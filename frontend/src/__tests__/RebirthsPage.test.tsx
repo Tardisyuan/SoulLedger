@@ -21,8 +21,13 @@ const mockedApi = (jest.requireMock("@soulledger/core/api") as { reincarnationAp
 const mockedList = mockedApi.list;
 const mockedQuota = mockedApi.quota;
 
+let mockCiv: string | undefined;
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ isAdmin: false, tenantCode: "CN_DIYU", user: { role: "JUDGE", permissions: ["reincarnation.read"] } }),
+  useTenant: () => ({
+    isAdmin: false,
+    tenantCode: "CN_DIYU",
+    user: { role: "JUDGE", permissions: ["reincarnation.read"], tenant: mockCiv ? { code: "X", display_name: "X", civilization: mockCiv } : undefined },
+  }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => {
   const { tZh: t } = jest.requireActual("./support/zhBundle");
@@ -61,6 +66,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  mockCiv = undefined;
   mockedList.mockReset();
   mockedList.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [row()] } });
   mockedQuota.mockReset();
@@ -144,5 +150,41 @@ describe("转生登记簿", () => {
     mockedList.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     renderPage();
     expect(await screen.findByText(tZh("rebirths.empty"))).toBeInTheDocument();
+  });
+});
+
+describe("按文明(v4 第八批第 7 条)", () => {
+  it.each([["EUROPEAN", "欧洲"], ["EGYPTIAN", "埃及"]])("%s:直接打开链接看到「没有转世」的说明,不发请求", async (civ, name) => {
+    mockCiv = civ;
+    renderPage();
+    const note = screen.getByTestId("rebirths-not-applicable");
+    expect(note).toHaveTextContent(tZh("rebirths.not_applicable.title", { civ: name }));
+    expect(note).toHaveTextContent(tZh("rebirths.not_applicable.body"));
+    expect(within(note).getByRole("link", { name: tZh("rebirths.not_applicable.back") })).toHaveAttribute("href", "/dashboard");
+    // Absence: no register, no quota, no request.
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByTestId("rebirth-quota-strip")).toBeNull();
+    expect(mockedList).not.toHaveBeenCalled();
+    expect(mockedQuota).not.toHaveBeenCalled();
+  });
+
+  it("希腊:只列转生记录 —— 没有六道配额条、没有形态筛选、没有形态一栏", async () => {
+    mockCiv = "GREEK";
+    renderPage();
+    expect(await screen.findByText("周阿满")).toBeInTheDocument();
+    expect(screen.queryByTestId("rebirth-quota-strip")).toBeNull();
+    expect(mockedQuota).not.toHaveBeenCalled();
+    expect(screen.queryByRole("columnheader", { name: tZh("rebirths.col_form") })).toBeNull();
+    expect(screen.queryByText(tZh("reincarnation.forms.HUMAN"))).toBeNull();
+    expect(screen.queryByText(tZh("rebirths.all_forms"))).toBeNull();
+    // Presence: the register itself is still there.
+    expect(screen.getByRole("columnheader", { name: tZh("rebirths.col_soul") })).toBeInTheDocument();
+  });
+
+  it("地府照旧:六道配额条与形态一栏都在", async () => {
+    mockCiv = "CHINESE";
+    renderPage();
+    expect(await screen.findByText(tZh("reincarnation.forms.HUMAN"))).toBeInTheDocument();
+    expect(mockedQuota).toHaveBeenCalled();
   });
 });

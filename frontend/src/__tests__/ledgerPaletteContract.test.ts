@@ -43,7 +43,7 @@ import {
  *   faint → line-strong 与 disabled-ink;line(8%)压在 card 上合成 → line;pos/neg → success/danger。
  * 文明(用户 2026-11-06 决定照 v4 的范围):solid → `--color-civ-*`(=匾色 / 主按钮底),civT →
  * `-ink`,metal → `-metal`,side → `-side`,glow 两主题同值不在这张表(只有一个值,没有对错之分可量)。
- * 中性皮 v4 没画,是推导值(与 App 一致)。v4 没定义的 danger-strong / tint / warning / 长明灯沿用 v3。 */
+ * 中性皮是第八批第 5 条给的值(与 App 一致);--color-warn / --color-faint-text 是第八批第 4、6 条新增的。v4 没定义的 danger-strong / tint / warning / 长明灯沿用 v3。 */
 const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-canvas": { light: "#f8f8f6", dark: "#111113" },
   "--color-surface-1": { light: "#ffffff", dark: "#1a1b1e" },
@@ -69,10 +69,15 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-lamp-bg": { light: "#FBF1DC", dark: "#241B0C" },
   "--color-disabled-ink": { light: "#8a8d92", dark: "#7c7f85" },
   "--color-disabled-surface": { light: "#f1f1ee", dark: "#222327" },
-  "--color-civ-neutral": { light: "#16171a", dark: "#38393e" },
+  // 中性皮:Design 第八批第 5 条(2026-11-06)。glow 两主题同值,只有中性这一格放进表里 —— 它是第八批新给的值。
+  "--color-civ-neutral": { light: "#5a606b", dark: "#55575e" },
   "--color-civ-neutral-ink": { light: "#54575c", dark: "#b4b6ba" },
-  "--color-civ-neutral-metal": { light: "#54575c", dark: "#b4b6ba" },
-  "--color-civ-neutral-side": { light: "#f1f1ee", dark: "#0c0c0e" },
+  "--color-civ-neutral-glow": { light: "#8e939c", dark: "#8e939c" },
+  "--color-civ-neutral-metal": { light: "#8a6a24", dark: "#ecaa3d" },
+  "--color-civ-neutral-side": { light: "#f1f1ef", dark: "#0e0f11" },
+  // 第八批新增:琥珀(连接状态的点与线,不当字)、比 sub 更淡的字。
+  "--color-warn": { light: "#9a6400", dark: "#e8b45a" },
+  "--color-faint-text": { light: "#686b70", dark: "#8e9197" },
   "--color-civ-cn": { light: "#a64a3b", dark: "#7e362b" },
   "--color-civ-cn-ink": { light: "#a04636", dark: "#d98a7a" },
   "--color-civ-cn-metal": { light: "#8a6a24", dark: "#c9a35e" },
@@ -101,7 +106,7 @@ describe("palette (规范 v4)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 44);
+    expect(rows).toHaveLength(2 * 47);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {
@@ -119,6 +124,7 @@ describe("palette (规范 v4)", () => {
     "--color-success",
     "--color-warning",
     "--color-lamp",
+    "--color-faint-text",
   ];
   it.each(THEMES.flatMap((theme) => TEXT.map((name) => [theme, name] as const)))("%s %s reads ≥ 4.5:1 on canvas", (theme, name) => {
     expect(contrastRatio(rgbOf(theme, name), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(4.5);
@@ -130,6 +136,17 @@ describe("palette (规范 v4)", () => {
       expect(contrastRatio(rgbOf(theme, name), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(3);
     }
   );
+
+  it.each(THEMES.flatMap((theme) => ["--color-surface-1", "--color-surface-2"].map((bg) => [theme, bg] as const)))(
+    "%s --color-faint-text reads ≥ 4.5:1 on %s too (第八批:三种底上都达标)",
+    (theme, bg) => {
+      expect(contrastRatio(rgbOf(theme, "--color-faint-text"), rgbOf(theme, bg))).toBeGreaterThanOrEqual(4.5);
+    }
+  );
+
+  it.each(THEMES)("%s --color-warn (a dot and a 2px line, never text) is ≥ 3:1 on canvas", (theme) => {
+    expect(contrastRatio(rgbOf(theme, "--color-warn"), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(3);
+  });
 
   it.each(THEMES)("%s: the five soul states are five different colours", (theme) => {
     const states = ["alive", "judging", "disposed", "reincarnating", "lost"].map((s) => rgbOf(theme, `--color-status-${s}`).join(","));

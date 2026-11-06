@@ -111,17 +111,73 @@ describe("the connection indicator", () => {
   });
 });
 
-describe("the connection bar (Design E 组: global state, top of the viewport)", () => {
+describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule on its lower edge)", () => {
   // The signed-out case above spies useTenant to null; clearAllMocks does not undo a spy.
   beforeEach(() => jest.restoreAllMocks());
+  afterEach(() => jest.useRealTimers());
 
-  it("spans the whole viewport from its very top, at a fixed 28 px the 问一问 panel starts below", () => {
+  const classes = (el: Element) => el.className.split(/\s+/);
+
+  it("is a pill in the toolbar's row on desktop — not a bar fixed across the top of the viewport", () => {
     mockStatus = "failed";
     render(<ConnectionBanner />);
-    const bar = screen.getByTestId("connection-banner");
-    for (const c of ["fixed", "inset-x-0", "top-0", "h-7"]) expect(bar.className.split(/\s+/)).toContain(c);
-    // Absence: it is no longer hung off the plaque's lower edge.
-    expect(bar.className).not.toMatch(/top-full|absolute/);
+    const pill = screen.getByTestId("connection-banner");
+    expect(pill).toHaveAttribute("role", "status");
+    expect(pill).toHaveAttribute("aria-live", "polite");
+    expect(classes(pill)).toEqual(expect.arrayContaining(["inline-flex", "h-7.5", "rounded-[9999px]"]));
+    // Absence: Design E 组's 28px bar (fixed, full width, top of the viewport) is gone on desktop. The only
+    // `fixed` left is the ≤ 768 float.
+    expect(classes(pill).filter((c) => /^(fixed|inset-x-0|top-0|h-7|absolute)$/.test(c))).toEqual([]);
+    expect(classes(pill)).toEqual(expect.arrayContaining(["max-[768px]:fixed", "max-[768px]:left-1/2", "max-[768px]:-translate-x-1/2"]));
+  });
+
+  it("draws the 2px rule absolutely, so the toolbar keeps its 52px and nothing below it moves", () => {
+    mockStatus = "reconnecting";
+    render(<ConnectionBanner />);
+    const rule = screen.getByTestId("connection-rule");
+    expect(classes(rule)).toEqual(expect.arrayContaining(["absolute", "inset-x-0", "h-0.5", "max-[768px]:hidden", "bg-[oklch(var(--color-warn))]"]));
+  });
+
+  it.each([
+    ["reconnecting", "warn", "--color-warn", false],
+    ["failed", "neg", "--color-danger", true],
+    ["disconnected", "neg", "--color-danger", true],
+  ] as const)("%s: tone %s, dot and rule in %s, retry %s", (status, tone, token, retry) => {
+    mockStatus = status;
+    render(<ConnectionBanner />);
+    const pill = screen.getByTestId("connection-banner");
+    expect(pill).toHaveAttribute("data-tone", tone);
+    expect(pill).toHaveTextContent(`connection.${status}`);
+    expect(classes(screen.getByTestId("connection-rule"))).toContain(`bg-[oklch(var(${token}))]`);
+    if (retry) {
+      fireEvent.click(screen.getByRole("button", { name: "connection.retry" }));
+      expect(mockReconnect).toHaveBeenCalledTimes(1);
+    } else {
+      expect(screen.queryByRole("button")).toBeNull();
+    }
+  });
+
+  it("the amber is a mark, never the words: the reason is ink", () => {
+    mockStatus = "reconnecting";
+    render(<ConnectionBanner />);
+    const pill = screen.getByTestId("connection-banner");
+    expect(classes(pill)).toContain("text-[oklch(var(--color-ink))]");
+    expect(pill.className).not.toMatch(/text-\[oklch\(var\(--color-(warn|warning)\)\)\]/);
+  });
+
+  it("fades out over 300ms once connected, and does not say 「已连接」", () => {
+    jest.useFakeTimers();
+    mockStatus = "failed";
+    const { rerender } = render(<ConnectionBanner />);
+    mockStatus = "connected";
+    rerender(<ConnectionBanner />);
+    const pill = screen.getByTestId("connection-banner");
+    expect(classes(pill)).toContain("opacity-0");
+    expect(pill).not.toHaveTextContent("connection.connected");
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+    expect(screen.queryByTestId("connection-banner")).toBeNull();
   });
 
   describe("离线(v3:navigator.onLine === false,随 offline / online 事件)", () => {
@@ -133,25 +189,30 @@ describe("the connection bar (Design E 组: global state, top of the viewport)",
     };
     afterEach(() => setOnline(true));
 
-    it("socket 连着也出条:离线 · 当前内容可能不是最新版本 · 重试,上沿 warning", () => {
+    it("socket 连着也出胶囊:离线 · 当前内容可能不是最新版本,灰点,没有按钮", () => {
+      jest.useFakeTimers();
       mockStatus = "connected";
       render(<ConnectionBanner />);
       expect(screen.queryByTestId("connection-banner")).toBeNull();
 
       setOnline(false);
-      const bar = screen.getByTestId("connection-banner");
-      expect(bar).toHaveTextContent("connection.offline");
-      // Absence: the socket reason is not what an offline bar says.
-      expect(bar).not.toHaveTextContent("connection.connected");
-      expect(bar.className.split(/\s+/)).toEqual(expect.arrayContaining(["border-t-4", "border-t-[oklch(var(--color-warning))]"]));
-      fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
-      expect(mockReconnect).toHaveBeenCalledTimes(1);
+      const pill = screen.getByTestId("connection-banner");
+      expect(pill).toHaveTextContent("connection.offline");
+      // Absence: the socket reason is not what an offline pill says.
+      expect(pill).not.toHaveTextContent("connection.connected");
+      expect(pill).toHaveAttribute("data-tone", "offline");
+      expect(classes(screen.getByTestId("connection-rule"))).toContain("bg-[oklch(var(--color-faint-text))]");
+      // Design 第八批: offline has no button — queries refetch on `online`; a socket that gave up shows 重连 then.
+      expect(screen.queryByRole("button")).toBeNull();
 
       setOnline(true);
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
       expect(screen.queryByTestId("connection-banner")).toBeNull();
     });
 
-    it("问一问面板按同一个判断让出条的高度", () => {
+    it("the shell's hook says the same as the pill", () => {
       mockStatus = "connected";
       const { result } = renderHook(() => useConnectionBannerShown());
       expect(result.current).toBe(false);

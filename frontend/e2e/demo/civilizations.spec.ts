@@ -154,6 +154,13 @@ for (const role of ["judge_eu", "judge_eg"] as Role[]) {
       await expect(page.locator('a[href="/rebirths"], a[href="/rebirth-applications"]')).toHaveCount(0);
       expect((await page.locator("aside, nav").allInnerTexts()).join("\n")).not.toMatch(NO_REBIRTH);
     });
+    // v4 第八批第 7 条: the door is gone, and a direct link says so instead of showing the six paths.
+    test("/rebirths opened directly: a page saying there is no rebirth here", async ({ page }) => {
+      await enter(page, role);
+      await page.goto("/rebirths");
+      await expect(page.getByTestId("rebirths-not-applicable")).toContainText(/没有转世|No rebirth/);
+      await expect(page.locator("main table")).toHaveCount(0);
+    });
     for (const route of routes) {
       test(route.replace(/[0-9a-f-]{36}/, "<id>"), async ({ page }) => {
         await enter(page, role);

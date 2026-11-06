@@ -1,4 +1,4 @@
-import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
+import { CIVILIZATION_SHORT_CODES, TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { localName } from "@soulledger/core/domain/localName";
 
 type T = (key: string) => string;
@@ -25,4 +25,15 @@ export function tenantLabel(
   const civilization = TENANT_CODE_TO_CIVILIZATION[tenant?.code ?? ""];
   if (civilization) return t(`organization.civilizations.${civilization}`);
   return localName(tenant, locale, "display_name") || tenant?.code || "";
+}
+
+/**
+ * 界域类型的显示词,按文明(v4 第八批第 7 条):数据与 `RealmType` 不动,只换显示 —— 地府没有「天堂」,
+ * 埃及的 PURGATORY 是杜阿特。有 `realms.types_by_civ.<文明>.<类型>` 就用那个命名空间,没有(Design 标「不用」的组合、
+ * 不认识的文明)就回落到四文明共用的 `realms.types`。给 `<DomainEnum namespace={…}>` 用。
+ */
+export function realmTypeNamespace(t: T, civilization: string | null | undefined, type: string | null | undefined): string {
+  const civ = civilization ? CIVILIZATION_SHORT_CODES[civilization] : undefined;
+  const ns = `realms.types_by_civ.${civ}`;
+  return civ && type && t(`${ns}.${type}`) !== `${ns}.${type}` ? ns : "realms.types";
 }

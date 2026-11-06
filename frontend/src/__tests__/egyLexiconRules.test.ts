@@ -588,6 +588,9 @@ const PROPER_NAMES = [
   // Tab 是键名(同 Enter / Esc / Ctrl);阿努比斯 Anpu(判决文书「Anpu Em Fai」);欧洲文书的装饰标题 SENTENTIA。
   // 希腊文书的 ΚΡΙΣΙΣ 不用登记:分词只取拉丁字母。
   "Tab", "Anpu", "SENTENTIA",
+  // v4 第八批(Design,2026-11-06):hooks 是技术名词,同 Django、packages/core 照原文写;Francesca 是人名(欧洲导览第五步);
+  // Wangsi 是枉死城的拼音(Nut Wangsi),照地府专名写拼音的惯例 —— 不写 Nut Mut Nen Maat,那会让含「功」的键里出现 Maat。
+  "hooks", "Francesca", "Wangsi",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",

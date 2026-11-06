@@ -95,7 +95,8 @@ describe("ink on surface", () => {
  * 上面的矩阵只量「token 对 token」;这里补它看不见的那一类,规定有四条:
  *   1. main 只做底色、指示条、描边和印章,不做文字色(两主题,字号不限)。
  *   2. main 作底、上面有字时,字只用 on-main。v3 深色一律加深一档(`color-mix(in srgb, main 90%, #111)`);
- *      v4(2026-11-06)的 solid 本身就是给白字配的深色,主按钮直接用 main,身份带仍是加深那一档。
+ *      v4(2026-11-06)的 solid 本身就是给白字配的深色,主按钮直接用 main。身份带(阶段 2)不再是 main 实底:
+ *      它是 canvas 上的一片文明光(glow 按 --glow-alpha 混入),字是 ink —— 按光最亮处量。
  *   (规定 1 在 v4 下更紧:深色 solid 对 surface-1 只有约 2:1,连 3px 指示条也不再用 main ——
  *    指示条读 `--color-metal`,印读 `--color-main-ink`。)
  *   3. 文字不用 opacity 降级 —— 要次要就换 ink-muted。
@@ -108,19 +109,21 @@ const CIVS = ["cn", "eu", "eg", "gr"] as const;
 const CSS = readFileSync(GLOBALS_CSS, "utf8");
 const stripCode = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 const rgbOf = (theme: ThemeName, name: string): Rgb => oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], name));
-/** `color-mix(in srgb, main p, #111)`,与浏览器一样在 gamma sRGB 上逐通道混。 */
-const mixWith111 = (rgb: Rgb, p: number): Rgb => rgb.map((v) => Math.round(v * p + 17 * (1 - p))) as unknown as Rgb;
-const pct = (raw: string | undefined, what: string): number => {
-  const m = /^(\d+(?:\.\d+)?)%$/.exec(raw ?? "");
-  if (m === null) throw new Error(`${what} 不是百分比:${raw} —— 修读取器,别删这条检查`);
-  return Number(m[1]) / 100;
+/** `color-mix(in srgb, fg p, transparent)` 叠在不透明的 bg 上 = 在 gamma sRGB 上逐通道 fg·p + bg·(1−p)。 */
+const over = (fg: Rgb, bg: Rgb, p: number): Rgb => fg.map((v, i) => Math.round(v * p + bg[i] * (1 - p))) as unknown as Rgb;
+/** v4 `--glowA`:深 .30 / 浅 .24,读 globals.css。读不到就抛,不要当成 0 放行(0 = 没有光,对比度只会更好看)。 */
+const glowAlpha = (theme: ThemeName): number => {
+  const raw = Number(TOKENS_BY_THEME[theme]["--glow-alpha"]);
+  if (!(raw > 0 && raw < 1)) throw new Error(`--glow-alpha 在 ${theme} 读到 ${TOKENS_BY_THEME[theme]["--glow-alpha"]} —— 修读取器,别删这条检查`);
+  return raw;
 };
-/** 身份带底的比例,读 globals.css 那一行(plaqueTitleStaysLargeText 读的也是它)。 */
-const BAND_PCT = pct(/\.identity-band\s*\{[^}]*background:\s*color-mix\(in srgb, oklch\(var\(--color-main\)\) ([\d.]+%), #111\)/.exec(CSS)?.[1], ".identity-band 的 background");
 /** 主按钮底 `--main-fill`(Button.tsx primary 读它):v4 起两个主题都是 main 本身,只声明一次。 */
 const MAIN_FILL_DECLS = [...stripCode(CSS).matchAll(/--main-fill:\s*([^;]+);/g)].map((m) => m[1].trim());
 const MAIN_FILL_ON_ROOT = /:root,\s*\[data-civ\]\s*\{[^}]*--main-fill:\s*([^;]+);/.exec(stripCode(CSS))?.[1].trim();
-const BAND_BG = /\.identity-band\s*\{[^}]*background:\s*([^;]+);/.exec(CSS)?.[1].trim();
+const BAND_BG = /\n {2}\.identity-band\s*\{[^}]*background:\s*([^;]+);/.exec(stripCode(CSS))?.[1].replace(/\s+/g, " ").trim();
+/** 身份带的底:glow 的椭圆光 + canvas 实底(v4 `.glowtop`)。下面按光最亮处(圆心)= glow·alpha + canvas 量字。 */
+const GLOW_BAND_BG =
+  "radial-gradient(70% 260px at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%), oklch(var(--color-canvas))";
 
 type Cell = { key: string; ratio: number; min: number };
 const cellOf = (key: string, fg: Rgb, bg: Rgb, min = AA_NORMAL_TEXT): Cell => ({ key, ratio: contrastRatio(fg, bg), min });
@@ -133,8 +136,8 @@ const RENDERED: Cell[] = THEMES.flatMap((theme) => {
     return [
       // 3px 指示条(侧栏左标、底栏顶标、行首色标)对 surface-1:非文字,3:1。v4 起是 metal。
       cellOf(`${theme}:metal-${civ} mark on surface-1`, rgbOf(theme, `--color-civ-${civ}-metal`), surface1, AA_NON_TEXT),
-      // 身份带上的字(题字之外:品牌、殿名、「案号」11 / 12px),纯白不透明。
-      cellOf(`${theme}:on-main on band-${civ}`, onMain, mixWith111(main, BAND_PCT)),
+      // 身份带上的字(题字之外:品牌、殿名、「案号」11 / 12px):ink,不透明,压在光最亮处。
+      cellOf(`${theme}:ink on band-glow-${civ}`, rgbOf(theme, "--color-ink"), over(rgbOf(theme, `--color-civ-${civ}-glow`), rgbOf(theme, "--color-canvas"), glowAlpha(theme))),
       // 主按钮上的字与按钮里的键帽 ⌘⏎ / ⌘S,纯白不透明;13–15px 不是大字。v4:主按钮底 = main。
       cellOf(`${theme}:on-main on primary-${civ}`, onMain, main),
     ];
@@ -151,11 +154,19 @@ describe("渲染后的对比度(指示条 / 身份带 / 主按钮,四文明 × �
     expect(c.ratio).toBeGreaterThanOrEqual(c.min);
   });
 
-  it("主按钮底两主题都是 main 本身(v4 solid),只声明一次;身份带仍是 main 90% + #111", () => {
-    expect(BAND_PCT).toBe(0.9);
+  it("主按钮底两主题都是 main 本身(v4 solid),只声明一次;身份带是 canvas 上的 glow 光(上面那组量的就是它)", () => {
     expect(MAIN_FILL_DECLS).toEqual(["oklch(var(--color-main))"]);
     expect(MAIN_FILL_ON_ROOT).toBe("oklch(var(--color-main))");
-    expect(BAND_BG).toBe("color-mix(in srgb, oklch(var(--color-main)) 90%, #111)");
+    expect(BAND_BG).toBe(GLOW_BAND_BG);
+    expect(glowAlpha("dark")).toBe(0.3);
+    expect(glowAlpha("light")).toBe(0.24);
+  });
+
+  it("身份带上的字不再是 on-main:v4 的光是浅的,白字在浅色光上托不住(这一格是承重的)", () => {
+    for (const civ of CIVS) {
+      const bg = over(rgbOf("light", `--color-civ-${civ}-glow`), rgbOf("light", "--color-canvas"), glowAlpha("light"));
+      expect(contrastRatio(rgbOf("light", "--color-on-main"), bg)).toBeLessThan(AA_NON_TEXT);
+    }
   });
 
   it("不加深也够:v4 的 solid 本身托得住白字,四文明 × 两主题(v3 深色埃及 / 希腊曾托不住)", () => {

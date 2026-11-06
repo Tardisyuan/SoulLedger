@@ -16,7 +16,9 @@ import { menuTranslationKey } from "@/src/lib/menuI18n";
 import { shortIdentifier } from "@/src/lib/domainDisplay";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { SoulStateBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
-import { GlobalSearchEntries, isSearchShortcut, takePendingOpen } from "./GlobalSearchEntry";
+import { useRegisteredCommands } from "@/src/lib/shellCommands";
+import { GlobalSearchEntries, isSearchShortcut, onSearchOpenRequest, takePendingOpen } from "./GlobalSearchEntry";
+import { openShortcutHelp } from "./ShortcutHelp";
 
 /**
  * 全局搜索(规范 v3 A8,`docs/design-handoff/v3-pages/A8-search.md`)。
@@ -26,6 +28,11 @@ import { GlobalSearchEntries, isSearchShortcut, takePendingOpen } from "./Global
  * 「页面」从已加载的侧栏菜单里筛,不发请求。没输入时列最近打开的 5 条(按用户存在本地)。
  *
  * 不自动跳:完整案号那一条排在案件组第一、标「案号完全一致」并默认选中,还是要按一下 ↵。
+ *
+ * 规范 v4(第七批 S02)把它扩成「搜索 + 指令」:最上面多一组「指令」(`cmdk.group.commands`),是当前页面
+ * 经 `useShellCommands` 登记的指令(审判台的通过 / 不过 / 放进待定),外加壳自己的一条「键盘快捷键」。
+ * 指令只在输入时按文字筛出来;判决类排在最上,回车即执行,和点页面上那个按钮一样。
+ * Tab 换一类(跳到下一组的第一条,Shift+Tab 反过来);底栏 ↑↓ 选择 · ↵ 执行 · Tab 换一类。
  */
 
 export const SEARCH_DEBOUNCE_MS = 200;
@@ -34,9 +41,10 @@ export const RECENT_LIMIT = 5;
 /** 说明与提示里的案号示例(Design 的原文)。放在代码里而不是语言包:它是一个编号,不是一句话。 */
 const CASE_NUMBER_EXAMPLE = "CN-2026-0042";
 
-type Kind = "judgment" | "soul" | "statute" | "page";
-export const GROUP_ORDER: readonly Kind[] = ["judgment", "soul", "statute", "page"];
+type Kind = "command" | "judgment" | "soul" | "statute" | "page";
+export const GROUP_ORDER: readonly Kind[] = ["command", "judgment", "soul", "statute", "page"];
 const GROUP_LABEL: Record<Kind, string> = {
+  command: "cmdk.group.commands",
   judgment: "search.group_judgments",
   soul: "search.group_souls",
   statute: "search.group_statutes",
@@ -60,8 +68,10 @@ export interface RecentItem {
 interface Option {
   key: string;
   href: string;
-  /** 打开时记进「最近打开」的那一条;「查看全部」没有。 */
+  /** 打开时记进「最近打开」的那一条;「查看全部」与指令没有。 */
   recent?: RecentItem;
+  /** 指令:选中就执行,不跳页。 */
+  run?: () => void;
   node: ReactNode;
   /** 律条两行,行高 64;其余 48。 */
   tall?: boolean;
@@ -165,6 +175,8 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+  // The sidebar's 「搜索、跳转、下指令」 opens this same palette (v4 S01).
+  useEffect(() => onSearchOpenRequest(() => show()));
 
   // This component arrives by `next/dynamic`; a press on the placeholder before then opens it now.
   useEffect(() => {
@@ -207,8 +219,25 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
     });
   }, [menus, term, t]);
 
+  const registered = useRegisteredCommands();
+  const commands = useMemo(() => {
+    const q = term.toLowerCase();
+    if (!q) return [];
+    const all: { id: string; label: string; hint?: string; run: () => void }[] = [
+      ...registered,
+      { id: "shortcuts", label: t("shortcuts.title"), run: openShortcutHelp },
+    ];
+    return all.filter((c) => [c.label, c.hint ?? ""].some((s) => s.toLowerCase().includes(q)));
+  }, [registered, term, t]);
+  const hasVerdicts = registered.some((c) => c.verdict);
+
   const close = () => setOpen(false);
   const go = (option: Option, newTab: boolean) => {
+    if (option.run) {
+      close();
+      option.run();
+      return;
+    }
     if (option.recent) {
       pushRecent(user?.id, option.recent);
       setRecent(readRecent(user?.id));
@@ -259,6 +288,22 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
   const sections: Section[] = !searching
     ? []
     : [
+        {
+          kind: "command",
+          state: "ok",
+          total: commands.length,
+          options: commands.map((c) => ({
+            key: `command:${c.id}`,
+            href: "",
+            run: c.run,
+            node: (
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="min-w-0 truncate" title={c.label}><Hit text={c.label} q={term} /></span>
+                {c.hint ? <span className={`min-w-0 truncate text-sm ${MUTED}`} title={c.hint}>{c.hint}</span> : null}
+              </span>
+            ),
+          })),
+        },
         remote<Judgment>("judgment", judgments, (j) => ({
           key: `judgment:${j.id}`,
           href: `/judgment/${j.id}`,
@@ -376,6 +421,16 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
       const next = e.key === "ArrowDown" ? Math.min(activeIndex + 1, options.length - 1) : Math.max(activeIndex - 1, 0);
       setPicked(options[next].key);
       document.getElementById(optionId(options[next].key))?.scrollIntoView?.({ block: "nearest" });
+    } else if (e.key === "Tab" && !e.altKey && !e.metaKey && !e.ctrlKey && searching) {
+      // Tab 换一类:下一组(Shift+Tab 上一组)的第一条;只有一组时不拦,焦点照常走。
+      const heads = visible.flatMap((s) => (s.state === "ok" && s.options.length ? [s.options[0].key] : []));
+      if (heads.length < 2) return;
+      e.preventDefault();
+      const kindOf = (key: string) => key.split(":")[0];
+      const at = Math.max(0, heads.findIndex((k) => activeKey !== null && kindOf(k) === kindOf(activeKey)));
+      const next = heads[(at + (e.shiftKey ? heads.length - 1 : 1)) % heads.length];
+      setPicked(next);
+      document.getElementById(optionId(next))?.scrollIntoView?.({ block: "nearest" });
     } else if (e.key === "Enter" && activeIndex !== -1) {
       e.preventDefault();
       go(options[activeIndex], e.metaKey || e.ctrlKey);
@@ -483,7 +538,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
                   autoComplete="off"
                   spellCheck={false}
                   value={input}
-                  placeholder={t("search.input_placeholder")}
+                  placeholder={t("cmdk.placeholder")}
                   onChange={(e) => { setInput(e.target.value); setPicked(null); }}
                   onKeyDown={onKeyDown}
                   className="h-full min-w-0 flex-1 bg-transparent text-md font-normal text-[oklch(var(--color-ink))] outline-none placeholder:text-[oklch(var(--color-ink-subtle))]"
@@ -516,10 +571,15 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
               )}
               <p role="status" className="sr-only">{announce}</p>
               <div className={`hidden h-9 shrink-0 items-center gap-[20px] border-t border-[oklch(var(--color-line))] px-4 font-mono text-xs ${MUTED} min-[769px]:flex`}>
-                <span>↑↓ {t("search.footer_select")}</span>
-                <span>↵ {t("search.footer_open")}</span>
+                <span>{t("cmdk.key.select")}</span>
+                <span>{t("cmdk.key.run")}</span>
+                <span>{t("cmdk.key.switch")}</span>
                 <span>{isMac() ? "⌘↵" : "Ctrl ↵"} {t("search.footer_new_tab")}</span>
-                <span className="ml-auto">esc {t("common.close")}</span>
+                {hasVerdicts ? (
+                  <span className="ml-auto min-w-0 truncate font-sans" title={t("cmdk.verdict_scope")}>{t("cmdk.verdict_scope")}</span>
+                ) : (
+                  <span className="ml-auto">esc {t("common.close")}</span>
+                )}
               </div>
             </Dialog.Popup>
           </Dialog.Viewport>
