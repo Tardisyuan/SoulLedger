@@ -4,9 +4,10 @@
 `Judgment.fail_reasons`(代码列表)与 `fail_reason_note`(选「其他」时写的一句)。
 
 **必填**,依据是定稿本身:理由面板的标题是 `reject.sheet.title`「选一个理由，才算判完」,希腊的标记写着
-`reject.sheet.required`「必选」,S10 的说明是「没选时『不过 · 落印』是灰的」。所以经接口结案(`by` 不为空)时
-FAILED 必须带理由;进程内结案(审批流驱动、种子、测试帮手,`by=None`)代表系统,不要求 —— 与
-`lock_for_conclude` 只在有 `by` 时检查认领同一条界线。给了就校验,无论谁给。
+`reject.sheet.required`「必选」,S10 的说明是「没选时『不过 · 落印』是灰的」。所以经结案接口
+(`POST /judgment/{id}/conclude/`,视图显式传 `require_fail_reason=True`)结原审 FAILED 时必须带理由;
+进程内的服务调用(申诉改判、审批流、种子、测试帮手)一律不要求,带不带 `by` 都一样 —— 那些路径的输入不是
+理由面板。给了就校验,无论谁给。
 
 各文明一套(代码只是标识,文字在语言包 `reject_reason.*`):
 

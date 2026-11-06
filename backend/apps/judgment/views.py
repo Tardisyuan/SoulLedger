@@ -1493,6 +1493,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
                 fail_reason_note=serializer.validated_data.get("fail_reason_note", ""),
                 greek_account=serializer.validated_data.get("greek_account", ""),
                 greek_curability=serializer.validated_data.get("greek_curability", ""),
+                require_fail_reason=True,  # 只有结案接口要求理由(v4 D6);进程内的服务调用不要求
             )
         except FailReasonRefusedError as exc:
             # v4 D6 / D7 / D8:理由或希腊标记缺了或不成立(fail_reason_required / fail_reason_invalid /

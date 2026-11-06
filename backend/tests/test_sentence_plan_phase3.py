@@ -201,7 +201,9 @@ def test_an_amendment_on_a_held_plan_is_refused(cn, eg, judges):
 
 def test_plan_changes_on_an_original_judgment_are_refused(cn, judges):
     soul, case = plan.open_case(cn)
-    response = _conclude(judges["cn"], case, plan_changes={"add": [{"realm_code": "X"}]})
+    # 带上 v4 的理由(D6):否则先答 fail_reason_required,这条要钉的 invalid_changes 就看不到了。
+    response = _conclude(judges["cn"], case, plan_changes={"add": [{"realm_code": "X"}]},
+                         fail_reasons=["OTHER"], fail_reason_note="测")
     assert response.status_code == 400 and response.data["code"] == "invalid_changes"
     case.refresh_from_db()
     assert case.verdict is None and not SentencePlan.all_objects.filter(soul=soul).exists()
