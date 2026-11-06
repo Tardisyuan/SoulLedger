@@ -57,6 +57,10 @@ describe("地府(定稿第五、六批)", () => {
 
   it("功多于过写道别;不过按罪目换殿号;五逆直送第九殿", () => {
     expect(verdictDocument({ ...base, merit: 42, demerit: 18, rebirthForm: "HUMAN" }, tz)!.ruling).toBe("功多于过，送交第十殿发放，投生人道。");
+    // 过多于功仍判通过(第十二批 CN U-3):写成宽恕,不写成「功多于过」,也不写成「两平」。
+    const pardoned = verdictDocument({ ...base, merit: 18, demerit: 42, rebirthForm: "HUMAN" }, tz)!.ruling;
+    expect(pardoned).toBe("过虽多于功，念其可恕，送交第十殿发放，投生人道。");
+    expect(pardoned).not.toContain("功多于过");
     expect(verdictDocument({ ...base, verdict: "FAILED", offence: "TRADE_FRAUD" }, tz)!.ruling).toBe("所犯交易欺诈，属第四殿所掌，解送第四殿。");
     expect(verdictDocument({ ...base, verdict: "FAILED", offence: "FIVE_HEINOUS" }, tz)!.ruling).toBe("犯五逆，不经各殿，解送第九殿阿鼻大地狱。");
   });

@@ -94,10 +94,17 @@ describe("lexiconKey", () => {
     expect(lexiconKey("eg", "merit")).toBe("soul_app.lexicon.eg.merit");
     expect(lexiconKey("eg", "demerit")).toBe("soul_app.lexicon.eg.demerit");
     expect(lexiconKey("eg", "judging")).toBe("soul_app.lexicon.eg.judging");
-    for (const civ of ["neutral", "cn", "eu", "gr"] as const) {
+    for (const civ of ["neutral", "cn", "gr"] as const) {
       expect(lexiconKey(civ, "merit")).toBe("soul_app.life.merit");
       expect(lexiconKey(civ, "judging")).toBe("soul_app.soul_states.JUDGING");
     }
+    expect(lexiconKey("eu", "judging")).toBe("soul_app.soul_states.JUDGING");
+  });
+
+  it("Europe says 善功 / 罪 (v4 batch 12 EU 5)", () => {
+    expect(lexiconKey("eu", "merit")).toBe("soul_app.lexicon.eu.merit");
+    expect(lexiconKey("eu", "demerit_entry")).toBe("soul_app.lexicon.eu.demerit_entry");
+    expect(lexiconKey("eu", "records")).toBe("soul_app.lexicon.eu.records");
   });
 
   it("Europe is not judged in a 殿: its court label is its own (wording review EU-12)", () => {
