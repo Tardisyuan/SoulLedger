@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { judgmentApi, type Judgment, type JudgmentCitation, type Statute } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
-import { useDeferJudgment, useJudgmentPrecedents } from "@soulledger/core/hooks/useJudgments";
+import { useJudgmentPrecedents } from "@soulledger/core/hooks/useJudgments";
 import { useAllStatutes } from "@soulledger/core/hooks/useStatutes";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { citationOf, resolveCitation } from "@soulledger/core/config/statuteCitation";
@@ -14,10 +14,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { forgetOpenCase, rememberOpenCase } from "@/src/lib/lastOpenCase";
-import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
-import { DeferDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
-import { useHotkeys } from "@/src/lib/hotkeys";
 import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 
@@ -52,12 +49,21 @@ export const VERDICT_KEY_CLASS =
 export const VERDICT_KEY_COMPACT = "min-h-13 flex-row justify-start gap-2 [&_kbd]:static [&_kbd]:order-first";
 
 /** 字形 + 文字 + 左上角数字键,两处落判键共用。 */
-export function VerdictKeyContent({ code, keyHint }: { code: NonNullable<Judgment["verdict"]>; keyHint: string }) {
+export function VerdictKeyContent({
+  code,
+  keyHint,
+  label,
+}: {
+  code: NonNullable<Judgment["verdict"]>;
+  keyHint: string;
+  /** 本文明的叫法(埃及称心:`desk.eg.*`「心轻于羽 · 通过」);原始枚举仍在 title 上。 */
+  label?: string;
+}) {
   return (
     <>
       <span aria-hidden="true" className="font-serif text-lg font-normal">{verdictGlyph(code)}</span>
       {/* <DomainEnum>:原始枚举留在 title 上,缺译文时显示「未识别」而不是点号键名。 */}
-      <DomainEnum namespace="judgment.verdicts" value={code} />
+      {label ? <span title={code}>{label}</span> : <DomainEnum namespace="judgment.verdicts" value={code} />}
       <kbd aria-hidden="true" className="absolute left-2 top-2 font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
         {keyHint}
       </kbd>
@@ -70,15 +76,12 @@ export function VerdictKeyContent({ code, keyHint }: { code: NonNullable<Judgmen
  * 队列进度条 QueueBar:3 px 墨线。数据来自 `GET /judgment/next/?at=<id>` —— 服务端把 `at`
  * 当偏好而不是筛选,所以只有回来的那一件就是本案时,`position` 才是本案的位置;否则不画。
  *
- * S 暂缓(理由必填;与队列控制台同一个键,Design 第三类 F 组答复),只在进度条画出来时接 —— 暂缓的案子不在 `next/` 里,进度条随之消失,
- * 不会对同一件按两次。K 上一件 / J 下一件在页头(`/judgment/previous/?at=` 与 `/judgment/next/?after=`,
+ * 「S 放进待定」的按钮在这里,理由框与 S 键在审判台页面(⌘K 的「放进待定分组」也用它;v4 D5 理由仍必填)。
+ * 待定的案子不在 `next/` 里,进度条随之消失。K 上一件 / J 下一件在页头(`/judgment/previous/?at=` 与 `/judgment/next/?after=`,
  * 见审判台页面)。
  */
-export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string; canDefer?: boolean }) {
+export function QueueBar({ judgmentId, onDefer }: { judgmentId: string; onDefer?: () => void }) {
   const { t } = useI18n();
-  const { showToast } = useToast();
-  const defer = useDeferJudgment();
-  const [asking, setAsking] = useState(false);
   const { data } = useQuery({
     queryKey: judgmentKeys.queue([], judgmentId),
     queryFn: () => judgmentApi.next({ at: judgmentId }).then((r) => r.data),
@@ -86,7 +89,6 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
     staleTime: 0,
   });
   const shown = !!data && data.judgment?.id === judgmentId && data.position !== null;
-  useHotkeys({ s: () => setAsking(true) }, shown && canDefer && !asking);
   if (!shown || !data || data.position === null) return null;
   const total = Math.max(data.total, 1);
   const label = t("judgment.queue.progress", { position: String(data.position), total: String(data.total) });
@@ -109,10 +111,10 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
           style={{ width: `${Math.min(100, (data.position / total) * 100)}%` }}
         />
       </span>
-      {canDefer && (
+      {onDefer && (
         <button
           type="button"
-          onClick={() => setAsking(true)}
+          onClick={onDefer}
           className="inline-flex min-h-(--control-h-sm) items-center gap-2 hover:text-[oklch(var(--color-ink))]"
         >
           <Kbd>S</Kbd>
@@ -125,24 +127,6 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
       >
         {t("judgment.queue.enter")}
       </Link>
-      <DeferDialog
-        isOpen={asking}
-        count={1}
-        pending={defer.isPending}
-        onCancel={() => setAsking(false)}
-        onConfirm={(reason) =>
-          defer.mutate(
-            { id: judgmentId, reason },
-            {
-              onSuccess: () => {
-                setAsking(false);
-                showToast(t("judgment.claim.done_defer", { n: "1" }), "success");
-              },
-              onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
-            }
-          )
-        }
-      />
     </div>
   );
 }

@@ -28,6 +28,8 @@ const REFUSAL_CODES = [
   "not_pending",
   "already_deferred",
   "not_deferred",
+  // 放进待定没写理由(v4 D5:理由仍必填)。理由框在发出前已拦,这里兜底。
+  "defer_reason_required",
   "invalid_assignee",
   "assignee_out_of_scope",
   "not_found",

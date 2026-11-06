@@ -267,7 +267,7 @@ describe("JudgmentQueueConsole", () => {
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
 
     await act(async () => {
-      fireEvent.keyDown(window, { key: "2" });
+      fireEvent.keyDown(window, { key: "1" });
     });
     await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
     await act(async () => {

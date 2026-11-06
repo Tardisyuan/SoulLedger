@@ -142,7 +142,16 @@ const toConfirm = () => screen.getByRole("button", { name: tZh("judgment.desk.to
  *  「落判并发起」;本域无站可选(下面默认的 `nothing_to_pick`)时没有「下一步」。 */
 const concludeViaLayer = async () => {
   fireEvent.click(toConfirm());
-  fireEvent.click(await screen.findByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") }));
+  const layer = await screen.findByTestId("confirm-layer");
+  // v4 S10:原审判「不过」先选理由(地府一个罪目),落印键写「不过 · 落印」。
+  const reasons = within(layer).queryByTestId("reject-reasons");
+  if (reasons) {
+    const reason = reasons.querySelector<HTMLInputElement>('input[value="TRADE_FRAUD"]');
+    if (reason) fireEvent.click(reason);
+    fireEvent.click(within(layer).getByRole("button", { name: tZh("reject.sheet.confirm") }));
+    return;
+  }
+  fireEvent.click(await within(layer).findByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") }));
 };
 
 beforeEach(() => {
@@ -823,7 +832,7 @@ describe("进度条上的 S 暂缓", () => {
     mockUser = { ...mockUser, permissions: ["judgment.read"] };
     renderPage();
     const bar = await screen.findByTestId("queue-bar");
-    expect(within(bar).queryByRole("button", { name: /暂缓/ })).toBeNull();
+    expect(within(bar).queryByRole("button", { name: new RegExp(tZh("judgment.claim.defer")) })).toBeNull();
     fireEvent.keyDown(document.body, { key: "s" });
     await act(async () => {});
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -881,7 +890,7 @@ describe("戊 · 发落", () => {
     await screen.findByLabelText(tZh("judgment.placement.destination"));
     await conclude();
     await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
-    expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({ verdict: "FAILED", notes: "", create_workflow: true });
+    expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({ verdict: "FAILED", notes: "", create_workflow: true, fail_reasons: ["TRADE_FRAUD"] });
     // 落定后确认层翻成「已写入记录」;「完成」关层,回到页面上。
     fireEvent.click(await screen.findByRole("button", { name: tZh("judgment.desk.done") }));
 
@@ -891,7 +900,7 @@ describe("戊 · 发落", () => {
     await conclude();
     await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(2));
     expect(judgmentApi.conclude.mock.calls[1][1]).toEqual({
-      verdict: "FAILED", notes: "", create_workflow: true, destination_realm_id: "r-9", term_years: 12,
+      verdict: "FAILED", notes: "", create_workflow: true, destination_realm_id: "r-9", term_years: 12, fail_reasons: ["TRADE_FRAUD"],
     });
   });
 
@@ -923,7 +932,7 @@ describe("戊 · 发落", () => {
     await conclude();
     await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
     expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({
-      verdict: "FAILED", notes: "", create_workflow: true, destination_realm_id: "r-a", eternal: true,
+      verdict: "FAILED", notes: "", create_workflow: true, destination_realm_id: "r-a", eternal: true, fail_reasons: ["TRADE_FRAUD"],
     });
   });
 
@@ -1368,7 +1377,7 @@ describe("v3 · 盖印确认层", () => {
     expect(layer).toHaveTextContent("第五殿");
     expect(layer).toHaveTextContent(tZh("judgment.desk.irreversible"));
 
-    fireEvent.keyDown(await within(layer).findByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") }), { key: "Escape" });
+    fireEvent.keyDown(await within(layer).findByRole("button", { name: tZh("reject.sheet.confirm") }), { key: "Escape" });
     await waitFor(() => expect(screen.queryByTestId("confirm-layer")).toBeNull());
     expect(judgmentApi.conclude).not.toHaveBeenCalled();
     expect(radio("FAILED").checked).toBe(true);
@@ -1563,5 +1572,70 @@ describe("PASSED barred before the server has to refuse it", () => {
     await waitFor(() => expect(radio("PASSED").checked).toBe(true));
     expect(radio("PASSED").disabled).toBe(false);
     expect(screen.queryByTestId("verdict-passed-barred")).toBeNull();
+  });
+});
+
+describe("v4 S10 · 「不过」的理由", () => {
+  const openFailLayer = async () => {
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "2" });
+    fireEvent.click(toConfirm());
+    return screen.findByTestId("confirm-layer");
+  };
+  const input = (panel: HTMLElement, value: string) => panel.querySelector<HTMLInputElement>(`input[value="${value}"]`) as HTMLInputElement;
+
+  it("没选理由时「不过 · 落印」是灰的;选「其他」要写一句,写了才发,理由随结案发出", async () => {
+    renderPage();
+    const layer = await openFailLayer();
+    const stamp = within(layer).getByRole("button", { name: tZh("reject.sheet.confirm") });
+    expect(stamp).toBeDisabled();
+    const panel = within(layer).getByTestId("reject-reasons");
+    expect(panel).toHaveTextContent(tZh("reject.sheet.title"));
+    fireEvent.click(input(panel, "OTHER"));
+    expect(stamp).toBeDisabled();
+    fireEvent.change(within(layer).getByTestId("reject-note"), { target: { value: "另有隐情" } });
+    expect(stamp).not.toBeDisabled();
+    fireEvent.click(stamp);
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    expect(judgmentApi.conclude.mock.calls[0][1]).toMatchObject({ verdict: "FAILED", fail_reasons: ["OTHER"], fail_reason_note: "另有隐情" });
+  });
+
+  it("地府选了罪目,判语预览按罪目换殿号", async () => {
+    renderPage();
+    const layer = await openFailLayer();
+    fireEvent.click(input(within(layer).getByTestId("reject-reasons"), "TRADE_FRAUD"));
+    expect(within(layer).getByTestId("reject-preview")).toHaveTextContent(
+      tZh("verdict_doc.cn.verdict.fail", { offence: tZh("judgment.offences.TRADE_FRAUD"), n: "四" })
+    );
+  });
+
+  it("希腊:先选文书,再加上可医 / 不可医;不可医不带去处与年数", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ civilization: "GREEK" }) });
+    renderPage();
+    const layer = await openFailLayer();
+    const stamp = within(layer).getByRole("button", { name: tZh("reject.sheet.confirm") });
+    const panel = within(layer).getByTestId("reject-reasons");
+    expect(within(layer).queryByTestId("greek-curability")).toBeNull();
+    fireEvent.click(input(panel, "GORGIAS"));
+    fireEvent.click(input(panel, "PERJURY"));
+    fireEvent.click(input(panel, "INJUSTICE"));
+    expect(stamp).toBeDisabled(); // 标记必选
+    fireEvent.click(input(panel, "INCURABLE"));
+    expect(stamp).not.toBeDisabled();
+    fireEvent.click(stamp);
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    const sent = judgmentApi.conclude.mock.calls[0][1];
+    expect(sent).toMatchObject({ verdict: "FAILED", greek_account: "GORGIAS", fail_reasons: ["PERJURY", "INJUSTICE"], greek_curability: "INCURABLE" });
+    expect(sent).not.toHaveProperty("destination_realm_id");
+    expect(sent).not.toHaveProperty("term_years");
+  });
+
+  it("服务端的理由拒绝码有译文,不回显后端英文", async () => {
+    judgmentApi.conclude.mockRejectedValue({ response: { status: 400, data: { error: "Choose a reason", code: "fail_reason_required" } } });
+    renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "2" });
+    await concludeViaLayer();
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.fail_reason_errors.fail_reason_required"), "error"));
   });
 });

@@ -200,7 +200,15 @@ function JudgmentQueuePageContent() {
     >
       {soul && <SoulFilterChip soulId={soul} onClear={clearSoul} />}
       {pending ? (
-        <JudgmentClaimQueue key={`${q}|${soul}`} initialSearch={q} soul={soul} />
+        <JudgmentClaimQueue
+          key={`${q}|${soul}`}
+          initialSearch={q}
+          soul={soul}
+          onViewConcluded={() => {
+            setTab("concluded");
+            setPage(1);
+          }}
+        />
       ) : (
       <>
       {/* 「已结案」的筛选条:搜索 / 裁决 / 文明;导出在右端,带同一组筛选与灵魂、排序(不带页码)。 */}

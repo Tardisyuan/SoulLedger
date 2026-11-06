@@ -19,8 +19,11 @@ async function concludeOpen(page: Page, name: string, verdict: "PASSED" | "FAILE
   await page.getByRole("button", { name: "进入盖印确认" }).click();
   // With the flow's stations to pick, there is one more step before the stamp.
   const next = page.getByRole("button", { name: "下一步" });
-  const final = page.getByRole("button", { name: /落判并发起|盖印并结案/ });
+  const final = page.getByRole("button", { name: /落判并发起|盖印并结案|不过 · 落印/ });
   await expect(next.or(final).first()).toBeVisible();
+  // v4 S10: a failed original names its reason first (the first the hall offers); the stamp stays grey until then.
+  const reasons = page.getByTestId("reject-reasons");
+  if (await reasons.isVisible()) await reasons.locator("input:not([disabled])").first().check({ force: true });
   if (await next.isVisible()) await next.click();
   await final.first().click();
 }

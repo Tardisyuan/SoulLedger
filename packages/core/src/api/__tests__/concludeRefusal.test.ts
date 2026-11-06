@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FAIL_REASON_REFUSALS,
   NOT_CONCLUDABLE_REFUSALS,
   PLACEMENT_REFUSALS,
   SENTENCE_PLAN_REFUSAL_CODES,
@@ -18,6 +19,7 @@ describe("concludeRefusalOf", () => {
     ...SENTENCE_PLAN_REFUSAL_CODES.map((code) => ["plan", code] as const),
     ...WEIGHING_REFUSALS.map((code) => ["weighing", code] as const),
     ...NOT_CONCLUDABLE_REFUSALS.map((code) => ["not_concludable", code] as const),
+    ...FAIL_REASON_REFUSALS.map((code) => ["fail_reason", code] as const),
   ])("reads %s for %s", (kind, code) => {
     expect(concludeRefusalOf(refused(code))).toEqual({ kind, code });
   });
@@ -29,6 +31,7 @@ describe("concludeRefusalOf", () => {
       ...SENTENCE_PLAN_REFUSAL_CODES,
       ...WEIGHING_REFUSALS,
       ...NOT_CONCLUDABLE_REFUSALS,
+      ...FAIL_REASON_REFUSALS,
     ];
     expect(new Set(all).size).toBe(all.length);
   });

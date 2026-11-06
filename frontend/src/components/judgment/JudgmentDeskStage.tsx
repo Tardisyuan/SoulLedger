@@ -250,6 +250,8 @@ export function JudgmentConfirmLayer({
   stations,
   step = 1,
   onStep,
+  reasons,
+  reasonsReady = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -269,6 +271,12 @@ export function JudgmentConfirmLayer({
   stations?: ReactNode;
   step?: 1 | 2;
   onStep?: (step: 1 | 2) => void;
+  /**
+   * 规范 v4 S10:「不过」的理由面板(希腊「通过」只选文书),画在第 1 步里。没选够(`reasonsReady` 为假)时
+   * 主键置灰;不过而又不用选站时主键写「不过 · 落印」,旁边「放回」关层。落印不可撤回。
+   */
+  reasons?: ReactNode;
+  reasonsReady?: boolean;
 }) {
   const { t } = useI18n();
   const code = verdict as Verdict;
@@ -328,7 +336,7 @@ export function JudgmentConfirmLayer({
                   <Button type="button" variant="secondary" size="lg" className="flex-1" disabled={pending} onClick={() => onStep?.(1)}>
                     {t("workflow.pick.back")}
                   </Button>
-                  <Button type="button" variant="primary" size="lg" className="flex-1 gap-2" loading={pending} onClick={onConfirm} ref={stampRef} disabled={!!refusal}>
+                  <Button type="button" variant="primary" size="lg" className="flex-1 gap-2" loading={pending} onClick={onConfirm} ref={stampRef} disabled={!!refusal || !reasonsReady}>
                     {pending ? t("judgment.detail.concluding") : t("judgment.detail.conclude_with_workflow")}
                     <Kbd>⌘⏎</Kbd>
                   </Button>
@@ -351,26 +359,36 @@ export function JudgmentConfirmLayer({
                     </span>
                   </span>
                 </div>
+                {reasons && <div className="mt-8">{reasons}</div>}
                 {refusal && <div className="mt-8">{refusal}</div>}
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="lg"
-                  className="mt-8 w-full gap-2"
-                  loading={pending}
-                  onClick={withWorkflow && stations ? () => onStep?.(2) : onConfirm}
-                  ref={stampRef}
-                  disabled={!!refusal}
-                >
-                  {pending
-                    ? t("judgment.detail.concluding")
-                    : withWorkflow && stations
-                      ? t("workflow.pick.next")
-                      : withWorkflow
-                        ? t("judgment.detail.conclude_with_workflow")
-                        : t("judgment.desk.stamp")}
-                  <Kbd>⌘⏎</Kbd>
-                </Button>
+                <div className="mt-8 flex gap-3">
+                  {reasons && (
+                    <Button type="button" variant="secondary" size="lg" className="flex-1" disabled={pending} onClick={onClose}>
+                      {t("reject.sheet.cancel")}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    className="flex-1 gap-2"
+                    loading={pending}
+                    onClick={withWorkflow && stations ? () => onStep?.(2) : onConfirm}
+                    ref={stampRef}
+                    disabled={!!refusal || !reasonsReady}
+                  >
+                    {pending
+                      ? t("judgment.detail.concluding")
+                      : withWorkflow && stations
+                        ? t("workflow.pick.next")
+                        : code === "FAILED" && reasons
+                          ? t("reject.sheet.confirm")
+                          : withWorkflow
+                            ? t("judgment.detail.conclude_with_workflow")
+                            : t("judgment.desk.stamp")}
+                    <Kbd>⌘⏎</Kbd>
+                  </Button>
+                </div>
                 <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
               </>
             )}

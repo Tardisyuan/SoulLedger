@@ -47,6 +47,7 @@ import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
+import { CivEmptyState } from "@/src/components/ui/CivEmptyState";
 import { withFrom } from "@/src/lib/backSource";
 
 /** 此刻不能认领:枉死城 / 埃及木乃伊 70 天候着,埃及案到不了殿(永远候着),或希腊亡魂过不了阿刻戎(第五十七批 G-1)。 */
@@ -54,7 +55,7 @@ const onHold = (j: Judgment) => isHeldUntilFatedDate(j) || isDuatBarred(j) || !!
 
 /**
  * 审判队列的「待审」一面(规范 v3 第 7 轮 `QueuePage`,落在规范 v1 第三类 A·02 的四组上):
- * 按「谁在处理」分四组 —— 我认领 / 待认领 / 他人认领 / 暂缓。组是服务端的 `?group=`,组头的数是
+ * 按「谁在处理」分四组 —— 我手上 / 待定 / 别人在审 / 待认领(v4 S05 的组序)。组是服务端的 `?group=`,组头的数是
  * `queue-counts/`,两者用同一组 `court` / `civilization` / `search`,所以数与行出自同一个筛选。
  * 每组各自分页;排序默认等待最久在上(`ordering=created_at`),可切成最近入队。
  * 文明下拉:ADMIN 列全部文明,其余角色只列自己租户的文明。
@@ -79,7 +80,15 @@ const onHold = (j: Judgment) => isHeldUntilFatedDate(j) || isDuatBarred(j) || !!
  * 取消认领此前只有 C 键,这是它的鼠标路径。
  */
 
-const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
+/**
+ * 规范 v4 S05 的组序:我手上 → 待定(仍归本人,不计期限)→ 别人在审 → 待认领。待定的行与「我手上」同一个样子,
+ * 不加灰(第四批 ②)。
+ */
+const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "deferred", "others", "unclaimed"];
+/** v4 队列的两个标签(`queue.tab.*`):与四个组不互斥,是列表与计数上的一个筛选(`?overdue=` / `?returned=`)。 */
+const QUEUE_TABS = ["overdue", "returned"] as const;
+type QueueTab = (typeof QUEUE_TABS)[number];
+const DAY_SECONDS = 86_400;
 /** 排序:列表接口的 `ordering`(`JudgmentViewSet.ordering_fields`)。默认等待最久在上 —— 队列先进先出。 */
 const ORDERINGS = ["created_at", "-created_at"] as const;
 type QueueOrdering = (typeof ORDERINGS)[number];
@@ -176,7 +185,11 @@ export function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
 }
 
 /** `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。`soul`:`?soul=`,只看这个灵魂的案子(列表与四组计数同用)。 */
-export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialSearch?: string; soul?: string } = {}) {
+export function JudgmentClaimQueue({
+  initialSearch = "",
+  soul = "",
+  onViewConcluded,
+}: { initialSearch?: string; soul?: string; onViewConcluded?: () => void } = {}) {
   const { t, locale, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
@@ -193,6 +206,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   const [stale, setStale] = useState("");
   const [ordering, setOrdering] = useState<QueueOrdering>("created_at");
   const [mineOnly, setMineOnly] = useState(false);
+  const [queueTab, setQueueTab] = useState<QueueTab | null>(null);
   const [pages, setPages] = useState<Record<JudgmentQueueGroup, number>>({ mine: 1, unclaimed: 1, others: 1, deferred: 1 });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | null>(null);
@@ -229,6 +243,9 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   if (court) filters.court = court;
   if (civilization) filters.civilization = civilization;
   if (stale) filters.stale = stale;
+  /** 标签上的数不随所选标签收窄(两个标签各自的数都要看得见);组头的数与行随它走。 */
+  const tabFilters = { ...filters };
+  if (queueTab) filters[queueTab] = "true";
   /* 文明的选项:ADMIN 看得到全部文明;其余角色只列自己租户的那一个(后端按租户收窄,
      列别的文明只会给出一个永远为空的选项)。 */
   const ownCivilization = user?.tenant?.code ? TENANT_CODE_TO_CIVILIZATION[user.tenant.code] : undefined;
@@ -236,6 +253,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   const resetPages = () => setPages({ mine: 1, unclaimed: 1, others: 1, deferred: 1 });
 
   const counts = useJudgmentQueueCounts(filters);
+  const tabCounts = useJudgmentQueueCounts(tabFilters);
   const hall = useHall(t("plaque.office.trials"));
   const groupQueries = useQueries({
     queries: GROUPS.map((group) => {
@@ -247,7 +265,8 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
       };
     }),
   });
-  const shownGroups = GROUPS.filter((g) => !mineOnly || g === "mine");
+  // 「我手上」含待定的那几件(第四批:仍算本人认领)。
+  const shownGroups = GROUPS.filter((g) => !mineOnly || g === "mine" || g === "deferred");
   /**
    * 本组本页的行;本次会话延后的排到本组末尾(稳定排序,其余次序不动)。
    * 「待认领」里候在枉死城的(第五十一批 F-2)排在可认领的后面,按候至日期先后 —— 只在这一页之内排。
@@ -426,7 +445,32 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   });
 
   const waitingDays = (j: Judgment) => Math.max(0, Math.floor((now - new Date(j.created_at).getTime()) / DAY_MS));
-  const colSpan = canExecute ? 11 : 10;
+  const colSpan = canExecute ? 12 : 11;
+  /**
+   * 期限一格(v4 D10,系统自设):待定中、未到可认领、殿没设天数 = 「不计」;过了 = 「超 n 日」;否则「n 日」。
+   * 天数向上取整:还剩 3 小时也是「1 日」,超了 3 小时也是「超 1 日」。
+   */
+  const deadlineOf = (j: Judgment): { text: string; over: boolean } => {
+    const left = j.deadline_remaining_seconds;
+    if (left == null || j.deferred_at) return { text: t("queue.deadline.none"), over: false };
+    if (left < 0) return { text: t("queue.deadline.over", { n: String(Math.ceil(-left / DAY_SECONDS)) }), over: true };
+    return { text: t("queue.deadline.days", { n: String(Math.ceil(left / DAY_SECONDS)) }), over: false };
+  };
+  /** 队列清空(没有任何筛选时一件未结的都没有):各文明自己的说法(S08),不是「本组暂无」四行。 */
+  const unfiltered = !search && !soul && !court && !civilization && !stale && !queueTab;
+  if (unfiltered && counts.data?.total === 0) {
+    return (
+      <CivEmptyState
+        action={
+          onViewConcluded ? (
+            <Button type="button" size="md" variant="secondary" onClick={onViewConcluded}>
+              {t("empty.view_concluded")}
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
 
   return (
     <div>
@@ -455,6 +499,26 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
               className={`${SEGMENT(mineOnly === mine)} ${mine ? "-ml-px" : ""}`}
             >
               {t(mine ? "judgment.claim.filter_mine" : "judgment.claim.filter_all")}
+            </button>
+          ))}
+        </div>
+        <div className="flex" data-testid="queue-tabs">
+          {QUEUE_TABS.map((tab, i) => (
+            <button
+              key={tab}
+              type="button"
+              aria-pressed={queueTab === tab}
+              onClick={() => {
+                setQueueTab((cur) => (cur === tab ? null : tab));
+                resetPages();
+                setFocused(null);
+              }}
+              className={`${SEGMENT(queueTab === tab)} ${i ? "-ml-px" : ""}`}
+            >
+              {t(`queue.tab.${tab}`)}
+              <span className="ml-2 font-mono text-2xs tabular-nums" data-testid={`tab-count-${tab}`}>
+                {tabCounts.data?.[tab] ?? "…"}
+              </span>
             </button>
           ))}
         </div>
@@ -611,6 +675,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
             <th scope="col" className="px-2 py-1 text-left font-normal max-xl:hidden">{t("judgment.claim.col_cycle_kind")}</th>
             <th scope="col" className="px-2 py-1 text-right font-normal max-xl:hidden">{t("judgment.detail.evidence")}</th>
             <th scope="col" className="px-2 py-1 text-right font-normal max-sm:hidden">{t("judgment.waiting")}</th>
+            <th scope="col" className="px-2 py-1 text-right font-normal">{t("queue.col.deadline")}</th>
             <th scope="col" className="w-11"><span className="sr-only">{t("common.row_actions")}</span></th>
           </tr>
         </thead>
@@ -632,6 +697,9 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                   {/* 「等待最久在上」只在它为真时说:换成「最近入队」就不说了。 */}
                   {((group === "unclaimed" && ordering === "created_at") || group === "others") && (
                     <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t(`judgment.claim.hints.${group}`)}</span>
+                  )}
+                  {group === "deferred" && (
+                    <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t("queue.deferred_hint")}</span>
                   )}
                 </th>
               </tr>
@@ -670,7 +738,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                          延后的行(B12):不加色标、不变灰,只把透明度降到 0.56;放回后色标重新出现。 */
                       className={`relative h-(--table-row-h) border-b border-[oklch(var(--color-line))] ${
                         isSel || isFocus ? ROW_SELECTED : `${ROW_HOVER} ${marked ? ROW_MARK_ROW : ""}`
-                      } ${group === "deferred" ? "opacity-[0.56]" : ""}`}
+                      }`}
                     >
                       {canExecute && (
                         <td className="w-6 px-1 relative z-10">
@@ -816,6 +884,14 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                           </span>
                         )}
                       </td>
+                      <td
+                        data-testid="deadline-cell"
+                        className={`px-2 text-right font-mono text-xs tabular-nums whitespace-nowrap ${
+                          deadlineOf(j).over ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"
+                        }`}
+                      >
+                        {deadlineOf(j).text}
+                      </td>
                       <td className="w-11 relative z-10 text-right">
                         <ActionsMenu
                           menuLabel={`${t("common.row_actions")} · ${j.soul_name || t(MISSING_LABEL_KEY.unrecorded)}`}
@@ -827,7 +903,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                               ? [{ key: "release", label: t("judgment.claim.release"), onSelect: () => releaseOne(j.id), disabled: release.isPending }]
                               : []),
                             ...(canExecute && group === "deferred"
-                              ? [{ key: "undefer", label: t("judgment.claim.undefer"), onSelect: () => undeferOne(j.id), disabled: undefer.isPending }]
+                              ? [{ key: "undefer", label: t("action.undo"), onSelect: () => undeferOne(j.id), disabled: undefer.isPending }]
                               : []),
                             ...(group !== "deferred" && !laterThisSession
                               ? [{ key: "defer", label: t("judgment.queue.defer"), onSelect: () => deferForSession(j.id) }]

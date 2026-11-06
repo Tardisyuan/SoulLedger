@@ -25,6 +25,8 @@ import { Button } from "@/src/components/ui/Button";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
 import { VERDICT_KEY_CLASS, VerdictKeyContent } from "@/src/components/judgment/JudgmentDesk";
+import { reasonsShown } from "@/src/components/judgment/RejectReasonPanel";
+import { withFrom } from "@/src/lib/backSource";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -125,10 +127,16 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const rule = useCallback(
     (verdict: VerdictCode) => {
       if (!judgment) return;
+      // v4 S10:原审判「不过」(希腊判「通过」也一样)要先选理由 / 文书,这一屏没有理由面板 —— 送到审判台,
+      // 在那里的盖印确认层里选,而不是发一个必然被 400 `fail_reason_required` 拒的请求。
+      if ((judgment.kind ?? "ORIGINAL") === "ORIGINAL" && reasonsShown(judgment.civilization, verdict)) {
+        router.push(withFrom(`/judgment/${judgment.id}`, "/judgment/queue"));
+        return;
+      }
       setStamp((n) => n + 1);
       void submitVerdict({ verdict, notes, createWorkflow });
     },
-    [judgment, submitVerdict, notes, createWorkflow]
+    [judgment, submitVerdict, notes, createWorkflow, router]
   );
 
   const leave = useCallback(() => {
