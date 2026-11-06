@@ -27,6 +27,10 @@ ssh -o BatchMode=yes "$GATES_REMOTE" "rm -rf $RWORK/frontend/e2e/demo" || exit 1
   | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P frontend/.next/' --filter='P .sl-*' \
       --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" || exit 1
 
+: "${1:?usage: scripts/demo-remote.sh <script under /app> [args...]}"
+# Every argument goes through, each %q-quoted once for the remote shell, so one with a space stays one.
+ARGS="/app/$(printf '%q' "$1")"; shift
+[ $# -gt 0 ] && ARGS="$ARGS$(printf ' %q' "$@")"
 BASE_URL="${GATES_REMOTE_DB_URL%/*}"
 NAME="sl-demo-$$"
 trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $NAME" >/dev/null 2>&1' EXIT
@@ -35,4 +39,4 @@ trap 'exit 130' INT TERM
 ssh -o BatchMode=yes "$GATES_REMOTE" "docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
     ${DEMO_PUBLISH:-} --cpus ${DEMO_CPUS:-8} --memory ${DEMO_MEMORY:-16g} --shm-size 2g -v $RWORK:/app -v $RDIR/tmp/demo:/sl-tmp -w /app \
     -e SL_PG_BASE='$BASE_URL' -e SL_DEMO_DB_URL='$BASE_URL/sl_demo_record' -e PW_WORKERS=${PW_WORKERS:-4} -e CI= \
-    $IMG bash /app/$1"
+    $IMG bash $ARGS"

@@ -126,7 +126,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       { id: "n2", name: "酆都大帝 · 直审", court: "酆都", type: "直审", order: 2 },
     ],
   },
-  // ========== 欧洲天堂地狱 ==========
+  // ========== 欧洲天堂与地狱 ==========
   //
   // 依据：docs/lore-verification/verify-christian-cast.md。这三个模板此前让
   // Michael 同时坐初审与终审，并在中间插进 Gabriel 与「天使议会」。四处都没有
