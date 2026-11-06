@@ -92,7 +92,7 @@ def test_a_fresh_plan_is_served_at_home_with_the_rest_not_started(cn, eg, eu):
 
 def test_a_soul_without_a_plan_gets_the_empty_state(cn):
     _, client = ready_soul(cn, name="无计划")
-    assert _get(client) == {"state": "none", "rebirth_open": True, "stations": []}
+    assert _get(client) == {"state": "none", "greek_account": "", "rebirth_open": True, "stations": []}
 
 
 def test_another_souls_plan_and_another_tenants_plan_are_invisible(cn, eg, eu):

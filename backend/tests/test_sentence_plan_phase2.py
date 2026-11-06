@@ -236,7 +236,7 @@ def test_the_notice_names_soul_stop_and_civilization_but_no_case_detail(cn, eg, 
     names = eg.hall_names
     assert "客魂" in note.message and "2" in note.message and names["zh-Hans"] in note.message
     assert note.params == {"soul": "客魂", "order": 2, "tenant": names["zh-Hans"], "tenant_en": names["en"],
-                           "tenant_egy": names["egy"]}
+                           "tenant_egy": names["egy"], "plan_civ": "CHINESE"}
     for secret in (str(p.origin_judgment_id), "PASSED", "EG_DUAT_TEST_HALL"):
         assert secret not in note.message and secret not in note.title
 
