@@ -49,6 +49,16 @@ function serve(c: Record<string, unknown> = CASE) {
 
 beforeEach(() => jest.clearAllMocks());
 
+/**
+ * 落印成功后卡片先飞出(Animated.timing,约 200ms),动画结束才从卡堆里拿掉并重取列表与计数。
+ * 等到卡片没了、空状态出来,再把重取的那两个请求冲掉 —— 否则动画的更新落在测试之后(act 警告,jest.setup.js 判红)。
+ */
+async function settled() {
+  await waitFor(() => expect(screen.queryByTestId("swipe-card-j-1")).toBeNull());
+  expect(await screen.findByTestId("swipe-empty")).toBeTruthy();
+  await act(async () => {});
+}
+
 it("右边圆钮:通过,直接落印,只带裁决", async () => {
   serve();
   renderOfficer(<SwipeScreen onBack={() => {}} />);
@@ -57,6 +67,7 @@ it("右边圆钮:通过,直接落印,只带裁决", async () => {
   await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
   await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
   await waitFor(() => expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" }));
+  await settled();
 });
 
 it("左边圆钮:先选理由;没选时「不过 · 落印」是灰的,选了才发,带罪目", async () => {
@@ -71,6 +82,7 @@ it("左边圆钮:先选理由;没选时「不过 · 落印」是灰的,选了才
   await waitFor(() =>
     expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "FAILED", fail_reasons: ["TRADE_FRAUD"], fail_reason_note: "" })
   );
+  await settled();
 });
 
 it("埃及:天平判了通过,左边圆钮不可点", async () => {
