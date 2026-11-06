@@ -1383,7 +1383,7 @@ describe("v3 · 盖印确认层", () => {
     expect(radio("FAILED").checked).toBe(true);
   });
 
-  it("盖印并结案 → 同一层翻成「已写入记录」并落印;「完成」关层", async () => {
+  it("落印并结案 → 同一层翻成「已写入记录」并落印;「完成」关层", async () => {
     renderPage();
     await screen.findAllByRole("radio");
     fireEvent.keyDown(document.body, { key: "1" });

@@ -40,7 +40,7 @@ test.describe("print media", () => {
 
     await expect(page.getByTestId("verdict-bar")).toBeHidden();
     await expect(page.getByText("按数字键 1–4 选择判决")).toBeHidden();
-    await expect(page.getByText("落判不可撤回")).toBeHidden();
+    await expect(page.getByText("落印不可撤回")).toBeHidden();
     await expect(page.getByText("发起审批流程")).toBeHidden();
     await expect(page.getByText("写评议")).toBeHidden(); // the label of the (hidden) input
     await expect(page.getByRole("link", { name: /返回审判列表/ })).toBeHidden();

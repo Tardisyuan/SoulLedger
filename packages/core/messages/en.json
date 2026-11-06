@@ -30,20 +30,20 @@
     "search_hint": "Search, jump, or give a command"
   },
   "auth": {
-    "login": "Login",
-    "logout": "Logout",
+    "login": "Sign in",
+    "logout": "Sign out",
     "username": "Username",
     "password": "Password",
-    "logging_in": "Logging in...",
-    "login_success": "Login successful",
-    "error_invalid_credentials": "Invalid username or password",
+    "logging_in": "Signing in…",
+    "login_success": "Signed in",
+    "error_invalid_credentials": "Account or password is incorrect",
     "error_invalid_token": "Invalid token",
     "error_token_expired": "Token has expired",
-    "error_login_failed": "Login failed",
+    "error_login_failed": "Sign-in failed",
     "error_locked": "Locked. Try again in {{minutes}} min",
-    "confirm_logout": "Confirm Logout",
+    "confirm_logout": "Sign out?",
     "confirm_logout_desc": "Are you sure you want to log out?",
-    "confirm_logout_btn": "Confirm Logout",
+    "confirm_logout_btn": "Sign out",
     "statute_of_day": "Statute of the day · a different one each visit",
     "statute_fixed_note": "Statutes can only be read after signing in; these few are quoted verbatim from the corpus and do not change.",
     "numbering": "How the four civilizations number their articles",
@@ -58,7 +58,7 @@
     "rate_limited": "Too many requests. Try again later",
     "back_to_login": "Back to sign in",
     "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password.",
-    "subtitle": "Sign in with the account your court issued.",
+    "subtitle": "Sign in with the account your hall issued.",
     "account": "Account",
     "console": "SoulLedger · Officer console",
     "statute_eyebrow": "Today's statute",
@@ -69,7 +69,7 @@
     "error_credentials": "Account or password is incorrect",
     "error_attempts_body": "{{n}} more tries before the account locks for {{m}} minutes.",
     "error_locked_title": "Account locked",
-    "error_locked_body": "{{n}} failed attempts. Try again after {{time}}, or ask your court admin to unlock it.",
+    "error_locked_body": "{{n}} failed attempts. Try again after {{time}}, or ask your hall admin to unlock it.",
     "error_network": "Can't reach the server",
     "error_network_body": "What you typed is kept. Check your connection and retry.",
     "submitting": "Signing in",
@@ -239,7 +239,7 @@
       "GREEK": "Three judges parting the ways, Er's thousand-year cycle, the water of Lethe"
     },
     "your_realm": "Your realm",
-    "civilizations_eyebrow_sub": "Four realms · one ledger",
+    "civilizations_eyebrow_sub": "Four realms · four ledgers",
     "signed_in_as": "Signed in · {{name}}"
   },
   "footer": {
@@ -1339,7 +1339,7 @@
       "node_name": "Node Name",
       "node_type": "Node Type",
       "court_code": "Court / Palace Code",
-      "court_placeholder": "e.g. First Court, Hall of Truth",
+      "court_placeholder": "e.g. First Court, Hall of Two Truths",
       "approver_type": "Approver Type",
       "approver_role": "Approver Role",
       "approver_placeholder": "— select an approver role —",
@@ -2051,7 +2051,8 @@
       "search": "Soul name or ID",
       "export": "Export",
       "export_failed": "Export failed"
-    }
+    },
+    "advisory_disclaimer_eg": "The scale reads the admitted deeds: a heart no heavier than the feather passes, a heavier one goes to Ammit. No officer chooses otherwise."
   },
   "judgment": {
     "title": "Judgment",
@@ -2070,7 +2071,7 @@
     "view": "View",
     "verdicts": {
       "passed": "Passed",
-      "failed": "Condemned",
+      "failed": "Fail",
       "purgatory": "Unresolved",
       "retry": "Retry"
     },
@@ -2194,7 +2195,7 @@
     "statute_corpus": {
       "HELL_LAW": "Hell Law",
       "GONGGUOGE": "Ledger of Merit and Demerit",
-      "NEGATIVE_CONFESSION": "Declaration of Innocence",
+      "NEGATIVE_CONFESSION": "Negative Confession",
       "DEADLY_SIN": "Deadly Sins",
       "INFERNO": "Circles of the Inferno",
       "GORGIAS": "Gorgias — the Judgement",
@@ -2493,7 +2494,7 @@
       "title": "Weighing of the heart",
       "scale": "Heart {{weight}} · feather {{counterweight}}",
       "gives": "The scale gives: {{verdict}}",
-      "wavering_hint": "Unresolved or Retry = the scale wavers: Thoth records it and the heart is weighed again; no destination.",
+      "wavering_hint": "The scale wavers, or Retry: Thoth records it and the heart is weighed again; no destination.",
       "contradicts": "Contradicts the scale",
       "result": {
         "LIGHTER": "Not heavier than the feather",
@@ -3058,15 +3059,15 @@
       "EU_HELL_9TH": "Circle 9",
       "EU_ACHERON": "Acheron",
       "EU_PLATO_MEADOW": "Meadow at the Crossroads",
-      "GR_ACHERON": "阿刻戎渡口",
-      "GR_ISLES_OF_THE_BLESSED": "至福岛",
-      "GR_TARTARUS": "塔尔塔罗斯",
-      "EG_DUAT_ENTRY": "杜阿特入口",
-      "EG_HALL_TWO_TRUTHS": "真理殿堂",
-      "EG_SEVEN_ARRWT": "七道通路",
-      "EG_TWENTYONE_SEBKHET": "二十一道门户",
-      "EG_AARU": "阿鲁之地",
-      "EG_ANNIHILATION": "第二次死亡",
+      "GR_ACHERON": "Acheron",
+      "GR_ISLES_OF_THE_BLESSED": "Isles of the Blessed",
+      "GR_TARTARUS": "Tartarus",
+      "EG_DUAT_ENTRY": "Duat entrance",
+      "EG_HALL_TWO_TRUTHS": "Hall of Two Truths",
+      "EG_SEVEN_ARRWT": "Seven Approaches",
+      "EG_TWENTYONE_SEBKHET": "Twenty-One Portals",
+      "EG_AARU": "Field of Reeds",
+      "EG_ANNIHILATION": "Annihilation",
       "EU_ANTINFERNO": "Vestibule"
     },
     "names": {
@@ -3103,11 +3104,11 @@
       "EU_HELL_8TH": "Eighth Circle - Fraud",
       "EU_HELL_9TH": "Ninth Circle - Treachery",
       "EU_ACHERON": "The Crossing of Acheron",
-      "EU_PLATO_MEADOW": "The Meadow at the Parting of the Ways",
+      "EU_PLATO_MEADOW": "The Meadow at the Crossroads",
       "GR_ACHERON": "The Crossing of Acheron",
       "GR_ISLES_OF_THE_BLESSED": "The Isles of the Blessed",
       "GR_TARTARUS": "Tartarus",
-      "EG_DUAT_ENTRY": "Gate of Duat",
+      "EG_DUAT_ENTRY": "Entrance to the Duat",
       "EG_HALL_TWO_TRUTHS": "Hall of Two Truths",
       "EG_SEVEN_ARRWT": "The Seven Approaches to the House of Osiris",
       "EG_TWENTYONE_SEBKHET": "The Twenty-One Portals of the Field of Reeds",
@@ -3195,7 +3196,7 @@
         "PARADISO": "Paradiso"
       },
       "fork": {
-        "PASS": "✓ Pass · the heart lighter than the feather",
+        "PASS": "✓ Pass · the heart no heavier than the feather",
         "FAIL": "✕ Fail · the heart heavier than the feather",
         "LEFT": "← Left · downward",
         "RIGHT": "Right · upward →"
@@ -3382,7 +3383,7 @@
   },
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
-    "subtitle": "Joint judgments across civilizations",
+    "subtitle": "Several civilizations judging one soul",
     "list_title": "Cross-Judgment Cases",
     "no_judgments": "No cross-tenant judgments yet",
     "initiated_by": "Initiated by",
@@ -3422,7 +3423,7 @@
     "end": "End cross-realm judgment",
     "end_conclusion": "Conclusion",
     "end_pass": "Pass",
-    "end_fail": "Not pass",
+    "end_fail": "Fail",
     "end_note": "Note · required, shown on the original judgment",
     "end_body": "After this, no one can join, convene or change the conclusion. The original judgment can then be closed.",
     "cancel": "Cancel cross-realm judgment",
@@ -3675,7 +3676,7 @@
     "greeting_morning": "Good morning, {{name}}",
     "greeting_afternoon": "Good afternoon, {{name}}",
     "greeting_evening": "Good evening, {{name}}",
-    "stats_eyebrow": "Souls in this court",
+    "stats_eyebrow": "Souls in this hall",
     "stats_as_of": "As of {{time}}",
     "stats_go_judging": "Go to judgment →",
     "stats_filter": "Filter by state →",
@@ -3695,7 +3696,7 @@
     "error_stats": "Stats didn't load. The shortcuts below still work.",
     "error_activity": "The audit log can't be read right now.",
     "onboarding_can_change": "You can change all four later.",
-    "onboarding_wrong_identity": "Wrong identity? Contact your court admin.",
+    "onboarding_wrong_identity": "Wrong identity? Contact your hall admin.",
     "onboarding_view_title": "What should you see after signing in?",
     "onboarding_back": "Back",
     "onboarding_skip": "Skip",
@@ -4415,7 +4416,7 @@
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
       "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed.",
-      "approval_cancelled": "The approval workflow was stopped, by a cancelled joint judgment or by an administrator, and never finished: it cannot be executed as is. The hall lead (an officer who can reassign cases) can reopen this judgment as a new case."
+      "approval_cancelled": "The approval workflow was stopped, by a cancelled cross-realm judgment or by an administrator, and never finished: it cannot be executed as is. The hall lead (an officer who can reassign cases) can reopen this judgment as a new case."
     },
     "term_overdue": "Term ended, not released",
     "overdue_since": "Ended {{date}}"
@@ -4575,6 +4576,8 @@
       "cooldown_invalid": "Enter a whole number from 0 to 365",
       "rebirth_quota_title": "Rebirth quota",
       "rebirth_quota_body": "The most rebirths each path may take in a month. Leave blank for no limit. When a path is full, souls wait among those awaiting rebirth until next month or until the limit is raised.",
+      "rebirth_quota_body_single": "The most rebirths this hall may take in a month. Leave blank for no limit. When it is full, souls wait among those awaiting rebirth until next month or until the limit is raised.",
+      "rebirth_quota_single_row": "Rebirths a month",
       "rebirth_quota_unlimited": "No limit",
       "rebirth_quota_limit_col": "Monthly limit",
       "rebirth_quota_used_col": "Done this month",
@@ -4890,13 +4893,13 @@
     "login": {
       "title": "Soul sign-in",
       "subtitle": "Use the soul code sent with your initial password",
-      "soul_code": "Soul code",
+      "soul_code": "Soul number",
       "password": "Password",
       "submit": "Sign in",
       "soul_code_hint": "10 letters and digits · on your slip, or scan it",
       "scan": "Scan",
       "scanned": "✓ Filled in from the code",
-      "bad_char": "! Soul numbers don't use \"{{c}}\"",
+      "bad_char": "! A soul number doesn't use \"{{c}}\"",
       "bad_char_body": "Numbers never use 0, O, 1, I or L. Check your slip again.",
       "bad_symbol": "! Only letters and digits",
       "bad_paste": "! The pasted text has characters a number never uses",
@@ -5187,10 +5190,10 @@
         "demerit_entry": "Heart",
         "records": "Feather and heart records",
         "judgments": "Weighing of the heart",
-        "court": "Hall",
+        "court": "Hall of Two Truths",
         "judging": "Weighing",
-        "past_read_only": "Past lives are read-only. The Duat takes no applications or appeals.",
-        "no_past_lives": "The Duat has no past lives. You have this one life, and nothing after it is recorded."
+        "past_read_only": "Past lives are read-only: no application or appeal can be made about them.",
+        "no_past_lives": "The Duat has no rebirth: there is no next life after this one."
       },
       "eu": {
         "past_read_only": "Past lives are read-only. Heaven and Hell take no applications or appeals.",
@@ -6269,7 +6272,7 @@
       "body": "Soul {{soul}} has served every stop of its sentence plan."
     },
     "cross_sentence_submitted": {
-      "title": "Joint sentence submitted",
+      "title": "Cross-realm judgment stop filled in",
       "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."
     },
     "sentence_plan_amended": {
@@ -6330,7 +6333,7 @@
     },
     "cross_judgment_concluded_fail": {
       "title": "Cross-realm judgment concluded",
-      "body": "The cross-realm judgment {{title}} has concluded: rejected."
+      "body": "The cross-realm judgment {{title}} has concluded: fail."
     },
     "cross_judgment_cancelled": {
       "title": "Cross-realm judgment cancelled",
@@ -6830,7 +6833,7 @@
       "failed": "Something went wrong",
       "invalid_changes": "The changes are malformed",
       "empty_changes": "Add or remove at least one stop",
-      "foreign_node": "Stops can be added only in your own civilization; elsewhere the home judge opens a joint judgment",
+      "foreign_node": "Stops can be added only in your own civilization; elsewhere the home judge opens a cross-realm judgment",
       "foreign_realm": "That realm is not one of your civilization's",
       "unknown_node": "No such stop on this plan",
       "soul_is_here": "The soul is here; open an amendment judgment",
@@ -6869,13 +6872,13 @@
       "order_error": "Could not save the order",
       "eternal_not_last": "An eternal term must be the last stop; in this order the bench will be refused when it concludes",
       "no_stops": "No co-judge or chair is seated yet",
-      "open": "Open a joint judgment",
-      "open_title": "Open a joint judgment for {{soul}}",
-      "open_hint": "The joint judgment sets the stops abroad; it must have ended before this case concludes.",
+      "open": "Open a cross-realm judgment",
+      "open_title": "Open a cross-realm judgment for {{soul}}",
+      "open_hint": "The cross-realm judgment sets the stops abroad; it must have ended before this case concludes.",
       "title_label": "Title",
       "description_label": "Description",
-      "opened": "Joint judgment opened",
-      "open_error": "Could not open the joint judgment",
+      "opened": "Cross-realm judgment opened",
+      "open_error": "Could not open the cross-realm judgment",
       "seat_title": "Seat a civilization",
       "seat_tenant": "Civilization",
       "seat_tenant_placeholder": "Choose a civilization",
@@ -6971,7 +6974,7 @@
       "gr": {
         "HELL": {
           "ACTIVE": "Being punished",
-          "WAITING": "Term ended, waiting to leave",
+          "WAITING": "Term ended, waiting to return",
           "ETERNAL": "Punished forever · incurable"
         },
         "PURGATORY": {
@@ -7094,7 +7097,7 @@
     },
     "switch": {
       "master": "Master switch",
-      "master_hint": "When off, 问一问 disappears for souls and officers alike. It turns itself off when this month's spend reaches the cap.",
+      "master_hint": "When off, Ask disappears for souls and officers alike. It turns itself off when this month's spend reaches the cap.",
       "env_off": "The deployment has the assistant turned off, so the switches here have no effect. Turning it back on is a deployment change, not something this page can do.",
       "env_off_short": "Turned off by the deployment; no effect here"
     },
@@ -7102,7 +7105,7 @@
       "hall": "Hall",
       "souls_homed": "Souls homed",
       "switch": "Switch",
-      "switch_label": "{{hall}} · 问一问",
+      "switch_label": "{{hall}} · Ask",
       "inactive": "No effect while the master switch is off",
       "saving": "Saving…",
       "saved": "Saved",
@@ -7236,7 +7239,7 @@
       "hint": "Evals run only as these two system-created identities, never a real account.",
       "ready": "Ready",
       "missing": "Missing",
-      "soul": "The 问一问 eval soul (eval only, cannot sign in)",
+      "soul": "The Ask eval soul (eval only, cannot sign in)",
       "officer": "Eval officer assist-eval-officer (eval only, cannot sign in)",
       "create": "Create eval identities",
       "creating": "Creating…",
@@ -7297,7 +7300,7 @@
       "entry_missed": "Not retrieved"
     },
     "try": {
-      "as_soul": "Asking as the 问一问 eval soul",
+      "as_soul": "Asking as the Ask eval soul",
       "as_officer": "Asking as assist-eval-officer",
       "question": "Question",
       "ask": "Ask",
@@ -7873,11 +7876,13 @@
       },
       "birth_name": "Birth name",
       "karma_group": "Life {{n}} · {{count}} entries",
+      "karma_group_life": "{{life}} · {{count}} entries",
       "merit_short": "Merit",
       "demerit_short": "Demerit",
       "source": "Source: {{source}}",
       "shown_count": "Showing {{shown}} of {{total}}",
       "judgment_meta": "Life {{n}} · {{verdict}} · {{status}}",
+      "judgment_meta_life": "{{life}} · {{verdict}} · {{status}}",
       "current_stop": "◐ Current stop",
       "no_disposition": "No disposition yet",
       "open_label": "Open {{name}}'s soul record",
@@ -8081,7 +8086,7 @@
       "full": "{{form}} is full this month ({{used}} of {{limit}}). The soul stays among those awaiting rebirth; try next month or once the limit is raised."
     },
     "not_applicable": {
-      "title": "No rebirth in {{civ}}",
+      "title": "No rebirth in the {{civ}} tradition",
       "body": "Here the road ends with the disposition; no soul is reborn. Rebirth applications exist only in Diyu and Greece.",
       "back": "Back to the overview"
     }
@@ -8598,13 +8603,13 @@
       },
       "eu": {
         "name": "Heaven and Hell",
-        "realm": "Paradiso · Inferno",
+        "realm": "Inferno · Purgatorio · Paradiso",
         "line": "St Peter at the gate, Purgatory cleansing terrace by terrace, Dante's nine circles sinking by sin."
       },
       "eg": {
         "name": "The Duat",
         "realm": "Duat",
-        "line": "The heart on the scale against Maat's feather, and forty-two denials heard one by one."
+        "line": "The heart on the scale against Ma'at's feather, and forty-two denials heard one by one."
       },
       "gr": {
         "name": "Hades",
@@ -8623,7 +8628,7 @@
         "core_detail": "API client, hooks, domain configuration, language packs. The rules are not here.",
         "backend": "Backend · the rules of all four underworlds",
         "letters": "Letters",
-        "tenancy": "Multi-tenant: each underworld is one tenant with its data kept apart; underworlds meet only through transfers and joint judgments."
+        "tenancy": "Multi-tenant: each underworld is one tenant with its data kept apart; underworlds meet only through transfers and cross-realm judgments."
       },
       "shared": "shared",
       "tests_title": "Automated tests",
@@ -8686,7 +8691,7 @@
         },
         "2": {
           "name": "The gate",
-          "body": "At the gate St Peter weighs the life: Heaven, Purgatory, or Hell."
+          "body": "At death Christ judges the soul: Heaven, Purgatory, or Hell."
         },
         "3": {
           "name": "Judgment",
@@ -8712,7 +8717,7 @@
         },
         "3": {
           "name": "The weighing",
-          "body": "The heart is weighed against Maat's feather; only a heart no heavier passes."
+          "body": "The heart is weighed against Ma'at's feather; only a heart no heavier passes."
         },
         "4": {
           "name": "Disposition",
@@ -8738,11 +8743,11 @@
         },
         "4": {
           "name": "The destination",
-          "body": "A disposition records where a soul goes and for how long. This step shows the whole hall's dispositions."
+          "body": "A disposition records where a soul goes and for how long. This step shows every disposition here."
         },
         "5": {
           "name": "A thousand years",
-          "body": "As in the myth of Er, the soul completes a thousand years below."
+          "body": "As in the myth of Er, the soul spends a thousand years, above or below."
         },
         "6": {
           "name": "Lethe",
@@ -8838,7 +8843,7 @@
     "doc_card": "Judgment document · from the last seal",
     "eg": {
       "fail": "Heavier than the feather · fail",
-      "pass": "Lighter than the feather · pass"
+      "pass": "No heavier than the feather · pass"
     },
     "reading": "Reading"
   },
@@ -8892,7 +8897,7 @@
   "landing": {
     "civ": {
       "cn": "Ten courts; the offence picks the court",
-      "eg": "The heart weighed against Maat's feather",
+      "eg": "The heart weighed against Ma'at's feather",
       "eu": "Sink by sin, or climb through Purgatory",
       "gr": "Three judges, a thousand years, Lethe"
     },
@@ -8977,7 +8982,7 @@
       "appeal": "Appeal · {{soul}}",
       "due_in": "Due in {{n}} days",
       "due_today": "Due today",
-      "joint": "Joint hearing invitation · {{hall}}",
+      "joint": "Cross-realm judgment invitation · {{hall}}",
       "returned": "Sent back · {{case}}",
       "title": "Waiting on this hall"
     },
@@ -9081,7 +9086,7 @@
   "soul": {
     "here": {
       "cn_court": "You are before {{court}}. A judge is reading the merits and faults of your life.",
-      "eg_weighing": "Your heart is weighed against Maat's feather.",
+      "eg_weighing": "Your heart is weighed against Ma'at's feather.",
       "eu_realm": "You are in {{realm}}.",
       "gr_thousand": "{{n}} years into the thousand-year road."
     }

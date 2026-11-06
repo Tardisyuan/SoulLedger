@@ -1,6 +1,7 @@
 "use client";
 
 import { hasRebirth } from "@/src/lib/hasRebirth";
+import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, REBIRTH_COOLDOWN_SETTING, REBIRTH_QUOTA_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
@@ -100,6 +101,10 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
   // 埃及、欧洲没有转世,整段不画,也不发这个字段。
   const { tenantCode } = useTenant();
   const rebirth = hasRebirth(tenant.civilization);
+  // Only Diyu is reborn into a path (core sixPaths.ts). Greece is stored as OTHER and counted as one row:
+  // a Greek hall sets one monthly limit, not one per path it does not have (wording review SH-4).
+  const sixPaths = hasSixPaths(tenant.civilization);
+  const quotaForms: readonly string[] = sixPaths ? QUOTA_FORMS : ["OTHER"];
   const [quotaStart] = useState(() => initialQuota(tenant));
   const [quota, setQuota] = useState<Record<string, string>>(quotaStart);
   const ownHall = tenantCode === tenant.code;
@@ -143,7 +148,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
       return;
     }
     const quotaPatch: Record<string, number | null> = {};
-    for (const f of rebirth ? QUOTA_FORMS : []) {
+    for (const f of rebirth ? quotaForms : []) {
       const next = parseQuotaLimit(quota[f]);
       if (next === undefined) {
         setErrors({ rebirth_monthly_quota: t("tenants.settings.rebirth_quota_invalid") });
@@ -264,7 +269,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
         {rebirth ? (
           <section className="flex flex-col gap-3 border-t border-[oklch(var(--color-block))] pt-6" data-testid="tenant-rebirth-quota">
             <h3 className="m-0 font-[family-name:var(--font-title)] text-lg text-[oklch(var(--color-ink))]">{t("tenants.settings.rebirth_quota_title")}</h3>
-            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("tenants.settings.rebirth_quota_body")}</p>
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t(sixPaths ? "tenants.settings.rebirth_quota_body" : "tenants.settings.rebirth_quota_body_single")}</p>
             {errors.rebirth_monthly_quota ? (
               <p role="alert" className="m-0 text-xs text-[oklch(var(--color-danger))]">{errors.rebirth_monthly_quota}</p>
             ) : null}
@@ -277,7 +282,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
                 </tr>
               </thead>
               <tbody>
-                {QUOTA_FORMS.map((form) => {
+                {quotaForms.map((form) => {
                   const limit = parseQuotaLimit(quota[form]);
                   const used = usedOf(form);
                   const note =
@@ -288,7 +293,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
                         : limit !== null && used !== undefined && limit < used
                           ? t("tenants.settings.rebirth_quota_below_used")
                           : null;
-                  const label = t(`reincarnation.forms.${form}`);
+                  const label = sixPaths ? t(`reincarnation.forms.${form}`) : t("tenants.settings.rebirth_quota_single_row");
                   return (
                     <tr key={form} data-quota-form={form} className="border-b border-[oklch(var(--color-rule))]">
                       <th scope="row" className="py-2 pr-2 text-left font-normal text-[oklch(var(--color-ink))]">{label}</th>

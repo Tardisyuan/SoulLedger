@@ -33,18 +33,18 @@ class Command(BaseCommand):
             {
                 "code": "EG_DUAT",
                 "display_name": "Egyptian Afterlife",
-                "hall_name": "真理殿堂", "hall_name_en": "Hall of Two Truths", "hall_name_egy": "Weret Maaty",
+                "hall_name": "两真之殿", "hall_name_en": "Hall of Two Truths", "hall_name_egy": "Weret Maaty",
                 "description": "Egyptian Duat — Field of Reeds (Aaru), Hall of Two Truths, Lake of Fire",
                 "dispatch_enabled": True,
             },
             {
                 "code": "GR_HADES",
                 "display_name": "Greek Afterlife",
-                # 殿司展示名的取法见 tenants/0012(同一组值)。
-                "hall_name": "岔路草原", "hall_name_en": "The Meadow at the Parting of the Ways",
+                # 殿司展示名的取法见 tenants/0012;EG_DUAT / GR_HADES 的名字按 docs 改过,见 tenants/0020。
+                "hall_name": "岔路口的草地", "hall_name_en": "The Meadow at the Crossroads",
                 "hall_name_egy": "Wat Wedja",
                 "description": (
-                    "Greek underworld — the meadow at the parting of the ways, "
+                    "Greek underworld — the meadow at the crossroads, "
                     "the Isles of the Blessed and Tartarus (Plato, Gorgias 524a)"
                 ),
                 "dispatch_enabled": True,
