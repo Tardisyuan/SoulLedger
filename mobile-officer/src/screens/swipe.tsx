@@ -13,7 +13,7 @@
  * 落印走 `confirmedDecision`(我的 › 批准前验证面容 / 指纹),同其他决定。
  */
 import { concludeRefusalOf, judgmentApi, type ConcludeJudgmentPayload, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { Animated, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Circle } from "react-native-svg";
@@ -21,7 +21,7 @@ import Svg, { Circle } from "react-native-svg";
 import { submitVerdict } from "../decisions";
 import { confirmedDecision, notConfirmedKey } from "../deviceCheck";
 import { ActionButton } from "../kit";
-import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useRemote, useTheme, useToast } from "../shared";
+import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast } from "../shared";
 import { BLOCKED_DRAG, SWIPE_FRACTION, blockedSide, deadlineText, passPayload, waitedDays, type Side } from "../verdict";
 import { ReasonSheet } from "./judgmentActions";
 import { AccountSheet, RejectSheet } from "./rejectSheet";
@@ -71,7 +71,11 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
   const { data: countsData, reload: reloadCounts } = useRemote(loadCounts);
   const [done, setDone] = useState<ReadonlySet<string>>(new Set());
-  const judgeable = (j: Judgment) => !j.conclude_refusal && !done.has(j.id);
+  // 落印(用户 2026-11-06):面容 / 指纹一过,卡片就飞出,提交在后台跑。飞出结束到服务端回话之间,那张卡
+  // 不在卡堆里(`away`);被拒(网络失败同样)时它回到卡堆顶上,从飞出去的那一侧弹回原位(`back`)。
+  const [away, setAway] = useState<string | null>(null);
+  const [back, setBack] = useState<{ id: string; x: number } | null>(null);
+  const judgeable = (j: Judgment) => !j.conclude_refusal && !done.has(j.id) && j.id !== away;
   // `topId` 直接从 `rows` 算,不经 `stack`:`stack` 与 `top` 会被交给子组件与回调,编译器当它们可能被改,
   // 依赖它的 `loadDetail` 就保不住手写的 useCallback(react-hooks/preserve-manual-memoization)。
   const topId = (rows ?? []).find(judgeable)?.id ?? null;
@@ -88,7 +92,10 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const [held, setHeld] = useState(false);
   const [hint, setHint] = useState(false);
   const [undo, setUndo] = useState<Judgment | null>(null);
-  const [pan] = useState(() => new Animated.Value(0));
+  // 每张卡一个 pan:飞出结束、下一张顶上来的那一帧,它的 pan 已经是 0。此前共用一个,要等 useEffect 才归零,
+  // 下一张有一帧还在屏外(1.5 倍屏宽)。被拒弹回的那张从飞出去的位置起,在下面的 layout effect 里弹回。
+  const pan = useMemo(() => new Animated.Value(back && back.id === topId ? back.x : 0), [topId, back]);
+  const backX = back && back.id === topId ? back.x : 0;
   const [hold] = useState(() => new Animated.Value(0));
   // 提示条 2 秒、撤回 5 秒:计时放在 effect 里,不放 ref —— 手势回调在渲染时交给 Gesture,碰到 ref 编译器就拒绝
   // (react-hooks/refs);ui.tsx 的下拉刷新也是回调里只有 state 与 Animated 值。
@@ -104,14 +111,13 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   }, [undo]);
 
   const canAct = !!current && !busy && !offline && overlay === null;
-  const ms = (n: number) => (reduced ? 0 : n);
+  const durations = useReducedMotionDurations();
 
   useEffect(() => {
-    pan.setValue(0);
     hold.setValue(0);
-  }, [topId, pan, hold]);
+  }, [topId, hold]);
 
-  // 减少动态效果时直接回原位:spring 没有 duration,上面的 `ms()` 管不到它，此前照样弹两下。
+  // 减少动态效果时直接回原位:spring 没有 duration,motion 令牌管不到它，此前照样弹两下。
   const snapBack = useCallback(() => {
     if (reduced) pan.setValue(0);
     else Animated.spring(pan, { toValue: 0, useNativeDriver: false, bounciness: 6 }).start();
@@ -128,34 +134,52 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     if (stack.length <= 2) void reloadList();
   };
 
+  // 飞出:验证通过的那一刻(`confirmedDecision` 在发请求前调它)。飞完才把卡拿出卡堆;中途被拒就不拿,
+  // 被拒那一边的 snapBack 停掉这段动画(finished 为 false)。
+  const flyOut = <R,>(id: string, x: number, submit: () => Promise<R>): Promise<R> => {
+    setOverlay(null);
+    Animated.timing(pan, { toValue: x, duration: durations.drawerOut, useNativeDriver: false }).start(({ finished }) => {
+      if (finished) setAway(id);
+    });
+    return submit();
+  };
+
+  // 提交期间 `busy`:下一张卡能看,不能落印(`canAct`)。
   const send = (payload: ConcludeJudgmentPayload) => {
     if (!top || busy) return;
     const id = top.id;
+    const x = (payload.verdict === "PASSED" ? 1.5 : -1.5) * width;
     setBusy(true);
-    confirmedDecision(t("officer_app.biometric.prompt"), () => submitVerdict(id, payload))
-      .then(() => {
-        Animated.timing(pan, { toValue: (payload.verdict === "PASSED" ? 1.5 : -1.5) * width, duration: ms(200), useNativeDriver: false }).start(() => finish(id));
-      })
+    confirmedDecision(t("officer_app.biometric.prompt"), () => flyOut(id, x, () => submitVerdict(id, payload)))
+      .then(() => finish(id))
       .catch((e: unknown) => {
+        // 面容没过、服务端拒绝、网络失败:都回到原位,写出原因。卡若已经飞走,从飞出去的那一侧回来。
         toast(verdictFailure(t, e), "failure");
         setOverlay(null);
-        snapBack();
+        setAway(null);
+        if (notConfirmedKey(e)) snapBack();
+        else setBack({ id, x });
       })
       .finally(() => setBusy(false));
   };
+
+  // 被拒的那张回到顶上时,它的 pan 从飞出去的位置起(上面的 useMemo),这里在绘制之前开始弹回。
+  useLayoutEffect(() => {
+    if (backX !== 0) snapBack();
+  }, [pan, backX, snapBack]);
 
   const pass = () => {
     if (!current) return;
     if (blocked === "right") return flashBlocked();
     if (current.civilization === "GREEK") {
-      Animated.timing(pan, { toValue: threshold, duration: ms(160), useNativeDriver: false }).start();
+      Animated.timing(pan, { toValue: threshold, duration: durations.sheetIn, useNativeDriver: false }).start();
       setOverlay("pass");
     } else send(passPayload(current.civilization));
   };
   const fail = () => {
     if (!current) return;
     if (blocked === "left") return flashBlocked();
-    Animated.timing(pan, { toValue: -0.6 * width, duration: ms(180), useNativeDriver: false }).start();
+    Animated.timing(pan, { toValue: -0.6 * width, duration: durations.sheetIn, useNativeDriver: false }).start();
     setOverlay("reject");
   };
   const putBack = () => {
@@ -187,17 +211,17 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   // 按住:0.5 秒走满一圈;不到就松手,退回原样。
   const holdIn = () => {
     if (!canAct) return;
-    Animated.timing(hold, { toValue: 1, duration: ms(HOLD_MS), useNativeDriver: false }).start();
+    Animated.timing(hold, { toValue: 1, duration: reduced ? 0 : HOLD_MS, useNativeDriver: false }).start();
   };
   const holdOut = () => {
     if (held) {
       setHeld(false);
       setOverlay("defer");
-    } else Animated.timing(hold, { toValue: 0, duration: ms(120), useNativeDriver: false }).start();
+    } else Animated.timing(hold, { toValue: 0, duration: durations.fade, useNativeDriver: false }).start();
   };
   const dropHold = () => {
     setOverlay(null);
-    Animated.timing(hold, { toValue: 0, duration: ms(120), useNativeDriver: false }).start();
+    Animated.timing(hold, { toValue: 0, duration: durations.fade, useNativeDriver: false }).start();
   };
 
   const undoDefer = (j: Judgment) => {
