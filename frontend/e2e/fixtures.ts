@@ -1440,6 +1440,15 @@ export class ApiMock {
     // The /judgment page's four group headers (JudgmentQueueCounts) and the desk's
     // 据 · 先例 panel. After `:id/` for the same reason as `next/`.
     this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0 });
+    // v4 概览的三张卡(HallOverview):hall-stats 是一个对象(12 周全 0),申诉是分页。都在 `:id/` 之后,理由同上。
+    this.on("GET", "/judgment/hall-stats/", {
+      timezone: "Asia/Shanghai", pending: 0, overdue: 0, concluded_this_month: 0, month_done_pct: null,
+      avg_days: null, returned_this_month: 0,
+      weeks: Array.from({ length: 12 }, (_, i) => ({
+        week_start: new Date(Date.UTC(2026, 7, 3 + 7 * i)).toISOString().slice(0, 10), concluded: 0, previous_quarter: 0,
+      })),
+    });
+    this.on("GET", "/judgment/appeals/", paginated([]));
     // 首页待办条的五格(审计 1017 #7):一次 `/officer-app/todo/`,每组 {count, items}。
     const emptyGroup = { count: 0, items: [] };
     this.on("GET", "/officer-app/todo/", {

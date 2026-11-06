@@ -23,6 +23,7 @@ import { RealmBars, RealmLegend, PATTERN_CLASS, patternOf } from "@/src/componen
 import { realmTypeNamespace } from "@/src/lib/domainNames";
 import { TodoStrip } from "@/src/components/dashboard/TodoStrip";
 import { TrendsPanel } from "@/src/components/dashboard/TrendsPanel";
+import { HallOverview } from "@/src/components/dashboard/HallOverview";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -38,10 +39,10 @@ import { StatCard } from "@/src/components/dashboard/StatCard";
 
 type DashboardTab = "overview" | "ledger";
 
-/** One Design A4 card: s1, 1px line, padding 20, a 20/28 h2 with an optional aside. */
+/** One card: s1, 1px line, padding 16, a 20/28 h2 with an optional aside; v4 `.v4-card` (light theme: shadow, no line) and the 6px panel radius. */
 function ChartCard({ title, aside, children }: { title: React.ReactNode; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
+    <section className="v4-card flex min-w-0 flex-col gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 className="text-lg text-[oklch(var(--color-ink))]">{title}</h2>
         {aside && <div className="text-xs text-[oklch(var(--color-ink-muted))]">{aside}</div>}
@@ -155,7 +156,8 @@ function DashboardContent() {
   // a hardcoded `role == "ADMIN"` check and this button sat behind RequireAdmin.
   const pageActions = (
     <RequirePermission permissions="ledger.export">
-      <Button type="button" variant="primary" loading={exporting} onClick={handleExport}>
+      {/* v4 页头的导出是次要按钮(定稿 `.btn.g`):主按钮让给概览卡里的「认领下一件」。 */}
+      <Button type="button" variant="secondary" loading={exporting} onClick={handleExport}>
         {t("dashboard.export_stats")}
       </Button>
     </RequirePermission>
@@ -277,6 +279,12 @@ function DashboardContent() {
       <div className="space-y-4 md:space-y-6">
         {activeTab === "overview" ? (
           <>
+            {/* v4 概览(第七批 S04):今日待审、近 12 周结案、待经手。下面的待办条与普查图是 v3 起就在这一页的,
+                定稿这一屏没画它们,也没说撤掉 —— 留在 v4 三张卡之下。 */}
+            <RequirePermission permissions="judgment.read">
+              <HallOverview />
+            </RequirePermission>
+
             <TodoStrip />
 
             {error && (
@@ -491,7 +499,7 @@ function DashboardContent() {
                 </ChartCard>
                 <section
                   aria-labelledby="dash-state-breakdown"
-                  className="min-w-0 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
+                  className="v4-card min-w-0 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
                 >
                   <h2 id="dash-state-breakdown" className="px-4 pt-4 text-lg text-[oklch(var(--color-ink))]">
                     {t("admin.state_breakdown")}

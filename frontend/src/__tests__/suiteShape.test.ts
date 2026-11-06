@@ -244,6 +244,8 @@ const COLLECTED_FILES = [
   "Toast.test.tsx",
   // 2026-10-08 仪表盘「趋势」面板:加载 / 出错 / 快照不足 / 有线四态与范围、维度开关。
   "TrendsPanel.test.tsx",
+  // 2026-11-06 v4 概览三张卡(第七批 S04):hall-stats 读数、12 周趋势的十字线、待经手三类行、认领下一件。
+  "HallOverview.test.tsx",
   "toastColourContract.test.ts",
   "OrganizationsPage.test.tsx",
   // 数据范围 B1:接口不建根(新建 / 移动必须选上级),删除被名下灵魂 / 审判挡住时说出两个数。

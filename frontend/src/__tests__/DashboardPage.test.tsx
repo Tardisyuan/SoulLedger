@@ -38,6 +38,9 @@ jest.mock("@soulledger/core/api", () => ({
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
 
+// The v4 overview cards (hall-stats, todo lists) have their own states in HallOverview.test.tsx.
+jest.mock("@/src/components/dashboard/HallOverview", () => ({ HallOverview: () => null }));
+
 jest.mock("@soulledger/core/api/sentence-plans", () => ({ sentencePlansApi: { list: jest.fn() } }));
 jest.mock("@soulledger/core/api/social-moderation", () => ({ socialModerationApi: { reports: jest.fn() } }));
 const mockedReports = (jest.requireMock("@soulledger/core/api/social-moderation") as { socialModerationApi: { reports: jest.Mock } })
