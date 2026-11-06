@@ -487,7 +487,7 @@ class TestCitationAPI:
     ):
         response = admin_client.post(
             f"/api/v1/judgment/{cn_judgment.id}/conclude/",
-            {"verdict": "FAILED", "notes": "刀山", "statute_ids": [str(cn_statute.id)]},
+            {"verdict": "FAILED", "notes": "刀山", "statute_ids": [str(cn_statute.id)], "fail_reasons": ["OTHER"], "fail_reason_note": "测"},
             format="json",
         )
         assert response.status_code == 200

@@ -10,11 +10,13 @@ from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.disposition.destination import MAX_TERM_YEARS
-from apps.judgment import snapshot, wangsi
+from apps.judgment import deadline, snapshot, wangsi
 from apps.judgment.claims import BATCH_LIMIT, ClaimRefusedError, assert_concludable, ferry_barred, may_edit
 from apps.judgment.models import (
     CitationSnapshotKind,
     EvidenceAdmission,
+    GreekAccount,
+    GreekCurability,
     Judgment,
     JudgmentCitation,
     JudgmentComment,
@@ -188,6 +190,10 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     # 这件案子自己的审批流以 CANCELLED 结束(跨界联审撤销),发落卡在 approval_cancelled:审判台据此给「重开一案」
     # (`reopen-cancelled/`,judgment.assign)。与那个动作的前提同一条:流决定这件案子、状态 CANCELLED。
     flow_cancelled = serializers.SerializerMethodField()
+    concluded_at_local = serializers.SerializerMethodField()
+    deadline_at = serializers.SerializerMethodField()
+    deadline_remaining_seconds = serializers.SerializerMethodField()
+    is_overdue = serializers.SerializerMethodField()
 
     validate_judge = tenant_scoped("judge")
     # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
@@ -239,6 +245,10 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "offence", "wrongful_death_cause", "grievance_level",
             "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
             "owner_org", "owner_org_name", "owner_org_name_en",
+            # v4:「不过」的理由与希腊落印的两样(只由 `conclude/` 写)、文书时辰的时区(D12)、审判期限(D10)。
+            "fail_reasons", "fail_reason_note", "greek_account", "greek_curability",
+            "concluded_tz", "concluded_at_local",
+            "claimable_since", "deadline_at", "deadline_remaining_seconds", "is_overdue",
             *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
@@ -254,6 +264,8 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "cycle", "judgment_method", "weighing_result", "heart_weight", "retrial_of",
             "city_god", "city_god_status", "city_god_note", "sent_on_at",
             "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
+            "fail_reasons", "fail_reason_note", "greek_account", "greek_curability", "concluded_tz",
+            "claimable_since",
         ]
 
     def update(self, instance, validated_data):
@@ -307,6 +319,29 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         if obj.civilization != Civilization.CHINESE:
             return None
         return obj.soul.karmic_balance
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_concluded_at_local(self, obj):
+        """落印那一刻,按当时所在殿的时区(`concluded_tz`)写出、带偏移的 ISO 串 —— 文书的日期与时辰读它(D12)。
+        这一列之前结的案没有时区,按 UTC;未结案是 null。"""
+        if obj.concluded_at is None:
+            return None
+        from zoneinfo import ZoneInfo
+
+        return obj.concluded_at.astimezone(ZoneInfo(obj.concluded_tz or "UTC")).isoformat()
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_deadline_at(self, obj):
+        """审判期限的截止时刻(D10,系统自设;`apps/judgment/deadline.py`)。不计期限是 null。"""
+        return deadline.deadline_at(obj)
+
+    def get_deadline_remaining_seconds(self, obj) -> int | None:
+        """离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。"""
+        return deadline.remaining_seconds(obj)
+
+    def get_is_overdue(self, obj) -> bool:
+        """已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。"""
+        return deadline.is_overdue(obj)
 
     def get_ferry_barred(self, obj) -> str:
         return ferry_barred(obj)
@@ -538,10 +573,18 @@ class JudgmentDetailSerializer(JudgmentSerializer):
     cross_judgment_id = serializers.UUIDField(source="cross_judgment.pk", read_only=True, allow_null=True)
     # 原审的审批流程走到哪一站、处置是否因此还不能执行(第五十九批 M-1);没有流程为 null。
     flow_progress = serializers.SerializerMethodField()
+    # 欧洲文书「哪一宗大罪」(v4 D9):本案引用的炼狱七台条文对应的罪(`fail_reasons.DEADLY_SIN_BY_STATUTE`),
+    # 键名同 `reject_reason.eu.sin.*`。只读、不存;没引用是空列表,文书不写那一句。不挂圈号(`8308204`)。
+    cited_deadly_sins = serializers.SerializerMethodField()
 
     class Meta(JudgmentSerializer.Meta):
         fields = [*JudgmentSerializer.Meta.fields, "evidence_admissions", "admitted_balance", "cross_judgment_id",
-                  "flow_progress"]
+                  "flow_progress", "cited_deadly_sins"]
+
+    def get_cited_deadly_sins(self, obj) -> list[str]:
+        from apps.judgment.fail_reasons import cited_deadly_sins
+
+        return cited_deadly_sins(obj) if obj.civilization == Civilization.EUROPEAN else []
 
     @extend_schema_field(JudgmentFlowProgressSerializer(allow_null=True))
     def get_flow_progress(self, obj):
@@ -659,6 +702,15 @@ class JudgmentConcludeSerializer(serializers.Serializer):
         required=False, allow_null=True, min_value=1, max_value=MAX_TERM_YEARS,
     )
     eternal = serializers.BooleanField(required=False, allow_null=True)
+    # 「不过」的理由(v4 D6)与希腊落印的两样(D8 / D7)。形状在这里校验;属不属于本文明、必不必填、与灵魂登记
+    # 合不合,在结案事务里(apps/judgment/fail_reasons.py),拒绝带稳定的 `code`。
+    fail_reasons = serializers.ListField(
+        child=serializers.CharField(max_length=30), required=False, default=list, max_length=10)
+    fail_reason_note = serializers.CharField(required=False, allow_blank=True, default="", max_length=500)
+    greek_account = serializers.ChoiceField(choices=GreekAccount.choices, required=False, allow_blank=True,
+                                            default="")
+    greek_curability = serializers.ChoiceField(choices=GreekCurability.choices, required=False, allow_blank=True,
+                                               default="")
 
 
 class JudgmentDestinationOptionSerializer(serializers.ModelSerializer):
@@ -916,6 +968,28 @@ class JudgmentQueueCountsSerializer(serializers.Serializer):
     others = serializers.IntegerField()
     deferred = serializers.IntegerField()
     total = serializers.IntegerField()
+    #: v4:已过期限(D10,待定中的不算)与退回重审(判了 RETRY 另开的一件)。与上面四组不互斥,不计入 `total` 的分解。
+    overdue = serializers.IntegerField()
+    returned = serializers.IntegerField()
+
+
+class JudgmentHallStatsWeekSerializer(serializers.Serializer):
+    week_start = serializers.DateField()
+    concluded = serializers.IntegerField()
+    previous_quarter = serializers.IntegerField()
+
+
+class JudgmentHallStatsSerializer(serializers.Serializer):
+    """`GET /judgment/hall-stats/`:v4 概览屏的数。每个数的定义见 `apps/judgment/hall_stats.py`。"""
+
+    timezone = serializers.CharField()
+    pending = serializers.IntegerField()
+    overdue = serializers.IntegerField()
+    concluded_this_month = serializers.IntegerField()
+    month_done_pct = serializers.IntegerField(allow_null=True)
+    avg_days = serializers.FloatField(allow_null=True)
+    returned_this_month = serializers.IntegerField()
+    weeks = JudgmentHallStatsWeekSerializer(many=True)
 
 
 class JudgmentCommentSerializer(serializers.ModelSerializer):

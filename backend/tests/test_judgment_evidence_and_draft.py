@@ -230,7 +230,7 @@ class TestFrozenAfterConclude:
         judgment, _, demerit = cn_case
         EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
         response = judge_client.post(
-            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判"}, format="json",
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判", "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json",
         )
         assert response.status_code == 200, response.data
         response = judge_client.put(_rule_url(judgment, demerit), {"admitted": True}, format="json")
@@ -458,7 +458,7 @@ def test_the_picker_default_and_conclude_agree_on_the_admitted_route(judge_clien
     assert response.data["default_realm_id"] == mildest.pk
 
     response = judge_client.post(
-        f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判"}, format="json",
+        f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判", "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json",
     )
     assert response.status_code == 200, response.data
     judgment.refresh_from_db()
@@ -603,7 +603,7 @@ class TestDraft:
         judgment, _, _ = cn_case
         judge_client.patch(_draft_url(judgment), {"version": 0, "notes": "草稿"}, format="json")
         response = judge_client.post(
-            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "定稿"}, format="json",
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "定稿", "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json",
         )
         assert response.status_code == 200, response.data
         assert response.data["notes"] == "定稿"
@@ -616,7 +616,7 @@ class TestDraft:
         judgment.refresh_from_db()
         assert judgment.draft_verdict == "PASSED"  # the draft really landed
         response = judge_client.post(
-            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "定稿"}, format="json",
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "定稿", "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json",
         )
         assert response.status_code == 200, response.data
         judgment.refresh_from_db()
@@ -682,7 +682,7 @@ class TestDispatchDraft:
             format="json",
         )
         response = judge_client.post(
-            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判"}, format="json",
+            f"/api/v1/judgment/{judgment.id}/conclude/", {"verdict": "FAILED", "notes": "判", "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json",
         )
         assert response.status_code == 200, response.data
         judgment.refresh_from_db()

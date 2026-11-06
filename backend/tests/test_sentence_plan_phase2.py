@@ -176,7 +176,7 @@ def test_an_eternal_home_sentence_with_stops_after_it_refuses_the_conclusion(cn,
     plan.bench(case, [(eg, plan.stop_realm(eg), 5)])
 
     response = officer_client(plan.officer("cn_judge", "JUDGE", cn)).post(
-        f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "FAILED"}, format="json")
+        f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "FAILED", "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json")
 
     assert response.status_code == 409 and response.data["code"] == "eternal_not_last", response.data
     case.refresh_from_db()

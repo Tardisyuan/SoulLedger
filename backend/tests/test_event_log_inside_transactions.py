@@ -125,6 +125,13 @@ def _conclude_original(event_type):
     return path
 
 
+def _conclude_with_fail_reason():
+    """v4 D6:理由与裁决同一行、同一事务落盘,事件带着理由代码。事件写不进去,理由也不能留下。"""
+    soul, case = plan.open_case(_cn())
+    return (lambda: Judgment.all_objects.get(pk=case.pk).conclude("FAILED", "", fail_reasons=["TRADE_FRAUD"]),
+            lambda: Judgment.all_objects.get(pk=case.pk).fail_reasons == ["TRADE_FRAUD"], "JUDGMENT_CONCLUDED")
+
+
 def _conclude_amendment():
     """judgment/services.py:271 -- the one `log_judgment_concluded` that sits lexically inside the atomic."""
     soul, p = plan.planned(_cn())
@@ -820,6 +827,7 @@ PATHS = {
     "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
     "conclude/JUDGMENT_CONCLUDED": _conclude_original("JUDGMENT_CONCLUDED"),
+    "conclude_fail_reason/JUDGMENT_CONCLUDED": _conclude_with_fail_reason,
     "conclude/DISPOSITION_CREATED": _conclude_original("DISPOSITION_CREATED"),
     "conclude/STATE_CHANGED": _conclude_original("STATE_CHANGED"),
     "conclude_amendment/JUDGMENT_CONCLUDED": _conclude_amendment,

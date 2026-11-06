@@ -90,6 +90,11 @@ class EventService:
             "court": court_code,
             **({"weighing_result": judgment.weighing_result, "heart_weight": judgment.heart_weight}
                if getattr(judgment, "weighing_result", None) else {}),
+            # v4 D6 / D8 / D7:「不过」的理由代码与希腊落印的两样(有才带)。「其他」那一句不进时间线 ——
+            # 与判词一样留在案子上(审计行带着它)。
+            **({"fail_reasons": list(judgment.fail_reasons)} if getattr(judgment, "fail_reasons", None) else {}),
+            **{key: getattr(judgment, key) for key in ("greek_account", "greek_curability")
+               if getattr(judgment, key, "")},
         }, actor)
 
     @staticmethod

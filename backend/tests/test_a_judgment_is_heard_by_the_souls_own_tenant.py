@@ -241,7 +241,7 @@ def test_a_case_cannot_be_opened_already_concluded(courts):
 @pytest.mark.django_db
 def test_the_sanctioned_door_still_works(courts, open_case):
     """Positive control: `conclude/` is how a verdict lands, and it still does."""
-    resp = courts["judge"].post(f"{URL}{open_case.id}/conclude/", {"verdict": "FAILED"}, format="json")  # 地府判无罪不建处置(2026-10-29)
+    resp = courts["judge"].post(f"{URL}{open_case.id}/conclude/", {"verdict": "FAILED", "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json")  # 地府判无罪不建处置(2026-10-29)
     assert resp.status_code == 200, resp.data
     open_case.refresh_from_db()
     assert open_case.is_final is True

@@ -10,7 +10,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
@@ -30,6 +30,7 @@ from apps.judgment import claims
 from apps.judgment.attachment_views import CaseAttachmentActionsMixin
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.confession_views import NegativeConfessionActionsMixin
+from apps.judgment.fail_reasons import FailReasonRefusedError
 from apps.judgment.models import AT_CITY_GOD, Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
@@ -54,6 +55,7 @@ from apps.judgment.serializers import (
     JudgmentDraftConflictSerializer,
     JudgmentDraftSerializer,
     JudgmentDraftWriteSerializer,
+    JudgmentHallStatsSerializer,
     JudgmentListSerializer,
     JudgmentPrecedentSerializer,
     JudgmentQueueCountsSerializer,
@@ -101,6 +103,11 @@ QUEUE_SKIP_LIMIT = 200
 PENDING = Q(verdict__isnull=True, is_final=False, is_archived=False) & ~Q(city_god_status__in=AT_CITY_GOD)
 
 
+#: 「退回重审」(v4 `queue.tab.returned`):判官判了 RETRY、另开的那一件(`weighing.open_retrial`)。
+#: 天平摇摆的再称、审批流驳回后的重开不算 —— 那两种不是判官退回的。
+RETURNED = Q(retrial_of__verdict="RETRY")
+
+
 def group_q(group: str, user) -> Q:
     """一个队列组的谓词(不含 `PENDING`)。四个组互斥:暂缓优先,其余按认领人分。"""
     not_deferred = Q(deferred_at__isnull=True)
@@ -129,6 +136,10 @@ class JudgmentFilter(filters.FilterSet):
     statute = filters.UUIDFilter(method="filter_statute")
     # 滞留(`stale_since` 非空,定时任务盖的章)。`?stale=true` 只要滞留的,`false` 排除它们。
     stale = filters.BooleanFilter(field_name="stale_since", lookup_expr="isnull", exclude=True)
+    # v4 队列:「已过期限」(D10,`apps/judgment/deadline.py`,待定中的不算)与「退回重审」(`RETURNED`)。
+    # 两者都隐含「未结案」。
+    overdue = filters.BooleanFilter(method="filter_overdue")
+    returned = filters.BooleanFilter(method="filter_returned")
 
     class Meta:
         model = Judgment
@@ -136,6 +147,17 @@ class JudgmentFilter(filters.FilterSet):
 
     def filter_group(self, queryset, name, value):
         return queryset.filter(PENDING & group_q(value, self.request.user))
+
+    def filter_overdue(self, queryset, name, value):
+        from apps.judgment import deadline
+
+        q = deadline.overdue_q(queryset)
+        pending = deadline.with_due_base(queryset.filter(PENDING))
+        return pending.filter(q) if value else pending.exclude(q)
+
+    def filter_returned(self, queryset, name, value):
+        pending = queryset.filter(PENDING)
+        return pending.filter(RETURNED) if value else pending.exclude(RETURNED)
 
     def filter_statute(self, queryset, name, value):
         return queryset.filter(pk__in=citing_judgments(value))
@@ -152,9 +174,14 @@ def citing_judgments(statute_id):
 def queue_counts_of(queryset, user) -> dict:
     """`total` 加四个组各几件,一条查询。`queryset` 已收窄到未结案件与调用者的范围。
     `queue_counts` 与官员助手的 `judgment_queue_counts` 工具(apps/soul_assist/officer_tools.py)共用。"""
-    return queryset.aggregate(
+    from apps.judgment import deadline
+
+    return deadline.with_due_base(queryset).aggregate(
         total=Count("pk"),
         **{group: Count("pk", filter=group_q(group, user)) for group, _label in QueueGroup.CHOICES},
+        # v4 队列的两个标签(与 `?overdue=` / `?returned=` 同一谓词;与四个组不互斥)。
+        overdue=Count("pk", filter=deadline.overdue_q(queryset)),
+        returned=Count("pk", filter=RETURNED),
     )
 
 
@@ -274,6 +301,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         # 这里是静态表,看不见请求体。
         'batch': ['judgment.execute'],
         'queue_counts': ['judgment.read'],
+        # v4 概览屏的数:与队列同一个读。
+        'hall_stats': ['judgment.read'],
         # 殿筛选的选项:与队列同一个读。
         'courts': ['judgment.read'],
         # 列表的 CSV:自己的码(用户 2026-10-29 第 3 条;此前与列表同一个读)。
@@ -870,12 +899,21 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         reason = serializer.validated_data.get("reason", "")
         return self._claim_response(lambda pk: claims.reassign(pk, target, actor=request.user, reason=reason))
 
-    @extend_schema(request=JudgmentDeferSerializer, responses=_CLAIM_RESPONSES)
+    @extend_schema(request=JudgmentDeferSerializer,
+                   responses={**_CLAIM_RESPONSES, 400: JudgmentClaimRefusalSerializer})
     @action(detail=True, methods=["post"])
     def defer(self, request, pk=None):
-        """暂缓。`{"reason": "…"}` 必填。暂缓的案子默认不再出现在 `next/`。"""
+        """暂缓(v4 叫「待定」)。`{"reason": "…"}` 必填(用户 2026-11-06 D5:仍必填,按住圆钮后弹理由框)。
+        暂缓的案子默认不再出现在 `next/`,期限停表(`apps/judgment/deadline.py`)。
+
+        没给理由或只有空白:400 `{"error", "code": "defer_reason_required"}` —— 理由框据此提示,不必解析
+        DRF 的字段错误。别的形状错误(超过 500 字等)仍是 DRF 的字段错误。"""
         serializer = JudgmentDeferSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            if {e.code for e in serializer.errors.get("reason", [])} & {"required", "blank", "null"}:
+                return Response({"error": "A reason is required to put a case on hold.",
+                                 "code": "defer_reason_required"}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError(serializer.errors)
         reason = serializer.validated_data["reason"]
         override = self._may_override()
         return self._claim_response(
@@ -1090,6 +1128,16 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         queryset = filterset.qs
         queryset = SearchFilter().filter_queryset(request, queryset, self)
         return Response(queue_counts_of(queryset, request.user))
+
+    @extend_schema(responses=JudgmentHallStatsSerializer)
+    # 不分页、不挂列表的过滤器:概览是整个殿的数,不随队列的筛选走。
+    @action(detail=False, methods=["get"], url_path="hall-stats", pagination_class=None, filter_backends=[])
+    def hall_stats(self, request):
+        """本殿概览(v4 `overview.*`):未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案。
+        范围与列表相同(`self.get_queryset()`);时间按殿的时区。定义见 `apps/judgment/hall_stats.py`。"""
+        from apps.judgment import hall_stats
+
+        return Response(hall_stats.overview(self.get_queryset(), PENDING, getattr(request, "tenant", None)))
 
     @extend_schema(responses=JudgmentCourtSerializer(many=True))
     # 不分页、不挂列表的过滤器:这是筛选条的选项,不随当前筛选收窄 —— 否则选了一个殿,
@@ -1411,6 +1459,14 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         carry a `code`: realm_not_found, realm_not_allowed, realm_full (409),
         term_conflict, eternal_not_allowed, destination_not_applicable. There is
         no undo window: the conclusion is written when this call returns.
+
+        `fail_reasons` / `fail_reason_note` (v4 D6): a FAILED original case needs
+        a reason from its hall's set (`apps/judgment/fail_reasons.py`); Egypt's
+        are listed by the scale and cannot be chosen. Greek PASSED / FAILED need
+        `greek_account` (GORGIAS / REPUBLIC, D8) and a Greek FAILED needs
+        `greek_curability` (CURABLE / INCURABLE, D7); INCURABLE is Tartarus for
+        ever, and a different door, a term or `eternal: false` is refused
+        (`incurable_is_eternal_in_tartarus`). All refusals 400 with a `code`.
         """
         judgment = self.get_object()
         if judgment.is_final:
@@ -1433,7 +1489,17 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
                 eternal=serializer.validated_data.get("eternal"),
                 by=request.user,
                 skip_node_orders=serializer.validated_data.get("skip_node_orders") or (),
+                fail_reasons=serializer.validated_data.get("fail_reasons") or (),
+                fail_reason_note=serializer.validated_data.get("fail_reason_note", ""),
+                greek_account=serializer.validated_data.get("greek_account", ""),
+                greek_curability=serializer.validated_data.get("greek_curability", ""),
             )
+        except FailReasonRefusedError as exc:
+            # v4 D6 / D7 / D8:理由或希腊标记缺了或不成立(fail_reason_required / fail_reason_invalid /
+            # fail_reason_not_selectable / fail_reason_not_failed / fail_reason_note_required /
+            # fail_reason_note_too_long / fail_reason_contradicts_record / greek_account_required /
+            # curability_required / greek_mark_not_applicable)。什么都没写。
+            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except ClaimRefusedError as exc:
             # 409 `claimed_by_other`:别人认领的案子,只有认领人、ADMIN、殿主能结。什么都没写。
             return Response(exc.as_payload(), status=exc.status)

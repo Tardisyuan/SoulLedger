@@ -2,6 +2,7 @@
 Judgment model — records of soul judgment proceedings.
 """
 import uuid
+from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -190,6 +191,21 @@ class GrievanceStatus(models.TextChoices):
 
 #: docs/10 §4.2「若确属冤死且冤情重大 → 可提前释放」:只有这两级的冤情,申诉属实才放人。
 GRIEVANCE_RELEASE_LEVELS = (GrievanceLevel.MAJOR, GrievanceLevel.SEVERE)
+
+
+class GreekAccount(models.TextChoices):
+    """希腊的判决写在哪一篇里(v4 D8,用户 2026-11-06:官员落印时自己选)。两篇不合并(Design 第五批):
+    《高尔吉亚》523e-526d 是岔路草地上的两条路;《理想国》X 614b-621b 是厄尔所见、四口之间的千年一路。
+    只决定文书(`verdict_doc.gr.*` / `verdict_doc.gr_er.*`),不改路由。"""
+    GORGIAS = "GORGIAS", "《高尔吉亚》"
+    REPUBLIC = "REPUBLIC", "《理想国》"
+
+
+class GreekCurability(models.TextChoices):
+    """判官给受罚者「加上标记」(Grg. 526b-c):可医或不可医。不可医者成为永远的儆戒(525b-c),出口不纳
+    (Rep. 615c-616a),所以 INCURABLE 的处置 `is_eternal=True`;可医者走塔尔塔罗斯的常规刑期(v4 D7)。"""
+    CURABLE = "CURABLE", "可医"
+    INCURABLE = "INCURABLE", "不可医"
 
 
 class CityGodRank(models.TextChoices):
@@ -400,6 +416,21 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     heart_weight = models.IntegerField(null=True, blank=True)
     # 天平摇摆而再称时,新开的那件案子指回这一件(apps/judgment/weighing.py)。
     retrial_of = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    # 「不过」的理由(v4 D6):本文明一套代码的列表,与「其他」时写的一句。只在 FAILED 时有值,只由结案写。
+    # 规则与出处见 `apps/judgment/fail_reasons.py`。
+    fail_reasons = models.JSONField(default=list, blank=True)
+    fail_reason_note = models.CharField(max_length=500, blank=True, default="")
+    # 希腊落印时的两样(v4 D8 / D7):文书写在哪一篇,与可医 / 不可医的标记。别的文明是空串。
+    greek_account = models.CharField(max_length=10, choices=GreekAccount.choices, blank=True, default="")
+    greek_curability = models.CharField(max_length=10, choices=GreekCurability.choices, blank=True, default="")
+    # 文书上的时辰按落印那一刻、所在殿的时区写死(v4 D12):存下当时的时区名,而不是事后由殿的设置推 ——
+    # 殿的时区是可改的设置,推出来的时辰会随它变,文书就不再是落印时的那一张。空 = 这一列之前结的案。
+    concluded_tz = models.CharField(max_length=64, blank=True, default="")
+    # 审判期限(v4 D10,系统自设,非出典;`apps/judgment/deadline.py`):从「可认领」起算,待定期间不计。
+    # `claimable_since` 是那一刻(由 `save()` 维护);`deferred_total` 是已结束的各段待定加起来的时长
+    # (撤销待定时累加,`claims._apply_undefer`)。期限 = 两者之和 + 殿的天数,不存:殿改天数当场生效。
+    claimable_since = models.DateTimeField(null=True, blank=True)
+    deferred_total = models.DurationField(default=timedelta(0))
 
     tenant = models.ForeignKey(
         'tenants.Tenant',
@@ -552,6 +583,11 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
             self.stale_since = None
             if kwargs.get("update_fields") is not None:
                 kwargs["update_fields"] = [*kwargs["update_fields"], "stale_since"]
+        # 审判期限的起点(v4 D10):解送、提前释放、防腐期满……每一条改变「能不能认领」的写入都经过这里。
+        from apps.judgment.deadline import refresh_claimable_since
+
+        if refresh_claimable_since(self) and kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = [*kwargs["update_fields"], "claimable_since"]
         if self._state.adding and not self.case_number:
             # 发号与写入在同一个事务里:写入失败,号跟着回滚,不留空号。
             with transaction.atomic():
