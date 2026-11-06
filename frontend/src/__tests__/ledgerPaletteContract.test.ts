@@ -43,7 +43,7 @@ import {
  *   faint → line-strong 与 disabled-ink;line(8%)压在 card 上合成 → line;pos/neg → success/danger。
  * 文明(用户 2026-11-06 决定照 v4 的范围):solid → `--color-civ-*`(=匾色 / 主按钮底),civT →
  * `-ink`,metal → `-metal`,side → `-side`,glow 两主题同值不在这张表(只有一个值,没有对错之分可量)。
- * 中性皮是第八批第 5 条给的值(与 App 一致);--color-warn / --color-faint-text 是第八批第 4、6 条新增的。v4 没定义的 danger-strong / tint / warning / 长明灯沿用 v3。 */
+ * 中性皮是第八批第 5 条给的值(与 App 一致);--color-warn / --color-faint-text 是第八批第 4、6 条新增的。v4 没定义的 tint / warning / 长明灯沿用 v3;danger-strong 与 on-danger 是 v4 的 neg / onNeg(用户 2026-11-06,与 App 一致)。 */
 const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-canvas": { light: "#f8f8f6", dark: "#111113" },
   "--color-surface-1": { light: "#ffffff", dark: "#1a1b1e" },
@@ -59,7 +59,8 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-focus": { light: "#16171a", dark: "#f3f3f1" },
   "--color-success": { light: "#1f6b3f", dark: "#8ad3a1" },
   "--color-danger": { light: "#a81e3c", dark: "#f2849b" },
-  "--color-danger-strong": { light: "#8f2430", dark: "#c84c5a" },
+  "--color-danger-strong": { light: "#a81e3c", dark: "#f2849b" },
+  "--color-on-danger": { light: "#ffffff", dark: "#16171a" },
   "--color-danger-tint": { light: "#FFECEF", dark: "#33101A" },
   "--color-danger-on-tint": { light: "#8A0C33", dark: "#FFD3DC" },
   "--color-warning": { light: "#a65000", dark: "#e07a23" },
@@ -106,7 +107,7 @@ describe("palette (规范 v4)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 47);
+    expect(rows).toHaveLength(2 * 48);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {
@@ -188,9 +189,14 @@ describe("the paired texts the spec measures", () => {
     }
   });
 
-  it.each(THEMES)("%s neg.onBg on neg.bg ≥ 4.5:1, and white on neg.strong ≥ 4.5:1", (theme) => {
+  it.each(THEMES)("%s neg.onBg on neg.bg ≥ 4.5:1, and on-danger on neg.strong ≥ 4.5:1", (theme) => {
     expect(contrastRatio(rgbOf(theme, "--color-danger-on-tint"), rgbOf(theme, "--color-danger-tint"))).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio([255, 255, 255], rgbOf(theme, "--color-danger-strong"))).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(rgbOf(theme, "--color-on-danger"), rgbOf(theme, "--color-danger-strong"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // v4(用户 2026-11-06):深色失败实底是浅红,白字在上面只有约 2.5:1 —— on-danger 在深色是深字,这条是承重的。
+  it("dark: white on the neg.strong fill would fail, so the text colour is not hard-coded white", () => {
+    expect(contrastRatio([255, 255, 255], rgbOf("dark", "--color-danger-strong"))).toBeLessThan(4.5);
   });
 
   it.each(THEMES)("%s input border (faint) on s1 ≥ 3:1 — the line token would not be", (theme) => {

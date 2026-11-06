@@ -191,12 +191,14 @@ describe("规范 v2 A1 按钮:主 = 匾色实底,危险 = neg.strong 实底白�
     expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(ink|accent)/);
   });
 
-  it("danger is a solid neg.strong fill with white text, darkened the same way", () => {
+  it("danger is a solid neg.strong fill with on-danger text, shaded per theme", () => {
     for (const size of BUTTON_SIZES) {
       const classes = classesOf("danger", size);
       expect(classes).toContain("bg-[oklch(var(--color-danger-strong))]");
-      expect(classes).toContain("text-white");
-      expect(classes).toContain("hover:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_88%,black)]");
+      // v4(用户 2026-11-06):实底上的字是 on-danger(深色深字、浅色白字),悬停按主题往白 / 往黑调。
+      expect(classes).toContain("text-[oklch(var(--color-on-danger))]");
+      expect(classes).not.toContain("text-white");
+      expect(classes).toContain("hover:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_88%,var(--danger-shade))]");
       // Not the text-strength danger hue as a fill: that one is for ✕ + words, not for white on it.
       expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(danger|status-error)\)\)\]/);
     }
