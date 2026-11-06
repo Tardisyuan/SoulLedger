@@ -456,9 +456,14 @@ export function JudgmentClaimQueue({
     if (left < 0) return { text: t("queue.deadline.over", { n: String(Math.ceil(-left / DAY_SECONDS)) }), over: true };
     return { text: t("queue.deadline.days", { n: String(Math.ceil(left / DAY_SECONDS)) }), over: false };
   };
-  /** 队列清空(没有任何筛选时一件未结的都没有):各文明自己的说法(S08),不是「本组暂无」四行。 */
+  /**
+   * 队列清空(没有任何筛选时一件未结的都没有):各文明自己的说法(S08),不是「本组暂无」四行。
+   * 计数**和**四组的行都要说空:计数有 30 秒 staleTime,而组的列表每次都取 —— 只看计数时,一个旧的 0
+   * 会把已经到了的行整张表藏掉(E2E 夹具的计数默认全 0、列表有行,正是这种组合)。
+   */
   const unfiltered = !search && !soul && !court && !civilization && !stale && !queueTab;
-  if (unfiltered && counts.data?.total === 0) {
+  const listsEmpty = groupQueries.every((q) => q.isSuccess && (q.data?.count ?? 0) === 0);
+  if (unfiltered && counts.data?.total === 0 && listsEmpty) {
     return (
       <CivEmptyState
         action={
