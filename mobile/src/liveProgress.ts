@@ -9,8 +9,11 @@
  * Shown while the soul is on a road (`soulRoute` has a place) and the app has been opened since; updated whenever the
  * 本世 page re-reads the profile or the plan; ended when the route is gone or the session ends (the tabs unmount on
  * sign-out). Updated only from the app: no push updates the activity while the app is closed (that needs an
- * ActivityKit push token the server does not have). The Android channel keeps RBAC A9's rule — the lock screen shows
- * only the title; iOS has no such switch for a Live Activity (see the report of 2026-11-06).
+ * ActivityKit push token the server does not have).
+ *
+ * The lock screen shows the soul's name and station on both platforms, as the draft draws it (用户 2026-11-06 决定):
+ * RBAC A9 (「锁屏只说来了东西」) does not apply to live progress. Every other notification — 书信 and the server's
+ * pushes, pushCore.ts's channel — keeps A9 (PRIVATE); only this channel is PUBLIC.
  */
 import { requireOptionalNativeModule } from "expo";
 import * as Notifications from "expo-notifications";
@@ -49,21 +52,28 @@ export function androidContent(c: LiveContent): Notifications.NotificationConten
   };
 }
 
+/**
+ * The Android channel. Quiet: no sound, no heads-up, no badge — it is a status, not news. PUBLIC on the lock screen,
+ * like the iOS Live Activity (用户 2026-11-06 决定: A9 does not apply to live progress; other channels stay PRIVATE).
+ */
+export function liveChannel(name: string): Notifications.NotificationChannelInput {
+  return {
+    name,
+    importance: Notifications.AndroidImportance.LOW,
+    showBadge: false,
+    enableVibrate: false,
+    sound: null,
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+  };
+}
+
 async function show(c: LiveContent, tint: string): Promise<void> {
   if (Platform.OS === "ios") {
     await ios()?.show(c.title, tint, nativeState(c));
     return;
   }
   if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync(LIVE_CHANNEL, {
-    name: c.title,
-    // Quiet: no sound, no heads-up, no badge — it is a status, not news.
-    importance: Notifications.AndroidImportance.LOW,
-    showBadge: false,
-    enableVibrate: false,
-    sound: null,
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
-  });
+  await Notifications.setNotificationChannelAsync(LIVE_CHANNEL, liveChannel(c.title));
   await Notifications.scheduleNotificationAsync({ identifier: LIVE_NOTIFICATION, content: androidContent(c), trigger: { channelId: LIVE_CHANNEL } });
 }
 

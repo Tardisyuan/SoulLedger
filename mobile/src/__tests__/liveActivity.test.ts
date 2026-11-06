@@ -6,7 +6,7 @@
 import fs from "fs";
 import path from "path";
 
-import { androidContent, nativeState } from "../liveProgress";
+import { androidContent, liveChannel, nativeState } from "../liveProgress";
 import type { LiveContent } from "../soulRoute";
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -63,6 +63,15 @@ describe("the Live Activity's two halves", () => {
       JSON.parse(fs.readFileSync(file, "utf8")).expo.plugins.some((p: unknown) => (Array.isArray(p) ? p[0] : p) === "./plugins/withLiveActivity");
     expect(has(path.join(ROOT, "app.json"))).toBe(true);
     expect(has(path.join(ROOT, "../mobile-officer/app.json"))).toBe(false);
+  });
+
+  it("the lock screen shows the content (用户 2026-11-06 决定: A9 does not apply to live progress); every other channel keeps A9", () => {
+    const { AndroidNotificationVisibility } = jest.requireMock("expo-notifications") as { AndroidNotificationVisibility: Record<string, number> };
+    expect(liveChannel("x").lockscreenVisibility).toBe(AndroidNotificationVisibility.PUBLIC);
+    // pushCore's channel (书信 and every server push) stays PRIVATE.
+    const pushCore = fs.readFileSync(path.join(ROOT, "src/pushCore.ts"), "utf8");
+    expect(pushCore).toContain("lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE");
+    expect(pushCore).not.toContain("AndroidNotificationVisibility.PUBLIC");
   });
 
   it("Android: one ongoing notification, its lines from the same content", () => {

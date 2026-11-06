@@ -253,14 +253,15 @@ const STACKED_TAB_LABEL_SCALE = 1.5;
 
 /**
  * v4 悬浮胶囊 (V4Batch07 02 外壳 ⑦ / 05 App): a capsule 14 from the screen's sides, 64 high, round, on the
- * card at 70% — icon 22 over an 11 label; the current item is the civilization's colour (`plaque`, v4 --civT,
+ * card (opaque for now; v4 draws it at 70%) — icon 22 over an 11 label; the current item is the civilization's colour (`plaque`, v4 --civT,
  * which holds 4.5:1 on its scheme's grounds) on 18% of its glow. C14: when any label is too long for one line
  * (`pillarIsWide`, the web's pillar rule) all of them may take two lines; a label that still does not fit is cut
  * and read whole by its accessibility label. At >= 1.7x text (handoff 2d) the items become rows, as before.
  *
  * ponytail: v4 floats the capsule over the page with a 20pt blur, so content slides under it. Here it sits at the
  * page's foot on the page's own ground — no blur without a new native module (expo-blur), and over the page each
- * tab's list, FAB and 问一问 button would need the bar's height as clearance. Both want a device pass first.
+ * tab's list, FAB and 问一问 button would need the bar's height as clearance. 用户 2026-11-06 决定: opaque, at the
+ * page's foot, until a device pass decides.
  */
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const t = useTheme();
@@ -274,7 +275,8 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
       testID="tab-bar"
       style={[
         stack ? styles.tabsStacked : styles.tabs,
-        { backgroundColor: `${t.s1}B3`, borderColor: t.hair2 },
+        // Opaque card, at the page's foot (用户 2026-11-06: 先这样，上机看过再定 v4 的 70% + 毛玻璃).
+        { backgroundColor: t.s1, borderColor: t.hair2 },
       ]}
     >
       {state.routes.map((route, index) => {
