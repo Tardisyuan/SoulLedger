@@ -121,9 +121,7 @@ export type LexiconWord =
   | "court"
   | "judging"
   | "past_read_only"
-  | "no_past_lives"
-  | "no_rebirth_title"
-  | "no_rebirth_body";
+  | "no_past_lives";
 
 const DEFAULT_WORDS: Record<LexiconWord, string> = {
   merit: "soul_app.life.merit",
@@ -136,19 +134,19 @@ const DEFAULT_WORDS: Record<LexiconWord, string> = {
   judging: "soul_app.soul_states.JUDGING",
   past_read_only: "soul_app.past_lives.read_only",
   no_past_lives: "soul_app.past_lives.empty",
-  no_rebirth_title: "soul_app.lexicon.default.no_rebirth_title",
-  no_rebirth_body: "soul_app.lexicon.default.no_rebirth_body",
 };
 
 /**
  * eu and eg are the two civilizations without rebirth
  * (`backend/apps/ledger/constants.py::REBIRTH_CAPABLE_CIVILIZATIONS`), which is
- * why both carry their own "no past lives / no rebirth" sentences. That is COPY
- * only: whether a soul may apply is always the server's `can_apply` / `reason`.
+ * why both carry their own "no past lives" sentences. That is COPY only: whether
+ * a soul may apply is always the server's `can_apply` / `reason`. (Their own
+ * "no rebirth" page went with v4's 转生 tab, user decision 2026-11-06: those two
+ * civilizations have no rebirth tab, so the page could not be reached.)
  */
 const LEXICON: Partial<Record<CivKey, readonly LexiconWord[]>> = {
   eg: Object.keys(DEFAULT_WORDS) as LexiconWord[],
-  eu: ["past_read_only", "no_past_lives", "no_rebirth_title", "no_rebirth_body"],
+  eu: ["past_read_only", "no_past_lives"],
 };
 
 export function lexiconKey(civ: CivKey, word: LexiconWord): string {
@@ -213,7 +211,7 @@ export const LIFE_PATH = ["ALIVE", "JUDGING", "DISPOSED", "SENTENCE", "REINCARNA
 export type LifePathStep = (typeof LIFE_PATH)[number];
 
 /**
- * The two civilizations without rebirth (the same two LEXICON gives no-rebirth sentences; docs/01_埃及冥界整体架构,
+ * The two civilizations without rebirth (the same two LEXICON gives their own past-lives sentences; docs/01_埃及冥界整体架构,
  * docs/01_欧洲天堂地狱整体架构): their road ends at the sentence, so no 「轮回中」 step is drawn (review 2026-11-01).
  */
 const NO_REBIRTH: ReadonlySet<CivKey> = new Set<CivKey>(["eg", "eu"]);

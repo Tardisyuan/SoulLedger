@@ -4,7 +4,7 @@
  *   skin      follows where the soul IS (its current tenant)
  *   words     follow where the soul BELONGS (home tenant; user decision 2026-09-17)
  *   rebirth   is the server's to decide (`can_apply` / `reason`); a terminal
- *             civilization gets the permanent disabled entry and its own empty state
+ *             civilization (埃及 / 欧洲 at home) has no 转生 tab at all (v4, 2026-11-06)
  */
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -174,7 +174,6 @@ describe("a soul residing in another civilization", () => {
     await pressTab("tab-Applications");
     const apply = await screen.findByTestId("apply");
     expect(apply.props.accessibilityState.disabled).toBe(false);
-    expect(screen.queryByTestId("terminal-empty")).toBeNull();
     expect(screen.getByText("还没有转生申请")).toBeTruthy();
     // 文明气质 1e: the whole-page empty state wears the illustration of where the soul IS.
     expect(within(screen.getByTestId("applications-empty")).getByTestId("empty-hero-eg")).toBeTruthy();
