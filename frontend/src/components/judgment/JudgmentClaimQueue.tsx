@@ -663,284 +663,290 @@ export function JudgmentClaimQueue({
       )}
 
       {/* 「我认领的」切换:整张表换 key 重挂,160ms 交叉淡化;不让每行依次入场。 */}
-      <table
-        key={mineOnly ? "mine" : "all"}
-        ref={tableRef}
-        className="w-full text-sm border-t border-[oklch(var(--color-block))] transition-opacity duration-fast ease-enter starting:opacity-0"
-        aria-label={t("judgment.pending")}
-      >
-        <thead>
-          {/* 补足 B9 表头:11 等宽 ink3、下沿 2px ink;高 44(v3 `.queue-head`)。 */}
-          <tr className="h-(--control-h-sm) font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink))]">
-            {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
-            <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.col_case_soul")}</th>
-            <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.court")}</th>
-            <th scope="col" className="px-2 py-1 text-right font-normal">{t("judgment.claim.col_merit_demerit")}</th>
-            <th scope="col" className="px-2 py-1 text-left font-normal max-lg:hidden">{t("judgment.claim.col_draft")}</th>
-            <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.claimant")}</th>
-            <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.claim.col_deferred")}</th>
-            <th scope="col" className="px-2 py-1 text-left font-normal max-xl:hidden">{t("judgment.claim.col_cycle_kind")}</th>
-            <th scope="col" className="px-2 py-1 text-right font-normal max-xl:hidden">{t("judgment.detail.evidence")}</th>
-            <th scope="col" className="px-2 py-1 text-right font-normal max-sm:hidden">{t("judgment.waiting")}</th>
-            <th scope="col" className="px-2 py-1 text-right font-normal">{t("queue.col.deadline")}</th>
-            <th scope="col" className="w-11"><span className="sr-only">{t("common.row_actions")}</span></th>
-          </tr>
-        </thead>
-        {shownGroups.map((group) => {
-          const q = groupQueries[GROUPS.indexOf(group)];
-          const rows = rowsOf(group);
-          const count = counts.data?.[group];
-          const total = q.data?.count ?? 0;
-          return (
-            <tbody key={group} data-testid={`queue-group-${group}`}>
-              {/* 分组头 GroupHeader:组名 · 服务端计数 · 一句提示。 */}
-              <tr className="border-b border-[oklch(var(--color-line))]">
-                <th scope="rowgroup" colSpan={colSpan} className="px-2 pt-4 pb-1 text-left font-normal">
-                  <span className="text-xs font-semibold text-[oklch(var(--color-ink))]">{t(`judgment.claim.groups.${group}`)}</span>
-                  <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]" data-testid={`group-count-${group}`}>
-                    {" · "}
-                    {count ?? "…"}
-                  </span>
-                  {/* 「等待最久在上」只在它为真时说:换成「最近入队」就不说了。 */}
-                  {((group === "unclaimed" && ordering === "created_at") || group === "others") && (
-                    <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t(`judgment.claim.hints.${group}`)}</span>
-                  )}
-                  {group === "deferred" && (
-                    <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t("queue.deferred_hint")}</span>
-                  )}
-                </th>
-              </tr>
-              {q.isError ? (
-                <tr>
-                  <td colSpan={colSpan}>
-                    <QueryError onRetry={() => q.refetch()} />
-                  </td>
+      {/* 表在自己的横向滚动框里(2026-11-06):393 宽下 案号 / 灵魂、功 / 过、认领、期限、⋯ 几列的最小宽度合起来超过
+          屏宽,此前把整个文档撑宽 —— 手机上文档比视口宽时,点按的坐标与画面不再对齐(no-route-overflows-the-document
+          文件头记过同一件事),组序改成「别人在审」紧挨在「待认领」上面之后,点「认领」落在上一行的认领人格上。
+          文档不再变宽;表格自己横向滚。 */}
+      <div data-testid="queue-table-scroll" className="overflow-x-auto">
+        <table
+          key={mineOnly ? "mine" : "all"}
+          ref={tableRef}
+          className="w-full text-sm border-t border-[oklch(var(--color-block))] transition-opacity duration-fast ease-enter starting:opacity-0"
+          aria-label={t("judgment.pending")}
+        >
+          <thead>
+            {/* 补足 B9 表头:11 等宽 ink3、下沿 2px ink;高 44(v3 `.queue-head`)。 */}
+            <tr className="h-(--control-h-sm) font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink))]">
+              {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
+              <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.col_case_soul")}</th>
+              <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.court")}</th>
+              <th scope="col" className="px-2 py-1 text-right font-normal">{t("judgment.claim.col_merit_demerit")}</th>
+              <th scope="col" className="px-2 py-1 text-left font-normal max-lg:hidden">{t("judgment.claim.col_draft")}</th>
+              <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.claimant")}</th>
+              <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.claim.col_deferred")}</th>
+              <th scope="col" className="px-2 py-1 text-left font-normal max-xl:hidden">{t("judgment.claim.col_cycle_kind")}</th>
+              <th scope="col" className="px-2 py-1 text-right font-normal max-xl:hidden">{t("judgment.detail.evidence")}</th>
+              <th scope="col" className="px-2 py-1 text-right font-normal max-sm:hidden">{t("judgment.waiting")}</th>
+              <th scope="col" className="px-2 py-1 text-right font-normal">{t("queue.col.deadline")}</th>
+              <th scope="col" className="w-11"><span className="sr-only">{t("common.row_actions")}</span></th>
+            </tr>
+          </thead>
+          {shownGroups.map((group) => {
+            const q = groupQueries[GROUPS.indexOf(group)];
+            const rows = rowsOf(group);
+            const count = counts.data?.[group];
+            const total = q.data?.count ?? 0;
+            return (
+              <tbody key={group} data-testid={`queue-group-${group}`}>
+                {/* 分组头 GroupHeader:组名 · 服务端计数 · 一句提示。 */}
+                <tr className="border-b border-[oklch(var(--color-line))]">
+                  <th scope="rowgroup" colSpan={colSpan} className="px-2 pt-4 pb-1 text-left font-normal">
+                    <span className="text-xs font-semibold text-[oklch(var(--color-ink))]">{t(`judgment.claim.groups.${group}`)}</span>
+                    <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]" data-testid={`group-count-${group}`}>
+                      {" · "}
+                      {count ?? "…"}
+                    </span>
+                    {/* 「等待最久在上」只在它为真时说:换成「最近入队」就不说了。 */}
+                    {((group === "unclaimed" && ordering === "created_at") || group === "others") && (
+                      <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t(`judgment.claim.hints.${group}`)}</span>
+                    )}
+                    {group === "deferred" && (
+                      <span className="ml-3 text-xs text-[oklch(var(--color-ink-subtle))]">{t("queue.deferred_hint")}</span>
+                    )}
+                  </th>
                 </tr>
-              ) : q.isLoading ? (
-                <tr aria-busy="true">
-                  <td colSpan={colSpan} className="h-10 px-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={colSpan} className="h-10 px-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.claim.group_empty")}</td>
-                </tr>
-              ) : (
-                rows.map((j) => {
-                  const isSel = selected.has(j.id);
-                  const isFocus = focused === j.id;
-                  const days = waitingDays(j);
-                  const mine = j.claimed_by != null && j.claimed_by === user?.id;
-                  const marked = isMinePending(j, user?.id) && !releasing.has(j.id);
-                  const laterThisSession = sessionDeferred.includes(j.id);
-                  const held = isHeldUntilFatedDate(j);
-                  const barred = isDuatBarred(j) || !!j.ferry_barred;
-                  return (
-                    <tr
-                      key={j.id}
-                      data-testid="queue-row"
-                      data-focused={isFocus ? "true" : undefined}
-                      data-session-deferred={laterThisSession ? "true" : undefined}
-                      onFocus={() => setFocused(j.id)}
-                      /* 选中 / 焦点 = 7% ink 底,没有行首竖条;竖条只表示「待我处理」(RowMark)。
-                         延后的行(B12):不加色标、不变灰,只把透明度降到 0.56;放回后色标重新出现。 */
-                      className={`relative h-(--table-row-h) border-b border-[oklch(var(--color-line))] ${
-                        isSel || isFocus ? ROW_SELECTED : `${ROW_HOVER} ${marked ? ROW_MARK_ROW : ""}`
-                      }`}
-                    >
-                      {canExecute && (
-                        <td className="w-6 px-1 relative z-10">
-                          <input
-                            type="checkbox"
-                            checked={isSel && !held && !barred}
-                            disabled={held || barred}
-                            onChange={() => toggle(j.id)}
-                            aria-label={t("judgment.claim.select_row", { name: j.soul_name || t(MISSING_LABEL_KEY.unrecorded) })}
-                            className="h-3.5 w-3.5 max-sm:h-5 max-sm:w-5 accent-[oklch(var(--color-accent))]"
+                {q.isError ? (
+                  <tr>
+                    <td colSpan={colSpan}>
+                      <QueryError onRetry={() => q.refetch()} />
+                    </td>
+                  </tr>
+                ) : q.isLoading ? (
+                  <tr aria-busy="true">
+                    <td colSpan={colSpan} className="h-10 px-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</td>
+                  </tr>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={colSpan} className="h-10 px-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.claim.group_empty")}</td>
+                  </tr>
+                ) : (
+                  rows.map((j) => {
+                    const isSel = selected.has(j.id);
+                    const isFocus = focused === j.id;
+                    const days = waitingDays(j);
+                    const mine = j.claimed_by != null && j.claimed_by === user?.id;
+                    const marked = isMinePending(j, user?.id) && !releasing.has(j.id);
+                    const laterThisSession = sessionDeferred.includes(j.id);
+                    const held = isHeldUntilFatedDate(j);
+                    const barred = isDuatBarred(j) || !!j.ferry_barred;
+                    return (
+                      <tr
+                        key={j.id}
+                        data-testid="queue-row"
+                        data-focused={isFocus ? "true" : undefined}
+                        data-session-deferred={laterThisSession ? "true" : undefined}
+                        onFocus={() => setFocused(j.id)}
+                        /* 选中 / 焦点 = 7% ink 底,没有行首竖条;竖条只表示「待我处理」(RowMark)。
+                           延后的行(B12):不加色标、不变灰,只把透明度降到 0.56;放回后色标重新出现。 */
+                        className={`relative h-(--table-row-h) border-b border-[oklch(var(--color-line))] ${
+                          isSel || isFocus ? ROW_SELECTED : `${ROW_HOVER} ${marked ? ROW_MARK_ROW : ""}`
+                        }`}
+                      >
+                        {canExecute && (
+                          <td className="w-6 px-1 relative z-10">
+                            <input
+                              type="checkbox"
+                              checked={isSel && !held && !barred}
+                              disabled={held || barred}
+                              onChange={() => toggle(j.id)}
+                              aria-label={t("judgment.claim.select_row", { name: j.soul_name || t(MISSING_LABEL_KEY.unrecorded) })}
+                              className="h-3.5 w-3.5 max-sm:h-5 max-sm:w-5 accent-[oklch(var(--color-accent))]"
+                            />
+                          </td>
+                        )}
+                        <td className="px-2 max-w-56">
+                          {/* 一直挂着、由 on 切换:取消认领时竖条反着退场(scaleY 1→0,140ms)。 */}
+                          <RowMark on={marked} />
+                          <span className="block truncate text-sm font-medium text-[oklch(var(--color-ink))]" title={j.soul_name || undefined}>
+                            <Link href={withFrom(`/judgment/${j.id}`, "/judgment")} onClick={() => rememberOpened(j.id)} data-row-link={j.id} className={ROW_LINK}>
+                              {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />}
+                            </Link>
+                          </span>
+                          {/* v3「案号 / 灵魂」:名字下面一行是案号(可复制,所以压在整行链接之上)与文明。 */}
+                          <span className="block whitespace-nowrap text-2xs text-[oklch(var(--color-ink-subtle))]">
+                            <span className="relative z-10">
+                              <CaseNumber value={j.case_number} variant="inline" />
+                            </span>
+                            {" · "}
+                            <DomainEnum namespace="souls.civilizations" value={j.civilization} />
+                            {j.stale_since && <StaleBadge className="ml-2" />}
+                          </span>
+                          {/* 枉死(第五十一批 F-2):方框徽标,ink 字 —— 审判的事实,不是警告;候审期间旁边写「候至 日期」。 */}
+                          {j.untimely && (
+                            <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="untimely-mark">
+                              <Badge tone="ink">{t("judgment.untimely")}</Badge>
+                              {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
+                            </span>
+                          )}
+                          {/* 埃及入殿前(review P2-9):木乃伊 70 天、早夭、无名、葬仪不当 —— 与枉死同一种方框徽标。 */}
+                          {j.duat_stage && (
+                            <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="duat-mark">
+                              <Badge tone="ink"><DomainEnum namespace="judgment.duat_stage" value={j.duat_stage} /></Badge>
+                              {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
+                            </span>
+                          )}
+                          {/* 希腊过不了阿刻戎(第五十七批 G-1):与枉死、入殿前同一种方框徽标。 */}
+                          {j.ferry_barred && (
+                            <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="ferry-mark">
+                              <Badge tone="ink"><DomainEnum namespace="souls.ferry_passage" value={j.ferry_barred} /></Badge>
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[courtLabel(t, j.court, locale), localName(j, locale, "judge_name")].filter(Boolean).join(" · ") || undefined}>
+                          {[courtLabel(t, j.court, locale), localName(j, locale, "judge_name")].filter(Boolean).join(" · ") || <MissingValue kind="unrecorded" />}
+                        </td>
+                        <td className="px-2 text-right text-xs whitespace-nowrap" data-testid="merit-demerit-cell">
+                          {/* 功 / 过分开写(v3 `<b>功</b> / 过`),不是净值;VIEWER 两个字段都不在,写「未记录」。 */}
+                          <DomainNumber value={j.merit_score} className="font-semibold text-[oklch(var(--color-ink))]" />
+                          <span className="text-[oklch(var(--color-ink-muted))]"> / </span>
+                          <DomainNumber value={j.demerit_score} className="text-[oklch(var(--color-ink-muted))]" />
+                        </td>
+                        <td className="px-2 text-xs whitespace-nowrap max-lg:hidden" data-testid="draft-cell">
+                          {/* 草拟判决:字形 + 文字,不单靠颜色。没拟过的写「未拟」,不是「未记录」。 */}
+                          {j.draft_verdict ? (
+                            <span title={j.draft_verdict} className="text-[oklch(var(--color-ink))]">
+                              <span aria-hidden="true">{verdictGlyph(j.draft_verdict)} </span>
+                              {verdictText(t, j.civilization, j.draft_verdict)}
+                            </span>
+                          ) : (
+                            <span className="text-[oklch(var(--color-ink-subtle))]">{t("judgment.claim.draft_none")}</span>
+                          )}
+                        </td>
+                        <td className="px-2 relative z-10 whitespace-nowrap">
+                          {j.claimed_by != null ? (
+                            <span className="flex items-center gap-2">
+                              <ClaimAvatar name={j.claimed_by_name ?? ""} mine={mine} />
+                              <span className="min-w-0 max-md:hidden">
+                                <span className="block max-w-28 truncate text-xs text-[oklch(var(--color-ink))]" title={j.claimed_by_name || undefined}>
+                                  {mine ? t("judgment.claim.reassign_you") : j.claimed_by_name || <MissingValue kind="unrecorded" />}
+                                </span>
+                                {j.claimed_at && (
+                                  <span className="block font-mono text-2xs tabular-nums text-[oklch(var(--color-ink-subtle))]">
+                                    {formatDateTime(j.claimed_at, CLAIMED_AT_FORMAT)}
+                                  </span>
+                                )}
+                              </span>
+                            </span>
+                          ) : canExecute && group !== "deferred" && barred ? (
+                            /* 点了必然被拒的按钮不放(第五十七批 G-1);认领被拒的 toast 仍在 claimOne 里兜底。 */
+                            <span data-testid="claim-held" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
+                              {j.ferry_barred
+                                ? t(j.ferry_barred === "NO_FARE" ? "judgment.ferry.barred_no_fare" : "judgment.ferry.barred_unburied")
+                                : t("judgment.claim.duat_barred_short")}
+                            </span>
+                          ) : canExecute && group !== "deferred" && held ? (
+                            /* 候审中:认领按钮换成一行灰字,到期后按钮回来。 */
+                            <span data-testid="claim-held" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
+                              {t("judgment.claim.held_short")}
+                            </span>
+                          ) : canExecute && group !== "deferred" ? (
+                            /* B9 行内动作:1px ink3 框、11 字,不是下划线链接。 */
+                            <button
+                              type="button"
+                              onClick={() => claimOne(j.id)}
+                              className="inline-flex h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                            >
+                              {t("judgment.claim.claim")}
+                            </button>
+                          ) : null}
+                        </td>
+                        <td
+                          className="px-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))] max-md:hidden"
+                          title={group === "deferred" && j.defer_reason ? j.defer_reason : undefined}
+                          data-testid="deferred-cell"
+                        >
+                          {/* 没延后的行这一格空着:「没延后」是常态,不是缺了一条记录。 */}
+                          {group === "deferred"
+                            ? t("judgment.claim.groups.deferred")
+                            : laterThisSession
+                              ? t("judgment.claim.deferred_session")
+                              : null}
+                        </td>
+                        <td className="px-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))] max-xl:hidden" data-testid="cycle-kind-cell">
+                          {/* 世次在上(cycle 0 = 第 1 世),种类小字在下(v3 `第四世<small>初审</small>`)。 */}
+                          <span className="block text-[oklch(var(--color-ink))]">
+                            {j.cycle == null ? <MissingValue kind="unrecorded" /> : (thisLifeLabel(t, j.civilization, j.cycle + 1) ?? t("souls.detail.life_number", { n: String(j.cycle + 1) }))}
+                          </span>
+                          <span className="block text-2xs">
+                            <DomainEnum namespace="judgment.claim.kinds" value={j.kind} />
+                          </span>
+                        </td>
+                        <td className="px-2 text-right text-xs max-xl:hidden">
+                          <DomainNumber value={j.evidence_count} />
+                        </td>
+                        <td
+                          className={`px-2 text-right font-mono text-xs tabular-nums whitespace-nowrap max-sm:hidden ${
+                            days > LONG_WAIT_DAYS ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"
+                          }`}
+                        >
+                          {t("judgment.waiting_days", { n: String(days) })}
+                          {!j.stale_since && days >= LONG_WAIT_DAYS - STALE_WARN_DAYS && days <= LONG_WAIT_DAYS && (
+                            <span className="block text-2xs font-sans text-[oklch(var(--color-warning))]" data-testid="stale-soon">
+                              {t("judgment.claim.stale_soon")}
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          data-testid="deadline-cell"
+                          className={`px-2 text-right font-mono text-xs tabular-nums whitespace-nowrap ${
+                            deadlineOf(j).over ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"
+                          }`}
+                        >
+                          {deadlineOf(j).text}
+                        </td>
+                        <td className="w-11 relative z-10 text-right">
+                          <ActionsMenu
+                            menuLabel={`${t("common.row_actions")} · ${j.soul_name || t(MISSING_LABEL_KEY.unrecorded)}`}
+                            items={[
+                              ...(canExecute && j.claimed_by == null && group !== "deferred" && !held && !barred
+                                ? [{ key: "claim", label: t("judgment.claim.claim"), onSelect: () => claimOne(j.id), disabled: claim.isPending }]
+                                : []),
+                              ...(canExecute && mine
+                                ? [{ key: "release", label: t("judgment.claim.release"), onSelect: () => releaseOne(j.id), disabled: release.isPending }]
+                                : []),
+                              ...(canExecute && group === "deferred"
+                                ? [{ key: "undefer", label: t("action.undo"), onSelect: () => undeferOne(j.id), disabled: undefer.isPending }]
+                                : []),
+                              ...(group !== "deferred" && !laterThisSession
+                                ? [{ key: "defer", label: t("judgment.queue.key_defer"), onSelect: () => deferForSession(j.id) }]
+                                : []),
+                              ...(canAssign
+                                ? [{ key: "reassign", label: t("judgment.claim.reassign"), onSelect: () => { setRowReassign(j.id); setDialog("reassign"); } }]
+                                : []),
+                            ]}
                           />
                         </td>
-                      )}
-                      <td className="px-2 max-w-56">
-                        {/* 一直挂着、由 on 切换:取消认领时竖条反着退场(scaleY 1→0,140ms)。 */}
-                        <RowMark on={marked} />
-                        <span className="block truncate text-sm font-medium text-[oklch(var(--color-ink))]" title={j.soul_name || undefined}>
-                          <Link href={withFrom(`/judgment/${j.id}`, "/judgment")} onClick={() => rememberOpened(j.id)} data-row-link={j.id} className={ROW_LINK}>
-                            {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />}
-                          </Link>
-                        </span>
-                        {/* v3「案号 / 灵魂」:名字下面一行是案号(可复制,所以压在整行链接之上)与文明。 */}
-                        <span className="block whitespace-nowrap text-2xs text-[oklch(var(--color-ink-subtle))]">
-                          <span className="relative z-10">
-                            <CaseNumber value={j.case_number} variant="inline" />
-                          </span>
-                          {" · "}
-                          <DomainEnum namespace="souls.civilizations" value={j.civilization} />
-                          {j.stale_since && <StaleBadge className="ml-2" />}
-                        </span>
-                        {/* 枉死(第五十一批 F-2):方框徽标,ink 字 —— 审判的事实,不是警告;候审期间旁边写「候至 日期」。 */}
-                        {j.untimely && (
-                          <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="untimely-mark">
-                            <Badge tone="ink">{t("judgment.untimely")}</Badge>
-                            {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
-                          </span>
-                        )}
-                        {/* 埃及入殿前(review P2-9):木乃伊 70 天、早夭、无名、葬仪不当 —— 与枉死同一种方框徽标。 */}
-                        {j.duat_stage && (
-                          <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="duat-mark">
-                            <Badge tone="ink"><DomainEnum namespace="judgment.duat_stage" value={j.duat_stage} /></Badge>
-                            {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
-                          </span>
-                        )}
-                        {/* 希腊过不了阿刻戎(第五十七批 G-1):与枉死、入殿前同一种方框徽标。 */}
-                        {j.ferry_barred && (
-                          <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="ferry-mark">
-                            <Badge tone="ink"><DomainEnum namespace="souls.ferry_passage" value={j.ferry_barred} /></Badge>
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[courtLabel(t, j.court, locale), localName(j, locale, "judge_name")].filter(Boolean).join(" · ") || undefined}>
-                        {[courtLabel(t, j.court, locale), localName(j, locale, "judge_name")].filter(Boolean).join(" · ") || <MissingValue kind="unrecorded" />}
-                      </td>
-                      <td className="px-2 text-right text-xs whitespace-nowrap" data-testid="merit-demerit-cell">
-                        {/* 功 / 过分开写(v3 `<b>功</b> / 过`),不是净值;VIEWER 两个字段都不在,写「未记录」。 */}
-                        <DomainNumber value={j.merit_score} className="font-semibold text-[oklch(var(--color-ink))]" />
-                        <span className="text-[oklch(var(--color-ink-muted))]"> / </span>
-                        <DomainNumber value={j.demerit_score} className="text-[oklch(var(--color-ink-muted))]" />
-                      </td>
-                      <td className="px-2 text-xs whitespace-nowrap max-lg:hidden" data-testid="draft-cell">
-                        {/* 草拟判决:字形 + 文字,不单靠颜色。没拟过的写「未拟」,不是「未记录」。 */}
-                        {j.draft_verdict ? (
-                          <span title={j.draft_verdict} className="text-[oklch(var(--color-ink))]">
-                            <span aria-hidden="true">{verdictGlyph(j.draft_verdict)} </span>
-                            {verdictText(t, j.civilization, j.draft_verdict)}
-                          </span>
-                        ) : (
-                          <span className="text-[oklch(var(--color-ink-subtle))]">{t("judgment.claim.draft_none")}</span>
-                        )}
-                      </td>
-                      <td className="px-2 relative z-10 whitespace-nowrap">
-                        {j.claimed_by != null ? (
-                          <span className="flex items-center gap-2">
-                            <ClaimAvatar name={j.claimed_by_name ?? ""} mine={mine} />
-                            <span className="min-w-0 max-md:hidden">
-                              <span className="block max-w-28 truncate text-xs text-[oklch(var(--color-ink))]" title={j.claimed_by_name || undefined}>
-                                {mine ? t("judgment.claim.reassign_you") : j.claimed_by_name || <MissingValue kind="unrecorded" />}
-                              </span>
-                              {j.claimed_at && (
-                                <span className="block font-mono text-2xs tabular-nums text-[oklch(var(--color-ink-subtle))]">
-                                  {formatDateTime(j.claimed_at, CLAIMED_AT_FORMAT)}
-                                </span>
-                              )}
-                            </span>
-                          </span>
-                        ) : canExecute && group !== "deferred" && barred ? (
-                          /* 点了必然被拒的按钮不放(第五十七批 G-1);认领被拒的 toast 仍在 claimOne 里兜底。 */
-                          <span data-testid="claim-held" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
-                            {j.ferry_barred
-                              ? t(j.ferry_barred === "NO_FARE" ? "judgment.ferry.barred_no_fare" : "judgment.ferry.barred_unburied")
-                              : t("judgment.claim.duat_barred_short")}
-                          </span>
-                        ) : canExecute && group !== "deferred" && held ? (
-                          /* 候审中:认领按钮换成一行灰字,到期后按钮回来。 */
-                          <span data-testid="claim-held" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
-                            {t("judgment.claim.held_short")}
-                          </span>
-                        ) : canExecute && group !== "deferred" ? (
-                          /* B9 行内动作:1px ink3 框、11 字,不是下划线链接。 */
-                          <button
-                            type="button"
-                            onClick={() => claimOne(j.id)}
-                            className="inline-flex h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
-                          >
-                            {t("judgment.claim.claim")}
-                          </button>
-                        ) : null}
-                      </td>
-                      <td
-                        className="px-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))] max-md:hidden"
-                        title={group === "deferred" && j.defer_reason ? j.defer_reason : undefined}
-                        data-testid="deferred-cell"
-                      >
-                        {/* 没延后的行这一格空着:「没延后」是常态,不是缺了一条记录。 */}
-                        {group === "deferred"
-                          ? t("judgment.claim.groups.deferred")
-                          : laterThisSession
-                            ? t("judgment.claim.deferred_session")
-                            : null}
-                      </td>
-                      <td className="px-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))] max-xl:hidden" data-testid="cycle-kind-cell">
-                        {/* 世次在上(cycle 0 = 第 1 世),种类小字在下(v3 `第四世<small>初审</small>`)。 */}
-                        <span className="block text-[oklch(var(--color-ink))]">
-                          {j.cycle == null ? <MissingValue kind="unrecorded" /> : (thisLifeLabel(t, j.civilization, j.cycle + 1) ?? t("souls.detail.life_number", { n: String(j.cycle + 1) }))}
-                        </span>
-                        <span className="block text-2xs">
-                          <DomainEnum namespace="judgment.claim.kinds" value={j.kind} />
-                        </span>
-                      </td>
-                      <td className="px-2 text-right text-xs max-xl:hidden">
-                        <DomainNumber value={j.evidence_count} />
-                      </td>
-                      <td
-                        className={`px-2 text-right font-mono text-xs tabular-nums whitespace-nowrap max-sm:hidden ${
-                          days > LONG_WAIT_DAYS ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"
-                        }`}
-                      >
-                        {t("judgment.waiting_days", { n: String(days) })}
-                        {!j.stale_since && days >= LONG_WAIT_DAYS - STALE_WARN_DAYS && days <= LONG_WAIT_DAYS && (
-                          <span className="block text-2xs font-sans text-[oklch(var(--color-warning))]" data-testid="stale-soon">
-                            {t("judgment.claim.stale_soon")}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        data-testid="deadline-cell"
-                        className={`px-2 text-right font-mono text-xs tabular-nums whitespace-nowrap ${
-                          deadlineOf(j).over ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"
-                        }`}
-                      >
-                        {deadlineOf(j).text}
-                      </td>
-                      <td className="w-11 relative z-10 text-right">
-                        <ActionsMenu
-                          menuLabel={`${t("common.row_actions")} · ${j.soul_name || t(MISSING_LABEL_KEY.unrecorded)}`}
-                          items={[
-                            ...(canExecute && j.claimed_by == null && group !== "deferred" && !held && !barred
-                              ? [{ key: "claim", label: t("judgment.claim.claim"), onSelect: () => claimOne(j.id), disabled: claim.isPending }]
-                              : []),
-                            ...(canExecute && mine
-                              ? [{ key: "release", label: t("judgment.claim.release"), onSelect: () => releaseOne(j.id), disabled: release.isPending }]
-                              : []),
-                            ...(canExecute && group === "deferred"
-                              ? [{ key: "undefer", label: t("action.undo"), onSelect: () => undeferOne(j.id), disabled: undefer.isPending }]
-                              : []),
-                            ...(group !== "deferred" && !laterThisSession
-                              ? [{ key: "defer", label: t("judgment.queue.key_defer"), onSelect: () => deferForSession(j.id) }]
-                              : []),
-                            ...(canAssign
-                              ? [{ key: "reassign", label: t("judgment.claim.reassign"), onSelect: () => { setRowReassign(j.id); setDialog("reassign"); } }]
-                              : []),
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-              {total > PAGE_SIZE && (
-                <tr>
-                  <td colSpan={colSpan}>
-                    <Pagination
-                      page={pages[group]}
-                      totalPages={Math.ceil(total / PAGE_SIZE)}
-                      count={total}
-                      onPageChange={(p) => setPages((prev) => ({ ...prev, [group]: p }))}
-                    />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          );
-        })}
-      </table>
+                      </tr>
+                    );
+                  })
+                )}
+                {total > PAGE_SIZE && (
+                  <tr>
+                    <td colSpan={colSpan}>
+                      <Pagination
+                        page={pages[group]}
+                        totalPages={Math.ceil(total / PAGE_SIZE)}
+                        count={total}
+                        onPageChange={(p) => setPages((prev) => ({ ...prev, [group]: p }))}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            );
+          })}
+        </table>
+      </div>
 
       {sessionDeferred.length > 0 && (
         <div data-testid="session-deferred" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[oklch(var(--color-ink-muted))]">
