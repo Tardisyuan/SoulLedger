@@ -33,7 +33,8 @@ function save(state: State): void {
 }
 
 /** The seal (Design batches 70, 71): colour spreads from the card, the seal lands, and the colour narrows to the identity
- *  band over the page, which by then is underneath; the real band takes over as it goes. At most 700 ms. */
+ *  band over the page, which by then is underneath; the real band takes over as it goes. 700 ms when the page is ready
+ *  in time; otherwise the colour holds, seal landed, until it is (`[data-land]`, `EntranceOverlay`). */
 const STYLES = `.demo-tour-target{outline:2px solid oklch(var(--color-main));outline-offset:4px;box-shadow:0 0 0 8px color-mix(in srgb,oklch(var(--color-main)) 16%,transparent);scroll-margin-top:9.5rem}
 body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max(45vh,22rem)}
 @keyframes demo-seal-spread{from{clip-path:circle(0 at var(--x) var(--y))}to{clip-path:circle(150vmax at var(--x) var(--y))}}
@@ -42,13 +43,17 @@ body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max
 @keyframes demo-seal-to-slot{to{left:calc(var(--band-height)/2 + 8px);transform:translate(-50%,-50%) scale(.5)}}
 @keyframes demo-seal-name-out{to{opacity:0}}
 @keyframes demo-seal-fade{from{opacity:1}to{opacity:0}}
-.demo-seal{--band-top:calc(1.75rem + 52px);--band-left:0px;--band-height:48px;position:fixed;top:0;left:0;right:0;height:100vh;z-index:9999;overflow:hidden;animation:demo-seal-spread 200ms ease-out both,demo-seal-narrow 250ms ease-in-out 450ms forwards}
+.demo-seal{--band-top:calc(1.75rem + 52px);--band-left:0px;--band-height:48px;position:fixed;top:0;left:0;right:0;height:100vh;z-index:9999;overflow:hidden;animation:demo-seal-spread 200ms ease-out both}
+.demo-seal[data-land]{animation:demo-seal-spread 200ms ease-out both,demo-seal-narrow 250ms ease-in-out forwards}
 @media (min-width:769px){.demo-seal{--band-left:252px;--band-height:64px}}
 .demo-seal-mark,.demo-seal-name{position:absolute;left:50%;transform:translate(-50%,-50%)}
-.demo-seal-mark{top:50%;animation:demo-seal-drop 250ms ease-out 200ms both,demo-seal-to-slot 250ms ease-in-out 450ms forwards}
-.demo-seal-name{top:calc(50% + 72px);animation:demo-seal-name-out 150ms ease-in 450ms forwards}
-.demo-seal-skip{position:absolute;top:8px;right:8px;animation:demo-seal-name-out 100ms ease-in 450ms forwards}
-@media (prefers-reduced-motion:reduce){.demo-seal{background:oklch(var(--color-canvas));animation:demo-seal-fade 150ms ease-out both}.demo-seal>*{display:none}}`;
+.demo-seal-mark{top:50%;animation:demo-seal-drop 250ms ease-out 200ms both}
+[data-land] .demo-seal-mark{animation:demo-seal-drop 250ms ease-out 200ms both,demo-seal-to-slot 250ms ease-in-out forwards}
+.demo-seal-name{top:calc(50% + 72px)}
+.demo-seal-skip{position:absolute;top:8px;right:8px}
+[data-land] .demo-seal-name{animation:demo-seal-name-out 150ms ease-in forwards}
+[data-land] .demo-seal-skip{animation:demo-seal-name-out 100ms ease-in forwards}
+@media (prefers-reduced-motion:reduce){.demo-seal,.demo-seal[data-land]{background:oklch(var(--color-canvas));animation:demo-seal-fade 150ms ease-out both}.demo-seal>*{display:none}}`;
 
 /** A page kept alive behind the current one is still in the document, with its own `main`, and takes up no room. */
 const onScreen = (element: Element) => element.getClientRects().length > 0;
@@ -76,15 +81,31 @@ function reveal(target: Element): void {
   }
 }
 
-/** The seal on the way in from a card: at most 700 ms, over the page, which does not wait for it. */
+/** When the seal starts to narrow: after it has landed (450 ms), and once the page under it is drawn. */
+const LANDED_MS = 450;
+const NARROW_MS = 250;
+/** Never hold the colour longer than this: a sign-in that went nowhere (an error) still lets the page show. */
+// ponytail: a fixed cap, not a signal from `enter`; a phone that takes longer than this sees the landing page again.
+const HOLD_MAX_MS = 6000;
+/** Still waiting: a route's loading slot (`PageSpinner` / `CivLoading`) or the permission gate. */
+const WAITING = "[data-civ-loading], [data-testid='permissions-pending']";
+
+/**
+ * The seal on the way in from a card. It used to end on a 700 ms timer whatever the page was doing, and the page took
+ * longer (the recording loads and is re-dated before the sign-in answers; then the route): the landing page came back
+ * for about a second before the console replaced it. Now it narrows only once the new route is on screen and done
+ * waiting, so the console is already under it when it goes.
+ */
 function EntranceOverlay() {
   const { t } = useI18n();
-  const [run, setRun] = useState<{ skin: SealCiv; x: number; y: number } | null>(null);
+  const [run, setRun] = useState<{ skin: SealCiv; x: number; y: number; from: string; at: number } | null>(null);
+  const [land, setLand] = useState(false);
 
   useEffect(() => {
     const start = (e: Event) => {
       const { skin, origin } = (e as CustomEvent).detail as { skin: SealCiv; origin: { x: number; y: number } };
-      setRun({ skin, x: origin.x, y: origin.y });
+      setLand(false);
+      setRun({ skin, x: origin.x, y: origin.y, from: window.location.pathname, at: performance.now() });
     };
     window.addEventListener(ENTRANCE, start);
     return () => window.removeEventListener(ENTRANCE, start);
@@ -96,13 +117,32 @@ function EntranceOverlay() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") end();
     };
-    const timer = setTimeout(end, 700);
     window.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [run]);
+
+  // Checked every frame rather than on events: "the page is drawn" has no event, and this lasts a second at most.
+  useEffect(() => {
+    if (!run || land) return;
+    let frame = 0;
+    let ready = 0;
+    const check = () => {
+      const held = performance.now() - run.at;
+      const arrived = window.location.pathname !== run.from && !document.querySelector(WAITING);
+      ready = arrived ? ready + 1 : 0;
+      // Two frames in a row: the page has painted once with its data, not just mounted.
+      if ((held >= LANDED_MS && ready >= 2) || held >= HOLD_MAX_MS) setLand(true);
+      else frame = requestAnimationFrame(check);
+    };
+    frame = requestAnimationFrame(check);
+    return () => cancelAnimationFrame(frame);
+  }, [run, land]);
+
+  useEffect(() => {
+    if (!land) return;
+    const timer = setTimeout(() => setRun(null), NARROW_MS);
+    return () => clearTimeout(timer);
+  }, [land]);
 
   if (!run) return null;
   const name = t(`demo.civ.${run.skin}.name`);
@@ -112,6 +152,7 @@ function EntranceOverlay() {
     <div
       data-testid="demo-entrance"
       data-civ={run.skin}
+      data-land={land ? "" : undefined}
       onClick={() => setRun(null)}
       className="seal-on-band band-colour demo-seal"
       style={{ "--x": `${run.x}px`, "--y": `${run.y}px` } as React.CSSProperties}
@@ -130,7 +171,7 @@ function EntranceOverlay() {
 export default function DemoTour() {
   const { t } = useI18n();
   const { user } = useTenant();
-  const { enter } = useEnter();
+  const { enter, warm } = useEnter();
   const pathname = usePathname();
   const router = useRouter();
   const [tour, setTour] = useState<Tour | null>(null);
@@ -233,6 +274,8 @@ export default function DemoTour() {
                   data-testid={`demo-tour-other-${skin}`}
                   aria-label={t("demo.landing.card_label", { civ: t(`demo.civ.${skin}.name`) })}
                   onClick={() => void enter(ROLE_OF_SKIN[skin])}
+                  onPointerEnter={() => warm(ROLE_OF_SKIN[skin])}
+                  onFocus={() => warm(ROLE_OF_SKIN[skin])}
                 >
                   <Seal size={36} civ={skin} glyphs={null} court={t(`demo.civ.${skin}.name`)} />
                 </button>
