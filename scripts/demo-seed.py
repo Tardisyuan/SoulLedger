@@ -74,10 +74,17 @@ NOW = timezone.now()
 
 CITY_GODS = {"CN_DIYU": "都城隍", "EU_HEAVEN_HELL": "Saint Peter's Gate", "EG_DUAT": "Thoth's Scribes", "GR_HADES": "Charon's Ferry"}
 
+# Roles follow docs/ (user 2026-11-07, EU-3 / EU-23 / EG-8). Europe: Christ is the one judge, at the particular
+# judgment (docs/01_欧洲天堂地狱整体架构.md §一, CCC 1021-1022) — so the demo judge is Christ, and Minos, who only
+# assigns the damned their circle at the second circle's mouth (docs/03:178), is an officer, not a judge; Saint
+# Peter judges nobody. Egypt: Anubis operates the balance and is not a judge (docs/01_埃及冥界整体架构.md §1.2) —
+# an officer; Ma'at is the standard itself, the feather, and no office at all, so the hall's moderator is Isis, who
+# stands behind Osiris' throne in the hall (docs/02_奥西里斯审判详解.md, Budge pl. IV). Thoth stays the demo judge
+# (the user's 2026-10-28 decision: he sits as an assessor and records, docs/01 埃及 §1.2).
 OFFICERS = {
     "CN_DIYU": [("cui_jue", "崔珏", "JUDGE"), ("heibai", "黑白无常", "OFFICER"), ("zhong_kui", "钟馗", "JUDGE"), ("meng_po", "孟婆", "MODERATOR")],
-    "EU_HEAVEN_HELL": [("minos", "Minos", "JUDGE"), ("uriel", "Uriel", "OFFICER"), ("beatrice", "Beatrice", "MODERATOR")],
-    "EG_DUAT": [("anubis", "Anubis", "JUDGE"), ("horus", "Horus", "OFFICER"), ("maat", "Ma'at", "MODERATOR")],
+    "EU_HEAVEN_HELL": [("minos", "Minos", "OFFICER"), ("uriel", "Uriel", "OFFICER"), ("beatrice", "Beatrice", "MODERATOR")],
+    "EG_DUAT": [("anubis", "Anubis", "OFFICER"), ("horus", "Horus", "OFFICER"), ("isis", "Isis", "MODERATOR")],
     "GR_HADES": [("rhadamanthus", "Rhadamanthus", "JUDGE"), ("aeacus", "Aeacus", "OFFICER"), ("hermes", "Hermes", "MODERATOR")],
 }
 
@@ -167,6 +174,10 @@ def officer(username, display, role, tenant, password="demo-only-not-a-secret"):
         user.set_password(password)
         user.must_change_password = False
         user.save()
+    elif (user.role, user.display_name) != (role, display):
+        # A database seeded before the 2026-11-07 roles keeps the old name / role otherwise (get_or_create).
+        user.role, user.display_name = role, display
+        user.save(update_fields=["role", "display_name"])
     return user
 
 
@@ -820,7 +831,7 @@ def main():
                 judges[code] = u
     demo = [officer("demo_admin", "太史令", "ADMIN", None), officer("demo_judge", "崔判官", "JUDGE", tenants["CN_DIYU"]),
             officer("demo_moderator", "孟婆", "MODERATOR", tenants["CN_DIYU"]),
-            officer("demo_judge_eu", "Saint Peter", "JUDGE", tenants["EU_HEAVEN_HELL"]),
+            officer("demo_judge_eu", "Christ", "JUDGE", tenants["EU_HEAVEN_HELL"]),
             officer("demo_judge_eg", "Thoth", "JUDGE", tenants["EG_DUAT"]),
             officer("demo_judge_gr", "Minos", "JUDGE", tenants["GR_HADES"])]
     judges.update(CN_DIYU=demo[1], EU_HEAVEN_HELL=demo[3], EG_DUAT=demo[4], GR_HADES=demo[5])
