@@ -27,6 +27,17 @@ WEEKS = 12
 QUARTER_WEEKS = 13
 
 
+def span_seconds(concluded_at, claimable_since, created_at, deferred_total) -> float:
+    """一件案子从可认领(老案子没有就按开案)到结案,扣掉待定。概览与年报同一口径。"""
+    return (concluded_at - (claimable_since or created_at) - (deferred_total or timedelta(0))).total_seconds()
+
+
+def average_days(rows) -> float | None:
+    """`rows` 的每行以 (concluded_at, claimable_since, created_at, deferred_total) 开头;一位小数,没有行为 None。"""
+    spans = [span_seconds(*row[:4]) for row in rows]
+    return round(sum(spans) / len(spans) / 86400, 1) if spans else None
+
+
 def overview(queryset, pending_q, tenant, now=None) -> dict:
     from apps.events.models import SoulEvent
 
@@ -44,9 +55,7 @@ def overview(queryset, pending_q, tenant, now=None) -> dict:
     month_rows = list(concluded.filter(concluded_at__gte=month_start)
                       .values_list("concluded_at", "claimable_since", "created_at", "deferred_total", "verdict"))
     done = len(month_rows)
-    spans = [(at - (since or created) - (held or timedelta(0))).total_seconds()
-             for at, since, created, held, _verdict in month_rows]
-    avg_days = round(sum(spans) / len(spans) / 86400, 1) if spans else None
+    avg_days = average_days(month_rows)
 
     tenant_ids = set(queryset.order_by().values_list("tenant_id", flat=True).distinct())
     returned = sum(1 for *_rest, verdict in month_rows if verdict == "RETRY") + SoulEvent.objects.filter(
