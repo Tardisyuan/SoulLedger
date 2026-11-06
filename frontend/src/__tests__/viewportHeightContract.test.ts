@@ -49,6 +49,7 @@ const CONTAINS_APP_LAYOUT: Record<string, string> = {
  */
 const OUTSIDE_APP_LAYOUT: Record<string, string> = {
   "app/page.tsx": "/ — PUBLIC_PATHS",
+  "app/verdict-print/page.tsx": "/verdict-print — PUBLIC_PATHS",
   "app/(auth)/layout.tsx": "/login, /register — AUTH_PATHS",
   "app/(auth)/login/page.tsx": "/login — AUTH_PATHS",
 };
