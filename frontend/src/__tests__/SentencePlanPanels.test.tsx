@@ -214,7 +214,9 @@ describe("灵魂详情的受刑计划面板", () => {
     const stops = await screen.findAllByRole("listitem", { current: "step" });
     expect(stops).toHaveLength(1);
     expect(stops[0]).toHaveAttribute("data-node-order", "2");
-    expect(within(stops[0]).getByText(tZh("sentence_plan.node_states.ACTIVE"))).toBeInTheDocument();
+    // v4 第十批第 3 条: an Egyptian stop of PURGATORY type (the fixture's realm) is said 「行进中」, not 「受刑中」.
+    expect(within(stops[0]).getByText(tZh("sentence_plan.node_states_by_civ.eg.PURGATORY.ACTIVE"))).toBeInTheDocument();
+    expect(within(stops[0]).queryByText(tZh("sentence_plan.node_states.ACTIVE"))).toBeNull();
     expect(planApi.list).toHaveBeenCalledWith(expect.objectContaining({ soul: "s1" }));
     expect(screen.getByText(tZh("sentence_plan.plan_states.ACTIVE"))).toBeInTheDocument();
     expect(screen.getByText(tZh("sentence_plan.node_states.COMPLETED"))).toBeInTheDocument();

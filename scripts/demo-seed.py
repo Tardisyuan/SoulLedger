@@ -552,6 +552,38 @@ def seed_accounts(tenants):
     print("accounts:", made, "rebirth applications:", n)
 
 
+#: The soul each underworld shows in the demo's soul entrance (frontend/demo/DemoSoul.tsx), first one with an account
+#: wins: 窦娥 waits to be reborn (地府 has a 转生 tab), Tristan is on the terraces, Nefertari in the Field of Reeds,
+#: Orpheus waits by the meadow (希腊 has a 转生 tab too).
+SOUL_VIEW = {"cn": ["窦娥", "梁山伯"], "eu": ["Tristan", "Lancelot"], "eg": ["Nefertari", "Bata"], "gr": ["Orpheus", "Eurydice"]}
+SOUL_PASSWORD = "demo-only-not-a-secret"
+
+
+def seed_soul_logins():
+    """For the recorder: a known password on one soul account per underworld, and where to find it. The recorder
+    signs in as each through the soul app's own `/soul-auth/login/` and records what `/me/` answers."""
+    out = {}
+    for civ, names in SOUL_VIEW.items():
+        for name in names:
+            soul = Soul.all_objects.filter(name=name).order_by("-life_index").first()
+            account = accounts.current_account_of(soul) if soul else None
+            if account is None:
+                continue
+            account.user.set_password(SOUL_PASSWORD)
+            account.user.save(update_fields=["password"])
+            account.must_change_password = False
+            account.initial_password_expires_at = None
+            account.save(update_fields=["must_change_password", "initial_password_expires_at"])
+            out[civ] = {"name": name, "soul_code": soul.soul_code}
+            break
+        else:
+            print("  no soul account for the soul entrance:", civ)
+    path = os.environ.get("DEMO_SOUL_LOGINS")
+    if path:
+        Path(path).write_text(json.dumps(out, ensure_ascii=False))
+    print("soul logins:", sorted(out))
+
+
 def seed_appeals():
     made = {}
     for case in Judgment.all_objects.filter(verdict__isnull=False, is_final=True).exclude(civilization="GREEK"):
@@ -800,6 +832,7 @@ def main():
     seed_death_sync(tenants)
     seed_accounts(tenants)
     seed_soul_circle()
+    seed_soul_logins()
     seed_appeals()
     seed_audit(list(User.objects.exclude(role="SOUL")[:12]))
     seed_notifications(demo)

@@ -65,3 +65,18 @@ test("393px: the tour fits above the fold and reaches its second step", async ({
   await expect(page.getByTestId("demo-tour-progress")).toContainText("2 / 6");
   clean(seen, "393 tour");
 });
+
+test("393px: the soul entrance fills the screen under a 40px strip, nothing overflows", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await page.goto("/");
+  await page.getByTestId("demo-soul-gr").click();
+  const strip = await page.getByTestId("demo-soul-strip").boundingBox();
+  expect(strip && Math.round(strip.height)).toBe(40);
+  await expect(page.getByTestId("demo-soul-phone")).toBeHidden();
+  const width = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(width).toBeLessThanOrEqual(0);
+  await page.getByTestId("demo-soul-back-short").click();
+  await page.waitForURL((u) => u.pathname !== "/");
+  await expect(page.locator("html")).toHaveAttribute("data-civ", "gr");
+  clean(seen, "393 soul entrance");
+});
