@@ -12,7 +12,9 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.filters import SearchFilter
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.client_ip import get_client_ip
@@ -26,7 +28,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
 from apps.judgment import attachments as _attachments  # noqa: F401  (注册 post_delete 收文件的接收器)
-from apps.judgment import claims
+from apps.judgment import claims, verdict_pdf
 from apps.judgment.attachment_views import CaseAttachmentActionsMixin
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.confession_views import NegativeConfessionActionsMixin
@@ -249,6 +251,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         'previous_pending': ['judgment.read'],
         # 「戊 · 发落」的候选目的地:只读,给判官挑;真正落判仍要 conclude 的 judgment.execute。
         'destinations': ['judgment.read'],
+        # 判决文书 PDF:与详情同一个读(用户 2026-11-07)。
+        'verdict_document_pdf': ['judgment.read'],
         'update': ['judgment.execute'],
         'partial_update': ['judgment.execute'],
         'destroy': ['judgment.execute'],
@@ -325,7 +329,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
     search_fields = ["soul__name", "=soul__id", "=id", "=case_number"]
     # 暂居只读例外(apps/core/tenant.py)。不含 `next_pending`:那是待办队列,
     # 原属租户对暂居地的案子什么都做不了。
-    residence_read_actions = ("list", "retrieve", "citations")
+    residence_read_actions = ("list", "retrieve", "citations", "verdict_document_pdf")
     ordering_fields = ["created_at", "concluded_at"]
 
     def get_queryset(self):
@@ -745,6 +749,61 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             ahead = remaining_qs.filter(self._before(judgment)).count()
             payload["position"] = total - remaining + ahead + 1
         return self._cursor_response(payload, judgment)
+
+    @extend_schema(
+        operation_id="v1_judgment_verdict_document_pdf_retrieve",
+        parameters=[
+            OpenApiParameter(
+                "locale", OpenApiTypes.STR, OpenApiParameter.QUERY, enum=list(verdict_pdf.LOCALES),
+                description="The language of the document (the reader's interface language); default zh-Hans.",
+            ),
+        ],
+        responses={
+            (200, "application/pdf"): OpenApiTypes.BINARY,
+            404: OpenApiTypes.OBJECT,
+            409: OpenApiTypes.OBJECT,
+            503: OpenApiTypes.OBJECT,
+        },
+    )
+    @action(detail=True, methods=["get"], url_path="verdict-document.pdf", pagination_class=None, filter_backends=[])
+    def verdict_document_pdf(self, request, pk=None):
+        """判决文书的 PDF(用户 2026-11-07;渲染路径见 apps/judgment/verdict_pdf.py)。
+
+        `GET /api/v1/judgment/{id}/verdict-document.pdf/?locale=en`
+
+        与详情同一个 `get_object`、同一个码名(`judgment.read`)、同一个序列化器,所以能看详情的人就能下载,
+        文书上的字与网页上那张卡出自同一份数据。没结案 409 `judgment_not_concluded`;结了但没有文书
+        (裁决是重审 RETRY,或文明不在四文明里)404 `no_verdict_document`;渲染服务没配或不在 503
+        (`verdict_pdf_not_configured` / `verdict_pdf_unavailable`)。文件名是案号。
+        """
+        from django.http import HttpResponse
+        from django.utils.http import content_disposition_header
+
+        from apps.perm.checker import check_permission
+
+        judgment = self.get_object()
+        if not judgment.is_final:
+            return Response({"error": "The judgment is not concluded.", "code": "judgment_not_concluded"},
+                            status=status.HTTP_409_CONFLICT)
+        if not verdict_pdf.has_document(judgment):
+            return Response({"error": "This judgment has no verdict document.", "code": "no_verdict_document"},
+                            status=status.HTTP_404_NOT_FOUND)
+        context = self.get_serializer_context()
+        soul = None
+        # 生卒年在网页上来自灵魂详情(`soul.read`);没有这个码的人,网页写「未记录」,PDF 也一样。
+        if check_permission(request.user, "soul.read"):
+            data = SoulSerializer(judgment.soul, context=context).data
+            soul = {"birth_date": data.get("birth_date"), "death_date": data.get("death_date")}
+        payload = {"judgment": dict(JudgmentDetailSerializer(judgment, context=context).data), "soul": soul}
+        try:
+            pdf = verdict_pdf.render(payload, request.query_params.get("locale", ""))
+        except verdict_pdf.RendererUnavailableError as exc:
+            return Response({"error": "The PDF renderer is unavailable.", "code": exc.code},
+                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = content_disposition_header(
+            True, f"{judgment.case_number or judgment.pk}.pdf")
+        return response
 
     @extend_schema(
         parameters=[
@@ -1639,3 +1698,24 @@ class StatuteViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSet
             )
             .order_by(*Statute._meta.ordering)
         )
+
+
+class VerdictPrintDataView(APIView):
+    """前端打印页取数据(`GET /api/v1/judgment/verdict-print/<key>/`,apps/judgment/verdict_pdf.py 第 3 步)。
+
+    不认登录:请求来自前端的服务端(Gotenberg 打开打印页时),手里只有那把一次性键 —— 256 位随机、
+    `VERDICT_PDF_TOKEN_TTL_SECONDS` 过期、PDF 出完即删。数据是 `verdict_document_pdf` 在下载人自己的请求里
+    按详情的权限序列化好的,这里只从缓存读,不查库。nginx 不对外转发这条路径(nginx.conf)。
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = []
+
+    @extend_schema(exclude=True)
+    def get(self, request, key):
+        data = verdict_pdf.print_data(key)
+        if data is None:
+            return Response({"error": "Unknown or expired key.", "code": "unknown_print_key"},
+                            status=status.HTTP_404_NOT_FOUND)
+        return Response(data)

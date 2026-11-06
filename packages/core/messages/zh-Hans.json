@@ -8843,7 +8843,8 @@
     "reading": "读数"
   },
   "doc": {
-    "download_pdf": "下载 PDF"
+    "download_pdf": "下载 PDF",
+    "pdf_fallback": "PDF 服务暂不可用，改用浏览器打印：在打印对话框里选「存为 PDF」。"
   },
   "empty": {
     "body": "队列已清空。新的案子到了会出现在这里。",

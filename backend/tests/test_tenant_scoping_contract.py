@@ -139,8 +139,9 @@ RESIDENCE_READABLE: dict[str, tuple[tuple[str, ...], str]] = {
         "写动作(die / transition / add_record / 确认日期警告 / archive / 更正终局)不纳入。",
     ),
     "JudgmentViewSet": (
-        ("list", "retrieve", "citations"),
-        "暂居地对灵魂的审判与其所引条文,即「审判进展」。不含 `next_pending`:"
+        ("list", "retrieve", "citations", "verdict_document_pdf"),
+        "暂居地对灵魂的审判与其所引条文,即「审判进展」;判决文书 PDF 是详情的另一种读法,范围与 retrieve 相同(2026-11-07)。"
+        "不含 `next_pending`:"
         "那是待办队列,原属租户对暂居地的案子什么都不能做,出现在它的队列里只会误导。",
     ),
     "DispositionViewSet": (
