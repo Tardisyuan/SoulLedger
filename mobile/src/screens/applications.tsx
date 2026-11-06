@@ -19,7 +19,7 @@ import { Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { GoneScreen, useGone } from "../gone";
 import { useI18n } from "../i18n";
-import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
+import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
 import { publishVoiceNumber } from "../voiceCache";
 import { radius, space } from "../theme";
@@ -53,32 +53,9 @@ import {
 } from "../ui";
 import { CooldownShorteningBlock } from "./cooldown";
 import { useDiscardGuard } from "./discardGuard";
-import { useResidence, useResidenceNames } from "../residence";
+import { useResidenceNames } from "../residence";
 import type { AppStackParams } from "../navTypes";
 import { SentenceBlocked } from "./sentence";
-
-/**
- * The server's `terminal_cosmology`: this soul's (home) civilization has no
- * rebirth. The entry stays — permanently disabled, with the fixed reason — and
- * the empty list says why it will stay empty (handoff 2a/2f).
- */
-export const TERMINAL_REASON = "terminal_cosmology";
-
-function TerminalEmpty() {
-  const { t } = useI18n();
-  const { home } = useResidence();
-  return (
-    <View testID="terminal-empty" style={styles.terminal}>
-      <PageEmptyArt />
-      <Txt variant="nav" style={styles.center}>
-        {t(lexiconKey(home, "no_rebirth_title"))}
-      </Txt>
-      <Txt variant="caption" tone="subtle" style={styles.center}>
-        {t(lexiconKey(home, "no_rebirth_body"))}
-      </Txt>
-    </View>
-  );
-}
 
 /**
  * The server's `soul_state` says only "not in a state that may apply" (`rebirth.py::eligibility`). Why is the
@@ -236,17 +213,14 @@ export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
         <FadeIn>
           <ResidenceNote />
           <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} onChanged={() => void list.reload()} landed={landed} />
+          {/* No terminal-cosmology variant: the civilizations without rebirth have no 转生 tab (v4; removed 2026-11-06). */}
           {list.data.results.length === 0 ? (
-            list.data.reason === TERMINAL_REASON ? (
-              <TerminalEmpty />
-            ) : (
-              <View testID="applications-empty" style={styles.terminal}>
-                <PageEmptyArt />
-                <Txt variant="caption" tone="subtle" style={styles.center}>
-                  {t("soul_app.applications.empty")}
-                </Txt>
-              </View>
-            )
+            <View testID="applications-empty" style={styles.empty}>
+              <PageEmptyArt />
+              <Txt variant="caption" tone="subtle" style={styles.center}>
+                {t("soul_app.applications.empty")}
+              </Txt>
+            </View>
           ) : null}
           {list.data.results.map((a) => (
             <ApplicationRow
@@ -721,7 +695,7 @@ const styles = StyleSheet.create({
   stepLineDashed: { flex: 1, width: 0, marginVertical: 4, borderLeftWidth: 1, borderStyle: "dashed" },
   stepDotLarge: { width: 16, height: 16, marginTop: 4 },
   railStacked: { width: 16 },
-  terminal: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingVertical: 32 },
+  empty: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingVertical: 32 },
   center: { textAlign: "center" },
   stepGap: { paddingBottom: 24 },
   stepName: { fontSize: 15, lineHeight: 21 },
