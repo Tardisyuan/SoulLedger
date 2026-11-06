@@ -147,7 +147,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   // 匾色 `--color-main`。前缀取自 CIVILIZATION_SHORT_CODES(由租户代码推出,不另写一份);
   // 没登录、或租户代码不属于四个文明时是 neutral(登录前的中性皮)。
   const civ = civSkinOf(tenantCode);
-  // v4:换文明时光、印与主视觉一起过渡 —— 把改写包进 View Transitions(globals.css 给 360ms 交叉淡化)。
+  // v4:换文明时光、印与主视觉一起过渡 —— 把改写包进 View Transitions(globals.css 给 320ms 交叉淡化,令牌 slow)。
   // 第一次写(加载、登录前的中性皮)不过渡;浏览器不支持或要求减少动态效果时直接换。
   // 登录与登出(一边是 neutral)也不过渡:那不是换文明，后面紧跟着换页。此前登录时这里拍下落地页 / 登录页的快照，
   // 在演示的入场印上面叠着淡出 360ms —— 新页面已经在下面了，旧画面还压在上面。
@@ -158,7 +158,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       root.dataset.civ = civ;
     };
     const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
-    const switching = previous && previous !== "neutral" && civ !== "neutral" && previous !== civ;
+    // `data-civ-change="covered"`:有别的东西正盖着这次换文明(演示的入场印),它自己等新页面就绪再收;这里再淡化
+    // 只会把旧页面冻成快照叠在它上面。
+    const covered = root.dataset.civChange === "covered";
+    const switching = previous && previous !== "neutral" && civ !== "neutral" && previous !== civ && !covered;
     if (switching && typeof doc.startViewTransition === "function" && !prefersReducedMotion()) {
       doc.startViewTransition(apply);
     } else {

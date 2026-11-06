@@ -1145,12 +1145,13 @@ html.theme-switching *::after {
 }
 
 /* 切换文明(殿司卡进另一殿、换账号)时,光、印与主视觉一起过渡:TenantContext 用 View Transitions
-   把 data-civ 的改写包起来,整页 360ms 交叉淡化(v4「1」的时长与缓动)。渐变不能逐值过渡,
-   交叉淡化是唯一让光一起走的办法。减少动态效果时 TenantContext 不开这一次过渡,直接换。 */
+   把 data-civ 的改写包起来,整页交叉淡化。渐变不能逐值过渡,交叉淡化是唯一让光一起走的办法。
+   时长取令牌 slow(320ms):v4「1」写的 360 不在令牌表里,320 是最近的一档;缓动就是 enter 的那条曲线。
+   减少动态效果时 TenantContext 不开这一次过渡,直接换;演示的入场印盖着时也不开(`data-civ-change`)。 */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 360ms;
-  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-duration: var(--transition-duration-slow);
+  animation-timing-function: var(--ease-enter);
 }
 
 @keyframes drawer-in {
