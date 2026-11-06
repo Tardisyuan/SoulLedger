@@ -5,7 +5,7 @@
 That sentence is the whole point of this rewrite. The previous version of this
 document was a 259-line hand-maintained mirror of the token system, and by
 2026-09-02 it disagreed with the code in six of its nine sections — it
-prescribed **Inter** and **JetBrains Mono** (the app then shipped Archivo, Source
+prescribed **Inter** and **JetBrains Mono**, which never shipped (the app then had Archivo, Source
 Serif 4 and IBM Plex Mono), **8px and 12px border radii** (every radius token
 in the app is `0`), a **14px body** (the scale has no 14px step), a 1280px
 container (it is 1200px), and "no shadows, never" (nine `shadow-*` classes
