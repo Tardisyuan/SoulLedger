@@ -21,7 +21,7 @@ jest.mock("@soulledger/core/api/judgment", () => ({
     conclude: (...a: unknown[]) => mockConclude(...a),
     defer: (...a: unknown[]) => mockDefer(...a),
     undefer: jest.fn(async () => ({})),
-    negativeConfessions: jest.fn(async () => ({ data: { items: [] } })),
+    negativeConfessions: jest.fn(async () => ({ items: [] })),
   },
 }));
 
