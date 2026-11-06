@@ -7,6 +7,7 @@ import { KARMA_PATTERNS, type ChartColors } from "@/lib/chart-colors";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@soulledger/core/api/ledger";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import {
   INHERITANCE_QUANTITIES,
   RECORD_QUANTITIES,
@@ -46,7 +47,7 @@ interface SoulKarmaLedgerCardProps {
    * (life_index / inherited_merit / inherited_demerit). Optional so the figure
    * inventory `renderCard` pins in ledgerQuantityContract.render stays what it
    * was; the page always passes it. */
-  life?: { index: number; inheritedMerit?: number; inheritedDemerit?: number } | null;
+  life?: { index: number; inheritedMerit?: number; inheritedDemerit?: number; civilization?: string } | null;
 }
 
 /** Year-only label for the x-axis — full formatHistoricalDate also appends
@@ -135,7 +136,7 @@ export function SoulKarmaLedgerCard({
             they take that table's kinds. */}
         {life && (
           <div className="mb-3 flex justify-between items-baseline gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
-            <span>{t("souls.detail.life_number", { n: String(life.index + 1) })}</span>
+            <span>{thisLifeLabel(t, life.civilization, life.index + 1) ?? t("souls.detail.life_number", { n: String(life.index + 1) })}</span>
             {life.index > 0 && life.inheritedMerit !== undefined && life.inheritedDemerit !== undefined && (
               <span className="inline-flex items-baseline gap-2">
                 <span>{t("souls.detail.carried_in")}</span>
