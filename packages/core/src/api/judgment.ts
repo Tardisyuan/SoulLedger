@@ -184,9 +184,33 @@ export interface Judgment extends ArchiveFields {
   owner_org?: number | null;
   owner_org_name?: string | null;
   owner_org_name_en?: string | null;
+  /**
+   * v4 D6:「不过」的理由代码(只在 FAILED;本文明一套,见 backend/apps/judgment/fail_reasons.py),与选「其他」时的一句。
+   * 只由 `conclude` 写。埃及永远是空列表:理由由天平列出。
+   */
+  fail_reasons?: string[];
+  fail_reason_note?: string;
+  /** v4 D8 / D7:希腊落印时选的文书与可医标记;别的文明是空串。 */
+  greek_account?: "" | GreekAccount;
+  greek_curability?: "" | GreekCurability;
+  /** v4 D12:落印那一刻所在殿的时区,与按它写出的带偏移时间;文书的日期与时辰读后者。未结案为 null。 */
+  concluded_tz?: string;
+  concluded_at_local?: string | null;
+  /**
+   * v4 D10 审判期限(系统自设):从可认领起算,待定期间不计。`deadline_remaining_seconds` 过了是负数,
+   * 待定中停表;不计期限时三项为 null / null / false。
+   */
+  claimable_since?: string | null;
+  deadline_at?: string | null;
+  deadline_remaining_seconds?: number | null;
+  is_overdue?: boolean;
 }
 
 type Schemas = components["schemas"];
+export type GreekAccount = Schemas["GreekAccountEnum"];
+export type GreekCurability = Schemas["GreekCurabilityEnum"];
+/** `GET /judgment/hall-stats/`:v4 概览屏的数(定义见 backend/apps/judgment/hall_stats.py)。 */
+export type JudgmentHallStats = Schemas["JudgmentHallStats"];
 export type ChineseOffence = Schemas["ChineseOffenceEnum"];
 export type WrongfulDeathCause = Schemas["WrongfulDeathCauseEnum"];
 export type GrievanceLevel = Schemas["GrievanceLevelEnum"];
@@ -221,6 +245,8 @@ export interface JudgmentDetail extends Judgment {
   cross_judgment_id?: string | null;
   /** 原审的审批流程走到第几站、处置是否因此还不能执行(`waiting`,`disposition.flow_waiting.*` 的码);没有流程为 null。 */
   flow_progress?: Schemas["JudgmentFlowProgress"] | null;
+  /** v4 D9:本案引用的炼狱七台条文对应的罪(`reject_reason.eu.sin.*` 的键名);只欧洲,没引用为空列表。 */
+  cited_deadly_sins?: string[];
 }
 
 export interface EvidenceRulingPayload {
@@ -251,6 +277,9 @@ export interface JudgmentQueueCounts {
   others: number;
   deferred: number;
   total: number;
+  /** v4:已过期限(待定中的不算)与退回重审(判 RETRY 另开的一件);与四组不互斥。 */
+  overdue?: number;
+  returned?: number;
 }
 
 /** `GET /judgment/courts/`: one court (殿) in the caller's scope and its pending cases. */
@@ -477,6 +506,21 @@ export interface ConcludeJudgmentPayload {
   term_years?: number | null;
   /** Only where the destination `is_eternal`. */
   eternal?: boolean | null;
+  /**
+   * v4 D6:FAILED 的理由代码(原审必填;地府一个罪目或 OTHER,欧洲恰好一项,希腊按所选文书可多选,埃及不能给)。
+   * 选了 OTHER 要 `fail_reason_note`。拒绝 400 带 `code`:fail_reason_required(带 `choices`)/ fail_reason_invalid /
+   * fail_reason_not_selectable / fail_reason_not_failed / fail_reason_note_required / fail_reason_note_too_long /
+   * fail_reason_contradicts_record。
+   */
+  fail_reasons?: string[];
+  fail_reason_note?: string;
+  /** v4 D8:希腊 PASSED / FAILED 必选(greek_account_required)。 */
+  greek_account?: "" | GreekAccount;
+  /**
+   * v4 D7:希腊 FAILED 必选(curability_required)。INCURABLE = 塔尔塔罗斯、永久;同时给别的门、年数或
+   * `eternal: false` 是 400 incurable_is_eternal_in_tartarus。别的文明给了是 greek_mark_not_applicable。
+   */
+  greek_curability?: "" | GreekCurability;
 }
 
 /** `GET /judgment/{id}/destinations/?candidate_verdict=` — the 「戊 · 发落」 picker. */
@@ -772,6 +816,8 @@ export const judgmentApi = {
     api.get<JudgmentQueueCounts>("/judgment/queue-counts/", { params }),
   /** Every court in the caller's scope (unfiltered, unpaginated) — the court filter's options. */
   courts: () => api.get<JudgmentCourt[]>("/judgment/courts/"),
+  /** v4 概览屏:未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案(殿的时区)。 */
+  hallStats: () => api.get<JudgmentHallStats>("/judgment/hall-stats/"),
 };
 
 // ── 申诉(第五十二批;backend/apps/judgment/appeal_views.py)──────────────────
@@ -944,6 +990,17 @@ export const PLACEMENT_REFUSALS = [
 export const WEIGHING_REFUSALS = [
   "verdict_contradicts_weighing", "wavering_has_no_destination", "wavering_with_open_cross",
   "approval_flow_required", "weighing_flow_required",
+] as const;
+
+/**
+ * v4「不过」的理由与希腊落印的拒绝码(400,backend/apps/judgment/fail_reasons.py;`incurable_is_eternal_in_tartarus`
+ * 在 services.py)。`concludeRefusalOf` 还不分类它们(为 null):理由面板在发出之前就挡住了这些情形,
+ * 文案与分类随 v4 前端一起加。
+ */
+export const FAIL_REASON_REFUSALS = [
+  "fail_reason_required", "fail_reason_invalid", "fail_reason_not_selectable", "fail_reason_not_failed",
+  "fail_reason_note_required", "fail_reason_note_too_long", "fail_reason_contradicts_record",
+  "greek_account_required", "curability_required", "greek_mark_not_applicable", "incurable_is_eternal_in_tartarus",
 ] as const;
 
 /** `claims.assert_concludable` 的拒绝码(结案与认领同一组,即 `conclude_refusal`),译文在 `claimRefusalMessage` 里。 */
