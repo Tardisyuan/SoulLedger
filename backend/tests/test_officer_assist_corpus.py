@@ -43,7 +43,9 @@ def test_officer_screens_are_the_web_route_segments():
     assert len(segments) >= 25  # 目录找错了会得到空集,而空集与空集相等
     # 曾有具名例外 NO_SCREEN = {"about"}:关于页归到 "other"。2026-09-30 用户拍板给它一个页面 id,
     # 例外随之删掉 —— 现在每个有页面的段都有助手页面 id,没有例外。
-    assert set(OFFICER_SCREENS) - {"other"} == segments
+    # 唯一不算的是 `verdict-print`(2026-11-07):只给无头 Chromium 渲染判决书 PDF 的页,不登录、没有页头,
+    # 官员不会在那里打开助手。
+    assert set(OFFICER_SCREENS) - {"other"} == segments - {"verdict-print"}
 
 
 def test_every_screen_has_an_officer_entry(locale):
