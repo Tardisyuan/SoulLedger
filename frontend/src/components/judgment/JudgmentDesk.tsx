@@ -53,9 +53,12 @@ export function VerdictKeyContent({
   code,
   keyHint,
   label,
+  namespace = "judgment.verdicts",
 }: {
   code: NonNullable<Judgment["verdict"]>;
   keyHint: string;
+  /** 按文明的叫法(`verdictNamespace`,第十一批 1a:PURGATORY 欧洲炼狱、埃及天平摇摆、其余存疑)。 */
+  namespace?: string;
   /** 本文明的叫法(埃及称心:`desk.eg.*`「心轻于羽 · 通过」);原始枚举仍在 title 上。 */
   label?: string;
 }) {
@@ -63,7 +66,7 @@ export function VerdictKeyContent({
     <>
       <span aria-hidden="true" className="font-serif text-lg font-normal">{verdictGlyph(code)}</span>
       {/* <DomainEnum>:原始枚举留在 title 上,缺译文时显示「未识别」而不是点号键名。 */}
-      {label ? <span title={code}>{label}</span> : <DomainEnum namespace="judgment.verdicts" value={code} />}
+      {label ? <span title={code}>{label}</span> : <DomainEnum namespace={namespace} value={code} />}
       <kbd aria-hidden="true" className="absolute left-2 top-2 font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
         {keyHint}
       </kbd>

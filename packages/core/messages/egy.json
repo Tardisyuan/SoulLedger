@@ -2089,7 +2089,7 @@
       "notes": "Medu En Wedja",
       "notes_placeholder": "Sesh Medu…",
       "create_workflow": "Iri Wat Wedja",
-      "defer": "Sedjer",
+      "defer": "Er Sedjer",
       "commit_error": "Wedja Nen Hab; Sep Aq Er Sepu Wedja Khery",
       "restore_deferred": "Ankh Wehem Sepu Sedjer",
       "stat_decided": "{{n}} Wedja",
@@ -2314,7 +2314,7 @@
       "selected": "Setep Seth {{n}}",
       "claim": "Shesep",
       "reassign": "Hab Ky…",
-      "defer": "Sedjer",
+      "defer": "Er Sedjer",
       "clear_selection": "Sehen Setep",
       "batch_limit": "Sep Wa: {{n}} Er Pehwy · Ky Em Khet",
       "balance": "Sepy",
@@ -2347,7 +2347,8 @@
         "not_found": "Wedja Nen Gem",
         "permission_denied": "Nen Was",
         "generic": "Nen Iri",
-        "assignee_out_of_scope": "Sep Pen: Nen Em Tash En Sab Pen"
+        "assignee_out_of_scope": "Sep Pen: Nen Em Tash En Sab Pen",
+        "defer_reason_required": "Sesh Khet: Er Sedjer"
       },
       "held_short": "Shesep Er Khet Hru Pen",
       "held": "Em Smen Er {{date}}: Ba Em Nut Mut Nen Maat; Nen Shesep Er Hru Pen.",
@@ -2488,7 +2489,7 @@
       "title": "Fai Ib",
       "scale": "Ib {{weight}} · Shut {{counterweight}}",
       "gives": "Fai Ib: {{verdict}}",
-      "wavering_hint": "«Nen Wedja Djer» «Wehem Wedja» = Fai Nen Smen: Djehuty Sesh, Fai Ib Mawy · Nen Wat.",
+      "wavering_hint": "«Nen Smen Djer» «Wehem Wedja» = Fai Nen Smen: Djehuty Sesh, Fai Ib Mawy · Nen Wat.",
       "contradicts": "Nen Mi Fai Ib",
       "result": {
         "LIGHTER": "Ib Nen Dens Er Shut",
@@ -2657,7 +2658,39 @@
     },
     "concluded_filter": {
       "search": "Hehy Ren Ba, Ren Sep"
-    }
+    },
+    "verdicts_by_civ": {
+      "eu": {
+        "purgatory": "Ta Hesmen"
+      },
+      "eg": {
+        "purgatory": "Fai Nen Smen"
+      }
+    },
+    "greek_account": {
+      "why": "Sesh 2 · Ky Er Ky. Sesh Wedja: Mi Setep.",
+      "gorgias": "Gorgias",
+      "gorgias_pass": "Leimon · Er Ta Nefer",
+      "republic": "Politeia",
+      "republic_pass": "Tephet 4 · Er Hery Em Pet · Renpet 1000: Er Leimon",
+      "step_choose": "Sep 1 · Setep Sesh",
+      "step_seal": "Sep 2 · Khetem",
+      "confirm_pass": "Menkh · Khetem"
+    },
+    "fail_reason_errors": {
+      "curability_required": "Sesh: Pekhret Er Nen Pekhret.",
+      "fail_reason_contradicts_record": "Sesh Ba Nen Djed Pen: Medu Wedja Nen Mi Pen.",
+      "fail_reason_invalid": "Khet Pen: Nen En Wedja Wesekhet Pen. Setep Wehem.",
+      "fail_reason_not_failed": "Khet Hena Sesh Pekhret: Em «Nen Menkh» Wa.",
+      "fail_reason_not_selectable": "Fai Sesh Khet: Nen Setep.",
+      "fail_reason_note_required": "«Ky»: Sesh Medu Wa.",
+      "fail_reason_note_too_long": "Medu Wa: Sesh 500 Er Pehwy.",
+      "fail_reason_required": "Setep Khet: Wedja Khetem.",
+      "greek_account_required": "Setep Sesh Wedja Tepy: Gorgias Er Politeia.",
+      "greek_mark_not_applicable": "Setep Sesh Hena Pekhret: Sep Duat Haunebut Wa.",
+      "incurable_is_eternal_in_tartarus": "Nen Pekhret: Djet Em Tartaros. Nen Setep Ta Ky, Nen Renpet."
+    },
+    "greek_account_label": "Sesh En Wedja Pen"
   },
   "audit": {
     "title": "Medew Maa",
@@ -7421,12 +7454,13 @@
       "claim": "Shesep",
       "empty_title": "Nen Shesep-I Djer",
       "empty_body": "Shesep Wa Em «Nen Shesep Djer».",
-      "desk_only": "Nen Djed Wedja Djer · Em Medjat Sab",
-      "scope_note": "Em Medjat Ba: Shesep, Maa Hena Sesh Wesheb. Djed Wedja Hena Khetem: Em Medjat Sab.",
+      "desk_only": "Djed Wedja Djer · Khetem Em «Khemen Sesh · Wedja»",
+      "scope_note": "Em Medjat Ba: Shesep, Maa, Sesh Wesheb · Khetem Em «Khemen Sesh · Wedja». Setep Ta Hena Djed Hep: Em Medjat Sab.",
       "claim_failed": "Nen Shesep-Ek",
       "deferred": "Sedjer",
       "others": "Em Djeret Ky",
-      "claim_taken": "Shesep Ky Seth"
+      "claim_taken": "Shesep Ky Seth",
+      "open_swipe": "Khemen Sesh · Wedja"
     },
     "search": {
       "souls": "Hehy Ba",
@@ -7711,7 +7745,7 @@
     },
     "case": {
       "release": "Redi Er Hat",
-      "defer": "Sedjer",
+      "defer": "Er Sedjer",
       "request_reassign": "Dbh Hab Ky",
       "release_title": "Redi Sep Pen Er Hat?",
       "release_body": "Er Khet: Em «Nen Shesep Djer». Sesh Wesheb-Ek Smen.",
@@ -8724,8 +8758,7 @@
     "doc_card": "Sesh Wedja · Khetem Pehwy",
     "eg": {
       "fail": "Ib Dens Er Shut · Nen Menkh",
-      "pass": "Ib Nen Dens Er Shut · Menkh",
-      "waver": "Fai Nen Smen"
+      "pass": "Ib Nen Dens Er Shut · Menkh"
     },
     "reading": "Hesb"
   },

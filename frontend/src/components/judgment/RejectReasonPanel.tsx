@@ -230,7 +230,12 @@ export function RejectReasonPanel({
   })();
 
   const preview = (() => {
-    if (!failing) return null;
+    // 希腊判「通过」(第十一批第 3 条):第五批定稿的判语,随所选的一篇换。
+    if (!failing) {
+      if (value.account === "GORGIAS") return t("verdict_doc.gr.verdict.isles");
+      if (value.account === "REPUBLIC") return t("verdict_doc.gr_er.verdict.just");
+      return null;
+    }
     if (civilization === "EGYPTIAN") return t("verdict_doc.eg.verdict.fail");
     const r = value.reasons.length === 1 ? value.reasons[0] : null;
     if (civilization === "CHINESE" && r && r !== OTHER) {
@@ -261,8 +266,9 @@ export function RejectReasonPanel({
         {t("reject.sheet.unstamped", { soul: soulName })}
         {failing && scope && ` · ${scope}`}
       </p>
+      {isGreek && !failing && <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("judgment.greek_account.why")}</p>}
       {isGreek && (
-        <div role="radiogroup" aria-label={t("judgment.greek_account_label")} data-testid="greek-account" className="grid grid-cols-2 gap-2">
+        <div role="radiogroup" aria-label={t("judgment.greek_account_label")} data-testid="greek-account" className={failing ? "grid grid-cols-2 gap-2" : "grid gap-2"}>
           {(["GORGIAS", "REPUBLIC"] as const).map((account) => (
             <label key={account} className={OPTION}>
               <input
@@ -274,7 +280,15 @@ export function RejectReasonPanel({
                 onChange={() => onChange({ ...value, account, reasons: [], note: "" })}
                 className="h-4 w-4 shrink-0 accent-[oklch(var(--color-ink))]"
               />
-              {t(account === "GORGIAS" ? "judgment.statute_corpus.GORGIAS" : "judgment.statute_corpus.REPUBLIC_ER")}
+              <span className="min-w-0">
+                <span className="block">{t(account === "GORGIAS" ? "judgment.greek_account.gorgias" : "judgment.greek_account.republic")}</span>
+                {/* 通过时每一篇下面写它把灵魂送到哪里(第五批判决文书的题名)。 */}
+                {!failing && (
+                  <span className="block text-xs font-normal text-[oklch(var(--color-ink-muted))]">
+                    {t(account === "GORGIAS" ? "judgment.greek_account.gorgias_pass" : "judgment.greek_account.republic_pass")}
+                  </span>
+                )}
+              </span>
             </label>
           ))}
         </div>
