@@ -73,7 +73,7 @@ def officer_client(user):
 
 
 def password_in_last_mail():
-    match = re.search(r"初始密码:(\S+)", mail.outbox[-1].body)
+    match = re.search(r"初始密码[:：](\S+)", mail.outbox[-1].body)
     assert match, mail.outbox[-1].body
     return match.group(1)
 
