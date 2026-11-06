@@ -563,11 +563,11 @@ describe("驳回时会转到的站不能跳过", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("殿名按界面语言:中文界面写 天堂 / 第十殿,不写库里的 Heaven", () => {
+  it("殿名按界面语言:中文界面写 天国 / 第十殿,不写库里的 Heaven", () => {
     const wf = workflowWith([running], JUMP_NODES, { current_node: "n1" });
     wrap(<AdjustStationsSheet workflow={wf} segment={running} isOpen onClose={() => {}} />);
     const list = screen.getByTestId("adjust-stations");
-    expect(list).toHaveTextContent("天堂");
+    expect(list).toHaveTextContent("天国");
     expect(list).toHaveTextContent("第十殿");
     expect(list).not.toHaveTextContent("Heaven");
     expect(list).not.toHaveTextContent("Tenth Court");
@@ -575,7 +575,7 @@ describe("驳回时会转到的站不能跳过", () => {
 });
 
 // ── 模板编辑器的只读预览(2026-10-19)────────────────────────────────────────
-// 窄屏只读视图的流程列表与右侧属性里的殿名,按界面语言(`courtLabel`):库里存的 Heaven 在中文界面写 天堂。
+// 窄屏只读视图的流程列表与右侧属性里的殿名,按界面语言(`courtLabel`):库里存的 Heaven 在中文界面写 天国。
 
 describe("模板编辑器只读预览的殿名", () => {
   const PREVIEW_NODES: FlowNode[] = [
@@ -587,7 +587,7 @@ describe("模板编辑器只读预览的殿名", () => {
     ["p2", "end"],
   ]);
 
-  it("流程列表写 天堂 / 第十殿,不写库里的 Heaven", () => {
+  it("流程列表写 天国 / 第十殿,不写库里的 Heaven", () => {
     render(
       <WorkflowReadOnlyList
         t={tZh}
@@ -601,13 +601,13 @@ describe("模板编辑器只读预览的殿名", () => {
       />
     );
     const list = screen.getByRole("region", { name: tZh("workflow.editor.preview") });
-    expect(list).toHaveTextContent("天堂");
+    expect(list).toHaveTextContent("天国");
     expect(list).toHaveTextContent("第十殿");
     expect(list).not.toHaveTextContent("Heaven");
     expect(list).not.toHaveTextContent("Tenth Court");
   });
 
-  it("右侧属性(只读)里的殿名同样写 天堂", () => {
+  it("右侧属性(只读)里的殿名同样写 天国", () => {
     render(
       <WorkflowInspector
         t={tZh}
@@ -624,7 +624,7 @@ describe("模板编辑器只读预览的殿名", () => {
       />
     );
     const panel = screen.getByRole("tabpanel");
-    expect(panel).toHaveTextContent("天堂");
+    expect(panel).toHaveTextContent("天国");
     expect(panel).not.toHaveTextContent("Heaven");
   });
 });

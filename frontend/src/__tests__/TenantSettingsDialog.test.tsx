@@ -27,6 +27,7 @@ const update = tenantsApi.updateSettings as jest.Mock;
 const tenant = (over: Partial<Tenant> = {}): Tenant => ({
   id: 1,
   code: "CN_DIYU",
+  civilization: "CHINESE", // 配额行按 hasSixPaths(civilization) 画(SH-4),地府要写明
   display_name: "Chinese Diyu",
   description: "旧说明",
   dispatch_enabled: true,

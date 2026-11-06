@@ -145,7 +145,7 @@ describe("时间线一行", () => {
       ({ id: `e-${through || "none"}`, soul: "s1", actor: "system", create_time: "2026-10-28T09:00:00Z",
         event_type: "PURGATORY_ASCENDED", payload: { through, realm: "EU_HEAVEN" } } as unknown as SoulEvent);
     const [via] = buildSystemRows([ascended("EU_EARTHLY_PARADISE")], labels);
-    expect(via.title).toBe("出炼狱，升天堂");
+    expect(via.title).toBe("出炼狱，升天国");
     expect(via.note).toBe("经地上乐园 · 饮忘川、忆善河");
     expect(buildSystemRows([ascended("")], labels)[0].note).toBeUndefined();
     expect(buildSystemRows([{ ...ascended("X"), event_type: "STATE_CHANGED" } as SoulEvent], labels)[0].note).toBeUndefined();

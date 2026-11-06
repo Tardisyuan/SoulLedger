@@ -73,7 +73,7 @@ it("the picker groups by hall, cannot re-pick a holder, and grants the picked pe
   fireEvent.click(screen.getByRole("button", { name: tZh("permissions.members.grant") }));
   const form = await screen.findByRole("form", { name: tZh("permissions.members.grant") });
   const cnGroup = await within(form).findByRole("group", { name: "中国地府" });
-  const egGroup = within(form).getByRole("group", { name: "埃及杜阿特" });
+  const egGroup = within(form).getByRole("group", { name: "埃及冥界" });
   expect(within(egGroup).queryByText("cn_new")).toBeNull();
   expect(within(cnGroup).getByRole("checkbox", { name: /main_holder/ })).toBeDisabled();
 

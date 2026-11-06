@@ -202,7 +202,7 @@ describe("待经手", () => {
       "◆退回重审 · DY-2026-03922 日后到期",
       "◆退回重审 · DY-2026-0393超 2 日",
       "◆申诉 · 赵小满",
-      "◆会审邀请 · 欧洲米诺斯庭待回复",
+      "◆跨域审判邀请 · 欧洲米诺斯庭待回复",
     ]);
     expect(rows[3]).toHaveAttribute("href", "/judgment/appeals/a1");
     expect(rows[4]).toHaveAttribute("href", "/cross-judgments/c1");
@@ -217,7 +217,7 @@ describe("待经手", () => {
       return el;
     });
     expect(joint).not.toHaveBeenCalled();
-    expect(card).not.toHaveTextContent("会审邀请");
+    expect(card).not.toHaveTextContent("跨域审判邀请");
   });
 
   it("一样都没有:已清空;取失败:说加载失败,不说已清空", async () => {
