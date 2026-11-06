@@ -1,5 +1,6 @@
 "use client";
 
+import { verdictText } from "@/src/lib/domainNames";
 import { useId, type ReactNode } from "react";
 import type { ConcludeJudgmentPayload, JudgmentVerdict } from "@soulledger/core/api";
 import { useJudgmentDestinations } from "@soulledger/core/hooks/useJudgments";
@@ -75,6 +76,7 @@ export function JudgmentPlacement({
   savedAt,
   noTerm = false,
   lead,
+  civilization,
 }: {
   judgmentId: string;
   verdict: string;
@@ -88,6 +90,8 @@ export function JudgmentPlacement({
   noTerm?: boolean;
   /** 画在标题下、目的地之上:地府的罪目(第五十七批 D-1,罪目决定送哪一殿,和发落是一件事)。 */
   lead?: ReactNode;
+  /** 案子的文明:句子里的裁决名按文明叫(PURGATORY 欧洲炼狱、埃及天平摇摆)。 */
+  civilization?: string | null;
 }) {
   const { t, formatDateTime } = useI18n();
   const { data, isLoading, isError } = useJudgmentDestinations(judgmentId, (verdict || null) as JudgmentVerdict | null);
@@ -99,7 +103,7 @@ export function JudgmentPlacement({
   const defaultRealm = options.find((o) => o.id === data?.default_realm_id);
   const chosen = options.find((o) => o.id === current.realmId) ?? (current.realmId ? undefined : defaultRealm);
   const canBeEternal = !!chosen?.is_eternal;
-  const verdictName = verdict ? t(`judgment.verdicts.${verdict.toLowerCase()}`) : "";
+  const verdictName = verdict ? verdictText(t, civilization, verdict) : "";
 
   let body;
   if (!verdict) {

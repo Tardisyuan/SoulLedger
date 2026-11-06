@@ -105,7 +105,7 @@ import { useShellCommands, type ShellCommand } from "@/src/lib/shellCommands";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { hasRebirth } from "@/src/lib/hasRebirth";
-import { verdictNamespace } from "@/src/lib/domainNames";
+import { verdictNamespace, verdictText } from "@/src/lib/domainNames";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -893,7 +893,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 cited={citedIds}
                 onCite={canEditGrounds ? (statuteId) => citeMutation.mutate(statuteId) : undefined}
               />
-              <PrecedentsPanel judgmentId={judgment.id} />
+              <PrecedentsPanel judgmentId={judgment.id} civilization={judgment.civilization} />
             </div>
           )}
         </>
@@ -1295,7 +1295,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <span className="mb-1 block text-2xs uppercase">{t("desk.reading")}</span>
               {t("judgment.weighing.scale", { weight: String(weighing.heart_weight), counterweight: String(weighing.counterweight) })}
               {" · "}
-              {t("judgment.weighing.gives", { verdict: t(`judgment.verdicts.${weighing.weighed_verdict.toLowerCase()}`) })}
+              {t("judgment.weighing.gives", { verdict: verdictText(t, judgment.civilization, weighing.weighed_verdict) })}
               <span className="mt-1 block">{t("judgment.weighing.wavering_hint")}</span>
             </p>
           )}
@@ -1394,6 +1394,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               {!draft.conflict && <DraftStatusLine status={draft.status} saves={draft.saves} />}
               {draft.conflict && (
                 <DraftConflictBanner
+                  civilization={judgment.civilization}
                   current={draft.conflict}
                   onUseServer={() => {
                     const theirs = draft.acceptTheirs();
@@ -1413,6 +1414,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <JudgmentPlacement
               lead={offenceField}
               noTerm={judgment.civilization === "EGYPTIAN"}
+              civilization={judgment.civilization}
               judgmentId={judgment.id}
               verdict={selectedVerdict}
               value={placement}

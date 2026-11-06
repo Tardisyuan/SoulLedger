@@ -11,6 +11,7 @@
  * Raw SoulEvent rows are used only for the toggle-gated "system events" feed.
  */
 import { resolveEnumDisplay, type Translate } from "@/src/lib/domainDisplay";
+import { verdictNamespace } from "@/src/lib/domainNames";
 import type { Soul } from "@soulledger/core/api/souls";
 import type { SoulEvent } from "@soulledger/core/api/events";
 import type { Judgment } from "@soulledger/core/api/judgment";
@@ -331,14 +332,15 @@ export interface SystemEventLabels {
  * `resolveEnumDisplay` — translated copy first, translated "unrecognized" for a
  * member the bundles do not cover, and the raw member never.
  */
-export function makeSystemEventLabels(t: Translate): SystemEventLabels {
+/** `civilization`:这一个灵魂的文明(灵魂时间线有;事件总表跨灵魂,没有 —— 那里的 PURGATORY 写通用的「存疑」)。 */
+export function makeSystemEventLabels(t: Translate, civilization?: string | null): SystemEventLabels {
   const via = (namespace: string) => (raw: string | null) => {
     const resolved = resolveEnumDisplay(t, namespace, raw);
     // `label` is null only for the "missing" branch (null/empty input), which
     // for a state means the payload recorded no such side to the transition.
     return resolved.label ?? t("common.value.unrecorded");
   };
-  const verdict = via("judgment.verdicts");
+  const verdict = (raw: string | null) => via(verdictNamespace(t, civilization, raw))(raw);
   return {
     eventType: via("souls.events"),
     state: via("souls.states"),

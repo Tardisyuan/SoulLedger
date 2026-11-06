@@ -203,8 +203,11 @@ export function DraftConflictBanner({
   current,
   onUseServer,
   onKeepMine,
+  civilization,
 }: {
   current: JudgmentDraft;
+  /** 案子的文明(PURGATORY 按文明叫)。 */
+  civilization?: string | null;
   onUseServer: () => void;
   onKeepMine: () => void;
 }) {
@@ -224,7 +227,7 @@ export function DraftConflictBanner({
       <p className="mt-2 text-2xs uppercase font-mono text-[oklch(var(--color-ink-subtle))]">{t("judgment.draft.server_version")}</p>
       {current.draft_verdict && (
         <p className="text-xs">
-          <VerdictBadge verdict={current.draft_verdict} />
+          <VerdictBadge verdict={current.draft_verdict} civilization={civilization} />
         </p>
       )}
       <blockquote className="mt-1 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] whitespace-pre-wrap">

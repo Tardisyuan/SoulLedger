@@ -25,6 +25,7 @@
  * (未结案、复审、前世)不画申诉行。
  */
 import { localName } from "@soulledger/core/domain/localName";
+import { verdictNamespace } from "@soulledger/core/domain/verdictNames";
 import {
   appealRefusalKey,
   soulApi,
@@ -141,9 +142,11 @@ function ladderProgress(ladder: MeJudgmentAppeal["ladder"], t: (key: string, var
   return t("appeals.ladder_progress", { n: String(current.order), total: String(ladder.stations.filter((s) => !s.is_final).length) });
 }
 
+/** 裁决名:PURGATORY 按这个灵魂的文明叫(皮肤的 `civ`;欧洲炼狱、埃及天平摇摆,第十一批 1a)。 */
 function useVerdict() {
   const { enumLabel, t } = useI18n();
-  return (v: string | null | undefined) => enumText(enumLabel("judgment.verdicts", v), t);
+  const { civ } = useTheme();
+  return (v: string | null | undefined) => enumText(enumLabel(verdictNamespace(t, civ, v), v), t);
 }
 
 function Round({

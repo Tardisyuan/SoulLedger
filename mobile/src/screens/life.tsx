@@ -1,6 +1,7 @@
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
+import { verdictNamespace } from "@soulledger/core/domain/verdictNames";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
@@ -240,7 +241,8 @@ export function LifeSections({
                   {j.weighing_result === "WAVERING" ? (
                     tr("judgment.weighing.result.WAVERING")
                   ) : j.verdict ? (
-                    <EnumValue namespace="judgment.verdicts" value={j.verdict} />
+                    // PURGATORY 按灵魂原属文明叫(欧洲炼狱;第十一批 1a)。
+                    <EnumValue namespace={verdictNamespace(tr, lex, j.verdict)} value={j.verdict} />
                   ) : (
                     tr("soul_app.life.verdict_pending")
                   )}

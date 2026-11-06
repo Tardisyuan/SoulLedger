@@ -27,6 +27,7 @@ import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
 import { VERDICT_KEY_CLASS, VerdictKeyContent } from "@/src/components/judgment/JudgmentDesk";
 import { reasonsShown } from "@/src/components/judgment/RejectReasonPanel";
 import { withFrom } from "@/src/lib/backSource";
+import { verdictNamespace } from "@/src/lib/domainNames";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -543,7 +544,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   /* 按下只换底色(line),不位移、不回弹:落判时界面不该显得得意。 */
                   className={VERDICT_KEY_CLASS}
                 >
-                  <VerdictKeyContent code={verdict.code} keyHint={verdict.key} />
+                  <VerdictKeyContent code={verdict.code} keyHint={verdict.key} namespace={verdictNamespace(t, judgment?.civilization, verdict.code)} />
                 </button>
               ))}
               </div>

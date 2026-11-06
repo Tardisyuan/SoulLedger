@@ -120,12 +120,14 @@ export function ApproverPreviewSection({
 
 function ClauseRow({
   t,
+  civilization,
   clause,
   onChange,
   onRemove,
   idPrefix,
 }: {
   t: TFunc;
+  civilization?: string | null;
   clause: ConditionClause;
   onChange: (c: ConditionClause) => void;
   onRemove: () => void;
@@ -182,7 +184,7 @@ function ClauseRow({
                     onChange({ ...clause, value: on ? cur.filter((x) => x !== v) : [...cur, v] });
                   }}
                 />
-                {valueText(clause.fact, v, t)}
+                {valueText(clause.fact, v, t, civilization)}
               </label>
             );
           })}
@@ -213,6 +215,7 @@ function ClauseRow({
  */
 export function ExitConditionsSection({
   t,
+  civilization,
   node,
   nodes,
   edges,
@@ -223,6 +226,8 @@ export function ExitConditionsSection({
   onActivate,
 }: {
   t: TFunc;
+  /** 模板的文明:条件里的裁决按文明叫。 */
+  civilization?: string | null;
   node: Node;
   nodes: readonly Node[];
   edges: readonly Edge[];
@@ -333,13 +338,14 @@ export function ExitConditionsSection({
                         {onChange ? (
                           <ClauseRow
                             t={t}
+                            civilization={civilization}
                             idPrefix={`${e.id}-${j}`}
                             clause={c}
                             onChange={(next) => onChange(e.id, when.map((x, k) => (k === j ? next : x)))}
                             onRemove={() => onChange(e.id, when.filter((_, k) => k !== j))}
                           />
                         ) : (
-                          <span className="font-mono text-xs">{whenText([c], t)}</span>
+                          <span className="font-mono text-xs">{whenText([c], t, civilization)}</span>
                         )}
                       </div>
                     ))}
@@ -383,7 +389,7 @@ export function ExitConditionsSection({
                       ? t("workflow.editor.branch.pass")
                       : when === undefined
                       ? `${t("workflow.editor.condition.no")} · ${t("workflow.editor.condition.default")}`
-                      : `${t("workflow.editor.condition.yes")} · ${when.length ? whenText(when, t) : t("workflow.editor.condition.empty")}`}
+                      : `${t("workflow.editor.condition.yes")} · ${when.length ? whenText(when, t, civilization) : t("workflow.editor.condition.empty")}`}
                   </span>
                 </div>
               </li>

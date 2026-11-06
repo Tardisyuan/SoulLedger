@@ -2,6 +2,7 @@
 
 import { type ApprovalWorkflow } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { verdictNamespace } from "@/src/lib/domainNames";
 import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import { CaseNumber, DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 
@@ -52,7 +53,9 @@ export function WorkflowInfoCard({
           {workflow.judgment ? <CaseNumber value={workflow.judgment_case_number} /> : <MissingValue kind="inapplicable" />}
         </dd>
         <dt className={DT}>{t("workflow.detail.judgment_verdict")}</dt>
-        <dd className={DD}><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
+        {/* 所属审判的裁决(Verdict 四个成员),不是审批节点的 workflow.verdicts —— 那一组没有 PURGATORY / RETRY,
+            此前写成「未识别」。流程上没有文明字段,PURGATORY 写通用的「存疑」(第十一批 1a)。 */}
+        <dd className={DD}><DomainEnum namespace={verdictNamespace(t, null, workflow.judgment_verdict)} value={workflow.judgment_verdict} /></dd>
         <dt className={DT}>{t("workflow.detail.priority")}</dt>
         <dd className={DD}>
           <span className="font-mono">{workflow.priority}</span> · {priorityLabel}

@@ -319,7 +319,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
                   {t("search.exact_case")}
                 </span>
               )}
-              {j.verdict && <VerdictBadge verdict={j.verdict} className="shrink-0" />}
+              {j.verdict && <VerdictBadge verdict={j.verdict} civilization={j.civilization} className="shrink-0" />}
             </>
           ),
           // 完整案号那一条排第一(案件组本来就在最前,所以它就是第一行、默认选中)。

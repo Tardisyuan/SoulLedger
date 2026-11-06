@@ -5,6 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { verdictNamespace, verdictText } from "@/src/lib/domainNames";
 import { RowShell, TONE_DOT } from "@/src/components/souls/SoulLifecycleRowShell";
 import { DedicationTag } from "@/src/components/souls/SoulLedgerBook";
 import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
@@ -139,7 +140,7 @@ export function SoulLifecycleTimeline({
   // Built once and threaded into both the row builder and the expanded-detail
   // render below, so the collapsed summary and the rows underneath it cannot
   // resolve the same enum two different ways.
-  const systemEventLabels = useMemo(() => makeSystemEventLabels(t), [t]);
+  const systemEventLabels = useMemo(() => makeSystemEventLabels(t, soul.civilization), [t, soul.civilization]);
 
   const rows: SpineRow[] = useMemo(() => {
     const out: SpineRow[] = [];
@@ -163,7 +164,10 @@ export function SoulLifecycleTimeline({
         entered: (court) => tf("souls.detail.timeline.entered_judgment", "进入审判{{court}}", { court: court ? ` · ${court}` : "" }),
         verdict: (verdict) =>
           tf("souls.detail.timeline.verdict", "裁决 · {{verdict}}", {
-            verdict: tf(`souls.detail.verdict_${verdict.toLowerCase()}`, verdict),
+            // PURGATORY 按文明叫(欧洲炼狱、埃及天平摇摆;第十一批 1a),其余照旧读 souls.detail.verdict_*。
+            verdict: verdictNamespace(t, soul.civilization, verdict) === "judgment.verdicts"
+              ? tf(`souls.detail.verdict_${verdict.toLowerCase()}`, verdict)
+              : verdictText(t, soul.civilization, verdict),
           }),
       })
     );
