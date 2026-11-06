@@ -144,13 +144,14 @@ export function DeliveredRow({ at, holdRef }: { at: string | null | undefined; h
   );
 }
 
-/** 冥河渡口(希腊):渡过了(crossed)就没有这张卡。NO_FARE 没有日期:不画细线,不写数字。 */
+/** 冥河渡口(希腊):渡过了(crossed)就没有这张卡。未葬、无渡资都等满百年(用户 2026-11-07);
+ * 死亡年份没登记时没有可渡之日(crosses_on 为 null):不画细线,不写数字。 */
 export function FerryCard({ ferry, today = new Date() }: { ferry: Ferry | null | undefined; today?: Date }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const day = useDay();
   if (!ferry || ferry.crossed || (ferry.ferry_passage !== "UNBURIED" && ferry.ferry_passage !== "NO_FARE")) return null;
-  const wait = ferry.ferry_passage === "UNBURIED" && ferry.crosses_on ? ferryWait(ferry.crosses_on, today) : null;
+  const wait = ferry.crosses_on ? ferryWait(ferry.crosses_on, today) : null;
   const n = wait ? String(wait.years || wait.days) : "";
   const big = !wait
     ? null
@@ -180,9 +181,9 @@ export function FerryCard({ ferry, today = new Date() }: { ferry: Ferry | null |
           </View>
           <DateLine testID="life-ferry-date" text={tr("soul_app.life.ferry.crosses_on", { date: day(ferry.crosses_on) })} />
         </>
-      ) : ferry.ferry_passage === "NO_FARE" ? (
+      ) : (
         <DateLine testID="life-ferry-date" text={tr("soul_app.life.ferry.no_date")} />
-      ) : null}
+      )}
     </Card>
   );
 }

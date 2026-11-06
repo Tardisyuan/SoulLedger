@@ -163,6 +163,24 @@ export function diyuVisits(
 export const pathVisits = (path: readonly { realm_code: string | null; left_at: string | null }[]): MapVisit[] =>
   path.filter((p) => p.realm_code).map((p) => ({ id: p.realm_code!, current: p.left_at === null }));
 
+/** 希腊千年格的格数:十期,每期一百年(Rep. 615a-b,`gr-millennium-1` … `-10`)。 */
+export const MILLENNIUM_CELLS = 10;
+
+/**
+ * 希腊:path 之外,可医者在塔尔塔罗斯服的千年(Rep. 615a)点亮千年格(用户 2026-11-07)。
+ * `years` 是账本 SENTENCE 读数的 `elapsed_years`;**不可医(永罚)、起点没登记的由调用方给 null**,千年格不亮。
+ * 只在此刻就在塔尔塔罗斯时加:前面的格算走过,第 ⌊years / 100⌋ + 1 格是当前(满千年仍停在第十格)。
+ * 当前于是落在千年格上,塔尔塔罗斯算走过 —— 与灵魂端路线(`soulRoute` 的 CYCLE)同一处。
+ */
+export function greekVisits(path: readonly { realm_code: string | null; left_at: string | null }[], years: number | null): MapVisit[] {
+  const visits = pathVisits(path);
+  const last = visits[visits.length - 1];
+  if (years === null || !last?.current || last.id !== "GR_TARTARUS") return visits;
+  const at = Math.min(MILLENNIUM_CELLS, Math.floor(Math.max(0, years) / 100) + 1);
+  for (let n = 1; n <= at; n++) visits.push({ id: `gr-millennium-${n}`, current: n === at });
+  return visits;
+}
+
 /** 三种状态的颜色,从样例里读:走过 = 走过的线,没走 = 没走的线,当前 = 脉动圈,空心底 = 画布底。 */
 export interface MapPalette {
   walked: string;

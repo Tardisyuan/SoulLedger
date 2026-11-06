@@ -14263,6 +14263,8 @@ export interface components {
             readonly cross_judgment_id: string | null;
             readonly flow_progress: components["schemas"]["JudgmentFlowProgress"] | null;
             readonly cited_deadly_sins: string[];
+            /** Format: uuid */
+            readonly final_review_by: string | null;
         };
         /** @description The draft as stored: what a save returns, and what a 409 hands back. */
         JudgmentDraft: {
@@ -15306,6 +15308,7 @@ export interface components {
             started_on: string | null;
             /** Format: date */
             ends_on: string | null;
+            elapsed_years: number | null;
         };
         /** @description 灵魂看到的律条引用:只有编号与各语言的短标题 —— 不带正文、出处、哈希、版本。 */
         MeStatuteRef: {

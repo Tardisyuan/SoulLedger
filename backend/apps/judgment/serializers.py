@@ -576,10 +576,30 @@ class JudgmentDetailSerializer(JudgmentSerializer):
     # 欧洲文书「哪一宗大罪」(v4 D9):本案引用的炼狱七台条文对应的罪(`fail_reasons.DEADLY_SIN_BY_STATUTE`),
     # 键名同 `reject_reason.eu.sin.*`。只读、不存;没引用是空列表,文书不写那一句。不挂圈号(`8308204`)。
     cited_deadly_sins = serializers.SerializerMethodField()
+    # 实际做了终裁的那一位(Actor 的 id):本案审批流程里**已经决定**的终审(`NodeType.FINAL`)人工节点的指定神祇,
+    # 没指定就取决定它的官员绑定的 Actor;流程没走到终审、或没有流程是 null。希腊《高尔吉亚》文书只在这里有值时
+    # 才落「米诺斯 终裁」—— 艾亚哥斯、拉达曼迪斯判通过就结案,米诺斯没有参与(GR-5,用户 2026-11-07)。
+    final_review_by = serializers.SerializerMethodField()
 
     class Meta(JudgmentSerializer.Meta):
         fields = [*JudgmentSerializer.Meta.fields, "evidence_admissions", "admitted_balance", "cross_judgment_id",
-                  "flow_progress", "cited_deadly_sins"]
+                  "flow_progress", "cited_deadly_sins", "final_review_by"]
+
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
+    def get_final_review_by(self, obj):
+        from apps.workflow.models import AUTOMATIC_KINDS, NodeStatus, NodeType
+
+        wf = getattr(obj, "approval_workflow", None)
+        if wf is None:
+            return None
+        decided = [n for n in wf.nodes.select_related("approver").order_by("node_order")
+                   if n.node_type == NodeType.FINAL and n.kind not in AUTOMATIC_KINDS
+                   and n.decided_at is not None and n.status in (NodeStatus.APPROVED, NodeStatus.REJECTED)]
+        if not decided:
+            return None
+        node = max(decided, key=lambda n: n.decided_at)
+        actor = node.approver_actor_id or (node.approver.actor_id if node.approver else None)
+        return str(actor) if actor else None
 
     def get_cited_deadly_sins(self, obj) -> list[str]:
         from apps.judgment.fail_reasons import cited_deadly_sins

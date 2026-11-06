@@ -249,6 +249,8 @@ export interface JudgmentDetail extends Judgment {
   flow_progress?: Schemas["JudgmentFlowProgress"] | null;
   /** v4 D9:本案引用的炼狱七台条文对应的罪(`reject_reason.eu.sin.*` 的键名);只欧洲,没引用为空列表。 */
   cited_deadly_sins?: string[];
+  /** 实际做了终裁的那一位(Actor 的 id):审批流程里已决定的终审节点;没走到终审为 null(GR-5)。 */
+  final_review_by?: string | null;
 }
 
 export interface EvidenceRulingPayload {

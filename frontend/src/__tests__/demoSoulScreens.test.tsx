@@ -25,7 +25,7 @@ const PLAN = {
   stations: [{
     id: "s1", n: 1, status: "active", is_home: true, civilization: "EUROPEAN",
     realm: { realm_code: "EU_PURGATORY_T3_WRATH", name_local: "", name_zh: "", name_en: "" },
-    sentence_years: 7, is_eternal: false, started_on: "2026-01-01", ends_on: "2033-01-01",
+    sentence_years: 7, is_eternal: false, started_on: "2026-01-01", ends_on: "2033-01-01", elapsed_years: null,
   }],
 };
 const recording = (docs: Recording["docs"]): Recording =>

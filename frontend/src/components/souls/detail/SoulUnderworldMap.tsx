@@ -5,7 +5,7 @@ import { DIYU_STATIONS, eventsApi, soulsApi, type Soul, type SoulPathEntry } fro
 import { soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { UnderworldMap, type MapArrival } from "@/src/components/realms/UnderworldMap";
-import { diyuVisits, pathVisits } from "@/src/lib/underworldMap";
+import { diyuVisits, greekVisits, pathVisits } from "@/src/lib/underworldMap";
 
 /**
  * 灵魂详情「走到了哪一步」的地图:这个灵魂的行程画在它文明的那张图上。
@@ -18,10 +18,14 @@ import { diyuVisits, pathVisits } from "@/src/lib/underworldMap";
  *     十殿各殿 = path 的 `entered_at`。两者按时间合在一起。事件只取第一页(按时间正序)—— 一个灵魂一世十三站,够用。
  *   - 其余:path 每一站的 `entered_at`。
  *   在路上之前的「死亡」「三判官」这类节点没有记录,回放里不单独停,随下游的站一起点亮。
+ *
+ * 希腊:可医者此刻在塔尔塔罗斯时点亮千年格,写「第 n 年」(用户 2026-11-07)。年数是账本 SENTENCE 读数的
+ * `elapsed_years`(`Disposition.term_start_*` 量到今天,与官员看的读数同一个数);`eternal`(不可医、永罚)不点亮。
  */
-export function SoulUnderworldMap({ soul, className }: { soul: Soul; className?: string }) {
+export function SoulUnderworldMap({ soul, eternal = false, className }: { soul: Soul; eternal?: boolean; className?: string }) {
   const { t } = useI18n();
   const diyu = soul.civilization === "CHINESE";
+  const greek = soul.civilization === "GREEK";
   // 图要 fetch 与 DOMParser 才画得出来(jsdom 没有 fetch):画不出来就不为它取数据。
   const canDraw = typeof fetch === "function" && typeof DOMParser !== "undefined";
   const path = useQuery({
@@ -36,10 +40,23 @@ export function SoulUnderworldMap({ soul, className }: { soul: Soul; className?:
     enabled: canDraw && diyu,
     staleTime: 60_000,
   });
+  // 与 `useSoulLedger` 同一个键:详情页已经取过就直接用缓存。
+  const ledger = useQuery({
+    queryKey: soulKeys.ledger(soul.id),
+    queryFn: async () => (await soulsApi.karma(soul.id)).data,
+    enabled: canDraw && greek && !eternal,
+    staleTime: 30_000,
+  });
   if (!path.data || !Array.isArray(path.data)) return null;
   const entries: SoulPathEntry[] = [...path.data].sort((a, b) => a.sequence - b.sequence);
 
-  const visits = diyu ? diyuVisits(DIYU_STATIONS, soul.diyu_station, entries) : pathVisits(entries);
+  const reading = ledger.data?.reading;
+  const years = greek && !eternal && reading?.kind === "SENTENCE" ? reading.elapsed_years : null;
+  const visits = diyu
+    ? diyuVisits(DIYU_STATIONS, soul.diyu_station, entries)
+    : greek
+      ? greekVisits(entries, years)
+      : pathVisits(entries);
   if (!visits.length) return null;
 
   const fromPath: MapArrival[] = entries
@@ -53,5 +70,17 @@ export function SoulUnderworldMap({ soul, className }: { soul: Soul; className?:
     : [];
   const arrivals = [...fromMoves, ...fromPath].sort((a, b) => a.at.localeCompare(b.at));
 
-  return <UnderworldMap civilization={soul.civilization} visits={visits} arrivals={arrivals} label={t(`souls.civilizations.${soul.civilization}`)} className={className} />;
+  const inMillennium = visits.some((v) => v.current && v.id.startsWith("gr-millennium-"));
+  const currentDetail = inMillennium && years !== null ? t("map.greece.year_n", { n: String(years) }) : null;
+
+  return (
+    <UnderworldMap
+      civilization={soul.civilization}
+      visits={visits}
+      arrivals={arrivals}
+      label={t(`souls.civilizations.${soul.civilization}`)}
+      currentDetail={currentDetail}
+      className={className}
+    />
+  );
 }

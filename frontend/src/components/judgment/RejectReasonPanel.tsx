@@ -12,7 +12,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
  * 规则与后端 `backend/apps/judgment/fail_reasons.py::check`(经结案接口、原审)一一对应,这里只是先拦:
  * - 地府、欧洲、希腊判「不过」必选理由;地府与欧洲恰好一项,希腊可多选。选「其他」要写一句(至多 500 字)。
  * - 欧洲的「否认灵魂不灭」「登记为中立者」读灵魂登记里的事实,登记没有就不能选(`fail_reason_contradicts_record`)。
- *   「哪一宗大罪」不在这里选:取本案引用的七宗罪条文(D9,`cited_deadly_sins`),只读。
+ *   这里不列七宗罪:七宗罪对应炼狱七台(docs/03),不对应地狱九圈,而「不过」是下地狱(用户 2026-11-07)。
  * - 希腊判「通过」或「不过」都先选文书(D8:《高尔吉亚》/《理想国》),「不过」再加上必选的可医 / 不可医(D7)。
  *   不可医 = 塔尔塔罗斯、永罚,页面据此不再带去处与年数(`incurable_is_eternal_in_tartarus`)。
  * - 埃及不能选:理由由天平与否定告白列出(`reject.sheet.eg_auto`),只读列出记为「不实」的告白。
@@ -92,7 +92,6 @@ export function RejectReasonPanel({
   onChange,
   deniedImmortality,
   neutralInLife,
-  citedSins = [],
   falseConfessions = [],
 }: {
   civilization: string;
@@ -103,8 +102,6 @@ export function RejectReasonPanel({
   /** 灵魂登记里的两个事实(欧洲两项理由读它们);没登记 = 不能选。 */
   deniedImmortality?: boolean | null;
   neutralInLife?: boolean | null;
-  /** D9:本案引用的七宗罪(`reject_reason.eu.sin.*` 的键名)。 */
-  citedSins?: readonly string[];
   /** 埃及:记为「不实」的否定告白(序号与原文)。 */
   falseConfessions?: readonly { ordinal: number; text: string }[];
 }) {
@@ -189,17 +186,7 @@ export function RejectReasonPanel({
     if (civilization === "EUROPEAN") {
       return EUROPEAN.map((code) =>
         code === "MORTAL_SIN" ? (
-          <div key={code} className="grid gap-1">
-            {choice(code, t("reject_reason.eu.mortal_sin"))}
-            {/* D9:哪一宗取本案引用的条文,没引用就不写这一行。 */}
-            {citedSins.length > 0 && (
-              <p data-testid="reject-cited-sins" className="flex flex-wrap gap-2 pl-8 text-xs text-[oklch(var(--color-ink-muted))]">
-                {citedSins.map((sin) => (
-                  <span key={sin}>{t(`reject_reason.eu.sin.${sin}`)}</span>
-                ))}
-              </p>
-            )}
-          </div>
+          choice(code, t("reject_reason.eu.mortal_sin"))
         ) : code === "DENIED_IMMORTALITY" ? (
           choice(code, t("souls.denied_immortality.label"), t("reject.sheet.circle", { n: String(HERESY_CIRCLE) }))
         ) : code === "NEUTRAL" ? (

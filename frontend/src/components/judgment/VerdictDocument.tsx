@@ -50,6 +50,8 @@ export interface VerdictDocumentProps {
     | "greek_curability"
     | "concluded_at_local"
     | "cited_deadly_sins"
+    | "judge"
+    | "final_review_by"
   >;
   /** 灵魂的生卒(`Soul.birth_date` / `death_date`),地府正文的生年卒年;没给就写「未记录」。 */
   soul?: { birth_date?: HistoricalDate | null; death_date?: HistoricalDate | null } | null;
@@ -155,6 +157,8 @@ export function useVerdictDoc({ judgment, soul, disposition }: VerdictDocumentPr
           greekAccount: judgment.greek_account,
           greekCurability: judgment.greek_curability,
           citedDeadlySins: judgment.cited_deadly_sins,
+          judgeId: judgment.judge,
+          finalReviewBy: judgment.final_review_by,
         },
         t
       )
