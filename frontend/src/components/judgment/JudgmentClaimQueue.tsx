@@ -666,8 +666,10 @@ export function JudgmentClaimQueue({
       {/* 表在自己的横向滚动框里(2026-11-06):393 宽下 案号 / 灵魂、功 / 过、认领、期限、⋯ 几列的最小宽度合起来超过
           屏宽,此前把整个文档撑宽 —— 手机上文档比视口宽时,点按的坐标与画面不再对齐(no-route-overflows-the-document
           文件头记过同一件事),组序改成「别人在审」紧挨在「待认领」上面之后,点「认领」落在上一行的认领人格上。
-          文档不再变宽;表格自己横向滚。 */}
-      <div data-testid="queue-table-scroll" className="overflow-x-auto">
+          文档不再变宽;表格自己横向滚。
+          `relative` 不能省:滚动框只裁「包含块在框里」的后代。表头「⋯」一格的 sr-only 文字是 absolute,而表头那一行
+          没有定位,不加 relative 时它的包含块在框外,照样把文档撑到 414(2026-11-06 在演示站 393 宽下实测)。 */}
+      <div data-testid="queue-table-scroll" className="relative overflow-x-auto">
         <table
           key={mineOnly ? "mine" : "all"}
           ref={tableRef}
