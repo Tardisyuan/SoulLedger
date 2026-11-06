@@ -53,15 +53,15 @@ function Seal({ glyph }: { glyph: string }) {
 // The toolbar entry (1b) is `OfficerAssistEntry.tsx`, kept out of this module so the shell can load the panel lazily.
 
 /**
- * Design E 组: the panel starts below the connection bar (global state at the top of the
- * viewport, 28 px, see ConnectionBanner) rather than under it — `belowBanner` moves its top
- * edge down by exactly that bar. Pushed or overlaid, same rule.
+ * The panel runs from the very top of the viewport, pushed or overlaid. (Design E 组 started it below a
+ * 28px connection bar fixed across the top; v4 第八批 moved the connection state into the toolbar as a
+ * pill, so there is nothing above the panel to clear any more.)
  */
-export function OfficerAssistPanel({ assist, belowBanner = false }: { assist: OfficerAssist; belowBanner?: boolean }) {
+export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
   const { t } = useI18n();
   if (!assist.open) return null;
   const label = t("officer_assist.title");
-  const top = belowBanner ? "top-7" : "top-0";
+  const top = "top-0";
 
   if (assist.pushed) {
     return (
