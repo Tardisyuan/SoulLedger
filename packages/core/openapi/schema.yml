@@ -8838,6 +8838,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
+  /api/v1/judgment/annual/:
+    get:
+      operationId: v1_judgment_annual_retrieve
+      description: |-
+        冥界年报(v4 `annual.*`):收了多少灵魂、几个有了去处、按文明、最久的一件、引用最多的条文、退回重审率、
+        每月结案(本年与上一年)。范围与列表相同;年按殿的时区。定义见 `apps/judgment/annual.py`。
+      parameters:
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: 公历年,默认殿的时区里的今年(1900–2999)
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentAnnual'
+          description: ''
   /api/v1/judgment/appeals/:
     get:
       operationId: v1_judgment_appeals_list
@@ -30765,6 +30788,118 @@ components:
       - wangsi_held
       - weighing_result
       - workflow
+    JudgmentAnnual:
+      type: object
+      description: '`GET /judgment/annual/`:v4 冥界年报的数。每个数的定义见 `apps/judgment/annual.py`。'
+      properties:
+        timezone:
+          type: string
+        year:
+          type: integer
+        received:
+          type: integer
+        placed:
+          type: integer
+        by_civ:
+          type: array
+          items:
+            $ref: '#/components/schemas/JudgmentAnnualCiv'
+        concluded:
+          type: integer
+        avg_days:
+          type: number
+          format: double
+          nullable: true
+        longest:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentAnnualLongest'
+          nullable: true
+        most_cited:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentAnnualStatute'
+          nullable: true
+        returned:
+          type: integer
+        returned_pct:
+          type: number
+          format: double
+          nullable: true
+        last_year_returned_pct:
+          type: number
+          format: double
+          nullable: true
+        monthly:
+          type: array
+          items:
+            type: integer
+          maxItems: 12
+          minItems: 12
+        last_year_monthly:
+          type: array
+          items:
+            type: integer
+          maxItems: 12
+          minItems: 12
+      required:
+      - avg_days
+      - by_civ
+      - concluded
+      - last_year_monthly
+      - last_year_returned_pct
+      - longest
+      - monthly
+      - most_cited
+      - placed
+      - received
+      - returned
+      - returned_pct
+      - timezone
+      - year
+    JudgmentAnnualCiv:
+      type: object
+      properties:
+        civilization:
+          type: string
+        received:
+          type: integer
+      required:
+      - civilization
+      - received
+    JudgmentAnnualLongest:
+      type: object
+      properties:
+        case_number:
+          type: string
+        soul_name:
+          type: string
+        days:
+          type: integer
+      required:
+      - case_number
+      - days
+      - soul_name
+    JudgmentAnnualStatute:
+      type: object
+      properties:
+        code:
+          type: string
+        corpus:
+          type: string
+        ordinal:
+          type: integer
+        corpus_size:
+          type: integer
+        display_title:
+          type: string
+        citations:
+          type: integer
+      required:
+      - citations
+      - code
+      - corpus
+      - corpus_size
+      - display_title
+      - ordinal
     JudgmentAppeal:
       type: object
       description: 官员看的:多了灵魂、复核人、认领时间,与原判的判词。

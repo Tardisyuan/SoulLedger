@@ -3817,6 +3817,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/annual/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 冥界年报(v4 `annual.*`):收了多少灵魂、几个有了去处、按文明、最久的一件、引用最多的条文、退回重审率、
+         *     每月结案(本年与上一年)。范围与列表相同;年按殿的时区。定义见 `apps/judgment/annual.py`。
+         */
+        get: operations["v1_judgment_annual_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/appeals/": {
         parameters: {
             query?: never;
@@ -13803,6 +13823,43 @@ export interface components {
             readonly archived_at: string | null;
             readonly archived_by_name: string | null;
             readonly archive_reason: string;
+        };
+        /** @description `GET /judgment/annual/`:v4 冥界年报的数。每个数的定义见 `apps/judgment/annual.py`。 */
+        JudgmentAnnual: {
+            timezone: string;
+            year: number;
+            received: number;
+            placed: number;
+            by_civ: components["schemas"]["JudgmentAnnualCiv"][];
+            concluded: number;
+            /** Format: double */
+            avg_days: number | null;
+            longest: components["schemas"]["JudgmentAnnualLongest"] | null;
+            most_cited: components["schemas"]["JudgmentAnnualStatute"] | null;
+            returned: number;
+            /** Format: double */
+            returned_pct: number | null;
+            /** Format: double */
+            last_year_returned_pct: number | null;
+            monthly: number[];
+            last_year_monthly: number[];
+        };
+        JudgmentAnnualCiv: {
+            civilization: string;
+            received: number;
+        };
+        JudgmentAnnualLongest: {
+            case_number: string;
+            soul_name: string;
+            days: number;
+        };
+        JudgmentAnnualStatute: {
+            code: string;
+            corpus: string;
+            ordinal: number;
+            corpus_size: number;
+            display_title: string;
+            citations: number;
         };
         /** @description 官员看的:多了灵魂、复核人、认领时间,与原判的判词。 */
         JudgmentAppeal: {
@@ -29012,6 +29069,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_annual_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 公历年,默认殿的时区里的今年(1900–2999) */
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentAnnual"];
                 };
             };
         };

@@ -273,6 +273,90 @@ def test_hall_stats_average_leaves_out_time_on_hold(cn_judge, cn_tenant):
     assert cn_judge.get(f"{BASE}hall-stats/").data["avg_days"] == 2.0
 
 
+# ── 冥界年报 ──────────────────────────────────────────────────────────────────────────────────
+
+
+def _concluded(tenant, verdict, at, *, days=1.0, name="年报之魂", soul=None):
+    case = _case(tenant, name=name) if soul is None else Judgment.objects.create(
+        soul=soul, civilization=soul.civilization, court="第四殿", tenant=tenant)
+    case.conclude(verdict, "")
+    Judgment.all_objects.filter(pk=case.pk).update(
+        created_at=at - timedelta(days=days), claimable_since=at - timedelta(days=days), concluded_at=at)
+    case.refresh_from_db()
+    return case
+
+
+@pytest.mark.django_db
+def test_annual_counts_souls_once_and_places_only_real_destinations(cn_judge, cn_tenant):
+    """收了 = 今年开案的灵魂(重审另开的一件不再算一个);有了去处 = 结案且不是「再审一次」。
+    变异:annual.py 的 `placed` 去掉 `.exclude(HEARS_AGAIN_Q)` → 2,红;`received` 去掉 `.distinct()` → 4,红。"""
+    first = _case(cn_tenant, name="重审后有去处")
+    first.conclude("RETRY", "")
+    Judgment.all_objects.get(retrial_of=first).conclude("FAILED", "")
+    _case(cn_tenant, name="只重审").conclude("RETRY", "")
+    _case(cn_tenant, name="还没审")
+
+    data = cn_judge.get(f"{BASE}annual/").data
+    assert data["received"] == 3
+    assert data["placed"] == 1
+    assert data["by_civ"] == [{"civilization": "CHINESE", "received": 3}]
+    assert data["concluded"] == 3
+    assert data["returned"] == 2 and data["returned_pct"] == 66.7
+    assert data["timezone"] == "Asia/Shanghai" and len(data["monthly"]) == 12
+
+
+@pytest.mark.django_db
+def test_annual_reads_the_year_in_the_halls_timezone_and_names_the_longest_case(cn_judge, cn_tenant):
+    """UTC 2024-12-31 16:30 在上海已是 2025 年 1 月 1 日。变异:`_year_bounds` 用 UTC、或 `_monthly` 不 astimezone →
+    这一件落进 2024 / 12 月,红。最久 = 可认领到结案扣掉待定,整天数;变异:`max` 改 `min` → 案号不对,红。"""
+    from datetime import datetime, timezone as dt_timezone
+
+    new_year = datetime(2024, 12, 31, 16, 30, tzinfo=dt_timezone.utc)
+    long = _concluded(cn_tenant, "FAILED", new_year, days=41.4, name="最久")
+    _concluded(cn_tenant, "FAILED", new_year + timedelta(days=40), days=2)
+    _concluded(cn_tenant, "RETRY", datetime(2024, 6, 1, 4, tzinfo=dt_timezone.utc))
+
+    data = cn_judge.get(f"{BASE}annual/", {"year": "2025"}).data
+    assert data["year"] == 2025
+    assert data["monthly"][:2] == [1, 1] and sum(data["monthly"]) == 2
+    assert data["last_year_monthly"][5] == 1 and sum(data["last_year_monthly"]) == 1
+    assert data["longest"] == {"case_number": long.case_number, "soul_name": "最久", "days": 41}
+    assert data["avg_days"] == 21.7
+    # 上一年只有一件,判 RETRY:退回率 100;今年没有退回。
+    assert data["returned_pct"] == 0.0 and data["last_year_returned_pct"] == 100.0
+
+
+@pytest.mark.django_db
+def test_annual_names_the_most_cited_article(cn_judge, cn_tenant):
+    """变异:`_most_cited` 的 `order_by("-n", …)` 改成 `order_by("n", …)` → 引用一次的那条,红。"""
+    from datetime import datetime, timezone as dt_timezone
+
+    from apps.judgment.models import JudgmentCitation, Statute
+
+    def article(code, ordinal):
+        return Statute.objects.create(tenant=cn_tenant, code=code, civilization="CHINESE", corpus="GONGGUOGE",
+                                      ordinal=ordinal, polarity="OFFENCE", title_zh=code, title_en=code)
+
+    often, once = article("CN-V4-T-01", 1), article("CN-V4-T-02", 2)
+    at = datetime(2025, 3, 1, 4, tzinfo=dt_timezone.utc)
+    for statutes in ([often, once], [often]):
+        case = _concluded(cn_tenant, "FAILED", at)
+        for statute in statutes:
+            JudgmentCitation.objects.create(judgment=case, statute=statute, tenant=cn_tenant)
+
+    cited = cn_judge.get(f"{BASE}annual/", {"year": "2025"}).data["most_cited"]
+    assert cited["code"] == "CN-V4-T-01" and cited["citations"] == 2
+    assert cited["corpus"] == "GONGGUOGE" and cited["ordinal"] == 1
+    assert cited["corpus_size"] == Statute.objects.filter(tenant=cn_tenant, corpus="GONGGUOGE").count()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("year", ["abc", "20", "3000"])
+def test_annual_refuses_a_year_that_is_not_one(cn_judge, year):
+    """变异:views.py 去掉年份的检查 → `int("abc")` 500 / 一个空年报 200,红。"""
+    assert cn_judge.get(f"{BASE}annual/", {"year": year}).status_code == 400
+
+
 # ── D9:欧洲罪种 ───────────────────────────────────────────────────────────────────────────────
 
 
