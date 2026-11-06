@@ -12,21 +12,31 @@ import { useMenuIcon } from "@/src/lib/menuIcons";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { Seal } from "@/src/components/plaque/Seal";
+import { useRealm } from "@/src/components/plaque/useHall";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { tenantLabel } from "@/src/lib/domainNames";
+import { navSections, type NavSectionId } from "@/src/lib/navSections";
+import { isMac, requestSearchOpen } from "@/src/components/layout/GlobalSearchEntry";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { judgmentAppealKeys, judgmentAppealsApi, type UserRole } from "@soulledger/core/api";
 
 /**
  * 全局导航(规范 v3 外框),取代 v2 的近黑立柱与 200px 弹出二级栏。
  *
- * - 浅色中性:surface-1 底、右侧 1px line。文明色**只**出现在当前项上:
- *   3px 左标(`--color-metal`,v4 `.side .it.on::before`;2026-11-06 由 main 改,v4 深色 solid 对
- *   surface-1 只有约 2:1,不够 3:1 的图形门槛)+ 8% main 混进 surface-1 的底,字 ink 600。这条 3px 是导航,不是表格行 ——
- *   「3px = 待我处理」那条说的是行。
+ * - 规范 v4(第七批 S01):底是文明的侧栏色 `--color-side`,右侧 1px line。自上而下:品牌 → 殿司卡
+ *   (`shell.hall_switch`,带文明印)→「搜索、跳转、下指令 ⌘K」→ 工作 / 灵魂 / 系统三组(`navSections`)
+ *   → 底部用户卡。收起按钮在品牌行右端:平时透明、指针进侧栏 120ms 淡入,窄屏(< 1024)与触屏常显。
+ * - 当前项:3px 左标(`--color-metal`,v4 `.side .it.on::before`;深色 solid 对 surface-1 只有约 2:1)
+ *   + `.nav-current` 的底(深色 glow 20%,浅色 card 底加卡片阴影,globals.css),字 ink 600。
+ *   这条 3px 是导航,不是表格行 ——「3px = 待我处理」那条说的是行。
  * - 一级项与顺序、图标都来自后端菜单(`useSidebarMenus`;`menu.icon` 是 lucide 图标名,
  *   见 IconPicker)。不认得的图标名落回一个中性方块,不按路径写死。
  * - 有子项的一级项是手风琴:原位展开,同一时刻只开一组,当前页所在组默认打开(状态在 AppLayout)。
  * - 收起(68px)时只剩图标;有子项的组点开一个浮出层列出它的页面 —— 子页面不能因为收起就够不着。
- * - 四档宽度:≥ 1200 展开 252 / 收起 68 由用户选(`localStorage["soulledger-nav-mode"]`,`[` 切换);
+ * - 四档宽度:≥ 1200 展开 252 / 收起 68 由用户选(`localStorage["soulledger-nav-mode"]`,`[` 或 ⌘\ 切换;
+ *   v4 画的是 248 / 64,这里不跟:问一问推开与否按 252 / 68 量过,E2E 钉着);
  *   769–1199 强制收起(给审判台的 600px 裁决栏留地方);≤ 768 没有侧栏,是底栏(`BottomBar`)。
  * - 焦点环用全站的 ink 环 —— 导航现在是浅底。v2 立柱的 `.focus-ring-pillar`(onMain 内缩环)
  *   随立柱、匾上的面包屑与操作一起没有了调用点,已从 globals.css 删除。
@@ -121,7 +131,14 @@ export function useNavMode() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "[" || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented || e.isComposing) return;
+      if (e.defaultPrevented || e.isComposing || e.altKey) return;
+      // ⌘\ / Ctrl \(v4):修饰键组合,在输入框里也接。
+      if (e.key === "\\" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        e.preventDefault();
+        toggle();
+        return;
+      }
+      if (e.key !== "[" || e.metaKey || e.ctrlKey) return;
       if (isEditable(e.target)) return;
       toggle();
     };
@@ -134,8 +151,8 @@ export function useNavMode() {
 
 // ── 侧栏 ────────────────────────────────────────────────────────────────
 
-/** 当前项:3px metal 标(侧栏在左、底栏在顶)+ 8% main 混进 surface-1。全导航只有标读 `--color-metal`、底读 `--color-main`,字一律 ink。 */
-const CURRENT_BG = "bg-[color-mix(in_oklab,oklch(var(--color-main))_8%,oklch(var(--color-surface-1)))]";
+/** 当前项:3px metal 标(侧栏在左、底栏在顶)+ `.nav-current` 的底(globals.css:深色 glow 20%,浅色 card + 卡片阴影)。字一律 ink。 */
+const CURRENT_BG = "nav-current";
 function CurrentMark() {
   return <span aria-hidden="true" data-testid="nav-current-mark" className="absolute inset-y-1.5 left-0 w-[3px] bg-[oklch(var(--color-metal))]" />;
 }
@@ -169,22 +186,29 @@ export function GlobalNav({
   onToggle,
   collapsed,
   user,
+  mode,
 }: {
   menus: readonly SidebarMenu[];
   allMenuPaths: readonly string[];
-  /** 当前页所在的一级项。 */
+  /** 当前页所在的一级项(`navSections` 拆开之后的那一层,见 `navItems`)。 */
   currentId: number | null;
   /** 手风琴里展开的那一组。 */
   openId: number | null;
   onToggle: (id: number) => void;
   collapsed: boolean;
   user?: { display_name?: string; username: string; role: UserRole } | null;
+  /** 收起按钮(`useNavMode` 的结果);不给就不画按钮(测试单独渲染侧栏时)。 */
+  mode?: { forced: boolean; toggle: () => void };
 }) {
   const { t } = useI18n();
   const labelOf = useMenuLabel();
   const pathname = usePathname();
   const navLabel = t("nav.mobile_menu") === "nav.mobile_menu" ? "导航菜单" : t("nav.mobile_menu");
   const name = user ? user.display_name || user.username : "";
+  const sections = navSections(menus);
+  const canSwitchHall = menus.some(function holdsHalls(m): boolean {
+    return m.path === HALLS_PATH || (m.children ?? []).some(holdsHalls);
+  });
 
   // 服务端不知道存的模式与视口宽度,首帧总是展开;读到之后那一下是校正,不是用户的操作,
   // 不该播 240ms 的收起动画。所以宽度过渡等两帧之后才打开 —— 写在 DOM 上而不是 state 里:
@@ -207,39 +231,53 @@ export function GlobalNav({
       id="global-nav"
       data-testid="global-nav"
       data-collapsed={collapsed || undefined}
-      className={`flex h-full flex-col overflow-hidden border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] data-animate:transition-[width] data-animate:duration-base data-animate:ease-enter ${
+      className={`group/side flex h-full flex-col overflow-hidden border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-side))] data-animate:transition-[width] data-animate:duration-base data-animate:ease-enter ${
         collapsed ? "w-17" : "w-63"
       }`}
     >
-      {/* 品牌位(A9 §一):天平标 24 加「灵魂簿」,高 56(17/600 不在八档字号里,取 md 15/600)。文明印只在身份带上,导航里不再出现;
-          收起时只留标,标自己带名字(旁边没有字了)。 */}
-      <div data-nav-brand="" className={`flex h-14 shrink-0 items-center gap-2 border-b border-[oklch(var(--color-line))] ${collapsed ? "justify-center" : "px-4"}`}>
+      {/* 品牌位(A9 §一):天平标 24 加「灵魂簿」,高 56(17/600 不在八档字号里,取 md 15/600)。
+          收起时只留标(标自己带名字),收起按钮落到标下面一行。 */}
+      <div data-nav-brand="" className={`flex h-14 shrink-0 items-center gap-2 ${collapsed ? "justify-center" : "pl-4 pr-2"}`}>
         <BrandMark size={24} label={collapsed ? BRAND_WORD : undefined} />
-        {collapsed ? null : <span className="font-title text-md text-[oklch(var(--color-ink))]">{BRAND_WORD}</span>}
+        {collapsed ? null : <span className="min-w-0 flex-1 font-title text-md text-[oklch(var(--color-ink))]">{BRAND_WORD}</span>}
+        {mode && !collapsed ? <CollapseButton mode={mode} collapsed={collapsed} /> : null}
       </div>
+      {mode && collapsed ? (
+        <div className="flex shrink-0 justify-center pb-1">
+          <CollapseButton mode={mode} collapsed={collapsed} />
+        </div>
+      ) : null}
 
-      <nav aria-label={navLabel} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
+      {user ? <HallCard collapsed={collapsed} canSwitch={canSwitchHall} /> : null}
+      {user ? <SearchHint collapsed={collapsed} /> : null}
+
+      <nav aria-label={navLabel} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-2">
         {menus.length === 0 ? <p className="px-2 py-4 text-2xs text-[oklch(var(--color-ink-muted))]">{t("menus.no_menus")}</p> : null}
-        {menus.map((menu) =>
-          hasChildren(menu) ? (
-            collapsed ? (
-              <RailGroup key={menu.id} menu={menu} label={labelOf(menu)} current={menu.id === currentId} allMenuPaths={allMenuPaths} />
-            ) : (
-              <Group
-                key={menu.id}
-                menu={menu}
-                label={labelOf(menu)}
-                holdsCurrent={menu.id === currentId}
-                open={menu.id === openId}
-                onToggle={() => onToggle(menu.id)}
-                allMenuPaths={allMenuPaths}
-                pathname={pathname}
-              />
-            )
-          ) : (
-            <TopLeaf key={menu.id} menu={menu} label={labelOf(menu)} current={menu.id === currentId} collapsed={collapsed} />
-          )
-        )}
+        {sections.map((section) => (
+          <div key={section.id} role="group" aria-labelledby={`nav-section-${section.id}`} data-nav-section={section.id}>
+            <SectionHeading id={section.id} collapsed={collapsed} />
+            {section.items.map((menu) =>
+              hasChildren(menu) ? (
+                collapsed ? (
+                  <RailGroup key={menu.id} menu={menu} label={labelOf(menu)} current={menu.id === currentId} allMenuPaths={allMenuPaths} />
+                ) : (
+                  <Group
+                    key={menu.id}
+                    menu={menu}
+                    label={labelOf(menu)}
+                    holdsCurrent={menu.id === currentId}
+                    open={menu.id === openId}
+                    onToggle={() => onToggle(menu.id)}
+                    allMenuPaths={allMenuPaths}
+                    pathname={pathname}
+                  />
+                )
+              ) : (
+                <TopLeaf key={menu.id} menu={menu} label={labelOf(menu)} current={menu.id === currentId} collapsed={collapsed} />
+              )
+            )}
+          </div>
+        ))}
       </nav>
 
       {user ? (
@@ -283,7 +321,127 @@ function TopLeaf({ menu, label, current, collapsed }: { menu: SidebarMenu; label
       {current ? <CurrentMark /> : null}
       <span className="flex w-6.75 shrink-0 justify-center"><NavIcon icon={menu.icon} /></span>
       {collapsed ? null : <span title={fullTitle(label)} className="min-w-0 flex-1 truncate">{label.primary}</span>}
+      {!collapsed && menu.path === APPEALS_PATH ? <AppealPendingCount /> : null}
     </Link>
+  );
+}
+
+const HALLS_PATH = "/halls";
+const SIDE_IDLE = "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-canvas))] hover:text-[oklch(var(--color-ink))]";
+
+/** 组标题(`nav.group.*`):11 字、字距 .08em、ink-muted。收起时只给读屏(组仍有名字,只是不占地方)。 */
+function SectionHeading({ id, collapsed }: { id: NavSectionId; collapsed: boolean }) {
+  const { t } = useI18n();
+  return (
+    <p
+      id={`nav-section-${id}`}
+      className={collapsed ? "sr-only" : "px-3 pt-3 pb-1 text-2xs tracking-label text-[oklch(var(--color-ink-muted))]"}
+    >
+      {t(`nav.group.${id}`)}
+    </p>
+  );
+}
+
+/**
+ * 收起 / 展开侧栏(`nav.collapse_sidebar` / `nav.expand_sidebar`,v4 S01)。展开时在品牌行右端,
+ * 无边框、平时透明,指针进侧栏或获焦时 120ms 淡入;< 1024 与触屏常显(那里没有「指针进来」)。
+ * 769–1199 被宽度强制收起:按钮在、不可用,名字说出原因(`nav.collapse_locked`)。`[` 与 ⌘\ 同一个开关。
+ */
+function CollapseButton({ mode, collapsed }: { mode: { forced: boolean; toggle: () => void }; collapsed: boolean }) {
+  const { t } = useI18n();
+  const label = mode.forced ? t("nav.collapse_locked") : collapsed ? t("nav.expand_sidebar") : t("nav.collapse_sidebar");
+  return (
+    <button
+      type="button"
+      data-testid="nav-toggle"
+      aria-controls="global-nav"
+      aria-expanded={!collapsed}
+      aria-disabled={mode.forced || undefined}
+      aria-label={label}
+      aria-keyshortcuts="[ Meta+\ Control+\"
+      title={mode.forced ? label : `${label} ([ · ${isMac() ? "⌘\\" : "Ctrl \\"})`}
+      onClick={mode.toggle}
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-control transition-opacity duration-fast ${
+        collapsed ? "" : "opacity-0 group-hover/side:opacity-100 focus-visible:opacity-100 max-[1023.98px]:opacity-100 pointer-coarse:opacity-100"
+      } ${
+        mode.forced
+          ? "cursor-not-allowed bg-[oklch(var(--color-disabled-surface))] text-[oklch(var(--color-disabled-ink))]"
+          : SIDE_IDLE
+      }`}
+    >
+      {collapsed ? <PanelLeftOpen aria-hidden="true" size={18} strokeWidth={1.5} /> : <PanelLeftClose aria-hidden="true" size={18} strokeWidth={1.5} />}
+    </button>
+  );
+}
+
+/**
+ * 殿司卡(v4 S01,`shell.hall_switch`):文明印 + 此刻所在的殿(进殿查看时是所进的殿)+ 文明名。
+ * 能进别的殿的人(菜单里有「各殿概况」= 全局管理员)点它去 `/halls` 挑一殿进入;别人只是一张卡,不是按钮 ——
+ * 不画一扇打不开的门。底:深色 glow 14% 混进 card,浅色 card + 卡片阴影(`.nav-hall-card`)。
+ */
+function HallCard({ collapsed, canSwitch }: { collapsed: boolean; canSwitch: boolean }) {
+  const { t } = useI18n();
+  const realm = useRealm();
+  const tenant = useTenant().user?.tenant;
+  const civName = tenantLabel(t, tenant);
+  const body = (
+    <>
+      <Seal size={28} />
+      {collapsed ? null : (
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-xs font-medium text-[oklch(var(--color-ink))]" title={realm}>{realm}</span>
+          <span className="block truncate text-2xs text-[oklch(var(--color-ink-muted))]" title={civName}>{civName}</span>
+        </span>
+      )}
+      {collapsed || !canSwitch ? null : (
+        <span aria-hidden="true" className="shrink-0 text-sm text-[oklch(var(--color-ink-muted))]">⇅</span>
+      )}
+    </>
+  );
+  const box = `nav-hall-card mx-2 mb-2 flex shrink-0 items-center gap-2 rounded-panel ${collapsed ? "justify-center p-1" : "p-2"}`;
+  return canSwitch ? (
+    <Link
+      href={HALLS_PATH}
+      data-testid="hall-switch"
+      aria-label={collapsed ? t("shell.hall_switch") : undefined}
+      title={t("shell.hall_switch")}
+      className={`${box} hover:text-[oklch(var(--color-ink))]`}
+    >
+      {body}
+      {collapsed ? null : <span className="sr-only">{t("shell.hall_switch")}</span>}
+    </Link>
+  ) : (
+    <div data-testid="hall-card" className={box}>
+      {body}
+    </div>
+  );
+}
+
+/** 「搜索、跳转、下指令 ⌘K」(`nav.search_hint`):打开同一个命令面板(`GlobalSearch`)。收起时只剩放大镜。 */
+function SearchHint({ collapsed }: { collapsed: boolean }) {
+  const { t } = useI18n();
+  const label = t("nav.search_hint");
+  return (
+    <button
+      type="button"
+      data-testid="nav-search-hint"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Meta+K Control+K"
+      aria-label={collapsed ? label : undefined}
+      title={label}
+      onClick={() => requestSearchOpen()}
+      className={`relative mx-2 mb-1 flex min-h-9 shrink-0 items-center rounded-control text-xs transition-colors duration-fast ${collapsed ? "justify-center" : "gap-2 px-3"} ${SIDE_IDLE}`}
+    >
+      <Search aria-hidden="true" size={16} strokeWidth={1.5} className="shrink-0" />
+      {collapsed ? null : (
+        <>
+          <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+          <kbd className="shrink-0 rounded-control px-1 font-mono text-2xs text-[oklch(var(--color-ink-muted))] shadow-[inset_0_0_0_1px_oklch(var(--color-line-strong))]">
+            {isMac() ? "⌘K" : "Ctrl K"}
+          </kbd>
+        </>
+      )}
+    </button>
   );
 }
 

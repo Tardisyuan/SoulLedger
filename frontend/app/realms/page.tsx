@@ -19,6 +19,7 @@ import { Drawer } from "@/src/components/ui/Drawer";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
 import { RealmFacts } from "@/src/components/realms/RealmFacts";
+import { realmTypeNamespace } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { RouteMap } from "@/src/components/realms/RouteMap";
@@ -338,7 +339,7 @@ function RealmTree({
     const type = REALM_TYPE_CONFIG[shownRealmType(realm)] || REALM_TYPE_CONFIG.NEUTRAL;
     return (
       <Badge glyph={type.icon} className={type.className}>
-        <DomainEnum namespace="realms.types" value={shownRealmType(realm)} />
+        <DomainEnum namespace={realmTypeNamespace(t, realm.civilization, shownRealmType(realm))} value={shownRealmType(realm)} />
       </Badge>
     );
   };
@@ -488,7 +489,7 @@ function RealmTree({
                 {noPlace ? <span className={MUTED}>{t("realms.table.not_a_place")}</span> : heldCap(realm, false)}
               </span>
               <span title={realm.realm_code} className={`col-span-2 truncate font-mono text-2xs ${MUTED}`}>
-                {realm.realm_code} · {realm.kind ? t(`realms.kind.${realm.kind}`) : <DomainEnum namespace="realms.types" value={shownRealmType(realm)} />}
+                {realm.realm_code} · {realm.kind ? t(`realms.kind.${realm.kind}`) : <DomainEnum namespace={realmTypeNamespace(t, realm.civilization, shownRealmType(realm))} value={shownRealmType(realm)} />}
                 {realm.is_eternal && <> · ≡ {t("realms.table.eternal_yes")}</>}
               </span>
             </span>

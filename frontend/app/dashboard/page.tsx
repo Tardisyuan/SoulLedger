@@ -20,6 +20,7 @@ import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RealmBars, RealmLegend, PATTERN_CLASS, patternOf } from "@/src/components/dashboard/RealmBars";
+import { realmTypeNamespace } from "@/src/lib/domainNames";
 import { TodoStrip } from "@/src/components/dashboard/TodoStrip";
 import { TrendsPanel } from "@/src/components/dashboard/TrendsPanel";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -249,6 +250,9 @@ function DashboardContent() {
     .sort((a, b) => b.count - a.count)
     .map((r) => ({ key: r.realm_code, name: r.realm_name || r.realm_code, count: r.count, realmType: r.realm_type }));
   const topRealms = [...(stats?.souls_by_realm ?? [])].sort((a, b) => b.count - a.count).slice(0, 10);
+  /** 按界域图上只有一个文明时,图例用它的界域类型叫法。 */
+  const realmCivs = new Set((stats?.souls_by_realm ?? []).map((r) => r.civilization).filter(Boolean));
+  const realmCiv = realmCivs.size === 1 ? [...realmCivs][0] : undefined;
 
   /** 今天的只写 HH:MM;更早的写月 / 日(Design A4 最近动态的右栏)。 */
   const formatTimestamp = (ts: string) => {
@@ -395,7 +399,7 @@ function DashboardContent() {
               {/* 按界域 — sorted descending: realms have no canonical order, so the
                   server's is arbitrary and a reader comparing magnitudes would have to
                   hunt. Each bar takes its realm type's pattern. */}
-              <ChartCard title={t("dashboard.souls_by_realm")} aside={<RealmLegend />}>
+              <ChartCard title={t("dashboard.souls_by_realm")} aside={<RealmLegend civilization={realmCiv} />}>
                 {loading ? (
                   <Skeleton className="h-60 w-full" />
                 ) : realmBars.length > 0 ? (
@@ -559,7 +563,7 @@ function DashboardContent() {
                       <td className="px-4">
                         <span className="flex items-center gap-2">
                           <span aria-hidden="true" className={`block size-3 ${PATTERN_CLASS[patternOf(realm.realm_type)]}`} />
-                          <DomainEnum namespace="realms.types" value={realm.realm_type} />
+                          <DomainEnum namespace={realmTypeNamespace(t, realm.civilization, realm.realm_type)} value={realm.realm_type} />
                         </span>
                       </td>
                       <td className="px-4 text-right font-mono">{realm.count}</td>

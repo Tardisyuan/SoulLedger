@@ -12,7 +12,7 @@
  *    警示档字形 ◐ + 文字(灵魂批量条「一次只能移交一个」、审判队列「一次最多 100 件」)。
  *  - 浅色、中性皮下,「待我处理」的匾色竖条(civ-neutral)与 v3 选中行的 ink 竖条
  *    1.19:1、ΔE00 4.71,几乎同色。改为选中行**不画竖条**,只靠 7% 底色;行首 3px 竖条
- *    整条让给「待我处理」。
+ *    整条让给「待我处理」。(v4 第八批:浅色中性 solid 改成 #5A606B,对 ink 2.83:1,撞色不再成立。)
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
@@ -57,12 +57,9 @@ describe("row states (v3 .ds-tr)", () => {
   it("a selected row draws no leading stripe — the 3px left bar belongs to「待我处理」alone", () => {
     // 2026-10-01 拍板。v3 的 .ds-tr.selected 带 3px ink inset;在浅色 + 中性皮下它与
     // 「待我处理」的 civ-neutral 竖条几乎同色,所以选中只靠底色。
+    // v4 第八批(2026-11-06):浅色中性 solid 改成 #5A606B,与 ink 拉开到 2.83:1,当初的理由不再成立
+    // (见下面那条)。竖条仍整条让给「待我处理」—— 要不要把选中竖条加回来是用户的决定,这里不跟着改。
     expect(ROW_SELECTED).not.toMatch(/shadow|inset|border-l/);
-    // 那个理由本身也钉住:如果哪天 civ-neutral 与 ink 拉开了,这里会红,提醒重新评估。
-    const ink = rgb(tok("light", "--color-ink"));
-    const mine = rgb(tok("light", "--color-civ-neutral"));
-    expect(contrastRatio(ink, mine)).toBeLessThan(1.5);
-    expect(deltaE00Rgb(ink, mine)).toBeLessThan(10);
   });
 
   const TEXT = ["--color-ink", "--color-ink-muted", "--color-ink-subtle", "--color-accent", "--color-danger", "--color-success", "--color-warning"];
@@ -85,12 +82,12 @@ describe("row states (v3 .ds-tr)", () => {
     expect(ratio(hov, s1)).toBeGreaterThan(1);
   });
 
-  it("KNOWN COLLISION: light + neutral skin, the 「待我处理」 bar and the selected inset are near-identical", () => {
-    // Pinned as still colliding so that a fix turns this red and the note in data-table.tsx gets updated.
+  it("light + neutral skin: the 「待我处理」 bar no longer matches ink (v4 第八批 solid #5A606B, 2.83:1)", () => {
+    // Was pinned as colliding (#16171A = ink, 1.19:1) so that a fix would turn it red; Design batch 8 fixed it.
     const ink = rgb(tok("light", "--color-ink"));
     const mine = rgb(tok("light", "--color-civ-neutral"));
-    expect(contrastRatio(ink, mine)).toBeLessThan(1.5);
-    expect(deltaE00Rgb(ink, mine)).toBeLessThan(10);
+    expect(contrastRatio(ink, mine)).toBeGreaterThan(2.5);
+    expect(deltaE00Rgb(ink, mine)).toBeGreaterThan(10);
   });
 });
 

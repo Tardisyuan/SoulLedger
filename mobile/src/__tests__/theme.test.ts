@@ -152,7 +152,17 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     expect(skin("neutral", scheme).plaqueFill).toBe(d ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL);
     expect(themeFor("ATLANTEAN", scheme).plaque).toBe(NEUTRAL_PLAQUE[scheme]);
     const civColours = new Set<string>(CIVS.flatMap((c) => Object.values(v4.civ[c])));
-    expect([skin("neutral", scheme).plaque, skin("neutral", scheme).plaqueFill, skin("neutral", scheme).metal].filter((x) => civColours.has(x))).toEqual([]);
+    expect([skin("neutral", scheme).plaque, skin("neutral", scheme).plaqueFill].filter((x) => civColours.has(x))).toEqual([]);
+    // The metal is the brand gold (Design 第八批第 5 条), not a civilization's: dark is the mark's own gold. Light
+    // #8A6A24 happens to equal 地府's light metal — Design gave it as the brand gold's light value, so it is not
+    // held to "no civilization colour" here.
+    expect(NEUTRAL_CIV.mD).toBe(brand.mark);
+  });
+
+  it("the neutral is Design 第八批第 5 条's (solid, glow, metal, side), and the web's --color-civ-neutral* say the same", () => {
+    expect(NEUTRAL_CIV).toEqual({ glow: "#8E939C", tD: "#B4B6BA", tL: "#54575C", sL: "#5A606B", sD: "#55575E", mD: "#ECAA3D", mL: "#8A6A24", sideD: "#0E0F11", sideL: "#F1F1EF" });
+    // Absence: the old derived neutral (#16171A solid = the body ink; #38393E) is gone.
+    expect(Object.values(NEUTRAL_CIV)).not.toEqual(expect.arrayContaining(["#16171A", "#38393E"]));
   });
 
   it("the neg and warn hues are not any civilization's colour", () => {
@@ -197,6 +207,7 @@ describe("contrast, at the worst App ground", () => {
       ["ink", worst(t.ink, scheme), 4.5],
       ["inkMuted", worst(t.inkMuted, scheme), 4.5],
       ["inkSubtle", worst(t.inkSubtle, scheme), 4.5],
+      ["faintText", worst(t.faintText, scheme), 4.5],
       ["lamp", worst(s.lamp, scheme), 3],
     ].filter(([, ratio, min]) => (ratio as number) < (min as number));
     expect(low).toEqual([]);

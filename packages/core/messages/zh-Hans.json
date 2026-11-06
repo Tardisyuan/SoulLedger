@@ -2960,6 +2960,32 @@
       "NEUTRAL": "中立",
       "ANNIHILATION": "湮灭"
     },
+    "types_by_civ": {
+      "cn": {
+        "HELL": "地狱",
+        "PURGATORY": "待审",
+        "BLISS": "天界",
+        "NEUTRAL": "殿司"
+      },
+      "eu": {
+        "HELL": "地狱",
+        "PURGATORY": "炼狱",
+        "BLISS": "天国",
+        "NEUTRAL": "前庭"
+      },
+      "eg": {
+        "PURGATORY": "杜阿特",
+        "BLISS": "芦苇原",
+        "NEUTRAL": "两真之殿",
+        "ANNIHILATION": "湮灭"
+      },
+      "gr": {
+        "HELL": "塔尔塔罗斯",
+        "PURGATORY": "千年之路",
+        "BLISS": "至福岛",
+        "NEUTRAL": "渡口"
+      }
+    },
     "codes": {
       "DY_01_HEAVEN": "天堂",
       "DY_02_YANGLIU": "杨柳宫",
@@ -7961,6 +7987,11 @@
       "used_unlimited": "{{used}} · 不限",
       "full_badge": "已满",
       "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在待转世里候位，下月或调高配额后再办。"
+    },
+    "not_applicable": {
+      "title": "{{civ}}没有转世",
+      "body": "这里的路在处置之后结束，不再投生。转生申请只出现在地府和希腊。",
+      "back": "回到概览"
     }
   },
   "hall_settings": {

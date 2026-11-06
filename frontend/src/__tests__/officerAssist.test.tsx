@@ -256,13 +256,14 @@ describe("Design E 组: the panel's head, its room, and the connection bar", () 
     expect(document.querySelector("[class*='--color-scrim']")).not.toBeNull();
   });
 
-  it("with the connection bar up, the panel starts below it (top-7), pushed or overlaid", async () => {
+  it("v4 第八批: with the link down the panel still runs from the very top — the pill is in the toolbar, not above it", async () => {
     mockBannerShown = true;
     renderLayout();
     fireEvent.click(entry());
     const panel = await screen.findByRole("complementary", { name: "问一问" });
-    expect(panel.className).toMatch(/(^|\s)top-7(\s|$)/);
-    expect(panel.className).not.toMatch(/(^|\s)(top-0|inset-y-0)(\s|$)/);
+    expect(panel.className).toMatch(/(^|\s)top-0(\s|$)/);
+    // Absence: the old offset under Design E 组's 28px bar is gone.
+    expect(panel.className).not.toMatch(/(^|\s)top-7(\s|$)/);
   });
 
   it("with no connection bar, the panel runs from the very top", async () => {
