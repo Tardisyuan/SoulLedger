@@ -2,9 +2,9 @@
  * The soul app's primitives, per the design handoff "灵魂簿 App", restyled for
  * v2「朱印」(补足 A1 component states, A2 rules, A3 type):
  *
- *   radius 0 except v3's three (`radius` in theme.ts): an input 4, a dialog or sheet 8, and
- *   the pill / circle (the lamp, a drawer handle, a radio, an avatar); the focus ring follows
- *   its element;
+ *   radius per v4 (`radius` in theme.ts): a control 4 (input, button, badge), a panel, dialog or
+ *   sheet 6, and the pill / circle (the lamp, a drawer handle, a radio, an avatar); the focus
+ *   ring follows its element;
  *   depth is 1px hairlines between two surfaces, never a shadow or elevation;
  *   pressed is a darker ground (A1: fills darken 24% toward black, ghosts take
  *   `hair`), never an Android ripple, whose colour cannot be held to contrast;
@@ -1053,16 +1053,16 @@ export function Button({
 }) {
   const t = useTheme();
   const inert = disabled || busy;
-  // A1 按钮: primary = the plaque (one of its five places); danger = solid neg.strong
-  // under white, always with ✕; secondary = ghost, ink3 outline. Disabled and busy:
-  // s2 ground, ink3 text, same opacity. Pressed: fills darken 24%, the ghost takes hair.
+  // A1 按钮, v4 `.btn`: primary = `--solid` under `--onSolid`; danger = solid neg under `--onNeg`
+  // (dark ink on dark's pink), always with ✕; secondary = ghost, the `--line2` outline. Disabled and
+  // busy: s2 ground, ink3 text, same opacity. Pressed: fills darken 24%, the ghost takes hair.
   const look = inert
     ? { bg: t.s2, border: t.s2, ink: t.inkSubtle, pressed: t.s2 }
     : kind === "primary"
       ? { bg: t.plaqueFill, border: t.plaqueFill, ink: t.onPlaque, pressed: shade(t.plaqueFill) }
       : kind === "danger"
-        ? { bg: t.negStrong, border: t.negStrong, ink: "#FFFFFF", pressed: shade(t.negStrong) }
-        : { bg: "transparent", border: t.inkSubtle, ink: t.ink, pressed: t.hair };
+        ? { bg: t.negStrong, border: t.negStrong, ink: t.onNeg, pressed: shade(t.negStrong) }
+        : { bg: "transparent", border: t.hair2, ink: t.ink, pressed: t.hair };
   return (
     <View style={[styles.buttonWrap, style]}>
       <Pressable
@@ -1622,10 +1622,11 @@ export const styles = StyleSheet.create({
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },
   iconNudge: { marginTop: 4 },
   buttonWrap: { gap: space[3] },
-  // A1: App buttons are 44 high, 13 / 600 — one size for all three kinds.
+  // A1: App buttons are 44 high, 13 / 600 — one size for all three kinds. v4: a control, radius 4.
   button: {
     minHeight: 44,
     borderWidth: 1,
+    borderRadius: radius.control,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1637,7 +1638,7 @@ export const styles = StyleSheet.create({
   notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
   failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
   failedText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20 },
-  small: { borderWidth: 1, paddingHorizontal: space[3], paddingVertical: space[2] },
+  small: { borderWidth: 1, borderRadius: radius.control, paddingHorizontal: space[3], paddingVertical: space[2] },
   screenError: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6], paddingVertical: space[7] },
   retry: { alignSelf: "stretch", marginTop: space[1] },
   home: { alignSelf: "stretch" },
@@ -1648,7 +1649,7 @@ export const styles = StyleSheet.create({
   rowLabel: { minWidth: 56, maxWidth: "45%" },
   // Up to 18 caption characters (LABEL_STACK_THRESHOLD) stay beside the value; past 40% they wrap at a space.
   rowLabelFixed: { width: "40%" },
-  // Square since v2 (A2: only the lamp and a drawer handle are pills).
+  // v4 `.tag`: a control, radius 4 (square from v2 to v3; only the lamp and a drawer handle are pills).
   badge: {
     alignSelf: "flex-start",
     maxWidth: "100%",
@@ -1657,7 +1658,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     columnGap: space[2],
     borderWidth: 1,
-    borderRadius: radius.none,
+    borderRadius: radius.control,
     paddingHorizontal: space[3],
     paddingVertical: space[1],
   },

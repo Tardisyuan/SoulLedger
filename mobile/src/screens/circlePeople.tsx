@@ -767,7 +767,8 @@ const styles = StyleSheet.create({
   /**
    * A name is not something said: the interface face, not the serif (v3) — but Archivo has no Han, so a Han
    * name fell back to the phone's own face (a script face on the test Huawei, 10-31). `nameFace` gives Han
-   * the bundled Noto Serif SC and keeps a Latin name in the interface face.
+   * the bundled Noto Serif SC and keeps a Latin name in the interface face. Since v4 (2026-11-06) the
+   * interface face carries Han itself (SoulLedger Sans), so the reason is gone; the choice is not yet revisited.
    */
   nameInput: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, fontSize: 15 },
 });

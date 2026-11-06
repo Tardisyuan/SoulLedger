@@ -1,81 +1,88 @@
 /**
- * The soul app's tokens.
+ * The soul app's tokens — and the officer app's: `mobile-officer/src/shared.ts` re-exports this file.
  *
- * Colours are v3's (round-7 prototype; user decision 2026-10-01: v3 fully replaces v2):
- * ONE set of neutrals for every civilization — canvas, surface, ink, muted, line — and
- * each civilization owns one colour (`plaque`). The status colours (`semantic`) are not
- * v3's and stay as they were.
+ * Colours are v4's (定稿 `SoulLedger v4/V4Batch07.dc.html`, its `.th-dark` / `.th-light` and
+ * `[data-civ]` blocks; user decision 2026-11-06: 一律按 v4, 深浅色做到一样好). The slot names are the
+ * ones every screen already reads; only their values moved, as v3 did in `dba34ac3`:
  *
- * Until 2026-10-01 the App had per-civilization grounds and hairlines (灵魂簿 App 1h-一,
- * v2 规范 §一) and a warm onPlaque #FFF4E8; v3 drops both — a page no longer says its
- * civilization by its ground, only by the plaque, the current tab, the seal and the
- * primary button.
+ *   s0 ← --main   s1 ← --card   s2 ← --card2   hair ← --line   hair2 ← --line2
+ *   ink ← --ink   inkMuted ← --sub   inkSubtle ← --sub (see `faint` in Theme)   faint ← --faint
+ *   plaque ← --civT (the civilization's colour as text and as a mark)
+ *   band, plaqueFill ← --solid (a filled ground under --onSolid)   onPlaque ← --onSolid
+ *   glow ← --glow   metal ← --metal   side ← --side   field ← --field   pos, neg, onNeg ← the same
+ *
+ * v4 has no colour for a soul of no known civilization; `NEUTRAL_CIV` is ours (see there). The
+ * statuses v4 does not print (negInk / negBg / warn / warnBg / lamp / lampBg / scrim) keep their values.
  */
 import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
 export type ColorScheme = "dark" | "light";
 export type CivKey = "neutral" | "cn" | "eu" | "eg" | "gr";
 
-/**
- * v3, verbatim. `civ` is the civilization's one colour; it goes to the plaque (the
- * identity band and every title bar), the current tab, the seal and the primary button,
- * and never to an error or a refusal (those are `neg`).
- */
-export const v3 = {
-  light: { canvas: "#EFEFEB", surface: "#FBFBF8", ink: "#181A17", muted: "#646861", line: "#D1D3CD" },
-  dark: { canvas: "#10120F", surface: "#1A1D19", ink: "#F0F1EA", muted: "#A7ACA4", line: "#383C35" },
+/** One civilization's nine, as v4 names them: `tD`/`tL` text, `sD`/`sL` solid, `mD`/`mL` metal, `sideD`/`sideL`. */
+export interface CivPalette {
+  glow: string;
+  tD: string;
+  tL: string;
+  sL: string;
+  sD: string;
+  mD: string;
+  mL: string;
+  sideD: string;
+  sideL: string;
+}
+
+/** v4, verbatim (`line` / `line2` / `field` are v4's rgba, not composited). */
+export const v4 = {
+  dark: { main: "#111113", card: "#1A1B1E", card2: "#222327", ink: "#F3F3F1", sub: "#B4B6BA", faint: "#7C7F85", line: "rgba(255,255,255,0.08)", line2: "rgba(255,255,255,0.16)", field: "rgba(255,255,255,0.05)", onSolid: "#FFFFFF", pos: "#8AD3A1", neg: "#F2849B", onNeg: "#16171A" },
+  light: { main: "#F8F8F6", card: "#FFFFFF", card2: "#F1F1EE", ink: "#16171A", sub: "#54575C", faint: "#8A8D92", line: "rgba(0,0,0,0.08)", line2: "rgba(0,0,0,0.16)", field: "rgba(0,0,0,0.035)", onSolid: "#FFFFFF", pos: "#1F6B3F", neg: "#A81E3C", onNeg: "#FFFFFF" },
   civ: {
-    cn: { light: "#8F3329", dark: "#AD4B40" },
-    eu: { light: "#583875", dark: "#80609A" },
-    eg: { light: "#294A8A", dark: "#5F7FBE" },
-    gr: { light: "#285051", dark: "#5A8480" },
+    cn: { glow: "#C8604F", tD: "#D98A7A", tL: "#A04636", sL: "#A64A3B", sD: "#7E362B", mD: "#C9A35E", mL: "#8A6A24", sideD: "#160806", sideL: "#FFF0EC" },
+    eu: { glow: "#A0709F", tD: "#A883AE", tL: "#885A94", sL: "#7A4F85", sD: "#5A3A63", mD: "#B9C2CF", mL: "#5C6878", sideD: "#100718", sideL: "#F7EDF6" },
+    eg: { glow: "#5F93C8", tD: "#89BCF1", tL: "#174A88", sL: "#3C69A2", sD: "#2B4E79", mD: "#D6B25E", mL: "#86671E", sideD: "#060C1C", sideL: "#EAF2FB" },
+    gr: { glow: "#5F9C94", tD: "#B5E3D8", tL: "#31695E", sL: "#37716A", sD: "#28544F", mD: "#C98B62", mL: "#8F5B36", sideD: "#03120F", sideL: "#E8FAF7" },
   },
 } as const;
 
 /**
- * v3 has no colour for a soul whose civilization the app does not know (or before
- * sign-in). Rather than borrow another civilization's, it is the web's neutral
- * `--color-main` (`--color-civ-neutral` in frontend/app/globals.css: `.light`
- * `0.275998 0.007000 134`, `:root` (dark) `0.515225 0.011900 131.5`), so App and Web agree.
- * White on it: light 14.7:1, dark 5.60:1 (band 6.39:1). Until 2026-10-02 it was v2's warm
- * black / warm grey #2B2724 / #6E665E.
+ * Before sign-in, and a civilization the app does not know: v4 draws none, so the neutral is made from
+ * v4's own greys rather than borrowed from a civilization — text / mark `--sub`, solid the draft's own
+ * pressed segment #16171A (light) and a grey that holds white at 11.5:1 (dark), glow `--faint`,
+ * metal `--sub`, side `--main`. The web's `--color-civ-neutral` is meant to carry the same text colour
+ * (theme.test reads it).
  */
-export const NEUTRAL_PLAQUE = { light: "#262925", dark: "#656962" } as const;
+export const NEUTRAL_CIV: CivPalette = {
+  glow: v4.dark.faint,
+  tD: v4.dark.sub,
+  tL: v4.light.sub,
+  sL: "#16171A",
+  sD: "#38393E",
+  mD: v4.dark.sub,
+  mL: v4.light.sub,
+  sideD: v4.dark.main,
+  sideL: v4.light.main,
+};
 
-/** v3 writes plain white on its civilization colours (#FFF4E8 was 4.30:1 on dark 埃及's band). */
+/** The neutral's mark colour; Android's notification tint (app.json) is its light value. */
+export const NEUTRAL_PLAQUE = { light: NEUTRAL_CIV.tL, dark: NEUTRAL_CIV.tD } as const;
+
+/** v4's `--onSolid`, the same in both schemes. */
 export const ON_PLAQUE = "#FFFFFF";
-
-/**
- * `s2`, the pressed / disabled / skeleton step, which v3 does not print: one step from
- * both grounds toward the line — light: 80% canvas + 20% line (muted on it 4.67:1);
- * dark: surface and line half and half (muted on it 6.06:1). Derived, so they move with
- * the five values above if those move.
- */
-export const S2 = { light: "#E9E9E5", dark: "#292D27" } as const;
-
-/** 90% the colour and 10% #111, as v3's `color-mix(accent 90%, #111)` draws the identity band. */
-export function v3Band(plaque: string): string {
-  const n = parseInt(plaque.slice(1), 16);
-  return `#${[16, 8, 0].map((s) => Math.round(((n >> s) & 255) * 0.9 + 0x11 * 0.1).toString(16).padStart(2, "0")).join("")}`;
-}
 
 /**
  * `lamp` / `lampBg`: the eternal light's warm gold (朋友圈 handoff 1e), used by that
  * one reaction and nowhere else in the app. The handoff draws dark only
  * (oklch 0.860 0.110 85 on 0.230 0.030 80). Light lamp #6A3E00 on #FBF1DC is
- * Design's (文明气质 1i, confirmed 2026-09-27; 8.13:1). v1's Egyptian ochre accent,
- * which the lamp could not part from in gamut, is gone (第三阶段: 埃及's colour is its
- * lapis plaque); the lamp is still told apart by form too — the one pill, 2px, in its gold.
+ * Design's (文明气质 1i, confirmed 2026-09-27; 8.13:1). Told apart by form too —
+ * the one pill, 2px, in its gold.
  *
- * v2 (规范 v2 定稿 §二, global — not per civilization): `neg` is 冷玫红 and every
- * neg* slot moved with it (strong = the solid danger fill under white text, bg /
- * negInk = a notice's ground and the text on it); `warn` is new, 橙, the same value
- * as the web. `pos`, `lamp` and `lampBg` are unchanged. neg is always drawn with ✕
- * and words, never by colour alone: its hue is close to 地府's plaque.
+ * `pos`, `neg`, `onNeg` are v4's. v4 has one danger colour: `negStrong` (a danger fill, a refusal's
+ * rule) is `neg` itself, and the text on that fill is `onNeg` — dark ink on dark's pink, white on
+ * light's crimson. neg is always drawn with ✕ and words, never by colour alone.
  */
 export const semantic = {
-  dark: { pos: "#82CB92", neg: "#FF7A93", negStrong: "#C21D4D", negInk: "#FFD3DC", negBg: "#33101A", warn: "#FF9A3C", warnBg: "#301904", lamp: "#F2CC7A", lampBg: "#241B0C", scrim: "rgba(0,0,0,0.62)" },
-  light: { pos: "#197037", neg: "#A8103E", negStrong: "#A8103E", negInk: "#8A0C33", negBg: "#FFECEF", warn: "#9F4A00", warnBg: "#FFF1E2", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
+  dark: { pos: v4.dark.pos, neg: v4.dark.neg, negStrong: v4.dark.neg, onNeg: v4.dark.onNeg, negInk: "#FFD3DC", negBg: "#33101A", warn: "#FF9A3C", warnBg: "#301904", lamp: "#F2CC7A", lampBg: "#241B0C", scrim: "rgba(0,0,0,0.62)" },
+  light: { pos: v4.light.pos, neg: v4.light.neg, negStrong: v4.light.neg, onNeg: v4.light.onNeg, negInk: "#8A0C33", negBg: "#FFECEF", warn: "#9F4A00", warnBg: "#FFF1E2", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
 } as const;
 // `warnBg` (补足 D 组 警示底): the ground of a warning box; the text on it is `warn` itself.
 // `scrim` rides along here because it is global too (补足 A2 阴影与遮罩): one use —
@@ -89,13 +96,12 @@ export const semantic = {
 export const space = [2, 4, 8, 12, 16, 24, 32, 48] as const;
 export const GUTTER_PT = 20;
 /**
- * v3 第一批「形状与层次」(2026-10-01): inputs (and filter chips — the app has none) 4, dialogs
- * and sheets 8 (a sheet rounds its top corners only), everything else square — buttons too
- * (user decision). The round-7 prototype draws 问一问's drawer at 20; the first batch is the
- * later word and says it follows that prototype, so 8. The pill (the lamp, a drawer handle)
- * and the circle (a radio, an avatar) are `pill`. The focus ring follows its element's shape.
+ * v4 (user decision 2026-11-06): controls 4 — inputs, buttons, tags / badges; panels, dialogs and
+ * sheets 6 (a sheet rounds its top corners only; v3's 8 became 6). The pill (the lamp, a drawer
+ * handle) and the circle (a radio, an avatar) are `pill`. `none` is left for what is still square
+ * (a rule, a table cell). The focus ring follows its element's shape.
  */
-export const radius = { none: 0, control: 4, dialog: 8, pill: 999 } as const;
+export const radius = { none: 0, control: 4, dialog: 6, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds excepted, `useReducedMotionDurations`).
  * Opacity and translate only — the one scale is the cold start's mark receding (0.96),
@@ -145,7 +151,8 @@ export const motion = {
 /**
  * The brand mark's two colours (v3 第三批 品牌色令牌): the gold balance on the deep canvas. For
  * the app icon (scripts/build-app-icon.mjs) and the cold start (coldStart.tsx) only — never a UI
- * colour, so it sits outside both schemes and `Theme`. `ground` is v3's dark canvas.
+ * colour, so it sits outside both schemes and `Theme`. v4 leaves the mark alone, so these stay
+ * (`ground` was v3's dark canvas; v4's is #111113) and neither the icons nor the splash move.
  */
 export const brand = { mark: "#ECAA3D", ground: "#10120F" } as const;
 
@@ -157,26 +164,39 @@ export interface Theme {
   s2: string;
   hair: string;
   hair2: string;
-  /** The civilization's colour (see `v3`): rules, emblems, the seal, a mark. Never under text. */
+  /**
+   * The civilization's colour, v4 `--civT`: rules, emblems, the seal, a mark — and, since v4, text
+   * (a tag, a current tab, a text button): it holds 4.5:1 on every ground of its scheme.
+   */
   plaque: string;
-  /**
-   * The plaque under text — the title bars and the identity band: `v3Band(plaque)`, as v3
-   * draws the band, in both schemes.
-   */
+  /** The civilization's colour under white text — the title bars and the identity band: v4 `--solid`. */
   band: string;
-  /**
-   * A filled control's ground (the primary button, send, follow …): the plaque in light;
-   * in dark the band, because white on dark 埃及 / 希腊 is 3.99 / 4.16:1 and on their band
-   * 4.66 / 4.82 (user decision 2026-10-01). The colour values themselves are unchanged.
-   */
+  /** A filled control's ground (the primary button, send, follow …): v4 `--solid`, as `band`. */
   plaqueFill: string;
   onPlaque: string;
+  /** v4 `--glow`: the header glow and the tinted grounds (`color-mix` of it). Never text. */
+  glow: string;
+  /** v4 `--metal`: the civilization's metal — the seal's gold / silver, a corner, the current item's rule. */
+  metal: string;
+  /** v4 `--side`: the side rail's ground, a tint of the civilization. */
+  side: string;
+  /** v4 `--field`: an input's / a neutral tag's ground (translucent). */
+  field: string;
   ink: string;
   inkMuted: string;
+  /**
+   * The third ink. v4 prints `--faint` for it, but light `--faint` is 2.94:1 on `--main` (dark 3.91),
+   * under AA for text; so this stays `--sub`, as v3 kept it equal to the second ink, and `faint`
+   * carries v4's value for what is not read as text (a count beside a label, a divider glyph).
+   */
   inkSubtle: string;
+  /** v4 `--faint`, verbatim. Not for text that must be read: see `inkSubtle`. */
+  faint: string;
   pos: string;
   neg: string;
   negStrong: string;
+  /** Text on a `negStrong` fill (v4 `--onNeg`). */
+  onNeg: string;
   negInk: string;
   negBg: string;
   warn: string;
@@ -209,35 +229,39 @@ export function themeFor(civilization: string | null | undefined, scheme: ColorS
 const themes = new Map<string, Theme>();
 
 function buildTheme(key: CivKey, scheme: ColorScheme): Theme {
-  const n = v3[scheme];
-  const plaque = key === "neutral" ? NEUTRAL_PLAQUE[scheme] : v3.civ[key][scheme];
+  const n = v4[scheme];
+  const c = key === "neutral" ? NEUTRAL_CIV : v4.civ[key];
+  const dark = scheme === "dark";
+  const solid = dark ? c.sD : c.sL;
   return {
     scheme,
     civ: key,
-    s0: n.canvas,
-    s1: n.surface,
-    s2: S2[scheme],
-    // v3 prints one line and one muted ink; the second hairline and the third ink are those.
+    s0: n.main,
+    s1: n.card,
+    s2: n.card2,
     hair: n.line,
-    hair2: n.line,
+    hair2: n.line2,
     ink: n.ink,
-    inkMuted: n.muted,
-    inkSubtle: n.muted,
-    ...plaqueSlots(plaque, scheme),
+    inkMuted: n.sub,
+    inkSubtle: n.sub,
+    faint: n.faint,
+    plaque: dark ? c.tD : c.tL,
+    band: solid,
+    plaqueFill: solid,
+    onPlaque: ON_PLAQUE,
+    glow: c.glow,
+    metal: dark ? c.mD : c.mL,
+    side: dark ? c.sideD : c.sideL,
+    field: n.field,
     ...semantic[scheme],
   };
 }
 
-function plaqueSlots(plaque: string, scheme: ColorScheme) {
-  return { plaque, band: v3Band(plaque), plaqueFill: scheme === "dark" ? v3Band(plaque) : plaque, onPlaque: ON_PLAQUE };
-}
-
 /**
  * Every screen before sign-in: booting, login, forgot-password, the forced password
- * change. Until 2026-10-02 these had their own parchment canvas (第三类 F 组); v3 has
- * none, so they are the neutral skin — v3's five neutrals and the neutral plaque, the
- * same theme as a signed-in soul of unknown civilization. The name stays because the
- * cold-start splash (being rewritten on another branch) still calls it.
+ * change. Until 2026-10-02 these had their own parchment canvas (第三类 F 组); since v3
+ * there is none, so they are the neutral skin — the neutrals and `NEUTRAL_CIV`, the
+ * same theme as a signed-in soul of unknown civilization.
  */
 export function preLoginTheme(scheme: ColorScheme): Theme {
   return themeFor(null, scheme);

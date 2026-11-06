@@ -18,7 +18,7 @@ import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX, RESIDENCE_MEMO_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { v3, v3Band } from "../theme";
+import { v4 } from "../theme";
 import { PROFILE, application, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -82,8 +82,8 @@ describe("a soul residing in another civilization", () => {
     renderApp();
     await screen.findByTestId("profile-card");
     // v3: the skin is the identity band's colour — where the soul is, not where it belongs (jest reports light).
-    expect(background(screen.getByTestId("plaque"))).toBe(v3Band(v3.civ.eg.light));
-    expect(background(screen.getByTestId("plaque"))).not.toBe(v3Band(v3.civ.cn.light));
+    expect(background(screen.getByTestId("plaque"))).toBe(v4.civ.eg.sL);
+    expect(background(screen.getByTestId("plaque"))).not.toBe(v4.civ.cn.sL);
     // Home lexicon: 功 / 过 and 审判中 — none of the Duat's words.
     expect(screen.getByText("功")).toBeTruthy();
     expect(screen.getByText("过")).toBeTruthy();

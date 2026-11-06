@@ -30,7 +30,7 @@ import { formatWhen } from "../format";
 import { ActionButton, StateView, detailStateOf } from "../kit";
 import { deskUrl } from "../rules";
 import { useSession } from "../session";
-import { Notice, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
+import { Notice, Screen, SectionLabel, SmallButton, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
 
 type T = (key: string, vars?: Record<string, string>) => string;
 
@@ -442,11 +442,11 @@ const styles = StyleSheet.create({
   bar: { padding: space[4], gap: space[3], borderTopWidth: 1 },
   summary: { flexDirection: "row", alignItems: "center", gap: space[3] },
   station: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: space[5], paddingVertical: space[2], borderBottomWidth: 1 },
-  box: { width: 22, height: 22, borderRadius: 4, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  box: { width: 22, height: 22, borderRadius: radius.control, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   struck: { textDecorationLine: "line-through" },
   head: { flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 44, paddingHorizontal: space[5], paddingVertical: space[2], borderTopWidth: 1 },
   node: { flexDirection: "row", alignItems: "center", gap: space[2], minHeight: 44, paddingHorizontal: space[5], paddingVertical: space[2], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center" },
-  card: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[4], borderWidth: 1, borderRadius: 8 },
+  card: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[4], borderWidth: 1, borderRadius: radius.dialog },
   gate: { margin: space[5], padding: space[4], gap: space[2], borderWidth: 1 },
 });

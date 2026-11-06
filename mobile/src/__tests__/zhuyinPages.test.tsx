@@ -19,7 +19,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { defaultLifeSection, lifePath, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
 import { LIFE_OPEN_PREFIX, stageWordFit } from "../screens/life";
 import { SessionProvider } from "../session";
-import { GUTTER_PT, space, themeFor, v3 } from "../theme";
+import { GUTTER_PT, space, themeFor, v4 } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
@@ -274,10 +274,10 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     // plain bars, never SVG (a percentage-width SVG line sat a pixel low on some screens).
     for (const i of [0, 1, 2]) {
       const seg = screen.getByTestId(`path-seg-${i}`);
-      expect([v3.light.ink, v3.dark.ink]).toContain(flat(seg).backgroundColor);
+      expect([v4.light.ink, v4.dark.ink]).toContain(flat(seg).backgroundColor);
       expect(seg.props.children).toBeUndefined();
     }
-    expect([v3.light.line, v3.dark.line]).toContain(flat(screen.getByTestId("path-seg-3")).backgroundColor);
+    expect([v4.light.line, v4.dark.line]).toContain(flat(screen.getByTestId("path-seg-3")).backgroundColor);
     // 「本世阶段 04 / 05」, and the state said in glyph and word: ▣ 已处置 (never a colour alone).
     expect(screen.getByTestId("life-stage").props.children).toBe("本世阶段 04 / 05");
     expect(screen.getByTestId("soul-state-glyph").props.children).toBe("▣");
@@ -285,9 +285,9 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     // Here: its number, an ink outline, its word in 600 — and in no civilization colour.
     expect(within(screen.getByTestId("path-SENTENCE-here")).getByText("4")).toBeTruthy();
     expect(within(screen.getByTestId("path-ALIVE-done")).getByText("✓")).toBeTruthy();
-    expect(flat(screen.getByTestId("path-SENTENCE-word")).fontFamily).toBe("Archivo_600SemiBold");
-    expect(flat(screen.getByTestId("path-ALIVE-word")).fontFamily).toBe("Archivo_400Regular");
-    const civColours = Object.values(v3.civ).flatMap((c) => [c.light, c.dark]);
+    expect(flat(screen.getByTestId("path-SENTENCE-word")).fontFamily).toBe("SoulLedgerSans_600");
+    expect(flat(screen.getByTestId("path-ALIVE-word")).fontFamily).toBe("SoulLedgerSans_400");
+    const civColours = Object.values(v4.civ).flatMap((c) => [c.tL, c.tD]);
     for (const step of ["ALIVE-done", "SENTENCE-here", "REINCARNATING-ahead"]) {
       const dot = flat(screen.getByTestId(`path-${step}`));
       expect(civColours).not.toContain(dot.backgroundColor);
@@ -304,7 +304,7 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     const value = screen.getByTestId("balance-value");
     expect(value.props.children).toBe("\u221212");
     // v3: an ink block, the number in the surface colour \u2014 a record, never a status or civilization colour.
-    const scheme = flat(value).color === v3.light.surface ? "light" : "dark";
+    const scheme = flat(value).color === v4.light.card ? "light" : "dark";
     const t = themeFor("CHINESE", scheme);
     expect(flat(screen.getByTestId("balance")).backgroundColor).toBe(v3[scheme].ink);
     expect(flat(value).color).toBe(v3[scheme].surface);

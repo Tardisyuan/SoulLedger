@@ -14,7 +14,7 @@ import { Path } from "react-native-svg";
 import { SHAPE, STROKES, VIEWBOX, pathLength } from "../brandMark";
 import { ColdStart, coldStart } from "../coldStart";
 import type { SessionState } from "../session";
-import { motion, v3 } from "../theme";
+import { brand, motion } from "../theme";
 import { PROFILE } from "./stubApi";
 
 // Every other suite gets jest.setup's inert double; this one tests the real thing.
@@ -67,8 +67,8 @@ describe("the cold start (补足 C18)", () => {
   it("frame 0 is the native splash's picture: its ground, no mark yet — every stroke undrawn", async () => {
     const plugins = require("../../app.json").expo.plugins as unknown[];
     const [, splash] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, Record<string, never>];
-    // The ground alone, in both modes (v3's dark canvas): the mark is written by JS, so the native splash carries none.
-    expect(splash).toMatchObject({ image: "./assets/splash-blank.png", backgroundColor: v3.dark.canvas, dark: { image: "./assets/splash-blank.png", backgroundColor: v3.dark.canvas } });
+    // The ground alone, in both modes (the brand ground, v3's dark canvas; v4 leaves the mark alone): the mark is written by JS, so the native splash carries none.
+    expect(splash).toMatchObject({ image: "./assets/splash-blank.png", backgroundColor: brand.ground, dark: { image: "./assets/splash-blank.png", backgroundColor: brand.ground } });
     const { data, info } = await sharp(join(__dirname, "../../assets/splash-blank.png")).raw().toBuffer({ resolveWithObject: true });
     expect(info.channels).toBe(4);
     expect(data.some((v, k) => k % 4 === 3 && v > 0)).toBe(false);
