@@ -15,7 +15,8 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
+import { useCourtOffice, useHall, useHallCivilization } from "@/src/components/plaque/useHall";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { drfFieldErrors, drfNonFieldError } from "@soulledger/core/validations/drfErrors";
@@ -54,6 +55,7 @@ export default function ProposeDispatchPage() {
 
 function ProposeDispatchForm() {
   const { t, locale } = useI18n();
+  const hallCiv = useHallCivilization();
   // 题字自己报:壳的默认是面包屑末段,而这一页的末段是路径段 `propose`(原样印在了身份带上)。
   usePlaque({ title: t("dispatch.propose"), hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
@@ -254,7 +256,7 @@ function ProposeDispatchForm() {
     if (byField.code === "target_dispatch_disabled") mapped.target_tenant_code = t("dispatch.target_tenant_closed");
     // 灵魂不在冥府(在世、轮回中、终局、失踪)或受刑计划进行中:放到灵魂那一栏下(2026-11-01)。
     if (byField.code === "soul_not_in_underworld") mapped.soul_id = t("dispatch.soul_not_in_underworld");
-    if (byField.code === "sentence_plan_active") mapped.soul_id = t("dispatch.soul_on_sentence_plan");
+    if (byField.code === "sentence_plan_active") mapped.soul_id = t(civKey(t, "dispatch.soul_on_sentence_plan", hallCiv));
     setFieldErrors(mapped);
     if (Object.keys(mapped).length > 0) {
       queueMicrotask(() => focusFirstInvalid(formRef.current));

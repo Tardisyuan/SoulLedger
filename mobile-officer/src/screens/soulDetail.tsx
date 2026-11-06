@@ -17,7 +17,7 @@ import { soulsApi, type Soul } from "@soulledger/core/api/souls";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
-import { nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
+import { civKey, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
@@ -128,7 +128,7 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
                 {k === "judgments" ? <JudgmentsTab soul={soul} onOpen={onOpenJudgment} /> : null}
                 {k === "karma" ? <KarmaTab soul={soul} /> : null}
                 {k === "fate" ? <FateTab soulId={id} dispositions={permissions.includes("disposition.read")} reincarnations={permissions.includes("reincarnation.read")} /> : null}
-                {k === "events" ? <EventsTab soulId={id} /> : null}
+                {k === "events" ? <EventsTab soulId={id} civilization={soul.civilization} /> : null}
               </View>
             ))}
         </View>
@@ -367,12 +367,13 @@ function JudgmentsTab({ soul, onOpen }: { soul: Soul; onOpen: (id: string) => vo
   );
 }
 
-function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] }) {
+function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] & { tenant_code?: string | null } }) {
   const { t, enumLabel } = useI18n();
   const { nodes, current } = planStops(plan);
   return (
     <View testID="soul-plan" style={{ padding: GUTTER, gap: space[3] }}>
-      <SectionLabel>{t("sentence_plan.panel_title")}</SectionLabel>
+      {/* 地府叫「受刑计划」,别的文明叫「去处计划」(第十二批 1.2)。 */}
+      <SectionLabel>{t(civKey(t, "sentence_plan.panel_title", plan.tenant_code))}</SectionLabel>
       {nodes.map((n) => {
         const realm = enumLabel("realms.names", n.realm_code);
         const status = enumLabel(nodeStateNamespace(t, n.tenant_code, n.realm_code, n.status), n.status);
@@ -530,7 +531,7 @@ function LostBanner({ soulId }: { soulId: string }) {
 }
 
 /** Rows as on the desk's 灵魂事件 page, without the soul column: event · time · actor, and the detail when there is one. */
-function EventsTab({ soulId }: { soulId: string }) {
+function EventsTab({ soulId, civilization }: { soulId: string; civilization?: string | null }) {
   const { t, enumLabel } = useI18n();
   const load = useCallback(() => eventsApi.list({ soul: soulId }).then((r) => r.data), [soulId]);
   const { data, error, reload } = useRemote(load);
@@ -543,6 +544,8 @@ function EventsTab({ soulId }: { soulId: string }) {
     <View testID="soul-events">
       {rows.map((e) => {
         const type = enumLabel("souls.events", e.event_type);
+        // 地府的受刑事件名保留「受刑计划…」(第十二批 1.2)。
+        const byCiv = civKey(t, `souls.events.${e.event_type}`, civilization);
         const actor = !e.actor || e.actor === "system" ? t("events.actor_system") : e.actor;
         const detail = eventDetail(e, enumLabel, t);
         return (
@@ -550,7 +553,7 @@ function EventsTab({ soulId }: { soulId: string }) {
             key={e.id}
             testID={`soul-event-${e.id}`}
             minHeight={64}
-            title={type.state === "known" ? type.label : e.event_type}
+            title={byCiv !== `souls.events.${e.event_type}` ? t(byCiv) : type.state === "known" ? type.label : e.event_type}
             lines={[{ one: `${formatWhen(e.create_time)} · ${actor}` }, ...(detail ? [detail] : [])]}
           />
         );

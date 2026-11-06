@@ -5,7 +5,7 @@
  *
  * 四文明各自的规则:
  * - 地府:判语按裁决与罪目 —— 五逆 → `five_heinous`;别的罪目 → `fail`,殿号取罪目所属的殿
- *   (`offenceCourt`,与后端自动选殿同一张表);通过时功多于过 → `merit`(道别取第十殿的六道建议),
+ *   (`offenceCourt`,与后端自动选殿同一张表);通过时功多于过 → `merit`(道别取第十殿的六道建议),过多于功 → `demerit_pardoned`(第十二批),
  *   否则 → `balanced`。**中文界面竖排、用汉字数字**(第六批第 3 条),年份逐位(一九三一),
  *   计数按读法(四十二);「年」由文书加,数据不带。其他语言横排、阿拉伯数字。
  * - 欧洲:天国 / 炼狱第 n 台 / 地狱第 n 圈 / 前庭(第六批第 6 条)。圈台号读处置的界域代码;
@@ -186,10 +186,16 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
       const courtName = courtLabel(t, input.court) || unrecorded;
       let verdict: string;
       if (passed) {
-        const more = (input.merit ?? 0) > (input.demerit ?? 0);
-        verdict = more
-          ? t(k("verdict.merit"), { path: input.rebirthForm ? t(`reincarnation.forms.${input.rebirthForm}`) : unrecorded })
-          : t(k("verdict.balanced"));
+        const merit = input.merit ?? 0;
+        const demerit = input.demerit ?? 0;
+        const path = { path: input.rebirthForm ? t(`reincarnation.forms.${input.rebirthForm}`) : unrecorded };
+        // 过多于功仍判通过:判官放宽了,文书如实写成宽恕,不写成「功多于过」(第十二批 CN U-3)。
+        verdict =
+          merit > demerit
+            ? t(k("verdict.merit"), path)
+            : demerit > merit
+              ? t(k("verdict.demerit_pardoned"), path)
+              : t(k("verdict.balanced"));
       } else if (input.offence === "FIVE_HEINOUS") {
         verdict = t(k("verdict.five_heinous"));
       } else {
