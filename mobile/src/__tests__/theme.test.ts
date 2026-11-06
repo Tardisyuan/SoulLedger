@@ -258,8 +258,14 @@ describe("brand (v3 第三批 品牌色令牌): the mark's gold and ground, one 
     expect(cold).toMatch(/const GOLD = brand\.mark;/);
     expect(cold).not.toMatch(/#ECAA3D|#10120F/i);
   });
-  it("is not a UI colour: no theme carries either value", () => {
-    for (const civ of [null, "CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"]) for (const s of ["light", "dark"] as const) expect(Object.values(themeFor(civ, s))).not.toContain(brand.mark);
+  it("is not a UI colour: no theme carries either value — except the neutral's dark metal, which Design batch 8 made the brand gold", () => {
+    for (const civ of [null, "CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"])
+      for (const s of ["light", "dark"] as const) {
+        const t = themeFor(civ, s) as unknown as Record<string, unknown>;
+        const carried = Object.entries(t).filter(([k]) => !(civ === null && s === "dark" && k === "metal")).map(([, v]) => v);
+        expect(carried).not.toContain(brand.mark);
+      }
+    expect(themeFor(null, "dark").metal).toBe(brand.mark);
   });
 });
 
