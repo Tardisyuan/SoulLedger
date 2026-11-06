@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   head: { paddingHorizontal: space[5], paddingTop: space[4], gap: space[1] },
   undo: { flexDirection: "row", alignItems: "center", gap: space[3], marginHorizontal: space[5], marginTop: space[3], paddingHorizontal: space[4], minHeight: 44, borderRadius: radius.control },
   deck: { flex: 1, margin: space[5] },
-  card: { ...StyleSheet.absoluteFillObject, borderWidth: 1, borderRadius: radius.dialog, padding: space[5] },
+  card: { ...StyleSheet.absoluteFill, borderWidth: 1, borderRadius: radius.dialog, padding: space[5] },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[3] },
   stamp: { position: "absolute", borderWidth: 2, borderRadius: radius.control, paddingHorizontal: space[3], paddingVertical: space[1] },
   hint: { flexDirection: "row", alignItems: "center", gap: space[2], marginHorizontal: space[5], padding: space[3], borderRadius: radius.control },

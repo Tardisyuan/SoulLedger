@@ -98,7 +98,7 @@ export function RejectSheet({
   const loadSoul = useCallback(() => (open && civ === "EUROPEAN" ? soulsApi.get(judgment.soul).then((r) => r.data) : Promise.resolve(null)), [open, civ, judgment.soul]);
   const soul = useRemote(loadSoul).data;
   // 埃及:列出记为「不实」的否定告白,不能另选。
-  const loadDenials = useCallback(() => (open && civ === "EGYPTIAN" ? judgmentApi.negativeConfessions(judgment.id).then((r) => r.data.items) : Promise.resolve(null)), [open, civ, judgment.id]);
+  const loadDenials = useCallback(() => (open && civ === "EGYPTIAN" ? judgmentApi.negativeConfessions(judgment.id).then((r) => r.items) : Promise.resolve(null)), [open, civ, judgment.id]);
   const untrue = (useRemote(loadDenials).data ?? []).filter((d) => d.truthful === false);
 
   const scope =
