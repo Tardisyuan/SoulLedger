@@ -161,7 +161,8 @@ describe("勾魂牒", () => {
 
   it("HANDED_OVER, on the road (a station card): the card folds into one data row", async () => {
     await openAs({ capture_warrant: { status: "HANDED_OVER", issued_at: "2026-10-27T12:00:00Z" }, diyu_station: "TUDI_TEMPLE" });
-    expect(screen.getByTestId("life-stations")).toBeTruthy();
+    // v4: the station is the road under 「你现在在哪」 (the thirteen-glyph card is not drawn beside it).
+    expect(screen.getByTestId("route-TUDI_TEMPLE")).toBeTruthy();
     expect(screen.queryByTestId("life-capture")).toBeNull();
     expect(screen.getByTestId("life-capture-line")).toHaveTextContent("勾魂牒 · 交城隍 · 2026年 · 10月27日");
   });
@@ -318,7 +319,10 @@ describe("the fixed order (第 5 节)", () => {
       european_vestibule: { entered_at: "2026-04-08T12:00:00Z" },
       negative_confession: { truthful: 1, untruthful: 0, unheard: 41, total: 42 },
     });
-    expect(order(["life-now", ...CARDS, "section-judgments"])).toEqual(["life-now", ...CARDS, "section-judgments"]);
+    // v4: with a 地府 station the road is drawn inside 「你现在在哪」 (life-now), so there is no separate 十三站 card.
+    const cards = CARDS.filter((c) => c !== "life-stations");
+    expect(order(["life-now", ...CARDS, "section-judgments"])).toEqual(["life-now", ...cards, "section-judgments"]);
+    expect(order(["life-now", "life-route"])).toEqual(["life-now", "life-route"]);
   });
 });
 

@@ -192,17 +192,19 @@ describe("v3 OutlineSeal", () => {
   });
 });
 
-describe("the band on a tab's root (v3 short identity band)", () => {
-  it("the band ground, the tenant's seal in white read as 「第五殿之印」, the meta line, the title at 20 in the title serif (Noto Serif SC 600)", async () => {
+describe("a tab's root (v4 big title, no band)", () => {
+  it("the page's ground, the tenant's seal in the civilization's colour read as 「第五殿之印」, the title at 30 in the title serif, the sub line in --sub", async () => {
     wrap(<PlaqueHeader title="书信" onAccount={() => {}} />, signedIn({ tenant: { ...PROFILE.tenant, seal_glyphs: ["五"] } }));
-    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v4.civ.cn.sL);
+    const t = themeFor("CHINESE", "light");
+    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v4.light.main);
+    expect(flat(screen.getByTestId("plaque")).backgroundColor).not.toBe(v4.civ.cn.sL);
     expect(screen.getByTestId("plaque-seal").props.accessibilityLabel).toBe("第五殿之印");
     expect(flat(screen.getByTestId("plaque-seal", H))).toMatchObject({ width: 38, height: 38 });
     expect(screen.getByTestId("plaque-seal-glyph", H).props.children).toBe("五");
-    expect(screen.getByTestId("plaque-seal-outer", H).props.stroke.payload).toBe(argb("#FFFFFF"));
-    expect(flat(screen.getByTestId("plaque-title"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 20, color: "#FFFFFF" });
+    expect(screen.getByTestId("plaque-seal-outer", H).props.stroke.payload).toBe(argb(t.plaque));
+    expect(flat(screen.getByTestId("plaque-title"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 30, lineHeight: 38, color: t.ink });
     expect(screen.getByTestId("plaque-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
-    expect(flat(screen.getByTestId("plaque-meta"))).toMatchObject({ fontFamily: "GeistMono_400Regular", fontSize: 11 });
+    expect(flat(screen.getByTestId("plaque-meta"))).toMatchObject({ fontFamily: "SoulLedgerSans_400", fontSize: 13, color: t.inkMuted });
     expect(screen.getByTestId("header-account")).toBeTruthy();
     // v2's ornament band and texture are gone.
     expect(screen.queryAllByTestId(/^plaque-band-/, H)).toEqual([]);
@@ -229,7 +231,7 @@ describe("the band on a tab's root (v3 short identity band)", () => {
     wrap(<PlaqueHeader title="本世" onAccount={() => {}} />, signedIn({ civilization: "ATLANTEAN" }), "ATLANTEAN");
     expect(screen.queryByTestId("plaque")).toBeNull();
     expect(screen.queryByTestId("plaque-seal", H)).toBeNull();
-    expect(flat(screen.getByTestId("header")).backgroundColor).toBe(themeFor(null, "light").band);
+    expect(flat(screen.getByTestId("header")).backgroundColor).toBe(themeFor(null, "light").s0);
   });
 });
 
@@ -274,25 +276,25 @@ describe("the tab bar (补足 B11 / C14)", () => {
   };
   const label = (name: string) => flat(screen.getByTestId(`tab-${name}-label`));
 
-  it("the current tab: a 2px rule in 匾色 and its label in ink 600; the rest ink3 400", () => {
-    // v3: the bar wears v3's neutrals and the civilization's v3 colour.
+  it("v4 capsule: the current tab is the civilization's colour (600) on 18% of its glow; the rest --sub 400", () => {
     const t = themeFor("CHINESE", "light");
-    expect([t.plaque, t.ink, t.inkSubtle, t.s1]).toEqual([v4.civ.cn.tL, v4.light.ink, v4.light.sub, v4.light.card]);
+    expect([t.plaque, t.ink, t.inkMuted, t.s1]).toEqual([v4.civ.cn.tL, v4.light.ink, v4.light.sub, v4.light.card]);
     wrap(bar(["本世", "转生", "书信", "朋友圈"], 2), signedIn());
-    expect(screen.getAllByTestId("tab-current-rule")).toHaveLength(1);
-    expect(flat(screen.getByTestId("tab-current-rule"))).toMatchObject({ backgroundColor: t.plaque });
-    expect(label("Letters")).toMatchObject({ color: t.ink, fontFamily: "SoulLedgerSans_600", fontSize: 12 });
-    expect(label("Life")).toMatchObject({ color: t.inkSubtle, fontFamily: "SoulLedgerSans_400" });
-    // The label stays ink: as text every dark v3 colour is under 4.5:1 on the dark surface.
-    expect(label("Letters").color).not.toBe(t.plaque);
-    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: v4.light.card, borderTopColor: v4.light.line });
+    expect(screen.getAllByTestId("tab-current-pill")).toHaveLength(1);
+    expect(flat(screen.getByTestId("tab-current-pill"))).toMatchObject({ backgroundColor: `${v4.civ.cn.glow}2E`, borderRadius: 999 });
+    expect(label("Letters")).toMatchObject({ color: t.plaque, fontFamily: "SoulLedgerSans_600", fontSize: 11 });
+    expect(label("Life")).toMatchObject({ color: t.inkMuted, fontFamily: "SoulLedgerSans_400" });
+    expect(label("Life").color).not.toBe(t.plaque);
+    // A round capsule on the card at 70%, 64 high, 14 from the screen's sides.
+    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: `${v4.light.card}B3`, borderRadius: 999, minHeight: 64 });
+    expect(flat(screen.getByTestId("tab-bar-ground"))).toMatchObject({ paddingHorizontal: 14, backgroundColor: v4.light.main });
   });
 
-  it("one label past the pillar's threshold (core's pillarIsWide): all four go to 11, not only that one", () => {
+  it("one label past the pillar's threshold (core's pillarIsWide): all four may take two lines, not only that one", () => {
     wrap(bar(["Ankh Pen", "Sesh Ba", "Medew", "Wehem Mesut"]), signedIn());
-    for (const name of ["Life", "Applications", "Letters", "Circle"]) expect(label(name).fontSize).toBe(11);
+    for (const name of ["Life", "Applications", "Letters", "Circle"]) expect(screen.getByTestId(`tab-${name}-label`).props.numberOfLines).toBe(2);
     screen.unmount();
     wrap(bar(["本世", "转生", "书信", "朋友圈"]), signedIn());
-    for (const name of ["Life", "Applications", "Letters", "Circle"]) expect(label(name).fontSize).toBe(12);
+    for (const name of ["Life", "Applications", "Letters", "Circle"]) expect([label(name).fontSize, screen.getByTestId(`tab-${name}-label`).props.numberOfLines]).toEqual([11, 1]);
   });
 });

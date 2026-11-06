@@ -38,6 +38,8 @@ import { soulLinks } from "./links";
 import { navigationHeld, useNavigationHeld } from "./navLock";
 import { NetworkProvider } from "./network";
 import { useSession } from "./session";
+import { useResidence } from "./residence";
+import { hasRebirth } from "./rules";
 import { preLoginTheme, themeFor, type ColorScheme } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext, useReducedMotionDurations } from "./ui";
 import { Welcome, welcomeFrom } from "./welcome";
@@ -98,6 +100,9 @@ function MainTabs() {
   // native component, remounting every tab: the life tab's three requests went out twice.
   const { tabFade } = useReducedMotionDurations();
   const { unread } = chat;
+  // v4: 欧洲 and 埃及 do not rebirth, so they have no 转生 tab (three tabs). By the HOME civilization, as the
+  // road is: a soul residing in Egypt is still 中国's to rebirth (residence.ts). The server's `can_apply` still decides.
+  const rebirth = hasRebirth(useResidence().home);
   return (
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
@@ -133,11 +138,11 @@ function MainTabs() {
           ),
       })}
     >
-      {/* Four tabs (朋友圈 handoff 1a): 本世 / 转生 / 书信 / 朋友圈. 前世 is the life tab's last section now. */}
-      {/* v3: the life tab draws its own identity band (it compacts as the page scrolls), so no navigator header. */}
+      {/* Four tabs (朋友圈 handoff 1a): 本世 / 转生 / 书信 / 朋友圈 — three where there is no rebirth (v4). 前世 is the life tab's last section. */}
+      {/* The life tab draws its own header (it compacts as the page scrolls), so no navigator header. */}
       <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life"), headerShown: false }} />
       {/* The tab is a signpost, the screen title the full name (chat handoff 1a): four two-character labels fit 98pt. */}
-      <Tabs.Screen name="Applications" component={ApplicationsTab} options={{ title: t("soul_app.tabs.rebirth") }} />
+      {rebirth ? <Tabs.Screen name="Applications" component={ApplicationsTab} options={{ title: t("soul_app.tabs.rebirth") }} /> : null}
       {/* Not deployed here: no tab at all, rather than one that opens onto "not available" (1b). */}
       {chat.availability === "not_configured" ? null : (
         <Tabs.Screen
@@ -340,6 +345,8 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   const open = assist?.open;
   const setDraft = assist?.setDraft;
   const lettersOff = chat.availability === "not_configured";
+  // No 转生 tab (欧洲 / 埃及, v4): the voice / shortcut links to it land on 本世, as 书信 does when letters are off.
+  const rebirthOff = !hasRebirth(useResidence().home);
   // Not subscribed while the recovery codes are on screen: the inbox keeps the link, and it lands on release.
   const held = useNavigationHeld();
   useEffect(() => {
@@ -360,13 +367,13 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
       else if (link.page === "help") navigationRef.navigate("Help");
       else if (link.page === "settings") navigationRef.navigate("Settings");
       else if (link.page === "notifications") navigationRef.navigate("NotificationHistory");
-      else if (link.page === "applications") navigationRef.navigate("Tabs", { screen: "Applications" });
+      else if (link.page === "applications" && !rebirthOff) navigationRef.navigate("Tabs", { screen: "Applications" });
       else if (link.page === "post" && link.id) navigationRef.navigate("CirclePost", { id: link.id });
       else if (link.page === "conversation" && link.id && !lettersOff) navigationRef.navigate("Conversation", { id: link.id });
       // `cooldown` goes through `landOn`, which passes `landed`: the shortening block is washed once.
-      else landOn(navigationRef.navigate, { screen: link.page === "cooldown" ? "Applications" : "Life" });
+      else landOn(navigationRef.navigate, { screen: link.page === "cooldown" && !rebirthOff ? "Applications" : "Life" });
     });
-  }, [signedIn, ready, held, open, setDraft, lettersOff]);
+  }, [signedIn, ready, held, open, setDraft, lettersOff, rebirthOff]);
   return null;
 }
 
