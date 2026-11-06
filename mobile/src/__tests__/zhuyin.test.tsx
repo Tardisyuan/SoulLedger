@@ -285,8 +285,8 @@ describe("the tab bar (补足 B11 / C14)", () => {
     expect(label("Letters")).toMatchObject({ color: t.plaque, fontFamily: "SoulLedgerSans_600", fontSize: 11 });
     expect(label("Life")).toMatchObject({ color: t.inkMuted, fontFamily: "SoulLedgerSans_400" });
     expect(label("Life").color).not.toBe(t.plaque);
-    // A round capsule on the card at 70%, 64 high, 14 from the screen's sides.
-    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: `${v4.light.card}B3`, borderRadius: 999, minHeight: 64 });
+    // A round capsule on the opaque card (用户 2026-11-06: not v4's 70% until a device pass), 64 high, 14 from the sides.
+    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: v4.light.card, borderRadius: 999, minHeight: 64 });
     expect(flat(screen.getByTestId("tab-bar-ground"))).toMatchObject({ paddingHorizontal: 14, backgroundColor: v4.light.main });
   });
 
