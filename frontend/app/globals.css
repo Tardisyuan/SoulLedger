@@ -1872,6 +1872,8 @@ html.theme-switching *::after {
 /* 主视觉深浅两份:按 :root.light 只显示一份(不等主题上下文挂好,首帧就对)。
    动画在 SVG 自己里面(<img> 加载,样式不进文档),减少动态效果时它自己停在静态图。 */
 :root.light .v4-emblem[data-theme="dark"],
-:root:not(.light) .v4-emblem[data-theme="light"] {
+:root:not(.light) .v4-emblem[data-theme="light"],
+:root.light .v4-themed[data-theme="dark"],
+:root:not(.light) .v4-themed[data-theme="light"] {
   display: none;
 }
