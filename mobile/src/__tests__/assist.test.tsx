@@ -189,7 +189,7 @@ describe("the entry", () => {
       .map((n) => n.props.testID);
     expect([...new Set(ids)]).toEqual(["header-account"]);
     const entry = StyleSheet.flatten(screen.getByTestId("assist-entry").props.style);
-    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v4.civ.cn.tL });
+    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v4.civ.cn.sL });
     await act(async () => fireEvent.press(screen.getByTestId("assist-entry")));
     expect(screen.getByTestId("assist-panel")).toBeTruthy();
   });
