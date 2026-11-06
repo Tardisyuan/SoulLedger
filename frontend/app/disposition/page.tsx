@@ -264,7 +264,7 @@ function DispositionPageContent() {
         {pending.map((d) => (
           <Row key={d.id} archived={d.is_archived} testId="disposition-pending-row" cols="md:grid-cols-[1.3fr_7rem_1.3fr_8rem_6rem_7rem]">
             {soulLink(d)}
-            <VerdictBadge verdict={d.verdict} />
+            <VerdictBadge verdict={d.verdict} civilization={user?.tenant?.civilization} />
             {realm(d)}
             <span className="text-[oklch(var(--color-ink-muted))]">
               {termLabel(termState(d, now), t)}
@@ -417,7 +417,7 @@ function termLabel(term: TermState, t: T): string {
 }
 
 /** 判决徽章:字形 + 名,颜色之外必有字形(规范 v1 §1.2)。没有本地审判的处置写「未记录」。 */
-function VerdictBadge({ verdict }: { verdict: Disposition["verdict"] }) {
+function VerdictBadge({ verdict, civilization }: { verdict: Disposition["verdict"]; civilization?: string | null }) {
   if (!verdict) {
     return (
       <span className="text-xs">
@@ -425,7 +425,7 @@ function VerdictBadge({ verdict }: { verdict: Disposition["verdict"] }) {
       </span>
     );
   }
-  return <DomainVerdictBadge verdict={verdict} className="justify-self-start" />;
+  return <DomainVerdictBadge verdict={verdict} civilization={civilization} className="justify-self-start" />;
 }
 
 /**

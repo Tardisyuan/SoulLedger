@@ -46,7 +46,7 @@ def test_the_reset_mail_keeps_its_text_and_adds_a_neutral_html_part(api_client, 
     code = cache.get(f"pwd_reset:{email}")
     [message] = mail.outbox
     assert message.subject == "SoulLedger 密码重置验证码"
-    assert message.body == f"您的验证码: {code}\n5 分钟内有效。如非本人操作,请忽略本邮件。"
+    assert message.body == f"你的验证码：{code}\n5 分钟内有效。如非本人操作，请忽略本邮件。"
     html = _html(message)
     assert code in html
     _assert_neutral(html)
@@ -63,10 +63,10 @@ def test_the_credential_mail_keeps_its_text_and_escapes_values_in_html(cn_tenant
     [message] = mail.outbox
     assert message.to == ["zhang@example.com"]
     assert message.body == (
-        f"您的灵魂编号:{hostile}\n"
-        "初始密码:Pw<b>x\n"
+        f"你的灵魂编号：{hostile}\n"
+        "初始密码：Pw<b>x\n"
         "有效期至 2026-10-07 08:30 (UTC)。首次登录后须修改密码。\n"
-        "该密码只发送这一次;过期或遗失请联系所属文明的官员重置。"
+        "该密码只发送这一次；过期或遗失请联系所属文明的官员重置。"
     ), "the plain-text part changed"
 
     html = _html(message)

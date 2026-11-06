@@ -26,7 +26,7 @@ TENANT_LOCALE = {"CN_DIYU": "zh-Hans", "EG_DUAT": "egy", "EU_HEAVEN_HELL": "en",
 
 # 每种语言一份完整的纯文本 —— 字面量,不从 MESSAGES 拼,否则测的是副本自己。
 RESET_TEXT = {
-    "zh-Hans": "您的验证码: {code}\n5 分钟内有效。如非本人操作,请忽略本邮件。",
+    "zh-Hans": "你的验证码：{code}\n5 分钟内有效。如非本人操作，请忽略本邮件。",
     "en": "Your code: {code}\nValid for 5 minutes. If you did not ask for this, ignore this email.",
     "egy": "Hesb Maa-Ek: {code}\nWenen At 5. Nen Djes: Nen Iri Khet.",
 }
@@ -35,8 +35,8 @@ RESET_SUBJECT = {
 }
 CREDENTIAL_TEXT = {
     "zh-Hans": (
-        "您的灵魂编号:{soul_code}\n初始密码:{password}\n有效期至 {expires}。首次登录后须修改密码。\n"
-        "该密码只发送这一次;过期或遗失请联系所属文明的官员重置。"
+        "你的灵魂编号：{soul_code}\n初始密码：{password}\n有效期至 {expires}。首次登录后须修改密码。\n"
+        "该密码只发送这一次；过期或遗失请联系所属文明的官员重置。"
     ),
     "en": (
         "Your soul code: {soul_code}\nInitial password: {password}\n"

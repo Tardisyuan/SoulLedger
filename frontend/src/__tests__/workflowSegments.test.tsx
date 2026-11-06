@@ -3,7 +3,7 @@
  *
  * - 选站列表:终审那一行勾灰、点不动;只剩终审时出提示条,勾回任一站就消失;有取消才有「全部恢复」。
  * - 门口那一块:召集这边写第几天,满 3 天后换成「每天提醒一次」;「按默认流程走」只在服务端说能的时候出现;
- *   该域没有能选站的人时只写那一句、不给「再提醒一次」;外域自己看到的是「流程在等本域选站」。
+ *   该域没有能选站的人时只写那一句、不给「再提醒一次」;外域自己看到的是「流程在等本殿选站」。
  * - 加减站:当前站与之前折成「不能改」,终审勾灰;行尾只标这次的变化;理由空着不能保存;
  *   别人刚改过(409 `segment_changed`)时拦下、写谁几点改的,不报错误 toast、不覆盖。
  * - 审批页「待我选站」:在门口的一行写「已在门口等 · N 天」并加粗,没到门口的写前面还有几站;空组不画。
@@ -209,7 +209,7 @@ describe("门口那一块(W-5a/b/c)", () => {
     expect(screen.getByRole("button", { name: tZh("workflow.gate.use_default") })).toBeInTheDocument();
   });
 
-  it("外域自己看到的是「流程在等本域选站」与「选站」,不是召集这边的那几句", () => {
+  it("外域自己看到的是「流程在等本殿选站」与「选站」,不是召集这边的那几句", () => {
     const seg = segment({ can_pick: true, can_remind: false });
     wrap(<WorkflowGateBanner workflow={workflowWith([local, seg])} segment={seg} myTenant="EG_DUAT" />);
     const banner = screen.getByTestId("gate-banner");

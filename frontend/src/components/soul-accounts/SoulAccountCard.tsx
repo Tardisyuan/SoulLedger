@@ -16,6 +16,7 @@ import { AccountCredentialModal } from "./AccountCredentialModal";
 import { EmailNotSyncedNote } from "./EmailNotSyncedNote";
 import { SoulMfaResetDialog } from "./SoulMfaResetDialog";
 import { lifeNumber } from "./soulAccountsView";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
 /**
@@ -41,6 +42,9 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
   const accounts = chain.data ?? [];
   const current: SoulAccount | undefined = accounts.find((a) => a.retired_at === null);
   const life = soul.life_index ?? 0;
+  // 欧洲、埃及的这一世写「此生」(v4 第十批第 4 条,core lifeLabel.ts);前世照写「第 n 世」。
+  const lifeText = (cycle: number) =>
+    (cycle === life ? thisLifeLabel(t, soul.civilization, cycle + 1) : null) ?? t("soul_accounts.life", { n: lifeNumber(cycle) });
   const thisLifeHasAccount = accounts.some((a) => a.cycle === life);
   const myHall = user?.tenant?.code;
   const homeHall = soul.home_tenant?.code ?? myHall;
@@ -73,7 +77,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
         {current?.email_not_synced === "taken" && <EmailNotSyncedNote />}
         {current ? (
           <dl className="space-y-2 text-sm" data-testid="current-soul-account">
-            {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(current.cycle) }))}
+            {row(t("soul_accounts.fields.cycle"), lifeText(current.cycle))}
             {row(t("soul_accounts.fields.soul_code"), <SoulCode code={current.soul_code} className="font-mono break-all" />)}
             {row(t("soul_accounts.account.origin_label"), <DomainEnum namespace="soul_accounts.origin" value={current.origin} />)}
             {row(
@@ -150,7 +154,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
               {accounts.map((a) => (
                 <li key={a.id} className="text-xs border-l-2 border-[oklch(var(--color-hairline))] pl-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-[oklch(var(--color-ink))]">{t("soul_accounts.life", { n: lifeNumber(a.cycle) })}</span>
+                    <span className="font-medium text-[oklch(var(--color-ink))]">{lifeText(a.cycle)}</span>
                     <DomainEnum namespace="soul_accounts.origin" value={a.origin} className="text-[oklch(var(--color-ink-muted))]" />
                     {a.retired_at ? (
                       <Badge tone="neutral">{t("soul_accounts.account.retired")}</Badge>

@@ -120,8 +120,23 @@ def _tenant_id(code):
     return Tenant.objects.filter(code=code).values_list("pk", flat=True).first()
 
 
+def hall_params(codes):
+    """`{{tenant}}` in a notification is the hall's display name in each language, not its tenant code: the code
+    (`EG_DUAT`) read in a Chinese sentence like a place, and is no realm's code either (wording review EG-3).
+    `tenant` carries the zh-Hans names, `tenant_en` / `tenant_egy` travel beside it (`notifications.messages.render`).
+    A code with no hall row stays as it is."""
+    from apps.tenants.models import Tenant
+
+    codes = sorted(set(codes))
+    halls = {t.code: t.hall_names for t in Tenant.objects.filter(code__in=codes)}
+    def names(locale):
+        return ", ".join(halls[c][locale] if c in halls else c for c in codes) or "-"
+
+    return {"tenant": names("zh-Hans"), "tenant_en": names("en"), "tenant_egy": names("egy")}
+
+
 def _node_params(soul, node):
-    return {"soul": soul.name, "order": node.order, "tenant": node.tenant_code}
+    return {"soul": soul.name, "order": node.order, **hall_params([node.tenant_code])}
 
 
 # ── 查询 ────────────────────────────────────────────────────────────────

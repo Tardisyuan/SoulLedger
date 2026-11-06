@@ -300,11 +300,11 @@ describe("the wizard", () => {
     act(() => navigationRef.navigate("Mfa"));
     await screen.findByTestId("intro-next");
     await startWith();
-    expect(await screen.findByText("尝试过于频繁,请稍后再试")).toBeTruthy();
+    expect(await screen.findByText("尝试过于频繁，请稍后再试")).toBeTruthy();
     // The button is off while the budget is spent, and typing does not wipe the sentence.
     expect(screen.getByTestId("intro-next").props.accessibilityState).toMatchObject({ disabled: true });
     fireEvent.changeText(screen.getByTestId("setup-password"), "another-try");
-    expect(screen.getByText("尝试过于频繁,请稍后再试")).toBeTruthy();
+    expect(screen.getByText("尝试过于频繁，请稍后再试")).toBeTruthy();
     expect(screen.getByTestId("intro-next").props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.queryByTestId("secret-key")).toBeNull();
   });

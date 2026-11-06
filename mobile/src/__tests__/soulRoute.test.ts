@@ -40,7 +40,7 @@ describe("soulRoute", () => {
 
   it("埃及: weighing while judging; 湮灭 ends the road and is marked so", () => {
     const judging = soulRoute({ me: me({ current_state: "JUDGING" }), civ: "eg", hall: "", now: NOW }, tr)!;
-    expect([judging.place, judging.line, judging.path]).toEqual(["真理大厅 · 称心", "你的心正在天平上，和玛阿特之羽相比。", undefined]);
+    expect([judging.place, judging.line, judging.path]).toEqual(["两真之殿 · 称心", "你的心正在天平上，和玛特之羽相比。", undefined]);
     const gone = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "eg", plan: plan("EG_ANNIHILATION"), hall: "", now: NOW }, tr)!;
     expect(gone.steps[gone.at]).toMatchObject({ id: "EG_ANNIHILATION", end: true });
     expect(liveContent(gone, "Nebamun", tr).ended).toBe(true);

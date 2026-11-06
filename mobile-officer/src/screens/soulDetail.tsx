@@ -125,8 +125,8 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
             .map((k) => (
               <View key={k} testID={`soul-panel-${k}`} style={k === tab ? undefined : { display: "none" }}>
                 {k === "identity" ? <IdentityTab soul={soul} /> : null}
-                {k === "judgments" ? <JudgmentsTab soulId={id} onOpen={onOpenJudgment} /> : null}
-                {k === "karma" ? <KarmaTab soulId={id} /> : null}
+                {k === "judgments" ? <JudgmentsTab soul={soul} onOpen={onOpenJudgment} /> : null}
+                {k === "karma" ? <KarmaTab soul={soul} /> : null}
                 {k === "fate" ? <FateTab soulId={id} dispositions={permissions.includes("disposition.read")} reincarnations={permissions.includes("reincarnation.read")} /> : null}
                 {k === "events" ? <EventsTab soulId={id} /> : null}
               </View>
@@ -309,7 +309,13 @@ function LoadMore({ more, shown, total, testID }: { more: (() => void) | null; s
 
 const byLife = (a: Judgment, b: Judgment) => (b.cycle ?? 0) - (a.cycle ?? 0) || b.created_at.localeCompare(a.created_at);
 
-function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string) => void }) {
+/** 欧洲、埃及的这一世写「此生」(v4 第十批第 4 条,core lifeLabel.ts);前世照写「第 n 世」。 */
+function thisLife(t: Parameters<typeof thisLifeLabel>[0], soul: Soul, cycle: number): string | null {
+  return cycle === (soul.life_index ?? 0) ? thisLifeLabel(t, soul.civilization, cycle + 1) : null;
+}
+
+function JudgmentsTab({ soul, onOpen }: { soul: Soul; onOpen: (id: string) => void }) {
+  const soulId = soul.id;
   const { t, enumLabel } = useI18n();
   // The plan rides along: it lives at the bottom of this tab, and a plan this hall may not read (a third hall gets
   // 404) is just not shown, not a failure of the tab.
@@ -334,6 +340,13 @@ function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string)
     const d = enumLabel(verdictNamespace(t, j.civilization, j.verdict), j.verdict.toLowerCase());
     return d.state === "known" ? d.label : j.verdict;
   };
+  const lifeMeta = (j: Judgment) => {
+    const status = t(j.is_final ? "souls.detail.case_closed" : "souls.detail.case_open");
+    const life = thisLife(t, soul, j.cycle ?? 0);
+    return life
+      ? t("officer_app.soul.judgment_meta_life", { life, verdict: verdict(j), status })
+      : t("officer_app.soul.judgment_meta", { n: String((j.cycle ?? 0) + 1), verdict: verdict(j), status });
+  };
   return (
     <View>
       {rows.length === 0 ? <Empty testID="soul-judgments-empty">{t("judgment.no_judgments")}</Empty> : null}
@@ -343,7 +356,7 @@ function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string)
           testID={`soul-judgment-${j.id}`}
           minHeight={64}
           title={[j.case_number, courtLabel(t, j.court)].filter(Boolean).join(" · ")}
-          lines={[{ one: t("officer_app.soul.judgment_meta", { n: String((j.cycle ?? 0) + 1), verdict: verdict(j), status: t(j.is_final ? "souls.detail.case_closed" : "souls.detail.case_open") }) }]}
+          lines={[{ one: lifeMeta(j) }]}
           onPress={() => onOpen(j.id)}
           right={<Txt tone="muted">›</Txt>}
         />
@@ -376,7 +389,8 @@ function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] }) {
   );
 }
 
-function KarmaTab({ soulId }: { soulId: string }) {
+function KarmaTab({ soul }: { soul: Soul }) {
+  const soulId = soul.id;
   const { t, enumLabel, locale } = useI18n();
   const theme = useTheme();
   const load = useCallback(() => soulsApi.records(soulId).then((r) => r.data), [soulId]);
@@ -392,7 +406,9 @@ function KarmaTab({ soulId }: { soulId: string }) {
         <View key={g.cycle}>
           <View style={{ paddingHorizontal: GUTTER, paddingTop: space[3], paddingBottom: space[1] }}>
             <Txt variant="caption" tone="muted" style={{ fontWeight: "600" }} testID={`soul-karma-group-${g.cycle}`}>
-              {t("officer_app.soul.karma_group", { n: String(g.cycle + 1), count: String(g.count) })}
+              {thisLife(t, soul, g.cycle)
+                ? t("officer_app.soul.karma_group_life", { life: thisLife(t, soul, g.cycle) ?? "", count: String(g.count) })
+                : t("officer_app.soul.karma_group", { n: String(g.cycle + 1), count: String(g.count) })}
             </Txt>
           </View>
           {g.rows.map((r) => {

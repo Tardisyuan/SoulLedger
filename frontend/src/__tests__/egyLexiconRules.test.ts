@@ -44,7 +44,7 @@
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
  * (生成时断言同键各行值相同),`JSON.stringify(table, null, 2)` 落盘。改定稿就整份重生成。这里钉住:
  *
- * - 修订表 745 个键与包里逐字一致(键 → 修订后 egy);
+ * - 修订表 742 个键与包里逐字一致(键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
@@ -256,7 +256,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 745 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 742 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "judgment.queue.read_only": ["judgment.execute"],
@@ -704,13 +704,16 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 745 个键与包里逐字一致", () => {
+  it("修订表 742 个键与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
     // 778 → 774:规范 v2 撤掉强调色,settings 里四个键连同修订一起删除。
     // 771 → 752:2026-10-23 删除 19 个无代码读的键(见文件头)。
     // 752 → 751:2026-11-02 删除无代码读的 soul_accounts.account.provisioned。
     // 751 → 745:2026-11-06(用户决定)删掉灵魂端「终局，没有转生」页,soul_app.lexicon.{default,eg,eu}.no_rebirth_{title,body} 一起删。
-    expect(Object.keys(table)).toHaveLength(745);
+    // 745 → 742:2026-11-07 措辞审查(EG-9、EG-23)改了 zh / en 的意思,egy 三个键删掉等 Design
+    // (actors.assessors.toggle、soul_app.lexicon.eg.no_past_lives / past_read_only,见 egyPendingKeys.json)。
+    // 同轮五条随包回填:EG-10 湮灭写 Mut Sen(两条)、EG-17 杜阿特入口写 Duat Aq、EG-25 称心写 Fai Ib(两条)。
+    expect(Object.keys(table)).toHaveLength(742);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
