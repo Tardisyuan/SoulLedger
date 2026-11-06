@@ -103,14 +103,14 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     expect(ON_PLAQUE).toBe(v4.light.onSolid);
   });
 
-  it("the neutral plaque is the web's neutral --color-civ-neutral, read from globals.css (dark :root, light .light)", () => {
+  it("the neutral plaque is the web's neutral text colour --color-civ-neutral-ink, read from globals.css (dark :root, light .light)", () => {
     const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
     // The theme's block, not the brand-token `:root` beside it (Design batch 3: outside the themes).
     const block = (selector: string) =>
-      css.split(`${selector} {`).slice(1).map((b) => b.split(/\n {2}\}/)[0]).find((b) => b.includes("--color-civ-neutral")) ?? "";
+      css.split(`${selector} {`).slice(1).map((b) => b.split(/\n {2}\}/)[0]).find((b) => b.includes("--color-civ-neutral-ink")) ?? "";
     // The web writes it as hex or as an OKLCH triple; either is read as hex.
     const neutral = (selector: string) => {
-      const v = block(selector).match(/--color-civ-neutral:\s*([^;]+);/)?.[1].trim() ?? "";
+      const v = block(selector).match(/--color-civ-neutral-ink:\s*([^;]+);/)?.[1].trim() ?? "";
       return v.startsWith("#") ? v.toLowerCase() : oklchToHex(v.replace(/^oklch\(|\)$/g, ""));
     };
     // …and the web's neutral main IS that token (no data-civ = neutral).
