@@ -7,11 +7,11 @@
  */
 import { fetchFailureOf } from "@soulledger/core/api/client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { Button, GUTTER, GoneState, Notice, OneLine, Txt, family, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
+import { BandPattern, Button, GUTTER, GlowTop, GoneState, Notice, OneLine, Txt, family, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
 
 // ── the four states ────────────────────────────────────────────────────
 
@@ -380,19 +380,36 @@ export function FilterChips<K extends string>({
 
 /**
  * 身份带: compact, 48 high, the officer's HALL -- fixed for the account, never changing with a
- * soul -- in the hall's colour. A soul from another civilization is marked inside rows and
+ * soul -- and the officer's name. A soul from another civilization is marked inside rows and
  * details in words, not here.
+ *
+ * v4 (V4Batch07 05 App) draws no band: the page's own ground with the header light (`GlowTop`, the hall's glow) and
+ * the civilization's pattern behind it, in the page's inks -- the soul app's `PlaqueFrame` (mobile/src/chrome.tsx).
+ * Not imported from there: chrome.tsx pulls the soul's session and assist into this bundle (sharedClosure.test.ts);
+ * the two pieces it draws with live in emblems.tsx, which is shared already. (v3's solid band under onPlaque, gone 2026-11-06.)
  */
 export function IdentityBand({ hall, name }: { hall: string; name: string }) {
   const t = useTheme();
   const { top } = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const [height, setHeight] = useState(0);
   return (
-    <View testID="identity-band" style={{ backgroundColor: t.band, paddingTop: top }}>
+    <View
+      testID="identity-band"
+      onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
+      style={{ backgroundColor: t.s0, paddingTop: top, overflow: "hidden", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.hair }}
+    >
+      {height ? (
+        <>
+          <GlowTop testID="identity-band-glow" color={t.glow} scheme={t.scheme} width={width} height={height} />
+          <BandPattern civ={t.civ} color={t.glow} width={width} height={height} ringBase={height} />
+        </>
+      ) : null}
       <View style={styles.band}>
-        <Txt variant="nav" numberOfLines={1} style={[styles.bandHall, { color: t.onPlaque }]}>
+        <Txt variant="nav" numberOfLines={1} style={[styles.bandHall, { color: t.ink, fontFamily: family.title }]}>
           {hall}
         </Txt>
-        <Txt variant="caption" numberOfLines={1} style={[styles.bandName, { color: t.onPlaque }]}>
+        <Txt variant="caption" numberOfLines={1} tone="muted" style={styles.bandName}>
           {name}
         </Txt>
       </View>
@@ -549,7 +566,7 @@ const styles = StyleSheet.create({
   chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },
-  bandName: { flexShrink: 1, opacity: 0.9 },
+  bandName: { flexShrink: 1 },
   tabBar: { flexDirection: "row", borderTopWidth: 1 },
   tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: space[1] },
   banner: { paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
