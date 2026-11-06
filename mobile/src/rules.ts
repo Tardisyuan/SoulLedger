@@ -147,7 +147,8 @@ const DEFAULT_WORDS: Record<LexiconWord, string> = {
 const LEXICON: Partial<Record<CivKey, readonly LexiconWord[]>> = {
   eg: Object.keys(DEFAULT_WORDS) as LexiconWord[],
   // `court`: 「审理殿」 is Diyu's word (the ten courts); Europe is judged before Christ (docs/01), so it reads 「受审于」.
-  eu: ["court", "past_read_only", "no_past_lives"],
+  // 功 / 过 read 「善功 / 罪」 in Europe (v4 batch 12 EU 5); judgments and the rest keep the shared word.
+  eu: ["merit", "demerit", "merit_entry", "demerit_entry", "records", "court", "past_read_only", "no_past_lives"],
 };
 
 export function lexiconKey(civ: CivKey, word: LexiconWord): string {

@@ -135,8 +135,13 @@ def hall_params(codes):
     return {"tenant": names("zh-Hans"), "tenant_en": names("en"), "tenant_egy": names("egy")}
 
 
+def soul_params(soul):
+    """`{{soul}}`,加计划所属文明(`plan_civ`):地府的通知标题仍叫「受刑计划」(第十二批 1.2)。"""
+    return {"soul": soul.name, "plan_civ": soul.home_civilization}
+
+
 def _node_params(soul, node):
-    return {"soul": soul.name, "order": node.order, **hall_params([node.tenant_code])}
+    return {**soul_params(soul), "order": node.order, **hall_params([node.tenant_code])}
 
 
 # ── 查询 ────────────────────────────────────────────────────────────────
@@ -759,7 +764,7 @@ class SentencePlanService:
             "sentence_plan_id": str(plan.pk), "rebirth_open": rebirth,
         })
         notify_judges({plan.tenant_id}, "sentence_plan_cancelled" if pardoned else "sentence_plan_completed",
-                      {"soul": soul.name}, plan.pk)
+                      soul_params(soul), plan.pk)
         return True
 
     @staticmethod

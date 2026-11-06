@@ -4,6 +4,7 @@ import { localName } from "@soulledger/core/domain/localName";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { localDateString } from "@soulledger/core/domain/dates";
 import { courtLabel } from "@soulledger/core/domain/courts";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
@@ -454,7 +455,8 @@ export default function SoulDetailPage() {
       if (blocked) {
         const end = rebirthTermEndOf(e);
         showToast(
-          t(`reincarnation.error.${blocked}`, { name: soul?.name ?? "", date: end ? formatHistoricalDate(end) ?? "" : "" }),
+          // `plan_in_progress` 在地府仍说「受刑计划」(第十二批 1.2)。
+          t(civKey(t, `reincarnation.error.${blocked}`, soul?.home_civilization ?? soul?.civilization), { name: soul?.name ?? "", date: end ? formatHistoricalDate(end) ?? "" : "" }),
           "error"
         );
         return;
@@ -975,7 +977,7 @@ export default function SoulDetailPage() {
               原属仍是这份计划的主人,撤销与决定请求都在原属。 */}
           {soul && (
             <RequirePermission permissions="judgment.read">
-              <SentencePlanCard soulId={soul.id} />
+              <SentencePlanCard soulId={soul.id} civilization={soul.home_civilization ?? soul.civilization} />
             </RequirePermission>
           )}
         </div>

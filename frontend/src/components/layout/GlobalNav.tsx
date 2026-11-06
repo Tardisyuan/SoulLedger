@@ -13,7 +13,7 @@ import { menuGlossParts } from "@/src/lib/menuI18n";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Seal } from "@/src/components/plaque/Seal";
-import { useRealm } from "@/src/components/plaque/useHall";
+import { useHallCivilization, useRealm } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { tenantLabel } from "@/src/lib/domainNames";
 import { navSections, type NavSectionId } from "@/src/lib/navSections";
@@ -46,9 +46,10 @@ import { judgmentAppealKeys, judgmentAppealsApi, type UserRole } from "@soulledg
 
 export function useMenuLabel() {
   const { t, locale } = useI18n();
+  const civ = useHallCivilization();
   return (menu: SidebarMenu) => {
     if (menu.path === "/") return { primary: t("nav.welcome") };
-    return menuGlossParts(menu, locale, t);
+    return menuGlossParts(menu, locale, t, civ);
   };
 }
 

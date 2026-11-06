@@ -10,12 +10,15 @@
 """
 DEFAULT_LOCALE = "zh-Hans"
 
+#: 文明 → 语言包 `_by_civ` 的短码(与 packages/core 的 `civShortCode` 同一张表)。
+PLAN_CIV_SHORT = {"CHINESE": "cn", "EUROPEAN": "eu", "EGYPTIAN": "eg", "GREEK": "gr"}
+
 MESSAGES = {
     "zh-Hans": {
-        "sentence_pardoned": {"title": "剩余刑期已赦免", "body": "你有刑期获赦，打开灵魂簿查看。"},
-        "sentence_amended": {"title": "受刑计划有变动", "body": "你的受刑计划有变动，打开灵魂簿查看。"},
-        "sentence_completed": {"title": "受刑已全部服完", "body": "你的受刑已全部服完，打开灵魂簿查看。"},
-        "sentence_waiting": {"title": "一站刑满，暂留原地", "body": "你有一站刑期已满，打开灵魂簿查看。"},
+        "sentence_pardoned": {"title": "剩余刑期已赦免", "body": "你有刑期获赦，打开灵魂簿查看。", "title_by_civ": {"eu": {"PURGATORY": "余下涤罪期已蒙减免"}}, "body_by_civ": {"eu": {"PURGATORY": "你的涤罪期有一部分蒙减免，打开灵魂簿查看。"}}},
+        "sentence_amended": {"title": "去处有变动", "body": "你的去处计划有变动，打开灵魂簿查看。", "title_by_civ": {"cn": "受刑计划有变动"}, "body_by_civ": {"cn": "你的受刑计划有变动，打开灵魂簿查看。"}},
+        "sentence_completed": {"title": "受刑已全部服完", "body": "你的受刑已全部服完，打开灵魂簿查看。", "title_by_civ": {"cn": {"BLISS": "停留期已满"}, "gr": {"BLISS": "停留期已满"}, "gr_republic": {"BLISS": "千年已满"}}, "body_by_civ": {"cn": {"BLISS": "你在天界的停留期已满，打开灵魂簿查看。"}, "gr": {"BLISS": "你在至福岛的停留期已满，打开灵魂簿查看。"}, "gr_republic": {"BLISS": "你在天上的千年已满，打开灵魂簿查看。"}}},
+        "sentence_waiting": {"title": "一站刑满，暂留原地", "body": "你有一站刑期已满，打开灵魂簿查看。", "body_by_civ": {"cn": {"BLISS": "你有一站停留期已满，打开灵魂簿查看。"}, "gr": {"BLISS": "你有一站停留期已满，打开灵魂簿查看。"}, "eu": {"PURGATORY": "你有一层涤罪已完成，打开灵魂簿查看。"}}},
         "rebirth_approved": {"title": "转生申请已批准", "body": "你的转生申请已批准，打开灵魂簿查看。"},
         "rebirth_rejected": {"title": "转生申请被驳回", "body": "你的转生申请被驳回，打开灵魂簿查看理由。"},
         "rebirth_appeal_rejected": {"title": "申诉被驳回", "body": "你对转生申请的申诉被驳回，打开灵魂簿查看理由。"},
@@ -59,10 +62,10 @@ MESSAGES = {
         "social_muted_reason": {"title": "你已被禁言", "body": "你被禁言 {{days}} 日：{{reason}}"},
     },
     "en": {
-        "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
-        "sentence_amended": {"title": "Your sentence changed", "body": "Your sentence plan has changed. Open Soul Ledger to see it."},
-        "sentence_completed": {"title": "Sentence fully served", "body": "Your sentence is fully served. Open Soul Ledger to see it."},
-        "sentence_waiting": {"title": "A term is served; you stay for now", "body": "One of your terms is served. Open Soul Ledger to see it."},
+        "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it.", "title_by_civ": {"eu": {"PURGATORY": "Remaining cleansing remitted"}}, "body_by_civ": {"eu": {"PURGATORY": "Part of your cleansing was remitted. Open Soul Ledger to see it."}}},
+        "sentence_amended": {"title": "Your placement changed", "body": "Your placement plan has changed. Open Soul Ledger to see it.", "title_by_civ": {"cn": "Your sentence changed"}, "body_by_civ": {"cn": "Your sentence plan has changed. Open Soul Ledger to see it."}},
+        "sentence_completed": {"title": "Sentence fully served", "body": "Your sentence is fully served. Open Soul Ledger to see it.", "title_by_civ": {"cn": {"BLISS": "Stay over"}, "gr": {"BLISS": "Stay over"}, "gr_republic": {"BLISS": "The thousand years are over"}}, "body_by_civ": {"cn": {"BLISS": "Your stay in the heavens is over. Open Soul Ledger to see it."}, "gr": {"BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it."}, "gr_republic": {"BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."}}},
+        "sentence_waiting": {"title": "A term is served; you stay for now", "body": "One of your terms is served. Open Soul Ledger to see it.", "body_by_civ": {"cn": {"BLISS": "One of your stays is over. Open Soul Ledger to see it."}, "gr": {"BLISS": "One of your stays is over. Open Soul Ledger to see it."}, "eu": {"PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."}}},
         "rebirth_approved": {
             "title": "Rebirth application approved",
             "body": "Your rebirth application was approved. Open Soul Ledger to see it.",
@@ -186,10 +189,10 @@ MESSAGES = {
         "social_muted_reason": {"title": "You are muted", "body": "You are muted for {{days}} days: {{reason}}"},
     },
     "egy": {
-        "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."},
-        "sentence_amended": {"title": "Khemen-Shepet", "body": "Shepet-Ek Khemen Seth. Wen Medjat Ba Er Maa."},
-        "sentence_completed": {"title": "Shepet Wetep-Neb Seth", "body": "Shepet-Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa."},
-        "sentence_waiting": {"title": "Renpet Khetem; Ahau", "body": "Renpet Wa Khetem Seth. Wen Medjat Ba Er Maa."},
+        "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa.", "title_by_civ": {"eu": {"PURGATORY": "Renpet Sepy Nedj Seth"}}, "body_by_civ": {"eu": {"PURGATORY": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."}}},
+        "sentence_amended": {"title": "Wat Khemen Seth", "body": "Wetep-Ek Khemen Seth. Wen Medjat Ba Er Maa.", "title_by_civ": {"cn": "Khemen-Shepet"}, "body_by_civ": {"cn": "Shepet-Ek Khemen Seth. Wen Medjat Ba Er Maa."}},
+        "sentence_completed": {"title": "Shepet Wetep-Neb Seth", "body": "Shepet-Ek Wetep-Neb Seth. Wen Medjat Ba Er Maa.", "title_by_civ": {"cn": {"BLISS": "Renpet Hemes Khetem Seth"}, "gr": {"BLISS": "Renpet Hemes Khetem Seth"}, "gr_republic": {"BLISS": "Renpet 1000 Khetem Seth"}}, "body_by_civ": {"cn": {"BLISS": "Renpet Hemes Em Tianjie Khetem Seth. Wen Medjat Ba Er Maa."}, "gr": {"BLISS": "Renpet Hemes Em Ta Nefer Khetem Seth. Wen Medjat Ba Er Maa."}, "gr_republic": {"BLISS": "Renpet 1000 Em Pet Khetem Seth. Wen Medjat Ba Er Maa."}}},
+        "sentence_waiting": {"title": "Renpet Khetem; Ahau", "body": "Renpet Wa Khetem Seth. Wen Medjat Ba Er Maa.", "body_by_civ": {"cn": {"BLISS": "Renpet Hemes Wa Khetem Seth. Wen Medjat Ba Er Maa."}, "gr": {"BLISS": "Renpet Hemes Wa Khetem Seth. Wen Medjat Ba Er Maa."}, "eu": {"PURGATORY": "Isfet Fekh Sekhet Wa Khetem Seth. Wen Medjat Ba Er Maa."}}},
         "rebirth_approved": {"title": "Dbh Wehem Mesut Hesy Seth", "body": "Dbh Wehem Mesut-Ek Hesy Seth. Wen Medjat Ba Er Maa."},
         "rebirth_rejected": {"title": "Dbh Wehem Mesut Khesef Seth", "body": "Dbh Wehem Mesut-Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
         "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Nehet-Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."},
@@ -246,12 +249,23 @@ def reason_label(locale, code):
     return (REASON_LABELS.get(locale) or REASON_LABELS[DEFAULT_LOCALE]).get(code, code)
 
 
-def render(locale, kind, **params):
-    """`params` 填 `{{占位符}}`(与语言包同一写法;chat_message 的 `name`、social_warned_* 的 `reason`)。"""
+def render(locale, kind, civ=None, place=None, **params):
+    """`params` 填 `{{占位符}}`(与语言包同一写法;chat_message 的 `name`、social_warned_* 的 `reason`)。
+
+    `civ`(`cn` / `eu` / `eg` / `gr`,希腊按《理想国》判的是 `gr_republic`)与 `place`(去处类型)选
+    Design v4 第十二批的 `<字段>_by_civ.<文明>[.<类型>]`:计划一层只按文明(`sentence_amended`),
+    灵魂自己那一层按文明 × 去处类型;没有就是底键。"""
     pack = MESSAGES.get(locale) or MESSAGES[DEFAULT_LOCALE]
     # egy 可以缺 Design 还没给词的种类(`egyPendingKeys.json` 里的 `soul_push.<kind>`):读作 zh-Hans。
     entry = pack.get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
-    title, body = entry["title"], entry["body"]
+
+    def word(field):
+        chosen = entry.get(f"{field}_by_civ", {}).get(civ) if civ else None
+        if isinstance(chosen, dict):
+            chosen = chosen.get(place) if place else None
+        return chosen if isinstance(chosen, str) else entry[field]
+
+    title, body = word("title"), word("body")
     for key, value in params.items():
         title, body = title.replace(f"{{{{{key}}}}}", value), body.replace(f"{{{{{key}}}}}", value)
     return title, body

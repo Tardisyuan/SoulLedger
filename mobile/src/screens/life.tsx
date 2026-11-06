@@ -3,6 +3,7 @@ import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import { verdictNamespace } from "@soulledger/core/domain/verdictNames";
+import { civKey, realmPlace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
@@ -76,6 +77,12 @@ import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode"
 import { DIYU_STATIONS, diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 import { useLiveProgress } from "../liveProgress";
 import { soulRoute, type RouteStep, type SoulRoute } from "@soulledger/core/domain/soulRoute";
+
+/** 「刑期」 in 十殿, 「停留期」 in 天界, 「涤罪期」 in 炼狱 (v4 batch 12 §1.4): the place is the disposition's realm. */
+const placeKeyOf = (t: (key: string) => string, key: string, realmCode: string | null | undefined) => {
+  const { civ, type } = realmPlace(realmCode);
+  return civKey(t, key, civ, type);
+};
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -277,11 +284,11 @@ export function LifeSections({
               {i ? <Hairline style={styles.rule} /> : null}
               <DataRows>
                 <DataRow label={tr("soul_app.life.realm")}>{d.destination_realm ? realmName(d.destination_realm, locale) : unrecorded}</DataRow>
-                <DataRow label={tr("soul_app.life.sentence")}>
+                <DataRow label={tr(placeKeyOf(tr, "soul_app.life.sentence", d.destination_realm?.realm_code))}>
                   {d.is_eternal
                     ? tr("soul_app.life.eternal")
                     : d.sentence_years !== null
-                      ? tr("soul_app.life.sentence_years", { years: String(d.sentence_years) })
+                      ? tr(placeKeyOf(tr, "soul_app.life.sentence_years", d.destination_realm?.realm_code), { years: String(d.sentence_years) })
                       : unrecorded}
                 </DataRow>
                 <DataRow label={tr("soul_app.life.execution")}>

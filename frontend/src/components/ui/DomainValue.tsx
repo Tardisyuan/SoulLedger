@@ -29,6 +29,7 @@ import {
   signedTone,
   type MissingKind,
 } from "@/src/lib/domainDisplay";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 
 // ---------------------------------------------------------------------------
 // Missing values
@@ -95,15 +96,23 @@ export interface DomainEnumProps {
   /** Context appended to the missing-value tooltip. */
   missingReason?: string;
   className?: string;
+  /**
+   * The civilization (or hall code) the value belongs to. A member with a `<member>_by_civ.<civ>` word reads
+   * that instead (v4 batch 12: an underworld soul's `SENTENCE_PLAN_CREATED` is 受刑计划生成, everyone else's is
+   * 去处计划生成). The raw member still goes to `title`.
+   */
+  civilization?: string | null;
 }
 
 /**
  * A translated domain enum. The raw key goes to `title` for triage and never
  * to the text node — that is exactly the `ALIVE — 存活` defect §4.6 names.
  */
-export function DomainEnum({ namespace, value, missingKind = "unrecorded", missingReason, className }: DomainEnumProps) {
+export function DomainEnum({ namespace, value, missingKind = "unrecorded", missingReason, className, civilization }: DomainEnumProps) {
   const { t } = useI18n();
-  const resolved = resolveEnumDisplay(t, namespace, value);
+  const display = resolveEnumDisplay(t, namespace, value);
+  const byCiv = value && civilization ? civKey(t, `${namespace}.${value}`, civilization) : null;
+  const resolved = byCiv && byCiv !== `${namespace}.${value}` ? { ...display, label: t(byCiv) } : display;
 
   if (resolved.state === "missing") {
     return <MissingValue kind={missingKind} reason={missingReason} className={className} />;

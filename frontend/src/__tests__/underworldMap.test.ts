@@ -202,6 +202,32 @@ describe("states follow the soul", () => {
     // The sample's pulse is gone; with no getBBox in jsdom the new one sits on the cell.
     expect(svg.querySelectorAll(".pulse")).toHaveLength(1);
   });
+
+  it.each(["dark", "light"])("Egypt %s: the gates are one ornament band lit with their station, never one gate at a time (batch 12 §4)", (theme) => {
+    const svg = map("eg", theme);
+    // The per-gate ids are gone, and nothing else may be addressed gate by gate.
+    for (const node of ["EG_SEVEN_ARRWT", "EG_TWENTYONE_SEBKHET"]) {
+      expect(svg.querySelectorAll(`[id^="${node}-"]:not([id$="-label"])`)).toHaveLength(0);
+      expect(svg.querySelectorAll(`#${node} .gates-ornament`)).toHaveLength(1);
+      expect(svg.querySelector(`#${node} .gates-ornament`)!.hasAttribute("id")).toBe(false);
+    }
+    const palette = readPalette(svg)!;
+    // Walked through the seven, now at the twenty-one: both bands take their station's colour.
+    paintStates(svg, mapStates(svg, pathVisits([
+      { realm_code: "EG_DUAT_ENTRY", left_at: "2026-01-01" },
+      { realm_code: "EG_SEVEN_ARRWT", left_at: "2026-01-02" },
+      { realm_code: "EG_HALL_TWO_TRUTHS", left_at: "2026-01-03" },
+      { realm_code: "EG_TWENTYONE_SEBKHET", left_at: null },
+    ])), palette);
+    const band = (node: string) => svg.querySelector(`#${node} .gates-ornament`)!;
+    expect(band("EG_SEVEN_ARRWT").getAttribute("stroke")).toBe(palette.walked);
+    expect(band("EG_TWENTYONE_SEBKHET").getAttribute("stroke")).toBe(palette.current);
+    expect(band("EG_TWENTYONE_SEBKHET").getAttribute("stroke-opacity")).toBe("1");
+    // Absence: a station not reached keeps a faint grey band.
+    paintStates(svg, mapStates(svg, pathVisits([{ realm_code: "EG_DUAT_ENTRY", left_at: null }])), palette);
+    expect(band("EG_TWENTYONE_SEBKHET").getAttribute("stroke")).toBe(palette.ahead);
+    expect(band("EG_TWENTYONE_SEBKHET").getAttribute("stroke-opacity")).toBe("0.55");
+  });
 });
 
 describe("zoom scales the route and only moves the words", () => {

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type Notification } from "@soulledger/core/api";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
@@ -79,12 +81,15 @@ const LINK_CLASS = cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-
 /** 通知行上的「打开 …」。没有目标就什么都不画。 */
 export function NotificationTargetLink({ notification }: { notification: NotificationRef }) {
   const { t } = useI18n();
+  // 「打开受刑计划」只在地府这么叫,别的殿是「打开去处计划」(第十二批 1.2)。
+  const civ = useHallCivilization();
   const target = notificationTarget(notification);
   if (!target) return null;
-  if (target.kind === "sentence_plan") return <SentencePlanLink planId={target.planId} label={t(target.label)} />;
+  const label = t(civKey(t, target.label, civ));
+  if (target.kind === "sentence_plan") return <SentencePlanLink planId={target.planId} label={label} />;
   return (
     <Link href={target.href} className={LINK_CLASS}>
-      {t(target.label)}
+      {label}
     </Link>
   );
 }
