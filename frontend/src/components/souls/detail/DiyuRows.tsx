@@ -12,6 +12,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { SelectField } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { responseCode } from "@soulledger/core/api/client";
+import { SoulUnderworldMap } from "./SoulUnderworldMap";
 
 const ROW = "border-t border-[oklch(var(--color-line))] py-3";
 const DT = "text-2xs text-[oklch(var(--color-ink-subtle))]";
@@ -42,6 +43,7 @@ export function DiyuRows({ soul }: { soul: Soul }) {
  * 宽屏(xl)13 个站名都写;更窄只写当前站名,其余留方块,悬浮看站名。右上「第 n / 13 站 · 站名」。
  * 不在路上(在世 / 已转世)不画条,只留一行灰字。`canMove`(持 `soul.transition`)时右上「挪站…」开弹层(S-1b)。
  * v4(第七批 S07):卡头是 `soulmap.title`,按钮是 `soulmap.move`,卡片是 `.v4-card`;列表的读屏名仍是「十三站」。
+ * 行程条下面是地府那张图(`SoulUnderworldMap`,阶段 5):同一个序号,加十殿的子格与一生回放。
  */
 export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boolean }) {
   const { t } = useI18n();
@@ -62,7 +64,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
       className="v4-card min-w-0 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-6 py-4"
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        {/* v4 S07 卡头「{soul} 走到了哪一步」(`soulmap.title`);地图本身在阶段 5,这里仍是十三格行程条。 */}
+        {/* v4 S07 卡头「{soul} 走到了哪一步」(`soulmap.title`);十三格行程条下面是地图。 */}
         <h2 data-testid="soul-diyu-station-title" className="text-md text-[oklch(var(--color-ink))]">
           {t("soulmap.title", { soul: soul.name })}
         </h2>
@@ -105,6 +107,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
           );
         })}
       </ol>
+      <SoulUnderworldMap soul={soul} className="mt-4" />
       {moving && <MoveStationDialog soul={soul} at={at} onClose={() => setMoving(false)} />}
     </section>
   );

@@ -78,6 +78,7 @@ export function Seal({
   glyphs,
   court,
   stampKey,
+  decorative = false,
   className = "",
 }: {
   /** 印宽:72 落判 / 64 身份带 / 52 签署 / 30 收起的身份带 / 28 导航。 */
@@ -90,6 +91,8 @@ export function Seal({
   court?: string;
   /** 每变一次(且非 0)盖一次印。 */
   stampKey?: number;
+  /** 装饰(身份带的水印巨印):读屏跳过,也不算一枚「印」(`data-testid="seal"` 只给真正的印)。 */
+  decorative?: boolean;
   className?: string;
 }) {
   const { t } = useI18n();
@@ -107,11 +110,12 @@ export function Seal({
   return (
     <span
       ref={root}
-      role="img"
-      aria-label={label}
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : label}
+      aria-hidden={decorative ? true : undefined}
       data-civ={skin}
       data-small={small ? "" : undefined}
-      data-testid="seal"
+      data-testid={decorative ? undefined : "seal"}
       className={`seal ${className}`}
       style={{ width: size, height: skin === "eg" ? Math.round(size * EG_ASPECT) : size }}
     >

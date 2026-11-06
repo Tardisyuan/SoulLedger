@@ -224,6 +224,10 @@ export function Plaque({
       className="identity-band"
     >
       <div aria-hidden="true" className="identity-pattern" />
+      {/* 水印巨印(v4 `.wm`):300 宽,压出带的右上角,文明字色 7%(浅色 9%)。收起时不画。 */}
+      <div aria-hidden="true" className="identity-watermark">
+        <Seal size={300} decorative />
+      </div>
       <div className="identity-brand">
         SOULLEDGER{product.toUpperCase() !== "SOULLEDGER" ? <span> {product}</span> : null}
       </div>

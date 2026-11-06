@@ -15,14 +15,14 @@ test("a browser in English gets English, from the first paint", async ({ page })
   const res = await page.goto("/");
   expect(await res?.text()).toContain('lang="en');
   await expect(page.locator("html")).toHaveAttribute("lang", /^en/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Four underworlds, one ledger.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("One question: will this soul pass?");
 });
 
 test("a visitor's choice of language sticks", async ({ page }) => {
   await page.goto("/");
   await page.locator("html[data-civ]").waitFor({ state: "attached" }); // hydrated: before this the select has no handler
   await page.locator("select").filter({ visible: true }).first().selectOption("zh-Hans");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("四种冥界,一本账。".replace(",", "，"));
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("同一个问题：这个灵魂过得了关吗？");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", /^zh/);
 });

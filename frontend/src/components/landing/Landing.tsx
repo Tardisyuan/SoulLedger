@@ -6,7 +6,8 @@ import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
-import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
+import type { SealCiv } from "@/src/components/plaque/Seal";
+import { CivEmblem } from "@/src/components/brand/CivEmblem";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
@@ -14,7 +15,12 @@ import stats from "@/src/config/landing-stats.json";
 /** Which skin (`data-civ`, globals.css) each civilization wears. */
 export const CARD_SKIN: Record<string, SealCiv> = { CHINESE: "cn", EUROPEAN: "eu", EGYPTIAN: "eg", GREEK: "gr" };
 
-/** Design batch 70: the page's subject is the four cards, and the first screen is all of it (1280 × 800). */
+/**
+ * Design batch 70: the page's subject is the four cards, and the first screen is all of it (1280 × 800).
+ * v4(第七批落地页 · 阶段 5):题字与导语是 v4 的 `landing.title` / `landing.lede`,其余照旧复用 `demo.landing.*`;
+ * 卡片是 v4 的卡(card 底上一层文明光,ink 字,金属角饰),印换成四个文明主视觉(`CivEmblem`),
+ * 每张卡一句 `landing.civ.*`。
+ */
 export function Landing({
   kicker,
   onEnter,
@@ -59,8 +65,8 @@ export function Landing({
       <main className="flex-1 landing-gutter">
         <section className="pt-8">
           {kicker && <p className="m-0 mb-3 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{kicker}</p>}
-          <h1 className="m-0 font-title text-xl text-[oklch(var(--color-ink))] md:text-display-lg">{t("demo.landing.title")}</h1>
-          <p className="mt-3 max-w-[44em] text-md text-[oklch(var(--color-ink-muted))]">{t("demo.landing.lede")}</p>
+          <h1 className="m-0 font-title text-xl text-[oklch(var(--color-ink))] md:text-display-lg">{t("landing.title")}</h1>
+          <p className="mt-3 max-w-[44em] text-md text-[oklch(var(--color-ink-muted))]">{t("landing.lede")}</p>
         </section>
 
         <section className="mt-6" aria-labelledby="landing-pick">
@@ -101,24 +107,22 @@ function CivCard({ civ, onEnter }: { civ: string; onEnter?: (skin: SealCiv, card
   const name = t(`demo.civ.${skin}.name`);
   const body = (
     <>
-      <span aria-hidden="true" className="pointer-events-none absolute -right-10 -bottom-10 opacity-10 max-md:hidden">
-        <Seal size={240} civ={skin} glyphs={null} court={name} />
+      <span aria-hidden="true" className="v4-corner" />
+      <span className="relative shrink-0 md:self-end">
+        <CivEmblem civ={skin} size={88} className="md:size-30" />
       </span>
-      <span className="relative shrink-0">
-        <Seal size={56} civ={skin} glyphs={null} court={name} />
-      </span>
-      <span className="relative flex min-w-0 flex-1 flex-col md:mt-8">
-        <span className="font-mono text-xs opacity-80">{t(`demo.civ.${skin}.realm`)}</span>
+      <span className="relative flex min-w-0 flex-1 flex-col md:mt-4">
+        <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t(`demo.civ.${skin}.realm`)}</span>
         <span className="mt-1 font-title text-lg">{name}</span>
-        <span className="mt-2 text-sm">{t(`demo.civ.${skin}.line`)}</span>
-        <span className="mt-auto pt-4 text-sm font-semibold">
+        <span className="mt-2 text-sm text-[oklch(var(--color-ink-muted))]">{t(`landing.civ.${skin}`)}</span>
+        <span className="mt-auto pt-4 text-sm font-semibold text-[oklch(var(--color-main-ink))]">
           {t("demo.landing.enter_judge")} <span aria-hidden="true">→</span>
         </span>
       </span>
     </>
   );
   const look =
-    "seal-on-band relative flex h-full min-h-37 w-full gap-4 band-colour overflow-hidden p-4 text-left transition-[transform,box-shadow] duration-fast hover:-translate-y-[3px] hover:shadow-overlay focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[oklch(var(--color-focus))] md:min-h-80 md:flex-col md:p-6";
+    "landing-card v4-card relative flex h-full min-h-37 w-full items-center gap-4 overflow-hidden rounded-panel border border-[oklch(var(--color-line))] p-4 text-left transition-[transform,box-shadow] duration-fast hover:-translate-y-[3px] hover:shadow-overlay focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[oklch(var(--color-focus))] md:min-h-80 md:flex-col md:items-stretch md:p-6";
   return (
     <li data-civ={skin} className="h-full">
       {onEnter ? (
