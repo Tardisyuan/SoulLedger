@@ -24,6 +24,8 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { SIX_PATHS } from "@/src/components/souls/RebirthFormSelect";
 import { rebirthAnchor } from "@/src/components/souls/detail/SoulLedgerSections";
 import { RebirthQuotaStrip } from "@/src/components/souls/RebirthQuota";
+import { CivEmblem } from "@/src/components/brand/CivEmblem";
+import { mapSkinOf } from "@/src/lib/underworldMap";
 
 /*
  * 转生登记簿(第四十批 W-c):全殿的转生记录,时间倒序(`Reincarnation.Meta.ordering`)。
@@ -40,13 +42,15 @@ import { RebirthQuotaStrip } from "@/src/components/souls/RebirthQuota";
  * - 希腊:六道只属于地府。希腊进这一页只列转生记录 —— 不显示六道配额条、不按六道筛、不列「形态」一栏。
  */
 
-/** 欧洲、埃及直接打开 /rebirths:这里的路在处置之后结束。 */
+/** 欧洲、埃及直接打开 /rebirths:这里的路在处置之后结束。题字上面是这个文明的主视觉(v4 第八批第 7 条)。 */
 function NoRebirthHere({ civilization }: { civilization: string }) {
   const { t } = useI18n();
+  const skin = mapSkinOf(civilization);
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   return (
     <PageShell variant="page" title={t("rebirths.title")}>
       <div data-testid="rebirths-not-applicable" className="mx-auto max-w-md py-12 text-center">
+        {skin && <CivEmblem civ={skin} size={160} className="mx-auto mb-6 block" />}
         <p className="font-title text-xl text-[oklch(var(--color-ink))]">
           {t("rebirths.not_applicable.title", { civ: t(`souls.civilizations.${civilization}`) })}
         </p>

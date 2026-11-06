@@ -278,10 +278,12 @@ describe("main 的用法与文字透明度(源码扫描)", () => {
     expect(kbds.filter((k) => /\bopacity-/.test(k))).toEqual([]);
   });
 
-  it("规定 3:身份带上的字(品牌 / 题字 / 殿名 / 案号)不带 opacity;纹样层不是字,可以", () => {
+  // 2026-11-06 v4 阶段 5:水印巨印(`.identity-watermark`,v4 `.wm`)和纹样层同类 —— 装饰,印文 aria-hidden,
+  // 不是要读的字;它的淡就是 opacity(深 .07 / 浅 .09)。白名单加它两条,题字等仍不许。
+  it("规定 3:身份带上的字(品牌 / 题字 / 殿名 / 案号)不带 opacity;纹样层与水印不是字,可以", () => {
     const rules = [...stripCode(CSS).matchAll(/([^{}]*\.identity-[^{}]*)\{([^}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
     expect(rules.length).toBeGreaterThan(10);
     const withOpacity = rules.filter((r) => /(?<![-\w])opacity\s*:/.test(r.body)).map((r) => r.sel);
-    expect(withOpacity).toEqual([".identity-pattern"]);
+    expect(withOpacity).toEqual([".identity-pattern", ".identity-watermark", ".light .identity-watermark"]);
   });
 });
