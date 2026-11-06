@@ -706,7 +706,7 @@ export default function SoulDetailPage() {
     <span className="flex items-center gap-2 flex-wrap">
       {stateBadge}
       {generation !== null && (
-        <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`}>
+        <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`} title={soul?.civilization ?? undefined}>
           {thisLifeLabel(t, soul?.civilization, generation) ?? tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
         </span>
       )}
