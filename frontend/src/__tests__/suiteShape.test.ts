@@ -259,6 +259,7 @@ const COLLECTED_FILES = [
   // 2026-10-09 多角色:角色签、设置角色对话框、批量启用 / 停用、非管理员什么都看不到。
   "UsersPage.multiRole.test.tsx",
   "UsersPage.orgFilter.test.tsx",
+  "VerdictDocument.test.tsx",
   "UsersPage.roleBadge.test.tsx",
   "WebSocketContext.currentUserId.test.tsx",
   // 2026-10-29 第 10 条:服务端推的 permission.refreshed 交给 TenantContext 重取权限。
