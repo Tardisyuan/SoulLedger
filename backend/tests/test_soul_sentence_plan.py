@@ -80,7 +80,8 @@ def _sentence_pushes():
 def test_a_fresh_plan_is_served_at_home_with_the_rest_not_started(cn, eg, eu):
     soul, p, client = _three_stops(cn, eg, eu)
     data = _get(client)
-    assert set(data) == {"state", "rebirth_open", "stations"}
+    assert set(data) == {"state", "greek_account", "rebirth_open", "stations"}
+    assert data["greek_account"] == ""  # 地府:没有文书之分
     assert (data["state"], data["rebirth_open"]) == ("serving", True)
     assert [set(s) for s in data["stations"]] == [STATION_KEYS] * 3
     assert [(s["n"], s["status"], s["civilization"], s["is_home"]) for s in data["stations"]] == [
