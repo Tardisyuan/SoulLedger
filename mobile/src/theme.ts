@@ -45,22 +45,23 @@ export const v4 = {
 } as const;
 
 /**
- * Before sign-in, and a civilization the app does not know: v4 draws none, so the neutral is made from
- * v4's own greys rather than borrowed from a civilization — text / mark `--sub`, solid the draft's own
- * pressed segment #16171A (light) and a grey that holds white at 11.5:1 (dark), glow `--faint`,
- * metal `--sub`, side `--main`. The web's `--color-civ-neutral` is meant to carry the same text colour
- * (theme.test reads it).
+ * Before sign-in, and a civilization the app does not know: v4 drew none until Design 第八批第 5 条
+ * (2026-11-06), whose values these are — text / mark `--sub` (confirmed), solid #55575E dark / #5A606B light
+ * (white 7.21 / 6.32:1; the light one used to be #16171A, the body ink, so the primary button read as text),
+ * glow #8E939C, metal the brand gold (dark = `brand.mark`; light #8A6A24, which is also 地府's light metal —
+ * Design's choice, see theme.test), side #0E0F11 / #F1F1EF. The web's `--color-civ-neutral*` carry the
+ * same values (theme.test reads the text colour; ledgerPaletteContract holds the rest). 印 = the brand balance.
  */
 export const NEUTRAL_CIV: CivPalette = {
-  glow: v4.dark.faint,
+  glow: "#8E939C",
   tD: v4.dark.sub,
   tL: v4.light.sub,
-  sL: "#16171A",
-  sD: "#38393E",
-  mD: v4.dark.sub,
-  mL: v4.light.sub,
-  sideD: v4.dark.main,
-  sideL: v4.light.main,
+  sL: "#5A606B",
+  sD: "#55575E",
+  mD: "#ECAA3D",
+  mL: "#8A6A24",
+  sideD: "#0E0F11",
+  sideL: "#F1F1EF",
 };
 
 /** The neutral's mark colour; Android's notification tint (app.json) is its light value. */
@@ -68,6 +69,14 @@ export const NEUTRAL_PLAQUE = { light: NEUTRAL_CIV.tL, dark: NEUTRAL_CIV.tD } as
 
 /** v4's `--onSolid`, the same in both schemes. */
 export const ON_PLAQUE = "#FFFFFF";
+
+/**
+ * v4 第八批 `--faint-text`: text lighter than `--sub` that must still be read — a count beside a label,
+ * a group heading, a map station number. ≥ 4.5:1 on main / card / card2 in both schemes (Design: dark
+ * 5.97 / 5.45 / 4.97, light 5.03 / 5.35 / 4.73). `--faint` stays for what is not read (a rule, disabled).
+ * The web's `--color-faint-text` is the same pair.
+ */
+export const FAINT_TEXT = { dark: "#8E9197", light: "#686B70" } as const;
 
 /**
  * `lamp` / `lampBg`: the eternal light's warm gold (朋友圈 handoff 1e), used by that
@@ -192,6 +201,8 @@ export interface Theme {
   inkSubtle: string;
   /** v4 `--faint`, verbatim. Not for text that must be read: see `inkSubtle`. */
   faint: string;
+  /** v4 第八批 `--faint-text`: readable text lighter than `--sub` (counts, group headings). See `FAINT_TEXT`. */
+  faintText: string;
   pos: string;
   neg: string;
   negStrong: string;
@@ -245,6 +256,7 @@ function buildTheme(key: CivKey, scheme: ColorScheme): Theme {
     inkMuted: n.sub,
     inkSubtle: n.sub,
     faint: n.faint,
+    faintText: FAINT_TEXT[scheme],
     plaque: dark ? c.tD : c.tL,
     band: solid,
     plaqueFill: solid,
