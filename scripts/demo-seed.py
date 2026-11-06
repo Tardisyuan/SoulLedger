@@ -565,7 +565,7 @@ def seed_soul_logins():
     out = {}
     for civ, names in SOUL_VIEW.items():
         for name in names:
-            soul = Soul.all_objects.filter(name=name).order_by("-life_index").first()
+            soul = Soul.all_objects.filter(name=name).order_by("-create_time").first()
             account = accounts.current_account_of(soul) if soul else None
             if account is None:
                 continue
