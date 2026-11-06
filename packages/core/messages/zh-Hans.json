@@ -18,7 +18,16 @@
     "mobile_menu": "导航菜单",
     "more": "更多",
     "soul_events": "灵魂事件",
-    "skip_to_main": "跳到正文"
+    "skip_to_main": "跳到正文",
+    "appeal_review": "申诉复核",
+    "collapse_sidebar": "收起侧栏",
+    "expand_sidebar": "展开侧栏",
+    "group": {
+      "souls": "灵魂",
+      "system": "系统",
+      "work": "工作"
+    },
+    "search_hint": "搜索、跳转、下指令"
   },
   "auth": {
     "login": "登录",
@@ -3769,7 +3778,8 @@
     "title": "系统发生错误",
     "description": "抱歉，服务器遇到了问题",
     "retry": "重新载入",
-    "home": "返回首页"
+    "home": "返回首页",
+    "next_body": "服务器没有回应。手上这一件没有改动。"
   },
   "not_found": {
     "title": "页面未找到",
@@ -8644,6 +8654,381 @@
     "admin_hint": "管理员看得到四个冥界。这里是全局数字；审计、用户与权限、语料在左边的菜单里。",
     "author": {
       "line": "作者 {{name}} 决定领域建模、考据和验证标准。"
+    }
+  },
+  "action": {
+    "undo": "撤回"
+  },
+  "annual": {
+    "by_civ": "四本账，各收多少",
+    "closing": "明年见。",
+    "data_note": "{{year}} · 演示站录制数据",
+    "last_year": "上一年",
+    "lead": "这一年，四个冥界一共收了",
+    "longest": "最久的一件",
+    "longest_value": "{{n}} 天",
+    "monthly": "每个月",
+    "most_cited": "被引用最多的条文",
+    "returned_down": "比上一年少 {{n}} 个百分点",
+    "returned_up": "比上一年多 {{n}} 个百分点",
+    "this_year": "本年",
+    "title": "冥界年报",
+    "total_rest": "个灵魂。其中 {{m}} 个已经有了去处。"
+  },
+  "cmdk": {
+    "defer": "跳到下一件 · 放进待定分组",
+    "group": {
+      "commands": "指令"
+    },
+    "key": {
+      "run": "↵ 执行",
+      "select": "↑↓ 选择",
+      "switch": "Tab 换一类"
+    },
+    "placeholder": "搜灵魂、案号、页面，或直接下指令",
+    "shortcut": "{{a}} 然后 {{b}}",
+    "verdict": {
+      "fail": "不过 · {{soul}}",
+      "fail_hint": "先选一个理由",
+      "pass": "通过 · {{soul}}",
+      "pass_hint": "{{case}} · 落印即定，不能撤回"
+    },
+    "verdict_scope": "判决类指令只对当前这一件生效"
+  },
+  "desk": {
+    "crumb": "审判台 · {{case}}",
+    "deferred_toast": "已放进待定分组",
+    "doc_card": "判决文书 · 取最后一次盖印",
+    "eg": {
+      "fail": "心重于羽 · 不过",
+      "pass": "心轻于羽 · 通过",
+      "waver": "天平摇摆"
+    },
+    "reading": "读数"
+  },
+  "doc": {
+    "download_pdf": "下载 PDF"
+  },
+  "empty": {
+    "body": "队列已清空。新的案子到了会出现在这里。",
+    "cn": "这一殿今天没有案子",
+    "eg": "今天天平空着",
+    "eu": "今天庭上没有人等候",
+    "gr": "今天岔路口没有人",
+    "view_concluded": "看已结案"
+  },
+  "hours": {
+    "cn": {
+      "chen": "辰时",
+      "chou": "丑时",
+      "hai": "亥时",
+      "mao": "卯时",
+      "shen": "申时",
+      "si": "巳时",
+      "wei": "未时",
+      "wu": "午时",
+      "xu": "戌时",
+      "yin": "寅时",
+      "you": "酉时",
+      "zi": "子时"
+    },
+    "eg": {
+      "day": "昼",
+      "night": "夜 · 第 {{n}} 时"
+    },
+    "eu": {
+      "compline": "夜终",
+      "lauds": "晨祷",
+      "matins": "夜祷",
+      "none": "九时",
+      "prime": "晨时",
+      "sext": "六时",
+      "terce": "三时",
+      "vespers": "晚祷"
+    },
+    "format": "{{name}} · {{time}}",
+    "gr": {
+      "day": "昼",
+      "night": "夜"
+    }
+  },
+  "landing": {
+    "civ": {
+      "cn": "十殿依次审，罪目定去哪一殿",
+      "eg": "心放上天平，对面是玛阿特之羽",
+      "eu": "按罪下沉，或沿炼狱向上",
+      "gr": "三判官分路，千年后饮勒忒"
+    },
+    "lede": "四本账，四种答案。",
+    "preview_label": "进去之后是这样",
+    "title": "同一个问题：这个灵魂过得了关吗？"
+  },
+  "live": {
+    "cn_station": "第 {{n}} 站 · {{station}}",
+    "count": "{{n}} / {{total}}",
+    "headline": "{{soul}} · {{step}}",
+    "island_sub": "{{soul}} · 第 {{n}} 站",
+    "letter": {
+      "claimed": "你的案子已由判官认领。"
+    },
+    "letter_title": "书信 · {{hall}}",
+    "path": {
+      "eu_down": "下行",
+      "eu_up": "上行",
+      "gr_isles": "经至福岛"
+    },
+    "title": "灵魂簿 · 实时进度"
+  },
+  "map": {
+    "branch_only": "官员挪站 · 只显示这一条",
+    "branches_hidden": "支线 {{n}} 处 · 已收起",
+    "diyu": {
+      "court10_bridges": "第十殿 · 六桥 · 孟婆",
+      "ghost_gate": "鬼门关",
+      "inside_fengdu": "酆都城之内 · 十殿",
+      "mengpo_pavilion": "孟婆亭",
+      "moved_by_officer": "官员挪站",
+      "nai_river": "奈河",
+      "naihe_bridge": "奈何桥",
+      "road_down": "赴冥 · 十三站之一至十",
+      "six_paths": "六道轮回",
+      "ten_courts": "十殿"
+    },
+    "drag_hint": "拖动平移 · 双击放大",
+    "egypt": {
+      "embalming_70_days": "防腐 · 七十日",
+      "nile": "尼罗河",
+      "second_death_note": "第二次死亡 · 不是地点",
+      "weighing": "真理大厅 · 称心"
+    },
+    "europe": {
+      "circles": "地狱九圈",
+      "downward": "向下 · 按罪下沉",
+      "terraces": "炼狱七台",
+      "upward": "向上 · 涤罪"
+    },
+    "fit": "全景",
+    "greece": {
+      "thousand_year_cycle": "千年循环",
+      "wait_on_bank": "岸边百年",
+      "year_n": "第 {{n}} 年"
+    },
+    "replay": {
+      "skip": "点任意处跳到现在",
+      "start": "回放这一生",
+      "stop": "停止回放"
+    },
+    "soul": {
+      "ahead": "后面还有 {{n}} 处",
+      "behind": "已走过 {{n}} 处",
+      "here": "你现在在这里"
+    }
+  },
+  "overview": {
+    "claim_next": "认领下一件",
+    "count_unit": "件 · 其中 {{n}} 件已过期限",
+    "days": "{{n}} 日",
+    "greet": "{{name}} · 今日待审",
+    "month_done_pct": "本月已结 {{pct}}%",
+    "open_queue": "打开队列",
+    "stat": {
+      "avg_time": "平均用时",
+      "returned": "退回重审"
+    },
+    "todo": {
+      "appeal": "申诉 · {{soul}}",
+      "due_in": "{{n}} 日后到期",
+      "due_today": "今天到期",
+      "joint": "会审邀请 · {{hall}}",
+      "returned": "退回重审 · {{case}}",
+      "title": "待经手"
+    },
+    "trend": {
+      "last_quarter": "上季",
+      "last_quarter_same": "上季同期",
+      "scope": "本殿 · 对比上一季",
+      "this_quarter": "本季",
+      "this_week": "本周",
+      "title": "近 12 周结案",
+      "week": "第 {{n}} 周 · {{date}}"
+    }
+  },
+  "queue": {
+    "col": {
+      "cause": "来由",
+      "deadline": "期限",
+      "reading": {
+        "eg": "心与羽",
+        "eu": "七宗罪",
+        "gr": "程序"
+      },
+      "trend": "近 12 周"
+    },
+    "deadline": {
+      "days": "{{n}} 日",
+      "none": "不计",
+      "over": "超 {{n}} 日"
+    },
+    "deferred_hint": "仍归本人，不计期限",
+    "tab": {
+      "overdue": "已过期限",
+      "returned": "退回重审"
+    }
+  },
+  "reject": {
+    "sheet": {
+      "by_court": "按殿分组",
+      "cancel": "放回",
+      "circle": "→ 第 {{n}} 圈",
+      "cn_more_sub": "二至九殿 · 共 {{n}} 条",
+      "cn_top": "最常用的 {{n}} 条",
+      "confirm": "不过 · 落印",
+      "eg_auto": "理由由天平自动列出，不能另选",
+      "eu_scope": "只有这几类会下地狱",
+      "gr_scars": "疤痕 · 可多选",
+      "preview_label": "判语预览",
+      "required": "必选",
+      "title": "选一个理由，才算判完",
+      "unstamped": "{{soul}} · 还没有落印"
+    }
+  },
+  "reject_reason": {
+    "cn": {
+      "court": "{{n}}殿"
+    },
+    "eg": {
+      "false_confession": "告白不实 · 第 {{n}} 条",
+      "scale_decided": "天平已判，不能另选"
+    },
+    "eu": {
+      "mortal_sin": "有未悔的大罪",
+      "neutral": "登记为中立者",
+      "sin": {
+        "envy": "嫉妒",
+        "gluttony": "暴食",
+        "greed": "贪婪",
+        "lust": "淫欲",
+        "pride": "傲慢",
+        "sloth": "懒惰",
+        "wrath": "愤怒"
+      }
+    },
+    "gr": {
+      "curable": "可医",
+      "incurable": "不可医",
+      "injustice": "不义",
+      "mark": "加上标记",
+      "perjury": "伪誓"
+    },
+    "gr_er": {
+      "betrayal": "出卖城邦或军队",
+      "enslavement": "使城邦或军队沦为奴役",
+      "many_deaths": "致多人于死",
+      "other": "其他恶行 · 写一句"
+    },
+    "other": "其他 · 写一句"
+  },
+  "shell": {
+    "ask": {
+      "context": "关于这一页 · {{page}}",
+      "scope_note": "回答只读这一页的数据，不代为判决。"
+    },
+    "density": {
+      "comfortable": "舒适",
+      "compact": "紧凑"
+    },
+    "hall_switch": "切换殿司"
+  },
+  "soul": {
+    "here": {
+      "cn_court": "你正在{{court}}受审。判官在看你这一生的功与过。",
+      "eg_weighing": "你的心正在天平上，和玛阿特之羽相比。",
+      "eu_realm": "你在{{realm}}。",
+      "gr_thousand": "你在千年的路上，已经走了 {{n}} 年。"
+    }
+  },
+  "soulmap": {
+    "life_events": "这一生记下的事",
+    "move": "挪站…",
+    "replay_line": "{{date}} · 到达{{station}}",
+    "replay_progress": "{{n}} / {{total}}",
+    "title": "{{soul}} 走到了哪一步"
+  },
+  "swipe": {
+    "count": "{{n}} 件 · 待定 {{m}}",
+    "hint": {
+      "hold": "按住 · 待定",
+      "left": "左滑 · 不过",
+      "right": "右滑 · 通过"
+    },
+    "hold_release": "松手：跳到下一件 · 放进待定分组",
+    "title": "待审",
+    "waited": "{{case}} · 已等 {{n}} 天"
+  },
+  "verdict_doc": {
+    "cn": {
+      "body": "查 {{soul}}，{{born}}生，{{died}}卒。功 {{merit}}，过 {{demerit}}。",
+      "date": "{{year}}年{{month}}月{{day}}日 · {{hour}}",
+      "seal": "{{court}}之印",
+      "sign": "第{{n}}殿 {{king}}",
+      "title": "{{court}}判词",
+      "verdict": {
+        "balanced": "功过两平，送交第十殿发放，仍投人世。",
+        "fail": "所犯{{offence}}，属第{{n}}殿所掌，解送第{{n}}殿。",
+        "five_heinous": "犯五逆，不经各殿，解送第九殿阿鼻大地狱。",
+        "merit": "功多于过，送交第十殿发放，投生{{path}}。"
+      }
+    },
+    "eg": {
+      "body": "{{soul}}的心已在天平上称过。阿努比斯操秤，托特记录并宣读。",
+      "date": "{{year}}年{{month}}月{{day}}日 · {{hour}}",
+      "seal": "两真之殿",
+      "sign": "托特 记录并宣读",
+      "title": "两真之殿 · 判词",
+      "verdict": {
+        "fail": "心重于羽。交与阿米特。第二次死亡，不再存在。",
+        "pass": "其中未见恶。不得交与阿米特。荷鲁斯引其至奥西里斯座前，往芦苇原。"
+      }
+    },
+    "eu": {
+      "body": "{{soul}}的一生已归结于基督。",
+      "date": "{{year}}年{{month}}月{{day}}日 · {{hour}}",
+      "deco": "SENTENTIA",
+      "seal": "SENTENTIA",
+      "sign": "基督台前",
+      "title": "私审判",
+      "verdict": {
+        "antinferno": "登记为中立者，留在地狱前庭。",
+        "heaven": "无未悔的大罪，蒙召入天国。",
+        "hell": "有未悔的大罪，下地狱第 {{n}} 圈。",
+        "purgatory": "无未悔的大罪，入炼狱第 {{n}} 台，由下而上涤罪。"
+      }
+    },
+    "gr": {
+      "body": "判官不问受审者是谁，只看灵魂。",
+      "date": "{{year}}年{{month}}月{{day}}日 · {{hour}}",
+      "deco": "ΚΡΙΣΙΣ",
+      "seal": "ΚΡΙΣΙΣ",
+      "sign_final": "米诺斯 终裁",
+      "sign_first": "{{judge}}",
+      "title": "岔路口的草地 · 判决",
+      "verdict": {
+        "curable": "加上标记：可医。送往塔尔塔罗斯。",
+        "incurable": "加上标记：不可医。送往塔尔塔罗斯。",
+        "isles": "一生虔敬求真，送往至福岛。"
+      }
+    },
+    "gr_er": {
+      "body": "审判者坐在四口之间。",
+      "date": "{{year}}年{{month}}月{{day}}日 · {{hour}}",
+      "seal": "ΚΡΙΣΙΣ",
+      "sign": "四口之间的审判者",
+      "title": "四口之间 · 判决",
+      "verdict": {
+        "incurable": "出口不纳，抛入塔尔塔罗斯。",
+        "just": "判决佩在身前，向右，向上穿过天。千年之后归于草地。",
+        "unjust": "判决佩在身后，向左，向下。每一件不义受十倍之罚，百年为一期，千年之后归于草地。"
+      }
     }
   }
 }
