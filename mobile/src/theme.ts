@@ -185,8 +185,8 @@ export interface Theme {
   ink: string;
   inkMuted: string;
   /**
-   * The third ink. v4 prints `--faint` for it, but light `--faint` is 2.94:1 on `--main` (dark 3.91),
-   * under AA for text; so this stays `--sub`, as v3 kept it equal to the second ink, and `faint`
+   * The third ink. v4 prints `--faint` for it, but light `--faint` is 3.13:1 on `--main` and 2.94 on `--card2`,
+   * and dark `--faint`, 4.70 on `--main`, is 4.29 on `--card` and 3.91 on `--card2` — under AA for text where it sits; so this stays `--sub`, as v3 kept it equal to the second ink, and `faint`
    * carries v4's value for what is not read as text (a count beside a label, a divider glyph).
    */
   inkSubtle: string;

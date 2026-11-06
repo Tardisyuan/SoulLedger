@@ -1255,14 +1255,16 @@ const styles = StyleSheet.create({
   /** v4 「你现在在哪」: 12 / 600 in the metal, the place at 30/38, its sentence 15/24, then the road. */
   here: { paddingTop: 24, paddingBottom: 24, borderBottomWidth: 1 },
   hereEyebrow: { fontFamily: family.ui[600], letterSpacing: 0 },
-  hereLine: { marginTop: 6, fontFamily: family.ui[400] },
-  route: { marginTop: 22 },
+  // v4 draws 6 and 22; the App's spacing scale (补足 A2) has 8 and 24.
+  hereLine: { marginTop: 8, fontFamily: family.ui[400] },
+  route: { marginTop: 24 },
   /** A 28 rail (the line at its centre, 2.5 wide) and the words 12 beside it; a row is 48, "here" 96. */
   routeRow: { flexDirection: "row", gap: 12, minHeight: 48 },
   routeRowHere: { minHeight: 96 },
   routeRail: { width: 28, alignItems: "center" },
   routeLine: { position: "absolute", top: 18, bottom: -4, left: 12.75, width: 2.5, borderRadius: 2 },
-  routeDot: { marginTop: 7, width: 14, height: 14, borderRadius: 999, borderWidth: 2 },
+  // 8 + 7 = 15, the middle of the words' first line (4 + 22 / 2).
+  routeDot: { marginTop: 8, width: 14, height: 14, borderRadius: 999, borderWidth: 2 },
   routeDotHere: { marginTop: 2, width: 24, height: 24, borderWidth: 4 },
   routeText: { flex: 1, minWidth: 0, paddingTop: 4 },
   stations: { paddingTop: 16, paddingBottom: 16, gap: 12, borderBottomWidth: 1 },

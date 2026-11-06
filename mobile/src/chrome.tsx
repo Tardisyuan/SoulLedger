@@ -252,7 +252,7 @@ const TAB_ICONS: Record<string, IconName> = { Life: "tabLife", Applications: "ta
 const STACKED_TAB_LABEL_SCALE = 1.5;
 
 /**
- * v4 悬浮胶囊 (V4Batch07 02 外壳 ⑦ / 05 App): a capsule 14 from the screen's sides, 64 high, round, on the
+ * v4 悬浮胶囊 (V4Batch07 02 外壳 ⑦ / 05 App): a capsule 16 from the screen's sides (v4 14, on the App's scale 16), 64 high, round, on the
  * card (opaque for now; v4 draws it at 70%) — icon 22 over an 11 label; the current item is the civilization's colour (`plaque`, v4 --civT,
  * which holds 4.5:1 on its scheme's grounds) on 18% of its glow. C14: when any label is too long for one line
  * (`pillarIsWide`, the web's pillar rule) all of them may take two lines; a label that still does not fit is cut
@@ -337,10 +337,11 @@ const styles = StyleSheet.create({
   /** 16 from the edge, as 1e draws it: the bar's 4 plus this. */
   titleStart: { paddingLeft: 12 },
   frame: { overflow: "hidden" },
-  /** v4 capsule: 14 from the sides, 64 high (6 + 52 + 6), round; the page's ground around it. */
-  capsuleGround: { paddingHorizontal: 14, paddingTop: 8 },
-  tabs: { flexDirection: "row", minHeight: 64, padding: 6, gap: 4, borderWidth: 1, borderRadius: radius.pill },
-  tab: { flex: 1, minHeight: 52, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 2, borderRadius: radius.pill },
+  /** v4 capsule: 16 from the sides, 64 high (4 + 56 + 4), round; the page's ground around it. */
+  // v4 draws 14 from the sides and 6 inside; the App's spacing scale (补足 A2, zhuyinPages.test) has 16 and 4.
+  capsuleGround: { paddingHorizontal: 16, paddingTop: 8 },
+  tabs: { flexDirection: "row", minHeight: 64, padding: 4, gap: 4, borderWidth: 1, borderRadius: radius.pill },
+  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 2, borderRadius: radius.pill },
   tabWide: { justifyContent: "flex-start", paddingTop: 4 },
   tabsStacked: { flexDirection: "column", borderWidth: 1, borderRadius: radius.dialog, overflow: "hidden" },
   tabRow: { minHeight: 48, paddingVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },

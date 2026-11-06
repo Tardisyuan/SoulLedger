@@ -204,13 +204,16 @@ describe("a native soul of the Duat", () => {
     expect(within(screen.getByTestId("score-merit")).getByText(String(PROFILE.merit_score))).toBeTruthy();
     expect(within(screen.getByTestId("score-demerit")).getByText("心侧")).toBeTruthy();
     expect(within(screen.getByTestId("score-demerit")).getByText(String(PROFILE.demerit_score))).toBeTruthy();
-    expect(within(screen.getByTestId("soul-state")).getByText("称心中")).toBeTruthy();
+    // v4: a judging soul of the Duat is told where it is — the weighing — instead of the state word 称心中.
+    expect(screen.getByTestId("life-here-place")).toHaveTextContent("真理大厅 · 称心");
+    expect(screen.getByTestId("life-here-line")).toHaveTextContent("你的心正在天平上，和玛阿特之羽相比。");
+    expect(screen.queryByTestId("soul-state")).toBeNull();
     expect(screen.queryByText("功")).toBeNull();
     expect(screen.queryByTestId("residence")).toBeNull();
   });
 
-  it("terminal cosmology: the entry stays, permanently disabled with the fixed reason, over the Duat's own empty state", async () => {
-    stubApi({
+  it("terminal cosmology: no 转生 tab at all (v4), and the rebirth list is not asked for", async () => {
+    const calls = stubApi({
       "/me/": { status: 200, data: NATIVE_EG },
       "/me/life/": { status: 200, data: life(1) },
       "/me/rebirth-applications/": {
@@ -220,15 +223,9 @@ describe("a native soul of the Duat", () => {
     });
     renderApp();
     await screen.findByTestId("profile-card");
-    await pressTab("tab-Applications");
-    const apply = await screen.findByTestId("apply");
-    expect(apply.props.accessibilityState.disabled).toBe(true);
-    expect(screen.getByTestId("eligibility-reason").props.children).toBe("你所属的文明没有转生。此处的去向是终局。");
-    const empty = screen.getByTestId("terminal-empty");
-    expect(within(empty).getByText("杜阿特没有转生")).toBeTruthy();
-    // 文明气质 1e: the no-rebirth variant uses the same illustration as the plain empty page.
-    expect(within(empty).getByTestId("empty-hero-eg")).toBeTruthy();
-    expect(screen.queryByText("还没有转生申请")).toBeNull();
+    expect(screen.queryByTestId("tab-Applications")).toBeNull();
+    expect(screen.getAllByRole("tab").map((tab) => tab.props.accessibilityLabel)).not.toContain("转生");
+    expect(calls.map((c) => c.url)).not.toContain("/me/rebirth-applications/");
   });
 
   it("no past lives is said as the Duat says it, not as 'no records'", async () => {
