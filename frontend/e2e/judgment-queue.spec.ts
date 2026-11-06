@@ -125,7 +125,7 @@ test.describe("Critical path: the judgment triage queue", () => {
 
     const banner = page.getByRole("alert").filter({ hasText: "该案已由「崔判官」认领" });
     await expect(banner).toBeVisible();
-    await expect(banner).toContainText("只有认领人、殿主或管理员能结案。你的裁决没有提交；本次会话已把这件延后。");
+    await expect(banner).toContainText("只有认领人或管理员可以结案。这次的判决没有提交；本次开庭已把这件案子放到一边。");
     await expect(page.getByText(SECOND.soul_name)).toBeVisible();
     await expect(page.getByText("已延后 1")).toBeVisible();
     await expect(page.getByText("本次延后 1 件")).toBeVisible();
