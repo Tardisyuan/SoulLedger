@@ -33,7 +33,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 const STORAGE_KEY = "soulledger_theme";
 
-/** 120ms of `--transition-duration-state` (规范 v2 fast) plus slack. */
+/** 160ms of `--transition-duration-state` (规范 v3 local, unchanged in v4) plus slack. */
 const THEME_SWAP_MS = 200;
 
 /** Asked as "light?" so that "no preference" lands on dark — the same question
@@ -127,7 +127,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
    * events for one interaction, and it does not fire at all for elements whose
    * colours happen not to differ between the two themes.
    *
-   * The timer matches `--transition-duration-state` (120ms) plus a frame of
+   * The timer matches `--transition-duration-state` (160ms) plus a frame of
    * slack. If the two ever disagree, the visible symptom is a swap that stops
    * halfway and jumps — so the number is written next to its reason rather
    * than left as a bare 200.

@@ -216,7 +216,8 @@ describe("domain status badges (v3: neutral-line frame, still square)", () => {
   it.each(THEMES)("%s: the line frame is decorative (glyph + text carry the meaning) — measured, not required", (theme) => {
     // WCAG 1.4.11 does not apply to a border the text already identifies. Recorded so a change is visible.
     const r = ratio(tok(theme, "--color-line"), tok(theme, "--color-surface-1"));
-    expect(r).toBeGreaterThan(1.3);
+    // v4(2026-11-06)的 line 是 8% 白 / 黑压在 card 上:深 1.25、浅 1.19(v3 时 >1.3)。
+    expect(r).toBeGreaterThan(1.15);
     expect(r).toBeLessThan(NON_TEXT);
   });
 });

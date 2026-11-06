@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
  * 重拉之后地址变了,格子按 `id:url` 重新挂载,失败状态随之清掉;还取不到就再显示一次虚线格。
  *
  * 查看器用 Base UI Dialog(与 BaseModal 同一个原语),焦点进出、Esc、焦点圈都随它;
- * 面板圆角 8(`rounded-panel`),← → 切换。动效走全局 reduced-motion 规则(1ms,不是 none)。
+ * 面板圆角 6(`rounded-panel`,v4 起由 8 改 6),← → 切换。动效走全局 reduced-motion 规则(1ms,不是 none)。
  */
 
 const DESKTOP_CELLS = 4;

@@ -30,10 +30,14 @@ export const LICENCE_LABELS: Record<Exclude<CreditLicence, "PD">, { label: strin
  * UnifrakturMaguntia、GFS Didot)随 App 的 v2 印去掉了(2026-10-03,Web 早在 10-02 撤掉)。
  * 都不再随任何一端发布,也就不再列。v3 描边印只剩埃及的圣书字。
  */
+//
+// 规范 v4(用户 2026-11-06:全换稿子的 7 套),Web 与 App 同一组。v3 的 Archivo / Source Serif 4 /
+// IBM Plex Mono 两端都已不再发布,不再列。
 export const FONT_CREDITS: Credit[] = [
-  "Archivo",
-  "Source Serif 4",
-  "IBM Plex Mono",
+  "Geist",
+  "Geist Mono",
+  "EB Garamond",
+  "GFS Didot",
   "Noto Sans SC",
   "Noto Serif SC",
   "Noto Sans Egyptian Hieroglyphs",

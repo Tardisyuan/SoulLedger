@@ -21,15 +21,16 @@ describe("AboutPage", () => {
     // v2 的匾纹带与分节纹(取自 Owen Jones)已从两端删光(2026-10-03),纹样一节随之撤掉。
     expect(screen.queryByRole("heading", { name: /纹样/ })).toBeNull();
     expect(screen.queryByText("Owen Jones")).toBeNull();
-    for (const font of ["Archivo", "Noto Sans Egyptian Hieroglyphs"]) {
+    // v4(2026-11-06)的七支字体。GFS Didot 随 v4 文书的希腊标题回来了;v3 的三支两端都不再发布。
+    for (const font of ["Geist", "Geist Mono", "EB Garamond", "GFS Didot", "Noto Sans SC", "Noto Serif SC", "Noto Sans Egyptian Hieroglyphs"]) {
       expect(screen.getByText(font)).toBeInTheDocument();
     }
-    // v2's plaque faces, and v2 朱印's other three seal faces (2026-10-03), ship nowhere since v3,
+    // v2's plaque faces, and v2 朱印's other two seal faces (2026-10-03), ship nowhere since v3,
     // so they are not credited.
-    for (const font of ["Ma Shan Zheng", "Josefin Slab", "Cinzel", "LXGW Seal", "UnifrakturMaguntia", "GFS Didot"]) {
+    for (const font of ["Ma Shan Zheng", "Josefin Slab", "Cinzel", "LXGW Seal", "UnifrakturMaguntia", "Archivo", "Source Serif 4", "IBM Plex Mono"]) {
       expect(screen.queryByText(font)).toBeNull();
     }
-    expect(screen.getAllByRole("link", { name: "SIL Open Font License 1.1" })).toHaveLength(6);
+    expect(screen.getAllByRole("link", { name: "SIL Open Font License 1.1" })).toHaveLength(7);
   });
 
   it("no seal-edge section: the four museum scans masked only v2's filled seal, which ships nowhere (2026-10-03)", () => {
@@ -82,6 +83,6 @@ describe("AboutPage", () => {
     // egy 是懒加载的包:先等它到,否则量到的是 zh 回退。
     expect(await screen.findByRole("heading", { level: 1, name: "Tepy Hena Sesen" })).toBeInTheDocument();
     expect(screen.getByText("Noto Sans Egyptian Hieroglyphs")).toBeInTheDocument();
-    expect(screen.getByText("Archivo").closest("li")).toHaveTextContent("SIL Open Font License 1.1");
+    expect(screen.getByText("Geist").closest("li")).toHaveTextContent("SIL Open Font License 1.1");
   });
 });

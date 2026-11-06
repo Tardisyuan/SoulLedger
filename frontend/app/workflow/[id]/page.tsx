@@ -491,7 +491,7 @@ export default function WorkflowDetailPage() {
                         <span
                           aria-hidden="true"
                           title={t("workflow.detail.waiting_on_me")}
-                          className="absolute inset-y-0 left-0 w-[3px] bg-[oklch(var(--color-main))]"
+                          className="absolute inset-y-0 left-0 w-[3px] bg-[oklch(var(--color-metal))]"
                         />
                       )}
                       <span aria-hidden="true" className="text-center">

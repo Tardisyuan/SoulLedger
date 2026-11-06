@@ -464,7 +464,7 @@ describe("DESIGN.md cannot prescribe against the code", () => {
 
   it("reads the fonts the app actually ships", () => {
     // Guards the parser: an empty list would make the assertion below vacuous.
-    expect(shippedFonts).toEqual(expect.arrayContaining(["Archivo"]));
+    expect(shippedFonts).toEqual(expect.arrayContaining(["Geist", "Geist_Mono"])); // v4 字体(用户 2026-11-06)
     expect(shippedFonts.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -507,7 +507,7 @@ describe("DESIGN.md cannot prescribe against the code", () => {
     ].map((m) => m[1].trim());
     expect(shape.length).toBeGreaterThanOrEqual(10);
     const declared = new Set(shape);
-    expect([...declared].sort()).toEqual(["0", "4px", "8px"]); // asserted, not assumed — see above
+    expect([...declared].sort()).toEqual(["0", "4px", "6px"]); // asserted, not assumed — see above. v4(用户 2026-11-06):panel 8px → 6px
 
     const offenders = doc
       .split("\n")
@@ -517,7 +517,7 @@ describe("DESIGN.md cannot prescribe against the code", () => {
       // "…would render `border-radius: 0` and read as a choice…" mid-sentence,
       // and the first version of this rule flagged exactly that line in the
       // rewritten file it was meant to protect.
-      .filter(([, line]) => /^\s*`?border-radius:\s*(?!(?:0|4px|8px)\b)/.test(line))
+      .filter(([, line]) => /^\s*`?border-radius:\s*(?!(?:0|4px|6px)\b)/.test(line))
       .map(([n, line]) => `DESIGN.md:${n}  ${line.trim().slice(0, 70)}`);
     expect(offenders).toEqual([]);
   });

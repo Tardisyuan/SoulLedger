@@ -37,7 +37,7 @@ export function RowMark({ on = true }: { on?: boolean }) {
         data-testid={on ? "row-mark" : "row-mark-off"}
         /* v3「C 认领」:色标 scaleY(0→1),160ms 进场曲线 —— 认领后这一格第一次挂上时播一次;
            一直挂着的那种由 `on` 从 0 过渡到 1,同样 160ms。 */
-        className={`pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-[oklch(var(--color-main))] origin-center transition-transform ${
+        className={`pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-[oklch(var(--color-metal))] origin-center transition-transform ${
           on ? "scale-y-100 duration-fast ease-enter starting:scale-y-0" : "scale-y-0 duration-dismiss ease-exit"
         }`}
       />
