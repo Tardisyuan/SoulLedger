@@ -9,11 +9,14 @@
  *   否则 → `balanced`。**中文界面竖排、用汉字数字**(第六批第 3 条),年份逐位(一九三一),
  *   计数按读法(四十二);「年」由文书加,数据不带。其他语言横排、阿拉伯数字。
  * - 欧洲:天国 / 炼狱第 n 台 / 地狱第 n 圈 / 前庭(第六批第 6 条)。圈台号读处置的界域代码;
- *   否认灵魂不灭落第 6 圈(第六批第 7 条)。「哪一宗大罪」只在下地狱时写,取本案引用的七宗罪条文
- *   (`cited_deadly_sins`,D9);没引用就没有那一行。
+ *   否认灵魂不灭落第 6 圈(第六批第 7 条)。七宗罪**只在入炼狱时写**,取本案引用的七宗罪条文
+ *   (`cited_deadly_sins`,D9);没引用就没有那一行。七宗罪对应炼狱七台(docs/03),不对应地狱九圈,
+ *   所以下地狱的文书不列(用户 2026-11-07;此前只在下地狱时列)。
  * - 埃及:跟天平,通过 / 不过两句。
  * - 希腊:按官员落印时选的文书(`greek_account`,D8)—— 《高尔吉亚》用 `gr.*`,《理想国》用 `gr_er.*`,
  *   两篇不合并。不过时按可医 / 不可医(`greek_curability`,D7)。一审落款只写判官名(第六批第 4 条)。
+ *   《高尔吉亚》的「米诺斯 终裁」只在米诺斯实际终裁时落(`final_review_by`,GR-5):艾亚哥斯、拉达曼迪斯
+ *   判通过即结案,米诺斯没有参与;判官本人就是终裁的那一位时只写终裁一行,不写两行米诺斯。
  *
  * 日期与时辰读 `concluded_at_local`(带偏移、按落印殿的时区写死,D12):直接取串里的年月日与钟点,
  * **不经过 `Date`** —— `Date` 会换成观看者的时区,同一份文书给两个时区的人看就成了两个时辰。
@@ -55,6 +58,10 @@ export interface VerdictDocumentInput {
   greekAccount?: string | null;
   greekCurability?: string | null;
   citedDeadlySins?: readonly string[] | null;
+  /** 判官的 Actor id(`Judgment.judge`),与 `finalReviewBy` 比:同一位时希腊落款只写一行终裁。 */
+  judgeId?: string | null;
+  /** 实际终裁的 Actor id(`final_review_by`):有值才落「米诺斯 终裁」(GR-5)。 */
+  finalReviewBy?: string | null;
 }
 
 export interface VerdictDocumentText {
@@ -68,7 +75,7 @@ export interface VerdictDocumentText {
   body: string;
   /** 判语(已翻译好的一句;不叫 verdict,那是裁决枚举的字段名,domainDisplayContract 认它)。 */
   ruling: string;
-  /** 欧洲下地狱时「哪一宗大罪」(七宗罪名,用 · 连);没引用就没有。 */
+  /** 欧洲入炼狱时「哪一宗大罪」(七宗罪名,用 · 连);没引用、下地狱都没有。 */
   sins?: string;
   /** 希腊两套的正文不带名字,名字单占正文上面一行(定稿 S15)。 */
   name?: string;
@@ -211,6 +218,7 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
         const lowest = cited.length ? Math.min(...cited.map((s) => SIN_TERRACE[s] ?? 99)) : null;
         const n = realmNumber(input.realmCode, /^EU_PURGATORY_T(\d+)_/) ?? (lowest != null && lowest < 99 ? lowest : null);
         verdict = t(k("verdict.purgatory"), { n: num(n) });
+        if (cited.length) sins = cited.map((s) => t(`reject_reason.eu.sin.${s}`)).join(" · ");
       } else if (input.realmCode === "EU_ANTINFERNO" || (!input.realmCode && reasons.includes("NEUTRAL"))) {
         verdict = t(k("verdict.antinferno"));
       } else {
@@ -221,7 +229,6 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
         else if (n === HERESY_CIRCLE && heresy) verdict = t(k("verdict.heresy"));
         else {
           verdict = t(k("verdict.hell"), { n: num(n) });
-          if (cited.length) sins = cited.map((s) => t(`reject_reason.eu.sin.${s}`)).join(" · ");
         }
       }
       return {
@@ -241,7 +248,12 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
         : t(k(passed ? "verdict.isles" : incurable ? "verdict.incurable" : "verdict.curable"));
       const signs = greekRepublic
         ? [t(k("sign"))]
-        : [...(input.judgeName ? [t(k("sign_first"), { judge: input.judgeName })] : []), t(k("sign_final"))];
+        : [
+            ...(input.judgeName && !(input.finalReviewBy && input.finalReviewBy === input.judgeId)
+              ? [t(k("sign_first"), { judge: input.judgeName })]
+              : []),
+            ...(input.finalReviewBy ? [t(k("sign_final"))] : []),
+          ];
       return {
         civ, account, vertical: false, deco: t("verdict_doc.gr.deco"), title: t(k("title")), name: soul, body: t(k("body")),
         ruling: verdict, date, signs, seal: t(k("seal")),

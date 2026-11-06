@@ -120,7 +120,7 @@ export function SoulLedgerProgress({
       <SoulRoute soulId={soul.id} civilization={soul.civilization} />
       {/* 地府的图在十三站卡里(DiyuStationStrip);其余三个文明的图在行程条下面。 */}
       {soul.civilization !== "CHINESE" && (
-        <SoulUnderworldMap soul={soul} className="py-3 border-b border-[oklch(var(--color-line))]" />
+        <SoulUnderworldMap soul={soul} eternal={!!disposition?.is_eternal} className="py-3 border-b border-[oklch(var(--color-line))]" />
       )}
     </div>
   );

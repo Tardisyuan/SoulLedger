@@ -40,6 +40,8 @@ const judgment: VerdictDocumentProps["judgment"] = {
   greek_curability: "",
   concluded_at_local: "2026-11-06T14:40:00+08:00",
   cited_deadly_sins: [],
+  judge: null,
+  final_review_by: null,
 };
 
 beforeEach(() => {

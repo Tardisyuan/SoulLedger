@@ -5031,8 +5031,8 @@
       "ferry": {
         "title": "Acheron · Shem Itru",
         "UNBURIED": "Nen Qeres · Charon: Nen Shem Itru. Renpet 100 Hena Itru: Shem Wenen.",
-        "NO_FARE": "Nen Redi Er Itru · Charon: Nen Shem Itru.",
-        "no_date": "Nen Hru Shem. Er Khet «Redi Er Itru Seth»: Shem Wenen.",
+        "NO_FARE": "Nen Redi Er Itru · Charon: Nen Shem Itru. Renpet 100 Hena Itru: Shem Wenen.",
+        "no_date": "Nen Hru Shem.",
         "crosses_on": "Hru Shem · {{date}}",
         "years_left": "Renpet {{n}} Wenen",
         "years_left_one": "Renpet {{n}} Wenen",

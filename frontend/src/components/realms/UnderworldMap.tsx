@@ -98,6 +98,7 @@ export function UnderworldMap({
   visits,
   arrivals = [],
   label,
+  currentDetail,
   className,
 }: {
   civilization: string;
@@ -109,6 +110,8 @@ export function UnderworldMap({
   arrivals?: readonly MapArrival[];
   /** 读屏给整张图的名字(文明名)。 */
   label: string;
+  /** 当前那一站的说明行(希腊千年格的「第 n 年」);不给就用当前子格的名字。回放时不用。 */
+  currentDetail?: string | null;
 }) {
   const { t, locale, formatDate } = useI18n();
   const { theme } = useTheme();
@@ -189,7 +192,8 @@ export function UnderworldMap({
       if (name && fills) name.setAttribute("fill", fills[states.nodes.get(node.id) ?? "ahead"]);
       // 说明行在样例里是样例的进度(「第五殿 · 阎罗」「第三百年」):换成当前子格的名字,没有就空着。
       const cell = cur && cur.node === node.id ? cur.cell : null;
-      const detail = (cell && nameOf(cell)) || (STATIC_DETAIL[node.id] ? known(STATIC_DETAIL[node.id]) : null);
+      const ownDetail = cur && cur.node === node.id && replayAt === null ? currentDetail : null;
+      const detail = ownDetail || (cell && nameOf(cell)) || (STATIC_DETAIL[node.id] ? known(STATIC_DETAIL[node.id]) : null);
       details.forEach((line, i) => (line.textContent = i === 0 && detail ? detail : ""));
     }
     if (!zh) {
@@ -205,7 +209,7 @@ export function UnderworldMap({
     applyView(svg, view);
     // view 不在依赖里:平移由下一个 effect 单独处理。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary]);
+  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary, currentDetail, replayAt]);
 
   useEffect(() => {
     if (live.current) applyView(live.current, view);

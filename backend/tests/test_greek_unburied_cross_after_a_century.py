@@ -1,7 +1,8 @@
 """The unburied cross after a hundred years (Aen. 6.325-330; docs/01_希腊冥府整体架构.md §2.3; user 2026-10-28).
 
-"centum errant annos volitantque haec litora circum; / tum demum admissi stagna exoptata revisunt." Only the
-unburied: no source gives the fare a term, so NO_FARE waits as before; nor does a soul whose death is not recorded.
+"centum errant annos volitantque haec litora circum; / tum demum admissi stagna exoptata revisunt." The fareless
+wait the same hundred years (user 2026-11-07, GR-19: no source makes the obol a bar for ever); a soul whose death
+is not recorded still waits.
 The hundred years run from the latest date the recorded death can be (`apps/souls/acheron.py`).
 """
 from datetime import date
@@ -50,9 +51,12 @@ def test_the_hundred_years_are_counted_from_the_latest_possible_death(death, cro
     assert acheron.crossed(_soul("UNBURIED", *death), TODAY) is crossed
 
 
-def test_the_fare_has_no_term():
-    """Virgil's hundred years are the unburied's (inhumata, 6.325); the obol is Lucian's, with no term."""
-    assert acheron.crossed(_soul("NO_FARE", -399, 5, 7), TODAY) is False
+def test_the_fareless_wait_the_same_hundred_years():
+    """Until 2026-11-07 NO_FARE waited for ever; now it is counted exactly like UNBURIED."""
+    assert acheron.crossed(_soul("NO_FARE", -399, 5, 7), TODAY) is True
+    assert acheron.crossed(_soul("NO_FARE", 1926, 10, 29), TODAY) is False  # a day short
+    assert acheron.crossed(_soul("NO_FARE", None), TODAY) is False  # no death date: waits
+    assert acheron.crosses_on(_soul("NO_FARE", 1990, 3, 4)) == date(2090, 3, 4)
     assert acheron.crossed(_soul("", -399, 5, 7), TODAY) is False  # buried: never waited, nothing to cross
 
 
@@ -66,6 +70,8 @@ def test_the_queryset_reader_agrees_with_the_one_soul_reader(gr_tenant, today):
                                      death_year=y, death_month=m, death_day=d)
              for i, (y, m, d) in enumerate(deaths)]
     souls.append(Soul.all_objects.create(name="fare", tenant=gr_tenant, ferry_passage="NO_FARE", death_year=-399))
+    souls.append(Soul.all_objects.create(name="fare-late", tenant=gr_tenant, ferry_passage="NO_FARE", death_year=1990))
+    souls.append(Soul.all_objects.create(name="buried", tenant=gr_tenant, death_year=-399))
     by_q = set(Soul.all_objects.filter(pk__in=[s.pk for s in souls]).filter(acheron.crossed_q(today))
                .values_list("pk", flat=True))
     by_soul = {s.pk for s in souls if acheron.crossed(s, today)}
@@ -84,13 +90,14 @@ def _died(tenant, passage, year, month=None, day=None):
 
 
 @pytest.mark.django_db
-def test_an_unburied_soul_a_century_dead_is_heard(gr_tenant, judge, admin_user):
-    soul, case = _died(gr_tenant, "UNBURIED", 1850, 3, 1)
+@pytest.mark.parametrize("passage", ["UNBURIED", "NO_FARE"])
+def test_a_soul_a_century_dead_on_the_bank_is_heard(gr_tenant, judge, admin_user, passage):
+    soul, case = _died(gr_tenant, passage, 1850, 3, 1)
     assert hall_row(gr_tenant)["judgments"]["held"] == 0
     assert hall_row(gr_tenant)["judgments"]["unclaimed"] == 1
     res = officer_client(admin_user).get(f"/api/v1/souls/{soul.pk}/")
     assert res.status_code == 200 and res.data["ferry_century_passed"] is True, res.data
-    assert res.data["ferry_passage"] == "UNBURIED"  # the record stands; only the wait is over
+    assert res.data["ferry_passage"] == passage  # the record stands; only the wait is over
     claims.claim(case.pk, judge)
 
 
@@ -98,7 +105,8 @@ def test_an_unburied_soul_a_century_dead_is_heard(gr_tenant, judge, admin_user):
 @pytest.mark.parametrize("passage, year", [
     ("UNBURIED", date.today().year - 50),  # not yet a hundred years
     ("UNBURIED", None),                    # no death date
-    ("NO_FARE", 1850),                     # the fare has no term
+    ("NO_FARE", date.today().year - 50),   # the fareless wait the same hundred years
+    ("NO_FARE", None),
 ])
 def test_the_rest_still_wait_on_the_bank(gr_tenant, judge, admin_user, passage, year):
     soul, case = _died(gr_tenant, passage, year)

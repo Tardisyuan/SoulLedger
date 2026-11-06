@@ -51,8 +51,6 @@ export function currentStation(plan: MeSentencePlan | null | undefined): MeSente
   return plan?.stations.find((s) => s.status === "active" || s.status === "eternal" || s.status === "waiting") ?? null;
 }
 
-const YEAR_MS = 365.25 * 24 * 3600 * 1000;
-
 function realmOf(plan: MeSentencePlan | null | undefined): { code: string; station: MeSentenceStation } | null {
   const station = currentStation(plan);
   return station?.realm ? { code: station.realm.realm_code, station } : null;
@@ -65,10 +63,11 @@ export interface RouteInput {
   plan?: MeSentencePlan | null;
   /** The hall the soul is in now, by its hall name (useCurrentHall). */
   hall: string;
+  /** Unused since the Greek years come from the backend (2026-11-07); kept so callers need not change. */
   now: number;
 }
 
-export function soulRoute({ me, civ, plan, hall, now }: RouteInput, tr: Tr): SoulRoute | null {
+export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRoute | null {
   const realm = (code: string) => tr(`realms.names.${code}`);
   const step = (id: string, label: string, extra?: Partial<RouteStep>): RouteStep => ({ id, label, ...extra });
   const judging = me.current_state === "JUDGING";
@@ -166,8 +165,11 @@ export function soulRoute({ me, civ, plan, hall, now }: RouteInput, tr: Tr): Sou
     }
     if (r?.code === "GR_TARTARUS") {
       // The repository's Tartarus is the thousand years of Rep. 615a (disposition/services.py): v4's 千年循环.
-      const started = r.station.started_on ? Date.parse(r.station.started_on) : NaN;
-      const years = Number.isNaN(started) ? null : String(Math.max(0, Math.floor((now - started) / YEAR_MS)));
+      // The years are the ledger's SENTENCE reading (`elapsed_years`, from `Disposition.term_start_*`), the same
+      // figure the officer's map shows (user 2026-11-07) — not the station's start, which is when the office
+      // carried the paperwork out. No term start recorded: no number.
+      const run = r.station.elapsed_years;
+      const years = run == null ? null : String(Math.max(0, run));
       const steps = [...base, years === null ? cycle : { ...cycle, sub: tr("map.greece.year_n", { n: years }) }, lethe];
       return {
         civ,

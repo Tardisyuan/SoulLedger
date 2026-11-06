@@ -1548,7 +1548,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               }}
               deniedImmortality={soulData?.denied_immortality}
               neutralInLife={soulData?.neutral_in_life}
-              citedSins={judgment.cited_deadly_sins}
               falseConfessions={(confessionsHeard?.items ?? []).filter((c) => c.truthful === false)}
             />
           ) : undefined
