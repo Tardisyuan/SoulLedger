@@ -154,14 +154,11 @@ class CheckerHonoursDatabaseGrantsTest(TestCase):
                 check_permission(self.user, GRANTED_BY_DICT)
 
 
-# The permission set MODERATOR and JUDGE are supposed to hold, per ROLE_PERMISSIONS.
-MODERATOR_WORKFLOW = (
-    "workflow.read",
-    "workflow.create",
-    "workflow.update",
-    "workflow.delete",
-    "workflow.escalate",
-)
+# The permission set MODERATOR and JUDGE are supposed to hold, per ROLE_PERMISSIONS. MODERATOR held the
+# five workflow design codenames until 2026-11-07; since then it only moderates the soul circle
+# (perm/0036), so on a migrate-only database it must hold that set — and none of workflow.*.
+MODERATOR_WORKFLOW = ("social.moderate",)
+MODERATOR_NO_LONGER = ("workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.escalate")
 JUDGE_WORKFLOW = ("workflow.read", "workflow.approve", "workflow.advance")
 
 
@@ -203,6 +200,8 @@ def test_workflow_codenames_survive_on_a_migrate_only_database():
 
     denied = [c for c in MODERATOR_WORKFLOW if not check_permission(moderator, c)]
     denied += [f"JUDGE:{c}" for c in JUDGE_WORKFLOW if not check_permission(judge, c)]
+    # Absence too: perm/0036 must have taken MODERATOR's old workflow grants off the migrated table.
+    assert [c for c in MODERATOR_NO_LONGER if check_permission(moderator, c)] == []
 
     assert denied == [], (
         f"seeded-but-ungranted codenames denied to their own role: {denied}. "

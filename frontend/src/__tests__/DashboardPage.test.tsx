@@ -636,7 +636,7 @@ describe("DashboardPage permission gate", () => {
   });
 
   it("hides the export button from someone holding ledger.read but not ledger.export", async () => {
-    mockUser = { role: "MODERATOR", permissions: ["ledger.read", "ledger.manage", "ledger.calculate"] };
+    mockUser = { role: "GUARDIAN", permissions: ["ledger.read", "ledger.manage", "ledger.calculate"] };
 
     renderPage();
 

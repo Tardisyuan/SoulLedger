@@ -30,7 +30,7 @@ def _letter(tenant, name, assignee=None, last_from="soul", **fields):
 
 @pytest.fixture
 def me(cn_tenant):
-    return User.objects.create_user(username="cui", password="x", role="MODERATOR", tenant=cn_tenant)
+    return User.objects.create_user(username="cui", password="x", role="ADMIN", tenant=cn_tenant)
 
 
 def _letters(user):
@@ -38,7 +38,7 @@ def _letters(user):
 
 
 def test_only_open_unanswered_letters_assigned_to_me_are_listed(cn_tenant, eu_tenant, me):
-    other = User.objects.create_user(username="zhong", password="x", role="MODERATOR", tenant=cn_tenant)
+    other = User.objects.create_user(username="zhong", password="x", role="ADMIN", tenant=cn_tenant)
     mine = _letter(cn_tenant, "甲", assignee=me)
     _letter(cn_tenant, "乙", assignee=other)  # 标给同僚
     _letter(cn_tenant, "丙")  # 没人认领
@@ -46,7 +46,7 @@ def test_only_open_unanswered_letters_assigned_to_me_are_listed(cn_tenant, eu_te
     _letter(cn_tenant, "戊", assignee=me, closed_at=timezone.now())  # 已关闭
     archived = _letter(cn_tenant, "己", assignee=me)
     InboxOfficerState.objects.create(conversation=archived, user=me, archived_at=timezone.now())
-    eu_officer = User.objects.create_user(username="minos", password="x", role="MODERATOR", tenant=eu_tenant)
+    eu_officer = User.objects.create_user(username="minos", password="x", role="ADMIN", tenant=eu_tenant)
     _letter(eu_tenant, "庚", assignee=eu_officer)  # 别的殿
 
     group = _letters(me)

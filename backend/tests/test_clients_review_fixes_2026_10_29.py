@@ -100,6 +100,6 @@ def test_capture_due_counts_every_due_soul_not_just_the_rows_it_returns(cn_tenan
     monkeypatch.setattr(capture_views, "DUE_LIMIT", 1)
     for name in ("甲", "乙"):
         Soul.objects.create(name=name, tenant=cn_tenant, fated_death_year=2000, fated_death_month=1, fated_death_day=1)
-    client = officer_client(sp.officer("cap_lead", "MODERATOR", cn_tenant))
+    client = officer_client(sp.officer("cap_lead", "ADMIN", cn_tenant))
     data = client.get("/api/v1/dispatch/capture-warrants/due/").data
     assert data["count"] == 2 and len(data["results"]) == 1

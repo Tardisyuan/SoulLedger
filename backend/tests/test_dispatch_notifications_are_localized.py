@@ -34,7 +34,7 @@ def hall(db):
     ]
     w.a, w.b, w.c = tenants
     users = [
-        User.objects.create_user(username=f"nt_{t.code[-1].lower()}", password="x", role="MODERATOR", tenant=t)
+        User.objects.create_user(username=f"nt_{t.code[-1].lower()}", password="x", role="ADMIN", tenant=t)
         for t in tenants
     ]
     w.ua, w.ub, w.uc = users

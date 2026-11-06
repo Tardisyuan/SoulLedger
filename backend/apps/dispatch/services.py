@@ -1206,7 +1206,7 @@ class CrossTenantJudgmentService:
     @staticmethod
     def can_end(judgment, user, request_tenant=None):
         """结束 / 取消会审的人(第四十批 W-a):召集人(建这场会审的人),或发起殿里持 `workflow.update` 的人
-        (默认 ADMIN 与殿主;令牌上的租户就是发起方;全局 ADMIN 没有租户也算)。
+        (默认只有 ADMIN —— MODERATOR 2026-11-07 起只管朋友圈审核;令牌上的租户就是发起方;全局 ADMIN 没有租户也算)。
         参与方不在内 —— 他们入席表态,不替召集人收场。结束与取消共用这一道。"""
         if user is None or not getattr(user, "is_authenticated", False):
             return False

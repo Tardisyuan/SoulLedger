@@ -50,7 +50,8 @@ def test_the_four_rows_carry_the_page_codename_and_the_holding_roles():
         ("JUDGE", {"审批流程", "处置"}, {"调度管理", "死亡同步"}),
         ("GUARDIAN", {"调度管理", "处置"}, {"审批流程", "死亡同步"}),
         ("VIEWER", set(), {"调度管理", "审批流程", "处置", "死亡同步"}),
-        ("MODERATOR", {"调度管理", "审批流程", "处置"}, {"死亡同步"}),
+        # 朋友圈巡察(2026-11-07 起只管朋友圈审核,perm/0036):这四页一页都不该在它的侧栏里。
+        ("MODERATOR", set(), {"调度管理", "审批流程", "处置", "死亡同步"}),
     ],
 )
 def test_each_role_sees_the_pages_it_can_open(cn_tenant, role, sees, not_sees):

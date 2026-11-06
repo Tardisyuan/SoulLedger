@@ -1,9 +1,11 @@
 """CSV exports of /dispatch, /disposition and /cross-judgments (Design batch 15, C3).
 
 Each export is "the list, as a file": same tenant scope, same filters, same
-codename. Callers are MODERATORs (not ADMIN, which is tenant-exempt and so
+codename. Callers are each hall's own ADMIN (bound to a hall, so scoped to it
+since 2026-10-29 — only the hall-less ADMIN is tenant-exempt, and that one
 cannot tell a working scope from a missing one) and VIEWER (holds none of the
-three read codenames).
+three read codenames). They were MODERATORs until 2026-11-07, when MODERATOR
+became the circle moderator and lost these codenames (perm/0036).
 """
 import csv
 import io
@@ -50,9 +52,9 @@ def world(db):
     a = Tenant.objects.get_or_create(code="EX_A", defaults={"display_name": "Hall A"})[0]
     b = Tenant.objects.get_or_create(code="EX_B", defaults={"display_name": "Hall B"})[0]
     c = Tenant.objects.get_or_create(code="EX_C", defaults={"display_name": "Hall C"})[0]
-    mod_a = User.objects.create_user(username="ex_mod_a", password="x", role="MODERATOR", tenant=a)
-    mod_b = User.objects.create_user(username="ex_mod_b", password="x", role="MODERATOR", tenant=b)
-    mod_c = User.objects.create_user(username="ex_mod_c", password="x", role="MODERATOR", tenant=c)
+    mod_a = User.objects.create_user(username="ex_mod_a", password="x", role="ADMIN", tenant=a)
+    mod_b = User.objects.create_user(username="ex_mod_b", password="x", role="ADMIN", tenant=b)
+    mod_c = User.objects.create_user(username="ex_mod_c", password="x", role="ADMIN", tenant=c)
     viewer = User.objects.create_user(username="ex_viewer", password="x", role="VIEWER", tenant=a)
     soul_a = Soul.objects.create(name="=SUM(1,1)", current_state=SoulState.ALIVE, tenant=a)
     soul_c = Soul.objects.create(name="OutsiderSoul", current_state=SoulState.ALIVE, tenant=c)

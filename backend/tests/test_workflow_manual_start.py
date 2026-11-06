@@ -61,7 +61,8 @@ def cn(seeded):
     return {
         "tenant": tenant,
         "soul": Soul.objects.create(name="手动发起魂", tenant=tenant),
-        "moderator": _client("MODERATOR", tenant, "w11_moderator"),
+        # The hall's ADMIN starts flows (workflow.create); MODERATOR did until 2026-11-07 (perm/0036).
+        "moderator": _client("ADMIN", tenant, "w11_moderator"),
     }
 
 

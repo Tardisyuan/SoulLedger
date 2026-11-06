@@ -106,6 +106,13 @@ ROLES = ["ADMIN", "MODERATOR", "JUDGE", "GUARDIAN", "VIEWER"]
 # those 403s is a hardcoded role string, never the codename system.
 OPEN_TO_ALL = dict.fromkeys(ROLES, 200)
 ADMIN_ONLY = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+# Every role but MODERATOR. Since 2026-11-07 (user decision) MODERATOR — 朋友圈巡察 — holds only
+# `social.moderate` plus `dashboard.read` / `notification.read` / `menu.read` (perm/0035, perm/0036), so
+# the codenames "all five roles hold" (soul.read, ledger.read, reincarnation.read, realms.read,
+# actors.read, org.read) are now held by four.
+# Every MODERATOR cell in the tables below is 403 for the same reason; where a comment below still
+# lists MODERATOR among a codename's holders, it describes the matrix before 2026-11-07.
+NOT_MODERATOR = {**OPEN_TO_ALL, "MODERATOR": 403}
 
 # The three read shapes tranche 2 introduces. Each is named for the codename
 # that produces it, not for the roles it happens to admit, because the roles
@@ -113,20 +120,20 @@ ADMIN_ONLY = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VI
 # output. Read them alongside apps/perm/models.py::ROLE_PERMISSIONS.
 #
 # `judgment.read` — ADMIN, MODERATOR, JUDGE. Not GUARDIAN, not VIEWER.
-JUDGMENT_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
+JUDGMENT_READ = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 # `disposition.read` — ADMIN, MODERATOR, JUDGE, GUARDIAN. Not VIEWER.
-DISPOSITION_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 200, "VIEWER": 403}
+DISPOSITION_READ = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 200, "GUARDIAN": 200, "VIEWER": 403}
 # `workflow.read` — ADMIN, MODERATOR, JUDGE. Not GUARDIAN, not VIEWER.
-WORKFLOW_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
+WORKFLOW_READ = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 # `audit.read` is granted to ADMIN and MODERATOR (apps/perm/models.py
 # ROLE_PERMISSIONS). Nobody else.
-AUDIT_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+AUDIT_READ = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 # The one tranche 3 introduces.
 #
 # `dispatch.read` — ADMIN, MODERATOR, GUARDIAN. Not JUDGE, not VIEWER: JUDGE
 # holds no `dispatch.*` codename at all, since dispatch is GUARDIAN's
 # operational business, not JUDGE's.
-DISPATCH_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
+DISPATCH_READ = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
 
 # `cross_judgment.read` — ADMIN, MODERATOR, JUDGE. DECIDED: cross-tenant
 # judgment moved off `dispatch.read` onto its own family (apps/dispatch/views.py)
@@ -134,7 +141,7 @@ DISPATCH_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, 
 # civilization that hears a soul's own case now hears its cross-tenant one.
 # The inverse split of DISPATCH_READ above: GUARDIAN loses this row, JUDGE
 # gains it.
-CROSS_JUDGMENT_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
+CROSS_JUDGMENT_READ = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 
 
 # ---------------------------------------------------------------------------
@@ -147,17 +154,17 @@ READ_MATRIX = {
     # is the useful part: these rows prove CodenamePermission grants as well as
     # it denies. A codename layer that only ever produced 403s would be
     # indistinguishable from an outage.
-    "/api/v1/ledger/balance/{soul}/": OPEN_TO_ALL,
-    "/api/v1/ledger/effective/{soul}/": OPEN_TO_ALL,
-    "/api/v1/ledger/inheritance/{soul}/": OPEN_TO_ALL,
+    "/api/v1/ledger/balance/{soul}/": NOT_MODERATOR,
+    "/api/v1/ledger/effective/{soul}/": NOT_MODERATOR,
+    "/api/v1/ledger/inheritance/{soul}/": NOT_MODERATOR,
     # Were ADMIN_ONLY because the view bodies spelled `role != 'ADMIN'` by hand.
     # Retired 2026-10-29 (user items 3 and 33): the overview is `ledger.read`,
     # the CSV its own `ledger.export` (perm/0030 grants it to every
     # `ledger.read` holder), each scoped to the caller's hall.
-    "/api/v1/ledger/stats/overview/": OPEN_TO_ALL,
-    "/api/v1/ledger/stats/export/": OPEN_TO_ALL,
+    "/api/v1/ledger/stats/overview/": NOT_MODERATOR,
+    "/api/v1/ledger/stats/export/": NOT_MODERATOR,
     # ENFORCED (step 4): declares `soul.read`, held by all five roles.
-    "/api/v1/souls/": OPEN_TO_ALL,
+    "/api/v1/souls/": NOT_MODERATOR,
     # ENFORCED (tranche 2): declares `judgment.read`. Held by ADMIN, MODERATOR
     # and JUDGE. GUARDIAN and VIEWER hold no `judgment.*` codename at all — the
     # guardian's business is the soul's record, not the case against it. Was
@@ -172,7 +179,7 @@ READ_MATRIX = {
     # than left uncommented — after enforcement a 200 here is the codename
     # system granting, not the absence of a check, and those look identical
     # from the outside.
-    "/api/v1/reincarnation/": OPEN_TO_ALL,
+    "/api/v1/reincarnation/": NOT_MODERATOR,
     # ENFORCED (tranche 3): declares `dispatch.read`. Held by ADMIN, MODERATOR
     # and GUARDIAN; JUDGE and VIEWER hold no `dispatch.*` codename at all. Was
     # OPEN_TO_ALL — one of the four READ moves tranche 3 made that its
@@ -191,8 +198,8 @@ READ_MATRIX = {
     # realm.read / actor.read / tenant.read / event.read are four of the 71
     # codenames no role holds. They are open anyway, because nothing consults
     # them.
-    "/api/v1/realms/": OPEN_TO_ALL,
-    "/api/v1/actors/": OPEN_TO_ALL,
+    "/api/v1/realms/": NOT_MODERATOR,
+    "/api/v1/actors/": NOT_MODERATOR,
     # 200 for everyone, but NOT a cross-tenant leak: TenantViewSet.get_queryset
     # scopes non-ADMIN to their own tenant row.
     "/api/v1/tenants/": OPEN_TO_ALL,
@@ -232,7 +239,7 @@ READ_MATRIX = {
     # Information disclosure, not privilege escalation.
     "/api/v1/perm/roles/": OPEN_TO_ALL,
     # see the module docstring: audit measured 500, the FieldError is now fixed
-    "/api/v1/organizations/": OPEN_TO_ALL,
+    "/api/v1/organizations/": NOT_MODERATOR,
     # FIXED (C9): was IsAdminUser (Django is_staff), which refused ADMIN too.
     # Now IsAdminPermission (role == 'ADMIN'), same shape as every other
     # admin-only row in this table.
@@ -258,13 +265,13 @@ READ_MATRIX = {
 # 2026-10-29: GUARDIAN holds ledger.manage too — it writes merit / demerit records (user decision
 # item 19, souls migration 0053) — so recalculation moved to its own `ledger.calculate` (item 3,
 # perm/0030), which GUARDIAN does not get. The answer per role is the one before either change.
-LEDGER_CALCULATE = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+LEDGER_CALCULATE = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED. POST /souls/ declares `soul.create`.
 # Held by ADMIN and MODERATOR. JUDGE, GUARDIAN and VIEWER do not hold it —
 # a judge rules on souls that exist, a guardian maintains them, a viewer reads.
 # Was 201 for all five.
-SOUL_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+SOUL_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED. PATCH /souls/{id}/ declares `soul.update`.
 # Held by ADMIN, MODERATOR and GUARDIAN. GUARDIAN keeping this while losing
@@ -272,13 +279,13 @@ SOUL_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 403, "V
 # record is the guardian's job; ending its life is not.
 # JUDGE and VIEWER hold neither. Was 200 for all five — the audit measured a
 # VIEWER renaming a soul to 'RENAMED_BY_VIEWER' and the row keeping the name.
-SOUL_PATCH = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
+SOUL_PATCH = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
 
 # ENFORCED. POST /souls/{id}/die/ declares `soul.die` (via extra_permissions).
 # Held by ADMIN, MODERATOR and JUDGE. GUARDIAN and VIEWER do not hold it, so
 # the mirror of SOUL_PATCH: the guardian may edit but not kill, the judge may
 # kill but not edit. Was 200 for all five, moving ALIVE -> JUDGING for anyone.
-SOUL_DIE = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
+SOUL_DIE = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED. PUT /souls/{id}/ declares `soul.update` — the same codename as the
 # PATCH above, because ACTION_PERM_MAP sends both `update` and `partial_update`
@@ -288,7 +295,7 @@ SOUL_DIE = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEW
 # enforcement a per-app rollout can produce.
 # Held by ADMIN, MODERATOR and GUARDIAN; JUDGE and VIEWER hold neither. Was 200
 # for all five, and tranche 1 denied JUDGE and VIEWER here without a witness.
-SOUL_PUT = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
+SOUL_PUT = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
 
 # ENFORCED. POST /souls/{id}/add_record/ declares `soul.update` (via
 # extra_permissions), so the same three roles hold it: ADMIN, MODERATOR,
@@ -297,7 +304,7 @@ SOUL_PUT = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEW
 # second look and is policy as declared, not an oversight of this change: a
 # judge rules from the record and does not write it. Was 201 for all five —
 # tranche 1's second unwitnessed denial.
-SOUL_ADD_RECORD = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 201, "VIEWER": 403}
+SOUL_ADD_RECORD = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 201, "VIEWER": 403}
 
 # ENFORCED. POST /souls/{id}/transition/ declares `soul.transition` (via
 # extra_permissions). Held by ADMIN, MODERATOR, JUDGE and GUARDIAN — four of
@@ -318,7 +325,7 @@ SOUL_ADD_RECORD = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 201
 # apps/perm/test_matrix_snapshot.py,
 # test_guardian_denied_soul_die_now_stays_denied_through_transition, for the
 # characterization this closes.
-SOUL_TRANSITION = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
+SOUL_TRANSITION = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED. DELETE /souls/{id}/ declares `soul.delete`. ADMIN alone holds it.
 # MODERATOR's exclusion is deliberate and documented at the ROLE_PERMISSIONS
@@ -335,7 +342,7 @@ SOUL_DELETE = {"ADMIN": 204, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "V
 # JUDGMENT_READ above, read one. Was 201 for all five: the audit measured a
 # VIEWER filing a judgment against a soul, and `perform_create` then walks that
 # soul ALIVE -> JUDGING, so the 201 was also a state change on a second row.
-JUDGMENT_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 201, "GUARDIAN": 403, "VIEWER": 403}
+JUDGMENT_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 201, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED (tranche 2). POST /disposition/ maps to `disposition.execute`, not to
 # a `disposition.create` — that codename exists nowhere, and the viewset's
@@ -344,7 +351,7 @@ JUDGMENT_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 201, "GUARDIAN": 403
 # JUDGE and GUARDIAN hold `disposition.read` and stop there: a judge decides
 # where a soul goes and records that as a judgment; carrying it out is a
 # different power. VIEWER holds neither. Was 201 for all five.
-DISPOSITION_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+DISPOSITION_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED (tranche 2). POST /workflow/templates/ declares `workflow.create`,
 # DELETE /workflow/templates/{id}/ declares `workflow.delete`. Both are held by
@@ -356,8 +363,8 @@ DISPOSITION_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 
 # no `workflow.*` at all.
 # Was 201/204 for all five — the audit's headline, a read-only role designing
 # and then destroying the approval workflow that judges souls.
-WORKFLOW_TEMPLATE_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
-WORKFLOW_TEMPLATE_DELETE = {"ADMIN": 204, "MODERATOR": 204, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+WORKFLOW_TEMPLATE_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+WORKFLOW_TEMPLATE_DELETE = {"ADMIN": 204, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 POST_CREATE = dict.fromkeys(ROLES, 201)
 # ENFORCED (step 5). POST /menus/ declares `menu.manage` (via extra_permissions
 # on MenuViewSet). ADMIN alone holds `menu.manage` in ROLE_PERMISSIONS — every
@@ -1154,6 +1161,28 @@ def _workflow_with_two_nodes(tenant, soul):
     return workflow, first, second
 
 
+def _grant_designer_codenames(role_name="MODERATOR"):
+    """Give `role_name` workflow.read / update / escalate as RolePermission rows.
+
+    The two bypass tests below were written around MODERATOR holding workflow.update (it designed the
+    flows) while being refused approve / advance. Since 2026-11-07 MODERATOR holds neither (perm/0036);
+    the closures are still worth pinning for any role that designs flows, so the test grants the
+    designer's codenames itself. Holding workflow.update is also what makes approve / advance a server
+    refusal for that role (apps/perm/checker.py::WORKFLOW_DESIGN_CODENAMES).
+    """
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Permission, RolePermission
+    from tests.perm_support import seeded_role
+
+    role = seeded_role(role_name)
+    for codename in ("workflow.read", "workflow.update", "workflow.escalate"):
+        permission, _ = Permission.objects.get_or_create(
+            codename=codename, defaults={"name": codename, "category": "workflow"}
+        )
+        RolePermission.objects.get_or_create(role=role, permission=permission)
+    invalidate_all_permissions()
+
+
 @pytest.mark.django_db
 def test_guardian_denied_soul_die_now_stays_denied_through_transition(
     role_clients, snapshot_tenant
@@ -1222,6 +1251,7 @@ def test_moderator_denied_workflow_approve_now_stays_denied_through_patch_nodes(
 
     soul = _soul(snapshot_tenant, "bypass-approve-vs-patch")
     workflow, first, _second = _workflow_with_two_nodes(snapshot_tenant, soul)
+    _grant_designer_codenames()
     moderator = role_clients["MODERATOR"]
 
     denied = moderator.post(
@@ -1272,6 +1302,7 @@ def test_moderator_denied_workflow_advance_now_stays_denied_through_patch_workfl
 
     soul = _soul(snapshot_tenant, "bypass-advance-vs-patch")
     workflow, first, second = _workflow_with_two_nodes(snapshot_tenant, soul)
+    _grant_designer_codenames()
     moderator = role_clients["MODERATOR"]
 
     denied = moderator.post(f"/api/v1/workflows/{workflow.id}/advance/", {}, format="json")
@@ -1405,7 +1436,10 @@ def test_moderators_three_forbidden_codenames_stay_denied_with_the_rows_in_the_t
     from apps.perm.models import Permission, Role, RolePermission
 
     moderator_role, _ = Role.objects.get_or_create(name="MODERATOR", defaults={"display_name": "殿主"})
-    for codename in ("workflow.approve", "workflow.advance", "user.manage"):
+    # workflow.update: since 2026-11-07 MODERATOR designs no flows by default (perm/0036), and approve /
+    # advance are refused by capability (a role holding workflow.create / update), not by name — so the
+    # row that makes this role a designer is part of what a hand edit would leave behind.
+    for codename in ("workflow.update", "workflow.approve", "workflow.advance", "user.manage"):
         permission, _ = Permission.objects.get_or_create(
             codename=codename, defaults={"name": codename, "category": codename.split(".")[0]}
         )

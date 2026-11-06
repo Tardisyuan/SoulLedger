@@ -63,3 +63,39 @@ def seeded_menus():
         for op in loader.disk_migrations[(app, name)].operations:
             if isinstance(op, m.RunPython) and op.code is not None:
                 op.code(django_apps, SCHEMA_EDITOR)
+
+
+#: The codenames MODERATOR held as 殿主 before 2026-11-07, when it became 朋友圈巡察 and kept only
+#: social.moderate (perm/0035, perm/0036). For tests that need a *non-ADMIN* officer holding a hall
+#: lead's codenames — data scopes and per-role rules, which ADMIN skips — not for tests about what
+#: MODERATOR holds today.
+FORMER_HALL_LEAD_CODES = (
+    "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.escalate", "workflow.export",
+    "soul.read", "soul.create", "soul.update", "soul.die", "soul.transition", "soul.export",
+    "judgment.read", "judgment.create", "judgment.execute", "judgment.assign", "judgment.export",
+    "city_god.read", "city_god.manage", "city_god.execute",
+    "tudi.read", "tudi.manage", "tudi.register",
+    "wangsi.read", "wangsi.manage", "wangsi.execute",
+    "capture.read", "capture.issue", "capture.execute",
+    "disposition.read", "disposition.execute", "disposition.export",
+    "reincarnation.read", "reincarnation.manage", "reincarnation.reborn",
+    "ledger.read", "ledger.manage", "ledger.calculate", "ledger.export",
+    "dispatch.read", "dispatch.manage", "dispatch.approve", "dispatch.reject", "dispatch.execute",
+    "dispatch.return", "dispatch.export", "sentence_plan.cancel",
+    "cross_judgment.read", "cross_judgment.create", "cross_judgment.export",
+    "realms.read", "actors.read", "dashboard.read",
+    "org.read", "org.manage",
+    "audit.read", "audit.export", "notification.read", "menu.read",
+    "soul_account.read", "soul_account.manage",
+    "soul_inbox.read", "soul_inbox.reply",
+    "social.moderate",
+)
+
+
+def grant_former_hall_lead_codes(role_name="MODERATOR"):
+    """`seeded_grants()`, then the former hall lead's codenames on `role_name` as RolePermission rows."""
+    seeded_grants()
+    role = seeded_role(role_name)
+    for codename in FORMER_HALL_LEAD_CODES:
+        RolePermission.objects.get_or_create(role=role, permission=seeded_permission(codename))
+    invalidate_all_permissions()

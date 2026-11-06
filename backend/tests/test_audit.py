@@ -657,9 +657,11 @@ class TestAuditApiEndpoint:
         including `/timeline/`, the permission-change timeline. Having a
         tenant is what tenant scoping is for; it is not an authorisation.
 
-        `audit.read` is granted to ADMIN and MODERATOR. Both sides are checked
-        here: asserting only the refusal would pass against a viewset that
-        refuses everyone.
+        `audit.read` is granted to ADMIN (and was to MODERATOR until 2026-11-07,
+        perm/0036). Both sides are checked here: asserting only the refusal
+        would pass against a viewset that refuses everyone — so the positive
+        side is a non-ADMIN role given `audit.read` as a row, which goes through
+        the codename check rather than ADMIN's short-circuit.
         """
         from django.contrib.auth import get_user_model
         from django.test import RequestFactory
@@ -687,8 +689,17 @@ class TestAuditApiEndpoint:
             "authorisation"
         )
         assert _status("VIEWER") == 403
-        assert _status("MODERATOR") == 200, (
-            "MODERATOR holds `audit.read` and must still get in -- a viewset "
+        assert _status("MODERATOR") == 403, "MODERATOR only moderates the circle since 2026-11-07"
+        from apps.perm.cache import invalidate_all_permissions
+        from apps.perm.models import Permission, Role, RolePermission
+
+        reader = Role.objects.get_or_create(name="AUDIT_READER", defaults={"display_name": "审计员"})[0]
+        audit_read = Permission.objects.get_or_create(
+            codename="audit.read", defaults={"name": "查看审计日志", "category": "audit"})[0]
+        RolePermission.objects.get_or_create(role=reader, permission=audit_read)
+        invalidate_all_permissions()
+        assert _status("AUDIT_READER") == 200, (
+            "a role holding `audit.read` must still get in -- a viewset "
             "that refuses everyone would satisfy the assertions above"
         )
 

@@ -34,7 +34,7 @@ def _write(client, body="阎王在上"):
     return opened.data["id"]
 
 
-def _officer(tenant, username, role="MODERATOR"):
+def _officer(tenant, username, role="ADMIN"):
     return User.objects.create_user(username=username, password="x", role=role, tenant=tenant)
 
 

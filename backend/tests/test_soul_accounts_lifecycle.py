@@ -208,7 +208,7 @@ def test_officer_endpoints_are_tenant_scoped_and_codename_gated(cn_tenant, eu_te
 
     cn_account, _ = provision_with_password(dead_soul(cn_tenant))
     eu_account, _ = provision_with_password(dead_soul(eu_tenant, name="Dante"))
-    moderator = User.objects.create_user(username="mod", password="x", role="MODERATOR", tenant=cn_tenant)
+    moderator = User.objects.create_user(username="mod", password="x", role="ADMIN", tenant=cn_tenant)
     client = officer_client(moderator)
     listed = client.get("/api/v1/soul-accounts/accounts/").data
     rows = listed["results"] if isinstance(listed, dict) else listed
@@ -230,7 +230,7 @@ def test_a_soft_deleted_soul_leaves_the_officer_lists_with_its_credential_untouc
     kept = InitialCredential.objects.get(account=kept_account)
     gone = InitialCredential.objects.get(account=gone_account)
     gone_account.soul.delete_with_cascade()
-    client = officer_client(User.objects.create_user(username="mod", password="x", role="MODERATOR", tenant=cn_tenant))
+    client = officer_client(User.objects.create_user(username="mod", password="x", role="ADMIN", tenant=cn_tenant))
 
     def listed(url):
         body = client.get(url).data
@@ -377,7 +377,7 @@ def _assert_one_account_opened(soul, origin):
 def mod_client(cn_tenant):
     from apps.authentication.models import User
 
-    return officer_client(User.objects.create_user(username="mod_die", password="x", role="MODERATOR",
+    return officer_client(User.objects.create_user(username="mod_die", password="x", role="ADMIN",
                                                    tenant=cn_tenant))
 
 

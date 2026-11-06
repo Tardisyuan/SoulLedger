@@ -27,7 +27,7 @@ def _write_to_hall(client, body="阎王在上"):
 
 
 def _moderator(tenant, username):
-    return User.objects.create_user(username=username, password="x", role="MODERATOR", tenant=tenant)
+    return User.objects.create_user(username=username, password="x", role="ADMIN", tenant=tenant)
 
 
 def test_a_soul_writes_to_the_hall_it_is_in_now(cn_tenant, eu_tenant, matrix):  # noqa: F811

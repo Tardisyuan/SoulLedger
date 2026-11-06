@@ -179,13 +179,13 @@ def test_todo_counts_dispatch_proposals_for_the_target_hall(cn_tenant, eu_tenant
     soul = dead_soul(eu_tenant, name="待调拨")
     record = DispatchRecord.objects.create(source_tenant=eu_tenant, target_tenant=cn_tenant, soul=soul,
                                            status=DispatchStatus.PROPOSED, tenant=eu_tenant)
-    # dispatch.approve belongs to the hall lead (MODERATOR), not to a judge.
-    cn_lead = User.objects.create_user(username="cn_lead", password="x", role="MODERATOR", tenant=cn_tenant)
+    # dispatch.approve belongs to the hall ADMIN (MODERATOR until 2026-11-07), not to a judge.
+    cn_lead = User.objects.create_user(username="cn_lead", password="x", role="ADMIN", tenant=cn_tenant)
     data = officer_client(cn_lead).get(TODO).data
     assert [i["id"] for i in data["reassignments"]["items"]] == [str(record.pk)]
     assert officer_client(judge_user).get(TODO).data["reassignments"]["count"] == 0
     # The source hall's lead is not the one asked.
-    eu_lead = User.objects.create_user(username="eu_lead", password="x", role="MODERATOR", tenant=eu_tenant)
+    eu_lead = User.objects.create_user(username="eu_lead", password="x", role="ADMIN", tenant=eu_tenant)
     assert officer_client(eu_lead).get(TODO).data["reassignments"]["count"] == 0
 
 
@@ -232,7 +232,7 @@ def test_item_detail_asks_the_same_codename_as_the_desk(cn_tenant, eu_tenant, ju
                                            soul=dead_soul(eu_tenant, name="待调拨"), reason="私下的理由",
                                            status=DispatchStatus.PROPOSED, tenant=eu_tenant)
     viewer = User.objects.create_user(username="m2_viewer", password="x", role="VIEWER", tenant=cn_tenant)
-    lead = User.objects.create_user(username="m2_lead", password="x", role="MODERATOR", tenant=cn_tenant)
+    lead = User.objects.create_user(username="m2_lead", password="x", role="ADMIN", tenant=cn_tenant)
     approval = f"/api/v1/officer-app/items/approval/{wf.pk}/"
     reassignment = f"/api/v1/officer-app/items/reassignment/{record.pk}/"
 

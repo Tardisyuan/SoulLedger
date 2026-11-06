@@ -221,7 +221,7 @@ def test_amend_compensates_an_executed_stop_and_replaces_the_pending_ones(cn_ten
     soul, plan = sp.planned(cn_tenant, [(away, sp.stop_realm(away), 5)], verdict=Verdict.FAILED)
     sp.serve(soul, plan, 1)
     record = DispatchRecord.all_objects.get(pk=sp.node(plan, 2).dispatch_record_id)
-    DispatchService.reject(record, sp.officer("eg", "MODERATOR", away), "不收")
+    DispatchService.reject(record, sp.officer("eg", "ADMIN", away), "不收")
     assert sp.node(plan, 2).status == "PENDING"
     account, _ = svc.provision_account(soul, AccountOrigin.OFFICER)
     account.must_change_password = False

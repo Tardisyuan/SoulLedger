@@ -1,7 +1,8 @@
 """`GET /judgment/assignable-officers/` —— 改派弹层的名单(apps/judgment/claims.py)。
 
-改派属于持 `judgment.assign` 的 ADMIN 与殿主(MODERATOR),而弹层此前读 `/users/`,
-那要 ADMIN 的 `user.manage` —— 殿主一打开就是 403。这个端点只给改派要的那四样。
+改派属于持 `judgment.assign` 的人(默认只有 ADMIN;MODERATOR 2026-11-07 起只管朋友圈审核,不在其列),
+而弹层此前读 `/users/`,那要 `user.manage` —— 持 assign 而不持它的人一打开就是 403。这个端点只给改派要的那四样。
+夹具里的 `mod` 是殿管理员(绑殿的 ADMIN,见 test_judgment_claim.py 的 `world`)。
 
 名单与改派用同一个 `claims.is_assignable`:`TestSameRuleAsReassign` 对夹具里的每一个人
 真的发一次改派,断言「改派收下的人」与「名单里的人」是同一个集合。
@@ -41,10 +42,15 @@ def crowd(world):  # noqa: F811
 
 @pytest.mark.django_db
 class TestAssignableOfficers:
-    def test_a_moderator_gets_the_tenants_officers_who_can_work_judgments(self, crowd):
+    def test_a_hall_admin_gets_the_tenants_officers_who_can_work_judgments(self, crowd):
         case = _case(crowd.cn)
         u = crowd.users
-        assert _ids(_officers(crowd.clients["mod"], case)) == {u["a"].pk, u["b"].pk, u["mod"].pk}
+        circle = User.objects.create_user(username="assign_circle_mod", password="x", role="MODERATOR",
+                                          tenant=crowd.cn)
+        listed = _ids(_officers(crowd.clients["mod"], case))
+        assert listed == {u["a"].pk, u["b"].pk, u["mod"].pk}
+        assert circle.pk not in listed  # 朋友圈巡察不办案,不在改派名单里
+        assert _officers(_client(circle), case).status_code == 403  # 也打不开名单
 
     def test_each_row_carries_exactly_five_fields(self, crowd):
         crowd.users["a"].display_name = "秦广王"

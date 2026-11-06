@@ -349,15 +349,17 @@ def test_0029_names_the_page_codename_on_the_seeded_rows():
     assert got["/welcome"] == ""  # 故意不写,见 0029 文件头
 
 
-def test_a_moderator_sees_the_core_pages_and_not_the_admin_ones(cn_tenant):
+def test_a_moderator_sees_the_dashboard_and_the_circle_review_and_nothing_of_the_hall(cn_tenant):
+    """2026-11-07(用户决定):朋友圈巡察只管朋友圈审核。此前它是殿主,这条断言的是它看得见十个殿务页面。"""
     from tests.perm_support import seeded_grants
 
     seeded_grants()
     _wipe()
     seeded_menus()
     seen = _seen_by("MODERATOR", cn_tenant, "/api/v1/menus/list-public/")
-    assert {"仪表盘", "灵魂管理", "审判队列", "跨域审判", "功德管理", "审批流程", "调度管理",
-            "领域管理", "神祇名录", "审计日志"} <= seen, seen
+    assert {"仪表盘", "朋友圈审核"} <= seen, seen
+    assert seen.isdisjoint({"灵魂管理", "审判队列", "跨域审判", "功德管理", "审批流程", "调度管理",
+                            "领域管理", "神祇名录", "审计日志", "语料条文"}), seen
     assert seen.isdisjoint({"用户管理", "权限与角色", "菜单管理"}), seen
 
 

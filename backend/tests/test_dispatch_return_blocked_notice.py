@@ -42,10 +42,10 @@ def world():
     DispatchService.execute(record, "executor")
     soul.refresh_from_db()
     people = {
-        "home_mod": _user("home_mod", "MODERATOR", home),
+        "home_mod": _user("home_mod", "ADMIN", home),
         "home_guardian": _user("home_guardian", "GUARDIAN", home),
         "home_admin": _user("home_admin", "ADMIN", home),
-        "away_mod": _user("away_mod", "MODERATOR", away),
+        "away_mod": _user("away_mod", "ADMIN", away),
         "away_guardian": _user("away_guardian", "GUARDIAN", away),
         "away_judge": _user("away_judge", "JUDGE", away),
         # 不该收的:
@@ -53,8 +53,8 @@ def world():
         "third_judge": _user("third_judge", "JUDGE", third),
         "away_retired_judge": _user("away_retired_judge", "JUDGE", away, is_active=False),
         "away_viewer": _user("away_viewer", "VIEWER", away),
-        "away_retired_mod": _user("away_retired_mod", "MODERATOR", away, is_active=False),
-        "third_mod": _user("third_mod", "MODERATOR", third),
+        "away_retired_mod": _user("away_retired_mod", "ADMIN", away, is_active=False),
+        "third_mod": _user("third_mod", "ADMIN", third),
         "third_admin": _user("third_admin", "ADMIN", third),
         "soul_user": _user("soul_user", "SOUL", home),
     }

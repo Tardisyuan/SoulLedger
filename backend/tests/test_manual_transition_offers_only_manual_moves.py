@@ -17,7 +17,7 @@ BUSINESS_EDGES = [
 ]
 
 
-@pytest.mark.parametrize("role", ["ADMIN", "MODERATOR", "JUDGE"])
+@pytest.mark.parametrize("role", ["ADMIN", "JUDGE"])  # MODERATOR 2026-11-07 起不持 soul.transition(403 在前)
 @pytest.mark.parametrize(("start", "target"), BUSINESS_EDGES)
 def test_business_edges_are_refused_by_hand(cn_tenant, role, start, target):
     user = User.objects.create_user(username=f"t_{role}", password="x", role=role, tenant=cn_tenant)

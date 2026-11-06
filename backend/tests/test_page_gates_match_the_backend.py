@@ -189,7 +189,7 @@ def test_the_audit_page_gates_on_the_codename_not_the_role():
         if not line.lstrip().startswith("//") and not line.lstrip().startswith("*")
     )
     assert 'hasPermission("audit.read")' in code, (
-        "审计页不再按 audit.read 判断 —— 若换回 isAdmin,持有该权限的 MODERATOR "
+        "审计页不再按 audit.read 判断 —— 若换回 isAdmin,持有该权限的非 ADMIN 角色 "
         "会被界面挡在外面,而后端会放行"
     )
     assert not re.search(r"^\s*(const \{ isAdmin \}|.*!isAdmin)", code, re.M), (

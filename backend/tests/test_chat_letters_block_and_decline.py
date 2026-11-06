@@ -228,7 +228,7 @@ def test_the_hall_a_soul_has_left_cannot_write_into_its_old_letter(cn_tenant, eu
     account, client = ready_soul(cn_tenant, name="甲")
     opened = client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
     assert _send(client, opened["id"], "我想申诉").status_code == 201
-    officer = officer_client(User.objects.create_user(username="cn_mod", password="x", role="MODERATOR",
+    officer = officer_client(User.objects.create_user(username="cn_mod", password="x", role="ADMIN",
                                                       tenant=cn_tenant))
     assert officer.get(f"{INBOX}{opened['id']}/").data["can_reply"] is True
     assert officer.get(f"{INBOX}folders/").data["awaiting_reply"] == 1
@@ -273,6 +273,6 @@ def test_a_mute_is_pushed_to_the_soul_with_its_reason(cn_tenant, matrix, django_
 
 
 def test_muting_an_officer_pushes_nothing(cn_tenant, matrix):  # noqa: F811
-    officer = User.objects.create_user(username="cn_mod", password="x", role="MODERATOR", tenant=cn_tenant)
+    officer = User.objects.create_user(username="cn_mod", password="x", role="ADMIN", tenant=cn_tenant)
     moderation.mute_user(officer, cn_tenant, 3, actor=None, reason="x")
     assert not PushDelivery.objects.exists()

@@ -32,7 +32,7 @@ def cn():
 
 
 def _moderator(tenant, name="serve_mod"):
-    return sp.officer(name, "MODERATOR", tenant)
+    return sp.officer(name, "ADMIN", tenant)
 
 
 def _termed(cn, years=3):

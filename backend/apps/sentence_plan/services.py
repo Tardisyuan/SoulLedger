@@ -33,7 +33,7 @@ from apps.souls.models import Soul
 
 logger = logging.getLogger(__name__)
 
-#: 「判官」= 持有这个码名的在职用户(ADMIN / JUDGE / MODERATOR),设计稿 §5.1。
+#: 「判官」= 持有这个码名的在职用户(默认 ADMIN / JUDGE;MODERATOR 2026-11-07 起不持有),设计稿 §5.1。
 JUDGE_PERMISSION = "judgment.execute"
 #: 系统想调往下一站而调拨没能发起(`_dispatch` 里 `propose` 拒绝):记在 `SENTENCE_NODE_REFUSED` 的 `dispatch_status`。
 NOT_STARTED = "NOT_STARTED"

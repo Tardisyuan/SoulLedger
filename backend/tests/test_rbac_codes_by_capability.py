@@ -207,7 +207,7 @@ def test_city_gods_need_city_god_read_not_judgment_read(world):
 def test_recalculation_is_ledger_calculate_which_guardian_does_not_hold(world):
     soul = Soul.objects.create(name="账上人", tenant=world.hall)
     guardian = _user(world, "cap_g", "GUARDIAN")
-    lead = _user(world, "cap_m", "MODERATOR")
+    lead = _user(world, "cap_m", "ADMIN")  # the hall's ADMIN; MODERATOR left ledger.* on 2026-11-07 (perm/0036)
     assert check_permission(guardian, "ledger.manage") is True
     assert _client(guardian).post(f"/api/v1/ledger/calculate/{soul.pk}/").status_code == 403
     assert _client(lead).post(f"/api/v1/ledger/calculate/{soul.pk}/").status_code == 200
@@ -246,10 +246,12 @@ def test_ws_and_report_lists_carry_the_new_codenames(world):
 def test_can_end_goes_by_workflow_update_in_the_initiating_hall(world):
     _role("FLOW_KEEPER", "workflow.update")
     judgment = SimpleNamespace(create_user_id=None, initiating_tenant_id=world.hall.pk)
-    assert CrossTenantJudgmentService.can_end(judgment, _user(world, "ce_m", "MODERATOR"), world.hall)
+    # The hall's ADMIN holds workflow.update; MODERATOR no longer does (2026-11-07, perm/0036).
+    assert CrossTenantJudgmentService.can_end(judgment, _user(world, "ce_m", "ADMIN"), world.hall)
+    assert not CrossTenantJudgmentService.can_end(judgment, _user(world, "ce_mod", "MODERATOR"), world.hall)
     assert CrossTenantJudgmentService.can_end(judgment, _user(world, "ce_k", "FLOW_KEEPER"), world.hall)
     assert not CrossTenantJudgmentService.can_end(judgment, _user(world, "ce_j", "JUDGE"), world.hall)
-    far = _user(world, "ce_far", "MODERATOR", tenant=world.other)
+    far = _user(world, "ce_far", "ADMIN", tenant=world.other)
     assert not CrossTenantJudgmentService.can_end(judgment, far, world.other)
     assert CrossTenantJudgmentService.can_end(judgment, world.admin, None)
 
@@ -258,16 +260,19 @@ def test_can_end_goes_by_workflow_update_in_the_initiating_hall(world):
 
 
 def test_creating_a_catalogue_row_keeps_its_default_holders(world):
-    Permission.all_objects.filter(codename="dispatch.return").delete()
+    # judgment.execute rather than dispatch.return (2026-11-07): the latter's only non-ADMIN holder was
+    # MODERATOR, which perm/0036 took it from; judgment.execute keeps one (JUDGE) and one non-holder.
+    Permission.all_objects.filter(codename="judgment.execute").delete()
     invalidate_all_permissions()
-    assert check_permission(RoleHolder("MODERATOR"), "dispatch.return") is True  # dict answer
+    assert check_permission(RoleHolder("JUDGE"), "judgment.execute") is True  # dict answer
     response = world.client.post("/api/v1/perm/permissions/create/",
-                                 {"codename": "dispatch.return", "name": "结束暂居", "category": "dispatch"},
+                                 {"codename": "judgment.execute", "name": "执行审判", "category": "judgment"},
                                  format="json")
     assert response.status_code == 201, response.content
     invalidate_all_permissions()
-    assert check_permission(RoleHolder("MODERATOR"), "dispatch.return") is True
-    assert check_permission(RoleHolder("JUDGE"), "dispatch.return") is False
+    assert check_permission(RoleHolder("JUDGE"), "judgment.execute") is True
+    assert check_permission(RoleHolder("GUARDIAN"), "judgment.execute") is False
+    assert check_permission(RoleHolder("MODERATOR"), "judgment.execute") is False
 
 
 def test_catalogue_rows_cannot_be_deleted_or_renamed_and_renames_cannot_collide(world):

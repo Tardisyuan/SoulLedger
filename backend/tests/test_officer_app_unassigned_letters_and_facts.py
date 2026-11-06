@@ -25,11 +25,11 @@ def _letter(tenant, name, assignee=None, last_from="soul", **fields):
 
 @pytest.fixture
 def me(cn_tenant):
-    return User.objects.create_user(username="cui", password="x", role="MODERATOR", tenant=cn_tenant)
+    return User.objects.create_user(username="cui", password="x", role="ADMIN", tenant=cn_tenant)
 
 
 def test_unassigned_group_lists_only_open_unanswered_unassigned_letters(cn_tenant, eu_tenant, me):
-    other = User.objects.create_user(username="zhong", password="x", role="MODERATOR", tenant=cn_tenant)
+    other = User.objects.create_user(username="zhong", password="x", role="ADMIN", tenant=cn_tenant)
     free = _letter(cn_tenant, "甲")
     _letter(cn_tenant, "乙", assignee=other)
     _letter(cn_tenant, "丙", assignee=me)

@@ -25,7 +25,7 @@ TOKENS = {
 
 
 def _officer(tenant, username):
-    user = User.objects.create_user(username=username, password="x", role="MODERATOR", tenant=tenant)
+    user = User.objects.create_user(username=username, password="x", role="ADMIN", tenant=tenant)
     push.register_device(user, TOKENS[username], "IOS")
     return user
 

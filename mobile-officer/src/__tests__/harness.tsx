@@ -50,8 +50,9 @@ export function renderOfficer(ui: ReactElement, { user = OFFICER, session }: { u
   );
 }
 
-/** A hall lead (殿主): the receiving hall's dispatch.approve / dispatch.reject as well. */
-export const DISPATCHER: LoginUser = { ...OFFICER, role: "MODERATOR", permissions: [...OFFICER.permissions, "dispatch.approve", "dispatch.reject"] };
+/** The hall's ADMIN: the receiving hall's dispatch.approve / dispatch.reject as well. (A MODERATOR until 2026-11-07,
+ *  when MODERATOR became the circle moderator and lost dispatch.*.) */
+export const DISPATCHER: LoginUser = { ...OFFICER, role: "ADMIN", permissions: [...OFFICER.permissions, "dispatch.approve", "dispatch.reject"] };
 
 /** An axios-shaped failure. */
 export const httpError = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });

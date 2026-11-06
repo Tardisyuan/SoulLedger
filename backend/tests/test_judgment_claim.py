@@ -65,11 +65,13 @@ def world(db, cn_tenant, eu_tenant):
     users = {
         "a": user("claim_judge_a", "JUDGE", cn_tenant),
         "b": user("claim_judge_b", "JUDGE", cn_tenant),
-        "mod": user("claim_moderator", "MODERATOR", cn_tenant),
+        # 殿管理员(绑殿的 ADMIN):释放 / 改派 / 越过认领结案。2026-11-07 之前这一格是 MODERATOR(殿主),
+        # 它改为只管朋友圈审核后不再持有 judgment.*(perm/0035、perm/0036)。键名 `mod` 沿用。
+        "mod": user("claim_moderator", "ADMIN", cn_tenant),
         "guardian": user("claim_guardian", "GUARDIAN", cn_tenant),
         "viewer": user("claim_viewer", "VIEWER", cn_tenant),
         "eu_judge": user("claim_eu_judge", "JUDGE", eu_tenant),
-        "eu_mod": user("claim_eu_moderator", "MODERATOR", eu_tenant),
+        "eu_mod": user("claim_eu_moderator", "ADMIN", eu_tenant),
     }
 
     class World:
@@ -218,7 +220,7 @@ class TestRelease:
         assert response.data["code"] == "not_claimant"
         assert _fresh(case).claimed_by_id == world.users["a"].pk
 
-    def test_a_moderator_can_release_someone_elses_claim(self, world):
+    def test_a_hall_admin_can_release_someone_elses_claim(self, world):
         case = _case(world.cn)
         _post(world.clients["a"], case, "claim")
         assert _post(world.clients["mod"], case, "release").status_code == 200
@@ -230,7 +232,7 @@ class TestRelease:
         assert response.status_code == 409
         assert response.data["code"] == "not_claimed"
 
-    def test_another_tenants_moderator_gets_404(self, world):
+    def test_another_tenants_hall_admin_gets_404(self, world):
         case = _case(world.cn)
         _post(world.clients["a"], case, "claim")
         assert _post(world.clients["eu_mod"], case, "release").status_code == 404
@@ -244,7 +246,7 @@ class TestRelease:
 
 @pytest.mark.django_db
 class TestReassign:
-    def test_a_moderator_reassigns_to_another_judge_in_the_tenant(self, world):
+    def test_a_hall_admin_reassigns_to_another_judge_in_the_tenant(self, world):
         case = _case(world.cn)
         _post(world.clients["a"], case, "claim")
         response = _post(world.clients["mod"], case, "reassign", {"to": world.users["b"].pk})
@@ -274,7 +276,7 @@ class TestReassign:
         assert response.data["code"] == "invalid_assignee"
         assert _fresh(case).claimed_by_id is None
 
-    def test_another_tenants_moderator_gets_404(self, world):
+    def test_another_tenants_hall_admin_gets_404(self, world):
         case = _case(world.cn)
         response = _post(world.clients["eu_mod"], case, "reassign", {"to": world.users["b"].pk})
         assert response.status_code == 404
@@ -395,7 +397,7 @@ def test_a_concluded_case_keeps_its_claimant_and_can_no_longer_be_released(world
 
 
 # ---------------------------------------------------------------------------
-# Conclude: only the claimant, ADMIN or 殿主 may conclude a claimed case
+# Conclude: only the claimant or a holder of judgment.assign (by default ADMIN) may conclude a claimed case
 # ---------------------------------------------------------------------------
 
 
@@ -451,12 +453,16 @@ class TestConcludeRespectsTheClaim:
         assert response.status_code == 200, response.data
         assert _fresh(case).is_final is True
 
-    def test_moderator_concludes_someone_elses_case(self, world):
-        case = _case(world.cn)
-        _post(world.clients["a"], case, "claim")
-        response = _conclude(world.clients["mod"], case)
-        assert response.status_code == 200, response.data
-        assert _fresh(case).is_final is True
+    def test_the_circle_moderator_cannot_conclude_any_case(self, world):
+        """2026-11-07(用户决定):朋友圈巡察只管朋友圈审核 —— 不结案,别人认领的、没人认领的都不行。
+        (这一格此前是「殿主越过认领结案」;殿管理员那一半由上面的 ADMIN 那条测。)"""
+        moderator = User.objects.create_user(username="claim_circle_mod", password="x", role="MODERATOR",
+                                             tenant=world.cn)
+        claimed, unclaimed = _case(world.cn), _case(world.cn)
+        _post(world.clients["a"], claimed, "claim")
+        for case in (claimed, unclaimed):
+            assert _conclude(_client(moderator), case).status_code == 403
+            assert _fresh(case).is_final is False
 
     def test_an_unclaimed_case_is_concluded_by_any_judge(self, world):
         case = _case(world.cn)
@@ -464,7 +470,7 @@ class TestConcludeRespectsTheClaim:
         assert response.status_code == 200, response.data
         assert _fresh(case).is_final is True
 
-    def test_another_tenants_moderator_gets_404_and_nothing_is_written(self, world):
+    def test_another_tenants_hall_admin_gets_404_and_nothing_is_written(self, world):
         case = _case(world.cn)
         _post(world.clients["a"], case, "claim")
         assert _conclude(world.clients["eu_mod"], case).status_code == 404

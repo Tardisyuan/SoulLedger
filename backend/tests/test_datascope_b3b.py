@@ -26,7 +26,11 @@ def units(cn_tenant):
 
 @pytest.fixture
 def lead(cn_tenant, units):
-    """殿主(MODERATOR 持转世 / 发起流程 / 发牒的码),在「本司」,范围 = 本机构。"""
+    """殿主(持转世 / 发起流程 / 发牒的码),在「本司」,范围 = 本机构。ADMIN 跳过数据范围,所以用非 ADMIN 的
+    MODERATOR,码由测试写进库 —— 2026-11-07 起 MODERATOR 默认只管朋友圈审核(perm/0036)。"""
+    from tests.perm_support import grant_former_hall_lead_codes
+
+    grant_former_hall_lead_codes()
     user = sp.officer("ds_lead", "MODERATOR", cn_tenant, organization=units[0])
     scope("MODERATOR", "ORG")
     return user

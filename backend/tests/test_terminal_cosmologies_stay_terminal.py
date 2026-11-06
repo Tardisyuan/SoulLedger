@@ -104,7 +104,7 @@ def test_the_api_refuses_it_too_and_says_so(civilization, db):
     soul, tenant = _soul_in(civilization, db)
     user = User.objects.create_user(
         username=f"tc_{civilization.lower()}", password="x",
-        role="MODERATOR", tenant=tenant,
+        role="ADMIN", tenant=tenant,
     )
     client = _jwt_client(user, tenant)
 

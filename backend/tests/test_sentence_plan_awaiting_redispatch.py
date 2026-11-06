@@ -27,7 +27,7 @@ def eg():
 
 def _refuse(soul, p, eg, who="eg_rej"):
     record = DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id)
-    DispatchService.reject(record, plan.officer(who, "MODERATOR", eg), "不收")
+    DispatchService.reject(record, plan.officer(who, "ADMIN", eg), "不收")
     assert plan.node(p, 2).status == "PENDING"
 
 

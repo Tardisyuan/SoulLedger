@@ -292,7 +292,7 @@ describe("suggested questions, role × page (1a)", () => {
   });
 
   it("GUARDIAN has no hall-inbox questions; ADMIN alone has scheduler ones", () => {
-    const inbox = ["ADMIN", "MODERATOR", "JUDGE"].flatMap((r) => officerAssistSuggestions(r, "soul-inbox", "zh-Hans"));
+    const inbox = ["ADMIN", "JUDGE"].flatMap((r) => officerAssistSuggestions(r, "soul-inbox", "zh-Hans"));
     const guardian = officerAssistSuggestions("GUARDIAN", "soul-inbox", "zh-Hans");
     expect(guardian).toEqual(officerAssistSuggestions("GUARDIAN", "users", "zh-Hans"));
     for (const q of inbox) expect(guardian).not.toContain(q);
@@ -300,9 +300,12 @@ describe("suggested questions, role × page (1a)", () => {
     expect(officerAssistSuggestions("JUDGE", "scheduler", "zh-Hans")).not.toContain("哪些任务连续失败？");
   });
 
-  it("MODERATOR asks why approving is closed and about escalating; JUDGE does not ask to escalate", () => {
-    expect(officerAssistSuggestions("MODERATOR", "workflow", "zh-Hans")).toEqual(["为什么我点不了审批？", "卡住的流程我能越级推进吗？"]);
-    expect(officerAssistSuggestions("JUDGE", "workflow", "zh-Hans")).not.toContain("卡住的流程我能越级推进吗？");
+  it("MODERATOR (the circle moderator) asks about the circle on every page; JUDGE does not ask to escalate", () => {
+    for (const s of OFFICER_SCREENS) {
+      expect(officerAssistSuggestions("MODERATOR", s, "zh-Hans")).toEqual(["被举报的帖子怎么处理？", "为什么我看不到审判和流程？"]);
+    }
+    expect(officerAssistSuggestions("MODERATOR", "workflow", "en")).not.toContain("Can I escalate a stuck workflow?");
+    expect(officerAssistSuggestions("JUDGE", "workflow", "zh-Hans")).not.toContain("越级推进会留下什么记录？");
   });
 
   it("zh UI asks in Chinese; en and egy ask in English, the server's answer language", () => {
@@ -312,7 +315,7 @@ describe("suggested questions, role × page (1a)", () => {
   });
 
   it("the empty panel shows the signed-in role's pair for this page, and a suggestion is sent verbatim", async () => {
-    mockTenant.user.role = "MODERATOR";
+    mockTenant.user.role = "ADMIN";
     mockPath = "/workflow/12";
     scripts.push(reply("这一步的审批角色是阎罗王。"));
     renderLayout();
@@ -320,9 +323,9 @@ describe("suggested questions, role × page (1a)", () => {
     const panel = await screen.findByRole("complementary", { name: "问一问" });
     expect(within(panel).getByText("关于审批流程，常被问到的：")).toBeInTheDocument();
     expect(within(panel).queryByText("待我审批的有几件？")).not.toBeInTheDocument();
-    fireEvent.click(within(panel).getByRole("button", { name: /为什么我点不了审批？/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /卡住最久的流程停在哪一步？/ }));
     await waitFor(() => expect(asks).toHaveLength(1));
-    expect(asks[0].body).toEqual({ question: "为什么我点不了审批？", screen: "workflow", new: true, stream: true });
+    expect(asks[0].body).toEqual({ question: "卡住最久的流程停在哪一步？", screen: "workflow", new: true, stream: true });
   });
 });
 

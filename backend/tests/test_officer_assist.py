@@ -158,7 +158,8 @@ def test_an_admin_with_a_hall_reads_that_halls_switch(cn_tenant, cn_admin_user):
 
 
 def test_only_permitted_tools_are_offered(cn_tenant, judge_user):
-    """JUDGE 不持有 soul_inbox.read;MODERATOR 持有。断言缺席,不只断言在场。
+    """JUDGE 不持有 soul_inbox.read;殿管理员(绑殿的 ADMIN)持有。断言缺席,不只断言在场。
+    朋友圈巡察(MODERATOR,2026-11-07 起只管朋友圈审核)只剩 my_permissions。
     变异:`offered` 不过滤 → JUDGE 的列表里出现 inbox_counts,红。"""
     _enable(cn_tenant)
     _ask(officer_client(judge_user))
@@ -168,9 +169,13 @@ def test_only_permitted_tools_are_offered(cn_tenant, judge_user):
     _ask(officer_client(viewer))
     assert FakeProvider.calls[-1]["tools"] == ["my_permissions"]
 
+    hall_admin = _officer("a", "ADMIN", cn_tenant)
+    _ask(officer_client(hall_admin))
+    assert "inbox_counts" in FakeProvider.calls[-1]["tools"]
+
     moderator = _officer("m", "MODERATOR", cn_tenant)
     _ask(officer_client(moderator))
-    assert "inbox_counts" in FakeProvider.calls[-1]["tools"]
+    assert FakeProvider.calls[-1]["tools"] == ["my_permissions"]
 
 
 def test_a_tool_the_officer_lacks_is_refused_when_forced(cn_tenant, judge_user):
@@ -256,7 +261,8 @@ def test_pending_approvals_count_only_nodes_this_user_may_decide(cn_tenant, eu_t
 
 
 def test_my_permissions_answers_why_a_moderator_cannot_approve(cn_tenant):
-    """「为什么我点不了批准」来自 check_permission,不来自语料(ROLE_FORBIDDEN_CODENAMES)。"""
+    """「为什么我点不了批准」来自 check_permission,不来自语料(ROLE_FORBIDDEN_CODENAMES)。
+    2026-11-07 起朋友圈巡察只管朋友圈审核:流程、调拨、用户管理一样都没有。"""
     _enable(cn_tenant)
     moderator = _officer("m", "MODERATOR", cn_tenant)
     out = _tool_result(officer_client(moderator), "my_permissions")
@@ -264,15 +270,19 @@ def test_my_permissions_answers_why_a_moderator_cannot_approve(cn_tenant):
     assert out["permissions"]["workflow.approve"] is False
     assert out["permissions"]["workflow.advance"] is False
     assert out["permissions"]["user.manage"] is False
-    # 殿主能越级推进、能批准与执行调拨(预置授权);这些由工具答,不由语料答。
-    assert out["permissions"]["workflow.escalate"] is True
-    assert out["permissions"]["dispatch.approve"] is True and out["permissions"]["dispatch.execute"] is True
+    # 越级推进、批准与执行调拨也不在(perm/0036 收回);这些由工具答,不由语料答。
+    assert out["permissions"]["workflow.escalate"] is False
+    assert out["permissions"]["dispatch.approve"] is False and out["permissions"]["dispatch.execute"] is False
 
 
 def test_a_step_naming_my_role_that_i_cannot_decide_is_not_counted_as_mine(cn_tenant):
     """`can_approve` 只比角色,`approve_node` 还要 workflow.approve。殿主被点名的步骤它办不了:
-    total 0,另报「点了名但无权」(审查 1)。变异:总是返回 designated 作 total → 红。"""
+    total 0,另报「点了名但无权」(审查 1)。变异:总是返回 designated 作 total → 红。
+    「殿主」= 持流程设计码、不持 workflow.approve 的非 ADMIN;2026-11-07 起默认角色里没有它,码由测试写进库。"""
+    from tests.perm_support import grant_former_hall_lead_codes
+
     _enable(cn_tenant)
+    grant_former_hall_lead_codes()
     moderator = _officer("m2", "MODERATOR", cn_tenant)
     _workflow(cn_tenant, "丙流程", role="MODERATOR", case_type="APPEAL")
     out = _tool_result(officer_client(moderator), "my_pending_approvals", screen="workflow")
@@ -280,13 +290,13 @@ def test_a_step_naming_my_role_that_i_cannot_decide_is_not_counted_as_mine(cn_te
                    "designated_but_not_permitted": 1, "holds_workflow_approve": False}
 
 
-def test_an_officers_empty_answer_points_to_the_hall_lead_not_to_letters(cn_tenant, judge_user):
-    """官员就是殿司,「写信给殿司」对它们不成立(审查 2)。"""
+def test_an_officers_empty_answer_points_to_the_administrator_not_to_letters(cn_tenant, judge_user):
+    """官员就是殿司,「写信给殿司」对它们不成立(审查 2);也不再引到「殿主」(2026-11-07 起 MODERATOR 只管朋友圈审核)。"""
     _enable(cn_tenant)
     FakeProvider.script = [{"text": " "}]
     content = _ask(officer_client(judge_user)).data["answer"]["content"]
     assert content == service.OFFICER_EMPTY_ANSWER["zh-Hans"]
-    assert "殿司" not in content.replace("殿主", "")
+    assert "殿司" not in content and "殿主" not in content and "管理员" in content
 
 
 def test_inbox_counts_are_this_halls_without_ids_or_names(cn_tenant, eu_tenant):
@@ -298,8 +308,8 @@ def test_inbox_counts_are_this_halls_without_ids_or_names(cn_tenant, eu_tenant):
         Conversation.objects.create(kind=ConversationKind.OFFICER_INBOX, room_id=f"!{name}:x",
                                     soul_a=account.soul, tenant=tenant, last_from="soul",
                                     last_soul_message_at=timezone.now(), last_message_at=timezone.now())
-    moderator = _officer("m", "MODERATOR", cn_tenant)
-    out = _tool_result(officer_client(moderator), "inbox_counts", screen="soul-inbox")
+    hall_admin = _officer("m", "ADMIN", cn_tenant)  # 持 soul_inbox.read(MODERATOR 2026-11-07 起不再持有)
+    out = _tool_result(officer_client(hall_admin), "inbox_counts", screen="soul-inbox")
     assert out["scope"] == "this_hall" and out["all"] == 1 and out["awaiting_reply"] == 1
     assert out["halls"] == [{"hall_names": cn_tenant.hall_names, "count": 1}]
     blob = json.dumps(out, ensure_ascii=False)

@@ -88,7 +88,7 @@ def world(cn_tenant, eu_tenant, matrix, media_root, django_capture_on_commit_cal
 
     # 书信:我写给殿司、官员回复;我和朋友私聊;朋友写给殿司(别人的信);朋友的草稿 / 经办人(官员侧)。
     w.hall_id = _write_to_hall(w.client, "我想申诉")
-    w.officer = User.objects.create_user(username="cn_mod", password="x", role="MODERATOR", tenant=cn_tenant,
+    w.officer = User.objects.create_user(username="cn_mod", password="x", role="ADMIN", tenant=cn_tenant,
                                          first_name="判官崔珏")
     reply = officer_client(w.officer).post(f"/api/v1/chat/inbox/{w.hall_id}/reply/", {"body": "已收到"}, format="json")
     assert reply.status_code == 201, reply.data

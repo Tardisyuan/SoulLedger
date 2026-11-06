@@ -19,7 +19,7 @@ pytestmark = pytest.mark.django_db
 INBOX = "/api/v1/chat/inbox/"
 
 
-def _officer(tenant, username, role="MODERATOR", display_name=""):
+def _officer(tenant, username, role="ADMIN", display_name=""):
     return User.objects.create_user(
         username=username, password="x", role=role, tenant=tenant, display_name=display_name or username
     )

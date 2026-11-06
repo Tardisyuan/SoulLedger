@@ -63,16 +63,18 @@ def two_tenants(db):
 
 @pytest.fixture
 def attacker(db, two_tenants):
-    """A MODERATOR in tenant B.
+    """Tenant B's own ADMIN.
 
-    Deliberately not ADMIN: ADMIN short-circuits `TenantPermission
-    .has_object_permission`, so an exploit demonstrated as ADMIN proves
-    nothing about tenant isolation. MODERATOR holds `dispatch.manage`, which
-    is what the PATCH route requires.
+    Deliberately not the hall-less ADMIN: that one short-circuits `TenantPermission
+    .has_object_permission`, so an exploit demonstrated with it proves
+    nothing about tenant isolation. An ADMIN bound to a hall is scoped like
+    everyone else (2026-10-29) and holds `dispatch.manage`, which is what the
+    PATCH route requires. This was a MODERATOR until 2026-11-07, when it lost
+    dispatch.* (perm/0036).
     """
     _, b = two_tenants
     return User.objects.create_user(
-        username="pf_attacker", password="x", role="MODERATOR", tenant=b
+        username="pf_attacker", password="x", role="ADMIN", tenant=b
     )
 
 

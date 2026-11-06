@@ -44,8 +44,9 @@ class TestHandover:
         body = {"from": world.users["a"].pk, "to": world.users["b"].pk}
         assert world.clients["a"].post("/api/v1/judgment/handover/", body, format="json").status_code == 403
 
-    def test_the_officer_list_is_the_moderators_own_hall_and_says_only_three_things(self, world, admin_user):  # noqa: F811
-        """rbac-web M-7:交接对话框的人选接口要 judgment.assign(殿主可用),不是 users/ 的 ADMIN + user.manage。"""
+    def test_the_officer_list_is_the_hall_admins_own_hall_and_says_only_three_things(self, world, admin_user):  # noqa: F811
+        """rbac-web M-7:交接对话框的人选接口要 judgment.assign(默认只有 ADMIN;殿管理员看本殿),不是 users/ 的
+        user.manage。`mod` 是绑殿的 ADMIN —— 2026-11-07 之前是殿主 MODERATOR,它现在只管朋友圈审核。"""
         url = "/api/v1/judgment/handover/officers/"
         soul = User.objects.create_user(username="claim_soul", password="x", role="SOUL", tenant=world.cn)
         gone = User.objects.create_user(username="claim_gone", password="x", role="JUDGE", tenant=world.cn,

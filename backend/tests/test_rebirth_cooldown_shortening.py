@@ -141,7 +141,11 @@ def test_officer_list_is_tenant_scoped_and_decisions_need_workflow_approve(cn_te
     rows = rows["results"] if isinstance(rows, dict) else rows
     assert [r["id"] for r in rows] == [row_id]
     assert rows[0]["remaining_days"] == 30 and rows[0]["cooldown_until"] is not None
-    # MODERATOR 持有 workflow.read 但刻意不持有 workflow.approve(apps/perm/models.py):看得到,决定不了。
+    # 持 workflow.read 而刻意不持 workflow.approve 的角色:看得到,决定不了。2026-11-07 之前默认的 MODERATOR(殿主)
+    # 就是这样;它现在只管朋友圈审核,所以殿主那份码由测试写进库。
+    from tests.perm_support import grant_former_hall_lead_codes
+
+    grant_former_hall_lead_codes()
     moderator = User.objects.create_user(username="mod", password="x", role="MODERATOR", tenant=cn_tenant)
     assert officer_client(moderator).get(OFFICER).status_code == 200
     assert officer_client(moderator).post(f"{OFFICER}{row_id}/approve/", {"approved_days": 0}, format="json")\

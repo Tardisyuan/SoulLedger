@@ -279,6 +279,10 @@ DECLARED = {
 # ---------------------------------------------------------------------------
 
 
+# Since 2026-11-07 (user decision) MODERATOR — 朋友圈巡察 — holds only social.moderate plus
+# dashboard.read / notification.read / menu.read (perm/0035, perm/0036), so it is denied on every
+# reincarnation / dispatch / cross_judgment / org write below. Where a comment in this file still names
+# MODERATOR among a codename's holders, it describes the grant table before that date.
 def _denied(*roles):
     """Build a per-role code map where `roles` get 403 and the rest get `ok`.
 
@@ -295,15 +299,15 @@ def _denied(*roles):
 # (9 until 2026-10-27; CRUD and `complete` were removed — READ-ONLY REINCARNATION.)
 # reincarnation.reborn — ADMIN and MODERATOR only. It walks the soul DISPOSED ->
 # REINCARNATING -> ALIVE, renames it and resets merit/demerit from the ledger.
-REINCARNATION_REBORN = _denied("JUDGE", "GUARDIAN", "VIEWER")(201)
+REINCARNATION_REBORN = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(201)
 
 # ── dispatch: 25 codes moved, and JUDGE carries most of them ─────────────────
 # dispatch.manage — ADMIN, MODERATOR, GUARDIAN. JUDGE holds NO dispatch
 # codename at all (not read, not manage, not any of the three decisions) and
 # neither does VIEWER, so both lose every write on both dispatch viewsets.
-DISPATCH_RECORD_CREATE = _denied("JUDGE", "VIEWER")(201)
-DISPATCH_RECORD_PATCH = _denied("JUDGE", "VIEWER")(200)
-DISPATCH_RECORD_DELETE = _denied("JUDGE", "VIEWER")(204)
+DISPATCH_RECORD_CREATE = _denied("MODERATOR", "JUDGE", "VIEWER")(201)
+DISPATCH_RECORD_PATCH = _denied("MODERATOR", "JUDGE", "VIEWER")(200)
+DISPATCH_RECORD_DELETE = _denied("MODERATOR", "JUDGE", "VIEWER")(204)
 
 # dispatch.approve / .reject / .execute — ADMIN and MODERATOR only. GUARDIAN
 # holds dispatch.manage and may propose and edit, but not decide; JUDGE and
@@ -320,9 +324,9 @@ DISPATCH_RECORD_DELETE = _denied("JUDGE", "VIEWER")(204)
 # only route to a decision GUARDIAN has. See THE DENIAL THAT NO LONGER WALKS
 # AROUND below. JUDGE's and VIEWER's denials never had such a route, because
 # they lose partial_update too.
-DISPATCH_APPROVE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
-DISPATCH_REJECT = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
-DISPATCH_EXECUTE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
+DISPATCH_APPROVE = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(200)
+DISPATCH_REJECT = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(200)
+DISPATCH_EXECUTE = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(200)
 
 # cross_judgment.create, via CrossTenantJudgmentViewSet — every action on that
 # viewset, CRUD and custom alike, resolves to this single codename. DECIDED:
@@ -333,13 +337,13 @@ DISPATCH_EXECUTE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
 # MODERATOR and JUDGE admitted — the inverse of dispatch.manage's split.
 # Because read and every write still share one codename, this viewset still
 # cannot exhibit the bypass its sibling does.
-CTJ_CREATE = _denied("GUARDIAN", "VIEWER")(201)
-CTJ_PATCH = _denied("GUARDIAN", "VIEWER")(200)
-CTJ_DELETE = _denied("GUARDIAN", "VIEWER")(204)
-CTJ_PARTICIPATE = _denied("GUARDIAN", "VIEWER")(200)
+CTJ_CREATE = _denied("MODERATOR", "GUARDIAN", "VIEWER")(201)
+CTJ_PATCH = _denied("MODERATOR", "GUARDIAN", "VIEWER")(200)
+CTJ_DELETE = _denied("MODERATOR", "GUARDIAN", "VIEWER")(204)
+CTJ_PARTICIPATE = _denied("MODERATOR", "GUARDIAN", "VIEWER")(200)
 # 结束与取消同一道:召集人或发起殿 ADMIN / 殿主。这张表只量权限码,所以下面的测试让每个角色自己当召集人 ——
 # 「不是召集人」的 403 是状态规则,测在 tests/test_cross_judgment_cancel.py。
-CTJ_CONCLUDE = _denied("GUARDIAN", "VIEWER")(200)
+CTJ_CONCLUDE = _denied("MODERATOR", "GUARDIAN", "VIEWER")(200)
 
 # ── notifications: 0 codes moved ─────────────────────────────────────────────
 # notification.read is held by every role and is the only codename any action
@@ -369,9 +373,9 @@ NOTIFICATION_MARK_ALL_READ = ALL_200
 # stop there, so all three lose all three writes. Three codes: 201->403,
 # 200->403, 204->403 — same shape as REINCARNATION_*, three denied roles
 # instead of one.
-ORGANIZATION_CREATE = _denied("JUDGE", "GUARDIAN", "VIEWER")(201)
-ORGANIZATION_PATCH = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
-ORGANIZATION_DELETE = _denied("JUDGE", "GUARDIAN", "VIEWER")(204)
+ORGANIZATION_CREATE = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(201)
+ORGANIZATION_PATCH = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(200)
+ORGANIZATION_DELETE = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(204)
 
 # death_sync: no codename anywhere, so enforcement cannot move these.
 # FIXED (C9, permission-layer audit follow-up): was `IsAdminUser` (Django
@@ -1062,21 +1066,23 @@ def test_organization_cross_tenant_isolation(role_clients, snapshot_tenants):
         f"tenant {other.code} — tenant filtering is not applied to org.read."
     )
 
-    for role in ("GUARDIAN", "MODERATOR"):
+    # MODERATOR used to be the second non-ADMIN here (org.read AND org.manage); since 2026-11-07 it
+    # holds neither, and the hall's own ADMIN — scoped to its hall since 2026-10-29 — plays the
+    # "holds org.manage, still bound by tenant scoping" part below.
+    for role in ("GUARDIAN", "ADMIN"):
         retrieve = clients[role].get(f"/api/v1/organizations/{org.id}/")
         assert retrieve.status_code == 404, (
             f"{role} (home={home.code}) could retrieve an organization belonging to "
             f"tenant {other.code}: got {retrieve.status_code}, expected 404."
         )
 
-    # MODERATOR holds org.manage, but tenant scoping is checked before a
-    # codename ever gets consulted — get_object() 404s from the unfiltered
-    # queryset, so this never reaches CodenamePermission at all.
-    patch = clients["MODERATOR"].patch(
+    # The hall's ADMIN holds org.manage, but tenant scoping still decides —
+    # get_object() 404s from the scoped queryset.
+    patch = clients["ADMIN"].patch(
         f"/api/v1/organizations/{org.id}/", {"name": "hijacked"}, format="json"
     )
     assert patch.status_code == 404, patch.status_code
-    delete = clients["MODERATOR"].delete(f"/api/v1/organizations/{org.id}/")
+    delete = clients["ADMIN"].delete(f"/api/v1/organizations/{org.id}/")
     assert delete.status_code == 404, delete.status_code
     assert Organization.objects.get(pk=org.pk).name == "wsnap"
     assert not _is_deleted(Organization, org.pk)
@@ -1243,14 +1249,15 @@ def test_recorded_holders_match_role_permissions():
     Each entry is quoted verbatim in the per-endpoint docstrings. If a grant
     moves, those docstrings become misleading, and this is what says so.
     """
-    assert _holders("reincarnation.manage") == {"ADMIN", "MODERATOR", "JUDGE", "GUARDIAN"}
-    assert _holders("reincarnation.reborn") == {"ADMIN", "MODERATOR"}
-    assert _holders("dispatch.manage") == {"ADMIN", "MODERATOR", "GUARDIAN"}
-    assert _holders("dispatch.approve") == {"ADMIN", "MODERATOR"}
-    assert _holders("dispatch.reject") == {"ADMIN", "MODERATOR"}
-    assert _holders("dispatch.execute") == {"ADMIN", "MODERATOR"}
-    assert _holders("org.read") == set(ROLES)
-    assert _holders("org.manage") == {"ADMIN", "MODERATOR"}
+    # MODERATOR left every one of these on 2026-11-07 (perm/0036).
+    assert _holders("reincarnation.manage") == {"ADMIN", "JUDGE", "GUARDIAN"}
+    assert _holders("reincarnation.reborn") == {"ADMIN"}
+    assert _holders("dispatch.manage") == {"ADMIN", "GUARDIAN"}
+    assert _holders("dispatch.approve") == {"ADMIN"}
+    assert _holders("dispatch.reject") == {"ADMIN"}
+    assert _holders("dispatch.execute") == {"ADMIN"}
+    assert _holders("org.read") == set(ROLES) - {"MODERATOR"}
+    assert _holders("org.manage") == {"ADMIN"}
 
 
 @pytest.mark.django_db

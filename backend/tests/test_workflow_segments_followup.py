@@ -31,9 +31,9 @@ def w():
     _template(x.eg, "EGYPTIAN")
     _template(x.eu, "EUROPEAN")
     x.cn_judge = plan.officer("b43_cn_judge", "JUDGE", x.cn)
-    x.cn_mod = plan.officer("b43_cn_mod", "MODERATOR", x.cn)
+    x.cn_mod = plan.officer("b43_cn_mod", "ADMIN", x.cn)
     x.eg_judge = plan.officer("b43_eg_judge", "JUDGE", x.eg)
-    x.eg_mod = plan.officer("b43_eg_mod", "MODERATOR", x.eg)
+    x.eg_mod = plan.officer("b43_eg_mod", "ADMIN", x.eg)
     x.eu_judge = plan.officer("b43_eu_judge", "JUDGE", x.eu)
     return x
 

@@ -147,7 +147,7 @@ def test_executing_a_single_home_node_through_the_api_completes_the_plan_and_tri
     视图若照旧再调一次,中国灵魂的时间线上会有两条 REINCARNATION_TRIGGERED。"""
     soul, p = plan.planned(cn)
     home = plan.node(p, 1)
-    response = officer_client(plan.officer("cn_mod", "MODERATOR", cn)).post(
+    response = officer_client(plan.officer("cn_mod", "ADMIN", cn)).post(
         f"/api/v1/disposition/{home.disposition_id}/execute/", {}, format="json")
     assert response.status_code == 200, response.data
     soul.refresh_from_db()
@@ -203,17 +203,18 @@ def test_an_eternal_home_sentence_alone_concludes_and_completes_the_plan(cn):
 def people(cn, eg, eu):
     make = plan.officer
     return {
-        "cn_judge": make("cn_judge", "JUDGE", cn), "cn_mod": make("cn_mod", "MODERATOR", cn),
+        "cn_judge": make("cn_judge", "JUDGE", cn),
         "cn_admin": make("cn_admin", "ADMIN", cn),
         "eg_judge": make("eg_judge", "JUDGE", eg),
-        # 不该收的:
+        # 不该收的(朋友圈巡察 2026-11-07 起不持 judgment.read,perm/0036):
+        "cn_mod": make("cn_mod", "MODERATOR", cn),
         "cn_guardian": make("cn_guardian", "GUARDIAN", cn), "cn_retired": make("cn_retired", "JUDGE", cn, is_active=False),
         "eu_judge": make("eu_judge", "JUDGE", eu), "eu_admin": make("eu_admin", "ADMIN", eu),
         "eg_viewer": make("eg_viewer", "VIEWER", eg),
     }
 
 
-HOME_JUDGES = {"cn_judge", "cn_mod", "cn_admin"}
+HOME_JUDGES = {"cn_judge", "cn_admin"}
 
 
 def test_arrival_is_told_to_the_stops_judges_and_completion_to_the_homes(cn, eg, people, django_capture_on_commit_callbacks):

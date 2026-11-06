@@ -130,7 +130,7 @@ def test_a_dispatch_the_plan_could_not_start_is_recorded_once_and_can_be_sent_ag
 
 def _resident_without_plan(cn, eg):
     soul = Soul.objects.create(name="无计划客魂", tenant=cn, current_state=SoulState.DISPOSED)
-    record = DispatchService.propose(cn, eg, soul, plan.officer("cn_mod7", "MODERATOR", cn), "手动调拨去受审")
+    record = DispatchService.propose(cn, eg, soul, plan.officer("cn_mod7", "ADMIN", cn), "手动调拨去受审")
     DispatchService.approve(record, "approver")
     DispatchService.execute(DispatchRecord.all_objects.get(pk=record.pk), "executor")
     soul.refresh_from_db()
@@ -177,20 +177,20 @@ def test_the_home_halls_own_disposition_still_executes(cn):
 def test_a_soul_outside_the_underworld_is_not_dispatched(cn, eg, state):
     soul = Soul.objects.create(name=f"不在冥府{state}", tenant=cn, current_state=state)
     with pytest.raises(SoulNotDispatchableError):
-        DispatchService.propose(cn, eg, soul, plan.officer(f"m_{state}", "MODERATOR", cn), "手动调拨")
+        DispatchService.propose(cn, eg, soul, plan.officer(f"m_{state}", "ADMIN", cn), "手动调拨")
     assert not DispatchRecord.all_objects.filter(soul=soul).exists()
 
 
 @pytest.mark.parametrize("state", [SoulState.JUDGING, SoulState.DISPOSED])
 def test_a_soul_in_the_underworld_is_dispatched(cn, eg, state):
     soul = Soul.objects.create(name=f"在冥府{state}", tenant=cn, current_state=state)
-    record = DispatchService.propose(cn, eg, soul, plan.officer(f"m_{state}", "MODERATOR", cn), "手动调拨")
+    record = DispatchService.propose(cn, eg, soul, plan.officer(f"m_{state}", "ADMIN", cn), "手动调拨")
     assert record.status == DispatchStatus.PROPOSED
 
 
 def test_a_soul_that_left_the_underworld_after_approval_is_not_moved(cn, eg):
     soul = Soul.objects.create(name="批准后转生", tenant=cn, current_state=SoulState.DISPOSED)
-    record = DispatchService.propose(cn, eg, soul, plan.officer("m_late", "MODERATOR", cn), "手动调拨")
+    record = DispatchService.propose(cn, eg, soul, plan.officer("m_late", "ADMIN", cn), "手动调拨")
     DispatchService.approve(record, "approver")
     Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.REINCARNATING)
 
@@ -204,7 +204,7 @@ def test_a_soul_that_left_the_underworld_after_approval_is_not_moved(cn, eg):
 def test_the_service_refuses_a_manual_dispatch_while_a_plan_runs_but_the_plan_itself_dispatches(cn, eg):
     soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)], name="计划中")
     with pytest.raises(SentencePlanActiveError):
-        DispatchService.propose(cn, eg, soul, plan.officer("m_plan", "MODERATOR", cn), "手动调拨")
+        DispatchService.propose(cn, eg, soul, plan.officer("m_plan", "ADMIN", cn), "手动调拨")
     assert not DispatchRecord.all_objects.filter(soul=soul).exists()
 
     plan.serve(soul, p, 1)  # 计划自己发起的那条(dispatcher=None)照常
