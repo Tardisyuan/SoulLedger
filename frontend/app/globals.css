@@ -508,7 +508,10 @@
        --color-metal      v4 metal:当前项的 3px 标、角饰
        --color-side       v4 sideD / sideL:侧栏底
      没有 data-civ(登录前)= 中性皮:accent / focus 回到 ink,其余取 `--color-civ-neutral*`。
-     中性皮 v4 没有画,值是推导的(与 App 的 v4-app-tokens 一致):ink 取 sub,solid 深 #38393E / 浅 #16171A。
+     中性皮是 Design 第八批第 5 条定的(与 App 的 NEUTRAL_CIV 同值):civT 深 #B4B6BA / 浅 #54575C(确认原值);
+     solid 深 #55575E / 浅 #5A606B(白字 7.21 / 6.32:1;浅色原来的 #16171A 与正文同色,主按钮和正文一样黑,
+     现在与正文的明度差 2.83:1);glow #8E939C(两主题同值);metal 用品牌金 深 #ECAA3D / 浅 #8A6A24;
+     side 深 #0E0F11 / 浅 #F1F1EF。中性皮的印用品牌天平,不放任何一个文明的印。
      ═══════════════════════════════════════════════════════════════════════ */
   /* 深色是 :root,浅色是 .light;ThemeContext 按系统偏好或用户选择给 <html> 加类。 */
   :root {
@@ -547,6 +550,13 @@
     --color-success-tint: 0.241388 0.040904 150.1078;
     --color-warning: 0.681246 0.156180 54.9021;
     --color-warning-tint: 0.240511 0.049375 60.4681;
+    /* 琥珀(v4 第八批 `--warn`):只给连接状态的点和顶栏下沿那条 2px 线,**不当字色**。不复用 --color-warning:
+       那一档是警示框里的字(对 canvas / warning-tint ≥ 4.5,inkOnSurfaceContract 钉着),色相偏橙(深 #E07A23),
+       审判中、炼狱去向都指着它;琥珀改它会连带改这几处。 */
+    --color-warn: 0.799963 0.123133 79.1550; /* #E8B45A */
+    /* 比 sub 更淡的字(v4 第八批 `--faint-text`):角标计数、分组标题、地图站号、「官员挪站」。--color-line-strong
+       (v4 faint)当字不达标,只给装饰线、禁用态;这一档在 canvas / surface-1 / surface-2 上都 ≥ 4.5。 */
+    --color-faint-text: 0.656067 0.009530 264.5008; /* #8E9197 */
     /* 长明灯:实底块 = 有,空底 + 描边 = 我点过;lamp-bg 是块上文字色。 */
     --color-lamp: 0.860675 0.109733 85.2786;
     --color-lamp-bg: 0.228754 0.029413 79.2504;
@@ -561,11 +571,11 @@
     /* 卡片阴影(v4 `--shadow`):深色没有阴影,卡片靠 1px 内描边(`.v4-card` 保留原来的 line 框)。 */
     --shadow-card: none;
     /* 文明 · 深色档(v4 `[data-civ]` 的 D 值)。光晕两主题同值,只在这里声明。 */
-    --color-civ-neutral: 0.345507 0.008765 276.8978; /* #38393E */
+    --color-civ-neutral: 0.457447 0.011600 273.1735; /* #55575E */
     --color-civ-neutral-ink: 0.775874 0.006082 264.5259; /* #B4B6BA */
-    --color-civ-neutral-glow: 0.642492 0.008222 260.7308; /* #8A8D92 */
-    --color-civ-neutral-metal: 0.775874 0.006082 264.5259; /* #B4B6BA */
-    --color-civ-neutral-side: 0.155270 0.004214 285.8987; /* #0C0C0E */
+    --color-civ-neutral-glow: 0.662027 0.014518 262.3609; /* #8E939C */
+    --color-civ-neutral-metal: 0.782429 0.142657 75.8527; /* #ECAA3D */
+    --color-civ-neutral-side: 0.168171 0.004477 264.4473; /* #0E0F11 */
     --color-civ-cn: 0.428514 0.102617 30.6112; /* #7E362B */
     --color-civ-cn-ink: 0.710969 0.100324 32.0926; /* #D98A7A */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
@@ -652,6 +662,8 @@
     --color-success-tint: 0.965876 0.035762 149.1233;
     --color-warning: 0.529090 0.135424 52.3541;
     --color-warning-tint: 0.965162 0.024981 69.4434;
+    --color-warn: 0.548270 0.117080 72.5076; /* #9A6400 */
+    --color-faint-text: 0.526852 0.008647 260.7291; /* #686B70 */
     --color-lamp: 0.407751 0.090608 66.2502;
     --color-lamp-bg: 0.960430 0.029660 85.5642;
     --color-disabled-ink: 0.642492 0.008222 260.7308;
@@ -662,10 +674,10 @@
     --glow-alpha: 0.24;
     /* 浅色不画线框:卡片、殿司卡、侧栏当前项只靠这两层很淡的阴影(v4 `.th-light --shadow`)。 */
     --shadow-card: 0 1px 2px rgba(20, 20, 24, 0.05), 0 6px 20px -10px rgba(20, 20, 24, 0.16);
-    --color-civ-neutral: 0.204832 0.006141 271.1072; /* #16171A */
+    --color-civ-neutral: 0.487734 0.019157 262.6797; /* #5A606B */
     --color-civ-neutral-ink: 0.455822 0.008971 260.7269; /* #54575C */
-    --color-civ-neutral-metal: 0.455822 0.008971 260.7269; /* #54575C */
-    --color-civ-neutral-side: 0.957310 0.003982 106.4744; /* #F1F1EE */
+    --color-civ-neutral-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
+    --color-civ-neutral-side: 0.957588 0.002656 106.4494; /* #F1F1EF */
     --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
     --color-civ-cn-ink: 0.508662 0.123408 31.8759; /* #A04636 */
     --color-civ-cn-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */

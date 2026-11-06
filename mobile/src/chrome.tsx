@@ -34,7 +34,7 @@ import { MAX_FONT_SCALE, ThemeContext, Txt, enumText, shade, useLayout, useTheme
  */
 export function onPlaqueTheme(t: Theme): Theme {
   const on = t.onPlaque;
-  return { ...t, s0: t.band, s1: t.band, s2: shade(t.band, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
+  return { ...t, s0: t.band, s1: t.band, s2: shade(t.band, 0.12), ink: on, inkMuted: on, inkSubtle: on, faintText: on, hair: `${on}33`, hair2: `${on}59` };
 }
 
 /**
