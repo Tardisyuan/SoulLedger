@@ -67,14 +67,14 @@ def test_a_new_message_is_pushed_to_the_other_side_only(pair, matrix):  # noqa: 
     assert [uri for uri, _ in api.posts] == [PUSH_URL] and not api.failures
     [push] = _pushes(b)
     assert push.data == {"screen": "Conversation", "conversation_id": str(conversation.id), "kind": "chat_message"}
-    assert (push.title, push.body) == ("新书信", f"{a.user.display_name} 给你写了一封信,打开灵魂簿查看。")
+    assert (push.title, push.body) == ("新书信", f"{a.user.display_name} 给你写了一封信，打开灵魂簿查看。")
     assert "今晚月色很好" not in f"{push.title}{push.body}{push.data}"
     assert "今晚月色很好" not in str(api.posts)  # 回调本身就不带正文
     assert _pushes(a) == []
 
 
 @pytest.mark.parametrize("locale, expected", [
-    ("zh-Hans", "前世之甲 给你写了一封信,打开灵魂簿查看。"),
+    ("zh-Hans", "前世之甲 给你写了一封信，打开灵魂簿查看。"),
     ("en", "前世之甲 wrote you a letter. Open Soul Ledger to read it."),
     ("egy", "前世之甲: Shemes Mawy Er-Ek. Wen Medjat Ba Er Maa."),
 ])
@@ -147,7 +147,7 @@ def test_a_hall_reply_is_pushed_but_a_letter_to_the_hall_is_not(cn_tenant, matri
     [push] = _pushes(a)
     assert push.data["conversation_id"] == inbox["id"]
     # 「谁」是殿司展示名(没填时退回租户名),不是回信官员本人;回信正文不上锁屏。
-    assert push.body == f"{cn_tenant.hall_names['zh-Hans']} 给你写了一封信,打开灵魂簿查看。"
+    assert push.body == f"{cn_tenant.hall_names['zh-Hans']} 给你写了一封信，打开灵魂簿查看。"
     assert "已收" not in push.body
 
 

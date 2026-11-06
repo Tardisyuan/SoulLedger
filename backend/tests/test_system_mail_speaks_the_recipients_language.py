@@ -7,6 +7,7 @@
 文案的权威是 `packages/core/messages/*.json` 的 `soul_mail`,后端是副本,这里逐字钉住。
 """
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -97,7 +98,8 @@ def _reset_mail(api_client, email):
 def _assert_credential(message, soul, locale):
     account = svc.current_account_of(soul)
     expires = f"{account.initial_password_expires_at:%Y-%m-%d %H:%M} (UTC)"
-    password = message.body.split("\n")[1].split(":", 1)[1].strip()
+    # zh 用全角冒号(2026-11-06 措辞审查:对灵魂用全角标点)。
+    password = re.split("[:：]", message.body.split("\n")[1], maxsplit=1)[1].strip()
     assert message.subject == CREDENTIAL_SUBJECT[locale]
     assert message.body == CREDENTIAL_TEXT[locale].format(soul_code=soul.soul_code, password=password, expires=expires)
     assert account.user.check_password(password)
