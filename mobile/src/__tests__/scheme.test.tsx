@@ -63,18 +63,18 @@ it("app.json asks the OS to follow the system setting", () => {
 // v2: the primary button is one of the plaque's five places; before sign-in that is
 // the neutral plaque (补足 C 组 login: 中性皮), no longer the canvas's ink fill.
 // v3 (2026-10-02): no parchment before sign-in — the login is on v3's neutrals.
-it.each(["dark", "light"] as const)("system %s → v3's neutrals of that scheme, primary button in the neutral plaque", async (scheme) => {
+it.each(["dark", "light"] as const)("system %s → v4's neutrals of that scheme, primary button in the neutral plaque", async (scheme) => {
   mockScheme = scheme;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(v3[scheme].surface);
+  expect(loginGround()).toBe(v4[scheme].main);
   // 「登录」 is pressable once there is a full number and a password: only then is it the plaque button.
   fireEvent.changeText(screen.getByTestId("login-soul-code"), "QU33Q9FW5F");
   fireEvent.changeText(screen.getByTestId("login-password"), "x");
   expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
     backgroundColor: (scheme === "dark" ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL),
   });
-  expect(loginGround()).not.toBe(v3[scheme === "dark" ? "light" : "dark"].surface);
+  expect(loginGround()).not.toBe(v4[scheme === "dark" ? "light" : "dark"].main);
 });
 
 it("no system preference reported → dark (the design's primary scheme)", async () => {

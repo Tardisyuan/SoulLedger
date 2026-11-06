@@ -306,8 +306,8 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     // v3: an ink block, the number in the surface colour \u2014 a record, never a status or civilization colour.
     const scheme = flat(value).color === v4.light.card ? "light" : "dark";
     const t = themeFor("CHINESE", scheme);
-    expect(flat(screen.getByTestId("balance")).backgroundColor).toBe(v3[scheme].ink);
-    expect(flat(value).color).toBe(v3[scheme].surface);
+    expect(flat(screen.getByTestId("balance")).backgroundColor).toBe(v4[scheme].ink);
+    expect(flat(value).color).toBe(v4[scheme].card);
     expect([t.neg, t.pos, t.warn, t.plaque]).not.toContain(flat(value).color);
     expect(within(screen.getByTestId("score-merit")).getByText("3")).toBeTruthy();
     expect(within(screen.getByTestId("score-demerit")).getByText("15")).toBeTruthy();
