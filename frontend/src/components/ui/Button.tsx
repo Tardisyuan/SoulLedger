@@ -57,11 +57,11 @@ const button = cva(
           "hover:bg-[oklch(var(--color-surface-2))]",
           "active:bg-[oklch(var(--color-line))]",
         ],
-        /** Destructive (A1 危险): solid neg.strong, white text. */
+        /** Destructive (A1 危险): solid neg.strong, its own text colour (v4 onNeg: dark text in dark, white in light; 用户 2026-11-06). */
         danger: [
-          "bg-[oklch(var(--color-danger-strong))] text-white border-transparent",
-          "hover:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_88%,black)]",
-          "active:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_76%,black)]",
+          "bg-[oklch(var(--color-danger-strong))] text-[oklch(var(--color-on-danger))] border-transparent",
+          "hover:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_88%,var(--danger-shade))]",
+          "active:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_76%,var(--danger-shade))]",
         ],
         /**
          * 反相条上的按钮(规范 v3 `.ds-batch button`,2026-10-01):批量条是 ink 实底,

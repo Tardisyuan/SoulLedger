@@ -497,7 +497,7 @@
        faint → line-strong 与 disabled-ink(输入框边框、禁用字;对 surface-1 4.29 / 3.33 ≥ 3)
        line(白 / 黑 8%)→ line / rule / surface-3:按压在 card 上合成成不透明的值(#2C2D30 / #EBEBEB)
        pos / neg → success / danger;onSolid #FFF → on-main
-     v4 没定义的(danger-strong、三种 tint、warning、长明灯、chart、scrim)沿用 v3 的值,
+     v4 没定义的(三种 tint、warning、长明灯、chart、scrim)沿用 v3 的值,
      并在 v4 的底上重新量过,见 inkOnSurfaceContract。
 
      文明色的范围(用户 2026-11-06 决定,撤销 v3 的「文明只进匾色,只给匾、立柱当前项、印、行首色标、
@@ -538,10 +538,14 @@
     /* 焦点环 · 2px,外扩 2。这里写字面三元组(与 ink 同值);有文明时 [data-civ] 指到 --color-main-ink(v4 `.btn:focus-visible`)。 */
     --color-focus: 0.963595 0.002651 106.4490;
     /* 状态色:danger = v4 neg、success = v4 pos;其余沿用 v3(v4 没定义)。
-       danger-strong 仍是不可撤回删除按钮的实底,上面白字 —— v4 的 neg 实底配深字(onNeg),
-       与「失败实底上的字一律白」的组件约定不合,所以这一档不跟 v4。 */
+       danger-strong 是「失败 / 不可撤回删除」的实底,on-danger 是实底上的字。用户 2026-11-06 决定照 v4、与 App 一致:
+       深色浅红实底 #F2849B 配深字 onNeg #16171A(7.30:1),浅色 #A81E3C 配白字(7.20:1)。
+       此前深色是 v3 的 #C84C5A 配白字(4.53:1),「失败实底上的字一律白」那条约定随之撤销。 */
     --color-danger: 0.739946 0.135852 7.6091; /* #F2849B */
-    --color-danger-strong: 0.585174 0.157720 16.6617;
+    --color-danger-strong: 0.739946 0.135852 7.6091; /* #F2849B */
+    --color-on-danger: 0.204832 0.006141 271.1072; /* #16171A */
+    /* 危险按钮悬停 / 按下往哪边调:深色是深字,压暗会掉到 3.70:1(按下 76%),所以往白调;浅色是白字,往黑调。 */
+    --danger-shade: white;
     --color-danger-tint: 0.233082 0.057680 4.8370;
     --color-danger-on-tint: 0.906877 0.050597 4.3604;
     --color-success: 0.805320 0.101985 153.6633; /* #8AD3A1 */
@@ -655,7 +659,9 @@
     --color-accent-hover: 0.455822 0.008971 260.7269;
     --color-focus: 0.204832 0.006141 271.1072;
     --color-danger: 0.479318 0.171592 15.4317; /* #A81E3C */
-    --color-danger-strong: 0.435794 0.141750 19.3962;
+    --color-danger-strong: 0.479318 0.171592 15.4317; /* #A81E3C */
+    --color-on-danger: 1 0 0; /* #FFFFFF */
+    --danger-shade: black;
     --color-danger-tint: 0.959029 0.020979 6.6063;
     --color-danger-on-tint: 0.409460 0.155831 12.0157;
     --color-success: 0.469880 0.102419 153.8115; /* #1F6B3F */
