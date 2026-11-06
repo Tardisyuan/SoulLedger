@@ -4,7 +4,7 @@
 
 每条测试的说明里写着「变异」:改哪一行它会红。
 """
-from datetime import timedelta
+from datetime import UTC, timedelta
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -309,12 +309,12 @@ def test_annual_counts_souls_once_and_places_only_real_destinations(cn_judge, cn
 def test_annual_reads_the_year_in_the_halls_timezone_and_names_the_longest_case(cn_judge, cn_tenant):
     """UTC 2024-12-31 16:30 在上海已是 2025 年 1 月 1 日。变异:`_year_bounds` 用 UTC、或 `_monthly` 不 astimezone →
     这一件落进 2024 / 12 月,红。最久 = 可认领到结案扣掉待定,整天数;变异:`max` 改 `min` → 案号不对,红。"""
-    from datetime import datetime, timezone as dt_timezone
+    from datetime import datetime
 
-    new_year = datetime(2024, 12, 31, 16, 30, tzinfo=dt_timezone.utc)
+    new_year = datetime(2024, 12, 31, 16, 30, tzinfo=UTC)
     long = _concluded(cn_tenant, "FAILED", new_year, days=41.4, name="最久")
     _concluded(cn_tenant, "FAILED", new_year + timedelta(days=40), days=2)
-    _concluded(cn_tenant, "RETRY", datetime(2024, 6, 1, 4, tzinfo=dt_timezone.utc))
+    _concluded(cn_tenant, "RETRY", datetime(2024, 6, 1, 4, tzinfo=UTC))
 
     data = cn_judge.get(f"{BASE}annual/", {"year": "2025"}).data
     assert data["year"] == 2025
@@ -329,7 +329,7 @@ def test_annual_reads_the_year_in_the_halls_timezone_and_names_the_longest_case(
 @pytest.mark.django_db
 def test_annual_names_the_most_cited_article(cn_judge, cn_tenant):
     """变异:`_most_cited` 的 `order_by("-n", …)` 改成 `order_by("n", …)` → 引用一次的那条,红。"""
-    from datetime import datetime, timezone as dt_timezone
+    from datetime import datetime
 
     from apps.judgment.models import JudgmentCitation, Statute
 
@@ -338,7 +338,7 @@ def test_annual_names_the_most_cited_article(cn_judge, cn_tenant):
                                       ordinal=ordinal, polarity="OFFENCE", title_zh=code, title_en=code)
 
     often, once = article("CN-V4-T-01", 1), article("CN-V4-T-02", 2)
-    at = datetime(2025, 3, 1, 4, tzinfo=dt_timezone.utc)
+    at = datetime(2025, 3, 1, 4, tzinfo=UTC)
     for statutes in ([often, once], [often]):
         case = _concluded(cn_tenant, "FAILED", at)
         for statute in statutes:
