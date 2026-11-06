@@ -64,6 +64,7 @@ src/__tests__/proseLinkIsNotColourOnly.test.ts packages
 src/__tests__/proxyAuthGate.test.ts config
 src/__tests__/reducedMotionContract.test.ts *
 src/__tests__/roleForbiddenCodenamesMatchBackend.test.ts backend
+src/__tests__/sentenceNodeStateByCivilization.test.ts backend
 src/__tests__/soulCodeMatchesBackend.test.ts backend
 src/__tests__/soulLifecycleEventCopy.test.tsx packages
 src/__tests__/soulStateBadgeContract.test.ts packages

@@ -376,6 +376,9 @@ describe("地府十三站与出身部洲 (docs/06, 07; Design 第五十七批 S-
     await openAs({ civilization: "EUROPEAN", diyu_station: "WANGXIANG_TERRACE", birth_continent: "NANZHAN" });
     expect(screen.queryByTestId("life-stations")).toBeNull();
     expect(screen.queryByTestId("soul-continent")).toBeNull();
+    // v4 第十批第 4 条: Europe does not go round, so its life has no number; the account's cycle 1 is a life elsewhere.
+    expect(screen.getByTestId("identity-meta").props.children).toMatch(/此生 · 此前另有 1 世/);
+    expect(screen.getByTestId("identity-meta").props.children).not.toMatch(/第 2 世/);
   });
 });
 

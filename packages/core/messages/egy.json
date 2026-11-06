@@ -896,6 +896,10 @@
       "XINIU": "Aparagodaniya",
       "BEIJULU": "Uttarakuru",
       "help": "Ta Mesut Em Ankh Pen · Ta 4. Wehem Mesut Er Remetj: Ta Ankh Em Khet Sesh."
+    },
+    "life_label": {
+      "this_life": "Ankh Pen",
+      "this_life_prior": "Ankh Pen · Ankh {{m}} Em Tepy"
     }
   },
   "common": {
@@ -6880,7 +6884,68 @@
     "list_subtitle": "Shepet: Per Tepy Er Sekhet Em Taui Pen",
     "list_title": "Shepet",
     "last_refusal_not_started": "Hab-Ba Pehwy Nen Tepy (Mi: Hab-Ba Ky Em Shem, Er Per Hemes Khetem)",
-    "inbox_show_all": "Dbh Wetep Neb"
+    "inbox_show_all": "Dbh Wetep Neb",
+    "node_states_by_civ": {
+      "eu": {
+        "HELL": {
+          "ACTIVE": "Em Shepet",
+          "ETERNAL": "Djet Em Shepet"
+        },
+        "PURGATORY": {
+          "ACTIVE": "Em Isfet Fekh",
+          "WAITING": "Isfet Fekh Seth · Er Hery Djer",
+          "COMPLETED": "Isfet Fekh Seth"
+        },
+        "BLISS": {
+          "ACTIVE": "Em Pet",
+          "ETERNAL": "Djet Em Pet"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "Smen Em Antinferno",
+          "ETERNAL": "Djet Em Antinferno"
+        }
+      },
+      "eg": {
+        "PURGATORY": {
+          "ACTIVE": "Em Shem",
+          "WAITING": "Smen Em Sebkhet",
+          "COMPLETED": "Shem Seth"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "Smen · Fai Ib Djer",
+          "COMPLETED": "Fai Ib Seth"
+        },
+        "BLISS": {
+          "ACTIVE": "Hemes Em Sekhet Aaru",
+          "ETERNAL": "Djet Em Sekhet Aaru"
+        },
+        "ANNIHILATION": {
+          "ETERNAL": "Mut Sen · Nen Wenen"
+        }
+      },
+      "gr": {
+        "HELL": {
+          "ACTIVE": "Em Shepet",
+          "WAITING": "Renpet Khetem · Per Djer",
+          "ETERNAL": "Djet Em Shepet · Nen Pekhret"
+        },
+        "PURGATORY": {
+          "ACTIVE": "Em Wat Renpet 1000",
+          "WAITING": "Er Leimon Djer",
+          "COMPLETED": "Er Leimon Seth"
+        },
+        "BLISS": {
+          "ACTIVE": "Hemes Em Ta Nefer",
+          "WAITING": "Renpet Khetem · Er Leimon Djer",
+          "COMPLETED": "Per Em Ta Nefer Seth"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "Smen Hena Itru",
+          "WAITING": "Shem Itru Djer",
+          "COMPLETED": "Shem Itru Seth"
+        }
+      }
+    }
   },
   "seal": {
     "aria": "Khetem En {{court}}"
@@ -8677,6 +8742,19 @@
     "admin_hint": "Sab Hery: Maa Duat 4. Dy: Hesb Neb. Medew Maa, Ba Sab Hena Was, Medu Sesh: Em Menu Semehy.",
     "author": {
       "line": "Neb Medu {{name}}: Smen Sesh Ta, Hehy Djedu Hena Maa Maat."
+    },
+    "soul": {
+      "entry_title": "Ba: Em Medjat Ba Wa",
+      "entry_body": "Maa: Medjat Ba Em Medjat Wesekhet.",
+      "entry_button": "Maa Mi Ba",
+      "badge": "Maa · Medjat Ba",
+      "note": "Mi Medjat Ba Pen. Medjat Wesekhet: Sab Hena Sab Hery Wa.",
+      "lock": "Medjat Khetem",
+      "lock_hint": "Maa Wa",
+      "switch_civ": "Setep Duat Ky",
+      "back": "Wehem Er Sab Wedja",
+      "strip": "Maa · Medjat Ba",
+      "back_short": "Er Sab Wedja"
     }
   },
   "action": {
@@ -9053,5 +9131,11 @@
         "unjust": "Wedja Em Pehwy. Er Semehy, Er Khery. Isfet Neb: Sep 10 · Renpet 100 Em Sep. Renpet 1000: Er Leimon."
       }
     }
+  },
+  "loading": {
+    "cn": "Sab Ini Sesh…",
+    "eu": "Ini Sesh Ankh Pen…",
+    "eg": "Djehuty Ini Sesh…",
+    "gr": "Sab Maa Ba…"
   }
 }

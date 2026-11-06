@@ -1,8 +1,15 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
-import { Spinner, PageSpinner } from "@/src/components/ui/Spinner";
+import { act, render, screen } from "@testing-library/react";
+import { Spinner, PageSpinner, CIV_LOADING_DELAY_MS } from "@/src/components/ui/Spinner";
 import { I18nProvider } from "@/src/contexts/I18nContext";
+
+// The hall the page is in; null is the neutral skin every test above renders in.
+let mockTenantCode: string | null = null;
+jest.mock("@/src/contexts/TenantContext", () => ({
+  ...jest.requireActual("@/src/contexts/TenantContext"),
+  useTenant: () => ({ user: mockTenantCode ? { tenant: { code: mockTenantCode, display_name: mockTenantCode } } : null }),
+}));
 
 const SOURCE = readFileSync(
   path.join(__dirname, "..", "components", "ui", "Spinner.tsx"),
@@ -195,5 +202,33 @@ describe("a whole-route busy screen is never silent", () => {
     inProvider(<PageSpinner label="载入判词" />);
     expect(screen.getByRole("status")).toHaveTextContent("载入判词");
     expect(screen.getByRole("status")).not.toHaveTextContent("加载中");
+  });
+});
+
+describe("a hall's wait says the hall's line (v4 第十批第 2 条)", () => {
+  afterEach(() => {
+    mockTenantCode = null;
+    jest.useRealTimers();
+  });
+  const inProvider = (node: React.ReactElement) => render(<I18nProvider>{node}</I18nProvider>);
+
+  it("stays blank for the first 400 ms, then shows the seal and 「托特正在取来记录…」", () => {
+    jest.useFakeTimers();
+    mockTenantCode = "EG_DUAT";
+    const { container } = inProvider(<PageSpinner />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(CIV_LOADING_DELAY_MS));
+    expect(screen.getByRole("status")).toHaveTextContent("托特正在取来记录…");
+    expect(screen.getByRole("status")).not.toHaveTextContent("加载中");
+    // The seal breathes and drops out under reduced motion; the ring is not drawn as well.
+    expect(container.querySelector(".empty-breathe")).toHaveClass("motion-reduce:hidden");
+    expect(container.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("a route's own label keeps the plain ring, in a hall too", () => {
+    mockTenantCode = "CN_DIYU";
+    inProvider(<PageSpinner label="载入判词" />);
+    expect(screen.getByRole("status")).toHaveTextContent("载入判词");
+    expect(screen.queryByText("判官正在调卷…")).not.toBeInTheDocument();
   });
 });

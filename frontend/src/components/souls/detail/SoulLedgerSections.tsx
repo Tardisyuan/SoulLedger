@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import type { Disposition, Judgment, Reincarnation, SoulEvent } from "@soulledger/core/api";
 import Link from "next/link";
@@ -96,7 +97,7 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
             </span>
             <span className="min-w-0">
               <span className="block whitespace-nowrap text-sm font-semibold text-[oklch(var(--color-ink))]" data-testid="judgment-life-kind">
-                {j.cycle == null ? <MissingValue kind="unrecorded" /> : t("souls.detail.life_number", { n: String(j.cycle + 1) })}
+                {j.cycle == null ? <MissingValue kind="unrecorded" /> : (thisLifeLabel(t, j.civilization, j.cycle + 1) ?? t("souls.detail.life_number", { n: String(j.cycle + 1) }))}
                 {" · "}
                 <DomainEnum namespace="judgment.claim.kinds" value={j.kind} />
               </span>

@@ -10,6 +10,7 @@ import { DedicationTag } from "@/src/components/souls/SoulLedgerBook";
 import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
 import { soulStateGlyph } from "@/src/lib/soulStateBadge";
 import type { Soul } from "@soulledger/core/api/souls";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import type { SoulEvent } from "@soulledger/core/api/events";
 import type { Judgment } from "@soulledger/core/api/judgment";
 import type { Disposition } from "@soulledger/core/api/disposition";
@@ -421,7 +422,7 @@ export function SoulLifecycleTimeline({
               <div key={row.id} className="my-2 pl-12">
                 <div className="flex items-center gap-2 py-1 px-2 bg-[oklch(var(--color-surface-2))] text-xs text-[oklch(var(--color-ink-muted))]">
                   <span className="font-semibold text-[oklch(var(--color-ink))]">
-                    {tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(row.cycleNumber) })}
+                    {(row.isCurrent && thisLifeLabel(t, soul.civilization, row.cycleNumber)) || tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(row.cycleNumber) })}
                   </span>
                   <span aria-hidden="true">·</span>
                   <span>{row.name}</span>

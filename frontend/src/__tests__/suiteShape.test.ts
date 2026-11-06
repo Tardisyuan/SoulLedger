@@ -383,6 +383,8 @@ const COLLECTED_FILES = [
   "roleForbiddenCodenamesMatchBackend.test.ts",
   "routeTopology.test.ts",
   "searchSelectIsServerFiltered.test.tsx",
+  // 2026-11-06 v4 第十批第 3 条:受刑站状态按文明与去处说;去处类型表与种子表逐条核对。
+  "sentenceNodeStateByCivilization.test.ts",
   "setup.test.ts",
   "soulCodeMatchesBackend.test.ts",
   "soulFallbackCopyContract.test.tsx",

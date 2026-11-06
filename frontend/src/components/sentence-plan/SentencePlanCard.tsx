@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SentenceNode, SentencePlan } from "@soulledger/core/api/sentence-plans";
 import { useCancelSentencePlan, useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
+import { nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -65,7 +66,7 @@ function NodeRow({ plan, node, current }: { plan: SentencePlan; node: SentenceNo
             : t("sentence_plan.years", { years: String(node.sentence_years) })}
       </span>
       <Badge tone={NODE_TONES[node.status] ?? "neutral"}>
-        <DomainEnum namespace="sentence_plan.node_states" value={node.status} />
+        <DomainEnum namespace={nodeStateNamespace(t, node.tenant_code, node.realm_code, node.status)} value={node.status} />
       </Badge>
       {current && <Badge tone="accent">{t("sentence_plan.current")}</Badge>}
       {node.reason && <p className={`w-full ${MUTED}`}>{node.reason}</p>}

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Soul } from "@soulledger/core/api";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { INHERITANCE_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
@@ -133,7 +134,7 @@ export function SoulBalance({ soul }: { soul: Soul }) {
         {figure(t("ledger.book.col_demerit"), "demerit_score", s.demerit)}
       </div>
       <p className="text-sm text-[oklch(var(--color-ink-muted))]">
-        {t("souls.detail.life_number", { n: String((soul.life_index ?? 0) + 1) })}
+        {thisLifeLabel(t, soul.civilization, (soul.life_index ?? 0) + 1) ?? t("souls.detail.life_number", { n: String((soul.life_index ?? 0) + 1) })}
         {" · "}
         {t("ledger.advisory_disclaimer")}
       </p>
