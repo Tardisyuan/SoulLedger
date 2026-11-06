@@ -48,10 +48,25 @@ jobs:
         run: |
           npx -y npm@11 ci
           npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
-      # A real gate: a moderate-or-worse finding in shipped dependencies fails
+      # A real gate: a high-or-worse finding in shipped dependencies fails
       # the job. `--omit=dev` replaces the deprecated `--production` spelling
       # and scopes the scan to what actually ships, so a devDependency advisory
       # does not block a release it cannot reach.
+      #
+      # Threshold `high`, not `moderate`: user decision 2026-11-06, after the
+      # 2026-11-02 run went red on moderates only. Every in-range upgrade was
+      # taken first; what was left on 2026-11-06 (npm 11, node 20) is
+      # 6 findings, 1 low + 5 moderate, none with a fix inside the declared ranges:
+      #   - glob 13.x (GHSA AbortSignal bypass, fixed in 14.0.2) and its
+      #     minimatch 10.x (GHSA-g3hv-75wg-m249, fixed in 11.0.1): pulled in at
+      #     ^13 / ^10 by @expo/{cli,config,config-plugins,fingerprint,metro-config}
+      #     and @sentry/bundler-plugins. glob 14 / minimatch 11 are breaking
+      #     majors (makeRe removed, ignore-root and walk() changes), so no override.
+      #     @sentry/nextjs, @sentry/bundler-plugins and @sentry/webpack-plugin are
+      #     flagged only for depending on that glob; @sentry/nextjs 11 is a major.
+      #   - deepmerge 4.3.1 (low, prototype poisoning), via @expo/config:
+      #     4.3.1 is the latest release, so there is no patched version.
+      # Re-check with this same command; when the upstreams move, these go away.
       #
       # Accepted advisories: none.
       #
@@ -59,16 +74,17 @@ jobs:
       # dial, and it is severity-wide. So if one specific advisory ever has to
       # be accepted, do NOT add `continue-on-error` (that accepts every present
       # and future finding, not the one being argued about) and do NOT lower
-      # `--audit-level` (same problem, one notch down). Either force a patched
+      # `--audit-level` (same problem, one notch down; the 2026-11-06 move to
+      # `high` above was the user's policy call, not a way to wave one through). Either force a patched
       # transitive version through `overrides` in package.json — the mechanism
       # already used there for postcss and sharp, and a real fix rather than an
       # exception — or, when no patched version exists, replace the line below
       # with an explicit id allowlist:
-      #   npm audit --omit=dev --audit-level=moderate --json > audit.json || true
+      #   npm audit --omit=dev --audit-level=high --json > audit.json || true
       #   node -e '...'   # fail unless every advisory id is in ACCEPTED
       # so that "we accept GHSA-xxxx because <reason>" is visible in the diff.
       - name: npm audit
-        run: cd frontend && npm audit --omit=dev --audit-level=moderate
+        run: cd frontend && npm audit --omit=dev --audit-level=high
 
   backend-audit:
     runs-on: ubuntu-latest
