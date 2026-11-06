@@ -1041,7 +1041,7 @@ class TestConcludeRechecksUnderTheLock:
             try:
                 if label == "b":
                     assert a_inside.wait(timeout=10), "A never took the lock"
-                response = clients[label].post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED", "fail_reasons": ["OTHER"], "fail_reason_note": "测"},
+                response = clients[label].post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED"},
                                                format="json")
                 results[label] = response.status_code
                 codes[label] = response.data.get("code")
