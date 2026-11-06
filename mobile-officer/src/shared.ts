@@ -62,6 +62,7 @@ export {
 } from "../../mobile/src/platform";
 export {
   motion,
+  radius,
   space,
   themeFor,
   type ColorScheme,

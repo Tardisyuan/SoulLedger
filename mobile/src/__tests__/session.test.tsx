@@ -16,7 +16,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { PENDING_LOGOUT_KEY, SessionProvider } from "../session";
-import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
+import { NEUTRAL_CIV, v4 } from "../theme";
 import { PROFILE, ageAnswers, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -310,9 +310,9 @@ describe("a stored session", () => {
     await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "EGYPTIAN", welcomed_civilizations: ["EGYPTIAN"] } }));
     // v3: the life tab's ground is v3's one canvas; the civilization is its identity band (jest reports light).
     const flatten = (id: string) => [screen.getByTestId(id).props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
-    expect(flatten("profile-card")).toMatchObject({ backgroundColor: v3.light.canvas });
-    expect(flatten("plaque")).toMatchObject({ backgroundColor: v3Band(v3.civ.eg.light) });
-    expect(v3Band(v3.civ.eg.light)).not.toBe(v3Band(v3.civ.cn.light));
+    expect(flatten("profile-card")).toMatchObject({ backgroundColor: v4.light.main });
+    expect(flatten("plaque")).toMatchObject({ backgroundColor: v4.civ.eg.sL });
+    expect(v4.civ.eg.sL).not.toBe(v4.civ.cn.sL);
     // …and relabels the two scores from Egypt's lexicon, keeping the server's numbers.
     expect(screen.getByText("羽侧")).toBeTruthy();
     expect(screen.queryByText("功")).toBeNull();
@@ -327,8 +327,8 @@ describe("a stored session", () => {
     await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "ATLANTEAN" } }));
     // The band falls back to the neutral plaque (no civilization colour borrowed).
     const band = [screen.getByTestId("plaque").props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
-    expect(band).toMatchObject({ backgroundColor: v3Band(NEUTRAL_PLAQUE.light) });
-    expect(Object.values(v3.civ).map((c) => v3Band(c.light))).not.toContain((band as { backgroundColor: string }).backgroundColor);  });
+    expect(band).toMatchObject({ backgroundColor: NEUTRAL_CIV.sL });
+    expect(Object.values(v4.civ).map((c) => c.sL)).not.toContain((band as { backgroundColor: string }).backgroundColor);  });
 
   it("returning to the life tab reloads it — an application submitted elsewhere shows up", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");

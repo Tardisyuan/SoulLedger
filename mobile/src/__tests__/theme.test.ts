@@ -1,26 +1,25 @@
 /**
  * The tokens against their sources.
  *
- * Since 2026-10-01 the colours are v3's (user decision: v3 fully replaces v2), printed as
- * hex — so they are compared as hex, verbatim. The status colours are still the ones
- * 规范 v2 §二 printed, and two of them (pos, lamp) still come from the 灵魂簿 App OKLCH
- * table; those rows are re-converted below.
+ * Since 2026-11-06 the colours are v4's (定稿 V4Batch07.dc.html; user decision: 一律按 v4),
+ * printed as hex / rgba — so they are compared verbatim. The statuses v4 does not print are still
+ * the ones 规范 v2 §二 printed; the lamp rows still come from the 灵魂簿 App OKLCH table and are
+ * re-converted below.
  */
 import { readFileSync } from "fs";
 import { join } from "path";
 
 import {
+  NEUTRAL_CIV,
   NEUTRAL_PLAQUE,
   ON_PLAQUE,
-  S2,
   brand,
   oklchToHex,
   preLoginTheme,
   sealedTheme,
   semantic,
   themeFor,
-  v3,
-  v3Band,
+  v4,
   type CivKey,
   type ColorScheme,
   type Theme,
@@ -28,7 +27,6 @@ import {
 
 /** [dark OKLCH, light OKLCH], exactly as the 灵魂簿 App handoff's table prints them. */
 const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string] }[] = [
-  { path: (s) => semantic[s].pos, triples: ["0.780 0.110 150", "0.480 0.120 150"] },
   // 朋友圈 handoff 1e draws the lamp dark only. Light lamp: 文明气质 1i gives #6A3E00 (confirmed 2026-09-27) —
   // the triple is that hex's OKLCH; lampBg light is still ours.
   { path: (s) => semantic[s].lamp, triples: ["0.860 0.110 85", "0.408 0.091 66"] },
@@ -69,8 +67,8 @@ describe("the status colours that still come from the OKLCH table", () => {
   });
 
   it("the transcription covers every row still taken from the table (a short list checks nothing)", () => {
-    // The ink and ground rows (10) left with v3 (2026-10-01); pos, lamp, lampBg remain.
-    expect(DESIGN_OKLCH).toHaveLength(3);
+    // The ink and ground rows (10) left with v3 (2026-10-01), pos with v4 (2026-11-06); lamp, lampBg remain.
+    expect(DESIGN_OKLCH).toHaveLength(2);
   });
 });
 
@@ -84,34 +82,40 @@ describe("v1's accent and mark are gone (第三阶段)", () => {
   });
 });
 
-describe("v3 is the palette (user decision 2026-10-01: v3 fully replaces v2)", () => {
+describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
   const STATUS = {
-    dark: "pos #82CB92 · neg #FF7A93 · negStrong #C21D4D · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · warnBg #301904 · lamp #F2CC7A · lampBg #241B0C",
-    light: "pos #197037 · neg #A8103E · negStrong #A8103E · negBg #FFECEF · negInk #8A0C33 · warn #9F4A00 · warnBg #FFF1E2 · lamp #6A3E00 · lampBg #FBF1DC",
+    dark: "pos #8AD3A1 · neg #F2849B · negStrong #F2849B · onNeg #16171A · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · warnBg #301904 · lamp #F2CC7A · lampBg #241B0C",
+    light: "pos #1F6B3F · neg #A81E3C · negStrong #A81E3C · onNeg #FFFFFF · negBg #FFECEF · negInk #8A0C33 · warn #9F4A00 · warnBg #FFF1E2 · lamp #6A3E00 · lampBg #FBF1DC",
   };
   const pairs = (line: string) => line.split(" · ").map((p) => p.split(" "));
 
-  it("is the user's palette, verbatim", () => {
-    expect(v3.light).toEqual({ canvas: "#EFEFEB", surface: "#FBFBF8", ink: "#181A17", muted: "#646861", line: "#D1D3CD" });
-    expect(v3.dark).toEqual({ canvas: "#10120F", surface: "#1A1D19", ink: "#F0F1EA", muted: "#A7ACA4", line: "#383C35" });
-    expect(CIVS.map((c) => [c, v3.civ[c].light, v3.civ[c].dark])).toEqual([
-      ["cn", "#8F3329", "#AD4B40"],
-      ["eu", "#583875", "#80609A"],
-      ["eg", "#294A8A", "#5F7FBE"],
-      ["gr", "#285051", "#5A8480"],
+  it("is the draft's .th-dark / .th-light and [data-civ] blocks, verbatim", () => {
+    expect(v4.dark).toEqual({ main: "#111113", card: "#1A1B1E", card2: "#222327", ink: "#F3F3F1", sub: "#B4B6BA", faint: "#7C7F85", line: "rgba(255,255,255,0.08)", line2: "rgba(255,255,255,0.16)", field: "rgba(255,255,255,0.05)", onSolid: "#FFFFFF", pos: "#8AD3A1", neg: "#F2849B", onNeg: "#16171A" });
+    expect(v4.light).toEqual({ main: "#F8F8F6", card: "#FFFFFF", card2: "#F1F1EE", ink: "#16171A", sub: "#54575C", faint: "#8A8D92", line: "rgba(0,0,0,0.08)", line2: "rgba(0,0,0,0.16)", field: "rgba(0,0,0,0.035)", onSolid: "#FFFFFF", pos: "#1F6B3F", neg: "#A81E3C", onNeg: "#FFFFFF" });
+    const nine = (c: (typeof CIVS)[number]) => [v4.civ[c].glow, v4.civ[c].tD, v4.civ[c].tL, v4.civ[c].sL, v4.civ[c].sD, v4.civ[c].mD, v4.civ[c].mL, v4.civ[c].sideD, v4.civ[c].sideL].join(" ");
+    expect(CIVS.map((c) => [c, nine(c)])).toEqual([
+      ["cn", "#C8604F #D98A7A #A04636 #A64A3B #7E362B #C9A35E #8A6A24 #160806 #FFF0EC"],
+      ["eu", "#A0709F #A883AE #885A94 #7A4F85 #5A3A63 #B9C2CF #5C6878 #100718 #F7EDF6"],
+      ["eg", "#5F93C8 #89BCF1 #174A88 #3C69A2 #2B4E79 #D6B25E #86671E #060C1C #EAF2FB"],
+      ["gr", "#5F9C94 #B5E3D8 #31695E #37716A #28544F #C98B62 #8F5B36 #03120F #E8FAF7"],
     ]);
-    expect(ON_PLAQUE).toBe("#FFFFFF");
+    expect(ON_PLAQUE).toBe(v4.dark.onSolid);
+    expect(ON_PLAQUE).toBe(v4.light.onSolid);
   });
 
-  it("the neutral plaque is the web's neutral --color-main, read from globals.css (dark :root, light .light)", () => {
+  it("the neutral plaque is the web's neutral --color-civ-neutral, read from globals.css (dark :root, light .light)", () => {
     const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
     // The theme's block, not the brand-token `:root` beside it (Design batch 3: outside the themes).
     const block = (selector: string) =>
       css.split(`${selector} {`).slice(1).map((b) => b.split(/\n {2}\}/)[0]).find((b) => b.includes("--color-civ-neutral")) ?? "";
-    const neutral = (selector: string) => block(selector).match(/--color-civ-neutral:\s*([\d.\s]+);/)?.[1];
+    // The web writes it as hex or as an OKLCH triple; either is read as hex.
+    const neutral = (selector: string) => {
+      const v = block(selector).match(/--color-civ-neutral:\s*([^;]+);/)?.[1].trim() ?? "";
+      return v.startsWith("#") ? v.toLowerCase() : oklchToHex(v.replace(/^oklch\(|\)$/g, ""));
+    };
     // …and the web's neutral main IS that token (no data-civ = neutral).
     expect(block(":root")).toMatch(/--color-main: var\(--color-civ-neutral\);/);
-    expect({ light: oklchToHex(neutral(".light") ?? ""), dark: oklchToHex(neutral(":root") ?? "") }).toEqual({
+    expect({ light: neutral(".light"), dark: neutral(":root") }).toEqual({
       light: NEUTRAL_PLAQUE.light.toLowerCase(),
       dark: NEUTRAL_PLAQUE.dark.toLowerCase(),
     });
@@ -119,70 +123,59 @@ describe("v3 is the palette (user decision 2026-10-01: v3 fully replaces v2)", (
     const app = require("../../app.json") as { expo: { plugins: unknown[] } };
     const notifications = app.expo.plugins.find((p) => Array.isArray(p) && p[0] === "expo-notifications") as [string, { color: string }];
     expect(notifications[1].color.toLowerCase()).toBe(NEUTRAL_PLAQUE.light.toLowerCase());
-    // v2's warm black / warm grey are gone.
-    expect(Object.values(NEUTRAL_PLAQUE)).not.toEqual(expect.arrayContaining(["#2B2724"]));
-    expect(Object.values(NEUTRAL_PLAQUE)).not.toEqual(expect.arrayContaining(["#6E665E"]));
+    // v3's neutral (#262925 / #656962) and v2's warm black / warm grey are gone.
+    expect(Object.values(NEUTRAL_PLAQUE)).not.toEqual(expect.arrayContaining(["#262925", "#656962", "#2B2724", "#6E665E"]));
   });
 
-  it.each(SCHEMES)("%s: the nine status colours (规范 v2 §二) are untouched", (scheme) => {
+  it.each(SCHEMES)("%s: the status colours — v4's pos / neg / onNeg, the rest as 规范 v2 §二 printed them", (scheme) => {
     const printed = Object.fromEntries(pairs(STATUS[scheme]));
     const { scrim: _scrim, ...ours } = semantic[scheme];
     expect(ours).toEqual(printed);
   });
 
   it.each(SCHEMES)("%s: every skin, every screen, on the same neutrals — no per-civilization ground is left", (scheme) => {
-    const n = v3[scheme];
+    const n = v4[scheme];
     for (const key of KEYS) {
       const t = skin(key, scheme);
-      expect([key, t.s0, t.s1, t.s2, t.hair, t.hair2, t.ink, t.inkMuted, t.inkSubtle]).toEqual([key, n.canvas, n.surface, S2[scheme], n.line, n.line, n.ink, n.muted, n.muted]);
+      expect([key, t.s0, t.s1, t.s2, t.hair, t.hair2, t.ink, t.inkMuted, t.inkSubtle, t.faint, t.field]).toEqual([key, n.main, n.card, n.card2, n.line, n.line2, n.ink, n.sub, n.sub, n.faint, n.field]);
     }
   });
 
-  it.each(SCHEMES)("%s: the civilization is its colour alone; an unknown one borrows no one's", (scheme) => {
-    for (const c of CIVS) expect([c, skin(c, scheme).plaque]).toEqual([c, v3.civ[c][scheme]]);
+  it.each(SCHEMES)("%s: each civilization's slots are its own v4 values; an unknown one borrows no one's", (scheme) => {
+    const d = scheme === "dark";
+    for (const c of CIVS) {
+      const v = v4.civ[c];
+      const t = skin(c, scheme);
+      expect([c, t.plaque, t.band, t.plaqueFill, t.metal, t.side, t.glow]).toEqual([c, d ? v.tD : v.tL, d ? v.sD : v.sL, d ? v.sD : v.sL, d ? v.mD : v.mL, d ? v.sideD : v.sideL, v.glow]);
+    }
     expect(skin("neutral", scheme).plaque).toBe(NEUTRAL_PLAQUE[scheme]);
+    expect(skin("neutral", scheme).plaqueFill).toBe(d ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL);
     expect(themeFor("ATLANTEAN", scheme).plaque).toBe(NEUTRAL_PLAQUE[scheme]);
-  });
-
-  it("s2 is derived from the five: light 80% canvas + 20% line, dark surface and line half and half", () => {
-    const mix = (a: string, b: string, w: number) =>
-      `#${rgb(a).map((x, i) => Math.round(x * w + rgb(b)[i] * (1 - w)).toString(16).padStart(2, "0")).join("").toUpperCase()}`;
-    expect(S2.light).toBe(mix(v3.light.canvas, v3.light.line, 0.8));
-    expect(S2.dark).toBe(mix(v3.dark.surface, v3.dark.line, 0.5));
-  });
-
-  it("v3Band is 90% the colour and 10% #111, as color-mix() draws it; it is every skin's band", () => {
-    expect(v3Band("#FFFFFF")).toBe("#e7e7e7");
-    expect(v3Band("#000000")).toBe("#020202");
-    expect(v3Band(v3.civ.cn.light)).toBe("#823027");
-    for (const key of KEYS) for (const scheme of SCHEMES) expect(skin(key, scheme).band).toBe(v3Band(skin(key, scheme).plaque));
+    const civColours = new Set(CIVS.flatMap((c) => Object.values(v4.civ[c])));
+    expect([skin("neutral", scheme).plaque, skin("neutral", scheme).plaqueFill, skin("neutral", scheme).metal].filter((x) => civColours.has(x))).toEqual([]);
   });
 
   it("the neg and warn hues are not any civilization's colour", () => {
-    const colours = new Set(KEYS.flatMap((k) => SCHEMES.flatMap((s) => [skin(k, s).plaque, skin(k, s).band, skin(k, s).plaqueFill])));
+    const colours = new Set(KEYS.flatMap((k) => SCHEMES.flatMap((s) => [skin(k, s).plaque, skin(k, s).band, skin(k, s).plaqueFill, skin(k, s).metal])));
     const status = SCHEMES.flatMap((s) => [semantic[s].neg, semantic[s].negStrong, semantic[s].warn]);
     expect(status.filter((c) => colours.has(c))).toEqual([]);
   });
-});
 
-describe("primary-button text (user decision 2026-10-01: dark 埃及 / 希腊 must reach AA)", () => {
-  const cases = CIVS.flatMap((c) => SCHEMES.map((s) => [c, s] as const));
-
-  it.each(cases)("%s / %s: white on the button's fill ≥ 4.5", (c, scheme) => {
-    expect(contrast(ON_PLAQUE, skin(c, scheme).plaqueFill)).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it("the fill is the colour itself in light and the band (10% #111) in dark — the colour values are not changed", () => {
-    for (const c of CIVS) {
-      expect(skin(c, "light").plaqueFill).toBe(v3.civ[c].light);
-      expect(skin(c, "dark").plaqueFill).toBe(v3Band(v3.civ[c].dark));
-      expect(skin(c, "dark").plaque).toBe(v3.civ[c].dark);
+  it("v3's palette reaches no slot", () => {
+    const v3 = ["#EFEFEB", "#FBFBF8", "#181A17", "#646861", "#D1D3CD", "#10120F", "#1A1D19", "#F0F1EA", "#A7ACA4", "#383C35", "#8F3329", "#AD4B40", "#583875", "#80609A", "#294A8A", "#5F7FBE", "#285051", "#5A8480", "#82CB92", "#FF7A93", "#C21D4D", "#197037", "#A8103E"];
+    for (const key of KEYS) for (const scheme of SCHEMES) {
+      const t = skin(key, scheme) as unknown as Record<string, unknown>;
+      expect([key, scheme, Object.keys(t).filter((k) => v3.includes(String(t[k]).toUpperCase()))]).toEqual([key, scheme, []]);
     }
   });
+});
 
-  it("why the mix: white on the raw dark 埃及 / 希腊 colour is under AA", () => {
-    expect(contrast(ON_PLAQUE, v3.civ.eg.dark)).toBeLessThan(4.5);
-    expect(contrast(ON_PLAQUE, v3.civ.gr.dark)).toBeLessThan(4.5);
+describe("filled text (user decision 2026-11-06: 深浅色做到一样好)", () => {
+  const cases = KEYS.flatMap((k) => SCHEMES.map((s) => [k, s] as const));
+
+  it.each(cases)("%s / %s: white on the button's fill and on the band ≥ 4.5", (key, scheme) => {
+    expect(contrast(ON_PLAQUE, skin(key, scheme).plaqueFill)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ON_PLAQUE, skin(key, scheme).band)).toBeGreaterThanOrEqual(4.5);
   });
 });
 
@@ -209,25 +202,25 @@ describe("contrast, at the worst App ground", () => {
     expect(low).toEqual([]);
   });
 
-  it.each(SCHEMES)("%s: white on negStrong, negInk on negBg, warn on warnBg ≥ 4.5", (scheme) => {
+  it.each(SCHEMES)("%s: onNeg on negStrong, negInk and neg on negBg, warn on warnBg ≥ 4.5", (scheme) => {
     const s = semantic[scheme];
-    expect(contrast("#FFFFFF", s.negStrong)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(s.onNeg, s.negStrong)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(s.neg, s.negBg)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(s.negInk, s.negBg)).toBeGreaterThanOrEqual(4.5);
     // 补足 D 组: text on the warning ground is warn itself.
     expect(contrast(s.warn, s.warnBg)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(KEYS.flatMap((k) => SCHEMES.map((s) => [k, s] as const)))("%s / %s: onPlaque on the band and on the fill ≥ 4.5; the colour on s0 ≥ 3", (key, scheme) => {
+  it.each(KEYS.flatMap((k) => SCHEMES.map((s) => [k, s] as const)))("%s / %s: the civilization's colour is text now (v4 --civT): ≥ 4.5 on every ground; its metal ≥ 3", (key, scheme) => {
     const t = skin(key, scheme);
-    expect(contrast(t.onPlaque, t.band)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(t.onPlaque, t.plaqueFill)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(t.plaque, t.s0)).toBeGreaterThanOrEqual(3);
+    expect(worst(t.plaque, scheme)).toBeGreaterThanOrEqual(4.5);
+    expect(worst(t.metal, scheme)).toBeGreaterThanOrEqual(3);
   });
 
-  it("why the current tab's label stays ink: as text every dark v3 colour fails AA on the dark surface", () => {
-    for (const c of CIVS) expect(contrast(v3.civ[c].dark, v3.dark.surface)).toBeLessThan(4.5);
-    // …while as a graphic (the emblem, the 2pt rule) each clears 3:1.
-    for (const c of CIVS) expect(contrast(v3.civ[c].dark, v3.dark.surface)).toBeGreaterThanOrEqual(3);
+  it("why inkSubtle is not v4's --faint: light --faint is under 3:1 on its own canvas", () => {
+    expect(contrast(v4.light.faint, v4.light.main)).toBeLessThan(3);
+    expect(contrast(v4.dark.faint, v4.dark.main)).toBeLessThan(4.5);
+    for (const s of SCHEMES) expect(skin("cn", s).inkSubtle).toBe(v4[s].sub);
   });
 });
 
@@ -255,7 +248,7 @@ describe("brand (v3 第三批 品牌色令牌): the mark's gold and ground, one 
 
 describe("themeFor", () => {
   it("skins by the soul's civilization: its colour, nothing else", () => {
-    expect(themeFor("EGYPTIAN", "light").plaque).toBe(v3.civ.eg.light);
+    expect(themeFor("EGYPTIAN", "light").plaque).toBe(v4.civ.eg.tL);
     expect(themeFor("GREEK", "dark").civ).toBe("gr");
     expect(new Set(["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((c) => themeFor(c, "dark").plaque)).size).toBe(4);
     expect(new Set(["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK", null].map((c) => themeFor(c, "dark").s1)).size).toBe(1);
@@ -275,11 +268,11 @@ describe("themeFor", () => {
   });
 });
 
-describe("preLoginTheme: v3 has no pre-sign-in canvas (the parchment left 2026-10-02)", () => {
-  it.each(SCHEMES)("%s: is the neutral skin — v3's neutrals, the neutral plaque — slot for slot", (scheme) => {
+describe("preLoginTheme: there is no pre-sign-in canvas since v3 (the parchment left 2026-10-02)", () => {
+  it.each(SCHEMES)("%s: is the neutral skin — v4's neutrals, the neutral plaque — slot for slot", (scheme) => {
     expect(preLoginTheme(scheme)).toEqual(themeFor(null, scheme));
     const t = preLoginTheme(scheme);
-    expect([t.s0, t.s1, t.ink, t.inkMuted, t.hair, t.plaque]).toEqual([v3[scheme].canvas, v3[scheme].surface, v3[scheme].ink, v3[scheme].muted, v3[scheme].line, NEUTRAL_PLAQUE[scheme]]);
+    expect([t.s0, t.s1, t.ink, t.inkMuted, t.hair, t.plaque]).toEqual([v4[scheme].main, v4[scheme].card, v4[scheme].ink, v4[scheme].sub, v4[scheme].line, NEUTRAL_PLAQUE[scheme]]);
     // v2's parchment grounds reach no slot.
     const parchment = new Set(["#f4efe4", "#ebe4d3", "#15130f", "#1f1c16"]);
     expect((Object.keys(t) as (keyof Theme)[]).filter((k) => parchment.has(t[k] as string))).toEqual([]);

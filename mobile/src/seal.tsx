@@ -37,8 +37,8 @@ export function sealGlyphs(civ: SealCiv, glyphs: readonly string[] | null | unde
  * colour: the civilization's (`theme.plaque`) on a page, white (`onPlaque`) on the band, which
  * is itself that colour. The shape says the civilization: 地府 square, 欧洲 circle, 埃及 arch
  * (64 × 70, round top), 希腊 hexagon. The glyph is `sealGlyphs` above, set in the app's
- * serif (Noto Serif SC for Han, Source Serif 4 for J / Μ) — the App bundles Noto Serif SC at
- * 400 only — and the hieroglyph face for 埃及. A soul of no known civilization has no seal.
+ * serif (`quoteFamily`: Noto Serif SC 500 for Han, EB Garamond for J / Μ) and the hieroglyph
+ * face for 埃及. A soul of no known civilization has no seal.
  */
 const EG_ASPECT = 70 / 64;
 /** Glyph size = seal width × this: v3 draws 64 → 28 and 30 → 15; two hieroglyphs 0.34 each. */
