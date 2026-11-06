@@ -151,7 +151,7 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     expect(skin("neutral", scheme).plaque).toBe(NEUTRAL_PLAQUE[scheme]);
     expect(skin("neutral", scheme).plaqueFill).toBe(d ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL);
     expect(themeFor("ATLANTEAN", scheme).plaque).toBe(NEUTRAL_PLAQUE[scheme]);
-    const civColours = new Set(CIVS.flatMap((c) => Object.values(v4.civ[c])));
+    const civColours = new Set<string>(CIVS.flatMap((c) => Object.values(v4.civ[c])));
     expect([skin("neutral", scheme).plaque, skin("neutral", scheme).plaqueFill, skin("neutral", scheme).metal].filter((x) => civColours.has(x))).toEqual([]);
   });
 
