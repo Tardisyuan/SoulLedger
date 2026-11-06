@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import type { gsap } from "gsap";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -252,6 +252,8 @@ export function JudgmentConfirmLayer({
   onStep,
   reasons,
   reasonsReady = true,
+  verdictNamespace = "judgment.verdicts",
+  chooseFirst = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -277,11 +279,24 @@ export function JudgmentConfirmLayer({
    */
   reasons?: ReactNode;
   reasonsReady?: boolean;
+  /** 按文明的裁决叫法(`verdictNamespace`,第十一批 1a)。 */
+  verdictNamespace?: string;
+  /**
+   * Design 第十一批第 3 条:希腊判「通过」先单独问「这一判写在哪一篇」(`reasons` 就是那一问),选好「下一步」
+   * 才到原来的落印一页。两项初始都不选,「下一步」是灰的。
+   */
+  chooseFirst?: boolean;
 }) {
   const { t } = useI18n();
   const code = verdict as Verdict;
   /* 句子里的裁决名走 DomainEnum 同一条解析(键是小写的;认不得时写「未识别」而不是键名)。 */
-  const verdictLabel = resolveEnumDisplay(t, "judgment.verdicts", verdict).label ?? "";
+  const verdictLabel = resolveEnumDisplay(t, verdictNamespace, verdict).label ?? "";
+  /** 希腊通过的第 1 步(选文书)走过了没有;每次进层从头来。 */
+  const [chosen, setChosen] = useState(false);
+  useEffect(() => {
+    if (!open) setChosen(false);
+  }, [open]);
+  const choosing = chooseFirst && !chosen && !done;
   /* 进层时焦点落在「盖印并结案」(不是排在前面的「返回检查」),落定后落在「完成」:Enter 做的是这一层要做的事。 */
   const stampRef = useRef<HTMLButtonElement>(null);
   const doneRef = useRef<HTMLButtonElement>(null);
@@ -293,7 +308,7 @@ export function JudgmentConfirmLayer({
   const choice = (
     <p className="font-title text-display-lg text-[oklch(var(--color-ink))]">
       <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(code)}</span>
-      <DomainEnum namespace="judgment.verdicts" value={verdict} />
+      <DomainEnum namespace={verdictNamespace} value={verdict} />
     </p>
   );
   return (
@@ -343,8 +358,25 @@ export function JudgmentConfirmLayer({
                 </div>
                 <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
               </>
+            ) : choosing ? (
+              <>
+                <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.greek_account.step_choose")}</p>
+                <Dialog.Title className="sr-only">{t("judgment.greek_account_label")}</Dialog.Title>
+                <div className="mt-4">{reasons}</div>
+                <div className="mt-8 flex gap-3">
+                  <Button type="button" variant="secondary" size="lg" className="flex-1" onClick={onClose}>
+                    {t("reject.sheet.cancel")}
+                  </Button>
+                  <Button type="button" variant="primary" size="lg" className="flex-1" ref={stampRef} disabled={!reasonsReady} onClick={() => setChosen(true)}>
+                    {t("workflow.pick.next")}
+                  </Button>
+                </div>
+              </>
             ) : (
               <>
+                {chooseFirst && (
+                  <p className="mb-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.greek_account.step_seal")}</p>
+                )}
                 <Dialog.Title className="text-lg text-[oklch(var(--color-ink))]">{t("judgment.desk.confirm_title")}</Dialog.Title>
                 <Dialog.Description className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">
                   {t("judgment.desk.confirm_body", { verdict: verdictLabel })}
@@ -359,10 +391,10 @@ export function JudgmentConfirmLayer({
                     </span>
                   </span>
                 </div>
-                {reasons && <div className="mt-8">{reasons}</div>}
+                {reasons && !chooseFirst && <div className="mt-8">{reasons}</div>}
                 {refusal && <div className="mt-8">{refusal}</div>}
                 <div className="mt-8 flex gap-3">
-                  {reasons && (
+                  {reasons && !chooseFirst && (
                     <Button type="button" variant="secondary" size="lg" className="flex-1" disabled={pending} onClick={onClose}>
                       {t("reject.sheet.cancel")}
                     </Button>
@@ -383,6 +415,8 @@ export function JudgmentConfirmLayer({
                         ? t("workflow.pick.next")
                         : code === "FAILED" && reasons
                           ? t("reject.sheet.confirm")
+                          : chooseFirst
+                            ? t("judgment.greek_account.confirm_pass")
                           : withWorkflow
                             ? t("judgment.detail.conclude_with_workflow")
                             : t("judgment.desk.stamp")}

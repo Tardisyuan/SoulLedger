@@ -911,7 +911,7 @@ export function JudgmentClaimQueue({
                               ? [{ key: "undefer", label: t("action.undo"), onSelect: () => undeferOne(j.id), disabled: undefer.isPending }]
                               : []),
                             ...(group !== "deferred" && !laterThisSession
-                              ? [{ key: "defer", label: t("judgment.queue.defer"), onSelect: () => deferForSession(j.id) }]
+                              ? [{ key: "defer", label: t("judgment.queue.key_defer"), onSelect: () => deferForSession(j.id) }]
                               : []),
                             ...(canAssign
                               ? [{ key: "reassign", label: t("judgment.claim.reassign"), onSelect: () => { setRowReassign(j.id); setDialog("reassign"); } }]

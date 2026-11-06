@@ -594,6 +594,8 @@ const PROPER_NAMES = [
   // v4 第八批(Design,2026-11-06):hooks 是技术名词,同 Django、packages/core 照原文写;Francesca 是人名(欧洲导览第五步);
   // Wangsi 是枉死城的拼音(Nut Wangsi),照地府专名写拼音的惯例 —— 不写 Nut Mut Nen Maat,那会让含「功」的键里出现 Maat。
   "hooks", "Francesca", "Wangsi",
+  // v4 第十一批(Design,2026-11-06):《理想国》照希腊原名 Politeia(与 Gorgias 同,判官落印时选的两篇文书之一)。
+  "Politeia",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
