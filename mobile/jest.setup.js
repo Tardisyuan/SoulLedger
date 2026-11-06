@@ -27,7 +27,10 @@ jest.mock("expo-notifications", () => {
   };
   return {
     __state: state,
-    AndroidImportance: { DEFAULT: 3 },
+    AndroidImportance: { LOW: 2, DEFAULT: 3 },
+    // 锁屏实时进度 on Android (liveProgress.ts): the one ongoing notification, presented and dismissed by id.
+    scheduleNotificationAsync: async ({ identifier }) => identifier,
+    dismissNotificationAsync: async () => undefined,
     AndroidNotificationVisibility: { UNKNOWN: 0, PUBLIC: 1, PRIVATE: 2, SECRET: 3 },
     // canAskAgain unset = iOS: only "undetermined" can still be asked.
     getPermissionsAsync: async () => ({

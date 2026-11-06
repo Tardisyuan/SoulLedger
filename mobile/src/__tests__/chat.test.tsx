@@ -1623,13 +1623,13 @@ describe("the fourth tab", () => {
   jest.setTimeout(20_000);
   const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
-  async function signedIn(chatRoutes: Record<string, unknown>) {
+  async function signedIn(chatRoutes: Record<string, unknown>, profile: Record<string, unknown> = PROFILE) {
     secure.clear();
     secure.set(REFRESH_TOKEN_KEY, "R");
     await AsyncStorage.clear();
     const calls = stubApi({
       "/auth/soul/refresh/": { status: 200, data: { access: "A", refresh: "R2" } },
-      "/me/": { status: 200, data: PROFILE },
+      "/me/": { status: 200, data: profile },
       "/me/life/": { status: 200, data: { cycle: 1, records: [], judgments: [], dispositions: [], rebirth_applications: [], reincarnation: null } },
       "/me/rebirth-applications/": { status: 200, data: { can_apply: false, reason: "not_eligible", cooldown_until: null, results: [] } },
       ...(chatRoutes as Record<string, Reply | Promise<Reply>>),
@@ -1660,6 +1660,16 @@ describe("the fourth tab", () => {
     // stops at findByText left its last update to land after the test — the act() warning, 3 of 20 runs under load.
     await pressTab("tab-Applications");
     expect(await screen.findByText("转生申请")).toBeTruthy();
+  });
+
+  it.each(["EGYPTIAN", "EUROPEAN"])("%s does not rebirth: three tabs, no 转生 (v4)", async (civilization) => {
+    jest.restoreAllMocks();
+    await signedIn(
+      { "/me/chat/conversations/": { status: 200, data: [] }, "/me/chat/session/": { status: 503, data: { code: "chat_unavailable" } } },
+      { ...PROFILE, civilization, home_civilization: civilization, welcomed_civilizations: [civilization] }
+    );
+    expect(screen.getAllByRole("tab").map((tab) => tab.props.accessibilityLabel)).toEqual(["本世", "书信", "朋友圈"]);
+    expect(screen.queryByTestId("tab-Applications")).toBeNull();
   });
 
   it("chat not configured here: no 书信 tab at all, and the session is asked for once, not every 5 s", async () => {
