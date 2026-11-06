@@ -10,6 +10,8 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+
 import { useChat } from "../chat";
 import { Icon } from "../emblems";
 import { family } from "../fonts";
@@ -55,6 +57,9 @@ function Question({ item }: { item: Faq }) {
   const { gutter } = useLayout();
   const [id, q, a] = item;
   const [open, setOpen] = useState(false);
+  // 「受刑计划」 in 地府, 「去处计划」 elsewhere (v4 batch 12 §1): by the signed-in soul's home civilization.
+  const { state } = useSession();
+  const home = state.status === "signedIn" ? state.profile.home_civilization : undefined;
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: theme.hair }}>
       <Pressable
@@ -65,7 +70,7 @@ function Question({ item }: { item: Faq }) {
         style={({ pressed }) => [styles.row, { paddingHorizontal: gutter }, pressed && styles.pressed]}
       >
         <Txt variant="bodyLg" style={styles.fill}>
-          {t(q)}
+          {t(civKey(t, q, home))}
         </Txt>
         <Icon name={open ? "chevronDown" : "chevron"} size={14} color={theme.inkSubtle} />
       </Pressable>

@@ -19,6 +19,7 @@ import {
   type OfficerAssistScreen,
 } from "@soulledger/core/api/officer-assist";
 import { officerAssistSuggestions } from "@soulledger/core/config/officerAssistSuggestions";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useCallback, useEffect, useState } from "react";
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 
@@ -80,16 +81,19 @@ export const WEB_PAGE_KEYS: Partial<Record<OfficerAssistScreen, string>> = {
  * (A conversation does not record which client asked, so a desk conversation on one of those five pages reads
  * as the tab -- the two cannot be told apart.)
  */
-export function pageNameOf(screen: OfficerAssistScreen, t: (key: string) => string): string {
+export function pageNameOf(screen: OfficerAssistScreen, t: (key: string) => string, hall?: string | null): string {
   const tab = (Object.keys(TAB_SCREEN) as TabKey[]).find((k) => TAB_SCREEN[k] === screen);
   if (tab) return t(`officer_app.tabs.${tab}`);
   const web = WEB_PAGE_KEYS[screen];
-  return web ? t(web) : t("officer_assist.page_other");
+  // 「受刑请求」 in 地府, 「去处请求」 elsewhere (v4 batch 12 §1), as the desk's sidebar reads it for the officer's hall.
+  return web ? t(civKey(t, web, hall)) : t("officer_assist.page_other");
 }
 
 function usePageName() {
   const { t } = useI18n();
-  return (screen: OfficerAssistScreen) => pageNameOf(screen, t);
+  const { state } = useSession();
+  const hall = state.status === "signedIn" ? state.user.tenant?.code : null;
+  return (screen: OfficerAssistScreen) => pageNameOf(screen, t, hall);
 }
 
 interface Line {

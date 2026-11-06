@@ -7,6 +7,7 @@ from rest_framework import serializers
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestKind
 from apps.sentence_plan.services import last_refusal
+from apps.sentence_plan.soul_view import origin_greek_account
 
 
 class SentencePlanRequestCreateSerializer(serializers.Serializer):
@@ -72,13 +73,19 @@ class SentencePlanSerializer(serializers.ModelSerializer):
     tenant_code = serializers.CharField(source="tenant.code", read_only=True, allow_null=True)
     nodes = SentenceNodeSerializer(many=True, read_only=True)
     requests = SentencePlanRequestSerializer(many=True, read_only=True)
+    #: 希腊的案子按哪篇文书判的(GORGIAS / REPUBLIC,原审判的 `greek_account`);别的文明为空串。界面据此选词。
+    greek_account = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.CharField(allow_blank=True))
+    def get_greek_account(self, plan) -> str:
+        return origin_greek_account(plan)
 
     class Meta:
         model = SentencePlan
         fields = [
             "id", "soul", "soul_name", "tenant", "tenant_code", "cycle", "status",
             "origin_judgment_id", "cross_judgment_id", "completed_at", "cancel_reason",
-            "nodes", "requests", "create_time", "update_time",
+            "nodes", "requests", "greek_account", "create_time", "update_time",
         ]
         read_only_fields = fields
 

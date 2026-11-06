@@ -27,6 +27,7 @@ import { rebirthAnchor } from "@/src/components/souls/detail/SoulLedgerSections"
 import { RebirthQuotaStrip } from "@/src/components/souls/RebirthQuota";
 import { CivEmblem } from "@/src/components/brand/CivEmblem";
 import { mapSkinOf } from "@/src/lib/underworldMap";
+import { rebirthFormNamespace } from "@/src/lib/domainNames";
 
 /*
  * 转生登记簿(第四十批 W-c):全殿的转生记录,时间倒序(`Reincarnation.Meta.ordering`)。
@@ -167,7 +168,8 @@ function RebirthsContent({ sixPaths }: { sixPaths: boolean }) {
             </td>
             {sixPaths ? (
               <td className="px-3 py-2 whitespace-nowrap">
-                <DomainEnum namespace="reincarnation.forms" value={r.rebirth_form} />
+                {/* 全局视图混着各文明:按这一行登记殿的文明选词(希腊的 OTHER 是「自择一生」,第十二批 SH 2)。 */}
+                <DomainEnum namespace={rebirthFormNamespace(t, r.civilization, r.rebirth_form)} value={r.rebirth_form} />
               </td>
             ) : null}
             <td className="px-3 py-2 whitespace-nowrap font-mono text-xs text-[oklch(var(--color-ink-muted))]">
