@@ -40,7 +40,7 @@ export function CorpusCitedBy({ statuteId }: { statuteId: string }) {
               <DomainText value={j.soul_name} />
             </Link>
             {j.verdict ? (
-              <VerdictBadge verdict={j.verdict} className="justify-self-end" />
+              <VerdictBadge verdict={j.verdict} civilization={j.civilization} className="justify-self-end" />
             ) : (
               <span className="justify-self-end font-mono text-2xs whitespace-nowrap">{t("judgment.corpus.cited_by_open")}</span>
             )}

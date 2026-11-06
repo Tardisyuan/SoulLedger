@@ -6,6 +6,7 @@
  * so going back to it keeps its 「加载更多」 state. A tab that fails says so inside itself, with 重试; the header and
  * the other tabs are untouched. Only the soul itself failing is the whole-page `state.error_*`.
  */
+import { verdictNamespace } from "@soulledger/core/domain/verdictNames";
 import { captureWarrantsApi } from "@soulledger/core/api/dispatch";
 import { dispositionApi, type Disposition } from "@soulledger/core/api/disposition";
 import { eventsApi, type SoulEvent } from "@soulledger/core/api/events";
@@ -327,7 +328,8 @@ function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string)
   const plan = [...data.plans].sort((a, b) => b.cycle - a.cycle)[0];
   const verdict = (j: Judgment) => {
     if (!j.verdict) return t("souls.detail.ledger.verdict_pending");
-    const d = enumLabel("judgment.verdicts", j.verdict.toLowerCase());
+    // PURGATORY 按案子的文明叫(欧洲炼狱、埃及天平摇摆;第十一批 1a)。
+    const d = enumLabel(verdictNamespace(t, j.civilization, j.verdict), j.verdict.toLowerCase());
     return d.state === "known" ? d.label : j.verdict;
   };
   return (

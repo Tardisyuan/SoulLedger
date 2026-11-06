@@ -28,6 +28,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { VerdictBadge } from "@/src/components/ui/StatusBadge";
+import { verdictNamespace } from "@/src/lib/domainNames";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue";
@@ -227,7 +228,8 @@ function JudgmentQueuePageContent() {
           value={verdict}
           options={[
             { value: "", label: t("filter.all") },
-            ...VERDICT_OPTIONS.map((v) => ({ value: v, label: resolveEnumDisplay(t, "judgment.verdicts", v).label ?? v })),
+            // 选了文明就按那个文明叫(欧洲「炼狱」、埃及「天平摇摆」);没选文明是几个文明一起筛,写通用的「存疑」。
+            ...VERDICT_OPTIONS.map((v) => ({ value: v, label: resolveEnumDisplay(t, verdictNamespace(t, civilization, v), v).label ?? v })),
           ]}
           clearLabel={t("filter.clear_one", { name: t("judgment.verdict") })}
           onChange={(v) => { setVerdict(v); setPage(1); }}
@@ -300,7 +302,7 @@ function JudgmentQueuePageContent() {
                 {bench || <MissingValue kind="unrecorded" />}
               </td>}
               {columnVis.isVisible("verdict") && <td className="px-3 whitespace-nowrap">
-                {judgment.verdict && <VerdictBadge verdict={judgment.verdict} />}
+                {judgment.verdict && <VerdictBadge verdict={judgment.verdict} civilization={judgment.civilization} />}
               </td>}
               {columnVis.isVisible("created_at") && <td className="px-3 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
                 {formatDate(judgment.concluded_at ?? judgment.created_at)}

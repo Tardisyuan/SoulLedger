@@ -105,7 +105,7 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
               </span>
             </span>
             <span className="text-xs">
-              {j.verdict ? <VerdictBadge verdict={j.verdict} /> : t("souls.detail.ledger.verdict_pending")}
+              {j.verdict ? <VerdictBadge verdict={j.verdict} civilization={j.civilization} /> : t("souls.detail.ledger.verdict_pending")}
             </span>
             <Link
               href={`/judgment/${j.id}`}

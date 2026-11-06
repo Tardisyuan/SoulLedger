@@ -47,6 +47,7 @@ import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
+import { verdictText } from "@/src/lib/domainNames";
 import { CivEmptyState } from "@/src/components/ui/CivEmptyState";
 import { withFrom } from "@/src/lib/backSource";
 
@@ -809,7 +810,7 @@ export function JudgmentClaimQueue({
                         {j.draft_verdict ? (
                           <span title={j.draft_verdict} className="text-[oklch(var(--color-ink))]">
                             <span aria-hidden="true">{verdictGlyph(j.draft_verdict)} </span>
-                            {t(`judgment.verdicts.${j.draft_verdict.toLowerCase()}`)}
+                            {verdictText(t, j.civilization, j.draft_verdict)}
                           </span>
                         ) : (
                           <span className="text-[oklch(var(--color-ink-subtle))]">{t("judgment.claim.draft_none")}</span>

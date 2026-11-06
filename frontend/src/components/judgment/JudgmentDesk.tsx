@@ -139,7 +139,7 @@ export function QueueBar({ judgmentId, onDefer }: { judgmentId: string; onDefer?
  * 同殿 → 余额最近 → 共同援引排序,这里照序列出,不再排。余额对 VIEWER 是 null,写「不适用」
  * 不对 —— 那是「没给」,所以 `unrecorded`。
  */
-export function PrecedentsPanel({ judgmentId }: { judgmentId: string }) {
+export function PrecedentsPanel({ judgmentId, civilization }: { judgmentId: string; civilization?: string | null }) {
   const { t } = useI18n();
   const { data, isLoading, isError } = useJudgmentPrecedents(judgmentId);
   const rows = data ?? [];
@@ -170,7 +170,7 @@ export function PrecedentsPanel({ judgmentId }: { judgmentId: string }) {
                 {p.same_court && ` · ${t("judgment.precedents.same_court")}`}
                 {p.shared_statutes > 0 && ` · ${t("judgment.precedents.shared", { n: String(p.shared_statutes) })}`}
               </span>
-              <VerdictBadge verdict={p.verdict} className="justify-self-end" />
+              <VerdictBadge verdict={p.verdict} civilization={civilization} className="justify-self-end" />
             </li>
           ))}
         </ul>

@@ -1,4 +1,5 @@
 import type { ConditionClause, ConditionFact, ConditionOp } from "@soulledger/core/api";
+import { verdictText } from "@/src/lib/domainNames";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { ORIGIN_REGIONS, originRegionLabel } from "@soulledger/core/domain/originRegion";
 
@@ -131,22 +132,23 @@ const OP_SIGN: Record<ConditionOp, string> = {
 type TFunc = (key: string, params?: Record<string, string>) => string;
 
 /** How one member of an enum fact reads: a civilization, a region or a verdict. */
-export function valueText(fact: ConditionFact, v: string, t: TFunc): string {
+/** `civilization`:模板的文明 —— 裁决 PURGATORY 按文明叫(第十一批 1a);不给就是通用的「存疑」。 */
+export function valueText(fact: ConditionFact, v: string, t: TFunc, civilization?: string | null): string {
   if (fact === "civilization") return t(`workflow.civilizations.${v}`);
   // Design 第四十五批:条件值与出口线、表单、详情同一组词(`souls.origin_region.*`)。
   if (fact === "origin_region") return originRegionLabel(t, v);
-  return t(`judgment.verdicts.${v.toLowerCase()}`);
+  return verdictText(t, civilization, v);
 }
 
 /** "余额 < 0" — the canvas label and the inspector summary. */
-export function clauseText(c: ConditionClause, t: TFunc): string {
+export function clauseText(c: ConditionClause, t: TFunc, civilization?: string | null): string {
   const fact = t(`workflow.editor.condition.fact.${c.fact}`);
   const value = Array.isArray(c.value)
-    ? c.value.map((v) => valueText(c.fact, v, t)).join(" / ")
+    ? c.value.map((v) => valueText(c.fact, v, t, civilization)).join(" / ")
     : String(c.value);
   return `${fact} ${OP_SIGN[c.op] ?? c.op} ${value}`;
 }
 
-export function whenText(when: readonly ConditionClause[], t: TFunc): string {
-  return when.map((c) => clauseText(c, t)).join(" ∧ ");
+export function whenText(when: readonly ConditionClause[], t: TFunc, civilization?: string | null): string {
+  return when.map((c) => clauseText(c, t, civilization)).join(" ∧ ");
 }

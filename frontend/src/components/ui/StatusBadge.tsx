@@ -5,6 +5,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { verdictBadgeClass, verdictGlyph } from "@/src/lib/verdictGlyph";
+import { verdictNamespace } from "@/src/lib/domainNames";
 
 /**
  * 规范 v1 §1.2「状态 = 颜色 + 字形」,给按 tone 上色的流程状态(调度、会审、凭据、
@@ -43,10 +44,20 @@ export function StatusBadge({ namespace, value, tone = "neutral" }: { namespace:
  * 判决徽章(补足 B8):领域枚举,ink 字 + 1px 中性灰框(2026-10-01 v3,原 ink3),「待定」加 s2 底。字形与底色
  * 都读 `verdictGlyph.ts` 那一张表 —— 审判列表、审判台、灵魂详情、处置页都画这一个。
  */
-export function VerdictBadge({ verdict, className }: { verdict: string | null | undefined; className?: string }) {
+export function VerdictBadge({
+  verdict,
+  civilization,
+  className,
+}: {
+  verdict: string | null | undefined;
+  /** 案子的文明:PURGATORY 按文明叫(欧洲炼狱、埃及天平摇摆,第十一批 1a);没给就是通用的「存疑」。 */
+  civilization?: string | null;
+  className?: string;
+}) {
+  const { t } = useI18n();
   return (
     <Badge glyph={verdictGlyph(verdict)} className={`${verdictBadgeClass(verdict)} ${className ?? ""}`} data-verdict-badge={verdict ?? ""}>
-      <DomainEnum namespace="judgment.verdicts" value={verdict} />
+      <DomainEnum namespace={verdictNamespace(t, civilization, verdict)} value={verdict} />
     </Badge>
   );
 }

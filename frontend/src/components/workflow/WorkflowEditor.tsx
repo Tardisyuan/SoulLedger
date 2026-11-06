@@ -1187,14 +1187,14 @@ export default function WorkflowEditor({
           ...e.data,
           branch: branchOf(e),
           labelled: branching.has(e.source) || conditional.has(e.source),
-          conditionText: when?.length ? whenText(when, t) : undefined,
+          conditionText: when?.length ? whenText(when, t, templateCiv) : undefined,
           isDefault: when === undefined && branchOf(e) === "pass" && conditional.has(e.source),
           regionText: region ? originRegionLabel(t, region, locale) : undefined,
           active: inspectorTab === "exits" && e.id === activeEdgeId,
         },
       };
     });
-  }, [nodes, edges, t, locale, inspectorTab, activeEdgeId]);
+  }, [nodes, edges, t, locale, inspectorTab, activeEdgeId, templateCiv]);
 
   /** Set or clear the condition on one PASS edge (the inspector's 出口 · 条件). */
   const setEdgeWhen = useCallback(
@@ -1545,6 +1545,7 @@ export default function WorkflowEditor({
       ) : (
         <ExitConditionsSection
           t={t}
+          civilization={templateCiv}
           node={node}
           nodes={nodes}
           edges={edges}
