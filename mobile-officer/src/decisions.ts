@@ -4,6 +4,7 @@
  * and every screen reaches this through `confirmedDecision` (deviceCheck.ts).
  */
 import { dispatchApi } from "@soulledger/core/api/dispatch";
+import { judgmentApi, type ConcludeJudgmentPayload } from "@soulledger/core/api/judgment";
 import type { TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { workflowApi } from "@soulledger/core/api/workflow";
@@ -58,4 +59,13 @@ export async function submitDecision({ detail, verdict, reason, days, passVerdic
     return;
   }
   throw new Error("unknown_kind");
+}
+
+/**
+ * 滑卡审判落印(v4 S09):结一件原审。理由、文书与可医标记由 `verdict.ts` 组好;发落交给自动选殿(不带
+ * destination / term / eternal),审批流程照服务端默认生成。拒绝时带 `code`(`FAIL_REASON_REFUSALS`、
+ * 称心、受刑计划 …),`verdictFailure`(screens/swipe.tsx)读它。
+ */
+export function submitVerdict(id: string, payload: ConcludeJudgmentPayload): Promise<unknown> {
+  return judgmentApi.conclude(id, payload);
 }

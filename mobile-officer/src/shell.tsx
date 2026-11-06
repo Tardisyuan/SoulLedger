@@ -23,6 +23,7 @@ import { ChangePasswordScreen, DisplayNameScreen } from "./screens/account";
 import { DevicesScreen } from "./screens/devices";
 import { NotifyScreen } from "./screens/notify";
 import { StatsScreen } from "./screens/stats";
+import { SwipeScreen } from "./screens/swipe";
 import { MeTab, type AccountScreen } from "./screens/me";
 import { SignOutButton } from "./screens/signOut";
 import { MfaScreen } from "./screens/mfa";
@@ -45,6 +46,12 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [detail, setDetail] = useState<DetailTarget | null>(null);
   // 我的's two sub-screens, drawn over the tabs like a detail (not a tab, so no tab-bar entry).
   const [account, setAccount] = useState<AccountScreen | null>(null);
+  // 滑卡审判(v4 S09),从审判的「我手上」打开,画在标签之上,同 `account`。
+  const [swipe, setSwipe] = useState(false);
+  const closeSwipe = useCallback(() => {
+    setSwipe(false);
+    setVersion((v) => v + 1);
+  }, []);
   const [locked, setLocked] = useState(false);
   // Bumped whenever a list should ask again: after a detail closes, after a push (tapped or arrived), back in the foreground.
   const [version, setVersion] = useState(0);
@@ -63,6 +70,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const markGone = useCallback((key: string) => setGone((prev) => (prev.has(key) ? prev : new Set(prev).add(key))), []);
 
   const land = useCallback((landing: Landing, from?: TabKey) => {
+    setSwipe(false);
     setOrigin(from ?? (landing.judgment ? "queue" : landing.soul ? "search" : "todo"));
     if (landing.judgment || landing.soul) {
       setTab(landing.judgment ? "queue" : "search");
@@ -110,6 +118,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
     // A link held while signed out (or before this mounted) arrives here first. Same landing as a push.
     () =>
       officerLinks.subscribe((link) => {
+        setSwipe(false);
         setVersion((v) => v + 1);
         if (link.item) {
           setTab("todo");
@@ -196,7 +205,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         </StandingBanner>
       ) : null}
       <OfflineBanner />
-      {account || detail ? null : (
+      {account || detail || swipe ? null : (
         <TabHead
           tab={current}
           onAsk={() => {
@@ -206,7 +215,9 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         />
       )}
       <View style={{ flex: 1 }}>
-        {account === "mfa" ? (
+        {swipe ? (
+          <SwipeScreen onBack={closeSwipe} />
+        ) : account === "mfa" ? (
           <MfaScreen onBack={() => setAccount(null)} onLocked={setLocked} />
         ) : account === "password" ? (
           <ChangePasswordScreen onBack={() => setAccount(null)} />
@@ -233,7 +244,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         ) : current === "todo" ? (
           <TodoTab version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : current === "queue" ? (
-          <QueueTab version={version} gone={gone} initialGroup={queueGroup} onGroup={setQueueGroup} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
+          <QueueTab version={version} gone={gone} initialGroup={queueGroup} onGroup={setQueueGroup} onSwipe={() => setSwipe(true)} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
         ) : current === "search" ? (
           <SearchTab
             initialQuery={searchQuery}
@@ -255,6 +266,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           if (locked) return; // the recovery codes are on screen and not yet confirmed saved
           setDetail(null);
           setAccount(null);
+          setSwipe(false);
           setTab(next);
         }}
       />
