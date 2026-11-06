@@ -2171,7 +2171,7 @@
       "key_help": "Show / hide this map",
       "key_notes": "Focus the notes field",
       "claimed_title": "Case claimed by {{name}}",
-      "claimed_body": "Only the claimant, a realm lead or an administrator can conclude it. Your verdict was not submitted; this sitting has put the case aside.",
+      "claimed_body": "Only the claimant or an administrator can conclude it. Your verdict was not submitted; this sitting has put the case aside.",
       "claimed_next": "Open the next case",
       "claimed_back": "Back to the queue",
       "session_deferred": "{{n}} set aside this sitting",
@@ -3050,7 +3050,7 @@
         "HELL": "Hell",
         "PURGATORY": "Mount Purgatory",
         "BLISS": "Heaven",
-        "NEUTRAL": "Places of passage"
+        "NEUTRAL": "The crossing"
       },
       "eg": {
         "PURGATORY": "The Duat",
@@ -3097,7 +3097,7 @@
       "EU_HELL_8TH": "Circle 8",
       "EU_HELL_9TH": "Circle 9",
       "EU_ACHERON": "Acheron",
-      "EU_PLATO_MEADOW": "Meadow at the Crossroads",
+      "GR_PLATO_MEADOW": "Meadow at the Crossroads",
       "GR_ACHERON": "Acheron",
       "GR_ISLES_OF_THE_BLESSED": "Isles of the Blessed",
       "GR_TARTARUS": "Tartarus",
@@ -3143,7 +3143,7 @@
       "EU_HELL_8TH": "Eighth Circle - Fraud",
       "EU_HELL_9TH": "Ninth Circle - Treachery",
       "EU_ACHERON": "The Crossing of Acheron",
-      "EU_PLATO_MEADOW": "The Meadow at the Crossroads",
+      "GR_PLATO_MEADOW": "The Meadow at the Crossroads",
       "GR_ACHERON": "The Crossing of Acheron",
       "GR_ISLES_OF_THE_BLESSED": "The Isles of the Blessed",
       "GR_TARTARUS": "Tartarus",
@@ -6676,7 +6676,7 @@
     },
     "cross_judgment_concluded_fail": {
       "title": "Cross-realm judgment concluded",
-      "body": "The cross-realm judgment {{title}} has concluded: fail."
+      "body": "The cross-realm judgment {{title}} failed."
     },
     "cross_judgment_cancelled": {
       "title": "Cross-realm judgment cancelled",
@@ -7349,7 +7349,7 @@
         "ACTIVE": "Waiting on the bank",
         "COMPLETED": "Crossed"
       },
-      "EU_PLATO_MEADOW": {
+      "GR_PLATO_MEADOW": {
         "ACTIVE": "Awaiting judgment in the meadow",
         "COMPLETED": "Left the meadow"
       }

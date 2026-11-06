@@ -141,7 +141,7 @@ export function WorkflowSegmentList({ workflow, myTenant }: { workflow: Approval
                       <span aria-hidden="true" className="text-center">{state.glyph}</span>
                       <span className="min-w-0 text-sm">
                         <span className={state.skipped ? "line-through" : undefined}>
-                          <span className="font-mono">{stationNo(node)}</span> {localNodeName(node, locale)}
+                          <span className="font-mono">{stationNo(node)}</span> {localNodeName(node, locale, t)}
                         </span>
                         {node.court_code ? (
                           <span className="text-xs font-normal">

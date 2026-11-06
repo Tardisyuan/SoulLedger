@@ -158,7 +158,7 @@ export function AdjustStationsSheet({
           )}
           {current && (
             <li data-locked="current" className={lockedRow}>
-              <span>{t("workflow.adjust.locked_current", { node: `${stationNo(current)} ${localNodeName(current, locale)}` })}</span>
+              <span>{t("workflow.adjust.locked_current", { node: `${stationNo(current)} ${localNodeName(current, locale, t)}` })}</span>
               <span className="text-xs">{t("workflow.adjust.locked")}</span>
             </li>
           )}
@@ -186,7 +186,7 @@ export function AdjustStationsSheet({
                     className="h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
                   />
                   <span className={`min-w-0 flex-1 break-words ${on ? "" : "line-through"}`}>
-                    <span className="font-mono">{stationNo(n)}</span> {localNodeName(n, locale)}
+                    <span className="font-mono">{stationNo(n)}</span> {localNodeName(n, locale, t)}
                     {n.court_code ? (
                       <span className="text-xs">
                         {" · "}
@@ -195,7 +195,7 @@ export function AdjustStationsSheet({
                     ) : null}
                     {sources.length > 0 ? (
                       <span className="block text-xs text-[oklch(var(--color-ink-muted))]">
-                        {t("workflow.pick.jump_target_reason", { source: sources.map((s) => localNodeName(s, locale)).join("、") })}
+                        {t("workflow.pick.jump_target_reason", { source: sources.map((s) => localNodeName(s, locale, t)).join("、") })}
                       </span>
                     ) : null}
                   </span>

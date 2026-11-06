@@ -57,7 +57,7 @@ def test_the_three_greek_constants_hold_the_codes_they_are_named_for():
     """字面量。**期望不取自被测类** —— 这正是本文件存在的理由。"""
     assert DispositionService.GR_ISLES == "GR_ISLES_OF_THE_BLESSED"
     assert DispositionService.GR_TARTARUS == "GR_TARTARUS"
-    assert DispositionService.GR_MEADOW == "EU_PLATO_MEADOW"
+    assert DispositionService.GR_MEADOW == "GR_PLATO_MEADOW"
 
 
 @pytest.mark.django_db

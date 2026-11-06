@@ -3,7 +3,7 @@
 // These maps are the frontend's copy of `TENANT_CIVILIZATION` /
 // `CIVILIZATION_TENANT` in backend/apps/souls/models.py. GREEK is the fourth
 // member: `Civilization.GREEK`, tenant `GR_HADES`, holding Plato's fork
-// (EU_PLATO_MEADOW, whose code still records where it was written), the Isles
+// (GR_PLATO_MEADOW; EU_PLATO_MEADOW before realms/0032), the Isles
 // of the Blessed and Tartarus, with Hades, Aeacus, Rhadamanthus and Plato's
 // Minos standing on the fork.
 //

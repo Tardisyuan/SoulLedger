@@ -266,7 +266,7 @@ def test_the_gongguoge_partition_does_not_reach_a_greek_soul(make_greek_soul):
 # arrives by. `apps/actors/mythology/realms.py` states the division at the top
 # of GREEK_REALMS and each row says which half it comes from.
 GREEK_REALM_CODES = [
-    "EU_PLATO_MEADOW",
+    "GR_PLATO_MEADOW",
     "GR_ACHERON",
     "GR_ISLES_OF_THE_BLESSED",
     "GR_TARTARUS",
@@ -415,7 +415,7 @@ def test_both_greek_roads_reset_memory_and_the_two_thresholds_do_not(db):
         .values_list("realm_code", "memory_reset_mechanism")
     )
     assert mechanisms == {
-        "EU_PLATO_MEADOW": "NONE",
+        "GR_PLATO_MEADOW": "NONE",
         "GR_ACHERON": "NONE",
         "GR_ISLES_OF_THE_BLESSED": "LETHE",
         "GR_TARTARUS": "LETHE",

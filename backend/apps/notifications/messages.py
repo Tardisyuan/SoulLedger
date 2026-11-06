@@ -119,7 +119,7 @@ MESSAGES = {
         "workflow_nodes_adjusted": {"title": "Stations changed in an approval flow", "body": "{{soul}} · {{by}}: restored {{added}}, skipped {{skipped}}. Reason: {{reason}}"},
         "workflow_pick_withdrawn": {"title": "Pick-stations task withdrawn", "body": "The cross-realm judgment \"{{title}}\" was cancelled; no need to pick stations for {{soul}}."},
         "cross_judgment_concluded": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} has concluded: passed."},
-        "cross_judgment_concluded_fail": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} has concluded: fail."},
+        "cross_judgment_concluded_fail": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} failed."},
         "cross_judgment_cancelled": {"title": "Cross-realm judgment cancelled", "body": "The cross-realm judgment {{title}} was cancelled. Reason: {{reason}}"},
         "scheduled_task_failed": {"title": "Scheduled task failed", "body": "Scheduled task {{task}} failed: {{error}}"},
         "scheduled_task_overdue": {"title": "Scheduled task did not run", "body": "Scheduled task {{task}} was due at {{expected_at}}; no run has been recorded since."},

@@ -186,10 +186,10 @@ DEFAULT_PERMISSIONS = [
     ("judgment.create", "创建审判", "judgment"),
     ("judgment.execute", "执行审判", "judgment"),
     # 改派审判(队列认领,2026-09-24):把一件案子交给另一位官员,或替别人释放 / 暂缓。
-    # 分配别人的工作,比办案(judgment.execute)更严 —— 持有者 ADMIN、MODERATOR(殿主);
+    # 分配别人的工作,比办案(judgment.execute)更严 —— 默认只 ADMIN 持有(MODERATOR 2026-11-07 收回,perm/0035);
     # JUDGE 不持有,审判官之间不能互相派活。与 judgment.* 其余三条一样不由迁移播种
     # (走 ROLE_PERMISSIONS 的字典路径)。没有 Permission 行时 checker 按字典作答,所以
-    # MODERATOR 照样持有;但权限矩阵里看不见它、不能单独收回。给已部署的库补行用
+    # 字典里的角色照样持有;但权限矩阵里看不见它、不能单独收回。给已部署的库补行用
     # `manage.py sync_permissions`(只补缺的码名,带默认授予,不碰已有码名的授予)。
     ("judgment.assign", "改派审判", "judgment"),
     ("judgment.export", "导出审判", "judgment"),
@@ -446,7 +446,9 @@ ROLE_PERMISSIONS = {
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete",
         "workflow.escalate", "workflow.export",
         "soul.read", "soul.create", "soul.update", "soul.die", "soul.transition", "soul.export",
-        "judgment.read", "judgment.create", "judgment.execute", "judgment.assign", "judgment.export",
+        # 2026-11-07(用户决定):朋友圈巡察不再持有 judgment.execute / judgment.assign —— 不办案、不改派、
+        # 不越过认领结案。已入库的授权由 perm/0035 收回。
+        "judgment.read", "judgment.create", "judgment.export",
         "city_god.read", "city_god.manage", "city_god.execute",
         "tudi.read", "tudi.manage", "tudi.register",
         "wangsi.read", "wangsi.manage", "wangsi.execute",

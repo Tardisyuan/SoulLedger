@@ -296,7 +296,7 @@ function WorkflowPageContent() {
                       const tmpl = templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId)!;
                       return (
                         <TemplatePreview
-                          model={backendPreviewModel(tmpl, locale)}
+                          model={backendPreviewModel(tmpl, locale, t)}
                           actions={
                             <>
                               <Button
@@ -358,7 +358,7 @@ function WorkflowPageContent() {
                         `presetPreviewModel`——`nodeTypeFor` 那一步就在它里面。 */}
                     {!editingTemplateId && selectedTemplate && currentTemplate && (
                       <TemplatePreview
-                        model={presetPreviewModel(currentTemplate, locale)}
+                        model={presetPreviewModel(currentTemplate, locale, t)}
                         actions={
                           <>
                             <Button

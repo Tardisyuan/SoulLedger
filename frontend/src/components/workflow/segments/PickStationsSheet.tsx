@@ -82,7 +82,7 @@ export function PickStationsSheet({
   const rows: PickRow[] = workflow
     ? segmentNodes(workflow, order).map((n) => ({
         key: n.id,
-        label: `${stationNo(n)} · ${localNodeName(n, locale)}`,
+        label: `${stationNo(n)} · ${localNodeName(n, locale, t)}`,
         hall: <DomainText value={courtLabel(t, n.court_code, locale)} />,
         who: n.approver_role ? <DomainEnum namespace="users.roles" value={n.approver_role} /> : null,
         required: !!n.is_required,

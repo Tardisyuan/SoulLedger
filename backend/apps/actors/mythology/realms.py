@@ -412,7 +412,7 @@ EUROPEAN_REALMS = [
     # --------------------------------------------------------------------
     # THE CROSSING, WHICH IS DANTE'S AND STAYS HERE.
     #
-    # This row and EU_PLATO_MEADOW were added together as "two Greek places",
+    # This row and GR_PLATO_MEADOW were added together as "two Greek places",
     # because the eleven European realms were nine Dante circles plus heaven and
     # purgatory while seven of the eleven European actors were Greek, and every
     # Greek figure had been filed into whichever Christian/Dantean row looked
@@ -540,18 +540,18 @@ EUROPEAN_REALMS = [
 #     (621a-b) — so both halves of the basis agree, and Greek souls in this
 #     system *are* rebirth-capable. That is recorded on the realms instead:
 #     the two destinations, GR_ISLES_OF_THE_BLESSED and GR_TARTARUS, carry
-#     `memory_reset_mechanism="LETHE"`, while EU_PLATO_MEADOW and GR_ACHERON
+#     `memory_reset_mechanism="LETHE"`, while GR_PLATO_MEADOW and GR_ACHERON
 #     carry "NONE" because nobody is sentenced to either (see the comment
 #     above GR_ISLES_OF_THE_BLESSED). An earlier version of this note said
 #     every Greek realm carried NONE; that stopped being true when the two
 #     destinations took LETHE.
 #
-# CODES. The meadow keeps `EU_PLATO_MEADOW`. Its code records where the row was
-# first written, not what it now belongs to, and renaming a `realm_code` is not
-# a cosmetic edit here: it is the join key `Reincarnation.target_realm` stores as
-# text, the string `consolidate_eu_pantheon` audits against, and the identifier
-# realms/0012 and realms/0015 each needed a dedicated migration to change. The
-# two new rows take `GR_` because they are new and nothing points at them yet.
+# CODES. The meadow was `EU_PLATO_MEADOW`, the prefix recording where the row was
+# first written. The user decided on 2026-11-07 that the code should say what
+# owns it, so it is `GR_PLATO_MEADOW` now. Renaming a `realm_code` is not a
+# cosmetic edit: it is the join key `Reincarnation.target_realm` stores as text
+# and other tables quote, so realms/0032 rewrites every stored copy (as realms/0012
+# and realms/0015 did for theirs).
 #
 # TWO OF THE THREE ARE DISPOSITION DESTINATIONS NOW; THE MEADOW IS NOT ONE.
 # This paragraph used to say that none of them was, because `DispositionService`
@@ -565,7 +565,7 @@ EUROPEAN_REALMS = [
 # therefore reachable without being a destination, in the sense EU_ACHERON above
 # is not: nobody is sentenced to it. See `DispositionService._route_greek`.
 GREEK_REALMS = [
-    ("EU_PLATO_MEADOW", "岔路口草地", "岔路口的草地", "The Meadow at the Crossroads",
+    ("GR_PLATO_MEADOW", "岔路口草地", "岔路口的草地", "The Meadow at the Crossroads",
      "Leimon", RealmType.NEUTRAL, 0,
      "Plato, Gorgias 524a: the dead are judged in a meadow at the fork in the "
      "road, one way leading to the Isles of the Blessed and the other to "
@@ -714,8 +714,8 @@ REALM_PARENTS = {
     # branches out of it — Gorgias 524a, "the two ways leading, one to the
     # Isles of the Blest, and the other to Tartarus". Which branch is which is
     # REALM_TOPOLOGY's `fork`, at the bottom of this file.
-    "GR_TARTARUS": "EU_PLATO_MEADOW",
-    "GR_ISLES_OF_THE_BLESSED": "EU_PLATO_MEADOW",
+    "GR_TARTARUS": "GR_PLATO_MEADOW",
+    "GR_ISLES_OF_THE_BLESSED": "GR_PLATO_MEADOW",
 }
 
 # THE GATES OF THE DUAT ARE THE DEAD PERSON'S, NOT RA'S.

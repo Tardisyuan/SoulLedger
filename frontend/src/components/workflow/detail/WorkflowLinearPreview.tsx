@@ -31,7 +31,7 @@ export function WorkflowLinearPreview({
   endLabel: string;
   label: string;
 }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   return (
     <div className="pt-3">
       <p className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</p>
@@ -52,7 +52,7 @@ export function WorkflowLinearPreview({
                   current && "font-semibold shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
                 )}
               >
-                {localNodeName(node, locale)}
+                {localNodeName(node, locale, t)}
               </span>
               <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">→</span>
             </li>

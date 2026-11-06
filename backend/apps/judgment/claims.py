@@ -191,7 +191,7 @@ def assert_may_edit(judgment: Judgment, request, what: str) -> None:
     )
 
 
-#: 结案越过认领的码:`judgment.assign`(ADMIN、殿主默认持有),与释放 / 暂缓 / 改派的 `_may_override`
+#: 结案越过认领的码:`judgment.assign`(默认只 ADMIN 持有;2026-11-07 起朋友圈巡察不再持有,perm/0035),与释放 / 暂缓 / 改派的 `_may_override`
 #: 同一口径。按码判、认兼任角色(rbac-be1 第 21 条,2026-10-29;此前按主角色名 ADMIN / MODERATOR 判,
 #: 兼任殿主的判官越不过、矩阵收不回)。
 CONCLUDE_OVERRIDE_CODENAME = "judgment.assign"

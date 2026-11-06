@@ -293,8 +293,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         'release': ['judgment.execute'],
         'defer': ['judgment.execute'],
         'undefer': ['judgment.execute'],
-        # 改派是分配别人的工作,比办案更严:`judgment.assign`,默认只 ADMIN 与 MODERATOR
-        # (殿主)持有。JUDGE 有 `judgment.execute` 而没有它 —— 审判官之间不能互相派活。
+        # 改派是分配别人的工作,比办案更严:`judgment.assign`,默认只 ADMIN(2026-11-07 起 MODERATOR 不再持有)
+        # 持有。JUDGE 有 `judgment.execute` 而没有它 —— 审判官之间不能互相派活。
         'reassign': ['judgment.assign'],
         # 跨域取消让原审流程中止、处置被永久扣住时,殿主重开一案(rbac-be1,2026-10-29)。
         'reopen_cancelled': ['judgment.assign'],

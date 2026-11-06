@@ -527,9 +527,8 @@ CIVILIZATION_STATUTES = {
 # order matters in one respect only — `_seed_actors` resolves realm FKs against
 # `Realm.all_objects.filter(civilization=...)`, i.e. only within the civilization
 # being seeded — so every actor's realm must appear in that civilization's own
-# realm table. EU_PLATO_MEADOW is therefore listed under GREEK_REALMS and not
-# under EUROPEAN_REALMS, even though its code still carries the EU_ prefix it
-# was created with.
+# realm table. GR_PLATO_MEADOW is therefore listed under GREEK_REALMS and not
+# under EUROPEAN_REALMS (its code was EU_PLATO_MEADOW until realms/0032).
 CIVILIZATION_DATA = {
     "chinese": (Civilization.CHINESE, CHINESE_REALMS, CHINESE_ACTORS),
     "european": (Civilization.EUROPEAN, EUROPEAN_REALMS, EUROPEAN_ACTORS),
