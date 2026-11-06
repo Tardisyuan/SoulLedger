@@ -1002,7 +1002,7 @@ class TestConcludeDestinationCapacityHoldsTheRealmLock:
             for t in threads:
                 t.join(timeout=30)
 
-        assert results == {"a": 200, "b": 409}, results
+        assert results == {"a": 200, "b": 409}, (results, codes)
         assert codes.get("b") == "realm_full", codes
         assert SoulPathEntry.all_objects.filter(realm=realm, left_at__isnull=True).count() == 1
 
@@ -1057,7 +1057,7 @@ class TestConcludeRechecksUnderTheLock:
             for t in threads:
                 t.join(timeout=30)
 
-        assert results == {"a": 200, "b": 409}, results
+        assert results == {"a": 200, "b": 409}, (results, codes)
         assert codes.get("b") == "already_concluded", codes
         assert Disposition.all_objects.filter(judgment_id=case.pk).count() == 1
 
