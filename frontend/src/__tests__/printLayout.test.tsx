@@ -191,6 +191,18 @@ describe("app/print.css", () => {
     expect(block).toContain("break-inside: avoid");
   });
 
+  it("prints the verdict document alone, on one A4 page with no page number (v4 S15)", () => {
+    // VerdictDocument mounts its copy under body; everything else under body — the case page's own
+    // PrintFrame included — is put away, so the paper carries only the document.
+    expect(printBlock).toMatch(/html body:has\(> \[data-print-verdict-doc\]\) > :not\(\[data-print-verdict-doc\]\)\s*\{\s*display: none !important/);
+    expect(printBlock).toMatch(/\[data-print-doc\]\[data-print-verdict-doc\]\s*\{[^}]*page: verdict/);
+    const page = css.match(/@page verdict\s*\{[\s\S]*?\n\}/)![0];
+    expect(page).toContain("size: A4 portrait");
+    expect(page).toMatch(/@bottom-right\s*\{\s*content: none/);
+    // Off paper the copy never shows: it exists only between the click and `afterprint`.
+    expect(css.slice(0, css.indexOf("@media print"))).toMatch(/\[data-print-verdict-doc\]\s*\{\s*display: none/);
+  });
+
   it("only touches pages that mounted a print document", () => {
     const rules = [...printBlock.matchAll(/^\s{2}([^\s@/*][^{]*)\{/gm)].map((m) => m[1].trim()).filter((s) => !/^(html|body)/.test(s));
     expect(rules.length).toBeGreaterThan(5);

@@ -1,0 +1,302 @@
+/*
+ * 判决文书的纸与墨(v4 第七批 S15,`src/components/judgment/VerdictDocument.tsx`)。
+ *
+ * 纸是实物:定稿给四文明各一种纸色与墨色,深浅主题都一样,所以写在这里而不进 globals.css 的主题令牌
+ * (令牌随主题换,纸不换)。变量用 `--doc-*`,不占 `--color-*` / `--civ-*` 两族(cssTokenReferenceContract)。
+ *
+ * A4 比例(210 × 297),宽度跟着容器走;字号、边距一律用容器单位 `cqi`(纸宽的百分之一),
+ * 所以屏幕上 420px 宽的卡与打印的整张 A4 是同一张版面放大缩小 —— 定稿「浏览器里『打印』走同一份 @page A4 样式」。
+ * 换算:定稿 420px 宽,1px = 0.238cqi。
+ *
+ * 打印时(print.css 末尾)纸色不印(浏览器默认不印底色,纸本来就是白的),正文压成黑;
+ * 题名、判语强调、印、边框这些「墨」保留文明色 —— 与登录交付单的「墨」同一个做法(print-slip-ink.css)。
+ */
+
+[data-verdict-paper] {
+  --doc-paper: #f2e8d5;
+  --doc-ink: #2b1f15;
+  --doc-muted: #5a4636;
+  --doc-accent: #9e3326;
+  --doc-seal: #b3261e;
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 210 / 297;
+  overflow: hidden;
+  background: var(--doc-paper);
+  color: var(--doc-ink);
+  font-family: var(--font-serif);
+  box-shadow: 0 1px 2px #0002, 0 18px 40px -20px #0006;
+}
+
+[data-verdict-paper][data-civ="eu"] {
+  --doc-paper: #f3ebdc;
+  --doc-ink: #2a2230;
+  --doc-muted: #4a3a52;
+  --doc-accent: #6b4c75;
+  --doc-seal: #5a3a63;
+  background: linear-gradient(#f6f0e4, #efe6d3);
+}
+[data-verdict-paper][data-civ="eg"] {
+  --doc-paper: #e4d3a2;
+  --doc-ink: #2d2416;
+  --doc-muted: #4a3d27;
+  --doc-accent: #2b4e79;
+  --doc-seal: #2b4e79;
+  background-image: repeating-linear-gradient(90deg, #c9b47d8c 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(0deg, #bfa46a8c 0 1px, transparent 1px 11px);
+}
+[data-verdict-paper][data-civ="gr"] {
+  --doc-paper: #b9b4aa;
+  --doc-ink: #4c4a45;
+  --doc-muted: #4c4a45;
+  --doc-accent: #5e5a52;
+  --doc-seal: #5e5a52;
+  background: linear-gradient(160deg, #cfcbc2, #b9b4aa 60%, #a9a398);
+}
+
+/* ── 正文区 ─────────────────────────────────────────────────────────── */
+
+[data-verdict-paper] [data-doc-text] {
+  position: absolute;
+  inset: 11cqi 11.5cqi 38cqi;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4cqi;
+  font-size: 3.6cqi;
+  line-height: 1.75;
+  overflow: hidden;
+}
+[data-verdict-paper] p,
+[data-verdict-paper] h2 {
+  margin: 0;
+}
+[data-verdict-paper] [data-doc-title] {
+  font-family: var(--font-title, var(--font-serif));
+  font-weight: 600;
+  font-size: 5.2cqi;
+  line-height: 1.4;
+}
+[data-verdict-paper] [data-doc-verdict] {
+  font-weight: 600;
+  font-size: 3.9cqi;
+}
+[data-verdict-paper] [data-doc-sins],
+[data-verdict-paper] [data-doc-sign],
+[data-verdict-paper] [data-doc-deco] {
+  color: var(--doc-muted);
+  font-size: 3cqi;
+}
+[data-verdict-paper] [data-doc-sign] {
+  margin-block-start: auto;
+}
+[data-verdict-paper] [data-doc-deco] {
+  letter-spacing: 0.32em;
+  text-align: center;
+  color: var(--doc-accent);
+}
+
+/* 地府:竖排牒文(中文界面),双线朱框,朱印在左下。 */
+[data-verdict-paper][data-civ="cn"]::before,
+[data-verdict-paper][data-civ="cn"]::after {
+  content: "";
+  position: absolute;
+  border: solid var(--doc-accent);
+  pointer-events: none;
+}
+[data-verdict-paper][data-civ="cn"]::before {
+  inset: 3.3cqi;
+  border-width: 2px;
+}
+[data-verdict-paper][data-civ="cn"]::after {
+  inset: 4.8cqi;
+  border-width: 1px;
+}
+[data-verdict-paper][data-vertical] [data-doc-text] {
+  inset: 10.5cqi;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 4.05cqi;
+  line-height: 2.76;
+  letter-spacing: 0.08em;
+  gap: 0;
+}
+[data-verdict-paper][data-vertical] [data-doc-title] {
+  font-size: 6.2cqi;
+}
+[data-verdict-paper][data-vertical] [data-doc-sign] {
+  font-size: inherit;
+}
+[data-verdict-paper][data-civ="cn"] [data-doc-title] {
+  color: var(--doc-accent);
+}
+
+/* 欧洲:居中题名,正文首字母做花体方块。 */
+[data-verdict-paper][data-civ="eu"] [data-doc-title],
+[data-verdict-paper][data-civ="gr"] [data-doc-title],
+[data-verdict-paper][data-civ="eg"] [data-doc-title] {
+  text-align: center;
+}
+[data-verdict-paper][data-civ="eu"] [data-doc-body]::first-letter {
+  float: left;
+  margin: 1cqi 3cqi 0 0;
+  padding: 0 2.6cqi;
+  background: var(--doc-seal);
+  color: var(--doc-paper);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 12.4cqi;
+  line-height: 1.2;
+}
+[data-verdict-paper][data-civ="eu"] [data-doc-verdict] {
+  clear: both;
+}
+
+/* 埃及:上下圣书字边,正文在中间。 */
+[data-verdict-paper] [data-doc-border] {
+  position: absolute;
+  inset-inline: 0;
+  height: 9.5cqi;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-hieroglyphs), sans-serif;
+  font-size: 5.2cqi;
+  color: var(--doc-accent);
+  border: 0 solid var(--doc-accent);
+}
+[data-verdict-paper] [data-doc-border="top"] {
+  top: 0;
+  border-bottom-width: 2px;
+}
+[data-verdict-paper] [data-doc-border="bottom"] {
+  bottom: 0;
+  border-top-width: 2px;
+}
+[data-verdict-paper][data-civ="eg"] [data-doc-text] {
+  inset: 16cqi 12cqi 36cqi;
+}
+[data-verdict-paper][data-civ="eg"] [data-doc-verdict] {
+  color: var(--doc-accent);
+}
+
+/* 希腊:石刻,居中,双线外框。 */
+[data-verdict-paper][data-civ="gr"] {
+  text-shadow: 0 1px 0 #fff8, 0 -1px 0 #0003;
+}
+[data-verdict-paper][data-civ="gr"]::before {
+  content: "";
+  position: absolute;
+  inset: 3.8cqi;
+  border: 1.5px solid #5e5a5280;
+  pointer-events: none;
+}
+[data-verdict-paper][data-civ="gr"] [data-doc-text] {
+  text-align: center;
+  inset: 15.7cqi 10.5cqi 38cqi;
+}
+[data-verdict-paper][data-civ="gr"] [data-doc-deco] {
+  font-family: var(--font-serif);
+  font-size: 6.7cqi;
+  color: var(--doc-ink);
+}
+[data-verdict-paper][data-civ="gr"] [data-doc-sign] {
+  text-align: start;
+}
+
+/* ── 印 ─────────────────────────────────────────────────────────────── */
+
+[data-verdict-paper] [data-doc-seal] {
+  position: absolute;
+  right: 11cqi;
+  bottom: 11cqi;
+  width: 21cqi;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  color: var(--doc-seal);
+}
+[data-verdict-paper] [data-doc-seal] svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+[data-verdict-paper] [data-doc-seal] > span {
+  position: relative;
+  max-width: 70%;
+  font-family: var(--font-title, var(--font-serif));
+  font-weight: 600;
+  font-size: 3.6cqi;
+  line-height: 1.2;
+  text-align: center;
+}
+/* 地府朱印:左下、斜 6°,五字竖排两行(「第一殿」「之印」)。 */
+[data-verdict-paper][data-civ="cn"] [data-doc-seal] {
+  left: 11cqi;
+  right: auto;
+  bottom: 13.8cqi;
+  width: 25.7cqi;
+  transform: rotate(-6deg);
+  opacity: 0.92;
+  mix-blend-mode: multiply;
+}
+[data-verdict-paper][data-civ="cn"] [data-doc-seal] > span {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  max-width: none;
+  max-height: 17cqi;
+  font-size: 5.4cqi;
+  line-height: 1.1;
+}
+/* 欧洲火漆:实心圆,浅字。 */
+[data-verdict-paper][data-civ="eu"] [data-doc-seal] {
+  width: 23.8cqi;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #8e5a98, #5a3a63 55%, #3a2240);
+  box-shadow: 0 3px 8px #0005, inset 0 -3px 6px #0006;
+  color: #d9bedd;
+}
+[data-verdict-paper][data-civ="eu"] [data-doc-seal] > span {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 2.6cqi;
+  letter-spacing: 0.15em;
+}
+[data-verdict-paper][data-civ="gr"] [data-doc-seal] > span {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 2.9cqi;
+}
+
+/* ── 打印 ───────────────────────────────────────────────────────────── */
+/* print.css 的 `[data-print-doc] *` 把一切压成黑、去掉底色;这里用更高的特异度把「墨」放回去。 */
+@media print {
+  [data-print-verdict-doc] [data-verdict-paper] {
+    max-width: none;
+    width: 210mm;
+    height: 296mm;
+    aspect-ratio: auto;
+  }
+  [data-print-verdict-doc] [data-verdict-paper] :is([data-doc-title], [data-doc-deco], [data-doc-border]),
+  [data-print-verdict-doc] [data-verdict-paper][data-civ="eg"] [data-doc-verdict] {
+    color: var(--doc-accent) !important;
+    border-color: var(--doc-accent) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-print-verdict-doc] [data-verdict-paper] [data-doc-seal],
+  [data-print-verdict-doc] [data-verdict-paper] [data-doc-seal] * {
+    color: var(--doc-seal) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* 欧洲首字母的底色块在纸上不印:字回到火漆色。 */
+  [data-print-verdict-doc] [data-verdict-paper][data-civ="eu"] [data-doc-body]::first-letter {
+    background: none;
+    color: var(--doc-seal);
+  }
+}
