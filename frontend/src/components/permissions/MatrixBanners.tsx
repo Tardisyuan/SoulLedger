@@ -121,7 +121,7 @@ export function ImpactConflictBanner({
               causes: causes(w),
               workflow: localName(w, locale, "workflow_name"),
               step: String(w.node_order),
-              step_name: localNodeName(w, locale),
+              step_name: localNodeName(w, locale, t),
             })}
           </li>
         ))}

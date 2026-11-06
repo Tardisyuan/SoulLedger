@@ -32,7 +32,7 @@ describe("nodeStateNamespace", () => {
     expect(word("EG_DUAT", "EG_HALL_TWO_TRUTHS", "ACTIVE")).toBe("等候称心");
     expect(word("EG_DUAT", "EG_ANNIHILATION", "ETERNAL")).toBe("已湮灭");
     expect(word("EU_HEAVEN_HELL", "EU_ACHERON", "ACTIVE")).toBe("岸边等候");
-    expect(word("EU_HEAVEN_HELL", "EU_PLATO_MEADOW", "ACTIVE")).toBe("草地上候判");
+    expect(word("EU_HEAVEN_HELL", "GR_PLATO_MEADOW", "ACTIVE")).toBe("草地上候判");
     expect(word("GR_HADES", "GR_ISLES_OF_THE_BLESSED", "ACTIVE")).toBe("居于至福岛");
     // Absence: 炼狱 no longer reads 「受刑中」.
     expect(word("EU_HEAVEN_HELL", "EU_PURGATORY", "ACTIVE")).not.toBe(t("sentence_plan.node_states.ACTIVE"));

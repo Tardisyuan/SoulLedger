@@ -218,7 +218,7 @@ function StationRow({ node, sources, on, onToggle }: { node: ApprovalNode; sourc
     : sources.length > 0
       ? jumpReason(t, sources, locale)
       : [courtLabel(t, node.court_code, locale), who].filter(Boolean).join(" · ");
-  const label = locked ? `${stationNo(node)} · ${localNodeName(node, locale)} · ${t("workflow.pick.final_badge")}` : `${stationNo(node)} · ${localNodeName(node, locale)}`;
+  const label = locked ? `${stationNo(node)} · ${localNodeName(node, locale, t)} · ${t("workflow.pick.final_badge")}` : `${stationNo(node)} · ${localNodeName(node, locale, t)}`;
   return (
     <Pressable
       testID={`pick-station-${node.id}`}
@@ -372,7 +372,7 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
                     >
                       <Txt variant="body" tone={look.skipped || look.notReached ? "subtle" : "ink"} style={styles.glyph}>{look.glyph}</Txt>
                       <Txt variant={isCurrent ? "bodyLg" : "body"} tone={look.skipped || look.notReached ? "subtle" : "ink"} style={[{ flex: 1 }, look.skipped ? styles.struck : null]}>
-                        {`${stationNo(node)} ${localNodeName(node, locale)}`}
+                        {`${stationNo(node)} ${localNodeName(node, locale, t)}`}
                       </Txt>
                       <Txt variant="caption" tone={look.skipped || look.notReached ? "subtle" : "muted"} testID={`segment-node-state-${node.id}`}>{right}</Txt>
                     </View>

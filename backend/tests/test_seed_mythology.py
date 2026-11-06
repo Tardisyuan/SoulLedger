@@ -159,22 +159,22 @@ GRECO_ROMAN_CAST = {
 # Hades, so seeding Pluto would manufacture the duplicate the merge exists to
 # remove.
 #
-#   Hades        EU_PLATO_MEADOW  overseer of the Greek judgment ground. The one
+#   Hades        GR_PLATO_MEADOW  overseer of the Greek judgment ground. The one
 #                                 engineering placement of the four — no house
 #                                 of Hades is modelled, and Limbo was not one.
-#   Aeacus       EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Europe).
-#   Rhadamanthus EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Asia).
-#   Minos        EU_PLATO_MEADOW  Plato, Gorgias 524a — the final decision when
+#   Aeacus       GR_PLATO_MEADOW  Plato, Gorgias 524a (those from Europe).
+#   Rhadamanthus GR_PLATO_MEADOW  Plato, Gorgias 524a (those from Asia).
+#   Minos        GR_PLATO_MEADOW  Plato, Gorgias 524a — the final decision when
 #                                 the other two are in doubt. A SECOND Minos
 #                                 row, distinct from the EUROPEAN one above:
 #                                 "different offices in different underworlds",
 #                                 which is what that row's own description has
 #                                 said since before this one existed.
 GREEK_CAST = {
-    "Hades": ("OVERSEER", "EU_PLATO_MEADOW"),
-    "Aeacus": ("JUDGE", "EU_PLATO_MEADOW"),
-    "Rhadamanthus": ("JUDGE", "EU_PLATO_MEADOW"),
-    "Minos": ("JUDGE", "EU_PLATO_MEADOW"),
+    "Hades": ("OVERSEER", "GR_PLATO_MEADOW"),
+    "Aeacus": ("JUDGE", "GR_PLATO_MEADOW"),
+    "Rhadamanthus": ("JUDGE", "GR_PLATO_MEADOW"),
+    "Minos": ("JUDGE", "GR_PLATO_MEADOW"),
     # 2026-10-28. Both on the crossing as an engineering placement — neither
     # the asphodel meadow (Od. 24.1-14) nor the gate of Hades (Theog. 769-773,
     # Apollodorus 2.5.12) is modelled. The Greek Cerberus is a second row; the
@@ -183,18 +183,15 @@ GREEK_CAST = {
     "Cerberus": ("GUARDIAN", "GR_ACHERON"),
 }
 
-# The Greek places, under GREEK. EU_PLATO_MEADOW keeps its EU_ code: a
-# `realm_code` is a join key (`Reincarnation.target_realm` stores it as text,
-# `consolidate_eu_pantheon` audits against it) and renaming one cost realms/0012
-# and realms/0015 a dedicated migration each. The prefix records where the row
-# was written, not what owns it.
+# The Greek places, under GREEK. The meadow was EU_PLATO_MEADOW until
+# realms/0032 (user decision 2026-11-07).
 #
 # The two destinations are here because Gorgias 524a names them in the same
 # sentence as the fork — "the two ways leading, one to the Isles of the Blest,
 # and the other to Tartarus" — and for no other reason. Asphodel and the five
 # rivers are deliberately absent; see GREEK_REALMS' header in
 # apps/actors/mythology/realms.py.
-GREEK_REALM_CODES = ["EU_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"]
+GREEK_REALM_CODES = ["GR_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"]
 
 # EU_ACHERON is NOT in the list above. It stays EUROPEAN with Charon, whose
 # anchor is Dante at the gate of hell (Inf. III); the crossing is the threshold
@@ -1297,7 +1294,7 @@ def test_second_run_creates_no_assessors(seeded):
 def test_greek_realms_present(seeded):
     """The Greek cast has Greek ground to stand on, filed under GREEK.
 
-    Without EU_PLATO_MEADOW there is no place in the system any of the Greek
+    Without GR_PLATO_MEADOW there is no place in the system any of the Greek
     actors belongs to, and the only way to give them a realm at all is to put
     them in a circle of Dante's hell — which is how Minos, Aeacus, Rhadamanthus,
     Charon, Cerberus and Hades all came to be misplaced at once.
@@ -1395,7 +1392,7 @@ def test_the_two_minos_rows_are_two_rows(seeded):
     )
     assert rows == [
         ("EUROPEAN", "EU_HELL_2ND"),
-        ("GREEK", "EU_PLATO_MEADOW"),
+        ("GREEK", "GR_PLATO_MEADOW"),
     ], (
         f"Minos rows in the database: {rows}. There should be exactly two — "
         f"Dante's, who coils his tail at the entrance to the second circle "

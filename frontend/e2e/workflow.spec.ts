@@ -54,8 +54,10 @@ test.describe("Workflow page", () => {
     // nodes, one per court of the Chinese underworld.
     await expect(heading(page, "十殿审判流程")).toBeVisible();
     await expect(seen(page, "10 个节点")).toBeVisible();
-    await expect(seen(page, "秦广王 · 分流")).toBeVisible();
-    await expect(seen(page, "转轮王 · 终审")).toBeVisible();
+    // 十殿的节点按殿名显示(realms.names.DY_COURT_*,用户 2026-11-07),不再写「秦广王 · 分流」。
+    await expect(seen(page, "第一殿秦广王")).toBeVisible();
+    await expect(seen(page, "第十殿转轮王")).toBeVisible();
+    await expect(seen(page, "秦广王 · 分流")).toHaveCount(0);
   });
 
   test("selecting a different template swaps the preview", async ({ page }) => {

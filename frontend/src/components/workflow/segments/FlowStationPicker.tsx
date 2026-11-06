@@ -54,7 +54,7 @@ export function FlowStationPicker({
   if (!preview.data) return <ListSkeleton count={4} />;
   const rows: PickRow[] = preview.data.stations.map((s, i) => ({
     key: String(s.node_order),
-    label: `${i + 1} · ${localNodeName(s, locale)}`,
+    label: `${i + 1} · ${localNodeName(s, locale, t)}`,
     hall: courtLabel(t, s.court_code, locale),
     who: s.approver ?? (s.approver_role ? <DomainEnum namespace="users.roles" value={s.approver_role} /> : null),
     required: s.is_required,
