@@ -8945,7 +8945,8 @@
     "greece": {
       "thousand_year_cycle": "Renpet 1000",
       "wait_on_bank": "Renpet 100 Hena Itru",
-      "year_n": "Renpet {{n}}"
+      "year_n": "Renpet {{n}}",
+      "three_judges": "Wesekhet Sab 3"
     },
     "replay": {
       "skip": "Er Hru Pen",
