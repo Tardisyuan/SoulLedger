@@ -76,7 +76,7 @@ export const ZH = {
   elapsedLabel: "已服",
   poenaHeading: "无法计算",
   elapsedHeading: "本账本未记",
-  termStart: "刑期何时开始",
+  termStart: "年限何时开始",
   timeServed: "已服了多少",
   /** `sentence_elapsed_years` interpolated. A unit, not a bare number: "2424"
    *  under a label reading 已服 states no unit, and years are the only thing a

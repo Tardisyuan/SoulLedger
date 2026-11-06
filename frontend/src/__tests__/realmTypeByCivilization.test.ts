@@ -32,12 +32,12 @@ describe("realmTypeNamespace", () => {
     expect(realmTypeNamespace(t, undefined, "BLISS")).toBe("realms.types");
   });
 
-  it("the three bundles carry the same 16 keys", () => {
+  it("the three bundles carry the same 13 keys (batch 9 dropped cn.NEUTRAL, eg.NEUTRAL, gr.PURGATORY)", () => {
     const keys = (b: unknown) =>
       Object.entries((b as { realms: { types_by_civ: Record<string, Record<string, string>> } }).realms.types_by_civ)
         .flatMap(([civ, types]) => Object.keys(types).map((k) => `${civ}.${k}`))
         .sort();
-    expect(keys(bundles.zh)).toHaveLength(16);
+    expect(keys(bundles.zh)).toHaveLength(13);
     expect(keys(bundles.en)).toEqual(keys(bundles.zh));
     expect(keys(bundles.egy)).toEqual(keys(bundles.zh));
   });
