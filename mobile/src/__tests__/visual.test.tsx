@@ -140,7 +140,8 @@ describe("the Han serif", () => {
     const dir = path.join(__dirname, "..", "..", "assets", "fonts");
     // Beside them the 5 KB status-glyph face (Design E 组). SoulLedger Sans is Geist with the Noto Sans SC
     // subset merged in (v4's `Geist, "Noto Sans SC"` as one file). v2's seal face went with v2's seal (2026-10-03).
-    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual([
+    // Sorted: readdir order is the file system's (ext4 on the gate box is not alphabetical).
+    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf")).sort()).toEqual([
       "NotoSerifSC-Subset-500.ttf",
       "NotoSerifSC-Subset-600.ttf",
       "SoulLedgerGlyphs.ttf",
