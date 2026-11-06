@@ -558,6 +558,8 @@
     --scrim-alpha: 0.62;
     /* 光晕透明度(v4 `--glowA`):深 .30、浅 .24。 */
     --glow-alpha: 0.3;
+    /* 卡片阴影(v4 `--shadow`):深色没有阴影,卡片靠 1px 内描边(`.v4-card` 保留原来的 line 框)。 */
+    --shadow-card: none;
     /* 文明 · 深色档(v4 `[data-civ]` 的 D 值)。光晕两主题同值,只在这里声明。 */
     --color-civ-neutral: 0.345507 0.008765 276.8978; /* #38393E */
     --color-civ-neutral-ink: 0.775874 0.006082 264.5259; /* #B4B6BA */
@@ -658,6 +660,8 @@
     --color-scrim: 0.204832 0.006141 271.1072;
     --scrim-alpha: 0.42;
     --glow-alpha: 0.24;
+    /* 浅色不画线框:卡片、殿司卡、侧栏当前项只靠这两层很淡的阴影(v4 `.th-light --shadow`)。 */
+    --shadow-card: 0 1px 2px rgba(20, 20, 24, 0.05), 0 6px 20px -10px rgba(20, 20, 24, 0.16);
     --color-civ-neutral: 0.204832 0.006141 271.1072; /* #16171A */
     --color-civ-neutral-ink: 0.455822 0.008971 260.7269; /* #54575C */
     --color-civ-neutral-metal: 0.455822 0.008971 260.7269; /* #54575C */
@@ -753,9 +757,21 @@
     }
   }
 
-  /* 身份带(规范 v3 `IdentityBand`,`src/components/plaque/Plaque.tsx`)。实底是匾色压暗 10%:
-     v3 原样是 `color-mix(in srgb, var(--accent) 90%, #111)`。白字对比度四文明 × 两主题见
-     plaqueTitleStaysLargeText.test.ts(它读的就是这一行的百分比与混入色)。 */
+  /* 页头光(规范 v4 `.glowtop`,用户 2026-11-06「照定稿」):文明的 glow 按 `--glow-alpha`(深 .30 / 浅 .24)
+     从左上 30% 处的椭圆向下铺开 260px。工具条(`global-topbar`)与身份带共用一片光:身份带的椭圆圆心在
+     它上沿之上 52px(工具条的高),两条接得上。两条都吸顶、内容从下面滚过,所以 canvas 实底垫在光下面。
+     最亮处(圆心)= glow 按 alpha 混进 canvas;字的对比度按这一处量(plaqueTitleStaysLargeText)。 */
+  .shell-glow {
+    --glow-y: 0px;
+    background:
+      radial-gradient(70% 260px at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
+      oklch(var(--color-canvas));
+  }
+
+  /* 身份带(v3 `IdentityBand` 的结构,`src/components/plaque/Plaque.tsx`;v4 起不再是匾色实底)。
+     v3 的实底是 `color-mix(main 90%, #111)` 上放白字;v4 定稿没有实底匾 —— 页头是 canvas 上的一片文明光,
+     题字是 ink,印是文明字色。高度(156 / 116 / 48)、分栏与收起都不动:筛选栏、内容槽位与几条 E2E
+     按这几个高度量。对比度见 plaqueTitleStaysLargeText.test.ts。 */
   .identity-band {
     position: relative;
     display: grid;
@@ -764,8 +780,11 @@
     height: 156px;
     padding: 0 32px;
     overflow: hidden;
-    color: oklch(var(--color-on-main));
-    background: color-mix(in srgb, oklch(var(--color-main)) 90%, #111);
+    color: oklch(var(--color-ink));
+    --glow-y: -52px;
+    background:
+      radial-gradient(70% 260px at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
+      oklch(var(--color-canvas));
     transition: height var(--transition-duration-reveal) var(--ease-standard);
   }
   /* 矮带(v3 `.queue-product` / `.soul-product`):审判队列与灵魂详情,116 高,题字从 28 起
@@ -778,30 +797,39 @@
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 0 20px;
   }
-  /* 纹样:每个文明一种,15% 白,自左向右淡出(v3 原样的四条渐变)。中性皮没有纹样。 */
+  /* 纹样(v4 `.pat`):每个文明一种,线是 glow 的 22–30%,整层 .5,自上而下淡出;只在光里,不进卡片和表格。
+     中性皮没有纹样。下面再叠一层噪点(v4「3 · 噪点」:160px 分形噪点,深色 overlay 9%,向下渐隐);
+     浅色 v4 写的是白噪点 multiply 6%,白色 multiply 等于不变,所以浅色不画。噪点的透明度写在 SVG 的
+     alpha 里(.09),不用 opacity —— 身份带上「opacity 只给纹样层」那条守卫(inkOnSurfaceContract)照旧。 */
   .identity-pattern {
     position: absolute;
     inset: 0;
-    opacity: 0.15;
+    opacity: 0.5;
     pointer-events: none;
-    --line: oklch(var(--color-on-main));
+    mask-image: linear-gradient(#000, transparent);
+  }
+  :root:not(.light) .identity-pattern::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   [data-civ="cn"] .identity-pattern {
-    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size: 18px 18px;
-    mask-image: linear-gradient(90deg, #000, transparent 72%);
+    background-image:
+      repeating-linear-gradient(0deg, color-mix(in srgb, oklch(var(--color-glow)) 22%, transparent) 0 1px, transparent 1px 12px),
+      repeating-linear-gradient(90deg, color-mix(in srgb, oklch(var(--color-glow)) 22%, transparent) 0 1px, transparent 1px 72px);
   }
   [data-civ="eu"] .identity-pattern {
-    background: repeating-radial-gradient(circle at 16% 110%, transparent 0 22px, var(--line) 23px 24px);
-    mask-image: linear-gradient(90deg, #000, transparent 76%);
+    background-image: repeating-radial-gradient(circle at 85% -40%, transparent 0 22px, color-mix(in srgb, oklch(var(--color-glow)) 26%, transparent) 22px 23px);
   }
   [data-civ="eg"] .identity-pattern {
-    background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 17px);
-    mask-image: linear-gradient(90deg, #000, transparent 66%);
+    background-image:
+      repeating-linear-gradient(90deg, color-mix(in srgb, oklch(var(--color-glow)) 22%, transparent) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(0deg, color-mix(in srgb, oklch(var(--color-glow)) 30%, transparent) 0 2px, transparent 2px 48px);
   }
   [data-civ="gr"] .identity-pattern {
-    background: linear-gradient(135deg, transparent 42%, var(--line) 43% 46%, transparent 47%) 0 0 / 34px 34px;
-    mask-image: linear-gradient(90deg, #000, transparent 74%);
+    background-image: repeating-linear-gradient(45deg, color-mix(in srgb, oklch(var(--color-glow)) 24%, transparent) 0 1px, transparent 1px 14px);
   }
   .identity-brand,
   .identity-title,
@@ -834,8 +862,8 @@
     font-size: var(--text-xs);
   }
   /* 案号(审判台,v3 `.identity-case span` / `b`):「案号」小字 11 在上,可复制的案号在下。
-     带上的字一律纯白 on-main,不用透明度降级(Design 第六十三批:v3 的 0.7 / 0.8 在深色埃及、希腊
-     只有 3.17–3.78:1;品牌、殿名、「案号」靠字号与等宽字区分)。守卫:inkOnSurfaceContract。
+     带上的字一律是带的字色(v4 起 ink),不用透明度降级(Design 第六十三批;品牌、殿名、「案号」靠字号
+     与等宽字区分)。守卫:inkOnSurfaceContract。
      收起的 48 带里照样在右(v3 `is-compact` 只藏品牌与题字);收起时并成一行。 */
   .identity-case[data-case] > span {
     display: block;
@@ -846,7 +874,7 @@
     display: inline;
     margin: 0 8px 0 0;
   }
-  /* 带上的链接随带上的白字:base 层的 `a` 是 ink-muted(悬停 accent-ink),落在匾色底上看不清
+  /* 带上的链接随带上的字色(v4 起 ink;v3 时是匾色底上的白字):base 层的 `a` 是 ink-muted(悬停 accent-ink)
      (灵魂详情的案号与「全部 N 场」)。守卫:plaqueTitleStaysLargeText「身份带上的链接」。 */
   .identity-band a {
     color: inherit;
@@ -906,7 +934,7 @@
 
   /* 印(规范 v3 `.product-seal`,`src/components/plaque/Seal.tsx`):描边,不填色。2px 外框 +
      内缩 6px 的 1px 细框;≤ 32 是 1px 外框、内缩 4px。颜色是 currentColor:默认文明的字色
-     (`--color-main-ink`,v4 civT),身份带上随带上的白字(v3 的印也是 `color: inherit`)。
+     (`--color-main-ink`,v4 civT),身份带上也是(v3 时随匾上的白字,`color: inherit`)。
      v3 时默认是匾色本身;v4 的 solid 是给白字垫底的深色,深色主题下对 surface-1 只有约 2:1,
      印是图形、要 ≥ 3:1,所以换成字色(2026-11-06)。对比度见 plaqueTitleStaysLargeText.test.ts。
      印文 Noto Serif SC 600(`--font-title`);圣书字不在 Noto Serif SC 里,接一支只含 U+13000 起
@@ -942,8 +970,52 @@
   .seal-on-band .seal {
     color: inherit;
   }
-  .identity-band .seal {
-    color: inherit;
+  /* (v3 时这里有 `.identity-band .seal { color: inherit }`,让印随匾上的白字。v4 的身份带是 canvas 上的光,
+     印回到默认的文明字色 civT —— 对比度在 plaqueTitleStaysLargeText 里按光最亮处量。) */
+
+  /* 卡片随主题(规范 v4 `.card`):深色用 1px 内描边(这里就是原来那条 line 框),浅色不画线框,
+     只靠两层很淡的阴影(1px 2px 5% + 6px 20px 16%)。值在 :root / .light 的 `--shadow-card`。
+     调用点:PageSection 与外壳里的殿司卡、侧栏当前项;业务页面里手写的面板随阶段 3 换过来。 */
+  .light .v4-card {
+    border-color: transparent;
+    box-shadow: var(--shadow-card);
+  }
+  /* 侧栏当前项(v4 `.side2 .it.on`):深色 glow 20% 透出侧栏底;浅色是 card 底加卡片阴影。字仍是 ink。 */
+  .nav-current {
+    background: color-mix(in srgb, oklch(var(--color-glow)) 20%, transparent);
+  }
+  .light .nav-current {
+    background: oklch(var(--color-surface-1));
+    box-shadow: var(--shadow-card);
+  }
+  /* 殿司卡(v4 `.hallcard`):深色 glow 14% 混进 card,浅色 card + 卡片阴影。 */
+  .nav-hall-card {
+    background: color-mix(in srgb, oklch(var(--color-glow)) 14%, oklch(var(--color-surface-1)));
+  }
+  .light .nav-hall-card {
+    background: oklch(var(--color-surface-1));
+    box-shadow: var(--shadow-card);
+  }
+
+  /* 紧凑(v4「8 · 紧凑」,`shell.density.compact`,ShellChrome.tsx 写 <html data-density>):表格行 36、
+     控件 30、正文 13;页头与卡片间距不动。只在 ≥ 769 且指针精确时 —— 触屏的 44 是点按下限。 */
+  @media (min-width: 769px) and (pointer: fine) {
+    html[data-density="compact"] {
+      --control-h-sm: 30px;
+      --control-h-md: 36px;
+      --table-row-h: 36px;
+    }
+    html[data-density="compact"] [data-slot="table"],
+    html[data-density="compact"] table {
+      font-size: var(--text-sm);
+    }
+  }
+
+  /* 空状态的主视觉轻轻呼吸(v4「10」):5s 一次,缩放 1 → 1.035,透明度 .5 → .72。出错不动。
+     减少动态效果时停在终态(下面的 reduced-motion 块与 reducedMotionContract)。 */
+  .empty-breathe {
+    animation: empty-breathe 5s ease-in-out infinite;
+    transform-origin: center;
   }
   .seal[data-civ="eu"] {
     border-radius: 50%;
@@ -995,6 +1067,27 @@ html.theme-switching *::after {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-duration: var(--transition-duration-state);
   transition-timing-function: var(--ease-enter);
+}
+
+@keyframes empty-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.035);
+    opacity: 0.72;
+  }
+}
+
+/* 切换文明(殿司卡进另一殿、换账号)时,光、印与主视觉一起过渡:TenantContext 用 View Transitions
+   把 data-civ 的改写包起来,整页 360ms 交叉淡化(v4「1」的时长与缓动)。渐变不能逐值过渡,
+   交叉淡化是唯一让光一起走的办法。减少动态效果时 TenantContext 不开这一次过渡,直接换。 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @keyframes drawer-in {

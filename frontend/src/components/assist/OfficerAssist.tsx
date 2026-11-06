@@ -143,6 +143,7 @@ function HeadButton({ onClick, children, label }: { onClick: () => void; childre
 
 function PanelBody({ assist }: { assist: OfficerAssist }) {
   const { t } = useI18n();
+  const pageTitle = usePageTitle();
   const history = assist.view === "history";
   const hasThread = assist.thread.messages.length > 0 || assist.pending !== null;
   return (
@@ -159,9 +160,17 @@ function PanelBody({ assist }: { assist: OfficerAssist }) {
           {history ? t("officer_assist.history_title") : t("officer_assist.title")}
         </span>
         {!history ? (
-          <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("officer_assist.read_only")}</span>
-        ) : null}
-        <span className="flex-1" />
+          // v4 S03:标题旁写「关于这一页 · {page}」(`shell.ask.context`);只读的说明挪到输入框下(`shell.ask.scope_note`)。
+          <span
+            data-testid="officer-assist-context"
+            className="min-w-0 flex-1 truncate text-2xs text-[oklch(var(--color-ink-subtle))]"
+            title={t("shell.ask.context", { page: pageTitle(assist.screen) })}
+          >
+            {t("shell.ask.context", { page: pageTitle(assist.screen) })}
+          </span>
+        ) : (
+          <span className="flex-1" />
+        )}
         {!history ? <HeadButton onClick={() => assist.setView("history")}>{t("officer_assist.history")}</HeadButton> : null}
         {history || hasThread ? <HeadButton onClick={assist.startNew}>{t("officer_assist.new")}</HeadButton> : null}
         <HeadButton onClick={assist.close} label={t("officer_assist.close")}>✕</HeadButton>
@@ -447,6 +456,9 @@ function Composer({ assist }: { assist: OfficerAssist }) {
       </div>
       <p className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
         {busy ? t("officer_assist.stop_hint") : t("officer_assist.input_hint", { enter: "Enter", shift_enter: "Shift+Enter", esc: "Esc" })}
+      </p>
+      <p data-testid="officer-assist-scope" className="mt-1 text-2xs text-[oklch(var(--color-ink-subtle))]">
+        {t("shell.ask.scope_note")}
       </p>
     </div>
   );

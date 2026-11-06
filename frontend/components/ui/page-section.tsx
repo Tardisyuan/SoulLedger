@@ -50,7 +50,8 @@ export function PageSection({
     // 规范 v3 面板(与 `app/dashboard` 的面板同一写法):1 px 结构线 + surface-1 底 + 16 内距;
     // 标题是面板标题(`text-lg`,界面字体,DESIGN.md「面板标题」)。v1 的 11 px 等宽栏目标签
     // 与压在标题下的区块线撤掉 —— 那是 v1「卡片 = 区块」的画法,v3 的面板靠底色与外框分层。
-    <section className={cn('flex min-w-0 flex-col gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4', className)}>
+    // v4 `.v4-card`(globals.css):深色留这条 1px 线(= v4 的内描边),浅色线去掉、换两层很淡的卡片阴影。
+    <section className={cn('v4-card flex min-w-0 flex-col gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4', className)}>
       {title && (
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg text-[oklch(var(--color-ink))]">{title}</h2>

@@ -296,7 +296,7 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
     expect(fs.existsSync(path.join(FRONTEND, "public", "v2"))).toBe(false);
   });
 
-  it("印是 v3 的描边印:currentColor 描边、不填色,印文 font-title + 圣书字回退;身份带上随带上的白字", () => {
+  it("印是 v3 的描边印:currentColor 描边、不填色,印文 font-title + 圣书字回退;身份带上也是文明字色(v4:带不再是匾色实底)", () => {
     const rule = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[.[\]"=]/g, "\\$&")} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
     const seal = rule(".seal");
     // v4(2026-11-06):默认印色由匾色改为文明字色 civT —— 深色 v4 solid 对 surface-1 只有约 2:1。
@@ -304,7 +304,9 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
     expect(seal).toMatch(/border: 2px solid currentColor;/);
     expect(seal).toMatch(/outline: 1px solid currentColor;/);
     expect(seal).not.toMatch(/background/);
-    expect(rule(".identity-band .seal")).toMatch(/color: inherit;/);
+    // v4(2026-11-06):身份带是 canvas 上的光、字是 ink,印不再随带上的白字 —— 那条 inherit 规则删掉了。
+    expect(rule(".identity-band .seal")).toBe("");
+    expect(rule(".identity-band")).toMatch(/color: oklch\(var\(--color-ink\)\);/);
     expect(rule(".seal-glyphs")).toMatch(/font-family: var\(--font-title\), var\(--font-hieroglyphs\);/);
     expect(rule('.seal[data-civ="eu"]')).toMatch(/border-radius: 50%;/);
     expect(rule('.seal[data-civ="gr"]')).toMatch(/clip-path: polygon\(/);
