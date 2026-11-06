@@ -175,11 +175,7 @@ export function RejectSheet({
                 onPress={() => pick(code)}
               />
             ))}
-            {has("MORTAL_SIN") && (judgment.cited_deadly_sins ?? []).length > 0 ? (
-              <Txt variant="caption" tone="muted" testID="reject-eu-sins">
-                {(judgment.cited_deadly_sins ?? []).map((s) => t(`reject_reason.eu.sin.${s}`)).join(" · ")}
-              </Txt>
-            ) : null}
+            {/* 不列七宗罪:七宗罪对应炼狱七台(docs/03),「不过」是下地狱(用户 2026-11-07)。 */}
           </>
         ) : null}
 

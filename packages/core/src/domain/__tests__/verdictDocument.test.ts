@@ -71,12 +71,17 @@ describe("地府(定稿第五、六批)", () => {
 
 describe("欧洲", () => {
   const eu = { ...base, civilization: "EUROPEAN", soulName: "Giulia Ferri", han: true };
-  it("地狱第 n 圈读处置界域;引用了七宗罪才写「哪一宗」", () => {
+  it("地狱第 n 圈读处置界域;七宗罪对应炼狱七台,下地狱的文书引用了也不列", () => {
     const hell = verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_4TH", citedDeadlySins: ["greed"] }, tz)!;
     expect(hell.ruling).toBe("有未悔的大罪，下地狱第 4 圈。");
-    expect(hell.sins).toBe("贪婪");
+    expect(hell.sins).toBeUndefined();
     expect(hell.date).toBe("2026年11月6日 · 六时"); // 14:40 在六时(12–15 点),与顶栏同一张表
-    expect(verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_4TH" }, tz)!.sins).toBeUndefined();
+  });
+
+  it("入炼狱时引用了七宗罪才写「哪一宗」", () => {
+    const purg = { ...eu, verdict: "PURGATORY", realmCode: "EU_PURGATORY_T5_AVARICE" };
+    expect(verdictDocument({ ...purg, citedDeadlySins: ["greed"] }, tz)!.sins).toBe("贪婪");
+    expect(verdictDocument(purg, tz)!.sins).toBeUndefined();
   });
 
   it("前庭、否认灵魂不灭落第 6 圈、炼狱第 n 台、天国不写罪", () => {
