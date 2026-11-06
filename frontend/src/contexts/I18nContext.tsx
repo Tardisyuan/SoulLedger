@@ -249,6 +249,9 @@ interface I18nContextType {
    *  answer per app, not one per page. */
   tf: TranslateWithFallback;
   hydrated: boolean;
+  /** The active locale's bundle is here (always true for the default one). Until then `t` answers from the
+   *  default bundle; the verdict print page (`app/verdict-print`) waits on this before Chromium takes the PDF. */
+  ready: boolean;
   /** Locale-aware date formatting (maps `egy` -> `en` for Intl, see INTL_LOCALE above). */
   formatDate: (value: DateInput, options?: Intl.DateTimeFormatOptions) => string;
   /** Locale-aware date+time formatting; defaults to medium date + medium time style. */
@@ -288,6 +291,7 @@ const I18nContext = createContext<I18nContextType>({
   t: echoKey,
   tf: makeTranslateWithFallback(echoKey),
   hydrated: false,
+  ready: true,
   formatDate: (value, options) => formatDateWith(DEFAULT_LOCALE, value, options),
   formatDateTime: (value, options) => formatDateTimeWith(DEFAULT_LOCALE, value, options),
 });
@@ -422,9 +426,10 @@ export function I18nProvider({
   // formatters move only with `locale` — so this memo is not wrapping a bag of
   // functions that churn underneath it. It is the object literal itself that
   // was new on every render.
+  const ready = !LAZY_BUNDLES[locale] || loadedBundles[locale] !== undefined;
   const value = useMemo(
-    () => ({ locale, setLocale, t, tf, hydrated, formatDate, formatDateTime }),
-    [locale, setLocale, t, tf, hydrated, formatDate, formatDateTime]
+    () => ({ locale, setLocale, t, tf, hydrated, ready, formatDate, formatDateTime }),
+    [locale, setLocale, t, tf, hydrated, ready, formatDate, formatDateTime]
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

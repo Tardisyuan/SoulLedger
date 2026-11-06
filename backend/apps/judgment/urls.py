@@ -7,7 +7,7 @@ from rest_framework import routers
 from apps.judgment.appeal_views import JudgmentAppealViewSet
 from apps.judgment.city_god_views import CityGodCaseViewSet, CityGodViewSet
 from apps.judgment.handover_views import HandoverCommitView, HandoverOfficersView, HandoverPreviewView
-from apps.judgment.views import JudgmentViewSet, StatuteViewSet
+from apps.judgment.views import JudgmentViewSet, StatuteViewSet, VerdictPrintDataView
 from apps.judgment.wangsi_views import WangsiViewSet
 
 router = routers.DefaultRouter()
@@ -30,5 +30,7 @@ urlpatterns = [
     path("handover/preview/", HandoverPreviewView.as_view(), name="judgment-handover-preview"),
     path("handover/officers/", HandoverOfficersView.as_view(), name="judgment-handover-officers"),
     path("handover/", HandoverCommitView.as_view(), name="judgment-handover"),
+    # 判决文书打印页取数据(内部,apps/judgment/verdict_pdf.py);同上,在空前缀的路由之前。
+    path("verdict-print/<str:key>/", VerdictPrintDataView.as_view(), name="judgment-verdict-print"),
     *router.urls,
 ]
