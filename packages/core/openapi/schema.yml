@@ -31823,6 +31823,11 @@ components:
           items:
             type: string
           readOnly: true
+        final_review_by:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
       required:
       - admitted_balance
       - amends_plan_id
@@ -31868,6 +31873,7 @@ components:
       - fail_reason_note
       - fail_reasons
       - ferry_barred
+      - final_review_by
       - flow_cancelled
       - flow_progress
       - greek_account
