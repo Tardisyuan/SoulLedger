@@ -19,8 +19,8 @@ class Command(BaseCommand):
                 "code": "CN_DIYU",
                 "display_name": "Chinese Afterlife",
                 "hall_name": "第五殿", "hall_name_en": "The Fifth Court", "hall_name_egy": "Yanluo Wesekhet",
-                "description": "中国地府 — 十殿阎王、十八层地狱、第一层天界",
-                "description_en": "Diyu, the Chinese underworld: the ten kings, the eighteen hells and the first heaven",
+                "description": "中国地府 — 十殿阎王、孟婆汤、六道轮回",
+                "description_en": "Diyu, the Chinese underworld: the ten kings, Meng Po's soup and the six paths of rebirth",
                 "dispatch_enabled": True,
             },
             {

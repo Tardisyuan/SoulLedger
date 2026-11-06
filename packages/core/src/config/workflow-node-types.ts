@@ -124,9 +124,9 @@ export const PRESET_NODE_TYPE: Record<string, NodeTypeMember> = {
   // 「算出」，算出的部分在别处已经完成。
   等待: "EXECUTION",
   // 罪行核定（阿鼻流程第一步）：核定五逆十恶的轻重，为第二步的入狱定性。
-  // 衡量在前、执行在后，与后端「忏悔赦免审核」= EVALUATION 同形。
+  // 衡量在前、执行在后，与后端「生前告解核对」= EVALUATION 同形。
   罪行评定: "EVALUATION",
-  // 阿鼻地狱入狱 / Satan · 第九层收监：判决的执行。
+  // 阿鼻地狱入狱 / Satan · 第九圈收押：判决的执行。
   入狱执行: "EXECUTION",
   // 功德核定：功德与阈值（≥500）相比较，教科书式的衡量。
   功德评定: "EVALUATION",

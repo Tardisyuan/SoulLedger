@@ -244,7 +244,7 @@ export function RejectReasonPanel({
       return court ? t("verdict_doc.cn.verdict.fail", { offence: t(`judgment.offences.${r}`), n: courtNo(court) }) : null;
     }
     if (civilization === "EUROPEAN") {
-      if (r === "DENIED_IMMORTALITY") return t("verdict_doc.eu.verdict.hell", { n: String(HERESY_CIRCLE) });
+      if (r === "DENIED_IMMORTALITY") return t("verdict_doc.eu.verdict.heresy");
       if (r === "NEUTRAL") return t("verdict_doc.eu.verdict.antinferno");
       return null; // 大罪的圈号由发落定,这里不猜
     }

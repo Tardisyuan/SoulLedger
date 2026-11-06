@@ -104,7 +104,7 @@ WORKFLOW_TEMPLATES = {
     (Civilization.EUROPEAN, CaseType.CANONIZATION): {
         "name": "封圣审查流程",
         "nodes": [
-            {"name": "主教座堂初审", "court": "Diocese", "type": NodeType.TRIAL, "order": 1},
+            {"name": "教区初审", "court": "Diocese", "type": NodeType.TRIAL, "order": 1},
             {"name": "教省复审", "court": "Archdiocese", "type": NodeType.TRIAL, "order": 2},
             {"name": "罗马教廷终审", "court": "Vatican", "type": NodeType.FINAL, "order": 3},
         ],
@@ -113,7 +113,10 @@ WORKFLOW_TEMPLATES = {
     (Civilization.EUROPEAN, CaseType.PURGATORY_REVIEW): {
         "name": "炼狱复核流程",
         "nodes": [
-            {"name": "忏悔赦免审核", "court": "Confessional", "type": NodeType.EVALUATION, "order": 1},
+            # Confession absolves only in life: the particular judgment falls at the moment of death (docs/01, CCC
+            # 1021-1022), so there is no confessional after it. What the review checks is whether the mortal sin was
+            # confessed before death (wording review 2026-11-06, EU-10).
+            {"name": "生前告解核对", "court": "Heaven", "type": NodeType.EVALUATION, "order": 1},
             {"name": "炼狱净化评估", "court": "Purgatory Court", "type": NodeType.TRIAL, "order": 2},
             {"name": "天堂准入终审", "court": "Heaven Gate", "type": NodeType.FINAL, "order": 3},
         ],
@@ -327,11 +330,11 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
              "living (Dan 8:16, 9:21; Lk 1:11-38) and does not receive the "
              "dead's cases — see the European section of "
              "packages/core/src/config/workflow-templates.ts.",
-    "主教座堂初审": "An institution (Diocese). EUROPEAN_ACTORS has no bishop.",
+    "教区初审": "An institution (Diocese, 教区 — not 主教座堂, the cathedral). EUROPEAN_ACTORS has no bishop.",
     "教省复审": "An institution (Archdiocese).",
     "罗马教廷终审": "An institution (the Curia). Naming a pope would be inventing "
                "one.",
-    "忏悔赦免审核": "A sacrament, not a person.",
+    "生前告解核对": "A check of the record (was the sin confessed in life), not a person.",
     "炼狱净化评估": "Names the process. Purgatorio's terraces have no seated "
                "judge — see realms/0014, which deliberately added no actor.",
     # THIS ONE IS NOW A DECISION RATHER THAN AN ABSENCE, AND IT IS WHY THE

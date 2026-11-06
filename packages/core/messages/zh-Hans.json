@@ -222,7 +222,7 @@
     "civilizations_title": "文明体系",
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂与地狱",
+      "EUROPEAN": "欧洲天堂地狱",
       "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     },
@@ -234,7 +234,7 @@
     },
     "civ_desc": {
       "CHINESE": "十殿阎王、孟婆汤、六道轮回",
-      "EUROPEAN": "基督教审判、炼狱、但丁地狱、忘川河",
+      "EUROPEAN": "基督教审判、炼狱、但丁地狱、勒特河与欧诺埃河",
       "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇原",
       "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
     },
@@ -346,7 +346,7 @@
       "CITY_GOD_SENT_ON": "城隍解送十殿",
       "CITY_GOD_RETURNED": "城隍退回补正",
       "MENGPO_SOUP_TAKEN": "饮孟婆汤",
-      "PURGATORY_ASCENDED": "出炼狱，升天堂",
+      "PURGATORY_ASCENDED": "出炼狱，升天国",
       "OFFICER_HANDOVER": "经办官员交接",
       "DUAT_PASSAGE_CHANGED": "杜阿特行程改记",
       "DIYU_STATION_CHANGED": "十三站换站",
@@ -761,7 +761,7 @@
       "BAPTISED": "已受洗",
       "UNBAPTISED": "未受洗",
       "BEFORE_CHRIST": "生于基督之前",
-      "help": "未受洗或生于基督之前、又没有更重的罪：判入第一圈 Limbo（不是刑罚）。有更重的罪，按那条罪发落。已受洗的灵魂不会落到 Limbo。"
+      "help": "未受洗或生于基督之前、又没有更重的罪：判入第一圈林勃（不是刑罚）。有更重的罪，按那条罪发落。已受洗的灵魂不会落到林勃。"
     },
     "denied_immortality": {
       "label": "否认灵魂不灭",
@@ -893,7 +893,7 @@
       "OFFERING_PAVILION": "领取阳间亲人烧来的纸钱供养。",
       "GHOST_FORT": "无处可去的孤魂暂时栖身。",
       "FENGDU_CITY": "进入酆都城，正式归地府管辖，候十殿审判。",
-      "EIGHTEEN_HELLS": "判有罪者在此受刑。",
+      "EIGHTEEN_HELLS": "民间相传的受刑之所（与十殿并行的另一种说法）。",
       "LOTUS_TERRACE": "受度化，超拔出离苦海。",
       "HUANHUN_CLIFF": "饮孟婆汤后，投胎前的最后一关。"
     },
@@ -1773,9 +1773,9 @@
       "action": "选站"
     },
     "court": {
-      "heaven": "天堂",
-      "heaven_gate": "天堂之门",
-      "diocese": "主教座堂",
+      "heaven": "天国",
+      "heaven_gate": "天国之门",
+      "diocese": "教区",
       "archdiocese": "教省",
       "vatican": "罗马教廷",
       "confessional": "告解室",
@@ -1784,8 +1784,8 @@
       "duat": "杜阿特",
       "egypt": "埃及",
       "crossroads": "岔路口草地",
-      "second_circle_gate": "第二层入口",
-      "ninth_circle": "第九层",
+      "second_circle_gate": "第二圈入口",
+      "ninth_circle": "第九圈",
       "court_1": "第一殿",
       "court_2": "第二殿",
       "court_3": "第三殿",
@@ -2466,7 +2466,7 @@
         "destination_not_applicable": "执行失败：此案不设发落",
         "term_not_applicable": "埃及的去处不服刑：芦苇原与第二死都没有刑期。",
         "retry_has_no_destination": "「重审」不发落：这件案子会另开一案再审，清空发落再结案。",
-        "passed_has_no_destination": "地府判无罪不发落：结案（审批流程走完）后直接候转世，清空发落再结案。"
+        "passed_has_no_destination": "地府判无罪不发落：结案（审批流程走完）后直接进入轮回中，清空发落再结案。"
       },
       "draft": "草稿 · 未提交",
       "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
@@ -3024,7 +3024,7 @@
       }
     },
     "codes": {
-      "DY_01_HEAVEN": "天堂",
+      "DY_01_HEAVEN": "天界",
       "DY_02_YANGLIU": "杨柳宫",
       "DY_00_PURGATORY": "待审所",
       "DY_COURT_01_QINGUANG": "第一殿",
@@ -3037,7 +3037,7 @@
       "DY_COURT_08_DUSHI": "第八殿",
       "DY_COURT_09_PINGDENG": "第九殿",
       "DY_COURT_10_ZHUANLUN": "第十殿",
-      "EU_HEAVEN": "天堂",
+      "EU_HEAVEN": "天国",
       "EU_PURGATORY": "炼狱",
       "EU_PURGATORY_T1_PRIDE": "炼狱第一层",
       "EU_PURGATORY_T2_ENVY": "炼狱第二层",
@@ -3047,16 +3047,16 @@
       "EU_PURGATORY_T6_GLUTTONY": "炼狱第六层",
       "EU_PURGATORY_T7_LUST": "炼狱第七层",
       "EU_EARTHLY_PARADISE": "地上乐园",
-      "EU_HELL_1ST": "第一层地狱",
-      "EU_HELL_2ND": "第二层地狱",
-      "EU_HELL_3RD": "第三层地狱",
-      "EU_HELL_4TH": "第四层地狱",
-      "EU_HELL_5TH": "第五层地狱",
-      "EU_HELL_6TH": "第六层地狱",
-      "EU_HELL_7TH": "第七层地狱",
-      "EU_HELL_8TH": "第八层地狱",
-      "EU_HELL_9TH": "第九层地狱",
-      "EU_ACHERON": "阿刻戎渡口",
+      "EU_HELL_1ST": "地狱第一圈",
+      "EU_HELL_2ND": "地狱第二圈",
+      "EU_HELL_3RD": "地狱第三圈",
+      "EU_HELL_4TH": "地狱第四圈",
+      "EU_HELL_5TH": "地狱第五圈",
+      "EU_HELL_6TH": "地狱第六圈",
+      "EU_HELL_7TH": "地狱第七圈",
+      "EU_HELL_8TH": "地狱第八圈",
+      "EU_HELL_9TH": "地狱第九圈",
+      "EU_ACHERON": "阿刻戎河渡口",
       "EU_PLATO_MEADOW": "岔路草原",
       "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
@@ -3085,24 +3085,24 @@
       "DY_COURT_10_ZHUANLUN": "第十殿转轮王",
       "EU_HEAVEN": "天国",
       "EU_PURGATORY": "炼狱",
-      "EU_PURGATORY_T1_PRIDE": "傲慢之台",
-      "EU_PURGATORY_T2_ENVY": "嫉妒之台",
-      "EU_PURGATORY_T3_WRATH": "愤怒之台",
-      "EU_PURGATORY_T4_SLOTH": "懒惰之台",
-      "EU_PURGATORY_T5_AVARICE": "贪婪之台",
-      "EU_PURGATORY_T6_GLUTTONY": "暴食之台",
-      "EU_PURGATORY_T7_LUST": "淫欲之台",
+      "EU_PURGATORY_T1_PRIDE": "第一层 - 傲慢",
+      "EU_PURGATORY_T2_ENVY": "第二层 - 嫉妒",
+      "EU_PURGATORY_T3_WRATH": "第三层 - 愤怒",
+      "EU_PURGATORY_T4_SLOTH": "第四层 - 懒惰",
+      "EU_PURGATORY_T5_AVARICE": "第五层 - 贪婪",
+      "EU_PURGATORY_T6_GLUTTONY": "第六层 - 暴食",
+      "EU_PURGATORY_T7_LUST": "第七层 - 淫欲",
       "EU_EARTHLY_PARADISE": "地上乐园",
-      "EU_HELL_1ST": "第一圈 - 地狱边境",
+      "EU_HELL_1ST": "第一圈 - 林勃",
       "EU_HELL_2ND": "第二圈 - 淫欲",
       "EU_HELL_3RD": "第三圈 - 暴食",
-      "EU_HELL_4TH": "第四圈 - 贪婪",
+      "EU_HELL_4TH": "第四圈 - 贪婪与挥霍",
       "EU_HELL_5TH": "第五圈 - 愤怒",
       "EU_HELL_6TH": "第六圈 - 异端",
       "EU_HELL_7TH": "第七圈 - 暴力",
-      "EU_HELL_8TH": "第八圈 - 恶毒沟",
+      "EU_HELL_8TH": "第八圈 - 欺诈",
       "EU_HELL_9TH": "第九圈 - 背叛",
-      "EU_ACHERON": "冥河渡口",
+      "EU_ACHERON": "阿刻戎河渡口",
       "EU_PLATO_MEADOW": "审判岔路",
       "GR_ACHERON": "冥河渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
@@ -3192,7 +3192,7 @@
       "region": {
         "INFERNO": "地狱 · {{n}} 圈，越下越窄",
         "PURGATORIO": "炼狱 · {{n}} 层，越上越窄",
-        "PARADISO": "天堂 · {{n}} 重"
+        "PARADISO": "天国"
       },
       "fork": {
         "PASS": "✓ 过 · 心轻于羽",
@@ -3228,7 +3228,7 @@
     "subtitle": "跨文明组织管理",
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂与地狱",
+      "EUROPEAN": "欧洲天堂地狱",
       "EGYPTIAN": "埃及杜阿特",
       "GREEK": "希腊冥界",
       "UNKNOWN": "未归属文明"
@@ -4405,7 +4405,7 @@
     "term_default": "默认 {{n}} 年",
     "release": "期满释放",
     "release_confirm": "确认期满释放？",
-    "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就候转世（或终局）。不可撤销。",
+    "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就进入轮回中（或终局）。不可撤销。",
     "release_success": "已期满释放",
     "release_error": {
       "term_not_ended": "期满日还没到，不能释放。",
@@ -4436,7 +4436,7 @@
       "THREE_EVIL_PATHS": "三恶道"
     },
     "error": {
-      "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转世。灵魂留在候转世。",
+      "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转世。灵魂仍在轮回中。",
       "plan_in_progress": "{{name}}的受刑计划还没走完，不能转世。",
       "eternal_sentence": "{{name}}受的是永久刑期，没有下一世。",
       "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。",
@@ -4574,7 +4574,7 @@
       "cooldown_hint": "最近一次终局驳回之后这么多天内不能再申请;0 到 365,留空用默认 30 天",
       "cooldown_invalid": "请填 0 到 365 之间的整数",
       "rebirth_quota_title": "转世配额",
-      "rebirth_quota_body": "每道每月最多办几次转世。留空 = 不限。某道满了，灵魂留在「待转世」里候位，下月或调高后再办。",
+      "rebirth_quota_body": "每道每月最多办几次转世。留空 = 不限。某道满了，灵魂留在「轮回中」候位，下月或调高后再办。",
       "rebirth_quota_unlimited": "不限",
       "rebirth_quota_limit_col": "每月上限",
       "rebirth_quota_used_col": "本月已办",
@@ -5194,7 +5194,8 @@
       },
       "eu": {
         "past_read_only": "前世记录只读。天堂与地狱不受理申请与申诉。",
-        "no_past_lives": "天堂与地狱没有前世。你只有这一世，此后不再入簿。"
+        "no_past_lives": "天堂与地狱没有前世。你只有这一世，此后不再入簿。",
+        "court": "受审于"
       }
     },
     "logout": {
@@ -8077,11 +8078,11 @@
       "used_of": "{{used}} / {{limit}}",
       "used_unlimited": "{{used}} · 不限",
       "full_badge": "已满",
-      "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在待转世里候位，下月或调高配额后再办。"
+      "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在「轮回中」候位，下月或调高配额后再办。"
     },
     "not_applicable": {
       "title": "{{civ}}没有转世",
-      "body": "这里的路在处置之后结束，不再投生。转生申请只出现在地府和希腊。",
+      "body": "这里的路在处置之后结束，不再转世。转生申请只出现在地府和希腊。",
       "back": "回到概览"
     }
   },
@@ -8444,10 +8445,10 @@
     "register_title": "登记{{name}}已饮孟婆汤？",
     "register_body": "每一世饮一次。登记后不能撤回，转世完成时清空。",
     "registered_toast": "已登记：{{name}}已饮孟婆汤",
-    "batch_refused": "{{n}} 位还没饮孟婆汤，没有转世，留在候转世：",
+    "batch_refused": "{{n}} 位还没饮孟婆汤，没有转世，仍在轮回中：",
     "error": {
       "not_diyu": "只有地府的灵魂要饮孟婆汤",
-      "not_reincarnating": "只有候转世的灵魂才能登记饮汤",
+      "not_reincarnating": "只有轮回中的灵魂才能登记饮汤",
       "soup_already_taken": "这一世已经饮过了"
     }
   },
@@ -8596,9 +8597,9 @@
         "line": "十殿轮审，判入六道；过奈何桥前，先喝一碗孟婆汤。"
       },
       "eu": {
-        "name": "欧洲天堂与地狱",
+        "name": "欧洲天堂地狱",
         "realm": "Paradiso · Inferno",
-        "line": "圣彼得守在天门，炼狱逐层涤罪，但丁的九层地狱按罪下沉。"
+        "line": "圣彼得守在天门，炼狱逐层涤罪，但丁的地狱九圈按罪下沉。"
       },
       "eg": {
         "name": "埃及冥界",
@@ -8693,7 +8694,7 @@
         },
         "4": {
           "name": "炼狱或地狱",
-          "body": "炼狱七层逐层涤罪；地狱九层，没有出口。"
+          "body": "炼狱七层逐层涤罪；地狱九圈，没有出口。"
         },
         "5": {
           "name": "这一生停在这里",
@@ -8920,7 +8921,7 @@
       "court10_bridges": "第十殿 · 六桥 · 孟婆",
       "ghost_gate": "鬼门关",
       "inside_fengdu": "酆都城之内 · 十殿",
-      "mengpo_pavilion": "孟婆亭",
+      "mengpo_pavilion": "醧忘台",
       "moved_by_officer": "官员挪站",
       "nai_river": "奈河",
       "naihe_bridge": "奈何桥",
@@ -8938,7 +8939,7 @@
     "europe": {
       "circles": "地狱九圈",
       "downward": "向下 · 按罪下沉",
-      "terraces": "炼狱七台",
+      "terraces": "炼狱七层",
       "upward": "向上 · 涤罪"
     },
     "fit": "全景",
@@ -9136,7 +9137,9 @@
         "antinferno": "登记为中立者，留在地狱前庭。",
         "heaven": "无未悔的大罪，蒙召入天国。",
         "hell": "有未悔的大罪，下地狱第 {{n}} 圈。",
-        "purgatory": "无未悔的大罪，入炼狱第 {{n}} 台，由下而上涤罪。"
+        "purgatory": "无未悔的大罪，入炼狱第 {{n}} 层，由下而上涤罪。",
+        "limbo": "未受洗，又没有更重的罪，入第一圈林勃。此处不施刑罚。",
+        "heresy": "否认灵魂不灭，入地狱第六圈。"
       }
     },
     "gr": {

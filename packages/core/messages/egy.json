@@ -869,7 +869,6 @@
       "OFFERING_PAVILION": "Shesep Redi Em Ankh.",
       "GHOST_FORT": "Ba Wa Nen Per: Hemes Em Sekhet Pen.",
       "FENGDU_CITY": "Aq Er Duat Sherer: Em Smen Wesekhet 1 Er 10.",
-      "EIGHTEEN_HELLS": "Wedja Nen Menkh: Shepet Em Sekhet Pen.",
       "LOTUS_TERRACE": "Ba Wedja Nefer: Per Em Shepet.",
       "HUANHUN_CLIFF": "Er Khet Mu Mengpo: Sekhet Pehwy Tepy Er Wehem Mesut."
     },
@@ -3192,7 +3191,7 @@
       "region": {
         "INFERNO": "Duat · Hesep {{n}}",
         "PURGATORIO": "Ta Hesmen · Hesep {{n}}",
-        "PARADISO": "Pet · Hesep {{n}}"
+        "PARADISO": "Pet"
       },
       "fork": {
         "PASS": "✓ Menkh · Ib Nen Er Hry Shut",
@@ -8920,10 +8919,8 @@
       "court10_bridges": "Wesekhet 10 · Mengpo",
       "ghost_gate": "Sebkhet Guimen",
       "inside_fengdu": "Nut Duat Sherer · Wesekhet 1 Er 10",
-      "mengpo_pavilion": "Per Mengpo",
       "moved_by_officer": "Khemen Sab",
-      "nai_river": "Itru Naihe",
-      "naihe_bridge": "Shem Itru Naihe",
+      "naihe_bridge": "Shem Naihe",
       "road_down": "Er Duat · Sekhet 1 Er 10",
       "six_paths": "Wehem Mesut Em Wat 6",
       "ten_courts": "Wesekhet 1 Er 10"

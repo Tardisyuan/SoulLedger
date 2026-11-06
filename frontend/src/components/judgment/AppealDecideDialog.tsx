@@ -11,6 +11,8 @@ import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
+import { verdictNamespace } from "@/src/lib/domainNames";
 import { APPEAL_IN_DIALOG_CODES, appealRefusalMessage, appealRefusalOf } from "@/src/components/judgment/appealDisplay";
 
 /**
@@ -43,6 +45,8 @@ export function AppealDecideDialog({
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  // 申诉在本殿审:欧洲的 PURGATORY 选项叫「炼狱」,不叫通用的「存疑」(第十一批 1a)。
+  const civilization = useHallCivilization();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -141,7 +145,7 @@ export function AppealDecideDialog({
               return (
                 <label key={v} className={`flex items-center gap-2 text-sm ${original ? "text-[oklch(var(--color-ink-subtle))]" : ""}`}>
                   <input type="radio" name="appeal-verdict" value={v} disabled={original} checked={verdict === v} onChange={() => setVerdict(v)} />
-                  <DomainEnum namespace="judgment.verdicts" value={v} />
+                  <DomainEnum namespace={verdictNamespace(t, civilization, v)} value={v} />
                   {original && <span>· {t("appeals.original_verdict")}</span>}
                 </label>
               );

@@ -17,9 +17,9 @@ import { isCivilizationOption } from "../config/civilizations";
 
 /** slug → 英文名(测试对 en.json 用)与库里出现过的写法。 */
 const COURTS: Record<string, { en: string; spellings: readonly string[] }> = {
-  heaven: { en: "Heaven", spellings: ["天堂", "Heaven"] },
-  heaven_gate: { en: "Gate of Heaven", spellings: ["天堂之门", "Heaven Gate", "Gate of Heaven"] },
-  diocese: { en: "Diocese", spellings: ["主教座堂", "Diocese"] },
+  heaven: { en: "Heaven", spellings: ["天堂", "天国", "Heaven"] },
+  heaven_gate: { en: "Gate of Heaven", spellings: ["天堂之门", "天国之门", "Heaven Gate", "Gate of Heaven"] },
+  diocese: { en: "Diocese", spellings: ["主教座堂", "教区", "Diocese"] },
   archdiocese: { en: "Archdiocese", spellings: ["教省", "Archdiocese"] },
   vatican: { en: "Vatican", spellings: ["罗马教廷", "Vatican"] },
   confessional: { en: "Confessional", spellings: ["告解室", "Confessional"] },
@@ -28,8 +28,8 @@ const COURTS: Record<string, { en: string; spellings: readonly string[] }> = {
   duat: { en: "Duat", spellings: ["杜阿特", "Duat"] },
   egypt: { en: "Egypt", spellings: ["埃及", "Egypt"] },
   crossroads: { en: "Meadow at the Crossroads", spellings: ["岔路口草地", "Meadow at the Crossroads"] },
-  second_circle_gate: { en: "Entrance to the Second Circle", spellings: ["第二层入口", "Entrance to the Second Circle"] },
-  ninth_circle: { en: "Ninth Circle", spellings: ["第九层", "Ninth Circle"] },
+  second_circle_gate: { en: "Entrance to the Second Circle", spellings: ["第二层入口", "第二圈入口", "Entrance to the Second Circle"] },
+  ninth_circle: { en: "Ninth Circle", spellings: ["第九层", "第九圈", "Ninth Circle"] },
   court_1: { en: "First Court", spellings: ["第一殿", "First Court"] },
   court_2: { en: "Second Court", spellings: ["第二殿", "Second Court"] },
   court_3: { en: "Third Court", spellings: ["第三殿", "Third Court"] },

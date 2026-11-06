@@ -62,7 +62,7 @@ INSIDE_DIS = (6, 7, 8, 9)
 CIRCLES = {
     1: {
         "code": "EU-INF-C1", "ordinal": 1, "title_en": "Limbo",
-        "title_zh": "第一圈·幽冥边境", "cantos": "Inf. IV",
+        "title_zh": "第一圈·林勃", "cantos": "Inf. IV",
         "aristotle": None, "guardian": None, "realm": "EU_HELL_1ST",
         "mark": "longing without hope",
     },

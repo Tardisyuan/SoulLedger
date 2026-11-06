@@ -9,7 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useHall, useHallCivilization } from "@/src/components/plaque/useHall";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -54,12 +54,13 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function Decision({ appeal }: { appeal: JudgmentAppeal }) {
   const { t, formatDate } = useI18n();
+  const civilization = useHallCivilization();
   return (
     <PageSection title={t(`appeals.status.${appeal.status}`)}>
       {appeal.status === "AMENDED" && (
         <Row label={t("appeals.new_verdict")}>
           <span className="inline-flex items-center gap-2 text-sm">
-            <VerdictBadge verdict={appeal.original_verdict} />→<VerdictBadge verdict={appeal.new_verdict} />
+            <VerdictBadge verdict={appeal.original_verdict} civilization={civilization} />→<VerdictBadge verdict={appeal.new_verdict} civilization={civilization} />
           </span>
         </Row>
       )}
@@ -96,6 +97,7 @@ function Decision({ appeal }: { appeal: JudgmentAppeal }) {
 function AppealReviewContent({ id }: { id: string }) {
   const { t, locale, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
+  const civilization = useHallCivilization();
   const { user } = useTenant();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -215,7 +217,7 @@ function AppealReviewContent({ id }: { id: string }) {
             </Link>
           </Row>
           <Row label={t("appeals.original_verdict")}>
-            <VerdictBadge verdict={appeal.original_verdict} />
+            <VerdictBadge verdict={appeal.original_verdict} civilization={civilization} />
           </Row>
           <Row label={t("souls.detail.ledger.verdict_words")}>
             <p className={PROSE}>{appeal.judgment_notes || <MissingValue kind="unrecorded" />}</p>

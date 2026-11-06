@@ -23,8 +23,8 @@ const tEn = tFor(en as Bundle);
 const tEgy = tFor(egy as Bundle);
 
 describe("courtLabel", () => {
-  it("zh shows 天堂 / 第十殿, en Heaven / Tenth Court", () => {
-    expect(courtLabel(tZh, "天堂", "zh-Hans")).toBe("天堂");
+  it("zh shows 天国 for the stored 天堂 (wording review EU-15) / 第十殿, en Heaven / Tenth Court", () => {
+    expect(courtLabel(tZh, "天堂", "zh-Hans")).toBe("天国");
     expect(courtLabel(tZh, "第十殿", "zh-Hans")).toBe("第十殿");
     expect(courtLabel(tEn, "天堂", "en")).toBe("Heaven");
     expect(courtLabel(tEn, "第十殿", "en")).toBe("Tenth Court");

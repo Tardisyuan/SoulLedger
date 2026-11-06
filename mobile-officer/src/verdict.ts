@@ -95,9 +95,12 @@ export function previewOf(t: T, civ: string, c: RejectChoice, locale: Locale): s
     const court = offenceCourt(first);
     return court ? t("verdict_doc.cn.verdict.fail", { offence: t(`judgment.offences.${first}`), n: courtNumeral(court, locale) }) : null;
   }
-  // 欧洲:只有中立者有一句现成的判语。大罪的圈号要等选殿算出来;否认灵魂不灭的去处(第 6 圈)写在选项上,
-  // 不借「有未悔的大罪」那一句 —— 那会说一件理由没说的事。
-  if (civ === "EUROPEAN") return first === "NEUTRAL" ? t("verdict_doc.eu.verdict.antinferno") : null;
+  // 欧洲:中立者与否认灵魂不灭各有一句现成的判语。大罪的圈号要等选殿算出来;
+  // 否认灵魂不灭不借「有未悔的大罪」那一句 —— 那会说一件理由没说的事。
+  if (civ === "EUROPEAN") {
+    if (first === "NEUTRAL") return t("verdict_doc.eu.verdict.antinferno");
+    return first === "DENIED_IMMORTALITY" ? t("verdict_doc.eu.verdict.heresy") : null;
+  }
   if (civ === "GREEK" && c.curability) {
     const mark = c.curability === "INCURABLE" ? "incurable" : "curable";
     if (c.account === "GORGIAS") return t(`verdict_doc.gr.verdict.${mark}`);
