@@ -61,7 +61,7 @@ class Organization(AuditUserFields):
     # tenant answers for.
     CATEGORY_CHOICES = [
         ('CHINESE', '中国地府'),
-        ('EUROPEAN', '欧洲天堂地狱'),
+        ('EUROPEAN', '欧洲天堂与地狱'),
         ('EGYPTIAN', '埃及冥界'),
         ('GREEK', '希腊冥界'),
     ]
