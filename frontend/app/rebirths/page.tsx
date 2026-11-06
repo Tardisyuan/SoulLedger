@@ -9,6 +9,7 @@ import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { hasRebirth } from "@/src/lib/hasRebirth";
+import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { cn } from "@/lib/utils";
@@ -192,7 +193,9 @@ export default function RebirthsPage() {
   if (civilization && !hasRebirth(civilization)) return <NoRebirthHere civilization={civilization} />;
   return (
     <RequirePermission permissions="reincarnation.read" fallback={<PermissionDenied permission="reincarnation.read" />}>
-      <RebirthsContent sixPaths={civilization !== "GREEK"} />
+      {/* One rule for the hall's view (core sixPaths.ts). The hall-less global view keeps the paths: how it shows
+          mixed civilizations is the user's call (wording review 2026-11-06, SH 需拍板 2). */}
+      <RebirthsContent sixPaths={civilization ? hasSixPaths(civilization) : true} />
     </RequirePermission>
   );
 }

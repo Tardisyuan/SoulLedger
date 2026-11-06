@@ -183,7 +183,7 @@ it("draws the Duat as a trunk, then 过 / 不过: the fail column dashed, its en
   expect(within(topo).queryByTestId("topology-schematic")).toBeNull();
   const pass = topo.querySelector('[data-fork="PASS"]')! as HTMLElement;
   const fail = topo.querySelector('[data-fork="FAIL"]')! as HTMLElement;
-  expect(pass).toHaveTextContent("✓ 过 · 心轻于羽");
+  expect(pass).toHaveTextContent("✓ 过 · 心不重于羽");
   expect(pass.getAttribute("data-terminal")).toBeNull();
   expect(pass.className).not.toContain("border-dashed");
   expect(pass.querySelector(".border-dashed")).toBeNull();

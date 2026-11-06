@@ -34,9 +34,9 @@
     "logout": "登出",
     "username": "用户名",
     "password": "密码",
-    "logging_in": "登录中...",
+    "logging_in": "登录中…",
     "login_success": "登录成功",
-    "error_invalid_credentials": "账号或密码错误",
+    "error_invalid_credentials": "账号或密码不对",
     "error_invalid_token": "无效的令牌",
     "error_token_expired": "令牌已过期",
     "error_login_failed": "登录失败",
@@ -238,8 +238,8 @@
       "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇原",
       "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
     },
-    "your_realm": "你所属的冥府",
-    "civilizations_eyebrow_sub": "四界 · 一本账",
+    "your_realm": "你所属的冥界",
+    "civilizations_eyebrow_sub": "四界 · 四本账",
     "signed_in_as": "已登录 · {{name}}"
   },
   "footer": {
@@ -632,8 +632,8 @@
         "not_found": "已不存在，或不在你的范围内。",
         "not_deletable": "已有结案审判，不能删除，只能归档。"
       },
-      "transfer": "移交…",
-      "transfer_one_only": "发起移交一次只带一个灵魂，已选 {{n}} 个。请只勾选一个，或逐个发起。",
+      "transfer": "调拨…",
+      "transfer_one_only": "发起调拨一次只带一个灵魂，已选 {{n}} 个。请只勾选一个，或逐个发起。",
       "export": "导出",
       "export_failed": "导出失败"
     },
@@ -908,7 +908,7 @@
     "close": "关闭",
     "cancel": "取消",
     "save": "保存",
-    "loading": "加载中...",
+    "loading": "加载中…",
     "edit": "编辑",
     "delete": "删除",
     "prev": "上一页",
@@ -1043,7 +1043,7 @@
     "entity_types": {
       "soul": "灵魂",
       "menu": "菜单",
-      "dispatch_draft": "移交草稿",
+      "dispatch_draft": "调拨草稿",
       "role": "角色",
       "social_post": "帖子",
       "social_comment": "评论",
@@ -1339,7 +1339,7 @@
       "node_name": "节点名称",
       "node_type": "节点类型",
       "court_code": "法庭/宫殿代码",
-      "court_placeholder": "例如: 第一殿, 真理大厅",
+      "court_placeholder": "例如: 第一殿, 两真之殿",
       "approver_type": "审批人类型",
       "approver_role": "审批角色",
       "approver_placeholder": "— 选择审批角色 —",
@@ -2051,7 +2051,8 @@
       "search": "灵魂姓名或 ID",
       "export": "导出",
       "export_failed": "导出失败"
-    }
+    },
+    "advisory_disclaimer_eg": "天平读采信的功过：心不重于羽即通过，重于羽即交阿米特。官员不另选。"
   },
   "judgment": {
     "title": "审判",
@@ -2157,7 +2158,7 @@
       "concluded_at": "结案时间",
       "notes": "备注",
       "render_verdict": "宣判",
-      "conclude_success": "已落判，待审批",
+      "conclude_success": "已落印，待审批",
       "conclude_error": "审判完结失败",
       "select_verdict": "请选择裁决",
       "concluding": "结案处理中...",
@@ -2281,8 +2282,8 @@
       "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。",
       "current_ruling": "当前这一判",
       "ruling_hint": "按数字键 1–4 选择判决，检查完毕后进入盖印确认。",
-      "to_confirm": "进入盖印确认",
-      "irreversible": "落判不可撤回",
+      "to_confirm": "进入落印确认",
+      "irreversible": "落印不可撤回",
       "materials": "资料舱",
       "tab_evidence": "功过记录",
       "tab_law": "律条引用",
@@ -2290,10 +2291,10 @@
       "back_to_focus": "返回聚焦",
       "case_nav": "案卷导航",
       "nav_draft": "草稿与批注",
-      "confirm_title": "确认落判",
+      "confirm_title": "确认落印",
       "confirm_body": "你选择了「{{verdict}}」。落判后写入审判记录，不可撤回。",
       "signing_court": "签署殿司",
-      "stamp": "盖印并结案",
+      "stamp": "落印并结案",
       "back_to_check": "返回检查",
       "recorded": "判决已写入记录。",
       "done": "完成",
@@ -2464,7 +2465,7 @@
         "term_conflict": "执行失败：刑期与永恒只能选一个",
         "eternal_not_allowed": "执行失败：该目的地不收永恒之刑",
         "destination_not_applicable": "执行失败：此案不设发落",
-        "term_not_applicable": "埃及的去处不服刑：芦苇原与第二死都没有刑期。",
+        "term_not_applicable": "埃及的去处不服刑：芦苇原与湮灭都没有刑期。",
         "retry_has_no_destination": "「重审」不发落：这件案子会另开一案再审，清空发落再结案。",
         "passed_has_no_destination": "地府判无罪不发落：结案（审批流程走完）后直接进入轮回中，清空发落再结案。"
       },
@@ -2493,7 +2494,7 @@
       "title": "称心",
       "scale": "心重 {{weight}} · 羽重 {{counterweight}}",
       "gives": "天平所给：{{verdict}}",
-      "wavering_hint": "存疑或退回重审 = 天平摇摆：托特记下，心再称一次；没有去处。",
+      "wavering_hint": "判天平摇摆或退回重审：托特记下，心再称一次；没有去处。",
       "contradicts": "与天平不符",
       "result": {
         "LIGHTER": "未重于羽",
@@ -2505,7 +2506,7 @@
       "errors": {
         "verdict_contradicts_weighing": "裁决与天平不符：心不重于羽只能判通过，重于羽只能判不通过。",
         "wavering_has_no_destination": "天平摇摆时不发落：清空发落再结案，会另开一次称量。",
-        "wavering_with_open_cross": "这件案子挂着未结的联审，先结联审再重称。",
+        "wavering_with_open_cross": "这件案子挂着未结的跨域审判，先结跨域审判再重称。",
         "weighing_in_progress": "称心流程还没走完：托特、神庭、荷鲁斯、奥西里斯（或阿米特）走完之后才执行。",
         "weighing_rejected": "称心流程被驳回：这件案子要重开或申诉，不能直接执行。",
         "weighing_wavers": "天平摇摆的旧处置不执行：另开一次称量。",
@@ -2897,7 +2898,7 @@
         "approval_timeout": "审批超时",
         "reassign": "改派请求",
         "password_help": "密码求助",
-        "dispatch": "移交",
+        "dispatch": "调拨",
         "letter_handoff": "书信交接",
         "city_god": "城隍初审"
       },
@@ -2958,7 +2959,7 @@
     "help_open_users": "去用户页",
     "help_ignore": "不是本人 · 忽略",
     "open_case": "打开案件",
-    "open_dispatch": "打开移交",
+    "open_dispatch": "打开调拨",
     "select_all": "全选",
     "select_row": "选择通知:{{title}}",
     "batch_region": "通知批量操作",
@@ -3057,16 +3058,16 @@
       "EU_HELL_8TH": "地狱第八圈",
       "EU_HELL_9TH": "地狱第九圈",
       "EU_ACHERON": "阿刻戎河渡口",
-      "EU_PLATO_MEADOW": "岔路草原",
+      "EU_PLATO_MEADOW": "岔路口草地",
       "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
       "GR_TARTARUS": "塔尔塔罗斯",
       "EG_DUAT_ENTRY": "杜阿特入口",
-      "EG_HALL_TWO_TRUTHS": "真理殿堂",
+      "EG_HALL_TWO_TRUTHS": "两真之殿",
       "EG_SEVEN_ARRWT": "七道通路",
       "EG_TWENTYONE_SEBKHET": "二十一道门户",
-      "EG_AARU": "阿鲁之地",
-      "EG_ANNIHILATION": "第二次死亡",
+      "EG_AARU": "芦苇原",
+      "EG_ANNIHILATION": "湮灭",
       "EU_ANTINFERNO": "地狱前庭"
     },
     "names": {
@@ -3103,12 +3104,12 @@
       "EU_HELL_8TH": "第八圈 - 欺诈",
       "EU_HELL_9TH": "第九圈 - 背叛",
       "EU_ACHERON": "阿刻戎河渡口",
-      "EU_PLATO_MEADOW": "审判岔路",
-      "GR_ACHERON": "冥河渡口",
+      "EU_PLATO_MEADOW": "岔路口的草地",
+      "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
       "GR_TARTARUS": "塔尔塔罗斯",
       "EG_DUAT_ENTRY": "杜阿特入口",
-      "EG_HALL_TWO_TRUTHS": "真理大厅",
+      "EG_HALL_TWO_TRUTHS": "两真之殿",
       "EG_SEVEN_ARRWT": "七道通路",
       "EG_TWENTYONE_SEBKHET": "二十一道门户",
       "EG_AARU": "芦苇原",
@@ -3195,7 +3196,7 @@
         "PARADISO": "天国"
       },
       "fork": {
-        "PASS": "✓ 过 · 心轻于羽",
+        "PASS": "✓ 过 · 心不重于羽",
         "FAIL": "✕ 不过 · 心重于羽",
         "LEFT": "← 左 · 向下",
         "RIGHT": "右 · 向上 →"
@@ -3258,10 +3259,10 @@
       "OVERSEER": "监理"
     },
     "assessors": {
-      "title": "四十二判官陪审席",
+      "title": "四十二判官",
       "count": "{{count}} 席",
       "seat": "第 {{index}} 席",
-      "toggle": "展开或收起四十二判官陪审席"
+      "toggle": "展开或收起四十二判官"
     },
     "no_actors": "还没有登记任何执事。"
   },
@@ -3305,15 +3306,15 @@
     "return_home_success": "灵魂已回归原属租户",
     "return_home_error": "结束暂居失败",
     "return_home_blocked_open_judgment": "灵魂仍有未结案的审判,结案或撤案后才能结束暂居",
-    "cancel_dispatch": "取消移交",
-    "cancel_title": "取消这次移交?",
-    "cancel_warning": "对方还没有批准。取消后这次移交作废,灵魂仍留在本殿,对方会收到通知。",
+    "cancel_dispatch": "取消调拨",
+    "cancel_title": "取消这次调拨?",
+    "cancel_warning": "对方还没有批准。取消后这次调拨作废,灵魂仍留在本殿,对方会收到通知。",
     "cancel_reason": "取消理由",
     "cancel_placeholder": "请说明为什么取消",
-    "confirm_cancel": "确认取消移交",
-    "cancel_success": "移交已取消",
-    "cancel_error": "取消移交失败",
-    "cancel_not_cancellable": "对方已经处理了这次移交,不能再取消",
+    "confirm_cancel": "确认取消调拨",
+    "cancel_success": "调拨已取消",
+    "cancel_error": "取消调拨失败",
+    "cancel_not_cancellable": "对方已经处理了这次调拨,不能再取消",
     "approve": "批准",
     "reject": "驳回",
     "execute": "执行",
@@ -3346,10 +3347,10 @@
     "soul_from_detail_error": "带入的灵魂加载失败，请在这里重新选择。",
     "source_label": "来源",
     "target_tenant_closed": "此殿暂不接收调拨",
-    "soul_not_in_underworld": "这个灵魂不在冥府（在世、轮回中、已终局或失踪），不能调拨",
+    "soul_not_in_underworld": "这个灵魂不在冥界（在世、轮回中、已终局或失踪），不能调拨",
     "soul_on_sentence_plan": "这个灵魂的受刑计划正在进行，调拨按计划走",
     "discard": "放弃…",
-    "discard_title": "放弃这份移交草稿？",
+    "discard_title": "放弃这份调拨草稿？",
     "discard_message": "草稿会移入回收站，可在「系统设置 › 回收站」找回。已填写的理由一并保留。",
     "discard_keep": "继续填写",
     "discard_confirm": "放弃并移入回收站",
@@ -3382,7 +3383,7 @@
   },
   "crossJudgments": {
     "title": "跨文明审判",
-    "subtitle": "多文明联合审判",
+    "subtitle": "几个文明同审一个灵魂",
     "list_title": "跨文明审判列表",
     "no_judgments": "暂无跨文明审判",
     "initiated_by": "发起方",
@@ -3422,7 +3423,7 @@
     "end": "结束跨域审判",
     "end_conclusion": "结论",
     "end_pass": "通过",
-    "end_fail": "不通过",
+    "end_fail": "不过",
     "end_note": "说明 · 必填，原审判页会显示",
     "end_body": "结束后不能再入席、召集或改结论。原审判可以结案。",
     "cancel": "取消跨域审判",
@@ -3496,7 +3497,7 @@
     "roles": {
       "ADMIN": "管理员",
       "MODERATOR": "殿主",
-      "JUDGE": "审判者",
+      "JUDGE": "判官",
       "GUARDIAN": "守护者",
       "VIEWER": "查看者",
       "SOUL": "灵魂"
@@ -3846,7 +3847,7 @@
   },
   "not_found": {
     "title": "页面未找到",
-    "description": "抱歉，您访问的页面不存在",
+    "description": "抱歉，你访问的页面不存在",
     "home": "返回首页"
   },
   "search": {
@@ -4415,7 +4416,7 @@
     "flow_waiting": {
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
       "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
-      "approval_cancelled": "审批流程因联审取消或管理员结束而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
+      "approval_cancelled": "审批流程因跨域审判取消或管理员结束而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
     },
     "term_overdue": "期满未释放",
     "overdue_since": "期满于 {{date}}"
@@ -4546,10 +4547,10 @@
   "tenants": {
     "active": "启用",
     "inactive": "停用",
-    "title": "租户管理",
-    "subtitle": "各文明体系的租户配置",
-    "list": "租户列表",
-    "no_tenants": "暂无租户",
+    "title": "殿司管理",
+    "subtitle": "各文明的殿司设置",
+    "list": "殿司列表",
+    "no_tenants": "暂无殿司",
     "code": "编码",
     "seal": {
       "column": "印字",
@@ -4566,7 +4567,7 @@
       "edit": "改设置",
       "title": "{{name}} · 设置",
       "hall_name": "殿司展示名(中文)",
-      "hall_name_hint": "灵魂与殿司收件箱里看到的殿名;留空用租户名",
+      "hall_name_hint": "灵魂与殿司收件箱里看到的殿名;留空用殿司名",
       "hall_name_en": "殿司展示名(English)",
       "hall_name_egy": "殿司展示名(egy)",
       "description": "说明",
@@ -4575,6 +4576,8 @@
       "cooldown_invalid": "请填 0 到 365 之间的整数",
       "rebirth_quota_title": "转生配额",
       "rebirth_quota_body": "每道每月最多办几次转生。留空 = 不限。某道满了，灵魂留在原处等候转生，下月或调高后再办。",
+      "rebirth_quota_body_single": "每月最多办几次转生。留空 = 不限。满了，灵魂留在原处等候转生，下月或调高后再办。",
+      "rebirth_quota_single_row": "每月转生",
       "rebirth_quota_unlimited": "不限",
       "rebirth_quota_limit_col": "每月上限",
       "rebirth_quota_used_col": "本月已办",
@@ -5048,7 +5051,7 @@
         "handed_line": "勾魂牒 · 交城隍 · {{date}}"
       },
       "ferry": {
-        "title": "冥河渡口",
+        "title": "阿刻戎渡口",
         "UNBURIED": "你还没有得到安葬，卡戎不渡。在岸边满一百年，就可以渡河。",
         "NO_FARE": "你没有渡资，卡戎不渡。在岸边满一百年，就可以渡河。",
         "no_date": "死亡日期没有登记，还算不出可渡之日。",
@@ -5067,7 +5070,7 @@
       },
       "confession": {
         "title": "四十二条否定告白",
-        "subtitle": "本世最近一次称心",
+        "subtitle": "此生最近一次称心",
         "truthful": "如实",
         "untruthful": "不实",
         "unheard": "未记",
@@ -5146,11 +5149,11 @@
     },
     "errors": {
       "invalid_credentials": "灵魂编号或密码错误",
-      "initial_password_expired": "初始密码已过期。绑定了联系邮箱的,可以在登录页点「忘记密码」用邮箱自己重置;否则请联系官员重置",
-      "rate_limited": "尝试过于频繁,请稍后再试",
+      "initial_password_expired": "初始密码已过期。绑定了联系邮箱的，可以在登录页点「忘记密码」用邮箱自己重置；否则请联系官员重置",
+      "rate_limited": "尝试过于频繁，请稍后再试",
       "invalid_old_password": "初始密码不正确",
       "password_unchanged": "新密码不能与原密码相同",
-      "weak_password": "新密码强度不足,请换一个更长、更不常见的密码",
+      "weak_password": "新密码强度不足，请换一个更长、更不常见的密码",
       "password_change_required": "请先修改初始密码",
       "account_retired": "账号已停用",
       "application_open": "已有一份进行中的转生申请",
@@ -5162,8 +5165,8 @@
       "not_appealable": "这份申请当前不能申诉",
       "past_life_read_only": "前世记录只读",
       "not_found": "记录不存在",
-      "network": "无法连接服务器,请检查网络后重试",
-      "validation": "填写的内容有误,请检查",
+      "network": "无法连接服务器，请检查网络后重试",
+      "validation": "填写的内容有误，请检查",
       "unknown": "出错了({{code}})",
       "reported": "已自动报告。",
       "go_home": "回到首页",
@@ -5187,10 +5190,10 @@
         "demerit_entry": "心",
         "records": "羽侧与心侧记录",
         "judgments": "称心",
-        "court": "审理厅",
+        "court": "两真之殿",
         "judging": "称心中",
-        "past_read_only": "前世记录只读。杜阿特不受理申请与申诉。",
-        "no_past_lives": "杜阿特没有前世。你只有这一世，此后不再入簿。"
+        "past_read_only": "前世记录只读，不能就前世提出申请或申诉。",
+        "no_past_lives": "杜阿特不转生：此后不再有下一世。"
       },
       "eu": {
         "past_read_only": "前世记录只读。天堂与地狱不受理申请与申诉。",
@@ -6024,67 +6027,67 @@
   "soul_push": {
     "rebirth_approved": {
       "title": "转生申请已批准",
-      "body": "你的转生申请已批准,打开灵魂簿查看。"
+      "body": "你的转生申请已批准，打开灵魂簿查看。"
     },
     "rebirth_rejected": {
       "title": "转生申请被驳回",
-      "body": "你的转生申请被驳回,打开灵魂簿查看理由。"
+      "body": "你的转生申请被驳回，打开灵魂簿查看理由。"
     },
     "rebirth_appeal_rejected": {
       "title": "申诉被驳回",
-      "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"
+      "body": "你对转生申请的申诉被驳回，打开灵魂簿查看理由。"
     },
     "cooldown_shortening_approved": {
       "title": "缩短冷却申请已批准",
-      "body": "你的缩短冷却申请已批准,打开灵魂簿查看新的冷却截止。"
+      "body": "你的缩短冷却申请已批准，打开灵魂簿查看新的冷却截止。"
     },
     "cooldown_shortening_rejected": {
       "title": "缩短冷却申请被驳回",
-      "body": "你的缩短冷却申请被驳回,打开灵魂簿查看理由。"
+      "body": "你的缩短冷却申请被驳回，打开灵魂簿查看理由。"
     },
     "judgment_result": {
       "title": "审判有了结论",
-      "body": "你的审判有了结论,打开灵魂簿查看。"
+      "body": "你的审判有了结论，打开灵魂簿查看。"
     },
     "appeal_upheld": {
-      "title": "申诉复核:维持原判",
+      "title": "申诉复核：维持原判",
       "body": "你的申诉已复核，维持原判。打开灵魂簿查看复核意见。"
     },
     "appeal_amended": {
-      "title": "申诉复核:已改判",
+      "title": "申诉复核：已改判",
       "body": "你的申诉已复核，原判已改。打开灵魂簿查看新的裁决。"
     },
     "wangsi_upheld": {
-      "title": "冤情申诉:属实 · 提前释放",
+      "title": "冤情申诉：属实 · 提前释放",
       "body": "你的冤情申诉经审核属实，已提前出枉死城。打开灵魂簿查看。"
     },
     "wangsi_upheld_late": {
-      "title": "冤情申诉:属实",
+      "title": "冤情申诉：属实",
       "body": "你的冤情申诉经审核属实。打开灵魂簿查看审核意见。"
     },
     "wangsi_delivered": {
-      "title": "冤情申诉:属实 · 已超度",
+      "title": "冤情申诉：属实 · 已超度",
       "body": "你的冤情申诉经审核属实，已超度出枉死城。打开灵魂簿查看。"
     },
     "wangsi_rejected": {
-      "title": "冤情申诉:不属实",
+      "title": "冤情申诉：不属实",
       "body": "你的冤情申诉经审核不属实。打开灵魂簿查看审核意见。"
     },
     "disposition_executed": {
       "title": "处置已执行",
-      "body": "你的处置已执行,打开灵魂簿查看。"
+      "body": "你的处置已执行，打开灵魂簿查看。"
     },
     "residence_approved": {
       "title": "即将暂居",
-      "body": "你即将被调往另一文明暂居,打开灵魂簿查看。"
+      "body": "你即将被调往另一文明暂居，打开灵魂簿查看。"
     },
     "residence_started": {
       "title": "暂居开始",
-      "body": "你已被调往另一文明暂居,打开灵魂簿查看。"
+      "body": "你已被调往另一文明暂居，打开灵魂簿查看。"
     },
     "residence_returned": {
       "title": "暂居结束",
-      "body": "你已回归原属文明,打开灵魂簿查看。"
+      "body": "你已回归原属文明，打开灵魂簿查看。"
     },
     "sentence_completed": {
       "title": "受刑已全部服完",
@@ -6104,7 +6107,7 @@
     },
     "chat_message": {
       "title": "新书信",
-      "body": "{{name}} 给你写了一封信,打开灵魂簿查看。"
+      "body": "{{name}} 给你写了一封信，打开灵魂簿查看。"
     },
     "social_warned_post": {
       "title": "帖子收到警告",
@@ -6201,24 +6204,24 @@
       "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请联系管理员为其重置。"
     },
     "dispatch_proposed": {
-      "title": "收到移交提案",
-      "body": "{{source}} 提议把灵魂「{{soul}}」移交到你殿，等你批准。"
+      "title": "收到调拨提案",
+      "body": "{{source}} 提议把灵魂「{{soul}}」调拨到本殿，等你批准。"
     },
     "dispatch_approved": {
-      "title": "移交提案已批准",
-      "body": "{{target}} 批准了你殿移交灵魂「{{soul}}」的提案。"
+      "title": "调拨提案已批准",
+      "body": "{{target}} 批准了本殿调拨灵魂「{{soul}}」的提案。"
     },
     "dispatch_rejected": {
-      "title": "移交提案被驳回",
-      "body": "{{target}} 驳回了你殿移交灵魂「{{soul}}」的提案。理由：{{reason}}"
+      "title": "调拨提案被驳回",
+      "body": "{{target}} 驳回了本殿调拨灵魂「{{soul}}」的提案。理由：{{reason}}"
     },
     "dispatch_rejected_bare": {
-      "title": "移交提案被驳回",
-      "body": "{{target}} 驳回了你殿移交灵魂「{{soul}}」的提案。"
+      "title": "调拨提案被驳回",
+      "body": "{{target}} 驳回了本殿调拨灵魂「{{soul}}」的提案。"
     },
     "dispatch_cancelled": {
-      "title": "移交提案已被发起方取消",
-      "body": "{{source}} 取消了移交灵魂「{{soul}}」的提案。理由：{{reason}}"
+      "title": "调拨提案已被发起方取消",
+      "body": "{{source}} 取消了调拨灵魂「{{soul}}」的提案。理由：{{reason}}"
     },
     "dispatch_return_blocked": {
       "title": "暂居回归被拦下",
@@ -6278,11 +6281,11 @@
     },
     "sentence_request_pending": {
       "title": "受刑计划请求待决",
-      "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原审判官决定。"
+      "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原判官决定。"
     },
     "sentence_request_decided": {
       "title": "受刑计划请求已决定",
-      "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原审判官决定，打开查看。"
+      "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原判官决定，打开查看。"
     },
     "sentence_plan_cancelled": {
       "title": "受刑计划已撤销",
@@ -6330,7 +6333,7 @@
     },
     "cross_judgment_concluded_fail": {
       "title": "跨域审判已结案",
-      "body": "跨域审判「{{title}}」已结案，结论：否决。"
+      "body": "跨域审判「{{title}}」已结案，结论：不过。"
     },
     "cross_judgment_cancelled": {
       "title": "跨域审判已取消",
@@ -6350,31 +6353,31 @@
     },
     "rebirth_status_under_review": {
       "title": "转生申请状态更新",
-      "body": "您的转生申请状态:审批中。"
+      "body": "你的转生申请状态：审批中。"
     },
     "rebirth_status_rejected": {
       "title": "转生申请状态更新",
-      "body": "您的转生申请状态:已驳回。"
+      "body": "你的转生申请状态：已驳回。"
     },
     "rebirth_status_appealing": {
       "title": "转生申请状态更新",
-      "body": "您的转生申请状态:申诉中。"
+      "body": "你的转生申请状态：申诉中。"
     },
     "rebirth_status_appeal_rejected": {
       "title": "转生申请状态更新",
-      "body": "您的转生申请状态:申诉被驳回。"
+      "body": "你的转生申请状态：申诉被驳回。"
     },
     "rebirth_status_approved": {
       "title": "转生申请状态更新",
-      "body": "您的转生申请状态:已批准。"
+      "body": "你的转生申请状态：已批准。"
     },
     "cooldown_decided_approved": {
       "title": "缩短冷却申请有了结果",
-      "body": "您的缩短冷却申请:已批准。"
+      "body": "你的缩短冷却申请：已批准。"
     },
     "cooldown_decided_rejected": {
       "title": "缩短冷却申请有了结果",
-      "body": "您的缩短冷却申请:已驳回。"
+      "body": "你的缩短冷却申请：已驳回。"
     },
     "assistant_cap_warning": {
       "title": "助手本月花费已到上限的 80%",
@@ -6401,12 +6404,12 @@
       "body": "灵魂「{{soul}}」提出了冤情申诉，等待审核。"
     },
     "workflow_pick_nodes": {
-      "title": "请为本域选站",
-      "body": "{{soul}} · {{realm}}发起的审批流程，本域排第 {{order}}。轮到本域之前请选好。"
+      "title": "请为本殿选站",
+      "body": "{{soul}} · {{realm}}发起的审批流程，本殿排第 {{order}}。轮到本殿之前请选好。"
     },
     "workflow_pick_waiting": {
-      "title": "流程在等本域选站",
-      "body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。"
+      "title": "流程在等本殿选站",
+      "body": "{{soul}} · {{realm}}的站已走完，选好本殿这一段才能继续。"
     },
     "workflow_pick_overdue": {
       "title": "{{realm}}超过 3 天未选站",
@@ -6776,7 +6779,7 @@
       "REOPEN": "重开审判"
     },
     "request_states": {
-      "PENDING": "待原审判官决定",
+      "PENDING": "待原判官决定",
       "ACCEPTED": "已批准",
       "REJECTED": "已驳回",
       "WITHDRAWN": "已撤回"
@@ -6800,7 +6803,7 @@
     "rejected": "请求已驳回",
     "withdrawn": "请求已撤回",
     "withdraw_title": "撤回这条请求？",
-    "withdraw_warning": "撤回后原审判官不再处理它；需要时可以重新提出。",
+    "withdraw_warning": "撤回后原判官不再处理它；需要时可以重新提出。",
     "cancel": "撤销计划",
     "cancel_title": "撤销「{{soul}}」的受刑计划",
     "cancel_warning": "撤销即赦免剩余刑期、视为完成：未开始的站取消，进行中的调拨取消，正在受的刑中止；灵魂在外则回归，然后与计划完成一样开放转生或结算。不可撤回。",
@@ -6809,7 +6812,7 @@
     "cancelled": "受刑计划已撤销",
     "inbox_title": "受刑请求",
     "inbox_show_all": "查看全部受刑请求",
-    "inbox_subtitle": "加减项与重开审判的请求，由原审判官决定",
+    "inbox_subtitle": "加减项与重开审判的请求，由原判官决定",
     "inbox_empty": "没有待决定的请求",
     "inbox_empty_reason": "本文明是原属的计划上的请求，和本文明提出的请求，都会出现在这里",
     "errors": {
@@ -6821,7 +6824,7 @@
       "request_closed": "这条请求已被处理",
       "not_home": "只有原属文明能这样做",
       "not_requester": "只有提出方能撤回",
-      "not_original_judge": "重开请求由原审判官本人决定；他不在职时，由原属殿能改派案子的官员决定",
+      "not_original_judge": "重开请求由原判官本人决定；他不在职时，由原属殿能改派案子的官员决定",
       "node_not_pending": "要减的站已经开始",
       "eternal_not_last": "永久刑期只能排在最后一站",
       "soul_state": "灵魂当前的状态不允许结束计划",
@@ -6839,7 +6842,7 @@
       "not_next": "前面还有没开始的站，先处理它",
       "soul_away": "灵魂不在原属地，不能重新发起",
       "dispatch_not_started": "调拨没能发出（例如还有一条手动调拨在途），稍后再试",
-      "retry_with_open_cross": "这件案子挂着未结的联审，先结联审再判「重审」。",
+      "retry_with_open_cross": "这件案子挂着未结的跨域审判，先结跨域审判再判「重审」。",
       "retry_not_a_destination": "「重审」（及欧洲以外的「待审」）不是去处：请给出终局裁决，或另开一件审判。",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能判下地狱，应判炼狱。",
@@ -6894,7 +6897,7 @@
     },
     "file": {
       "open": "提出请求",
-      "title": "向原审判官提出请求：{{soul}}",
+      "title": "向原判官提出请求：{{soul}}",
       "kind": "请求类型",
       "add_title": "加站（只能加本文明的站）",
       "add_stop": "再加一站",
@@ -6905,12 +6908,12 @@
       "reason_reopen": "理由（重开审判必填）",
       "reopen_hint": "批准后原属地立刻开重审；重审的裁决决定计划怎么改。",
       "submit": "提交请求",
-      "submitted": "请求已提交，等待原审判官决定",
+      "submitted": "请求已提交，等待原判官决定",
       "soul_is_here": "灵魂此刻就在本文明：请开加减项审判，结案时带上改动。"
     },
     "amend": {
       "title": "结案时对受刑计划的改动",
-      "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原审判官批准；不带改动则不生成请求。"
+      "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原判官批准；不带改动则不生成请求。"
     },
     "retry_dispatch": "重新发起调拨",
     "retry_title": "重新发起「{{soul}}」第 {{order}} 站的调拨",
@@ -6971,7 +6974,7 @@
       "gr": {
         "HELL": {
           "ACTIVE": "受罚中",
-          "WAITING": "期满待出",
+          "WAITING": "期满待归",
           "ETERNAL": "永罚 · 不可医"
         },
         "PURGATORY": {
@@ -7000,8 +7003,8 @@
     "reset_code": {
       "title": "密码重置验证码",
       "code_label": "验证码",
-      "note": "5 分钟内有效。如非本人操作,请忽略本邮件。",
-      "text": "您的验证码: {{code}}\n5 分钟内有效。如非本人操作,请忽略本邮件。"
+      "note": "5 分钟内有效。如非本人操作，请忽略本邮件。",
+      "text": "你的验证码：{{code}}\n5 分钟内有效。如非本人操作，请忽略本邮件。"
     },
     "credential": {
       "title": "灵魂账号",
@@ -7009,8 +7012,8 @@
       "password_label": "初始密码",
       "expires_label": "有效期至",
       "note_change": "首次登录后须修改密码。",
-      "note_once": "该密码只发送这一次;过期或遗失请联系所属文明的官员重置。",
-      "text": "您的灵魂编号:{{soul_code}}\n初始密码:{{password}}\n有效期至 {{expires_at}}。首次登录后须修改密码。\n该密码只发送这一次;过期或遗失请联系所属文明的官员重置。"
+      "note_once": "该密码只发送这一次；过期或遗失请联系所属文明的官员重置。",
+      "text": "你的灵魂编号：{{soul_code}}\n初始密码：{{password}}\n有效期至 {{expires_at}}。首次登录后须修改密码。\n该密码只发送这一次；过期或遗失请联系所属文明的官员重置。"
     },
     "email_code": {
       "title": "联系邮箱验证码"
@@ -7466,7 +7469,7 @@
       "court": {
         "cn": "第十殿",
         "eu": "米诺斯之庭",
-        "eg": "双真理厅",
+        "eg": "两真之殿",
         "gr": "三判官之庭"
       }
     },
@@ -7873,11 +7876,13 @@
       },
       "birth_name": "原名",
       "karma_group": "第 {{n}} 世 · {{count}} 条",
+      "karma_group_life": "{{life}} · {{count}} 条",
       "merit_short": "功",
       "demerit_short": "过",
       "source": "来源：{{source}}",
       "shown_count": "已显示 {{shown}} / {{total}}",
       "judgment_meta": "第 {{n}} 世 · {{verdict}} · {{status}}",
+      "judgment_meta_life": "{{life}} · {{verdict}} · {{status}}",
       "current_stop": "◐ 现在在这一站",
       "no_disposition": "还没有处置",
       "open_label": "打开{{name}}的灵魂详情",
@@ -8168,7 +8173,7 @@
     "decided_toast": "结论已发出，灵魂会收到通知",
     "error": {
       "plan_in_transit": "灵魂正在去下一站，或在外地、那一站还没执行。等那一站执行后再作结论。",
-      "plan_busy": "受刑计划正在重审、永久挂起，或有请求等原审判官决定，现在不能改判。",
+      "plan_busy": "受刑计划正在重审、永久挂起，或有请求等原判官决定，现在不能改判。",
       "already_claimed": "这份申诉已由其他官员认领",
       "original_judge": "你作出了原判，不能复核",
       "not_reviewer": "只有认领的复核人能作出结论",
@@ -8183,8 +8188,8 @@
       "five_heinous_must_fail": "原审罪目是五逆：不能改判通过。"
     },
     "decide": {
-      "foreign_title": "联审带来的外地站",
-      "foreign_hint": "这几站还没开始，是联审带进来的。改判不会替你处理它们：请选全部保留，还是全部撤掉。",
+      "foreign_title": "跨域审判带来的外地站",
+      "foreign_hint": "这几站还没开始，是跨域审判带进来的。改判不会替你处理它们：请选全部保留，还是全部撤掉。",
       "foreign_keep": "全部保留",
       "foreign_remove": "全部撤掉",
       "foreign_required": "请决定这些外地站保留还是撤掉"
@@ -8598,7 +8603,7 @@
       },
       "eu": {
         "name": "欧洲天堂与地狱",
-        "realm": "Paradiso · Inferno",
+        "realm": "Inferno · Purgatorio · Paradiso",
         "line": "圣彼得守在天门，炼狱逐层涤罪，但丁的地狱九圈按罪下沉。"
       },
       "eg": {
@@ -8623,7 +8628,7 @@
         "core_detail": "接口客户端、hooks、领域配置、语言包。规则不在这里。",
         "backend": "后端 · 四种冥界的规则",
         "letters": "书信",
-        "tenancy": "多租户：每个冥界一个租户，数据按租户隔开；跨冥界只走调拨与会审。"
+        "tenancy": "多租户：每个冥界一个租户，数据按租户隔开；跨冥界只走调拨与跨域审判。"
       },
       "shared": "共用",
       "tests_title": "自动测试",
@@ -8686,7 +8691,7 @@
         },
         "2": {
           "name": "天门",
-          "body": "圣彼得在门前看生前功过：天堂、炼狱，还是地狱。"
+          "body": "死的那一刻，基督作私审判：天国、炼狱，还是地狱。"
         },
         "3": {
           "name": "审判",
@@ -8704,11 +8709,11 @@
       "eg": {
         "1": {
           "name": "死亡",
-          "body": "登记死亡，七十日防腐期满，灵魂才动身去双真理之厅。"
+          "body": "登记死亡，七十日防腐期满，灵魂才动身去两真之殿。"
         },
         "2": {
           "name": "否定告白",
-          "body": "在四十二位陪审神面前逐条否认罪过，每条记「如实」或「不实」。"
+          "body": "在四十二位判官面前逐条否认罪过，每条记「如实」或「不实」。"
         },
         "3": {
           "name": "称心",
@@ -8729,7 +8734,7 @@
           "body": "登记死亡，灵魂来到阿刻戎河边。"
         },
         "2": {
-          "name": "冥河渡口",
+          "name": "阿刻戎渡口",
           "body": "卡戎只渡已安葬、付了渡资的；其余在岸边等满一百年。"
         },
         "3": {
@@ -8738,11 +8743,11 @@
         },
         "4": {
           "name": "去处",
-          "body": "处置记下灵魂去哪里、待多久。这一步看的是全殿的处置。"
+          "body": "处置记下灵魂去哪里、待多久。这一步看的是这里全部的处置。"
         },
         "5": {
           "name": "千年",
-          "body": "按厄尔的故事，灵魂在下界走完一千年。"
+          "body": "按厄尔的故事，灵魂或上天、或入地，走完一千年。"
         },
         "6": {
           "name": "勒忒之水",
@@ -8760,7 +8765,7 @@
         "realm_map": "界域 · 地图",
         "timeline": "灵魂详情 · 时间线",
         "confessions": "审判台 · 四十二条",
-        "scale": "称心之厅 · 称重记录",
+        "scale": "两真之殿 · 称重记录",
         "ferry": "灵魂详情 · 渡河",
         "desk": "审判台",
         "disposition": "处置",
@@ -8838,7 +8843,7 @@
     "doc_card": "判决文书 · 取最后一次盖印",
     "eg": {
       "fail": "心重于羽 · 不过",
-      "pass": "心轻于羽 · 通过"
+      "pass": "心不重于羽 · 通过"
     },
     "reading": "读数"
   },
@@ -8892,7 +8897,7 @@
   "landing": {
     "civ": {
       "cn": "十殿依次审，罪目定去哪一殿",
-      "eg": "心放上天平，对面是玛阿特之羽",
+      "eg": "心放上天平，对面是玛特之羽",
       "eu": "按罪下沉，或沿炼狱向上",
       "gr": "三判官分路，千年后饮勒忒"
     },
@@ -8936,7 +8941,7 @@
       "embalming_70_days": "防腐 · 七十日",
       "nile": "尼罗河",
       "second_death_note": "第二次死亡 · 不是地点",
-      "weighing": "真理大厅 · 称心"
+      "weighing": "两真之殿 · 称心"
     },
     "europe": {
       "circles": "地狱九圈",
@@ -8977,7 +8982,7 @@
       "appeal": "申诉 · {{soul}}",
       "due_in": "{{n}} 日后到期",
       "due_today": "今天到期",
-      "joint": "会审邀请 · {{hall}}",
+      "joint": "跨域审判邀请 · {{hall}}",
       "returned": "退回重审 · {{case}}",
       "title": "待经手"
     },
@@ -9081,7 +9086,7 @@
   "soul": {
     "here": {
       "cn_court": "你正在{{court}}受审。判官在看你这一生的功与过。",
-      "eg_weighing": "你的心正在天平上，和玛阿特之羽相比。",
+      "eg_weighing": "你的心正在天平上，和玛特之羽相比。",
       "eu_realm": "你在{{realm}}。",
       "gr_thousand": "你在千年的路上，已经走了 {{n}} 年。"
     }

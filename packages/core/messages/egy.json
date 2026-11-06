@@ -239,7 +239,6 @@
       "GREEK": "Wedja 3, Sesh Er, Mu Lethe"
     },
     "your_realm": "Per Ahet-Ek",
-    "civilizations_eyebrow_sub": "Duat 4 · Medjat Wa",
     "signed_in_as": "Em Aq · {{name}}"
   },
   "footer": {
@@ -1966,7 +1965,7 @@
     "civ": {
       "CHINESE": "Sesh Nefer Bin",
       "EUROPEAN": "Wedja Hena Poena",
-      "EGYPTIAN": "Dens Ib",
+      "EGYPTIAN": "Fai Ib",
       "GREEK": "Renpet Wehem",
       "UNKNOWN": "Sesh Nefer Isfet"
     },
@@ -2492,7 +2491,6 @@
       "title": "Fai Ib",
       "scale": "Ib {{weight}} · Shut {{counterweight}}",
       "gives": "Fai Ib: {{verdict}}",
-      "wavering_hint": "«Nen Smen Djer» «Wehem Wedja» = Fai Nen Smen: Djehuty Sesh, Fai Ib Mawy · Nen Wat.",
       "contradicts": "Nen Mi Fai Ib",
       "result": {
         "LIGHTER": "Ib Nen Dens Er Shut",
@@ -3065,7 +3063,7 @@
       "EG_SEVEN_ARRWT": "Arrwt 7",
       "EG_TWENTYONE_SEBKHET": "Sebkhet 21",
       "EG_AARU": "Ta Aaru",
-      "EG_ANNIHILATION": "Ammit",
+      "EG_ANNIHILATION": "Mut Sen",
       "EU_ANTINFERNO": "Antinferno"
     },
     "names": {
@@ -3106,12 +3104,12 @@
       "GR_ACHERON": "Acheron",
       "GR_ISLES_OF_THE_BLESSED": "Ta Nefer",
       "GR_TARTARUS": "Tartaros",
-      "EG_DUAT_ENTRY": "Sebkhet Duat",
+      "EG_DUAT_ENTRY": "Duat Aq",
       "EG_HALL_TWO_TRUTHS": "Weret Maaty",
       "EG_SEVEN_ARRWT": "Arrwt 7",
       "EG_TWENTYONE_SEBKHET": "Sebkhet 21",
       "EG_AARU": "Sekhet Aaru",
-      "EG_ANNIHILATION": "Ammit - Mut Sen",
+      "EG_ANNIHILATION": "Mut Sen",
       "EU_ANTINFERNO": "Duat · Antinferno"
     },
     "no_realms": "Nen Ta Djer",
@@ -3257,10 +3255,8 @@
       "OVERSEER": "Imy-Ra"
     },
     "assessors": {
-      "title": "Djadjat En Maat (42 Netjeru)",
       "count": "{{count}} Sab",
-      "seat": "Sab {{index}}",
-      "toggle": "Wen Er Khetem Djadjat En Maat"
+      "seat": "Sab {{index}}"
     },
     "no_actors": "Nen Iaut Djer"
   },
@@ -5167,11 +5163,9 @@
         "merit_entry": "Shut",
         "demerit_entry": "Ib",
         "records": "Sesh Shut Hena Ib",
-        "judgments": "Wedja Ib",
+        "judgments": "Fai Ib",
         "court": "Wesekhet Maaty",
-        "judging": "Em Wedja Ib",
-        "past_read_only": "Ankh Tepyu Maa Wa. Duat Nen Dbh, Nen Nehet.",
-        "no_past_lives": "Nen Ankh Tepyu Em Duat. Ankh Wa Pen; Er Khet Nen Sesh."
+        "judging": "Em Fai Ib"
       },
       "eu": {
         "past_read_only": "Ankh Tepyu Maa Wa. Pet Hena Duat Nen Dbh, Nen Nehet.",
@@ -6958,7 +6952,7 @@
       "gr": {
         "HELL": {
           "ACTIVE": "Em Shepet",
-          "WAITING": "Renpet Khetem · Per Djer",
+          "WAITING": "Renpet Khetem · Er Leimon Djer",
           "ETERNAL": "Djet Em Shepet · Nen Pekhret"
         },
         "PURGATORY": {
@@ -7860,11 +7854,13 @@
       },
       "birth_name": "Ren Mesut",
       "karma_group": "Ankh {{n}} · Sep {{count}}",
+      "karma_group_life": "{{life}} · Sep {{count}}",
       "merit_short": "Nefer",
       "demerit_short": "Isfet",
       "source": "Em {{source}}",
       "shown_count": "{{shown}} · Neb {{total}}",
       "judgment_meta": "Ankh {{n}} · {{verdict}} · {{status}}",
+      "judgment_meta_life": "{{life}} · {{verdict}} · {{status}}",
       "current_stop": "◐ Sekhet Pen",
       "no_disposition": "Wetep Nen Iri Djer",
       "open_label": "Wen Medjat Ba · {{name}}",
@@ -8596,8 +8592,7 @@
       },
       "eu": {
         "name": "Pet Hena Duat",
-        "line": "Sab Sebkhet Pet; Ta Hesmen; Duat 9 En Dante: Isfet Wer, Duat Khery.",
-        "realm": "Paradiso · Inferno"
+        "line": "Sab Sebkhet Pet; Ta Hesmen; Duat 9 En Dante: Isfet Wer, Duat Khery."
       },
       "eg": {
         "name": "Duat Kemet",
@@ -8682,8 +8677,7 @@
           "body": "Mut Sesh Seth; Ba Iyi Er Sebkhet Pet."
         },
         "2": {
-          "name": "Sebkhet Pet",
-          "body": "Sab Sebkhet Pet Maa Ankh: Pet, Ta Hesmen, Er Duat."
+          "name": "Sebkhet Pet"
         },
         "3": {
           "name": "Wedja",
@@ -8738,8 +8732,7 @@
           "body": "Wetep: Wat Er Ta Hena Renpet. Shem Pen: Wetep Neb Em Wesekhet."
         },
         "5": {
-          "name": "Renpet 1000",
-          "body": "Mi Sesh Er: Renpet 1000 Em Duat."
+          "name": "Renpet 1000"
         },
         "6": {
           "name": "Mu Lethe",

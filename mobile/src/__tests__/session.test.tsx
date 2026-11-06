@@ -171,7 +171,7 @@ describe("login", () => {
     stubApi({ "/soul-auth/login/": { status: 401, data: { detail: "x", code: "initial_password_expired" } } });
     renderApp();
     await signIn(false);
-    expect((await screen.findByTestId("login-error")).props.children).toBe("初始密码已过期。绑定了联系邮箱的,可以在登录页点「忘记密码」用邮箱自己重置;否则请联系官员重置");
+    expect((await screen.findByTestId("login-error")).props.children).toBe("初始密码已过期。绑定了联系邮箱的，可以在登录页点「忘记密码」用邮箱自己重置；否则请联系官员重置");
   });
 
   it("the login page carries the S-and-L balance mark, not the old ledger emblem (2026-10-03)", async () => {
@@ -246,7 +246,7 @@ describe("a stored session", () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     stubApi({ "/me/": "offline" });
     renderApp();
-    expect((await screen.findByTestId("failure")).props.children).toBe("无法连接服务器,请检查网络后重试");
+    expect((await screen.findByTestId("failure")).props.children).toBe("无法连接服务器，请检查网络后重试");
     expect(screen.queryByTestId("login-submit")).toBeNull();
     expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R");
   });
@@ -286,7 +286,7 @@ describe("a stored session", () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     const calls = stubApi({ "/soul-auth/refresh/": "offline", "/me/": { status: 200, data: PROFILE } });
     renderApp();
-    expect((await screen.findByTestId("failure")).props.children).toBe("无法连接服务器,请检查网络后重试");
+    expect((await screen.findByTestId("failure")).props.children).toBe("无法连接服务器，请检查网络后重试");
     expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R");
     expect(calls.some((c) => c.url === "/me/")).toBe(false);
     expect(screen.queryByTestId("login-submit")).toBeNull();
