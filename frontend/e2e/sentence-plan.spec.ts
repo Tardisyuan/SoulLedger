@@ -81,7 +81,7 @@ test.describe("Sentence plan", () => {
     const card = page.getByTestId("sentence-plan-card");
     await card.getByRole("button", { name: "提出请求" }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog).toContainText("向原审判官提出请求");
+    await expect(dialog).toContainText("向原判官提出请求");
 
     // 减:只有未开始的两站可选;减第 3 站(欧洲)。
     await expect(dialog.getByRole("checkbox")).toHaveCount(2);
