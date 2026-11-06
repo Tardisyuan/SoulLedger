@@ -367,7 +367,7 @@ function JudgmentsTab({ soul, onOpen }: { soul: Soul; onOpen: (id: string) => vo
   );
 }
 
-function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] & { tenant_code?: string | null } }) {
+function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] & { tenant_code?: string | null; greek_account?: string } }) {
   const { t, enumLabel } = useI18n();
   const { nodes, current } = planStops(plan);
   return (
@@ -376,7 +376,7 @@ function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] & { tenant_
       <SectionLabel>{t(civKey(t, "sentence_plan.panel_title", plan.tenant_code))}</SectionLabel>
       {nodes.map((n) => {
         const realm = enumLabel("realms.names", n.realm_code);
-        const status = enumLabel(nodeStateNamespace(t, n.tenant_code, n.realm_code, n.status), n.status);
+        const status = enumLabel(nodeStateNamespace(t, n.tenant_code, n.realm_code, n.status, plan.greek_account), n.status);
         const term = n.is_eternal ? t("sentence_plan.eternal") : n.sentence_years != null ? t("sentence_plan.years", { years: String(n.sentence_years) }) : t("sentence_plan.years_unrecorded");
         return (
           <View key={n.id} testID={`soul-plan-node-${n.id}`} style={{ gap: space[1] }}>

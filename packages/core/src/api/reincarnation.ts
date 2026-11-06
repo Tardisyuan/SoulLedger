@@ -9,6 +9,8 @@ export interface Reincarnation {
   soul_name?: string;
   /** 灵魂编号(没开过号的为 null);转生登记簿的「灵魂」列。 */
   soul_code?: string | null;
+  /** 登记这次转生的殿的文明(CHINESE / GREEK …);全局登记簿的「形态」列按它选词。 */
+  civilization?: string | null;
   disposition: string | null;
   target_realm: string;
   rebirth_form: string;

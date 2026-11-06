@@ -34497,6 +34497,8 @@ components:
       properties:
         state:
           $ref: '#/components/schemas/SoulSentencePlanStateEnum'
+        greek_account:
+          type: string
         rebirth_open:
           type: boolean
         stations:
@@ -34504,6 +34506,7 @@ components:
           items:
             $ref: '#/components/schemas/MeSentenceStation'
       required:
+      - greek_account
       - rebirth_open
       - state
       - stations
@@ -42258,6 +42261,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        civilization:
+          type: string
+          readOnly: true
+          nullable: true
         disposition:
           type: string
           format: uuid
@@ -42289,6 +42296,7 @@ components:
           format: date-time
           readOnly: true
       required:
+      - civilization
       - id
       - reincarnated_at
       - soul
@@ -43380,6 +43388,9 @@ components:
           items:
             $ref: '#/components/schemas/SentencePlanRequest'
           readOnly: true
+        greek_account:
+          type: string
+          readOnly: true
         create_time:
           type: string
           format: date-time
@@ -43394,6 +43405,7 @@ components:
       - create_time
       - cross_judgment_id
       - cycle
+      - greek_account
       - id
       - nodes
       - origin_judgment_id

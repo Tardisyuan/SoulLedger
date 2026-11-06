@@ -32,7 +32,7 @@ jest.mock("@react-navigation/native", () => {
   const actual = jest.requireActual("@react-navigation/native");
   return {
     ...actual,
-    useNavigation: () => (mockUseReal.current ? actual.useNavigation() : { navigate: mockNavigate, goBack: jest.fn() }),
+    useNavigation: () => (mockUseReal.current ? actual.useNavigation() : { navigate: mockNavigate, goBack: jest.fn(), setOptions: jest.fn() }),
   };
 });
 

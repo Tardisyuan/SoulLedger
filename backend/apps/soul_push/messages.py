@@ -252,18 +252,23 @@ def reason_label(locale, code):
 def render(locale, kind, civ=None, place=None, **params):
     """`params` 填 `{{占位符}}`(与语言包同一写法;chat_message 的 `name`、social_warned_* 的 `reason`)。
 
-    `civ`(`cn` / `eu` / `eg` / `gr`,希腊按《理想国》判的是 `gr_republic`)与 `place`(去处类型)选
-    Design v4 第十二批的 `<字段>_by_civ.<文明>[.<类型>]`:计划一层只按文明(`sentence_amended`),
-    灵魂自己那一层按文明 × 去处类型;没有就是底键。"""
+    `civ`(`cn` / `eu` / `eg` / `gr`,或按次序查的一串:希腊按《理想国》判的是 `("gr_republic", "gr")`)与
+    `place`(去处类型)选 Design v4 第十二批的 `<字段>_by_civ.<文明>[.<类型>]`:计划一层只按文明
+    (`sentence_amended`),灵魂自己那一层按文明 × 去处类型;都没有就是底键(与 core 的 `civKey` 同一次序)。"""
     pack = MESSAGES.get(locale) or MESSAGES[DEFAULT_LOCALE]
     # egy 可以缺 Design 还没给词的种类(`egyPendingKeys.json` 里的 `soul_push.<kind>`):读作 zh-Hans。
     entry = pack.get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
 
+    civs = (civ,) if isinstance(civ, str) else tuple(civ or ())
+
     def word(field):
-        chosen = entry.get(f"{field}_by_civ", {}).get(civ) if civ else None
-        if isinstance(chosen, dict):
-            chosen = chosen.get(place) if place else None
-        return chosen if isinstance(chosen, str) else entry[field]
+        for one in civs:
+            chosen = entry.get(f"{field}_by_civ", {}).get(one)
+            if isinstance(chosen, dict):
+                chosen = chosen.get(place) if place else None
+            if isinstance(chosen, str):
+                return chosen
+        return entry[field]
 
     title, body = word("title"), word("body")
     for key, value in params.items():

@@ -140,7 +140,7 @@ function SentencePlansContent() {
                       <span className="flex items-center gap-2 text-sm">
                         {t("sentence_plan.stop", { order: String(current.order) })}
                         <TenantName code={current.tenant_code} />
-                        <StatusBadge namespace={nodeStateNamespace(t, current.tenant_code, current.realm_code, current.status)} value={current.status} tone={NODE_TONES[current.status] ?? "neutral"} />
+                        <StatusBadge namespace={nodeStateNamespace(t, current.tenant_code, current.realm_code, current.status, plan.greek_account)} value={current.status} tone={NODE_TONES[current.status] ?? "neutral"} />
                       </span>
                     )}
                   </p>

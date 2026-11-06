@@ -18,13 +18,15 @@ import {
 } from "@soulledger/core/api/soul";
 import { NODE_STATES, REALM_SHOWN_TYPE, civKey, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useEffect, useState, type ReactNode } from "react";
+import { useContext, useEffect, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
+import { AppHeader } from "../chrome";
 import { Emblem, Node } from "../emblems";
 import { useI18n } from "../i18n";
 import { termServed } from "../rules";
+import { SessionContext } from "../session";
 import { civKeyOf } from "../theme";
 import {
   Button,
@@ -65,15 +67,37 @@ const NODE_STATE: Partial<Record<SentenceStationStatus, string>> = { active: "AC
  * The soul's own words go by the station's civilization × kind of place (v4 batch 12 §1.4): 「我的涤罪」 in 炼狱,
  * 「停留期」 in 天界 … Punishment keeps the base word (受刑、刑期). No station: the base word.
  */
-export function placeKey(t: (key: string) => string, key: string, station: MeSentenceStation | null | undefined): string {
-  return station ? civKey(t, key, station.civilization, REALM_SHOWN_TYPE[station.realm?.realm_code ?? ""]) : key;
+export function placeKey(
+  t: (key: string) => string,
+  key: string,
+  station: MeSentenceStation | null | undefined,
+  greekAccount?: string | null
+): string {
+  return station ? civKey(t, key, station.civilization, REALM_SHOWN_TYPE[station.realm?.realm_code ?? ""], greekAccount) : key;
+}
+
+/** Plan-level words with no station (the empty state, the title before the plan loads): the soul's home civilization. */
+function useHomeCiv(): string | undefined {
+  const session = useContext(SessionContext);
+  return session?.state.status === "signedIn" ? session.state.profile.home_civilization : undefined;
+}
+
+/**
+ * The full-screen page's title (navigation's header): the life page section's words, by the current station once
+ * the plan has loaded, by the home civilization before that (v4 batch 12 §1).
+ */
+export function useSentenceTitle(plan: MeSentencePlan | null | undefined): string {
+  const { t } = useI18n();
+  const home = useHomeCiv();
+  const current = plan && plan.state !== "none" ? currentStation(plan) : null;
+  return t(current ? placeKey(t, "soul_app.sentence.section_title", current, plan?.greek_account) : civKey(t, "soul_app.sentence.section_title", home));
 }
 
 /** 「涤罪中」 in 炼狱, 「行进中」 in 杜阿特 …; the soul app's own word (by place, batch 12) wherever v4 keeps the shared one. */
-function stateKey(t: (key: string) => string, station: MeSentenceStation): string {
+function stateKey(t: (key: string) => string, station: MeSentenceStation, greekAccount?: string | null): string {
   const node = NODE_STATE[station.status];
-  const ns = node ? nodeStateNamespace(t, station.civilization, station.realm?.realm_code, node) : NODE_STATES;
-  return ns === NODE_STATES ? placeKey(t, STATUS_KEY[station.status], station) : `${ns}.${node}`;
+  const ns = node ? nodeStateNamespace(t, station.civilization, station.realm?.realm_code, node, greekAccount) : NODE_STATES;
+  return ns === NODE_STATES ? placeKey(t, STATUS_KEY[station.status], station, greekAccount) : `${ns}.${node}`;
 }
 
 /** The soul is at this station (serving, held, or there for good). */
@@ -192,7 +216,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function StationDetail({ station, fresh, landing }: { station: MeSentenceStation; fresh: boolean; landing?: SentenceLanding }) {
+function StationDetail({ station, fresh, landing, account }: { station: MeSentenceStation; fresh: boolean; landing?: SentenceLanding; account?: string }) {
   const { t, locale } = useI18n();
   const struck = station.status === "pardoned";
   // An amendment names only the stations it added (a reduction names none), so the note says "added".
@@ -215,7 +239,7 @@ function StationDetail({ station, fresh, landing }: { station: MeSentenceStation
       ) : null}
       <CivLine station={station} />
       <View style={styles.rows}>
-        <Row label={t(placeKey(t, "soul_app.sentence.term", station))}>
+        <Row label={t(placeKey(t, "soul_app.sentence.term", station, account))}>
           <OneLine variant="value" tone="muted">
             {termText(station, t)}
           </OneLine>
@@ -227,11 +251,11 @@ function StationDetail({ station, fresh, landing }: { station: MeSentenceStation
 }
 
 /** `withEnd`: where the soul is, the state line also says until when (1c 「受刑中 · 至 …」). */
-function StatusText({ station, withEnd }: { station: MeSentenceStation; withEnd?: boolean }) {
+function StatusText({ station, withEnd, account }: { station: MeSentenceStation; withEnd?: boolean; account?: string }) {
   const { t } = useI18n();
   const here = OCCUPYING.includes(station.status);
   const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : here ? "ink" : "muted";
-  const state = t(stateKey(t, station));
+  const state = t(stateKey(t, station, account));
   return (
     <Txt testID={`station-${station.n}-status`} variant="caption" tone={tone}>
       {withEnd && here && station.ends_on ? `${state} · ${t("soul_app.sentence.until", { date: station.ends_on })}` : state}
@@ -325,11 +349,12 @@ export function SentenceSection({
   const current = plan ? currentStation(plan) : null;
   const hasPlan = !!plan && plan.state !== "none";
   const final = plan?.state === "eternal";
+  const home = useHomeCiv();
   return (
     <Section
       testID="section-sentence"
       index={index}
-      title={t(placeKey(t, "soul_app.sentence.section_title", hasPlan ? current : null))}
+      title={t(hasPlan && current ? placeKey(t, "soul_app.sentence.section_title", current, plan.greek_account) : civKey(t, "soul_app.sentence.section_title", home))}
       count={hasPlan && current && !final ? t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) }) : undefined}
       countTestID="sentence-progress"
       open={open || !!landing}
@@ -350,18 +375,18 @@ export function SentenceSection({
       ) : null}
       {plan ? (
         !hasPlan ? (
-          <Empty testID="sentence-empty" text={t("soul_app.sentence.empty")} />
+          <Empty testID="sentence-empty" text={t(civKey(t, "soul_app.sentence.empty", home))} />
         ) : (
           <View style={styles.sectionBody}>
             {final ? null : <Axis plan={plan} />}
             {current ? (
               <>
-                <StationDetail station={current} fresh={isNew(landing, current, plan)} landing={landing} />
-                <StatusText station={current} />
+                <StationDetail station={current} fresh={isNew(landing, current, plan)} landing={landing} account={plan.greek_account} />
+                <StatusText station={current} account={plan.greek_account} />
                 {OCCUPYING.includes(current.status) ? <Served station={current} /> : null}
               </>
             ) : null}
-            {plan.state === "completed" && plan.rebirth_open ? <Txt variant="bodyLg">{t(placeKey(t, "soul_app.sentence.all_done_title", current))}</Txt> : null}
+            {plan.state === "completed" && plan.rebirth_open ? <Txt variant="bodyLg">{t(placeKey(t, "soul_app.sentence.all_done_title", current, plan.greek_account))}</Txt> : null}
             <ApplyRow plan={plan} />
           </View>
         )
@@ -403,10 +428,10 @@ function Banner({ plan }: { plan: MeSentencePlan }) {
   const here = currentStation(plan);
   return (
     <View testID={`sentence-banner-${plan.state}`} style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: c.tone, backgroundColor: theme.s1 }]}>
-      <Txt variant="bodyLg">{t(placeKey(t, c.title, here))}</Txt>
+      <Txt variant="bodyLg">{t(placeKey(t, c.title, here, plan.greek_account))}</Txt>
       {c.body.map((k) => (
         <Txt key={k} variant="caption" tone="muted">
-          {t(placeKey(t, k, here), { total: String(plan.stations.length) })}
+          {t(placeKey(t, k, here, plan.greek_account), { total: String(plan.stations.length) })}
         </Txt>
       ))}
       <ApplyRow plan={plan} />
@@ -428,10 +453,10 @@ function StationRow({ station, next, plan, landing }: { station: MeSentenceStati
       </View>
       <View style={[styles.fill, next && styles.stationGap]}>
         <View style={[here && [styles.here, { borderColor: theme.ink, backgroundColor: theme.s1 }]]}>
-          <StationDetail station={station} fresh={isNew(landing, station, plan)} landing={landing} />
+          <StationDetail station={station} fresh={isNew(landing, station, plan)} landing={landing} account={plan.greek_account} />
           <View style={styles.rows}>
             <Row label={t("soul_app.sentence.field_state")}>
-              <StatusText station={station} withEnd />
+              <StatusText station={station} withEnd account={plan.greek_account} />
             </Row>
           </View>
           {station.status === "waiting" ? (
@@ -453,6 +478,13 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
   const remote = useRemote(soulApi.sentencePlan);
   const residence = useResidenceNames();
   const plan = remote.data;
+  const home = useHomeCiv();
+  const navigation = useNavigation<NavigationProp<AppStackParams>>();
+  // The title bar says what the section says (「我的居所」 in 天界, 「我的千年」 for a Republic soul …), not the bare key.
+  const title = useSentenceTitle(plan);
+  useEffect(() => {
+    navigation.setOptions({ header: () => <AppHeader title={title} onBack={navigation.goBack} assist="sentence" /> });
+  }, [navigation, title]);
   if (remote.error && !plan) {
     return (
       <Screen scroll={false}>
@@ -473,7 +505,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
   return (
     <Screen refreshing={remote.loading} onRefresh={remote.reload} testID={`sentence-screen-${plan.state}`}>
       {plan.state === "none" ? (
-        <Empty testID="sentence-empty" text={t("soul_app.sentence.empty")} />
+        <Empty testID="sentence-empty" text={t(civKey(t, "soul_app.sentence.empty", home))} />
       ) : (
         <>
           {residence ? (
@@ -497,7 +529,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
                   {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
                 </OneLine>
                 <OneLine variant="caption" tone="subtle">
-                  {t(stateKey(t, current))}
+                  {t(stateKey(t, current, plan.greek_account))}
                 </OneLine>
               </View>
             ) : null}
@@ -527,7 +559,7 @@ export function SentenceBlocked() {
   const current = plan ? currentStation(plan) : null;
   return (
     <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
-      <Txt variant="bodyLg">{t(placeKey(t, "soul_app.sentence.blocked_title", current))}</Txt>
+      <Txt variant="bodyLg">{t(placeKey(t, "soul_app.sentence.blocked_title", current, plan?.greek_account))}</Txt>
       <Txt variant="caption" tone="muted">
         {plan && plan.stations.length
           ? t("soul_app.sentence.blocked_body", { total: String(plan.stations.length) })
@@ -539,7 +571,7 @@ export function SentenceBlocked() {
             <Txt variant="value" tone="subtle">
               {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
             </Txt>
-            <StatusText station={current} />
+            <StatusText station={current} account={plan.greek_account} />
           </View>
           <Txt variant="body">
             {`${current.realm ? realmName(current.realm, locale) : t("common.value.unrecorded")} · ${underworld(current.civilization)}`}
@@ -552,7 +584,7 @@ export function SentenceBlocked() {
         </View>
       ) : null}
       <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
-        <Txt variant="caption" tone="ink" style={styles.link}>{`${t(placeKey(t, "soul_app.sentence.blocked_link", current))} →`}</Txt>
+        <Txt variant="caption" tone="ink" style={styles.link}>{`${t(placeKey(t, "soul_app.sentence.blocked_link", current, plan?.greek_account))} →`}</Txt>
       </Pressable>
     </View>
   );

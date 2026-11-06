@@ -84,6 +84,16 @@ def _ends_on(node, status):
     return None
 
 
+def origin_greek_account(plan):
+    """希腊的案子按哪篇文书判的(`Judgment.greek_account`,D8):界面据此选《理想国》那套词(「天上千年」,
+    第十二批 GR 9)。读生成计划的那份结案审判;非希腊、没有计划或原审判、没选文书,都是空串。"""
+    from apps.judgment.models import Judgment
+
+    if plan is None or not plan.origin_judgment_id or getattr(plan.tenant, "civilization", None) != "GREEK":
+        return ""
+    return Judgment.objects.filter(pk=plan.origin_judgment_id).values_list("greek_account", flat=True).first() or ""
+
+
 def soul_plan(account):
     """本人本世(`account.cycle`)最新那份计划 —— 与转生资格(`rebirth.eligibility`)读的是同一份。"""
     from apps.ledger.constants import REBIRTH_CAPABLE_CIVILIZATIONS
@@ -117,6 +127,7 @@ def soul_plan(account):
     statuses = {s["status"] for s in stations}
     return {
         "state": plan_state(plan, statuses),
+        "greek_account": origin_greek_account(plan),
         # 永久刑期 = 不转生(与 `SentencePlanService._complete` 同一条:还有 ETERNAL 节点就不开放)。
         "rebirth_open": soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and "eternal" not in statuses,
         "stations": stations,

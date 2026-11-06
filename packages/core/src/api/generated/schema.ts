@@ -15287,6 +15287,7 @@ export interface components {
         /** @description 本人本世的受刑计划。没有计划时 `state=none`、`stations=[]`。 */
         MeSentencePlan: {
             state: components["schemas"]["SoulSentencePlanStateEnum"];
+            greek_account: string;
             rebirth_open: boolean;
             stations: components["schemas"]["MeSentenceStation"][];
         };
@@ -19180,6 +19181,7 @@ export interface components {
             soul: string;
             readonly soul_name: string;
             readonly soul_code: string | null;
+            readonly civilization: string | null;
             /** Format: uuid */
             disposition?: string | null;
             target_realm: string;
@@ -19634,6 +19636,7 @@ export interface components {
             readonly cancel_reason: string;
             readonly nodes: components["schemas"]["SentenceNode"][];
             readonly requests: components["schemas"]["SentencePlanRequest"][];
+            readonly greek_account: string;
             /** Format: date-time */
             readonly create_time: string;
             /** Format: date-time */

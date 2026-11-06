@@ -79,9 +79,9 @@ import { useLiveProgress } from "../liveProgress";
 import { soulRoute, type RouteStep, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 
 /** 「刑期」 in 十殿, 「停留期」 in 天界, 「涤罪期」 in 炼狱 (v4 batch 12 §1.4): the place is the disposition's realm. */
-const placeKeyOf = (t: (key: string) => string, key: string, realmCode: string | null | undefined) => {
+const placeKeyOf = (t: (key: string) => string, key: string, realmCode: string | null | undefined, greekAccount?: string) => {
   const { civ, type } = realmPlace(realmCode);
-  return civKey(t, key, civ, type);
+  return civKey(t, key, civ, type, greekAccount);
 };
 
 /**
@@ -184,8 +184,11 @@ export function LifeSections({
   wangsi,
   confession,
   deliveredRef,
+  greekAccount,
 }: {
   life: MeLife;
+  /** 希腊本世按哪篇文书判的(`/me/sentence-plan/` 的 greek_account):《理想国》读「天上 n 年」(第十二批 GR 9)。只有当前这一世传。 */
+  greekAccount?: string;
   /** 第六十二批:四十二条否定告白,紧贴审判那一格上方(只有当前这一世传)。 */
   confession?: ReactNode;
   /** 推送「已超度」的落点:超度了的那件枉死案子底部那一行。 */
@@ -284,11 +287,11 @@ export function LifeSections({
               {i ? <Hairline style={styles.rule} /> : null}
               <DataRows>
                 <DataRow label={tr("soul_app.life.realm")}>{d.destination_realm ? realmName(d.destination_realm, locale) : unrecorded}</DataRow>
-                <DataRow label={tr(placeKeyOf(tr, "soul_app.life.sentence", d.destination_realm?.realm_code))}>
+                <DataRow label={tr(placeKeyOf(tr, "soul_app.life.sentence", d.destination_realm?.realm_code, greekAccount))}>
                   {d.is_eternal
                     ? tr("soul_app.life.eternal")
                     : d.sentence_years !== null
-                      ? tr(placeKeyOf(tr, "soul_app.life.sentence_years", d.destination_realm?.realm_code), { years: String(d.sentence_years) })
+                      ? tr(placeKeyOf(tr, "soul_app.life.sentence_years", d.destination_realm?.realm_code, greekAccount), { years: String(d.sentence_years) })
                       : unrecorded}
                 </DataRow>
                 <DataRow label={tr("soul_app.life.execution")}>
@@ -1056,6 +1059,7 @@ export function MyLifeScreen() {
             <LifeSections
               life={life.data}
               lex={residence.home}
+              greekAccount={sentence.data?.greek_account}
               numbered
               focus={focus}
               appeals={appeals}

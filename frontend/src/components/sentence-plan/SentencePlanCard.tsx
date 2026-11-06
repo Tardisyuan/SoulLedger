@@ -66,7 +66,7 @@ function NodeRow({ plan, node, current }: { plan: SentencePlan; node: SentenceNo
             : t("sentence_plan.years", { years: String(node.sentence_years) })}
       </span>
       <Badge tone={NODE_TONES[node.status] ?? "neutral"}>
-        <DomainEnum namespace={nodeStateNamespace(t, node.tenant_code, node.realm_code, node.status)} value={node.status} />
+        <DomainEnum namespace={nodeStateNamespace(t, node.tenant_code, node.realm_code, node.status, plan.greek_account)} value={node.status} />
       </Badge>
       {current && <Badge tone="accent">{t("sentence_plan.current")}</Badge>}
       {node.reason && <p className={`w-full ${MUTED}`}>{node.reason}</p>}

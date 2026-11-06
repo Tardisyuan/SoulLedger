@@ -277,6 +277,49 @@ KIND_CATEGORY = {
 }
 
 
+#: 灵魂看的「这一站」(App `currentStation`):在受 / 暂留 / 永久的那一站,否则最后一站。已减项的不算。
+OCCUPYING_NODE_STATUSES = ("ACTIVE", "WAITING", "ETERNAL")
+
+
+def _uuid_or_none(value):
+    # 先验成 UUID 再查:非法的 id 在 PostgreSQL 上会让整个事务中止,而推送失败不能连累业务。
+    try:
+        return uuid.UUID(str(value))
+    except ValueError:
+        return None
+
+
+def sentence_wording(kind, payload, home_civilization):
+    """受刑一族推送选词用的 `(civ, place)`(Design 第十二批 1.2 / 1.4,与 App「我的受刑」同一套查找):
+
+    * `civ`:计划一层(`sentence_amended`)是灵魂原属文明;灵魂那一层是这一站所在的文明(App 的 `placeKey`
+      读 `station.civilization`)。希腊按《理想国》判的(原审判 `greek_account == REPUBLIC`)是
+      `("gr_republic", "gr")`,先查前者。
+    * `place`:这一站去处的类型(`Realm.realm_type`,与 App 的 `REALM_SHOWN_TYPE` 同源于种子)。
+      `sentence_waiting` 是刑满的那一站;`sentence_completed` / `sentence_pardoned` 是 App 横幅读的那一站
+      (`currentStation`:在受 / 暂留 / 永久的,否则最后一站);`sentence_amended` 只按文明(计划一层),没有 place。
+    """
+    from apps.realms.models import realm_by_code
+    from apps.sentence_plan.models import SentenceNode, SentenceNodeStatus, SentencePlan
+    from apps.sentence_plan.soul_view import origin_greek_account
+
+    node, plan = None, None
+    if kind == "sentence_waiting":
+        node_pk = _uuid_or_none(payload.get("node_id"))
+        node = node_pk and SentenceNode.objects.filter(pk=node_pk).select_related("plan__tenant").first()
+        plan = node.plan if node else None
+    elif kind in ("sentence_completed", "sentence_pardoned", "sentence_amended"):
+        plan_pk = _uuid_or_none(payload.get("sentence_plan_id"))
+        plan = plan_pk and SentencePlan.objects.filter(pk=plan_pk).select_related("tenant").first()
+        if plan and kind != "sentence_amended":
+            nodes = list(plan.nodes.filter(is_deleted=False).exclude(status=SentenceNodeStatus.REMOVED).order_by("order"))
+            node = next((n for n in nodes if n.status in OCCUPYING_NODE_STATUSES), nodes[-1] if nodes else None)
+    realm = node and realm_by_code(node.realm_code, tenant_code=node.tenant_code)
+    civ = messages.PLAN_CIV_SHORT.get(realm.civilization if realm else home_civilization)
+    civs = ("gr_republic", "gr") if civ == "gr" and origin_greek_account(plan) == "REPUBLIC" else civ
+    return civs, (realm.realm_type if realm else None)
+
+
 def record_for_event(event_type, payload, tenant_code):
     """写下该推的投递,返回新建的投递 id。已经记过的(同 dedupe_key、同设备)不再返回。"""
     from apps.soul_accounts.models import SoulAccount
@@ -292,7 +335,8 @@ def record_for_event(event_type, payload, tenant_code):
     rule = rule_for(event_type, payload, account)
     if rule is None:
         return []
-    return _record(account, event_type, *rule)
+    wording = sentence_wording(rule[1], payload, account.soul.home_civilization) if rule[1].startswith("sentence_") else None
+    return _record(account, event_type, *rule, wording=wording)
 
 
 #: 新书信(apps/chat):私聊的新消息、殿司给灵魂的回信。**不经事件总线** ——
@@ -427,15 +471,17 @@ def record_export_ready(account, export):
                    {"screen": "DataExport"})
 
 
-def _record(account, event_type, category, kind, dedupe_key, data, params=None):
+def _record(account, event_type, category, kind, dedupe_key, data, params=None, wording=None):
     preference = PushPreference.objects.filter(account=account).first()
     if preference is not None and category and not getattr(preference, category):
         return []
     locale = preference.locale if preference else messages.DEFAULT_LOCALE
-    # 受刑一族的推送按灵魂原属文明选词(第十二批 1.2:地府的「受刑计划有变动」)。按去处类型分的那几组
-    # (天界的停留期、炼狱的涤罪……)语言包与副本里都有,这里还没传 `place`:后端不知道站的去处类型。
-    civ = messages.PLAN_CIV_SHORT.get(account.soul.home_civilization) if kind.startswith("sentence_") else None
-    title, body = messages.render(locale, kind, civ=civ, **(params(locale) if params else {}))
+    # 受刑一族的推送按灵魂原属文明选词(第十二批 1.2:地府的「受刑计划有变动」),灵魂自己那一层再按这一站的
+    # 去处类型(天界的「停留期已满」、炼狱的「蒙减免」,1.4):`sentence_wording`。
+    if wording is None and kind.startswith("sentence_"):
+        wording = (messages.PLAN_CIV_SHORT.get(account.soul.home_civilization), None)
+    civ, place = wording or (None, None)
+    title, body = messages.render(locale, kind, civ=civ, place=place, **(params(locale) if params else {}))
     title, body = title[:120], body[:300]  # 列宽(PushDelivery);警告理由最长 500
     data = {**data, "kind": kind}
     created_ids = []

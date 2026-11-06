@@ -84,6 +84,8 @@ class ReincarnationSerializer(serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     # 转生登记簿(第四十批 W-c)的「灵魂」列写名字 + 编号。编号是灵魂的标识(没开过号的为空),不是账号数据。
     soul_code = serializers.CharField(source="soul.soul_code", read_only=True, allow_null=True)
+    #: 登记这次转生的殿的文明(CHINESE / GREEK …):全局登记簿的「形态」一栏按它选词(希腊的 OTHER 是「自择一生」)。
+    civilization = serializers.CharField(source="tenant.civilization", read_only=True, allow_null=True)
 
     validate_soul = tenant_scoped("soul")
     validate_disposition = tenant_scoped("disposition")
@@ -91,7 +93,7 @@ class ReincarnationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reincarnation
         fields = [
-            "id", "soul", "soul_name", "soul_code", "disposition", "target_realm",
+            "id", "soul", "soul_name", "soul_code", "civilization", "disposition", "target_realm",
             "rebirth_form", "rebirth_continent", "cycle_count", "previous_realm", "new_identity",
             "notes", "reincarnated_at",
         ]
