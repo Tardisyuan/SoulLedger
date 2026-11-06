@@ -66,7 +66,8 @@ export interface VerdictDocumentText {
   deco?: string;
   title: string;
   body: string;
-  verdict: string;
+  /** 判语(已翻译好的一句;不叫 verdict,那是裁决枚举的字段名,domainDisplayContract 认它)。 */
+  ruling: string;
   /** 欧洲下地狱时「哪一宗大罪」(七宗罪名,用 · 连);没引用就没有。 */
   sins?: string;
   /** 希腊两套的正文不带名字,名字单占正文上面一行(定稿 S15)。 */
@@ -190,7 +191,7 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
         vertical: han,
         title: t(k("title"), { court: courtName }),
         body: t(k("body"), { soul, born: year(input.bornYear), died: year(input.diedYear), merit: num(input.merit), demerit: num(input.demerit) }),
-        verdict,
+        ruling: verdict,
         date,
         signs: [n == null ? input.judgeName || courtName : t(k("sign"), { n: num(n), king: input.judgeName || unrecorded })],
         seal: t(k("seal"), { court: courtName }),
@@ -214,13 +215,13 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
       }
       return {
         civ, account, vertical: false, deco: t(k("deco")), title: t(k("title")), body: t(k("body"), { soul }),
-        verdict, sins, date, signs: [t(k("sign"))], seal: t(k("seal")),
+        ruling: verdict, sins, date, signs: [t(k("sign"))], seal: t(k("seal")),
       };
     }
     case "eg":
       return {
         civ, account, vertical: false, title: t(k("title")), body: t(k("body"), { soul }),
-        verdict: t(k(passed ? "verdict.pass" : "verdict.fail")), date, signs: [t(k("sign"))], seal: t(k("seal")),
+        ruling: t(k(passed ? "verdict.pass" : "verdict.fail")), date, signs: [t(k("sign"))], seal: t(k("seal")),
       };
     case "gr": {
       const incurable = input.greekCurability === "INCURABLE";
@@ -232,7 +233,7 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
         : [...(input.judgeName ? [t(k("sign_first"), { judge: input.judgeName })] : []), t(k("sign_final"))];
       return {
         civ, account, vertical: false, deco: t("verdict_doc.gr.deco"), title: t(k("title")), name: soul, body: t(k("body")),
-        verdict, date, signs, seal: t(k("seal")),
+        ruling: verdict, date, signs, seal: t(k("seal")),
       };
     }
   }

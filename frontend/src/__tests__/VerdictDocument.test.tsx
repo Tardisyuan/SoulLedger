@@ -90,6 +90,6 @@ it("prints one copy mounted under body, and for a PDF names the file after the c
   expect(document.querySelector("[data-print-verdict-doc]")).toBeNull();
   expect(document.title).toBe("灵魂簿");
 
-  fireEvent.click(screen.getByRole("button", { name: "print.button" }));
+  fireEvent.click(screen.getByRole("button", { name: "print.button · verdict_doc.cn.title" }));
   expect(titleWhilePrinting).toBe("灵魂簿");
 });
