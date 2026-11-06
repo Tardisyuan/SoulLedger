@@ -24,12 +24,15 @@ export const CARD_SKIN: Record<string, SealCiv> = { CHINESE: "cn", EUROPEAN: "eu
 export function Landing({
   kicker,
   onEnter,
+  onWarm,
   secondary,
 }: {
   /** A line above the title. Only the demo has something to say there. */
   kicker?: ReactNode;
   /** Sign in with one click. Without it (the real product) a card goes to `/login?civ=…`. */
   onEnter?: (skin: SealCiv, card: HTMLElement) => void;
+  /** A pointer or the focus reached a card: start loading what its click will need. */
+  onWarm?: (skin: SealCiv) => void;
   /** Ways in other than the four cards. */
   secondary?: ReactNode;
 }) {
@@ -73,7 +76,7 @@ export function Landing({
           <h2 id="landing-pick" className="m-0 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("demo.landing.pick")}</h2>
           <ul data-testid="landing-civs" className="m-0 mt-3 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-4">
             {CIVILIZATION_OPTIONS.map((civ) => (
-              <CivCard key={civ} civ={civ} onEnter={onEnter} />
+              <CivCard key={civ} civ={civ} onEnter={onEnter} onWarm={onWarm} />
             ))}
           </ul>
           {secondary}
@@ -101,7 +104,15 @@ export function Landing({
   );
 }
 
-function CivCard({ civ, onEnter }: { civ: string; onEnter?: (skin: SealCiv, card: HTMLElement) => void }) {
+function CivCard({
+  civ,
+  onEnter,
+  onWarm,
+}: {
+  civ: string;
+  onEnter?: (skin: SealCiv, card: HTMLElement) => void;
+  onWarm?: (skin: SealCiv) => void;
+}) {
   const { t } = useI18n();
   const skin = CARD_SKIN[civ];
   const name = t(`demo.civ.${skin}.name`);
@@ -131,6 +142,8 @@ function CivCard({ civ, onEnter }: { civ: string; onEnter?: (skin: SealCiv, card
           data-testid={`landing-card-${skin}`}
           aria-label={t("demo.landing.card_label", { civ: name })}
           onClick={(e) => onEnter(skin, e.currentTarget)}
+          onPointerEnter={() => onWarm?.(skin)}
+          onFocus={() => onWarm?.(skin)}
           className={look}
         >
           {body}

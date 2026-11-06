@@ -3,6 +3,7 @@
  * 这里验的是按钮发出去的东西、被天平挡住的方向、「不过」没选理由时不能落印、待定要理由。
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { AccessibilityInfo, Animated } from "react-native";
 
 import { SwipeScreen } from "../screens/swipe";
 import { renderOfficer } from "./harness";
@@ -114,4 +115,26 @@ it("手上没有能判的:空状态", async () => {
   serve({ ...CASE, conclude_refusal: "at_city_god" });
   renderOfficer(<SwipeScreen onBack={() => {}} />);
   expect(await screen.findByTestId("swipe-empty")).toBeTruthy();
+});
+
+describe("落印失败时卡片回原位", () => {
+  afterEach(() => jest.restoreAllMocks());
+  const failOnce = async (reduced: boolean) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    const spring = jest.spyOn(Animated, "spring");
+    serve();
+    mockConclude.mockRejectedValue(new Error("offline"));
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await waitFor(() => expect(mockConclude).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
+    return spring;
+  };
+  it("平常:弹回去(spring)", async () => {
+    expect(await failOnce(false)).toHaveBeenCalled();
+  });
+  it("减少动态效果:直接回原位，不弹 —— spring 没有 duration,`ms()` 管不到它", async () => {
+    expect(await failOnce(true)).not.toHaveBeenCalled();
+  });
 });

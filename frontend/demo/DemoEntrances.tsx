@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, isMfaRequired } from "@soulledger/core/api";
 import { api } from "@soulledger/core/api/client";
-import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
+import { getLocale, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { Button } from "@/src/components/ui/Button";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { defaultViewRoute } from "@/src/lib/defaultView";
-import { DEMO_USERNAMES, type DemoRole } from "./store";
-import type { Tour } from "./tour";
+import { DEMO_USERNAMES, type DemoRole, langOf, recording } from "./store";
+import { type Tour, tourOf } from "./tour";
 
 export const ROLE_OF_SKIN: Record<SealCiv, DemoRole> = { cn: "judge", eu: "judge_eu", eg: "judge_eg", gr: "judge_gr" };
 export const SKINS = Object.keys(ROLE_OF_SKIN) as SealCiv[];
@@ -33,13 +33,30 @@ async function firstPage(role: DemoRole, user: Parameters<typeof defaultViewRout
   return data?.steps[0]?.route ?? defaultViewRoute(user);
 }
 
+/**
+ * Ahead of the click (hover, focus, press): the role's recording (1–5 MB; the sign-in waits on it) and the page it opens
+ * on. Without it the seal played out over a landing page still waiting for both. Only a head start: `enter` still asks
+ * `/demo/tour/` where to go.
+ */
+export function useWarm() {
+  const router = useRouter();
+  return (role: DemoRole) => {
+    void recording(role, langOf(getLocale())).then(async (rec) => {
+      const user = rec.login.user as unknown as Parameters<typeof defaultViewRoute>[0];
+      router.prefetch(role === "moderator" ? "/moderation" : (tourOf(rec)?.steps[0]?.route ?? (await defaultViewRoute(user))));
+    });
+  };
+}
+
 /** One sign-in, through the same `authApi.login` the real page uses (the demo answers it). The tour starts over with it. */
 export function useEnter() {
   const { setUser } = useTenant();
   const router = useRouter();
+  const warm = useWarm();
   const [entering, setEntering] = useState<DemoRole | null>(null);
   const enter = async (role: DemoRole) => {
     setEntering(role);
+    warm(role);
     const { data } = await authApi.login({ username: DEMO_USERNAMES[role], password: "demo", remember: false });
     if (isMfaRequired(data)) return;
     try {
@@ -53,7 +70,7 @@ export function useEnter() {
     // Soft navigation: the seal keeps playing over it, and the page does not wait for the seal.
     router.push(await firstPage(role, data.user));
   };
-  return { entering, enter };
+  return { entering, enter, warm };
 }
 
 /** Administrator and moderator: smaller, below the four cards. */
