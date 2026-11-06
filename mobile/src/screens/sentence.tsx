@@ -16,6 +16,7 @@ import {
   type MeSentenceStation,
   type SentenceStationStatus,
 } from "@soulledger/core/api/soul";
+import { NODE_STATES, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -56,6 +57,16 @@ const STATUS_KEY: Record<SentenceStationStatus, string> = {
   eternal: "soul_app.sentence.state.eternal",
   pardoned: "soul_app.sentence.state.pardoned",
 };
+
+/** The officers' node state a station's status reads as, for v4's words by civilization and place (第十批第 3 条). */
+const NODE_STATE: Partial<Record<SentenceStationStatus, string>> = { active: "ACTIVE", waiting: "WAITING", done: "COMPLETED", eternal: "ETERNAL" };
+
+/** 「涤罪中」 in 炼狱, 「行进中」 in 杜阿特 …; the soul app's own word wherever v4 keeps the shared one. */
+function stateKey(t: (key: string) => string, station: MeSentenceStation): string {
+  const node = NODE_STATE[station.status];
+  const ns = node ? nodeStateNamespace(t, station.civilization, station.realm?.realm_code, node) : NODE_STATES;
+  return ns === NODE_STATES ? STATUS_KEY[station.status] : `${ns}.${node}`;
+}
 
 /** The soul is at this station (serving, held, or there for good). */
 const OCCUPYING: SentenceStationStatus[] = ["active", "waiting", "eternal"];
@@ -212,7 +223,7 @@ function StatusText({ station, withEnd }: { station: MeSentenceStation; withEnd?
   const { t } = useI18n();
   const here = OCCUPYING.includes(station.status);
   const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : here ? "ink" : "muted";
-  const state = t(STATUS_KEY[station.status]);
+  const state = t(stateKey(t, station));
   return (
     <Txt testID={`station-${station.n}-status`} variant="caption" tone={tone}>
       {withEnd && here && station.ends_on ? `${state} · ${t("soul_app.sentence.until", { date: station.ends_on })}` : state}
@@ -476,7 +487,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
                   {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
                 </OneLine>
                 <OneLine variant="caption" tone="subtle">
-                  {t(STATUS_KEY[current.status])}
+                  {t(stateKey(t, current))}
                 </OneLine>
               </View>
             ) : null}

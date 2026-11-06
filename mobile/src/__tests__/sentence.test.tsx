@@ -245,6 +245,23 @@ describe("the full list's revised copy (1c/1d)", () => {
     expect(screen.getByTestId("station-1-status").props.children).toBe("已完成");
   });
 
+  it("the state is said in the words of the station's civilization and place (v4 第十批第 3 条)", async () => {
+    const at = (n: number, status: string, civilization: string, code: string) => station(n, status, { civilization, realm: REALM(code, code) });
+    const words = plan("serving", [
+      at(1, "done", "GREEK", "GR_TARTARUS"),
+      at(2, "active", "EUROPEAN", "EU_PURGATORY_T3_WRATH"),
+      at(3, "pending", "EGYPTIAN", "EG_DUAT_ENTRY"),
+    ]);
+    stubApi({ "/me/sentence-plan/": { status: 200, data: words } });
+    wrap(<SentenceScreen />);
+    await screen.findByTestId("station-2");
+    expect(screen.getByTestId("station-2-status").props.children).toBe("涤罪中 · 至 2038-09-14");
+    // 沿用: 塔尔塔罗斯 keeps 「已完成」, and every civilization keeps 「未开始」.
+    expect(screen.getByTestId("station-1-status").props.children).toBe("已完成");
+    expect(screen.getByTestId("station-3-status").props.children).toBe("未开始");
+    expect(screen.queryByText(/^受刑中/)).toBeNull();
+  });
+
   it("an amendment that added a station says 「新增了一站」 on that station only", async () => {
     stubApi({ "/me/sentence-plan/": { status: 200, data: PLANS.serving } });
     const view = wrap(<SentenceScreen landing={{ kind: "sentence_amended", nodeIds: [ID(3)] }} />);

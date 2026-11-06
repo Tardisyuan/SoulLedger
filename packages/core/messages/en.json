@@ -896,6 +896,10 @@
       "EIGHTEEN_HELLS": "Where those found guilty are punished.",
       "LOTUS_TERRACE": "Where the soul is delivered and lifted out of the sea of suffering.",
       "HUANHUN_CLIFF": "The last pass before rebirth, after drinking Mengpo's soup."
+    },
+    "life_label": {
+      "this_life": "This life",
+      "this_life_prior": "This life · {{m}} earlier lives elsewhere"
     }
   },
   "common": {
@@ -6924,6 +6928,67 @@
       "status": "Status",
       "awaiting_redispatch": "Dispatch to resend",
       "pending_request": "Request pending"
+    },
+    "node_states_by_civ": {
+      "eu": {
+        "HELL": {
+          "ACTIVE": "Being punished",
+          "ETERNAL": "Punished forever"
+        },
+        "PURGATORY": {
+          "ACTIVE": "Being cleansed",
+          "WAITING": "Cleansed, waiting to rise",
+          "COMPLETED": "Cleansed"
+        },
+        "BLISS": {
+          "ACTIVE": "In Heaven",
+          "ETERNAL": "In Heaven forever"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "Kept in the Vestibule",
+          "ETERNAL": "In the Vestibule forever"
+        }
+      },
+      "eg": {
+        "PURGATORY": {
+          "ACTIVE": "On the way",
+          "WAITING": "Waiting at a gate",
+          "COMPLETED": "Passed through"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "Waiting for the weighing",
+          "COMPLETED": "Weighed"
+        },
+        "BLISS": {
+          "ACTIVE": "At rest in the Field of Reeds",
+          "ETERNAL": "In the Field of Reeds forever"
+        },
+        "ANNIHILATION": {
+          "ETERNAL": "Annihilated"
+        }
+      },
+      "gr": {
+        "HELL": {
+          "ACTIVE": "Being punished",
+          "WAITING": "Term ended, waiting to leave",
+          "ETERNAL": "Punished forever · incurable"
+        },
+        "PURGATORY": {
+          "ACTIVE": "On the thousand-year road",
+          "WAITING": "Waiting to return to the meadow",
+          "COMPLETED": "Back at the meadow"
+        },
+        "BLISS": {
+          "ACTIVE": "On the Isles of the Blessed",
+          "WAITING": "Term ended, waiting to return",
+          "COMPLETED": "Left the Isles"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "Waiting on the bank",
+          "WAITING": "Waiting to cross",
+          "COMPLETED": "Crossed"
+        }
+      }
     }
   },
   "seal": {
@@ -8711,6 +8776,19 @@
     "admin_hint": "An administrator sees all four underworlds. These are the overall numbers; audit, users and permissions, and the corpus are in the menu on the left.",
     "author": {
       "line": "{{name}} decided the domain model, the source research and the standard of verification."
+    },
+    "soul": {
+      "entry_title": "Souls live in the app",
+      "entry_body": "This demo can show a few app screens in the browser.",
+      "entry_button": "Look as a soul",
+      "badge": "Demo · soul app",
+      "note": "This is how the soul app looks. The real website is only for officers and administrators.",
+      "lock": "Lock screen",
+      "lock_hint": "Demo only",
+      "switch_civ": "Try another underworld",
+      "back": "Back to the judge's view",
+      "strip": "Demo · how the app looks",
+      "back_short": "Back to judge"
     }
   },
   "action": {
@@ -9086,5 +9164,11 @@
         "unjust": "The judgment worn behind; to the left, downward. Each injustice paid ten times over, a hundred years each time; after a thousand years, back to the meadow."
       }
     }
+  },
+  "loading": {
+    "cn": "The judge is fetching the file…",
+    "eu": "Bringing out the record of this life…",
+    "eg": "Thoth is bringing the record…",
+    "gr": "The judge is looking at the soul…"
   }
 }

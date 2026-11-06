@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { localDateString } from "@soulledger/core/domain/dates";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { useCallback, useMemo, useState } from "react";
@@ -706,7 +707,7 @@ export default function SoulDetailPage() {
       {stateBadge}
       {generation !== null && (
         <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`}>
-          {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
+          {thisLifeLabel(t, soul?.civilization, generation) ?? tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
         </span>
       )}
       <DomainEnum namespace="souls.civilizations" value={soul?.civilization} />
@@ -814,6 +815,7 @@ export default function SoulDetailPage() {
           soul
             ? {
                 index: soul.life_index ?? 0,
+                civilization: soul.civilization,
                 inheritedMerit: soul.inherited_merit,
                 inheritedDemerit: soul.inherited_demerit,
               }

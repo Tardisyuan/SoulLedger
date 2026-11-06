@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -869,7 +870,7 @@ export function JudgmentClaimQueue({
                       <td className="px-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))] max-xl:hidden" data-testid="cycle-kind-cell">
                         {/* 世次在上(cycle 0 = 第 1 世),种类小字在下(v3 `第四世<small>初审</small>`)。 */}
                         <span className="block text-[oklch(var(--color-ink))]">
-                          {j.cycle == null ? <MissingValue kind="unrecorded" /> : t("souls.detail.life_number", { n: String(j.cycle + 1) })}
+                          {j.cycle == null ? <MissingValue kind="unrecorded" /> : (thisLifeLabel(t, j.civilization, j.cycle + 1) ?? t("souls.detail.life_number", { n: String(j.cycle + 1) }))}
                         </span>
                         <span className="block text-2xs">
                           <DomainEnum namespace="judgment.claim.kinds" value={j.kind} />

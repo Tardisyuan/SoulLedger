@@ -7,7 +7,7 @@ import fs from "fs";
 import path from "path";
 
 import { androidContent, liveChannel, nativeState } from "../liveProgress";
-import type { LiveContent } from "../soulRoute";
+import type { LiveContent } from "@soulledger/core/domain/soulRoute";
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const live = require("../../plugins/liveActivity");

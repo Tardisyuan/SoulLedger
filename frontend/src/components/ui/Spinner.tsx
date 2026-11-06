@@ -2,7 +2,11 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { civSkinOf } from "@/src/lib/civSkin";
+import { Seal } from "@/src/components/plaque/Seal";
 
 /**
  * The one busy indicator.
@@ -133,6 +137,10 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
  */
 export function PageSpinner({ label }: { label?: string }) {
   const { t } = useI18n();
+  const civ = civSkinOf(useTenant().user?.tenant?.code ?? null);
+  // v4 第十批第 2 条: inside a hall the wait says the hall's line (`loading.<civ>`), under the hall's seal breathing
+  // as the empty state's does (CivEmptyState). A route given its own `label`, and the neutral skin, keep the ring.
+  if (!label && civ !== "neutral") return <CivLoading text={t(`loading.${civ}`)} />;
   return (
     // `min-h-(--content-min-h)`, the same variable as AppLayout's slot (globals.css:
     // viewport − toolbar − identity band − bottom bar) — NOT `min-h-screen`, and not a
@@ -147,6 +155,33 @@ export function PageSpinner({ label }: { label?: string }) {
     // centred spinner that is invisible, and it is the right trade.
     <div className="min-h-(--content-min-h) bg-[oklch(var(--color-canvas))] flex items-center justify-center">
       <Spinner size="lg" label={label ?? t("common.loading")} />
+    </div>
+  );
+}
+
+/** How long a wait stays blank before it says anything (v4 第十批第 2 条): a quick page never flashes a line. */
+export const CIV_LOADING_DELAY_MS = 400;
+
+/**
+ * A hall's wait: its seal breathing (`.empty-breathe`, as the empty state's) and one line. Under reduced motion only
+ * the line is left. Errors never come here: they stay plain (`QueryError`), as the reply asks.
+ */
+function CivLoading({ text }: { text: string }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(true), CIV_LOADING_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div data-civ-loading="" className="min-h-(--content-min-h) bg-[oklch(var(--color-canvas))] flex items-center justify-center">
+      {shown && (
+        <div role="status" className="flex flex-col items-center gap-4">
+          <span aria-hidden="true" className="empty-breathe inline-block motion-reduce:hidden">
+            <Seal size={48} />
+          </span>
+          <p className="m-0 font-title text-md text-[oklch(var(--color-ink-muted))]">{text}</p>
+        </div>
+      )}
     </div>
   );
 }

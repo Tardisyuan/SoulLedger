@@ -896,6 +896,10 @@
       "EIGHTEEN_HELLS": "判有罪者在此受刑。",
       "LOTUS_TERRACE": "受度化，超拔出离苦海。",
       "HUANHUN_CLIFF": "饮孟婆汤后，投胎前的最后一关。"
+    },
+    "life_label": {
+      "this_life": "此生",
+      "this_life_prior": "此生 · 此前另有 {{m}} 世"
     }
   },
   "common": {
@@ -6924,6 +6928,67 @@
       "status": "状态",
       "awaiting_redispatch": "待重发的调拨",
       "pending_request": "有待决定的请求"
+    },
+    "node_states_by_civ": {
+      "eu": {
+        "HELL": {
+          "ACTIVE": "受罚中",
+          "ETERNAL": "永罚"
+        },
+        "PURGATORY": {
+          "ACTIVE": "涤罪中",
+          "WAITING": "涤净待升",
+          "COMPLETED": "已涤净"
+        },
+        "BLISS": {
+          "ACTIVE": "在天国",
+          "ETERNAL": "永在天国"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "留在前庭",
+          "ETERNAL": "永留前庭"
+        }
+      },
+      "eg": {
+        "PURGATORY": {
+          "ACTIVE": "行进中",
+          "WAITING": "门前等候",
+          "COMPLETED": "已通过"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "等候称心",
+          "COMPLETED": "已称心"
+        },
+        "BLISS": {
+          "ACTIVE": "安居芦苇原",
+          "ETERNAL": "永居芦苇原"
+        },
+        "ANNIHILATION": {
+          "ETERNAL": "已湮灭"
+        }
+      },
+      "gr": {
+        "HELL": {
+          "ACTIVE": "受罚中",
+          "WAITING": "期满待出",
+          "ETERNAL": "永罚 · 不可医"
+        },
+        "PURGATORY": {
+          "ACTIVE": "千年途中",
+          "WAITING": "待归草地",
+          "COMPLETED": "已归草地"
+        },
+        "BLISS": {
+          "ACTIVE": "居于至福岛",
+          "WAITING": "期满待归",
+          "COMPLETED": "已离至福岛"
+        },
+        "NEUTRAL": {
+          "ACTIVE": "岸边等候",
+          "WAITING": "等候渡河",
+          "COMPLETED": "已渡河"
+        }
+      }
     }
   },
   "seal": {
@@ -8711,6 +8776,19 @@
     "admin_hint": "管理员看得到四个冥界。这里是全局数字；审计、用户与权限、语料在左边的菜单里。",
     "author": {
       "line": "作者 {{name}} 决定领域建模、考据和验证标准。"
+    },
+    "soul": {
+      "entry_title": "灵魂只在 App 里",
+      "entry_body": "演示站可以在网页里看几屏 App 的样子。",
+      "entry_button": "以灵魂身份看看",
+      "badge": "演示 · 灵魂端",
+      "note": "这是灵魂端 App 里的样子。正式网页只给官员和管理员用。",
+      "lock": "锁屏",
+      "lock_hint": "只在演示里",
+      "switch_civ": "换一个冥界",
+      "back": "回到判官视角",
+      "strip": "演示 · App 里的样子",
+      "back_short": "回到判官"
     }
   },
   "action": {
@@ -9086,5 +9164,11 @@
         "unjust": "判决佩在身后，向左，向下。每一件不义受十倍之罚，百年为一期，千年之后归于草地。"
       }
     }
+  },
+  "loading": {
+    "cn": "判官正在调卷…",
+    "eu": "正在取来这一生的记录…",
+    "eg": "托特正在取来记录…",
+    "gr": "判官正在看这个灵魂…"
   }
 }

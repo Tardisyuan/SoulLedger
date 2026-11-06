@@ -17,6 +17,8 @@ import { soulsApi, type Soul } from "@soulledger/core/api/souls";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
+import { nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
 import { formatHistoricalDate, type HistoricalDate } from "@soulledger/core/domain/dates";
@@ -155,7 +157,7 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
   const archived = !!soul.is_archived;
   const tone = archived ? "muted" : "ink";
   const civ = enumLabel("souls.civilizations", soul.civilization);
-  const meta = [code ? formatSoulCode(code) : null, civ.state === "known" ? civ.label : soul.civilization, t("souls.detail.generation", { n: String((soul.life_index ?? 0) + 1) })];
+  const meta = [code ? formatSoulCode(code) : null, civ.state === "known" ? civ.label : soul.civilization, thisLifeLabel(t, soul.civilization, (soul.life_index ?? 0) + 1) ?? t("souls.detail.generation", { n: String((soul.life_index ?? 0) + 1) })];
   const state = enumLabel("souls.states", soul.current_state);
   const figures: [string, number | undefined][] = [
     [t("souls.detail.merit"), soul.merit_score],
@@ -360,7 +362,7 @@ function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] }) {
       <SectionLabel>{t("sentence_plan.panel_title")}</SectionLabel>
       {nodes.map((n) => {
         const realm = enumLabel("realms.names", n.realm_code);
-        const status = enumLabel("sentence_plan.node_states", n.status);
+        const status = enumLabel(nodeStateNamespace(t, n.tenant_code, n.realm_code, n.status), n.status);
         const term = n.is_eternal ? t("sentence_plan.eternal") : n.sentence_years != null ? t("sentence_plan.years", { years: String(n.sentence_years) }) : t("sentence_plan.years_unrecorded");
         return (
           <View key={n.id} testID={`soul-plan-node-${n.id}`} style={{ gap: space[1] }}>

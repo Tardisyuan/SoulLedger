@@ -1,0 +1,21 @@
+{
+  "_": "Written by hand. Letters live in Synapse, which the recording never reaches, so each underworld's soul gets one short exchange with its hall. Plain wording only: no lore is claimed here that the app does not already say.",
+  "letters": {
+    "cn": [
+      { "from": "me", "minutes_ago": 2880, "zh": "转生申请已经递上了，想问还要等多久。", "en": "I have sent my rebirth application. How long is the wait?" },
+      { "from": "hall", "minutes_ago": 1440, "zh": "申请已收到，正在审。有结果会在这里回信。", "en": "It has been received and is being reviewed. The answer will come here." }
+    ],
+    "eu": [
+      { "from": "me", "minutes_ago": 4320, "zh": "我还要在这里留多久？", "en": "How much longer do I stay here?" },
+      { "from": "hall", "minutes_ago": 2900, "zh": "刑期写在你的受刑计划里。期满之后，会送你去下一处。", "en": "Your term is written in your sentence plan. When it ends, you will be sent on to the next place." }
+    ],
+    "eg": [
+      { "from": "hall", "minutes_ago": 5760, "zh": "称心已毕。你的记录已经入簿。", "en": "The weighing is over. Your record has been entered in the ledger." },
+      { "from": "me", "minutes_ago": 5700, "zh": "收到，谢谢。", "en": "Received, thank you." }
+    ],
+    "gr": [
+      { "from": "me", "minutes_ago": 3000, "zh": "我想申请回到人间。", "en": "I would like to apply to go back." },
+      { "from": "hall", "minutes_ago": 1500, "zh": "申请已收到。判官看过之后，会在这里回信。", "en": "It has been received. The judges will reply here once they have read it." }
+    ]
+  }
+}

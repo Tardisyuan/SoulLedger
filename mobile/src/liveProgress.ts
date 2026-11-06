@@ -21,7 +21,7 @@ import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 
 import { useI18n } from "./i18n";
-import { liveContent, type LiveContent, type SoulRoute } from "./soulRoute";
+import { liveContent, type LiveContent, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 import { useTheme } from "./ui";
 
 interface LiveNative {

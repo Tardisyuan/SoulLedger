@@ -124,6 +124,20 @@ export function recording(role: DemoRole, lang: DemoLang): Promise<Recording> {
   return (loaded[`${role}.${lang}`] ??= import(`./data/${role}.${lang}.json`).then((m) => shifted(m.default as Recording)));
 }
 
+/**
+ * The soul app's screens (`DemoSoul`): what one soul of each civilization reads under `/me/`, recorded by signing in
+ * as that soul (`data/soul_<civ>.<lang>.json`, scripts/demo-record.mjs). `null` until it has been recorded.
+ */
+export function soulRecording(civ: string, lang: DemoLang): Promise<Recording | null> {
+  const name = `soul_${civ}`;
+  // The same template as `recording`'s, so the bundler's context is the same set of files, recorded or not.
+  return (soulLoaded[`${name}.${lang}`] ??= import(`./data/${name}.${lang}.json`).then(
+    (m) => shifted(m.default as Recording),
+    () => null,
+  ));
+}
+const soulLoaded: Record<string, Promise<Recording | null>> = {};
+
 export const nextSeq = () => ++overlay.seq;
 
 /** A UUID's own shape, so a stand-in id reads like the real ones. */

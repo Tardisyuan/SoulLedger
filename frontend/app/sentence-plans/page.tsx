@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
 import type { SentencePlanFilters, SentencePlanStatus } from "@soulledger/core/api/sentence-plans";
+import { nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -139,7 +140,7 @@ function SentencePlansContent() {
                       <span className="flex items-center gap-2 text-sm">
                         {t("sentence_plan.stop", { order: String(current.order) })}
                         <TenantName code={current.tenant_code} />
-                        <StatusBadge namespace="sentence_plan.node_states" value={current.status} tone={NODE_TONES[current.status] ?? "neutral"} />
+                        <StatusBadge namespace={nodeStateNamespace(t, current.tenant_code, current.realm_code, current.status)} value={current.status} tone={NODE_TONES[current.status] ?? "neutral"} />
                       </span>
                     )}
                   </p>

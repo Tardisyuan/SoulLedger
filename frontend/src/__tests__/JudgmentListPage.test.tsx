@@ -774,11 +774,12 @@ describe("审判队列", () => {
 });
 
 describe("审判队列 · 世次 / 种类", () => {
-  it("cycle 0 是第 1 世;世次在上、种类在下", async () => {
+  it("cycle 0 是第 1 世;世次在上、种类在下;欧洲不转生，写「此生」(v4 第十批第 4 条)", async () => {
     renderPage();
     await screen.findByText("Marguerite Vey");
     const first = within(rowOf("Marguerite Vey")).getByTestId("cycle-kind-cell");
-    expect(first).toHaveTextContent(tZh("souls.detail.life_number", { n: "1" }));
+    expect(first).toHaveTextContent(tZh("souls.life_label.this_life"));
+    expect(first).not.toHaveTextContent(tZh("souls.detail.life_number", { n: "1" }));
     expect(first).toHaveTextContent(tZh("judgment.claim.kinds.ORIGINAL"));
     const fourth = within(rowOf("沈青梧")).getByTestId("cycle-kind-cell");
     expect(fourth).toHaveTextContent(tZh("souls.detail.life_number", { n: "4" }));
