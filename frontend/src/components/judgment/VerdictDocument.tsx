@@ -101,10 +101,13 @@ function VerdictPaper({ doc, caseNumber }: { doc: VerdictDocumentText; caseNumbe
         ) : (
           doc.deco && <p data-doc-deco="">{doc.deco}</p>
         )}
-        <h2 data-doc-title="">{doc.title}</h2>
+        {/* 不用 <h2>:页面的 h2 只有三个字阶角色(PageShell density 守卫),文书题名是纸上的字,字号在 verdict-doc.css。 */}
+        <p data-doc-title="" role="heading" aria-level={2}>
+          {doc.title}
+        </p>
         {doc.name && <p data-doc-name="">{doc.name}</p>}
         <p data-doc-body="">{doc.body}</p>
-        <p data-doc-verdict="">{doc.verdict}</p>
+        <p data-doc-verdict="">{doc.ruling}</p>
         {doc.sins && <p data-doc-sins="">{doc.sins}</p>}
         <div data-doc-sign="">
           {doc.signs.map((s) => (
@@ -175,7 +178,8 @@ export function VerdictDocument({ judgment, soul, disposition }: VerdictDocument
           <DownloadIcon />
           {t("doc.download_pdf")}
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => print(false)}>
+        {/* 审判台上还有页面自己的「打印」(整份案卷);这个的可读名字带上文书题名,两者不重名。不另起词条。 */}
+        <Button type="button" variant="secondary" size="sm" aria-label={`${t("print.button")} · ${doc.title}`} onClick={() => print(false)}>
           <PrintIcon />
           {t("print.button")}
         </Button>
