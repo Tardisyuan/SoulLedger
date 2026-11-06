@@ -5,10 +5,11 @@
  * this suite: nothing serves /ws). While it sat in the flow it pushed the
  * page down ~28 px at that moment, and a click aimed just before landed on
  * empty space: `avatar-upload.spec.ts` clicked 编辑资料, missed, and timed out
- * waiting for the dialog, 1 run in 16. It now floats: `position: fixed` at the
- * very top of the viewport, across the pillar and the 问一问 panel (Design E 组 —
- * global state, not part of the plaque). This pins that: the page title's
- * position is the same before and after the banner appears.
+ * waiting for the dialog, 1 run in 16. Design E 组 then floated it `fixed` across the
+ * top of the viewport, where it covered the top of every toolbar button; an in-flow
+ * try pushed the page 28px again and was reverted (`125d0229`). v4 第八批: it is a pill
+ * inside the 52px toolbar (≤ 768: floating under the toolbar's edge), so it takes no
+ * height anywhere. This pins that: the content starts where the masthead ends.
  */
 import { expect, test, setupAuthenticatedPage } from "./fixtures";
 
@@ -33,6 +34,13 @@ test("the connection banner takes no layout space: content starts right under th
   expect(plaque, "no plaque box").not.toBeNull();
   expect(content, "no content box").not.toBeNull();
   expect(Math.round(header!.y), `the toolbar starts at y=${header!.y}, under the banner's height`).toBe(0);
+  // The toolbar keeps its 52px with the pill in it, and the pill is inside it (desktop project).
+  expect(Math.round(header!.height)).toBe(52);
+  const pill = await banner.boundingBox();
+  if ((page.viewportSize()?.width ?? 0) > 768) {
+    expect(pill!.y).toBeGreaterThanOrEqual(header!.y);
+    expect(pill!.y + pill!.height).toBeLessThanOrEqual(header!.y + header!.height);
+  }
   expect(
     Math.abs(plaque!.y - (header!.y + header!.height)),
     `plaque starts at y=${plaque!.y}, masthead ends at y=${header!.y + header!.height}`

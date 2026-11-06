@@ -34,24 +34,27 @@ test.describe("问一问", () => {
     await expect(page.getByTestId("officer-assist-entry")).toBeFocused();
   });
 
-  test("Design E 组: the head is 48 px on an ink rule, and the panel starts below the connection bar", async ({ page }) => {
+  test("Design E 组: the head is 48 px on an ink rule; v4 第八批: the connection pill sits in the toolbar, the panel runs from the top", async ({ page }) => {
     await setupAuthenticatedPage(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/judgment");
-    // Nothing serves /ws in this suite, so the bar always comes up.
-    const bar = page.getByTestId("connection-banner");
-    await expect(bar).toBeVisible({ timeout: 15_000 });
+    // Nothing serves /ws in this suite, so the pill always comes up.
+    const pill = page.getByTestId("connection-banner");
+    await expect(pill).toBeVisible({ timeout: 15_000 });
     await page.getByTestId("officer-assist-entry").click();
     const panel = page.getByRole("complementary", { name: "问一问" });
     await expect(panel).toBeVisible();
 
-    const b = (await bar.boundingBox())!;
-    // Global state, top of the viewport, the whole width — pillar and panel included.
-    expect(Math.round(b.x)).toBe(0);
-    expect(Math.round(b.y)).toBe(0);
-    expect(Math.round(b.width)).toBe(1440);
+    // Inside the 52px toolbar's box, left of the pushed panel — not a bar across the top of the viewport.
+    const b = (await pill.boundingBox())!;
+    const bar = (await page.getByTestId("global-topbar").boundingBox())!;
+    expect(Math.round(bar.height)).toBe(52);
+    expect(b.y).toBeGreaterThanOrEqual(bar.y);
+    expect(b.y + b.height).toBeLessThanOrEqual(bar.y + bar.height);
+    expect(b.width).toBeLessThan(1440 / 2);
     const p = (await panel.boundingBox())!;
-    expect(Math.round(p.y)).toBe(Math.round(b.y + b.height));
+    expect(Math.round(p.y)).toBe(0);
+    expect(b.x + b.width).toBeLessThanOrEqual(p.x);
 
     const head = panel.getByTestId("officer-assist-head");
     expect(Math.round((await head.boundingBox())!.height)).toBe(48);

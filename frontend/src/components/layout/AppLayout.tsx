@@ -13,7 +13,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@soulledger/core/api";
-import { ConnectionBanner, useConnectionBannerShown } from "@/src/components/connection-status";
+import { ConnectionBanner } from "@/src/components/connection-status";
 import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
@@ -47,8 +47,8 @@ import { useImpersonation } from "@/src/components/impersonation/useImpersonatio
  *   是底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。规则在 `GlobalNav.tsx`。
  * - 工具条吸顶;身份带吸在它下沿,页面滚过 60px 收成 48px(PageShell 的筛选栏吸在两者
  *   下沿,`--below-band` = 52 + 身份带此刻的高度)。
- * - 连接状态只在断开时出现,是视口最顶上横跨整个视口(含导航与问一问面板)的一条警示条
- *   (`ConnectionBanner`,Design E 组:它是全局状态),浮在内容上,不推动内容。
+ * - 连接状态只在断开时出现(`ConnectionBanner`,v4 第八批第 4 条):桌面是工具条里面包屑后面的一个
+ *   胶囊,加工具条下沿一条 2px 状态色线;≤ 768 浮在工具条下沿正中。工具条高度不变,内容不动、不被盖住。
  * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
  */
 /** domMax arrives after first paint (`motionFeatures.ts`); an `m` element renders unanimated until then. */
@@ -100,7 +100,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const roomy = useRoomBeside(mainBoxRef, ASSIST_PANEL_WIDTH + ASSIST_MIN_MAIN_WIDTH);
   const wide = useWideViewport() && roomy;
   const assist = useOfficerAssist(wide);
-  const bannerShown = useConnectionBannerShown();
   useSyncEmailLocale();
   // 代看固定条在工具条之上:把它的高度写进 `--imp-h`(globals.css),吸顶的条都往下让。
   const viewing = useImpersonation() !== null;
@@ -212,6 +211,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         >
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Breadcrumb menus={menus} />
+            <ConnectionBanner />
             {user ? <HoursChip /> : null}
           </div>
           <div className="flex shrink-0 items-center gap-1 whitespace-nowrap">
@@ -371,12 +371,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       <BottomBar menus={menus} allMenuPaths={allMenuPaths} currentId={currentGroup} />
 
-      <OfficerAssistPanel assist={assist} belowBanner={bannerShown} />
+      <OfficerAssistPanel assist={assist} />
       <ShortcutHelp />
 
-      {/* 视口最顶、横跨立柱与面板;fixed,浮在内容上 —— 它在加载后一会儿才出现,在文档流里
-          那 28px 的位移曾把按钮从指针下挪走(E2E 头像测试 16 次里 1 次点空)。 */}
-      <ConnectionBanner />
 
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <LogoutConfirmDialog
