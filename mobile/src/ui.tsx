@@ -752,7 +752,7 @@ export function GoneState({ from, onBack, testID, style }: { from?: string; onBa
 
 /**
  * 文明气质 1e: the civilization's illustration over a WHOLE-PAGE empty state —
- * 书信, 朋友圈, 申请 (and the no-rebirth variant of 申请). One drawing per
+ * 书信, 朋友圈, 申请. One drawing per
  * civilization for all three; which page it is, the language bundle says. An
  * empty section inside a page keeps `Empty`'s dash.
  */

@@ -24,8 +24,6 @@ const LEXICON_WORDS: LexiconWord[] = [
   "judging",
   "past_read_only",
   "no_past_lives",
-  "no_rebirth_title",
-  "no_rebirth_body",
 ];
 
 type Bundle = Record<string, unknown>;
