@@ -782,7 +782,7 @@
       "NONE": "Buried, fare paid",
       "UNBURIED": "Unburied",
       "NO_FARE": "No fare",
-      "help": "Charon ferries only the buried who can pay. The unburied and those without a fare wait on the bank of Acheron and their judgment can't be claimed; record “Buried, fare paid” and the case can be heard. The unburied also cross once a hundred years have passed since death (Virgil); those without a fare do not.",
+      "help": "Charon ferries only the buried who can pay. The unburied and those without a fare wait on the bank of Acheron and their judgment can't be claimed; record “Buried, fare paid” and the case can be heard. Both cross once a hundred years have passed since death (Virgil, Aeneid 6.325-330).",
       "century_passed": "A hundred years on the bank: may cross"
     },
     "sin_gravity": {
@@ -5050,8 +5050,8 @@
       "ferry": {
         "title": "The crossing of Acheron",
         "UNBURIED": "You are unburied, so Charon will not take you across. After a hundred years on the bank, you may cross.",
-        "NO_FARE": "You have no fare, so Charon will not take you across.",
-        "no_date": "There is no crossing day: you may cross once your fare is recorded as paid.",
+        "NO_FARE": "You have no fare, so Charon will not take you across. After a hundred years on the bank, you may cross.",
+        "no_date": "Your date of death is not recorded, so there is no crossing day yet.",
         "crosses_on": "Crossing day · {{date}}",
         "years_left": "{{n}} years to wait",
         "years_left_one": "{{n}} year to wait",

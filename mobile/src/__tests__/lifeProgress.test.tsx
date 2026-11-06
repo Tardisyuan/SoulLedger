@@ -215,10 +215,17 @@ describe("冥河渡口", () => {
     expect(screen.getByTestId("life-ferry-wait")).toHaveTextContent("已满百年，可以渡河");
   });
 
-  it("NO_FARE: no day, so no line and no number — only how to cross", async () => {
+  it("NO_FARE waits the same hundred years (user 2026-11-07): the same count as the unburied", async () => {
+    const on = shifted(18, 5);
+    await openAs(greek({ ferry_passage: "NO_FARE", crossed: false, crosses_on: on }));
+    expect(screen.getByTestId("life-ferry-body")).toHaveTextContent("你没有渡资，卡戎不渡。在岸边满一百年，就可以渡河。");
+    expect(screen.getByTestId("life-ferry-wait")).toHaveTextContent("还要等 18 年");
+    expect(screen.getByTestId("life-ferry-date")).toHaveTextContent(`可渡之日 · ${zhDay(on)}`);
+  });
+
+  it("no recorded death year: no day, so no line and no number", async () => {
     await openAs(greek({ ferry_passage: "NO_FARE", crossed: false, crosses_on: null }));
-    expect(screen.getByTestId("life-ferry-body")).toHaveTextContent("你没有渡资，卡戎不渡。");
-    expect(screen.getByTestId("life-ferry-date")).toHaveTextContent("没有可渡之日：记录改为「已付渡资」后才能渡河。");
+    expect(screen.getByTestId("life-ferry-date")).toHaveTextContent("死亡日期没有登记，还算不出可渡之日。");
     expect(screen.queryByTestId("life-ferry-line")).toBeNull();
     expect(screen.queryByTestId("life-ferry-wait")).toBeNull();
   });

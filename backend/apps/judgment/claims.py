@@ -105,7 +105,7 @@ def _assert_not_held(judgment: Judgment) -> None:
     # 希腊:未葬或无渡资的亡魂过不了阿刻戎,滞留岸边,到不了岔路草地受审(docs/01_希腊冥府整体架构.md §2.3;
     # `Soul.ferry_passage`)。读灵魂此刻的记录,不冻在案子上:官员补记「已葬」后即可认领。只拦原审 ——
     # 上诉、重开时灵魂早已过河。未葬者在岸边游荡满一百年后得渡(Aen. 6.325-330,`apps/souls/acheron.py`);
-    # 无渡资照拦,死亡日没登记也照拦。
+    # 无渡资同此(用户 2026-11-07),死亡日没登记照拦。
     if ferry := ferry_barred(judgment):
         raise ClaimRefusedError(
             "Charon ferries only the buried who can pay; this soul waits on the bank of Acheron.", "unferried",
