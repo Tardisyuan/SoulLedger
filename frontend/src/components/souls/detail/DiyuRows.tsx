@@ -65,7 +65,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         {/* v4 S07 卡头「{soul} 走到了哪一步」(`soulmap.title`);十三格行程条下面是地图。 */}
-        <h2 data-testid="soul-diyu-station-title" className="text-md text-[oklch(var(--color-ink))]">
+        <h2 data-testid="soul-diyu-station-title" className="text-lg text-[oklch(var(--color-ink))]">
           {t("soulmap.title", { soul: soul.name })}
         </h2>
         <span className="flex-1" />
