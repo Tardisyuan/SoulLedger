@@ -375,6 +375,7 @@ const COLLECTED_FILES = [
   "ReactionBar.test.tsx",
   "proseLinkIsNotColourOnly.test.ts",
   "readingQuantityContract.test.tsx",
+  "realmTypeByCivilization.test.ts",
   "reducedMotionContract.test.ts",
   "refreshCookieLifetime.test.ts",
   "roleForbiddenCodenamesMatchBackend.test.ts",

@@ -48,7 +48,7 @@ export function HoursChip() {
   const hour = civilHour(civ as HourCiv, now);
   const text = t("hours.format", { name: t(hour.key, hour.params), time: `${pad(now.getHours())}:${pad(now.getMinutes())}` });
   return (
-    <span data-testid="shell-hours" className="hidden min-w-0 truncate whitespace-nowrap font-mono text-xs text-[oklch(var(--color-ink-muted))] min-[1280px]:block">
+    <span data-testid="shell-hours" title={text} className="hidden min-w-0 truncate whitespace-nowrap font-mono text-xs text-[oklch(var(--color-ink-muted))] min-[1280px]:block">
       <time dateTime={`${pad(now.getHours())}:${pad(now.getMinutes())}`}>{text}</time>
     </span>
   );

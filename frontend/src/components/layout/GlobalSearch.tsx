@@ -409,6 +409,8 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
   const announce = searching && !pending
     ? sections
         .filter((s): s is Extract<Section, { state: "ok" }> => s.state === "ok")
+        // 指令组只是页面登记的几条;没有时不播报「指令 0 条」。
+        .filter((s) => !(s.kind === "command" && s.total === 0))
         .map((s) => t("search.announce_group", { group: t(GROUP_LABEL[s.kind]), n: String(s.total) }))
         .join(" · ")
     : "";

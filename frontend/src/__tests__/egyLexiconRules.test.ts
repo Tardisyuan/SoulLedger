@@ -272,6 +272,9 @@ const TECHNICAL: Record<string, string[]> = {
   "welcome.minutes_ago": ["m"],
   "welcome.hours_ago": ["h"],
   "footer.version": ["v0.1"],
+  // 「这是怎么做的」里的代码名:hooks、packages/core 照原样小写(Design 第八批)。
+  "demo.build.lede": ["hooks", "packages/core"],
+  "demo.build.node.core_detail": ["hooks"],
   "ledger.copy_resource_id": ["{resource}"],
   // 第九节:搜索框提示「名字 / ID」,画布宽度门槛「≥ 1024 px」。
   "judgment.claim.search": ["ID"],
