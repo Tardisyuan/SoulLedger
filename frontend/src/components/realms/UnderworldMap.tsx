@@ -288,13 +288,19 @@ export function UnderworldMap({
 
   if (!skin || !template || !states) return null;
 
-  const stations = nodesOf(template)
-    .filter((n) => !n.classList.contains("branch") || !branchesHidden || states.current?.node === n.id)
-    .map((n) => ({ id: n.id, name: nameOf(n.id), state: states.nodes.get(n.id) ?? ("ahead" as MapState) }))
-    .filter((s): s is { id: string; name: string; state: MapState } => !!s.name);
+  // 清单只写站名;站码(节点 id)只当 React key 和聚焦的目标,不进文字。没有名字的站不列。
+  const stations: { key: string; name: string; state: MapState }[] = [];
+  for (const node of nodesOf(template)) {
+    if (node.classList.contains("branch") && branchesHidden && cur?.node !== node.id) continue;
+    const name = nameOf(node.id);
+    const state: MapState = states.nodes.get(node.id) || "ahead";
+    if (name) stations.push({ key: node.id, name, state });
+  }
   const behind = stations.filter((s) => s.state === "walked").length;
   const ahead = stations.filter((s) => s.state === "ahead").length;
   const step = replayAt !== null ? arrivals[replayAt] : null;
+  // 回放卡只写站名(没有名字就空着),不写站码。
+  const stepStation = step ? nameOf(step.id) || "" : "";
 
   return (
     <figure data-testid="underworld-map" data-map={skin} className={cn("v4-map m-0 min-w-0 space-y-2", className)}>
@@ -351,10 +357,10 @@ export function UnderworldMap({
             type="button"
             data-testid="underworld-map-replay-card"
             onClick={() => setReplayAt(null)}
-            className="absolute bottom-3 left-3 max-w-xs border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-left shadow-overlay"
+            className="absolute bottom-3 left-3 right-3 max-w-xs border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-left shadow-overlay"
           >
             <span aria-live="polite" className="block font-title text-md text-[oklch(var(--color-ink))]">
-              {t("soulmap.replay_line", { date: formatDate(step.at), station: nameOf(step.id) ?? "" })}
+              {t("soulmap.replay_line", { date: formatDate(step.at), station: stepStation })}
             </span>
             <span className="mt-2 flex items-center gap-3 text-xs text-[oklch(var(--color-ink-muted))]">
               <span className="font-mono">{t("soulmap.replay_progress", { n: String(replayAt! + 1), total: String(arrivals.length) })}</span>
@@ -382,11 +388,11 @@ export function UnderworldMap({
       <figcaption className="sr-only focus-within:not-sr-only">
         <ol aria-label={label} className="m-0 flex list-none flex-wrap gap-1 p-0">
           {stations.map((s) => (
-            <li key={s.id}>
+            <li key={s.key}>
               <button
                 type="button"
                 aria-current={s.state === "current" ? "step" : undefined}
-                onClick={() => focusStation(s.id)}
+                onClick={() => focusStation(s.key)}
                 className={cn(
                   "inline-flex h-8 items-center border border-[oklch(var(--color-line))] px-2 text-xs",
                   s.state === "current" ? "font-semibold text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-muted))]",

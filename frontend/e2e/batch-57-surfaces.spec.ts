@@ -227,7 +227,8 @@ test.describe("灵魂详情 · 十三站", () => {
     const hiddenName = await strip.locator('li[data-station="TUDI_TEMPLE"]').getByText("土地庙").boundingBox();
     expect(hiddenName!.width, "非当前站名在 393 宽下仍占位").toBeLessThanOrEqual(1);
     await expect(strip.locator('li[data-station="TUDI_TEMPLE"]')).toHaveAttribute("title", "土地庙");
-    const list = strip.locator("ol");
+    // 卡里还有地图(阶段 5),它的站名清单也是一个 <ol>:按名字取十三站那一条。
+    const list = strip.getByRole("list", { name: "十三站" });
     const overflow = await list.evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(overflow, `十三站条在 393 宽下横向溢出 ${overflow}px`).toBeLessThanOrEqual(1);
     const last = await strip.locator('li[data-station="HUANHUN_CLIFF"]').boundingBox();
