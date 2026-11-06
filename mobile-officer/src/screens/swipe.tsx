@@ -13,7 +13,7 @@
  * 落印走 `confirmedDecision`(我的 › 批准前验证面容 / 指纹),同其他决定。
  */
 import { concludeRefusalOf, judgmentApi, type ConcludeJudgmentPayload, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Animated, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Circle } from "react-native-svg";
@@ -66,17 +66,21 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
 
   // ponytail: 只取「我手上」的第一页;卡堆快空时再问一次(判过的、放进待定的服务端已不在这一组)。
   const loadList = useCallback(() => judgmentApi.list({ group: "mine" }).then((r) => r.data.results), []);
-  const list = useRemote(loadList);
+  // 拆开取:在整个返回对象上调 `.reload()`,编译器就当它可能被改,连带从 `data` 算出的 `topId`。
+  const { data: rows, error: listError, reload: reloadList } = useRemote(loadList);
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
-  const counts = useRemote(loadCounts);
+  const { data: countsData, reload: reloadCounts } = useRemote(loadCounts);
   const [done, setDone] = useState<ReadonlySet<string>>(new Set());
-  const stack = (list.data ?? []).filter((j) => !j.conclude_refusal && !done.has(j.id));
+  const judgeable = (j: Judgment) => !j.conclude_refusal && !done.has(j.id);
+  // `topId` 直接从 `rows` 算,不经 `stack`:`stack` 与 `top` 会被交给子组件与回调,编译器当它们可能被改,
+  // 依赖它的 `loadDetail` 就保不住手写的 useCallback(react-hooks/preserve-manual-memoization)。
+  const topId = (rows ?? []).find(judgeable)?.id ?? null;
+  const stack = (rows ?? []).filter(judgeable);
   const top = stack[0] ?? null;
-  const topId = top?.id ?? null;
   // 顶上那张的详情:埃及要天平的读数(挡哪一边),欧洲要本案引用的七宗罪。
   const loadDetail = useCallback(() => (topId ? judgmentApi.get(topId).then((r) => r.data) : Promise.resolve(null)), [topId]);
-  const detail = useRemote(loadDetail);
-  const current = detail.data && detail.data.id === topId ? detail.data : null;
+  const { data: detailData } = useRemote(loadDetail);
+  const current = detailData && detailData.id === topId ? detailData : null;
   const blocked = current ? blockedSide(current) : null;
 
   const [overlay, setOverlay] = useState<Overlay>(null);
@@ -86,11 +90,18 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const [undo, setUndo] = useState<Judgment | null>(null);
   const [pan] = useState(() => new Animated.Value(0));
   const [hold] = useState(() => new Animated.Value(0));
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
-  const later = useCallback((fn: () => void, delay: number) => {
-    timers.current.push(setTimeout(fn, delay));
-  }, []);
+  // 提示条 2 秒、撤回 5 秒:计时放在 effect 里,不放 ref —— 手势回调在渲染时交给 Gesture,碰到 ref 编译器就拒绝
+  // (react-hooks/refs);ui.tsx 的下拉刷新也是回调里只有 state 与 Animated 值。
+  useEffect(() => {
+    if (!hint) return;
+    const id = setTimeout(() => setHint(false), HINT_MS);
+    return () => clearTimeout(id);
+  }, [hint]);
+  useEffect(() => {
+    if (!undo) return;
+    const id = setTimeout(() => setUndo(null), UNDO_MS);
+    return () => clearTimeout(id);
+  }, [undo]);
 
   const canAct = !!current && !busy && !offline && overlay === null;
   const ms = (n: number) => (reduced ? 0 : n);
@@ -103,22 +114,16 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const snapBack = useCallback(() => {
     Animated.spring(pan, { toValue: 0, useNativeDriver: false, bounciness: 6 }).start();
   }, [pan]);
-  const hinting = useRef(false);
-  const flashBlocked = useCallback(() => {
-    if (hinting.current) return;
-    hinting.current = true;
-    setHint(true);
-    later(() => {
-      hinting.current = false;
-      setHint(false);
-    }, HINT_MS);
-  }, [later]);
+  // 已经亮着就不再设:否则每一帧拖动都重排一次 2 秒。
+  const flashBlocked = () => {
+    if (!hint) setHint(true);
+  };
 
   const finish = (id: string) => {
     setDone((prev) => new Set(prev).add(id));
     setOverlay(null);
-    void counts.reload();
-    if (stack.length <= 2) void list.reload();
+    void reloadCounts();
+    if (stack.length <= 2) void reloadList();
   };
 
   const send = (payload: ConcludeJudgmentPayload) => {
@@ -202,8 +207,8 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
           next.delete(j.id);
           return next;
         });
-        void list.reload();
-        void counts.reload();
+        void reloadList();
+        void reloadCounts();
       },
       () => toast(t("officer_app.state.error_title"), "failure")
     );
@@ -217,8 +222,8 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const deferInk = hold.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 0, 0.85] });
   const ring = hold.interpolate({ inputRange: [0, 1], outputRange: [RING_C, 0] });
 
-  const n = counts.data ? counts.data.mine : stack.length;
-  const m = counts.data?.deferred ?? 0;
+  const n = countsData ? countsData.mine : stack.length;
+  const m = countsData?.deferred ?? 0;
 
   return (
     <View testID="swipe-screen" style={{ flex: 1, backgroundColor: theme.s0 }}>
@@ -252,12 +257,12 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
       ) : null}
 
       <View style={styles.deck}>
-        {list.error && !list.data ? (
+        {listError && !rows ? (
           <View style={styles.empty}>
             <Txt variant="body">{t("officer_app.state.error_title")}</Txt>
-            <ActionButton testID="swipe-retry" kind="outline" title={t("common.retry")} onPress={() => void list.reload()} />
+            <ActionButton testID="swipe-retry" kind="outline" title={t("common.retry")} onPress={() => void reloadList()} />
           </View>
-        ) : list.data && !top ? (
+        ) : rows && !top ? (
           <View testID="swipe-empty" style={styles.empty}>
             {theme.civ !== "neutral" ? <Txt variant="title">{t(`empty.${theme.civ}`)}</Txt> : null}
             <Txt variant="body" tone="muted">
@@ -265,11 +270,11 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
             </Txt>
           </View>
         ) : (
-          stack
-            .slice(0, 3)
-            .reverse()
-            .map((j) => {
-              const depth = stack.indexOf(j);
+          // 后面的先画(压在下面)。按下标取,不 reverse:就地翻转让编译器把 `stack`(连同 `topId`)当成会被改动的值。
+          [2, 1, 0]
+            .filter((depth) => depth < stack.length)
+            .map((depth) => {
+              const j = stack[depth];
               if (depth > 0) {
                 return (
                   <View
@@ -394,7 +399,6 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
               hold.setValue(0);
               finish(top.id);
               setUndo(top);
-              later(() => setUndo((u) => (u?.id === top.id ? null : u)), UNDO_MS);
             })
           }
         />
