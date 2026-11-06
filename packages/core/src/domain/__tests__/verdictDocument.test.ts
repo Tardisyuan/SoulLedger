@@ -75,7 +75,7 @@ describe("欧洲", () => {
     const hell = verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_4TH", citedDeadlySins: ["greed"] }, tz)!;
     expect(hell.verdict).toBe("有未悔的大罪，下地狱第 4 圈。");
     expect(hell.sins).toBe("贪婪");
-    expect(hell.date).toBe("2026年11月6日 · 九时");
+    expect(hell.date).toBe("2026年11月6日 · 六时"); // 14:40 在六时(12–15 点),与顶栏同一张表
     expect(verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_4TH" }, tz)!.sins).toBeUndefined();
   });
 
