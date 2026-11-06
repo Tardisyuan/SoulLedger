@@ -998,6 +998,23 @@
     border-color: transparent;
     box-shadow: var(--shadow-card);
   }
+  /* 卡片角饰(v4 `.corner`):内缩 8px,四角各一横一竖 14px 的金属色细线。只装饰,不接指针;概览主卡用。
+     父元素要 `position: relative`。 */
+  .v4-corner {
+    position: absolute;
+    inset: 8px;
+    pointer-events: none;
+    opacity: 0.9;
+    background:
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) top left / 14px 1px no-repeat,
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) top left / 1px 14px no-repeat,
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) top right / 14px 1px no-repeat,
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) top right / 1px 14px no-repeat,
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) bottom left / 14px 1px no-repeat,
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) bottom left / 1px 14px no-repeat,
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) bottom right / 14px 1px no-repeat,
+      linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) bottom right / 1px 14px no-repeat;
+  }
   /* 侧栏当前项(v4 `.side2 .it.on`):深色 glow 20% 透出侧栏底;浅色是 card 底加卡片阴影。字仍是 ink。 */
   .nav-current {
     background: color-mix(in srgb, oklch(var(--color-glow)) 20%, transparent);

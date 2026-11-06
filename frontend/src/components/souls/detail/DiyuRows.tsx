@@ -41,6 +41,7 @@ export function DiyuRows({ soul }: { soul: Soul }) {
  * 十三站行程条(Design 第五十七批 S-1,docs/06 §一):13 站等宽,字形同上诉站梯 —— 已过 ■ · 当前 ▪ · 未到 □。
  * 宽屏(xl)13 个站名都写;更窄只写当前站名,其余留方块,悬浮看站名。右上「第 n / 13 站 · 站名」。
  * 不在路上(在世 / 已转世)不画条,只留一行灰字。`canMove`(持 `soul.transition`)时右上「挪站…」开弹层(S-1b)。
+ * v4(第七批 S07):卡头是 `soulmap.title`,按钮是 `soulmap.move`,卡片是 `.v4-card`;列表的读屏名仍是「十三站」。
  */
 export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boolean }) {
   const { t } = useI18n();
@@ -56,10 +57,14 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
   }
   const name = (s: Station) => t(`souls.diyu_station.${s}`);
   return (
-    <section data-testid="soul-diyu-station" className="min-w-0 bg-[oklch(var(--color-surface-1))] px-6 py-4">
+    <section
+      data-testid="soul-diyu-station"
+      className="v4-card min-w-0 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-6 py-4"
+    >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
-          {t("souls.diyu_station.label")}
+        {/* v4 S07 卡头「{soul} 走到了哪一步」(`soulmap.title`);地图本身在阶段 5,这里仍是十三格行程条。 */}
+        <h2 data-testid="soul-diyu-station-title" className="text-md text-[oklch(var(--color-ink))]">
+          {t("soulmap.title", { soul: soul.name })}
         </h2>
         <span className="flex-1" />
         <span className="font-mono text-xs text-[oklch(var(--color-ink))]" data-testid="soul-diyu-station-now">
@@ -67,7 +72,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
         </span>
         {canMove && (
           <Button size="sm" variant="secondary" data-testid="soul-diyu-station-move" onClick={() => setMoving(true)}>
-            {t("souls.diyu_station.move")}
+            {t("soulmap.move")}
           </Button>
         )}
       </div>

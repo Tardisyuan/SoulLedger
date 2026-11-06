@@ -108,6 +108,20 @@ export const KARMA_PATTERNS: Record<"merit" | "demerit", ChartPattern> = {
   demerit: "hatch",
 };
 
+/**
+ * 线的几何(规范 v4 第七批 S04 概览趋势卡):数据线 2.5、虚线 4 4(上一期)、十字线与基线 1,一律 non-scaling-stroke。
+ * 所有折线图读这一份,不各写各的(此前仪表盘趋势小图是 2)。
+ */
+export const CHART_STROKE = { line: 2.5, dash: "4 4", crosshair: 1, axis: 1 } as const;
+
+/**
+ * 「近 12 周结案」的两条线(v4 S04):本季 = 文明字色(civT),上季 = 金属色(metal)。
+ * 用户 2026-11-06 撤销「文明色不进图表」(D11,文明色范围照 v4),**只这一张图**:它比的是本殿自己的两段时间,
+ * 不是按文明分的系列 —— 按文明 / 状态 / 界域分的系列仍是上面的灰蓝梯度,`CIVILIZATION_COLORS` 仍不许有。
+ * 这两个令牌随 `<html data-civ>` 变,没有字面量镜像:只能写成 `oklch(var(--…))` 交给 CSS。
+ */
+export const TREND_TOKENS = { current: "--color-main-ink", previous: "--color-metal" } as const;
+
 /** 斜线图案的几何:45°,线宽 1.5,间距 5(A5 的 `repeating-linear-gradient(45deg, c 0 1.5px, transparent 1.5px 5px)`)。 */
 export const HATCH = { angle: 45, stroke: 1.5, gap: 5 } as const;
 

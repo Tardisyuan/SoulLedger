@@ -11,7 +11,16 @@
  *   `realms.types` — a state the API can send but no chart can colour is red,
  *   and so is an entry for a state that no longer exists.
  */
-import { CHART_COLORS, CHART_TOKENS, KARMA_PATTERNS, REALM_PATTERNS, STATE_PATTERNS, type ChartColors } from "@/lib/chart-colors";
+import {
+  CHART_COLORS,
+  CHART_STROKE,
+  CHART_TOKENS,
+  KARMA_PATTERNS,
+  REALM_PATTERNS,
+  STATE_PATTERNS,
+  TREND_TOKENS,
+  type ChartColors,
+} from "@/lib/chart-colors";
 
 import {
   THEMES,
@@ -113,5 +122,30 @@ describe("charts are a gray-blue ramp plus patterns (规范 v2 A5)", () => {
   it("the tooltip is s1 with a 1px ink border (A5 · A2: overlays have no shadow, only the ink line)", () => {
     expect(CHART_TOKENS.CHART_CHROME.tooltipBg).toBe("--color-surface-1");
     expect(CHART_TOKENS.CHART_CHROME.tooltipBorder).toBe("--color-ink");
+  });
+});
+
+/**
+ * 规范 v4(第七批 S04,用户 2026-11-06 D11 撤销「文明色不进图表」):**只有**概览的「近 12 周结案」用文明色 ——
+ * 它比的是本殿自己的本季与上季,不是按文明分的系列。本季 = civT(`--color-main-ink`)实线,上季 = metal 虚线。
+ * 这两个令牌随 `<html data-civ>` 变,没有字面量镜像,所以不进 CHART_TOKENS(上面那组逐值核对的表)。
+ */
+describe("v4 trend lines and stroke geometry", () => {
+  it("the 12-week trend reads the civ ink and the metal, nothing else", () => {
+    expect(TREND_TOKENS).toEqual({ current: "--color-main-ink", previous: "--color-metal" });
+    // 系列表里仍没有文明色:按文明 / 状态 / 界域分的线照旧是灰蓝梯度。
+    for (const table of TABLES) {
+      expect(Object.values(CHART_TOKENS[table])).not.toContain(TREND_TOKENS.current);
+      expect(Object.values(CHART_TOKENS[table])).not.toContain(TREND_TOKENS.previous);
+    }
+  });
+
+  it.each(THEMES)("%s: both trend tokens are declared in globals.css", (theme) => {
+    expect(() => resolveTriple(TOKENS_BY_THEME[theme], TREND_TOKENS.current)).not.toThrow();
+    expect(() => resolveTriple(TOKENS_BY_THEME[theme], TREND_TOKENS.previous)).not.toThrow();
+  });
+
+  it("one stroke geometry for every line chart (v4: data 2.5, dash 4 4, crosshair and axis 1)", () => {
+    expect(CHART_STROKE).toEqual({ line: 2.5, dash: "4 4", crosshair: 1, axis: 1 });
   });
 });

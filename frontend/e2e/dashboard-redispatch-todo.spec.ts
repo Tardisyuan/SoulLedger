@@ -18,7 +18,7 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
         : { body: { count: 1, next: null, previous: null, results: [SENTENCE_PLAN] } }
     );
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard?tab=more"); // v3 待办条与普查图在「更多」里(用户 2026-11-06)
     const cell = page.locator(CELL);
     await expect(cell.locator("[data-todo-count]")).toHaveText("2");
     await expect(cell).toHaveAttribute("data-todo-mine", "");
@@ -32,7 +32,7 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
   test("with nothing waiting it reads 0 and 已清空, like the other cells", async ({ page }) => {
     await setupAuthenticatedPage(page);
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard?tab=more"); // v3 待办条与普查图在「更多」里(用户 2026-11-06)
     const cell = page.locator(CELL);
     await expect(cell.locator("[data-todo-count]")).toHaveText("0");
     await expect(cell).toContainText("已清空");
@@ -49,7 +49,7 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
         : { body: { count: 1, next: null, previous: null, results: [SENTENCE_PLAN] } }
     );
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard?tab=more"); // v3 待办条与普查图在「更多」里(用户 2026-11-06)
     // 审计 1017 #7 之后管理员看得到全部十一格;这里看前四格的排法,与每一格都不溢出。
     const cells = page.locator("[data-todo]");
     await expect(cells).toHaveCount(11);

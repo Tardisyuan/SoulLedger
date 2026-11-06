@@ -14,6 +14,7 @@ import { orderLifecycle } from "@/src/components/dashboard/LegendLedger";
 import { soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { CHART_STROKE } from "@/lib/chart-colors";
 
 const RANGES: { key: LedgerTrendRange; text: string }[] = [
   { key: "30d", text: "dashboard.trends.range_30d" },
@@ -91,7 +92,7 @@ function Sparkline({ values, xs }: { values: number[]; xs: number[] }) {
   const pts = values.map((v, i) => `${(xs[i] * W).toFixed(1)},${y(v).toFixed(1)}`);
   return (
     <svg aria-hidden="true" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-14 w-full flex-1 overflow-visible">
-      <line x1="0" y1={H - 0.5} x2={W} y2={H - 0.5} className="stroke-[oklch(var(--color-line))]" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      <line x1="0" y1={H - 0.5} x2={W} y2={H - 0.5} className="stroke-[oklch(var(--color-line))]" strokeWidth={CHART_STROKE.axis} vectorEffect="non-scaling-stroke" />
       {values.length === 1 ? (
         <circle cx={xs[0] * W} cy={y(values[0])} r="2.5" className="fill-[oklch(var(--color-chart-1))]" />
       ) : (
@@ -99,7 +100,7 @@ function Sparkline({ values, xs }: { values: number[]; xs: number[] }) {
           points={pts.join(" ")}
           fill="none"
           className="stroke-[oklch(var(--color-chart-1))]"
-          strokeWidth="2"
+          strokeWidth={CHART_STROKE.line}
           strokeLinejoin="round"
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
