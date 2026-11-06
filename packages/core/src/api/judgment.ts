@@ -296,6 +296,9 @@ export interface JudgmentQueueCountsParams {
   soul?: string;
   /** `"true"` 只数滞留的(`stale_since` 非空),`"false"` 不数它们。 */
   stale?: string;
+  /** v4 队列标签:`"true"` 只数已过期限 / 退回重审的(与列表同一谓词)。 */
+  overdue?: string;
+  returned?: string;
 }
 
 export type JudgmentBatchOperation = "claim" | "reassign" | "defer";
@@ -994,8 +997,8 @@ export const WEIGHING_REFUSALS = [
 
 /**
  * v4「不过」的理由与希腊落印的拒绝码(400,backend/apps/judgment/fail_reasons.py;`incurable_is_eternal_in_tartarus`
- * 在 services.py)。`concludeRefusalOf` 还不分类它们(为 null):理由面板在发出之前就挡住了这些情形,
- * 文案与分类随 v4 前端一起加。
+ * 在 services.py)。理由面板在发出之前就挡住了这些情形;并发或规则变了时服务端仍会答,`concludeRefusalOf`
+ * 归为 `fail_reason`,译文 `judgment.fail_reason_errors.<code>`。
  */
 export const FAIL_REASON_REFUSALS = [
   "fail_reason_required", "fail_reason_invalid", "fail_reason_not_selectable", "fail_reason_not_failed",
@@ -1012,7 +1015,8 @@ export const NOT_CONCLUDABLE_REFUSALS = ["at_city_god", "held_until_fated_date",
  * - `cross_open`:跨域审判还开着(`cross_judgment_open`);
  * - `plan`:受刑计划的拒绝,译文 `sentence_plan.errors.*`;
  * - `weighing`:埃及称心 / 审批流程,译文 `judgment.weighing.errors.*`;
- * - `not_concludable`:候审未到,与认领同一组码。
+ * - `not_concludable`:候审未到,与认领同一组码;
+ * - `fail_reason`:「不过」的理由或希腊落印的标记,译文 `judgment.fail_reason_errors.*`。
  * 选站的拒绝(`segmentRefusalOf`)不在这里:它有自己的分类与译文。
  */
 export type ConcludeRefusal =
@@ -1020,7 +1024,8 @@ export type ConcludeRefusal =
   | { kind: "cross_open"; code: "cross_judgment_open" }
   | { kind: "plan"; code: (typeof SENTENCE_PLAN_REFUSAL_CODES)[number] }
   | { kind: "weighing"; code: (typeof WEIGHING_REFUSALS)[number] }
-  | { kind: "not_concludable"; code: (typeof NOT_CONCLUDABLE_REFUSALS)[number] };
+  | { kind: "not_concludable"; code: (typeof NOT_CONCLUDABLE_REFUSALS)[number] }
+  | { kind: "fail_reason"; code: (typeof FAIL_REASON_REFUSALS)[number] };
 
 const isOneOf = <T extends string>(list: readonly T[], code: string): code is T =>
   (list as readonly string[]).includes(code);
@@ -1033,5 +1038,6 @@ export function concludeRefusalOf(error: unknown): ConcludeRefusal | null {
   if (isOneOf(SENTENCE_PLAN_REFUSAL_CODES, code)) return { kind: "plan", code };
   if (isOneOf(WEIGHING_REFUSALS, code)) return { kind: "weighing", code };
   if (isOneOf(NOT_CONCLUDABLE_REFUSALS, code)) return { kind: "not_concludable", code };
+  if (isOneOf(FAIL_REASON_REFUSALS, code)) return { kind: "fail_reason", code };
   return null;
 }

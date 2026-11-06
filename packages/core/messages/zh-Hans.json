@@ -2133,7 +2133,7 @@
       "claimed_body": "只有认领人、殿主或管理员能结案。你的裁决没有提交；本次会话已把这件延后。",
       "claimed_next": "打开下一件",
       "claimed_back": "回到队列",
-      "session_deferred": "本次暂缓 {{n}} 件",
+      "session_deferred": "本次延后 {{n}} 件",
       "restore_all": "全部放回队列",
       "key_claim": "认领当前这一件",
       "reassigned": "已改派 · {{name}} → {{to}}"
@@ -2264,7 +2264,7 @@
       "cited": "已引用",
       "uncite": "撤回引用 {{code}}",
       "cite_error": "引用未能保存",
-      "deferred_note": "已暂缓：{{reason}}",
+      "deferred_note": "已放进待定：{{reason}}",
       "previous": "上一件",
       "next": "下一件",
       "concluded_on": "已结案 · {{date}}",
@@ -2307,7 +2307,7 @@
         "mine": "我认领",
         "unclaimed": "待认领",
         "others": "他人认领",
-        "deferred": "暂缓"
+        "deferred": "待定"
       },
       "hints": {
         "unclaimed": "等待最久在上",
@@ -2320,7 +2320,7 @@
       "selected": "已选 {{n}}",
       "claim": "认领",
       "reassign": "改派…",
-      "defer": "暂缓",
+      "defer": "放进待定",
       "clear_selection": "取消选择",
       "batch_limit": "一次至多 {{n}} 件，其余请下一批",
       "balance": "余额",
@@ -2332,7 +2332,7 @@
       "claimed_by_me": "你已认领",
       "reason": "理由",
       "reason_required": "请写明理由",
-      "defer_title": "暂缓 {{n}} 件审判",
+      "defer_title": "放进待定 · {{n}} 件审判",
       "defer_reason_hint": "必填，至多 500 字；随案子留存，办案人会看到",
       "reassign_title": "改派 {{n}} 件审判",
       "reassign_to": "改派给",
@@ -2341,19 +2341,20 @@
       "reassign_confirm": "改派",
       "done_claim": "已认领 {{n}} 件",
       "done_reassign": "已改派 {{n}} 件",
-      "done_defer": "已暂缓 {{n}} 件",
+      "done_defer": "已放进待定 {{n}} 件",
       "refused": {
         "already_claimed": "已被他人认领",
         "not_claimed": "这件尚无人认领",
         "not_claimant": "这件由他人认领；替他人操作需要改派权限",
         "not_pending": "已结案，不能再改",
-        "already_deferred": "已经暂缓",
-        "not_deferred": "并未暂缓",
+        "already_deferred": "已经在待定分组里",
+        "not_deferred": "不在待定分组里",
         "invalid_assignee": "该官员不在本租户，或没有办案权限",
         "not_found": "有审判已不存在",
         "permission_denied": "没有权限",
         "generic": "操作未能完成",
-        "assignee_out_of_scope": "对方的数据范围看不到这条数据"
+        "assignee_out_of_scope": "对方的数据范围看不到这条数据",
+        "defer_reason_required": "写一句理由，才能放进待定"
       },
       "held_short": "到期后可认领",
       "held": "这桩审判候至 {{date}}：灵魂在枉死城，到那天才能认领。",
@@ -2657,6 +2658,20 @@
     },
     "concluded_filter": {
       "search": "搜灵魂姓名、案号"
+    },
+    "greek_account_label": "这一判写在哪一篇",
+    "fail_reason_errors": {
+      "fail_reason_required": "选一个理由，才算判完。",
+      "fail_reason_invalid": "这个理由不是本殿这一判能给的，请重新选。",
+      "fail_reason_not_selectable": "理由由天平列出，不能另选。",
+      "fail_reason_not_failed": "理由和可医标记只随「不过」一起落印。",
+      "fail_reason_note_required": "选了「其他」，要写一句。",
+      "fail_reason_note_too_long": "这一句不能超过 500 字。",
+      "fail_reason_contradicts_record": "灵魂的登记里没有这一项，判语不能这样写。",
+      "greek_account_required": "先选这一判写在哪一篇：《高尔吉亚》或《理想国》。",
+      "curability_required": "加上标记：可医或不可医。",
+      "greek_mark_not_applicable": "只有希腊的案子才选文书和可医标记。",
+      "incurable_is_eternal_in_tartarus": "不可医者永罚于塔尔塔罗斯，不能另选去处或写年数。"
     }
   },
   "audit": {
@@ -6195,12 +6210,12 @@
       "body": "{{by}} 替你放回了案件 {{soul}}，它回到了待认领。理由：{{reason}}"
     },
     "judgment_deferred_for_you": {
-      "title": "案件已暂缓",
-      "body": "{{by}} 暂缓了你手上的案件 {{soul}}。理由：{{reason}}"
+      "title": "案件已放进待定",
+      "body": "{{by}} 把你手上的案件 {{soul}} 放进了待定。理由：{{reason}}"
     },
     "judgment_undeferred_for_you": {
-      "title": "案件已取消暂缓",
-      "body": "{{by}} 取消了你手上案件 {{soul}} 的暂缓。理由：{{reason}}"
+      "title": "案件已移出待定",
+      "body": "{{by}} 把你手上的案件 {{soul}} 移出了待定。理由：{{reason}}"
     },
     "death_sync_retry_failed": {
       "title": "死亡登记重试仍失败",

@@ -1,3 +1,16 @@
 [
+  "judgment.claim.refused.defer_reason_required",
+  "judgment.fail_reason_errors.curability_required",
+  "judgment.fail_reason_errors.fail_reason_contradicts_record",
+  "judgment.fail_reason_errors.fail_reason_invalid",
+  "judgment.fail_reason_errors.fail_reason_not_failed",
+  "judgment.fail_reason_errors.fail_reason_not_selectable",
+  "judgment.fail_reason_errors.fail_reason_note_required",
+  "judgment.fail_reason_errors.fail_reason_note_too_long",
+  "judgment.fail_reason_errors.fail_reason_required",
+  "judgment.fail_reason_errors.greek_account_required",
+  "judgment.fail_reason_errors.greek_mark_not_applicable",
+  "judgment.fail_reason_errors.incurable_is_eternal_in_tartarus",
+  "judgment.greek_account_label",
   "officer_app.queue.open_swipe"
 ]

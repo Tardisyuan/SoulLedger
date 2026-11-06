@@ -140,6 +140,20 @@ describe("审判队列", () => {
     expect(within(screen.getByTestId("queue-group-deferred")).getByText(tZh("judgment.claim.group_empty"))).toBeInTheDocument();
   });
 
+  it("v4 S05:组序 我手上 → 待定 → 别人在审 → 待认领;期限一格;「已过期限」是列表与组头计数上的筛选", async () => {
+    renderPage();
+    await screen.findByText("沈青梧");
+    const order = Array.from(document.querySelectorAll('tbody[data-testid^="queue-group-"]')).map((b) => b.getAttribute("data-testid"));
+    expect(order).toEqual(["queue-group-mine", "queue-group-deferred", "queue-group-others", "queue-group-unclaimed"]);
+    // 夹具里没有期限(殿没设天数 / 未到可认领):写「不计」,不是空格。
+    expect(screen.getAllByTestId("deadline-cell")[0]).toHaveTextContent(tZh("queue.deadline.none"));
+    fireEvent.click(within(screen.getByTestId("queue-tabs")).getByRole("button", { name: new RegExp(tZh("queue.tab.overdue")) }));
+    await waitFor(() =>
+      expect(judgmentApi.list).toHaveBeenCalledWith({ group: "mine", page: "1", ordering: "created_at", overdue: "true" })
+    );
+    expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ overdue: "true" });
+  });
+
   it("行是 v3 的 64 px(--table-row-h)、整行链到审判台;功 / 过与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "沈青梧" });
@@ -618,7 +632,7 @@ describe("审判队列", () => {
       expect(screen.queryByRole("alertdialog")).toBeNull();
     });
 
-    it("「我认领的」只留我认领一组;「全部案卷」四组都回来", async () => {
+    it("「我认领的」只留我认领与待定两组;「全部案卷」四组都回来", async () => {
       renderPage();
       await screen.findByText("陆晚晴");
       const scope = screen.getByTestId("queue-scope");
@@ -628,7 +642,9 @@ describe("审判队列", () => {
       fireEvent.click(mine);
       expect(mine).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByTestId("queue-group-mine")).toBeInTheDocument();
-      for (const g of ["unclaimed", "others", "deferred"]) expect(screen.queryByTestId(`queue-group-${g}`)).toBeNull();
+      // v4 第四批:待定仍归本人,算进「我手上」。
+      expect(screen.getByTestId("queue-group-deferred")).toBeInTheDocument();
+      for (const g of ["unclaimed", "others"]) expect(screen.queryByTestId(`queue-group-${g}`)).toBeNull();
       expect(screen.queryByText("陆晚晴")).toBeNull();
       fireEvent.click(all);
       expect(await screen.findByText("陆晚晴")).toBeInTheDocument();

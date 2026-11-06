@@ -2,7 +2,7 @@
 
 import { localName } from "@soulledger/core/domain/localName";
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { use, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { use, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -53,6 +53,7 @@ import {
   VerdictKeyContent,
 } from "@/src/components/judgment/JudgmentDesk";
 import { Seal } from "@/src/components/plaque/Seal";
+import { VerdictDocument } from "@/src/components/judgment/VerdictDocument";
 import {
   CivMotif,
   JudgmentConfirmLayer,
@@ -87,10 +88,20 @@ import {
   placementFromDraft,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
-import { useArchiveJudgment, useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious, useNegativeConfessions, useUnarchiveJudgment, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
+import { useArchiveJudgment, useCaseAttachments, useDeferJudgment, useJudgmentNextAfter, useJudgmentPrevious, useNegativeConfessions, useUnarchiveJudgment, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { OwnerOrgField } from "@/src/components/organizations/OwnerOrgField";
-import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { DeferDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import {
+  EMPTY_REASONS,
+  RejectReasonPanel,
+  isIncurable,
+  reasonPayload,
+  reasonsReady,
+  reasonsShown,
+  type ReasonDraft,
+} from "@/src/components/judgment/RejectReasonPanel";
+import { useShellCommands, type ShellCommand } from "@/src/lib/shellCommands";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { hasRebirth } from "@/src/lib/hasRebirth";
@@ -186,6 +197,13 @@ const VERDICT_LIFT = "-translate-y-1.5 shadow-raised";
 
 const NO_LIVES: Reincarnation[] = [];
 
+/** 埃及称心的案子,裁决键用天平的说法(规范 v4 S06 `desk.eg.*`);「待定」在称心里就是天平摇摆。 */
+const WEIGHED_LABEL: Partial<Record<VerdictMember, string>> = {
+  PASSED: "desk.eg.pass",
+  FAILED: "desk.eg.fail",
+  PURGATORY: "desk.eg.waver",
+};
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -212,6 +230,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [stamp, setStamp] = useState(0);
   const [planDraft, setPlanDraft] = useState<ChangesDraft>(EMPTY_DRAFT);
   const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
+  /** v4 S10:「不过」的理由与希腊落印的文书 / 可医标记,在盖印确认层第 1 步里选。 */
+  const [reasonDraft, setReasonDraft] = useState<ReasonDraft>(EMPTY_REASONS);
+  /** 放进待定的理由框(v4 D5:仍必填)。S 键、进度条上的按钮、⌘K 的「放进待定分组」都开它。 */
+  const [deferAsking, setDeferAsking] = useState(false);
   /** v3 审判台的三种样子:聚焦(默认)、全案(F)、盖印确认层(盖在两者之上)。 */
   const [view, setView] = useState<"focus" | "case">("focus");
   const [confirming, setConfirming] = useState(false);
@@ -333,6 +355,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         case "weighing":
           showToast(t(`judgment.weighing.errors.${refusal.code}`), "error");
           return;
+        case "fail_reason":
+          // 理由面板发出前已拦;到这里是并发或规则变了。译好的一句,层留着让人改。
+          showToast(t(`judgment.fail_reason_errors.${refusal.code}`), "error");
+          return;
         case "not_concludable":
           // 候审未到(枉死城 / 木乃伊 / 到不了殿 / 未渡河 / 还在城隍那里):与认领的拒绝同一组码、同一句译文。
           queryClient.invalidateQueries({ queryKey: judgmentKeys.detail(id) }); // 规则在服务端:重取 `conclude_refusal`,键就灰了
@@ -387,6 +413,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   const isAmendment = judgment?.kind === "AMENDMENT" && !!judgment?.amends_plan_id;
   const isOriginal = (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
+  const civ = judgment?.civilization ?? "";
+  /** 理由面板只给原审(后端只在原审要求理由,`fail_reasons.check(required=…)`)。 */
+  const reasonsPanel = isOriginal && reasonsShown(civ, selectedVerdict);
+  const reasonsOk = !isOriginal || reasonsReady(civ, selectedVerdict, reasonDraft);
+  const incurable = isOriginal && isIncurable(civ, selectedVerdict, reasonDraft);
   const myTenant = user?.tenant?.code ?? null;
   const soulHome = soulData?.home_tenant?.code ?? soulData?.tenant_code ?? null;
   /* 开联审(§2.1):原属的 ORIGINAL 审判,持 cross_judgment.create;按钮只在未结案的结案区里。服务端再判一次。 */
@@ -421,6 +452,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       showToast(t("judgment.detail.select_verdict"), "error");
       return;
     }
+    // v4 S10:原审的理由没选够就不发(后端同一条,400 fail_reason_required 等)。
+    if (!reasonsOk) {
+      showToast(t("judgment.fail_reason_errors.fail_reason_required"), "error");
+      return;
+    }
     // 加减项审判(情况 1):改动随裁决一起交,系统生成一条请求给原审判官;没改动就不带(不生成请求)。
     const planChanges = amendmentChanges();
     if (planChanges === null) return;
@@ -430,7 +466,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       create_workflow: withWorkflow,
       ...(withWorkflow && skipOrders.size ? { skip_node_orders: [...skipOrders].map(Number) } : {}),
       ...(planChanges ? { plan_changes: planChanges } : {}),
-      ...(isOriginal ? placementFor(placement, selectedVerdict) : {}),
+      // 不可医者永罚于塔尔塔罗斯(D7):不带去处、年数、永久与否,由服务端落到塔尔塔罗斯。
+      ...(isOriginal && !incurable ? placementFor(placement, selectedVerdict) : {}),
+      ...(isOriginal ? reasonPayload(civ, selectedVerdict, reasonDraft) : {}),
     });
   }
 
@@ -531,6 +569,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       ),
       "mod+Enter": () => {
         if (!canExecute || atCityGod || concludeHeld || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
+        if (confirming && !reasonsOk) return; // 理由没选够:「不过 · 落印」是灰的,⌘⏎ 同样不接
         if (confirming && withWorkflow && !noPick && confirmStep === 1) setConfirmStep(2);
         else if (confirming) handleConclude();
         else openConfirm();
@@ -549,6 +588,54 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     },
     !!judgment && !confirming
   );
+
+  /* 放进待定(v4 S06 / D5):S、进度条上的按钮、⌘K 都开同一个理由框;放好就换下一件(J 那一条链接),
+     「撤回」在判栏顶上的待定条与队列的待定分组里。别人认领、城隍初审中、已在待定的不给。 */
+  const defer = useDeferJudgment();
+  const canDefer = deskOpen && canEditCase && !atCityGod && !judgment?.deferred_at;
+  useHotkeys({ s: () => setDeferAsking(true) }, canDefer && !deferAsking && !confirming);
+
+  /* ⌘K 的判决类指令(v4 S02):只对当前这一件。「通过」与点键一样进盖印确认层(落印在层里);「不过」进层先选理由。
+     处理函数每次渲染都换,所以经 ref 调最新的那一个,登记的列表只随文字与可用与否变。 */
+  const commandRun = useRef<{ verdict: (member: VerdictMember) => void; defer: () => void }>({ verdict: () => {}, defer: () => {} });
+  commandRun.current = {
+    verdict: (member) => {
+      if (barredBy(member) || !canEditCase || atCityGod || concludeHeld || crossBlocked) return;
+      chooseVerdict(member);
+      openConfirm();
+    },
+    defer: () => setDeferAsking(true),
+  };
+  const commandSoul = soulData?.name || judgment?.soul_name || "";
+  const commandCase = judgment?.case_number ?? "";
+  const verdictCommandsOn = deskOpen && canEditCase && !atCityGod && !concludeHeld && !crossBlocked;
+  const passBarred = !!barredBy("PASSED");
+  const failBarred = !!barredBy("FAILED");
+  const shellCommands = useMemo<ShellCommand[]>(
+    () => [
+      ...(verdictCommandsOn && !passBarred
+        ? [{
+            id: "desk-pass",
+            label: t("cmdk.verdict.pass", { soul: commandSoul }),
+            hint: t("cmdk.verdict.pass_hint", { case: commandCase }),
+            verdict: true,
+            run: () => commandRun.current.verdict("PASSED"),
+          }]
+        : []),
+      ...(verdictCommandsOn && !failBarred
+        ? [{
+            id: "desk-fail",
+            label: t("cmdk.verdict.fail", { soul: commandSoul }),
+            hint: t("cmdk.verdict.fail_hint"),
+            verdict: true,
+            run: () => commandRun.current.verdict("FAILED"),
+          }]
+        : []),
+      ...(canDefer ? [{ id: "desk-defer", label: t("cmdk.defer"), run: () => commandRun.current.defer() }] : []),
+    ],
+    [t, commandSoul, commandCase, verdictCommandsOn, passBarred, failBarred, canDefer],
+  );
+  useShellCommands(shellCommands);
 
   /* K 上一件:与 `next/` 同一队列;打字时不接(useHotkeys)。结案后也能回看上一件。 */
   const { data: previous } = useJudgmentPrevious(id);
@@ -706,7 +793,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const notesShown = isFinal ? judgment.notes : notes;
 
   const showPlacement =
-    !isFinal && isOriginal && canEditCase && !(weighedCase && (selectedVerdict === "PURGATORY" || selectedVerdict === "RETRY"));
+    !isFinal && isOriginal && canEditCase && !incurable && !(weighedCase && (selectedVerdict === "PURGATORY" || selectedVerdict === "RETRY"));
   const offenceField =
     judgment.civilization === "CHINESE" ? <OffenceField judgment={judgment} editable={!isFinal && canEditCase} /> : null;
 
@@ -812,7 +899,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   return (
     <>
-    {!isFinal && <QueueBar judgmentId={judgment.id} canDefer={canExecute && !atCityGod} />}
+    {!isFinal && <QueueBar judgmentId={judgment.id} onDefer={canDefer ? () => setDeferAsking(true) : undefined} />}
     {/* 语料页「插入审判台」带着 ?cite= 进来:确认后引用;并记下这是最后打开的未结案。 */}
     <CiteFromCorpus judgment={judgment} canCite={canEditGrounds} onCite={(statuteId) => citeMutation.mutate(statuteId)} />
     <PrintFrame hall={hall} reference={judgment.case_number} referenceLabel={t("print.case_no")} note={hasAttachments ? t("case.attachments.print_footer") : undefined}>
@@ -1065,7 +1152,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                     })
                   }
                 >
-                  {t("judgment.claim.undefer")}
+                  {t("action.undo")}
                 </Button>
               )}
             </p>
@@ -1141,7 +1228,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               const barred = isFinal ? null : barredBy(member);
               const offScale = barred !== null;
               const marked = isFinal ? isOrdered : isChosen;
-              const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} />;
+              const weighedLabel = weighedCase ? WEIGHED_LABEL[member] : undefined;
+              const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} label={weighedLabel && t(weighedLabel)} />;
               const tile = `${VERDICT_KEY_CLASS} ${fullCase ? VERDICT_KEY_COMPACT : ""} ${
                 marked ? VERDICT_CHOSEN : "bg-[oklch(var(--color-surface-1))]"
               } ${marked && !isFinal && !fullCase ? VERDICT_LIFT : ""}`;
@@ -1186,6 +1274,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {/* 埃及:天平此刻的读数(按本案采信的证据)与结案时托特记下的结果。 */}
           {weighing && !isFinal && (
             <p data-testid="weighing-scale" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">
+              <span className="mb-1 block text-2xs uppercase">{t("desk.reading")}</span>
               {t("judgment.weighing.scale", { weight: String(weighing.heart_weight), counterweight: String(weighing.counterweight) })}
               {" · "}
               {t("judgment.weighing.gives", { verdict: t(`judgment.verdicts.${weighing.weighed_verdict.toLowerCase()}`) })}
@@ -1381,6 +1470,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             panels={materials}
           />
         </div>
+        {/* 判决文书(v4 S06 文书卡 / S15):取最后一次盖印;未结案或裁决不是 通过 / 不过 / 待定 时组件自己不画。
+            去处(`disposition`)这一页没取,组件按裁决写判语。 */}
+        {isFinal && (
+          <section data-testid="desk-doc-card" aria-label={t("desk.doc_card")} className="min-w-0 md:col-span-2 xl:col-span-3 order-last">
+            <JudgmentSectionHead title={t("desk.doc_card")} />
+            <VerdictDocument judgment={judgment} soul={soulData} />
+          </section>
+        )}
         {/* 评议:与资料舱同级的次要信息,默认收起;写不写只看 judgment.read(服务端同一码名),结案后照样可写。 */}
         {/* 案卷附件(W4):评议区上面一节。两个 order-last 按 DOM 顺序排,所以放在评议之前。 */}
         {canReadAttachments && (
@@ -1415,8 +1512,46 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         stampKey={stamp}
         onConfirm={handleConclude}
         refusal={crossRefused && crossId ? <CrossJudgmentBlockedNotice crossId={crossId} cross={cross} /> : undefined}
+        reasons={
+          reasonsPanel && !isFinal ? (
+            <RejectReasonPanel
+              civilization={judgment.civilization}
+              verdict={selectedVerdict}
+              soulName={soulName || ""}
+              value={reasonDraft}
+              onChange={(next) => {
+                concludeMutation.reset();
+                setReasonDraft(next);
+              }}
+              deniedImmortality={soulData?.denied_immortality}
+              neutralInLife={soulData?.neutral_in_life}
+              citedSins={judgment.cited_deadly_sins}
+              falseConfessions={(confessionsHeard?.items ?? []).filter((c) => c.truthful === false)}
+            />
+          ) : undefined
+        }
+        reasonsReady={reasonsOk}
       />
     ) : null}
+    <DeferDialog
+      isOpen={deferAsking}
+      count={1}
+      pending={defer.isPending}
+      onCancel={() => setDeferAsking(false)}
+      onConfirm={(reason) =>
+        defer.mutate(
+          { id: judgment.id, reason },
+          {
+            onSuccess: () => {
+              setDeferAsking(false);
+              showToast(t("desk.deferred_toast"), "success");
+              nextLink.current?.click(); // 直接换下一件(v4 S06);没有下一件就留在这里,判栏顶上出待定条
+            },
+            onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+          }
+        )
+      }
+    />
     </>
   );
 }
