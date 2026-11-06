@@ -201,7 +201,7 @@ def test_cancelling_strikes_the_unserved_stations_as_pardoned(cn, eg, eu, judges
     plan.serve(soul, p, 1)
     plan.arrive(soul, p, 2)
     PushDelivery.objects.all().delete()
-    mod = plan.officer("cn_mod", "MODERATOR", cn)
+    mod = plan.officer("cn_mod", "ADMIN", cn)
     assert officer_client(mod).post(f"{PLANS}{p.pk}/cancel/", {"reason": "复核"}, format="json").status_code == 200
     data = _get(client)
     # 在受的那站 ABORTED(手动结束 → 已完成),未开始的 CANCELLED(划掉,已赦免)。
@@ -251,7 +251,7 @@ def test_a_pardon_reaches_a_soul_whose_civilization_has_no_rebirth(cn, eg, eu, h
     home = eg if home_code == "EG_DUAT" else eu
     soul, p, client = _planned_soul(home, [(cn, plan.stop_realm(cn), 5)], name=f"终局魂{home_code}")
     PushDelivery.objects.all().delete()
-    mod = plan.officer(f"mod_{home_code}", "MODERATOR", home)
+    mod = plan.officer(f"mod_{home_code}", "ADMIN", home)
     assert officer_client(mod).post(f"{PLANS}{p.pk}/cancel/", {"reason": "复核"}, format="json").status_code == 200
     data = _get(client)
     assert (data["state"], data["rebirth_open"]) == ("pardoned", False)

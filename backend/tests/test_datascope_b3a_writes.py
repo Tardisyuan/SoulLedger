@@ -1,6 +1,6 @@
 """数据范围 B3a:灵魂 / 审判 / 机构的写入侧(local-gates/rbac-2026-10-29/datascope-design.md「取值」「执行点 · 对象级」)。
 
-殿主(MODERATOR)坐在机构 A,配「仅本机构」(ORG);B 是 A 的平级。每条反例都同时断言范围内的那一行照常 ——
+殿主(这里借 MODERATOR 这个角色名,码在 `_LEAD_CODES` 里写进库)坐在机构 A,配「仅本机构」(ORG);B 是 A 的平级。每条反例都同时断言范围内的那一行照常 ——
 只断言「范围外被拒」的测试,在一个什么都拒的实现上也是绿的。
 """
 import pytest
@@ -18,9 +18,17 @@ from tests.data_scope_support import org, scope
 pytestmark = pytest.mark.django_db
 
 
-def _grant(prefixes=("soul.", "judgment.", "org."), extra=(("MODERATOR", "soul.delete"),)):
-    """按 ROLE_PERMISSIONS 把这几族码写进库(库里有 Permission 行时 checker 以库为准);殿主另给 soul.delete,
-    好走到回收 / 归档 / 批量回收的范围判定(否则先被码名 403 挡住)。"""
+#: 一位「殿主」在这三族里要的码。2026-11-07 起默认角色里没有殿主了(MODERATOR 只管朋友圈审核,perm/0035、
+#: perm/0036),而这个文件测的是「持这些码的非 ADMIN 被数据范围收窄」—— ADMIN 不走数据范围,换成 ADMIN 就什么都
+#: 测不到。所以码由测试自己写进库:当年殿主的那一份,外加 soul.delete(走到回收 / 归档 / 批量回收的范围判定)
+#: 与 judgment.execute / assign(认领、改派、交接、改 owner_org)。
+_LEAD_CODES = ("soul.read", "soul.create", "soul.update", "soul.delete", "soul.die", "soul.transition", "soul.export",
+               "judgment.read", "judgment.create", "judgment.execute", "judgment.assign", "judgment.export",
+               "org.read", "org.manage")
+
+
+def _grant(prefixes=("soul.", "judgment.", "org."), extra=tuple(("MODERATOR", c) for c in _LEAD_CODES)):
+    """按 ROLE_PERMISSIONS 把这几族码写进库(库里有 Permission 行时 checker 以库为准);殿主的码见 `_LEAD_CODES`。"""
     from apps.perm.cache import invalidate_all_permissions
     from apps.perm.models import DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, Permission, Role, RolePermission
 

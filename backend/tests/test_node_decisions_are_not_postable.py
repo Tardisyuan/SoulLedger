@@ -59,7 +59,11 @@ def world(db):
     b = Tenant.objects.get_or_create(code="WF_B", defaults={"display_name": "WF B"})[0]
     soul_a = Soul.objects.create(name="SoulA", current_state=SoulState.JUDGING, tenant=a)
     soul_b = Soul.objects.create(name="SoulB", current_state=SoulState.JUDGING, tenant=b)
-    # MODERATOR holds workflow.update but is denied workflow.approve/advance.
+    # A designer: holds workflow.update but is denied workflow.approve/advance. MODERATOR designed flows
+    # until 2026-11-07 (perm/0036 took that away), so the designer's codenames are written in here.
+    from tests.perm_support import grant_former_hall_lead_codes
+
+    grant_former_hall_lead_codes()
     mod_b = User.objects.create_user(
         username="wf_mod_b", password="x", role="MODERATOR", tenant=b
     )

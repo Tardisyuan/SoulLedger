@@ -476,7 +476,7 @@ def test_cancelling_at_home_waives_the_rest_and_the_soul_may_apply_for_rebirth(
     plan.serve(soul, p, 1)
     [record] = DispatchRecord.all_objects.filter(soul=soul)
     assert client.get("/api/v1/me/rebirth-applications/").data["reason"] == "sentence_in_progress"
-    mod = plan.officer("cn_mod", "MODERATOR", cn)
+    mod = plan.officer("cn_mod", "ADMIN", cn)
 
     with django_capture_on_commit_callbacks(execute=True):
         response = _cancel(mod, p)
@@ -516,7 +516,7 @@ def test_cancelling_pushes_the_pardon_not_the_completion(cn, eg, enqueued):  # n
     case.conclude("FAILED", "")
     p = SentencePlan.all_objects.get(soul=soul)
     PushDelivery.objects.all().delete()
-    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p, reason="SECRET-REASON").status_code == 200
+    assert _cancel(plan.officer("cn_mod", "ADMIN", cn), p, reason="SECRET-REASON").status_code == 200
     [push] = PushDelivery.objects.filter(kind__startswith="sentence_")
     assert (push.kind, push.title) == ("sentence_pardoned", "剩余刑期已赦免")
     assert "SECRET" not in push.body and "SECRET" not in push.title
@@ -526,7 +526,7 @@ def test_cancelling_while_the_soul_serves_abroad_ends_that_stop_and_brings_it_ho
     soul, p = _two_stops(cn, eg, eu)
     record = DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id)
 
-    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p).status_code == 200
+    assert _cancel(plan.officer("cn_mod", "ADMIN", cn), p).status_code == 200
 
     soul.refresh_from_db()
     record.refresh_from_db()
@@ -543,7 +543,7 @@ def test_cancelling_while_the_soul_serves_abroad_ends_that_stop_and_brings_it_ho
 def test_cancelling_a_held_plan_brings_the_soul_home_from_its_eternal_stop(cn, eg, judges):
     soul, p, _ = plan.at_stop(cn, eg, eternal=True)
     plan.serve(soul, p, 2)
-    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p).status_code == 200
+    assert _cancel(plan.officer("cn_mod", "ADMIN", cn), p).status_code == 200
     soul.refresh_from_db()
     assert plan.node(p, 2).status == "ABORTED" and soul.tenant_id == cn.pk
     assert soul.current_state == SoulState.REINCARNATING
@@ -551,7 +551,7 @@ def test_cancelling_a_held_plan_brings_the_soul_home_from_its_eternal_stop(cn, e
 
 def test_a_terminal_cosmology_settles_when_its_plan_is_cancelled(eu, eg):
     soul, p, _ = plan.at_stop(eu, eg, name="欧魂")
-    assert _cancel(plan.officer("eu_mod", "MODERATOR", eu), p).status_code == 200
+    assert _cancel(plan.officer("eu_mod", "ADMIN", eu), p).status_code == 200
     soul.refresh_from_db()
     assert soul.tenant_id == eu.pk and soul.current_state == SoulState.SETTLED
     assert SoulEvent.objects.get(soul=soul, event_type="SENTENCE_PLAN_CANCELLED").payload["rebirth_open"] is False
@@ -559,7 +559,7 @@ def test_a_terminal_cosmology_settles_when_its_plan_is_cancelled(eu, eg):
 
 def test_cancelling_withdraws_the_pending_request_and_the_open_retrial(cn, eg, eu, judges):
     soul, p, retrial = _reopen_accepted(cn, eg, eu, judges)
-    assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p).status_code == 200
+    assert _cancel(plan.officer("cn_mod", "ADMIN", cn), p).status_code == 200
     retrial.refresh_from_db()
     soul.refresh_from_db()
     assert retrial.is_deleted and soul.tenant_id == cn.pk
@@ -570,14 +570,14 @@ def test_a_cancelled_plan_neither_advances_nor_takes_requests(cn, eg, eu, judges
     from apps.sentence_plan.services import SentencePlanService
 
     soul, p = _two_stops(cn, eg, eu)
-    _cancel(plan.officer("cn_mod", "MODERATOR", cn), p)
+    _cancel(plan.officer("cn_mod", "ADMIN", cn), p)
     before, records = _shape(p), DispatchRecord.all_objects.filter(soul=soul).count()
     SentencePlanService.advance(soul)
     assert _shape(p) == before and DispatchRecord.all_objects.filter(soul=soul).count() == records
     response = _file(judges["eu"], p, kind="AMEND", changes={"add": [{"realm_code": plan.stop_realm(eu)}]})
     assert response.status_code == 409 and response.data["code"] == "plan_closed"
     assert not SentencePlanRequest.all_objects.filter(plan=p).exists()
-    assert _cancel(plan.officer("cn_mod2", "MODERATOR", cn), p).data["code"] == "plan_closed"
+    assert _cancel(plan.officer("cn_mod2", "ADMIN", cn), p).data["code"] == "plan_closed"
 
 
 @pytest.mark.allow_uncommitted_audit  # 撤销的 AuditLog 由服务直接写(不经 on_commit 信号),「不存在」不是空断言
@@ -585,10 +585,10 @@ def test_cancel_refusals_write_nothing(cn, eg, eu, judges):
     soul, p = _two_stops(cn, eg, eu)
     before = _shape(p)
     url = f"{PLANS}{p.pk}/cancel/"
-    # 理由必填;JUDGE 不持有 sentence_plan.cancel;执行地的 MODERATOR 不是原属。
-    assert _c(plan.officer("cn_mod", "MODERATOR", cn)).post(url, {"reason": ""}, format="json").status_code == 400
+    # 理由必填;JUDGE 不持有 sentence_plan.cancel;执行地的殿管理员不是原属。
+    assert _c(plan.officer("cn_mod", "ADMIN", cn)).post(url, {"reason": ""}, format="json").status_code == 400
     assert _c(judges["cn"]).post(url, {"reason": "x"}, format="json").status_code == 403
-    response = _c(plan.officer("eg_mod", "MODERATOR", eg)).post(url, {"reason": "x"}, format="json")
+    response = _c(plan.officer("eg_mod", "ADMIN", eg)).post(url, {"reason": "x"}, format="json")
     assert response.status_code == 403 and response.data["code"] == "not_home"
     p.refresh_from_db()
     soul.refresh_from_db()
@@ -603,7 +603,7 @@ def test_an_open_case_blocks_the_cancel_like_it_blocks_completion(cn, eg, eu, ju
     soul, p = _two_stops(cn, eg, eu)
     case = _open_amendment(judges["eg"], soul)
     before = _shape(p)
-    response = _cancel(plan.officer("cn_mod", "MODERATOR", cn), p)
+    response = _cancel(plan.officer("cn_mod", "ADMIN", cn), p)
     assert response.status_code == 409 and response.data["code"] == "open_judgment"
     assert response.data["open_judgment_ids"] == [str(case.pk)]
     p.refresh_from_db()
@@ -630,7 +630,7 @@ def test_the_service_itself_refuses_a_blank_reason(cn, eg):
 def test_a_finished_plan_cannot_be_cancelled(cn, judges):
     soul, p = plan.planned(cn)
     plan.serve(soul, p, 1)
-    response = _c(plan.officer("cn_mod", "MODERATOR", cn)).post(f"{PLANS}{p.pk}/cancel/", {"reason": "x"}, format="json")
+    response = _c(plan.officer("cn_mod", "ADMIN", cn)).post(f"{PLANS}{p.pk}/cancel/", {"reason": "x"}, format="json")
     assert response.status_code == 409 and response.data["code"] == "plan_closed"
     p.refresh_from_db()
     assert p.status == "COMPLETED" and p.cancel_reason == ""

@@ -39,8 +39,8 @@ def w(db):
     eu = Tenant.objects.get_or_create(code="EU_HEAVEN_HELL", defaults={"display_name": "天堂地狱"})[0]
     return {
         "cn": cn, "eu": eu,
-        "cn_mod": User.objects.create_user(username="hc_cn_mod", password="x", role="MODERATOR", tenant=cn),
-        "eu_mod": User.objects.create_user(username="hc_eu_mod", password="x", role="MODERATOR", tenant=eu),
+        "cn_mod": User.objects.create_user(username="hc_cn_mod", password="x", role="ADMIN", tenant=cn),
+        "eu_mod": User.objects.create_user(username="hc_eu_mod", password="x", role="ADMIN", tenant=eu),
         "soul": Soul.objects.create(name="沈青梧", current_state=SoulState.JUDGING, tenant=cn),
     }
 

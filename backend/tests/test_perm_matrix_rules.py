@@ -44,6 +44,12 @@ def world(db):
         c: Permission.objects.get_or_create(codename=c, defaults={"name": c, "category": "soul"})[0]
         for c in CODENAMES
     }
+    # MODERATOR designed flows until 2026-11-07 (it held workflow.create / update); perm/0036 took that
+    # away. approve / advance are refused by capability — to a role holding a design codename — so the
+    # rules below are exercised on a MODERATOR that still holds workflow.update, the shape they were
+    # written against. user.manage stays refused by name regardless.
+    update = Permission.objects.get_or_create(codename="workflow.update", defaults={"name": "x", "category": "workflow"})[0]
+    RolePermission.objects.get_or_create(role=Role.objects.get(name="MODERATOR"), permission=update)
     admin = User.objects.create_user(username="rules_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     yield {"tenant": tenant, "perms": perms, "admin": admin, "client": _client(admin)}
     invalidate_all_permissions()

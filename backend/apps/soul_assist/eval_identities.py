@@ -2,7 +2,8 @@
 
 只有 `ensure()` 会写 `AssistConfig.eval_soul_account` / `eval_officer`:PATCH 不认这两个字段,
 所以「评测身份」只可能是本模块造的 —— 管理员不能把真灵魂或 ADMIN 指成评测身份。
-两个身份都是**不可用密码**(从不登录);官员是 MODERATOR(有收件箱与派发权限,四个官员工具都能演练),绝不是 ADMIN。
+两个身份都是**不可用密码**(从不登录);官员是 MODERATOR,绝不是 ADMIN。2026-11-07 起 MODERATOR 只管朋友圈审核,四个官员工具里只剩
+`my_permissions` 能演练(队列、待审批、收件箱三条会答 permission_denied)—— 换哪个角色待定。
 """
 from django.db import transaction
 

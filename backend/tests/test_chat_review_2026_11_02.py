@@ -40,7 +40,7 @@ def _quiet_cache():
     cache.clear()
 
 
-def _officer(tenant, username, role="MODERATOR", display_name=""):
+def _officer(tenant, username, role="ADMIN", display_name=""):
     return User.objects.create_user(username=username, password="x", role=role, tenant=tenant,
                                     display_name=display_name)
 

@@ -5,9 +5,10 @@ import type { OfficerAssistScreen } from "../api/officer-assist";
 /**
  * Suggested questions, role × page — canvas 「灵魂簿 官员端 · 问一问」 1a, with the
  * corrections sent to Design: 「调度」 is dispatch (escort / transfer), the
- * scheduler is ADMIN-only, GUARDIAN has no hall inbox, MODERATOR can escalate
- * workflows and approve / execute dispatches but not approve / advance
- * workflows or manage users, JUDGE can approve / advance but not escalate.
+ * scheduler is ADMIN-only, GUARDIAN has no hall inbox, JUDGE can approve /
+ * advance but not escalate. MODERATOR is the circle moderator since 2026-11-07
+ * (user decision): it reviews the soul circle and nothing else — no cases, flows,
+ * dispatches or letters — so it has one pair, about that, on every page.
  *
  * In code, not in the message bundles, for the soul App's reason: a suggestion
  * is sent verbatim as the question, so it is in the language the server
@@ -39,12 +40,7 @@ const ZH: Table = {
     other: ["这一页是做什么的？", "这里的改动会写入审计吗？"],
   },
   MODERATOR: {
-    judgment: ["本殿待审有多少件？", "我能把案子改派给谁？"],
-    workflow: ["为什么我点不了审批？", "卡住的流程我能越级推进吗？"],
-    dispatch: ["待我批准的调拨有几件？", "批准和执行有什么区别？"],
-    "soul-inbox": ["本殿有几封待回复？", "回复会署谁的名？"],
-    "sentence-requests": ["本殿待处理的请求有几件？", "为什么我不能批准？"],
-    other: ["为什么我不能管理用户？", "这一页我能做什么？"],
+    other: ["被举报的帖子怎么处理？", "为什么我看不到审判和流程？"],
   },
   JUDGE: {
     judgment: ["我的队列有多少？", "为什么我不能结案？"],
@@ -75,12 +71,7 @@ const EN: Table = {
     other: ["What is this page for?", "Are changes made here written to the audit log?"],
   },
   MODERATOR: {
-    judgment: ["How many cases await judgment in this hall?", "Who can I reassign a case to?"],
-    workflow: ["Why can't I approve?", "Can I escalate a stuck workflow?"],
-    dispatch: ["How many dispatches are waiting for my approval?", "What is the difference between approving and executing?"],
-    "soul-inbox": ["How many letters in this hall await a reply?", "Whose name does a reply go out under?"],
-    "sentence-requests": ["How many requests are pending in this hall?", "Why can't I approve?"],
-    other: ["Why can't I manage users?", "What can I do on this page?"],
+    other: ["How do I handle a reported post?", "Why can't I see judgments or workflows?"],
   },
   JUDGE: {
     judgment: ["How many are in my queue?", "Why can't I close the case?"],

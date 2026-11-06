@@ -17,7 +17,7 @@ export const SESSIONS_PATH = "/audit/sessions";
  * 权限变更与统计同列表一样是 `audit.read`(第三十七批:版主也看统计)。
  * The login-log tab is ADMIN-only because `LoginLogViewSet` is
  * (`IsAdminPermission`, backend/apps/authentication/views.py) while the audit
- * log itself is `audit.read` (ADMIN and MODERATOR) — a MODERATOR sees one tab.
+ * log itself is `audit.read` (ADMIN by default; MODERATOR until 2026-11-07) — a non-ADMIN holder sees one tab.
  * 「在线会话」is `session.manage` (2026-10-29: ADMIN by default, grantable in the matrix).
  */
 export function AuditTabs() {

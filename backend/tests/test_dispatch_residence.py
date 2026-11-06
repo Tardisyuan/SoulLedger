@@ -236,7 +236,7 @@ def test_serving_the_stop_returns_the_soul_and_completes_the_plan(cn, eg):
 def test_the_disposition_endpoint_serves_the_stop(cn, eg):
     soul, p, _ = plan.at_stop(cn, eg)
     stop = _node(p, 2)
-    officer = _officer("eg_mod", "MODERATOR", eg)
+    officer = _officer("eg_mod", "ADMIN", eg)
 
     client = officer_client(officer)
     response = client.post(f"/api/v1/disposition/{stop.disposition_id}/execute/", {}, format="json")
@@ -308,7 +308,7 @@ def test_ending_an_eternal_stop_by_hand_aborts_it_and_the_plan_goes_on(cn, eg):
     soul, p, record = plan.at_stop(cn, eg, eternal=True)
     plan.serve(soul, p, 2)
 
-    response = _return(_officer("cn_mod", "MODERATOR", cn), record)
+    response = _return(_officer("cn_mod", "ADMIN", cn), record)
 
     assert response.status_code == 200, response.data
     soul.refresh_from_db()
@@ -322,7 +322,7 @@ def test_ending_an_active_stop_by_hand_aborts_it_and_the_next_stop_is_dispatched
     plan.serve(soul, p, 1)
     record = plan.arrive(soul, p, 2)
 
-    assert _return(_officer("cn_mod", "MODERATOR", cn), record).status_code == 200
+    assert _return(_officer("cn_mod", "ADMIN", cn), record).status_code == 200
 
     soul.refresh_from_db()
     assert _node(p, 2).status == "ABORTED" and _node(p, 3).status == "DISPATCHING"
@@ -341,7 +341,7 @@ def test_a_refused_stop_goes_back_to_pending_and_the_home_judges_are_told(cn, eg
     [record] = plan.records(soul)
 
     with django_capture_on_commit_callbacks(execute=True):
-        response = officer_client(_officer("eg_mod", "MODERATOR", eg)).post(
+        response = officer_client(_officer("eg_mod", "ADMIN", eg)).post(
             f"/api/v1/dispatch/records/{record.pk}/reject/", {"reason": "不收"}, format="json")
 
     assert response.status_code == 200, response.data
@@ -366,7 +366,7 @@ def test_a_cancelled_stop_goes_back_to_pending_too(cn, eg):
 
 def test_a_manual_dispatch_is_refused_while_a_plan_is_in_progress(cn, eg):
     soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
-    mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    mod = officer_client(_officer("cn_mod", "ADMIN", cn))
     body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动调拨：灵魂需移送目标文明受审，理由写足二十字"}
 
     response = mod.post("/api/v1/dispatch/records/", body, format="json")
@@ -377,7 +377,7 @@ def test_a_manual_dispatch_is_refused_while_a_plan_is_in_progress(cn, eg):
 
 def test_a_soul_without_a_plan_can_still_be_dispatched_by_hand(cn, eg):
     soul = Soul.objects.create(name="无计划", tenant=cn, current_state=SoulState.DISPOSED)
-    mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    mod = officer_client(_officer("cn_mod", "ADMIN", cn))
     body = {"source_tenant": cn.pk, "target_tenant": eg.pk, "soul": str(soul.pk), "reason": "手动调拨：灵魂需移送目标文明受审，理由写足二十字"}
     assert mod.post("/api/v1/dispatch/records/", body, format="json").status_code == 201
 
@@ -392,7 +392,7 @@ def _return(user, record, reason="提前结束"):
 
 def test_the_home_tenant_can_end_the_residence(cn, eg):
     soul, record = _residing(cn, eg)
-    home_mod = _officer("cn_mod", "MODERATOR", cn)
+    home_mod = _officer("cn_mod", "ADMIN", cn)
 
     response = _return(home_mod, record)
 
@@ -408,7 +408,7 @@ def test_the_home_tenant_can_end_the_residence(cn, eg):
 
 def test_the_residence_tenant_cannot_send_the_soul_home_by_hand(cn, eg):
     soul, record = _residing(cn, eg)
-    response = _return(_officer("eg_mod", "MODERATOR", eg), record)
+    response = _return(_officer("eg_mod", "ADMIN", eg), record)
     assert response.status_code == 403
     soul.refresh_from_db()
     assert soul.tenant_id == eg.pk and _returned_events(soul) == []
@@ -416,7 +416,7 @@ def test_the_residence_tenant_cannot_send_the_soul_home_by_hand(cn, eg):
 
 def test_an_uninvolved_tenant_cannot_see_the_residence(cn, eg, eu):
     soul, record = _residing(cn, eg)
-    assert _return(_officer("eu_mod", "MODERATOR", eu), record).status_code == 404
+    assert _return(_officer("eu_mod", "ADMIN", eu), record).status_code == 404
     soul.refresh_from_db()
     assert soul.tenant_id == eg.pk
 
@@ -439,14 +439,14 @@ def test_the_global_admin_can_end_the_residence_and_another_halls_admin_cannot(c
 
 def test_manual_return_needs_a_reason(cn, eg):
     soul, record = _residing(cn, eg)
-    assert _return(_officer("cn_mod", "MODERATOR", cn), record, reason=None).status_code == 400
+    assert _return(_officer("cn_mod", "ADMIN", cn), record, reason=None).status_code == 400
     soul.refresh_from_db()
     assert soul.tenant_id == eg.pk
 
 
 def test_a_finished_residence_cannot_be_ended_twice(cn, eg):
     soul, record = _residing(cn, eg)
-    home_mod = _officer("cn_mod", "MODERATOR", cn)
+    home_mod = _officer("cn_mod", "ADMIN", cn)
     assert _return(home_mod, record).status_code == 200
     assert _return(home_mod, record).status_code == 409
     assert len(_returned_events(soul)) == 1
@@ -513,7 +513,7 @@ def test_manual_return_with_an_open_judgment_is_409_with_a_code(cn, eg):
     soul, record = _residing(cn, eg)
     case = _open_judgment(soul, eg)
 
-    response = _return(_officer("cn_mod", "MODERATOR", cn), record)
+    response = _return(_officer("cn_mod", "ADMIN", cn), record)
 
     assert response.status_code == 409, response.data
     assert response.data["code"] == "open_judgment"
@@ -539,7 +539,7 @@ def test_without_a_plan_withdrawing_the_blocking_judgment_no_longer_returns_the_
     case.delete_or_raise()
     soul.refresh_from_db()
     assert soul.is_residing and _returned_events(soul) == []
-    assert _return(_officer("cn_mod", "MODERATOR", cn), record).status_code == 200
+    assert _return(_officer("cn_mod", "ADMIN", cn), record).status_code == 200
 
 
 # ── 刑满暂留(WAITING,Q7):受刑计划里被未结案审判拦下的回归 ─────────────────
@@ -618,7 +618,7 @@ def test_a_waiting_soul_can_be_ended_by_hand_once_nothing_is_open(cn, eg):
     soul, p, record = plan.at_stop(cn, eg)
     case = _open_judgment(soul, eg)
     plan.serve(soul, p, 2)
-    mod = _officer("cn_mod", "MODERATOR", cn)
+    mod = _officer("cn_mod", "ADMIN", cn)
     assert _return(mod, record).status_code == 409
     from apps.judgment.models import Judgment
     # 绕开撤案(撤案会推进并自动回归):只剩手动结束这一条路,节点记 ABORTED。
@@ -640,7 +640,7 @@ def test_while_residing_the_home_tenant_reads_the_soul_and_an_uninvolved_tenant_
     assert detail.status_code == 200
     assert detail.data["is_residing"] is True and detail.data["tenant_code"] == "EG_DUAT"
     assert officer_client(_officer("eu_judge", "JUDGE", eu)).get(url).status_code == 404
-    home_mod = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    home_mod = officer_client(_officer("cn_mod", "ADMIN", cn))
     assert home_mod.get(f"/api/v1/dispatch/records/{record.pk}/").status_code == 200
 
 
@@ -752,9 +752,10 @@ def test_the_pending_queue_does_not_offer_the_home_tenant_a_residence_case(cn, e
 
 
 def test_the_home_tenant_cannot_write_to_the_residing_soul_or_its_residence_rows(cn, eg, away):
-    """MODERATOR 持有下面每个动作的权限码,所以 404 来自租户隔离,不是 403 权限码。"""
+    """殿管理员(绑了殿的 ADMIN)持有下面每个动作的权限码、又不跨殿,所以 404 来自租户隔离,不是 403 权限码。
+    (2026-11-07 之前这里是 MODERATOR;它现在只管朋友圈审核。)"""
     soul = away["soul"]
-    home = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    home = officer_client(_officer("cn_mod", "ADMIN", cn))
     writes = [
         ("patch", f"/api/v1/souls/{soul.pk}/", {"name": "改名"}),
         ("post", f"/api/v1/souls/{soul.pk}/die/", {}),
@@ -785,7 +786,7 @@ def test_the_home_tenant_cannot_write_to_the_residing_soul_or_its_residence_rows
 def test_the_home_tenant_cannot_withdraw_a_pending_residence_case(cn, eg):
     soul, _ = _residing(cn, eg)
     case = _open_judgment(soul, eg)
-    home = officer_client(_officer("cn_mod", "MODERATOR", cn))
+    home = officer_client(_officer("cn_mod", "ADMIN", cn))
     assert home.delete(f"/api/v1/judgment/{case.pk}/").status_code == 404
     assert home.post(f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "PASSED"}, format="json").status_code == 404
     case.refresh_from_db()

@@ -74,7 +74,7 @@ def open_hall(client):
 
 
 def moderator(tenant, username):
-    return User.objects.create_user(username=username, password="x", role="MODERATOR", tenant=tenant)
+    return User.objects.create_user(username=username, password="x", role="ADMIN", tenant=tenant)
 
 
 @pytest.fixture

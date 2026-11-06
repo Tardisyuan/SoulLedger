@@ -246,11 +246,11 @@ DEFAULT_PERMISSIONS = [
     ("dispatch.execute", "执行调度", "dispatch"),
     ("dispatch.export", "导出调度", "dispatch"),
     # 调拨是暂居(2026-09-17)。结束暂居 = 灵魂回到原属租户;视图另外要求调用者属于
-    # 原属租户(或 ADMIN)。持有者与 execute 相同:ADMIN、MODERATOR。
+    # 原属租户(或 ADMIN)。持有者与 execute 相同:ADMIN(MODERATOR 2026-11-07 收回,perm/0036)。
     # 与同族其余五条一样不由迁移播种(走本文件 ROLE_PERMISSIONS 的字典路径)。
     ("dispatch.return", "结束暂居", "dispatch"),
     # 撤销受刑计划(docs/ARCHITECTURE-sentence-plan.md §2.5,Q11)。视图另外要求调用者属于
-    # 原属租户(或 ADMIN)。持有者与 dispatch.return 相同:ADMIN、MODERATOR;同样不由迁移播种。
+    # 原属租户(或 ADMIN)。持有者与 dispatch.return 相同:ADMIN;同样不由迁移播种。
     # 归 judgment 族:声明它的 SentencePlanViewSet 的 `permission_codename` 是 "judgment"
     # (读计划是读案子的一部分);单独立一个 sentence_plan 族就是一个没有视图认领的族
     # (tests/test_every_codename_family_is_claimed.py)。
@@ -272,8 +272,8 @@ DEFAULT_PERMISSIONS = [
     # 一整段「改挂过去属于策略变更」。**那句话被它描述的代码反驳** ——
     # `apps/dispatch/views.py::CrossTenantJudgmentViewSet` 就写着
     # `permission_codename = "cross_judgment"`，而且整张 `extra_permissions`
-    # 表都挂在这一族上。持有者是 ADMIN/JUDGE/MODERATOR，与 `dispatch.*` 的
-    # ADMIN/GUARDIAN/MODERATOR 确实不同，那部分事实仍然成立；不成立的是
+    # 表都挂在这一族上。持有者是 ADMIN/JUDGE，与 `dispatch.*` 的
+    # ADMIN/GUARDIAN 确实不同(MODERATOR 两族都在 2026-11-07 收回)，那部分事实仍然成立；不成立的是
     # 「没人声明它」这个前提，而整段论证是架在那个前提上的。
     #
     # `tests/test_every_codename_family_is_claimed.py` 现在把「哪些族被哪个视图
@@ -315,15 +315,15 @@ DEFAULT_PERMISSIONS = [
     ("scheduler.manage", "管理定时任务", "scheduler"),
     # soul_account 权限(灵魂端账号,2026-09-17)。read 看账号链、脱敏联系方式、
     # 待交付列表;manage 开通、重置初始密码、查看一次待交付明文、标记交付、重试发送。
-    # 默认 ADMIN 与 MODERATOR(殿主)持有:两者都是能管本租户灵魂的角色;
+    # 默认 ADMIN 持有(MODERATOR 2026-11-07 起只管朋友圈审核,perm/0036 收回);
     # JUDGE / GUARDIAN / VIEWER 不持有 —— 联系方式是个人信息,待交付明文是登录凭据,
     # 按最小可见。perm 迁移 0022 播种这两行。
     ("soul_account.read", "查看灵魂账号", "soul_account"),
     ("soul_account.manage", "管理灵魂账号", "soul_account"),
     # soul_inbox 权限(殿司收件箱,2026-09-17)。灵魂写给**当前所在**殿司的信,
     # 官员在 Web 后台看与回。read 看会话列表与正文;reply 以殿司名义回复。
-    # 默认 ADMIN 与 MODERATOR(殿主)持有 —— 收件箱是殿司的事务,与 soul_account.*
-    # 同一批人;JUDGE / GUARDIAN / VIEWER 不持有:那是灵魂的私人信件,不按最小可见
+    # 默认 ADMIN 持有 —— 收件箱是殿司的事务,与 soul_account.*
+    # 同一批人(MODERATOR 2026-11-07 收回);JUDGE / GUARDIAN / VIEWER 不持有:那是灵魂的私人信件,不按最小可见
     # 收就等于让每个能登录后台的人读它。perm 迁移 0024 播种这两行。
     ("soul_inbox.read", "查看殿司收件箱", "soul_inbox"),
     ("soul_inbox.reply", "回复殿司收件箱", "soul_inbox"),
@@ -333,8 +333,7 @@ DEFAULT_PERMISSIONS = [
     # 既没有人要,也把私密内容多摊给了一个角色)。族名是 `social`,与官员侧那五个
     # 社交 viewset 无关 —— 它们在 apps/perm/test_codename_coverage.py 的
     # EXEMPT_VIEWS 里,仍然不声明任何码名。
-    # 默认 ADMIN 与 MODERATOR(殿主)持有,与 soul_account.* 同一批人:能管本租户
-    # 灵魂的角色。JUDGE / GUARDIAN / VIEWER 不持有 —— 被举报的内容里会有
+    # 默认 ADMIN 与 MODERATOR(朋友圈巡察)持有 —— 2026-11-07 起这是巡察唯一的业务码。JUDGE / GUARDIAN / VIEWER 不持有 —— 被举报的内容里会有
     # PRIVATE 与待审的帖子,按最小可见收。perm 迁移 0023 播种这一行。
     ("social.moderate", "审核灵魂朋友圈", "social"),
     # souls.mfa_reset(灵魂端两步验证,2026-10-11):官员替灵魂关闭两步验证(丢了手机又没有恢复码时)。
@@ -413,60 +412,24 @@ ROLE_PERMISSIONS = {
         "org.read",
         "notification.read", "menu.read",
     ],
-    # Realm lead: configures the approval flows for their own civilization.
+    # 朋友圈巡察(Circle Moderator):**只管灵魂朋友圈的审核**(用户 2026-11-07)。此前这一格是「殿主」——
+    # 设计本殿流程、调拨、管灵魂账号与收件箱、读审计、开案;那些全部收回(perm/0035 收 judgment.execute /
+    # assign,perm/0036 收其余),殿里的事归 ADMIN(殿管理员)与 JUDGE / GUARDIAN。逐项理由:
     #
-    # Scoping comes from the tenant, not the role — every user belongs to
-    # exactly one tenant and non-ADMIN querysets are filtered to it, so one
-    # role covers all four civilizations without any of its holders seeing
-    # each other's. That is also why this must never be ADMIN: ADMIN bypasses
-    # tenant isolation outright, so a "lead of Diyu" given ADMIN would quietly
-    # be a lead of everywhere.
+    #   social.moderate   这个角色的全部工作:举报队列、处置内容、敏感词、禁言。审核后台
+    #                     (apps/social/moderation_views.py)每个动作只认这一个码,禁言选人走它自己的
+    #                     `mutes/souls/`,不需要 soul.read;作者、文明名随审核接口一起返回。
+    #   dashboard.read    登录后落在 /dashboard,待办条里「朋友圈待审」那一格就在那里(TodoStrip 的
+    #                     canModerate);没有它首页的概览请求一律 403。只读、只是本殿的计数。
+    #   notification.read 自己的通知(举报进队列等提醒落在这里)。
+    #   menu.read         导航本身,五个角色都持有(见目录里 menu.read 那条)。
     #
-    # workflow.approve, workflow.advance and user.manage are not merely left
-    # out here: they are server rules — user.manage by name
-    # (apps/perm/checker.py::ROLE_FORBIDDEN_CODENAMES), approve / advance by
-    # capability since 2026-10-29 (a role holding workflow.create / update may
-    # not hold them, whatever it is called: WORKFLOW_DESIGN_CODENAMES) — denied
-    # whatever the grant table says, and refused by the matrix, assign, copy and import.
-    #
-    # Deliberately no workflow.approve / workflow.advance. The ten courts exist
-    # to divide the decision; a lead who both designs the flow and approves at
-    # any stage of it makes that division decorative. workflow.escalate is the
-    # sanctioned way past a stalled flow instead — it demands a written reason
-    # and always leaves an audit record naming who overrode which node.
-    #
-    # Also no user.manage: UserViewSet carries no tenant mixin, so that
-    # codename grants edit access to every user in every tenant with no bound
-    # on the role being assigned — a realm lead holding it could promote
-    # themselves to ADMIN and step straight out of the isolation that defines
-    # this role. No system.settings or menu.manage either: those are platform
-    # concerns, not realm ones. And no soul.delete while deletion semantics are
-    # still unsettled.
+    # 「问一问」不挂码名(apps/soul_assist/views.py 只要 TenantPermission),官员工具按各自的码再过一遍,
+    # 巡察只拿得到 my_permissions。仍然是租户角色、不能是 ADMIN:ADMIN 绕过租户隔离,一位「东土的巡察」
+    # 给了 ADMIN 就审得到每一殿。user.manage 仍是服务端禁项(apps/perm/checker.py::ROLE_FORBIDDEN_CODENAMES)。
     "MODERATOR": [
-        "workflow.read", "workflow.create", "workflow.update", "workflow.delete",
-        "workflow.escalate", "workflow.export",
-        "soul.read", "soul.create", "soul.update", "soul.die", "soul.transition", "soul.export",
-        # 2026-11-07(用户决定):朋友圈巡察不再持有 judgment.execute / judgment.assign —— 不办案、不改派、
-        # 不越过认领结案。已入库的授权由 perm/0035 收回。
-        "judgment.read", "judgment.create", "judgment.export",
-        "city_god.read", "city_god.manage", "city_god.execute",
-        "tudi.read", "tudi.manage", "tudi.register",
-        "wangsi.read", "wangsi.manage", "wangsi.execute",
-        "capture.read", "capture.issue", "capture.execute",
-        "disposition.read", "disposition.execute", "disposition.export",
-        "reincarnation.read", "reincarnation.manage",
-        "reincarnation.reborn",
-        "ledger.read", "ledger.manage", "ledger.calculate", "ledger.export",
-        "dispatch.read", "dispatch.manage",
-        "dispatch.approve", "dispatch.reject", "dispatch.execute", "dispatch.return", "dispatch.export",
-        "sentence_plan.cancel",
-        "cross_judgment.read", "cross_judgment.create", "cross_judgment.export",
-        "realms.read", "actors.read", "dashboard.read",
-        "org.read", "org.manage",
-        "audit.read", "audit.export", "notification.read", "menu.read",
-        "soul_account.read", "soul_account.manage",
-        "soul_inbox.read", "soul_inbox.reply",
         "social.moderate",
+        "dashboard.read", "notification.read", "menu.read",
     ],
     "VIEWER": [
         "soul.read", "soul.export", "capture.read", "reincarnation.read",

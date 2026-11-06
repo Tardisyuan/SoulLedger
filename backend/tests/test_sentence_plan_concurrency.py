@@ -274,7 +274,7 @@ def _cancel_while_advancing(cn, eg, run):
     soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
     home = plan.node(p, 1)
     executor = _client(plan.officer("pg6_exec", "ADMIN", cn))
-    canceller = _client(plan.officer("pg6_mod", "MODERATOR", cn))
+    canceller = _client(plan.officer("pg6_mod", "ADMIN", cn))
     results = run({
         "serve": _execute(executor, home.disposition_id),
         "cancel": lambda: canceller.post(f"{PLANS}{p.pk}/cancel/", {"reason": "撤"}, format="json").status_code,
@@ -493,7 +493,7 @@ def test_two_officers_retrying_one_refused_dispatch_at_once_send_it_once():
     soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
     plan.serve(soul, p, 1)
     DispatchService.reject(DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id),
-                           plan.officer("pg8_eg", "MODERATOR", eg), "不收")
+                           plan.officer("pg8_eg", "ADMIN", eg), "不收")
     node = plan.node(p, 2)
     url = f"/api/v1/sentence-plans/{p.pk}/nodes/{node.pk}/retry-dispatch/"
     a, b = _client(plan.officer("pg8_a", "JUDGE", cn)), _client(plan.officer("pg8_b", "JUDGE", cn))

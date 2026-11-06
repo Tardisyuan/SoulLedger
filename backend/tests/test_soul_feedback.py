@@ -39,7 +39,7 @@ def _send(client, conversation_id, **body):
 
 
 def _officer(tenant, username="cui"):
-    return User.objects.create_user(username=username, password="x", role="MODERATOR", tenant=tenant)
+    return User.objects.create_user(username=username, password="x", role="ADMIN", tenant=tenant)
 
 
 def _row(api, conversation_id):

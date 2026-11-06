@@ -59,7 +59,7 @@ def test_death_puts_a_diyu_soul_at_the_earth_god_temple_and_no_one_else(cn_tenan
 def test_automatic_moves_only_go_forward_and_officer_moves_go_anywhere(cn_tenant):
     soul = Soul.objects.create(name="丙", tenant=cn_tenant)
     soul.die()
-    lead = sp.officer("st_lead", "MODERATOR", cn_tenant)
+    lead = sp.officer("st_lead", "ADMIN", cn_tenant)
     stations.move(soul, "EIGHTEEN_HELLS", lead)
     # 进殿(酆都城,第十站)在十八层地狱(第十一站)之后到来:不往回拉。
     assert not stations.arrive(soul, Soul.DiyuStation.FENGDU_CITY, via="court")
@@ -71,7 +71,7 @@ def test_automatic_moves_only_go_forward_and_officer_moves_go_anywhere(cn_tenant
 
 
 def test_the_station_endpoint_refuses_the_living_and_other_civilizations(cn_tenant, eu_tenant):
-    lead = sp.officer("st_api", "MODERATOR", cn_tenant)
+    lead = sp.officer("st_api", "ADMIN", cn_tenant)
     client = officer_client(lead)
     alive = Soul.objects.create(name="丁", tenant=cn_tenant)
     res = client.post(f"/api/v1/souls/{alive.pk}/station/", {"station": "YELLOW_SPRINGS_ROAD"}, format="json")
@@ -129,11 +129,11 @@ def test_only_a_diyu_human_rebirth_takes_a_continent(cn_tenant, eu_tenant):
 
 
 def test_birth_continent_is_recorded_only_for_diyu(cn_tenant, eu_tenant):
-    lead = sp.officer("cont_lead", "MODERATOR", cn_tenant)
+    lead = sp.officer("cont_lead", "ADMIN", cn_tenant)
     soul = Soul.objects.create(name="壬", tenant=cn_tenant)
     res = officer_client(lead).patch(f"/api/v1/souls/{soul.pk}/", {"birth_continent": "BEIJULU"}, format="json")
     assert res.status_code == 200 and res.data["birth_continent"] == "BEIJULU"
-    eu_lead = sp.officer("cont_eu", "MODERATOR", eu_tenant)
+    eu_lead = sp.officer("cont_eu", "ADMIN", eu_tenant)
     eu = Soul.objects.create(name="癸", tenant=eu_tenant)
     res = officer_client(eu_lead).patch(f"/api/v1/souls/{eu.pk}/", {"birth_continent": "BEIJULU"}, format="json")
     assert res.status_code == 400 and "birth_continent" in res.data
@@ -242,7 +242,7 @@ def test_a_failed_hand_over_writes_nothing(cn_tenant):
 
 
 def test_capture_api_is_tenant_scoped_and_lists_due_souls(cn_tenant, eu_tenant):
-    lead = sp.officer("cap_lead", "MODERATOR", cn_tenant)
+    lead = sp.officer("cap_lead", "ADMIN", cn_tenant)
     client = officer_client(lead)
     mine, theirs = _due(cn_tenant, name="本殿"), _due(eu_tenant, name="他殿")
     due = client.get(WARRANTS + "due/").data
@@ -307,10 +307,10 @@ def test_only_his_officers_or_a_hall_admin_register_in_his_name(cn_tenant):
 
 
 def test_tudi_gods_are_diyu_only_and_their_city_god_must_be_of_the_hall(cn_tenant, eu_tenant):
-    eu_admin = sp.officer("tudi_eu", "MODERATOR", eu_tenant)
+    eu_admin = sp.officer("tudi_eu", "ADMIN", eu_tenant)
     res = officer_client(eu_admin).post(TUDI, {"name": "x"}, format="json")
     assert (res.status_code, res.data["code"]) == (400, "tudi_gods_diyu_only")
-    lead = sp.officer("tudi_lead", "MODERATOR", cn_tenant)
+    lead = sp.officer("tudi_lead", "ADMIN", cn_tenant)
     eu_god = CityGod.objects.create(tenant=eu_tenant, name="他殿城隍")
     res = officer_client(lead).post(TUDI, {"name": "石桥村土地", "city_god": str(eu_god.pk)}, format="json")
     assert res.status_code == 400 and "city_god" in res.data

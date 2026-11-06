@@ -49,9 +49,9 @@ def _refused(cn, eg, *, how="reject", stops=None):
     plan.serve(soul, p, 1)
     record = DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id)
     if how == "reject":
-        DispatchService.reject(record, plan.officer("eg_rej", "MODERATOR", eg), "不收")
+        DispatchService.reject(record, plan.officer("eg_rej", "ADMIN", eg), "不收")
     else:
-        DispatchService.cancel(record, plan.officer("cn_can", "MODERATOR", cn))
+        DispatchService.cancel(record, plan.officer("cn_can", "ADMIN", cn))
     assert plan.node(p, 2).status == "PENDING"
     return soul, p
 

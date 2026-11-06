@@ -190,13 +190,23 @@ def test_copy_from_goes_into_the_callers_hall_or_the_one_the_global_admin_names(
     assert SensitiveWord.objects.filter(tenant=gr, word="禁词").exists()
 
 
-def test_can_end_counts_a_moderator_held_as_an_extra_role(world):
+def test_can_end_counts_workflow_update_held_through_an_extra_role(world):
     from types import SimpleNamespace
 
     from apps.dispatch.services import CrossTenantJudgmentService
 
     judgment = SimpleNamespace(create_user_id=None, initiating_tenant_id=world["cn"].pk)
-    world["cn_judge"].extra_roles = ["MODERATOR"]
+    # A judge who also holds workflow.update through an extra role. That was extra_roles=["MODERATOR"] until
+    # 2026-11-07; MODERATOR no longer designs flows (perm/0036), so the extra role is written in here.
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Permission, Role, RolePermission
+
+    lead = Role.objects.get_or_create(name="FLOW_LEAD", defaults={"display_name": "流程"})[0]
+    update = Permission.objects.get_or_create(codename="workflow.update",
+                                              defaults={"name": "x", "category": "workflow"})[0]
+    RolePermission.objects.get_or_create(role=lead, permission=update)
+    invalidate_all_permissions()
+    world["cn_judge"].extra_roles = ["FLOW_LEAD"]
     assert CrossTenantJudgmentService.can_end(judgment, world["cn_judge"], world["cn"])
     assert not CrossTenantJudgmentService.can_end(judgment, world["eg_judge"], world["eg"])
     assert not CrossTenantJudgmentService.can_end(judgment, world["bound"], world["eg"])

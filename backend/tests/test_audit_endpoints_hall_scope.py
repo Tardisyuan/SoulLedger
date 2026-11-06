@@ -73,10 +73,11 @@ def test_stats_global_admin_counts_every_hall_bound_admin_only_their_own(global_
 
 
 def test_stats_is_open_to_a_moderator_and_counts_only_their_hall(halls):
-    """`stats` follows `audit.read` like the list (2026-10-17): a MODERATOR holds it, so 200 -- with the
-    same hall scoping as the list, so none of EG's rows are counted."""
+    """`stats` follows `audit.read` like the list (2026-10-17): the hall's ADMIN holds it, so 200 -- with the
+    same hall scoping as the list, so none of EG's rows are counted. (A MODERATOR until 2026-11-07, when it
+    lost audit.read, perm/0036.)"""
     cn, _ = halls
-    mod = _client(User.objects.create_user(username="m", password="x", role="MODERATOR", tenant=cn), cn)
+    mod = _client(User.objects.create_user(username="m", password="x", role="ADMIN", tenant=cn), cn)
     res = mod.get(BASE + "stats/")
     assert res.status_code == 200, res.content
     body = res.json()

@@ -40,9 +40,9 @@ def world(db):
     a = Tenant.objects.get_or_create(code="TT_A", defaults={"display_name": "TT A"})[0]
     b = Tenant.objects.get_or_create(code="TT_B", defaults={"display_name": "TT B"})[0]
     c = Tenant.objects.get_or_create(code="TT_C", defaults={"display_name": "TT C"})[0]
-    mod_a = User.objects.create_user(username="cx_mod_a", password="x", role="MODERATOR", tenant=a)
-    mod_b = User.objects.create_user(username="cx_mod_b", password="x", role="MODERATOR", tenant=b)
-    mod_c = User.objects.create_user(username="cx_mod_c", password="x", role="MODERATOR", tenant=c)
+    mod_a = User.objects.create_user(username="cx_mod_a", password="x", role="ADMIN", tenant=a)
+    mod_b = User.objects.create_user(username="cx_mod_b", password="x", role="ADMIN", tenant=b)
+    mod_c = User.objects.create_user(username="cx_mod_c", password="x", role="ADMIN", tenant=c)
     judge_a = User.objects.create_user(username="cx_judge_a", password="x", role="JUDGE", tenant=a)
     soul = Soul.objects.create(name="TravellingSoul", current_state=SoulState.JUDGING, tenant=a)
     record = DispatchRecord.objects.create(
@@ -132,7 +132,7 @@ def test_cancelling_a_plan_dispatch_sends_the_stop_back_to_pending():
     plan.serve(soul, p, 1)
     assert plan.node(p, 2).status == "DISPATCHING"
     record = DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id)
-    officer = plan.officer("cx_cn_mod", "MODERATOR", home)
+    officer = plan.officer("cx_cn_mod", "ADMIN", home)
 
     res = _cancel(_client(officer, home), record)
 

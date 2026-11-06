@@ -47,9 +47,23 @@ def test_the_migration_seeded_both_menus_under_their_directories():
     assert (rebirth.parent.name, rebirth.permission) == ("流程协作", "workflow.read")
 
 
-def test_moderator_sees_both_through_the_codename_and_their_directories(cn_tenant):
-    names = _tree_for("MODERATOR", cn_tenant)
+def test_a_codename_holder_sees_both_through_the_codename_and_their_directories(cn_tenant):
+    """roles 只写了 ADMIN(与 JUDGE);别的角色经「持有 permission 即可见」那扇门看到它们。2026-11-07 之前
+    这扇门由 MODERATOR(殿主)来测;它现在只管朋友圈审核,两个码都不持有 —— 换一个持码的自建角色,
+    巡察本身断言缺席。"""
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Role, RolePermission
+    from tests.perm_support import seeded_grants, seeded_permission
+
+    seeded_grants()
+    desk = Role.objects.get_or_create(name="SOUL_DESK", defaults={"display_name": "灵魂事务"})[0]
+    for codename in ("soul_account.read", "workflow.read"):
+        RolePermission.objects.get_or_create(role=desk, permission=seeded_permission(codename))
+    invalidate_all_permissions()
+    names = _tree_for("SOUL_DESK", cn_tenant)
     assert {"待交付初始密码", "灵魂业务", "转生申请", "流程协作"} <= names
+    circle = _tree_for("MODERATOR", cn_tenant)
+    assert "待交付初始密码" not in circle and "转生申请" not in circle
 
 
 def test_viewer_sees_neither(cn_tenant):

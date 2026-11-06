@@ -17,7 +17,7 @@ questions:
   - "how do I reset an officer's two-step verification"
   - "how do I view the console as another user"
 ---
-"User Management" (sidebar, under "System Settings") needs the user management permission, which by default only administrators hold. A Realm Lead is refused by the server whatever the matrix says; a holder in another role manages only their own hall's people and never sees an administrator account. An administrator bound to a hall also manages only that hall.
+"User Management" (sidebar, under "System Settings") needs the user management permission, which by default only administrators hold. A Circle Moderator is refused by the server whatever the matrix says; a holder in another role manages only their own hall's people and never sees an administrator account. An administrator bound to a hall also manages only that hall.
 The list can be searched by username or email and filtered by role and status, and the unit tree on the left filters by unit (sub-units included); each row shows username, email, role, tenant (the hall) and status. The role column starts with the primary role; chips with a dashed border after it are additional roles.
 - "Create User": username, email, password and role, with an optional name. A hall member who is not an administrator must be placed in one of the hall's units; the hall's root unit is the default.
 - "Edit User": change details, unit and role; passwords are not changed here.

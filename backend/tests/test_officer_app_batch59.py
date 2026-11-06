@@ -23,7 +23,7 @@ def hall(cn_tenant):
     clerk = sp.officer("wangsi_clerk", "JUDGE", cn_tenant)
     god = CityGod.objects.create(tenant=cn_tenant, name="常熟县城隍", regions=["常熟"])
     god.officers.add(clerk)
-    return {"clerk": clerk, "lead": sp.officer("wangsi_lead", "MODERATOR", cn_tenant), "god": god}
+    return {"clerk": clerk, "lead": sp.officer("wangsi_lead", "ADMIN", cn_tenant), "god": god}
 
 
 def _untimely(tenant, name="钱谦益"):

@@ -212,7 +212,8 @@ def test_moving_an_open_case_by_its_passage_needs_judgment_assign(eg_tenant, jud
     from tests.soul_account_support import officer_client
 
     guardian = User.objects.create_user(username="eg_guardian", role="GUARDIAN", tenant=eg_tenant)
-    moderator = User.objects.create_user(username="eg_moderator", role="MODERATOR", tenant=eg_tenant)
+    # The hall's own ADMIN holds judgment.assign (MODERATOR did until 2026-11-07, perm/0035).
+    moderator = User.objects.create_user(username="eg_moderator", role="ADMIN", tenant=eg_tenant)
     soul = _soul(eg_tenant)
     case = soul.die(death_date=date.today() - timedelta(days=200))
     res = officer_client(guardian).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": "NAMELESS"}, format="json")

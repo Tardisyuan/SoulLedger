@@ -2,8 +2,9 @@
 
 Same contract as `test_list_exports_dispatch_disposition_cross.py`: each export is "the list, as
 a file" -- same tenant scope, same filters and search, same codename (`judgment.read` /
-`workflow.read`). Callers are MODERATORs, not ADMIN (tenant-exempt, so it cannot tell a working
-scope from a missing one), and VIEWER, which holds neither codename.
+`workflow.read`). Callers are each hall's own ADMIN -- bound to a hall, so scoped to it (only the
+hall-less ADMIN is tenant-exempt, and that one cannot tell a working scope from a missing one) --
+and VIEWER, which holds neither codename. MODERATOR played the first part until 2026-11-07.
 """
 import csv
 import io
@@ -45,8 +46,8 @@ def _table(response):
 def world(db):
     a = Tenant.objects.get_or_create(code="JX_A", defaults={"display_name": "Hall A"})[0]
     c = Tenant.objects.get_or_create(code="JX_C", defaults={"display_name": "Hall C"})[0]
-    mod_a = User.objects.create_user(username="jx_mod_a", password="x", role="MODERATOR", tenant=a)
-    mod_c = User.objects.create_user(username="jx_mod_c", password="x", role="MODERATOR", tenant=c)
+    mod_a = User.objects.create_user(username="jx_mod_a", password="x", role="ADMIN", tenant=a)
+    mod_c = User.objects.create_user(username="jx_mod_c", password="x", role="ADMIN", tenant=c)
     viewer = User.objects.create_user(username="jx_viewer", password="x", role="VIEWER", tenant=a)
     soul_a = Soul.objects.create(name="=SUM(1,1)", current_state=SoulState.ALIVE, tenant=a)
     soul_a2 = Soul.objects.create(name="Second Soul", current_state=SoulState.ALIVE, tenant=a)

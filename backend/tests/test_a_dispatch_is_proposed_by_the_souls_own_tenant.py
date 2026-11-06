@@ -22,9 +22,10 @@ BD-16 is in the same file because it is the same service: `execute` dropped
 (cancelled from another session between the caller's read and the execute)
 still transferred the soul and returned 200 with the record reading CANCELLED.
 
-Clients are MODERATORs — the role that holds dispatch.manage/approve/execute
-and is not ADMIN — carrying a JWT with `tenant_code`, so `request.tenant` is
-set the way TenantMiddleware sets it in production.
+Clients are each hall's own ADMIN — holds dispatch.manage/approve/execute and,
+bound to a hall, is not tenant-exempt (2026-10-29) — carrying a JWT with
+`tenant_code`, so `request.tenant` is set the way TenantMiddleware sets it in
+production. MODERATOR played this part until 2026-11-07 (perm/0036).
 """
 import pytest
 from django.contrib.auth import get_user_model
@@ -55,8 +56,8 @@ def realms(db):
     eu = Tenant.objects.get_or_create(
         code="EU_HEAVEN_HELL", defaults={"display_name": "European Heaven/Hell"}
     )[0]
-    cn_mod = User.objects.create_user(username="dp_cn_mod", password="x", role="MODERATOR", tenant=cn)
-    eu_mod = User.objects.create_user(username="dp_eu_mod", password="x", role="MODERATOR", tenant=eu)
+    cn_mod = User.objects.create_user(username="dp_cn_mod", password="x", role="ADMIN", tenant=cn)
+    eu_mod = User.objects.create_user(username="dp_eu_mod", password="x", role="ADMIN", tenant=eu)
     cn_admin = User.objects.create_user(username="dp_cn_admin", password="x", role="ADMIN", tenant=None)
     return {
         "cn": cn,

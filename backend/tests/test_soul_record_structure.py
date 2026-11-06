@@ -274,9 +274,9 @@ def test_editing_needs_soul_update_and_the_record_must_belong_to_this_soul(
                             **auth_headers).status_code == 404
     viewer = django_user_model.objects.create_user(username="viewer_v5", password="x", role="VIEWER", tenant=cn_tenant)
     assert api_client.patch(url, {"weight": 3}, format="json", **_token_for(viewer, cn_tenant)).status_code == 403
-    # Another hall's officer who CAN edit souls (MODERATOR holds soul.update; a JUDGE does not, and would
+    # Another hall's officer who CAN edit souls (that hall's ADMIN holds soul.update; a JUDGE does not, and would
     # be refused 403 by the permission check before any lookup): the soul is not theirs to see → 404.
-    eu_mod = django_user_model.objects.create_user(username="eu_mod_v5b", password="x", role="MODERATOR", tenant=eu_tenant)
+    eu_mod = django_user_model.objects.create_user(username="eu_mod_v5b", password="x", role="ADMIN", tenant=eu_tenant)
     assert api_client.patch(url, {"weight": 3}, format="json", **_token_for(eu_mod, eu_tenant)).status_code == 404
     record.refresh_from_db()
     assert record.weight == 10

@@ -178,7 +178,7 @@ def _city_god(action):
             return (lambda: Soul.all_objects.get(pk=soul.pk).die(),
                     lambda: Judgment.all_objects.filter(soul=soul, city_god=god).exists(), "CITY_GOD_RECEIVED")
         case = soul.die()
-        lead = plan.officer(f"lead_{soul.pk.hex[:8]}", "MODERATOR", tenant)
+        lead = plan.officer(f"lead_{soul.pk.hex[:8]}", "ADMIN", tenant)
         if action == "sent_on":
             return (lambda: city_gods.send_on(case.pk, lead, "解送"),
                     lambda: Judgment.all_objects.get(pk=case.pk).city_god_status == "SENT_ON", "CITY_GOD_SENT_ON")
@@ -257,7 +257,7 @@ def _workflow_started():
     tenant = _cn()
     soul = dead_soul(tenant, name="手动发起灵魂")
     moderator = User.objects.get_or_create(username="evlog_moderator",
-                                           defaults={"role": "MODERATOR", "tenant": tenant})[0]
+                                           defaults={"role": "ADMIN", "tenant": tenant})[0]
     return (lambda: officer_client(moderator).post("/api/v1/workflows/start/",
                                                    {"soul": str(soul.pk), "case_type": "ROUTINE", "reason": "x"},
                                                    format="json"),
@@ -546,7 +546,7 @@ def _retry_dispatch():
     soul, p = plan.planned(home, [(away, plan.stop_realm(away), 5)])
     plan.serve(soul, p, 1)
     DispatchService.reject(DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id),
-                           plan.officer("evlog_eg_rej", "MODERATOR", away), "不收")
+                           plan.officer("evlog_eg_rej", "ADMIN", away), "不收")
     node = plan.node(p, 2)
     return (lambda: plan_requests.retry_dispatch(p, node.pk, user=None),
             lambda: plan.node(p, 2).status == "DISPATCHING", "SENTENCE_NODE_REDISPATCHED")
@@ -558,7 +558,7 @@ def _cancel_proposed_dispatch():
     from apps.dispatch.services import DispatchService
 
     home, away = _cn(), plan.tenant("EG_DUAT")
-    officer = plan.officer("evlog_cancel_mod", "MODERATOR", home)
+    officer = plan.officer("evlog_cancel_mod", "ADMIN", home)
     soul = Soul.objects.create(name="取消之魂", tenant=home, current_state="JUDGING")
     record = DispatchService.propose(home, away, soul, officer, "x" * 30)
     return (lambda: DispatchService.cancel_proposed(DispatchRecord.all_objects.get(pk=record.pk), officer, "改主意"),
@@ -573,8 +573,8 @@ def _dispatch(step):
 
     def path():
         home, away = _cn(), plan.tenant("EG_DUAT")
-        sender = plan.officer("evlog_dsp_send", "MODERATOR", home)
-        receiver = plan.officer("evlog_dsp_recv", "MODERATOR", away)
+        sender = plan.officer("evlog_dsp_send", "ADMIN", home)
+        receiver = plan.officer("evlog_dsp_recv", "ADMIN", away)
         soul = Soul.objects.create(name="调拨之魂", tenant=home, current_state="JUDGING")
         status = lambda pk: DispatchRecord.all_objects.get(pk=pk).status  # noqa: E731
         if step == "propose":
@@ -612,7 +612,7 @@ def _plan_stop(step):
         record_id = plan.node(p, 2).dispatch_record_id
         fresh = lambda: DispatchRecord.all_objects.get(pk=record_id)  # noqa: E731
         if step == "refused":
-            return (lambda: DispatchService.reject(fresh(), plan.officer("evlog_plan_rej", "MODERATOR", away), "不收"),
+            return (lambda: DispatchService.reject(fresh(), plan.officer("evlog_plan_rej", "ADMIN", away), "不收"),
                     lambda: fresh().status == DispatchStatus.REJECTED, "SENTENCE_NODE_REFUSED")
         DispatchService.approve(fresh(), "approver")
         return (lambda: DispatchService.execute(fresh(), "executor"),
@@ -645,7 +645,7 @@ def _station_move():
 
     soul = Soul.objects.create(name="挪站", tenant=_cn())
     soul.die()
-    lead = plan.officer(f"st_{soul.pk.hex[:8]}", "MODERATOR", _cn())
+    lead = plan.officer(f"st_{soul.pk.hex[:8]}", "ADMIN", _cn())
     return (lambda: stations.move(Soul.all_objects.get(pk=soul.pk), "WANGXIANG_TERRACE", lead),
             lambda: Soul.all_objects.get(pk=soul.pk).diyu_station == "WANGXIANG_TERRACE", "DIYU_STATION_CHANGED")
 

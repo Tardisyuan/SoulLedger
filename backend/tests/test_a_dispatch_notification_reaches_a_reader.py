@@ -137,11 +137,12 @@ def test_only_officers_who_can_read_dispatches_are_notified(
         return django_user_model.objects.create_user(
             username=name, password="x", role=role, tenant=target_tenant, **kw)
 
-    moderator = make("duat_moderator", "MODERATOR")
+    moderator = make("duat_moderator", "ADMIN")  # the hall's ADMIN holds dispatch.read
+    circle = make("duat_circle", "MODERATOR")  # 朋友圈巡察:2026-11-07 起不持 dispatch.read
     judge = make("duat_judge", "JUDGE")
     viewer = make("duat_viewer", "VIEWER")
     soul_account = make("duat_soul", "SOUL")
-    retired = make("duat_retired", "MODERATOR", is_active=False)
+    retired = make("duat_retired", "ADMIN", is_active=False)
 
     with django_capture_on_commit_callbacks(execute=True):
         DispatchService.propose(
@@ -152,7 +153,7 @@ def test_only_officers_who_can_read_dispatches_are_notified(
     got = set(UserNotification.objects.filter(
         notification_type=NotificationType.DISPATCH_PROPOSED).values_list("user_id", flat=True))
     assert {target_operator.pk, moderator.pk} <= got
-    assert not got & {judge.pk, viewer.pk, soul_account.pk, retired.pk}, got
+    assert not got & {judge.pk, viewer.pk, soul_account.pk, retired.pk, circle.pk}, got
 
 
 def test_cross_judgment_notices_go_to_cross_judgment_readers_only(

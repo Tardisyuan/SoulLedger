@@ -317,7 +317,7 @@ def _cross_case_appeal(cn_tenant, judge_user, capture):
 @pytest.mark.parametrize("stage,who,expected", [
     ("initial", "judge", (True, 200)),
     ("initial", "admin", (False, 403)),         # 持有 workflow.approve,不是初审节点的角色
-    ("initial", "moderator", (False, 403)),     # 没有 workflow.approve
+    ("initial", "moderator", (False, 403)),     # 有 workflow.read、没有 workflow.approve(殿主的码,测试写进库)
     ("past_initial", "judge", (False, 409)),
     ("appeal", "judge", (False, 409)),
 ])
@@ -327,6 +327,10 @@ def test_can_decide_cross_civilization_agrees_with_the_endpoint(stage, who, expe
     build = {"initial": _cross_case_initial, "past_initial": _cross_case_past_initial,
              "appeal": _cross_case_appeal}[stage]
     application, _ = build(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    if who == "moderator":  # MODERATOR 2026-11-07 起只管朋友圈审核;这一格要的是「读得到、批不了」的殿主
+        from tests.perm_support import grant_former_hall_lead_codes
+
+        grant_former_hall_lead_codes()
     user = {"judge": judge_user, "admin": cn_admin,
             "moderator": User.objects.create_user(username="mod", password="x", role="MODERATOR",
                                                   tenant=cn_tenant)}[who]

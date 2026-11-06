@@ -2,7 +2,8 @@
 
 Two write boundaries measured on 2026-08-29.
 
-`DispositionSerializer` had no `read_only_fields` at all. A MODERATOR could
+`DispositionSerializer` had no `read_only_fields` at all. A MODERATOR (then a hall lead; the
+hall's ADMIN plays it here since 2026-11-07) could
 `PATCH {"is_executed": true, "executed_at": ...}` and get a 200. The row then
 reads EXECUTED while the soul was never routed -- not SETTLED, not
 REINCARNATING, still DISPOSED. The real `POST .../execute/` afterwards returns
@@ -45,7 +46,7 @@ def scene(db):
     a = Tenant.objects.get_or_create(code="EF_A", defaults={"display_name": "EF A"})[0]
     b = Tenant.objects.get_or_create(code="EF_B", defaults={"display_name": "EF B"})[0]
     mod = User.objects.create_user(
-        username="ef_mod", password="x", role="MODERATOR", tenant=a
+        username="ef_mod", password="x", role="ADMIN", tenant=a
     )
     soul = Soul.objects.create(
         name="EFSoul", current_state=SoulState.DISPOSED, tenant=a,

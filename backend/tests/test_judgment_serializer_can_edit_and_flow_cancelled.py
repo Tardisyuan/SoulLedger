@@ -33,7 +33,7 @@ def _get(user, case):
 def test_can_edit_follows_the_claim_rule(cn):
     holder = plan.officer("ce_holder", "JUDGE", cn)
     other = plan.officer("ce_other", "JUDGE", cn)
-    lead = plan.officer("ce_lead", "MODERATOR", cn)
+    lead = plan.officer("ce_lead", "ADMIN", cn)
     _soul, case = plan.open_case(cn)
     assert _get(other, case)["can_edit"] is True  # 无人认领
 
@@ -49,7 +49,7 @@ def test_can_edit_follows_the_claim_rule(cn):
 
 
 def test_flow_cancelled_only_when_the_cases_own_flow_was_cancelled(cn):
-    lead = plan.officer("fc_lead", "MODERATOR", cn)
+    lead = plan.officer("fc_lead", "ADMIN", cn)
     _soul, case = plan.open_case(cn)
     assert _get(lead, case)["flow_cancelled"] is False  # 没有流程
     case.conclude("FAILED", "")

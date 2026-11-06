@@ -298,7 +298,7 @@ def test_the_final_station_of_a_ladder_cannot_be_escalated_past(case):
     _upheld_once(case)
     appeal = JudgmentAppeal.all_objects.get(pk=_file(case, escalate=True).data["id"])
     _drive(appeal.workflow, ["PASSED"] * 3, case["reviewer"])
-    escalator = sp.officer("ladder_escalator", "MODERATOR", case["judgment"].tenant)
+    escalator = sp.officer("ladder_escalator", "ADMIN", case["judgment"].tenant)
     flow = ApprovalWorkflow.all_objects.get(pk=appeal.workflow_id)
     with pytest.raises(EscalationRefusedError):
         flow.escalate_current_node(user=escalator, reason="终审告假")
@@ -336,7 +336,7 @@ def test_a_failing_auto_reject_is_recorded_once_and_the_admins_are_told(
         raise weighing.WeighingRefusedError("no", "soul_cannot_reopen", status=409)
 
     monkeypatch.setattr(weighing, "reweigh_after_rejection", refuse)
-    sp.officer("timeout_admin", "MODERATOR", cn)
+    sp.officer("timeout_admin", "ADMIN", cn)
     flow = _workflow(cn, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)])
     _age(flow.current_node, 2)
     with django_capture_on_commit_callbacks(execute=True):
@@ -508,7 +508,7 @@ def test_release_locks_the_soul_before_the_disposition(cn, monkeypatch):
     real_lock, real_releasable = Soul.lock, expiry.releasable
     monkeypatch.setattr(Soul, "lock", lambda pk: (order.append("soul"), real_lock(pk))[1])
     monkeypatch.setattr(expiry, "releasable", lambda d: (order.append("disposition"), real_releasable(d))[1])
-    mod = officer_client(sp.officer("release_mod", "MODERATOR", cn))
+    mod = officer_client(sp.officer("release_mod", "ADMIN", cn))
     mod.post(f"/api/v1/disposition/{disposition.pk}/release/")
     assert order[:2] == ["soul", "disposition"]
 
@@ -541,7 +541,7 @@ def test_a_warrant_is_refused_at_issue_when_no_city_god_can_take_the_case(cn):
     with pytest.raises(NoCityGodError):
         capture.issue(soul)
     assert not CaptureWarrant.objects.filter(soul=soul).exists()
-    lead = officer_client(sp.officer("cap_lead_ncg", "MODERATOR", cn))
+    lead = officer_client(sp.officer("cap_lead_ncg", "ADMIN", cn))
     res = lead.post("/api/v1/dispatch/capture-warrants/", {"soul": str(soul.pk)}, format="json")
     assert (res.status_code, res.data.get("code")) == (409, "no_city_god"), res.data
 

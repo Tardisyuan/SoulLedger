@@ -53,7 +53,7 @@ def _post(client, case, upload):
 
 @pytest.fixture
 def moderator(django_user_model, cn_tenant):
-    return django_user_model.objects.create_user(username="lead", password="x", role="MODERATOR", tenant=cn_tenant)
+    return django_user_model.objects.create_user(username="lead", password="x", role="ADMIN", tenant=cn_tenant)
 
 
 # ── 类型:看魔数,不看扩展名与客户端声明的类型 ────────────────────────────

@@ -134,5 +134,5 @@ def test_a_viewer_cannot_read_the_audit_log(cn_tenant):
         resp = client.get(path)
         assert resp.status_code == 403, (
             f"VIEWER got {resp.status_code} from {path}. `audit.read` is held "
-            f"by ADMIN and MODERATOR; /timeline/ is the permission-change log."
+            f"by ADMIN (and MODERATOR until 2026-11-07); /timeline/ is the permission-change log."
         )

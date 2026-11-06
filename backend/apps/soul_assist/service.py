@@ -39,10 +39,11 @@ EMPTY_ANSWER = {
     "zh-Hans": "这个问题我答不了。需要人来处理的事，请写信给殿司。",
     "en": "I can't answer that. For anything that needs a person, write to the hall office.",
 }
-#: 官员就是殿司,「写信给殿司」对它们不成立;按 OFFICER_RULES 引到本殿殿主或管理员(Design 1f)。
+#: 官员就是殿司,「写信给殿司」对它们不成立;引到管理员(Design 1f;第十二批 `officer_assist.cannot_answer` 同一方向 ——
+#: 2026-11-07 起 MODERATOR 只管朋友圈审核,不再是「本殿殿主」)。前端 `packages/core/src/api/officer-assist.ts` 逐字同一份。
 OFFICER_EMPTY_ANSWER = {
-    "zh-Hans": "这个问题我答不了。这类问题请询问本殿殿主或管理员。",
-    "en": "I can't answer that. Please ask your hall's realm lead or the administrator.",
+    "zh-Hans": "这个问题我答不了。这类问题请问管理员。",
+    "en": "I can't answer that. For questions like this, ask the administrator.",
 }
 
 

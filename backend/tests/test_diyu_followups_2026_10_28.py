@@ -159,7 +159,7 @@ def test_a_rejected_grievance_is_on_the_timeline(cn_tenant, admin_user):
 
 
 def test_a_tudi_god_reports_only_to_a_county_city_god_or_an_unranked_one(cn_tenant):
-    lead = sp.officer("tudi_rank", "MODERATOR", cn_tenant)
+    lead = sp.officer("tudi_rank", "ADMIN", cn_tenant)
     client = officer_client(lead)
     prefecture = CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", rank=CityGodRank.PREFECTURE)
     county = CityGod.objects.create(tenant=cn_tenant, name="临安县城隍", rank=CityGodRank.COUNTY)

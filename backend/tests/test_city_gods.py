@@ -33,7 +33,7 @@ def hall(cn_tenant):
     return {
         "clerk": clerk,
         "judge": sp.officer("court_judge", "JUDGE", cn_tenant),
-        "lead": sp.officer("lead", "MODERATOR", cn_tenant),
+        "lead": sp.officer("lead", "ADMIN", cn_tenant),
         "zhejiang": CityGod.objects.create(tenant=cn_tenant, name="浙江都城隍", regions=["浙江"]),
         "hangzhou": CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"]),
     }
@@ -259,7 +259,7 @@ def test_a_hall_admin_manages_city_gods_and_assigns_officers(hall, cn_tenant):
 
 
 def test_city_gods_are_per_hall_and_only_in_diyu(hall, cn_tenant, eu_tenant):
-    eu_lead = officer_client(sp.officer("eu_lead", "MODERATOR", eu_tenant))
+    eu_lead = officer_client(sp.officer("eu_lead", "ADMIN", eu_tenant))
     refused = eu_lead.post(GODS, {"name": "城隍"}, format="json")
     assert refused.status_code == 400 and refused.data["code"] == "city_gods_diyu_only"
     assert eu_lead.get(GODS).data["count"] == 0

@@ -87,7 +87,7 @@ beforeEach(() => {
   judgmentApi.assignableOfficers.mockResolvedValue({
     data: [
       { id: 7, display_name: "秦广王", username: "qinguang", role: "JUDGE", in_hand: 2 },
-      { id: 9, display_name: "", username: "songdi", role: "MODERATOR", in_hand: 0 },
+      { id: 9, display_name: "", username: "songdi", role: "ADMIN", in_hand: 0 },
     ],
   });
 });
@@ -360,8 +360,8 @@ describe("审判队列", () => {
     await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "defer", ids: ["a"], reason: "待补证" }));
   });
 
-  it("殿主(MODERATOR,没有用户管理权)打开改派,看得到名单,且名单按勾选的案子取,不读 /users/", async () => {
-    mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+  it("持 judgment.assign、没有用户管理权的官员打开改派,看得到名单,且名单按勾选的案子取,不读 /users/", async () => {
+    mockUser = { ...mockUser, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
     renderPage();
     await screen.findByText("沈青梧");
     fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
@@ -388,7 +388,7 @@ describe("审判队列", () => {
   });
 
   it("连可改派名单也被拒(403)时照实说,不给一个空下拉", async () => {
-    mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    mockUser = { ...mockUser, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
     judgmentApi.assignableOfficers.mockRejectedValue({ response: { status: 403 } });
     renderPage();
     await screen.findByText("沈青梧");
@@ -400,7 +400,7 @@ describe("审判队列", () => {
   });
 
   it("自己也列出但置灰、写「你」、件数「—」、不可选", async () => {
-    mockUser = { ...mockUser, id: 9, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    mockUser = { ...mockUser, id: 9, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
     renderPage();
     await screen.findByText("沈青梧");
     fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
@@ -415,8 +415,8 @@ describe("审判队列", () => {
   });
 
   it("除自己之外没有人:虚线框的空状态,改派按钮不可按", async () => {
-    mockUser = { ...mockUser, id: 9, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
-    judgmentApi.assignableOfficers.mockResolvedValue({ data: [{ id: 9, display_name: "", username: "songdi", role: "MODERATOR", in_hand: 0 }] });
+    mockUser = { ...mockUser, id: 9, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    judgmentApi.assignableOfficers.mockResolvedValue({ data: [{ id: 9, display_name: "", username: "songdi", role: "ADMIN", in_hand: 0 }] });
     renderPage();
     await screen.findByText("沈青梧");
     fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
@@ -428,8 +428,8 @@ describe("审判队列", () => {
 
   describe("空状态的「请管理员改派」", () => {
     async function openEmpty() {
-      mockUser = { ...mockUser, id: 9, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
-      judgmentApi.assignableOfficers.mockResolvedValue({ data: [{ id: 9, display_name: "", username: "songdi", role: "MODERATOR", in_hand: 0 }] });
+      mockUser = { ...mockUser, id: 9, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      judgmentApi.assignableOfficers.mockResolvedValue({ data: [{ id: 9, display_name: "", username: "songdi", role: "ADMIN", in_hand: 0 }] });
       renderPage();
       await screen.findByText("沈青梧");
       fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
@@ -679,7 +679,7 @@ describe("审判队列", () => {
     });
 
     it("工具条「改派…」没勾选时作用于焦点行;什么都没选时不可按;没有改派权限时不出现", async () => {
-      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      mockUser = { ...mockUser, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
       renderPage();
       await screen.findByText("陆晚晴");
       const toolbarReassign = () => screen.getAllByRole("button", { name: tZh("judgment.claim.reassign") })[0];
@@ -744,7 +744,7 @@ describe("审判队列", () => {
     });
 
     it("「⋯ → 改派…」只作用于那一行,不管勾选了什么;改派后勾选还在", async () => {
-      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      mockUser = { ...mockUser, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
       renderPage();
       await screen.findByText("陆晚晴");
       fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
@@ -760,7 +760,7 @@ describe("审判队列", () => {
     });
 
     it("改派层是 v3 的 390 宽、手机上从底部升起 78% 高(Drawer 的 layer)", async () => {
-      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      mockUser = { ...mockUser, role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
       renderPage();
       await screen.findByText("陆晚晴");
       fireEvent.click((await openRowMenu("陆晚晴"))[1]);

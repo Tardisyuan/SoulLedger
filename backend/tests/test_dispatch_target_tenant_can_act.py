@@ -53,15 +53,16 @@ def both_sides(db):
     a = Tenant.objects.get_or_create(code="TT_A", defaults={"display_name": "TT A"})[0]
     b = Tenant.objects.get_or_create(code="TT_B", defaults={"display_name": "TT B"})[0]
     c = Tenant.objects.get_or_create(code="TT_C", defaults={"display_name": "TT C"})[0]
-    # MODERATOR holds dispatch.manage/approve/reject/execute; not ADMIN.
+    # Each hall's own ADMIN: holds dispatch.*, and is bound to its hall (not tenant-exempt since
+    # 2026-10-29). MODERATOR played this part until 2026-11-07 (perm/0036).
     mod_a = User.objects.create_user(
-        username="tt_mod_a", password="x", role="MODERATOR", tenant=a
+        username="tt_mod_a", password="x", role="ADMIN", tenant=a
     )
     mod_b = User.objects.create_user(
-        username="tt_mod_b", password="x", role="MODERATOR", tenant=b
+        username="tt_mod_b", password="x", role="ADMIN", tenant=b
     )
     mod_c = User.objects.create_user(
-        username="tt_mod_c", password="x", role="MODERATOR", tenant=c
+        username="tt_mod_c", password="x", role="ADMIN", tenant=c
     )
     soul = Soul.objects.create(name="TravellingSoul", current_state=SoulState.JUDGING, tenant=a)
     record = DispatchRecord.objects.create(

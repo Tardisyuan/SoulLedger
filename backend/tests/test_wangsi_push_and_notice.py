@@ -54,7 +54,7 @@ def test_filing_tells_the_city_gods_officers_after_commit(cn_tenant, god, office
                                                           django_capture_on_commit_callbacks):
     clerk = sp.officer("clerk", "JUDGE", cn_tenant)
     bystander = sp.officer("bystander", "JUDGE", cn_tenant)
-    lead = sp.officer("lead", "MODERATOR", cn_tenant)
+    lead = sp.officer("lead", "ADMIN", cn_tenant)
     god.officers.add(clerk)
     account, case = _held(cn_tenant)
     UserNotification.objects.all().delete()  # 收案那条(CITY_GOD_CASE_RECEIVED)不是这里测的
@@ -76,7 +76,7 @@ def test_filing_tells_the_city_gods_officers_after_commit(cn_tenant, god, office
 
 def test_a_city_god_with_no_officers_falls_back_to_the_hall_admins_without_an_app_push(
         cn_tenant, god, officer_pushes, django_capture_on_commit_callbacks):
-    lead = sp.officer("lead", "MODERATOR", cn_tenant)
+    lead = sp.officer("lead", "ADMIN", cn_tenant)
     judge = sp.officer("judge", "JUDGE", cn_tenant)
     account, case = _held(cn_tenant)
     UserNotification.objects.all().delete()

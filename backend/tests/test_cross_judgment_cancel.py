@@ -40,7 +40,7 @@ def bench():
         "cj": cj, "case": case, "cn": cn, "eg": eg,
         "convener": convener,
         "colleague": officer_client(_user(cn, "cj_colleague")),
-        "moderator": officer_client(_user(cn, "cj_moderator", role="MODERATOR")),
+        "moderator": officer_client(_user(cn, "cj_moderator", role="ADMIN")),
         "participant": officer_client(_user(eg, "cj_eg_judge")),
     }
 

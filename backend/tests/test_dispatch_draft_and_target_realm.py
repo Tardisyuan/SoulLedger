@@ -5,8 +5,9 @@
 放弃 = 软删进回收站,ADMIN 可恢复。目标界域必须是目标租户、目标文明的未软删界域;
 执行时写进灵魂行程。
 
-客户端是 MODERATOR(持有 dispatch.manage / approve / execute,且不是 ADMIN)带着
-`tenant_code` 的 JWT —— ADMIN 绕过租户与草稿可见性,全用 ADMIN 的测试证明不了规则。
+客户端是各殿自己的 ADMIN(持有 dispatch.*;绑了殿,2026-10-29 起与殿内其他角色一样限本殿、也看不见别人的草稿)
+带着 `tenant_code` 的 JWT —— 只有没绑殿的 ADMIN 绕过租户与草稿可见性,全用它的测试证明不了规则。
+2026-11-07 之前这里是 MODERATOR;它改为只管朋友圈审核后不再持有 dispatch.*(perm/0036)。
 """
 import pytest
 from django.contrib.auth import get_user_model
@@ -49,9 +50,9 @@ def _realm(code, civilization, tenant, **extra):
 def w(db):
     cn = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "地府"})[0]
     eu = Tenant.objects.get_or_create(code="EU_HEAVEN_HELL", defaults={"display_name": "天堂地狱"})[0]
-    cn_mod = User.objects.create_user(username="dr_cn_mod", password="x", role="MODERATOR", tenant=cn)
-    cn_mod2 = User.objects.create_user(username="dr_cn_mod2", password="x", role="MODERATOR", tenant=cn)
-    eu_mod = User.objects.create_user(username="dr_eu_mod", password="x", role="MODERATOR", tenant=eu)
+    cn_mod = User.objects.create_user(username="dr_cn_mod", password="x", role="ADMIN", tenant=cn)
+    cn_mod2 = User.objects.create_user(username="dr_cn_mod2", password="x", role="ADMIN", tenant=cn)
+    eu_mod = User.objects.create_user(username="dr_eu_mod", password="x", role="ADMIN", tenant=eu)
     admin = User.objects.create_user(username="dr_admin", password="x", role="ADMIN", tenant=None)
     return {
         "cn": cn, "eu": eu, "cn_mod": cn_mod, "cn_mod2": cn_mod2, "eu_mod": eu_mod, "admin": admin,

@@ -81,8 +81,8 @@ export function officerAssistRetryAt(error: unknown): string | null {
  * is a "cannot answer" (canvas 1f ④). Pinned word for word by a frontend test.
  */
 export const OFFICER_EMPTY_ANSWER: Record<"zh-Hans" | "en", string> = {
-  "zh-Hans": "这个问题我答不了。这类问题请询问本殿殿主或管理员。",
-  en: "I can't answer that. Please ask your hall's realm lead or the administrator.",
+  "zh-Hans": "这个问题我答不了。这类问题请问管理员。",
+  en: "I can't answer that. For questions like this, ask the administrator.",
 };
 
 export function isOfficerEmptyAnswer(content: string): boolean {

@@ -540,36 +540,36 @@ class ModeratorRealmLeadTest(TestCase):
         for codename in ("workflow.create", "workflow.update", "workflow.delete"):
             self.assertFalse(check_permission(judge, codename))
 
-    def test_moderator_can_escalate_but_not_approve(self):
-        """The escape hatch that replaces approve/advance for a realm lead.
-
-        A stalled flow still needs a way forward; the answer is an action that
-        demands a reason and writes an audit record, not the approval right
-        the ten courts exist to divide.
-        """
-        self.assertIn("workflow.escalate", ROLE_PERMISSIONS["MODERATOR"])
-        for codename in self.EXECUTE:
-            self.assertNotIn(codename, ROLE_PERMISSIONS["MODERATOR"])
-
-    def test_moderator_cannot_manage_users(self):
-        """UserViewSet has no tenant mixin, so user.manage would let a realm
-        lead edit any user in any tenant — including promoting themselves to
-        ADMIN, which is exactly the isolation this role depends on."""
+    def test_moderator_holds_only_the_circle_moderation_set(self):
+        """2026-11-07(用户决定):朋友圈巡察只管朋友圈审核。0014 那轮「殿主设计本殿流程」的格局
+        已经收回(perm/0035、perm/0036);上面几条测的是 0014 这条迁移本身,仍然成立。"""
+        self.assertEqual(
+            set(ROLE_PERMISSIONS["MODERATOR"]),
+            {"social.moderate", "dashboard.read", "notification.read", "menu.read"},
+        )
         self.assertNotIn("user.manage", ROLE_PERMISSIONS["MODERATOR"])
         self.assertNotIn("system.settings", ROLE_PERMISSIONS["MODERATOR"])
         self.assertNotIn("menu.manage", ROLE_PERMISSIONS["MODERATOR"])
         self.assertNotIn("soul.delete", ROLE_PERMISSIONS["MODERATOR"])
 
-    def test_moderator_outranks_judge_on_realm_operations(self):
-        """A realm lead should not hold fewer operational rights than the
-        judges working under them — the shape 0014 shipped with."""
-        moderator = set(ROLE_PERMISSIONS["MODERATOR"])
-        judge = set(ROLE_PERMISSIONS["JUDGE"])
-        self.assertGreater(len(moderator), len(judge))
-        # Everything a judge does on souls and judgments, a lead can do too,
-        # apart from the approval rights held back on purpose.
-        missing = (judge - moderator) - set(self.EXECUTE)
-        self.assertEqual(missing, set(), f"lead is missing judge rights: {missing}")
+    def test_moderator_holds_no_judgment_codename(self):
+        """审判、流程、调拨、处置、轮回一族的码,巡察一个都不持有 —— 字典里没有,迁移后的库里也问不出来
+        (perm/0036 收回了已入库的授予)。断言主体不空:这些族在目录里有几十条。"""
+        from apps.perm.checker import check_permission
+        from apps.perm.models import DEFAULT_PERMISSIONS
+
+        families = {"judgment", "cross_judgment", "city_god", "tudi", "wangsi", "capture",
+                    "disposition", "reincarnation", "workflow", "dispatch"}
+        codenames = [c for c, _name, category in DEFAULT_PERMISSIONS if category in families]
+        self.assertGreater(len(codenames), 30)
+        self.assertIn("judgment.execute", codenames)
+        self.assertIn("sentence_plan.cancel", codenames)
+        user = User.objects.create_user(username="mod_no_judgment", password="x", role="MODERATOR")
+        held_by_dict = [c for c in codenames if c in ROLE_PERMISSIONS["MODERATOR"]]
+        held = [c for c in codenames if check_permission(user, c)]
+        self.assertEqual((held_by_dict, held), ([], []))
+        # 正对照:同一个人问得出它该有的那一条。
+        self.assertTrue(check_permission(user, "social.moderate"))
 
     def test_moderator_is_not_admin(self):
         """A realm lead must stay inside its tenant, so it cannot be ADMIN —

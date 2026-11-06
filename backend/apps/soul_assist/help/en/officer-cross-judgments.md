@@ -17,4 +17,4 @@ The list shows title, initiator and status ("Proposed", "Active", "Concluded", "
 - Sentence plan stops: the home civilization is always stop one, set by the original judgment when it concludes; each co-judge or chair civilization then has one stop, filled in by its own judges with realm, term and notes; advisors carry none and have no approval stage either. An eternal term must be last; the order can be changed and saved.
 - Verdict: passed or rejected.
 Another hall sees only its own stop and the other halls' names, not their officers, sentence notes or the reasons stops were added or dropped; the original case's details open only for the initiating hall and an administrator who belongs to no hall.
-Viewing needs the cross-realm judgment read permission; opening, seating, filling a stop, activating and concluding need the cross-realm judgment create permission (held by Judges, Realm Leads and Administrators by default).
+Viewing needs the cross-realm judgment read permission; opening, seating, filling a stop, activating and concluding need the cross-realm judgment create permission (held by Judges and Administrators by default).

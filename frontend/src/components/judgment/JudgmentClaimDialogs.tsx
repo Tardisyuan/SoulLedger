@@ -209,8 +209,8 @@ type ApiError = { response?: { status?: number; data?: { retry_after?: number } 
  * 改派:选一位能接下这些案子的官员。
  *
  * 名单来自 `GET /judgment/assignable-officers/`,要的是 `judgment.assign` —— 与改派本身
- * 同一个码名。此前读的是 `/users/`(要 ADMIN 的 `user.manage`),于是恰恰是改派的殿主
- * (MODERATOR)一打开就 403。服务端按案子的租户、用与 `reassign` 同一条
+ * 同一个码名。此前读的是 `/users/`(要 ADMIN 的 `user.manage`),于是恰恰是持改派码、不持用户管理码的人
+ * (当时的殿主 MODERATOR)一打开就 403。服务端按案子的租户、用与 `reassign` 同一条
  * `claims.is_assignable` 筛好,这里不再自己按租户或在职过滤。那个端点也拒了(403 等)
  * 时照实说「名单读不到」,不给一个空下拉。
  *

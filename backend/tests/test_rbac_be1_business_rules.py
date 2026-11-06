@@ -48,13 +48,15 @@ def eg():
 
 @pytest.fixture
 def mod(cn):
-    return plan.officer("be1_mod", "MODERATOR", cn)
+    """The hall's lead: its own ADMIN (bound to the hall). MODERATOR played this part until 2026-11-07, when it
+    became the circle moderator and lost judgment.* / workflow.* / soul_inbox.* (perm/0035, perm/0036)."""
+    return plan.officer("be1_mod", "ADMIN", cn)
 
 
 def _role(name, *codenames):
     """A custom role. A codename with no Permission row yet is answered from ROLE_PERMISSIONS; creating the row
-    makes the database authoritative for it, so the default roles get their grants alongside (or MODERATOR would
-    lose judgment.assign in the middle of the test)."""
+    makes the database authoritative for it, so the default roles get their grants alongside (or JUDGE would
+    lose judgment.execute in the middle of the test)."""
     from apps.perm.models import ROLE_PERMISSIONS
 
     role, _ = Role.objects.get_or_create(name=name, defaults={"display_name": name})
@@ -422,7 +424,10 @@ def test_hall_admin_and_picker_are_read_from_codes_with_extra_roles(cn):
 
     soul, _ = plan.open_case(cn)
     flow = ApprovalWorkflow.objects.create(tenant=cn, soul=soul, workflow_name="流程")
-    lead_too = plan.officer("be1_judge_lead", "JUDGE", cn, extra_roles=["MODERATOR"])
+    # A judge who also holds a hall lead's workflow.update through an extra role (was extra_roles=["MODERATOR"]
+    # until 2026-11-07; MODERATOR no longer holds it).
+    _role("BE1_LEAD", "workflow.update")
+    lead_too = plan.officer("be1_judge_lead", "JUDGE", cn, extra_roles=["BE1_LEAD"])
     plain = plan.officer("be1_plain_judge", "JUDGE", cn)
     assert segments.is_convener_admin(lead_too, flow) and not segments.is_convener_admin(plain, flow)
     _role("BE1_PICKER", "workflow.approve")
@@ -439,8 +444,10 @@ def test_concluding_over_a_claim_is_judgment_assign_including_an_extra_role(cn):
     holder = plan.officer("be1_c_holder", "JUDGE", cn)
     _soul, case = plan.open_case(cn)
     Judgment.all_objects.filter(pk=case.pk).update(claimed_by=holder, claimed_at=timezone.now())
+    _role("BE1_ASSIGN_LEAD", "judgment.assign")  # was extra_roles=["MODERATOR"]; perm/0035 took judgment.assign off it
     with transaction.atomic():
-        assert claims.lock_for_conclude(case.pk, plan.officer("be1_c_lead", "JUDGE", cn, extra_roles=["MODERATOR"]))
+        assert claims.lock_for_conclude(case.pk, plan.officer("be1_c_lead", "JUDGE", cn,
+                                                              extra_roles=["BE1_ASSIGN_LEAD"]))
     with pytest.raises(claims.ClaimRefusedError) as refused, transaction.atomic():
         claims.lock_for_conclude(case.pk, plan.officer("be1_c_plain", "JUDGE", cn))
     assert refused.value.code == "claimed_by_other"
@@ -453,7 +460,7 @@ def test_letters_move_only_when_the_operator_may_reply(cn, mod):
     from apps.chat.models import Conversation, ConversationKind
 
     source = plan.officer("be1_leaving", "JUDGE", cn)
-    target = plan.officer("be1_taking", "MODERATOR", cn)
+    target = plan.officer("be1_taking", "ADMIN", cn)
     soul = Soul.objects.create(name="来信魂", tenant=cn)
     letter = Conversation.objects.create(kind=ConversationKind.OFFICER_INBOX, room_id="!be1:x", soul_a=soul,
                                          tenant=cn, assignee=source)
