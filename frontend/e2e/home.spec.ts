@@ -24,7 +24,7 @@ test.describe("Home page", () => {
     // One column per civilization — the row is the page's whole point. Each name follows its
     // ink glyph (■●▲◆, aria-hidden), so match inside the list rather than by exact text.
     const civs = page.getByTestId("landing-civs");
-    for (const civilization of ["中国地府", "欧洲天堂与地狱", "埃及冥界", "希腊冥界"]) {
+    for (const civilization of ["中国地府", "欧洲天堂与地狱", "埃及冥界", "希腊冥府"]) {
       await expect(civs.getByText(civilization)).toBeVisible();
     }
     await expect(page.getByText("灵魂账本 v0.1").first()).toBeVisible();

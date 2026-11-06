@@ -562,7 +562,7 @@ EUROPEAN_REALMS = [
 # therefore reachable without being a destination, in the sense EU_ACHERON above
 # is not: nobody is sentenced to it. See `DispositionService._route_greek`.
 GREEK_REALMS = [
-    ("EU_PLATO_MEADOW", "岔路草原", "审判岔路", "The Meadow at the Parting of the Ways",
+    ("EU_PLATO_MEADOW", "岔路口草地", "岔路口的草地", "The Meadow at the Crossroads",
      "Leimon", RealmType.NEUTRAL, 0,
      "Plato, Gorgias 524a: the dead are judged in a meadow at the fork in the "
      "road, one way leading to the Isles of the Blessed and the other to "
@@ -621,7 +621,7 @@ GREEK_REALMS = [
     # name it and why it carries tier 0 alongside the meadow. It is reachable in
     # the sense a threshold is: a soul passes through, and no verdict puts it
     # there.
-    ("GR_ACHERON", "阿刻戎渡口", "冥河渡口", "The Crossing of Acheron", "Acheron",
+    ("GR_ACHERON", "阿刻戎渡口", "阿刻戎渡口", "The Crossing of Acheron", "Acheron",
      RealmType.NEUTRAL, 0,
      "Where the dead are ferried into the underworld, before any judging. "
      "Virgil, Aeneid 6.295-297 places the crossing on Acheron and 6.298-304 "
@@ -788,7 +788,7 @@ REALM_PARENTS = {
 # `tests/test_duat_gates.py::test_a_seeded_duat_gate_names_its_source_edition`
 # is what makes a numbered gate arrive with its source rather than without one.
 EGYPTIAN_REALMS = [
-    ("EG_DUAT_ENTRY", "杜阿特入口", "杜阿特之门", "Gate of Duat", "Sebkhet Duat", RealmType.PURGATORY, 1,
+    ("EG_DUAT_ENTRY", "杜阿特入口", "杜阿特入口", "Entrance to the Duat", "Duat Aq", RealmType.PURGATORY, 1,
      "Entry to the underworld Duat, where the dead person's own passage west begins. "
      "What this row records is the start of a soul's journey and nothing else; the gates "
      "that passage then meets are seeded separately as EG_SEVEN_ARRWT and "
@@ -807,7 +807,7 @@ EGYPTIAN_REALMS = [
      "individual keeper is seeded, because no transcription of their names has been "
      "obtained and the order of the series has no second witness.",
      "SPELL", False, None),
-    ("EG_HALL_TWO_TRUTHS", "真理殿堂", "两真之殿", "Hall of Two Truths", "Weret Maaty", RealmType.PURGATORY, 3,
+    ("EG_HALL_TWO_TRUTHS", "两真之殿", "两真之殿", "Hall of Two Truths", "Weret Maaty", RealmType.PURGATORY, 3,
      "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
     ("EG_TWENTYONE_SEBKHET", "二十一道门户", "二十一道门户",
      "The Twenty-One Portals of the Field of Reeds", "Sebkhet 21", RealmType.PURGATORY, 4,
@@ -893,7 +893,7 @@ EGYPTIAN_REALMS = [
     # never read the type — DispositionService, appeals and the soul-account
     # retirement all key on the realm_code — so only labels, the realm badge and
     # the dashboard pattern change.
-    ("EG_ANNIHILATION", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "Ammit - Mut Sen",
+    ("EG_ANNIHILATION", "湮灭", "湮灭", "Second Death (annihilation by Ammit)", "Mut Sen",
      RealmType.ANNIHILATION, 10,
      "Not a place and not a residence: the outcome recorded when the heart is "
      "heavier than the feather and Ammit devours it. Egyptian sources call this "

@@ -153,7 +153,7 @@ NOTES = {
     "CN_DIYU": {"PASSED": "功过相抵后仍有余善,准入轮回。", "FAILED": "恶业深重,依律发落。"},
     "EU_HEAVEN_HELL": {"PASSED": "生前无大罪,准入天堂。", "FAILED": "所犯之罪依《神曲》定层,入地狱。", "PURGATORY": "其罪可涤,入炼狱逐层洗炼。"},
     "EG_DUAT": {"PASSED": "心不重于羽,入芦苇原。", "FAILED": "心重于羽,交阿米特吞噬。"},
-    "GR_HADES": {"PASSED": "善者往至福岛,千年后再择来生。", "FAILED": "恶者下塔尔塔罗斯。"},
+    "GR_HADES": {"PASSED": "一生虔敬求真,送往至福岛。", "FAILED": "恶者下塔尔塔罗斯。"},
 }
 
 #: A sentence of its own. Docs/10 第三类: 殉节 counts among the deaths by one's own hand, whatever the cause.
@@ -319,8 +319,8 @@ PLACED = {
     "Lancelot": "EU_PURGATORY_T7_LUST", "Dido": "EU_HELL_2ND", "Ulysses": "EU_HELL_8TH", "Sisyphus": "GR_TARTARUS", "Tantalus": "GR_TARTARUS", "Ixion": "GR_TARTARUS",
 }
 #: Which Greek judge: Rhadamanthus the souls of Asia, Aeacus those of Europe, Minos when they are in doubt (Gorgias 524a).
-ASIA = {"Tantalus", "Eurydice"}
-EUROPE = {"Orpheus", "Sisyphus", "Achilles", "Patroclus", "Odysseus", "Penelope", "Ixion", "Hector", "Antigone",
+ASIA = {"Tantalus", "Eurydice", "Hector"}
+EUROPE = {"Orpheus", "Sisyphus", "Achilles", "Patroclus", "Odysseus", "Penelope", "Ixion", "Antigone",
           "Alcestis", "Nikos Pappas", "Eleni Vlachou", "Stavros Kouris", "Katerina Doukas"}
 #: 卡戎不渡未葬者:他在岸边等,队列里认领不了。
 UNBURIED = {"Katerina Doukas"}
@@ -406,8 +406,8 @@ def seed_souls(tenants, judges):
 
 def seed_dispatches(tenants):
     """Two souls sent across the civilizations: one proposed, one approved."""
-    pairs = [("EG_DUAT", "CN_DIYU", "Tutu", "外邦亡魂,移交第五殿"), ("CN_DIYU", "GR_HADES", "牛郎", "两界会审,押赴岔路草原"),
-             ("GR_HADES", "CN_DIYU", "Hector", "战死异乡,请地府收押"), ("EU_HEAVEN_HELL", "EG_DUAT", "Percival", "请真理殿堂称心")]
+    pairs = [("EG_DUAT", "CN_DIYU", "Tutu", "外邦亡魂,移交第五殿"), ("CN_DIYU", "GR_HADES", "牛郎", "两界会审,押赴岔路口的草地"),
+             ("GR_HADES", "CN_DIYU", "Hector", "战死异乡,请地府收押"), ("EU_HEAVEN_HELL", "EG_DUAT", "Percival", "请两真之殿称心")]
     made = 0
     for i, (src, dst, name, reason) in enumerate(pairs):
         soul = Soul.objects.filter(name=name).first()
@@ -617,7 +617,7 @@ def seed_cross_judgments(tenants):
     for soul, conclude, title in ((sitting, False, "哪吒案·两界会审"), (done, True, "项羽案·两界会审")):
         try:
             case = sent_on(soul.die(location=soul.origin_location))
-            cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后冥河", cn, None)
+            cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后希腊冥府", cn, None)
             cj.judgment = case
             cj.save(update_fields=["judgment"])
             seat = CrossTenantJudgmentService.add_participant(cj, gr, None, ParticipantRole.CO_JUDGE, node_order=2)
@@ -644,8 +644,8 @@ def seed_sentence_requests():
     reasons = {
         "CN_DIYU": ["外邦新出证人,请求重开此案。", "地府核定刑期有误,请原审复核。"],
         "EU_HEAVEN_HELL": ["新出证人,请求重审。", "赦罪令已下,请原审确认是否重开。"],
-        "EG_DUAT": ["真理殿堂发现判词与卷宗不符。", "请求重新称量。"],
-        "GR_HADES": ["冥河彼岸新出证人,请求重开此案。", "判官存疑,请米诺斯复核。"],
+        "EG_DUAT": ["两真之殿发现判词与卷宗不符。", "请求重新称量。"],
+        "GR_HADES": ["地府新出证人,请求重开此案。", "判官存疑,请米诺斯复核。"],
     }
     plans = list(SentencePlan.all_objects.filter(status="ACTIVE").select_related("soul")[:40])
     made = {}
@@ -792,7 +792,7 @@ def seed_audit(users):
 
 def seed_notifications(demo_users):
     for u in demo_users:
-        hall = {"CN_DIYU": "第五殿", "EU_HEAVEN_HELL": "炼狱", "EG_DUAT": "真理殿堂", "GR_HADES": "岔路草原"}.get(u.tenant.code if u.tenant else "", "本殿")
+        hall = {"CN_DIYU": "第五殿", "EU_HEAVEN_HELL": "炼狱", "EG_DUAT": "两真之殿", "GR_HADES": "岔路口的草地"}.get(u.tenant.code if u.tenant else "", "本殿")
         texts = [("新案待认领", f"{hall}队列有新案"), ("审批待办", "有一件结案等你批"), ("调拨通知", f"有灵魂调入{hall}")]
         for i, (title, body) in enumerate(texts):
             try:

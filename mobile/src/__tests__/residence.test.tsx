@@ -204,8 +204,8 @@ describe("a native soul of the Duat", () => {
     expect(within(screen.getByTestId("score-demerit")).getByText("心侧")).toBeTruthy();
     expect(within(screen.getByTestId("score-demerit")).getByText(String(PROFILE.demerit_score))).toBeTruthy();
     // v4: a judging soul of the Duat is told where it is — the weighing — instead of the state word 称心中.
-    expect(screen.getByTestId("life-here-place")).toHaveTextContent("真理大厅 · 称心");
-    expect(screen.getByTestId("life-here-line")).toHaveTextContent("你的心正在天平上，和玛阿特之羽相比。");
+    expect(screen.getByTestId("life-here-place")).toHaveTextContent("两真之殿 · 称心");
+    expect(screen.getByTestId("life-here-line")).toHaveTextContent("你的心正在天平上，和玛特之羽相比。");
     expect(screen.queryByTestId("soul-state")).toBeNull();
     expect(screen.queryByText("功")).toBeNull();
     expect(screen.queryByTestId("residence")).toBeNull();
@@ -236,7 +236,7 @@ describe("a native soul of the Duat", () => {
     renderApp();
     await screen.findByTestId("profile-card");
     fireEvent.press(await screen.findByTestId("section-past_lives-toggle"));
-    expect((await screen.findByTestId("past-lives-empty")).props.children).toBe("杜阿特没有前世。你只有这一世，此后不再入簿。");
+    expect((await screen.findByTestId("past-lives-empty")).props.children).toBe("杜阿特不转世：此后不再有下一世。");
   });
 
   it("…while a residing Chinese soul with no past lives gets the ordinary sentence", async () => {

@@ -9,7 +9,7 @@
  * (`null`) and the page keeps its five-stage line.
  *
  * Not drawn: 地府 鬼门关 (a label on the map, not a station of `DiyuStation`) and 希腊 三判官 (its only words
- * are the demo tour's, `demo.tour.gr.3.name`; the three judges sit at 审判岔路, which is drawn).
+ * are the demo tour's, `demo.tour.gr.3.name`; the three judges sit at 岔路口的草地, which is drawn).
  */
 import type { MeProfile, MeSentencePlan, MeSentenceStation } from "../api/soul";
 import { DIYU_STATIONS, diyuStationOrdinal } from "./diyuStations";

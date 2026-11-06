@@ -218,7 +218,7 @@ test.describe("Rebirth applications", () => {
     await row.getByRole("button", { name: "查看详情" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText("评估");
-    await expect(dialog).toContainText("审判者");
+    await expect(dialog).toContainText("判官");
     expect(api.countOf("GET", "/workflows/:id/")).toBe(0);
     await expect(dialog).toContainText(REBIRTH_APPLICATIONS[0].statement);
     await expect(dialog).toContainText("尚未决定");

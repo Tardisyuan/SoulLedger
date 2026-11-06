@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { judgmentAppealKeys, judgmentAppealsApi, type JudgmentAppeal } from "@soulledger/core/api";
 import { useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
+import { verdictNamespace } from "@/src/lib/domainNames";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
@@ -43,6 +45,8 @@ export function AppealDecideDialog({
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  // PURGATORY by the hall's civilization (欧洲炼狱、埃及天平摇摆, verdictNames.ts); a hall-less ADMIN gets 存疑.
+  const civilization = useTenant().user?.tenant?.civilization;
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -141,7 +145,7 @@ export function AppealDecideDialog({
               return (
                 <label key={v} className={`flex items-center gap-2 text-sm ${original ? "text-[oklch(var(--color-ink-subtle))]" : ""}`}>
                   <input type="radio" name="appeal-verdict" value={v} disabled={original} checked={verdict === v} onChange={() => setVerdict(v)} />
-                  <DomainEnum namespace="judgment.verdicts" value={v} />
+                  <DomainEnum namespace={verdictNamespace(t, civilization, v)} value={v} />
                   {original && <span>· {t("appeals.original_verdict")}</span>}
                 </label>
               );
