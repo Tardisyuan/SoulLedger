@@ -147,6 +147,15 @@ describe("审判队列", () => {
     expect(order).toEqual(["queue-group-mine", "queue-group-deferred", "queue-group-others", "queue-group-unclaimed"]);
     // 夹具里没有期限(殿没设天数 / 未到可认领):写「不计」,不是空格。
     expect(screen.getAllByTestId("deadline-cell")[0]).toHaveTextContent(tZh("queue.deadline.none"));
+    // <640px(用户 2026-11-07):期限列连表头一起收起,同一句以小字并到案号下面,「不计」照写;宽屏时那行小字收起。
+    const deadlineHead = screen.getByRole("columnheader", { name: tZh("queue.col.deadline") });
+    expect(deadlineHead).toHaveClass("max-sm:hidden");
+    expect(screen.getAllByTestId("deadline-cell")[0]).toHaveClass("max-sm:hidden");
+    const inline = screen.getAllByTestId("deadline-inline")[0];
+    expect(inline).toHaveClass("sm:hidden");
+    expect(inline).toHaveTextContent(`${tZh("queue.col.deadline")} · ${tZh("queue.deadline.none")}`);
+    // 在「案号 / 灵魂」那一格里(那一格带整行链接)。
+    expect(inline.closest("td")!.querySelector("[data-row-link]")).not.toBeNull();
     fireEvent.click(within(screen.getByTestId("queue-tabs")).getByRole("button", { name: new RegExp(tZh("queue.tab.overdue")) }));
     await waitFor(() =>
       expect(judgmentApi.list).toHaveBeenCalledWith({ group: "mine", page: "1", ordering: "created_at", overdue: "true" })
