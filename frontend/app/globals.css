@@ -1073,9 +1073,12 @@
 
   /* 空状态的主视觉轻轻呼吸(v4「10」):5s 一次,缩放 1 → 1.035,透明度 .5 → .72。出错不动。
      减少动态效果时停在终态(下面的 reduced-motion 块与 reducedMotionContract)。 */
+  /* `opacity: .5` 是终态本身:减少动态效果时那条 1ms 规则让动画跑一次就结束，结束后回到这里的值。
+     此前这里没写，结束后是 1 —— 印比正常时深一倍，不是「停在终态」。 */
   .empty-breathe {
     animation: empty-breathe 5s ease-in-out infinite;
     transform-origin: center;
+    opacity: 0.5;
   }
   .seal[data-civ="eu"] {
     border-radius: 50%;

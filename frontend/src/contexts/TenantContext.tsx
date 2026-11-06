@@ -149,6 +149,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const civ = civSkinOf(tenantCode);
   // v4:换文明时光、印与主视觉一起过渡 —— 把改写包进 View Transitions(globals.css 给 360ms 交叉淡化)。
   // 第一次写(加载、登录前的中性皮)不过渡;浏览器不支持或要求减少动态效果时直接换。
+  // 登录与登出(一边是 neutral)也不过渡:那不是换文明，后面紧跟着换页。此前登录时这里拍下落地页 / 登录页的快照，
+  // 在演示的入场印上面叠着淡出 360ms —— 新页面已经在下面了，旧画面还压在上面。
   useEffect(() => {
     const root = document.documentElement;
     const previous = root.dataset.civ;
@@ -156,7 +158,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       root.dataset.civ = civ;
     };
     const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
-    if (previous && previous !== civ && typeof doc.startViewTransition === "function" && !prefersReducedMotion()) {
+    const switching = previous && previous !== "neutral" && civ !== "neutral" && previous !== civ;
+    if (switching && typeof doc.startViewTransition === "function" && !prefersReducedMotion()) {
       doc.startViewTransition(apply);
     } else {
       apply();

@@ -8,13 +8,13 @@
  * - 「回到判官视角」回到同一个冥界的判官概览，也就是演示账号的判官身份(`useEnter`)。
  * - 胶囊标签栏照 App:不透明，贴在页底。锁屏的实时进度是演示里多出来的一屏，标「只在演示里」。
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ROLE_OF_SKIN, SKINS, startEntrance, useEnter } from "./DemoEntrances";
 import { REBIRTH_CIVS, SoulScreenBody, Unrecorded, soulView, type SoulScreen, type SoulView } from "./DemoSoulScreens";
-import { langOf, soulRecording } from "./store";
+import { langOf, soulRecording, soulRecordingNow } from "./store";
 
 const TABS: Record<Exclude<SoulScreen, "lock">, string> = {
   life: "soul_app.tabs.life",
@@ -26,7 +26,7 @@ const tabsOf = (civ: SealCiv) => (Object.keys(TABS) as (keyof typeof TABS)[]).fi
 
 /** The band under the four cards. The cards keep their one action; this is the second way in. */
 export function DemoSoulEntry({ onLook }: { onLook: (civ: SealCiv) => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <section data-testid="demo-soul-entry" aria-labelledby="demo-soul-entry-title" className="mt-4 rounded-panel border border-[oklch(var(--color-line))] p-4">
       <h3 id="demo-soul-entry-title" className="m-0 font-title text-md text-[oklch(var(--color-ink))]">{t("demo.soul.entry_title")}</h3>
@@ -38,6 +38,8 @@ export function DemoSoulEntry({ onLook }: { onLook: (civ: SealCiv) => void }) {
               type="button"
               data-testid={`demo-soul-${civ}`}
               onClick={() => onLook(civ)}
+              onPointerEnter={() => void soulRecording(civ, langOf(locale))}
+              onFocus={() => void soulRecording(civ, langOf(locale))}
               aria-label={`${t("demo.soul.entry_button")} · ${t(`demo.civ.${civ}.name`)}`}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-control border border-[oklch(var(--color-line-strong))] px-3 text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-1))] focus-visible:outline-2 focus-visible:outline-[oklch(var(--color-focus))]"
             >
@@ -51,18 +53,21 @@ export function DemoSoulEntry({ onLook }: { onLook: (civ: SealCiv) => void }) {
   );
 }
 
+/** Read in the render itself when it has already loaded (it usually has: `DemoHome` waits for it), so the phone's first
+ *  frame is not an empty screen. */
 function useSoulView(civ: SealCiv): SoulView | null | undefined {
   const { t, locale } = useI18n();
-  const [view, setView] = useState<SoulView | null | undefined>(undefined);
+  const lang = langOf(locale);
+  const rec = soulRecordingNow(civ, lang);
+  const [, loaded] = useState(0);
   useEffect(() => {
     let live = true;
-    setView(undefined);
-    void soulRecording(civ, langOf(locale)).then((rec) => live && setView(rec ? soulView(rec, civ, t) : null));
+    void soulRecording(civ, lang).then(() => live && loaded((n) => n + 1));
     return () => {
       live = false;
     };
-  }, [civ, locale, t]);
-  return view;
+  }, [civ, lang]);
+  return useMemo(() => (rec === undefined ? undefined : rec && soulView(rec, civ, t)), [rec, civ, t]);
 }
 
 export default function DemoSoul({ civ, onCiv }: { civ: SealCiv; onCiv: (civ: SealCiv) => void }) {
