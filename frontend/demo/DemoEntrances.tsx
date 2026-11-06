@@ -25,6 +25,8 @@ export function startEntrance(skin: SealCiv, card?: HTMLElement): void {
   window.dispatchEvent(new CustomEvent(ENTRANCE_EVENT, { detail: { skin, origin } }));
 }
 export const ENTRANCE = ENTRANCE_EVENT;
+/** Sent by `enter` with the route it pushed. */
+export const ENTERED = "soulledger-demo-entered";
 
 /** A judge opens on the soul the tour follows, and the moderator on the page made for that role; the rest on the usual default. */
 async function firstPage(role: DemoRole, user: Parameters<typeof defaultViewRoute>[0]): Promise<string> {
@@ -68,7 +70,10 @@ export function useEnter() {
     setRefreshToken(data.refresh);
     if (data.user) setUser(data.user);
     // Soft navigation: the seal keeps playing over it, and the page does not wait for the seal.
-    router.push(await firstPage(role, data.user));
+    const route = await firstPage(role, data.user);
+    router.push(route);
+    // The seal, if one is up, holds until this route is on screen (`EntranceOverlay`).
+    window.dispatchEvent(new CustomEvent(ENTERED, { detail: { route } }));
   };
   return { entering, enter, warm };
 }

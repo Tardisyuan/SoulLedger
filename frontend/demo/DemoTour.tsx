@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@soulledger/core/api/client";
 import { Button } from "@/src/components/ui/Button";
@@ -8,7 +9,7 @@ import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
-import { ENTRANCE, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
+import { ENTERED, ENTRANCE, ROLE_OF_SKIN, SKINS, TOUR_KEY, startEntrance, useEnter } from "./DemoEntrances";
 import { DEMO_USERNAMES } from "./store";
 import type { Tour } from "./tour";
 
@@ -71,14 +72,28 @@ function findTarget(css?: string, text?: string, up?: string): Element | null {
   return (up && row?.closest(up)) || row;
 }
 
+function covered(target: Element): boolean {
+  const card = document.querySelector("[data-testid='demo-tour']")?.getBoundingClientRect();
+  const box = target.getBoundingClientRect();
+  return !!card && box.bottom > card.top && box.top < card.bottom && box.right > card.left && box.left < card.right;
+}
+
 /** Centred if the card leaves it clear, otherwise at the top: the page has room to spare below it while the card is up (STYLES). */
 function reveal(target: Element): void {
   target.scrollIntoView({ block: "center", behavior: "auto" });
-  const card = document.querySelector("[data-testid='demo-tour']")?.getBoundingClientRect();
-  const box = target.getBoundingClientRect();
-  if (card && box.bottom > card.top && box.top < card.bottom && box.right > card.left && box.left < card.right) {
-    target.scrollIntoView({ block: "start", behavior: "auto" });
-  }
+  if (covered(target)) target.scrollIntoView({ block: "start", behavior: "auto" });
+}
+
+/** After the card has moved: scroll only if it now sits on the target. */
+function revealIfCovered(target: Element): void {
+  if (covered(target)) target.scrollIntoView({ block: "start", behavior: "auto" });
+}
+
+/** How far the card sits up: above the verdict bar when the page has one at its foot. */
+function liftNow(): number {
+  const bar = document.querySelector("[class*='bottom-(--bottom-bar)'], [data-testid='verdict-bar']");
+  const box = bar?.getBoundingClientRect();
+  return box && box.top < window.innerHeight && box.bottom > window.innerHeight * 0.5 ? window.innerHeight - box.top + 12 : 0;
 }
 
 /** When the seal starts to narrow: after it has landed (450 ms), and once the page under it is drawn. */
@@ -95,30 +110,49 @@ const WAITING = "[data-civ-loading], [data-testid='permissions-pending']";
  * longer (the recording loads and is re-dated before the sign-in answers; then the route): the landing page came back
  * for about a second before the console replaced it. Now it narrows only once the new route is on screen and done
  * waiting, so the console is already under it when it goes.
+ *
+ * The same seal covers going from one underworld to another (the finished tour's other seals). While it is up, the root
+ * carries `data-civ-change="covered"` and `TenantContext` skips its cross-fade: that fade froze the old page and faded
+ * it into the old page in the new colours, and the new page cut in half a second to a second later.
  */
 function EntranceOverlay() {
   const { t } = useI18n();
-  const [run, setRun] = useState<{ skin: SealCiv; x: number; y: number; from: string; at: number } | null>(null);
+  const [run, setRun] = useState<{ skin: SealCiv; x: number; y: number; at: number } | null>(null);
   const [land, setLand] = useState(false);
+  const target = useRef<string | null>(null);
 
   useEffect(() => {
     const start = (e: Event) => {
       const { skin, origin } = (e as CustomEvent).detail as { skin: SealCiv; origin: { x: number; y: number } };
+      // Before the sign-in answers and changes the civilization: set here, not in an effect a frame later.
+      document.documentElement.dataset.civChange = "covered";
+      target.current = null;
       setLand(false);
-      setRun({ skin, x: origin.x, y: origin.y, from: window.location.pathname, at: performance.now() });
+      setRun({ skin, x: origin.x, y: origin.y, at: performance.now() });
+    };
+    const entered = (e: Event) => {
+      target.current = ((e as CustomEvent).detail as { route: string }).route;
     };
     window.addEventListener(ENTRANCE, start);
-    return () => window.removeEventListener(ENTRANCE, start);
+    window.addEventListener(ENTERED, entered);
+    return () => {
+      window.removeEventListener(ENTRANCE, start);
+      window.removeEventListener(ENTERED, entered);
+    };
   }, []);
 
   useEffect(() => {
     if (!run) return;
+    document.documentElement.dataset.civChange = "covered";
     const end = () => setRun(null);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") end();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      delete document.documentElement.dataset.civChange;
+    };
   }, [run]);
 
   // Checked every frame rather than on events: "the page is drawn" has no event, and this lasts a second at most.
@@ -128,7 +162,8 @@ function EntranceOverlay() {
     let ready = 0;
     const check = () => {
       const held = performance.now() - run.at;
-      const arrived = window.location.pathname !== run.from && !document.querySelector(WAITING);
+      // The route `enter` pushed, not merely another one: from one hall to the next the path may not change at all.
+      const arrived = target.current !== null && window.location.pathname === target.current && !document.querySelector(WAITING);
       ready = arrived ? ready + 1 : 0;
       // Two frames in a row: the page has painted once with its data, not just mounted.
       if ((held >= LANDED_MS && ready >= 2) || held >= HOLD_MAX_MS) setLand(true);
@@ -199,11 +234,12 @@ export default function DemoTour() {
   const here = !!step && pathname === step.route;
   const showing = !state.collapsed && !state.finished && !state.closed;
 
+  // The step's target, while lit: a later lift of the card scrolls it clear only if the card now covers it.
+  const lit = useRef<Element | null>(null);
+
   useEffect(() => {
     if (!here || !showing) return;
     let tries = 0;
-    let lit: Element | null = null;
-    let again: ReturnType<typeof setTimeout> | undefined;
     const timer = setInterval(() => {
       if (step?.tab) {
         const label = t(step.tab);
@@ -213,36 +249,48 @@ export default function DemoTour() {
       const found = findTarget(step?.css, step?.text, step?.up);
       tries += 1;
       if (found) {
-        lit = found;
+        lit.current = found;
         found.classList.add("demo-tour-target");
+        // The card where it will sit first, then one scroll. It used to scroll, let the card move up (lift was
+        // measured every 300 ms) and scroll again 350 ms later: the page jumped twice.
+        flushSync(() => setLift(liftNow()));
         reveal(found);
-        // Once more when the card has settled above the verdict bar (`lift`, measured every 300 ms).
-        again = setTimeout(() => reveal(found), 350);
       }
-      if (lit || tries > 25) clearInterval(timer);
+      if (lit.current || tries > 25) clearInterval(timer);
     }, 120);
     return () => {
       clearInterval(timer);
-      clearTimeout(again);
-      lit?.classList.remove("demo-tour-target");
+      lit.current?.classList.remove("demo-tour-target");
+      lit.current = null;
     };
   }, [here, step, showing, t]);
 
-  // The verdict keys are what the page is for: the card sits above the bar that holds them.
+  // The verdict keys are what the page is for: the card sits above the bar that holds them. Measured when the page
+  // changes (the bar mounts, a tab opens), coalesced to a frame, instead of on a 300 ms poll that moved the card late.
   useEffect(() => {
     if (!showing) {
       setLift(0);
       return;
     }
+    let frame = 0;
     const measure = () => {
-      const bar = document.querySelector("[class*='bottom-(--bottom-bar)'], [data-testid='verdict-bar']");
-      const box = bar?.getBoundingClientRect();
-      setLift(box && box.top < window.innerHeight && box.bottom > window.innerHeight * 0.5 ? window.innerHeight - box.top + 12 : 0);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setLift(liftNow()));
     };
     measure();
-    const timer = setInterval(measure, 300);
-    return () => clearInterval(timer);
+    const watcher = new MutationObserver(measure);
+    watcher.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      watcher.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, [showing, pathname]);
+
+  useEffect(() => {
+    if (lit.current && lift) revealIfCovered(lit.current);
+  }, [lift]);
 
   const update = (next: Partial<State>) => {
     const merged = { ...state, ...next };
@@ -273,7 +321,10 @@ export default function DemoTour() {
                   type="button"
                   data-testid={`demo-tour-other-${skin}`}
                   aria-label={t("demo.landing.card_label", { civ: t(`demo.civ.${skin}.name`) })}
-                  onClick={() => void enter(ROLE_OF_SKIN[skin])}
+                  onClick={(e) => {
+                    startEntrance(skin, e.currentTarget);
+                    void enter(ROLE_OF_SKIN[skin]);
+                  }}
                   onPointerEnter={() => warm(ROLE_OF_SKIN[skin])}
                   onFocus={() => warm(ROLE_OF_SKIN[skin])}
                 >

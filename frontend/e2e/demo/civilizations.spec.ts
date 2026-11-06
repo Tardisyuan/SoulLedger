@@ -255,6 +255,50 @@ test("the seal goes once the console is under it, and Esc skips it", async ({ pa
   await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 300 });
 });
 
+test("from one underworld to another: the seal covers it, no cross-fade of the old page, no cut afterwards", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("landing-card-cn").click();
+  await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 6000 });
+  // The finished tour's card, where the other three seals are.
+  await page.evaluate(() => sessionStorage.setItem("soulledger_demo_tour", JSON.stringify({ step: 0, finished: true })));
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  const other = page.getByTestId("demo-tour-other-eu");
+  await expect(other).toBeVisible();
+  const from = new URL(page.url()).pathname;
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  // It used to cross-fade the cn page into the cn page in eu's colours, and cut to the eu page 0.5–1 s later.
+  await page.evaluate(() => {
+    const seen = { seal: false, fadeFrames: 0, waitingAfter: 0, oldCivAfter: 0, pathAtGone: "" };
+    (window as unknown as { __switch: typeof seen }).__switch = seen;
+    let after = 0;
+    const tick = () => {
+      const sealUp = !!document.querySelector("[data-testid='demo-entrance']");
+      if (sealUp) seen.seal = true;
+      if (document.getAnimations().some((a) => String((a.effect as KeyframeEffect | null)?.pseudoElement ?? "").startsWith("::view-transition"))) seen.fadeFrames++;
+      if (seen.seal && !sealUp) {
+        if (!after) seen.pathAtGone = location.pathname;
+        after++;
+        if (document.documentElement.dataset.civ !== "eu") seen.oldCivAfter++;
+        if (document.querySelector("[data-civ-loading], [data-testid='permissions-pending']")) seen.waitingAfter++;
+      }
+      if (after < 30) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await other.hover();
+  await other.click();
+  await expect(page.getByTestId("demo-entrance")).toBeVisible();
+  await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 6000 });
+  await page.waitForTimeout(1000);
+  const seen = await page.evaluate(() => (window as unknown as { __switch: { pathAtGone: string } }).__switch);
+  expect(seen).toEqual({ seal: true, fadeFrames: 0, waitingAfter: 0, oldCivAfter: 0, pathAtGone: expect.not.stringMatching(new RegExp(`^${from}$`)) });
+  // Nothing arrived after the seal went: the page it uncovered is the page that stays.
+  expect(new URL(page.url()).pathname).toBe(seen.pathAtGone);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+});
+
 test("Greece: the tour's second step lights the crossing line, the third the judges' fork", async ({ page }) => {
   await enter(page, "judge_gr");
   // A judge lands on the protagonist's page: the first step is already where it points, no 回到这一步 to press.
