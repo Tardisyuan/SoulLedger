@@ -3817,6 +3817,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/verdict-document.pdf/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 判决文书的 PDF(用户 2026-11-07;渲染路径见 apps/judgment/verdict_pdf.py)。
+         *
+         *     `GET /api/v1/judgment/{id}/verdict-document.pdf/?locale=en`
+         *
+         *     与详情同一个 `get_object`、同一个码名(`judgment.read`)、同一个序列化器,所以能看详情的人就能下载,
+         *     文书上的字与网页上那张卡出自同一份数据。没结案 409 `judgment_not_concluded`;结了但没有文书
+         *     (裁决是重审 RETRY,或文明不在四文明里)404 `no_verdict_document`;渲染服务没配或不在 503
+         *     (`verdict_pdf_not_configured` / `verdict_pdf_unavailable`)。文件名是案号。
+         */
+        get: operations["v1_judgment_verdict_document_pdf_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/annual/": {
         parameters: {
             query?: never;
@@ -29069,6 +29095,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_verdict_document_pdf_retrieve: {
+        parameters: {
+            query?: {
+                /** @description The language of the document (the reader's interface language); default zh-Hans. */
+                locale?: "egy" | "en" | "zh-Hans";
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

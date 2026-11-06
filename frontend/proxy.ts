@@ -82,6 +82,8 @@ const PUBLIC_PATHS = [
   "/(auth)/verify-email",
   // 邀请信的链接(第五十四批):令牌是唯一凭据,收信人还没有密码。
   "/(auth)/accept-invite",
+  // 判决文书 PDF 的打印页(2026-11-07):只有无头 Chromium 打开,一次性键是唯一凭据(app/verdict-print/page.tsx)。
+  "/verdict-print",
 ];
 
 /** The browser's first language: Chinese if it starts with `zh`, English otherwise. Kemet is only ever chosen. */

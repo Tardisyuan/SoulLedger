@@ -127,6 +127,14 @@ services:
         limits:
           memory: 512m
 
+  # 一个 Chromium 一次出一份文书;1g 够它加一页 A4 的字体与图层。
+  gotenberg:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
   # Nightly pg_dump. It lived in the base file behind `profiles: [production]`,
   # and nothing — scripts/deploy.sh included — ever passed `--profile`, so it
   # never started; had it started, the script read DB_HOST instead of the

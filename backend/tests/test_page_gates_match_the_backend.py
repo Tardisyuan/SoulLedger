@@ -51,6 +51,7 @@ PUBLIC_OR_SELF_SERVICE = {
     "/cross-judgments": "参与方由后端按租户裁;页面本身不构成额外授权。",
     "/cross-judgments/[id]": "同上。",
     "/corpus": "语料是公开的考据材料,不含任何租户数据。",
+    "/verdict-print": "判决文书 PDF 的打印页:只有无头 Chromium 打开,一次性键是凭据;数据由后端在下载人自己的请求里按详情的权限备好(apps/judgment/verdict_pdf.py)。",
     "/about": "关于 / 致谢:字体、纹样、图像的授权清单,静态内容,不含任何租户数据(OFL / CC0 本就要求可见)。",
 }
 
