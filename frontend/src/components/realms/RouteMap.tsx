@@ -21,6 +21,7 @@ import { toRomanNumeral } from "@soulledger/core/config/civilizationSigil";
  */
 const LABEL = "text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]";
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
+const SUMMIT = "EU_EARTHLY_PARADISE";
 const SPINE = "absolute left-[5.5px] top-3 bottom-3 w-px bg-[oklch(var(--color-line-strong))]";
 
 export function RouteMap({
@@ -98,7 +99,8 @@ export function RouteMap({
           {topology.regions.map(({ region, stations }) => {
             // Purgatorio is the mountain: summit first, so it narrows upward.
             const drawn = region === "PURGATORIO" ? [...stations].reverse() : stations;
-            const levels = stations.filter((s) => s.realm?.level != null).length;
+            // The summit (Earthly Paradise) has level 8 but is not an eighth terrace: it purges nothing (docs/03 §5).
+            const levels = stations.filter((s) => s.realm?.level != null && s.code !== SUMMIT).length;
             return (
               <div key={region} data-funnel-region={region}>
                 <div className={`text-2xs pb-1 ${MUTED}`}>{t(`realms.map.region.${region}`, { n: String(levels) })}</div>

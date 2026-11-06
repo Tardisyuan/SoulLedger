@@ -222,7 +222,7 @@
     "civilizations_title": "Civilizations",
     "civilizations": {
       "CHINESE": "Chinese Diyu",
-      "EUROPEAN": "European Heaven and Hell",
+      "EUROPEAN": "European Heaven & Hell",
       "EGYPTIAN": "Egyptian Duat",
       "GREEK": "Greek Underworld"
     },
@@ -233,8 +233,8 @@
       "GREEK": "Greece"
     },
     "civ_desc": {
-      "CHINESE": "Ten Yama Kings, Meng Po's broth, the six paths of rebirth",
-      "EUROPEAN": "Christian judgement, purgatory, Dante's Inferno, Lethe",
+      "CHINESE": "Ten Yama Kings, Meng Po's soup, the six paths of rebirth",
+      "EUROPEAN": "Christian judgement, purgatory, Dante's Inferno, Lethe and Eunoe",
       "EGYPTIAN": "The judgement of Osiris, the weighing of the heart, the Field of Reeds",
       "GREEK": "Three judges parting the ways, Er's thousand-year cycle, the water of Lethe"
     },
@@ -345,7 +345,7 @@
       "CITY_GOD_RECEIVED": "Received by the City God",
       "CITY_GOD_SENT_ON": "Sent on by the City God to the Ten Courts",
       "CITY_GOD_RETURNED": "Returned by the City God for correction",
-      "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting",
+      "MENGPO_SOUP_TAKEN": "Drank Meng Po's soup",
       "PURGATORY_ASCENDED": "Rose from purgatory to heaven",
       "OFFICER_HANDOVER": "Case handed to another officer",
       "DUAT_PASSAGE_CHANGED": "Duat passage changed",
@@ -893,9 +893,9 @@
       "OFFERING_PAVILION": "Where the soul receives the paper money its family burns for it above.",
       "GHOST_FORT": "A shelter for lonely souls with nowhere else to go.",
       "FENGDU_CITY": "The soul enters the City of Fengdu, comes under the underworld's rule, and awaits the Ten Courts.",
-      "EIGHTEEN_HELLS": "Where those found guilty are punished.",
+      "EIGHTEEN_HELLS": "Where punishment happens in the popular telling (a rival account to the ten courts).",
       "LOTUS_TERRACE": "Where the soul is delivered and lifted out of the sea of suffering.",
-      "HUANHUN_CLIFF": "The last pass before rebirth, after drinking Mengpo's soup."
+      "HUANHUN_CLIFF": "The last pass before rebirth, after drinking Meng Po's soup."
     },
     "life_label": {
       "this_life": "This life",
@@ -3024,40 +3024,40 @@
       }
     },
     "codes": {
-      "DY_01_HEAVEN": "天堂",
-      "DY_02_YANGLIU": "杨柳宫",
-      "DY_00_PURGATORY": "待审所",
-      "DY_COURT_01_QINGUANG": "第一殿",
-      "DY_COURT_02_CHUJIANG": "第二殿",
-      "DY_COURT_03_SONGDI": "第三殿",
-      "DY_COURT_04_WUGUAN": "第四殿",
-      "DY_COURT_05_YANLUO": "第五殿",
-      "DY_COURT_06_BIANCHENG": "第六殿",
-      "DY_COURT_07_TAISHAN": "第七殿",
-      "DY_COURT_08_DUSHI": "第八殿",
-      "DY_COURT_09_PINGDENG": "第九殿",
-      "DY_COURT_10_ZHUANLUN": "第十殿",
-      "EU_HEAVEN": "天堂",
-      "EU_PURGATORY": "炼狱",
-      "EU_PURGATORY_T1_PRIDE": "炼狱第一层",
-      "EU_PURGATORY_T2_ENVY": "炼狱第二层",
-      "EU_PURGATORY_T3_WRATH": "炼狱第三层",
-      "EU_PURGATORY_T4_SLOTH": "炼狱第四层",
-      "EU_PURGATORY_T5_AVARICE": "炼狱第五层",
-      "EU_PURGATORY_T6_GLUTTONY": "炼狱第六层",
-      "EU_PURGATORY_T7_LUST": "炼狱第七层",
-      "EU_EARTHLY_PARADISE": "地上乐园",
-      "EU_HELL_1ST": "第一层地狱",
-      "EU_HELL_2ND": "第二层地狱",
-      "EU_HELL_3RD": "第三层地狱",
-      "EU_HELL_4TH": "第四层地狱",
-      "EU_HELL_5TH": "第五层地狱",
-      "EU_HELL_6TH": "第六层地狱",
-      "EU_HELL_7TH": "第七层地狱",
-      "EU_HELL_8TH": "第八层地狱",
-      "EU_HELL_9TH": "第九层地狱",
-      "EU_ACHERON": "阿刻戎渡口",
-      "EU_PLATO_MEADOW": "岔路草原",
+      "DY_01_HEAVEN": "First Heaven",
+      "DY_02_YANGLIU": "Yangliu Palace",
+      "DY_00_PURGATORY": "Holding Hall",
+      "DY_COURT_01_QINGUANG": "First Court",
+      "DY_COURT_02_CHUJIANG": "Second Court",
+      "DY_COURT_03_SONGDI": "Third Court",
+      "DY_COURT_04_WUGUAN": "Fourth Court",
+      "DY_COURT_05_YANLUO": "Fifth Court",
+      "DY_COURT_06_BIANCHENG": "Sixth Court",
+      "DY_COURT_07_TAISHAN": "Seventh Court",
+      "DY_COURT_08_DUSHI": "Eighth Court",
+      "DY_COURT_09_PINGDENG": "Ninth Court",
+      "DY_COURT_10_ZHUANLUN": "Tenth Court",
+      "EU_HEAVEN": "Heaven",
+      "EU_PURGATORY": "Purgatory",
+      "EU_PURGATORY_T1_PRIDE": "Terrace 1",
+      "EU_PURGATORY_T2_ENVY": "Terrace 2",
+      "EU_PURGATORY_T3_WRATH": "Terrace 3",
+      "EU_PURGATORY_T4_SLOTH": "Terrace 4",
+      "EU_PURGATORY_T5_AVARICE": "Terrace 5",
+      "EU_PURGATORY_T6_GLUTTONY": "Terrace 6",
+      "EU_PURGATORY_T7_LUST": "Terrace 7",
+      "EU_EARTHLY_PARADISE": "Earthly Paradise",
+      "EU_HELL_1ST": "Circle 1",
+      "EU_HELL_2ND": "Circle 2",
+      "EU_HELL_3RD": "Circle 3",
+      "EU_HELL_4TH": "Circle 4",
+      "EU_HELL_5TH": "Circle 5",
+      "EU_HELL_6TH": "Circle 6",
+      "EU_HELL_7TH": "Circle 7",
+      "EU_HELL_8TH": "Circle 8",
+      "EU_HELL_9TH": "Circle 9",
+      "EU_ACHERON": "Acheron",
+      "EU_PLATO_MEADOW": "Meadow at the Crossroads",
       "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
       "GR_TARTARUS": "塔尔塔罗斯",
@@ -3067,12 +3067,12 @@
       "EG_TWENTYONE_SEBKHET": "二十一道门户",
       "EG_AARU": "阿鲁之地",
       "EG_ANNIHILATION": "第二次死亡",
-      "EU_ANTINFERNO": "地狱前庭"
+      "EU_ANTINFERNO": "Vestibule"
     },
     "names": {
       "DY_01_HEAVEN": "First Heaven",
       "DY_02_YANGLIU": "Yangliu Palace",
-      "DY_00_PURGATORY": "Purgatory Holding",
+      "DY_00_PURGATORY": "Holding Hall",
       "DY_COURT_01_QINGUANG": "First Court Qinguang",
       "DY_COURT_02_CHUJIANG": "Second Court Chujiang",
       "DY_COURT_03_SONGDI": "Third Court Songdi",
@@ -3096,11 +3096,11 @@
       "EU_HELL_1ST": "First Circle - Limbo",
       "EU_HELL_2ND": "Second Circle - Lust",
       "EU_HELL_3RD": "Third Circle - Gluttony",
-      "EU_HELL_4TH": "Fourth Circle - Greed",
-      "EU_HELL_5TH": "Fifth Circle - Anger",
+      "EU_HELL_4TH": "Fourth Circle - Avarice and Prodigality",
+      "EU_HELL_5TH": "Fifth Circle - Wrath",
       "EU_HELL_6TH": "Sixth Circle - Heresy",
       "EU_HELL_7TH": "Seventh Circle - Violence",
-      "EU_HELL_8TH": "Eighth Circle - Malebolge",
+      "EU_HELL_8TH": "Eighth Circle - Fraud",
       "EU_HELL_9TH": "Ninth Circle - Treachery",
       "EU_ACHERON": "The Crossing of Acheron",
       "EU_PLATO_MEADOW": "The Meadow at the Parting of the Ways",
@@ -3192,7 +3192,7 @@
       "region": {
         "INFERNO": "Inferno · {{n}} circles, narrowing downward",
         "PURGATORIO": "Purgatorio · {{n}} terraces, narrowing upward",
-        "PARADISO": "Paradiso · {{n}} spheres"
+        "PARADISO": "Paradiso"
       },
       "fork": {
         "PASS": "✓ Pass · the heart lighter than the feather",
@@ -4436,7 +4436,7 @@
       "THREE_EVIL_PATHS": "Three evil paths"
     },
     "error": {
-      "soup_not_taken": "{{name}} hasn't taken Mengpo's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
+      "soup_not_taken": "{{name}} hasn't taken Meng Po's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
       "plan_in_progress": "{{name}}'s sentence plan is not finished; no rebirth yet.",
       "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
       "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth.",
@@ -5194,7 +5194,8 @@
       },
       "eu": {
         "past_read_only": "Past lives are read-only. Heaven and Hell take no applications or appeals.",
-        "no_past_lives": "Heaven and Hell have no past lives. You have this one life, and nothing after it is recorded."
+        "no_past_lives": "Heaven and Hell have no past lives. You have this one life, and nothing after it is recorded.",
+        "court": "Judged at"
       }
     },
     "logout": {
@@ -5941,7 +5942,7 @@
       "unresolved": "Still need help",
       "group_terms": "Terms",
       "q_appeals": "The three kinds of appeal",
-      "a_appeals": "Judgment appeal: you dispute a concluded judgment; file it before its deadline, at most twice per judgment, and a withdrawal counts. Rebirth appeal: a rejected rebirth application can be appealed once. Grievance: held in the City of the Wrongly Dead and believing your death unjust, you petition the City God; if it is found untrue you may file again later.",
+      "a_appeals": "Judgment appeal: you dispute a concluded judgment; file it before its deadline, at most twice per judgment, and a withdrawal counts. Rebirth appeal: a rejected rebirth application can be appealed once. Grievance: held in the City of Wrongful Death and believing your death unjust, you petition the City God; if it is found untrue you may file again later.",
       "q_merit": "Merit and demerit",
       "a_merit": "Your records are this life's account: good deeds are merit, wrongs are demerit. Merit minus demerit is the number above “This life's ledger”.",
       "q_disposition": "Disposition",
@@ -6055,7 +6056,7 @@
     },
     "wangsi_upheld": {
       "title": "Grievance upheld: released early",
-      "body": "Your grievance was found true and you have been released early from the City of the Wrongfully Dead. Open Soul Ledger to see it."
+      "body": "Your grievance was found true and you have been released early from the City of Wrongful Death. Open Soul Ledger to see it."
     },
     "wangsi_upheld_late": {
       "title": "Grievance upheld",
@@ -6063,7 +6064,7 @@
     },
     "wangsi_delivered": {
       "title": "Grievance upheld: delivered",
-      "body": "Your grievance was found true and you have been delivered from the City of the Wrongfully Dead. Open Soul Ledger to see it."
+      "body": "Your grievance was found true and you have been delivered from the City of Wrongful Death. Open Soul Ledger to see it."
     },
     "wangsi_rejected": {
       "title": "Grievance not upheld",
@@ -6396,7 +6397,7 @@
       "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"
     },
     "wangsi_grievance_filed": {
-      "title": "New grievance in the City of the Wrongfully Dead",
+      "title": "New grievance in the City of Wrongful Death",
       "body": "{{soul}} has filed a grievance, waiting for review."
     },
     "workflow_pick_nodes": {
@@ -8436,17 +8437,17 @@
     "reset_invalid_body": "It has expired or was already used. Ask your administrator to reset your password again."
   },
   "mengpoSoup": {
-    "title": "Mengpo's soup",
-    "hint": "Souls of Diyu take Mengpo's soup before rebirth.",
+    "title": "Meng Po's soup",
+    "hint": "Souls of Diyu take Meng Po's soup before rebirth.",
     "not_taken": "Not taken",
     "taken": "Taken · {{time}}",
     "register": "Record as taken",
-    "register_title": "Record that {{name}} has taken Mengpo's soup?",
+    "register_title": "Record that {{name}} has taken Meng Po's soup?",
     "register_body": "Once per life. It can't be undone; it clears when the rebirth completes.",
-    "registered_toast": "Recorded: {{name}} has taken Mengpo's soup",
-    "batch_refused": "{{n}} haven't taken Mengpo's soup and were not reborn; they stay awaiting rebirth:",
+    "registered_toast": "Recorded: {{name}} has taken Meng Po's soup",
+    "batch_refused": "{{n}} haven't taken Meng Po's soup and were not reborn; they stay awaiting rebirth:",
     "error": {
-      "not_diyu": "Only souls of Diyu take Mengpo's soup",
+      "not_diyu": "Only souls of Diyu take Meng Po's soup",
       "not_reincarnating": "Only souls awaiting rebirth can take it",
       "soup_already_taken": "Already taken in this life"
     }
@@ -8921,7 +8922,7 @@
       "court10_bridges": "Court 10 · six bridges · Meng Po",
       "ghost_gate": "Ghost Gate",
       "inside_fengdu": "Inside Fengdu · the ten courts",
-      "mengpo_pavilion": "Meng Po's Pavilion",
+      "mengpo_pavilion": "Terrace of Oblivion",
       "moved_by_officer": "Moved by an officer",
       "nai_river": "River Nai",
       "naihe_bridge": "Naihe Bridge",
@@ -9043,7 +9044,7 @@
       "sin": {
         "envy": "Envy",
         "gluttony": "Gluttony",
-        "greed": "Greed",
+        "greed": "Avarice",
         "lust": "Lust",
         "pride": "Pride",
         "sloth": "Sloth",
@@ -9078,7 +9079,7 @@
   },
   "soul": {
     "here": {
-      "cn_court": "{{court}} is judging your merits and faults.",
+      "cn_court": "You are before {{court}}. A judge is reading the merits and faults of your life.",
       "eg_weighing": "Your heart is weighed against Maat's feather.",
       "eu_realm": "You are in {{realm}}.",
       "gr_thousand": "{{n}} years into the thousand-year road."
@@ -9138,7 +9139,9 @@
         "antinferno": "Registered as neutral: kept in the Vestibule of Hell.",
         "heaven": "No unrepented mortal sin: called into Heaven.",
         "hell": "An unrepented mortal sin: down to Circle {{n}} of Hell.",
-        "purgatory": "No unrepented mortal sin: to Terrace {{n}} of Purgatory, to be cleansed from the lowest terrace upward."
+        "purgatory": "No unrepented mortal sin: to Terrace {{n}} of Purgatory, to be cleansed from the lowest terrace upward.",
+        "limbo": "Unbaptised, with no graver sin: to the first circle, Limbo. No punishment is given there.",
+        "heresy": "Denied that the soul outlives the body: to the sixth circle of Hell."
       }
     },
     "gr": {

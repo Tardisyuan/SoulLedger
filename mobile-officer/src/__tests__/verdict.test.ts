@@ -61,7 +61,7 @@ it("the preview says the draft's sentence, and nothing where the destination is 
   expect(previewOf(t, "CHINESE", { ...NO_CHOICE, reasons: ["FIVE_HEINOUS"] }, "zh-Hans")).toBe("犯五逆，不经各殿，解送第九殿阿鼻大地狱。");
   expect(previewOf(t, "CHINESE", { ...NO_CHOICE, reasons: ["OTHER"] }, "zh-Hans")).toBeNull();
   expect(previewOf(t, "EUROPEAN", { ...NO_CHOICE, reasons: ["NEUTRAL"] }, "zh-Hans")).toBe("登记为中立者，留在地狱前庭。");
-  expect(previewOf(t, "EUROPEAN", { ...NO_CHOICE, reasons: ["DENIED_IMMORTALITY"] }, "zh-Hans")).toBeNull();
+  expect(previewOf(t, "EUROPEAN", { ...NO_CHOICE, reasons: ["DENIED_IMMORTALITY"] }, "zh-Hans")).toBe("否认灵魂不灭，入地狱第六圈。");
   expect(previewOf(t, "EUROPEAN", { ...NO_CHOICE, reasons: ["MORTAL_SIN"] }, "zh-Hans")).toBeNull();
   expect(previewOf(t, "GREEK", { ...NO_CHOICE, account: "REPUBLIC", curability: "INCURABLE" }, "zh-Hans")).toBe("出口不纳，抛入塔尔塔罗斯。");
   expect(previewOf(t, "GREEK", { ...NO_CHOICE, account: "GORGIAS", curability: "CURABLE" }, "zh-Hans")).toBe("加上标记：可医。送往塔尔塔罗斯。");

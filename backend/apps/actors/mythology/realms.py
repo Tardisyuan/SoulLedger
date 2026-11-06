@@ -80,7 +80,7 @@ CHINESE_REALMS = [
     # NO LONGER USED (user 2026-10-29, review L). 地府判无罪直接候转世(docs/11 §3.1, §3.3), so nothing is sent
     # here any more. The row stays — old dispositions and paths name it — but it is never offered as a choice
     # (`apps/realms/models.py::RETIRED_REALM_CODES`).
-    ("DY_01_HEAVEN", "天堂", "第一层天界", "First Heaven", "Tianjie", RealmType.BLISS, 1,
+    ("DY_01_HEAVEN", "天界", "第一层天界", "First Heaven", "Tianjie", RealmType.BLISS, 1,
      "No longer used (2026-10-29): an acquitted soul of Diyu goes straight to rebirth. "
      "Formerly: pure merit souls - highest bliss, for as long as the merit lasts; "
      "when it is spent the soul returns to the wheel", "MENGPO", False, None),
@@ -127,7 +127,7 @@ CHINESE_REALMS = [
     # solved the identical question the other way and its comment describes the
     # Chinese pattern as "on every court a soul can be sentenced to", which the
     # holding pen is not.
-    ("DY_00_PURGATORY", "待审所", "待审所", "Purgatory Holding", "Daishensuo", RealmType.PURGATORY, 1,
+    ("DY_00_PURGATORY", "待审所", "待审所", "Holding Hall", "Daishensuo", RealmType.PURGATORY, 1,
      "Souls awaiting judgment - held before the first court reads the ledger",
      "NONE", False, None),
     ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Wesekhet 1 · Qinguang",
@@ -136,8 +136,8 @@ CHINESE_REALMS = [
      "opened at the 孽镜台 (Mirror of Retribution); no punishment is administered here", "MENGPO", False, None),
     ("DY_COURT_02_CHUJIANG", "第二殿", "第二殿楚江王", "Second Court Chujiang", "Wesekhet 2 · Chujiang",
      RealmType.HELL, 2,
-     "活大地狱 - the mildest punishment court; thieves and those who wounded "
-     "others in life", "MENGPO", False, 100),
+     "活大地狱 - the mildest punishment court; abducting the young, seizing "
+     "others' property, maiming others' eyes, ears, hands or feet", "MENGPO", False, 100),
     # 忤逆尊长 is the offence 《玉历》 actually opens the third court with, and it
     # was the one missing: the row read "evil tongue, false witness,
     # oath-breaking", of which only 教唆兴讼 (incitement to litigation) has a
@@ -150,7 +150,7 @@ CHINESE_REALMS = [
      "litigation, betraying a trust", "MENGPO", False, 80),
     ("DY_COURT_04_WUGUAN", "第四殿", "第四殿五官王", "Fourth Court Wuguan", "Wesekhet 4 · Wuguan",
      RealmType.HELL, 4,
-     "合大地狱 - fraud, withheld dues, falsified accounts", "MENGPO", False, 60),
+     "合大地狱 - refusing grain tax and rent, fraud in trade", "MENGPO", False, 60),
     ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yanluo", "Wesekhet 5 · Yanluo",
      RealmType.HELL, 5,
      "叫唤大地狱 and the 十六诛心小地狱 - the court that tries the intent behind "
@@ -198,7 +198,7 @@ EUROPEAN_REALMS = [
     # makes the reset a thing that happened to it somewhere else. A field
     # naming the mechanism *this realm* applies is the wrong place to record a
     # river two realms down the road.
-    ("EU_HEAVEN", "天堂", "上帝之国", "Kingdom of Heaven", "Pet", RealmType.BLISS, 1,
+    ("EU_HEAVEN", "天国", "天国", "Kingdom of Heaven", "Pet", RealmType.BLISS, 1,
      "Eternal paradise - the highest bliss realm in Christian tradition", "NONE", True, None),
     # The mountain as a whole. It is a container now — the seven terraces below
     # hang off this row by `parent_realm` (see REALM_PARENTS) — so its
@@ -217,7 +217,7 @@ EUROPEAN_REALMS = [
     # `DispositionService._route_european` sends every PURGATORY and RETRY
     # verdict to, state that no memory reset occurs on a mountain whose own
     # description names both rivers.
-    ("EU_PURGATORY", "炼狱", "涤罪所", "Purgatory", "Ta Hesmen", RealmType.PURGATORY, 1,
+    ("EU_PURGATORY", "炼狱", "炼狱", "Purgatory", "Ta Hesmen", RealmType.PURGATORY, 1,
      "Mount Purgatory entire: Ante-Purgatory (Purg. I-IX), the seven terraces "
      "and the Earthly Paradise at the summit, all of which are its sub-realms. "
      "Every soul admitted here is already saved; the suffering is remedial and "
@@ -272,28 +272,28 @@ EUROPEAN_REALMS = [
     # after the seventh terrace. These rows say NONE, and so do the nine circles
     # and heaven now; the two rows that still say LETHE are the mountain and
     # EU_EARTHLY_PARADISE, which is the only place the water actually is.
-    ("EU_PURGATORY_T1_PRIDE", "炼狱第一层", "傲慢之台", "First Terrace - Pride",
+    ("EU_PURGATORY_T1_PRIDE", "炼狱第一层", "第一层 - 傲慢", "First Terrace - Pride",
      "Ta Hesmen 1 · Superbia", RealmType.PURGATORY, 1,
      "First terrace: pride. The penitent walks bent double beneath a great "
      "stone, past carved exempla of humility (Purg. X-XII). Love perverted. "
      "Pride has no circle in the Inferno at all — this is its only place in "
      "the poem",
      "NONE", False, None),
-    ("EU_PURGATORY_T2_ENVY", "炼狱第二层", "嫉妒之台", "Second Terrace - Envy",
+    ("EU_PURGATORY_T2_ENVY", "炼狱第二层", "第二层 - 嫉妒", "Second Terrace - Envy",
      "Ta Hesmen 2 · Invidia", RealmType.PURGATORY, 2,
      "Second terrace: envy. The penitent's eyelids are sewn shut with iron "
      "wire (Purg. XIII-XV). Love perverted. Envy has no circle in the Inferno "
      "either; the withdrawn EU-DS-07 gave it an iron cage in the eighth "
      "circle, and no part of the poem contains one",
      "NONE", False, None),
-    ("EU_PURGATORY_T3_WRATH", "炼狱第三层", "愤怒之台", "Third Terrace - Wrath",
+    ("EU_PURGATORY_T3_WRATH", "炼狱第三层", "第三层 - 愤怒", "Third Terrace - Wrath",
      "Ta Hesmen 3 · Ira", RealmType.PURGATORY, 3,
      "Third terrace: wrath. The penitent walks through thick, blinding, "
      "choking smoke (Purg. XV-XVII). Love perverted. The Inferno's fifth "
      "circle also holds the wrathful, but it holds them as incontinence, not "
      "as one of the seven",
      "NONE", False, None),
-    ("EU_PURGATORY_T4_SLOTH", "炼狱第四层", "懒惰之台", "Fourth Terrace - Sloth",
+    ("EU_PURGATORY_T4_SLOTH", "炼狱第四层", "第四层 - 懒惰", "Fourth Terrace - Sloth",
      "Ta Hesmen 4 · Acedia", RealmType.PURGATORY, 4,
      "Fourth terrace: sloth (acedia). The penitent runs without pause, calling "
      "out exempla of zeal (Purg. XVIII-XIX). Love defective — the single sin "
@@ -302,20 +302,20 @@ EUROPEAN_REALMS = [
      "some as acedia and by Dante as anger turned inward, and the reading is "
      "disputed",
      "NONE", False, None),
-    ("EU_PURGATORY_T5_AVARICE", "炼狱第五层", "贪婪之台", "Fifth Terrace - Avarice",
+    ("EU_PURGATORY_T5_AVARICE", "炼狱第五层", "第五层 - 贪婪", "Fifth Terrace - Avarice",
      "Ta Hesmen 5 · Avaritia", RealmType.PURGATORY, 5,
      "Fifth terrace: avarice, and prodigality with it. The penitent lies face "
      "down on the ground (Purg. XIX-XXII). Love excessive. Two directions of "
      "one disorder share the terrace, the same pairing the Inferno's fourth "
      "circle makes of the avaricious and the prodigal",
      "NONE", False, None),
-    ("EU_PURGATORY_T6_GLUTTONY", "炼狱第六层", "暴食之台", "Sixth Terrace - Gluttony",
+    ("EU_PURGATORY_T6_GLUTTONY", "炼狱第六层", "第六层 - 暴食", "Sixth Terrace - Gluttony",
      "Ta Hesmen 6 · Gula", RealmType.PURGATORY, 6,
      "Sixth terrace: gluttony. The penitent starves and thirsts beneath fruit "
      "trees whose scent draws and whose branches withhold (Purg. XXII-XXIV). "
      "Love excessive",
      "NONE", False, None),
-    ("EU_PURGATORY_T7_LUST", "炼狱第七层", "淫欲之台", "Seventh Terrace - Lust",
+    ("EU_PURGATORY_T7_LUST", "炼狱第七层", "第七层 - 淫欲", "Seventh Terrace - Lust",
      "Ta Hesmen 7 · Luxuria", RealmType.PURGATORY, 7,
      "Seventh and last terrace: lust. The penitent passes through a wall of "
      "flame (Purg. XXV-XXVII). Love excessive. What lies above is not an "
@@ -383,28 +383,31 @@ EUROPEAN_REALMS = [
     #
     # `docs/01`'s comparison table already said 「基督教 记忆消除=否」 while
     # these rows said LETHE — one of the two had to be wrong, and it was these.
-    ("EU_HELL_1ST", "第一层地狱", "幽冥边境", "First Circle - Limbo", "Duat 1 · Limbo", RealmType.HELL, 1,
+    ("EU_HELL_1ST", "地狱第一圈", "第一圈 - 林勃", "First Circle - Limbo", "Duat 1 · Limbo", RealmType.HELL, 1,
      "Limbo - virtuous pagans, unbaptized infants", "NONE", True, None),
     # name_zh was 「贪食深渊」 (gluttony) against a name_en of "Second Circle -
     # Lust". Dante's second circle is lust (Inf. V) and gluttony is the third
     # (Inf. VI), so the Chinese alias was one circle out of step with the
-    # English on the same row — and EU_HELL_3RD already carries 「饕餮泥沼」,
-    # so the repo named gluttony twice and lust not at all.
-    ("EU_HELL_2ND", "第二层地狱", "色欲之风", "Second Circle - Lust", "Duat 2 · Luxuria", RealmType.HELL, 2,
+    # English on the same row — and EU_HELL_3RD then carried 「饕餮泥沼」,
+    # so the repo named gluttony twice and lust not at all. Since 2026-11-07
+    # every European name_zh / name_local is the language pack's
+    # realms.names / realms.codes word for word (realms/0030).
+    ("EU_HELL_2ND", "地狱第二圈", "第二圈 - 淫欲", "Second Circle - Lust", "Duat 2 · Luxuria", RealmType.HELL, 2,
      "Lustful souls - tossed by violent winds (Dante's Inferno)", "NONE", True, None),
-    ("EU_HELL_3RD", "第三层地狱", "饕餮泥沼", "Third Circle - Gluttony", "Duat 3 · Gula", RealmType.HELL, 3,
+    ("EU_HELL_3RD", "地狱第三圈", "第三圈 - 暴食", "Third Circle - Gluttony", "Duat 3 · Gula", RealmType.HELL, 3,
      "Gluttons - lie in icy sludge beneath rain and hail", "NONE", True, None),
-    ("EU_HELL_4TH", "第四层地狱", "贪婪深渊", "Fourth Circle - Greed", "Duat 4 · Avaritia", RealmType.HELL, 4,
+    ("EU_HELL_4TH", "地狱第四圈", "第四圈 - 贪婪与挥霍", "Fourth Circle - Avarice and Prodigality", "Duat 4 · Avaritia",
+     RealmType.HELL, 4,
      "Avaricious and prodigal - push heavy weights (Dante)", "NONE", True, None),
-    ("EU_HELL_5TH", "第五层地狱", "愤怒沼泽", "Fifth Circle - Anger", "Duat 5 · Ira", RealmType.HELL, 5,
+    ("EU_HELL_5TH", "地狱第五圈", "第五圈 - 愤怒", "Fifth Circle - Wrath", "Duat 5 · Ira", RealmType.HELL, 5,
      "Wrathful and sullen - fight on the Stygian marsh", "NONE", True, None),
-    ("EU_HELL_6TH", "第六层地狱", "异端荒原", "Sixth Circle - Heresy", "Duat 6 · Haeresis", RealmType.HELL, 6,
+    ("EU_HELL_6TH", "地狱第六圈", "第六圈 - 异端", "Sixth Circle - Heresy", "Duat 6 · Haeresis", RealmType.HELL, 6,
      "Heretics - burned in flaming tombs", "NONE", True, None),
-    ("EU_HELL_7TH", "第七层地狱", "暴力之渊", "Seventh Circle - Violence", "Duat 7 · Violentia", RealmType.HELL, 7,
+    ("EU_HELL_7TH", "地狱第七圈", "第七圈 - 暴力", "Seventh Circle - Violence", "Duat 7 · Violentia", RealmType.HELL, 7,
      "Violent against neighbors, selves, God - in three rings", "NONE", True, None),
-    ("EU_HELL_8TH", "第八层地狱", "欺诈深渊", "Eighth Circle - Malebolge", "Duat 8 · Malebolge", RealmType.HELL, 8,
+    ("EU_HELL_8TH", "地狱第八圈", "第八圈 - 欺诈", "Eighth Circle - Fraud", "Duat 8 · Malebolge", RealmType.HELL, 8,
      "Fraud - ten concentric fosses of Malebolge", "NONE", True, None),
-    ("EU_HELL_9TH", "第九层地狱", "叛徒冰湖", "Ninth Circle - Treachery", "Duat 9 · Proditio", RealmType.HELL, 9,
+    ("EU_HELL_9TH", "地狱第九圈", "第九圈 - 背叛", "Ninth Circle - Treachery", "Duat 9 · Proditio", RealmType.HELL, 9,
      "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "NONE", True, None),
     # --------------------------------------------------------------------
     # THE CROSSING, WHICH IS DANTE'S AND STAYS HERE.
@@ -451,7 +454,7 @@ EUROPEAN_REALMS = [
      "stung by wasps and hornets. Outside the nine circles; Limbo is the first "
      "circle, not this.",
      "NONE", True, None),
-    ("EU_ACHERON", "阿刻戎渡口", "冥河渡口", "The Crossing of Acheron", "Acheron",
+    ("EU_ACHERON", "阿刻戎河渡口", "阿刻戎河渡口", "The Crossing of Acheron", "Acheron",
      RealmType.NEUTRAL, 0,
      "The far bank of Acheron, where the dead are ferried in. Virgil, Aeneid "
      "6.295-297 ('the way leads to that Tartarean stream of Acheron'); Dante "
