@@ -197,6 +197,7 @@ class JudgmentConclusionService:
         fail_reason_note="",
         greek_account="",
         greek_curability="",
+        require_fail_reason=False,
     ) -> bool:
         """
         Execute the full judgment conclusion saga.
@@ -226,8 +227,9 @@ class JudgmentConclusionService:
 
         `fail_reasons` / `fail_reason_note` / `greek_account` / `greek_curability` (v4 D6 / D8 / D7): the reasons
         of a FAILED verdict and the Greek stamp, checked and written by `apps/judgment/fail_reasons.py`. Required
-        when an officer concludes an original case (`by` given); refused when they do not fit, before anything is
-        written. A Greek INCURABLE goes to Tartarus for ever (Grg. 525b-c, 526b-c; Rep. 615c-616a).
+        only when the caller says so (`require_fail_reason`, which only the `conclude/` view sets) on an original
+        case; in-process conclusions (appeals, flows, seeders, helpers) are not asked even when they name `by`.
+        Refused when given and they do not fit, before anything is written. A Greek INCURABLE goes to Tartarus for ever (Grg. 525b-c, 526b-c; Rep. 615c-616a).
         """
         from apps.sentence_plan.services import CrossJudgmentOpenError, SentencePlanService
 
@@ -393,7 +395,7 @@ class JudgmentConclusionService:
             reasons_rule.check(
                 judgment, verdict, civilization, reasons=fail_reasons, note=fail_reason_note,
                 account=greek_account, curability=greek_curability,
-                required=by is not None and judgment.kind == JudgmentKind.ORIGINAL)
+                required=require_fail_reason and judgment.kind == JudgmentKind.ORIGINAL)
 
             # Step 0: Grounds, before the verdict they explain.
             if statute_ids:

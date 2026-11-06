@@ -23,7 +23,7 @@ BASE = "/api/v1/judgment/"
 
 
 def _soul(**fields):
-    return SimpleNamespace(denied_immortality=False, neutral_in_life=False, **fields)
+    return SimpleNamespace(**{"denied_immortality": False, "neutral_in_life": False, **fields})
 
 
 def _code(verdict, civ, *, required=True, reasons=(), note="", account="", curability="", soul=None):
@@ -125,7 +125,7 @@ def _case(tenant, name="四版之魂", **fields):
 
 @pytest.mark.django_db
 def test_a_failed_conclusion_without_a_reason_is_refused_and_writes_nothing(cn_judge, cn_tenant):
-    """变异:views.py 不再把 `by` 传进去(required 为假)→ 200,红。"""
+    """变异:views.py 不再传 `require_fail_reason=True` → 200,红。"""
     case = _case(cn_tenant)
     response = cn_judge.post(f"{BASE}{case.pk}/conclude/", {"verdict": "FAILED"}, format="json")
     assert response.status_code == 400, response.data
@@ -300,7 +300,7 @@ def test_0051_backfills_claimable_since_and_goes_back(migration_round_trip):
     tenant = state.get_model("tenants", "Tenant")._base_manager.create(code="CN_DIYU", display_name="地府")
     soul = state.get_model("souls", "Soul")._base_manager.create(name="回填", tenant=tenant, home_tenant=tenant)
     rows = state.get_model("judgment", "Judgment")._base_manager
-    sent = timezone.now()
+    sent = timezone.now() + dt.timedelta(hours=1)  # 晚于开案:回填取最晚的那个,才看得出用的是解送时间
     held = (timezone.now() + dt.timedelta(days=40)).date()
     rows.create(soul=soul, tenant=tenant, case_number="M-1")
     rows.create(soul=soul, tenant=tenant, case_number="M-2", city_god_status="SENT_ON", sent_on_at=sent)
