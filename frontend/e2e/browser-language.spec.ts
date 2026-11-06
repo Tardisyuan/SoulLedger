@@ -12,7 +12,7 @@ test.describe("in an English browser", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     await page.getByRole("combobox").filter({ visible: true }).first().selectOption("zh-Hans");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("四种冥界，一本账。");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("同一个问题：这个灵魂过得了关吗？");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("lang", /^zh/);
   });

@@ -11,6 +11,7 @@ import { buildTopology } from "@/src/lib/routeTopology";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { latest, stepStatuses } from "./soulProgress";
 import { hasRebirth } from "@/src/lib/hasRebirth";
+import { SoulUnderworldMap } from "./SoulUnderworldMap";
 
 /**
  * 户头进度(四格)+ 行程条。两者读的是同一组 `StepStatus`,所以「当前」在两处
@@ -117,6 +118,10 @@ export function SoulLedgerProgress({
       </ol>
 
       <SoulRoute soulId={soul.id} civilization={soul.civilization} />
+      {/* 地府的图在十三站卡里(DiyuStationStrip);其余三个文明的图在行程条下面。 */}
+      {soul.civilization !== "CHINESE" && (
+        <SoulUnderworldMap soul={soul} className="py-3 border-b border-[oklch(var(--color-line))]" />
+      )}
     </div>
   );
 }

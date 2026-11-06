@@ -17,7 +17,7 @@ test.describe("Home page", () => {
   test("renders hero title and all four civilizations (A10)", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator("h1")).toHaveText("四种冥界，一本账。");
+    await expect(page.locator("h1")).toHaveText("同一个问题：这个灵魂过得了关吗？");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "选一个冥界" })).toBeVisible();
 
