@@ -3,7 +3,15 @@ import unicodedata
 from rest_framework import serializers
 
 from apps.souls.models import Civilization
-from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
+from apps.tenants.models import (
+    DEADLINE_SETTING,
+    REBIRTH_COOLDOWN_SETTING,
+    SELF_SERVICE_SETTING,
+    TIMEZONE_SETTING,
+    VISIT_SETTINGS,
+    Tenant,
+    valid_timezone,
+)
 
 
 def _one_char(test):
@@ -44,6 +52,9 @@ class TenantSerializer(serializers.ModelSerializer):
     civilization = serializers.CharField(read_only=True)
     seal_glyphs = serializers.ListField(child=serializers.CharField(), read_only=True)
     letters_on = serializers.SerializerMethodField(help_text="书信是否开着(服务器级 `MATRIX_ENABLED`)。")
+    # 生效值(设置里的,否则本文明的默认值;v4 D10 / D12,系统自设)。设置里的原值在 `settings` 里。
+    judgment_deadline_days = serializers.IntegerField(read_only=True, allow_null=True)
+    hall_timezone = serializers.CharField(read_only=True)
 
     def get_letters_on(self, obj) -> bool:
         from django.conf import settings
@@ -69,6 +80,8 @@ class TenantSerializer(serializers.ModelSerializer):
             "hall_name_en",
             "hall_name_egy",
             "letters_on",
+            "judgment_deadline_days",
+            "hall_timezone",
             "created_at",
         ]
         read_only_fields = ["id", "code", "created_at"]
@@ -95,12 +108,22 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
     # 转世月配额(2026-10-24):{道: 每月上限};某道给 null = 去掉那一道的上限(不限)。只收已知的道。
     rebirth_monthly_quota = serializers.DictField(
         child=serializers.IntegerField(min_value=0, max_value=100000, allow_null=True), required=False)
+    # 审判期限天数(v4 D10,系统自设):1–365;给 null 删掉这个键,回到本文明的默认值(地府 / 希腊 / 欧洲 7,埃及 12)。
+    judgment_deadline_days = serializers.IntegerField(min_value=1, max_value=365, required=False, allow_null=True)
+    # 殿的时区(IANA 名,v4 D12):文书时辰按它写死、概览按它分周。空串删掉这个键,回到本文明的默认值。
+    timezone = serializers.CharField(max_length=64, required=False, allow_blank=True)
 
     class Meta:
         model = Tenant
         fields = ["display_name_en", "description", "description_en", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy",
                   "soul_rebirth_cooldown_days", "mfa_required_roles", *VISIT_SETTINGS, SELF_SERVICE_SETTING,
-                  "rebirth_monthly_quota"]
+                  "rebirth_monthly_quota", "judgment_deadline_days", "timezone"]
+
+    def validate_timezone(self, value):
+        value = value.strip()
+        if value and not valid_timezone(value):
+            raise serializers.ValidationError("not an IANA time zone name, e.g. Asia/Shanghai")
+        return value
 
     def validate_rebirth_monthly_quota(self, value):
         from apps.reincarnation.models import RebirthForm
@@ -145,6 +168,13 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
             instance.settings = merged
         if SELF_SERVICE_SETTING in validated_data:
             instance.settings = {**(instance.settings or {}), SELF_SERVICE_SETTING: validated_data.pop(SELF_SERVICE_SETTING)}
+        for field, key in (("judgment_deadline_days", DEADLINE_SETTING), ("timezone", TIMEZONE_SETTING)):
+            if field in validated_data:
+                value = validated_data.pop(field)
+                merged = {k: v for k, v in (instance.settings or {}).items() if k != key}
+                if value not in (None, ""):
+                    merged[key] = value
+                instance.settings = merged
         if "soul_rebirth_cooldown_days" in validated_data:
             days = validated_data.pop("soul_rebirth_cooldown_days")
             merged = {k: v for k, v in (instance.settings or {}).items() if k != REBIRTH_COOLDOWN_SETTING}

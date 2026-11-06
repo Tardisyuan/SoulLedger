@@ -47,6 +47,7 @@ SITES = [
     ('apps/judgment/handover.py', '_log_per_soul', 'Judgment.all_objects', 1, 'PK', 'the soul ids of judgments this handover just moved; their pks came from a query filtered by the handover hall'),
     ('apps/judgment/handover.py', '_log_per_soul', 'JudgmentAppeal.all_objects', 2, 'PK', 'the soul ids of appeals this handover just moved; their pks came from a query filtered by the handover hall'),
     ('apps/judgment/handover.py', '_log_per_soul', 'Soul.all_objects', 1, 'PK', 'the souls of those judgments, appeals and letters, by their FKs'),
+    ('apps/judgment/deadline.py', 'overdue_q', 'Tenant.objects', 1, 'PK', "the halls of the judgments already in the caller's scoped queryset, by their tenant_id; only each hall's deadline days are read"),
     ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'SentenceNode.all_objects', 1, 'PK', "the soul's own plan nodes (plan__soul_id), to tell a pardoned eternal sentence"),
     ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'Disposition.all_objects', 2, 'PK', "the soul's own dispositions, by its pk (eternal ones; and unexecuted ones of this life)"),
     ('apps/souls/stations.py', 'arrive', 'Soul.all_objects', 2, 'PK', "reads and updates the station column of the one soul the caller passed in, by its pk (the caller reached it through a scoped path or holds its lock)"),

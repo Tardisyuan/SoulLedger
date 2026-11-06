@@ -184,7 +184,7 @@ class TestJudgmentAPI:
             court="第一殿",
             tenant=cn_tenant,
         )
-        data = {"verdict": Verdict.FAILED, "notes": "Murderer"}
+        data = {"verdict": Verdict.FAILED, "notes": "Murderer", "fail_reasons": ["MURDER"]}
 
         response = authenticated_client.post(
             f"/api/v1/judgment/{judgment.id}/conclude/",

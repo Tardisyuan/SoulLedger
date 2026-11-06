@@ -82,7 +82,7 @@ def test_a_case_on_a_soul_under_judgment_still_concludes(admin, tenant):
     response = admin.post(
         f"/api/v1/judgment/{judgment.id}/conclude/",
         # FAILED:地府判无罪结案后直接候转世(2026-10-29),这里断的是「走到 DISPOSED」。
-        {"verdict": Verdict.FAILED, "notes": ""},
+        {"verdict": Verdict.FAILED, "notes": "", "fail_reasons": ["OTHER"], "fail_reason_note": "测"},
         format="json",
     )
     assert response.status_code == 200, (response.status_code, response.data)

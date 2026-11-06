@@ -23,28 +23,21 @@ name: Republic X 615b requites well-doing 「in the same measure」 on its own r
 in parallel with the punishment rather than subtracted from it, so netting the
 two 「would rebuild the Chinese account under a Greek name」.
 
-**NOT landed, and pinned so that landing it has to be deliberate.** Gorgias 525c
-divides the condemned in two: those whose wrongs are curable are benefited by
-their punishment, and those who are incurable (ἀνίατοι) are made everlasting
-examples. The owner has ruled that this exception holds alongside Republic X's
-thousand-year circuit and its return to a new life (615a-b, 617d-620d) — rebirth
-is the norm, the incurable are the exception. Only the norm is implemented. The
-exception is not, because Plato's criterion is *curability* — whether punishment
-can still improve the soul — and this system records nothing that bears on it:
-`Soul` carries two scores, `RecordCategory` is a 功過格 deed vocabulary
-(apps/ledger/fungibility.py) with no member for incorrigibility, and `Judgment`
-holds free-form text and a citation. A demerit threshold standing in for
-「beyond help」 would be the invented classifier that
-`docs/lore-verification/README.md` §1 rules out for exactly this material, and
-that `8308204` is the standing example of.
-
-The last group of tests below therefore asserts that the distinction is STILL
-absent — written the way `tests/test_european_hell_basis.py` and
-`tests/test_migration_reverse_scope.py::test_perm_0008_sample_scopes_contradict_
-perm_0017` are written, and for the same reason: nothing in the language
-connects a routing formula to a claim about 525c, so the disagreement has to be
-asserted or it is invisible. Whoever supplies a real curability judgment will
-find these red and has to delete them on purpose.
+**Landed 2026-11-06 (v4 D7, user decision 「照文档」), and pinned so it stays the
+judge's mark rather than a score.** Gorgias 525b-c divides the condemned in two:
+the curable are benefited by their punishment, the incurable (ἀνίατοι) are made
+everlasting examples; Republic X 615c-616a has the mouth refuse the incurable and
+cast them into Tartarus (docs/02_希腊冥府审判与人物详解.md:183, :221, :252). Until
+then this file pinned the distinction as ABSENT, because nothing in the system
+bore on curability and a demerit threshold standing in for 「beyond help」 would be
+the invented classifier `docs/lore-verification/README.md` §1 rules out (and that
+`8308204` is the standing example of). That premise is gone and the rule still
+stands: Gorgias 526b-c has the judge himself look at the soul and 「set a mark on
+it, curable or incurable」 (docs/02:185), so the mark is `Judgment.greek_curability`,
+stamped by the officer at conclusion — not derived from anything. The road is
+still one road (524a); an INCURABLE mark makes that soul's disposition eternal,
+on the soul and not on the realm, because the same Tartarus holds both kinds.
+The last group of tests pins all of that, including that no score sets the mark.
 """
 import io
 
@@ -444,8 +437,8 @@ def test_greek_is_not_recorded_as_a_terminal_cosmology():
 
     `TERMINAL_COSMOLOGY_REASON` is the copy `RebirthNotApplicable` reads when it
     refuses a soul a next life. A GREEK entry would describe an afterlife the
-    gate above says this soul does have — and half an entry, covering only the
-    incurable, would name a population §3 below shows nobody can pick out.
+    gate above says this soul does have — and the incurable are stopped by their
+    own eternal disposition (§3 below), not by a rule about the whole cosmology.
     """
     assert Civilization.GREEK not in TERMINAL_COSMOLOGY_REASON
     assert set(TERMINAL_COSMOLOGY_REASON) == {
@@ -505,7 +498,7 @@ def test_greek_has_no_decay_rate_of_its_own_and_that_is_the_answer(make_greek_so
 
 
 # --------------------------------------------------------------------------
-# 3. The exception. These tests assert a contradiction is still there.
+# 3. The exception: the judge's mark (Gorgias 526b-c), not a score.
 # --------------------------------------------------------------------------
 
 
@@ -513,19 +506,13 @@ def test_greek_has_no_decay_rate_of_its_own_and_that_is_the_answer(make_greek_so
 def test_every_condemned_greek_soul_gets_the_same_road_however_grave_the_wrong(
     make_greek_soul,
 ):
-    """CONTRADICTION, PINNED. Gorgias 525c divides these two and this router cannot.
+    """One road, no depth (524a), whatever the tally. One wrong against a hundred:
+    both go to Tartarus. The incurable are not the ones who did *more* — Plato's
+    examples are tyrants (525d-526a), not a count — so the router still reads the
+    verdict alone; curability is the judge's mark and decides how long, not where.
 
-    One wrong against a hundred of them. Both are sent to Tartarus, which is
-    right as far as 524a goes — one road, no depth — and is exactly why the
-    525c distinction cannot ride on top of it: the incurable are not the ones
-    who did *more*, they are the ones punishment can no longer improve, and
-    Plato's examples are tyrants (525d-526a) rather than a tally. There is no
-    number in this system that separates them and no threshold that would be
-    anything but invented.
-
-    This goes red when someone routes the incurable elsewhere, or marks them.
-    That is the day to delete it, having first read `_route_greek`'s docstring
-    on why nobody has.
+    Red when a demerit figure starts separating the condemned: that is the
+    invented classifier, the one thing the 2026-11-06 decision did not license.
     """
     once = make_greek_soul("one wrong")
     many = make_greek_soul("a hundred wrongs")
@@ -540,85 +527,85 @@ def test_every_condemned_greek_soul_gets_the_same_road_however_grave_the_wrong(
     assert DispositionService._route_to_realm(
         once, Verdict.FAILED
     ) == DispositionService._route_to_realm(many, Verdict.FAILED) == TARTARUS, (
-        "the condemned are being separated by something — if that is a real "
-        "curability judgment, 525c is satisfied and this test has done its job; "
-        "if it is a demerit threshold, it is the invented classifier"
+        "the condemned are being separated by a ledger figure — curability is the "
+        "judge's mark (526b-c), not a threshold"
     )
 
 
-def test_nothing_in_this_system_says_whether_a_soul_can_be_cured():
-    """CONTRADICTION, PINNED: the missing input, named field by field.
+def test_curability_is_a_mark_on_the_judgment_and_nowhere_else():
+    """The one fact 525c turns on lives on the case, as the judge's stamp — two
+    members and a blank, no default that would decide for him. A curability field
+    on the soul, its deeds or the disposition would be the place a derived value
+    could hide; `Disposition.is_eternal` carries the consequence, not the mark.
 
-    Asserted as absence, because that is what it is. A field named for
-    curability appearing on any of these four is the signal that someone has
-    started storing the one fact 525c turns on — and also the signal that they
-    may have derived it from a score, which is the thing to check before
-    deleting this.
-    """
+    Mutation: give `greek_curability` a default of "CURABLE" → red."""
+    from apps.judgment.models import GreekCurability
+
     forbidden = ("curab", "incurab", "aniat", "irredeem", "reformab")
-    for model in (Soul, SoulRecord, Judgment, Disposition):
+    for model in (Soul, SoulRecord, Disposition):
         names = {field.name for field in model._meta.get_fields()}
-        for fragment in forbidden:
-            offenders = {name for name in names if fragment in name}
-            assert not offenders, (
-                f"{model.__name__} now carries {sorted(offenders)}. If this is a "
-                f"real curability judgment, `_route_greek` can stop sending every "
-                f"condemned soul down one road. If it is derived from "
-                f"merit/demerit, it is a threshold wearing Plato's word."
-            )
+        assert not {n for n in names if any(f in n for f in forbidden)}, model.__name__
+    field = Judgment._meta.get_field("greek_curability")
+    assert set(GreekCurability.values) == {"CURABLE", "INCURABLE"}
+    assert field.default == "" and field.blank, "a default mark would be the system deciding, not the judge"
 
-    # The deed taxonomy is Chinese and has no member for it either — 功過格 grades
-    # what was done, and ἀνίατος is a claim about what the doer has become.
     members = {member.name for member in RecordCategory}
     assert not {name for name in members if "CURAB" in name or "TYRAN" in name}
 
 
-@pytest.mark.django_db
-def test_tartarus_asserts_neither_perpetuity_nor_a_term(make_greek_soul):
-    """CONTRADICTION, PINNED: one realm, two outcomes, one BooleanField.
-
-    Republic X sends the unjust round again after a thousand years; 525c keeps
-    the incurable there for good. `Realm.is_eternal` is a property of the place
-    and the same Tartarus holds both kinds, so the flag cannot express the
-    split. It is False, which now carries the norm — and the per-soul column
-    that *could* carry the exception, `Disposition.is_eternal`, is copied
-    straight off it, so a condemned Greek soul is recorded as not-eternal
-    whatever it did.
-
-    `sentence_years` is asserted null in the same breath and is the other half
-    of the gap: the field's own help_text reads 「null = eternal」, so the two
-    columns of this row say opposite things about the same soul. Neither is
-    filled in, and neither should be guessed — Republic X's thousand years is a
-    number from a different dialogue than the one GR_TARTARUS is seeded from,
-    and welding them together is the synthesis
-    docs/lore-verification/verify-greek.md §6 says not to perform.
-    """
+def _sent_left(make_greek_soul, name, curability):
     call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
-
-    realm = Realm.all_objects.get(realm_code=TARTARUS)
-    assert realm.is_eternal is False, (
-        "GR_TARTARUS is marked eternal, which makes every soul sent left an "
-        "ἀνίατος — the smaller population and the one Plato treats as remarkable"
-    )
-
-    soul = make_greek_soul("sent left")
+    soul = make_greek_soul(name)
     judgment = Judgment.objects.create(
         soul=soul,
         civilization=Civilization.GREEK,
         court="岔路草原",
         verdict=Verdict.FAILED,
+        greek_curability=curability,
         tenant=soul.tenant,
     )
-    disposition = DispositionService.create_from_judgment(judgment)
+    return DispositionService.create_from_judgment(judgment)
 
-    assert disposition.destination_realm is not None, (
-        "the Greek verdict produced a disposition with no realm — the router "
-        "returned a code the seed does not carry"
-    )
-    assert disposition.destination_realm.realm_code == TARTARUS
-    assert disposition.is_eternal is False
-    # 用户 2026-10-29 拍板:执行即服刑、刑满才转世,没写刑期的处置取界域默认刑期 —— 希腊两处取《理想国》
-    # 615a-b 的一千年,出处写在 `apps/disposition/default_terms.py`(一张表,不是界域上的一列)。上面那段
-    # 「不该猜」的顾虑由那份文件的出处说明承担;这里钉住数值来自那张表、且没写回界域。
+
+@pytest.mark.django_db
+def test_tartarus_is_not_eternal_and_the_unmarked_or_curable_serve_a_term(make_greek_soul):
+    """The realm carries the norm (Republic X: a thousand years, then a new life),
+    so it stays `is_eternal=False` — True would make every soul sent left an
+    ἀνίατος. A curable soul, and one concluded before the mark existed, serve the
+    default term (`apps/disposition/default_terms.py`, Republic X 615a-b)."""
     from apps.disposition.default_terms import GREEK_JOURNEY_YEARS
-    assert disposition.sentence_years == GREEK_JOURNEY_YEARS
+    from apps.judgment.models import GreekCurability
+
+    for name, mark in (("unmarked", ""), ("curable", GreekCurability.CURABLE)):
+        disposition = _sent_left(make_greek_soul, name, mark)
+        assert disposition.destination_realm is not None, "the router returned a code the seed does not carry"
+        assert disposition.destination_realm.realm_code == TARTARUS
+        assert disposition.is_eternal is False, name
+        assert disposition.sentence_years == GREEK_JOURNEY_YEARS, name
+    assert Realm.all_objects.get(realm_code=TARTARUS).is_eternal is False, (
+        "GR_TARTARUS is marked eternal, which makes every soul sent left an ἀνίατος"
+    )
+
+
+@pytest.mark.django_db
+def test_an_incurable_soul_stays_in_tartarus_for_ever(make_greek_soul):
+    """Gorgias 525b-c, Republic X 615c-616a: the same road, and no way back up it.
+    The disposition is eternal with no term, and executing it leaves the soul
+    SETTLED rather than REINCARNATING — `execute` reads `is_eternal`, so a Greek
+    soul is rebirth-capable unless its own sentence says otherwise.
+
+    Mutation: drop the INCURABLE branch in `create_from_judgment` → is_eternal is
+    False and the soul goes REINCARNATING; red on both asserts."""
+    from apps.judgment.models import GreekCurability
+
+    disposition = _sent_left(make_greek_soul, "beyond help", GreekCurability.INCURABLE)
+    assert disposition.destination_realm.realm_code == TARTARUS
+    assert disposition.is_eternal is True
+    assert disposition.sentence_years is None
+
+    soul = disposition.soul
+    soul.current_state = SoulState.DISPOSED
+    soul.save(update_fields=["current_state"])
+    DispositionService.execute(disposition)
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.SETTLED
