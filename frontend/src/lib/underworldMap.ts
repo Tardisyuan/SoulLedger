@@ -177,6 +177,7 @@ export function greekVisits(path: readonly { realm_code: string | null; left_at:
   const last = visits[visits.length - 1];
   if (years === null || !last?.current || last.id !== "GR_TARTARUS") return visits;
   const at = Math.min(MILLENNIUM_CELLS, Math.floor(Math.max(0, years) / 100) + 1);
+  visits[visits.length - 1] = { ...last, current: false };
   for (let n = 1; n <= at; n++) visits.push({ id: `gr-millennium-${n}`, current: n === at });
   return visits;
 }
