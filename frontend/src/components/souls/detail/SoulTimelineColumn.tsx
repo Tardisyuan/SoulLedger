@@ -91,7 +91,7 @@ export function SoulTimelineColumn({
         />
       </div>
       <div className={PANEL}>
-        <SoulLedgerSections rebirth={hasRebirth(soul?.civilization)} dispositions={dispositions} reincarnations={reincarnations} events={events} />
+        <SoulLedgerSections rebirth={hasRebirth(soul?.civilization)} civilization={soul?.home_civilization ?? soul?.civilization} dispositions={dispositions} reincarnations={reincarnations} events={events} />
       </div>
       {/* Soul lifecycle spine — the one reverse-chronological story
           across lives (docs/design-handoff/BRIEF.md §4.1): karma entries,

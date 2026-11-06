@@ -16,6 +16,8 @@ import { Button } from "@/src/components/ui/Button";
 import { RowMark } from "@/src/components/judgment/RowMark";
 import { groupDigits } from "@/src/components/dashboard/numberFormat";
 import { MissingValue } from "@/src/components/ui/DomainValue";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
 
 /**
  * 待办条 TodoStrip(Design A4):三格 —— 调派待批 / 审判队列 / 死亡同步异常;
@@ -110,6 +112,7 @@ function TodoCell({
 
 export function TodoStrip() {
   const { t } = useI18n();
+  const hallCiv = useHallCivilization();
   const { user } = useTenant();
   const { hasPermission, isAdmin } = usePermissions();
   const canDispatch = hasPermission("dispatch.read");
@@ -271,7 +274,7 @@ export function TodoStrip() {
       )}
       {canSentenceRequests && (
         <TodoCell
-          label={t("dashboard.todo.sentence_requests")}
+          label={t(civKey(t, "dashboard.todo.sentence_requests", hallCiv))}
           query={sentenceRequestQ}
           href="/sentence-requests"
           linkText={t("dashboard.todo.go_resend")}

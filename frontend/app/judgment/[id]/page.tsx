@@ -106,7 +106,7 @@ import { useShellCommands, type ShellCommand } from "@/src/lib/shellCommands";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { hasRebirth } from "@/src/lib/hasRebirth";
-import { verdictNamespace, verdictText } from "@/src/lib/domainNames";
+import { rebirthFormNamespace, verdictNamespace, verdictText } from "@/src/lib/domainNames";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -1126,7 +1126,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                       </span>
                     </div>
                     <div className="text-[oklch(var(--color-ink-muted))] truncate" title={life.new_identity || undefined}>
-                      <DomainEnum namespace="reincarnation.forms" value={life.rebirth_form} />
+                      <DomainEnum namespace={rebirthFormNamespace(t, judgment.civilization, life.rebirth_form)} value={life.rebirth_form} />
                       {life.new_identity && ` · ${life.new_identity}`}
                     </div>
                   </li>

@@ -12,6 +12,7 @@
  */
 import { resolveEnumDisplay, type Translate } from "@/src/lib/domainDisplay";
 import { verdictNamespace } from "@/src/lib/domainNames";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import type { Soul } from "@soulledger/core/api/souls";
 import type { SoulEvent } from "@soulledger/core/api/events";
 import type { Judgment } from "@soulledger/core/api/judgment";
@@ -342,7 +343,11 @@ export function makeSystemEventLabels(t: Translate, civilization?: string | null
   };
   const verdict = (raw: string | null) => via(verdictNamespace(t, civilization, raw))(raw);
   return {
-    eventType: via("souls.events"),
+    // 地府的受刑事件名保留「受刑计划…」,别的文明与跨灵魂的总表是「去处计划…」(第十二批 1.2)。
+    eventType: (raw) => {
+      const key = raw ? civKey(t, `souls.events.${raw}`, civilization) : null;
+      return key && key !== `souls.events.${raw}` ? t(key) : via("souls.events")(raw);
+    },
     state: via("souls.states"),
     appeal: {
       round: (round) => t("appeals.round", { round: String(round) }),

@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { FROM_PARAM, sourceFrom } from "@/src/lib/backSource";
 import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { menuGlossParts } from "@/src/lib/menuI18n";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
 
 /**
  * 页头里那一条面包屑。原先长在 AppLayout.tsx 里，随文件一起越过 500 行的上限
@@ -74,6 +75,7 @@ export type Crumb = { label: string; gloss?: string; href?: string };
 export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
   const pathname = usePathname();
   const { t, locale } = useI18n();
+  const hallCiv = useHallCivilization();
 
   // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
   const label = (key: string, fallback: string) => {
@@ -98,7 +100,7 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
 
   if (trail.length > 0) {
     for (const node of trail) {
-      const { primary, gloss } = menuGlossParts(node, locale, t);
+      const { primary, gloss } = menuGlossParts(node, locale, t, hallCiv);
       crumbs.push({
         // 分组目录没有页面，不给链接
         label: primary,
