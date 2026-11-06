@@ -76,7 +76,7 @@ def test_an_unburied_greek_soul_sees_the_day_it_crosses(gr_tenant):
     account, _ = ready_soul(gr_tenant, ferry_passage="UNBURIED", death_year=1990, death_month=3, death_day=4)
     assert _me(account)["greek_ferry"] == {"ferry_passage": "UNBURIED", "crossed": False, "crosses_on": "2090-03-04"}
     fareless, _ = ready_soul(gr_tenant, name="无渡资", ferry_passage="NO_FARE", death_year=1990)
-    assert _me(fareless)["greek_ferry"] == {"ferry_passage": "NO_FARE", "crossed": False, "crosses_on": None}
+    assert _me(fareless)["greek_ferry"] == {"ferry_passage": "NO_FARE", "crossed": False, "crosses_on": "2090-12-31"}
     ancient, _ = ready_soul(gr_tenant, name="古人", ferry_passage="UNBURIED", death_year=1800)
     assert _me(ancient)["greek_ferry"]["crossed"] is True
     buried, _ = ready_soul(gr_tenant, name="已葬", death_year=1990)

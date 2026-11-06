@@ -294,8 +294,8 @@ class MeProfileSerializer(serializers.Serializer):
     #: 勾魂牒(地府):`{status: ISSUED|CAPTURED|HANDED_OVER, issued_at}`。在世时只给还开着的;死后给最近一张没撤销的
     #: (死亡登记时一并签发并交接,用户 2026-10-30 定)。撤销的不给。
     capture_warrant = serializers.SerializerMethodField()
-    #: 希腊:卡戎不渡(`Soul.ferry_passage` 有值)时 `{ferry_passage, crossed, crosses_on}`;未葬者满百年得渡的那天,
-    #: 无渡资者没有这一天(null)。照常过河的为 null。
+    #: 希腊:卡戎不渡(`Soul.ferry_passage` 有值)时 `{ferry_passage, crossed, crosses_on}`;未葬、无渡资者满百年得渡的那天
+    #: (死亡年份没登记时为 null,用户 2026-11-07 起无渡资同此)。照常过河的为 null。
     greek_ferry = serializers.SerializerMethodField()
     #: 欧洲:此刻在地狱前庭(EU_ANTINFERNO,中立者的去处,永久)时 `{entered_at}`,否则 null。
     european_vestibule = serializers.SerializerMethodField()
