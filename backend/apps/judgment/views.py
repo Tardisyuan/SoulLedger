@@ -39,6 +39,7 @@ from apps.judgment.serializers import (
     AssignableOfficerSerializer,
     EvidenceRulingResultSerializer,
     EvidenceRulingWriteSerializer,
+    JudgmentAnnualSerializer,
     JudgmentBatchResultSerializer,
     JudgmentBatchSerializer,
     JudgmentCitationSerializer,
@@ -303,6 +304,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         'queue_counts': ['judgment.read'],
         # v4 概览屏的数:与队列同一个读。
         'hall_stats': ['judgment.read'],
+        'annual': ['judgment.read'],
         # 殿筛选的选项:与队列同一个读。
         'courts': ['judgment.read'],
         # 列表的 CSV:自己的码(用户 2026-10-29 第 3 条;此前与列表同一个读)。
@@ -1138,6 +1140,27 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         from apps.judgment import hall_stats
 
         return Response(hall_stats.overview(self.get_queryset(), PENDING, getattr(request, "tenant", None)))
+
+    @extend_schema(
+        responses=JudgmentAnnualSerializer,
+        parameters=[OpenApiParameter("year", int, description="公历年,默认殿的时区里的今年(1900–2999)")],
+    )
+    # 不分页、不挂列表的过滤器:年报与概览一样是整个殿的数。
+    @action(detail=False, methods=["get"], url_path="annual", pagination_class=None, filter_backends=[])
+    def annual(self, request):
+        """冥界年报(v4 `annual.*`):收了多少灵魂、几个有了去处、按文明、最久的一件、引用最多的条文、退回重审率、
+        每月结案(本年与上一年)。范围与列表相同;年按殿的时区。定义见 `apps/judgment/annual.py`。"""
+        from apps.core.locale import locale_from_request
+        from apps.judgment import annual
+
+        raw = request.query_params.get("year")
+        year = None
+        if raw not in (None, ""):
+            if not raw.isdigit() or not 1900 <= int(raw) <= 2999:
+                raise ValidationError({"year": "a year between 1900 and 2999"}, code="invalid_year")
+            year = int(raw)
+        return Response(annual.report(self.get_queryset(), getattr(request, "tenant", None), year=year,
+                                      locale=locale_from_request(request)))
 
     @extend_schema(responses=JudgmentCourtSerializer(many=True))
     # 不分页、不挂列表的过滤器:这是筛选条的选项,不随当前筛选收窄 —— 否则选了一个殿,

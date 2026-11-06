@@ -97,6 +97,28 @@ describe("主卡", () => {
     expect(hero.querySelector("[data-done-ring]")).not.toBeNull();
   });
 
+  it("进页:大数字是 88 的一档、看得见的那层从 0 滚到实际值;环从满偏移扫到实际;已过期限的数是金属色", async () => {
+    renderIt();
+    const hero = await waitFor(() => {
+      const el = document.querySelector("[data-overview-hero]") as HTMLElement;
+      expect(el.querySelector(".v4-roll")).not.toBeNull();
+      return el;
+    });
+    const pending = hero.querySelector("[data-overview-pending]") as HTMLElement;
+    expect(pending).toHaveClass("text-display-xl");
+    // 滚动的那层不给读屏;终值在 sr-only 里,所以整格的文字仍是 24,不是 0 或某个中间值。
+    const roll = pending.querySelector(".v4-roll") as HTMLElement;
+    expect(roll).toHaveAttribute("aria-hidden", "true");
+    expect(roll.style.getPropertyValue("--roll-n")).toBe("24");
+    expect(pending).toHaveTextContent(/^24$/);
+    const ring = hero.querySelector("[data-done-ring]") as SVGElement;
+    expect(ring).toHaveClass("v4-ring-sweep");
+    expect(Number(ring.style.getPropertyValue("--ring-c"))).toBeCloseTo(2 * Math.PI * 26, 0);
+    const overdue = hero.querySelector("[data-overdue-count]") as HTMLElement;
+    expect(overdue).toHaveTextContent(/^3$/);
+    expect(overdue.className).toContain("--color-metal");
+  });
+
   it("本月既没结也没待审:不写百分比,不画进度环", async () => {
     hallStats.mockResolvedValue({ data: { ...STATS, pending: 0, concluded_this_month: 0, month_done_pct: null, avg_days: null } });
     renderIt();

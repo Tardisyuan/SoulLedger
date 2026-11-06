@@ -13,6 +13,7 @@ src/__tests__/ActorsPage.test.tsx packages
 src/__tests__/AppLayout.test.tsx frontend
 src/__tests__/Button.test.tsx frontend
 src/__tests__/Field.test.tsx *
+src/__tests__/HomePageIdentity.test.tsx packages
 src/__tests__/LoginPage.test.tsx backend
 src/__tests__/PageShell.test.tsx frontend
 src/__tests__/SchedulerPage.test.tsx backend

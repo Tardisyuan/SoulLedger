@@ -136,6 +136,8 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     ["design-system/type-scale", "v1 的 text-quote", '<div className="text-quote" />'],
     // A3「40 只给匾题字和登录页」:探针路径 src/__design_guard_probe__.tsx 两者都不是。
     ["design-system/type-scale", "匾与登录页以外的 text-display", '<div className="text-display" />'],
+    // v4 的 88(display-xl)只给概览主卡与年报两个文件。
+    ["design-system/type-scale", "概览与年报以外的 text-display-xl", '<div className="text-display-xl" />'],
     // v2 A2 的间距表去掉了 v1 的 1.5 / 10 / 14。
     ["design-system/spacing-rhythm", "v1 的 6px(1.5)", '<div className="gap-1.5" />'],
     ["design-system/spacing-rhythm", "v1 的 40px(10)", '<div className="py-10" />'],
@@ -245,6 +247,20 @@ describe("text-display 只在匾与登录页放行(规范 v2 A3)", () => {
     const hits = lintAll(['export const P = () => (<p className="text-xl lg:text-display" />);\n'], "app/judgment/__probe__.tsx")[0]
       .filter((m) => m.ruleId === "design-system/type-scale");
     expect(hits).toHaveLength(1);
+  }, 60_000);
+});
+
+describe("text-display-xl 只在概览主卡与年报放行(规范 v4)", () => {
+  const PROBE = 'export const P = () => (<span className="font-title text-display-xl" />);\n';
+  const typeHits = (filePath: string) =>
+    lintAll([PROBE], filePath)[0].filter((m) => m.ruleId === "design-system/type-scale");
+
+  it.each(["src/components/dashboard/HallOverview.tsx", "src/components/dashboard/AnnualReport.tsx"])("%s 放行", (filePath) => {
+    expect(typeHits(filePath)).toEqual([]);
+  }, 60_000);
+
+  it.each(["src/components/dashboard/__probe__.tsx", "src/components/landing/Landing.tsx", "app/judgment/__probe__.tsx"])("%s 报红", (filePath) => {
+    expect(typeHits(filePath)).toHaveLength(1);
   }, 60_000);
 });
 

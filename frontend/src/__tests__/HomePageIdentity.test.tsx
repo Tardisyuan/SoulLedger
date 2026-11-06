@@ -55,6 +55,21 @@ describe("the landing page", () => {
     expect(screen.getByTestId("landing-console")).toHaveAttribute("href", "/dashboard");
   });
 
+  it("shows a console thumbnail under the cards: one image per theme, lazy, files that exist", () => {
+    const fs = jest.requireActual<typeof import("fs")>("fs");
+    const path = jest.requireActual<typeof import("path")>("path");
+    render(<HomePage />);
+    const preview = screen.getByTestId("landing-preview");
+    expect(preview).toHaveTextContent("landing.preview_label");
+    const imgs = [...preview.querySelectorAll("img")];
+    expect(imgs.map((img) => img.getAttribute("data-theme"))).toEqual(["light", "dark"]);
+    for (const img of imgs) {
+      expect(img).toHaveAttribute("loading", "lazy");
+      expect(img).toHaveClass("v4-themed");
+      expect(fs.existsSync(path.join(__dirname, "..", "..", "public", img.getAttribute("src")!))).toBe(true);
+    }
+  });
+
   it("shows how it is built, with the numbers from the stats file", () => {
     render(<HomePage />);
     expect(screen.getByTestId("landing-architecture")).toHaveTextContent("packages/core");

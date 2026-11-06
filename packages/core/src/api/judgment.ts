@@ -211,6 +211,8 @@ export type GreekAccount = Schemas["GreekAccountEnum"];
 export type GreekCurability = Schemas["GreekCurabilityEnum"];
 /** `GET /judgment/hall-stats/`:v4 概览屏的数(定义见 backend/apps/judgment/hall_stats.py)。 */
 export type JudgmentHallStats = Schemas["JudgmentHallStats"];
+/** `GET /judgment/annual/`:v4 冥界年报的数(定义见 backend/apps/judgment/annual.py)。 */
+export type JudgmentAnnual = Schemas["JudgmentAnnual"];
 export type ChineseOffence = Schemas["ChineseOffenceEnum"];
 export type WrongfulDeathCause = Schemas["WrongfulDeathCauseEnum"];
 export type GrievanceLevel = Schemas["GrievanceLevelEnum"];
@@ -821,6 +823,8 @@ export const judgmentApi = {
   courts: () => api.get<JudgmentCourt[]>("/judgment/courts/"),
   /** v4 概览屏:未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案(殿的时区)。 */
   hallStats: () => api.get<JudgmentHallStats>("/judgment/hall-stats/"),
+  /** v4 冥界年报:收了多少灵魂、有了去处、按文明、最久的一件、引用最多的条文、退回重审率、每月结案(殿的时区)。 */
+  annual: (year?: number) => api.get<JudgmentAnnual>("/judgment/annual/", { params: year ? { year } : undefined }),
 };
 
 // ── 申诉(第五十二批;backend/apps/judgment/appeal_views.py)──────────────────
