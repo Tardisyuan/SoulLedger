@@ -1721,12 +1721,12 @@ case "$cmd" in *"docker inspect"*) [ -f {tmp_path}/metro-env ] && cat {tmp_path}
 exit 0
 ''')
         (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
-        (b / "adb").write_text("#!/bin/bash\nexit 0\n")
+        (b / "adb").write_text(f'#!/bin/bash\nprintf "%s\\n" "$*" >> {tmp_path}/adb.log\nexit 0\n')
         for f in b.iterdir():
             f.chmod(0o755)
         if log.exists():
             log.unlink()
-        env = _clean_env(MOBILE_REMOTE="box")
+        env = _clean_env(MOBILE_REMOTE="box", MOBILE_REMOTE_IP="gates-host.lan")
         env["PATH"] = f"{b}:{env['PATH']}"
         proc = subprocess.run(["bash", str(repo / "scripts" / "mobile-remote.sh"), "mobile", *args], cwd=repo,
                               env=env, capture_output=True, text=True, timeout=60)
@@ -1761,6 +1761,20 @@ exit 0
         proc, log = self._run(repo, tmp_path, "metro", "open")
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "restarting it" in proc.stdout and "docker run -d" in log, proc.stdout + log
+
+    def test_open_cold_starts_the_app_by_deep_link(self, tmp_path):
+        """A launcher start left the Huawei on a black screen (2026-11-07): force-stop, then `am start` the
+        dev-client link at this app's scheme and Metro port, after the force-stop."""
+        repo = self._repo(tmp_path)
+        (repo / "mobile" / "app.json").write_text('{"expo": {"android": {"package": "x.y"}}}')
+        proc, _ = self._run(repo, tmp_path, "metro", "open")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        calls = (tmp_path / "adb.log").read_text().splitlines()
+        stop = next(i for i, c in enumerate(calls) if c.endswith("shell am force-stop x.y"))
+        start = next(i for i, c in enumerate(calls) if "am start -a android.intent.action.VIEW" in c)
+        assert stop < start, calls
+        assert "soulledger://expo-development-client/?url=http%3A%2F%2Fgates-host.lan%3A8081" in calls[start], calls
+        assert not any("monkey" in c for c in calls), calls
 
     def test_a_current_metro_and_no_metro_are_left_alone(self, tmp_path):
         repo = self._repo(tmp_path)

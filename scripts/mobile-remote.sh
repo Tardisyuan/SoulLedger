@@ -29,8 +29,8 @@
 # cores, a gate container is held to 12 and a build to 8, so the two run side by side (user decision
 # 2026-10-29); the lock only keeps two builds apart. Metro takes no lock — it is light.
 set -euo pipefail
-APP="${1:-}"; case "$APP" in mobile) PORT=8081 DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_SOUL ;;
-    mobile-officer) PORT=8082 DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_OFFICER ;; *) sed -n '2,13p' "$0"; exit 2 ;; esac
+APP="${1:-}"; case "$APP" in mobile) PORT=8081 SCHEME=soulledger DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_SOUL ;;
+    mobile-officer) PORT=8082 SCHEME=soulledger-officer DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_OFFICER ;; *) sed -n '2,13p' "$0"; exit 2 ;; esac
 shift
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ -f "$ROOT/.prepush.env" ] && . "$ROOT/.prepush.env"
@@ -172,11 +172,15 @@ metro)
         restart_if_stale
         # No expo-dev-client in these apps: the APK is a plain React Native debug build, which reads the
         # packager address from debug_http_host in its default SharedPreferences (the dev menu's
-        # "Debug server host"). run-as works because the build is debuggable. Restart to pick it up.
+        # "Debug server host"). run-as works because the build is debuggable. Restart to pick it up:
+        # force-stop, then a cold start by deep link (scheme from app.json). A launcher start (monkey) left
+        # the Huawei TAS-AL00 on a black screen (2026-11-07).
         PKG=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["expo"]["android"]["package"])' "$ROOT/$APP/app.json")
         X=$(printf '%s' "<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map><string name=\"debug_http_host\">$IP:$PORT</string></map>" | base64)
         adb -s "$SERIAL" shell "am force-stop $PKG; echo $X | run-as $PKG sh -c 'mkdir -p shared_prefs && base64 -d > shared_prefs/${PKG}_preferences.xml'"
-        adb -s "$SERIAL" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+        adb -s "$SERIAL" shell am force-stop "$PKG"
+        adb -s "$SERIAL" shell am start -a android.intent.action.VIEW \
+            -d "'$SCHEME://expo-development-client/?url=http%3A%2F%2F$IP%3A$PORT'" >/dev/null
         echo "$P: $PKG on $SERIAL now loads its JS from $IP:$PORT (restarted)"
         ;;
     logs) rsh "docker logs --tail ${3:-40} $METRO" ;;
