@@ -701,11 +701,11 @@ describe("审判队列", () => {
     it("「⋯」菜单按权限:我认领的给取消认领 + 延后,未认领的给认领 + 延后,他人认领的只给延后;JUDGE 没有改派", async () => {
       renderPage();
       await screen.findByText("陆晚晴");
-      expect(labels(await openRowMenu("沈青梧"))).toEqual([tZh("judgment.claim.release"), tZh("judgment.queue.defer")]);
+      expect(labels(await openRowMenu("沈青梧"))).toEqual([tZh("judgment.claim.release"), tZh("judgment.queue.key_defer")]);
       fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
-      expect(labels(await openRowMenu("Marguerite Vey"))).toEqual([tZh("judgment.claim.claim"), tZh("judgment.queue.defer")]);
+      expect(labels(await openRowMenu("Marguerite Vey"))).toEqual([tZh("judgment.claim.claim"), tZh("judgment.queue.key_defer")]);
       fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
-      expect(labels(await openRowMenu("陆晚晴"))).toEqual([tZh("judgment.queue.defer")]);
+      expect(labels(await openRowMenu("陆晚晴"))).toEqual([tZh("judgment.queue.key_defer")]);
     });
 
     it("「⋯ → 取消认领」是 C 的鼠标路径;色标不卸载,而是反着退场(scaleY 1→0,dismiss 140ms,出场曲线)", async () => {
@@ -740,7 +740,7 @@ describe("审判队列", () => {
       await screen.findByText("陆晚晴");
       fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
       const items = await openRowMenu("陆晚晴");
-      expect(labels(items)).toEqual([tZh("judgment.queue.defer"), tZh("judgment.claim.reassign")]);
+      expect(labels(items)).toEqual([tZh("judgment.queue.key_defer"), tZh("judgment.claim.reassign")]);
       fireEvent.click(items[1]);
       const dialog = await screen.findByRole("dialog");
       await waitFor(() => expect(judgmentApi.assignableOfficers).toHaveBeenCalledWith(["c"]));

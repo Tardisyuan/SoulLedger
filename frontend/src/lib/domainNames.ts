@@ -37,3 +37,15 @@ export function realmTypeNamespace(t: T, civilization: string | null | undefined
   const ns = `realms.types_by_civ.${civ}`;
   return civ && type && t(`${ns}.${type}`) !== `${ns}.${type}` ? ns : "realms.types";
 }
+
+/**
+ * 裁决的显示词,按文明(Design v4 第十一批 1a):`PURGATORY` 通用名「存疑」,欧洲叫「炼狱」、埃及叫「天平摇摆」
+ * (`judgment.verdicts_by_civ.<文明>.<裁决小写>`);没有那一项(地府、希腊,及别的三个裁决)就回落到 `judgment.verdicts`。
+ * 与 `realmTypeNamespace` 同一个做法,给 `<DomainEnum namespace={…}>` 用。
+ */
+export function verdictNamespace(t: T, civilization: string | null | undefined, verdict: string | null | undefined): string {
+  const civ = civilization ? CIVILIZATION_SHORT_CODES[civilization] : undefined;
+  const ns = `judgment.verdicts_by_civ.${civ}`;
+  const key = `${ns}.${(verdict ?? "").toLowerCase()}`;
+  return civ && verdict && t(key) !== key ? ns : "judgment.verdicts";
+}

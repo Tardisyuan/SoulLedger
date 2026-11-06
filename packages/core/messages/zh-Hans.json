@@ -446,7 +446,7 @@
       "start_judgment": "开始审判",
       "verdict_passed": "善行通过",
       "verdict_failed": "恶行不过",
-      "verdict_purgatory": "待定",
+      "verdict_purgatory": "存疑",
       "verdict_retry": "重审",
       "reincarnate": "轮回 →",
       "reincarnate_success": "轮回完成",
@@ -2067,7 +2067,7 @@
     "verdicts": {
       "passed": "通过",
       "failed": "不过",
-      "purgatory": "待定",
+      "purgatory": "存疑",
       "retry": "重审"
     },
     "queue": {
@@ -2089,7 +2089,7 @@
       "notes": "裁决备注",
       "notes_placeholder": "输入备注…",
       "create_workflow": "落判时一并发起审批流",
-      "defer": "延后",
+      "defer": "放进待定",
       "commit_error": "裁决提交失败，该条已放回队列",
       "restore_deferred": "恢复延后的条目",
       "stat_decided": "已裁决 {{n}}",
@@ -2489,7 +2489,7 @@
       "title": "称心",
       "scale": "心重 {{weight}} · 羽重 {{counterweight}}",
       "gives": "天平所给：{{verdict}}",
-      "wavering_hint": "「待定」「重审」= 天平摇摆：托特记下，另开一次称量，不发落。",
+      "wavering_hint": "存疑或退回重审 = 天平摇摆：托特记下，心再称一次；没有去处。",
       "contradicts": "与天平不符",
       "result": {
         "LIGHTER": "未重于羽",
@@ -2672,6 +2672,24 @@
       "curability_required": "加上标记：可医或不可医。",
       "greek_mark_not_applicable": "只有希腊的案子才选文书和可医标记。",
       "incurable_is_eternal_in_tartarus": "不可医者永罚于塔尔塔罗斯，不能另选去处或写年数。"
+    },
+    "verdicts_by_civ": {
+      "eu": {
+        "purgatory": "炼狱"
+      },
+      "eg": {
+        "purgatory": "天平摇摆"
+      }
+    },
+    "greek_account": {
+      "why": "两篇对死后的说法不同，判决文书照选定的那一篇写。",
+      "gorgias": "《高尔吉亚》",
+      "gorgias_pass": "岔路口的草地 · 送往至福岛",
+      "republic": "《理想国》",
+      "republic_pass": "四口之间 · 向上穿过天，千年之后归于草地",
+      "step_choose": "第 1 步 · 选文书",
+      "step_seal": "第 2 步 · 落印",
+      "confirm_pass": "通过 · 落印"
     }
   },
   "audit": {
@@ -5199,7 +5217,7 @@
       "appeal_review": "申诉复核中",
       "no_time": "无时间戳",
       "decision": "决定",
-      "pending": "待定"
+      "pending": "未判"
     },
     "soul_states": {
       "ALIVE": "在世",
@@ -6819,7 +6837,7 @@
       "retry_with_open_cross": "这件案子挂着未结的联审，先结联审再判「重审」。",
       "retry_not_a_destination": "「重审」（及欧洲以外的「待审」）不是去处：请给出终局裁决，或另开一件审判。",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能判不通过。",
-      "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能判下地狱，应判待定（炼狱）。",
+      "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能判下地狱，应判炼狱。",
       "untruthful_confession": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。",
       "five_heinous_must_fail": "罪目是五逆：直入阿鼻，不能判通过。"
     },
@@ -7738,7 +7756,7 @@
     },
     "case": {
       "release": "放回",
-      "defer": "待定",
+      "defer": "放进待定",
       "request_reassign": "请求改派",
       "release_title": "放回这件案子？",
       "release_body": "放回后回到「待认领」，你写的评议保留。",
@@ -8740,8 +8758,7 @@
     "doc_card": "判决文书 · 取最后一次盖印",
     "eg": {
       "fail": "心重于羽 · 不过",
-      "pass": "心轻于羽 · 通过",
-      "waver": "天平摇摆"
+      "pass": "心轻于羽 · 通过"
     },
     "reading": "读数"
   },

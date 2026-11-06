@@ -105,6 +105,7 @@ import { useShellCommands, type ShellCommand } from "@/src/lib/shellCommands";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { hasRebirth } from "@/src/lib/hasRebirth";
+import { verdictNamespace } from "@/src/lib/domainNames";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -197,11 +198,13 @@ const VERDICT_LIFT = "-translate-y-1.5 shadow-raised";
 
 const NO_LIVES: Reincarnation[] = [];
 
-/** 埃及称心的案子,裁决键用天平的说法(规范 v4 S06 `desk.eg.*`);「待定」在称心里就是天平摇摆。 */
+/**
+ * 埃及称心的案子,通过 / 不过用天平的说法(规范 v4 S06 `desk.eg.*`)。第三个键(`PURGATORY`)按文明叫
+ * (Design 第十一批 1a,`verdictNamespace`):欧洲炼狱、埃及天平摇摆、地府与希腊存疑 —— 它是裁决,不是「放进待定」。
+ */
 const WEIGHED_LABEL: Partial<Record<VerdictMember, string>> = {
   PASSED: "desk.eg.pass",
   FAILED: "desk.eg.fail",
-  PURGATORY: "desk.eg.waver",
 };
 
 interface PageProps {
@@ -213,6 +216,7 @@ const DESK_SHORTCUTS = [
   { key: "⌘/Ctrl ⏎", label: "shortcuts.conclude" },
   { key: "F", label: "shortcuts.toggle_case" },
   { key: "J / K", label: "shortcuts.next_prev_case" },
+  { key: "S", label: "judgment.claim.defer" },
 ] as const;
 
 export default function JudgmentDetailPage({ params }: PageProps) {
@@ -899,7 +903,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   return (
     <>
-    {!isFinal && <QueueBar judgmentId={judgment.id} onDefer={canDefer ? () => setDeferAsking(true) : undefined} />}
+    {!isFinal && <QueueBar judgmentId={judgment.id} />}
     {/* 语料页「插入审判台」带着 ?cite= 进来:确认后引用;并记下这是最后打开的未结案。 */}
     <CiteFromCorpus judgment={judgment} canCite={canEditGrounds} onCite={(statuteId) => citeMutation.mutate(statuteId)} />
     <PrintFrame hall={hall} reference={judgment.case_number} referenceLabel={t("print.case_no")} note={hasAttachments ? t("case.attachments.print_footer") : undefined}>
@@ -913,8 +917,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       title={<DomainText value={soulName} />}
       subtitle={subtitle}
       actions={
-        previousId || nextId || isFinal ? (
+        previousId || nextId || isFinal || canDefer ? (
           <span className="inline-flex items-center gap-4">
+            {/* 「放进待定」是页头的一个动作,不是第五个裁决(Design 第十一批 1a);理由框见下(D5 仍必填)。 */}
+            {canDefer && (
+              <Button type="button" variant="secondary" size="sm" className="gap-2" data-testid="desk-defer" onClick={() => setDeferAsking(true)}>
+                <Kbd>S</Kbd>
+                {t("judgment.claim.defer")}
+              </Button>
+            )}
             {/* 有裁决的审判不能删,只能归档(后端 `archive` 只收有裁决的)。 */}
             {judgment.verdict && !judgment.is_archived && canExecute && buttonOn("judgment.archive") && (
               <Button type="button" variant="secondary" size="sm" onClick={() => setArchiveOpen(true)}>
@@ -1167,7 +1178,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <Seal size={72} court={judgment.court ?? undefined} className="shrink-0" />
               <p data-testid="current-ruling" className={`font-title ${fullCase ? "text-xl font-semibold" : "text-display-lg"} text-[oklch(var(--color-ink))]`}>
                 <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(ordered)}</span>
-                <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
+                <DomainEnum namespace={verdictNamespace(t, judgment.civilization, judgment.verdict)} value={judgment.verdict} />
               </p>
               {/* 主审 · 结案时间. 印记 / 会审比数 have no fields — file header. */}
               <p
@@ -1201,7 +1212,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   {selectedVerdict && (
                     <>
                       <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(selectedVerdict as VerdictMember)}</span>
-                      <DomainEnum namespace="judgment.verdicts" value={selectedVerdict} />
+                      <DomainEnum namespace={verdictNamespace(t, judgment.civilization, selectedVerdict)} value={selectedVerdict} />
                     </>
                   )}
                 </span>
@@ -1229,7 +1240,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               const offScale = barred !== null;
               const marked = isFinal ? isOrdered : isChosen;
               const weighedLabel = weighedCase ? WEIGHED_LABEL[member] : undefined;
-              const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} label={weighedLabel && t(weighedLabel)} />;
+              const clause = (
+                <VerdictKeyContent
+                  code={member}
+                  keyHint={String(index + 1)}
+                  label={weighedLabel && t(weighedLabel)}
+                  namespace={verdictNamespace(t, judgment.civilization, member)}
+                />
+              );
               const tile = `${VERDICT_KEY_CLASS} ${fullCase ? VERDICT_KEY_COMPACT : ""} ${
                 marked ? VERDICT_CHOSEN : "bg-[oklch(var(--color-surface-1))]"
               } ${marked && !isFinal && !fullCase ? VERDICT_LIFT : ""}`;
@@ -1498,6 +1516,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         open={confirming}
         onClose={() => setConfirming(false)}
         verdict={selectedVerdict}
+        verdictNamespace={verdictNamespace(t, judgment.civilization, selectedVerdict)}
+        chooseFirst={isOriginal && judgment.civilization === "GREEK" && selectedVerdict === "PASSED"}
         court={judgment.court}
         withWorkflow={withWorkflow}
         step={confirmStep}

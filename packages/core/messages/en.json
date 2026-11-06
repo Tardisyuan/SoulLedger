@@ -446,7 +446,7 @@
       "start_judgment": "Start Judgment",
       "verdict_passed": "Passed",
       "verdict_failed": "Condemned",
-      "verdict_purgatory": "Purgatory",
+      "verdict_purgatory": "Unresolved",
       "verdict_retry": "Retry",
       "reincarnate": "Reincarnate →",
       "reincarnate_success": "Reincarnation complete",
@@ -2067,7 +2067,7 @@
     "verdicts": {
       "passed": "Passed",
       "failed": "Condemned",
-      "purgatory": "Purgatory",
+      "purgatory": "Unresolved",
       "retry": "Retry"
     },
     "queue": {
@@ -2089,7 +2089,7 @@
       "notes": "Verdict notes",
       "notes_placeholder": "Add a note…",
       "create_workflow": "Also open an approval workflow when ruling",
-      "defer": "Defer",
+      "defer": "Move to Deferred",
       "commit_error": "The verdict did not land; the case is back in the queue",
       "restore_deferred": "Bring deferred cases back",
       "stat_decided": "{{n}} ruled",
@@ -2489,7 +2489,7 @@
       "title": "Weighing of the heart",
       "scale": "Heart {{weight}} · feather {{counterweight}}",
       "gives": "The scale gives: {{verdict}}",
-      "wavering_hint": "Pending or Retry = the scale wavers: Thoth records it and the heart is weighed again; no destination.",
+      "wavering_hint": "Unresolved or Retry = the scale wavers: Thoth records it and the heart is weighed again; no destination.",
       "contradicts": "Contradicts the scale",
       "result": {
         "LIGHTER": "Not heavier than the feather",
@@ -2672,6 +2672,24 @@
       "curability_required": "Add the mark: curable or incurable.",
       "greek_mark_not_applicable": "Only a Greek case takes an account or a curability mark.",
       "incurable_is_eternal_in_tartarus": "The incurable are cast into Tartarus for ever; no other destination or term."
+    },
+    "verdicts_by_civ": {
+      "eu": {
+        "purgatory": "Purgatory"
+      },
+      "eg": {
+        "purgatory": "The scale wavers"
+      }
+    },
+    "greek_account": {
+      "why": "The two dialogues tell the afterlife differently; the judgment document follows the one chosen.",
+      "gorgias": "Gorgias",
+      "gorgias_pass": "The meadow at the crossroads · to the Isles of the Blessed",
+      "republic": "Republic",
+      "republic_pass": "Between the four openings · up through the heavens, back to the meadow after a thousand years",
+      "step_choose": "Step 1 · choose the account",
+      "step_seal": "Step 2 · seal",
+      "confirm_pass": "Pass · seal"
     }
   },
   "audit": {
@@ -5199,7 +5217,7 @@
       "appeal_review": "Appeal under review",
       "no_time": "no timestamp",
       "decision": "Decision",
-      "pending": "Pending"
+      "pending": "Not judged yet"
     },
     "soul_states": {
       "ALIVE": "Alive",
@@ -6819,7 +6837,7 @@
       "retry_with_open_cross": "A cross-realm judgment is open on this case; conclude it before hearing the case again.",
       "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: give a final verdict, or open a new judgment.",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
-      "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Pending (purgatory).",
+      "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Purgatory.",
       "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again.",
       "five_heinous_must_fail": "The offence is one of the five heinous crimes: the verdict cannot be passed."
     },
@@ -8740,8 +8758,7 @@
     "doc_card": "Judgment document · from the last seal",
     "eg": {
       "fail": "Heavier than the feather · fail",
-      "pass": "Lighter than the feather · pass",
-      "waver": "The scale wavers"
+      "pass": "Lighter than the feather · pass"
     },
     "reading": "Reading"
   },
