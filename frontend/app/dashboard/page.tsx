@@ -37,7 +37,11 @@ import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { StatCard } from "@/src/components/dashboard/StatCard";
 
-type DashboardTab = "overview" | "ledger";
+/**
+ * 三个标签:概览 = v4 三张卡;更多 = v3 起就在这一页的待办条与普查图(用户 2026-11-06:收进「更多」,默认不显示);
+ * 账本要 `ledger.read`。和原来两个一样是 aria-pressed 的一组开关,选中的写进 `?tab=`。
+ */
+type DashboardTab = "overview" | "more" | "ledger";
 
 /** One card: s1, 1px line, padding 16, a 20/28 h2 with an optional aside; v4 `.v4-card` (light theme: shadow, no line) and the 6px panel radius. */
 function ChartCard({ title, aside, children }: { title: React.ReactNode; aside?: React.ReactNode; children: React.ReactNode }) {
@@ -80,7 +84,8 @@ function DashboardContent() {
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
+  const tabParam = searchParams.get("tab");
+  const activeTab: DashboardTab = tabParam === "ledger" || tabParam === "more" ? tabParam : "overview";
 
   const { data: stats, isLoading: loading, error: queryError } = useQuery<LedgerStatsOverview>({
     queryKey: ["dashboard", "stats"],
@@ -100,7 +105,7 @@ function DashboardContent() {
   const asOf = formatAsOf(stats?.as_of, new Date(), formatDateTime);
   usePlaque({
     hall,
-    title: t(activeTab === "ledger" ? "dashboard.tab_ledger" : "dashboard.tab_overview"),
+    title: t(activeTab === "ledger" ? "dashboard.tab_ledger" : activeTab === "more" ? "nav.more" : "dashboard.tab_overview"),
     meta: asOf ? `${today} · ${t("dashboard.data_as_of", { time: asOf })}` : today,
   });
 
@@ -165,6 +170,7 @@ function DashboardContent() {
 
   const tabs: { key: DashboardTab; label: string }[] = [
     { key: "overview", label: t("dashboard.tab_overview") },
+    { key: "more", label: t("nav.more") },
     { key: "ledger", label: t("dashboard.tab_ledger") },
   ];
 
@@ -278,13 +284,13 @@ function DashboardContent() {
     >
       <div className="space-y-4 md:space-y-6">
         {activeTab === "overview" ? (
+          // v4 概览(第七批 S04):今日待审、近 12 周结案、待经手。
+          <RequirePermission permissions="judgment.read">
+            <HallOverview />
+          </RequirePermission>
+        ) : activeTab === "more" ? (
           <>
-            {/* v4 概览(第七批 S04):今日待审、近 12 周结案、待经手。下面的待办条与普查图是 v3 起就在这一页的,
-                定稿这一屏没画它们,也没说撤掉 —— 留在 v4 三张卡之下。 */}
-            <RequirePermission permissions="judgment.read">
-              <HallOverview />
-            </RequirePermission>
-
+            {/* 更多:v3 的待办条与普查图,定稿概览屏没画它们(用户 2026-11-06 定:收在这里,点开才看)。 */}
             <TodoStrip />
 
             {error && (

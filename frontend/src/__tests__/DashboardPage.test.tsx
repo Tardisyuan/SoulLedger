@@ -174,6 +174,7 @@ describe("DashboardPage 数据截至 (identity band meta)", () => {
     const { as_of: _omit, ...withoutAsOf } = baseStats;
     void _omit;
     mockedStats.mockResolvedValue({ data: withoutAsOf });
+    mockSearch = new URLSearchParams("tab=more"); // the KPI row lives in 更多 now
     renderPage();
     await waitFor(() => expect(document.querySelector("[data-kpi]")).not.toBeNull());
     expect(mockT).not.toHaveBeenCalledWith("dashboard.data_as_of", expect.anything());
@@ -182,7 +183,38 @@ describe("DashboardPage 数据截至 (identity band meta)", () => {
   });
 });
 
-describe("DashboardPage overview", () => {
+describe("DashboardPage 概览 vs 更多 (用户 2026-11-06)", () => {
+  it("the overview carries only the v4 cards: no 待办条, no census charts until 更多 is opened", async () => {
+    const { container } = renderPage();
+    expect(await screen.findByText("nav.more")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("dashboard.tab_overview")).toHaveAttribute("aria-pressed", "true");
+    // the stats query still lands (the plaque reads it), but nothing of the v3 page is drawn
+    await waitFor(() => expect(mockedStats).toHaveBeenCalled());
+    expect(container.querySelector("[data-legend-ledger]")).toBeNull();
+    expect(container.querySelector("[data-kpi-card]")).toBeNull();
+    expect(container.querySelector("[data-todo]")).toBeNull();
+    expect(mockedProposed).not.toHaveBeenCalled();
+  });
+
+  it("writes ?tab=more when 更多 is picked", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByText("nav.more"));
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard?tab=more", { scroll: false });
+  });
+
+  it("draws the v3 page at ?tab=more, with 更多 the pressed toggle", async () => {
+    mockSearch = new URLSearchParams("tab=more");
+    const { container } = renderPage();
+    expect(await found(container, "[data-legend-ledger]")).toBeInTheDocument();
+    expect(screen.getByText("nav.more")).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("DashboardPage 更多 (the v3 overview, moved)", () => {
+  beforeEach(() => {
+    mockSearch = new URLSearchParams("tab=more");
+  });
+
   it("renders the lifecycle row from the payload, in lifecycle order", async () => {
     renderPage();
 
@@ -765,8 +797,9 @@ describe("DashboardPage tab navigation", () => {
 
     const { container } = renderPage();
 
-    // The overview's own marker — the 图例账 that replaced the pie.
-    expect(await found(container, "[data-legend-ledger]")).toBeInTheDocument();
+    // Overview is the pressed toggle, and none of 更多's v3 page is drawn.
+    expect(await screen.findByText("dashboard.tab_overview")).toHaveAttribute("aria-pressed", "true");
+    expect(container.querySelector("[data-legend-ledger]")).toBeNull();
   });
 });
 

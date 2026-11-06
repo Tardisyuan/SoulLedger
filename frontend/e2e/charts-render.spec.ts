@@ -103,7 +103,7 @@ test.describe("dashboard 的图表", () => {
     const api = await setupAuthenticatedPage(page);
     api.on("GET", "/ledger/stats/overview/", { ...STATS_WITH_MARKS, souls_by_realm: REALMS });
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard?tab=more"); // v3 待办条与普查图在「更多」里(用户 2026-11-06)
     // 余额分布的题注:只数已处置的,n 是直方图的 total(LEDGER_STATS 里是 2),不是 total_souls(84)。
     await expect(page.locator("[data-histogram-scope]")).toHaveText("已处置 · n = 2 · 每格 50");
 
@@ -121,7 +121,7 @@ test.describe("dashboard 的图表", () => {
     const api = await setupAuthenticatedPage(page);
     api.on("GET", "/ledger/stats/overview/", STATS_WITH_MARKS);
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard?tab=more"); // v3 待办条与普查图在「更多」里(用户 2026-11-06)
     const ledger = page.locator("[data-legend-ledger]");
     await expect(ledger).toBeVisible();
 
