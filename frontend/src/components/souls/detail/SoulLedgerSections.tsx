@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { rebirthFormNamespace } from "@/src/lib/domainNames";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import type { Disposition, Judgment, Reincarnation, SoulEvent } from "@soulledger/core/api";
@@ -156,12 +157,15 @@ export function SoulLedgerSections({
   reincarnations,
   events,
   rebirth = true,
+  civilization,
 }: {
   dispositions: Disposition[];
   reincarnations: Reincarnation[];
   events: SoulEvent[];
   /** False where this soul's afterlife has no rebirth (`hasRebirth`): the section has nothing to say. */
   rebirth?: boolean;
+  /** 灵魂原属文明:地府的受刑事件名仍叫「受刑计划…」,别的文明是「去处计划…」(第十二批 1.2)。 */
+  civilization?: string | null;
 }) {
   const { t, formatDate, formatDateTime } = useI18n();
 
@@ -224,7 +228,7 @@ export function SoulLedgerSections({
             <span className={TIME}>{formatDate(r.reincarnated_at)}</span>
             <span title={r.new_identity || undefined} className={`${CELL} truncate`}>{r.new_identity || <MissingValue kind="unrecorded" />}</span>
             <span className={CELL}>
-              <DomainEnum namespace="reincarnation.forms" value={r.rebirth_form} />
+              <DomainEnum namespace={rebirthFormNamespace(t, civilization, r.rebirth_form)} value={r.rebirth_form} />
             </span>
             <span className={`${TIME} text-right`}>{r.cycle_count}</span>
           </div>
@@ -241,7 +245,7 @@ export function SoulLedgerSections({
           <div key={e.id} className="contents" data-testid="ledger-event-row">
             <span className={CELL}>{formatDateTime(e.create_time)}</span>
             <span className={`${CELL} font-sans text-[oklch(var(--color-ink))]`}>
-              <DomainEnum namespace="souls.events" value={e.event_type} />
+              <DomainEnum namespace="souls.events" value={e.event_type} civilization={civilization} />
             </span>
           </div>
         ))}

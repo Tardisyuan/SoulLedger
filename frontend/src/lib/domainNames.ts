@@ -38,6 +38,15 @@ export function realmTypeNamespace(t: T, civilization: string | null | undefined
   return civ && type && t(`${ns}.${type}`) !== `${ns}.${type}` ? ns : "realms.types";
 }
 
+/**
+ * 转生形态的显示词按文明(第十二批 SH 2):希腊的 OTHER 是「自择一生」(厄尔神话里灵魂自己挑下一世),地府仍是「六道之外」。
+ * 有 `reincarnation.forms_by_civ.<文明>.<形态>` 就用那个命名空间,没有就回落 `reincarnation.forms`。做法同 `realmTypeNamespace`。
+ */
+export function rebirthFormNamespace(t: T, civilization: string | null | undefined, form: string | null | undefined): string {
+  const civ = civilization ? CIVILIZATION_SHORT_CODES[civilization] : undefined;
+  const ns = `reincarnation.forms_by_civ.${civ}`;
+  return civ && form && t(`${ns}.${form}`) !== `${ns}.${form}` ? ns : "reincarnation.forms";
+}
 
 /** 裁决按文明的叫法在 core(两个 App 也用);这里转出,web 的调用点照旧从这里取。 */
 export { verdictNamespace, verdictText } from "@soulledger/core/domain/verdictNames";

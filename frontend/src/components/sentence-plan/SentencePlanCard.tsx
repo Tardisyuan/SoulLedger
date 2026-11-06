@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { SentenceNode, SentencePlan } from "@soulledger/core/api/sentence-plans";
 import { useCancelSentencePlan, useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
-import { nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
+import { civKey, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -198,7 +198,8 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
   );
 }
 
-export function SentencePlanCard({ soulId }: { soulId: string }) {
+/** `civilization`:灵魂原属文明。计划归它;地府叫「受刑计划」,别的文明叫「去处计划」(第十二批 1.2)。 */
+export function SentencePlanCard({ soulId, civilization }: { soulId: string; civilization?: string | null }) {
   const { t } = useI18n();
   // ponytail: first page (20 plans) — one plan per life cycle, a soul past 20 lives shows its latest 20.
   const plans = useSentencePlans({ soul: soulId });
@@ -206,13 +207,13 @@ export function SentencePlanCard({ soulId }: { soulId: string }) {
 
   return (
     <div className={PANEL} data-testid="sentence-plan-card">
-      <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("sentence_plan.panel_title")}</h2>
+      <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t(civKey(t, "sentence_plan.panel_title", rows[0]?.tenant_code ?? civilization))}</h2>
       {plans.isLoading ? (
         <Skeleton className="h-16 w-full" />
       ) : plans.isError && !plans.data ? (
         <QueryError onRetry={() => plans.refetch()} />
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("sentence_plan.none")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t(civKey(t, "sentence_plan.none", civilization))}</p>
       ) : (
         <div className="space-y-6">
           {rows.map((p) => (

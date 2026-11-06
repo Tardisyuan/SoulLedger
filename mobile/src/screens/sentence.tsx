@@ -16,7 +16,7 @@ import {
   type MeSentenceStation,
   type SentenceStationStatus,
 } from "@soulledger/core/api/soul";
-import { NODE_STATES, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
+import { NODE_STATES, REALM_SHOWN_TYPE, civKey, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -61,11 +61,19 @@ const STATUS_KEY: Record<SentenceStationStatus, string> = {
 /** The officers' node state a station's status reads as, for v4's words by civilization and place (第十批第 3 条). */
 const NODE_STATE: Partial<Record<SentenceStationStatus, string>> = { active: "ACTIVE", waiting: "WAITING", done: "COMPLETED", eternal: "ETERNAL" };
 
-/** 「涤罪中」 in 炼狱, 「行进中」 in 杜阿特 …; the soul app's own word wherever v4 keeps the shared one. */
+/**
+ * The soul's own words go by the station's civilization × kind of place (v4 batch 12 §1.4): 「我的涤罪」 in 炼狱,
+ * 「停留期」 in 天界 … Punishment keeps the base word (受刑、刑期). No station: the base word.
+ */
+export function placeKey(t: (key: string) => string, key: string, station: MeSentenceStation | null | undefined): string {
+  return station ? civKey(t, key, station.civilization, REALM_SHOWN_TYPE[station.realm?.realm_code ?? ""]) : key;
+}
+
+/** 「涤罪中」 in 炼狱, 「行进中」 in 杜阿特 …; the soul app's own word (by place, batch 12) wherever v4 keeps the shared one. */
 function stateKey(t: (key: string) => string, station: MeSentenceStation): string {
   const node = NODE_STATE[station.status];
   const ns = node ? nodeStateNamespace(t, station.civilization, station.realm?.realm_code, node) : NODE_STATES;
-  return ns === NODE_STATES ? STATUS_KEY[station.status] : `${ns}.${node}`;
+  return ns === NODE_STATES ? placeKey(t, STATUS_KEY[station.status], station) : `${ns}.${node}`;
 }
 
 /** The soul is at this station (serving, held, or there for good). */
@@ -207,7 +215,7 @@ function StationDetail({ station, fresh, landing }: { station: MeSentenceStation
       ) : null}
       <CivLine station={station} />
       <View style={styles.rows}>
-        <Row label={t("soul_app.sentence.term")}>
+        <Row label={t(placeKey(t, "soul_app.sentence.term", station))}>
           <OneLine variant="value" tone="muted">
             {termText(station, t)}
           </OneLine>
@@ -321,7 +329,7 @@ export function SentenceSection({
     <Section
       testID="section-sentence"
       index={index}
-      title={t("soul_app.sentence.section_title")}
+      title={t(placeKey(t, "soul_app.sentence.section_title", hasPlan ? current : null))}
       count={hasPlan && current && !final ? t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) }) : undefined}
       countTestID="sentence-progress"
       open={open || !!landing}
@@ -353,7 +361,7 @@ export function SentenceSection({
                 {OCCUPYING.includes(current.status) ? <Served station={current} /> : null}
               </>
             ) : null}
-            {plan.state === "completed" && plan.rebirth_open ? <Txt variant="bodyLg">{t("soul_app.sentence.all_done_title")}</Txt> : null}
+            {plan.state === "completed" && plan.rebirth_open ? <Txt variant="bodyLg">{t(placeKey(t, "soul_app.sentence.all_done_title", current))}</Txt> : null}
             <ApplyRow plan={plan} />
           </View>
         )
@@ -391,12 +399,14 @@ function Banner({ plan }: { plan: MeSentencePlan }) {
   };
   const c = copy[plan.state];
   if (!c) return null;
+  // 天界、天国、芦苇原的「永居…」,炼狱的「蒙减免」(第十二批 1.4)。
+  const here = currentStation(plan);
   return (
     <View testID={`sentence-banner-${plan.state}`} style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: c.tone, backgroundColor: theme.s1 }]}>
-      <Txt variant="bodyLg">{t(c.title)}</Txt>
+      <Txt variant="bodyLg">{t(placeKey(t, c.title, here))}</Txt>
       {c.body.map((k) => (
         <Txt key={k} variant="caption" tone="muted">
-          {t(k, { total: String(plan.stations.length) })}
+          {t(placeKey(t, k, here), { total: String(plan.stations.length) })}
         </Txt>
       ))}
       <ApplyRow plan={plan} />
@@ -517,7 +527,7 @@ export function SentenceBlocked() {
   const current = plan ? currentStation(plan) : null;
   return (
     <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
-      <Txt variant="bodyLg">{t("soul_app.sentence.blocked_title")}</Txt>
+      <Txt variant="bodyLg">{t(placeKey(t, "soul_app.sentence.blocked_title", current))}</Txt>
       <Txt variant="caption" tone="muted">
         {plan && plan.stations.length
           ? t("soul_app.sentence.blocked_body", { total: String(plan.stations.length) })
@@ -542,7 +552,7 @@ export function SentenceBlocked() {
         </View>
       ) : null}
       <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
-        <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.blocked_link")} →`}</Txt>
+        <Txt variant="caption" tone="ink" style={styles.link}>{`${t(placeKey(t, "soul_app.sentence.blocked_link", current))} →`}</Txt>
       </Pressable>
     </View>
   );

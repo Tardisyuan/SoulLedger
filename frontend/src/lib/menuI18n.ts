@@ -1,6 +1,7 @@
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { isDirectory } from "@/src/hooks/useSidebarMenus";
 import type { Locale } from "@/src/contexts/I18nContext";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 
 /**
  * 菜单名（Menu.name）是数据库自由文本，英文在 `Menu.name_en`（2026-11-05 起）；空的、以及 egy，走下面这张
@@ -103,6 +104,13 @@ export function menuTranslationKey(node: GlossableNode): string | null {
 export type MenuGlossParts = { primary: string; gloss?: string };
 
 /**
+ * 叫法按文明分的菜单(Design v4 第十二批 1.2):底键是中性的「去处请求 / 去处计划」,地府在 `_by_civ.cn` 里保留
+ * 「受刑…」。库里的 `Menu.name` 是迁移写的「受刑请求 / 受刑计划」,所以这两项**连 zh-Hans 也读语言包**,
+ * 不然别的文明的官员在中文界面上照样看见「受刑」。
+ */
+const CIV_WORDED_PATHS = new Set(["/sentence-requests", "/sentence-plans"]);
+
+/**
  * 面包屑 / 页面 H1 共用的对照渲染逻辑：
  * - zh-Hans 下界面语言和源数据语言相同，不需要对照，原样显示中文名。
  * - 其它语言下，找到译名就"译名在前、中文原名在后（小字）"；找不到译名
@@ -111,8 +119,14 @@ export type MenuGlossParts = { primary: string; gloss?: string };
 export function menuGlossParts(
   node: GlossableNode,
   locale: Locale,
-  t: (key: string) => string
+  t: (key: string) => string,
+  /** 此刻所在的殿的文明(`useHallCivilization`),只给 `CIV_WORDED_PATHS` 用。 */
+  civilization?: string | null
 ): MenuGlossParts {
+  if (node.path && CIV_WORDED_PATHS.has(node.path) && !isDirectory(node)) {
+    const key = civKey(t, LEAF_KEYS[node.path], civilization);
+    return locale === "egy" ? { primary: t(key), gloss: node.name } : { primary: t(key) };
+  }
   if (locale === "zh-Hans") return { primary: node.name };
   // The row's own English first: a menu an administrator added has no key below.
   if (locale === "en" && node.name_en) return { primary: node.name_en };
