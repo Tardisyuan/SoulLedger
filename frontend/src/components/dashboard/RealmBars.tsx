@@ -1,6 +1,8 @@
 "use client";
 
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { realmTypeNamespace } from "@/src/lib/domainNames";
 import { REALM_PATTERNS, type ChartPattern } from "@/lib/chart-colors";
 
 /**
@@ -38,14 +40,18 @@ export function patternOf(realmType: string): ChartPattern {
   return REALM_PATTERNS[realmType] ?? "solid";
 }
 
-/** 标题行右侧的图例:四个 12 × 12 样块 + 界名。 */
-export function RealmLegend() {
+/**
+ * 标题行右侧的图例:四个 12 × 12 样块 + 界名。图上只有一个文明的界域时,界名用那个文明的叫法
+ * (v4 第八批第 7 条:地府没有「天堂」);几个文明混在一起(管理员的全局数字)时用共用的 `realms.types`。
+ */
+export function RealmLegend({ civilization }: { civilization?: string | null } = {}) {
+  const { t } = useI18n();
   return (
     <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
       {LEGEND_ORDER.map((type) => (
         <li key={type} className="flex items-center gap-1">
           <span aria-hidden="true" className={`block size-3 ${PATTERN_CLASS[patternOf(type)]}`} />
-          <DomainEnum namespace="realms.types" value={type} />
+          <DomainEnum namespace={realmTypeNamespace(t, civilization, type)} value={type} />
         </li>
       ))}
     </ul>
