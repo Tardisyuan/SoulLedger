@@ -1639,3 +1639,40 @@ describe("v4 S10 · 「不过」的理由", () => {
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.fail_reason_errors.fail_reason_required"), "error"));
   });
 });
+
+describe("v4 第十一批 · 存疑与放进待定、希腊通过选文书", () => {
+  it("第三个裁决键按文明叫:地府「存疑」,欧洲「炼狱」;「放进待定」在页头,不是裁决", async () => {
+    renderPage();
+    await screen.findAllByRole("radio");
+    expect(screen.getByTestId("verdict-bar")).toHaveTextContent(tZh("judgment.verdicts.purgatory"));
+    expect(screen.getByTestId("verdict-bar")).not.toHaveTextContent(tZh("judgment.claim.defer"));
+    expect(screen.getByTestId("desk-defer")).toHaveTextContent(tZh("judgment.claim.defer"));
+  });
+
+  it("欧洲的 PURGATORY 写「炼狱」", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ civilization: "EUROPEAN" }) });
+    renderPage();
+    await screen.findAllByRole("radio");
+    expect(screen.getByTestId("verdict-bar")).toHaveTextContent(tZh("judgment.verdicts_by_civ.eu.purgatory"));
+    expect(screen.getByTestId("verdict-bar")).not.toHaveTextContent(tZh("judgment.verdicts.purgatory"));
+  });
+
+  it("希腊判通过:第 1 步只问写在哪一篇(初始不选、下一步是灰的),第 2 步「通过 · 落印」带上文书", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ civilization: "GREEK" }) });
+    renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "1" });
+    fireEvent.click(toConfirm());
+    const layer = await screen.findByTestId("confirm-layer");
+    expect(layer).toHaveTextContent(tZh("judgment.greek_account.step_choose"));
+    expect(layer).toHaveTextContent(tZh("judgment.greek_account.why"));
+    const next = within(layer).getByRole("button", { name: tZh("workflow.pick.next") });
+    expect(next).toBeDisabled();
+    fireEvent.click(within(layer).getByTestId("greek-account").querySelector('input[value="GORGIAS"]') as HTMLInputElement);
+    expect(within(layer).getByTestId("reject-preview")).toHaveTextContent(tZh("verdict_doc.gr.verdict.isles"));
+    fireEvent.click(next);
+    fireEvent.click(await within(layer).findByRole("button", { name: tZh("judgment.greek_account.confirm_pass") }));
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    expect(judgmentApi.conclude.mock.calls[0][1]).toMatchObject({ verdict: "PASSED", greek_account: "GORGIAS" });
+  });
+});

@@ -335,7 +335,7 @@ function QueueShortcuts() {
     ["↑↓", t("judgment.claim.key_move")],
     ["Enter", t("judgment.claim.key_open")],
     ["C", t("judgment.claim.claim")],
-    ["S", t("judgment.queue.defer")],
+    ["S", t("judgment.claim.col_deferred")],
     ["R", t("judgment.claim.key_restore")],
   ];
   return (

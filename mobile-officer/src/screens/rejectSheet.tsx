@@ -35,6 +35,7 @@ function Choice({
   multi,
   disabled,
   aside,
+  sub,
   onPress,
 }: {
   testID: string;
@@ -43,6 +44,8 @@ function Choice({
   multi?: boolean;
   disabled?: boolean;
   aside?: string;
+  /** 标签下面一行小字(希腊通过:这一篇把灵魂送到哪里)。 */
+  sub?: string;
   onPress: () => void;
 }) {
   const theme = useTheme();
@@ -58,9 +61,16 @@ function Choice({
       <View style={[styles.mark, { borderRadius: multi ? radius.control : radius.pill, borderColor: on ? theme.ink : theme.inkSubtle, backgroundColor: on ? theme.ink : "transparent" }]}>
         {on ? <Icon name="check" size={10} color={theme.s0} strokeWidth={2} /> : null}
       </View>
-      <Txt variant="body" style={{ flex: 1, fontFamily: on ? family.ui[500] : family.ui[400] }}>
-        {label}
-      </Txt>
+      <View style={{ flex: 1 }}>
+        <Txt variant="body" style={{ fontFamily: on ? family.ui[500] : family.ui[400] }}>
+          {label}
+        </Txt>
+        {sub ? (
+          <Txt variant="caption" tone="muted">
+            {sub}
+          </Txt>
+        ) : null}
+      </View>
       {aside ? (
         <Txt variant="caption" tone="muted">
           {aside}
@@ -265,27 +275,40 @@ function greekReasonKey(code: string): string {
   }
 }
 
-/** 希腊判通过:只问一件 —— 判决写进哪一篇(D8)。 */
+/**
+ * 希腊判通过:只问一件 —— 判决写进哪一篇(D8;Design 第十一批第 3 条)。右滑过线后不落印,先弹这一页:
+ * 两个选项各带一行去处(`judgment.greek_account.*_pass`),一句为什么要选(`.why`),下面是判语预览(第五批定稿)。
+ * 刚打开时两项都不选,「通过 · 落印」是灰的 —— 不替官员猜。「放回」或下滑关掉,卡片回原位。
+ */
 export function AccountSheet({ open, busy, onCancel, onConfirm }: { open: boolean; busy: boolean; onCancel: () => void; onConfirm: (account: GreekAccount) => void }) {
   const { t } = useI18n();
   const theme = useTheme();
   const [account, setAccount] = useState<GreekAccount | null>(null);
+  const preview = account === "GORGIAS" ? t("verdict_doc.gr.verdict.isles") : account === "REPUBLIC" ? t("verdict_doc.gr_er.verdict.just") : null;
   return (
     <Sheet open={open} onClose={onCancel} edge={theme.hair} closeLabel={t("reject.sheet.cancel")}>
       <View testID="swipe-pass-sheet" style={{ padding: space[5], gap: space[3] }}>
-        <Txt variant="title">{t("judgment.verdicts.passed")}</Txt>
+        <Txt variant="label" tone="pos">{t("judgment.verdicts.passed")}</Txt>
+        <Txt variant="title">{t("judgment.greek_account_label")}</Txt>
+        <Txt variant="body" tone="muted">{t("judgment.greek_account.why")}</Txt>
         {GR_ACCOUNTS.map((a) => (
           <Choice
             key={a}
             testID={`pass-account-${a}`}
-            label={t(a === "GORGIAS" ? "judgment.statute_corpus.GORGIAS" : "judgment.statute_corpus.REPUBLIC_ER")}
+            label={t(a === "GORGIAS" ? "judgment.greek_account.gorgias" : "judgment.greek_account.republic")}
+            sub={t(a === "GORGIAS" ? "judgment.greek_account.gorgias_pass" : "judgment.greek_account.republic_pass")}
             on={account === a}
             onPress={() => setAccount(a)}
           />
         ))}
+        {preview ? (
+          <Txt variant="body" testID="pass-preview" style={{ backgroundColor: theme.s2, padding: space[3] }}>
+            {`${t("reject.sheet.preview_label")} · ${preview}`}
+          </Txt>
+        ) : null}
         <View style={{ flexDirection: "row", gap: space[3] }}>
           <ActionButton testID="pass-cancel" kind="outline" title={t("reject.sheet.cancel")} onPress={onCancel} />
-          <ActionButton testID="pass-confirm" kind="primary" busy={busy} disabled={!account} title={t("judgment.verdicts.passed")} onPress={() => account && onConfirm(account)} style={{ flex: 1 }} />
+          <ActionButton testID="pass-confirm" kind="primary" busy={busy} disabled={!account} title={t("judgment.greek_account.confirm_pass")} onPress={() => account && onConfirm(account)} style={{ flex: 1 }} />
         </View>
       </View>
     </Sheet>
