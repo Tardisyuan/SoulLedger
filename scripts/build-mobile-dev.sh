@@ -32,10 +32,9 @@ cd "$ROOT/$APP"
 QOS="${BUILD_QOS:-background}"
 
 case "$APP" in mobile) DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_SOUL ;; *) DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_OFFICER ;; esac
-FP=$(npx @expo/fingerprint fingerprint:generate --platform "$PLATFORM" 2>/dev/null \
-     | python3 -c "import json,sys; print(json.load(sys.stdin)['hash'])")
-# react-native.config.js (Sentry on / off) is not part of the fingerprint: hash it in, with the DSN state.
-KEY="$FP rnconfig=$(shasum react-native.config.js 2>/dev/null | cut -c1-12) sentry=$([ -n "${!DSN_VAR:-}" ] && echo on || echo off)"
+# Fingerprint + react-native.config.js hash (shared with ios-sim-build.yml / ios-sim-fetch.sh), and the DSN state.
+read -r FP RNCONFIG < <("$ROOT/scripts/mobile-native-key.sh" "$APP" "$PLATFORM")
+KEY="$FP rnconfig=$RNCONFIG sentry=$([ -n "${!DSN_VAR:-}" ] && echo on || echo off)"
 STORE="$(git -C "$ROOT" rev-parse --git-common-dir)/soulledger-native-builds"
 mkdir -p "$STORE"
 LAST="$STORE/$APP-$PLATFORM"
