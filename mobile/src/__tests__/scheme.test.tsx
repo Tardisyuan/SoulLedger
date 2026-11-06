@@ -13,7 +13,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
-import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
+import { NEUTRAL_CIV, v4 } from "../theme";
 import { resetLoginMemory } from "./stubApi";
 
 const appJson = require("../../app.json") as { expo: { userInterfaceStyle?: string } };
@@ -72,7 +72,7 @@ it.each(["dark", "light"] as const)("system %s → v3's neutrals of that scheme,
   fireEvent.changeText(screen.getByTestId("login-soul-code"), "QU33Q9FW5F");
   fireEvent.changeText(screen.getByTestId("login-password"), "x");
   expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
-    backgroundColor: scheme === "dark" ? v3Band(NEUTRAL_PLAQUE.dark) : NEUTRAL_PLAQUE.light,
+    backgroundColor: (scheme === "dark" ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL),
   });
   expect(loginGround()).not.toBe(v3[scheme === "dark" ? "light" : "dark"].surface);
 });
@@ -81,5 +81,5 @@ it("no system preference reported → dark (the design's primary scheme)", async
   mockScheme = null;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(v3.dark.surface);
+  expect(loginGround()).toBe(v4.dark.card);
 });

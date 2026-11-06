@@ -1146,7 +1146,7 @@ const styles = StyleSheet.create({
   stageDot: { width: 30, height: 30, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   stageHere: { width: 28, height: 28, borderWidth: 4 },
   stageMark: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 14 },
-  /** ✓ from the status-glyph face: IBM Plex Mono has none, so the OS fell back to a √-like mark. */
+  /** ✓ from the status-glyph face: the mono face (Plex then, Geist Mono now) has none, so the OS fell back to a √-like mark. */
   stageGlyph: { fontFamily: family.glyph },
   stageWord: { fontSize: 11, lineHeight: 16, textAlign: "center" },
   /** v3 .life-balance: an ink block, the number in mono 56. */

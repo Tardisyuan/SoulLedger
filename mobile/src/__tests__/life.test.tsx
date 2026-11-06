@@ -16,7 +16,7 @@ import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { ON_PLAQUE, motion, v3, v3Band } from "../theme";
+import { ON_PLAQUE, motion, v4 } from "../theme";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockWindow = { width: 390, height: 844, scale: 3, fontScale: 1 };
@@ -83,8 +83,8 @@ describe("the identity band", () => {
     const need = band.paddingTop + Number(flat(screen.getByTestId("identity-meta")).lineHeight) + band.gap + Number(flat(screen.getByTestId("plaque-seal")).height) + band.paddingBottom;
     expect(need).toBeLessThanOrEqual(band.height);
     // The civilization's colour (darkened 10%, as v3 mixes it) is the band's; the page under it is neutral.
-    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v3Band(v3.civ.cn.light));
-    expect(flat(screen.getByTestId("life")).backgroundColor).toBe(v3.light.canvas);
+    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v4.civ.cn.sL);
+    expect(flat(screen.getByTestId("life")).backgroundColor).toBe(v4.light.main);
     scrollTo(60);
     expect(screen.getByTestId("identity-meta")).toBeTruthy();
     scrollTo(100);
@@ -223,7 +223,7 @@ describe("v3 civilization marks on 本世", () => {
     expect(typeof first === "string" ? first : first.props.testID).toBe("stage-motif");
     const paths = motif.findAllByType(Path);
     expect(paths.length).toBeGreaterThan(0);
-    expect(paths.map((p) => p.props.stroke)).toEqual(paths.map(() => v3.civ.cn.light));
+    expect(paths.map((p) => p.props.stroke)).toEqual(paths.map(() => v4.civ.cn.tL));
   });
 
   it("the current state is v3's display: glyph and word both 56, the word in Noto Serif SC 600", async () => {
@@ -272,7 +272,7 @@ describe("the ledger rows", () => {
     expect(screen.getByTestId("ledger-head")).toBeTruthy();
     expect(flat(screen.getByTestId("section-records-plus")).transform).toEqual([{ rotate: "45deg" }]);
     expect(flat(screen.getByTestId("section-judgments-plus")).transform).toBeUndefined();
-    expect(flat(screen.getByTestId("section-records-body"))).toMatchObject({ borderLeftWidth: 3, borderLeftColor: v3.light.ink, backgroundColor: v3.light.canvas });
+    expect(flat(screen.getByTestId("section-records-body"))).toMatchObject({ borderLeftWidth: 3, borderLeftColor: v4.light.ink, backgroundColor: v4.light.main });
     // Rows are 60pt, never under the 44pt target.
     expect(flat(screen.getByTestId("section-records-toggle")).minHeight).toBe(60);
     // Arrived open: it just is. Opened by hand: it grows from 0 with its opacity, then lets go.

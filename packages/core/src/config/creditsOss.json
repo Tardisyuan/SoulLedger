@@ -255,24 +255,19 @@
   ],
   "app": [
     {
-      "name": "@expo-google-fonts/archivo",
+      "name": "@expo-google-fonts/eb-garamond",
       "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/archivo"
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/eb-garamond"
     },
     {
-      "name": "@expo-google-fonts/ibm-plex-mono",
+      "name": "@expo-google-fonts/geist-mono",
       "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/ibm-plex-mono"
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/geist-mono"
     },
     {
       "name": "@expo-google-fonts/noto-sans-egyptian-hieroglyphs",
       "licence": "MIT AND OFL-1.1",
       "url": "https://www.npmjs.com/package/@expo-google-fonts/noto-sans-egyptian-hieroglyphs"
-    },
-    {
-      "name": "@expo-google-fonts/source-serif-4",
-      "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/source-serif-4"
     },
     {
       "name": "@gorhom/bottom-sheet",

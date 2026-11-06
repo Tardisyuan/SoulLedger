@@ -25,7 +25,7 @@ import { SessionProvider } from "../session";
 import { PROFILE, heldReply, life, stubApi, resetLoginMemory } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccessibilityInfo, StyleSheet } from "react-native";
-import { motion, themeFor, v3, type Theme } from "../theme";
+import { motion, themeFor, v4, type Theme } from "../theme";
 import { ThemeContext } from "../ui";
 
 /** Wait out the drawer's 200ms exit (v3 MotionSpec 问一问抽屉 出场). */
@@ -189,7 +189,7 @@ describe("the entry", () => {
       .map((n) => n.props.testID);
     expect([...new Set(ids)]).toEqual(["header-account"]);
     const entry = StyleSheet.flatten(screen.getByTestId("assist-entry").props.style);
-    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v3.civ.cn.light });
+    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v4.civ.cn.tL });
     await act(async () => fireEvent.press(screen.getByTestId("assist-entry")));
     expect(screen.getByTestId("assist-panel")).toBeTruthy();
   });
