@@ -110,8 +110,11 @@ const ENGLISH_RESIDUE = [
  * 仍有键没换的(义项第十节没给写法)留在旧账清单里,不在这里;换净一个就从旧账挪过来。
  * 星期词组里的 Ra / Ka 与厅名里的 Maaty 不在这里 —— 它们整体出现时合规,单独出现由封闭词汇拦下。
  */
+// 用户 2026-11-06 决定(v4):Anpu、Shen、Wu 解除废止,改作专名(见 PROPER_NAMES 的 v4 一段)。
+// 当初废止的是误用,不是词本身:Anpu 在第十节被当成「杨柳」的填充词(DY_02_YANGLIU「Yanglju Anpu」→ Yangliu,1a8f7d52);
+// Shen、Wu 在第十二节是万能填充(「Shen Medu」「Kheme Wu」「Sethet Wu」,bffd96cc)。v4 里它们只作阿努比斯之名与申时、午时的拼音。
 const ABOLISHED_TEN_WORDS = [
-  "Aashu", "Aba-Ef", "Amenti", "Ami", "Amset", "An", "Anpu", "Aper", "Awy", "Benet", "Bu", "Dema", "Diu", "Diyu",
+  "Aashu", "Aba-Ef", "Amenti", "Ami", "Amset", "An", "Aper", "Awy", "Benet", "Bu", "Dema", "Diu", "Diyu",
   "Djam", "Djed-Tep", "Djeser", "Djew", "Eremitee", "Fedu", "Fekh-Es", "Hanacht", "Herep", "Hor", "Ier", "Ii", "Im",
   "Ineb", "Ipen", "Iret", "Irtu", "Iwen", "Iyt", "Kefa", "Kemet-Shen", "Khefere", "Khemet", "Khemt", "Khemu", "Khen",
   "Khenty", "Khered", "Khetaw", "Maat-Benet", "Maatheru", "Maau", "Makhat", "Mdu", "Medu-Ib", "Mehi", "Men", "Meng",
@@ -127,7 +130,7 @@ const ABOLISHED_TEN_WORDS = [
   // 第十二节「这一轮之后应当废止的写法」(Per Aa 是词组,单列在下面)。Hotep(「待」义)与 Rekhyu(「原因 / 方式」义)
   // 只按义项废止,整词名单表达不了义项,所以不在这里 —— 包里已无这两个词,单独出现由封闭词汇拦下。
   "Am", "Aru", "Aset", "Ahamet", "Aba", "Djewet", "Hemset", "Kheme", "Mech", "Renenu", "Ru", "Seh",
-  "Senu", "Set", "Shen", "Tep", "We", "Weben", "Wepet", "Wu",
+  "Senu", "Set", "Tep", "We", "Weben", "Wepet",
   // Wer 已划掉:2026-10-27 复用(用户定),义项只有「大 / 大写」,只放在被修饰的词后面(Medu Wer);「太、过于」仍是 Menmen / Aa Er。
   // Her 与 Ma 也在第十二节名单里;它们唯一的键 escalate_reason_placeholder 第十四节改写 Khet: Nen Iri Sekhet Pen
   // (第十二节给的 Khet: Seshem Sekhet Pen 撞了「Seshem 只表推进」),换净,从旧账挪来。
