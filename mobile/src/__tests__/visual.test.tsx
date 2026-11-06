@@ -70,7 +70,7 @@ describe("the unrecognized-value badge", () => {
     expect(within(badge).getByText("?")).toBeTruthy();
     expect(within(badge).getByText("未识别取值")).toBeTruthy();
     const raw = within(badge).getByText("PENDING_SYNC");
-    expect(flat(raw).fontFamily).toBe("IBMPlexMono_400Regular");
+    expect(flat(raw).fontFamily).toBe("GeistMono_400Regular");
     expect(flat(badge).borderStyle).toBe("dotted");
   });
 
@@ -119,12 +119,12 @@ describe("soul-state badges", () => {
 });
 
 describe("the Han serif", () => {
-  it("quoted Chinese uses the bundled Noto Serif SC; Latin-only quotes keep Source Serif 4", () => {
-    expect(quoteFamily("功过相权，尚有一过未清")).toBe("NotoSerifSC_400");
-    expect(quoteFamily("Merit and demerit have been weighed")).toBe("SourceSerif4_400Regular");
-    expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_400");
-    // Regular for quotes, SemiBold for v3's titles and display text (back 2026-10-03; it had no caller 2026-09-18).
-    expect(Object.keys(FONT_ASSETS).filter((name) => name.startsWith("NotoSerifSC"))).toEqual(["NotoSerifSC_400", "NotoSerifSC_600"]);
+  it("quoted Chinese uses the bundled Noto Serif SC 500; Latin-only quotes EB Garamond (v4)", () => {
+    expect(quoteFamily("功过相权，尚有一过未清")).toBe("NotoSerifSC_500");
+    expect(quoteFamily("Merit and demerit have been weighed")).toBe("EBGaramond_400Regular");
+    expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_500");
+    // v4 loads the serif at 500 and 600 only: 500 for quotes, 600 for titles and display text.
+    expect(Object.keys(FONT_ASSETS).filter((name) => name.startsWith("NotoSerifSC"))).toEqual(["NotoSerifSC_500", "NotoSerifSC_600"]);
   });
 
   it("titles and display text are Noto Serif SC 600 (v3 第一批); body and labels stay the interface face", () => {
@@ -134,26 +134,29 @@ describe("the Han serif", () => {
     expect(flat(screen.getByText("灵魂簿")).fontFamily).toBe("NotoSerifSC_600");
   });
 
-  it("bundles exactly the two Han serif weights, each within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
+  it("bundles exactly the two Han serif weights and the three interface weights, each within the 1.5 MB budget (scripts/build-cjk-fonts.py)", () => {
     const fs = jest.requireActual<typeof import("fs")>("fs");
     const path = jest.requireActual<typeof import("path")>("path");
     const dir = path.join(__dirname, "..", "..", "assets", "fonts");
-    // Beside them only the 5 KB status-glyph face (Design E 组), which is not a serif. v2's seal face
-    // 霞鹜篆书 went with v2's seal (2026-10-03). The 600 subset is v3's titles and display text.
+    // Beside them the 5 KB status-glyph face (Design E 组). SoulLedger Sans is Geist with the Noto Sans SC
+    // subset merged in (v4's `Geist, "Noto Sans SC"` as one file). v2's seal face went with v2's seal (2026-10-03).
     expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual([
-      "NotoSerifSC-Subset-400.ttf",
+      "NotoSerifSC-Subset-500.ttf",
       "NotoSerifSC-Subset-600.ttf",
       "SoulLedgerGlyphs.ttf",
+      "SoulLedgerSans-400.ttf",
+      "SoulLedgerSans-500.ttf",
+      "SoulLedgerSans-600.ttf",
     ]);
-    for (const w of ["400", "600"]) expect(fs.statSync(path.join(dir, `NotoSerifSC-Subset-${w}.ttf`)).size <= 1_500_000).toBe(true);
+    for (const f of ["NotoSerifSC-Subset-500", "NotoSerifSC-Subset-600", "SoulLedgerSans-400", "SoulLedgerSans-500", "SoulLedgerSans-600"])
+      expect([f, fs.statSync(path.join(dir, `${f}.ttf`)).size <= 1_500_000]).toEqual([f, true]);
     // what App.tsx hands to useFonts must resolve — a require of a deleted file fails the import above
-    expect(FONT_ASSETS.NotoSerifSC_400).toBeTruthy();
-    expect(FONT_ASSETS.NotoSerifSC_600).toBeTruthy();
+    for (const k of ["NotoSerifSC_500", "NotoSerifSC_600", "SoulLedgerSans_400", "SoulLedgerSans_500", "SoulLedgerSans_600"] as const) expect(FONT_ASSETS[k]).toBeTruthy();
   });
 
   it("renders a rejection reason in it", () => {
     wrap(<Quote testID="q" text="人道可期，然非此时。" tone="rejection" />);
-    expect(flat(screen.getByTestId("q")).fontFamily).toBe("NotoSerifSC_400");
+    expect(flat(screen.getByTestId("q")).fontFamily).toBe("NotoSerifSC_500");
   });
 });
 
@@ -296,7 +299,7 @@ describe("long labels", () => {
 describe("v3 section labels (.product-label)", () => {
   const cn = themeFor("CHINESE", "dark");
   // v3 第一批: 11, upper case, the interface face — not mono (the round-7 prototype's was mono).
-  const label = { fontFamily: "Archivo_500Medium", fontSize: 11, textTransform: "uppercase", color: cn.inkMuted };
+  const label = { fontFamily: "SoulLedgerSans_500", fontSize: 11, textTransform: "uppercase", color: cn.inkMuted };
 
   it("SectionLabel: 11, upper case, the interface face (not mono), muted — not ink, not the civilization's colour", () => {
     wrap(<SectionLabel>Language</SectionLabel>);
@@ -317,7 +320,7 @@ describe("v3 section labels (.product-label)", () => {
       </>
     );
     expect(flat(screen.getByText("Open source"))).toMatchObject(label);
-    expect(flat(screen.getByText("功过"))).toMatchObject({ fontSize: 15, fontFamily: "Archivo_600SemiBold", color: cn.ink });
+    expect(flat(screen.getByText("功过"))).toMatchObject({ fontSize: 15, fontFamily: "SoulLedgerSans_600", color: cn.ink });
   });
 });
 
@@ -326,10 +329,10 @@ describe("v2 base components", () => {
   const hosts = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.type === "string");
   const hasPath = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.props.d === "string").length > 0;
 
-  it("primary is the plaque's fill under onPlaque (dark: the band); pressing darkens it 24%, never lightens it", () => {
+  it("primary is the plaque's fill (v4 --solid, the band) under onPlaque; pressing darkens it 24%, never lightens it", () => {
     wrap(<Button testID="go" title="提交" onPress={jest.fn()} />);
     expect(flat(screen.getByTestId("go")).backgroundColor).toBe(cn.plaqueFill);
-    expect(cn.plaqueFill).toBe(cn.band); // dark: 10% #111 mixed in, so white text clears AA on every civilization
+    expect(cn.plaqueFill).toBe(cn.band); // v4 --solid: white text clears AA on every civilization, both schemes
     expect(flat(screen.getByText("提交")).color).toBe(cn.onPlaque);
     // The Pressable's own style function, asked for its pressed look (the test renderer has no touch).
     let pressable = screen.getByTestId("go").parent;
@@ -340,7 +343,7 @@ describe("v2 base components", () => {
     expect(shade("#B3402C")).toBe("#883121");
   });
 
-  it("danger is solid neg.strong under white, with a ✕; secondary is an ink3 outline with no glyph", () => {
+  it("danger is solid neg.strong under onNeg (v4: dark ink on dark's pink), with a ✕; secondary is a line2 outline with no glyph", () => {
     wrap(
       <>
         <Button testID="del" kind="danger" title="删除" onPress={jest.fn()} />
@@ -348,9 +351,10 @@ describe("v2 base components", () => {
       </>
     );
     expect(flat(screen.getByTestId("del")).backgroundColor).toBe(cn.negStrong);
-    expect(flat(screen.getByText("删除")).color).toBe("#FFFFFF");
+    expect(flat(screen.getByText("删除")).color).toBe(cn.onNeg);
+    expect(cn.onNeg).not.toBe("#FFFFFF");
     expect(hasPath("del")).toBe(true);
-    expect(flat(screen.getByTestId("later"))).toMatchObject({ backgroundColor: "transparent", borderColor: cn.inkSubtle });
+    expect(flat(screen.getByTestId("later"))).toMatchObject({ backgroundColor: "transparent", borderColor: cn.hair2 });
     expect(hasPath("later")).toBe(false);
   });
 
@@ -421,16 +425,19 @@ describe("useReducedMotionDurations", () => {
   });
 });
 
-describe("v3 timings and corners", () => {
+describe("timings (v3) and corners (v4)", () => {
   it("a toast stays 4s (v3 B2 Toast 停留 4s); a sheet opens over 240 and closes over 180", () => {
     expect([motion.toastHold, motion.sheetIn, motion.sheetOut]).toEqual([4000, 240, 180]);
   });
 
-  it("inputs 4, dialogs and sheets 8, the rest square (v3 第一批 形状与层次)", async () => {
-    expect(radius).toEqual({ none: 0, control: 4, dialog: 8, pill: 999 });
+  it("controls 4 (inputs, buttons), panels, dialogs and sheets 6 (user decision 2026-11-06)", async () => {
+    expect(radius).toEqual({ none: 0, control: 4, dialog: 6, pill: 999 });
     wrap(<Input label="Name" testID="name" value="" onChangeText={jest.fn()} />);
     const box = screen.getByTestId("name").parent?.parent;
     expect(flat(box as never).borderRadius).toBe(4);
+    screen.unmount();
+    wrap(<Button testID="b" title="b" onPress={jest.fn()} />);
+    expect(flat(screen.getByTestId("b")).borderRadius).toBe(4);
     screen.unmount();
     wrap(
       <LogoutProvider onConfirm={jest.fn()}>
@@ -439,7 +446,7 @@ describe("v3 timings and corners", () => {
     );
     await act(async () => {});
     fireEvent.press(screen.getByTestId("ask"));
-    expect(flat(screen.getByTestId("confirm-sheet"))).toMatchObject({ borderTopLeftRadius: 8, borderTopRightRadius: 8 });
+    expect(flat(screen.getByTestId("confirm-sheet"))).toMatchObject({ borderTopLeftRadius: 6, borderTopRightRadius: 6 });
     expect(flat(screen.getByTestId("confirm-sheet")).borderBottomLeftRadius).toBeUndefined();
   });
 });
@@ -454,7 +461,7 @@ describe("titleFamily (v3 titles in Noto Serif SC 600, a Han + ASCII subset)", (
     expect(["张三", "Anubis", "第 2 世 · 书信", "「灵魂簿」", "王翾"].map(titleFamily)).toEqual(Array(5).fill("NotoSerifSC_600"));
   });
   it("a letter outside the subset keeps the whole title in the interface face, not serif and sans glyph by glyph", () => {
-    expect(["Jérôme", "Søren", "Σωκράτης", "Ḥr-m-ḥꜣb", "Đặng"].map(titleFamily)).toEqual(Array(5).fill("Archivo_600SemiBold"));
+    expect(["Jérôme", "Søren", "Σωκράτης", "Ḥr-m-ḥꜣb", "Đặng"].map(titleFamily)).toEqual(Array(5).fill("SoulLedgerSans_600"));
   });
 });
 

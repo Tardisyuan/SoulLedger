@@ -353,7 +353,7 @@ describe("changing my circle name", () => {
     const calls = mine({ status: 200, data: { user_id: 1, display_name: "砚舟", avatar: null, is_active: true } });
     fireEvent.press(await screen.findByTestId("edit-name"));
     expect(screen.getByTestId("name-input").props.value).toBe("陈砚舟");
-    // A Han name is drawn in the bundled serif, not in Archivo (no Han: the phone's own face); a Latin one keeps Archivo.
+    // A Han name is drawn in the bundled serif (a choice from Archivo's days, which had no Han); a Latin one keeps the interface face.
     const face = () => StyleSheet.flatten(screen.getByTestId("name-input").props.style).fontFamily;
     expect(face()).toBe(family.serifHan);
     expect(face()).not.toBe(family.ui[500]);

@@ -378,7 +378,7 @@ describe("step 2: the code and the new password", () => {
     stubApi({});
     await openForgot();
     const title = screen.getByText("灵魂簿");
-    expect(StyleSheet.flatten(title.props.style).fontFamily).toBe("NotoSerifSC_400");
+    expect(StyleSheet.flatten(title.props.style).fontFamily).toBe("NotoSerifSC_500");
     const email = screen.getByTestId("forgot-email");
     expect(email.props.cursorColor).toBeTruthy();
     expect(email.props.cursorColor).toBe(email.props.selectionHandleColor);

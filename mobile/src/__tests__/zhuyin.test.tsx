@@ -14,7 +14,7 @@ import { installMobilePlatform } from "../platform";
 import { FONT_ASSETS, HIEROGLYPH_FONT, family } from "../fonts";
 import { DEFAULT_GLYPHS, OutlineSeal, sealGlyphs } from "../seal";
 import { SessionContext, type SessionState } from "../session";
-import { themeFor, v3, v3Band } from "../theme";
+import { themeFor, v4 } from "../theme";
 import { ThemeContext } from "../ui";
 import { PROFILE } from "./stubApi";
 
@@ -115,15 +115,15 @@ describe("v3 OutlineSeal", () => {
 
   it("the glyph: the colour, 0.44 of the width (0.5 at ≤ 32, 0.34 each for two), in the app's serif or the hieroglyph face", async () => {
     seal("cn", 64, { glyphs: ["五"] });
-    expect(flat(screen.getByTestId("s-glyph", H))).toMatchObject({ fontFamily: "NotoSerifSC_400", fontSize: 28, color: "#123456" });
+    expect(flat(screen.getByTestId("s-glyph", H))).toMatchObject({ fontFamily: "NotoSerifSC_500", fontSize: 28, color: "#123456" });
     screen.unmount();
     seal("eu", 30);
-    expect(flat(screen.getByTestId("s-glyph", H))).toMatchObject({ fontFamily: "SourceSerif4_400Regular", fontSize: 15 });
+    expect(flat(screen.getByTestId("s-glyph", H))).toMatchObject({ fontFamily: "EBGaramond_400Regular", fontSize: 15 });
     expect(screen.getByTestId("s-glyph", H).props.children).toBe("J");
     screen.unmount();
     seal("gr");
     expect(screen.getByTestId("s-glyph", H).props.children).toBe("Μ");
-    expect(flat(screen.getByTestId("s-glyph", H)).fontFamily).toBe("SourceSerif4_400Regular");
+    expect(flat(screen.getByTestId("s-glyph", H)).fontFamily).toBe("EBGaramond_400Regular");
     screen.unmount();
     seal("eg", 100, { glyphs: ["\u{13184}", "\u{131CB}"] });
     await act(async () => {}); // the hieroglyph face loads on demand (S2)
@@ -195,14 +195,14 @@ describe("v3 OutlineSeal", () => {
 describe("the band on a tab's root (v3 short identity band)", () => {
   it("the band ground, the tenant's seal in white read as 「第五殿之印」, the meta line, the title at 20 in the title serif (Noto Serif SC 600)", async () => {
     wrap(<PlaqueHeader title="书信" onAccount={() => {}} />, signedIn({ tenant: { ...PROFILE.tenant, seal_glyphs: ["五"] } }));
-    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v3Band(v3.civ.cn.light));
+    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v4.civ.cn.sL);
     expect(screen.getByTestId("plaque-seal").props.accessibilityLabel).toBe("第五殿之印");
     expect(flat(screen.getByTestId("plaque-seal", H))).toMatchObject({ width: 38, height: 38 });
     expect(screen.getByTestId("plaque-seal-glyph", H).props.children).toBe("五");
     expect(screen.getByTestId("plaque-seal-outer", H).props.stroke.payload).toBe(argb("#FFFFFF"));
     expect(flat(screen.getByTestId("plaque-title"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 20, color: "#FFFFFF" });
     expect(screen.getByTestId("plaque-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
-    expect(flat(screen.getByTestId("plaque-meta"))).toMatchObject({ fontFamily: "IBMPlexMono_400Regular", fontSize: 11 });
+    expect(flat(screen.getByTestId("plaque-meta"))).toMatchObject({ fontFamily: "GeistMono_400Regular", fontSize: 11 });
     expect(screen.getByTestId("header-account")).toBeTruthy();
     // v2's ornament band and texture are gone.
     expect(screen.queryAllByTestId(/^plaque-band-/, H)).toEqual([]);
@@ -251,16 +251,16 @@ describe("no civilization display face on any bar (v3; v2's 匾题字 and Ma Sha
 
   it("a title with a letter the serif subset lacks (a soul's name) stays whole in the interface face", async () => {
     wrap(<AppHeader title="Jérôme" onBack={() => {}} />, signedIn(), "CHINESE");
-    expect(flat(screen.getByRole("header"))).toMatchObject({ fontFamily: "Archivo_600SemiBold", fontSize: 20 });
+    expect(flat(screen.getByRole("header"))).toMatchObject({ fontFamily: "SoulLedgerSans_600", fontSize: 20 });
     screen.unmount();
     wrap(<PlaqueHeader title="Σωκράτης" onAccount={() => {}} />, signedIn(), "CHINESE");
-    expect(flat(screen.getByTestId("plaque-title")).fontFamily).toBe("Archivo_600SemiBold");
+    expect(flat(screen.getByTestId("plaque-title")).fontFamily).toBe("SoulLedgerSans_600");
     await act(async () => {});
   });
 
   it("the pre-login bar keeps the app name in the serif (product decision 2026-09-26)", () => {
     wrap(<AppHeader title="灵魂簿" serif />, { status: "signedOut" } as never, null);
-    expect(flat(screen.getByRole("header")).fontFamily).toBe("NotoSerifSC_400");
+    expect(flat(screen.getByRole("header")).fontFamily).toBe("NotoSerifSC_500");
   });
 });
 
@@ -277,15 +277,15 @@ describe("the tab bar (补足 B11 / C14)", () => {
   it("the current tab: a 2px rule in 匾色 and its label in ink 600; the rest ink3 400", () => {
     // v3: the bar wears v3's neutrals and the civilization's v3 colour.
     const t = themeFor("CHINESE", "light");
-    expect([t.plaque, t.ink, t.inkSubtle, t.s1]).toEqual([v3.civ.cn.light, v3.light.ink, v3.light.muted, v3.light.surface]);
+    expect([t.plaque, t.ink, t.inkSubtle, t.s1]).toEqual([v4.civ.cn.tL, v4.light.ink, v4.light.sub, v4.light.card]);
     wrap(bar(["本世", "转生", "书信", "朋友圈"], 2), signedIn());
     expect(screen.getAllByTestId("tab-current-rule")).toHaveLength(1);
     expect(flat(screen.getByTestId("tab-current-rule"))).toMatchObject({ backgroundColor: t.plaque });
-    expect(label("Letters")).toMatchObject({ color: t.ink, fontFamily: "Archivo_600SemiBold", fontSize: 12 });
-    expect(label("Life")).toMatchObject({ color: t.inkSubtle, fontFamily: "Archivo_400Regular" });
+    expect(label("Letters")).toMatchObject({ color: t.ink, fontFamily: "SoulLedgerSans_600", fontSize: 12 });
+    expect(label("Life")).toMatchObject({ color: t.inkSubtle, fontFamily: "SoulLedgerSans_400" });
     // The label stays ink: as text every dark v3 colour is under 4.5:1 on the dark surface.
     expect(label("Letters").color).not.toBe(t.plaque);
-    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: v3.light.surface, borderTopColor: v3.light.line });
+    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: v4.light.card, borderTopColor: v4.light.line });
   });
 
   it("one label past the pillar's threshold (core's pillarIsWide): all four go to 11, not only that one", () => {
