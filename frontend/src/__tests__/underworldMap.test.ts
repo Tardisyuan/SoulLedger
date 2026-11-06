@@ -7,6 +7,8 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { DIYU_STATIONS } from "@soulledger/core/domain/diyuStations";
+import en from "@soulledger/core/messages/en.json";
+import zh from "@soulledger/core/messages/zh-Hans.json";
 import {
   applyBranches,
   applyView,
@@ -16,6 +18,7 @@ import {
   parseMapSvg,
   pathVisits,
   readPalette,
+  stationNameKeys,
 } from "@/src/lib/underworldMap";
 
 const PUBLIC_V4 = path.join(__dirname, "..", "..", "public", "v4");
@@ -76,6 +79,20 @@ describe("the Diyu map's ids are the codes the code uses", () => {
     );
     // 十殿是 dy-ten-courts 里的十个子格。
     expect(svg.querySelectorAll('#dy-ten-courts circle[id^="DY_COURT_"]')).toHaveLength(10);
+  });
+});
+
+const lookup = (bundle: unknown, key: string): unknown =>
+  key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], bundle);
+
+describe("every station on every map has a name in the language packs", () => {
+  // 取不到名字时组件退回图里的中文:英文界面上出现「三判官」(演示 E2E 2026-11-06)。egy 可以待补(egyPendingKeys)。
+  it.each(MAPS.filter((f) => f.endsWith("-dark.svg")))("%s", (rel) => {
+    const svg = parseMapSvg(read(rel))!;
+    const unnamed = [...svg.querySelectorAll("#terrain g.node[id]")]
+      .map((n) => n.id)
+      .filter((id) => !stationNameKeys(id).some((k) => typeof lookup(en, k) === "string" && typeof lookup(zh, k) === "string"));
+    expect(unnamed).toEqual([]);
   });
 });
 

@@ -20,6 +20,7 @@ import {
   paintStates,
   parseMapSvg,
   readPalette,
+  stationNameKeys,
   viewBoxOf,
   worldStates,
   zoomAt,
@@ -58,21 +59,6 @@ function loadSvg(url: string): Promise<string> {
   return cache.get(url)!;
 }
 
-/** 没有码的节点在语言包里的名字。`gr-three-judges` 没有现成的词,退回图里的字。 */
-const LOWER_KEYS: Record<string, string> = {
-  "dy-ghost-gate": "map.diyu.ghost_gate",
-  "dy-ten-courts": "map.diyu.ten_courts",
-  "dy-court10-bridges": "map.diyu.court10_bridges",
-  "dy-six-paths": "map.diyu.six_paths",
-  "eg-embalming": "map.egypt.embalming_70_days",
-  "eu-death": "souls.detail.death",
-  "gr-death": "souls.detail.death",
-  "eu-hell": "map.europe.circles",
-  EU_PURGATORY: "map.europe.terraces",
-  EG_HALL_TWO_TRUTHS: "map.egypt.weighing",
-  "gr-millennium": "map.greece.thousand_year_cycle",
-  "gr-lethe": "souls.detail.memory_mechanisms.LETHE",
-};
 /** 图里不属于任何一站的说明字(按 Design 的中文认)。 */
 const FREE_KEYS: Record<string, string> = {
   "赴冥 · 十三站之一至十": "map.diyu.road_down",
@@ -159,8 +145,7 @@ export function UnderworldMap({
   const nameOf = useCallback(
     (id: string): string | null => {
       const baked = template ? labelLines(template, id).name?.textContent?.trim() || null : null;
-      const fromPack =
-        (LOWER_KEYS[id] && known(LOWER_KEYS[id])) || known(`souls.diyu_station.${id}`) || known(`realms.names.${id}`) || known(`realms.codes.${id}`);
+      const fromPack = stationNameKeys(id).map(known).find(Boolean) ?? null;
       return zh ? baked ?? fromPack : fromPack ?? baked;
     },
     [template, known, zh],

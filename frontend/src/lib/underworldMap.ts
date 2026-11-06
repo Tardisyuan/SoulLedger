@@ -391,6 +391,30 @@ export function labelFills(svg: Element): Record<MapState, string> | null {
   return ink && sub ? { walked: ink, current: ink, ahead: sub } : null;
 }
 
+/**
+ * 没有码的节点在语言包里的名字。四张图的每个节点都要能从这里、`souls.diyu_station.*` 或 `realms.names|codes.*`
+ * 取到名字 —— 取不到就退回图里的中文,英文界面上就会出现中文(演示 E2E「has no Chinese on it」抓到过「三判官」)。
+ */
+export const LOWER_KEYS: Record<string, string> = {
+  "dy-ghost-gate": "map.diyu.ghost_gate",
+  "dy-ten-courts": "map.diyu.ten_courts",
+  "dy-court10-bridges": "map.diyu.court10_bridges",
+  "dy-six-paths": "map.diyu.six_paths",
+  "eg-embalming": "map.egypt.embalming_70_days",
+  "eu-death": "souls.detail.death",
+  "gr-death": "souls.detail.death",
+  "eu-hell": "map.europe.circles",
+  EU_PURGATORY: "map.europe.terraces",
+  EG_HALL_TWO_TRUTHS: "map.egypt.weighing",
+  "gr-millennium": "map.greece.thousand_year_cycle",
+  "gr-three-judges": "map.greece.three_judges",
+  "gr-lethe": "souls.detail.memory_mechanisms.LETHE",
+};
+
+/** 一站的名字去语言包里按这个次序找:小写节点的 `map.*`、地府站码、界域名、界域码。 */
+export const stationNameKeys = (id: string): string[] =>
+  [LOWER_KEYS[id], `souls.diyu_station.${id}`, `realms.names.${id}`, `realms.codes.${id}`].filter((k): k is string => !!k);
+
 /** 没有 data-for 的说明字(「奈河」「向上 · 涤罪」……)。 */
 export const freeLabels = (svg: Element): SVGTextElement[] =>
   Array.from(svg.querySelectorAll("#labels > g:not([data-for]) > text")) as SVGTextElement[];
