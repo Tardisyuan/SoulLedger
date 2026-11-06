@@ -7,6 +7,8 @@ import { reincarnationApi, type Reincarnation } from "@soulledger/core/api";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { cn } from "@/lib/utils";
@@ -31,9 +33,36 @@ import { RebirthQuotaStrip } from "@/src/components/souls/RebirthQuota";
  * 「第几世」写「第 n → n+1 世」:`cycle_count` 是这次转生**离开**的那一世(第一次转生为 1)。
  * 「去往」是记录上的 `target_realm`(处置所在界域的代码);记录上没有目标文明,所以不画 ⇄。
  * 点一行进灵魂详情,锚点 `#reincarnation-<id>` 滚到这一次转生并高亮(`SoulLedgerSections`)。
+ *
+ * v4 第八批第 7 条(Design):
+ * - 欧洲、埃及没有转世(`hasRebirth`):侧栏与底栏本来就没有这个入口(`hideTheWheel`,前端按文明滤菜单);
+ *   直接打开链接时看到一页说明(`rebirths.not_applicable.*`),不发请求。
+ * - 希腊:六道只属于地府。希腊进这一页只列转生记录 —— 不显示六道配额条、不按六道筛、不列「形态」一栏。
  */
 
-function RebirthsContent() {
+/** 欧洲、埃及直接打开 /rebirths:这里的路在处置之后结束。 */
+function NoRebirthHere({ civilization }: { civilization: string }) {
+  const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.trials")) });
+  return (
+    <PageShell variant="page" title={t("rebirths.title")}>
+      <div data-testid="rebirths-not-applicable" className="mx-auto max-w-md py-12 text-center">
+        <p className="font-title text-xl text-[oklch(var(--color-ink))]">
+          {t("rebirths.not_applicable.title", { civ: t(`souls.civilizations.${civilization}`) })}
+        </p>
+        <p className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("rebirths.not_applicable.body")}</p>
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-flex h-9 items-center border border-[oklch(var(--color-line-strong))] px-4 text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+        >
+          {t("rebirths.not_applicable.back")}
+        </Link>
+      </div>
+    </PageShell>
+  );
+}
+
+function RebirthsContent({ sixPaths }: { sixPaths: boolean }) {
   const { t, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const [page, setPage] = useState(1);
@@ -45,7 +74,7 @@ function RebirthsContent() {
   };
 
   const params: Record<string, string> = { page: String(page) };
-  if (form) params.rebirth_form = form;
+  if (form && sixPaths) params.rebirth_form = form;
   if (/^[1-9]\d*$/.test(life)) params.cycle_count = life;
   const isFiltered = Object.keys(params).length > 1;
   const { data, isLoading, isError, refetch, isPlaceholderData } = useQuery({
@@ -67,20 +96,22 @@ function RebirthsContent() {
       }
       subtitle={data ? t("rebirths.total", { n: String(count) }) : undefined}
     >
-      {/* 本月配额(第五十一批 Q-2):表格上方一行,每道一格。 */}
-      <RebirthQuotaStrip />
+      {/* 本月配额(第五十一批 Q-2):表格上方一行,每道一格。希腊没有六道,不显示。 */}
+      {sixPaths ? <RebirthQuotaStrip /> : null}
       <div className="flex flex-wrap items-center gap-3 pb-3">
-        <FilterChipSelect
-          label={t("rebirths.col_form")}
-          value={form}
-          options={[
-            { value: "", label: t("rebirths.all_forms") },
-            // 六道之外(OTHER)不是第七道,但旧记录里有 —— 筛得出它们(配额条同样有这一格)。
-            ...[...SIX_PATHS, "OTHER"].map((f) => ({ value: f, label: t(`reincarnation.forms.${f}`) })),
-          ]}
-          clearLabel={t("filter.clear_one", { name: t("rebirths.col_form") })}
-          onChange={(v) => change(() => setForm(v))}
-        />
+        {sixPaths ? (
+          <FilterChipSelect
+            label={t("rebirths.col_form")}
+            value={form}
+            options={[
+              { value: "", label: t("rebirths.all_forms") },
+              // 六道之外(OTHER)不是第七道,但旧记录里有 —— 筛得出它们(配额条同样有这一格)。
+              ...[...SIX_PATHS, "OTHER"].map((f) => ({ value: f, label: t(`reincarnation.forms.${f}`) })),
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("rebirths.col_form") })}
+            onChange={(v) => change(() => setForm(v))}
+          />
+        ) : null}
         <input
           type="number"
           min={1}
@@ -104,7 +135,7 @@ function RebirthsContent() {
         columns={[
           { key: "soul", header: t("rebirths.col_soul") },
           { key: "life", header: t("rebirths.col_life") },
-          { key: "form", header: t("rebirths.col_form") },
+          ...(sixPaths ? [{ key: "form", header: t("rebirths.col_form") }] : []),
           { key: "to", header: t("rebirths.col_to") },
           { key: "time", header: `${t("rebirths.col_time")} ↓`, align: "right" },
         ]}
@@ -129,9 +160,11 @@ function RebirthsContent() {
             <td className="px-3 py-2 whitespace-nowrap tabular-nums">
               {t("rebirths.life_value", { from: String(r.cycle_count), to: String(r.cycle_count + 1) })}
             </td>
-            <td className="px-3 py-2 whitespace-nowrap">
-              <DomainEnum namespace="reincarnation.forms" value={r.rebirth_form} />
-            </td>
+            {sixPaths ? (
+              <td className="px-3 py-2 whitespace-nowrap">
+                <DomainEnum namespace="reincarnation.forms" value={r.rebirth_form} />
+              </td>
+            ) : null}
             <td className="px-3 py-2 whitespace-nowrap font-mono text-xs text-[oklch(var(--color-ink-muted))]">
               {r.target_realm || <MissingValue kind="unrecorded" />}
             </td>
@@ -150,9 +183,12 @@ function RebirthsContent() {
 }
 
 export default function RebirthsPage() {
+  const { user } = useTenant();
+  const civilization = user?.tenant?.civilization;
+  if (civilization && !hasRebirth(civilization)) return <NoRebirthHere civilization={civilization} />;
   return (
     <RequirePermission permissions="reincarnation.read" fallback={<PermissionDenied permission="reincarnation.read" />}>
-      <RebirthsContent />
+      <RebirthsContent sixPaths={civilization !== "GREEK"} />
     </RequirePermission>
   );
 }
