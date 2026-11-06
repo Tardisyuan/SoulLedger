@@ -15,12 +15,14 @@
  * RBAC A9 (「锁屏只说来了东西」) does not apply to live progress. Every other notification — 书信 and the server's
  * pushes, pushCore.ts's channel — keeps A9 (PRIVATE); only this channel is PUBLIC.
  */
+import { platform } from "@soulledger/core/platform";
 import { requireOptionalNativeModule } from "expo";
 import * as Notifications from "expo-notifications";
 import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 
 import { useI18n } from "./i18n";
+import { PRIMER_SEEN_KEY, permission, registerDevice, requestPermission } from "./push";
 import { liveContent, type LiveContent, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 import { useTheme } from "./ui";
 
@@ -67,12 +69,43 @@ export function liveChannel(name: string): Notifications.NotificationChannelInpu
   };
 }
 
-async function show(c: LiveContent, tint: string): Promise<void> {
+/** Set once this device has shown the system's notification dialog for live progress: never asked again. */
+export const LIVE_ASKED_KEY = "soul_live_permission_asked";
+
+let asking: Promise<boolean> | null = null;
+
+/**
+ * Android 13+ shows nothing until POST_NOTIFICATIONS is granted, and nothing else asks for it in a build without an EAS
+ * project (the push primer is offered only with one) — 华为 TAS-AL00, 2026-11-06: the ongoing notification never showed.
+ * So the first live progress asks, once, through the push path's own request (same channel first, same EMUI re-read).
+ * A refusal is final here: no second dialog, no error. The push primer is marked seen, so the system dialog is not shown
+ * twice from two places; a grant registers the device for push as a sign-in would. One request at a time.
+ */
+async function mayNotify(): Promise<boolean> {
+  const now = await permission();
+  if (now === "granted") return true;
+  // An update that arrives while the dialog is up waits for its answer rather than asking again.
+  if (asking) return asking;
+  if (now === "denied" || platform().persistent.get(LIVE_ASKED_KEY)) return false;
+  platform().persistent.set(LIVE_ASKED_KEY, "1");
+  platform().persistent.set(PRIMER_SEEN_KEY, "1");
+  const request = requestPermission().then((answer) => {
+    if (answer === "granted") void registerDevice().catch(() => {});
+    return answer === "granted";
+  });
+  asking = request;
+  void request.finally(() => (asking = null));
+  return request;
+}
+
+/** Starts or updates the lock screen's live progress (iOS: the Live Activity, which needs no permission). */
+export async function showLiveProgress(c: LiveContent, tint: string): Promise<void> {
   if (Platform.OS === "ios") {
     await ios()?.show(c.title, tint, nativeState(c));
     return;
   }
   if (Platform.OS !== "android") return;
+  if (!(await mayNotify())) return;
   await Notifications.setNotificationChannelAsync(LIVE_CHANNEL, liveChannel(c.title));
   await Notifications.scheduleNotificationAsync({ identifier: LIVE_NOTIFICATION, content: androidContent(c), trigger: { channelId: LIVE_CHANNEL } });
 }
@@ -97,7 +130,7 @@ export function useLiveProgress(route: SoulRoute | null, soul: string): void {
   useEffect(() => {
     const { content: now, glow: tint } = latest.current;
     if (!now) void endLiveProgress().catch(() => {});
-    else void show(now, tint).catch(() => {});
+    else void showLiveProgress(now, tint).catch(() => {});
   }, [key]);
   // Leaving the signed-in tree (sign-out): the lock screen forgets the soul too.
   useEffect(() => () => void endLiveProgress().catch(() => {}), []);

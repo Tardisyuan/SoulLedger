@@ -6,7 +6,11 @@
 import fs from "fs";
 import path from "path";
 
-import { androidContent, liveChannel, nativeState } from "../liveProgress";
+import * as Notifications from "expo-notifications";
+
+import { LIVE_ASKED_KEY, LIVE_NOTIFICATION, androidContent, liveChannel, nativeState, showLiveProgress } from "../liveProgress";
+import { installMobilePlatform, persistentStore } from "../platform";
+import { PRIMER_SEEN_KEY } from "../push";
 import type { LiveContent } from "@soulledger/core/domain/soulRoute";
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -78,5 +82,64 @@ describe("the Live Activity's two halves", () => {
     const n = androidContent(CONTENT);
     expect(n).toMatchObject({ title: "灵魂簿 · 实时进度 · 下行", sticky: true, autoDismiss: false });
     expect(n.body).toBe("Giulia Ferri · 地狱九圈 · 第 4 / 4 步\n死亡 → 地狱九圈 → 地狱九圈");
+  });
+});
+
+/**
+ * 华为 TAS-AL00 (2026-11-06): nothing asked for POST_NOTIFICATIONS, so the ongoing notification never showed. The
+ * first live progress asks once (the push path's own request); a refusal is final — no second dialog, no error.
+ */
+describe("Android: the notification permission, asked once by the first live progress", () => {
+  const system = (Notifications as unknown as { __state: { status: string; answer: string; requests: number; canAskAgain?: boolean } }).__state;
+  const { Platform } = jest.requireActual<typeof import("react-native")>("react-native");
+  const os = Platform.OS;
+  let scheduled: jest.SpyInstance;
+
+  beforeEach(() => {
+    installMobilePlatform();
+    persistentStore.remove(LIVE_ASKED_KEY);
+    persistentStore.remove(PRIMER_SEEN_KEY);
+    Object.assign(system, { status: "undetermined", answer: "granted", requests: 0, canAskAgain: undefined });
+    Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
+    scheduled = jest.spyOn(Notifications, "scheduleNotificationAsync");
+  });
+  afterEach(() => {
+    scheduled.mockRestore();
+    Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+  });
+
+  it("not yet granted: asks once, shows on a grant, and does not ask again on the next update", async () => {
+    await Promise.all([showLiveProgress(CONTENT, "#C8604F"), showLiveProgress(CONTENT, "#C8604F")]);
+    expect(system.requests).toBe(1);
+    expect(scheduled).toHaveBeenCalledWith(expect.objectContaining({ identifier: LIVE_NOTIFICATION }));
+    // The push primer will not put the same system dialog up a second time.
+    expect(persistentStore.get(PRIMER_SEEN_KEY)).toBeTruthy();
+    await showLiveProgress(CONTENT, "#C8604F");
+    expect(system.requests).toBe(1);
+  });
+
+  it("refused: nothing shown, no error, and never asked again — even where Android would allow a second ask", async () => {
+    system.answer = "denied";
+    await expect(showLiveProgress(CONTENT, "#C8604F")).resolves.toBeUndefined();
+    expect(system.requests).toBe(1);
+    expect(scheduled).not.toHaveBeenCalled();
+    // Android 13 lets an app ask twice: the system reports "can ask again", and the app still does not.
+    Object.assign(system, { status: "denied", canAskAgain: true });
+    await showLiveProgress(CONTENT, "#C8604F");
+    expect(system.requests).toBe(1);
+    expect(scheduled).not.toHaveBeenCalled();
+  });
+
+  it("already granted (the push path asked first): no dialog, just the notification", async () => {
+    system.status = "granted";
+    await showLiveProgress(CONTENT, "#C8604F");
+    expect(system.requests).toBe(0);
+    expect(scheduled).toHaveBeenCalledTimes(1);
+  });
+
+  it("iOS: the Live Activity needs no notification permission — nothing is asked", async () => {
+    Object.defineProperty(Platform, "OS", { value: "ios", configurable: true });
+    await showLiveProgress(CONTENT, "#C8604F");
+    expect(system.requests).toBe(0);
   });
 });
