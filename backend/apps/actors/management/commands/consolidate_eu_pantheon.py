@@ -132,14 +132,13 @@ NORSE_NAMES = ["Odin", "Freya", "Hel", "Valkyries"]
 #   Cerberus     EU_HELL_3RD      Dante, Inferno VI — over the gluttons.
 #
 # GREEK — in apps.actors.mythology.actors_greek:
-#   Hades        EU_PLATO_MEADOW  overseer of the Greek judgment ground. The one
+#   Hades        GR_PLATO_MEADOW  overseer of the Greek judgment ground. The one
 #                                 engineering placement here: no house of Hades
 #                                 is modelled, and Limbo was not a substitute.
-#                                 The realm keeps its EU_ code, which records
-#                                 where it was written and not what owns it.
-#   Aeacus       EU_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Europe.
-#   Rhadamanthus EU_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Asia.
-#   Minos        EU_PLATO_MEADOW  Plato, Gorgias 524a — the final decision when
+#                                 (EU_PLATO_MEADOW until realms/0032.)
+#   Aeacus       GR_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Europe.
+#   Rhadamanthus GR_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Asia.
+#   Minos        GR_PLATO_MEADOW  Plato, Gorgias 524a — the final decision when
 #                                 the other two are in doubt. A DIFFERENT ROW
 #                                 from the EUROPEAN Minos above and a different
 #                                 office; both are audited, and a database that
@@ -155,10 +154,10 @@ GRECO_ROMAN_EXPECTED = {
 }
 
 GREEK_EXPECTED = {
-    "Hades": (ActorRole.OVERSEER, "EU_PLATO_MEADOW"),
-    "Aeacus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
-    "Rhadamanthus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
-    "Minos": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
+    "Hades": (ActorRole.OVERSEER, "GR_PLATO_MEADOW"),
+    "Aeacus": (ActorRole.JUDGE, "GR_PLATO_MEADOW"),
+    "Rhadamanthus": (ActorRole.JUDGE, "GR_PLATO_MEADOW"),
+    "Minos": (ActorRole.JUDGE, "GR_PLATO_MEADOW"),
     # 2026-10-28; see their rows in actors_greek.py for the GR_ACHERON compromise.
     "Hermes": (ActorRole.CONDUIT, "GR_ACHERON"),
     "Cerberus": (ActorRole.GUARDIAN, "GR_ACHERON"),

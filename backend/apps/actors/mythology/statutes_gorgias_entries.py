@@ -66,7 +66,7 @@ GORGIAS_STATUTES = [
             NOT_AN_OFFENCE_NOTE,
             NOT_A_ROUTING_INPUT_NOTE,
             "The two destinations are seeded as GR_ISLES_OF_THE_BLESSED and "
-            "GR_TARTARUS. The third Greek realm, EU_PLATO_MEADOW, is the venue "
+            "GR_TARTARUS. The third Greek realm, GR_PLATO_MEADOW, is the venue "
             "of GR-GRG-06 and not a destination; the fourth, GR_ACHERON, is "
             "Virgil's and appears nowhere in this dialogue.",
         ],
@@ -239,7 +239,7 @@ GORGIAS_STATUTES = [
         ],
         "payload": {
             "stephanus": "523e-524a",
-            "venue_realm_code": "EU_PLATO_MEADOW",
+            "venue_realm_code": "GR_PLATO_MEADOW",
             "judges": {
                 "Rhadamanthus": "Asia",
                 "Aeacus": "Europe",

@@ -95,24 +95,8 @@ interface TreeRow {
  */
 /** 天堂 → 炼狱 → 中立 → 地狱 → 湮灭。枚举字符串的字母序不是这个顺序;未知类型排在最后。 */
 const TYPE_ORDER = ["BLISS", "PURGATORY", "NEUTRAL", "HELL", "ANNIHILATION"];
-/**
- * 地狱前庭(EU_ANTINFERNO,Inf. III)在数据里是 HELL:受罚、永久,路由与容量照地狱算(`actors/mythology/realms.py`)。
- * 界域页上它的类型写「中立」,排在中立一组(Design 第五十七批 §9):它在九圈之外,写「地狱」会被读成第一圈。
- */
-const SHOWN_AS_NEUTRAL = new Set(["EU_ANTINFERNO"]);
-const shownRealmType =(r: Pick<Realm, "realm_code" | "realm_type">) =>
-  SHOWN_AS_NEUTRAL.has(r.realm_code) ? "NEUTRAL" : r.realm_type;
-
-/**
- * 岔路口的草地的码是 `EU_PLATO_MEADOW`:前缀 `EU_` 是历史遗留的连接键,不表示归属(docs/01_希腊冥府整体架构.md:285)。
- * 希腊界域表上照原样写,读起来像欧洲的界域(措辞审查 GR-3),所以「代码」一栏写它的短名;原码留在 title 里供排查。
- */
-const LEGACY_CODES = new Set(["EU_PLATO_MEADOW"]);
-const shownCode = (t: (k: string) => string, r: Pick<Realm, "realm_code">) =>
-  LEGACY_CODES.has(r.realm_code) ? t(`realms.codes.${r.realm_code}`) : r.realm_code;
-
 const typeRank = (r: Realm) => {
-  const i = TYPE_ORDER.indexOf(shownRealmType(r));
+  const i = TYPE_ORDER.indexOf(r.realm_type);
   return i < 0 ? TYPE_ORDER.length : i;
 };
 
@@ -356,10 +340,10 @@ function RealmTree({
     realmStationLabel(t, { id: realm.id, code: realm.realm_code, realm, state: "pending" }) ?? realm.realm_code;
   const typeOf = (realm: Realm) => {
     if (realm.kind) return t(`realms.kind.${realm.kind}`);
-    const type = REALM_TYPE_CONFIG[shownRealmType(realm)] || REALM_TYPE_CONFIG.NEUTRAL;
+    const type = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
     return (
       <Badge glyph={type.icon} className={type.className}>
-        <DomainEnum namespace={realmTypeNamespace(t, realm.civilization, shownRealmType(realm))} value={shownRealmType(realm)} />
+        <DomainEnum namespace={realmTypeNamespace(t, realm.civilization, realm.realm_type)} value={realm.realm_type} />
       </Badge>
     );
   };
@@ -463,7 +447,7 @@ function RealmTree({
                     {nameOf(realm)}
                     {factsToggle(realm)}
                   </td>
-                  <td title={realm.realm_code} className={`truncate pr-3 font-mono text-xs ${MUTED}`}>{shownCode(t, realm)}</td>
+                  <td title={realm.realm_code} className={`truncate pr-3 font-mono text-xs ${MUTED}`}>{realm.realm_code}</td>
                   <td title={realm.kind ? t(`realms.kind.${realm.kind}`) : realm.realm_type} className={`truncate pr-3 ${MUTED}`}>{typeOf(realm)}</td>
                   <td data-testid="realm-held" className="pr-3 text-right whitespace-nowrap">
                     {noPlace ? (
@@ -509,7 +493,7 @@ function RealmTree({
                 {noPlace ? <span className={MUTED}>{t("realms.table.not_a_place")}</span> : heldCap(realm, false)}
               </span>
               <span title={realm.realm_code} className={`col-span-2 truncate font-mono text-2xs ${MUTED}`}>
-                {shownCode(t, realm)} · {realm.kind ? t(`realms.kind.${realm.kind}`) : <DomainEnum namespace={realmTypeNamespace(t, realm.civilization, shownRealmType(realm))} value={shownRealmType(realm)} />}
+                {realm.realm_code} · {realm.kind ? t(`realms.kind.${realm.kind}`) : <DomainEnum namespace={realmTypeNamespace(t, realm.civilization, realm.realm_type)} value={realm.realm_type} />}
                 {realm.is_eternal && <> · ≡ {t("realms.table.eternal_yes")}</>}
               </span>
             </span>

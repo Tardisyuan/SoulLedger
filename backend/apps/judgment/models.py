@@ -28,7 +28,7 @@ def hears_again(civilization, verdict) -> bool:
 
     * RETRY,任何文明:原审结案另开一案(`weighing.open_retrial`),不建处置、不动计划与灵魂状态。
     * PURGATORY,欧洲以外:地府的 `DY_00_PURGATORY` 是待审所,希腊的草地是「还没被送走」(docs/02_希腊 §5.2:
-      PURGATORY / RETRY 留在 `EU_PLATO_MEADOW`,「不是第三条路」),埃及的 Duat 入口是天平摇摆(02 §5.3)——
+      PURGATORY / RETRY 留在 `GR_PLATO_MEADOW`,「不是第三条路」),埃及的 Duat 入口是天平摇摆(02 §5.3)——
       三处都不是刑罚,只是没判完;docs/11 第八步「不服判决 → …… → 重新审理」是同一个动作。
     * 欧洲的 PURGATORY 是真正的去处:炼狱收确定得救者、按刑期涤罪后升天堂(docs/01_欧洲 §1.2),照旧发落。
 

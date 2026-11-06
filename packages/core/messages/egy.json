@@ -2168,7 +2168,7 @@
       "key_help": "Sesh / Imen Sesh En Wat-Ha",
       "key_notes": "Smen Medu Seth",
       "claimed_title": "Sep Pen Shesep Em «{{name}}»",
-      "claimed_body": "Khetem Wa Em Shesep, Heri-Tep Per Ahet, Sab Hery. Wedja Nen Hab; Sedjer Em Aq Pen.",
+      "claimed_body": "Khetem Wa Em Shesep, Sab Hery. Wedja Nen Hab; Sedjer Em Aq Pen.",
       "claimed_next": "Wen Ky",
       "claimed_back": "Wehem Er Sepu Wedja",
       "session_deferred": "{{n}} Sedjer Em Aq Pen",
@@ -3046,7 +3046,7 @@
         "HELL": "Duat",
         "PURGATORY": "Ta Hesmen",
         "BLISS": "Pet",
-        "NEUTRAL": "Ta Shem"
+        "NEUTRAL": "Acheron"
       },
       "eg": {
         "PURGATORY": "Duat",
@@ -3093,7 +3093,7 @@
       "EU_HELL_8TH": "Malebolge",
       "EU_HELL_9TH": "Proditio",
       "EU_ACHERON": "Acheron",
-      "EU_PLATO_MEADOW": "Leimon",
+      "GR_PLATO_MEADOW": "Leimon",
       "GR_ACHERON": "Acheron",
       "GR_ISLES_OF_THE_BLESSED": "Ta Nefer",
       "GR_TARTARUS": "Tartaros",
@@ -3139,7 +3139,7 @@
       "EU_HELL_8TH": "Duat 8 · Malebolge",
       "EU_HELL_9TH": "Duat 9 · Proditio",
       "EU_ACHERON": "Acheron",
-      "EU_PLATO_MEADOW": "Leimon",
+      "GR_PLATO_MEADOW": "Leimon",
       "GR_ACHERON": "Acheron",
       "GR_ISLES_OF_THE_BLESSED": "Ta Nefer",
       "GR_TARTARUS": "Tartaros",
@@ -7327,7 +7327,7 @@
         "ACTIVE": "Smen Hena Itru",
         "COMPLETED": "Shem Itru Seth"
       },
-      "EU_PLATO_MEADOW": {
+      "GR_PLATO_MEADOW": {
         "ACTIVE": "Smen Em Leimon",
         "COMPLETED": "Per Em Leimon Seth"
       }

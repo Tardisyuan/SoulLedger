@@ -7,7 +7,7 @@ columns are the ones documented at the top of ``actors_chinese.py``.
 WHAT MOVED AND WHAT DID NOT, AND WHY THE LINE FALLS WHERE IT DOES.
 
 Three rows moved here unchanged except for their civilization and tenant —
-Hades, Aeacus and Rhadamanthus. All three already stood in ``EU_PLATO_MEADOW``,
+Hades, Aeacus and Rhadamanthus. All three already stood in ``GR_PLATO_MEADOW``,
 Plato's fork in the road, and two of them carry a sentence in their own
 descriptions that decides the question: *He does not appear in Dante.* A row
 whose text says it is not in the European corpus was only ever EUROPEAN because
@@ -83,7 +83,7 @@ GREEK_ACTORS = [
     # Latin transcription of that Greek title. Rome's own underworld gods are
     # Dis Pater and Orcus; Cicero equates Dis with Plouton. So the merge folds
     # two cult aspects of one Greek god, not a Greek name and a Roman one.
-    ("Hades", "哈迪斯", "Hades", "Aides", ActorRole.OVERSEER, "EU_PLATO_MEADOW",
+    ("Hades", "哈迪斯", "Hades", "Aides", ActorRole.OVERSEER, "GR_PLATO_MEADOW",
      "冥王哈迪斯", "冥王哈迪斯", "Hades - Lord of the Underworld", "Aides",
      "Greek god of the underworld - sole overseer of the Greek infernal "
      "realm. Also Plouton (Πλούτων), a Greek cult title from πλοῦτος 'wealth' "
@@ -114,7 +114,7 @@ GREEK_ACTORS = [
     # Their two destinations are modelled now — GR_ISLES_OF_THE_BLESSED and
     # GR_TARTARUS — because the same sentence of 524a names them. Nothing else
     # of the geography was invented to go with them; see GREEK_REALMS.
-    ("Aeacus", "艾亚哥斯", "Aeacus", "Aiakos", ActorRole.JUDGE, "EU_PLATO_MEADOW",
+    ("Aeacus", "艾亚哥斯", "Aeacus", "Aiakos", ActorRole.JUDGE, "GR_PLATO_MEADOW",
      "冥界判官艾亚哥斯", "冥界判官艾亚哥斯", "Judge Aeacus", "Aiakos",
      "One of the three judges of the dead - tries those who come from Europe "
      "(Plato, Gorgias 524a) and keeps the keys of Hades (Apollodorus 3.12.6, "
@@ -123,7 +123,7 @@ GREEK_ACTORS = [
      "the keys. Son of Zeus and the nymph Aegina, and grandfather of Achilles. "
      "He does not appear in Dante"),
     ("Rhadamanthus", "拉达曼迪斯", "Rhadamanthus", "Rhadamanthys", ActorRole.JUDGE,
-     "EU_PLATO_MEADOW",
+     "GR_PLATO_MEADOW",
      "冥界判官拉达曼迪斯", "冥界判官拉达曼迪斯", "Judge Rhadamanthus", "Rhadamanthys",
      "One of the three judges of the dead - tries those who come from Asia "
      "(Plato, Gorgias 524a). Homer instead has him living in Elysium rather "
@@ -192,7 +192,7 @@ GREEK_ACTORS = [
      "no third row exists. CONDUIT and not GUARDIAN: he carries, he does not "
      "decide — the refusal of the unburied is a rule he applies, not a verdict "
      "he reaches"),
-    ("Minos", "米诺斯", "Minos", "Mino", ActorRole.JUDGE, "EU_PLATO_MEADOW",
+    ("Minos", "米诺斯", "Minos", "Mino", ActorRole.JUDGE, "GR_PLATO_MEADOW",
      "终裁判官米诺斯", "终裁判官米诺斯", "Minos - Final Arbiter", "Mino",
      "THIS ROW IS PLATO'S MINOS, not Dante's. At the fork in the meadow "
      "Rhadamanthus tries those who come from Asia and Aeacus those from Europe; "

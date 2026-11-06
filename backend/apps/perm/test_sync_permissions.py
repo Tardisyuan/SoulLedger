@@ -76,7 +76,7 @@ def test_a_subset_database_gets_exactly_the_missing_ones(only):
 
     out = _sync()
 
-    assert "created judgment.assign -> ADMIN, MODERATOR" in out
+    assert "created judgment.assign -> ADMIN\n" in out + "\n"
     after = set(Permission.objects.values_list("pk", "codename"))
     assert before <= after, "an existing Permission row was replaced"
     assert {c for _, c in after - before} == {"judgment.assign", "dispatch.return"}
@@ -98,7 +98,7 @@ def test_a_revoked_default_on_an_existing_codename_stays_revoked(only):
 
     assert ("JUDGE", "judgment.execute") not in _grants()
     assert ("VIEWER", "judgment.read") in _grants()
-    assert _grants() - before == {("ADMIN", "judgment.assign"), ("MODERATOR", "judgment.assign")}
+    assert _grants() - before == {("ADMIN", "judgment.assign")}
     assert before <= _grants()
 
 
@@ -108,11 +108,11 @@ def test_a_second_run_does_nothing(only):
     _sync()
     snapshot = (set(Permission.objects.values_list("pk", flat=True)), _grants())
     # Even after the admin revokes the one this command just created.
-    RolePermission.objects.filter(role__name="MODERATOR", permission__codename="judgment.assign").delete()
+    RolePermission.objects.filter(role__name="ADMIN", permission__codename="judgment.assign").delete()
     out = _sync()
     assert "Nothing to do" in out
     assert set(Permission.objects.values_list("pk", flat=True)) == snapshot[0]
-    assert ("MODERATOR", "judgment.assign") not in _grants()
+    assert ("ADMIN", "judgment.assign") not in _grants()
 
 
 @pytest.mark.django_db
@@ -120,7 +120,7 @@ def test_dry_run_writes_nothing(only):
     only(ALL_CODENAMES - {"judgment.assign"})
     before = (Permission.objects.count(), RolePermission.objects.count())
     out = _sync("--dry-run")
-    assert "[dry-run] would create judgment.assign -> ADMIN, MODERATOR" in out
+    assert "[dry-run] would create judgment.assign -> ADMIN\n" in out + "\n"
     assert (Permission.objects.count(), RolePermission.objects.count()) == before
 
 
@@ -134,19 +134,20 @@ def test_syncing_does_not_change_what_anyone_may_do(only):
     only(ALL_CODENAMES - {"judgment.assign"})
     users = {
         role: User.objects.create_user(username=f"sync_{role.lower()}", password="x", role=role)
-        for role in ("MODERATOR", "JUDGE")
+        for role in ("ADMIN", "MODERATOR", "JUDGE")
     }
     invalidate_all_permissions()
     by_dict = {role: check_permission(u, "judgment.assign") for role, u in users.items()}
     _sync()
     by_rows = {role: check_permission(u, "judgment.assign") for role, u in users.items()}
-    assert by_dict == by_rows == {"MODERATOR": True, "JUDGE": False}
+    # MODERATOR 2026-11-07 起不再持有 judgment.assign(perm/0035)。
+    assert by_dict == by_rows == {"ADMIN": True, "MODERATOR": False, "JUDGE": False}
 
 
 @pytest.mark.django_db
 def test_a_missing_role_row_is_reported_not_created(only):
     only(ALL_CODENAMES - {"judgment.assign"})
-    Role.objects.filter(name="MODERATOR").delete()
+    Role.objects.filter(name="ADMIN").delete()
     out = _sync()
-    assert "[no Role row, not granted: MODERATOR]" in out
-    assert not Role.objects.filter(name="MODERATOR").exists()
+    assert "[no Role row, not granted: ADMIN]" in out
+    assert not Role.objects.filter(name="ADMIN").exists()

@@ -107,7 +107,7 @@ REPUBLIC_ER_STATUTES = [
             "stephanus": "614e-615a",
             "circuit_years": 1000,
             "applies_to_both_roads": True,
-            "meadow_realm_code": "EU_PLATO_MEADOW",
+            "meadow_realm_code": "GR_PLATO_MEADOW",
         },
     },
     {
@@ -369,7 +369,7 @@ REPUBLIC_ER_STATUTES = [
             "stephanus": "616b",
             "days_in_the_meadow": 7,
             "departure_day": 8,
-            "meadow_realm_code": "EU_PLATO_MEADOW",
+            "meadow_realm_code": "GR_PLATO_MEADOW",
         },
     },
     {

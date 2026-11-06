@@ -301,7 +301,7 @@ function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight:
       ? wangsi.map((one) => ({ one }))
       : cityGod
         ? cityGod.filter(Boolean).map((one) => ({ one }))
-        : [tag, request, item.soul_code, localNodeName(item, locale), formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
+        : [tag, request, item.soul_code, localNodeName(item, locale, t), formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}

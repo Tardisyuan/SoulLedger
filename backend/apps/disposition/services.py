@@ -136,10 +136,10 @@ class DispositionService:
     # THERE ARE THREE CODES HERE AND ONLY TWO OF THEM ARE DESTINATIONS. The
     # meadow is the ground the judging happens on, not a place anyone is sent
     # to; see `_route_greek` for why an inconclusive verdict lands there anyway
-    # and why that is not a third road. `EU_PLATO_MEADOW` keeps its `EU_` prefix
-    # under GREEK on purpose — a realm_code is a join key, not a label (see
-    # apps/actors/mythology/realms.py, GREEK_REALMS §CODES).
-    GR_MEADOW = "EU_PLATO_MEADOW"
+    # and why that is not a third road. The meadow's code was `EU_PLATO_MEADOW`
+    # until realms/0032 (user decision 2026-11-07; see GREEK_REALMS §CODES in
+    # apps/actors/mythology/realms.py).
+    GR_MEADOW = "GR_PLATO_MEADOW"
     GR_ISLES = "GR_ISLES_OF_THE_BLESSED"
     GR_TARTARUS = "GR_TARTARUS"
 

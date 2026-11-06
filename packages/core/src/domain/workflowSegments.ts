@@ -45,7 +45,7 @@ export function jumpReason(
   locale?: string,
 ): string {
   const names = (via: "branch" | "on_fail") =>
-    sources.filter((s) => (s.via ?? "on_fail") === via).map((s) => localNodeName(s, locale)).join("、");
+    sources.filter((s) => (s.via ?? "on_fail") === via).map((s) => localNodeName(s, locale, t)).join("、");
   const branch = names("branch");
   const fail = names("on_fail");
   return [

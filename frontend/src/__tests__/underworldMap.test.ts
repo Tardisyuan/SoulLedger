@@ -152,12 +152,12 @@ describe("states follow the soul", () => {
       svg,
       pathVisits([
         { realm_code: "GR_ACHERON", left_at: "2026-01-01T00:00:00Z" },
-        { realm_code: "EU_PLATO_MEADOW", left_at: null },
+        { realm_code: "GR_PLATO_MEADOW", left_at: null },
       ]),
     );
     expect(s.nodes.get("gr-death")).toBe("walked");
     expect(s.nodes.get("gr-three-judges")).toBe("walked");
-    expect(s.nodes.get("EU_PLATO_MEADOW")).toBe("current");
+    expect(s.nodes.get("GR_PLATO_MEADOW")).toBe("current");
     expect(s.nodes.get("gr-millennium")).toBe("ahead");
     expect(s.nodes.get("gr-lethe")).toBe("ahead");
     expect(s.nodes.get("GR_ISLES_OF_THE_BLESSED")).toBe("ahead");
@@ -166,7 +166,7 @@ describe("states follow the soul", () => {
   it("Greece: a curable soul in Tartarus lights the thousand-year cells up to its century; the incurable light none", () => {
     const svg = map("gr");
     const path = [
-      { realm_code: "EU_PLATO_MEADOW", left_at: "2026-01-01T00:00:00Z" },
+      { realm_code: "GR_PLATO_MEADOW", left_at: "2026-01-01T00:00:00Z" },
       { realm_code: "GR_TARTARUS", left_at: null },
     ];
     const s = mapStates(svg, greekVisits(path, 299));
