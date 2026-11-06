@@ -13,6 +13,7 @@ import {
   applyBranches,
   applyView,
   diyuVisits,
+  greekVisits,
   mapStates,
   paintStates,
   parseMapSvg,
@@ -160,6 +161,31 @@ describe("states follow the soul", () => {
     expect(s.nodes.get("gr-millennium")).toBe("ahead");
     expect(s.nodes.get("gr-lethe")).toBe("ahead");
     expect(s.nodes.get("GR_ISLES_OF_THE_BLESSED")).toBe("ahead");
+  });
+
+  it("Greece: a curable soul in Tartarus lights the thousand-year cells up to its century; the incurable light none", () => {
+    const svg = map("gr");
+    const path = [
+      { realm_code: "EU_PLATO_MEADOW", left_at: "2026-01-01T00:00:00Z" },
+      { realm_code: "GR_TARTARUS", left_at: null },
+    ];
+    const s = mapStates(svg, greekVisits(path, 299));
+    expect(s.current).toEqual({ node: "gr-millennium", cell: "gr-millennium-3" });
+    expect(s.nodes.get("GR_TARTARUS")).toBe("walked");
+    expect(s.cells.get("gr-millennium-1")).toBe("walked");
+    expect(s.cells.get("gr-millennium-2")).toBe("walked");
+    expect(s.cells.get("gr-millennium-4")).toBeUndefined();
+    // Past a thousand years it stays on the tenth cell, never an eleventh.
+    expect(greekVisits(path, 1450).filter((v) => v.current)).toEqual([{ id: "gr-millennium-10", current: true }]);
+    // Incurable (the caller passes null), or no term start: Tartarus stays current and no cell is lit.
+    const incurable = mapStates(svg, greekVisits(path, null));
+    expect(incurable.current).toEqual({ node: "GR_TARTARUS", cell: null });
+    expect(incurable.nodes.get("gr-millennium")).toBe("ahead");
+    expect(incurable.cells.size).toBe(0);
+    // Not in Tartarus now (the Isles): the years do not light the cells.
+    expect(greekVisits([{ realm_code: "GR_ISLES_OF_THE_BLESSED", left_at: null }], 299)).toEqual([
+      { id: "GR_ISLES_OF_THE_BLESSED", current: true },
+    ]);
   });
 
   it("paints edges by their two ends, and the sample's walked edge turns dashed when it is no longer walked", () => {

@@ -18,7 +18,7 @@ pytestmark = pytest.mark.django_db
 ME = "/api/v1/me/sentence-plan/"
 PLANS = "/api/v1/sentence-plans/"
 STATION_KEYS = {"id", "n", "status", "is_home", "civilization", "realm", "sentence_years", "is_eternal",
-                "started_on", "ends_on"}
+                "started_on", "ends_on", "elapsed_years"}
 
 
 @pytest.fixture
