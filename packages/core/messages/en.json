@@ -328,17 +328,17 @@
       "REBIRTH_STATUS_CHANGED": "Rebirth application status changed",
       "REBIRTH_CROSS_CIV_DECIDED": "Cross-civilization rebirth decided",
       "COOLDOWN_SHORTENING_DECIDED": "Cooldown shortening decided",
-      "SENTENCE_PLAN_CREATED": "Sentence plan created",
-      "SENTENCE_NODE_ACTIVATED": "Sentence stage started",
-      "SENTENCE_NODE_WAITING": "Sentence stage awaiting the soul",
-      "SENTENCE_NODE_COMPLETED": "Sentence stage served",
-      "SENTENCE_NODE_REFUSED": "Sentence stage transfer did not go through",
-      "SENTENCE_NODE_REDISPATCHED": "Sentence stage transfer resent",
-      "SENTENCE_PLAN_AMENDED": "Sentence plan amended",
-      "SENTENCE_REQUEST_CREATED": "Sentence request submitted",
-      "SENTENCE_REQUEST_DECIDED": "Sentence request decided",
-      "SENTENCE_PLAN_COMPLETED": "Sentence plan completed",
-      "SENTENCE_PLAN_CANCELLED": "Sentence plan cancelled",
+      "SENTENCE_PLAN_CREATED": "Placement plan created",
+      "SENTENCE_NODE_ACTIVATED": "Placement stage started",
+      "SENTENCE_NODE_WAITING": "Placement stage awaiting the soul",
+      "SENTENCE_NODE_COMPLETED": "Placement stage completed",
+      "SENTENCE_NODE_REFUSED": "Placement stage transfer did not go through",
+      "SENTENCE_NODE_REDISPATCHED": "Placement stage transfer resent",
+      "SENTENCE_PLAN_AMENDED": "Placement plan amended",
+      "SENTENCE_REQUEST_CREATED": "Placement request submitted",
+      "SENTENCE_REQUEST_DECIDED": "Placement request decided",
+      "SENTENCE_PLAN_COMPLETED": "Placement plan completed",
+      "SENTENCE_PLAN_CANCELLED": "Placement plan cancelled",
       "JUDGMENT_APPEAL_FILED": "Appeal filed",
       "JUDGMENT_APPEAL_WITHDRAWN": "Appeal withdrawn",
       "JUDGMENT_APPEAL_DECIDED": "Appeal decided",
@@ -358,7 +358,40 @@
       "WANGSI_GRIEVANCE_UPHELD": "Grievance upheld · released early",
       "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld",
       "WANGSI_GRIEVANCE_DELIVERED": "Grievance upheld · delivered at the Lotus Terrace",
-      "NEGATIVE_CONFESSION_HEARD": "Negative confession heard"
+      "NEGATIVE_CONFESSION_HEARD": "Negative confession heard",
+      "SENTENCE_PLAN_CREATED_by_civ": {
+        "cn": "Sentence plan created"
+      },
+      "SENTENCE_NODE_ACTIVATED_by_civ": {
+        "cn": "Sentence stage started"
+      },
+      "SENTENCE_NODE_WAITING_by_civ": {
+        "cn": "Sentence stage awaiting the soul"
+      },
+      "SENTENCE_NODE_COMPLETED_by_civ": {
+        "cn": "Sentence stage served"
+      },
+      "SENTENCE_NODE_REFUSED_by_civ": {
+        "cn": "Sentence stage transfer did not go through"
+      },
+      "SENTENCE_NODE_REDISPATCHED_by_civ": {
+        "cn": "Sentence stage transfer resent"
+      },
+      "SENTENCE_PLAN_AMENDED_by_civ": {
+        "cn": "Sentence plan amended"
+      },
+      "SENTENCE_REQUEST_CREATED_by_civ": {
+        "cn": "Sentence request submitted"
+      },
+      "SENTENCE_REQUEST_DECIDED_by_civ": {
+        "cn": "Sentence request decided"
+      },
+      "SENTENCE_PLAN_COMPLETED_by_civ": {
+        "cn": "Sentence plan completed"
+      },
+      "SENTENCE_PLAN_CANCELLED_by_civ": {
+        "cn": "Sentence plan cancelled"
+      }
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -1091,7 +1124,7 @@
     "role_name_placeholder": "e.g. MODERATOR",
     "role_name_builtin_hint": "Built-in role: the name is fixed (the code compares it by literal); the display name can change",
     "display_name_label": "Display Name *",
-    "display_name_placeholder": "e.g. Moderator",
+    "display_name_placeholder": "e.g. Circle Moderator",
     "role_delete_error": "Delete role failed",
     "role_create_error": "Create role failed",
     "role_edit_error": "Update role failed",
@@ -1153,7 +1186,7 @@
         "failed": "Failed",
         "conflict": "Conflict",
         "lock": "always · ADMIN",
-        "deny": "forbidden · realm lead"
+        "deny": "forbidden · circle moderator"
       },
       "refused": {
         "admin_only_permission": "Conflicts with the rule that recycle-bin restore and hard delete are ADMIN-only; sent back.",
@@ -1163,14 +1196,14 @@
         "database_error": "A database error: this cell was not written.",
         "admin_always_all": "ADMIN always holds every permission",
         "conflict_unacknowledged": "This revoke leaves a workflow with no approver and was not acknowledged; sent back. Tick the acknowledgement in the conflict notice, then save.",
-        "role_forbidden_permission": "Conflicts with the rule that MODERATOR may not hold workflow approve, workflow advance or user management; sent back."
+        "role_forbidden_permission": "Conflicts with the rule that a Circle Moderator (MODERATOR) may not hold workflow approve, workflow advance or user management; sent back."
       },
       "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
       "conflict_acknowledge": "Confirm the conflict: these changes affect {{n}} workflows, {{m}} of them in flight.",
       "lock_word": "always",
       "lock_hint": "The ADMIN role always holds every permission; it cannot be unticked.",
       "deny_word": "forbidden",
-      "deny_hint": "A realm lead cannot be granted 「{{perm}}」.",
+      "deny_hint": "A Circle Moderator cannot be granted 「{{perm}}」.",
       "conflict_view": "View",
       "category_all": "All",
       "category_none": "None",
@@ -1913,10 +1946,13 @@
       "cooldowns": "Cooldown requests to decide",
       "letters": "Letters awaiting your reply",
       "unassigned_letters": "Unassigned letters",
-      "sentence_requests": "Sentence plan requests",
+      "sentence_requests": "Placement plan requests",
       "reports": "Reports to review",
       "pick_nodes": "Stations to pick · other realms' flows",
-      "go_pick": "Pick →"
+      "go_pick": "Pick →",
+      "sentence_requests_by_civ": {
+        "cn": "Sentence plan requests"
+      }
     },
     "civ_empty": "No souls yet · register one",
     "tab_ledger": "Ledger",
@@ -1968,7 +2004,7 @@
       "CHINESE": "Ledger of Merit and Demerit",
       "EUROPEAN": "Judgment and Penance",
       "EGYPTIAN": "Weighing of the Heart",
-      "GREEK": "Sentence to be Served",
+      "GREEK": "Requital",
       "UNKNOWN": "Deed Record"
     },
     "book": {
@@ -2465,7 +2501,7 @@
         "term_conflict": "Not executed: choose a term or eternal, not both",
         "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
         "destination_not_applicable": "Not executed: this case has no placement",
-        "term_not_applicable": "Egyptian outcomes take no term: neither the Field of Reeds nor the second death is served.",
+        "term_not_applicable": "Egyptian outcomes take no term: neither the Field of Reeds nor the second death has one.",
         "retry_has_no_destination": "A RETRY sends the soul nowhere: the case is heard again. Clear the placement and conclude.",
         "passed_has_no_destination": "Acquitted in Diyu, the soul is not placed: once the case is concluded (and its approval flow completes) it awaits rebirth. Clear the placement and conclude."
       },
@@ -2973,13 +3009,19 @@
     "open_workflow": "Open the approval",
     "open_cross_judgment": "Open the cross-realm judgment",
     "open_soul": "Open the soul",
-    "open_sentence_plan": "Open the sentence plan",
-    "open_sentence_requests": "Open sentence requests",
+    "open_sentence_plan": "Open the placement plan",
+    "open_sentence_requests": "Open placement requests",
     "open_letter": "Open the letter",
     "open_death_sync": "Open death sync",
     "open_scheduler": "Open scheduled tasks",
     "open_assistant": "Open assistant admin",
-    "open_failed": "Could not open: the record is gone"
+    "open_failed": "Could not open: the record is gone",
+    "open_sentence_plan_by_civ": {
+      "cn": "Open the sentence plan"
+    },
+    "open_sentence_requests_by_civ": {
+      "cn": "Open sentence requests"
+    }
   },
   "realms": {
     "title": "Realms",
@@ -2992,34 +3034,31 @@
       "GREEK": "Greek Underworld"
     },
     "types": {
-      "HELL": "Hell",
-      "PURGATORY": "Purgatory",
-      "BLISS": "Bliss",
-      "NEUTRAL": "Neutral",
+      "HELL": "Places of punishment",
+      "PURGATORY": "Places in between",
+      "BLISS": "Places of bliss",
+      "NEUTRAL": "Places of passage",
       "ANNIHILATION": "Annihilation"
     },
     "types_by_civ": {
       "cn": {
-        "HELL": "Hells",
-        "PURGATORY": "Holding",
-        "BLISS": "Heavens",
-        "NEUTRAL": "Courts"
+        "HELL": "The Ten Courts",
+        "PURGATORY": "Awaiting judgment",
+        "BLISS": "Heavens"
       },
       "eu": {
         "HELL": "Hell",
-        "PURGATORY": "Purgatory",
+        "PURGATORY": "Mount Purgatory",
         "BLISS": "Heaven",
-        "NEUTRAL": "Vestibule"
+        "NEUTRAL": "Places of passage"
       },
       "eg": {
         "PURGATORY": "The Duat",
         "BLISS": "Field of Reeds",
-        "NEUTRAL": "Hall of Two Truths",
         "ANNIHILATION": "Annihilation"
       },
       "gr": {
         "HELL": "Tartarus",
-        "PURGATORY": "The thousand years",
         "BLISS": "Isles of the Blessed",
         "NEUTRAL": "The crossing"
       }
@@ -3348,7 +3387,7 @@
     "source_label": "Source",
     "target_tenant_closed": "This hall is not receiving transfers",
     "soul_not_in_underworld": "This soul is not in the underworld (alive, awaiting rebirth, settled or lost); it cannot be dispatched",
-    "soul_on_sentence_plan": "This soul has a sentence plan in progress; its dispatches follow the plan",
+    "soul_on_sentence_plan": "This soul has a placement plan in progress; its dispatches follow the plan",
     "discard": "Discard…",
     "discard_title": "Discard this dispatch draft?",
     "discard_message": "The draft moves to the recycle bin and can be recovered from Settings › Recycle bin, with the reason you wrote.",
@@ -3379,6 +3418,9 @@
       "from": "Proposed from",
       "to": "Proposed to",
       "clear": "Clear filters"
+    },
+    "soul_on_sentence_plan_by_civ": {
+      "cn": "This soul has a sentence plan in progress; its dispatches follow the plan"
     }
   },
   "crossJudgments": {
@@ -3496,7 +3538,7 @@
     "last_name_placeholder": "Last Name",
     "roles": {
       "ADMIN": "Administrator",
-      "MODERATOR": "Realm Lead",
+      "MODERATOR": "Circle Moderator",
       "JUDGE": "Judge",
       "GUARDIAN": "Guardian",
       "VIEWER": "Viewer",
@@ -3511,7 +3553,7 @@
       "primary": "Primary role",
       "primary_hint": "The primary role decides whether the account is an administrator and how it ranks.",
       "extra": "Additional roles",
-      "extra_hint": "Permissions are the union of the primary role and every additional role. Each role's own refusals apply to that role only, so a Realm Lead who is also a Judge can approve as Judge. Administrator-only actions still follow the primary role.",
+      "extra_hint": "Permissions are the union of the primary role and every additional role. Each role's own refusals apply to that role only, so a Circle Moderator who is also a Judge can approve as Judge. Administrator-only actions still follow the primary role.",
       "extra_none": "No roles available to add",
       "admin_locked": "An administrator already holds everything and cannot take additional roles.",
       "saved": "Roles updated",
@@ -4438,7 +4480,7 @@
     },
     "error": {
       "soup_not_taken": "{{name}} hasn't taken Meng Po's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
-      "plan_in_progress": "{{name}}'s sentence plan is not finished; no rebirth yet.",
+      "plan_in_progress": "{{name}}'s placement plan is not finished; no rebirth yet.",
       "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
       "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth.",
       "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
@@ -4446,7 +4488,18 @@
       "open_judgment": "{{name}} still has an open judgment; conclude or withdraw it before the rebirth.",
       "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path.",
       "rebirth_continent_not_applicable": "Only a soul of Diyu reborn into the human path is born in one of the four continents.",
-      "origin_flow_open": "{{name}}'s original approval workflow has not finished; the rebirth waits for it."
+      "origin_flow_open": "{{name}}'s original approval workflow has not finished; the rebirth waits for it.",
+      "plan_in_progress_by_civ": {
+        "cn": "{{name}}'s sentence plan is not finished; no rebirth yet."
+      },
+      "eternal_sentence_by_civ": {
+        "cn": {
+          "BLISS": "{{name}} dwells in the heavens forever; there is no next life."
+        },
+        "gr": {
+          "BLISS": "{{name}} dwells in the Isles of the Blessed forever; there is no next life."
+        }
+      }
     },
     "next_continent": "Continent of the next life · optional",
     "next_continent_same": "Same as this life",
@@ -4454,7 +4507,12 @@
     "next_continent_unset": "Not specified",
     "desired_form": "The soul asks for: {{form}}",
     "form_reason": "Reason for another path",
-    "form_reason_hint": "This differs from what the soul asked for: give the reason; it is kept with the rebirth."
+    "form_reason_hint": "This differs from what the soul asked for: give the reason; it is kept with the rebirth.",
+    "forms_by_civ": {
+      "gr": {
+        "OTHER": "A life of its own choosing"
+      }
+    }
   },
   "social": {
     "title": "Social",
@@ -4631,17 +4689,23 @@
       "soul_credentials": "Initial Passwords Awaiting Delivery",
       "rebirth_applications": "Rebirth Applications",
       "soul_inbox": "Hall Inbox",
-      "sentence_requests": "Sentence Requests",
+      "sentence_requests": "Placement Requests",
       "assistant_admin": "Assistant Admin",
       "moderation": "Circle Moderation",
       "recycle_bin": "Recycle Bin",
-      "sentence_plans": "Sentence Plans",
+      "sentence_plans": "Placement Plans",
       "group_rebirth": "Reincarnation",
       "judgment_appeals": "Appeal reviews",
       "city_gods": "City Gods",
       "city_god_cases": "City God review",
       "halls": "Halls at a glance",
-      "group_global": "Global"
+      "group_global": "Global",
+      "sentence_requests_by_civ": {
+        "cn": "Sentence Requests"
+      },
+      "sentence_plans_by_civ": {
+        "cn": "Sentence Plans"
+      }
     },
     "queue": "Triage queue",
     "about": "About",
@@ -5079,7 +5143,35 @@
         "strip_aria": "{{truthful}} true, {{untruthful}} false, {{unheard}} not recorded, of {{total}}"
       },
       "delivered": "Delivered",
-      "delivered_on": "Delivered · {{date}}"
+      "delivered_on": "Delivered · {{date}}",
+      "sentence_by_civ": {
+        "cn": {
+          "BLISS": "Stay"
+        },
+        "gr": {
+          "BLISS": "Stay"
+        },
+        "eu": {
+          "PURGATORY": "Term"
+        },
+        "gr_republic": {
+          "BLISS": "Term"
+        }
+      },
+      "sentence_years_by_civ": {
+        "cn": {
+          "BLISS": "{{years}} years"
+        },
+        "gr": {
+          "BLISS": "{{years}} years"
+        },
+        "eu": {
+          "PURGATORY": "{{years}} years"
+        },
+        "gr_republic": {
+          "BLISS": "{{years}} years in the heavens"
+        }
+      }
     },
     "past_lives": {
       "title": "Past lives",
@@ -5198,7 +5290,12 @@
       "eu": {
         "past_read_only": "Past lives are read-only. Heaven and Hell take no applications or appeals.",
         "no_past_lives": "Heaven and Hell have no past lives. You have this one life, and nothing after it is recorded.",
-        "court": "Judged at"
+        "court": "Judged at",
+        "merit": "Good works",
+        "demerit": "Sins",
+        "merit_entry": "Good work",
+        "demerit_entry": "Sin",
+        "records": "Records of good works and sins"
       }
     },
     "logout": {
@@ -5633,7 +5730,25 @@
         "waiting": "Term served, still here",
         "done": "Completed",
         "eternal": "Eternal",
-        "pardoned": "Pardoned"
+        "pardoned": "Pardoned",
+        "active_by_civ": {
+          "cn": {
+            "BLISS": "In the heavens"
+          },
+          "eu": {
+            "PURGATORY": "Being cleansed",
+            "BLISS": "In Heaven"
+          },
+          "eg": {
+            "BLISS": "At rest in the Field of Reeds"
+          },
+          "gr": {
+            "BLISS": "On the Isles of the Blessed"
+          },
+          "gr_republic": {
+            "BLISS": "A thousand years in the heavens"
+          }
+        }
       },
       "waiting_why": "This term is served. A judgment at home is still open; you move once it closes.",
       "eternal_title": "The term is eternal",
@@ -5648,7 +5763,7 @@
       "next_not_started_body": "You wait at home. Nothing is required of you before you move.",
       "amended_tag": "New",
       "amended_note": "A station was added",
-      "empty": "No sentence yet. It is entered here once judgment ends.",
+      "empty": "No placement yet. It is entered here once judgment ends.",
       "loading": "Loading…",
       "error": "This part could not be loaded. The rest is shown as usual.",
       "blocked_title": "Your sentence is not yet served",
@@ -5657,7 +5772,153 @@
       "total_stations": "{{total}} stations",
       "field_state": "Status",
       "until": "Until {{date}}",
-      "residing_body": "You belong to {{home}}. You return once this station in {{current}} is served."
+      "residing_body": "You belong to {{home}}. You return once this station in {{current}} is served.",
+      "empty_by_civ": {
+        "cn": "No sentence yet. It is entered here once judgment ends."
+      },
+      "section_title_by_civ": {
+        "cn": {
+          "BLISS": "My dwelling"
+        },
+        "eu": {
+          "BLISS": "My dwelling",
+          "PURGATORY": "My cleansing"
+        },
+        "eg": {
+          "BLISS": "My dwelling"
+        },
+        "gr": {
+          "BLISS": "My dwelling"
+        },
+        "gr_republic": {
+          "BLISS": "My thousand years"
+        }
+      },
+      "term_by_civ": {
+        "cn": {
+          "BLISS": "Stay"
+        },
+        "gr": {
+          "BLISS": "Stay"
+        },
+        "eu": {
+          "PURGATORY": "Term"
+        },
+        "gr_republic": {
+          "BLISS": "Term"
+        }
+      },
+      "eternal_title_by_civ": {
+        "cn": {
+          "BLISS": "In the heavens forever"
+        },
+        "eu": {
+          "BLISS": "In Heaven forever"
+        },
+        "eg": {
+          "BLISS": "In the Field of Reeds forever"
+        },
+        "gr": {
+          "BLISS": "On the Isles of the Blessed forever"
+        }
+      },
+      "eternal_no_rebirth_by_civ": {
+        "cn": {
+          "BLISS": "Those who dwell in the heavens forever do not apply for rebirth."
+        },
+        "gr": {
+          "BLISS": "Those who dwell in the Isles of the Blessed forever do not apply for rebirth."
+        }
+      },
+      "all_done_title_by_civ": {
+        "cn": {
+          "BLISS": "Your stay is over"
+        },
+        "gr": {
+          "BLISS": "Your stay is over"
+        },
+        "gr_republic": {
+          "BLISS": "The thousand years are over"
+        }
+      },
+      "blocked_title_by_civ": {
+        "cn": {
+          "BLISS": "Your stay is not over yet"
+        },
+        "gr": {
+          "BLISS": "Your stay is not over yet"
+        },
+        "gr_republic": {
+          "BLISS": "The thousand years are not over yet"
+        }
+      },
+      "blocked_link_by_civ": {
+        "cn": {
+          "BLISS": "See my dwelling"
+        },
+        "gr": {
+          "BLISS": "See my dwelling"
+        },
+        "gr_republic": {
+          "BLISS": "See my thousand years"
+        }
+      },
+      "pardoned_title_by_civ": {
+        "eu": {
+          "PURGATORY": "The rest of your cleansing is remitted"
+        }
+      },
+      "push": {
+        "completed": {
+          "title_by_civ": {
+            "cn": {
+              "BLISS": "Stay over"
+            },
+            "gr": {
+              "BLISS": "Stay over"
+            },
+            "gr_republic": {
+              "BLISS": "The thousand years are over"
+            }
+          },
+          "body_by_civ": {
+            "cn": {
+              "BLISS": "Your stay in the heavens is over. Open Soul Ledger to see it."
+            },
+            "gr": {
+              "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it."
+            },
+            "gr_republic": {
+              "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
+            }
+          }
+        },
+        "waiting": {
+          "body_by_civ": {
+            "cn": {
+              "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+            },
+            "gr": {
+              "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+            },
+            "eu": {
+              "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
+            }
+          }
+        },
+        "pardoned": {
+          "title_by_civ": {
+            "eu": {
+              "PURGATORY": "Remaining cleansing remitted"
+            }
+          },
+          "body_by_civ": {
+            "eu": {
+              "PURGATORY": "Part of your cleansing was remitted. Open Soul Ledger to see it."
+            }
+          }
+        }
+      }
     },
     "assist": {
       "entry_label": "Ask — the in-app assistant",
@@ -5950,14 +6211,17 @@
       "a_merit": "Your records are this life's account: good deeds are merit, wrongs are demerit. Merit minus demerit is the number above “This life's ledger”.",
       "q_disposition": "Disposition",
       "a_disposition": "What is decided for you once a judgment is concluded: where you serve a sentence, or which path you are reborn into.",
-      "q_sentence": "Sentence plan",
+      "q_sentence": "Placement plan",
       "a_sentence": "The sentence in your disposition, laid out station by station. Each station is served before the next; rebirth can be applied for only once all are done.",
       "q_cooldown": "Cooling-off period",
       "a_cooldown": "The wait after a rebirth application is rejected; you cannot apply again until it ends. Each cooling-off period can be asked to be shortened once.",
       "q_residing": "Residing",
       "a_residing": "You are in another civilization but still belong to your own: the pages take on where you are, while rebirth and appeals stay with your home civilization.",
       "q_hall": "The hall",
-      "a_hall": "The office of the hall you are in. Write to the hall and an officer replies in its name."
+      "a_hall": "The office of the hall you are in. Write to the hall and an officer replies in its name.",
+      "q_sentence_by_civ": {
+        "cn": "Sentence plan"
+      }
     },
     "feedback": {
       "kind_label": "What is it about",
@@ -6091,19 +6355,68 @@
     },
     "sentence_completed": {
       "title": "Sentence fully served",
-      "body": "Your sentence is fully served. Open Soul Ledger to see it."
+      "body": "Your sentence is fully served. Open Soul Ledger to see it.",
+      "title_by_civ": {
+        "cn": {
+          "BLISS": "Stay over"
+        },
+        "gr": {
+          "BLISS": "Stay over"
+        },
+        "gr_republic": {
+          "BLISS": "The thousand years are over"
+        }
+      },
+      "body_by_civ": {
+        "cn": {
+          "BLISS": "Your stay in the heavens is over. Open Soul Ledger to see it."
+        },
+        "gr": {
+          "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it."
+        },
+        "gr_republic": {
+          "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
+        }
+      }
     },
     "sentence_waiting": {
       "title": "A term is served; you stay for now",
-      "body": "One of your terms is served. Open Soul Ledger to see it."
+      "body": "One of your terms is served. Open Soul Ledger to see it.",
+      "body_by_civ": {
+        "cn": {
+          "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+        },
+        "gr": {
+          "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+        },
+        "eu": {
+          "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
+        }
+      }
     },
     "sentence_amended": {
-      "title": "Your sentence changed",
-      "body": "Your sentence plan has changed. Open Soul Ledger to see it."
+      "title": "Your placement changed",
+      "body": "Your placement plan has changed. Open Soul Ledger to see it.",
+      "title_by_civ": {
+        "cn": "Your sentence changed"
+      },
+      "body_by_civ": {
+        "cn": "Your sentence plan has changed. Open Soul Ledger to see it."
+      }
     },
     "sentence_pardoned": {
       "title": "Remaining term pardoned",
-      "body": "Part of your term was pardoned. Open Soul Ledger to see it."
+      "body": "Part of your term was pardoned. Open Soul Ledger to see it.",
+      "title_by_civ": {
+        "eu": {
+          "PURGATORY": "Remaining cleansing remitted"
+        }
+      },
+      "body_by_civ": {
+        "eu": {
+          "PURGATORY": "Part of your cleansing was remitted. Open Soul Ledger to see it."
+        }
+      }
     },
     "chat_message": {
       "title": "New letter",
@@ -6248,48 +6561,78 @@
       "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."
     },
     "sentence_node_active": {
-      "title": "Sentence stop begun",
-      "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."
+      "title": "Placement stop begun",
+      "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}.",
+      "title_by_civ": {
+        "cn": "Sentence stop begun"
+      }
     },
     "sentence_node_done": {
-      "title": "Sentence stop ended",
-      "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."
+      "title": "Placement stop ended",
+      "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended.",
+      "title_by_civ": {
+        "cn": "Sentence stop ended"
+      }
     },
     "sentence_node_waiting": {
       "title": "Held after serving",
       "body": "Soul {{soul}} has served stop {{order}} in {{tenant}} and stays there while a judgment is open. It returns once the judgment is concluded or withdrawn."
     },
     "sentence_node_refused": {
-      "title": "Sentence stop refused",
-      "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."
+      "title": "Placement stop refused",
+      "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again.",
+      "title_by_civ": {
+        "cn": "Sentence stop refused"
+      }
     },
     "sentence_node_not_dispatched": {
-      "title": "Sentence stop not dispatched",
-      "body": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again."
+      "title": "Placement stop not dispatched",
+      "body": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again.",
+      "title_by_civ": {
+        "cn": "Sentence stop not dispatched"
+      }
     },
     "sentence_plan_completed": {
-      "title": "Sentence plan completed",
-      "body": "Soul {{soul}} has served every stop of its sentence plan."
+      "title": "Placement plan completed",
+      "body": "Soul {{soul}} has completed every stop of its placement plan.",
+      "title_by_civ": {
+        "cn": "Sentence plan completed"
+      },
+      "body_by_civ": {
+        "cn": "Soul {{soul}} has served every stop of its sentence plan."
+      }
     },
     "cross_sentence_submitted": {
       "title": "Cross-realm judgment stop filled in",
       "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."
     },
     "sentence_plan_amended": {
-      "title": "Sentence plan changed",
-      "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."
+      "title": "Placement plan changed",
+      "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}.",
+      "title_by_civ": {
+        "cn": "Sentence plan changed"
+      }
     },
     "sentence_request_pending": {
-      "title": "Sentence plan request pending",
-      "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."
+      "title": "Placement plan request pending",
+      "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge.",
+      "title_by_civ": {
+        "cn": "Sentence plan request pending"
+      }
     },
     "sentence_request_decided": {
-      "title": "Sentence plan request decided",
-      "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."
+      "title": "Placement plan request decided",
+      "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see.",
+      "title_by_civ": {
+        "cn": "Sentence plan request decided"
+      }
     },
     "sentence_plan_cancelled": {
-      "title": "Sentence plan cancelled",
-      "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."
+      "title": "Placement plan cancelled",
+      "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete.",
+      "title_by_civ": {
+        "cn": "Sentence plan cancelled"
+      }
     },
     "soul_inbox_assigned": {
       "title": "A letter handed to you",
@@ -6744,8 +7087,8 @@
     }
   },
   "sentence_plan": {
-    "panel_title": "Sentence plan",
-    "none": "No sentence plan yet",
+    "panel_title": "Placement plan",
+    "none": "No placement plan yet",
     "plan_label": "Sentence plan, cycle {{cycle}}",
     "cycle": "Cycle {{cycle}}",
     "nodes_label": "Stops",
@@ -6949,19 +7292,15 @@
           "ETERNAL": "In Heaven forever"
         },
         "NEUTRAL": {
-          "ACTIVE": "Kept in the Vestibule",
-          "ETERNAL": "In the Vestibule forever"
+          "ACTIVE": "Waiting on the way",
+          "COMPLETED": "Passed"
         }
       },
       "eg": {
         "PURGATORY": {
-          "ACTIVE": "On the way",
-          "WAITING": "Waiting at a gate",
+          "ACTIVE": "In the Duat",
+          "WAITING": "Waiting in the Duat",
           "COMPLETED": "Passed through"
-        },
-        "NEUTRAL": {
-          "ACTIVE": "Waiting for the weighing",
-          "COMPLETED": "Weighed"
         },
         "BLISS": {
           "ACTIVE": "At rest in the Field of Reeds",
@@ -6977,11 +7316,6 @@
           "WAITING": "Term ended, waiting to return",
           "ETERNAL": "Punished forever · incurable"
         },
-        "PURGATORY": {
-          "ACTIVE": "On the thousand-year road",
-          "WAITING": "Waiting to return to the meadow",
-          "COMPLETED": "Back at the meadow"
-        },
         "BLISS": {
           "ACTIVE": "On the Isles of the Blessed",
           "WAITING": "Term ended, waiting to return",
@@ -6992,7 +7326,39 @@
           "WAITING": "Waiting to cross",
           "COMPLETED": "Crossed"
         }
+      },
+      "gr_republic": {
+        "BLISS": {
+          "ACTIVE": "A thousand years in the heavens",
+          "WAITING": "Term ended, waiting to return",
+          "COMPLETED": "Back at the meadow"
+        },
+        "HELL": {
+          "ACTIVE": "A thousand years beneath the earth",
+          "WAITING": "Term ended, waiting to leave",
+          "COMPLETED": "Back at the meadow"
+        }
       }
+    },
+    "node_states_by_realm": {
+      "EG_HALL_TWO_TRUTHS": {
+        "ACTIVE": "Waiting for the weighing",
+        "COMPLETED": "Weighed"
+      },
+      "EU_ACHERON": {
+        "ACTIVE": "Waiting on the bank",
+        "COMPLETED": "Crossed"
+      },
+      "EU_PLATO_MEADOW": {
+        "ACTIVE": "Awaiting judgment in the meadow",
+        "COMPLETED": "Left the meadow"
+      }
+    },
+    "panel_title_by_civ": {
+      "cn": "Sentence plan"
+    },
+    "none_by_civ": {
+      "cn": "No sentence plan yet"
     }
   },
   "seal": {
@@ -7053,8 +7419,8 @@
     "limited_body": "Too many questions this hour. You can ask again after {{time}}.",
     "limited_later": "Too many questions this hour. You can ask again later.",
     "not_configured_title": "Ask is not open at this hall yet",
-    "not_configured_body": "An administrator opens it in the system settings. If you have a question, ask your hall's realm lead or the administrator.",
-    "cannot_answer": "For questions like this, ask your hall's realm lead or the administrator.",
+    "not_configured_body": "An administrator turns it on in the system settings. If you have a question, ask the administrator.",
+    "cannot_answer": "For questions like this, ask the administrator.",
     "footnote": "AI-generated · what the page officially shows prevails",
     "retention": "Conversations are deleted automatically after 30 days.",
     "history_end": "Older conversations have been deleted on schedule.",
@@ -7475,7 +7841,7 @@
     },
     "realm": {
       "cn": "Fengdu",
-      "eu": "The Beyond",
+      "eu": "Hell · Purgatory · Heaven",
       "eg": "Duat",
       "gr": "Hades"
     }
@@ -8582,7 +8948,7 @@
     "role_judge_desc": "An officer's day: claim cases, conclude them, issue dispositions, approve.",
     "role_admin": "Administrator",
     "role_admin_desc": "Sees all four civilizations: users, roles and permissions, configuration, audit.",
-    "role_moderator": "Realm Lead",
+    "role_moderator": "Circle moderator",
     "role_moderator_desc": "Soul circle review: reports, mutes, sensitive words.",
     "banner_short": "Demo · data stays in this browser",
     "landing": {
@@ -8750,8 +9116,8 @@
           "body": "As in the myth of Er, the soul spends a thousand years, above or below."
         },
         "6": {
-          "name": "Lethe",
-          "body": "It drinks from Lethe, forgets, and is born again."
+          "name": "The plain of Lethe",
+          "body": "On the plain of Lethe it drinks from the river Ameles, forgets, and is born again."
         }
       },
       "target": {
@@ -9120,7 +9486,8 @@
         "balanced": "Merit and demerit even: sent to the Tenth Court for dispatch, to be born again into the world of the living.",
         "fail": "The offence, {{offence}}, falls to Court {{n}}: sent under escort to Court {{n}}.",
         "five_heinous": "One of the five heinous crimes: bypassing every court, sent under escort to the Ninth Court, Avici Hell.",
-        "merit": "More merit than demerit: sent to the Tenth Court for dispatch, to be reborn into {{path}}."
+        "merit": "More merit than demerit: sent to the Tenth Court for dispatch, to be reborn into {{path}}.",
+        "demerit_pardoned": "More demerit than merit, yet pardonable: sent to the Tenth Court for dispatch, to be reborn into {{path}}."
       }
     },
     "eg": {

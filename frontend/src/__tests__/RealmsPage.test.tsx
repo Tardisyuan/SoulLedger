@@ -296,7 +296,9 @@ it("地狱前庭的类型写「中立」,排在中立一组;数据仍是 HELL,�
   const tree = await screen.findByTestId("realm-tree");
   // 第三格是类型(名字 · 代码 · 类型 · 在押)。名字「地狱前庭」本身带「地狱」二字,所以只看这一格。
   const typeCell = (code: string) => tree.querySelector(`[data-realm-row="${code}"]`)!.querySelectorAll("td")[2];
-  expect(typeCell("EU_ANTINFERNO")).toHaveTextContent("前庭"); // 欧洲的中立类叫「前庭」(Design 第八批)
+  // 欧洲的中立类第九批起叫「途经之地」(此前「前庭」)。前庭仍按 SHOWN_AS_NEUTRAL 显示成中立类 ——
+  // 第十二批冲突 5 建议去掉这个例外(按种子读「地狱」),等用户定。
+  expect(typeCell("EU_ANTINFERNO")).toHaveTextContent("途经之地");
   expect(typeCell("EU_ANTINFERNO")).not.toHaveTextContent("地狱");
   expect(typeCell("EU_HELL_1ST")).toHaveTextContent("地狱");
   const order = Array.from(tree.querySelectorAll("[data-realm-row]")).map((r) => r.getAttribute("data-realm-row"));
