@@ -173,6 +173,8 @@
   --transition-duration-dismiss: 140ms; /* @kind other */
   --transition-duration-reveal: 200ms; /* @kind other */
   --transition-duration-reduced: 80ms; /* @kind other */
+  /* v4 概览进页(第七批 `.roll` / `.ring`):数字滚动与进度环,900ms。只属于这一件事,所以按它起名(同上面三个)。 */
+  --transition-duration-count: 900ms; /* @kind other */
 
   /* THE TABLE ROWS, and the one of the three that is not decoration.
    *
@@ -302,6 +304,12 @@
   --text-display-lg: 56px;
   --text-display-lg--line-height: 62px;
   --text-display-lg--font-weight: 600;
+  /* 规范 v4:概览主卡的「今日待审」(第七批 S04,四个文明八帧都是 88/92)与年报的总数 —— 一页只有这一个数、
+     卡片里没有别的字与它争的那种「主角数字」。不是放大的 display-lg:那一档是「当前这一判」,和别的字并排。
+     只给这两个文件(eslint.config.mjs 的 DISPLAY_XL_ALLOW);落地页封面仍是用户 2026-10-03 定的 display-lg。 */
+  --text-display-xl: 88px;
+  --text-display-xl--line-height: 92px;
+  --text-display-xl--font-weight: 600;
 
   /* 间距 · 规范 v2 A2:2 / 4 / 8 / 12 / 16 / 24 / 32 / 48,即 Tailwind 的
      0.5 / 1 / 2 / 3 / 4 / 6 / 8 / 12(4px 基数,`--spacing` 保持 Tailwind 默认 0.25rem)。
@@ -1138,6 +1146,37 @@ html.theme-switching *::after {
   50% {
     transform: scale(1.035);
     opacity: 0.72;
+  }
+}
+
+/* 概览进页(v4 第七批 S04 `.roll` / `.ring`):主卡的大数字从 0 滚到实际值,「本月已结」环从 0 扫到实际百分比,
+   900ms、进场曲线,随元素挂上(数据到了)播一次。数字只用 CSS:`--n` 注册成整数才能被插值,`counter()` 把它写出来。
+   这一层是 `aria-hidden` 的;真正的数在旁边的 sr-only 里 —— 读屏不念滚动,jsdom 与复制拿到的也是终值。
+   减少动态效果时,上面那条通用规则把时长压到 1ms:直接是终态,`animationend` 照样触发。 */
+@property --roll-n {
+  syntax: "<integer>";
+  initial-value: 0;
+  inherits: false;
+}
+.v4-roll {
+  animation: v4-roll var(--transition-duration-count) var(--ease-enter) both;
+  counter-reset: roll var(--roll-n);
+}
+.v4-roll::after {
+  content: counter(roll);
+}
+@keyframes v4-roll {
+  from {
+    --roll-n: 0;
+  }
+}
+/* 环从满偏移(= 周长,一点不画)扫到它自己的 stroke-dashoffset。周长由调用处给 `--ring-c`。 */
+.v4-ring-sweep {
+  animation: v4-ring-sweep var(--transition-duration-count) var(--ease-enter) both;
+}
+@keyframes v4-ring-sweep {
+  from {
+    stroke-dashoffset: var(--ring-c);
   }
 }
 

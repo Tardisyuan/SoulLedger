@@ -28,16 +28,19 @@ import type { SealCiv } from "@/src/components/plaque/Seal";
  * 会审邀请(`/dispatch/cross-tenant-judgments/?side=participating&status=PROPOSED`)。
  *
  * 卡片是 `.v4-card`(深色 1px 线、浅色两层淡阴影),圆角 6(面板);主卡四角是金属色角饰(`.v4-corner`)。
- * 定稿主卡右上的文明主视觉(轮)属阶段 5,这里不画;88px 的大数字没有这一档字号,用 display-lg(56)。
+ * 大数字是 88(`text-display-xl`,v4 加的一档,只给这里与年报);进页时它从 0 滚上来、「本月已结」环从 0 扫到实际值
+ * (`.v4-roll` / `.v4-ring-sweep`,globals.css,减少动态效果时直接是终态)。「其中 n 件已过期限」的 n 是金属色。
  */
 
 const CARD =
   "v4-card relative min-w-0 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]";
 const DAY_S = 86_400;
 
-/** 「本月已结」环:直径 64,线宽 5,金属色;没有数(本月既没结也没待审)时只画底环。 */
+const RING_C = 2 * Math.PI * 26;
+
+/** 「本月已结」环:直径 64,线宽 5,金属色;没有数(本月既没结也没待审)时只画底环。挂上时从 0 扫到 pct。 */
 function DoneRing({ pct }: { pct: number | null }) {
-  const c = 2 * Math.PI * 26;
+  const c = RING_C;
   return (
     <svg aria-hidden="true" width="64" height="64" viewBox="0 0 64 64" className="shrink-0">
       <circle cx="32" cy="32" r="26" fill="none" strokeWidth="5" className="stroke-[oklch(var(--color-line))]" />
@@ -53,7 +56,8 @@ function DoneRing({ pct }: { pct: number | null }) {
           strokeDasharray={c.toFixed(1)}
           strokeDashoffset={(c * (1 - pct / 100)).toFixed(1)}
           transform="rotate(-90 32 32)"
-          className="stroke-[oklch(var(--color-metal))]"
+          className="v4-ring-sweep stroke-[oklch(var(--color-metal))]"
+          style={{ "--ring-c": c.toFixed(1) } as React.CSSProperties}
         />
       )}
       {pct != null && (
@@ -62,6 +66,28 @@ function DoneRing({ pct }: { pct: number | null }) {
         </text>
       )}
     </svg>
+  );
+}
+
+/** 大数字:看得见的那层从 0 滚到 n(`.v4-roll`,只 CSS),读屏与复制拿到的是 sr-only 里的终值。 */
+function RollingCount({ n }: { n: number }) {
+  return (
+    <>
+      <span className="sr-only">{n}</span>
+      <span aria-hidden="true" data-roll={n} className="v4-roll" style={{ "--roll-n": n } as React.CSSProperties} />
+    </>
+  );
+}
+
+/** `overview.count_unit`「件 · 其中 {n} 件已过期限」:n 用金属色(定稿 `.metal`,600)。按占位符把句子切开,词序归语言包。 */
+function OverdueLine({ t, n }: { t: (k: string, p?: Record<string, string>) => string; n: number }) {
+  const [before, after = ""] = t("overview.count_unit", { n: "\u0000" }).split("\u0000");
+  return (
+    <div data-overview-overdue="" className="mt-1 text-md font-normal text-[oklch(var(--color-ink))]">
+      {before}
+      <span data-overdue-count="" className="font-semibold text-[oklch(var(--color-metal))]">{n}</span>
+      {after}
+    </div>
   );
 }
 
@@ -113,16 +139,14 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
       <div className="relative max-w-xs">
         <div className="text-sm text-[oklch(var(--color-ink-muted))]">{t("overview.greet", { name })}</div>
         <div className="mt-2 flex items-center gap-4">
-          <span data-overview-pending="" className="font-title text-display-lg tabular-nums text-[oklch(var(--color-main-ink))]">
-            {loading ? <Skeleton as="span" className="inline-block h-14 w-16" /> : stats ? stats.pending : <MissingValue kind="unrecorded" />}
+          <span data-overview-pending="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-main-ink))]">
+            {loading ? <Skeleton as="span" className="inline-block h-23 w-20" /> : stats ? <RollingCount n={stats.pending} /> : <MissingValue kind="unrecorded" />}
           </span>
           {!loading && stats && <DoneRing pct={stats.month_done_pct} />}
         </div>
         {stats && (
           <>
-            <div data-overview-overdue="" className="mt-1 text-md font-normal text-[oklch(var(--color-ink))]">
-              {t("overview.count_unit", { n: String(stats.overdue) })}
-            </div>
+            <OverdueLine t={t} n={stats.overdue} />
             {stats.month_done_pct != null && (
               <div className="text-sm text-[oklch(var(--color-ink-muted))]">
                 {t("overview.month_done_pct", { pct: String(stats.month_done_pct) })}
