@@ -48,13 +48,15 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [account, setAccount] = useState<AccountScreen | null>(null);
   // 滑卡审判(v4 S09),从审判的「我手上」打开,画在标签之上,同 `account`。
   const [swipe, setSwipe] = useState(false);
+  const [locked, setLocked] = useState(false);
+  // Bumped whenever a list should ask again: after a detail closes, after a push (tapped or arrived), back in the foreground.
+  const [version, setVersion] = useState(0);
+  // After `setVersion`: declared above it, the compiler read the setter as used before declaration and then could
+  // not keep `land` / `close` memoized either (react-hooks/preserve-manual-memoization, 2026-11-06).
   const closeSwipe = useCallback(() => {
     setSwipe(false);
     setVersion((v) => v + 1);
   }, []);
-  const [locked, setLocked] = useState(false);
-  // Bumped whenever a list should ask again: after a detail closes, after a push (tapped or arrived), back in the foreground.
-  const [version, setVersion] = useState(0);
   const [landed, setLanded] = useState<ItemRef | null>(null);
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
   const [unread, setUnread] = useState(false);
