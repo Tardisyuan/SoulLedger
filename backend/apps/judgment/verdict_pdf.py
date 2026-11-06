@@ -89,8 +89,10 @@ def render(payload: dict, locale: str) -> bytes:
             "url": f"{frontend}/verdict-print?key={key}",
             # `@page verdict` 定 A4 与边距;不设就是 Gotenberg 默认的 Letter。
             "preferCssPageSize": "true",
-            # 与浏览器打印同一个媒体类型(print.css 只在 print 下收掉页面其余部分);底色不印,同浏览器默认。
+            # 与浏览器打印同一个媒体类型(print.css 只在 print 下收掉页面其余部分)。
             "emulatedMediaType": "print",
+            # 纸张底色照印(用户 2026-11-07)。Chromium 默认不印背景;verdict-doc.css 打印时放回纸色并标 exact。
+            "printBackground": "true",
             "waitForExpression": READY_EXPRESSION,
             # 不等网络空闲:根布局里的实时连接等可能一直不「空闲」。等的是上面那个标记,它在字体到齐之后才打上。
             "skipNetworkIdleEvent": "true",

@@ -71,6 +71,8 @@ def test_a_reader_of_the_case_downloads_a_pdf_named_after_the_case(api_client, j
     assert call["url"] == "http://gotenberg:3000/forms/chromium/convert/url"
     assert call["fields"]["url"].startswith("http://frontend:3000/verdict-print?key=")
     assert call["fields"]["preferCssPageSize"] == "true"
+    # 纸张底色要印(用户 2026-11-07):不发这一项,Chromium 出的 PDF 是白纸。
+    assert call["fields"]["printBackground"] == "true"
     assert call["fields"]["waitForExpression"] == verdict_pdf.READY_EXPRESSION
     assert '"value": "en"' in call["fields"]["cookies"] and '"domain": "frontend"' in call["fields"]["cookies"]
     # 打印页拿到的是详情那份数据(同一个序列化器),外加生卒。
