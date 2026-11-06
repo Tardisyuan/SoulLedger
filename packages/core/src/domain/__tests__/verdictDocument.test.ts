@@ -49,16 +49,16 @@ describe("地府(定稿第五、六批)", () => {
     expect(doc.vertical).toBe(true);
     expect(doc.title).toBe("第一殿判词");
     expect(doc.body).toBe("查 李青竹，一九三一年生，二〇二六年卒。功 三十，过 三十。");
-    expect(doc.verdict).toBe("功过两平，送交第十殿发放，仍投人世。");
+    expect(doc.ruling).toBe("功过两平，送交第十殿发放，仍投人世。");
     expect(doc.date).toBe("二〇二六年十一月六日 · 未时");
     expect(doc.signs).toEqual(["第一殿 秦广王"]);
     expect(doc.seal).toBe("第一殿之印");
   });
 
   it("功多于过写道别;不过按罪目换殿号;五逆直送第九殿", () => {
-    expect(verdictDocument({ ...base, merit: 42, demerit: 18, rebirthForm: "HUMAN" }, tz)!.verdict).toBe("功多于过，送交第十殿发放，投生人道。");
-    expect(verdictDocument({ ...base, verdict: "FAILED", offence: "TRADE_FRAUD" }, tz)!.verdict).toBe("所犯交易欺诈，属第四殿所掌，解送第四殿。");
-    expect(verdictDocument({ ...base, verdict: "FAILED", offence: "FIVE_HEINOUS" }, tz)!.verdict).toBe("犯五逆，不经各殿，解送第九殿阿鼻大地狱。");
+    expect(verdictDocument({ ...base, merit: 42, demerit: 18, rebirthForm: "HUMAN" }, tz)!.ruling).toBe("功多于过，送交第十殿发放，投生人道。");
+    expect(verdictDocument({ ...base, verdict: "FAILED", offence: "TRADE_FRAUD" }, tz)!.ruling).toBe("所犯交易欺诈，属第四殿所掌，解送第四殿。");
+    expect(verdictDocument({ ...base, verdict: "FAILED", offence: "FIVE_HEINOUS" }, tz)!.ruling).toBe("犯五逆，不经各殿，解送第九殿阿鼻大地狱。");
   });
 
   it("英文界面横排、阿拉伯数字", () => {
@@ -73,16 +73,16 @@ describe("欧洲", () => {
   const eu = { ...base, civilization: "EUROPEAN", soulName: "Giulia Ferri", han: true };
   it("地狱第 n 圈读处置界域;引用了七宗罪才写「哪一宗」", () => {
     const hell = verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_4TH", citedDeadlySins: ["greed"] }, tz)!;
-    expect(hell.verdict).toBe("有未悔的大罪，下地狱第 4 圈。");
+    expect(hell.ruling).toBe("有未悔的大罪，下地狱第 4 圈。");
     expect(hell.sins).toBe("贪婪");
     expect(hell.date).toBe("2026年11月6日 · 六时"); // 14:40 在六时(12–15 点),与顶栏同一张表
     expect(verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_4TH" }, tz)!.sins).toBeUndefined();
   });
 
   it("前庭、否认灵魂不灭落第 6 圈、炼狱第 n 台、天国不写罪", () => {
-    expect(verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_ANTINFERNO" }, tz)!.verdict).toBe("登记为中立者，留在地狱前庭。");
-    expect(verdictDocument({ ...eu, verdict: "FAILED", failReasons: ["DENIED_IMMORTALITY"] }, tz)!.verdict).toBe("有未悔的大罪，下地狱第 6 圈。");
-    expect(verdictDocument({ ...eu, verdict: "PURGATORY", realmCode: "EU_PURGATORY_T5_AVARICE" }, tz)!.verdict).toBe("无未悔的大罪，入炼狱第 5 台，由下而上涤罪。");
+    expect(verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_ANTINFERNO" }, tz)!.ruling).toBe("登记为中立者，留在地狱前庭。");
+    expect(verdictDocument({ ...eu, verdict: "FAILED", failReasons: ["DENIED_IMMORTALITY"] }, tz)!.ruling).toBe("有未悔的大罪，下地狱第 6 圈。");
+    expect(verdictDocument({ ...eu, verdict: "PURGATORY", realmCode: "EU_PURGATORY_T5_AVARICE" }, tz)!.ruling).toBe("无未悔的大罪，入炼狱第 5 台，由下而上涤罪。");
     expect(verdictDocument({ ...eu, citedDeadlySins: ["pride"] }, tz)!.sins).toBeUndefined();
   });
 });
@@ -90,7 +90,7 @@ describe("欧洲", () => {
 describe("埃及", () => {
   it("跟天平;时辰是夜第几时", () => {
     const doc = verdictDocument({ ...base, civilization: "EGYPTIAN", soulName: "Nebamun", concludedAtLocal: "2026-11-06T23:40:00+02:00" }, tz)!;
-    expect(doc.verdict).toBe("其中未见恶。不得交与阿米特。荷鲁斯引其至奥西里斯座前，往芦苇原。");
+    expect(doc.ruling).toBe("其中未见恶。不得交与阿米特。荷鲁斯引其至奥西里斯座前，往芦苇原。");
     expect(doc.date).toBe("2026年11月6日 · 夜 · 第 6 时");
   });
 });
@@ -101,7 +101,7 @@ describe("希腊:按所选文书", () => {
     const doc = verdictDocument({ ...gr, verdict: "FAILED", greekAccount: "GORGIAS", greekCurability: "INCURABLE" }, tz)!;
     expect(doc.account).toBe("gr");
     expect(doc.name).toBe("Elpenor");
-    expect(doc.verdict).toBe("加上标记：不可医。送往塔尔塔罗斯。");
+    expect(doc.ruling).toBe("加上标记：不可医。送往塔尔塔罗斯。");
     expect(doc.signs).toEqual(["艾亚哥斯", "米诺斯 终裁"]);
     expect(doc.date).toBe("2026年11月6日 · 昼");
   });
@@ -111,8 +111,8 @@ describe("希腊:按所选文书", () => {
     expect(unjust.account).toBe("gr_er");
     expect(unjust.title).toBe("四口之间 · 判决");
     expect(unjust.signs).toEqual(["四口之间的审判者"]);
-    expect(unjust.verdict).toContain("判决佩在身后");
-    expect(verdictDocument({ ...gr, verdict: "FAILED", greekAccount: "REPUBLIC", greekCurability: "INCURABLE" }, tz)!.verdict).toBe("出口不纳，抛入塔尔塔罗斯。");
+    expect(unjust.ruling).toContain("判决佩在身后");
+    expect(verdictDocument({ ...gr, verdict: "FAILED", greekAccount: "REPUBLIC", greekCurability: "INCURABLE" }, tz)!.ruling).toBe("出口不纳，抛入塔尔塔罗斯。");
   });
 });
 
