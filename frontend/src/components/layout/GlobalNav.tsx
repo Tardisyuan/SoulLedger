@@ -435,7 +435,7 @@ function SearchHint({ collapsed }: { collapsed: boolean }) {
       <Search aria-hidden="true" size={16} strokeWidth={1.5} className="shrink-0" />
       {collapsed ? null : (
         <>
-          <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+          <span className="min-w-0 flex-1 truncate text-left" title={label}>{label}</span>
           <kbd className="shrink-0 rounded-control px-1 font-mono text-2xs text-[oklch(var(--color-ink-muted))] shadow-[inset_0_0_0_1px_oklch(var(--color-line-strong))]">
             {isMac() ? "⌘K" : "Ctrl K"}
           </kbd>
