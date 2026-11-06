@@ -9,6 +9,7 @@
  */
 import type { ConcludeJudgmentPayload, GreekAccount, GreekCurability, JudgmentDetail } from "@soulledger/core/api/judgment";
 import type { Locale } from "@soulledger/core/config/locale";
+import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { offenceCourt } from "@soulledger/core/domain/diyuCase";
 
 type T = (key: string, vars?: Record<string, string>) => string;
@@ -113,8 +114,21 @@ export function waitedDays(j: { claimable_since?: string | null; created_at: str
   return Number.isNaN(since) ? 0 : Math.max(0, Math.floor((now - since) / (DAY * 1000)));
 }
 
-/** 期限一格(`queue.deadline.*`):不计 / n 日 / 超 n 日。待定中停表,仍照剩下的写。 */
-export function deadlineText(t: T, j: { deadline_remaining_seconds?: number | null }): string {
+/** 还在候审:还到不了可认领的那天(枉死城候至阳寿、埃及入殿前、城隍未解送 …),期限还没开始。 */
+export function heldBeforeClaim(j: { conclude_refusal?: string | null; held_until?: string | null; duat_stage?: string | null }): boolean {
+  return !!j.conclude_refusal || isHeldUntilFatedDate(j) || isDuatBarred(j);
+}
+
+/**
+ * 期限一格(`queue.deadline.*`):不计 / n 日 / 超 n 日。待定中停表,仍照剩下的写。
+ * 候审中的写「候审中 · 不计期限」:服务端从可认领那天起算(`claimable_since` = `held_until`),
+ * 候至 2056 年的案子按剩下的写就是「10956 日」(安卓真机 2026-11-06)。
+ */
+export function deadlineText(
+  t: T,
+  j: { deadline_remaining_seconds?: number | null; conclude_refusal?: string | null; held_until?: string | null; duat_stage?: string | null }
+): string {
+  if (heldBeforeClaim(j)) return t("queue.deadline.held");
   const s = j.deadline_remaining_seconds;
   if (s == null) return t("queue.deadline.none");
   if (s < 0) return t("queue.deadline.over", { n: String(Math.ceil(-s / DAY)) });
