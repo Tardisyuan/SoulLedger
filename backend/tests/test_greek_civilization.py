@@ -4,7 +4,7 @@ Why this file exists
 --------------------
 The Greek cosmology was filed under ``EUROPEAN`` because ``Civilization`` had
 three members and that was the only slot. Nothing in the data looked wrong —
-Hades, Aeacus and Rhadamanthus stood in ``EU_PLATO_MEADOW``, which is Plato's
+Hades, Aeacus and Rhadamanthus stood in ``GR_PLATO_MEADOW``, which is Plato's
 fork in the road and exactly where Gorgias 524a puts them — and that is the
 whole difficulty: the defect lived in one column, on rows that were otherwise
 correct, and every check in the repository was green over it.
@@ -51,7 +51,10 @@ from apps.tenants.models import Tenant
 GREEK_TENANT_CODE = "GR_HADES"
 EUROPEAN_TENANT_CODE = "EU_HEAVEN_HELL"
 
-MEADOW = "EU_PLATO_MEADOW"
+MEADOW = "GR_PLATO_MEADOW"
+#: The meadow's code before realms/0032 (2026-11-07). The realms/0018 round trip
+#: below runs in that older world, so it seeds and checks this one.
+LEGACY_MEADOW = "EU_PLATO_MEADOW"
 ISLES = "GR_ISLES_OF_THE_BLESSED"
 TARTARUS = "GR_TARTARUS"
 #: The crossing, added when the basis became Gorgias plus Aeneid 6. Not a move:
@@ -228,10 +231,9 @@ def test_every_greek_actor_stands_on_a_greek_realm(seeded):
         if realm.civilization != "GREEK"
     }
     assert not misplaced, (
-        f"GREEK actors standing in realms of another cosmology: {misplaced}. A "
-        f"realm_code's prefix records where the row was written, not what it "
-        f"belongs to (EU_PLATO_MEADOW is GREEK), so the check is the realm's "
-        f"own civilization and never the spelling of its code."
+        f"GREEK actors standing in realms of another cosmology: {misplaced}. The "
+        f"check is the realm's own civilization and never the spelling of its "
+        f"code."
     )
 
 
@@ -239,11 +241,9 @@ def test_every_greek_actor_stands_on_a_greek_realm(seeded):
 def test_the_greek_realms_are_greek_and_the_crossing_is_not(seeded):
     """Three Greek places, and the one that stayed behind with Charon.
 
-    EU_PLATO_MEADOW keeps its `EU_` code under GREEK, which is deliberate: a
-    `realm_code` is a join key (`Reincarnation.target_realm` stores it as text,
-    `consolidate_eu_pantheon` audits against it, the frontend has hard-coded one
-    before) and renaming one cost realms/0012 and realms/0015 a dedicated
-    migration each. The prefix records where the row was written.
+    The meadow was `EU_PLATO_MEADOW` until realms/0032 renamed it (user decision
+    2026-11-07); a `realm_code` is a join key, so that migration rewrote every
+    stored copy.
 
     The two destinations are here because Gorgias 524a names them in the same
     sentence as the fork. Asphodel and the five rivers are not, and the last
@@ -370,7 +370,7 @@ def test_realms_0018_round_trip(migration_round_trip):
         )
         realms = {}
         for code, realm_type, tier in (
-            (MEADOW, "NEUTRAL", 0),
+            (LEGACY_MEADOW, "NEUTRAL", 0),
             ("EU_ACHERON", "NEUTRAL", 0),
             ("EU_HELL_2ND", "HELL", 2),
         ):
@@ -388,10 +388,10 @@ def test_realms_0018_round_trip(migration_round_trip):
                 tenant=owner,
             )
         for name, role, code, owned in (
-            ("Hades", "OVERSEER", MEADOW, True),
-            ("Aeacus", "JUDGE", MEADOW, True),
+            ("Hades", "OVERSEER", LEGACY_MEADOW, True),
+            ("Aeacus", "JUDGE", LEGACY_MEADOW, True),
             # The untenanted legacy row.
-            ("Rhadamanthus", "JUDGE", MEADOW, False),
+            ("Rhadamanthus", "JUDGE", LEGACY_MEADOW, False),
             # Dante's, and it stays put.
             ("Minos", "JUDGE", "EU_HELL_2ND", True),
             ("Charon", "CONDUIT", "EU_ACHERON", True),
@@ -454,7 +454,7 @@ def test_realms_0018_round_trip(migration_round_trip):
             realm._base_manager.get(realm_code="EU_ACHERON").civilization == "EUROPEAN"
         ), "forward moved the crossing, which stays with Charon"
         assert (
-            realm._base_manager.get(realm_code=MEADOW).tenant.code == GREEK_TENANT_CODE
+            realm._base_manager.get(realm_code=LEGACY_MEADOW).tenant.code == GREEK_TENANT_CODE
         ), "forward moved the meadow's civilization but not its owner"
 
     def check_reverse(state):

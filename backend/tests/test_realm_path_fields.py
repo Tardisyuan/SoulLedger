@@ -108,7 +108,7 @@ def test_egypt_has_one_judgment_hall_and_no_hour_or_gate(seeded):
 
 @pytest.mark.django_db
 def test_greek_roads_fork_left_and_right_off_the_meadow_and_nothing_takes_the_middle(seeded):
-    meadow = _realm("EU_PLATO_MEADOW")
+    meadow = _realm("GR_PLATO_MEADOW")
     assert (_realm("GR_TARTARUS").fork, _realm("GR_TARTARUS").parent_realm_id) == (RealmFork.LEFT, meadow.pk)
     isles = _realm("GR_ISLES_OF_THE_BLESSED")
     assert (isles.fork, isles.parent_realm_id) == (RealmFork.RIGHT, meadow.pk)
@@ -475,7 +475,7 @@ def test_an_unrouted_verdict_closes_the_court_and_invents_no_destination(cn):
 @pytest.mark.django_db
 def test_a_greek_retry_on_the_meadow_is_not_a_second_visit(seeded):
     gr = plan.tenant("GR_HADES")
-    meadow = _realm("EU_PLATO_MEADOW")
+    meadow = _realm("GR_PLATO_MEADOW")
     soul, case = plan.open_case(gr, name="再审")
     SoulPathService.enter(soul, meadow, tenant_id=gr.pk)
     case.conclude(Verdict.RETRY, "")

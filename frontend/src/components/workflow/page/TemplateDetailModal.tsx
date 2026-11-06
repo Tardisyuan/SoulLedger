@@ -60,7 +60,7 @@ export function TemplateDetailModal({
                   built locally with a `nodes_json` key. Read both. */}
               {((template.nodes_json || template.nodes || []) as FlowNode[]).map((node: FlowNode, idx: number) => (
                 <div key={idx} className="bg-[oklch(var(--color-surface-3))] p-2 text-sm">
-                  <div className="font-medium text-[oklch(var(--color-ink))]">{localNodeName(node, locale)}</div>
+                  <div className="font-medium text-[oklch(var(--color-ink))]">{localNodeName(node, locale, t)}</div>
                   <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
                     {node.court_code && (
                   <span className="inline-flex items-center gap-1">

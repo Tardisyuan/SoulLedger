@@ -23,7 +23,7 @@ class Civilization(models.TextChoices):
     # GREEK IS A FOURTH COSMOLOGY, NOT A REGION OF THE EUROPEAN ONE.
     #
     # It used to be filed under EUROPEAN, and that was never a claim anybody
-    # checked: Hades, Aeacus and Rhadamanthus stood in EU_PLATO_MEADOW — Plato's
+    # checked: Hades, Aeacus and Rhadamanthus stood in GR_PLATO_MEADOW — Plato's
     # fork in the road, Gorgias 524a — while carrying the civilization of a
     # tenant whose other rows are the Nicene Creed's judgment and Dante's nine
     # circles. The two systems answer different questions with different

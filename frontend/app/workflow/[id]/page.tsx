@@ -498,7 +498,7 @@ export default function WorkflowDetailPage() {
                         {notReached ? "–" : isPast ? VERDICT_GLYPH[node.verdict ?? ""] ?? STATUS_GLYPH[node.status] ?? "?" : isCurrent ? "◐" : "·"}
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-sm break-words">{localNodeName(node, locale)}</span>
+                        <span className="block text-sm break-words">{localNodeName(node, locale, t)}</span>
                         <span className="block text-xs font-normal text-[oklch(var(--color-ink-muted))]">
                           <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={courtLabel(t, node.court_code, locale)} />
                           {" · "}
@@ -551,7 +551,7 @@ export default function WorkflowDetailPage() {
                 <div className="min-w-0">
                   <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
                     <span aria-hidden="true">{KIND_GLYPH[currentNode.kind ?? "APPROVAL"]} </span>
-                    {localNodeName(currentNode, locale)}
+                    {localNodeName(currentNode, locale, t)}
                   </h2>
                   <p className="text-xs text-[oklch(var(--color-ink-muted))]">
                     <DomainText value={courtLabel(t, currentNode.court_code, locale)} /> · <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} />
@@ -868,7 +868,7 @@ export default function WorkflowDetailPage() {
                 <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{formatDateTime(lastDecided.decided_at!)}</span>
                 <span className="text-sm text-[oklch(var(--color-ink))]">
                   {/* 跳过、越级的站没有判决:写节点的状态(已跳过 / 已升级 / 已经过)。 */}
-                  {localNodeName(lastDecided, locale)} · <span aria-hidden="true">{VERDICT_GLYPH[lastDecided.verdict ?? ""] ?? STATUS_GLYPH[lastDecided.status] ?? "?"} </span>
+                  {localNodeName(lastDecided, locale, t)} · <span aria-hidden="true">{VERDICT_GLYPH[lastDecided.verdict ?? ""] ?? STATUS_GLYPH[lastDecided.status] ?? "?"} </span>
                   {lastDecided.verdict
                     ? <DomainEnum namespace="workflow.verdicts" value={lastDecided.verdict} />
                     : <DomainEnum namespace="workflow.status" value={lastDecided.status} />}

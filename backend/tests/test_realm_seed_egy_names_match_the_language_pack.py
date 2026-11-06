@@ -46,12 +46,18 @@ def test_the_section_ten_rename_moves_only_rows_still_holding_the_old_name():
     mig = import_module("apps.realms.migrations.0023_egy_names_section_ten")
     call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
     names = json.loads(PACK.read_text(encoding="utf-8"))["realms"]["names"]
-    new = {code: pair[1] for code, pair in mig.RENAMES.items()}
-    old = {code: pair[0] for code, pair in mig.RENAMES.items()}
-    assert new == {code: names[code] for code in mig.RENAMES}
+    # realms/0032 renamed EU_PLATO_MEADOW to GR_PLATO_MEADOW; 0023 still names the old code, which no seeded
+    # row carries any more, so it is checked against the pack under its new code and left out of the snapshot.
+    renamed = {"EU_PLATO_MEADOW": "GR_PLATO_MEADOW"}
+    assert {code: pair[1] for code, pair in mig.RENAMES.items()} == {
+        code: names[renamed.get(code, code)] for code in mig.RENAMES
+    }
+    live = [code for code in mig.RENAMES if code not in renamed]
+    new = {code: mig.RENAMES[code][1] for code in live}
+    old = {code: mig.RENAMES[code][0] for code in live}
 
     def snap():
-        return dict(Realm.all_objects.filter(realm_code__in=mig.RENAMES).values_list("realm_code", "name_egy"))
+        return dict(Realm.all_objects.filter(realm_code__in=live).values_list("realm_code", "name_egy"))
 
     assert snap() == new
     mig.backwards(registry, SCHEMA_EDITOR)

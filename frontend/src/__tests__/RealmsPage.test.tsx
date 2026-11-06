@@ -281,28 +281,29 @@ it("is read-only without realms.manage and says why", async () => {
   expect(screen.queryByRole("spinbutton")).toBeNull();
 });
 
-it("地狱前庭的类型写「中立」,排在中立一组;数据仍是 HELL,第一圈照写地狱(第五十七批 §9)", async () => {
+it("地狱前庭按种子读「地狱」,排在地狱一组;界域页不再有中立的例外(第十二批冲突 5,用户 2026-11-07)", async () => {
   mockedList.mockResolvedValue({
     data: {
       results: [
         R("EU_HELL_1ST", "EUROPEAN", { realm_type: "HELL", tier: 1 }),
         R("EU_ANTINFERNO", "EUROPEAN", { realm_type: "HELL", tier: 0, is_eternal: true }),
+        R("EU_ACHERON", "EUROPEAN", { realm_type: "NEUTRAL", tier: 0 }),
         R("EU_HEAVEN", "EUROPEAN", { realm_type: "BLISS" }),
       ],
-      count: 3,
+      count: 4,
     },
   });
   renderPage();
   const tree = await screen.findByTestId("realm-tree");
-  // 第三格是类型(名字 · 代码 · 类型 · 在押)。名字「地狱前庭」本身带「地狱」二字,所以只看这一格。
+  // 第三格是类型(名字 · 代码 · 类型 · 在押)。
   const typeCell = (code: string) => tree.querySelector(`[data-realm-row="${code}"]`)!.querySelectorAll("td")[2];
-  // 欧洲的中立类第九批起叫「途经之地」(此前「前庭」)。前庭仍按 SHOWN_AS_NEUTRAL 显示成中立类 ——
-  // 第十二批冲突 5 建议去掉这个例外(按种子读「地狱」),等用户定。
-  expect(typeCell("EU_ANTINFERNO")).toHaveTextContent("途经之地");
-  expect(typeCell("EU_ANTINFERNO")).not.toHaveTextContent("地狱");
+  expect(typeCell("EU_ANTINFERNO")).toHaveTextContent("地狱");
+  expect(typeCell("EU_ANTINFERNO")).not.toHaveTextContent("渡口");
   expect(typeCell("EU_HELL_1ST")).toHaveTextContent("地狱");
+  // 欧洲的中立类只剩阿刻戎渡口,叫法照希腊改作「渡口」(2026-11-07)。
+  expect(typeCell("EU_ACHERON")).toHaveTextContent("渡口");
   const order = Array.from(tree.querySelectorAll("[data-realm-row]")).map((r) => r.getAttribute("data-realm-row"));
-  expect(order).toEqual(["EU_HEAVEN", "EU_ANTINFERNO", "EU_HELL_1ST"]);
+  expect(order).toEqual(["EU_HEAVEN", "EU_ACHERON", "EU_HELL_1ST", "EU_ANTINFERNO"]);
 });
 
 describe("with realms.manage", () => {

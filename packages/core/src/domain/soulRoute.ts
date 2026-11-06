@@ -151,7 +151,7 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
   }
 
   if (civ === "gr") {
-    const base = [step("DEATH", tr("souls.detail.death")), step("GR_ACHERON", realm("GR_ACHERON")), step("EU_PLATO_MEADOW", realm("EU_PLATO_MEADOW"))];
+    const base = [step("DEATH", tr("souls.detail.death")), step("GR_ACHERON", realm("GR_ACHERON")), step("GR_PLATO_MEADOW", realm("GR_PLATO_MEADOW"))];
     const cycle = step("CYCLE", tr("map.greece.thousand_year_cycle"));
     const lethe = step("LETHE", tr("souls.detail.memory_mechanisms.LETHE"));
     const r = realmOf(plan);

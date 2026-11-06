@@ -2171,7 +2171,7 @@
       "key_help": "显示 / 隐藏键盘映射",
       "key_notes": "聚焦备注",
       "claimed_title": "该案已由「{{name}}」认领",
-      "claimed_body": "只有认领人、殿主或管理员能结案。你的裁决没有提交；本次会话已把这件延后。",
+      "claimed_body": "只有认领人或管理员可以结案。这次的判决没有提交；本次开庭已把这件案子放到一边。",
       "claimed_next": "打开下一件",
       "claimed_back": "回到队列",
       "session_deferred": "本次延后 {{n}} 件",
@@ -3050,7 +3050,7 @@
         "HELL": "地狱",
         "PURGATORY": "炼狱山",
         "BLISS": "天国",
-        "NEUTRAL": "途经之地"
+        "NEUTRAL": "渡口"
       },
       "eg": {
         "PURGATORY": "杜阿特",
@@ -3097,7 +3097,7 @@
       "EU_HELL_8TH": "地狱第八圈",
       "EU_HELL_9TH": "地狱第九圈",
       "EU_ACHERON": "阿刻戎河渡口",
-      "EU_PLATO_MEADOW": "岔路口草地",
+      "GR_PLATO_MEADOW": "岔路口草地",
       "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
       "GR_TARTARUS": "塔尔塔罗斯",
@@ -3143,7 +3143,7 @@
       "EU_HELL_8TH": "第八圈 - 欺诈",
       "EU_HELL_9TH": "第九圈 - 背叛",
       "EU_ACHERON": "阿刻戎河渡口",
-      "EU_PLATO_MEADOW": "岔路口的草地",
+      "GR_PLATO_MEADOW": "岔路口的草地",
       "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
       "GR_TARTARUS": "塔尔塔罗斯",
@@ -7349,7 +7349,7 @@
         "ACTIVE": "岸边等候",
         "COMPLETED": "已渡河"
       },
-      "EU_PLATO_MEADOW": {
+      "GR_PLATO_MEADOW": {
         "ACTIVE": "草地上候判",
         "COMPLETED": "已出草地"
       }

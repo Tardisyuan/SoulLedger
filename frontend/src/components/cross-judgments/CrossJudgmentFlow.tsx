@@ -47,7 +47,7 @@ export function CrossJudgmentFlow({ judgment }: { judgment: CrossTenantJudgment 
                 ? t("crossJudgments.flow.at", {
                     order: circled(flow.at.segment),
                     realm: realmAt(flow.at.segment, flow.at.realm_name),
-                    node: localNodeName(flow.at, locale),
+                    node: localNodeName(flow.at, locale, t),
                     hall: flow.at.hall,
                   })
                 : flow.at_gate
