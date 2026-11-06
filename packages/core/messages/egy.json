@@ -5135,19 +5135,11 @@
         "court": "Wesekhet Maaty",
         "judging": "Em Wedja Ib",
         "past_read_only": "Ankh Tepyu Maa Wa. Duat Nen Dbh, Nen Nehet.",
-        "no_past_lives": "Nen Ankh Tepyu Em Duat. Ankh Wa Pen; Er Khet Nen Sesh.",
-        "no_rebirth_title": "Nen Wehem Mesut Em Duat",
-        "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Er Khet Dens Ib, Wat-Ek Pehwy; Nen Er Aat Pen."
-      },
-      "default": {
-        "no_rebirth_title": "Nen Wehem Mesut Em Taui-Ek",
-        "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Wat Dy Pehwy; Nen Er Per Pen."
+        "no_past_lives": "Nen Ankh Tepyu Em Duat. Ankh Wa Pen; Er Khet Nen Sesh."
       },
       "eu": {
         "past_read_only": "Ankh Tepyu Maa Wa. Pet Hena Duat Nen Dbh, Nen Nehet.",
-        "no_past_lives": "Nen Ankh Tepyu Em Pet Hena Duat. Ankh Wa Pen; Er Khet Nen Sesh.",
-        "no_rebirth_title": "Nen Wehem Mesut Em Pet Hena Duat",
-        "no_rebirth_body": "Nen Dbh Dy: Nen Emu, Nen Er Khet. Er Khet Wedja, Wat-Ek Pehwy; Nen Er Aat Pen."
+        "no_past_lives": "Nen Ankh Tepyu Em Pet Hena Duat. Ankh Wa Pen; Er Khet Nen Sesh."
       }
     },
     "logout": {

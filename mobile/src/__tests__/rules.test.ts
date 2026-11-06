@@ -100,9 +100,9 @@ describe("lexiconKey", () => {
     }
   });
 
-  it("the two civilizations without rebirth carry their own no-rebirth and no-past-lives sentences; the others do not", () => {
+  // Their own no-rebirth sentences went with the page (no 转生 tab for them in v4; user decision 2026-11-06).
+  it("the two civilizations without rebirth carry their own no-past-lives sentence; the others do not", () => {
     for (const civ of ["eg", "eu"] as const) {
-      expect(lexiconKey(civ, "no_rebirth_title")).toBe(`soul_app.lexicon.${civ}.no_rebirth_title`);
       expect(lexiconKey(civ, "no_past_lives")).toBe(`soul_app.lexicon.${civ}.no_past_lives`);
     }
     for (const civ of ["neutral", "cn", "gr"] as const) {
