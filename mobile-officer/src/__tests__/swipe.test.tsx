@@ -93,6 +93,16 @@ it("埃及:天平判了通过,左边圆钮不可点", async () => {
   expect(screen.getByTestId("swipe-fail").props.accessibilityState.disabled).toBe(true);
 });
 
+it("欧洲:七宗罪不上卡面(用户 2026-11-07,只在炼狱判决里列)", async () => {
+  serve({ ...CASE, civilization: "EUROPEAN", cited_deadly_sins: ["pride", "wrath"] });
+  renderOfficer(<SwipeScreen onBack={() => {}} />);
+  expect(await screen.findByText("李青竹")).toBeTruthy();
+  await waitFor(() => expect(mockGet).toHaveBeenCalledWith("j-1"));
+  await act(async () => {});
+  expect(screen.queryByText(/七宗罪/)).toBeNull();
+  expect(screen.queryByText(/傲慢|愤怒/)).toBeNull();
+});
+
 it("按住待定:松手后要写理由,空着不发", async () => {
   serve();
   renderOfficer(<SwipeScreen onBack={() => {}} />);
