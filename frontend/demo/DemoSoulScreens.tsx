@@ -71,17 +71,20 @@ function Life({ view, civ }: { view: SoulView; civ: SealCiv }) {
         <p id="demo-soul-here" className={EYEBROW}>{t("soul_app.life.here")}</p>
         {route ? <Route route={route} /> : <p className="m-0 mt-2 font-title text-lg">{t(`soul_app.soul_states.${me.current_state}`)}</p>}
       </section>
-      <section className="flex items-end gap-6 bg-[oklch(var(--color-ink))] px-5 py-5 text-[oklch(var(--color-canvas))]">
-        <div className="flex-1">
-          <p className="m-0 text-xs opacity-70">{t("soul_app.life.balance")}</p>
-          <p className="m-0 font-mono text-xl">{signed(me.merit_score - me.demerit_score)}</p>
-        </div>
-        {(["merit", "demerit"] as const).map((w) => (
-          <div key={w}>
-            <p className="m-0 text-xs opacity-70">{word(t, `soul_app.lexicon.${civ}.${w}`, `soul_app.life.${w}`)}</p>
-            <p className="m-0 font-mono text-md">{w === "merit" ? me.merit_score : me.demerit_score}</p>
+      {/* The balance on a v4 panel (surface-1, hairline, rounded-panel), the number font-title 28 in ink as the web soul page draws 功 / 过. */}
+      <section className={SECTION}>
+        <div className="flex items-end gap-6 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
+          <div className="flex-1">
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-subtle))]">{t("soul_app.life.balance")}</p>
+            <p className="m-0 mt-1 font-title text-xl font-semibold tabular-nums text-[oklch(var(--color-ink))]">{signed(me.merit_score - me.demerit_score)}</p>
           </div>
-        ))}
+          {(["merit", "demerit"] as const).map((w) => (
+            <div key={w}>
+              <p className="m-0 text-xs text-[oklch(var(--color-ink-subtle))]">{word(t, `soul_app.lexicon.${civ}.${w}`, `soul_app.life.${w}`)}</p>
+              <p className="m-0 font-mono text-md text-[oklch(var(--color-ink))]">{w === "merit" ? me.merit_score : me.demerit_score}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
