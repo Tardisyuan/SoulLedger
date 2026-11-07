@@ -19,6 +19,13 @@
  * 出错的东西。文案写死成中英双语,而不是调用一个此刻可能不存在的 hook ——
  * 一个在错误边界里自己抛错的错误边界,是最难诊断的那一种。
  */
+const GE_THEME = [
+  ".ge { --canvas: #111113; --line: #2C2D30; --line-strong: #7C7F85; --ink: #F3F3F1; --muted: #B4B6BA; color-scheme: dark; }",
+  "@media (prefers-color-scheme: light) {",
+  "  .ge { --canvas: #F8F8F6; --line: #EBEBEB; --line-strong: #8A8D92; --ink: #16171A; --muted: #54575C; color-scheme: light; }",
+  "}",
+].join("\n");
+
 export default function GlobalError({
   error,
   reset,
@@ -28,7 +35,13 @@ export default function GlobalError({
 }) {
   return (
     <html lang="zh-Hans">
+      <head>
+        {/* 规范 v4 的深 / 浅两套纸墨值,照抄 globals.css 的 :root 与 .light(那份文件此刻不保证加载,
+            所以只能写死;那边的值改了要同步这里)。主题跟系统偏好走 —— ThemeContext 此刻也不存在。 */}
+        <style>{GE_THEME}</style>
+      </head>
       <body
+        className="ge"
         style={{
           margin: 0,
           minHeight: "100vh",
@@ -37,18 +50,18 @@ export default function GlobalError({
           justifyContent: "center",
           fontFamily:
             "system-ui, -apple-system, 'Segoe UI', 'Noto Sans SC', sans-serif",
-          background: "#0b0d12",
-          color: "#e6e8ee",
+          background: "var(--canvas)",
+          color: "var(--ink)",
         }}
       >
         <div style={{ textAlign: "center", padding: "2rem", maxWidth: "36rem" }}>
-          <div style={{ fontSize: "3rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+          <div style={{ fontSize: "3rem", fontWeight: 600, marginBottom: "0.5rem" }}>
             500
           </div>
-          <h1 style={{ fontSize: "1.25rem", margin: "0 0 0.5rem" }}>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
             页面框架加载失败 · The page shell failed to load
           </h1>
-          <p style={{ opacity: 0.7, margin: "0 0 1.5rem", lineHeight: 1.6 }}>
+          <p style={{ color: "var(--muted)", margin: "0 0 1.5rem", lineHeight: 1.6 }}>
             这一层出错时,应用的语言设置和主题都还没有建立起来,所以这段文字没有
             翻译。
             <br />
@@ -58,7 +71,7 @@ export default function GlobalError({
           {/* `digest` 是 Next 给生产环境错误的稳定标识 —— 用户能把它念给你听,
               而堆栈不能。 */}
           {error.digest ? (
-            <p style={{ opacity: 0.5, fontFamily: "ui-monospace, monospace", fontSize: "0.8rem" }}>
+            <p style={{ color: "var(--muted)", fontFamily: "ui-monospace, monospace", fontSize: "0.8rem" }}>
               digest: {error.digest}
             </p>
           ) : null}
@@ -66,10 +79,12 @@ export default function GlobalError({
             onClick={reset}
             style={{
               padding: "0.5rem 1rem",
-              borderRadius: "0.5rem",
-              border: "1px solid #2a2f3a",
-              background: "#151922",
-              color: "#e6e8ee",
+              borderRadius: "4px",
+              border: "1px solid var(--line-strong)",
+              background: "transparent",
+              color: "var(--ink)",
+              font: "inherit",
+              fontWeight: 600,
               cursor: "pointer",
               marginRight: "0.75rem",
             }}
@@ -80,9 +95,9 @@ export default function GlobalError({
             href="/"
             style={{
               padding: "0.5rem 1rem",
-              borderRadius: "0.5rem",
-              border: "1px solid #2a2f3a",
-              color: "#e6e8ee",
+              borderRadius: "4px",
+              border: "1px solid var(--line)",
+              color: "var(--ink)",
               textDecoration: "none",
             }}
           >

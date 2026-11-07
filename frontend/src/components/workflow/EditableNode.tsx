@@ -90,7 +90,7 @@ function EditableNodeComponent({
       className={`relative w-[168px] min-h-[60px] px-3 py-2 border bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] cursor-pointer transition-[outline-color] duration-state ${
         issues > 0 ? "border-[oklch(var(--color-danger))]" : "border-[oklch(var(--color-line-strong))]"
       } ${selected ? "outline-2 outline-offset-2 outline-[oklch(var(--color-ink))]" : ""} ${
-        dragging ? "shadow-[0_2px_8px_oklch(0_0_0/0.08)]" : ""
+        dragging ? "shadow-raised" : ""
       }`}
     >
       <Handle type="target" position={Position.Top} className={PORT} />
