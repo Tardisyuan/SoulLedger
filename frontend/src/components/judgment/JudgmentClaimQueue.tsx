@@ -703,7 +703,7 @@ export function JudgmentClaimQueue({
             return (
               <tbody key={group} data-testid={`queue-group-${group}`}>
                 {/* 分组头 GroupHeader:组名 · 服务端计数 · 一句提示。 */}
-                <tr className="border-b border-[oklch(var(--color-line))]">
+                <tr data-group-head="" className="border-b border-[oklch(var(--color-line))]">
                   <th scope="rowgroup" colSpan={colSpan} className="px-2 pt-4 pb-1 text-left font-normal">
                     <span className="text-xs font-semibold text-[oklch(var(--color-ink))]">{t(`judgment.claim.groups.${group}`)}</span>
                     <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]" data-testid={`group-count-${group}`}>

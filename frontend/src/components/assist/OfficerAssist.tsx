@@ -70,7 +70,7 @@ export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
         aria-label={label}
         data-testid="officer-assist-panel"
         data-assist-mode="pushed"
-        className={`fixed ${top} bottom-0 right-0 z-masthead flex w-[420px] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]`}
+        className={`fixed ${top} bottom-0 right-0 z-masthead flex w-[420px] flex-col border-l border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] shadow-overlay`}
       >
         <PanelBody assist={assist} />
       </aside>
@@ -98,7 +98,7 @@ export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
           initialFocus={assist.inputRef}
           finalFocus={assist.entryRef}
           data-assist-mode="overlay"
-          className={`fixed ${top} bottom-0 right-0 z-dialog flex w-[min(420px,100vw)] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]`}
+          className={`fixed ${top} bottom-0 right-0 z-dialog flex w-[min(420px,100vw)] flex-col border-l border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] shadow-overlay`}
         >
           <PanelBody assist={assist} />
         </Dialog.Popup>

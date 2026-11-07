@@ -366,16 +366,16 @@ function UsersRoute() {
             {show("email") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.email}
             </td>}
-            {show("role") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
+            {show("role") && <td className={cn("whitespace-nowrap px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 规范 v1 §2「徽章 · 只有常态」:无底色,字与 1 px 边同色。角色是身份,
                   不是系统状态,所以不借反馈色 —— 一律中性,名字本身区分。 */}
               <UserRoleChips role={user.role} extraRoles={user.extra_roles} customLabelOf={customRoleLabel} />
             </td>}
-            {show("tenant") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+            {show("tenant") && <td className={cn("whitespace-nowrap px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {tenantLabel(t, user.tenant, locale) || "-"}
             </td>}
             {/* 机构与职务只由管理员在编辑弹层里设(`PATCH /users/{id}/`);此前列表上没有,机构页的「查看人员」因此总是空的也没人看得出。 */}
-            {show("organization") && <td data-testid="user-organization" className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+            {show("organization") && <td data-testid="user-organization" className={cn("whitespace-nowrap px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {[localName(user.organization, locale), user.position].filter(Boolean).join(" · ") || "-"}
             </td>}
             {show("status") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>

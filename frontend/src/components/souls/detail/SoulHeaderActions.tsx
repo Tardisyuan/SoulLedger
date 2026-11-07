@@ -159,7 +159,7 @@ export function SoulHeaderActions({
               <div
                 ref={menuRef}
                 role="menu"
-                className="absolute right-0 mt-1 w-48 z-20 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] py-1"
+                className="absolute right-0 mt-1 w-48 z-20 rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] py-1"
               >
                 {onRecalculate ? (
                   <button

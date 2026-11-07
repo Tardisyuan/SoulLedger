@@ -137,7 +137,7 @@ export function WorkflowPalette({
                 <p
                   id={hintId}
                   role="tooltip"
-                  className="hidden peer-hover:block peer-focus-visible:block mt-1 px-2 py-1 text-xs text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))]"
+                  className="hidden peer-hover:block peer-focus-visible:block mt-1 rounded-panel px-2 py-1 text-xs text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))]"
                 >
                   {t("workflow.editor.palette_hint.AUTO_ROUTE")}
                 </p>

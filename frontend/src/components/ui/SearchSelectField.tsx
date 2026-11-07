@@ -229,7 +229,7 @@ export function SearchSelectField({
 
           <Combobox.Portal>
             <Combobox.Positioner sideOffset={2} className="z-dialog w-[var(--anchor-width)]">
-              <Combobox.Popup aria-busy={loading || searching || undefined} className="max-h-64 overflow-y-auto bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] py-1 transition duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
+              <Combobox.Popup aria-busy={loading || searching || undefined} className="max-h-64 overflow-y-auto rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] py-1 transition duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
                 {loading ? (
                   <p className="px-3 py-2 text-xs text-[oklch(var(--color-ink-subtle))]" role="status">
                     {loadingText}

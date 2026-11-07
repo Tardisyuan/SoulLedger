@@ -175,7 +175,7 @@ export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, rese
             role="menu"
             aria-label={buttonLabel}
             style={{ position: 'fixed', top: pos.top, right: pos.right }}
-            className="z-sidebar min-w-[220px] border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] py-1"
+            className="z-sidebar min-w-[220px] rounded-panel shadow-overlay border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] py-1"
           >
             {hintLabel ? (
               <p className="px-4 pb-2 pt-1 text-xs text-[oklch(var(--color-ink-muted))]">{hintLabel}</p>

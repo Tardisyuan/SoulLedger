@@ -1071,9 +1071,31 @@
       --control-h-lg: 36px;
       --table-row-h: 36px;
     }
-    html[data-density="compact"] [data-slot="table"],
-    html[data-density="compact"] table {
-      font-size: var(--text-sm);
+    /* 表格行一律 `--table-row-h`(v4 `.tr` 是 `min-height` + `padding: 0 16px`,上下不留内边距)。
+       2026-11-08 此前紧凑只改了变量:DataTable / DataGrid 与各页手写表的单元格是调用方的 `py-3`,
+       24 px 内边距加 23 px 内容把行撑在 47,36 等于没写 —— 切换后表格一像素不动。所以这里在紧凑下
+       直接收单元格:上下 0、居中(同 v4 `.tr`;4 px 时审判队列「名字 + 案号」两行的格子是 20 + 16 + 8 = 44,
+       行仍是 45),左右 10(v4 未给横向数,用户 11-08 要求一并收),字 12(默认表格已是 13,v4 的紧凑是降一档)。
+       带 colSpan 的是空状态 / 出错 / 加载格,不压。分组头照 v4 `.grpH` 10 / 4。 */
+    html[data-density="compact"] tbody > tr:not([data-group-head]) {
+      height: var(--table-row-h);
+    }
+    html[data-density="compact"] tbody > tr:not([data-group-head]) > :is(td, th):not([colspan]) {
+      padding-block: 0;
+      vertical-align: middle;
+      font-size: var(--text-xs);
+      line-height: 18px;
+    }
+    html[data-density="compact"] tbody > tr:not([data-group-head]) > :is(td, th):not([colspan], .p-0) {
+      padding-inline: 10px;
+    }
+    html[data-density="compact"] tbody > tr[data-group-head] > th {
+      padding-top: 10px;
+      padding-bottom: 4px;
+    }
+    html[data-density="compact"] [data-filter-bar] {
+      gap: 8px;
+      padding: 12px;
     }
   }
 
@@ -1728,8 +1750,10 @@ html.theme-switching *::after {
   min-width: 240px;
   max-width: 420px;
   padding: 0 12px;
-  /* 0, like every other step in the table. */
-  border-radius: 0;
+  /* 规范 v4(用户 2026-11-08):弹层一律 `--radius-panel`、`--shadow-overlay`。此前是 0、无阴影,
+     顶栏右侧一排弹层里只有它和通知 / 用户菜单是方角。 */
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-overlay);
   border: none;
   background: oklch(var(--color-ink));
   color: oklch(var(--color-surface-1));

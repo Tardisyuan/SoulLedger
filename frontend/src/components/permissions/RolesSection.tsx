@@ -330,7 +330,7 @@ function RoleDrawerBody({
           {menuOpen && (
             <div
               id="role-drawer-more"
-              className="absolute bottom-full left-0 z-10 mb-1 flex min-w-48 flex-col border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))]"
+              className="absolute bottom-full left-0 z-10 mb-1 flex min-w-48 flex-col overflow-hidden rounded-panel shadow-overlay border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
             >
               <button
                 type="button"

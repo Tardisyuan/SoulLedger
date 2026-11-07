@@ -114,7 +114,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         ref={drawerRef}
         {...drawerProps}
         data-motion="fade"
-        className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] z-drawer overflow-y-auto ${
+        className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-line))] shadow-overlay z-drawer overflow-y-auto ${
           open ? "animate-drawer-in" : "animate-drawer-out"
         }`}
       >

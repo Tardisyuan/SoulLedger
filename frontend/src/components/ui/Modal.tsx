@@ -121,7 +121,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
         <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
           <Dialog.Popup
             data-motion="fade"
-            className={`flex max-h-[calc(100dvh-2rem)] w-full ${extraWide ? "sm:max-w-[880px]" : wide ? "sm:max-w-[640px]" : "sm:max-w-[440px]"} flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3`}
+            className={`flex max-h-[calc(100dvh-2rem)] w-full ${extraWide ? "sm:max-w-[880px]" : wide ? "sm:max-w-[640px]" : "sm:max-w-[440px]"} flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3`}
           >
             {/* Header */}
             {/* 规范 v1 §3.3:标题 16/600,下接区块边界线;右上角写 Esc(键盘上真正关它的那个键)。 */}
@@ -494,7 +494,7 @@ export function ConfirmDialog({
         {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
          * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
         <AlertDialog.Viewport className="fixed inset-0 z-confirm flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
-          <AlertDialog.Popup data-motion="fade" className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3">
+          <AlertDialog.Popup data-motion="fade" className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <AlertDialog.Title className="text-lg text-[oklch(var(--color-ink))] pb-2 mb-3 border-b border-[oklch(var(--color-block))]">
                 {title}

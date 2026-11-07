@@ -99,7 +99,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           ref={listRef}
           role="listbox"
           aria-label={config.label}
-          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] py-1"
+          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto rounded-panel shadow-overlay border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] py-1"
         >
           {config.options.map((option, index) => (
             <button
@@ -147,6 +147,7 @@ export function FilterBar({
 }: FilterBarProps) {
   return (
     <div
+      data-filter-bar=""
       className={cn(
         'flex flex-wrap items-center gap-2.5 p-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))]',
         className
