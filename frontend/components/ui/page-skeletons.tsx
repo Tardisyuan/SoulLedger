@@ -21,7 +21,7 @@
  *
  * ── THE COLOUR IS NOT A CHOICE ────────────────────────────────────────────
  *
- * `--color-hairline`, matching `app/dashboard/loading.tsx` and
+ * `--color-line`, matching `app/dashboard/loading.tsx` and
  * `components/ui/skeleton.tsx`. `src/__tests__/cssTokenReferenceContract.test.ts`
  * holds new skeletons to it: on a `--color-surface-*` the block measures
  * 1.021:1 against the page and is invisible to anyone who is not looking
@@ -33,12 +33,12 @@
  * the animation.
  */
 
-const BLOCK = "bg-[oklch(var(--color-hairline))]";
+const BLOCK = "bg-[oklch(var(--color-line))]";
 
 function PageHead({ withTabs }: { withTabs?: boolean }) {
   return (
     <>
-      <header className="border-b border-[oklch(var(--color-hairline))]">
+      <header className="border-b border-[oklch(var(--color-line))]">
         <div className="max-w-page mx-auto px-4 md:px-8 pt-8 pb-6">
           <div className="flex items-start gap-4">
             <div className={`h-10 w-64 ${BLOCK}`} />
@@ -48,7 +48,7 @@ function PageHead({ withTabs }: { withTabs?: boolean }) {
         </div>
       </header>
       {withTabs && (
-        <div className="border-b border-[oklch(var(--color-hairline))]">
+        <div className="border-b border-[oklch(var(--color-line))]">
           <div className="max-w-page mx-auto px-4 md:px-8 flex items-center gap-1">
             <div className={`h-10 w-24 ${BLOCK}`} />
             <div className={`h-10 w-24 ${BLOCK}`} />
@@ -79,9 +79,9 @@ export function TablePageSkeleton({
     <div className="bg-[oklch(var(--color-canvas))]">
       <PageHead withTabs={withTabs} />
       <div className="max-w-page mx-auto px-4 md:px-8 py-6">
-        <div className="border border-[oklch(var(--color-hairline))]">
+        <div className="border border-[oklch(var(--color-line))]">
           <div className={`h-11 ${BLOCK} opacity-70`} />
-          <div className="divide-y divide-[oklch(var(--color-hairline))]">
+          <div className="divide-y divide-[oklch(var(--color-line))]">
             {Array.from({ length: rows }, (_, i) => (
               <div key={i} className={`h-11 ${BLOCK}`} />
             ))}
@@ -119,7 +119,7 @@ export function CardListPageSkeleton({
             {Array.from({ length: cards }, (_, i) => (
               <div
                 key={i}
-                className={`${cardHeight} ${BLOCK} border border-[oklch(var(--color-hairline))]`}
+                className={`${cardHeight} ${BLOCK} border border-[oklch(var(--color-line))]`}
               />
             ))}
           </div>

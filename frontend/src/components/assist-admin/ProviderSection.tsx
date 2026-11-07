@@ -29,7 +29,7 @@ import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 const WARN = "border-l-2 border-[oklch(var(--color-warning))] pl-3";
 const OK = "border-l-2 border-[oklch(var(--color-success))] pl-3";
 const BAD = "border-l-2 border-[oklch(var(--color-danger))] pl-3";
-const INK = "border-l-2 border-[oklch(var(--color-hairline))] pl-3";
+const INK = "border-l-2 border-[oklch(var(--color-line))] pl-3";
 /** Canvas 2f's glyph for 「不提供模型列表」: a status mark (aria-hidden), not a missing value. */
 const NO_LIST_GLYPH = "—";
 
@@ -332,8 +332,8 @@ export function Segment({
             </div>
           )}
           {list?.status === "ok" && (
-            <div className="mt-2 border border-[oklch(var(--color-hairline))]" data-testid={`${p}-model-list`}>
-              <div className="flex items-center gap-2 border-b border-[oklch(var(--color-hairline))] p-2">
+            <div className="mt-2 border border-[oklch(var(--color-line))]" data-testid={`${p}-model-list`}>
+              <div className="flex items-center gap-2 border-b border-[oklch(var(--color-line))] p-2">
                 <input
                   type="search"
                   aria-label={t("assist_admin.provider.fetch_search")}
@@ -363,7 +363,7 @@ export function Segment({
                   </li>
                 ))}
               </ul>
-              <p className={`border-t border-[oklch(var(--color-hairline))] p-2 ${SUBTLE}`}>{t("assist_admin.provider.fetch_manual_hint")}</p>
+              <p className={`border-t border-[oklch(var(--color-line))] p-2 ${SUBTLE}`}>{t("assist_admin.provider.fetch_manual_hint")}</p>
             </div>
           )}
         </div>

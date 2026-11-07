@@ -152,7 +152,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
             <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{t("soul_accounts.account.chain")}</h3>
             <ol className="space-y-2" data-testid="soul-account-chain">
               {accounts.map((a) => (
-                <li key={a.id} className="text-xs border-l-2 border-[oklch(var(--color-hairline))] pl-3">
+                <li key={a.id} className="text-xs border-l-2 border-[oklch(var(--color-line))] pl-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-[oklch(var(--color-ink))]">{lifeText(a.cycle)}</span>
                     <DomainEnum namespace="soul_accounts.origin" value={a.origin} className="text-[oklch(var(--color-ink-muted))]" />
@@ -176,7 +176,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
   }
 
   return (
-    <section id="soul-account" className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+    <section id="soul-account" className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]">
       <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">{t("soul_accounts.account.title")}</h2>
       {body}
       {modal === "provision" && (

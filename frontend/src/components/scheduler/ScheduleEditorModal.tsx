@@ -217,7 +217,7 @@ export function ScheduleEditorModal({ job, jobName, onClose }: Props) {
           error={fieldErrors.timezone?.join(" ") ?? null}
         />
 
-        <section aria-live="polite" className="border-t border-[oklch(var(--color-hairline))] pt-3">
+        <section aria-live="polite" className="border-t border-[oklch(var(--color-line))] pt-3">
           <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-2">
             {t("scheduler.editor.preview")} · {timezone}
           </h3>

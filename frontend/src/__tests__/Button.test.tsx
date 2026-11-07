@@ -324,9 +324,9 @@ describe("behaviour", () => {
   });
 
   it("lets a caller's className win a conflict", () => {
-    render(<Button variant="primary" className="bg-[oklch(var(--color-surface-4))]" />);
+    render(<Button variant="primary" className="bg-[oklch(var(--color-surface-3))]" />);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toContain("bg-[oklch(var(--color-surface-4))]");
+    expect(classes).toContain("bg-[oklch(var(--color-surface-3))]");
     expect(classes).not.toContain("bg-[oklch(var(--color-accent))]");
   });
 });

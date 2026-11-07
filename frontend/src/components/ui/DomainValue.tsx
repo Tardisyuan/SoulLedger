@@ -210,13 +210,13 @@ export interface IdentifierChipProps {
 const IDENTIFIER_VARIANT_CLASSES: Record<"chip" | "inline", string> = {
   chip:
     "font-mono text-xs px-1.5 py-0.5 bg-[oklch(var(--color-surface-2))] " +
-    "border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] " +
+    "border border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-3))] " +
     "text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors",
   // No fill at all, so nothing here can approach the 0.1 badge-tint cap
   // (src/__tests__/dataGridToneContract.test.ts). The dotted underline is the
   // only affordance, and it only firms up on hover/focus.
   inline:
-    "font-mono text-inherit underline decoration-dotted decoration-[oklch(var(--color-hairline))] " +
+    "font-mono text-inherit underline decoration-dotted decoration-[oklch(var(--color-line))] " +
     "underline-offset-2 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] " +
     "hover:decoration-[oklch(var(--color-ink-muted))] transition-colors",
 };

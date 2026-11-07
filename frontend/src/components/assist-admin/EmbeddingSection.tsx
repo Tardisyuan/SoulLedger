@@ -191,7 +191,7 @@ export function EmbeddingSection({
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[oklch(var(--color-hairline))] pt-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[oklch(var(--color-line))] pt-3">
         <p className={`text-sm ${MONO}`} data-testid="aa-emb-progress">
           {status.embedded === 0 && status.last_rebuild_at == null
             ? t("assist_admin.embedding.none")

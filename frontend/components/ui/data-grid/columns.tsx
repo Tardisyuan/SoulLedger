@@ -210,7 +210,7 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
    */
   const empty = (label?: string) =>
     label
-      ? <span className={column.missingKind === 'inapplicable' ? 'text-[oklch(var(--color-ink-subtle))]' : 'text-[oklch(var(--color-ink-tertiary))]'}>{label}</span>
+      ? <span className={column.missingKind === 'inapplicable' ? 'text-[oklch(var(--color-ink-subtle))]' : 'text-[oklch(var(--color-ink-subtle))]'}>{label}</span>
       : <MissingValue kind={column.missingKind ?? 'unrecorded'} reason={column.missingReason} />
 
   switch (column.type) {

@@ -114,14 +114,14 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
           type="button"
           onClick={primary.onSelect}
           disabled={primary.disabled}
-          className="inline-flex h-(--control-h-sm) items-center px-3 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex h-(--control-h-sm) items-center px-3 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-line-strong))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {primary.label}
         </button>
       )}
       {items.length > 0 && (
         <>
-          {primary && <span aria-hidden="true" className="w-px h-4 bg-[oklch(var(--color-hairline-strong))]" />}
+          {primary && <span aria-hidden="true" className="w-px h-4 bg-[oklch(var(--color-line-strong))]" />}
           <button
             ref={triggerRef}
             type="button"

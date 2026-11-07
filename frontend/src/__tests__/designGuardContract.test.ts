@@ -189,7 +189,7 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   // 到那时最省事的做法就是把整条规则删掉。带斜杠的不透明度写法要一并钉住:
   // classTokens 会在 `/` 处截断,截断后的残段不能被误判成字面颜色。
   const CLEAN =
-    'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
+    'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-line))] ' +
     'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-line)/0.4)] shadow-none shadow-[inset_3px_0_0_oklch(var(--color-ink))] ' +
     // 规范 v2 A2 新放行的:48px(12)、以及圆角任意值里的三种合法值。
     'p-12 gap-0.5 rounded-[0] rounded-[9999px] rounded-[50%] ' +

@@ -11,7 +11,7 @@ const LazyWorkflowEditor = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex flex-col h-full bg-[oklch(var(--color-surface-2))]">
-        <div className="flex items-center gap-3 p-3 border-b border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))]">
+        <div className="flex items-center gap-3 p-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
           <Skeleton className="h-9 w-48" />
           <Skeleton className="h-9 w-32" />
           <Skeleton className="h-9 w-32" />

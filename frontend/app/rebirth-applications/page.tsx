@@ -149,7 +149,7 @@ function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
                 <Link href={`/souls/${a.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline break-words">
                   {a.soul_name}
                 </Link>
-                <p className="text-xs text-[oklch(var(--color-ink-tertiary))] break-all">
+                <p className="text-xs text-[oklch(var(--color-ink-subtle))] break-all">
                   <SoulCode code={a.soul_code} />
                 </p>
               </div>

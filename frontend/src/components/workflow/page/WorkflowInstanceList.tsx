@@ -255,7 +255,7 @@ export function WorkflowInstanceList({
           <Link
             key={wf.id}
             href={`/workflow/${wf.id}`}
-            className="block bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))] hover:border-[oklch(var(--color-accent))]/50 transition-colors cursor-pointer"
+            className="block bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))] hover:border-[oklch(var(--color-accent))]/50 transition-colors cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div>
