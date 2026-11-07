@@ -321,9 +321,9 @@ describe("O-3 / O-4 · the workflow's segments in an approval detail", () => {
     expect(screen.queryByText(/第 2 天/)).toBeNull();
   });
 
-  it("the waiting realm sees 流程在等本殿选站 and 选站, which opens the pick page over the detail", async () => {
+  it("the waiting realm sees 流程在等本域选站 and 选站, which opens the pick page over the detail", async () => {
     await openApproval(EGYPT);
-    expect(screen.getByTestId("segment-gate-title").props.children).toBe("◌ 流程在等本殿选站");
+    expect(screen.getByTestId("segment-gate-title").props.children).toBe("◌ 流程在等本域选站");
     expect(screen.getByTestId("segment-gate-body").props.children).toBe("王守仁 · 中国的站已走完，选好本域这一段才能继续。");
     expect(screen.queryByText(/等待外域选站 · 埃及/)).toBeNull();
     fireEvent.press(screen.getByTestId("segment-gate-pick"));
@@ -400,9 +400,9 @@ describe("courtLabel in the officer app", () => {
   const zh = (k: string, v?: Record<string, string>) => translate("zh-Hans", k, v);
   const en = (k: string, v?: Record<string, string>) => translate("en", k, v);
 
-  it("zh shows 天堂 / 第十殿 and en Heaven / Tenth Court, whichever spelling is stored", () => {
-    for (const stored of ["Heaven", "天堂"]) {
-      expect(courtLabel(zh, stored, "zh-Hans")).toBe("天堂");
+  it("zh shows 天国 / 第十殿 and en Heaven / Tenth Court, whichever spelling is stored", () => {
+    for (const stored of ["Heaven", "天堂", "天国"]) {
+      expect(courtLabel(zh, stored, "zh-Hans")).toBe("天国");
       expect(courtLabel(en, stored, "en")).toBe("Heaven");
     }
     expect(courtLabel(zh, "第十殿", "zh-Hans")).toBe("第十殿");
