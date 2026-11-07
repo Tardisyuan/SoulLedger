@@ -131,7 +131,23 @@ describe("落印失败时卡片回原位", () => {
   afterEach(() => jest.restoreAllMocks());
   const failOnce = async (reduced: boolean) => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
-    const spring = jest.spyOn(Animated, "spring");
+    // 弹回的 spring 要跑一秒多,每一帧都更新 Animated(View):记下它何时停,等它停了才结束测试(否则 act 警告)。
+    const realSpring = Animated.spring;
+    const springsDone: Promise<void>[] = [];
+    const spring = jest.spyOn(Animated, "spring").mockImplementation((value, config) => {
+      const anim = realSpring(value, config);
+      const start: typeof anim.start = (cb) => {
+        springsDone.push(
+          new Promise<void>((done) =>
+            anim.start((r) => {
+              cb?.(r);
+              done();
+            })
+          )
+        );
+      };
+      return { ...anim, start };
+    });
     serve();
     mockConclude.mockRejectedValue(new Error("offline"));
     renderOfficer(<SwipeScreen onBack={() => {}} />);
@@ -140,7 +156,10 @@ describe("落印失败时卡片回原位", () => {
     await waitFor(() => expect(mockConclude).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
     // 飞出(200ms)比拒绝晚结束时,它不能再把弹回来的卡拿走。
-    await act(() => new Promise((r) => setTimeout(r, 400)));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 400));
+      await Promise.all(springsDone);
+    });
     expect(screen.getByTestId("swipe-card-j-1")).toBeTruthy();
     return spring;
   };
