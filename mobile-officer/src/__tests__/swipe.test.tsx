@@ -155,7 +155,8 @@ describe("落印失败时卡片回原位", () => {
     await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
     await waitFor(() => expect(mockConclude).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
-    // 飞出(200ms)比拒绝晚结束时,它不能再把弹回来的卡拿走。
+    // 拒绝早于飞出(200ms)结束:旧 pan 被 detach、飞出以 finished=false 收尾,不能再把弹回来的卡拿走
+    // (flyOut 里不看 `finished` 就会拿走 —— 这条断言守的是那一处)。
     await act(async () => {
       await new Promise((r) => setTimeout(r, 400));
       await Promise.all(springsDone);

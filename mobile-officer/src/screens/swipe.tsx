@@ -135,8 +135,8 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   };
 
   // 飞出:验证通过的那一刻(`confirmedDecision` 在发请求前调它)。飞完才把卡拿出卡堆;中途被拒就不拿:
-  // 被拒那一边先 `pan.stopAnimation()`(finished 为 false)。不能指望 snapBack 停它 —— `setBack` 换了一个新 pan,
-  // 旧 pan 上的飞出照跑,200ms 后 `setAway(id)` 把刚弹回来的卡又拿走(网络失败往往比 200ms 快)。
+  // 被拒时 `setBack` 换了一个新 pan,卡片改绑新 pan,旧 pan 没了子节点就被 Animated detach,detach 会
+  // `stopAnimation()` —— 这段飞出以 finished 为 false 收尾,所以下面只在 finished 时 `setAway`。
   const flyOut = <R,>(id: string, x: number, submit: () => Promise<R>): Promise<R> => {
     setOverlay(null);
     Animated.timing(pan, { toValue: x, duration: durations.drawerOut, useNativeDriver: false }).start(({ finished }) => {
@@ -154,7 +154,6 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     confirmedDecision(t("officer_app.biometric.prompt"), () => flyOut(id, x, () => submitVerdict(id, payload)))
       .then(() => finish(id))
       .catch((e: unknown) => {
-        pan.stopAnimation();
         // 面容没过、服务端拒绝、网络失败:都回到原位,写出原因。卡若已经飞走,从飞出去的那一侧回来。
         toast(verdictFailure(t, e), "failure");
         setOverlay(null);
