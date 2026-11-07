@@ -270,7 +270,10 @@ describe("the scan is looking at something", () => {
     const uses = OBJECT_CONSTS.filter((entry) =>
       FEEDBACK_STATUS_TOKENS.some((token) => entry.body.includes(token))
     );
-    expect(uses.length).toBeGreaterThan(5);
+    // 2026-11-07: 5 maps, down from 7 — workflow/[id]'s STATUS / VERDICT maps moved onto the ink
+    // DOMAIN_BADGE (规范 v4). The remaining five still name the tokens; an alias would drop the count to
+    // about 0, so a floor of 4 still separates "spelled out" from "collapsed" with one map of slack.
+    expect(uses.length).toBeGreaterThanOrEqual(4);
   });
 });
 
