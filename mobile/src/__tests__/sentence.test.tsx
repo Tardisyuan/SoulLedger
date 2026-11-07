@@ -127,7 +127,13 @@ describe("the life page's section (1b)", () => {
 
   it("loading, empty and error each say so; the error retries", async () => {
     stubApi({ "/me/sentence-plan/": [{ status: 500 }, { status: 200, data: plan("none", []) }] });
-    wrap(<Section />);
+    // The empty line goes by the signed-in soul's home civilization (no session: the neutral 「尚未定下去处」).
+    const session = { state: { status: "signedIn", profile: PROFILE } } as unknown as Session;
+    wrap(
+      <SessionContext.Provider value={session}>
+        <Section />
+      </SessionContext.Provider>
+    );
     expect(screen.getByTestId("sentence-loading")).toBeTruthy();
     expect(screen.getByText("加载中…")).toBeTruthy();
     await screen.findByTestId("sentence-error");
