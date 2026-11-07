@@ -85,9 +85,9 @@ import { cn } from "@/lib/utils";
  *   v1 用它,于是每一个 SelectField 都被画成了禁用底色。
  * - 密码显示后改等宽字:调用点在明文时给 input 加 `data-revealed`(登录页那样)。
  *
- * Heights match `Button` (44 / 48 / 56, 规范 v3 `.field-sizes`;数字在 globals.css 的
+ * Heights match `Button` (触屏 44 / 48 / 56,精确指针 v4 的 32 / 36 / 40;数字在 globals.css 的
  * `--control-h-*`), so a field and the button beside it line up; `min-h` rather than
- * `h` so a <textarea> can grow. 最小一档就是 44,393 宽下不再另补触控高度。
+ * `h` so a <textarea> can grow. 触屏最小一档就是 44,393 宽下不再另补触控高度。
  */
 export const fieldControl = cva(
   [

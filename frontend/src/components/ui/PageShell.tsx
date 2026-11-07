@@ -401,7 +401,7 @@ export function PageShell({
       ) : null}
 
       {/* 筛选栏：全站唯一贴在 AppLayout 52px 工具条(h-13)下沿的一段。
-          `h-16 py-2`:border-box 下总高 64、内容 48,放得下规范 v3 md 档的控件(见下)。 */}
+          `h-16 py-2`:border-box 下总高 64、内容 48,放得下 md 档的控件(触屏 48、精确指针 36,见下)。 */}
       {filters ? (
         <div
           data-page-shell-filters=""
@@ -418,8 +418,8 @@ export function PageShell({
               「可见、可用、可滚动到」却点不动。mobile-chrome 上三条 E2E 长期
               超时失败,根因就在这里,而它看起来完全不像一个筛选栏的问题。
               
-              滚动而不是换行:`h-16`(64px = 上下各 8 padding + 48 内容,即规范 v3 的 md 档
-              控件;v3 `.queue-toolbar` 是 min-height 62)是写死的高度,换行会破坏它。
+              滚动而不是换行:`h-16`(64px = 上下各 8 padding + 48 内容,即触屏 md 档
+              控件的高;v3 `.queue-toolbar` 是 min-height 62)是写死的高度,换行会破坏它。
               2026-10-01 控件换到 v3 之前这里是 `h-14 py-3`(32 内容)—— 48 的输入放进去会被
               这个 overflow 容器从上下两头裁掉。 */}
           <div

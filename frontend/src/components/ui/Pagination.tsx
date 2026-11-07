@@ -56,7 +56,7 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
     if (next !== page) onPageChange(next);
   };
 
-  // 规范 v1 §2 分页:方格、等宽 12 px,高按规范 v3 的 sm 档 44(`--control-h-sm`);悬停 surface-2、按下 surface-3,
+  // 规范 v1 §2 分页:方格、等宽 12 px,高按 sm 档(`--control-h-sm`,触屏 44、精确指针 32);悬停 surface-2、按下 surface-3,
   // 禁用用 disabled 墨色(首页的「上一页」)。
   // `whitespace-nowrap`:393 px 下「← 上一页」曾折成三行(箭头、上一、页),整条控件跟着变高。
   const stepButton =
