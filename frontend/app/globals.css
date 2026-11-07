@@ -1070,8 +1070,10 @@
 
   /* 精确指针的默认档(规范 v4,用户 2026-11-07):控件 36、表格行 46。md 是「控件」那一档(Button / Field 的默认),
      sm 是表头与行内动作,要放进 46 的行里,取 32;lg 40。触屏(hover: none 或 pointer: coarse)不进这里,仍是 @theme 的 44 / 48 / 56 / 64。 */
+  /* 选择器写 `html` 而不是 `:root`:utilities 层本来就压过 @theme 的 `:root`,而测试的 `readTokens(":root")`
+     把每个 `:root {…}` 都当成深色主题的令牌表读。 */
   @media (hover: hover) and (pointer: fine) {
-    :root {
+    html {
       --control-h-sm: 32px;
       --control-h-md: 36px;
       --control-h-lg: 40px;
