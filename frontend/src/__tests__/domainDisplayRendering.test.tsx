@@ -36,6 +36,7 @@ import {
   signedTone,
   type MissingKind,
 } from "@/src/lib/domainDisplay";
+import { THEMES, TOKENS_BY_THEME, oklchTripleToRgb, resolveTriple } from "./support/globalsCssTokens";
 
 const FRONTEND_ROOT = path.join(__dirname, "..", "..");
 // ---------------------------------------------------------------------------
@@ -72,9 +73,18 @@ describe("the three missing semantics are distinguishable on screen", () => {
     expect(zero.textContent).not.toBe("+0");
   });
 
-  it("gives them three different ink tokens", () => {
-    const inks = (Object.keys(MISSING_INK) as MissingKind[]).map((k) => MISSING_INK[k]);
-    expect(new Set(inks).size).toBe(3);
+  // 曾断言「三个不同的 token 名」—— v4 里 ink-muted 与 ink-subtle 同值,名字不同、屏幕上同色,那条一直是绿的。
+  // 现在按 globals.css 把每个 class 的 token 解析成实际颜色,两个主题各断言三种互不相同。
+  it.each(THEMES)("gives them three different resolved colours in the %s theme", (theme) => {
+    const colours = (Object.keys(MISSING_INK) as MissingKind[]).map((k) => {
+      const token = MISSING_INK[k].match(/var\((--color-[a-z0-9-]+)\)/)?.[1];
+      expect(token).toBeDefined();
+      return oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], token as string)).join(",");
+    });
+    expect(new Set(colours).size).toBe(3);
+  });
+
+  it("renders the inapplicable kind at its ink", () => {
     const { container } = renderWithI18n(<MissingValue kind="inapplicable" />);
     expect(container.firstElementChild?.className).toContain(MISSING_INK.inapplicable);
   });

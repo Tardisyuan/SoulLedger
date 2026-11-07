@@ -79,6 +79,8 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   // 第八批新增:琥珀(连接状态的点与线,不当字)、比 sub 更淡的字。
   "--color-warn": { light: "#9a6400", dark: "#e8b45a" },
   "--color-faint-text": { light: "#686b70", dark: "#8e9197" },
+  // 不是 Design 给的值:sub 与 faint-text 的 sRGB 中点,给「未记录」(用户 2026-11-08,见 globals.css)。
+  "--color-ink-mid": { light: "#5e6166", dark: "#a1a4a8" },
   "--color-civ-cn": { light: "#a64a3b", dark: "#7e362b" },
   "--color-civ-cn-ink": { light: "#a04636", dark: "#d98a7a" },
   "--color-civ-cn-metal": { light: "#8a6a24", dark: "#c9a35e" },
@@ -107,7 +109,7 @@ describe("palette (规范 v4)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 48);
+    expect(rows).toHaveLength(2 * 49);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {
@@ -126,6 +128,7 @@ describe("palette (规范 v4)", () => {
     "--color-warning",
     "--color-lamp",
     "--color-faint-text",
+    "--color-ink-mid",
   ];
   it.each(THEMES.flatMap((theme) => TEXT.map((name) => [theme, name] as const)))("%s %s reads ≥ 4.5:1 on canvas", (theme, name) => {
     expect(contrastRatio(rgbOf(theme, name), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(4.5);
@@ -138,10 +141,14 @@ describe("palette (规范 v4)", () => {
     }
   );
 
-  it.each(THEMES.flatMap((theme) => ["--color-surface-1", "--color-surface-2"].map((bg) => [theme, bg] as const)))(
-    "%s --color-faint-text reads ≥ 4.5:1 on %s too (第八批:三种底上都达标)",
-    (theme, bg) => {
-      expect(contrastRatio(rgbOf(theme, "--color-faint-text"), rgbOf(theme, bg))).toBeGreaterThanOrEqual(4.5);
+  it.each(
+    THEMES.flatMap((theme) =>
+      ["--color-faint-text", "--color-ink-mid"].flatMap((name) => ["--color-surface-1", "--color-surface-2"].map((bg) => [theme, name, bg] as const))
+    )
+  )(
+    "%s %s reads ≥ 4.5:1 on %s too (第八批:三种底上都达标;ink-mid 同为缺值字)",
+    (theme, name, bg) => {
+      expect(contrastRatio(rgbOf(theme, name), rgbOf(theme, bg))).toBeGreaterThanOrEqual(4.5);
     }
   );
 

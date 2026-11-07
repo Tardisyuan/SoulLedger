@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
@@ -109,12 +110,17 @@ const COLLAPSE_AT = 60;
 /**
  * 滚过 60 收起,回到顶才展开。只在**收得下**时收:收起让文档短了「展开高 − 48」,页面不够长
  * 时一收,浏览器把滚动位置夹回 0,于是又展开 —— 在页底来回跳。
+ *
+ * scroll 里用 flushSync(2026-11-08):标题行在 AppLayout 里,跨页不重挂。从滚过的页软导航,Next 在新页提交时
+ * 把滚动设回 0,浏览器在下一帧画之前派发 scroll —— 普通的 setState 排在画之后,于是新页在顶上、标题行还收着,
+ * 画出一帧再长回去(E2E mobile-chrome 逐帧采样两次都抓到:/souls y=0 compact,下一帧才展开)。
+ * 同步提交让这次展开落在同一帧里。状态没变时 React 直接跳过,滚动中不多渲染。
  */
 function useCompact(enabled: boolean, band: RefObject<HTMLElement | null>): boolean {
   const [compact, setCompact] = useState(false);
   useEffect(() => {
     if (!enabled) return;
-    const onScroll = () =>
+    const judge = () =>
       setCompact((was) => {
         const y = window.scrollY;
         if (was) return y > 0;
@@ -122,7 +128,8 @@ function useCompact(enabled: boolean, band: RefObject<HTMLElement | null>): bool
         const shrink = (band.current?.offsetHeight ?? COMPACT_PX) - COMPACT_PX;
         return y > COLLAPSE_AT && room - shrink > COLLAPSE_AT;
       });
-    onScroll();
+    const onScroll = () => flushSync(judge);
+    judge();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, [enabled, band]);

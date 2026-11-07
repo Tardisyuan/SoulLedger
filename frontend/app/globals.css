@@ -572,6 +572,11 @@
     /* 比 sub 更淡的字(v4 第八批 `--faint-text`):角标计数、分组标题、地图站号、「官员挪站」。--color-line-strong
        (v4 faint)当字不达标,只给装饰线、禁用态;这一档在 canvas / surface-1 / surface-2 上都 ≥ 4.5。 */
     --color-faint-text: 0.656067 0.009530 264.5008; /* #8E9197 */
+    /* sub 与 faint-text 之间的中间档,只给「未记录」(MISSING_INK.unrecorded)。v4 里 ink-muted = ink-subtle,
+       「零」与「未记录」原本同色(用户 2026-11-08 定拉开)。数值 = v4 墨色梯度上 sub 与 faint-text 两档的 sRGB 逐通道中点:
+       深 (#B4B6BA + #8E9197) / 2 ≈ #A1A4A8,浅 (#54575C + #686B70) / 2 = #5E6166。
+       对 canvas / surface-1 / surface-2:深 7.54 / 6.88 / 6.27,浅 5.85 / 6.22 / 5.49(ledgerPaletteContract 钉 ≥ 4.5)。 */
+    --color-ink-mid: 0.717491 0.006726 255.4889; /* #A1A4A8 */
     /* 长明灯:实底块 = 有,空底 + 描边 = 我点过;lamp-bg 是块上文字色。 */
     --color-lamp: 0.860675 0.109733 85.2786;
     --color-lamp-bg: 0.228754 0.029413 79.2504;
@@ -681,6 +686,7 @@
     --color-warning-tint: 0.965162 0.024981 69.4434;
     --color-warn: 0.548270 0.117080 72.5076; /* #9A6400 */
     --color-faint-text: 0.526852 0.008647 260.7291; /* #686B70 */
+    --color-ink-mid: 0.491657 0.008800 260.7282; /* #5E6166 */
     --color-lamp: 0.407751 0.090608 66.2502;
     --color-lamp-bg: 0.960430 0.029660 85.5642;
     --color-disabled-ink: 0.642492 0.008222 260.7308;

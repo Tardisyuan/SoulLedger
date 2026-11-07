@@ -71,9 +71,11 @@ export const MISSING_GLYPH: Record<MissingKind, string> = {
  */
 // 2026-11-07:unrecorded 原是旧别名 ink-tertiary(= ink-subtle),改名后和 inapplicable 撞成同一个 token;
 // inapplicable 改用 v4 的 faint-text(比 sub 更淡,在 canvas / surface-1 / surface-2 上仍 ≥ 4.5),
-// 也正是「最淡的排最后」。v4 里 ink-muted 与 ink-subtle 同值,zero 与 unrecorded 目前只在 token 名上不同。
+// 也正是「最淡的排最后」。v4 里 ink-muted 与 ink-subtle 同值,zero 与 unrecorded 当时只在 token 名上不同;
+// 2026-11-08(用户定)unrecorded 改用 sub 与 faint-text 之间的 ink-mid,三种在两主题下都是三个不同的实际颜色
+// (domainDisplayRendering 按解析后的值断言,ledgerPaletteContract 钉三种底上 ≥ 4.5)。
 export const MISSING_INK: Record<MissingKind, string> = {
-  unrecorded: "text-[oklch(var(--color-ink-subtle))]",
+  unrecorded: "text-[oklch(var(--color-ink-mid))]",
   zero: "text-[oklch(var(--color-ink-muted))]",
   inapplicable: "text-[oklch(var(--color-faint-text))]",
 };
