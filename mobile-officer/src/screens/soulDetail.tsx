@@ -31,7 +31,7 @@ import { ActionButton, LoadingRows, RefreshFailed, Row, StateView, detailStateOf
 import { MoreRow, useMoreRows, type Page } from "../paged";
 import { hallLabel } from "../rules";
 import { useSession } from "../session";
-import { GUTTER, Notice, OneLine, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
+import { GUTTER, Notice, OneLine, SectionLabel, Txt, family, radius, space, useI18n, useRemote, useTheme } from "../shared";
 import { SOUL_PAGE, deedScore, eventDetail, karmaView, planStops, signed, soulTabs, type SoulTab } from "../soulView";
 import { ServingFact } from "./servingFact";
 
@@ -112,7 +112,7 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
               onPress={() => pick(k)}
               style={{ flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: k === tab ? theme.ink : "transparent" }}
             >
-              <Txt variant="body" tone={k === tab ? "ink" : "muted"} style={k === tab ? { fontWeight: "600" } : undefined}>
+              <Txt variant="body" tone={k === tab ? "ink" : "muted"} style={k === tab ? { fontFamily: family.ui[600] } : undefined}>
                 {t(`officer_app.soul.tabs.${k}`)}
               </Txt>
             </Pressable>
@@ -144,8 +144,8 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
 function Pill({ children, strong, testID }: { children: string; strong?: boolean; testID?: string }) {
   const theme = useTheme();
   return (
-    <View testID={testID} style={{ minHeight: 26, paddingHorizontal: space[3], justifyContent: "center", borderWidth: 1, borderRadius: 13, borderColor: strong ? theme.ink : theme.inkSubtle }}>
-      <Txt variant="caption" style={strong ? { fontWeight: "500" } : undefined}>{children}</Txt>
+    <View testID={testID} style={{ minHeight: 26, paddingHorizontal: space[3], justifyContent: "center", borderWidth: 1, borderRadius: radius.control, borderColor: strong ? theme.ink : theme.inkSubtle }}>
+      <Txt variant="caption" style={strong ? { fontFamily: family.ui[500] } : undefined}>{children}</Txt>
     </View>
   );
 }
@@ -171,7 +171,7 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={{ width: 52, height: 52, borderWidth: 1, borderColor: archived ? theme.inkSubtle : theme.ink, alignItems: "center", justifyContent: "center" }}
+            style={{ width: 52, height: 52, borderWidth: 1, borderRadius: radius.control, borderColor: archived ? theme.inkSubtle : theme.ink, alignItems: "center", justifyContent: "center" }}
           >
             <Txt variant="title" tone={tone}>{Array.from(soul.name)[0] ?? ""}</Txt>
           </View>
@@ -193,7 +193,7 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
         </View>
         {soul.merit_score != null ? (
           // Absent for VIEWER (the serializer drops all three): then no cells at all.
-          <View testID="soul-figures" style={{ flexDirection: "row", borderWidth: 1, borderColor: theme.hair }}>
+          <View testID="soul-figures" style={{ flexDirection: "row", borderWidth: 1, borderRadius: radius.dialog, borderColor: theme.hair }}>
             {figures.map(([label, n], i) => (
               <View key={label} style={{ flex: 1, paddingVertical: space[2], paddingHorizontal: space[3], borderLeftWidth: i ? 1 : 0, borderLeftColor: theme.hair }}>
                 <Txt variant="caption" tone="muted">{label}</Txt>
@@ -406,7 +406,7 @@ function KarmaTab({ soul }: { soul: Soul }) {
       {view.groups.map((g) => (
         <View key={g.cycle}>
           <View style={{ paddingHorizontal: GUTTER, paddingTop: space[3], paddingBottom: space[1] }}>
-            <Txt variant="caption" tone="muted" style={{ fontWeight: "600" }} testID={`soul-karma-group-${g.cycle}`}>
+            <Txt variant="caption" tone="muted" style={{ fontFamily: family.ui[600] }} testID={`soul-karma-group-${g.cycle}`}>
               {thisLife(t, soul, g.cycle)
                 ? t("officer_app.soul.karma_group_life", { life: thisLife(t, soul, g.cycle) ?? "", count: String(g.count) })
                 : t("officer_app.soul.karma_group", { n: String(g.cycle + 1), count: String(g.count) })}
