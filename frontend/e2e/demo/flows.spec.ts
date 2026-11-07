@@ -160,7 +160,7 @@ test("the admin creates a user and a role", async ({ page, context }) => {
   await expect(page.locator("main")).toContainText("demo_new_officer");
 
   await page.goto("/permissions");
-  await page.getByRole("button", { name: /^角色/ }).first().click();
+  await page.getByRole("radio", { name: /^角色/ }).first().click();
   await page.getByRole("button", { name: /创建角色/ }).click();
   const roleDialog = page.getByRole("dialog");
   await roleDialog.locator("input").first().fill("FERRYMAN");
