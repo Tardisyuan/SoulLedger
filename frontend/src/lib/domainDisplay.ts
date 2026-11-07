@@ -70,7 +70,7 @@ export const MISSING_GLYPH: Record<MissingKind, string> = {
  * (src/__tests__/dataGridToneContract.test.ts) is not in play here.
  */
 export const MISSING_INK: Record<MissingKind, string> = {
-  unrecorded: "text-[oklch(var(--color-ink-tertiary))]",
+  unrecorded: "text-[oklch(var(--color-ink-subtle))]",
   zero: "text-[oklch(var(--color-ink-muted))]",
   inapplicable: "text-[oklch(var(--color-ink-subtle))]",
 };

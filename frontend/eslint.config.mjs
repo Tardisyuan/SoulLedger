@@ -145,6 +145,10 @@ const ROUND_ALLOW = new Set([
   "src/components/judgment/ClaimAvatar.tsx",
   // 规范 v3 导航底部的个人区:30px 圆形头像(首字),头像例外。
   "src/components/layout/GlobalNav.tsx",
+  // 演示里的灵魂端 App 画面(2026-11-07 起 demo/ 进守卫):照 App 自己的形状 —— 胶囊页签、路线站点圆点、
+  // 实时活动的进度条,App 里都是 borderRadius 999(mobile/src/screens/life.tsx 的 routeDot 等)。
+  "demo/DemoSoul.tsx",
+  "demo/DemoSoulScreens.tsx",
 ]);
 
 // 规范 v2 A2:全站不用阴影,**浮层也不用**(v1 放行的 shadow-overlay 撤掉,弹层改 1px ink 框)。
@@ -707,12 +711,18 @@ const eslintConfig = [
       "components/**/*.{ts,tsx}",
       "lib/**/*.{ts,tsx}",
       "hooks/**/*.{ts,tsx}",
+      // 第八次:`demo/**`(Vercel 上的纯前端演示)此前也在名单外,`rounded-full`、`gap-10` 这类照样漏网
+      // (v4 审计 2026-11-07)。DemoSoulScreens 的余额块正在另一项任务里改版,它那两处 px-5 / py-5 记在
+      // 基线里,改版时一并还掉。
+      "demo/**/*.{ts,tsx}",
     ],
     // 测试文件除外。这几条规则读的是**类名字符串**,而测试里的 `text-xs` /
     // `py-0.5` / `rounded` 通常正是**被断言为不该出现的东西** —— 让规则去管
     // 断言的内容,只会让人把整块重新关掉,而那正是 `src/__tests__/**` 当初被
     // 塞进全局 `ignores` 的原因。
-    ignores: ["src/__tests__/**"],
+    // DemoEntrances / DemoTour 暂不看(2026-11-07):这两个文件正被另一项任务整体改写,
+    // 改写合进来之后删掉这两行,让守卫照常管它们。
+    ignores: ["src/__tests__/**", "demo/DemoEntrances.tsx", "demo/DemoTour.tsx"],
     plugins: { "design-system": designSystem },
     rules: {
       "design-system/type-scale": "error",

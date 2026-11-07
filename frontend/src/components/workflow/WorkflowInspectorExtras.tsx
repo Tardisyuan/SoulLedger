@@ -264,7 +264,7 @@ export function ExitConditionsSection({
   return (
     <section aria-label={t("workflow.editor.condition.title")} className="flex flex-col gap-3">
       <div>
-        <h2 className="text-lg text-[oklch(var(--color-ink))] break-words">
+        <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
           <span aria-hidden="true">◇ </span>
           {t("workflow.editor.exits_title", { node: nodeLabel })}
         </h2>
@@ -357,7 +357,7 @@ export function ExitConditionsSection({
                       <>
                         <button
                           type="button"
-                          className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
+                          className="rounded-control h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
                           onClick={() => onChange(e.id, [...when, defaultClause()])}
                         >
                           + {t("workflow.editor.condition.add_clause")}
@@ -373,7 +373,7 @@ export function ExitConditionsSection({
                     ) : (
                       <button
                         type="button"
-                        className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
+                        className="rounded-control h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
                         onClick={() => onChange(e.id, [defaultClause()])}
                       >
                         {t("workflow.editor.condition.make")}

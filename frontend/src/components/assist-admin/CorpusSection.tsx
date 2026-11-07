@@ -86,7 +86,7 @@ export function CorpusSection() {
             </thead>
             <tbody>
               {shown.map((e) => (
-                <tr key={`${e.locale}/${e.audience}/${e.id}`} className="border-t border-[oklch(var(--color-hairline))] align-top">
+                <tr key={`${e.locale}/${e.audience}/${e.id}`} className="border-t border-[oklch(var(--color-line))] align-top">
                   <td className="py-1 pr-2">
                     <IdentifierChip id={e.id} variant="inline" />
                   </td>

@@ -12,7 +12,7 @@ test.describe("roles drawer: members tab", () => {
     await seedAuthState(page, { ...TEST_USER, tenant: null });
     await page.goto("/permissions");
     await expect(page.getByRole("heading", { name: "权限矩阵" })).toBeVisible();
-    await page.getByRole("button", { name: /^角色/ }).first().click();
+    await page.getByRole("radio", { name: /^角色/ }).first().click();
   });
 
   const openMembers = async (page: import("@playwright/test").Page, role: string) => {

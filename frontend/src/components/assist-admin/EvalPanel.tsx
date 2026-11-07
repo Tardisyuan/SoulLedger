@@ -173,7 +173,7 @@ export function EvalPanel({
                 type="button"
                 aria-pressed={selected === run.id}
                 onClick={() => setSelected(run.id)}
-                className={`w-full text-left text-xs px-2 py-1 border ${selected === run.id ? "border-[oklch(var(--color-accent))]" : "border-[oklch(var(--color-hairline))]"}`}
+                className={`w-full text-left text-xs px-2 py-1 border ${selected === run.id ? "border-[oklch(var(--color-accent))]" : "border-[oklch(var(--color-line))]"}`}
               >
                 <span className={MONO}>{formatDateTime(run.created_at)}</span> · {t(`assist_admin.eval.status.${run.status ?? "queued"}`)} ·{" "}
                 <span className={MONO}>
@@ -249,7 +249,7 @@ function RunDetail({ id }: { id: number }) {
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         {detail.summary.map((s) => (
-          <dl key={s.candidate} className="border border-[oklch(var(--color-hairline))] p-2 text-xs grid grid-cols-2 gap-1">
+          <dl key={s.candidate} className="border border-[oklch(var(--color-line))] p-2 text-xs grid grid-cols-2 gap-1">
             <dt className="col-span-2 text-sm">
               {LABELS[s.candidate]} · <span className={MONO}>{s.model}</span>
             </dt>
@@ -291,7 +291,7 @@ function RunDetail({ id }: { id: number }) {
               const ret = retrievalOf(row.byCandidate, wanted);
               return (
                 <Fragment key={row.key}>
-                  <tr className="border-t border-[oklch(var(--color-hairline))] align-top">
+                  <tr className="border-t border-[oklch(var(--color-line))] align-top">
                     <td className={`py-1 ${MONO}`}>{n + 1}</td>
                     <td className="py-1">
                       <button
@@ -341,7 +341,7 @@ function RunDetail({ id }: { id: number }) {
                         <div className="grid gap-2 sm:grid-cols-2">
                           {row.byCandidate.map((r, i) =>
                             r ? (
-                              <div key={i} className="border border-[oklch(var(--color-hairline))] p-2">
+                              <div key={i} className="border border-[oklch(var(--color-line))] p-2">
                                 <p className={SUBTLE}>
                                   {LABELS[i]} · {missingOf(r).length ? t("assist_admin.eval.missing", { phrases: missingOf(r).join("、") }) : t("assist_admin.eval.all_hit")}
                                 </p>
@@ -383,7 +383,7 @@ function RetrievalDetail({ wanted, got, allHit }: { wanted: string[]; got: strin
   const { t } = useI18n();
   return (
     <div className="mb-2 grid gap-2 sm:grid-cols-2" data-testid="aa-retrieval-detail">
-      <div className="border border-[oklch(var(--color-hairline))] p-2">
+      <div className="border border-[oklch(var(--color-line))] p-2">
         <p className={SUBTLE}>{t("assist_admin.eval.expected_entries")}</p>
         <ul className="mt-1 grid gap-0.5">
           {wanted.map((e) => {
@@ -405,7 +405,7 @@ function RetrievalDetail({ wanted, got, allHit }: { wanted: string[]; got: strin
           })}
         </ul>
       </div>
-      <div className="border border-[oklch(var(--color-hairline))] p-2">
+      <div className="border border-[oklch(var(--color-line))] p-2">
         <p className={SUBTLE}>{t("assist_admin.eval.retrieved_top", { k: String(got.length) })}</p>
         <ol className="mt-1 grid gap-0.5">
           {got.map((e, i) => (

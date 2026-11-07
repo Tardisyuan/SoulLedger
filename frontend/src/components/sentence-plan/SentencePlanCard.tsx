@@ -38,7 +38,7 @@ import { SentenceRequestForm } from "./SentenceRequestForm";
  * 节点的理由(`reason`)与请求在这里对官员可见;灵魂端(App)不看这些(Q10)。
  */
 
-const PANEL = "bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]";
+const PANEL = "bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]";
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function NodeRow({ plan, node, current }: { plan: SentencePlan; node: SentenceNode; current: boolean }) {
@@ -49,7 +49,7 @@ function NodeRow({ plan, node, current }: { plan: SentencePlan; node: SentenceNo
       data-node-order={node.order}
       data-node-status={node.status}
       aria-current={current ? "step" : undefined}
-      className={`flex flex-wrap items-center gap-x-2 gap-y-1 py-2 border-b border-[oklch(var(--color-hairline))] last:border-b-0 ${
+      className={`flex flex-wrap items-center gap-x-2 gap-y-1 py-2 border-b border-[oklch(var(--color-line))] last:border-b-0 ${
         gone ? "opacity-60" : ""
       }`}
     >

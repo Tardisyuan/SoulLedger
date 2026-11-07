@@ -218,7 +218,7 @@ export function SoulHeaderActions({
                     >
                       {t("souls.lost.mark")}
                     </button>
-                    <div role="separator" className="my-1 border-t border-[oklch(var(--color-hairline))]" />
+                    <div role="separator" className="my-1 border-t border-[oklch(var(--color-line))]" />
                   </>
                 ) : null}
                 {canDelete ? (

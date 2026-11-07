@@ -58,10 +58,10 @@ describe("EmptyState · 居左", () => {
 
   it("外层 className 是追加的，不改上面那条居左的约定", () => {
     const { container } = render(
-      <EmptyState title="尚无判决" className="border border-[oklch(var(--color-hairline))]" />
+      <EmptyState title="尚无判决" className="border border-[oklch(var(--color-line))]" />
     );
     const root = container.querySelector<HTMLElement>("[data-empty-state]")!;
-    expect(root.className).toContain("border-[oklch(var(--color-hairline))]");
+    expect(root.className).toContain("border-[oklch(var(--color-line))]");
     expect(root.className).toMatch(/\bpy-8\b/);
   });
 });

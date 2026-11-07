@@ -162,10 +162,10 @@ export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, rese
           e.preventDefault()
           openAt()
         }}
-        className="flex items-center gap-2 h-(--control-h-sm) px-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] text-sm text-[oklch(var(--color-ink))] whitespace-nowrap transition-colors hover:border-[oklch(var(--color-hairline-tertiary))]"
+        className="flex items-center gap-2 h-(--control-h-sm) px-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] text-sm text-[oklch(var(--color-ink))] whitespace-nowrap transition-colors hover:border-[oklch(var(--color-line-strong))]"
       >
         <span>{buttonLabel}</span>
-        <span aria-hidden="true" className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))]">▾</span>
+        <span aria-hidden="true" className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">▾</span>
       </button>
       {open &&
         pos &&
@@ -209,7 +209,7 @@ export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, rese
                 </button>
               )
             })}
-            <div aria-hidden="true" className="my-1 h-px bg-[oklch(var(--color-hairline-strong))]" />
+            <div aria-hidden="true" className="my-1 h-px bg-[oklch(var(--color-line-strong))]" />
             <button
               ref={(el) => {
                 itemRefs.current[columns.length] = el

@@ -103,7 +103,7 @@ export default function DemoSoul({ civ, onCiv }: { civ: SealCiv; onCiv: (civ: Se
         </div>
         <div className="min-h-0 flex-1">{app}</div>
       </div>
-      <div className="mx-auto hidden max-w-6xl gap-10 px-8 py-8 lg:flex">
+      <div className="mx-auto hidden max-w-6xl gap-8 px-8 py-8 lg:flex">
         <aside className="flex w-80 shrink-0 flex-col gap-6">
           <div className="flex items-center gap-3">
             <BrandMark size={28} />
@@ -150,7 +150,8 @@ export default function DemoSoul({ civ, onCiv }: { civ: SealCiv; onCiv: (civ: Se
             {t("demo.soul.back")} →
           </button>
         </aside>
-        {/* 393 × 852, the app's own size, not scaled. */}
+        {/* 393 × 852, the app's own size, not scaled. The 44px corner is the phone's bezel, not a UI radius. */}
+        {/* eslint-disable-next-line design-system/dead-radius -- device bezel of the phone mockup (not a control or panel) */}
         <div data-testid="demo-soul-phone" className="h-[852px] w-[393px] shrink-0 overflow-hidden rounded-[44px] border-8 border-[oklch(var(--color-ink))] shadow-overlay">
           {app}
         </div>

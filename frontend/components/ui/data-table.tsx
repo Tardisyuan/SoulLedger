@@ -276,8 +276,8 @@ export function DataTable<T>({
     transitionKey ?? ''
   )
 
-  /* 行高按规范 v3(2026-10-01 拍板):正文行 `min-height: 64px`(`--table-row-h`,v3 `.queue-row`
-     / `.ds-tr`),表头 44(`--control-h-sm`,v3 `.queue-head` / `.ds-th`)。`<tr>` 上的 `height`
+  /* 行高:正文行 `--table-row-h`(触屏 64,v3 `.queue-row` / `.ds-tr`;精确指针 46,规范 v4,2026-11-07),
+     表头 `--control-h-sm`(触屏 44、精确指针 32)。`<tr>` 上的 `height`
      在表格布局里就是最小高度 —— 内容更高时行照样长高。曾有的 `compact` 密度(不设最小行高、
      `py-1`)2026-10-02 用户拍板删除;删之前唯一的调用点是审判队列侧栏的两张表(经 DataGrid)。 */
   const rowHeight = 'h-(--table-row-h)'

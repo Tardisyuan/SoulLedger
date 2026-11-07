@@ -1,5 +1,7 @@
 "use client";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 /**
  * 迁移前这里是一个手搓的双环转圈:`border-amber-500/20` + `border-t-amber-500`
  * ——两处 Tailwind 原生调色板(基线里 `palette: 2` 就是它们),在浅色主题下
@@ -18,28 +20,33 @@
  * 的理由只剩上面第 1 条 —— 它本身就足够,但它是一条设计判断,不是一个缺陷的
  * 权宜之计,两者要求的后续动作不同。
  */
+/*
+ * 形状跟着 v4 的页面走(PageShell `variant="full"`):页头 = 标题(text-lg,行高 28)+ 副标题(text-sm,行高 20),
+ * 下面一条分段签(矩阵 / 角色 / 权限定义,`--control-h-sm`),正文是矩阵那一块:工具行、表头、
+ * 按 `--table-row-h` 的行 —— 和页面自己的 `!matrixReady` 骨架同高,加载完成不跳版。
+ */
 export default function Loading() {
   return (
     <div className="bg-[oklch(var(--color-canvas))]">
-      <header className="border-b border-[oklch(var(--color-hairline))]">
+      <header className="border-b border-[oklch(var(--color-line))]">
         <div className="px-4 md:px-8 pt-8 pb-6">
-          {/* h-10 对着 text-lg 的 32px × 1.2;h-6 对着 text-sm 副标题。 */}
-          <div className="h-10 w-64 bg-[oklch(var(--color-hairline))]" />
-          <div className="h-6 w-96 max-w-full bg-[oklch(var(--color-hairline))] mt-3" />
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-5 w-96 max-w-full mt-3" />
         </div>
       </header>
+      <div className="border-b border-[oklch(var(--color-line))]">
+        <div className="px-4 md:px-8 py-2">
+          <Skeleton className="h-(--control-h-sm) w-72 max-w-full" />
+        </div>
+      </div>
 
       {/* variant="full":矩阵的列数随角色数增长,这里也不设 max-width。 */}
-      <div className="px-4 md:px-8 py-6 space-y-6">
-        <div className="space-y-2">
-          <div className="h-11 w-full bg-[oklch(var(--color-hairline))]" />
+      <div className="px-4 md:px-8 py-6 space-y-4">
+        <Skeleton className="h-(--control-h-sm) w-full max-w-md" />
+        <div className="space-y-1">
+          <Skeleton className="h-(--control-h-sm) w-full" />
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="h-8 w-full bg-[oklch(var(--color-hairline))]" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 bg-[oklch(var(--color-hairline))]" />
+            <Skeleton key={i} className="h-(--table-row-h) w-full" />
           ))}
         </div>
       </div>

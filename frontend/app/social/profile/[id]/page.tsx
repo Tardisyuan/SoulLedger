@@ -113,7 +113,7 @@ export default function UserProfilePage() {
 
         {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一档)+ 件数注记;v2 节首的匾纹片段撤掉。 */}
         <div className="flex items-center gap-3 max-[768px]:px-4">
-          <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("social.user_posts")}</h2>
+          <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("social.user_posts")}</h2>
           {postsData?.count ? (
             <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{postsData.count}</span>
           ) : null}

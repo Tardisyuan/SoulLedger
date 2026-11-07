@@ -435,7 +435,7 @@ function Composer({ assist }: { assist: OfficerAssist }) {
             onClick={assist.stop}
             aria-label={t("officer_assist.stop_aria")}
             data-testid="officer-assist-stop"
-            className="flex h-(--control-h-sm) shrink-0 items-center gap-1 border border-[oklch(var(--color-ink))] px-2 text-xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+            className="flex rounded-control h-(--control-h-sm) shrink-0 items-center gap-1 border border-[oklch(var(--color-ink))] px-2 text-xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
           >
             <span aria-hidden="true">■</span>
             {t("officer_assist.stop")}

@@ -270,7 +270,7 @@ function DayBars({ days }: { days: Day[] }) {
 function Metric({ label, value, reached }: { label: string; value: string; reached: boolean }) {
   const { t } = useI18n();
   return (
-    <div className={`border-l-2 pl-3 ${reached ? "border-[oklch(var(--color-accent))]" : "border-[oklch(var(--color-hairline))]"}`}>
+    <div className={`border-l-2 pl-3 ${reached ? "border-[oklch(var(--color-accent))]" : "border-[oklch(var(--color-line))]"}`}>
       <dt className={MUTED}>{label}</dt>
       <dd className={MONO}>{value}</dd>
       <dd className={reached ? "text-[oklch(var(--color-accent-ink))]" : SUBTLE}>
@@ -296,7 +296,7 @@ function Table({ head, rows, monoFirst = false }: { head: string[]; rows: string
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r[0]} className="border-t border-[oklch(var(--color-hairline))]">
+          <tr key={r[0]} className="border-t border-[oklch(var(--color-line))]">
             {r.map((c, i) => (
               <td key={i} className={`py-1 ${i ? `text-right ${MONO}` : monoFirst ? MONO : ""}`}>
                 {c}

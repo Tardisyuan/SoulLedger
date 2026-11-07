@@ -181,7 +181,7 @@ export function ClauseLink({ record, code, className, ...rest }: { record: Ledge
     <Link
       href={`/corpus?code=${encodeURIComponent(code)}`}
       title={clauseTitle(record, locale)}
-      className={`underline decoration-dotted decoration-[oklch(var(--color-hairline))] underline-offset-2 hover:text-[oklch(var(--color-ink))] hover:decoration-current ${className ?? ""}`}
+      className={`underline decoration-dotted decoration-[oklch(var(--color-line))] underline-offset-2 hover:text-[oklch(var(--color-ink))] hover:decoration-current ${className ?? ""}`}
       {...rest}
     >
       {code}
@@ -295,7 +295,7 @@ export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
           </colgroup>
 
           <thead>
-            <tr className="border-b border-[oklch(var(--color-hairline))]">
+            <tr className="border-b border-[oklch(var(--color-line))]">
               <HeadCell first>{t("ledger.book.col_n")}</HeadCell>
               <HeadCell>{t("ledger.book.col_date")}</HeadCell>
               <HeadCell>{t("ledger.book.col_item")}</HeadCell>
@@ -326,8 +326,8 @@ export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
               const hasFacts = hasRecordFacts(record);
 
               return (
-                <tr key={record.id} className="border-b border-[oklch(var(--color-hairline))]">
-                  <BodyCell first className="text-[oklch(var(--color-ink-tertiary))] tabular-nums font-mono">
+                <tr key={record.id} className="border-b border-[oklch(var(--color-line))]">
+                  <BodyCell first className="text-[oklch(var(--color-ink-subtle))] tabular-nums font-mono">
                     {n}
                   </BodyCell>
 
@@ -495,7 +495,7 @@ function BookHeading({ title }: { title: string }) {
  * six ruled columns into a bordered card.
  */
 function rule(first?: boolean): string {
-  return first ? "" : "border-l border-[oklch(var(--color-hairline))]";
+  return first ? "" : "border-l border-[oklch(var(--color-line))]";
 }
 
 function HeadCell({
@@ -522,7 +522,7 @@ function HeadCell({
     >
       {children}
       {scale ? (
-        <span data-quantity-scale="" className="block text-2xs font-normal text-[oklch(var(--color-ink-tertiary))]">
+        <span data-quantity-scale="" className="block text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
           {t("ledger.figure_scale_weight")}
         </span>
       ) : null}
@@ -545,7 +545,7 @@ function BodyCell({
     <td
       className={`px-2 py-2 align-top ${numeric ? "text-right" : "text-left"} ${rule(
         first
-      )} ${numeric && !children ? "text-[oklch(var(--color-ink-tertiary))]" : ""} ${className}`}
+      )} ${numeric && !children ? "text-[oklch(var(--color-ink-subtle))]" : ""} ${className}`}
     >
       {children}
     </td>

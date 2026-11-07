@@ -48,7 +48,7 @@ function ChartCard({ title, aside, children }: { title: React.ReactNode; aside?:
   return (
     <section className="v4-card flex min-w-0 flex-col gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="text-lg text-[oklch(var(--color-ink))]">{title}</h2>
+        <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{title}</h2>
         {aside && <div className="text-xs text-[oklch(var(--color-ink-muted))]">{aside}</div>}
       </div>
       {children}
@@ -507,7 +507,7 @@ function DashboardContent() {
                   aria-labelledby="dash-state-breakdown"
                   className="v4-card min-w-0 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
                 >
-                  <h2 id="dash-state-breakdown" className="px-4 pt-4 text-lg text-[oklch(var(--color-ink))]">
+                  <h2 id="dash-state-breakdown" className="px-4 pt-4 font-title text-lg text-[oklch(var(--color-ink))]">
                     {t("admin.state_breakdown")}
                   </h2>
                   <div className="grid grid-cols-[20px_1fr_140px_120px] px-4 max-sm:grid-cols-[20px_1fr_64px_72px]">

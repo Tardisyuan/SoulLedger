@@ -13,10 +13,8 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
  * return 里，那个文件越过仓库 500 行的上限之后搬到这里；标记逐字未改，只把页面里的
  * `sortedNodes` 换成 prop `nodes`、`VERDICT_COLORS` 换成 prop `verdictColors`。
  *
- * 那张色表本身**没有**跟着搬：src/__tests__/statusTokenLayering.test.ts
- * 用 `app/workflow/[id]/page.tsx::VERDICT_COLORS` 这个字符串登记它（连同「为什么
- * 还没搬到 verdict 色板」的理由），换个文件就是把那条记录变哑。所以那张表留在
- * 页面里，这里只收它。
+ * 那张表本身**没有**跟着搬，留在页面里，这里只收它。2026-11-07(规范 v4)起它叫 `VERDICT_BADGE`,
+ * 全是 ink 的 `DOMAIN_BADGE`(字形 + 文字，不靠颜色),statusTokenLayering 的登记随之删掉。
  *
  * 切页签的那条 tab 条也留在页面 body 里，不在 PageShell 的 `tabs` 槽 —— 理由写在
  * 页面里那条注释上，别顺手"修正"。

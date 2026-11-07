@@ -219,7 +219,7 @@ export function DataGrid<T>({
           <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{selection.labels.selectedCount(selectedCount)}</span>
           {selection.bulkActions && (
             <>
-              <span aria-hidden="true" className="w-px h-[18px] bg-[oklch(var(--color-hairline-strong))]" />
+              <span aria-hidden="true" className="w-px h-[18px] bg-[oklch(var(--color-line-strong))]" />
               {selection.bulkActions}
             </>
           )}

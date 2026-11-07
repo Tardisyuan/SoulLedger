@@ -80,7 +80,7 @@ export function PlanChangesEditor({
         {draft.add.map((a, index) => {
           const eternal = realms.data?.find((r) => r.realm_code === a.realm_code)?.is_eternal;
           return (
-            <div key={index} data-add-row={index} className="space-y-2 border-l-2 border-[oklch(var(--color-hairline))] pl-3">
+            <div key={index} data-add-row={index} className="space-y-2 border-l-2 border-[oklch(var(--color-line))] pl-3">
               <p className="text-sm">
                 <TenantName code={tenantCode} />
               </p>

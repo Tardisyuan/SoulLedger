@@ -345,8 +345,11 @@
   --radius-control: 4px;
   --radius-panel: 6px;
 
-  /* 规范 v3 的控件三档高度 —— **2026-10-01 起全站在用**(用户拍板,推翻了此前「尺寸先不动」)。
+  /* 控件三档高度。这里是**触屏**的值(规范 v3,2026-10-01 起全站在用):
    *   sm 44px   md 48px   lg 56px      表格行 min-height 64px、表头 44px、行内动作列 44px
+   * 鼠标等精确指针(`(hover: hover) and (pointer: fine)`)按规范 v4(用户 2026-11-07):
+   *   sm 32px   md 36px   lg 40px      表格行 46px —— 覆盖写在 utilities 层「紧凑」档旁边。
+   * 触屏不跟:44 是点按下限。
    * 这里是唯一的数字来源:Button / Field / FilterChip / Pagination / DataTable 与这一轮换过的
    * 手写控件都写 `h-(--control-h-*)` / `min-h-(--table-row-h)`,不写 h-11 / h-12 这类等值的
    * 类名 —— 等值的类名改这里时不会跟着变。(此前就已是 44 的 `min-h-11` 等处没动,它们本来
@@ -1065,12 +1068,27 @@
     box-shadow: var(--shadow-card);
   }
 
-  /* 紧凑(v4「8 · 紧凑」,`shell.density.compact`,ShellChrome.tsx 写 <html data-density>):表格行 36、
-     控件 30、正文 13;页头与卡片间距不动。只在 ≥ 769 且指针精确时 —— 触屏的 44 是点按下限。 */
-  @media (min-width: 769px) and (pointer: fine) {
-    html[data-density="compact"] {
-      --control-h-sm: 30px;
+  /* 精确指针的默认档(规范 v4,用户 2026-11-07):控件 36、表格行 46。md 是「控件」那一档(Button / Field 的默认),
+     sm 是表头与行内动作,要放进 46 的行里,取 32;lg 40。触屏(hover: none 或 pointer: coarse)不进这里,仍是 @theme 的 44 / 48 / 56 / 64。 */
+  /* 选择器写 `html` 而不是 `:root`:utilities 层本来就压过 @theme 的 `:root`,而测试的 `readTokens(":root")`
+     把每个 `:root {…}` 都当成深色主题的令牌表读。 */
+  @media (hover: hover) and (pointer: fine) {
+    html {
+      --control-h-sm: 32px;
       --control-h-md: 36px;
+      --control-h-lg: 40px;
+      --table-row-h: 46px;
+    }
+  }
+
+  /* 紧凑(v4「8 · 紧凑」,`shell.density.compact`,ShellChrome.tsx 写 <html data-density>):表格行 36、
+     控件 32、表头 28;正文 13;页头与卡片间距不动。只在 ≥ 769 且指针精确时 —— 触屏的 44 是点按下限。
+     2026-11-07 默认档在精确指针上已是 36 / 46,此前紧凑的「控件 36」于是等于默认,整档随之下调一级。 */
+  @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+    html[data-density="compact"] {
+      --control-h-sm: 28px;
+      --control-h-md: 32px;
+      --control-h-lg: 36px;
       --table-row-h: 36px;
     }
     html[data-density="compact"] [data-slot="table"],

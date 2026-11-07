@@ -205,7 +205,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
 
         {step === 1 ? (
           <section className="flex flex-col gap-2">
-            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step1_title")}</h3>
+            <h3 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step1_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step1_body")}</p>
             {setup ? null : (
               <>
@@ -242,7 +242,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
 
         {step === 2 ? (
           <section className="flex flex-col gap-4">
-            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step2_title")}</h3>
+            <h3 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step2_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step2_body")}</p>
             {setup ? (
               <div className="flex flex-col gap-4 md:flex-row md:items-start">
@@ -278,7 +278,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
 
         {step === 3 ? (
           <section className="flex flex-col gap-4">
-            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step3_title")}</h3>
+            <h3 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step3_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step3_body")}</p>
             {codeError ? (
               <p role="alert" className="text-sm font-medium text-[oklch(var(--color-danger))]">
@@ -305,7 +305,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
 
         {step === 4 ? (
           <section className="flex flex-col gap-4">
-            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step4_title")}</h3>
+            <h3 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step4_title")}</h3>
             <RecoveryCodesPanel codes={codes} saved={saved} onSavedChange={setSaved} username={username} />
             {completeError ? (
               <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">

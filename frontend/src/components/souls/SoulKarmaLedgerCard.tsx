@@ -168,7 +168,7 @@ export function SoulKarmaLedgerCard({
           karmicBalance={karmicBalance}
         />
 
-        <div className="mt-4 pt-3 border-t border-[oklch(var(--color-hairline))] space-y-2">
+        <div className="mt-4 pt-3 border-t border-[oklch(var(--color-line))] space-y-2">
           <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">
             {tf("ledger.raw_vs_decayed", "原始 / 衰减后")}
           </p>
@@ -276,7 +276,7 @@ export function SoulKarmaLedgerCard({
             </>
           )}
 
-          <div className="border border-dashed border-[oklch(var(--color-hairline))] p-2 mt-2">
+          <div className="border border-dashed border-[oklch(var(--color-line))] p-2 mt-2">
             <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
               {/* Egypt: the scale reads the admitted deeds and the officer does not choose (docs/02_奥西里斯审判详解.md:175-177). */}
               {(life?.civilization ?? reading.civilization) === "EGYPTIAN"

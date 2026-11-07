@@ -107,7 +107,7 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
         )}
 
         {canDecide && (
-          <section className="border-t border-[oklch(var(--color-hairline))] pt-3 space-y-2" data-testid="cross-civilization-decision">
+          <section className="border-t border-[oklch(var(--color-line))] pt-3 space-y-2" data-testid="cross-civilization-decision">
             <h3 className="text-sm font-medium">{t("soul_accounts.rebirth.cross_title")}</h3>
             <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("soul_accounts.rebirth.cross_hint")}</p>
             <div className="flex flex-wrap gap-2">

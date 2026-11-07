@@ -41,7 +41,7 @@ export type SoulView = ReturnType<typeof soulView>;
 const word = (t: T, key: string, fallback: string) => (t(key) === key ? t(fallback) : t(key));
 const signed = (b: number) => (b > 0 ? `+${b}` : b < 0 ? `−${-b}` : "0");
 
-const SECTION = "border-b border-[oklch(var(--color-line))] px-5 py-5";
+const SECTION = "border-b border-[oklch(var(--color-line))] px-4 py-4";
 const EYEBROW = "m-0 text-2xs uppercase text-[oklch(var(--color-metal))]";
 
 export function SoulScreenBody({ screen, view, civ }: { screen: SoulScreen; view: SoulView; civ: SealCiv }) {
@@ -133,7 +133,7 @@ function Letters({ civ }: { civ: SealCiv }) {
         <h2 className="m-0 mt-1 font-title text-lg">{t("soul_app.chat.hall.title", { hall })}</h2>
         <p className="m-0 mt-1 text-xs text-[oklch(var(--color-ink-muted))]">{t("soul_app.chat.hall.subtitle")}</p>
       </header>
-      <ol className="m-0 flex list-none flex-col gap-3 p-5">
+      <ol className="m-0 flex list-none flex-col gap-3 p-4">
         {thread.map((m, i) => (
           <li key={i} className={m.from === "me" ? "self-end" : "self-start"}>
             <p
@@ -163,7 +163,7 @@ function Circle({ view }: { view: SoulView }) {
         <h2 className="m-0 font-title text-lg">{t("soul_app.circle.tab")}</h2>
       </header>
       {posts.length === 0 ? (
-        <p className="m-0 p-5 text-sm text-[oklch(var(--color-ink-muted))]">{t("soul_app.circle.feed.empty_title")}</p>
+        <p className="m-0 p-4 text-sm text-[oklch(var(--color-ink-muted))]">{t("soul_app.circle.feed.empty_title")}</p>
       ) : (
         <ul className="m-0 list-none p-0">
           {posts.map((post) => (
@@ -191,7 +191,7 @@ function Rebirth({ view }: { view: SoulView }) {
         <h2 className="m-0 font-title text-lg">{t("soul_app.tabs.rebirth")}</h2>
       </header>
       {apps.length === 0 ? (
-        <p className="m-0 p-5 text-sm text-[oklch(var(--color-ink-muted))]">{t("soul_app.life.no_applications")}</p>
+        <p className="m-0 p-4 text-sm text-[oklch(var(--color-ink-muted))]">{t("soul_app.life.no_applications")}</p>
       ) : (
         <ul className="m-0 list-none p-0">
           {apps.map((a) => (
@@ -216,10 +216,10 @@ function Lock({ view }: { view: SoulView }) {
   const live = view.route && view.me ? liveContent(view.route, view.me.name, t) : null;
   const now = new Date();
   return (
-    <div data-testid="demo-soul-lock" className="flex min-h-full flex-col items-center bg-[oklch(var(--color-ink))] px-4 pt-16 text-[oklch(var(--color-canvas))]">
+    <div data-testid="demo-soul-lock" className="flex min-h-full flex-col items-center bg-[oklch(var(--color-ink))] px-4 pt-12 text-[oklch(var(--color-canvas))]">
       <p className="m-0 text-sm opacity-70">{now.toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric" })}</p>
       <p className="m-0 font-title text-display-lg">{now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</p>
-      <div className="mt-10 w-full rounded-panel bg-[oklch(var(--color-canvas)/0.12)] p-4">
+      <div className="mt-8 w-full rounded-panel bg-[oklch(var(--color-canvas)/0.12)] p-4">
         <p className="m-0 text-2xs uppercase opacity-70">{live?.title ?? t("live.title")}</p>
         {live ? (
           <>
@@ -245,5 +245,5 @@ function Lock({ view }: { view: SoulView }) {
 
 export function Unrecorded() {
   const { t } = useI18n();
-  return <p className="m-0 p-5 text-sm text-[oklch(var(--color-ink-muted))]">{t("common.value.unrecorded")}</p>;
+  return <p className="m-0 p-4 text-sm text-[oklch(var(--color-ink-muted))]">{t("common.value.unrecorded")}</p>;
 }

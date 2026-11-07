@@ -58,12 +58,12 @@ export function JudgmentEvidenceColumn({ evidence, mark = "丙" }: { evidence: R
         <p className="text-sm text-[oklch(var(--color-ink-subtle))] py-6">{t("judgment.no_evidence")}</p>
       ) : (
         <>
-          <ol className="mt-4 divide-y divide-[oklch(var(--color-hairline))]">
+          <ol className="mt-4 divide-y divide-[oklch(var(--color-line))]">
             {entries.map(([key, value], index) => (
               <li key={key} className="grid grid-cols-[44px_1fr] gap-3 py-3">
                 {/* Han numerals, the same numbering the main clauses carry, so
                     the two numbered lists on this page read as one document. */}
-                <span className="font-mono tabular-nums text-xs text-[oklch(var(--color-ink-tertiary))]">
+                <span className="font-mono tabular-nums text-xs text-[oklch(var(--color-ink-subtle))]">
                   {toHanNumeral(index + 1) ?? String(index + 1)}
                 </span>
                 <span className="min-w-0">

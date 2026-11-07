@@ -57,7 +57,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
         <div className="space-y-4">
           <p>{t("users.delete_confirm")}</p>
           {user && (
-            <div className="border border-[oklch(var(--color-hairline))] p-3 space-y-1">
+            <div className="border border-[oklch(var(--color-line))] p-3 space-y-1">
               <p className="font-medium">
                 <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.username")}: </span>
                 {user.username}
