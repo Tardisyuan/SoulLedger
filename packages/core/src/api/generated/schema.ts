@@ -1145,7 +1145,7 @@ export interface paths {
         /**
          * @description POST /api/v1/auth/password-help/
          *     「忘记密码」 on a console whose accounts an administrator opens: the
-         *     administrators and realm leads (殿主) of the account's tenant get an in-app
+         *     officers of the account's tenant who hold user.manage (ADMIN by default) get an in-app
          *     notification and an audit row is written. No code, no link, no mail — the
          *     recipient resets the password through user management as they would anyway.
          *
@@ -3176,7 +3176,7 @@ export interface paths {
          *
          *     The docstring here used to read "Read-only audit log", and that one line has
          *     now caused the same question to be raised twice: why can a VIEWER read this
-         *     when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+         *     when `AuditLog` requires `audit.read` (then ADMIN and MODERATOR; ADMIN alone by default since 2026-11-07)?
          *
          *     Because they are different things. `AuditLog` records who changed what, for
          *     review. `SoulEvent` records what happened to a soul, and it is what
@@ -3213,7 +3213,7 @@ export interface paths {
          *
          *     The docstring here used to read "Read-only audit log", and that one line has
          *     now caused the same question to be raised twice: why can a VIEWER read this
-         *     when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+         *     when `AuditLog` requires `audit.read` (then ADMIN and MODERATOR; ADMIN alone by default since 2026-11-07)?
          *
          *     Because they are different things. `AuditLog` records who changed what, for
          *     review. `SoulEvent` records what happened to a soul, and it is what
@@ -6420,7 +6420,7 @@ export interface paths {
          *     1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
          *        to `org.read`, held by all five roles; writes (`create`/`update`/
          *        `partial_update`/`destroy`) are remapped through `extra_permissions` to
-         *        `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
+         *        `org.manage`, held by ADMIN only (and MODERATOR until 2026-11-07). `CodenamePermission` is
          *        added to `permission_classes` alongside `TenantPermission` — the two
          *        answer different questions ("may this role do this at all" vs. "in this
          *        tenant") and both must hold, same pairing as every other enforced
@@ -6449,7 +6449,7 @@ export interface paths {
          *     1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
          *        to `org.read`, held by all five roles; writes (`create`/`update`/
          *        `partial_update`/`destroy`) are remapped through `extra_permissions` to
-         *        `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
+         *        `org.manage`, held by ADMIN only (and MODERATOR until 2026-11-07). `CodenamePermission` is
          *        added to `permission_classes` alongside `TenantPermission` — the two
          *        answer different questions ("may this role do this at all" vs. "in this
          *        tenant") and both must hold, same pairing as every other enforced
@@ -6490,7 +6490,7 @@ export interface paths {
          *     1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
          *        to `org.read`, held by all five roles; writes (`create`/`update`/
          *        `partial_update`/`destroy`) are remapped through `extra_permissions` to
-         *        `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
+         *        `org.manage`, held by ADMIN only (and MODERATOR until 2026-11-07). `CodenamePermission` is
          *        added to `permission_classes` alongside `TenantPermission` — the two
          *        answer different questions ("may this role do this at all" vs. "in this
          *        tenant") and both must hold, same pairing as every other enforced
@@ -6518,7 +6518,7 @@ export interface paths {
          *     1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
          *        to `org.read`, held by all five roles; writes (`create`/`update`/
          *        `partial_update`/`destroy`) are remapped through `extra_permissions` to
-         *        `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
+         *        `org.manage`, held by ADMIN only (and MODERATOR until 2026-11-07). `CodenamePermission` is
          *        added to `permission_classes` alongside `TenantPermission` — the two
          *        answer different questions ("may this role do this at all" vs. "in this
          *        tenant") and both must hold, same pairing as every other enforced
@@ -6558,7 +6558,7 @@ export interface paths {
          *     1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
          *        to `org.read`, held by all five roles; writes (`create`/`update`/
          *        `partial_update`/`destroy`) are remapped through `extra_permissions` to
-         *        `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
+         *        `org.manage`, held by ADMIN only (and MODERATOR until 2026-11-07). `CodenamePermission` is
          *        added to `permission_classes` alongside `TenantPermission` — the two
          *        answer different questions ("may this role do this at all" vs. "in this
          *        tenant") and both must hold, same pairing as every other enforced
@@ -10315,8 +10315,9 @@ export interface paths {
         /**
          * @description 越级推进 — force a stuck workflow past its current node.
          *
-         *     A realm lead (MODERATOR) configures the flow but deliberately holds
-         *     neither workflow.approve nor workflow.advance: the ten courts exist to
+         *     A role that designs the flow (workflow.create / update — by default only
+         *     ADMIN; MODERATOR until 2026-11-07) may hold neither workflow.approve nor
+         *     workflow.advance (apps/perm/checker.py::WORKFLOW_DESIGN_CODENAMES): the ten courts exist to
          *     divide the decision, and a lead who could both design the flow and
          *     approve at any stage of it would make that division decorative.
          *
@@ -10764,9 +10765,9 @@ export interface components {
          *     to record a decision — and, in the same call, also advances the parent
          *     workflow's `current_node`/`status`, and sets `completed_at` when that was
          *     the last node. ApprovalNodeViewSet.partial_update maps to `workflow.update`,
-         *     which MODERATOR holds despite being deliberately denied `workflow.approve`
-         *     (see ApprovalWorkflowViewSet's extra_permissions and the ROLE_PERMISSIONS
-         *     entry for MODERATOR) — so a plain PATCH here used to let MODERATOR forge a
+         *     which a flow designer holds while being refused `workflow.approve`
+         *     (apps/perm/checker.py::WORKFLOW_DESIGN_CODENAMES; MODERATOR was that designer
+         *     until 2026-11-07) — so a plain PATCH here used to let MODERATOR forge a
          *     verdict on a real pending node while skipping every one of complete_node's
          *     side effects: the workflow never advanced, `completed_at` never got set,
          *     and nothing recorded that the "approval" never happened. validate() below
@@ -10912,11 +10913,11 @@ export interface components {
          *     DispatchRecordSerializer's `status`/`dispatched_by`
          *     (apps/dispatch/serializers.py) — see that docstring for the shape this
          *     mirrors. ApprovalWorkflowViewSet.partial_update maps to `workflow.update`,
-         *     which MODERATOR holds; `advance` requires `workflow.advance` (ADMIN,
-         *     JUDGE), which MODERATOR is deliberately denied so that a realm lead who
-         *     designs a flow cannot also push it forward unchecked. The *sanctioned*
-         *     way past a stalled flow is `escalate` (`workflow.escalate`, which
-         *     MODERATOR does hold) — it demands a written reason and always writes an
+         *     which a flow designer holds; `advance` requires `workflow.advance` (ADMIN,
+         *     JUDGE), which a designer is refused so that whoever designs a flow cannot
+         *     also push it forward unchecked (MODERATOR was that designer until
+         *     2026-11-07). The *sanctioned* way past a stalled flow is `escalate`
+         *     (`workflow.escalate`, ADMIN by default) — it demands a written reason and always writes an
          *     AuditLog naming who overrode which node. A plain PATCH setting
          *     `current_node` directly reached the identical state change as `advance`
          *     while skipping both `advance_to_next()`'s own checks and, worse,
@@ -17085,9 +17086,9 @@ export interface components {
          *     to record a decision — and, in the same call, also advances the parent
          *     workflow's `current_node`/`status`, and sets `completed_at` when that was
          *     the last node. ApprovalNodeViewSet.partial_update maps to `workflow.update`,
-         *     which MODERATOR holds despite being deliberately denied `workflow.approve`
-         *     (see ApprovalWorkflowViewSet's extra_permissions and the ROLE_PERMISSIONS
-         *     entry for MODERATOR) — so a plain PATCH here used to let MODERATOR forge a
+         *     which a flow designer holds while being refused `workflow.approve`
+         *     (apps/perm/checker.py::WORKFLOW_DESIGN_CODENAMES; MODERATOR was that designer
+         *     until 2026-11-07) — so a plain PATCH here used to let MODERATOR forge a
          *     verdict on a real pending node while skipping every one of complete_node's
          *     side effects: the workflow never advanced, `completed_at` never got set,
          *     and nothing recorded that the "approval" never happened. validate() below
@@ -17192,11 +17193,11 @@ export interface components {
          *     DispatchRecordSerializer's `status`/`dispatched_by`
          *     (apps/dispatch/serializers.py) — see that docstring for the shape this
          *     mirrors. ApprovalWorkflowViewSet.partial_update maps to `workflow.update`,
-         *     which MODERATOR holds; `advance` requires `workflow.advance` (ADMIN,
-         *     JUDGE), which MODERATOR is deliberately denied so that a realm lead who
-         *     designs a flow cannot also push it forward unchecked. The *sanctioned*
-         *     way past a stalled flow is `escalate` (`workflow.escalate`, which
-         *     MODERATOR does hold) — it demands a written reason and always writes an
+         *     which a flow designer holds; `advance` requires `workflow.advance` (ADMIN,
+         *     JUDGE), which a designer is refused so that whoever designs a flow cannot
+         *     also push it forward unchecked (MODERATOR was that designer until
+         *     2026-11-07). The *sanctioned* way past a stalled flow is `escalate`
+         *     (`workflow.escalate`, ADMIN by default) — it demands a written reason and always writes an
          *     AuditLog naming who overrode which node. A plain PATCH setting
          *     `current_node` directly reached the identical state change as `advance`
          *     while skipping both `advance_to_next()`'s own checks and, worse,
