@@ -73,7 +73,9 @@ describe("地府(定稿第五、六批)", () => {
     const doc = verdictDocument({ ...base, han: false, judgeName: "King Qinguang" }, ten)!;
     expect(doc.vertical).toBe(false);
     expect(doc.body).toContain("born 1931");
-    expect(doc.date).toBe(`6/11/2026 · ${ten("hours.cn.wei")}`);
+    expect(doc.date).toBe(`6 November 2026 · ${ten("hours.cn.wei")}`);
+    // 不写 6/11/2026:美式读法是六月十一日。
+    expect(doc.date).not.toMatch(/\d+\/\d+\/\d+/);
   });
 });
 

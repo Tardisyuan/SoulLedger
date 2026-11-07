@@ -9478,7 +9478,7 @@
   "verdict_doc": {
     "cn": {
       "body": "{{soul}}: born {{born}}, died {{died}}. Merit {{merit}}, demerit {{demerit}}.",
-      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "date": "{{day}} {{month_name}} {{year}} · {{hour}}",
       "seal": "Seal of {{court}}",
       "sign": "Court {{n}} · {{king}}",
       "title": "Judgment of {{court}}",
@@ -9492,7 +9492,7 @@
     },
     "eg": {
       "body": "The heart of {{soul}} has been weighed on the scale. Anubis tended the scale; Thoth recorded and proclaimed.",
-      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "date": "{{day}} {{month_name}} {{year}} · {{hour}}",
       "seal": "Hall of Two Truths",
       "sign": "Recorded and proclaimed by Thoth",
       "title": "Hall of Two Truths · judgment",
@@ -9503,7 +9503,7 @@
     },
     "eu": {
       "body": "The life of {{soul}} has been referred to Christ.",
-      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "date": "{{day}} {{month_name}} {{year}} · {{hour}}",
       "deco": "SENTENTIA",
       "seal": "SENTENTIA",
       "sign": "Before the judgment seat of Christ",
@@ -9519,7 +9519,7 @@
     },
     "gr": {
       "body": "The judge does not ask who is being judged; he looks only at the soul.",
-      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "date": "{{day}} {{month_name}} {{year}} · {{hour}}",
       "deco": "ΚΡΙΣΙΣ",
       "seal": "ΚΡΙΣΙΣ",
       "sign_final": "Minos · final judgment",
@@ -9533,7 +9533,7 @@
     },
     "gr_er": {
       "body": "The judges sit between the four openings.",
-      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "date": "{{day}} {{month_name}} {{year}} · {{hour}}",
       "seal": "ΚΡΙΣΙΣ",
       "sign": "The judges between the four openings",
       "title": "Between the four openings · judgment",
