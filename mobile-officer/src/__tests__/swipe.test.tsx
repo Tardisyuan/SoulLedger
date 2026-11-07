@@ -139,6 +139,9 @@ describe("落印失败时卡片回原位", () => {
     await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
     await waitFor(() => expect(mockConclude).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
+    // 飞出(200ms)比拒绝晚结束时,它不能再把弹回来的卡拿走。
+    await act(() => new Promise((r) => setTimeout(r, 400)));
+    expect(screen.getByTestId("swipe-card-j-1")).toBeTruthy();
     return spring;
   };
   it("平常:弹回去(spring)", async () => {
