@@ -25,7 +25,7 @@ import {
 } from "../rules";
 import { useKeptText } from "../keptText";
 import { useCan } from "../session";
-import { Input, Notice, Sheet, Txt, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
+import { Input, Notice, Sheet, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
 import { PeoplePickerSheet, type PickPerson } from "./letterActions";
 
 type Overlay = "menu" | "release" | "defer" | "request_reassign" | "reassign_to" | "release_for" | "defer_for" | "undefer_for" | null;
@@ -122,7 +122,7 @@ export function JudgmentActionBar({
       // Read out as words, not "horizontal ellipsis" (review 2026-11-01); the letter's ⋯ says the same.
       accessibilityLabel={t("officer_app.letter.more")}
       onPress={() => open("menu")}
-      style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.inkSubtle }}
+      style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: radius.control, borderColor: theme.inkSubtle }}
     >
       <Txt variant="nav">⋯</Txt>
     </Pressable>

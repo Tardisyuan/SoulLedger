@@ -13,7 +13,7 @@ import { useCachedRemote, useOnBump } from "../readCache";
 import { ActionButton, FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, onlySoul, pickRowLines, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
-import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, space, useI18n, useTheme } from "../shared";
+import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, radius, space, useI18n, useTheme } from "../shared";
 import { formatWhen } from "../format";
 
 export interface ItemRef {
@@ -326,7 +326,7 @@ function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight:
 const styles = StyleSheet.create({
   summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: space[5] },
   summaryText: { flex: 1 },
-  pending: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[2], paddingVertical: 2 },
+  pending: { borderWidth: 1, borderStyle: "dashed", borderRadius: radius.control, paddingHorizontal: space[2], paddingVertical: 2 },
   failure: { paddingHorizontal: space[5], paddingVertical: space[3], gap: space[2] },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: space[3] },
   summaryClear: { minHeight: 44, justifyContent: "center" },
