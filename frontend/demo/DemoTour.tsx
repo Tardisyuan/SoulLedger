@@ -51,10 +51,11 @@ body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max
 .demo-entrance{position:fixed;inset:0;z-index:9999;color:oklch(var(--color-ink))}
 .demo-cover{position:fixed;left:0;top:0;width:100vw;height:100vh;overflow:hidden;background-color:oklch(var(--color-canvas));background-image:radial-gradient(70% 260px at 30% -52px,color-mix(in srgb,oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%),transparent),transparent 70%)}
 .demo-seal-mark{position:fixed;left:0;top:0;transform-origin:0 0;will-change:transform;line-height:0}
-.demo-seal-name{position:fixed;left:50%;top:calc(50% + 72px);transform:translateX(-50%);animation:demo-seal-in var(--transition-duration-base) var(--ease-enter) 160ms both}
+.demo-seal-name{position:absolute;left:50%;top:calc(50% + 56px);transform:translateX(-50%);animation:demo-seal-in var(--transition-duration-base) var(--ease-enter) 160ms both}
 .demo-seal-skip{position:fixed;top:8px;right:8px}
-[data-land] .demo-seal-name,[data-land] .demo-seal-skip{animation:demo-seal-out var(--transition-duration-fast) var(--ease-exit) forwards}
-@media (prefers-reduced-motion:reduce){.demo-entrance{animation:demo-seal-in 150ms ease-out both}.demo-entrance>:not(.demo-cover):not(.sr-only){display:none}}`;
+[data-land] .demo-seal-skip{animation:demo-seal-out 120ms var(--ease-exit) forwards}
+[data-land] .demo-seal-name{animation:none}
+@media (prefers-reduced-motion:reduce){.demo-entrance{animation:demo-seal-in 150ms ease-out both}.demo-entrance>:not(.demo-cover):not(.sr-only),.demo-seal-name{display:none}}`;
 
 /** A page kept alive behind the current one is still in the document, with its own `main`, and takes up no room. */
 const onScreen = (element: Element) => element.getClientRects().length > 0;
@@ -149,6 +150,7 @@ function EntranceOverlay() {
   const root = useRef<HTMLDivElement>(null);
   const cover = useRef<HTMLDivElement>(null);
   const mark = useRef<HTMLSpanElement>(null);
+  const label = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const start = (e: Event) => {
@@ -193,6 +195,7 @@ function EntranceOverlay() {
     box.removeAttribute("style");
     root.current?.style.removeProperty("opacity");
     el.style.removeProperty("opacity");
+    label.current?.style.removeProperty("opacity");
     const centre = centreOf(el);
     el.style.transform = over(centre);
     if (prefersReducedMotion() || typeof box.animate !== "function") return;
@@ -232,7 +235,11 @@ function EntranceOverlay() {
   // Closing: the cover onto the real band, the seal onto the real seal; then the cover fades over the band it now matches.
   // Frame by frame towards the targets measured on that frame, not to a box measured once: the band can still move while
   // it closes (the tour scrolls its first step into view, and a scrolled band shrinks to 48), and the seal would jump.
-  useEffect(() => {
+  // The cover has the band cut out of it from the first frame: the real band (its title, its court) is already drawn
+  // where it will stay, and only its seal is held back until the cover's seal is on it. The name rides in the cover, so
+  // it is clipped with it and never lies over the console.
+  // Before the paint that first shows `data-land`: a frame of the uncut cover over the drawn band is what this avoids.
+  useLayoutEffect(() => {
     const el = mark.current;
     const box = cover.current;
     const all = root.current;
@@ -240,33 +247,76 @@ function EntranceOverlay() {
     let frame = 0;
     const reduced = prefersReducedMotion();
     const t0 = performance.now();
-    const move = reduced ? 0 : ms("slow");
-    const fade = reduced ? 150 : ms("fast");
+    // The name fades first (120 ms, on the same clock as the rest, so it is gone when the cover starts to close), on the
+    // cover and nowhere else; then the cover closes.
+    // 120 + 240 + 120: no longer in all than before the name waited, which a slow phone (CPU x4) only just fits.
+    const wait = reduced ? 0 : 120;
+    const move = reduced ? 0 : ms("base");
+    const fade = reduced ? 150 : 120;
     const from = centreOf(el);
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - t0) / (move || 1));
-      // ponytail: a quartic ease-out standing in for `standard` (0.2, 0, 0, 1); a bezier solver if anyone can tell.
-      const e = move ? 1 - (1 - p) ** 4 : 1;
+    let held: HTMLElement | SVGElement | null = null;
+    const hold = (real: Element | null) => {
+      if (held === real) return;
+      held?.style.removeProperty("visibility");
+      held = real instanceof HTMLElement || real instanceof SVGElement ? real : null;
+      held?.style.setProperty("visibility", "hidden");
+    };
+    // performance.now(), not the frame's timestamp: that can be earlier than t0, and a negative progress overshoots.
+    let p = 0;
+    let e = 0;
+    // The band can also change size inside a frame (a phone's band opens from 48 to its full height as the page settles):
+    // a resize observer runs after layout and before paint, so the cut-out is redrawn in that same frame.
+    let watched: Element | null = null;
+    let resized: ResizeObserver | null = null;
+    const place = () => {
       if (!reduced) {
         const { band, mark: real } = handOffTargets(run.skin !== null);
+        if (band !== watched && resized) {
+          resized.disconnect();
+          if (band) resized.observe(band);
+          watched = band;
+        }
         if (band) {
           const b = band.getBoundingClientRect();
-          Object.assign(box.style, { left: `${lerp(0, b.left, e)}px`, top: `${lerp(0, b.top, e)}px`, width: `${lerp(vw, b.width, e)}px`, height: `${lerp(vh, b.height, e)}px` });
+          const c = { x: lerp(0, b.left, e), y: lerp(0, b.top, e), w: lerp(vw, b.width, e), h: lerp(vh, b.height, e) };
+          Object.assign(box.style, { left: `${c.x}px`, top: `${c.y}px`, width: `${c.w}px`, height: `${c.h}px` });
+          // The band's box in the cover's own coordinates, cut out (even-odd: the outer rectangle minus the inner one).
+          const hole = `M${b.left - c.x} ${b.top - c.y}h${b.width}v${b.height}h${-b.width}Z`;
+          box.style.clipPath = `path(evenodd, "M0 0H${c.w}V${c.h}H0Z${hole}")`;
         } else box.style.opacity = String(1 - e);
         if (real) {
           const m = real.getBoundingClientRect();
           el.style.transform = over({ x: lerp(from.x, m.left, e), y: lerp(from.y, m.top, e), w: lerp(from.w, m.width, e) });
         } else el.style.opacity = String(1 - e);
+        // The band's own seal shows once the cover's is on it; until then there would be two.
+        hold(p < 1 ? real : null);
       }
-      const f = Math.min(1, Math.max(0, (now - t0 - move) / fade));
+    };
+    if (typeof ResizeObserver === "function") resized = new ResizeObserver(place);
+    const tick = () => {
+      const now = performance.now();
+      label.current?.style.setProperty("opacity", String(wait ? Math.max(0, 1 - (now - t0) / wait) : 0));
+      p = Math.min(1, Math.max(0, (now - t0 - wait) / (move || 1)));
+      // ponytail: a quartic ease-out standing in for `standard` (0.2, 0, 0, 1); a bezier solver if anyone can tell.
+      e = move ? 1 - (1 - p) ** 4 : 1;
+      place();
+      const f = Math.min(1, Math.max(0, (now - t0 - wait - move) / fade));
       all.style.opacity = String(1 - f);
       if (f >= 1) setRun(null);
       else frame = requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    tick();
+    // The tour scrolls its first step into view while this closes: scroll events come before the frame's callbacks, so
+    // the cut-out follows the band in the same frame rather than one behind it.
+    window.addEventListener("scroll", place, { capture: true, passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", place, { capture: true });
+      resized?.disconnect();
+      hold(null);
+    };
   }, [land, run]);
 
   if (!run) return null;
@@ -286,12 +336,12 @@ function EntranceOverlay() {
     >
       <div ref={cover} className="demo-cover">
         <div aria-hidden="true" className="identity-pattern" />
+        <span ref={label} className="demo-seal-name whitespace-nowrap font-title text-lg">{name}</span>
       </div>
       <span aria-live="polite" className="sr-only">{t("demo.enter.entering", { civ: name })}</span>
       <span ref={mark} className="demo-seal-mark">
         {run.skin ? <Seal size={MARK} civ={run.skin} glyphs={null} court={name} /> : <BrandMark size={MARK} />}
       </span>
-      <span className="demo-seal-name whitespace-nowrap font-title text-lg">{name}</span>
       <button type="button" onClick={() => setRun(null)} className="demo-seal-skip h-11 min-w-11 px-3 text-sm">
         {t("demo.enter.skip")}
       </button>
