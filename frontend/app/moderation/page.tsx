@@ -19,7 +19,7 @@ import { ReportsReview } from "@/src/components/moderation/ReportsReview";
 import { SensitiveWordsSection } from "@/src/components/moderation/SensitiveWordsSection";
 import { MutesSection } from "@/src/components/moderation/MutesSection";
 import { HandledSection } from "@/src/components/moderation/HandledSection";
-import { cn } from "@/lib/utils";
+import { Segmented } from "@/src/components/ui/Segmented";
 
 /*
  * 官员审核后台 /moderation:四区共用一个页头 —— 文明范围加分段切换
@@ -89,36 +89,29 @@ function ModerationPageContent() {
         </span>
       }
       tabs={
-        <div role="group" aria-label={t("social_moderation.tabs.label")} className="flex flex-wrap border border-[oklch(var(--color-block))] w-fit">
-          {SEGMENTS.map((value) => {
-            const on = segment === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setSegment(value)}
-                className={cn(
-                  "flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm",
-                  on
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                    : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
-                )}
-              >
+        <Segmented
+          label={t("social_moderation.tabs.label")}
+          value={segment}
+          onChange={(v) => setSegment(v as Segment)}
+          className="max-w-full flex-wrap"
+          options={SEGMENTS.map((value) => ({
+            value,
+            label: (
+              <span className="inline-flex items-center gap-2">
                 {t(`social_moderation.tabs.${value}`)}
                 {counts[value] !== undefined && (
                   <>
-                    <span aria-hidden="true" className="font-mono text-2xs opacity-80">
+                    <span aria-hidden="true" className="font-mono text-2xs">
                       {counts[value]}
                     </span>
                     {/* 计数对读屏也要在(review-2026-11-01 Web 7):此前整个数字 aria-hidden。 */}
                     <span className="sr-only">{t("social_moderation.tab_count_sr", { n: String(counts[value]) })}</span>
                   </>
                 )}
-              </button>
-            );
-          })}
-        </div>
+              </span>
+            ),
+          }))}
+        />
       }
     >
       {segment === "reports" && <ReportsReview />}

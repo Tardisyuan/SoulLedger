@@ -111,7 +111,7 @@ const asRole = (...permissions: string[]) =>
 const asAdmin = () =>
   (mockUser = { id: 1, username: "admin", role: "ADMIN", permissions: [], tenant: { code: "CN_DIYU", display_name: "中国地府" } });
 // The name is the label, then the count for screen readers (review-2026-11-01 Web 7) once it has loaded.
-const segment = (key: string) => screen.getByRole("button", { name: new RegExp(`^${tZh(`social_moderation.tabs.${key}`)}`) });
+const segment = (key: string) => screen.getByRole("radio", { name: new RegExp(`^${tZh(`social_moderation.tabs.${key}`)}`) });
 const detail = () => screen.getByRole("region", { name: tZh("social_moderation.review.detail_label") });
 
 beforeEach(() => {
@@ -144,8 +144,8 @@ describe("page header", () => {
     expect(screen.getByText("中国地府")).toBeInTheDocument();
     for (const key of ["reports", "words", "mutes", "handled"]) expect(segment(key)).toBeInTheDocument();
     // The old 「待审内容」 tab is gone: rule hits are in the 举报 queue now.
-    expect(screen.queryByRole("button", { name: tZh("social_moderation.tabs.content") })).toBeNull();
-    expect(segment("reports")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("radio", { name: tZh("social_moderation.tabs.content") })).toBeNull();
+    expect(segment("reports")).toHaveAttribute("aria-checked", "true");
   });
 
   // review-2026-11-01 Web 7:分段进地址栏;计数读屏也读得到。
@@ -153,7 +153,7 @@ describe("page header", () => {
     asRole("social.moderate");
     window.history.replaceState(null, "", "/moderation?segment=mutes");
     const { unmount } = renderPage();
-    await waitFor(() => expect(segment("mutes")).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(segment("mutes")).toHaveAttribute("aria-checked", "true"));
     fireEvent.click(segment("words"));
     expect(window.location.search).toBe("?segment=words");
     fireEvent.click(segment("reports"));
