@@ -18,7 +18,7 @@ export function CaseAttachmentsPrintList({ judgmentId, enabled }: { judgmentId: 
   if (enabled && query.isError && !query.data) {
     return (
       <section data-testid="attachments-print-failed" className="hidden break-before-page print:block">
-        <h2 className="mb-3 text-lg">{t("case.attachments.print_title")}</h2>
+        <h2 className="mb-3 font-title text-lg">{t("case.attachments.print_title")}</h2>
         <p className="text-sm">{t("case.attachments.print_failed")}</p>
       </section>
     );
@@ -26,7 +26,7 @@ export function CaseAttachmentsPrintList({ judgmentId, enabled }: { judgmentId: 
   if (!enabled || items.length === 0) return null;
   return (
     <section data-testid="attachments-print-list" className="hidden break-before-page print:block">
-      <h2 className="mb-3 text-lg">{t("case.attachments.print_title")}</h2>
+      <h2 className="mb-3 font-title text-lg">{t("case.attachments.print_title")}</h2>
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="text-left">

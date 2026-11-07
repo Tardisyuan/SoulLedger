@@ -27,7 +27,7 @@ export function FollowPanel() {
   return (
     <aside className="flex flex-col gap-6">
       <section aria-labelledby="follow-panel" className="flex flex-col gap-2 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-[20px]">
-        <h2 id="follow-panel" className="sr-only text-lg">{t("social.follows")}</h2>
+        <h2 id="follow-panel" className="sr-only font-title text-lg">{t("social.follows")}</h2>
         <div className="flex border-b border-[oklch(var(--color-line))]">
           {(["following", "followers"] as const).map((key) => {
             const n = (key === "following" ? following : followers).data?.length ?? 0;

@@ -176,7 +176,7 @@ export default function ProfilePage() {
       {/* 规范 v1:区块标压线,行线代替卡片;标签在左,值在右,393 px 下同样两列。 */}
       <section className="mb-6">
         {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一档);v2 节首的匾纹片段撤掉。 */}
-        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="pt-6 font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark("甲", locale)} · </span>
           {t("profile.basic_info")}
         </h2>
@@ -258,7 +258,7 @@ export default function ProfilePage() {
 
       {/* Change Password Section */}
       <section id="password-section">
-        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="pt-6 font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark("乙", locale)} · </span>
           {t("profile.change_password")}
         </h2>
@@ -325,7 +325,7 @@ export default function ProfilePage() {
       {/* 通知:类别 × 站内 / 邮件(apps/notifications/categories.py)。通知页右上角的齿轮跳到这里。 */}
       {mustSetupMfa ? null : (
       <section id={NOTIFICATION_PREFS_ANCHOR}>
-        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="pt-6 font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark("丙", locale)} · </span>
           {t("profile.notifications.title")}
         </h2>
@@ -335,7 +335,7 @@ export default function ProfilePage() {
 
       {/* 两步验证(A12):状态、向导、恢复码、关闭。组件自己拉 /auth/mfa/status/。 */}
       <section>
-        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="pt-6 font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark("丁", locale)} · </span>
           {t("mfa.title")}
         </h2>
@@ -347,7 +347,7 @@ export default function ProfilePage() {
 
       {/* 登录设备(Design 第二十八批 W2):一台设备一行;「不认识的设备」的出路是改密码,所以带一个直达那一节的入口。 */}
       <section>
-        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="pt-6 font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark("戊", locale)} · </span>
           {t("profile.devices.title")}
         </h2>
@@ -358,7 +358,7 @@ export default function ProfilePage() {
 
       {/* 单字母快捷键总开关(WCAG 2.1.4):全局 `?` 列表里也有同一个开关;状态只在本浏览器。 */}
       <section>
-        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="pt-6 font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark("己", locale)} · </span>
           {t("shortcuts.title")}
         </h2>
@@ -369,7 +369,7 @@ export default function ProfilePage() {
 
       {/* 默认视图(review-2026-11-01 Web 1):登录后先到哪。此前只在首次设置里出现一次。 */}
       <section>
-        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="pt-6 font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark("庚", locale)} · </span>
           {t("welcome.default_view")}
         </h2>

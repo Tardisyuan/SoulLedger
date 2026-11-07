@@ -173,7 +173,7 @@ export function CommentThread({ postId, count }: { postId: string; count?: numbe
       aria-busy={isLoading}
       className="flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-[20px] max-[768px]:border-x-0 max-[768px]:p-4"
     >
-      <h2 id="comments-heading" className="pb-2 text-lg text-[oklch(var(--color-ink))]">
+      <h2 id="comments-heading" className="pb-2 font-title text-lg text-[oklch(var(--color-ink))]">
         {t("social.comments")} · <span className="font-mono tabular-nums">{count ?? comments.length}</span>
       </h2>
 

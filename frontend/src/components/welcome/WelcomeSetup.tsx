@@ -303,7 +303,7 @@ export function WelcomeSetup({
         </div>
 
         <div className="flex-1 p-4 md:p-6">
-          <h2 id="welcome-setup-title" className="text-lg text-[oklch(var(--color-ink))]">
+          <h2 id="welcome-setup-title" className="font-title text-lg text-[oklch(var(--color-ink))]">
             {current.title}
           </h2>
           <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{current.desc}</p>

@@ -246,7 +246,7 @@ export function RejectReasonPanel({
 
   return (
     <section data-testid="reject-reasons" aria-labelledby={`${base}-title`} className="grid gap-3 text-left">
-      <h3 id={`${base}-title`} className="text-lg text-[oklch(var(--color-ink))]">
+      <h3 id={`${base}-title`} className="font-title text-lg text-[oklch(var(--color-ink))]">
         {failing ? t("reject.sheet.title") : t("judgment.greek_account_label")}
       </h3>
       <p className="text-xs text-[oklch(var(--color-ink-muted))]">

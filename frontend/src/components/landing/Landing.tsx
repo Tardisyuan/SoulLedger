@@ -201,7 +201,7 @@ function HowBuilt() {
   const box = "border border-[oklch(var(--color-line-strong))] p-3 text-sm text-[oklch(var(--color-ink))]";
   return (
     <section id="how-built" className="mt-8 scroll-mt-20 border-t border-[oklch(var(--color-line-strong))] pt-8 pb-8" aria-labelledby="how-built-title">
-      <h2 id="how-built-title" className="m-0 text-lg text-[oklch(var(--color-ink))]">{t("demo.build.title")}</h2>
+      <h2 id="how-built-title" className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t("demo.build.title")}</h2>
       <p className="mt-2 max-w-[48em] text-sm text-[oklch(var(--color-ink-muted))]">{t("demo.build.lede")}</p>
       <div data-testid="landing-architecture" className="mt-6 grid gap-3">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

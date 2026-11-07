@@ -492,7 +492,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   return (
     <section aria-label={t("soul_inbox.thread_label", { name: conversation.soul_name })} className="min-w-0 px-4 lg:px-6 pt-4 pb-6">
       <header className="flex flex-wrap items-baseline gap-3 pb-3 border-b border-[oklch(var(--color-block))]">
-        <h2 className="text-lg text-[oklch(var(--color-ink))]">{conversation.soul_name}</h2>
+        <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{conversation.soul_name}</h2>
         <SoulCode code={conversation.soul_code} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" />
         {conversation.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
         {waitingDays !== null && <Badge tone="warning">{t("soul_inbox.awaiting", { n: String(waitingDays) })}</Badge>}
