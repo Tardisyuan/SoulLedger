@@ -24,11 +24,23 @@ export const TOUR_KEY = "soulledger_demo_tour";
  */
 const SKIN_OF_ROLE: Record<DemoRole, SealCiv | null> = { judge: "cn", judge_eu: "eu", judge_eg: "eg", judge_gr: "gr", moderator: "cn", admin: null };
 
-/** The seal's overlay lives in the layout, so it outlasts the navigation it covers (`EntranceOverlay`). */
+/** A rectangle on screen, and its corner radius: where the cover and the seal start from (`EntranceOverlay`). */
+export type EntranceBox = { x: number; y: number; w: number; h: number; r: number };
+export type EntranceDetail = { skin: SealCiv | null; from: EntranceBox | null; mark: EntranceBox | null };
+
+function boxOf(el: Element): EntranceBox {
+  const b = el.getBoundingClientRect();
+  return { x: b.left, y: b.top, w: b.width, h: b.height, r: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0 };
+}
+
+/**
+ * The seal's overlay lives in the layout, so it outlasts the navigation it covers (`EntranceOverlay`). It starts as the
+ * thing clicked: the card's box, and the card's emblem (or seal) as where the seal comes from.
+ */
 function startEntrance(skin: SealCiv | null, card?: HTMLElement): void {
-  const box = card?.getBoundingClientRect();
-  const origin = box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-  window.dispatchEvent(new CustomEvent(ENTRANCE_EVENT, { detail: { skin, origin } }));
+  const mark = card?.querySelector("[data-testid='civ-emblem'], [data-testid='seal']");
+  const detail: EntranceDetail = { skin, from: card ? boxOf(card) : null, mark: mark ? boxOf(mark) : null };
+  window.dispatchEvent(new CustomEvent(ENTRANCE_EVENT, { detail }));
 }
 export const ENTRANCE = ENTRANCE_EVENT;
 /** Sent by `enter` with the route it pushed. */

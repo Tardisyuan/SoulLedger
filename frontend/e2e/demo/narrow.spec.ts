@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { clean, enter, watch } from "./support";
+import { clean, enter, expectSealHandedOver, handOff, watch, watchHandOff } from "./support";
 
 test("the landing page's two app recordings load", async ({ page }) => {
   await page.goto("/");
@@ -50,6 +50,14 @@ test("393px: a post", async ({ page, context }) => {
   await page.getByRole("button", { name: "发布" }).filter({ visible: true }).click();
   await expect(page.locator("main").getByText("窄屏发帖。").first()).toBeVisible();
   clean(seen, "393 post");
+});
+
+test("393px: the cover's seal lands on the band's 48px seal", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await watchHandOff(page);
+  await page.getByTestId("landing-card-eg").click();
+  expectSealHandedOver(await handOff(page));
 });
 
 test("393px: the tour fits above the fold and reaches its second step", async ({ page, context }) => {
