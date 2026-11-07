@@ -16,7 +16,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     # `tenant` being read-only closes one door and leaves the next one open:
     # `parent` is still a plain related field resolved against a manager that
-    # does not scope, so `org.manage` (ADMIN/MODERATOR) could hang this tenant's
+    # does not scope, so `org.manage` (then ADMIN/MODERATOR) could hang this tenant's
     # org under another tenant's node. See apps/core/tenant_fields.py.
     validate_parent = tenant_scoped("parent")
 

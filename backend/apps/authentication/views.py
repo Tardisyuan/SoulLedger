@@ -1589,7 +1589,7 @@ def password_help_request(request):
     """
     POST /api/v1/auth/password-help/
     「忘记密码」 on a console whose accounts an administrator opens: the
-    administrators and realm leads (殿主) of the account's tenant get an in-app
+    officers of the account's tenant who hold user.manage (ADMIN by default) get an in-app
     notification and an audit row is written. No code, no link, no mail — the
     recipient resets the password through user management as they would anyway.
 

@@ -211,12 +211,16 @@ def _event(judgment, event_type, **extra) -> None:
     })
 
 
-def _hall_admins(tenant_id, exclude=None) -> list:
-    """本殿在职的 ADMIN 与殿主;本殿一个都没有时退到全局 ADMIN(与「请管理员改派」同一条退路)。"""
+def _hall_admins(tenant_id, exclude=None, codename="city_god.manage") -> list:
+    """本殿在职、持 `codename` 的官员(含兼任角色;默认 ADMIN);本殿一个都没有时退到全局 ADMIN(与「请管理员改派」
+    同一条退路)。按码选人,不按角色名(用户 2026-11-07:此前写死 ADMIN 与殿主 MODERATOR,而巡察只管朋友圈审核、
+    打不开这些通知指向的案子)。城隍收案 / 退回与枉死申诉问 `city_god.manage` / `wangsi.manage`(改交、替别人办),
+    审批超时问 `workflow.update`(殿管理员,同 `workflow.segments.HALL_ADMIN_CODENAME`)。"""
     from apps.authentication.models import User
+    from apps.perm.checker import check_permission
 
-    people = User.objects.filter(is_active=True).exclude(pk=exclude)
-    mine = list(people.filter(tenant_id=tenant_id, role__in=("ADMIN", "MODERATOR")).values_list("pk", flat=True))
+    people = User.objects.filter(is_active=True).exclude(pk=exclude).exclude(role="SOUL").order_by("pk")
+    mine = [u.pk for u in people.filter(tenant_id=tenant_id) if check_permission(u, codename)]
     return mine or list(people.filter(role="ADMIN", tenant__isnull=True).values_list("pk", flat=True))
 
 

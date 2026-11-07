@@ -32,7 +32,7 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
 
     The docstring here used to read "Read-only audit log", and that one line has
     now caused the same question to be raised twice: why can a VIEWER read this
-    when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+    when `AuditLog` requires `audit.read` (then ADMIN and MODERATOR; ADMIN alone by default since 2026-11-07)?
 
     Because they are different things. `AuditLog` records who changed what, for
     review. `SoulEvent` records what happened to a soul, and it is what

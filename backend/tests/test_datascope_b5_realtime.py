@@ -255,15 +255,31 @@ def test_changing_a_users_unit_pushes_a_refresh(cn_tenant):
 # ── 按码 / 按角色群发的通知 ────────────────────────────────────────────
 
 
+def _hall_role(name, codename):
+    """A non-ADMIN hall role holding `codename` (ADMIN skips data scopes, so the filter needs one of these).
+    Until 2026-11-07 MODERATOR played this part by name; recipients are chosen by codename since."""
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Permission, Role, RolePermission
+
+    role = Role.objects.get_or_create(name=name, defaults={"display_name": name})[0]
+    perm = Permission.objects.get_or_create(codename=codename, defaults={"name": codename,
+                                                                         "category": codename.split(".")[0]})[0]
+    RolePermission.objects.get_or_create(role=role, permission=perm)
+    invalidate_all_permissions()
+    return name
+
+
+
 @pytest.mark.django_db
-def test_password_help_skips_a_moderator_who_cannot_see_the_account(cn_tenant):
+def test_password_help_skips_a_user_manager_who_cannot_see_the_account(cn_tenant):
     from apps.authentication.tasks import notify_password_help
     from apps.notifications.models import UserNotification
 
     mine, theirs = org(cn_tenant, "本司"), org(cn_tenant, "他司")
-    scope("MODERATOR", "ORG")
-    inside = sp.officer("b5_mod_in", "MODERATOR", cn_tenant, organization=mine)
-    outside = sp.officer("b5_mod_out", "MODERATOR", cn_tenant, organization=theirs)
+    role = _hall_role("B5_USER_CLERK", "user.manage")
+    scope(role, "ORG")
+    inside = sp.officer("b5_mod_in", role, cn_tenant, organization=mine)
+    outside = sp.officer("b5_mod_out", role, cn_tenant, organization=theirs)
     sp.officer("b5_asker", "VIEWER", cn_tenant, organization=mine)
     notify_password_help("b5_asker")
     assert UserNotification.objects.filter(user=inside, notification_type="PASSWORD_HELP_REQUESTED").exists()
@@ -271,7 +287,7 @@ def test_password_help_skips_a_moderator_who_cannot_see_the_account(cn_tenant):
 
 
 @pytest.mark.django_db
-def test_a_timeout_failure_skips_a_moderator_who_cannot_see_the_workflow(cn_tenant, monkeypatch):
+def test_a_timeout_failure_skips_a_hall_admin_who_cannot_see_the_workflow(cn_tenant, monkeypatch):
     from apps.workflow import timeouts
     from tests.test_workflow_timeout_and_reject_to import _node, _workflow
 
@@ -279,9 +295,10 @@ def test_a_timeout_failure_skips_a_moderator_who_cannot_see_the_workflow(cn_tena
     monkeypatch.setattr("apps.events.services.EventService.notify_user",
                         staticmethod(lambda **kw: told.append(kw["user"].username)))
     mine, theirs = org(cn_tenant, "本司"), org(cn_tenant, "他司")
-    scope("MODERATOR", "ORG")
-    sp.officer("b5_wf_in", "MODERATOR", cn_tenant, organization=mine)
-    sp.officer("b5_wf_out", "MODERATOR", cn_tenant, organization=theirs)
+    role = _hall_role("B5_FLOW_LEAD", "workflow.update")
+    scope(role, "ORG")
+    sp.officer("b5_wf_in", role, cn_tenant, organization=mine)
+    sp.officer("b5_wf_out", role, cn_tenant, organization=theirs)
     flow = _workflow(cn_tenant, [_node(1), _node(2)])
     Soul.objects.filter(pk=flow.soul_id).update(owner_org=mine)
     timeouts._tell_admins(flow.pk, flow.current_node_id)

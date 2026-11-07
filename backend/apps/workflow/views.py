@@ -253,10 +253,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     """
     # Enforced from here on — see WorkflowTemplateViewSet above. The
     # extra_permissions below are the reason this viewset matters most of the
-    # three: `escalate` is MODERATOR-and-ADMIN, `approve_node`/`advance` are
-    # JUDGE-and-ADMIN, and that split is the separation of duties the
-    # MODERATOR entry in ROLE_PERMISSIONS is written around. It had never once
-    # been applied to a request.
+    # three: `escalate` is ADMIN's (and was MODERATOR's until 2026-11-07),
+    # `approve_node`/`advance` are JUDGE-and-ADMIN, and a role that designs flows
+    # may not approve them (apps/perm/checker.py::WORKFLOW_DESIGN_CODENAMES). It
+    # had never once been applied to a request.
     permission_classes = [WorkflowPartyPermission, CodenamePermission]
     permission_codename = "workflow"
     extra_permissions = {
@@ -621,8 +621,9 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         """
         越级推进 — force a stuck workflow past its current node.
 
-        A realm lead (MODERATOR) configures the flow but deliberately holds
-        neither workflow.approve nor workflow.advance: the ten courts exist to
+        A role that designs the flow (workflow.create / update — by default only
+        ADMIN; MODERATOR until 2026-11-07) may hold neither workflow.approve nor
+        workflow.advance (apps/perm/checker.py::WORKFLOW_DESIGN_CODENAMES): the ten courts exist to
         divide the decision, and a lead who could both design the flow and
         approve at any stage of it would make that division decorative.
 

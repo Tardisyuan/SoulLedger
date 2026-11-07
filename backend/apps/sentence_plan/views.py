@@ -98,9 +98,9 @@ REQUEST_ID = OpenApiParameter("request_id", OpenApiTypes.UUID, OpenApiParameter.
 
 
 class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ReadOnlyModelViewSet):
-    # 读计划是读案子的一部分:`judgment.read`(ADMIN / JUDGE / MODERATOR)。提 / 决定 / 撤回请求是
+    # 读计划是读案子的一部分:`judgment.read`(默认 ADMIN / JUDGE)。提 / 决定 / 撤回请求是
     # 对案子的动作:`judgment.execute`,与 `conclude` 同一个码(§2.5)。撤销整份计划另有
-    # `sentence_plan.cancel`(ADMIN / MODERATOR,同 `dispatch.return` 的持有者)。
+    # `sentence_plan.cancel`(默认只有 ADMIN,同 `dispatch.return` 的持有者)。
     permission_classes = [SentencePlanPartyPermission, CodenamePermission]
     permission_codename = "judgment"
     extra_permissions = {

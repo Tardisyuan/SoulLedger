@@ -95,7 +95,7 @@
   **每月 1 日 08:00** 才到:提醒、关闭、重开的通知文字都写明「早上 8 点(北京时间)」,配置响应带只读的 `month_rolls_over_at`。
 - **2026-09-29 追加(用户拍板):评测身份「灵魂一个,测评官员一个」,由系统创建。** `POST /assist-admin/eval/identities/`(仅 ADMIN,幂等):
   评测灵魂 = CN_DIYU 殿(没有就退到第一个在用的殿,响应里 `description` 说明)的「问一问评测灵魂」,有灵魂账号、不可用密码、不必改密、
-  受刑计划已完成、状态轮回中;评测官员 = 用户名 `assist-eval-officer`、角色 **MODERATOR**(有收件箱与派发权限,四个官员工具都能演练)、
+  受刑计划已完成、状态轮回中;评测官员 = 用户名 `assist-eval-officer`、角色 **JUDGE**(2026-11-07 起;此前是 MODERATOR。判官能演练队列、待审批、my_permissions 三个工具,不持收件箱权限,收件箱计数评测的正确答法是「无权」)、
   不可用密码,绝不是 ADMIN。两个 FK 只有这个接口会写:`PATCH config/` 带 `eval_soul_account` / `eval_officer` 得 400
   (`read_only_field`)。被删 / 停用 / 退役的评测身份在预估里报 `no_eval_soul` / `no_eval_officer`,再调该接口即补建(同名官员复活)。
   代码:`apps/soul_assist/eval_identities.py`。

@@ -485,9 +485,9 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
     to record a decision — and, in the same call, also advances the parent
     workflow's `current_node`/`status`, and sets `completed_at` when that was
     the last node. ApprovalNodeViewSet.partial_update maps to `workflow.update`,
-    which MODERATOR holds despite being deliberately denied `workflow.approve`
-    (see ApprovalWorkflowViewSet's extra_permissions and the ROLE_PERMISSIONS
-    entry for MODERATOR) — so a plain PATCH here used to let MODERATOR forge a
+    which a flow designer holds while being refused `workflow.approve`
+    (apps/perm/checker.py::WORKFLOW_DESIGN_CODENAMES; MODERATOR was that designer
+    until 2026-11-07) — so a plain PATCH here used to let MODERATOR forge a
     verdict on a real pending node while skipping every one of complete_node's
     side effects: the workflow never advanced, `completed_at` never got set,
     and nothing recorded that the "approval" never happened. validate() below
@@ -765,11 +765,11 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     DispatchRecordSerializer's `status`/`dispatched_by`
     (apps/dispatch/serializers.py) — see that docstring for the shape this
     mirrors. ApprovalWorkflowViewSet.partial_update maps to `workflow.update`,
-    which MODERATOR holds; `advance` requires `workflow.advance` (ADMIN,
-    JUDGE), which MODERATOR is deliberately denied so that a realm lead who
-    designs a flow cannot also push it forward unchecked. The *sanctioned*
-    way past a stalled flow is `escalate` (`workflow.escalate`, which
-    MODERATOR does hold) — it demands a written reason and always writes an
+    which a flow designer holds; `advance` requires `workflow.advance` (ADMIN,
+    JUDGE), which a designer is refused so that whoever designs a flow cannot
+    also push it forward unchecked (MODERATOR was that designer until
+    2026-11-07). The *sanctioned* way past a stalled flow is `escalate`
+    (`workflow.escalate`, ADMIN by default) — it demands a written reason and always writes an
     AuditLog naming who overrode which node. A plain PATCH setting
     `current_node` directly reached the identical state change as `advance`
     while skipping both `advance_to_next()`'s own checks and, worse,

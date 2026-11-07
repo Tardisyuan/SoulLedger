@@ -767,13 +767,13 @@ class DispatchService:
             if not already_told:
                 DispatchService._notify_return_blocked(locked, dispatch_id, len(blocked.judgment_ids))
 
-    #: 「回归被拦下」通知的收件权限。选 `dispatch.read`(ADMIN / MODERATOR / GUARDIAN)而不是
-    #: `dispatch.return`(只有 ADMIN / MODERATOR):通知链到调拨记录,收件人必须看得见它;
+    #: 「回归被拦下」通知的收件权限。选 `dispatch.read`(默认 ADMIN / GUARDIAN)而不是
+    #: `dispatch.return`(默认只有 ADMIN):通知链到调拨记录,收件人必须看得见它;
     #: 而解开它的动作是结案或撤案,不是「结束暂居」—— 那会同样被 409 拦下,所以持有
     #: `dispatch.return` 并不让谁更该知道。JUDGE / VIEWER 不持有 `dispatch.read`,不收。
     RETURN_BLOCKED_PERMISSION = "dispatch.read"
     #: 暂居地还通知能结案或撤案的人(2026-09-18 用户决定):`JudgmentViewSet` 的 `conclude` 与
-    #: `destroy`(撤案)都要 `judgment.execute`(ADMIN / JUDGE / MODERATOR)。**只限暂居地**:
+    #: `destroy`(撤案)都要 `judgment.execute`(默认 ADMIN / JUDGE)。**只限暂居地**:
     #: 案子在那里审;原属地的判官不收。
     RETURN_BLOCKED_CASE_PERMISSION = "judgment.execute"
 

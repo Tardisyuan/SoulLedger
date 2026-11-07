@@ -84,8 +84,8 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     # the declared policy, not a side effect of attaching this class.
     permission_classes = [TenantPermission, CodenamePermission]
     # BINARY: read / execute. ROLE_PERMISSIONS defines exactly those two —
-    # read for ADMIN, JUDGE, GUARDIAN and MODERATOR; execute for ADMIN and
-    # MODERATOR — and there is no disposition.manage. The viewset is a
+    # read for ADMIN, JUDGE and GUARDIAN; execute for ADMIN (MODERATOR held both
+    # until 2026-11-07) — and there is no disposition.manage. The viewset is a
     # ModelViewSet, so the mixin was also generating disposition.create,
     # .update and .delete, which exist nowhere and are held by nobody.
     #

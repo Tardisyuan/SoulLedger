@@ -58,9 +58,12 @@ def prune_expired_push_registrations():
     return {"officer": officer, "soul": soul}
 
 
-#: Who hears about 「忘记密码」 in the account's own tenant: its administrators
-#: and its realm leads (殿主, `UserRole.MODERATOR`). See `notify_password_help`.
-PASSWORD_HELP_TENANT_ROLES = ("ADMIN", "MODERATOR")
+#: Who hears about 「忘记密码」 in the account's own tenant: the officers who can
+#: reset it — holders of this codename (ADMIN by default, or a role granted it in
+#: the matrix). Chosen by codename, not role name, since 2026-11-07: it used to be
+#: ("ADMIN", "MODERATOR"), and MODERATOR is now the circle moderator, who cannot
+#: open user management. See `notify_password_help`.
+PASSWORD_HELP_CODENAME = "user.manage"
 
 #: The window of the 「近 24 小时第 N 次」 count on a password-help notification.
 PASSWORD_HELP_COUNT_WINDOW = timedelta(hours=24)
@@ -78,13 +81,13 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     gone. So the endpoint cannot say whether an account exists either in its
     body or in how long it takes to answer.
 
-    RECIPIENTS: the active ADMINs and MODERATORs (殿主) of the account's own
-    tenant — MODERATOR since 2026-09-25, the product owner's decision: the
-    realm lead is who knows the officer in person. If that tenant has
-    neither — or the account has no tenant, i.e. it is itself a global
+    RECIPIENTS: the active officers of the account's own tenant who hold
+    `user.manage` (ADMIN by default) — they can actually reset it. From
+    2026-09-25 to 2026-11-07 this also named MODERATOR (殿主) by role; MODERATOR
+    is now the circle moderator (user decision 2026-11-07). If that tenant has
+    nobody — or the account has no tenant, i.e. it is itself a global
     ADMIN — the global ADMINs (tenant NULL, the only role `scope_to_tenant`
-    lets across tenants). The fallback is ADMIN only: a MODERATOR is a
-    tenant role, and one without a tenant speaks for no hall. Never anyone
+    lets across tenants). Never anyone
     of another tenant: they cannot manage this user
     (`UserViewSet.get_queryset` scopes them out), and the request names an
     account in a tenant that is not theirs. The requester is never their own
@@ -110,13 +113,16 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     if user is None:
         return 0
 
+    from apps.perm.checker import check_permission
+
     active = User.objects.filter(is_active=True).exclude(pk=user.pk)
     recipients = (
-        list(active.filter(role__in=PASSWORD_HELP_TENANT_ROLES, tenant=user.tenant).order_by("pk"))
+        [u for u in active.filter(tenant=user.tenant).exclude(role="SOUL").order_by("pk")
+         if check_permission(u, PASSWORD_HELP_CODENAME)]
         if user.tenant_id
         else []
     )
-    # 数据范围(B5):殿主的范围看不到这个人就不收(ADMIN 不受范围限制)。
+    # 数据范围(B5):持码人的范围看不到这个人就不收(ADMIN 不受范围限制)。
     from apps.perm.data_scope import visible_to
 
     cache = {}
@@ -140,13 +146,12 @@ def notify_password_help(username, ip_address=None, user_agent=""):
     }
 
     for admin in recipients:
-        # A MODERATOR cannot open user management (ADMIN only), so theirs says
-        # to ask an administrator. Written into `params` so the read-time
-        # re-render (`kind_for`) picks the same text in every language.
+        # Every recipient holds user.manage, so every one gets the "open user
+        # management" text. `password_help_requested_moderator` ("ask an
+        # administrator") was the MODERATOR variant; it stays in the message
+        # table only so notifications stored before 2026-11-07 still re-render.
         params = {"username": user.username, **context}
-        if admin.role != "ADMIN":
-            params["kind"] = "password_help_requested_moderator"
-        title, message = render(DEFAULT_LOCALE, params.get("kind", "password_help_requested"), params)
+        title, message = render(DEFAULT_LOCALE, "password_help_requested", params)
         notify_user(
             admin,
             title=title,
@@ -163,7 +168,7 @@ def notify_password_help(username, ip_address=None, user_agent=""):
         action=AuditAction.EXECUTE,
         resource="password_help",
         resource_id=str(user.pk),
-        description=f"忘记密码求助:{user.username},已通知 {len(recipients)} 位管理员或殿主"[:500],
+        description=f"忘记密码求助:{user.username},已通知 {len(recipients)} 位能管理用户的官员"[:500],
         changes={"notified_admin_ids": [admin.pk for admin in recipients]},
         ip_address=ip_address,
         user_agent=(user_agent or "")[:500],

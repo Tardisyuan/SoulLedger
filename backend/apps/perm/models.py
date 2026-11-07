@@ -448,7 +448,7 @@ ROLE_PERMISSIONS = {
 # 跳过——地区主宰在新装环境里是个有权限矩阵却没有实体的角色。
 DEFAULT_ROLES = [
     ("ADMIN", "Administrator"),
-    ("MODERATOR", "Realm Lead"),
+    ("MODERATOR", "Circle Moderator"),  # 朋友圈巡察;2026-11-07 之前是 Realm Lead(殿主),perm/0037 改已入库的那行
     ("JUDGE", "Judge"),
     ("GUARDIAN", "Guardian"),
     ("VIEWER", "Viewer"),

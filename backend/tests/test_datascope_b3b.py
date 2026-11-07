@@ -144,10 +144,19 @@ def test_the_assistants_queue_count_leaves_out_cases_outside_the_scope(cn_tenant
 
 def test_a_hall_admin_outside_the_scope_is_not_told_of_a_city_god_case(cn_tenant, units,
                                                                        django_capture_on_commit_callbacks):
-    """城隍名下没有官员时退给殿主;看不到这件案子的殿主不收(收件人再过 visible_to)。"""
-    inside = sp.officer("lead_in", "MODERATOR", cn_tenant, organization=units[0])
-    outside = sp.officer("lead_out", "MODERATOR", cn_tenant, organization=units[1])
-    scope("MODERATOR", "ORG")
+    """城隍名下没有官员时退给本殿持 city_god.manage 的人;看不到这件案子的不收(收件人再过 visible_to)。
+    持码的是一个非 ADMIN 的自建角色:ADMIN 跳过数据范围;2026-11-07 之前这一格按角色名是 MODERATOR。"""
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Permission, Role, RolePermission
+
+    lead = Role.objects.get_or_create(name="B3B_CG_LEAD", defaults={"display_name": "城隍司"})[0]
+    manage = Permission.objects.get_or_create(codename="city_god.manage",
+                                              defaults={"name": "管理城隍", "category": "city_god"})[0]
+    RolePermission.objects.get_or_create(role=lead, permission=manage)
+    invalidate_all_permissions()
+    inside = sp.officer("lead_in", "B3B_CG_LEAD", cn_tenant, organization=units[0])
+    outside = sp.officer("lead_out", "B3B_CG_LEAD", cn_tenant, organization=units[1])
+    scope("B3B_CG_LEAD", "ORG")
     from apps.judgment import city_gods
     from apps.judgment.models import CityGodStatus
 
