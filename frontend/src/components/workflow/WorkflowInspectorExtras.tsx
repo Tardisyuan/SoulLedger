@@ -357,7 +357,7 @@ export function ExitConditionsSection({
                       <>
                         <button
                           type="button"
-                          className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
+                          className="rounded-control h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
                           onClick={() => onChange(e.id, [...when, defaultClause()])}
                         >
                           + {t("workflow.editor.condition.add_clause")}
@@ -373,7 +373,7 @@ export function ExitConditionsSection({
                     ) : (
                       <button
                         type="button"
-                        className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
+                        className="rounded-control h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
                         onClick={() => onChange(e.id, [defaultClause()])}
                       >
                         {t("workflow.editor.condition.make")}

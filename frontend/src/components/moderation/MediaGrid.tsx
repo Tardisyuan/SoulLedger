@@ -81,7 +81,7 @@ export function MediaViewer({ media, index, onIndex, onClose }: { media: PostMed
                 {caption(t, current, index)}
                 {media.length > 1 ? ` · ${index + 1} / ${media.length}` : ""}
               </span>
-              <Dialog.Close className="absolute right-4 top-4 min-h-(--control-h-sm) border border-white px-3 text-sm text-white focus-visible:outline-white">
+              <Dialog.Close className="absolute right-4 top-4 rounded-control min-h-(--control-h-sm) border border-white px-3 text-sm text-white focus-visible:outline-white">
                 {t("common.close")}
               </Dialog.Close>
             </>
