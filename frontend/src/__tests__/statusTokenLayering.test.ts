@@ -202,10 +202,10 @@ function enumKeyedMapsUsingFeedbackTokens(): string[] {
  * each is recorded rather than fixed in the pass that added this file.
  *
  * `app/realms/page.tsx::REALM_TYPE_CONFIG` is deliberately ABSENT: it is the
- * one this pass fixed, onto `--color-verdict-*` and `--color-ink-tertiary`, and
- * its absence here is what makes a revert red.
+ * one this pass fixed (first onto `--color-verdict-*`, since 2026-11-07 onto
+ * plain ink `DOMAIN_BADGE`), and its absence here is what makes a revert red.
  *
- * These four are the same defect at a lower stake — the badge is on a workflow
+ * These are the same defect at a lower stake — the badge is on a workflow
  * or sync row rather than the realms grid — and, unlike the realm types, none
  * of them has a domain palette obviously waiting for it. `PENDING`/`ACCEPTED`/
  * `PROCESSED` describe how an OPERATION went, which is closer to the feedback
@@ -214,11 +214,9 @@ function enumKeyedMapsUsingFeedbackTokens(): string[] {
  * what each should become is a palette question, not a rename, so they are
  * recorded with the token they use rather than guessed at.
  *
- * `app/workflow/[id]/page.tsx::VERDICT_COLORS` is the one with an obvious
- * answer — `PASSED`/`FAILED` have `--color-verdict-passed`/`-failed` — and it
- * is left here only because that page is `CONFIRMED`/`REJECTED`/`SKIPPED` too,
- * which are approval-step outcomes rather than verdicts on a soul, and mixing
- * two palettes inside one badge map would be worse than either.
+ * `app/workflow/[id]/page.tsx`'s two maps were recorded here until 2026-11-07: the
+ * answer to "which palette" turned out to be none — 规范 v4 draws domain badges in ink
+ * with a glyph, so both maps moved whole onto `DOMAIN_BADGE`.
  */
 const ENUM_MAPS_STILL_ON_FEEDBACK_TOKENS: Record<string, string> = {
   // `app/actors/page.tsx::ROLE_BADGE_CLASSES` left on 2026-10-02 (v3 pages): the map is gone,
@@ -230,14 +228,8 @@ const ENUM_MAPS_STILL_ON_FEEDBACK_TOKENS: Record<string, string> = {
     "PROPOSED/APPROVED/REJECTED/EXECUTED/RETURNED/CANCELLED — the same shape the " +
     "death-sync list had before it moved to tones: " +
     "the state of a request being processed, not a judgement about a soul.",
-  "app/workflow/[id]/page.tsx::STATUS_COLORS":
-    "PENDING/APPROVED/REJECTED/SKIPPED/ESCALATED are approval-step states. " +
-    "ESCALATED already uses --color-verdict-retry, so this map straddles both " +
-    "palettes and needs deciding as a whole.",
-  "app/workflow/[id]/page.tsx::VERDICT_COLORS":
-    "PASSED/FAILED have verdict tokens waiting, but CONFIRMED/REJECTED/SKIPPED " +
-    "are approval-step outcomes; half-moving the map would leave one badge row " +
-    "drawn from two palettes.",
+  // `app/workflow/[id]/page.tsx::STATUS_COLORS` / `::VERDICT_COLORS` left on 2026-11-07 (规范 v4): both became
+  // `STATUS_BADGE` / `VERDICT_BADGE`, plain ink `DOMAIN_BADGE` decided whole, as their entries here asked.
 };
 
 describe("the scan is looking at something", () => {
@@ -299,66 +291,19 @@ describe("system-feedback tokens stay off domain-enum badges and rows", () => {
     );
   });
 
-  it("the realm badge map draws from the same palette the realm chart does", () => {
-    // The positive half. `REALM_COLORS` in lib/chart-colors.ts is pinned to
-    // these four tokens by chartColourContract.test.ts, so naming them here
-    // ties the badge and the chart legend to one palette rather than two that
-    // happen to agree today.
-    //
-    // The utilities are PARSED rather than compared as literal strings, and
-    // that is not a style choice. tailwind.config.js scans `./src/**/*.{ts,tsx}`
-    // — this file included — so an arbitrary-value utility written out here is
-    // a class name Tailwind generates a real CSS rule for. An earlier draft
-    // built one from a template literal, and the unsubstituted `${token}`
-    // reached the stylesheet as a rule whose value no CSS parser accepts; the
-    // dev server refused to start. The comment warning about it did the same
-    // thing a second time, by quoting the shape. Parsing the utilities apart
-    // keeps both the assertion and its explanation out of the scanner.
+  it("the realm badge map is ink: every type names DOMAIN_BADGE and no colour token", () => {
+    // The positive half. 规范 v4 (用户 2026-11-07): a realm type is a domain enum, told apart by glyph + text,
+    // drawn in ink like the verdict and soul-state badges — the verdict tint it wore until then is gone.
+    // Asserted per line and as an absence: "DOMAIN_BADGE is present" alone would stay green with a tint beside it.
     const realms = OBJECT_CONSTS.find(
       (e) => e.file === "app/realms/page.tsx" && e.name === "REALM_TYPE_CONFIG"
     )!;
-    const byRealm: Record<string, string> = {
-      HELL: "--color-verdict-failed",
-      PURGATORY: "--color-verdict-purgatory",
-      BLISS: "--color-verdict-passed",
-      NEUTRAL: "--color-ink-tertiary",
-      // The second death is a type, not a verdict outcome: it wears NEUTRAL's tint (Design 55).
-      ANNIHILATION: "--color-ink-tertiary",
-    };
-    expect(Object.keys(byRealm)).toEqual(realms.keys);
-
-    /** `{utility: [token, alpha]}` for every `x-[oklch(var(--t)/a)]` on the line. */
-    const utilities = (line: string): Record<string, [string, string]> => {
-      const out: Record<string, [string, string]> = {};
-      for (const m of line.matchAll(/(\w[\w-]*)-\[oklch\(var\((--[\w-]+)\)(?:\/([\d.]+))?\)\]/g)) {
-        out[m[1]] = [m[2], m[3] ?? "1"];
-      }
-      return out;
-    };
-    const lineFor = (realm: string) =>
-      realms.body.split("\n").find((l) => l.trimStart().startsWith(`${realm}:`));
-
-    for (const [realm, token] of Object.entries(byRealm)) {
-      const line = lineFor(realm);
+    expect(realms.keys).toEqual(["HELL", "PURGATORY", "BLISS", "NEUTRAL", "ANNIHILATION"]);
+    for (const realm of realms.keys) {
+      const line = realms.body.split("\n").find((l) => l.trimStart().startsWith(`${realm}:`));
       expect(line).toBeDefined();
-      const found = utilities(line!);
-      expect(found.bg).toEqual([token, "0.1"]);
-      expect(found.border).toEqual([token, "0.3"]);
-    }
-
-    // NEUTRAL's LABEL is ink-muted, not ink-tertiary: ink-tertiary text over a
-    // 10% tint of itself measures 2.56:1 in light mode, under the 4.5:1 AA
-    // floor. The fill and border carry the pinned token; the text does not.
-    // Asserted as an equality, so "the right token is present" cannot pass
-    // while the wrong one sits beside it.
-    expect(utilities(lineFor("NEUTRAL")!).text).toEqual(["--color-ink-muted", "1"]);
-    expect(utilities(lineFor("ANNIHILATION")!).text).toEqual(["--color-ink-muted", "1"]);
-
-    // And the other four DO tint at the depth the light-mode tokens were
-    // measured against — 10%, the cap dataGridToneContract.test.ts enforces on
-    // the shared badge tones. A realm badge is the same kind of badge.
-    for (const realm of ["HELL", "PURGATORY", "BLISS"]) {
-      expect(utilities(lineFor(realm)!).text).toEqual([byRealm[realm], "1"]);
+      expect(line).toMatch(/className:\s*DOMAIN_BADGE\b/);
+      expect(line).not.toMatch(/--color-/);
     }
   });
 });
