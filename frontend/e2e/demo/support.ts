@@ -20,11 +20,12 @@ export const rows = (rec: Recording, path: string): Row[] => rec.lists[path]?.ro
 export interface Watch {
   offsite: string[];
   errors: string[];
+  bounced: string[];
 }
 
 /** Everything a demo page must never do: leave its own origin, touch the API over the wire, log an error. */
 export function watch(context: BrowserContext, page: Page): Watch {
-  const seen: Watch = { offsite: [], errors: [] };
+  const seen: Watch = { offsite: [], errors: [], bounced: [] };
   context.on("request", (req) => {
     const url = new URL(req.url());
     if (url.protocol === "data:" || url.protocol === "blob:") return;
@@ -35,19 +36,27 @@ export function watch(context: BrowserContext, page: Page): Watch {
     if (m.type() === "error") seen.errors.push(m.text());
   });
   page.on("pageerror", (e) => seen.errors.push(`pageerror: ${e.message}`));
+  // A route sent back to sign-in: a prefetch made before the sign-in's cookie was kept by the router, and the push that
+  // followed it opened /login (`useWarm`).
+  page.on("response", (res) => {
+    if (res.status() === 307 && (res.headers().location ?? "").includes("/login?redirect=")) seen.bounced.push(res.url());
+  });
   return seen;
 }
 
 export function clean(seen: Watch, where: string): void {
   expect(seen.offsite, `requests off this origin on ${where}`).toEqual([]);
   expect(seen.errors, `console errors on ${where}`).toEqual([]);
+  expect(seen.bounced, `routes redirected to sign-in on ${where}`).toEqual([]);
 }
 
 export async function enter(page: Page, role: Role): Promise<void> {
   await page.goto("/login");
   // The button is on the page before its handler is: a click ahead of hydration does nothing, and nothing says so.
   await page.locator("html[data-civ]").waitFor({ state: "attached" });
-  await page.getByTestId(`demo-enter-${role}`).click();
+  // The visible one: when the server streams the page late, the copy it streamed waits in `<div hidden id="S:0">` for its
+  // reveal script while the client has already drawn its own, so for a moment there are two (trace, 2026-11-08).
+  await page.getByTestId(`demo-enter-${role}`).filter({ visible: true }).click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
   await page.getByTestId("user-menu").waitFor();
   await page.waitForLoadState("networkidle");
