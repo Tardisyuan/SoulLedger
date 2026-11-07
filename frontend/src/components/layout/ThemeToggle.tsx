@@ -50,7 +50,7 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       title={label}
       aria-label={label}
-      // 44 × 44 的点击区(规范 v3 控件下限),图标仍是 18。
+      // 点击区 `--control-h-sm` 见方(触屏 44 的下限;精确指针 32),图标仍是 18。
       className="inline-flex size-(--control-h-sm) shrink-0 items-center justify-center text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors"
     >
       {theme === "dark" ? (

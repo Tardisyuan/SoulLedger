@@ -32,7 +32,7 @@ import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
  * 右边是同一批数据的树表(名称 / 代码 / 类型 / 在押 / 容量 / 永恒)。两者都从
  * `buildTopology` / `parent_realm` 来;详情页的行程条仍是 `<RouteTopology mode="route">`,
  * 与这张图共用布局、不共用画法。切换文明只换查看的形状,匾与印仍是自己的文明;
- * 选中段是墨底,不是文明色(规范 v3:文明色只给匾、导航当前项、印、主按钮)。
+ * 选中段是墨底,不是文明色:分段控件是中性的 ink(`ui/Segmented` 同一画法;v4 的文明色给强调与当前项,不给分段)。
  *
  * **只有容量可改。** `PATCH /realms/{id}/` 只收 `capacity`(别的字段 400),持
  * `realms.manage`(默认只 ADMIN)的人点容量数字就地改(窄屏从底部抽屉改);其余各列来自
@@ -168,7 +168,7 @@ function RealmsPageContent() {
       subtitle={t("realms.subtitle")}
       filters={
         <div className="flex flex-wrap items-center gap-3 w-full">
-          {/* 选中段是墨底,不是文明色:文明色只给匾、导航当前项、印、主按钮(规范 v3)。 */}
+          {/* 选中段是墨底,不是文明色:分段控件是中性的 ink(同 `ui/Segmented`)。 */}
           <div
             role="group"
             aria-label={t("souls.filter_civilization")}
