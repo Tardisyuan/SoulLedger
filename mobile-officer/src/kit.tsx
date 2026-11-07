@@ -11,7 +11,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions,
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { BandPattern, Button, GUTTER, GlowTop, GoneState, Notice, OneLine, Txt, family, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
+import { BandPattern, Button, GUTTER, GlowTop, GoneState, Notice, OneLine, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
 
 // ── the four states ────────────────────────────────────────────────────
 
@@ -556,14 +556,14 @@ const styles = StyleSheet.create({
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },
   rowText: { flex: 1, gap: space[1] },
   rowValue: { flexShrink: 1, maxWidth: "60%" },
-  action: { flex: 1, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: space[3] },
+  action: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center", paddingHorizontal: space[3] },
   actionText: { letterSpacing: 0 },
-  segmented: { flexDirection: "row", borderWidth: 1, marginHorizontal: GUTTER, marginVertical: space[3] },
+  segmented: { flexDirection: "row", borderWidth: 1, borderRadius: radius.control, overflow: "hidden", marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
   // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.
   segmentTight: { fontSize: 13, lineHeight: 18, fontVariant: ["tabular-nums"] },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
-  chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
+  chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },
   bandName: { flexShrink: 1 },

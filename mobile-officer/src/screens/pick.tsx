@@ -448,5 +448,5 @@ const styles = StyleSheet.create({
   node: { flexDirection: "row", alignItems: "center", gap: space[2], minHeight: 44, paddingHorizontal: space[5], paddingVertical: space[2], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center" },
   card: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[4], borderWidth: 1, borderRadius: radius.dialog },
-  gate: { margin: space[5], padding: space[4], gap: space[2], borderWidth: 1 },
+  gate: { margin: space[5], padding: space[4], gap: space[2], borderWidth: 1, borderRadius: radius.dialog },
 });

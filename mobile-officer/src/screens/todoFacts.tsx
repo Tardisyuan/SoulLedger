@@ -15,7 +15,7 @@ import { Pressable, View } from "react-native";
 import { AttachmentList } from "../attachments";
 import { formatWhen } from "../format";
 import { hallLabel } from "../rules";
-import { OneLine, SectionLabel, Txt, space, useI18n, useTheme } from "../shared";
+import { OneLine, SectionLabel, Txt, radius, space, useI18n, useTheme } from "../shared";
 import { historyView, soulsView } from "../todoFacts";
 import { SoulLink } from "./soulDetail";
 
@@ -66,7 +66,7 @@ function DispatchHeader({ f, hall }: { f: TodoFacts; hall: (h: Hall) => string }
   const { t } = useI18n();
   const theme = useTheme();
   return (
-    <View testID="facts-from-to" style={{ borderWidth: 1, borderColor: theme.hair, padding: space[4], gap: space[2] }}>
+    <View testID="facts-from-to" style={{ borderWidth: 1, borderRadius: radius.dialog, borderColor: theme.hair, padding: space[4], gap: space[2] }}>
       <Txt variant="caption" tone="muted">{t("officer_app.detail.from")}</Txt>
       <Txt variant="title">{hall(f.from_hall)}</Txt>
       <Txt variant="caption" tone="muted">{`→ ${t("officer_app.detail.to")}`}</Txt>
