@@ -561,7 +561,7 @@ function RailGroup({ menu, label, current, allMenuPaths }: { menu: SidebarMenu; 
         <Popover.Positioner side="right" align="start" sideOffset={8} className="z-drawer">
           <Popover.Popup
             data-testid="nav-flyout"
-            className="w-56 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-1 focus:outline-hidden"
+            className="w-56 rounded-panel shadow-overlay border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-1 focus:outline-hidden"
           >
             <p className="truncate px-2 py-2 text-2xs text-[oklch(var(--color-ink-muted))]" title={fullTitle(label)}>
               {label.primary}

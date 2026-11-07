@@ -75,7 +75,7 @@ export function EventTypeFilter({ value, onChange }: { value: string; onChange: 
       </span>
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} align="start" className="z-dialog">
-          <Combobox.Popup className="w-80 max-h-96 overflow-y-auto bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] py-1">
+          <Combobox.Popup className="w-80 max-h-96 overflow-y-auto rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] py-1">
             <div className="px-2 pt-1 pb-2">
               <Combobox.Input
                 placeholder={t("events.search_type")}

@@ -236,7 +236,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
-                    <Popover.Popup className="w-80 border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] focus:outline-hidden">
+                    <Popover.Popup className="w-80 rounded-panel shadow-overlay overflow-hidden border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] focus:outline-hidden">
                       <div className="flex items-center justify-between border-b border-[oklch(var(--color-block))] px-4 py-2">
                         <h3 className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
                         <Link href="/notifications" className="text-xs text-[oklch(var(--color-accent))] hover:underline">
@@ -276,7 +276,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
-                    <Popover.Popup className="w-60 border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] focus:outline-hidden">
+                    <Popover.Popup className="w-60 rounded-panel shadow-overlay overflow-hidden border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] focus:outline-hidden">
                       <Link
                         href="/profile"
                         className="block border-b border-[oklch(var(--color-block))] px-3 py-2 hover:bg-[oklch(var(--color-surface-2))]"

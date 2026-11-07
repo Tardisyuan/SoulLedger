@@ -43,7 +43,7 @@ const POPUP_SHAPE = {
   panel:
     "inset-y-0 right-0 w-full sm:w-[480px] border-l data-ending-style:translate-x-3 data-starting-style:translate-x-3",
   layer:
-    "inset-x-0 bottom-0 h-[78%] border-t sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:h-auto sm:w-[390px] sm:border-t-0 sm:border-l data-ending-style:translate-y-3 data-starting-style:translate-y-3 sm:data-ending-style:translate-y-0 sm:data-starting-style:translate-y-0 sm:data-ending-style:translate-x-3 sm:data-starting-style:translate-x-3",
+    "inset-x-0 bottom-0 h-[78%] max-sm:rounded-t-panel border-t sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:h-auto sm:w-[390px] sm:border-t-0 sm:border-l data-ending-style:translate-y-3 data-starting-style:translate-y-3 sm:data-ending-style:translate-y-0 sm:data-starting-style:translate-y-0 sm:data-ending-style:translate-x-3 sm:data-starting-style:translate-x-3",
 } as const;
 
 /** J / K only when the keystroke is not text entry. */
@@ -69,7 +69,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
             else if (key === "k" && onPrev) { e.preventDefault(); onPrev(); }
           }}
           data-variant={variant}
-          className={`fixed z-drawer flex flex-col shadow-overlay bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 ${POPUP_SHAPE[variant]}`}
+          className={`fixed z-drawer flex flex-col shadow-overlay bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 ${POPUP_SHAPE[variant]}`}
         >
           <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-2 border-b border-[oklch(var(--color-block))]">
             <Dialog.Title className="min-w-0 break-words text-lg text-[oklch(var(--color-ink))]">{title}</Dialog.Title>

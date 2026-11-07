@@ -233,7 +233,7 @@ function Composer({
           className="block w-full min-h-[84px] px-3 py-2 bg-transparent font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] resize-y"
         />
         {open && (
-          <div className={`absolute left-3 right-3 top-full z-10 border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))]`}>
+          <div className={`absolute left-3 right-3 top-full z-10 overflow-hidden rounded-panel shadow-overlay border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]`}>
             <p role="status" className="sr-only">
               {results.length > 0 ? t("soul_inbox.cite_results", { n: String(results.length) }) : ""}
             </p>
