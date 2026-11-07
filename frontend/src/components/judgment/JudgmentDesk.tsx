@@ -264,7 +264,7 @@ export function StatuteSearch({
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           placeholder={t("judgment.desk.statute_search")}
-          className="w-full h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
+          className="w-full rounded-control h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
         />
       </label>
       {query && !resolved && !corpus.isPending && !isFetching && (isError || results.length === 0) && (

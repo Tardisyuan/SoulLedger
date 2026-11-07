@@ -131,10 +131,10 @@ function readSessionDeferred(): string[] {
 }
 
 const SELECT_CLASS =
-  "h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))]";
+  "rounded-control h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))]";
 /** 分段按钮(全部案卷 / 我认领的):当前一段 ink 框 + 600,不用文明色。 */
 const SEGMENT = (on: boolean) =>
-  `h-(--control-h-sm) border px-3 text-sm ${
+  `rounded-control h-(--control-h-sm) border px-3 text-sm ${
     on
       ? "border-[oklch(var(--color-ink))] font-semibold text-[oklch(var(--color-ink))]"
       : "border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
@@ -492,7 +492,7 @@ export function JudgmentClaimQueue({
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder={t("judgment.claim.search")}
-            className="w-full h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
+            className="w-full rounded-control h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
           />
         </label>
         <div className="flex" data-testid="queue-scope">
@@ -867,7 +867,7 @@ export function JudgmentClaimQueue({
                             <button
                               type="button"
                               onClick={() => claimOne(j.id)}
-                              className="inline-flex h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                              className="inline-flex rounded-control h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                             >
                               {t("judgment.claim.claim")}
                             </button>

@@ -127,7 +127,7 @@ export function QueueMinePanel({
                         type="button"
                         onClick={() => onReassign(j)}
                         /* B9 行内动作:1px ink3 框、11 字。 */
-                        className="inline-flex h-(--control-h-sm) shrink-0 items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="inline-flex rounded-control h-(--control-h-sm) shrink-0 items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("judgment.claim.reassign")}
                       </button>
@@ -144,7 +144,7 @@ export function QueueMinePanel({
               onClick={() => void query.fetchNextPage()}
               disabled={query.isFetchingNextPage}
               /* 同行内动作:1px ink3 框、11 字。 */
-              className="mt-2 inline-flex h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-disabled-ink))]"
+              className="mt-2 inline-flex rounded-control h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-disabled-ink))]"
             >
               {t("judgment.claim.load_more", { n: String(total - loaded.length) })}
             </button>

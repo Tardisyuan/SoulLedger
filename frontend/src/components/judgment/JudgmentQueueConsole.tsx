@@ -552,7 +552,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 type="button"
                 onClick={defer}
                 aria-keyshortcuts="S"
-                className="flex h-(--control-h-md) items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]"
+                className="flex rounded-control h-(--control-h-md) items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]"
               >
                 {t("judgment.claim.col_deferred")}
                 <Keycap>S</Keycap>
