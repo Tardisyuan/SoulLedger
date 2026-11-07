@@ -34,7 +34,7 @@ import {
 } from "../rules";
 import { useSession } from "../session";
 import { OutlineSeal } from "../seal";
-import { sealedTheme, type CivKey } from "../theme";
+import { radius, sealedTheme, type CivKey } from "../theme";
 import {
   Block,
   Button,
@@ -673,37 +673,37 @@ function StationsCard({ station }: { station: string }) {
 }
 
 /**
- * v3 .life-balance: merit less demerit, the one number the page is for, in mono on an ink
- * block — never in a status colour (a colour would make it a verdict). The two sides the
- * server sends beside it, in the soul's home lexicon (Egypt: feather side / heart side).
+ * The balance: merit less demerit, the one number the page is for, in the title serif 28
+ * (DESIGN.md 「展示数字 · 二档」, as the web soul page draws 功 / 过) on a v4 panel — s1, a
+ * hairline, `radius.dialog` — in ink, never a status colour (a colour would make it a verdict).
+ * The two sides the server sends beside it, in the soul's home lexicon (Egypt: feather side / heart side).
  */
 function Balance({ me, lex }: { me: MeProfile; lex: CivKey }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
-  const on = { color: t.s1 };
   const side = (word: "merit" | "demerit", value: number) => (
     <View testID={`score-${word}`} style={styles.side}>
-      <Txt variant="caption" style={[on, styles.dim]}>
+      <Txt variant="caption" tone="subtle">
         {tr(lexiconKey(lex, word))}
       </Txt>
-      <Txt variant="value" style={on}>
-        {grouped(value)}
-      </Txt>
+      <Txt variant="value">{grouped(value)}</Txt>
     </View>
   );
   return (
-    <View testID="balance" style={[styles.balance, { paddingHorizontal: gutter, backgroundColor: t.ink }]}>
-      <View style={styles.fill}>
-        <Txt variant="caption" style={[on, styles.dim]}>
-          {tr("soul_app.life.balance")}
-        </Txt>
-        <Txt testID="balance-value" numberOfLines={1} adjustsFontSizeToFit style={[styles.balanceValue, on]}>
-          {signedBalance(me.merit_score, me.demerit_score)}
-        </Txt>
+    <View style={[styles.balanceWrap, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+      <View testID="balance" style={[styles.balance, { backgroundColor: t.s1, borderColor: t.hair }]}>
+        <View style={styles.fill}>
+          <Txt variant="caption" tone="subtle">
+            {tr("soul_app.life.balance")}
+          </Txt>
+          <Txt testID="balance-value" numberOfLines={1} adjustsFontSizeToFit style={[styles.balanceValue, { color: t.ink }]}>
+            {signedBalance(me.merit_score, me.demerit_score)}
+          </Txt>
+        </View>
+        {side("merit", me.merit_score)}
+        {side("demerit", me.demerit_score)}
       </View>
-      {side("merit", me.merit_score)}
-      {side("demerit", me.demerit_score)}
     </View>
   );
 }
@@ -1296,11 +1296,11 @@ const styles = StyleSheet.create({
   /** ✓ from the status-glyph face: the mono face (Plex then, Geist Mono now) has none, so the OS fell back to a √-like mark. */
   stageGlyph: { fontFamily: family.glyph },
   stageWord: { fontSize: 11, lineHeight: 16, textAlign: "center" },
-  /** v3 .life-balance: an ink block, the number in mono 56. */
-  balance: { minHeight: 120, flexDirection: "row", alignItems: "center", gap: 24, paddingVertical: 24 },
+  /** The balance panel (as applications' A11 panel): s1, a hairline, `radius.dialog`, 16 inside; the number title 28 / 36. */
+  balanceWrap: { paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1 },
+  balance: { flexDirection: "row", alignItems: "center", gap: 24, borderWidth: 1, borderRadius: radius.dialog, padding: 16 },
   side: { alignItems: "flex-start", gap: 4 },
-  dim: { opacity: 0.72 },
-  balanceValue: { fontFamily: family.mono[500], fontSize: 56, lineHeight: 64, letterSpacing: -2 },
+  balanceValue: { marginTop: 4, fontFamily: family.title, fontSize: 28, lineHeight: 36 },
   ledgerHead: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1 },
   ask: { position: "absolute", right: 16, bottom: 16, width: 48, height: 48, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   residenceWrap: { paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
