@@ -15,6 +15,7 @@ import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
 import { ColumnMenu, DataGrid, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { Segmented } from "@/src/components/ui/Segmented";
 import { Button } from "@/src/components/ui/Button";
 import {
   cloneGrantMap,
@@ -369,28 +370,21 @@ function PermissionsPageContent() {
         </div>
       }
       tabs={
-        <div role="group" aria-label={t("permissions.segments.label")} className="flex w-fit flex-wrap border border-[oklch(var(--color-block))]">
-          {segments.map((s) => {
-            const on = segment === s.value;
-            return (
-              <button
-                key={s.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setSegment(s.value)}
-                className={cn(
-                  "flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm",
-                  on
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                    : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
-                )}
-              >
+        <Segmented
+          label={t("permissions.segments.label")}
+          value={segment}
+          onChange={(v) => setSegment(v as typeof segment)}
+          className="max-w-full flex-wrap"
+          options={segments.map((s) => ({
+            value: s.value,
+            label: (
+              <span className="inline-flex items-center gap-2">
                 {s.label}
-                {s.count !== undefined && <span aria-hidden="true" className="font-mono text-2xs opacity-80">{s.count}</span>}
-              </button>
-            );
-          })}
-        </div>
+                {s.count !== undefined && <span aria-hidden="true" className="font-mono text-2xs">{s.count}</span>}
+              </span>
+            ),
+          }))}
+        />
       }
     >
       <>

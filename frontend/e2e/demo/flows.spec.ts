@@ -135,10 +135,10 @@ test("the moderator hides a reported post and lifts a mute", async ({ page, cont
   await detail.getByLabel("隐藏 / 删除理由（会告诉作者）").selectOption("ABUSE");
   await detail.getByRole("button", { name: /^隐藏/ }).click();
   await expect(page.locator("main li").filter({ hasText: String(before.content_excerpt).slice(0, 8) })).toHaveCount(0);
-  await page.getByRole("button", { name: /^已处理/ }).click();
+  await page.getByRole("radio", { name: /^已处理/ }).click();
   await expect(page.locator("main")).toContainText(String(before.content_excerpt).slice(0, 8));
 
-  await page.getByRole("button", { name: /^禁言\s*(，\d+ 条)?$/ }).first().click();
+  await page.getByRole("radio", { name: /^禁言\s*(，\d+ 条)?$/ }).first().click();
   await page.getByRole("button", { name: "解除禁言" }).first().click();
   await page.getByRole("dialog").or(page.getByRole("alertdialog")).getByRole("button", { name: "解除禁言" }).click();
   await expect(page.getByRole("button", { name: "解除禁言" })).toHaveCount(0);

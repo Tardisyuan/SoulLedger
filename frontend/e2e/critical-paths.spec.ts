@@ -466,7 +466,7 @@ test.describe("Critical path: permission matrix save", () => {
       await page.locator("tr", { hasText: "GUARDIAN" }).getByRole("button").click();
       return page.getByRole("dialog");
     };
-    await page.getByRole("button", { name: /^角色/ }).first().click();
+    await page.getByRole("radio", { name: /^角色/ }).first().click();
     let drawer = await openGuardian();
     const scope = drawer.getByRole("region", { name: "数据范围" });
     await expect(scope.getByRole("radio", { name: "全部" })).toBeChecked();
@@ -488,7 +488,7 @@ test.describe("Critical path: permission matrix save", () => {
   });
 
   test("roles: a row opens the drawer; a referenced role's delete lists the workflow", async ({ page }) => {
-    await page.getByRole("button", { name: /^角色/ }).first().click();
+    await page.getByRole("radio", { name: /^角色/ }).first().click();
     await page.locator("tr", { hasText: "GUARDIAN" }).getByRole("button").click();
     const drawer = page.getByRole("dialog");
     await expect(drawer).toContainText("创建后不可改；审批流按代码引用");
