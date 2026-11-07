@@ -45,7 +45,7 @@ function renderPage() {
   );
 }
 async function openDefinitions() {
-  fireEvent.click(await screen.findByRole("button", { name: /permissions\.segments\.definitions/ }));
+  fireEvent.click(await screen.findByRole("radio", { name: /permissions\.segments\.definitions/ }));
   await screen.findByText("soul.read");
 }
 
@@ -58,7 +58,7 @@ beforeEach(() => {
 describe("权限定义的列菜单", () => {
   it("只在「权限定义」一段出现;矩阵一段没有", async () => {
     renderPage();
-    await screen.findByRole("button", { name: /permissions\.segments\.definitions/ });
+    await screen.findByRole("radio", { name: /permissions\.segments\.definitions/ });
     expect(menuButton()).toBeNull();
     await openDefinitions();
     expect(menuButton()).toBeInTheDocument();

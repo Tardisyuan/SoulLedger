@@ -69,10 +69,13 @@ export const MISSING_GLYPH: Record<MissingKind, string> = {
  * weight difference. No fills, so the 0.1 badge-tint cap
  * (src/__tests__/dataGridToneContract.test.ts) is not in play here.
  */
+// 2026-11-07:unrecorded 原是旧别名 ink-tertiary(= ink-subtle),改名后和 inapplicable 撞成同一个 token;
+// inapplicable 改用 v4 的 faint-text(比 sub 更淡,在 canvas / surface-1 / surface-2 上仍 ≥ 4.5),
+// 也正是「最淡的排最后」。v4 里 ink-muted 与 ink-subtle 同值,zero 与 unrecorded 目前只在 token 名上不同。
 export const MISSING_INK: Record<MissingKind, string> = {
   unrecorded: "text-[oklch(var(--color-ink-subtle))]",
   zero: "text-[oklch(var(--color-ink-muted))]",
-  inapplicable: "text-[oklch(var(--color-ink-subtle))]",
+  inapplicable: "text-[oklch(var(--color-faint-text))]",
 };
 
 /** i18n key naming each kind, used as the `title` so the glyph is explainable. */
