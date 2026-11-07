@@ -25,7 +25,7 @@ import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDi
 
 import { ActionButton, type TabKey } from "./kit";
 import { useSession } from "./session";
-import { Button, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, space, useI18n, useTheme } from "./shared";
+import { Button, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, radius, space, useI18n, useTheme } from "./shared";
 
 /**
  * Each tab as a page the backend knows (`OFFICER_SCREENS`). 待办 → `workflow`: its first and main
@@ -478,12 +478,12 @@ function History({ assist }: { assist: OfficerAssist }) {
 const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   head: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: space[5], paddingVertical: space[2], borderBottomWidth: 1 },
-  entry: { flexDirection: "row", alignItems: "center", gap: space[1], minHeight: 44, paddingHorizontal: space[3], borderWidth: 1 },
+  entry: { flexDirection: "row", alignItems: "center", gap: space[1], minHeight: 44, paddingHorizontal: space[3], borderWidth: 1, borderRadius: radius.control },
   sheetHead: { flexDirection: "row", alignItems: "center", gap: space[1], paddingHorizontal: space[3], minHeight: 52, borderBottomWidth: 1 },
   headButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: space[2] },
   strip: { paddingHorizontal: space[5], paddingVertical: space[2] },
   body: { paddingHorizontal: space[5], paddingTop: space[4], paddingBottom: space[3], gap: space[4] },
-  suggestion: { minHeight: 52, justifyContent: "center", paddingHorizontal: space[4], paddingVertical: space[3], borderWidth: 1 },
+  suggestion: { minHeight: 52, justifyContent: "center", paddingHorizontal: space[4], paddingVertical: space[3], borderWidth: 1, borderRadius: radius.control },
   composer: { paddingHorizontal: space[5], gap: space[3] },
   historyRow: { flexDirection: "row", alignItems: "center", gap: space[2], borderBottomWidth: 1 },
 });

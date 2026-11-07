@@ -27,7 +27,7 @@ import {
 import { submitDecision } from "../decisions";
 import { useKeptText } from "../keptText";
 import { effectLine, objectLines } from "../todoFacts";
-import { Button, FieldError, Input, Notice, Sheet, SmallButton, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { Button, FieldError, Input, Notice, Sheet, SmallButton, Txt, radius, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 import { PEOPLE_SHOWN } from "./letterActions";
 
 /** How long the 加签 search waits after the last keystroke before it asks the server. */
@@ -129,7 +129,7 @@ export function DecisionSheet({
           <Txt variant="body" testID="decision-cross-wanted">{t("officer_app.rebirth.cross_wanted")}</Txt>
         ) : null}
         {/* 对象: a bordered block (what, then who asked). 后果: one sentence under it. */}
-        <View testID="decision-object" style={{ borderWidth: 1, borderColor: theme.hair, padding: space[3], gap: space[1] }}>
+        <View testID="decision-object" style={{ borderWidth: 1, borderRadius: radius.dialog, borderColor: theme.hair, padding: space[3], gap: space[1] }}>
           <Txt variant="bodyLg">{objectTop}</Txt>
           {objectBottom ? <Txt variant="caption" tone="muted">{objectBottom}</Txt> : null}
         </View>
