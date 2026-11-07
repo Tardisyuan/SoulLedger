@@ -158,7 +158,7 @@ for (const role of ["judge_eu", "judge_eg"] as Role[]) {
     test("/rebirths opened directly: a page saying there is no rebirth here", async ({ page }) => {
       await enter(page, role);
       await page.goto("/rebirths");
-      await expect(page.getByTestId("rebirths-not-applicable")).toContainText(/没有转世|No rebirth/);
+      await expect(page.getByTestId("rebirths-not-applicable")).toContainText(/没有转生|No rebirth/);
       await expect(page.locator("main table")).toHaveCount(0);
     });
     for (const route of routes) {
