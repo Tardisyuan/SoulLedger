@@ -1,13 +1,12 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
 import { PAGE_SIZE, type ScheduledJob, type TaskRun, type TaskRunStatus } from "@soulledger/core/api";
 import { useTaskRuns } from "@soulledger/core/hooks/useScheduler";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { Button } from "@/src/components/ui/Button";
+import { Drawer } from "@/src/components/ui/Drawer";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -28,14 +27,11 @@ interface Props {
 }
 
 /**
- * Right-hand run history. Keyboard contract from `useDrawerA11y` (the one
- * `SettingsDrawer` uses); mounted only while a job is chosen, so a closed
- * drawer is absent from the DOM rather than hidden by a class jsdom cannot see.
+ * Right-hand run history on the shared `ui/Drawer` (scrim `--color-scrim`, focus trap, Escape);
+ * mounted only while a job is chosen, so a closed drawer is absent from the DOM.
  */
 export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Props) {
   const { t, formatDateTime } = useI18n();
-  const titleId = useId();
-  const { drawerRef, drawerProps } = useDrawerA11y<HTMLDivElement>({ open: true, onClose, labelledBy: titleId });
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const statusFilter = status === "" ? undefined : status;
@@ -48,29 +44,8 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
   const totalPages = runs.data ? Math.max(1, Math.ceil(runs.data.count / PAGE_SIZE)) : 0;
 
   return (
-    <>
-      <button type="button" aria-label={t("common.close")} data-motion="fade" className="fixed inset-0 bg-black/50 z-drawer animate-scrim-in" onClick={onClose} />
-      <div
-        ref={drawerRef}
-        {...drawerProps}
-        data-motion="fade"
-        className="fixed right-0 top-0 h-full w-full max-w-xl bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] z-drawer overflow-y-auto animate-drawer-in"
-      >
-        <div className="p-4 sm:p-6 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <h2 id={titleId} className="font-title text-lg text-[oklch(var(--color-ink))] min-w-0 break-words">
-              {t("scheduler.runs.title", { job: jobName })}
-            </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("common.close")}
-              className="shrink-0 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
+    <Drawer isOpen onClose={onClose} title={t("scheduler.runs.title", { job: jobName })}>
+        <div className="space-y-4">
           <SelectField
             label={t("scheduler.runs.status_filter")}
             value={status}
@@ -103,8 +78,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
             </>
           )}
         </div>
-      </div>
-    </>
+    </Drawer>
   );
 }
 

@@ -97,7 +97,8 @@ export function useConnectionBannerShown(): boolean {
 }
 
 /** v4 第八批:连上之后胶囊淡出的时长。 */
-const FADE_MS = 300;
+/** = `--transition-duration-base`(`duration-base`,240ms)—— 淡出完再清空内容。 */
+const FADE_MS = 240;
 
 type Tone = "warn" | "neg" | "offline";
 /** The dot and the 2px rule: amber while it retries, red when it gave up, grey offline. `--color-warn` is
@@ -124,7 +125,7 @@ const TONE_COLOUR: Record<Tone, string> = {
  *
  * Reconnecting: amber dot, pulsing. Failed (or disconnected — terminal too): red dot and 重连. Offline:
  * grey dot, no button — queries refetch on `online` by themselves, and if the socket gave up meanwhile
- * the pill turns red and offers 重连 then. On reconnect the pill fades out over 300ms, no 「已连接」.
+ * the pill turns red and offers 重连 then. On reconnect the pill fades out over 240ms (`duration-base`), no 「已连接」.
  */
 export function ConnectionBanner() {
   const { status, reconnect } = useWebSocket();
@@ -159,7 +160,7 @@ export function ConnectionBanner() {
         data-testid="connection-banner"
         data-tone={view.tone}
         data-offline={view.tone === "offline" ? "true" : undefined}
-        className={`inline-flex h-7.5 min-w-0 shrink items-center gap-2 whitespace-nowrap rounded-[9999px] border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] pl-2 text-xs text-[oklch(var(--color-ink))] transition-opacity duration-300 motion-reduce:transition-none max-[768px]:fixed max-[768px]:left-1/2 max-[768px]:top-[calc(var(--spacing)*15+var(--imp-h))] max-[768px]:z-masthead max-[768px]:max-w-[calc(100vw-32px)] max-[768px]:-translate-x-1/2 ${
+        className={`inline-flex h-7.5 min-w-0 shrink items-center gap-2 whitespace-nowrap rounded-[9999px] border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] pl-2 text-xs text-[oklch(var(--color-ink))] transition-opacity duration-base motion-reduce:transition-none max-[768px]:fixed max-[768px]:left-1/2 max-[768px]:top-[calc(var(--spacing)*15+var(--imp-h))] max-[768px]:z-masthead max-[768px]:max-w-[calc(100vw-32px)] max-[768px]:-translate-x-1/2 ${
           canRetry ? "pr-1" : "pr-3"
         } ${leaving ? "opacity-0" : "opacity-100"}`}
       >
@@ -185,7 +186,7 @@ export function ConnectionBanner() {
       <span
         aria-hidden="true"
         data-testid="connection-rule"
-        className={`pointer-events-none absolute inset-x-0 -bottom-px h-0.5 transition-opacity duration-300 motion-reduce:transition-none max-[768px]:hidden ${TONE_COLOUR[view.tone]} ${
+        className={`pointer-events-none absolute inset-x-0 -bottom-px h-0.5 transition-opacity duration-base motion-reduce:transition-none max-[768px]:hidden ${TONE_COLOUR[view.tone]} ${
           leaving ? "opacity-0" : "opacity-80"
         }`}
       />

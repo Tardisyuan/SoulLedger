@@ -210,7 +210,7 @@ export function MediaViewer({
       <Dialog.Portal>
         <Dialog.Backdrop
           data-motion="fade"
-          className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/0.78)] transition-opacity duration-base ease-enter data-ending-style:opacity-0 data-starting-style:opacity-0"
+          className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:opacity-0 data-starting-style:opacity-0"
         />
         <Dialog.Viewport className="fixed inset-0 z-dialog flex items-center justify-center p-4 max-[768px]:p-2">
           <Dialog.Popup
