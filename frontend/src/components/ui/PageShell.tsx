@@ -360,7 +360,7 @@ export function PageShell({
       {/* 页头：不 sticky。 */}
       <header
         data-page-shell-header=""
-        className="border-b border-[oklch(var(--color-hairline))]"
+        className="border-b border-[oklch(var(--color-line))]"
       >
         <div className={cn(width, "px-4 md:px-8 pt-8 pb-6")}>
           {leading || aside ? (
@@ -395,7 +395,7 @@ export function PageShell({
           为什么不塞进 children：它必须在筛选栏之上，否则筛选看起来像作用于
           所有标签页而不是当前这个。 */}
       {tabs ? (
-        <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-hairline))]">
+        <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-line))]">
           <div className={cn(width, "px-4 md:px-8 flex items-center gap-1")}>{tabs}</div>
         </div>
       ) : null}
@@ -405,7 +405,7 @@ export function PageShell({
       {filters ? (
         <div
           data-page-shell-filters=""
-          className="sticky top-(--below-band) z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
+          className="sticky top-(--below-band) z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-line))]"
         >
           {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
               筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、

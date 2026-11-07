@@ -162,7 +162,7 @@ export function JudgmentGroundsPanel({ citations }: { citations: JudgmentCitatio
           {t("judgment.grounds.empty")}
         </p>
       ) : (
-        <ul className="divide-y divide-[oklch(var(--color-hairline))]">
+        <ul className="divide-y divide-[oklch(var(--color-line))]">
           {citations.map((citation) => (
             <GroundRow key={citation.id} citation={citation} />
           ))}
@@ -222,7 +222,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
         {/* The article code is a citation key, not an opaque identifier —
             "CN-HL-O01" is how a reader looks the article up, so it is content
             and IDENTIFIER_POLICY does not reach it. */}
-        <p className="font-mono text-2xs text-[oklch(var(--color-ink-tertiary))] mt-1">{statute.code}</p>
+        <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] mt-1">{statute.code}</p>
       </div>
 
       {/* 条文正文 */}
@@ -296,7 +296,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
       {/* 出处 */}
       <div className="min-w-0 text-xs text-[oklch(var(--color-ink-subtle))]">
         <p>
-          <span className="text-2xs uppercase text-[oklch(var(--color-ink-tertiary))] block">
+          <span className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] block">
             {statute.is_derived ? t("judgment.grounds.derived") : t("judgment.grounds.source")}
           </span>
           {source}
@@ -305,7 +305,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
             source by ink and not by `italic` — this page reserves italic for
             what italic is for. */}
         {statute.source_notes?.map((note, index) => (
-          <p key={index} className="text-[oklch(var(--color-ink-tertiary))] mt-2">
+          <p key={index} className="text-[oklch(var(--color-ink-subtle))] mt-2">
             {t("judgment.grounds.caveat")} {note}
           </p>
         ))}

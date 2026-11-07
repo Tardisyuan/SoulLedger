@@ -69,7 +69,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
             <EmptyState title={status ? t("scheduler.runs.empty_filtered") : t("scheduler.runs.empty")} />
           ) : (
             <>
-              <ul className="divide-y divide-[oklch(var(--color-hairline))]" data-testid="task-runs">
+              <ul className="divide-y divide-[oklch(var(--color-line))]" data-testid="task-runs">
                 {results.map((run) => (
                   <TaskRunItem key={run.id} run={run} formatDateTime={formatDateTime} />
                 ))}
@@ -149,7 +149,7 @@ export function TaskRunItem({
           <Collapse open={open} id={errorId} className="mt-2">
             <pre
               aria-label={t("scheduler.runs.error")}
-              className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
+              className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-line))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
             >
               {run.error}
             </pre>

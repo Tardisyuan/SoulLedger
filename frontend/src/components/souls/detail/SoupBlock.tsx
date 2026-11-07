@@ -36,7 +36,7 @@ export function SoupBlock({
     }
   };
   return (
-    <div data-testid="soup-block" className="space-y-2 border-t border-[oklch(var(--color-hairline))] pt-3 text-sm">
+    <div data-testid="soup-block" className="space-y-2 border-t border-[oklch(var(--color-line))] pt-3 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-[oklch(var(--color-ink-muted))]">{t("mengpoSoup.title")}</span>
         {takenAt ? (

@@ -108,7 +108,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
   }
 
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+    <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]">
       <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">
         {t("souls.detail.date_problems.title")}
       </h2>
@@ -118,7 +118,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
           const severity = group[0].severity;
           const isOpen = expandedCodes[code] ?? false;
           return (
-            <div key={code} className="border border-[oklch(var(--color-hairline))]">
+            <div key={code} className="border border-[oklch(var(--color-line))]">
               <button
                 type="button"
                 onClick={() => setExpandedCodes((s) => ({ ...s, [code]: !isOpen }))}
@@ -151,7 +151,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                 </span>
               </button>
               <Collapse open={isOpen} id={`date-problems-${code}`}>
-                <div className="px-3 pb-3 space-y-3 border-t border-[oklch(var(--color-hairline))] pt-2">
+                <div className="px-3 pb-3 space-y-3 border-t border-[oklch(var(--color-line))] pt-2">
                   {group.map((occ, idx) => (
                     <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-sm text-[oklch(var(--color-ink-muted))] space-y-1">
                       {occ.recordLabel && (
@@ -173,7 +173,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                                   type="button"
                                   onClick={() => runAckAction(occ.recordId!, "unacknowledge")}
                                   disabled={busyRecordId === occ.recordId}
-                                  className="px-2 py-0.5 border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
+                                  className="px-2 py-0.5 border border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
                                 >
                                   {t("souls.detail.date_problems.revoke")}
                                 </button>
@@ -185,7 +185,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                                 type="button"
                                 onClick={() => runAckAction(occ.recordId!, "acknowledge")}
                                 disabled={busyRecordId === occ.recordId}
-                                className="px-2 py-0.5 border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
+                                className="px-2 py-0.5 border border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
                               >
                                 {t("souls.detail.date_problems.acknowledge")}
                               </button>

@@ -44,7 +44,7 @@ export function RowShell({ date, dotClassName, dashed, hideConnector, highlight,
       <div className="w-16 shrink-0 text-xs text-[oklch(var(--color-ink-subtle))] text-right pt-2">{date ?? <MissingValue kind="unrecorded" />}</div>
       <div className="flex flex-col items-center shrink-0">
         {terminalVariant === "flush" ? (
-          <span className="w-2.5 h-px mt-3 bg-[oklch(var(--color-hairline-strong))]" aria-hidden="true" />
+          <span className="w-2.5 h-px mt-3 bg-[oklch(var(--color-line-strong))]" aria-hidden="true" />
         ) : (
           <span
             className={
@@ -57,7 +57,7 @@ export function RowShell({ date, dotClassName, dashed, hideConnector, highlight,
         )}
         {!hideConnector && (
           <span
-            className={`flex-1 w-0 mt-0.5 ${dashed ? "border-l border-dashed border-[oklch(var(--color-hairline-strong))]" : "border-l border-[oklch(var(--color-hairline))]"}`}
+            className={`flex-1 w-0 mt-0.5 ${dashed ? "border-l border-dashed border-[oklch(var(--color-line-strong))]" : "border-l border-[oklch(var(--color-line))]"}`}
           />
         )}
       </div>

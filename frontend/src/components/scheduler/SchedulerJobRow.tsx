@@ -89,7 +89,7 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
         <h3 className="text-sm font-medium text-[oklch(var(--color-ink))] break-words">
           <DomainEnum namespace={JOB_DESCRIPTION_NAMESPACE} value={jobDescriptionMember(job)} />
         </h3>
-        <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all" title={job.periodic_task_name}>
+        <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))] break-all" title={job.periodic_task_name}>
           {job.periodic_task_name}
         </p>
         <div className="flex flex-wrap gap-1">

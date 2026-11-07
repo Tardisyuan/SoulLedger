@@ -36,11 +36,11 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
        * `e2e/error-states-differ-from-empty.spec.ts` 要等「这一屏已经是最终状态」
        * 才去读正文,而那八个页面的加载态一律是这个组件。按类名找不行:
        * `animate-pulse` 还长在别处(实测 /tenants 上有一个 `w-2 h-2 
-    * animate-pulse` 的状态圆点常驻),而 `bg-[oklch(var(--color-hairline))]`
+    * animate-pulse` 的状态圆点常驻),而 `bg-[oklch(var(--color-line))]`
        * 是 Tailwind 的任意值,拿它当选择器等于把测试钉在一个可以随时改的样式上。 */
       data-slot="skeleton"
       className={cn(
-        /* `--color-hairline`, NOT a surface token.
+        /* `--color-line`, NOT a surface token.
          *
          * A skeleton block is one of the ~29% of surface fills in this app that
          * ships with no border, so the fill is the ONLY thing separating it from
@@ -55,7 +55,7 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
          * pinned ink-on-surface combinations because the hairline family is in
          * neither ramp. */
         // 静态(交互与动效第 2 轮「骨架屏:静态骨架，不做闪光;数据到了交叉淡化成内容」)。
-        'bg-[oklch(var(--color-hairline))]',
+        'bg-[oklch(var(--color-line))]',
         !shown && 'invisible',
         className
       )}
@@ -68,7 +68,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
   return (
     <>
       {/* 表头 */}
-      <tr className="border-b border-[oklch(var(--color-hairline))]">
+      <tr className="border-b border-[oklch(var(--color-line))]">
         {Array.from({ length: cols }).map((_, i) => (
           <td key={i} className="px-4 py-3">
             <Skeleton className="h-4 w-full" />
@@ -78,7 +78,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
       {/* 行 */}
       {Array.from({ length: rows }).map((_, rowIdx) => (
         // 与 DataTable 的正文行同高(`--table-row-h`),骨架换成内容时不跳行。
-        <tr key={rowIdx} className="h-(--table-row-h) border-b border-[oklch(var(--color-hairline))]">
+        <tr key={rowIdx} className="h-(--table-row-h) border-b border-[oklch(var(--color-line))]">
           {Array.from({ length: cols }).map((_, colIdx) => (
             <td key={colIdx} className="px-4 py-3">
               <Skeleton className="h-4 w-full" />

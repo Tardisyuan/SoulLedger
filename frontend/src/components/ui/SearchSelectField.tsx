@@ -239,7 +239,7 @@ export function SearchSelectField({
                     {searching ? (
                       <p
                         role="status"
-                        className="px-3 py-2 text-2xs text-[oklch(var(--color-ink-tertiary))] border-b border-[oklch(var(--color-hairline))]"
+                        className="px-3 py-2 text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-line))]"
                       >
                         {loadingText}
                       </p>
@@ -262,7 +262,7 @@ export function SearchSelectField({
                             <div
                               role="presentation"
                               data-option-group=""
-                              className="px-3 pt-2 pb-1 text-2xs text-[oklch(var(--color-ink-subtle))] border-t border-[oklch(var(--color-hairline))] first:border-t-0"
+                              className="px-3 pt-2 pb-1 text-2xs text-[oklch(var(--color-ink-subtle))] border-t border-[oklch(var(--color-line))] first:border-t-0"
                             >
                               {option.group}
                             </div>
@@ -281,7 +281,7 @@ export function SearchSelectField({
                         did. Without it "keep typing" is advice the user has no
                         reason to take. */}
                     {moreText ? (
-                      <p className="px-3 py-2 text-2xs text-[oklch(var(--color-ink-tertiary))] border-t border-[oklch(var(--color-hairline))]">
+                      <p className="px-3 py-2 text-2xs text-[oklch(var(--color-ink-subtle))] border-t border-[oklch(var(--color-line))]">
                         {moreText}
                       </p>
                     ) : null}

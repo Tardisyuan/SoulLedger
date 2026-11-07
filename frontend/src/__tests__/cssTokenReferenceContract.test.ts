@@ -157,7 +157,8 @@ describe("the scan is looking at something", () => {
     // its own removal, which is the scan working exactly as the note in
     // globals.css warns: this file does not strip comments, so a token name
     // written inside `var()` in a sentence is a reference like any other.
-    for (const token of ["--color-ink", "--color-surface-1", "--color-hairline", "--color-block"]) {
+    // `--color-line`, not the old alias `--color-hairline`: every consumer moved to the v4 name on 2026-11-07.
+    for (const token of ["--color-ink", "--color-surface-1", "--color-line", "--color-block"]) {
       expect(seen).toContain(token);
     }
   });
@@ -395,7 +396,7 @@ describe("skeletons are visible against what they sit on", () => {
       throw new Error(
         `A skeleton is filled from the surface ramp. At 1.05:1 — 1.02:1 once ` +
           `animate-pulse halves the opacity — the block is invisible against ` +
-          `what it sits on. Fill it from \`--color-hairline\` instead.\n\n` +
+          `what it sits on. Fill it from \`--color-line\` instead.\n\n` +
           offenders.join("\n")
       );
     }

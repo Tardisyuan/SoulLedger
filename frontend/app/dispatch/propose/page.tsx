@@ -388,7 +388,7 @@ function ProposeDispatchForm() {
                 {carriedSoul.id.slice(0, 8)}
               </span>
             </div>
-            <span className="text-xs text-[oklch(var(--color-ink-tertiary))]">{t("dispatch.soul_from_detail")}</span>
+            <span className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("dispatch.soul_from_detail")}</span>
           </div>
         ) : (
         /* While the list is in flight the control stays in place, disabled,

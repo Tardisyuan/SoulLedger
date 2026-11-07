@@ -48,7 +48,7 @@ export function HallSwitches({ inactiveReason }: { inactiveReason: string | null
             const pending = update.isPending && update.variables?.id === hall.id;
             const reasonId = inactiveReason ? `hall-inactive-${hall.id}` : undefined;
             return (
-              <tr key={hall.id} className="border-t border-[oklch(var(--color-hairline))]">
+              <tr key={hall.id} className="border-t border-[oklch(var(--color-line))]">
                 <td className="py-2">
                   {hall.display_name} <span className={`${MONO} ${SUBTLE}`}>{hall.code}</span>
                   {reasonId && (

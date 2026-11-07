@@ -254,7 +254,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   return (
     <div className="text-[oklch(var(--color-ink))]">
       {/* 窄屏把题目放在自己那一行,进度和两个按钮排第二行(393 宽四样挤一行时题目折两行,56 高撑出 48 的定高)。 */}
-      <div className="min-h-12 flex flex-wrap items-center px-6 gap-x-4 max-sm:pt-2 border-b border-[oklch(var(--color-hairline))]/50">
+      <div className="min-h-12 flex flex-wrap items-center px-6 gap-x-4 max-sm:pt-2 border-b border-[oklch(var(--color-line))]/50">
         <h1 className="font-title text-lg text-[oklch(var(--color-accent-ink))] flex-1 max-sm:basis-full">
           {t("judgment.queue.title")}
         </h1>
@@ -454,7 +454,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
             <section
               aria-labelledby="queue-verdict-heading"
-              className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4"
+              className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4"
             >
               <h2 id="queue-verdict-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
                 {t("judgment.queue.render_verdict")}
@@ -468,7 +468,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 onChange={(event) => setNotes(event.target.value)}
                 rows={2}
                 placeholder={t("judgment.queue.notes_placeholder")}
-                className="w-full border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] mb-3"
+                className="w-full border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] mb-3"
               />
               <label className="flex min-h-(--control-h-sm) items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3">
                 <input
@@ -505,7 +505,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       />
 
       {judgment && cursor.soul && cursor.ledger && (
-        <div className="sticky bottom-(--bottom-bar) border-t border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))]">
+        <div className="sticky bottom-(--bottom-bar) border-t border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-canvas))]">
           <div className="max-w-6xl mx-auto px-6 py-3">
             {/* The verdict row stays hand-rolled, deliberately, while the four
                 plain buttons on this screen moved to `Button`. Each verdict
@@ -569,7 +569,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 function CaseFactsPanel({ court, confession, stale }: { court: string; confession: string; stale: boolean }) {
   const { t } = useI18n();
   return (
-    <section aria-labelledby="queue-case-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-case-heading" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <h3 id="queue-case-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.case")}
       </h3>
@@ -578,7 +578,7 @@ function CaseFactsPanel({ court, confession, stale }: { court: string; confessio
         {court ? (
           <EnumBadge value={{ tone: "info", label: court }} />
         ) : (
-          <span className="text-sm text-[oklch(var(--color-ink-tertiary))]">{t("judgment.queue.not_recorded")}</span>
+          <span className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("judgment.queue.not_recorded")}</span>
         )}
         {stale && <StaleBadge />}
       </div>
@@ -603,7 +603,7 @@ function CaseFactsPanel({ court, confession, stale }: { court: string; confessio
           className={
             confession
               ? "text-sm text-[oklch(var(--color-ink))] whitespace-pre-line max-h-64 overflow-y-auto overscroll-contain"
-              : "text-sm text-[oklch(var(--color-ink-tertiary))]"
+              : "text-sm text-[oklch(var(--color-ink-subtle))]"
           }
         >
           {confession || t("judgment.queue.no_confession")}
@@ -615,7 +615,7 @@ function CaseFactsPanel({ court, confession, stale }: { court: string; confessio
 
 function ConsoleNotice({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
   return (
-    <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] px-6 py-12 text-center">
+    <div className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-6 py-12 text-center">
       <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{title}</p>
       {body && <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{body}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
@@ -637,7 +637,7 @@ function KeyboardMap() {
   // Design's six (`src/lib/queueShortcuts.ts`). `h` and Esc still work — see the keydown above.
   const rows = QUEUE_SHORTCUTS.map(({ key, label }) => [key, t(label)] as const);
   return (
-    <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] p-4">
+    <div className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] p-4">
       <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-2">
         {t("judgment.queue.keyboard_map")}
       </h2>

@@ -55,7 +55,7 @@ const GROUP_TONE = {
 } as const;
 
 const UNSELECTED =
-  "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]";
+  "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]";
 
 interface RebirthFormSelectProps {
   /** null = nothing chosen yet (Diyu with no suggestion): no radio is checked. */

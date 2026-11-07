@@ -129,7 +129,7 @@ export function SentenceReading({
           dividing by it would state a fraction Republic X does not. And no
           colour on either path — the two roads are plain ink and so is their
           clock. */}
-      <div className="border-t border-dashed border-[oklch(var(--color-hairline))] pt-3">
+      <div className="border-t border-dashed border-[oklch(var(--color-line))] pt-3">
         <div className="flex justify-between items-center">
           <span className="text-sm text-[oklch(var(--color-ink-muted))]">
             {t("souls.detail.reading.sentence_elapsed_label")}
@@ -209,7 +209,7 @@ interface RoadProps {
 const FORK_COLUMNS = "grid grid-cols-[1fr_10px_1fr]";
 
 /** One hairline, in the one place hairlines are allowed inside the fork. */
-const FORK_LINE = "absolute border-[oklch(var(--color-hairline))]";
+const FORK_LINE = "absolute border-[oklch(var(--color-line))]";
 
 // The fork itself: the rule that governs both roads, the join where they part,
 // and the two roads.

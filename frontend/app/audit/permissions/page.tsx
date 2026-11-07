@@ -70,13 +70,13 @@ function TimelineEntry({ log }: { log: AuditLogEntry }) {
         }`}
       />
       <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-        <time dateTime={log.timestamp} className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))]">
+        <time dateTime={log.timestamp} className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
           {formatDate(log.timestamp, { hour: "2-digit", minute: "2-digit" })}
         </time>
         <span className="text-[oklch(var(--color-ink))]">{log.user_display}</span>
         <DomainEnum namespace="audit.actions" value={log.action} className="font-semibold" />
         <span title={log.resource}>{auditResourceLabel(t, log.resource)}</span>
-        {log.resource_id && <span className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))]">{`#${log.resource_id}`}</span>}
+        {log.resource_id && <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{`#${log.resource_id}`}</span>}
       </div>
       {shown.length > 0 &&
         (isCreate ? (
