@@ -21,7 +21,7 @@ const API = `${API_ORIGIN}/api/v1`;
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../frontend/demo/data");
 const PASSWORD = "demo-only-not-a-secret";
 const ROLES = { admin: "demo_admin", judge: "demo_judge", judge_eu: "demo_judge_eu", judge_eg: "demo_judge_eg", judge_gr: "demo_judge_gr", moderator: "demo_moderator" };
-const STATIC_ROUTES = `/dashboard /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins
+const STATIC_ROUTES = `/dashboard /dashboard/annual /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins
   /audit/permissions /audit/sessions /audit/stats /city-god-cases /city-gods /corpus /cross-judgments /death-sync
   /death-sync/api-keys /death-sync/tudi-gods /death-sync/webhooks /dispatch /dispatch/propose /disposition /events /halls
   /judgment /judgment/appeals /judgment/capture-due /judgment/queue /ledger /menus /menus/buttons /moderation
@@ -45,11 +45,18 @@ const NO_TWO_STEP = /^(mfa_required|mfa_setup_required)$/;
 
 // What the seed wrote in one language, in the other (scripts/demo-translations.json).
 const TRANSLATIONS = JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "demo-translations.json"), "utf8"));
+// Longest key first, so a whole sentence wins over a word inside it. Into English it is all or nothing: a string that
+// would still hold Chinese after the replacements stays as it was, whole, rather than half one language and half the
+// other (「Meng Po汤」); `scripts/demo-cjk-report.py` then lists it, and the fix is a key for the whole string.
+const CJK = /[㐀-鿿]/;
 const translator = (lang) => {
   const table = TRANSLATIONS[lang];
   const pattern = new RegExp(Object.keys(table).sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
   const walk = (v) => {
-    if (typeof v === "string") return v.replace(pattern, (m) => table[m]);
+    if (typeof v === "string") {
+      const out = v.replace(pattern, (m) => table[m]);
+      return lang === "en" && out !== v && CJK.test(out) ? v : out;
+    }
     if (Array.isArray(v)) return v.map(walk);
     if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
     return v;
@@ -232,9 +239,54 @@ async function sweepOpenCases(rec, access) {
     for (const verdict of ["PASSED", "FAILED", "PURGATORY"]) {
       await getAll(rec, access, `${API}/judgment/${row.id}/destinations/?candidate_verdict=${verdict}`);
     }
-    await getAll(rec, access, `${API}/workflows/flow-preview/?judgment=${row.id}`);
     // The triage queue's card for this case; the demo computes the cursor around it.
     await getAll(rec, access, `${API}/judgment/next/?at=${row.id}`);
+    await getAll(rec, access, `${API}/judgment/assignable-officers/?judgment=${row.id}`);
+  }
+}
+
+const TENANT_CODES = ["CN_DIYU", "EU_HEAVEN_HELL", "EG_DUAT", "GR_HADES"];
+const CIVILIZATIONS = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"];
+
+/**
+ * The GETs whose answer depends on a parameter the schema sweep cannot fill (it only fills path ids). Asked here with
+ * the values the screens send, so the server answers them, rules and permissions included, rather than the demo
+ * imitating those rules. What a visitor's own new rows ask is matched to these in `derived()` (frontend/demo/flows.ts).
+ */
+async function sweepWithParams(rec, access, login) {
+  const tenants = rowsOf(rec, "/tenants/").filter((t) => t.id != null);
+  const own = login.user?.tenant;
+  const tenantIds = [...new Set([...tenants.map((t) => t.id), ...(own?.id != null ? [own.id] : [])])];
+  const codes = [...new Set([...TENANT_CODES, ...tenants.map((t) => t.code).filter(Boolean)])];
+  for (const code of codes) await getAll(rec, access, `${API}/dispatch/records/realm-options/?target_tenant_code=${code}`);
+  for (const civ of CIVILIZATIONS) await getAll(rec, access, `${API}/workflows/case-types/?civilization=${civ}`);
+  for (const id of tenantIds) await getAll(rec, access, `${API}/judgment/handover/officers/?tenant=${id}`);
+  // The annual report's 「去年」 button.
+  const year = rec.docs["/judgment/annual/"]?.b?.year;
+  if (typeof year === "number") await getAll(rec, access, `${API}/judgment/annual/?year=${year - 1}`);
+  // Concluded cases too: the desk and the case page read both for every case, not only the open ones.
+  for (const row of rowsOf(rec, "/judgment/")) {
+    await getAll(rec, access, `${API}/workflows/flow-preview/?judgment=${row.id}`);
+    await getAll(rec, access, `${API}/judgment/${row.id}/citations/`);
+  }
+  // Seats are chosen only while a bench is PROPOSED (the seed leaves one so); every invited hall, every seat.
+  for (const bench of rowsOf(rec, "/dispatch/cross-tenant-judgments/").filter((b) => b.status === "PROPOSED")) {
+    for (const code of codes.filter((c) => c !== bench.initiating_tenant_code)) {
+      for (const role of ["ADVISOR", "CO_JUDGE", "CHAIRMAN"]) {
+        await getAll(rec, access, `${API}/dispatch/cross-tenant-judgments/${bench.id}/seatable-actors/?role=${role}&tenant_code=${code}`);
+      }
+    }
+  }
+  // Who each node of each template's working copy resolves to, as the inspector asks it (`node`, and its civilization).
+  for (const template of rowsOf(rec, "/workflow/templates/")) {
+    const doc = rec.docs[`/workflow/templates/${template.id}/`]?.b ?? template;
+    for (const node of Array.isArray(doc.nodes) ? doc.nodes : []) {
+      if (node?.id == null) continue;
+      await getAll(rec, access, `${API}/workflow/templates/${template.id}/approver-preview/?node=${node.id}`);
+      if (doc.civilization) {
+        await getAll(rec, access, `${API}/workflow/templates/${template.id}/approver-preview/?civilization=${doc.civilization}&node=${node.id}`);
+      }
+    }
   }
 }
 
@@ -282,6 +334,7 @@ for (const role of Object.keys(ROLES)) {
   paths ??= schemaPaths();
   await sweep(rec, access, paths);
   await sweepOpenCases(rec, access);
+  await sweepWithParams(rec, access, login);
   // English: the same questions again, asked in English. What the backend only has in one language stays until the
   // translations table above covers it; `scripts/demo-cjk-report.py` lists what is left.
   const recEn = { lists: {}, docs: {}, errors: new Set(), swept: {} };

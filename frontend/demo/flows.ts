@@ -598,9 +598,40 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
   );
 }
 
+/**
+ * A recorded answer asked at a path like this one (`pattern`) with the same values for `names`, whatever else differs:
+ * the recorder asked the parameterised GETs with real values (`sweepWithParams` in scripts/demo-record.mjs), and this
+ * finds the one that answers a row the visitor made, or a parameter the screen adds that the recording did not.
+ */
+function recordedLike(rec: Recording, pattern: RegExp, query: URLSearchParams, names: string[]): Answer | null {
+  for (const [key, doc] of Object.entries(rec.docs)) {
+    const [path, q = ""] = key.split("?");
+    if (doc.s !== 200 || !pattern.test(path)) continue;
+    const recorded = new URLSearchParams(q);
+    if (names.every((n) => recorded.get(n) === query.get(n))) return ok(doc.b);
+  }
+  return null;
+}
+
 /** The reads the server computes from the current state, which a recording of them could not follow. */
 export function derived(rec: Recording, path: string, query: URLSearchParams): Answer | null {
   if (path === "/demo/tour/") return ok(tourOf(rec));
+  // The case types depend only on the soul's civilization (`VALID_CASE_TYPES_BY_CIVILIZATION`), recorded per civilization.
+  if (path === "/workflows/case-types/" && query.has("soul")) {
+    const civilization = find(rec, "/souls/", query.get("soul"))?.civilization;
+    if (civilization) return read(rec, path, new URLSearchParams({ civilization: String(civilization) }));
+  }
+  // Who may sit depends on the invited hall and the seat, not on the bench: recorded on the seed's one PROPOSED bench.
+  if (/^\/dispatch\/cross-tenant-judgments\/[^/]+\/seatable-actors\/$/.test(path) && !rec.docs[`${path}?role=${query.get("role")}&tenant_code=${query.get("tenant_code")}`]) {
+    const seats = recordedLike(rec, /^\/dispatch\/cross-tenant-judgments\/[^/]+\/seatable-actors\/$/, query, ["role", "tenant_code"]);
+    if (seats) return seats;
+  }
+  // A node's approver, by the node: the inspector may add a civilization the recording asked without.
+  if (/^\/workflow\/templates\/[^/]+\/approver-preview\/$/.test(path)) {
+    const exact = new RegExp(`^${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+    const answer = recordedLike(rec, exact, query, ["node", "civilization"]) ?? recordedLike(rec, exact, query, ["node"]);
+    if (answer) return answer;
+  }
   if (path === "/judgment/next/" || path === "/judgment/previous/") return cursor(rec, path, query);
   const inbox = inboxRead(rec, path, query);
   if (inbox) return inbox;

@@ -35,17 +35,24 @@ from apps.dispatch.models import ParticipantRole  # noqa: E402
 from apps.disposition.models import Disposition  # noqa: E402
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService  # noqa: E402
 from apps.judgment import appeals, claims, confessions  # noqa: E402
+from apps.actors.models import Actor  # noqa: E402
 from apps.judgment.models import (  # noqa: E402
     CityGod,
     CityGodStatus,
     DuatStage,
     Judgment,
     JudgmentComment,
+    NegativeConfession,
+    Statute,
     Verdict,
 )
+from apps.judgment.services import CitationRefusedError, StatuteCitationService  # noqa: E402
 from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot  # noqa: E402
 from apps.ledger.snapshots import census_tenant  # noqa: E402
 from apps.notifications.models import UserNotification  # noqa: E402
+from apps.org.management.commands.init_organizations import INITIAL_ORGANIZATIONS, ORGANIZATION_NAME_EN  # noqa: E402
+from apps.org.models import Organization  # noqa: E402
+from apps.org.ownership import default_owner_org, tenant_root  # noqa: E402
 from apps.realms.models import Realm  # noqa: E402
 from apps.reincarnation.services import ReincarnationService, drink_soup  # noqa: E402
 from apps.sentence_plan.models import SentencePlan, SentencePlanRequest  # noqa: E402
@@ -67,7 +74,7 @@ from apps.souls.models import Soul  # noqa: E402
 from apps.souls.record_models import SoulRecord  # noqa: E402
 from apps.tenants.models import Tenant  # noqa: E402
 from apps.workflow.models import ApprovalWorkflow  # noqa: E402
-from tests.sentence_plan_support import execute_only, serve, stop_realm  # noqa: E402
+from tests.sentence_plan_support import execute_only, serve  # noqa: E402
 
 random.seed(20261102)
 NOW = timezone.now()
@@ -344,6 +351,74 @@ def hear_confessions(case, *, upto=42, false_every=0):
         confessions.record(case, ordinal, not (false_every and ordinal % false_every == 0), "" if not false_every or ordinal % false_every else "证物与其所言相悖")
 
 
+#: Which gate of the 功過格 a deed's category is read under (statutes_chinese.GONGGUOGE_GATES). The demo's own reading.
+GATE_OF = {"CHARITY": "F-JJ", "COMPASSION": "F-JJ", "PIETY": "F-FX", "HONESTY": "F-YS", "WISDOM": "F-YS",
+           "CRUELTY": "G-BR", "MURDER": "G-BR", "GREED": "G-BY", "DECEPTION": "G-BY", "BLASPHEMY": "G-BS"}
+#: The bolgia a damned soul is in: where the poem puts him (Ulysses, Inf. XXVI), or this demo's reading (Faust, a
+#: magician, with the sorcerers of the fourth bolgia, Inf. XX).
+BOLGIA = {"Ulysses": "EU-INF-C8-B08", "Faust": "EU-INF-C8-B04"}
+#: Gorgias 523a-526d and Republic X: the two roads and the marks a life leaves on the soul for everyone; for the damned
+#: the curable and the incurable, and the incurable who were kings (525e names Tantalus and Sisyphus); requital for the good.
+GREEK_GROUNDS = {Verdict.PASSED: ["GR-GRG-01", "GR-GRG-07", "GR-ER-05"],
+                 Verdict.FAILED: ["GR-GRG-01", "GR-GRG-09", "GR-GRG-10", "GR-ER-04"]}
+
+
+def grounds(case, soul, verdict):
+    """The articles a verdict rests on: two to four where the corpus has that many to say. Europe's seven sins are the
+    terraces of Purgatory, so only a PURGATORY verdict cites them (the user's rule); a damned soul cites the Inferno, the
+    second circle first (Minos there assigns every circle, Inf. V.4-12); a soul admitted to Heaven has no article."""
+    pick = random.Random(f"{soul.name}/{verdict}")
+    statutes = Statute.all_objects.filter(tenant_id=case.tenant_id, is_deleted=False)
+
+    def by_code(codes):
+        found = {s.code: s for s in statutes.filter(code__in=codes)}
+        return [found[c] for c in dict.fromkeys(codes) if c in found]
+
+    if case.civilization == "CHINESE":
+        # 功過相抵: the side that decided the case, up to three, and at least one article of the other side.
+        passed = verdict == Verdict.PASSED or (verdict is None and soul.merit_score >= soul.demerit_score)
+
+        def articles(records):
+            out = []
+            for record in records:
+                gate = GATE_OF.get(record.category)
+                rows = list(statutes.filter(corpus="GONGGUOGE", code__startswith=f"CN-GGG-{gate}-").order_by("ordinal")) if gate else []
+                if rows:
+                    out.append(pick.choice(rows))
+            return list(dict.fromkeys(out))
+
+        records = list(SoulRecord.objects.filter(soul=soul).order_by("-weight", "pk"))
+        first = articles([r for r in records if (r.record_type == "MERIT") == passed])[:3]
+        second = [a for a in articles([r for r in records if (r.record_type == "MERIT") != passed]) if a not in first]
+        return (first + second[:max(1, 2 - len(first))])[:4]
+    if case.civilization == "EGYPTIAN":
+        heard = list(NegativeConfession.all_objects.filter(judgment=case, is_deleted=False).select_related("statute"))
+        lied = [c.statute for c in heard if c.truthful is False]
+        if verdict == Verdict.FAILED and lied:
+            return lied[:pick.randint(2, 4)]
+        kept = [c.statute for c in heard if c.truthful]
+        return pick.sample(kept, min(len(kept), pick.randint(2, 3)))
+    if case.civilization == "EUROPEAN":
+        placed = PLACED.get(soul.name, "")
+        if verdict == Verdict.PURGATORY and placed.startswith("EU_PURGATORY_"):
+            return by_code([f"EU-DS-{placed.split('_')[2]}"])
+        if verdict == Verdict.FAILED and placed.startswith("EU_HELL_"):
+            circle = "".join(ch for ch in placed[len("EU_HELL_"):] if ch.isdigit())
+            return by_code(["EU-INF-C2", f"EU-INF-C{circle}", BOLGIA.get(soul.name, "")])
+        return []
+    if case.civilization == "GREEK":
+        return by_code(GREEK_GROUNDS.get(verdict, []))
+    return []
+
+
+def cite_grounds(case, soul, verdict):
+    for statute in grounds(case, soul, verdict):
+        try:
+            StatuteCitationService.cite(case, statute.pk)
+        except CitationRefusedError as exc:
+            print("  citation refused:", soul.name, statute.code, str(exc)[:120])
+
+
 def carry_out(soul, tenant, fate, judges, stats):
     if fate in ("alive", "due"):
         return
@@ -364,6 +439,7 @@ def carry_out(soul, tenant, fate, judges, stats):
     if fate == "claimed":
         if tenant.code == "EG_DUAT":
             hear_confessions(case, upto=26)
+        cite_grounds(case, soul, None)
         return
     verdict = Verdict.FAILED if fate in ("failed", "full") or (fate in ("flow", "served") and tenant.code == "CN_DIYU") else Verdict.PASSED
     if fate == "purgatory":
@@ -371,6 +447,7 @@ def carry_out(soul, tenant, fate, judges, stats):
     if tenant.code == "EG_DUAT":  # The scale decides in the Hall of Two Truths; anything else is refused.
         verdict = Verdict.FAILED if soul.demerit_score > soul.merit_score else Verdict.PASSED
         hear_confessions(case, false_every=6 if verdict == Verdict.FAILED else 0)
+    cite_grounds(case, soul, verdict)
     case.concluded_by = judge
     case.save(update_fields=["concluded_by"])
     placed = Realm.all_objects.filter(realm_code=PLACED.get(soul.name, "")).first()
@@ -625,18 +702,30 @@ def seed_queue_variety(tenants):
 
 
 def seed_cross_judgments(tenants):
-    """One bench still sitting, one concluded. Both begin in the Fifth Court and sit with the Greeks."""
+    """One bench still sitting, one concluded, one still being convened (PROPOSED: its seats are not chosen yet, and
+    the recorder asks who may sit). All begin in the Fifth Court and sit with the Greeks."""
     cn, gr = tenants["CN_DIYU"], tenants["GR_HADES"]
     sitting = make_soul(cn, "哪吒", 52, 48, 0)
     done = make_soul(cn, "项羽", 44, 61, 1, fate="failed")
+    convening = make_soul(cn, "沉香", 61, 30, 2)
+    try:
+        case = sent_on(convening.die(location=convening.origin_location))
+        Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
+        cj = CrossTenantJudgmentService.create("沉香案·两界会审", "两界共审,先地府后希腊冥界", cn, None)
+        cj.judgment = case
+        cj.save(update_fields=["judgment"])
+    except Exception as exc:
+        print("  cross stuck: 沉香案·两界会审", type(exc).__name__, str(exc)[:200])
     for soul, conclude, title in ((sitting, False, "哪吒案·两界会审"), (done, True, "项羽案·两界会审")):
         try:
             case = sent_on(soul.die(location=soul.origin_location))
+            Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
             cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后希腊冥界", cn, None)
             cj.judgment = case
             cj.save(update_fields=["judgment"])
             seat = CrossTenantJudgmentService.add_participant(cj, gr, None, ParticipantRole.CO_JUDGE, node_order=2)
-            CrossTenantJudgmentService.submit_sentence(seat, stop_realm(gr), 10, "", None)
+            # Tartarus: the Greek bench's stop is where the Greeks send the wicked (Gorgias 523b, 525c).
+            CrossTenantJudgmentService.submit_sentence(seat, "GR_TARTARUS", 10, "", None)
             CrossTenantJudgmentService.activate(cj)
             if conclude:
                 CrossTenantJudgmentService.conclude(cj, "PASS", None)
@@ -644,6 +733,51 @@ def seed_cross_judgments(tenants):
                 walk(case)
         except Exception as exc:
             print("  cross stuck:", title, type(exc).__name__, str(exc)[:200])
+
+
+#: The court a case is heard in, by underworld (the spellings `courtLabel` knows, packages/core/src/domain/courts.ts), and
+#: the demo judge who sits there (`judge` is the deity, an Actor; the claim is the demo account's). Diyu: every case
+#: comes to King Qinguang's First Court, the good go on to the Tenth for rebirth, the guilty to the Second to Ninth.
+TEN_COURTS = ["第一殿", "第二殿", "第三殿", "第四殿", "第五殿", "第六殿", "第七殿", "第八殿", "第九殿", "第十殿"]
+COURT_OF = {"EU_HEAVEN_HELL": "天堂", "EG_DUAT": "两真之殿", "GR_HADES": "岔路口草地"}
+JUDGE_OF = {"CN_DIYU": "崔府君", "EU_HEAVEN_HELL": "Christ", "EG_DUAT": "Thoth", "GR_HADES": "Minos"}
+
+
+def court_for(case, i):
+    if case.tenant.code != "CN_DIYU":
+        return COURT_OF.get(case.tenant.code, "")
+    if case.verdict is None:
+        return TEN_COURTS[0]
+    return TEN_COURTS[9] if case.verdict == Verdict.PASSED else TEN_COURTS[1 + i % 8]
+
+
+def court_org(tenant, court):
+    """The unit a case of this court belongs to (`default_owner_org`: the hall's unit named after the court). The ten
+    courts and Heaven are `init_organizations` rows with no hall; each hall gets its own copy, under its root."""
+    if not Organization.objects.filter(tenant=tenant, name__startswith=court).exists():
+        entry = next((o for o in INITIAL_ORGANIZATIONS if o["name"].startswith(court)), None)
+        if entry is not None:
+            Organization.objects.create(name=entry["name"], name_en=ORGANIZATION_NAME_EN.get(entry["name"], ""),
+                                        code=f"{entry['code']}_{tenant.code}"[:50], category=entry["category"],
+                                        tenant=tenant, parent=tenant_root(tenant))
+    return default_owner_org(tenant, None, court)
+
+
+def seat_benches():
+    """Court, judge and owning unit on every case: the queue's 殿 filter and the 殿 · 判官 column read them."""
+    judges = {code: Actor.all_objects.filter(tenant__code=code, name=name, is_deleted=False).first() for code, name in JUDGE_OF.items()}
+    for code, actor in judges.items():
+        if actor is None:
+            print("  no judge actor:", code, JUDGE_OF[code])
+    seated = 0
+    for i, case in enumerate(Judgment.all_objects.filter(tenant__isnull=False).select_related("tenant").order_by("created_at", "pk")):
+        court = case.court or court_for(case, i)
+        if not court:
+            continue
+        Judgment.all_objects.filter(pk=case.pk).update(court=court, judge=judges.get(case.tenant.code),
+                                                       owner_org=court_org(case.tenant, court))
+        seated += 1
+    print("benches:", seated)
 
 
 def seed_deleted(admin):
@@ -855,6 +989,7 @@ def main():
     seed_notifications(demo)
     seed_deleted(demo[0])
     seed_sentence_requests()
+    seat_benches()
     spread_time(started)
     backdate_deaths()
     write_lives()

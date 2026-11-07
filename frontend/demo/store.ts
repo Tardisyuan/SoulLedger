@@ -117,7 +117,23 @@ function shifted(raw: Recording): Recording {
     .replace(BARE_DATE, (whole, date: string) =>
       Number(date.slice(0, 4)) < recent ? whole : `"${new Date(Date.parse(date) + days).toISOString().slice(0, 10)}"`,
     );
-  return JSON.parse(text) as Recording;
+  return shiftAnnual(JSON.parse(text) as Recording, new Date(Date.now()).getUTCFullYear() - new Date(raw.recordedAt).getUTCFullYear());
+}
+
+/** The annual report names its year as a number, not a stamp: it moves with the calendar too, and so do the `?year=` it was asked with. */
+function shiftAnnual(rec: Recording, years: number): Recording {
+  if (!years) return rec;
+  const docs: Recording["docs"] = {};
+  for (const [key, doc] of Object.entries(rec.docs)) {
+    if (pathOfKey(key) !== "/judgment/annual/") {
+      docs[key] = doc;
+      continue;
+    }
+    const b = doc.b as Row | null;
+    const moved = b && typeof b.year === "number" ? { ...doc, b: { ...b, year: b.year + years } } : doc;
+    docs[key.replace(/([?&]year=)(\d+)/, (_, p: string, y: string) => `${p}${Number(y) + years}`)] = moved;
+  }
+  return { ...rec, docs };
 }
 
 export function recording(role: DemoRole, lang: DemoLang): Promise<Recording> {
