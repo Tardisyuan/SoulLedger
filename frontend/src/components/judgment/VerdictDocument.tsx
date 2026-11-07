@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { judgmentApi, type JudgmentDetail } from "@soulledger/core/api/judgment";
 import type { HistoricalDate } from "@soulledger/core/domain/dates";
@@ -92,8 +92,49 @@ function DocSeal({ doc }: { doc: VerdictDocumentText }) {
   );
 }
 
+/** 字最小缩到原来的几成。再小就读不清;到了这一档还排不下,`overflow: hidden` 会裁掉末尾 —— E2E 的
+ *  `verdict-document-fits.spec.ts` 量的正是这件事,长案情要在那里排得下。 */
+const FIT_MIN = 0.6;
+const FIT_STEP = 0.04;
+
+/**
+ * 整份文书排进一页:正文区溢出就把字号(`--doc-fit`,verdict-doc.css 里每个字号都乘它)一档档缩小,直到排得下。
+ * 地府竖排的落款与日期排在最左一列,案情一长就被正文区的 `overflow: hidden` 静默裁掉(2026-11-07 真 PDF 上看到的),
+ * 而这里的版面用的都是 `cqw`,与纸宽成比例 —— 所以在屏幕上量好的比例,打印成 A4 时照样排得下。
+ * 字体换了字面要重量一次(`document.fonts.ready`),纸从 0 宽变出来(卡在折叠区里)也要(ResizeObserver)。
+ */
+function useFitToPage(text: RefObject<HTMLDivElement | null>, doc: VerdictDocumentText) {
+  // 每次渲染 doc 都是新对象;按字面比,字没变就不重量。
+  const words = JSON.stringify(doc);
+  useLayoutEffect(() => {
+    const el = text.current;
+    if (!el) return;
+    const fit = () => {
+      if (!el.clientWidth || !el.clientHeight) return; // 没排版(jsdom、折叠起来的卡):量不出,留着原字号
+      let f = 1;
+      el.style.setProperty("--doc-fit", "1");
+      const over = () => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+      while (over() && f > FIT_MIN) {
+        f = Math.max(FIT_MIN, +(f - FIT_STEP).toFixed(2));
+        el.style.setProperty("--doc-fit", String(f));
+      }
+    };
+    fit();
+    let live = true;
+    void document.fonts?.ready.then(() => live && fit());
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(fit);
+    ro?.observe(el);
+    return () => {
+      live = false;
+      ro?.disconnect();
+    };
+  }, [text, words]);
+}
+
 /** 一张纸:屏幕上的卡、打印用的那份、PDF 打印页(`app/verdict-print`)是同一个组件。 */
 export function VerdictPaper({ doc, caseNumber }: { doc: VerdictDocumentText; caseNumber: string }) {
+  const text = useRef<HTMLDivElement>(null);
+  useFitToPage(text, doc);
   return (
     <article data-verdict-paper="" data-civ={doc.civ} data-account={doc.account} data-vertical={doc.vertical ? "" : undefined}>
       {doc.civ === "eg" && (
@@ -102,7 +143,7 @@ export function VerdictPaper({ doc, caseNumber }: { doc: VerdictDocumentText; ca
           <div data-doc-border="bottom" aria-hidden="true">{HIEROGLYPH_BORDER}</div>
         </>
       )}
-      <div data-doc-text="">
+      <div data-doc-text="" ref={text}>
         {doc.civ === "eu" ? (
           <p data-doc-deco="">
             {doc.deco} · <CaseNumber value={caseNumber} variant="inline" plain />
@@ -242,9 +283,12 @@ export function VerdictPrintSheet(props: VerdictDocumentProps) {
   useEffect(() => {
     if (!mounted || !ready || !hasDoc) return;
     let live = true;
-    void document.fonts.ready.then(() => {
-      if (live) document.body.dataset.verdictReady = "1";
-    });
+    // 字体到齐后 `VerdictPaper` 还要按新字面缩一次字号(useFitToPage);等一帧,排好了再打勾。
+    void document.fonts.ready.then(() =>
+      requestAnimationFrame(() => {
+        if (live) document.body.dataset.verdictReady = "1";
+      })
+    );
     return () => {
       live = false;
     };

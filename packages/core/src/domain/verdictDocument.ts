@@ -93,6 +93,9 @@ const HAN_UNITS = ["", "十", "百", "千"];
 const HAN_ZERO = "零";
 const HAN_WAN = "万";
 const HAN_YEAR = "年";
+/** 英文日期写月名(`7 November 2026`):`7/11/2026` 在美式读法里是七月十一日。只有 en 的模板用 `{{month_name}}`,
+ *  zh 写「年月日」、egy 写「年 · 月 · 日」,都不会读反,不用它。 */
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** 年份逐位:1931 → 一九三一,2026 → 二〇二六。负数(公元前)原样给阿拉伯数字。 */
 export const hanDigits = (n: number): string =>
@@ -172,6 +175,7 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
           year: han ? hanDigits(parts.year) : String(parts.year),
           month: han ? hanNumber(parts.month) : String(parts.month),
           day: han ? hanNumber(parts.day) : String(parts.day),
+          month_name: MONTH_NAMES[parts.month - 1] ?? String(parts.month),
           hour: t(hour.key, hour.params),
         });
       })()
