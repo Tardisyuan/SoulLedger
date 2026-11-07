@@ -20,6 +20,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
 import { RealmFacts } from "@/src/components/realms/RealmFacts";
 import { realmTypeNamespace } from "@/src/lib/domainNames";
+import { DOMAIN_BADGE } from "@/src/lib/soulStateBadge";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { RouteMap } from "@/src/components/realms/RouteMap";
@@ -56,30 +57,22 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string }> = {
 };
 
 /**
- * The realm-type badge, drawn from the VERDICT palette — the domain layer —
- * rather than the system-feedback one it used to borrow. Shown in the tree
- * table's 类型 column for a realm that has no 殿 / 门 / 层 / 道 `kind`.
+ * The realm-type badge: glyph + text + ink, no colour (规范 v4 / C15「领域枚举」, the same `DOMAIN_BADGE` the
+ * verdict and soul-state badges use). Shown in the tree table's 类型 column for a realm that has no
+ * 殿 / 门 / 层 / 道 `kind`. Until 2026-11-07 it tinted HELL / PURGATORY / BLISS with the verdict tokens; the
+ * type is told apart by its glyph (flame, cloud, dot, castle, ≡) and its name, the way every other domain
+ * badge is. ANNIHILATION (Egyptian second death) takes the ≡ the roadmap and the realm tree already use
+ * for 「终结 / 永恒」.
  *
- * NEUTRAL is the authored dim neutral: `RealmType.NEUTRAL` is a waypoint nobody
- * is sentenced to, so no verdict token can mirror it. Its LABEL is ink-muted
- * rather than ink-tertiary because ink-tertiary on a 10% tint of itself is
- * under the 4.5:1 floor (2.56:1 light).
- *
- * ANNIHILATION (Egyptian second death) wears NEUTRAL's neutral tint and the ≡
- * glyph the roadmap and the realm tree already use for 「终结 / 永恒」: the type says
- * what the realm IS, not the outcome of a verdict, so it takes no verdict colour.
- *
- * src/__tests__/statusTokenLayering.test.ts holds this map to the rule. It reads
- * these five entries AS TEXT, one line per key, and parses the
- * `x-[oklch(var(--t)/a)]` utilities out of each — so the five lines below stay
- * one-line literals and the alphas stay 0.1 / 0.3 / 1.
+ * src/__tests__/statusTokenLayering.test.ts reads these five entries AS TEXT, one line per key, and
+ * asserts each names `DOMAIN_BADGE` and no colour token.
  */
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {
-  HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-failed)/0.1)] border-[oklch(var(--color-verdict-failed)/0.3)] text-[oklch(var(--color-verdict-failed))]' },
-  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-purgatory)/0.1)] border-[oklch(var(--color-verdict-purgatory)/0.3)] text-[oklch(var(--color-verdict-purgatory))]' },
-  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-passed)/0.1)] border-[oklch(var(--color-verdict-passed)/0.3)] text-[oklch(var(--color-verdict-passed))]' },
-  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[oklch(var(--color-ink-tertiary)/0.1)] border-[oklch(var(--color-ink-tertiary)/0.3)] text-[oklch(var(--color-ink-muted))]' },
-  ANNIHILATION: { icon: <span aria-hidden="true">≡</span>, className: 'bg-[oklch(var(--color-ink-tertiary)/0.1)] border-[oklch(var(--color-ink-tertiary)/0.3)] text-[oklch(var(--color-ink-muted))]' },
+  HELL: { icon: <Flame className="w-4 h-4" />, className: DOMAIN_BADGE },
+  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: DOMAIN_BADGE },
+  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: DOMAIN_BADGE },
+  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: DOMAIN_BADGE },
+  ANNIHILATION: { icon: <span aria-hidden="true">≡</span>, className: DOMAIN_BADGE },
 };
 
 /** One row of the tree table: a realm and how deep it sits under `parent_realm`. */

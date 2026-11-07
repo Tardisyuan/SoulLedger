@@ -32,6 +32,7 @@ import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNo
 import { WorkflowLinearPreview } from "@/src/components/workflow/detail/WorkflowLinearPreview";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { KIND_GLYPH } from "@/src/components/workflow/workflowValidation";
+import { DOMAIN_BADGE, DOMAIN_BADGE_PENDING } from "@/src/lib/soulStateBadge";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -40,26 +41,31 @@ import { WorkflowSegmentHistory } from "@/src/components/workflow/segments/Workf
 import { WorkflowGateBanner } from "@/src/components/workflow/segments/WorkflowGateBanner";
 import { responseCode, responseStatus, responseError } from "@soulledger/core/api/client";
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
-  APPROVED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
-  REJECTED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
-  SKIPPED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
-  ESCALATED: "text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry))]",
+/**
+ * 审批流 / 节点状态与节点结论的徽章:字形 + 文字 + ink,不靠颜色(规范 v4,用户 2026-11-07;与判决、灵魂状态
+ * 同一个 `DOMAIN_BADGE`)。「还要处理」的待办(PENDING)加 s2 底,同判决的「待定」。字形在下面两张表。
+ * 此前两张表按系统反馈色上色(`statusTokenLayering.test.ts` 记着它们),2026-11-07 一起改成 ink,登记随之删掉。
+ */
+const STATUS_BADGE: Record<string, string> = {
+  PENDING: DOMAIN_BADGE_PENDING,
+  APPROVED: DOMAIN_BADGE,
+  REJECTED: DOMAIN_BADGE,
+  SKIPPED: DOMAIN_BADGE,
+  ESCALATED: DOMAIN_BADGE,
   // 通知 / 结束: the engine went through it and nobody decided — SKIPPED's register.
-  TRAVERSED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
+  TRAVERSED: DOMAIN_BADGE,
 };
 
-const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
-  FAILED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
-  CONFIRMED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
-  REJECTED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
-  SKIPPED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
+const VERDICT_BADGE: Record<string, string> = {
+  PASSED: DOMAIN_BADGE,
+  FAILED: DOMAIN_BADGE,
+  CONFIRMED: DOMAIN_BADGE,
+  REJECTED: DOMAIN_BADGE,
+  SKIPPED: DOMAIN_BADGE,
 };
 
 /**
- * 规范 v1 §1.2:状态 = 颜色 + 字形。两张表与上面两张颜色表同键;未知成员给「?」。
+ * 规范 v1 §1.2:状态 = 颜色 + 字形(v4 起只剩字形 + 文字)。两张表与上面两张徽章表同键;未知成员给「?」。
  * 判决的 ✓ / ✕ 与灵魂详情「丙 · 审判」同形(src/lib/verdictGlyph.ts)。
  */
 const STATUS_GLYPH: Record<string, string> = {
@@ -336,7 +342,7 @@ export default function WorkflowDetailPage() {
     );
   }
 
-  const statusColor = STATUS_COLORS[workflow.status] || STATUS_COLORS.PENDING;
+  const statusColor = STATUS_BADGE[workflow.status] || STATUS_BADGE.PENDING;
   const segmented = (workflow.segments?.length ?? 0) > 0;
   const gateSegment =
     workflow.awaiting_segment != null ? workflow.segments?.find((seg) => seg.order === workflow.awaiting_segment) ?? null : null;
@@ -352,13 +358,6 @@ export default function WorkflowDetailPage() {
    * `title={…}` in a shell slot is close enough to be read against the wrong
    * `title`. Naming it here puts it outside any such window, and the rule's own
    * `const` guard skips this line.
-   *
-   * STATUS_COLORS itself is untouched: it is one of the four enum-keyed maps
-   * `statusTokenLayering.test.ts` records as still drawing on system-feedback
-   * tokens, together with the reason (ESCALATED already sits on
-   * `--color-verdict-retry`, so the map straddles two palettes and has to be
-   * decided whole). Re-tinting it here would either go stale against that
-   * record or half-move the map. Only the geometry changes.
    */
   const statusBadge = (
     /* Nested rather than given the badge classes directly: `py-0.5` is the 2px
@@ -535,7 +534,7 @@ export default function WorkflowDetailPage() {
           {activeTab === "history" && (
             <div className="px-3">
               <WorkflowSegmentHistory workflow={workflow} />
-              <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} verdictGlyphs={VERDICT_GLYPH} statusGlyphs={STATUS_GLYPH} currentNode={workflow.current_node} />
+              <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_BADGE} verdictGlyphs={VERDICT_GLYPH} statusGlyphs={STATUS_GLYPH} currentNode={workflow.current_node} />
             </div>
           )}
         </section>
