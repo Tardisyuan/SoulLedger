@@ -5,6 +5,9 @@
   "components/ui/data-table.tsx": {
     "space": 1
   },
+  "demo/DemoSoulScreens.tsx": {
+    "space": 2
+  },
   "src/components/layout/AppLayout.tsx": {
     "space": 1
   },
