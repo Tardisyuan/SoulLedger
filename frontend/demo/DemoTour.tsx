@@ -219,11 +219,17 @@ function EntranceOverlay() {
     if (!run || land) return;
     let frame = 0;
     let ready = 0;
+    let lastBand = "";
     const check = () => {
       const held = performance.now() - run.at;
       // The route `enter` pushed, not merely another one: from one hall to the next the path may not change at all.
       const arrived = target.current !== null && window.location.pathname === target.current && !document.querySelector(WAITING);
-      ready = arrived ? ready + 1 : 0;
+      // And its band at rest: one that is still collapsing or opening (44 ↔ 76 on a phone) is not where the seal goes.
+      const b = handOffTargets(run.skin !== null).band?.getBoundingClientRect();
+      const band = b ? `${Math.round(b.top)}/${Math.round(b.height)}` : "";
+      const still = band === lastBand;
+      lastBand = band;
+      ready = arrived && still ? ready + 1 : 0;
       // Two frames in a row: the page has painted once with its data, not just mounted.
       if ((held >= LANDED_MS && ready >= 2) || held >= HOLD_MAX_MS) setLand(true);
       else frame = requestAnimationFrame(check);

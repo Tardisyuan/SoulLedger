@@ -99,6 +99,11 @@ export function useEnter() {
     if (data.user) setUser(data.user);
     // Soft navigation: the seal keeps playing over it, and the page does not wait for the seal.
     const route = await firstPage(role, data.user);
+    // The console opens at the top, under the cover. A landing page scrolled to its card (62 px on a phone) used to carry
+    // that scroll into the console's first render: its band mounted collapsed (44, past the 60 px line), the seal was
+    // aimed at the collapsed band's 24 px seal, and the band grew to 76 when the page went back to the top mid-hand-over
+    // (E2E 393px, sampled: sy=62 band 80/44 → sy=0 band 80/76 with the cut-out still 44).
+    window.scrollTo({ top: 0, behavior: "instant" });
     router.push(route);
     // The seal, if one is up, holds until this route is on screen (`EntranceOverlay`).
     window.dispatchEvent(new CustomEvent(ENTERED, { detail: { route } }));
