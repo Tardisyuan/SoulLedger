@@ -198,7 +198,7 @@ export function AnnualReport() {
 
           {data.by_civ.length > 0 && (
             <section className="grid gap-6 md:grid-cols-[18rem_1fr]">
-              <h2 className="m-0 text-lg text-[oklch(var(--color-ink))]">{t("annual.by_civ")}</h2>
+              <h2 className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t("annual.by_civ")}</h2>
               <Civs data={data} />
             </section>
           )}
@@ -231,7 +231,7 @@ export function AnnualReport() {
           </section>
 
           <section className={CARD}>
-            <h2 id="annual-monthly-title" className="m-0 mb-4 text-lg text-[oklch(var(--color-ink))]">{t("annual.monthly")}</h2>
+            <h2 id="annual-monthly-title" className="m-0 mb-4 font-title text-lg text-[oklch(var(--color-ink))]">{t("annual.monthly")}</h2>
             <Monthly data={data} />
           </section>
 

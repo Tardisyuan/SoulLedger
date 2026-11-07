@@ -111,7 +111,7 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
   if (state === "sent") {
     return (
       <div className="flex flex-col gap-4" data-testid="password-help-sent">
-        <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
+        <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
         {/* 第三类 F 组 2.6:对任何账号名都是同一句 —— 账号不存在时后端不发通知,这里也不说。 */}
         <div role="status" className="rounded-control border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-4 py-3 text-sm text-[oklch(var(--color-ink))]">
           <p className="font-semibold">{t("auth.forgot_sent")}</p>
@@ -126,7 +126,7 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" data-testid="password-help-form">
-      <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
+      <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
       <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("auth.forgot_desc")}</p>
       <TextField
         id="password-help-username"

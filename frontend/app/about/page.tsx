@@ -80,7 +80,7 @@ function Section({ stem, title, aside, children }: { stem: string; title: string
     <section>
       {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一写法);v2 节首的匾纹片段撤掉。 */}
       <div className="flex items-center gap-3 pt-6">
-        <h2 className="text-lg text-[oklch(var(--color-ink))]">
+        <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{sectionMark(stem, locale)} · </span>
           {title}
         </h2>

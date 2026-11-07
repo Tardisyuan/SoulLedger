@@ -319,7 +319,7 @@ export function WorkflowInspector({
           (node ? (
             <>
               <div>
-                <h2 className="text-lg text-[oklch(var(--color-ink))] break-words">
+                <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
                   <span aria-hidden="true">{autoRoute ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kindOf(node)]} </span>
                   {nodeName(node, t)}
                 </h2>
@@ -368,7 +368,7 @@ export function WorkflowInspector({
               <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_none")}</p>
             ) : (
               <>
-                <h2 className="text-lg text-[oklch(var(--color-ink))]">
+                <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">
                   {t("workflow.editor.issues_blocking", { n: String(issues.length) })}
                 </h2>
                 <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_hint")}</p>

@@ -73,7 +73,7 @@ export function StationPicker({
   return (
     <div data-testid="station-picker" className="flex flex-col gap-3 text-left">
       <div>
-        <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("workflow.pick.title")}</h3>
+        <h3 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("workflow.pick.title")}</h3>
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">
           {t("workflow.pick.subtitle", { flow: flowName, n: String(rows.length) })}
         </p>

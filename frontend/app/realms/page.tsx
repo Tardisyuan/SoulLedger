@@ -222,7 +222,7 @@ function RealmsPageContent() {
           />
           <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] items-start gap-4 lg:gap-6 pt-2">
             <section data-testid="realm-topology" className={`${CARD} p-4 space-y-4 min-w-0`}>
-              <h2 className="text-lg">{t("realms.map.title")}</h2>
+              <h2 className="font-title text-lg">{t("realms.map.title")}</h2>
               <RouteMap
                 topology={buildTopology(civilization, realms)}
                 civilizationName={t(config(civilization))}
@@ -232,7 +232,7 @@ function RealmsPageContent() {
             <section className="min-w-0">
               <div className={CARD}>
                 <div className="flex flex-wrap items-baseline gap-x-3 px-4 py-4">
-                  <h2 className="text-lg">{t("realms.tree.title")}</h2>
+                  <h2 className="font-title text-lg">{t("realms.tree.title")}</h2>
                   <span className="text-xs text-[oklch(var(--color-ink-muted))]">
                     {t(canManage ? "realms.tree.count_editable" : "realms.tree.count", { n: String(rows.length) })}
                   </span>

@@ -203,7 +203,7 @@ function OrganizationsPageContent() {
                   短语内容,标题进按钮是无效 HTML。 */}
               {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
               <div className="sticky top-(--below-band) z-1 mb-3 flex items-center gap-3 bg-[oklch(var(--color-canvas))]">
-                <h2 className="text-lg text-[oklch(var(--color-ink))]">
+                <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">
                   <button
                     type="button"
                     onClick={() => toggleCollapse(category)}
