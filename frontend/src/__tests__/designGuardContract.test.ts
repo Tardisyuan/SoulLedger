@@ -328,8 +328,9 @@ describe("LEGACY 基线", () => {
     // 同一套机制的第三条腿漏了同一个目录:glob 漏过一次(规则根本没看),
     // 基线漏过一次(没有 components/ 开头的键),这里是第三次。三处各自
     // 维护一份「哪些目录算数」的清单,而它们之间没有任何东西强制一致。
+    // 2026-11-07 `demo/**` 进了守卫(第四次同一件事),`demo` 随之加进这里。
     const tracked = new Set(
-      execFileSync("git", ["ls-files", "--", "app", "src", "components"], { cwd: ROOT, encoding: "utf8" })
+      execFileSync("git", ["ls-files", "--", "app", "src", "components", "demo"], { cwd: ROOT, encoding: "utf8" })
         .split("\n")
         .filter(Boolean),
     );
