@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@soulledger/core/api/client";
+import { MOTION_DURATIONS, MOTION_EASINGS, prefersReducedMotion } from "@/lib/motion";
 import { Button } from "@/src/components/ui/Button";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { BRAND_WORD } from "@/src/components/layout/GlobalNav";
-import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
+import { Seal } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
-import { ENTERED, ENTRANCE, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
+import { ENTERED, ENTRANCE, type EntranceDetail, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
 import { DEMO_USERNAMES } from "./store";
 import type { Tour } from "./tour";
 
@@ -35,29 +36,25 @@ function save(state: State): void {
   }
 }
 
-/** The seal (Design batches 70, 71): colour spreads from the card, the seal lands, and the colour narrows to the identity
- *  band over the page, which by then is underneath; the real band takes over as it goes. 700 ms when the page is ready
- *  in time; otherwise the colour holds, seal landed, until it is (`[data-land]`, `EntranceOverlay`). */
+/**
+ * The way in (v4; Design drew no motion for it, so it is built from the v4 tokens and the v4 band): the card that was
+ * clicked opens into a cover that looks like the console's identity band (canvas and the civilization's glow and
+ * pattern, the seal in its own ink), and its emblem becomes the seal at the centre. Once the console is drawn under it,
+ * the cover closes onto the real band's box and the seal onto the real band's seal, measured, so the hand-over is one
+ * motion and not a jump; then the cover fades and the real band is what stays. The administrator has no seal: the
+ * brand's mark goes to the sidebar's. Reduced motion: the cover only fades in and out.
+ */
 const STYLES = `.demo-tour-target{outline:2px solid oklch(var(--color-main));outline-offset:4px;box-shadow:0 0 0 8px color-mix(in srgb,oklch(var(--color-main)) 16%,transparent);scroll-margin-top:9.5rem}
 body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max(45vh,22rem)}
-@keyframes demo-seal-spread{from{clip-path:circle(0 at var(--x) var(--y))}to{clip-path:circle(150vmax at var(--x) var(--y))}}
-@keyframes demo-seal-drop{0%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}85%{opacity:1;transform:translate(-50%,-50%) scale(.98)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-@keyframes demo-seal-narrow{to{top:var(--band-top);left:var(--band-left);height:var(--band-height)}}
-@keyframes demo-seal-to-slot{to{left:calc(var(--band-height)/2 + 8px);transform:translate(-50%,-50%) scale(.5)}}
-@keyframes demo-seal-name-out{to{opacity:0}}
-@keyframes demo-seal-fade{from{opacity:1}to{opacity:0}}
-.demo-seal{--band-top:calc(1.75rem + 52px);--band-left:0px;--band-height:48px;position:fixed;top:0;left:0;right:0;height:100vh;z-index:9999;overflow:hidden;animation:demo-seal-spread 200ms ease-out both}
-.demo-seal[data-neutral]{background:oklch(var(--color-canvas));color:oklch(var(--color-ink))}
-.demo-seal[data-land]{animation:demo-seal-spread 200ms ease-out both,demo-seal-narrow 250ms ease-in-out forwards}
-@media (min-width:769px){.demo-seal{--band-left:252px;--band-height:64px}}
-.demo-seal-mark,.demo-seal-name{position:absolute;left:50%;transform:translate(-50%,-50%)}
-.demo-seal-mark{top:50%;animation:demo-seal-drop 250ms ease-out 200ms both}
-[data-land] .demo-seal-mark{animation:demo-seal-drop 250ms ease-out 200ms both,demo-seal-to-slot 250ms ease-in-out forwards}
-.demo-seal-name{top:calc(50% + 72px)}
-.demo-seal-skip{position:absolute;top:8px;right:8px}
-[data-land] .demo-seal-name{animation:demo-seal-name-out 150ms ease-in forwards}
-[data-land] .demo-seal-skip{animation:demo-seal-name-out 100ms ease-in forwards}
-@media (prefers-reduced-motion:reduce){.demo-seal,.demo-seal[data-land]{background:oklch(var(--color-canvas));animation:demo-seal-fade 150ms ease-out both}.demo-seal>*{display:none}}`;
+@keyframes demo-seal-out{to{opacity:0}}
+@keyframes demo-seal-in{from{opacity:0}}
+.demo-entrance{position:fixed;inset:0;z-index:9999;color:oklch(var(--color-ink))}
+.demo-cover{position:fixed;left:0;top:0;width:100vw;height:100vh;overflow:hidden;background-color:oklch(var(--color-canvas));background-image:radial-gradient(70% 260px at 30% -52px,color-mix(in srgb,oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%),transparent),transparent 70%)}
+.demo-seal-mark{position:fixed;left:0;top:0;transform-origin:0 0;will-change:transform;line-height:0}
+.demo-seal-name{position:fixed;left:50%;top:calc(50% + 72px);transform:translateX(-50%);animation:demo-seal-in var(--transition-duration-base) var(--ease-enter) 160ms both}
+.demo-seal-skip{position:fixed;top:8px;right:8px}
+[data-land] .demo-seal-name,[data-land] .demo-seal-skip{animation:demo-seal-out var(--transition-duration-fast) var(--ease-exit) forwards}
+@media (prefers-reduced-motion:reduce){.demo-entrance{animation:demo-seal-in 150ms ease-out both}.demo-entrance>:not(.demo-cover):not(.sr-only){display:none}}`;
 
 /** A page kept alive behind the current one is still in the document, with its own `main`, and takes up no room. */
 const onScreen = (element: Element) => element.getClientRects().length > 0;
@@ -99,39 +96,68 @@ function liftNow(): number {
   return box && box.top < window.innerHeight && box.bottom > window.innerHeight * 0.5 ? window.innerHeight - box.top + 12 : 0;
 }
 
-/** When the seal starts to narrow: after it has landed (450 ms), and once the page under it is drawn. */
+/** When the cover may start to close: after the seal has come to the centre, and once the page under it is drawn. */
 const LANDED_MS = 450;
-const NARROW_MS = 250;
-/** Never hold the colour longer than this: a sign-in that went nowhere (an error) still lets the page show. */
+/** Never hold the cover longer than this: a sign-in that went nowhere (an error) still lets the page show. */
 // ponytail: a fixed cap, not a signal from `enter`; a phone that takes longer than this sees the landing page again.
 const HOLD_MAX_MS = 6000;
 /** Still waiting: a route's loading slot (`PageSpinner` / `CivLoading`) or the permission gate. */
 const WAITING = "[data-civ-loading], [data-testid='permissions-pending']";
+/** The seal's width while it stands at the centre; it is scaled from and to the measured marks at either end. */
+const MARK = 96;
+
+const ms = (d: keyof typeof MOTION_DURATIONS) => MOTION_DURATIONS[d] * 1000;
+const curve = (e: keyof typeof MOTION_EASINGS) => `cubic-bezier(${MOTION_EASINGS[e].join(",")})`;
+
+/** On screen and in the viewport: a sidebar slid off a phone's edge, or a page kept alive behind this one, is not. */
+function inView(el: Element | null | undefined): el is Element {
+  const b = el?.getBoundingClientRect();
+  return !!b && b.width > 0 && b.right > 0 && b.bottom > 0 && b.left < window.innerWidth && b.top < window.innerHeight;
+}
+const firstInView = (css: string) => Array.from(document.querySelectorAll(css)).find(inView) ?? null;
+
+/** The console's identity band, and the mark the seal lands on: the band's seal, or with no underworld the sidebar's. */
+function handOffTargets(sealed: boolean): { band: Element | null; mark: Element | null } {
+  const band = firstInView("[data-testid='plaque']");
+  const mark = sealed ? (band?.querySelector(".identity-title [data-testid='seal']") ?? null) : firstInView("[data-nav-brand] [data-brand-mark]");
+  return { band, mark: inView(mark) ? mark : null };
+}
+
+type Box = { x: number; y: number; w: number; h: number; r: number };
+const boxFrame = (b: Box): Keyframe => ({ left: `${b.x}px`, top: `${b.y}px`, width: `${b.w}px`, height: `${b.h}px`, borderRadius: `${b.r}px` });
+const viewport = (): Keyframe => boxFrame({ x: 0, y: 0, w: window.innerWidth, h: window.innerHeight, r: 0 });
+/** The seal element (MARK wide) drawn over a box: moved to its corner and scaled to its width. */
+const over = (b: { x: number; y: number; w: number }) => `translate(${b.x}px, ${b.y}px) scale(${b.w / MARK})`;
+
+/** Where the seal stands while the cover is up: the middle of the viewport, a little above centre for its name below. */
+const centreOf = (el: HTMLElement) => ({ x: (window.innerWidth - el.offsetWidth) / 2, y: (window.innerHeight - el.offsetHeight) / 2 - 16, w: MARK });
+const lerp = (a: number, b: number, e: number) => a + (b - a) * e;
 
 /**
- * The seal on the way in from a card. It used to end on a 700 ms timer whatever the page was doing, and the page took
- * longer (the recording loads and is re-dated before the sign-in answers; then the route): the landing page came back
- * for about a second before the console replaced it. Now it narrows only once the new route is on screen and done
- * waiting, so the console is already under it when it goes.
+ * The seal on the way in. It holds until the new route is on screen and done waiting (two frames in a row with no
+ * loading slot), so the console is already under it when it closes: a timer alone left the landing page up for a second.
  *
- * The same seal covers going from one underworld to another (the finished tour's other seals). While it is up, the root
+ * The same cover goes from one underworld to another (the finished tour's other seals). While it is up, the root
  * carries `data-civ-change="covered"` and `TenantContext` skips its cross-fade: that fade froze the old page and faded
  * it into the old page in the new colours, and the new page cut in half a second to a second later.
  */
 function EntranceOverlay() {
   const { t } = useI18n();
-  const [run, setRun] = useState<{ skin: SealCiv | null; x: number; y: number; at: number } | null>(null);
+  const [run, setRun] = useState<(EntranceDetail & { at: number }) | null>(null);
   const [land, setLand] = useState(false);
   const target = useRef<string | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const cover = useRef<HTMLDivElement>(null);
+  const mark = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const start = (e: Event) => {
-      const { skin, origin } = (e as CustomEvent).detail as { skin: SealCiv | null; origin: { x: number; y: number } };
+      const detail = (e as CustomEvent<EntranceDetail>).detail;
       // Before the sign-in answers and changes the civilization: set here, not in an effect a frame later.
       document.documentElement.dataset.civChange = "covered";
       target.current = null;
       setLand(false);
-      setRun({ skin, x: origin.x, y: origin.y, at: performance.now() });
+      setRun({ ...detail, at: performance.now() });
     };
     const entered = (e: Event) => {
       target.current = ((e as CustomEvent).detail as { route: string }).route;
@@ -158,6 +184,33 @@ function EntranceOverlay() {
     };
   }, [run]);
 
+  // Opening: the card's box grows to the viewport, and its emblem moves to the centre and becomes the seal.
+  useLayoutEffect(() => {
+    const el = mark.current;
+    const box = cover.current;
+    if (!run || !el || !box) return;
+    // A cover started again before the last one went keeps its element and what the closing wrote on it.
+    box.removeAttribute("style");
+    root.current?.style.removeProperty("opacity");
+    el.style.removeProperty("opacity");
+    const centre = centreOf(el);
+    el.style.transform = over(centre);
+    if (prefersReducedMotion() || typeof box.animate !== "function") return;
+    const anims: Animation[] = [];
+    if (run.from) anims.push(box.animate([boxFrame(run.from), viewport()], { duration: ms("base"), easing: curve("enter") }));
+    const from = run.mark ?? (run.from ? { x: run.from.x + run.from.w / 2 - 12, y: run.from.y + run.from.h / 2 - 12, w: 24 } : centre);
+    anims.push(
+      el.animate(
+        [
+          { transform: over(from), opacity: 0 },
+          { transform: over(centre), opacity: 1 },
+        ],
+        { duration: ms("slow"), easing: curve("drop") },
+      ),
+    );
+    return () => anims.forEach((a) => a.cancel());
+  }, [run]);
+
   // Checked every frame rather than on events: "the page is drawn" has no event, and this lasts a second at most.
   useEffect(() => {
     if (!run || land) return;
@@ -176,29 +229,68 @@ function EntranceOverlay() {
     return () => cancelAnimationFrame(frame);
   }, [run, land]);
 
+  // Closing: the cover onto the real band, the seal onto the real seal; then the cover fades over the band it now matches.
+  // Frame by frame towards the targets measured on that frame, not to a box measured once: the band can still move while
+  // it closes (the tour scrolls its first step into view, and a scrolled band shrinks to 48), and the seal would jump.
   useEffect(() => {
-    if (!land) return;
-    const timer = setTimeout(() => setRun(null), NARROW_MS);
-    return () => clearTimeout(timer);
-  }, [land]);
+    const el = mark.current;
+    const box = cover.current;
+    const all = root.current;
+    if (!land || !run || !el || !box || !all) return;
+    let frame = 0;
+    const reduced = prefersReducedMotion();
+    const t0 = performance.now();
+    const move = reduced ? 0 : ms("slow");
+    const fade = reduced ? 150 : ms("fast");
+    const from = centreOf(el);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / (move || 1));
+      // ponytail: a quartic ease-out standing in for `standard` (0.2, 0, 0, 1); a bezier solver if anyone can tell.
+      const e = move ? 1 - (1 - p) ** 4 : 1;
+      if (!reduced) {
+        const { band, mark: real } = handOffTargets(run.skin !== null);
+        if (band) {
+          const b = band.getBoundingClientRect();
+          Object.assign(box.style, { left: `${lerp(0, b.left, e)}px`, top: `${lerp(0, b.top, e)}px`, width: `${lerp(vw, b.width, e)}px`, height: `${lerp(vh, b.height, e)}px` });
+        } else box.style.opacity = String(1 - e);
+        if (real) {
+          const m = real.getBoundingClientRect();
+          el.style.transform = over({ x: lerp(from.x, m.left, e), y: lerp(from.y, m.top, e), w: lerp(from.w, m.width, e) });
+        } else el.style.opacity = String(1 - e);
+      }
+      const f = Math.min(1, Math.max(0, (now - t0 - move) / fade));
+      all.style.opacity = String(1 - f);
+      if (f >= 1) setRun(null);
+      else frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [land, run]);
 
   if (!run) return null;
-  // No underworld (the administrator): the brand's mark and word on the canvas, in ink, instead of a court's seal.
+  // No underworld (the administrator): the brand's mark on the canvas, in ink, instead of a court's seal.
   const name = run.skin ? t(`demo.civ.${run.skin}.name`) : BRAND_WORD;
   return (
     // A click anywhere skips it; Esc does the same, on the window, and the 跳过 button is the keyboard's way.
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
+      ref={root}
       data-testid="demo-entrance"
       data-civ={run.skin ?? undefined}
       data-neutral={run.skin ? undefined : ""}
       data-land={land ? "" : undefined}
       onClick={() => setRun(null)}
-      className={run.skin ? "seal-on-band band-colour demo-seal" : "demo-seal"}
-      style={{ "--x": `${run.x}px`, "--y": `${run.y}px` } as React.CSSProperties}
+      className="demo-entrance"
     >
+      <div ref={cover} className="demo-cover">
+        <div aria-hidden="true" className="identity-pattern" />
+      </div>
       <span aria-live="polite" className="sr-only">{t("demo.enter.entering", { civ: name })}</span>
-      <span className="demo-seal-mark">{run.skin ? <Seal size={96} civ={run.skin} glyphs={null} court={name} /> : <BrandMark size={96} />}</span>
+      <span ref={mark} className="demo-seal-mark">
+        {run.skin ? <Seal size={MARK} civ={run.skin} glyphs={null} court={name} /> : <BrandMark size={MARK} />}
+      </span>
       <span className="demo-seal-name whitespace-nowrap font-title text-lg">{name}</span>
       <button type="button" onClick={() => setRun(null)} className="demo-seal-skip h-11 min-w-11 px-3 text-sm">
         {t("demo.enter.skip")}
