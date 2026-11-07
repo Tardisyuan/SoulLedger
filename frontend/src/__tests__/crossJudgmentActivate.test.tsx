@@ -123,7 +123,7 @@ describe("cross-judgment detail — activate", () => {
   });
 
   it("a participant tenant does not see it", async () => {
-    mockTenant.user = { id: 2, username: "eu", tenant: { code: "EU_HEAVEN_HELL" } };
+    mockTenant.user = { id: 2, username: "eu", permissions: ["cross_judgment.read"], tenant: { code: "EU_HEAVEN_HELL" } };
     renderPage(judgment());
 
     await screen.findByText("Joint");
@@ -178,7 +178,7 @@ describe("cross-judgment detail — back to the original judgment", () => {
   beforeEach(() => {
     crossTenantJudgmentsApi.get.mockReset();
     judgmentApi.get.mockReset();
-    mockTenant.user = { id: 1, username: "u", tenant: { code: "CN_DIYU" } };
+    mockTenant.user = { id: 1, username: "u", permissions: ["cross_judgment.read"], tenant: { code: "CN_DIYU" } };
   });
 
   it("the initiator gets links to the judgment and to its soul", async () => {
@@ -198,7 +198,7 @@ describe("cross-judgment detail — back to the original judgment", () => {
   });
 
   it("a participant tenant gets neither, and nothing is fetched for it", async () => {
-    mockTenant.user = { id: 2, username: "eu", tenant: { code: "EU_HEAVEN_HELL" } };
+    mockTenant.user = { id: 2, username: "eu", permissions: ["cross_judgment.read"], tenant: { code: "EU_HEAVEN_HELL" } };
     renderPage(judgment({ judgment: "j-7" }));
 
     await screen.findByText("Joint");

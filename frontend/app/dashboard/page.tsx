@@ -19,6 +19,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { RealmBars, RealmLegend, PATTERN_CLASS, patternOf } from "@/src/components/dashboard/RealmBars";
 import { realmTypeNamespace } from "@/src/lib/domainNames";
 import { TodoStrip } from "@/src/components/dashboard/TodoStrip";
@@ -87,6 +88,7 @@ function DashboardContent() {
   const tabParam = searchParams.get("tab");
   const activeTab: DashboardTab = tabParam === "ledger" || tabParam === "more" ? tabParam : "overview";
 
+  const canReadLedger = usePermissions().hasPermission("ledger.read");
   const { data: stats, isLoading: loading, error: queryError } = useQuery<LedgerStatsOverview>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
@@ -94,6 +96,8 @@ function DashboardContent() {
       return res.data;
     },
     staleTime: 60_000,
+    // The census is `ledger.read`'s (backend); without it the request is a 403, which read as 「加载统计数据失败」.
+    enabled: canReadLedger,
   });
   const error = queryError ? t("dashboard.error_load") : null;
 
@@ -293,6 +297,9 @@ function DashboardContent() {
             {/* 更多:v3 的待办条与普查图,定稿概览屏没画它们(用户 2026-11-06 定:收在这里,点开才看)。 */}
             <TodoStrip />
 
+            {/* The census below is the ledger's: without `ledger.read`, the 403 state, not a failed load. */}
+            <RequirePermission permissions="ledger.read" fallback={<PermissionDenied permission="ledger.read" />}>
+
             {error && (
               <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
                 <span aria-hidden="true">✕ </span>
@@ -476,6 +483,7 @@ function DashboardContent() {
                 )}
               </ChartCard>
             </div>
+            </RequirePermission>
           </>
         ) : (
           <RequirePermission permissions="ledger.read" fallback={<PermissionDenied permission="ledger.read" />}>

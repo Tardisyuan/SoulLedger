@@ -24,6 +24,11 @@ jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { statutes: jest.fn(), list: jest.fn() },
 }));
 
+// The page asks judgment.read (as the API does); a judge who may read but not cite.
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: { id: 1, role: "JUDGE", permissions: ["judgment.read"] }, permissionsReady: true }),
+}));
+
 // `?code=` deep link (ClauseLink). Empty by default: no query string.
 const mockQuery = { current: "" };
 jest.mock("next/navigation", () => ({

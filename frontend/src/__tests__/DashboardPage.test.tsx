@@ -462,7 +462,7 @@ describe("DashboardPage 更多 (the v3 overview, moved)", () => {
     });
 
     it("is not shown, and asks nothing, for someone who may open neither page", async () => {
-      mockUser = { role: "VIEWER", permissions: [] };
+      mockUser = { role: "VIEWER", permissions: ["ledger.read"] };
       renderPage();
       await screen.findByText("made a soul");
       expect(screen.queryByText("dashboard.todo.approve_dispatch")).not.toBeInTheDocument();
@@ -613,6 +613,20 @@ describe("DashboardPage permission gate", () => {
     renderPage();
 
     expect(await screen.findByText("dashboard.tab_ledger")).toBeInTheDocument();
+  });
+
+  // A moderator holds dashboard.read and not ledger.read: 更多 used to ask for the census anyway, get a 403, and say
+  // 「加载统计数据失败」 (the demo's moderator, 2026-11-08). The to-do strip stays; the census is the 403 state.
+  it("does not ask for the census without ledger.read, and says so rather than that it failed", async () => {
+    mockUser = { role: "MODERATOR", permissions: ["dashboard.read", "social.moderate"] };
+    mockSearch = new URLSearchParams("tab=more");
+
+    renderPage();
+
+    expect(await screen.findByText("dashboard.todo.reports")).toBeInTheDocument();
+    expect(screen.getByTestId("permission-denied")).toBeInTheDocument();
+    expect(screen.queryByText("dashboard.error_load")).not.toBeInTheDocument();
+    expect(mockedStats).not.toHaveBeenCalled();
   });
 
   it("refuses the ledger panel to someone without ledger.read who reaches it via ?tab=ledger", async () => {

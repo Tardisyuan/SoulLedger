@@ -45,6 +45,22 @@ for (const role of ROLES) {
   });
 }
 
+// The moderator holds neither cross_judgment.read, judgment.read nor ledger.read: the recording has a 403 for each list,
+// and the page says it is not theirs instead of 「出错了」 (which the test above only missed when it read the page before
+// the retry gave up).
+for (const route of ["/cross-judgments", "/corpus", "/dashboard?tab=more"]) {
+  test(`as moderator, ${route} says 没有权限 rather than that it failed`, async ({ page, context }) => {
+    const seen = watch(context, page);
+    await enter(page, "moderator");
+    await page.goto(route);
+    await expect(page.getByTestId("permission-denied")).toBeVisible();
+    await expect(page.getByTestId("permission-denied")).toContainText("您没有权限访问此页面");
+    expect((await page.locator("main").innerText()).trim()).not.toMatch(BROKEN);
+    await expect(page.getByText("加载统计数据失败")).toHaveCount(0);
+    clean(seen, route);
+  });
+}
+
 for (const route of ["/login/verify", "/forgot-password", "/reset-password", "/verify-email", "/accept-invite"]) {
   test(`${route} is not part of the demo`, async ({ page }) => {
     await page.goto(route);

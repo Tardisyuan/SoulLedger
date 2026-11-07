@@ -7,6 +7,8 @@ import { crossTenantJudgmentsApi, judgmentApi } from "@soulledger/core/api";
 import { judgmentKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -52,7 +54,16 @@ const STATUS_GLYPH: Record<string, string> = {
 /** 结论的字形与字色,与灵魂详情「丙 · 审判」的判决同一套(✓ / ✕)。 */
 const CONCLUSION_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕" };
 
+/** 同列表页:详情也要 `cross_judgment.read`,没有就是「没有权限」,不是取数失败。 */
 export default function CrossJudgmentDetailPage() {
+  return (
+    <RequirePermission permissions="cross_judgment.read" fallback={<PermissionDenied />}>
+      <CrossJudgmentDetail />
+    </RequirePermission>
+  );
+}
+
+function CrossJudgmentDetail() {
   const { t, locale, formatDate } = useI18n();
   // 题字自己报:壳的默认是面包屑末段,在详情页上那是原始 id。
   usePlaque({ title: t("crossJudgments.title"), hall: useHall(t("plaque.office.trials")) });

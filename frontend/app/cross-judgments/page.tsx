@@ -21,6 +21,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { Button } from "@/src/components/ui/Button";
 import { fieldControl } from "@/src/components/ui/Field";
@@ -58,7 +59,19 @@ const STATUS_TONES: Record<string, BadgeTone> = {
  */
 const CROSS_COLUMNS_KEY = "soulledger.cross-judgments.columns";
 
+/**
+ * 门在最外层:列表要 `cross_judgment.read`(后端 CodenamePermission;MODERATOR 2026-11-07 起没有它,菜单也不给入口)。
+ * 此前这一页在豁免名单里,没有这个码的人直接输网址,得到的是表格里的「出错了」—— 403 被当成了系统故障。
+ */
 export default function CrossJudgmentsPage() {
+  return (
+    <RequirePermission permissions="cross_judgment.read" fallback={<PermissionDenied />}>
+      <CrossJudgmentsList />
+    </RequirePermission>
+  );
+}
+
+function CrossJudgmentsList() {
   const { t, locale } = useI18n();
   const hall = useHall(t("plaque.office.trials"));
   usePlaque({ hall });

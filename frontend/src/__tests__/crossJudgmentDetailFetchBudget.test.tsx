@@ -64,7 +64,7 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
 }));
 
-const mockTenantCtx = { user: { id: 1, username: "u" }, tenant: { slug: "t" } };
+const mockTenantCtx = { user: { id: 1, username: "u", permissions: ["cross_judgment.read"] }, tenant: { slug: "t" } };
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => mockTenantCtx,
 }));

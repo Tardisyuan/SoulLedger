@@ -19,6 +19,8 @@ import { CorpusCitedBy } from "@/src/components/judgment/CorpusCitedBy";
 import { CorpusInsertIntoDesk } from "@/src/components/judgment/CorpusInsertIntoDesk";
 import { CorpusRelated, relatedStatutes } from "@/src/components/judgment/CorpusRelated";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { cn } from "@/lib/utils";
@@ -143,11 +145,15 @@ function MarkHits({ text, query, base = 0, current = -1 }: { text: string; query
 }
 
 export default function CorpusPage() {
+  // The articles are `GET /judgment/statutes/`, which asks `judgment.read` (StatuteViewSet): without it the page was
+  // the list's error, a 403 read as a failure (the demo's moderator, 2026-11-08). The gate says what it is.
   // useSearchParams needs a Suspense boundary under the App Router build (as app/users/page.tsx).
   return (
-    <Suspense fallback={null}>
-      <CorpusLinked />
-    </Suspense>
+    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied />}>
+      <Suspense fallback={null}>
+        <CorpusLinked />
+      </Suspense>
+    </RequirePermission>
   );
 }
 

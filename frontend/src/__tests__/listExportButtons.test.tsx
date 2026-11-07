@@ -144,7 +144,9 @@ describe("/cross-judgments", () => {
   it("offers nothing to someone without cross_judgment.read", async () => {
     mockPermissions = ["soul.read"];
     renderWith(<CrossJudgmentsPage />);
-    await waitFor(() => expect(crossTenantJudgmentsApi.list).toHaveBeenCalled());
+    // The page's gate: the 403 state, and the list (a 403 on the server) is not asked for.
+    expect(await screen.findByTestId("permission-denied")).toBeInTheDocument();
+    expect(crossTenantJudgmentsApi.list).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "common.export" })).toBeNull();
   });
 });
