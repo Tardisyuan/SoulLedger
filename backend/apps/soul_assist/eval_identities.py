@@ -2,8 +2,10 @@
 
 只有 `ensure()` 会写 `AssistConfig.eval_soul_account` / `eval_officer`:PATCH 不认这两个字段,
 所以「评测身份」只可能是本模块造的 —— 管理员不能把真灵魂或 ADMIN 指成评测身份。
-两个身份都是**不可用密码**(从不登录);官员是 MODERATOR,绝不是 ADMIN。2026-11-07 起 MODERATOR 只管朋友圈审核,四个官员工具里只剩
-`my_permissions` 能演练(队列、待审批、收件箱三条会答 permission_denied)—— 换哪个角色待定。
+两个身份都是**不可用密码**(从不登录);官员是判官 JUDGE,绝不是 ADMIN(用户 2026-11-07 定;此前是 MODERATOR,
+它改为只管朋友圈审核后几乎没有工具可演练)。判官持 judgment.read / workflow.read,队列、待审批、my_permissions
+三个工具能演练;不持 soul_inbox.read,收件箱计数那两条评测的正确答法是「无权」(soul_assist/0017)。
+`ensure()` 每次都把角色写回 OFFICER_ROLE,已部署的评测官员下次 ensure 时随之改成判官。
 """
 from django.db import transaction
 
@@ -12,7 +14,7 @@ from apps.soul_assist.models import AssistConfig
 
 SOUL_NAME = "问一问评测灵魂"
 OFFICER_USERNAME = "assist-eval-officer"
-OFFICER_ROLE = "MODERATOR"
+OFFICER_ROLE = "JUDGE"
 
 
 def live_account(account_id):

@@ -901,7 +901,7 @@ def test_the_eval_identities_are_made_once_and_are_the_ones_the_run_uses(api, cn
     assert User.objects.filter(username="assist-eval-officer").count() == 1
     account = SoulAccount.objects.select_related("user", "soul").get(pk=first.data["eval_soul_account"])
     officer = User.objects.get(pk=first.data["eval_officer"])
-    assert officer.role == "MODERATOR" and officer.role != "ADMIN" and officer.tenant == cn_tenant
+    assert officer.role == "JUDGE" and officer.role != "ADMIN" and officer.tenant == cn_tenant
     assert not is_password_usable(officer.password) and not is_password_usable(account.user.password)
     assert account.must_change_password is False and account.soul.tenant == cn_tenant
     assert account.soul.current_state == "REINCARNATING"

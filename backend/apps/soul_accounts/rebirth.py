@@ -45,7 +45,7 @@ FINAL_REJECTIONS = (RebirthApplicationStatus.REJECTED, RebirthApplicationStatus.
 
 #: 节点按**角色**指定审批人,不按神祇:转生申请没有经典出处的审理殿,
 #: 编一个等于替神话造人(apps/workflow/templates.py 对 TEMPLATE_NODES_WITHOUT_AN_APPROVER 的立场)。
-#: MODERATOR 不在里面 —— 它刻意不持有 workflow.approve(apps/perm/models.py)。
+#: MODERATOR 不在里面 —— 它从不持有 workflow.approve,2026-11-07 起只管朋友圈审核(apps/perm/models.py)。
 REBIRTH_NODES = [
     ("判官初审", "EVALUATION", "JUDGE"),
     ("终审", "FINAL", "ADMIN"),

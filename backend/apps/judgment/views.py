@@ -233,7 +233,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
     #
     # They map to judgment.execute. The choice between judgment.execute and
     # judgment.create is not a guess and cannot go wrong: both are held by
-    # exactly {ADMIN, JUDGE, MODERATOR}, so no role's access differs between
+    # the same roles by default ({ADMIN, JUDGE}; MODERATOR held both until 2026-11-07), so no role's access differs between
     # them. execute is the closer fit — amending or withdrawing a filed
     # judgment is an act on the case, and conclude already maps here.
     permission_codename = "judgment"
@@ -296,7 +296,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         # 改派是分配别人的工作,比办案更严:`judgment.assign`,默认只 ADMIN(2026-11-07 起 MODERATOR 不再持有)
         # 持有。JUDGE 有 `judgment.execute` 而没有它 —— 审判官之间不能互相派活。
         'reassign': ['judgment.assign'],
-        # 跨域取消让原审流程中止、处置被永久扣住时,殿主重开一案(rbac-be1,2026-10-29)。
+        # 跨域取消让原审流程中止、处置被永久扣住时,持改派码的人(默认殿管理员)重开一案(rbac-be1,2026-10-29)。
         'reopen_cancelled': ['judgment.assign'],
         # 改派弹层的名单:谁能被改派到这些案子上。问的人就是能改派的人。
         'assignable_officers': ['judgment.assign'],
@@ -1584,7 +1584,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             # curability_required / greek_mark_not_applicable)。什么都没写。
             return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except ClaimRefusedError as exc:
-            # 409 `claimed_by_other`:别人认领的案子,只有认领人、ADMIN、殿主能结。什么都没写。
+            # 409 `claimed_by_other`:别人认领的案子,只有认领人或持 judgment.assign 的人(默认 ADMIN)能结。什么都没写。
             return Response(exc.as_payload(), status=exc.status)
         except WeighingRefusedError as exc:
             # 埃及:裁决与天平不符(`verdict_contradicts_weighing`,带天平给的裁决),或天平摇摆却选了去处。

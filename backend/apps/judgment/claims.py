@@ -170,7 +170,7 @@ def may_edit(judgment: Judgment, user) -> bool:
 def assert_may_edit(judgment: Judgment, request, what: str) -> None:
     """改 / 删案子、写草稿、采信证据、引条文、写否认告白、上传附件之前(用户 2026-10-29 第 17 条)。
 
-    无人认领、或认领人就是自己:照旧。别人认领中(案子还开着):持 `judgment.assign`(殿主 / ADMIN,
+    无人认领、或认领人就是自己:照旧。别人认领中(案子还开着):持 `judgment.assign`(默认 ADMIN,
     与释放 / 暂缓 / 改派的 `_may_override` 同一口径)的人可以越过,并留一行审计说他越过了谁;
     其余 403 `not_claimant`。已结案的案子不在此列 —— 那里由「结案冻结」管(第 18 条)。
     不在行锁下读认领人:与改派并发时最坏是按旧认领人放行一次编辑,不会落判(结案另有 `lock_for_conclude`)。"""

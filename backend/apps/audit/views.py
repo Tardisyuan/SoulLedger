@@ -159,8 +159,8 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     permission_classes = [TenantPermission, CodenamePermission]
     # BINARY on `audit.read`, which is what the module already is: a
     # ReadOnlyModelViewSet, so every routed action is a read and there is no
-    # write codename to want. `audit.read` is seeded and held by ADMIN and
-    # MODERATOR.
+    # write codename to want. `audit.read` is seeded and held by ADMIN (and by
+    # MODERATOR until 2026-11-07).
     #
     # by_trace and timeline are listed here because they were not: they are
     # @action reads, and without an entry the mixin fell through to

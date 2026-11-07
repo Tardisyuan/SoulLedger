@@ -40,7 +40,7 @@ class OrganizationViewSet(
     1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
        to `org.read`, held by all five roles; writes (`create`/`update`/
        `partial_update`/`destroy`) are remapped through `extra_permissions` to
-       `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
+       `org.manage`, held by ADMIN only (and MODERATOR until 2026-11-07). `CodenamePermission` is
        added to `permission_classes` alongside `TenantPermission` — the two
        answer different questions ("may this role do this at all" vs. "in this
        tenant") and both must hold, same pairing as every other enforced

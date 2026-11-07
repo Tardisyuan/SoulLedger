@@ -303,7 +303,7 @@ class TestPasswordHelpNeverSaysWhetherAnAccountExists:
     def test_a_down_broker_still_delivers(self, api_client, cast):
         with patch.object(tasks.notify_password_help, "delay", side_effect=ConnectionError("broker down")):
             assert _ask(api_client, "cn_judge").data == PASSWORD_HELP_ACCEPTED
-        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2", "cn_mod"}
+        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2"}
 
     def test_blank_username_is_a_400_without_counting(self, api_client, cast, eager):
         assert _ask(api_client, "  ").status_code == 400
@@ -311,51 +311,55 @@ class TestPasswordHelpNeverSaysWhetherAnAccountExists:
 
 @pytest.mark.django_db
 class TestPasswordHelpReachesTheRightAdministrators:
-    def test_the_active_admins_and_moderators_of_the_users_own_tenant_and_nobody_else(
+    def test_the_active_user_managers_of_the_users_own_tenant_and_nobody_else(
         self, api_client, django_user_model, cast, eager
     ):
-        _user(django_user_model, "cn_mod_off", role="MODERATOR", tenant=cast["judge"].tenant, is_active=False)
         _user(django_user_model, "eu_mod", role="MODERATOR", tenant=cast["eu_admin"].tenant)
         _ask(api_client, "cn_judge")
-        # The tenant's admins AND its realm lead (殿主). Not the EU admin or the
-        # EU realm lead (tenant isolation), not the global admin (the tenant has
-        # its own), not the inactive admin or the inactive realm lead.
-        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2", "cn_mod"}
+        # The tenant's admins (holders of user.manage). Not the EU admin (tenant isolation), not the
+        # global admin (the tenant has its own), not the inactive admin — and not the circle moderator
+        # (cn_mod): since 2026-11-07 recipients are chosen by user.manage, which it never holds.
+        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2"}
 
-    def test_the_moderator_gets_the_same_notification_as_the_admins_but_its_own_text(self, api_client, cast, eager):
+    def test_a_role_granted_user_manage_is_told_with_the_admin_text(self, api_client, django_user_model, cast, eager):
+        """By codename, not role name: a hall role given user.manage in the matrix can reset the
+        password, so it is told, and told to use User Management."""
+        from apps.perm.cache import invalidate_all_permissions
+        from apps.perm.models import Permission, Role, RolePermission
+
+        clerk_role = Role.objects.get_or_create(name="USER_CLERK", defaults={"display_name": "吏员"})[0]
+        manage = Permission.objects.get_or_create(codename="user.manage",
+                                                  defaults={"name": "用户管理", "category": "system"})[0]
+        RolePermission.objects.get_or_create(role=clerk_role, permission=manage)
+        invalidate_all_permissions()
+        _user(django_user_model, "cn_clerk", role="USER_CLERK", tenant=cast["judge"].tenant)
         _ask(api_client, "cn_judge")
-        mod = UserNotification.objects.get(user=cast["cn_moderator"])
-        admin = UserNotification.objects.get(user=cast["cn_admin"])
-        fields = ("title", "notification_type", "related_resource", "related_id")
-        assert [getattr(mod, f) for f in fields] == [getattr(admin, f) for f in fields]
+        assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2", "cn_clerk"}
+        clerk = UserNotification.objects.get(user__username="cn_clerk")
+        assert "kind" not in clerk.params and "用户管理" in clerk.message
 
     @pytest.mark.parametrize("locale", ["zh-Hans", "en", "egy"])
-    def test_only_an_admin_is_sent_to_user_management_a_moderator_is_sent_to_an_admin(
+    def test_every_recipient_is_sent_to_user_management_and_the_moderator_hears_nothing(
         self, api_client, cast, eager, locale
     ):
-        """User management is ADMIN only (`UserViewSet`), so a 殿主 told to
-        reset the password there would be told to do what they cannot
-        (2026-09-25 decision). Both the stored zh-Hans text and the read-time
-        render in every locale; presence AND absence of each instruction."""
+        """Every recipient holds user.manage, so every one is told to reset it under User
+        Management. The circle moderator is not told at all (2026-11-07). Both the stored zh-Hans
+        text and the read-time render in every locale."""
         from apps.notifications.messages import MESSAGES
 
         pack = MESSAGES[locale]
         to_admin = pack["password_help_requested"]["body"].replace("{{username}}", "cn_judge")
-        to_moderator = pack["password_help_requested_moderator"]["body"].replace("{{username}}", "cn_judge")
-        assert to_admin != to_moderator
         tasks.notify_password_help.run("cn_judge")
-        expected = {"cn_admin": to_admin, "cn_admin_2": to_admin, "cn_mod": to_moderator}
+        expected = {"cn_admin": to_admin, "cn_admin_2": to_admin}
         users = {"cn_admin": cast["cn_admin"], "cn_admin_2": cast["cn_admin_2"], "cn_mod": cast["cn_moderator"]}
-        for name, body in expected.items():
-            # A real token carrying the tenant: `force_authenticate` has none,
-            # and TenantPermission refuses a MODERATOR without it.
+        for name, body in {**expected, "cn_mod": None}.items():
+            # A real token carrying the tenant: `force_authenticate` has none.
             listed = officer_client(users[name]).get("/api/v1/notifications/", HTTP_ACCEPT_LANGUAGE=locale).data
             rows = listed["results"] if isinstance(listed, dict) else listed
-            assert [r["message"] for r in rows] == [body], (locale, name)
+            assert [r["message"] for r in rows] == ([body] if body else []), (locale, name)
         if locale == "zh-Hans":
             stored = {n.user.username: n.message for n in UserNotification.objects.select_related("user")}
             assert stored == expected
-            assert "用户管理" not in stored["cn_mod"] and "联系管理员" in stored["cn_mod"]
             assert "用户管理" in stored["cn_admin"] and "联系管理员" not in stored["cn_admin"]
 
     def test_the_global_admin_fallback_gets_the_admin_text(self, django_user_model, cast):
@@ -364,14 +368,16 @@ class TestPasswordHelpReachesTheRightAdministrators:
         note = UserNotification.objects.get(user=cast["global_admin"])
         assert "kind" not in note.params and "用户管理" in note.message
 
-    def test_a_tenant_with_only_a_moderator_notifies_the_moderator_not_the_global_admins(
+    def test_a_tenant_with_only_a_moderator_falls_back_to_the_global_admins(
         self, api_client, django_user_model, cast
     ):
+        """The circle moderator cannot reset a password, so a hall with nobody else is a hall with
+        nobody: the global admins hear it (until 2026-11-07 the moderator did)."""
         hades = _tenant("GR_HADES")
         _user(django_user_model, "gr_mod", role="MODERATOR", tenant=hades)
         asker = _user(django_user_model, "gr_judge", tenant=hades)
         tasks.notify_password_help.run("gr_judge")
-        assert _recipients(asker) == {"gr_mod"}
+        assert _recipients(asker) == {"root"}
 
     def test_a_moderator_asking_is_not_their_own_recipient(self, api_client, cast):
         tasks.notify_password_help.run("cn_mod")
@@ -437,7 +443,7 @@ class TestPasswordHelpReachesTheRightAdministrators:
         assert row.user is None
         assert row.ip_address == "10.9.9.9"
         assert sorted(row.changes["notified_admin_ids"]) == sorted(
-            [cast["cn_admin"].pk, cast["cn_admin_2"].pk, cast["cn_moderator"].pk]
+            [cast["cn_admin"].pk, cast["cn_admin_2"].pk]
         )
 
     @pytest.mark.parametrize("username", ["nobody_here", "cn_gone", "soul_x"])
@@ -458,7 +464,7 @@ class TestPasswordHelpReachesTheRightAdministrators:
 
     def test_an_admin_asking_is_not_their_own_recipient(self, api_client, cast):
         tasks.notify_password_help.run("cn_admin")
-        assert _recipients(cast["cn_admin"]) == {"cn_admin_2", "cn_mod"}
+        assert _recipients(cast["cn_admin"]) == {"cn_admin_2"}
 
     def test_a_global_admin_asking_reaches_the_other_global_admins(self, django_user_model, cast):
         _user(django_user_model, "root_2", role="ADMIN", tenant=None)

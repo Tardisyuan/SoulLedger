@@ -287,7 +287,7 @@ REDACTED = "[redacted]"
 #: Measured 2026-09-07, before this existed: changing a password wrote BOTH the
 #: old and the new `pbkdf2_sha256$…` hash into `AuditLog.changes`, and
 #: `AuditLogSerializer` returns `changes` to anyone holding `audit.read` —
-#: which is ADMIN *and* MODERATOR. All three password paths
+#: which was ADMIN *and* MODERATOR then (ADMIN alone since 2026-11-07, and any role granted it). All three password paths
 #: (`views.py:196`, `:622`, `:724`) use `set_password` + `save(update_fields=)`,
 #: and `_on_post_save` does not look at `update_fields`, so every one of them
 #: was audited in full.
@@ -307,7 +307,7 @@ SECRET_FIELD_NAMES = frozenset({
 SECRET_NAME_HINTS = ('password', 'secret', 'token', 'api_key', 'private_key')
 
 #: 个人信息字段:与密钥同样只记「改了」,不记值。`AuditLog.changes` 对持有
-#: `audit.read` 的角色(ADMIN、MODERATOR)可读,而灵魂的联系方式按最小可见
+#: `audit.read` 的角色(默认 ADMIN;MODERATOR 到 2026-11-07 为止)可读,而灵魂的联系方式按最小可见
 #: 只给 `soul_account.read`。审计日志是一条绕过那道门的旁路,所以在这里堵上。
 PII_FIELD_NAMES = frozenset({'contact_email', 'contact_phone'})
 

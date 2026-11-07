@@ -63,7 +63,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
     queryset = Reincarnation.objects.select_related("soul", "disposition", "tenant").all()
     serializer_class = ReincarnationSerializer
     permission_classes = [TenantPermission, CodenamePermission]
-    # read / manage plus the named actions. `reborn` is ADMIN and MODERATOR only; `drink_soup` is any
+    # read / manage plus the named actions. `reborn` is ADMIN only (MODERATOR too until 2026-11-07); `drink_soup` is any
     # holder of reincarnation.manage.
     permission_codename = "reincarnation"
     extra_permissions = {

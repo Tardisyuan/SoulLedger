@@ -14,7 +14,7 @@
 那一段的当前站与之后的站(含终审)一并跳过(`on_cross_cancelled`)。
 
 **谁能做什么,只看这一段的 `tenant`**(跨租户只经这里放行,见 `foreign_workflows` 与 `views.WorkflowPartyPermission`):
-* 选站 / 改选:该段所属域的判官(JUDGE / ADMIN,有 `workflow.approve`)或殿管理员(ADMIN / MODERATOR);该段开始之前。
+* 选站 / 改选:该段所属域的判官(JUDGE / ADMIN,有 `workflow.approve`)或殿管理员(持 `workflow.update`,默认 ADMIN);该段开始之前。
 * 加减站:当前站的审批人(当前站就在这一段)或该段所属域的殿管理员;只动当前站之后的站(没开始的段:全部站)。
 * 按默认流程走:召集殿(流程所属殿)的管理员;门口满 `OVERDUE_DAYS` 天,或该域没有能选站的人。
 * 再提醒一次:召集殿的人,每段一小时一次。
@@ -55,7 +55,7 @@ DAILY_REMINDER = timedelta(hours=20)
 
 #: 能选站的人:持 `workflow.approve`。都没有 = 「没有能选站的人」,待办转给殿管理员。
 PICKER_CODENAME = "workflow.approve"
-#: 殿管理员:持 `workflow.update`(改审批流;ADMIN / 殿主默认持有,判官没有)。按码判、认兼任角色,
+#: 殿管理员:持 `workflow.update`(改审批流;默认只有 ADMIN —— MODERATOR 到 2026-11-07 为止也持有,判官没有)。按码判、认兼任角色,
 #: 权限矩阵收得回(rbac-be1 第 21 条,2026-10-29;此前按主角色名 ADMIN / MODERATOR 判)。
 HALL_ADMIN_CODENAME = "workflow.update"
 #: 跨域审判取消让流程提前结束时写在 `end_reason` 上(不再去结束那场已取消的审判)。

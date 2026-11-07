@@ -114,7 +114,7 @@ def _notify_filed(judgment: Judgment) -> None:
 
     officers = (list(judgment.city_god.officers.filter(is_active=True))
                 if judgment.city_god_id is not None else [])
-    recipients = [u.pk for u in officers] or city_gods._hall_admins(judgment.tenant_id)
+    recipients = [u.pk for u in officers] or city_gods._hall_admins(judgment.tenant_id, codename="wangsi.manage")
     city_gods._notify_after_commit(recipients, "WANGSI_GRIEVANCE_FILED", judgment)
     notify_users(officers, target={"kind": "wangsi", "id": str(judgment.pk)})
 

@@ -524,7 +524,7 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
 #
 # X-3: a station that names nobody gets ``approver_role`` ``DEFAULT_APPROVER_ROLE`` instead of ``SYSTEM``, so a
 # fresh hall's officers can decide it without first editing the template (``TEMPLATE_NODES_WITHOUT_AN_APPROVER``
-# still records why no *person* is named). JUDGE, because MODERATOR is deliberately denied ``workflow.approve``.
+# still records why no *person* is named). JUDGE, because it holds ``workflow.approve`` (MODERATOR never did, and since 2026-11-07 only moderates the circle).
 
 DEFAULT_APPROVER_ROLE = "JUDGE"
 

@@ -88,10 +88,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     # This is the largest move in the tranche, and it is JUDGE that carries it.
     # JUDGE holds no dispatch codename at all — not read, not manage, not any
     # of the three approval actions — so both viewsets close to it entirely,
-    # the list included. VIEWER likewise. dispatch.manage is held by ADMIN,
-    # MODERATOR and GUARDIAN; dispatch.approve/.reject/.execute by ADMIN and
-    # MODERATOR only, so GUARDIAN keeps proposing and editing and loses the
-    # three decisions.
+    # the list included. VIEWER likewise. dispatch.manage is held by ADMIN and
+    # GUARDIAN; dispatch.approve/.reject/.execute by ADMIN only, so GUARDIAN
+    # keeps proposing and editing and loses the three decisions. (MODERATOR held
+    # all of dispatch.* until 2026-11-07, when it became the circle moderator.)
     #
     # The two read moves (GET on this viewset and on CrossTenantJudgmentViewSet,
     # 200 -> 403 for JUDGE and VIEWER) are recorded in
@@ -701,8 +701,8 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
     # is a judgment activity — the same civilization that hears a soul's own
     # case should hear its cross-tenant one — so it moves to JUDGE rather than
     # staying with GUARDIAN's operational dispatch role. cross_judgment.read
-    # and cross_judgment.create are held by the same three roles (ADMIN,
-    # MODERATOR, JUDGE — see apps/perm/models.py), so this is a clean binary
+    # and cross_judgment.create are held by the same roles (ADMIN and JUDGE;
+    # MODERATOR too until 2026-11-07 — see apps/perm/models.py), so this is a clean binary
     # swap: GUARDIAN loses cross-tenant judgments entirely, JUDGE gains full
     # access (view, participate, conclude), matching how it already reads and
     # decides on ordinary judgments. Both reads and writes moved together —
@@ -1034,7 +1034,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         """
         judgment = self.get_object()
 
-        # 结束与取消同一道:召集人,或发起殿的 ADMIN / 殿主。参与方入席表态,不替召集人收场。
+        # 结束与取消同一道:召集人,或发起殿持 workflow.update 的人(默认殿管理员)。参与方入席表态,不替召集人收场。
         if not CrossTenantJudgmentService.can_end(judgment, request.user, getattr(request, "tenant", None)):
             return Response(
                 {"error": "Only the convener or this hall's admin may conclude"}, status=status.HTTP_403_FORBIDDEN
