@@ -33,7 +33,7 @@ const PAGES: [Role, string][] = [
   ["judge_eg", "/judgment"], ["judge_eg", "/disposition"], ["judge_eg", "/realms"],
   ["judge_gr", "/judgment"], ["judge_gr", "/disposition"], ["judge_gr", "/realms"],
   ["admin", "/dashboard"], ["admin", "/menus"], ["admin", "/users"], ["admin", "/permissions"], ["admin", "/audit"],
-  ["moderator", "/moderation"], ["moderator", "/soul-inbox"], ["judge", "/profile"], ["judge", "/about"],
+  ["moderator", "/moderation"], ["admin", "/soul-inbox"], ["judge", "/profile"], ["judge", "/about"],
   ["judge", "/actors"], ["judge_eu", "/actors"], ["judge_eg", "/actors"], ["judge_gr", "/actors"], ["admin", "/tenants"],
   ["judge", "/workflow"], ["judge_eu", "/workflow"], ["judge_eg", "/workflow"], ["judge_gr", "/workflow"],
 ];

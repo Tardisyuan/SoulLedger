@@ -322,7 +322,8 @@ test("capture warrants are due", async ({ page, context }) => {
 
 test("a letter can be read and answered", async ({ page, context }) => {
   const seen = watch(context, page);
-  await enter(page, "moderator");
+  // The hall's inbox is the administrator's in the demo: the moderator keeps the circle only, and no judge holds soul_inbox.
+  await enter(page, "admin");
   await page.goto("/soul-inbox");
   const main = page.locator("main");
   await main.getByText("未读", { exact: true }).first().click();
