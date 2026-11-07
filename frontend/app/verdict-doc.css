@@ -4,11 +4,14 @@
  * 纸是实物:定稿给四文明各一种纸色与墨色,深浅主题都一样,所以写在这里而不进 globals.css 的主题令牌
  * (令牌随主题换,纸不换)。变量用 `--doc-*`,不占 `--color-*` / `--civ-*` 两族(cssTokenReferenceContract)。
  *
- * A4 比例(210 × 297),宽度跟着容器走;字号、边距一律用容器单位 `cqi`(纸宽的百分之一),
+ * A4 比例(210 × 297),宽度跟着容器走;字号、边距一律用容器单位 `cqw`(纸宽的百分之一),
  * 所以屏幕上 420px 宽的卡与打印的整张 A4 是同一张版面放大缩小 —— 定稿「浏览器里『打印』走同一份 @page A4 样式」。
- * 换算:定稿 420px 宽,1px = 0.238cqi。
+ * 换算:定稿 420px 宽,1px = 0.238cqw。
+ * 用 `cqw`(纸的**物理**宽度)不用 `cqi`:`cqi` 按用它的那个元素的书写方向取「行向」,地府竖排(vertical-rl)
+ * 里行向是竖的,而纸只声明了 inline-size 容器(横向),于是竖排里的 `cqi` 落空、退回视口高度 ——
+ * 2026-11-07 量到 1280×900 视口下竖排字号是 36px(该是 17px),正文排出纸外两倍宽。
  *
- * 打印时(print.css 末尾)纸色不印(浏览器默认不印底色,纸本来就是白的),正文压成黑;
+ * 打印时 print.css 把一切压成黑、去掉底色;本文件末尾的 print 块把纸色与纹理(用户 2026-11-07:照印)、欧洲火漆放回,
  * 题名、判语强调、印、边框这些「墨」保留文明色 —— 与登录交付单的「墨」同一个做法(print-slip-ink.css)。
  */
 
@@ -39,6 +42,9 @@
   --doc-accent: #6b4c75;
   --doc-seal: #5a3a63;
   --doc-paper-image: linear-gradient(#f6f0e4, #efe6d3);
+  /* 火漆:印本身是实心的蜡,印文浅色。打印时(下面 @media print)原样放回。 */
+  --doc-wax: radial-gradient(circle at 38% 34%, #8e5a98, #5a3a63 55%, #3a2240);
+  --doc-wax-ink: #d9bedd;
 }
 [data-verdict-paper][data-civ="eg"] {
   --doc-paper: #e4d3a2;
@@ -62,12 +68,14 @@
 
 [data-verdict-paper] [data-doc-text] {
   position: absolute;
-  inset: 11cqi 11.5cqi 38cqi;
+  inset: 11cqw 11.5cqw 38cqw;
   display: flex;
   flex-direction: column;
-  gap: 2.4cqi;
-  font-size: 3.6cqi;
+  gap: calc(2.4cqw * var(--doc-fit, 1));
+  font-size: calc(3.6cqw * var(--doc-fit, 1));
   line-height: 1.75;
+  /* 排不下的字会被裁掉,不会出纸:`VerdictPaper` 的 useFitToPage 先把 `--doc-fit`(下面每个字号都乘它)缩到排得下。
+     E2E `verdict-document-fits.spec.ts` 量这里不溢出。 */
   overflow: hidden;
 }
 [data-verdict-paper] p,
@@ -77,18 +85,18 @@
 [data-verdict-paper] [data-doc-title] {
   font-family: var(--font-title, var(--font-serif));
   font-weight: 600;
-  font-size: 5.2cqi;
+  font-size: calc(5.2cqw * var(--doc-fit, 1));
   line-height: 1.4;
 }
 [data-verdict-paper] [data-doc-verdict] {
   font-weight: 600;
-  font-size: 3.9cqi;
+  font-size: calc(3.9cqw * var(--doc-fit, 1));
 }
 [data-verdict-paper] [data-doc-sins],
 [data-verdict-paper] [data-doc-sign],
 [data-verdict-paper] [data-doc-deco] {
   color: var(--doc-muted);
-  font-size: 3cqi;
+  font-size: calc(3cqw * var(--doc-fit, 1));
 }
 [data-verdict-paper] [data-doc-sign] {
   margin-block-start: auto;
@@ -108,24 +116,24 @@
   pointer-events: none;
 }
 [data-verdict-paper][data-civ="cn"]::before {
-  inset: 3.3cqi;
+  inset: 3.3cqw;
   border-width: 2px;
 }
 [data-verdict-paper][data-civ="cn"]::after {
-  inset: 4.8cqi;
+  inset: 4.8cqw;
   border-width: 1px;
 }
 [data-verdict-paper][data-vertical] [data-doc-text] {
-  inset: 10.5cqi;
+  inset: 10.5cqw;
   writing-mode: vertical-rl;
   text-orientation: upright;
-  font-size: 4.05cqi;
+  font-size: calc(4.05cqw * var(--doc-fit, 1));
   line-height: 2.76;
   letter-spacing: 0.08em;
   gap: 0;
 }
 [data-verdict-paper][data-vertical] [data-doc-title] {
-  font-size: 6.2cqi;
+  font-size: calc(6.2cqw * var(--doc-fit, 1));
 }
 [data-verdict-paper][data-vertical] [data-doc-sign] {
   font-size: inherit;
@@ -142,13 +150,13 @@
 }
 [data-verdict-paper][data-civ="eu"] [data-doc-body]::first-letter {
   float: left;
-  margin: 1cqi 3cqi 0 0;
-  padding: 0 2.6cqi;
+  margin: 1cqw 3cqw 0 0;
+  padding: 0 2.6cqw;
   background: var(--doc-seal);
   color: var(--doc-paper);
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 12.4cqi;
+  font-size: calc(12.4cqw * var(--doc-fit, 1));
   line-height: 1.2;
 }
 [data-verdict-paper][data-civ="eu"] [data-doc-verdict] {
@@ -159,14 +167,14 @@
 [data-verdict-paper] [data-doc-border] {
   position: absolute;
   inset-inline: 0;
-  height: 9.5cqi;
+  height: 9.5cqw;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   white-space: nowrap;
   font-family: var(--font-hieroglyphs), sans-serif;
-  font-size: 5.2cqi;
+  font-size: 5.2cqw;
   color: var(--doc-accent);
   border: 0 solid var(--doc-accent);
 }
@@ -179,7 +187,7 @@
   border-top-width: 2px;
 }
 [data-verdict-paper][data-civ="eg"] [data-doc-text] {
-  inset: 16cqi 12cqi 36cqi;
+  inset: 16cqw 12cqw 36cqw;
 }
 [data-verdict-paper][data-civ="eg"] [data-doc-verdict] {
   color: var(--doc-accent);
@@ -192,17 +200,17 @@
 [data-verdict-paper][data-civ="gr"]::before {
   content: "";
   position: absolute;
-  inset: 3.8cqi;
+  inset: 3.8cqw;
   border: 1.5px solid #5e5a5280;
   pointer-events: none;
 }
 [data-verdict-paper][data-civ="gr"] [data-doc-text] {
   text-align: center;
-  inset: 15.7cqi 10.5cqi 38cqi;
+  inset: 15.7cqw 10.5cqw 38cqw;
 }
 [data-verdict-paper][data-civ="gr"] [data-doc-deco] {
   font-family: var(--font-serif);
-  font-size: 6.7cqi;
+  font-size: calc(6.7cqw * var(--doc-fit, 1));
   color: var(--doc-ink);
 }
 [data-verdict-paper][data-civ="gr"] [data-doc-sign] {
@@ -213,9 +221,9 @@
 
 [data-verdict-paper] [data-doc-seal] {
   position: absolute;
-  right: 11cqi;
-  bottom: 11cqi;
-  width: 21cqi;
+  right: 11cqw;
+  bottom: 11cqw;
+  width: 21cqw;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -232,46 +240,57 @@
   max-width: 70%;
   font-family: var(--font-title, var(--font-serif));
   font-weight: 600;
-  font-size: 3.6cqi;
+  font-size: 3.6cqw;
   line-height: 1.2;
   text-align: center;
 }
-/* 地府朱印:左下、斜 6°,五字竖排两行(「第一殿」「之印」)。 */
+/* 地府朱印:左下、斜 6°。 */
 [data-verdict-paper][data-civ="cn"] [data-doc-seal] {
-  left: 11cqi;
+  left: 11cqw;
   right: auto;
-  bottom: 13.8cqi;
-  width: 25.7cqi;
+  bottom: 11cqw;
+  width: 21cqw;
   transform: rotate(-6deg);
   opacity: 0.92;
   mix-blend-mode: multiply;
 }
-[data-verdict-paper][data-civ="cn"] [data-doc-seal] > span {
+/* 横排(英文、egy 界面):印文横写,小字号。印比竖排的小、更靠下,顶边低于正文区底边(38cqw),不压日期。 */
+[data-verdict-paper][data-civ="cn"]:not([data-vertical]) [data-doc-seal] > span {
+  font-size: 2.9cqw;
+  line-height: 1.15;
+}
+/* 竖排(中文界面):印大一些,五字竖排两行(「第一殿」「之印」)。只在 `[data-vertical]` 下竖写:
+   横排的印文(「Seal of Tenth Court」)竖写会逐个字母立起来,出印框又出纸(2026-11-07 真 PDF)。 */
+[data-verdict-paper][data-civ="cn"][data-vertical] [data-doc-seal] {
+  bottom: 13.8cqw;
+  width: 25.7cqw;
+}
+[data-verdict-paper][data-civ="cn"][data-vertical] [data-doc-seal] > span {
   writing-mode: vertical-rl;
   text-orientation: upright;
   max-width: none;
-  max-height: 17cqi;
-  font-size: 5.4cqi;
+  max-height: 17cqw;
+  font-size: 5.4cqw;
   line-height: 1.1;
 }
 /* 欧洲火漆:实心圆,浅字。 */
 [data-verdict-paper][data-civ="eu"] [data-doc-seal] {
-  width: 23.8cqi;
+  width: 23.8cqw;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 34%, #8e5a98, #5a3a63 55%, #3a2240);
+  background: var(--doc-wax);
   box-shadow: 0 3px 8px #0005, inset 0 -3px 6px #0006;
-  color: #d9bedd;
+  color: var(--doc-wax-ink);
 }
 [data-verdict-paper][data-civ="eu"] [data-doc-seal] > span {
   font-family: var(--font-serif);
   font-weight: 400;
-  font-size: 2.6cqi;
+  font-size: 2.6cqw;
   letter-spacing: 0.15em;
 }
 [data-verdict-paper][data-civ="gr"] [data-doc-seal] > span {
   font-family: var(--font-serif);
   font-weight: 400;
-  font-size: 2.9cqi;
+  font-size: 2.9cqw;
 }
 
 /* ── 打印 ───────────────────────────────────────────────────────────── */
@@ -302,6 +321,15 @@
     color: var(--doc-seal) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+  /* 欧洲火漆照印:print.css 的 `[data-print-doc] *` 去掉了底色,只剩 SVG 里那道 r=30 的细圈,
+     而印文按整颗蜡的宽度排,就出了圈(2026-11-07 真 PDF)。蜡与浅色印文放回,与屏幕上一样。 */
+  [data-print-verdict-doc] [data-verdict-paper][data-civ="eu"] [data-doc-seal] {
+    background: var(--doc-wax) !important;
+  }
+  [data-print-verdict-doc] [data-verdict-paper][data-civ="eu"] [data-doc-seal],
+  [data-print-verdict-doc] [data-verdict-paper][data-civ="eu"] [data-doc-seal] * {
+    color: var(--doc-wax-ink) !important;
   }
   /* 欧洲首字母的底色块在纸上不印:字回到火漆色。 */
   [data-print-verdict-doc] [data-verdict-paper][data-civ="eu"] [data-doc-body]::first-letter {

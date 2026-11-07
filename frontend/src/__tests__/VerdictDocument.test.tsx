@@ -159,7 +159,8 @@ describe("VerdictPrintSheet (the page the headless renderer prints)", () => {
     expect(document.body.dataset.verdictReady).toBeUndefined();
 
     await act(async () => fontsLoaded());
-    expect(document.body.dataset.verdictReady).toBe("1");
+    // 字体到齐后还等一帧(文书按新字面缩字号,useFitToPage),再打勾。
+    await waitFor(() => expect(document.body.dataset.verdictReady).toBe("1"));
   });
 
   it("never marks ready for a case with no document", async () => {
