@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { clean, enter, recording, rows, watch, type Role } from "./support";
+import { clean, enter, expectSealHandedOver, handOff, recording, rows, watch, watchHandOff, type Role } from "./support";
 
 const SKINS: [string, Role][] = [["cn", "judge"], ["eu", "judge_eu"], ["eg", "judge_eg"], ["gr", "judge_gr"]];
 
@@ -213,6 +213,20 @@ for (const route of ["queue", "open"]) {
       return !!top?.closest("[data-testid='demo-tour']");
     });
     expect(covered).toBe(false);
+  });
+}
+
+// The cover used to end with its seal at a spot written into the CSS (252px + 40px across, 80px down), while the band's
+// real seal sat 190px further right: the two jumped apart at the hand-over. Now the cover's last frame has the seal on
+// the console's own, and the console (not the landing page) under it.
+const WAYS_IN: [string, string][] = [...SKINS.map(([skin]): [string, string] => [skin, `landing-card-${skin}`]), ["admin", "demo-enter-admin"], ["moderator", "demo-enter-moderator"]];
+for (const [way, testId] of WAYS_IN) {
+  test(`${way}: the cover's seal lands on the console's own`, async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await watchHandOff(page);
+    await page.getByTestId(testId).click();
+    expectSealHandedOver(await handOff(page));
   });
 }
 
