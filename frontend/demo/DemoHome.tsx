@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Landing } from "@/src/components/landing/Landing";
 import type { SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { DemoSecondary, ROLE_OF_SKIN, startEntrance, useEnter } from "./DemoEntrances";
+import { DemoSecondary, ROLE_OF_SKIN, useEnter } from "./DemoEntrances";
 import DemoSoul, { DemoSoulEntry } from "./DemoSoul";
 import { langOf, soulRecording } from "./store";
 
@@ -27,10 +27,7 @@ export default function DemoHome() {
   return (
     <Landing
       kicker={t("demo.landing.kicker")}
-      onEnter={(skin, card) => {
-        startEntrance(skin, card);
-        void enter(ROLE_OF_SKIN[skin]);
-      }}
+      onEnter={(skin, card) => void enter(ROLE_OF_SKIN[skin], card)}
       onWarm={(skin) => warm(ROLE_OF_SKIN[skin])}
       secondary={
         <>

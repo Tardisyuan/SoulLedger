@@ -299,6 +299,81 @@ test("from one underworld to another: the seal covers it, no cross-fade of the o
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
 });
 
+// The two buttons under the cards used to sign in with no cover: the landing page stood, button spinning, until the
+// console replaced it (about 1 s on a desktop, 3.5 s on a slow phone).
+for (const [role, civ] of [["admin", null], ["moderator", "cn"]] as const) {
+  test(`${role}: the way in is covered until the console is up${civ ? `, by ${civ}'s seal` : ", by a neutral cover"}`, async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    // From the click on, every frame: the landing page in view with no cover over it is the defect.
+    await page.evaluate(() => {
+      const seen = { seal: false, bare: 0 };
+      (window as unknown as { __entry: typeof seen }).__entry = seen;
+      const tick = () => {
+        const sealUp = !!document.querySelector("[data-testid='demo-entrance']");
+        const landing = !!document.querySelector("[data-testid='landing-civs']");
+        if (sealUp) seen.seal = true;
+        if (landing && !sealUp) seen.bare++;
+        if (landing || sealUp) requestAnimationFrame(tick);
+      };
+      document.addEventListener("click", () => requestAnimationFrame(tick), { capture: true, once: true });
+    });
+    await page.getByTestId(`demo-enter-${role}`).click();
+    const cover = page.getByTestId("demo-entrance");
+    await expect(cover).toBeVisible();
+    if (civ) await expect(cover).toHaveAttribute("data-civ", civ);
+    else {
+      await expect(cover).toHaveAttribute("data-neutral", "");
+      await expect(cover).not.toHaveAttribute("data-civ", /./);
+      await expect(cover.locator("[data-brand-mark]")).toHaveCount(1);
+    }
+    await expect(cover).toHaveCount(0, { timeout: 8000 });
+    await expect(page).not.toHaveURL(/\/$/);
+    await expect(page.getByTestId("user-menu")).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { __entry: object }).__entry)).toEqual({ seal: true, bare: 0 });
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  });
+}
+
+// 「回放这一生」used to stop only at stops with a date. 屈原 has no station-change events, so the replay was one court:
+// the thirteen stations went dark for 1.2 s and the map snapped back. Now it walks the road, a stop at a time.
+test("China: replaying 屈原's life walks the stations one by one", async ({ page }) => {
+  await enter(page, "judge");
+  await page.getByTestId("demo-tour-collapse").click();
+  const button = page.getByTestId("underworld-map-replay");
+  await button.scrollIntoViewIfNeeded();
+  const states = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll("[data-testid='underworld-map'] g.node[id]"))
+        .map((n) => `${n.id}:${n.getAttribute("data-state")}`)
+        .join(","),
+    );
+  const now = await states();
+  await button.click();
+  const card = page.getByTestId("underworld-map-replay-card");
+  await expect(card).toContainText(/1 \/ \d+/);
+  const total = Number((await card.textContent())?.match(/1 \/ (\d+)/)?.[1]);
+  expect(total).toBeGreaterThanOrEqual(10);
+  // The first stop is the first station on the road, and what lies beyond it is dark.
+  const map = page.getByTestId("underworld-map");
+  await expect(map.locator("g.node#TUDI_TEMPLE")).toHaveAttribute("data-state", "current");
+  await expect(map.locator("g.node#HUANHUN_CLIFF")).toHaveAttribute("data-state", "ahead");
+  const seen = new Set([await states()]);
+  for (let i = 0; i < 8; i++) {
+    await page.waitForTimeout(600);
+    seen.add(await states());
+  }
+  // Moving on its own: the current stop changes over time, and none of these is the map as it is now.
+  expect(seen.size).toBeGreaterThanOrEqual(4);
+  await expect(card).toContainText(/[3-9] \//);
+  expect(seen.has(now)).toBe(false);
+  await card.click();
+  await expect(card).toHaveCount(0);
+  expect(await states()).toBe(now);
+});
+
 test("Greece: the tour's second step lights the crossing line, the third the judges' fork", async ({ page }) => {
   await enter(page, "judge_gr");
   // A judge lands on the protagonist's page: the first step is already where it points, no 回到这一步 to press.

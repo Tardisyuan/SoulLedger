@@ -79,7 +79,7 @@ export function NavIcon({ icon }: { icon: string | null | undefined }) {
 
 export const NAV_MODE_KEY = "soulledger-nav-mode";
 /** 品牌字标。一直是字面量(此前的「SoulLedger / 灵魂簿」两行也是):它是标的一部分,不随界面语言换。 */
-const BRAND_WORD = "灵魂簿";
+export const BRAND_WORD = "灵魂簿";
 
 export type NavMode = "expanded" | "collapsed";
 /** 769–1199 强制收起;≤ 768 根本没有侧栏,同样不让切。 */

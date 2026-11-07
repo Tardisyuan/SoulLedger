@@ -18,8 +18,14 @@ export const SKINS = Object.keys(ROLE_OF_SKIN) as SealCiv[];
 const ENTRANCE_EVENT = "soulledger-demo-entrance";
 export const TOUR_KEY = "soulledger_demo_tour";
 
-/** The seal's overlay lives in the layout, so it outlasts the navigation it covers (`DemoEntranceOverlay`). */
-export function startEntrance(skin: SealCiv, card?: HTMLElement): void {
+/**
+ * What covers the way in. The administrator's console belongs to no underworld: a neutral cover (`null`). The moderator's
+ * hall is 中国地府's (the recording's tenant is CN_DIYU) and the console opens in its colours, so its seal.
+ */
+const SKIN_OF_ROLE: Record<DemoRole, SealCiv | null> = { judge: "cn", judge_eu: "eu", judge_eg: "eg", judge_gr: "gr", moderator: "cn", admin: null };
+
+/** The seal's overlay lives in the layout, so it outlasts the navigation it covers (`EntranceOverlay`). */
+function startEntrance(skin: SealCiv | null, card?: HTMLElement): void {
   const box = card?.getBoundingClientRect();
   const origin = box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   window.dispatchEvent(new CustomEvent(ENTRANCE_EVENT, { detail: { skin, origin } }));
@@ -50,13 +56,19 @@ export function useWarm() {
   };
 }
 
-/** One sign-in, through the same `authApi.login` the real page uses (the demo answers it). The tour starts over with it. */
+/**
+ * One sign-in, through the same `authApi.login` the real page uses (the demo answers it). The tour starts over with it.
+ * Every way in goes behind the cover, started here rather than by each caller: the administrator and moderator buttons
+ * and the login page's list called only this, and the landing page stood still, the button spinning, until the console
+ * replaced it (about 1 s on a desktop, 3.5 s on a slow phone).
+ */
 export function useEnter() {
   const { setUser } = useTenant();
   const router = useRouter();
   const warm = useWarm();
   const [entering, setEntering] = useState<DemoRole | null>(null);
-  const enter = async (role: DemoRole) => {
+  const enter = async (role: DemoRole, from?: HTMLElement) => {
+    startEntrance(SKIN_OF_ROLE[role], from);
     setEntering(role);
     warm(role);
     const { data } = await authApi.login({ username: DEMO_USERNAMES[role], password: "demo", remember: false });
@@ -94,7 +106,7 @@ export function DemoSecondary() {
           disabled={entering !== null}
           loading={entering === role}
           title={t(`demo.role_${role}_desc`)}
-          onClick={() => void enter(role)}
+          onClick={(e) => void enter(role, e.currentTarget)}
           data-testid={`demo-enter-${role}`}
         >
           {t(`demo.role_${role}`)}
@@ -118,7 +130,7 @@ export function DemoEntrances() {
               data-testid={`demo-enter-${ROLE_OF_SKIN[skin]}`}
               disabled={entering !== null}
               aria-label={t("demo.landing.card_label", { civ: t(`demo.civ.${skin}.name`) })}
-              onClick={() => void enter(ROLE_OF_SKIN[skin])}
+              onClick={(e) => void enter(ROLE_OF_SKIN[skin], e.currentTarget)}
               className="seal-on-band band-colour flex w-full items-center gap-3 p-3 text-left disabled:opacity-60"
             >
               <Seal size={36} civ={skin} glyphs={null} court={t(`demo.civ.${skin}.name`)} />

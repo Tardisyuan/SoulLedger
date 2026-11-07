@@ -51,6 +51,8 @@ export async function enter(page: Page, role: Role): Promise<void> {
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
   await page.getByTestId("user-menu").waitFor();
   await page.waitForLoadState("networkidle");
+  // Every way in is behind the cover now, the login page's list too: it goes once the console is drawn.
+  await page.getByTestId("demo-entrance").waitFor({ state: "detached" });
 }
 
 /** The account menu's sign-out, by way of its confirmation. */
