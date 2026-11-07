@@ -1,7 +1,12 @@
 /** The pure parts of withLiveActivity.js (Swift, plists, build settings); dependency-free so jest can load them. */
 
-/** The widget extension's target, folder (ios/<TARGET>/) and the suffix of its bundle id. */
-const TARGET = "SoulLedgerLive";
+/**
+ * The widget extension's target and folder (ios/<TARGET>/). Not "SoulLedgerLive": that is the local module's pod,
+ * and an extension target of the same name copies its own SoulLedgerLive.swiftmodule into BUILT_PRODUCTS_DIR,
+ * where the app's `import SoulLedgerLive` finds it before the pod's — ExpoModulesProvider.swift then fails with
+ * "cannot find 'SoulLedgerLiveModule' in scope" (ios-sim-build run 42333208763).
+ */
+const TARGET = "SoulLedgerLiveExtension";
 const BUNDLE_SUFFIX = "live";
 /** The attributes are compiled into both the app (the local module) and the extension: one file, copied. */
 const ATTRIBUTES_FILE = "SoulLedgerLiveAttributes.swift";
