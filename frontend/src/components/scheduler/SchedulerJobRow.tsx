@@ -89,7 +89,7 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
         <h3 className="text-sm font-medium text-[oklch(var(--color-ink))] break-words">
           <DomainEnum namespace={JOB_DESCRIPTION_NAMESPACE} value={jobDescriptionMember(job)} />
         </h3>
-        <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all" title={job.periodic_task_name}>
+        <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))] break-all" title={job.periodic_task_name}>
           {job.periodic_task_name}
         </p>
         <div className="flex flex-wrap gap-1">
@@ -152,9 +152,9 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
             aria-label={t("scheduler.actions.toggle", { job: job.task_name })}
             disabled={togglePending}
             onClick={() => onToggle(job)}
-            // 规范 v3:控件点击区至少 44(`--control-h-sm`)。开关的样子仍是规范 v2 A1 的 32 × 18
+            // 点击区 `--control-h-sm`(触屏 44,精确指针 32)。开关的样子仍是规范 v2 A1 的 32 × 18
             // 轨道(1.5px 框;开 = ink 实底、纸色滑块在右;关 = 空底、ink3 框与滑块在左;
-            // 禁用 = s2 底、line 框,不调透明度;选中不用匾色),现在画在 44 × 44 的按钮里 ——
+            // 禁用 = s2 底、line 框,不调透明度;选中不用匾色),现在画在这个见方的按钮里 ——
             // 此前按钮本身就是那条 18 高的轨道,手机上点不准。
             className="group inline-flex size-(--control-h-sm) shrink-0 items-center justify-center disabled:cursor-not-allowed"
           >

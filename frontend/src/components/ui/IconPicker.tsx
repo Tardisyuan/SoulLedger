@@ -53,7 +53,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-accent))] transition-colors min-w-[120px]"
+          className="flex items-center gap-2 px-3 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-accent))] transition-colors min-w-[120px]"
         >
           {SelectedIcon ? (
             <SelectedIcon className="w-4 h-4 text-[oklch(var(--color-accent-ink))]" />
@@ -85,7 +85,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("icon_picker.search")}
             aria-label={t("icon_picker.search")}
-            className="w-full bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            className="w-full bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-line))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           />
 
           {!search && (

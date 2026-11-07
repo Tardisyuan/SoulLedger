@@ -124,7 +124,7 @@ function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
           : undefined
       }
     >
-      {/* 规范 v3 列表(审判队列同一种表):表头 44、11 px 界面字体,行最小 64,行与行之间是行线。
+      {/* 规范 v3 列表(审判队列同一种表):表头 `--control-h-sm`、11 px 界面字体,行最小 `--table-row-h`(触屏 64、精确指针 46),行与行之间是行线。
           窄于 md 不是表,是一叠卡片(每格自带标签)。 */}
       <div>
         <div
@@ -149,7 +149,7 @@ function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
                 <Link href={`/souls/${a.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline break-words">
                   {a.soul_name}
                 </Link>
-                <p className="text-xs text-[oklch(var(--color-ink-tertiary))] break-all">
+                <p className="text-xs text-[oklch(var(--color-ink-subtle))] break-all">
                   <SoulCode code={a.soul_code} />
                 </p>
               </div>

@@ -55,7 +55,7 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
   ];
 
   return (
-    <section aria-labelledby="queue-identity-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-identity-heading" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <h3 id="queue-identity-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.identity")}
       </h3>
@@ -91,7 +91,7 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
         {rows.map((row) => (
           <div key={row.label}>
             <dt className="text-xs text-[oklch(var(--color-ink-muted))]">{row.label}</dt>
-            <dd className={row.value ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-tertiary))]"}>
+            <dd className={row.value ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-subtle))]"}>
               {row.value ?? t("judgment.queue.not_recorded")}
             </dd>
           </div>
@@ -145,7 +145,7 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
   ];
 
   return (
-    <section aria-labelledby="queue-ledger-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-ledger-heading" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <h3 id="queue-ledger-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.ledger")}
       </h3>
@@ -284,7 +284,7 @@ export function PriorCyclesPanel({ cycles }: { cycles: QueuePriorCycle[] }) {
   ];
 
   return (
-    <section aria-labelledby="queue-cycles-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-cycles-heading" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <h3 id="queue-cycles-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.prior_cycles")}
       </h3>
@@ -305,7 +305,7 @@ export function RealmOptionsPanel({ realms }: { realms: QueueRealm[] }) {
   const { t } = useI18n();
 
   return (
-    <section aria-labelledby="queue-realms-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-realms-heading" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
       <h3 id="queue-realms-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-1">
         {t("judgment.queue.realm_options")}
       </h3>
@@ -315,7 +315,7 @@ export function RealmOptionsPanel({ realms }: { realms: QueueRealm[] }) {
           §4.2 lists "applicable realm options" as decision context. */}
       <p className="text-xs text-[oklch(var(--color-ink-subtle))] mb-3">{t("judgment.queue.realm_options_hint")}</p>
       {realms.length === 0 ? (
-        <p className="text-sm text-[oklch(var(--color-ink-tertiary))]">{t("judgment.queue.realms_empty")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("judgment.queue.realms_empty")}</p>
       ) : (
         <ul className="flex flex-wrap gap-2">
           {realms.map((realm) => (

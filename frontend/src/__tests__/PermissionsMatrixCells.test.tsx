@@ -449,7 +449,7 @@ describe("roles table (E-11b)", () => {
     );
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "permissions.segments.roles" }));
+    fireEvent.click(screen.getByRole("radio", { name: "permissions.segments.roles" }));
     const row = (await screen.findByText("YIN_CLERK")).closest("tr") as HTMLElement;
     // No row-end edit / delete: the row's one control is the opener.
     expect(within(row).getAllByRole("button")).toHaveLength(1);
@@ -480,7 +480,7 @@ describe("roles table (E-11b)", () => {
     api.roles.update.mockResolvedValue({ data: {} });
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "permissions.segments.roles" }));
+    fireEvent.click(screen.getByRole("radio", { name: "permissions.segments.roles" }));
     const row = (await screen.findByText("YIN_CLERK")).closest("tr") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "殿司" }));
     const drawer = await screen.findByRole("dialog");
@@ -500,7 +500,7 @@ describe("roles table (E-11b)", () => {
     mockTenant = { id: 7 };
     renderPage();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "permissions.segments.roles" }));
+    fireEvent.click(screen.getByRole("radio", { name: "permissions.segments.roles" }));
     const row = (await screen.findByText("YIN_CLERK")).closest("tr") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "殿司" }));
     const drawer = await screen.findByRole("dialog");

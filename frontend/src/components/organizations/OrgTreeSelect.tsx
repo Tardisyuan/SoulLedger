@@ -100,7 +100,7 @@ export function OrgTreeSelect(props: Props) {
         placeholder={t("souls.search")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="h-(--control-h-md) border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-sm"
+        className="rounded-control h-(--control-h-md) border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-sm"
       />
       <div className="max-h-56 overflow-y-auto border border-[oklch(var(--color-line))]">
         {props.mode === "single" && props.noneLabel && !q && (

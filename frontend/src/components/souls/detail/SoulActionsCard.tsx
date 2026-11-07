@@ -147,7 +147,7 @@ export function SoulActionsCard({
                   commit — a soul with no pending disposition has no
                   rebirth to configure. */}
               {sixPaths && dispositions.some(d => !d.is_executed) && (
-                <div className="pb-3 mb-3 border-b border-[oklch(var(--color-hairline))]">
+                <div className="pb-3 mb-3 border-b border-[oklch(var(--color-line))]">
                   <RebirthFormSelect
                     value={rebirthForm}
                     onChange={onRebirthFormChange}

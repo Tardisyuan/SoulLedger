@@ -134,7 +134,7 @@ test.describe("Data scope: a judge set to 本机构 sees only that organization"
     for (const s of [S_HOME, S_PEER, S_PEER_MINE]) await expect(page.getByText(s.name, { exact: true }).filter({ visible: true })).toBeVisible();
 
     await page.goto("/permissions");
-    await page.getByRole("button", { name: /^角色/ }).first().click();
+    await page.getByRole("radio", { name: /^角色/ }).first().click();
     await page.locator("tr", { hasText: "JUDGE" }).getByRole("button").click();
     const drawer = page.getByRole("dialog");
     const scope = drawer.getByRole("region", { name: "数据范围" });

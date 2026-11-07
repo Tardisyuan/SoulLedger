@@ -234,8 +234,8 @@ export function TryPanel({
             </p>
           )}
           {result && (
-            <div className="border border-[oklch(var(--color-hairline))]">
-              <p className={`border-b border-[oklch(var(--color-hairline))] px-2 py-1 ${SUBTLE}`}>
+            <div className="border border-[oklch(var(--color-line))]">
+              <p className={`border-b border-[oklch(var(--color-line))] px-2 py-1 ${SUBTLE}`}>
                 {t("assist_admin.try.tools", { count: String(result.tools_called.length) })}
               </p>
               {result.tools_called.length ? (

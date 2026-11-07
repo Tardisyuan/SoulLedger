@@ -181,7 +181,7 @@ function NextPanel({
   return (
     <section aria-labelledby="welcome-next-title" className={cn(PANEL, "flex flex-col")}>
       <header className="flex items-baseline justify-between gap-3 px-4 pt-4">
-        <h2 id="welcome-next-title" className="text-lg text-[oklch(var(--color-ink))]">
+        <h2 id="welcome-next-title" className="font-title text-lg text-[oklch(var(--color-ink))]">
           {t("welcome.next_title")}
         </h2>
         {user ? (
@@ -242,7 +242,7 @@ function ActivityPanel({
     <section aria-labelledby="welcome-activity-title" aria-busy={load.state === "loading" || undefined} className={cn(PANEL, "min-w-0")}>
       <header className="flex items-center justify-between gap-3 px-4 pt-2">
         <div className="min-w-0">
-          <h2 id="welcome-activity-title" className="text-lg text-[oklch(var(--color-ink))]">
+          <h2 id="welcome-activity-title" className="font-title text-lg text-[oklch(var(--color-ink))]">
             {t("welcome.recent_activity")}
           </h2>
           <p className={cn("text-xs", MUTED)}>{t("welcome.activity_source", { n: String(ACTIVITY_MAX) })}</p>

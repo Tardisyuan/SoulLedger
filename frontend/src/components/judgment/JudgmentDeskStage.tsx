@@ -214,7 +214,7 @@ export function MaterialDock({
             }`}
           >
             {fullCase && (
-              <h3 className="mb-3 flex items-baseline gap-3 text-lg text-[oklch(var(--color-ink))]">
+              <h3 className="mb-3 flex items-baseline gap-3 font-title text-lg text-[oklch(var(--color-ink))]">
                 <span aria-hidden="true" className="font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
                   {String(i + 1).padStart(2, "0")}
                 </span>

@@ -88,11 +88,11 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           'flex items-center gap-2 h-(--control-h-sm) px-3 border text-sm transition-colors',
           active
             ? 'bg-[oklch(var(--color-accent)/0.12)] border-[oklch(var(--color-accent)/0.4)] text-[oklch(var(--color-ink))]'
-            : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))]'
+            : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-line-strong))]'
         )}
       >
         <span>{activeOption ? activeOption.label : config.label}</span>
-        <span className={cn('font-mono text-xs', active ? 'text-[oklch(var(--color-accent-ink))]' : 'text-[oklch(var(--color-ink-tertiary))]')}>▾</span>
+        <span className={cn('font-mono text-xs', active ? 'text-[oklch(var(--color-accent-ink))]' : 'text-[oklch(var(--color-ink-subtle))]')}>▾</span>
       </button>
       {open && (
         <div
@@ -148,13 +148,13 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-2.5 p-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline-strong))]',
+        'flex flex-wrap items-center gap-2.5 p-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))]',
         className
       )}
     >
       {onSearchChange && (
-        <div className="flex items-center gap-2 h-(--control-h-sm) px-3 border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-2))] min-w-[220px]">
-          <span aria-hidden="true" className="font-mono text-sm text-[oklch(var(--color-ink-tertiary))]">
+        <div className="flex items-center gap-2 h-(--control-h-sm) px-3 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-2))] min-w-[220px]">
+          <span aria-hidden="true" className="font-mono text-sm text-[oklch(var(--color-ink-subtle))]">
             ⌕
           </span>
           <input
@@ -163,7 +163,7 @@ export function FilterBar({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder}
-            className="flex-1 bg-transparent text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-tertiary))] focus:outline-hidden"
+            className="flex-1 bg-transparent text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden"
           />
         </div>
       )}

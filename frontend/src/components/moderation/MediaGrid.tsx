@@ -71,17 +71,17 @@ export function MediaViewer({ media, index, onIndex, onClose }: { media: PostMed
             if (e.key === "ArrowRight") step(1);
             else if (e.key === "ArrowLeft") step(-1);
           }}
-          // 纯黑底是查看器的规格(不是 canvas):照片在任何主题下都放在同一种底上看。
+          // 纯黑底是查看器的规格(不是 canvas):照片在任何主题下都放在同一种底上看。上面的字与框取 on-main(v4 onSolid,两主题都是白)。
           className="fixed inset-0 z-dialog flex items-center justify-center bg-black p-12 focus:outline-hidden"
         >
           {current && index !== null ? (
             <>
               <img src={mediaUrl(current.url)} alt={caption(t, current, index)} className="max-h-full max-w-full object-contain" />
-              <span className="absolute bottom-4 left-4 font-mono text-2xs text-white">
+              <span className="absolute bottom-4 left-4 font-mono text-2xs text-[oklch(var(--color-on-main))]">
                 {caption(t, current, index)}
                 {media.length > 1 ? ` · ${index + 1} / ${media.length}` : ""}
               </span>
-              <Dialog.Close className="absolute right-4 top-4 min-h-(--control-h-sm) border border-white px-3 text-sm text-white focus-visible:outline-white">
+              <Dialog.Close className="absolute right-4 top-4 rounded-control min-h-(--control-h-sm) border border-[oklch(var(--color-on-main))] px-3 text-sm text-[oklch(var(--color-on-main))] focus-visible:outline-[oklch(var(--color-on-main))]">
                 {t("common.close")}
               </Dialog.Close>
             </>

@@ -60,7 +60,7 @@ export const DENSITY_KEY = "soulledger-density";
 export type Density = "comfortable" | "compact";
 
 /**
- * 密度写在 <html data-density>,globals.css 据此在紧凑时把表格行、筛选与控件压矮(v4:行高 36、控件 30、
+ * 密度写在 <html data-density>,globals.css 据此在紧凑时把表格行、筛选与控件压矮(行高 36、控件 32、表头 28;默认档在精确指针上已是 v4 的 36 / 46,
  * 正文 13);页头与卡片间距不动。只在 ≥ 769 且指针精确时生效 —— 触屏的 44 是点按下限,不让它变小。
  * 存在 localStorage;存储被禁时只活在本页。
  */

@@ -333,7 +333,7 @@ export function SoulLifecycleTimeline({
                   {row.metadata && <div title={row.metadata} className="text-xs text-[oklch(var(--color-ink-muted))] truncate">{row.metadata}</div>}
                   {isTerminalRow && (
                     <div
-                      className={`text-xs font-mono mt-0.5 ${isAnnihilated ? "text-[oklch(var(--color-ink-tertiary))]" : "text-[oklch(var(--color-ink-muted))]"}`}
+                      className={`text-xs font-mono mt-0.5 ${isAnnihilated ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink-muted))]"}`}
                     >
                       {isAnnihilated
                         ? tf("souls.detail.timeline.terminal_flush", "── 其人已无")
@@ -379,7 +379,7 @@ export function SoulLifecycleTimeline({
                     )}
                   </button>
                   <Collapse open={isOpen} id={`timeline-system-${row.id}`} className="mt-1">
-                    <div className="space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">
+                    <div className="space-y-0.5 pl-2 border-l border-[oklch(var(--color-line))]">
                       {row.items.map((item) => {
                         const described = describeSystemEvent(item, systemEventLabels);
                         return (
@@ -414,7 +414,7 @@ export function SoulLifecycleTimeline({
 
             if (row.kind === "future") {
               return (
-                <RowShell key={row.id} date={null} hideConnector={isLast} dashed dotClassName="bg-[oklch(var(--color-surface-3))] border border-dashed border-[oklch(var(--color-hairline-strong))]">
+                <RowShell key={row.id} date={null} hideConnector={isLast} dashed dotClassName="bg-[oklch(var(--color-surface-3))] border border-dashed border-[oklch(var(--color-line-strong))]">
                   <div className="text-sm text-[oklch(var(--color-ink-subtle))]">{row.title}</div>
                   <div className="text-xs text-[oklch(var(--color-ink-subtle))]">{row.hint}</div>
                 </RowShell>

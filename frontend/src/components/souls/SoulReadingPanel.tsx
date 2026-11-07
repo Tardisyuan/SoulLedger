@@ -286,7 +286,7 @@ function GuiltAndPenaltyReading({
           neutral em-dash instead of a number, and no shared axis with the
           figure above. Poena is an honest absence, not a zero, and it must
           never read as something that offsets or compares against culpa. */}
-      <div className="border-t border-dashed border-[oklch(var(--color-hairline))] pt-3">
+      <div className="border-t border-dashed border-[oklch(var(--color-line))] pt-3">
         <div className="flex justify-between items-center">
           <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.reading.poena_label")}</span>
           {/* aria-hidden, not aria-labelled. The label used to be the same key
@@ -393,7 +393,7 @@ function UnavailableReading({
           from "these are not weights". A reader who scrolls from a Greek soul's
           road count to this box is making exactly the comparison the review
           caught, and the box is the place it is least defended against. */}
-      <div className="border border-dashed border-[oklch(var(--color-hairline))] p-3 space-y-2">
+      <div className="border border-dashed border-[oklch(var(--color-line))] p-3 space-y-2">
         <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
           {t("souls.detail.reading.unavailable_raw_data")}
         </p>
@@ -409,7 +409,7 @@ function UnavailableReading({
             {demeritScore}
           </Figure>
         </div>
-        <div className="flex justify-between text-sm border-t border-[oklch(var(--color-hairline))] pt-1">
+        <div className="flex justify-between text-sm border-t border-[oklch(var(--color-line))] pt-1">
           <span className="text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
           <Figure field="karmic_balance" quantity={SUMMARY_QUANTITIES.karmic_balance} t={t} className="tabular-nums text-[oklch(var(--color-ink))]">
             {karmicBalance}

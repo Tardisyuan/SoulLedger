@@ -50,7 +50,8 @@ import { cn } from "@/lib/utils";
  *                                      自己的 `eyebrow` 是同一个排版位。
  *      面板标题   `text-md`            一整块面板/区段的标题,和页面的 `<h1>`
  *                 (2026-10-01 起改为 `text-lg` 20px,跟 v3 的「模块标题」;
- *                  区块标签同日去掉 `font-mono`。现行表见 DESIGN.md)
+ *                  区块标签同日去掉 `font-mono`;规范 v4(用户 2026-11-07)起
+ *                  写作 `font-title text-lg`,标题衬线。现行表见 DESIGN.md)
  *                                      同族、低一档。weight 由
  *                                      `--text-md--font-weight: 600` 提供。
  *      列表行标题 `text-sm font-medium` 一屏几十个的那种标题 —— 列表/信息流里
@@ -359,7 +360,7 @@ export function PageShell({
       {/* 页头：不 sticky。 */}
       <header
         data-page-shell-header=""
-        className="border-b border-[oklch(var(--color-hairline))]"
+        className="border-b border-[oklch(var(--color-line))]"
       >
         <div className={cn(width, "px-4 md:px-8 pt-8 pb-6")}>
           {leading || aside ? (
@@ -394,17 +395,17 @@ export function PageShell({
           为什么不塞进 children：它必须在筛选栏之上，否则筛选看起来像作用于
           所有标签页而不是当前这个。 */}
       {tabs ? (
-        <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-hairline))]">
+        <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-line))]">
           <div className={cn(width, "px-4 md:px-8 flex items-center gap-1")}>{tabs}</div>
         </div>
       ) : null}
 
       {/* 筛选栏：全站唯一贴在 AppLayout 52px 工具条(h-13)下沿的一段。
-          `h-16 py-2`:border-box 下总高 64、内容 48,放得下规范 v3 md 档的控件(见下)。 */}
+          `h-16 py-2`:border-box 下总高 64、内容 48,放得下 md 档的控件(触屏 48、精确指针 36,见下)。 */}
       {filters ? (
         <div
           data-page-shell-filters=""
-          className="sticky top-(--below-band) z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
+          className="sticky top-(--below-band) z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-line))]"
         >
           {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
               筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、
@@ -417,8 +418,8 @@ export function PageShell({
               「可见、可用、可滚动到」却点不动。mobile-chrome 上三条 E2E 长期
               超时失败,根因就在这里,而它看起来完全不像一个筛选栏的问题。
               
-              滚动而不是换行:`h-16`(64px = 上下各 8 padding + 48 内容,即规范 v3 的 md 档
-              控件;v3 `.queue-toolbar` 是 min-height 62)是写死的高度,换行会破坏它。
+              滚动而不是换行:`h-16`(64px = 上下各 8 padding + 48 内容,即触屏 md 档
+              控件的高;v3 `.queue-toolbar` 是 min-height 62)是写死的高度,换行会破坏它。
               2026-10-01 控件换到 v3 之前这里是 `h-14 py-3`(32 内容)—— 48 的输入放进去会被
               这个 overflow 容器从上下两头裁掉。 */}
           <div

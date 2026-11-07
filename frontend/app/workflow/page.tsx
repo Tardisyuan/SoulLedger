@@ -179,7 +179,7 @@ function WorkflowPageContent() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
                 {/* 06 是区块标题那一档。 */}
-                <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
+                <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
                 <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
               </div>
               <RequirePermission permissions="workflow.create">
@@ -241,7 +241,7 @@ function WorkflowPageContent() {
                         className={`w-full text-left px-3 py-2 border transition-colors ${
                           editingTemplateId === String(tmpl.id)
                             ? "bg-[oklch(var(--color-accent))]/10 border-[oklch(var(--color-accent))] text-[oklch(var(--color-ink))]"
-                            : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
+                            : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
                         }`}
                       >
                         <div title={localName(tmpl, locale)} className="text-sm font-medium truncate">{localName(tmpl, locale)}</div>
@@ -272,7 +272,7 @@ function WorkflowPageContent() {
                           className={`w-full text-left px-3 py-2 border transition-colors text-sm ${
                             selectedTemplate === tmpl.key && !editingTemplateId
                               ? "bg-[oklch(var(--color-accent))]/10 border-[oklch(var(--color-accent))] text-[oklch(var(--color-ink))]"
-                              : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
+                              : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
                           }`}
                         >
                           {presetLabel(tmpl.name, locale)}
@@ -287,7 +287,7 @@ function WorkflowPageContent() {
               <div className="flex-1 min-w-0">
                 {/* 预览内容 */}
                 {(editingTemplateId || selectedTemplate) && (
-                  <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
+                  <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4">
                     {/* 后端模板预览。标记在 `TemplatePreview`，两种来源共用一份；
                         差在字段名的部分收在 `backendPreviewModel` 这个适配器里。
                         按钮不进组件——这里有三颗且「查看」要发一次请求，预设那份
@@ -434,7 +434,7 @@ function WorkflowPageContent() {
 
                 {/* 未选中状态 */}
                 {!editingTemplateId && !selectedTemplate && (
-                  <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] px-4">
+                  <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] px-4">
                     <EmptyState title={t("workflow.select_from_left")} />
                   </div>
                 )}

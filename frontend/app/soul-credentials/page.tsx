@@ -290,7 +290,7 @@ function CredentialsPageContent() {
                       {c.soul_name}
                     </Link>
                   </p>
-                  <p className="text-xs text-[oklch(var(--color-ink-tertiary))] break-all">
+                  <p className="text-xs text-[oklch(var(--color-ink-subtle))] break-all">
                     <SoulCode code={c.soul_code} />
                   </p>
                   <StatusBadge namespace="soul_accounts.credential_status" value={c.status} tone={credentialTone(c.status)} />

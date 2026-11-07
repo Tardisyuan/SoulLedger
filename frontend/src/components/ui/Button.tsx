@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { Spinner } from "./Spinner";
 
 /**
- * The one button — 规范 v2「朱印」补足 A1 的按钮行,尺寸按规范 v3(44 / 48 / 56,见下面 size 那段):
+ * The one button — 规范 v2「朱印」补足 A1 的按钮行,尺寸见下面 size 那段(触屏 44 / 48 / 56,精确指针 v4 的 32 / 36 / 40),
+ * 圆角是控件那一档 4px(`rounded-control`,规范 v4,用户 2026-11-06):
  *
  * - **主**:匾色实底(`--color-main`,按 <html data-civ> 换文明)、onMain 字、无边框。
  *   主按钮是匾色的五处用法之一,只给落判这一类决定。深色主题下底色是身份带同一档
@@ -30,7 +31,7 @@ import { Spinner } from "./Spinner";
 
 const button = cva(
   [
-    "inline-flex items-center justify-center gap-2",
+    "inline-flex items-center justify-center gap-2 rounded-control",
     "font-semibold whitespace-nowrap select-none border",
     "transition-[color,background-color,border-color] duration-fast ease-standard",
     // Disabled (A1): s2 fill, ink3 text, no border, same opacity; hover and press are dead.
@@ -86,26 +87,18 @@ const button = cva(
           "active:bg-[oklch(var(--color-line))]",
         ],
       },
-      /* 规范 v3 的三档:**44 / 48 / 56**,数字在 globals.css 的 `--control-h-*`。
+      /* 三档高度,数字在 globals.css 的 `--control-h-*`:触屏 **44 / 48 / 56**(规范 v3,2026-10-01 起;
+       * 最小一档就是 393 宽下的触控下限,所以这里没有 `max-sm:min-h-11`),鼠标等精确指针 **32 / 36 / 40**
+       * (规范 v4,用户 2026-11-07;md 即 v4 的「控件 36」)。表格行同理:触屏 64、精确指针 46(`--table-row-h`)。
        *
-       * 2026-10-01 用户拍板换过去,推翻了同一天早些时候的「尺寸先整体不动」—— 当时的理由
-       * (只换一部分会让全站没有统一规范)仍然成立,所以这次是**一次换全**:按钮、输入、
-       * 筛选标签、分页、表格行(64px,`--table-row-h`)与各处手写的同类控件同一轮换。
-       * 代价当时就写明了:`size="sm"` 约 131 处、跨约 60 个文件,大多在表格行里;一屏能看到的
-       * 案卷行数变少,审判队列首当其冲。
-       *
-       * 最小的一档就是 44,也就是 393 宽下的触控下限,所以这里不再有 `max-sm:min-h-11`。
-       *
-       * 圆角仍是拍板:**按钮保持方角**。v3 的令牌表把 `--radius-control: 4px` 写成
-       * 「输入与小控件」,而 v3 自己的组件库原型里 `.ds-button` 没有 border-radius。
-       * 表与原型不一致,用户 2026-10-01 选了原型这一边。输入框与筛选标签是圆的
-       * (`rounded-control`),按钮不是 —— 这是有意的区分,不是漏改。 */
+       * 圆角:v3 时按钮是方角(2026-10-01 用户选了 v3 原型那一边);规范 v4(用户 2026-11-06)定
+       * 「控件 4、面板与弹层 6」,按钮属于控件,于是和输入框、筛选标签同为 `rounded-control`。 */
       size: {
-        /** 44 px: inside table rows (v3 行内动作列). */
+        /** Touch 44 / fine pointer 32: inside table rows (行内动作列). */
         sm: "h-(--control-h-sm) px-3 text-xs",
-        /** 48 px: the control height (v3 `.ds-button`). */
+        /** Touch 48 / fine pointer 36: the control height (v4 控件 36). */
         md: "h-(--control-h-md) px-3 text-sm",
-        /** 56 px. */
+        /** Touch 56 / fine pointer 40. */
         lg: "h-(--control-h-lg) px-4 text-sm",
       },
     },

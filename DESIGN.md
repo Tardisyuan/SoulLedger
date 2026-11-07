@@ -41,10 +41,11 @@ this document is the bug.
 
 **Square corners are a decision, not an omission.** The default *shape* radius is `0`
 — `--radius` and its seven siblings. Spec v3 (2026-10) added exactly two non-zero
-steps, each with a written job: `--radius-control` 4px for inputs and filter chips,
-`--radius-panel` for dialogs — 8px in v3, **6px since spec v4** (user decision 2026-11-06). **Buttons stay square** — the v3 token table says
-"inputs and small controls", the v3 component prototype draws square buttons, and on
-2026-10-01 the prototype won; `Button.tsx` says so beside its `size` block. Pills remain
+steps, each with a written job: `--radius-control` 4px for inputs, buttons and filter chips,
+`--radius-panel` for dialogs — 8px in v3, **6px since spec v4** (user decision 2026-11-06). **Buttons
+are controls and take `--radius-control` 4px** since spec v4 (the same decision: "controls 4, panels and
+popups 6"); under v3 they were square, because on 2026-10-01 the v3 prototype's square `.ds-button` won
+over its own token table. `Button.tsx` says so beside its `size` block. Pills remain
 the other exception, for avatars and spinners only, in the files listed in
 `ROUND_ALLOW` (`frontend/eslint.config.mjs`). The focus ring went square with
 spec v1 (`e78e5d88`), and `--radius-focus` was deleted with it.
@@ -66,7 +67,7 @@ every row below and checks the step, size, line-height and weight against
 | 身份带题字 · 第一档(≤ 768 不用) | 身份带里的 `<Title>` | `font-title text-display` | 40 / 54 | 600 | Noto Serif SC | `plaqueTitleStaysLargeText` |
 | 身份带题字 · 第二档 | 同上,第一档放不下时;≤ 768 从这一档起 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | 同上 |
 | 身份带题字 · 第三档 | 同上,第二档还放不下时 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC,最多两行 | 同上 |
-| 面板标题 | `<h2>` 或 `<h3>` | `text-lg` | 20 / 28 | 600 | 界面字体 | `PageShell.test` h2 / h3 |
+| 面板标题(区块、卡片的题) | `<h2>` 或 `<h3>` | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC(规范 v4,用户 2026-11-07) | `PageShell.test` h2 / h3 |
 | 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 13 / 20 | 500 | 界面字体 | 同上 |
 | 区块标签 | `<h2>` 或 `<h3>` | `text-2xs uppercase`,不带 `font-mono` | 11 / 16 | 400 | 界面字体 | 同上 |
 | 眉题 | 壳的 `eyebrow`,不是标题 | `text-2xs font-mono uppercase` | 11 / 16 | 400 | Geist Mono | `PageShell.test` |

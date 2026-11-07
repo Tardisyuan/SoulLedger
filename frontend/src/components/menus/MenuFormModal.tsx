@@ -203,7 +203,7 @@ export function MenuFormModal({
             {iconError ? (
               <p role="alert" className="text-xs text-[oklch(var(--color-danger))]"><span aria-hidden="true">! </span>{t("menus.icon_missing_error")}</p>
             ) : (
-              <p className="text-xs text-[oklch(var(--color-ink-tertiary))]">{t("menus.icon_required_hint")}</p>
+              <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("menus.icon_required_hint")}</p>
             )}
             {iconCollision && (
               <p className="text-xs text-[oklch(var(--color-status-warning))]">
@@ -277,7 +277,7 @@ export function MenuFormModal({
               </Button>
             ))}
           </div>
-          <p className="text-xs text-[oklch(var(--color-ink-tertiary))]">{t("menus.roles_empty_hint")}</p>
+          <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("menus.roles_empty_hint")}</p>
         </div>
         <div className="flex flex-col gap-1">
           {isAdmin ? (
@@ -301,7 +301,7 @@ export function MenuFormModal({
               </span>
             </div>
           )}
-          <p className="text-xs text-[oklch(var(--color-ink-tertiary))]">
+          <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
             {isAdmin ? t("menus.active_hint") : t("menus.active_readonly_note")}
           </p>
         </div>
@@ -315,7 +315,7 @@ export function MenuFormModal({
             />
             <label htmlFor={visibleId} className="text-sm text-[oklch(var(--color-ink))]">{t("menus.visible_label")}</label>
           </div>
-          <p className="text-xs text-[oklch(var(--color-ink-tertiary))]">{t("menus.visible_hint")}</p>
+          <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("menus.visible_hint")}</p>
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <Button

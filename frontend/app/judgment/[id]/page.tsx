@@ -742,7 +742,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const subtitle = (
     <span className="inline-flex flex-wrap items-center gap-2">
       {civilisation}
-      <span aria-hidden="true" className="text-[oklch(var(--color-ink-tertiary))]">·</span>
+      <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">·</span>
       <span className="font-mono tabular-nums">{formatDate(judgment.created_at)}</span>
       {/* 枉死(第五十一批 F-3):候审期间多一行「枉死 · 候至 日期 · 在枉死城」,到期后收成「枉死」;
           申诉属实提前释放后是「枉死 · 日期 已提前释放」(第五十七批 D-2b)。枉死城块头写同一句。 */}
@@ -1191,7 +1191,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 }
               >
                 <DomainText value={localName(judgment, locale, "judge_name")} />
-                <span aria-hidden="true" className="mx-2 text-[oklch(var(--color-ink-tertiary))]">·</span>
+                <span aria-hidden="true" className="mx-2 text-[oklch(var(--color-ink-subtle))]">·</span>
                 {judgment.concluded_at ? (
                   <span className="tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
                 ) : (

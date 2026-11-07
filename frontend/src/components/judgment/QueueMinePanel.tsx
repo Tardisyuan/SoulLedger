@@ -15,7 +15,7 @@ import { MOTION_EASINGS } from "@/lib/motion";
 /**
  * 审判队列上的「我认领的」分组(2026-09-30 用户拍板的三项新功能之一):服务端 `?group=mine`
  * —— 我认领、未结案的案子。每行带行首色标(B12「待我处理」),点名字把队列切到那一件,
- * 有改派权限时每行可改派。行高与审判队列同为 v3 的 64(`--table-row-h`),行内动作 44。
+ * 有改派权限时每行可改派。行高与审判队列同为 `--table-row-h`(触屏 64、精确指针 46),行内动作 `--control-h-sm`。
  *
  * 动效(交互与动效第 2 轮 §三 2 / 2c):刚认领的那件排在最上面,其余行 layout 补位
  * (base 200 · ease.standard,级差 30,只对前 8 行);改派走的那一行向左 8px 淡出
@@ -127,7 +127,7 @@ export function QueueMinePanel({
                         type="button"
                         onClick={() => onReassign(j)}
                         /* B9 行内动作:1px ink3 框、11 字。 */
-                        className="inline-flex h-(--control-h-sm) shrink-0 items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="inline-flex rounded-control h-(--control-h-sm) shrink-0 items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("judgment.claim.reassign")}
                       </button>
@@ -144,7 +144,7 @@ export function QueueMinePanel({
               onClick={() => void query.fetchNextPage()}
               disabled={query.isFetchingNextPage}
               /* 同行内动作:1px ink3 框、11 字。 */
-              className="mt-2 inline-flex h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-disabled-ink))]"
+              className="mt-2 inline-flex rounded-control h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-disabled-ink))]"
             >
               {t("judgment.claim.load_more", { n: String(total - loaded.length) })}
             </button>
