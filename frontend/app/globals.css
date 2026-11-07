@@ -786,44 +786,53 @@
     }
   }
 
-  /* 页头光(规范 v4 `.glowtop`,用户 2026-11-06「照定稿」):文明的 glow 按 `--glow-alpha`(深 .30 / 浅 .24)
-     从左上 30% 处的椭圆向下铺开 260px。工具条(`global-topbar`)与身份带共用一片光:身份带的椭圆圆心在
-     它上沿之上 52px(工具条的高),两条接得上。两条都吸顶、内容从下面滚过,所以 canvas 实底垫在光下面。
+  /* 页头(规范 v4,用户 2026-11-07:去掉 v3 的 156px 满幅身份带,「页头是一层文明色的柔光加该文明纹样,
+     再加一枚水印巨印」—— v4 第一批)。v4 定稿的页头是 52 的工具条(面包屑、时辰)下面一行 `.ph`:44 的印 +
+     殿名小字 + 衬线标题,光从左上 30% 处向下铺开。这里的页头 = 工具条 + 下面这条标题行(`Plaque`),两条都吸顶、
+     内容从下面滚过,所以 canvas 实底垫在光下面,光在两条的总高里淡尽(与 App 端 `IdentityBand` 的 `GlowTop`
+     同一个做法:光的高度就是页头的高度)。v4 稿的光是 260 高的椭圆、70% 处淡尽(182);我们的页头没有 182 高,
+     照 260 画会在标题行下沿留一道切边,所以椭圆的竖半径取「页头总高 ÷ 0.7」,淡尽处正好落在下沿:
+       桌面   52 + 96 = 148 → 212      ≤ 768   52 + 76 = 128 → 183      收起   52 + 44 = 96 → 137
      最亮处(圆心)= glow 按 alpha 混进 canvas;字的对比度按这一处量(plaqueTitleStaysLargeText)。 */
+  html {
+    --glow-r: 212px;
+  }
+  @media (max-width: 768px) {
+    html {
+      --glow-r: 183px;
+    }
+  }
+  html:has(.identity-band[data-compact]) {
+    --glow-r: 137px;
+  }
   .shell-glow {
     --glow-y: 0px;
     background:
-      radial-gradient(70% 260px at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
+      radial-gradient(70% var(--glow-r) at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
       oklch(var(--color-canvas));
   }
 
-  /* 身份带(v3 `IdentityBand` 的结构,`src/components/plaque/Plaque.tsx`;v4 起不再是匾色实底)。
-     v3 的实底是 `color-mix(main 90%, #111)` 上放白字;v4 定稿没有实底匾 —— 页头是 canvas 上的一片文明光,
-     题字是 ink,印是文明字色。高度(156 / 116 / 48)、分栏与收起都不动:筛选栏、内容槽位与几条 E2E
-     按这几个高度量。对比度见 plaqueTitleStaysLargeText.test.ts。 */
+  /* 标题行(`src/components/plaque/Plaque.tsx`,v4 `.ph`):印 + 殿名 / 题字,右边是案号。桌面 96 高(v4:工具条下
+     20 + 行高 52 + 22),≤ 768 至少 76;滚过 60px 收成 44(只留小印与殿名)。光的椭圆圆心在它上沿之上 52px
+     (工具条的高),与工具条接成一片。没有 v3 的品牌小字:v4 的品牌在侧栏左上角。对比度见 plaqueTitleStaysLargeText.test.ts。 */
   .identity-band {
     position: relative;
-    display: grid;
-    grid-template-columns: 190px minmax(0, 1fr) auto;
+    display: flex;
     align-items: center;
-    height: 156px;
+    justify-content: space-between;
+    gap: 24px;
+    height: 96px;
     padding: 0 32px;
     overflow: hidden;
     color: oklch(var(--color-ink));
     --glow-y: -52px;
     background:
-      radial-gradient(70% 260px at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
+      radial-gradient(70% var(--glow-r) at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
       oklch(var(--color-canvas));
     transition: height var(--transition-duration-reveal) var(--ease-standard);
   }
-  /* 矮带(v3 `.queue-product` / `.soul-product`):审判队列与灵魂详情,116 高,题字从 28 起
-     (Plaque.tsx `shortBandFor`)。收起照样是 48。 */
-  .identity-band[data-short] {
-    height: 116px;
-  }
   .identity-band[data-compact] {
-    height: 48px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    height: 44px;
     padding: 0 20px;
   }
   /* 纹样(v4 `.pat`):每个文明一种,线是 glow 的 22–30%,整层 .5,自上而下淡出;只在光里,不进卡片和表格。
@@ -844,13 +853,14 @@
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  /* 水印巨印(规范 v4 `.wm`,第七批各屏页头):300 宽的印,右 −40、上 −30,压出带的右上角;
-     文明字色(印的默认色),深色 7%、浅色 9%。和纹样层一样不是字(印文 aria-hidden),所以可以用 opacity
-     (inkOnSurfaceContract 规定 3 的白名单)。收起的 48px 带与中性皮(没有印)不画。 */
+  /* 水印巨印(规范 v4 `.wm`):v4 稿是 300 宽、右 −40、上 −30,压出页头的右上角;我们的标题行只有 96 高,
+     300 的印露出来只是一段弧,所以按比例缩成 140(≤ 768 是 112),同样压出右上角。文明字色(印的默认色),
+     深色 7%、浅色 9%。和纹样层一样不是字(印文 aria-hidden),所以可以用 opacity(inkOnSurfaceContract
+     规定 3 的白名单)。收起的 44 与中性皮(没有印)不画。 */
   .identity-watermark {
     position: absolute;
-    top: -30px;
-    right: -40px;
+    top: -22px;
+    right: -28px;
     opacity: 0.07;
     pointer-events: none;
   }
@@ -876,40 +886,32 @@
   [data-civ="gr"] .identity-pattern {
     background-image: repeating-linear-gradient(45deg, color-mix(in srgb, oklch(var(--color-glow)) 24%, transparent) 0 1px, transparent 1px 14px);
   }
-  .identity-brand,
   .identity-title,
   .identity-case {
     position: relative;
     min-width: 0;
   }
-  .identity-brand {
-    align-self: start;
-    margin-top: 22px;
-    font-family: var(--font-mono);
-    font-size: var(--text-2xs);
-    line-height: var(--text-2xs--line-height);
-    letter-spacing: 0.12em;
-  }
   .identity-title {
     display: flex;
+    flex: 1;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
   }
   .identity-court {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     font-size: var(--text-xs);
     line-height: var(--text-xs--line-height);
     overflow-wrap: anywhere;
   }
   .identity-case {
+    flex: none;
     text-align: right;
     font-size: var(--text-xs);
   }
   /* 案号(审判台,v3 `.identity-case span` / `b`):「案号」小字 11 在上,可复制的案号在下。
-     带上的字一律是带的字色(v4 起 ink),不用透明度降级(Design 第六十三批;品牌、殿名、「案号」靠字号
-     与等宽字区分)。守卫:inkOnSurfaceContract。
-     收起的 48 带里照样在右(v3 `is-compact` 只藏品牌与题字);收起时并成一行。 */
+     带上的字一律是带的字色(v4 起 ink),不用透明度降级(Design 第六十三批;殿名、「案号」靠字号
+     与等宽字区分)。守卫:inkOnSurfaceContract。收起时照样在右,并成一行。 */
   .identity-case[data-case] > span {
     display: block;
     margin-bottom: 5px;
@@ -925,58 +927,36 @@
     color: inherit;
   }
   /* 收起:只留印与殿名(v3 `is-compact`)。没有殿名(租户没给展示名)时留题字,不然带上只剩一枚印。 */
-  .identity-band[data-compact] .identity-brand,
   .identity-band[data-compact] .identity-court ~ [data-tier] {
     display: none;
   }
   .identity-band[data-compact] .identity-title {
-    gap: 12px;
+    gap: 10px;
   }
   .identity-band[data-compact] .identity-court {
     margin: 0;
-    font-size: var(--text-2xs);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  /* ≤ 768(底栏那一档):品牌在上、印与题字在下,不再分栏;v3 手机身份带 105–150,这里取
-     最低 120、随题字行数长高(egy 两行 20 时约 150)。右栏只留案号,别的文字不显示。 */
+  /* ≤ 768(底栏那一档):印 36、题字从 20 起,随题字行数长高(egy 两行 20 时约 92)。右栏只留案号。 */
   @media (max-width: 768px) {
     .identity-band:not([data-compact]) {
-      display: block;
       height: auto;
-      min-height: 120px;
-      padding: 16px 18px;
-    }
-    .identity-band .identity-brand {
-      margin: 0;
+      min-height: 76px;
+      padding: 12px 16px;
+      gap: 12px;
     }
     .identity-band:not([data-compact]) .identity-title {
-      margin-top: 17px;
       gap: 12px;
     }
     .identity-band .identity-case:not([data-case]) {
       display: none;
     }
-    /* 案号在手机上照样印(v3 `.is-mobile .identity-case`):右上角,与品牌同一行;收起时回到格子里。 */
-    .identity-band:not([data-compact]) .identity-case[data-case] {
-      position: absolute;
-      top: 15px;
-      right: 16px;
-    }
     .identity-band[data-compact] {
       padding: 0 12px;
     }
-    /* 矮带的手机档(v3 `.queue-mobile` / `.soul-mobile`):105 起、印 38、题字从 20 起。 */
-    .identity-band[data-short]:not([data-compact]) {
-      min-height: 105px;
-      padding: 13px;
-    }
-    .identity-band[data-short]:not([data-compact]) .identity-title {
-      gap: 9px;
-    }
   }
-
   /* 印(规范 v3 `.product-seal`,`src/components/plaque/Seal.tsx`):描边,不填色。2px 外框 +
      内缩 6px 的 1px 细框;≤ 32 是 1px 外框、内缩 4px。颜色是 currentColor:默认文明的字色
      (`--color-main-ink`,v4 civT),身份带上也是(v3 时随匾上的白字,`color: inherit`)。

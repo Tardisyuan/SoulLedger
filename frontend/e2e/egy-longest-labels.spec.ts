@@ -6,7 +6,7 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
 
 /**
  * 规范 v2 补足 C14:「用 egy 语言包里最长的 20 个键跑一遍截图测试,钉住这三条」——
- * 匾题字按实测宽度 40 → 28 → 界面字 20 两行;侧栏项(规范 v3 起:252 里一行、放不下截断、全文在 title)不溢出;窄屏底栏两行截断。
+ * 匾题字按实测宽度 28 → 20 → 20 两行(v4,2026-11-07;v3 是 40 → 28 → 20);侧栏项(规范 v3 起:252 里一行、放不下截断、全文在 title)不溢出;窄屏底栏两行截断。
  * (第三条的 App 底栏在 mobile/,这里钉的是 Web 393 下的同形底栏。)
  *
  * 字串从 egy.json 现取,不抄进这里:以后谁加了更长的页题或菜单名,它自动进这 20 条。
@@ -94,7 +94,7 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
         expect(plaque.lines).toBeLessThanOrEqual(2);
       } else {
         expect(plaque.overflowX).toBeLessThanOrEqual(1);
-        expect(plaque.fontSize).toBe(plaque.tier === "0" ? 40 : 28);
+        expect(plaque.fontSize).toBe(plaque.tier === "0" ? 28 : 20);
       }
 
       // ── 侧栏(≥ 769,规范 v3 展开 252)或底栏(≤ 768)。

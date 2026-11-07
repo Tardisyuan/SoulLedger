@@ -82,7 +82,7 @@ describe("身份带题字始终是大号文字,且是 Noto Serif SC 600", () => 
 
   it("读到了全部三档,而不是零档", () => {
     // 零档会让下面的 it.each 一条都不跑、整份测试照样绿 —— 正是这份测试要防的那种失效。
-    expect(scales.map((t) => t.name)).toEqual(["display", "xl", "lg"]);
+    expect(scales.map((t) => t.name)).toEqual(["xl", "lg", "lg"]);
   });
 
   it.each(scales.map((t, tier) => [tier, t.name, t.line] as const))(
@@ -140,7 +140,7 @@ describe("身份带(canvas 上的文明光)上的字", () => {
   it("读到的身份带就是 v4 的光:glow 的椭圆渐变垫 canvas,字是 ink", () => {
     const rule = ruleBody(".identity-band");
     expect(rule).toMatch(/color: oklch\(var\(--color-ink\)\);/);
-    expect(rule).toMatch(/radial-gradient\(70% 260px at 30% var\(--glow-y\), color-mix\(in srgb, oklch\(var\(--color-glow\)\) calc\(var\(--glow-alpha\) \* 100%\), transparent\), transparent 70%\),\s*oklch\(var\(--color-canvas\)\);/);
+    expect(rule).toMatch(/radial-gradient\(70% var\(--glow-r\) at 30% var\(--glow-y\), color-mix\(in srgb, oklch\(var\(--color-glow\)\) calc\(var\(--glow-alpha\) \* 100%\), transparent\), transparent 70%\),\s*oklch\(var\(--color-canvas\)\);/);
     expect(rule).not.toMatch(/--color-main/);
   });
 

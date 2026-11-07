@@ -123,7 +123,7 @@ const MAIN_FILL_ON_ROOT = /:root,\s*\[data-civ\]\s*\{[^}]*--main-fill:\s*([^;]+)
 const BAND_BG = /\n {2}\.identity-band\s*\{[^}]*background:\s*([^;]+);/.exec(stripCode(CSS))?.[1].replace(/\s+/g, " ").trim();
 /** 身份带的底:glow 的椭圆光 + canvas 实底(v4 `.glowtop`)。下面按光最亮处(圆心)= glow·alpha + canvas 量字。 */
 const GLOW_BAND_BG =
-  "radial-gradient(70% 260px at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%), oklch(var(--color-canvas))";
+  "radial-gradient(70% var(--glow-r) at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%), oklch(var(--color-canvas))";
 
 type Cell = { key: string; ratio: number; min: number };
 const cellOf = (key: string, fg: Rgb, bg: Rgb, min = AA_NORMAL_TEXT): Cell => ({ key, ratio: contrastRatio(fg, bg), min });
