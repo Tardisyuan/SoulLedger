@@ -136,10 +136,25 @@ RWORK="$RDIR/work/$RID"
 # (GIT_CONFIG_NOSYSTEM), and four gate tests went red. node_modules, the venv, caches and the Next
 # build survive the --delete.
 remote_sync() {
-    { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf '.git\0'; } \
+    # In a linked worktree `.git` is a FILE ("gitdir: /Users/…/.git/worktrees/<name>"), a path that does not
+    # exist on the remote: every git command there died with "not a repository" before any test ran
+    # (2026-11-07, a subagent's push from .claude/worktrees/…). So a worktree sends a real .git instead: the
+    # common dir (objects, refs, config; not the other worktrees) plus this worktree's own HEAD and index.
+    local dotgit='.git\0' keepgit=()
+    [ -f "$ROOT/.git" ] && { dotgit=''; keepgit=(--filter='P .git/'); }
+    { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf "$dotgit"; } \
         | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
-            --filter='P frontend/.next/' --filter='P .sl-*' --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" \
+            --filter='P frontend/.next/' --filter='P .sl-*' ${keepgit[@]+"${keepgit[@]}"} --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" \
         || return 1
+    if [ -f "$ROOT/.git" ]; then
+        local common gitdir
+        common="$(git rev-parse --path-format=absolute --git-common-dir)"
+        gitdir="$(git rev-parse --path-format=absolute --git-dir)"
+        ssh "$GATES_REMOTE" "rm -f '$RWORK/.git' 2>/dev/null; mkdir -p '$RWORK/.git'" || return 1
+        rsync -a --no-owner --no-group --delete --exclude='/worktrees/' --exclude='/soulledger-*' \
+            "$common/" "$GATES_REMOTE:$RWORK/.git/" || return 1
+        rsync -a --no-owner --no-group "$gitdir/HEAD" "$gitdir/index" "$GATES_REMOTE:$RWORK/.git/" || return 1
+    fi
     # --delete never fires under --files-from: a file deleted here is simply absent from the list, so the
     # remote copy stayed and kept running (2026-10-29: a test deleted by a merge failed the gates there).
     # The synced .git no longer tracks it, so it shows up remotely as untracked; remove every such file
