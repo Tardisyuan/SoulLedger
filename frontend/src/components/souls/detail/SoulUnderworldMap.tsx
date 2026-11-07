@@ -13,11 +13,14 @@ import { diyuVisits, greekVisits, pathVisits } from "@/src/lib/underworldMap";
  * 当前站:地府读 `diyu_station`(与十三站行程条同一个序号),十殿的子格读 path 的殿;
  * 其余三个文明读 path(`GET /souls/{id}/path/`)的界域码 —— 处置与受刑计划都是写进 path 才动灵魂的。
  *
- * 一生回放的到达日期:
- *   - 地府:十三站各站的到达 = `DIYU_STATION_CHANGED` 事件(payload.to,`apps/souls/stations.py`)的时间;
- *     十殿各殿 = path 的 `entered_at`。两者按时间合在一起。事件只取第一页(按时间正序)—— 一个灵魂一世十三站,够用。
- *   - 其余:path 每一站的 `entered_at`。
- *   在路上之前的「死亡」「三判官」这类节点没有记录,回放里不单独停,随下游的站一起点亮。
+ * 一生回放的站序是这个灵魂走过的路,不是「有日期的那几站」:
+ *   - 地府:行程(`diyuVisits`)走过的站,十殿各殿接在酆都城之后。到达日期:站 = `DIYU_STATION_CHANGED` 事件
+ *     (payload.to,`apps/souls/stations.py`)的时间,殿 = path 的 `entered_at`;没有记录的站照样停,卡片只写站名。
+ *     此前只停有日期的那几站,而直接落在某站的灵魂(种子数据、演示里的屈原)一条挪站事件都没有:回放只剩一站殿,
+ *     一点按钮十三站全暗、1.2 秒后弹回现在 —— 看起来就是「没有动画」(2026-11-07)。顺序也曾按日期字符串排,
+ *     公元前的扩展年份(`-000278-…`)按字面排是反的。事件只取第一页(按时间正序)—— 一世十三站,够用。
+ *   - 其余:path 按 `sequence`,日期是 `entered_at`。
+ *   在路上之前的「死亡」「三判官」这类无码节点不单独停,随下游的站一起点亮。
  *
  * 希腊:可医者此刻在塔尔塔罗斯时点亮千年格,写「第 n 年」(用户 2026-11-07)。年数是账本 SENTENCE 读数的
  * `elapsed_years`(`Disposition.term_start_*` 量到今天,与官员看的读数同一个数);`eternal`(不可医、永罚)不点亮。
@@ -59,16 +62,21 @@ export function SoulUnderworldMap({ soul, eternal = false, className }: { soul: 
       : pathVisits(entries);
   if (!visits.length) return null;
 
-  const fromPath: MapArrival[] = entries
-    .filter((p) => p.realm_code && (!diyu || p.realm_code.startsWith("DY_COURT_")))
-    .map((p) => ({ id: p.realm_code!, at: p.entered_at }));
-  const fromMoves: MapArrival[] = diyu
-    ? (moves.data ?? []).flatMap((e) => {
-        const to = e.payload?.to;
-        return typeof to === "string" && (DIYU_STATIONS as readonly string[]).includes(to) ? [{ id: to, at: e.create_time }] : [];
-      })
-    : [];
-  const arrivals = [...fromMoves, ...fromPath].sort((a, b) => a.at.localeCompare(b.at));
+  const fromPath: MapArrival[] = entries.filter((p) => p.realm_code).map((p) => ({ id: p.realm_code!, at: p.entered_at }));
+  let arrivals = fromPath;
+  if (diyu) {
+    const dated = new Map<string, string>(fromPath.map((a) => [a.id, a.at!]));
+    for (const e of moves.data ?? []) {
+      const to = e.payload?.to;
+      if (typeof to === "string" && !dated.has(to)) dated.set(to, e.create_time);
+    }
+    const walk = visits.map((v) => v.id);
+    const courts = walk.filter((id) => id.startsWith("DY_COURT_"));
+    const road = walk.filter((id) => !id.startsWith("DY_COURT_"));
+    const fengdu = road.indexOf("FENGDU_CITY");
+    road.splice(fengdu < 0 ? road.length : fengdu + 1, 0, ...courts);
+    arrivals = road.map((id) => ({ id, at: dated.get(id) ?? null }));
+  }
 
   const inMillennium = visits.some((v) => v.current && v.id.startsWith("gr-millennium-"));
   const currentDetail = inMillennium && years !== null ? t("map.greece.year_n", { n: String(years) }) : null;

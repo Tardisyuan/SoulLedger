@@ -89,8 +89,8 @@ const BUTTON =
 export interface MapArrival {
   /** 图上的节点或子格 id。 */
   id: string;
-  /** 到达时间(ISO)。 */
-  at: string;
+  /** 到达时间(ISO);没有记录是 null —— 回放照样停在这一站,卡片只写站名。 */
+  at: string | null;
 }
 
 export function UnderworldMap({
@@ -349,7 +349,7 @@ export function UnderworldMap({
             className="absolute bottom-3 left-3 right-3 max-w-xs border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-left shadow-overlay"
           >
             <span aria-live="polite" className="block font-title text-md text-[oklch(var(--color-ink))]">
-              {t("soulmap.replay_line", { date: formatDate(step.at), station: stepStation })}
+              {step.at ? t("soulmap.replay_line", { date: formatDate(step.at), station: stepStation }) : stepStation}
             </span>
             <span className="mt-2 flex items-center gap-3 text-xs text-[oklch(var(--color-ink-muted))]">
               <span className="font-mono">{t("soulmap.replay_progress", { n: String(replayAt! + 1), total: String(arrivals.length) })}</span>

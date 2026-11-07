@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { ROLE_OF_SKIN, SKINS, startEntrance, useEnter } from "./DemoEntrances";
+import { ROLE_OF_SKIN, SKINS, useEnter } from "./DemoEntrances";
 import { REBIRTH_CIVS, SoulScreenBody, Unrecorded, soulView, type SoulScreen, type SoulView } from "./DemoSoulScreens";
 import { langOf, soulRecording, soulRecordingNow } from "./store";
 
@@ -76,10 +76,7 @@ export default function DemoSoul({ civ, onCiv }: { civ: SealCiv; onCiv: (civ: Se
   const view = useSoulView(civ);
   const [screen, setScreen] = useState<SoulScreen>("life");
   const shown = screen === "rebirth" && !REBIRTH_CIVS.has(civ) ? "life" : screen;
-  const back = () => {
-    startEntrance(civ);
-    void enter(ROLE_OF_SKIN[civ]);
-  };
+  const back = () => void enter(ROLE_OF_SKIN[civ]);
   const app = (
     <div data-civ={civ} className="flex h-full flex-col bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))]">
       <div className="min-h-0 flex-1 overflow-y-auto">

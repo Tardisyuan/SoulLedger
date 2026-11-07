@@ -5,11 +5,13 @@ import { flushSync } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@soulledger/core/api/client";
 import { Button } from "@/src/components/ui/Button";
+import { BrandMark } from "@/src/components/brand/BrandMark";
+import { BRAND_WORD } from "@/src/components/layout/GlobalNav";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
-import { ENTERED, ENTRANCE, ROLE_OF_SKIN, SKINS, TOUR_KEY, startEntrance, useEnter } from "./DemoEntrances";
+import { ENTERED, ENTRANCE, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
 import { DEMO_USERNAMES } from "./store";
 import type { Tour } from "./tour";
 
@@ -45,6 +47,7 @@ body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max
 @keyframes demo-seal-name-out{to{opacity:0}}
 @keyframes demo-seal-fade{from{opacity:1}to{opacity:0}}
 .demo-seal{--band-top:calc(1.75rem + 52px);--band-left:0px;--band-height:48px;position:fixed;top:0;left:0;right:0;height:100vh;z-index:9999;overflow:hidden;animation:demo-seal-spread 200ms ease-out both}
+.demo-seal[data-neutral]{background:oklch(var(--color-canvas));color:oklch(var(--color-ink))}
 .demo-seal[data-land]{animation:demo-seal-spread 200ms ease-out both,demo-seal-narrow 250ms ease-in-out forwards}
 @media (min-width:769px){.demo-seal{--band-left:252px;--band-height:64px}}
 .demo-seal-mark,.demo-seal-name{position:absolute;left:50%;transform:translate(-50%,-50%)}
@@ -117,13 +120,13 @@ const WAITING = "[data-civ-loading], [data-testid='permissions-pending']";
  */
 function EntranceOverlay() {
   const { t } = useI18n();
-  const [run, setRun] = useState<{ skin: SealCiv; x: number; y: number; at: number } | null>(null);
+  const [run, setRun] = useState<{ skin: SealCiv | null; x: number; y: number; at: number } | null>(null);
   const [land, setLand] = useState(false);
   const target = useRef<string | null>(null);
 
   useEffect(() => {
     const start = (e: Event) => {
-      const { skin, origin } = (e as CustomEvent).detail as { skin: SealCiv; origin: { x: number; y: number } };
+      const { skin, origin } = (e as CustomEvent).detail as { skin: SealCiv | null; origin: { x: number; y: number } };
       // Before the sign-in answers and changes the civilization: set here, not in an effect a frame later.
       document.documentElement.dataset.civChange = "covered";
       target.current = null;
@@ -180,20 +183,22 @@ function EntranceOverlay() {
   }, [land]);
 
   if (!run) return null;
-  const name = t(`demo.civ.${run.skin}.name`);
+  // No underworld (the administrator): the brand's mark and word on the canvas, in ink, instead of a court's seal.
+  const name = run.skin ? t(`demo.civ.${run.skin}.name`) : BRAND_WORD;
   return (
     // A click anywhere skips it; Esc does the same, on the window, and the 跳过 button is the keyboard's way.
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       data-testid="demo-entrance"
-      data-civ={run.skin}
+      data-civ={run.skin ?? undefined}
+      data-neutral={run.skin ? undefined : ""}
       data-land={land ? "" : undefined}
       onClick={() => setRun(null)}
-      className="seal-on-band band-colour demo-seal"
+      className={run.skin ? "seal-on-band band-colour demo-seal" : "demo-seal"}
       style={{ "--x": `${run.x}px`, "--y": `${run.y}px` } as React.CSSProperties}
     >
       <span aria-live="polite" className="sr-only">{t("demo.enter.entering", { civ: name })}</span>
-      <span className="demo-seal-mark"><Seal size={96} civ={run.skin} glyphs={null} court={name} /></span>
+      <span className="demo-seal-mark">{run.skin ? <Seal size={96} civ={run.skin} glyphs={null} court={name} /> : <BrandMark size={96} />}</span>
       <span className="demo-seal-name whitespace-nowrap font-title text-lg">{name}</span>
       <button type="button" onClick={() => setRun(null)} className="demo-seal-skip h-11 min-w-11 px-3 text-sm">
         {t("demo.enter.skip")}
@@ -321,10 +326,7 @@ export default function DemoTour() {
                   type="button"
                   data-testid={`demo-tour-other-${skin}`}
                   aria-label={t("demo.landing.card_label", { civ: t(`demo.civ.${skin}.name`) })}
-                  onClick={(e) => {
-                    startEntrance(skin, e.currentTarget);
-                    void enter(ROLE_OF_SKIN[skin]);
-                  }}
+                  onClick={(e) => void enter(ROLE_OF_SKIN[skin], e.currentTarget)}
                   onPointerEnter={() => warm(ROLE_OF_SKIN[skin])}
                   onFocus={() => warm(ROLE_OF_SKIN[skin])}
                 >
