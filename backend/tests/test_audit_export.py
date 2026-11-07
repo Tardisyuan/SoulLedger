@@ -1,7 +1,7 @@
 """`GET /audit-logs/export/` —— 与列表同一组筛选、同一租户划界、同一权限的 CSV。
 
 文件取自 `filter_queryset(get_queryset())`,即列表跑的那一条,所以下面每条都拿列表当对照:
-同一组参数下,文件的行数等于列表的 `count`。身份用 MODERATOR(持 `audit.read`、非 ADMIN),
+同一组参数下,文件的行数等于列表的 `count`。身份用一个自建的非 ADMIN 角色(持 `audit.read` 与 `audit.export`),
 走租户过滤那条路。
 """
 import csv
@@ -35,12 +35,13 @@ def tenant(db):
 
 @pytest.fixture
 def moderator(db, tenant):
-    role, _ = Role.objects.get_or_create(name="MODERATOR", defaults={"display_name": "Realm Lead"})
-    perm, _ = Permission.objects.get_or_create(
-        codename="audit.read", defaults={"name": "查看审计日志", "category": "audit"}
-    )
-    RolePermission.objects.get_or_create(role=role, permission=perm)
-    user = User.objects.create_user(username="exp_moderator", password="x", role="MODERATOR", tenant=tenant)
+    # A custom non-ADMIN role holding both codes: MODERATOR held audit.read / audit.export until
+    # 2026-11-07 (perm/0036), when it became 朋友圈巡察.
+    role, _ = Role.objects.get_or_create(name="EXP_AUDITOR", defaults={"display_name": "Auditor"})
+    for codename, name in (("audit.read", "查看审计日志"), ("audit.export", "导出审计日志")):
+        perm, _ = Permission.objects.get_or_create(codename=codename, defaults={"name": name, "category": "audit"})
+        RolePermission.objects.get_or_create(role=role, permission=perm)
+    user = User.objects.create_user(username="exp_moderator", password="x", role="EXP_AUDITOR", tenant=tenant)
     return _client_for(user, tenant)
 
 

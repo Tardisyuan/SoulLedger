@@ -57,7 +57,7 @@ def test_a_codename_holder_sees_both_through_the_codename_and_their_directories(
 
     seeded_grants()
     desk = Role.objects.get_or_create(name="SOUL_DESK", defaults={"display_name": "灵魂事务"})[0]
-    for codename in ("soul_account.read", "workflow.read"):
+    for codename in ("menu.read", "soul_account.read", "workflow.read"):  # menu.read: the tree endpoint's own gate
         RolePermission.objects.get_or_create(role=desk, permission=seeded_permission(codename))
     invalidate_all_permissions()
     names = _tree_for("SOUL_DESK", cn_tenant)
