@@ -75,7 +75,9 @@ class TestRecipients:
     def test_an_admin_asking_is_not_their_own_recipient(self, admins):
         me = admins.users["cn_admin"]
         _ask(_client(me), _case(admins.cn))
-        assert _notified() == ["rr_cn_admin2"]
+        # The other in-hall ADMINs hear it (claim_moderator is the hall ADMIN since 2026-11-07); the asker does not.
+        assert _notified() == ["claim_moderator", "rr_cn_admin2"]
+        assert "rr_cn_admin" not in _notified()
 
 
 @pytest.mark.django_db

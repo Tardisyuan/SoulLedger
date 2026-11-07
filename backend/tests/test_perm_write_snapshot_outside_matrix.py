@@ -1371,8 +1371,10 @@ def test_every_denial_traces_to_a_missing_codename():
     by_app = {}
     for endpoint, _role in denials:
         by_app[_app_of(endpoint)] = by_app.get(_app_of(endpoint), 0) + 1
-    assert by_app == {"reincarnation": 3, "dispatch": 25, "organizations": 9}, by_app
-    assert len(denials) == 37, sorted(denials)
+    # 3 / 25 / 9 = 37 until 2026-11-07; then MODERATOR (朋友圈巡察, perm/0035-0036) lost every
+    # reincarnation / dispatch / cross_judgment / org codename: +1, +11 (6 records + 5 CTJ), +3.
+    assert by_app == {"reincarnation": 4, "dispatch": 36, "organizations": 12}, by_app
+    assert len(denials) == 52, sorted(denials)
 
 
 def test_unenforced_apps_would_still_move_nothing():

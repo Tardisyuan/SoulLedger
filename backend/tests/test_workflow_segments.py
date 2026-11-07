@@ -163,8 +163,10 @@ def test_concluding_with_an_open_bench_generates_a_workflow_with_one_segment_per
     assert wf.current_node_id == _nodes(wf, 1)[0].pk
     assert cj.status == JudgmentStatus.ACTIVE
     # 每个外域同时收到「选站」待办;本域没有。
+    # 外域能选站的人(持 workflow.approve)都收到:埃及的判官与殿管理员(ADMIN 也持 approve;b43_eg_mod 在
+    # 2026-11-07 之前是不持 approve 的殿主),欧洲的判官。
     told = {n.user.username for n in UserNotification.objects.filter(params__kind="workflow_pick_nodes")}
-    assert told == {"b43_eg_judge", "b43_eu_judge"}
+    assert told == {"b43_eg_judge", "b43_eg_mod", "b43_eu_judge"}
 
 
 def test_pick_notifications_name_the_convener_by_its_civilization_per_language(
@@ -334,7 +336,7 @@ def test_the_daily_job_reminds_the_realm_and_tells_the_convener_after_three_days
         assert segments.remind_due(w.cn) == {"reminded": 1, "overdue": 1}
         assert segments.remind_due(w.cn) == {"reminded": 0, "overdue": 0}  # same day, same segment: nothing more
     waiting = UserNotification.objects.filter(params__kind="workflow_pick_waiting")
-    assert {n.user.username for n in waiting} == {"b43_eg_judge"}
+    assert {n.user.username for n in waiting} == {"b43_eg_judge", "b43_eg_mod"}  # 该域能选站的人,不含召集殿
     overdue = UserNotification.objects.filter(params__kind="workflow_pick_overdue")
     assert {n.user.username for n in overdue} == {"b43_cn_mod"}
 
@@ -390,7 +392,7 @@ def test_cancelling_the_bench_skips_the_unstarted_realms_and_the_flow_ends_after
     assert _seg(wf, 2).state == SegmentState.SKIPPED
     assert {(n.status, n.skip_kind) for n in _nodes(wf, 2)} == {(NodeStatus.SKIPPED, SkipKind.CANCELLED)}
     withdrawn = UserNotification.objects.filter(params__kind="workflow_pick_withdrawn")
-    assert {n.user.username for n in withdrawn} == {"b43_eg_judge"}
+    assert {n.user.username for n in withdrawn} == {"b43_eg_judge", "b43_eg_mod"}  # 该域能选站的人
 
     wf.refresh_from_db()
     assert wf.status == ApprovalWorkflowStatus.IN_PROGRESS  # this realm still runs

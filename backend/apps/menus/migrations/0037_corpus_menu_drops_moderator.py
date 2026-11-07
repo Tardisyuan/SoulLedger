@@ -23,14 +23,14 @@ def forward(apps, schema_editor):
     for menu in _rows(apps, schema_editor):
         if ROLE in (menu.roles or []):
             menu.roles = [r for r in menu.roles if r != ROLE]
-            menu.save(update_fields=["roles"])
+            menu.save(using=schema_editor.connection.alias, update_fields=["roles"])
 
 
 def backward(apps, schema_editor):
     for menu in _rows(apps, schema_editor):
         if ROLE not in (menu.roles or []):
             menu.roles = [*(menu.roles or []), ROLE]
-            menu.save(update_fields=["roles"])
+            menu.save(using=schema_editor.connection.alias, update_fields=["roles"])
 
 
 class Migration(migrations.Migration):

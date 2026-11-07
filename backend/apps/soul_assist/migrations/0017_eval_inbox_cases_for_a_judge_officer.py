@@ -26,7 +26,7 @@ def forward(apps, schema_editor):
         for case in _cases(apps, schema_editor, question):
             if case.expected_tools == OLD_TOOLS and not case.must_include:
                 case.expected_tools, case.must_include = [], include
-                case.save(update_fields=["expected_tools", "must_include"])
+                case.save(using=schema_editor.connection.alias, update_fields=["expected_tools", "must_include"])
 
 
 def backward(apps, schema_editor):
@@ -34,7 +34,7 @@ def backward(apps, schema_editor):
         for case in _cases(apps, schema_editor, question):
             if case.expected_tools == [] and case.must_include == include:
                 case.expected_tools, case.must_include = OLD_TOOLS, []
-                case.save(update_fields=["expected_tools", "must_include"])
+                case.save(using=schema_editor.connection.alias, update_fields=["expected_tools", "must_include"])
 
 
 class Migration(migrations.Migration):
