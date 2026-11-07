@@ -21,7 +21,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 import { Seal, sealGlyphsFor, DEFAULT_SEAL_GLYPHS } from "@/src/components/plaque/Seal";
-import { fitTier, Plaque, shortBandFor } from "@/src/components/plaque/Plaque";
+import { fitTier, Plaque } from "@/src/components/plaque/Plaque";
 import { labelTooLongForVerticalPillar, pillarIsWide } from "@soulledger/core/domain/pillar";
 
 const FRONTEND = path.join(__dirname, "..", "..");
@@ -92,95 +92,69 @@ describe("印", () => {
   });
 });
 
-describe("身份带题字按实测宽度降档(C14)", () => {
-  /** jsdom 不排版;给一个按档位报宽度的元素:40 档 300、28 档 `at28`、20 档 50,容器 100。 */
-  function measured(at28: number) {
+describe("页头题字按实测宽度降档(C14;规范 v4 28 → 20 → 20 两行)", () => {
+  /** jsdom 不排版;给一个按档位报宽度的元素:28 档 300、一行 20 档 `at20`、两行 20 档 50,容器 100。 */
+  function measured(at20: number) {
     const el = document.createElement("div");
     Object.defineProperty(el, "clientWidth", { value: 100 });
     Object.defineProperty(el, "scrollWidth", {
-      get: () => (el.className.includes("text-display") ? 300 : el.className.includes("text-xl") ? at28 : 50),
+      get: () => (el.className.includes("text-xl") ? 300 : el.className.includes("line-clamp-2") ? 50 : at20),
     });
     return el;
   }
 
-  it("40 放不下、28 放得下 → 28", () => {
+  it("28 放不下、20 一行放得下 → 20 一行", () => {
     const el = measured(90);
     expect(fitTier(el)).toBe(1);
-    expect(el.className).toContain("text-xl");
+    expect(el.className).toContain("text-lg");
+    expect(el.className).not.toContain("line-clamp-2");
   });
 
-  it("28 也放不下 → 20,两行,仍是标题字体", () => {
+  it("20 一行也放不下 → 20 两行,仍是标题字体", () => {
     const el = measured(140);
     expect(fitTier(el)).toBe(2);
     expect(el.className).toContain("line-clamp-2");
     expect(el.className).toContain("font-title");
   });
 
-  it("40 放得下就是 40", () => {
+  it("28 放得下就是 28", () => {
     const el = document.createElement("div");
     expect(fitTier(el)).toBe(0);
-    expect(el.className).toContain("text-display");
+    expect(el.className).toContain("text-xl");
   });
 
-  it("≤ 768 从 28 起:放得下 40 也不用 40", () => {
+  it("≤ 768 从 20 起:放得下 28 也不用 28", () => {
     const el = document.createElement("div");
     expect(fitTier(el, 1)).toBe(1);
-    expect(el.className).not.toContain("text-display");
+    expect(el.className).not.toContain("text-xl");
   });
 });
 
-describe("矮带(审判队列、灵魂详情)", () => {
-  it.each([
-    ["/judgment/queue", true],
-    ["/souls/42", true],
-    ["/souls/3f9a0c1e-0000-4000-8000-000000000000", true],
-    ["/souls", false],
-    ["/judgment", false],
-    ["/judgment/42", false],
-    ["/judgment/queue/x", false],
-    ["/souls/42/x", false],
-  ])("%s → 矮带 %s", (path, short) => {
-    expect(shortBandFor(path)).toBe(short);
-  });
-
-  it("矮带标 data-short、题字从 28 起(放得下 40 也不用 40);印仍是 64", () => {
-    render(<Plaque title="审判队列" collapsible short />);
-    const band = screen.getByTestId("plaque");
-    expect(band).toHaveAttribute("data-short");
-    expect(band.querySelector("[data-tier]")).toHaveAttribute("data-tier", "1");
-    expect(screen.getByRole("img").style.width).toBe("64px");
-  });
-
-  it("不是矮带的不标,放得下就是 40", () => {
-    render(<Plaque title="审判台" collapsible />);
+describe("v3 的矮带随 v4 撤掉(用户 2026-11-07)", () => {
+  it("队列也是同一条标题行:不标 data-short,放得下就是 28,印 44", () => {
+    render(<Plaque title="审判队列" collapsible />);
     const band = screen.getByTestId("plaque");
     expect(band).not.toHaveAttribute("data-short");
     expect(band.querySelector("[data-tier]")).toHaveAttribute("data-tier", "0");
-  });
-
-  it("从 20 起(≤ 768 的矮带)", () => {
-    const el = document.createElement("div");
-    expect(fitTier(el, 2)).toBe(2);
-    expect(el.className).toContain("line-clamp-2");
+    expect(screen.getByRole("img").style.width).toBe("44px");
   });
 
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
-  it("矮带 116 高,写在收起之前(收起的 48 赢)", () => {
-    const short = css.indexOf(".identity-band[data-short] {");
-    const compact = css.indexOf(".identity-band[data-compact] {");
-    expect(/\.identity-band\[data-short\] \{\s*height: 116px;/.test(css)).toBe(true);
-    expect(short).toBeGreaterThan(-1);
-    expect(short).toBeLessThan(compact);
+  it("标题行 96 高、收起 44,没有 data-short 的规则", () => {
+    expect(/\.identity-band \{[^}]*\bheight: 96px;/.test(css)).toBe(true);
+    expect(/\.identity-band\[data-compact\] \{\s*height: 44px;/.test(css)).toBe(true);
+    expect(css).not.toContain("[data-short]");
   });
 });
 
-describe("身份带(规范 v3)", () => {
-  it("品牌小字、殿名、题字;纹样只是装饰;没有 v2 的回纹带", () => {
+describe("页头标题行(规范 v4)", () => {
+  it("殿名、题字;纹样与水印只是装饰;没有 v3 的品牌小字(v4 的品牌在侧栏),没有 v2 的回纹带", () => {
     render(<Plaque title="审判台" />);
     const band = screen.getByTestId("plaque");
     expect(band).toHaveClass("identity-band");
     expect(band.querySelector(".identity-pattern")).toHaveAttribute("aria-hidden", "true");
-    expect(band.querySelector(".identity-brand")).toHaveTextContent("SOULLEDGER nav.title");
+    expect(band.querySelector(".identity-watermark")).toHaveAttribute("aria-hidden", "true");
+    expect(band.querySelector(".identity-brand")).toBeNull();
     // No hall given: the civilization's realm name, not the tenant's stored display name —
     // on the 115 box that name is English ("Chinese Afterlife") under a Chinese UI.
     expect(band.querySelector(".identity-court")).toHaveTextContent("plaque.realm.cn");
@@ -204,31 +178,31 @@ describe("身份带(规范 v3)", () => {
         fireEvent.scroll(window);
       });
 
-    it("滚过 60 收起,印缩到 30;回到顶才展开", () => {
+    it("滚过 60 收起,印缩到 24;回到顶才展开", () => {
       render(<Plaque title="审判台" collapsible />);
       const band = screen.getByTestId("plaque");
       scrollTo(60);
       expect(band).not.toHaveAttribute("data-compact");
       scrollTo(61);
       expect(band).toHaveAttribute("data-compact");
-      expect(screen.getByRole("img").style.width).toBe("30px");
+      expect(screen.getByRole("img").style.width).toBe("24px");
       scrollTo(10);
       expect(band).toHaveAttribute("data-compact");
       scrollTo(0);
       expect(band).not.toHaveAttribute("data-compact");
-      expect(screen.getByRole("img").style.width).toBe("64px");
+      expect(screen.getByRole("img").style.width).toBe("44px");
     });
 
     it("页面不够长就不收:收了会把滚动位置夹回顶、又展开,在页底来回跳", () => {
-      // 展开 156、收起 48:收起让文档短 108。可滚的余量只有 150,收了只剩 42 —— 不收。
-      scrollHeight = window.innerHeight + 150;
-      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(156);
+      // 展开 96、收起 44:收起让文档短 52。可滚的余量只有 100,收了只剩 48 —— 不收。
+      scrollHeight = window.innerHeight + 100;
+      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(96);
       try {
         render(<Plaque title="审判台" collapsible />);
         scrollTo(100);
         expect(screen.getByTestId("plaque")).not.toHaveAttribute("data-compact");
-        // 同一个页面再长 100 就收得下了 —— 判据是余量,不是一律不收。
-        scrollHeight = window.innerHeight + 250;
+        // 同一个页面再长 50 就收得下了 —— 判据是余量,不是一律不收。
+        scrollHeight = window.innerHeight + 150;
         scrollTo(101);
         expect(screen.getByTestId("plaque")).toHaveAttribute("data-compact");
       } finally {
@@ -237,10 +211,10 @@ describe("身份带(规范 v3)", () => {
     });
 
     it("吸顶的那条把自己的实际高度写到 <html> 的 --identity-band(筛选栏据此吸顶);卸载时擦掉", () => {
-      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(156);
+      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(96);
       try {
         const { unmount } = render(<Plaque title="审判台" collapsible />);
-        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("156px");
+        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("96px");
         unmount();
         expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("");
         render(<Plaque title="灵魂账本" heading />);

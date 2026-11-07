@@ -8,18 +8,16 @@ import { Seal } from "./Seal";
 import { useRealm } from "./useHall";
 
 /**
- * 身份带(规范 v3 `IdentityBand`,2026-10-01 用户拍板取代 v2 的匾):匾色压暗 10% 的实底
- * (`color-mix(main 90%, #111)`)+ 每个文明一种淡纹样(地府方格、欧洲同心弧、埃及竖线、
- * 希腊斜线,自左向右淡出)+ 品牌小字 + 印 + 殿名小字 + 题字。样式在 globals.css 的
- * `.identity-band*`;文明由 <html data-civ> 选定。
+ * 页头的标题行(规范 v4 `.ph`,用户 2026-11-07:去掉 v3 的 156px 满幅身份带,「页头光 + 纹样 + 水印 + 标题行」)。
+ * canvas 上一片文明光(与上面的工具条接成一片)+ 文明纹样 + 水印巨印 + 44 的印 + 殿名小字 + 题字。样式在
+ * globals.css 的 `.identity-band*`(类名沿用 v3,E2E 与演示站入场动画按它找);文明由 <html data-civ> 选定。
+ * 组件名与 `data-testid="plaque"` 是 v2 匾的旧名,沿用。
  *
- * 题字是 Noto Serif SC 600(`font-title`),按**实测宽度**降档,不按字数(C14):40 放得下
- * 就 40;放不下 28;还放不下 20、最多两行、末尾截断,完整文字在 title 里。≤ 768 从 28 起
- * (v3 手机身份带的题字就是 28 / 20)。降档仍然需要:egy 的页面标题最长 28 个字符,
- * v3 自己也给埃及画了 28 两行与 20 两行。每一档都是 WCAG 大号文字(plaqueTitleStaysLargeText)。
+ * 题字是 Noto Serif SC 600(`font-title`),按**实测宽度**降档,不按字数(C14):28 放得下就 28(v4 稿的 h1 是
+ * 26/34,七档字号里最近的是 28/36);放不下 20;还放不下 20、最多两行、末尾截断,完整文字在 title 里。
+ * ≤ 768 从 20 起。降档仍然需要:egy 的页面标题最长 28 个字符。每一档都是 WCAG 大号文字(plaqueTitleStaysLargeText)。
  *
- * `collapsible`(壳里的那一条):吸在工具条下沿,页面滚过 60px 收成 48px,只留印与殿名
- * (v3 `is-compact`)。
+ * `collapsible`(壳里的那一条):吸在工具条下沿,页面滚过 60px 收成 44px,只留小印与殿名。
  */
 
 /**
@@ -70,8 +68,8 @@ export function usePlaque({ title, meta, hall, caseNumber, caseRef }: PlaqueText
 }
 
 const TIER_CLASS = [
-  "font-title text-display whitespace-nowrap",
   "font-title text-xl font-semibold whitespace-nowrap",
+  "font-title text-lg whitespace-nowrap",
   "font-title text-lg line-clamp-2",
 ] as const;
 
@@ -103,14 +101,8 @@ function useNarrow(): boolean {
   );
 }
 
-/**
- * 矮带(v3 `.queue-product` / `.soul-product` 的 `.identity-band`):审判队列与灵魂详情两页,
- * 桌面 116 高、题字从 28 起;≤ 768 约 105 高、印 38、题字从 20 起。按路由选,页面文件不知道。
- */
-export const shortBandFor = (pathname: string) => pathname === "/judgment/queue" || /^\/souls\/[^/]+$/.test(pathname);
-
-/** 收起的身份带高度(globals.css `.identity-band[data-compact]`)。 */
-const COMPACT_PX = 48;
+/** 收起的标题行高度(globals.css `.identity-band[data-compact]`)。v3 的「矮带」(队列与灵魂详情 116)随 v4 撤掉:标题行本来就矮。 */
+const COMPACT_PX = 44;
 /** 滚过多少收起(v3 `scrollTop > 60`)。 */
 const COLLAPSE_AT = 60;
 
@@ -139,8 +131,8 @@ function useCompact(enabled: boolean, band: RefObject<HTMLElement | null>): bool
 
 /**
  * 吸顶的身份带把自己此刻的高度写到 <html> 的 `--identity-band` 上:筛选栏吸在
- * `--below-band`(工具条 52 + 这个高度)。页面短到收不起来时身份带一直是 156,
- * 筛选栏若按 48 算就会压在它下半截上 —— 所以读实际高度,不读常量。
+ * `--below-band`(工具条 52 + 这个高度)。页面短到收不起来时标题行一直是展开高(96;
+ * ≤ 768 随题字长高),筛选栏若按 44 算就会压在它下半截上 —— 所以读实际高度,不读常量。
  */
 function useBandHeightVar(enabled: boolean, band: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
@@ -166,7 +158,6 @@ export function Plaque({
   hall,
   heading = false,
   collapsible = false,
-  short = false,
 }: {
   title: string;
   /** 右栏的一般文字。≤ 768 不显示。 */
@@ -179,10 +170,8 @@ export function Plaque({
   hall?: string;
   /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是题字。 */
   heading?: boolean;
-  /** 壳里的身份带:滚动时收成 48px。 */
+  /** 壳里的标题行:滚动时收成 44px。 */
   collapsible?: boolean;
-  /** 矮带(`shortBandFor`):116 高、题字从 28 起。 */
-  short?: boolean;
 }) {
   const { t } = useI18n();
   const band = useRef<HTMLDivElement>(null);
@@ -191,11 +180,10 @@ export function Plaque({
   const narrow = useNarrow();
   const compact = useCompact(collapsible, band);
   useBandHeightVar(collapsible, band);
-  const start = ((narrow ? 1 : 0) + (short ? 1 : 0)) as 0 | 1 | 2;
+  const start: 0 | 1 = narrow ? 1 : 0;
   const [tier, setTier] = useState<0 | 1 | 2>(start);
   const realm = useRealm();
   const court = hall || realm || null;
-  const product = t("nav.title");
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -220,19 +208,15 @@ export function Plaque({
       ref={band}
       data-testid="plaque"
       data-compact={compact ? "" : undefined}
-      data-short={short ? "" : undefined}
       className="identity-band"
     >
       <div aria-hidden="true" className="identity-pattern" />
-      {/* 水印巨印(v4 `.wm`):300 宽,压出带的右上角,文明字色 7%(浅色 9%)。收起时不画。 */}
+      {/* 水印巨印(v4 `.wm`):140 宽(≤ 768 是 112),压出右上角,文明字色 7%(浅色 9%)。收起时不画。 */}
       <div aria-hidden="true" className="identity-watermark">
-        <Seal size={300} decorative />
-      </div>
-      <div className="identity-brand">
-        SOULLEDGER{product.toUpperCase() !== "SOULLEDGER" ? <span> {product}</span> : null}
+        <Seal size={narrow ? 112 : 140} decorative />
       </div>
       <div className="identity-title">
-        <Seal size={compact ? 30 : narrow ? (short ? 38 : 48) : 64} />
+        <Seal size={compact ? 24 : narrow ? 36 : 44} />
         <div className="min-w-0">
           {court ? <small className="identity-court">{court}</small> : null}
           <Title ref={ref} data-tier={tier} title={title} className={tierClass(tier)}>

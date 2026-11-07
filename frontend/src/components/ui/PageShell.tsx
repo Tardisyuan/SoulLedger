@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
  *
  * 2) **页头不 sticky，只有筛选栏 sticky。** 卷宗的封面不跟着滚；滚动时还需要的
  *    控件只有筛选。筛选栏吸在 `--below-band`:AppLayout 那条 52px 工具条加上身份带此刻的
- *    高度(规范 v3:身份带吸顶、滚动后收成 48;页面短到收不起时仍是 156)。
+ *    高度(规范 v4:标题行吸顶、滚动后收成 44;页面短到收不起时仍是 96)。
  *
  * 3) **没有 `min-h-screen`。** AppLayout 给的槽位是
  *    `min-h-[calc(100vh-4rem)]`（AppLayout.tsx:461），页面再写一次

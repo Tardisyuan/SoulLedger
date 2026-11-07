@@ -20,7 +20,7 @@ import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
 import { BottomBar, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
-import { Plaque, PlaqueProvider, shortBandFor, type PlaqueText } from "@/src/components/plaque/Plaque";
+import { Plaque, PlaqueProvider, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Bell } from "lucide-react";
@@ -41,11 +41,11 @@ import { useImpersonation } from "@/src/components/impersonation/useImpersonatio
 /**
  * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
  * 52px 中性工具条(`global-topbar`:导航开合、面包屑;右边问一问、通知、用户菜单)、
- * 身份带(`Plaque`,v3 IdentityBand —— 品牌、印、殿名、题字、文明纹样;不放面包屑与操作)、页面。
+ * 标题行(`Plaque`,v4 `.ph` —— 页头光、纹样、水印、印、殿名、题字;不放面包屑与操作)、页面。
  *
  * - 四档宽度:≥ 1200 导航展开 / 收起由用户选;769–1199 强制收起;≤ 768 没有侧栏,
  *   是底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。规则在 `GlobalNav.tsx`。
- * - 工具条吸顶;身份带吸在它下沿,页面滚过 60px 收成 48px(PageShell 的筛选栏吸在两者
+ * - 工具条吸顶;身份带吸在它下沿,页面滚过 60px 收成 44px(PageShell 的筛选栏吸在两者
  *   下沿,`--below-band` = 52 + 身份带此刻的高度)。
  * - 连接状态只在断开时出现(`ConnectionBanner`,v4 第八批第 4 条):桌面是工具条里面包屑后面的一个
  *   胶囊,加工具条下沿一条 2px 状态色线;≤ 768 浮在工具条下沿正中。工具条高度不变,内容不动、不被盖住。
@@ -343,10 +343,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <MfaRequiredBanner />
         <PasswordChangeRedirect />
 
-        {/* 身份带(规范 v3):吸在工具条下沿;页面滚动后自己收成 48px,只留印与殿名。
+        {/* 标题行(规范 v4,用户 2026-11-07 去掉 156px 身份带):吸在工具条下沿;页面滚动后自己收成 44px,只留小印与殿名。
             z 与筛选栏同一层:两者不重叠 —— 筛选栏吸在 52 + 身份带此刻的高度(`--below-band`)。 */}
         <div className={`sticky top-[calc(var(--spacing)*13+var(--imp-h))] z-filters ${assist.pushed ? "pr-[420px]" : ""}`}>
-          <Plaque title={title} meta={plaque?.meta} caseNumber={plaque?.caseNumber} caseRef={plaque?.caseRef} hall={plaque?.hall} collapsible short={shortBandFor(pathname)} />
+          <Plaque title={title} meta={plaque?.meta} caseNumber={plaque?.caseNumber} caseRef={plaque?.caseRef} hall={plaque?.hall} collapsible />
         </div>
 
         {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its

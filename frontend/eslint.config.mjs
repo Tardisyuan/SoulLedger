@@ -720,9 +720,7 @@ const eslintConfig = [
     // `py-0.5` / `rounded` 通常正是**被断言为不该出现的东西** —— 让规则去管
     // 断言的内容,只会让人把整块重新关掉,而那正是 `src/__tests__/**` 当初被
     // 塞进全局 `ignores` 的原因。
-    // DemoEntrances / DemoTour 暂不看(2026-11-07):这两个文件正被另一项任务整体改写,
-    // 改写合进来之后删掉这两行,让守卫照常管它们。
-    ignores: ["src/__tests__/**", "demo/DemoEntrances.tsx", "demo/DemoTour.tsx"],
+    ignores: ["src/__tests__/**"],
     plugins: { "design-system": designSystem },
     rules: {
       "design-system/type-scale": "error",

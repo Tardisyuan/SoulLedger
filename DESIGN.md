@@ -29,7 +29,7 @@ recoverable from the code, and it points at the code for everything else.
 | Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v4 (Design batch 07, `V4Batch07.dc.html`, 2026-11-06; token names unchanged since v1, only values); `ledgerPaletteContract` holds each token to the spec's hex. |
 | Type scale | `frontend/app/globals.css` `@theme` | Nine steps — `text-2xs` 11 · `xs` 12 · `sm` 13 · `md` 15 · `lg` 20 · `xl` 28 · `display` 40 · `display-lg` 56 · `display-xl` 88 (px), each with its line-height attached. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
 | Font families | `frontend/app/fonts.ts`, `--font-title` in `globals.css` | Four roles, each with one stated job — see "Four faces, one job each" below. |
-| Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | Spec v4 (user decision 2026-11-06: the v4 range, replacing v3's "five uses only"). Each civilization has five values per theme — `--color-civ-cn` (the solid fill, white text on it), `-ink` (civ-coloured text), `-glow`, `-metal`, `-side` — and each `[data-civ]` rule points five generic names at them: `--color-main`, `--color-main-ink`, `--color-glow`, `--color-metal`, `--color-side`. A second `[data-civ]` rule points `--color-accent`, `--color-accent-ink` and `--color-focus` at `--color-main-ink`, so links, selection and the focus ring take the civilization's text colour; with no `data-civ` (before login) they stay ink. `--color-main` is a fill only: the dark v4 solids are about 2:1 on surface-1, so the 3px marks read `--color-metal` and the seal reads `--color-main-ink`. Nothing outside `globals.css` reads a civ token — `ledgerPaletteContract` asserts it. The seal is an outline in `currentColor` whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon); the identity band's fill is still the solid darkened 10% (`color-mix(in srgb, main 90%, #111)`) until the shell is redone. |
+| Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | Spec v4 (user decision 2026-11-06: the v4 range, replacing v3's "five uses only"). Each civilization has five values per theme — `--color-civ-cn` (the solid fill, white text on it), `-ink` (civ-coloured text), `-glow`, `-metal`, `-side` — and each `[data-civ]` rule points five generic names at them: `--color-main`, `--color-main-ink`, `--color-glow`, `--color-metal`, `--color-side`. A second `[data-civ]` rule points `--color-accent`, `--color-accent-ink` and `--color-focus` at `--color-main-ink`, so links, selection and the focus ring take the civilization's text colour; with no `data-civ` (before login) they stay ink. `--color-main` is a fill only: the dark v4 solids are about 2:1 on surface-1, so the 3px marks read `--color-metal` and the seal reads `--color-main-ink`. Nothing outside `globals.css` reads a civ token — `ledgerPaletteContract` asserts it. The seal is an outline in `currentColor` whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon); the page header has no solid fill: it is the canvas under the civilization's glow (see "The page header" below). |
 | Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:663-671`. These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
 
 If a number here would ever contradict one of those files, the file wins and
@@ -64,9 +64,9 @@ every row below and checks the step, size, line-height and weight against
 |---|---|---|---|---|---|---|
 | 页面标题 | `<h1>`,每页一个 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC | `PageShell.test`「页面标题」 |
 | 封面标题(只在首页;md 起 28 / 36) | `<h1>` | `font-title text-lg md:text-xl` | 20 / 28 | 600 | Noto Serif SC | 同上 |
-| 身份带题字 · 第一档(≤ 768 不用) | 身份带里的 `<Title>` | `font-title text-display` | 40 / 54 | 600 | Noto Serif SC | `plaqueTitleStaysLargeText` |
-| 身份带题字 · 第二档 | 同上,第一档放不下时;≤ 768 从这一档起 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | 同上 |
-| 身份带题字 · 第三档 | 同上,第二档还放不下时 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC,最多两行 | 同上 |
+| 页头题字 · 第一档(≤ 768 不用) | 页头标题行里的 `<Title>`(`Plaque`) | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | `plaqueTitleStaysLargeText` |
+| 页头题字 · 第二档 | 同上,第一档放不下时;≤ 768 从这一档起 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC | 同上 |
+| 页头题字 · 第三档 | 同上,第二档还放不下时 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC,最多两行 | 同上 |
 | 面板标题(区块、卡片的题) | `<h2>` 或 `<h3>` | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC(规范 v4,用户 2026-11-07) | `PageShell.test` h2 / h3 |
 | 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 13 / 20 | 500 | 界面字体 | 同上 |
 | 区块标签 | `<h2>` 或 `<h3>` | `text-2xs uppercase`,不带 `font-mono` | 11 / 16 | 400 | 界面字体 | 同上 |
@@ -89,21 +89,38 @@ Three things this table does on purpose:
   a title competing with it. Spec v3 names the 11px step "micro-label".
   Its weight is 400: `--text-2xs` has carried no weight since `16f4e149` (spec v1
   §1.4); the 600 that `PageShell.tsx` used to cite belonged to the old `--text-01`.
-- **The identity-band title is the one heading that changes step at runtime.** It
-  measures its own width and steps down 40 → 28 → 20 (from 28 at ≤ 768, as spec
-  v3's phone band does); Egyptian page titles run to 28 characters, and v3 itself
-  draws them at 28 and 20 on two lines. Every step stays WCAG large text. On the raw
-  dark Egyptian and Greek colours white text is only 3.99:1 and 4.16:1; on the band
-  (the colour darkened 10%) it is 4.66:1 and 4.82:1, and
-  `plaqueTitleStaysLargeText` pins all eight civ × theme ratios at ≥ 4.5.
+- **The page-header title is the one heading that changes step at runtime.** It
+  measures its own width and steps down 28 → 20 → 20 on two lines (from 20 at ≤ 768);
+  Egyptian page titles run to 28 characters. Spec v4 draws the header title at 26/34;
+  28/36 is the nearest step of the seven-step scale, so the first step is `text-xl`.
+  Every step stays WCAG large text. Since v4 the title is ink on the canvas under the
+  civilization's glow (no solid band), and `plaqueTitleStaysLargeText` measures it
+  against the glow's brightest point.
 
 The v2 plaque's per-civilization display faces (Ma Shan Zheng, UnifrakturMaguntia,
 Josefin Slab, Cinzel) and its fret band were removed with spec v3 (2026-10-01).
 The v2 seal's three glyph faces (LXGW Seal, UnifrakturMaguntia, GFS Didot) and its
 mask artwork went with spec v3's outline seal (2026-10-02); only Noto Sans Egyptian
 Hieroglyphs still ships, as the fallback for the Egyptian glyph (U+13184), which
-Noto Serif SC does not have. The queue and soul-detail pages use v3's short band
-(116px, title from 28) — chosen by route in `Plaque.tsx` `shortBandFor`.
+Noto Serif SC does not have.
+
+**The page header (spec v4, user decision 2026-11-07).** v3's 156px full-width
+identity band is gone, and with it the short band (116px on the queue and soul
+detail) and the band's SOULLEDGER brand line (v4 puts the brand mark at the top of
+the sidebar). The header is now two sticky rows on the canvas: the 52px toolbar
+(breadcrumb, the hour chip, density, 问一问, search, notifications, the user menu),
+then the title row (`Plaque`, `.identity-band` in `globals.css`): a 44px seal, the
+hall's name in 12px above the title, the case number on the right. The title row is
+96px on a desktop and at least 76px at ≤ 768 (a 36px seal; it grows with a
+two-line title), and collapses to 44px (a 24px seal and the hall's name) once the
+page has scrolled 60px. Behind both rows: the civilization's glow from 30% across the
+top (dark .30, light .24 — `--glow-alpha`), the civilization's pattern (地府 grid,
+Europe rings, Egypt reeds, Greece hatching; none for the neutral administrator skin),
+the dark theme's noise, and a watermark seal (140px, 112px at ≤ 768, 7% dark / 9%
+light, pressed out of the top-right corner; not drawn when collapsed or with no
+civilization). v4's glow is a 260px ellipse fading at 70%; ours ends at the header's
+foot instead (`--glow-r` = header height ÷ 0.7: 212 / 183 / 137 px), the same choice
+as the apps' `IdentityBand`, whose `GlowTop` is as tall as the band.
 
 **Settled 2026-10-01** (each was an open question in the first version of this table):
 

@@ -2129,7 +2129,7 @@ export async function seedAuthState(page: Page, user: object = TEST_USER): Promi
  *
  * The preset button sits below the fold, so the click scrolls the page and the band collapses (scrollY > 60).
  * A shorter preset then shortens the page, the browser clamps scrollY back to 0, and the band re-expands
- * 48 → 156 px with its `height` transition — pushing everything under it down. Firefox delivers that scroll
+ * 44 → 96 px (v4; v3 was 48 → 156) with its `height` transition — pushing everything under it down. Firefox delivers that scroll
  * event late enough that the expansion landed between the NEXT click's pointerdown and pointerup: 「编辑」
  * took focus on the way down, the up landed on the container, no click (logged: y 361 → 399 in 12 ms;
  * about 1 run in 50 of workflow.spec.ts). Expanding on the way back to the top is the band's spec (v3), so

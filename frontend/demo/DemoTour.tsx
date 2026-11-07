@@ -49,7 +49,7 @@ body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max
 @keyframes demo-seal-out{to{opacity:0}}
 @keyframes demo-seal-in{from{opacity:0}}
 .demo-entrance{position:fixed;inset:0;z-index:9999;color:oklch(var(--color-ink))}
-.demo-cover{position:fixed;left:0;top:0;width:100vw;height:100vh;overflow:hidden;background-color:oklch(var(--color-canvas));background-image:radial-gradient(70% 260px at 30% -52px,color-mix(in srgb,oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%),transparent),transparent 70%)}
+.demo-cover{position:fixed;left:0;top:0;width:100vw;height:100vh;overflow:hidden;background-color:oklch(var(--color-canvas));background-image:radial-gradient(70% var(--glow-r) at 30% -52px,color-mix(in srgb,oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%),transparent),transparent 70%)}
 .demo-seal-mark{position:fixed;left:0;top:0;transform-origin:0 0;will-change:transform;line-height:0}
 .demo-seal-name{position:absolute;left:50%;top:calc(50% + 56px);transform:translateX(-50%);animation:demo-seal-in var(--transition-duration-base) var(--ease-enter) 160ms both}
 .demo-seal-skip{position:fixed;top:8px;right:8px}
@@ -234,7 +234,7 @@ function EntranceOverlay() {
 
   // Closing: the cover onto the real band, the seal onto the real seal; then the cover fades over the band it now matches.
   // Frame by frame towards the targets measured on that frame, not to a box measured once: the band can still move while
-  // it closes (the tour scrolls its first step into view, and a scrolled band shrinks to 48), and the seal would jump.
+  // it closes (the tour scrolls its first step into view, and a scrolled band shrinks to 44), and the seal would jump.
   // The cover has the band cut out of it from the first frame: the real band (its title, its court) is already drawn
   // where it will stay, and only its seal is held back until the cover's seal is on it. The name rides in the cover, so
   // it is clipped with it and never lies over the console.
@@ -266,7 +266,7 @@ function EntranceOverlay() {
     // performance.now(), not the frame's timestamp: that can be earlier than t0, and a negative progress overshoots.
     let p = 0;
     let e = 0;
-    // The band can also change size inside a frame (a phone's band opens from 48 to its full height as the page settles):
+    // The band can also change size inside a frame (a phone's band opens from 44 to its full height as the page settles):
     // a resize observer runs after layout and before paint, so the cut-out is redrawn in that same frame.
     let watched: Element | null = null;
     let resized: ResizeObserver | null = null;
