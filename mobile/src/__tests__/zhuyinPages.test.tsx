@@ -19,7 +19,8 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { defaultLifeSection, lifePath, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
 import { LIFE_OPEN_PREFIX, stageWordFit } from "../screens/life";
 import { SessionProvider } from "../session";
-import { GUTTER_PT, space, themeFor, v4 } from "../theme";
+import { family } from "../fonts";
+import { GUTTER_PT, radius, space, themeFor, v4 } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
@@ -303,11 +304,17 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     expect(ORDER.filter(expanded)).toEqual(["records"]);
     const value = screen.getByTestId("balance-value");
     expect(value.props.children).toBe("\u221212");
-    // v3: an ink block, the number in the surface colour \u2014 a record, never a status or civilization colour.
-    const scheme = flat(value).color === v4.light.card ? "light" : "dark";
+    // v4: a panel (card ground, hairline, radius.dialog), the number in ink in the title serif 28 \u2014 a record,
+    // never a status or civilization colour; no longer v3's ink block with the number in mono.
+    const scheme = flat(value).color === v4.light.ink ? "light" : "dark";
     const t = themeFor("CHINESE", scheme);
-    expect(flat(screen.getByTestId("balance")).backgroundColor).toBe(v4[scheme].ink);
-    expect(flat(value).color).toBe(v4[scheme].card);
+    const panel = flat(screen.getByTestId("balance"));
+    expect(panel.backgroundColor).toBe(v4[scheme].card);
+    expect(panel.backgroundColor).not.toBe(v4[scheme].ink);
+    expect(panel.borderColor).toBe(t.hair);
+    expect(panel.borderRadius).toBe(radius.dialog);
+    expect(flat(value).color).toBe(v4[scheme].ink);
+    expect([flat(value).fontFamily, flat(value).fontSize]).toEqual([family.title, 28]);
     expect([t.neg, t.pos, t.warn, t.plaque]).not.toContain(flat(value).color);
     expect(within(screen.getByTestId("score-merit")).getByText("3")).toBeTruthy();
     expect(within(screen.getByTestId("score-demerit")).getByText("15")).toBeTruthy();
