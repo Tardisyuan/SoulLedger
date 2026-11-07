@@ -4,7 +4,7 @@
  * module modules/soulledger-live (mobile/src/liveProgress.ts); Android needs no native part (an ongoing
  * notification from expo-notifications).
  *
- * Writes ios/SoulLedgerLive/ (the widget's Swift, a copy of the module's SoulLedgerLiveAttributes.swift — ActivityKit
+ * Writes ios/SoulLedgerLiveExtension/ (the widget's Swift, a copy of the module's SoulLedgerLiveAttributes.swift — ActivityKit
  * pairs app and widget by that type — and the extension's Info.plist), adds the app-extension target with its
  * Sources phase and its own group (the group has a path, so files are registered by bare name inside it; the
  * <Project>/file rule in CLAUDE.md is for the Expo template's path-less group), embeds it in the app (addTarget's
