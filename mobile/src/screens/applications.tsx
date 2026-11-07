@@ -99,7 +99,7 @@ export function EligibilityCard({
   const cooling = !list.can_apply && list.reason === "cooldown";
   return (
     <Block testID="eligibility" last>
-      {/* A11: the eligibility card and the shortening block share one panel: s1, a hairline, radius 8, 16 inside. */}
+      {/* A11: the eligibility card and the shortening block share one panel: s1, a hairline, radius 6 (`radius.dialog`), 16 inside. */}
       <View style={[styles.panel, { backgroundColor: theme.s1, borderColor: theme.hair }]}>
         <Button
           testID="apply"
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   gone: { opacity: 0.45 },
   gap4: { marginTop: 4 },
   gap10: { marginTop: 12 },
-  /** A11 panel: radius 8 (`radius.dialog`), 16 inside, 12 between the eligibility items. */
+  /** A11 panel: radius 6 (`radius.dialog`), 16 inside, 12 between the eligibility items. */
   panel: { borderWidth: 1, borderRadius: radius.dialog, padding: space[4], gap: space[3] },
   untilRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: space[2] },
   untilDate: { fontSize: 15, lineHeight: 24 },
