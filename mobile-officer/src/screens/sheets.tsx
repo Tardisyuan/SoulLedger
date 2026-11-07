@@ -331,7 +331,7 @@ function useCandidates(q: string, open: boolean) {
   );
 }
 
-/** A role code through the bundles (审判者), the raw code only when the bundles do not know it. */
+/** A role code through the bundles (判官), the raw code only when the bundles do not know it. */
 function roleLabel(enumLabel: ReturnType<typeof useI18n>["enumLabel"], role: string | null | undefined): string {
   const d = enumLabel("users.roles", role);
   return d.state === "known" ? d.label : (role ?? "");

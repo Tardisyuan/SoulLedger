@@ -125,7 +125,7 @@ describe("the to-do tab", () => {
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     expect(await screen.findByText("□ 没有权限")).toBeTruthy();
     // The role's name, not its code (decision 30).
-    expect(screen.getByText("你的角色「审判者」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
+    expect(screen.getByText("你的角色「判官」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
     expect(screen.queryByText(/「JUDGE」/)).toBeNull();
     expect(screen.queryByTestId("state-retry")).toBeNull();
   });
