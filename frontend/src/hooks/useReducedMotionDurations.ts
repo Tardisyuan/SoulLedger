@@ -3,7 +3,7 @@
 import { useReducedMotion } from "motion/react";
 import { MOTION_DURATIONS, type MotionDurations } from "@/lib/motion";
 
-const ZERO_DURATIONS: MotionDurations = { instant: 0, fast: 0, base: 0, slow: 0, ritual: 0 };
+const ZERO_DURATIONS: MotionDurations = { instant: 0, fast: 0, base: 0, slow: 0 };
 
 /**
  * 规范 v2 的动效时长(秒),减少动态效果时**全部为 0**(交互与动效第 2 轮「减少动态」一条)。
