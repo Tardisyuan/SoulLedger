@@ -40,7 +40,42 @@ details[open] summary{margin-bottom:12px}
 </header>
 
 <article>
-<h2>第十六批 · 地图与插画的主角节点、魂火、两个 egy 词<span class="tag new">待回 · 2026-11-08</span></h2>
+<h2>第十七批 · 三个 egy 词,确认埃及「羽侧 / 心侧」的 egy<span class="tag new">待回 · 2026-11-08</span></h2>
+<p>回复写到 <code>v4-batch17-reply.md</code>,文案三语写到 <code>v4-batch17-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>。第十六批已落地并上线(主角节点、魂火、光效与数据徽标都在演示站上)。</p>
+
+<section>
+<h3>1. 三个新键的 egy</h3>
+<div class="scroll"><table>
+<thead><tr><th>键</th><th>zh</th><th>en</th><th>用在哪</th></tr></thead>
+<tbody>
+<tr><td><code>map.close_up</code></td><td>近处</td><td>Close up</td><td>地图缩放按钮旁,从全景回到当前站附近</td></tr>
+<tr><td><code>map.card.arrived</code></td><td>到达 {{date}}</td><td>Arrived {{date}}</td><td>灵魂路线图上点站点出的小卡,这一站的到达日</td></tr>
+<tr><td><code>souls.detail.timeline.stage_reincarnating_waiting</code></td><td>处置已执行 · 等候转生</td><td>Disposition carried out · awaiting rebirth</td><td>灵魂详情时间线:处置走完、等转生的那一格</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h3>2. 请确认:埃及的「羽侧 / 心侧」</h3>
+<p>用户 11-08 定:埃及那两个数(别的文明叫「功德 / 罪业」)在网页和官员端一律读作「羽侧 / 心侧」,和灵魂端一致。新键都是 <code>_by_civ.eg</code>。egy 是我们用词表里已有的词拼的(没有新词根),请你确认或改:</p>
+<div class="scroll"><table>
+<thead><tr><th>键(都带 <code>_by_civ.eg</code>)</th><th>zh</th><th>en</th><th>我们写的 egy</th></tr></thead>
+<tbody>
+<tr><td><code>souls.detail.merit / demerit</code>、<code>judgment.queue.merit / demerit</code>、<code>ledger.book.col_merit / col_demerit</code></td><td>羽侧 / 心侧</td><td>Feather side / Heart side</td><td>Shut / Ib</td></tr>
+<tr><td><code>ledger.raw_merit</code> 等</td><td>原始 羽侧</td><td>Raw feather side</td><td>Shut Tepy</td></tr>
+<tr><td><code>ledger.decayed_merit</code> 等</td><td>衰减后 羽侧</td><td>Decayed feather side</td><td>Shut Khebi Seth</td></tr>
+<tr><td><code>ledger.journal.pillar_received / pillar_disbursed</code></td><td>新收 · 羽侧 / 开除 · 心侧</td><td>Received · feather side / Disbursed · heart side</td><td>Shesep · Shut / Bek · Ib</td></tr>
+<tr><td><code>events.detail.karma</code></td><td>羽侧 {{merit}} · 心侧 {{demerit}}</td><td>Feather side {{merit}} · Heart side {{demerit}}</td><td>Shut {{merit}} · Ib {{demerit}}</td></tr>
+<tr><td><code>judgment.claim.col_merit_demerit</code></td><td>羽侧 / 心侧</td><td>Feather side / heart side</td><td>Shut / Ib</td></tr>
+<tr><td><code>officer_app.soul.merit_short / demerit_short</code></td><td>羽侧 / 心侧</td><td>Feather / Heart(56px 列放不下更长的)</td><td>Shut / Ib</td></tr>
+</tbody></table></div>
+<p class="ask">「衰减」用 Khebi Seth、「开除」用 Bek 是我们挑的,最没把握;你觉得不对就给正字。zh / en 措辞要改也一起给。</p>
+</section>
+</article>
+
+<details>
+<summary>第十六批 · 地图与插画的主角节点、魂火、两个 egy 词<span class="tag done">已回 · 已落地</span></summary>
+<article>
+<h2>第十六批 · 地图与插画的主角节点、魂火、两个 egy 词<span class="tag done">已回 · 2026-11-08</span></h2>
 <p>回复写到 <code>v4-batch16-reply.md</code>;新图放同一目录;文案三语写到 <code>v4-batch16-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>(扁平 <code>键: 值</code>)。第七至十五批已定的不动。</p>
 
 <section>
@@ -97,6 +132,7 @@ details[open] summary{margin-bottom:12px}
 <p class="ask">zh / en 是我们先写的,措辞要改也请一起给。地图数据徽标和站点小卡的新键等代码做完再一并交给你。</p>
 </section>
 </article>
+</details>
 
 <details>
 <summary>第十五批 · 两个 egy 词与一处推送用词<span class="tag done">已回 · 已落地</span></summary>
