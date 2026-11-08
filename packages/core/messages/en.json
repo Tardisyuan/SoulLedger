@@ -1418,6 +1418,8 @@
       "node_issue_count": "{{n}} issues",
       "node_issue_summary": "This node has {{n}} issues to fix before publishing.",
       "locate": "Show on canvas",
+      "read_only": "Read only",
+      "other_exit": "Another exit of {{node}} · {{label}}",
       "palette": "Nodes · drag onto the canvas",
       "inspector": "Properties",
       "inspector_empty": "Pick a node on the canvas or in the linear preview.",

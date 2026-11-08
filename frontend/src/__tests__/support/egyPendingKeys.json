@@ -18,5 +18,7 @@
   "tenants.settings.rebirth_quota_body_single",
   "tenants.settings.rebirth_quota_single_row",
   "verdict_doc.eu.verdict.heresy",
-  "verdict_doc.eu.verdict.limbo"
+  "verdict_doc.eu.verdict.limbo",
+  "workflow.editor.other_exit",
+  "workflow.editor.read_only"
 ]

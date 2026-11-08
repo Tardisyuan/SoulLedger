@@ -41,6 +41,21 @@ const CONTROL =
   "h-(--control-h-sm) min-w-0 px-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-sm text-[oklch(var(--color-ink))] focus-visible:border-[oklch(var(--color-ink))] focus-visible:shadow-[0_0_0_2px_oklch(var(--color-focus)/0.35)]";
 const LABEL = "pt-3 text-xs text-[oklch(var(--color-ink-muted))]";
 
+/** The fields a failing check points at (v4 第十四批 §3.4). Codes about edges or the whole graph have none. */
+export type FieldKey = "name" | "signers" | "threshold" | "reject_to" | "timeout";
+export const ISSUE_FIELD: Readonly<Record<string, FieldKey>> = {
+  name_empty: "name",
+  countersign_no_signers: "signers",
+  threshold_out_of_range: "threshold",
+  reject_not_earlier: "reject_to",
+  reject_and_fail_route: "reject_to",
+  timeout_incomplete: "timeout",
+  timeout_role_missing: "timeout",
+};
+/** A failing field: the inner edge turns 1.5px danger (in place of the 1px line-strong one). */
+const BAD_EDGE = "border-[1.5px] border-[oklch(var(--color-danger))]";
+const CONTROL_EDGE = "border border-[oklch(var(--color-line-strong))]";
+
 /**
  * The inspector's 节点 tab as a form, v3 A1 (用户 10-02: follow the Design —
  * this replaced the 「编辑节点」 modal). A `72px 1fr` grid, label left.
@@ -59,6 +74,7 @@ export function NodeEditForm({
   onChange,
   rejectOptions,
   t,
+  errors = {},
 }: {
   node: Node;
   formId: string;
@@ -66,7 +82,20 @@ export function NodeEditForm({
   /** The nodes 驳回到 may name: those EARLIER than this one, as `N2「名」`. */
   rejectOptions: { value: string; label: string }[];
   t: TFunc;
+  /** The full message of the first failing check per field (`ISSUE_FIELD`), shown under that field. */
+  errors?: Partial<Record<FieldKey, string>>;
 }) {
+  const ctl = (k: FieldKey) => (errors[k] ? CONTROL.replace(CONTROL_EDGE, BAD_EDGE) : CONTROL);
+  const errId = (k: FieldKey) => `${formId}-${k}-error`;
+  const invalid = (k: FieldKey) =>
+    errors[k] ? ({ "aria-invalid": true, "aria-describedby": errId(k) } as const) : {};
+  const err = (k: FieldKey, inline = false) =>
+    errors[k] ? (
+      <p id={errId(k)} className={`${inline ? "" : "col-start-2 "}text-xs text-[oklch(var(--color-danger))]`}>
+        <span aria-hidden="true" className="font-semibold">! </span>
+        {errors[k]}
+      </p>
+    ) : null;
   const d = node.data;
   const kind = ((d.kind as WorkflowNodeKind | undefined) || "APPROVAL") as WorkflowNodeKind;
   const approverRole = (d.approverRole as string) || "";
@@ -129,10 +158,12 @@ export function NodeEditForm({
       <input
         id={nodeNameFieldId(formId)}
         type="text"
-        className={`${CONTROL} font-medium`}
+        className={`${ctl("name")} font-medium`}
         value={(d.label as string) ?? ""}
         onChange={(e) => set({ label: e.target.value })}
+        {...invalid("name")}
       />
+      {err("name")}
 
       <label htmlFor={id("node-name-en")} className={LABEL}>
         {t("workflow.editor.field.name_en")}
@@ -220,7 +251,10 @@ export function NodeEditForm({
             onChange={setSigners}
             roleOptions={roleOptions}
             t={t}
+            invalid={!!errors.signers}
+            describedBy={errors.signers ? errId("signers") : undefined}
           />
+          {err("signers")}
 
           <label htmlFor={id("threshold")} className={LABEL}>
             {t("workflow.editor.field.threshold")}
@@ -231,8 +265,12 @@ export function NodeEditForm({
                 id={id("threshold")}
                 type="number"
                 min={1}
-                aria-describedby={signers.length > 0 ? id("threshold-rule") : undefined}
-                className={`${CONTROL} w-14 font-mono`}
+                aria-invalid={errors.threshold ? true : undefined}
+                aria-describedby={
+                  [signers.length > 0 ? id("threshold-rule") : "", errors.threshold ? errId("threshold") : ""].filter(Boolean).join(" ") ||
+                  undefined
+                }
+                className={`${ctl("threshold")} w-14 font-mono`}
                 value={threshold ?? ""}
                 onChange={(e) => set({ threshold: positiveOrNull(e.target.value) })}
               />
@@ -251,6 +289,7 @@ export function NodeEditForm({
                 })}
               </p>
             )}
+            {err("threshold", true)}
           </div>
         </>
       )}
@@ -262,12 +301,14 @@ export function NodeEditForm({
           </label>
           <select
             id={id("reject-to")}
-            className={CONTROL}
+            className={ctl("reject_to")}
             value={(d.rejectTo as string | null | undefined) ?? ""}
             onChange={(e) => set({ rejectTo: e.target.value || null })}
+            {...invalid("reject_to")}
           >
             {options(rejectToOptions)}
           </select>
+          {err("reject_to")}
 
           <label htmlFor={id("timeout-hours")} className={LABEL}>
             {t("workflow.editor.timeout.label")}
@@ -279,7 +320,8 @@ export function NodeEditForm({
                 type="number"
                 min={1}
                 aria-label={t("workflow.editor.timeout.hours")}
-                className={`${CONTROL} w-[72px] font-mono`}
+                className={`${ctl("timeout")} w-[72px] font-mono`}
+                {...invalid("timeout")}
                 value={timeoutHours ?? ""}
                 onChange={(e) => set({ timeoutHours: positiveOrNull(e.target.value) })}
               />
@@ -289,7 +331,8 @@ export function NodeEditForm({
               <select
                 id={id("timeout-action")}
                 aria-label={t("workflow.editor.timeout.action_label")}
-                className={`${CONTROL} flex-1`}
+                className={`${ctl("timeout")} flex-1`}
+                {...invalid("timeout")}
                 value={timeoutAction}
                 onChange={(e) => set({ timeoutAction: e.target.value as WorkflowTimeoutAction | "" })}
               >
@@ -300,13 +343,15 @@ export function NodeEditForm({
               <select
                 id={id("timeout-role")}
                 aria-label={t("workflow.editor.timeout.role")}
-                className={CONTROL}
+                className={ctl("timeout")}
+                {...invalid("timeout")}
                 value={(d.timeoutRole as string | undefined) || ""}
                 onChange={(e) => set({ timeoutRole: e.target.value })}
               >
                 {options(roleSelectOptions)}
               </select>
             )}
+            {err("timeout", true)}
             {/* Said where the field is, because it is the one thing about a
                 timeout an operator cannot see from the value: it fires only
                 when the 5-minutely `workflow.process_timeouts_for_tenant` job
@@ -341,12 +386,17 @@ function SignerTags({
   onChange,
   roleOptions,
   t,
+  invalid = false,
+  describedBy,
 }: {
   inputId: string;
   signers: TemplateSigner[];
   onChange: (next: TemplateSigner[]) => void;
   roleOptions: { value: string; label: string }[];
   t: TFunc;
+  /** A failing 会签人 (no signers): the field's edge goes 1.5px danger, the message is under it. */
+  invalid?: boolean;
+  describedBy?: string;
 }) {
   const [draft, setDraft] = useState("");
   const roleLabel = (v: string) => roleOptions.find((o) => o.value === v)?.label ?? v;
@@ -357,7 +407,7 @@ function SignerTags({
     setDraft("");
   };
   return (
-    <div className="flex flex-wrap items-center gap-1 min-w-0 min-h-(--control-h-sm) px-1 py-1 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))] focus-within:shadow-[0_0_0_2px_oklch(var(--color-focus)/0.35)]">
+    <div className={`flex flex-wrap items-center gap-1 min-w-0 min-h-(--control-h-sm) px-1 py-1 rounded-control ${invalid ? BAD_EDGE : CONTROL_EDGE} bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))] focus-within:shadow-[0_0_0_2px_oklch(var(--color-focus)/0.35)]`}>
       <ul className="contents" aria-label={t("workflow.editor.signers")}>
         {signers.map((sg, idx) => {
           const text = signerText(sg, roleLabel);
@@ -382,6 +432,8 @@ function SignerTags({
       <input
         id={inputId}
         type="text"
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         value={draft}
         placeholder={signers.length === 0 ? t("workflow.editor.signer_placeholder") : undefined}
         onChange={(e) => setDraft(e.target.value)}

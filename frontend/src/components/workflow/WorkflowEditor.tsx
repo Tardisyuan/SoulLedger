@@ -71,6 +71,7 @@ import {
   nodeName,
   WorkflowPalette,
   WorkflowReadOnlyList,
+  issueText,
   type InspectorTab,
   type PaletteType,
 } from "@/src/components/workflow/WorkflowEditorPanels";
@@ -101,8 +102,10 @@ import {
 } from "@/src/components/workflow/WorkflowInspectorExtras";
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import {
+  ISSUE_FIELD,
   NodeEditForm,
   nodeNameFieldId,
+  type FieldKey,
   type NodeDataUpdates,
 } from "@/src/components/workflow/NodeEditForm";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -1517,6 +1520,16 @@ export default function WorkflowEditor({
    * preview resolves the SAVED working copy, so a node added or re-designated
    * since the last save has nothing server-side to preview yet.
    */
+  /** Per field of one node, the full message of its first failing check (v4 第十四批 §3.4, shown under the field). */
+  const fieldErrors = (nodeId: string): Partial<Record<FieldKey, string>> => {
+    const out: Partial<Record<FieldKey, string>> = {};
+    for (const issue of issues) {
+      const field = issue.nodeId === nodeId ? ISSUE_FIELD[issue.code] : undefined;
+      if (field && !out[field]) out[field] = issueText(issue, nodes, t, locale);
+    }
+    return out;
+  };
+
   const savedAsShown = (node: Node): boolean => {
     const stored = (existingTemplate?.nodes ?? []).find((n) => n.id === node.id);
     if (!stored) return false;
@@ -1554,7 +1567,14 @@ export default function WorkflowEditor({
                   nameFieldId={nodeNameFieldId(formId)}
                 />
               ) : (
-                <NodeEditForm node={node} formId={formId} onChange={updateNodeData} rejectOptions={rejectOptions} t={t} />
+                <NodeEditForm
+                  node={node}
+                  formId={formId}
+                  onChange={updateNodeData}
+                  rejectOptions={rejectOptions}
+                  t={t}
+                  errors={fieldErrors(node.id)}
+                />
               )
             )
           : undefined
@@ -1623,9 +1643,15 @@ export default function WorkflowEditor({
           {t("workflow.editor.narrow_title")}
           <span className="mt-1 block text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.narrow_body")}</span>
         </div>
-        <h2 id={titleId} className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
-          {(locale === "en" && templateNameEn) || templateName || t("workflow.editor.template_name_placeholder")}
-        </h2>
+        {/* The header's three actions are not here (no save below 1024); a 「只读」 tag stands in their place. */}
+        <div className="flex items-start justify-between gap-3">
+          <h2 id={titleId} className="min-w-0 font-title text-lg text-[oklch(var(--color-ink))] break-words">
+            {(locale === "en" && templateNameEn) || templateName || t("workflow.editor.template_name_placeholder")}
+          </h2>
+          <Badge tone="neutral" glyph="◐" data-testid="read-only-tag">
+            {t("workflow.editor.read_only")}
+          </Badge>
+        </div>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
           <span>{t(`workflow.civilizations.${templateCiv}`)}</span>
           <span aria-hidden="true">·</span>
