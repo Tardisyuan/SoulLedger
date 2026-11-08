@@ -10,6 +10,16 @@
 // Output shape (read by frontend/demo/store.ts):
 //   { recordedAt, login, lists: { "/souls/?state=X": { rows, extra } }, docs: { "/souls/<id>/": { s, b } } }
 // `lists` holds paginated answers with their pages flattened; the key leaves out page and page_size.
+//
+// Order (2026-11-08). The administrator goes first and alone: it reads everyone's sign-ins, sessions, last logins and
+// audit rows, and a recording role's own sign-in writes those; walked beside the others it would record them signing
+// in. The other five see only their own (their recordings hold no login-log, admin-session or user list, and only
+// `/audit-logs/?user=<own id>`), and the walks send nothing but GETs and the sign-in, so they run at once, each against
+// a Django of its own on DEMO_ROLE_PORTS (comma-separated; one walk at a time per port, so the port count is the
+// concurrency cap). Django here is daphne, which runs every sync view of a process on one thread: on a shared server
+// the walks would only take turns. The browser keeps the build's API address and each context's requests are routed
+// to its port. Without DEMO_ROLE_PORTS everything runs in turn on :8000, as before. The souls come last: the judges'
+// screens show soul accounts' sign-ins.
 import { chromium } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -122,12 +132,14 @@ function historizeAll({ lists, docs }) {
 
 // The recorder's own sign-in writes a login-log row, and auditing that writes another: neither happened in the story.
 const recordersOwn = (row) => row?.resource === "loginlog";
-const scrub = (v) => {
-  if (Array.isArray(v)) return v.filter((row) => !recordersOwn(row)).map(scrub);
+const scrub = (v, origin = API_ORIGIN) => {
+  if (Array.isArray(v)) return v.filter((row) => !recordersOwn(row)).map((x) => scrub(x, origin));
   if (v && typeof v === "object") {
-    return Object.fromEntries(Object.entries(v).filter(([k]) => !SECRET_KEYS.test(k)).map(([k, x]) => [k, NO_TWO_STEP.test(k) ? false : scrub(x)]));
+    return Object.fromEntries(Object.entries(v).filter(([k]) => !SECRET_KEYS.test(k)).map(([k, x]) => [k, NO_TWO_STEP.test(k) ? false : scrub(x, origin)]));
   }
-  if (typeof v === "string") return v.replaceAll(API, "/api/v1").replaceAll(API_ORIGIN, "").replaceAll("HeadlessChrome", "Chrome");
+  if (typeof v === "string") {
+    return v.replaceAll(`${origin}/api/v1`, "/api/v1").replaceAll(API, "/api/v1").replaceAll(origin, "").replaceAll(API_ORIGIN, "").replaceAll("HeadlessChrome", "Chrome");
+  }
   return v;
 };
 
@@ -150,13 +162,13 @@ function remember(rec, url, status, body) {
   if (status === 200 && isPage(body)) {
     const { results, count: _count, next: _next, previous: _previous, ...extra } = body;
     const list = (rec.lists[key] ??= { rows: [], extra, pages: {} });
-    list.pages[page] = scrub(results);
+    list.pages[page] = scrub(results, rec.origin);
     return;
   }
   // A 400 here is the recording's own artefact (a hall-less admin has no tenant context for a hall's inbox), not the screen's.
   if (status === 400) return;
   if (key in rec.docs && status !== 200) return;
-  rec.docs[key] = { s: status, b: scrub(body) };
+  rec.docs[key] = { s: status, b: scrub(body, rec.origin) };
 }
 
 function rowsOf(rec, path) {
@@ -211,13 +223,13 @@ async function finishLists(rec, access) {
   for (const [key, list] of Object.entries(rec.lists)) {
     if (!list.pages[1]) continue;
     const [path, q] = key.split("?");
-    await getAll(rec, access, `${API}${path}${q ? `?${q}` : ""}`);
+    await getAll(rec, access, `${rec.api}${path}${q ? `?${q}` : ""}`);
   }
 }
 
 async function sweep(rec, access, paths) {
   const flat = paths.filter((p) => !p.includes("{"));
-  for (const p of flat) await getAll(rec, access, `${API_ORIGIN}${p}`);
+  for (const p of flat) await getAll(rec, access, `${rec.origin}${p}`);
   for (const p of paths.filter((x) => x.includes("{"))) {
     const open = p.indexOf("{");
     const parent = p.slice(0, open).replace(/^\/api\/v1/, "");
@@ -228,7 +240,7 @@ async function sweep(rec, access, paths) {
         const v = at === open ? row[name] ?? row.code ?? row.id ?? row.pk : bad = true;
         return v;
       });
-      if (!bad && !url.includes("undefined")) await getAll(rec, access, `${API_ORIGIN}${url}`);
+      if (!bad && !url.includes("undefined")) await getAll(rec, access, `${rec.origin}${url}`);
     }
   }
 }
@@ -237,11 +249,11 @@ async function sweep(rec, access, paths) {
 async function sweepOpenCases(rec, access) {
   for (const row of rowsOf(rec, "/judgment/").filter((r) => r.verdict == null)) {
     for (const verdict of ["PASSED", "FAILED", "PURGATORY"]) {
-      await getAll(rec, access, `${API}/judgment/${row.id}/destinations/?candidate_verdict=${verdict}`);
+      await getAll(rec, access, `${rec.api}/judgment/${row.id}/destinations/?candidate_verdict=${verdict}`);
     }
     // The triage queue's card for this case; the demo computes the cursor around it.
-    await getAll(rec, access, `${API}/judgment/next/?at=${row.id}`);
-    await getAll(rec, access, `${API}/judgment/assignable-officers/?judgment=${row.id}`);
+    await getAll(rec, access, `${rec.api}/judgment/next/?at=${row.id}`);
+    await getAll(rec, access, `${rec.api}/judgment/assignable-officers/?judgment=${row.id}`);
   }
 }
 
@@ -258,22 +270,22 @@ async function sweepWithParams(rec, access, login) {
   const own = login.user?.tenant;
   const tenantIds = [...new Set([...tenants.map((t) => t.id), ...(own?.id != null ? [own.id] : [])])];
   const codes = [...new Set([...TENANT_CODES, ...tenants.map((t) => t.code).filter(Boolean)])];
-  for (const code of codes) await getAll(rec, access, `${API}/dispatch/records/realm-options/?target_tenant_code=${code}`);
-  for (const civ of CIVILIZATIONS) await getAll(rec, access, `${API}/workflows/case-types/?civilization=${civ}`);
-  for (const id of tenantIds) await getAll(rec, access, `${API}/judgment/handover/officers/?tenant=${id}`);
+  for (const code of codes) await getAll(rec, access, `${rec.api}/dispatch/records/realm-options/?target_tenant_code=${code}`);
+  for (const civ of CIVILIZATIONS) await getAll(rec, access, `${rec.api}/workflows/case-types/?civilization=${civ}`);
+  for (const id of tenantIds) await getAll(rec, access, `${rec.api}/judgment/handover/officers/?tenant=${id}`);
   // The annual report's 「去年」 button.
   const year = rec.docs["/judgment/annual/"]?.b?.year;
-  if (typeof year === "number") await getAll(rec, access, `${API}/judgment/annual/?year=${year - 1}`);
+  if (typeof year === "number") await getAll(rec, access, `${rec.api}/judgment/annual/?year=${year - 1}`);
   // Concluded cases too: the desk and the case page read both for every case, not only the open ones.
   for (const row of rowsOf(rec, "/judgment/")) {
-    await getAll(rec, access, `${API}/workflows/flow-preview/?judgment=${row.id}`);
-    await getAll(rec, access, `${API}/judgment/${row.id}/citations/`);
+    await getAll(rec, access, `${rec.api}/workflows/flow-preview/?judgment=${row.id}`);
+    await getAll(rec, access, `${rec.api}/judgment/${row.id}/citations/`);
   }
   // Seats are chosen only while a bench is PROPOSED (the seed leaves one so); every invited hall, every seat.
   for (const bench of rowsOf(rec, "/dispatch/cross-tenant-judgments/").filter((b) => b.status === "PROPOSED")) {
     for (const code of codes.filter((c) => c !== bench.initiating_tenant_code)) {
       for (const role of ["ADVISOR", "CO_JUDGE", "CHAIRMAN"]) {
-        await getAll(rec, access, `${API}/dispatch/cross-tenant-judgments/${bench.id}/seatable-actors/?role=${role}&tenant_code=${code}`);
+        await getAll(rec, access, `${rec.api}/dispatch/cross-tenant-judgments/${bench.id}/seatable-actors/?role=${role}&tenant_code=${code}`);
       }
     }
   }
@@ -282,9 +294,9 @@ async function sweepWithParams(rec, access, login) {
     const doc = rec.docs[`/workflow/templates/${template.id}/`]?.b ?? template;
     for (const node of Array.isArray(doc.nodes) ? doc.nodes : []) {
       if (node?.id == null) continue;
-      await getAll(rec, access, `${API}/workflow/templates/${template.id}/approver-preview/?node=${node.id}`);
+      await getAll(rec, access, `${rec.api}/workflow/templates/${template.id}/approver-preview/?node=${node.id}`);
       if (doc.civilization) {
-        await getAll(rec, access, `${API}/workflow/templates/${template.id}/approver-preview/?civilization=${doc.civilization}&node=${node.id}`);
+        await getAll(rec, access, `${rec.api}/workflow/templates/${template.id}/approver-preview/?civilization=${doc.civilization}&node=${node.id}`);
       }
     }
   }
@@ -310,16 +322,18 @@ function schemaPaths() {
     .filter((p) => !/^\/api\/v1\/(me|soul-auth|officer-app)\//.test(p) && !/(export|export_csv|print|file|download)\/?$/.test(p));
 }
 
-const browser = await chromium.launch();
-mkdirSync(OUT, { recursive: true });
-let paths = null;
-for (const role of Object.keys(ROLES)) {
+/** One role: sign in, walk, sweep, ask again in English, write both files. `origin` is the Django this role talks to. */
+async function recordRole(browser, role, origin, paths) {
   const started = Date.now();
-  const rec = { lists: {}, docs: {}, errors: new Set(), swept: {} };
+  const api = `${origin}/api/v1`;
+  const rec = { lists: {}, docs: {}, errors: new Set(), swept: {}, origin, api };
   const context = await browser.newContext({ locale: "zh-CN", viewport: { width: 1440, height: 900 } });
   await context.addCookies([{ name: "soulledger-locale", value: "zh-Hans", url: FRONT }]);
+  if (origin !== API_ORIGIN) {
+    await context.route(`${API_ORIGIN}/**`, (route) => route.continue({ url: route.request().url().replace(API_ORIGIN, origin) }));
+  }
   context.on("response", async (res) => {
-    const url = res.url();
+    const url = res.url().replace(origin, API_ORIGIN);
     if (!url.startsWith(API) || res.request().method() !== "GET") return;
     const body = await res.json().catch(() => undefined);
     if (body !== undefined) remember(rec, url, res.status(), body);
@@ -331,27 +345,44 @@ for (const role of Object.keys(ROLES)) {
   }
   await page.waitForTimeout(500);
   await finishLists(rec, access);
-  paths ??= schemaPaths();
   await sweep(rec, access, paths);
   await sweepOpenCases(rec, access);
   await sweepWithParams(rec, access, login);
   // English: the same questions again, asked in English. What the backend only has in one language stays until the
   // translations table above covers it; `scripts/demo-cjk-report.py` lists what is left.
-  const recEn = { lists: {}, docs: {}, errors: new Set(), swept: {} };
+  const recEn = { lists: {}, docs: {}, errors: new Set(), swept: {}, origin, api };
   for (const key of [...Object.keys(rec.lists), ...Object.keys(rec.docs)]) {
     const doc = rec.docs[key];
     if (doc && doc.s !== 200) recEn.docs[key] = doc;
-    else await getAll(recEn, access, `${API}${key}`, "en");
+    else await getAll(recEn, access, `${api}${key}`, "en");
   }
   const recordedAt = new Date().toISOString();
-  const out = { role, lang: "zh", recordedAt, login: translator("zh")(scrub(login)), ...translator("zh")(historizeAll(finish(rec))) };
-  const outEn = { role, lang: "en", recordedAt, login: translator("en")(scrub(login)), ...translator("en")(historizeAll(finish(recEn))) };
+  const out = { role, lang: "zh", recordedAt, login: translator("zh")(scrub(login, origin)), ...translator("zh")(historizeAll(finish(rec))) };
+  const outEn = { role, lang: "en", recordedAt, login: translator("en")(scrub(login, origin)), ...translator("en")(historizeAll(finish(recEn))) };
   writeFileSync(`${OUT}/${role}.zh.json`, JSON.stringify(out));
   writeFileSync(`${OUT}/${role}.en.json`, JSON.stringify(outEn));
   console.log(`${role}: ${Object.keys(out.lists).length} lists, ${Object.keys(out.docs).length} docs, ` +
-    `${Math.round(JSON.stringify(out).length / 1024)} KB, ${Math.round((Date.now() - started) / 1000)} s; swept ${JSON.stringify(rec.swept)}; server errors: ${[...rec.errors].join(" | ") || "none"}`);
+    `${Math.round(JSON.stringify(out).length / 1024)} KB, ${Math.round((Date.now() - started) / 1000)} s on ${origin}; swept ${JSON.stringify(rec.swept)}; server errors: ${[...rec.errors].join(" | ") || "none"}`);
   await context.close();
 }
+
+const browser = await chromium.launch();
+mkdirSync(OUT, { recursive: true });
+const paths = schemaPaths();
+const walkStarted = Date.now();
+// The administrator first, alone (see the top of this file).
+await recordRole(browser, "admin", API_ORIGIN, paths);
+const others = Object.keys(ROLES).filter((role) => role !== "admin");
+const ports = (process.env.DEMO_ROLE_PORTS || "").split(",").filter(Boolean);
+if (ports.length === 0) {
+  for (const role of others) await recordRole(browser, role, API_ORIGIN, paths);
+} else {
+  const queue = [...others];
+  await Promise.all(ports.map(async (port) => {
+    for (let role = queue.shift(); role; role = queue.shift()) await recordRole(browser, role, `http://localhost:${port}`, paths);
+  }));
+}
+console.log(`roles: ${Math.round((Date.now() - walkStarted) / 1000)} s (${ports.length || 1} at a time after the administrator)`);
 await browser.close();
 
 // The soul entrance (frontend/demo/DemoSoul.tsx): one soul per underworld, signed in through the soul app's own

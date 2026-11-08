@@ -75,6 +75,24 @@ as each role, walks every page and clicks every tab, sweeps every GET the OpenAP
 database is dropped at the end and the files come back here. Tokens and secret-named fields are removed from what is
 recorded. To change what is in the world, edit `scripts/demo-seed.py`.
 
+The administrator is walked first and alone: its screens list everyone's sign-ins, sessions, last logins and audit
+rows, and every role's sign-in writes those. The other five roles see only their own, and a walk sends nothing but GETs
+and its sign-in, so they then run at once, each against a Django process of its own (daphne runs a process's sync views
+on one thread, so a shared server would only take turns); the browser's API requests are routed to that process. The
+soul accounts are recorded last, because the judges' screens show soul sign-ins. `DEMO_PARALLEL` caps the concurrent
+walks (default 5; `0` walks them in turn, as before). Measured one after another: admin 209 s, judge 148 s, judge_eu
+113 s, judge_eg 116 s, judge_gr 101 s, moderator 49 s, about 12 minutes; expected now about 209 s plus the slowest of the
+five under contention, roughly 6–7 minutes (an estimate until the next recording prints its `roles:` line).
+
+The script records only when it has to. It hashes the working-tree content of `scripts/demo-seed.py`,
+`scripts/demo-record.mjs` (which holds the role and route lists), `scripts/demo-record-inner.sh`,
+`scripts/demo-backend-up.sh`, `scripts/demo_settings.py`, `scripts/demo-translations.json`, `backend/apps/`,
+`backend/config/` and `backend/requirements.lock` (test files excluded), and keeps the hash in
+`frontend/demo/data/.recorded-from` after each recording. An equal hash prints that the recording is current and exits
+0 without reaching the gates' machine; `FORCE=1 scripts/demo-record.sh` records anyway. Frontend code is deliberately
+not an input, so a change to the screens alone does not re-record; when a screen starts asking for something new,
+use `FORCE=1`.
+
 ## Verifying
 
 ```bash
