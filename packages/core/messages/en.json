@@ -8,7 +8,6 @@
     "greeting_evening": "Good Evening",
     "greeting_night": "Good Night",
     "expand_menu": "Expand menu",
-    "collapse_menu": "Collapse menu",
     "collapse_locked": "Navigation stays collapsed below a 1200 px window width",
     "settings": "Settings",
     "welcome": "Welcome",
@@ -19,7 +18,6 @@
     "more": "More",
     "soul_events": "Soul events",
     "skip_to_main": "Skip to main content",
-    "appeal_review": "Appeal review",
     "collapse_sidebar": "Collapse sidebar",
     "expand_sidebar": "Expand sidebar",
     "group": {
@@ -32,20 +30,13 @@
   "auth": {
     "login": "Sign in",
     "logout": "Sign out",
-    "username": "Username",
     "password": "Password",
-    "logging_in": "Signing in…",
     "login_success": "Signed in",
-    "error_invalid_credentials": "Account or password is incorrect",
-    "error_invalid_token": "Invalid token",
-    "error_token_expired": "Token has expired",
     "error_login_failed": "Sign-in failed",
     "error_locked": "Locked. Try again in {{minutes}} min",
     "confirm_logout": "Sign out?",
     "confirm_logout_desc": "Are you sure you want to log out?",
     "confirm_logout_btn": "Sign out",
-    "statute_of_day": "Statute of the day · a different one each visit",
-    "statute_fixed_note": "Statutes can only be read after signing in; these few are quoted verbatim from the corpus and do not change.",
     "numbering": "How the four civilizations number their articles",
     "civilization": "Civilization",
     "civilization_note": "Your account decides the civilization; you enter it on sign-in. The marked one is where this device last signed in.",
@@ -216,10 +207,6 @@
   },
   "home": {
     "console": "Console",
-    "hero_title": "SoulLedger",
-    "hero_subtitle": "Cross-civilization soul management system",
-    "hero_description": "One operating system for the souls of four cosmologies: the Chinese Diyu, European Heaven and Hell, the Egyptian Duat and the Greek Underworld.",
-    "civilizations_title": "Civilizations",
     "civilizations": {
       "CHINESE": "Chinese Diyu",
       "EUROPEAN": "European Heaven & Hell",
@@ -249,7 +236,6 @@
     "title": "About & credits",
     "intro": "The typefaces, open-source software, texts and services this app uses, with their licences and sources.",
     "fonts": "Typefaces",
-    "licence": "Licence",
     "public_domain": "Public domain",
     "source": "Source",
     "software": "Open-source software",
@@ -276,8 +262,6 @@
     "balance_range": "Balance Range",
     "balance_min": "Min",
     "balance_max": "Max",
-    "all_states": "All States",
-    "all_civilizations": "All Civilizations",
     "no_souls": "No souls found",
     "name": "Name",
     "civilization": "Civilization",
@@ -1070,7 +1054,6 @@
     "hard_delete_confirm_title": "Delete permanently?",
     "hard_delete_confirm_message": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
     "dependent_count": "{{type}} {{name}} · {{count}} linked items",
-    "deleted_by": "Deleted by {{user}}",
     "empty": "The recycle bin is empty",
     "manage_from_bin": "Manage from the recycle bin",
     "entity_types": {
@@ -1113,13 +1096,10 @@
     "edit_error": "Update failed",
     "confirm_delete": "Delete this permission?",
     "confirm_delete_message": "After deletion, all roles using this permission will lose it. This cannot be undone.",
-    "cancel_delete": "Cancel",
     "deleting": "Deleting...",
     "confirm_delete_action": "Confirm Delete",
     "roles_title": "Role Management",
     "create_role": "Create Role",
-    "edit_role": "Edit Role",
-    "delete_role": "Delete Role",
     "role_name_label": "Role Name *",
     "role_name_placeholder": "e.g. MODERATOR",
     "role_name_builtin_hint": "Built-in role: the name is fixed (the code compares it by literal); the display name can change",
@@ -1129,7 +1109,6 @@
     "role_create_error": "Create role failed",
     "role_edit_error": "Update role failed",
     "confirm_delete_role": "Delete this role?",
-    "confirm_delete_role_message": "After deletion, all permission assignments for this role will be removed. This cannot be undone.",
     "matrix": {
       "title": "Permission Matrix",
       "codename_col": "Codename",
@@ -2103,7 +2082,6 @@
     "court": "Court",
     "verdict": "Verdict",
     "created": "Created",
-    "action": "Action",
     "view": "View",
     "verdicts": {
       "passed": "Passed",
@@ -2209,9 +2187,6 @@
       "passed_barred_five_heinous": "The offence is one of the five heinous crimes: it cannot be passed.",
       "passed_barred_untruthful": "A denial was recorded as untrue: the verdict cannot be passed. The scale can be left wavering for a new weighing."
     },
-    "create_success": "Judgment created",
-    "create_error": "Failed to create judgment",
-    "conclude_success": "Judgment concluded",
     "conclude_error": "Failed to conclude judgment",
     "no_evidence": "No evidence on file",
     "grounds": {
@@ -2903,7 +2878,6 @@
     "old_password": "Current Password",
     "new_password": "New Password",
     "confirm_password": "Confirm Password",
-    "password_mismatch": "Passwords do not match",
     "password_too_short": "Password must be at least 8 characters",
     "password_changed": "Password changed successfully",
     "password_change_failed": "Failed to change password",
@@ -3026,7 +3000,6 @@
   "realms": {
     "title": "Realms",
     "subtitle": "Cross-civilization realm management",
-    "count": "realms",
     "civilizations": {
       "CHINESE": "Chinese Diyu",
       "EUROPEAN": "European Heaven & Hell",
@@ -3531,7 +3504,6 @@
     "username_placeholder": "Enter username",
     "email_placeholder": "Enter email",
     "password_placeholder": "Enter password",
-    "password_edit_placeholder": "Leave empty to keep current",
     "first_name": "First Name",
     "last_name": "Last Name",
     "first_name_placeholder": "First Name",
@@ -3659,12 +3631,9 @@
     "dark": "Dark"
   },
   "admin": {
-    "ledger_stats": "Deed Statistics",
     "avg_balance": "Avg Balance",
     "state_breakdown": "State Breakdown",
-    "top_balance": "Top Souls by Balance",
     "realm": "Realm",
-    "civilization": "Civilization",
     "soul_count": "Soul Count",
     "no_realm_data": "No realm data available",
     "souls": "souls",
@@ -3700,9 +3669,7 @@
     "minutes_ago": "{{n}}m ago",
     "hours_ago": "{{n}}h ago",
     "first_run": "First-time setup · {{n}} / {{total}}",
-    "setup_intro": "Set these four and you are ready; you can come back here to change them.",
     "identity": "Confirm who you are",
-    "identity_desc": "Your civilization and role are at the bottom of this page. If they are wrong, ask an administrator.",
     "default_view": "Default view",
     "default_view_desc": "What you see first after signing in. Saved on your account, in any browser.",
     "view_operator": "Operator",
@@ -3711,8 +3678,6 @@
     "prefs": "Language and theme",
     "prefs_desc": "Interface language and light or dark theme; change them any time from the user menu.",
     "keys_desc": "These work throughout the judgment queue.",
-    "step_done": "Done",
-    "step_current": "Current",
     "continue": "Continue",
     "skip": "Skip and go in",
     "greeting_morning": "Good morning, {{name}}",
@@ -3895,7 +3860,6 @@
   "search": {
     "placeholder": "Search...",
     "aria_label": "Search",
-    "input_placeholder": "Search souls, case numbers, articles or pages",
     "dialog_label": "Search everywhere",
     "cancel": "Cancel",
     "group_judgments": "Cases",
@@ -3913,8 +3877,6 @@
     "no_results_title": "Nothing found for “{{q}}”",
     "no_results_body": "Souls are found by name; cases by a full case number, ID or soul name, e.g. {{example}}; articles by text or source.",
     "hint": "Type the whole case number to find a case, e.g. {{example}}.",
-    "footer_select": "select",
-    "footer_open": "open",
     "footer_new_tab": "new tab",
     "announce_group": "{{group}}: {{n}}"
   },
@@ -4541,7 +4503,6 @@
     },
     "no_posts": "No posts yet",
     "user_posts": "Their posts",
-    "view_all_posts": "View all posts",
     "placeholder": "Say something…",
     "send": "Send",
     "comments": "Comments",
@@ -6773,8 +6734,6 @@
   },
   "social_moderation": {
     "title": "Circle moderation",
-    "subtitle": "Reports, pending content, the word list and mutes for this civilization's soul circle",
-    "refresh": "Refresh",
     "tabs": {
       "label": "Moderation sections",
       "reports": "Reports",
@@ -6816,7 +6775,6 @@
       "reason": "Reason",
       "word": "Word"
     },
-    "report_count": "{{n}} reporters",
     "kind": {
       "posts": "Posts",
       "comments": "Comments"
@@ -6842,9 +6800,7 @@
     "word_hint": "Lower-case substring match; new posts and comments that hit it wait for review and are hidden until then",
     "confirm_delete_title": "Delete this content?",
     "confirm_delete_body": "It disappears from the soul app; the audit log keeps a record.",
-    "confirm_remove_word_title": "Remove “{{word}}”?",
     "confirm_remove_word_body": "New content will no longer be held for this word.",
-    "mute_active": "Active",
     "mute_lifted": "Lifted",
     "mute_expired": "Expired",
     "done": "Done",
@@ -8275,9 +8231,6 @@
       "approved_next": "Approved. The receiving hall still has to carry it out on a computer before the soul moves.",
       "awaiting_receiver": "◐ Waiting for receiving hall"
     },
-    "appeals": {
-      "desk_only": "Reviews are done on the web"
-    },
     "stats": {
       "title": "My numbers",
       "scope": "Your own only, across all halls",
@@ -8731,8 +8684,6 @@
     "from": "From",
     "to": "To",
     "pick": "Pick an active officer of this hall",
-    "preview": "Preview",
-    "preview_stale": "The officers changed; preview again",
     "submit": "Hand over",
     "submit_n": "Hand over {{n}}",
     "submitting": "Handing over…",
@@ -9458,7 +9409,6 @@
     }
   },
   "soulmap": {
-    "life_events": "Recorded in this life",
     "move": "Move station…",
     "replay_line": "{{date}} · reached {{station}}",
     "replay_progress": "{{n}} / {{total}}",

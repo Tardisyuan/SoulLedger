@@ -358,6 +358,8 @@ const COLLECTED_FILES = [
   "jestRunsNextVendoredReact.test.ts",
   "ledgerQuantityContract.render.test.tsx",
   "messageValuesAreNotTheirOwnKeys.test.ts",
+  // 2026-11-08 语言包每个键要么有人引用,要么在基线里。
+  "messageKeysAreReferenced.test.ts",
   "proxyAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
   // 2026-10-17 第四十批 W-b:配置页只列接上的按钮(取代 editFailure 那份:通用增改表单已拿掉);配置读法与关掉的按钮。

@@ -9,7 +9,6 @@
     "greeting_evening": "晚上好",
     "greeting_night": "夜深了",
     "expand_menu": "展开菜单",
-    "collapse_menu": "收起菜单",
     "collapse_locked": "窗口宽度不足 1200 像素，导航固定收起",
     "settings": "设置",
     "language": "界面语言",
@@ -19,7 +18,6 @@
     "more": "更多",
     "soul_events": "灵魂事件",
     "skip_to_main": "跳到正文",
-    "appeal_review": "申诉复核",
     "collapse_sidebar": "收起侧栏",
     "expand_sidebar": "展开侧栏",
     "group": {
@@ -32,20 +30,13 @@
   "auth": {
     "login": "登录",
     "logout": "登出",
-    "username": "用户名",
     "password": "密码",
-    "logging_in": "登录中…",
     "login_success": "登录成功",
-    "error_invalid_credentials": "账号或密码不对",
-    "error_invalid_token": "无效的令牌",
-    "error_token_expired": "令牌已过期",
     "error_login_failed": "登录失败",
     "error_locked": "已锁定，{{minutes}} 分钟后再试",
     "confirm_logout": "确认退出登录",
     "confirm_logout_desc": "确定要退出当前账号吗？",
     "confirm_logout_btn": "确认退出",
-    "statute_of_day": "今日律条 · 每次进入换一条",
-    "statute_fixed_note": "律条要登录后才能读取，这里的几条摘自语料库原文，固定不变。",
     "numbering": "四文明编号法",
     "civilization": "文明",
     "civilization_note": "文明由账号决定，登录后自动进入所属文明。标记的是此设备上次登录的文明。",
@@ -216,10 +207,6 @@
   },
   "home": {
     "console": "控制台",
-    "hero_title": "灵魂账本",
-    "hero_subtitle": "跨文明灵魂管理系统",
-    "hero_description": "统一管理中国地府、欧洲天堂与地狱、埃及冥界、希腊冥界四大文明体系的灵魂操作系统。",
-    "civilizations_title": "文明体系",
     "civilizations": {
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂与地狱",
@@ -249,7 +236,6 @@
     "title": "关于与致谢",
     "intro": "本应用用到的字体、开源软件、典籍与服务,以及它们的授权与出处。",
     "fonts": "字体",
-    "licence": "授权",
     "public_domain": "公有领域",
     "source": "来源",
     "software": "开源软件",
@@ -276,8 +262,6 @@
     "balance_range": "功过范围",
     "balance_min": "最小",
     "balance_max": "最大",
-    "all_states": "全部状态",
-    "all_civilizations": "全部文明",
     "no_souls": "未找到灵魂",
     "name": "名称",
     "civilization": "文明",
@@ -1070,7 +1054,6 @@
     "hard_delete_confirm_title": "永久删除？",
     "hard_delete_confirm_message": "「{{name}}」将被永久删除，此操作无法撤销。",
     "dependent_count": "{{type}} {{name}} · 含 {{count}} 项关联",
-    "deleted_by": "由 {{user}} 删除",
     "empty": "回收站是空的",
     "manage_from_bin": "在回收站中管理",
     "entity_types": {
@@ -1113,13 +1096,10 @@
     "edit_error": "更新失败",
     "confirm_delete": "确认删除此权限？",
     "confirm_delete_message": "删除后，所有使用此权限的角色将失去该权限。此操作不可撤销。",
-    "cancel_delete": "取消",
     "deleting": "删除中...",
     "confirm_delete_action": "确认删除",
     "roles_title": "角色管理",
     "create_role": "创建角色",
-    "edit_role": "编辑角色",
-    "delete_role": "删除角色",
     "role_name_label": "角色名称 *",
     "role_name_placeholder": "如: MODERATOR",
     "role_name_builtin_hint": "内置角色,名称固定(代码按字面量比较);显示名称可改",
@@ -1129,7 +1109,6 @@
     "role_create_error": "创建角色失败",
     "role_edit_error": "更新角色失败",
     "confirm_delete_role": "确认删除此角色？",
-    "confirm_delete_role_message": "删除后，该角色的所有权限分配将被移除。此操作不可撤销。",
     "matrix": {
       "title": "权限矩阵",
       "codename_col": "权限代码",
@@ -2103,7 +2082,6 @@
     "court": "法庭",
     "verdict": "裁决",
     "created": "创建时间",
-    "action": "操作",
     "view": "查看",
     "verdicts": {
       "passed": "通过",
@@ -2209,9 +2187,6 @@
       "passed_barred_five_heinous": "罪目是五逆：直入阿鼻，不能判通过。",
       "passed_barred_untruthful": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。"
     },
-    "create_success": "已创建审判",
-    "create_error": "创建审判失败",
-    "conclude_success": "审判已结案",
     "conclude_error": "结案失败",
     "no_evidence": "暂无证据材料",
     "grounds": {
@@ -2903,7 +2878,6 @@
     "old_password": "当前密码",
     "new_password": "新密码",
     "confirm_password": "确认密码",
-    "password_mismatch": "两次输入的密码不一致",
     "password_too_short": "密码至少8位",
     "password_changed": "密码修改成功",
     "password_change_failed": "密码修改失败",
@@ -3026,7 +3000,6 @@
   "realms": {
     "title": "地域",
     "subtitle": "跨文明地域管理",
-    "count": "个地域",
     "civilizations": {
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂与地狱",
@@ -3531,7 +3504,6 @@
     "username_placeholder": "输入用户名",
     "email_placeholder": "输入邮箱",
     "password_placeholder": "输入密码",
-    "password_edit_placeholder": "留空则不修改",
     "first_name": "名",
     "last_name": "姓",
     "first_name_placeholder": "名",
@@ -3659,12 +3631,9 @@
     "dark": "深色"
   },
   "admin": {
-    "ledger_stats": "功德统计",
     "avg_balance": "平均功过余额",
     "state_breakdown": "状态分布",
-    "top_balance": "功过榜首灵魂",
     "realm": "领域",
-    "civilization": "文明",
     "soul_count": "灵魂数量",
     "no_realm_data": "暂无领域数据",
     "souls": "灵魂",
@@ -3700,9 +3669,7 @@
     "minutes_ago": "{{n}}分钟前",
     "hours_ago": "{{n}}小时前",
     "first_run": "首次设置 · {{n}} / {{total}}",
-    "setup_intro": "设好下面四项就可以开始了，之后回到本页还能再改。",
     "identity": "确认身份",
-    "identity_desc": "所属文明与角色见本页底部。不对请联系管理员。",
     "default_view": "默认视图",
     "default_view_desc": "决定登录后先看到什么。存在你的账号上，换浏览器也在。",
     "view_operator": "操作员",
@@ -3711,8 +3678,6 @@
     "prefs": "语言与主题",
     "prefs_desc": "界面语言与明暗主题，随时可在用户菜单里再改。",
     "keys_desc": "审判队列里通用。",
-    "step_done": "已完成",
-    "step_current": "当前",
     "continue": "继续",
     "skip": "跳过，直接进入",
     "greeting_morning": "早上好，{{name}}",
@@ -3895,7 +3860,6 @@
   "search": {
     "placeholder": "搜索...",
     "aria_label": "搜索",
-    "input_placeholder": "搜灵魂、案号、律条或页面",
     "dialog_label": "全局搜索",
     "cancel": "取消",
     "group_judgments": "案件",
@@ -3913,8 +3877,6 @@
     "no_results_title": "没有找到「{{q}}」",
     "no_results_body": "灵魂按姓名搜；案件按完整案号、编号或灵魂姓名搜，例如 {{example}}；律条按条文、出处搜。",
     "hint": "案号要输完整才能搜到，例如 {{example}}。",
-    "footer_select": "选择",
-    "footer_open": "打开",
     "footer_new_tab": "新标签页",
     "announce_group": "{{group}} {{n}} 条"
   },
@@ -4541,7 +4503,6 @@
     },
     "no_posts": "暂无帖子",
     "user_posts": "TA 的帖子",
-    "view_all_posts": "查看全部帖子",
     "placeholder": "今天想说点什么",
     "send": "发送",
     "comments": "评论",
@@ -6773,8 +6734,6 @@
   },
   "social_moderation": {
     "title": "朋友圈审核",
-    "subtitle": "本文明灵魂朋友圈的举报、待审内容、敏感词与禁言",
-    "refresh": "刷新",
     "tabs": {
       "label": "审核分区",
       "reports": "举报",
@@ -6816,7 +6775,6 @@
       "reason": "理由",
       "word": "敏感词"
     },
-    "report_count": "{{n}} 人举报",
     "kind": {
       "posts": "帖子",
       "comments": "评论"
@@ -6842,9 +6800,7 @@
     "word_hint": "按小写子串匹配;命中的新帖子与评论先进待审队列,审核前不可见",
     "confirm_delete_title": "删除这条内容?",
     "confirm_delete_body": "删除后灵魂端不再显示,审计里留有记录。",
-    "confirm_remove_word_title": "删除敏感词「{{word}}」?",
     "confirm_remove_word_body": "之后的新内容不再因为这个词进入待审。",
-    "mute_active": "生效中",
     "mute_lifted": "已解除",
     "mute_expired": "已到期",
     "done": "已处理",
@@ -8275,9 +8231,6 @@
       "approved_next": "已批准。接收方殿还要在电脑上执行一次，灵魂才会动身。",
       "awaiting_receiver": "◐ 等接收方执行"
     },
-    "appeals": {
-      "desk_only": "复核在网页上进行"
-    },
     "stats": {
       "title": "我的数",
       "scope": "只数你自己的，所有殿合在一起",
@@ -8731,8 +8684,6 @@
     "from": "交出人",
     "to": "接手人",
     "pick": "选一位本殿在职官员",
-    "preview": "预览",
-    "preview_stale": "改了人选，请重新预览",
     "submit": "移交",
     "submit_n": "移交 {{n}} 件",
     "submitting": "移交中…",
@@ -9458,7 +9409,6 @@
     }
   },
   "soulmap": {
-    "life_events": "这一生记下的事",
     "move": "挪站…",
     "replay_line": "{{date}} · 到达{{station}}",
     "replay_progress": "{{n}} / {{total}}",
