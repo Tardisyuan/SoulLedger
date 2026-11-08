@@ -114,6 +114,10 @@ class Reincarnation(AuditUserFields, models.Model):
         ordering = ["-reincarnated_at"]
         verbose_name = "Reincarnation"
         verbose_name_plural = "Reincarnations"
+        indexes = [
+            # 配额计数(一殿一道一段时间里转了几个)在殿级行锁里跑,没有它就是全表扫(重构审查 2026-11-08 4.1)。
+            models.Index(fields=["tenant", "rebirth_form", "reincarnated_at"], name="reinc_tenant_form_at_idx"),
+        ]
         constraints = [
             # 实测接受 −7,而 `ReincarnationSerializer` 同样没有 `read_only_fields`。
             # 下限 1 而不是 0:默认值就是 1,「第零次轮回」不是这个系统里的一个状态。
