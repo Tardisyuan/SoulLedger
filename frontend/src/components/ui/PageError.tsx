@@ -103,6 +103,14 @@ export function StatusCard({ code, title, message, detail, detailTestId, action,
   );
 }
 
+/**
+ * 一屏多个查询时交给 `QueryError` 的那一个:第一个出错的查询的 error。
+ * 查询的顺序就是页面上读的顺序;都没出错时是 `null`。
+ */
+export function firstError(...queries: ReadonlyArray<{ error: unknown } | undefined>): unknown {
+  return queries.find((q) => q?.error)?.error ?? null;
+}
+
 interface QueryErrorProps {
   /** Re-run the query. Omit only if there is genuinely nothing to retry. */
   onRetry?: () => void;

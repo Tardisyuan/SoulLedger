@@ -38,9 +38,9 @@ export default function SocialFeedPage() {
   // inactive one changes its key; it does not stop it fetching — so every
   // visit to this page hit both `/social/feed/` and `/social/posts/`, and
   // every page turn hit both again. `enabled` is what actually gates a query.
-  const { data: feedData, isLoading: feedLoading, isPlaceholderData: feedStale, isError: feedError, refetch: refetchFeed } =
+  const { data: feedData, isLoading: feedLoading, isPlaceholderData: feedStale, isError: feedError, error: feedFailure, refetch: refetchFeed } =
     useFeed(params, { enabled: tab === "feed" });
-  const { data: allData, isLoading: allLoading, isPlaceholderData: allStale, isError: allError, refetch: refetchAll } =
+  const { data: allData, isLoading: allLoading, isPlaceholderData: allStale, isError: allError, error: allFailure, refetch: refetchAll } =
     usePosts(params, { enabled: tab === "all" });
 
   // 身份带(A5):题「朋友圈」,右栏「关注 N · 粉丝 N」(自己的资料;没取到就不写)。
@@ -62,6 +62,7 @@ export default function SocialFeedPage() {
   // genuinely empty feed shows. The active tab's error is the one on screen.
   const isError = tab === "feed" ? feedError : allError;
   const refetch = tab === "feed" ? refetchFeed : refetchAll;
+  const failure = tab === "feed" ? feedFailure : allFailure;
   const paged = data && !Array.isArray(data) ? data : null;
   const totalPages = paged ? Math.max(1, Math.ceil(paged.count / PAGE_SIZE)) : 0;
 
@@ -159,7 +160,7 @@ export default function SocialFeedPage() {
               ))}
             </div>
           ) : isError ? (
-            <QueryError onRetry={() => refetch()} />
+            <QueryError onRetry={() => refetch()} error={failure} />
           ) : posts.length === 0 ? (
             <EmptyState
               title={t("social.posts")}

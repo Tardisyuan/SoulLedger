@@ -22,7 +22,7 @@ import { ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { useArchiveDisposition, useUnarchiveDisposition } from "@soulledger/core/hooks/useDispositions";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-import { QueryError } from "@/src/components/ui/PageError";
+import { QueryError, firstError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
@@ -253,7 +253,7 @@ function DispositionPageContent() {
       isEmpty={isError || total === 0}
       empty={
         isError ? (
-          <QueryError onRetry={() => SECTIONS.forEach((s) => queries[s].refetch())} />
+          <QueryError onRetry={() => SECTIONS.forEach((s) => queries[s].refetch())} error={firstError(...SECTIONS.map((s) => queries[s]))} />
         ) : (
           <EmptyState title={t("disposition.list")} reason={t("disposition.no_dispositions")} />
         )

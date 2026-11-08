@@ -184,7 +184,7 @@ function CrossJudgmentDetail() {
         {fetchFailureOf(loadError) === "gone" ? (
           <EmptyState title={t("state.gone_title")} reason={t("state.gone_body")} />
         ) : (
-          <QueryError onRetry={() => void refetch()} />
+          <QueryError onRetry={() => void refetch()} error={loadError} />
         )}
       </PageShell>
     );

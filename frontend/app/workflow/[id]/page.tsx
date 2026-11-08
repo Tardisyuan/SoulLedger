@@ -323,7 +323,7 @@ export default function WorkflowDetailPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-8">
-        <QueryError onRetry={() => refetch()} />
+        <QueryError onRetry={() => refetch()} error={error} />
         <Link href="/workflow" className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline">
           {t("workflow.detail.back_to_list")}
         </Link>

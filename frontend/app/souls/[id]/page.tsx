@@ -618,7 +618,7 @@ export default function SoulDetailPage() {
           </a>
         }
       >
-        <QueryError onRetry={refreshSoulViews} />
+        <QueryError onRetry={refreshSoulViews} error={failure} />
       </PageShell>
     );
   }

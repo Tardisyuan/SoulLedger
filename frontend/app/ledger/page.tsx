@@ -187,7 +187,7 @@ function LedgerPageContent() {
       {tooLarge ? (
         <QueryError detail={t("ledger.journal.month_too_large")} />
       ) : isError && !data ? (
-        <QueryError onRetry={() => refetch()} detail={t("ledger.journal.load_failed")} />
+        <QueryError onRetry={() => refetch()} error={error} detail={t("ledger.journal.load_failed")} />
       ) : isLoading || !data ? (
         <LedgerSkeleton />
       ) : (

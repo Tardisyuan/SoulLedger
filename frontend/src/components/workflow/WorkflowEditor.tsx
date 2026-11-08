@@ -399,6 +399,7 @@ export default function WorkflowEditor({
   const {
     data: existingTemplate,
     isError: isTemplateError,
+    error: templateError,
     isLoading: isTemplateLoading,
     refetch: refetchTemplate,
   } = useQuery({
@@ -1467,7 +1468,7 @@ export default function WorkflowEditor({
   if (templateId && isTemplateError) {
     return (
       <div className="flex flex-col h-full items-center justify-center bg-[oklch(var(--color-surface-2))]">
-        <QueryError onRetry={() => void refetchTemplate()} />
+        <QueryError onRetry={() => void refetchTemplate()} error={templateError} />
         {onClose && (
           <button
             type="button"

@@ -60,6 +60,22 @@ test("a failed load says so, not 'empty'", async () => {
   expect(screen.queryByText("officer_app.comment.empty")).not.toBeInTheDocument();
 });
 
+test("a 403 is the permission card, not 'something went wrong' with a retry", async () => {
+  comments.mockRejectedValue(Object.assign(new Error("403"), { response: { status: 403 } }));
+  await renderIt();
+  expect(await screen.findByTestId("permission-denied")).toBeInTheDocument();
+  expect(document.querySelector("[data-query-error]")).toBeNull();
+  expect(screen.queryByText("error.retry")).not.toBeInTheDocument();
+});
+
+test("a 500 stays the query error with a retry", async () => {
+  comments.mockRejectedValue(Object.assign(new Error("500"), { response: { status: 500 } }));
+  await renderIt();
+  expect(await screen.findByText("error.retry")).toBeInTheDocument();
+  expect(document.querySelector("[data-query-error]")).not.toBeNull();
+  expect(screen.queryByTestId("permission-denied")).not.toBeInTheDocument();
+});
+
 test("a body that is not a list (a paginated page) is a load failure, not a crash", async () => {
   // E2E found this: an unmodelled endpoint answered {count, results} and `.slice` took the whole page down.
   comments.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });

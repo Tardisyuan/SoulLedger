@@ -69,7 +69,7 @@ export function JudgmentComments({ id, canWrite, concludedAt }: { id: string; ca
           {isLoading ? (
             <PageSpinner />
           ) : isError ? (
-            <QueryError onRetry={() => void refetch()} />
+            <QueryError onRetry={() => void refetch()} error={q.error} />
           ) : data && data.length === 0 ? (
             <EmptyState title={t("officer_app.comment.empty")} />
           ) : (
