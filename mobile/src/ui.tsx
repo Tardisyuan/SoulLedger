@@ -70,6 +70,13 @@ import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme"
  * Inside a `Sheet`, an `Input` renders @gorhom's `BottomSheetTextInput`: only that one tells the sheet
  * which field has focus, and without it the sheet never lifts above the keyboard (reason fields were covered, 2026-10-17).
  */
+/**
+ * Keyboard for a field typed in Latin letters (soul codes, recovery codes). iOS has "ascii-capable"; Android has no such
+ * type and falls back to the default keyboard, where a pinyin IME (Sogou on Huawei) composes the letters into words.
+ * "visible-password" is Android's Latin keyboard. `Input` applies this itself; hand-written TextInputs use this constant.
+ */
+export const LATIN_KEYBOARD = Platform.OS === "android" ? ("visible-password" as const) : ("ascii-capable" as const);
+
 export const InSheetContext = createContext(false);
 /** Inside a `Sheet`: bring a focused field (and ~one button below it) above the keyboard. */
 export const SheetRevealContext = createContext<((field: TextInput | null) => void) | null>(null);

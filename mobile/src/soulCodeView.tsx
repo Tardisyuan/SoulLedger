@@ -13,7 +13,7 @@ import Svg, { Path } from "react-native-svg";
 import { family } from "./fonts";
 import { useI18n } from "./i18n";
 import { SOUL_CODE_PROBLEM_KEY, soulCodeStep } from "./loginRules";
-import { FocusRing, Txt, useTheme } from "./ui";
+import { FocusRing, LATIN_KEYBOARD, Txt, useTheme } from "./ui";
 import type { SoulCodeProblem } from "@soulledger/core/domain/soulCode";
 
 export function useSpelled() {
@@ -134,7 +134,7 @@ export function SoulCodeField({
               // uncommitted composition that is dropped when focus moves to the password field.
               // Android has no "ascii-capable"; "visible-password" is its keyboard without the suggestion strip, which
               // otherwise offers words ("QUEEN") for a code that is not one.
-              keyboardType={Platform.OS === "android" ? "visible-password" : "ascii-capable"}
+              keyboardType={LATIN_KEYBOARD}
               autoCapitalize="characters"
               autoCorrect={false}
               spellCheck={false}
