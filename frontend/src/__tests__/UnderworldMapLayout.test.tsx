@@ -76,6 +76,13 @@ it("draws the whole map when it is wide enough for 11px labels", async () => {
   expect(container.querySelector(".v4-map-viewport > svg")!.getAttribute("viewBox")).toBe("0 0 1120 450");
 });
 
+it("opens at Fit on a desktop-width container (the Diyu labels alone would ask for a close-up)", async () => {
+  width = 870;
+  const { container } = draw();
+  expect(await screen.findByTestId("underworld-map")).toHaveAttribute("data-camera", "whole");
+  expect(container.querySelector(".v4-map-viewport > svg")!.getAttribute("viewBox")).toBe("0 0 1120 450");
+});
+
 it("raises the narrow station card above the demo tour panel's layer", async () => {
   width = 300;
   draw();
@@ -84,6 +91,9 @@ it("raises the narrow station card above the demo tour panel's layer", async () 
   const card = screen.getByTestId("underworld-map-station-card");
   expect(card.className).toMatch(/max-md:z-drawer/);
   expect(card.className).not.toMatch(/max-md:z-(filters|toast)\b/);
+  // And sits above the panel rather than over its buttons: the bottom offset adds the panel's published height.
+  expect(card.className).toContain("max-md:bottom-[calc(var(--demo-tour-h,0px)+1rem)]");
+  expect(card.className).not.toMatch(/max-md:bottom-4\b/);
 });
 
 // 小卡上「今日进 · 出 · 平均停留」(Design 第十六批 §1.4;`GET /realms/occupancy/` 2026-11-08 加的三个数)。

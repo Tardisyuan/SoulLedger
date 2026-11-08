@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@soulledger/core/api/client";
@@ -445,6 +445,30 @@ export default function DemoTour() {
     if (lit.current && lift) revealIfCovered(lit.current);
   }, [lift]);
 
+  // Whatever panel is up publishes how much of the viewport bottom it takes (`--demo-tour-h` on :root), so a fixed-bottom
+  // card elsewhere (the map's station card at 393, the overview's padding) sits above it instead of over its buttons.
+  // No panel → the variable is removed and those offsets fall back to 0. Every render: the panel changes with state and lift.
+  const panelRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const el = panelRef.current;
+    const root = document.documentElement;
+    if (!el) {
+      root.style.removeProperty("--demo-tour-h");
+      return;
+    }
+    const publish = () =>
+      root.style.setProperty("--demo-tour-h", `${Math.max(0, Math.round(window.innerHeight - el.getBoundingClientRect().top))}px`);
+    publish();
+    const resized = typeof ResizeObserver === "function" ? new ResizeObserver(publish) : null;
+    resized?.observe(el);
+    window.addEventListener("resize", publish);
+    return () => {
+      resized?.disconnect();
+      window.removeEventListener("resize", publish);
+      root.style.removeProperty("--demo-tour-h");
+    };
+  });
+
   const update = (next: Partial<State>) => {
     const merged = { ...state, ...next };
     save(merged);
@@ -464,7 +488,7 @@ export default function DemoTour() {
     const total = tour.steps.length;
     if (state.finished) {
       card = (
-        <aside data-testid="demo-tour" data-finished="" className={panel}>
+        <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={panel}>
           <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t(state.skipped ? "demo.tour.skipped_title" : "demo.tour.done_title")}</p>
           <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{state.skipped ? t("demo.tour.skipped_body") : t("demo.tour.done_body", { civ })}</p>
           <ul className="m-0 mt-3 flex list-none gap-2 p-0">
@@ -497,6 +521,7 @@ export default function DemoTour() {
       card = (
         <button
           type="button"
+          ref={panelRef as RefObject<HTMLButtonElement | null>}
           data-testid="demo-tour-badge"
           onClick={() => update({ collapsed: false })}
           className="fixed right-3 bottom-3 z-toast h-11 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-xs text-[oklch(var(--color-ink))] max-md:bottom-20 md:right-6 md:bottom-6"
@@ -507,7 +532,7 @@ export default function DemoTour() {
     } else {
       const last = state.step === total - 1;
       card = (
-        <aside data-testid="demo-tour" data-civ={tour.skin} className={panel} style={lift ? { bottom: lift } : undefined}>
+        <aside ref={panelRef} data-testid="demo-tour" data-civ={tour.skin} className={panel} style={lift ? { bottom: lift } : undefined}>
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-xs text-[oklch(var(--color-ink-muted))]">{t("demo.tour.title_civ", { civ })}</span>
             <span className="flex shrink-0 items-center gap-2">
@@ -547,7 +572,7 @@ export default function DemoTour() {
   // The administrator has no tour, and lands on the densest page there is.
   if (!card && username === DEMO_USERNAMES.admin && pathname === "/dashboard" && !state.closed) {
     card = (
-      <aside data-testid="demo-admin-hint" className={panel}>
+      <aside ref={panelRef} data-testid="demo-admin-hint" className={panel}>
         <p className="m-0 text-sm text-[oklch(var(--color-ink))]">{t("demo.admin_hint")}</p>
         <div className="mt-2 flex justify-end">
           <Button type="button" variant="ghost" size="sm" onClick={() => update({ closed: true })}>{t("common.close")}</Button>

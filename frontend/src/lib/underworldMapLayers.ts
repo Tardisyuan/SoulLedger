@@ -270,12 +270,15 @@ export const badgeWidth = (text: string) => Math.round(BADGE.padX * 2 + BADGE.ba
 /** 满八成以上:描边与进度条换金属色,外加一圈光(第十六批)。 */
 export const BADGE_HOT = 0.8;
 
-/** 胶囊放在站的右上方;右边放不下(超出图宽)就放到左上方。 */
+/**
+ * 胶囊放在站的右上方;右边放不下(超出图宽)就放到左上方。两边都放不下(站贴着左边又很宽)就夹进图里,
+ * 顶上同样不出图 —— 全景的框就是 viewBox,胶囊出了 viewBox 就被框切掉。
+ */
 export function badgePlacement(node: Rect, width: number, mapWidth: number): { x: number; y: number; side: "right" | "left" } {
-  const y = Math.round(node.y - BADGE.height - 2);
+  const y = Math.max(0, Math.round(node.y - BADGE.height - 2));
   const right = Math.round(node.x + node.width + 4);
   if (right + width <= mapWidth) return { x: right, y, side: "right" };
-  return { x: Math.round(node.x - width - 4), y, side: "left" };
+  return { x: Math.max(0, Math.min(mapWidth - width, Math.round(node.x - width - 4))), y, side: "left" };
 }
 
 /** 读数的字:满 / 将满前面加字形(■ / ◐,同树表图例),不只靠颜色;容量未记录写 —。 */
@@ -413,6 +416,11 @@ export const MIN_LABEL_PX = 11;
 export const CLOSE_SCALE = 1.25;
 /** 当前站放在镜头横向六成处,左边看得见走过来的那一段。 */
 export const FOCUS_AT = 0.6;
+/**
+ * 镜头只给窄屏:容器宽到这里就开全景(2026-11-09)。只看字号时桌面也进近处 —— 地府的 10 号字要 1232px 宽的容器才到 11px,
+ * 1280 宽的桌面容器约 870px,于是默认镜头把酆都那一头、埃及「真理大厅」的读数切在框外。393 宽的手机容器约 330px。
+ */
+export const CLOSE_UP_BELOW_PX = 640;
 
 /** 图里最小的标签字号(viewBox 单位);读不到按 12。 */
 export function minLabelFont(svg: Element): number {
@@ -429,7 +437,7 @@ export interface MapCamera {
 }
 
 /**
- * 窄屏镜头:整图时最小的字在屏上小于 `MIN_LABEL_PX` 才要镜头(否则 null)。镜头按 `CLOSE_SCALE` 取宽(393 宽约 290 单位,
+ * 窄屏镜头:容器窄于 `CLOSE_UP_BELOW_PX`、且整图时最小的字在屏上小于 `MIN_LABEL_PX` 才要镜头(否则 null)。镜头按 `CLOSE_SCALE` 取宽(393 宽约 290 单位,
  * 10 号字约 12.5px)、高取整图(第十六批 393 合成图上下两段路都在);`focus` 落在横向 `FOCUS_AT` 处,不出图。
  */
 export function narrowCamera(
@@ -438,7 +446,7 @@ export function narrowCamera(
   containerPx: number,
   fontUnits: number,
 ): MapCamera | null {
-  if (!(containerPx > 0)) return null;
+  if (!(containerPx > 0) || containerPx >= CLOSE_UP_BELOW_PX) return null;
   if ((fontUnits * containerPx) / box.width >= MIN_LABEL_PX) return null;
   const w = Math.min(box.width, Math.round(containerPx / CLOSE_SCALE));
   const h = box.height;

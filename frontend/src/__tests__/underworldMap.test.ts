@@ -43,6 +43,7 @@ import {
   minLabelFont,
   moveGroupLabelsOffHeroes,
   narrowCamera,
+  CLOSE_UP_BELOW_PX,
   nodeLoads,
   paintLight,
   panCamera,
@@ -389,6 +390,18 @@ describe("data on the map (2026-11-08 B)", () => {
     expect(badgePlacement({ x: 1060, y: 60, width: 20, height: 20 }, 80, 1120).side).toBe("left");
   });
 
+  it("the badge never leaves the drawing: clamped at the left and top edges when neither side fits", () => {
+    // A wide node hugging the left edge: right side runs past 1120, left side would start below 0.
+    const at = badgePlacement({ x: 20, y: 5, width: 1060, height: 40 }, 80, 1120);
+    expect(at.x).toBeGreaterThanOrEqual(0);
+    expect(at.x + 80).toBeLessThanOrEqual(1120);
+    expect(at.y).toBe(0);
+    // A station at the right end flips left and stays inside.
+    const end = badgePlacement({ x: 1100, y: 60, width: 20, height: 20 }, 80, 1120);
+    expect(end.x + 80).toBeLessThanOrEqual(1120);
+    expect(end.x).toBeGreaterThanOrEqual(0);
+  });
+
   it("markLoads hangs one badge per station in its label group, metal-hot at 80% and above", () => {
     const svg = map("eu");
     const placed = markLoads(svg, new Map([
@@ -465,6 +478,15 @@ describe("narrow screens: close up on the current station", () => {
   it("no camera when the whole map already shows labels at 11px or more", () => {
     expect(narrowCamera(box, { x: 500, y: 200 }, 1300, 10)).toBeNull();
     expect(narrowCamera(box, { x: 500, y: 200 }, 0, 10)).toBeNull();
+  });
+
+  it("a desktop container opens at Fit even though the Diyu 10-unit labels are under 11px there", () => {
+    // 1280-wide desktop: the map's container is about 870px; 10 x 870 / 1120 is about 7.8px.
+    expect((10 * 870) / box.width).toBeLessThan(11);
+    expect(narrowCamera(box, { x: 500, y: 200 }, 870, 10)).toBeNull();
+    expect(narrowCamera(box, { x: 500, y: 200 }, CLOSE_UP_BELOW_PX, 10)).toBeNull();
+    // Just under the threshold it is still a phone-ish width and closes up.
+    expect(narrowCamera(box, { x: 500, y: 200 }, CLOSE_UP_BELOW_PX - 1, 10)).not.toBeNull();
   });
 
   it("at 393 the camera is 1.25 px per unit, full height, with the station about 60% across", () => {

@@ -258,6 +258,13 @@ describe("冥界图缩略", () => {
     const link = thumb.closest("a")!;
     expect(link).toHaveAttribute("href", "/realms");
     expect(link).toHaveAttribute("data-overview-map");
+    // In the hero card (first screen, left of the demo tour panel), not at the foot of the right column.
+    const hero = document.querySelector("[data-overview-hero]")!;
+    expect(hero.contains(link)).toBe(true);
+    expect(document.querySelector("[data-overview] > [data-overview-map]")).toBeNull();
+    // Between the buttons and the three figures: the figures still come after it.
+    const figures = hero.lastElementChild!;
+    expect(link.compareDocumentPosition(figures) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("用户资料里的文明优先于租户代码前缀", async () => {

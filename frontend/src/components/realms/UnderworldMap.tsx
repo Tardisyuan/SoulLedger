@@ -66,12 +66,13 @@ import { Locate, Maximize2 } from "lucide-react";
  *   世界图给了 `loads` 就每站写「在押/容量」,热度定柔光强弱与流光快慢。减少动态效果时流光不画、扫描弧停住(globals.css)。
  * - 主角节点(Design 第十六批 §1,`public/v4/maps/nodes/`):每个文明 3–4 站换成一张小建筑线描,状态随节点的 data-state;
  *   点列站不替换,挂在点列左边。分组名压到主角节点时挪到它与读数胶囊的右边。
- * - 窄屏(字在屏上会小于 11px):默认镜头 1.25 倍、当前站在横向六成处(没有灵魂就是起点),拖动移镜头;
+ * - 窄屏(容器窄于 640px、且字在屏上会小于 11px;桌面一律全景):默认镜头 1.25 倍、当前站在横向六成处(没有灵魂就是起点),拖动移镜头;
  *   「全景」看整张,「近处」回来。缩放钮 44 见方,竖排在右上 —— 在图框里、画面之外自成一列(2026-11-08):
  *   此前叠在画面上,全景时盖住最右一站与它的读数,393 宽时那一列比全景的图还高、压到下面「支线」一行。
  *   现在画面只占那一列左边的宽,全景、镜头、拖到头都不会有东西藏在钮下面;图框至少和那一列一样高。
  * - 点 / 悬停一站出一张小卡(236 宽;窄屏贴在视窗底部,层级是抽屉那一档 —— 演示导览的面板是 Toast 一档、也贴在底部,
- *   刚点出来的卡要在它上面):站名、(灵魂的行程)状态与到达日期、(世界图)在押 / 容量与进度条,
+ *   刚点出来的卡要在它上面;卡的底边让出导览面板的高度 `--demo-tour-h`(`demo/DemoTour.tsx` 写在 :root 上,演示之外没有,
+ *   于是是 0),两者都不挡对方的按钮):站名、(灵魂的行程)状态与到达日期、(世界图)在押 / 容量与进度条,
  *   和第十六批稿子里那行「今日进 · 出 · 平均停留」(`GET /realms/occupancy/` 的 `arrived_today` / `left_today` /
  *   `avg_stay_days`,2026-11-08 加;平均停留是此刻在押者已待的天数)。缺的数写「未记录」。键盘:站名清单的按钮同样打开它,Esc 关。
  *
@@ -545,7 +546,7 @@ export function UnderworldMap({
           <div
             data-testid="underworld-map-station-card"
             data-station={cardId}
-            className="z-filters w-[236px] border max-md:fixed max-md:z-drawer max-md:inset-x-4 max-md:bottom-4 max-md:w-auto md:absolute md:bottom-3 md:right-16 border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 shadow-overlay"
+            className="z-filters w-[236px] border max-md:fixed max-md:z-drawer max-md:inset-x-4 max-md:bottom-[calc(var(--demo-tour-h,0px)+1rem)] max-md:w-auto md:absolute md:bottom-3 md:right-16 border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 shadow-overlay"
           >
             <div className="flex items-start gap-2">
               <p aria-live="polite" className="m-0 flex-1 font-title text-md text-[oklch(var(--color-ink))]">{cardName}</p>

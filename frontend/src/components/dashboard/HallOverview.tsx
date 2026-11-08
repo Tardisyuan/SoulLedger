@@ -31,8 +31,10 @@ import { mapSkinOf } from "@/src/lib/underworldMap";
  * 会审邀请(`/dispatch/cross-tenant-judgments/?side=participating&status=PROPOSED`)。
  *
  * 卡片是 `.v4-card`(深色 1px 线、浅色两层淡阴影),圆角 6(面板);主卡四角是金属色角饰(`.v4-corner`)。
- * 右栏最下是本殿文明的冥界图缩略(`UnderworldMap` 的 compact:没有钮、小卡、读数),点它去 /realms。它不发任何接口请求,
- * 只取图的 SVG(与 /realms 同一份模块缓存),所以只在概览这一格挂上时才取。
+ * 主卡里、按钮与三个读数之间是本殿文明的冥界图缩略(`UnderworldMap` 的 compact:没有钮、小卡、读数),点它去 /realms。
+ * 它不发任何接口请求,只取图的 SVG(与 /realms 同一份模块缓存),所以只在概览挂上时才取。2026-11-09 从右栏最下挪进主卡:
+ * 1280×860 时右栏最下那一格在首屏底边、又正好在演示导览面板(右下角)底下;主卡那一段原本是空的。
+ * 整个概览底下让出导览面板的高度(`--demo-tour-h`,`demo/DemoTour.tsx` 写在 :root;演示之外是 0),窄一些的宽度上滚得开。
  *
  * 大数字是 88(`text-display-xl`,v4 加的一档,只给这里与年报);进页时它从 0 滚上来、「本月已结」环从 0 扫到实际值
  * (`.v4-roll` / `.v4-ring-sweep`,globals.css,减少动态效果时直接是终态)。「其中 n 件已过期限」的 n 是金属色。
@@ -169,6 +171,7 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
           </Link>
         </div>
       </div>
+      <MapThumb />
       <div className="relative mt-auto flex flex-wrap gap-8 pt-6">
         <Figure label={t("officer_app.stats.concluded_this_month")} value={value(stats?.concluded_this_month)} />
         <Figure
@@ -416,10 +419,10 @@ function MapThumb() {
     <Link
       href="/realms"
       data-overview-map=""
-      className={`${CARD} block p-4 hover:border-[oklch(var(--color-line-strong))] focus-visible:outline-2 focus-visible:outline-offset-2`}
+      className="relative mt-4 block max-w-md rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-3 hover:border-[oklch(var(--color-line-strong))] focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       <span className="mb-2 flex flex-wrap items-baseline gap-2">
-        <span className="font-title text-lg text-[oklch(var(--color-ink))]">{t("overview.map.title")}</span>
+        <span className="font-title text-md text-[oklch(var(--color-ink))]">{t("overview.map.title")}</span>
         <span className="ml-auto text-xs text-[oklch(var(--color-ink-muted))]">{t("overview.map.open")}</span>
       </span>
       <UnderworldMap compact civilization={civ} label={t(`realms.switch.${civ}`)} />
@@ -436,7 +439,7 @@ export function HallOverview() {
     staleTime: 60_000,
   });
   return (
-    <div data-overview="" className="grid grid-cols-1 gap-4 lg:grid-cols-[1.55fr_1fr]">
+    <div data-overview="" className="grid grid-cols-1 gap-4 pb-[var(--demo-tour-h,0px)] lg:grid-cols-[1.55fr_1fr]">
       {statsQ.isError && (
         <p role="alert" className="text-sm text-[oklch(var(--color-danger))] lg:col-span-2">
           <span aria-hidden="true">✕ </span>
@@ -446,7 +449,6 @@ export function HallOverview() {
       <HeroCard stats={statsQ.data} loading={statsQ.isLoading} failed={statsQ.isError} />
       <TrendCard stats={statsQ.data} loading={statsQ.isLoading} />
       <TodoCard />
-      <MapThumb />
     </div>
   );
 }
