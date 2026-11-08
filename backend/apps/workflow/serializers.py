@@ -8,7 +8,6 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
 
-from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
 from apps.workflow.models import (
     ApprovalNode,
@@ -691,29 +690,10 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
     validate_realm = tenant_scoped("realm")
     validate_approver_actor = tenant_scoped("approver_actor")
 
-    def validate_workflow(self, value):
-        """A node may only be attached to a workflow the requester can reach.
-
-        See the class docstring: the field's own queryset is a TenantManager
-        evaluated with no tenant contextvar, so it does not scope anything at
-        validation time, and `get_queryset()` scoping never runs on POST.
-        ADMIN is exempt here for the same reason it is exempt everywhere else
-        in this codebase (apps/core/tenant.py documents it as the one globally
-        scoped role); every non-ADMIN caller is checked against the tenant on
-        the request, falling back to the user's own tenant column because
-        `force_authenticate` leaves `request.tenant` unset.
-        """
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if is_tenant_exempt(user):
-            return value
-        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
-        if tenant is None or value.tenant_id != tenant.pk:
-            raise serializers.ValidationError(
-                "No such workflow in this tenant. A node cannot be attached to "
-                "another tenant's approval chain."
-            )
-        return value
+    # A node may only be attached to a workflow the requester can reach: in the hall and in the data scope
+    # (the hand-written copy here checked the hall only — refactor audit 2026-11-08). See the class docstring for
+    # why the field's own queryset does not scope anything at validation time.
+    validate_workflow = tenant_scoped("workflow")
 
     def validate(self, attrs):
         """Reject an attempt to set `status`/`verdict`/`approver`/`decided_at`.

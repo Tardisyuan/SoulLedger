@@ -4,6 +4,8 @@ Serializers for dispatch app.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.tenant import request_tenant
+from apps.core.tenant_fields import tenant_scoped
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, JudgmentStatus
 from apps.judgment.models import Judgment
@@ -221,17 +223,8 @@ class DispatchDraftSerializer(serializers.ModelSerializer):
             "reason": {"required": False, "allow_blank": True},
         }
 
-    def validate_soul(self, soul):
-        from apps.core.tenant import is_tenant_exempt
-
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if soul is None or user is None or is_tenant_exempt(user):
-            return soul
-        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
-        if tenant is None or soul.tenant_id != tenant.pk:
-            raise serializers.ValidationError("Soul does not belong to your tenant", code="soul_not_in_tenant")
-        return soul
+    # The hall and the caller's data scope (refactor audit 2026-11-08): the hand-written check here compared halls only.
+    validate_soul = tenant_scoped("soul")
 
     def validate(self, attrs):
         # The draft on the row plus this body: a body that only changes the
@@ -530,7 +523,7 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
         from apps.judgment.models import JudgmentKind
 
         request = self.context.get("request")
-        tenant = getattr(request, "tenant", None) or getattr(getattr(request, "user", None), "tenant", None)
+        tenant = request_tenant(request)
         soul = value.soul
         home_id = soul.home_tenant_id or soul.tenant_id
         if tenant is None or value.tenant_id != tenant.pk or home_id != tenant.pk:
