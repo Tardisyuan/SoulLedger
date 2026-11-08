@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi } from "@soulledger/core/api";
 import type { JudgmentHallStats } from "@soulledger/core/api/judgment";
 import { localName } from "@soulledger/core/domain/localName";
+import { getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -20,6 +21,8 @@ import { CHART_STROKE, TREND_TOKENS } from "@/lib/chart-colors";
 import { CivEmblem } from "@/src/components/brand/CivEmblem";
 import { civSkinOf } from "@/src/lib/civSkin";
 import type { SealCiv } from "@/src/components/plaque/Seal";
+import { UnderworldMap } from "@/src/components/realms/UnderworldMap";
+import { mapSkinOf } from "@/src/lib/underworldMap";
 
 /**
  * 概览屏(规范 v4 第七批 S04,`overview.*`):左边一张大卡(今日待审、本月已结环、三个读数),右边上「近 12 周结案」、
@@ -28,6 +31,9 @@ import type { SealCiv } from "@/src/components/plaque/Seal";
  * 会审邀请(`/dispatch/cross-tenant-judgments/?side=participating&status=PROPOSED`)。
  *
  * 卡片是 `.v4-card`(深色 1px 线、浅色两层淡阴影),圆角 6(面板);主卡四角是金属色角饰(`.v4-corner`)。
+ * 右栏最下是本殿文明的冥界图缩略(`UnderworldMap` 的 compact:没有钮、小卡、读数),点它去 /realms。它不发任何接口请求,
+ * 只取图的 SVG(与 /realms 同一份模块缓存),所以只在概览这一格挂上时才取。
+ *
  * 大数字是 88(`text-display-xl`,v4 加的一档,只给这里与年报);进页时它从 0 滚上来、「本月已结」环从 0 扫到实际值
  * (`.v4-roll` / `.v4-ring-sweep`,globals.css,减少动态效果时直接是终态)。「其中 n 件已过期限」的 n 是金属色。
  */
@@ -133,7 +139,7 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
     loading ? <Skeleton as="span" className="inline-block h-6 w-10" /> : n == null ? <MissingValue kind={failed ? "unrecorded" : "inapplicable"} /> : render(n);
 
   return (
-    <section data-overview-hero="" className={`${CARD} flex flex-col overflow-hidden p-6 lg:row-span-2 lg:min-h-105`}>
+    <section data-overview-hero="" className={`${CARD} flex flex-col overflow-hidden p-6 lg:row-span-3 lg:min-h-105`}>
       <span aria-hidden="true" className="v4-corner" />
       {skin !== "neutral" && <CivEmblem civ={skin as SealCiv} size={250} className="absolute -right-1.5 top-7.5 max-md:hidden" />}
       <div className="relative max-w-xs">
@@ -398,7 +404,30 @@ function TodoCard() {
   );
 }
 
-/** 概览的三张卡;只给能看审判的人(`hall-stats` 要 `judgment.read`)。 */
+/** 本殿文明的冥界图缩略;认不出文明(管理员、新殿没填文明)或进不了 /realms(没有 `realms.read`)就不画。整张是去 /realms 的链接。 */
+function MapThumb() {
+  const { t } = useI18n();
+  const { user } = useTenant();
+  const { hasPermission } = usePermissions();
+  const code = user?.tenant?.code ?? null;
+  const civ = user?.tenant?.civilization || (code ? getCivilizationFromTenantCode(code) : null);
+  if (!civ || !mapSkinOf(civ) || !hasPermission("realms.read")) return null;
+  return (
+    <Link
+      href="/realms"
+      data-overview-map=""
+      className={`${CARD} block p-4 hover:border-[oklch(var(--color-line-strong))] focus-visible:outline-2 focus-visible:outline-offset-2`}
+    >
+      <span className="mb-2 flex flex-wrap items-baseline gap-2">
+        <span className="font-title text-lg text-[oklch(var(--color-ink))]">{t("overview.map.title")}</span>
+        <span className="ml-auto text-xs text-[oklch(var(--color-ink-muted))]">{t("overview.map.open")}</span>
+      </span>
+      <UnderworldMap compact civilization={civ} label={t(`realms.switch.${civ}`)} />
+    </Link>
+  );
+}
+
+/** 概览的四张卡;只给能看审判的人(`hall-stats` 要 `judgment.read`)。 */
 export function HallOverview() {
   const { t } = useI18n();
   const statsQ = useQuery({
@@ -417,6 +446,7 @@ export function HallOverview() {
       <HeroCard stats={statsQ.data} loading={statsQ.isLoading} failed={statsQ.isError} />
       <TrendCard stats={statsQ.data} loading={statsQ.isLoading} />
       <TodoCard />
+      <MapThumb />
     </div>
   );
 }

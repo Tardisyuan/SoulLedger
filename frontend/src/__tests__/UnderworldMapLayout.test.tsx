@@ -85,3 +85,47 @@ it("raises the narrow station card above the demo tour panel's layer", async () 
   expect(card.className).toMatch(/max-md:z-drawer/);
   expect(card.className).not.toMatch(/max-md:z-(filters|toast)\b/);
 });
+
+// 小卡上「今日进 · 出 · 平均停留」(Design 第十六批 §1.4;`GET /realms/occupancy/` 2026-11-08 加的三个数)。
+it("writes today's in / out and the average stay on the station card; a missing figure is 'unrecorded', not 0", async () => {
+  width = 1300;
+  const loads = new Map([
+    ["TUDI_TEMPLE", { held: 4, capacity: 10, flow: { arrived: 3, left: 1, avgDays: 2.5 } }],
+    ["HUANGQUAN_ROAD", { held: 0, capacity: 10, flow: { arrived: null, left: 2, avgDays: null } }],
+  ]);
+  render(<UnderworldMap civilization="CHINESE" label="地府" loads={loads} />);
+  await screen.findByTestId("underworld-map");
+  fireEvent.click(screen.getAllByRole("button", { name: /土地庙/ })[0]);
+  let flow = screen.getByTestId("underworld-map-station-flow");
+  expect(flow.textContent!.replace(/\s+/g, " ")).toBe(
+    "map.card.today_in 3 · map.card.today_out 1 · map.card.avg_stay overview.days",
+  );
+  expect(flow.querySelector("[data-missing]")).toBeNull();
+
+  fireEvent.click(screen.getAllByRole("button", { name: /黄泉路/ })[0]);
+  flow = screen.getByTestId("underworld-map-station-flow");
+  expect(flow.querySelectorAll("[data-missing]")).toHaveLength(2);
+  expect(flow.textContent).toContain("map.card.today_out 2");
+  expect(flow.textContent).not.toContain("today_in 0");
+});
+
+it("draws no flow line when the loads carry no flow (an older reply)", async () => {
+  width = 1300;
+  render(<UnderworldMap civilization="CHINESE" label="地府" loads={new Map([["TUDI_TEMPLE", { held: 1, capacity: 2 }]])} />);
+  await screen.findByTestId("underworld-map");
+  fireEvent.click(screen.getAllByRole("button", { name: /土地庙/ })[0]);
+  expect(screen.getByTestId("underworld-map-station-card")).toBeInTheDocument();
+  expect(screen.queryByTestId("underworld-map-station-flow")).toBeNull();
+});
+
+// 概览的缩略图:只有图 —— 没有钮、清单、小卡;窄也不进近处。
+it("compact draws only the picture: no toolbar, no buttons, whole map even when narrow", async () => {
+  width = 300;
+  const { container } = render(<UnderworldMap compact civilization="CHINESE" label="地府" />);
+  const figure = await screen.findByTestId("underworld-map");
+  expect(figure).toHaveAttribute("data-compact");
+  expect(screen.queryByRole("toolbar")).toBeNull();
+  expect(screen.queryAllByRole("button")).toHaveLength(0);
+  expect(screen.getByRole("img", { name: "地府" })).toBeInTheDocument();
+  expect(container.querySelector(".v4-map-viewport > svg")!.getAttribute("viewBox")).toBe("0 0 1120 450");
+});

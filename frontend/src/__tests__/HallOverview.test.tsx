@@ -1,5 +1,6 @@
 /**
- * v4 概览的三张卡(第七批 S04):主卡的读数来自 hall-stats、趋势卡的十字线与提示、待经手的三类行、认领下一件。
+ * v4 概览的四张卡(第七批 S04):主卡的读数来自 hall-stats、趋势卡的十字线与提示、待经手的三类行、认领下一件;
+ * 本殿文明的冥界图缩略(去 /realms 的链接,不发接口请求)。
  * 失败不说「已清空」(errorIsNotAnEmptyState 同一条约定)。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -10,6 +11,9 @@ import { HallOverview } from "@/src/components/dashboard/HallOverview";
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
 let mockPerms: string[] = ["judgment.read", "cross_judgment.read"];
+type MockUser = { id: number; username: string; display_name: string; tenant?: { code: string; civilization?: string } };
+const OFFICER: MockUser = { id: 7, username: "cui", display_name: "崔判官" };
+let mockUser: MockUser = OFFICER;
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock("@soulledger/core/api", () => ({
@@ -25,7 +29,13 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 7, username: "cui", display_name: "崔判官" } }),
+  useTenant: () => ({ user: mockUser }),
+}));
+// 缩略图本身(compact 模式)在 UnderworldMapLayout.test 里测;这里只看概览给它什么、包在哪里。
+jest.mock("@/src/components/realms/UnderworldMap", () => ({
+  UnderworldMap: (p: { civilization: string; label: string; compact?: boolean }) => (
+    <div data-testid="map-thumb" data-civ={p.civilization} data-label={p.label} data-compact={String(!!p.compact)} />
+  ),
 }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 jest.mock("@/src/hooks/usePermissions", () => ({
@@ -68,6 +78,7 @@ function renderIt() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockPerms = ["judgment.read", "cross_judgment.read"];
+  mockUser = OFFICER;
   hallStats.mockResolvedValue({ data: STATS });
   list.mockResolvedValue(
     page([
@@ -232,5 +243,46 @@ describe("待经手", () => {
     renderIt();
     expect(await screen.findByRole("alert")).toHaveTextContent("加载失败");
     expect(screen.queryByText("已清空")).toBeNull();
+  });
+});
+
+describe("冥界图缩略", () => {
+  it("本殿文明的图,compact,整张是去 /realms 的链接", async () => {
+    mockPerms = ["judgment.read", "realms.read"];
+    mockUser = { ...OFFICER, tenant: { code: "CN_DIYU" } };
+    renderIt();
+    const thumb = await screen.findByTestId("map-thumb");
+    expect(thumb).toHaveAttribute("data-civ", "CHINESE");
+    expect(thumb).toHaveAttribute("data-compact", "true");
+    expect(thumb).toHaveAttribute("data-label", "地府");
+    const link = thumb.closest("a")!;
+    expect(link).toHaveAttribute("href", "/realms");
+    expect(link).toHaveAttribute("data-overview-map");
+  });
+
+  it("用户资料里的文明优先于租户代码前缀", async () => {
+    mockPerms = ["judgment.read", "realms.read"];
+    mockUser = { ...OFFICER, tenant: { code: "NEW_HALL", civilization: "GREEK" } };
+    renderIt();
+    expect(await screen.findByTestId("map-thumb")).toHaveAttribute("data-civ", "GREEK");
+  });
+
+  it("没有 realms.read、没有殿、认不出文明:都不画", async () => {
+    mockPerms = ["judgment.read"];
+    mockUser = { ...OFFICER, tenant: { code: "CN_DIYU" } };
+    const { unmount } = renderIt();
+    await screen.findByText("24");
+    expect(screen.queryByTestId("map-thumb")).toBeNull();
+    unmount();
+
+    mockPerms = ["judgment.read", "realms.read"];
+    for (const user of [OFFICER, { ...OFFICER, tenant: { code: "NEW_HALL" } }]) {
+      mockUser = user;
+      const r = renderIt();
+      await screen.findByText("24");
+      expect(screen.queryByTestId("map-thumb")).toBeNull();
+      expect(document.querySelector("[data-overview-map]")).toBeNull();
+      r.unmount();
+    }
   });
 });

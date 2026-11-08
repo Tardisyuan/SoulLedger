@@ -41,10 +41,17 @@ export interface Realm {
   fork?: "LEFT" | "RIGHT" | "PASS" | "FAIL" | null;
 }
 
-/** One row of `GET /realms/occupancy/` — 在押. A realm absent from the list holds 0. */
+/**
+ * One row of `GET /realms/occupancy/` — 在押. A realm absent from the list holds 0 and had no flow today.
+ * `arrived_today` / `left_today`: path entries entered / left since 0:00 in the hall's timezone (人次).
+ * `avg_stay_days`: mean days the souls held now have stayed so far; null when nobody is held.
+ */
 export interface RealmOccupancy {
   realm_id: string;
   count: number;
+  arrived_today: number;
+  left_today: number;
+  avg_stay_days: number | null;
 }
 
 export const realmsApi = {
