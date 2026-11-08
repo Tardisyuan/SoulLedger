@@ -25,21 +25,22 @@ import { AUTO_ROUTE_GLYPH, EXIT_HANDLE_PREFIX, KIND_GLYPH, ROLE_GLYPH, type Bran
  * already module-scope (a fresh object each render would defeat this
  * entirely), so the memo was the only piece missing.
  *
- * v3 A1: 168 × 60 on surface-1, 1 px line-strong, padding 8/10. Two lines:
- * the node's ROLE in the flow (▷ entry, □ step, ◇ branch, ■ end — derived, see
- * `workflowValidation.ts`) with the court / timeout or 会签 threshold in mono at
- * the right; then the KIND glyph and the name.
+ * v4 第十四批 §2: 176 wide, 62 high (84 with the issue line), padding 9/12/10, radius 6. Line 1 (12/16, sub):
+ * the ROLE glyph in the civilization accent (▷ entry, □ step, ◇ branch, ■ end — derived, see
+ * `workflowValidation.ts`) · the KIND glyph and name · the stage code (`NodeType`, mono); the annotation at the
+ * right (timeout「24h」or the 会签 threshold「2/3」). Line 2 (14/20, 600): the display name, ellipsised.
  *
- * States — none of them in the civilization colour (用户 10-02: the canvas is ink):
- *   - selected  → 2 px ink outline, offset 2.
- *   - issues    → danger border and a danger `!` at the end of the name line.
- *                 Never colour alone.
- *   - dragging  → the one shadow on the canvas: a node being carried is a
- *                 floating thing while it is carried.
+ * Ground: dark `surface-2` with a 1 px `line` inner edge and no shadow; light `surface-1` with the card shadow
+ * (`--shadow-card`). `.light` is matched as an ancestor class (`[.light_&]`) because xyflow's root carries `.dark`
+ * (`colorMode="dark"`, see WorkflowEditor), so the `dark:` variant is true everywhere inside the canvas.
  *
- * The raw `NodeType` member is no longer printed on the card (v3 shows the
- * role there); it stays in the accessible name `nodeAriaLabel` builds and in
- * the inspector's 节点 tab.
+ * States — told apart by SHAPE, not colour (地府's accent is itself red, next to the error colour):
+ *   - hover     → the inner edge turns `sub`.
+ *   - selected  → a 2 px accent ring 2 px out, and a 10 px dot showing on each side.
+ *   - issues    → a 1.5 px danger inner edge, an 18 px「!」badge on the top-right corner (ringed in the canvas
+ *                 colour so it reads on the edge), and a third line: rule + 16 px「!」+ the short reason
+ *                 (`issue_short.<code>`). Never colour alone.
+ *   - dragging  → `shadow-raised` (v4 `--shadowPop`) and −1°.
  */
 type CardData = {
   label: string;
@@ -51,6 +52,8 @@ type CardData = {
   role?: NodeRole;
   ordinal?: number;
   issueCount?: number;
+  /** The codes of this node's issues, in `validateFlow` order; the first one is the card's short line. */
+  issueCodes?: string[];
   /** 自动分流(`isAutoRoute`,第四十五批):「▷◇ 自动 · 无审批人」+ ⇉。 */
   autoRoute?: boolean;
   /** 自动分流没连的出口(第四十七批 W-1):地域码与显示名。 */
@@ -77,52 +80,92 @@ function EditableNodeComponent({
   const kind = data.kind === "COUNTERSIGN" || data.kind === "NOTIFY" || data.kind === "END" ? data.kind : "APPROVAL";
   const signers = Array.isArray(data.signers) ? data.signers.length : 0;
   const threshold = typeof data.threshold === "number" ? data.threshold : signers;
-  const hours = typeof data.timeoutHours === "number" && data.timeoutHours > 0 ? `${data.timeoutHours}h` : "";
-  // 右上等宽小字:殿号 · 超时,会签换成门槛 k/n(v3 A1)。
-  const meta = [courtLabel(t, data.courtCode, locale), kind === "COUNTERSIGN" && signers > 0 ? `${threshold}/${signers}` : hours]
-    .filter(Boolean)
-    .join(" · ");
+  const hours = typeof data.timeoutHours === "number" && data.timeoutHours > 0 ? `${data.timeoutHours} h` : "";
+  // 右端附注:会签的门槛 k/n,否则超时时长(v4 第十四批)。殿名不上卡片 —— 在检查器与可访问名称里。
+  const meta = kind === "COUNTERSIGN" && signers > 0 ? `${threshold}/${signers}` : hours;
+  const firstCode = data.issueCodes?.[0];
+  // 卡片放不下带「{{node}}」的整句,用短句(第十四批取舍 6)。自动分流缺出口没有短句:卡片下的短桩已经画出缺哪条。
+  const short =
+    firstCode && firstCode !== "auto_route_exit_missing"
+      ? t(`workflow.editor.issue_short.${firstCode}`)
+      : t("workflow.editor.node_issue_count", { n: String(issues) });
+  const bad = issues > 0;
+  const stage = typeof data.nodeType === "string" ? data.nodeType : "";
 
   return (
     <div
       data-role={role}
-      data-issues={issues > 0 ? issues : undefined}
-      className={`relative w-[168px] min-h-[60px] px-3 py-2 border bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] cursor-pointer transition-[outline-color] duration-state ${
-        issues > 0 ? "border-[oklch(var(--color-danger))]" : "border-[oklch(var(--color-line-strong))]"
-      } ${selected ? "outline-2 outline-offset-2 outline-[oklch(var(--color-ink))]" : ""} ${
-        dragging ? "shadow-raised" : ""
+      data-issues={bad ? issues : undefined}
+      title={courtLabel(t, data.courtCode, locale) || undefined}
+      className={`group/card relative w-[176px] min-h-[62px] pt-[9px] px-3 pb-[10px] rounded-panel bg-[oklch(var(--color-surface-2))] [.light_&]:bg-[oklch(var(--color-surface-1))] [.light_&]:shadow-(--shadow-card) text-[oklch(var(--color-ink))] cursor-pointer transition-[outline-color,border-color,rotate] duration-state ${
+        bad
+          ? "border-[1.5px] border-[oklch(var(--color-danger))]"
+          : "border border-[oklch(var(--color-line))] hover:border-[oklch(var(--color-ink-muted))]"
+      } ${selected ? "outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]" : ""} ${
+        dragging ? "shadow-raised! -rotate-1" : ""
       }`}
     >
       <Handle type="target" position={Position.Top} className={PORT} />
-      {/* 第一行:角色字形 + 角色名(由连线推导),右侧等宽小字 */}
-      <div className="flex justify-between gap-2 text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
-        {data.autoRoute ? (
-          // Design W-3:它总有分支,所以带 ◇;在入口时前面还有 ▷。没有审批人,写明「自动」。
-          <span className="whitespace-nowrap" data-auto-route="">
-            <span aria-hidden="true">{role === "branch" ? ROLE_GLYPH.branch : `${ROLE_GLYPH[role]}${ROLE_GLYPH.branch}`}</span>{" "}
-            {t("workflow.editor.auto_route.badge")}
-          </span>
-        ) : (
-          <span className="whitespace-nowrap">
-            <span aria-hidden="true">{ROLE_GLYPH[role]}</span> {t(`workflow.editor.role.${role}`)}
+      {/* 选中:左右各露出一个 10px 的圆点,压在外环上 —— 与出错的红内边按形状分开,不只靠颜色。 */}
+      {selected && (
+        <>
+          <span aria-hidden="true" data-selected-dot="" className="absolute top-1/2 -left-[8px] -translate-y-1/2 size-2.5 rounded-circle bg-[oklch(var(--color-accent))]" />
+          <span aria-hidden="true" data-selected-dot="" className="absolute top-1/2 -right-[8px] -translate-y-1/2 size-2.5 rounded-circle bg-[oklch(var(--color-accent))]" />
+        </>
+      )}
+      {bad && (
+        <span
+          data-issue-badge=""
+          title={t("workflow.editor.node_issue_count", { n: String(issues) })}
+          className="absolute -top-[9px] -right-[9px] flex size-[18px] items-center justify-center rounded-circle bg-[oklch(var(--color-danger))] text-2xs font-semibold text-[oklch(var(--color-on-danger))] ring-2 ring-[oklch(var(--color-canvas))]"
+        >
+          !
+        </span>
+      )}
+      {/* 第一行(12/16,sub):角色字形(强调色)· 类型字形与名称 · 流程代号;右端附注 */}
+      <div className="flex items-center justify-between gap-2 text-xs leading-4 text-[oklch(var(--color-ink-muted))]">
+        <span className="flex min-w-0 items-center gap-1 whitespace-nowrap">
+          {data.autoRoute ? (
+            // Design W-3:它总有分支,所以带 ◇;在入口时前面还有 ▷。没有审批人,写明「自动」。
+            <span data-auto-route="">
+              <span aria-hidden="true" className="text-[oklch(var(--color-accent))]">
+                {role === "branch" ? ROLE_GLYPH.branch : `${ROLE_GLYPH[role]}${ROLE_GLYPH.branch}`}
+              </span>{" "}
+              {t("workflow.editor.auto_route.badge")}
+            </span>
+          ) : (
+            <span title={t(`workflow.editor.role.${role}`)}>
+              <span aria-hidden="true" className="text-[oklch(var(--color-accent))]">{ROLE_GLYPH[role]}</span>{" "}
+              <span aria-hidden="true">{KIND_GLYPH[kind]}</span> {t(`workflow.editor.kind.${kind}`)}
+            </span>
+          )}
+          {stage && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="font-mono truncate">{stage}</span>
+            </>
+          )}
+        </span>
+        {meta && <span className="shrink-0 font-mono">{meta}</span>}
+      </div>
+      {/* 第二行(14/20,600):显示名,放不下省略 */}
+      <div className="mt-0.5 truncate text-sm leading-5 font-semibold" title={shownLabel}>
+        {data.autoRoute && (
+          <span aria-hidden="true" title={t("workflow.editor.auto_route.kind")}>
+            {AUTO_ROUTE_GLYPH}{" "}
           </span>
         )}
-        {meta && <span className="font-mono truncate" title={meta}>{meta}</span>}
+        {shownLabel}
       </div>
-      {/* 第二行:类型字形 + 名称;有问题时右端 `!` */}
-      <div className="mt-0.5 flex justify-between gap-2 text-sm font-medium">
-        <span className="truncate" title={shownLabel}>
-          <span aria-hidden="true" title={data.autoRoute ? t("workflow.editor.auto_route.kind") : t(`workflow.editor.kind.${kind}`)}>
-            {data.autoRoute ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kind]}
-          </span>{" "}
-          {shownLabel}
-        </span>
-        {issues > 0 && (
-          <span className="font-semibold text-[oklch(var(--color-danger))]" title={t("workflow.editor.issues", { n: String(issues) })}>
+      {/* 出错时多一行:分隔线 + 16 圆「!」+ 短说明(12/16,neg)。 */}
+      {bad && (
+        <div data-issue-line="" className="mt-2 flex items-center gap-[6px] border-t border-[oklch(var(--color-line))] pt-[6px] text-xs leading-4 text-[oklch(var(--color-danger))]">
+          <span aria-hidden="true" className="flex size-4 shrink-0 items-center justify-center rounded-circle border border-current text-2xs font-semibold">
             !
           </span>
-        )}
-      </div>
+          <span className="truncate" title={short}>{short}</span>
+        </div>
+      )}
       {/* 第四十七批 W-1:没连的出口画成短桩 + 空心方端点,标签虚线框写「欧洲 · 未连」,「未连」用 danger 色。
           从下方的通过端口拖到节点即连上(连上的那条按地域归位,见 setAutoRouteTarget);也可在检查器里选。 */}
       {data.autoRoute && (data.unconnected ?? []).length > 0 && (
@@ -206,6 +249,8 @@ type RouteData = {
   conditionText?: string;
   isDefault?: boolean;
   active?: boolean;
+  /** Into or out of the selected node (v4 第十四批): 2 px in the civilization accent. */
+  highlight?: boolean;
   /** 自动分流的出口:地域名(欧洲 / 亚洲 / 不详),实线,不写「是 / 否 · 默认」(第四十五批)。 */
   regionText?: string;
 };
@@ -247,8 +292,11 @@ function RouteEdgeComponent({
   });
   const fail = route.branch === "fail";
   const y = (labelY + targetY) / 2;
-  // The exit the inspector's 出口 tab is on: 2 px ink, label inverted (v3 A1).
-  const stroke = route.active ? "oklch(var(--color-ink))" : style?.stroke;
+  // The exit the inspector's 出口 section is on, and every edge into or out of the selected node: 2 px in the
+  // civilization accent, fully opaque (v4 第十四批). The rest keep `edgeArrow()`'s 1.4 px sub at .7.
+  const lit = route.active || route.highlight;
+  const stroke = lit ? "oklch(var(--color-accent))" : style?.stroke;
+  const opacity = lit ? 1 : style?.opacity;
   const conditional = !fail && route.regionText === undefined && (route.conditionText !== undefined || route.isDefault);
 
   return (
@@ -256,25 +304,25 @@ function RouteEdgeComponent({
       <BaseEdge
         id={id}
         path={path}
-        style={{ ...style, stroke, strokeWidth: route.active ? 2 : style?.strokeWidth, strokeDasharray: fail ? "4 3" : undefined }}
+        style={{ ...style, stroke, opacity, strokeWidth: lit ? 2 : style?.strokeWidth, strokeDasharray: fail ? "4 4" : undefined }}
       />
       <polygon
         data-edge-arrow=""
         points={`${targetX - 4},${targetY - 6} ${targetX + 4},${targetY - 6} ${targetX},${targetY}`}
         transform={`rotate(${ARROW_ROTATION[targetPosition] ?? 0} ${targetX} ${targetY})`}
-        style={{ fill: stroke }}
+        style={{ fill: stroke, opacity }}
       />
       {route.labelled && (
         <EdgeLabelRenderer>
+          {/* 20 高的小胶囊,11 号字,卡片底加细边;被高亮的那条字与边换成强调色。 */}
           <span
-            className={`absolute pointer-events-none px-1 text-2xs normal-case tracking-normal ${
-              conditional
-                ? `font-mono border ${
-                    route.active
-                      ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))] border-[oklch(var(--color-ink))]"
-                      : "bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-line-strong))]"
-                  }`
-                : "bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink-muted))]"
+            data-edge-label=""
+            className={`absolute pointer-events-none flex h-5 items-center rounded-full border px-2 text-2xs normal-case tracking-normal bg-[oklch(var(--color-surface-1))] ${
+              conditional ? "font-mono" : ""
+            } ${
+              lit
+                ? "text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent))]"
+                : "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-line))]"
             }`}
             style={{ transform: `translate(0, -50%) translate(${targetX + 6}px, ${y}px)` }}
           >

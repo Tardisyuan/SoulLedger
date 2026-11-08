@@ -154,7 +154,8 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
 export function edgeArrow() {
   return {
     type: "route",
-    style: { stroke: "oklch(var(--color-ink-muted))", strokeWidth: 1.25 },
+    // v4 第十四批:常态 1.4 宽、sub 色、不透明度 .7;进出选中节点的那条在 route 边里换成强调色 2 宽、不透明。
+    style: { stroke: "oklch(var(--color-ink-muted))", strokeWidth: 1.4, opacity: 0.7 },
   };
 }
 
