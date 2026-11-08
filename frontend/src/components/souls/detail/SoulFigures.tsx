@@ -2,6 +2,7 @@
 
 import type { Soul } from "@soulledger/core/api";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { INHERITANCE_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
@@ -22,7 +23,10 @@ import { Figure } from "@/src/components/ledger/QuantityFigure";
  * 而不是画一个「尚未记录」—— 这数是记了的,只是不给这个角色看。
  */
 
-/** 功 / 过,用账簿自己的两个字(`ledger.book.col_merit` / `col_demerit`)。 */
+/**
+ * 功 / 过,用账簿自己的两个字(`ledger.book.col_merit` / `col_demerit`)。埃及没有功德:同两个数读作羽侧 / 心侧
+ * (`_by_civ.eg`,灵魂端的词,用户 2026-11-08)。
+ */
 function scores(soul: Soul): { merit: number; demerit: number } | null {
   const { merit_score: merit, demerit_score: demerit } = soul;
   return typeof merit === "number" && typeof demerit === "number" ? { merit, demerit } : null;
@@ -61,7 +65,7 @@ export function SoulHeadingFigures({ soul }: { soul: Soul }) {
   return (
     <dl data-testid="soul-heading-figures" className="grid grid-cols-3 md:flex">
       <div className={CELL}>
-        <dt className={DT}>{t("souls.detail.merit")}</dt>
+        <dt className={DT}>{t(civKey(t, "souls.detail.merit", soul.civilization))}</dt>
         <dd className={DD}>
           <Figure field="merit_score" quantity="magnitude" t={t} className="">
             {s.merit}
@@ -69,7 +73,7 @@ export function SoulHeadingFigures({ soul }: { soul: Soul }) {
         </dd>
       </div>
       <div className={CELL}>
-        <dt className={DT}>{t("souls.detail.demerit")}</dt>
+        <dt className={DT}>{t(civKey(t, "souls.detail.demerit", soul.civilization))}</dt>
         <dd className={DD}>
           <Figure field="demerit_score" quantity="magnitude" t={t} className="">
             {s.demerit}
@@ -81,14 +85,14 @@ export function SoulHeadingFigures({ soul }: { soul: Soul }) {
           <dt className={DT}>{t("souls.detail.carried_in")}</dt>
           <dd className={`${DD} flex flex-wrap gap-x-2`}>
             <span>
-              {t("ledger.book.col_merit")}{" "}
+              {t(civKey(t, "ledger.book.col_merit", soul.civilization))}{" "}
               <Figure field="inherited_merit" quantity={INHERITANCE_QUANTITIES.inherited_merit} t={t} className="">
                 {soul.inherited_merit}
               </Figure>
             </span>
             <span aria-hidden="true">/</span>
             <span>
-              {t("ledger.book.col_demerit")}{" "}
+              {t(civKey(t, "ledger.book.col_demerit", soul.civilization))}{" "}
               <Figure field="inherited_demerit" quantity={INHERITANCE_QUANTITIES.inherited_demerit} t={t} className="">
                 {soul.inherited_demerit}
               </Figure>
@@ -129,9 +133,9 @@ export function SoulBalance({ soul }: { soul: Soul }) {
         {t("souls.detail.ledger.karma")}
       </h2>
       <div className="my-6 flex flex-col gap-3">
-        {figure(t("ledger.book.col_merit"), "merit_score", s.merit)}
+        {figure(t(civKey(t, "ledger.book.col_merit", soul.civilization)), "merit_score", s.merit)}
         <i aria-hidden="true" className="block h-px bg-[oklch(var(--color-line))]" />
-        {figure(t("ledger.book.col_demerit"), "demerit_score", s.demerit)}
+        {figure(t(civKey(t, "ledger.book.col_demerit", soul.civilization)), "demerit_score", s.demerit)}
       </div>
       <p className="text-sm text-[oklch(var(--color-ink-muted))]">
         {thisLifeLabel(t, soul.civilization, (soul.life_index ?? 0) + 1) ?? t("souls.detail.life_number", { n: String((soul.life_index ?? 0) + 1) })}

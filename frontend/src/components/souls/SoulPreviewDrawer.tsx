@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSoul } from "@soulledger/core/hooks/useSouls";
 import type { SoulListItem } from "@soulledger/core/api";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { Badge } from "@/src/components/ui/Badge";
@@ -109,8 +110,8 @@ export function SoulPreviewDrawer({ soul, onClose, onNext, onPrev, finalFocus }:
                 <Row label={t("souls.origin_region.label")}>
                   <OriginRegionText value={data.origin_region} />
                 </Row>
-                <Row label={t("souls.detail.merit")}>{score(data.merit_score)}</Row>
-                <Row label={t("souls.detail.demerit")}>{score(data.demerit_score)}</Row>
+                <Row label={t(civKey(t, "souls.detail.merit", data.civilization))}>{score(data.merit_score)}</Row>
+                <Row label={t(civKey(t, "souls.detail.demerit", data.civilization))}>{score(data.demerit_score)}</Row>
                 <Row label={t("souls.detail.balance")}>{score(data.karmic_balance)}</Row>
               </>
             ) : null}

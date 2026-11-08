@@ -131,6 +131,14 @@ describe("eventDetail", () => {
     expect(eventDetail(event({ payload: { delta: 0 } }), labels, tZh)).toBe("功 0 · 过 —");
   });
 
+  it("reads the same two numbers as 羽侧 / 心侧 in an Egyptian hall (用户 2026-11-08), and only there", () => {
+    const e = event({ payload: { delta: 12, demerit_delta: -4 } });
+    expect(eventDetail(e, labels, tZh, "eg")).toBe("羽侧 +12 · 心侧 −4");
+    expect(eventDetail(e, labels, tZh, "EGYPTIAN")).toBe("羽侧 +12 · 心侧 −4");
+    expect(eventDetail(e, labels, tZh, "cn")).toBe("功 +12 · 过 −4");
+    expect(eventDetail(e, labels, tZh, "eg")).not.toContain("功");
+  });
+
   it("is null for every other event", () => {
     expect(eventDetail(event({ event_type: "WORKFLOW_CREATED", payload: { reason: "x" } }), labels, tZh)).toBeNull();
     expect(eventDetail(event({ event_type: "DEATH_SYNC_RECEIVED" }), labels, tZh)).toBeNull();

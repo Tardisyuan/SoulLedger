@@ -8,7 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useHall, useHallCivilization } from "@/src/components/plaque/useHall";
 import { ColumnMenu, DataGrid, useColumnVisibility, type DataGridColumn } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -101,6 +101,7 @@ function SoulEventsContent() {
 
   const rows = useMemo(() => buildEventRows(data?.results ?? []), [data?.results]);
   const labels = useMemo(() => makeSystemEventLabels(t), [t]);
+  const hallCiv = useHallCivilization();
 
   const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 0;
   const isFiltered = Boolean(search || eventType || actor || datePreset);
@@ -167,7 +168,7 @@ function SoulEventsContent() {
       key: "detail",
       header: t("events.col_detail"),
       // Design:其余写 —。默认的「未记录」画的就是 —(「不适用」会写成字)。
-      value: ({ lead }) => eventDetail(lead, labels, t),
+      value: ({ lead }) => eventDetail(lead, labels, t, hallCiv),
     },
   ];
 

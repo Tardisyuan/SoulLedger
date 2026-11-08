@@ -3,6 +3,7 @@
 import { localName } from "@soulledger/core/domain/localName";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { courtLabel } from "@soulledger/core/domain/courts";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
@@ -687,9 +688,7 @@ export function JudgmentClaimQueue({
               <th scope="col" className="px-2 py-1 text-right font-normal">
                 {/* Egypt has no merit (docs/02): the same two numbers are the feather's pan and the heart's, in the soul
                     app's words (用户 2026-11-08). Only when every row is Egyptian. */}
-                {(civilization || ownCivilization) === "EGYPTIAN"
-                  ? `${t("soul_app.lexicon.eg.merit")} / ${t("soul_app.lexicon.eg.demerit")}`
-                  : t("judgment.claim.col_merit_demerit")}
+                {t(civKey(t, "judgment.claim.col_merit_demerit", civilization || ownCivilization))}
               </th>
               <th scope="col" className="px-2 py-1 text-left font-normal max-lg:hidden">{t("judgment.claim.col_draft")}</th>
               <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.claimant")}</th>

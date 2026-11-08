@@ -3,6 +3,7 @@
  * signed numbers. No React, so the tests call them directly.
  */
 import type { SoulEvent } from "@soulledger/core/api/events";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import type { SentencePlan } from "@soulledger/core/api/sentence-plans";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
 
@@ -78,7 +79,7 @@ const named = (label: Label, ns: string, raw: unknown): string => {
  * The 细节 column of the desk's 灵魂事件 page (`frontend/src/components/events/soulEventRows.ts` `eventDetail`), for
  * the two types that have one; null for the rest. Kept in step by hand: that file is the web's, not core's.
  */
-export function eventDetail(e: SoulEvent, label: Label, t: Translate): string | null {
+export function eventDetail(e: SoulEvent, label: Label, t: Translate, civilization?: string | null): string | null {
   const p = e.payload ?? {};
   if (e.event_type === "STATE_CHANGED") {
     const reason = typeof p.reason === "string" ? p.reason.trim() : "";
@@ -87,7 +88,7 @@ export function eventDetail(e: SoulEvent, label: Label, t: Translate): string | 
   }
   if (e.event_type === "KARMA_RECALCULATED") {
     const n = (v: unknown) => (typeof v === "number" ? signed(v) : "—");
-    return t("events.detail.karma", { merit: n(p.delta), demerit: n(p.demerit_delta) });
+    return t(civKey(t, "events.detail.karma", civilization), { merit: n(p.delta), demerit: n(p.demerit_delta) });
   }
   return null;
 }

@@ -447,7 +447,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 <RealmOptionsPanel realms={cursor.realm_options} />
               </div>
               <div className="min-w-0 space-y-4">
-                <LedgerPanel ledger={cursor.ledger} />
+                <LedgerPanel ledger={cursor.ledger} civilization={cursor.soul.civilization} />
                 <PriorCyclesPanel cycles={cursor.prior_cycles} />
               </div>
             </div>

@@ -8,6 +8,7 @@ import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@soulledger/core/api/ledger";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import {
   INHERITANCE_QUANTITIES,
   RECORD_QUANTITIES,
@@ -120,6 +121,8 @@ export function SoulKarmaLedgerCard({
   const rawMerit = records.filter((r) => r.type === "MERIT").reduce((s, r) => s + r.original_weight, 0);
   const rawDemerit = records.filter((r) => r.type === "DEMERIT").reduce((s, r) => s + r.original_weight, 0);
   const rawBalance = rawMerit - rawDemerit;
+  // 埃及没有功德:同两个数读作羽侧 / 心侧(`_by_civ.eg`,用户 2026-11-08)。
+  const civ = life?.civilization ?? reading.civilization;
 
   return (
     <div className="space-y-6">
@@ -184,7 +187,7 @@ export function SoulKarmaLedgerCard({
               decayed pair and the balance are `LedgerSummary`'s own fields and
               take theirs from that payload's table. */}
           <div className="flex justify-between text-xs">
-            <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.raw_merit", "原始 功德")}</span>
+            <span className="text-[oklch(var(--color-ink-muted))]">{tf(civKey(t, "ledger.raw_merit", civ), "原始 功德")}</span>
             <Figure
               field="raw_merit"
               quantity={RECORD_QUANTITIES.original_weight}
@@ -195,7 +198,7 @@ export function SoulKarmaLedgerCard({
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.raw_demerit", "原始 罪业")}</span>
+            <span className="text-[oklch(var(--color-ink-muted))]">{tf(civKey(t, "ledger.raw_demerit", civ), "原始 罪业")}</span>
             <Figure
               field="raw_demerit"
               quantity={RECORD_QUANTITIES.original_weight}
@@ -206,7 +209,7 @@ export function SoulKarmaLedgerCard({
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.decayed_merit", "衰减后 功德")}</span>
+            <span className="text-[oklch(var(--color-ink-muted))]">{tf(civKey(t, "ledger.decayed_merit", civ), "衰减后 功德")}</span>
             <Figure
               field="merit_score"
               quantity={SUMMARY_QUANTITIES.merit_score}
@@ -217,7 +220,7 @@ export function SoulKarmaLedgerCard({
             </Figure>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="text-[oklch(var(--color-ink-muted))]">{tf("ledger.decayed_demerit", "衰减后 罪业")}</span>
+            <span className="text-[oklch(var(--color-ink-muted))]">{tf(civKey(t, "ledger.decayed_demerit", civ), "衰减后 罪业")}</span>
             <Figure
               field="demerit_score"
               quantity={SUMMARY_QUANTITIES.demerit_score}
@@ -279,7 +282,7 @@ export function SoulKarmaLedgerCard({
           <div className="border border-dashed border-[oklch(var(--color-line))] p-2 mt-2">
             <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
               {/* Egypt: the scale reads the admitted deeds and the officer does not choose (docs/02_奥西里斯审判详解.md:175-177). */}
-              {(life?.civilization ?? reading.civilization) === "EGYPTIAN"
+              {civ === "EGYPTIAN"
                 ? tf("ledger.advisory_disclaimer_eg", "天平读采信的功过：心不重于羽即通过，重于羽即交阿米特。官员不另选。")
                 : tf("ledger.advisory_disclaimer", "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出")}
             </p>
@@ -329,14 +332,14 @@ export function SoulKarmaLedgerCard({
               {/* 规范 v2 A5:功 = 实底,过 = 空框斜线。图例只作补充,色块与条形同一个梯度色。 */}
               <span className="inline-flex items-center gap-2">
                 <span aria-hidden="true" className="w-2.5 h-2.5 bg-[oklch(var(--color-chart-1))]" />
-                {t("souls.detail.merit")}
+                {t(civKey(t, "souls.detail.merit", civ))}
               </span>
               <span className="inline-flex items-center gap-2">
                 <span
                   aria-hidden="true"
                   className="w-2.5 h-2.5 border border-[oklch(var(--color-chart-1))] bg-[repeating-linear-gradient(45deg,oklch(var(--color-chart-1))_0_1.5px,transparent_1.5px_5px)]"
                 />
-                {t("souls.detail.demerit")}
+                {t(civKey(t, "souls.detail.demerit", civ))}
               </span>
             </div>
           </div>
