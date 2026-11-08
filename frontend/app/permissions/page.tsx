@@ -511,6 +511,7 @@ function PermissionsPageContent() {
             data={permsQuery.data ?? []}
             isLoading={permsQuery.isLoading}
             isError={permsQuery.isError}
+            error={permsQuery.error}
             keyExtractor={(perm) => String(perm.id)}
           />
           </>
