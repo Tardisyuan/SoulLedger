@@ -93,6 +93,8 @@ const COLLECTED_FILES = [
   "DevicesSection.test.tsx",
   "DispositionPage.pagination.test.tsx",
   "DataTable.test.tsx",
+  // 2026-11-08 灵魂缺 date_problems 时面板不崩。
+  "DateProblemsPanel.missingFields.test.tsx",
   "EmptyState.test.tsx",
   "Field.test.tsx",
   "FilterChip.test.tsx",

@@ -39,6 +39,7 @@ import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul
 import { isArchivableConflict, tudiGodKeys, tudiGodsApi } from "@soulledger/core/api";
 import { fetchFailureOf, responseCode, responseError, responseStatus } from "@soulledger/core/api/client";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
 import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
 import { useDispositions } from "@soulledger/core/hooks/useDispositions";
@@ -100,18 +101,6 @@ const NO_JUDGMENTS: Judgment[] = [];
 const NO_DISPOSITIONS: Disposition[] = [];
 const NO_REINCARNATIONS: Reincarnation[] = [];
 const NO_EVENTS: SoulEvent[] = [];
-
-/**
- * 七个请求里任何一个失败时,页面要显示的那句话。
- *
- * 逐字保留原来 `loadSoulData` 的 catch:先 `response.data.detail`,再
- * `message`,`||` 而不是 `??` —— 空字符串在这里要当作「没有」而不是「有一个空
- * 的」,那是原来的行为。
- */
-function readErrorDetail(e: unknown): string | undefined {
-  const err = e as { response?: { data?: { detail?: string } }; message?: string };
-  return err?.response?.data?.detail || err?.message;
-}
 
 export default function SoulDetailPage() {
   const params = useParams();
@@ -308,7 +297,6 @@ export default function SoulDetailPage() {
     reincarnationsQuery.error ??
     eventsQuery.error ??
     null;
-  const error = failure ? readErrorDetail(failure) || t("souls.detail.loading") : "";
 
   /**
    * 「这个灵魂的服务端状态可能动了」—— 一处。
@@ -603,7 +591,7 @@ export default function SoulDetailPage() {
 
   // Error state - only show when we have actual data fetch error, not during initial load
   // 数据范围(B8):灵魂本身读到 404 / 403 是「无权查看或已不存在」,不回显后端那句英文。
-  if (error && !soul && fetchFailureOf(soulQuery.error) === "gone") {
+  if (failure && !soul && fetchFailureOf(soulQuery.error) === "gone") {
     return (
       <PageShell
         variant="page"
@@ -618,18 +606,19 @@ export default function SoulDetailPage() {
       </PageShell>
     );
   }
-  if (error && !soul) {
+  // 其余失败(500、断网、超时)是系统出错,不是「灵魂未找到」;也不回显后端或 axios 的英文。
+  if (failure && !soul) {
     return (
       <PageShell
         variant="page"
-        title={t("souls.detail.not_found")}
+        title={t("plaque.soul")}
         backLink={
           <a href="/souls" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
             {t("souls.detail.back_to_list")}
           </a>
         }
       >
-        <p role="alert" className="text-sm text-[oklch(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
+        <QueryError onRetry={refreshSoulViews} />
       </PageShell>
     );
   }
