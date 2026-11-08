@@ -537,6 +537,21 @@ describe("审判队列", () => {
     expect(judgmentApi.list).toHaveBeenCalledWith({ civilization: "EGYPTIAN", group: "mine", page: "1", ordering: "created_at" });
   });
 
+  it("an Egyptian hall heads the two numbers 羽侧 / 心侧, as the soul app does; the others keep 功 / 过", async () => {
+    const egypt = `${tZh("soul_app.lexicon.eg.merit")} / ${tZh("soul_app.lexicon.eg.demerit")}`;
+    mockUser = { ...mockUser, role: "JUDGE", tenant: { code: "EG_DUAT" } };
+    const { unmount } = renderPage();
+    await screen.findByText("Marguerite Vey");
+    expect(screen.getByRole("columnheader", { name: egypt })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: tZh("judgment.claim.col_merit_demerit") })).toBeNull();
+    unmount();
+    mockUser = { ...mockUser, tenant: { code: "CN_DIYU" } };
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    expect(screen.getByRole("columnheader", { name: tZh("judgment.claim.col_merit_demerit") })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: egypt })).toBeNull();
+  });
+
   it("排序:默认等待最久(ordering=created_at),可切成最近入队;计数不带排序", async () => {
     renderPage();
     await screen.findByText("Marguerite Vey");

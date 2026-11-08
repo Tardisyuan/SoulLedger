@@ -684,7 +684,13 @@ export function JudgmentClaimQueue({
               {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
               <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.col_case_soul")}</th>
               <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.court")}</th>
-              <th scope="col" className="px-2 py-1 text-right font-normal">{t("judgment.claim.col_merit_demerit")}</th>
+              <th scope="col" className="px-2 py-1 text-right font-normal">
+                {/* Egypt has no merit (docs/02): the same two numbers are the feather's pan and the heart's, in the soul
+                    app's words (用户 2026-11-08). Only when every row is Egyptian. */}
+                {(civilization || ownCivilization) === "EGYPTIAN"
+                  ? `${t("soul_app.lexicon.eg.merit")} / ${t("soul_app.lexicon.eg.demerit")}`
+                  : t("judgment.claim.col_merit_demerit")}
+              </th>
               <th scope="col" className="px-2 py-1 text-left font-normal max-lg:hidden">{t("judgment.claim.col_draft")}</th>
               <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.claimant")}</th>
               <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.claim.col_deferred")}</th>
