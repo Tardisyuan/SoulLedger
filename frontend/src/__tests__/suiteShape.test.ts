@@ -331,6 +331,7 @@ const COLLECTED_FILES = [
   // 2026-11-06 v4 第十批第 1 条:演示站灵魂入口的几屏读录制，地方与 App 的 soulRoute 一致。
   "demoSoulScreens.test.tsx",
   "demoStaysOutOfTheNormalBuild.test.ts",
+  "demoStoreFilters.test.ts",
   "dialogsAreNotHandRolled.test.ts",
   "designGuardContract.test.ts",
   "rootAttributes.test.tsx",
@@ -397,6 +398,7 @@ const COLLECTED_FILES = [
   "setup.test.ts",
   "soulCodeMatchesBackend.test.ts",
   "soulFallbackCopyContract.test.tsx",
+  "soulFire.test.ts",
   "soulLifecycleEventCopy.test.tsx",
   "soulLifecycleRows.test.ts",
   "soulMutationFeedback.test.tsx",

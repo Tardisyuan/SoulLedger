@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, 
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import {
   applyBranches,
   applyView,
@@ -542,7 +543,7 @@ export function UnderworldMap({
                 <>
                   <p className="m-0 flex items-baseline gap-2">
                     <span data-load={cardLevel ?? undefined} className="font-mono text-[oklch(var(--color-ink-muted))]">
-                      <span className="text-xl text-[oklch(var(--color-ink))]">{cardLoad.held}</span> / {cardLoad.capacity ?? "—"}
+                      <span className="text-xl text-[oklch(var(--color-ink))]">{cardLoad.held}</span> / {cardLoad.capacity ?? <MissingValue kind="unrecorded" />}
                     </span>
                     <span className="ml-auto">{t("realms.table.col_held")}</span>
                   </p>
