@@ -6,6 +6,7 @@
 import type { MeRebirthApplication } from "@soulledger/core/api/soul";
 
 import { daysLeft, termFraction } from "@soulledger/core/domain/term";
+import { pad2 } from "@soulledger/core/domain/dates";
 import { civKeyOf, type CivKey } from "./theme";
 import type { BadgeSpec } from "./layout";
 
@@ -267,8 +268,6 @@ export function termServed(startedOn: string | null | undefined, endsOn: string 
 
 // ── dates ──────────────────────────────────────────────────────────────
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
 /** `YYYY-MM-DD HH:mm`, device time — one copy in core, shared with the officer app. */
 export { formatStamp } from "@soulledger/core/domain/dates";
 
@@ -300,7 +299,7 @@ export function isPlausibleEmail(value: string): boolean {
 /** Seconds left as `m:ss` — the countdown's mono value. Never negative. */
 export function formatCountdown(seconds: number): string {
   const s = Math.max(0, Math.ceil(seconds));
-  return `${Math.floor(s / 60)}:${pad(s % 60)}`;
+  return `${Math.floor(s / 60)}:${pad2(s % 60)}`;
 }
 
 // ── application flow ───────────────────────────────────────────────────

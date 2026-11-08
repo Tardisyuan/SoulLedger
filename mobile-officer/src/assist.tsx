@@ -19,6 +19,7 @@ import {
   type OfficerAssistScreen,
 } from "@soulledger/core/api/officer-assist";
 import { officerAssistSuggestions } from "@soulledger/core/config/officerAssistSuggestions";
+import { hhmm, mmdd } from "@soulledger/core/domain/dates";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useCallback, useEffect, useState } from "react";
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
@@ -112,10 +113,7 @@ interface Thread {
 
 const EMPTY: Thread = { id: null, screen: null, lines: [], resumed: null };
 
-const pad = (n: number) => String(n).padStart(2, "0");
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
-const hm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const md = (d: Date) => `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 export function useOfficerAssist() {
   const [open, setOpen] = useState(false);
@@ -248,7 +246,7 @@ function Chat({ assist, tab, onClose }: { assist: OfficerAssist; tab: TabKey; on
       {resumed && !isToday(resumed.last_active_at) ? (
         <View testID="assist-resumed" accessibilityRole="text" style={[styles.strip, { backgroundColor: theme.s2 }]}>
           <Txt variant="caption" tone="muted">
-            {t("officer_app.assist.resumed", { date: md(new Date(resumed.last_active_at)), page: pageName(resumed.screen) })}
+            {t("officer_app.assist.resumed", { date: mmdd(new Date(resumed.last_active_at)), page: pageName(resumed.screen) })}
           </Txt>
         </View>
       ) : null}
@@ -395,7 +393,7 @@ function History({ assist }: { assist: OfficerAssist }) {
   const earlier = rows.filter((c) => !isToday(c.last_active_at));
   const row = (c: OfficerAssistConversation) => {
     const at = new Date(c.last_active_at);
-    const when = isToday(c.last_active_at) ? t("officer_app.assist.time_today", { time: hm(at) }) : `${md(at)} ${hm(at)}`;
+    const when = isToday(c.last_active_at) ? t("officer_app.assist.time_today", { time: hhmm(at) }) : `${mmdd(at)} ${hhmm(at)}`;
     return (
       <View key={c.id} testID={`assist-row-${c.id}`} style={[styles.historyRow, { borderBottomColor: theme.hair }]}>
         <Pressable accessibilityRole="button" onPress={() => openOne(c.id)} style={[styles.grow, { gap: space[1], paddingVertical: space[3] }]}>

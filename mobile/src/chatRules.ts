@@ -14,6 +14,7 @@
  */
 import type { SoulConversation } from "@soulledger/core/api/soul-chat";
 import { SOUL_CODE_LENGTH } from "@soulledger/core/domain/soulCode";
+import { hhmm, localDateString, mmdd } from "@soulledger/core/domain/dates";
 
 export type ChatMode =
   /** ① Free: mutual, or a request that has been answered. */
@@ -110,26 +111,24 @@ export const normalizeCode = (raw: string) => raw.trim().toUpperCase();
 /** `SOUL_CODE_LENGTH` there. Shorter or longer is refused here with its own copy, before asking. */
 export const isCompleteCode = (code: string) => code.length === SOUL_CODE_LENGTH;
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
 /** List time: today `HH:mm`, this year `MM-DD`, else `YYYY-MM-DD`. Device time. */
 export function listStamp(ts: number, now: number): string {
   const d = new Date(ts);
   const today = new Date(now);
-  if (d.toDateString() === today.toDateString()) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (d.getFullYear() === today.getFullYear()) return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  if (d.toDateString() === today.toDateString()) return hhmm(d);
+  if (d.getFullYear() === today.getFullYear()) return mmdd(d);
+  return localDateString(d);
 }
 
 /** Bubble time: today `HH:mm`, else `MM-DD HH:mm`. */
 export function bubbleStamp(ts: number, now: number): string {
   const d = new Date(ts);
-  const clock = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  return d.toDateString() === new Date(now).toDateString() ? clock : `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${clock}`;
+  const clock = hhmm(d);
+  return d.toDateString() === new Date(now).toDateString() ? clock : `${mmdd(d)} ${clock}`;
 }
 
 /** The day divider between bubbles: `YYYY-MM-DD`. */
 export function dayOf(ts: number): string {
   const d = new Date(ts);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return localDateString(d);
 }

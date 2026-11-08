@@ -7,6 +7,7 @@
  * ones from before, and stay until the page is left. Where a row leads: a comment / reply → the post, that comment
  * scrolled to and washed; a reaction / lamp → the post; a follow → the first soul's page.
  */
+import { hhmm, mmdd } from "@soulledger/core/domain/dates";
 import { soulErrorMessage } from "@soulledger/core/api/soul";
 import { soulSocialApi, type SoulInteraction } from "@soulledger/core/api/soul-social";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
@@ -21,13 +22,12 @@ import { invalidateSocialStatus, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, usePaged } from "../paged";
 
-const pad = (n: number) => String(n).padStart(2, "0");
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 /** Today's rows by the clock (09:12), older ones by the day (10-15) — device time. */
 export function interactionStamp(iso: string, now: Date = new Date()): string {
   const d = new Date(iso);
-  return sameDay(d, now) ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return sameDay(d, now) ? hhmm(d) : mmdd(d);
 }
 
 /** The row's sentence, with `{{name}}` left for the bold name. `n` is everyone on the row, the first one included. */

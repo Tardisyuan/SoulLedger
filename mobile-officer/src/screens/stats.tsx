@@ -7,6 +7,7 @@
  * 退回重审、近 12 周结案(本季实心,上季同期一道细线)。范围是这位官员看得到的审判列表,时间按殿的时区。
  * 取不到就整组不画(上面「我的数」照旧),不另写失败。
  */
+import { pad2 } from "@soulledger/core/domain/dates";
 import { judgmentApi, type JudgmentHallStats } from "@soulledger/core/api/judgment";
 import { officerAppApi, type OfficerStats } from "@soulledger/core/api/officer-app";
 import { useCallback } from "react";
@@ -19,7 +20,7 @@ import { Notice, SectionLabel, SmallButton, Txt, space, useI18n, useRemote, useT
 import { AccountFrame } from "./account";
 
 /** 本月 1 日(本地时间),与后端 `_month_start` 同一天。 */
-export const monthSince = (now: Date = new Date()): string => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+export const monthSince = (now: Date = new Date()): string => `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-01`;
 
 export const allZero = (s: OfficerStats): boolean => Object.values(s).every((n) => n === 0);
 

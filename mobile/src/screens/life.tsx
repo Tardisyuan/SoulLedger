@@ -1,7 +1,7 @@
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
-import { formatHistoricalDate } from "@soulledger/core/domain/dates";
+import { formatHistoricalDate, pad2 } from "@soulledger/core/domain/dates";
 import { verdictNamespace } from "@soulledger/core/domain/verdictNames";
 import { civKey, realmPlace } from "@soulledger/core/domain/sentenceNodeStates";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
@@ -489,8 +489,6 @@ function ResidenceNote({ me, landed }: { me: MeProfile; landed: boolean }) {
   );
 }
 
-const two = (n: number) => String(n).padStart(2, "0");
-
 /**
  * v3 .life-now 「你现在在哪」: the soul's state, glyph and word (never colour alone), then —
  * when the state has a place on the road — 「本世阶段 02 / 05」 and the five stages.
@@ -527,7 +525,7 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
       {at === null ? null : (
         <>
           <Txt testID="life-stage" variant="value" tone="muted" style={styles.small}>
-            {tr("soul_app.life.stage", { at: two(at + 1), total: two(total) })}
+            {tr("soul_app.life.stage", { at: pad2(at + 1), total: pad2(total) })}
           </Txt>
           <LifePath at={at} lex={lex} />
         </>

@@ -170,14 +170,7 @@ export function formatStamp(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-/** Local calendar date as `YYYY-MM-DD` — the shape `Judgment.held_until` comes in. */
-function localIsoDate(now: Date): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+  return `${localDateString(d)} ${hhmm(d)}`;
 }
 
 /**
@@ -186,7 +179,7 @@ function localIsoDate(now: Date): string {
  * would refuse. Here rather than beside `judgmentApi` so screens whose tests stub that module keep the real rule.
  */
 export function isHeldUntilFatedDate(j: { held_until?: string | null }, now: Date = new Date()): boolean {
-  return !!j.held_until && j.held_until > localIsoDate(now);
+  return !!j.held_until && j.held_until > localDateString(now);
 }
 
 /**
@@ -199,6 +192,15 @@ export function isDuatBarred(j: { duat_stage?: string | null }): boolean {
 
 /** `YYYY-MM-DD` in the user's own time zone (`toISOString` would give the UTC day). */
 export function localDateString(d: Date = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
+
+/**
+ * Two-digit zero padding, and the two clock pieces both apps print (refactor audit 2026-11-08 P4: these
+ * were copied into eight files). All read the device's local fields, never UTC.
+ */
+export const pad2 = (n: number): string => String(n).padStart(2, "0");
+/** `HH:mm`, device time. */
+export const hhmm = (d: Date): string => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+/** `MM-DD`, device time. */
+export const mmdd = (d: Date): string => `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;

@@ -9,6 +9,7 @@
  * The soul app's own bar (mobile/src/network.tsx) is off here (`<NetworkProvider bar={false}>`): it says
  * "offline" and nothing about cached content, which is the opposite of what this app promises.
  */
+import { hhmm } from "@soulledger/core/domain/dates";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 
@@ -17,11 +18,6 @@ import { useShownAt } from "./readCache";
 import { Txt, space, useI18n, useOnline, useTheme } from "./shared";
 
 export const FOLD_MS = 3000;
-
-const hhmm = (at: number): string => {
-  const d = new Date(at);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
 
 export function OfflineBanner() {
   const { t } = useI18n();
@@ -81,5 +77,5 @@ function ContentTime() {
   const { t } = useI18n();
   const shownAt = useShownAt();
   // Nothing fetched on the screen in front (「没取到」, or nothing loaded yet): say only that the network is gone.
-  return <>{shownAt === null ? t("officer_app.offline.banner_bare") : t("officer_app.offline.banner", { time: hhmm(shownAt) })}</>;
+  return <>{shownAt === null ? t("officer_app.offline.banner_bare") : t("officer_app.offline.banner", { time: hhmm(new Date(shownAt)) })}</>;
 }

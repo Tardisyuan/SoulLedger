@@ -17,6 +17,7 @@
  * and offers 「↓ 最新」. Reduced motion: no fade, no cursor, still dots, and a
  * whole paragraph at a time.
  */
+import { hhmm, mmdd } from "@soulledger/core/domain/dates";
 import { assistBlocks, assistShownText } from "@soulledger/core/api/assist-stream";
 import { assistAnswerLocale, isEmptyAnswer, type AssistConversation, type AssistMessage, type AssistScreen } from "@soulledger/core/api/soul-assist";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -76,11 +77,7 @@ const SUGGESTIONS: Record<"zh-Hans" | "en", Partial<Record<AssistScreen, string[
   },
 };
 
-const pad = (n: number) => String(n).padStart(2, "0");
-const clock = (iso: string) => {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
+const clock = (iso: string) => hhmm(new Date(iso));
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
 
@@ -663,7 +660,7 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
   const now = new Date();
   const stamp = (iso: string) => {
     const d = new Date(iso);
-    return sameDay(d, now) ? `${tr("soul_app.assist.today")} ${clock(iso)}` : `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${clock(iso)}`;
+    return sameDay(d, now) ? `${tr("soul_app.assist.today")} ${clock(iso)}` : `${mmdd(d)} ${clock(iso)}`;
   };
   const remove = async () => {
     if (!asking) return;
