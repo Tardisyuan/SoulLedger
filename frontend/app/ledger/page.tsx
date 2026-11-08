@@ -9,7 +9,8 @@ import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useHall, useHallCivilization } from "@/src/components/plaque/useHall";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useToast } from "@/src/contexts/ToastContext";
 import { cn } from "@/lib/utils";
 import { fieldControl } from "@/src/components/ui/Field";
@@ -68,6 +69,7 @@ function LedgerPageContent() {
   const { user } = useTenant();
   const [month, setMonth] = useState(() => currentMonth());
   const [civilization, setCivilization] = useState("");
+  const hallCiv = useHallCivilization();
   const [category, setCategory] = useState("");
   useRememberedFilters(
     LEDGER_FILTERS_KEY,
@@ -193,6 +195,7 @@ function LedgerPageContent() {
       ) : (
         <LedgerBody
           data={data}
+          civilization={civilization || hallCiv}
           onPrevMonth={() => setMonth(shiftMonth(month, -1))}
           onClearFilters={filtered ? clearFilters : undefined}
         />
@@ -203,17 +206,20 @@ function LedgerPageContent() {
 
 function LedgerBody({
   data,
+  civilization,
   onPrevMonth,
   onClearFilters,
 }: {
   data: LedgerJournal;
+  /** 所筛的文明,没筛就是所在殿的:埃及两柱读作羽侧 / 心侧(用户 2026-11-08)。 */
+  civilization?: string;
   onPrevMonth: () => void;
   onClearFilters?: () => void;
 }) {
   const { t } = useI18n();
   return (
     <div className="flex flex-col gap-3">
-      <FourPillars data={data} />
+      <FourPillars data={data} civilization={civilization} />
       <p className={MONO_LABEL} data-testid="ledger-formula">
         {t("ledger.journal.formula", { souls: String(data.soul_count), records: String(data.record_count) })}
       </p>
@@ -248,12 +254,12 @@ function LedgerBody({
 }
 
 /** 四柱(B10):28 等宽,柱间 1px 行线,期末一柱 s1 底;数字不上色。 */
-function FourPillars({ data }: { data: LedgerJournal }) {
+function FourPillars({ data, civilization }: { data: LedgerJournal; civilization?: string }) {
   const { t } = useI18n();
   const cells: { key: string; label: string; value: string; closing?: boolean }[] = [
     { key: "opening", label: t("ledger.journal.pillar_opening"), value: signed(data.opening) },
-    { key: "received", label: t("ledger.journal.pillar_received"), value: signed(data.received) },
-    { key: "disbursed", label: t("ledger.journal.pillar_disbursed"), value: signed(-data.disbursed) },
+    { key: "received", label: t(civKey(t, "ledger.journal.pillar_received", civilization)), value: signed(data.received) },
+    { key: "disbursed", label: t(civKey(t, "ledger.journal.pillar_disbursed", civilization)), value: signed(-data.disbursed) },
     { key: "closing", label: t("ledger.journal.pillar_closing"), value: signed(data.closing), closing: true },
   ];
   return (

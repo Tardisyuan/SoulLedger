@@ -160,8 +160,8 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
   const meta = [code ? formatSoulCode(code) : null, civ.state === "known" ? civ.label : soul.civilization, thisLifeLabel(t, soul.civilization, (soul.life_index ?? 0) + 1) ?? t("souls.detail.generation", { n: String((soul.life_index ?? 0) + 1) })];
   const state = enumLabel("souls.states", soul.current_state);
   const figures: [string, number | undefined][] = [
-    [t("souls.detail.merit"), soul.merit_score],
-    [t("souls.detail.demerit"), soul.demerit_score == null ? undefined : -Math.abs(soul.demerit_score)],
+    [t(civKey(t, "souls.detail.merit", soul.civilization)), soul.merit_score],
+    [t(civKey(t, "souls.detail.demerit", soul.civilization)), soul.demerit_score == null ? undefined : -Math.abs(soul.demerit_score)],
     [t("souls.detail.balance"), soul.karmic_balance],
   ];
   return (
@@ -419,7 +419,7 @@ function KarmaTab({ soul }: { soul: Soul }) {
               <View key={r.id} testID={`soul-karma-row-${r.id}`} style={{ flexDirection: "row", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
                 <View style={{ width: 56 }}>
                   <OneLine variant="value" style={{ fontSize: 15 }}>{deedScore(r)}</OneLine>
-                  <Txt variant="caption" tone="muted">{t(r.record_type === "DEMERIT" ? "officer_app.soul.demerit_short" : "officer_app.soul.merit_short")}</Txt>
+                  <Txt variant="caption" tone="muted">{t(civKey(t, r.record_type === "DEMERIT" ? "officer_app.soul.demerit_short" : "officer_app.soul.merit_short", soul.civilization))}</Txt>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Txt variant="body" numberOfLines={2}>{r.description}</Txt>
@@ -547,7 +547,7 @@ function EventsTab({ soulId, civilization }: { soulId: string; civilization?: st
         // 地府的受刑事件名保留「受刑计划…」(第十二批 1.2)。
         const byCiv = civKey(t, `souls.events.${e.event_type}`, civilization);
         const actor = !e.actor || e.actor === "system" ? t("events.actor_system") : e.actor;
-        const detail = eventDetail(e, enumLabel, t);
+        const detail = eventDetail(e, enumLabel, t, civilization);
         return (
           <Row
             key={e.id}

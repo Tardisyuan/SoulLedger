@@ -12,6 +12,7 @@ import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
 import { soulStateGlyph } from "@/src/lib/soulStateBadge";
 import type { Soul } from "@soulledger/core/api/souls";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import type { SoulEvent } from "@soulledger/core/api/events";
 import type { Judgment } from "@soulledger/core/api/judgment";
 import type { Disposition } from "@soulledger/core/api/disposition";
@@ -281,7 +282,7 @@ export function SoulLifecycleTimeline({
             if (row.kind === "karma") {
               const positive = row.effectiveSigned >= 0;
               const detail = [
-                row.type === "MERIT" ? t("souls.detail.merit") : t("souls.detail.demerit"),
+                t(civKey(t, row.type === "MERIT" ? "souls.detail.merit" : "souls.detail.demerit", soul.civilization)),
                 `${tf(`souls.categories.${row.category_code}`, row.category_code)} ${row.category_code}`,
                 tf("souls.detail.timeline.original", "原始 {{sign}}{{n}}", {
                   sign: row.originalSigned >= 0 ? "+" : "",

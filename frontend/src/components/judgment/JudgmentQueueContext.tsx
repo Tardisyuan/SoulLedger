@@ -7,6 +7,7 @@ import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { formatHistoricalDate } from "@/lib/utils";
 import { SUMMARY_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import type { QueueLedger, QueueLedgerRecord, QueuePriorCycle, QueueRealm, QueueSoul } from "@soulledger/core/api";
 
 /**
@@ -104,7 +105,8 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
   );
 }
 
-export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
+/** `civilization`:灵魂的文明。埃及没有功德,同两个数读作羽侧 / 心侧(`_by_civ.eg`,用户 2026-11-08)。 */
+export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civilization?: string }) {
   const { t, formatDateTime } = useI18n();
 
   const columns: DataGridColumn<QueueLedgerRecord>[] = [
@@ -114,7 +116,7 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
       header: t("judgment.queue.ledger_type"),
       value: (row) => ({
         tone: row.type === "MERIT" ? "success" : "error",
-        label: row.type === "MERIT" ? t("judgment.queue.merit") : t("judgment.queue.demerit"),
+        label: t(civKey(t, row.type === "MERIT" ? "judgment.queue.merit" : "judgment.queue.demerit", civilization)),
       }),
     },
     {
@@ -166,7 +168,7 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
           numeral cannot. */}
       <div className="flex gap-6 mb-4">
         <div>
-          <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t("judgment.queue.merit")}</div>
+          <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t(civKey(t, "judgment.queue.merit", civilization))}</div>
           <Figure
             field="merit_score"
             quantity={SUMMARY_QUANTITIES.merit_score}
@@ -177,7 +179,7 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
           </Figure>
         </div>
         <div>
-          <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t("judgment.queue.demerit")}</div>
+          <div className="text-xs text-[oklch(var(--color-ink-muted))]">{t(civKey(t, "judgment.queue.demerit", civilization))}</div>
           <Figure
             field="demerit_score"
             quantity={SUMMARY_QUANTITIES.demerit_score}

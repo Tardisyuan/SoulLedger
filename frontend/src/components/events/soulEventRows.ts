@@ -5,6 +5,7 @@
 import type { SoulEvent, SoulEventListParams } from "@soulledger/core/api/events";
 import { groupSystemEvents, sameSoulAndEvent, type SystemEventLabels } from "@/src/components/souls/soulLifecycleRows";
 import { MISSING_GLYPH } from "@/src/lib/domainDisplay";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 
 export type DatePreset = "" | "7d" | "30d";
 
@@ -68,7 +69,8 @@ function signed(n: unknown): string {
  * 状态名走灵魂时间线同一份 `labels`(`souls.states.*`);原因是后端写进事件的自由文本,原样显示,
  * 同 `describeSystemEvent`。
  */
-export function eventDetail(e: SoulEvent, labels: SystemEventLabels, t: Translate): string | null {
+/** `civilization`:所在殿的文明,埃及读作「羽侧 · 心侧」(`events.detail.karma_by_civ.eg`,用户 2026-11-08)。 */
+export function eventDetail(e: SoulEvent, labels: SystemEventLabels, t: Translate, civilization?: string | null): string | null {
   const p = e.payload as Record<string, unknown>;
   if (e.event_type === "STATE_CHANGED") {
     const from = labels.state(typeof p.old_state === "string" ? p.old_state : null);
@@ -79,7 +81,7 @@ export function eventDetail(e: SoulEvent, labels: SystemEventLabels, t: Translat
     return reason ? text : text.replace(/\s*·\s*$/, "");
   }
   if (e.event_type === "KARMA_RECALCULATED") {
-    return t("events.detail.karma", { merit: signed(p.delta), demerit: signed(p.demerit_delta) });
+    return t(civKey(t, "events.detail.karma", civilization), { merit: signed(p.delta), demerit: signed(p.demerit_delta) });
   }
   return null;
 }

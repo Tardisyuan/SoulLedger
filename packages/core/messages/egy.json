@@ -426,7 +426,13 @@
       "death": "Mut",
       "location_label": "Sekhet",
       "merit": "Nefer",
+      "merit_by_civ": {
+        "eg": "Shut"
+      },
       "demerit": "Isfet",
+      "demerit_by_civ": {
+        "eg": "Ib"
+      },
       "balance": "Sepy",
       "records": "Medu Seth",
       "actions": "Aha Seth",
@@ -1976,7 +1982,13 @@
       "col_date": "Hru",
       "col_item": "Medu",
       "col_merit": "Nefer",
+      "col_merit_by_civ": {
+        "eg": "Shut"
+      },
       "col_demerit": "Isfet",
+      "col_demerit_by_civ": {
+        "eg": "Ib"
+      },
       "col_balance": "Wedja",
       "total": "Hesb Neb",
       "empty": "Nen Medu.",
@@ -2016,9 +2028,21 @@
     "series_decayed": "Khebi Seth",
     "raw_vs_decayed": "Tepy / Khebi Seth",
     "raw_merit": "Nefer Tepy",
+    "raw_merit_by_civ": {
+      "eg": "Shut Tepy"
+    },
     "raw_demerit": "Isfet Tepy",
+    "raw_demerit_by_civ": {
+      "eg": "Ib Tepy"
+    },
     "decayed_merit": "Nefer Khebi Seth",
+    "decayed_merit_by_civ": {
+      "eg": "Shut Khebi Seth"
+    },
     "decayed_demerit": "Isfet Khebi Seth",
+    "decayed_demerit_by_civ": {
+      "eg": "Ib Khebi Seth"
+    },
     "raw_balance_sr": "Wedja Tepy {{n}}",
     "advisory_disclaimer": "Er Maa Wa · Nefer Isfet Nen Em Hesb Wedja; Sab Wedja Iri Wedja",
     "journal": {
@@ -2029,7 +2053,13 @@
       "month_next": "Abed Em Khet",
       "pillar_opening": "Tepy",
       "pillar_received": "Shesep · Nefer",
+      "pillar_received_by_civ": {
+        "eg": "Shesep · Shut"
+      },
       "pillar_disbursed": "Bek · Isfet",
+      "pillar_disbursed_by_civ": {
+        "eg": "Bek · Ib"
+      },
       "pillar_closing": "Sepy",
       "formula": "Tepy + Shesep − Bek = Sepy · Ba {{souls}} · Sep {{records}}",
       "col_day": "Hru",
@@ -2108,7 +2138,13 @@
       "not_recorded": "Nen Sesh",
       "no_confession": "Nen Medu Ib",
       "merit": "Nefer",
+      "merit_by_civ": {
+        "eg": "Shut"
+      },
       "demerit": "Isfet",
+      "demerit_by_civ": {
+        "eg": "Ib"
+      },
       "balance": "Sepy",
       "ledger_type": "Iru",
       "ledger_description": "Khet",
@@ -2371,6 +2407,9 @@
         "REOPEN": "Wedja Wehem"
       },
       "col_merit_demerit": "Nefer / Isfet",
+      "col_merit_demerit_by_civ": {
+        "eg": "Shut / Ib"
+      },
       "col_case_soul": "Ren Sep / Ba",
       "col_cycle_kind": "Ankh / Iru",
       "stale_soon": "Er Khet: Shesep Tepy",
@@ -8246,7 +8285,13 @@
       "karma_group": "Ankh {{n}} · Sep {{count}}",
       "karma_group_life": "{{life}} · Sep {{count}}",
       "merit_short": "Nefer",
+      "merit_short_by_civ": {
+        "eg": "Shut"
+      },
       "demerit_short": "Isfet",
+      "demerit_short_by_civ": {
+        "eg": "Ib"
+      },
       "source": "Em {{source}}",
       "shown_count": "{{shown}} · Neb {{total}}",
       "judgment_meta": "Ankh {{n}} · {{verdict}} · {{status}}",
@@ -8417,7 +8462,10 @@
     },
     "detail": {
       "state": "{{from}} → {{to}} · {{reason}}",
-      "karma": "Nefer {{merit}} · Isfet {{demerit}}"
+      "karma": "Nefer {{merit}} · Isfet {{demerit}}",
+      "karma_by_civ": {
+        "eg": "Shut {{merit}} · Ib {{demerit}}"
+      }
     },
     "empty": "Nen Medew Em Setep Pen",
     "empty_all": "Nen Medew Djer",

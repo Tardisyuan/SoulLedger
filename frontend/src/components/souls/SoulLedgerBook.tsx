@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { RECORD_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { formatHistoricalDate } from "@/lib/utils";
@@ -230,9 +231,11 @@ export interface SoulLedgerBookProps {
    * `ledger.manage`(后端对 add_record / 改一条强制同一把码名,2026-10-29 起)。审判台的证据行不传,只读。
    */
   edit?: { soulId: string; civilization: string; soulState?: string; soulName?: string };
+  /** 灵魂的文明:埃及的两列读作羽侧 / 心侧(`ledger.book.col_*_by_civ.eg`,用户 2026-11-08)。 */
+  civilization?: string;
 }
 
-export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
+export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookProps) {
   const { t, formatDate, locale } = useI18n();
   const rows = settlementOrder(records);
   // `null` = 窗口关着;`"new"` = 新增;一条记录 = 修改它。
@@ -308,10 +311,10 @@ export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
                   prints it beside every figure, which is right for a panel of
                   three numbers and wrong for a table of thirty. */}
               <HeadCell numeric scale className="text-[oklch(var(--color-ink))]">
-                {t("ledger.book.col_merit")}
+                {t(civKey(t, "ledger.book.col_merit", civilization ?? edit?.civilization))}
               </HeadCell>
               <HeadCell numeric scale className="text-[oklch(var(--color-ink))]">
-                {t("ledger.book.col_demerit")}
+                {t(civKey(t, "ledger.book.col_demerit", civilization ?? edit?.civilization))}
               </HeadCell>
               <HeadCell numeric scale>{t("ledger.book.col_balance")}</HeadCell>
             </tr>

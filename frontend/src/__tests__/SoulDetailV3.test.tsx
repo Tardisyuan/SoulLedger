@@ -94,6 +94,29 @@ describe("右栏「功过」", () => {
   });
 });
 
+describe("埃及读作羽侧 / 心侧(用户 2026-11-08)", () => {
+  it("同两个数,页头与右栏都写羽侧 / 心侧,不写功德 / 罪业 / 功 / 过", () => {
+    // 埃及不转生,这里只是让「承自前世」那一格也画出来,一并看它的两个字。
+    const egypt = { ...SOUL, civilization: "EGYPTIAN" } as unknown as Soul;
+    wrap(
+      <>
+        <SoulHeadingFigures soul={egypt} />
+        <SoulBalance soul={egypt} />
+      </>
+    );
+    const dl = screen.getByTestId("soul-heading-figures");
+    expect(within(dl).getByText("羽侧")).toBeInTheDocument();
+    expect(within(dl).getByText("心侧")).toBeInTheDocument();
+    expect(within(dl).getAllByRole("definition")[2]).toHaveTextContent(/羽侧\s*120.*心侧\s*34/);
+    expect(dl).not.toHaveTextContent(/功|过|罪业/);
+    const aside = screen.getByTestId("soul-balance");
+    expect(within(aside).getByText("羽侧")).toBeInTheDocument();
+    expect(within(aside).getByText("心侧")).toBeInTheDocument();
+    // 两个数那一格(标题「功过」与底下的说明不在其中,那不是这两个数的名字)。
+    expect(aside.querySelector(":scope > div")).not.toHaveTextContent(/功|过/);
+  });
+});
+
 describe("账页的两个标签", () => {
   const tabs = () =>
     wrap(

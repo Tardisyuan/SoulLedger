@@ -283,7 +283,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
             disabled={pending || dedication}
             options={RECORD_TYPES.map((v) => ({
               value: v,
-              label: t(v === "MERIT" ? "ledger.book.col_merit" : "ledger.book.col_demerit"),
+              label: t(civKey(t, v === "MERIT" ? "ledger.book.col_merit" : "ledger.book.col_demerit", civilization)),
             }))}
           />
           <SelectField

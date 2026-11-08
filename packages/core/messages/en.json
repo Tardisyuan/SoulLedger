@@ -429,7 +429,13 @@
       "death": "Death",
       "location_label": "Location",
       "merit": "Merit",
+      "merit_by_civ": {
+        "eg": "Feather side"
+      },
       "demerit": "Demerit",
+      "demerit_by_civ": {
+        "eg": "Heart side"
+      },
       "balance": "Balance",
       "records": "records",
       "actions": "Actions",
@@ -1977,7 +1983,13 @@
       "col_date": "Date",
       "col_item": "Entry",
       "col_merit": "Merit",
+      "col_merit_by_civ": {
+        "eg": "Feather side"
+      },
       "col_demerit": "Demerit",
+      "col_demerit_by_civ": {
+        "eg": "Heart side"
+      },
       "col_balance": "Net",
       "total": "Total",
       "empty": "No entries recorded.",
@@ -2017,9 +2029,21 @@
     "series_decayed": "Decayed away",
     "raw_vs_decayed": "Raw / decayed",
     "raw_merit": "Raw merit",
+    "raw_merit_by_civ": {
+      "eg": "Raw feather side"
+    },
     "raw_demerit": "Raw demerit",
+    "raw_demerit_by_civ": {
+      "eg": "Raw heart side"
+    },
     "decayed_merit": "Decayed merit",
+    "decayed_merit_by_civ": {
+      "eg": "Decayed feather side"
+    },
     "decayed_demerit": "Decayed demerit",
+    "decayed_demerit_by_civ": {
+      "eg": "Decayed heart side"
+    },
     "raw_balance_sr": "Raw balance {{n}}",
     "advisory_disclaimer": "For the bench's reference only · karma is not part of the verdict calculation; the judge decides",
     "journal": {
@@ -2030,7 +2054,13 @@
       "month_next": "Next month",
       "pillar_opening": "Opening",
       "pillar_received": "Received · merit",
+      "pillar_received_by_civ": {
+        "eg": "Received · feather side"
+      },
       "pillar_disbursed": "Disbursed · demerit",
+      "pillar_disbursed_by_civ": {
+        "eg": "Disbursed · heart side"
+      },
       "pillar_closing": "Closing",
       "formula": "Opening + received − disbursed = closing · {{souls}} accounts · {{records}} entries this period",
       "totals_whole_hall": "Totals cover the whole hall; the entries list only souls in your data scope",
@@ -2110,7 +2140,13 @@
       "not_recorded": "Not recorded yet",
       "no_confession": "No confession recorded",
       "merit": "Merit",
+      "merit_by_civ": {
+        "eg": "Feather side"
+      },
       "demerit": "Demerit",
+      "demerit_by_civ": {
+        "eg": "Heart side"
+      },
       "balance": "Balance",
       "ledger_type": "Kind",
       "ledger_description": "Deed",
@@ -2380,6 +2416,9 @@
         "REOPEN": "Reopened"
       },
       "col_merit_demerit": "Merit / demerit",
+      "col_merit_demerit_by_civ": {
+        "eg": "Feather side / heart side"
+      },
       "col_case_soul": "Case no. / Soul",
       "col_cycle_kind": "Life / kind",
       "undefer": "Restore",
@@ -8267,7 +8306,13 @@
       "karma_group": "Life {{n}} · {{count}} entries",
       "karma_group_life": "{{life}} · {{count}} entries",
       "merit_short": "Merit",
+      "merit_short_by_civ": {
+        "eg": "Feather"
+      },
       "demerit_short": "Demerit",
+      "demerit_short_by_civ": {
+        "eg": "Heart"
+      },
       "source": "Source: {{source}}",
       "shown_count": "Showing {{shown}} of {{total}}",
       "judgment_meta": "Life {{n}} · {{verdict}} · {{status}}",
@@ -8427,7 +8472,10 @@
     },
     "detail": {
       "state": "{{from}} → {{to}} · {{reason}}",
-      "karma": "Merit {{merit}} · Demerit {{demerit}}"
+      "karma": "Merit {{merit}} · Demerit {{demerit}}",
+      "karma_by_civ": {
+        "eg": "Feather side {{merit}} · Heart side {{demerit}}"
+      }
     },
     "empty": "No events match",
     "empty_all": "No events yet",

@@ -429,7 +429,13 @@
       "death": "死亡",
       "location_label": "位置",
       "merit": "功德",
+      "merit_by_civ": {
+        "eg": "羽侧"
+      },
       "demerit": "罪业",
+      "demerit_by_civ": {
+        "eg": "心侧"
+      },
       "balance": "余额",
       "records": "条记录",
       "actions": "操作",
@@ -1977,7 +1983,13 @@
       "col_date": "日",
       "col_item": "事目",
       "col_merit": "功",
+      "col_merit_by_civ": {
+        "eg": "羽侧"
+      },
       "col_demerit": "过",
+      "col_demerit_by_civ": {
+        "eg": "心侧"
+      },
       "col_balance": "销算余",
       "total": "合计",
       "empty": "尚无账目。",
@@ -2017,9 +2029,21 @@
     "series_decayed": "已衰减",
     "raw_vs_decayed": "原始 / 衰减后",
     "raw_merit": "原始 功德",
+    "raw_merit_by_civ": {
+      "eg": "原始 羽侧"
+    },
     "raw_demerit": "原始 罪业",
+    "raw_demerit_by_civ": {
+      "eg": "原始 心侧"
+    },
     "decayed_merit": "衰减后 功德",
+    "decayed_merit_by_civ": {
+      "eg": "衰减后 羽侧"
+    },
     "decayed_demerit": "衰减后 罪业",
+    "decayed_demerit_by_civ": {
+      "eg": "衰减后 心侧"
+    },
     "raw_balance_sr": "原始余额 {{n}}",
     "advisory_disclaimer": "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出",
     "journal": {
@@ -2030,7 +2054,13 @@
       "month_next": "下一月",
       "pillar_opening": "旧管 · 期初",
       "pillar_received": "新收 · 功德",
+      "pillar_received_by_civ": {
+        "eg": "新收 · 羽侧"
+      },
       "pillar_disbursed": "开除 · 罪业",
+      "pillar_disbursed_by_civ": {
+        "eg": "开除 · 心侧"
+      },
       "pillar_closing": "实在 · 期末",
       "formula": "旧管 + 新收 − 开除 = 实在 · {{souls}} 户 · 本期 {{records}} 条",
       "totals_whole_hall": "合计为全殿;明细只列你数据范围内的灵魂",
@@ -2110,7 +2140,13 @@
       "not_recorded": "尚未记录",
       "no_confession": "无供词",
       "merit": "功德",
+      "merit_by_civ": {
+        "eg": "羽侧"
+      },
       "demerit": "罪业",
+      "demerit_by_civ": {
+        "eg": "心侧"
+      },
       "balance": "业力净额",
       "ledger_type": "类别",
       "ledger_description": "事由",
@@ -2380,6 +2416,9 @@
         "REOPEN": "重开"
       },
       "col_merit_demerit": "功 / 过",
+      "col_merit_demerit_by_civ": {
+        "eg": "羽侧 / 心侧"
+      },
       "col_case_soul": "案号 / 灵魂",
       "col_cycle_kind": "世次 / 种类",
       "undefer": "恢复",
@@ -8267,7 +8306,13 @@
       "karma_group": "第 {{n}} 世 · {{count}} 条",
       "karma_group_life": "{{life}} · {{count}} 条",
       "merit_short": "功",
+      "merit_short_by_civ": {
+        "eg": "羽侧"
+      },
       "demerit_short": "过",
+      "demerit_short_by_civ": {
+        "eg": "心侧"
+      },
       "source": "来源：{{source}}",
       "shown_count": "已显示 {{shown}} / {{total}}",
       "judgment_meta": "第 {{n}} 世 · {{verdict}} · {{status}}",
@@ -8427,7 +8472,10 @@
     },
     "detail": {
       "state": "{{from}} → {{to}} · {{reason}}",
-      "karma": "功 {{merit}} · 过 {{demerit}}"
+      "karma": "功 {{merit}} · 过 {{demerit}}",
+      "karma_by_civ": {
+        "eg": "羽侧 {{merit}} · 心侧 {{demerit}}"
+      }
     },
     "empty": "没有符合条件的事件",
     "empty_all": "还没有事件",
