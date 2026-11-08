@@ -353,6 +353,7 @@ test.describe("审判台 · 地府", () => {
   test("枉死城块:冤情不到「重」不能判属实;「属实 · 提前释放…」先二次确认再发", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     const HELD = "2099-12-31";
+    const HELD_DAY = "2099年 · 12月31日";
     const state = liveJudgment(api, {
       ...OPENED_JUDGMENT, untimely: true, held_until: HELD, wrongful_death_cause: "VICTIM", grievance_level: "MINOR",
       grievance_status: "FILED", grievance_plea: "被人推下河", grievance_note: "", grievance_decided_at: null,
@@ -368,8 +369,8 @@ test.describe("审判台 · 地府", () => {
     await page.goto(`/judgment/${OPENED_JUDGMENT.id}`);
     const block = page.getByTestId("desk-wangsi");
     await expect(block).toContainText("枉死城");
-    await expect(block.getByTestId("wangsi-head-line")).toHaveText(`枉死 · 候至 ${HELD} · 在枉死城`);
-    await expect(page.getByTestId("desk-untimely")).toHaveText(`枉死 · 候至 ${HELD} · 在枉死城`);
+    await expect(block.getByTestId("wangsi-head-line")).toHaveText(`枉死 · 候至 ${HELD_DAY} · 在枉死城`);
+    await expect(page.getByTestId("desk-untimely")).toHaveText(`枉死 · 候至 ${HELD_DAY} · 在枉死城`);
     await expect(block.getByTestId("wangsi-grievance-status")).toContainText("已申诉 · 待审");
 
     await block.getByLabel("审核意见").fill("确系被害");
@@ -386,7 +387,7 @@ test.describe("审判台 · 地府", () => {
     await uphold.click();
     const confirm = page.getByRole("alertdialog");
     await expect(confirm).toContainText(`提前释放${OPENED_JUDGMENT.soul_name}？`);
-    await expect(confirm).toContainText(`不再候到 ${HELD}`);
+    await expect(confirm).toContainText(`不再候到 ${HELD_DAY}`);
     await expect(confirm).toContainText("释放后不能收回。");
     expect(api.countOf("POST", "/judgment/wangsi/:id/decide/")).toBe(0);
     await confirm.getByRole("button", { name: "属实 · 提前释放", exact: true }).click();

@@ -11,7 +11,8 @@ import {
   WRONGFUL_DEATH_CAUSES,
   offenceCourt,
 } from "@soulledger/core/domain/diyuCase";
-import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import type { Locale } from "@soulledger/core/config/locale";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -50,7 +51,7 @@ type FormatDate = ReturnType<typeof useI18n>["formatDate"];
  * 页头与枉死城块头同一句(D-2):候审期间「枉死 · 候至 日期 · 在枉死城」;申诉属实已提前释放「枉死 · 日期 已提前释放」;
  * 其余只写「枉死」。
  */
-export function untimelyLine(judgment: Judgment, t: Translate, formatDate: FormatDate): string {
+export function untimelyLine(judgment: Judgment, t: Translate, formatDate: FormatDate, locale?: Locale): string {
   if (judgment.grievance_status === "UPHELD" && judgment.grievance_decided_at) {
     return t("judgment.wangsi.released_line", { date: formatDate(judgment.grievance_decided_at) });
   }
@@ -58,7 +59,7 @@ export function untimelyLine(judgment: Judgment, t: Translate, formatDate: Forma
     return t("judgment.wangsi.delivered_line", { date: formatDate(judgment.grievance_decided_at) });
   }
   if (isHeldUntilFatedDate(judgment)) {
-    return [t("judgment.untimely"), t("judgment.held_until", { date: judgment.held_until as string }), t("judgment.in_city")].join(" · ");
+    return [t("judgment.untimely"), t("judgment.held_until", { date: formatIsoDay(judgment.held_until, locale) }), t("judgment.in_city")].join(" · ");
   }
   return t("judgment.untimely");
 }
@@ -136,7 +137,7 @@ export function OffenceField({ judgment, editable }: { judgment: Judgment; edita
 }
 
 export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editable: boolean }) {
-  const { t, formatDate, formatDateTime } = useI18n();
+  const { t, locale, formatDate, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const refresh = useRefresh();
   const causeId = useId();
@@ -189,7 +190,7 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
     <section className="mt-6" data-testid="desk-wangsi" aria-label={t("judgment.wangsi.title")}>
       <div className="flex flex-wrap items-baseline gap-x-3 border-b border-[oklch(var(--color-block))] pb-1">
         <p className="flex-1 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.wangsi.title")}</p>
-        <span className="text-xs text-[oklch(var(--color-ink))]" data-testid="wangsi-head-line">{untimelyLine(judgment, t, formatDate)}</span>
+        <span className="text-xs text-[oklch(var(--color-ink))]" data-testid="wangsi-head-line">{untimelyLine(judgment, t, formatDate, locale)}</span>
       </div>
 
       <div className="mt-3 space-y-3">
@@ -335,7 +336,7 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
             (judgment.city_god_status === "PENDING" || judgment.city_god_status === "RETURNED"
               ? ` ${t("judgment.wangsi.deliver_sends_on")}`
               : "")
-          : t("judgment.wangsi.release_body", { name: judgment.soul_name, date: judgment.held_until ?? "" })} ${t("judgment.wangsi.release_irreversible")}`}
+          : t("judgment.wangsi.release_body", { name: judgment.soul_name, date: formatIsoDay(judgment.held_until, locale) })} ${t("judgment.wangsi.release_irreversible")}`}
         confirmText={confirming === "deliver" ? t("judgment.wangsi.deliver") : t("judgment.wangsi.uphold")}
         confirmLoading={decide.isPending}
         onConfirm={() => decide.mutate({ upheld: true, deliver: confirming === "deliver" })}
