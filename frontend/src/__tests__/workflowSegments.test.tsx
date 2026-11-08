@@ -627,4 +627,36 @@ describe("模板编辑器只读预览的殿名", () => {
     expect(panel).toHaveTextContent("天国");
     expect(panel).not.toHaveTextContent("Heaven");
   });
+
+  // v4 第十四批 §5:主路径先排,分支的另一条出口排在后面,前面一行「◇ 复核 的另一条出口 · …」。
+  it("窄屏只读列表:主路径先排,否决出去的那条分支排在后面并写明从哪条出口来", () => {
+    const n = (id: string, label: string, kind = "APPROVAL"): FlowNode => ({ id, position: { x: 0, y: 0 }, data: { label, kind, nodeType: "TRIAL" } });
+    // 按顺序是 受理 · 复议 · 复核 · 终审;复核的否决连到复议,通过连到终审 —— 主路径是 受理 → 复核 → 终审。
+    const nodes = [n("a", "受理"), n("x", "复议"), n("b", "复核"), n("c", "终审", "END")];
+    const edges = [
+      { id: "ab", source: "a", sourceHandle: "pass", target: "b" },
+      { id: "bc", source: "b", sourceHandle: "pass", target: "c" },
+      { id: "bx", source: "b", sourceHandle: "fail", target: "x" },
+    ];
+    render(
+      <WorkflowReadOnlyList
+        t={tZh}
+        locale="zh-Hans"
+        nodes={nodes}
+        edges={edges}
+        roles={new Map()}
+        issueNodes={new Set()}
+        selectedId={null}
+        onSelect={() => {}}
+      />
+    );
+    const list = screen.getByRole("region", { name: tZh("workflow.editor.preview") });
+    const names = within(list).getAllByRole("button").map((b) => b.textContent ?? "");
+    expect(names.map((s) => ["受理", "复议", "复核", "终审"].find((w) => s.startsWith(w)))).toEqual(["受理", "复核", "终审", "复议"]);
+    const via = list.querySelectorAll("[data-other-exit]");
+    expect(via).toHaveLength(1);
+    expect(via[0]).toHaveTextContent(
+      tZh("workflow.editor.other_exit", { node: "复核", label: tZh("workflow.editor.branch.fail") })
+    );
+  });
 });

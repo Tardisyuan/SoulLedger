@@ -1378,6 +1378,8 @@
       "node_issue_count": "{{n}} 处问题",
       "node_issue_summary": "这个节点有 {{n}} 处问题，发布前要改。",
       "locate": "定位",
+      "read_only": "只读",
+      "other_exit": "{{node}} 的另一条出口 · {{label}}",
       "palette": "节点 · 拖入画布",
       "inspector": "属性",
       "inspector_empty": "在画布或线性预览里选一个节点。",

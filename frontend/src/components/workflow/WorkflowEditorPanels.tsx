@@ -13,6 +13,7 @@ import {
   KIND_GLYPH,
   ROLE_GLYPH,
   branchOf,
+  exitRegion,
   isAutoRoute,
   kindOf,
   whenOf,
@@ -573,9 +574,66 @@ export function WorkflowLinearPreview({
   );
 }
 
+/** How the canvas labels an exit that is not the node's plain 通过 (`RouteEdge` in EditableNode.tsx). */
+function exitLabel(edge: Edge, source: Node, edges: readonly Edge[], t: TFunc, locale?: string): string {
+  if (branchOf(edge) === "fail") return t("workflow.editor.branch.fail");
+  const region = isAutoRoute(source, edges) ? exitRegion(edge) : null;
+  if (region) return originRegionLabel(t, region, locale);
+  const when = whenOf(edge);
+  return `${t("workflow.editor.condition.yes")} · ${when?.length ? whenText(when, t) : t("workflow.editor.condition.empty")}`;
+}
+
 /**
- * The read-only flow below 1024 (v4 第十四批 §5): the canvas's own node card, stacked full width, one per node in
- * order, with a vertical rule between them that names the exit taken. The card's first line is the ROLE glyph ·
+ * The order the narrow view stacks the cards in (v4 第十四批 §5): the main path first — from the first node, each
+ * node's plain 通过 edge, or the next node by order when it has no 通过 edge at all (the engine's default) — then,
+ * for each node already listed, every other exit's branch, followed the same way until it meets a listed node.
+ * The first card of a branch carries 「◇ {node} 的另一条出口 · {label}」. Nodes nothing reaches come last, in order.
+ */
+export function readingOrder(
+  nodes: readonly Node[],
+  edges: readonly Edge[],
+  t: TFunc,
+  locale?: string
+): { node: Node; via?: string }[] {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const seen = new Set<string>();
+  const out: { node: Node; via?: string }[] = [];
+  // A plain 通过 edge. 自动分流's 不详 exit is one (no condition); its 欧洲 / 亚洲 exits carry a condition.
+  const isMain = (e: Edge) => branchOf(e) === "pass" && whenOf(e) === undefined;
+  const next = (n: Node): Node | undefined => {
+    if (kindOf(n) === "END") return undefined;
+    const plain = edges.find((e) => e.source === n.id && isMain(e));
+    if (plain) return byId.get(plain.target);
+    if (edges.some((e) => e.source === n.id && branchOf(e) === "pass")) return undefined;
+    return nodes[nodes.indexOf(n) + 1];
+  };
+  const walk = (start: Node | undefined, via?: string): Node[] => {
+    const chain: Node[] = [];
+    for (let n = start; n && !seen.has(n.id); n = next(n)) {
+      seen.add(n.id);
+      out.push({ node: n, via: chain.length === 0 ? via : undefined });
+      chain.push(n);
+    }
+    return chain;
+  };
+  const queue = walk(nodes[0]);
+  for (let i = 0; i < queue.length; i++) {
+    const from = queue[i];
+    for (const e of edges) {
+      if (e.source !== from.id || isMain(e)) continue;
+      const target = byId.get(e.target);
+      if (!target || seen.has(target.id)) continue;
+      queue.push(...walk(target, t("workflow.editor.other_exit", { node: nodeName(from, t), label: exitLabel(e, from, edges, t, locale) })));
+    }
+  }
+  for (const n of nodes) if (!seen.has(n.id)) walk(n);
+  return out;
+}
+
+/**
+ * The read-only flow below 1024 (v4 第十四批 §5): the canvas's own node card, stacked full width in `readingOrder`
+ * (main path, then each other exit's branch under a 「◇ … 的另一条出口」 line), with a vertical rule under each
+ * card that names where its outcomes go. The card's first line is the ROLE glyph ·
  * KIND glyph and name, the court (and k/n for 会签) at the right; the second the display name; a node with issues
  * keeps its「!」and the short reason line. A card selects its node, and the narrow view then shows 属性.
  */
@@ -609,7 +667,7 @@ export function WorkflowReadOnlyList({
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</p>
       ) : (
         <ol className="flex flex-col">
-          {nodes.map((n) => {
+          {readingOrder(nodes, edges, t, locale).map(({ node: n, via }) => {
             const role = roles.get(n.id) ?? "step";
             const kind = kindOf(n);
             const bad = issueNodes.has(n.id);
@@ -625,6 +683,12 @@ export function WorkflowReadOnlyList({
               .join(" · ");
             return (
               <li key={n.id} className="flex flex-col">
+                {via && (
+                  <p data-other-exit="" className="mt-2 mb-2 text-xs text-[oklch(var(--color-ink-muted))] break-words">
+                    <span aria-hidden="true" className="text-[oklch(var(--color-accent))]">◇ </span>
+                    {via}
+                  </p>
+                )}
                 <button
                   type="button"
                   aria-pressed={n.id === selectedId}

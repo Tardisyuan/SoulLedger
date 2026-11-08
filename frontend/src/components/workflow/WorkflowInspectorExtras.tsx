@@ -281,7 +281,7 @@ export function ExitConditionsSection({
             return (
               <li
                 key={e.id}
-                className={`flex flex-col gap-2 border bg-[oklch(var(--color-surface-1))] ${
+                className={`group/exit flex flex-col gap-2 border bg-[oklch(var(--color-surface-1))] ${
                   active ? "border-[oklch(var(--color-ink))]" : "border-[oklch(var(--color-line))]"
                 }`}
               >
@@ -290,7 +290,7 @@ export function ExitConditionsSection({
                   type="button"
                   aria-pressed={active}
                   onClick={() => onActivate?.(e.id)}
-                  className="flex-1 min-w-0 flex items-center gap-2 min-h-11 px-3 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                  className="flex-1 min-w-0 flex items-center gap-2 min-h-[46px] pointer-coarse:min-h-11 px-3 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                 >
                   <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{i + 1}</span>
                   <span className="flex-1 min-w-0 break-words">
@@ -305,6 +305,7 @@ export function ExitConditionsSection({
                     <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.condition.default")}</span>
                   )}
                 </button>
+                {/* ↑ ↓ (v4 第十四批): shown on hover or while focus is in the row; always on touch. */}
                 {onMove && when !== undefined && (
                   <>
                     <button
@@ -312,7 +313,7 @@ export function ExitConditionsSection({
                       aria-label={`${t("workflow.editor.exit_up")} ${i + 1}`}
                       disabled={i === 0}
                       onClick={() => onMove(e.id, -1)}
-                      className="w-11 shrink-0 font-mono text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:hover:bg-transparent"
+                      className="w-11 shrink-0 opacity-0 group-hover/exit:opacity-100 group-focus-within/exit:opacity-100 pointer-coarse:opacity-100 font-mono text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:hover:bg-transparent"
                     >
                       ↑
                     </button>
@@ -321,7 +322,7 @@ export function ExitConditionsSection({
                       aria-label={`${t("workflow.editor.exit_down")} ${i + 1}`}
                       disabled={i === conditionalCount - 1}
                       onClick={() => onMove(e.id, 1)}
-                      className="w-11 shrink-0 font-mono text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:hover:bg-transparent"
+                      className="w-11 shrink-0 opacity-0 group-hover/exit:opacity-100 group-focus-within/exit:opacity-100 pointer-coarse:opacity-100 font-mono text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:hover:bg-transparent"
                     >
                       ↓
                     </button>
