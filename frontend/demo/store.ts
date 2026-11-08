@@ -237,6 +237,20 @@ export function allRows(rec: Recording, path: string): Row[] {
 function matches(row: Row, query: URLSearchParams): boolean {
   for (const [k, v] of query.entries()) {
     if (NO_FILTER.has(k) || v === "") continue;
+    // Filters that are not a column, read the way the server reads them (apps/events/views.py, apps/audit): a day range
+    // on the row's own time, both ends inclusive, and 「不含系统事件」 = actor empty or "system". Unread, an unrecorded
+    // day showed every event, system ones too, under 「近 7 天 · 不含系统事件」.
+    if (k === "start_date" || k === "end_date") {
+      const stamp = row.create_time ?? row.created_at ?? row.timestamp;
+      if (typeof stamp !== "string") continue;
+      const day = stamp.slice(0, stamp.indexOf("T") > 0 ? stamp.indexOf("T") : 10);
+      if (k === "start_date" ? beforeDay(day, v) : beforeDay(v, day)) return false;
+      continue;
+    }
+    if (k === "exclude_system") {
+      if ((v === "1" || v === "true") && "actor" in row && (!row.actor || row.actor === "system")) return false;
+      continue;
+    }
     const field = k.replace(/(__in|__iexact|__exact)$/, "");
     if (!(field in row)) continue;
     const cell = row[field];
@@ -246,6 +260,16 @@ function matches(row: Row, query: URLSearchParams): boolean {
   }
   const words = query.get("search") ?? query.get("q");
   return !words || JSON.stringify(row).toLowerCase().includes(words.toLowerCase());
+}
+
+/** `a` is an earlier calendar day than `b`. Both `YYYY-MM-DD`, or the ISO extended year (`-000276-03-03`) a shifted
+ * recording holds — which a string compare gets wrong. Unparseable never counts as earlier. */
+function beforeDay(a: string, b: string): boolean {
+  const key = (d: string) => /^([+-]?\d+)-(\d\d)-(\d\d)/.exec(d)?.slice(1).map(Number);
+  const [x, y] = [key(a), key(b)];
+  if (!x || !y) return false;
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i];
+  return false;
 }
 
 function ordered(rows: Row[], ordering: string | null): Row[] {

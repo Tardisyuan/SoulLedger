@@ -229,8 +229,7 @@
     "undeclared": "Not declared",
     "by_deployment": "All configured per deployment",
     "default": "Default",
-    "reference": "Cited for comparison",
-    "author": "Author"
+    "reference": "Cited for comparison"
   },
   "souls": {
     "title": "Souls",
@@ -546,6 +545,7 @@
         "stage_disposed_hint": "Not started · assigned by the verdict once judged",
         "stage_reincarnating": "Rebirth",
         "stage_reincarnating_hint": "Not started · disposition must complete first",
+        "stage_reincarnating_waiting": "Disposition carried out · awaiting rebirth",
         "stage_next_life": "Next life",
         "stage_next_life_hint": "Settled once disposition and rebirth complete",
         "stage_final": "The end",
@@ -9169,9 +9169,6 @@
       "skip": "Skip"
     },
     "admin_hint": "An administrator sees all four underworlds. These are the overall numbers; audit, users and permissions, and the corpus are in the menu on the left.",
-    "author": {
-      "line": "{{name}} decided the domain model, the source research and the standard of verification."
-    },
     "soul": {
       "entry_title": "Souls live in the app",
       "entry_body": "This demo can show a few app screens in the browser.",

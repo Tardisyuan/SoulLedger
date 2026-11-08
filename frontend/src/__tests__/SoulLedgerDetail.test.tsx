@@ -11,7 +11,7 @@ import type { Judgment, Reincarnation, Soul } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { stepStatuses } from "@/src/components/souls/detail/soulProgress";
 import { SoulLedgerProgress } from "@/src/components/souls/detail/SoulLedgerProgress";
-import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SoulJudgmentHistory, SoulLedgerSections } from "@/src/components/souls/detail/SoulLedgerSections";
 
 // 行程条自己取两份数据:全部界域与这个灵魂的 path。
 jest.mock("@soulledger/core/api", () => ({
@@ -309,5 +309,17 @@ describe("SoulJudgmentHistory — 全部审判", () => {
     // 庭与判官不在标题里,在下一行。
     expect(fourth).not.toHaveTextContent("第五殿");
     expect(screen.getAllByTestId("ledger-judgment-row")[0]).toHaveTextContent("第五殿 · 阎罗王");
+  });
+});
+
+describe("SoulLedgerSections — no rebirth record yet", () => {
+  it("says the soul waits to be reborn once it is REINCARNATING, and 需先完成处置 only before", () => {
+    const waiting = wrap(<SoulLedgerSections dispositions={[]} reincarnations={[]} events={[]} awaitingRebirth />);
+    expect(screen.getByTestId("soul-ledger-sections")).toHaveTextContent("处置已执行 · 等候转生");
+    expect(screen.getByTestId("soul-ledger-sections")).not.toHaveTextContent("需先完成处置");
+    waiting.unmount();
+    wrap(<SoulLedgerSections dispositions={[]} reincarnations={[]} events={[]} />);
+    expect(screen.getByTestId("soul-ledger-sections")).toHaveTextContent("需先完成处置");
+    expect(screen.getByTestId("soul-ledger-sections")).not.toHaveTextContent("等候转生");
   });
 });

@@ -66,6 +66,20 @@ def test_an_officer_concluding_a_stale_copy_is_refused_too(cn_tenant):
     assert refused.value.code == "already_concluded"
 
 
+def test_the_conclusion_event_names_the_officer_who_concluded(cn_tenant):
+    """The event log said 「system」 for every verdict, the API's too (`by` was known and not passed): /events
+    could not say who judged, and its default 「不含系统事件」 hid every conclusion. In-process ones stay system."""
+    from apps.events.models import SoulEvent
+
+    judge = sp.officer("j1108", "ADMIN", cn_tenant)
+    by_officer, in_process = _case(cn_tenant), _case(cn_tenant)
+    JudgmentConclusionService.conclude_judgment(by_officer, Verdict.FAILED, by=judge)
+    JudgmentConclusionService.conclude_judgment(in_process, Verdict.FAILED)
+    actor = lambda case: SoulEvent.all_objects.get(soul_id=case.soul_id, event_type="JUDGMENT_CONCLUDED").actor  # noqa: E731
+    assert actor(by_officer) == str(judge)
+    assert actor(in_process) == "system"
+
+
 # ── P2 #10:灵魂此刻结不了案,就不开案 ───────────────────────────────────────
 
 

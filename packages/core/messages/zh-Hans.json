@@ -229,8 +229,7 @@
     "undeclared": "未声明",
     "by_deployment": "均按部署配置",
     "default": "默认",
-    "reference": "参照",
-    "author": "作者"
+    "reference": "参照"
   },
   "souls": {
     "title": "灵魂",
@@ -546,6 +545,7 @@
         "stage_disposed_hint": "尚未开始 · 裁决后按判定结果分配去向",
         "stage_reincarnating": "轮回",
         "stage_reincarnating_hint": "尚未开始 · 需先完成处置",
+        "stage_reincarnating_waiting": "处置已执行 · 等候转生",
         "stage_next_life": "下一世",
         "stage_next_life_hint": "待处置与轮回完成后确定",
         "stage_final": "终点",
@@ -9169,9 +9169,6 @@
       "skip": "跳过"
     },
     "admin_hint": "管理员看得到四个冥界。这里是全局数字；审计、用户与权限、语料在左边的菜单里。",
-    "author": {
-      "line": "作者 {{name}} 决定领域建模、考据和验证标准。"
-    },
     "soul": {
       "entry_title": "灵魂只在 App 里",
       "entry_body": "演示站可以在网页里看几屏 App 的样子。",

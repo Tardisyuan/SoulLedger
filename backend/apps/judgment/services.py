@@ -437,7 +437,7 @@ class JudgmentConclusionService:
                 else:
                     weighing.open_retrial(judgment, reason=str(verdict), method=judgment.judgment_method)
                 from apps.events.services import EventService
-                EventService.log_judgment_concluded(judgment)
+                EventService.log_judgment_concluded(judgment, actor=str(by) if getattr(by, "pk", None) is not None else "system")
                 return True
 
             # An AMENDMENT (the stop's own case, situation 1) or a REOPEN (the
@@ -458,7 +458,7 @@ class JudgmentConclusionService:
                     plan_requests.conclude_reopened(judgment)
                 SentencePlanService.advance(judgment.soul)
                 from apps.events.services import EventService
-                EventService.log_judgment_concluded(judgment)
+                EventService.log_judgment_concluded(judgment, actor=str(by) if getattr(by, "pk", None) is not None else "system")
                 return True
             if plan_changes:
                 raise plan_requests.PlanChangeRefusedError(
@@ -499,7 +499,7 @@ class JudgmentConclusionService:
             # Step 5: the event row is part of the conclusion's record: written in the same transaction, so a
             # failed insert rolls the whole conclusion back and reaches the caller (tests/test_event_log_*).
             from apps.events.services import EventService
-            EventService.log_judgment_concluded(judgment)
+            EventService.log_judgment_concluded(judgment, actor=str(by) if getattr(by, "pk", None) is not None else "system")
 
         return True
 
