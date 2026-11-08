@@ -52,7 +52,8 @@ import {
 const PUBLIC_V4 = path.join(__dirname, "..", "..", "public", "v4");
 const files = (dir: string) => readdirSync(path.join(PUBLIC_V4, dir)).filter((f) => f.endsWith(".svg")).map((f) => path.join(dir, f));
 const MAPS = files("maps");
-const EMBLEMS = files("emblems");
+const EMBLEMS = files("emblems").filter((f) => !f.endsWith("-mark.svg"));
+const MARKS = files("emblems").filter((f) => f.endsWith("-mark.svg"));
 const HEROES = files("maps/nodes");
 const SOULFIRE = files("soulfire");
 const read = (rel: string) => readFileSync(path.join(PUBLIC_V4, rel), "utf8");
@@ -62,9 +63,10 @@ describe("the delivered SVGs are safe to put in the page", () => {
   it("are all there: four civilizations, dark and light, maps and emblems", () => {
     expect(MAPS).toHaveLength(8);
     expect(EMBLEMS).toHaveLength(8);
+    expect(MARKS).toHaveLength(4);
   });
 
-  it.each([...MAPS, ...EMBLEMS, ...HEROES, ...SOULFIRE])("%s has no script, foreign content, handler, outside link or import", (rel) => {
+  it.each([...MAPS, ...EMBLEMS, ...MARKS, ...HEROES, ...SOULFIRE])("%s has no script, foreign content, handler, outside link or import", (rel) => {
     const text = read(rel);
     expect(text).not.toMatch(/<script/i);
     expect(text).not.toMatch(/foreignObject/i);
@@ -93,6 +95,20 @@ describe("the delivered SVGs are safe to put in the page", () => {
       expect(Math.min(h.top, h.left)).toBeGreaterThanOrEqual(0);
       expect(Math.max(h.bottom, h.right)).toBeLessThanOrEqual(240);
     }
+  });
+
+  // 主视觉用 <img> 加载,<img> 里的 SVG 不加载网页字体:字要转成路径(第十九批的冥字印),不能留 <text>。
+  it.each(EMBLEMS)("%s draws no text (an <img> SVG would fall back to a system font)", (rel) => {
+    expect(read(rel)).not.toMatch(/<text\b|font-family/);
+  });
+
+  // 小号在 CivEmblem.tsx 里内联(currentColor 才跟随文字色):每个形状的参数都要和交付的文件一致。
+  it.each(MARKS)("%s is what CivEmblem inlines", (rel) => {
+    const source = readFileSync(path.join(__dirname, "..", "components", "brand", "CivEmblem.tsx"), "utf8");
+    const body = read(rel).replace(/^<svg[^>]*>|<\/svg>\s*$/g, "");
+    const shapes = [...body.matchAll(/<(path|circle|rect)\b([^>]*?)\/>/g)];
+    expect(shapes.length).toBeGreaterThan(0);
+    for (const [, tag, attrs] of shapes) expect(source).toContain(`<${tag}${attrs.replace(/\s+$/, "")} />`);
   });
 
   it("parseMapSvg drops script, style, handlers and outside links even if a file grows them", () => {

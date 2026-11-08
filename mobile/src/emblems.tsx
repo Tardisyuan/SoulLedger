@@ -1,49 +1,57 @@
 /**
  * The four civilization emblems, the neutral mark, and the handful of line
- * icons the screens use — all transcribed from the design handoff's SVG
- * (viewBox 48 for emblems, 16/18 for icons). One `stroke`: a caller passes one
- * ink and nothing else about colour.
+ * icons the screens use — all transcribed from the design handoff's SVG. One
+ * `stroke`: a caller passes one ink and nothing else about colour.
  *
- * Each emblem has two drawings: `full` (login mark, watermark) and `compact`
- * (inline 15px, tab 24px, divider), where the handoff drops strokes that would
- * turn to mud at small sizes.
+ * Every place the app draws a civilization emblem is 12–16pt (inline, divider), so the four
+ * civilizations use Design v4 batch 19's small marks (`soulledger-emblem-<civ>-mark.svg`, 24 grid,
+ * 1.6 stroke, round caps — the same files as the web's `public/v4/emblems/`): the full 240 emblems
+ * turn to mud below 24. The neutral skin keeps the ledger-and-brush mark (viewBox 48), whose
+ * `full` / `compact` drawings are picked by size.
  */
 import type { ReactNode } from "react";
 import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 
 import type { CivKey } from "./theme";
 
-type Drawing = { rect?: boolean; paths: string[] };
+type Drawing = {
+  rect?: { x: number; y: number; width: number; height: number; rx?: number };
+  circle?: { cx: number; cy: number; r: number };
+  paths: string[];
+};
 
 const BRUSH = "M37.5 5.5l4.5 4.5-15.5 15.5-5.5 1.5 1.5-5.5z";
+const LEDGER_RECT = { x: 8, y: 12, width: 26, height: 30 };
 
-/** The ledger with a judge's brush — the app's own mark, and 中国地府's. */
+/** The ledger with a judge's brush — the app's own mark (neutral skin). */
 const LEDGER: Record<"full" | "compact", Drawing> = {
-  full: { rect: true, paths: ["M14 12v30M8 20.5h26M8 29h26", BRUSH] },
-  compact: { rect: true, paths: ["M14 12v30M8 20.5h26", BRUSH] },
+  full: { rect: LEDGER_RECT, paths: ["M14 12v30M8 20.5h26M8 29h26", BRUSH] },
+  compact: { rect: LEDGER_RECT, paths: ["M14 12v30M8 20.5h26", BRUSH] },
 };
 
-export const EMBLEMS: Record<CivKey, Record<"full" | "compact", Drawing>> = {
-  neutral: LEDGER,
-  cn: LEDGER,
-  eu: {
-    full: {
-      paths: [
-        "M6 42a18 18 0 0136 0M9 42a15 15 0 0130 0M12 42a12 12 0 0124 0M15 42a9 9 0 0118 0M18 42a6 6 0 0112 0M21 42a3 3 0 016 0",
-        "M24 4v38",
-      ],
-    },
-    compact: { paths: ["M8 42a16 16 0 0132 0M15 42a9 9 0 0118 0M21 42a3 3 0 016 0"] },
+/** Batch 19 small marks, viewBox 24, element for element. */
+export const MARKS: Record<Exclude<CivKey, "neutral">, Drawing> = {
+  cn: {
+    circle: { cx: 12, cy: 12, r: 9.5 },
+    rect: { x: 9, y: 9, width: 6, height: 6, rx: 0.6 },
+    paths: ["M12 2.5v4M12 17.5v4M3.8 7.2l3.4 2M16.8 14.8l3.4 2M3.8 16.8l3.4-2M16.8 9.2l3.4-2"],
   },
-  eg: {
-    full: { paths: ["M24 6v30M12 42h24M14 14h20", "M10 14a4 4 0 008 0M30 14a4 4 0 008 0", "M31 8c3-4 7-3 7-3s-.5 5-4 7"] },
-    compact: { paths: ["M24 8v28M12 40h24M14 16h20", "M11 16a3.5 3.5 0 007 0M27 16a3.5 3.5 0 007 0"] },
-  },
-  gr: {
-    full: { paths: ["M24 44V26M24 26L9 6M24 26l15-20", "M3 36c6 3 12-3 18 0s12 3 18 0M3 41c6 3 12-3 18 0s12 3 18 0"] },
-    compact: { paths: ["M24 42V24M24 24L11 8M24 24l13-16", "M6 38c6 3 12-3 18 0s12 3 18 0"] },
-  },
+  eu: { paths: ["M6 11 12 3l6 8Z", "M3 13.5h18M5.5 13.5 12 21l6.5-7.5M8 16.5h8"] },
+  eg: { paths: ["M12 5v14M8.5 20.5h7M3.5 8h17M5.5 8 3 14h5ZM18.5 8 16 14h5Z"] },
+  gr: { circle: { cx: 12, cy: 14, r: 1.6 }, paths: ["M12 21v-7M12 14 5.5 6.5M12 14V4.5M12 14l6.5-7.5", "M3 21.5h18"] },
 };
+
+function shapes(d: Drawing) {
+  return (
+    <>
+      {d.circle ? <Circle {...d.circle} /> : null}
+      {d.rect ? <Rect {...d.rect} /> : null}
+      {d.paths.map((p) => (
+        <Path key={p} d={p} />
+      ))}
+    </>
+  );
+}
 
 export function Emblem({
   civ,
@@ -56,19 +64,24 @@ export function Emblem({
   civ: CivKey;
   size: number;
   stroke: string;
+  /** Neutral only: each mark is one drawing. */
   variant?: "full" | "compact";
+  /** Neutral only (viewBox 48): the marks keep the design's 1.6 on 24. */
   strokeWidth?: number;
   testID?: string;
 }) {
-  const drawing = EMBLEMS[civ][variant];
+  if (civ !== "neutral") {
+    return (
+      <Svg testID={testID} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+        {shapes(MARKS[civ])}
+      </Svg>
+    );
+  }
   // The handoff's weights: ~0.75 at watermark size, 1 at 66px, 1.6–2 inline.
   const width = strokeWidth ?? (size >= 120 ? 0.75 : size >= 40 ? 1 : 1.8);
   return (
     <Svg testID={testID} width={size} height={size} viewBox="0 0 48 48" fill="none" stroke={stroke} strokeWidth={width}>
-      {drawing.rect ? <Rect x={8} y={12} width={26} height={30} /> : null}
-      {drawing.paths.map((d) => (
-        <Path key={d} d={d} />
-      ))}
+      {shapes(LEDGER[variant])}
     </Svg>
   );
 }
