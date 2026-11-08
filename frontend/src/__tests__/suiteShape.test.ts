@@ -341,6 +341,8 @@ const COLLECTED_FILES = [
   "domainNamespaceContract.test.ts",
   "drawerFocusTrap.test.tsx",
   "egyLexiconRules.test.ts",
+  // 2026-11-09 落地页主视觉的描线、光泽、倾斜(用户定 A):倾斜夹角、只画一次、减少动态效果全关。
+  "emblemFx.test.tsx",
   "localName.test.ts",
   "workflowPresetEnglish.test.ts",
   "eventInvalidationReachesCache.test.ts",

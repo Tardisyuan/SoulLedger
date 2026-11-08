@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { DIYU_STATIONS } from "@soulledger/core/domain/diyuStations";
 import en from "@soulledger/core/messages/en.json";
+import { EMBLEM_SVGS } from "@/src/generated/emblemSvgs";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import {
   applyBranches,
@@ -121,6 +122,53 @@ describe("the delivered SVGs are safe to put in the page", () => {
     expect(svg.querySelector("rect")!.getAttribute("onclick")).toBeNull();
     expect(svg.querySelector("a")!.getAttribute("href")).toBeNull();
     expect(svg.querySelector("use")!.getAttribute("href")).toBe("#ok");
+  });
+
+  // 落地页内联主视觉(LandingEmblem)留图里的 <style>:它全写在 .emblem2[data-civ][data-theme] 下;带外链的照删。
+  it("parseMapSvg keeps a scoped <style> only when asked, and never one that reaches outside", () => {
+    const scoped = '<svg xmlns="http://www.w3.org/2000/svg"><style>.emblem2 .e-l{stroke-width:6}</style></svg>';
+    expect(parseMapSvg(scoped)!.querySelector("style")).toBeNull();
+    expect(parseMapSvg(scoped, { keepStyle: true })!.querySelector("style")!.textContent).toContain(".e-l");
+    for (const bad of ["@import 'x.css';", ".a{background:url(https://example.com/x.png)}", '.a{fill:url("/x.svg")}']) {
+      const svg = parseMapSvg(`<svg xmlns="http://www.w3.org/2000/svg"><style>${bad}</style></svg>`, { keepStyle: true })!;
+      expect(svg.querySelector("style")).toBeNull();
+    }
+    const local = parseMapSvg('<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:url(#g)}</style></svg>', { keepStyle: true })!;
+    expect(local.querySelector("style")).not.toBeNull();
+  });
+
+  // 落地页的描线与光泽只认类名(emblemFx.ts):每份主视觉都要有主线 .e-l、刻度 .e-t,样式写在自己的作用域里。
+  it.each(EMBLEMS)("%s has the classes the landing effects work off, and scopes its own style", (rel) => {
+    const text = read(rel);
+    const [, civ, theme] = rel.match(/emblem-(\w+)-(dark|light)\.svg$/)!;
+    const svg = parseMapSvg(text, { keepStyle: true })!;
+    expect(svg.querySelectorAll(".e-l").length).toBeGreaterThan(0);
+    expect(svg.querySelectorAll(".e-t").length).toBeGreaterThan(0);
+    expect(svg.getAttribute("class")).toBe("emblem2");
+    expect(svg.getAttribute("data-civ")).toBe(civ);
+    expect(svg.getAttribute("data-theme")).toBe(theme);
+    expect(svg.querySelector("style")!.textContent).toContain(`.emblem2[data-civ="${civ}"][data-theme="${theme}"]`);
+    // 描线临时设 pathLength=1,收尾整个删掉:文件里本来就不能有。
+    expect(text).not.toMatch(/pathLength/);
+  });
+
+  // 落地页把主视觉原文在构建时嵌进来(src/generated/emblemSvgs.ts),服务端第一帧就有图。它不能和文件漂移,
+  // 而且是不经运行时消毒直接插进页面的:所以这里证明消毒器对它无事可做。
+  it("the embedded emblems are exactly the files (rerun `node frontend/scripts/gen-emblem-svgs.mjs` if not)", () => {
+    expect(Object.keys(EMBLEM_SVGS).sort()).toEqual(EMBLEMS.map((rel) => rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]).sort());
+    for (const rel of EMBLEMS) expect(EMBLEM_SVGS[rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]]).toBe(read(rel));
+  });
+
+  it.each(EMBLEMS)("%s loses nothing to parseMapSvg's keepStyle sanitising, so it can go in unsanitised", (rel) => {
+    const raw = new DOMParser().parseFromString(read(rel), "image/svg+xml").documentElement;
+    expect(parseMapSvg(read(rel), { keepStyle: true })!.outerHTML).toBe(raw.outerHTML);
+  });
+
+  // 深浅两份同在 DOM 里(按主题 display:none 一份),四张卡同在一页:八份的 id 不能有一个重复。
+  it("ids are unique across all eight emblems", () => {
+    const ids = EMBLEMS.flatMap((rel) => [...read(rel).matchAll(/\sid="([^"]*)"/g)].map((m) => m[1]));
+    expect(ids.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it.each(MAPS)("%s has the terrain / labels / you-are-here layers and a readable palette", (rel) => {

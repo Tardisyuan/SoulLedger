@@ -13,6 +13,7 @@ import {
   freeLabels,
   labelFills,
   labelLines,
+  loadSvg,
   mapSkinOf,
   mapStates,
   mapUrl,
@@ -80,19 +81,6 @@ import { Locate, Maximize2 } from "lucide-react";
  * 界域码 → `realms.names.*`,小写节点 → `map.*`),取不到才退回图里的中文。
  */
 
-const cache = new Map<string, Promise<string>>();
-function loadSvg(url: string): Promise<string> {
-  if (!cache.has(url)) {
-    cache.set(
-      url,
-      fetch(url).then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status))))).catch((e) => {
-        cache.delete(url);
-        throw e;
-      }),
-    );
-  }
-  return cache.get(url)!;
-}
 
 /** 图里不属于任何一站的说明字(按 Design 的中文认)。 */
 const FREE_KEYS: Record<string, string> = {

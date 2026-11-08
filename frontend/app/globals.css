@@ -2089,3 +2089,106 @@ html.theme-switching *::after {
 :root:not(.light) .v4-themed[data-theme="light"] {
   display: none;
 }
+
+/* ── 落地页主视觉的三样代码效果(2026-11-09 用户定 A;逻辑在 src/lib/emblemFx.ts)────────────
+   只认 SVG 里的类名(.e-l / .e-l2 主线、.e-t 刻度),不认几何 —— Design 还在改线稿。
+   只动 transform / opacity(描线那一秒是 stroke-dashoffset,一次性),不动 filter。
+   深浅两份都在 DOM 里,哪份显示由上面那条 `.v4-emblem[data-theme]` 规则决定。 */
+
+/* 1. 描线:纯 CSS,页面一打开就画(没有 JS 也画,不会先露整图再藏起来)。主线在渲染时带上 pathLength="1"
+      (`withDrawLengths`),所以 dasharray / offset 用 1 就是整条线。`backwards`:等待的那一小段里停在起点(线藏着);
+      不带 forwards:画完回到文件自己的样子。自己有动画的元素(`em2-*`,如欧洲的九圈明暗)不参与 ——
+      `animation` 会顶掉它们自己的那条,它们本来就在动,直接出现。
+      JS 到了之后:`fx-wait` 先停着(开头不在视口里的卡,快进视口时去掉它,动画从头来),`fx-done` 画过了(之后换主题、
+      重挂都不再画)。 */
+.emblem-fx .emblem2 :is(.e-l, .e-l2):not([class*="em2-"]) {
+  animation: emblem-draw 1s cubic-bezier(0.4, 0, 0.2, 1) 150ms backwards;
+}
+.emblem-fx .emblem2 .e-t:not([class*="em2-"]) {
+  animation: emblem-tick-in 450ms ease-out 900ms backwards;
+}
+.emblem-fx .emblem2:is(.fx-wait, .fx-done) :is(.e-l, .e-l2, .e-t):not([class*="em2-"]) {
+  animation-name: none;
+}
+@keyframes emblem-draw {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes emblem-tick-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 2. 金属光泽:一道斜光每 11 s 扫一次(避开图里的 3.4 / 3.8 / 4.2 / 4.4 / 4.6 / 9.6 / 10 / 60 s 和魂火的 1–2 s、5–8 s)。
+      遮罩是同一份 SVG(--sheen-mask),光只落在有笔画、有光晕的地方;光带自己只做 transform。
+      首扫延后 2 s,不和描线撞(离开视口时连延迟一起暂停)。 */
+.emblem-sheen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask: var(--sheen-mask) center / 100% 100% no-repeat;
+  mask: var(--sheen-mask) center / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+}
+.emblem-sheen::before {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent 20%, oklch(1 0 0 / 0.55) 50%, transparent 80%);
+  transform: translateX(-110%) rotate(12deg);
+  animation: emblem-sheen 11s ease-in-out 2s infinite;
+}
+.light .emblem-sheen {
+  opacity: 0.6;
+}
+@keyframes emblem-sheen {
+  0% {
+    transform: translateX(-110%) rotate(12deg);
+  }
+  14%,
+  100% {
+    transform: translateX(260%) rotate(12deg);
+  }
+}
+/* 离开视口或标签页藏起来:光泽和图里自己的动画都停。 */
+.emblem-fx[data-paused] *,
+.emblem-fx[data-paused] .emblem-sheen::before {
+  animation-play-state: paused !important;
+}
+
+/* 3. 倾斜:只在 JS 写了 data-tilting 时才有 transform(平时不为四张卡各建一层)。卡本身 overflow:hidden,
+      preserve-3d 会被压平,所以「主视觉更靠前」用 translate 做视差,不用 translateZ。
+      hover 的上浮是 Tailwind 4 的 `translate` 属性,和这里的 transform 互不覆盖。 */
+.landing-card[data-tilting] {
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+}
+.landing-emblem-layer {
+  translate: var(--par-x, 0px) var(--par-y, 0px);
+  transition: translate var(--transition-duration-fast) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emblem-fx .emblem2 :is(.e-l, .e-l2, .e-t):not([class*="em2-"]) {
+    animation-name: none;
+  }
+  .emblem-sheen {
+    display: none;
+  }
+  .landing-card[data-tilting] {
+    transform: none;
+  }
+  .landing-emblem-layer {
+    translate: none;
+  }
+}
