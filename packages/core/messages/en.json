@@ -546,6 +546,7 @@
         "stage_disposed_hint": "Not started · assigned by the verdict once judged",
         "stage_reincarnating": "Rebirth",
         "stage_reincarnating_hint": "Not started · disposition must complete first",
+        "stage_reincarnating_waiting": "Disposition carried out · awaiting rebirth",
         "stage_next_life": "Next life",
         "stage_next_life_hint": "Settled once disposition and rebirth complete",
         "stage_final": "The end",

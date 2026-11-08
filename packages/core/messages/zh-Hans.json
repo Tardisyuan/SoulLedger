@@ -546,6 +546,7 @@
         "stage_disposed_hint": "尚未开始 · 裁决后按判定结果分配去向",
         "stage_reincarnating": "轮回",
         "stage_reincarnating_hint": "尚未开始 · 需先完成处置",
+        "stage_reincarnating_waiting": "处置已执行 · 等候转生",
         "stage_next_life": "下一世",
         "stage_next_life_hint": "待处置与轮回完成后确定",
         "stage_final": "终点",
