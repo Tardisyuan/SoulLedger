@@ -33,6 +33,7 @@ from apps.authentication.models import User  # noqa: E402
 from apps.death_sync.models import DeathRegistrationRequest, ExternalApiKey, TudiGod, WebhookConfig  # noqa: E402
 from apps.dispatch.models import ParticipantRole  # noqa: E402
 from apps.disposition.models import Disposition  # noqa: E402
+from apps.events.models import SoulEvent  # noqa: E402
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService  # noqa: E402
 from apps.judgment import appeals, claims, confessions  # noqa: E402
 from apps.actors.models import Actor  # noqa: E402
@@ -124,6 +125,8 @@ SOULS = {
         ("Paolo Malatesta", 34, 46, "failed"), ("Faust", 41, 70, "failed"), ("Ulysses", 50, 60, "failed"), ("Orlando", 77, 13, "passed"),
         ("Roland", 85, 9, "passed"), ("Guinevere", 60, 25, "alive"), ("Lancelot", 66, 31, "purgatory"), ("Percival", 90, 3, "alive"),
         ("Marco Bellini", 40, 55, "queue"), ("Anna Keller", 50, 60, "queue"),
+        # Concluded this week, the approval half walked: a judge's own recent work on /events (Europe had none).
+        ("Lucia Ferri", 58, 36, "flow"), ("Jonas Weber", 46, 52, "flow"),
     ],
     "EG_DUAT": [
         ("Sinuhe", 72, 18, "passed"), ("Khufu", 44, 40, "passed"), ("Nefertari", 91, 4, "passed"), ("Imhotep", 95, 2, "passed"),
@@ -139,6 +142,7 @@ SOULS = {
         ("Penelope", 94, 2, "served"), ("Penelope", 94, 2, "reborn"),
         ("Antigone", 88, 7, "alive"), ("Hector", 86, 10, "alive"), ("Ixion", 5, 88, "failed"), ("Alcestis", 92, 3, "passed"),
         ("Nikos Pappas", 74, 16, "queue"), ("Eleni Vlachou", 69, 37, "queue"), ("Stavros Kouris", 66, 42, "flow"), ("Katerina Doukas", 92, 3, "queue"),
+        ("Yannis Petrou", 61, 33, "flow"),
     ],
 }
 
@@ -241,6 +245,8 @@ LIVES = {
 }
 DIED = {}
 PLANNED = {}
+#: soul pk -> its fate in SOULS, for `spread_time`.
+FATE = {}
 FINISHED = {"failed", "passed", "served", "reborn", "full", "purgatory"}
 #: Not a finished fate, but the transfer below ends the life: it keeps its own century.
 TRANSFERRED_LONG_AGO = {"Percival"}
@@ -339,7 +345,7 @@ PLACED = {
 #: Which Greek judge: Rhadamanthus the souls of Asia, Aeacus those of Europe, Minos when they are in doubt (Gorgias 524a).
 ASIA = {"Tantalus", "Eurydice", "Hector"}
 EUROPE = {"Orpheus", "Sisyphus", "Achilles", "Patroclus", "Odysseus", "Penelope", "Ixion", "Antigone",
-          "Alcestis", "Nikos Pappas", "Eleni Vlachou", "Stavros Kouris", "Katerina Doukas"}
+          "Alcestis", "Nikos Pappas", "Eleni Vlachou", "Stavros Kouris", "Katerina Doukas", "Yannis Petrou"}
 #: 卡戎不渡未葬者:他在岸边等,队列里认领不了。
 UNBURIED = {"Katerina Doukas"}
 
@@ -481,6 +487,9 @@ def carry_out(soul, tenant, fate, judges, stats):
     case.save(update_fields=["concluded_by"])
     placed = Realm.all_objects.filter(realm_code=PLACED.get(soul.name, "")).first()
     case.conclude(verdict, NOTE_OF.get(name) or NOTES[tenant.code].get(verdict, ""), **({"destination_realm_id": placed.pk} if placed else {}))
+    # The API names the judge on the event (`conclude_judgment(by=...)`); the seed concludes in-process, which logs
+    # "system" — so /events, which hides system events by default, showed no judge ever deciding anything.
+    SoulEvent.all_objects.filter(soul_id=soul.pk, event_type="JUDGMENT_CONCLUDED", actor="system").update(actor=str(judge))
     mark(soul.pk, name, "verdict")
     if fate == "flow":
         walk(case, stop_before_last=True)
@@ -512,6 +521,7 @@ def seed_souls(tenants, judges):
         tenant = tenants[code]
         for i, (name, merit, demerit, fate) in enumerate(rows):
             soul = make_soul(tenant, name, merit, demerit, i, fate=fate)
+            FATE[soul.pk] = fate
             try:
                 carry_out(soul, tenant, fate, judges, stats)
             except Exception as exc:  # A soul stuck part way is still a soul; say which and carry on.
@@ -806,8 +816,13 @@ def seat_benches():
         court = case.court or court_for(case, i)
         if not court:
             continue
-        Judgment.all_objects.filter(pk=case.pk).update(court=court, judge=judges.get(case.tenant.code),
-                                                       owner_org=court_org(case.tenant, court))
+        unit = court_org(case.tenant, court)
+        Judgment.all_objects.filter(pk=case.pk).update(court=court, judge=judges.get(case.tenant.code), owner_org=unit)
+        # The soul is filed where its first case is: the soul page's 「所属机构」 said
+        # the hall's root (第五殿) under a header naming the court that judged him (屈原, 第二殿, 2026-11-08). A soul
+        # living in another hall (an open transfer) keeps the unit the transfer gave it: only a soul still filed under its
+        # hall's root, as it was created, moves.
+        Soul.all_objects.filter(pk=case.soul_id, owner_org=tenant_root(case.tenant)).update(owner_org=unit)
         seated += 1
     print("benches:", seated)
 
@@ -885,6 +900,8 @@ def backdate_deaths():
 
 #: 灵魂离最近一件事过了多久(天):队列里的新,已转世的旧。
 AGE_BY_STATE = {"ALIVE": (200, 1500), "JUDGING": (1, 16), "DISPOSED": (6, 120), "REINCARNATING": (20, 240), "TERMINATED": (60, 500)}
+#: A case concluded with its approval still half walked was decided this week: /events opens on the last 7 days.
+AGE_BY_FATE = {"flow": (0.3, 5)}
 #: 种子跑一秒,历史上算两小时:一个灵魂经历的事前后拉开,先后不变。
 STRETCH = 7200
 
@@ -926,7 +943,7 @@ def spread_time(started):
     ages = {}
     for group in span:
         if group[0] == "soul":
-            low, high = AGE_BY_STATE.get(states.get(group[1]), (5, 90))
+            low, high = AGE_BY_FATE.get(FATE.get(group[1])) or AGE_BY_STATE.get(states.get(group[1]), (5, 90))
         elif group[0] == "post":
             low, high = (1, 45)
         else:
