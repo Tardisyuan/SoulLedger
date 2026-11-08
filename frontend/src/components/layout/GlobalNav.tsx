@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Popover } from "@base-ui/react/popover";
@@ -106,9 +106,16 @@ const isEditable = (el: EventTarget | null) =>
  * 用户选的模式(≥ 1200 才生效)+ 是否被宽度强制收起 + `[` 快捷键。
  * 每一次 localStorage 读写都包在 try 里:隐私窗口里它会抛,那时模式只活在本页。
  */
-export function useNavMode() {
+export function useNavMode(transient = false) {
   const [mode, setMode] = useState<NavMode>("expanded");
   const forced = useForcedCollapse();
+  // 编辑器里的那一次展开(浮层)。离开或进入编辑器时归零:不记(Design v4 第十四批取舍 1)。
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayFor, setOverlayFor] = useState(transient);
+  if (overlayFor !== transient) {
+    setOverlayFor(transient);
+    setOverlayOpen(false);
+  }
   useEffect(() => {
     try {
       if (window.localStorage.getItem(NAV_MODE_KEY) === "collapsed") setMode("collapsed");
@@ -118,6 +125,10 @@ export function useNavMode() {
   }, []);
 
   const toggle = useCallback(() => {
+    if (transient) {
+      setOverlayOpen((o) => !o);
+      return;
+    }
     if (forced) return;
     setMode((m) => {
       const next: NavMode = m === "expanded" ? "collapsed" : "expanded";
@@ -128,7 +139,7 @@ export function useNavMode() {
       }
       return next;
     });
-  }, [forced]);
+  }, [forced, transient]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -147,7 +158,24 @@ export function useNavMode() {
     return () => document.removeEventListener("keydown", onKey);
   }, [toggle]);
 
-  return { mode, forced, collapsed: forced || mode === "collapsed", toggle };
+  const close = useCallback(() => setOverlayOpen(false), []);
+  if (transient) return { mode, forced: false, collapsed: !overlayOpen, overlay: overlayOpen, close, toggle };
+  return { mode, forced, collapsed: forced || mode === "collapsed", overlay: false, close, toggle };
+}
+
+/**
+ * 审批流编辑器(Design v4 第十四批取舍 1):挂载期间侧栏一律收成图标栏,展开时以浮层盖在画布上、不挤画布;
+ * 不记上次的展开(`useNavMode(transient)`)。全站「1200 以下才锁定收起」在这里不适用。壳外(测试)什么都不做。
+ */
+const EditorNavContext = createContext<(on: boolean) => void>(() => {});
+export const EditorNavProvider = EditorNavContext.Provider;
+export function useEditorNav(on: boolean): void {
+  const set = useContext(EditorNavContext);
+  useEffect(() => {
+    if (!on) return;
+    set(true);
+    return () => set(false);
+  }, [set, on]);
 }
 
 // ── 侧栏 ────────────────────────────────────────────────────────────────
