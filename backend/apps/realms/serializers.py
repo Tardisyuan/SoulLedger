@@ -99,9 +99,14 @@ class SoulPathEntrySerializer(serializers.ModelSerializer):
 
 class RealmOccupancySerializer(serializers.Serializer):
     """One row of `GET /realms/occupancy/`: souls whose open path entry
-    (`left_at` null) is in this realm — 在押."""
+    (`left_at` null) is in this realm — 在押; plus today's flow (hall timezone)
+    and the average days the souls held now have stayed so far. Definitions:
+    `RealmViewSet.occupancy`."""
     realm_id = serializers.UUIDField()
     count = serializers.IntegerField()
+    arrived_today = serializers.IntegerField()
+    left_today = serializers.IntegerField()
+    avg_stay_days = serializers.FloatField(allow_null=True)
 
 
 class RealmCapacitySerializer(serializers.ModelSerializer):

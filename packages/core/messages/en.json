@@ -9402,10 +9402,17 @@
     },
     "close_up": "Close up",
     "card": {
-      "arrived": "Arrived {{date}}"
+      "arrived": "Arrived {{date}}",
+      "today_in": "In today",
+      "today_out": "out",
+      "avg_stay": "avg. stay"
     }
   },
   "overview": {
+    "map": {
+      "title": "Underworld map",
+      "open": "Open Realms"
+    },
     "claim_next": "Claim the next case",
     "count_unit": "cases · {{n}} past their deadline",
     "days": "{{n}} days",

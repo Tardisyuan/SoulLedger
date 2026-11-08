@@ -9402,10 +9402,17 @@
     },
     "close_up": "近处",
     "card": {
-      "arrived": "到达 {{date}}"
+      "arrived": "到达 {{date}}",
+      "today_in": "今日进",
+      "today_out": "出",
+      "avg_stay": "平均停留"
     }
   },
   "overview": {
+    "map": {
+      "title": "冥界图",
+      "open": "打开界域页"
+    },
     "claim_next": "认领下一件",
     "count_unit": "件 · 其中 {{n}} 件已过期限",
     "days": "{{n}} 日",

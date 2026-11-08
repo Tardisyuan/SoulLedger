@@ -28,7 +28,7 @@ import { useHall } from "@/src/components/plaque/useHall";
 import { RouteMap } from "@/src/components/realms/RouteMap";
 import { UnderworldMap } from "@/src/components/realms/UnderworldMap";
 import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
-import { loadOf, type StationLoad } from "@/src/lib/underworldMapLayers";
+import { loadOf, stationLoadsOf } from "@/src/lib/underworldMapLayers";
 
 /**
  * 界域(Design A2 · /realms):左边是这个文明的路线图(`RouteMap`,列表 + 连线,只读),
@@ -142,16 +142,10 @@ function RealmsPageContent() {
   const occupancy = new Map((occupancyQuery.data ?? []).map((o) => [o.realm_id, o.count]));
   // 地图上的读数:界域码 → 在押 / 容量。只在在押取到了时给(没取到时图上不写 0)。memo:地图按它重画。
   const occupancyData = occupancyQuery.isSuccess ? occupancyQuery.data : undefined;
-  const mapLoads = useMemo(() => {
-    if (!occupancyData) return undefined;
-    const held = new Map(occupancyData.map((o) => [o.realm_id, o.count]));
-    return new Map<string, StationLoad>(
-      (realmsQuery.data ?? []).filter((r) => r.civilization === civilization).map((r) => [r.realm_code, {
-        held: held.get(r.id) ?? 0,
-        capacity: r.capacity ?? null,
-      }]),
-    );
-  }, [occupancyData, realmsQuery.data, civilization]);
+  const mapLoads = useMemo(
+    () => (occupancyData ? stationLoadsOf(realmsQuery.data ?? [], occupancyData, civilization) : undefined),
+    [occupancyData, realmsQuery.data, civilization],
+  );
   const rows = treeRows(own);
   // 身份带(A2):题「界域 · <所看文明的界域根>」,右栏「在押 <根的在押数>」。根取树的第一行;
   // 在押没取到就不写右栏。

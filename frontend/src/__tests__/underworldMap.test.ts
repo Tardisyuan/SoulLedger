@@ -39,6 +39,7 @@ import {
   heroPlacement,
   loadOf,
   markLoads,
+  mergeFlow,
   minLabelFont,
   moveGroupLabelsOffHeroes,
   narrowCamera,
@@ -313,6 +314,23 @@ describe("light on the map (2026-11-08 A, Design batch 16 §1.4)", () => {
     ]));
     expect(loads.get("dy-ten-courts")).toEqual({ held: 7, capacity: null });
     expect([...loads.keys()]).toEqual(["dy-ten-courts"]);
+  });
+
+  it("today's flow folds with the cells: in / out add up, the average stay is weighted by who is held", () => {
+    const svg = map("cn");
+    const loads = nodeLoads(svg, new Map([
+      ["DY_COURT_01_QINGUANG", { held: 3, capacity: 10, flow: { arrived: 2, left: 1, avgDays: 4 } }],
+      ["DY_COURT_02_CHUJIANG", { held: 1, capacity: 10, flow: { arrived: 0, left: 5, avgDays: 8 } }],
+    ]));
+    // (4·3 + 8·1) / 4 = 5 —— not the plain mean of the two averages (6).
+    expect(loads.get("dy-ten-courts")).toEqual({ held: 4, capacity: 20, flow: { arrived: 2, left: 6, avgDays: 5 } });
+    // One cell without a figure makes the sum unknown, not smaller; nobody held means no average.
+    expect(mergeFlow([
+      { held: 0, capacity: null, flow: { arrived: null, left: 2, avgDays: null } },
+      { held: 0, capacity: null, flow: { arrived: 1, left: 0, avgDays: null } },
+    ])).toEqual({ arrived: null, left: 2, avgDays: null });
+    // No flow given at all stays absent (the card then draws no flow line).
+    expect(mergeFlow([{ held: 1, capacity: 1 }])).toBeUndefined();
   });
 
   it("walked edges get a glow under them and a moving flow on top; edges ahead get neither", () => {

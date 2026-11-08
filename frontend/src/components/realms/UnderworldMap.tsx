@@ -71,9 +71,9 @@ import { Locate, Maximize2 } from "lucide-react";
  *   此前叠在画面上,全景时盖住最右一站与它的读数,393 宽时那一列比全景的图还高、压到下面「支线」一行。
  *   现在画面只占那一列左边的宽,全景、镜头、拖到头都不会有东西藏在钮下面;图框至少和那一列一样高。
  * - 点 / 悬停一站出一张小卡(236 宽;窄屏贴在视窗底部,层级是抽屉那一档 —— 演示导览的面板是 Toast 一档、也贴在底部,
- *   刚点出来的卡要在它上面):站名、(灵魂的行程)状态与到达日期、(世界图)在押 / 容量与进度条。
- *   卡里只写接口已经给的字段 —— `GET /realms/occupancy/` 只有在押数,第十六批稿子里那行「今日进 · 出 · 平均停留」
- *   接口没有,不画。键盘:站名清单的按钮同样打开它,Esc 关。
+ *   刚点出来的卡要在它上面):站名、(灵魂的行程)状态与到达日期、(世界图)在押 / 容量与进度条,
+ *   和第十六批稿子里那行「今日进 · 出 · 平均停留」(`GET /realms/occupancy/` 的 `arrived_today` / `left_today` /
+ *   `avg_stay_days`,2026-11-08 加;平均停留是此刻在押者已待的天数)。缺的数写「未记录」。键盘:站名清单的按钮同样打开它,Esc 关。
  *
  * 站名:中文用图里 Design 写的字(就是定稿措辞);其他语言按 id 取语言包(地府站码 → `souls.diyu_station.*`,
  * 界域码 → `realms.names.*`,小写节点 → `map.*`),取不到才退回图里的中文。
@@ -120,6 +120,11 @@ const REPLAY_MS = 1200;
 const BUTTON =
   "inline-flex size-11 items-center justify-center border-t first:border-t-0 border-[oklch(var(--color-line-strong))] font-mono text-md hover:bg-[oklch(var(--color-surface-2))]";
 
+/** 小卡上进 / 出的一个数;接口没给是「未记录」,不写 0。 */
+function FlowFigure({ value }: { value: number | null }) {
+  return value === null ? <MissingValue kind="unrecorded" /> : <span className="font-mono text-[oklch(var(--color-ink))]">{value}</span>;
+}
+
 export interface MapArrival {
   /** 图上的节点或子格 id。 */
   id: string;
@@ -135,7 +140,13 @@ export function UnderworldMap({
   currentDetail,
   loads,
   className,
+  compact = false,
 }: {
+  /**
+   * 缩略图(概览):只有图 —— 没有缩放钮、小卡、悬停、拖动、支线一行和站名清单,永远是全景。
+   * 整块是一张 role="img" 的图,点哪里由调用方包一层链接决定。
+   */
+  compact?: boolean;
   /** 世界图:界域码 → 在押 / 容量(/realms 取到的 occupancy)。不给就不写读数,流光一律中等。调用方要 memo。 */
   loads?: ReadonlyMap<string, StationLoad>;
   civilization: string;
@@ -239,7 +250,7 @@ export function UnderworldMap({
   const fontUnits = template ? minLabelFont(template) : 12;
   const homeCamera = template ? narrowCamera(box, home, width, fontUnits) : null;
   const localCamera = homeCamera && camX !== null ? panCamera(homeCamera, camX - homeCamera.x, box) : homeCamera;
-  const camera = wholeMap ? null : localCamera;
+  const camera = wholeMap || compact ? null : localCamera;
   const cameraKey = camera ? `${camera.x} ${camera.y} ${camera.w} ${camera.h}` : "";
 
   // 量宽要在第一次绘制之前(layout effect):用 useEffect 时第一帧按宽 0 画,窄屏先闪一下缩小的全景才换成近处。
@@ -427,6 +438,14 @@ export function UnderworldMap({
 
   if (!skin || !template || !states) return null;
 
+  if (compact) {
+    return (
+      <figure data-testid="underworld-map" data-map={skin} data-compact="" className={cn("v4-map m-0 min-w-0", className)}>
+        <div ref={host} className="v4-map-viewport pointer-events-none flex min-w-0 flex-col justify-center" />
+      </figure>
+    );
+  }
+
   // 清单只写站名;站码(节点 id)只当 React key 和聚焦的目标,不进文字。没有名字的站不列。
   const stations: { key: string; name: string; state: MapState }[] = [];
   for (const node of nodesOf(template)) {
@@ -560,6 +579,17 @@ export function UnderworldMap({
                       />
                     </span>
                   ) : null}
+                  {cardLoad.flow && (
+                    <p data-testid="underworld-map-station-flow" className="m-0">
+                      {t("map.card.today_in")} <FlowFigure value={cardLoad.flow.arrived} /> · {t("map.card.today_out")}{" "}
+                      <FlowFigure value={cardLoad.flow.left} /> · {t("map.card.avg_stay")}{" "}
+                      {cardLoad.flow.avgDays === null ? (
+                        <MissingValue kind="unrecorded" />
+                      ) : (
+                        <span className="font-mono text-[oklch(var(--color-ink))]">{t("overview.days", { n: String(cardLoad.flow.avgDays) })}</span>
+                      )}
+                    </p>
+                  )}
                   {cardLevel === "full" && <p className="m-0">■ {t("realms.table.full")}</p>}
                   {cardLevel === "near" && <p className="m-0">◐ {t("realms.table.near")}</p>}
                 </>

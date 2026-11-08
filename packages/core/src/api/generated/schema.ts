@@ -7070,12 +7070,19 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 在押:每个界域里此刻有多少灵魂(官员端界域页的树表)。
+         * @description 在押:每个界域里此刻有多少灵魂(官员端界域页的树表与冥界地图的小卡)。
          *
-         *     数的是**未离开**的行程站(`SoulPathEntry.left_at` 为空)—— 一个灵魂同时
-         *     只有一条(`soulpath_one_open_entry_per_soul` 约束),所以这是人数,不是人次。
-         *     按行程站自己的租户划界,与 `GET /souls/{id}/path/` 同一口径;没有一站的
-         *     界域不出现在结果里(前端读作 0,那是事实,不是缺值)。
+         *     * `count` —— **未离开**的行程站(`SoulPathEntry.left_at` 为空)。一个灵魂同时只有一条
+         *       (`soulpath_one_open_entry_per_soul` 约束),所以这是人数,不是人次。
+         *     * `arrived_today` / `left_today` —— 今天(殿的时区,`Tenant.hall_timezone`,与概览
+         *       `judgment/hall_stats.py` 同一取法;没有殿的调用者按 UTC)0 点起 `entered_at` / `left_at`
+         *       落在这个界域的行程站数:人次,同一灵魂进出两次算两次。
+         *     * `avg_stay_days` —— 此刻在押的灵魂到现在已经待了多少天的平均,一位小数;没人在押是 null。
+         *       取在押而不取「已离开的停留」:在押是这张卡的主语,而永不离开的界域(`is_eternal`)
+         *       没有已结束的停留可平均。
+         *
+         *     按行程站自己的租户划界,与 `GET /souls/{id}/path/` 同一口径;三个数各一次分组查询,
+         *     不按界域逐个查。三个数都为 0 的界域不出现在结果里(前端读作 0,那是事实,不是缺值)。
          */
         get: operations["v1_realms_occupancy_list"];
         put?: never;
@@ -18968,12 +18975,18 @@ export interface components {
         };
         /**
          * @description One row of `GET /realms/occupancy/`: souls whose open path entry
-         *     (`left_at` null) is in this realm — 在押.
+         *     (`left_at` null) is in this realm — 在押; plus today's flow (hall timezone)
+         *     and the average days the souls held now have stayed so far. Definitions:
+         *     `RealmViewSet.occupancy`.
          */
         RealmOccupancy: {
             /** Format: uuid */
             realm_id: string;
             count: number;
+            arrived_today: number;
+            left_today: number;
+            /** Format: double */
+            avg_stay_days: number | null;
         };
         /**
          * @description * `HELL` - Hell / Punishment

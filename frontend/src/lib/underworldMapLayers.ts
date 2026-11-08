@@ -1,3 +1,4 @@
+import type { Realm, RealmOccupancy } from "@soulledger/core/api";
 import {
   CSS_ESCAPE,
   STROKE,
@@ -28,6 +29,56 @@ import {
 export interface StationLoad {
   held: number;
   capacity: number | null;
+  /** 今日进 / 出(人次)与在押者的平均停留天数(`GET /realms/occupancy/`);null = 接口没给。不给就是没取。 */
+  flow?: StationFlow;
+}
+
+export interface StationFlow {
+  arrived: number | null;
+  left: number | null;
+  avgDays: number | null;
+}
+
+/**
+ * 世界图的读数:这个文明的界域码 → 在押 / 容量 / 今日进出。接口没列出的界域是 0 人、今天没有进出(那是事实);
+ * 列出了却缺某个数(旧接口、演示录像)是 null —— 卡上写「未记录」,不写 0。/realms 与概览的缩略图共用。
+ */
+export function stationLoadsOf(
+  realms: readonly Realm[],
+  occupancy: readonly RealmOccupancy[],
+  civilization: string,
+): Map<string, StationLoad> {
+  const rows = new Map(occupancy.map((o) => [o.realm_id, o]));
+  return new Map(
+    realms.filter((r) => r.civilization === civilization).map((r): [string, StationLoad] => {
+      const o = rows.get(r.id);
+      return [r.realm_code, {
+        held: o?.count ?? 0,
+        capacity: r.capacity ?? null,
+        flow: o
+          ? { arrived: o.arrived_today ?? null, left: o.left_today ?? null, avgDays: o.avg_stay_days ?? null }
+          : { arrived: 0, left: 0, avgDays: null },
+      }];
+    }),
+  );
+}
+
+/**
+ * 几格合成一站的进出:进、出相加(任何一格没给,合计就没给);平均停留按各格在押人数加权 ——
+ * 每格的平均本来就是「在押者的平均」,加权后仍是合起来那群人的平均。没人在押是 null。
+ */
+export function mergeFlow(parts: readonly StationLoad[]): StationFlow | undefined {
+  const flows = parts.map((p) => p.flow);
+  if (!flows.some(Boolean)) return undefined;
+  const sum = (pick: (f: StationFlow) => number | null) =>
+    flows.every((f) => f && pick(f) !== null) ? flows.reduce((n, f) => n + (pick(f!) as number), 0) : null;
+  const held = parts.reduce((n, p) => n + p.held, 0);
+  const weighed = parts.filter((p) => p.held > 0);
+  const avgDays =
+    held > 0 && weighed.every((p) => p.flow?.avgDays != null)
+      ? Math.round((weighed.reduce((n, p) => n + (p.flow!.avgDays as number) * p.held, 0) / held) * 10) / 10
+      : null;
+  return { arrived: sum((f) => f.arrived), left: sum((f) => f.left), avgDays };
 }
 
 /** 将满:在押 ≥ 容量的 90%(树表图例「◐ 将满 = ≥ 90%」)。满了另算;容量未记录不判。 */
@@ -50,7 +101,8 @@ export function nodeLoads(svg: Element, byCode: ReadonlyMap<string, StationLoad>
     if (!parts.length) continue;
     const held = parts.reduce((n, p) => n + p.held, 0);
     const capacity = parts.every((p) => p.capacity !== null) ? parts.reduce((n, p) => n + (p.capacity as number), 0) : null;
-    out.set(node.id, { held, capacity });
+    const flow = mergeFlow(parts);
+    out.set(node.id, flow ? { held, capacity, flow } : { held, capacity });
   }
   return out;
 }
