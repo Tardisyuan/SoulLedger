@@ -38,7 +38,7 @@ import { StaleBadge } from "@/src/components/ui/StatusBadge";
 import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { OfficerHandoverDialog } from "@/src/components/users/OfficerHandoverDialog";
-import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { Badge } from "@/src/components/ui/Badge";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
@@ -684,7 +684,13 @@ export function JudgmentClaimQueue({
               {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
               <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.col_case_soul")}</th>
               <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.court")}</th>
-              <th scope="col" className="px-2 py-1 text-right font-normal">{t("judgment.claim.col_merit_demerit")}</th>
+              <th scope="col" className="px-2 py-1 text-right font-normal">
+                {/* Egypt has no merit (docs/02): the same two numbers are the feather's pan and the heart's, in the soul
+                    app's words (用户 2026-11-08). Only when every row is Egyptian. */}
+                {(civilization || ownCivilization) === "EGYPTIAN"
+                  ? `${t("soul_app.lexicon.eg.merit")} / ${t("soul_app.lexicon.eg.demerit")}`
+                  : t("judgment.claim.col_merit_demerit")}
+              </th>
               <th scope="col" className="px-2 py-1 text-left font-normal max-lg:hidden">{t("judgment.claim.col_draft")}</th>
               <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.claimant")}</th>
               <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.claim.col_deferred")}</th>
@@ -798,14 +804,14 @@ export function JudgmentClaimQueue({
                           {j.untimely && (
                             <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="untimely-mark">
                               <Badge tone="ink">{t("judgment.untimely")}</Badge>
-                              {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
+                              {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: formatIsoDay(j.held_until, locale) })}</span>}
                             </span>
                           )}
                           {/* 埃及入殿前(review P2-9):木乃伊 70 天、早夭、无名、葬仪不当 —— 与枉死同一种方框徽标。 */}
                           {j.duat_stage && (
                             <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="duat-mark">
                               <Badge tone="ink"><DomainEnum namespace="judgment.duat_stage" value={j.duat_stage} /></Badge>
-                              {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
+                              {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: formatIsoDay(j.held_until, locale) })}</span>}
                             </span>
                           )}
                           {/* 希腊过不了阿刻戎(第五十七批 G-1):与枉死、入殿前同一种方框徽标。 */}

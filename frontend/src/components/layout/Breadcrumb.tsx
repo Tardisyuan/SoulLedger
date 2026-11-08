@@ -187,9 +187,11 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;
           return (
-            <li key={`${crumb.label}-${i}`} className="flex items-center gap-1 min-w-0">
+            /* Below sm only the current page: three crumbs in ~150px read 「灵… / 灵 / i」(2026-11-08, 375px); the back
+               arrow beside them is the way up. */
+            <li key={`${crumb.label}-${i}`} className={`flex items-center gap-1 min-w-0 ${isLast ? "" : "max-sm:hidden"}`}>
               {i > 0 ? (
-                <span aria-hidden="true" className="shrink-0">
+                <span aria-hidden="true" className="shrink-0 max-sm:hidden">
                   /
                 </span>
               ) : null}

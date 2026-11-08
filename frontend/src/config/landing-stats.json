@@ -19,9 +19,5 @@
       "src": "/demo-videos/app-officer.mp4",
       "poster": "/demo-videos/app-officer.jpg"
     }
-  ],
-  "author": {
-    "name": "Richard Yuan",
-    "github": "https://github.com/Tardisyuan"
-  }
+  ]
 }

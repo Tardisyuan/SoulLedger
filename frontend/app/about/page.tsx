@@ -15,7 +15,6 @@ import {
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { sectionMark } from "@/src/lib/sectionMark";
-import stats from "@/src/config/landing-stats.json";
 
 /**
  * 关于 / 致谢(规范 v2 补足 C16):入口在用户菜单。数据在 packages/core 的
@@ -156,11 +155,6 @@ export default function AboutPage() {
             <Row key={d.name} name={d.name} detail={d.detail} />
           ))}
         </ul>
-      </Section>
-      <Section stem="己" title={t("about.author")}>
-        <p data-testid="about-author" className="py-2 text-sm">
-          {t("demo.author.line", { name: stats.author.name })} <ExtLink href={stats.author.github}>GitHub</ExtLink>
-        </p>
       </Section>
     </PageShell>
   );

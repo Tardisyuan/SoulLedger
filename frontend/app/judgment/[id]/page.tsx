@@ -65,7 +65,7 @@ import { useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { FROM_PARAM, sourceFrom, withFrom } from "@/src/lib/backSource";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
-import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
@@ -748,14 +748,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           申诉属实提前释放后是「枉死 · 日期 已提前释放」(第五十七批 D-2b)。枉死城块头写同一句。 */}
       {judgment.untimely && (
         <span data-testid="desk-untimely" className="basis-full text-[oklch(var(--color-ink))]">
-          {untimelyLine(judgment, t, formatDate)}
+          {untimelyLine(judgment, t, formatDate, locale)}
         </span>
       )}
       {/* 埃及入殿前(review P2-9):木乃伊 70 天期间带「候至 日期」,到期后只留阶段名。 */}
       {judgment.duat_stage && (
         <span data-testid="desk-duat" className="basis-full text-[oklch(var(--color-ink))]">
           <DomainEnum namespace="judgment.duat_stage" value={judgment.duat_stage} />
-          {isHeldUntilFatedDate(judgment) && ` · ${t("judgment.held_until", { date: judgment.held_until as string })}`}
+          {isHeldUntilFatedDate(judgment) && ` · ${t("judgment.held_until", { date: formatIsoDay(judgment.held_until, locale) })}`}
         </span>
       )}
       {atCityGod && (

@@ -80,12 +80,12 @@ describe("buildKarmaRows", () => {
 
   it("labels the row by event_date year, not recorded_at, when event_date is present", () => {
     const rows = buildKarmaRows([record({ event_date: { year: -44, month: 3, day: 15 } })]);
-    expect(rows[0].dateLabel).toBe("44 BCE");
+    expect(rows[0].date).toEqual({ year: -44, month: null, day: null });
   });
 
   it("falls back to recorded_at when event_date is null", () => {
     const rows = buildKarmaRows([record({ event_date: null, recorded_at: "1969-07-20T00:00:00Z" })]);
-    expect(rows[0].dateLabel).toBe("1969-07-20");
+    expect(rows[0].date).toEqual({ year: 1969, month: 7, day: 20 });
   });
 });
 
@@ -372,9 +372,9 @@ describe("buildCycleBandRows", () => {
 
 describe("filterRows / sortRows", () => {
   const rows: SpineRow[] = [
-    { id: "k1", kind: "karma", category: "karma", sortKey: 10, dateLabel: null, effectiveSigned: 1, originalSigned: 1, decayFactor: 1, yearsElapsed: 0, title: "", category_code: "X", type: "MERIT", isMilestone: false },
-    { id: "j1", kind: "marker", category: "judgment", sortKey: 20, dateLabel: null, glyph: "", title: "", tone: "neutral" },
-    { id: "s1", kind: "system", category: "system", sortKey: 30, dateLabel: null, title: "", rawEventType: "STATE_CHANGED", count: 1, actor: "system", items: [] },
+    { id: "k1", kind: "karma", category: "karma", sortKey: 10, date: null, effectiveSigned: 1, originalSigned: 1, decayFactor: 1, yearsElapsed: 0, title: "", category_code: "X", type: "MERIT", isMilestone: false },
+    { id: "j1", kind: "marker", category: "judgment", sortKey: 20, date: null, glyph: "", title: "", tone: "neutral" },
+    { id: "s1", kind: "system", category: "system", sortKey: 30, date: null, title: "", rawEventType: "STATE_CHANGED", count: 1, actor: "system", items: [] },
     { id: "st1", kind: "future", category: "structural", sortKey: 5, title: "", hint: "" },
   ];
 

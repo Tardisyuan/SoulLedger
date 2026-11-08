@@ -34,7 +34,7 @@ interface BaseRow {
 export interface KarmaRow extends BaseRow {
   kind: "karma";
   category: "karma";
-  dateLabel: string | null;
+  date: HistoricalDate | null;
   effectiveSigned: number;
   originalSigned: number;
   decayFactor: number;
@@ -48,7 +48,7 @@ export interface KarmaRow extends BaseRow {
 export interface MarkerRow extends BaseRow {
   kind: "marker";
   category: "judgment" | "disposition" | "reincarnation" | "structural";
-  dateLabel: string | null;
+  date: HistoricalDate | null;
   glyph: string;
   title: string;
   metadata?: string;
@@ -59,7 +59,7 @@ export interface MarkerRow extends BaseRow {
 export interface SystemGroupRow extends BaseRow {
   kind: "system";
   category: "system";
-  dateLabel: string | null;
+  date: HistoricalDate | null;
   title: string;
   /** The raw `event_type` member, for the row's `title` attribute only — the
    * same arrangement `src/lib/domainDisplay.ts` documents for every other enum
@@ -94,7 +94,7 @@ export interface CycleBandRow extends BaseRow {
   name: string;
   form: string | null;
   isCurrent: boolean;
-  dateLabel: string | null;
+  date: HistoricalDate | null;
 }
 
 export type SpineRow = KarmaRow | MarkerRow | SystemGroupRow | FutureRow | ActionRow | CycleBandRow;
@@ -121,13 +121,19 @@ export function historicalToMs(d: HistoricalDate | null | undefined): number | n
  * always float to the top of a newest-first spine regardless of wall clock. */
 const FUTURE_BASE = Number.MAX_SAFE_INTEGER;
 
-function yearLabel(date: HistoricalDate): string {
-  return date.year <= 0 ? `${Math.abs(date.year)} BCE` : `${date.year}`;
+/** The year alone: a life's events are dated by year on the spine. The row
+ * carries the date, not words for it — the timeline formats it in the page's
+ * locale (「前278年」, not "278 BCE" on a Chinese page). */
+function yearLabel(date: HistoricalDate): HistoricalDate {
+  return { year: date.year, month: null, day: null };
 }
 
-function isoDateLabel(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  return iso.slice(0, 10);
+/** The calendar day of a server timestamp. Takes the ISO extended year too
+ * (`-000276-03-03T…`): the demo shifts its recording into antiquity, and
+ * `slice(0, 10)` printed that as "-000276-03". */
+function isoDateLabel(iso: string | null | undefined): HistoricalDate | null {
+  const m = /^([+-]\d{6}|\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
+  return m ? { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) } : null;
 }
 
 // ── Karma rows ────────────────────────────────────────────────────────────
@@ -141,7 +147,7 @@ export function buildKarmaRows(records: LedgerRecord[]): KarmaRow[] {
       kind: "karma",
       category: "karma",
       sortKey,
-      dateLabel: r.event_date ? yearLabel(r.event_date) : isoDateLabel(r.recorded_at),
+      date: r.event_date ? yearLabel(r.event_date) : isoDateLabel(r.recorded_at),
       effectiveSigned: sign * r.effective_weight,
       originalSigned: sign * r.original_weight,
       decayFactor: r.decay_factor,
@@ -163,7 +169,7 @@ export function buildBirthMarker(soul: Soul, title: string): MarkerRow | null {
     kind: "marker",
     category: "structural",
     sortKey: historicalToMs(soul.birth_date) ?? 0,
-    dateLabel: yearLabel(soul.birth_date),
+    date: yearLabel(soul.birth_date),
     glyph: "○",
     title,
     tone: "neutral",
@@ -177,7 +183,7 @@ export function buildDeathMarker(soul: Soul, title: string): MarkerRow | null {
     kind: "marker",
     category: "structural",
     sortKey: (historicalToMs(soul.death_date) ?? 0) + 1, // nudge above birth on same-day edge cases
-    dateLabel: yearLabel(soul.death_date),
+    date: yearLabel(soul.death_date),
     glyph: "†",
     title,
     tone: "neutral",
@@ -195,7 +201,7 @@ export function buildJudgmentMarkers(
       kind: "marker",
       category: "judgment",
       sortKey: toSortMs(j.created_at),
-      dateLabel: isoDateLabel(j.created_at),
+      date: isoDateLabel(j.created_at),
       glyph: "⚖",
       title: labels.entered(j.court),
       tone: "info",
@@ -207,7 +213,7 @@ export function buildJudgmentMarkers(
         kind: "marker",
         category: "judgment",
         sortKey: toSortMs(j.concluded_at ?? j.created_at),
-        dateLabel: isoDateLabel(j.concluded_at ?? j.created_at),
+        date: isoDateLabel(j.concluded_at ?? j.created_at),
         glyph: "⚖",
         title: labels.verdict(j.verdict),
         tone,
@@ -232,7 +238,7 @@ export function buildDispositionMarkers(
         kind: "marker" as const,
         category: "disposition" as const,
         sortKey: toSortMs(d.executed_at ?? d.created_at),
-        dateLabel: isoDateLabel(d.executed_at ?? d.created_at),
+        date: isoDateLabel(d.executed_at ?? d.created_at),
         glyph: "→",
         title: labels.executed(realm),
         metadata: metaParts.join(" · "),
@@ -251,7 +257,7 @@ export function buildReincarnationMarkers(
     kind: "marker",
     category: "reincarnation",
     sortKey: toSortMs(r.reincarnated_at),
-    dateLabel: isoDateLabel(r.reincarnated_at),
+    date: isoDateLabel(r.reincarnated_at),
     glyph: "☯",
     title: labels.reborn(r.new_identity),
     metadata: labels.cycle(String(r.cycle_count), r.target_realm),
@@ -455,7 +461,7 @@ export function buildLostMoveMarkers(
         kind: "marker" as const,
         category: "disposition" as const,
         sortKey: toSortMs(e.create_time),
-        dateLabel: isoDateLabel(e.create_time),
+        date: isoDateLabel(e.create_time),
         glyph: "◌",
         title: `${labels.eventType(e.event_type)} · ${side(p.old_state)} → ${side(p.new_state)}`,
         metadata: meta.length ? meta.join(" · ") : undefined,
@@ -481,7 +487,7 @@ export function buildSystemRows(events: SoulEvent[], labels: SystemEventLabels):
     kind: "system",
     category: "system",
     sortKey: toSortMs(g.date),
-    dateLabel: isoDateLabel(g.date),
+    date: isoDateLabel(g.date),
     title: describeSystemEvent(g.items[0], labels),
     note: systemEventNote(g.items[0], labels),
     rawEventType: g.eventType,
@@ -546,7 +552,7 @@ export function buildCycleBandRows(
     name: soul.birth_name || soul.name,
     form: null,
     isCurrent: false,
-    dateLabel: soul.birth_date ? yearLabel(soul.birth_date) : null,
+    date: soul.birth_date ? yearLabel(soul.birth_date) : null,
   });
 
   // Life 2..N — each begins at its reincarnation record's transition.
@@ -561,7 +567,7 @@ export function buildCycleBandRows(
       name: r.new_identity,
       form: r.rebirth_form,
       isCurrent: i === sorted.length - 1,
-      dateLabel: isoDateLabel(r.reincarnated_at),
+      date: isoDateLabel(r.reincarnated_at),
     });
   });
 

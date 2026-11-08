@@ -157,6 +157,7 @@ export function SoulLedgerSections({
   reincarnations,
   events,
   rebirth = true,
+  awaitingRebirth = false,
   civilization,
 }: {
   dispositions: Disposition[];
@@ -164,6 +165,8 @@ export function SoulLedgerSections({
   events: SoulEvent[];
   /** False where this soul's afterlife has no rebirth (`hasRebirth`): the section has nothing to say. */
   rebirth?: boolean;
+  /** The soul is REINCARNATING: its disposition is behind it and the rebirth is what it waits for. */
+  awaitingRebirth?: boolean;
   /** 灵魂原属文明:地府的受刑事件名仍叫「受刑计划…」,别的文明是「去处计划…」(第十二批 1.2)。 */
   civilization?: string | null;
 }) {
@@ -220,7 +223,10 @@ export function SoulLedgerSections({
         <p className="mt-2 border border-dashed border-[oklch(var(--color-line-strong))] px-3 py-2 text-[oklch(var(--color-ink-muted))]">
           <b className="font-medium text-[oklch(var(--color-ink))]">{t("souls.detail.ledger.not_yet")}</b>
           {" · "}
-          {t("souls.detail.timeline.stage_reincarnating_hint")}
+          {/* Disposed of and REINCARNATING is waiting to be reborn, not 「需先完成处置」 (屈原 after his soup, 2026-11-08). */}
+          {t(awaitingRebirth
+            ? "souls.detail.timeline.stage_reincarnating_waiting"
+            : "souls.detail.timeline.stage_reincarnating_hint")}
         </p>
       ) : (
         byNewest(reincarnations, (r) => r.reincarnated_at).map((r) => (
