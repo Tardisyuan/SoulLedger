@@ -19,6 +19,7 @@ import type { Reincarnation } from "@soulledger/core/api/reincarnation";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { sectionMark } from "@/src/lib/sectionMark";
 import { hasRebirth } from "@/src/lib/hasRebirth";
+import { formatHistoricalDate } from "@/lib/utils";
 import {
   buildKarmaRows,
   buildBirthMarker,
@@ -290,7 +291,7 @@ export function SoulLifecycleTimeline({
               return (
                 <RowShell
                   key={row.id}
-                  date={row.dateLabel}
+                  date={formatHistoricalDate(row.date, locale)}
                   hideConnector={isLast}
                   tint={row.isMilestone}
                   dotClassName={row.type === "MERIT" ? TONE_DOT.merit : TONE_DOT.demerit}
@@ -324,7 +325,7 @@ export function SoulLifecycleTimeline({
               return (
                 <RowShell
                   key={row.id}
-                  date={row.dateLabel}
+                  date={formatHistoricalDate(row.date, locale)}
                   hideConnector={isLast}
                   dotClassName={isTerminalRow ? "bg-[oklch(var(--color-status-settled))]" : TONE_DOT[row.tone]}
                   terminalVariant={isTerminalRow ? (isAnnihilated ? "flush" : "filled") : undefined}
@@ -352,7 +353,7 @@ export function SoulLifecycleTimeline({
             if (row.kind === "system") {
               const isOpen = expandedSystemGroups[row.id] ?? false;
               return (
-                <RowShell key={row.id} date={row.dateLabel} hideConnector={isLast} dotClassName={TONE_DOT.neutral}>
+                <RowShell key={row.id} date={formatHistoricalDate(row.date, locale)} hideConnector={isLast} dotClassName={TONE_DOT.neutral}>
                   <button
                     type="button"
                     onClick={() => setExpandedSystemGroups((s) => ({ ...s, [row.id]: !isOpen }))}
