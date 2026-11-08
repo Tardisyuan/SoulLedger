@@ -114,6 +114,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { prefersReducedMotion } from "@/lib/motion";
 import {
   appendPosition,
+  countGraphChanges,
   edgeArrow,
   extendedData,
   layoutNodes,
@@ -1470,6 +1471,29 @@ export default function WorkflowEditor({
   /** 「草稿 v4 · 已发布 v3」, design C · 03 — from the template as last loaded. */
   const draftVersion = existingTemplate?.draft_version ?? null;
   const publishedVersion = existingTemplate?.published_version ?? null;
+  /* The published graph, to count what the draft changes against it. Same query (and cache entry) as the
+     version menu's history; not fetched for a template never published. */
+  const { data: publishedNodes } = useQuery({
+    queryKey: workflowKeys.templates.versions(templateId ?? ""),
+    queryFn: async () => (await workflowApi.templates.versions(templateId!)).data,
+    enabled: Boolean(templateId) && publishedVersion != null,
+    staleTime: Infinity,
+    select: (versions) =>
+      (Array.isArray(versions) ? versions : []).find((v) => v.number === publishedVersion)?.nodes ?? null,
+  });
+  const pendingChanges = useMemo(
+    () => (publishedNodes ? countGraphChanges(getTemplateNodes(), publishedNodes) : 0),
+    [publishedNodes, getTemplateNodes]
+  );
+  const draftLabel =
+    pendingChanges > 0
+      ? t("workflow.editor.version.pending_changes", {
+          n: String(draftVersion ?? (publishedVersion ?? 0) + 1),
+          count: String(pendingChanges),
+        })
+      : draftVersion != null
+        ? t("workflow.editor.version.draft", { n: String(draftVersion) })
+        : null;
   /* v3 A1: the published version as a badge (✓ ink), the working draft beside
      it in muted text (◇). A template never published says so in the badge. */
   const versionBadge = (
@@ -1479,10 +1503,10 @@ export default function WorkflowEditor({
           ? t("workflow.editor.version.published", { n: String(publishedVersion) })
           : t("workflow.editor.version.unpublished")}
       </Badge>
-      {draftVersion != null && (
+      {draftLabel != null && (
         <span className="text-xs text-[oklch(var(--color-ink-muted))]">
           <span aria-hidden="true">◇ </span>
-          {t("workflow.editor.version.draft", { n: String(draftVersion) })}
+          {draftLabel}
         </span>
       )}
     </span>
@@ -1843,7 +1867,7 @@ export default function WorkflowEditor({
         </div>
         <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-[oklch(var(--color-line))]" />
         {/* 版本 (取舍 2): the 版本 tab became this dropdown — the published / draft badge, and 版本历史 at the
-            bottom of the menu. The history is fetched only while the menu is open. */}
+            bottom of the menu. For a published template the history is fetched on open, for the pending-changes count. */}
         <Popover.Root>
           <Popover.Trigger
             title={t("workflow.editor.version.history")}
@@ -1859,8 +1883,8 @@ export default function WorkflowEditor({
                   {publishedVersion != null
                     ? t("workflow.editor.version.published", { n: String(publishedVersion) })
                     : t("workflow.editor.version.unpublished")}
-                  {draftVersion != null && (
-                    <span className="text-[oklch(var(--color-ink-muted))]"> · {t("workflow.editor.version.draft", { n: String(draftVersion) })}</span>
+                  {draftLabel != null && (
+                    <span className="text-[oklch(var(--color-ink-muted))]"> · {draftLabel}</span>
                   )}
                 </p>
                 <div className="border-t border-[oklch(var(--color-line))] pt-3">

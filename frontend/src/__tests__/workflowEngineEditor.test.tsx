@@ -239,8 +239,15 @@ describe("the canvas carries every new field", () => {
 
 // ── the editor: badge, 存草稿, 发布 ─────────────────────────────────────
 
-function renderEditor() {
+/** `published`: v3's graph, which the badge counts the draft's changes against — by default the same graph. */
+function renderEditor(published: unknown[] = STORED.nodes) {
   api().get.mockResolvedValue({ data: STORED });
+  api().versions.mockResolvedValue({
+    data: [
+      { id: "v4", number: 4, status: "DRAFT", nodes: STORED.nodes, created_at: "", updated_at: "2026-09-25T00:00:00Z", published_at: null, saved_by_name: "崔珏", published_by_name: null },
+      { id: "v3", number: 3, status: "PUBLISHED", nodes: published, created_at: "", updated_at: "", published_at: "2026-09-20T00:00:00Z", saved_by_name: null, published_by_name: "崔珏" },
+    ],
+  });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -269,6 +276,15 @@ describe("WorkflowEditor — versions and the engine fields", () => {
     expect(within(history).getByText("v3")).toBeInTheDocument();
     // Read-only: nothing in the history section is a control.
     expect(within(history).queryAllByRole("button")).toEqual([]);
+  });
+
+  it("counts the draft's changes against the published graph: 「草稿 v4 · 1 处改动未发布」", async () => {
+    renderEditor(STORED.nodes.map((n) => (n.id === "n4" ? { ...n, timeout_hours: 48 } : n)));
+    await waitFor(() =>
+      expect(screen.getByTestId("version-badge").textContent).toBe(
+        "✓workflow.editor.version.published(3)◇ workflow.editor.version.pending_changes(4,1)"
+      )
+    );
   });
 
   it("存草稿 sends every new field back as it was loaded", async () => {

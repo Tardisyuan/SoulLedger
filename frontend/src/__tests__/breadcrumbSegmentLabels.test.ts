@@ -19,7 +19,7 @@ const get = (b: Bundle, path: string): unknown =>
 const SEGMENT_TITLE: Record<string, string> = {
   notifications: "notifications.title",
   profile: "profile.title",
-  welcome: "nav.home",
+  welcome: "breadcrumb.welcome",
   buttons: "menu_buttons.title",
   admin: "breadcrumb.menu.group_settings",
   assistant: "assist_admin.title",
