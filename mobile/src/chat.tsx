@@ -62,6 +62,7 @@ import {
   type TimelineState,
 } from "@soulledger/core/api/matrix";
 import { platform } from "@soulledger/core/platform";
+import { fileField } from "./platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 
@@ -365,7 +366,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
             let imageId = image.imageId;
             if (!imageId) {
               const body = new FormData();
-              body.append("file", { uri: image.uri, name: image.name, type: image.type } as unknown as Blob);
+              body.append("file", fileField(image));
               const up = await soulChatApi.uploadImage(c.id, body, (fraction) => setProgress((p) => ({ ...p, [o.txnId]: fraction })));
               imageId = up.id;
               // Written back at once: from here a restart sends this image instead of uploading another.

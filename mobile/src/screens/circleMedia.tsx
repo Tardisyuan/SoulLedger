@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
+import { fileField } from "../platform";
 import { AlertTxt, Txt, useLayout, useReducedMotion, useTheme } from "../ui";
 
 const GAP = 3;
@@ -193,8 +194,7 @@ export async function compressWithSize(image: PickedImage): Promise<{ file: Pick
 /** 一张图的 multipart 请求体(先压缩)。字段名 `file`(backend `MeSocialMediaView`)。 */
 export async function uploadBody(image: PickedImage): Promise<FormData> {
   const body = new FormData();
-  // React Native 的 FormData 收 `{ uri, name, type }` 这种文件描述;DOM 的类型不认它。
-  body.append("file", (await compressForUpload(image)) as unknown as Blob);
+  body.append("file", fileField(await compressForUpload(image)));
   return body;
 }
 

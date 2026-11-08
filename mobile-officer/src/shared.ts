@@ -56,6 +56,7 @@ export { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "..
 export { ColdStartView, coldStart } from "../../mobile/src/coldStartView";
 export { easProjectId, installNotificationHandler, permission, pushCore, type Permission, type Registration } from "../../mobile/src/pushCore";
 export {
+  fileField,
   hydratePersistentStore,
   installMobilePlatform,
   onForeground,

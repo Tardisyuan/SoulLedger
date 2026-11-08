@@ -24,6 +24,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { Alert, AppState, Platform, ToastAndroid } from "react-native";
 
+import { captureCrash } from "./crashReport";
 import { translate } from "./i18n";
 
 const memory = new Map<string, string>();
@@ -38,11 +39,11 @@ export const persistentStore: KeyValueStore = {
   get: (key) => persistentCache.get(key) ?? null,
   set: (key, value) => {
     persistentCache.set(key, value);
-    AsyncStorage.setItem(key, value).catch(() => {});
+    AsyncStorage.setItem(key, value).catch(captureCrash);
   },
   remove: (key) => {
     persistentCache.delete(key);
-    AsyncStorage.removeItem(key).catch(() => {});
+    AsyncStorage.removeItem(key).catch(captureCrash);
   },
 };
 
@@ -160,3 +161,9 @@ export const mobilePlatform: PlatformAdapter = {
 export function installMobilePlatform(): void {
   configurePlatform(mobilePlatform);
 }
+
+/**
+ * React Native's FormData takes a `{ uri, name, type }` file descriptor where the DOM types want a Blob.
+ * The one cast, so the upload sites (letters, circle, officer attachments) do not each carry it.
+ */
+export const fileField = (file: { uri: string; name: string; type: string }): Blob => file as unknown as Blob;
