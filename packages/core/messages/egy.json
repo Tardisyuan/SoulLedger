@@ -5306,7 +5306,9 @@
       "primer_residence_note": "Nen Taui.",
       "never": "Djer Nen: Khet Khesef, Medu Maat, Nefer Hena Isfet, Sekhem.",
       "yes": "Sedjem-I",
-      "no": "Nen At"
+      "no": "Nen At",
+      "live_hint_title": "Nen Maa Wat Em Medjat Khetem",
+      "live_hint_body": "Sedjem Ba Khetem. Wen Sedjem Ba Em Smen Hemsu: Maa Sekhet-Ek Em Medjat Khetem."
     },
     "original": {
       "tag": "Medu Tepy",

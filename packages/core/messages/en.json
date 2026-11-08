@@ -5335,7 +5335,7 @@
       "yes": "Yes, notify me",
       "no": "Not now",
       "live_hint_title": "No progress on the lock screen",
-      "live_hint_body": "Notifications are off for SoulLedger. Turn them on in system settings to see which station you have reached from the lock screen."
+      "live_hint_body": "Notifications are off for SoulLedger. Turn them on in system settings to see on the lock screen which station you have reached."
     },
     "original": {
       "tag": "Original",
