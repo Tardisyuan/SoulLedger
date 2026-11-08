@@ -2030,19 +2030,19 @@
     "raw_vs_decayed": "原始 / 衰减后",
     "raw_merit": "原始 功德",
     "raw_merit_by_civ": {
-      "eg": "原始 羽侧"
+      "eg": "原始羽侧"
     },
     "raw_demerit": "原始 罪业",
     "raw_demerit_by_civ": {
-      "eg": "原始 心侧"
+      "eg": "原始心侧"
     },
     "decayed_merit": "衰减后 功德",
     "decayed_merit_by_civ": {
-      "eg": "衰减后 羽侧"
+      "eg": "衰减后羽侧"
     },
     "decayed_demerit": "衰减后 罪业",
     "decayed_demerit_by_civ": {
-      "eg": "衰减后 心侧"
+      "eg": "衰减后心侧"
     },
     "raw_balance_sr": "原始余额 {{n}}",
     "advisory_disclaimer": "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出",

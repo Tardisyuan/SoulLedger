@@ -545,7 +545,8 @@
         "stage_next_life": "Ankh Khery",
         "stage_next_life_hint": "Smen Er Khet Wetep Hena Wehem Mesut Khetem Seth",
         "stage_final": "Wat Pehwy",
-        "stage_final_hint": "Nen Wehem Mesut Dy: Wetep = Wat Pehwy"
+        "stage_final_hint": "Nen Wehem Mesut Dy: Wetep = Wat Pehwy",
+        "stage_reincarnating_waiting": "Wetep Seth · Em Smen Wehem Mesut"
       },
       "ledger": {
         "not_yet": "Nen Shesep",
@@ -9382,6 +9383,10 @@
       "ahead": "Nen Shem Djer: {{n}}",
       "behind": "Shem Seth: {{n}}",
       "here": "Dy Emu"
+    },
+    "close_up": "Maa Dy",
+    "card": {
+      "arrived": "Iyi Seth · {{date}}"
     }
   },
   "overview": {
