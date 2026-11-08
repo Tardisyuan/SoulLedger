@@ -79,6 +79,7 @@ function WorkflowPageContent() {
     data: templatesData,
     isLoading: isTemplatesLoading,
     isError: isTemplatesError,
+    error: templatesError,
     refetch: refetchTemplates,
   } = useQuery({
     queryKey: ["workflow-templates"],
@@ -212,7 +213,7 @@ function WorkflowPageContent() {
               <div className="w-full space-y-4 lg:w-80 lg:shrink-0">
                 {/* 后端模板列表 */}
                 {isTemplatesError ? (
-                  <QueryError onRetry={() => void refetchTemplates()} />
+                  <QueryError onRetry={() => void refetchTemplates()} error={templatesError} />
                 ) : isTemplatesLoading ? (
                   <ListSkeleton count={3} />
                 ) : templates.length === 0 ? (

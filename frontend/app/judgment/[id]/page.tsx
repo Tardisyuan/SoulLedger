@@ -684,7 +684,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         {fetchFailureOf(error) === "gone" ? (
           <EmptyState title={t("state.gone_title")} reason={t("state.gone_body")} />
         ) : (
-          <QueryError onRetry={() => refetch()} />
+          <QueryError onRetry={() => refetch()} error={error} />
         )}
       </PageShell>
     );

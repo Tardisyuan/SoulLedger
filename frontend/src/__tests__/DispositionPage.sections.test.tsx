@@ -260,6 +260,32 @@ describe("处置页按服务端分三段", () => {
     expect(within(nostart).queryByRole("meter")).toBeNull();
     expect(within(nostart).getByText("disposition.start_unrecorded")).toBeInTheDocument();
   });
+
+  // 三段是三个查询:只有一段出错时,交给 QueryError 的是那一段的 error(`firstError`)。
+  const failExecuting = (status: number) =>
+    (dispositionApi.list as jest.Mock).mockImplementation(async (params: Record<string, string>) => {
+      if (params.section === "executing") throw Object.assign(new Error("x"), { response: { status } });
+      return { data: { next: null, previous: null, section_counts: {}, ...BY_SECTION[params.section] } };
+    });
+
+  it("只有中间一段 403:权限卡,不是「出错了」,也没有重试", async () => {
+    failExecuting(403);
+    renderPage();
+    expect(await screen.findByTestId("permission-denied")).toBeInTheDocument();
+    expect(document.querySelector("[data-query-error]")).toBeNull();
+    expect(screen.queryByRole("button", { name: "error.retry" })).toBeNull();
+  });
+
+  it("只有中间一段 500:仍是「出错了」+ 重试,重试三段都重取", async () => {
+    failExecuting(500);
+    renderPage();
+    const retry = await screen.findByRole("button", { name: "error.retry" });
+    expect(document.querySelector("[data-query-error]")).not.toBeNull();
+    expect(screen.queryByTestId("permission-denied")).toBeNull();
+    const before = (dispositionApi.list as jest.Mock).mock.calls.length;
+    fireEvent.click(retry);
+    await waitFor(() => expect((dispositionApi.list as jest.Mock).mock.calls.length).toBe(before + 3));
+  });
 });
 
 describe("默认刑期的标注(2026-10-29 用户定:去掉「可改」)", () => {

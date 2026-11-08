@@ -2,7 +2,7 @@
  * Tests for PageError component
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { PageError, QueryError, StatusCard } from "@/src/components/ui/PageError";
+import { PageError, QueryError, StatusCard, firstError } from "@/src/components/ui/PageError";
 import NotFound from "@/app/not-found";
 import WelcomeError from "@/app/welcome/error";
 import zh from "@soulledger/core/messages/zh-Hans.json";
@@ -184,6 +184,14 @@ describe("QueryError · 403", () => {
     render(<QueryError onRetry={() => {}} error={{ response: { status: 403 } }} />);
     expect(screen.getByTestId("permission-denied")).toBeInTheDocument();
     expect(document.querySelector("[data-query-error]")).toBeNull();
+  });
+
+  it("firstError: the first query that failed, in reading order; null when none did", () => {
+    const forbidden = { response: { status: 403 } };
+    const broken = { response: { status: 500 } };
+    expect(firstError({ error: null }, { error: forbidden }, { error: broken })).toBe(forbidden);
+    expect(firstError({ error: broken }, undefined, { error: forbidden })).toBe(broken);
+    expect(firstError({ error: null }, undefined)).toBeNull();
   });
 
   it("any other failure stays the query error", () => {

@@ -25,7 +25,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-import { QueryError } from "@/src/components/ui/PageError";
+import { QueryError, firstError } from "@/src/components/ui/PageError";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { fieldControl } from "@/src/components/ui/Field";
 import { ListSkeleton } from "@/components/ui/skeleton";
@@ -377,6 +377,7 @@ export function ReportsReview() {
   if (failed)
     return (
       <QueryError
+        error={firstError(reports, posts, comments)}
         onRetry={() => {
           void reports.refetch();
           void posts.refetch();

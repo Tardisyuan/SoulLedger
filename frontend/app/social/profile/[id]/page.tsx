@@ -129,7 +129,7 @@ export default function UserProfilePage() {
           /* Before the length check, always. "The request failed" and "there
              is nothing here" are different facts and this page used to render
              the second for both. */
-          <QueryError onRetry={() => void refetchPosts()} />
+          <QueryError onRetry={() => void refetchPosts()} error={postsError} />
         ) : posts.length === 0 ? (
           <EmptyState title={t("social.posts")} reason={t("social.no_posts")} />
         ) : (

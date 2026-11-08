@@ -86,7 +86,7 @@ export default function AuditDetailPage() {
     const missing = axios.isAxiosError(error) && error.response?.status === 404;
     return (
       <PageShell density="document" variant="page" title={t("audit.title")} backLink={backLink}>
-        {missing ? <EmptyState title={t("audit.detail.not_found")} /> : <QueryError onRetry={() => void refetch()} />}
+        {missing ? <EmptyState title={t("audit.detail.not_found")} /> : <QueryError onRetry={() => void refetch()} error={error} />}
       </PageShell>
     );
   }
