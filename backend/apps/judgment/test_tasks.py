@@ -125,7 +125,9 @@ class TestStaleFlagIsWrittenOnce:
         # does not grow with the row count.
         # 2026-10-29: the batch audit row now takes the edited rows' tenant; with
         # `tenant_id` deferred that was one extra SELECT per row (7 on real PG).
-        with django_assert_max_num_queries(5):
+        # 2026-11-08: the batch audit row is written in a savepoint (once per batch, not per row) so a failed
+        # insert cannot abort the caller's transaction on PostgreSQL — one more statement, measured 6 on PG.
+        with django_assert_max_num_queries(6):
             auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
 
     def test_the_batch_audit_row_is_filed_under_the_rows_hall(self):
