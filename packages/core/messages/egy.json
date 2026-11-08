@@ -2081,7 +2081,8 @@
       "export": "Bek Seth",
       "export_failed": "Nen Wehem Medew",
       "totals_whole_hall": "Hesb: Wesekhet Neb. Sesh: Ba Em Tash-Ek Wa."
-    }
+    },
+    "advisory_disclaimer_eg": "Fai Maa Nefer Hena Isfet Shesep: Ib Nen Dens Er Shut → Menkh; Ib Dens Er Shut → Er Ammit. Sab Nen Setep Ky."
   },
   "judgment": {
     "title": "Wedja Seth",
@@ -2530,7 +2531,8 @@
         "weighing_wavers": "Wetep Em Fai Nen Smen: Nen Iri. Fai Ib Mawy.",
         "approval_flow_required": "Wedja Tepy: Khetem Em Wat Hesy Wa.",
         "weighing_flow_required": "Sep Kemet: Khetem Em Wat Hesy Fai Ib Wa."
-      }
+      },
+      "wavering_hint": "«Fai Nen Smen» Er «Wehem Wedja»: Djehuty Sesh; Fai Ib Mawy. Nen Wat."
     },
     "duat_stage": {
       "EMBALMING": "Em Wet",
@@ -3274,7 +3276,9 @@
     },
     "assessors": {
       "count": "{{count}} Sab",
-      "seat": "Sab {{index}}"
+      "seat": "Sab {{index}}",
+      "title": "Djadjat En Maat (42 Netjeru)",
+      "toggle": "Wen Er Khetem Djadjat En Maat"
     },
     "no_actors": "Nen Iaut Djer"
   },
@@ -4588,7 +4592,9 @@
       "dispatch_enabled": "Shesep Hab-Ba (Hemes)",
       "saved": "Smen Sau Seth",
       "save_failed": "Nen Sau Smen",
-      "security": "Sa"
+      "security": "Sa",
+      "rebirth_quota_body_single": "Wehem Mesut Em Abed: Hesb Wer. Nen Sesh = Nen Hesb. Hesb Neb: Ba Em Smen Wehem Mesut Er Abed Ky, Er Hesb Wer Khemen.",
+      "rebirth_quota_single_row": "Wehem Mesut · Abed"
     }
   },
   "table": {
@@ -5218,7 +5224,9 @@
         "records": "Sesh Shut Hena Ib",
         "judgments": "Fai Ib",
         "court": "Wesekhet Maaty",
-        "judging": "Em Fai Ib"
+        "judging": "Em Fai Ib",
+        "no_past_lives": "Nen Wehem Mesut Em Duat: Nen Ankh Em Khet Ankh Pen.",
+        "past_read_only": "Sesh Ankh Tepyu Maa Wa: Nen Dbh, Nen Nehet Er Ankh Tepyu."
       },
       "eu": {
         "past_read_only": "Ankh Tepyu Maa Wa. Pet Hena Duat Nen Dbh, Nen Nehet.",
@@ -5227,7 +5235,8 @@
         "demerit": "Isfet",
         "merit_entry": "Nefer",
         "demerit_entry": "Isfet",
-        "records": "Sesh Nefer Hena Isfet"
+        "records": "Sesh Nefer Hena Isfet",
+        "court": "Wedja Em"
       }
     },
     "logout": {
@@ -9031,7 +9040,8 @@
       },
       "eu": {
         "name": "Pet Hena Duat",
-        "line": "Sab Sebkhet Pet; Ta Hesmen; Duat 9 En Dante: Isfet Wer, Duat Khery."
+        "line": "Sab Sebkhet Pet; Ta Hesmen; Duat 9 En Dante: Isfet Wer, Duat Khery.",
+        "realm": "Inferno · Purgatorio · Paradiso"
       },
       "eg": {
         "name": "Duat Kemet",
@@ -9116,7 +9126,8 @@
           "body": "Mut Sesh Seth; Ba Iyi Er Sebkhet Pet."
         },
         "2": {
-          "name": "Sebkhet Pet"
+          "name": "Sebkhet Pet",
+          "body": "Mut: Kristos Wedja Ba · Pet, Ta Hesmen, Er Duat."
         },
         "3": {
           "name": "Wedja",
@@ -9171,7 +9182,8 @@
           "body": "Wetep: Wat Er Ta Hena Renpet. Shem Pen: Wetep Neb Em Wesekhet."
         },
         "5": {
-          "name": "Renpet 1000"
+          "name": "Renpet 1000",
+          "body": "Mi Sesh Er: Ba Er Hery Er Khery · Renpet 1000."
         },
         "6": {
           "name": "Ta Lethe",
@@ -9236,7 +9248,8 @@
     "returned_up": "Wer {{n}} Er Renpet Tepy",
     "this_year": "Renpet Pen",
     "title": "Sesh Renpet · Duat",
-    "total_rest": "Ba. {{m}}: Wetep Seth."
+    "total_rest": "Ba. {{m}}: Wetep Seth.",
+    "lead_hall": "Renpet Pen · Wesekhet Pen Shesep"
   },
   "cmdk": {
     "defer": "Er Sep Ky · Er Wedja Djer",
@@ -9269,7 +9282,8 @@
     "reading": "Hesb"
   },
   "doc": {
-    "download_pdf": "Ini PDF"
+    "download_pdf": "Ini PDF",
+    "pdf_fallback": "PDF Nen Iri Emu: Wen Sesh Er Djama · Setep «Sau PDF»."
   },
   "empty": {
     "body": "Wat Wedja Shu. Wedja Mawy: Dy.",
@@ -9352,7 +9366,9 @@
       "naihe_bridge": "Shem Naihe",
       "road_down": "Er Duat · Sekhet 1 Er 10",
       "six_paths": "Wehem Mesut Em Wat 6",
-      "ten_courts": "Wesekhet 1 Er 10"
+      "ten_courts": "Wesekhet 1 Er 10",
+      "mengpo_pavilion": "Sekhet Nen Rekh",
+      "nai_river": "Itru Nai"
     },
     "drag_hint": "Khemen · Maa Weret",
     "egypt": {
@@ -9386,7 +9402,10 @@
     },
     "close_up": "Maa Dy",
     "card": {
-      "arrived": "Iyi Seth · {{date}}"
+      "arrived": "Iyi Seth · {{date}}",
+      "today_in": "Hru Pen · Aq",
+      "today_out": "Per",
+      "avg_stay": "Hemes · Hesb Mi"
     }
   },
   "overview": {
@@ -9416,6 +9435,10 @@
       "this_week": "Sefekh Pen",
       "title": "Khetem · Sefekh 12",
       "week": "Sefekh {{n}} · {{date}}"
+    },
+    "map": {
+      "title": "Tut Duat",
+      "open": "Wen Ta"
     }
   },
   "queue": {
@@ -9432,7 +9455,8 @@
     "deadline": {
       "days": "Hru {{n}}",
       "none": "Nen Hesb",
-      "over": "Khet Hru {{n}}"
+      "over": "Khet Hru {{n}}",
+      "held": "Em Smen Wedja · Nen Hru"
     },
     "deferred_hint": "Sab Pen · Nen Hru",
     "tab": {
@@ -9566,7 +9590,9 @@
         "antinferno": "Sesh: Nen Setep Em Ankh. Smen Em Duat · Antinferno.",
         "heaven": "Nen Isfet Wer Nen Djed. Nis Er Pet.",
         "hell": "Isfet Wer Nen Djed. Khery Er Duat {{n}}.",
-        "purgatory": "Nen Isfet Wer Nen Djed. Er Ta Hesmen {{n}} · Isfet Fekh: Khery Er Hery."
+        "purgatory": "Nen Isfet Wer Nen Djed. Er Ta Hesmen {{n}} · Isfet Fekh: Khery Er Hery.",
+        "heresy": "Djed: Ba Mut Hena Khat. Er Duat 6 · Haeresis.",
+        "limbo": "Nen Shesep Baptisma, Nen Isfet Dens: Er Duat 1 · Limbo. Nen Shepet Dy."
       }
     },
     "gr": {
