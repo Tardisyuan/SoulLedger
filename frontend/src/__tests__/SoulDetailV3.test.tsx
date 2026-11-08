@@ -105,8 +105,8 @@ describe("埃及读作羽侧 / 心侧(用户 2026-11-08)", () => {
       </>
     );
     const dl = screen.getByTestId("soul-heading-figures");
-    expect(within(dl).getByText("羽侧")).toBeInTheDocument();
-    expect(within(dl).getByText("心侧")).toBeInTheDocument();
+    expect(within(dl).getAllByText("羽侧").length).toBeGreaterThan(0); // the dt and the carried-in cell both say it
+    expect(within(dl).getAllByText("心侧").length).toBeGreaterThan(0); // the dt and the carried-in cell both say it
     expect(within(dl).getAllByRole("definition")[2]).toHaveTextContent(/羽侧\s*120.*心侧\s*34/);
     expect(dl).not.toHaveTextContent(/功|过|罪业/);
     const aside = screen.getByTestId("soul-balance");

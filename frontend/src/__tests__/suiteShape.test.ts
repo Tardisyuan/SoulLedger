@@ -414,6 +414,7 @@ const COLLECTED_FILES = [
   "truncatedValuesAreRecoverable.test.ts",
   // 2026-11-06 v4 阶段 5:冥界地图 SVG 的安全检查、站码对照与按行程上色。
   "underworldMap.test.ts",
+  "UnderworldMapLayout.test.tsx",
   "unreadBadgeCountsTheWholeInbox.test.tsx",
   "useDebouncedValue.test.ts",
   "useDispositions.test.ts",
