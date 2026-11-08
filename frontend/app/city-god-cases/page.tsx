@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { cityGodCasesApi, cityGodKeys, cityGodsApi, type CityGodCase } from "@soulledger/core/api";
-import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
@@ -36,7 +36,7 @@ type Tab = "open" | "SENT_ON";
 const SUBTLE = "text-[oklch(var(--color-ink-subtle))]";
 
 function CityGodCasesContent() {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
   const { hasPermission } = usePermissions();
@@ -147,7 +147,7 @@ function CityGodCasesContent() {
                   {c.soul_name}
                   {c.untimely && <Badge tone="ink">{t("cityGodCases.untimely_badge")}</Badge>}
                   {c.untimely && isHeldUntilFatedDate(c) && (
-                    <span className="font-mono text-2xs tabular-nums">{t("judgment.held_until", { date: c.held_until as string })}</span>
+                    <span className="font-mono text-2xs tabular-nums">{t("judgment.held_until", { date: formatIsoDay(c.held_until, locale) })}</span>
                   )}
                 </span>
                 {greyed && <span className="block text-2xs">{t("cityGodCases.cannot_act")}</span>}

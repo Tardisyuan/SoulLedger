@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import JudgmentListPage from "@/app/judgment/page";
 import { BATCH_BAR } from "@/components/ui/data-table";
 import { tZh } from "./support/zhBundle";
+import { formatIsoDay } from "@soulledger/core/domain/dates";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), release: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn(), requestReassign: jest.fn() },
@@ -937,7 +938,7 @@ describe("埃及入殿前 (review P2-9)", () => {
 
     const embalmed = rowOf("Ka");
     expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.duat_stage.EMBALMING"));
-    expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.held_until", { date: "2999-03-01" }));
+    expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.held_until", { date: formatIsoDay("2999-03-01") }));
     expect(within(embalmed).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_short"));
 
     const nameless = rowOf("Ren");
@@ -1003,7 +1004,7 @@ describe("枉死城 (第五十一批 F-2)", () => {
 
     const held = rowOf("王守仁");
     expect(within(held).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.untimely"));
-    expect(within(held).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.held_until", { date: "2999-11-03" }));
+    expect(within(held).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.held_until", { date: formatIsoDay("2999-11-03") }));
     expect(within(held).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_short"));
     expect(within(held).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
     expect(within(held).getByRole("checkbox")).toBeDisabled();
