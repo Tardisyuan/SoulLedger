@@ -118,7 +118,7 @@ export function TodoTab({ onOpen, highlight, gone, version }: { onOpen: (item: I
         {shown.map(({ field, kind, label }) => {
           const group = data![field];
           if (!group || group.count === 0) return null;
-          return <TodoGroupRows key={kind} kind={kind} label={t(label)} group={group} highlight={highlight} gone={gone} onOpen={onOpen} />;
+          return <TodoGroupRows key={kind} kind={kind} label={groupLabel(label)} group={group} highlight={highlight} gone={gone} onOpen={onOpen} />;
         })}
         {chosen.length === 0 && unassigned && unassigned.count > 0 ? <UnassignedRows group={unassigned} highlight={highlight} gone={gone} onOpen={onOpen} /> : null}
         </>
