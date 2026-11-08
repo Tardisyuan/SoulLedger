@@ -526,10 +526,45 @@ const FALLBACK_EXPRESSION_RE = new RegExp(
   String.raw`(?:^|[^=$])\{[^{}]*(?:\|\||\?\?)[^{}]*\}`,
   "g"
 );
-const IDENTIFIER_MEMBER_RE = new RegExp(
-  String.raw`[A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:${IDENTIFIER_FIELD_RE})\b`,
-  "g"
-);
+const IDENTIFIER_MEMBER = String.raw`[A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:${IDENTIFIER_FIELD_RE})\b`;
+const IDENTIFIER_MEMBER_RE = new RegExp(IDENTIFIER_MEMBER, "g");
+
+/**
+ * Uses of an id inside a `{… ?? …}` that consume it rather than show it.
+ *
+ * WHY. FALLBACK_EXPRESSION_RE matches any braces with `??` in them, and on one
+ * line that includes an object literal and a Map lookup:
+ * `{ held: held.get(r.id) ?? 0, capacity: r.capacity ?? null }` in
+ * app/realms/page.tsx (2026-11) went red here, and was dodged by breaking the
+ * line — the rule was teaching people to format around it. `r.id` there is the
+ * key a count is looked up by; the reader sees the count.
+ *
+ * Deliberately narrow: only `.get(id)` / `.has(id)` and `[id]` indexing are
+ * dropped, and a braced object literal (`{ key: …`) is not a JSX child at all.
+ * `{String(x.id) || "—"}` and `{byId[x.id] ?? x.id}` still go red — a call in
+ * general may well render its argument, and the right side there is the id.
+ */
+const ID_LOOKUP_RE = new RegExp(String.raw`\.(?:get|has)\(\s*${IDENTIFIER_MEMBER}\s*\)|\[\s*${IDENTIFIER_MEMBER}\s*\]`, "g");
+const OBJECT_LITERAL_RE = /^.?\{\s*(?:[A-Za-z_$][\w$]*|"[^"]*"|'[^']*'|\[[^\]]*\])\s*:/;
+
+/** Identifier members one source line renders as dead text: `{x.id}`, or `{x.name || x.id}`. */
+function rawIdentifiersIn(code: string): string[] {
+  const found: string[] = [];
+  RAW_IDENTIFIER_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = RAW_IDENTIFIER_RE.exec(code)) !== null) found.push(m[2]);
+  // `{name || id}` — see FALLBACK_EXPRESSION_RE. Reported with the whole
+  // expression rather than just the member, because "which side of the
+  // `||`" is the first thing a reader needs.
+  FALLBACK_EXPRESSION_RE.lastIndex = 0;
+  let f: RegExpExecArray | null;
+  while ((f = FALLBACK_EXPRESSION_RE.exec(code)) !== null) {
+    if (OBJECT_LITERAL_RE.test(f[0])) continue;
+    IDENTIFIER_MEMBER_RE.lastIndex = 0;
+    if (IDENTIFIER_MEMBER_RE.test(f[0].replace(ID_LOOKUP_RE, ""))) found.push(f[0].trim());
+  }
+  return found;
+}
 
 /** Where an id reaches a reader, and whether it arrived copyable. */
 interface IdentifierSite extends Violation {
@@ -544,22 +579,7 @@ function scanIdentifierSites(): IdentifierSite[] {
     const lines = readFileSync(file, "utf8").split("\n");
     lines.forEach((line, i) => {
       const code = stripComment(line);
-      RAW_IDENTIFIER_RE.lastIndex = 0;
-      let m: RegExpExecArray | null;
-      while ((m = RAW_IDENTIFIER_RE.exec(code)) !== null) {
-        found.push({ file: rel, line: i + 1, text: m[2], kind: "raw" });
-      }
-      // `{name || id}` — see FALLBACK_EXPRESSION_RE. Reported with the whole
-      // expression rather than just the member, because "which side of the
-      // `||`" is the first thing a reader needs.
-      FALLBACK_EXPRESSION_RE.lastIndex = 0;
-      let f: RegExpExecArray | null;
-      while ((f = FALLBACK_EXPRESSION_RE.exec(code)) !== null) {
-        IDENTIFIER_MEMBER_RE.lastIndex = 0;
-        if (IDENTIFIER_MEMBER_RE.test(f[0])) {
-          found.push({ file: rel, line: i + 1, text: f[0].trim(), kind: "raw" });
-        }
-      }
+      for (const text of rawIdentifiersIn(code)) found.push({ file: rel, line: i + 1, text, kind: "raw" });
       if (code.includes("<IdentifierChip")) {
         found.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110), kind: "chip" });
       }
@@ -817,6 +837,23 @@ describe("§4.6 identifier placement", () => {
     const sites = scanIdentifierSites();
     expect(sites.length).toBeGreaterThan(0);
     expect(sites.some((s) => s.kind === "chip")).toBe(true);
+  });
+
+  it("tells an id rendered in JSX from an id used as a lookup key", () => {
+    // Still caught: the id is what the reader sees.
+    expect(rawIdentifiersIn("<td>{row.id}</td>")).toEqual(["row.id"]);
+    expect(rawIdentifiersIn("<td>{row.name || row.owner_id}</td>")).toHaveLength(1);
+    expect(rawIdentifiersIn('<td>{String(row.id) || "—"}</td>')).toHaveLength(1);
+    expect(rawIdentifiersIn("<td>{byId[row.id] ?? row.id}</td>")).toHaveLength(1);
+    expect(rawIdentifiersIn("<td>{held.get(row.id) ?? row.soul_id}</td>")).toHaveLength(1);
+    // Not rendered: a Map lookup, an object literal, a React key.
+    expect(rawIdentifiersIn("<td>{held.get(row.id) ?? 0}</td>")).toEqual([]);
+    expect(rawIdentifiersIn("<td>{seen.has(row.id) ?? false}</td>")).toEqual([]);
+    expect(rawIdentifiersIn("<td>{byId[row.id] ?? 0}</td>")).toEqual([]);
+    expect(rawIdentifiersIn(".map((r) => [r.realm_code, { held: held.get(r.id) ?? 0, capacity: r.capacity ?? null }]),")).toEqual([]);
+    expect(rawIdentifiersIn("const o = { owner: row.owner_id ?? null };")).toEqual([]);
+    expect(rawIdentifiersIn("<i style={{ order: row.soul_id ?? 0 }} />")).toEqual([]);
+    expect(rawIdentifiersIn("<li key={row.id ?? row.name}>")).toEqual([]);
   });
 
   it("renders no identifier a reader cannot copy", () => {

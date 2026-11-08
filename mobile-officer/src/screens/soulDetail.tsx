@@ -19,6 +19,7 @@ import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 import { civKey, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
+import { balanceApplies } from "@soulledger/core/domain/karmicBalance";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
 import { formatHistoricalDate, type HistoricalDate } from "@soulledger/core/domain/dates";
@@ -150,7 +151,7 @@ function Pill({ children, strong, testID }: { children: string; strong?: boolean
   );
 }
 
-/** Monogram + name, code · civilization · life; the state pill (and 暂居); merit / demerit / balance; 已归档 dims it all. */
+/** Monogram + name, code · civilization · life; the state pill (and 暂居); merit / demerit (/ balance, 地府 only); 已归档 dims it all. */
 function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
   const { t, enumLabel } = useI18n();
   const theme = useTheme();
@@ -162,8 +163,9 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
   const figures: [string, number | undefined][] = [
     [t(civKey(t, "souls.detail.merit", soul.civilization)), soul.merit_score],
     [t(civKey(t, "souls.detail.demerit", soul.civilization)), soul.demerit_score == null ? undefined : -Math.abs(soul.demerit_score)],
-    [t("souls.detail.balance"), soul.karmic_balance],
   ];
+  // 余额只在网页也画它的地方画(`balanceApplies`:地府);埃及只有羽侧 / 心侧(用户 2026-11-08)。
+  if (balanceApplies(soul.civilization)) figures.push([t("souls.detail.balance"), soul.karmic_balance]);
   return (
     <View style={{ backgroundColor: theme.s1 }}>
       <View testID="soul-header" style={{ padding: GUTTER, gap: space[4] }}>
