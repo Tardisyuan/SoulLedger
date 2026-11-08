@@ -416,3 +416,69 @@ export function presetTemplateToFlow(
   const edges = edgesFor(rows as TemplateNode[]);
   return { nodes: layoutNodes(nodes, edges), edges };
 }
+
+/**
+ * How many things the draft changes against the published graph: nodes added / removed / changed, plus
+ * routes (on_pass, on_fail, each condition branch) added / removed / retargeted / re-conditioned / reordered. Drives
+ * 「草稿 vN · M 处改动未发布」 in the template bar.
+ *
+ * Both sides are read the way the editor reads a stored template: an undeclared graph routes as the
+ * `node_order` chain (`edgesFor`'s fallback — `getTemplateNodes` then saves it as explicit `on_pass`),
+ * and a route to an id the graph does not define is dropped. `position` is left out: it is presentational,
+ * and a template stored before positions existed would otherwise read as every node changed.
+ */
+export function countGraphChanges(draft: TemplateNode[], published: TemplateNode[]): number {
+  const a = graphFacts(draft);
+  const b = graphFacts(published);
+  let count = 0;
+  for (const side of ["nodes", "edges"] as const) {
+    for (const [key, value] of a[side]) if (b[side].get(key) !== value) count++;
+    for (const key of b[side].keys()) if (!a[side].has(key)) count++;
+  }
+  return count;
+}
+
+function graphFacts(rows: TemplateNode[]) {
+  const id = (n: TemplateNode, idx: number) => String(n.id || `node-${idx}`);
+  const known = new Set(rows.map(id));
+  const declared = rows.some((n) => n.on_pass || n.on_fail || (n.branches ?? []).length > 0);
+  const nodes = new Map<string, string>();
+  const edges = new Map<string, string>();
+  const route = (key: string, target: unknown, extra = "") => {
+    if (target && known.has(String(target))) edges.set(key, String(target) + extra);
+  };
+  rows.forEach((n, idx) => {
+    const src = id(n, idx);
+    const orNull = (v: unknown) => (v === undefined || v === "" ? null : v);
+    nodes.set(
+      src,
+      JSON.stringify([
+        n.node_name ?? "",
+        (n.name_en ?? "").trim(),
+        n.node_type,
+        n.court_code ?? "",
+        n.approver_role ?? "",
+        n.approver_type,
+        n.node_order,
+        n.kind ?? "APPROVAL",
+        // Tuples, not the objects: key order differs between the serializer and the inspector.
+        (n.signers ?? []).map((g) => [g.label, g.approver_type, g.approver_role]),
+        orNull(n.threshold),
+        orNull(n.reject_to),
+        orNull(n.timeout_hours),
+        orNull(n.timeout_action),
+        orNull(n.timeout_role),
+      ])
+    );
+    if (!declared) {
+      if (idx + 1 < rows.length) route(`${src}:pass`, id(rows[idx + 1], idx + 1));
+      return;
+    }
+    route(`${src}:pass`, n.on_pass);
+    route(`${src}:fail`, n.on_fail);
+    (n.branches ?? []).forEach((br, bIdx) =>
+      route(`${src}:branch:${br.id || `b${bIdx + 1}`}`, br.target, JSON.stringify([bIdx, (br.when ?? []).map((c) => [c.fact, c.op, c.value])]))
+    );
+  });
+  return { nodes, edges };
+}
