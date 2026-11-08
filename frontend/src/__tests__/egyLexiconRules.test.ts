@@ -715,7 +715,8 @@ describe("egy 词表规则", () => {
     // (actors.assessors.toggle、soul_app.lexicon.eg.no_past_lives / past_read_only,见 egyPendingKeys.json)。
     // 同轮五条随包回填:EG-10 湮灭写 Mut Sen(两条)、EG-17 杜阿特入口写 Duat Aq、EG-25 称心写 Fai Ib(两条)。
     // 742 → 731:2026-11-08 删除无人引用的 48 个键(messageKeysAreReferenced.test.ts),其中 11 个在修订表里。
-    expect(Object.keys(table)).toHaveLength(731);
+    // 731 → 703:同日复查其余无人引用的键，删 93 个，其中 28 个在修订表里。
+    expect(Object.keys(table)).toHaveLength(703);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);

@@ -416,7 +416,7 @@ export function WorkflowInspector({
             ) : (
               <>
                 <div className="rounded-panel border border-[oklch(var(--color-danger)/0.35)] bg-[oklch(var(--color-danger)/0.1)] px-3 py-2">
-                  <h2 className="text-sm font-semibold text-[oklch(var(--color-ink))]">
+                  <h2 className="text-sm font-medium text-[oklch(var(--color-ink))]">
                     <span aria-hidden="true" className="text-[oklch(var(--color-danger))]">! </span>
                     {t("workflow.editor.issues_blocking", { n: String(issues.length) })}
                   </h2>

@@ -120,7 +120,7 @@ export function nodeStateNamespace(
  *   - **灵魂自己那一层**给去处类型 `place`(`HELL` / `PURGATORY` / `BLISS` …):
  *     `<键>_by_civ.<文明>.<类型>` → `<键>_by_civ.<文明>` → `<键>`。受罚的就是底键(受刑、刑期)。
  *     同一个键在一个文明下既有按类型的、又要文明层兜底时,JSON 嵌套放不下两者,兜底只能按类型展开
- *     (`soul_push.sentence_completed` 的 `eu.BLISS` / `eu.NEUTRAL`,第十三批)。
+ *     (推送 sentence_completed 的 eu.BLISS / eu.NEUTRAL,第十三批)。
  *   - 希腊按《理想国》判的(`greekAccount === "REPUBLIC"`)先查 `gr_republic`,再查 `gr`。
  *
  * 拿不到文明、或那一项 Design 没给,一律是底键。

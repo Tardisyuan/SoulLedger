@@ -33,10 +33,10 @@ describe("motion tokens: the JS mirror equals the stylesheet", () => {
   });
 
   /* 规范 v3 把中间两档各加长一档:fast 120 → 160(v3 local)、base 200 → 240
-   * (v3 layout)。slow 320 本来就等于 v3 的 page。0 与 600 是 v2 独有的两档
-   * (「不动画」与按住确认),v3 没有,所以留着 —— 对应关系写在 globals.css。 */
-  it("the five spec durations are 0 / 160 / 240 / 320 / 600", () => {
-    expect(Object.values(MOTION_DURATIONS).map((s) => Math.round(s * 1000))).toEqual([0, 160, 240, 320, 600]);
+   * (v3 layout)。slow 320 本来就等于 v3 的 page。0 是 v2 独有的「不动画」,留着。
+   * 按住确认的 600(ritual)2026-11-08 删掉 —— 已经没有按住确认的操作。 */
+  it("the four spec durations are 0 / 160 / 240 / 320", () => {
+    expect(Object.values(MOTION_DURATIONS).map((s) => Math.round(s * 1000))).toEqual([0, 160, 240, 320]);
   });
 });
 
@@ -187,7 +187,7 @@ describe("useReducedMotionDurations", () => {
     mockReduce.mockReturnValue(true);
     const d = renderHook(() => useReducedMotionDurations()).result.current;
     expect(Object.keys(d).sort()).toEqual(Object.keys(MOTION_DURATIONS).sort());
-    expect(Object.values(d)).toEqual([0, 0, 0, 0, 0]);
+    expect(Object.values(d)).toEqual([0, 0, 0, 0]);
   });
 });
 

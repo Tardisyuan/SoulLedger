@@ -142,7 +142,7 @@ function EditableNodeComponent({
           {stage && (
             <>
               <span aria-hidden="true">·</span>
-              <span className="font-mono truncate">{stage}</span>
+              <span className="font-mono truncate" title={stage}>{stage}</span>
             </>
           )}
         </span>
