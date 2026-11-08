@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { requestIdOf } from "@soulledger/core/api/requestStamp";
@@ -28,11 +28,17 @@ interface PageErrorProps {
 // edited anyway. See tests/... — the keys are asserted to exist.
 export function PageError({ error, reset }: PageErrorProps) {
   const { t } = useI18n();
+  // `error.message` is for whoever debugs it, not for the reader: an axios or runtime message is English and
+  // says nothing they can act on. It goes to the console, and to Sentry when the build has a DSN.
+  useEffect(() => {
+    console.error(error);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) void import("@sentry/nextjs").then((sentry) => sentry.captureException(error));
+  }, [error]);
   return (
     <StatusCard
       code="500"
       title={t("error.title")}
-      message={error.message || t("error.description")}
+      message={t("error.description")}
       // A failed API call carries the server's X-Request-ID: its first 8 characters find the request in the logs.
       detail={error.digest ? <>trace {error.digest}</> : requestIdOf(error) && <>request {requestIdOf(error)}</>}
       action={
