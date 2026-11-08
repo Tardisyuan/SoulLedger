@@ -7,7 +7,6 @@ highest-stakes of them: it deletes rows, so its test
 asserts the other tenant's row survives, not just that it's excluded from
 a queryset.
 """
-from unittest.mock import patch
 
 import pytest
 from django.utils import timezone
@@ -16,10 +15,7 @@ from apps.death_sync.models import (
     DeathRegistrationRequest,
     ExternalApiKey,
 )
-from apps.death_sync.tasks import (
-    cleanup_old_requests,
-    cleanup_old_requests_for_tenant,
-)
+from apps.death_sync.tasks import cleanup_old_requests_for_tenant
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
 
@@ -38,21 +34,6 @@ def _registration(tenant):
         tenant=tenant, idempotency_key=f"idem-{tenant.code}", source_system="HOSPITAL",
         source_payload={"test": True}, soul=soul,
     )
-
-
-@pytest.mark.django_db
-class TestCleanupOldRequestsDispatch:
-    @pytest.fixture(autouse=True)
-    def setup(self, db):
-        self.active = Tenant.objects.create(code="CLN_ACTIVE", display_name="Active", is_active=True)
-        self.inactive = Tenant.objects.create(code="CLN_INACTIVE", display_name="Inactive", is_active=False)
-
-    @patch("apps.death_sync.tasks.cleanup_old_requests_for_tenant.delay")
-    def test_dispatches_only_for_active_tenants(self, mock_delay):
-        result = cleanup_old_requests()
-        dispatched_ids = {call.args[0] for call in mock_delay.call_args_list}
-        assert dispatched_ids == {str(self.active.id)}
-        assert result["tenants_dispatched"] == 1
 
 
 @pytest.mark.django_db

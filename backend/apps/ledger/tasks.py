@@ -16,29 +16,6 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="ledger.recalculate_all")
-def recalculate_all_ledgers():
-    """
-    Fan out one recalculation subtask per active tenant, rather than
-    iterating every soul in a single run. Celery has no per-request tenant
-    context the way HTTP does (TenantMiddleware never runs here), so a
-    task that just does `Soul.objects.iterator()` touches every tenant's
-    data in one execution: a failure or retry affects tenants that had
-    nothing to do with it, and every audit-log row this produces has no
-    tenant to attribute to (apps.audit.signals reads
-    apps.tenants.managers.get_current_tenant(), which stays None for the
-    whole run). Dispatching one subtask per tenant fixes both — see
-    recalculate_tenant_ledgers.
-    """
-    from apps.tenants.models import Tenant
-
-    tenant_ids = list(Tenant.objects.filter(is_active=True).values_list("id", flat=True))
-    for tenant_id in tenant_ids:
-        recalculate_tenant_ledgers.delay(str(tenant_id))
-
-    return {"tenants_dispatched": len(tenant_ids), "timestamp": timezone.now().isoformat()}
-
-
 @shared_task(name="ledger.recalculate_tenant")
 def recalculate_tenant_ledgers(tenant_id: str):
     """

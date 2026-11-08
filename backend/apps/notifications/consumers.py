@@ -226,11 +226,6 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             "permissions": sorted(self.permissions),
         }))
 
-    # Legacy handler — backward compat with old notification_push
-    async def notification_push(self, event):
-        """Handle legacy notification_push — forward data to client."""
-        await self.send(text_data=json.dumps(event["data"]))
-
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------

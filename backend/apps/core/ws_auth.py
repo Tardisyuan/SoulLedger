@@ -178,7 +178,7 @@ class JWTAuthMiddleware(BaseMiddleware):
             if "imp_id" in token:
                 return None
             from apps.authentication.models import User
-            user = User.objects.select_related("rbac_role", "tenant").get(id=user_id)
+            user = User.objects.select_related("tenant").get(id=user_id)
             # HTTP enforces this and WebSocket did not.
             # `rest_framework_simplejwt`'s own authentication checks
             # CHECK_USER_IS_ACTIVE (on by default); this method did a bare

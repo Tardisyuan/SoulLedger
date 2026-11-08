@@ -189,7 +189,3 @@ def check_permissions(user, codenames, require_all=True):
     if require_all:
         return all(check_permission(user, cod) for cod in codenames)
     return any(check_permission(user, cod) for cod in codenames)
-
-
-# Backward-compatible alias for existing code
-user_has_permission = check_permission

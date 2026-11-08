@@ -25,28 +25,6 @@ def _flush_stale(chunk):
     return len(chunk)
 
 
-@shared_task(name="judgment.auto_conclude_stale")
-def auto_conclude_stale_judgments(days_threshold: int = 30):
-    """
-    Fan out one flagging subtask per active tenant. Same reasoning as
-    ledger.recalculate_all: a single run touching every tenant's stale
-    judgments has no fault isolation between tenants and produces
-    audit-log rows with no tenant to attribute to. See
-    auto_conclude_stale_judgments_for_tenant.
-    """
-    from apps.tenants.models import Tenant
-
-    tenant_ids = list(Tenant.objects.filter(is_active=True).values_list("id", flat=True))
-    for tenant_id in tenant_ids:
-        auto_conclude_stale_judgments_for_tenant.delay(str(tenant_id), days_threshold)
-
-    return {
-        "tenants_dispatched": len(tenant_ids),
-        "threshold_days": days_threshold,
-        "timestamp": timezone.now().isoformat(),
-    }
-
-
 @shared_task(name="judgment.auto_conclude_stale_for_tenant")
 def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int = 30):
     """
