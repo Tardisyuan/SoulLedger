@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-11-08T01:34:32.858363+00:00",
+  "recordedAt": "2026-11-08T07:19:59.491243+00:00",
   "replies": [
     {
       "question": {
@@ -107,8 +107,8 @@
         "en": "How many placement requests are pending in all?"
       },
       "answer": {
-        "zh-Hans": "我没有能查受刑请求件数的工具。我能查的只有审判队列、等你审批的流程和收件箱的计数，这些工具不包含受刑请求的数量，我也无法查看具体案子。\n\n要看待处理的受刑请求，请到左侧栏「受刑请求」页，每个有待决请求的计划占一行，等你决定的会有标记。",
-        "en": "I don't have a tool for sentence request counts, so I can't give you a number. The Sentence Requests page itself lists one row per plan with a pending request, with the rows waiting for you marked."
+        "zh-Hans": "我这边没有统计受刑请求（去处请求）件数的工具，能查的只有审判队列、待我审批的流程和收件箱的计数。要是问的是调度提案，可以看「调度」页的「待处理提案」；问受刑请求的话，请看「受刑请求」页——每件有待决请求的计划各占一行。具体数字我这边查不到。",
+        "en": "I don't know — I don't have a tool that counts placement requests, and the help entries don't give a number for them. The sentence-requests page (where you are) shows one row per plan with a pending request, so that is the place to see the pending count; if you need an exact total across halls, ask the system administrator."
       }
     },
     {
