@@ -74,8 +74,11 @@ import {
   type InspectorTab,
   type PaletteType,
 } from "@/src/components/workflow/WorkflowEditorPanels";
+import { Popover } from "@base-ui/react/popover";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
+import { MissingValue } from "@/src/components/ui/DomainValue";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import {
   EXIT_HANDLE_PREFIX,
   SAVE_BLOCKING,
@@ -260,15 +263,19 @@ function nodeAriaLabel(node: Node): string {
   return parts.length > 0 ? parts.join(", ") : node.id;
 }
 
-/** One cell of the canvas zoom bar. */
-const ZOOM_BUTTON = "w-11 h-11 border-l first:border-l-0 border-[oklch(var(--color-line-strong))] hover:bg-[oklch(var(--color-surface-2))]";
+/** One cell of the canvas zoom bar: 36 × 36, 44 on touch (v4 第十四批). */
+const ZOOM_BUTTON = "w-9 h-full pointer-coarse:w-11 border-l first:border-l-0 border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))]";
 
 /** Room for the floating bar above and the zoom bar below whenever the canvas fits. */
 const FIT_OPTIONS = { padding: { top: "64px", bottom: "64px", left: "24px", right: "24px" } } as const;
 
-/** The toolbar's two prefixed selects (v3 A1): a 44-high box, small muted prefix, the select filling the rest. */
+/** The template bar's prefixed selects and version menu (v4 第十四批): a 36-high box (48 on touch). */
 const TOOL_SELECT =
-  "flex shrink-0 items-center gap-2 h-(--control-h-sm) pl-3 pr-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))]";
+  "flex shrink-0 items-center gap-2 h-(--control-h-md) pl-3 pr-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))]";
+
+/** The template bar's two name fields, the same 36-high box. */
+const TOOL_INPUT =
+  "shrink-0 h-(--control-h-md) px-3 rounded-control bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-ink))]";
 
 /**
  * The case types each civilization has — the backend's `VALID_CASE_TYPES_BY_CIVILIZATION`
@@ -351,9 +358,11 @@ export default function WorkflowEditor({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesStateChange] = useEdgesState<Edge>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  /** v3 A1 inspector tab; 「! 校验 · N」 opens 问题, a card click opens 节点. */
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("node");
-  /** The exit the 出口 tab is on — drawn in ink on the canvas. */
+  /** v4 第十四批 inspector tab; 「! 校验 · N」 opens 问题, a card click opens 属性. */
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("props");
+  /** Below 1024 (v4 第十四批 §5): one column, three tabs — 线性预览 / 问题 N / 属性. */
+  const [narrowTab, setNarrowTab] = useState<"preview" | InspectorTab>("preview");
+  /** The exit the 出口 section is on — drawn in the accent on the canvas. */
   const [activeEdgeId, setActiveEdgeId] = useState<string | null>(null);
   /** The viewport zoom, shown in the bottom-left zoom bar. */
   const [zoom, setZoom] = useState(1);
@@ -1010,8 +1019,27 @@ export default function WorkflowEditor({
   );
 
   /**
+   * 「定位 →」 on a 问题 card (v4 第十四批 §3): select the node and put it in the middle of the canvas, at the
+   * current zoom. `setCenter` with no duration writes the viewport at once; null under the jest stubs.
+   */
+  const locateNode = useCallback(
+    (nodeId: string) => {
+      selectNode(nodeId);
+      const flow = flowRef.current;
+      const at = flow?.getNode(nodeId);
+      if (!flow || !at) return;
+      void flow.setCenter(
+        at.position.x + (at.measured?.width ?? NODE_WIDTH) / 2,
+        at.position.y + (at.measured?.height ?? NODE_HEIGHT) / 2,
+        { zoom: flow.getZoom() }
+      );
+    },
+    [selectNode]
+  );
+
+  /**
    * 编辑节点 — `E` on a card, or a double-click: select the node, open the
-   * inspector's 节点 tab and put focus in its first field (名称). The form is
+   * inspector's 属性 tab and put focus in its first field (名称). The form is
    * the inspector itself now (v3 A1, 用户 10-02), so there is nothing to open
    * and nothing to seed: `flushSync` commits the selection and the tab so the
    * field exists before it is focused.
@@ -1020,7 +1048,7 @@ export default function WorkflowEditor({
     (nodeId: string) => {
       flushSync(() => {
         selectNode(nodeId);
-        setInspectorTab("node");
+        setInspectorTab("props");
       });
       document.getElementById(nodeNameFieldId(formId))?.focus();
     },
@@ -1154,6 +1182,7 @@ export default function WorkflowEditor({
           role: roles.get(n.id),
           ordinal: idx + 1,
           issueCount: issues.filter((i) => i.nodeId === n.id).length,
+          issueCodes: issues.filter((i) => i.nodeId === n.id).map((i) => i.code),
           autoRoute: isAutoRoute(n, edges),
           // 没连的出口(第四十七批 W-1):卡片下画短桩 +「欧洲 · 未连」。
           unconnected: isAutoRoute(n, edges)
@@ -1191,11 +1220,13 @@ export default function WorkflowEditor({
           conditionText: when?.length ? whenText(when, t, templateCiv) : undefined,
           isDefault: when === undefined && branchOf(e) === "pass" && conditional.has(e.source),
           regionText: region ? originRegionLabel(t, region, locale) : undefined,
-          active: inspectorTab === "exits" && e.id === activeEdgeId,
+          active: inspectorTab === "props" && e.id === activeEdgeId,
+          // v4 第十四批:进出选中节点的那条,强调色 2 宽。
+          highlight: selectedNodeId !== null && (e.source === selectedNodeId || e.target === selectedNodeId),
         },
       };
     });
-  }, [nodes, edges, t, locale, inspectorTab, activeEdgeId, templateCiv]);
+  }, [nodes, edges, t, locale, inspectorTab, activeEdgeId, templateCiv, selectedNodeId]);
 
   /** Set or clear the condition on one PASS edge (the inspector's 出口 · 条件). */
   const setEdgeWhen = useCallback(
@@ -1391,9 +1422,8 @@ export default function WorkflowEditor({
       const picked = selects.find((c) => c.selected && nodes.some((n) => n.id === c.id));
       if (picked) {
         setSelectedNodeId(picked.id);
-        // A card picked on the canvas is a question about that node: 出口 stays
-        // (it is about the node too), 问题 / 版本 give way to 节点.
-        setInspectorTab((tab) => (tab === "exits" ? tab : "node"));
+        // A card picked on the canvas is a question about that node: 问题 gives way to 属性.
+        setInspectorTab("props");
       }
       else setSelectedNodeId((current) => (selects.some((c) => c.id === current) ? null : current));
     },
@@ -1530,8 +1560,8 @@ export default function WorkflowEditor({
           : undefined
       }
       validationId={validationId}
-      tab={inspectorTab}
-      onTab={setInspectorTab}
+      tab={wide ? inspectorTab : narrowTab === "issues" ? "issues" : "props"}
+      onTab={wide ? setInspectorTab : setNarrowTab}
       nodeExtras={(node) => isAutoRoute(node, edges) ? null : (
         <ApproverPreviewSection
           t={t}
@@ -1557,25 +1587,43 @@ export default function WorkflowEditor({
           onActivate={setActiveEdgeId}
         />
       )}
-      version={
-        <VersionHistorySection t={t} templateId={templateId} empty={versionBadge} />
+      onLocate={wide ? locateNode : selectNode}
+      preview={
+        wide ? (
+          <WorkflowLinearPreview
+            t={t}
+            nodes={nodes}
+            roles={roles}
+            issueNodes={issueNodes}
+            selectedId={selectedNodeId}
+            onSelect={selectNode}
+          />
+        ) : undefined
       }
+      hideTabs={!wide}
     />
   );
 
   const priorityLabel = priorityOptions.find((o) => o.value === templatePriority)?.label;
 
-  // The read-only view (v3 A1 · 393): no canvas, no palette, no inputs and —
-  // deliberately — no save. A template opened here can be read, not changed;
-  // the notice says why and where it can be.
+  // The read-only view (v4 第十四批 §5, below 1024): no canvas, no palette, no inputs and — deliberately — no
+  // save. One column: the notice, the template's name and meta, then three 44-high tabs — 线性预览 / 问题 N /
+  // 属性. The preview stacks the canvas's own card; a card opens 属性 (read-only) for its node.
   if (!wide) {
+    const narrowTabs = [
+      { key: "preview", label: t("workflow.editor.preview") },
+      { key: "issues", label: `${t("workflow.editor.tab.issues")} ${issues.length}` },
+      { key: "props", label: t("workflow.editor.inspector") },
+    ] as const;
+    const titleId = `${formId}-narrow-title`;
     return (
       <div className="flex flex-col gap-3">
-        <div role="note" className="px-3 py-3 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-sm text-[oklch(var(--color-ink))]">
+        <div role="note" className="rounded-panel px-3 py-3 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-sm text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">◐ </span>
           {t("workflow.editor.narrow_title")}
+          <span className="mt-1 block text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.narrow_body")}</span>
         </div>
-        <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
+        <h2 id={titleId} className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
           {(locale === "en" && templateNameEn) || templateName || t("workflow.editor.template_name_placeholder")}
         </h2>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
@@ -1593,37 +1641,61 @@ export default function WorkflowEditor({
           </span>
         </p>
         {versionBadge}
-        <WorkflowReadOnlyList
-          t={t}
-          locale={locale}
-          nodes={nodes}
-          edges={edges}
-          roles={roles}
-          issueNodes={issueNodes}
-          selectedId={selectedNodeId}
-          onSelect={selectNode}
-        />
-        <div className="border border-[oklch(var(--color-line))]">{inspector}</div>
+        {/* Three switches with exactly one on — `aria-pressed`, not `role="tab"`: no tabpanel, no arrow keys
+            (the repo's reading, see selectionIsNotColourOnly.test.tsx). */}
+        <div role="group" aria-labelledby={titleId} className="flex border-b border-[oklch(var(--color-line))]">
+          {narrowTabs.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={narrowTab === key}
+              onClick={() => setNarrowTab(key)}
+              className={`${TAB_BASE} ${narrowTab === key ? `${TAB_ON} border-[oklch(var(--color-accent))]!` : TAB_OFF} flex-1 h-11 px-2`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {narrowTab === "preview" ? (
+          <WorkflowReadOnlyList
+            t={t}
+            locale={locale}
+            nodes={nodes}
+            edges={edges}
+            roles={roles}
+            issueNodes={issueNodes}
+            issues={issues}
+            selectedId={selectedNodeId}
+            onSelect={(id) => {
+              selectNode(id);
+              setNarrowTab("props");
+            }}
+          />
+        ) : (
+          <div className="overflow-hidden rounded-panel border border-[oklch(var(--color-line))]">{inspector}</div>
+        )}
       </div>
     );
   }
 
-  /* 「! 校验 · N」: the count, and the `!`, go danger only while something
-     fails. Split around the placeholder so the number can be styled on its own
-     without a second string per locale. */
+  /* 「! 校验 · N」: the `!` and the number are always there, not colour alone. Split around the placeholder so
+     the number can be set in mono without a second string per locale. */
   const [issuesBefore, issuesAfter = ""] = t("workflow.editor.issues", { n: "\u0001" }).split("\u0001");
   const openIssues = () => {
     flushSync(() => setInspectorTab("issues"));
     if (issues[0]?.nodeId) selectNode(issues[0].nodeId);
     document.getElementById(validationId)?.focus();
   };
+  const publishBlocked = issues.length > 0 || nodes.length === 0;
 
   return (
-    <div className="flex flex-col h-full border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))]">
-      {/* Toolbar — v3 A1: 64 high on surface-1. Template name, civilization,
-       * case type, priority 0/1/2, version; then 「! 校验 · N」/ 存草稿 / 发布.
-       * 加节点 / 自动布局 / 删除所选 are NOT here (用户 10-02): they float on
-       * the canvas, top right.
+    /* The editing area (v4 第十四批 §1): an opaque card over the page header's glow and watermark, so the canvas
+       is always on a clean ground. `.v4-card` gives it the card shadow in light and keeps the 1px line in dark. */
+    <div className="v4-card flex flex-col h-full min-h-0 overflow-hidden rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
+      {/* Template bar — v4 第十四批: 48 high, controls 36 (44 on touch). Name, then the metadata that changes
+       * only while the template is edited: civilization 150, case type 120, priority 3 × 36, a rule, version
+       * 120; at the right the node / edge count in mono and 「! 校验 · N」/ 存草稿 / 发布.
+       * 加节点 / 自动布局 / 删除所选 are NOT here (用户 10-02): they float on the canvas, top right.
        *
        * ─────────────────────────────────────────────────────────────────
        * 这一行的收缩策略修过一次,方向反了,于是缺陷换了个受害者。
@@ -1634,14 +1706,14 @@ export default function WorkflowEditor({
        * 输入区被压到不可用 —— 2026-09-05 在 mobile-chrome(393px)的失败截图里,
        * 「中国地府」是从「删除选中」底下透出来的。所以这里**没有** `min-w-0`:
        * 每个控件保持可用的尺寸,行真的超出时真的滚。 */}
-      <div className="flex items-center gap-2 h-16 shrink-0 px-4 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] overflow-x-auto">
+      <div className="flex items-center gap-2 h-12 pointer-coarse:h-14 shrink-0 px-3 border-b border-[oklch(var(--color-line))] overflow-x-auto">
         <input
           type="text"
           value={templateName}
           onChange={(e) => setTemplateName(e.target.value)}
           placeholder={t("workflow.editor.template_name_placeholder")}
           aria-label={t("workflow.editor.template_name_placeholder")}
-          className="w-[180px] shrink-0 h-(--control-h-sm) px-3 rounded-control bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-ink))]"
+          className={`w-[160px] ${TOOL_INPUT}`}
         />
         <input
           type="text"
@@ -1649,9 +1721,9 @@ export default function WorkflowEditor({
           onChange={(e) => setTemplateNameEn(e.target.value)}
           placeholder={t("common.name_en")}
           aria-label={t("common.name_en")}
-          className="w-[180px] shrink-0 h-(--control-h-sm) px-3 rounded-control bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-ink))]"
+          className={`w-[140px] ${TOOL_INPUT}`}
         />
-        <label className={TOOL_SELECT}>
+        <label className={`${TOOL_SELECT} w-[150px]`}>
           <span aria-hidden="true" className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
             {t("workflow.editor.civilization_select_label")}
           </span>
@@ -1664,7 +1736,7 @@ export default function WorkflowEditor({
               if (!CASE_TYPES_BY_CIVILIZATION[civ].includes(templateCaseType)) setTemplateCaseType("ROUTINE");
             }}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="h-full bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
+            className="h-full min-w-0 flex-1 bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -1677,15 +1749,14 @@ export default function WorkflowEditor({
             ))}
           </select>
         </label>
-        <label className={TOOL_SELECT}>
-          <span aria-hidden="true" className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
-            {t("workflow.editor.case_type_select_label")}
-          </span>
+        {/* 120 wide holds the value only; the prefix is the select's accessible name and its title. */}
+        <label className={`${TOOL_SELECT} w-[120px]`}>
           <select
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="h-full bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
+            title={t("workflow.editor.case_type_select_label")}
+            className="h-full min-w-0 flex-1 bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
           >
             {/* One literal <option> per line, in exactly this shape:
                 `backend/tests/test_workflow_preset_case_types.py` reads them as
@@ -1704,9 +1775,9 @@ export default function WorkflowEditor({
             {caseTypes.includes("DIVINE_TRIAL") && <option value="DIVINE_TRIAL">{t("workflow.case_types.DIVINE_TRIAL")}</option>}
           </select>
         </label>
-        {/* Priority as a 0 / 1 / 2 segment, v3 A1. A radio group, so arrow keys
-            move it and the screen reader hears 「普通 / 紧急 / 特急」 — the
-            digit is what is drawn, the word is the accessible name. */}
+        {/* Priority as a 0 / 1 / 2 segment, 3 × 36. A radio group, so arrow keys move it and the screen reader
+            hears 「普通 / 紧急 / 特急」 — the digit is what is drawn, the word is the accessible name. The chosen
+            segment is in the civilization accent (v4 第十四批 §4). */}
         <div
           role="radiogroup"
           id={templatePriorityId}
@@ -1733,9 +1804,9 @@ export default function WorkflowEditor({
                   setTemplatePriority(next);
                   (e.currentTarget.parentElement?.children[next] as HTMLElement | undefined)?.focus();
                 }}
-                className={`w-11 h-11 font-mono text-sm border-l first:border-l-0 border-[oklch(var(--color-line-strong))] ${
+                className={`w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 font-mono text-sm border-l first:border-l-0 border-[oklch(var(--color-line-strong))] ${
                   on
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))]"
+                    ? "bg-[oklch(var(--color-accent))] text-[oklch(var(--color-accent-contrast))]"
                     : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                 }`}
               >
@@ -1744,23 +1815,77 @@ export default function WorkflowEditor({
             );
           })}
         </div>
-        {versionBadge}
+        <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-[oklch(var(--color-line))]" />
+        {/* 版本 (取舍 2): the 版本 tab became this dropdown — the published / draft badge, and 版本历史 at the
+            bottom of the menu. The history is fetched only while the menu is open. */}
+        <Popover.Root>
+          <Popover.Trigger
+            title={t("workflow.editor.version.history")}
+            className={`${TOOL_SELECT} min-w-[120px] justify-between text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]`}
+          >
+            {versionBadge}
+            <span aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">▾</span>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Positioner sideOffset={6} align="start" className="z-drawer">
+              <Popover.Popup className="flex w-72 flex-col gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-3 shadow-overlay focus:outline-hidden">
+                <p className="text-sm text-[oklch(var(--color-ink))]">
+                  {publishedVersion != null
+                    ? t("workflow.editor.version.published", { n: String(publishedVersion) })
+                    : t("workflow.editor.version.unpublished")}
+                  {draftVersion != null && (
+                    <span className="text-[oklch(var(--color-ink-muted))]"> · {t("workflow.editor.version.draft", { n: String(draftVersion) })}</span>
+                  )}
+                </p>
+                <div className="border-t border-[oklch(var(--color-line))] pt-3">
+                  <VersionHistorySection
+                    t={t}
+                    templateId={templateId}
+                    empty={
+                      <p className="text-xs text-[oklch(var(--color-ink-muted))]">
+                        {t("workflow.editor.version.history")} · <MissingValue kind="unrecorded" />
+                      </p>
+                    }
+                  />
+                </div>
+              </Popover.Popup>
+            </Popover.Positioner>
+          </Popover.Portal>
+        </Popover.Root>
         <span className="flex-1" />
-        {/* 「! 校验 · N」, always on screen: muted while clean, danger while
-            something fails — it is the reason the save beside it is disabled.
-            Pressing it opens the inspector's 问题 tab, selects the first
-            offending node and moves focus to the list. */}
-        <Button type="button" size="sm" variant="secondary" onClick={openIssues} className="shrink-0 text-sm">
-          <span aria-hidden="true" className={issues.length > 0 ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink-muted))]"}>
-            !
-          </span>
-          <span>
-            {issuesBefore}
-            <span className={`font-mono ${issues.length > 0 ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink-muted))]"}`}>
-              {issues.length}
-            </span>
-            {issuesAfter}
-          </span>
+        <span className="shrink-0 whitespace-nowrap font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+          {t("workflow.editor.preview_count", { nodes: String(nodes.length), edges: String(edges.length) })}
+        </span>
+        {/* 「! 校验 · N」, always on screen. N > 0: danger 12% ground, 45% edge, danger text — it is the reason
+            the publish beside it is disabled. N = 0: a ghost button,「✓ 校验通过」 in the success colour.
+            Pressing it opens the inspector's 问题 tab, selects the first offending node and moves focus to
+            the list. */}
+        <Button
+          type="button"
+          size="md"
+          variant={issues.length > 0 ? "secondary" : "ghost"}
+          onClick={openIssues}
+          className={`shrink-0 gap-1 ${
+            issues.length > 0
+              ? "bg-[oklch(var(--color-danger)/0.12)] border-[oklch(var(--color-danger)/0.45)] text-[oklch(var(--color-danger))] hover:bg-[oklch(var(--color-danger)/0.18)]"
+              : "text-[oklch(var(--color-success))]"
+          }`}
+        >
+          {issues.length > 0 ? (
+            <>
+              <span aria-hidden="true" className="font-semibold">!</span>
+              <span>
+                {issuesBefore}
+                <span className="font-mono">{issues.length}</span>
+                {issuesAfter}
+              </span>
+            </>
+          ) : (
+            <>
+              <span aria-hidden="true">✓</span>
+              <span>{t("workflow.editor.issues_none")}</span>
+            </>
+          )}
         </Button>
         {/* `isTemplateLoading` in the disabled condition: between mount and
             the GET resolving, the form holds its own empty defaults, and
@@ -1771,28 +1896,30 @@ export default function WorkflowEditor({
             both with the same codes. */}
         <Button
           type="button"
-          size="sm"
+          size="md"
           variant="secondary"
           onClick={handleSave}
           disabled={busy || (!!templateId && isTemplateLoading) || saveBlocked}
           aria-describedby={saveBlocked && inspectorTab === "issues" ? validationId : undefined}
-          className="shrink-0 text-sm"
+          className="shrink-0"
         >
           {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="primary"
-          onClick={handlePublish}
-          disabled={busy || (!!templateId && isTemplateLoading) || issues.length > 0 || nodes.length === 0}
-          aria-describedby={issues.length > 0 && inspectorTab === "issues" ? validationId : undefined}
-          className="shrink-0 text-sm"
-        >
-          {publishMutation.isPending
-            ? t("workflow.editor.publishing")
-            : `${t("workflow.editor.publish")} v${(publishedVersion ?? 0) + 1}`}
-        </Button>
+        {/* A disabled button gets no hover, so the reason rides on a wrapper (「2 处问题挡住发布」). */}
+        <span className="shrink-0" title={issues.length > 0 ? t("workflow.editor.issues_blocking", { n: String(issues.length) }) : undefined}>
+          <Button
+            type="button"
+            size="md"
+            variant="primary"
+            onClick={handlePublish}
+            disabled={busy || (!!templateId && isTemplateLoading) || publishBlocked}
+            aria-describedby={issues.length > 0 && inspectorTab === "issues" ? validationId : undefined}
+          >
+            {publishMutation.isPending
+              ? t("workflow.editor.publishing")
+              : `${t("workflow.editor.publish")} v${(publishedVersion ?? 0) + 1}`}
+          </Button>
+        </span>
       </div>
 
       {/* Flow canvas */}
@@ -1817,8 +1944,8 @@ export default function WorkflowEditor({
        * A descendant variant rather than a rule in `globals.css`: the selector
        * is xyflow's internal class and this is the only file that may know it.
        */}
-      {/* v3 A1: palette 176 · canvas · inspector 360 (was 320, 用户 10-02). */}
-      <div className="flex-1 min-h-0 grid grid-cols-[176px_minmax(0,1fr)_360px]">
+      {/* v4 第十四批: palette 200 (a 56 icon column at 1024–1279) · canvas · inspector 360 (用户 10-02). */}
+      <div className="flex-1 min-h-0 grid grid-cols-[56px_minmax(0,1fr)_360px] xl:grid-cols-[200px_minmax(0,1fr)_360px]">
       <WorkflowPalette
         t={t}
         onAdd={(type) => {
@@ -1904,7 +2031,7 @@ export default function WorkflowEditor({
              before branches existed it was all that was needed. `autoLayout`
              owns every fit after this one. */
           fitView
-          /* The floating bar (top right) and the zoom bar (bottom left) sit on
+          /* The floating bar (top right) and the zoom bar (bottom right) sit on
              the pane; the fit keeps 64 px clear above and below so neither
              covers a card — a panel over a card takes its clicks (see the
              palette hint note above). */
@@ -1931,18 +2058,19 @@ export default function WorkflowEditor({
             ...edgeArrow(),
           }}
         >
-          {/* 16 px dot grid, line-strong at 45 %, as drawn (v3 A1). */}
-          <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="oklch(var(--color-line-strong) / 0.45)" />
+          {/* 20 px dot grid in the line colour (v4 第十四批 `--line2`). */}
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="oklch(var(--color-line))" />
         </ReactFlow>
 
-        {/* Floating bar, top right (用户 10-02: these three left the toolbar).
-            Plain DOM over the pane, not an xyflow <Panel>, so the jest stubs
-            that replace <ReactFlow> still render it. */}
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-2 p-1 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] shadow-[0_2px_8px_oklch(0_0_0/0.08)]">
-          <Button type="button" size="sm" variant="ghost" onClick={() => addNode()} className="text-sm">
+        {/* Floating card, top right (用户 10-02: these three left the toolbar): 36-high buttons in a radius-6
+            card on the raised shadow; 删除所选 in the warning colour, greyed while nothing is selected.
+            Plain DOM over the pane, not an xyflow <Panel>, so the jest stubs that replace <ReactFlow> still
+            render it. */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 p-1 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] shadow-raised">
+          <Button type="button" size="md" variant="ghost" onClick={() => addNode()}>
             ＋ {t("workflow.editor.add_node")}
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={autoLayout} disabled={nodes.length === 0} className="text-sm">
+          <Button type="button" size="md" variant="ghost" onClick={autoLayout} disabled={nodes.length === 0}>
             {t("workflow.editor.auto_layout")}
           </Button>
           {/* Status, not a spinner. `layoutNodes` is synchronous and finished
@@ -1960,17 +2088,18 @@ export default function WorkflowEditor({
           <span role="status" aria-live="polite" className="sr-only">
             {layoutDone}
           </span>
-          <Button type="button" size="sm" variant="warning" onClick={deleteSelectedNode} disabled={!selectedNodeId} className="text-sm">
+          <Button type="button" size="md" variant="warning" onClick={deleteSelectedNode} disabled={!selectedNodeId}>
             {t("workflow.editor.delete_selected")}
           </Button>
         </div>
 
-        {/* Zoom, bottom left: − / 100% / ＋ / ⤢, 44 square each (v3 A1). */}
-        <div className="absolute bottom-3 left-3 z-10 flex border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] font-mono text-xs text-[oklch(var(--color-ink))]">
+        {/* Zoom, bottom right (v4 第十四批): one 36-high bar — − / 100% (56 wide, back to 100%) / ＋ / ⤢,
+            each cell 36 × 36, 44 on touch. */}
+        <div className="absolute bottom-3 right-3 z-10 flex h-9 pointer-coarse:h-11 overflow-hidden rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] shadow-raised font-mono text-xs text-[oklch(var(--color-ink))]">
           <button type="button" aria-label={t("workflow.editor.zoom.out")} onClick={() => void flowRef.current?.zoomOut()} className={ZOOM_BUTTON}>
             −
           </button>
-          <button type="button" aria-label={t("workflow.editor.zoom.reset")} onClick={() => void flowRef.current?.zoomTo(1)} className={`${ZOOM_BUTTON} w-14`}>
+          <button type="button" aria-label={t("workflow.editor.zoom.reset")} onClick={() => void flowRef.current?.zoomTo(1)} className={`${ZOOM_BUTTON} w-14 pointer-coarse:w-14`}>
             {Math.round(zoom * 100)}%
           </button>
           <button type="button" aria-label={t("workflow.editor.zoom.in")} onClick={() => void flowRef.current?.zoomIn()} className={ZOOM_BUTTON}>
@@ -1983,15 +2112,6 @@ export default function WorkflowEditor({
       </div>
       {inspector}
       </div>
-      <WorkflowLinearPreview
-        t={t}
-        nodes={nodes}
-        edgeCount={edges.length}
-        roles={roles}
-        issueNodes={issueNodes}
-        selectedId={selectedNodeId}
-        onSelect={selectNode}
-      />
     </div>
   );
 }

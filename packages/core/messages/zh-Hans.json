@@ -1397,6 +1397,27 @@
         "no_end": "{{node}}:用了条件或结束节点,就需要至少一个结束节点",
         "auto_route_exit_missing": "{{node}}：「{{region}}」出口没有去向"
       },
+      "issue_short": {
+        "name_empty": "没有名称",
+        "self_route": "出口指回自己",
+        "duplicate_route": "同名出口重复",
+        "reject_not_earlier": "驳回只能指向前面的节点",
+        "reject_and_fail_route": "驳回和不通过同时设了",
+        "timeout_incomplete": "超时缺时长或动作",
+        "timeout_role_missing": "超时升级没写角色",
+        "countersign_no_signers": "会签没有会签人",
+        "threshold_out_of_range": "通过人数多于会签人",
+        "end_has_exit": "终点不能有出口",
+        "condition_empty": "条件永远不成立",
+        "condition_invalid": "条件没写完",
+        "condition_overlap": "两条条件会同时成立",
+        "unreachable": "从入口走不到这里",
+        "no_exit": "没有出口，走不到结束",
+        "no_end": "流程缺一个终点"
+      },
+      "node_issue_count": "{{n}} 处问题",
+      "node_issue_summary": "这个节点有 {{n}} 处问题，发布前要改。",
+      "locate": "定位",
       "palette": "节点 · 拖入画布",
       "inspector": "属性",
       "inspector_empty": "在画布或线性预览里选一个节点。",
@@ -1421,6 +1442,7 @@
         "draft": "草稿 v{{n}}",
         "published": "已发布 v{{n}}",
         "unpublished": "未发布",
+        "pending_changes": "草稿 v{{n}} · {{count}} 处改动未发布",
         "history": "版本历史",
         "status": {
           "DRAFT": "草稿",
@@ -1503,10 +1525,7 @@
       },
       "roles_note": "角色不可拖，只能由连线得出",
       "tab": {
-        "node": "节点",
-        "exits": "出口",
-        "issues": "问题",
-        "version": "版本"
+        "issues": "问题"
       },
       "issues_blocking": "{{n}} 处问题挡住发布",
       "issues_hint": "点一条，画布定位到出问题的节点",

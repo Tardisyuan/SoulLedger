@@ -262,7 +262,8 @@ describe("WorkflowEditor — versions and the engine fields", () => {
         "✓workflow.editor.version.published(3)◇ workflow.editor.version.draft(4)"
       )
     );
-    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.version/ }));
+    // v4 第十四批: no 版本 tab — the history is at the bottom of the template bar's version menu.
+    fireEvent.click(screen.getByTestId("version-badge").closest("button")!);
     const history = await screen.findByRole("region", { name: "workflow.editor.version.history" });
     expect(within(history).getByText("v4")).toBeInTheDocument();
     expect(within(history).getByText("v3")).toBeInTheDocument();
@@ -321,13 +322,15 @@ describe("WorkflowEditor — versions and the engine fields", () => {
     renderEditor();
     const chip = await screen.findByRole("button", { name: /余额 < 0 \?/ });
     fireEvent.click(chip);
-    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.exits/ }));
+    // v4 第十四批: 出口 is the second section of 属性, not a tab of its own.
     const exits = await screen.findByRole("region", { name: "workflow.editor.condition.title" });
     expect(within(exits).getByText(/workflow\.editor\.condition\.fact\.balance < 0/)).toBeInTheDocument();
     expect(within(exits).getByText("workflow.editor.condition.default")).toBeInTheDocument();
 
+    // With a node selected the linear preview is at the foot of 问题.
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));
     fireEvent.click(within(screen.getByRole("region", { name: "workflow.editor.preview" })).getByRole("button", { name: /目标文明判官/ }));
-    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.node/ }));
+    fireEvent.click(screen.getByRole("tab", { name: "workflow.editor.inspector" }));
     await waitFor(() => expect(api().approverPreview).toHaveBeenCalledWith("t1", { node: "n4", civilization: "CHINESE" }));
     expect(await screen.findByText("workflow.editor.preview_approver.role(JUDGE)")).toBeInTheDocument();
   });
@@ -335,7 +338,6 @@ describe("WorkflowEditor — versions and the engine fields", () => {
   it("making an exit conditional turns it into a branch on save", async () => {
     renderEditor();
     fireEvent.click(await screen.findByRole("button", { name: /来源殿审批/ }));
-    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.exits/ }));
     const exits = await screen.findByRole("region", { name: "workflow.editor.condition.title" });
     fireEvent.click(within(exits).getByRole("button", { name: "workflow.editor.condition.make" }));
     await waitFor(() => expect(within(exits).getByRole("button", { name: "workflow.editor.condition.clear" })).toBeInTheDocument());
@@ -360,7 +362,11 @@ describe("WorkflowEditor — the inspector edits in place", () => {
     fireEvent.click(await screen.findByRole("button", { name }));
   }
   const form = () => screen.getByTestId("node-form");
-  const toTab = (k: string) => fireEvent.click(screen.getByRole("tab", { name: new RegExp(`workflow\\.editor\\.tab\\.${k}`) }));
+  // v4 第十四批: two tabs. The old 节点 and 出口 are both 属性 (`workflow.editor.inspector`) now.
+  const toTab = (k: "issues" | "node" | "exits") =>
+    fireEvent.click(
+      screen.getByRole("tab", { name: k === "issues" ? /workflow\.editor\.tab\.issues/ : "workflow.editor.inspector" })
+    );
   /** The codes the 问题 tab lists right now (leaves the inspector there). */
   const issueCodes = () => {
     toTab("issues");

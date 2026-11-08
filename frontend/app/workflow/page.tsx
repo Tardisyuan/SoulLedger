@@ -30,6 +30,7 @@ import {
 import { QueryError } from "@/src/components/ui/PageError";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
+import { useEditorNav } from "@/src/components/layout/GlobalNav";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import type {
   BackendTemplate,
@@ -129,28 +130,36 @@ function WorkflowPageContent() {
     useSearchParams()?.get("tab") === "instances" ? "instances" : "existing"
   );
 
-  // 身份带(A1):编辑器页签题「审批流编辑器」,右栏「模板名 · 已发布 vN」。版本取模板列表里
-  // 那一行的 `published_version`;「草稿 N 处改动」只有编辑器内部知道,这里不写。其他页签退回面包屑。
+  // 页头(v4 第十四批 §4):编辑器页签的题字是模板名(新模板退回「审批流编辑器」),右栏一行状态
+  // 「文明 · 已发布 vN」。版本取模板列表里那一行的 `published_version`;「草稿 N 处改动」只有编辑器内部知道,
+  // 这里不写。页头光与水印跟当前殿的文明走,不跟模板的。其他页签退回面包屑。
   const editingRow = editingTemplateId ? templates.find((x) => String(x.id) === editingTemplateId) : undefined;
   const editingSource = editingRow ?? editingTemplateData;
   const editingName = editingSource ? localName(editingSource, locale) : undefined;
   const hall = useHall(t("plaque.office.rules"));
   usePlaque({
     hall,
-    title: tab === "editor" ? t("plaque.workflow_editor") : undefined,
+    title: tab === "editor" ? editingName || t("plaque.workflow_editor") : undefined,
     meta:
-      tab === "editor" && editingName
-        ? [editingName, editingRow?.published_version ? t("workflow.editor.version.published", { n: String(editingRow.published_version) }) : null]
+      tab === "editor" && editingSource
+        ? [
+            editingSource.civilization ? t(`workflow.civilizations.${editingSource.civilization}`) : null,
+            editingRow?.published_version
+              ? t("workflow.editor.version.published", { n: String(editingRow.published_version) })
+              : t("workflow.editor.version.unpublished"),
+          ]
             .filter(Boolean)
             .join(" · ")
         : undefined,
   });
+  // 编辑器里全局侧栏默认收成图标栏,展开是浮层(取舍 1)。
+  useEditorNav(tab === "editor");
 
   return (
     /* `page` (1200px), up from the `max-w-6xl` (1152) this page chose for
        itself. */
     <PageShell
-      /* The editor tab is a three-pane canvas (176 · canvas · 360, v3 A1) and takes the full width; the other two tabs keep the page column. */
+      /* The editor tab is a three-pane canvas (200 · canvas · 360, v4 第十四批) and takes the full width; the other two tabs keep the page column. */
       variant={tab === "editor" ? "full" : "page"}
       title={
         <>

@@ -18,7 +18,7 @@ import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
-import { BottomBar, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
+import { BottomBar, EditorNavProvider, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
 import { Plaque, PlaqueProvider, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
@@ -140,7 +140,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const currentGroup = useMemo(() => groupOfPath(menus, pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
   const currentNav = useMemo(() => groupOfPath(navItems(menus), pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
   const [openGroup, setOpenGroup] = useState<number | null>(null);
-  const nav = useNavMode();
+  // 审批流编辑器挂着时为真(`useEditorNav`):侧栏收成图标栏,展开是浮层。
+  const [editorNav, setEditorNav] = useState(false);
+  const nav = useNavMode(editorNav);
+  const asideRef = useRef<HTMLElement>(null);
+  // 浮层展开时,点侧栏外面或按 Esc 收回去(它盖着画布)。
+  const { overlay: navOverlay, close: closeNav } = nav;
+  useEffect(() => {
+    if (!navOverlay) return;
+    const onDown = (e: PointerEvent) => {
+      if (!asideRef.current?.contains(e.target as Node)) closeNav();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeNav();
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [navOverlay, closeNav]);
   const [openFor, setOpenFor] = useState<number | null>(null);
   if (currentNav !== openFor) {
     setOpenFor(currentNav);
@@ -186,7 +206,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </a>
     <ImpersonationBanner />
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
-      <aside className="sticky top-(--imp-h) hidden h-[calc(100vh-var(--imp-h))] min-[769px]:block">
+      {/* 编辑器里这一栏固定 68(图标栏);展开的 252 溢出到右边,压在画布上(z-sidebar 高过吸顶的工具条)。 */}
+      <aside
+        ref={asideRef}
+        data-nav-overlay={nav.overlay ? "" : undefined}
+        className={`sticky top-(--imp-h) hidden h-[calc(100vh-var(--imp-h))] min-[769px]:block ${
+          editorNav ? "z-sidebar w-17 data-nav-overlay:[&>#global-nav]:shadow-overlay" : ""
+        }`}
+      >
         <GlobalNav
           menus={menus}
           allMenuPaths={allMenuPaths}
@@ -365,7 +392,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             assist.pushed ? "pr-[420px] max-xl:[&_[class~='md:px-8']]:px-6" : ""
           }`}
         >
-          <PlaqueProvider value={setPlaque}>{hallViewExpired ? <HallViewExpired /> : children}</PlaqueProvider>
+          <PlaqueProvider value={setPlaque}>
+            <EditorNavProvider value={setEditorNav}>{hallViewExpired ? <HallViewExpired /> : children}</EditorNavProvider>
+          </PlaqueProvider>
         </main>
       </div>
 

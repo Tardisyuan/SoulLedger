@@ -247,6 +247,8 @@ test.describe("Workflow editor selection", () => {
     await expect(inspector.getByRole("heading", { level: 2 })).not.toHaveText(/魏征 · 察查司/);
     await expect(inspector.getByLabel("名称", { exact: true })).toHaveValue("上级殿阎王");
     await expect(page.getByRole("button", { name: "删除选中", exact: true })).toBeEnabled();
+    // v4 第十四批: with a node selected, the linear preview is at the foot of the 问题 tab.
+    await page.getByRole("tab", { name: /^问题 \d/ }).click();
     await expect(
       page.getByRole("region", { name: "模板预览 · 线性" }).getByRole("button", { pressed: true })
     ).toHaveText(/上级殿阎王/);
@@ -476,7 +478,7 @@ test.describe("Workflow editor keyboard access", () => {
   test("出口: a conditional exit added in the inspector is drawn and labelled on the canvas", async ({ page }) => {
     await openAppealPresetInEditor(page);
     await page.locator(".react-flow__node").first().click();
-    await page.getByRole("tab", { name: "出口", exact: true }).click();
+    // v4 第十四批: 出口 is the second section of 属性, no tab to open.
     const exits = page.getByRole("region", { name: "出口 · 条件" });
     await expect(exits.getByRole("listitem")).toHaveCount(1);
 

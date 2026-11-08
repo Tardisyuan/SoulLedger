@@ -619,7 +619,7 @@ describe("模板编辑器只读预览的殿名", () => {
         selectedId="p1"
         onSelect={() => {}}
         validationId="v"
-        tab="node"
+        tab="props"
         onTab={() => {}}
       />
     );

@@ -118,7 +118,9 @@ describe("the five strips read it from there", () => {
     "src/components/death-sync/DeathSyncTabs.tsx",
     // 2026-10-02(A5):动态页右列「关注」卡的「关注中 / 粉丝」两个页签。
     "src/components/social/FollowPanel.tsx",
-    // 2026-10-02(v3 A1):审批流编辑器检查器的「节点 / 出口 / 问题 / 版本」四个页签。
+    // 2026-11-08(v4 第十四批):审批流编辑器窄屏的「线性预览 / 问题 / 属性」三个页签。
+    "src/components/workflow/WorkflowEditor.tsx",
+    // 2026-10-02(v3 A1):审批流编辑器检查器的页签;v4 第十四批起是「属性 / 问题」两个。
     "src/components/workflow/WorkflowEditorPanels.tsx",
   ];
 

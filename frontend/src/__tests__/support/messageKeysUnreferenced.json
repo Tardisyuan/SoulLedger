@@ -102,6 +102,6 @@
   "welcome.agent_status",
   "welcome.current_civilization",
   "welcome.quick_actions",
-  "workflow.editor.narrow_body",
+  "workflow.editor.version.pending_changes",
   "workflow.template"
 ]

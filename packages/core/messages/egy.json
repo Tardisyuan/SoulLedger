@@ -1396,6 +1396,27 @@
         "no_end": "{{node}}: Nen Sekhet Pehwy",
         "auto_route_exit_missing": "{{node}} «{{region}}»: Nen Sekhet Er"
       },
+      "issue_short": {
+        "name_empty": "Nen Ren",
+        "self_route": "Wat Er Djes-Ef",
+        "duplicate_route": "Wat Wa Hena Wat Wa",
+        "reject_not_earlier": "Khesef Er — Sekhet Tepy Wa",
+        "reject_and_fail_route": "Khesef Er Hena Khesef Wat",
+        "timeout_incomplete": "Unut Hena Aha — Sesh Neb",
+        "timeout_role_missing": "Hab Er It — Nen Netjer",
+        "countersign_no_signers": "Sesen Hena — Nen Netjer Sesen",
+        "threshold_out_of_range": "Sesen Er Hry — Nen Menkh",
+        "end_has_exit": "Pehwy — Nen Wat",
+        "condition_empty": "Setep Nen Gem",
+        "condition_invalid": "Setep Nen Khetem",
+        "condition_overlap": "Setep Wa Hena Setep Ky — Kheper Hena",
+        "unreachable": "Nen Wat Er Sekhet Pen",
+        "no_exit": "Nen Wat Er Pehwy",
+        "no_end": "Nen Sekhet Pehwy"
+      },
+      "node_issue_count": "Nen Menkh {{n}}",
+      "node_issue_summary": "Sekhet Pen: Nen Menkh {{n}} · Iri Er Tepy Sesh.",
+      "locate": "Maa Em Sekhet",
       "palette": "Sekhet Neb",
       "inspector": "Mekher Sekhet",
       "inspector_empty": "Setep Sekhet Wa",
@@ -1419,6 +1440,7 @@
         "draft": "Sesh Tepy · Hemet-Sesh {{n}}",
         "published": "Per Seth · Hemet-Sesh {{n}}",
         "unpublished": "Nen Sesh",
+        "pending_changes": "Sesh Tepy · Hemet-Sesh {{n}} · Khemen {{count}} Nen Sesh",
         "history": "Hemet-Sesh · Medew Tepy",
         "status": {
           "DRAFT": "Sesh Tepy",
@@ -1501,10 +1523,7 @@
       },
       "roles_note": "Iaut Em Wat · Nen Nehem",
       "tab": {
-        "node": "Sekhet",
-        "exits": "Wat",
-        "issues": "Nen Menkh",
-        "version": "Sesh Sep"
+        "issues": "Nen Menkh"
       },
       "issues_blocking": "Nen Menkh {{n}}: Nen Per",
       "issues_hint": "Setep Wa → Sekhet",
