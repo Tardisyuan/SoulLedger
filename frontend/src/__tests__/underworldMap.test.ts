@@ -123,6 +123,34 @@ describe("the delivered SVGs are safe to put in the page", () => {
     expect(svg.querySelector("use")!.getAttribute("href")).toBe("#ok");
   });
 
+  // 落地页内联主视觉(LandingEmblem)留图里的 <style>:它全写在 .emblem2[data-civ][data-theme] 下;带外链的照删。
+  it("parseMapSvg keeps a scoped <style> only when asked, and never one that reaches outside", () => {
+    const scoped = '<svg xmlns="http://www.w3.org/2000/svg"><style>.emblem2 .e-l{stroke-width:6}</style></svg>';
+    expect(parseMapSvg(scoped)!.querySelector("style")).toBeNull();
+    expect(parseMapSvg(scoped, { keepStyle: true })!.querySelector("style")!.textContent).toContain(".e-l");
+    for (const bad of ["@import 'x.css';", ".a{background:url(https://example.com/x.png)}", '.a{fill:url("/x.svg")}']) {
+      const svg = parseMapSvg(`<svg xmlns="http://www.w3.org/2000/svg"><style>${bad}</style></svg>`, { keepStyle: true })!;
+      expect(svg.querySelector("style")).toBeNull();
+    }
+    const local = parseMapSvg('<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:url(#g)}</style></svg>', { keepStyle: true })!;
+    expect(local.querySelector("style")).not.toBeNull();
+  });
+
+  // 落地页的描线与光泽只认类名(emblemFx.ts):每份主视觉都要有主线 .e-l、刻度 .e-t,样式写在自己的作用域里。
+  it.each(EMBLEMS)("%s has the classes the landing effects work off, and scopes its own style", (rel) => {
+    const text = read(rel);
+    const [, civ, theme] = rel.match(/emblem-(\w+)-(dark|light)\.svg$/)!;
+    const svg = parseMapSvg(text, { keepStyle: true })!;
+    expect(svg.querySelectorAll(".e-l").length).toBeGreaterThan(0);
+    expect(svg.querySelectorAll(".e-t").length).toBeGreaterThan(0);
+    expect(svg.getAttribute("class")).toBe("emblem2");
+    expect(svg.getAttribute("data-civ")).toBe(civ);
+    expect(svg.getAttribute("data-theme")).toBe(theme);
+    expect(svg.querySelector("style")!.textContent).toContain(`.emblem2[data-civ="${civ}"][data-theme="${theme}"]`);
+    // 描线临时设 pathLength=1,收尾整个删掉:文件里本来就不能有。
+    expect(text).not.toMatch(/pathLength/);
+  });
+
   it.each(MAPS)("%s has the terrain / labels / you-are-here layers and a readable palette", (rel) => {
     const svg = parseMapSvg(read(rel))!;
     expect(svg.querySelector("#terrain")).not.toBeNull();

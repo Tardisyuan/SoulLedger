@@ -2089,3 +2089,89 @@ html.theme-switching *::after {
 :root:not(.light) .v4-themed[data-theme="light"] {
   display: none;
 }
+
+/* ── 落地页主视觉的三样代码效果(2026-11-09 用户定 A;逻辑在 src/lib/emblemFx.ts)────────────
+   只认 SVG 里的类名(.e-l / .e-l2 主线、.e-t 刻度),不认几何 —— Design 还在改线稿。
+   只动 transform / opacity(描线那一秒是 stroke-dashoffset,一次性),不动 filter。 */
+
+/* 1. 描线:插图前根上加 fx-pre(主线 pathLength=1,偏移压到 1 = 看不见,刻度透明),进视口加 fx-run 过渡回去。
+      刻度的 opacity 要压过图里自己的 `.emblem2[data-civ][data-theme] .e-t` 和行内 style,所以 !important。 */
+.emblem2.fx-pre :is(.e-l, .e-l2) {
+  stroke-dasharray: 1 !important;
+}
+.emblem2.fx-pre:not(.fx-run) :is(.e-l, .e-l2) {
+  stroke-dashoffset: 1 !important;
+}
+.emblem2.fx-pre:not(.fx-run) .e-t {
+  opacity: 0 !important;
+}
+.emblem2.fx-run :is(.e-l, .e-l2) {
+  transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.emblem2.fx-run .e-t {
+  transition: opacity 450ms ease-out 750ms;
+}
+
+/* 2. 金属光泽:一道斜光每 11 s 扫一次(避开图里的 3.4 / 3.8 / 4.2 / 4.4 / 4.6 / 9.6 / 10 / 60 s 和魂火的 1–2 s、5–8 s)。
+      遮罩是同一份 SVG(--sheen-mask),光只落在有笔画、有光晕的地方;光带自己只做 transform。
+      首扫延后 2 s,不和描线撞(离开视口时连延迟一起暂停)。 */
+.emblem-sheen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask: var(--sheen-mask) center / 100% 100% no-repeat;
+  mask: var(--sheen-mask) center / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+}
+.emblem-sheen::before {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent 20%, oklch(1 0 0 / 0.55) 50%, transparent 80%);
+  transform: translateX(-110%) rotate(12deg);
+  animation: emblem-sheen 11s ease-in-out 2s infinite;
+}
+.light .emblem-sheen {
+  opacity: 0.6;
+}
+@keyframes emblem-sheen {
+  0% {
+    transform: translateX(-110%) rotate(12deg);
+  }
+  14%,
+  100% {
+    transform: translateX(260%) rotate(12deg);
+  }
+}
+/* 离开视口或标签页藏起来:光泽和图里自己的动画都停。 */
+.emblem-fx[data-paused] *,
+.emblem-fx[data-paused] .emblem-sheen::before {
+  animation-play-state: paused !important;
+}
+
+/* 3. 倾斜:只在 JS 写了 data-tilting 时才有 transform(平时不为四张卡各建一层)。卡本身 overflow:hidden,
+      preserve-3d 会被压平,所以「主视觉更靠前」用 translate 做视差,不用 translateZ。
+      hover 的上浮是 Tailwind 4 的 `translate` 属性,和这里的 transform 互不覆盖。 */
+.landing-card[data-tilting] {
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+}
+.landing-emblem-layer {
+  translate: var(--par-x, 0px) var(--par-y, 0px);
+  transition: translate var(--transition-duration-fast) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emblem-sheen {
+    display: none;
+  }
+  .landing-card[data-tilting] {
+    transform: none;
+  }
+  .landing-emblem-layer {
+    translate: none;
+  }
+}

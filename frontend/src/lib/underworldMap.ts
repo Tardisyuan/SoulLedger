@@ -49,13 +49,19 @@ export const STROKE = { ahead: 1.5, walked: 2, ring: 1.5 } as const;
  *     SVG 自带的 `<style>` 一插进文档就是全局的,`.pulse` 会撞别人的类名)。
  *   - `on*` 属性;不以 `#` 开头的 `href` / `xlink:href`。
  * 解析失败返回 null。
+ *
+ * `keepStyle`:落地页内联的文明主视觉(`emblemFx.ts`)要留它自己的 `<style>` —— 那段样式每条都写在
+ * `.emblem2[data-civ][data-theme]` 下,插进文档也撞不到别人;带 `@import` 或外部 `url()` 的照删。
  */
-export function parseMapSvg(text: string): SVGSVGElement | null {
+export function parseMapSvg(text: string, { keepStyle = false }: { keepStyle?: boolean } = {}): SVGSVGElement | null {
   if (typeof DOMParser === "undefined") return null;
   const doc = new DOMParser().parseFromString(text, "image/svg+xml");
   const root = doc.documentElement;
   if (!root || root.nodeName !== "svg" || doc.getElementsByTagName("parsererror").length) return null;
-  doc.querySelectorAll("script, foreignObject, style").forEach((el) => el.remove());
+  doc.querySelectorAll("script, foreignObject").forEach((el) => el.remove());
+  doc.querySelectorAll("style").forEach((el) => {
+    if (!keepStyle || /@import|url\(\s*['"]?(?!#)/i.test(el.textContent ?? "")) el.remove();
+  });
   for (const el of [root, ...Array.from(root.querySelectorAll("*"))]) {
     for (const attr of Array.from(el.attributes)) {
       const name = attr.name.toLowerCase();
@@ -64,6 +70,21 @@ export function parseMapSvg(text: string): SVGSVGElement | null {
     }
   }
   return root as unknown as SVGSVGElement;
+}
+
+/** 取一份 SVG 文本,同一网址只取一次(失败的不缓存,下次再取)。地图与落地页主视觉共用。 */
+const svgCache = new Map<string, Promise<string>>();
+export function loadSvg(url: string): Promise<string> {
+  if (!svgCache.has(url)) {
+    svgCache.set(
+      url,
+      fetch(url).then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status))))).catch((e) => {
+        svgCache.delete(url);
+        throw e;
+      }),
+    );
+  }
+  return svgCache.get(url)!;
 }
 
 export const byId = (svg: Element, id: string): Element | null => svg.querySelector(`[id="${CSS_ESCAPE(id)}"]`);

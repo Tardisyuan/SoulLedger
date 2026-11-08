@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRef, type FocusEvent, type PointerEvent, type ReactNode } from "react";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
 import type { SealCiv } from "@/src/components/plaque/Seal";
-import { CivEmblem } from "@/src/components/brand/CivEmblem";
+import { LandingEmblem } from "@/src/components/landing/LandingEmblem";
 import { SoulFire } from "@/src/components/landing/SoulFire";
+import { FOCUS_TILT, tiltAllowed, tiltFor, type Tilt } from "@/src/lib/emblemFx";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
@@ -19,7 +20,7 @@ export const CARD_SKIN: Record<string, SealCiv> = { CHINESE: "cn", EUROPEAN: "eu
 /**
  * Design batch 70: the page's subject is the four cards, and the first screen is all of it (1280 × 800).
  * v4(第七批落地页 · 阶段 5):题字与导语是 v4 的 `landing.title` / `landing.lede`,其余照旧复用 `demo.landing.*`;
- * 卡片是 v4 的卡(card 底上一层文明光,ink 字,金属角饰),印换成四个文明主视觉(`CivEmblem`),
+ * 卡片是 v4 的卡(card 底上一层文明光,ink 字,金属角饰),印换成四个文明主视觉(内联版 `LandingEmblem`:描线、光泽、倾斜见 `emblemFx.ts`),
  * 每张卡一句 `landing.civ.*`。
  */
 export function Landing({
@@ -120,13 +121,14 @@ function CivCard({
   const { t } = useI18n();
   const skin = CARD_SKIN[civ];
   const name = t(`demo.civ.${skin}.name`);
+  const tilt = useCardTilt();
   const body = (
     <>
       {/* 魂火(第十六批 §2):卡的最底层,压在底色与内容之间;下面几层都是 relative / absolute,画在它上面。 */}
       <SoulFire civ={skin} />
       <span aria-hidden="true" className="v4-corner" />
-      <span className="relative shrink-0 md:self-end">
-        <CivEmblem civ={skin} size={88} className="md:size-30" />
+      <span className="landing-emblem-layer relative shrink-0 md:self-end">
+        <LandingEmblem civ={skin} size={88} className="md:size-30" />
       </span>
       <span className="relative flex min-w-0 flex-1 flex-col md:mt-4">
         <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t(`demo.civ.${skin}.realm`)}</span>
@@ -148,8 +150,15 @@ function CivCard({
           data-testid={`landing-card-${skin}`}
           aria-label={t("demo.landing.card_label", { civ: name })}
           onClick={(e) => onEnter(skin, e.currentTarget)}
-          onPointerEnter={() => onWarm?.(skin)}
-          onFocus={() => onWarm?.(skin)}
+          {...tilt}
+          onPointerEnter={(e) => {
+            tilt.onPointerEnter(e);
+            onWarm?.(skin);
+          }}
+          onFocus={(e) => {
+            tilt.onFocus(e);
+            onWarm?.(skin);
+          }}
           className={look}
         >
           {body}
@@ -159,6 +168,7 @@ function CivCard({
           href={`/login?civ=${skin}`}
           data-testid={`landing-card-${skin}`}
           aria-label={t("demo.landing.card_label", { civ: name })}
+          {...tilt}
           className={look}
         >
           {body}
@@ -166,6 +176,49 @@ function CivCard({
       )}
     </li>
   );
+}
+
+/** 卡片随指针倾斜(`emblemFx.ts` 第 3 条):指针移动按帧节流,只写两个角度和主视觉的位移(transform / translate)。 */
+function useCardTilt() {
+  const frame = useRef(0);
+  const rect = useRef<DOMRect | null>(null);
+  const apply = (el: HTMLElement, tilt: Tilt | null) => {
+    cancelAnimationFrame(frame.current);
+    if (!tilt) {
+      el.removeAttribute("data-tilting");
+      for (const p of ["--tilt-x", "--tilt-y", "--par-x", "--par-y"]) el.style.removeProperty(p);
+      return;
+    }
+    el.setAttribute("data-tilting", "");
+    el.style.setProperty("--tilt-x", `${tilt.rx}deg`);
+    el.style.setProperty("--tilt-y", `${tilt.ry}deg`);
+    el.style.setProperty("--par-x", `${tilt.px}px`);
+    el.style.setProperty("--par-y", `${tilt.py}px`);
+  };
+  return {
+    onPointerEnter(e: PointerEvent<HTMLElement>) {
+      // 量一次没倾斜时的框:倾斜之后的外接框会跟着变,逐帧量会自己抖。
+      rect.current = e.pointerType === "mouse" && tiltAllowed() ? e.currentTarget.getBoundingClientRect() : null;
+    },
+    onPointerMove(e: PointerEvent<HTMLElement>) {
+      const r = rect.current;
+      if (!r) return;
+      const el = e.currentTarget;
+      const { clientX, clientY } = e;
+      cancelAnimationFrame(frame.current);
+      frame.current = requestAnimationFrame(() => apply(el, tiltFor(clientX, clientY, r)));
+    },
+    onPointerLeave(e: PointerEvent<HTMLElement>) {
+      rect.current = null;
+      apply(e.currentTarget, null);
+    },
+    onFocus(e: FocusEvent<HTMLElement>) {
+      if (!rect.current && tiltAllowed() && e.currentTarget.matches(":focus-visible")) apply(e.currentTarget, FOCUS_TILT);
+    },
+    onBlur(e: FocusEvent<HTMLElement>) {
+      if (!rect.current) apply(e.currentTarget, null);
+    },
+  };
 }
 
 /**
