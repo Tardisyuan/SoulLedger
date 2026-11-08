@@ -229,8 +229,7 @@
     "undeclared": "Nen Sesh",
     "by_deployment": "Neb Mi Smen Hery",
     "default": "Smen Tepy",
-    "reference": "Mi Djedu",
-    "author": "Neb Medu"
+    "reference": "Mi Djedu"
   },
   "souls": {
     "title": "Ba",
@@ -9155,9 +9154,6 @@
       "skip": "Sni"
     },
     "admin_hint": "Sab Hery: Maa Duat 4. Dy: Hesb Neb. Medew Maa, Ba Sab Hena Was, Medu Sesh: Em Menu Semehy.",
-    "author": {
-      "line": "Neb Medu {{name}}: Smen Sesh Ta, Hehy Djedu Hena Maa Maat."
-    },
     "soul": {
       "entry_title": "Ba: Em Medjat Ba Wa",
       "entry_body": "Maa: Medjat Ba Em Medjat Wesekhet.",

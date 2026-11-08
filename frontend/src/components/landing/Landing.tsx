@@ -89,10 +89,10 @@ export function Landing({
       <footer className="shrink-0 border-t border-[oklch(var(--color-line))]">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 landing-gutter py-3">
           <span className="font-title text-sm text-[oklch(var(--color-ink))]">{t("demo.landing.footer")}</span>
-          <span data-testid="landing-author" className="text-xs text-[oklch(var(--color-ink-muted))]">
-            {t("demo.author.line", { name: stats.author.name })}{" "}
-            <a href={stats.author.github} target="_blank" rel="noreferrer" className="underline underline-offset-2">GitHub</a>
-          </span>
+          {/* The repository only: no personal name or address on the site (用户 2026-11-08). */}
+          <a data-testid="landing-repo" href={stats.github} target="_blank" rel="noreferrer" className="text-xs text-[oklch(var(--color-ink-muted))] underline underline-offset-2">
+            {t("demo.build.github")} <span aria-hidden="true">↗</span>
+          </a>
           <span className="md:hidden"><LanguageSwitcher /></span>
           <span className="flex flex-wrap items-center gap-4 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
             <a href="https://claude.com/claude-code" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">Built with Claude Code</a>
