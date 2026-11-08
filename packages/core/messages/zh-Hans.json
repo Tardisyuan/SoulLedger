@@ -3,12 +3,10 @@
     "title": "灵魂账本",
     "home": "欢迎页",
     "welcome": "欢迎页",
-    "greeting": "你好, {{username}}!",
     "greeting_morning": "上午好",
     "greeting_afternoon": "下午好",
     "greeting_evening": "晚上好",
     "greeting_night": "夜深了",
-    "expand_menu": "展开菜单",
     "collapse_locked": "窗口宽度不足 1200 像素，导航固定收起",
     "settings": "设置",
     "language": "界面语言",
@@ -32,8 +30,6 @@
     "logout": "登出",
     "password": "密码",
     "login_success": "登录成功",
-    "error_login_failed": "登录失败",
-    "error_locked": "已锁定，{{minutes}} 分钟后再试",
     "confirm_logout": "确认退出登录",
     "confirm_logout_desc": "确定要退出当前账号吗？",
     "confirm_logout_btn": "确认退出",
@@ -207,27 +203,12 @@
   },
   "home": {
     "console": "控制台",
-    "civilizations": {
-      "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂与地狱",
-      "EGYPTIAN": "埃及冥界",
-      "GREEK": "希腊冥界"
-    },
     "civ_subtitle": {
       "CHINESE": "中国",
       "EUROPEAN": "欧洲",
       "EGYPTIAN": "埃及",
       "GREEK": "希腊"
-    },
-    "civ_desc": {
-      "CHINESE": "十殿阎王、孟婆汤、六道轮回",
-      "EUROPEAN": "基督教审判、炼狱、但丁地狱、勒特河与欧诺埃河",
-      "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇原",
-      "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
-    },
-    "your_realm": "你所属的冥界",
-    "civilizations_eyebrow_sub": "四界 · 四本账",
-    "signed_in_as": "已登录 · {{name}}"
+    }
   },
   "footer": {
     "version": "灵魂账本 v0.1"
@@ -272,7 +253,6 @@
     "fated_death_help": "生死簿上注定的死期。登记的死亡早于这一天，即判为横死：审判标「枉死」，灵魂先入枉死城，到这一天才能认领。不知道就留空。",
     "fated_death_preview": "死亡早于阳寿 · 这桩审判会标「枉死」，候至 {{date}}",
     "action": "操作",
-    "view": "查看",
     "states": {
       "ALIVE": "存活",
       "JUDGING": "审判中",
@@ -444,12 +424,9 @@
       "origin_region_hint_greek": "希腊冥府按这一项定由谁主审；「不详」直接交终审。"
     },
     "detail": {
-      "loading": "加载灵魂数据中...",
-      "not_found": "灵魂未找到",
       "back_to_list": "← 返回灵魂列表",
       "edit": "编辑",
       "delete": "移入回收站",
-      "soul_info": "灵魂信息",
       "birth": "出生",
       "death": "死亡",
       "location_label": "位置",
@@ -582,14 +559,12 @@
         "progress_label": "户头进度",
         "current": "当前",
         "route_title": "行程",
-        "route_legend": "━ 已行 ┅ 待行 ▪ 现在",
         "identity": "身份",
         "karma": "功过",
         "col_in": "收",
         "col_out": "支",
         "col_net": "结",
         "events": "事件日志",
-        "court_judge": "庭 · 判官",
         "verdict_pending": "待决",
         "verdict_words": "判词",
         "nature": "性质",
@@ -860,7 +835,6 @@
     "capture": {
       "title": "勾魂",
       "unavailable": "勾魂状态暂时读不到",
-      "due_hint": "阳寿已到，可以发勾魂牒。交接时登记死亡，案子交城隍初审。",
       "escort_label": "鬼差",
       "escort": {
         "SUGGESTED": "按功过建议",
@@ -876,8 +850,6 @@
       "city_god": "{{name}}发牒",
       "issue": "发勾魂牒",
       "capture": "拘到",
-      "hand_over": "交接",
-      "cancel": "撤销",
       "cancel_reason": "撤销理由",
       "cancel_confirm": "撤销勾魂牒",
       "issued_toast": "已为{{name}}发勾魂牒",
@@ -1114,27 +1086,20 @@
     "role_delete_error": "删除角色失败",
     "role_create_error": "创建角色失败",
     "role_edit_error": "更新角色失败",
-    "confirm_delete_role": "确认删除此角色？",
     "matrix": {
       "title": "权限矩阵",
       "codename_col": "权限代码",
       "filter_placeholder": "按权限代码或名称筛选...",
       "only_differences": "仅显示存在差异的行",
-      "pending_count": "{{count}} 个角色有未保存的改动",
-      "no_changes": "没有未保存的改动",
       "no_roles": "暂无角色",
       "save_button": "保存改动",
-      "saving": "保存中...",
       "save_error": "保存失败",
       "load_error": "矩阵数据加载失败",
-      "before_after_line": "{{role}} {{before}} → {{after}}",
-      "role_users": "{{count}} 名用户持有此角色",
       "legend_title": "五个角色互为同侪，不是阶梯",
       "legend_intro": "权限数量的多少不代表位阶高低，下面是从当前数据中取得的真实对照：",
       "legend_nonsubset": "{{roleA}} 持有 {{roleB}} 没有的权限（如 {{codenamesA}}）；{{roleB}} 也持有 {{roleA}} 没有的权限（如 {{codenamesB}}）——两者互不包含，谁也不是谁的子集。",
       "legend_countparadox": "{{higher}} 共持有 {{higherCount}} 项权限，多于 {{lower}} 的 {{lowerCount}} 项，但 {{lower}} 仍独有 {{codenames}}，{{higher}} 并不具备——持有数量更多不代表权限范围更广。",
       "confirm_title": "确认保存权限改动",
-      "confirm_replace_notice": "此接口为整体替换：保存将删除下列角色现有的全部授权，再按下方结果重建。",
       "confirm_user_count": "{{count}} 名用户当前使用此角色，保存后立即生效。",
       "confirm_removed_label": "将被移除：",
       "confirm_clear_warning": "此操作将清空 {{role}} 持有的全部权限。",
@@ -1143,11 +1108,6 @@
       "confirm_cancel": "取消",
       "confirm_submit": "确认保存",
       "confirm_submitting": "保存中...",
-      "conflict_message": "{{role}} 自加载后已被其他管理员修改（版本 {{expected}} → {{current}}）。请重新加载后再决定。",
-      "conflict_reload_button": "重新加载此角色",
-      "conflict_reloading": "加载中...",
-      "partial_save_title": "这次保存在中途停下了。下面这些角色已经写进服务器：",
-      "partial_save_hint": "整体重试会把它们按旧版本号再发一次，服务器会当成冲突拒绝。重试前请先重新加载。",
       "showing": "权限 · 显示 {{shown}} / {{total}}",
       "no_differences": "没有差异：当前筛选下各角色取值完全一致。",
       "role_picker": "角色",
@@ -1410,7 +1370,6 @@
       "preview": "模板预览 · 线性",
       "preview_empty": "还没有节点。",
       "narrow_title": "窄屏只读。要改节点或连线，请在 1024 以上打开。",
-      "narrow_body": "窄屏下只读:显示线性预览、校验结果和节点属性。",
       "publish": "发布",
       "publishing": "发布中…",
       "published": "已发布 v{{n}}",
@@ -1570,7 +1529,6 @@
     "delete_confirm_msg": "确定要删除模板 \"{{name}}\" 吗？",
     "delete_irreversible": "此操作不可撤销，删除后无法恢复。",
     "select_from_left": "请从左侧选择一个模板",
-    "template": "模板编辑器",
     "instances": "审批实例",
     "no_instances": "暂无审批实例",
     "filter_overdue": "只看已超时",
@@ -2169,20 +2127,16 @@
       "back_to_list": "← 返回审判列表",
       "final": "终审",
       "soul_info": "灵魂信息",
-      "soul_name": "灵魂名称",
       "civilization": "文明",
       "court": "法庭",
       "evidence": "证据",
       "confession": "供词",
-      "verdict": "裁决",
       "concluded_at": "结案时间",
       "notes": "备注",
-      "render_verdict": "宣判",
       "conclude_success": "已落印，待审批",
       "conclude_error": "审判完结失败",
       "select_verdict": "请选择裁决",
       "concluding": "结案处理中...",
-      "conclude": "结案",
       "notes_placeholder": "输入备注...",
       "create_workflow": "发起审批流程",
       "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。",
@@ -2193,7 +2147,6 @@
       "passed_barred_five_heinous": "罪目是五逆：直入阿鼻，不能判通过。",
       "passed_barred_untruthful": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。"
     },
-    "conclude_error": "结案失败",
     "no_evidence": "暂无证据材料",
     "grounds": {
       "title": "依据条文",
@@ -2227,13 +2180,7 @@
     "corpus": {
       "title": "语料条文",
       "subtitle": "判决可以据以成立的条文。四套体系共转录 {{n}} 条。",
-      "col_sigil": "节号",
-      "col_offence": "罪目",
-      "col_text": "条文",
-      "col_citations": "引",
-      "filter_corpus": "语料",
       "article_count": "{{n}} 条",
-      "listed_count": "本页 {{n}} 条",
       "empty_reason": "这套语料尚无转录条文。",
       "citations_absent": "本次响应不带引用计数。",
       "sigil_absent": "此条无转录节号。",
@@ -2248,7 +2195,6 @@
       "copy_cite": "复制引用",
       "copied": "已复制",
       "cited_by": "被引用",
-      "cited_by_count": "被引用 {{n}} 件",
       "versions": "版本",
       "select_prompt": "从目录选一条律条。",
       "no_match": "没有匹配「{{q}}」的律条",
@@ -2264,7 +2210,6 @@
       "related_circle": "同圈",
       "related_terrace": "同台阶",
       "search_paste": "粘贴引文直达，或输入字词搜索",
-      "search_paste_short": "粘贴引文或搜索",
       "hits_summary": "子串匹配 · {{c}} 部中 {{n}} 处",
       "hit_prev": "上一处",
       "hit_next": "下一处",
@@ -2345,7 +2290,6 @@
       "defer": "放进待定",
       "clear_selection": "取消选择",
       "batch_limit": "一次至多 {{n}} 件，其余请下一批",
-      "balance": "余额",
       "claimant": "认领",
       "group_empty": "本组暂无",
       "key_move": "上下移动",
@@ -2400,7 +2344,6 @@
       "filter_mine": "我认领的",
       "col_draft": "草拟判决",
       "col_deferred": "延后",
-      "col_kind": "种类",
       "draft_none": "未拟",
       "deferred_session": "本次会话",
       "key_restore": "全部放回",
@@ -2566,7 +2509,6 @@
       "label": "罪目",
       "none": "未填",
       "routes_to": "判有罪时送 {{court}}",
-      "fallback": "未填罪目：判有罪时按严重度选殿",
       "placeholder": "未填 · 按严重度选殿",
       "no_match": "没有这个罪目",
       "kings": {
@@ -2885,7 +2827,6 @@
     "new_password": "新密码",
     "confirm_password": "确认密码",
     "password_too_short": "密码至少8位",
-    "password_changed": "密码修改成功",
     "password_change_failed": "密码修改失败",
     "password_changed_others_out": "密码已修改,其他设备上的登录已退出",
     "password_reason_common": "这个密码太常见,请换一个",
@@ -2898,7 +2839,6 @@
     "password_old_wrong": "当前密码不正确",
     "profile_updated": "个人信息已更新",
     "profile_update_failed": "个人信息更新失败",
-    "avatar": "头像",
     "load_failed": "无法获取最新资料，下面显示的可能是旧值",
     "notifications": {
       "title": "通知",
@@ -3136,7 +3076,6 @@
     },
     "no_realms": "还没有登记任何殿域。",
     "topology": {
-      "map_title": "拓扑",
       "legend": "━ 已行 ┅ 待行 ▪ 现在 □ 站",
       "schematic": "示意",
       "shape_line": "一线",
@@ -3176,7 +3115,6 @@
       "occupancy_failed": "在押人数加载失败",
       "not_a_place": "— · 不是地方",
       "edit_scope": "只有容量可改;其余各列来自神话语料,不经接口改。容量降到在押人数以下时谁都不挪,之后发落到这里会被拒。",
-      "edit_capacity": "改容量",
       "edit_capacity_of": "改 {{name}} 的容量",
       "capacity_label": "容量",
       "full_warning": "已满:在押 {{held}}。谁都不挪,之后发落到这里会被拒。",
@@ -3506,7 +3444,6 @@
     "email_empty": "邮箱不能为空",
     "password_empty": "密码不能为空",
     "password": "密码",
-    "optional": "可选",
     "username_placeholder": "输入用户名",
     "email_placeholder": "输入邮箱",
     "password_placeholder": "输入密码",
@@ -3642,8 +3579,6 @@
     "realm": "领域",
     "soul_count": "灵魂数量",
     "no_realm_data": "暂无领域数据",
-    "souls": "灵魂",
-    "on": "于",
     "users": {
       "impersonate": "以此人身份查看"
     },
@@ -3664,11 +3599,8 @@
     }
   },
   "welcome": {
-    "quick_actions": "快捷操作",
-    "agent_status": "AI 智能体状态",
     "recent_activity": "最近活动",
     "view_all_activity": "查看全部活动",
-    "current_civilization": "当前文明",
     "user_role": "用户角色",
     "system_version": "系统版本",
     "just_now": "刚刚",
@@ -3855,7 +3787,6 @@
     "title": "系统发生错误",
     "description": "抱歉，服务器遇到了问题",
     "retry": "重新载入",
-    "home": "返回首页",
     "next_body": "服务器没有回应。手上这一件没有改动。"
   },
   "not_found": {
@@ -3864,7 +3795,6 @@
     "home": "返回首页"
   },
   "search": {
-    "placeholder": "搜索...",
     "aria_label": "搜索",
     "dialog_label": "全局搜索",
     "cancel": "取消",
@@ -4732,8 +4662,7 @@
       "schedule": "调度",
       "timezone": "时区",
       "last_run": "上次运行",
-      "next_run": "下次运行",
-      "enabled": "启用"
+      "next_run": "下次运行"
     },
     "jobs": {
       "ledger_recalculate_tenant": "重算功过格",
@@ -4880,9 +4809,6 @@
       "hourly": "每小时第 {{minute}} 分",
       "daily": "每天 {{time}}",
       "weekly": "每{{weekday}} {{time}}"
-    },
-    "events": {
-      "SCHEDULER_RUN_FAILED": "定时任务运行失败"
     },
     "realtime": {
       "run_failed": "「{{job}}」运行失败",
@@ -6853,11 +6779,6 @@
       "COMMENT": "评论",
       "USER": "用户"
     },
-    "report_status": {
-      "OPEN": "待处理",
-      "RESOLVED": "已处置",
-      "DISMISSED": "已驳回"
-    },
     "reason": {
       "SPAM": "垃圾信息",
       "ABUSE": "辱骂骚扰",
@@ -6874,10 +6795,7 @@
     "fields": {
       "author": "作者",
       "content": "内容",
-      "reports": "举报",
-      "reasons": "举报原因",
       "created": "时间",
-      "until": "禁言至",
       "reason": "理由",
       "word": "敏感词"
     },
@@ -6885,20 +6803,12 @@
       "posts": "帖子",
       "comments": "评论"
     },
-    "status_filter": {
-      "PENDING": "待审",
-      "HIDDEN": "已隐藏"
-    },
     "actions": {
       "hide": "隐藏",
       "delete": "删除",
       "mute": "禁言",
-      "dismiss": "驳回",
-      "approve": "通过",
-      "restore": "恢复",
       "lift": "解除禁言",
-      "add_word": "添加",
-      "remove_word": "删除"
+      "add_word": "添加"
     },
     "mute_days": "禁言天数",
     "mute_days_option": "{{n}} 天",
@@ -6927,9 +6837,6 @@
       "invalid_days": "禁言天数须在 1–365 之间"
     },
     "empty": {
-      "reports": "没有待处理的举报",
-      "content": "没有待审的内容",
-      "content_reason": "只有命中敏感词的内容会进待审;被举报的内容在举报队列里",
       "words": "还没有敏感词",
       "mutes": "没有禁言记录",
       "review": "没有待审内容",
@@ -6961,7 +6868,6 @@
       "report_n": "举报 {{n}}",
       "rule_hit": "规则命中 · 敏感词",
       "from": "来自 {{name}}",
-      "reaction_comment": "评",
       "reason_label": "处理备注（警告必填）",
       "reason_required": "警告必须写理由",
       "approve": "放行",
@@ -7647,8 +7553,6 @@
     },
     "key": {
       "title": "API key",
-      "set": "已设置",
-      "not_set": "未设置",
       "set_at": "设置于 {{date}}",
       "from_env": "来自部署配置",
       "replace": "更换",
@@ -7976,7 +7880,6 @@
         "reassignments": "移交",
         "cooldowns": "缩短冷却申请",
         "rebirths": "转生申请",
-        "letters": "待回书信",
         "unassigned_letters": "未分配的书信",
         "pick_nodes": "待我选站",
         "city_god": "城隍初审",
@@ -7989,12 +7892,8 @@
       "filter_empty_body": "换个类型看看，或清除筛选。",
       "filter_clear": "清除筛选",
       "see_all": "全部 {{n}} 封",
-      "group_sentence_change": "去处计划变更",
       "on_desk_only": "在电脑上处理",
-      "empty_body_other": "有轮到你的事时会推送给你。",
-      "group_sentence_change_by_civ": {
-        "cn": "受刑计划变更"
-      }
+      "empty_body_other": "有轮到你的事时会推送给你。"
     },
     "queue": {
       "mine": "我手上",
@@ -8838,7 +8737,6 @@
     "from": "交出人",
     "to": "接手人",
     "pick": "选一位本殿在职官员",
-    "submit": "移交",
     "submit_n": "移交 {{n}} 件",
     "submitting": "移交中…",
     "row_judgments": "认领中的审判",
@@ -8897,7 +8795,6 @@
     "subtitle": "你被邀请为官员。设好密码后，用用户名和这个密码登录。",
     "new_password": "新密码",
     "confirm_password": "再输一次",
-    "mismatch": "两次输入的不一样",
     "submit": "设置密码",
     "weak": "这个密码不够强：",
     "done_title": "密码已设置",
@@ -8943,12 +8840,10 @@
     "hall_names_hint": "egy 留空时用默认叫法",
     "description_optional": "说明 · 选填",
     "submit": "新建",
-    "submitting": "新建中…",
     "created_toast": "已新建{{name}}",
     "create_failed": "没能新建，请重试",
     "deactivate": "停用",
     "activate": "重新启用",
-    "row_menu": "更多操作",
     "deactivate_title": "停用{{name}}？",
     "deactivate_body": "数据全部保留，已有的灵魂和案件照常办理。停用后：",
     "deactivate_no_souls": "不能再登记新灵魂；",

@@ -190,7 +190,6 @@ const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
   // (第三十五批的 users.import.template_notes 已撤:第五十四批改写后中文写出了「密码」。)
   // 第五十四批:邀请落地页「再输一次」「两次输入的不一样」,说的是新密码。
   "acceptInvite.confirm_password",
-  "acceptInvite.mismatch",
   "users.reset_password.confirm",
   "users.reset_password.failed",
   "soul_accounts.credentials.reason.voided",

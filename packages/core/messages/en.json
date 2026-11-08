@@ -2,12 +2,10 @@
   "nav": {
     "title": "SoulLedger",
     "home": "Home",
-    "greeting": "Hello, {{username}}!",
     "greeting_morning": "Good Morning",
     "greeting_afternoon": "Good Afternoon",
     "greeting_evening": "Good Evening",
     "greeting_night": "Good Night",
-    "expand_menu": "Expand menu",
     "collapse_locked": "Navigation stays collapsed below a 1200 px window width",
     "settings": "Settings",
     "welcome": "Welcome",
@@ -32,8 +30,6 @@
     "logout": "Sign out",
     "password": "Password",
     "login_success": "Signed in",
-    "error_login_failed": "Sign-in failed",
-    "error_locked": "Locked. Try again in {{minutes}} min",
     "confirm_logout": "Sign out?",
     "confirm_logout_desc": "Are you sure you want to log out?",
     "confirm_logout_btn": "Sign out",
@@ -207,27 +203,12 @@
   },
   "home": {
     "console": "Console",
-    "civilizations": {
-      "CHINESE": "Chinese Diyu",
-      "EUROPEAN": "European Heaven & Hell",
-      "EGYPTIAN": "Egyptian Duat",
-      "GREEK": "Greek Underworld"
-    },
     "civ_subtitle": {
       "CHINESE": "China",
       "EUROPEAN": "Europe",
       "EGYPTIAN": "Egypt",
       "GREEK": "Greece"
-    },
-    "civ_desc": {
-      "CHINESE": "Ten Yama Kings, Meng Po's soup, the six paths of rebirth",
-      "EUROPEAN": "Christian judgement, purgatory, Dante's Inferno, Lethe and Eunoe",
-      "EGYPTIAN": "The judgement of Osiris, the weighing of the heart, the Field of Reeds",
-      "GREEK": "Three judges parting the ways, Er's thousand-year cycle, the water of Lethe"
-    },
-    "your_realm": "Your realm",
-    "civilizations_eyebrow_sub": "Four realms · four ledgers",
-    "signed_in_as": "Signed in · {{name}}"
+    }
   },
   "footer": {
     "version": "SoulLedger v0.1"
@@ -272,7 +253,6 @@
     "fated_death_help": "The date of death fixed in the ledger of life and death. If the recorded death comes earlier, the death is untimely: the judgment is marked Untimely and the soul waits in the City of Wrongful Death; the judgment can't be claimed before that date. Leave blank if unknown.",
     "fated_death_preview": "Death before the fated date · this judgment will be marked Untimely, held until {{date}}",
     "action": "Action",
-    "view": "View",
     "states": {
       "ALIVE": "Alive",
       "JUDGING": "Judging",
@@ -444,12 +424,9 @@
       "origin_region_hint_greek": "The Greek Underworld uses this to choose the presiding judge; \"Unknown\" goes straight to the final review."
     },
     "detail": {
-      "loading": "Loading soul data...",
-      "not_found": "Soul not found",
       "back_to_list": "← Back to souls",
       "edit": "Edit",
       "delete": "Move to recycle bin",
-      "soul_info": "Soul Information",
       "birth": "Birth",
       "death": "Death",
       "location_label": "Location",
@@ -582,14 +559,12 @@
         "progress_label": "Account progress",
         "current": "current",
         "route_title": "Route",
-        "route_legend": "━ travelled ┅ ahead ▪ now",
         "identity": "Identity",
         "karma": "Merit & demerit",
         "col_in": "In",
         "col_out": "Out",
         "col_net": "Net",
         "events": "Event log",
-        "court_judge": "Court · judge",
         "verdict_pending": "Pending",
         "verdict_words": "Verdict text",
         "nature": "Nature",
@@ -860,7 +835,6 @@
     "capture": {
       "title": "Capture",
       "unavailable": "Capture status can't be read right now",
-      "due_hint": "The fated date has come: a capture warrant can be issued. Handing over registers the death and sends the case to the City God.",
       "escort_label": "Escort",
       "escort": {
         "SUGGESTED": "Suggested by karma",
@@ -876,8 +850,6 @@
       "city_god": "issued by {{name}}",
       "issue": "Issue capture warrant",
       "capture": "Mark captured",
-      "hand_over": "Hand over",
-      "cancel": "Revoke",
       "cancel_reason": "Reason for cancelling",
       "cancel_confirm": "Revoke the warrant",
       "issued_toast": "Capture warrant issued for {{name}}",
@@ -1114,27 +1086,20 @@
     "role_delete_error": "Delete role failed",
     "role_create_error": "Create role failed",
     "role_edit_error": "Update role failed",
-    "confirm_delete_role": "Delete this role?",
     "matrix": {
       "title": "Permission Matrix",
       "codename_col": "Codename",
       "filter_placeholder": "Filter by codename or name...",
       "only_differences": "Show only differing rows",
-      "pending_count": "{{count}} role(s) have unsaved changes",
-      "no_changes": "No unsaved changes",
       "no_roles": "No roles yet",
       "save_button": "Save changes",
-      "saving": "Saving...",
       "save_error": "Save failed",
       "load_error": "Failed to load the matrix",
-      "before_after_line": "{{role}} {{before}} → {{after}}",
-      "role_users": "{{count}} user(s) hold this role",
       "legend_title": "Five peers, not a ladder",
       "legend_intro": "Holding more codenames does not mean outranking another role. Real comparisons pulled from the current data:",
       "legend_nonsubset": "{{roleA}} holds codenames {{roleB}} does not (e.g. {{codenamesA}}); {{roleB}} likewise holds codenames {{roleA}} does not (e.g. {{codenamesB}}) — neither is a subset of the other.",
       "legend_countparadox": "{{higher}} holds {{higherCount}} codenames in total, more than {{lower}}'s {{lowerCount}} — yet {{lower}} alone holds {{codenames}}, which {{higher}} does not. Holding more does not mean holding a superset.",
       "confirm_title": "Confirm permission changes",
-      "confirm_replace_notice": "This endpoint replaces the whole set: saving deletes every grant the roles below currently hold, then rebuilds from the result shown here.",
       "confirm_user_count": "{{count}} user(s) currently hold this role — this takes effect immediately on save.",
       "confirm_removed_label": "Will be removed:",
       "confirm_clear_warning": "This clears every codename {{role}} currently holds.",
@@ -1143,11 +1108,6 @@
       "confirm_cancel": "Cancel",
       "confirm_submit": "Confirm save",
       "confirm_submitting": "Saving...",
-      "conflict_message": "{{role}} was modified by another admin since it was loaded (version {{expected}} → {{current}}). Reload before deciding what to save.",
-      "conflict_reload_button": "Reload this role",
-      "conflict_reloading": "Reloading...",
-      "partial_save_title": "The save stopped partway. These roles were already written to the server:",
-      "partial_save_hint": "Re-saving everything will send these again with a version they no longer have, which the server refuses as a conflict. Reload before retrying.",
       "showing": "Permissions · showing {{shown}} / {{total}}",
       "no_differences": "No differences: every role has the same values under this filter.",
       "role_picker": "Role",
@@ -1410,7 +1370,6 @@
       "preview": "Linear preview",
       "preview_empty": "No nodes yet.",
       "narrow_title": "Read-only on narrow screens. Open at 1024 px or wider to change nodes or edges.",
-      "narrow_body": "Read-only on narrow screens: linear preview, checks and node properties.",
       "publish": "Publish",
       "publishing": "Publishing…",
       "published": "Published v{{n}}",
@@ -1570,7 +1529,6 @@
     "delete_confirm_msg": "Delete template \"{{name}}\"?",
     "delete_irreversible": "This action cannot be undone.",
     "select_from_left": "Select a template from the left",
-    "template": "Templates",
     "instances": "Instances",
     "no_instances": "No workflow instances",
     "filter_overdue": "Overdue only",
@@ -2169,20 +2127,16 @@
       "back_to_list": "Back to judgments",
       "final": "Final",
       "soul_info": "Soul Information",
-      "soul_name": "Soul Name",
       "civilization": "Civilization",
       "court": "Court",
       "evidence": "Evidence",
       "confession": "Confession",
-      "verdict": "Verdict",
       "concluded_at": "Concluded at",
       "notes": "Notes",
-      "render_verdict": "Render Verdict",
       "conclude_success": "Judgment recorded; awaiting approval",
       "conclude_error": "Failed to conclude judgment",
       "select_verdict": "Please select a verdict",
       "concluding": "Concluding...",
-      "conclude": "Conclude",
       "notes_placeholder": "Enter notes...",
       "create_workflow": "Start approval workflow",
       "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type.",
@@ -2193,7 +2147,6 @@
       "passed_barred_five_heinous": "The offence is one of the five heinous crimes: it cannot be passed.",
       "passed_barred_untruthful": "A denial was recorded as untrue: the verdict cannot be passed. The scale can be left wavering for a new weighing."
     },
-    "conclude_error": "Failed to conclude judgment",
     "no_evidence": "No evidence on file",
     "grounds": {
       "title": "Cited grounds",
@@ -2227,13 +2180,7 @@
     "corpus": {
       "title": "Corpus",
       "subtitle": "The articles a verdict may rest on. {{n}} transcribed across four cosmologies.",
-      "col_sigil": "Sigil",
-      "col_offence": "Offence",
-      "col_text": "Article",
-      "col_citations": "Cited",
-      "filter_corpus": "Corpus",
       "article_count": "{{n}} articles",
-      "listed_count": "{{n}} listed",
       "empty_reason": "No article in this corpus has been transcribed.",
       "citations_absent": "This response does not carry a citation count.",
       "sigil_absent": "This article has no transcribed number.",
@@ -2248,7 +2195,6 @@
       "copy_cite": "Copy citation",
       "copied": "Copied",
       "cited_by": "Cited by",
-      "cited_by_count": "Cited by {{n}} judgments",
       "versions": "Versions",
       "select_prompt": "Choose an article from the contents.",
       "no_match": "No article matches “{{q}}”",
@@ -2264,7 +2210,6 @@
       "related_circle": "Same circle",
       "related_terrace": "Same terrace",
       "search_paste": "Paste a citation to jump, or type words to search",
-      "search_paste_short": "Paste a citation or search",
       "hits_summary": "Substring match · {{n}} hits in {{c}} corpora",
       "hit_prev": "Previous hit",
       "hit_next": "Next hit",
@@ -2345,7 +2290,6 @@
       "defer": "Move to Deferred",
       "clear_selection": "Clear selection",
       "batch_limit": "At most {{n}} at a time; do the rest in another batch",
-      "balance": "Balance",
       "claimant": "Claimant",
       "group_empty": "None in this group",
       "key_move": "move",
@@ -2400,7 +2344,6 @@
       "filter_mine": "Claimed by me",
       "col_draft": "Draft verdict",
       "col_deferred": "Deferred",
-      "col_kind": "Kind",
       "draft_none": "Not drafted",
       "deferred_session": "This sitting",
       "key_restore": "Put all back",
@@ -2566,7 +2509,6 @@
       "label": "Offence",
       "none": "Not recorded",
       "routes_to": "If found guilty, sent to the {{court}}",
-      "fallback": "No offence recorded: if found guilty, the court is chosen by severity",
       "placeholder": "Not recorded · court by severity",
       "no_match": "No such offence",
       "kings": {
@@ -2885,7 +2827,6 @@
     "new_password": "New Password",
     "confirm_password": "Confirm Password",
     "password_too_short": "Password must be at least 8 characters",
-    "password_changed": "Password changed successfully",
     "password_change_failed": "Failed to change password",
     "password_changed_others_out": "Password changed. Other devices have been signed out.",
     "password_reason_common": "That password is too common. Choose another.",
@@ -2898,7 +2839,6 @@
     "password_old_wrong": "The current password is not correct.",
     "profile_updated": "Profile updated",
     "profile_update_failed": "Failed to update profile",
-    "avatar": "Avatar",
     "load_failed": "Could not load the latest profile — the values below may be out of date",
     "notifications": {
       "title": "Notifications",
@@ -3136,7 +3076,6 @@
     },
     "no_realms": "No realms are recorded yet.",
     "topology": {
-      "map_title": "Topology",
       "legend": "━ travelled ┅ ahead ▪ now □ station",
       "schematic": "Schematic",
       "shape_line": "Line",
@@ -3176,7 +3115,6 @@
       "occupancy_failed": "Occupancy failed to load",
       "not_a_place": "— · not a place",
       "edit_scope": "Only capacity can be changed; every other column comes from the mythology corpus. Lowering it below the souls held moves nobody — new placements here are refused.",
-      "edit_capacity": "Edit",
       "edit_capacity_of": "Edit capacity of {{name}}",
       "capacity_label": "Capacity",
       "full_warning": "Full: {{held}} held. Nobody is moved; new placements here will be refused.",
@@ -3506,7 +3444,6 @@
     "email_empty": "Email is required",
     "password_empty": "Password is required",
     "password": "Password",
-    "optional": "optional",
     "username_placeholder": "Enter username",
     "email_placeholder": "Enter email",
     "password_placeholder": "Enter password",
@@ -3642,8 +3579,6 @@
     "realm": "Realm",
     "soul_count": "Soul Count",
     "no_realm_data": "No realm data available",
-    "souls": "souls",
-    "on": "on",
     "users": {
       "impersonate": "View as this user"
     },
@@ -3664,11 +3599,8 @@
     }
   },
   "welcome": {
-    "quick_actions": "Quick Actions",
-    "agent_status": "AI Agent Status",
     "recent_activity": "Recent Activity",
     "view_all_activity": "View All Activity",
-    "current_civilization": "Current Civilization",
     "user_role": "User Role",
     "system_version": "System Version",
     "just_now": "Just now",
@@ -3855,7 +3787,6 @@
     "title": "A system error occurred",
     "description": "Sorry, the server encountered a problem",
     "retry": "Reload",
-    "home": "Return Home",
     "next_body": "No server response. The case is unchanged."
   },
   "not_found": {
@@ -3864,7 +3795,6 @@
     "home": "Return Home"
   },
   "search": {
-    "placeholder": "Search...",
     "aria_label": "Search",
     "dialog_label": "Search everywhere",
     "cancel": "Cancel",
@@ -4732,8 +4662,7 @@
       "schedule": "Schedule",
       "timezone": "Time zone",
       "last_run": "Last run",
-      "next_run": "Next run",
-      "enabled": "Enabled"
+      "next_run": "Next run"
     },
     "jobs": {
       "ledger_recalculate_tenant": "Recalculate merit ledgers",
@@ -4880,9 +4809,6 @@
       "hourly": "Hourly at :{{minute}}",
       "daily": "Daily at {{time}}",
       "weekly": "{{weekday}}s at {{time}}"
-    },
-    "events": {
-      "SCHEDULER_RUN_FAILED": "Scheduled task run failed"
     },
     "realtime": {
       "run_failed": "“{{job}}” failed",
@@ -6853,11 +6779,6 @@
       "COMMENT": "Comment",
       "USER": "User"
     },
-    "report_status": {
-      "OPEN": "Open",
-      "RESOLVED": "Resolved",
-      "DISMISSED": "Dismissed"
-    },
     "reason": {
       "SPAM": "Spam",
       "ABUSE": "Abuse",
@@ -6874,10 +6795,7 @@
     "fields": {
       "author": "Author",
       "content": "Content",
-      "reports": "Reports",
-      "reasons": "Reasons",
       "created": "Time",
-      "until": "Muted until",
       "reason": "Reason",
       "word": "Word"
     },
@@ -6885,20 +6803,12 @@
       "posts": "Posts",
       "comments": "Comments"
     },
-    "status_filter": {
-      "PENDING": "Pending",
-      "HIDDEN": "Hidden"
-    },
     "actions": {
       "hide": "Hide",
       "delete": "Delete",
       "mute": "Mute",
-      "dismiss": "Dismiss",
-      "approve": "Approve",
-      "restore": "Restore",
       "lift": "Lift mute",
-      "add_word": "Add",
-      "remove_word": "Remove"
+      "add_word": "Add"
     },
     "mute_days": "Mute for",
     "mute_days_option": "{{n}} days",
@@ -6927,9 +6837,6 @@
       "invalid_days": "A mute lasts 1–365 days"
     },
     "empty": {
-      "reports": "No open reports",
-      "content": "Nothing pending",
-      "content_reason": "Only content that hit the word list waits here; reported content is in Reports",
       "words": "No words yet",
       "mutes": "No mutes",
       "review": "Nothing to review",
@@ -6961,7 +6868,6 @@
       "report_n": "Reports {{n}}",
       "rule_hit": "Rule hit · word list",
       "from": "from {{name}}",
-      "reaction_comment": "Comments",
       "reason_label": "Note (required to warn)",
       "reason_required": "Warning needs a reason",
       "approve": "Let through",
@@ -7647,8 +7553,6 @@
     },
     "key": {
       "title": "API key",
-      "set": "Set",
-      "not_set": "Not set",
       "set_at": "Set {{date}}",
       "from_env": "From the deployment",
       "replace": "Replace",
@@ -7976,7 +7880,6 @@
         "reassignments": "Handovers",
         "cooldowns": "Cooling-off requests",
         "rebirths": "Rebirth applications",
-        "letters": "Letters to answer",
         "unassigned_letters": "Unassigned letters",
         "pick_nodes": "Stations to pick",
         "city_god": "City God review",
@@ -7989,12 +7892,8 @@
       "filter_empty_body": "Try another type, or clear the filters.",
       "filter_clear": "Clear filters",
       "see_all": "All {{n}}",
-      "group_sentence_change": "Placement plan changes",
       "on_desk_only": "Handle on computer",
-      "empty_body_other": "Anything that comes to you will be pushed to you.",
-      "group_sentence_change_by_civ": {
-        "cn": "Sentence plan changes"
-      }
+      "empty_body_other": "Anything that comes to you will be pushed to you."
     },
     "queue": {
       "mine": "Mine",
@@ -8838,7 +8737,6 @@
     "from": "From",
     "to": "To",
     "pick": "Pick an active officer of this hall",
-    "submit": "Hand over",
     "submit_n": "Hand over {{n}}",
     "submitting": "Handing over…",
     "row_judgments": "Claimed judgments",
@@ -8897,7 +8795,6 @@
     "subtitle": "You've been invited as an officer. Once the password is set, sign in with your username and this password.",
     "new_password": "New password",
     "confirm_password": "Repeat the password",
-    "mismatch": "The two passwords differ",
     "submit": "Set password",
     "weak": "That password isn't strong enough:",
     "done_title": "Password set",
@@ -8943,12 +8840,10 @@
     "hall_names_hint": "Leave egy empty to use the default",
     "description_optional": "Description · optional",
     "submit": "Create",
-    "submitting": "Creating…",
     "created_toast": "Created {{name}}",
     "create_failed": "Couldn't create it. Try again.",
     "deactivate": "Deactivate",
     "activate": "Reactivate",
-    "row_menu": "More actions",
     "deactivate_title": "Deactivate {{name}}?",
     "deactivate_body": "Everything is kept, and existing souls and cases carry on. Once it is deactivated:",
     "deactivate_no_souls": "no new souls can be registered;",

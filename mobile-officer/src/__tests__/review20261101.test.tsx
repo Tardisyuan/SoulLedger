@@ -223,6 +223,5 @@ describe("names, not codes", () => {
     const label = (kind: string) => zh(TODO_GROUPS.find((g) => g.kind === kind)!.label);
     expect(label("letter")).toBe(zh("dashboard.todo.letters"));
     expect(label("sentence_change")).toBe(zh("sentence_plan.inbox_title"));
-    expect(label("letter")).not.toBe(zh("officer_app.todo.groups.letters"));
   });
 });

@@ -61,9 +61,10 @@ const CIVILIZATION_NAMESPACES = [
   // screen in the product announced three cosmologies out of four. The page now
   // renders from CIVILIZATION_OPTIONS against these three maps, so the omission
   // is expressible as a missing key — which is the only form this test can read.
-  "home.civilizations",
+  // 2026-11-08: the landing page now reads `demo.civ.*` / `landing.civ.*`, so
+  // `home.civilizations` and `home.civ_desc` were deleted as dead; `home.civ_subtitle`
+  // is still read by /about (web and soul App).
   "home.civ_subtitle",
-  "home.civ_desc",
 ];
 
 function at(bundle: unknown, path: string): Record<string, unknown> | undefined {

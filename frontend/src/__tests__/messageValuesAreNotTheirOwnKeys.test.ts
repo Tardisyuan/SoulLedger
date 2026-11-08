@@ -81,7 +81,7 @@ describe.each(BUNDLES)("%s", (locale, bundle) => {
     // 只查**含下划线**的键。不加这个限定,en 里有四条真实文案会被误报:
     // `souls.detail.records` = "records"、`users.optional` = "optional"、
     // `admin.souls` = "souls"、`admin.on` = "on" —— 它们都是正确的英文文案,
-    // 只是碰巧等于键的末段。下划线是标识符特有的,正常文案里不出现,所以它把
+    // 只是碰巧等于键的末段(后三条没人用,2026-11-08 已删)。下划线是标识符特有的,正常文案里不出现,所以它把
     // 「退化成键名」和「英文词恰好同形」分得干净。
     //
     // 代价:`admin.souls` 那一类真的退化了也抓不到。这是有意选的方向 ——
