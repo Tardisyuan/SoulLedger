@@ -39,24 +39,10 @@
  * and reddening on a momentarily unused member would only teach people to
  * delete tokens out of a ramp.
  *
- * THE TWO TOKENS THIS PARAGRAPH USED TO NAME AS EXAMPLES BOTH HAVE CALLERS,
- * and one of them had callers on the day the sentence was written. It read
- * "`--color-surface-4` and `--color-status-disposed` currently have no
- * caller". Re-measured 2026-09-04, with comments stripped first (this file's
- * own prose names the tokens it discusses, so a plain grep counts the sentence
- * it is checking):
- *
- *   --color-surface-4        4 callers — data-grid/ActionsMenu.tsx,
- *                            data-grid/FilterBar.tsx, ui/Button.tsx,
- *                            workflow/NodeEditModal.tsx
- *   --color-status-disposed  3 callers — app/ledger/page.tsx (STATE_DOT),
- *                            app/welcome/page.tsx, src/lib/soulStateBadge.ts
- *
- * `app/ledger/page.tsx::STATE_DOT` predates the sentence; `soulStateBadge.ts`
- * is newer (28c9bc9). So the claim was half wrong when written and got wronger
- * without anything changing colour — it is prose in a comment, not an
- * assertion, which is the whole reason it could rot in a file whose subject is
- * exactly this failure mode.
+ * This paragraph used to name `--color-surface-4` and `--color-status-disposed` as
+ * tokens with no caller, which was wrong when written; `--color-surface-4` and the
+ * other v3 aliases (`--color-hairline*`, `--color-ink-tertiary`) were deleted on
+ * 2026-11-08 once their last consumers moved to the v4 names.
  *
  * The argument itself survives its examples: on the same measurement EVERY
  * `--color-*` / `--civ-*` token `:root` declares is referenced somewhere in
@@ -157,7 +143,7 @@ describe("the scan is looking at something", () => {
     // its own removal, which is the scan working exactly as the note in
     // globals.css warns: this file does not strip comments, so a token name
     // written inside `var()` in a sentence is a reference like any other.
-    // `--color-line`, not the old alias `--color-hairline`: every consumer moved to the v4 name on 2026-11-07.
+    // `--color-line`: the old alias `--color-hairline` lost its last consumer and was deleted (2026-11-08).
     for (const token of ["--color-ink", "--color-surface-1", "--color-line", "--color-block"]) {
       expect(seen).toContain(token);
     }
@@ -259,9 +245,9 @@ describe("every referenced custom property is declared in globals.css", () => {
 describe("colour tokens are referenced one way only", () => {
   /** Every colour family `app/globals.css` owns, longest first so `ink` cannot eat `ink-subtle`. */
   const COLOUR_TOKENS = [
-    "surface-1", "surface-2", "surface-3", "surface-4", "canvas",
-    "hairline-strong", "hairline-tertiary", "hairline",
-    "ink-muted", "ink-subtle", "ink-tertiary", "ink",
+    "surface-1", "surface-2", "surface-3", "canvas",
+    "line-strong", "line",
+    "ink-muted", "ink-subtle", "ink",
     "accent-hover", "accent",
   ];
 
@@ -292,7 +278,7 @@ describe("colour tokens are referenced one way only", () => {
     // silently inert and read as compliance.
     expect(BARE.test('className="text-ink"')).toBe(true);
     expect(BARE.test('className="hover:bg-surface-2"')).toBe(true);
-    expect(BARE.test('className="divide-y divide-hairline"')).toBe(true);
+    expect(BARE.test('className="divide-y divide-line"')).toBe(true);
     expect(BARE.test('"active:border-accent"')).toBe(true);
 
     // The bracketed form is the whole point — it must never trip.
@@ -352,7 +338,7 @@ describe("colour tokens are referenced one way only", () => {
  * blocks across three `loading.tsx` files and the shared `skeleton.tsx`
  * primitive were drawn that way — a loading state nobody could see.
  *
- * `--color-hairline` is the token that already means "the quietest visible
+ * `--color-line` is the token that already means "the quietest visible
  * boundary": 1.438:1 full, 1.153:1 at the trough. It also belongs to neither
  * ramp, so using it here moves none of the 128 pinned ink-on-surface
  * combinations.
@@ -380,7 +366,7 @@ describe("skeletons are visible against what they sit on", () => {
     // The shape the first version missed: a bare string in a `cn([...])` array.
     expect(PULSING_SURFACE.test("  'animate-pulse bg-[oklch(var(--color-surface-2))]',")).toBe(true);
     // The fix, and unrelated surface use, must both pass.
-    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[oklch(var(--color-hairline))]"')).toBe(false);
+    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[oklch(var(--color-line))]"')).toBe(false);
     expect(PULSING_SURFACE.test('className="bg-[oklch(var(--color-surface-1))] border"')).toBe(false);
   });
 

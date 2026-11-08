@@ -344,7 +344,7 @@ export default function XPage() {                    // 页级权限门包在默
 说要替掉的那六行）；`dashboard/loading.tsx:20-46` 用裸 `div bg-hairline animate-pulse`
 而非 `Skeleton`。
 
-**唯一的骨架原语是 `components/ui/skeleton.tsx`**，填色必须 `--color-hairline`
+**唯一的骨架原语是 `components/ui/skeleton.tsx`**，填色必须 `--color-line`
 （`[test:cssTokenReferenceContract:416-447]`）。
 
 **翻页 / 换筛选**用 `isPlaceholderData` → tbody `opacity-50 aria-busy`，不是整页重画（前提是查询带 `placeholderData`，见 §1）。

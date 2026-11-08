@@ -134,7 +134,8 @@
    *                 SchedulerJobRow.tsx 的 `transition-colors duration-instant`)。
    *                 v3 的 instant 是 80ms 的另一件事,已经给了 press,别把这两个
    *                 混起来 —— 把它改成 80ms 会让所有开关无声地动起来。
-   *   ritual 600ms  按住确认。v3 没有这一档,交互本身还在,所以留着。
+   *   ritual 600ms  按住确认。v3 没有这一档,交互本身还在;只有 JS 读它(lib/motion.ts),
+   *                 CSS 变量没有调用点,2026-11-08 删掉。
    *
    * 缓动:
    *   exit      v2 (0.4,0,1,1) 与 v3 逐位相同,不动。
@@ -158,7 +159,6 @@
   --transition-duration-fast: 160ms; /* @kind other */
   --transition-duration-base: 240ms; /* @kind other */
   --transition-duration-slow: 320ms; /* @kind other */
-  --transition-duration-ritual: 600ms; /* @kind other */
   --transition-duration-press: 80ms; /* @kind other */
   --transition-duration-state: 160ms; /* @kind other */
   --transition-duration-settle: 240ms; /* @kind other */
@@ -366,8 +366,6 @@
   --shadow-raised: 0 8px 24px rgba(20, 22, 18, 0.1);
   --shadow-overlay: 0 24px 72px rgba(10, 11, 9, 0.28);
 
-  --border-width-3: 3px;
-
   /* 顺序在 2026-09-01 换过一次,而且是被一个具体需要逼出来的,不是顺手调的。
      命名这三档时照抄了当时的现状 —— drawer(99998)压在 dialog(9999)之上 ——
      并在注释里记着「这多半是反的,留给真正要动层级的那一次」。那一次到了:
@@ -478,7 +476,7 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: oklch(var(--color-hairline-strong));
+    background: oklch(var(--color-line-strong));
     border-radius: 4px;
   }
 
@@ -493,7 +491,7 @@
   /* Firefox scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: oklch(var(--color-hairline-strong))
+    scrollbar-color: oklch(var(--color-line-strong))
       oklch(var(--color-surface-1));
   }
 
@@ -629,12 +627,6 @@
     --color-chart-4: 0.740999 0.045000 249.5047;
     --color-chart-5: 0.690172 0.045147 250.6443;
     --color-chart-6: 0.650533 0.044564 249.6206;
-    /* 旧名 → 新令牌。消费点仍按旧名写的逐步改;新代码直接用新名。 */
-    --color-surface-4: var(--color-surface-3);
-    --color-hairline: var(--color-line);
-    --color-hairline-strong: var(--color-line-strong);
-    --color-hairline-tertiary: var(--color-line-strong);
-    --color-ink-tertiary: var(--color-ink-subtle);
     /* 领域状态 = 颜色 + 字形。「轮回中」· Design D1:图表里取梯度第 4 档(浅 #53687F / 深 #96AEC7);
        图表以外不给颜色 —— 徽章是「↻ 轮回中」、ink 字、1px ink3 框,逐页改版时换过去。 */
     --color-status-alive: var(--color-success);
@@ -1413,7 +1405,7 @@ html.theme-switching *::after {
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: oklch(var(--color-hairline));
+    border-color: oklch(var(--color-line));
   }
   /* hover 用 accent-ink,不是 accent。实测(2026-09-04)浅色下
      `--color-accent` 在 canvas 上是 2.13:1 —— 连非文本的 3:1 下限都不过,
@@ -1554,7 +1546,7 @@ html.theme-switching *::after {
 /* React Flow Controls Dark Mode Override */
 .react-flow__controls {
   background: oklch(var(--color-surface-1)) !important;
-  border: 1px solid oklch(var(--color-hairline)) !important;
+  border: 1px solid oklch(var(--color-line)) !important;
 /* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
      system, and then handed it the one radius the system forbids
      (tailwind.config.js zeroes every step except `full` and `focus`). */
@@ -1564,7 +1556,7 @@ html.theme-switching *::after {
 
 .react-flow__controls-button {
   background: oklch(var(--color-surface-1)) !important;
-  border-bottom: 1px solid oklch(var(--color-hairline)) !important;
+  border-bottom: 1px solid oklch(var(--color-line)) !important;
   fill: oklch(var(--color-ink-muted)) !important;
 }
 
@@ -1585,7 +1577,7 @@ html.theme-switching *::after {
 /* React Flow minimap dark mode */
 .react-flow__minimap {
   background: oklch(var(--color-surface-1)) !important;
-  border: 1px solid oklch(var(--color-hairline)) !important;
+  border: 1px solid oklch(var(--color-line)) !important;
 /* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
      system, and then handed it the one radius the system forbids
      (tailwind.config.js zeroes every step except `full` and `focus`). */
@@ -1598,7 +1590,7 @@ html.theme-switching *::after {
 
 /* React Flow background dots */
 .react-flow__background circle {
-  fill: oklch(var(--color-hairline)) !important;
+  fill: oklch(var(--color-line)) !important;
 }
 /* ── Keyboard focus ──────────────────────────────────────────────────────
    Nothing in the app defined a focus style, while 69 uses of the Tailwind
