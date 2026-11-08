@@ -7,7 +7,9 @@ import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 
 const mockI18n = { t: (key: string) => key, formatDateTime: (v: string) => v, locale: "zh-Hans" };
 jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => mockI18n }));
-jest.mock("@/src/components/rbac/RequirePermission", () => ({ RequirePermission: () => null }));
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: { id: 1, username: "g", role: "GUARDIAN", tenant: null, permissions: [] } }),
+}));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 
 describe("DateProblemsPanel with missing fields", () => {
