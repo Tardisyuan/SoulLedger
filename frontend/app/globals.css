@@ -134,8 +134,8 @@
    *                 SchedulerJobRow.tsx 的 `transition-colors duration-instant`)。
    *                 v3 的 instant 是 80ms 的另一件事,已经给了 press,别把这两个
    *                 混起来 —— 把它改成 80ms 会让所有开关无声地动起来。
-   *   ritual 600ms  按住确认。v3 没有这一档,交互本身还在;只有 JS 读它(lib/motion.ts),
-   *                 CSS 变量没有调用点,2026-11-08 删掉。
+   *   ritual 600ms  按住确认。v3 没有这一档,交互本身还在,所以留着。CSS 里没有调用点,
+   *                 但它是 lib/motion.ts 那张 JS 镜像表的出处(motionTokens.test.ts 逐项对账)。
    *
    * 缓动:
    *   exit      v2 (0.4,0,1,1) 与 v3 逐位相同,不动。
@@ -159,6 +159,7 @@
   --transition-duration-fast: 160ms; /* @kind other */
   --transition-duration-base: 240ms; /* @kind other */
   --transition-duration-slow: 320ms; /* @kind other */
+  --transition-duration-ritual: 600ms; /* @kind other */
   --transition-duration-press: 80ms; /* @kind other */
   --transition-duration-state: 160ms; /* @kind other */
   --transition-duration-settle: 240ms; /* @kind other */
