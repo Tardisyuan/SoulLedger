@@ -29,6 +29,27 @@ import {
   type MapView,
   type MapVisit,
 } from "@/src/lib/underworldMap";
+import {
+  HERO_NODES,
+  addGrid,
+  addHeroes,
+  addScanRing,
+  applyCamera,
+  cameraCentre,
+  heatByNode,
+  heroUrl,
+  loadOf,
+  markLoads,
+  minLabelFont,
+  moveGroupLabelsOffHeroes,
+  narrowCamera,
+  nodeLoads,
+  paintLight,
+  panCamera,
+  stationPoint,
+  type StationLoad,
+} from "@/src/lib/underworldMapLayers";
+import { Locate, Maximize2 } from "lucide-react";
 
 /**
  * 冥界地图(规范 v4 第七批 S07,Design 第八批的四张 SVG):挂在 /realms(世界图,全部点亮)与灵魂详情
@@ -40,6 +61,15 @@ import {
  * - 支线(十八层地狱、莲花台)默认收起,`map.branches_hidden` 点开;灵魂就在支线上时只画那一条(`map.branch_only`)。
  * - 一生回放(`map.replay.*`):按到达先后一站一站点亮,卡片写「{日期} · 到达{站}」;点卡片或「停止回放」回到现在。
  * - 深浅主题各一份图(`useTheme`)。图载不到(jsdom 没有 fetch、网络错)就整块不画 —— 行程条与树表照样在。
+ * - 光与动、图上的数(2026-11-08,`src/lib/underworldMapLayers.ts`):走过的线加柔光与流光,当前处是扫描环,图下网格与刻度;
+ *   世界图给了 `loads` 就每站写「在押/容量」,热度定柔光强弱与流光快慢。减少动态效果时流光不画、扫描弧停住(globals.css)。
+ * - 主角节点(Design 第十六批 §1,`public/v4/maps/nodes/`):每个文明 3–4 站换成一张小建筑线描,状态随节点的 data-state;
+ *   点列站不替换,挂在点列左边。分组名压到主角节点时挪到它与读数胶囊的右边。
+ * - 窄屏(字在屏上会小于 11px):默认镜头 1.25 倍、当前站在横向六成处(没有灵魂就是起点),拖动移镜头;
+ *   「全景」看整张,「近处」回来。缩放钮 44 见方,竖排在图的右上角。
+ * - 点 / 悬停一站出一张小卡(236 宽;窄屏贴在视窗底部):站名、(灵魂的行程)状态与到达日期、(世界图)在押 / 容量与进度条。
+ *   卡里只写接口已经给的字段 —— `GET /realms/occupancy/` 只有在押数,第十六批稿子里那行「今日进 · 出 · 平均停留」
+ *   接口没有,不画。键盘:站名清单的按钮同样打开它,Esc 关。
  *
  * 站名:中文用图里 Design 写的字(就是定稿措辞);其他语言按 id 取语言包(地府站码 → `souls.diyu_station.*`,
  * 界域码 → `realms.names.*`,小写节点 → `map.*`),取不到才退回图里的中文。
@@ -84,7 +114,7 @@ const ZOOM_STEP = 1.25;
 const PAN_STEP = 40;
 const REPLAY_MS = 1200;
 const BUTTON =
-  "inline-flex h-9 min-w-9 items-center justify-center border-l first:border-l-0 border-[oklch(var(--color-line-strong))] px-2 font-mono text-xs hover:bg-[oklch(var(--color-surface-2))]";
+  "inline-flex size-11 items-center justify-center border-t first:border-t-0 border-[oklch(var(--color-line-strong))] font-mono text-md hover:bg-[oklch(var(--color-surface-2))]";
 
 export interface MapArrival {
   /** 图上的节点或子格 id。 */
@@ -99,8 +129,11 @@ export function UnderworldMap({
   arrivals = [],
   label,
   currentDetail,
+  loads,
   className,
 }: {
+  /** 世界图:界域码 → 在押 / 容量(/realms 取到的 occupancy)。不给就不写读数,流光一律中等。调用方要 memo。 */
+  loads?: ReadonlyMap<string, StationLoad>;
   civilization: string;
   /** 外框(边距、分隔线):图载不到时整块连同外框都不画。 */
   className?: string;
@@ -124,7 +157,14 @@ export function UnderworldMap({
   const [focused, setFocused] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const live = useRef<SVGSVGElement | null>(null);
-  const drag = useRef<{ x: number; y: number; view: MapView } | null>(null);
+  const drag = useRef<{ x: number; y: number; view: MapView; camX: number | null; node: string | null } | null>(null);
+  const [width, setWidth] = useState(0);
+  const [wholeMap, setWholeMap] = useState(false);
+  /** 镜头被拖过 / 移到某站后的左边位置;null = 跟着当前站。 */
+  const [camX, setCamX] = useState<number | null>(null);
+  const [heroes, setHeroes] = useState<ReadonlyMap<string, Element>>(new Map());
+  const [card, setCard] = useState<string | null>(null);
+  const [hover, setHover] = useState<string | null>(null);
 
   useEffect(() => {
     if (!url || typeof fetch !== "function") return;
@@ -137,6 +177,22 @@ export function UnderworldMap({
       alive = false;
     };
   }, [url]);
+
+  // 主角节点:这个文明的三四份,载不到的那份就不换(节点照原图画)。
+  useEffect(() => {
+    if (!skin || typeof fetch !== "function") return;
+    let alive = true;
+    const entries = Object.entries(HERO_NODES[skin]);
+    Promise.all(entries.map(([, name]) => loadSvg(heroUrl(name)).then(parseMapSvg, () => null))).then((parsed) => {
+      if (!alive) return;
+      const out = new Map<string, Element>();
+      parsed.forEach((svg, i) => svg && out.set(entries[i][0], svg));
+      setHeroes(out);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [skin]);
 
   const known = useCallback((key: string) => {
     const v = t(key);
@@ -170,6 +226,29 @@ export function UnderworldMap({
   /** 读屏念整张图:文明名,有灵魂时加「你现在在这里 · 站名」。写在 SVG 的 role="img" 上。 */
   const summary = visits && here ? `${label} · ${t("map.soul.here")} · ${here}` : label;
 
+  const box = template ? viewBoxOf(template) : { width: 1120, height: 400 };
+  const stationLoads = useMemo(() => (template && loads && !visits ? nodeLoads(template, loads) : null), [template, loads, visits]);
+  const heat = useMemo(() => (stationLoads ? heatByNode(stationLoads) : null), [stationLoads]);
+  // 窄屏镜头:默认对着当前站(世界图对着第一站);拖动改 camX;「全景」关掉镜头。容器够宽时 narrowCamera 是 null。
+  const firstNode = template ? nodesOf(template)[0]?.id ?? null : null;
+  const home = template ? stationPoint(template, cur ? cur.cell ?? cur.node : firstNode ?? "") : null;
+  const fontUnits = template ? minLabelFont(template) : 12;
+  const homeCamera = template ? narrowCamera(box, home, width, fontUnits) : null;
+  const localCamera = homeCamera && camX !== null ? panCamera(homeCamera, camX - homeCamera.x, box) : homeCamera;
+  const camera = wholeMap ? null : localCamera;
+  const cameraKey = camera ? `${camera.x} ${camera.y} ${camera.w} ${camera.h}` : "";
+
+  useEffect(() => {
+    const el = host.current;
+    if (!el) return;
+    const measure = () => setWidth(el.clientWidth);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [template]);
+
   // 每次状态变了:从模板克隆一份,画状态、支线、字,再插进来。拖动只改 transform,不重画。
   useEffect(() => {
     const el = host.current;
@@ -184,6 +263,10 @@ export function UnderworldMap({
     live.current = svg;
     const palette = readPalette(template);
     if (palette) paintStates(svg, states, palette);
+    paintLight(svg, heat);
+    const heroBoxes = addHeroes(svg, heroes);
+    addScanRing(svg);
+    addGrid(svg);
     const fills = labelFills(template);
     for (const node of nodesOf(svg)) {
       const { name, details } = labelLines(svg, node.id);
@@ -203,17 +286,34 @@ export function UnderworldMap({
         if (shown) line.textContent = shown;
       }
     }
+    const badgeBoxes = stationLoads ? markLoads(svg, stationLoads) : new Map();
+    moveGroupLabelsOffHeroes(svg, heroBoxes, badgeBoxes);
     markYouAreHere(svg, states, visits ? t("map.soul.here") : null);
     setBranchInfo(applyBranches(svg, branchesHidden, states.current?.node ?? null));
     if (focused) svg.querySelector(`[id="${focused}"]`)?.setAttribute("data-focused", "");
     applyView(svg, view);
-    // view 不在依赖里:平移由下一个 effect 单独处理。
+    applyCamera(svg, camera, box);
+    // view / camera 不在依赖里:平移由下面两个 effect 单独处理。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary, currentDetail, replayAt]);
+  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary, currentDetail, replayAt, heat, stationLoads, heroes]);
 
   useEffect(() => {
     if (live.current) applyView(live.current, view);
   }, [view]);
+
+  useEffect(() => {
+    if (live.current) applyCamera(live.current, camera, box);
+    // cameraKey 是 camera 的值;camera 本身每次渲染都是新对象。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraKey, box.width, box.height]);
+
+  // 小卡开着时 Esc 关掉(焦点在哪都一样:站名清单、卡上的关闭钮、缩放钮)。
+  useEffect(() => {
+    if (!card) return;
+    const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && setCard(null);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [card]);
 
   // 回放:一站一站往前走,走到头停在现在。
   useEffect(() => {
@@ -222,34 +322,70 @@ export function UnderworldMap({
     return () => clearTimeout(timer);
   }, [replayAt, arrivals.length]);
 
-  const box = template ? viewBoxOf(template) : { width: 1120, height: 400 };
-  const zoomBy = (factor: number) => setView((v) => zoomAt(v, v.k * factor, box.width / 2, box.height / 2, box));
-  const fit = () => setView({ k: 1, x: 0, y: 0 });
-  const unitsPerPx = () => box.width / Math.max(1, host.current?.clientWidth ?? box.width);
+  // 缩放的中心:有镜头时是镜头中心,否则是整图中心。
+  const middle = camera ? cameraCentre(camera) : { x: box.width / 2, y: box.height / 2 };
+  const zoomBy = (factor: number) => setView((v) => zoomAt(v, v.k * factor, middle.x, middle.y, box));
+  const fit = () => {
+    setView({ k: 1, x: 0, y: 0 });
+    setWholeMap(true);
+    setCamX(null);
+  };
+  const closeUp = () => {
+    setWholeMap(false);
+    setCamX(null);
+  };
+  const unitsPerPx = () => (camera ? camera.w : box.width) / Math.max(1, host.current?.clientWidth ?? box.width);
+  /** 镜头的左边移到 x(夹在图内,拖过头再拖回来不会卡住)。 */
+  const moveCamera = (from: number, dx: number) => {
+    if (camera) setCamX(panCamera({ ...camera, x: from }, dx, box).x);
+  };
+  const nodeAt = (target: EventTarget | null) => (target instanceof Element ? target.closest("g.node[id]")?.id ?? null : null);
+  const openCard = (id: string) => {
+    setCard(id);
+    setFocused(id);
+  };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    drag.current = { x: e.clientX, y: e.clientY, view };
+    drag.current = { x: e.clientX, y: e.clientY, view, camX: camera ? camera.x : null, node: nodeAt(e.target) };
     e.currentTarget.setPointerCapture?.(e.pointerId);
     e.currentTarget.setAttribute("data-dragging", "");
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     const start = drag.current;
-    if (!start) return;
+    if (!start) {
+      const id = nodeAt(e.target);
+      if (id !== hover) setHover(id);
+      return;
+    }
     const u = unitsPerPx();
-    setView(clampView({ ...start.view, x: start.view.x + (e.clientX - start.x) * u, y: start.view.y + (e.clientY - start.y) * u }, box));
+    const dx = (e.clientX - start.x) * u;
+    const dy = (e.clientY - start.y) * u;
+    if (start.camX !== null) moveCamera(start.camX, -dx);
+    else setView(clampView({ ...start.view, x: start.view.x + dx, y: start.view.y + dy }, box));
   };
   const endDrag = (e: PointerEvent<HTMLDivElement>) => {
     drag.current = null;
     e.currentTarget.removeAttribute("data-dragging");
   };
+  /** 按下又抬起、几乎没动 = 点了一站:打开它的卡。 */
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    const start = drag.current;
+    if (start?.node && Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) < 6) openCard(start.node);
+    endDrag(e);
+  };
   const onDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const u = unitsPerPx();
-    setView((v) => zoomAt(v, v.k * 1.5, (e.clientX - rect.left) * u, (e.clientY - rect.top) * u, box));
+    const x0 = camera?.x ?? 0;
+    const y0 = camera?.y ?? 0;
+    setView((v) => zoomAt(v, v.k * 1.5, x0 + (e.clientX - rect.left) * u, y0 + (e.clientY - rect.top) * u, box));
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const pan = (dx: number, dy: number) => setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy }, box));
+    const pan = (dx: number, dy: number) =>
+      camera && dx
+        ? moveCamera(camera.x, -dx)
+        : setView((v) => clampView({ ...v, x: v.x + dx, y: v.y + dy }, box));
     const keys: Record<string, () => void> = {
       ArrowLeft: () => pan(PAN_STEP, 0),
       ArrowRight: () => pan(-PAN_STEP, 0),
@@ -265,9 +401,18 @@ export function UnderworldMap({
     e.preventDefault();
     run();
   };
-  /** 站名清单里按下一站:放大到至少 2 倍,把那一站移到图中间,并标出来。 */
+  /**
+   * 站名清单里按下一站:打开它的卡,把那一站移到图中间并标出来 —— 有镜头时移镜头,
+   * 否则放大到至少 2 倍。
+   */
   const focusStation = (id: string) => {
-    setFocused(id);
+    openCard(id);
+    if (camera) {
+      const p = template ? stationPoint(template, id) : null;
+      const aim = p ? narrowCamera(box, { x: view.x + p.x * view.k, y: view.y + p.y * view.k }, width, fontUnits) : null;
+      if (aim) setCamX(aim.x);
+      return;
+    }
     const node = live.current?.querySelector(`[id="${id}"]`);
     const b = node ? bboxOf(node) : null;
     if (!b) return;
@@ -291,8 +436,23 @@ export function UnderworldMap({
   // 回放卡只写站名(没有名字就空着),不写站码。
   const stepStation = step ? nameOf(step.id) || "" : "";
 
+  // 一站的小卡(点住的优先,其次悬停)。只写接口给了的:站名;灵魂的行程加状态与最近一次到达;世界图加在押 / 容量。
+  const cardId = card ?? hover;
+  const cardName = cardId ? nameOf(cardId) : null;
+  const cardLoad = cardId ? stationLoads?.get(cardId) : undefined;
+  const cardLevel = cardLoad ? loadOf(cardLoad.held, cardLoad.capacity) : null;
+  const cardArrived = cardId
+    ? [...arrivals].reverse().find((a) => a.at && template.querySelector(`[id="${a.id}"]`)?.closest("g.node[id]")?.id === cardId)?.at ?? null
+    : null;
+  const cardState = cardId && visits ? states.nodes.get(cardId) ?? "ahead" : null;
+
   return (
-    <figure data-testid="underworld-map" data-map={skin} className={cn("v4-map m-0 min-w-0 space-y-2", className)}>
+    <figure
+      data-testid="underworld-map"
+      data-map={skin}
+      data-camera={camera ? "close" : "whole"}
+      className={cn("v4-map m-0 min-w-0 space-y-2", className)}
+    >
       <div className="flex flex-wrap items-center gap-2">
         {visits && here && (
           <p data-testid="underworld-map-here" className="m-0 text-sm text-[oklch(var(--color-ink))]">
@@ -315,20 +475,6 @@ export function UnderworldMap({
         )}
         <span className="flex-1" />
         <span className="max-md:hidden text-xs text-[oklch(var(--color-ink-muted))]">{t("map.drag_hint")}</span>
-        {/* 键盘:焦点在这一组钮上时,方向键平移、+ / − 缩放、0 全景(图框本身不可聚焦 —— 它只是一张图)。 */}
-        <div
-          role="toolbar"
-          aria-label={t("map.drag_hint")}
-          onKeyDown={onKeyDown}
-          className="flex border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
-        >
-          <button type="button" aria-label={t("workflow.editor.zoom.out")} onClick={() => zoomBy(1 / ZOOM_STEP)} className={BUTTON}>−</button>
-          <button type="button" aria-label={t("workflow.editor.zoom.reset")} onClick={() => setView((v) => zoomAt(v, 1, box.width / 2, box.height / 2, box))} className={`${BUTTON} w-14`}>
-            {Math.round(view.k * 100)}%
-          </button>
-          <button type="button" aria-label={t("workflow.editor.zoom.in")} onClick={() => zoomBy(ZOOM_STEP)} className={BUTTON}>＋</button>
-          <button type="button" onClick={fit} className={BUTTON}>{t("map.fit")}</button>
-        </div>
       </div>
 
       <div className="relative">
@@ -336,11 +482,86 @@ export function UnderworldMap({
           ref={host}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
+          onPointerUp={onPointerUp}
           onPointerCancel={endDrag}
+          onPointerLeave={() => setHover(null)}
           onDoubleClick={onDoubleClick}
           className="v4-map-viewport rounded-panel border border-[oklch(var(--color-line))]"
         />
+        {/* 缩放钮(第十六批 §1.4):44 见方,竖排在图的右上角。键盘:焦点在这一组钮上时,方向键平移、+ / − 缩放、0 全景
+            (图框本身不可聚焦 —— 它只是一张图)。 */}
+        <div
+          role="toolbar"
+          aria-orientation="vertical"
+          aria-label={t("map.drag_hint")}
+          onKeyDown={onKeyDown}
+          className="absolute right-2 top-2 flex flex-col border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
+        >
+          <button type="button" aria-label={t("workflow.editor.zoom.in")} onClick={() => zoomBy(ZOOM_STEP)} className={BUTTON}>＋</button>
+          <button type="button" aria-label={t("workflow.editor.zoom.out")} onClick={() => zoomBy(1 / ZOOM_STEP)} className={BUTTON}>−</button>
+          <button type="button" aria-label={t("map.fit")} title={t("map.fit")} onClick={fit} aria-pressed={localCamera ? !camera : undefined} className={BUTTON}>
+            <Maximize2 aria-hidden="true" className="size-4" />
+          </button>
+          {localCamera && (
+            <button
+              type="button"
+              data-testid="underworld-map-close-up"
+              aria-label={t("map.close_up")}
+              title={t("map.close_up")}
+              onClick={closeUp}
+              aria-pressed={!!camera}
+              className={BUTTON}
+            >
+              <Locate aria-hidden="true" className="size-4" />
+            </button>
+          )}
+        </div>
+        {cardId && cardName && (
+          <div
+            data-testid="underworld-map-station-card"
+            data-station={cardId}
+            className="z-filters w-[236px] border max-md:fixed max-md:inset-x-4 max-md:bottom-4 max-md:w-auto md:absolute md:bottom-3 md:right-16 border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 shadow-overlay"
+          >
+            <div className="flex items-start gap-2">
+              <p aria-live="polite" className="m-0 flex-1 font-title text-md text-[oklch(var(--color-ink))]">{cardName}</p>
+              {card && (
+                <button
+                  type="button"
+                  aria-label={t("common.close")}
+                  onClick={() => setCard(null)}
+                  className="-mr-1 inline-flex size-8 items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              )}
+            </div>
+            <div className="mt-1 space-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
+              {cardState && <p className="m-0">{t(STATE_KEY[cardState])}</p>}
+              {cardArrived && <p className="m-0">{t("map.card.arrived", { date: formatDate(cardArrived) })}</p>}
+              {cardLoad && (
+                <>
+                  <p className="m-0 flex items-baseline gap-2">
+                    <span data-load={cardLevel ?? undefined} className="font-mono text-[oklch(var(--color-ink-muted))]">
+                      <span className="text-xl text-[oklch(var(--color-ink))]">{cardLoad.held}</span> / {cardLoad.capacity ?? "—"}
+                    </span>
+                    <span className="ml-auto">{t("realms.table.col_held")}</span>
+                  </p>
+                  {cardLoad.capacity ? (
+                    <span aria-hidden="true" className="relative block h-1 bg-[oklch(var(--color-line))]">
+                      <span
+                        className="absolute inset-y-0 left-0 bg-[oklch(var(--map-metal))]"
+                        style={{ width: `${Math.min(100, (cardLoad.held / cardLoad.capacity) * 100)}%` }}
+                      />
+                    </span>
+                  ) : null}
+                  {cardLevel === "full" && <p className="m-0">■ {t("realms.table.full")}</p>}
+                  {cardLevel === "near" && <p className="m-0">◐ {t("realms.table.near")}</p>}
+                </>
+              )}
+              {cardLoad?.capacity === null && <p className="m-0">{t("realms.table.capacity_unrecorded")}</p>}
+            </div>
+          </div>
+        )}
         {step && (
           <button
             type="button"

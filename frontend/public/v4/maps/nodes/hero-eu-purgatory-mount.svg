@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="hero" data-node="EU_PURGATORY"  width="64" height="64" viewBox="0 0 64 64" overflow="visible" aria-hidden="true"><style>.hero{--hero-line:var(--civT, #A883AE);--hero-fill:color-mix(in srgb,var(--civT, #A883AE) 9%,var(--card, #1A1B1E));--hero-accent:var(--metal, #B9C2CF);--hero-portal:color-mix(in srgb,var(--glow, #A0709F) 35%,transparent);--hero-glow:var(--glow, #A0709F);--hero-glow-op:.0;--hero-op:1}
+.hero[data-state="ahead"]{--hero-line:var(--sub, #B4B6BA);--hero-fill:var(--main, #111113);--hero-accent:var(--sub, #B4B6BA);--hero-portal:transparent;--hero-glow-op:0;--hero-op:.72}
+.hero[data-state="walked"]{--hero-glow-op:.28}
+.hero[data-state="current"]{--hero-line:var(--metal, #B9C2CF);--hero-fill:color-mix(in srgb,var(--metal, #B9C2CF) 12%,var(--card, #1A1B1E));--hero-accent:var(--metal, #B9C2CF);--hero-portal:color-mix(in srgb,var(--metal, #B9C2CF) 45%,transparent);--hero-glow:var(--metal, #B9C2CF);--hero-glow-op:.55}
+.hero .h-l,.hero .h-f,.hero .h-a,.hero .h-cren,.hero .h-g2{fill:none;stroke:var(--hero-line);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hero .h-f{fill:var(--hero-fill)}
+.hero .h-a{stroke:var(--hero-accent);stroke-width:1.4}
+.hero .h-af{fill:var(--hero-accent);stroke:none}
+.hero .h-af.ice{fill:color-mix(in srgb,var(--hero-accent) 40%,transparent);stroke:var(--hero-line);stroke-width:1.2}
+.hero .h-p{fill:var(--hero-portal);stroke:none}
+.hero .h-cren{stroke-width:3;stroke-dasharray:2.4 2.4}
+.hero .h-g2{stroke-width:1.2;opacity:.45}
+.hero .h-glow{fill:var(--hero-glow);opacity:var(--hero-glow-op)}
+.hero .h-body{opacity:var(--hero-op)}</style><defs><filter id="hb-eu-purgatory-mount" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter></defs><ellipse class="h-glow" cx="32" cy="44" rx="24" ry="11" filter="url(#hb-eu-purgatory-mount)"/><ellipse class="h-g2" cx="32" cy="52.5" rx="22" ry="3.5" style="opacity:.25"/><g class="h-body">
+   <path class="h-f" d="M7 52 28 13.5Q32 9.5 36 13.5L57 52Z"/>
+   <path class="h-l" d="M11.5 45.5Q33 49 53 43M15 39Q33 42 49.5 36.5M18.5 32.5Q33 35 46 30M22 26Q33 28 42.5 23.5M25 20.3Q32.5 21.8 39 18"/>
+   <path class="h-a" d="M32 11.5V7"/><circle class="h-af" cx="32" cy="5.6" r="3.2"/></g></svg>

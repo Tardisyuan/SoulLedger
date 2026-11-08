@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="hero" data-node="dy-six-paths"  width="64" height="64" viewBox="0 0 64 64" overflow="visible" aria-hidden="true"><style>.hero{--hero-line:var(--civT, #D98A7A);--hero-fill:color-mix(in srgb,var(--civT, #D98A7A) 9%,var(--card, #1A1B1E));--hero-accent:var(--metal, #C9A35E);--hero-portal:color-mix(in srgb,var(--glow, #C8604F) 35%,transparent);--hero-glow:var(--glow, #C8604F);--hero-glow-op:.0;--hero-op:1}
+.hero[data-state="ahead"]{--hero-line:var(--sub, #B4B6BA);--hero-fill:var(--main, #111113);--hero-accent:var(--sub, #B4B6BA);--hero-portal:transparent;--hero-glow-op:0;--hero-op:.72}
+.hero[data-state="walked"]{--hero-glow-op:.28}
+.hero[data-state="current"]{--hero-line:var(--metal, #C9A35E);--hero-fill:color-mix(in srgb,var(--metal, #C9A35E) 12%,var(--card, #1A1B1E));--hero-accent:var(--metal, #C9A35E);--hero-portal:color-mix(in srgb,var(--metal, #C9A35E) 45%,transparent);--hero-glow:var(--metal, #C9A35E);--hero-glow-op:.55}
+.hero .h-l,.hero .h-f,.hero .h-a,.hero .h-cren,.hero .h-g2{fill:none;stroke:var(--hero-line);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hero .h-f{fill:var(--hero-fill)}
+.hero .h-a{stroke:var(--hero-accent);stroke-width:1.4}
+.hero .h-af{fill:var(--hero-accent);stroke:none}
+.hero .h-af.ice{fill:color-mix(in srgb,var(--hero-accent) 40%,transparent);stroke:var(--hero-line);stroke-width:1.2}
+.hero .h-p{fill:var(--hero-portal);stroke:none}
+.hero .h-cren{stroke-width:3;stroke-dasharray:2.4 2.4}
+.hero .h-g2{stroke-width:1.2;opacity:.45}
+.hero .h-glow{fill:var(--hero-glow);opacity:var(--hero-glow-op)}
+.hero .h-body{opacity:var(--hero-op)}</style><defs><filter id="hb-cn-six-paths" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter></defs><ellipse class="h-glow" cx="32" cy="44" rx="24" ry="11" filter="url(#hb-cn-six-paths)"/><ellipse class="h-g2" cx="32" cy="52.5" rx="22" ry="3.5" style="opacity:.25"/><g class="h-body">
+   <path class="h-f" d="M23 52l4-7h10l4 7Z"/>
+   <circle class="h-f" cx="32" cy="26" r="17"/>
+   <circle class="h-l" cx="32" cy="26" r="11.5"/>
+   <path class="h-l" d="M32 14.5v23M22 20.3l20 11.4M22 31.7l20-11.4"/>
+   <circle class="h-af" cx="32" cy="26" r="3.6"/>
+   <path class="h-a" d="M48.5 17.5A18.5 18.5 0 0 0 39 8.8"/><path class="h-a" d="m39.5 6.6-.9 2.6 2.6.8"/>
+   <circle class="h-af" cx="32.0" cy="9.0" r="1.7"/><circle class="h-af" cx="46.7" cy="17.5" r="1.7"/><circle class="h-af" cx="46.7" cy="34.5" r="1.7"/><circle class="h-af" cx="32.0" cy="43.0" r="1.7"/><circle class="h-af" cx="17.3" cy="34.5" r="1.7"/><circle class="h-af" cx="17.3" cy="17.5" r="1.7"/></g></svg>

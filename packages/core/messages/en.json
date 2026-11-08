@@ -9354,6 +9354,10 @@
       "ahead": "{{n}} more ahead",
       "behind": "{{n}} places behind you",
       "here": "You are here"
+    },
+    "close_up": "Close up",
+    "card": {
+      "arrived": "Arrived {{date}}"
     }
   },
   "overview": {

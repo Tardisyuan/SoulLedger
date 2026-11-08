@@ -9354,6 +9354,10 @@
       "ahead": "后面还有 {{n}} 处",
       "behind": "已走过 {{n}} 处",
       "here": "你现在在这里"
+    },
+    "close_up": "近处",
+    "card": {
+      "arrived": "到达 {{date}}"
     }
   },
   "overview": {

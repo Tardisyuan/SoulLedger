@@ -1844,10 +1844,186 @@ html.theme-switching *::after {
   width: 100%;
   height: auto;
 }
-.v4-map .pulse {
+/* 代码加的层(2026-11-08,src/lib/underworldMapLayers.ts)的颜色:每个文明的光晕色与金属色令牌。
+   `--map-*` 只是本节的别名,不是新令牌。 */
+.v4-map {
+  --map-glow: var(--color-civ-neutral-glow);
+  --map-metal: var(--color-civ-neutral-metal);
+  --map-ink: var(--color-civ-neutral-ink);
+}
+.v4-map[data-map="cn"] {
+  --map-glow: var(--color-civ-cn-glow);
+  --map-metal: var(--color-civ-cn-metal);
+  --map-ink: var(--color-civ-cn-ink);
+}
+.v4-map[data-map="eu"] {
+  --map-glow: var(--color-civ-eu-glow);
+  --map-metal: var(--color-civ-eu-metal);
+  --map-ink: var(--color-civ-eu-ink);
+}
+.v4-map[data-map="eg"] {
+  --map-glow: var(--color-civ-eg-glow);
+  --map-metal: var(--color-civ-eg-metal);
+  --map-ink: var(--color-civ-eg-ink);
+}
+.v4-map[data-map="gr"] {
+  --map-glow: var(--color-civ-gr-glow);
+  --map-metal: var(--color-civ-gr-metal);
+  --map-ink: var(--color-civ-gr-ink);
+}
+/* 线宽:路线与流光在屏上就是 STROKE 那几档,不随 #terrain 的 scale 变粗、不随窄屏缩细。 */
+.v4-map .edge,
+.v4-map .flow {
+  vector-effect: non-scaling-stroke;
+}
+/* 流光:只动 dashoffset,没有滤镜;快慢与疏密由脚本按热度写进 --flow-s / --flow-period。 */
+.v4-map .flow {
+  stroke: oklch(var(--map-metal));
+  stroke-opacity: 0.9;
+  animation: v4-map-flow var(--flow-s, 6s) linear infinite;
+}
+@keyframes v4-map-flow {
+  to {
+    stroke-dashoffset: calc(-1 * var(--flow-period, 20));
+  }
+}
+/* 当前处(第十六批 §1.4):静止的虚线环 + 一段 60° 的实弧,12 秒一圈(只转 transform)。 */
+.v4-map .pulse,
+.v4-map .scan {
+  stroke: oklch(var(--map-metal));
+}
+.v4-map .scan {
   transform-box: fill-box;
   transform-origin: center;
-  animation: v4-map-pulse 2.4s ease-out infinite;
+  animation: v4-map-scan 12s linear infinite;
+}
+@keyframes v4-map-scan {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* 网格(--ink 5%)与顶边刻度:它是参照,不该比路线显眼。 */
+.v4-map .map-grid-lines {
+  stroke: oklch(var(--color-ink) / 0.05);
+  stroke-width: 1;
+}
+.v4-map .map-grid-ticks {
+  stroke: oklch(var(--color-ink) / 0.18);
+  stroke-width: 1;
+}
+/* 每站的读数胶囊(第十六批 §1.4):18 高、等宽 10.5,前面一条 14 宽的小进度条;满八成以上描边与进度条换金属色、外加一圈光。
+   满 / 将满另有字形(■ / ◐),字色同 ink,不只靠颜色。 */
+.v4-map .map-badge-pill {
+  fill: oklch(var(--color-surface-1));
+  stroke: oklch(var(--color-line-strong));
+  stroke-width: 1;
+}
+.v4-map .map-badge-track {
+  fill: oklch(var(--color-line));
+}
+.v4-map .map-badge-bar {
+  fill: oklch(var(--map-ink));
+}
+.v4-map .map-badge-text {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  fill: oklch(var(--color-ink-muted));
+}
+.v4-map .map-badge[data-load] .map-badge-text {
+  fill: oklch(var(--color-ink));
+  font-weight: 600;
+}
+.v4-map .map-badge[data-hot] .map-badge-pill {
+  stroke: oklch(var(--map-metal));
+}
+.v4-map .map-badge[data-hot] .map-badge-bar {
+  fill: oklch(var(--map-metal));
+}
+.v4-map .map-badge-halo {
+  fill: none;
+  stroke: oklch(var(--map-metal) / var(--glow-alpha));
+  stroke-width: 3;
+}
+/* 主角节点(第十六批 §1.3):四种状态只换变量,不换图。Design 的 hero-nodes.css 原样搬来,只把它的六个页面令牌
+   (--civT / --metal / --glow / --card / --main / --sub)接到这里的令牌上。文件自带的 <style> 在插进页面前删掉了
+   (parseMapSvg),一插进文档它就是全局的。普通站的主角节点替换节点原来的图形(`data-hero="replace"`),当前站的环不藏。 */
+.v4-map .hero {
+  --hero-line: oklch(var(--map-ink));
+  --hero-fill: color-mix(in srgb, oklch(var(--map-ink)) 9%, oklch(var(--color-surface-1)));
+  --hero-accent: oklch(var(--map-metal));
+  --hero-portal: color-mix(in srgb, oklch(var(--map-glow)) 35%, transparent);
+  --hero-glow: oklch(var(--map-glow));
+  --hero-glow-op: 0;
+  --hero-op: 1;
+  overflow: visible;
+}
+.v4-map [data-state="ahead"] > .hero {
+  --hero-line: oklch(var(--color-ink-muted));
+  --hero-fill: oklch(var(--color-canvas));
+  --hero-accent: oklch(var(--color-ink-muted));
+  --hero-portal: transparent;
+  --hero-glow-op: 0;
+  --hero-op: 0.72;
+}
+.v4-map [data-state="walked"] > .hero {
+  --hero-glow-op: 0.28;
+}
+.v4-map [data-state="current"] > .hero {
+  --hero-line: oklch(var(--map-metal));
+  --hero-fill: color-mix(in srgb, oklch(var(--map-metal)) 12%, oklch(var(--color-surface-1)));
+  --hero-accent: oklch(var(--map-metal));
+  --hero-portal: color-mix(in srgb, oklch(var(--map-metal)) 45%, transparent);
+  --hero-glow: oklch(var(--map-metal));
+  --hero-glow-op: 0.55;
+}
+.v4-map .hero .h-l,
+.v4-map .hero .h-f,
+.v4-map .hero .h-a,
+.v4-map .hero .h-cren,
+.v4-map .hero .h-g2 {
+  fill: none;
+  stroke: var(--hero-line);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.v4-map .hero .h-f {
+  fill: var(--hero-fill);
+}
+.v4-map .hero .h-a {
+  stroke: var(--hero-accent);
+  stroke-width: 1.4;
+}
+.v4-map .hero .h-af {
+  fill: var(--hero-accent);
+  stroke: none;
+}
+.v4-map .hero .h-af.ice {
+  fill: color-mix(in srgb, var(--hero-accent) 40%, transparent);
+  stroke: var(--hero-line);
+  stroke-width: 1.2;
+}
+.v4-map .hero .h-p {
+  fill: var(--hero-portal);
+  stroke: none;
+}
+.v4-map .hero .h-cren {
+  stroke-width: 3;
+  stroke-dasharray: 2.4 2.4;
+}
+.v4-map .hero .h-g2 {
+  stroke-width: 1.2;
+  opacity: 0.45;
+}
+.v4-map .hero .h-glow {
+  fill: var(--hero-glow);
+  opacity: var(--hero-glow-op);
+}
+.v4-map .hero .h-body {
+  opacity: var(--hero-op);
+}
+.v4-map g.node[data-hero="replace"] > :not(.hero, .pulse, .scan) {
+  display: none;
 }
 .v4-map .map-hide-branches .branch:not(.branch-shown) {
   display: none;
@@ -1863,31 +2039,45 @@ html.theme-switching *::after {
   outline: 2px solid oklch(var(--color-focus));
   outline-offset: 4px;
 }
-@keyframes v4-map-pulse {
-  0% {
-    opacity: 0.75;
-    transform: scale(1);
-  }
-  80%,
-  100% {
-    opacity: 0;
-    transform: scale(2.4);
-  }
-}
-/* 减少动态效果:脉动停在一个看得见的样子(Design 原图同值);上面那条全局 1ms 会让它播一次就停在透明。 */
+/* 减少动态效果:流光不画(停住的流光是一条莫名其妙的虚线,走过的线本身已经说明了);扫描弧经上面那条全局 1ms
+   转一圈停回原位,就是一段静止的弧。落地页的扫描线同理不画。 */
 @media (prefers-reduced-motion: reduce) {
-  .v4-map .pulse {
-    animation-name: v4-map-pulse-still !important;
-    opacity: 0.5;
-    transform: scale(1.6);
+  .v4-map .flow,
+  .landing-backdrop::after {
+    display: none;
   }
 }
-@keyframes v4-map-pulse-still {
-  from,
-  to {
-    opacity: 0.5;
-    transform: scale(1.6);
+
+/* 落地页四张卡后面:一层文明光的径向光晕 + 一条慢慢扫下去的细线(只动 transform)。装饰,aria-hidden。 */
+.landing-backdrop {
+  position: absolute;
+  inset: -2rem 0 0; /* 不往两侧伸:393 宽时伸出去就是一条横向滚动 */
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(60% 70% at 50% 0%, oklch(var(--color-glow) / var(--glow-alpha)), transparent 70%);
+}
+.landing-backdrop::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, oklch(var(--color-glow) / var(--glow-alpha)), transparent);
+  animation: landing-scan 9s linear infinite;
+}
+@keyframes landing-scan {
+  from {
+    transform: translateY(0);
   }
+  to {
+    transform: translateY(28rem);
+  }
+}
+
+/* 空态背后的文明主视觉线稿:压到很淡,靠右,不挡字(EmptyState 的 `civilization`)。 */
+.empty-emblem {
+  opacity: 0.12;
 }
 
 /* 主视觉深浅两份:按 :root.light 只显示一份(不等主题上下文挂好,首帧就对)。

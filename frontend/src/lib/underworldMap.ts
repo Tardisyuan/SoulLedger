@@ -34,7 +34,13 @@ export function mapSkinOf(civilization: string | null | undefined): MapSkin | nu
 
 export const mapUrl = (skin: MapSkin, theme: MapTheme) => `/v4/maps/soulledger-map-${skin}-${theme}.svg`;
 
-const SVG_NS = "http://www.w3.org/2000/svg";
+export const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * 线宽只有这几档(viewBox 单位)。`.edge` 与流光另由 CSS 设 `vector-effect: non-scaling-stroke`,放大、窄屏时屏幕上也是这几档 ——
+ * 此前走过的线随 `#terrain` 的 scale 一起变粗,放到 4 倍是 10 个单位,而同屏的字不变。
+ */
+export const STROKE = { ahead: 1.5, walked: 2, ring: 1.5 } as const;
 
 /**
  * 解析并消毒。文件是 Design 交付、随仓库发布的静态资源(`underworldMap.test.ts` 逐份确认没有脚本、外链、
@@ -60,14 +66,14 @@ export function parseMapSvg(text: string): SVGSVGElement | null {
   return root as unknown as SVGSVGElement;
 }
 
-const byId = (svg: Element, id: string): Element | null => svg.querySelector(`[id="${CSS_ESCAPE(id)}"]`);
-const CSS_ESCAPE = (s: string) => s.replace(/["\\]/g, "\\$&");
+export const byId = (svg: Element, id: string): Element | null => svg.querySelector(`[id="${CSS_ESCAPE(id)}"]`);
+export const CSS_ESCAPE = (s: string) => s.replace(/["\\]/g, "\\$&");
 
 export const nodesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain g.node[id]"));
-const edgesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain .edge[data-from][data-to]"));
+export const edgesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain .edge[data-from][data-to]"));
 /** 节点里带 id 的子格(十殿、九圈、七台、千年)。 */
-const cellsOf = (node: Element): Element[] => Array.from(node.querySelectorAll("circle[id]"));
-const isBranch = (el: Element) => el.classList.contains("branch");
+export const cellsOf = (node: Element): Element[] => Array.from(node.querySelectorAll("circle[id]"));
+export const isBranch = (el: Element) => el.classList.contains("branch");
 
 /** 一处有记录的停留:`id` 是图上的节点或子格;`current` = 还没离开。按先后排。 */
 export interface MapVisit {
@@ -257,12 +263,12 @@ export function paintStates(svg: Element, states: MapStates, palette: MapPalette
     if (to === "walked") {
       edge.setAttribute("stroke", palette.walked);
       edge.setAttribute("stroke-opacity", "1");
-      edge.setAttribute("stroke-width", "2.5");
+      edge.setAttribute("stroke-width", String(STROKE.walked));
       edge.removeAttribute("stroke-dasharray");
     } else {
       edge.setAttribute("stroke", palette.ahead);
       edge.setAttribute("stroke-opacity", "0.45");
-      edge.setAttribute("stroke-width", "1.5");
+      edge.setAttribute("stroke-width", String(STROKE.ahead));
       edge.setAttribute("stroke-dasharray", "4 5");
     }
   }

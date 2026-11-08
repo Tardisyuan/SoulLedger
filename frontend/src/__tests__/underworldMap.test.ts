@@ -21,11 +21,38 @@ import {
   readPalette,
   stationNameKeys,
 } from "@/src/lib/underworldMap";
+import {
+  BADGE,
+  CLOSE_SCALE,
+  HERO_NODES,
+  UNMEASURED,
+  addGrid,
+  addHeroes,
+  addScanRing,
+  badgePlacement,
+  badgeText,
+  edgeHeat,
+  flowOf,
+  glowAlphaOf,
+  heatByNode,
+  heatOf,
+  heroPlacement,
+  loadOf,
+  markLoads,
+  minLabelFont,
+  moveGroupLabelsOffHeroes,
+  narrowCamera,
+  nodeLoads,
+  paintLight,
+  panCamera,
+} from "@/src/lib/underworldMapLayers";
 
 const PUBLIC_V4 = path.join(__dirname, "..", "..", "public", "v4");
 const files = (dir: string) => readdirSync(path.join(PUBLIC_V4, dir)).filter((f) => f.endsWith(".svg")).map((f) => path.join(dir, f));
 const MAPS = files("maps");
 const EMBLEMS = files("emblems");
+const HEROES = files("maps/nodes");
+const SOULFIRE = files("soulfire");
 const read = (rel: string) => readFileSync(path.join(PUBLIC_V4, rel), "utf8");
 const map = (skin: string, theme = "dark") => parseMapSvg(read(`maps/soulledger-map-${skin}-${theme}.svg`))!;
 
@@ -35,7 +62,7 @@ describe("the delivered SVGs are safe to put in the page", () => {
     expect(EMBLEMS).toHaveLength(8);
   });
 
-  it.each([...MAPS, ...EMBLEMS])("%s has no script, foreign content, handler, outside link or import", (rel) => {
+  it.each([...MAPS, ...EMBLEMS, ...HEROES, ...SOULFIRE])("%s has no script, foreign content, handler, outside link or import", (rel) => {
     const text = read(rel);
     expect(text).not.toMatch(/<script/i);
     expect(text).not.toMatch(/foreignObject/i);
@@ -241,5 +268,205 @@ describe("zoom scales the route and only moves the words", () => {
     const ay = Number(text.getAttribute("y"));
     expect(label.getAttribute("transform")).toBe(`translate(${ax - 100} ${ay - 50})`);
     expect(label.getAttribute("transform")).not.toMatch(/scale/);
+  });
+});
+
+describe("light on the map (2026-11-08 A, Design batch 16 §1.4)", () => {
+  it("occupancy → heat: by capacity when recorded, against the fullest station when not, zero when empty", () => {
+    expect(heatOf({ held: 30, capacity: 120 }, 999)).toBe(0.25);
+    expect(heatOf({ held: 200, capacity: 120 }, 0)).toBe(1);
+    expect(heatOf({ held: 3, capacity: 0 }, 0)).toBe(1);
+    expect(heatOf({ held: 5, capacity: null }, 20)).toBe(0.25);
+    expect(heatOf({ held: 0, capacity: 10 }, 20)).toBe(0);
+    expect(heatOf(undefined, 20)).toBe(0);
+    expect(heatByNode(new Map([["a", { held: 10, capacity: null }], ["b", { held: 5, capacity: null }]]))).toEqual(
+      new Map([["a", 1], ["b", 0.5]]),
+    );
+  });
+
+  it("heat → flow: hotter is faster and denser, the middle is Design's dash 2 / gap 22, and nobody there means no flow", () => {
+    const cold = flowOf(0.1)!;
+    const mid = flowOf(0.5)!;
+    const hot = flowOf(1)!;
+    expect(mid).toMatchObject({ dash: 2, gap: 22, period: 24 });
+    expect(hot.seconds).toBeLessThan(mid.seconds);
+    expect(mid.seconds).toBeLessThan(cold.seconds);
+    expect(hot.gap).toBeLessThan(cold.gap);
+    expect(flowOf(0)).toBeNull();
+    expect(glowAlphaOf(0)).toBeLessThan(glowAlphaOf(1));
+  });
+
+  it("an edge into a station that is not a realm is 'not measured', not 'empty'", () => {
+    const heat = new Map([["EU_HEAVEN", 0]]);
+    expect(edgeHeat(heat, "EU_HEAVEN")).toBe(0);
+    expect(edgeHeat(heat, "eu-death")).toBe(UNMEASURED);
+    expect(flowOf(edgeHeat(heat, "eu-death"))).not.toBeNull();
+    expect(edgeHeat(null, "anything")).toBe(0.5);
+  });
+
+  it("realm codes fold into the map's nodes, cells included; one unrecorded capacity makes the sum unrecorded", () => {
+    const svg = map("cn");
+    const loads = nodeLoads(svg, new Map([
+      ["DY_COURT_01", { held: 3, capacity: 10 }],
+      ["DY_COURT_02", { held: 4, capacity: null }],
+      ["NOT_ON_THE_MAP", { held: 9, capacity: 9 }],
+    ]));
+    expect(loads.get("dy-ten-courts")).toEqual({ held: 7, capacity: null });
+    expect([...loads.keys()]).toEqual(["dy-ten-courts"]);
+  });
+
+  it("walked edges get a glow under them and a moving flow on top; edges ahead get neither", () => {
+    const svg = map("eu");
+    paintStates(svg, mapStates(svg, pathVisits([{ realm_code: "EU_PURGATORY_T3_WRATH", left_at: null }])), readPalette(svg)!);
+    paintLight(svg, null);
+    const flows = [...svg.querySelectorAll("#terrain .flow")];
+    expect(flows.length).toBeGreaterThan(0);
+    for (const f of flows) {
+      expect(f.getAttribute("stroke-dasharray")).toBe("2 22");
+      // No filter on anything that moves (Huawei-class Chrome re-blurs every frame).
+      expect(f.hasAttribute("filter")).toBe(false);
+      const edge = svg.querySelector(`.edge[data-to="${f.getAttribute("data-to")}"]`)!;
+      expect(edge.getAttribute("data-state")).toBe("walked");
+    }
+    // Every edge has a glow sibling now, shown only when walked; widths are the two STROKE steps.
+    for (const edge of svg.querySelectorAll("#terrain .edge")) {
+      const glow = edge.nextElementSibling!;
+      expect(glow.classList.contains("edge-glow")).toBe(true);
+      expect(glow.getAttribute("display")).toBe(edge.getAttribute("data-state") === "walked" ? "inline" : "none");
+      expect(edge.getAttribute("stroke-width")).toBe(edge.getAttribute("data-state") === "walked" ? "2" : "1.5");
+    }
+  });
+
+  it("the current place gets a dashed ring and one 60° arc", () => {
+    const svg = map("eu");
+    paintStates(svg, mapStates(svg, pathVisits([{ realm_code: "EU_PURGATORY_T3_WRATH", left_at: null }])), readPalette(svg)!);
+    addScanRing(svg);
+    expect(svg.querySelector(".pulse")!.getAttribute("stroke-dasharray")).toBe("2 3");
+    const [arc, rest] = svg.querySelector(".scan")!.getAttribute("stroke-dasharray")!.split(" ").map(Number);
+    expect(arc / (arc + rest)).toBeCloseTo(1 / 6, 2);
+  });
+
+  it("the grid sits under the terrain, and the long ticks are every fifth cell along the top", () => {
+    const svg = map("gr");
+    addGrid(svg);
+    expect(svg.querySelector(":scope > .map-grid")!.nextElementSibling!.id).toBe("terrain");
+    const ticks = svg.querySelector(".map-grid-ticks")!.getAttribute("d")!;
+    expect(ticks).toContain("M0 0v8");
+    expect(ticks).toContain("M24 0v4");
+    expect(ticks).toContain("M120 0v8");
+  });
+});
+
+describe("data on the map (2026-11-08 B)", () => {
+  it("the badge says held / capacity, with a glyph when full or nearly full, not only a colour", () => {
+    expect(badgeText({ held: 12, capacity: 40 })).toBe("12 / 40");
+    expect(badgeText({ held: 40, capacity: 40 })).toBe("■ 40 / 40");
+    expect(badgeText({ held: 37, capacity: 40 })).toBe("◐ 37 / 40");
+    expect(badgeText({ held: 3, capacity: null })).toBe("3 / —");
+    expect(loadOf(3, null)).toBeNull();
+  });
+
+  it("the badge goes up and to the right of its station, and to the left when the right edge would cut it", () => {
+    expect(badgePlacement({ x: 100, y: 60, width: 20, height: 20 }, 80, 1120)).toEqual({ x: 124, y: 60 - BADGE.height - 2, side: "right" });
+    expect(badgePlacement({ x: 1060, y: 60, width: 20, height: 20 }, 80, 1120).side).toBe("left");
+  });
+
+  it("markLoads hangs one badge per station in its label group, metal-hot at 80% and above", () => {
+    const svg = map("eu");
+    const placed = markLoads(svg, new Map([
+      ["EU_HEAVEN", { held: 9, capacity: 10 }],
+      ["EU_ACHERON", { held: 1, capacity: 10 }],
+    ]));
+    expect(placed.size).toBe(2);
+    const badge = (id: string) => svg.querySelector(`#labels [data-for="${id}"] .map-badge`)!;
+    expect(badge("EU_HEAVEN").hasAttribute("data-hot")).toBe(true);
+    expect(badge("EU_HEAVEN").querySelector(".map-badge-halo")).not.toBeNull();
+    // Absence: a quiet station has no halo and is not hot.
+    expect(badge("EU_ACHERON").hasAttribute("data-hot")).toBe(false);
+    expect(badge("EU_ACHERON").querySelector(".map-badge-halo")).toBeNull();
+    expect(badge("EU_ACHERON").querySelector(".map-badge-bar")!.getAttribute("width")).toBe(String(BADGE.bar / 10));
+  });
+});
+
+describe("hero nodes (Design batch 16 §1)", () => {
+  it.each(Object.entries(HERO_NODES).flatMap(([skin, nodes]) => Object.entries(nodes).map(([id, name]) => [skin, id, name])))(
+    "%s: %s → hero-%s.svg exists, declares that node, and the node is on both maps",
+    (skin, id, name) => {
+      expect(read(`maps/nodes/hero-${name}.svg`)).toContain(`data-node="${id}"`);
+      for (const theme of ["dark", "light"]) expect(map(skin, theme).querySelector(`#terrain g.node[id="${id}"]`)).not.toBeNull();
+    },
+  );
+
+  it("there are fifteen, and every delivered file is wired to a node", () => {
+    const wired = Object.values(HERO_NODES).flatMap((nodes) => Object.values(nodes).map((n) => `maps/nodes/hero-${n}.svg`));
+    expect(wired.sort()).toEqual([...HEROES].sort());
+    expect(wired).toHaveLength(15);
+  });
+
+  it("a station hero is 56 and centred; a dot-row hero is 48 and hangs left of the row", () => {
+    expect(heroPlacement({ x: 100, y: 70, width: 20, height: 20 }, false)).toEqual({ x: 82, y: 52, width: 56, height: 56 });
+    const row = heroPlacement({ x: 600, y: 60, width: 300, height: 40 }, true);
+    expect(row).toMatchObject({ width: 48, height: 48 });
+    expect(row.x + row.width).toBeLessThan(600);
+  });
+
+  it("goes into the node's <g data-state>; a station's own graphic is replaced, a dot row's is not", () => {
+    const svg = map("cn");
+    const hero = (name: string) => parseMapSvg(read(`maps/nodes/hero-${name}.svg`))!;
+    const placed = addHeroes(svg, new Map([["dy-ghost-gate", hero("cn-ghost-gate")], ["dy-ten-courts", hero("cn-ten-courts")]]));
+    expect(placed.size).toBe(2);
+    expect(svg.querySelector("#dy-ghost-gate > svg.hero")).not.toBeNull();
+    expect(svg.querySelector("#dy-ghost-gate")!.getAttribute("data-hero")).toBe("replace");
+    expect(svg.querySelector("#dy-ten-courts > svg.hero")!.getAttribute("width")).toBe("48");
+    expect(svg.querySelector("#dy-ten-courts")!.hasAttribute("data-hero")).toBe(false);
+    // The file's own <style> is gone (it would be global once in the page); the court cells are untouched.
+    expect(svg.querySelector(".hero style")).toBeNull();
+    expect(svg.querySelectorAll("#dy-ten-courts circle[id^='DY_COURT_']")).toHaveLength(10);
+  });
+
+  it("a group label that a hero covers moves to the right of that hero and its badge", () => {
+    const svg = map("cn");
+    const groupLabels = () => [...svg.querySelectorAll("#labels > g:not([data-for]) > text")];
+    const label = groupLabels().find((t) => t.textContent === "赴冥 · 十三站之一至十")!;
+    const x0 = Number(label.getAttribute("x"));
+    const hero = { x: x0 + 40, y: Number(label.getAttribute("y")) - 20, width: 56, height: 56 };
+    const badge = { x: hero.x + 60, y: hero.y, width: 70, height: 18 };
+    const river = groupLabels().find((t) => t.textContent === "奈河")!;
+    const riverX = river.getAttribute("x");
+    moveGroupLabelsOffHeroes(svg, new Map([["dy-ghost-gate", hero]]), new Map([["dy-ghost-gate", badge]]));
+    expect(Number(label.getAttribute("x"))).toBe(badge.x + badge.width + 8);
+    expect(label.getAttribute("text-anchor")).toBe("start");
+    // Absence: a label nowhere near a hero stays where Design put it.
+    expect(river.getAttribute("x")).toBe(riverX);
+  });
+});
+
+describe("narrow screens: close up on the current station", () => {
+  const box = { width: 1120, height: 450 };
+
+  it("no camera when the whole map already shows labels at 11px or more", () => {
+    expect(narrowCamera(box, { x: 500, y: 200 }, 1300, 10)).toBeNull();
+    expect(narrowCamera(box, { x: 500, y: 200 }, 0, 10)).toBeNull();
+  });
+
+  it("at 393 the camera is 1.25 px per unit, full height, with the station about 60% across", () => {
+    const c = narrowCamera(box, { x: 700, y: 300 }, 361, 10)!;
+    expect(c.w).toBe(Math.round(361 / CLOSE_SCALE));
+    expect(c.h).toBe(box.height);
+    expect((700 - c.x) / c.w).toBeCloseTo(0.6, 1);
+    // The smallest label is now at least 11 px on screen.
+    expect((10 * 361) / c.w).toBeGreaterThanOrEqual(11);
+  });
+
+  it("stays inside the map at either end, and panning is clamped", () => {
+    expect(narrowCamera(box, { x: 10, y: 0 }, 361, 10)!.x).toBe(0);
+    const end = narrowCamera(box, { x: 1115, y: 0 }, 361, 10)!;
+    expect(end.x + end.w).toBe(box.width);
+    expect(panCamera(end, 500, box).x).toBe(end.x);
+    expect(panCamera(end, -5000, box).x).toBe(0);
+  });
+
+  it("reads the smallest label size from the map (the Diyu map has 10)", () => {
+    expect(minLabelFont(map("cn"))).toBe(10);
   });
 });

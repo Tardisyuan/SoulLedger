@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { realmsApi, type Realm, type RealmCapacityResult } from "@soulledger/core/api";
 import { realmKeys } from "@soulledger/core/query_keys";
@@ -28,6 +28,7 @@ import { useHall } from "@/src/components/plaque/useHall";
 import { RouteMap } from "@/src/components/realms/RouteMap";
 import { UnderworldMap } from "@/src/components/realms/UnderworldMap";
 import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
+import { loadOf, type StationLoad } from "@/src/lib/underworldMapLayers";
 
 /**
  * 界域(Design A2 · /realms):左边是这个文明的路线图(`RouteMap`,列表 + 连线,只读),
@@ -139,6 +140,15 @@ function RealmsPageContent() {
     picked ?? CIVILIZATION_OPTIONS.find((c) => realms.some((r) => r.civilization === c)) ?? CIVILIZATION_OPTIONS[0];
   const own = realms.filter((r) => r.civilization === civilization);
   const occupancy = new Map((occupancyQuery.data ?? []).map((o) => [o.realm_id, o.count]));
+  // 地图上的读数:界域码 → 在押 / 容量。只在在押取到了时给(没取到时图上不写 0)。memo:地图按它重画。
+  const occupancyData = occupancyQuery.isSuccess ? occupancyQuery.data : undefined;
+  const mapLoads = useMemo(() => {
+    if (!occupancyData) return undefined;
+    const held = new Map(occupancyData.map((o) => [o.realm_id, o.count]));
+    return new Map<string, StationLoad>(
+      (realmsQuery.data ?? []).filter((r) => r.civilization === civilization).map((r) => [r.realm_code, { held: held.get(r.id) ?? 0, capacity: r.capacity ?? null }]),
+    );
+  }, [occupancyData, realmsQuery.data, civilization]);
   const rows = treeRows(own);
   // 身份带(A2):题「界域 · <所看文明的界域根>」,右栏「在押 <根的在押数>」。根取树的第一行;
   // 在押没取到就不写右栏。
@@ -202,13 +212,14 @@ function RealmsPageContent() {
       ) : realms.length === 0 ? (
         <EmptyState title={t("realms.title")} reason={t("realms.no_realms")} />
       ) : own.length === 0 ? (
-        <EmptyState title={t(`realms.civilizations.${civilization}`)} reason={t("realms.table.empty_civ")} />
+        <EmptyState title={t(`realms.civilizations.${civilization}`)} reason={t("realms.table.empty_civ")} civilization={civilization} />
       ) : (
         <>
           <UnderworldMap
             key={civilization}
             civilization={civilization}
             label={t(config(civilization))}
+            loads={mapLoads}
             className={`${CARD} mt-2 p-4`}
           />
           <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] items-start gap-4 lg:gap-6 pt-2">
@@ -262,14 +273,7 @@ function parseCapacity(draft: string): number | null | undefined {
   return /^\d+$/.test(s) ? Number(s) : undefined;
 }
 
-/** 将满:在押占容量 ≥ 90%(图例「◐ 将满 = ≥ 90%」)。满了另算。 */
-const NEAR = 0.9;
-type Load = "full" | "near" | null;
-function loadOf(held: number, cap: number | null): Load {
-  if (cap === null) return null;
-  if (held >= cap) return "full";
-  return cap > 0 && held / cap >= NEAR ? "near" : null;
-}
+// 将满 / 满(`loadOf`)与冥界地图上的读数是同一条规则,在 `src/lib/underworldMapLayers.ts`。
 
 /**
  * 树表(≥ 768)与两行卡片(< 768)是同一批行、同一个编辑状态。宽屏在行内改容量,
