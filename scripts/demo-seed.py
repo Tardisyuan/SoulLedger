@@ -357,16 +357,31 @@ GATE_OF = {"CHARITY": "F-JJ", "COMPASSION": "F-JJ", "PIETY": "F-FX", "HONESTY": 
 #: The bolgia a damned soul is in: where the poem puts him (Ulysses, Inf. XXVI), or this demo's reading (Faust, a
 #: magician, with the sorcerers of the fourth bolgia, Inf. XX).
 BOLGIA = {"Ulysses": "EU-INF-C8-B08", "Faust": "EU-INF-C8-B04"}
+#: Named in the soul's own canto: "Caina attende chi a vita ci spense" (Inf. V.107), the first zone of Cocytus, where
+#: their killer will go. Francesca's one deed is OTHER, which reads as no sin, so without it she had one article.
+NAMED_IN_CANTO = {"Francesca da Rimini": "EU-INF-C9-Z1", "Paolo Malatesta": "EU-INF-C9-Z1"}
 #: Gorgias 523a-526d and Republic X: the two roads and the marks a life leaves on the soul for everyone; for the damned
 #: the curable and the incurable, and the incurable who were kings (525e names Tantalus and Sisyphus); requital for the good.
+#: A case still before the court: both parties judged dead and naked (523e), the court and its seats (524a), and the
+#: scars the soul brings to it (524d), which are what the judge is about to read.
 GREEK_GROUNDS = {Verdict.PASSED: ["GR-GRG-01", "GR-GRG-07", "GR-ER-05"],
-                 Verdict.FAILED: ["GR-GRG-01", "GR-GRG-09", "GR-GRG-10", "GR-ER-04"]}
+                 Verdict.FAILED: ["GR-GRG-01", "GR-GRG-09", "GR-GRG-10", "GR-ER-04"],
+                 None: ["GR-GRG-05", "GR-GRG-06", "GR-GRG-07"]}
+#: A European deed's category read as the terrace that purges it (Purg. X-XXVII) and the circle that punishes it
+#: (Inferno). Avarice is both T5 and the fourth circle (Inf. VII); cruelty is wrath's terrace and the first girone of
+#: violence (Inf. XII); blasphemy the third girone (Inf. XIV) and, on the mountain, pride's terrace; a false oath the
+#: falsifiers of words in the tenth bolgia (Inf. XXX). Envy for a false oath is this demo's own reading.
+EU_SIN_OF = {"GREED": ("EU-DS-T5", "EU-INF-C4"), "CRUELTY": ("EU-DS-T3", "EU-INF-C7-R1"),
+             "BLASPHEMY": ("EU-DS-T1", "EU-INF-C7-R3"), "DECEPTION": ("EU-DS-T2", "EU-INF-C8-B10")}
 
 
 def grounds(case, soul, verdict):
-    """The articles a verdict rests on: two to four where the corpus has that many to say. Europe's seven sins are the
-    terraces of Purgatory, so only a PURGATORY verdict cites them (the user's rule); a damned soul cites the Inferno, the
-    second circle first (Minos there assigns every circle, Inf. V.4-12); a soul admitted to Heaven has no article."""
+    """The articles a verdict rests on, or (`verdict` None) a case still open: two to four. Europe has no Paradiso corpus
+    (StatuteCorpus has only the terraces and the circles), so a soul admitted to Heaven cites the terraces that purged
+    its sins on the way up, every one of the saved having climbed the mountain (the user, 2026-11-08); a soul in
+    Purgatory its own terrace and those of its other sins; a damned soul the Inferno, the second circle first (Minos
+    there assigns every circle, Inf. V.4-12), then its own and its sins'; an open case Minos's circle and the soul's sins
+    on both sides, which is the question in front of the judge."""
     pick = random.Random(f"{soul.name}/{verdict}")
     statutes = Statute.all_objects.filter(tenant_id=case.tenant_id, is_deleted=False)
 
@@ -396,16 +411,28 @@ def grounds(case, soul, verdict):
         lied = [c.statute for c in heard if c.truthful is False]
         if verdict == Verdict.FAILED and lied:
             return lied[:pick.randint(2, 4)]
-        kept = [c.statute for c in heard if c.truthful]
+        # Not heard yet (the queue): the docket's own clauses, which the hearing will put to the soul.
+        kept = [c.statute for c in heard if c.truthful] or list(statutes.filter(corpus="NEGATIVE_CONFESSION").order_by("ordinal"))
         return pick.sample(kept, min(len(kept), pick.randint(2, 3)))
     if case.civilization == "EUROPEAN":
         placed = PLACED.get(soul.name, "")
-        if verdict == Verdict.PURGATORY and placed.startswith("EU_PURGATORY_"):
-            return by_code([f"EU-DS-{placed.split('_')[2]}"])
-        if verdict == Verdict.FAILED and placed.startswith("EU_HELL_"):
-            circle = "".join(ch for ch in placed[len("EU_HELL_"):] if ch.isdigit())
-            return by_code(["EU-INF-C2", f"EU-INF-C{circle}", BOLGIA.get(soul.name, "")])
-        return []
+        sins = [EU_SIN_OF[r.category] for r in SoulRecord.objects.filter(soul=soul, record_type="DEMERIT").order_by("-weight", "pk")
+                if r.category in EU_SIN_OF]
+        terraces = [t for t, _ in sins]
+        circles = [c for _, c in sins]
+        if verdict == Verdict.PURGATORY:
+            own = [f"EU-DS-{placed.split('_')[2]}"] if placed.startswith("EU_PURGATORY_") else []
+            codes = own + terraces + ["EU-DS-T1"]
+        elif verdict == Verdict.FAILED:
+            circle = "".join(ch for ch in placed[len("EU_HELL_"):] if ch.isdigit()) if placed.startswith("EU_HELL_") else ""
+            codes = ["EU-INF-C2", f"EU-INF-C{circle}" if circle else "", BOLGIA.get(soul.name, ""), NAMED_IN_CANTO.get(soul.name, "")] + circles
+        elif verdict == Verdict.PASSED:
+            # Pride first, where the climb begins (Purg. X), and the seventh last: its wall of fire stands between every soul
+            # and the Earthly Paradise, Dante too (Purg. XXVII).
+            codes = ["EU-DS-T1"] + terraces + ["EU-DS-T7"]
+        else:
+            codes = ["EU-INF-C2"] + [c for pair in sins for c in pair]
+        return by_code([c for c in codes if c])[:4]
     if case.civilization == "GREEK":
         return by_code(GREEK_GROUNDS.get(verdict, []))
     return []
@@ -432,6 +459,8 @@ def carry_out(soul, tenant, fate, judges, stats):
     sent_on(case)
     judge = judges[tenant.code]
     if fate == "queue":
+        # Unclaimed, anyone may cite (`claims.assert_may_edit`): the grounds already on the docket when a judge claims it.
+        cite_grounds(case, soul, None)
         return
     claims.claim(case.pk, judge)
     case.refresh_from_db()
@@ -711,6 +740,7 @@ def seed_cross_judgments(tenants):
     try:
         case = sent_on(convening.die(location=convening.origin_location))
         Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
+        cite_grounds(case, convening, None)
         cj = CrossTenantJudgmentService.create("沉香案·两界会审", "两界共审,先地府后希腊冥界", cn, None)
         cj.judgment = case
         cj.save(update_fields=["judgment"])
@@ -720,6 +750,8 @@ def seed_cross_judgments(tenants):
         try:
             case = sent_on(soul.die(location=soul.origin_location))
             Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
+            # The Fifth Court's own grounds, written before the verdict as every other case's are (`cite_grounds`).
+            cite_grounds(case, soul, Verdict.FAILED if conclude else None)
             cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后希腊冥界", cn, None)
             cj.judgment = case
             cj.save(update_fields=["judgment"])
