@@ -19,7 +19,7 @@ import { useBiometry } from "../useBiometry";
 import { Button, Input, SwitchMark, Txt, useLayout, useTheme } from "../ui";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
-function SheetTitle({ children }: { children: string }) {
+export function SheetTitle({ children }: { children: string }) {
   return (
     <Txt accessibilityRole="header" style={styles.sheetTitle}>
       {children}
@@ -189,7 +189,7 @@ export function BioRow() {
  * sign-in) the session still holds the password that was just typed, and that is what 「开启」 uses. Saying 「以后再说」
  * ends the question for this soul code. The password is dropped here either way.
  */
-export function BioAsk({ soulCode, welcomePending }: { soulCode: string; welcomePending: boolean }) {
+export function BioAsk({ soulCode, welcomePending, onSettled }: { soulCode: string; welcomePending: boolean; onSettled?: (settled: boolean) => void }) {
   const { t } = useI18n();
   const toast = useToast();
   const { heldPassword, dropPassword } = useSession();
@@ -202,6 +202,9 @@ export function BioAsk({ soulCode, welcomePending }: { soulCode: string; welcome
   useEffect(() => {
     if (bio.ready && !due && !welcomePending) dropPassword();
   }, [bio.ready, due, welcomePending, dropPassword]);
+  // Settled: the question has been answered or is not going to be asked -- the next one-time sheet may come up.
+  const settled = bio.ready && !due && !welcomePending;
+  useEffect(() => onSettled?.(settled), [settled, onSettled]);
 
   const finish = () => {
     markAsked(soulCode);

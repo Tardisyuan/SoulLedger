@@ -23,11 +23,11 @@
 import { platform } from "@soulledger/core/platform";
 import { requireOptionalNativeModule } from "expo";
 import * as Notifications from "expo-notifications";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Platform } from "react-native";
 
 import { useI18n } from "./i18n";
-import { PRIMER_SEEN_KEY, permission, registerDevice, requestPermission } from "./push";
+import { PRIMER_SEEN_KEY, permission, registerDevice, requestPermission, type Permission } from "./push";
 import { liveContent, type LiveContent, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 import { useTheme } from "./ui";
 
@@ -89,6 +89,44 @@ export const LIVE_ASKED_KEY = "soul_live_permission_asked";
 
 let asking: Promise<boolean> | null = null;
 
+/** Set once the soul has answered the 「锁屏上看不到进度」 sheet, either button: never shown again. */
+export const LIVE_HINT_SEEN_KEY = "soul_live_settings_hint_seen";
+
+/**
+ * Android 12 and below have no runtime notification dialog: when notifications are off for the app (EMUI's appop
+ * "ignore", 华为 TAS-AL00 API 31, 2026-11-08) a request shows nothing and the lock screen stays empty without a word.
+ * So, once, the app says so itself (用户 2026-11-08 决定). Android 13+ keeps its one system dialog and gets no hint.
+ */
+export function shouldOfferNotifySettings(o: { apiLevel: number; permission: Permission; seen: boolean }): boolean {
+  return o.apiLevel < 33 && o.permission !== "granted" && !o.seen;
+}
+
+let hintDue = false;
+const hintListeners = new Set<() => void>();
+function setHintDue(due: boolean): void {
+  if (hintDue === due) return;
+  hintDue = due;
+  hintListeners.forEach((fn) => fn());
+}
+
+/** True while the 「锁屏上看不到进度」 sheet is owed (see `shouldOfferNotifySettings`). */
+export function useNotifySettingsHint(): boolean {
+  return useSyncExternalStore(
+    (fn) => {
+      hintListeners.add(fn);
+      return () => hintListeners.delete(fn);
+    },
+    () => hintDue,
+    () => hintDue
+  );
+}
+
+/** Either button of the sheet: marked seen for good. */
+export function dismissNotifySettingsHint(): void {
+  platform().persistent.set(LIVE_HINT_SEEN_KEY, "1");
+  setHintDue(false);
+}
+
 /**
  * Android 13+ shows nothing until POST_NOTIFICATIONS is granted, and nothing else asks for it in a build without an EAS
  * project (the push primer is offered only with one) — 华为 TAS-AL00, 2026-11-06: the ongoing notification never showed.
@@ -99,6 +137,10 @@ let asking: Promise<boolean> | null = null;
 async function mayNotify(): Promise<boolean> {
   const now = await permission();
   if (now === "granted") return true;
+  const apiLevel = Number(Platform.Version);
+  if (shouldOfferNotifySettings({ apiLevel, permission: now, seen: !!platform().persistent.get(LIVE_HINT_SEEN_KEY) })) setHintDue(true);
+  // Below 33 there is no dialog to show: the request would only poll for 3 s and come back as it went in.
+  if (apiLevel < 33) return false;
   // An update that arrives while the dialog is up waits for its answer rather than asking again.
   if (asking) return asking;
   if (now === "denied" || platform().persistent.get(LIVE_ASKED_KEY)) return false;

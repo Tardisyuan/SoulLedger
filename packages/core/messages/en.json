@@ -5333,7 +5333,9 @@
       "primer_residence_note": "Not where you are sent.",
       "never": "Never on the lock screen: rejection reasons, evidence, scores, passwords.",
       "yes": "Yes, notify me",
-      "no": "Not now"
+      "no": "Not now",
+      "live_hint_title": "No progress on the lock screen",
+      "live_hint_body": "Notifications are off for SoulLedger. Turn them on in system settings to see which station you have reached from the lock screen."
     },
     "original": {
       "tag": "Original",

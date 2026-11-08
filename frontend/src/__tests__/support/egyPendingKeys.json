@@ -14,6 +14,8 @@
   "soul_app.lexicon.eg.no_past_lives",
   "soul_app.lexicon.eg.past_read_only",
   "soul_app.lexicon.eu.court",
+  "soul_app.push.live_hint_body",
+  "soul_app.push.live_hint_title",
   "tenants.settings.rebirth_quota_body_single",
   "tenants.settings.rebirth_quota_single_row",
   "verdict_doc.eu.verdict.heresy",

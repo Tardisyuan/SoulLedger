@@ -97,6 +97,7 @@ describe("Android: the notification permission, asked once by the first live pro
   const system = (Notifications as unknown as { __state: { status: string; answer: string; requests: number; canAskAgain?: boolean } }).__state;
   const { Platform } = jest.requireActual<typeof import("react-native")>("react-native");
   const os = Platform.OS;
+  const version = Platform.Version;
   let scheduled: jest.SpyInstance;
 
   beforeEach(() => {
@@ -105,11 +106,14 @@ describe("Android: the notification permission, asked once by the first live pro
     persistentStore.remove(PRIMER_SEEN_KEY);
     Object.assign(system, { status: "undetermined", answer: "granted", requests: 0, canAskAgain: undefined });
     Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
+    // Android 13+: the system has a dialog to show.
+    Object.defineProperty(Platform, "Version", { value: 34, configurable: true });
     scheduled = jest.spyOn(Notifications, "scheduleNotificationAsync");
   });
   afterEach(() => {
     scheduled.mockRestore();
     Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+    Object.defineProperty(Platform, "Version", { value: version, configurable: true });
   });
 
   it("not yet granted: asks once, shows on a grant, and does not ask again on the next update", async () => {

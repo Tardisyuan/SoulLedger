@@ -53,6 +53,7 @@ import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/a
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { MfaLostScreen, type LoginMfaParams } from "./screens/loginMfa";
 import { BioAsk } from "./screens/bio";
+import { NotifySettingsHint } from "./screens/notifyHint";
 import { FeedbackScreen } from "./screens/writeToHall";
 import { JudgmentAppealScreen } from "./screens/appeals";
 import { WangsiGrievanceScreen } from "./screens/wangsi";
@@ -380,17 +381,20 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
 /**
  * The welcome and the 「下次用面容登录？」 sheet share the first home page, and the welcome goes first: the sheet is
  * held back while a welcome is due for this soul × civilization and has not ended (played, skipped, or had nothing
- * left to show). Not due at all (not the first time): the sheet is asked at once.
+ * left to show). Not due at all (not the first time): the sheet is asked at once. The 「锁屏上看不到进度」 hint
+ * (Android 12-, notifications off) comes last: held until the face / finger question is settled.
  */
 function SignedInOverlays({ profile, scheme }: { profile: MeProfile; scheme: ColorScheme }) {
   const key = `${profile.soul_code}:${profile.civilization}`;
   const [settled, setSettled] = useState<string | null>(null);
   const onSettled = useCallback(() => setSettled(key), [key]);
+  const [bioSettled, setBioSettled] = useState(false);
   return (
     <>
       <Welcome profile={profile} scheme={scheme} onSettled={onSettled} />
       <AppLock />
-      <BioAsk soulCode={profile.soul_code} welcomePending={welcomeFrom(profile) !== null && settled !== key} />
+      <BioAsk soulCode={profile.soul_code} welcomePending={welcomeFrom(profile) !== null && settled !== key} onSettled={setBioSettled} />
+      <NotifySettingsHint held={!bioSettled} />
     </>
   );
 }
