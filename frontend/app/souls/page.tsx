@@ -13,7 +13,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { readFilters, writeFilters } from "@/src/lib/rememberedFilters";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
-import { SoulCreateModal } from "@/src/components/ui/Modal";
+import { SoulCreateModal } from "@/src/components/souls/SoulCreateModal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, ROW_LINK, parseOrdering } from "@/components/ui/data-table";
 import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/components/ui/DomainValue";

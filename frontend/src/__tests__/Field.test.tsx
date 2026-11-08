@@ -43,7 +43,7 @@ function control(): HTMLElement {
 describe("the error state exists at all, on every control", () => {
   /**
    * Of 92 form controls in the repo, exactly two render an error — both in
-   * Modal.tsx. Everywhere else a rejected value comes back as a toast or as
+   * SoulCreateModal.tsx. Everywhere else a rejected value comes back as a toast or as
    * nothing: no `aria-invalid`, no `aria-describedby`, no mark on the field
    * that was wrong.
    */
