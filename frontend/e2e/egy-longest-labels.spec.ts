@@ -58,9 +58,9 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
   test("选出来的确实是 20 条,且包含 C14 点名的两条最长真实字串", () => {
     expect(LONGEST).toHaveLength(20);
     const keys = LONGEST.map(([k]) => k);
-    // actors.assessors.title 曾是最长的一条;2026-11-06 措辞审查撤回了它的 egy 译名,
-    // 现在在 egyPendingKeys.json 里等 Design,所以不再出现在 egy 包中。
-    expect(keys).not.toContain("actors.assessors.title");
+    // actors.assessors.title:2026-11-06 措辞审查撤回过它的 egy,v4 第十八批(2026-11-09)Design 重给了
+    // 「Djadjat En Maat (42 Netjeru)」,所以它又回到最长的一组里。
+    expect(keys).toContain("actors.assessors.title");
     expect(keys).toContain("breadcrumb.menu.soul_credentials");
     // 没有模板:带占位符的字串不是页题,原样上匾就是一个生的 {{soul}}。
     expect(LONGEST.filter(([, label]) => /\{\{|\}\}/.test(label))).toEqual([]);
