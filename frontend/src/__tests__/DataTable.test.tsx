@@ -140,6 +140,19 @@ describe("DataTable", () => {
     expect(onRetry).toHaveBeenCalled();
   });
 
+  it("a 403 shows the permission card, not 「出错」 and not a retry", () => {
+    renderTable({ isError: true, error: { response: { status: 403 } }, onRetry: jest.fn() });
+    expect(screen.getByTestId("permission-denied")).toBeInTheDocument();
+    expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+    expect(screen.queryByText("Retry")).not.toBeInTheDocument();
+  });
+
+  it("a 500 still shows 「出错」", () => {
+    renderTable({ isError: true, error: { response: { status: 500 } } });
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    expect(screen.queryByTestId("permission-denied")).not.toBeInTheDocument();
+  });
+
   it("shows the empty state with a primary action when nothing exists", () => {
     renderTable({
       data: [],

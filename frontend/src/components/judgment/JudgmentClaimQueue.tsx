@@ -722,7 +722,7 @@ export function JudgmentClaimQueue({
                 {q.isError ? (
                   <tr>
                     <td colSpan={colSpan}>
-                      <QueryError onRetry={() => q.refetch()} />
+                      <QueryError onRetry={() => q.refetch()} error={q.error} />
                     </td>
                   </tr>
                 ) : q.isLoading ? (

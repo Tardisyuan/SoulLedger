@@ -174,7 +174,7 @@ export function CaseAttachments({ judgmentId, canWrite }: { judgmentId: string; 
       {q.isLoading ? (
         <PageSpinner />
       ) : q.isError ? (
-        <QueryError onRetry={() => void q.refetch()} />
+        <QueryError onRetry={() => void q.refetch()} error={q.error} />
       ) : items.length === 0 && local.length === 0 ? (
         <EmptyState title={t("case.attachments.empty")} />
       ) : (

@@ -33,7 +33,7 @@ export function LoginLogPanel() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: ["login-logs", page, status, debouncedSearch],
     queryFn: async () =>
       (
@@ -115,6 +115,7 @@ export function LoginLogPanel() {
         }}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         isFiltered={isFiltered}
         onClearFilters={clearFilters}

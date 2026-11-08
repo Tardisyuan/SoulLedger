@@ -667,7 +667,7 @@ const eslintConfig = [
     // no-autofocus 单独一份清单:这 6 处 autoFocus 全部是对话框/内联编辑打开时
     // 把焦点送进第一个输入框,即 WAI-ARIA APG 对 dialog 的规定动作,不是页面
     // 加载时抢焦点。清单是 `grep -n autoFocus` 的实际命中,只有四个文件:
-    //   app/profile/page.tsx:136,187,238   src/components/ui/Modal.tsx:184
+    //   app/profile/page.tsx:136,187,238   src/components/souls/SoulCreateModal.tsx:203
     //   src/components/souls/SoulEditModal.tsx:143
     //   src/components/users/UserModal.tsx:168
     // AppLayout.tsx 与 SettingsDrawer.tsx **不在**这里 —— 它们一个 autoFocus
@@ -675,8 +675,8 @@ const eslintConfig = [
     // 那个错:清单按方便凑,而不是按每个文件实际需要什么。
     files: [
       "app/profile/page.tsx",
+      "src/components/souls/SoulCreateModal.tsx",
       "src/components/souls/SoulEditModal.tsx",
-      "src/components/ui/Modal.tsx",
       "src/components/users/UserModal.tsx",
     ],
     rules: {

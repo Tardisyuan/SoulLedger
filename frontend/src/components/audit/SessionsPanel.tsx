@@ -33,7 +33,7 @@ export function SessionsPanel() {
   const [person, setPerson] = useState<AdminSession | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: ["admin-sessions", kind, page, person?.user_id ?? null],
     queryFn: async () =>
       (
@@ -119,6 +119,7 @@ export function SessionsPanel() {
         data={rows}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         isFiltered={Boolean(person)}
         onClearFilters={clearPerson}

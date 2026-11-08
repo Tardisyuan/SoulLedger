@@ -8,7 +8,6 @@
     "greeting_evening": "Dua · Pehwy Hru",
     "greeting_night": "Pehwy Hru Seth",
     "expand_menu": "Wen Menu",
-    "collapse_menu": "Khetem Menu",
     "collapse_locked": "Nen Er Hry 1200: Wat Khetem Smen",
     "settings": "Smen",
     "welcome": "Tepy",
@@ -19,7 +18,6 @@
     "more": "Ky",
     "soul_events": "Medew Ba",
     "skip_to_main": "Sni Menu",
-    "appeal_review": "Nehet · Maa Wehem",
     "collapse_sidebar": "Khetem Menu",
     "expand_sidebar": "Wen Menu",
     "group": {
@@ -32,20 +30,13 @@
   "auth": {
     "login": "Aq",
     "logout": "Per Aq",
-    "username": "Ren Aq",
     "password": "Sekhem",
-    "logging_in": "Em Aq...",
     "login_success": "Aq Kheper",
-    "error_invalid_credentials": "Aq / Sekhem Nen Maat",
-    "error_invalid_token": "Menf Nen Wenen",
-    "error_token_expired": "Menf Wehem Seth",
     "error_login_failed": "Nen Aq",
     "error_locked": "Aq Khetem Seth. Wehem Iri Er Khet {{minutes}} At",
     "confirm_logout": "Per Aq?",
     "confirm_logout_desc": "Per Aq Pen?",
     "confirm_logout_btn": "Per Aq",
-    "statute_of_day": "Djedu Hru Pen · Ky Em Aq Neb",
-    "statute_fixed_note": "Djedu: Aq Tepy. Djedu Pen Em Sesh Wa, Nen Khemen.",
     "numbering": "Ren Djedu Em Taui Neb",
     "civilization": "Taui",
     "civilization_note": "Taui Em Aq: Aq, Iyi Djes-Ef Er Taui-Ek. Sesh Dy: Taui Aq Pehwy.",
@@ -216,10 +207,6 @@
   },
   "home": {
     "console": "Wetep Khet",
-    "hero_title": "Medjat Ba",
-    "hero_subtitle": "Hemsu · Iri Ba Em Taui Neb",
-    "hero_description": "Sesh En Ba Em Duat 4: Sherer, Europa, Kemet, Haunebut.",
-    "civilizations_title": "Taui",
     "civilizations": {
       "CHINESE": "Duat Sherer",
       "EUROPEAN": "Duat Europa",
@@ -248,7 +235,6 @@
     "title": "Tepy Hena Sesen",
     "intro": "Kat Wen, Sesh Djedu, Sia Hena Per Ky, Iri Tut: Wedj Hena Tepy Neb.",
     "fonts": "Sesh Medu",
-    "licence": "Wedj",
     "public_domain": "Sesen En Neb",
     "source": "Tepy",
     "software": "Kat Wen",
@@ -272,8 +258,6 @@
     "search": "Shesep",
     "filter_state": "Kheperu",
     "filter_civilization": "Taui",
-    "all_states": "Kheperu Neb",
-    "all_civilizations": "Taui Neb",
     "no_souls": "Nen Gem Ba",
     "name": "Ren",
     "civilization": "Taui",
@@ -1068,7 +1052,6 @@
     "hard_delete_confirm_title": "Wehem Djet?",
     "hard_delete_confirm_message": "«{{name}}» Fekh Djet. Nen Wehem Djer.",
     "dependent_count": "{{type}} {{name}} · Khet Senb {{count}}",
-    "deleted_by": "Wehem Iri {{user}}",
     "empty": "Per Wehem Seth Nen Ahet",
     "manage_from_bin": "Iri Em Per Wehem Seth",
     "entity_types": {
@@ -1110,13 +1093,10 @@
     "edit_error": "Nen Wehem Seth",
     "confirm_delete": "Fekh Was Pen?",
     "confirm_delete_message": "Er Khet Fekh: Netjer Neb Em Was Pen Nen Shesep Seth. Nen Wehem Djer.",
-    "cancel_delete": "Sehen",
     "deleting": "Em Wehem Seth...",
     "confirm_delete_action": "Smen Fekh",
     "roles_title": "Iri Netjeru",
     "create_role": "Iri Netjer",
-    "edit_role": "Khemen Seth Netjer",
-    "delete_role": "Wehem Netjer",
     "role_name_label": "Ren Netjer *",
     "role_name_placeholder": "Mi: MODERATOR",
     "role_name_builtin_hint": "Netjer Em Tepy: Ren Smen (Medu Khet Ren); Ren Sesen Kheper",
@@ -1126,7 +1106,6 @@
     "role_create_error": "Nen Iri Netjer",
     "role_edit_error": "Nen Khemen Seth Netjer",
     "confirm_delete_role": "Fekh Netjer Pen?",
-    "confirm_delete_role_message": "Er Khet Fekh: Was Neb En Netjer Pen Fekh. Nen Wehem Djer.",
     "subtitle": "Iri Netjer Hena Was Em Hemsu",
     "matrix": {
       "title": "Mesqet Was",
@@ -2100,7 +2079,6 @@
     "court": "Wesekhet",
     "verdict": "Wedja",
     "created": "Ahet Iri",
-    "action": "Aha Seth",
     "view": "Smen",
     "verdicts": {
       "passed": "Menkh",
@@ -2206,9 +2184,6 @@
       "passed_barred_five_heinous": "Isfet Wer 5: Er Duat Pehwy · Nen Menkh.",
       "passed_barred_untruthful": "Djed Nen Maat Em Medu: Nen Menkh. Fai Nen Smen Wenen: Fai Ib Mawy."
     },
-    "create_success": "Wedja Iri Seth",
-    "create_error": "Nen Iri Wedja",
-    "conclude_success": "Wedja Khetem Seth",
     "conclude_error": "Nen Khetem",
     "no_evidence": "Nen Medu Maat Djer",
     "grounds": {
@@ -2898,7 +2873,6 @@
     "old_password": "Sekhem-Ek",
     "new_password": "Sekhem Mawy",
     "confirm_password": "Wehem Sesh Sekhem",
-    "password_mismatch": "Sekhem Sen Nen Wa",
     "password_too_short": "Sekhem Sesh 8 Er Hry",
     "password_changed": "Sekhem Khemen Seth",
     "password_change_failed": "Nen Khemen Sekhem",
@@ -3022,7 +2996,6 @@
   "realms": {
     "title": "Ta",
     "subtitle": "Iri Ta Em Taui Neb",
-    "count": "Ta",
     "civilizations": {
       "CHINESE": "Duat Sherer",
       "EUROPEAN": "Duat Europa",
@@ -3525,7 +3498,6 @@
     "first_name": "Ren",
     "optional": "Setep",
     "create_error": "Nen Iri Netjer",
-    "password_edit_placeholder": "Nen Sesh: Nen Khemen",
     "first_name_placeholder": "Sesh Ren",
     "last_name": "Ren Per",
     "last_name_placeholder": "Sesh Ren Per",
@@ -3721,13 +3693,10 @@
   "admin": {
     "state_breakdown": "Kheperu Redu",
     "souls": "Ba",
-    "civilization": "Taui",
     "avg_balance": "Sepy Nefer Isfet · Hesb Mi",
-    "ledger_stats": "Medew Nefer",
     "no_realm_data": "Nen Medew Ahet",
     "on": "Em",
     "soul_count": "Ba Neb",
-    "top_balance": "Ba Tepy Em Nefer Isfet",
     "realm": "Ahet",
     "users": {
       "impersonate": "Maa Em Ba Pen"
@@ -3840,9 +3809,7 @@
     "hours_ago": "{{n}}h Khet",
     "agent_status": "Kheperu Ba",
     "first_run": "Aq Tepy · {{n}} / {{total}}",
-    "setup_intro": "Smen Pen Neb, Er Aq. Wehem Smen Em Per Pen.",
     "identity": "Maa Ren",
-    "identity_desc": "Taui Hena Netjer: Em Khet Per Pen. Nen Maat: Medu Netjer Em Tepy.",
     "default_view": "Maa Tepy",
     "default_view_desc": "Maa Tepy Em Aq. Wa Em Per Pen.",
     "view_operator": "Iri Medu",
@@ -3851,8 +3818,6 @@
     "prefs": "Medew Seth Hena Hetep",
     "prefs_desc": "Medew Seth Hena Hetep: Smen Em Netjer Neb.",
     "keys_desc": "Wat-Ha: Sepu Wedja",
-    "step_done": "Wetep Seth",
-    "step_current": "Em Tepy",
     "continue": "Em Khet",
     "skip": "Iri Tepy, Aq",
     "greeting_morning": "Dua · Tepy Hru, {{name}}",
@@ -3889,7 +3854,6 @@
   "search": {
     "placeholder": "Hehy...",
     "aria_label": "Hehy",
-    "input_placeholder": "Hehy Ba, Ren Sep, Hep, Medjat",
     "dialog_label": "Hehy Neb",
     "cancel": "Sehen",
     "group_judgments": "Wedja",
@@ -3907,8 +3871,6 @@
     "no_results_title": "Nen Gem «{{q}}»",
     "no_results_body": "Ba: Ren. Wedja: Ren Sep Neb, Ren Ba, Mi {{example}}. Hep: Medu, Medu Ahet.",
     "hint": "Ren Sep: Sesh Neb, Mi {{example}}.",
-    "footer_select": "Setep",
-    "footer_open": "Wen",
     "footer_new_tab": "Medjat Mawy",
     "announce_group": "{{group}}: {{n}}"
   },
@@ -4509,7 +4471,6 @@
     "post_delete_error": "Nen Wehem Sesh Seth",
     "no_posts": "Nen Sesh Djer",
     "user_posts": "Sesh Netjer",
-    "view_all_posts": "Smen Sesh Neb",
     "placeholder": "Djed Aha...",
     "send": "Hab",
     "comments": "Wesheb",
@@ -6751,8 +6712,6 @@
   },
   "social_moderation": {
     "title": "Maat Shemsu",
-    "subtitle": "Sedjem, Khet Em Maat, Medu Djeseru, Gerh — Em Shemsu Ba Taui Pen",
-    "refresh": "Wehem Maa",
     "tabs": {
       "label": "Aat Maat",
       "reports": "Sedjem",
@@ -6794,7 +6753,6 @@
       "reason": "Khet",
       "word": "Medu Djeseru"
     },
-    "report_count": "Sedjem {{n}}",
     "kind": {
       "posts": "Medu",
       "comments": "Wesheb"
@@ -6820,9 +6778,7 @@
     "word_hint": "Gem Em Sesh Nedjes. Medu Hena Wesheb Mawy Em Maat; Nen Maa Er Khet Maat.",
     "confirm_delete_title": "Fekh Khet Pen?",
     "confirm_delete_body": "Nen Maa Em Medjat Ba; Sesh Maa Wenen.",
-    "confirm_remove_word_title": "Fekh Medu Djeseru «{{word}}»?",
     "confirm_remove_word_body": "Khet Mawy Nen Em Maat Em Medu Pen Er Khet.",
-    "mute_active": "Em Wenen",
     "mute_lifted": "Fekh Seth",
     "mute_expired": "Mut",
     "done": "Kheper",
@@ -8253,9 +8209,6 @@
       "approved_next": "Hesy Seth. Wesekhet Shesep Iri Em Medjat Sab: Ba Nen Shem Djer.",
       "awaiting_receiver": "◐ Nen Iri Wesekhet Shesep Djer"
     },
-    "appeals": {
-      "desk_only": "Maa Nehet: Em Medjat Sab"
-    },
     "stats": {
       "title": "Hesb Djes",
       "scope": "Djes Wa · Wesekhet Neb",
@@ -8720,8 +8673,6 @@
     "from": "Sab Redi",
     "to": "Sab Shesep",
     "pick": "Setep Sab Em Wesekhet Pen",
-    "preview": "Maa",
-    "preview_stale": "Sab Khemen Seth: Wehem Maa",
     "submit": "Redi",
     "submit_n": "Redi {{n}}",
     "submitting": "Em Redi…",
@@ -9439,7 +9390,6 @@
     }
   },
   "soulmap": {
-    "life_events": "Sesh · Ankh Pen",
     "move": "Khemen Sekhet…",
     "replay_line": "{{date}} · Er {{station}}",
     "replay_progress": "{{n}} / {{total}}",

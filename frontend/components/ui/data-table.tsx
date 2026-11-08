@@ -8,6 +8,8 @@ import { Button } from '@/src/components/ui/Button'
 import { useI18n } from '@/src/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 import { useRowTransitions } from '@/src/hooks/useRowTransitions'
+import { PermissionDenied } from '@/src/components/rbac/PermissionDenied'
+import { responseStatus } from '@soulledger/core/api/client'
 
 export type SortDirection = 'asc' | 'desc'
 
@@ -138,6 +140,8 @@ export interface DataTableProps<T> {
 
   isLoading?: boolean
   isError?: boolean
+  /** The query's error. A 403 renders the permission card instead of 「出错」 —— 无权不是系统出错。 */
+  error?: unknown
   onRetry?: () => void
   /** Overrides the default `common.error` copy. */
   errorMessage?: string
@@ -246,6 +250,7 @@ export function DataTable<T>({
   caption,
   isLoading,
   isError,
+  error,
   onRetry,
   errorMessage,
   skeletonRows = 5,
@@ -427,18 +432,23 @@ export function DataTable<T>({
             <tbody>
               <tr>
                 <td colSpan={colCount} className="px-3 py-8">
-                  {/* 补足 C15「出错」:冷玫红「✕ 原因」13 / 600 + 次按钮「重试」,在内容区里,不换整页。 */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <p className="text-sm font-semibold text-[oklch(var(--color-danger))]">
-                      <span aria-hidden="true">✕ </span>
-                      {errorMessage ?? t('common.error')}
-                    </p>
-                    {onRetry && (
-                      <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
-                        {t('common.retry')}
-                      </Button>
-                    )}
-                  </div>
+                  {/* 补足 C15「出错」:冷玫红「✕ 原因」13 / 600 + 次按钮「重试」,在内容区里,不换整页。
+                      403 不是系统出错:换成权限卡,重试也不会变。 */}
+                  {responseStatus(error) === 403 ? (
+                    <PermissionDenied />
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p className="text-sm font-semibold text-[oklch(var(--color-danger))]">
+                        <span aria-hidden="true">✕ </span>
+                        {errorMessage ?? t('common.error')}
+                      </p>
+                      {onRetry && (
+                        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
+                          {t('common.retry')}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </td>
               </tr>
             </tbody>

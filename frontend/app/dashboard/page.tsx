@@ -571,6 +571,7 @@ function DashboardContent() {
                   // DataTable suppresses its own empty state when isError is set, so a
                   // failed load never reads as "no realms" beside an error.
                   isError={!!queryError}
+                  error={queryError}
                   keyExtractor={(realm, idx) => `${realm.realm_code}-${idx}`}
                   renderRow={(realm, idx) => (
                     <>

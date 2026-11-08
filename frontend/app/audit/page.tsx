@@ -241,7 +241,7 @@ export default function AuditPage() {
     return civ === "neutral" ? hall.display_name : t(`plaque.realm.${civ}`);
   };
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter, debouncedSearch, debouncedOperator],
     queryFn: async () => {
       const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
@@ -534,6 +534,7 @@ export default function AuditPage() {
         }}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         keyExtractor={(r) => r.group.key}
         sort={parseOrdering(ordering)}

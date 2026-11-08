@@ -115,7 +115,7 @@ function DispatchPageContent() {
   const {
     data: proposedData, isLoading: loadingProposed,
     isPlaceholderData: proposedStale,
-    isError: proposedError, refetch: refetchProposed,
+    isError: proposedError, error: proposedFailure, refetch: refetchProposed,
   } = useQuery({
     queryKey: ["dispatch", "proposed", proposedPage, filterKey],
     queryFn: () => dispatchApi.proposed({ page: String(proposedPage), ...filterParams }).then(r => r.data),
@@ -129,7 +129,7 @@ function DispatchPageContent() {
   const {
     data: historyData, isLoading: loadingHistory,
     isPlaceholderData: historyStale,
-    isError: historyError, refetch: refetchHistory,
+    isError: historyError, error: historyFailure, refetch: refetchHistory,
   } = useQuery({
     queryKey: ["dispatch", "history", historyPage, filterKey],
     queryFn: () => dispatchApi.history({ page: String(historyPage), ...filterParams }).then(r => r.data),
@@ -258,6 +258,7 @@ function DispatchPageContent() {
           rows={proposed}
           isLoading={loadingProposed}
           isError={proposedError}
+          error={proposedFailure}
           onRetry={() => refetchProposed()}
           emptyMessage={t("dispatch.no_pending")}
           page={proposedPage}
@@ -277,6 +278,7 @@ function DispatchPageContent() {
           rows={history}
           isLoading={loadingHistory}
           isError={historyError}
+          error={historyFailure}
           onRetry={() => refetchHistory()}
           emptyMessage={t("dispatch.no_history")}
           page={historyPage}
@@ -307,11 +309,12 @@ function dispatchColumns(t: (key: string) => string): DataTableColumn[] {
 }
 
 function DispatchTable({
-  rows, isLoading, isError, onRetry, emptyMessage, page, count, onPageChange, caption, columnVis, cancelable = false,
+  rows, isLoading, isError, error, onRetry, emptyMessage, page, count, onPageChange, caption, columnVis, cancelable = false,
 }: {
   rows: DispatchRecord[];
   isLoading: boolean;
   isError: boolean;
+  error?: unknown;
   onRetry: () => void;
   emptyMessage: string;
   page: number;
@@ -331,6 +334,7 @@ function DispatchTable({
       data={rows}
       isLoading={isLoading}
       isError={isError}
+      error={error}
       onRetry={onRetry}
       emptyMessage={emptyMessage}
       skeletonRows={3}

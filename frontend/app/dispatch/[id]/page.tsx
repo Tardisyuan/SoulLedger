@@ -104,7 +104,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnReason, setReturnReason] = useState("");
 
-  const { data: dispatch, isLoading, isError, refetch } = useQuery({
+  const { data: dispatch, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: ["dispatch", "detail", id],
     queryFn: () => dispatchApi.get(id).then(r => r.data),
     enabled: !!user && !!id,
@@ -219,7 +219,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   if (isError) {
     return (
       <PageShell variant="prose" backLink={backLink} title={t("dispatch.detail_title")}>
-        <QueryError onRetry={() => refetch()} />
+        <QueryError onRetry={() => refetch()} error={listError} />
       </PageShell>
     );
   }

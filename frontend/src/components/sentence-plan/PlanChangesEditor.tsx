@@ -1,7 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { realmsApi } from "@soulledger/core/api";
+import { useRealms } from "@soulledger/core/hooks/useRealms";
 import type { SentencePlan, SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -60,12 +59,9 @@ export function PlanChangesEditor({
 }) {
   const { t } = useI18n();
   const civilization = TENANT_CODE_TO_CIVILIZATION[tenantCode];
-  const realms = useQuery({
-    queryKey: ["realms", "list", { civilization }],
-    // 不再使用的界域(后端 `RETIRED_REALM_CODES`)不给选。
-    queryFn: () => realmsApi.list({ civilization }).then((r) => r.data.results.filter((realm) => !realm.is_retired)),
-    enabled: !!civilization,
-  });
+  const realmsQuery = useRealms(civilization, { enabled: !!civilization });
+  // 不再使用的界域(后端 `RETIRED_REALM_CODES`)不给选。
+  const realms = realmsQuery.data?.filter((realm) => !realm.is_retired);
   const pending = plan.nodes.filter((n) => n.status === "PENDING");
 
   const setAdd = (index: number, patch: Partial<ChangesDraft["add"][number]>) =>
@@ -78,7 +74,7 @@ export function PlanChangesEditor({
       <fieldset className="space-y-3">
         <legend className="text-sm font-medium mb-1">{t("sentence_plan.file.add_title")}</legend>
         {draft.add.map((a, index) => {
-          const eternal = realms.data?.find((r) => r.realm_code === a.realm_code)?.is_eternal;
+          const eternal = realms?.find((r) => r.realm_code === a.realm_code)?.is_eternal;
           return (
             <div key={index} data-add-row={index} className="space-y-2 border-l-2 border-[oklch(var(--color-line))] pl-3">
               <p className="text-sm">
@@ -90,7 +86,7 @@ export function PlanChangesEditor({
                 onChange={(e) => setAdd(index, { realm_code: e.target.value })}
                 options={[
                   { value: "", label: t("sentence_plan.cross.realm_placeholder") },
-                  ...(realms.data ?? []).map((r) => ({
+                  ...(realms ?? []).map((r) => ({
                     value: r.realm_code,
                     label: resolveEnumDisplay(t, "realms.names", r.realm_code).label ?? r.realm_code,
                   })),

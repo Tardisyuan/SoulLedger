@@ -57,7 +57,7 @@ function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
 
   const failed = list.isError && !list.data;
   const empty = failed ? (
-    <QueryError onRetry={() => list.refetch()} />
+    <QueryError onRetry={() => list.refetch()} error={list.error} />
   ) : status === "" ? (
     <EmptyState title={t("soul_accounts.rebirth.empty")} />
   ) : (

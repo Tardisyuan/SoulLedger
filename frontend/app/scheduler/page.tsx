@@ -205,7 +205,7 @@ function SchedulerPageContent() {
   // one dropped request.
   const failed = jobs.isError && !jobs.data;
   const empty = failed ? (
-    <QueryError onRetry={() => jobs.refetch()} />
+    <QueryError onRetry={() => jobs.refetch()} error={jobs.error} />
   ) : all.length === 0 ? (
     <EmptyState title={t("scheduler.empty.no_jobs")} reason={t("scheduler.empty.no_jobs_reason")} />
   ) : (

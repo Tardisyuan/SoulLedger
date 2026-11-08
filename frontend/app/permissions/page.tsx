@@ -480,6 +480,7 @@ function PermissionsPageContent() {
               roles={rolesQuery.data ?? []}
               isLoading={rolesQuery.isLoading}
               isError={rolesQuery.isError}
+              error={rolesQuery.error}
               onRetry={() => rolesQuery.refetch()}
               canManage={canManagePermissions}
               onOpenMatrix={(role) => {
@@ -510,6 +511,7 @@ function PermissionsPageContent() {
             data={permsQuery.data ?? []}
             isLoading={permsQuery.isLoading}
             isError={permsQuery.isError}
+            error={permsQuery.error}
             keyExtractor={(perm) => String(perm.id)}
           />
           </>

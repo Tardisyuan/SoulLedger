@@ -31,7 +31,7 @@ export function PickNodesGroup() {
   });
   const [picking, setPicking] = useState<{ id: string; order: number } | null>(null);
   // 403 是「没有这份待办」,不是系统错误。
-  if (todo.isError && !todo.data && responseStatus(todo.error) !== 403) return <QueryError onRetry={() => void todo.refetch()} />;
+  if (todo.isError && !todo.data && responseStatus(todo.error) !== 403) return <QueryError onRetry={() => void todo.refetch()} error={todo.error} />;
   const group = todo.data?.pick_nodes;
   const items = group?.items ?? [];
   if (!group || items.length === 0) return null;

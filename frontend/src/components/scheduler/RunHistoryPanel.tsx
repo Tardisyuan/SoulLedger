@@ -179,7 +179,7 @@ export function RunHistoryPanel({ jobs, jobName, showTenant, realtimeConnected }
           <Spinner />
         </div>
       ) : runs.isError && !runs.data ? (
-        <QueryError onRetry={() => runs.refetch()} />
+        <QueryError onRetry={() => runs.refetch()} error={runs.error} />
       ) : results.length === 0 ? (
         <EmptyState title={filtered ? t("scheduler.history.empty") : t("scheduler.runs.empty")} />
       ) : (

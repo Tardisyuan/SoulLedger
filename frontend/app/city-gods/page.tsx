@@ -72,6 +72,7 @@ function CityGodsContent() {
         data={gods}
         isLoading={list.isLoading}
         isError={list.isError}
+        error={list.error}
         onRetry={() => list.refetch()}
         skeletonRows={3}
         emptyMessage={t("cityGods.empty")}

@@ -5,6 +5,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentAppealKeys, judgmentAppealsApi, type JudgmentAppeal } from "@soulledger/core/api";
+import { responseStatus } from "@soulledger/core/api/client";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -118,9 +119,9 @@ function AppealReviewContent({ id }: { id: string }) {
 
   if (query.isLoading) return <ListSkeleton count={3} />;
   // A deleted or other-hall appeal answers 404: say it is not there, not that the request failed.
-  if ((query.error as { response?: { status?: number } } | null)?.response?.status === 404)
+  if (responseStatus(query.error) === 404)
     return <EmptyState title={t("notifications.open_failed")} />;
-  if (query.isError || !query.data) return <QueryError onRetry={() => query.refetch()} />;
+  if (query.isError || !query.data) return <QueryError onRetry={() => query.refetch()} error={query.error} />;
   const appeal = query.data;
   const original = !!user && appeal.original_officer_ids.includes(user.id);
   const mine = !!user && appeal.reviewer === user.id;

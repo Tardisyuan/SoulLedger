@@ -121,7 +121,7 @@ function SentencePlansContent() {
       {list.isLoading ? (
         <ListSkeleton count={3} />
       ) : list.isError && !list.data ? (
-        <QueryError onRetry={() => list.refetch()} />
+        <QueryError onRetry={() => list.refetch()} error={list.error} />
       ) : plans.length === 0 ? (
         <EmptyState title={t("sentence_plan.list_empty")} />
       ) : (

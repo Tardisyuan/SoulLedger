@@ -34,7 +34,7 @@ function TenantsPageContent() {
   const [deactivating, setDeactivating] = useState<Tenant | null>(null);
   const activate = useHallActiveMutation();
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: tenantKeys.page(page),
     queryFn: () => tenantsApi.list({ page }).then((r) => r.data),
     enabled: !!user,
@@ -77,6 +77,7 @@ function TenantsPageContent() {
         data={tenants}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         keyExtractor={(tenant) => String(tenant.id)}
         renderRow={(tenant) => (

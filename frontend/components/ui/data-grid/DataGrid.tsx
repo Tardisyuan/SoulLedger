@@ -43,6 +43,8 @@ export interface DataGridProps<T> {
 
   isLoading?: boolean
   isError?: boolean
+  /** Forwarded to DataTable — a 403 renders the permission card. */
+  error?: unknown
   onRetry?: () => void
   errorMessage?: string
   skeletonRows?: number
@@ -111,6 +113,7 @@ export function DataGrid<T>({
   caption,
   isLoading,
   isError,
+  error,
   onRetry,
   errorMessage,
   skeletonRows,
@@ -252,6 +255,7 @@ export function DataGrid<T>({
         caption={caption}
         isLoading={isLoading}
         isError={isError}
+        error={error}
         onRetry={onRetry}
         errorMessage={errorMessage}
         skeletonRows={skeletonRows}

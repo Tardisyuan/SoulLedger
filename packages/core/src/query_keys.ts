@@ -24,6 +24,16 @@ export const soulKeys = {
 };
 
 /**
+ * 界域。一个请求一把键:不分文明的全表与按文明的表各一把,用的人共用缓存(此前同一个
+ * `GET /realms/` 挂在三把键下,各取一次)。在押人数(`occupancy`)另在 `realms` 下,改容量时一起失效。
+ */
+export const realmKeys = {
+  all: ["realms"] as const,
+  list: (civilization?: string) => [...realmKeys.all, "list", civilization ?? "all"] as const,
+  occupancy: () => [...realmKeys.all, "occupancy"] as const,
+};
+
+/**
  * 殿(租户)。新建、停用、改设置都失效 `all`,名单、分页表、概况、MFA 角色都在它下面。
  */
 export const tenantKeys = {

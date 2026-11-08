@@ -32,7 +32,7 @@ export default function AuditStatsPage() {
   const { user, tenantCode } = useTenant();
   const isGlobalAdmin = user?.role === "ADMIN" && tenantCode === null;
 
-  const { data, isPending, isError, refetch } = useQuery({
+  const { data, isPending, isError, error: listError, refetch } = useQuery({
     queryKey: ["audit-stats"],
     queryFn: async () => (await auditApi.stats()).data,
     enabled: canReadAudit,
@@ -78,7 +78,7 @@ export default function AuditStatsPage() {
   }
 
   let body: ReactNode;
-  if (isError) body = <QueryError onRetry={() => void refetch()} detail={t("audit.stats.failed")} />;
+  if (isError) body = <QueryError onRetry={() => void refetch()} error={listError} detail={t("audit.stats.failed")} />;
   else if (isPending) body = <Spinner />;
   else if (data.total_logs === 0) body = <EmptyState title={t("audit.no_logs")} />;
   else {

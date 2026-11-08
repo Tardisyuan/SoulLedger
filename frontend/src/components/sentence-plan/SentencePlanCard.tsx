@@ -211,7 +211,7 @@ export function SentencePlanCard({ soulId, civilization }: { soulId: string; civ
       {plans.isLoading ? (
         <Skeleton className="h-16 w-full" />
       ) : plans.isError && !plans.data ? (
-        <QueryError onRetry={() => plans.refetch()} />
+        <QueryError onRetry={() => plans.refetch()} error={plans.error} />
       ) : rows.length === 0 ? (
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t(civKey(t, "sentence_plan.none", civilization))}</p>
       ) : (

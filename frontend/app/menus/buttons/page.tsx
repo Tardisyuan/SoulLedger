@@ -93,7 +93,7 @@ function MenuButtonsPageContent() {
       {config.isLoading ? (
         <ListSkeleton count={3} />
       ) : config.isError ? (
-        <QueryError onRetry={() => config.refetch()} />
+        <QueryError onRetry={() => config.refetch()} error={config.error} />
       ) : groups.length === 0 ? (
         <EmptyState title={t("menu_buttons.no_buttons")} />
       ) : (

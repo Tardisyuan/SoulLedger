@@ -26,7 +26,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { SoulCreateModal } from "@/src/components/ui/Modal";
+import { SoulCreateModal } from "@/src/components/souls/SoulCreateModal";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { soulKeys } from "@soulledger/core/query_keys";
 import { soulsApi } from "@soulledger/core/api";

@@ -230,6 +230,7 @@ export function SensitiveWordsSection() {
         data={rows}
         isLoading={list.isLoading}
         isError={list.isError && !list.data}
+        error={list.error}
         onRetry={() => list.refetch()}
         emptyMessage={t("social_moderation.empty.words")}
         emptyAction={

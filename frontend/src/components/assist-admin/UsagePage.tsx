@@ -43,7 +43,7 @@ export function AssistAdminUsagePage() {
       isLoading={usage.isLoading}
       skeleton={<ListSkeleton count={4} />}
       isEmpty={!usage.data}
-      empty={<QueryError onRetry={() => usage.refetch()} />}
+      empty={<QueryError onRetry={() => usage.refetch()} error={usage.error} />}
     >
       {usage.data && <UsageBody usage={usage.data} />}
     </PageShell>

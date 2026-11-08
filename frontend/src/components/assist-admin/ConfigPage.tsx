@@ -31,6 +31,7 @@ import {
   embeddingSaveBlock,
   saveBlock,
   samePlatform,
+  savedValue,
   setDraft,
   setEmbeddingDraft,
   type Draft,
@@ -62,7 +63,7 @@ export function AssistAdminConfigPage() {
       isLoading={config.isLoading}
       skeleton={<ListSkeleton count={4} />}
       isEmpty={!config.data}
-      empty={<QueryError onRetry={() => config.refetch()} />}
+      empty={<QueryError onRetry={() => config.refetch()} error={config.error} />}
     >
       {config.data && <ConfigForm config={config.data} />}
     </PageShell>
@@ -103,7 +104,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
     setDraftState((d) => setDraft(d, config, key, value));
   };
   const value = <K extends DraftKey>(key: K) =>
-    (key in draft ? draft[key] : (config as unknown as Record<string, unknown>)[key === "enabled" ? "switch" : key]) as Draft[K];
+    (key in draft ? draft[key] : savedValue(config, key)) as Draft[K];
 
   const nConfig = Object.keys(draft).length;
   const nEmbedding = Object.keys(edraft).length;

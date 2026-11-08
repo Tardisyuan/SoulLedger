@@ -30,7 +30,7 @@ export function HallSwitches({ inactiveReason }: { inactiveReason: string | null
     );
 
   if (halls.isLoading) return <ListSkeleton count={2} />;
-  if (halls.isError || !halls.data) return <QueryError onRetry={() => halls.refetch()} />;
+  if (halls.isError || !halls.data) return <QueryError onRetry={() => halls.refetch()} error={halls.error} />;
 
   return (
     <div>

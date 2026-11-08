@@ -151,7 +151,7 @@ function ActorsPageContent() {
    */
   const [benchOpen, setBenchOpen] = useState<Record<string, boolean>>({});
 
-  const { data: actors = [], isLoading, isError, refetch } = useQuery({
+  const { data: actors = [], isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: ["actors"],
     queryFn: () => actorsApi.list().then(r => r.data.results || []),
     enabled: !!user,
@@ -200,7 +200,7 @@ function ActorsPageContent() {
         {/* A failed request used to fall through to the empty state, so
             "the server is down" and "there is nothing here" read the same. */}
         {isError ? (
-          <QueryError onRetry={() => refetch()} />
+          <QueryError onRetry={() => refetch()} error={listError} />
         ) : isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (

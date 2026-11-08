@@ -73,6 +73,7 @@ function TudiGodsContent() {
         data={list.data ?? []}
         isLoading={list.isLoading}
         isError={list.isError}
+        error={list.error}
         onRetry={() => list.refetch()}
         skeletonRows={3}
         emptyMessage={t("earthGods.empty")}

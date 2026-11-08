@@ -17,6 +17,9 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
+import { fetchFailureOf } from "@soulledger/core/api/client";
 import { Button } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
@@ -103,6 +106,7 @@ function CrossJudgmentDetail() {
     data: judgment,
     isPending: loading,
     error: loadError,
+    refetch,
   } = useQuery({
     queryKey: crossJudgmentKeys.detail(id as string),
     queryFn: () => crossTenantJudgmentsApi.get(id as string).then((res) => res.data),
@@ -111,12 +115,6 @@ function CrossJudgmentDetail() {
     enabled: !!user && !!id,
   });
 
-  const error = loadError
-    ? (loadError as { response?: { data?: { detail?: string } }; message?: string })?.response
-        ?.data?.detail ||
-      (loadError as { message?: string })?.message ||
-      t("crossJudgments.failed_to_load")
-    : "";
 
   /**
    * ACTIVATION IS A BUTTON, NOT A SIDE EFFECT (BD-06, 2026-09-12).
@@ -178,14 +176,16 @@ function CrossJudgmentDetail() {
     </Button>
   );
 
-  if (error && !judgment) {
+  // 404 / 403 是「无权查看或已不存在」;其余是系统出错。两者都不回显后端或 axios 的英文。
+  if (loadError && !judgment) {
     return (
       <PageShell
       density="document" variant="page" title={t("crossJudgments.title")} backLink={backLink}>
-        <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
-          <span aria-hidden="true">! </span>
-          {error}
-        </p>
+        {fetchFailureOf(loadError) === "gone" ? (
+          <EmptyState title={t("state.gone_title")} reason={t("state.gone_body")} />
+        ) : (
+          <QueryError onRetry={() => void refetch()} />
+        )}
       </PageShell>
     );
   }

@@ -32,10 +32,18 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 /** A segment's saved connection: the config for the primary, `config/backup/` for the backup (nulls when none). */
 export type SavedConnection = Pick<AssistAdminBackup, "platform" | "provider" | "base_url" | "model" | "effort" | "fallbacks" | "prices">;
 
+/**
+ * The saved value a draft key edits: the draft's `enabled` is the config's `switch`, and `api_key` is never
+ * read back from the server. The one mapping, for the form's displayed value and for `setDraft`.
+ */
+export function savedValue(config: AssistAdminConfig | SavedConnection, key: DraftKey): unknown {
+  return key === "api_key" ? undefined : Reflect.get(config, key === "enabled" ? "switch" : key);
+}
+
 /** Set one key; a value equal to the saved one drops it from the draft. `saved` is the config, or the saved backup. */
 export function setDraft(draft: Draft, config: AssistAdminConfig | SavedConnection, key: DraftKey, value: unknown): Draft {
   const next = { ...draft } as Record<string, unknown>;
-  const saved = key === "api_key" ? undefined : (config as unknown as Record<string, unknown>)[key === "enabled" ? "switch" : key];
+  const saved = savedValue(config, key);
   if (value === undefined || (key !== "api_key" && same(value, saved))) delete next[key];
   else next[key] = value;
   return next as Draft;

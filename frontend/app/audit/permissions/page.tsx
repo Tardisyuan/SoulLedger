@@ -142,7 +142,7 @@ export default function PermissionChangesPage() {
   });
 
   const startDate = datePresetStart(datePreset);
-  const { data, isPending, isError, refetch } = useQuery({
+  const { data, isPending, isError, error: listError, refetch } = useQuery({
     queryKey: ["audit-timeline", resource, action, startDate, limit],
     queryFn: async () =>
       (
@@ -189,7 +189,7 @@ export default function PermissionChangesPage() {
   }
 
   let body: ReactNode;
-  if (isError && !data) body = <QueryError onRetry={() => void refetch()} detail={t("audit.timeline.failed")} />;
+  if (isError && !data) body = <QueryError onRetry={() => void refetch()} error={listError} detail={t("audit.timeline.failed")} />;
   else if (isPending) body = <Spinner />;
   else if (logs.length === 0) body = <EmptyState title={t(datePreset ? "audit.timeline.empty" : "audit.timeline.empty_all")} />;
   else

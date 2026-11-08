@@ -115,7 +115,7 @@ export function PickStationsSheet({
       }
     >
       {detail.isError ? (
-        <QueryError onRetry={() => void detail.refetch()} />
+        <QueryError onRetry={() => void detail.refetch()} error={detail.error} />
       ) : !workflow || !segment ? (
         <ListSkeleton count={4} />
       ) : (

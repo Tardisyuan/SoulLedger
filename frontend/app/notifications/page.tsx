@@ -91,7 +91,7 @@ export default function NotificationsPage() {
     select(next);
   };
 
-  const { data: notifications = [], isLoading, isError, refetch } = useQuery({
+  const { data: notifications = [], isLoading, isError, error: listError, refetch } = useQuery({
     // `notificationKeys.list(...)`, not a hand-written `["notifications", filter]`.
     // The literal happened to prefix-match what eventHandlers.ts invalidates
     // (`notificationKeys.all` === `["notifications"]`), so pushes did reach this
@@ -308,7 +308,7 @@ export default function NotificationsPage() {
            action is offered there and withheld on `all`, where "show
            everything" is already what you are looking at. */
         isError ? (
-          <QueryError onRetry={() => refetch()} />
+          <QueryError onRetry={() => refetch()} error={listError} />
         ) : (
           <EmptyState
             title={t("notifications.title")}

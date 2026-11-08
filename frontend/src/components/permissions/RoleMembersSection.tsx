@@ -14,6 +14,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { Segmented } from "@/src/components/ui/Segmented";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { responseCode, responseData, responseStatus } from "@soulledger/core/api/client";
 
 const PAGE_SIZE = 20;
@@ -41,10 +42,11 @@ export function RoleMembersSection({ role }: { role: Role }) {
   const [page, setPage] = useState(1);
   const [granting, setGranting] = useState(false);
   const [refused, setRefused] = useState<RoleMembersRefused | null>(null);
+  const debouncedSearch = useDebouncedValue(search);
 
   const members = useQuery({
-    queryKey: [...permKeys.roles, "members", role.id, search, page],
-    queryFn: async () => (await permApi.roles.members(role.id, { search: search || undefined, page })).data,
+    queryKey: [...permKeys.roles, "members", role.id, debouncedSearch, page],
+    queryFn: async () => (await permApi.roles.members(role.id, { search: debouncedSearch || undefined, page })).data,
   });
 
   const change = useMutation({
@@ -170,9 +172,10 @@ function GrantPicker({
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<"primary" | "extra">("extra");
   const [picked, setPicked] = useState<Set<number>>(new Set());
+  const debouncedQ = useDebouncedValue(q);
   const candidates = useQuery({
-    queryKey: [...userKeys.all, "role-grant-picker", q],
-    queryFn: async () => (await usersApi.list({ search: q || undefined, ordering: "username" })).data.results,
+    queryKey: [...userKeys.all, "role-grant-picker", debouncedQ],
+    queryFn: async () => (await usersApi.list({ search: debouncedQ || undefined, ordering: "username" })).data.results,
   });
   const groups = new Map<string, User[]>();
   for (const u of candidates.data ?? []) {

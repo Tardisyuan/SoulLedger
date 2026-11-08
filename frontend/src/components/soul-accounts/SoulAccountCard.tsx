@@ -70,7 +70,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
       </div>
     );
   } else if (chain.isError && !chain.data) {
-    body = <QueryError onRetry={() => chain.refetch()} />;
+    body = <QueryError onRetry={() => chain.refetch()} error={chain.error} />;
   } else {
     body = (
       <div className="space-y-4">

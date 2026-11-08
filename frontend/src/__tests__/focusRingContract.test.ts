@@ -50,7 +50,7 @@ import {
 //   than an alias, and that it clears WCAG 1.4.11's 3:1 for non-text UI on
 //   every surface a focused control can sit in front of. `outline-offset` is
 //   2px, so the ring lands on the background BEHIND the control: canvas plus
-//   surface-1..4, for the neutral fallback ramp and each civilization's.
+//   surface-1..3, for the neutral fallback ramp and each civilization's.
 //
 // WHY THE TOKEN IS ITS OWN AND NOT THE ACCENT, restated here because a future
 // reader will be tempted to collapse them: `useAccentColor` in
@@ -170,7 +170,8 @@ describe("the focus-ring checks are looking at something", () => {
     for (const theme of THEMES) {
       const backgrounds = ringBackgrounds(theme);
       expect(backgrounds).toHaveLength(1 + SURFACE_TOKENS.length);
-      expect(backgrounds.length).toBeGreaterThanOrEqual(5);
+      // canvas + surface-1..3. 5 → 4 on 2026-11-08: `--color-surface-4` was an alias of surface-3, not a step, and was deleted.
+      expect(backgrounds.length).toBeGreaterThanOrEqual(4);
       expect(backgrounds.map((b) => b.label)).toContain("canvas");
     }
   });
@@ -267,7 +268,7 @@ describe("the focus ring-3 clears WCAG 1.4.11 on every surface it can land on", 
         ratio: true,
       });
     }
-    expect(measured.length).toBeGreaterThanOrEqual(5);
+    expect(measured.length).toBeGreaterThanOrEqual(4);
   });
 
   /* 规范 v4(用户 2026-11-06 决定文明色范围照 v4):有 data-civ 时 `[data-civ]` 把 --color-focus 指到

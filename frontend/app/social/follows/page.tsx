@@ -20,12 +20,14 @@ export default function FollowsPage() {
     data: followingData,
     isLoading: followingLoading,
     isError: followingError,
+    error: followingFailure,
     refetch: refetchFollowing,
   } = useFollowing();
   const {
     data: followersData,
     isLoading: followersLoading,
     isError: followersError,
+    error: followersFailure,
     refetch: refetchFollowers,
   } = useFollowers();
 
@@ -33,6 +35,7 @@ export default function FollowsPage() {
   const followersList = followersData ?? [];
   const isLoading = tab === "following" ? followingLoading : followersLoading;
   const isError = tab === "following" ? followingError : followersError;
+  const listError = tab === "following" ? followingFailure : followersFailure;
   const refetch = tab === "following" ? refetchFollowing : refetchFollowers;
   const list = tab === "following" ? followingList : followersList;
 
@@ -104,6 +107,7 @@ export default function FollowsPage() {
           data={list}
           isLoading={isLoading}
           isError={isError}
+          error={listError}
           onRetry={() => refetch()}
           keyExtractor={(item) => String(item.id)}
           renderRow={(item) => {

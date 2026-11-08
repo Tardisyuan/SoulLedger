@@ -6,15 +6,16 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { soulsApi } from "@soulledger/core/api";
+import { responseError } from "@soulledger/core/api/client";
 import type { SoulDateProblem, SoulRecordEntry } from "@soulledger/core/api/souls";
 
 interface DateProblemsPanelProps {
   soulId: string;
   /** soul.date_problems — the soul's own dates against each other. */
-  soulProblems: SoulDateProblem[];
+  soulProblems: SoulDateProblem[] | null | undefined;
   /** Already-fetched records (each carries its own date_problems); no
    * extra request is made here. */
-  records: SoulRecordEntry[];
+  records: SoulRecordEntry[] | null | undefined;
   /** Called after a successful acknowledge/unacknowledge to refetch. */
   onChanged: () => void;
 }
@@ -54,8 +55,9 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
   const [expandedCodes, setExpandedCodes] = useState<Record<string, boolean>>({});
 
   const occurrences: Occurrence[] = [
-    ...soulProblems.map((p) => ({ severity: p.severity, code: p.code, message: p.message })),
-    ...records.flatMap((r) =>
+    // 后端没给这个字段(旧数据、旧接口)时按「没有问题」处理,不让整页崩成 500。
+    ...(soulProblems ?? []).map((p) => ({ severity: p.severity, code: p.code, message: p.message })),
+    ...(records ?? []).flatMap((r) =>
       (r.date_problems ?? []).map((p) => ({
         severity: p.severity,
         code: p.code,
@@ -97,11 +99,8 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
       }
       onChanged();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } }; message?: string };
-      showToast(
-        err?.response?.data?.error || err?.message || t("souls.detail.date_problems.ack_error"),
-        "error"
-      );
+      // 后端写的那句原因照显示;没有就给固定文案 —— 不回显 axios 的英文 message。
+      showToast(responseError(e) || t("souls.detail.date_problems.ack_error"), "error");
     } finally {
       setBusyRecordId(null);
     }

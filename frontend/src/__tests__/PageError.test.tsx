@@ -2,7 +2,7 @@
  * Tests for PageError component
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { PageError, StatusCard } from "@/src/components/ui/PageError";
+import { PageError, QueryError, StatusCard } from "@/src/components/ui/PageError";
 import NotFound from "@/app/not-found";
 import WelcomeError from "@/app/welcome/error";
 import zh from "@soulledger/core/messages/zh-Hans.json";
@@ -26,11 +26,24 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 describe("PageError", () => {
-  it("renders error title and error message", () => {
-    const error = new Error("Test error");
+  let consoleError: jest.SpyInstance;
+  beforeEach(() => {
+    consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => consoleError.mockRestore());
+
+  it("renders the title and the generic description, not the error's own message", () => {
+    const error = new Error("Request failed with status code 500");
     render(<PageError error={error} reset={() => {}} />);
     expect(screen.getByText("Server Error")).toBeInTheDocument();
-    expect(screen.getByText("Test error")).toBeInTheDocument();
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    expect(screen.queryByText("Request failed with status code 500")).not.toBeInTheDocument();
+  });
+
+  it("logs the error itself for whoever debugs it", () => {
+    const error = new Error("boom");
+    render(<PageError error={error} reset={() => {}} />);
+    expect(consoleError).toHaveBeenCalledWith(error);
   });
 
   it("renders retry button", () => {
@@ -58,11 +71,6 @@ describe("PageError", () => {
     expect(screen.queryByText(/^request /)).not.toBeInTheDocument();
   });
 
-  it("renders error message from error object", () => {
-    const error = new Error("Custom error message");
-    render(<PageError error={error} reset={() => {}} />);
-    expect(screen.getByText("Custom error message")).toBeInTheDocument();
-  });
 });
 
 /**
@@ -168,5 +176,19 @@ describe("500 的文案是规范 v3 的(2026-10-01)", () => {
     expect(en.error.retry).toBe("Reload");
     expect(egy.error.title).toBe("Sethet");
     expect(egy.error.retry).toBe("Wehem Ini");
+  });
+});
+
+describe("QueryError · 403", () => {
+  it("a 403 is the permission card, not a system failure", () => {
+    render(<QueryError onRetry={() => {}} error={{ response: { status: 403 } }} />);
+    expect(screen.getByTestId("permission-denied")).toBeInTheDocument();
+    expect(document.querySelector("[data-query-error]")).toBeNull();
+  });
+
+  it("any other failure stays the query error", () => {
+    render(<QueryError onRetry={() => {}} error={{ response: { status: 500 } }} />);
+    expect(document.querySelector("[data-query-error]")).not.toBeNull();
+    expect(screen.queryByTestId("permission-denied")).not.toBeInTheDocument();
   });
 });

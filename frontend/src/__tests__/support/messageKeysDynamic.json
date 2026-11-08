@@ -1,0 +1,5 @@
+{
+  "official_notify": "后端副本 backend/apps/notifications/messages.py 按通知种类取(MESSAGES[locale][kind]),test_official_notify_messages_match_the_language_packs 对齐",
+  "soul_push": "后端副本 backend/apps/soul_push/messages.py;灵魂端 mobile/src/push.ts",
+  "soul_mail": "后端副本 backend/apps/authentication/mail.py,test_system_mail_speaks_the_recipients_language 对齐"
+}

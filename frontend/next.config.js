@@ -19,6 +19,17 @@ const nextConfig = {
     externalDir: true,
   },
   reactStrictMode: true,
+  // The shared language packs carry namespaces only the apps and the backend read; the web build drops
+  // them (lib/i18n/dropAppOnlyNamespaces.js). `path` is project-relative, and the project root is the repo's.
+  turbopack: {
+    rules: {
+      "*.json": {
+        condition: { path: /^packages\/core\/messages\/(?:en|zh-Hans|egy)\.json$/ },
+        loaders: [require.resolve("./lib/i18n/dropAppOnlyNamespaces.js")],
+        as: "*.js",
+      },
+    },
+  },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || (demo ? "/api/v1" : "http://localhost:8000/api/v1"),
     // Always defined, for the same reason as the DSN below: the demo's only entry points are folded out on this literal.

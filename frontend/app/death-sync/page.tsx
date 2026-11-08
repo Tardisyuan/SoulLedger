@@ -133,7 +133,7 @@ function DeathSyncRoute() {
     apply();
     setPage(1);
   };
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: ["death-sync", "registrations", page, filterParams],
     queryFn: async () => (await deathSyncApi.registrations({ page: String(page), ...filterParams })).data,
     enabled: !!user,
@@ -262,6 +262,7 @@ function DeathSyncRoute() {
           data={registrations}
           isLoading={isLoading}
           isError={isError}
+          error={listError}
           onRetry={() => refetch()}
           emptyMessage={t("death_sync.no_registrations")}
           /* 空状态给一条出路(补足 C15):按状态筛空了,就给「清除筛选」。 */

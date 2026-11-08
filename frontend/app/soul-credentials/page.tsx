@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { PAGE_SIZE, type CredentialSlip, type InitialCredential } from "@soulledger/core/api";
+import { responseData, responseStatus } from "@soulledger/core/api/client";
 import { soulAccountKeys } from "@soulledger/core/query_keys";
 import {
   classifySoulAccountError,
@@ -153,9 +154,9 @@ function CredentialsPageContent() {
       onError: (error) => {
         setPrinting(false);
         const key = failureKey(classifySoulAccountError(error), "");
-        const detail = (error as { response?: { status?: number; data?: { detail?: unknown } } })?.response;
+        const detail = responseData<{ detail: unknown }>(error)?.detail;
         showToast(
-          key ? t(key) : detail?.status === 409 && typeof detail.data?.detail === "string" ? detail.data.detail : t("soul_accounts.credentials.print_failed"),
+          key ? t(key) : responseStatus(error) === 409 && typeof detail === "string" ? detail : t("soul_accounts.credentials.print_failed"),
           "error",
         );
       },
@@ -220,7 +221,7 @@ function CredentialsPageContent() {
   // Failed / nothing pending at all / nothing under this filter: three states, three looks.
   const failed = list.isError && !list.data;
   const empty = failed ? (
-    <QueryError onRetry={() => list.refetch()} />
+    <QueryError onRetry={() => list.refetch()} error={list.error} />
   ) : status === "PENDING" ? (
     <EmptyState title={t("soul_accounts.credentials.empty.pending")} reason={t("soul_accounts.credentials.empty.pending_reason")} />
   ) : (

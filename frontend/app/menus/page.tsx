@@ -247,6 +247,7 @@ function MenusPageContent() {
         data={treeRows}
         isLoading={isLoading}
         isError={Boolean(error)}
+        error={error}
         keyExtractor={({ item }) => String(item.id)}
         renderRow={({ item, depth }) => (
           <MenuRowCells menu={item} depth={depth} onEdit={openEdit} onDelete={setPendingDelete} />

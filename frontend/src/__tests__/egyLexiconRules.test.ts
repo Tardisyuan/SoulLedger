@@ -706,7 +706,7 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 742 个键与包里逐字一致", () => {
+  it("修订表 731 个键与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
     // 778 → 774:规范 v2 撤掉强调色,settings 里四个键连同修订一起删除。
     // 771 → 752:2026-10-23 删除 19 个无代码读的键(见文件头)。
@@ -715,7 +715,8 @@ describe("egy 词表规则", () => {
     // 745 → 742:2026-11-07 措辞审查(EG-9、EG-23)改了 zh / en 的意思,egy 三个键删掉等 Design
     // (actors.assessors.toggle、soul_app.lexicon.eg.no_past_lives / past_read_only,见 egyPendingKeys.json)。
     // 同轮五条随包回填:EG-10 湮灭写 Mut Sen(两条)、EG-17 杜阿特入口写 Duat Aq、EG-25 称心写 Fai Ib(两条)。
-    expect(Object.keys(table)).toHaveLength(742);
+    // 742 → 731:2026-11-08 删除无人引用的 48 个键(messageKeysAreReferenced.test.ts),其中 11 个在修订表里。
+    expect(Object.keys(table)).toHaveLength(731);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);

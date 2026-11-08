@@ -71,7 +71,7 @@ export function WebhooksPanel() {
   const [disabling, setDisabling] = useState<AdminWebhook | null>(null);
   const [deliveriesFor, setDeliveriesFor] = useState<AdminWebhook | null>(null);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: [...WEBHOOKS_QUERY, page],
     queryFn: async () => (await deathSyncApi.webhooks({ page: String(page) })).data,
     placeholderData: (previous) => previous,
@@ -134,6 +134,7 @@ export function WebhooksPanel() {
           data={hooks}
           isLoading={isLoading}
           isError={isError}
+          error={listError}
           onRetry={() => refetch()}
           emptyMessage={t("death_sync.webhooks.no_webhooks")}
           keyExtractor={(hook) => hook.id}
@@ -396,7 +397,7 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
     },
   });
   const params = { page: String(page), ...(webhook ? { webhook: webhook.id } : {}) };
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: [...DELIVERIES_QUERY, webhook?.id ?? "all", page],
     queryFn: async () => (await deathSyncApi.webhookDeliveries(params)).data,
     placeholderData: (previous) => previous,
@@ -428,6 +429,7 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
         data={rows}
         isLoading={isLoading}
         isError={isError}
+          error={listError}
         onRetry={() => refetch()}
         isFiltered={webhook !== null}
         emptyMessage={t("death_sync.webhooks.no_deliveries")}
