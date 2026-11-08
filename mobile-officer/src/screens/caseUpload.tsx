@@ -9,7 +9,7 @@ import { View } from "react-native";
 
 import { pickerAvailable, pickFiles, type Picked, type PickKind } from "../attachmentPicker";
 import { ActionButton } from "../kit";
-import { SmallButton, Txt, space, useI18n, useOnline } from "../shared";
+import { SmallButton, Txt, fileField, space, useI18n, useOnline } from "../shared";
 
 type Local = { key: number; file: Picked; state: "uploading" | "failed"; percent: number; message?: string; retryable?: boolean };
 
@@ -46,8 +46,7 @@ export function CaseUpload({ judgmentId, list, canWrite, onUploaded }: { judgmen
     aborts.current.set(key, controller);
     patch(key, { state: "uploading", percent: 0, message: undefined });
     const body = new FormData();
-    // React Native 的 FormData 收 `{ uri, name, type }` 这种文件描述;DOM 的类型不认它。
-    body.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+    body.append("file", fileField(file));
     try {
       await judgmentApi.uploadAttachment(judgmentId, body, { signal: controller.signal, onProgress: (f) => patch(key, { percent: Math.round(f * 100) }) });
       drop(key);

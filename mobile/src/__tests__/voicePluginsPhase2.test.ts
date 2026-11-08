@@ -141,6 +141,8 @@ describe("the App Group", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../../../mobile-officer/package.json"), "utf8"));
     const dir = path.resolve(__dirname, "../../../mobile-officer", pkg.expo.autolinking.nativeModulesDir);
     expect(fs.existsSync(path.join(dir, "soulledger-voice/expo-module.config.json"))).toBe(true);
+    // The officer app has no Live Activity (nothing it imports touches liveProgress): that module is not linked into it.
+    expect(pkg.expo.autolinking.exclude).toEqual(["soulledger-live"]);
   });
 
   it("the officer app does not ship react-native-screens: it has no native stack or tab navigator to need it (B2)", () => {

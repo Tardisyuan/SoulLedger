@@ -11,6 +11,7 @@
  * one per call, so turning it on again revokes the old one first.
  */
 import { soulApi } from "@soulledger/core/api/soul";
+import { captureCrash } from "./crashReport";
 import { BIO_KEY } from "./loginRules";
 import { storedLocale, translate } from "./i18n";
 import { platform } from "@soulledger/core/platform";
@@ -154,7 +155,7 @@ export const appLockOn = () => bioEnabled() && platform().persistent.get(APP_LOC
 export function clearCredential(): void {
   platform().persistent.remove(BIO_KEY);
   platform().persistent.remove(APP_LOCK_KEY);
-  SecureStore.deleteItemAsync(CREDENTIAL_KEY, { keychainService: SERVICE }).catch(() => {});
+  SecureStore.deleteItemAsync(CREDENTIAL_KEY, { keychainService: SERVICE }).catch(captureCrash);
 }
 
 /**
