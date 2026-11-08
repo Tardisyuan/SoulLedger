@@ -1391,6 +1391,27 @@
         "no_end": "{{node}}: a flow with conditions or end nodes needs at least one end node",
         "auto_route_exit_missing": "{{node}}: the \"{{region}}\" exit has no target"
       },
+      "issue_short": {
+        "name_empty": "No name",
+        "self_route": "An exit points back to itself",
+        "duplicate_route": "Duplicate exits",
+        "reject_not_earlier": "Return must go to an earlier node",
+        "reject_and_fail_route": "Both return and refuse are set",
+        "timeout_incomplete": "Timeout is incomplete",
+        "timeout_role_missing": "Escalation names no role",
+        "countersign_no_signers": "Countersign has no signers",
+        "threshold_out_of_range": "Threshold exceeds signers",
+        "end_has_exit": "An end has exits",
+        "condition_empty": "Condition can never hold",
+        "condition_invalid": "Condition is incomplete",
+        "condition_overlap": "Two conditions overlap",
+        "unreachable": "Unreachable from the entry",
+        "no_exit": "No way out to an end",
+        "no_end": "The flow needs an end node"
+      },
+      "node_issue_count": "{{n}} issues",
+      "node_issue_summary": "This node has {{n}} issues to fix before publishing.",
+      "locate": "Show on canvas",
       "palette": "Nodes · drag onto the canvas",
       "inspector": "Properties",
       "inspector_empty": "Pick a node on the canvas or in the linear preview.",
@@ -1415,6 +1436,7 @@
         "draft": "Draft v{{n}}",
         "published": "Published v{{n}}",
         "unpublished": "Not published",
+        "pending_changes": "Draft v{{n}} · {{count}} changes not published",
         "history": "Version history",
         "status": {
           "DRAFT": "Draft",
@@ -1497,10 +1519,7 @@
       },
       "roles_note": "Roles cannot be dragged; the edges decide them",
       "tab": {
-        "node": "Node",
-        "exits": "Exits",
-        "issues": "Issues",
-        "version": "Version"
+        "issues": "Issues"
       },
       "issues_blocking": "{{n}} issues block publishing",
       "issues_hint": "Pick one to select its node on the canvas",
