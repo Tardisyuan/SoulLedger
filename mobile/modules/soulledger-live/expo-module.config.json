@@ -1,6 +1,9 @@
 {
-  "platforms": ["apple"],
+  "platforms": ["apple", "android"],
   "apple": {
     "modules": ["SoulLedgerLiveModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.soulledgerlive.SoulLedgerLiveModule"]
   }
 }

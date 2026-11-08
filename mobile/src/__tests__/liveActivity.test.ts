@@ -8,10 +8,14 @@ import path from "path";
 
 import * as Notifications from "expo-notifications";
 
-import { LIVE_ASKED_KEY, LIVE_NOTIFICATION, androidContent, liveChannel, nativeState, showLiveProgress } from "../liveProgress";
+import { LIVE_ASKED_KEY, LIVE_CHANNEL, LIVE_NOTIFICATION, androidContent, endLiveProgress, liveChannel, nativeState, showLiveProgress } from "../liveProgress";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { PRIMER_SEEN_KEY } from "../push";
 import type { LiveContent } from "@soulledger/core/domain/soulRoute";
+
+// The local module: absent (null) unless a test installs one, as in jest and Expo Go.
+let mockNative: Record<string, jest.Mock> | null = null;
+jest.mock("expo", () => ({ ...jest.requireActual("expo"), requireOptionalNativeModule: () => mockNative }));
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const live = require("../../plugins/liveActivity");
@@ -141,5 +145,67 @@ describe("Android: the notification permission, asked once by the first live pro
     Object.defineProperty(Platform, "OS", { value: "ios", configurable: true });
     await showLiveProgress(CONTENT, "#C8604F");
     expect(system.requests).toBe(0);
+  });
+});
+
+/**
+ * 华为 TAS-AL00 (2026-11-08): the notification expo posted never reached the lock screen — expo never sets
+ * Notification.visibility (vis=PRIVATE), Android reset the channel's PUBLIC to NO_OVERRIDE, and the LOW channel was
+ * "silent". The Kotlin side (modules/soulledger-live/android) posts it PUBLIC on a DEFAULT, silenced channel.
+ */
+describe("Android: the native module posts the live progress", () => {
+  const system = (Notifications as unknown as { __state: { status: string } }).__state;
+  const { Platform } = jest.requireActual<typeof import("react-native")>("react-native");
+  const os = Platform.OS;
+  const ROOT_MODULE = path.join(ROOT, "modules/soulledger-live");
+  const kotlin = fs.readFileSync(path.join(ROOT_MODULE, "android/src/main/java/expo/modules/soulledgerlive/SoulLedgerLiveModule.kt"), "utf8");
+
+  beforeEach(() => {
+    installMobilePlatform();
+    system.status = "granted";
+    Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
+    mockNative = { notify: jest.fn(async () => true), end: jest.fn(async () => {}), show: jest.fn() };
+  });
+  afterEach(() => {
+    mockNative = null;
+    Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+  });
+
+  it("show goes to the module with the same lines and progress, not to expo-notifications", async () => {
+    const scheduled = jest.spyOn(Notifications, "scheduleNotificationAsync");
+    await showLiveProgress(CONTENT, "#C8604F");
+    const n = androidContent(CONTENT);
+    expect(mockNative!.notify).toHaveBeenCalledWith(CONTENT.title, n.title, n.body, 1);
+    expect(mockNative!.show).not.toHaveBeenCalled();
+    expect(scheduled).not.toHaveBeenCalled();
+    scheduled.mockRestore();
+  });
+
+  it("end cancels through the module", async () => {
+    const dismissed = jest.spyOn(Notifications, "dismissNotificationAsync");
+    await endLiveProgress();
+    expect(mockNative!.end).toHaveBeenCalledTimes(1);
+    expect(dismissed).not.toHaveBeenCalled();
+    dismissed.mockRestore();
+  });
+
+  it("the Kotlin side: the v2 channel at DEFAULT importance, silenced, the old channel deleted, the notification PUBLIC", () => {
+    expect(LIVE_CHANNEL).toBe("live-progress-v2");
+    expect(kotlin).toContain(`const val CHANNEL = "${LIVE_CHANNEL}"`);
+    expect(kotlin).toContain('const val OLD_CHANNEL = "live-progress"');
+    expect(kotlin).toContain("deleteNotificationChannel(OLD_CHANNEL)");
+    expect(kotlin).toContain("NotificationManager.IMPORTANCE_DEFAULT");
+    expect(kotlin).not.toContain("IMPORTANCE_LOW");
+    for (const part of ["setVisibility(NotificationCompat.VISIBILITY_PUBLIC)", "setOngoing(true)", "setOnlyAlertOnce(true)", "setSilent(true)", "setSound(null, null)", "enableVibration(false)", "setShowBadge(false)"])
+      expect(kotlin).toContain(part);
+    // Tapping opens 本世 through the app's own link.
+    expect(kotlin).toContain('"soulledger://life"');
+    expect(kotlin).toContain("cancel(TAG, ID)");
+    const config = JSON.parse(fs.readFileSync(path.join(ROOT_MODULE, "expo-module.config.json"), "utf8"));
+    expect(config.platforms).toEqual(expect.arrayContaining(["apple", "android"]));
+    expect(config.android.modules).toEqual(["expo.modules.soulledgerlive.SoulLedgerLiveModule"]);
+    // The officer app has no live progress: still excluded from its autolinking.
+    const officer = JSON.parse(fs.readFileSync(path.join(ROOT, "../mobile-officer/package.json"), "utf8"));
+    expect(officer.expo.autolinking.exclude).toContain("soulledger-live");
   });
 });

@@ -1,8 +1,8 @@
 /**
  * 锁屏实时进度, iOS side (user decision D13, 2026-11-06): a WidgetKit extension that draws the soul app's Live
  * Activity on the lock screen and in the Dynamic Island. The app starts / updates / ends it through the local
- * module modules/soulledger-live (mobile/src/liveProgress.ts); Android needs no native part (an ongoing
- * notification from expo-notifications).
+ * module modules/soulledger-live (mobile/src/liveProgress.ts). Android's side is that module's Kotlin (an ongoing
+ * PUBLIC notification); it needs nothing from this plugin.
  *
  * Writes ios/SoulLedgerLiveExtension/ (the widget's Swift, a copy of the module's SoulLedgerLiveAttributes.swift — ActivityKit
  * pairs app and widget by that type — and the extension's Info.plist), adds the app-extension target with its

@@ -4,7 +4,12 @@
  *
  *   iOS      a Live Activity (ActivityKit) through the local module `modules/soulledger-live`; the lock-screen and
  *            Dynamic Island views are the widget extension `plugins/withLiveActivity.js` adds to the project.
- *   Android  the equivalent: one ongoing notification on its own quiet channel, replaced in place on each change.
+ *   Android  the equivalent: one ongoing notification on its own quiet channel, replaced in place on each change, posted
+ *            by the same module's Kotlin side (`notify`). Not through expo-notifications: its builder never sets
+ *            Notification.visibility (always PRIVATE), and Android resets an app-created channel's PUBLIC to
+ *            NO_OVERRIDE, so nothing expo posts reaches the lock screen as PUBLIC; and its LOW channel is "silent",
+ *            which Android 12 / EMUI keep off the lock screen altogether (华为 TAS-AL00, 2026-11-08). The expo path
+ *            remains only where the module is absent (jest, Expo Go).
  *
  * Shown while the soul is on a road (`soulRoute` has a place) and the app has been opened since; updated whenever the
  * 本世 page re-reads the profile or the plan; ended when the route is gone or the session ends (the tabs unmount on
@@ -32,10 +37,20 @@ interface LiveNative {
   end(): Promise<void>;
 }
 
-export const LIVE_CHANNEL = "live-progress";
+interface LiveNativeAndroid {
+  /** Posts or replaces the ongoing notification on LIVE_CHANNEL, VISIBILITY_PUBLIC. false: notifications are off. */
+  notify(channelName: string, title: string, body: string, progress: number): Promise<boolean>;
+  end(): Promise<void>;
+}
+
+/** The Kotlin side's channel (DEFAULT importance, silenced); it deletes the old LOW `live-progress` on first use. */
+export const LIVE_CHANNEL = "live-progress-v2";
 export const LIVE_NOTIFICATION = "live-progress";
+/** The expo-notifications fallback keeps the old id: a LOW channel made there must not squat on the v2 id. */
+const EXPO_CHANNEL = "live-progress";
 
 const ios = () => (Platform.OS === "ios" ? requireOptionalNativeModule<LiveNative>("SoulLedgerLive") : null);
+const android = () => (Platform.OS === "android" ? requireOptionalNativeModule<LiveNativeAndroid>("SoulLedgerLive") : null);
 
 /** What the native activity's ContentState decodes (modules/soulledger-live/ios/SoulLedgerLiveAttributes.swift). */
 export function nativeState(c: LiveContent): string {
@@ -106,13 +121,23 @@ export async function showLiveProgress(c: LiveContent, tint: string): Promise<vo
   }
   if (Platform.OS !== "android") return;
   if (!(await mayNotify())) return;
-  await Notifications.setNotificationChannelAsync(LIVE_CHANNEL, liveChannel(c.title));
-  await Notifications.scheduleNotificationAsync({ identifier: LIVE_NOTIFICATION, content: androidContent(c), trigger: { channelId: LIVE_CHANNEL } });
+  const native = android();
+  if (native) {
+    const { title, body } = androidContent(c);
+    await native.notify(c.title, title ?? c.title, body ?? "", c.progress);
+    return;
+  }
+  await Notifications.setNotificationChannelAsync(EXPO_CHANNEL, liveChannel(c.title));
+  await Notifications.scheduleNotificationAsync({ identifier: LIVE_NOTIFICATION, content: androidContent(c), trigger: { channelId: EXPO_CHANNEL } });
 }
 
 export async function endLiveProgress(): Promise<void> {
   if (Platform.OS === "ios") await ios()?.end();
-  else if (Platform.OS === "android") await Notifications.dismissNotificationAsync(LIVE_NOTIFICATION);
+  else if (Platform.OS === "android") {
+    const native = android();
+    if (native) await native.end();
+    else await Notifications.dismissNotificationAsync(LIVE_NOTIFICATION);
+  }
 }
 
 /** Keeps the lock screen in step with `route` (null: none) for the soul named `soul`. */

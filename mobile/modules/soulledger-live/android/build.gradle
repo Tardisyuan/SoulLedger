@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.soulledgerlive'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.soulledgerlive"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // The same NotificationCompat expo-notifications builds with (its android/build.gradle).
+  implementation 'androidx.core:core:1.17.0'
+}
