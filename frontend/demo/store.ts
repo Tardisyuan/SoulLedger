@@ -338,6 +338,12 @@ export function read(rec: Recording, path: string, query: URLSearchParams): Answ
     return { status: 200, data: mergeScoped(overlaid(doc?.b ?? addedRow ?? inParent, scope), parent) };
   }
   if (overlay.added[path]?.length) return { status: 200, data: overlaid(overlay.added[path], path) };
+  // A row of a recorded list that the list does not have — an id from an older recording (every re-seed mints new
+  // ones), or one typed by hand — is a 404, as the server would say. An empty 200 here made detail pages crash on the
+  // fields they expect (2026-11-08: /souls/<old id> → "Cannot read properties of undefined (reading 'map')").
+  if (parent && /^(\d+|[0-9a-f]{8}-[0-9a-f-]{27})$/.test(parent.id) && Object.keys(rec.lists).some((k) => pathOfKey(k) === parent.collection)) {
+    return { status: 404, data: { detail: "Not found." } };
+  }
   console.info("[demo] nothing recorded for GET", key);
   return { status: 200, data: emptyLike() };
 }

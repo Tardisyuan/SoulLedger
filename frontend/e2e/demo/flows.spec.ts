@@ -348,3 +348,13 @@ test("each soul's values sit under their own column headers", async ({ page, con
   await expect(named.locator("td").nth(column)).toContainText("前202年");
   clean(seen, "souls columns");
 });
+
+// A link from an older recording (every re-seed mints new ids) or a mistyped id: the soul is simply not there, as on
+// the server — not a 500 from a page that got an empty 200 (2026-11-08, /souls/c7b8d72b-… on the live demo).
+test("a soul id the recording does not have is a not-found page, not a crash", async ({ page }) => {
+  await enter(page, "judge");
+  await page.goto("/souls/c7b8d72b-ffa4-4138-a766-aa73ffb1fbbc");
+  const main = page.locator("main");
+  await expect(main).toContainText(/灵魂未找到|无权查看或已不存在|不存在/);
+  await expect(main).not.toContainText(/Cannot read properties|系统发生错误/);
+});
