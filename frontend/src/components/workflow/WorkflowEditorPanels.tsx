@@ -88,18 +88,18 @@ export function WorkflowPalette({
     refs.current[next]?.focus();
   };
   return (
-    /* v3 A1: 176 wide on surface-1, 16/12 padding. Four 48-high drag blocks, then
-       the role legend — roles cannot be dragged, they are read off the edges.
-       The hint is a footer OUTSIDE the scrolling part (用户 2026-10-02): it used to be the
-       last item of one scrolling column, pinned with `mt-auto`, and at 1440×900 the column
-       was ~100px taller than the box — so the hint sat below the box's bottom edge. */
+    /* v4 第十四批 §1: 200 wide (a 56 icon column at 1024–1279, names on hover, still draggable). Drag items
+       ≥ 36 high with 6 between (44 on touch), then the role legend in 28-high rows — read-only, roles cannot be
+       dragged, they are read off the edges. The hint is a footer OUTSIDE the scrolling part (用户 2026-10-02): it
+       used to be the last item of one scrolling column, pinned with `mt-auto`, and at 1440×900 the column was
+       ~100px taller than the box — so the hint sat below the box's bottom edge. */
     <nav
       aria-label={t("workflow.editor.palette")}
       className="flex flex-col min-h-0 border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
     >
-      <div data-palette-scroll="" className="flex flex-col gap-3 px-3 py-4 min-h-0 flex-1 overflow-y-auto">
-        <div className={LABEL}>{t("workflow.editor.palette")}</div>
-        <ul className="flex flex-col gap-2">
+      <div data-palette-scroll="" className="flex flex-col gap-3 px-3 max-xl:px-2 py-4 min-h-0 flex-1 overflow-y-auto">
+        <div className={`${LABEL} max-xl:sr-only`}>{t("workflow.editor.palette")}</div>
+        <ul className="flex flex-col gap-[6px]">
           {PALETTE_TYPES.map((type, i) => (
             <li key={type}>
               <button
@@ -124,20 +124,21 @@ export function WorkflowPalette({
                 }}
                 onClick={() => onAdd(type)}
                 aria-describedby={type === "AUTO_ROUTE" ? hintId : undefined}
-                className="peer w-full h-12 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
+                title={t(`workflow.editor.kind.${type}`)}
+                className="peer w-full min-h-9 pointer-coarse:min-h-11 px-3 max-xl:px-0 max-xl:justify-center flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] rounded-control border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] hover:border-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
               >
                 <span aria-hidden="true" className="w-4 text-center">
                   {type === "AUTO_ROUTE" ? AUTO_ROUTE_GLYPH : KIND_GLYPH[type]}
                 </span>
-                <span className="flex-1">{t(`workflow.editor.kind.${type}`)}</span>
+                <span className="flex-1 max-xl:sr-only">{t(`workflow.editor.kind.${type}`)}</span>
               </button>
               {/* W-2:只在悬停 / 键盘聚焦时出现 —— 它是唯一不需要审批人的节点。画在按钮下方而不是右侧浮层:
-                  这一栏是滚动容器,浮出去会被裁掉。 */}
+                  这一栏是滚动容器,浮出去会被裁掉。56 宽的图标列里放不下,那里只有按钮的 title。 */}
               {type === "AUTO_ROUTE" && (
                 <p
                   id={hintId}
                   role="tooltip"
-                  className="hidden peer-hover:block peer-focus-visible:block mt-1 rounded-panel px-2 py-1 text-xs text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))]"
+                  className="hidden peer-hover:block peer-focus-visible:block max-xl:hidden! mt-1 rounded-panel px-2 py-1 text-xs text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))]"
                 >
                   {t("workflow.editor.palette_hint.AUTO_ROUTE")}
                 </p>
@@ -145,23 +146,25 @@ export function WorkflowPalette({
             </li>
           ))}
         </ul>
-        <div className={`${LABEL} mt-2`}>{t("workflow.editor.roles_title")}</div>
-        <ul className="flex flex-col gap-2">
-          {(Object.keys(ROLE_GLYPH) as NodeRole[]).map((role) => (
-            <li key={role} className="flex items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
-              <span aria-hidden="true" className="w-4 text-center text-md text-[oklch(var(--color-ink))]">
-                {ROLE_GLYPH[role]}
-              </span>
-              {t(`workflow.editor.role_legend.${role}`)}
-            </li>
-          ))}
-        </ul>
-        <p className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.roles_note")}</p>
+        <div className="flex flex-col max-xl:hidden">
+          <div className={`${LABEL} mt-2 mb-1`}>{t("workflow.editor.roles_title")}</div>
+          <ul className="flex flex-col">
+            {(Object.keys(ROLE_GLYPH) as NodeRole[]).map((role) => (
+              <li key={role} className="flex h-7 items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                <span aria-hidden="true" className="w-4 text-center text-md text-[oklch(var(--color-accent))]">
+                  {ROLE_GLYPH[role]}
+                </span>
+                {t(`workflow.editor.role_legend.${role}`)}
+              </li>
+            ))}
+          </ul>
+          <p className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.roles_note")}</p>
+        </div>
       </div>
       {children && (
         <p
           data-palette-hint=""
-          className="shrink-0 px-3 py-3 border-t border-[oklch(var(--color-line))] text-xs text-[oklch(var(--color-ink-muted))]"
+          className="shrink-0 px-3 py-3 border-t border-[oklch(var(--color-line))] text-xs text-[oklch(var(--color-ink-muted))] max-xl:hidden"
         >
           {children}
         </p>
@@ -216,18 +219,23 @@ function exitText(branch: Branch, node: Node, nodes: readonly Node[], edges: rea
     : t("workflow.editor.exit.pass_end");
 }
 
-/** The inspector's four tabs, v3 A1: 节点 / 出口 / 问题 N / 版本. */
-export const INSPECTOR_TABS = ["node", "exits", "issues", "version"] as const;
+/**
+ * The inspector's two tabs (Design v4 第十四批 §3, 取舍 2): 属性 (the old 节点 and 出口 tabs, one above the other)
+ * and 问题 N. 版本 moved into the template bar's version dropdown.
+ */
+export const INSPECTOR_TABS = ["props", "issues"] as const;
 export type InspectorTab = (typeof INSPECTOR_TABS)[number];
 
+/** v4 section rule: each section of 属性 after the form opens with a line. */
+const SECTION = "flex flex-col gap-3 border-t border-[oklch(var(--color-line))] pt-4";
+
 /**
- * 「检查器 Inspector」, v3 A1: 360 wide, four tabs. Properties are read here and
- * edited in the node modal (the 编辑 button, or `E` on the canvas): that modal
- * is where the approver-role options are loaded and the fields are validated,
- * and a second form for the same fields would be two places to keep in step.
+ * 「检查器 Inspector」, v4 第十四批: 360 wide, two 44-high tabs. 属性 edits the selected node in place (the form,
+ * then 出口, then 审批人预览); with nothing selected it shows the empty hint and the template's linear preview.
+ * 问题 lists every failing check as a card; a card selects its node and puts it in the middle of the canvas.
  *
- * The tab is the editor's state, not this component's: 「! 校验 · N」 in the
- * toolbar opens 问题, and a click on a card opens 节点.
+ * The tab is the editor's state, not this component's: 「! 校验 · N」 in the template bar opens 问题, and a
+ * click on a card opens 属性.
  */
 export function WorkflowInspector({
   t,
@@ -238,13 +246,15 @@ export function WorkflowInspector({
   issues,
   selectedId,
   onSelect,
+  onLocate,
   nodeForm,
   validationId,
   tab,
   onTab,
   nodeExtras,
   exits,
-  version,
+  preview,
+  hideTabs = false,
 }: {
   t: TFunc;
   /** 殿名按界面语言(`courtLabel`;库里中英混写)。 */
@@ -255,22 +265,26 @@ export function WorkflowInspector({
   issues: readonly FlowIssue[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  /** The 节点 tab's edit form (v3 A1). Absent in the read-only view, which lists the fields instead. */
+  /** 「定位 →」 on an issue card: select the node and centre the canvas on it. Falls back to `onSelect`. */
+  onLocate?: (id: string) => void;
+  /** 属性's edit form. Absent in the read-only view, which lists the fields instead. */
   nodeForm?: (node: Node) => ReactNode;
   validationId: string;
   tab: InspectorTab;
   onTab: (tab: InspectorTab) => void;
   /** Sections about the selected node that talk to the API (approver preview). */
   nodeExtras?: (node: Node) => ReactNode;
-  /** The 出口 tab's body for the selected node. */
+  /** 出口 · the selected node's exits, the second section of 属性. */
   exits?: (node: Node) => ReactNode;
-  /** The 版本 tab's body. */
-  version?: ReactNode;
+  /** The template's linear preview: under the empty hint in 属性, and at the bottom of 问题. */
+  preview?: ReactNode;
+  /** The narrow view draws its own tabs (线性预览 / 问题 / 属性) and shows one panel of this at a time. */
+  hideTabs?: boolean;
 }) {
   const idx = nodes.findIndex((n) => n.id === selectedId);
   const node = idx >= 0 ? nodes[idx] : undefined;
   const role = node ? roles.get(node.id) ?? "step" : "step";
-  // 自动分流(第四十五批):字形 ⇉,没有审批人;出口只在「出口」页签与表单里按地域改,这里不再列一遍。
+  // 自动分流(第四十五批):字形 ⇉,没有审批人;出口只在表单里按地域改,这里不再列一遍。
   const autoRoute = node ? isAutoRoute(node, edges) : false;
   const field = (label: string, value: string, mono = false) => (
     <>
@@ -281,58 +295,87 @@ export function WorkflowInspector({
     </>
   );
   const failing = new Set(issues.map((i) => i.code));
-  const tabLabel = (k: InspectorTab) =>
-    k === "issues" ? `${t("workflow.editor.tab.issues")} ${issues.length}` : t(`workflow.editor.tab.${k}`);
+  const nodeIssues = node ? issues.filter((i) => i.nodeId === node.id) : [];
+  const locate = onLocate ?? onSelect;
   const empty = <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.inspector_empty")}</p>;
+  const tag = "inline-flex h-6 items-center gap-1 rounded-control border border-[oklch(var(--color-line))] px-2 text-xs text-[oklch(var(--color-ink-muted))]";
 
   return (
     <aside
       aria-label={t("workflow.editor.inspector")}
-      className="flex flex-col min-h-0 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-line))] max-lg:border-l-0 max-lg:border-t"
+      className="flex flex-col min-h-0 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-line))] max-lg:border-l-0"
     >
-      <div role="tablist" aria-label={t("workflow.editor.inspector")} className="flex shrink-0 border-b border-[oklch(var(--color-line))]">
-        {INSPECTOR_TABS.map((k) => (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            id={`${validationId}-tab-${k}`}
-            aria-selected={tab === k}
-            aria-controls={`${validationId}-panel`}
-            onClick={() => onTab(k)}
-            className={`${TAB_BASE} ${tab === k ? TAB_ON : TAB_OFF} flex-1 h-12 ${
-              k === "issues" && issues.length > 0 ? "text-[oklch(var(--color-danger))]!" : ""
-            }`}
-          >
-            {tabLabel(k)}
-          </button>
-        ))}
-      </div>
+      {!hideTabs && (
+        <div role="tablist" aria-label={t("workflow.editor.inspector")} className="flex shrink-0 border-b border-[oklch(var(--color-line))]">
+          {INSPECTOR_TABS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              id={`${validationId}-tab-${k}`}
+              aria-selected={tab === k}
+              aria-controls={`${validationId}-panel`}
+              onClick={() => onTab(k)}
+              className={`${TAB_BASE} ${tab === k ? TAB_ON : TAB_OFF} flex-1 h-11 gap-2 ${tab === k ? "border-[oklch(var(--color-accent))]!" : ""}`}
+            >
+              {k === "issues" ? (
+                <>
+                  {t("workflow.editor.tab.issues")}{" "}
+                  <span
+                    className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-control px-1 font-mono text-2xs ${
+                      issues.length > 0
+                        ? "bg-[oklch(var(--color-danger))] text-[oklch(var(--color-on-danger))]"
+                        : "text-[oklch(var(--color-ink-muted))]"
+                    }`}
+                  >
+                    {issues.length}
+                  </span>
+                </>
+              ) : (
+                t("workflow.editor.inspector")
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div
-        role="tabpanel"
+        role={hideTabs ? undefined : "tabpanel"}
         id={`${validationId}-panel`}
-        aria-labelledby={`${validationId}-tab-${tab}`}
-        className="flex flex-col gap-4 p-4 overflow-y-auto min-h-0"
+        aria-labelledby={hideTabs ? undefined : `${validationId}-tab-${tab}`}
+        className="flex flex-col gap-4 px-4 py-[14px] overflow-y-auto min-h-0"
       >
-        {tab === "node" &&
+        {tab === "props" &&
           (node ? (
             <>
-              <div>
-                <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
-                  <span aria-hidden="true">{autoRoute ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kindOf(node)]} </span>
-                  {nodeName(node, t)}
-                </h2>
-                <p className="text-xs text-[oklch(var(--color-ink-muted))]">
-                  <span aria-hidden="true">{ROLE_GLYPH[role]} </span>
-                  {autoRoute ? t("workflow.editor.auto_route.kind") : t(`workflow.editor.role.${role}`)} ·{" "}
-                  <span className="font-mono">N{idx + 1}</span>
-                </p>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={tag}>
+                    <span aria-hidden="true">{autoRoute ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kindOf(node)]}</span>
+                    {autoRoute ? t("workflow.editor.auto_route.kind") : t(`workflow.editor.kind.${kindOf(node)}`)}
+                  </span>
+                  <span className={tag}>
+                    <span aria-hidden="true" className="text-[oklch(var(--color-accent))]">{ROLE_GLYPH[role]}</span>
+                    {t(`workflow.editor.role.${role}`)}
+                  </span>
+                  <span className="ml-auto font-mono text-xs text-[oklch(var(--color-ink-muted))]">N{idx + 1}</span>
+                </div>
+                <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">{nodeName(node, t)}</h2>
               </div>
+              {nodeIssues.length > 0 && (
+                <div
+                  data-node-issue-summary=""
+                  className="flex gap-2 rounded-panel border border-[oklch(var(--color-danger)/0.35)] bg-[oklch(var(--color-danger)/0.1)] px-3 py-2 text-sm text-[oklch(var(--color-ink))]"
+                >
+                  <span aria-hidden="true" className="font-semibold text-[oklch(var(--color-danger))]">
+                    !
+                  </span>
+                  <span>{t("workflow.editor.node_issue_summary", { n: String(nodeIssues.length) })}</span>
+                </div>
+              )}
               {nodeForm?.(node)}
-              {/* Read-only: every field as text. Editable: the form above
-                  carries the fields, and only the two routes stay as text —
-                  they are edges, edited on the canvas and in 出口. */}
+              {/* Read-only: every field as text. Editable: the form above carries the fields, and only the two
+                  routes stay as text — they are edges, edited on the canvas and in 出口 below. */}
               <dl className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3">
                 {!nodeForm && (
                   <>
@@ -354,73 +397,93 @@ export function WorkflowInspector({
                   kindOf(node) !== "NOTIFY" &&
                   field(t("workflow.editor.branch.fail"), exitText("fail", node, nodes, edges, t))}
               </dl>
-              {nodeExtras?.(node)}
+              {/* 出口 · the old 出口 tab. An editable 自动分流 already carries its exits in the form above. */}
+              {exits && !(autoRoute && nodeForm) && <div className={SECTION}>{exits(node)}</div>}
+              {nodeExtras && <div className={SECTION}>{nodeExtras(node)}</div>}
             </>
           ) : (
-            empty
+            <>
+              {empty}
+              {preview}
+            </>
           ))}
 
-        {tab === "exits" && (node ? exits?.(node) : empty)}
-
         {tab === "issues" && (
-          <section id={validationId} tabIndex={-1} aria-label={t("workflow.editor.issues", { n: String(issues.length) })}>
+          <section id={validationId} tabIndex={-1} aria-label={t("workflow.editor.issues", { n: String(issues.length) })} className="flex flex-col gap-3">
             {issues.length === 0 ? (
               <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_none")}</p>
             ) : (
               <>
-                <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">
-                  {t("workflow.editor.issues_blocking", { n: String(issues.length) })}
-                </h2>
-                <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_hint")}</p>
-                <ul className="mt-3 flex flex-col">
-                  {issues.map((issue) => (
-                    <li
-                      key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}-${issue.edgeId ?? ""}-${issue.region ?? ""}`}
-                      className="border-b border-[oklch(var(--color-line))]"
-                    >
-                      <button
-                        type="button"
-                        aria-current={issue.nodeId !== "" && issue.nodeId === selectedId ? "true" : undefined}
-                        onClick={() => {
-                          if (!issue.nodeId) return;
-                          // 第四十七批 W-3:自动分流缺出口的那一行,选中节点并把焦点放到那条出口的下拉(在 节点 页签)。
-                          if (issue.code === "auto_route_exit_missing" && issue.region) {
-                            flushSync(() => {
-                              onSelect(issue.nodeId);
-                              onTab("node");
-                            });
-                            document.getElementById(`${issue.nodeId}-exit-${issue.region}`)?.focus();
-                            return;
-                          }
-                          onSelect(issue.nodeId);
-                        }}
-                        className="w-full flex gap-2 px-2 py-3 text-left hover:bg-[oklch(var(--color-surface-2))] aria-[current=true]:bg-[oklch(var(--color-ink)/0.07)]"
-                      >
-                        <span aria-hidden="true" className="font-semibold text-[oklch(var(--color-danger))]">
-                          !
-                        </span>
-                        <span className="flex flex-col min-w-0">
-                          <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{issueText(issue, nodes, t, locale)}</span>
-                          <span className="font-mono text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">
-                            {issue.code}
+                <div className="rounded-panel border border-[oklch(var(--color-danger)/0.35)] bg-[oklch(var(--color-danger)/0.1)] px-3 py-2">
+                  <h2 className="text-sm font-semibold text-[oklch(var(--color-ink))]">
+                    <span aria-hidden="true" className="text-[oklch(var(--color-danger))]">! </span>
+                    {t("workflow.editor.issues_blocking", { n: String(issues.length) })}
+                  </h2>
+                  <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_hint")}</p>
+                </div>
+                <ul className="flex flex-col gap-2">
+                  {issues.map((issue) => {
+                    const at = nodes.find((n) => n.id === issue.nodeId);
+                    const current = issue.nodeId !== "" && issue.nodeId === selectedId;
+                    return (
+                      <li key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}-${issue.edgeId ?? ""}-${issue.region ?? ""}`}>
+                        <button
+                          type="button"
+                          aria-current={current ? "true" : undefined}
+                          onClick={() => {
+                            if (!issue.nodeId) return;
+                            // 第四十七批 W-3:自动分流缺出口的那一行,选中节点并把焦点放到那条出口的下拉(在 属性 页签)。
+                            if (issue.code === "auto_route_exit_missing" && issue.region) {
+                              flushSync(() => {
+                                locate(issue.nodeId);
+                                onTab("props");
+                              });
+                              document.getElementById(`${issue.nodeId}-exit-${issue.region}`)?.focus();
+                              return;
+                            }
+                            locate(issue.nodeId);
+                          }}
+                          className={`w-full min-h-[46px] pointer-coarse:min-h-11 grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-2 rounded-panel px-3 py-2 text-left hover:bg-[oklch(var(--color-surface-2))] ${
+                            current
+                              ? "border-[1.5px] border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger)/0.06)]"
+                              : "border border-[oklch(var(--color-line))]"
+                          }`}
+                        >
+                          <span aria-hidden="true" className="font-semibold text-[oklch(var(--color-danger))]">
+                            !
                           </span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
+                          <span className="flex flex-col min-w-0">
+                            <span className="text-sm font-semibold text-[oklch(var(--color-ink))] break-words">
+                              {at && <span aria-hidden="true">{isAutoRoute(at, edges) ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kindOf(at)]} </span>}
+                              {at ? nodeName(at, t) : t("workflow.editor.template_level")}
+                            </span>
+                            <span className="text-sm text-[oklch(var(--color-ink))]">{issueText(issue, nodes, t, locale)}</span>
+                            <span className="font-mono text-2xs normal-case tracking-normal text-[oklch(var(--color-faint-text))]">
+                              {issue.code}
+                            </span>
+                          </span>
+                          {issue.nodeId && (
+                            <span className="self-center whitespace-nowrap text-xs text-[oklch(var(--color-ink-muted))]">
+                              {t("workflow.editor.locate")} →
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             )}
-            <p className="mt-3 text-xs text-[oklch(var(--color-ink-muted))]">
+            <p className="flex min-h-[46px] items-center gap-2 border-t border-[oklch(var(--color-line))] text-xs text-[oklch(var(--color-ink-muted))]">
+              <span aria-hidden="true" className="text-[oklch(var(--color-success))]">✓</span>
               {t("workflow.editor.issues_checks", {
                 total: String(FLOW_ISSUE_CODES.length),
                 passed: String(FLOW_ISSUE_CODES.filter((c) => !failing.has(c)).length),
               })}
             </p>
+            {preview}
           </section>
         )}
-
-        {tab === "version" && version}
       </div>
     </aside>
   );
@@ -452,16 +515,14 @@ export function glyphFor(node: Node, role: NodeRole): string {
 }
 
 /**
- * 「线性预览」, v3 A1: one 44-high line under the canvas, never wrapping. The
- * nodes in `node_order`, which is the path the engine takes when every node
- * passes and no edge says otherwise; each chip selects its node. A node with
- * issues is danger and carries `!` — glyph and colour, never colour alone.
- * The count at the right end is of what is drawn: nodes and edges.
+ * 「线性预览」, v4 第十四批: no longer a strip under the canvas — it sits in the inspector, under 属性's empty
+ * hint and at the bottom of 问题. The nodes in `node_order`, which is the path the engine takes when every node
+ * passes and no edge says otherwise; each chip selects its node. A node with issues is danger and carries `!` —
+ * glyph and colour, never colour alone. The node / edge count is in the template bar.
  */
 export function WorkflowLinearPreview({
   t,
   nodes,
-  edgeCount,
   roles,
   issueNodes,
   selectedId,
@@ -469,32 +530,28 @@ export function WorkflowLinearPreview({
 }: {
   t: TFunc;
   nodes: readonly Node[];
-  edgeCount: number;
   roles: ReadonlyMap<string, NodeRole>;
   issueNodes: ReadonlySet<string>;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
   return (
-    <section
-      aria-label={t("workflow.editor.preview")}
-      className="flex items-center gap-3 h-11 shrink-0 px-4 border-t border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] text-xs whitespace-nowrap overflow-x-auto"
-    >
+    <section aria-label={t("workflow.editor.preview")} className="flex flex-col gap-2 border-t border-[oklch(var(--color-line))] pt-3 text-xs">
       <span className={LABEL}>{t("workflow.editor.preview")}</span>
       {nodes.length === 0 ? (
         <span className="text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</span>
       ) : (
-        <ol className="flex items-center h-full">
+        <ol className="flex flex-wrap items-center gap-y-1">
           {nodes.map((n, i) => {
             const role = roles.get(n.id) ?? "step";
             const bad = issueNodes.has(n.id);
             return (
-              <li key={n.id} className="flex items-center h-full">
+              <li key={n.id} className="flex items-center">
                 <button
                   type="button"
                   aria-pressed={n.id === selectedId}
                   onClick={() => onSelect(n.id)}
-                  className={`h-full px-2 hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-ink)/0.07)] aria-pressed:font-medium ${
+                  className={`min-h-7 pointer-coarse:min-h-11 rounded-control px-2 hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-ink)/0.07)] aria-pressed:font-medium ${
                     bad ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink))]"
                   }`}
                 >
@@ -512,18 +569,15 @@ export function WorkflowLinearPreview({
           })}
         </ol>
       )}
-      <span className="ml-auto pl-4 font-mono text-[oklch(var(--color-ink-muted))]">
-        {t("workflow.editor.preview_count", { nodes: String(nodes.length), edges: String(edgeCount) })}
-      </span>
     </section>
   );
 }
 
 /**
- * The read-only flow below 1024 (v3 A1 · 393): one row per node in order. The
- * left column is the node's ROLE glyph, the name carries its KIND glyph, the
- * right column its court (and k/n for 会签); the second line says where each
- * outcome goes. A row selects its node, which the inspector below then shows.
+ * The read-only flow below 1024 (v4 第十四批 §5): the canvas's own node card, stacked full width, one per node in
+ * order, with a vertical rule between them that names the exit taken. The card's first line is the ROLE glyph ·
+ * KIND glyph and name, the court (and k/n for 会签) at the right; the second the display name; a node with issues
+ * keeps its「!」and the short reason line. A card selects its node, and the narrow view then shows 属性.
  */
 export function WorkflowReadOnlyList({
   t,
@@ -532,6 +586,7 @@ export function WorkflowReadOnlyList({
   edges,
   roles,
   issueNodes,
+  issues = [],
   selectedId,
   onSelect,
 }: {
@@ -542,6 +597,8 @@ export function WorkflowReadOnlyList({
   edges: readonly Edge[];
   roles: ReadonlyMap<string, NodeRole>;
   issueNodes: ReadonlySet<string>;
+  /** For each failing card's short reason (`issue_short.<code>`). */
+  issues?: readonly FlowIssue[];
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
@@ -551,11 +608,12 @@ export function WorkflowReadOnlyList({
       {nodes.length === 0 ? (
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</p>
       ) : (
-        <ol className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
+        <ol className="flex flex-col">
           {nodes.map((n) => {
             const role = roles.get(n.id) ?? "step";
             const kind = kindOf(n);
             const bad = issueNodes.has(n.id);
+            const code = issues.find((x) => x.nodeId === n.id)?.code;
             const signers = Array.isArray(n.data.signers) ? n.data.signers.length : 0;
             const right = [
               typeof n.data.courtCode === "string" ? courtLabel(t, n.data.courtCode, locale) : "",
@@ -566,36 +624,45 @@ export function WorkflowReadOnlyList({
               .filter(Boolean)
               .join(" · ");
             return (
-              <li key={n.id} className="border-b last:border-b-0 border-[oklch(var(--color-line))]">
+              <li key={n.id} className="flex flex-col">
                 <button
                   type="button"
                   aria-pressed={n.id === selectedId}
                   onClick={() => onSelect(n.id)}
-                  className="w-full grid grid-cols-[20px_minmax(0,1fr)_auto] gap-x-2 px-3 py-3 text-left hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-ink)/0.07)]"
+                  className={`w-full min-h-11 flex flex-col rounded-panel px-3 pt-[9px] pb-[10px] text-left bg-[oklch(var(--color-surface-2))] [.light_&]:bg-[oklch(var(--color-surface-1))] [.light_&]:shadow-(--shadow-card) aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-[oklch(var(--color-accent))] ${
+                    bad ? "border-[1.5px] border-[oklch(var(--color-danger))]" : "border border-[oklch(var(--color-line))]"
+                  }`}
                 >
-                  <span aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">
-                    {ROLE_GLYPH[role]}
-                  </span>
-                  <span
-                    className={`text-sm font-medium break-words ${
-                      bad ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink))]"
-                    }`}
-                  >
-                    <span aria-hidden="true">{KIND_GLYPH[kind]} </span>
-                    {bad && <span aria-hidden="true">! </span>}
+                  {/* The name comes first in the DOM (it starts the button's accessible name) and second on screen. */}
+                  <span className="order-2 mt-0.5 block text-sm leading-5 font-semibold break-words text-[oklch(var(--color-ink))]">
                     {nodeName(n, t)}
+                    {bad && <span aria-hidden="true" className="text-[oklch(var(--color-danger))]"> !</span>}
                   </span>
-                  <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{right}</span>
-                  <span className="col-start-2 col-span-2 text-xs text-[oklch(var(--color-ink-muted))] break-words">
-                    {t("workflow.editor.branch.pass")} {exitText("pass", n, nodes, edges, t)}
-                    {kind !== "END" && kind !== "NOTIFY" && (
-                      <>
-                        {" · "}
-                        {t("workflow.editor.branch.fail")} {exitText("fail", n, nodes, edges, t)}
-                      </>
-                    )}
+                  <span className="order-1 flex items-center justify-between gap-2 text-xs leading-4 text-[oklch(var(--color-ink-muted))]">
+                    <span>
+                      <span aria-hidden="true" className="text-[oklch(var(--color-accent))]">{ROLE_GLYPH[role]}</span>{" "}
+                      <span aria-hidden="true">{KIND_GLYPH[kind]}</span> {t(`workflow.editor.kind.${kind}`)}
+                    </span>
+                    <span className="font-mono">{right}</span>
                   </span>
+                  {bad && (
+                    <span className="order-3 mt-2 block border-t border-[oklch(var(--color-line))] pt-[6px] text-xs leading-4 text-[oklch(var(--color-danger))]">
+                      {code && code !== "auto_route_exit_missing"
+                        ? t(`workflow.editor.issue_short.${code}`)
+                        : t("workflow.editor.node_issue_count", { n: String(issues.filter((x) => x.nodeId === n.id).length) })}
+                    </span>
+                  )}
                 </button>
+                {/* Under each card: a vertical rule and where this node's outcomes go. */}
+                <span className="ml-6 border-l border-[oklch(var(--color-line-strong))] py-2 pl-3 text-xs text-[oklch(var(--color-ink-muted))] break-words">
+                  {t("workflow.editor.branch.pass")} {exitText("pass", n, nodes, edges, t)}
+                  {kind !== "END" && kind !== "NOTIFY" && (
+                    <>
+                      {" · "}
+                      {t("workflow.editor.branch.fail")} {exitText("fail", n, nodes, edges, t)}
+                    </>
+                  )}
+                </span>
               </li>
             );
           })}

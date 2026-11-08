@@ -264,10 +264,11 @@ export function ExitConditionsSection({
   return (
     <section aria-label={t("workflow.editor.condition.title")} className="flex flex-col gap-3">
       <div>
-        <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
+        {/* h3: since v4 第十四批 this is the second section of 属性, under the node's own h2. */}
+        <h3 className="text-sm font-semibold text-[oklch(var(--color-ink))] break-words">
           <span aria-hidden="true">◇ </span>
           {t("workflow.editor.exits_title", { node: nodeLabel })}
-        </h2>
+        </h3>
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.exits_hint")}</p>
       </div>
       {exits.length === 0 ? (

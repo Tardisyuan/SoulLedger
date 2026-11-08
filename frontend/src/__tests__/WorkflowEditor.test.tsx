@@ -572,11 +572,11 @@ describe("WorkflowEditor", () => {
     expect(wrapperFor("A").getAttribute("aria-label")).toBe("秦广王 · 分流, TRIAL, 第一殿");
   });
 
-  /** The inspector's 节点-tab form (v3 A1) — the only place a node is edited now. */
+  /** The inspector's 属性-tab form (v4 第十四批; v3 A1 called it 节点) — the only place a node is edited now. */
   const form = () => screen.queryByTestId("node-form");
   const nameField = () => within(form()!).getByLabelText("Name") as HTMLInputElement;
 
-  it("E on a node selects THAT node, opens 节点 and focuses its name field", () => {
+  it("E on a node selects THAT node, opens 属性 and focuses its name field", () => {
     renderNamed();
     // 问题 first, so the shortcut has a tab to move away from.
     fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));
@@ -584,7 +584,7 @@ describe("WorkflowEditor", () => {
 
     fireEvent.keyDown(wrapperFor("B"), { key: "e", bubbles: true });
 
-    expect(screen.getByRole("tab", { name: "workflow.editor.tab.node" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "workflow.editor.inspector" })).toHaveAttribute("aria-selected", "true");
     // The node, not merely a node — a handler that always took the first one
     // would satisfy "a form appeared".
     expect(nameField()).toHaveValue("楚江王 · 初审");
@@ -805,7 +805,7 @@ describe("WorkflowEditor · validation gates the save", () => {
     expect(screen.getByText("Save Template").closest("button")).not.toBeDisabled();
     fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));
     expect(screen.queryByText("workflow.editor.issue.name_empty")).not.toBeInTheDocument();
-    expect(screen.getByText("workflow.editor.issues_none")).toBeInTheDocument();
+    expect(within(screen.getByRole("tabpanel")).getByText("workflow.editor.issues_none")).toBeInTheDocument();
   });
 
   it("the linear preview lists the nodes in order and selecting one fills the inspector", () => {
@@ -816,11 +816,20 @@ describe("WorkflowEditor · validation gates the save", () => {
     const preview = screen.getByRole("region", { name: "workflow.editor.preview" });
     const chips = within(preview).getAllByRole("button");
     expect(chips.map((b) => b.textContent)).toEqual(["▷ 秦广王 · 分流", "■ 楚江王 · 初审"]);
-    expect(screen.getByText("workflow.editor.inspector_empty")).toBeInTheDocument();
+    // v4 第十四批: the preview sits under 属性's empty hint (and at the foot of 问题), not under the canvas.
+    const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
+    expect(within(inspector).getByText("workflow.editor.inspector_empty")).toBeInTheDocument();
+    expect(inspector).toContainElement(preview);
 
     fireEvent.click(chips[0]);
-    expect(chips[0]).toHaveAttribute("aria-pressed", "true");
-    const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
+    // A node is selected, so 属性 shows it — the empty hint and the preview give way to its form.
+    expect(within(inspector).queryByText("workflow.editor.inspector_empty")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));
+    expect(within(screen.getByRole("region", { name: "workflow.editor.preview" })).getAllByRole("button")[0]).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "workflow.editor.inspector" }));
     expect(within(inspector).getAllByText("秦广王 · 分流").length).toBeGreaterThan(0);
     // Wide: the fields are the form's controls, holding this node's values.
     expect(within(inspector).getByLabelText("Name")).toHaveValue("秦广王 · 分流");
