@@ -5,26 +5,6 @@ from celery import shared_task
 from django.utils import timezone
 
 
-@shared_task(name="death_sync.cleanup_old_requests")
-def cleanup_old_requests(days=None, batch_size=1000):
-    """
-    Fan out one cleanup subtask per active tenant. This is a DELETE, the
-    highest-stakes of the four tasks fixed here: unscoped, a single batch
-    could straddle several tenants' rows and one tenant generating a large
-    backlog would starve others' cleanup within the same batch loop. See
-    cleanup_old_requests_for_tenant.
-    """
-    from apps.tenants.models import Tenant
-
-    tenant_ids = list(Tenant.objects.filter(is_active=True).values_list("id", flat=True))
-    total_dispatched = 0
-    for tenant_id in tenant_ids:
-        cleanup_old_requests_for_tenant.delay(str(tenant_id), days, batch_size)
-        total_dispatched += 1
-
-    return {"tenants_dispatched": total_dispatched, "timestamp": timezone.now().isoformat()}
-
-
 @shared_task(name="death_sync.cleanup_old_requests_for_tenant")
 def cleanup_old_requests_for_tenant(tenant_id: str, days=None, batch_size=1000):
     """

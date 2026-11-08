@@ -6,7 +6,6 @@ pattern exists — same M15 fix, same shape of test.
 """
 import importlib
 from datetime import timedelta
-from unittest.mock import patch
 
 import pytest
 from django.utils import timezone
@@ -14,33 +13,10 @@ from django.utils import timezone
 from apps.judgment.models import Judgment
 from apps.judgment.tasks import (
     STALE_MARKER,
-    auto_conclude_stale_judgments,
     auto_conclude_stale_judgments_for_tenant,
 )
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
-
-
-@pytest.mark.django_db
-class TestAutoConcludeStaleDispatch:
-    @pytest.fixture(autouse=True)
-    def setup(self, db):
-        self.active_a = Tenant.objects.create(code="JDG_ACTIVE_A", display_name="Active A", is_active=True)
-        self.active_b = Tenant.objects.create(code="JDG_ACTIVE_B", display_name="Active B", is_active=True)
-        self.inactive = Tenant.objects.create(code="JDG_INACTIVE", display_name="Inactive", is_active=False)
-
-    @patch("apps.judgment.tasks.auto_conclude_stale_judgments_for_tenant.delay")
-    def test_dispatches_one_subtask_per_active_tenant(self, mock_delay):
-        result = auto_conclude_stale_judgments(days_threshold=30)
-        dispatched_ids = {call.args[0] for call in mock_delay.call_args_list}
-        assert dispatched_ids == {str(self.active_a.id), str(self.active_b.id)}
-        assert result["tenants_dispatched"] == 2
-
-    @patch("apps.judgment.tasks.auto_conclude_stale_judgments_for_tenant.delay")
-    def test_does_not_dispatch_for_an_inactive_tenant(self, mock_delay):
-        auto_conclude_stale_judgments()
-        dispatched_ids = {call.args[0] for call in mock_delay.call_args_list}
-        assert str(self.inactive.id) not in dispatched_ids
 
 
 @pytest.mark.django_db
@@ -125,7 +101,9 @@ class TestStaleFlagIsWrittenOnce:
         # does not grow with the row count.
         # 2026-10-29: the batch audit row now takes the edited rows' tenant; with
         # `tenant_id` deferred that was one extra SELECT per row (7 on real PG).
-        with django_assert_max_num_queries(5):
+        # 2026-11-08: the batch audit row is written in a savepoint (once per batch, not per row) so a failed
+        # insert cannot abort the caller's transaction on PostgreSQL — one more statement, measured 6 on PG.
+        with django_assert_max_num_queries(6):
             auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
 
     def test_the_batch_audit_row_is_filed_under_the_rows_hall(self):

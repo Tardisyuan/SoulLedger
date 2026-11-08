@@ -57,6 +57,27 @@ def is_tenant_exempt(user) -> bool:
     )
 
 
+def request_tenant(request):
+    """The caller's hall: ``request.tenant``, else the user's own ``tenant`` column.
+
+    One place for the idiom that sat in 26 views and serializers (refactor audit 2026-11-08).
+
+    In production the two agree: ``TenantMiddleware`` sets ``request.tenant`` from the token's
+    ``tenant_code`` claim, and the token is issued for the user's own hall. The fallback exists for
+    DRF's ``force_authenticate``, which skips the middleware and is used by over a hundred tests —
+    without it those tests would exercise the "no tenant" branch instead of the one they mean to.
+    Kept deliberately rather than rewriting that test surface; it is here and nowhere else, so a
+    later decision to drop it is one line.
+
+    Not ``scope_to_tenant``'s rule: that one reads ``request.tenant`` only and fails closed. A caller
+    that must fail closed on a middleware-less request should use it, not this.
+    """
+    tenant = getattr(request, "tenant", None)
+    if tenant is not None:
+        return tenant
+    return getattr(getattr(request, "user", None), "tenant", None)
+
+
 def scope_to_tenant(
     qs,
     request,

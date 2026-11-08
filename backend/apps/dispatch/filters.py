@@ -4,6 +4,7 @@ Dispatch FilterSet — filtering, search, and ordering for Dispatch API.
 import django_filters as filters
 from django.db.models import Q
 
+from apps.core.tenant import request_tenant
 from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus, JudgmentStatus
 
 
@@ -59,7 +60,7 @@ class CrossTenantJudgmentFilter(filters.FilterSet):
         fields = ["status"]
 
     def filter_side(self, queryset, name, value):
-        tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
+        tenant = request_tenant(self.request)
         if tenant is None:
             return queryset
         if value == "initiated":

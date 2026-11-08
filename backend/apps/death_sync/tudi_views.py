@@ -15,6 +15,7 @@ from rest_framework.response import Response
 
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import request_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.death_sync.models import DeathRegistrationRequest, TudiGod
 from apps.death_sync.serializers import DeathRegistrationCreateSerializer, DeathRegistrationRequestSerializer
@@ -131,7 +132,7 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
 
     def get_serializer_context(self):
         return {**super().get_serializer_context(),
-                "tenant": getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)}
+                "tenant": request_tenant(self.request)}
 
     @extend_schema(responses={201: TudiGodSerializer, 400: TudiRefusalSerializer})
     def create(self, request, *args, **kwargs):

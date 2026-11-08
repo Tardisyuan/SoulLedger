@@ -17,7 +17,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import is_tenant_exempt, scope_to_tenant
+from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.sentence_plan import requests as plan_requests
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestStatus
@@ -153,7 +153,7 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
         plan = self.get_object()
         body = SentencePlanRequestCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        tenant = request_tenant(request)
         if tenant is None:
             return Response({"error": "No tenant context", "code": "no_tenant"}, status=status.HTTP_400_BAD_REQUEST)
         try:

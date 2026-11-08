@@ -8,7 +8,7 @@ from rest_framework.exceptions import APIException
 
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import is_tenant_exempt, request_tenant
 from apps.org.ownership import check_owner_org, owner_org_field
 from apps.souls import acheron
 from apps.souls.dates import ERROR, WARNING, check_birth_date, check_record_date, check_soul_dates
@@ -663,7 +663,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 attrs["tenant"] = hall
             else:
                 request = self.context.get("request")
-                bound = getattr(request, "tenant", None) or getattr(getattr(request, "user", None), "tenant", None)
+                bound = request_tenant(request)
                 expected = bound.known_civilization if bound is not None else None
                 if expected is not None and asked != expected:
                     raise SoulCivilizationRefusedError("civilization_mismatch", "This hall is of another civilization.")

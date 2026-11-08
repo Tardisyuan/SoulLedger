@@ -17,8 +17,9 @@ first boot after this landed).
 
 Tenant-scoped jobs call the existing `*_for_tenant` / `*_tenant` subtasks
 directly with `tenant_id=` as a keyword, one row per tenant, instead of the old
-fan-out parents (`ledger.recalculate_all` etc.). The parents still exist in
-code; their PeriodicTask rows are what `LEGACY_TASKS` below removes.
+fan-out parents (`ledger.recalculate_all` etc.). The parents were deleted from
+the code on 2026-11-08; leftover PeriodicTask rows naming them are what
+`LEGACY_TASKS` below removes.
 """
 import hashlib
 import re

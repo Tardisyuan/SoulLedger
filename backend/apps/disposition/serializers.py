@@ -7,8 +7,7 @@ from rest_framework import serializers
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
-from apps.core.tenant import is_tenant_exempt
-from apps.core.tenant_fields import tenant_scoped
+from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.disposition.expiry import effective_term_start, term_end
 from apps.disposition.models import Disposition, DispositionSection
 from apps.judgment.models import Verdict
@@ -167,35 +166,17 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
         ]
 
     def validate_soul(self, value):
-        """A disposition may only be recorded against a soul in this tenant.
+        """A disposition may only be recorded against a soul in this tenant and the caller's data scope
+        (`apps/core/tenant_fields.py`; the hand-written copy here checked the hall only — refactor audit 2026-11-08).
 
         (Re-pointing a filed disposition at another soul is refused outright since
         2026-10-29 — `_validate_fixed_columns`; this check is the create path.)
-        What was never checked is whether the soul belongs to the caller's tenant: `soul` is a plain
-        PrimaryKeyRelatedField whose queryset is a TenantManager, and that
-        manager is evaluated with no tenant contextvar at serializer-validation
-        time, so it scopes nothing. Same shape as ApprovalNodeSerializer's
-        `workflow` (apps/workflow/serializers.py).
-
-        ADMIN is exempt, as it is everywhere else (apps/core/tenant.py names it
-        the one globally scoped role). The fallback to the user's own tenant
-        column matters because `force_authenticate` never sets
-        `request.tenant`.
         """
-        request = self.context.get("request")
-        if request is None:
+        if self.context.get("request") is None:
             # Serializer used directly, outside a request -- the term-start
             # rules still apply; there is no tenant to check against.
             return value
-        user = getattr(request, "user", None)
-        if is_tenant_exempt(user):
-            return value
-        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
-        if tenant is None or value.tenant_id != tenant.pk:
-            raise serializers.ValidationError(
-                "No such soul in this tenant."
-            )
-        return value
+        return same_tenant_or_404_message(value, self.context, "soul")
 
     def validate(self, attrs):
         """Refuse a term start that contradicts the soul it is recorded against.

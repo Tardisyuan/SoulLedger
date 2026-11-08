@@ -18,7 +18,7 @@ from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import is_tenant_exempt, scope_to_tenant
+from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.disposition.models import Disposition
 from apps.ledger.journal import JournalParamError, build_journal, journal_records, rows_in_data_scope
 from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot
@@ -36,6 +36,7 @@ from apps.ledger.serializers import (
 )
 from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.ledger.snapshots import previous_month_average
+from apps.perm.filters import DataScopeFilter
 from apps.realms.models import Realm, resolve_localized_name
 from apps.souls.dates import format_death_date
 from apps.souls.models import Soul, SoulState
@@ -45,8 +46,6 @@ from apps.tenants.models import Tenant
 def _scoped_souls(request, tenant):
     """This hall's souls, narrowed by the caller's row-level data scope — the same rows the souls
     list shows, so a soul id copied from elsewhere does not open its ledger (security review 2026-10-27 #4)."""
-    from apps.perm.filters import DataScopeFilter
-
     return DataScopeFilter.filter_queryset(request, Soul.objects.filter(tenant=tenant), Soul)
 
 
@@ -391,13 +390,17 @@ class LedgerOverviewStatsView(APIView):
     def get(self, request):
         user = request.user
         exempt = is_tenant_exempt(user)
-        tenant = None if exempt else (getattr(request, 'tenant', None) or getattr(user, 'tenant', None))
+        tenant = None if exempt else request_tenant(request)
 
         # The hall-less ADMIN: all souls. Anyone else: their hall's, and none without one (fail closed).
+        # Then narrowed by the caller's data scope (user 2026-11-08): the same souls the list and the export show.
         if exempt:
-            soul_qs = Soul.objects.all()
+            hall_souls = Soul.objects.all()
         else:
-            soul_qs = Soul.objects.filter(tenant=tenant) if tenant is not None else Soul.objects.none()
+            hall_souls = Soul.objects.filter(tenant=tenant) if tenant is not None else Soul.objects.none()
+        soul_qs = DataScopeFilter.filter_queryset(request, hall_souls, Soul)
+        # `filter_queryset` hands back the same object when the scope does not narrow (apps/perm/filters.py).
+        narrowed = soul_qs is not hall_souls
 
         # S-H3: All queries scoped to tenant
         total_souls = soul_qs.count()
@@ -423,7 +426,8 @@ class LedgerOverviewStatsView(APIView):
 
         # 较上月:上个月的快照(apps/ledger/snapshots.py),与上面的 soul_qs 同一个划界 ——
         # 不带租户的 ADMIN 看全部,带租户的只看这个租户。没有上月快照就是 null,前端隐藏。
-        snapshots = BalanceSnapshot.objects.all()
+        # 快照是全殿的和,数据范围收窄时没有可比的上月值 → null(前端隐藏「较上月」)。
+        snapshots = BalanceSnapshot.objects.none() if narrowed else BalanceSnapshot.objects.all()
         if not exempt:
             snapshots = snapshots.filter(tenant=tenant) if tenant is not None else snapshots.none()
         prev_raw = previous_month_average(snapshots)
@@ -571,6 +575,8 @@ class LedgerOverviewStatsView(APIView):
             else Disposition.objects.filter(tenant=tenant) if tenant is not None
             else Disposition.objects.none()
         )
+        if narrowed:
+            disp_qs = disp_qs.filter(soul__in=soul_qs)
         # All four name columns, resolved per row, rather than `name_en`.
         #
         # This aggregate answered in English for every reader — a zh-Hans user
@@ -678,13 +684,9 @@ class LedgerExportStatsView(APIView):
         },
     )
     def get(self, request):
-        user = request.user
-        tenant = getattr(request, 'tenant', None) or getattr(user, 'tenant', None)
-        qs = (
-            Soul.objects.select_related("tenant").filter(tenant=tenant)
-            if tenant
-            else Soul.objects.none()
-        )
+        tenant = request_tenant(request)
+        # Narrowed by the data scope as well (refactor audit 2026-11-08 1.1): the same souls `_scoped_souls` opens.
+        qs = _scoped_souls(request, tenant).select_related("tenant") if tenant else Soul.objects.none()
         refuse_if_too_many(qs)
 
         response = HttpResponse(content_type="text/csv")

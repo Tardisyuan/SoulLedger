@@ -14,7 +14,7 @@ from apps.core.client_ip import get_client_ip
 from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.perm.filters import DataScopeFilter
 from apps.workflow import decision_codes, segments
@@ -171,7 +171,7 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if civilization not in Civilization.values:
             return Response({"error": "invalid_civilization"}, status=status.HTTP_400_BAD_REQUEST)
 
-        own = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        own = request_tenant(request)
         code = request.query_params.get("tenant")
         if is_tenant_exempt(request.user):
             code = code or CIVILIZATION_TENANT.get(civilization)

@@ -12,34 +12,9 @@ from unittest.mock import patch
 
 import pytest
 
-from apps.ledger.tasks import (
-    recalculate_all_ledgers,
-    recalculate_tenant_ledgers,
-)
+from apps.ledger.tasks import recalculate_tenant_ledgers
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
-
-
-@pytest.mark.django_db
-class TestRecalculateAllLedgersDispatch:
-    @pytest.fixture(autouse=True)
-    def setup(self, db):
-        self.active_a = Tenant.objects.create(code="LDG_ACTIVE_A", display_name="Active A", is_active=True)
-        self.active_b = Tenant.objects.create(code="LDG_ACTIVE_B", display_name="Active B", is_active=True)
-        self.inactive = Tenant.objects.create(code="LDG_INACTIVE", display_name="Inactive", is_active=False)
-
-    @patch("apps.ledger.tasks.recalculate_tenant_ledgers.delay")
-    def test_dispatches_one_subtask_per_active_tenant(self, mock_delay):
-        result = recalculate_all_ledgers()
-        dispatched_ids = {call.args[0] for call in mock_delay.call_args_list}
-        assert dispatched_ids == {str(self.active_a.id), str(self.active_b.id)}
-        assert result["tenants_dispatched"] == 2
-
-    @patch("apps.ledger.tasks.recalculate_tenant_ledgers.delay")
-    def test_does_not_dispatch_for_an_inactive_tenant(self, mock_delay):
-        recalculate_all_ledgers()
-        dispatched_ids = {call.args[0] for call in mock_delay.call_args_list}
-        assert str(self.inactive.id) not in dispatched_ids
 
 
 @pytest.mark.django_db

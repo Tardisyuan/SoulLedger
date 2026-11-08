@@ -16,6 +16,7 @@ from django.http import HttpResponse
 from rest_framework.exceptions import ValidationError
 
 from apps.core.csv_safe import csv_safe
+from apps.core.tenant import request_tenant
 
 #: Every export's ceiling, the audit export included. Design batch 28 W5 greys the
 #: button above 1 万 rows and says so (`common.export_too_many`); the server holds
@@ -81,7 +82,7 @@ def record_export(request, *, resource, rows):
         raise refuse("impersonation_read_only", "查看中，不能导出。")
     user =request.user if request.user.is_authenticated else None
     AuditLog.objects.create(
-        tenant=getattr(request, "tenant", None) or getattr(user, "tenant", None),
+        tenant=request_tenant(request),
         user=user,
         action=AuditAction.EXPORT,
         resource=resource,

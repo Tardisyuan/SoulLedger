@@ -14,7 +14,7 @@ from apps.core.exports import export_csv
 from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
-from apps.core.tenant import is_tenant_exempt
+from apps.core.tenant import is_tenant_exempt, request_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import CrossTenantJudgmentFilter, DispatchFilter
 from apps.dispatch.models import (
@@ -233,7 +233,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         # holds the soul; ADMIN keeps the global exemption. 403 like the party
         # checks on approve/reject/execute below, which this is one of.
         if not is_tenant_exempt(request.user):
-            requester_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+            requester_tenant = request_tenant(request)
             source = validated.get("source_tenant")
             if requester_tenant is None or source is None or source.pk != requester_tenant.pk:
                 return Response(
@@ -319,7 +319,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         return None
 
     def _requester_tenant(self, request):
-        return getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        return request_tenant(request)
 
     def _own_draft_or_error(self, request, record):
         """草稿只由发起人改、提交。ADMIN 看得见别人的草稿,但不替人改。"""
@@ -651,7 +651,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         dispatch_record = self.get_object()
         soul = dispatch_record.soul
         if not is_tenant_exempt(request.user):
-            requester_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+            requester_tenant = request_tenant(request)
             if requester_tenant is None or requester_tenant.pk != soul.home_tenant_id:
                 return Response(
                     {"error": "Only the soul's home tenant may end its residence"},
@@ -832,9 +832,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         as None. Reading the user's own tenant column is the same answer by a
         route that cannot be skipped.
         """
-        tenant = getattr(self.request, "tenant", None) or getattr(
-            self.request.user, "tenant", None
-        )
+        tenant = request_tenant(self.request)
         if tenant is None:
             raise serializers.ValidationError({
                 "initiating_tenant": (
@@ -853,10 +851,10 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         tenant on its token (`test_uninvolved_tenant_cannot_participate` pins
         an ADMIN of a third tenant at 403). Returns a Response to send, or None.
         """
-        request_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
-        if not request_tenant:
+        own = request_tenant(request)
+        if not own:
             return Response({"error": "Tenant context required"}, status=status.HTTP_403_FORBIDDEN)
-        if judgment.initiating_tenant_id != request_tenant.pk:
+        if judgment.initiating_tenant_id != own.pk:
             return Response(
                 {"error": "Only the initiating tenant may do this"}, status=status.HTTP_403_FORBIDDEN
             )
@@ -973,8 +971,8 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         ).first()
         if participant is None:
             return Response({"error": "Participant not found"}, status=status.HTTP_404_NOT_FOUND)
-        request_tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
-        if request_tenant is None or participant.participant_tenant_id != request_tenant.pk:
+        own = request_tenant(request)
+        if own is None or participant.participant_tenant_id != own.pk:
             return Response(
                 {"error": "Only the participant's own tenant may submit its sentence"},
                 status=status.HTTP_403_FORBIDDEN,

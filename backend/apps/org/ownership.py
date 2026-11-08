@@ -5,6 +5,7 @@
 """
 from django.db import IntegrityError, transaction
 
+from apps.core.tenant import request_tenant
 from apps.org.models import Organization
 
 
@@ -78,7 +79,7 @@ def check_owner_org(value, context, resource, instance=None, codename=None):
     if instance is not None and codename and not check_permission(user, codename):
         raise exceptions.PermissionDenied(f"Changing the owning unit needs {codename}.")
     tenant_id = instance.tenant_id if instance is not None else getattr(
-        getattr(request, "tenant", None) or getattr(user, "tenant", None), "pk", None)
+        request_tenant(request), "pk", None)
     if tenant_id is None or value.tenant_id != tenant_id:
         raise serializers.ValidationError("No such organization in this hall.")
     ids = data_scope.org_ids(user, resource, data_scope.request_cache(request))

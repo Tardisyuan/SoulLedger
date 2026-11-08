@@ -13,6 +13,7 @@ import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
 
+from django.db import transaction
 from django.db.models.signals import post_delete, post_migrate, post_save, pre_migrate, pre_save
 from django.dispatch import receiver
 
@@ -190,23 +191,26 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
 
             trace_id = _get_trace_id(request)
 
-            AuditLog.objects.create(
-                tenant=tenant,
-                user=user,
-                action=AuditAction.PERMISSION_CHANGE,
-                # model_name is the CamelCase class name ('Role', 'RolePermission'),
-                # kept as-is above for the comparisons. Every other write path derives
-                # `resource` from _meta.label_lower, which lowercases it — lowercase
-                # here too so this doesn't split the same resource into two spellings
-                # (e.g. 'rolepermission' vs 'RolePermission') in the audit log.
-                resource=model_name.lower(),
-                resource_id=resource_id,
-                changes=changes,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                description=description,
-                trace_id=trace_id,
-            )
+            # A savepoint: on PostgreSQL a failed INSERT aborts the caller's transaction, and the `except`
+            # below would swallow the error while every later statement failed (refactor audit 2026-11-08).
+            with transaction.atomic():
+                AuditLog.objects.create(
+                    tenant=tenant,
+                    user=user,
+                    action=AuditAction.PERMISSION_CHANGE,
+                    # model_name is the CamelCase class name ('Role', 'RolePermission'),
+                    # kept as-is above for the comparisons. Every other write path derives
+                    # `resource` from _meta.label_lower, which lowercases it — lowercase
+                    # here too so this doesn't split the same resource into two spellings
+                    # (e.g. 'rolepermission' vs 'RolePermission') in the audit log.
+                    resource=model_name.lower(),
+                    resource_id=resource_id,
+                    changes=changes,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    description=description,
+                    trace_id=trace_id,
+                )
             logger.debug(f"Created PERMISSION_CHANGE audit log for {model_name} {resource_id}")
         except Exception as e:
             _swallow_or_log(e, "Failed to create permission change audit log")
@@ -448,8 +452,7 @@ def _create_audit_log(action, instance, changes=None):
         trace_id = _get_trace_id(request)
         tenant_id = _row_tenant_id(instance, tenant)
 
-        from django.db import transaction
-        transaction.on_commit(lambda: AuditLog.objects.create(
+        row = dict(
             tenant_id=tenant_id,
             user=user,
             action=action,
@@ -461,7 +464,18 @@ def _create_audit_log(action, instance, changes=None):
             # Empty, not a sentence: the row's action and resource say it, and the screens name them in the reader's language.
             description="",
             trace_id=trace_id,
-        ))
+        )
+
+        def write():
+            # Runs after commit, long after the `try` around it has returned — so it catches its own failure,
+            # or the error reaches whoever committed (refactor audit 2026-11-08).
+            try:
+                with transaction.atomic():
+                    AuditLog.objects.create(**row)
+            except Exception as e:
+                _swallow_or_log(e, "Failed to create audit log")
+
+        transaction.on_commit(write)
     except Exception as e:
         _swallow_or_log(e, "Failed to create audit log")
 
@@ -605,17 +619,19 @@ def create_batch_audit_log(action, instances, changes=None):
             combined_resource_ids = combined_resource_ids[:97] + "..."
 
         row_tenants = {_row_tenant_id(inst, tenant) for inst in instances}
-        AuditLog.objects.create(
-            tenant_id=row_tenants.pop() if len(row_tenants) == 1 else getattr(tenant, "pk", None),
-            user=user,
-            action=action,
-            resource=combined_resource,
-            resource_id=combined_resource_ids,
-            changes=batch_changes,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            description=description,
-        )
+        # A savepoint, for the same reason as the permission-change row above.
+        with transaction.atomic():
+            AuditLog.objects.create(
+                tenant_id=row_tenants.pop() if len(row_tenants) == 1 else getattr(tenant, "pk", None),
+                user=user,
+                action=action,
+                resource=combined_resource,
+                resource_id=combined_resource_ids,
+                changes=batch_changes,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                description=description,
+            )
         logger.debug(f"Created batch {action} audit log for {instance_count} {resource_desc}")
     except Exception as e:
         _swallow_or_log(e, "Failed to create batch audit log")
