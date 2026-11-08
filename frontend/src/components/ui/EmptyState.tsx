@@ -1,5 +1,8 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { CivEmblem } from "@/src/components/brand/CivEmblem";
+import type { SealCiv } from "@/src/components/plaque/Seal";
+import { mapSkinOf } from "@/src/lib/underworldMap";
 
 /**
  * 空态 —— Stage 11 B slots。
@@ -31,11 +34,29 @@ export interface EmptyStateProps {
   /** 一个动作。**一个** —— 空态不是工具栏。 */
   action?: React.ReactNode;
   className?: string;
+  /**
+   * 知道是哪个文明时(`CHINESE` 或皮名 `cn`):右侧压一张很淡的文明主视觉线稿(2026-11-08 用户决定)。
+   * □ 仍不染色 —— 主视觉是背景,不是标记。认不出的文明不画。
+   */
+  civilization?: string | null;
 }
 
-export function EmptyState({ title, reason, action, className }: EmptyStateProps) {
+/** `CHINESE` / `cn` → `cn`;认不出是 null。 */
+function emblemSkin(civ: string | null | undefined): SealCiv | null {
+  if (!civ) return null;
+  if (civ === "cn" || civ === "eu" || civ === "eg" || civ === "gr") return civ;
+  return mapSkinOf(civ);
+}
+
+export function EmptyState({ title, reason, action, className, civilization }: EmptyStateProps) {
+  const skin = emblemSkin(civilization);
   return (
-    <div data-empty-state="" className={cn("py-8", className)}>
+    <div data-empty-state="" className={cn("py-8", skin && "relative isolate overflow-hidden", className)}>
+      {skin && (
+        <span className="empty-emblem pointer-events-none absolute right-0 top-1/2 -z-10 -translate-y-1/2">
+          <CivEmblem civ={skin} size={160} />
+        </span>
+      )}
       {/* 规范 v3 的 □,28px(text-xl)。aria-hidden —— 它是标记，不是内容。 */}
       <span
         data-empty-state-mark=""

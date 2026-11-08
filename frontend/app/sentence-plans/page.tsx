@@ -126,7 +126,7 @@ function SentencePlansContent() {
       ) : list.isError && !list.data ? (
         <QueryError onRetry={() => list.refetch()} error={list.error} />
       ) : plans.length === 0 ? (
-        <EmptyState title={t(civKey(t, "sentence_plan.list_empty", hallCiv))} />
+        <EmptyState title={t(civKey(t, "sentence_plan.list_empty", hallCiv))} civilization={hallCiv} />
       ) : (
         <>
           <ul aria-label={listTitle} className="border-t border-[oklch(var(--color-block))]">

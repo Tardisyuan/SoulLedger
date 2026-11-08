@@ -8,6 +8,7 @@ import { BrandMark } from "@/src/components/brand/BrandMark";
 import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
 import type { SealCiv } from "@/src/components/plaque/Seal";
 import { CivEmblem } from "@/src/components/brand/CivEmblem";
+import { SoulFire } from "@/src/components/landing/SoulFire";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
@@ -72,7 +73,9 @@ export function Landing({
           <p className="mt-3 max-w-[44em] text-md text-[oklch(var(--color-ink-muted))]">{t("landing.lede")}</p>
         </section>
 
-        <section className="mt-6" aria-labelledby="landing-pick">
+        <section className="relative isolate mt-6" aria-labelledby="landing-pick">
+          {/* 卡片后面的光:文明光的径向光晕 + 一条慢扫的细线(globals.css `.landing-backdrop`,减少动态效果时线不画)。 */}
+          <div aria-hidden="true" data-testid="landing-backdrop" className="landing-backdrop" />
           <h2 id="landing-pick" className="m-0 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("demo.landing.pick")}</h2>
           <ul data-testid="landing-civs" className="m-0 mt-3 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-4">
             {CIVILIZATION_OPTIONS.map((civ) => (
@@ -119,6 +122,8 @@ function CivCard({
   const name = t(`demo.civ.${skin}.name`);
   const body = (
     <>
+      {/* 魂火(第十六批 §2):卡的最底层,压在底色与内容之间;下面几层都是 relative / absolute,画在它上面。 */}
+      <SoulFire civ={skin} />
       <span aria-hidden="true" className="v4-corner" />
       <span className="relative shrink-0 md:self-end">
         <CivEmblem civ={skin} size={88} className="md:size-30" />
