@@ -466,9 +466,20 @@ test.describe("审判台 · 埃及称心", () => {
 
     const columns = panel.getByTestId("confession-column");
     await expect(columns).toHaveCount(2);
-    const [left, right] = [await columns.nth(0).boundingBox(), await columns.nth(1).boundingBox()];
-    expect(Math.abs(right!.x - left!.x), "窄屏下第二栏没有叠到第一栏下面").toBeLessThanOrEqual(1);
-    expect(right!.y).toBeGreaterThanOrEqual(left!.y + left!.height - 1);
+    // 中文字体是按 unicode-range 分片、display: swap 的(app/fonts.ts):告白原文的那几片要等字上了屏才去取,
+    // 取到之前用回退字体排版,换上后 42 行重排。两次 boundingBox() 是两次往返,中间换字体就会量出
+    // 「第二栏顶在第一栏底之上 2.5px」(2026-11-08 mobile-chrome 连续两轮首跑红、重试过)。
+    // 所以先触发排版、等字体落定,再在同一次同步求值里量两栏 —— 两个矩形出自同一帧排版。
+    const [left, right] = await columns.evaluateAll(async (els) => {
+      void document.body.offsetHeight;
+      await document.fonts.ready;
+      return els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return { x: r.x, y: r.y, height: r.height };
+      });
+    });
+    expect(Math.abs(right.x - left.x), "窄屏下第二栏没有叠到第一栏下面").toBeLessThanOrEqual(1);
+    expect(right.y).toBeGreaterThanOrEqual(left.y + left.height - 1);
     const radio = panel.getByRole("radiogroup", { name: "第 3 位判官 陪审神3" }).getByRole("radio", { name: "未记" });
     const box = await radio.boundingBox();
     expect(box!.height, `窄屏分段高 ${box!.height}px,不到 44`).toBeGreaterThanOrEqual(43.5);
