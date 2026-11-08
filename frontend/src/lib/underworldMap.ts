@@ -210,13 +210,13 @@ export function readPalette(svg: Element): MapPalette | null {
 }
 
 const FILL: Record<MapState, keyof MapPalette> = { walked: "walked", current: "current", ahead: "hollow" };
-const STROKE: Record<MapState, keyof MapPalette> = { walked: "walked", current: "current", ahead: "ahead" };
+const STROKE_COLOUR: Record<MapState, keyof MapPalette> = { walked: "walked", current: "current", ahead: "ahead" };
 
 /** 子格三种样子(照样例):走过实心、当前金属色实心、没走空心细圈。 */
 function paintCell(cell: Element, state: MapState, p: MapPalette) {
   cell.setAttribute("data-state", state);
   cell.setAttribute("fill", state === "ahead" ? "none" : p[FILL[state]]);
-  cell.setAttribute("stroke", p[STROKE[state]]);
+  cell.setAttribute("stroke", p[STROKE_COLOUR[state]]);
   cell.setAttribute("stroke-opacity", state === "ahead" ? "0.6" : "1");
 }
 
@@ -226,7 +226,7 @@ function paintCell(cell: Element, state: MapState, p: MapPalette) {
  */
 function recolor(el: Element, from: MapState | null, to: MapState, p: MapPalette) {
   if (!from || from === to) return;
-  for (const [attr, table] of [["fill", FILL], ["stroke", STROKE]] as const) {
+  for (const [attr, table] of [["fill", FILL], ["stroke", STROKE_COLOUR]] as const) {
     const value = el.getAttribute(attr);
     const stateColours = from === "ahead" ? [p[table.ahead]] : [p[table.walked], p[table.current]];
     if (value && stateColours.includes(value)) el.setAttribute(attr, p[table[to]]);
