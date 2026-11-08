@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import type { MuteFilters, SocialMute } from "@soulledger/core/api/social-moderation";
 import {
   useLiftMute,
@@ -83,7 +84,7 @@ function MuteDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   const [picked, setPicked] = useState<number | null>(null);
   const [days, setDays] = useState(7);
   const [reason, setReason] = useState("");
-  const souls = useMuteSouls(q.trim(), isOpen);
+  const souls = useMuteSouls(useDebouncedValue(q.trim()), isOpen);
   const mute = useMuteSoul();
   const close = () => {
     setQ("");
@@ -201,14 +202,15 @@ export function MutesSection() {
   const [term, setTerm] = useState<NonNullable<MuteFilters["term"]> | "">("");
   const [executor, setExecutor] = useState("");
   const [muting, setMuting] = useState(false);
+  const debouncedQ = useDebouncedValue(q.trim());
   const filters: MuteFilters = {
     ...(page > 1 ? { page } : {}),
-    ...(q.trim() ? { q: q.trim() } : {}),
+    ...(debouncedQ ? { q: debouncedQ } : {}),
     ...(status ? { status } : {}),
     ...(term ? { term } : {}),
     ...(executor ? { created_by: Number(executor) } : {}),
   };
-  const filtered = Boolean(q.trim() || status || term || executor);
+  const filtered = Boolean(debouncedQ || status || term || executor);
   const list = useSocialMutes(filters);
   const executors = useMuteExecutors();
   const lift = useLiftMute();
