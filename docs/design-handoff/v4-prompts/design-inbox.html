@@ -1,0 +1,111 @@
+<title>Design 收件箱</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: one reading column; newest batch first, answered batches folded below. */
+:root{
+  --bg:#f6f4f1; --surface:#fffdfa; --ink:#23201d; --sub:#6b645c; --line:#ddd6cc; --accent:#8e3b2f; --ok:#3f6b4a;
+  --display:"Noto Serif SC","Songti SC",serif; --body:"Noto Sans SC","PingFang SC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#181614;--surface:#211e1b;--ink:#ece6de;--sub:#a59c91;--line:#3a3530;--accent:#d97a68;--ok:#8fbf9a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#181614;--surface:#211e1b;--ink:#ece6de;--sub:#a59c91;--line:#3a3530;--accent:#d97a68;--ok:#8fbf9a;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.75 var(--body)}
+main{max-width:46rem;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1{font:700 1.6rem/1.3 var(--display);margin:0;text-wrap:balance}
+h2{font:700 1.25rem/1.4 var(--display);margin:0;text-wrap:balance}
+h3{font:700 1.05rem/1.4 var(--display);margin:0 0 6px;text-wrap:balance}
+.meta{color:var(--sub);font-size:.85rem;letter-spacing:.04em;margin:6px 0 0}
+p,li{margin:0}
+article,section{display:flex;flex-direction:column;gap:12px}
+article{border-top:2px solid var(--accent);padding-top:16px}
+ul,ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+code{font:.85em var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px;overflow-wrap:anywhere}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.9rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--sub);font-weight:500;font-size:.8rem;letter-spacing:.04em}
+tr:last-child td{border-bottom:0}
+.ask{border-left:3px solid var(--accent);padding-left:12px}
+.fyi{color:var(--sub)}
+.tag{display:inline-block;font:500 .75rem var(--body);letter-spacing:.06em;padding:1px 8px;border-radius:999px;border:1px solid currentColor;margin-left:8px;vertical-align:middle}
+.new{color:var(--accent)} .done{color:var(--ok)}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font:700 1.05rem var(--display)}
+details[open] summary{margin-bottom:12px}
+</style>
+<main>
+<header>
+<h1>SoulLedger · Design v4 收件箱</h1>
+<p class="meta">最新一批在最上面。回复和文件照旧写到设计系统 <code>soulledger-v4-pages/v4-batchNN-*</code>。</p>
+</header>
+
+<article>
+<h2>第十六批 · 地图与插画的主角节点、魂火、两个 egy 词<span class="tag new">待回 · 2026-11-08</span></h2>
+<p>回复写到 <code>v4-batch16-reply.md</code>;新图放同一目录;文案三语写到 <code>v4-batch16-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>(扁平 <code>键: 值</code>)。第七至十五批已定的不动。</p>
+
+<section>
+<h3>背景:用户觉得地图和插画「美观度差一点,没有科技感」</h3>
+<p>我们查过,原因有三:全是平涂、没有光和层次;几乎不动(只有当前站一个脉冲圈);图上没有数据。393 宽下整张图缩到约 310px,站名只剩约 4px。</p>
+<p>用户定了:代码这边现在就做两件事(不用你出图),同时请你画「主角」部分。代码这边在做的:</p>
+<ul>
+<li>走过的线两层光(亮芯 + 柔晕),线上有沿路流动的「魂光」,世界图上流速按各站在押数;</li>
+<li>底下加 24px 细网格和刻度;当前站换成扫描环;线宽统一成几档;</li>
+<li>每站旁边加等宽数字小徽标(在押 / 容量),越满的站光越强,点站点出小卡;</li>
+<li>393 宽默认放大到当前站附近;空状态用本文明的徽记线描;落地页徽记卡后面加光晕和慢扫描线。</li>
+</ul>
+<p>这些都叠在你第八批的 SVG 上,<code>id</code>、<code>data-state</code>、<code>.edge</code>、<code>#labels</code> 约定不变。</p>
+</section>
+
+<section>
+<h3>1. 主角节点的新画(四文明 × 深浅)</h3>
+<p>不重画整张图。只画每张图上的几个「主角」站点,做成等距或斜视角的小建筑 / 地标,替换现在的小方块或圆点。建议每个文明 3–4 个:</p>
+<div class="scroll"><table>
+<thead><tr><th>文明</th><th>建议的主角站点</th></tr></thead>
+<tbody>
+<tr><td>地府</td><td>鬼门关、酆都城、十殿、六道轮回</td></tr>
+<tr><td>欧洲</td><td>地狱之门、九圈(可只画最深一圈的冰湖)、炼狱山、天堂</td></tr>
+<tr><td>埃及</td><td>杜阿特入口、两真之殿(称心天平)、芦苇原</td></tr>
+<tr><td>希腊</td><td>冥河渡口、三判官审判处、塔耳塔罗斯 / 极乐</td></tr>
+</tbody></table></div>
+<ul>
+<li>每个节点一份独立 SVG,有「常态 / 当前站 / 已走过 / 未到」四种状态的写法(或告诉我们用哪些 CSS 变量换色);</li>
+<li>线描为主、颜色走矿物色与各文明的 glow 色;深浅各一套;</li>
+<li>尺寸:在 1120×450 的图里约 40–64px 宽,393 宽放大后也要清楚;</li>
+<li>请顺带给一张合成效果图:主角节点放回地图、配上上面那些光效和数据徽标,桌面与 393 宽各一张。站点清单和读屏替代我们保留。</li>
+</ul>
+</section>
+
+<section>
+<h3>2. 落地页的「魂火」</h3>
+<p>落地页四张文明卡后面,想加一层慢慢飘的魂火粒子。我们自己用 canvas 写,不需要你出动画,只需要你定样子:</p>
+<ul>
+<li>颜色(各文明卡后是否用各自的 glow 色,还是统一一种)、粒子大小与疏密、亮度、飘动方向和速度、有没有拖尾;</li>
+<li>一张静态参考图(深浅各一),减少动效和低端机时就显示它;</li>
+<li>它和第二批定的徽记轻动画同时在,请确认不会抢戏。</li>
+</ul>
+</section>
+
+<section>
+<h3>3. 两个新键的 egy</h3>
+<p>安卓 12 及以下,通知被关着时实时进度不显示,现在会在本世页提示一次(用户 11-08 定)。按钮沿用已有的「以后再说」和「前往系统设置 ↗」。</p>
+<div class="scroll"><table>
+<thead><tr><th>键</th><th>zh</th><th>en</th></tr></thead>
+<tbody>
+<tr><td><code>soul_app.push.live_hint_title</code></td><td>锁屏上看不到进度</td><td>No progress on the lock screen</td></tr>
+<tr><td><code>soul_app.push.live_hint_body</code></td><td>灵魂簿的通知关着。要在锁屏上看到这一程走到哪一站,请在系统设置里打开通知。</td><td>Notifications are off for SoulLedger. Turn them on in system settings to see which station you have reached from the lock screen.</td></tr>
+</tbody></table></div>
+<p class="ask">zh / en 是我们先写的,措辞要改也请一起给。地图数据徽标和站点小卡的新键等代码做完再一并交给你。</p>
+</section>
+</article>
+
+<details>
+<summary>第十五批 · 两个 egy 词与一处推送用词<span class="tag done">已回 · 已落地</span></summary>
+<section>
+<ul>
+<li><code>workflow.editor.read_only</code> = Maa Wa;<code>workflow.editor.other_exit</code> = <code>{{node}} · Wat Ky · {{label}}</code>,已进代码。</li>
+<li>中国籍灵魂最后一站在埃及:沿用中性的「去处计划已全部走完」,不改不加键。</li>
+<li>侧栏 68 / 252、只点击和 <code>[</code> 展开,第十四批稿里的 64 / 248 与悬停展开作废。</li>
+</ul>
+</section>
+</details>
+</main>
