@@ -7,7 +7,7 @@
   解送 / 退回要 `judgment.execute`,且是这位城隍名下的官员(或持 `judgment.assign`);改交要 `judgment.assign`。
 """
 from django.db import IntegrityError, transaction
-from django.db.models import Case, Exists, IntegerField, OuterRef, Value, When
+from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Q, Value, When
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -15,6 +15,7 @@ from rest_framework.response import Response
 
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import request_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import city_gods
 from apps.judgment.claims import is_assignable
@@ -65,9 +66,15 @@ class CityGodSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(CityGodOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
-        return [{"id": u.pk, "name": _name(u)} for u in obj.officers.order_by("username")]
+        # Sorted here, not `.order_by()`: that is a new query per row and bypasses the viewset's prefetch.
+        return [{"id": u.pk, "name": _name(u)} for u in sorted(obj.officers.all(), key=lambda u: u.username)]
 
     def get_open_case_count(self, obj) -> int:
+        # The list annotates it (`CityGodViewSet.queryset`, one query for the page, as the tudi list does);
+        # a row saved by create / update is not re-read through that queryset, so it counts once.
+        annotated = getattr(obj, "open_case_total", None)
+        if annotated is not None:
+            return annotated
         return Judgment.objects.filter(city_god=obj, city_god_status__in=AT_CITY_GOD).count()
 
     def _tenant(self):
@@ -127,13 +134,17 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
     permission_codename = "city_god"
     extra_permissions = {action: ["city_god.manage"]
                          for action in ("create", "update", "partial_update", "destroy", "officer_choices")}
-    queryset = CityGod.objects.prefetch_related("officers").all()
+    queryset = CityGod.objects.prefetch_related("officers").annotate(
+        # The same rows `Judgment.objects` counts in the serializer's fallback, i.e. not soft-deleted ones.
+        open_case_total=Count("judgments", filter=Q(judgments__city_god_status__in=AT_CITY_GOD,
+                                                    judgments__is_deleted=False), distinct=True),
+    ).order_by("name")  # Meta.ordering is dropped once a query aggregates; the list pages on it
     serializer_class = CityGodSerializer
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_serializer_context(self):
         return {**super().get_serializer_context(),
-                "tenant": getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)}
+                "tenant": request_tenant(self.request)}
 
     @extend_schema(responses={201: CityGodSerializer, 400: JudgmentClaimRefusalSerializer})
     def create(self, request, *args, **kwargs):
