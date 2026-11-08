@@ -269,7 +269,9 @@ test("the souls died on different days, and the dashboard's trend is not a flat 
   const deaths = rows(recording("admin"), "/souls/").map((s) => JSON.stringify(s.death_date)).filter((d) => d !== "null");
   expect(new Set(deaths).size).toBeGreaterThan(deaths.length * 0.8);
   const events = rows(recording("admin"), "/events/").map((e) => String(e.create_time ?? e.created_at ?? e.timestamp).slice(0, 10));
-  expect(new Set(events).size).toBeGreaterThan(5);
+  // The recording keeps the newest 200 events. Since judges got this week's verdicts (edd6dae45) those 200 fall on
+  // 4 days, not 6+; what this guards is spread_time working at all (broken, every event lands on one day).
+  expect(new Set(events).size).toBeGreaterThan(3);
   await enter(page, "admin");
   await page.goto("/dashboard");
   await expect(page.locator("main svg polyline").first()).toBeAttached();
