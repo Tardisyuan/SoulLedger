@@ -21,7 +21,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { SelectField, TextAreaField, TextField } from "@/src/components/ui/Field";
 import { TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
-import { responseCode } from "@soulledger/core/api/client";
+import { responseCode, responseError } from "@soulledger/core/api/client";
 
 /*
  * 联审定下的各站(docs/ARCHITECTURE-sentence-plan.md §2.1、Q1、Q5、Q12、Q16)。
@@ -38,8 +38,7 @@ const ROW = "flex flex-wrap items-center gap-x-2 gap-y-1 py-2 border-b border-[o
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function errorText(error: unknown): string | null {
-  const text = (error as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
-  return typeof text === "string" ? text : null;
+  return responseError(error) ?? null;
 }
 
 function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTenantJudgmentParticipant }) {

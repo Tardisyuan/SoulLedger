@@ -18,6 +18,7 @@ import { soulCreateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import type { SoulOriginRegion } from "@soulledger/core/api";
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
+import { responseData, responseStatus } from "@soulledger/core/api/client";
 
 const SOUL_CREATE_FIELDS = ["name", "civilization", "birth_date", "origin_location"] as const;
 type SoulCreateField = (typeof SOUL_CREATE_FIELDS)[number];
@@ -27,10 +28,10 @@ type SoulCreateField = (typeof SOUL_CREATE_FIELDS)[number];
  * `non_field_errors`、`detail`)归到 `general`。不是 400 对象体时两边都空:`useCreateSoul` 已经报过了。
  */
 function soulCreateErrorsOf(error: unknown): { fields: Partial<Record<SoulCreateField, string>>; general?: string } {
-  const response = (error as { response?: { status?: number; data?: unknown } })?.response;
+  const data = responseData(error);
   const out: ReturnType<typeof soulCreateErrorsOf> = { fields: {} };
-  if (response?.status !== 400 || typeof response.data !== "object" || response.data === null || Array.isArray(response.data)) return out;
-  for (const [key, value] of Object.entries(response.data as Record<string, unknown>)) {
+  if (responseStatus(error) !== 400 || typeof data !== "object" || data === null || Array.isArray(data)) return out;
+  for (const [key, value] of Object.entries(data)) {
     const message = Array.isArray(value) ? String(value[0] ?? "") : typeof value === "string" ? value : "";
     if (!message) continue;
     if ((SOUL_CREATE_FIELDS as readonly string[]).includes(key)) out.fields[key as SoulCreateField] = message;
