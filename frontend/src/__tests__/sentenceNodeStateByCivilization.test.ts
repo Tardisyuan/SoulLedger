@@ -103,4 +103,12 @@ describe("civKey (batch 12 §1)", () => {
     expect(t(civKey(t, "soul_app.sentence.state.active", "GREEK", "BLISS", "REPUBLIC"))).toBe("天上千年");
     expect(t(civKey(t, "soul_app.sentence.state.active", "GREEK", "BLISS", "GORGIAS"))).toBe("居于至福岛");
   });
+
+  it("with a place and no typed word, the civilization's own fallback comes before the base (batch 13 §4)", () => {
+    expect(t(civKey(t, "soul_app.sentence.all_done_title", "EGYPTIAN", "BLISS"))).toBe("去处计划已全部走完");
+    expect(t(civKey(t, "soul_app.sentence.blocked_link", "EUROPEAN", "PURGATORY"))).toBe("看我的去处");
+    // The typed word still wins over the fallback, and a civilization with neither keeps the base.
+    expect(t(civKey(t, "soul_app.sentence.all_done_title", "CHINESE", "BLISS"))).toBe("停留期已满");
+    expect(civKey(t, "soul_app.sentence.all_done_title", "CHINESE", "HELL")).toBe("soul_app.sentence.all_done_title");
+  });
 });

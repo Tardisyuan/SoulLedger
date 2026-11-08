@@ -401,11 +401,17 @@
       "OTHER": "Other"
     },
     "dedication": {
-      "body": "A rite the soul's living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or serving a sentence.",
+      "body": "A rite the soul's living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or still on their placement plan.",
       "source_label": "Source (who, which rite)",
       "date_label": "Date of the rite",
-      "not_eligible": "Only for souls being judged or serving a sentence. {{name}} is {{state}} now.",
-      "tag": "From the living"
+      "not_eligible": "Only for souls being judged or still on their placement plan. {{name}} is {{state}} now.",
+      "tag": "From the living",
+      "body_by_civ": {
+        "cn": "A rite the soul's living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or serving a sentence."
+      },
+      "not_eligible_by_civ": {
+        "cn": "Only for souls being judged or serving a sentence. {{name}} is {{state}} now."
+      }
     },
     "life_stages": {
       "CHILDHOOD": "Childhood",
@@ -4410,7 +4416,7 @@
     "term_default": "Default {{n}} years",
     "release": "Release at term end",
     "release_confirm": "Release at term end?",
-    "release_warning": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can't be undone.",
+    "release_warning": "Records the term as over and the soul leaves this stop: to the next stop of its placement plan, or, if none is left, to await rebirth (or its final rest). This can't be undone.",
     "release_success": "Released at term end",
     "release_error": {
       "term_not_ended": "The term has not ended yet; it cannot be released.",
@@ -4423,7 +4429,10 @@
       "approval_cancelled": "The approval workflow was stopped, by a cancelled cross-realm judgment or by an administrator, and never finished: it cannot be executed as is. The hall lead (an officer who can reassign cases) can reopen this judgment as a new case."
     },
     "term_overdue": "Term ended, not released",
-    "overdue_since": "Ended {{date}}"
+    "overdue_since": "Ended {{date}}",
+    "release_warning_by_civ": {
+      "cn": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can't be undone."
+    }
   },
   "reincarnation": {
     "form_label": "Rebirth form",
@@ -5227,13 +5236,16 @@
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
       "offline": "Offline",
-      "sentence_in_progress": "Your sentence plan is not finished (a term not yet served counts). You can apply once it is complete",
+      "sentence_in_progress": "Your placement plan is not finished (a term not yet over counts). You can apply once it is complete.",
       "not_in_cooldown": "Only a soul in cooldown can ask to shorten it",
       "shortening_pending": "A cooldown shortening request is already pending",
       "shortening_used": "This cooldown has already been asked to be shortened once",
       "desired_form_required": "Choose the form you hope to be reborn as first",
       "rebirth_form_not_applicable": "Your civilization has no six paths; there is no form to choose",
-      "invalid_days": "That number of days is outside the allowed range."
+      "invalid_days": "That number of days is outside the allowed range.",
+      "sentence_in_progress_by_civ": {
+        "cn": "Your sentence plan is not finished (a term not yet served counts). You can apply once it is complete."
+      }
     },
     "lexicon": {
       "eg": {
@@ -5800,7 +5812,9 @@
         },
         "gr_republic": {
           "BLISS": "The thousand years are over"
-        }
+        },
+        "eu": "Your placement plan is complete",
+        "eg": "Your placement plan is complete"
       },
       "blocked_title_by_civ": {
         "cn": {
@@ -5811,7 +5825,9 @@
         },
         "gr_republic": {
           "BLISS": "The thousand years are not over yet"
-        }
+        },
+        "eu": "Your placement plan is not finished",
+        "eg": "Your placement plan is not finished"
       },
       "blocked_link_by_civ": {
         "cn": {
@@ -5822,7 +5838,9 @@
         },
         "gr_republic": {
           "BLISS": "See my thousand years"
-        }
+        },
+        "eu": "See my placement",
+        "eg": "See my placement"
       },
       "pardoned_title_by_civ": {
         "eu": {
@@ -5840,7 +5858,13 @@
             },
             "gr_republic": {
               "BLISS": "The thousand years are over"
-            }
+            },
+            "eu": {
+              "PURGATORY": "Cleansing complete",
+              "BLISS": "Placement plan complete",
+              "NEUTRAL": "Placement plan complete"
+            },
+            "eg": "Placement plan complete"
           },
           "body_by_civ": {
             "cn": {
@@ -5851,7 +5875,13 @@
             },
             "gr_republic": {
               "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
-            }
+            },
+            "eu": {
+              "PURGATORY": "Your cleansing is complete. Open Soul Ledger to see it.",
+              "BLISS": "Your placement plan is complete. Open Soul Ledger to see it.",
+              "NEUTRAL": "Your placement plan is complete. Open Soul Ledger to see it."
+            },
+            "eg": "Your placement plan is complete. Open Soul Ledger to see it."
           }
         },
         "waiting": {
@@ -5864,6 +5894,23 @@
             },
             "eu": {
               "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
+            },
+            "gr_republic": {
+              "BLISS": "Your thousand years in the heavens are over; you remain for now. Open Soul Ledger to see it."
+            }
+          },
+          "title_by_civ": {
+            "cn": {
+              "BLISS": "A stay is over; you remain for now"
+            },
+            "gr": {
+              "BLISS": "A stay is over; you remain for now"
+            },
+            "eu": {
+              "PURGATORY": "A stage of cleansing is complete; you remain for now"
+            },
+            "gr_republic": {
+              "BLISS": "Your thousand years are over; you remain for now"
             }
           }
         },
@@ -5915,7 +5962,7 @@
       "screen_other": "Other",
       "delete_label": "Delete this conversation",
       "delete_title": "Delete this conversation?",
-      "delete_body": "This conversation, started on {{screen}}, disappears from here at once and cannot be brought back. It does not touch your applications, your sentence or any record.",
+      "delete_body": "This conversation, started on {{screen}}, disappears from here at once and cannot be brought back. It does not touch your applications, your placement or any record.",
       "delete_confirm": "Delete",
       "intro_title": "Before you ask",
       "intro_ai_title": "Answers are AI-generated",
@@ -6171,7 +6218,7 @@
       "q_merit": "Merit and demerit",
       "a_merit": "Your records are this life's account: good deeds are merit, wrongs are demerit. Merit minus demerit is the number above “This life's ledger”.",
       "q_disposition": "Disposition",
-      "a_disposition": "What is decided for you once a judgment is concluded: where you serve a sentence, or which path you are reborn into.",
+      "a_disposition": "What is decided for you once a judgment is concluded: where you go, how long you stay there, and whether another stop follows.",
       "q_sentence": "Placement plan",
       "a_sentence": "The sentence in your disposition, laid out station by station. Each station is served before the next; rebirth can be applied for only once all are done.",
       "q_cooldown": "Cooling-off period",
@@ -6182,6 +6229,9 @@
       "a_hall": "The office of the hall you are in. Write to the hall and an officer replies in its name.",
       "q_sentence_by_civ": {
         "cn": "Sentence plan"
+      },
+      "a_disposition_by_civ": {
+        "cn": "What is decided for you once a judgment is concluded: where you serve a sentence, or which path you are reborn into."
       }
     },
     "feedback": {
@@ -6326,7 +6376,13 @@
         },
         "gr_republic": {
           "BLISS": "The thousand years are over"
-        }
+        },
+        "eu": {
+          "PURGATORY": "Cleansing complete",
+          "BLISS": "Placement plan complete",
+          "NEUTRAL": "Placement plan complete"
+        },
+        "eg": "Placement plan complete"
       },
       "body_by_civ": {
         "cn": {
@@ -6337,7 +6393,13 @@
         },
         "gr_republic": {
           "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
-        }
+        },
+        "eu": {
+          "PURGATORY": "Your cleansing is complete. Open Soul Ledger to see it.",
+          "BLISS": "Your placement plan is complete. Open Soul Ledger to see it.",
+          "NEUTRAL": "Your placement plan is complete. Open Soul Ledger to see it."
+        },
+        "eg": "Your placement plan is complete. Open Soul Ledger to see it."
       }
     },
     "sentence_waiting": {
@@ -6352,6 +6414,23 @@
         },
         "eu": {
           "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
+        },
+        "gr_republic": {
+          "BLISS": "Your thousand years in the heavens are over; you remain for now. Open Soul Ledger to see it."
+        }
+      },
+      "title_by_civ": {
+        "cn": {
+          "BLISS": "A stay is over; you remain for now"
+        },
+        "gr": {
+          "BLISS": "A stay is over; you remain for now"
+        },
+        "eu": {
+          "PURGATORY": "A stage of cleansing is complete; you remain for now"
+        },
+        "gr_republic": {
+          "BLISS": "Your thousand years are over; you remain for now"
         }
       }
     },
@@ -6523,16 +6602,22 @@
     },
     "sentence_node_active": {
       "title": "Placement stop begun",
-      "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}.",
+      "body": "Soul {{soul}} has arrived. Stop {{order}} of its placement plan begins in {{tenant}}.",
       "title_by_civ": {
         "cn": "Sentence stop begun"
+      },
+      "body_by_civ": {
+        "cn": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."
       }
     },
     "sentence_node_done": {
       "title": "Placement stop ended",
-      "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended.",
+      "body": "Stop {{order}} ({{tenant}}) of the placement plan of soul {{soul}} has ended.",
       "title_by_civ": {
         "cn": "Sentence stop ended"
+      },
+      "body_by_civ": {
+        "cn": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."
       }
     },
     "sentence_node_waiting": {
@@ -6541,16 +6626,22 @@
     },
     "sentence_node_refused": {
       "title": "Placement stop refused",
-      "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again.",
+      "body": "{{tenant}} refused the transfer for stop {{order}} of the placement plan of soul {{soul}}. The stop is pending again.",
       "title_by_civ": {
         "cn": "Sentence stop refused"
+      },
+      "body_by_civ": {
+        "cn": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."
       }
     },
     "sentence_node_not_dispatched": {
       "title": "Placement stop not dispatched",
-      "body": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again.",
+      "body": "The transfer for stop {{order}} ({{tenant}}) of the placement plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again.",
       "title_by_civ": {
         "cn": "Sentence stop not dispatched"
+      },
+      "body_by_civ": {
+        "cn": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again."
       }
     },
     "sentence_plan_completed": {
@@ -6565,34 +6656,49 @@
     },
     "cross_sentence_submitted": {
       "title": "Cross-realm judgment stop filled in",
-      "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."
+      "body": "{{tenant}} has submitted stop {{order}} of the placement plan of soul {{soul}}.",
+      "body_by_civ": {
+        "cn": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."
+      }
     },
     "sentence_plan_amended": {
       "title": "Placement plan changed",
-      "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}.",
+      "body": "The placement plan of soul {{soul}} has changed, involving {{tenant}}.",
       "title_by_civ": {
         "cn": "Sentence plan changed"
+      },
+      "body_by_civ": {
+        "cn": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."
       }
     },
     "sentence_request_pending": {
       "title": "Placement plan request pending",
-      "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge.",
+      "body": "{{tenant}} has filed a request on the placement plan of soul {{soul}}. It awaits the original judge.",
       "title_by_civ": {
         "cn": "Sentence plan request pending"
+      },
+      "body_by_civ": {
+        "cn": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."
       }
     },
     "sentence_request_decided": {
       "title": "Placement plan request decided",
-      "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see.",
+      "body": "The original judge has decided this hall's request on the placement plan of soul {{soul}}. Open it to see.",
       "title_by_civ": {
         "cn": "Sentence plan request decided"
+      },
+      "body_by_civ": {
+        "cn": "The original judge has decided this hall's request on the sentence plan of soul {{soul}}. Open it to see."
       }
     },
     "sentence_plan_cancelled": {
       "title": "Placement plan cancelled",
-      "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete.",
+      "body": "The placement plan of soul {{soul}} was cancelled. The remaining stops are waived and the plan counts as complete.",
       "title_by_civ": {
         "cn": "Sentence plan cancelled"
+      },
+      "body_by_civ": {
+        "cn": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."
       }
     },
     "soul_inbox_assigned": {
@@ -7045,7 +7151,7 @@
   "sentence_plan": {
     "panel_title": "Placement plan",
     "none": "No placement plan yet",
-    "plan_label": "Sentence plan, cycle {{cycle}}",
+    "plan_label": "Placement plan, cycle {{cycle}}",
     "cycle": "Cycle {{cycle}}",
     "nodes_label": "Stops",
     "stop": "Stop {{order}}",
@@ -7092,8 +7198,8 @@
     "accept": "Accept",
     "reject": "Reject",
     "withdraw": "Withdraw",
-    "accept_title": "Accept the request on the sentence plan of {{soul}}",
-    "reject_title": "Reject the request on the sentence plan of {{soul}}",
+    "accept_title": "Accept the request on the placement plan of {{soul}}",
+    "reject_title": "Reject the request on the placement plan of {{soul}}",
     "accept_warning": "Accepting changes the plan at once: added stops join it and removed stops leave it. Stops already begun are not touched.",
     "accept_reopen_warning": "Accepting opens the reopened judgment at home at once, even while the soul is away. The current stop abroad carries on; once served, the soul waits there for the retrial to close.",
     "reject_warning": "Rejecting leaves the plan unchanged.",
@@ -7104,13 +7210,13 @@
     "withdraw_title": "Withdraw this request?",
     "withdraw_warning": "The original judge will no longer handle it. You can file it again later.",
     "cancel": "Cancel plan",
-    "cancel_title": "Cancel the sentence plan of {{soul}}",
+    "cancel_title": "Cancel the placement plan of {{soul}}",
     "cancel_warning": "Cancelling pardons the rest of the sentence and counts the plan as complete: stops not begun are cancelled, a transfer under way is cancelled and the term being served ends. A soul abroad returns home, then goes on exactly as if the plan had been completed. This cannot be undone.",
     "cancel_reason": "Reason (required, recorded in the audit log)",
     "cancel_reason_shown": "Cancelled because: {{reason}}",
-    "cancelled": "Sentence plan cancelled",
-    "inbox_title": "Sentence requests",
-    "inbox_show_all": "All sentence requests",
+    "cancelled": "Placement plan cancelled",
+    "inbox_title": "Placement requests",
+    "inbox_show_all": "All placement requests",
     "inbox_subtitle": "Requests to add or remove stops or to reopen a judgment, decided by the original judge",
     "inbox_empty": "No requests awaiting a decision",
     "inbox_empty_reason": "Requests on plans your civilization owns, and requests it has filed, appear here",
@@ -7149,7 +7255,7 @@
       "five_heinous_must_fail": "The offence is one of the five heinous crimes: the verdict cannot be passed."
     },
     "cross": {
-      "title": "Sentence plan stops",
+      "title": "Placement plan stops",
       "hint": "The home civilization is always stop 1. Each co-judge or chair civilization then has one stop, filled in by its own judges; advisors carry none. An eternal term must be last.",
       "home_stop": "Set by the original judgment when it concludes",
       "not_submitted": "Not filled in yet",
@@ -7192,7 +7298,10 @@
       "seat_actor_empty": "This civilization has no deity who can take a seat",
       "seat_actor_hint_judging": "A co-judge or chair must be a judge",
       "seat_actor_hint_advisor": "Any serving deity may sit as an advisor",
-      "view": "View the cross-realm judgment"
+      "view": "View the cross-realm judgment",
+      "title_by_civ": {
+        "cn": "Sentence plan stops"
+      }
     },
     "file": {
       "open": "File a request",
@@ -7211,8 +7320,11 @@
       "soul_is_here": "The soul is here now: open an amendment judgment and carry the changes when it concludes."
     },
     "amend": {
-      "title": "Changes to the sentence plan",
-      "hint": "This is an amendment judgment. Concluding it creates no disposition; the changes go to the original judge as one request, and with no changes no request is filed."
+      "title": "Changes to the placement plan",
+      "hint": "This is an amendment judgment. Concluding it creates no disposition; the changes go to the original judge as one request, and with no changes no request is filed.",
+      "title_by_civ": {
+        "cn": "Changes to the sentence plan"
+      }
     },
     "retry_dispatch": "Send dispatch again",
     "retry_title": "Send the dispatch for stop {{order}} of {{soul}} again",
@@ -7223,9 +7335,9 @@
     "last_refusal_cancelled": "The last dispatch was cancelled",
     "last_refusal_not_started": "The last dispatch could not be started (for example another dispatch is in flight, or the destination hall is closed)",
     "last_refusal_redispatched": "Sent again {{n}} time(s)",
-    "list_title": "Sentence plans",
+    "list_title": "Placement plans",
     "list_subtitle": "Plans this civilization owns or holds a stop of",
-    "list_empty": "No sentence plans match",
+    "list_empty": "No placement plans match",
     "filter": {
       "search": "Search soul name",
       "status": "Status",
@@ -7315,6 +7427,36 @@
     },
     "none_by_civ": {
       "cn": "No sentence plan yet"
+    },
+    "plan_label_by_civ": {
+      "cn": "Sentence plan, cycle {{cycle}}"
+    },
+    "accept_title_by_civ": {
+      "cn": "Accept the request on the sentence plan of {{soul}}"
+    },
+    "reject_title_by_civ": {
+      "cn": "Reject the request on the sentence plan of {{soul}}"
+    },
+    "cancel_title_by_civ": {
+      "cn": "Cancel the sentence plan of {{soul}}"
+    },
+    "cancelled_by_civ": {
+      "cn": "Sentence plan cancelled"
+    },
+    "inbox_title_by_civ": {
+      "cn": "Sentence requests"
+    },
+    "inbox_show_all_by_civ": {
+      "cn": "All sentence requests"
+    },
+    "list_title_by_civ": {
+      "cn": "Sentence plans"
+    },
+    "list_subtitle_by_civ": {
+      "cn": "Plans this civilization owns or holds a stop of"
+    },
+    "list_empty_by_civ": {
+      "cn": "No sentence plans match"
     }
   },
   "seal": {
@@ -7847,9 +7989,12 @@
       "filter_empty_body": "Try another type, or clear the filters.",
       "filter_clear": "Clear filters",
       "see_all": "All {{n}}",
-      "group_sentence_change": "Punishment plan changes",
+      "group_sentence_change": "Placement plan changes",
       "on_desk_only": "Handle on computer",
-      "empty_body_other": "Anything that comes to you will be pushed to you."
+      "empty_body_other": "Anything that comes to you will be pushed to you.",
+      "group_sentence_change_by_civ": {
+        "cn": "Sentence plan changes"
+      }
     },
     "queue": {
       "mine": "Mine",
@@ -8353,7 +8498,10 @@
       "dispatch": "Dispatch",
       "death_sync": "Death sync",
       "account": "Soul accounts & rebirth",
-      "punishment": "Punishment plans"
+      "punishment": "Placement plans",
+      "punishment_by_civ": {
+        "cn": "Sentence plans"
+      }
     },
     "detail": {
       "state": "{{from}} → {{to}} · {{reason}}",
@@ -8488,11 +8636,11 @@
     "amend": "Change the verdict",
     "pick_verdict": "Choose the new verdict",
     "note_required": "Write a note; the soul will read it",
-    "amend_impact": "After the change, stations not yet served follow the new verdict; each station already served earns the soul one compensation merit.",
+    "amend_impact": "After the change, stops not yet reached follow the new verdict; each stop already passed earns the soul one compensation merit.",
     "decided_toast": "Decision sent; the soul will be notified",
     "error": {
       "plan_in_transit": "The soul is on the way to, or away at, a station that hasn't been served yet. Decide once it has.",
-      "plan_busy": "The sentence plan is being retried, held indefinitely, or has a request awaiting the original judge; it can't be changed now.",
+      "plan_busy": "The placement plan is being retried, held indefinitely, or has a request awaiting the original judge; it can't be changed now.",
       "already_claimed": "Another officer has already claimed this appeal",
       "original_judge": "You made the original ruling and can't review it",
       "not_reviewer": "Only the officer who claimed it can decide",
@@ -8504,7 +8652,10 @@
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",
       "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed.",
-      "five_heinous_must_fail": "The original offence is one of the five heinous crimes: the appeal cannot amend it to passed."
+      "five_heinous_must_fail": "The original offence is one of the five heinous crimes: the appeal cannot amend it to passed.",
+      "plan_busy_by_civ": {
+        "cn": "The sentence plan is being retried, held indefinitely, or has a request awaiting the original judge; it can't be changed now."
+      }
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",
@@ -8533,7 +8684,10 @@
     "ladder_final_pending": "Decision pending",
     "escalate_reason_label": "Further reasons · optional",
     "escalate_last": "This is the last appeal for this judgment; there can be none after it.",
-    "open_note": "{{n}} judgment(s) open to appeal · the first closes {{date}}"
+    "open_note": "{{n}} judgment(s) open to appeal · the first closes {{date}}",
+    "amend_impact_by_civ": {
+      "cn": "After the change, stations not yet served follow the new verdict; each station already served earns the soul one compensation merit."
+    }
   },
   "cityGods": {
     "title": "City Gods",

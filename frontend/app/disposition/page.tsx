@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
+import { useCourtOffice, useHall, useHallCivilization } from "@/src/components/plaque/useHall";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispositionApi, PAGE_SIZE, type Disposition } from "@soulledger/core/api";
 import { releaseRefusalOf, type DispositionListParams, type DispositionSection } from "@soulledger/core/api/disposition";
@@ -75,6 +76,7 @@ function DispositionPageContent() {
   const hall = useHall(useCourtOffice());
   usePlaque({ hall });
   const { user } = useTenant();
+  const hallCiv = useHallCivilization();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [showExecuteModal, setShowExecuteModal] = useState<string | null>(null);
@@ -390,7 +392,7 @@ function DispositionPageContent() {
       <ConfirmDialog
         isOpen={releaseTarget !== null}
         title={t("disposition.release_confirm")}
-        message={t("disposition.release_warning")}
+        message={t(civKey(t, "disposition.release_warning", hallCiv))}
         confirmText={t("disposition.release")}
         confirmLoading={releaseMutation.isPending}
         onCancel={() => setReleaseTarget(null)}

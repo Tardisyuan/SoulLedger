@@ -100,14 +100,14 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
       {
         onSuccess: () => {
           closeCancel();
-          showToast(t("sentence_plan.cancelled"), "success");
+          showToast(t(civKey(t, "sentence_plan.cancelled", plan.tenant_code)), "success");
         },
         onError: (error) => showToast(t(refusalKey(error)), "error"),
       }
     );
 
   return (
-    <section data-plan-id={plan.id} aria-label={t("sentence_plan.plan_label", { cycle: String(plan.cycle) })} className="space-y-3">
+    <section data-plan-id={plan.id} aria-label={t(civKey(t, "sentence_plan.plan_label", plan.tenant_code), { cycle: String(plan.cycle) })} className="space-y-3">
       <header className="flex flex-wrap items-center gap-2">
         {!forever && (
           <Badge tone={PLAN_TONES[plan.status] ?? "neutral"}>
@@ -167,7 +167,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
       <BaseModal
         isOpen={cancelOpen}
         onClose={closeCancel}
-        title={t("sentence_plan.cancel_title", { soul: plan.soul_name })}
+        title={t(civKey(t, "sentence_plan.cancel_title", plan.tenant_code), { soul: plan.soul_name })}
         footer={
           <div className="flex gap-3 justify-end">
             <Button type="button" variant="secondary" onClick={closeCancel}>

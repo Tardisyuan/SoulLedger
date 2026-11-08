@@ -289,7 +289,9 @@ describe("超度回向 (第五十一批 D-1 / D-2)", () => {
 
     expect(label("ledger.book.form.type")).toBeDisabled();
     expect((label("ledger.book.form.type") as HTMLSelectElement).value).toBe("MERIT");
-    expect(screen.getByTestId("dedication-body")).toHaveTextContent(tZh("souls.dedication.body"));
+    // 地府的底本说「受刑中」(第十三批,`_by_civ.cn`);别的文明是中性的「去处计划未走完」。
+    expect(screen.getByTestId("dedication-body")).toHaveTextContent(tZh("souls.dedication.body_by_civ.cn"));
+    expect(screen.getByTestId("dedication-body")).not.toHaveTextContent(tZh("souls.dedication.body"));
     expect(screen.queryByLabelText(new RegExp(tZh("ledger.book.col_item")))).toBeNull();
     expect(screen.queryByLabelText(new RegExp(tZh("ledger.book.form.evidence_source")))).toBeNull();
     expect(yearInput().labels?.[0]).toHaveTextContent(tZh("souls.dedication.date_label"));
@@ -313,7 +315,7 @@ describe("超度回向 (第五十一批 D-1 / D-2)", () => {
   it("a soul not being judged or serving a sentence: the option is greyed, not hidden, and the reason names the soul and its state", () => {
     wrap(<SoulRecordFormModal isOpen onClose={jest.fn()} soulId="s1" civilization="CHINESE" soulState="REINCARNATING" soulName="海瑞" />);
     expect(dedicationOption()).toBeDisabled();
-    expect(screen.getByText(tZh("souls.dedication.not_eligible", { name: "海瑞", state: tZh("souls.states.REINCARNATING") }))).toBeInTheDocument();
+    expect(screen.getByText(tZh("souls.dedication.not_eligible_by_civ.cn", { name: "海瑞", state: tZh("souls.states.REINCARNATING") }))).toBeInTheDocument();
   });
 
   it("a soul under judgment: the option is open and no reason is shown", () => {

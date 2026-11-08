@@ -2,6 +2,7 @@
 import { localNodeName } from "@soulledger/core/domain/localName";
 import { officerAppApi, type Todo, type TodoGroup, type TodoItem, type TodoItemExtra, type TodoKind } from "@soulledger/core/api/officer-app";
 import { platform } from "@soulledger/core/platform";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, Share, StyleSheet, View } from "react-native";
 
@@ -41,6 +42,9 @@ export function TodoTab({ onOpen, highlight, gone, version }: { onOpen: (item: I
   const { t, locale } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
+  // 「受刑请求」 in 地府, 「去处请求」 elsewhere (batch 13 §3): by the officer's hall.
+  const hall = state.status === "signedIn" ? state.user.tenant?.code : null;
+  const groupLabel = (label: string) => t(civKey(t, label, hall));
   // 「新的审批、移交和申请会推送给你」 only to an officer who can be given one (decision 30); others get a sentence that promises nothing they cannot get.
   const held = state.status === "signedIn" ? (state.user.permissions ?? []) : [];
   const approver = held.includes("workflow.approve") || held.includes("dispatch.approve");
@@ -65,7 +69,7 @@ export function TodoTab({ onOpen, highlight, gone, version }: { onOpen: (item: I
     setChosen([]);
   };
   const shown = TODO_GROUPS.filter((g) => chosen.length === 0 || chosen.includes(g.kind));
-  const kinds = chosen.length === 0 ? "" : shown.map((g) => t(g.label)).join(locale === "zh-Hans" ? "、" : ", "); // Design batch 29: en / egy use ", "
+  const kinds = chosen.length === 0 ? "" : shown.map((g) => groupLabel(g.label)).join(locale === "zh-Hans" ? "、" : ", "); // Design batch 29: en / egy use ", "
   // 未分配的书信 is not a filter chip (it is not "on me"): it shows when no filter is chosen.
   const unassigned = data?.unassigned_letters ?? null;
   const rowsShown = (data ? shown.reduce((sum, g) => sum + countOf(data, g.field), 0) : 0) + (chosen.length === 0 ? (unassigned?.count ?? 0) : 0);
@@ -89,7 +93,7 @@ export function TodoTab({ onOpen, highlight, gone, version }: { onOpen: (item: I
         <>
           <FilterChips
             testID="todo-filter"
-            options={TODO_GROUPS.map((g) => ({ key: g.kind, label: t(g.label), count: countOf(data!, g.field) }))}
+            options={TODO_GROUPS.map((g) => ({ key: g.kind, label: groupLabel(g.label), count: countOf(data!, g.field) }))}
             selected={chosen}
             onToggle={toggle}
           />

@@ -118,7 +118,9 @@ export function nodeStateNamespace(
  *   - **计划一层**(页面名、菜单、事件名、官员通知……)不给 `place`:`<键>_by_civ.<文明>` → `<键>`。
  *     底键是中性的「去处计划」,地府在 `_by_civ.cn` 里保留「受刑计划」。
  *   - **灵魂自己那一层**给去处类型 `place`(`HELL` / `PURGATORY` / `BLISS` …):
- *     `<键>_by_civ.<文明>.<类型>` → `<键>`。受罚的就是底键(受刑、刑期)。
+ *     `<键>_by_civ.<文明>.<类型>` → `<键>_by_civ.<文明>` → `<键>`。受罚的就是底键(受刑、刑期)。
+ *     同一个键在一个文明下既有按类型的、又要文明层兜底时,JSON 嵌套放不下两者,兜底只能按类型展开
+ *     (`soul_push.sentence_completed` 的 `eu.BLISS` / `eu.NEUTRAL`,第十三批)。
  *   - 希腊按《理想国》判的(`greekAccount === "REPUBLIC"`)先查 `gr_republic`,再查 `gr`。
  *
  * 拿不到文明、或那一项 Design 没给,一律是底键。
@@ -130,9 +132,8 @@ export function civKey(
   place?: string | null,
   greekAccount?: string | null
 ): string {
-  for (const civ of civsOf(civilizationOrTenant, greekAccount)) {
-    const k = place ? `${key}_by_civ.${civ}.${place}` : `${key}_by_civ.${civ}`;
-    if (t(k) !== k) return k;
-  }
-  return key;
+  const civs = civsOf(civilizationOrTenant, greekAccount);
+  // 灵魂那一层查完 `.<文明>.<类型>` 再查不分类型的 `.<文明>`(第十三批:欧洲、埃及的文明层兜底)。
+  const candidates = place ? [...civs.map((c) => `${key}_by_civ.${c}.${place}`), ...civs.map((c) => `${key}_by_civ.${c}`)] : civs.map((c) => `${key}_by_civ.${c}`);
+  return candidates.find((k) => t(k) !== k) ?? key;
 }

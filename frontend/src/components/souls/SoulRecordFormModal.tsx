@@ -9,6 +9,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, TextField } from "@/src/components/ui/Field";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 
 /**
  * 功过台账的「新增一条 / 修改」表单。新增走 `add_record`,修改走 `PATCH …/records/<id>/`;
@@ -297,7 +298,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
             description={
               dedicationAllowed
                 ? undefined
-                : t("souls.dedication.not_eligible", { name: soulName ?? "", state: t(`souls.states.${soulState}`) })
+                : t(civKey(t, "souls.dedication.not_eligible", civilization), { name: soulName ?? "", state: t(`souls.states.${soulState}`) })
             }
             options={CATEGORIES.map((v) => ({
               value: v,
@@ -308,7 +309,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
         </div>
         {dedication ? (
           <p data-testid="dedication-body" className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">
-            {t("souls.dedication.body")}
+            {t(civKey(t, "souls.dedication.body", civilization))}
           </p>
         ) : (
           <TextAreaField

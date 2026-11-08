@@ -11,6 +11,7 @@ import { Button } from "@/src/components/ui/Button";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { refusalKey } from "./sentencePlanDisplay";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 
 /**
  * 一条 PENDING 请求上的按钮。
@@ -92,7 +93,7 @@ export function SentenceRequestActions({ plan, request }: { plan: SentencePlan; 
       <BaseModal
         isOpen={decision !== null}
         onClose={closeDecision}
-        title={t(decision === "REJECT" ? "sentence_plan.reject_title" : "sentence_plan.accept_title", { soul: plan.soul_name })}
+        title={t(civKey(t, decision === "REJECT" ? "sentence_plan.reject_title" : "sentence_plan.accept_title", plan.tenant_code), { soul: plan.soul_name })}
         footer={
           <div className="flex gap-3 justify-end">
             <Button type="button" variant="secondary" onClick={closeDecision}>

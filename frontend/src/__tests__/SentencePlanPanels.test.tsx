@@ -114,7 +114,8 @@ describe("受刑请求收件箱", () => {
     const narrowed = renderWith(<SentenceRequestsPage />);
     await screen.findByText("张三");
     expect(planApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ pending_request: true, soul: "s9" }));
-    expect(screen.getByRole("link", { name: tZh("sentence_plan.inbox_show_all") }).getAttribute("href")).toBe("/sentence-requests");
+    // 地府的殿读「受刑请求」(第十三批 `_by_civ.cn`)。
+    expect(screen.getByRole("link", { name: tZh("sentence_plan.inbox_show_all_by_civ.cn") }).getAttribute("href")).toBe("/sentence-requests");
     narrowed.unmount();
 
     mockSearch = "";
@@ -122,7 +123,7 @@ describe("受刑请求收件箱", () => {
     renderWith(<SentenceRequestsPage />);
     await screen.findByText("张三");
     expect(planApi.list.mock.calls[0][0].soul).toBeUndefined();
-    expect(screen.queryByRole("link", { name: tZh("sentence_plan.inbox_show_all") })).toBeNull();
+    expect(screen.queryByRole("link", { name: tZh("sentence_plan.inbox_show_all_by_civ.cn") })).toBeNull();
   });
 
   it("原属判官批准:有批准 / 驳回、没有撤回;批准带上理由", async () => {

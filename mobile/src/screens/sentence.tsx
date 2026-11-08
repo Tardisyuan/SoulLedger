@@ -557,13 +557,16 @@ export function SentenceBlocked() {
   const remote = useRemote(soulApi.sentencePlan);
   const plan = remote.data;
   const current = plan ? currentStation(plan) : null;
+  // No station to read the place from: the home civilization's own words (batch 13 §3, §4).
+  const home = useHomeCiv();
+  const word = (key: string) => (current ? placeKey(t, key, current, plan?.greek_account) : civKey(t, key, home));
   return (
     <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
-      <Txt variant="bodyLg">{t(placeKey(t, "soul_app.sentence.blocked_title", current, plan?.greek_account))}</Txt>
+      <Txt variant="bodyLg">{t(word("soul_app.sentence.blocked_title"))}</Txt>
       <Txt variant="caption" tone="muted">
         {plan && plan.stations.length
           ? t("soul_app.sentence.blocked_body", { total: String(plan.stations.length) })
-          : t("soul_app.errors.sentence_in_progress")}
+          : t(civKey(t, "soul_app.errors.sentence_in_progress", home))}
       </Txt>
       {plan && current ? (
         <View style={[styles.blockedStation, { borderTopColor: theme.hair }]}>
@@ -584,7 +587,7 @@ export function SentenceBlocked() {
         </View>
       ) : null}
       <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
-        <Txt variant="caption" tone="ink" style={styles.link}>{`${t(placeKey(t, "soul_app.sentence.blocked_link", current, plan?.greek_account))} →`}</Txt>
+        <Txt variant="caption" tone="ink" style={styles.link}>{`${t(word("soul_app.sentence.blocked_link"))} →`}</Txt>
       </Pressable>
     </View>
   );

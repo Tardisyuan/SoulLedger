@@ -13,6 +13,8 @@ import {
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { officerAssistSuggestions } from "@soulledger/core/config/officerAssistSuggestions";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { StreamingText, WaitingDots } from "./StreamingText";
 import type { OfficerAssist } from "./useOfficerAssist";
 
@@ -122,9 +124,11 @@ function useClock() {
 
 function usePageTitle() {
   const { t } = useI18n();
+  // 「受刑请求」 in 地府, 「去处请求」 elsewhere (v4 batch 12 §1), as the sidebar reads it for this hall.
+  const hallCiv = useHallCivilization();
   return (screen: OfficerAssistScreen) => {
     const key = PAGE_TITLE[screen];
-    return key ? t(key) : t("officer_assist.page_other");
+    return key ? t(civKey(t, key, hallCiv)) : t("officer_assist.page_other");
   };
 }
 

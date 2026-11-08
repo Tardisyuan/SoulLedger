@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
 import type { SentencePlanFilters, SentencePlanStatus } from "@soulledger/core/api/sentence-plans";
-import { nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
+import { civKey, nodeStateNamespace } from "@soulledger/core/domain/sentenceNodeStates";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useHall, useHallCivilization } from "@/src/components/plaque/useHall";
 import { cn } from "@/lib/utils";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -62,17 +62,20 @@ function SentencePlansContent() {
   const list = useSentencePlans(filters);
   const plans = list.data?.results ?? [];
   const count = list.data?.count ?? 0;
+  // 地府叫「受刑计划」,别处与全局管理员是中性的「去处计划」(第十三批)。
+  const hallCiv = useHallCivilization();
+  const listTitle = t(civKey(t, "sentence_plan.list_title", hallCiv));
 
   return (
     <PageShell
       variant="page"
       title={
         <>
-          {t("sentence_plan.list_title")}
+          {listTitle}
           <MenuGloss path="/sentence-plans" />
         </>
       }
-      subtitle={t("sentence_plan.list_subtitle")}
+      subtitle={t(civKey(t, "sentence_plan.list_subtitle", hallCiv))}
     >
       <div className="flex flex-wrap items-center gap-3 pb-3">
         <input
@@ -123,10 +126,10 @@ function SentencePlansContent() {
       ) : list.isError && !list.data ? (
         <QueryError onRetry={() => list.refetch()} error={list.error} />
       ) : plans.length === 0 ? (
-        <EmptyState title={t("sentence_plan.list_empty")} />
+        <EmptyState title={t(civKey(t, "sentence_plan.list_empty", hallCiv))} />
       ) : (
         <>
-          <ul aria-label={t("sentence_plan.list_title")} className="border-t border-[oklch(var(--color-block))]">
+          <ul aria-label={listTitle} className="border-t border-[oklch(var(--color-block))]">
             {plans.map((plan) => {
               const current = plan.nodes.find((n) => CURRENT_NODE_STATUSES.includes(n.status));
               return (

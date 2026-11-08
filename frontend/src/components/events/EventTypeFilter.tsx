@@ -7,6 +7,8 @@ import { filterChipClass } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { SOUL_EVENT_GROUPS, type SoulEventGroup } from "@/lib/events/event_registry";
 import { makeSystemEventLabels } from "@/src/components/souls/soulLifecycleRows";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
 
 interface Option {
   value: string;
@@ -30,6 +32,8 @@ interface Group {
 export function EventTypeFilter({ value, onChange }: { value: string; onChange: (_value: string) => void }) {
   const { t } = useI18n();
   const dimension = t("events.col_event");
+  // 「受刑计划」 in 地府, 「去处计划」 elsewhere (batch 13 §3).
+  const hallCiv = useHallCivilization();
 
   const groups: Group[] = useMemo(() => {
     const { eventType: label } = makeSystemEventLabels(t);
@@ -91,7 +95,7 @@ export function EventTypeFilter({ value, onChange }: { value: string; onChange: 
                 <Combobox.Group key={group.value || "all"} items={group.items}>
                   {group.value ? (
                     <Combobox.GroupLabel className="px-3 pt-2 pb-0.5 text-xs text-[oklch(var(--color-ink-muted))]">
-                      {t(`events.groups.${group.value}`)}
+                      {t(civKey(t, `events.groups.${group.value}`, hallCiv))}
                     </Combobox.GroupLabel>
                   ) : null}
                   <Combobox.Collection>

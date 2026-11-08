@@ -76,7 +76,7 @@ function Question({ item }: { item: Faq }) {
       </Pressable>
       {open ? (
         <Txt testID={`help-a-${id}`} variant="bodyLg" tone="muted" style={[styles.answer, { paddingHorizontal: gutter }]}>
-          {t(a)}
+          {t(civKey(t, a, home))}
         </Txt>
       ) : null}
     </View>

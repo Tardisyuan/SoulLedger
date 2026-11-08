@@ -36,7 +36,8 @@ const ZH: Table = {
     dispatch: ["各殿待批准的调拨有几件？", "回归原属会立即生效吗？"],
     scheduler: ["哪些任务连续失败？", "重建调度会改掉手动改过的设置吗？"],
     "soul-inbox": ["各殿待回复的信有几封？", "等了多久算积压？"],
-    "sentence-requests": ["全部待处理的受刑请求有几件？", "改站由谁批准？"],
+    // Design v4 batch 13 §3: ADMIN reads the mixed, all-civilization view, so the neutral 「去处请求」 (no 地府 variant).
+    "sentence-requests": ["全部待处理的去处请求有几件？", "改站由谁批准？"],
     other: ["这一页是做什么的？", "这里的改动会写入审计吗？"],
   },
   MODERATOR: {
@@ -67,7 +68,7 @@ const EN: Table = {
     dispatch: ["How many dispatches are awaiting approval across the halls?", "Does a return to the home hall take effect at once?"],
     scheduler: ["Which tasks have failed several times in a row?", "Will rebuilding the schedules overwrite settings changed by hand?"],
     "soul-inbox": ["How many letters await a reply across the halls?", "How long a wait counts as a backlog?"],
-    "sentence-requests": ["How many sentence requests are pending in all?", "Who approves a change of station?"],
+    "sentence-requests": ["How many placement requests are pending in all?", "Who approves a change of station?"],
     other: ["What is this page for?", "Are changes made here written to the audit log?"],
   },
   MODERATOR: {

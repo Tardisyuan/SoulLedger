@@ -8,12 +8,13 @@
  */
 import { dispositionApi, releaseRefusalOf, type Disposition } from "@soulledger/core/api/disposition";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
 import { confirmedDecision, notConfirmedKey, useBioWord } from "../deviceCheck";
 import { ActionButton } from "../kit";
-import { useCan } from "../session";
+import { useCan, useSession } from "../session";
 import { Sheet, Txt, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
 
 /** 正在服的那一份:已执行、未期满、不是永久、有期满日。 */
@@ -37,6 +38,8 @@ function Serving({ soulId }: { soulId: string }) {
   const toast = useToast();
   const bio = useBioWord();
   const canRelease = useCan("disposition.execute");
+  const { state } = useSession();
+  const hall = state.status === "signedIn" ? state.user.tenant?.code : null;
   // 没网时不释放(同审判台的认领 / 改派):按钮置灰,原因写在下面。
   const { offline } = useOnline();
   const load = useCallback(
@@ -103,7 +106,7 @@ function Serving({ soulId }: { soulId: string }) {
       <Sheet open={confirming} onClose={() => setConfirming(false)} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
         <View testID="soul-release-sheet" style={{ padding: space[5], gap: space[4] }}>
           <Txt variant="title">{t("disposition.release_confirm")}</Txt>
-          <Txt variant="body">{t("disposition.release_warning")}</Txt>
+          <Txt variant="body">{t(civKey(t, "disposition.release_warning", hall))}</Txt>
           <View style={{ flexDirection: "row", gap: space[3] }}>
             <ActionButton testID="soul-release-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={() => setConfirming(false)} />
             <ActionButton testID="soul-release-confirm" kind="ink" busy={busy} title={t("disposition.release")} onPress={release} />

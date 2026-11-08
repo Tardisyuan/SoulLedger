@@ -103,8 +103,8 @@
     },
     {
       "question": {
-        "zh-Hans": "全部待处理的受刑请求有几件？",
-        "en": "How many sentence requests are pending in all?"
+        "zh-Hans": "全部待处理的去处请求有几件？",
+        "en": "How many placement requests are pending in all?"
       },
       "answer": {
         "zh-Hans": "我没有能查受刑请求件数的工具。我能查的只有审判队列、等你审批的流程和收件箱的计数，这些工具不包含受刑请求的数量，我也无法查看具体案子。\n\n要看待处理的受刑请求，请到左侧栏「受刑请求」页，每个有待决请求的计划占一行，等你决定的会有标记。",

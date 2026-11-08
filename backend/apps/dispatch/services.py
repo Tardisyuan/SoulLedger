@@ -1047,14 +1047,18 @@ class CrossTenantJudgmentService:
         locked.sentence_submitted_at = timezone.now()
         locked.sentence_submitted_by = user
         locked.save()
-        # 发起方的判官(§5.1 `cross_sentence_submitted`):只带灵魂名、文明代码、节点序号。
+        # 发起方的判官(§5.1 `cross_sentence_submitted`):只带灵魂名、文明代码、节点序号,
+        # 加计划所属文明(`plan_civ`,地府的正文仍说「受刑计划」,第十三批)。
         from apps.judgment.models import Judgment
-        from apps.sentence_plan.services import notify_judges
+        from apps.sentence_plan.services import notify_judges, soul_params
 
-        soul_name = Judgment.all_objects.filter(pk=judgment.judgment_id).values_list("soul__name", flat=True).first()
+        source = (Judgment.all_objects.filter(pk=judgment.judgment_id)
+                  .select_related("soul__tenant", "soul__home_tenant").first())
+        soul = source.soul if source else None
         notify_judges(
             {judgment.initiating_tenant_id}, "cross_sentence_submitted",
-            {"soul": soul_name or "", "order": locked.node_order, "tenant": participant.participant_tenant.code},
+            {**(soul_params(soul) if soul else {"soul": ""}), "order": locked.node_order,
+             "tenant": participant.participant_tenant.code},
             judgment.pk, related_resource="CrossTenantJudgment",
         )
         return locked

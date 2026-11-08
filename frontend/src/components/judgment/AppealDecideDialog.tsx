@@ -13,6 +13,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { verdictNamespace } from "@/src/lib/domainNames";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { APPEAL_IN_DIALOG_CODES, appealRefusalMessage, appealRefusalOf } from "@/src/components/judgment/appealDisplay";
 
 /**
@@ -82,7 +83,7 @@ export function AppealDecideDialog({
         return;
       }
       if (refusal && APPEAL_IN_DIALOG_CODES.includes(refusal.code)) {
-        setInDialog(t(`appeals.error.${refusal.code}`));
+        setInDialog(t(civKey(t, `appeals.error.${refusal.code}`, civilization)));
         return;
       }
       showToast(appealRefusalMessage(err, t), "error");
@@ -150,7 +151,7 @@ export function AppealDecideDialog({
                 </label>
               );
             })}
-            <p className="text-xs text-[oklch(var(--color-ink-muted))] pt-1">{t("appeals.amend_impact")}</p>
+            <p className="text-xs text-[oklch(var(--color-ink-muted))] pt-1">{t(civKey(t, "appeals.amend_impact", civilization))}</p>
           </fieldset>
         )}
         <TextAreaField

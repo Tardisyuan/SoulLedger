@@ -401,11 +401,17 @@
       "OTHER": "其他"
     },
     "dedication": {
-      "body": "阳间亲属为这个灵魂做的法事，由官员代登。只计功德；只对审判中、受刑中的灵魂有效。",
+      "body": "阳间亲属为这个灵魂做的法事，由官员代登。只计功德；只对审判中、去处计划未走完的灵魂有效。",
       "source_label": "来源（谁 · 何种法事）",
       "date_label": "法事日期",
-      "not_eligible": "只能登给审判中或受刑中的灵魂。{{name}}现在是「{{state}}」。",
-      "tag": "阳间"
+      "not_eligible": "只能登给审判中或去处计划未走完的灵魂。{{name}}现在是「{{state}}」。",
+      "tag": "阳间",
+      "body_by_civ": {
+        "cn": "阳间亲属为这个灵魂做的法事，由官员代登。只计功德；只对审判中、受刑中的灵魂有效。"
+      },
+      "not_eligible_by_civ": {
+        "cn": "只能登给审判中或受刑中的灵魂。{{name}}现在是「{{state}}」。"
+      }
     },
     "life_stages": {
       "CHILDHOOD": "童年",
@@ -4410,7 +4416,7 @@
     "term_default": "默认 {{n}} 年",
     "release": "期满释放",
     "release_confirm": "确认期满释放？",
-    "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就等候转生（或终局）。不可撤销。",
+    "release_warning": "记下期满，灵魂离开这一站：去处计划还有下一站就去下一站，没有就等候转生（或终局）。不可撤销。",
     "release_success": "已期满释放",
     "release_error": {
       "term_not_ended": "期满日还没到，不能释放。",
@@ -4423,7 +4429,10 @@
       "approval_cancelled": "审批流程因跨域审判取消或管理员结束而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
     },
     "term_overdue": "期满未释放",
-    "overdue_since": "期满于 {{date}}"
+    "overdue_since": "期满于 {{date}}",
+    "release_warning_by_civ": {
+      "cn": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就等候转生（或终局）。不可撤销。"
+    }
   },
   "reincarnation": {
     "form_label": "轮回形态",
@@ -5227,13 +5236,16 @@
       "screen_body": "你的记录仍在。只是此刻取不到。",
       "section": "这一段没取到。其余部分照常显示。",
       "offline": "已离线",
-      "sentence_in_progress": "受刑计划尚未完成（刑期未满也算），完成后才能申请转生",
+      "sentence_in_progress": "去处计划还没走完（年限未满也算），走完后才能申请转生。",
       "not_in_cooldown": "只有在冷却期内才能申请缩短冷却",
       "shortening_pending": "已有一份待决的缩短冷却申请",
       "shortening_used": "这段冷却期已申请过一次缩短",
       "desired_form_required": "请先选一个希望转生的形态",
       "rebirth_form_not_applicable": "你的文明转生不分六道，不用选形态",
-      "invalid_days": "天数不在可选的范围内。"
+      "invalid_days": "天数不在可选的范围内。",
+      "sentence_in_progress_by_civ": {
+        "cn": "受刑计划尚未完成（刑期未满也算），完成后才能申请转生。"
+      }
     },
     "lexicon": {
       "eg": {
@@ -5800,7 +5812,9 @@
         },
         "gr_republic": {
           "BLISS": "千年已满"
-        }
+        },
+        "eu": "去处计划已全部走完",
+        "eg": "去处计划已全部走完"
       },
       "blocked_title_by_civ": {
         "cn": {
@@ -5811,7 +5825,9 @@
         },
         "gr_republic": {
           "BLISS": "千年尚未满"
-        }
+        },
+        "eu": "去处计划尚未走完",
+        "eg": "去处计划尚未走完"
       },
       "blocked_link_by_civ": {
         "cn": {
@@ -5822,7 +5838,9 @@
         },
         "gr_republic": {
           "BLISS": "看我的千年"
-        }
+        },
+        "eu": "看我的去处",
+        "eg": "看我的去处"
       },
       "pardoned_title_by_civ": {
         "eu": {
@@ -5840,7 +5858,13 @@
             },
             "gr_republic": {
               "BLISS": "千年已满"
-            }
+            },
+            "eu": {
+              "PURGATORY": "涤罪已全部完成",
+              "BLISS": "去处计划已全部走完",
+              "NEUTRAL": "去处计划已全部走完"
+            },
+            "eg": "去处计划已全部走完"
           },
           "body_by_civ": {
             "cn": {
@@ -5851,7 +5875,13 @@
             },
             "gr_republic": {
               "BLISS": "你在天上的千年已满，打开灵魂簿查看。"
-            }
+            },
+            "eu": {
+              "PURGATORY": "你的涤罪已全部完成，打开灵魂簿查看。",
+              "BLISS": "你的去处计划已全部走完，打开灵魂簿查看。",
+              "NEUTRAL": "你的去处计划已全部走完，打开灵魂簿查看。"
+            },
+            "eg": "你的去处计划已全部走完，打开灵魂簿查看。"
           }
         },
         "waiting": {
@@ -5864,6 +5894,23 @@
             },
             "eu": {
               "PURGATORY": "你有一层涤罪已完成，打开灵魂簿查看。"
+            },
+            "gr_republic": {
+              "BLISS": "你在天上的千年已满，暂留原地，打开灵魂簿查看。"
+            }
+          },
+          "title_by_civ": {
+            "cn": {
+              "BLISS": "一站停留期满，暂留原地"
+            },
+            "gr": {
+              "BLISS": "一站停留期满，暂留原地"
+            },
+            "eu": {
+              "PURGATORY": "一层涤罪已完成，暂留原地"
+            },
+            "gr_republic": {
+              "BLISS": "天上千年已满，暂留原地"
             }
           }
         },
@@ -5915,7 +5962,7 @@
       "screen_other": "其他",
       "delete_label": "删除这段会话",
       "delete_title": "删除这段会话？",
-      "delete_body": "从{{screen}}开始的这段会话会立即从你这里消失，不能恢复。它不影响你的申请、受刑或任何记录。",
+      "delete_body": "从{{screen}}开始的这段会话会立即从你这里消失，不能恢复。它不影响你的申请、去处或任何记录。",
       "delete_confirm": "删除",
       "intro_title": "问一问之前",
       "intro_ai_title": "回答由 AI 生成",
@@ -6171,7 +6218,7 @@
       "q_merit": "功与过",
       "a_merit": "功过记录是这一世的账：做的好事记功，过错记过。两者相减，就是「本世账目」上面那个数。",
       "q_disposition": "处置",
-      "a_disposition": "审判结案之后，对你去向的安排：例如去哪里受刑、往哪一道投生。",
+      "a_disposition": "审判结案之后，对你去向的安排：去哪一处、在那里多久，之后还有没有下一站。",
       "q_sentence": "去处计划",
       "a_sentence": "处置里要服的刑，按站排成的一份计划。一站执行完才去下一站；全部完成后才能申请转生。",
       "q_cooldown": "冷却期",
@@ -6182,6 +6229,9 @@
       "a_hall": "你所在殿的办事处。写信给殿司，由官员以殿司的名义回复。",
       "q_sentence_by_civ": {
         "cn": "受刑计划"
+      },
+      "a_disposition_by_civ": {
+        "cn": "审判结案之后，对你去向的安排：例如去哪里受刑、往哪一道投生。"
       }
     },
     "feedback": {
@@ -6326,7 +6376,13 @@
         },
         "gr_republic": {
           "BLISS": "千年已满"
-        }
+        },
+        "eu": {
+          "PURGATORY": "涤罪已全部完成",
+          "BLISS": "去处计划已全部走完",
+          "NEUTRAL": "去处计划已全部走完"
+        },
+        "eg": "去处计划已全部走完"
       },
       "body_by_civ": {
         "cn": {
@@ -6337,7 +6393,13 @@
         },
         "gr_republic": {
           "BLISS": "你在天上的千年已满，打开灵魂簿查看。"
-        }
+        },
+        "eu": {
+          "PURGATORY": "你的涤罪已全部完成，打开灵魂簿查看。",
+          "BLISS": "你的去处计划已全部走完，打开灵魂簿查看。",
+          "NEUTRAL": "你的去处计划已全部走完，打开灵魂簿查看。"
+        },
+        "eg": "你的去处计划已全部走完，打开灵魂簿查看。"
       }
     },
     "sentence_waiting": {
@@ -6352,6 +6414,23 @@
         },
         "eu": {
           "PURGATORY": "你有一层涤罪已完成，打开灵魂簿查看。"
+        },
+        "gr_republic": {
+          "BLISS": "你在天上的千年已满，暂留原地，打开灵魂簿查看。"
+        }
+      },
+      "title_by_civ": {
+        "cn": {
+          "BLISS": "一站停留期满，暂留原地"
+        },
+        "gr": {
+          "BLISS": "一站停留期满，暂留原地"
+        },
+        "eu": {
+          "PURGATORY": "一层涤罪已完成，暂留原地"
+        },
+        "gr_republic": {
+          "BLISS": "天上千年已满，暂留原地"
         }
       }
     },
@@ -6523,16 +6602,22 @@
     },
     "sentence_node_active": {
       "title": "去处节点开始",
-      "body": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。",
+      "body": "灵魂「{{soul}}」已到达，去处计划第 {{order}} 站在 {{tenant}} 开始执行。",
       "title_by_civ": {
         "cn": "受刑节点开始"
+      },
+      "body_by_civ": {
+        "cn": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。"
       }
     },
     "sentence_node_done": {
       "title": "去处节点结束",
-      "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。",
+      "body": "灵魂「{{soul}}」去处计划第 {{order}} 站（{{tenant}}）已结束。",
       "title_by_civ": {
         "cn": "受刑节点结束"
+      },
+      "body_by_civ": {
+        "cn": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。"
       }
     },
     "sentence_node_waiting": {
@@ -6541,16 +6626,22 @@
     },
     "sentence_node_refused": {
       "title": "去处节点被拒",
-      "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。",
+      "body": "{{tenant}} 拒绝了灵魂「{{soul}}」去处计划第 {{order}} 站的调拨，该节点已退回待执行。",
       "title_by_civ": {
         "cn": "受刑节点被拒"
+      },
+      "body_by_civ": {
+        "cn": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"
       }
     },
     "sentence_node_not_dispatched": {
       "title": "去处节点未能发起调拨",
-      "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）没能发起调拨，该节点仍待执行，请处理后重新发起。",
+      "body": "灵魂「{{soul}}」去处计划第 {{order}} 站（{{tenant}}）没能发起调拨，该节点仍待执行，请处理后重新发起。",
       "title_by_civ": {
         "cn": "受刑节点未能发起调拨"
+      },
+      "body_by_civ": {
+        "cn": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）没能发起调拨，该节点仍待执行，请处理后重新发起。"
       }
     },
     "sentence_plan_completed": {
@@ -6565,34 +6656,49 @@
     },
     "cross_sentence_submitted": {
       "title": "跨域审判节点已填写",
-      "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"
+      "body": "{{tenant}} 已填写灵魂「{{soul}}」去处计划第 {{order}} 站的处置。",
+      "body_by_civ": {
+        "cn": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"
+      }
     },
     "sentence_plan_amended": {
       "title": "去处计划变更",
-      "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。",
+      "body": "灵魂「{{soul}}」的去处计划已变更，涉及 {{tenant}}。",
       "title_by_civ": {
         "cn": "受刑计划变更"
+      },
+      "body_by_civ": {
+        "cn": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"
       }
     },
     "sentence_request_pending": {
       "title": "去处计划请求待决",
-      "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原判官决定。",
+      "body": "{{tenant}} 就灵魂「{{soul}}」的去处计划提出了请求，等待原判官决定。",
       "title_by_civ": {
         "cn": "受刑计划请求待决"
+      },
+      "body_by_civ": {
+        "cn": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原判官决定。"
       }
     },
     "sentence_request_decided": {
       "title": "去处计划请求已决定",
-      "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原判官决定，打开查看。",
+      "body": "本殿就灵魂「{{soul}}」去处计划提出的请求，原判官已经决定，打开查看。",
       "title_by_civ": {
         "cn": "受刑计划请求已决定"
+      },
+      "body_by_civ": {
+        "cn": "本殿就灵魂「{{soul}}」受刑计划提出的请求，原判官已经决定，打开查看。"
       }
     },
     "sentence_plan_cancelled": {
       "title": "去处计划已撤销",
-      "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。",
+      "body": "灵魂「{{soul}}」的去处计划已撤销，余下各站免去，按计划走完处理。",
       "title_by_civ": {
         "cn": "受刑计划已撤销"
+      },
+      "body_by_civ": {
+        "cn": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"
       }
     },
     "soul_inbox_assigned": {
@@ -7045,7 +7151,7 @@
   "sentence_plan": {
     "panel_title": "去处计划",
     "none": "尚无去处计划",
-    "plan_label": "第 {{cycle}} 轮受刑计划",
+    "plan_label": "第 {{cycle}} 轮去处计划",
     "cycle": "第 {{cycle}} 轮",
     "nodes_label": "各站",
     "stop": "第 {{order}} 站",
@@ -7092,8 +7198,8 @@
     "accept": "批准",
     "reject": "驳回",
     "withdraw": "撤回",
-    "accept_title": "批准「{{soul}}」的受刑计划请求",
-    "reject_title": "驳回「{{soul}}」的受刑计划请求",
+    "accept_title": "批准「{{soul}}」的去处计划请求",
+    "reject_title": "驳回「{{soul}}」的去处计划请求",
     "accept_warning": "批准后立即改计划：加的站排入计划，减的站移除；已开始的站不受影响。",
     "accept_reopen_warning": "批准后立即在原属地开重审，即使灵魂在外地；外地当前一站照常执行，刑满后暂留等待重审结案。",
     "reject_warning": "驳回后计划不变。",
@@ -7104,13 +7210,13 @@
     "withdraw_title": "撤回这条请求？",
     "withdraw_warning": "撤回后原判官不再处理它；需要时可以重新提出。",
     "cancel": "撤销计划",
-    "cancel_title": "撤销「{{soul}}」的受刑计划",
+    "cancel_title": "撤销「{{soul}}」的去处计划",
     "cancel_warning": "撤销即赦免剩余刑期、视为完成：未开始的站取消，进行中的调拨取消，正在受的刑中止；灵魂在外则回归，然后与计划完成一样开放转生或结算。不可撤回。",
     "cancel_reason": "理由（必填，记入审计）",
     "cancel_reason_shown": "撤销理由：{{reason}}",
-    "cancelled": "受刑计划已撤销",
-    "inbox_title": "受刑请求",
-    "inbox_show_all": "查看全部受刑请求",
+    "cancelled": "去处计划已撤销",
+    "inbox_title": "去处请求",
+    "inbox_show_all": "查看全部去处请求",
     "inbox_subtitle": "加减项与重开审判的请求，由原判官决定",
     "inbox_empty": "没有待决定的请求",
     "inbox_empty_reason": "本文明是原属的计划上的请求，和本文明提出的请求，都会出现在这里",
@@ -7149,7 +7255,7 @@
       "five_heinous_must_fail": "罪目是五逆：直入阿鼻，不能判通过。"
     },
     "cross": {
-      "title": "受刑计划各站",
+      "title": "去处计划各站",
       "hint": "原属恒为第 1 站；其后每个联合审判官或主持的文明各一站，由该文明的判官填写；顾问不带站。永久刑期只能排在最后。",
       "home_stop": "由原审判结案产出",
       "not_submitted": "尚未填写",
@@ -7192,7 +7298,10 @@
       "seat_actor_empty": "该文明没有可入席的神祇",
       "seat_actor_hint_judging": "联合审判官与主持只能由判官担任",
       "seat_actor_hint_advisor": "顾问可由任一在任神祇担任",
-      "view": "查看跨域审判"
+      "view": "查看跨域审判",
+      "title_by_civ": {
+        "cn": "受刑计划各站"
+      }
     },
     "file": {
       "open": "提出请求",
@@ -7211,8 +7320,11 @@
       "soul_is_here": "灵魂此刻就在本文明：请开加减项审判，结案时带上改动。"
     },
     "amend": {
-      "title": "结案时对受刑计划的改动",
-      "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原判官批准；不带改动则不生成请求。"
+      "title": "结案时对去处计划的改动",
+      "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原判官批准；不带改动则不生成请求。",
+      "title_by_civ": {
+        "cn": "结案时对受刑计划的改动"
+      }
     },
     "retry_dispatch": "重新发起调拨",
     "retry_title": "重新发起「{{soul}}」第 {{order}} 站的调拨",
@@ -7223,9 +7335,9 @@
     "last_refusal_cancelled": "上次调拨已被取消",
     "last_refusal_not_started": "上次调拨没能发起（例如还有一条调拨在途，或执行地闭殿）",
     "last_refusal_redispatched": "已重发 {{n}} 次",
-    "list_title": "受刑计划",
-    "list_subtitle": "本文明是原属、或有一站在本文明的受刑计划",
-    "list_empty": "没有符合条件的受刑计划",
+    "list_title": "去处计划",
+    "list_subtitle": "本文明是原属、或有一站在本文明的去处计划",
+    "list_empty": "没有符合条件的去处计划",
     "filter": {
       "search": "搜索灵魂姓名",
       "status": "状态",
@@ -7315,6 +7427,36 @@
     },
     "none_by_civ": {
       "cn": "尚无受刑计划"
+    },
+    "plan_label_by_civ": {
+      "cn": "第 {{cycle}} 轮受刑计划"
+    },
+    "accept_title_by_civ": {
+      "cn": "批准「{{soul}}」的受刑计划请求"
+    },
+    "reject_title_by_civ": {
+      "cn": "驳回「{{soul}}」的受刑计划请求"
+    },
+    "cancel_title_by_civ": {
+      "cn": "撤销「{{soul}}」的受刑计划"
+    },
+    "cancelled_by_civ": {
+      "cn": "受刑计划已撤销"
+    },
+    "inbox_title_by_civ": {
+      "cn": "受刑请求"
+    },
+    "inbox_show_all_by_civ": {
+      "cn": "查看全部受刑请求"
+    },
+    "list_title_by_civ": {
+      "cn": "受刑计划"
+    },
+    "list_subtitle_by_civ": {
+      "cn": "本文明是原属、或有一站在本文明的受刑计划"
+    },
+    "list_empty_by_civ": {
+      "cn": "没有符合条件的受刑计划"
     }
   },
   "seal": {
@@ -7847,9 +7989,12 @@
       "filter_empty_body": "换个类型看看，或清除筛选。",
       "filter_clear": "清除筛选",
       "see_all": "全部 {{n}} 封",
-      "group_sentence_change": "受刑计划变更",
+      "group_sentence_change": "去处计划变更",
       "on_desk_only": "在电脑上处理",
-      "empty_body_other": "有轮到你的事时会推送给你。"
+      "empty_body_other": "有轮到你的事时会推送给你。",
+      "group_sentence_change_by_civ": {
+        "cn": "受刑计划变更"
+      }
     },
     "queue": {
       "mine": "我手上",
@@ -8353,7 +8498,10 @@
       "dispatch": "调拨",
       "death_sync": "死亡同步",
       "account": "灵魂账号与转生",
-      "punishment": "受刑计划"
+      "punishment": "去处计划",
+      "punishment_by_civ": {
+        "cn": "受刑计划"
+      }
     },
     "detail": {
       "state": "{{from}} → {{to}} · {{reason}}",
@@ -8488,11 +8636,11 @@
     "amend": "改判",
     "pick_verdict": "选新裁决",
     "note_required": "请写复核意见，灵魂会看到",
-    "amend_impact": "改判后，受刑计划里还没执行的站改按新裁决；已经执行的每一站，给灵魂记一笔补偿功德。",
+    "amend_impact": "改判后，去处计划里还没走到的站改按新裁决；已经走过的每一站，给灵魂记一笔补偿功德。",
     "decided_toast": "结论已发出，灵魂会收到通知",
     "error": {
       "plan_in_transit": "灵魂正在去下一站，或在外地、那一站还没执行。等那一站执行后再作结论。",
-      "plan_busy": "受刑计划正在重审、永久挂起，或有请求等原判官决定，现在不能改判。",
+      "plan_busy": "去处计划正在重审、永久挂起，或有请求等原判官决定，现在不能改判。",
       "already_claimed": "这份申诉已由其他官员认领",
       "original_judge": "你作出了原判，不能复核",
       "not_reviewer": "只有认领的复核人能作出结论",
@@ -8504,7 +8652,10 @@
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能改判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能改判下地狱。",
       "untruthful_confession": "原审有否定告白记为「不实」：不能改判通过。",
-      "five_heinous_must_fail": "原审罪目是五逆：不能改判通过。"
+      "five_heinous_must_fail": "原审罪目是五逆：不能改判通过。",
+      "plan_busy_by_civ": {
+        "cn": "受刑计划正在重审、永久挂起，或有请求等原判官决定，现在不能改判。"
+      }
     },
     "decide": {
       "foreign_title": "跨域审判带来的外地站",
@@ -8533,7 +8684,10 @@
     "ladder_final_pending": "待作出结论",
     "escalate_reason_label": "补充理由 · 选填",
     "escalate_last": "这是这件审判的最后一次申诉，之后不能再申诉。",
-    "open_note": "{{n}} 件审判可申诉 · 最早 {{date}} 截止"
+    "open_note": "{{n}} 件审判可申诉 · 最早 {{date}} 截止",
+    "amend_impact_by_civ": {
+      "cn": "改判后，受刑计划里还没执行的站改按新裁决；已经执行的每一站，给灵魂记一笔补偿功德。"
+    }
   },
   "cityGods": {
     "title": "城隍",

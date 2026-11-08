@@ -10,6 +10,7 @@ import {
 import { crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useRealms } from "@soulledger/core/hooks/useRealms";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -158,8 +159,8 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
   };
 
   return (
-    <section className="mb-6" aria-label={t("sentence_plan.cross.title")}>
-      <LedgerHeading mark="丁" title={t("sentence_plan.cross.title")} />
+    <section className="mb-6" aria-label={t(civKey(t, "sentence_plan.cross.title", judgment.initiating_tenant_code))}>
+      <LedgerHeading mark="丁" title={t(civKey(t, "sentence_plan.cross.title", judgment.initiating_tenant_code))} />
       <p className={`${MUTED} py-2`}>{t("sentence_plan.cross.hint")}</p>
       <ol>
         <li className={ROW} data-stop="1">

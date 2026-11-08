@@ -302,7 +302,8 @@ def test_each_served_stop_pushes_once_and_completion_says_rebirth_is_open(cn, eg
     keys = set(PushDelivery.objects.filter(kind="disposition_executed").values_list("dedupe_key", flat=True))
     assert keys == {f"node:{plan.node(p, 1).pk}:done", f"node:{plan.node(p, 2).pk}:done"}
     completed = PushDelivery.objects.get(kind="sentence_completed")
-    assert (completed.title, completed.data) == ("受刑已全部服完", {"screen": "Life", "kind": "sentence_completed"})
+    # 最后一站在埃及:按那一站的文明选词,埃及的文明层兜底是「去处计划已全部走完」(Design v4 第十三批 §2)。
+    assert (completed.title, completed.data) == ("去处计划已全部走完", {"screen": "Life", "kind": "sentence_completed"})
 
 
 def test_a_waiting_soul_is_told_it_waits_and_nothing_about_the_case(cn, eg, enqueued):  # noqa: F811

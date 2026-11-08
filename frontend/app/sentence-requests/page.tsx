@@ -7,7 +7,8 @@ import { useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useHall, useHallCivilization } from "@/src/components/plaque/useHall";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -44,13 +45,16 @@ function SentenceRequestsContent() {
   const plans = list.data?.results ?? [];
   const count = list.data?.count ?? 0;
   const mine = user?.tenant?.code;
+  // 地府叫「受刑请求」,别处与全局管理员是中性的「去处请求」(第十三批)。
+  const hallCiv = useHallCivilization();
+  const inboxTitle = t(civKey(t, "sentence_plan.inbox_title", hallCiv));
 
   return (
-    <PageShell variant="page" title={t("sentence_plan.inbox_title")} subtitle={t("sentence_plan.inbox_subtitle")}>
+    <PageShell variant="page" title={inboxTitle} subtitle={t("sentence_plan.inbox_subtitle")}>
       {soul && (
         <p className="mb-3 text-sm">
           <Link href="/sentence-requests" className="underline underline-offset-2">
-            {t("sentence_plan.inbox_show_all")}
+            {t(civKey(t, "sentence_plan.inbox_show_all", hallCiv))}
           </Link>
         </p>
       )}
@@ -64,7 +68,7 @@ function SentenceRequestsContent() {
         <>
           {/* 账页(规范 v1 §2):不装框,行与行之间是行线,顶上是区块边界线。
               行尾的决定 / 撤回按钮照旧(`SentenceRequestActions`,灵魂详情的计划面板也用它)。 */}
-          <ul aria-label={t("sentence_plan.inbox_title")} className="border-t border-[oklch(var(--color-block))]">
+          <ul aria-label={inboxTitle} className="border-t border-[oklch(var(--color-block))]">
             {plans.map((plan) => {
               const request = plan.requests.find((r) => r.status === "PENDING");
               if (!request) return null;

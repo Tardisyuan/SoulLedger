@@ -2,6 +2,7 @@
 
 import { useSentencePlan } from "@soulledger/core/hooks/useSentencePlans";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryError } from "@/src/components/ui/PageError";
 import { PlanChangesEditor, type ChangesDraft } from "./PlanChangesEditor";
@@ -24,9 +25,10 @@ export function AmendmentPlanChanges({
 }) {
   const { t } = useI18n();
   const plan = useSentencePlan(planId);
+  const title = t(civKey(t, "sentence_plan.amend.title", plan.data?.tenant_code ?? tenantCode));
   return (
-    <section className="mt-12 space-y-3" data-testid="amendment-plan-changes" aria-label={t("sentence_plan.amend.title")}>
-      <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{t("sentence_plan.amend.title")}</h2>
+    <section className="mt-12 space-y-3" data-testid="amendment-plan-changes" aria-label={title}>
+      <h2 className="font-title text-lg text-[oklch(var(--color-ink))]">{title}</h2>
       <p className="text-sm text-[oklch(var(--color-ink-muted))] max-w-prose">{t("sentence_plan.amend.hint")}</p>
       {plan.isLoading ? (
         <Skeleton className="h-24 w-full" />
