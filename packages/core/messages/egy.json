@@ -1391,6 +1391,8 @@
       "preview_empty": "Nen Sekhet Djer.",
       "narrow_title": "Khemen Tut: ≥ 1024 px",
       "narrow_body": "Maa Wa: Wat Wa, Maat, Mekher Sekhet.",
+      "read_only": "Maa Wa",
+      "other_exit": "{{node}} · Wat Ky · {{label}}",
       "publish": "Sesh",
       "publishing": "Em Sesh…",
       "published": "Per Seth · Hemet-Sesh {{n}}",

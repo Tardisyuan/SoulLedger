@@ -435,6 +435,7 @@ const COLLECTED_FILES = [
   "workflowEngineEditor.test.tsx",
   "workflowEdgeArrowSingleSource.test.ts",
   "workflowEditorLayout.test.ts",
+  "workflowGraphChanges.test.ts",
   "viewportHeightContract.test.ts",
   "v3DataDisplayContract.test.tsx",
   "workflowTemplateLore.test.ts",
