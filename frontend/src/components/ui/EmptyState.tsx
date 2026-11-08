@@ -51,7 +51,8 @@ function emblemSkin(civ: string | null | undefined): SealCiv | null {
 export function EmptyState({ title, reason, action, className, civilization }: EmptyStateProps) {
   const skin = emblemSkin(civilization);
   return (
-    <div data-empty-state="" className={cn("py-8", skin && "relative isolate overflow-hidden", className)}>
+    // min-h-40 = 主视觉的 160px:短的空态(一行标题)比它矮时,overflow-hidden 会把主视觉的光晕上下切平。
+    <div data-empty-state="" className={cn("py-8", skin && "relative isolate min-h-40 overflow-hidden", className)}>
       {skin && (
         <span className="empty-emblem pointer-events-none absolute right-0 top-1/2 -z-10 -translate-y-1/2">
           <CivEmblem civ={skin} size={160} />
