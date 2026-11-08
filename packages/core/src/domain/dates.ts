@@ -10,7 +10,7 @@
  * had a type-only dependency on the CSS layer. `cn()` stays in the frontend;
  * this comes here.
  */
-import { DEFAULT_LOCALE, type Locale } from "../config/locale";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "../config/locale";
 
 export interface HistoricalDate {
   year: number;
@@ -113,9 +113,12 @@ const MONTH_DAY: Record<Locale, (monthName: string, day: number) => string> = {
  */
 export function formatHistoricalDate(
   date: HistoricalDate | null | undefined,
-  locale: Locale = DEFAULT_LOCALE
+  requested: Locale = DEFAULT_LOCALE
 ): string | null {
   if (!date) return null;
+  // The type says Locale, but values reach here untyped (a persisted cookie, a test's mocked
+  // `useI18n()` saying "zh"): an unknown one indexed MONTH_NAMES to `undefined` and threw.
+  const locale: Locale = isLocale(requested) ? requested : DEFAULT_LOCALE;
 
   const { year, month, day } = date;
 

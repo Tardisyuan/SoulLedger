@@ -307,8 +307,8 @@ describe("light on the map (2026-11-08 A, Design batch 16 §1.4)", () => {
   it("realm codes fold into the map's nodes, cells included; one unrecorded capacity makes the sum unrecorded", () => {
     const svg = map("cn");
     const loads = nodeLoads(svg, new Map([
-      ["DY_COURT_01", { held: 3, capacity: 10 }],
-      ["DY_COURT_02", { held: 4, capacity: null }],
+      ["DY_COURT_01_QINGUANG", { held: 3, capacity: 10 }],
+      ["DY_COURT_02_CHUJIANG", { held: 4, capacity: null }],
       ["NOT_ON_THE_MAP", { held: 9, capacity: 9 }],
     ]));
     expect(loads.get("dy-ten-courts")).toEqual({ held: 7, capacity: null });
