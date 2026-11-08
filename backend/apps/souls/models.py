@@ -3,6 +3,7 @@ Soul core model + state machine.
 """
 import logging
 import uuid
+from typing import TYPE_CHECKING
 
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
@@ -12,6 +13,9 @@ from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
 from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.querysets import SoulManager
+
+if TYPE_CHECKING:  # the annotation on Soul.die only; judgment imports souls, so not at runtime
+    from apps.judgment.models import Judgment
 
 logger = logging.getLogger(__name__)
 
