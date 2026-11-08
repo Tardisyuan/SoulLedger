@@ -78,6 +78,23 @@ describe("the delivered SVGs are safe to put in the page", () => {
     expect([...text.matchAll(/https?:\/\/[^"' )]+/g)].map((m) => m[0])).toEqual(["http://www.w3.org/2000/svg"]);
   });
 
+  // 主视觉背后那团光(填渐变的圆 / 椭圆)要整个落在 viewBox 里:伸出去的部分被 SVG 视口切掉,
+  // 光晕顶上就是一条平边(2026-11-09 落地页:埃及 cy 60 / ry 90、希腊 cy 80 / ry 90,顶端在 −30、−10)。
+  it.each(EMBLEMS)("%s keeps its halo inside the 240×240 viewBox", (rel) => {
+    const text = read(rel);
+    expect(text).toContain('viewBox="0 0 240 240"');
+    const halos = [...text.matchAll(/<(circle|ellipse)\b[^>]*fill="url\(#[^)]*\)"[^>]*>/g)].map((m) => {
+      const n = (a: string) => Number(m[0].match(new RegExp(`\\s${a}="([-\\d.]+)"`))![1]);
+      const [rx, ry] = m[1] === "circle" ? [n("r"), n("r")] : [n("rx"), n("ry")];
+      return { top: n("cy") - ry, bottom: n("cy") + ry, left: n("cx") - rx, right: n("cx") + rx };
+    });
+    expect(halos.length).toBeGreaterThan(0);
+    for (const h of halos) {
+      expect(Math.min(h.top, h.left)).toBeGreaterThanOrEqual(0);
+      expect(Math.max(h.bottom, h.right)).toBeLessThanOrEqual(240);
+    }
+  });
+
   it("parseMapSvg drops script, style, handlers and outside links even if a file grows them", () => {
     const svg = parseMapSvg(
       '<svg xmlns="http://www.w3.org/2000/svg" onload="x()"><style>.a{}</style><script>x()</script>' +
