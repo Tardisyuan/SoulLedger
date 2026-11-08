@@ -83,7 +83,7 @@ function RebirthsContent({ sixPaths }: { sixPaths: boolean }) {
   if (form && sixPaths) params.rebirth_form = form;
   if (/^[1-9]\d*$/.test(life)) params.cycle_count = life;
   const isFiltered = Object.keys(params).length > 1;
-  const { data, isLoading, isError, refetch, isPlaceholderData } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch, isPlaceholderData } = useQuery({
     queryKey: ["reincarnations", "register", params],
     queryFn: () => reincarnationApi.list(params).then((res) => res.data),
     placeholderData: keepPreviousData,
@@ -148,6 +148,7 @@ function RebirthsContent({ sixPaths }: { sixPaths: boolean }) {
         data={rows}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         isRefreshing={isPlaceholderData}
         isFiltered={isFiltered}

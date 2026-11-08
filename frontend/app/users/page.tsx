@@ -123,7 +123,7 @@ function UsersRoute() {
   const debouncedSearch = useDebouncedValue(search);
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
   // `placeholderData`:翻页 / 换筛选时留着上一页，不闪骨架。
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: userKeys.list({ page, search: debouncedSearch, role: roleFilter, ordering, username: located, mfa: mfaFilter, organization, active: statusFilter }),
     placeholderData: (previous) => previous,
     queryFn: async () => {
@@ -350,6 +350,7 @@ function UsersRoute() {
         selection={canManage ? selection.tableSelection : undefined}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         keyExtractor={(user) => String(user.id)}
         renderRow={(user) => (

@@ -2,7 +2,7 @@
  * Tests for PageError component
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { PageError, StatusCard } from "@/src/components/ui/PageError";
+import { PageError, QueryError, StatusCard } from "@/src/components/ui/PageError";
 import NotFound from "@/app/not-found";
 import WelcomeError from "@/app/welcome/error";
 import zh from "@soulledger/core/messages/zh-Hans.json";
@@ -168,5 +168,19 @@ describe("500 的文案是规范 v3 的(2026-10-01)", () => {
     expect(en.error.retry).toBe("Reload");
     expect(egy.error.title).toBe("Sethet");
     expect(egy.error.retry).toBe("Wehem Ini");
+  });
+});
+
+describe("QueryError · 403", () => {
+  it("a 403 is the permission card, not a system failure", () => {
+    render(<QueryError onRetry={() => {}} error={{ response: { status: 403 } }} />);
+    expect(screen.getByTestId("permission-denied")).toBeInTheDocument();
+    expect(document.querySelector("[data-query-error]")).toBeNull();
+  });
+
+  it("any other failure stays the query error", () => {
+    render(<QueryError onRetry={() => {}} error={{ response: { status: 500 } }} />);
+    expect(document.querySelector("[data-query-error]")).not.toBeNull();
+    expect(screen.queryByTestId("permission-denied")).not.toBeInTheDocument();
   });
 });

@@ -278,6 +278,7 @@ export function MutesSection() {
         data={list.data?.results}
         isLoading={list.isLoading}
         isError={list.isError && !list.data}
+        error={list.error}
         onRetry={() => list.refetch()}
         emptyMessage={t("social_moderation.empty.mutes")}
         isFiltered={filtered}

@@ -143,6 +143,7 @@ export function HandledSection() {
         data={rows}
         isLoading={list.isLoading}
         isError={list.isError && !list.data}
+        error={list.error}
         onRetry={() => list.refetch()}
         isFiltered={Boolean(type || handling || range !== "all")}
         onClearFilters={() => {

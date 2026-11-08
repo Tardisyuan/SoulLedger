@@ -28,6 +28,7 @@ export function RolesSection({
   roles,
   isLoading,
   isError,
+  error,
   onRetry,
   onOpenMatrix,
   canManage,
@@ -35,6 +36,7 @@ export function RolesSection({
   roles: Role[];
   isLoading: boolean;
   isError: boolean;
+  error?: unknown;
   onRetry: () => void;
   onOpenMatrix: (role: string) => void;
   /** 改名 / 复制 / 移入回收站:只给没绑殿的 ADMIN 且持 system.settings(后端 `CanWriteGlobalSettings`)。 */
@@ -71,6 +73,7 @@ export function RolesSection({
         data={roles}
         isLoading={isLoading}
         isError={isError}
+        error={error}
         onRetry={onRetry}
         emptyMessage={t("permissions.matrix.no_roles")}
         keyExtractor={(role) => String(role.id)}

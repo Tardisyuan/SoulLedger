@@ -90,7 +90,7 @@ function OrganizationsPageContent() {
   const [formMode, setFormMode] = useState<OrganizationFormMode | null>(null);
   const [deleting, setDeleting] = useState<Organization | null>(null);
 
-  const { data: organizations = [], isLoading, isError, refetch } = useAllOrganizations({ enabled: !!user });
+  const { data: organizations = [], isLoading, isError, error: listError, refetch } = useAllOrganizations({ enabled: !!user });
 
   // Group by category (civilization)
   const grouped: Record<string, Organization[]> = organizations.reduce((acc, org) => {
@@ -177,7 +177,7 @@ function OrganizationsPageContent() {
           rendered a heading and literally nothing else -- `Object.entries({})`
           over zero groups. And `fetchAllOrganizations` pages with `while
           (true)`, so one failed page fails the whole query. */}
-      {isError && <QueryError onRetry={() => refetch()} />}
+      {isError && <QueryError onRetry={() => refetch()} error={listError} />}
       {/* The third state. `Object.entries({})` over zero groups renders
           nothing, so a successful query with no rows produced a heading and
           blank space — the case `PageError.tsx:59` already recorded about this

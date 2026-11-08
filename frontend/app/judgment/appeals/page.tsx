@@ -107,6 +107,7 @@ function AppealQueueContent() {
         data={rows}
         isLoading={list.isLoading}
         isError={list.isError}
+        error={list.error}
         onRetry={() => list.refetch()}
         isRefreshing={list.isPlaceholderData}
         skeletonRows={3}

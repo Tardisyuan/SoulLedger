@@ -99,7 +99,7 @@ function CrossJudgmentsList() {
     apply();
     setPage(1);
   };
-  const { data: pageData, isLoading, isError, isPlaceholderData, refetch } = useQuery({
+  const { data: pageData, isLoading, isError, error: listError, isPlaceholderData, refetch } = useQuery({
     queryKey: crossJudgmentKeys.list(page, filterParams),
     queryFn: () => crossTenantJudgmentsApi.list({ page: String(page), ...filterParams }).then(r => r.data),
     placeholderData: (previous) => previous,
@@ -190,6 +190,7 @@ function CrossJudgmentsList() {
           data={judgments}
           isLoading={isLoading}
           isError={isError}
+          error={listError}
           onRetry={() => refetch()}
           isRefreshing={isPlaceholderData}
           skeletonRows={3}

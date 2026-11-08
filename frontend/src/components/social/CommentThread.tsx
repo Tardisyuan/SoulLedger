@@ -152,7 +152,7 @@ export function CommentThread({ postId, count }: { postId: string; count?: numbe
   const { t } = useI18n();
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const { data, isLoading, isError, refetch } = useComments(postId);
+  const { data, isLoading, isError, error: listError, refetch } = useComments(postId);
   const createComment = useCreateComment();
   const comments = data?.results ?? [];
   const tree = buildTree(comments);
@@ -185,7 +185,7 @@ export function CommentThread({ postId, count }: { postId: string; count?: numbe
           ))}
         </div>
       ) : isError && !data ? (
-        <QueryError onRetry={() => void refetch()} />
+        <QueryError onRetry={() => void refetch()} error={listError} />
       ) : comments.length === 0 ? (
         <p className="border-t border-[oklch(var(--color-line))] py-4 text-sm text-[oklch(var(--color-ink-subtle))]">
           {t("social.no_comments")}

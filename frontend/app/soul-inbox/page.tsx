@@ -538,7 +538,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
           <ListSkeleton count={2} />
         </div>
       ) : messages.isError ? (
-        <QueryError onRetry={() => messages.refetch()} />
+        <QueryError onRetry={() => messages.refetch()} error={messages.error} />
       ) : rows.length === 0 ? (
         <EmptyState title={t("soul_inbox.thread_empty")} />
       ) : (
@@ -748,7 +748,7 @@ function SoulInboxContent() {
       {list.isLoading && !list.data ? (
         <ListSkeleton count={3} />
       ) : list.isError && !list.data ? (
-        <QueryError onRetry={() => list.refetch()} />
+        <QueryError onRetry={() => list.refetch()} error={list.error} />
       ) : nothingAtAll ? (
         <EmptyState title={t("soul_inbox.empty")} reason={t("soul_inbox.empty_reason")} />
       ) : (

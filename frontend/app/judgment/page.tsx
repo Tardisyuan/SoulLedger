@@ -131,7 +131,7 @@ function JudgmentQueuePageContent() {
       previousQuery?.queryKey[1] === which ? previous : undefined,
   });
   // Params live in the queryKey, so tab/page/ordering changes refetch on their own.
-  const { data: judgmentData, isLoading, isError, refetch } = useQuery(listQuery(tab, page));
+  const { data: judgmentData, isLoading, isError, error: listError, refetch } = useQuery(listQuery(tab, page));
   // 另一段只为分段切换上的计数:取它的第一页(与切过去时第一眼看到的是同一份缓存)。
   const other: Tab = tab === "pending" ? "concluded" : "pending";
   const { data: otherData } = useQuery(listQuery(other, 1));
@@ -278,6 +278,7 @@ function JudgmentQueuePageContent() {
         transitionKey={`${tab}|${page}|${ordering}|${soul}|${debouncedSearch}|${verdict}|${civilization}`}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         keyExtractor={(judgment) => String(judgment.id)}
         renderRow={(judgment) => {

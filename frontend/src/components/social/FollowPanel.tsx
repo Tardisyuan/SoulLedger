@@ -46,7 +46,7 @@ export function FollowPanel() {
           })}
         </div>
         {active.isError ? (
-          <QueryError onRetry={() => void active.refetch()} />
+          <QueryError onRetry={() => void active.refetch()} error={active.error} />
         ) : list.length === 0 && !active.isLoading ? (
           <p className="py-3 text-sm text-[oklch(var(--color-ink-subtle))]">
             {t(tab === "following" ? "social.no_following" : "social.no_followers")}

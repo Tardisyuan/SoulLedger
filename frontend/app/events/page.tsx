@@ -86,7 +86,7 @@ function SoulEventsContent() {
   }, [searchInput]);
 
   const params = eventListParams({ search, eventType, actor, datePreset, includeSystem, page });
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: ["soul-events", params],
     queryFn: async () => (await eventsApi.list(params)).data,
     // 翻页 / 换筛选时留着上一页，不闪骨架。
@@ -245,6 +245,7 @@ function SoulEventsContent() {
         data={rows}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         errorMessage={t("events.failed")}
         onRetry={() => refetch()}
         keyExtractor={(r) => r.key}

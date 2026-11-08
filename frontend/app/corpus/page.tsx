@@ -172,7 +172,7 @@ function CorpusLinked() {
 function CorpusRoute({ linkedArticle, linkedQuery }: { linkedArticle: string; linkedQuery: string }) {
   const { t, locale } = useI18n();
   const linkedCode = useSearchParams()?.get("code")?.trim() ?? "";
-  const { data, isLoading, isError, refetch } = useAllStatutes();
+  const { data, isLoading, isError, error: listError, refetch } = useAllStatutes();
   const [query, setQuery] = useState(linkedQuery);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hitIndex, setHitIndex] = useState(0);
@@ -331,7 +331,7 @@ function CorpusRoute({ linkedArticle, linkedQuery }: { linkedArticle: string; li
 
   let body: ReactNode;
   if (isError) {
-    body = <QueryError onRetry={() => refetch()} />;
+    body = <QueryError onRetry={() => refetch()} error={listError} />;
   } else if (isLoading || !data) {
     body = <CorpusSkeleton />;
   } else if (articles.length === 0) {

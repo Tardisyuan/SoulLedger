@@ -173,7 +173,7 @@ function SoulsList({
 
   // TanStack Query — automatic caching, background refetch, loading/error states.
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
-  const { data, isLoading, isError, isPlaceholderData, refetch } = useSouls(params);
+  const { data, isLoading, isError, error: listError, isPlaceholderData, refetch } = useSouls(params);
   const souls = data?.results ?? [];
   // 规范 v1 §3.1 批量条。The selection is keyed by the query itself, so a page
   // turn or a filter change empties it without an effect: a selection the
@@ -438,6 +438,7 @@ function SoulsList({
         isRefreshing={isPlaceholderData}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         keyExtractor={(soul) => String(soul.id)}
         renderRow={(soul) => {

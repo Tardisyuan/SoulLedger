@@ -120,7 +120,7 @@ function AppealReviewContent({ id }: { id: string }) {
   // A deleted or other-hall appeal answers 404: say it is not there, not that the request failed.
   if ((query.error as { response?: { status?: number } } | null)?.response?.status === 404)
     return <EmptyState title={t("notifications.open_failed")} />;
-  if (query.isError || !query.data) return <QueryError onRetry={() => query.refetch()} />;
+  if (query.isError || !query.data) return <QueryError onRetry={() => query.refetch()} error={query.error} />;
   const appeal = query.data;
   const original = !!user && appeal.original_officer_ids.includes(user.id);
   const mine = !!user && appeal.reviewer === user.id;

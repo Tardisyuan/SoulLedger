@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { requestIdOf } from "@soulledger/core/api/requestStamp";
+import { responseStatus } from "@soulledger/core/api/client";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * `QueryError`(列表查询失败)仍是规范 v2 补足 C15 的那一段:冷玫红「✕ 标题」13 / 600、
@@ -100,6 +102,8 @@ interface QueryErrorProps {
   onRetry?: () => void;
   /** Optional detail, e.g. a status code. The message itself is generic. */
   detail?: string;
+  /** The query's error. A 403 renders the permission card: 无权不是系统出错,重试也不会变。 */
+  error?: unknown;
 }
 
 /**
@@ -120,8 +124,9 @@ interface QueryErrorProps {
  * `DataTable` already does this correctly for the pages that use it. This is
  * the same statement for the pages that render their own lists.
  */
-export function QueryError({ onRetry, detail }: QueryErrorProps) {
+export function QueryError({ onRetry, detail, error }: QueryErrorProps) {
   const { t } = useI18n();
+  if (responseStatus(error) === 403) return <PermissionDenied />;
 
   return (
     <div role="alert" data-query-error="" className="border-t border-[oklch(var(--color-line))] py-8">

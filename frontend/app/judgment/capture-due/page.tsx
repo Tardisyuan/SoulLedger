@@ -64,6 +64,7 @@ function CaptureDueContent() {
         data={rows}
         isLoading={list.isLoading}
         isError={list.isError}
+        error={list.error}
         onRetry={() => list.refetch()}
         skeletonRows={3}
         emptyMessage={t("captureDue.empty")}

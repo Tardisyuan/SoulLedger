@@ -62,7 +62,7 @@ export function AssistAdminConfigPage() {
       isLoading={config.isLoading}
       skeleton={<ListSkeleton count={4} />}
       isEmpty={!config.data}
-      empty={<QueryError onRetry={() => config.refetch()} />}
+      empty={<QueryError onRetry={() => config.refetch()} error={config.error} />}
     >
       {config.data && <ConfigForm config={config.data} />}
     </PageShell>

@@ -480,6 +480,7 @@ function PermissionsPageContent() {
               roles={rolesQuery.data ?? []}
               isLoading={rolesQuery.isLoading}
               isError={rolesQuery.isError}
+              error={rolesQuery.error}
               onRetry={() => rolesQuery.refetch()}
               canManage={canManagePermissions}
               onOpenMatrix={(role) => {

@@ -220,7 +220,7 @@ function CredentialsPageContent() {
   // Failed / nothing pending at all / nothing under this filter: three states, three looks.
   const failed = list.isError && !list.data;
   const empty = failed ? (
-    <QueryError onRetry={() => list.refetch()} />
+    <QueryError onRetry={() => list.refetch()} error={list.error} />
   ) : status === "PENDING" ? (
     <EmptyState title={t("soul_accounts.credentials.empty.pending")} reason={t("soul_accounts.credentials.empty.pending_reason")} />
   ) : (

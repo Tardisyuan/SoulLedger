@@ -198,7 +198,7 @@ function RealmsPageContent() {
       }
     >
       {realmsQuery.isError ? (
-        <QueryError onRetry={() => realmsQuery.refetch()} />
+        <QueryError onRetry={() => realmsQuery.refetch()} error={realmsQuery.error} />
       ) : realmsQuery.isLoading ? (
         <RealmsSkeleton />
       ) : realms.length === 0 ? (

@@ -64,7 +64,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
               <Spinner />
             </div>
           ) : runs.isError && !runs.data ? (
-            <QueryError onRetry={() => runs.refetch()} />
+            <QueryError onRetry={() => runs.refetch()} error={runs.error} />
           ) : results.length === 0 ? (
             <EmptyState title={status ? t("scheduler.runs.empty_filtered") : t("scheduler.runs.empty")} />
           ) : (

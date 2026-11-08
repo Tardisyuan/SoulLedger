@@ -41,7 +41,7 @@ const LINK = "underline decoration-[oklch(var(--color-ink-subtle))] underline-of
 function HallsOverviewContent() {
   const { t, locale } = useI18n();
   const [sort, setSort] = useState<HallSort>("code");
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: tenantKeys.overview,
     queryFn: () => tenantsApi.overview().then((r) => r.data),
   });
@@ -102,6 +102,7 @@ function HallsOverviewContent() {
         data={rows}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         errorMessage={t("halls.overview.load_failed")}
         onRetry={() => refetch()}
         emptyMessage={t("halls.overview.empty")}

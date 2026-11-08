@@ -51,7 +51,7 @@ export function ApiKeysPanel() {
   const [created, setCreated] = useState<ExternalApiKey | null>(null);
   const [revoking, setRevoking] = useState<ExternalApiKey | null>(null);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: [...KEYS_QUERY, page],
     queryFn: async () => (await deathSyncApi.apiKeys({ page: String(page) })).data,
     placeholderData: (previous) => previous,
@@ -93,6 +93,7 @@ export function ApiKeysPanel() {
         data={keys}
         isLoading={isLoading}
         isError={isError}
+        error={listError}
         onRetry={() => refetch()}
         emptyMessage={t("death_sync.api_keys.no_keys")}
         keyExtractor={(key) => key.id}

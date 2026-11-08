@@ -180,6 +180,7 @@ export default function RecycleBinPage() {
           transitionKey={`recycle-bin|${typeFilter}|${needle}`}
           isLoading={isLoading}
           isError={Boolean(error)}
+          error={error}
           keyExtractor={(entry) => `${entry.entity_type}-${entry.id}`}
           renderRow={(entry) => (
             <>

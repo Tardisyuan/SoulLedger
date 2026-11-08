@@ -73,7 +73,7 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
     setPage(1);
   };
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: listError, refetch } = useQuery({
     // Pushed: workflow events invalidate `workflowKeys.all` (["workflows"]) —— 前缀匹配,带参数的键也会刷新。
     queryKey: ["workflows", page, filterParams],
     queryFn: async () => (await workflowApi.list({ page: String(page), ...filterParams })).data,
@@ -81,7 +81,7 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
     placeholderData: (previous) => previous,
   });
 
-  if (isError) return <QueryError onRetry={() => refetch()} />;
+  if (isError) return <QueryError onRetry={() => refetch()} error={listError} />;
 
   const count = data?.count ?? 0;
   const option = (ns: string, values: readonly string[]) => [

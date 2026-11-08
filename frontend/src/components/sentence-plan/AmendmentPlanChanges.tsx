@@ -33,7 +33,7 @@ export function AmendmentPlanChanges({
       ) : plan.data ? (
         <PlanChangesEditor plan={plan.data} tenantCode={tenantCode} draft={draft} onChange={onChange} />
       ) : (
-        <QueryError onRetry={() => plan.refetch()} />
+        <QueryError onRetry={() => plan.refetch()} error={plan.error} />
       )}
     </section>
   );
