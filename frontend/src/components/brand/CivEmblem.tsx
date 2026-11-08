@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * 文明主视觉(规范 v4 第二批定稿,Design 第八批 `emblems/`):地府刻度转、欧洲九圈明暗、埃及横梁摆、希腊光流。
- * 概览主卡右上角、/rebirths 的「没有转世」页、空态用它;落地页四张卡用内联版 `LandingEmblem`(取不到文件时退回这里)。
+ * 概览主卡右上角、/rebirths 的「没有转世」页、空态用它;落地页四张卡用内联版 `LandingEmblem`(原文构建时嵌入,服务端第一帧就有图)。
  *
  * 用 `<img>` 载 SVG:动画写在 SVG 自己的 <style> 里,只在图里生效,不进文档;那段样式自带
  * `prefers-reduced-motion` 一条(停在静态图)。深浅两份都放,`:root.light` 决定显示哪一份(globals.css

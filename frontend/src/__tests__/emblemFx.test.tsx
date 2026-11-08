@@ -1,25 +1,28 @@
 import { act, render } from "@testing-library/react";
 import { LandingEmblem } from "@/src/components/landing/LandingEmblem";
 import {
+  DRAW_DONE,
   DRAW_MS,
+  DRAW_WAIT,
   PARALLAX_PX,
   TILT_MAX_DEG,
-  finishDraw,
   markDrawn,
-  primeDraw,
   reducedMotion,
   shouldDraw,
   tiltAllowed,
   tiltFor,
+  withDrawLengths,
 } from "@/src/lib/emblemFx";
+import { EMBLEM_SVGS } from "@/src/generated/emblemSvgs";
 
 /** 落地页主视觉的三样效果(2026-11-09 A):倾斜的数学、只画一次、减少动态效果时全关。 */
 
 const RECT = { left: 100, top: 50, width: 200, height: 400 };
-const SVG = (civ: string) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" class="emblem2" data-civ="${civ}" data-theme="dark" viewBox="0 0 240 240">` +
-  `<style>.emblem2[data-civ="${civ}"] .e-l{stroke-width:6}</style>` +
-  '<circle class="e-l" cx="120" cy="120" r="80"/><line class="e-l2" x1="0" y1="0" x2="10" y2="10"/><line class="e-t" x1="1" y1="1" x2="2" y2="2"/></svg>';
+const SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" class="emblem2" data-civ="x" data-theme="dark" viewBox="0 0 240 240">' +
+  '<style>.emblem2[data-civ="x"] .e-l{stroke-width:6}</style><defs><radialGradient id="g"></radialGradient></defs>' +
+  '<circle class="e-l" cx="120" cy="120" r="80"/><line class="e-l2" x1="0" y1="0" x2="10" y2="10"/><line class="e-t" x1="1" y1="1" x2="2" y2="2"/>' +
+  '<ellipse class="e-l2 em2-wave e-l" rx="9"/><line class="e-l" style="stroke-dasharray:2 5"/><path class="e-l" pathLength="10" d="M0 0"/><line class="e-ll"/></svg>';
 const parse = (text: string) => new DOMParser().parseFromString(text, "image/svg+xml").documentElement;
 
 /** 只认括号里的单项特性:一条查询里每一项都在 `features` 里才算匹配(和浏览器对 `and` 的读法一样)。 */
@@ -33,10 +36,6 @@ function mockMedia(features: string[]) {
 }
 const MOTION = "prefers-reduced-motion: no-preference";
 const MOUSE = ["hover: hover", "pointer: fine"];
-const flush = () =>
-  act(async () => {
-    for (let i = 0; i < 10; i++) await Promise.resolve();
-  });
 
 afterEach(() => {
   delete (window as { matchMedia?: unknown }).matchMedia;
@@ -79,7 +78,7 @@ describe("reduced motion switches every effect off", () => {
   });
 });
 
-describe("the draw-in runs once", () => {
+describe("the draw-in: pure CSS from the first frame, once per civ", () => {
   it("a key is drawn until it is marked, then never again", () => {
     expect(shouldDraw("once-key", false)).toBe(true);
     markDrawn("once-key");
@@ -87,90 +86,97 @@ describe("the draw-in runs once", () => {
     expect(shouldDraw("other-key", false)).toBe(true);
   });
 
-  it("prime sets pathLength on the main lines only, finish leaves the file as it was", () => {
-    const svg = parse(SVG("x"));
-    const before = svg.outerHTML;
-    primeDraw(svg);
-    expect(svg.classList.contains("fx-pre")).toBe(true);
-    expect([...svg.querySelectorAll("[pathLength]")].map((e) => e.getAttribute("class"))).toEqual(["e-l", "e-l2"]);
-    svg.classList.add("fx-run");
-    finishDraw(svg);
-    expect(svg.outerHTML).toBe(before);
+  it("withDrawLengths gives the main lines pathLength=1 and touches nothing else", () => {
+    const out = withDrawLengths(SVG);
+    expect([...parse(out).querySelectorAll('[pathLength="1"]')].map((e) => e.getAttribute("class"))).toEqual(["e-l", "e-l2", "e-l2 em2-wave e-l"]);
+    // 自己写了虚线或 pathLength 的不碰;去掉加的那几处就是原文。
+    expect(parse(out).querySelector("path")!.getAttribute("pathLength")).toBe("10");
+    expect(out.split(' pathLength="1"').join("")).toBe(SVG);
   });
 
-  it("LandingEmblem draws on first sight, not on re-render, remount or a second theme", async () => {
-    mockMedia([MOTION, ...MOUSE]);
-    const observers: { cb: IntersectionObserverCallback; disconnected: boolean }[] = [];
-    const IO = jest.fn((cb: IntersectionObserverCallback) => {
-      const o = { cb, disconnected: false };
-      observers.push(o);
-      return { observe() {}, disconnect: () => void (o.disconnected = true), unobserve() {}, takeRecords: () => [] };
-    });
-    Object.assign(window, { IntersectionObserver: IO });
-    Object.assign(globalThis, {
-      fetch: jest.fn(async (url: string) => ({ ok: true, text: async () => SVG(url.includes("-cn-") ? "cn" : "eu") })),
-    });
-    jest.useFakeTimers();
-    try {
-      const view = render(<LandingEmblem civ="cn" size={88} />);
-      await flush();
-      const svg = () => view.container.querySelector("svg.emblem2")!;
-      expect(svg()).not.toBeNull();
-      // 进视口之前:主线藏着,还没开画。
-      expect(svg().classList.contains("fx-pre")).toBe(true);
-      expect(svg().classList.contains("fx-run")).toBe(false);
-      expect(view.container.querySelector("[data-paused]")).not.toBeNull();
-
-      const open = observers.filter((o) => !o.disconnected);
-      const live = open[open.length - 1];
-      act(() => live.cb([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
-      expect(view.container.querySelector("[data-paused]")).toBeNull();
-      act(() => void jest.advanceTimersByTime(20));
-      expect(svg().classList.contains("fx-run")).toBe(true);
-      act(() => void jest.advanceTimersByTime(DRAW_MS));
-      expect(svg().classList.contains("fx-pre")).toBe(false);
-      expect(svg().querySelector("[pathLength]")).toBeNull();
-
-      // 重渲染:同一份图,不重画。
-      const same = svg();
-      view.rerender(<LandingEmblem civ="cn" size={88} className="x" />);
-      expect(svg()).toBe(same);
-      expect(svg().classList.contains("fx-pre")).toBe(false);
-
-      // 卸了再挂(换主题换出的另一份图同理):已经画过,直接整图。
-      view.unmount();
-      const again = render(<LandingEmblem civ="cn" size={88} />);
-      await flush();
-      expect(again.container.querySelector("svg.emblem2")!.classList.contains("fx-pre")).toBe(false);
-      again.unmount();
-    } finally {
-      jest.useRealTimers();
-      delete (window as { IntersectionObserver?: unknown }).IntersectionObserver;
-      delete (globalThis as { fetch?: unknown }).fetch;
-    }
+  it.each(Object.keys(EMBLEM_SVGS))("%s: every solid main line gets its pathLength, and only those", (key) => {
+    const svg = parse(withDrawLengths(EMBLEM_SVGS[key]));
+    const lines = [...svg.querySelectorAll(".e-l, .e-l2")];
+    expect(lines.length).toBeGreaterThan(0);
+    for (const el of lines) expect(el.getAttribute("pathLength")).toBe(/dasharray/.test(el.outerHTML) ? null : "1");
+    expect(svg.querySelectorAll("[pathLength]").length).toBe(lines.filter((el) => !/dasharray/.test(el.outerHTML)).length);
   });
 
-  it("reduced motion: the emblem is whole from the first frame", async () => {
-    mockMedia(MOUSE);
-    Object.assign(window, { IntersectionObserver: jest.fn(() => ({ observe() {}, disconnect() {} })) });
-    Object.assign(globalThis, { fetch: jest.fn(async () => ({ ok: true, text: async () => SVG("eg") })) });
-    try {
-      const view = render(<LandingEmblem civ="eg" size={88} />);
-      await flush();
-      const svg = view.container.querySelector("svg.emblem2")!;
-      expect(svg).not.toBeNull();
-      expect(svg.classList.contains("fx-pre")).toBe(false);
-      expect(svg.querySelector("[pathLength]")).toBeNull();
-      view.unmount();
-    } finally {
-      delete (window as { IntersectionObserver?: unknown }).IntersectionObserver;
-      delete (globalThis as { fetch?: unknown }).fetch;
-    }
-  });
-
-  it("without fetch it falls back to the <img> emblem", () => {
+  it("the markup is in the render itself, both themes, no fetch", () => {
     const view = render(<LandingEmblem civ="gr" size={88} />);
-    expect(view.container.querySelector("img[src='/v4/emblems/soulledger-emblem-gr-dark.svg']")).not.toBeNull();
-    expect(view.container.querySelector("svg")).toBeNull();
+    const copies = [...view.container.querySelectorAll(".v4-emblem[data-theme]")];
+    expect(copies.map((c) => c.getAttribute("data-theme"))).toEqual(["dark", "light"]);
+    for (const c of copies) expect(c.querySelector(`svg.emblem2[data-civ="gr"][data-theme="${c.getAttribute("data-theme")}"]`)).not.toBeNull();
+    expect(view.container.querySelector("img")).toBeNull();
+  });
+
+  describe("once JS is there", () => {
+    const svgs = (root: HTMLElement) => [...root.querySelectorAll("svg.emblem2")];
+    const all = (root: HTMLElement, c: string) => svgs(root).every((s) => s.classList.contains(c));
+    const none = (root: HTMLElement, c: string) => svgs(root).every((s) => !s.classList.contains(c));
+    let observers: { cb: IntersectionObserverCallback; disconnected: boolean }[];
+    let rect: jest.SpyInstance<DOMRect, []>;
+
+    beforeEach(() => {
+      rect = jest.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+      jest.useFakeTimers();
+      observers = [];
+      Object.assign(window, {
+        IntersectionObserver: jest.fn((cb: IntersectionObserverCallback) => {
+          const o = { cb, disconnected: false };
+          observers.push(o);
+          return { observe() {}, disconnect: () => void (o.disconnected = true), unobserve() {}, takeRecords: () => [] };
+        }),
+      });
+      mockMedia([MOTION, ...MOUSE]);
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+      rect.mockRestore();
+      delete (window as { IntersectionObserver?: unknown }).IntersectionObserver;
+    });
+    const at = (top: number) => rect.mockReturnValue({ top, bottom: top + 100, left: 0, right: 100, width: 100, height: 100, x: 0, y: top, toJSON() {} } as DOMRect);
+
+    it("on screen at load: left drawing, marked done after it, not redrawn on re-render or remount", () => {
+      at(10);
+      const view = render(<LandingEmblem civ="eu" size={88} />);
+      expect(none(view.container, DRAW_WAIT)).toBe(true);
+      expect(none(view.container, DRAW_DONE)).toBe(true);
+      act(() => void jest.advanceTimersByTime(DRAW_MS));
+      expect(all(view.container, DRAW_DONE)).toBe(true);
+
+      const same = svgs(view.container)[0];
+      view.rerender(<LandingEmblem civ="eu" size={88} className="x" />);
+      expect(svgs(view.container)[0]).toBe(same);
+      expect(all(view.container, DRAW_DONE)).toBe(true);
+
+      view.unmount();
+      const again = render(<LandingEmblem civ="eu" size={88} />);
+      expect(all(again.container, DRAW_DONE)).toBe(true);
+    });
+
+    it("off screen at load: waits, then draws when it comes into view", () => {
+      at(5000);
+      const view = render(<LandingEmblem civ="cn" size={88} />);
+      expect(all(view.container, DRAW_WAIT)).toBe(true);
+      const open = observers.filter((o) => !o.disconnected);
+      act(() => open[open.length - 1].cb([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver));
+      expect(view.container.querySelector("[data-paused]")).not.toBeNull();
+      expect(all(view.container, DRAW_WAIT)).toBe(true);
+      act(() => open[open.length - 1].cb([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+      expect(view.container.querySelector("[data-paused]")).toBeNull();
+      expect(none(view.container, DRAW_WAIT)).toBe(true);
+      expect(none(view.container, DRAW_DONE)).toBe(true);
+      act(() => void jest.advanceTimersByTime(DRAW_MS));
+      expect(all(view.container, DRAW_DONE)).toBe(true);
+    });
+
+    it("reduced motion: done from the start, nothing waits", () => {
+      mockMedia(MOUSE);
+      at(5000);
+      const view = render(<LandingEmblem civ="eg" size={88} />);
+      expect(all(view.container, DRAW_DONE)).toBe(true);
+      expect(none(view.container, DRAW_WAIT)).toBe(true);
+    });
   });
 });

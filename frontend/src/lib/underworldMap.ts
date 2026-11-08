@@ -50,7 +50,7 @@ export const STROKE = { ahead: 1.5, walked: 2, ring: 1.5 } as const;
  *   - `on*` 属性;不以 `#` 开头的 `href` / `xlink:href`。
  * 解析失败返回 null。
  *
- * `keepStyle`:落地页内联的文明主视觉(`emblemFx.ts`)要留它自己的 `<style>` —— 那段样式每条都写在
+ * `keepStyle`:落地页内联的文明主视觉是构建时嵌入的原文(`LandingEmblem`),underworldMap.test.ts 用这一档证明消毒器对它无事可做 —— 它的 `<style>` 每条都写在
  * `.emblem2[data-civ][data-theme]` 下,插进文档也撞不到别人;带 `@import` 或外部 `url()` 的照删。
  */
 export function parseMapSvg(text: string, { keepStyle = false }: { keepStyle?: boolean } = {}): SVGSVGElement | null {

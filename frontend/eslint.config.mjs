@@ -509,7 +509,9 @@ const eslintConfig = [
     //
     // 一个从不被调用的 import,在测试里比在产品代码里更值得报红:它通常意味着
     // 那条测试**打算**做的事和它实际做的事不是一回事。
-    ignores: [".next/**", "node_modules/**", "coverage/**", "scripts/**"],
+    // `src/generated/`:由 `scripts/` 里的生成器写出的模块(落地页主视觉的 SVG 原文,带十六进制色),
+    // 不是手写代码;它和源文件是否一致由 underworldMap.test.ts 核对。
+    ignores: [".next/**", "node_modules/**", "coverage/**", "scripts/**", "src/generated/**"],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],

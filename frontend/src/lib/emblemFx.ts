@@ -1,6 +1,7 @@
 /**
  * 落地页四张卡上文明主视觉的三样代码效果(2026-11-09 用户定 A,Design 第十九批之后):
- *   1. 第一次进视口时描线:主线(`.e-l` / `.e-l2`)约 1 秒画出,刻度(`.e-t`)随后淡入;只画一次。
+ *   1. 页面一打开就描线(纯 CSS,不等 JS):主线(`.e-l` / `.e-l2`)约 1 秒画出,刻度(`.e-t`)随后淡入。
+ *      JS 到了之后只做两件事:开头不在视口里的卡先停着、进视口再画;画过的不再画(重挂、换主题)。
  *   2. 金属光泽:每 11 秒一道斜光扫过(CSS,`globals.css` 的 `.emblem-sheen`)。
  *   3. 卡片随指针轻微倾斜(≤ 6°),主视觉比卡底多挪几像素。
  * 只认元素的类名(`.e-l` 主线、`.e-l2`、`.e-t` 刻度),不认几何:Design 还在改线稿(更细的线、2.5D 版)。
@@ -10,7 +11,7 @@
 export const TILT_MAX_DEG = 6;
 /** 主视觉相对卡底的视差,单位 px(指针在卡边时)。 */
 export const PARALLAX_PX = 4;
-/** 描线 1 s + 刻度 0.75 s 起淡入 0.45 s,收尾再留一点。 */
+/** 描线 0.15 s 起画 1 s,刻度 0.9 s 起淡入 0.45 s(globals.css 的 `emblem-draw` / `emblem-tick-in`),收尾再留一点。 */
 export const DRAW_MS = 1400;
 
 export interface Tilt {
@@ -50,27 +51,25 @@ export const reducedMotion = () => !query("(prefers-reduced-motion: no-preferenc
 /** 倾斜只给精确指针(鼠标、触控板);触屏与减少动态效果都不倾斜。 */
 export const tiltAllowed = () => query("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
 
-// 已经画过的文明。模块级:重渲染、换主题(换成另一份 SVG)、卡片重挂都不再画第二遍;整页刷新才重来。
+// 已经画过的文明。模块级:重渲染、换主题(另一份从 display:none 出来会重启 CSS 动画)、卡片重挂都不再画第二遍;整页刷新才重来。
 const drawn = new Set<string>();
 export const shouldDraw = (key: string, reduced: boolean) => !reduced && !drawn.has(key);
 export const markDrawn = (key: string) => void drawn.add(key);
 
-const LINES = ".e-l, .e-l2";
-
 /**
- * 插进页面之前:主线设 `pathLength=1`,根上加 `fx-pre`(globals.css 把主线的虚线偏移压到 1、刻度压到透明)。
- * 这些文件里本来没有 `pathLength`,收尾时整个删掉就回到原样。
+ * 描线要主线带 `pathLength="1"`(虚线长度按 1 算,CSS 动画才不用量长度)。在渲染时往 SVG 原文里加,
+ * 服务端与客户端得到同一串,水合不会对不上。只加给类名里有 `e-l` / `e-l2` 且自己没写 pathLength、没写虚线的元素
+ * —— 这些线本来是实线,pathLength 对实线没有任何作用,所以画完留着也不改样子。
  */
-export function primeDraw(svg: Element) {
-  svg.querySelectorAll(LINES).forEach((el) => el.setAttribute("pathLength", "1"));
-  svg.classList.add("fx-pre");
+export function withDrawLengths(svg: string): string {
+  return svg.replace(/<([a-zA-Z]+)\b([^>]*)>/g, (tag, name: string, attrs: string) => {
+    const cls = attrs.match(/\sclass="([^"]*)"/)?.[1].split(/\s+/) ?? [];
+    if (!cls.includes("e-l") && !cls.includes("e-l2")) return tag;
+    if (/\spathLength=|dasharray/.test(attrs)) return tag;
+    return `<${name} pathLength="1"${attrs}>`;
+  });
 }
 
-/** 开画:加 `fx-run`,两条 transition 把主线画出、刻度淡入。 */
-export const runDraw = (svg: Element) => svg.classList.add("fx-run");
-
-/** 画完:撤掉描线用的类和 `pathLength`,主线回到文件自己的样子(本来就没有虚线,看不出切换)。 */
-export function finishDraw(svg: Element) {
-  svg.classList.remove("fx-pre", "fx-run");
-  svg.querySelectorAll(LINES).forEach((el) => el.removeAttribute("pathLength"));
-}
+/** 画过的、离开视口等着画的:状态写成 SVG 根上的类(SVG 是原文插进去的,不归 React 管,重渲染不会抹掉)。 */
+export const DRAW_WAIT = "fx-wait";
+export const DRAW_DONE = "fx-done";

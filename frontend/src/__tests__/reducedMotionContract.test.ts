@@ -96,3 +96,16 @@ describe("the stylesheet honours prefers-reduced-motion", () => {
     expect(count("animate-pulse") + count("animate-spin")).toBeGreaterThan(10);
   });
 });
+
+// 落地页主视觉的描线(2026-11-09,emblemFx.ts):纯 CSS 动画,页面一打开就画。上面那条全局规则只把它压到 1ms,
+// 而它带 150 / 900ms 的延迟与 `backwards` —— 减少动态效果时延迟里线是藏着的,随后一下冒出来。所以单独取消。
+describe("the landing emblem draw-in", () => {
+  it("is a CSS animation on the main lines and ticks, cancelled for wait / done and for reduced motion", () => {
+    expect(CSS).toMatch(/\.emblem-fx \.emblem2 :is\(\.e-l, \.e-l2\):not\(\[class\*="em2-"\]\) \{\s*animation: emblem-draw /);
+    expect(CSS).toMatch(/\.emblem-fx \.emblem2 \.e-t:not\(\[class\*="em2-"\]\) \{\s*animation: emblem-tick-in /);
+    expect(CSS).toMatch(/\.emblem2:is\(\.fx-wait, \.fx-done\)[^{]*\{\s*animation-name: none;/);
+    const reduced = [...CSS.matchAll(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
+    expect(reduced).toMatch(/\.emblem-fx \.emblem2 :is\(\.e-l, \.e-l2, \.e-t\)[^{]*\{\s*animation-name: none;/);
+    expect(reduced).toMatch(/\.emblem-sheen \{\s*display: none;/);
+  });
+});

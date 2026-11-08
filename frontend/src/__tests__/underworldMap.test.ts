@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { DIYU_STATIONS } from "@soulledger/core/domain/diyuStations";
 import en from "@soulledger/core/messages/en.json";
+import { EMBLEM_SVGS } from "@/src/generated/emblemSvgs";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import {
   applyBranches,
@@ -149,6 +150,25 @@ describe("the delivered SVGs are safe to put in the page", () => {
     expect(svg.querySelector("style")!.textContent).toContain(`.emblem2[data-civ="${civ}"][data-theme="${theme}"]`);
     // 描线临时设 pathLength=1,收尾整个删掉:文件里本来就不能有。
     expect(text).not.toMatch(/pathLength/);
+  });
+
+  // 落地页把主视觉原文在构建时嵌进来(src/generated/emblemSvgs.ts),服务端第一帧就有图。它不能和文件漂移,
+  // 而且是不经运行时消毒直接插进页面的:所以这里证明消毒器对它无事可做。
+  it("the embedded emblems are exactly the files (rerun `node frontend/scripts/gen-emblem-svgs.mjs` if not)", () => {
+    expect(Object.keys(EMBLEM_SVGS).sort()).toEqual(EMBLEMS.map((rel) => rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]).sort());
+    for (const rel of EMBLEMS) expect(EMBLEM_SVGS[rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]]).toBe(read(rel));
+  });
+
+  it.each(EMBLEMS)("%s loses nothing to parseMapSvg's keepStyle sanitising, so it can go in unsanitised", (rel) => {
+    const raw = new DOMParser().parseFromString(read(rel), "image/svg+xml").documentElement;
+    expect(parseMapSvg(read(rel), { keepStyle: true })!.outerHTML).toBe(raw.outerHTML);
+  });
+
+  // 深浅两份同在 DOM 里(按主题 display:none 一份),四张卡同在一页:八份的 id 不能有一个重复。
+  it("ids are unique across all eight emblems", () => {
+    const ids = EMBLEMS.flatMap((rel) => [...read(rel).matchAll(/\sid="([^"]*)"/g)].map((m) => m[1]));
+    expect(ids.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it.each(MAPS)("%s has the terrain / labels / you-are-here layers and a readable palette", (rel) => {
