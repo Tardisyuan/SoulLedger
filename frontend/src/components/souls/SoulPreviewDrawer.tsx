@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSoul } from "@soulledger/core/hooks/useSouls";
 import type { SoulListItem } from "@soulledger/core/api";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
+import { balanceApplies } from "@soulledger/core/domain/karmicBalance";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { Badge } from "@/src/components/ui/Badge";
@@ -43,10 +44,10 @@ export function SoulPreviewDrawer({ soul, onClose, onNext, onPrev, finalFocus }:
   const { t, locale } = useI18n();
   const { data, isLoading, isError, refetch } = useSoul(soul?.id ?? "");
   // `karmic_balance` is the CHINESE instrument only — same rule as the list's
-  // balance column (app/souls/page.tsx).
-  const balanceApplies = soul?.civilization === "CHINESE";
+  // balance column (app/souls/page.tsx) and the officer app's soul header.
+  const showsBalance = balanceApplies(soul?.civilization);
   const score = (v: number | undefined) =>
-    !balanceApplies ? (
+    !showsBalance ? (
       <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />
     ) : v === undefined || v === null ? (
       <MissingValue kind="unrecorded" reason={t("souls.balance_withheld")} />

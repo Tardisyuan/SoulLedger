@@ -9,6 +9,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { SoulBatchBar, useSoulSelection } from "@/src/components/souls/SoulBatchBar";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
+import { balanceApplies } from "@soulledger/core/domain/karmicBalance";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { readFilters, writeFilters } from "@/src/lib/rememberedFilters";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -452,7 +453,7 @@ function SoulsList({
           // for the one civilization where that claim is true, and
           // points elsewhere for the rest rather than guessing at their
           // headline figure without the actual reading in hand.
-          const showsBalance = soul.civilization === "CHINESE";
+          const showsBalance = balanceApplies(soul.civilization);
           return (
           <>
             {/* `whitespace-nowrap` on every cell: at 393 px the auto-layout table

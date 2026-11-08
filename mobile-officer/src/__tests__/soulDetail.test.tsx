@@ -249,6 +249,28 @@ describe("header", () => {
     expect(screen.queryByTestId("soul-residing")).toBeNull();
   });
 
+  // 余额只在地府画,与网页同一条 `balanceApplies`(用户 2026-11-08)。
+  it("a Chinese soul shows 功德 · 罪业 · 余额", async () => {
+    await openSoul();
+    const figures = within(screen.getByTestId("soul-figures"));
+    expect(figures.getByText("功德")).toBeTruthy();
+    expect(figures.getByText("罪业")).toBeTruthy();
+    expect(figures.getByText("余额")).toBeTruthy();
+    expect(figures.getByText("+254")).toBeTruthy();
+  });
+
+  it("an Egyptian soul shows 羽侧 · 心侧 and no 余额", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, civilization: "EGYPTIAN" } });
+    await openSoul();
+    const figures = within(screen.getByTestId("soul-figures"));
+    expect(figures.getByText("羽侧")).toBeTruthy();
+    expect(figures.getByText("心侧")).toBeTruthy();
+    expect(figures.getByText("+412")).toBeTruthy();
+    expect(figures.queryByText("余额")).toBeNull();
+    expect(figures.queryByText("+254")).toBeNull();
+    expect(figures.queryByText("功德")).toBeNull();
+  });
+
   it("the code comes with the soul, so a judge without soul_account.read sees it too (Design 第四十批 第四节 4)", async () => {
     mockSoul.mockResolvedValue({ data: { ...SOUL, soul_code: "QU33Q9FW5F" } });
     await openSoul();
