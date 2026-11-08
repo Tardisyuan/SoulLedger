@@ -1841,6 +1841,7 @@ html.theme-switching *::after {
 }
 .v4-map-viewport > svg {
   display: block;
+  flex: none; /* 画面是竖排的 flex(UnderworldMap.tsx):图按 viewBox 比例取高,不被压扁 */
   width: 100%;
   height: auto;
 }

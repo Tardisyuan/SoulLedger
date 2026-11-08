@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
@@ -67,8 +67,11 @@ import { Locate, Maximize2 } from "lucide-react";
  * - 主角节点(Design 第十六批 §1,`public/v4/maps/nodes/`):每个文明 3–4 站换成一张小建筑线描,状态随节点的 data-state;
  *   点列站不替换,挂在点列左边。分组名压到主角节点时挪到它与读数胶囊的右边。
  * - 窄屏(字在屏上会小于 11px):默认镜头 1.25 倍、当前站在横向六成处(没有灵魂就是起点),拖动移镜头;
- *   「全景」看整张,「近处」回来。缩放钮 44 见方,竖排在图的右上角。
- * - 点 / 悬停一站出一张小卡(236 宽;窄屏贴在视窗底部):站名、(灵魂的行程)状态与到达日期、(世界图)在押 / 容量与进度条。
+ *   「全景」看整张,「近处」回来。缩放钮 44 见方,竖排在右上 —— 在图框里、画面之外自成一列(2026-11-08):
+ *   此前叠在画面上,全景时盖住最右一站与它的读数,393 宽时那一列比全景的图还高、压到下面「支线」一行。
+ *   现在画面只占那一列左边的宽,全景、镜头、拖到头都不会有东西藏在钮下面;图框至少和那一列一样高。
+ * - 点 / 悬停一站出一张小卡(236 宽;窄屏贴在视窗底部,层级是抽屉那一档 —— 演示导览的面板是 Toast 一档、也贴在底部,
+ *   刚点出来的卡要在它上面):站名、(灵魂的行程)状态与到达日期、(世界图)在押 / 容量与进度条。
  *   卡里只写接口已经给的字段 —— `GET /realms/occupancy/` 只有在押数,第十六批稿子里那行「今日进 · 出 · 平均停留」
  *   接口没有,不画。键盘:站名清单的按钮同样打开它,Esc 关。
  *
@@ -239,7 +242,8 @@ export function UnderworldMap({
   const camera = wholeMap ? null : localCamera;
   const cameraKey = camera ? `${camera.x} ${camera.y} ${camera.w} ${camera.h}` : "";
 
-  useEffect(() => {
+  // 量宽要在第一次绘制之前(layout effect):用 useEffect 时第一帧按宽 0 画,窄屏先闪一下缩小的全景才换成近处。
+  useLayoutEffect(() => {
     const el = host.current;
     if (!el) return;
     const measure = () => setWidth(el.clientWidth);
@@ -478,7 +482,8 @@ export function UnderworldMap({
         <span className="max-md:hidden text-xs text-[oklch(var(--color-ink-muted))]">{t("map.drag_hint")}</span>
       </div>
 
-      <div className="relative">
+      {/* 图框:画面(host)与缩放钮各占一列,钮不压在画面上;框高取两者较高的,全景的矮图在框里竖直居中。 */}
+      <div className="relative flex overflow-hidden rounded-panel border border-[oklch(var(--color-line))]">
         <div
           ref={host}
           onPointerDown={onPointerDown}
@@ -487,16 +492,16 @@ export function UnderworldMap({
           onPointerCancel={endDrag}
           onPointerLeave={() => setHover(null)}
           onDoubleClick={onDoubleClick}
-          className="v4-map-viewport rounded-panel border border-[oklch(var(--color-line))]"
+          className="v4-map-viewport flex min-w-0 flex-1 flex-col justify-center"
         />
-        {/* 缩放钮(第十六批 §1.4):44 见方,竖排在图的右上角。键盘:焦点在这一组钮上时,方向键平移、+ / − 缩放、0 全景
+        {/* 缩放钮(第十六批 §1.4):44 见方,竖排在图框右上,画面右边自成一列(不叠在画面上)。键盘:焦点在这一组钮上时,方向键平移、+ / − 缩放、0 全景
             (图框本身不可聚焦 —— 它只是一张图)。 */}
         <div
           role="toolbar"
           aria-orientation="vertical"
           aria-label={t("map.drag_hint")}
           onKeyDown={onKeyDown}
-          className="absolute right-2 top-2 flex flex-col border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
+          className="m-2 flex shrink-0 flex-col self-start border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
         >
           <button type="button" aria-label={t("workflow.editor.zoom.in")} onClick={() => zoomBy(ZOOM_STEP)} className={BUTTON}>＋</button>
           <button type="button" aria-label={t("workflow.editor.zoom.out")} onClick={() => zoomBy(1 / ZOOM_STEP)} className={BUTTON}>−</button>
@@ -521,7 +526,7 @@ export function UnderworldMap({
           <div
             data-testid="underworld-map-station-card"
             data-station={cardId}
-            className="z-filters w-[236px] border max-md:fixed max-md:inset-x-4 max-md:bottom-4 max-md:w-auto md:absolute md:bottom-3 md:right-16 border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 shadow-overlay"
+            className="z-filters w-[236px] border max-md:fixed max-md:z-drawer max-md:inset-x-4 max-md:bottom-4 max-md:w-auto md:absolute md:bottom-3 md:right-16 border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 shadow-overlay"
           >
             <div className="flex items-start gap-2">
               <p aria-live="polite" className="m-0 flex-1 font-title text-md text-[oklch(var(--color-ink))]">{cardName}</p>
