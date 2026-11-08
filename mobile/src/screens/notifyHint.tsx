@@ -4,6 +4,7 @@
  * held while that one or the welcome is still to come, so the two never stack. Either button ends it for good.
  */
 import Constants from "expo-constants";
+import { useSyncExternalStore } from "react";
 import { Linking, StyleSheet } from "react-native";
 
 import { useI18n } from "../i18n";
@@ -23,9 +24,28 @@ async function openNotificationSettings(): Promise<void> {
   }
 }
 
-export function NotifySettingsHint({ held }: { held: boolean }) {
+/*
+ * Whether the face / finger question is settled, kept outside React: SignedInOverlays used to hold it in state, and
+ * BioAsk's late `bio.ready` then re-rendered the overlays after tests had ended (act() warnings in every signed-in
+ * test). Only a hint that is actually due subscribes to it.
+ */
+let bioSettled = false;
+const bioListeners = new Set<() => void>();
+export function setBioSettled(settled: boolean): void {
+  if (settled === bioSettled) return;
+  bioSettled = settled;
+  bioListeners.forEach((l) => l());
+}
+const subscribeBio = (l: () => void) => (bioListeners.add(l), () => void bioListeners.delete(l));
+
+export function NotifySettingsHint() {
+  return useNotifySettingsHint() ? <DueHint /> : null;
+}
+
+function DueHint() {
   const { t } = useI18n();
-  const due = useNotifySettingsHint();
+  const held = !useSyncExternalStore(subscribeBio, () => bioSettled);
+  const due = true;
   const open = () => {
     dismissNotifySettingsHint();
     void openNotificationSettings();

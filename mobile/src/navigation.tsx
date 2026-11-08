@@ -53,7 +53,7 @@ import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/a
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { MfaLostScreen, type LoginMfaParams } from "./screens/loginMfa";
 import { BioAsk } from "./screens/bio";
-import { NotifySettingsHint } from "./screens/notifyHint";
+import { NotifySettingsHint, setBioSettled } from "./screens/notifyHint";
 import { FeedbackScreen } from "./screens/writeToHall";
 import { JudgmentAppealScreen } from "./screens/appeals";
 import { WangsiGrievanceScreen } from "./screens/wangsi";
@@ -388,13 +388,12 @@ function SignedInOverlays({ profile, scheme }: { profile: MeProfile; scheme: Col
   const key = `${profile.soul_code}:${profile.civilization}`;
   const [settled, setSettled] = useState<string | null>(null);
   const onSettled = useCallback(() => setSettled(key), [key]);
-  const [bioSettled, setBioSettled] = useState(false);
   return (
     <>
       <Welcome profile={profile} scheme={scheme} onSettled={onSettled} />
       <AppLock />
       <BioAsk soulCode={profile.soul_code} welcomePending={welcomeFrom(profile) !== null && settled !== key} onSettled={setBioSettled} />
-      <NotifySettingsHint held={!bioSettled} />
+      <NotifySettingsHint />
     </>
   );
 }

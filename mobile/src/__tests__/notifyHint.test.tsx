@@ -11,7 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { I18nProvider } from "../i18n";
 import { LIVE_ASKED_KEY, LIVE_HINT_SEEN_KEY, dismissNotifySettingsHint, shouldOfferNotifySettings, showLiveProgress } from "../liveProgress";
 import { installMobilePlatform, persistentStore } from "../platform";
-import { NotifySettingsHint } from "../screens/notifyHint";
+import { NotifySettingsHint, setBioSettled } from "../screens/notifyHint";
 import type { LiveContent } from "@soulledger/core/domain/soulRoute";
 
 const system = (Notifications as unknown as { __state: { status: string; answer: string; requests: number; canAskAgain?: boolean } }).__state;
@@ -49,14 +49,16 @@ describe("the sheet", () => {
   const version = Platform.Version;
 
   const setApi = (v: number) => Object.defineProperty(Platform, "Version", { value: v, configurable: true });
-  const renderHint = (held = false) =>
-    render(
+  const renderHint = (held = false) => {
+    setBioSettled(!held);
+    return render(
       <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
         <I18nProvider>
-          <NotifySettingsHint held={held} />
+          <NotifySettingsHint />
         </I18nProvider>
       </SafeAreaProvider>
     );
+  };
 
   beforeEach(() => {
     installMobilePlatform();
@@ -81,16 +83,10 @@ describe("the sheet", () => {
   });
 
   it("held (the fingerprint question is still to come): not shown until it is let go", async () => {
-    const view = renderHint(true);
+    renderHint(true);
     await act(() => showLiveProgress(CONTENT, "#C8604F"));
     expect(screen.queryByTestId("notify-hint")).toBeNull();
-    view.rerender(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <NotifySettingsHint held={false} />
-        </I18nProvider>
-      </SafeAreaProvider>
-    );
+    act(() => setBioSettled(true));
     expect(await screen.findByTestId("notify-hint")).toBeTruthy();
   });
 
