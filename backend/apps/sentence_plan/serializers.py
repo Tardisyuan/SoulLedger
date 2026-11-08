@@ -4,6 +4,7 @@ AMENDMENT 审判结案那条路径要守,写在序列化器里就只守住一边
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.tenant import request_tenant
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestKind
 from apps.sentence_plan.services import last_refusal
@@ -97,7 +98,7 @@ class SentencePlanSerializer(serializers.ModelSerializer):
         viewer = viewer_tenant_id(request)
         if viewer is SEE_ALL or viewer == plan.tenant_id:
             return data
-        code = getattr(getattr(request, "tenant", None) or getattr(request.user, "tenant", None), "code", None)
+        code = getattr(request_tenant(request), "code", None)
         for node in data["nodes"]:
             if node["tenant_code"] != code:
                 node["reason"] = ""

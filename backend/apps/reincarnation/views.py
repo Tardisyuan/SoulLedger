@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import request_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import (
@@ -99,7 +100,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
         """This hall's rebirth quota for the current month, per path: `limit` null = unlimited (2026-10-24)."""
         from apps.reincarnation.services import quota_usage
 
-        tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        tenant = request_tenant(request)
         if tenant is None:
             return Response([])
         return Response([{"rebirth_form": form, **row} for form, row in quota_usage(tenant).items()])

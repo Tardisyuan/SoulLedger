@@ -23,7 +23,7 @@ from apps.core.idempotency import idempotent
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
@@ -380,7 +380,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         user = self.request.user
         in_tenant = None
         if not is_tenant_exempt(user):
-            in_tenant = getattr(self.request, "tenant", None) or getattr(user, "tenant", None)
+            in_tenant = request_tenant(self.request)
             if in_tenant is None:
                 raise ValidationError({"soul": ["No such soul in this tenant."]})
         fields = {k: v for k, v in serializer.validated_data.items() if k != "soul"}

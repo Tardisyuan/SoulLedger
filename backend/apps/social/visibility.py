@@ -23,6 +23,7 @@ it.
 """
 from django.db.models import Q
 
+from apps.core.tenant import request_tenant
 from apps.social.models import Follow, ModerationStatus, Post
 
 
@@ -42,7 +43,7 @@ def visible_posts(request, queryset=None):
     if user is None or not user.is_authenticated:
         return qs.none()
 
-    tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
+    tenant = request_tenant(request)
     following_ids = (
         Follow.objects.filter(follower=user, tenant=tenant).values_list(
             "following_id", flat=True

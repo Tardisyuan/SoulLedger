@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from apps.core.csv_safe import csv_safe
 from apps.core.exports import EXPORT_MAX_ROWS, record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import is_tenant_exempt, scope_to_tenant
+from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 
 from .models import AuditAction, AuditLog
@@ -65,7 +65,7 @@ class AuditLogFilter(filters.FilterSet):
         request = self.request
         user = getattr(request, "user", None)
         if not is_global_admin(user):
-            own = getattr(request, "tenant", None) or getattr(user, "tenant", None)
+            own = request_tenant(request)
             if own is None or own.code != value:
                 raise PermissionDenied("Only an administrator can read another hall's audit log.")
             return queryset.filter(tenant=own)
