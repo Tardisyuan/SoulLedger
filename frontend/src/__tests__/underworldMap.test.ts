@@ -154,7 +154,7 @@ describe("the delivered SVGs are safe to put in the page", () => {
 
   // 落地页把主视觉原文在构建时嵌进来(src/generated/emblemSvgs.ts),服务端第一帧就有图。它不能和文件漂移,
   // 而且是不经运行时消毒直接插进页面的:所以这里证明消毒器对它无事可做。
-  it("the embedded emblems are exactly the files (rerun `node frontend/scripts/gen-emblem-svgs.mjs` if not)", () => {
+  it("the embedded emblems are exactly the files (if not, rerun the gen-emblem-svgs script in frontend)", () => {
     expect(Object.keys(EMBLEM_SVGS).sort()).toEqual(EMBLEMS.map((rel) => rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]).sort());
     for (const rel of EMBLEMS) expect(EMBLEM_SVGS[rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]]).toBe(read(rel));
   });
