@@ -146,10 +146,9 @@ function RealmsPageContent() {
     if (!occupancyData) return undefined;
     const held = new Map(occupancyData.map((o) => [o.realm_id, o.count]));
     return new Map<string, StationLoad>(
-      (realmsQuery.data ?? []).filter((r) => r.civilization === civilization).map((r) => [r.realm_code, {
-        held: held.get(r.id) ?? 0,
-        capacity: r.capacity ?? null,
-      }]),
+      (realmsQuery.data ?? [])
+        .filter((r) => r.civilization === civilization)
+        .map((r) => [r.realm_code, { held: held.get(r.id) ?? 0, capacity: r.capacity ?? null }]),
     );
   }, [occupancyData, realmsQuery.data, civilization]);
   const rows = treeRows(own);
