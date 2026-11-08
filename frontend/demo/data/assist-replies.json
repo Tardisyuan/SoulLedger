@@ -1,5 +1,5 @@
 {
-  "recordedAt": null,
+  "recordedAt": "2026-11-08T01:34:32.858363+00:00",
   "replies": [
     {
       "question": {
@@ -7,8 +7,8 @@
         "en": "How many cases are awaiting judgment across all halls?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "我只能查到您自己范围的数字：共 13 件未结审判，其中待认领 12 件、他人认领 1 件、您认领 0 件、暂缓 0 件，逾期的有 10 件。这个数字只覆盖本殿（您的数据范围是本殿），各殿汇总的待审数要看「各殿概况」页，那里每个殿一行、可以点进去。",
+        "en": "I can't give you a figure across all halls: your data scope is this hall only, so the counts cover just your own hall. Here: 13 open cases in total — 0 claimed by you, 12 unclaimed, 1 claimed by someone else, 0 deferred; 10 are overdue and none are returned. For a cross-hall total you'd need an administrator who belongs to no hall."
       }
     },
     {
@@ -17,8 +17,8 @@
         "en": "Which hall has the largest backlog?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "抱歉，我没有能按殿统计积压的工具。你这个问题需要\"审判队列按殿分布\"之类的数据，助手只提供你本人队列的分组计数（我的、未认领、他人认领、延期、逾期、退回），给不出各殿之间的对比。\n\n要看哪个殿积压多，建议在审判队列页面按殿筛选后逐个数，或者找系统管理员做一次统计。",
+        "en": "I don't know — I can't answer that. The counts tools don't break the judgment queue down by hall, and I have no tool that reports hall-by-hall backlog. Your scope is this hall only anyway.\n\nTo compare backlogs, open the Judgment Queue (its \"Pending\" tab) and use the court and civilization filters to check each hall's open cases, or ask your system administrator for a cross-hall report."
       }
     },
     {
@@ -27,8 +27,8 @@
         "en": "Where is the longest-stuck workflow waiting?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "我查不到这个问题的答案。我的工具只返回计数（审判队列、等你审批的流程、收件箱、你自己的权限），不提供任何具体流程实例、当前停在哪个节点或停留多久的信息，所以无法告诉你哪条流程卡得最久、停在哪一步。\n\n要看具体实例，请到「审批流程」页的「审批实例」页签，那里列出各个实例和它们的当前节点，可以配合排序查看。如果某个节点确实卡住，由有权限的官员用「越级推进」（需写理由，会留审计记录）处理，最多推到终审那一站。",
+        "en": "I don't know — I can't answer that from what I have. My tools only return counts (for example, how many workflow steps are waiting for your own decision), never which case has been waiting longest, so I can't point to a specific workflow.\n\nTo find it yourself: open \"Approval Workflow\" and go to the running instances tab, then sort or filter by how long each has been pending. I can only tell you whether workflows are waiting on you, not where the oldest one sits."
       }
     },
     {
@@ -37,8 +37,8 @@
         "en": "What record does escalating a workflow leave?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "越级推进必须写理由，并且会留下审计记录。审计日志可按动作、资源、日期筛选和搜索，你可到审计日志页查看。\n\n另外提醒：越级推进最多只能推到终审那一站，终审本身不能越过，也不会让流程直接走完。如果想知道自己是否持有越级推进权限，可以告诉我，我帮你查。",
+        "en": "Escalating leaves an audit record: \"Escalate past this node\" needs a written reason, and that is written to the audit log. It goes at most as far as the final review — the final review itself cannot be escalated past, and escalating never completes a workflow."
       }
     },
     {
@@ -47,8 +47,8 @@
         "en": "How many dispatches are awaiting approval across the halls?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "我这边查不到“各殿”的调拨数量：我没有用于获取调度计数的工具，而且你的权限范围只覆盖本殿，看不到其他殿的数据。请去调度页查看：「待处理提案」列出目标殿待办的提案，「历史记录」列出本殿作为发起殿或目标殿的全部记录，其中包含待处理的记录。",
+        "en": "I don't know — I have no tool that counts dispatch proposals, and I can't see any dispatch records. The \"Pending Proposals\" tab on the Dispatch page is the target hall's queue; since your scope is this hall only, it will show just what is waiting for your hall. For a cross-hall total, ask the system administrator."
       }
     },
     {
@@ -57,8 +57,8 @@
         "en": "Does a return to the home hall take effect at once?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "「结束暂居」要原属殿（或无殿管理员）点，且要写理由；点了立即生效，灵魂随即回到原殿。另外，灵魂在那里的处置执行完毕、或受刑计划这一站刑满时也会自动回归。若灵魂还有未结案的审判，手动结束暂居会被拒。页面是「调度」的「历史记录」里那一笔。",
+        "en": "Ending a residence (\"End residence\") takes effect once it is recorded, but there are two things that can block or delay it: it is refused while the soul still has an open judgment, and the soul may also return home by itself when its disposition, or its stay at that station of a sentence plan, has been carried out. To end one by hand, use \"End residence\" on the dispatch record, with a reason — that page is in the dispatch area, under the record's actions."
       }
     },
     {
@@ -67,8 +67,8 @@
         "en": "Which tasks have failed several times in a row?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "助手查不到具体任务，只能给计数，无法列出哪些任务连续失败。\n\n你可以在侧栏「定时任务」→「任务」页签用「连续失败」筛选，把连续失败的任务列出来；「运行历史」页签是只读的执行记录。另外，你是绑定在某个殿的管理员，只能看到本殿的任务，全局任务和其他殿的任务不显示。",
+        "en": "I can't tell you that — I have no tool that reads scheduler job history. The assistant's tools only return judgment-queue counts, workflow approvals waiting on you, inbox counts and a few of your own permissions, so I can't see which jobs failed.\n\nTo find out yourself: open \"Scheduled Tasks\" in the sidebar, go to the \"Run history\" tab, and use the \"failing\" filter (there's also \"overdue\" and \"disabled only\"). Run records there are read-only. Note that, with your scope (this hall), you'll see only your own hall's jobs."
       }
     },
     {
@@ -77,8 +77,8 @@
         "en": "Will rebuilding the schedules overwrite settings changed by hand?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "重建调度只有不属于任何殿的管理员能做。你是绑定在某个殿的管理员，所以我看不到这个功能对你是否开放，也不清楚它会不会覆盖手动改动过的设置，建议问系统管理员（Administrator）。",
+        "en": "I don't know whether \"Rebuild schedules\" overwrites hand-edited job settings — the help entry only says that rebuilding is reserved for an administrator who belongs to no hall, and that \"Run now\", \"Edit schedule\" (cron and time zone) and enable/disable need the scheduler manage permission. It does not describe what rebuilding does to existing jobs. Please ask the system administrator to confirm."
       }
     },
     {
@@ -87,8 +87,8 @@
         "en": "How many letters await a reply across the halls?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你的账号只覆盖本殿，看不到各殿的数字。本殿收件箱共 2 封来信，其中待回复 0 封，已回复 2 封，未读 2 封。要看其他殿的来信，需要不属于任何殿的管理员权限，可以找系统管理员。",
+        "en": "You can only see your own hall's letters: this hall has 0 letters awaiting a reply (2 letters in total, all from The Fifth Court, 2 unread, 2 open). An across-all-halls figure isn't available to you, since your data scope is this hall only."
       }
     },
     {
@@ -97,8 +97,8 @@
         "en": "How long a wait counts as a backlog?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "这个助手和帮助条目里都没有定义「积压」的等待时长标准，所以我没法给你一个天数。审判队列的计数工具会另外单列「已逾期」：指超过本殿截止日、且未暂缓的案子；要看具体案子请去「审判队列」页按「等待最久」排序。具体多久算积压，建议问系统管理员。",
+        "en": "I don't know, and that's not something the help entries cover. Nothing in the console documentation defines a backlog or a waiting time that counts as one. Please ask the system administrator."
       }
     },
     {
@@ -107,8 +107,8 @@
         "en": "How many sentence requests are pending in all?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "我没有能查受刑请求件数的工具。我能查的只有审判队列、等你审批的流程和收件箱的计数，这些工具不包含受刑请求的数量，我也无法查看具体案子。\n\n要看待处理的受刑请求，请到左侧栏「受刑请求」页，每个有待决请求的计划占一行，等你决定的会有标记。",
+        "en": "I don't have a tool for sentence request counts, so I can't give you a number. The Sentence Requests page itself lists one row per plan with a pending request, with the rows waiting for you marked."
       }
     },
     {
@@ -117,8 +117,8 @@
         "en": "Who approves a change of station?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你问的「改站」我没有把握对应到具体功能：帮助条目里没有叫「改站」的条目。如果指的是受刑计划的加减项请求，这类由计划的**原属殿（或管理员）**决定，需要「执行审判」权限；如果是重开审判的请求，则由原审的结案判官本人决定（他停用、调离或没有结案人记录时，由原属殿持改派权限的官员决定）。\n\n如果你指的是别的页面，请告诉我是哪一个，或者问系统管理员确认。",
+        "en": "A sentence-request that amends a plan (adds or removes a station) is decided by the plan's home hall — or an administrator — and requires the judgment execute permission. Reopen requests are different: the judge who concluded the original case decides, unless that judge is deactivated, has left the home hall or is not on record, in which case an officer of the home hall with the reassign permission decides. The rows waiting for you are marked on the Sentence Requests page."
       }
     },
     {
@@ -127,8 +127,8 @@
         "en": "What is this page for?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你说的“这一页”是指哪个页面？请告诉我：侧栏名称或页面标题，我才能告诉你它是做什么的。比如灵魂管理、审判队列、功过格、殿司收件箱、回收站、调度、通知等。",
+        "en": "This is the help assistant inside the SoulLedger officer console. It answers how-to questions about the back office: roles and permissions, the judgment queue, workflows, dispatch, rebirth applications and sentence requests, the hall-office inbox, the recycle bin, the scheduler and notifications.\n\nIt is read-only, so it won't approve, advance, claim, reply, restore or delete anything for you; it points you to the page and button that does. Its tools return counts only — it never shows souls' names, codes, statements or verdicts, so for a specific case it will send you to the page that lists it.\n\nI can see you're signed in as an administrator scoped to your own hall from the screen you asked on. Ask away, or tell me which screen has a button that won't work and I'll check your permissions."
       }
     },
     {
@@ -137,128 +137,28 @@
         "en": "Are changes made here written to the audit log?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "看你指哪一处改动。越级推进流程必须写理由，并一定写进审计记录；「标记失踪」「召回」的原因也会记进灵魂账页和审计日志；改派越过认领人、结案越过认领人同样会留痕。审计日志要按动作、资源、日期筛选，需要审计查看权限，默认只有管理员有；你绑定在本殿，只能看本殿的记录。想确认某个具体操作是否审计、以及具体记了哪些字段，请到侧栏的审计日志页查看，或问系统管理员。",
+        "en": "I don't know — the help entries don't cover which actions made in this assistant are audited. What they do say is that conversations with the assistant are kept for thirty days and then deleted, and that you can delete one yourself at any time; and that some officer actions elsewhere in the console (such as marking a soul lost and recalling it) write to the audit log. For whether this assistant's own use is recorded in the audit log, please ask the system administrator."
       }
     },
     {
       "question": {
-        "zh-Hans": "本殿待审有多少件？",
-        "en": "How many cases await judgment in this hall?"
+        "zh-Hans": "被举报的帖子怎么处理？",
+        "en": "How do I handle a reported post?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "朋友圈审核的举报在「朋友圈审核」页的「举报」页签里查看和处理，需要朋友圈审核权限；删掉的帖子和评论会进回收站。具体每条举报怎么裁定，助手看不到内容，请到该页签里逐条打开处理。如果页签或按钮看不到，可以让我查一下你的权限。",
+        "en": "To handle a reported post, go to Circle moderation and open the \"Reports\" tab — the same page has \"Pending content\", \"Word list\", \"Mutes\" and \"Handled\". You'll need the social moderate permission (held by administrators and Circle Moderators by default), which is not something my tools can check for you.\n\nI'm read-only, so I can't take action on the report; the report's own actions on that page are what you use. Deleted posts and comments go to the recycle bin. If a button there is greyed out, ask an administrator about the permission."
       }
     },
     {
       "question": {
-        "zh-Hans": "我能把案子改派给谁？",
-        "en": "Who can I reassign a case to?"
+        "zh-Hans": "为什么我看不到审判和流程？",
+        "en": "Why can't I see judgments or workflows?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "为什么我点不了审批？",
-        "en": "Why can't I approve?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "卡住的流程我能越级推进吗？",
-        "en": "Can I escalate a stuck workflow?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "待我批准的调拨有几件？",
-        "en": "How many dispatches are waiting for my approval?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "批准和执行有什么区别？",
-        "en": "What is the difference between approving and executing?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "本殿有几封待回复？",
-        "en": "How many letters in this hall await a reply?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "回复会署谁的名？",
-        "en": "Whose name does a reply go out under?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "本殿待处理的请求有几件？",
-        "en": "How many requests are pending in this hall?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "为什么我不能批准？",
-        "en": "Why can't I approve?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "为什么我不能管理用户？",
-        "en": "Why can't I manage users?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
-      }
-    },
-    {
-      "question": {
-        "zh-Hans": "这一页我能做什么？",
-        "en": "What can I do on this page?"
-      },
-      "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你现在的角色是 MODERATOR，数据范围只限本殿，而且没有流程的批准、推进、越级推进权限，也没有用户管理和调度的各项权限。所以审批流程里你看不到可决定的节点，因为「提交决定」要流程批准权限，节点还必须是你在指定审批人之列；「推进」和「越级推进」分别要推进、越级推进权限。\n\n审判那边，助手查不到审判相关权限，也可能和权限无关：队列里「他人认领」的案子对你只读，具体某组是否为空要去「审判队列」页看。需要开通权限的话，请找管理员（Administrator）；改权限矩阵只有不属于任何殿的管理员能做。",
+        "en": "Your primary role is Circle Moderator (MODERATOR) with no additional roles, and you don't hold any workflow approve, advance or escalate permissions. The Circle Moderator role only covers the soul circle: reports, pending content, the word list and mutes, plus the dashboard and your own notifications. It neither reads nor works judgments or workflows at all — so their pages and buttons stay hidden or refused, and that's by role design, not a settings glitch.\n\nIf you need judgment or workflow access, an administrator who belongs to no hall would have to grant you an additional role (for example Judge) or change the permission matrix; ask your administrator."
       }
     },
     {
@@ -267,8 +167,8 @@
         "en": "How many are in my queue?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你的审判队列共 13 件未结案子：我认领 0 件、待认领 12 件、他人认领 1 件、暂缓 0 件；其中已逾期 10 件，退回后重审 0 件。这些数字只覆盖你所在的殿。要看具体案件，请打开侧栏「审判队列」的「待审」页。",
+        "en": "Your judgment queue for this hall has 13 open cases: 0 claimed by you, 12 unclaimed, 1 claimed by someone else, and 0 deferred. 10 are overdue and 0 are returned after a retry. Open the \"Judgment Queue\" page and its \"Pending\" tab to see them."
       }
     },
     {
@@ -277,8 +177,8 @@
         "en": "Why can't I close the case?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "抱歉，我的权限工具只报告流程批准、推进、越级推进、用户管理和调度这几项，看不到“执行审判”相关的权限，所以没法判断你缺的是不是这一项。\n\n从手册看，结案（宣判等操作）在案件详情页进行，需要“执行审判”权限；另外，别人认领中的案子只有认领人能改，有改派权限的人才能越过认领人，已结案的案子除备注外都不能再改。请先确认案子是不是你认领的、是否已结案；如果都不是，可能是缺少“执行审判”权限，建议找管理员（Administrator）核实开通。",
+        "en": "Verdict and seal actions on a case page (including concluding a case) need the judgment execute permission. My permission tool only reports workflow, user management and dispatch permissions, so it can't confirm whether you hold it — the tool doesn't cover it, which means I can't tell you for sure why the button is refused.\n\nTwo common causes to check on the case page itself: the case may be claimed by someone else (then only the claimant can edit or conclude it, unless an officer with the reassign permission overrides the claim), or the judgment is still waiting on an approval workflow step, which only the step's named approver can decide with \"Submit Decision\". Ask an administrator if you believe you should hold the judgment execute permission."
       }
     },
     {
@@ -287,8 +187,8 @@
         "en": "How many are waiting for my approval?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "目前没有流程节点在等你本人决定，总数是 0。你持有流程批准权限；如果某个节点指定了你却仍无法决定，页面会提示原因。要查看具体流程，请到「审批流程」页的「审批实例」页签。",
+        "en": "Nothing is waiting for your decision right now: 0 workflows have a current step awaiting you. You do hold the workflow approve permission, and these counts cover your own hall only."
       }
     },
     {
@@ -297,8 +197,8 @@
         "en": "What is the next step in this workflow?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你说的“这个流程”没有具体指向，而我只按帮助条目和工具结果回答，看不到你屏幕上具体是哪一个审批实例。请告诉我是哪一类流程（审批流程里的审判处置流程、转生申请、申诉，还是调度），或者直接说明当前节点名称，我再说下一步是什么。\n\n一般来说：审批实例上的节点要靠“提交决定”完成，只有该节点指定的审批人能做；流程办完后要看下一站是哪个节点，需在“审批流程”页的实例里看指针位置。\n\n如果要我查你这个账号有多少节点在等你本人决定，我可以调用工具查计数（只返回数量），需要的话说一声。",
+        "en": "I don't know — I can't see any workflow instance, its steps or which step is current. My tools only return counts (how many steps are waiting for your decision), never case content.\n\nTo see a running instance's steps and where the pointer sits, open the \"Approval Workflow\" page and look under the running instances tab; the current step is the one marked pending, and \"Submit Decision\" there decides it (only the approver that step names, with the workflow approve permission). If you tell me what you'd like to check about your own pending decisions, I can call the counts tool."
       }
     },
     {
@@ -307,8 +207,8 @@
         "en": "What step has this dispatch reached?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "我查不到具体某一份调拨的进度，因为助手只给计数，看不到单份记录。请到侧栏「调度」页的「历史记录」页签查看：那里列出你所在殿作为发起殿或目标殿的全部调度记录，含待处理的那份，状态会写作草稿、待审批、已批准／已拒绝／已取消、已执行（暂居中）或已回归原殿。\n\n另外提醒一句：你的账号角色是 JUDGE，数据范围仅限本殿。批准、驳回与执行只有目标殿能做，所以如果这份调度的目标殿不是你所在殿，你只能看到它作为发起殿的记录，处理按钮也不会在你这里出现。",
+        "en": "I can't tell you that — I don't have any tool that reads dispatch records, and I never see individual souls, cases or records. To see a dispatch's current step, open the Dispatch page: the \"Pending Proposals\" tab shows proposals awaiting decision for your hall as target, and \"History\" lists every dispatch record where your hall is source or target, pending included, with its status (draft, proposed, approved/rejected/cancelled, executed/in residence, returned home)."
       }
     },
     {
@@ -317,8 +217,8 @@
         "en": "Which hall does the case belong to after the dispatch?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "关于调度的规则里，没有写「调拨后案子归哪一殿」这一条，我查不到，也就无法回答。建议问系统管理员（Administrator）。\n\n另外提醒一下：调度是让灵魂到另一个文明的殿暂居，它改变的是灵魂的暂居殿，不等于审判案子的归属；案子归属的规则在帮助条目里没有说明。",
+        "en": "I don't know — the help entries don't say how a judgment case's hall assignment follows a dispatch (or whether it changes at all). Ask the system administrator to confirm; the case page itself shows the hall the case currently belongs to."
       }
     },
     {
@@ -327,8 +227,8 @@
         "en": "How many letters are waiting for my reply?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "我这边没有查收件箱封数的工具（例如 inbox_counts），因此无法告诉你具体有几封待回复。请直接打开殿司收件箱，在「待回复」文件夹里看数量；如果打开该文件夹或写入回复时提示没有权限，请找系统管理员开通收件箱的查看或回复权限。",
+        "en": "I don't have a tool that counts the hall inbox folders, so I can't give you that number. The assistant is only given counts for the judgment queue and for workflows waiting on your decision, not the inbox.\n\nTo see it, open the hall office inbox (SoulLedger officer console) and look at the \"Awaiting reply\" folder, which lists exactly those letters."
       }
     },
     {
@@ -337,8 +237,8 @@
         "en": "Can a reply cite the statutes?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "可以。写回复时输入斜杠就能「引用律条」：搜索律条并把引用插进回信；这个功能只对持有审判查看权限的官员显示。发送和回复本身还需要收件箱回复权限。",
+        "en": "Yes, if you have the judgment read permission: while writing a reply, typing a slash opens \"cite a statute\", where you can search the statutes and insert a citation into the reply. If the slash option does not appear, you lack that permission; a system administrator can check it."
       }
     },
     {
@@ -347,8 +247,8 @@
         "en": "How many are waiting for me?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "目前没有流程节点在等您本人决定（待处理 0 件）。这只统计审批流程里的节点；若要看待审的审判案件，可在「审判队列」页查看各组。",
+        "en": "No approval steps are waiting for your decision right now — the total is 0, and you do hold the workflow approve permission, so nothing is being held back from you. For judgment cases instead, the Judgment Queue page shows your claimed and the unclaimed groups."
       }
     },
     {
@@ -357,8 +257,8 @@
         "en": "Who has to approve a change of station?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你说的“改站”在受刑请求里其实是两类情况，批准人不同：\n\n- 加项或减项的受刑请求：由这个受刑计划的原属殿（或不属于任何殿的管理员）决定，决定人需要「执行审判」权限。批准后立即生效，驳回可以附理由。\n- 重开审判的请求：由原审的结案判官本人决定；如果他已停用、调离原属殿或没有结案人记录，就由原属殿持改派权限的官员决定。批准会立即开启重审。\n\n撤回请求也是由提出请求的殿（或管理员）来做，同样需要「执行审判」权限。你现在这个页面是受刑请求页，等你决定的那些计划会带标记。",
+        "en": "That depends on the type of request. For a sentence request to amend the plan (add or remove a station), it is decided by the plan's home hall, or an administrator, and requires the judgment execute permission. For a request to reopen the judgment, it is decided by the judge who concluded the original case; if that judge is deactivated, has left the home hall or is not on record, an officer of the home hall holding the reassign permission decides. The page you are on lists one row per plan with a pending request, with rows waiting for you marked."
       }
     },
     {
@@ -367,8 +267,78 @@
         "en": "What can I do here?"
       },
       "answer": {
-        "zh-Hans": "",
-        "en": ""
+        "zh-Hans": "你是审判官（JUDGE），看的数据只覆盖本殿。\n\n- 流程：持有批准和推进权限，可以批你负责的步骤、推进流程；没有越级推进权限，卡住的节点要找管理员。\n- 用户管理：没有，所以看不到「待交付初始密码」里的密码操作、忘记密码通知里的「去用户页」等。\n- 调度：批准、驳回、执行、管理都没有，所以调度的批准、驳回、执行按钮以及「移交…」都用不了。\n- 其他权限（审判、账本、收件箱、审计等）助手查不到，要看对应页面能不能用；应当有而没有的，请找管理员开通。\n\n另外提醒：批准权限不等于能决定任何节点——只有该节点指定的审批人才行。",
+        "en": "I can answer questions about using the officer console: roles and permissions, the judgment queue, workflows and approvals, dispatch, rebirth applications and sentence requests, the hall-office inbox, the recycle bin, the scheduler, and notifications.\n\nI'm read-only — I can't approve, advance, claim, reply or delete anything; I'll point you to the page and button. My tools give counts only (your judgment queue, workflows waiting on you, and which permissions you hold), never souls' names or case details.\n\nAsk away — for example, \"why is my Submit Decision button greyed out?\" or \"how many cases are in my queue?\""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "结案后多久交给押解？",
+        "en": "How long after a case closes is it handed over for escort?"
+      },
+      "answer": {
+        "zh-Hans": "我没有这方面的规定——帮助条目里只有审判队列、认领、宣判和受刑请求的说明，没有“结案后多久交给押解”的时限，也没有能回答这个问题的工具。请去问系统管理员（管理员 / Administrator），或查看本殿针对押解与移交的内部规程。",
+        "en": "I don't know. The help entries I have don't cover the handover-for-escort timing after a case closes, so I can't give you a number of days or a deadline for it. Please ask the system administrator (管理员) for that rule."
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "这些裁决状态是什么意思？",
+        "en": "What do these verdict states mean?"
+      },
+      "answer": {
+        "zh-Hans": "我不确定你问的是哪里的「裁决状态」。我能直接依据的帮助条目里，只有审批流程这一处提到「裁决」：流程节点可以声明接受哪些裁决类型，节点上提交决定时只能用其中列出的那种；官员 App 的批准层在节点接受多种通过裁决时会让你选，只有一种就直接提交（见「审批流程」条目）。\n\n如果你指的是审判、转生申请或调度里的某个具体状态名，帮助条目里没有对应的定义，我不能凭猜测解释。麻烦你说一下是在哪个页面的哪个字段看到的，或者直接问系统管理员。",
+        "en": "I don't know — the help entries I have don't define the verdict states or their meanings. The entries describe the judgment queue groups (Mine, Unclaimed, Claimed by others, Deferred) and that verdict actions need the judgment execute permission, but not what each verdict state signifies.\n\nIf you tell me the exact state names you see on the case page, I can check whether anything in the entries covers them; otherwise please ask the system administrator."
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "押解要等哪一步批完？",
+        "en": "Which step must be approved before an escort?"
+      },
+      "answer": {
+        "zh-Hans": "你问的“押解”在后台没有对应的步骤或字面入口，帮助条目里也查不到，我不能凭猜测给答案。请说明它对应审批流程里的哪个节点，或直接问系统管理员。",
+        "en": "I do not know — the help entries I have do not describe an approval step that must precede an escort. I can tell you about workflow steps generally (only the approver a step names may \"Submit Decision\", and \"Advance\" moves the pointer without deciding), but nothing here ties a step to escorts. Please ask the system administrator."
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "今天待执行的调拨有几件？",
+        "en": "How many dispatches are due to be executed today?"
+      },
+      "answer": {
+        "zh-Hans": "我无法回答这个问题：我没有查询调度数量的工具，助手能取到的计数只有审判队列、等你审批的流程和收件箱，调度相关的计数并不在其中。\n\n请到侧栏「调度」页面查看：「待处理提案」是目标殿的待办，「历史记录」列出你所在殿作为发起殿或目标殿的全部调度记录（含待处理的），可以按状态自行筛选。另外提醒一下，你当前的权限范围只覆盖本殿，看不到其他殿的数据。",
+        "en": "I don't know — I have no tool that counts dispatches, so I can't give you that number. To see them, open Dispatch and check the \"Pending Proposals\" tab (your hall's queue as the target hall) or the \"History\" tab, which lists every dispatch record where your hall is source or target, pending ones included."
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "放弃的移交草稿去哪了？",
+        "en": "Where do discarded dispatch drafts go?"
+      },
+      "answer": {
+        "zh-Hans": "被删除的调度草稿可以在回收站里找。「永久删除」只适用于参考数据，调度草稿属于这类，所以要过了保留期才能永久删除；在那之前它一直留在回收站。\n\n但恢复和永久删除都只有管理员能做，而且绑定在某个殿的管理员只能动本殿的记录。你这边没有回收站相关的权限工具，能不能实际操作请以页面显示为准，需要的话可以找管理员（Administrator）处理。",
+        "en": "Deleted records, including dispatch drafts, go to the recycle bin. From there, only an administrator can restore or permanently delete them, and an administrator bound to a hall only for that hall's records. Note that permanent deletion applies only to reference data such as dispatch drafts, and only after the retention period."
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "待我押解的有几件？",
+        "en": "How many are waiting for me to escort?"
+      },
+      "answer": {
+        "zh-Hans": "我这边查不了「押解」的数量：我只有审判队列、待你审批的流程、收件箱这几项计数工具，没有押解相关的计数工具，所以无法给出具体件数。你可以去侧栏相关的押解／调度页面自己查看列表；如果页面上应当显示却看不到，或需要这项权限，请找系统管理员开通。",
+        "en": "I don't know — nothing in my help entries or tools covers an \"escort\" queue, and I have no tool that counts one. Please ask your system administrator (Administrator) about it."
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "目的地已满怎么办？",
+        "en": "What if the destination is full?"
+      },
+      "answer": {
+        "zh-Hans": "这个问题我不知道答案：助手工具和帮助条目里都没有「目的地已满」的处理办法。建议问本殿管理员，或在「系统设置」相关的页面查看提示。\n\n不过如果你的意思是某个殿的转生配额满了，帮助里有这一条：某一道本月配额满了之后，再办转生的灵魂留在原处等候，下个月或把上限调高后再办，不会丢；配额在「租户管理 › 改设置」的「转生配额」里改（本月已办、剩余量也能在「各殿概况」看到）。若你指的是调度或受刑计划的目的地，请具体说说是哪一页，我再帮你查。",
+        "en": "I don't know — the help entries I have on dispatch don't cover what happens when the destination hall is full, and my tools only return counts, so I can't check a hall's capacity. Please ask the system administrator about that.\n\nWhat I can tell you from the entries: a dispatch proposal needs a target civilization and a written reason of at least twenty characters, and approval, rejection and execution are done by the target hall's officers (or an administrator who belongs to no hall), so capacity questions would be settled on that side."
       }
     }
   ]
