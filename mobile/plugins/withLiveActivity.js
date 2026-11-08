@@ -84,6 +84,12 @@ module.exports = function withLiveActivity(config) {
       team: app.DEVELOPMENT_TEAM,
       tablet: !!config.ios?.supportsTablet,
     });
+    // With ccache on, the Podfile sets CC/CXX/LD to $(REACT_NATIVE_PATH)/scripts/xcode/ccache-clang.sh at
+    // project level. The app target gets REACT_NATIVE_PATH from its Pods xcconfig; this extension has no pods,
+    // so the path resolved to "/../../../node_modules/…" and the device build failed (2026-11-08). Give it the
+    // real react-native directory, as node resolves it from the app.
+    const rn = path.dirname(require.resolve("react-native/package.json", { paths: [cfg.modRequest.projectRoot] }));
+    settings.REACT_NATIVE_PATH = `"${rn}"`;
     const configs = project.pbxXCBuildConfigurationSection();
     for (const { value } of project.pbxXCConfigurationList()[target.pbxNativeTarget.buildConfigurationList].buildConfigurations) {
       Object.assign(configs[value].buildSettings, settings);
