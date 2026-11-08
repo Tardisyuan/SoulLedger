@@ -338,7 +338,8 @@ test("a letter can be read and answered", async ({ page, context }) => {
 test("each soul's values sit under their own column headers", async ({ page, context }) => {
   const seen = watch(context, page);
   await enter(page, "judge");
-  await page.goto("/souls");
+  // By name: which page of the list a soul lands on follows the seed's random ages, not the soul.
+  await page.goto("/souls?q=项羽");
   await expect(page.locator("main tbody tr").first()).toBeVisible();
   const headers = (await page.locator("main").getByRole("columnheader").allInnerTexts()).map((h) => h.trim());
   const column = headers.findIndex((h) => h.includes("死亡时间"));

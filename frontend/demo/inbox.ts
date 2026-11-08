@@ -22,7 +22,7 @@ const THREADS = [
   },
   {
     hoursAgo: 120,
-    letters: { zh: ["谢谢您上回回信。我想再问一句:转世之后,这些事还记得吗?"], en: ["Thank you for your last letter. One more question: after rebirth, will I remember any of this?"] },
+    letters: { zh: ["谢谢您上回回信。我想再问一句:转生之后,这些事还记得吗?"], en: ["Thank you for your last letter. One more question: after rebirth, will I remember any of this?"] },
     replied: { zh: "饮过孟婆汤便不记得了。", en: "Not after the soup." },
   },
 ];

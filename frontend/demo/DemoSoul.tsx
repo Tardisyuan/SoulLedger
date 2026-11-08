@@ -10,6 +10,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/src/components/brand/BrandMark";
+import { BRAND_WORD } from "@/src/components/layout/GlobalNav";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ROLE_OF_SKIN, SKINS, useEnter } from "./DemoEntrances";
@@ -107,7 +108,7 @@ export default function DemoSoul({ civ, onCiv }: { civ: SealCiv; onCiv: (civ: Se
         <aside className="flex w-80 shrink-0 flex-col gap-6">
           <div className="flex items-center gap-3">
             <BrandMark size={28} />
-            <span className="font-title text-md">灵魂簿</span>
+            <span className="font-title text-md">{BRAND_WORD}</span>
             <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("demo.soul.badge")}</span>
           </div>
           <div>
