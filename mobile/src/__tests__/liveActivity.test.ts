@@ -26,7 +26,7 @@ const CONTENT: LiveContent = {
   count: "第 4 / 4 步",
   compact: "4/4",
   place: "地狱九圈",
-  island: "Giulia Ferri · 地狱九圈",
+  island: "Giulia Ferri",
   first: "死亡",
   current: "地狱九圈",
   last: "地狱九圈",

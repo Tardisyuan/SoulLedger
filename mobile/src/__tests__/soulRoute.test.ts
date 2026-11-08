@@ -41,6 +41,9 @@ describe("soulRoute", () => {
   it("埃及: weighing while judging; 湮灭 ends the road and is marked so", () => {
     const judging = soulRoute({ me: me({ current_state: "JUDGING" }), civ: "eg", hall: "", now: NOW }, tr)!;
     expect([judging.place, judging.line, judging.path]).toEqual(["两真之殿 · 称心", "你的心正在天平上，和玛特之羽相比。", undefined]);
+    // The expanded island puts the place on top; the line under it names the soul without saying the place again.
+    const island = liveContent(judging, "QA·称心者", tr);
+    expect([island.place, island.island]).toEqual(["两真之殿 · 称心", "QA·称心者"]);
     const gone = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "eg", plan: plan("EG_ANNIHILATION"), hall: "", now: NOW }, tr)!;
     expect(gone.steps[gone.at]).toMatchObject({ id: "EG_ANNIHILATION", end: true });
     expect(liveContent(gone, "Nebamun", tr).ended).toBe(true);

@@ -224,7 +224,9 @@ export function liveContent(route: SoulRoute, soul: string, tr: Tr): LiveContent
     count: s ? tr("live.count", { n: String(n), total: String(total) }) : tr("demo.tour.progress", { n: String(n), total: String(total) }),
     compact: `${n}/${total}`,
     place: route.place,
-    island: s ? tr("live.island_sub", { soul, n: String(s.n) }) : tr("live.headline", { soul, step }),
+    // Off the ten-court route the step IS the place, which the expanded island already shows on the line
+    // above; repeating it read 「两真之殿 · 称心 / QA·称心者 · 两真之殿 · 称心」 on the iPhone (2026-11-08).
+    island: s ? tr("live.island_sub", { soul, n: String(s.n) }) : soul,
     first: route.steps[0].label,
     current: here.label,
     last: route.steps[route.steps.length - 1].label,
