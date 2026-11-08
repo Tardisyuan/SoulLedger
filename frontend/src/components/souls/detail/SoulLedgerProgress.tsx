@@ -2,7 +2,8 @@
 
 import type { Disposition, Judgment, Reincarnation, Soul } from "@soulledger/core/api";
 import { useQuery } from "@tanstack/react-query";
-import { realmsApi, soulsApi } from "@soulledger/core/api";
+import { soulsApi } from "@soulledger/core/api";
+import { useRealms } from "@soulledger/core/hooks/useRealms";
 import { soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,11 +130,7 @@ export function SoulLedgerProgress({
 /** 行程:这个灵魂的 path 画在它文明的形状上。两份数据各自加载、各自报错。 */
 function SoulRoute({ soulId, civilization }: { soulId: string; civilization: string }) {
   const { t } = useI18n();
-  const realms = useQuery({
-    queryKey: ["realms", "topology"],
-    queryFn: () => realmsApi.list().then((r) => r.data.results),
-    staleTime: 5 * 60_000,
-  });
+  const realms = useRealms();
   const path = useQuery({
     queryKey: soulKeys.path(soulId),
     queryFn: () => soulsApi.path(soulId).then((r) => r.data),

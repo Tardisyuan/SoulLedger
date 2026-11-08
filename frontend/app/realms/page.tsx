@@ -2,6 +2,8 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { realmsApi, type Realm, type RealmCapacityResult } from "@soulledger/core/api";
+import { realmKeys } from "@soulledger/core/query_keys";
+import { useRealms } from "@soulledger/core/hooks/useRealms";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -125,13 +127,9 @@ function RealmsPageContent() {
   const canManage = hasPermission("realms.manage");
   const [picked, setPicked] = useState<string | null>(null);
 
-  const realmsQuery = useQuery({
-    queryKey: ["realms", user?.tenant?.code, user?.role],
-    queryFn: () => realmsApi.list().then((r) => r.data.results || []),
-    enabled: !!user,
-  });
+  const realmsQuery = useRealms(undefined, { enabled: !!user });
   const occupancyQuery = useQuery({
-    queryKey: ["realms", "occupancy", user?.tenant?.code],
+    queryKey: realmKeys.occupancy(),
     queryFn: () => realmsApi.occupancy().then((r) => r.data),
     enabled: !!user,
   });
@@ -318,7 +316,7 @@ function RealmTree({
     onSuccess: (result) => {
       setSaved(result);
       setEditing(null);
-      void queryClient.invalidateQueries({ queryKey: ["realms"] });
+      void queryClient.invalidateQueries({ queryKey: realmKeys.all });
     },
   });
   const parents = new Set(rows.map((r) => r.realm.parent_realm).filter(Boolean));

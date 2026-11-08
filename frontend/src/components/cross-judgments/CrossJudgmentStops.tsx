@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   crossTenantJudgmentsApi,
-  realmsApi,
   type CrossTenantJudgment,
   type CrossTenantJudgmentParticipant,
 } from "@soulledger/core/api";
 import { crossJudgmentKeys } from "@soulledger/core/query_keys";
+import { useRealms } from "@soulledger/core/hooks/useRealms";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -47,16 +47,13 @@ function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTen
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const civilization = TENANT_CODE_TO_CIVILIZATION[seat.participant_tenant_code];
-  const realms = useQuery({
-    queryKey: ["realms", "list", { civilization }],
-    // 不再使用的界域(后端 `RETIRED_REALM_CODES`)不给选。
-    queryFn: () => realmsApi.list({ civilization }).then((r) => r.data.results.filter((realm) => !realm.is_retired)),
-    enabled: !!civilization,
-  });
+  const realmsQuery = useRealms(civilization, { enabled: !!civilization });
+  // 不再使用的界域(后端 `RETIRED_REALM_CODES`)不给选。
+  const realms = realmsQuery.data?.filter((realm) => !realm.is_retired);
   const [realmCode, setRealmCode] = useState(seat.sentence_realm_code);
   const [years, setYears] = useState(seat.sentence_years == null ? "" : String(seat.sentence_years));
   const [notes, setNotes] = useState(seat.sentence_notes);
-  const chosen = realms.data?.find((r) => r.realm_code === realmCode);
+  const chosen = realms?.find((r) => r.realm_code === realmCode);
 
   const submit = useMutation({
     mutationFn: () =>
@@ -90,7 +87,7 @@ function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTen
         onChange={(e) => setRealmCode(e.target.value)}
         options={[
           { value: "", label: t("sentence_plan.cross.realm_placeholder") },
-          ...(realms.data ?? []).map((r) => ({
+          ...(realms ?? []).map((r) => ({
             value: r.realm_code,
             label: resolveEnumDisplay(t, "realms.names", r.realm_code).label ?? r.realm_code,
           })),
