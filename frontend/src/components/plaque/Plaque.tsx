@@ -115,8 +115,14 @@ const COLLAPSE_AT = 60;
  * 把滚动设回 0,浏览器在下一帧画之前派发 scroll —— 普通的 setState 排在画之后,于是新页在顶上、标题行还收着,
  * 画出一帧再长回去(E2E mobile-chrome 逐帧采样两次都抓到:/souls y=0 compact,下一帧才展开)。
  * 同步提交让这次展开落在同一帧里。状态没变时 React 直接跳过,滚动中不多渲染。
+ *
+ * 换页(`route` 变了)在提交之后再判一次(2026-11-10)。此前换页后唯一的判定来自 scroll 事件:Next 的滚动复位
+ * 在提交的 layout 阶段,之后若没有一次 scroll 事件读到 0,标题行就一直收着,直到用户自己滚。passive effect 在
+ * 所有 layout effect 之后跑,读到的是复位之后的 y。**滞回照旧**(收着就只在 y === 0 展开):0 < y ≤ 60 时展开,
+ * 带长高 52 会把下面的内容往下推,滚动锚定跟着把 y 推过 60,于是又收起 —— 那会闪。新页落在 y > 0 是滚动复位
+ * 的事(Next 只在新页顶边不在视口里时才复位,`layout-router` 的 `getScrollTargetState`),不归这里管。
  */
-function useCompact(enabled: boolean, band: RefObject<HTMLElement | null>): boolean {
+function useCompact(enabled: boolean, band: RefObject<HTMLElement | null>, route?: string): boolean {
   const [compact, setCompact] = useState(false);
   useEffect(() => {
     if (!enabled) return;
@@ -132,7 +138,7 @@ function useCompact(enabled: boolean, band: RefObject<HTMLElement | null>): bool
     judge();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [enabled, band]);
+  }, [enabled, band, route]);
   return enabled && compact;
 }
 
@@ -165,6 +171,7 @@ export function Plaque({
   hall,
   heading = false,
   collapsible = false,
+  route,
 }: {
   title: string;
   /** 右栏的一般文字。≤ 768 不显示。 */
@@ -179,13 +186,15 @@ export function Plaque({
   heading?: boolean;
   /** 壳里的标题行:滚动时收成 44px。 */
   collapsible?: boolean;
+  /** 当前路由(壳传 pathname):变了就按新页重新判收不收,见 `useCompact`。 */
+  route?: string;
 }) {
   const { t } = useI18n();
   const band = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLHeadingElement & HTMLDivElement>(null);
   const Title = heading ? "h1" : "div";
   const narrow = useNarrow();
-  const compact = useCompact(collapsible, band);
+  const compact = useCompact(collapsible, band, route);
   useBandHeightVar(collapsible, band);
   const start: 0 | 1 = narrow ? 1 : 0;
   const [tier, setTier] = useState<0 | 1 | 2>(start);

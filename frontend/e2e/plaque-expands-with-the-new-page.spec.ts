@@ -32,13 +32,17 @@ test("从滚过的页点侧栏进另一页:新页在顶上时标题行没有一�
   // 测试量的是「从这里点侧栏」,不是「在收起的半途点」(同 fixtures.ts `selectPreset` 的等法)。
   await page.waitForFunction(() => document.querySelector("[data-testid='plaque']")!.getAnimations().length === 0);
 
+  // 不设帧数上限(此前 600 帧:rAF 被降频或点击前等得久,上限先到,后面的等待就永远等不到 —— 红成超时,
+  // 测试评审 2026-11-10 §4.3):采到新页之后再采 30 帧自己停。
   await page.evaluate(() => {
     const frames: Frame[] = [];
     (window as unknown as { __frames: Frame[] }).__frames = frames;
+    let after = 0;
     const tick = () => {
       const b = document.querySelector("[data-testid='plaque']");
       frames.push({ path: location.pathname, y: scrollY, compact: !!b?.hasAttribute("data-compact") });
-      if (frames.length < 600) requestAnimationFrame(tick);
+      if (location.pathname === "/souls") after += 1;
+      if (after < 30) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   });
@@ -48,16 +52,15 @@ test("从滚过的页点侧栏进另一页:新页在顶上时标题行没有一�
 
   // 新页落地后再多看一段,覆盖晚到的提交(加载边界 → 列表)。先取帧再断「展开」:那条红时,帧里的 scrollY 才说得出
   // 是「新页没落在顶上」(收着是对的)还是「落在顶上却没展开」(2026-11-09 唯一一次红只留下了「一直收着」)。
-  await page.waitForFunction(() => {
-    const f = (window as unknown as { __frames: Frame[] }).__frames;
-    const first = f.findIndex((x) => x.path === "/souls");
-    return first >= 0 && f.length - first >= 30;
-  });
+  await page.waitForFunction(
+    () => (window as unknown as { __frames: Frame[] }).__frames.filter((x) => x.path === "/souls").length >= 30
+  );
   const frames = await page.evaluate(() => (window as unknown as { __frames: Frame[] }).__frames);
   const last = frames.filter((f) => f.path === "/souls").slice(-3);
   await expect(band, `新页最后几帧:${JSON.stringify(last)}`).not.toHaveAttribute("data-compact");
+  // 新页真的落在了顶上 —— 不然下面那条量的是空集。红在这里时 scrollY 在消息里:不是 0 就是滚动复位的问题,不是标题行的。
   const arrived = frames.filter((f) => f.path === "/souls" && f.y === 0);
-  expect(arrived.length).toBeGreaterThan(0);
+  expect(arrived.length, `新页最后几帧:${JSON.stringify(last)}`).toBeGreaterThan(0);
   expect(
     arrived.filter((f) => f.compact),
     JSON.stringify(frames.filter((f) => f.path === "/souls").slice(0, 12))
