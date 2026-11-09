@@ -40,7 +40,51 @@ details[open] summary{margin-bottom:12px}
 </header>
 
 <article>
-<h2>第二十三批 · 徽记:星图留下,再要几个同等水准的新方向<span class="tag new">待回 · 2026-11-10</span></h2>
+<h2>第二十四批 · 徽记定稿:F 嵌彩做卡片,G 天体仪做其余,出全套<span class="tag new">待回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch24-reply.md</code>,稿子 <code>V4Batch24.dc.html</code>。</p>
+<section>
+<h3>用户的决定</h3>
+<ul>
+<li><strong>落地页四张卡片(约 240,右上,带魂火)用 F · 嵌彩</strong>:地府景泰蓝彼岸花、欧洲彩色玻璃尖窗、埃及有翼日轮胸饰、希腊马赛克油瓶。</li>
+<li><strong>其余所有地方用 G · 天体仪</strong>:空状态(12%)、页头水印(.07 / .09)、24px 单色小标、App 里出现徽记的地方。</li>
+<li>E 圆窗小景不用;B 星图这次也不用。</li>
+</ul>
+</section>
+<section>
+<h3>F · 嵌彩(卡片)要补的</h3>
+<ul>
+<li><strong>四张占位一致</strong>:外形可以各是各的(方牌、尖窗、胸饰、瓶),但放进同一个 240 方框时,视觉重心、上下留白、最大宽高要对齐,四张并排看是一排而不是高低不齐。</li>
+<li><strong>希腊马赛克减到约 300 个元素以内</strong>(现在约 1200)。落地页四张同时内联,元素太多会拖首屏;用大一点的嵌片或把背景区块合并成路径。</li>
+<li>深、浅两套;颜色走 <code>--civT / --metal / --glow</code>,金丝走 <code>--metal</code>。</li>
+<li>动效:一处主动效(建议:金丝描线一次,沿用 <code>.e-l</code> 的画线)+ 一处呼吸(建议:彩色嵌片的微弱光泽,周期 8–12 s,避开魂火 0.5–1 Hz);减少动效时有静止帧。</li>
+<li>光晕在 240 框内淡出(上次被裁成平边的问题别再出现)。</li>
+</ul>
+</section>
+<section>
+<h3>G · 天体仪(其余)要补的</h3>
+<ul>
+<li><strong>四张外形统一</strong>(这正是它负责小尺寸的原因),只靠中心物和底座区分文明。</li>
+<li><strong>24px 单色小标</strong>:另画一版,只留最外的环加中心物剪影,单色 <code>currentColor</code>,线宽按 24px 看得清来定。</li>
+<li>空状态 12%、页头水印 .07 / .09 下要能认出是哪个文明:请在合成图里附这三档的样子。</li>
+<li><strong>App 要用</strong>:react-native-svg 读属性上色,<strong>不能用滤镜、不能用 <code>&lt;style&gt;</code> 里的选择器</strong>;渐变可以。请给一份 App 能直接用的版本(或说明哪些效果在 App 里去掉)。</li>
+<li>深、浅两套;动效一处主动效(建议:环慢转)+ 一处呼吸。</li>
+</ul>
+</section>
+<section>
+<h3>交付</h3>
+<ul>
+<li>文件放 <code>soulledger-v4-pages/emblems-f/</code>(<code>soulledger-emblem-&lt;cn|eu|eg|gr&gt;-&lt;dark|light&gt;.svg</code>)和 <code>emblems-g/</code>(同名,另加四个 <code>-mark.svg</code>)。</li>
+<li>沿用 <code>.e-l / .e-l2 / .e-halo / .e-p / .e-af / .e-hl / .e-glow2</code> 这些 class,代码里的画线、反光、3D 倾斜直接挂上。</li>
+<li>没有新文案键、没有新 egy 词;已定稿的 <code>emblems/</code>、<code>emblems-b/</code>、<code>emblems-c/</code> 别动,上线后我们这边删。</li>
+</ul>
+<p class="ask">请给:两套 SVG 文件、一张总览合成图(F 四卡 + G 四卡 + G 在 12% / .07 / 24px 三档,深浅各一),以及每处动效的说明。</p>
+</section>
+</article>
+
+<details>
+<summary>第二十三批 · 星图留下,再要新方向(E 圆窗 / F 嵌彩 / G 天体仪)<span class="tag done">已回 · F 卡片 + G 其余</span></summary>
+<article>
+<h2>第二十三批 · 徽记:星图留下,再要几个同等水准的新方向<span class="tag done">已回 · 2026-11-10</span></h2>
 <p>回复写到 <code>v4-batch23-reply.md</code>,稿子 <code>V4Batch23.dc.html</code>,每个方向一张四卡合成图(深色,和第二十二批一样的版式)。</p>
 <section>
 <h3>用户对第二十二批的反馈</h3>
@@ -69,6 +113,7 @@ details[open] summary{margin-bottom:12px}
 <p class="ask">请给:每个方向的四卡合成图(深色)和一句话说明;再把 B 原版也放进同一份稿子里做对照。最推荐哪一个、为什么。</p>
 </section>
 </article>
+</details>
 
 <details>
 <summary>第二十二批 · 四个新方向(A 冥门 / B 星图 / C 信物 / D 一笔)<span class="tag done">已回 · B 留下</span></summary>
