@@ -11,7 +11,7 @@ jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   judgmentApi: { negativeConfessions: jest.fn(), recordNegativeConfession: jest.fn() },
 }));
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k), locale: "zh-Hans", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, params: "json", locale: "zh-Hans", hydrated: true }));
 
 const list = judgmentApi.negativeConfessions as jest.Mock;
 const record = judgmentApi.recordNegativeConfession as jest.Mock;

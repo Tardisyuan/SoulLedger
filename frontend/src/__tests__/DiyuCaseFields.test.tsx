@@ -14,16 +14,7 @@ jest.mock("@soulledger/core/api", () => ({
   wangsiApi: { fileGrievance: jest.fn(), decideGrievance: jest.fn() },
 }));
 const t = (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k);
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({
-    t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k),
-    locale: "zh-Hans",
-    hydrated: true,
-    formatDate: (v: string) => `D(${v})`,
-    formatDateTime: (v: string) => `DT(${v})`,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, params: "json", locale: "zh-Hans", hydrated: true, formatDate: (v: string) => `D(${v})`, formatDateTime: (v: string) => `DT(${v})` }));
 
 const decide = wangsiApi.decideGrievance as jest.Mock;
 
