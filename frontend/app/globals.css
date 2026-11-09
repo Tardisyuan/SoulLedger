@@ -2091,7 +2091,7 @@ html.theme-switching *::after {
 }
 
 /* ── 落地页主视觉的三样代码效果(2026-11-09 用户定 A;逻辑在 src/lib/emblemFx.ts)────────────
-   只认 SVG 里的类名(.e-l / .e-l2 主线、.e-halo 主线下的柔线、.e-t 刻度),不认几何。落地页是第二十批 C 版(public/v4/emblems-c)。
+   只认 SVG 里的类名(.e-l / .e-l2 主线、.e-halo 主线下的柔线、.e-t 刻度),不认几何。落地页是第二十四批 F 版(public/v4/emblems-f)。
    只动 transform / opacity(描线那一秒是 stroke-dashoffset,一次性),不动 filter。
    深浅两份都在 DOM 里,哪份显示由上面那条 `.v4-emblem[data-theme]` 规则决定。 */
 

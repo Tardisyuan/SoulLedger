@@ -4,9 +4,9 @@
  * `stroke`: a caller passes one ink and nothing else about colour.
  *
  * Every place the app draws a civilization emblem is 12–16pt (inline, divider), so the four
- * civilizations use Design v4 batch 19's small marks (`soulledger-emblem-<civ>-mark.svg`, 24 grid,
- * 1.6 stroke, round caps — the same files as the web's `public/v4/emblems/`): the full 240 emblems
- * turn to mud below 24. The neutral skin keeps the ledger-and-brush mark (viewBox 48), whose
+ * civilizations use Design v4 batch 24's small marks — the armillary sphere: a ring, the horizon band
+ * sticking out of it, and each civilization's centre (`soulledger-emblem-<civ>-mark.svg`, 24 grid —
+ * the same files as the web's `public/v4/emblems/`): the full 240 emblems turn to mud below 24. The neutral skin keeps the ledger-and-brush mark (viewBox 48), whose
  * `full` / `compact` drawings are picked by size.
  */
 import type { ReactNode } from "react";
@@ -29,16 +29,28 @@ const LEDGER: Record<"full" | "compact", Drawing> = {
   compact: { rect: LEDGER_RECT, paths: ["M14 12v30M8 20.5h26", BRUSH] },
 };
 
-/** Batch 19 small marks, viewBox 24, element for element. */
-export const MARKS: Record<Exclude<CivKey, "neutral">, Drawing> = {
-  cn: {
-    circle: { cx: 12, cy: 12, r: 9.5 },
-    rect: { x: 9, y: 9, width: 6, height: 6, rx: 0.6 },
-    paths: ["M12 2.5v4M12 17.5v4M3.8 7.2l3.4 2M16.8 14.8l3.4 2M3.8 16.8l3.4-2M16.8 9.2l3.4-2"],
-  },
-  eu: { paths: ["M6 11 12 3l6 8Z", "M3 13.5h18M5.5 13.5 12 21l6.5-7.5M8 16.5h8"] },
-  eg: { paths: ["M12 5v14M8.5 20.5h7M3.5 8h17M5.5 8 3 14h5ZM18.5 8 16 14h5Z"] },
-  gr: { circle: { cx: 12, cy: 14, r: 1.6 }, paths: ["M12 21v-7M12 14 5.5 6.5M12 14V4.5M12 14l6.5-7.5", "M3 21.5h18"] },
+/** Batch 24 small marks, viewBox 24, element for element; `ink` is the caller's one colour. */
+const BAND = "M22.75 8.51L22.8 8.74L22.8 8.98L22.76 9.24L22.67 9.51L22.53 9.79L22.35 10.08L22.13 10.38L21.86 10.69M3.25 16.74L2.85 16.65L2.5 16.54L2.18 16.41L1.91 16.26L1.68 16.09L1.49 15.91L1.35 15.71L1.25 15.49L1.2 15.26L1.2 15.02L1.24 14.76L1.33 14.49L1.47 14.21L1.65 13.92L1.87 13.62L2.14 13.31M20.75 7.26L21.15 7.35L21.5 7.46L21.82 7.59L22.09 7.74L22.32 7.91L22.51 8.09L22.65 8.29L22.75 8.51";
+const MARKS: Record<Exclude<CivKey, "neutral">, (ink: string) => ReactNode> = {
+  cn: (ink) => <Circle cx={12} cy={12} r={3.6} fill={ink} />,
+  eu: (ink) => (
+    <>
+      <Circle cx={12} cy={12} r={3.9} fill="none" stroke={ink} strokeWidth={1.2} />
+      <Path d="M9.9 11.1h4.2L12 14.3Z" fill={ink} />
+    </>
+  ),
+  eg: (ink) => (
+    <>
+      <Circle cx={12} cy={12} r={2.2} fill={ink} />
+      <Circle cx={12} cy={12} r={4.4} fill="none" stroke={ink} strokeWidth={1} />
+    </>
+  ),
+  gr: (ink) => (
+    <>
+      <Circle cx={12} cy={12} r={4.4} fill="none" stroke={ink} strokeWidth={1.2} />
+      <Path d="M12 7.6v8.8M7.6 12h8.8M10 8.1Q8.4 12 10 15.9M14 8.1Q15.6 12 14 15.9" fill="none" stroke={ink} strokeWidth={1} />
+    </>
+  ),
 };
 
 function shapes(d: Drawing) {
@@ -66,14 +78,16 @@ export function Emblem({
   stroke: string;
   /** Neutral only: each mark is one drawing. */
   variant?: "full" | "compact";
-  /** Neutral only (viewBox 48): the marks keep the design's 1.6 on 24. */
+  /** Neutral only (viewBox 48): the civilization marks carry the design's own widths. */
   strokeWidth?: number;
   testID?: string;
 }) {
   if (civ !== "neutral") {
     return (
-      <Svg testID={testID} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-        {shapes(MARKS[civ])}
+      <Svg testID={testID} width={size} height={size} viewBox="0 0 24 24">
+        <Circle cx={12} cy={12} r={8.2} fill="none" stroke={stroke} strokeWidth={1.5} />
+        <Path d={BAND} fill="none" stroke={stroke} strokeWidth={1.3} strokeLinecap="round" />
+        {MARKS[civ](stroke)}
       </Svg>
     );
   }

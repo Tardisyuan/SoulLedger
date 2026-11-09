@@ -5,7 +5,7 @@
  *   2. 金属光泽:每 11 秒一道斜光扫过(CSS,`globals.css` 的 `.emblem-sheen`)。
  *   3. 卡片随指针轻微倾斜(≤ 6°),主视觉比卡底多挪几像素。
  * 只认元素的类名(`.e-l` 主线、`.e-halo` 主线下的柔线、`.e-l2`、`.e-t` 刻度),不认几何。
- * 落地页用 Design 第二十批的 C 版(2.5D,`public/v4/emblems-c/`),别处用 B 版(`public/v4/emblems/`)。
+ * 落地页用 Design 第二十四批的 F 版(嵌彩,`public/v4/emblems-f/`),别处用 G 版(天体仪,`public/v4/emblems/`)。
  * 这里只放纯逻辑与 DOM 小操作,组件在 `components/landing/LandingEmblem.tsx` 与 `Landing.tsx`。
  */
 

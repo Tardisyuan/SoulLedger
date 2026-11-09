@@ -1,7 +1,7 @@
 /**
  * 冥界地图(v4 阶段 5):Design 交付的 SVG 能安全地插进页面,站码与代码一致,状态按行程画对。
  *
- * 读文件:八张地图与十六个主视觉(第二十批:emblems/ 是 B 版,emblems-c/ 是落地页卡上的 C 版)就在 public/v4/ 里,改一份 SVG 不会让 import 图选中这份测试,
+ * 读文件:八张地图与十六个主视觉(第二十四批:emblems/ 是 G 版天体仪,emblems-f/ 是落地页卡上的 F 版嵌彩)就在 public/v4/ 里,改一份 SVG 不会让 import 图选中这份测试,
  * 所以它在 jest.always-run.txt 里。
  */
 import { readFileSync, readdirSync } from "node:fs";
@@ -55,9 +55,9 @@ const files = (dir: string) => readdirSync(path.join(PUBLIC_V4, dir)).filter((f)
 const MAPS = files("maps");
 const EMBLEMS = files("emblems").filter((f) => !f.endsWith("-mark.svg"));
 const MARKS = files("emblems").filter((f) => f.endsWith("-mark.svg"));
-/** 第二十批 C 版(2.5D):只给落地页卡上的内联主视觉(EMBLEM_SVGS 由它生成);别处的 <img> 用 emblems/ 里的 B 版。 */
-const EMBLEMS_C = files("emblems-c");
-const ALL_EMBLEMS = [...EMBLEMS, ...EMBLEMS_C];
+/** 第二十四批 F 版(嵌彩):只给落地页卡上的内联主视觉(EMBLEM_SVGS 由它生成);别处的 <img> 用 emblems/ 里的 G 版。 */
+const EMBLEMS_F = files("emblems-f");
+const ALL_EMBLEMS = [...EMBLEMS, ...EMBLEMS_F];
 const HEROES = files("maps/nodes");
 const SOULFIRE = files("soulfire");
 const read = (rel: string) => readFileSync(path.join(PUBLIC_V4, rel), "utf8");
@@ -67,8 +67,8 @@ describe("the delivered SVGs are safe to put in the page", () => {
   it("are all there: four civilizations, dark and light, maps and emblems", () => {
     expect(MAPS).toHaveLength(8);
     expect(EMBLEMS).toHaveLength(8);
-    expect(EMBLEMS_C).toHaveLength(8);
-    expect(EMBLEMS_C.map((f) => path.basename(f)).sort()).toEqual(EMBLEMS.map((f) => path.basename(f)).sort());
+    expect(EMBLEMS_F).toHaveLength(8);
+    expect(EMBLEMS_F.map((f) => path.basename(f)).sort()).toEqual(EMBLEMS.map((f) => path.basename(f)).sort());
     expect(MARKS).toHaveLength(4);
   });
 
@@ -103,8 +103,8 @@ describe("the delivered SVGs are safe to put in the page", () => {
     }
   });
 
-  // C 版的柔影(`.e-shadow`)是一条画椭圆的路径 `M x y a rx ry …`(从最左点起),同样要整个落在框里,不然边被切平。
-  it.each(EMBLEMS_C)("%s keeps its soft shadow inside the 240×240 viewBox", (rel) => {
+  // F 版的柔影(`.e-shadow`)是一条画椭圆的路径 `M x y a rx ry …`(从最左点起),同样要整个落在框里,不然边被切平。
+  it.each(EMBLEMS_F)("%s keeps its soft shadow inside the 240×240 viewBox", (rel) => {
     const shadows = [...read(rel).matchAll(/class="e-shadow"[^>]*\sd="M([-\d.]+) ([-\d.]+)a([-\d.]+) ([-\d.]+) /g)];
     for (const m of shadows) {
       const [x, y, rx, ry] = m.slice(1).map(Number);
@@ -116,7 +116,7 @@ describe("the delivered SVGs are safe to put in the page", () => {
   });
 
   // 主视觉用 <img> 加载,<img> 里的 SVG 不加载网页字体:字要转成路径(第十九批起的冥字印),不能留 <text>。
-  // C 版内联在页面里,但首帧时网页字体里「冥」那一片未必到了:同样转成路径,不闪字。
+  // F 版内联在页面里,但首帧时网页字体里「冥」那一片未必到了:同样转成路径,不闪字。
   it.each(ALL_EMBLEMS)("%s draws no text (an <img> SVG would fall back to a system font)", (rel) => {
     expect(read(rel)).not.toMatch(/<text\b|font-family/);
   });
@@ -127,7 +127,8 @@ describe("the delivered SVGs are safe to put in the page", () => {
     const body = read(rel).replace(/^<svg[^>]*>|<\/svg>\s*$/g, "");
     const shapes = [...body.matchAll(/<(path|circle|rect)\b([^>]*?)\/>/g)];
     expect(shapes.length).toBeGreaterThan(0);
-    for (const [, tag, attrs] of shapes) expect(source).toContain(`<${tag}${attrs.replace(/\s+$/, "")} />`);
+    const jsx = (attrs: string) => attrs.replace(/\s+$/, "").replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    for (const [, tag, attrs] of shapes) expect(source).toContain(`<${tag}${jsx(attrs)} />`);
   });
 
   it("parseMapSvg drops script, style, handlers and outside links even if a file grows them", () => {
@@ -155,19 +156,20 @@ describe("the delivered SVGs are safe to put in the page", () => {
     expect(local.querySelector("style")).not.toBeNull();
   });
 
-  // 落地页的描线与光泽只认类名(emblemFx.ts):每份主视觉都要有主线 .e-l、刻度 .e-t,样式写在自己的作用域里。
+  // 落地页的描线与光泽只认类名(emblemFx.ts):每份主视觉都要有主线 .e-l,G 要有刻度 .e-t、F 要有金丝 .e-l2,样式写在自己的作用域里。
   it.each(ALL_EMBLEMS)("%s has the classes the landing effects work off, and scopes its own style", (rel) => {
     const text = read(rel);
     const [, civ, theme] = rel.match(/emblem-(\w+)-(dark|light)\.svg$/)!;
-    const v = rel.startsWith("emblems-c") ? "C" : "B";
+    const v = rel.startsWith("emblems-f") ? "F" : "G";
     const svg = parseMapSvg(text, { keepStyle: true })!;
     expect(svg.querySelectorAll(".e-l").length).toBeGreaterThan(0);
-    expect(svg.querySelectorAll(".e-t").length).toBeGreaterThan(0);
+    // G 有刻度(.e-t,描线后淡入);F 嵌彩没有刻度,金丝是 .e-l2(描线就画它)。
+    expect(svg.querySelectorAll(v === "G" ? ".e-t" : ".e-l2").length).toBeGreaterThan(0);
     expect(svg.getAttribute("class")).toBe("emblem2");
     expect(svg.getAttribute("data-civ")).toBe(civ);
     expect(svg.getAttribute("data-theme")).toBe(theme);
     expect(svg.getAttribute("data-v")).toBe(v);
-    // 每条规则都写在自己的作用域下(B、C、深浅同页也不串):去掉 @keyframes 与 @media 外壳,剩下的选择器都以它开头。
+    // 每条规则都写在自己的作用域下(F、G、深浅同页也不串):去掉 @keyframes 与 @media 外壳,剩下的选择器都以它开头。
     const scope = `.emblem2[data-v="${v}"][data-civ="${civ}"][data-theme="${theme}"] `;
     const css = svg
       .querySelector("style")!
@@ -182,17 +184,17 @@ describe("the delivered SVGs are safe to put in the page", () => {
 
   // 落地页把主视觉原文在构建时嵌进来(src/generated/emblemSvgs.ts),服务端第一帧就有图。它不能和文件漂移,
   // 而且是不经运行时消毒直接插进页面的:所以这里证明消毒器对它无事可做。
-  it("the embedded emblems are exactly the C files (if not, rerun the gen-emblem-svgs script in frontend)", () => {
-    expect(Object.keys(EMBLEM_SVGS).sort()).toEqual(EMBLEMS_C.map((rel) => rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]).sort());
-    for (const rel of EMBLEMS_C) expect(EMBLEM_SVGS[rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]]).toBe(read(rel));
+  it("the embedded emblems are exactly the F files (if not, rerun the gen-emblem-svgs script in frontend)", () => {
+    expect(Object.keys(EMBLEM_SVGS).sort()).toEqual(EMBLEMS_F.map((rel) => rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]).sort());
+    for (const rel of EMBLEMS_F) expect(EMBLEM_SVGS[rel.match(/emblem-(\w+-(?:dark|light))\.svg$/)![1]]).toBe(read(rel));
   });
 
-  it.each(EMBLEMS_C)("%s loses nothing to parseMapSvg's keepStyle sanitising, so it can go in unsanitised", (rel) => {
+  it.each(EMBLEMS_F)("%s loses nothing to parseMapSvg's keepStyle sanitising, so it can go in unsanitised", (rel) => {
     const raw = new DOMParser().parseFromString(read(rel), "image/svg+xml").documentElement;
     expect(parseMapSvg(read(rel), { keepStyle: true })!.outerHTML).toBe(raw.outerHTML);
   });
 
-  // 深浅两份同在 DOM 里(按主题 display:none 一份),四张卡同在一页:id 不能有一个重复。B、C 两版一起查
+  // 深浅两份同在 DOM 里(按主题 display:none 一份),四张卡同在一页:id 不能有一个重复。F、G 两版一起查
   // (哪天 B 也内联到同一页不会撞);每个 url(#…) 都要指向自己文件里的 id(渐变 ink / ip / sh / bg)。
   it("ids are unique across all sixteen emblems, and every url(#id) resolves in its own file", () => {
     for (const rel of ALL_EMBLEMS) {

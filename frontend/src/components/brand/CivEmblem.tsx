@@ -3,7 +3,7 @@ import type { SealCiv } from "@/src/components/plaque/Seal";
 import { cn } from "@/lib/utils";
 
 /**
- * 文明主视觉(规范 v4 第二批定稿,Design 第八批 `emblems/`):地府刻度转、欧洲九圈明暗、埃及横梁摆、希腊光流。
+ * 文明主视觉(Design 第二十四批定稿 G 版天体仪,`emblems/`):外圈刻度慢转、中心呼吸;四个文明靠中心物与底座区分。
  * 概览主卡右上角、/rebirths 的「没有转世」页、空态用它;落地页四张卡用内联版 `LandingEmblem`(原文构建时嵌入,服务端第一帧就有图)。
  *
  * 用 `<img>` 载 SVG:动画写在 SVG 自己的 <style> 里,只在图里生效,不进文档;那段样式自带
@@ -14,37 +14,37 @@ import { cn } from "@/lib/utils";
  * 不加载网页字体,留 `<text>` 就落回系统字体。32px 及以下换成单色小号(`-mark.svg`,24 网格):
  * 完整徽记缩到这么小,刻度和读数格糊成一片。小号内联,`currentColor` 跟随文字色。
  *
- * 第二十批(用户 2026-11-09 定):这里用 B 版(调细、加层次,public/v4/emblems),落地页卡上用 C 版(2.5D,emblems-c)。
- * B 版的冥字印同样已转成路径。
+ * 第二十四批(用户 2026-11-10 定):这里用 G 版天体仪(public/v4/emblems),落地页卡上用 F 版嵌彩(emblems-f)。
+ * 小号是一圈环加伸出环外的一段地平环,中间是各文明的中心物(Design:只留环加中心物时像靶心)。
  */
 const MARK_MAX = 32;
 
-// 与 public/v4/emblems/soulledger-emblem-<civ>-mark.svg 逐元素一致(underworldMap.test.ts 核对)。
+// 与 public/v4/emblems/soulledger-emblem-<civ>-mark.svg 逐元素一致(underworldMap.test.ts 核对;属性名按 JSX 写成驼峰)。
 const mark = (children: ReactNode) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="block size-full">
+  <svg viewBox="0 0 24 24" className="block size-full">
+    <circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M22.75 8.51L22.8 8.74L22.8 8.98L22.76 9.24L22.67 9.51L22.53 9.79L22.35 10.08L22.13 10.38L21.86 10.69M3.25 16.74L2.85 16.65L2.5 16.54L2.18 16.41L1.91 16.26L1.68 16.09L1.49 15.91L1.35 15.71L1.25 15.49L1.2 15.26L1.2 15.02L1.24 14.76L1.33 14.49L1.47 14.21L1.65 13.92L1.87 13.62L2.14 13.31M20.75 7.26L21.15 7.35L21.5 7.46L21.82 7.59L22.09 7.74L22.32 7.91L22.51 8.09L22.65 8.29L22.75 8.51" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     {children}
   </svg>
 );
 const MARKS: Record<SealCiv, ReactNode> = {
-  cn: mark(
-    <>
-      <circle cx="12" cy="12" r="9.5" />
-      <path d="M12 2.5v4M12 17.5v4M3.8 7.2l3.4 2M16.8 14.8l3.4 2M3.8 16.8l3.4-2M16.8 9.2l3.4-2" />
-      <rect x="9" y="9" width="6" height="6" rx=".6" />
-    </>,
-  ),
+  cn: mark(<circle cx="12" cy="12" r="3.6" fill="currentColor" />),
   eu: mark(
     <>
-      <path d="M6 11 12 3l6 8Z" />
-      <path d="M3 13.5h18M5.5 13.5 12 21l6.5-7.5M8 16.5h8" />
+      <circle cx="12" cy="12" r="3.9" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M9.9 11.1h4.2L12 14.3Z" fill="currentColor" />
     </>,
   ),
-  eg: mark(<path d="M12 5v14M8.5 20.5h7M3.5 8h17M5.5 8 3 14h5ZM18.5 8 16 14h5Z" />),
+  eg: mark(
+    <>
+      <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1" />
+    </>,
+  ),
   gr: mark(
     <>
-      <path d="M12 21v-7M12 14 5.5 6.5M12 14V4.5M12 14l6.5-7.5" />
-      <circle cx="12" cy="14" r="1.6" />
-      <path d="M3 21.5h18" />
+      <circle cx="12" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M12 7.6v8.8M7.6 12h8.8M10 8.1Q8.4 12 10 15.9M14 8.1Q15.6 12 14 15.9" fill="none" stroke="currentColor" strokeWidth="1" />
     </>,
   ),
 };

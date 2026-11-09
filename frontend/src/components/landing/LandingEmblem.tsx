@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 /**
  * 落地页卡上的文明主视觉,内联 SVG 版(描线与光泽要够到图里的元素,`<img>` 里的够不到)。
  *
- * 用 Design 第二十批的 C 版(2.5D,public/v4/emblems-c;用户 2026-11-09 定:卡上用 C,别处的 CivEmblem 用 B)。
- * SVG 原文在构建时嵌进来(`src/generated/emblemSvgs.ts`,由 `scripts/gen-emblem-svgs.mjs` 从 public/v4/emblems-c 生成,
+ * 用 Design 第二十四批的 F 版(嵌彩,public/v4/emblems-f;用户 2026-11-10 定:卡上用 F,别处的 CivEmblem 用 G 天体仪)。
+ * SVG 原文在构建时嵌进来(`src/generated/emblemSvgs.ts`,由 `scripts/gen-emblem-svgs.mjs` 从 public/v4/emblems-f 生成,
  * underworldMap.test.ts 核对它和文件逐字相同、消毒后不少一样东西)—— 所以服务端渲染的第一帧就有图,不等水合和请求。
  * 深浅两份都在 DOM 里,按 `:root.light` 只显示一份(globals.css 的 `.v4-emblem`,和 `<img>` 版同一条规则);
  * 两份的渐变 id 各带文明与主题,不会撞(同一测试核对)。
@@ -90,7 +90,7 @@ export function LandingEmblem({ civ, size, className }: { civ: SealCiv; size: nu
           key={theme}
           data-theme={theme}
           className="v4-emblem relative block size-full"
-          style={{ "--sheen-mask": `url("/v4/emblems-c/soulledger-emblem-${civ}-${theme}.svg")` } as CSSProperties}
+          style={{ "--sheen-mask": `url("/v4/emblems-f/soulledger-emblem-${civ}-${theme}.svg")` } as CSSProperties}
         >
           {/* 原文来自仓库里的静态文件,构建时嵌入;没有脚本、事件属性、外链(underworldMap.test.ts 逐份核对)。 */}
           <span className="block size-full [&>svg]:block [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: withDrawLengths(EMBLEM_SVGS[`${civ}-${theme}`]) }} />
