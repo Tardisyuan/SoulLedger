@@ -2091,23 +2091,24 @@ html.theme-switching *::after {
 }
 
 /* ── 落地页主视觉的三样代码效果(2026-11-09 用户定 A;逻辑在 src/lib/emblemFx.ts)────────────
-   只认 SVG 里的类名(.e-l / .e-l2 主线、.e-t 刻度),不认几何 —— Design 还在改线稿。
+   只认 SVG 里的类名(.e-l / .e-l2 主线、.e-halo 主线下的柔线、.e-t 刻度),不认几何。落地页是第二十批 C 版(public/v4/emblems-c)。
    只动 transform / opacity(描线那一秒是 stroke-dashoffset,一次性),不动 filter。
    深浅两份都在 DOM 里,哪份显示由上面那条 `.v4-emblem[data-theme]` 规则决定。 */
 
 /* 1. 描线:纯 CSS,页面一打开就画(没有 JS 也画,不会先露整图再藏起来)。主线在渲染时带上 pathLength="1"
       (`withDrawLengths`),所以 dasharray / offset 用 1 就是整条线。`backwards`:等待的那一小段里停在起点(线藏着);
       不带 forwards:画完回到文件自己的样子。自己有动画的元素(`em2-*`,如欧洲的九圈明暗)不参与 ——
-      `animation` 会顶掉它们自己的那条,它们本来就在动,直接出现。
+      `animation` 会顶掉它们自己的那条,它们本来就在动,直接出现。`.e-halo` 与它上面的 `.e-l` 同一条路径,一起画;
+      自带虚线的 `.e-tk`(C 版地府的刻度带,主动效就是它的 dashoffset)与 `.e-flow` 不是这三类,不参与。
       JS 到了之后:`fx-wait` 先停着(开头不在视口里的卡,快进视口时去掉它,动画从头来),`fx-done` 画过了(之后换主题、
       重挂都不再画)。 */
-.emblem-fx .emblem2 :is(.e-l, .e-l2):not([class*="em2-"]) {
+.emblem-fx .emblem2 :is(.e-l, .e-l2, .e-halo):not([class*="em2-"]) {
   animation: emblem-draw 1s cubic-bezier(0.4, 0, 0.2, 1) 150ms backwards;
 }
 .emblem-fx .emblem2 .e-t:not([class*="em2-"]) {
   animation: emblem-tick-in 450ms ease-out 900ms backwards;
 }
-.emblem-fx .emblem2:is(.fx-wait, .fx-done) :is(.e-l, .e-l2, .e-t):not([class*="em2-"]) {
+.emblem-fx .emblem2:is(.fx-wait, .fx-done) :is(.e-l, .e-l2, .e-halo, .e-t):not([class*="em2-"]) {
   animation-name: none;
 }
 @keyframes emblem-draw {
@@ -2179,7 +2180,7 @@ html.theme-switching *::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .emblem-fx .emblem2 :is(.e-l, .e-l2, .e-t):not([class*="em2-"]) {
+  .emblem-fx .emblem2 :is(.e-l, .e-l2, .e-halo, .e-t):not([class*="em2-"]) {
     animation-name: none;
   }
   .emblem-sheen {

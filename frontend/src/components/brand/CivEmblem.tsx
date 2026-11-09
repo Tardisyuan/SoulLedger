@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils";
  * 第十九批重画:地府的冥字印在 SVG 里已转成路径(Noto Serif SC 600 的字形)——`<img>` 里的 SVG
  * 不加载网页字体,留 `<text>` 就落回系统字体。32px 及以下换成单色小号(`-mark.svg`,24 网格):
  * 完整徽记缩到这么小,刻度和读数格糊成一片。小号内联,`currentColor` 跟随文字色。
+ *
+ * 第二十批(用户 2026-11-09 定):这里用 B 版(调细、加层次,public/v4/emblems),落地页卡上用 C 版(2.5D,emblems-c)。
+ * B 版的冥字印同样已转成路径。
  */
 const MARK_MAX = 32;
 
