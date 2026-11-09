@@ -192,6 +192,6 @@ export function judgingLine(
   const open = judgments.filter((j) => !j.concluded_at).sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
   if (!open) return null;
   if (civilization === "EGYPTIAN") return open.verdict == null ? { kind: "weighing" } : null;
-  const court = open.court.trim();
+  const court = (open.court ?? "").trim();
   return court ? { kind: "court", court } : null;
 }

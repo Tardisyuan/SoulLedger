@@ -365,6 +365,8 @@ export default function WelcomePage() {
   // 审计日志要 audit.read:判官、巡察没有这一项,请求必然 403,此前整栏写「加载失败」(演示站 2026-11-10 看到,
   // 正式环境一样)。没有这项权限就不请求、不画这一栏。
   const canAudit = hasPermission("audit.read");
+  // 匿名访客照旧看见这一栏的空状态(不请求、不编造);只给登录了却没有这项权限的人藏起来。
+  const showActivity = canAudit || userId === null;
   const loadActivity = useCallback(() => {
     if (userId === null || !canAudit) {
       setActivity({ state: "ready", data: [] });
@@ -412,9 +414,9 @@ export default function WelcomePage() {
             </div>
             {skin !== "neutral" && <LandingEmblem civ={skin as SealCiv} size={136} className="shrink-0 self-center max-md:hidden" />}
           </div>
-          <div className={cn("grid grid-cols-1 gap-6", canAudit && "lg:grid-cols-[400px_minmax(0,1fr)]")}>
+          <div className={cn("grid grid-cols-1 gap-6", showActivity && "lg:grid-cols-[400px_minmax(0,1fr)]")}>
             <NextPanel user={user} judging={judging} onRedo={() => setSetupAt(0)} onShortcuts={() => setSetupAt(3)} />
-            {canAudit && <ActivityPanel load={activity} onRetry={loadActivity} formatTimestamp={formatTimestamp} />}
+            {showActivity && <ActivityPanel load={activity} onRetry={loadActivity} formatTimestamp={formatTimestamp} />}
           </div>
           <footer className={cn("text-xs", MUTED)}>
             {t("welcome.system_version")} · <span className="font-mono">{APP_VERSION}</span>
