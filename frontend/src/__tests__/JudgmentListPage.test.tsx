@@ -37,7 +37,7 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/judgment",
   useSearchParams: () => new URLSearchParams(mockSearch),
 }));
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh-Hans", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant: { code: string } | null };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));

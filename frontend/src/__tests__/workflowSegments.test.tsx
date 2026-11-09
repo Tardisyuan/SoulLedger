@@ -40,15 +40,7 @@ const { workflowApi, officerAppApi } = jest.requireMock("@soulledger/core/api") 
   workflowApi: Record<"get" | "adjust" | "pickSegment" | "remindSegment" | "useDefault", jest.Mock>;
   officerAppApi: { todo: jest.Mock };
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: tZh,
-    formatDate: (v: string) => v,
-    formatDateTime: (v: string) => `@${v}`,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ zh: "stable", formatDate: (v: string) => v, formatDateTime: (v: string) => `@${v}`, locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 function wrap(ui: ReactNode) {

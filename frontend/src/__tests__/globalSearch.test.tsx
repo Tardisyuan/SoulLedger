@@ -29,7 +29,7 @@ const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 let mockUser: { id: number; role?: string; permissions?: string[] } | null = { id: 7, role: "ADMIN" };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, locale: "zh-Hans", formatDate: String, formatDateTime: String, hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", locale: "zh-Hans", formatDate: String, formatDateTime: String, hydrated: true }));
 
 const page = <T,>(results: T[], count = results.length) => ({ data: { count, next: null, previous: null, results } });
 const judgment = (id: string, caseNumber: string, soulName: string) => ({

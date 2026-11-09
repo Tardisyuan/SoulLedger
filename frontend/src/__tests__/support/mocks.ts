@@ -20,14 +20,16 @@
 type Params = Record<string, string>;
 
 /**
- * How a key-echo `t` shows its params — the three spellings the suites use:
- * `"drop"` → `key`, `"paren"` → `key(a,b)`, `"colon"` → `key:a,b`.
+ * How a key-echo `t` shows its params — the four spellings the suites use:
+ * `"drop"` → `key`, `"paren"` → `key(a,b)`, `"colon"` → `key:a,b`,
+ * `"json"` → `key|{"a":"b"}` (names and values, for asserting on the params).
  */
-export type ParamStyle = "drop" | "paren" | "colon";
+export type ParamStyle = "drop" | "paren" | "colon" | "json";
 
 export function echoT(style: ParamStyle = "drop") {
   return (key: string, params?: Params): string => {
     if (!params || style === "drop") return key;
+    if (style === "json") return `${key}|${JSON.stringify(params)}`;
     const values = Object.values(params).join(",");
     return style === "paren" ? `${key}(${values})` : `${key}:${values}`;
   };
@@ -45,22 +47,46 @@ export function echoT(style: ParamStyle = "drop") {
  * (all of them inline arrows at the call sites) is re-wrapped per call, so a
  * component that memoizes on `formatDateTime` sees it change as it did.
  *
+ * Two other `t`s in place of the echo, each a shape ≥5 suites wrote by hand:
+ * - `zh`: real Simplified Chinese, `support/zhBundle`'s `tZh`. `"stable"` is
+ *   `t: tZh`, one function for the whole file; `"per-call"` is
+ *   `t: (key, params) => tZh(key, params)`, a new arrow per `useI18n()` call.
+ * - `map`: `t: (key) => map[key] ?? key`, a new arrow per call. The table is
+ *   read when the factory runs, so it is written inside the `jest.mock` call,
+ *   never a module variable (that is still in its TDZ then).
+ *
  * `useI18n` instead of fields: the suite's own hook, used as is — for a `t`
- * that closes over `tZh` / a `mock*` variable, a custom mapping, or a stable
- * `() => mockI18n`. Only the module spread around it is shared.
+ * that closes over a `mock*` variable, a field read on every call (`locale:
+ * mockLocale`), a one-off mapping, or a stable `() => mockI18n`. Only the
+ * module spread around it is shared.
  */
 export function i18nMock({
   params = "drop",
+  zh,
+  map,
   actual = false,
   useI18n,
   ...fields
-}: { params?: ParamStyle; actual?: boolean; useI18n?: () => unknown } & Record<string, unknown> = {}) {
+}: {
+  params?: ParamStyle;
+  zh?: "stable" | "per-call";
+  map?: Record<string, string>;
+  actual?: boolean;
+  useI18n?: () => unknown;
+} & Record<string, unknown> = {}) {
   const fresh = (v: unknown) => (typeof v === "function" ? (...a: unknown[]) => v(...a) : v);
+  const tZh = (): typeof import("./zhBundle").tZh => jest.requireActual("./zhBundle").tZh;
+  const t = () => {
+    if (zh === "stable") return tZh();
+    if (zh === "per-call") return (key: string, p?: Params) => tZh()(key, p);
+    if (map) return (key: string) => map[key] ?? key;
+    return echoT(params);
+  };
   return {
     ...(actual ? jest.requireActual("@/src/contexts/I18nContext") : {}),
     useI18n:
       useI18n ??
-      (() => ({ t: echoT(params), ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, fresh(v)])) })),
+      (() => ({ t: t(), ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, fresh(v)])) })),
   };
 }
 

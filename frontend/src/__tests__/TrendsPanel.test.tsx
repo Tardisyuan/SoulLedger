@@ -15,14 +15,7 @@ jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsTrends: jest.fn() },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => jest.requireActual("./support/zhBundle").tZh(key, params),
-    formatDateTime: (v: string) => `dt(${v.slice(0, 10)})`,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ zh: "per-call", formatDateTime: (v: string) => `dt(${v.slice(0, 10)})`, locale: "zh-Hans", hydrated: true }));
 
 const mockedTrends = ledgerApi.statsTrends as jest.Mock;
 

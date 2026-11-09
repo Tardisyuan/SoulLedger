@@ -7,7 +7,7 @@ import type { AppealLadder } from "@soulledger/core/api";
 import { AppealLadderView, ladderAnchor, ladderCurrentText } from "@/src/components/judgment/AppealLadder";
 import { tZh } from "./support/zhBundle";
 
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, locale: "zh-Hans", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", locale: "zh-Hans", hydrated: true }));
 
 const station = (order: number, name: string, state: AppealLadder["stations"][number]["state"], note: string | null = null, is_final = false) => ({
   order,
