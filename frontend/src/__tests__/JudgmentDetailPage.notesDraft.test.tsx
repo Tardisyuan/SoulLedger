@@ -18,8 +18,8 @@
  * The real page, a real QueryClient, and only the HTTP layer stubbed, so the
  * refetch is a real refetch and the effect under test is the real effect.
  */
-import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, act, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 
 const ID = "j-1";
 
@@ -46,6 +46,7 @@ jest.mock("react", () => {
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
 import { judgmentApi, soulsApi } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { get: jest.fn(), conclude: jest.fn() },
@@ -59,10 +60,7 @@ const mockI18n = {
   locale: "zh-Hans",
   hydrated: true,
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),
@@ -101,12 +99,8 @@ function judgment(notes: string, confession = "") {
 let queryClient: QueryClient;
 
 function renderPage() {
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
-    </QueryClientProvider>
-  );
+  queryClient = createTestQueryClient();
+  return renderWithProviders(<JudgmentDetailPage params={Promise.resolve({ id: ID })} />, { client: queryClient, i18n: false });
 }
 
 const notesBox = () => screen.getByLabelText("judgment.detail.notes") as HTMLTextAreaElement;

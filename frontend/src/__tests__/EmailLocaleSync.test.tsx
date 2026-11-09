@@ -11,9 +11,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 let mockLocale = "zh-Hans";
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ locale: mockLocale }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ locale: mockLocale }) }));
 
 const { authApi } = require("@soulledger/core/api");
 

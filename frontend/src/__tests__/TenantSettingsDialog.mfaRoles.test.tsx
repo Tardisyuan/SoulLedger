@@ -6,10 +6,10 @@
  *
  * Written 2026-10-09 and NOT run (user instruction: write, don't run).
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
 import { TenantSettingsDialog } from "@/src/components/tenants/TenantSettingsDialog";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -30,12 +30,7 @@ const ROWS = [
 const TENANT: Tenant = { id: 1, code: "CN_DIYU", display_name: "Chinese Diyu", description: "", dispatch_enabled: true, hall_name: "", hall_name_en: "", hall_name_egy: "", settings: { mfa_required_roles: ["JUDGE"] } };
 
 function renderDialog() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <TenantSettingsDialog tenant={TENANT} onClose={jest.fn()} />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<TenantSettingsDialog tenant={TENANT} onClose={jest.fn()} />, { i18n: false });
 }
 
 beforeEach(() => {

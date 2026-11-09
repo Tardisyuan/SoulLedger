@@ -21,32 +21,50 @@ import { QueryClient, QueryClientProvider, type DefaultOptions } from "@tanstack
 import type { ReactNode } from "react";
 import { I18nProvider, type Locale } from "@/src/contexts/I18nContext";
 
-/** `retry: false` for queries and mutations; `queries` adds to (or overrides) the query defaults, e.g. `{ staleTime: 30_000 }`. */
-export function createTestQueryClient(queries: DefaultOptions["queries"] = {}): QueryClient {
-  return new QueryClient({ defaultOptions: { queries: { retry: false, ...queries }, mutations: { retry: false } } });
+export interface TestClientOptions {
+  /** Query defaults, added to (or overriding) `retry: false`, e.g. `{ staleTime: 30_000 }`. */
+  queries?: DefaultOptions["queries"];
+  /** Mutation defaults, likewise. */
+  mutations?: DefaultOptions["mutations"];
+  /**
+   * `false` keeps TanStack's own retry defaults (three retries for a query) —
+   * for a suite that built `new QueryClient()` or set only mutation options,
+   * so its failing queries still retry exactly as they did.
+   */
+  retryOff?: boolean;
 }
 
-export interface ProvidersOptions {
-  /** Reuse a client (to seed or inspect its cache before rendering). */
+/** `retry: false` for queries and mutations unless `retryOff: false`; `queries` / `mutations` add to it. */
+export function createTestQueryClient({ queries = {}, mutations = {}, retryOff = true }: TestClientOptions = {}): QueryClient {
+  const off = retryOff ? { retry: false } : {};
+  return new QueryClient({ defaultOptions: { queries: { ...off, ...queries }, mutations: { ...off, ...mutations } } });
+}
+
+export interface ProvidersOptions extends TestClientOptions {
+  /** Reuse a client — to seed or inspect its cache, or to render a second time on the same cache. The client options are then ignored. */
   client?: QueryClient;
-  /** Extra query defaults for a client built here. Ignored when `client` is given. */
-  queries?: DefaultOptions["queries"];
-  /** Real `I18nProvider` at this locale (default "zh-Hans"); `false` for a suite whose I18nContext is mocked. */
-  i18n?: Locale | false;
+  /**
+   * Real `I18nProvider` at this locale (default "zh-Hans", hydrated from the
+   * first frame); `true` for a bare `<I18nProvider>` that reads the locale
+   * cookie after mount, as the app does without a server value; `false` for a
+   * suite whose I18nContext is mocked.
+   */
+  i18n?: Locale | boolean;
 }
 
 /** `{ client, wrapper }` — the wrapper alone is what `renderHook(…, { wrapper })` wants. */
-export function testProviders({ client, queries, i18n = "zh-Hans" }: ProvidersOptions = {}) {
-  const qc = client ?? createTestQueryClient(queries);
+export function testProviders({ client, i18n = "zh-Hans", ...clientOptions }: ProvidersOptions = {}) {
+  const qc = client ?? createTestQueryClient(clientOptions);
   const wrapper = ({ children }: { children: ReactNode }) => {
     const inner = <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
-    return i18n === false ? inner : <I18nProvider initialLocale={i18n}>{inner}</I18nProvider>;
+    if (i18n === false) return inner;
+    return <I18nProvider initialLocale={i18n === true ? undefined : i18n}>{inner}</I18nProvider>;
   };
   return { client: qc, wrapper };
 }
 
 export function renderWithProviders(ui: ReactNode, options: ProvidersOptions & Omit<RenderOptions, "wrapper"> = {}) {
-  const { client, queries, i18n, ...renderOptions } = options;
-  const providers = testProviders({ client, queries, i18n });
+  const { client, queries, mutations, retryOff, i18n, ...renderOptions } = options;
+  const providers = testProviders({ client, queries, mutations, retryOff, i18n });
   return { ...render(ui, { ...renderOptions, wrapper: providers.wrapper }), client: providers.client };
 }

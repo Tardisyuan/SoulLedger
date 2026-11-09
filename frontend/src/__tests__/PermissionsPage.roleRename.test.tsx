@@ -24,10 +24,11 @@
  * fix. The assertions therefore run only once the renamed column's header is
  * on screen, which is when the false diff would be too.
  */
-import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, act, fireEvent } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import PermissionsPage from "@/app/permissions/page";
 import { permApi, type Permission, type Role } from "@soulledger/core/api";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   permApi: {
@@ -102,12 +103,8 @@ const GRANTS: Record<string, number[]> = {
 let queryClient: QueryClient;
 
 function renderPage() {
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <PermissionsPage />
-    </QueryClientProvider>
-  );
+  queryClient = createTestQueryClient();
+  return renderWithProviders(<PermissionsPage />, { client: queryClient, i18n: false });
 }
 
 const cell = (roleName: string, codename: string) =>

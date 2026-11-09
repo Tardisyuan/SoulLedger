@@ -9,8 +9,7 @@
  * original; `test_regions_are_exact_over_integers_and_sets` on the backend and
  * the "exact over integers" case here assert the same four facts.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Edge, Node } from "@xyflow/react";
 
 jest.mock("@xyflow/react", () => {
@@ -316,12 +315,7 @@ describe("WorkflowEditor — versions and the engine fields", () => {
     api().get.mockResolvedValue({
       data: { ...STORED, nodes: [...STORED.nodes.slice(0, 4), { ...STORED.nodes[4], kind: "APPROVAL" }] },
     });
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={queryClient}>
-        <WorkflowEditor templateId="t1" />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<WorkflowEditor templateId="t1" />, { i18n: false });
     // Without the 结束 node, the conditional graph has no end.
     await waitFor(() => expect(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues [1-9]/ })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));

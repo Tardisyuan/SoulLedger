@@ -13,8 +13,7 @@
  * instant-commit plus undo. A cross-tenant approval is exactly the infrequent,
  * consequential case that keeps the dialog.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 
 /**
  * A shim for `React.use`, and an honest note about what it costs.
@@ -69,6 +68,7 @@ jest.mock("react", () => {
 
 import DispatchDetailPage from "@/app/dispatch/[id]/page";
 import { dispatchApi } from "@soulledger/core/api";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispatchApi: {
@@ -130,14 +130,8 @@ function renderPage() {
       target_tenant_name: "GR_HADES",
     },
   });
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <DispatchDetailPage params={Promise.resolve({ id: "d1" })} />
-    </QueryClientProvider>
-  );
+  const client = createTestQueryClient();
+  return renderWithProviders(<DispatchDetailPage params={Promise.resolve({ id: "d1" })} />, { client, i18n: false });
 }
 
 beforeEach(() => jest.clearAllMocks());

@@ -5,10 +5,10 @@
  *
  * 身份走 `useTenant` 的桩(真门跑起来),不桩 `RequirePermission`(suiteShape 禁止)。
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+import { renderWithProviders } from "./support/render";
 
 const SOUL_ID = "soul-1";
 
@@ -21,10 +21,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: 
 
 const mockT = (key: string) => key;
 const mockI18n = { t: mockT, tf: makeTranslateWithFallback(mockT), formatDate: (v: unknown) => String(v), locale: "en" };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
   ...jest.requireActual("@soulledger/core/hooks/useSouls"),
@@ -78,12 +75,7 @@ const SOUL = {
 };
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <SoulDetailPage />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<SoulDetailPage />, { i18n: false });
 }
 
 /** 「重算功过」住在 ⋯ 菜单里:先开菜单,再找那一项。这组权限里没有 `soul.delete` —— 菜单照样出现。 */
@@ -143,11 +135,7 @@ describe("SoulDetailPage — 重算功过", () => {
     });
     try {
     mockUser.permissions = ["soul.read", "soul.update"];
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <SoulDetailPage />
-      </QueryClientProvider>
-    );
+    const { unmount } = renderWithProviders(<SoulDetailPage />, { i18n: false });
     fireEvent.click(await screen.findByRole("tab", { name: /souls.detail.profile.tab_records/ }));
     await waitFor(() => expect(soulsApi.karma).toHaveBeenCalled());
     await screen.findByRole("tab", { name: /souls.detail.profile.tab_records/, selected: true });

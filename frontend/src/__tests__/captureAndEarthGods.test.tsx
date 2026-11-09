@@ -2,8 +2,7 @@
  * Design 第五十七批 S-3 / S-4 / S-6 / S-7:勾魂卡的三步与原地撤销、待发勾魂牒的「超 N 天」、
  * 办转世选了人道才出现的「下一世部洲」、以土地公名义登记死亡的请求与失败那一句。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Disposition, Soul } from "@soulledger/core/api";
 import { tZh } from "./support/zhBundle";
 
@@ -66,9 +65,10 @@ import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { TudiRegisterDeathDialog } from "@/src/components/tudi-gods/TudiRegisterDeathDialog";
 import { mayRegisterUnder } from "@/src/components/tudi-gods/tudiDisplay";
 import { CityGodCaseDrawer } from "@/src/components/city-gods/CityGodCaseDrawer";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 const wrap = (node: React.ReactNode) =>
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{node}</QueryClientProvider>);
+  renderWithProviders(node, { i18n: false });
 
 const SOUL = {
   id: "s1",
@@ -316,13 +316,9 @@ describe("缓存:勾魂与城隍初审的动作让别的键族也失效(客户�
   it("勾魂卡的动作(这里是撤销):灵魂、审判之外,城隍初审的键族也失效", async () => {
     mockList.mockResolvedValue({ data: { results: [warrant("CAPTURED")] } });
     mockCancel.mockResolvedValue({ data: {} });
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const qc = createTestQueryClient();
     const spy = jest.spyOn(qc, "invalidateQueries");
-    render(
-      <QueryClientProvider client={qc}>
-        <CapturePanel soul={SOUL} canIssue canExecute />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<CapturePanel soul={SOUL} canIssue canExecute />, { client: qc, i18n: false });
     fireEvent.click(await screen.findByRole("button", { name: "撤销…" }));
     fireEvent.change(screen.getByLabelText(/撤销理由/), { target: { value: "查无此人" } });
     fireEvent.click(screen.getByRole("button", { name: "撤销勾魂牒" }));
@@ -339,13 +335,9 @@ describe("缓存:勾魂与城隍初审的动作让别的键族也失效(客户�
       },
     });
     mockSendOn.mockResolvedValue({ data: {} });
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const qc = createTestQueryClient();
     const spy = jest.spyOn(qc, "invalidateQueries");
-    render(
-      <QueryClientProvider client={qc}>
-        <CityGodCaseDrawer caseId="j1" gods={[]} canTransfer={false} onClose={jest.fn()} />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<CityGodCaseDrawer caseId="j1" gods={[]} canTransfer={false} onClose={jest.fn()} />, { client: qc, i18n: false });
     fireEvent.click(await screen.findByTestId("city-god-send-on"));
     fireEvent.click(screen.getByTestId("city-god-case-confirm"));
     await waitFor(() => expect(mockSendOn).toHaveBeenCalledWith("j1", ""));

@@ -9,10 +9,10 @@
  *
  * 真页面,只替换 HTTP 层与身份带的 setter(同 WelcomePage.test 的做法)。
  */
-import { render, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { waitFor } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+import { renderWithProviders } from "./support/render";
 
 const SOUL_ID = "soul-1";
 
@@ -24,10 +24,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: 
 
 const mockT = (key: string) => key;
 const mockI18n = { t: mockT, tf: makeTranslateWithFallback(mockT), formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh" };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 let mockUser: { id: number; username: string; role: string; tenant: null; permissions: string[] };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
@@ -85,12 +82,7 @@ const account = (over: Record<string, unknown>) => ({
 });
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <SoulDetailPage />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<SoulDetailPage />, { queries: { staleTime: 30_000 }, i18n: false });
 }
 
 const withJudgments = (results: unknown[]) =>

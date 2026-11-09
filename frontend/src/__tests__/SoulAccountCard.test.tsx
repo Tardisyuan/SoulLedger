@@ -6,11 +6,9 @@
  * control is asserted absent without `soul_account.manage` and present with it.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
 import { tZh } from "./support/zhBundle";
-import { renderWithProviders } from "./support/render";
+import { renderWithProviders, createTestQueryClient, testProviders } from "./support/render";
 import { mockShowToast, page, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -22,10 +20,7 @@ const { soulAccountsApi } = jest.requireMock("@soulledger/core/api") as {
 
 let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant?: { code: string } | null } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const FUTURE = "2999-01-01T00:00:00Z";
@@ -194,8 +189,8 @@ it("one soul's chain never shows on another soul's card (keys are per soul)", as
   soulAccountsApi.accounts.mockImplementation(({ soul: id }: { soul: string }) =>
     Promise.resolve(page(id === "s1" ? [account()] : [account({ id: "b1", soul: "s2", soul_code: "ZZZZZZZZ99", soul_name: "李四", cycle: 0 })]))
   );
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  const client = createTestQueryClient();
+  const Wrapper = testProviders({ client, i18n: false }).wrapper;
   const { rerender } = render(<SoulAccountCard soul={soul()} />, { wrapper: Wrapper });
   expect(await screen.findByText("ABC DEFG H23")).toBeInTheDocument();
   rerender(<SoulAccountCard soul={soul({ id: "s2", name: "李四", life_index: 0 })} />);

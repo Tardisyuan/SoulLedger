@@ -7,11 +7,10 @@
  * failed completely silently: no toast, no error surfaced anywhere.
  */
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { createElement } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useToggleReaction, useCreateComment, useUpdateProfile, useUploadAvatar } from "@soulledger/core/hooks/useSocial";
 import { socialKeys } from "@soulledger/core/query_keys";
 import { socialApi } from "@soulledger/core/api";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 const mockShowToast = jest.fn();
 
@@ -59,15 +58,11 @@ function networkError() {
 }
 
 function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  const queryClient = createTestQueryClient();
   jest.spyOn(queryClient, "invalidateQueries");
   return {
     queryClient,
-    wrapper: function Wrapper({ children }: { children: React.ReactNode }) {
-      return createElement(QueryClientProvider, { client: queryClient }, children);
-    },
+    wrapper: testProviders({ client: queryClient, i18n: false }).wrapper,
   };
 }
 

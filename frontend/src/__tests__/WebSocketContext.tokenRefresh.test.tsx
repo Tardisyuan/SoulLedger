@@ -22,13 +22,14 @@
  * going through the port. Only `axios.post` is stubbed, and the fake socket is
  * the shared one from `./support/wsHarness` for the reason its header gives.
  */
-import { render, screen, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, act } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { WebSocketProvider, useWebSocket } from "@/src/contexts/WebSocketContext";
 import { rotateRefreshToken } from "@soulledger/core/api/client";
 import * as platformModule from "@soulledger/core/platform";
 
 import { FakeWebSocket, lastSocket, setToken } from "./support/wsHarness";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("axios", () => {
   const post = jest.fn(async () => ({
@@ -73,12 +74,11 @@ let tokenSubscribes = 0;
 let subscribeSpy: jest.SpyInstance;
 
 function renderProvider() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <WebSocketProvider>
-        <Probe />
-      </WebSocketProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <WebSocketProvider>
+      <Probe />
+    </WebSocketProvider>,
+    { client: queryClient, i18n: false },
   );
 }
 
@@ -104,7 +104,7 @@ beforeEach(() => {
   (global as unknown as { WebSocket: unknown }).WebSocket = FakeWebSocket;
   setToken("jwt-token");
   mockUser = { id: 1, username: "yama" };
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient = createTestQueryClient();
   warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
   tokenListeners = 0;
@@ -204,11 +204,9 @@ describe("WebSocketProvider reconnects after a successful token refresh", () => 
     mockUser = { id: 1, username: "yama" };
     act(() => {
       rerender(
-        <QueryClientProvider client={queryClient}>
-          <WebSocketProvider>
-            <Probe />
-          </WebSocketProvider>
-        </QueryClientProvider>,
+        <WebSocketProvider>
+          <Probe />
+        </WebSocketProvider>
       );
     });
 

@@ -9,9 +9,10 @@
  */
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useSidebarMenus, isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { menusApi } from "@soulledger/core/api";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   menusApi: {
@@ -30,9 +31,7 @@ const mockedAll = menusApi.all as jest.Mock;
 const mockedList = menusApi.list as jest.Mock;
 
 function wrapper({ children }: { children: ReactNode }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
+  const queryClient = createTestQueryClient({ queries: { gcTime: 0 } });
   return createElement(QueryClientProvider, { client: queryClient }, children);
 }
 
@@ -115,9 +114,8 @@ describe("useSidebarMenus endpoint selection", () => {
     mockUser = { id: 3, role: "CLERK" };
     mockedAll.mockResolvedValueOnce({ data: [{ id: 1, name: "Clerk view", parent: null }] });
     mockedAll.mockResolvedValueOnce({ data: [{ id: 2, name: "Admin view", parent: null }] });
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const sharedWrapper = ({ children }: { children: ReactNode }) =>
-      createElement(QueryClientProvider, { client: queryClient }, children);
+    const queryClient = createTestQueryClient();
+    const sharedWrapper = testProviders({ client: queryClient, i18n: false }).wrapper;
 
     const { result, rerender } = renderHook(() => useSidebarMenus(), { wrapper: sharedWrapper });
     await waitFor(() => expect(names(result.current.data)).toEqual(["Clerk view"]));

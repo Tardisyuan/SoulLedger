@@ -4,11 +4,11 @@
  * 只给能成功的人 —— 本殿发起(或 ADMIN)、状态 PROPOSED、持有 `dispatch.manage`;其余一律不渲染
  * (不是禁用的按钮)。每一条「有」都配一条「没有」。理由必填;409 `not_cancellable` 说清「对方已处理」。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 import { tZh } from "./support/zhBundle";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({ dispatchApi: { cancel: jest.fn() } }));
 const { dispatchApi } = jest.requireMock("@soulledger/core/api") as { dispatchApi: { cancel: jest.Mock } };
@@ -22,9 +22,7 @@ let mockAdmin = false;
 jest.mock("@/src/hooks/usePermissions", () => ({
   usePermissions: () => ({ hasPermission: (p: string) => mockHeld.has(p), isAdmin: mockAdmin, isTenantExempt: mockAdmin && !mockTenant }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => tZh(key), formatDateTime: (v: string) => v, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (key: string) => tZh(key), formatDateTime: (v: string) => v, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const record = (over: Record<string, unknown> = {}) => ({
@@ -33,12 +31,7 @@ const record = (over: Record<string, unknown> = {}) => ({
 const trigger = () => screen.queryByRole("button", { name: tZh("dispatch.cancel_dispatch") });
 
 function renderButton(dispatch = record(), onCancelled?: () => void) {
-  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <CancelDispatchButton dispatch={dispatch as never} onCancelled={onCancelled} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<CancelDispatchButton dispatch={dispatch as never} onCancelled={onCancelled} />, { retryOff: false, mutations: { retry: false }, i18n: false });
 }
 
 beforeEach(() => {

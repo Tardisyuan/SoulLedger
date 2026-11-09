@@ -8,10 +8,9 @@
  * operator advances at once, and a refusal is never silent.
  */
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { createElement } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useJudgmentQueue } from "@soulledger/core/hooks/useJudgmentQueue";
 import { judgmentApi } from "@soulledger/core/api";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 const mockShowToast = jest.fn();
 
@@ -68,12 +67,8 @@ const mockNext = judgmentApi.next as jest.Mock;
 const mockConclude = judgmentApi.conclude as jest.Mock;
 
 function wrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
-  };
+  const queryClient = createTestQueryClient();
+  return testProviders({ client: queryClient, i18n: false }).wrapper;
 }
 
 /** The last `skip` array the hook asked the API for. */

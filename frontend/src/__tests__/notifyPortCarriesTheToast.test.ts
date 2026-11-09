@@ -24,7 +24,6 @@ import { render, renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   configurePlatform,
   notify,
@@ -37,6 +36,7 @@ import { installWebPlatform } from "@/lib/platform/web";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { dispositionApi } from "@soulledger/core/api";
 import { useArchiveDisposition } from "@soulledger/core/hooks/useDispositions";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: { list: jest.fn(), archive: jest.fn() },
@@ -205,12 +205,9 @@ describe("a hook drives the port, not the context", () => {
     configurePlatform(adapter);
     mockArchive.mockResolvedValue({ data: {} });
 
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    const queryClient = createTestQueryClient();
     const { result } = renderHook(() => useArchiveDisposition(), {
-      wrapper: ({ children }: { children: React.ReactNode }) =>
-        createElement(QueryClientProvider, { client: queryClient }, children),
+      wrapper: testProviders({ client: queryClient, i18n: false }).wrapper,
     });
 
     result.current.mutate({ id: "d-1" });
@@ -224,12 +221,9 @@ describe("a hook drives the port, not the context", () => {
     configurePlatform(adapter);
     mockArchive.mockRejectedValue(new Error("nope"));
 
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    const queryClient = createTestQueryClient();
     const { result } = renderHook(() => useArchiveDisposition(), {
-      wrapper: ({ children }: { children: React.ReactNode }) =>
-        createElement(QueryClientProvider, { client: queryClient }, children),
+      wrapper: testProviders({ client: queryClient, i18n: false }).wrapper,
     });
 
     result.current.mutate({ id: "d-1" });

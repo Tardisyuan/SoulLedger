@@ -23,10 +23,7 @@ const tDesk = (key: string, params?: Record<string, string>) => {
   const v = pick(BUNDLES[mockDesk], key) ?? pick(zhBundle, key);
   return typeof v === "string" ? v.replace(/\{\{(\w+)\}\}/g, (w, k) => params?.[k] ?? w) : key;
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tDesk, locale: mockDesk, formatDateTime: (v: string) => `dt(${v})`, hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tDesk, locale: mockDesk, formatDateTime: (v: string) => `dt(${v})`, hydrated: true }) }));
 beforeEach(() => {
   mockDesk = "zh-Hans";
 });

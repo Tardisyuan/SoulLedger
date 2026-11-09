@@ -69,9 +69,7 @@ const translate = jest.fn((key: string, params?: Record<string, string>): string
   });
 });
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: translate, locale: "en", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: translate, locale: "en", hydrated: true }) }));
 
 // ---------------------------------------------------------------------------
 // Fixture — the real roster, in the real order

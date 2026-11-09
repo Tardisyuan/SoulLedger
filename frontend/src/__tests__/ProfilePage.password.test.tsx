@@ -2,9 +2,9 @@
  * /profile 修改密码: the server's refusal is shown under the field it is about, one line per reason
  * by its code (never Django's English sentence), and a success says the other devices were signed out.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import ProfilePage from "@/app/profile/page";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   authApi: {
@@ -30,12 +30,7 @@ const { authApi } = require("@soulledger/core/api");
 
 async function openForm(next = "N0t-Guessable!2026", confirm = next, submit = true) {
   (authApi.profile as jest.Mock).mockResolvedValue({ data: { username: "u", email: "", role: "JUDGE" } });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <ProfilePage />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<ProfilePage />, { i18n: false });
   fireEvent.click((await screen.findAllByRole("button", { name: "profile.change_password" }))[0]);
   const [oldInput, newInput, confirmInput] = Array.from(document.querySelectorAll('input[type="password"]'));
   fireEvent.change(oldInput, { target: { value: "oldpw-123" } });

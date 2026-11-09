@@ -3,18 +3,14 @@
  * 只地府画;不在路上只一行灰字;没有 `soul.transition` 不给挪站;挪站在弹层里,发对的请求。
  * 时间线一行:换站写去处,勾魂写鬼差与城隍;升天堂经地上乐园写一行小字(E-3)。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Soul, SoulEvent } from "@soulledger/core/api";
 import { tZh } from "./support/zhBundle";
 
 const mockShowToast = jest.fn();
 const mockMove = jest.fn();
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -24,6 +20,7 @@ jest.mock("@soulledger/core/api", () => ({
 
 import { DiyuRows, DiyuStationStrip } from "@/src/components/souls/detail/DiyuRows";
 import { describeSystemEvent, makeSystemEventLabels, buildSystemRows } from "@/src/components/souls/soulLifecycleRows";
+import { renderWithProviders } from "./support/render";
 
 const SOUL = {
   id: "s1",
@@ -35,21 +32,16 @@ const SOUL = {
 } as unknown as Soul;
 
 function rows(soul: Partial<Soul>) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <dl>
-        <DiyuRows soul={{ ...SOUL, ...soul } as Soul} />
-      </dl>
-    </QueryClientProvider>
+  return renderWithProviders(
+    <dl>
+      <DiyuRows soul={{ ...SOUL, ...soul } as Soul} />
+    </dl>,
+    { retryOff: false, i18n: false },
   );
 }
 
 function strip(soul: Partial<Soul>, canMove = false) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <DiyuStationStrip soul={{ ...SOUL, ...soul } as Soul} canMove={canMove} />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<DiyuStationStrip soul={{ ...SOUL, ...soul } as Soul} canMove={canMove} />, { retryOff: false, i18n: false });
 }
 
 describe("DiyuRows · 出身部洲", () => {

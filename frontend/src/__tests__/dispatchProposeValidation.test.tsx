@@ -14,12 +14,12 @@
  * knew. Measured app-wide at the same time: **2 `onBlur` handlers in the whole
  * frontend** — inline validation was, in practice, never.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 
 import ProposeDispatchPage from "@/app/dispatch/propose/page";
 import { dispatchApi, soulsApi, ledgerApi } from "@soulledger/core/api";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => {
   // The real rule, not a copy of it: a stub that re-implemented the count
@@ -95,14 +95,8 @@ function renderPage(extraTenants: object[] = []) {
       ],
     },
   });
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <ProposeDispatchPage />
-    </QueryClientProvider>
-  );
+  const client = createTestQueryClient();
+  return renderWithProviders(<ProposeDispatchPage />, { client, i18n: false });
 }
 
 /**
@@ -247,14 +241,8 @@ describe("proposing a dispatch", () => {
     it("灵魂检索失败时,字段自己报错,而不是说「没有匹配」", async () => {
       (soulsApi.list as jest.Mock).mockRejectedValue(new Error("500"));
       (ledgerApi.statsOverview as jest.Mock).mockResolvedValue({ data: { tenants: [] } });
-      const client = new QueryClient({
-        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-      });
-      render(
-        <QueryClientProvider client={client}>
-          <ProposeDispatchPage />
-        </QueryClientProvider>
-      );
+      const client = createTestQueryClient();
+      renderWithProviders(<ProposeDispatchPage />, { client, i18n: false });
 
       // `Field` 把它接成 aria-invalid + role="alert" + aria-describedby,
       // 所以这条同时验了「说了」和「读屏读得到」。
@@ -268,14 +256,8 @@ describe("proposing a dispatch", () => {
     it("租户列表失败时,下拉里不再只剩一个占位项", async () => {
       (soulsApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
       (ledgerApi.statsOverview as jest.Mock).mockRejectedValue(new Error("500"));
-      const client = new QueryClient({
-        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-      });
-      render(
-        <QueryClientProvider client={client}>
-          <ProposeDispatchPage />
-        </QueryClientProvider>
-      );
+      const client = createTestQueryClient();
+      renderWithProviders(<ProposeDispatchPage />, { client, i18n: false });
 
       // A radio group now, not a select: the group points at its own alert,
       // and there is no row at all that could read as "nothing to choose".

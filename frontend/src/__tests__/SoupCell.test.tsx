@@ -11,10 +11,7 @@ jest.mock("@/src/hooks/usePermissions", () => ({
   usePermissions: () => ({ isAdmin: true, hasPermission: () => true, hasAnyPermission: () => true, hasAllPermissions: () => true }),
 }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k), formatDateTime: (v: unknown) => `at:${String(v)}`, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k), formatDateTime: (v: unknown) => `at:${String(v)}`, locale: "zh-Hans", hydrated: true }) }));
 
 const soul = { id: 7, name: "张三", civilization: "CHINESE", current_state: "REINCARNATING", soup_taken_at: null };
 

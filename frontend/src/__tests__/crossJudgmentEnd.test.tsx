@@ -6,10 +6,10 @@
  * - `CrossJudgmentBlockedNotice`:标题、召集信息、「去跨域审判」链接;取不到会审时只写标题与链接。
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CrossJudgmentEndControls } from "@/src/components/cross-judgments/CrossJudgmentEndControls";
 import { CrossJudgmentBlockedNotice, isCrossJudgmentOpen } from "@/src/components/judgment/CrossJudgmentBlockedNotice";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({ crossTenantJudgmentsApi: { conclude: jest.fn(), cancel: jest.fn() } }));
 const { crossTenantJudgmentsApi } = jest.requireMock("@soulledger/core/api") as {
@@ -41,12 +41,7 @@ const judgment = (over: Record<string, unknown> = {}) => ({
 });
 
 function renderControls(j = judgment()) {
-  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <CrossJudgmentEndControls judgment={j as never} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<CrossJudgmentEndControls judgment={j as never} />, { retryOff: false, mutations: { retry: false }, i18n: false });
 }
 
 beforeEach(() => {

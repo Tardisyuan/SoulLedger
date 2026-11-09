@@ -4,9 +4,7 @@
 import { render, fireEvent, within } from "@testing-library/react";
 import type { PostMedia } from "@soulledger/core/domain/postMedia";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}:${Object.values(p).join(",")}` : k) }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}:${Object.values(p).join(",")}` : k) }) }));
 
 import { PostMediaGrid } from "@/src/components/social/PostMedia";
 

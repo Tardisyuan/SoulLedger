@@ -11,9 +11,7 @@ import { mockShowToast } from "./support/mocks";
 
 let mockLocale = "zh-Hans";
 let mockReady = true;
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (k: string) => k, locale: mockLocale, ready: mockReady }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (k: string) => k, locale: mockLocale, ready: mockReady }) }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 const mockPdf = jest.fn();
 jest.mock("@soulledger/core/api/judgment", () => ({

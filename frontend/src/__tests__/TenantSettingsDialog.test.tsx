@@ -3,11 +3,11 @@
  * 所以助手管理页写的 `assistant_enabled` 不会被这张表单冲掉(后端那半由
  * backend/tests/test_tenant_settings_api.py 守)。400 的字段信息原样显示在各自字段下。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
 import { TenantSettingsDialog, parseCooldownDays, parseQuotaLimit, tenantSettingsErrors } from "@/src/components/tenants/TenantSettingsDialog";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -33,13 +33,9 @@ const tenant = (over: Partial<Tenant> = {}): Tenant => ({
 });
 
 function renderDialog(tn: Tenant, onClose = jest.fn()) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const qc = createTestQueryClient();
   const invalidate = jest.spyOn(qc, "invalidateQueries");
-  render(
-    <QueryClientProvider client={qc}>
-      <TenantSettingsDialog tenant={tn} onClose={onClose} />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<TenantSettingsDialog tenant={tn} onClose={onClose} />, { client: qc, i18n: false });
   return { onClose, invalidate };
 }
 

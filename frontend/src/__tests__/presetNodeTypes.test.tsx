@@ -18,9 +18,7 @@
  * `test_the_preset_reason_table_has_no_stale_entries` 已经用过。
  */
 
-import type { ReactNode } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WorkflowPage from "@/app/workflow/page";
 import { workflowApi } from "@soulledger/core/api";
 import { WORKFLOW_TEMPLATES } from "@soulledger/core/config/workflow-templates";
@@ -29,6 +27,7 @@ import {
   nodeTypeFor,
   type NodeTypeMember,
 } from "@soulledger/core/config/workflow-node-types";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 // ── the page that used to send the Chinese label ─────────────────────
 
@@ -160,12 +159,8 @@ describe("the presets keep the Chinese step name", () => {
 
 describe("the 编辑 button hands the editor a saveable template", () => {
   function renderPage() {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const Wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+    const queryClient = createTestQueryClient();
+    const Wrapper = testProviders({ client: queryClient, i18n: false }).wrapper;
     return render(<WorkflowPage />, { wrapper: Wrapper });
   }
 

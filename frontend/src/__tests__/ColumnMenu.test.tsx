@@ -10,9 +10,7 @@ import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid/Colum
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import type { DataGridColumn } from "@/components/ui/data-grid/columns";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => (key === "common.export" ? "导出" : key), locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (key: string) => (key === "common.export" ? "导出" : key), locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 

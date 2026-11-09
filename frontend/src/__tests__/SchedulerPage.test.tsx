@@ -11,18 +11,17 @@
  * Copy is the real zh-Hans bundle (`tZh`), so a key the page asks for that the
  * bundle lacks renders as the raw key and the text assertions miss.
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import SchedulerPage from "@/app/scheduler/page";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
 import zhHans from "@soulledger/core/messages/zh-Hans.json";
 import egyPendingKeys from "./support/egyPendingKeys.json";
 import { tZh, zh } from "./support/zhBundle";
-import { renderWithProviders } from "./support/render";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 import { mockShowToast, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -42,10 +41,7 @@ const mockI18n = {
   locale: "zh-Hans",
   hydrated: true,
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 const mockListeners = new Set<(_event: Record<string, unknown>) => void>();
@@ -469,8 +465,8 @@ describe("run history tab", () => {
 
   async function openHistory(client?: QueryClient) {
     schedulerApi.runs.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [RUN] } });
-    const qc = client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<SchedulerPage />, { wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider> });
+    const qc = client ?? createTestQueryClient();
+    renderWithProviders(<SchedulerPage />, { client: qc, i18n: false });
     await screen.findAllByText(tZh("scheduler.jobs.ledger_recalculate_tenant"));
     const tab = screen.getByRole("button", { name: tZh("scheduler.tabs.history") });
     expect(tab).toHaveAttribute("aria-pressed", "false");
@@ -544,7 +540,7 @@ describe("run history tab", () => {
 
   it("refetches when the scheduler keys are invalidated — what the realtime handler does", async () => {
     asAdmin();
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = createTestQueryClient();
     await openHistory(client);
     await waitFor(() => expect(schedulerApi.runs).toHaveBeenCalled());
     const before = schedulerApi.runs.mock.calls.length;

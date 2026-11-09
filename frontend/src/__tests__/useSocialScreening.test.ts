@@ -3,10 +3,9 @@
  * (打码 / 送审 / 隐藏);干净就照旧(发帖「已发布」、改帖「已保存」、评论不提示)。
  */
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
 import { useCreatePost, useUpdatePost, useCreateComment } from "@soulledger/core/hooks/useSocial";
 import { socialApi } from "@soulledger/core/api";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 const mockNotify = jest.fn();
 
@@ -19,8 +18,8 @@ jest.mock("@soulledger/core/platform", () => ({
 }));
 
 function wrapper() {
-  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
-  return ({ children }: { children: React.ReactNode }) => React.createElement(QueryClientProvider, { client: qc }, children);
+  const qc = createTestQueryClient({ retryOff: false, mutations: { retry: false } });
+  return testProviders({ client: qc, i18n: false }).wrapper;
 }
 
 beforeEach(() => mockNotify.mockClear());

@@ -3,15 +3,11 @@
  * 与地府十三站卡(已过窄条、现在展开、未到虚线框)。
  */
 import { render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Realm, Soul } from "@soulledger/core/api";
 import type { Station, Topology } from "@/src/lib/routeTopology";
 import { tZh } from "./support/zhBundle";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 const mockEvents = jest.fn();
 jest.mock("@soulledger/core/api", () => ({
@@ -22,6 +18,7 @@ beforeEach(() => mockEvents.mockReset().mockResolvedValue({ data: { results: [] 
 
 import { RouteMap, occupancyBar, OCC_HOT, OCC_DANGER } from "@/src/components/realms/RouteMap";
 import { DiyuStationStrip, diyuArrival, diyuCardState } from "@/src/components/souls/detail/DiyuRows";
+import { renderWithProviders } from "./support/render";
 
 describe("occupancyBar thresholds", () => {
   it("78% is hot, 90% is danger, just under each is not", () => {
@@ -90,11 +87,7 @@ describe("十三站卡折叠", () => {
 
   it("passed fold to strips with a tick and number, one expanded current card, ahead are dashed frames", () => {
     const soul = { id: "s1", name: "张三", civilization: "CHINESE", current_state: "JUDGING", diyu_station: "FENGDU_CITY" } as unknown as Soul;
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <DiyuStationStrip soul={soul} canMove={false} />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<DiyuStationStrip soul={soul} canMove={false} />, { retryOff: false, i18n: false });
     const cards = Array.from(document.querySelectorAll("li[data-station]"));
     expect(cards.filter((c) => c.classList.contains("diyu-card--passed"))).toHaveLength(9);
     const current = cards.filter((c) => c.classList.contains("diyu-card--current"));
@@ -122,20 +115,12 @@ describe("十三站卡折叠", () => {
     const soul = { id: "s2", name: "李四", civilization: "CHINESE", current_state: "JUDGING", diyu_station: "FENGDU_CITY" } as unknown as Soul;
     const arrived = new Date(Date.now() - 3 * 86_400_000 - 3_600_000).toISOString();
     mockEvents.mockResolvedValue({ data: { results: [{ payload: { to: "FENGDU_CITY" }, create_time: arrived }] } });
-    const { unmount } = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <DiyuStationStrip soul={soul} canMove={false} />
-      </QueryClientProvider>
-    );
+    const { unmount } = renderWithProviders(<DiyuStationStrip soul={soul} canMove={false} />, { retryOff: false, i18n: false });
     expect(await screen.findByTestId("diyu-card-stay")).toHaveTextContent("到此 3 日");
     expect(mockEvents).toHaveBeenCalledWith(expect.objectContaining({ soul: "s2", event_type: "DIYU_STATION_CHANGED" }));
     unmount();
     mockEvents.mockResolvedValue({ data: { results: [] } });
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <DiyuStationStrip soul={soul} canMove={false} />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<DiyuStationStrip soul={soul} canMove={false} />, { retryOff: false, i18n: false });
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.queryByTestId("diyu-card-stay")).toBeNull();
   });

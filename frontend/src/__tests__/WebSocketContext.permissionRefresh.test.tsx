@@ -6,11 +6,11 @@
  * permissions in `TenantContext`, so the provider must hand the frame to `refreshFromServer`. Asserted
  * both ways: the push calls it, an ordinary notification does not.
  */
-import { render, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act } from "@testing-library/react";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
 
 import { installWsHarness, lastSocket } from "./support/wsHarness";
+import { renderWithProviders } from "./support/render";
 
 const mockRefresh = jest.fn();
 const mockUser = { id: 1, username: "yama" };
@@ -26,12 +26,11 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 installWsHarness();
 
 function mount() {
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <WebSocketProvider>
-        <span />
-      </WebSocketProvider>
-    </QueryClientProvider>
+  renderWithProviders(
+    <WebSocketProvider>
+      <span />
+    </WebSocketProvider>,
+    { retryOff: false, i18n: false },
   );
   act(() => lastSocket().open());
 }

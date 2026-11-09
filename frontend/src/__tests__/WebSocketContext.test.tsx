@@ -13,9 +13,10 @@
  */
 import { useEffect } from "react";
 import { render, screen, act, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { WebSocketProvider, useWebSocket } from "@/src/contexts/WebSocketContext";
 import { flushEventInvalidations } from "@/lib/events/event_registry";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 // ── Fake WebSocket ───────────────────────────────────────────────────
 
@@ -112,12 +113,11 @@ let invalidateSpy: jest.SpyInstance;
 let warnSpy: jest.SpyInstance;
 
 function renderProvider() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <WebSocketProvider>
-        <Probe />
-      </WebSocketProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <WebSocketProvider>
+      <Probe />
+    </WebSocketProvider>,
+    { client: queryClient, i18n: false },
   );
 }
 
@@ -130,7 +130,7 @@ beforeEach(() => {
   (global as unknown as { WebSocket: unknown }).WebSocket = FakeWebSocket;
   setToken("jwt-token");
   mockUser = { id: 1, username: "yama" };
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient = createTestQueryClient();
   invalidateSpy = jest.spyOn(queryClient, "invalidateQueries");
   warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 });
@@ -186,11 +186,9 @@ describe("WebSocketProvider authentication gating", () => {
     mockUser = null;
     act(() => {
       rerender(
-        <QueryClientProvider client={queryClient}>
-          <WebSocketProvider>
-            <Probe />
-          </WebSocketProvider>
-        </QueryClientProvider>,
+        <WebSocketProvider>
+          <Probe />
+        </WebSocketProvider>
       );
     });
 
@@ -448,12 +446,11 @@ describe("WebSocketProvider event fan-out", () => {
       return null;
     }
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-    render(
-      <QueryClientProvider client={queryClient}>
-        <WebSocketProvider>
-          <Subscriber />
-        </WebSocketProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <WebSocketProvider>
+        <Subscriber />
+      </WebSocketProvider>,
+      { client: queryClient, i18n: false },
     );
     act(() => lastSocket().open());
     act(() => lastSocket().receive({ type: "connected" }));

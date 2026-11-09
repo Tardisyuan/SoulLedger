@@ -7,11 +7,11 @@
  */
 import type { ComponentProps } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { organizationsApi, type Organization } from "@soulledger/core/api";
 import { OwnerOrgField } from "@/src/components/organizations/OwnerOrgField";
 import { OrganizationDeleteDialog } from "@/src/components/organizations/OrganizationDialogs";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
@@ -38,13 +38,9 @@ const b = unit(3, "乙司", 1);
 const elsewhere = unit(9, "别殿司", null, 4);
 
 function renderField(props: Partial<ComponentProps<typeof OwnerOrgField>> = {}) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = createTestQueryClient();
   const onSave = props.onSave ?? jest.fn().mockResolvedValue(undefined);
-  render(
-    <QueryClientProvider client={qc}>
-      <OwnerOrgField orgId={2} orgName="甲司" tenantId={1} canChange onSave={onSave} {...props} />
-    </QueryClientProvider>,
-  );
+  renderWithProviders(<OwnerOrgField orgId={2} orgName="甲司" tenantId={1} canChange onSave={onSave} {...props} />, { client: qc, i18n: false });
   return onSave;
 }
 

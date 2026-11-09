@@ -6,12 +6,11 @@
  *
  * Written 2026-10-09 and NOT run (user instruction: write, don't run).
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
-import { renderWithProviders } from "./support/render";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: { list: jest.fn(), delete: jest.fn(), activate: jest.fn(), deactivate: jest.fn(), resetMfa: jest.fn() },
@@ -105,13 +104,9 @@ describe("UsersPage · 两步验证 column", () => {
 
 describe("MfaResetDialog", () => {
   function renderDialog() {
-    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const qc = createTestQueryClient({ retryOff: false, mutations: { retry: false } });
     const onClose = jest.fn();
-    render(
-      <QueryClientProvider client={qc}>
-        <MfaResetDialog user={ROWS[0] as never} onClose={onClose} />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<MfaResetDialog user={ROWS[0] as never} onClose={onClose} />, { client: qc, i18n: false });
     return onClose;
   }
 

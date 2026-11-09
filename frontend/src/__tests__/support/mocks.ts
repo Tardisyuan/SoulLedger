@@ -39,16 +39,28 @@ export function echoT(style: ParamStyle = "drop") {
  * never said `hydrated` still gets `undefined` there, as it did by hand.
  * `actual: true` spreads the real module first, for code that also imports
  * `makeTranslateWithFallback` / `LOCALE_LABELS` / `I18nProvider` from it.
- * Like the inline copies, every `useI18n()` call builds a fresh `t`.
+ *
+ * Identity matches the inline copies, whose arrows were rebuilt on every
+ * `useI18n()` call: `t` is a fresh echo per call, and every function field
+ * (all of them inline arrows at the call sites) is re-wrapped per call, so a
+ * component that memoizes on `formatDateTime` sees it change as it did.
+ *
+ * `useI18n` instead of fields: the suite's own hook, used as is — for a `t`
+ * that closes over `tZh` / a `mock*` variable, a custom mapping, or a stable
+ * `() => mockI18n`. Only the module spread around it is shared.
  */
 export function i18nMock({
   params = "drop",
   actual = false,
+  useI18n,
   ...fields
-}: { params?: ParamStyle; actual?: boolean } & Record<string, unknown> = {}) {
+}: { params?: ParamStyle; actual?: boolean; useI18n?: () => unknown } & Record<string, unknown> = {}) {
+  const fresh = (v: unknown) => (typeof v === "function" ? (...a: unknown[]) => v(...a) : v);
   return {
     ...(actual ? jest.requireActual("@/src/contexts/I18nContext") : {}),
-    useI18n: () => ({ t: echoT(params), ...fields }),
+    useI18n:
+      useI18n ??
+      (() => ({ t: echoT(params), ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, fresh(v)])) })),
   };
 }
 

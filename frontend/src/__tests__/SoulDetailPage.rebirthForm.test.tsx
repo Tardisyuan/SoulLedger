@@ -43,10 +43,7 @@ const mockI18n = {
   tf: makeTranslateWithFallback(mockT),
   formatDate: mockFormatDate,
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 // `requireActual` first, then override only the two mutations. The factory used
 // to return those two ALONE, which deleted every other export of the module —
