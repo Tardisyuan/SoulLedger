@@ -21,7 +21,7 @@
  * is no token to import and no component to render that would prove it. jsdom
  * does not evaluate media queries, so a render test here would assert nothing.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 const CSS = readFileSync(
@@ -80,19 +80,16 @@ describe("the stylesheet honours prefers-reduced-motion", () => {
     // If these ever hit zero the rule above is dead weight and should be
     // argued for rather than inherited. Counted over the same three source
     // roots the eslint design-guard covers.
-    const { execFileSync } = require("node:child_process") as typeof import("node:child_process");
-    const root = path.join(__dirname, "..", "..");
-    const count = (pattern: string) => {
-      try {
-        return execFileSync(
-          "grep",
-          ["-rho", "--include=*.tsx", "-e", pattern, "app", "src", "components"],
-          { cwd: root, encoding: "utf8" }
-        ).trim().split("\n").filter(Boolean).length;
-      } catch {
-        return 0;
+    const tsx: string[] = [];
+    const walk = (dir: string): void => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) walk(full);
+        else if (e.name.endsWith(".tsx")) tsx.push(readFileSync(full, "utf8"));
       }
     };
+    for (const dir of ["app", "src", "components"]) walk(path.join(__dirname, "..", "..", dir));
+    const count = (word: string) => tsx.reduce((n, src) => n + src.split(word).length - 1, 0);
     expect(count("animate-pulse") + count("animate-spin")).toBeGreaterThan(10);
   });
 });

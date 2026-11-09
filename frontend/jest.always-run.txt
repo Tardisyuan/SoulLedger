@@ -12,13 +12,13 @@
 src/__tests__/ActorsPage.test.tsx packages
 src/__tests__/AppLayout.test.tsx frontend
 src/__tests__/Button.test.tsx frontend
-src/__tests__/Field.test.tsx *
+src/__tests__/Field.test.tsx frontend
 src/__tests__/HomePageIdentity.test.tsx packages
 src/__tests__/LoginPage.test.tsx backend
 src/__tests__/PageShell.test.tsx frontend
 src/__tests__/SchedulerPage.test.tsx backend
 src/__tests__/Spinner.test.tsx frontend
-src/__tests__/a11yEngineBaseline.test.tsx *
+src/__tests__/a11yEngineBaseline.test.tsx frontend
 src/__tests__/accessTokenNeverBecomesACookie.test.ts frontend packages
 src/__tests__/apiEndpointContract.test.ts packages
 src/__tests__/arrowNotDoubled.test.ts packages
@@ -38,19 +38,19 @@ src/__tests__/domainNamespaceContract.test.ts packages
 src/__tests__/draftSavedFlash.test.tsx packages
 src/__tests__/egyLexiconRules.test.ts frontend
 src/__tests__/enumsMatchTheSchema.test.ts packages
-src/__tests__/errorIsNotAnEmptyState.test.ts *
-src/__tests__/eventInvalidationReachesCache.test.ts *
+src/__tests__/errorIsNotAnEmptyState.test.ts frontend
+src/__tests__/eventInvalidationReachesCache.test.ts packages
 src/__tests__/eventRegistry.test.ts backend
 src/__tests__/focusRingContract.test.ts packages
 src/__tests__/inkOnSurfaceContract.test.ts packages
 src/__tests__/jestAlwaysRunList.test.ts *
 src/__tests__/jestRunsNextVendoredReact.test.ts package.json
-src/__tests__/ledgerPaletteContract.test.ts *
+src/__tests__/ledgerPaletteContract.test.ts packages
 src/__tests__/loginStatutes.test.ts backend config
 src/__tests__/permissionCodesStayOutOfCopy.test.ts packages
 src/__tests__/printLayout.test.tsx frontend
 src/__tests__/menuButtonGates.test.ts frontend
-src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts *
+src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts frontend
 src/__tests__/menuIconTable.test.ts backend
 src/__tests__/messageKeysAreReferenced.test.ts backend config frontend mobile-officer mobile packages
 src/__tests__/motionTokens.test.ts packages
@@ -64,7 +64,7 @@ src/__tests__/plaqueTitleStaysLargeText.test.ts packages
 src/__tests__/platformAdapterIsInstalled.test.tsx frontend
 src/__tests__/proseLinkIsNotColourOnly.test.ts packages
 src/__tests__/proxyAuthGate.test.ts config
-src/__tests__/reducedMotionContract.test.ts *
+src/__tests__/reducedMotionContract.test.ts frontend
 src/__tests__/roleForbiddenCodenamesMatchBackend.test.ts backend
 src/__tests__/sentenceNodeStateByCivilization.test.ts backend
 src/__tests__/soulCodeMatchesBackend.test.ts backend
@@ -73,7 +73,7 @@ src/__tests__/soulStateBadgeContract.test.ts packages
 src/__tests__/statusGlyphFont.test.ts frontend mobile
 src/__tests__/statusTokenLayering.test.ts packages
 src/__tests__/suiteShape.test.ts frontend
-src/__tests__/tabClassContract.test.ts *
+src/__tests__/tabClassContract.test.ts frontend
 src/__tests__/toastColourContract.test.ts packages
 src/__tests__/truncatedValuesAreRecoverable.test.ts frontend
 src/__tests__/underworldMap.test.ts frontend

@@ -32,9 +32,8 @@
  * call a pass. That one answers "what did it ask for"; this one answers "did
  * anyone hear it".
  */
-import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 import { QueryClient } from "@tanstack/react-query";
 
@@ -313,21 +312,23 @@ describe("no source file caches under a singular form of a factory family", () =
     users: "user",
   };
 
-  function grep(pattern: string): string[] {
-    try {
-      const out = execFileSync(
-        "grep",
-        ["-rn", "--include=*.ts", "--include=*.tsx", "-e", pattern, "app", "src", "lib"],
-        { cwd: FRONTEND_ROOT, encoding: "utf8" }
-      );
-      return out.trim() === "" ? [] : out.trim().split("\n");
-    } catch (err) {
-      // grep exits 1 for "no matches", which is the passing case. Any other
-      // status is a broken check, and must not read as a pass.
-      const status = (err as { status?: number }).status;
-      if (status === 1) return [];
-      throw err;
-    }
+  /** `file:line:text` for every .ts / .tsx line under app/, src/, lib/ matching `pattern`. */
+  function grep(pattern: RegExp): string[] {
+    const hits: string[] = [];
+    const walk = (rel: string): void => {
+      for (const e of readdirSync(path.join(FRONTEND_ROOT, rel), { withFileTypes: true })) {
+        const child = `${rel}/${e.name}`;
+        if (e.isDirectory()) walk(child);
+        else if (/\.tsx?$/.test(e.name))
+          readFileSync(path.join(FRONTEND_ROOT, child), "utf8")
+            .split("\n")
+            .forEach((line, i) => {
+              if (pattern.test(line)) hits.push(`${child}:${i + 1}:${line}`);
+            });
+      }
+    };
+    for (const dir of ["app", "src", "lib"]) walk(dir);
+    return hits;
   }
 
   it.each(CACHED.map((c) => [c.label, c.owner] as const))(
@@ -371,13 +372,13 @@ describe("no source file caches under a singular form of a factory family", () =
   it("the grep works, or this whole block is a no-op", () => {
     // Proves the search reaches real files and the plural spelling is in use;
     // without this, a broken invocation would report zero matches and pass.
-    expect(grep('queryKey: \\[\\"souls\\"').length + grep("soulKeys\\.").length).toBeGreaterThan(0);
+    expect(grep(/queryKey: \["souls"/).length + grep(/soulKeys\./).length).toBeGreaterThan(0);
   });
 
   it.each(Object.entries(SHADOWS).map(([plural, singular]) => [singular, plural] as const))(
     "nothing keys under [\"%s\"] where the family is \"%s\"",
     (singular, _plural) => {
-      expect(grep(`queryKey: \\[\\"${singular}\\"`)).toEqual([]);
+      expect(grep(new RegExp(`queryKey: \\["${singular}"`))).toEqual([]);
     }
   );
 });

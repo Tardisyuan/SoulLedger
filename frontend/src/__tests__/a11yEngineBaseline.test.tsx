@@ -772,9 +772,9 @@ const SUBJECTS: Subject[] = [
 // ── Baseline ────────────────────────────────────────────────────────────────
 
 const BASELINE_FILE = "axe-baseline.json";
-const ROOT = path.join(__dirname, "..", "..");
+const FRONTEND = path.join(__dirname, "..", "..");
 const BASELINE: Record<string, Record<string, number>> = JSON.parse(
-  fs.readFileSync(path.join(ROOT, BASELINE_FILE), "utf8"),
+  fs.readFileSync(path.join(FRONTEND, BASELINE_FILE), "utf8"),
 );
 
 /**
