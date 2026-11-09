@@ -44,7 +44,15 @@ export function DiyuRows({ soul }: { soul: Soul }) {
  * 不在路上(在世 / 已转世)不画条,只留一行灰字。`canMove`(持 `soul.transition`)时右上「挪站…」开弹层(S-1b)。
  * v4(第七批 S07):卡头是 `soulmap.title`,按钮是 `soulmap.move`,卡片是 `.v4-card`;列表的读屏名仍是「十三站」。
  * 行程条下面是地府那张图(`SoulUnderworldMap`,阶段 5):同一个序号,加十殿的子格与一生回放。
+ *
+ * 第二十五批 §五.2:十三张卡不再等宽 —— 已过折成约 30 宽的窄条(勾 + 站号)、现在那张展开约 168 宽
+ * (1.5 metal 内描,「现在 · 第 N 站」+ 站名)、未到是虚线框(站号;xl 起写站名)。三种状态靠宽度 / 实底 / 虚线分开,
+ * 不靠颜色;已过与未到另有 sr-only 状态字。稿里的「到此 N 日」没画:灵魂上只有 `diyu_station`,没有到站时间,不编。
+ * 样式在 globals.css 末尾「十三站卡」一节。
  */
+export type DiyuCardState = "passed" | "current" | "ahead";
+/** Station `i` (0-based) against the soul's 1-based ordinal `at`. */
+export const diyuCardState = (i: number, at: number): DiyuCardState => (i + 1 < at ? "passed" : i + 1 === at ? "current" : "ahead");
 export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boolean }) {
   const { t } = useI18n();
   const [moving, setMoving] = useState(false);
@@ -78,9 +86,10 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
           </Button>
         )}
       </div>
-      <ol className="mt-3 grid grid-cols-13 gap-1" aria-label={t("souls.diyu_station.label")}>
+      <ol className="mt-3 flex gap-1" aria-label={t("souls.diyu_station.label")}>
         {DIYU_STATIONS.map((s, i) => {
-          const where = i + 1 < at ? "passed" : i + 1 === at ? "current" : "ahead";
+          const where = diyuCardState(i, at);
+          const n = String(i + 1);
           return (
             <li
               key={s}
@@ -88,21 +97,29 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
               data-state={where}
               title={name(s)}
               aria-current={where === "current" ? "step" : undefined}
-              className="flex min-w-0 flex-col items-center gap-1 text-center"
+              className={cn("diyu-card", `diyu-card--${where}`)}
             >
-              <span aria-hidden="true" className={cn("leading-none", where === "current" ? "text-lg font-semibold" : "text-sm text-[oklch(var(--color-ink-muted))]")}>
-                {where === "passed" ? "■" : where === "current" ? "▪" : "□"}
-              </span>
-              <span
-                title={name(s)}
-                className={cn(
-                  "truncate text-2xs",
-                  // w-full 只给看得见的站名:和 sr-only 写在一起时它压过 sr-only 的 1px 宽,隐藏的站名照样撑满 393px
-                  where === "current" ? "w-full font-semibold text-[oklch(var(--color-ink))]" : "sr-only text-[oklch(var(--color-ink-muted))] xl:not-sr-only xl:w-full", // 窄屏只藏起来给眼睛,读屏照样念出每一站
-                )}
-              >
-                {name(s)}
-              </span>
+              {where === "current" ? (
+                <>
+                  <span className="diyu-card-now text-2xs font-semibold">{t("souls.diyu_station.now_card", { n })}</span>
+                  <span className="w-full truncate font-title text-md font-semibold text-[oklch(var(--color-ink))]">{name(s)}</span>
+                </>
+              ) : (
+                <>
+                  {where === "passed" && <span aria-hidden="true" className="text-sm leading-none">✓</span>}
+                  <span aria-hidden="true" className="font-mono text-2xs">{n}</span>
+                  <span className="sr-only">{t(`souls.diyu_station.state_${where}`)}</span>
+                  <span
+                    className={cn(
+                      "truncate text-2xs",
+                      // 已过的窄条永远只给读屏;未到的 xl 起写出来。w-full 只给看得见的站名(和 sr-only 同写会压过它的 1px 宽)
+                      where === "ahead" ? "sr-only xl:not-sr-only xl:w-full" : "sr-only",
+                    )}
+                  >
+                    {name(s)}
+                  </span>
+                </>
+              )}
             </li>
           );
         })}
