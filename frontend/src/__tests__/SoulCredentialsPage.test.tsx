@@ -11,11 +11,11 @@
  * document once the dialog is closed.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import SoulCredentialsPage from "@/app/soul-credentials/page";
 import { tZh } from "./support/zhBundle";
 import { mockShowToast, page, http } from "./support/mocks";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -77,8 +77,8 @@ function credential(over: Record<string, unknown> = {}) {
 
 let client: QueryClient;
 function renderPage() {
-  client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  client = createTestQueryClient();
+  const Wrapper = testProviders({ client, i18n: false }).wrapper;
   return render(<SoulCredentialsPage />, { wrapper: Wrapper });
 }
 

@@ -7,13 +7,10 @@
  * real `api` instance with its verbs spied on.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { api } from "@soulledger/core/api/client";
 import { OFFICER_EMPTY_ANSWER, OFFICER_SCREENS, officerAssistScreen } from "@soulledger/core/api/officer-assist";
-import { I18nProvider } from "@/src/contexts/I18nContext";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import { officerAssistSuggestions } from "@soulledger/core/config/officerAssistSuggestions";
 import { installStreamFetch, refuse, type StreamAsk, type StreamEvent, type StreamScript } from "./support/assistStreamFetch";
@@ -56,6 +53,7 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 }));
 
 import { AppLayout } from "@/src/components/layout/AppLayout";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const CONVERSATION_ID = "11111111-1111-1111-1111-111111111111";
@@ -97,12 +95,8 @@ function setWidth(wide: boolean) {
 }
 
 function renderLayout() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>
-      <I18nProvider initialLocale="zh-Hans">{children}</I18nProvider>
-    </QueryClientProvider>
-  );
+  const client = createTestQueryClient();
+  const Wrapper = testProviders({ client, i18n: "zh-Hans" }).wrapper;
   return render(<AppLayout>page body</AppLayout>, { wrapper: Wrapper });
 }
 

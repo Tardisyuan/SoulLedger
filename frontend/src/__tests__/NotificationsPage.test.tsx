@@ -9,11 +9,11 @@
  * the failure toasts for the two mutations.
  */
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import NotificationsPage from "@/app/notifications/page";
 import { notificationsApi } from "@soulledger/core/api";
 import { mockShowToast } from "./support/mocks";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   notificationsApi: { list: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn() },
@@ -48,10 +48,8 @@ function notification(over: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+  const queryClient = createTestQueryClient();
+  const Wrapper = testProviders({ client: queryClient, i18n: false }).wrapper;
   return { ...render(<NotificationsPage />, { wrapper: Wrapper }), queryClient };
 }
 

@@ -31,11 +31,12 @@
  * pair is NOT reused — `installWsHarness` runs `runOnlyPendingTimers()` in an
  * `afterEach` that would fire while a React tree is still mounted.
  */
-import { render, screen, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, act } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { WebSocketProvider, useWebSocket } from "@/src/contexts/WebSocketContext";
 
 import { FakeWebSocket, lastSocket, setToken } from "./support/wsHarness";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 // ── Mocked surroundings ──────────────────────────────────────────────
 //
@@ -94,12 +95,11 @@ let addSpy: jest.SpyInstance;
 let removeSpy: jest.SpyInstance;
 
 function renderProvider() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <WebSocketProvider>
-        <Probe />
-      </WebSocketProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <WebSocketProvider>
+      <Probe />
+    </WebSocketProvider>,
+    { client: queryClient, i18n: false },
   );
 }
 
@@ -120,7 +120,7 @@ beforeEach(() => {
   (global as unknown as { WebSocket: unknown }).WebSocket = FakeWebSocket;
   setToken("jwt-token");
   mockUser = { id: 1, username: "yama" };
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient = createTestQueryClient();
   warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
   pageshowListeners = 0;
@@ -305,11 +305,9 @@ describe("WebSocketProvider reconnects when the session resumes", () => {
     mockUser = { id: 1, username: "yama" };
     act(() => {
       rerender(
-        <QueryClientProvider client={queryClient}>
-          <WebSocketProvider>
-            <Probe />
-          </WebSocketProvider>
-        </QueryClientProvider>,
+        <WebSocketProvider>
+          <Probe />
+        </WebSocketProvider>
       );
     });
 

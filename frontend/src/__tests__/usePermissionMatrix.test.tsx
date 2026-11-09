@@ -4,8 +4,7 @@
  * is read.
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import {
   matrixCellKey,
   roleDeleteRefusal,
@@ -19,6 +18,7 @@ import {
 import { permKeys } from "@soulledger/core/query_keys";
 import { useCustomRoleLabel } from "@/src/components/users/RoleName";
 import { usePermissionCrud } from "@/src/components/permissions/usePermissionCrud";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
@@ -40,11 +40,11 @@ const { permApi } = jest.requireMock("@soulledger/core/api") as {
 };
 
 function newClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return createTestQueryClient();
 }
 
 function wrapperFor(client: QueryClient) {
-  return ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
+  return testProviders({ client, i18n: false }).wrapper;
 }
 
 const result = (index: number, role: string, permission_id: number, status: string, code: string | null = null) => ({

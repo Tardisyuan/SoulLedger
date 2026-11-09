@@ -4,12 +4,12 @@
  * 范围(只动自己的通知、条数上限)是后端的事,见 backend/tests/test_notifications_batch.py。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import NotificationsPage from "@/app/notifications/page";
 import { notificationsApi } from "@soulledger/core/api";
 import { notificationKeys } from "@soulledger/core/query_keys";
 import { mockShowToast } from "./support/mocks";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   notificationsApi: {
@@ -27,8 +27,8 @@ const n = (id: number, over: Record<string, unknown> = {}) => ({
 
 let client: QueryClient;
 function renderPage() {
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  client = createTestQueryClient();
+  const Wrapper = testProviders({ client, i18n: false }).wrapper;
   return render(<NotificationsPage />, { wrapper: Wrapper });
 }
 const tick = (title: string) => fireEvent.click(screen.getByRole("checkbox", { name: `notifications.select_row:${title}` }));

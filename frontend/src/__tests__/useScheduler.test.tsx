@@ -8,8 +8,7 @@
  * `data` — would pass a read-back and fail here.
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
+import { QueryClient, focusManager } from "@tanstack/react-query";
 import {
   SCHEDULER_POLL_FAST_MS,
   SCHEDULER_POLL_SLOW_MS,
@@ -22,6 +21,7 @@ import {
   useUpdateScheduledJob,
 } from "@soulledger/core/hooks/useScheduler";
 import { schedulerKeys } from "@soulledger/core/query_keys";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   schedulerApi: {
@@ -43,11 +43,11 @@ const job = (id: number, status: string | null) => ({
 });
 
 function wrapperFor(client: QueryClient) {
-  return ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
+  return testProviders({ client, i18n: false }).wrapper;
 }
 
 function newClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return createTestQueryClient();
 }
 
 beforeEach(() => {

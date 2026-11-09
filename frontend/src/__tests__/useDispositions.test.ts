@@ -2,9 +2,8 @@
  * Tests for useDispositions hooks
  */
 import { renderHook, waitFor } from "@testing-library/react";
-import { createElement } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useDispositions } from "@soulledger/core/hooks/useDispositions";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: {
@@ -25,10 +24,8 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 // keys because that is what the hook now passes, not because a stub echoed them.
 
 function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return { queryClient, wrapper: ({ children }: { children: React.ReactNode }) => createElement(QueryClientProvider, { client: queryClient }, children) };
+  const queryClient = createTestQueryClient();
+  return { queryClient, wrapper: testProviders({ client: queryClient, i18n: false }).wrapper };
 }
 
 describe("useDispositions", () => {

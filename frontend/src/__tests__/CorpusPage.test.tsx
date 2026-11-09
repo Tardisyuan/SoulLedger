@@ -13,11 +13,9 @@
  *      走过每一处;输入节号直达那一条。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CorpusPage from "@/app/corpus/page";
-import { I18nProvider } from "@/src/contexts/I18nContext";
 import { judgmentApi } from "@soulledger/core/api";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -93,12 +91,8 @@ const FIXTURES = [
 ];
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>
-      <I18nProvider>{children}</I18nProvider>
-    </QueryClientProvider>
-  );
+  const client = createTestQueryClient();
+  const Wrapper = testProviders({ client, i18n: true }).wrapper;
   return render(<CorpusPage />, { wrapper: Wrapper });
 }
 

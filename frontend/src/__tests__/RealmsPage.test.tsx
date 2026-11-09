@@ -6,12 +6,10 @@
  * 不持有的人看到的仍是只读表。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Realm } from "@soulledger/core/api";
 import RealmsPage from "@/app/realms/page";
 import { realmsApi } from "@soulledger/core/api";
-import { I18nProvider } from "@/src/contexts/I18nContext";
+import { createTestQueryClient, testProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   realmsApi: { list: jest.fn(), occupancy: jest.fn(), setCapacity: jest.fn() },
@@ -43,12 +41,8 @@ const mockedOcc = realmsApi.occupancy as jest.Mock;
 const mockedSet = realmsApi.setCapacity as jest.Mock;
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>
-      <I18nProvider>{children}</I18nProvider>
-    </QueryClientProvider>
-  );
+  const client = createTestQueryClient();
+  const Wrapper = testProviders({ client, i18n: true }).wrapper;
   return render(<RealmsPage />, { wrapper: Wrapper });
 }
 
