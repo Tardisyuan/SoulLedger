@@ -70,12 +70,15 @@ describe("DiyuRows · 出身部洲", () => {
 });
 
 describe("十三站行程条(第五十七批 S-1)", () => {
-  it("13 站等宽:已过 ■、当前 ▪、未到 □;右上第 n / 13 站 · 站名;不写原值", () => {
+  it("13 站卡(第二十五批):已过窄条带勾、当前展开写「现在 · 第 n 站」、未到虚线框;右上第 n / 13 站 · 站名;不写原值", () => {
     strip({});
     const states = Array.from(document.querySelectorAll("[data-station]")).map((li) => li.getAttribute("data-state"));
     expect(states).toEqual(["passed", "passed", "current", ...Array(10).fill("ahead")]);
-    const cells = Array.from(document.querySelectorAll("[data-station]")).map((li) => li.textContent?.charAt(0));
-    expect(cells.slice(0, 4)).toEqual(["■", "■", "▪", "□"]);
+    const cells = Array.from(document.querySelectorAll("[data-station]")).map((li) => li.textContent ?? "");
+    expect(cells[0].startsWith("✓1")).toBe(true);
+    expect(cells[2].startsWith("现在 · 第 3 站望乡台")).toBe(true);
+    expect(cells[3].startsWith("4")).toBe(true);
+    expect(cells[3]).not.toContain("✓");
     expect(screen.getByTestId("soul-diyu-station-now")).toHaveTextContent("第 3 / 13 站 · 望乡台");
     expect(screen.getByTestId("soul-diyu-station")).not.toHaveTextContent("WANGXIANG_TERRACE");
     // v4 S07 卡头:「{soul} 走到了哪一步」,不再是 v3 的「十三站」小字栏目名。

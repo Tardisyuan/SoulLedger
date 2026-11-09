@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
@@ -18,7 +18,21 @@ import { toRomanNumeral } from "@soulledger/core/config/civilizationSigil";
  *   GREEK    主干到三判官,下分左 / 右两栏,右栏右对齐
  *
  * `occupancy` 缺(在押加载失败)时数字写「—」,不写 0。
+ *
+ * 第二十五批 §五.1:每站右边一根在押 / 容量条(`occupancyBar`;文明墨色,越满越实)。
+ * ≥ 78% 方块放大并加 `--color-glow` 光圈;≥ 90% 条的右端一道 `--color-danger` 竖线。这页没有「现在」,不用 metal。
+ * 容量来自界域行自己的 `capacity`(`PATCH /realms/{id}/` 写的那一列)。**容量为 null(未记录)的站只写在押数、不画条** ——
+ * 未记录不是无限也不是 0,画不出比例;后端没有别的容量来源,这里不编。在押加载失败时同样只写「—」。
  */
+export const OCC_HOT = 0.78;
+export const OCC_DANGER = 0.9;
+
+/** held / capacity → the bar's reading; null when capacity is unrecorded (no bar). Capacity 0 with someone held is full. */
+export function occupancyBar(held: number, capacity: number | null | undefined): { ratio: number; hot: boolean; danger: boolean } | null {
+  if (capacity == null) return null;
+  const ratio = capacity > 0 ? held / capacity : held > 0 ? 1 : 0;
+  return { ratio, hot: ratio >= OCC_HOT, danger: ratio >= OCC_DANGER };
+}
 const LABEL = "text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]";
 const MUTED = "text-[oklch(var(--color-ink-muted))]";
 const SUMMIT = "EU_EARTHLY_PARADISE";
@@ -40,9 +54,38 @@ export function RouteMap({
   const tip = (s: Station) => [realmStationLabel(t, s), s.code].filter(Boolean).join(" · ") || undefined;
   const count = (s: Station) => (occupancy ? held(s) : <MissingValue kind="unrecorded" reason={t("realms.table.occupancy_failed")} />);
 
+  const bar = (s: Station) => (occupancy ? occupancyBar(held(s), s.realm?.capacity) : null);
+  /** Bar + "held / capacity"; only the count when capacity is unrecorded or occupancy failed. */
+  const load = (s: Station, on: boolean) => {
+    const b = bar(s);
+    return (
+      <>
+        {b && (
+          <span
+            aria-hidden="true"
+            data-occupancy-bar={b.danger ? "danger" : b.hot ? "hot" : "ok"}
+            className="realm-occ shrink-0"
+            style={{ "--occ": Math.min(b.ratio, 1) } as CSSProperties}
+          >
+            <span className="realm-occ-fill" />
+          </span>
+        )}
+        <span className={`shrink-0 font-mono text-xs ${on ? "" : MUTED}`}>
+          {count(s)}
+          {b && <span className={MUTED}>{` / ${s.realm?.capacity}`}</span>}
+        </span>
+      </>
+    );
+  };
+
   const mark = (s: Station) =>
     held(s) > 0 ? (
-      <span aria-hidden="true" data-mark="held" className="relative size-[11px] bg-[oklch(var(--color-ink))]" />
+      <span
+        aria-hidden="true"
+        data-mark="held"
+        data-hot={bar(s)?.hot ? "true" : undefined}
+        className={`relative bg-[oklch(var(--color-ink))] ${bar(s)?.hot ? "realm-occ-hot size-[13px]" : "size-[11px]"}`}
+      />
     ) : (
       <span
         aria-hidden="true"
@@ -70,7 +113,7 @@ export function RouteMap({
           {name(s)}
         </span>
         {eternal(s)}
-        {!terminal && <span className={`font-mono text-xs ${on ? "" : MUTED}`}>{count(s)}</span>}
+        {!terminal && load(s, on)}
       </li>
     );
   };
@@ -125,7 +168,7 @@ export function RouteMap({
                           {name(s)}
                         </span>
                         {eternal(s)}
-                        <span className={`font-mono text-xs ${on ? "" : MUTED}`}>{count(s)}</span>
+                        {load(s, on)}
                       </li>
                     );
                   })}
@@ -208,6 +251,7 @@ export function RouteMap({
         <span>{t("realms.map.legend_held")}</span>
         <span>{t("realms.map.legend_empty")}</span>
         <span>{t("realms.map.legend_count")}</span>
+        <span data-testid="map-legend-bar">{t("realms.map.legend_bar")}</span>
         <span data-testid="map-legend-eternal">{t("realms.tree.legend_eternal")}</span>
         <span className="ml-auto">{t("realms.map.read_only")}</span>
       </div>

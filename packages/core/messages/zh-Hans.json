@@ -841,7 +841,10 @@
       "move_body": "挪站只改记录的位置，会记进灵魂账页。",
       "not_on_road": "十三站 · 不在路上",
       "move_confirm": "挪站",
-      "here_mark": "现在"
+      "here_mark": "现在",
+      "now_card": "现在 · 第 {{n}} 站",
+      "state_passed": "已过",
+      "state_ahead": "未到"
     },
     "birth_continent": {
       "label": "出身部洲",
@@ -3236,6 +3239,7 @@
       "legend_held": "■ 有灵魂",
       "legend_empty": "□ 空",
       "legend_count": "数字 = 在押",
+      "legend_bar": "条长 = 在押 / 容量；≥ 78% 方块放大、加光圈；≥ 90% 右端一道竖线；没记容量的站只写在押",
       "read_only": "只读示意"
     },
     "facts": {

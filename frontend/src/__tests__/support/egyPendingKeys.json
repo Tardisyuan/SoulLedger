@@ -9,5 +9,9 @@
   "auth.goodbye.line.cn",
   "auth.goodbye.line.eu",
   "auth.goodbye.line.eg",
-  "auth.goodbye.line.gr"
+  "auth.goodbye.line.gr",
+  "realms.map.legend_bar",
+  "souls.diyu_station.now_card",
+  "souls.diyu_station.state_passed",
+  "souls.diyu_station.state_ahead"
 ]

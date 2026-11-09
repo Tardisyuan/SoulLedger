@@ -841,7 +841,10 @@
       "move_body": "Moving changes only the recorded station; it goes into the soul ledger page.",
       "not_on_road": "Thirteen stations · not on the road",
       "move_confirm": "Move",
-      "here_mark": "now"
+      "here_mark": "now",
+      "now_card": "Now · station {{n}}",
+      "state_passed": "passed",
+      "state_ahead": "ahead"
     },
     "birth_continent": {
       "label": "Continent of birth",
@@ -3236,6 +3239,7 @@
       "legend_held": "■ souls held",
       "legend_empty": "□ empty",
       "legend_count": "number = held",
+      "legend_bar": "bar = held / capacity; ≥ 78% enlarged mark with a halo; ≥ 90% a tick at the end; no capacity recorded, count only",
       "read_only": "Read-only sketch"
     },
     "facts": {

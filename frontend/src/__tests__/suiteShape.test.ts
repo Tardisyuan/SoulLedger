@@ -193,6 +193,8 @@ const COLLECTED_FILES = [
   "SoulInfoCard.infernoFacts.test.tsx",
   // 2026-10-28 地府十三站与出身部洲(身份栏),换站与勾魂的时间线一行。
   "DiyuRows.test.tsx",
+  // 2026-11-09 第二十五批 §五:界域拓扑的在押 / 容量条阈值、十三站卡折叠。
+  "batch25OccupancyAndDiyuCards.test.tsx",
   // 2026-10-28 枉死城案卷字段、城隍「下属诸司」(第五十七批 D-3)、埃及四十二条否定告白。
   "DiyuCaseFields.test.tsx",
   "CityGodBureauPicker.test.tsx",
