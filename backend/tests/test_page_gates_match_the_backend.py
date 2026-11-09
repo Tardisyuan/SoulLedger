@@ -20,23 +20,17 @@
 Django 的。
 """
 import re
-from pathlib import Path
 
 import pytest
 
-FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
-APP = FRONTEND / "app"
+from tests.web_routes import APP, pages, public_paths, routes
 
-#: 路由 -> 为什么它不需要页级权限门。
-PUBLIC_OR_SELF_SERVICE = {
-    "/": "登录前的落地页。",
-    "/welcome": "登录前的欢迎页。",
-    "/login": "登录页本身。",
-    "/login/verify": "两步验证第二步:持 5 分钟的 pending token 才能走下去,此时还没有任何会话。",
-    "/forgot-password": "官员找回密码的申请页,登录前可用;回应对任何账号都一样。",
-    "/reset-password": "邮件链接里的一次性令牌就是凭证,登录前可用。",
-    "/accept-invite": "邀请信里的一次性令牌就是凭证,设好密码之前还没有账号可登(第五十四批)。",
-    "/verify-email": "邮件链接里的一次性令牌就是凭证,不需要登录。",
+#: 登录后才进得来、却不需要页级权限门的页面 -> 为什么。
+#:
+#: **公开页不在这里**:它们的理由写在 `frontend/proxy.ts` 的 `PUBLIC_PATHS` 里(那是「无需登录」
+#: 的唯一决定),这里读它(`tests/web_routes.py`)。2026-11-10 之前这里另抄了一份,加 `/goodbye`
+#: 要两边都改。没有会话的页面谈不上权限门,所以公开即豁免;新增公开页只改 proxy.ts。
+SELF_SERVICE = {
     "/dashboard": "登录后的首页,每个角色都进得来;页内各区块自己带门。",
     "/profile": "本人资料,任何登录用户都该能看自己的。",
     "/notifications": "本人通知,同上。",
@@ -48,10 +42,12 @@ PUBLIC_OR_SELF_SERVICE = {
     "/judgment/[id]": "页内 judgment.execute 门。",
     "/dispatch/[id]": "页内 dispatch.approve / reject / execute 三道门。",
     "/workflow/[id]": "页内 workflow.approve / advance 门。",
-    "/goodbye": "退出登录之后的再会页(2026-11-10):这时已经没有会话;页面只读本标签页里退出前留的名字与文明,不请求任何数据。",
-    "/verdict-print": "判决文书 PDF 的打印页:只有无头 Chromium 打开,一次性键是凭据;数据由后端在下载人自己的请求里按详情的权限备好(apps/judgment/verdict_pdf.py)。",
-    "/about": "关于 / 致谢:字体、纹样、图像的授权清单,静态内容,不含任何租户数据(OFL / CC0 本就要求可见)。",
 }
+
+PUBLIC = public_paths()
+
+#: 路由 -> 为什么它不需要页级权限门:公开页(理由在 proxy.ts)加上面的自助页。
+PUBLIC_OR_SELF_SERVICE = {**PUBLIC, **SELF_SERVICE}
 
 #: 一道门在**使用处**长什么样。不是 `("RequirePermission", ...)` 这样的裸名字:
 #: 第一版是那样,而把 `/ledger` 的门整个拆掉、只留下那行没用到的
@@ -92,15 +88,7 @@ def gate_is_outermost(source):
     return bool(OUTERMOST_GATE.match(body[first_return.end():].lstrip().lstrip("(")))
 
 
-def routes():
-    """`app/` 下每个 `page.tsx` 对应的路由。路由组 `(auth)` 不出现在 URL 里。"""
-    out = []
-    for page in APP.rglob("page.tsx"):
-        parts = [p for p in page.relative_to(APP).parent.parts if not p.startswith("(")]
-        out.append("/" + "/".join(parts) if parts else "/")
-    return sorted(set(out))
-
-
+#: `app/` 下每个 `page.tsx` 对应的路由(`tests/web_routes.py`)。路由组 `(auth)` 不出现在 URL 里。
 ROUTES = routes()
 
 
@@ -123,8 +111,8 @@ def test_every_other_route_has_a_gate(route):
     )
     assert any(m in code for m in GATE_MARKERS), (
         f"{route} 没有任何权限判断。侧边栏的菜单过滤只藏链接、不挡路由,所以"
-        f"直接输 URL 就能打开它。若这是有意的,把它加进 PUBLIC_OR_SELF_SERVICE "
-        f"并写明理由。"
+        f"直接输 URL 就能打开它。若这是有意的:登录后的自助页加进 SELF_SERVICE 并写明理由;"
+        f"无需登录的页加进 frontend/proxy.ts 的 PUBLIC_PATHS。"
     )
     assert gate_is_outermost(source), (
         f"{route} 的门不在页面最外层:默认导出 return 的第一个元素应是 <RequirePermission> / "
@@ -156,14 +144,7 @@ def test_the_outermost_rule_tells_a_page_gate_from_a_button_gate():
 
 
 def _page_source(route):
-    parts = [p for p in route.strip("/").split("/") if p]
-    page = APP.joinpath(*parts, "page.tsx") if parts else APP / "page.tsx"
-    if not page.exists():
-        # 路由组:回退到全量搜索
-        page = next(
-            p for p in APP.rglob("page.tsx")
-            if "/" + "/".join(x for x in p.relative_to(APP).parent.parts if not x.startswith("(")) == route
-        )
+    page = next(p for p, r in pages().items() if r == route)
     return page.read_text(encoding="utf-8")
 
 
@@ -172,6 +153,15 @@ def test_the_exemption_list_names_only_real_routes():
     生效的豁免完全一样,而它豁免的那个页面此刻没有门也没人知道。"""
     stale = sorted(set(PUBLIC_OR_SELF_SERVICE) - set(ROUTES))
     assert stale == [], f"豁免名单里这些路由已不存在:{stale}"
+
+
+def test_public_routes_are_read_from_the_proxy_with_their_reasons():
+    """守卫的守卫:公开页从 proxy.ts 解析而来。解析坏了(比如对象换了写法)会得到空表或丢条目,
+    那时公开页会在上面那条里显示成「没有门」—— 方向是红的,但原因读起来不对,所以这里直说。
+    `/login` 是登录闸门本身,它不公开就没有人能登录,拿它当探针。"""
+    assert "/login" in PUBLIC, PUBLIC
+    assert all(reason.strip() for reason in PUBLIC.values()), PUBLIC
+    assert not set(PUBLIC) & set(SELF_SERVICE), "同一页不会既无需登录又需要登录"
 
 
 def test_the_audit_page_gates_on_the_codename_not_the_role():

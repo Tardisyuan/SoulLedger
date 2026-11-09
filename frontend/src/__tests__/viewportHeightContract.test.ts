@@ -25,6 +25,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isOutsideAppLayout, pageRoutes, shellFreeLists } from "./support/appRoutes";
+
 const ROOT = path.resolve(__dirname, "../..");
 const APP = path.join(ROOT, "app");
 
@@ -41,19 +43,33 @@ const CONTAINS_APP_LAYOUT: Record<string, string> = {
 };
 
 /**
- * 允许写 `min-h-screen` 的文件,以及它们各自对应哪一条豁免路由。
+ * 允许写 `min-h-screen` 的文件,以及它们各自对应哪些豁免路由 —— **推导**,不手写。
  *
- * 这张表是手写的 —— 路由组 `(auth)` 到 URL 的映射不是机械可推的。所以下面有
- * 一条测试把它与 `AppLayoutWrapper` 里那两个数组双向对上:任何人新增一条公开
- * 路由而不更新这里,那条测试就会红,而不是让一个新的全屏页悄悄合法。
+ * 2026-11-10 之前这是一张手写表(路由组 `(auth)` 到 URL 的映射当时被认为不可机械推导),
+ * 加 `/goodbye` 就得来这里补一行。现在 `support/appRoutes.ts` 把每个 `page.tsx` 映射到
+ * 它的 URL,再用 `AppLayoutWrapper` 自己的两个数组判断它在不在外壳里:
+ *   - 一个 `page.tsx`,它的路由不在外壳里 → 豁免;
+ *   - `app/` 之下(不含根)的一个 `layout.tsx`,它管的页面里有一个不在外壳里 → 豁免
+ *     (`(auth)/layout.tsx` 包着 `/login`)。根 `app/layout.tsx` 不走这条,见上面那张表。
+ * 已知的天花板:`(auth)/layout.tsx` 同时包着 `/forgot-password` 等走外壳的页面,
+ * 它的豁免对那几页偏宽 —— 与此前手写表一样宽,不是这次放开的。
  */
-const OUTSIDE_APP_LAYOUT: Record<string, string> = {
-  "app/page.tsx": "/ — PUBLIC_PATHS",
-  "app/verdict-print/page.tsx": "/verdict-print — PUBLIC_PATHS",
-  "app/goodbye/page.tsx": "/goodbye — PUBLIC_PATHS",
-  "app/(auth)/layout.tsx": "/login, /register — AUTH_PATHS",
-  "app/(auth)/login/page.tsx": "/login — AUTH_PATHS",
-};
+function outsideAppLayout(): Record<string, string[]> {
+  const lists = shellFreeLists();
+  const out: Record<string, string[]> = {};
+  for (const { file, route } of pageRoutes()) {
+    if (!isOutsideAppLayout(route, lists)) continue;
+    out[file] = [...(out[file] ?? []), route];
+    // 管着这一页的每一层 layout.tsx(到 app/ 为止,不含根)。
+    for (let dir = path.posix.dirname(file); dir !== "app"; dir = path.posix.dirname(dir)) {
+      const layout = `${dir}/layout.tsx`;
+      if (fs.existsSync(path.join(ROOT, layout))) out[layout] = [...(out[layout] ?? []), route];
+    }
+  }
+  return out;
+}
+
+const OUTSIDE_APP_LAYOUT = outsideAppLayout();
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -85,37 +101,35 @@ describe("min-h-screen 只出现在 AppLayout 之外", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("豁免清单与 AppLayoutWrapper 的两个数组对得上", () => {
-    const src = fs.readFileSync(
-      path.join(ROOT, "src/components/layout/AppLayoutWrapper.tsx"),
-      "utf8",
-    );
-    const read = (name: string) => {
-      const m = new RegExp(`const ${name}\\s*=\\s*\\[([^\\]]*)\\]`).exec(src);
-      expect(m).not.toBeNull();
-      return [...m![1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
-    };
-    const auth = read("AUTH_PATHS");
-    const publik = read("PUBLIC_PATHS");
+  it("豁免与 AppLayoutWrapper 的两个数组双向对得上", () => {
+    const { auth, publik } = shellFreeLists();
+    // 读不到数组(改成了别的写法)时两边都是空,豁免也是空 —— 下面那条会对着空集合绿。
+    expect(auth.length + publik.length).toBeGreaterThan(0);
 
-    // 每个豁免文件的注记里必须写明它对应哪条路由,而那条路由必须真的在这两个
-    // 数组里 —— 否则豁免是在为一条已经不存在的路由放行。
-    for (const [file, note] of Object.entries(OUTSIDE_APP_LAYOUT)) {
-      const routes = note.split("—")[0].split(",").map((r) => r.trim());
+    // 正向:每个豁免文件都因为一条真在这两个数组里的路由而豁免(推导保证,这里钉住推导本身)。
+    for (const [file, routes] of Object.entries(OUTSIDE_APP_LAYOUT)) {
       for (const route of routes) {
-        expect({ file, route, known: [...auth, ...publik].includes(route) }).toMatchObject({
-          known: true,
+        expect({ file, route, outside: isOutsideAppLayout(route, { auth, publik }) }).toMatchObject({
+          outside: true,
         });
       }
     }
 
-    // 反向:两个数组里的每一条路由都必须被某个豁免文件认领。新增一条公开路由
-    // 却不更新这里,这条会红。
-    for (const route of [...auth, ...publik]) {
-      const claimed = Object.values(OUTSIDE_APP_LAYOUT).some((n) =>
-        n.split("—")[0].split(",").map((r) => r.trim()).includes(route),
-      );
-      expect({ route, claimed }).toMatchObject({ claimed: true });
+    // 反向:两个数组里的每一条都必须落在磁盘上一个真页面上。指着不存在页面的一条
+    // 不豁免任何文件,读起来却像在豁免(`/register` 就是这样)。
+    const pages = pageRoutes();
+    for (const entry of [...auth, ...publik]) {
+      const alone = auth.includes(entry) ? { auth: [entry], publik: [] } : { auth: [], publik: [entry] };
+      const claimed = pages.some((p) => isOutsideAppLayout(p.route, alone) && p.file in OUTSIDE_APP_LAYOUT);
+      expect({ entry, claimed }).toMatchObject({ claimed: true });
     }
+  });
+
+  it("推导真的分得清外壳内外(否则豁免可能是全体页面)", () => {
+    // 守卫的守卫:一个把每页都判成「外壳外」的推导会让上面那条规则形同虚设。
+    const pages = pageRoutes();
+    const outside = pages.filter((p) => p.file in OUTSIDE_APP_LAYOUT);
+    expect(outside.length).toBeGreaterThan(0);
+    expect(pages.length - outside.length).toBeGreaterThan(30);
   });
 });

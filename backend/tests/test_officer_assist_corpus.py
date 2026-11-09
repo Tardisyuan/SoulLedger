@@ -4,15 +4,13 @@
 页面清单钉在 `frontend/app/` 上、工具权限码钉在权限种子上、两端语料互不进对方的 system prompt。
 """
 import re
-from pathlib import Path
 
 import pytest
 
 from apps.perm.models import DEFAULT_PERMISSIONS
 from apps.soul_assist import corpus, officer_tools
 from apps.soul_assist.models import OFFICER_SCREENS
-
-FRONTEND_APP = Path(__file__).resolve().parents[2] / "frontend" / "app"
+from tests.web_routes import is_outside_app_layout, top_segments
 
 #: 官员语料里一个数字都不写:期限、上限、条数都在代码与工具里,写进语料就是第二份会漂的副本。
 ANY_DIGIT = re.compile(r"\d")
@@ -29,23 +27,25 @@ def _officer(locale):
     return corpus.entries(locale, "officer")
 
 
-def _web_segments():
-    """`frontend/app/<段>/**/page.tsx` 的顶层段;`(auth)` 这类路由组不在页头里,不算。"""
-    return {p.relative_to(FRONTEND_APP).parts[0] for p in FRONTEND_APP.glob("*/**/page.tsx")
-            if not p.relative_to(FRONTEND_APP).parts[0].startswith("(")}
+def _shell_segments():
+    """`frontend/app/<段>/**/page.tsx` 的顶层段里,至少有一页在 AppLayout 外壳里的那些。
 
-
+    `(auth)` 这类路由组不在页头里,不算。助手入口在外壳(AppLayout)里,所以整段都不在外壳里的段
+    (`verdict-print`:只给无头 Chromium 渲染判决书 PDF;`goodbye`:退出登录之后的再会页)没有助手页面 id。
+    「在不在外壳里」读 `AppLayoutWrapper.tsx` 的两个数组(`tests/web_routes.py`),不在这里另写一份例外 ——
+    2026-11-10 之前这里写着 `- {"verdict-print", "goodbye"}`,加一个无外壳页要来这里补。"""
+    return {seg for seg, routes in top_segments().items() if not all(map(is_outside_app_layout, routes))}
 
 
 def test_officer_screens_are_the_web_route_segments():
     """加一个页面而不加 OFFICER_SCREENS(或反过来)→ 红。"""
-    segments = _web_segments()
+    segments = _shell_segments()
     assert len(segments) >= 25  # 目录找错了会得到空集,而空集与空集相等
+    # 「不在外壳里」的推导坏成恒为真时 segments 为空,上一行红;坏成恒为假时无外壳段会被要求
+    # 一个助手 id,下一行红。两头都封住,不必再钉住具体是哪几段。
     # 曾有具名例外 NO_SCREEN = {"about"}:关于页归到 "other"。2026-09-30 用户拍板给它一个页面 id,
-    # 例外随之删掉 —— 现在每个有页面的段都有助手页面 id,没有例外。
-    # 唯一不算的是 `verdict-print`(2026-11-07):只给无头 Chromium 渲染判决书 PDF 的页,不登录、没有页头,
-    # 官员不会在那里打开助手。`goodbye`(2026-11-10)同理:退出登录之后的再会页,已经没有会话、没有外壳。
-    assert set(OFFICER_SCREENS) - {"other"} == segments - {"verdict-print", "goodbye"}
+    # 例外随之删掉 —— 现在每个在外壳里的段都有助手页面 id。
+    assert set(OFFICER_SCREENS) - {"other"} == segments
 
 
 def test_every_screen_has_an_officer_entry(locale):

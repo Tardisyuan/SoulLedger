@@ -64,29 +64,32 @@ export function contentSecurityPolicy(nonce: string, host: string): string {
   ].join("; ");
 }
 
-// Routes that don't require authentication
-// `/login/verify` (two-step verification) is reached before any refresh token exists.
-// `/forgot-password`, `/reset-password` and `/verify-email` are the officer e-mail reset flow
-// (2026-10-09): the first two are used while signed out, and the links in the mails land on the
-// last two with a one-time token as the only credential.
-const PUBLIC_PATHS = [
-  "/",
-  "/welcome",
-  // 致谢页:静态清单,不含租户数据;落地页的页脚链到它。
-  "/about",
-  "/(auth)/login",
-  "/(auth)/login/verify",
-  "/(auth)/register",
-  "/(auth)/forgot-password",
-  "/(auth)/reset-password",
-  "/(auth)/verify-email",
-  // 邀请信的链接(第五十四批):令牌是唯一凭据,收信人还没有密码。
-  "/(auth)/accept-invite",
-  // 判决文书 PDF 的打印页(2026-11-07):只有无头 Chromium 打开,一次性键是唯一凭据(app/verdict-print/page.tsx)。
-  "/verdict-print",
-  // 退出登录之后的「再会」(2026-11-10):这时已经没有登录凭据了。
-  "/goodbye",
-];
+/** Routes that don't require authentication: route → why it is public.
+ *
+ *  **This is the one written decision.** The guards derive from it instead of
+ *  each carrying a copy: `src/__tests__/proxyAuthGate.test.ts` checks that every
+ *  key is a page under `app/`, that every reason is written, and that every
+ *  other page redirects; `backend/tests/test_page_gates_match_the_backend.py`
+ *  reads these keys as the pages that need no permission gate. A new public page
+ *  is one new line here, with its reason.
+ *
+ *  Keys are URL paths — a route group such as `(auth)` is not in the URL. One
+ *  entry per line, `"<path>": "<reason>",`: the backend test parses that shape.
+ *  (`/register` was listed here and in AppLayoutWrapper with no page behind it;
+ *  removed 2026-11-10 when the guards started checking entries against `app/`.) */
+export const PUBLIC_PATHS: Readonly<Record<string, string>> = {
+  "/": "登录前的落地页。",
+  "/welcome": "登录前的欢迎页。",
+  "/about": "关于 / 致谢:字体、纹样、图像的授权清单,静态内容,不含任何租户数据(OFL / CC0 本就要求可见);落地页的页脚链到它。",
+  "/login": "登录页本身。",
+  "/login/verify": "两步验证第二步:持 5 分钟的 pending token 才能走下去,此时还没有任何会话。",
+  "/forgot-password": "官员找回密码的申请页(2026-10-09),登录前可用;回应对任何账号都一样。",
+  "/reset-password": "邮件链接里的一次性令牌就是凭证,登录前可用。",
+  "/verify-email": "邮件链接里的一次性令牌就是凭证,不需要登录。",
+  "/accept-invite": "邀请信里的一次性令牌就是凭证,设好密码之前还没有账号可登(第五十四批)。",
+  "/verdict-print": "判决文书 PDF 的打印页(2026-11-07):只有无头 Chromium 打开,一次性键是凭据;数据由后端在下载人自己的请求里按详情的权限备好(apps/judgment/verdict_pdf.py)。",
+  "/goodbye": "退出登录之后的再会页(2026-11-10):这时已经没有会话;页面只读本标签页里退出前留的名字与文明,不请求任何数据。",
+};
 
 /** The browser's first language: Chinese if it starts with `zh`, English otherwise. Kemet is only ever chosen. */
 export function localeFromBrowser(acceptLanguage: string | null): Locale {
@@ -94,9 +97,7 @@ export function localeFromBrowser(acceptLanguage: string | null): Locale {
 }
 
 function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname === p.replace("(auth)/", "")
-  );
+  return Object.prototype.hasOwnProperty.call(PUBLIC_PATHS, pathname);
 }
 
 // Next 16 renamed the `middleware` file convention to `proxy` (same contract,

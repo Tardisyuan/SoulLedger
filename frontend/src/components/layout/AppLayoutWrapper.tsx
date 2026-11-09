@@ -3,7 +3,10 @@
 import { usePathname } from "next/navigation";
 import { AppLayout } from "./AppLayout";
 
-const AUTH_PATHS = ["/login", "/register"];
+// Prefix match (`/login` covers `/login/verify`). The guards read these two arrays from this
+// source (src/__tests__/support/appRoutes.ts, backend/tests/web_routes.py), so keep them one-line
+// string literals; every entry must be a page under app/ (`/register` had none, removed 2026-11-10).
+const AUTH_PATHS = ["/login"];
 // Homepage is public. `/verdict-print` is the verdict PDF's print page, opened only by the headless renderer:
 // no shell (and no AppLayout session handling) around the one document it prints.
 // `/goodbye` is the farewell shown right after signing out (2026-11-10): no shell, no session.

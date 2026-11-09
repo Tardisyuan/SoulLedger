@@ -13,8 +13,15 @@
  * 所以问题不是「没有测试」,是**清单是手抄的**。手抄的清单不会因为新增了一个
  * 页面而变长,也不会因为某个页面被划进公开而变短 —— 它只会一直是那 6 条。
  *
- * 这里的清单是 `find app -name page.tsx` 走出来的。新增一个页面,它自动进入
- * 被断言的集合;把它划进 `PUBLIC_PATHS`,下面第一条就红。
+ * 这里的清单是 `find app -name page.tsx` 走出来的(`support/appRoutes.ts`,与
+ * viewportHeightContract 共用)。新增一个页面,它自动进入被断言的集合。
+ *
+ * 公开与否是一个**决定**,只写在一处:`proxy.ts` 的 `PUBLIC_PATHS`,每条带理由。
+ * 2026-11-10 之前这里另抄了一份 `EXPECTED_PUBLIC`,加 `/goodbye` 要改四个守卫
+ * (docs/test-suite-review-2026-11-10.md §2.1)。现在这里断的是那份决定与现实相符:
+ * 每条都是磁盘上真有的页面、每条都写了理由、它们放行、其余每一页都重定向。
+ * 代价要说清:把一个页面写进 `PUBLIC_PATHS` 并写上理由,这里不再红 —— 那一行
+ * 就是决定本身,它在评审里被看见,而不是在第二份清单里被重复一遍。
  *
  * jsdom 里跑不了这个文件:`next/server` 在模块顶层就要 `Request`,而 jsdom 没有。
  * 所以有上面那行 `@jest-environment node`。
@@ -24,36 +31,17 @@ import path from "node:path";
 
 import { NextRequest } from "next/server";
 
-import { proxy } from "@/proxy";
+import { PUBLIC_PATHS, proxy } from "@/proxy";
 import { DEFAULT_LOCALE, LOCALE_COOKIE } from "@soulledger/core/config/locale";
 
-const APP_DIR = path.join(__dirname, "..", "..", "app");
+import { concretePath, pageRoutes } from "./support/appRoutes";
 
-/** 每个 `page.tsx` 对应的 URL 路径。
- *
- *  两处转换要说明:`(auth)` 这类路由组不出现在 URL 里,`[id]` 这类动态段要换成
- *  一个具体值 —— 中间件按前缀匹配,占位符原样传进去匹配到的是另一回事。 */
-function routesFromDisk(dir = APP_DIR, prefix = ""): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      const segment = entry.name.startsWith("(")
-        ? "" // 路由组:不出现在 URL 里
-        : `/${entry.name.replace(/^\[\.{3}?(.+)\]$/, "probe").replace(/^\[(.+)\]$/, "probe")}`;
-      out.push(...routesFromDisk(path.join(dir, entry.name), prefix + segment));
-    } else if (entry.name === "page.tsx") {
-      out.push(prefix === "" ? "/" : prefix);
-    }
-  }
-  return out;
-}
+/** 每个 `page.tsx` 的 URL;`[id]` 换成具体值 —— 中间件按真实路径匹配,占位符原样
+ *  传进去匹配到的是另一回事。`(auth)` 这类路由组不出现在 URL 里(pageRoutes 已去掉)。 */
+const ALL_ROUTES = [...new Set(pageRoutes().map((p) => concretePath(p.route)))].sort();
 
-const ALL_ROUTES = [...new Set(routesFromDisk())].sort();
-
-/** 不需要登录的那几条,与 `proxy.ts` 的 `PUBLIC_PATHS` 对应。
- *  写死是有意的:这是一个**决定**,新增页面不该自动进来。下面第一条断言比对的
- *  正是「磁盘上的页面减去这几条」。 */
-const EXPECTED_PUBLIC = ["/", "/welcome", "/about", "/login", "/login/verify", "/forgot-password", "/reset-password", "/verify-email", "/accept-invite", "/verdict-print", "/goodbye"];
+/** 不需要登录的那几条 —— 读 `proxy.ts` 的决定,不另抄一份。 */
+const PUBLIC = Object.keys(PUBLIC_PATHS);
 
 function request(pathname: string, cookies: Record<string, string> = {}) {
   const req = new NextRequest(new URL(`http://localhost:3000${pathname}`));
@@ -66,14 +54,26 @@ function redirectTarget(res: Response): string | null {
 }
 
 describe("未登录时,除公开路由外每一条都被送去登录页", () => {
+  const protectedRoutes = ALL_ROUTES.filter((r) => !PUBLIC.includes(r));
+
   it("走到了一个非平凡数量的路由,否则下面的断言在扫一个空集合", () => {
-    // 守卫的守卫。`routesFromDisk` 返回 [] 时,`it.each` 一条都不生成,
+    // 守卫的守卫。`pageRoutes` 返回 [] 时,`it.each` 一条都不生成,
     // 而一个生成了零条测试的 each 在汇总里是看不出来的。
     expect(ALL_ROUTES.length).toBeGreaterThan(30);
-    for (const p of EXPECTED_PUBLIC) expect(ALL_ROUTES).toContain(p);
+    expect(protectedRoutes.length).toBeGreaterThan(20);
   });
 
-  const protectedRoutes = ALL_ROUTES.filter((r) => !EXPECTED_PUBLIC.includes(r));
+  it("PUBLIC_PATHS 的每一条都是磁盘上真有的页面", () => {
+    // 指着不存在页面的公开项读起来和生效的一样;页面改名之后它放行的是一个空地址,
+    // 新名字上的页面却悄悄变成了「需要登录」。(`/register` 就这样躺了不知多久。)
+    expect(PUBLIC.filter((p) => !ALL_ROUTES.includes(p))).toEqual([]);
+  });
+
+  it("PUBLIC_PATHS 的每一条都写了为什么公开", () => {
+    // 这一句理由就是「决定」的记录;空着的那条是没人做过的决定。
+    expect(PUBLIC.length).toBeGreaterThan(0);
+    expect(Object.entries(PUBLIC_PATHS).filter(([, why]) => why.trim() === "")).toEqual([]);
+  });
 
   it.each(protectedRoutes)("%s 未登录 → 重定向到 /login", (route) => {
     const res = proxy(request(route));
@@ -86,7 +86,7 @@ describe("未登录时,除公开路由外每一条都被送去登录页", () => 
     expect(url.searchParams.get("redirect")).toBe(route);
   });
 
-  it.each(EXPECTED_PUBLIC)("%s 未登录也放行", (route) => {
+  it.each(PUBLIC)("%s 未登录也放行", (route) => {
     // 正对照。没有它,一个「什么都重定向」的中间件同样满足上面全部断言。
     expect(redirectTarget(proxy(request(route)))).toBeNull();
   });
