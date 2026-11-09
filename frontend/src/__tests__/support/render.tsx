@@ -63,7 +63,8 @@ export function testProviders({ client, i18n = "zh-Hans", ...clientOptions }: Pr
   return { client: qc, wrapper };
 }
 
-export function renderWithProviders(ui: ReactNode, options: ProvidersOptions & Omit<RenderOptions, "wrapper"> = {}) {
+// RTL's own `queries` (custom query helpers) is left out: here `queries` means TanStack query defaults.
+export function renderWithProviders(ui: ReactNode, options: ProvidersOptions & Omit<RenderOptions, "wrapper" | "queries"> = {}) {
   const { client, queries, mutations, retryOff, i18n, ...renderOptions } = options;
   const providers = testProviders({ client, queries, mutations, retryOff, i18n });
   return { ...render(ui, { ...renderOptions, wrapper: providers.wrapper }), client: providers.client };
