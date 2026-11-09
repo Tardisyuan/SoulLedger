@@ -2,17 +2,16 @@
  * 建殿 / 停用(第五十四批 K-2、K-3):文明没有默认值、选好之前不能提交;种子殿代号配错文明的错误挂在文明下;
  * 停用确认写两条后果和「殿不能删除」,确认按钮不是危险色。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
 import { CreateHallDialog, DeactivateHallDialog, hallCreateErrors } from "@/src/components/tenants/HallLifecycleDialogs";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   tenantsApi: { create: jest.fn(), deactivate: jest.fn(), activate: jest.fn() },
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
@@ -25,8 +24,7 @@ const t = (key: string, params?: Record<string, string>) => (params ? `${key}(${
 const bad = (data: unknown) => ({ response: { status: 400, data } });
 
 function wrap(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { i18n: false });
 }
 
 beforeEach(() => jest.clearAllMocks());

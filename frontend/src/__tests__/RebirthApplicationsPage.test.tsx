@@ -8,11 +8,11 @@
  *
  * Permissions run for real (stubbed `useTenant` only).
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import RebirthApplicationsPage from "@/app/rebirth-applications/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -30,8 +30,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const INITIAL_STEP = { node_type: "EVALUATION", approver_role: "JUDGE", is_appeal: false };
 
@@ -64,13 +63,8 @@ function application(over: Record<string, unknown> = {}) {
   };
 }
 
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
-
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<RebirthApplicationsPage />, { wrapper: Wrapper });
+  return renderWithProviders(<RebirthApplicationsPage />, { i18n: false });
 }
 
 const as = (role: string, ...permissions: string[]) => (mockUser = { id: 2, username: "op", role, permissions });

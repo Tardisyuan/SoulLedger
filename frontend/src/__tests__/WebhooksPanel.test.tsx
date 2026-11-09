@@ -11,12 +11,13 @@
  * and the deliveries table renders status / attempt / error and narrows to
  * one webhook on request.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WebhooksRoute from "@/app/death-sync/webhooks/page";
 import DeathSyncPage from "@/app/death-sync/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -42,8 +43,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 let mockPath = "/death-sync/webhooks";
 jest.mock("next/navigation", () => ({
@@ -101,11 +101,9 @@ function delivery(over: Record<string, unknown> = {}) {
     ...over,
   };
 }
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 
 function renderRoute(ui: ReactNode = <WebhooksRoute />) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { i18n: false });
 }
 
 beforeEach(() => {

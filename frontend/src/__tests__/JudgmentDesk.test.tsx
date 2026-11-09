@@ -31,6 +31,8 @@ jest.mock("react", () => {
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/src/components/judgment/JudgmentDraftAutosave";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 /**
  * 越过自动保存的去抖窗口,在假时钟上:断言「没存」之前,去抖的定时器**一定**已经到点。
@@ -90,8 +92,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => mockI18n,
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant: { code: string } };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
@@ -113,12 +114,7 @@ const judgment = (over: Record<string, unknown> = {}) => ({
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<JudgmentDetailPage params={Promise.resolve({ id: ID })} />, { i18n: false });
 }
 
 const realm = (id: string, name: string, occupancy: number, capacity: number | null, is_eternal = false) => ({

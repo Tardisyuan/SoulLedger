@@ -7,10 +7,11 @@
  * per-user endpoint; the row of this admin's own session offers no button.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SessionsRoute from "@/app/audit/sessions/page";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { page } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -57,15 +58,9 @@ function row(over: Record<string, unknown> = {}) {
     ...over,
   };
 }
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 
 function renderRoute() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <SessionsRoute />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<SessionsRoute />, { i18n: false });
 }
 
 beforeEach(() => {

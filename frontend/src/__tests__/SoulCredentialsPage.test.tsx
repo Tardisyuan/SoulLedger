@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulCredentialsPage from "@/app/soul-credentials/page";
 import { tZh } from "./support/zhBundle";
+import { mockShowToast, page, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -44,8 +45,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => mockI18n,
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const SECRET = "Zq7-one-time-SECRET";
 const FUTURE = "2999-01-01T00:00:00Z";
@@ -74,9 +74,6 @@ function credential(over: Record<string, unknown> = {}) {
     ...over,
   };
 }
-
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
 
 let client: QueryClient;
 function renderPage() {

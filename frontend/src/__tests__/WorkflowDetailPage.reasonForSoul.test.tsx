@@ -10,11 +10,11 @@
  * `requiresReasonForSoul` is the real one (requireActual); only the HTTP calls
  * are doubles. Permissions run for real against a stubbed `useTenant`.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import WorkflowDetailPage from "@/app/workflow/[id]/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -35,8 +35,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, formatDateTime: (v: string) => `dt(${v})`, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const NODE = {
   id: "n1",
@@ -76,12 +75,8 @@ function workflow(caseType: string, name: string) {
   };
 }
 
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
-
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<WorkflowDetailPage />, { wrapper: Wrapper });
+  return renderWithProviders(<WorkflowDetailPage />, { i18n: false });
 }
 
 const LABEL = () => tZh("workflow.detail.reason_for_soul");

@@ -18,7 +18,7 @@
  */
 import { render, type RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, type DefaultOptions } from "@tanstack/react-query";
-import type { ReactElement, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { I18nProvider, type Locale } from "@/src/contexts/I18nContext";
 
 /** `retry: false` for queries and mutations; `queries` adds to (or overrides) the query defaults, e.g. `{ staleTime: 30_000 }`. */
@@ -45,7 +45,7 @@ export function testProviders({ client, queries, i18n = "zh-Hans" }: ProvidersOp
   return { client: qc, wrapper };
 }
 
-export function renderWithProviders(ui: ReactElement, options: ProvidersOptions & Omit<RenderOptions, "wrapper"> = {}) {
+export function renderWithProviders(ui: ReactNode, options: ProvidersOptions & Omit<RenderOptions, "wrapper"> = {}) {
   const { client, queries, i18n, ...renderOptions } = options;
   const providers = testProviders({ client, queries, i18n });
   return { ...render(ui, { ...renderOptions, wrapper: providers.wrapper }), client: providers.client };

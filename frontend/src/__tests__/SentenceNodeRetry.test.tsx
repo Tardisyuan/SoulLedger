@@ -5,11 +5,11 @@
  * 与 SentencePlanPanels.test.tsx 同一套桩;断言「有」的地方都同时断言「别人没有」,
  * 并且断言按钮不在时接口一次都没调。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { SentencePlanCard } from "@/src/components/sentence-plan/SentencePlanCard";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api/sentence-plans", () => ({
   sentencePlansApi: { list: jest.fn(), retryDispatch: jest.fn() },
@@ -28,8 +28,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => mockI18n,
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const as = (role: string, tenant: string, ...permissions: string[]) =>
   (mockUser = { id: 2, username: "op", role, permissions, tenant: { code: tenant } });
@@ -48,13 +47,9 @@ const plan = (over: Record<string, unknown> = {}) => ({
   nodes: [node(1, "CN_DIYU", "COMPLETED"), node(2, "EG_DUAT", "PENDING", { last_refusal: REJECTED })],
   requests: [], create_time: "2026-09-01T00:00:00Z", update_time: "2026-09-10T00:00:00Z", ...over,
 });
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
 
 function renderCard() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<SentencePlanCard soulId="s1" />, { wrapper: Wrapper });
+  return renderWithProviders(<SentencePlanCard soulId="s1" />, { i18n: false });
 }
 const retryButton = () => screen.queryByRole("button", { name: tZh("sentence_plan.retry_dispatch") });
 

@@ -9,10 +9,11 @@
  * silently ignored), and every filter change resets to page 1.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoginLogRoute from "@/app/audit/logins/page";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { page } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -54,15 +55,9 @@ function row(over: Record<string, unknown> = {}) {
     ...over,
   };
 }
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 
 function renderRoute() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <LoginLogRoute />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<LoginLogRoute />, { i18n: false });
 }
 
 /** FilterChipSelect is a native <select> named by its dimension (see AuditPage.test). */

@@ -7,8 +7,7 @@
  *
  * 真页面、真 QueryClient,只替换 HTTP 层;`React.use` 垫片与 JudgmentDetailPage.notesDraft.test.tsx 同一个。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { tZh } from "./support/zhBundle";
 
 const ID = "j-1";
@@ -28,6 +27,8 @@ jest.mock("react", () => {
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
 import { PLACEMENT_REFUSALS } from "@soulledger/core/api/judgment";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { get: jest.fn(), conclude: jest.fn() },
@@ -57,8 +58,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => mockI18n,
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 type MockUser = { id: number; username: string; role: string; permissions: string[]; tenant: { code: string } };
 let mockUser: MockUser | null = null;
@@ -88,12 +88,7 @@ const plan = {
 const AMENDMENT = { kind: "AMENDMENT", amends_plan_id: "p1" };
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<JudgmentDetailPage params={Promise.resolve({ id: ID })} />, { i18n: false });
 }
 
 /** 原审一律带审批流程(d4d2bb27,2026-10-29),确认层那一键是「落判并发起」;加减项审判不强制,仍是「落印并结案」。 */

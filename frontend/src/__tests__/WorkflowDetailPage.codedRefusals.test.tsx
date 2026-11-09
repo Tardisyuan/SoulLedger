@@ -4,11 +4,11 @@
  * 越级推进最多到终审(审查 A,400 `escalate_past_final`);五逆判了通过的案子不能批(审查 J,400
  * `five_heinous_must_fail`)。Other refusals keep the server's `error` text.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import WorkflowDetailPage from "@/app/workflow/[id]/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -29,8 +29,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, formatDateTime: (v: string) => `dt(${v})`, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const node = {
   id: "n1", workflow: "w1", node_name: "终审", node_type: "FINAL", court_code: "", node_order: 1,
@@ -46,9 +45,7 @@ const WORKFLOW = {
 };
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<WorkflowDetailPage />, { wrapper: Wrapper });
+  return renderWithProviders(<WorkflowDetailPage />, { i18n: false });
 }
 
 const refused = (code: string, error: string) => Promise.reject({ response: { status: 400, data: { code, error } } });

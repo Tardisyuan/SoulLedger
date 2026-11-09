@@ -6,11 +6,11 @@
  * `approve/` and `reject/`); the days rule (0 ≤ days < remaining_days) is
  * applied before the round trip and the backend's `code` is read on failure.
  */
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import RebirthApplicationsPage from "@/app/rebirth-applications/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -35,8 +35,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 function shortening(over: Record<string, unknown> = {}) {
   return {
@@ -67,13 +66,8 @@ function shortening(over: Record<string, unknown> = {}) {
   };
 }
 
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
-
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<RebirthApplicationsPage />, { wrapper: Wrapper });
+  return renderWithProviders(<RebirthApplicationsPage />, { i18n: false });
 }
 
 const as = (role: string, ...permissions: string[]) => (mockUser = { id: 2, username: "op", role, permissions });
