@@ -26,9 +26,7 @@ jest.mock("@soulledger/core/api", () => ({
   sessionsApi: { list: jest.fn().mockResolvedValue({ data: [] }) },
   mfaApi: { status: jest.fn().mockResolvedValue({ data: {} }) },
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 let mockUser: Record<string, unknown>;
 const mockSetUser = jest.fn();
 jest.mock("@/src/contexts/TenantContext", () => ({

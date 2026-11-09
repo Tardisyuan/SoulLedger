@@ -5,10 +5,10 @@
  * - 关掉的那一行只关它自己(按菜单 path + code),同 code 不同菜单不受牵连。
  * - 接上的按钮 id 互不重复,(菜单, code) 也互不重复 —— 否则一个开关管两个按钮。
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor } from "@testing-library/react";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { WIRED_BUTTONS, buttonKey, type WiredButtonId } from "@/src/lib/menuButtons";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({ menuButtonsApi: { config: jest.fn() } }));
 const { menuButtonsApi } = jest.requireMock("@soulledger/core/api") as { menuButtonsApi: { config: jest.Mock } };
@@ -20,12 +20,7 @@ function Probe({ ids }: { ids: WiredButtonId[] }) {
 }
 
 function renderProbe(ids: WiredButtonId[]) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <Probe ids={ids} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<Probe ids={ids} />, { i18n: false });
 }
 
 beforeEach(() => jest.clearAllMocks());

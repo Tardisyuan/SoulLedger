@@ -2,17 +2,13 @@
  * /organizations 按规范 v2 补齐:每个文明一节 = 面板标题 <h2>,折叠钮在 <h2> 里
  * (不是 <h2> 进 <button>),加载是静态的表格骨架。
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, within } from "@testing-library/react";
 import OrganizationsPage from "@/app/organizations/page";
 import { organizationsApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({ organizationsApi: { all: jest.fn() } }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon" }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, role: "VIEWER", permissions: ["org.read"] } }),
 }));
@@ -25,12 +21,7 @@ const org = (id: number, name: string, category: string) => ({
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <OrganizationsPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<OrganizationsPage />, { i18n: false });
 }
 
 beforeEach(() => jest.clearAllMocks());

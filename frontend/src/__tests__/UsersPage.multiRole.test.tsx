@@ -16,10 +16,10 @@
  * - ABSENCE: without `user.manage` there is no checkbox column, no 设置角色 button and
  *   no bar — the page offers a non-admin nothing to click.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: {
@@ -90,12 +90,7 @@ const user = (over: Record<string, unknown>) => ({
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <UsersPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<UsersPage />, { i18n: false });
 }
 const rowOf = (username: string) => {
   const tr = screen.getByText(username).closest("tr");

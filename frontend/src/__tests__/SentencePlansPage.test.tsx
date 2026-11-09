@@ -4,11 +4,10 @@
  * 筛选只发服务端认的参数(状态 / awaiting_redispatch / pending_request / search);首页那一格带来的
  * `?awaiting_redispatch=true` 一进来就按下;行上是翻译过的状态词,不是枚举成员。
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import SentencePlansPage from "@/app/sentence-plans/page";
 import { tZh, zh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 let mockSearch = new URLSearchParams();
 jest.mock("next/navigation", () => ({ useSearchParams: () => mockSearch }));
@@ -59,11 +58,7 @@ const plan = {
 };
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-  return render(<SentencePlansPage />, { wrapper: Wrapper });
+  return renderWithProviders(<SentencePlansPage />, { i18n: false });
 }
 
 beforeEach(() => {

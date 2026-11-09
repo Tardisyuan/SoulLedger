@@ -8,11 +8,10 @@
  * Rendered through the real page so the wiring from `current_node` is what is
  * measured, not a prop handed to the component by this file.
  */
-import { render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen } from "@testing-library/react";
 import WorkflowDetailPage from "@/app/workflow/[id]/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -78,9 +77,7 @@ function payload(status: string, current: string | null) {
 }
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<WorkflowDetailPage />, { wrapper: Wrapper });
+  return renderWithProviders(<WorkflowDetailPage />, { i18n: false });
 }
 
 const preview = async () => screen.findByRole("list", { name: tZh("workflow.detail.nodes") });

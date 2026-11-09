@@ -31,6 +31,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
 import { dispatchEvent, flushEventInvalidations, type EventPayload } from "@/lib/events/event_registry";
+import { mockShowToast } from "./support/mocks";
 
 const SOUL_ID = "soul-1";
 
@@ -39,10 +40,7 @@ jest.mock("next/navigation", () => ({
   useParams: () => ({ id: SOUL_ID }),
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 // Module constants, not fresh values per call. A mock written as
 // `useI18n: () => ({ t: (k) => k })` hands back a NEW function every render,

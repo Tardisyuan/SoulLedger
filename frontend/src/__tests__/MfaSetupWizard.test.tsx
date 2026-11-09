@@ -13,13 +13,7 @@ import { MfaSetupWizard, groupKey } from "@/src/components/profile/MfaSetupWizar
 jest.mock("@soulledger/core/api", () => ({
   mfaApi: { setup: jest.fn(), cancelSetup: jest.fn(), confirm: jest.fn(), complete: jest.fn() },
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", locale: "zh-Hans", hydrated: true }));
 
 const setup = mfaApi.setup as jest.Mock;
 const cancelSetup = mfaApi.cancelSetup as jest.Mock;

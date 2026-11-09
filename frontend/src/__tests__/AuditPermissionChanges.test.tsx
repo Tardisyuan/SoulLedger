@@ -9,10 +9,11 @@
  * preset; a failure offers a retry. No ×N folding: two identical updates are
  * two entries.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PermissionChangesPage from "@/app/audit/permissions/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: { timeline: jest.fn(), actions: jest.fn() },
@@ -69,12 +70,7 @@ function log(over: Record<string, unknown> = {}) {
 const many = (n: number) => Array.from({ length: n }, () => log());
 
 function renderRoute() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <PermissionChangesPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<PermissionChangesPage />, { i18n: false });
 }
 
 const lastParams = () => auditApi.timeline.mock.calls[auditApi.timeline.mock.calls.length - 1][0];

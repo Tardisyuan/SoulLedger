@@ -2,10 +2,10 @@
  * /judgment 的 CSV 导出(Design 第二十八批 W5):「待审」一面的按钮在筛选条右端,带搜索 / 殿 / 灵魂这组筛选;
  * 「已结案」一面没有筛选条,按钮在表上方右端。两边都不带页码,行数超过 1 万按钮置灰。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import JudgmentListPage from "@/app/judgment/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), exportCsv: jest.fn() },
@@ -51,12 +51,7 @@ beforeEach(() => {
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <JudgmentListPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<JudgmentListPage />, { i18n: false });
 }
 const exportButton = () => screen.findByRole("button", { name: /^按当前筛选导出，共 \d+ 条$/ });
 

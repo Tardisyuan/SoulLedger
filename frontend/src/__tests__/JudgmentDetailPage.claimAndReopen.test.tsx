@@ -7,8 +7,7 @@
  *
  * 真页面、真 QueryClient,只桩 HTTP 层(同 JudgmentDetailPage.notesDraft.test.tsx)。
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 
 const ID = "j-1";
 
@@ -36,6 +35,7 @@ jest.mock("next/navigation", () => ({
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
 import { judgmentApi, soulsApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { get: jest.fn(), conclude: jest.fn(), reopenCancelled: jest.fn() },
@@ -83,12 +83,7 @@ function judgment(over: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<JudgmentDetailPage params={Promise.resolve({ id: ID })} />, { i18n: false });
 }
 
 const TIMEOUT = { timeout: 5000 };

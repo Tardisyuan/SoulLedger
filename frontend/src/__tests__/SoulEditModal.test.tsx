@@ -13,14 +13,9 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import type { Soul } from "@soulledger/core/api";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock());
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const mockMutate = jest.fn();
 jest.mock("@soulledger/core/hooks/useSouls", () => ({

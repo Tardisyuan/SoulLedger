@@ -7,9 +7,9 @@
  * first opened it); loading is a skeleton under aria-busy; a failed detail
  * fetch is an error bar under the header, not an empty drawer.
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import SoulsPage from "@/app/souls/page";
+import { renderWithProviders } from "./support/render";
 
 const souls = [
   { id: "a1", name: "沈青梧", civilization: "CHINESE", current_state: "DISPOSED", karmic_balance: 347, birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false, is_eval_identity: false },
@@ -57,12 +57,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <SoulsPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<SoulsPage />, { i18n: false });
 }
 
 const previewButton = (name: string) => screen.getByRole("button", { name: `souls.preview.open_aria:${name}` });

@@ -2,10 +2,10 @@
  * 冥界年报(v4 第八批 S14):数全部来自 `GET /judgment/annual/`;导语按看的人分「本殿」与「四个冥界」;
  * 退回率比上一年少 / 多;「上一年」按钮换年取数。失败说加载失败,不画一页 0。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { judgmentApi } from "@soulledger/core/api";
 import { AnnualReport } from "@/src/components/dashboard/AnnualReport";
+import { renderWithProviders } from "./support/render";
 
 let mockUser: Record<string, unknown> = { id: 7, tenant: { code: "CN_DIYU" } };
 
@@ -42,12 +42,7 @@ const REPORT = {
 };
 
 function renderIt() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <AnnualReport />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<AnnualReport />, { i18n: false });
 }
 
 beforeEach(() => {

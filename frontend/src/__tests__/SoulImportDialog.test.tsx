@@ -64,14 +64,7 @@ jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: (...args: unknown[]) => mockS
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { tenant: { code: "EG_DUAT", display_name: "Duat", civilization: "EGYPTIAN" } } }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "zh-Hans", hydrated: true }));
 
 const CSV = new File(["name,civilization\n沈青梧,CHINESE\n"], "souls.csv", { type: "text/csv" });
 

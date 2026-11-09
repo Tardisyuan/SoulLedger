@@ -11,7 +11,6 @@
  * to text; the template is `soul_id,origin_region`.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders } from "axios";
 import SoulsPage from "@/app/souls/page";
 import {
@@ -21,6 +20,7 @@ import {
   skippedRowsCsv,
 } from "@/src/components/souls/SoulRegionBackfillDialog";
 import type { SoulRegionUpdateRow } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 const A = "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed";
 const B = "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b";
@@ -122,12 +122,7 @@ beforeEach(() => {
 
 describe("入口", () => {
   function renderPage() {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    return render(
-      <QueryClientProvider client={qc}>
-        <SoulsPage />
-      </QueryClientProvider>,
-    );
+    return renderWithProviders(<SoulsPage />, { i18n: false });
   }
 
   it("有 soul.update 就有按钮,点开的是自己的弹层(第 1 步),不是导入", async () => {

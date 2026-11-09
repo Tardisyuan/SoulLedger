@@ -3,9 +3,9 @@
  * It used to be ADMIN = error red, JUDGE = warning amber, GUARDIAN = info — a role read as an alert.
  * The users list and the actors roster already draw roles neutral; this is the same decision.
  */
-import { render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen } from "@testing-library/react";
 import ProfilePage from "@/app/profile/page";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   authApi: {
@@ -20,9 +20,7 @@ jest.mock("@soulledger/core/api", () => ({
   mfaApi: { status: jest.fn().mockResolvedValue({ data: { enabled: false, required: false, confirmed_at: null, last_used_at: null, last_used_method: "", recovery_codes_remaining: 0 } }) },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 let mockRole = "ADMIN";
 jest.mock("@/src/contexts/TenantContext", () => ({
@@ -34,12 +32,7 @@ jest.mock("@/src/components/ui/Toast", () => ({ showToast: jest.fn() }));
 const { authApi } = require("@soulledger/core/api");
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ProfilePage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<ProfilePage />, { i18n: false });
 }
 
 it.each(["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"])("%s: the role badge is neutral ink, no feedback colour", async (role) => {

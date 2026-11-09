@@ -21,9 +21,8 @@ jest.mock("@soulledger/core/platform", () => ({ setAccessToken: jest.fn(), setRe
 jest.mock("@/src/lib/navigate", () => ({ goTo: jest.fn(), replaceWith: jest.fn() }));
 jest.mock("@/src/lib/defaultView", () => ({ defaultViewRoute: jest.fn().mockResolvedValue("/dashboard") }));
 
-const mockShowToast = jest.fn();
 const mockSetUser = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ setUser: mockSetUser }) }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   LOCALE_LABELS: jest.requireActual("@/src/contexts/I18nContext").LOCALE_LABELS,

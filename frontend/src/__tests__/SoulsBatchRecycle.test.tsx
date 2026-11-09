@@ -16,11 +16,11 @@
  * `soulBatchRecycleErrorOf`, so the page is tested against the shape the API
  * module actually recognises, not against a stub that agrees with the page.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, AxiosHeaders } from "axios";
 import SoulsPage from "@/app/souls/page";
 import { BATCH_BAR, ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
+import { renderWithProviders } from "./support/render";
 
 const soul = (id: string, name: string) => ({
   id,
@@ -70,22 +70,10 @@ jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: (...args: unknown[]) => mockS
 let mockUser: Record<string, unknown> = { role: "OPERATOR", permissions: ["soul.read", "soul.export", "soul.delete"] };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "zh-Hans", hydrated: true }));
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <SoulsPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<SoulsPage />, { i18n: false });
 }
 
 const box = (name: string) => screen.getByRole("checkbox", { name: `souls.batch.select_row:${name}` });

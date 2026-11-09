@@ -22,8 +22,6 @@
  */
 import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -100,15 +98,12 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 import { AppLayout } from "@/src/components/layout/AppLayout";
 import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 import { focusablesWithin } from "@/src/components/layout/useDrawerA11y";
+import { renderWithProviders } from "./support/render";
 
 // ── AppLayout's phone drawer ─────────────────────────────────────────
 
 function renderLayout() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  );
-  return render(<AppLayout>page body</AppLayout>, { wrapper: Wrapper });
+  return renderWithProviders(<AppLayout>page body</AppLayout>, { i18n: false });
 }
 
 /** 底栏的「更多」—— 规范 v2 里它取代了 v1 的 ☰,打开的是同一种模态抽屉。按它报告的状态找,不按文案。 */

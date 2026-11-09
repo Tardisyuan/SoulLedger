@@ -4,11 +4,10 @@
  * 只发后端已有的筛选(`rebirth_form` 单值、`cycle_count`);「第几世」写「第 n → n+1 世」;
  * 行链到灵魂详情上这一次转生的锚点;没开过号的灵魂不印编号。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import RebirthsPage from "@/app/rebirths/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   reincarnationApi: { list: jest.fn(), quota: jest.fn() },
@@ -60,9 +59,7 @@ const row = (over: Record<string, unknown> = {}) => ({
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<RebirthsPage />, { wrapper: Wrapper });
+  return renderWithProviders(<RebirthsPage />, { i18n: false });
 }
 
 beforeEach(() => {

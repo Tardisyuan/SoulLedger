@@ -8,6 +8,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 import { tZh } from "./support/zhBundle";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({ dispatchApi: { cancel: jest.fn() } }));
 const { dispatchApi } = jest.requireMock("@soulledger/core/api") as { dispatchApi: { cancel: jest.Mock } };
@@ -24,8 +25,7 @@ jest.mock("@/src/hooks/usePermissions", () => ({
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => tZh(key), formatDateTime: (v: string) => v, locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const record = (over: Record<string, unknown> = {}) => ({
   id: "d1", status: "PROPOSED", source_tenant_code: "CN_DIYU", soul_name: "孟婆", ...over,

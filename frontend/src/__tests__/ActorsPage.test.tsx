@@ -23,11 +23,10 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { ReactNode } from "react";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, within, fireEvent } from "@testing-library/react";
 import ActorsPage from "@/app/actors/page";
 import { actorsApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   actorsApi: { list: jest.fn() },
@@ -144,11 +143,7 @@ function fullRoster(): ActorFixture[] {
 const mockedList = actorsApi.list as jest.Mock;
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-  return render(<ActorsPage />, { wrapper: Wrapper });
+  return renderWithProviders(<ActorsPage />, { i18n: false });
 }
 
 /** Card names in DOM order inside a container. */

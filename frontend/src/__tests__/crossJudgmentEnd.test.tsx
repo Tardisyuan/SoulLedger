@@ -24,8 +24,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     hydrated: true,
   }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const judgment = (over: Record<string, unknown> = {}) => ({
   id: "cj1",

@@ -6,6 +6,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DevicesSection, SIGNED_OUT_LINGER_MS } from "@/src/components/profile/DevicesSection";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   sessionsApi: { list: jest.fn(), revoke: jest.fn(), revokeOthers: jest.fn() },
@@ -30,12 +31,7 @@ const MAC = ROW({ id: "b", label: "macOS · Safari", last_seen_at: "2026-10-12T0
 const APP = ROW({ id: "c", label: "官员 App · iPhone", last_seen_at: "2026-10-11T22:40:00" });
 
 function renderSection() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <DevicesSection onChangePassword={jest.fn()} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<DevicesSection onChangePassword={jest.fn()} />, { i18n: false });
 }
 
 beforeEach(() => {

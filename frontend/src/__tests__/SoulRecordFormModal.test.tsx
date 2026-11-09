@@ -2,14 +2,14 @@
  * 功过台账的「新增一条 / 修改」:表单发出什么、拦下什么、后端的 400 落在哪、存好后的律条快照,
  * 以及台账本身只在传了 `edit`(调用方判过 `soul.update`)时才画这两个入口。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
 import { SoulRecordFormModal } from "@/src/components/souls/SoulRecordFormModal";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   soulsApi: { addRecord: jest.fn(), updateRecord: jest.fn() },
@@ -40,8 +40,7 @@ jest.mock("@soulledger/core/platform", () => ({
 }));
 
 function wrap(node: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  return renderWithProviders(node, { i18n: false });
 }
 
 const RECORD: LedgerRecord = {

@@ -1,19 +1,17 @@
 /**
  * /cross-judgments 的列菜单:案件标题列钉住,其余可隐藏;偏好记在本浏览器。
  */
-import { fireEvent, render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen } from "@testing-library/react";
 import CrossJudgmentsPage from "@/app/cross-judgments/page";
 import { crossTenantJudgmentsApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   crossTenantJudgmentsApi: { list: jest.fn(), exportCsv: jest.fn() },
   PAGE_SIZE: 20,
 }));
 jest.mock("@soulledger/core/api/client", () => ({ PAGE_SIZE: 20 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: { id: 1, tenant: { code: "CN_DIYU" } } }) }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
@@ -30,8 +28,7 @@ function renderPage() {
   (crossTenantJudgmentsApi.list as jest.Mock).mockResolvedValue({
     data: { count: 1, results: [{ id: "c1", title: "联合案甲", status: "ACTIVE", initiating_tenant_code: "EU_HEAVEN_HELL", initiating_tenant_display_name: "欧洲天堂" }] },
   });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><CrossJudgmentsPage /></QueryClientProvider>);
+  return renderWithProviders(<CrossJudgmentsPage />, { i18n: false });
 }
 
 beforeEach(() => localStorage.clear());

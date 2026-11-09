@@ -15,8 +15,7 @@
  * and API are doubles; `mockTenant` is a module constant for the reason the
  * fetch-budget test next door records (a fresh object per call re-fetches).
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 
 jest.mock("next/navigation", () => ({
@@ -46,6 +45,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 import Page from "@/app/cross-judgments/[id]/page";
+import { renderWithProviders } from "./support/render";
 
 const { crossTenantJudgmentsApi, judgmentApi } = jest.requireMock("@soulledger/core/api") as {
   crossTenantJudgmentsApi: { get: jest.Mock; activate: jest.Mock };
@@ -82,13 +82,11 @@ function judgment(overrides: Record<string, unknown> = {}) {
 
 function renderPage(data: ReturnType<typeof judgment>) {
   crossTenantJudgmentsApi.get.mockResolvedValue({ data });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <I18nProvider initialLocale="zh-Hans">
-        <Page />
-      </I18nProvider>
-    </QueryClientProvider>
+  return renderWithProviders(
+    <I18nProvider initialLocale="zh-Hans">
+      <Page />
+    </I18nProvider>,
+    { i18n: false },
   );
 }
 

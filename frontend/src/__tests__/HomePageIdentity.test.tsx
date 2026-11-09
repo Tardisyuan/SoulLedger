@@ -11,14 +11,7 @@ let mockUser: Record<string, unknown> | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-    locale: "zh-Hans",
-    setLocale: () => {},
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "zh-Hans", setLocale: () => {}, hydrated: true }));
 jest.mock("@/components/LanguageSwitcher", () => ({ LanguageSwitcher: () => null }));
 jest.mock("@/src/components/layout/ThemeToggle", () => ({ ThemeToggle: () => null }));
 

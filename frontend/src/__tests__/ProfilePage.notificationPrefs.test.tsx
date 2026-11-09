@@ -3,9 +3,9 @@
  * 锁定的格(账号安全两列、密码求助两列、审批超时的站内)是禁用的 switch 写着「必收」;
  * 密码求助只给管理员看;旧的「邮件通知」总开关不再出现。上次发送失败与「没有邮箱」的说明保留。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import ProfilePage from "@/app/profile/page";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   authApi: { profile: jest.fn(), updateProfile: jest.fn(), changePassword: jest.fn(), preferences: jest.fn(), updatePreferences: jest.fn() },
@@ -56,12 +56,7 @@ const lockedLabel = (category: string, channel: "site" | "mail") => `${label(cat
 
 function renderPage(profile: Record<string, unknown> = { username: "u", email: "u@example.com", role: "ADMIN" }) {
   (authApi.profile as jest.Mock).mockResolvedValue({ data: profile });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <ProfilePage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<ProfilePage />, { i18n: false });
 }
 
 beforeEach(() => {

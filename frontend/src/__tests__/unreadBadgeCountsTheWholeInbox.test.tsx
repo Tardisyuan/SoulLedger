@@ -10,9 +10,7 @@
  * is 21 while `results` carries 20, so the 21st unread notification exists
  * only on page two.
  */
-import { render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen } from "@testing-library/react";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   LOCALE_LABELS: { "zh-Hans": "简体中文", en: "English", egy: "Kemet" },
@@ -62,6 +60,7 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 }));
 
 import { AppLayout } from "@/src/components/layout/AppLayout";
+import { renderWithProviders } from "./support/render";
 
 function firstPage(size: number) {
   return Array.from({ length: size }, (_, i) => ({
@@ -74,11 +73,7 @@ function firstPage(size: number) {
 }
 
 function renderLayout() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  );
-  return render(<AppLayout>page body</AppLayout>, { wrapper: Wrapper });
+  return renderWithProviders(<AppLayout>page body</AppLayout>, { i18n: false });
 }
 
 describe("the unread badge", () => {

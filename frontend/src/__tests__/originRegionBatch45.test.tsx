@@ -15,7 +15,6 @@
  * 文案都用真的 zh-Hans 语言包(`tZh`),断言的是读者看到的字。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import type { Edge, Node } from "@xyflow/react";
 import type { ApprovalNode, ApprovalWorkflow, ConditionClause, Soul, WorkflowSegment } from "@soulledger/core/api";
@@ -116,10 +115,10 @@ import { ExitConditionsSection } from "@/src/components/workflow/WorkflowInspect
 import { WorkflowSegmentList } from "@/src/components/workflow/segments/WorkflowSegmentList";
 import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
 import { FlowStationPicker } from "@/src/components/workflow/segments/FlowStationPicker";
+import { renderWithProviders } from "./support/render";
 
 function wrap(ui: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { i18n: false });
 }
 
 beforeEach(() => {

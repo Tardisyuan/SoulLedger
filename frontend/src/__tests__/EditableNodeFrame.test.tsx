@@ -7,9 +7,7 @@ import { render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { nodeTypes } from "@/src/components/workflow/EditableNode";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (k: string) => k, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 const Node = nodeTypes.editableNode as unknown as ComponentType<{ data: Record<string, unknown>; selected: boolean }>;
 

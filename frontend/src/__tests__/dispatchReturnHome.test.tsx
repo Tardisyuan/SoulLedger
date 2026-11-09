@@ -55,9 +55,7 @@ jest.mock("@/src/components/impersonation/useImpersonation", () => ({
   ...jest.requireActual("@/src/components/impersonation/useImpersonation"),
   useImpersonation: () => mockViewing,
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 // Real `RequirePermission` and real `usePermissions`, fed a mutable permission list through the user

@@ -7,14 +7,12 @@
  * 数据范围 B6:机构改用 OrgTreeSelect 单选;有殿的非管理员必填(没有「不属于任何机构」),缺省殿根
  * (`ROOT_` 开头的顶层,没有就取排序最前的顶层)。
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { UserModal } from "@/src/components/users/UserModal";
 import { usersApi, organizationsApi, tenantsApi, type User } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: { update: jest.fn().mockResolvedValue({ data: {} }), create: jest.fn() },
@@ -42,12 +40,7 @@ const user: User = {
 };
 
 function renderModal(u: User | null) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <UserModal isOpen onClose={() => {}} user={u} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<UserModal isOpen onClose={() => {}} user={u} />, { i18n: false });
 }
 
 beforeEach(() => {

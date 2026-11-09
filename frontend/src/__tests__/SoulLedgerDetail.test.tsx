@@ -4,14 +4,14 @@
  *
  * 真 I18nProvider,不用回显键的替身 —— 理由见 SoulLedgerBook.test.tsx 第 3 条。
  */
-import { render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, within } from "@testing-library/react";
 
 import type { Judgment, Reincarnation, Soul } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { stepStatuses } from "@/src/components/souls/detail/soulProgress";
 import { SoulLedgerProgress } from "@/src/components/souls/detail/SoulLedgerProgress";
 import { SoulJudgmentHistory, SoulLedgerSections } from "@/src/components/souls/detail/SoulLedgerSections";
+import { renderWithProviders } from "./support/render";
 
 // 行程块自己取两份数据:全部界域与这个灵魂的 path。
 jest.mock("@soulledger/core/api", () => ({
@@ -75,12 +75,7 @@ const SOUL = {
 } as unknown as Soul;
 
 const wrap = (ui: React.ReactElement) => {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <I18nProvider>{ui}</I18nProvider>
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<I18nProvider>{ui}</I18nProvider>, { i18n: false });
 };
 
 const court = (n: number) => ({

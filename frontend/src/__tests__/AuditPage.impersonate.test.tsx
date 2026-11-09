@@ -2,12 +2,11 @@
  * 审计页按名字显示「开始代看 / 结束代看」两种动作(W6),描述从 `changes` 按界面语言现拼,
  * 而不是原样露出库里存的 zh 固定句式或词条键。用真实的 zh-Hans 词包,断言操作员读到的字。
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor } from "@testing-library/react";
 import AuditPage from "@/app/audit/page";
 import { auditApi } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: {
@@ -44,9 +43,7 @@ const entry = (over: Record<string, unknown>) => ({
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<AuditPage />, { wrapper: Wrapper });
+  return renderWithProviders(<AuditPage />, { i18n: false });
 }
 
 it("两种代看动作有名字,描述按 changes 现拼", async () => {

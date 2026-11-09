@@ -15,10 +15,10 @@
  * pinned by `domainDisplayContract`. The absence assertion is the one that
  * matters — no badge on the page in the "unrecognized" state.
  */
-import { render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, within } from "@testing-library/react";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: { list: jest.fn(), delete: jest.fn(), activate: jest.fn(), deactivate: jest.fn() },
@@ -82,12 +82,7 @@ function user(over: Record<string, unknown>) {
 }
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <UsersPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<UsersPage />, { i18n: false });
 }
 
 beforeEach(() => {

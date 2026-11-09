@@ -3,11 +3,11 @@
  * 自己、停用与灵魂账号的行上;确认弹层理由必填,理由原样交给 `startImpersonation`。
  * 每条都同时断言有与没有 —— 只断言「按钮在」,换成人人可见也是绿的。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
 import { startImpersonation } from "@soulledger/core/api/impersonation";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: { list: jest.fn(), delete: jest.fn(), activate: jest.fn(), deactivate: jest.fn() },
@@ -20,9 +20,7 @@ jest.mock("@soulledger/core/api/impersonation", () => ({
   subscribeImpersonation: () => () => {},
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 const mockTenant = {
   user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["user.manage"] },
@@ -41,12 +39,7 @@ const row = (over: Record<string, unknown>) => ({
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <UsersPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<UsersPage />, { i18n: false });
 }
 
 function rowOf(name: string): HTMLElement {
