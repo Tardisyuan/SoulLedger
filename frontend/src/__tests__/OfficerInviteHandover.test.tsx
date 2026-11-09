@@ -2,11 +2,11 @@
  * 第五十四批(殿管理员):/accept-invite 落地页、移交在途案件对话框、停用前的移交提示。
  * 邀请只能由管理员重发,所以失效页不给「再要一个链接」;预览一变就重取,按钮写总件数。
  */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import AcceptInvitePage from "@/app/(auth)/accept-invite/page";
 import { OfficerHandoverDialog } from "@/src/components/users/OfficerHandoverDialog";
 import { authApi, handoverApi, usersApi, type User } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   authApi: { acceptOfficerInvite: jest.fn() },
@@ -85,11 +85,7 @@ describe("/accept-invite", () => {
 
 describe("OfficerHandoverDialog", () => {
   const renderDialog = () =>
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <OfficerHandoverDialog from={officer(1, "alice")} onClose={jest.fn()} />
-      </QueryClientProvider>,
-    );
+    renderWithProviders(<OfficerHandoverDialog from={officer(1, "alice")} onClose={jest.fn()} />, { i18n: false });
   const pickTarget = async () => {
     const select = (await screen.findAllByRole("combobox"))[1];
     await within(select).findByRole("option", { name: "bob" });
@@ -175,11 +171,7 @@ describe("OfficerHandoverDialog", () => {
 
   it("without a giver (opened from the queue by a hall lead) both people are picked, then it previews", async () => {
     preview.mockResolvedValue({ data: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 0, problems: [] } });
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <OfficerHandoverDialog onClose={jest.fn()} />
-      </QueryClientProvider>,
-    );
+    renderWithProviders(<OfficerHandoverDialog onClose={jest.fn()} />, { i18n: false });
     const [giver, taker] = await screen.findAllByRole("combobox");
     await within(giver).findByRole("option", { name: "alice" });
     expect(officers).toHaveBeenCalledWith(undefined);
@@ -198,11 +190,7 @@ describe("OfficerHandoverDialog, opened from deactivation", () => {
     preview.mockResolvedValue({ data: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 0, problems: [] } });
     deactivate.mockResolvedValue({ data: officer(1, "alice") });
     const onClose = jest.fn();
-    render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <OfficerHandoverDialog from={officer(1, "alice")} deactivate onClose={onClose} />
-      </QueryClientProvider>,
-    );
+    renderWithProviders(<OfficerHandoverDialog from={officer(1, "alice")} deactivate onClose={onClose} />, { i18n: false });
     expect(screen.getByTestId("handover-deactivate-prompt")).toHaveTextContent("officerHandover.deactivate_prompt(alice)");
     const [source, target] = await screen.findAllByRole("combobox");
     expect(source).toBeDisabled();

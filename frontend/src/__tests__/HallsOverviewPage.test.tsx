@@ -2,11 +2,11 @@
  * 各殿概况(第五十四批 O-1/O-2):一殿一行,只有数;0 的待办项不写;埃及不轮回写「不适用」;
  * 每一格都只读进入那一殿再跳到对应页;加载失败与空态是两句不同的话;两种排序。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { tenantsApi, type HallOverviewRow } from "@soulledger/core/api";
 import HallsOverviewPage from "@/app/halls/page";
 import { sortHalls } from "@/src/lib/hallsOverview";
+import { renderWithProviders } from "./support/render";
 
 const mockEnterHall = jest.fn();
 const mockShowToast = jest.fn();
@@ -54,12 +54,7 @@ const duat = row({
 });
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <HallsOverviewPage />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<HallsOverviewPage />, { i18n: false });
 }
 
 const rowOf = (code: string) => screen.getByText(code).closest("tr") as HTMLElement;

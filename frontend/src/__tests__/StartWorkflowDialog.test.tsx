@@ -10,10 +10,10 @@
  * `resolveEnumDisplay` 把「回显键」当作没译,会给出 `common.value.unrecognized`,所以这几个键给真译名 ——
  * 断言因此也守住了「插进去的是译名,不是原值」。
  */
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import type { Soul } from "@soulledger/core/api";
 import { StartWorkflowDialog, startWorkflowRefusal } from "@/src/components/workflow/StartWorkflowDialog";
+import { renderWithProviders } from "./support/render";
 
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -102,12 +102,7 @@ beforeEach(() => {
 
 function renderDialog(props: { lockedSoul?: Soul } = { lockedSoul: SOUL }) {
   const onClose = jest.fn();
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <StartWorkflowDialog isOpen onClose={onClose} {...props} />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<StartWorkflowDialog isOpen onClose={onClose} {...props} />, { i18n: false });
   return { onClose };
 }
 

@@ -9,8 +9,7 @@
  * 丁 判词自动保存(去抖、带版本号;409 停下并摆出对方的版本,绝不静默覆盖)、据 · 先例、
  * 进度条上的 S 暂缓(理由必填)。
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { tZh } from "./support/zhBundle";
 
 const ID = "j-1";
@@ -33,6 +32,7 @@ import JudgmentDetailPage from "@/app/judgment/[id]/page";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/src/components/judgment/JudgmentDraftAutosave";
 import { renderWithProviders } from "./support/render";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders } from "./support/render";
 
 /**
  * 越过自动保存的去抖窗口,在假时钟上:断言「没存」之前,去抖的定时器**一定**已经到点。
@@ -379,13 +379,11 @@ describe("甲 · 灵魂栏的所在界域、审判方式、世次 / 种类", () 
     const { PlaqueProvider } = await import("@/src/components/plaque/Plaque");
     const plaque = jest.fn();
     judgmentApi.get.mockResolvedValue({ data: judgment() });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <PlaqueProvider value={plaque}>
-          <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
-        </PlaqueProvider>
-      </QueryClientProvider>
+    renderWithProviders(
+      <PlaqueProvider value={plaque}>
+        <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
+      </PlaqueProvider>,
+      { i18n: false },
     );
     await waitFor(() => expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ caseNumber: "CN-2026-0042" })));
     expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ meta: undefined }));

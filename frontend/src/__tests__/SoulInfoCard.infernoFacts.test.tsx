@@ -2,8 +2,7 @@
  * 灵魂详情身份栏:欧洲灵魂的受洗与否认灵魂不灭(E-2,2026-10-28 用户决定)。
  * 登记了才画;未登记(UNRECORDED / null)不画;别的文明即使字段有值也不画(编辑弹层同样只对欧洲)。
  */
-import { render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { Soul } from "@soulledger/core/api";
 import { tZh } from "./support/zhBundle";
@@ -21,6 +20,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 const SOUL = {
   id: "s1",
@@ -41,11 +41,11 @@ const SOUL = {
 } as unknown as Soul;
 
 function card(soul: Partial<Soul>) {
-  const client = new QueryClient();
+  const client = createTestQueryClient({ retryOff: false });
   const ui: ReactNode = (
     <SoulInfoCard soul={{ ...SOUL, ...soul } as Soul} loading={false} birthDisplay={null} deathDisplay={null} />
   );
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { client, i18n: false });
 }
 
 describe("SoulInfoCard:受洗 / 否认灵魂不灭", () => {

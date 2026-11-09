@@ -6,8 +6,7 @@
  * 的行仍在「执行中」(条满、期满未释放),**不许**被前端挪进期满。期满段带 `soul_reborn=false`。
  * 此外:待执行有判决列(字形 ✓ ✕ ◇ ↺),行尾动作只在待执行与期满(规则 15),永恒画虚线框。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import DispositionPage from "@/app/disposition/page";
 import { dispositionApi } from "@soulledger/core/api";
 import { termState } from "@/src/lib/dispositionTerm";
@@ -16,6 +15,7 @@ import zh from "@soulledger/core/messages/zh-Hans.json";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
 import { renderWithProviders } from "./support/render";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: { list: jest.fn(), execute: jest.fn() },
@@ -176,13 +176,9 @@ describe("处置页按服务端分三段", () => {
 
   it("执行成功:处置与灵魂两处缓存都失效(灵魂的状态与界域跟着变)", async () => {
     (dispositionApi.execute as jest.Mock).mockResolvedValue({ data: {} });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = createTestQueryClient();
     const spy = jest.spyOn(client, "invalidateQueries");
-    render(
-      <QueryClientProvider client={client}>
-        <DispositionPage />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<DispositionPage />, { client, i18n: false });
     await screen.findByText("Soul p");
     const [pending] = screen.getAllByTestId("disposition-pending-row");
     fireEvent.click(within(pending).getByRole("button", { name: "disposition.execute" }));

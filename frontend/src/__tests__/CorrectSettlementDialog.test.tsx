@@ -2,11 +2,11 @@
  * ADMIN 更正结案:POST /souls/{id}/correct_settlement/ 必须带原因 —— 空原因不出门;
  * 后端 400 的 `error` 原样显示;成功后交给调用方重取(`onCorrected`)。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { soulsApi } from "@soulledger/core/api";
 import { CorrectSettlementDialog, correctSettlementError } from "@/src/components/souls/detail/CorrectSettlementDialog";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -20,12 +20,7 @@ const correct = soulsApi.correctSettlement as jest.Mock;
 function renderDialog() {
   const onClose = jest.fn();
   const onCorrected = jest.fn();
-  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <CorrectSettlementDialog soulId="soul-1" isOpen onClose={onClose} onCorrected={onCorrected} />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<CorrectSettlementDialog soulId="soul-1" isOpen onClose={onClose} onCorrected={onCorrected} />, { retryOff: false, mutations: { retry: false }, i18n: false });
   return { onClose, onCorrected };
 }
 

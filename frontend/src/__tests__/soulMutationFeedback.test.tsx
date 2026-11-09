@@ -23,13 +23,13 @@
  * key nothing uses — the exact failure that hid six dead realtime handlers
  * (see eventInvalidationReachesCache.test.ts).
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 
 import { SoulCreateModal } from "@/src/components/souls/SoulCreateModal";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { soulKeys } from "@soulledger/core/query_keys";
 import { soulsApi } from "@soulledger/core/api";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 const mockShowToast = jest.fn();
 
@@ -69,9 +69,7 @@ const mockedCreate = soulsApi.create as jest.Mock;
 const mockedUpdate = soulsApi.update as jest.Mock;
 
 function renderModal() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  const queryClient = createTestQueryClient();
   // The entry a second, differently-filtered souls list would hold. `refetch()`
   // on the calling page cannot reach it; only an invalidation can.
   queryClient.setQueryData(soulKeys.list({ page: 2, civilization: "GREEK" }), {
@@ -80,11 +78,7 @@ function renderModal() {
   });
   const onCreated = jest.fn();
   const onClose = jest.fn();
-  render(
-    <QueryClientProvider client={queryClient}>
-      <SoulCreateModal isOpen onClose={onClose} onCreated={onCreated} />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<SoulCreateModal isOpen onClose={onClose} onCreated={onCreated} />, { client: queryClient, i18n: false });
   return { queryClient, onCreated, onClose };
 }
 
@@ -173,15 +167,9 @@ describe("editing a soul", () => {
   } as unknown as Parameters<typeof SoulEditModal>[0]["soul"];
 
   it("raises exactly one toast for one edit", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    const queryClient = createTestQueryClient();
     const onUpdated = jest.fn();
-    render(
-      <QueryClientProvider client={queryClient}>
-        <SoulEditModal isOpen onClose={jest.fn()} soul={soul} onUpdated={onUpdated} />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<SoulEditModal isOpen onClose={jest.fn()} soul={soul} onUpdated={onUpdated} />, { client: queryClient, i18n: false });
 
     const nameInput = screen.getByLabelText(/souls\.form\.name/i);
     fireEvent.change(nameInput, { target: { value: "孟婆汤" } });

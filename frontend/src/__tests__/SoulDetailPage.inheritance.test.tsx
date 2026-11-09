@@ -11,10 +11,10 @@
  *   - still treats any other failure (e.g. 500) as a real query error
  *     instead of folding it into the same "render nothing" path as 409.
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 const SOUL_ID = "soul-1";
 const INHERITANCE_KEY = ["souls", "inheritance", SOUL_ID];
@@ -183,14 +183,8 @@ function mockLedgerWithOneRecord(meritScore: number, demeritScore: number) {
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const utils = render(
-    <QueryClientProvider client={queryClient}>
-      <SoulDetailPage />
-    </QueryClientProvider>
-  );
+  const queryClient = createTestQueryClient();
+  const utils = renderWithProviders(<SoulDetailPage />, { client: queryClient, i18n: false });
   return { queryClient, ...utils };
 }
 

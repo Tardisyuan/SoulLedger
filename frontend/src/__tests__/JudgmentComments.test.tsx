@@ -2,10 +2,10 @@
  * 评议 on the judgment page (src/components/judgment/JudgmentComments.tsx + the core hooks).
  * Real QueryClient, real hooks; only the HTTP layer is stubbed.
  */
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { judgmentApi } from "@soulledger/core/api";
 import { JudgmentComments } from "@/src/components/judgment/JudgmentComments";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -24,12 +24,8 @@ const titleButton = () => screen.getByRole("button", { name: /officer_app\.comme
 
 /** Renders, waits for the list to load (the title grows its count), and opens the section if it is shut. */
 async function renderIt(canWrite = true) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <JudgmentComments id="j-1" canWrite={canWrite} />
-    </QueryClientProvider>
-  );
+  const qc = createTestQueryClient();
+  renderWithProviders(<JudgmentComments id="j-1" canWrite={canWrite} />, { client: qc, i18n: false });
   await waitFor(() => expect(comments).toHaveBeenCalled());
   await act(async () => {}); // let the load settle: it decides whether the section starts open
   if (titleButton().getAttribute("aria-expanded") === "false") fireEvent.click(titleButton());
@@ -137,12 +133,8 @@ test("a failed send keeps the text and shows the failure", async () => {
 describe("default open state and the 3-comment window", () => {
   const at = (id: string, when: string) => ({ ...row(id, `body-${id}`), created_at: when });
   const mount = (concludedAt?: string | null) => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={qc}>
-        <JudgmentComments id="j-1" canWrite concludedAt={concludedAt} />
-      </QueryClientProvider>
-    );
+    const qc = createTestQueryClient();
+    renderWithProviders(<JudgmentComments id="j-1" canWrite concludedAt={concludedAt} />, { client: qc, i18n: false });
   };
 
   test("no comments: shut by default, title says 0, the box appears only after opening", async () => {

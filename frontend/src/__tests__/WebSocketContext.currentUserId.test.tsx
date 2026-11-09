@@ -22,11 +22,12 @@
  * the id it plants in localStorage. A synchronously-present user would hide
  * the defect entirely.
  */
-import { render, act, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
 import { showToast } from "@/src/components/ui/Toast";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 // The toast layer, mocked at the module that `ToastContext`'s DEFAULT value
 // points at. `ToastProvider` is deliberately NOT rendered below: in
@@ -166,14 +167,13 @@ function HydrationProbe() {
  * socket count is settled before any test looks at it.
  */
 async function renderAndHydrate() {
-  render(
-    <QueryClientProvider client={queryClient}>
-      <TenantProvider>
-        <WebSocketProvider>
-          <HydrationProbe />
-        </WebSocketProvider>
-      </TenantProvider>
-    </QueryClientProvider>,
+  renderWithProviders(
+    <TenantProvider>
+      <WebSocketProvider>
+        <HydrationProbe />
+      </WebSocketProvider>
+    </TenantProvider>,
+    { client: queryClient, i18n: false },
   );
 
   await waitFor(() =>
@@ -208,9 +208,7 @@ beforeEach(() => {
   sessionStorage.setItem("soulledger_access", "token-abc");
   seedCachedUser(VIEWER_ID);
   (global as unknown as { WebSocket: unknown }).WebSocket = FakeWebSocket;
-  queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  queryClient = createTestQueryClient();
 });
 
 afterEach(() => {
@@ -322,14 +320,13 @@ describe("WebSocketProvider carries the hydrated user id into its handlers", () 
       () => new Promise((r) => { resolvePerms = r; }),
     );
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <TenantProvider>
-          <WebSocketProvider>
-            <HydrationProbe />
-          </WebSocketProvider>
-        </TenantProvider>
-      </QueryClientProvider>,
+    renderWithProviders(
+      <TenantProvider>
+        <WebSocketProvider>
+          <HydrationProbe />
+        </WebSocketProvider>
+      </TenantProvider>,
+      { client: queryClient, i18n: false },
     );
 
     // 第一段:缓存里的用户已恢复,权限还空着,连接 effect 已经开了一个 socket。

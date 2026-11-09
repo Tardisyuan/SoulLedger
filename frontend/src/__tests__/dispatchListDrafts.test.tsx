@@ -4,10 +4,10 @@
  * views.py); here the row has to say 草稿 and reopen in the form, pre-filled,
  * rather than on the detail page — which has no action for a draft.
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, within } from "@testing-library/react";
 import DispatchPage from "@/app/dispatch/page";
 import { dispatchApi } from "@soulledger/core/api";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispatchApi: { proposed: jest.fn(), history: jest.fn() },
@@ -58,12 +58,8 @@ it("marks a draft 草稿 and links it back into the form; a proposal still opens
       count: 2,
     },
   });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <DispatchPage />
-    </QueryClientProvider>
-  );
+  const client = createTestQueryClient();
+  renderWithProviders(<DispatchPage />, { client, i18n: false });
 
   const proposal = await screen.findByRole("link", { name: /沈青梧/ });
   expect(proposal).toHaveAttribute("href", "/dispatch/p1");
@@ -82,8 +78,8 @@ describe("dispatch column menu", () => {
   const renderPage = async () => {
     (dispatchApi.proposed as jest.Mock).mockResolvedValue({ data: { results: [{ ...base, id: "p9", status: "PROPOSED", soul: "s9", soul_name: "陆晚晴" }], count: 1 } });
     (dispatchApi.history as jest.Mock).mockResolvedValue({ data: { results: [{ ...base, id: "h9", status: "PROPOSED", soul: "s8", soul_name: "沈青梧" }], count: 1 } });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const view = render(<QueryClientProvider client={client}><DispatchPage /></QueryClientProvider>);
+    const client = createTestQueryClient();
+    const view = renderWithProviders(<DispatchPage />, { client, i18n: false });
     await screen.findByRole("link", { name: /陆晚晴/ });
     return view;
   };

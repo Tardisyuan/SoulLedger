@@ -3,9 +3,9 @@
  * 退出别台不输密码、立刻调用,行内显示「已退出」3 秒后消失;「退出其他全部」先弹确认,标题带台数,
  * 确认前不调用;只有这一台时没有「退出其他全部」。「30 天内不再询问」是行下的标签。
  */
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { DevicesSection, SIGNED_OUT_LINGER_MS } from "@/src/components/profile/DevicesSection";
+import { renderWithProviders } from "./support/render";
 import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -135,12 +135,7 @@ it("a failed load says so instead of showing an empty list", async () => {
 
 it("the stranger line links to the password section and opens its form, without adding a second 修改密码 button", async () => {
   const onChangePassword = jest.fn();
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <DevicesSection onChangePassword={onChangePassword} />
-    </QueryClientProvider>,
-  );
+  renderWithProviders(<DevicesSection onChangePassword={onChangePassword} />, { i18n: false });
   await screen.findAllByTestId("device-row");
   const link = screen.getByRole("link", { name: "profile.change_password" });
   expect(link).toHaveAttribute("href", "#password-section");

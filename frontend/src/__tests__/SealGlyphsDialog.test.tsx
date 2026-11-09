@@ -2,11 +2,11 @@
  * 租户印字编辑(规范 v2 补足 A6):PATCH /tenants/{code}/seal-glyphs/,400 原样显示,
  * 改的是自己租户时把新印字写回 TenantContext —— 页头的印读的就是那里。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
 import { SealGlyphsDialog, parseSealGlyphs, sealGlyphsError } from "@/src/components/tenants/SealGlyphsDialog";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({ tenantsApi: { updateSealGlyphs: jest.fn() } }));
 
@@ -29,12 +29,7 @@ jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastM
 const tenant = (over: Partial<Tenant> = {}): Tenant => ({ id: 1, code: "CN_DIYU", display_name: "第五殿", seal_glyphs: [], ...over });
 
 function renderDialog(tn: Tenant, onClose = jest.fn()) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <SealGlyphsDialog tenant={tn} onClose={onClose} />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<SealGlyphsDialog tenant={tn} onClose={onClose} />, { i18n: false });
   return onClose;
 }
 

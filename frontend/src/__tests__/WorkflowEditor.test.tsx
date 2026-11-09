@@ -1,8 +1,7 @@
 /**
  * Tests for WorkflowEditor component
  */
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 // Mock all heavy dependencies before import
 jest.mock("@xyflow/react", () => {
@@ -166,14 +165,10 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 }));
 
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
+import { renderWithProviders as renderInProviders } from "./support/render";
 
 function renderWithProviders(ui: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return renderInProviders(ui, { i18n: false });
 }
 
 describe("WorkflowEditor", () => {

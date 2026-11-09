@@ -3,9 +3,9 @@
  * 没有取消;改好后清掉标记。管理员的新密码至少 12 位,清单上写的也是 12。
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ProfilePage from "@/app/profile/page";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
+import { renderWithProviders } from "./support/render";
 
 const mockReplace = jest.fn();
 let mockPath = "/souls";
@@ -38,11 +38,7 @@ const { authApi } = require("@soulledger/core/api");
 
 function renderProfile(owed = true) {
   (authApi.profile as jest.Mock).mockResolvedValue({ data: { username: "u", email: "", role: mockUser.role, password_change_required: owed } });
-  return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <ProfilePage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<ProfilePage />, { i18n: false });
 }
 
 beforeEach(() => {

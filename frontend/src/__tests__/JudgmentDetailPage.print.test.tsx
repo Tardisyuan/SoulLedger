@@ -2,8 +2,8 @@
  * 判词页的「打印」(第十五批 C1):只在已结案(有判词)时出现,点它调 `window.print()`;
  * 未结案的草稿不是文书,没有这个入口。页面带打印框(`data-print-doc`),别的打印规则见 printLayout.test.tsx。
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 
 const ID = "j-1";
 
@@ -29,6 +29,7 @@ jest.mock("react", () => {
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
 import { judgmentApi, soulsApi } from "@soulledger/core/api";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { get: jest.fn(), conclude: jest.fn() },
@@ -86,12 +87,8 @@ function judgment(final: boolean) {
 let queryClient: QueryClient;
 
 function renderPage() {
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
-    </QueryClientProvider>
-  );
+  queryClient = createTestQueryClient();
+  return renderWithProviders(<JudgmentDetailPage params={Promise.resolve({ id: ID })} />, { client: queryClient, i18n: false });
 }
 
 

@@ -11,10 +11,10 @@
  * Rendered for real with only the HTTP layer stubbed, like
  * `SoulDetailPage.cacheInvalidation.test.tsx`.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+import { renderWithProviders } from "./support/render";
 
 const SOUL_ID = "soul-1";
 
@@ -116,14 +116,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 function renderPage() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <SoulDetailPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<SoulDetailPage />, { i18n: false });
 }
 
 beforeEach(() => {

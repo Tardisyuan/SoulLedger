@@ -6,10 +6,10 @@
  *
  * Written 2026-10-09 and NOT run (user instruction: write, don't run).
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { mfaApi } from "@soulledger/core/api";
 import { MfaSection } from "@/src/components/profile/MfaSection";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   mfaApi: { status: jest.fn(), setup: jest.fn(), cancelSetup: jest.fn(), confirm: jest.fn(), complete: jest.fn(), regenerateRecoveryCodes: jest.fn(), disable: jest.fn() },
@@ -28,12 +28,8 @@ const OFF = { enabled: false, required: false, confirmed_at: null, last_used_at:
 const ON = { enabled: true, required: true, confirmed_at: "2026-10-01T00:00:00Z", last_used_at: "2026-10-08T00:00:00Z", last_used_method: "recovery", recovery_codes_remaining: 7 };
 
 function renderSection() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <MfaSection />
-    </QueryClientProvider>
-  );
+  const qc = createTestQueryClient();
+  renderWithProviders(<MfaSection />, { client: qc, i18n: false });
   return qc;
 }
 

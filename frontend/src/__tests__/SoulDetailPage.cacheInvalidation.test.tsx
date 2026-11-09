@@ -26,12 +26,13 @@
  * the two sibling SoulDetailPage suites, because a mocked hook is exactly the
  * fixture that would let this defect back in.
  */
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
 import { dispatchEvent, flushEventInvalidations, type EventPayload } from "@/lib/events/event_registry";
 import { mockShowToast } from "./support/mocks";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 const SOUL_ID = "soul-1";
 
@@ -138,14 +139,8 @@ function karmaWith(merit: number) {
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const utils = render(
-    <QueryClientProvider client={queryClient}>
-      <SoulDetailPage />
-    </QueryClientProvider>
-  );
+  const queryClient = createTestQueryClient();
+  const utils = renderWithProviders(<SoulDetailPage />, { client: queryClient, i18n: false });
   return { queryClient, ...utils };
 }
 

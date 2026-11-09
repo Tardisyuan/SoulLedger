@@ -2,12 +2,12 @@
  * 地府审判台的罪目与枉死城(Design 第五十七批 D-1、D-2、D-2b)。Real QueryClient; HTTP and copy are stubbed —
  * `t` echoes the key and its params, so an assertion names the key it expects rather than a translation.
  */
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { wangsiApi, type Judgment } from "@soulledger/core/api";
 import { OffenceField, WangsiPanel, untimelyLine } from "@/src/components/judgment/DiyuCaseFields";
 import { renderWithProviders } from "./support/render";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -107,13 +107,9 @@ describe("枉死城 (D-2 / D-2b)", () => {
 
   it("审完申诉:案子、处置、灵魂三处缓存都失效(释放 / 超度改的不只是案子)", async () => {
     decide.mockResolvedValue({});
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const qc = createTestQueryClient();
     const spy = jest.spyOn(qc, "invalidateQueries");
-    render(
-      <QueryClientProvider client={qc}>
-        <WangsiPanel judgment={judgment({ grievance_level: "MAJOR", grievance_status: "FILED" })} editable />
-      </QueryClientProvider>
-    );
+    renderWithProviders(<WangsiPanel judgment={judgment({ grievance_level: "MAJOR", grievance_status: "FILED" })} editable />, { client: qc, i18n: false });
     fireEvent.change(screen.getByRole("textbox", { name: "judgment.wangsi.decision_note" }), { target: { value: "不实" } });
     fireEvent.click(screen.getByTestId("wangsi-reject"));
     await waitFor(() => expect(decide).toHaveBeenCalled());

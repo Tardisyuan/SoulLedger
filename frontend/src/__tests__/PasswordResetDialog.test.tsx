@@ -2,11 +2,11 @@
  * 管理员重置密码(2026-10-29 用户决定第 8 条):显示一次性设置链接,不再显示密码;对另一位管理员,
  * 服务端答 403 `second_factor_required` 时弹出验证码输入,错码留在输入框里说剩几次,对了才带着证明重发。
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { PasswordResetDialog } from "@/src/components/users/PasswordResetDialog";
 import { usersApi, type User } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (key: string, params?: Record<string, string>) => tZh(key, params), locale: "zh-Hans", hydrated: true }),
@@ -20,12 +20,7 @@ const LINK = "https://desk.example/accept-invite?uid=MQ&token=abc&kind=reset";
 const refusal = (status: number, data: object) => Object.assign(new Error("refused"), { response: { status, data } });
 
 function renderDialog(user: Partial<User>) {
-  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <PasswordResetDialog user={{ id: 7, username: "mengpo", email: "", role: "JUDGE", is_active: true, ...user } as User} onClose={jest.fn()} />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<PasswordResetDialog user={{ id: 7, username: "mengpo", email: "", role: "JUDGE", is_active: true, ...user } as User} onClose={jest.fn()} />, { retryOff: false, mutations: { retry: false }, i18n: false });
 }
 
 beforeEach(() => reset.mockReset());

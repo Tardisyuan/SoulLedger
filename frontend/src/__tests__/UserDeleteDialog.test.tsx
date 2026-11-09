@@ -8,12 +8,12 @@
  * green (FT-04). The doubles here are the API and the toast; what sits between
  * the click and `usersApi.delete` is the code under test.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { usersApi, type User } from "@soulledger/core/api";
 import { showToast } from "@/src/components/ui/Toast";
 import { tZh, zh } from "./support/zhBundle";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 const mockTranslate = jest.fn(tZh);
 
@@ -57,13 +57,9 @@ const mockUser: User = {
 type Props = Parameters<typeof UserDeleteDialog>[0];
 
 function renderDialog(props: Partial<Props> = {}) {
-  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const queryClient = createTestQueryClient({ retryOff: false, mutations: { retry: false } });
   const invalidate = jest.spyOn(queryClient, "invalidateQueries");
-  const utils = render(
-    <QueryClientProvider client={queryClient}>
-      <UserDeleteDialog user={mockUser} isOpen={true} onClose={jest.fn()} {...props} />
-    </QueryClientProvider>
-  );
+  const utils = renderWithProviders(<UserDeleteDialog user={mockUser} isOpen={true} onClose={jest.fn()} {...props} />, { client: queryClient, i18n: false });
   return { ...utils, invalidate };
 }
 

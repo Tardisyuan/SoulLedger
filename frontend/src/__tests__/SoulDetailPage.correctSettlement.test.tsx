@@ -5,10 +5,10 @@
  *
  * 身份走 `useTenant` 的桩(真门跑起来),不桩 `RequirePermission`(suiteShape 禁止)。
  */
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent, act } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+import { renderWithProviders } from "./support/render";
 
 const SOUL_ID = "soul-1";
 
@@ -75,12 +75,7 @@ const soul = (current_state: string) => ({
 });
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <SoulDetailPage />
-    </QueryClientProvider>
-  );
+  renderWithProviders(<SoulDetailPage />, { i18n: false });
 }
 
 const openMenu = async () => {

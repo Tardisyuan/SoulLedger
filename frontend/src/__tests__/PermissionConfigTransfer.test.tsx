@@ -10,14 +10,14 @@
  * 确认词(= mode.overwrite 的文案,不是殿名)危险按钮才可点,真导入才带 `overwrite: true`;删除名单里有自己的权限(`removes_own_permissions`)时
  * 禁止覆盖。第 2 步有「上一步」,回第 1 步、文件名还在;第 3 步没有。
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { permApi } from "@soulledger/core/api";
 import { PermissionConfigTransfer, parsePermissionConfig, MAX_IMPORT_BYTES } from "@/src/components/permissions/PermissionConfigTransfer";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
 import { saveBlob } from "@/src/lib/saveBlob";
+import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   permApi: { exportConfig: jest.fn(), importConfig: jest.fn() },
@@ -72,13 +72,9 @@ const NOTHING_SKIPPED = {
 };
 
 function setup() {
-  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const client = createTestQueryClient({ retryOff: false, mutations: { retry: false } });
   const invalidate = jest.spyOn(client, "invalidateQueries");
-  render(
-    <QueryClientProvider client={client}>
-      <PermissionConfigTransfer />
-    </QueryClientProvider>,
-  );
+  renderWithProviders(<PermissionConfigTransfer />, { client, i18n: false });
   return { invalidate };
 }
 

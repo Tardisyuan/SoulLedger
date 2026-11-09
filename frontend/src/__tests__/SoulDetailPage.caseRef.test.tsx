@@ -9,10 +9,10 @@
  *
  * 真页面,只替换 HTTP 层与身份带的 setter(同 WelcomePage.test 的做法)。
  */
-import { render, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { waitFor } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+import { renderWithProviders } from "./support/render";
 
 const SOUL_ID = "soul-1";
 
@@ -85,12 +85,7 @@ const account = (over: Record<string, unknown>) => ({
 });
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <SoulDetailPage />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<SoulDetailPage />, { queries: { staleTime: 30_000 }, i18n: false });
 }
 
 const withJudgments = (results: unknown[]) =>
