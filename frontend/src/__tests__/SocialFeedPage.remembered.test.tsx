@@ -13,7 +13,7 @@ jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useMyProfile: () => ({ data: undefined }),
 }));
 jest.mock("@soulledger/core/api", () => ({ PAGE_SIZE: 20 }));
-jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (k: string) => k, locale: "en", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "en", hydrated: true }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 jest.mock("@/src/components/plaque/Plaque", () => ({ usePlaque: () => undefined }));
 jest.mock("@/src/components/social/PostCard", () => ({ PostCard: () => null }));

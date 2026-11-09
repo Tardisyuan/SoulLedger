@@ -20,7 +20,7 @@ import { useCustomRoleLabel } from "@/src/components/users/RoleName";
 import { usePermissionCrud } from "@/src/components/permissions/usePermissionCrud";
 import { createTestQueryClient, testProviders } from "./support/render";
 
-jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock());
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 
 jest.mock("@soulledger/core/api", () => ({

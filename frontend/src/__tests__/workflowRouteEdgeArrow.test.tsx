@@ -19,7 +19,7 @@ jest.mock("@xyflow/react", () => {
     EdgeLabelRenderer: () => null,
   };
 });
-jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (k: string) => k }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock());
 
 const Route = edgeTypes.route as ComponentType<Record<string, unknown>>;
 

@@ -9,7 +9,7 @@ const mockToggle = { mutate: jest.fn(), isPending: false };
 jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useToggleReaction: () => mockToggle,
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (k: string) => k }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock());
 
 import { ReactionBar, REACTIONS } from "@/src/components/social/ReactionBar";
 
