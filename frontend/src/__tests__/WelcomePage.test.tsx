@@ -93,7 +93,8 @@ const stats = {
 const menu = (id: number, path: string): SidebarMenu =>
   ({ id, name: path, path, icon: null, order: id, component: null, roles: [], is_active: true, parent: null, children: [] }) as SidebarMenu;
 
-const JUDGE = { id: 7, username: "yama", display_name: "阎罗", role: "JUDGE", tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife" } };
+// audit.read: the activity panel only exists for someone who may read the audit log (see the last describe).
+const JUDGE = { id: 7, username: "yama", display_name: "阎罗", role: "JUDGE", permissions: ["audit.read"], tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife" } };
 const ONBOARDED = "soulledger_onboarded:7";
 
 let hoursSpy: jest.SpyInstance;
@@ -285,6 +286,16 @@ describe("接着做: one primary button, entries from the user's own menus", () 
 });
 
 // ── 最近活动 ─────────────────────────────────────────────────────────
+
+describe("最近活动 without audit.read (judges and moderators, 2026-11-10)", () => {
+  it("asks nothing and draws no panel, instead of a 403 shown as 「加载失败」", async () => {
+    signedInJudge({ permissions: [] });
+    renderPage();
+    await settled();
+    expect(mockedAudit).not.toHaveBeenCalled();
+    expect(document.querySelector('section[aria-labelledby="welcome-activity-title"]')).toBeNull();
+  });
+});
 
 describe("最近活动: mine, from the audit log, at most six", () => {
   const entry = (over: Partial<Record<string, unknown>> = {}) => ({

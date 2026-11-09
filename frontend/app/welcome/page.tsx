@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant, type AuthUser } from "@/src/contexts/TenantContext";
 import { civSkinOf } from "@/src/lib/civSkin";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import dynamic from "next/dynamic";
 
 // 嵌彩徽记的 SVG 原文(四文明深浅八份,约 340 KB)在落地页的模块里:这里单独成块、按需加载,不压欢迎页首屏。
@@ -303,6 +304,7 @@ function ActivityPanel({
 export default function WelcomePage() {
   const { t, formatDate } = useI18n();
   const { user } = useTenant();
+  const { hasPermission } = usePermissions();
   const name = user?.display_name || user?.username || "";
   const skin = civSkinOf(user?.tenant?.code ?? null);
 
@@ -360,8 +362,11 @@ export default function WelcomePage() {
    * No `page_size` param: the backend has no `page_size_query_param`; slice the first page.
    */
   const [activity, setActivity] = useState<Load<AuditLogEntry[]>>({ state: "loading" });
+  // 审计日志要 audit.read:判官、巡察没有这一项,请求必然 403,此前整栏写「加载失败」(演示站 2026-11-10 看到,
+  // 正式环境一样)。没有这项权限就不请求、不画这一栏。
+  const canAudit = hasPermission("audit.read");
   const loadActivity = useCallback(() => {
-    if (userId === null) {
+    if (userId === null || !canAudit) {
       setActivity({ state: "ready", data: [] });
       return;
     }
@@ -370,7 +375,7 @@ export default function WelcomePage() {
       .list({ user: String(userId) })
       .then((res) => setActivity({ state: "ready", data: res.data.results.slice(0, ACTIVITY_MAX) }))
       .catch(() => setActivity({ state: "error" }));
-  }, [userId]);
+  }, [userId, canAudit]);
   useEffect(() => {
     loadActivity();
   }, [loadActivity]);
@@ -407,9 +412,9 @@ export default function WelcomePage() {
             </div>
             {skin !== "neutral" && <LandingEmblem civ={skin as SealCiv} size={136} className="shrink-0 self-center max-md:hidden" />}
           </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
+          <div className={cn("grid grid-cols-1 gap-6", canAudit && "lg:grid-cols-[400px_minmax(0,1fr)]")}>
             <NextPanel user={user} judging={judging} onRedo={() => setSetupAt(0)} onShortcuts={() => setSetupAt(3)} />
-            <ActivityPanel load={activity} onRetry={loadActivity} formatTimestamp={formatTimestamp} />
+            {canAudit && <ActivityPanel load={activity} onRetry={loadActivity} formatTimestamp={formatTimestamp} />}
           </div>
           <footer className={cn("text-xs", MUTED)}>
             {t("welcome.system_version")} · <span className="font-mono">{APP_VERSION}</span>
