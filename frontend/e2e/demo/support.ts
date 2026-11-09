@@ -64,11 +64,13 @@ export async function enter(page: Page, role: Role): Promise<void> {
   await page.getByTestId("demo-entrance").waitFor({ state: "detached" });
 }
 
-/** The account menu's sign-out, by way of its confirmation. */
+/** The account menu's sign-out, by way of its confirmation and the farewell page (left by its 回到首页 rather than its six seconds). */
 export async function signOut(page: Page): Promise<void> {
   await page.getByTestId("user-menu").click();
   await page.getByRole("button", { name: "登出", exact: true }).click();
   await page.getByRole("alertdialog").or(page.getByRole("dialog")).getByRole("button").last().click();
+  await page.waitForURL((u) => u.pathname === "/goodbye");
+  await page.getByRole("link", { name: "回到首页" }).click();
   await page.waitForURL((u) => u.pathname === "/");
 }
 
