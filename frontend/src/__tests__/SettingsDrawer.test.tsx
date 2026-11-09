@@ -4,21 +4,18 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "settings.title": "Settings",
-        "settings.theme": "Theme",
-        "settings.light": "Light",
-        "settings.dark": "Dark",
-      };
-      return map[key] || key;
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "settings.title": "Settings",
+      "settings.theme": "Theme",
+      "settings.light": "Light",
+      "settings.dark": "Dark",
     },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 jest.mock("@/src/contexts/ThemeContext", () => ({
   useTheme: () => ({

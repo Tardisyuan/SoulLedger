@@ -103,20 +103,19 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) =>
-      ({
-        "workflow.editor.auto_layout": "Auto layout",
-        "workflow.editor.add_node": "Add Node",
-        "workflow.editor.delete_selected": "Delete Selected",
-        "workflow.editor.save_template": "Save Template",
-        "workflow.editor.template_name_placeholder": "Template name...",
-      })[key] || key,
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "workflow.editor.auto_layout": "Auto layout",
+      "workflow.editor.add_node": "Add Node",
+      "workflow.editor.delete_selected": "Delete Selected",
+      "workflow.editor.save_template": "Save Template",
+      "workflow.editor.template_name_placeholder": "Template name...",
+    },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),

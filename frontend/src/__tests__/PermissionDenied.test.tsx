@@ -8,21 +8,18 @@ import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
 
 // Mock the I18nContext so t() returns predictable strings
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "permission.denied_title": "Access Denied",
+      "permission.denied_message":
+        "You do not have permission to view this page.",
+    },
     locale: "en",
     setLocale: jest.fn(),
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "permission.denied_title": "Access Denied",
-        "permission.denied_message":
-          "You do not have permission to view this page.",
-      };
-      return map[key] ?? key;
-    },
     hydrated: true,
   }),
-}));
+);
 
 describe("PermissionDenied", () => {
   it("draws no lock — C15 draws an in-page state, not an emoji", () => {

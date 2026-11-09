@@ -14,16 +14,19 @@ jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
     // The two state labels this test reads; any other key echoes, which
     // `DomainEnum` treats as a missing translation.
-    t: (key: string) => ({ "dispatch.states.DRAFT": "草稿", "dispatch.states.PROPOSED": "待审批" })[key] ?? key,
+    map: {
+      "dispatch.states.DRAFT": "草稿",
+      "dispatch.states.PROPOSED": "待审批",
+    },
     formatDateTime: (v: string) => v,
     locale: "zh-Hans",
     hydrated: true,
   }),
-}));
+);
 
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, tenant: { code: "CN_DIYU" } } }),
