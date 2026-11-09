@@ -34,10 +34,7 @@ const mockI18n = {
   formatDate: (v: unknown) => String(v),
   locale: "zh",
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 const mockTenant = {
   user: { id: 1, username: "admin", role: "ADMIN", tenant: null, permissions: [] },

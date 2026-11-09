@@ -62,10 +62,7 @@ const mockI18n = {
   formatDate: mockFormatDate,
   locale: "zh",
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 // Same reasoning: one frozen identity. The real permission gates run against an
 // ADMIN, so the edit control below is reachable without stubbing

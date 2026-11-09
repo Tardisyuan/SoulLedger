@@ -22,9 +22,7 @@ const { menuButtonsApi, menusApi } = jest.requireMock("@soulledger/core/api") as
 };
 
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (k: string, p?: Record<string, string>) => tZh(k, p), locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (k: string, p?: Record<string, string>) => tZh(k, p), locale: "zh-Hans", hydrated: true }) }));
 let mockPermissions = ["menu.read", "menu.manage"];
 jest.mock("@/src/hooks/usePermissions", () => ({
   usePermissions: () => ({

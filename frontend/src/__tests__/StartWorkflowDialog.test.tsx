@@ -28,10 +28,7 @@ const mockLabels: Record<string, string> = {
 };
 const mockT = (key: string, params?: Record<string, string>) =>
   params ? `${key}(${Object.values(params).join(",")})` : (mockLabels[key] ?? key);
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: mockT, tf: (_k: string, f: string) => f, locale: "en", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: mockT, tf: (_k: string, f: string) => f, locale: "en", hydrated: true }) }));
 
 const mockStart = jest.fn();
 const mockCaseTypes = jest.fn();

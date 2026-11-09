@@ -26,10 +26,7 @@ const { soulAccountsApi, workflowApi } = jest.requireMock("@soulledger/core/api"
 
 let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const INITIAL_STEP = { node_type: "EVALUATION", approver_role: "JUDGE", is_appeal: false };

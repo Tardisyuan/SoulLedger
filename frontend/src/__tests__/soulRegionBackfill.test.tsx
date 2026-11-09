@@ -92,9 +92,7 @@ let mockUser: Record<string, unknown> = { role: "OPERATOR", permissions: ["soul.
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 const t = (key: string, params?: Record<string, string>) =>
   params ? `${key}:${Object.values(params).join(",")}` : key;
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t, locale: "zh-Hans", hydrated: true }) }));
 
 const CSV = new File(["soul_id,origin_region\n"], "regions.csv", { type: "text/csv" });
 

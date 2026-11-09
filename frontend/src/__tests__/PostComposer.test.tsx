@@ -5,9 +5,7 @@
  */
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}:${Object.values(p).join(",")}` : k) }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}:${Object.values(p).join(",")}` : k) }) }));
 
 const mockMutate = jest.fn();
 let mockMax: number | undefined = 4;

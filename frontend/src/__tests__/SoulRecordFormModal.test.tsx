@@ -30,10 +30,7 @@ jest.mock("@soulledger/core/hooks/useStatutes", () => ({
   }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tZh, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@soulledger/core/platform", () => ({
   ...jest.requireActual("@soulledger/core/platform"),
   notify: jest.fn(),

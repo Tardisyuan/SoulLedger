@@ -8,9 +8,7 @@ import { usersApi, type User } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
 import { renderWithProviders } from "./support/render";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string, params?: Record<string, string>) => tZh(key, params), locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (key: string, params?: Record<string, string>) => tZh(key, params), locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@soulledger/core/api", () => ({ usersApi: { resetPassword: jest.fn() } }));
 jest.mock("@soulledger/core/query_keys", () => ({ userKeys: { all: ["users"] } }));
 jest.mock("@/src/components/ui/Toast", () => ({ showToast: jest.fn() }));

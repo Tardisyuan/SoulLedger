@@ -7,10 +7,7 @@ import type { Realm, Soul } from "@soulledger/core/api";
 import type { Station, Topology } from "@/src/lib/routeTopology";
 import { tZh } from "./support/zhBundle";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 const mockEvents = jest.fn();
 jest.mock("@soulledger/core/api", () => ({

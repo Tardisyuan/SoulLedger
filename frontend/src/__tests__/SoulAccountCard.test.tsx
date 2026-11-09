@@ -20,10 +20,7 @@ const { soulAccountsApi } = jest.requireMock("@soulledger/core/api") as {
 
 let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant?: { code: string } | null } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const FUTURE = "2999-01-01T00:00:00Z";

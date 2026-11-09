@@ -41,10 +41,7 @@ const mockI18n = {
   locale: "zh-Hans",
   hydrated: true,
 };
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => mockI18n,
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => mockI18n }));
 
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 const mockListeners = new Set<(_event: Record<string, unknown>) => void>();
