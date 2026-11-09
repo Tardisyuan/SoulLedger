@@ -2475,6 +2475,9 @@ li:last-child > .route-row {
 
 /* 十三站卡:已过窄条(实底 + 勾)、现在展开(metal 1.5 内描)、未到虚线框 —— 宽度 / 实底 / 虚线三条线索,不只靠颜色。 */
 .diyu-card {
+  /* 卡里有 sr-only 的站名与状态(absolute,1px):不给卡定位,它们按外层定位,把十三站那一排撑宽 3px(393 宽实测)。 */
+  position: relative;
+  overflow: hidden;
   display: flex;
   min-width: 0;
   height: 5rem;
