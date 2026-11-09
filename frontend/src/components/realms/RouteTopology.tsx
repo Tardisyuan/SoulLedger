@@ -124,7 +124,7 @@ export function RouteTopology({
           className="min-w-18 flex-1 pr-1"
           style={{ "--i": i } as CSSProperties}
         >
-          <span aria-hidden="true" className="route-row flex items-center h-5">
+          <span aria-hidden="true" className="route-row flex items-center h-6">
             <span className={`flex-1 h-0 ${into === null ? "" : into ? `border-t-2 ${WALKED}` : `border-t-2 ${AHEAD}`}`} />
             {mark(s, bold?.(s), terminal)}
             <span className={`flex-1 h-0 ${i === stations.length - 1 ? "" : segmentWalked(stations, i + 1) ? `border-t-2 ${WALKED}` : `border-t-2 ${AHEAD}`}`} />
@@ -281,15 +281,14 @@ function textTone(state: StationState): string {
 }
 
 function StationMark({ state, filled, emphasis, terminal }: { state: StationState; filled: boolean; emphasis?: boolean; terminal?: boolean }) {
-  const ring = emphasis ? "border-2" : "border";
   const cls = terminal
     ? `size-2.5 border border-dashed border-[oklch(var(--color-ink))] ${state === "current" ? "bg-[oklch(var(--color-metal))]" : "bg-[oklch(var(--color-canvas))]"}`
     :
     state === "current"
-      ? "route-now size-3.5 bg-[oklch(var(--color-metal))]"
+      ? "route-now size-4 bg-[oklch(var(--color-metal))]"
       : state === "travelled" || filled
-        ? `route-done size-2.5 bg-[oklch(var(--color-main-ink))] ${emphasis ? "outline outline-1 outline-offset-1 outline-[oklch(var(--color-main-ink))]" : ""}`
-        : `size-2.5 bg-[oklch(var(--color-canvas))] ${ring} border-[oklch(var(--color-ink-muted))]`;
+        ? `route-done size-3 bg-[oklch(var(--color-main-ink))] ${emphasis ? "outline outline-1 outline-offset-1 outline-[oklch(var(--color-main-ink))]" : ""}`
+        : `route-ahead size-3 bg-[oklch(var(--color-canvas))] border-2 border-[oklch(var(--color-ink-muted))]`;
   return <span aria-hidden="true" data-mark={state} data-terminal={terminal ? "dashed" : undefined} className={`shrink-0 ${cls}`} />;
 }
 

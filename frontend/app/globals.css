@@ -2222,6 +2222,21 @@ html.theme-switching *::after {
   border: 1px solid oklch(var(--color-metal));
   animation: route-pulse 3.2s ease-out infinite;
 }
+/* 横排的轨道:整条路下面一道文明色的淡底(像一条路),虚线、实线画在它中间。 */
+.route-row {
+  background: linear-gradient(oklch(var(--color-main-ink) / 0.16), oklch(var(--color-main-ink) / 0.16)) center / 100% 8px no-repeat;
+}
+li:first-child > .route-row {
+  background-position: right center;
+  background-size: 50% 8px;
+}
+li:last-child > .route-row {
+  background-position: left center;
+  background-size: 50% 8px;
+}
+.route-ahead {
+  box-shadow: 0 0 0 2px oklch(var(--color-canvas));
+}
 .route-strip {
   mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
   scrollbar-width: thin;
@@ -2246,7 +2261,7 @@ html.theme-switching *::after {
 
 .soul-progress-bar {
   position: relative;
-  height: 4px;
+  height: 6px;
   overflow: hidden;
   border-radius: 999px;
   background: oklch(var(--color-rule));
