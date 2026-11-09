@@ -352,6 +352,10 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
   依赖、`backend/` 顶层文件 → 全量。实测:只改 judgment 一个文件选 474 个里的 113 个,2348 passed,
   `-n 2` 4 分 41 秒(全量 `-n 4` 是 10–28 分钟)。**可能漏的**:只经别的 app 间接走到某 app、源码里既没写它
   名字也没调它网址的测试 —— 用户接受,没有夜间全量兜底。守卫 `tests/test_backend_test_selection.py`。
+  **2026-11-10 加一层反向依赖**:改了 `apps/A`,凡非测试代码 import 了 `apps.A` 的 app B(`ast` 读,不含迁移),
+  再加上 `backend/apps/B/` 下 B 自己的测试;只一层,不求传递闭包。实测(591 个测试文件,27 个 app 各改一个文件):
+  合计 2320 → 2693(+16%),单个 app +0%(menus)到 +75%(org 20 → 35),judgment 166 → 180;给 B 套用全部三条规则则多数 app
+  选到 591 里的 300–560 个,等于全量,所以只加目录。仍会漏:B 目录外、只经 B 走到 A 的测试,以及隔两层以上的。
   下面那段 testmon 的实测是当时不选的理由(按 import 选太宽且会漏 URLconf),按 app 选是另一条路。
 - tsc / eslint / core / mobile / ruff / makemigrations 照旧在对应区域有改动时跑。
   pytest-testmon 做进去并实测过(2026-09-30,`-n 4`,同一棵树),**没有采用**,因为安全的版本比全跑慢:
