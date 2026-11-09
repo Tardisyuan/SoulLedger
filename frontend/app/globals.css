@@ -2375,3 +2375,126 @@ li:last-child > .route-row {
     transition: none;
   }
 }
+
+/* ── 退出登录之后的「再会」(app/goodbye,2026-11-10)──────────────────────────────────────────
+   嵌彩徽记描线出现(LandingEmblem 自己的效果)→ 2.2 s 后像灯熄一样暗下去;魂火余烬往上飘;字依次浮起;
+   底下一条细线随倒计时缩短。余烬的节奏 4–7 s,避开魂火 0.5–1 Hz。减少动态效果(data-still)时全部静止。 */
+.goodbye {
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  overflow: hidden;
+  padding-inline: 16px;
+  padding-block: 48px;
+  color: oklch(var(--color-ink));
+  background:
+    radial-gradient(60% 45% at 50% 100%, oklch(var(--color-glow) / 0.22), transparent 70%),
+    oklch(var(--color-canvas));
+}
+.goodbye-body {
+  position: relative;
+  display: flex;
+  max-width: 28rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.goodbye-mark {
+  display: grid;
+  min-height: 168px;
+  place-items: center;
+  margin-bottom: 8px;
+  animation: goodbye-lamp-out 1.6s ease-in-out 2.2s forwards;
+}
+.goodbye-title {
+  font-size: 2rem;
+  line-height: 1.2;
+  animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.3s backwards;
+}
+.goodbye-line {
+  font-size: 1rem;
+  color: oklch(var(--color-main-ink));
+  animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.6s backwards;
+}
+.goodbye-status {
+  font-size: 0.8125rem;
+  color: oklch(var(--color-ink-muted));
+  animation: goodbye-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.9s backwards;
+}
+.goodbye-timer {
+  width: 160px;
+  height: 2px;
+  overflow: hidden;
+  background: oklch(var(--color-rule));
+}
+.goodbye-timer > span {
+  display: block;
+  height: 100%;
+  background: oklch(var(--color-main-ink));
+  transform-origin: left;
+  animation: goodbye-timer linear forwards;
+}
+.goodbye-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.goodbye-embers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.goodbye-embers > span {
+  position: absolute;
+  bottom: -8px;
+  left: var(--x);
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: oklch(var(--color-metal));
+  box-shadow: 0 0 8px oklch(var(--color-glow));
+  opacity: 0;
+  animation: goodbye-ember var(--s) ease-out var(--d) infinite;
+}
+@keyframes goodbye-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes goodbye-lamp-out {
+  to {
+    opacity: 0.35;
+    filter: saturate(0.4);
+  }
+}
+@keyframes goodbye-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+@keyframes goodbye-ember {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(24px, -70vh);
+  }
+}
+.goodbye[data-still] :is(.goodbye-mark, .goodbye-title, .goodbye-line, .goodbye-status, .goodbye-timer > span) {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .goodbye :is(.goodbye-mark, .goodbye-title, .goodbye-line, .goodbye-status, .goodbye-timer > span, .goodbye-embers > span) {
+    animation: none;
+  }
+}

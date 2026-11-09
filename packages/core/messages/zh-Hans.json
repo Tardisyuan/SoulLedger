@@ -81,7 +81,22 @@
     "verify_done_body": "以后忘记密码，可以用这个邮箱重置。",
     "verify_invalid": "验证链接无效或已过期",
     "verify_invalid_body": "请在个人中心重新发送验证邮件。",
-    "verify_go_profile": "前往个人中心"
+    "verify_go_profile": "前往个人中心",
+    "goodbye": {
+      "title": "再会",
+      "title_named": "再会，{{name}}",
+      "signed_out": "已安全退出登录",
+      "returning": "{{n}} 秒后回到首页",
+      "home": "回到首页",
+      "login": "重新登录",
+      "line": {
+        "neutral": "簿已合上。",
+        "cn": "灯已熄，簿已合。",
+        "eu": "门在身后合上了。",
+        "eg": "天平归于平静。",
+        "gr": "渡船已经离岸。"
+      }
+    }
   },
   "mfa": {
     "title": "两步验证",

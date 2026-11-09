@@ -37,6 +37,8 @@ import { ImpersonationBanner, IMPERSONATION_BANNER_HEIGHT } from "@/src/componen
 import { HallViewExpired } from "@/src/components/impersonation/HallViewExpired";
 import { useHallViewExpired } from "@/src/components/impersonation/hallViewExpiry";
 import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
+import { civSkinOf } from "@/src/lib/civSkin";
+import { leaveGoodbye } from "@/src/lib/goodbye";
 
 /**
  * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
@@ -114,8 +116,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }
     queryClient.invalidateQueries({ queryKey: ["menus-sidebar"] });
+    // 先给「再会」页留下名字与文明(退出之后就读不到了),再退出、去 /goodbye(2026-11-10)。
+    leaveGoodbye({ name: user?.display_name || user?.username, civ: civSkinOf(user?.tenant?.code ?? null) });
     logout();
-    router.push("/");
+    router.push("/goodbye");
   };
 
   const { data: menus = [] } = useSidebarMenus();

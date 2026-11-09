@@ -84,6 +84,8 @@ const PUBLIC_PATHS = [
   "/(auth)/accept-invite",
   // 判决文书 PDF 的打印页(2026-11-07):只有无头 Chromium 打开,一次性键是唯一凭据(app/verdict-print/page.tsx)。
   "/verdict-print",
+  // 退出登录之后的「再会」(2026-11-10):这时已经没有登录凭据了。
+  "/goodbye",
 ];
 
 /** The browser's first language: Chinese if it starts with `zh`, English otherwise. Kemet is only ever chosen. */

@@ -81,7 +81,22 @@
     "verify_done_body": "If you forget your password, this address can reset it.",
     "verify_invalid": "This verification link is invalid or has expired",
     "verify_invalid_body": "Send a new verification email from your profile.",
-    "verify_go_profile": "Go to profile"
+    "verify_go_profile": "Go to profile",
+    "goodbye": {
+      "title": "Farewell",
+      "title_named": "Farewell, {{name}}",
+      "signed_out": "You have been signed out.",
+      "returning": "Back to the home page in {{n}} s",
+      "home": "Home page",
+      "login": "Sign in again",
+      "line": {
+        "neutral": "The ledger is closed.",
+        "cn": "The lamp is out; the ledger is closed.",
+        "eu": "The gate has closed behind you.",
+        "eg": "The scales are at rest.",
+        "gr": "The ferry has left the shore."
+      }
+    }
   },
   "mfa": {
     "title": "Two-step verification",
