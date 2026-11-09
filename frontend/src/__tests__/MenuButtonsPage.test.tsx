@@ -5,11 +5,12 @@
  * 没有配置行 = 开着;关掉一个没有行的按钮时建一行(is_active=false),有行就只改 is_active。
  * 没有 `menu.manage` 的人只看,开关不可拨。改坏了说出来。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import MenuButtonsPage from "@/app/menus/buttons/page";
 import { WIRED_BUTTONS } from "@/src/lib/menuButtons";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   menuButtonsApi: { config: jest.fn(), update: jest.fn(), create: jest.fn() },
@@ -20,8 +21,7 @@ const { menuButtonsApi, menusApi } = jest.requireMock("@soulledger/core/api") as
   menusApi: { all: jest.Mock };
 };
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (k: string, p?: Record<string, string>) => tZh(k, p), locale: "zh-Hans", hydrated: true }),
 }));
@@ -40,12 +40,7 @@ const MENUS = [
 ];
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <MenuButtonsPage />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<MenuButtonsPage />, { i18n: false });
 }
 
 const soulsGroup = async () => within(await screen.findByTestId("menu-buttons-/souls"));

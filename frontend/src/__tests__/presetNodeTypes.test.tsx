@@ -57,14 +57,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}(${Object.values(params).join(",")})` : key,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", locale: "en", hydrated: true }));
 
 // The editor is stubbed to *report what it was handed* rather than to render.
 // The defect is in the payload `page.tsx` builds, so a stub that swallowed the

@@ -7,10 +7,11 @@
  * six paths. Rendering a picker is only half the fix; these pin that what the
  * operator picks is what gets posted.
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 const SOUL_ID = "soul-1";
 const DISPOSITION_ID = "disp-1";
@@ -20,10 +21,7 @@ jest.mock("next/navigation", () => ({
   useParams: () => ({ id: SOUL_ID }),
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 // t() returns the key unchanged, matching this codebase's real missing-key
 // fallback — so the page's `tf` helper renders its code-level fallbacks and
@@ -139,12 +137,7 @@ const pendingDisposition = {
 };
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <SoulDetailPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<SoulDetailPage />, { i18n: false });
 }
 
 beforeEach(() => {

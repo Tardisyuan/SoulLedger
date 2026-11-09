@@ -16,10 +16,10 @@
  * Since the page reads its three sections from `?section=`, each section
  * pages on its own: moving 待执行 to page 2 must not move the other two.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import DispositionPage from "@/app/disposition/page";
 import { dispositionApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: { list: jest.fn(), execute: jest.fn() },
@@ -27,16 +27,7 @@ jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    formatDateTime: (v: string) => v,
-    formatDate: (v: string) => v,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", formatDateTime: (v: string) => v, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),
@@ -70,12 +61,7 @@ function row(i: number) {
 }
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <DispositionPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<DispositionPage />, { i18n: false });
 }
 
 beforeEach(() => {

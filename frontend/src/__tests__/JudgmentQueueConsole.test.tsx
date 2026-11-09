@@ -10,14 +10,14 @@
  * window, the U key and the undo strip were removed on 2026-09-25
  * (「落判即提交,不可撤回」, as on the desk).
  */
-import { render, renderHook, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
 import { judgmentApi } from "@soulledger/core/api";
 import { setSingleKeyShortcuts } from "@/src/lib/hotkeys";
 import { isMinePending } from "@/src/components/judgment/RowMark";
 import { PlaqueProvider } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
+import { renderWithProviders } from "./support/render";
 
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
@@ -135,28 +135,14 @@ jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    locale: "zh-Hans",
-    hydrated: true,
-    formatDate: (v: string) => String(v),
-    formatDateTime: (v: string) => String(v),
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "zh-Hans", hydrated: true, formatDate: (v: string) => String(v), formatDateTime: (v: string) => String(v) }));
 
 const mockNext = judgmentApi.next as jest.Mock;
 const mockConclude = judgmentApi.conclude as jest.Mock;
 const mockGetJudgment = judgmentApi.get as jest.Mock;
 
 function renderConsole() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <JudgmentQueueConsole />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<JudgmentQueueConsole />, { i18n: false });
 }
 
 afterEach(() => {
@@ -857,13 +843,11 @@ describe("行首色标只表示「待我处理」(B12)", () => {
 // 身份带殿名(用户 2026-10-02):「<租户名> · <眼前这一案的殿>」;案子没记殿就写刑名司。
 describe("身份带殿名跟着眼前这一案", () => {
   function renderInBand(set: jest.Mock) {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <PlaqueProvider value={set}>
-          <JudgmentQueueConsole />
-        </PlaqueProvider>
-      </QueryClientProvider>
+    return renderWithProviders(
+      <PlaqueProvider value={set}>
+        <JudgmentQueueConsole />
+      </PlaqueProvider>,
+      { i18n: false },
     );
   }
 

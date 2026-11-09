@@ -7,13 +7,13 @@
  * bundle, so a key the page asks for that the bundle lacks shows up as a miss.
  * The API module is the only thing stubbed.
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import ModerationPage from "@/app/moderation/page";
 import { tZh } from "./support/zhBundle";
 
 import { rangeStart } from "@/src/components/moderation/HandledSection";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 jest.mock("@soulledger/core/api/social-moderation", () => ({
   socialModerationApi: {
     reports: jest.fn(),
@@ -56,8 +56,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => mockI18n,
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const author = { user_id: 7, display_name: "王五" };
 const report = (over: Record<string, unknown> = {}) => ({
@@ -97,13 +96,9 @@ const post = (over: Record<string, unknown> = {}) => ({
 });
 const media = (n: number) =>
   Array.from({ length: n }, (_, i) => ({ id: `m${i + 1}`, url: `/api/v1/social-media/m${i + 1}/?t=s${i + 1}`, width: 1080, height: 720 }));
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<ModerationPage />, { wrapper: Wrapper });
+  return renderWithProviders(<ModerationPage />, { i18n: false });
 }
 
 const asRole = (...permissions: string[]) =>

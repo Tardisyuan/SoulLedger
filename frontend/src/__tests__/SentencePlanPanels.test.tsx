@@ -6,14 +6,14 @@
  * 打桩(角色、租户、码名由各条测试给),文案是真的 zh-Hans 包,只替换 API 模块。
  * 断言「看得到」的地方都同时断言「别人看不到」—— 按钮出现在错的人面前,正是要守的缺陷。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import SentenceRequestsPage from "@/app/sentence-requests/page";
 import { SentencePlanCard } from "@/src/components/sentence-plan/SentencePlanCard";
 import { CrossJudgmentStops } from "@/src/components/cross-judgments/CrossJudgmentStops";
 import type { CrossTenantJudgment } from "@soulledger/core/api";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 
 let mockSearch = "";
 jest.mock("next/navigation", () => ({
@@ -48,8 +48,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => mockI18n,
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const as = (role: string, tenant: string, ...permissions: string[]) =>
   (mockUser = { id: 2, username: "op", role, permissions, tenant: { code: tenant } });
@@ -72,13 +71,9 @@ const plan = (over: Record<string, unknown> = {}) => ({
   nodes: [node(1, "CN_DIYU", "COMPLETED"), node(2, "EG_DUAT", "ACTIVE"), node(3, "EU_HEAVEN_HELL", "PENDING")],
   requests: [request()], create_time: "2026-09-01T00:00:00Z", update_time: "2026-09-10T00:00:00Z", ...over,
 });
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
 
 function renderWith(ui: React.ReactElement) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(ui, { wrapper: Wrapper });
+  return renderWithProviders(ui, { i18n: false });
 }
 
 beforeEach(() => {

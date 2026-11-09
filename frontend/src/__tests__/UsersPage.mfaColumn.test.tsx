@@ -11,20 +11,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: { list: jest.fn(), delete: jest.fn(), activate: jest.fn(), deactivate: jest.fn(), resetMfa: jest.fn() },
   permApi: { roles: { list: jest.fn() } },
   PAGE_SIZE: 20,
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
-    formatDate: (iso: string) => `D(${iso})`,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", formatDate: (iso: string) => `D(${iso})`, locale: "zh-Hans", hydrated: true }));
 const mockTenant = { user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["user.manage"] } };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => mockTenant }));
 jest.mock("next/navigation", () => ({
@@ -53,12 +47,7 @@ const ROWS = [
 ];
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <UsersPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<UsersPage />, { i18n: false });
 }
 
 beforeEach(() => {

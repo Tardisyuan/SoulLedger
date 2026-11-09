@@ -5,11 +5,11 @@
  * run for real against a stubbed `useTenant`, copy is the real zh-Hans bundle,
  * the API module is the only thing stubbed.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import SoulInboxPage from "@/app/soul-inbox/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 
 // 只换掉网络那一层;`renderTemplate` 与占位符表用真的 —— 模板替换正是被测的行为。
 jest.mock("@soulledger/core/api/soul-inbox", () => ({
@@ -46,8 +46,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => mockI18n,
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const conversation = (over: Record<string, unknown> = {}) => ({
   id: "c1",
@@ -79,13 +78,9 @@ const MESSAGES = [
   { event_id: "$2", from_officer: true, sender_name: "崔珏", officer_title: "判官", body: "已收到", image: null, timestamp: 2000 },
   { event_id: "$1", from_officer: false, sender_name: "张三", officer_title: "", body: "我想申诉", image: null, timestamp: 1000 },
 ];
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<SoulInboxPage />, { wrapper: Wrapper });
+  return renderWithProviders(<SoulInboxPage />, { i18n: false });
 }
 
 const asRole = (...permissions: string[]) => (mockUser = { id: 2, username: "op", role: "MODERATOR", permissions });

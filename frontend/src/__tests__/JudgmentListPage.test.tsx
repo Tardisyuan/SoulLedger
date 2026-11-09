@@ -13,12 +13,13 @@
  *
  * 每条都断了反面:没勾选时没有批量条、理由空时不发请求、改派名单不再读 `/users/`。
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import JudgmentListPage from "@/app/judgment/page";
 import { BATCH_BAR } from "@/components/ui/data-table";
 import { tZh } from "./support/zhBundle";
 import { formatIsoDay } from "@soulledger/core/domain/dates";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), release: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn(), requestReassign: jest.fn() },
@@ -40,8 +41,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant: { code: string } | null };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
@@ -94,12 +94,7 @@ beforeEach(() => {
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <JudgmentListPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<JudgmentListPage />, { i18n: false });
 }
 
 const rowOf = (name: string) => screen.getByRole("link", { name }).closest("tr") as HTMLElement;

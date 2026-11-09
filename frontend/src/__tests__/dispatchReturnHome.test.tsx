@@ -7,8 +7,7 @@
  * through `return-home/` with a written reason. The backend decides who may
  * (home tenant or ADMIN); the page offers the action behind `dispatch.return`.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 
 // Same `React.use` shim as dispatchApproveConfirms.test.tsx — see the note there
 // for what it can and cannot prove.
@@ -27,6 +26,8 @@ jest.mock("react", () => {
 
 import DispatchDetailPage from "@/app/dispatch/[id]/page";
 import { dispatchApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   dispatchApi: {
@@ -57,8 +58,7 @@ jest.mock("@/src/components/impersonation/useImpersonation", () => ({
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => key, formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 // Real `RequirePermission` and real `usePermissions`, fed a mutable permission list through the user
 // (suiteShape.test.ts forbids stubbing the gate). ADMIN holds everything, as in the hook.
@@ -72,12 +72,7 @@ function renderPage(status: string, extra: Record<string, unknown> = {}) {
     data: { id: "d1", status, soul_name: "孟婆", reason: "先在彼处受罚", source_tenant_code: "CN_DIYU",
             target_tenant_code: "EG_DUAT", executed_at: "2026-09-17T00:00:00Z", returned_at: null, ...extra },
   });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <DispatchDetailPage params={Promise.resolve({ id: "d1" })} />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<DispatchDetailPage params={Promise.resolve({ id: "d1" })} />, { i18n: false });
 }
 
 beforeEach(() => {

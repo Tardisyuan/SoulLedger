@@ -3,9 +3,9 @@
  * (带 `ids` 的是批量条的「导出」,见 SoulsBatchRecycle.test.tsx)。行数取列表的 `count`。
  * 文件里有哪些行是后端的事,见 backend/tests/test_soul_export.py。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import SoulsPage from "@/app/souls/page";
+import { renderWithProviders } from "./support/render";
 
 let mockRows: Record<string, unknown>[] = [];
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
@@ -44,14 +44,7 @@ jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: (...args: unknown[]) => mockS
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { role: "OPERATOR", permissions: ["soul.read", "soul.export"] } }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "zh-Hans", hydrated: true }));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -62,12 +55,7 @@ beforeEach(() => {
 });
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <SoulsPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<SoulsPage />, { i18n: false });
 }
 
 it("导出 CSV 带当前的搜索与状态筛选,不带页码、不带 ids,文件交给 saveBlob", async () => {

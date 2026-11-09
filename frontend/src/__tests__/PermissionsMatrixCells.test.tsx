@@ -15,10 +15,10 @@
  * - the roles table opens a drawer with the code read-only; a refused delete
  *   lists the referencing workflows.
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import PermissionsPage from "@/app/permissions/page";
 import { permApi, type Permission, type Role } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   permApi: {
@@ -31,17 +31,9 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "en", hydrated: true }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 let mockTenant: { id: number } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "admin", role: "ADMIN", tenant: mockTenant, permissions: [] } }),
@@ -79,12 +71,7 @@ const CLERK = role({ id: 3, name: "YIN_CLERK", display_name: "殿司", version: 
 let GRANTS: Record<string, number[]>;
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <PermissionsPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<PermissionsPage />, { i18n: false });
 }
 
 const cell = (roleName: string, codename: string) => screen.getByRole("checkbox", { name: `${roleName} — ${codename}` });

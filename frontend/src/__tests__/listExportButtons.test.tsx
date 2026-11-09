@@ -4,14 +4,15 @@
  * disposition.export / cross_judgment.export)—— 只有读码没有导出码,就没有按钮。
  * 内容(哪些行、哪些列)是后端的事,见 backend/tests/test_list_exports_dispatch_disposition_cross.py。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import DispatchPage from "@/app/dispatch/page";
 import DispositionPage from "@/app/disposition/page";
 import CrossJudgmentsPage from "@/app/cross-judgments/page";
 import { crossTenantJudgmentsApi, dispatchApi, dispositionApi } from "@soulledger/core/api";
 import { saveBlob } from "@/src/lib/saveBlob";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   dispatchApi: { proposed: jest.fn(), history: jest.fn(), exportCsv: jest.fn() },
@@ -21,17 +22,8 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-    formatDate: (v: string) => v,
-    formatDateTime: (v: string) => v,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", formatDate: (v: string) => v, formatDateTime: (v: string) => v, locale: "en", hydrated: true }));
 let mockPermissions: string[] = [];
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({
@@ -44,8 +36,7 @@ const page = { data: { results: [], count: 0 } };
 const csv = { data: new Blob(["a,b"]) };
 
 function renderWith(node: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  return renderWithProviders(node, { i18n: false });
 }
 
 beforeEach(() => {

@@ -85,14 +85,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "yama", role: "ADMIN" }, isAdmin: true }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-    formatDateTime: (v: string) => v ?? "",
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),

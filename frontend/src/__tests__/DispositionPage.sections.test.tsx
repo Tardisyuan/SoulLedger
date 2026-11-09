@@ -15,22 +15,14 @@ import type { Disposition } from "@soulledger/core/api";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: { list: jest.fn(), execute: jest.fn() },
   PAGE_SIZE: 20,
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    formatDate: (v: string) => v,
-    formatDateTime: (v: string) => v,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", formatDate: (v: string) => v, formatDateTime: (v: string) => v, locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 const mockTenant = {
   user: { id: 1, username: "yama", role: "JUDGE", tenant: null, permissions: ["disposition.read", "disposition.execute"] },
@@ -114,12 +106,7 @@ describe("处置页按服务端分三段", () => {
   afterEach(() => jest.restoreAllMocks());
 
   function renderPage() {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    return render(
-      <QueryClientProvider client={client}>
-        <DispositionPage />
-      </QueryClientProvider>
-    );
+    return renderWithProviders(<DispositionPage />, { i18n: false });
   }
   const names = (testId: string) =>
     screen.getAllByTestId(testId).map((r) => within(r).getByRole("link", { name: /^Soul / }).textContent);

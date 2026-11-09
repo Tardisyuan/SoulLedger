@@ -3,12 +3,12 @@
  * 真的 zh-Hans 文案;只桩住 API。主角色与兼任分开标、主角色不能在这里移除、选人按殿分组、
  * 已持有的人不可勾、整批被拒时逐人列出原因。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { permApi, usersApi, type Role } from "@soulledger/core/api";
 import { RoleMembersSection } from "@/src/components/permissions/RoleMembersSection";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   permApi: { roles: { members: jest.fn(), changeMembers: jest.fn() } },
@@ -16,8 +16,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 const mockI18n = { t: tZh, locale: "zh-Hans", hydrated: true };
 jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => mockI18n }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const members = permApi.roles.members as jest.Mock;
 const changeMembers = permApi.roles.changeMembers as jest.Mock;
@@ -29,12 +28,9 @@ const eg = { id: 2, code: "EG_DUAT", display_name: "埃及杜阿特" };
 const user = (id: number, username: string, roleName: string, extra: string[] = [], tenant = cn) => ({
   id, username, role: roleName, extra_roles: extra, tenant, organization: null, is_active: true,
 });
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 
 function renderSection() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<RoleMembersSection role={role} />, { wrapper: Wrapper });
+  return renderWithProviders(<RoleMembersSection role={role} />, { i18n: false });
 }
 
 beforeEach(() => {

@@ -22,6 +22,8 @@ import egy from "@soulledger/core/messages/egy.json";
 import zhHans from "@soulledger/core/messages/zh-Hans.json";
 import egyPendingKeys from "./support/egyPendingKeys.json";
 import { tZh, zh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -45,8 +47,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => mockI18n,
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 const mockListeners = new Set<(_event: Record<string, unknown>) => void>();
 jest.mock("@/src/contexts/WebSocketContext", () => ({
   useWebSocket: () => ({
@@ -103,12 +104,8 @@ const GLOBAL_JOB = job({
   hour: "*",
 });
 
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
-
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<SchedulerPage />, { wrapper: Wrapper });
+  return renderWithProviders(<SchedulerPage />, { i18n: false });
 }
 
 const asAdmin = () => (mockUser = { id: 1, username: "admin", role: "ADMIN", permissions: [] });

@@ -12,7 +12,6 @@
  *   `realm_name` / `hall` —— 那是租户展示名,库里的英文(2026-10-19 模拟器上「埃及 · Egyptian Afterlife发起」)。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import type { ApprovalNode, ApprovalWorkflow, WorkflowHistoryEntry, WorkflowSegment } from "@soulledger/core/api";
 import { StationPicker, type PickRow } from "@/src/components/workflow/segments/StationPicker";
@@ -24,6 +23,8 @@ import { WorkflowInspector, WorkflowReadOnlyList } from "@/src/components/workfl
 import type { NodeRole } from "@/src/components/workflow/workflowValidation";
 import type { Node as FlowNode } from "@xyflow/react";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   workflowApi: {
@@ -48,12 +49,10 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     hydrated: true,
   }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 function wrap(ui: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { i18n: false });
 }
 
 beforeEach(() => jest.clearAllMocks());

@@ -10,6 +10,8 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   soulAccountsApi: { accounts: jest.fn(), provision: jest.fn(), resetCredential: jest.fn(), resetMfa: jest.fn() },
@@ -24,8 +26,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const FUTURE = "2999-01-01T00:00:00Z";
 
@@ -57,13 +58,8 @@ const PAST_LIFE = account({ id: "a0", cycle: 0, previous_account: null, origin: 
 const soul = (over: Record<string, unknown> = {}) =>
   ({ id: "s1", name: "张三", civilization: "CHINESE", current_state: "DISPOSED", life_index: 1, ...over }) as never;
 
-const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
-const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
-
 function renderCard(s = soul()) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<SoulAccountCard soul={s} />, { wrapper: Wrapper });
+  return renderWithProviders(<SoulAccountCard soul={s} />, { i18n: false });
 }
 
 const asRole = (...permissions: string[]) => (mockUser = { id: 2, username: "op", role: "GUARDIAN", permissions });

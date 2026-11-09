@@ -5,10 +5,11 @@
  *   的人出现 —— 这是后端强制的同一个码名;
  * - 删除于 / 删除人 各占一列,数据来自 API 已有字段。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import RecycleBinPage from "@/app/recycle-bin/page";
 import { recycleBinApi, type RecycleBinEntry } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   recycleBinApi: { list: jest.fn(), restore: jest.fn(), hardDelete: jest.fn() },
@@ -30,8 +31,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const row = (over: Partial<RecycleBinEntry> = {}): RecycleBinEntry => ({
   entity_type: "MENU",
@@ -50,12 +50,7 @@ const row = (over: Partial<RecycleBinEntry> = {}): RecycleBinEntry => ({
 });
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RecycleBinPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<RecycleBinPage />, { i18n: false });
 }
 
 const READ_RESTORE = ["recycle_bin.read", "recycle_bin.restore"];

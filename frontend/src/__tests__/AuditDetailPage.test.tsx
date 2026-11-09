@@ -2,12 +2,11 @@
  * app/audit/[id]/page.tsx: the audit detail the backend always had (`AuditLogDetailSerializer`) and
  * the web never called. Shows who/when/what, the before → after table, and the trace link.
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor } from "@testing-library/react";
 import AuditDetailPage from "@/app/audit/[id]/page";
 import { auditApi } from "@soulledger/core/api";
 import { AxiosError } from "axios";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: { get: jest.fn() },
@@ -25,24 +24,12 @@ let mockPermissions: string[] = ["audit.read"];
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ isAdmin: false, tenantCode: null, user: { role: "MODERATOR", permissions: mockPermissions } }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-    formatDateTime: (v: string) => `dt(${v})`,
-    formatDate: (v: string) => v,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDateTime: (v: string) => `dt(${v})`, formatDate: (v: string) => v, locale: "en", hydrated: true }));
 
 const mockedGet = auditApi.get as jest.Mock;
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-  return render(<AuditDetailPage />, { wrapper: Wrapper });
+  return renderWithProviders(<AuditDetailPage />, { i18n: false });
 }
 
 beforeEach(() => {
