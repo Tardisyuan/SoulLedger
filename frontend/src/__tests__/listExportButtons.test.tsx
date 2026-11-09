@@ -23,15 +23,7 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-    formatDate: (v: string) => v,
-    formatDateTime: (v: string) => v,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", formatDate: (v: string) => v, formatDateTime: (v: string) => v, locale: "en", hydrated: true }));
 let mockPermissions: string[] = [];
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({

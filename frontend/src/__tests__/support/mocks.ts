@@ -34,8 +34,9 @@ export function echoT(style: ParamStyle = "drop") {
 }
 
 /**
- * `useI18n` answering a key-echo `t`. Defaults: `locale: "zh-Hans"`,
- * `hydrated: true`; `fields` adds or overrides (`formatDateTime`, `t: tZh`, …).
+ * `useI18n` answering a key-echo `t` plus exactly the `fields` given
+ * (`locale`, `hydrated`, `formatDateTime`, …) — no defaults, so a suite that
+ * never said `hydrated` still gets `undefined` there, as it did by hand.
  * `actual: true` spreads the real module first, for code that also imports
  * `makeTranslateWithFallback` / `LOCALE_LABELS` / `I18nProvider` from it.
  * Like the inline copies, every `useI18n()` call builds a fresh `t`.
@@ -47,7 +48,7 @@ export function i18nMock({
 }: { params?: ParamStyle; actual?: boolean } & Record<string, unknown> = {}) {
   return {
     ...(actual ? jest.requireActual("@/src/contexts/I18nContext") : {}),
-    useI18n: () => ({ t: echoT(params), locale: "zh-Hans", hydrated: true, ...fields }),
+    useI18n: () => ({ t: echoT(params), ...fields }),
   };
 }
 

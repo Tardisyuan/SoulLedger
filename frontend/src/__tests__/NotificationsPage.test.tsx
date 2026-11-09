@@ -8,33 +8,23 @@
  * whose notifications happen to be unread. Both are pinned here, along with
  * the failure toasts for the two mutations.
  */
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NotificationsPage from "@/app/notifications/page";
 import { notificationsApi } from "@soulledger/core/api";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   notificationsApi: { list: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn() },
 }));
 
-const mockShowToast = jest.fn();
 let mockUser: { role: string; permissions: string[] } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-    formatDateTime: (v: string) => `dt(${v})`,
-    formatDate: (v: string) => `d(${v})`,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", formatDateTime: (v: string) => `dt(${v})`, formatDate: (v: string) => `d(${v})`, locale: "en", hydrated: true }));
 
 let mockWsConnected = false;
 jest.mock("@/src/contexts/WebSocketContext", () => ({

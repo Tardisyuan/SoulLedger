@@ -9,24 +9,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NotificationsPage from "@/app/notifications/page";
 import { notificationsApi } from "@soulledger/core/api";
 import { notificationKeys } from "@soulledger/core/query_keys";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   notificationsApi: {
     list: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn(), batchRead: jest.fn(), batchDelete: jest.fn(),
   },
 }));
-const mockShowToast = jest.fn();
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: { role: "JUDGE", permissions: [] } }) }));
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-    formatDateTime: (v: string) => `dt(${v})`,
-    formatDate: (v: string) => `d(${v})`,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", formatDateTime: (v: string) => `dt(${v})`, formatDate: (v: string) => `d(${v})`, locale: "en", hydrated: true }));
 
 const n = (id: number, over: Record<string, unknown> = {}) => ({
   id, title: `Note ${id}`, message: "m", notification_type: "SYSTEM", is_read: false,

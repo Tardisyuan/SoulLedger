@@ -12,13 +12,7 @@ jest.mock("@soulledger/core/api", () => ({
   tenantsApi: { create: jest.fn(), deactivate: jest.fn(), activate: jest.fn() },
 }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", locale: "zh-Hans", hydrated: true }));
 
 const t = (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key);
 const bad = (data: unknown) => ({ response: { status: 400, data } });

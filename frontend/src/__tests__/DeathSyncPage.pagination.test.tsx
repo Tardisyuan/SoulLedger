@@ -4,10 +4,10 @@
  * status filter: it lives in `?status=`, so the dashboard's 「死亡同步异常」 cell
  * can link straight to it.
  */
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import DeathSyncPage from "@/app/death-sync/page";
 import { deathSyncApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   deathSyncApi: { registrations: jest.fn(), summary: jest.fn(), retry: jest.fn(), exportCsv: jest.fn() },
@@ -15,15 +15,7 @@ jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}:${Object.values(params).join(",")}` : key,
-    formatDateTime: (v: string) => v,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", formatDateTime: (v: string) => v, locale: "zh-Hans", hydrated: true }));
 
 const mockTenant = {
   user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: [] },
@@ -63,12 +55,7 @@ function row(i: number) {
 }
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <DeathSyncPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<DeathSyncPage />, { i18n: false });
 }
 
 beforeEach(() => {
