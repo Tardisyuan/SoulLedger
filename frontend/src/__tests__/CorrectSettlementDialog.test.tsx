@@ -6,16 +6,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { soulsApi } from "@soulledger/core/api";
 import { CorrectSettlementDialog, correctSettlementError } from "@/src/components/souls/detail/CorrectSettlementDialog";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   soulsApi: { correctSettlement: jest.fn() },
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const correct = soulsApi.correctSettlement as jest.Mock;
 

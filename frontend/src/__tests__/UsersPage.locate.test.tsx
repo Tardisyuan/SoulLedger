@@ -2,19 +2,17 @@
  * `/users?username=<u>` —— 求助通知的「去用户页」落到那一个账号(第三类 F 组 2.6):
  * 服务端按用户名精确筛,那一行高亮;账号不存在时是普通的空结果。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: { list: jest.fn(), delete: jest.fn(), activate: jest.fn(), deactivate: jest.fn() },
   permApi: { roles: { list: jest.fn() } },
   PAGE_SIZE: 20,
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["user.manage"] } }),
 }));
@@ -32,12 +30,7 @@ const row = (id: number, username: string) => ({ id, username, email: `${usernam
 const page = (...results: ReturnType<typeof row>[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <UsersPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<UsersPage />, { i18n: false });
 }
 
 beforeEach(() => {

@@ -32,9 +32,7 @@ import {
   type ThemeName,
 } from "./support/globalsCssTokens";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 const AA = 4.5;
 const NON_TEXT = 3;

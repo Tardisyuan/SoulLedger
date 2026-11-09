@@ -11,13 +11,7 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { ProfileCard } from "@/src/components/social/ProfileCard";
 import type { UserProfile } from "@soulledger/core/api";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "en", hydrated: true }));
 
 let mockUser: { id: string | number } | null = { id: "user-1" };
 jest.mock("@/src/contexts/TenantContext", () => ({

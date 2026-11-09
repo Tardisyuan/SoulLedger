@@ -15,13 +15,7 @@ jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   tenantsApi: { updateSettings: jest.fn(), mfaRoles: jest.fn() },
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 
 const update = tenantsApi.updateSettings as jest.Mock;

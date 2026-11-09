@@ -5,11 +5,11 @@
  * 钉住:ADMIN 角色只显示「全部(固定)」、不取接口;只有无殿管理员能改,有殿管理员与非管理员只读;
  * 自定义机构未选机构不能保存;覆盖行选了就进 body、改回「跟随默认」就不进;保存提示「对方刷新后生效」。
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import type { Role } from "@soulledger/core/api";
 import { dataScopeApi } from "@soulledger/core/api";
 import { RoleDataScopeSection } from "@/src/components/permissions/RoleDataScopeSection";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   DATA_SCOPES: ["ALL", "ORG_CHILD", "ORG", "SELF", "DEFINE"],
@@ -23,9 +23,7 @@ jest.mock("@soulledger/core/api", () => ({
   tenantsApi: { list: jest.fn().mockResolvedValue({ data: { results: [{ id: 1, code: "CN", display_name: "中国地府" }] } }) },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 const mockToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockToast }) }));
@@ -38,12 +36,7 @@ const api = dataScopeApi as unknown as Record<string, jest.Mock>;
 const role = (name: string, id = 5) => ({ id, name, display_name: name }) as Role;
 
 function renderSection(r: Role) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <RoleDataScopeSection role={r} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<RoleDataScopeSection role={r} />, { i18n: false });
 }
 
 const radio = (scope: string) => screen.getByRole("radio", { name: `permissions.datascope.scope.${scope}` });

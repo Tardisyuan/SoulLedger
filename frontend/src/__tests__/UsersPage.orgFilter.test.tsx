@@ -2,10 +2,10 @@
  * 用户页左侧机构树与「已停用」筛选(rbac-snowy 2026-10-29)。点机构 → `?organization=<id>` 给服务端
  * (服务端含下级);「全部机构」→ 不带;状态签 → `is_active`。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi, organizationsApi, tenantsApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   usersApi: { list: jest.fn(), delete: jest.fn(), activate: jest.fn(), deactivate: jest.fn() },
@@ -14,9 +14,7 @@ jest.mock("@soulledger/core/api", () => ({
   tenantsApi: { list: jest.fn() },
   PAGE_SIZE: 20,
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["user.manage"] } }),
 }));
@@ -31,12 +29,7 @@ const mockUsers = usersApi.list as jest.Mock;
 const page = { data: { count: 1, next: null, previous: null, results: [{ id: 3, username: "cuijue", email: "c@x", role: "JUDGE", tenant: null, is_active: true }] } };
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <UsersPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<UsersPage />, { i18n: false });
 }
 
 beforeEach(() => {

@@ -9,9 +9,7 @@ import { DefaultViewSection } from "@/src/components/profile/DefaultViewSection"
 jest.mock("@soulledger/core/api", () => ({
   authApi: { preferences: jest.fn(), updatePreferences: jest.fn() },
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock());
 let mockUser: { role: string; permissions: string[] } = { role: "JUDGE", permissions: ["judgment.read"] };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 

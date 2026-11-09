@@ -2,8 +2,7 @@
  * 移交详情页的「驳回理由 / 取消理由」读 `decision_reason` 字段 —— `reason` 是发起时的原文,不再被追加。
  * 每一条「有」配一条「没有」:批准的、空理由的、状态不符的,都不画这一段。
  */
-import { render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen } from "@testing-library/react";
 
 // Same `React.use` shim as dispatchReturnHome.test.tsx.
 jest.mock("react", () => {
@@ -21,6 +20,7 @@ jest.mock("react", () => {
 
 import DispatchDetailPage from "@/app/dispatch/[id]/page";
 import { dispatchApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   dispatchApi: { get: jest.fn(), approve: jest.fn(), reject: jest.fn(), execute: jest.fn(), returnHome: jest.fn() },
@@ -29,9 +29,7 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "cn_mod", role: "MODERATOR" }, isAdmin: false }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock("@/src/hooks/usePermissions", () => ({
   usePermissions: () => {
@@ -45,12 +43,7 @@ function renderPage(over: Record<string, unknown>) {
     data: { id: "d1", status: "PROPOSED", soul_name: "孟婆", reason: "先在彼处受罚", decision_reason: "",
             source_tenant_code: "CN_DIYU", target_tenant_code: "EG_DUAT", executed_at: null, returned_at: null, ...over },
   });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <DispatchDetailPage params={Promise.resolve({ id: "d1" })} />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<DispatchDetailPage params={Promise.resolve({ id: "d1" })} />, { i18n: false });
 }
 
 describe("the decision reason on a dispatch", () => {

@@ -6,6 +6,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
 import { SealGlyphsDialog, parseSealGlyphs, sealGlyphsError } from "@/src/components/tenants/SealGlyphsDialog";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({ tenantsApi: { updateSealGlyphs: jest.fn() } }));
 
@@ -22,15 +23,8 @@ const mockUser = {
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser, setUser: mockSetUser }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", locale: "zh-Hans", hydrated: true }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const tenant = (over: Partial<Tenant> = {}): Tenant => ({ id: 1, code: "CN_DIYU", display_name: "第五殿", seal_glyphs: [], ...over });
 

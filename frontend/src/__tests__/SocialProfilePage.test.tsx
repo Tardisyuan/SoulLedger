@@ -8,12 +8,11 @@
  * 因为它是 per-FILE 的:它在第 85 行找到了 profile 查询的 `role="alert"` 就
  * 停下了。缺陷是 per-QUERY 的。这个套件是逐查询的那一版。
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor } from "@testing-library/react";
 
 import UserProfilePage from "@/app/social/profile/[id]/page";
 import { socialApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
@@ -27,14 +26,7 @@ jest.mock("next/navigation", () => ({
   useParams: () => ({ id: "u1" }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-    formatDateTime: (v: string) => `dt(${v})`,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDateTime: (v: string) => `dt(${v})`, locale: "en", hydrated: true }));
 
 // 这两个只负责把内容画出来,和本套件要问的分支无关。桩掉它们是为了让断言
 // 落在页面自己的分支上,而不是它们的内部结构。
@@ -51,11 +43,7 @@ const mockListPosts = socialApi.listPosts as jest.Mock;
 const PROFILE = { id: "u1", username: "孟婆", bio: "", followers_count: 0, following_count: 0 };
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  );
-  return render(<UserProfilePage />, { wrapper: Wrapper });
+  return renderWithProviders(<UserProfilePage />, { i18n: false });
 }
 
 beforeEach(() => {

@@ -7,9 +7,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import type { Organization } from "@soulledger/core/api";
 import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 const ORGS: Organization[] = [
   { id: 1, name: "地府", code: "ROOT_CN", parent: null, level: 0, sort: 0, tenant: 1 },

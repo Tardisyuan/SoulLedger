@@ -23,13 +23,7 @@ jest.mock("@soulledger/core/api", () => ({
   permApi: { exportConfig: jest.fn(), importConfig: jest.fn() },
 }));
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "en", hydrated: true }));
 const showToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast }) }));
 let mockRole = "ADMIN";

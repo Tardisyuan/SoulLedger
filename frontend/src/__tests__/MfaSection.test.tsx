@@ -14,14 +14,7 @@ import { MfaSection } from "@/src/components/profile/MfaSection";
 jest.mock("@soulledger/core/api", () => ({
   mfaApi: { status: jest.fn(), setup: jest.fn(), cancelSetup: jest.fn(), confirm: jest.fn(), complete: jest.fn(), regenerateRecoveryCodes: jest.fn(), disable: jest.fn() },
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
-    formatDateTime: (iso: string) => `D(${iso})`,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", formatDateTime: (iso: string) => `D(${iso})`, locale: "zh-Hans", hydrated: true }));
 const mockSetUser = jest.fn();
 const mockUser = { id: 1, username: "yama", role: "JUDGE", tenant: null, permissions: [] as string[], mfa_enabled: false, mfa_required: false };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser, setUser: mockSetUser }) }));

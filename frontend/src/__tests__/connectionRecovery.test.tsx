@@ -29,9 +29,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "yama" } }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "en", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "en", hydrated: true }));
 
 beforeEach(() => {
   jest.clearAllMocks();

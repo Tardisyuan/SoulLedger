@@ -23,13 +23,7 @@ jest.mock("@/src/hooks/usePermissions", () => ({
 }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "paren", locale: "zh-Hans", hydrated: true }));
 
 const overview = tenantsApi.overview as jest.Mock;
 

@@ -3,19 +3,17 @@
  * - 整棵树一次取回,按**根**分页 —— 子项永远紧跟在父项下面,不会因为落在后端的下一页而脱离父项;
  * - 编辑框的角色勾选来自角色表(殿主与自建角色都在),不是写死的四个。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import MenusPage from "@/app/menus/page";
 import { menusApi, permApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   menusApi: { listAll: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
   permApi: { list: jest.fn(), roles: { list: jest.fn() } },
   PAGE_SIZE: 20,
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "a", role: "ADMIN", tenant: null, permissions: [] } }),
@@ -27,12 +25,7 @@ const menu = (id: number, name: string, parent: number | null, roles: string[] =
 });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <MenusPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<MenusPage />, { i18n: false });
 }
 
 beforeEach(() => {

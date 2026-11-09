@@ -3,10 +3,10 @@
  * 隐藏的偏好记在 `soulledger.permissions.columns`、重挂后还在;矩阵一段没有列菜单,
  * 矩阵的筛选(搜索框与「只看差异」)不记。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import PermissionsPage from "@/app/permissions/page";
 import { permApi, type Permission } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   permApi: {
@@ -18,13 +18,7 @@ jest.mock("@soulledger/core/api", () => ({
     impact: jest.fn().mockResolvedValue({ data: { required_codenames: [], conflicts: [] } }),
   },
 }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "en", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "admin", role: "ADMIN", tenant: null, permissions: [] } }),
@@ -37,12 +31,7 @@ const headers = () => screen.queryAllByRole("columnheader").map((h) => h.textCon
 const menuButton = () => screen.queryByRole("button", { name: /^list\.columns\.button/ });
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <PermissionsPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<PermissionsPage />, { i18n: false });
 }
 async function openDefinitions() {
   fireEvent.click(await screen.findByRole("radio", { name: /permissions\.segments\.definitions/ }));

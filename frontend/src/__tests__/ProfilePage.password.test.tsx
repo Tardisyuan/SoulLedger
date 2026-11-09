@@ -19,9 +19,7 @@ jest.mock("@soulledger/core/api", () => ({
   mfaApi: { status: jest.fn().mockResolvedValue({ data: { enabled: false, required: false, confirmed_at: null, last_used_at: null, last_used_method: "", recovery_codes_remaining: 0 } }) },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { username: "u", role: "JUDGE", tenant: { display_name: "中国地府" } }, setUser: jest.fn() }),
 }));
