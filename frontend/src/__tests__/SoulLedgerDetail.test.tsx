@@ -4,7 +4,7 @@
  *
  * 真 I18nProvider,不用回显键的替身 —— 理由见 SoulLedgerBook.test.tsx 第 3 条。
  */
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import type { Judgment, Reincarnation, Soul } from "@soulledger/core/api";
@@ -13,7 +13,7 @@ import { stepStatuses } from "@/src/components/souls/detail/soulProgress";
 import { SoulLedgerProgress } from "@/src/components/souls/detail/SoulLedgerProgress";
 import { SoulJudgmentHistory, SoulLedgerSections } from "@/src/components/souls/detail/SoulLedgerSections";
 
-// 行程条自己取两份数据:全部界域与这个灵魂的 path。
+// 行程块自己取两份数据:全部界域与这个灵魂的 path。
 jest.mock("@soulledger/core/api", () => ({
   realmsApi: { list: jest.fn() },
   soulsApi: { path: jest.fn() },
@@ -108,10 +108,10 @@ beforeEach(() => {
 });
 
 describe("SoulLedgerProgress", () => {
-  it("marks the current step, says 未至 for later ones, and a MissingValue where a passed step has no record", () => {
+  const progress = (soul: Soul = SOUL) =>
     wrap(
       <SoulLedgerProgress
-        soul={SOUL}
+        soul={soul}
         judgments={[]}
         dispositions={[]}
         reincarnations={[] as Reincarnation[]}
@@ -119,146 +119,120 @@ describe("SoulLedgerProgress", () => {
         deathDisplay={null}
       />
     );
+  /** The wide map's stations (jsdom has no ResizeObserver, so the map stays wide). */
+  const stations = (route: HTMLElement) => Array.from(route.querySelectorAll<SVGGElement>('[role="list"] [role="listitem"]'));
+
+  it("marks the current stage, says 未至 for later ones, and a MissingValue where a passed stage has no record", () => {
+    progress();
     const steps = within(screen.getByTestId("soul-ledger-progress")).getAllByRole("listitem");
     expect(steps.map((s) => s.getAttribute("data-step-status"))).toEqual(["done", "done", "current", "future"]);
-    expect(steps[2]).toHaveTextContent("03 处置 · 当前");
+    expect(steps[2]).toHaveTextContent("处置");
+    expect(steps[2]).toHaveTextContent("现在");
+    expect(steps[2]).toHaveAttribute("aria-current", "step");
     expect(steps[3]).toHaveTextContent("未至");
     // 02 审判已过但没有一份判决:是「未记录」,不是编一个日期,也不是「未至」。
     expect(steps[1].querySelector('[data-missing="unrecorded"]')).not.toBeNull();
     expect(steps[1]).not.toHaveTextContent("未至");
   });
 
+  it("draws the fourth stage as not-applicable 「不轮回」 where there is no wheel — not as a greyed to-do", () => {
+    progress({ ...SOUL, civilization: "EGYPTIAN" } as Soul);
+    const steps = within(screen.getByTestId("soul-ledger-progress")).getAllByRole("listitem");
+    expect(steps.map((s) => s.getAttribute("data-step-status"))).toEqual(["done", "done", "current", "na"]);
+    expect(steps[3]).toHaveTextContent("不轮回");
+    expect(steps[3]).not.toHaveTextContent("未至");
+  });
+
   it("draws the route from the soul's path on its civilization's shape — only recorded stops count as walked", async () => {
-    const { container } = wrap(
-      <SoulLedgerProgress
-        soul={SOUL}
-        judgments={[]}
-        dispositions={[]}
-        reincarnations={[] as Reincarnation[]}
-        birthDisplay={null}
-        deathDisplay={null}
-      />
-    );
+    const { container } = progress();
     const route = await screen.findByTestId("soul-route");
-    const shape = await within(route).findAllByRole("listitem");
+    await waitFor(() => expect(stations(route).length).toBeGreaterThan(0));
     expect(route.querySelector('[data-route-topology="line"]')?.getAttribute("data-schematic")).toBe("false");
-    const line = route.querySelector('[data-route-topology] ol')!;
-    // 一线:第一、二殿没有记录 —— 虚线待行,不因为「现在」在第三殿就算走过(规则 16)。
-    expect(Array.from(line.querySelectorAll(":scope > li"), (li) => li.getAttribute("data-station-state"))).toEqual([
-      "pending",
-      "pending",
-      "current",
-    ]);
-    // 待审所不在一线上:作为 ↳ 分支画出,已行。
+    // 一线:第一、二殿没有记录 —— 待行,不因为「现在」在第三殿就算走过(规则 16)。
+    expect(stations(route).map((g) => g.getAttribute("data-station-state"))).toEqual(["pending", "pending", "current"]);
+    expect(stations(route)[2]).toHaveAttribute("aria-current", "step");
+    // 没有一段是实线:两端都要有记录。
+    expect(route.querySelector('[data-segment="walked"]')).toBeNull();
+    expect(route.querySelectorAll('[data-segment="ahead"]')).toHaveLength(2);
+    // 待审所不在一线上:作为支线列在下面,已行。
     const branches = within(route).getByTestId("topology-branches");
     expect(branches.querySelector("li")?.getAttribute("data-station-state")).toBe("travelled");
-    expect(shape.length).toBeGreaterThan(3);
+    // 标题写现在在哪:第 3 站(殿号)。
+    expect(screen.getByTestId("soul-journey-title")).toHaveTextContent("第 3 站 · Court 3");
+    expect(screen.getByTestId("soul-journey-count")).toHaveTextContent("已行 1 站");
     expect(container.querySelectorAll("[aria-current=step]").length).toBeGreaterThan(0);
     expect(coreApi.soulsApi.path).toHaveBeenCalledWith("s1");
   });
 
-  it("draws an Egyptian soul's route on 称心二岔: the fail road is the dashed terminal and states come from the path", async () => {
-    const eg = (id: string, order: number, extra: Record<string, unknown> = {}) => ({
-      id, realm_code: id, name: id, civilization: "EGYPTIAN", realm_type: "PURGATORY", tier: order,
-      is_eternal: false, order, is_judgment_hall: false, fork: null, ...extra,
-    });
-    coreApi.realmsApi.list.mockResolvedValue({
-      data: {
-        results: [
-          eg("EG_DUAT_ENTRY", 1),
-          eg("EG_SEVEN_ARRWT", 2),
-          eg("EG_HALL_TWO_TRUTHS", 3, { is_judgment_hall: true }),
-          eg("EG_TWENTYONE_SEBKHET", 4, { fork: "PASS" }),
-          eg("EG_AARU", 5, { fork: "PASS" }),
-          eg("EG_ANNIHILATION", 4, { fork: "FAIL" }),
-        ],
-        count: 6,
-      },
-    });
-    coreApi.soulsApi.path.mockResolvedValue({
-      data: [
-        { id: "p1", sequence: 1, realm_id: "EG_DUAT_ENTRY", realm_code: "EG_DUAT_ENTRY", entered_at: "2026-06-08T00:00:00Z", left_at: "2026-06-09T00:00:00Z" },
-        { id: "p2", sequence: 2, realm_id: "EG_HALL_TWO_TRUTHS", realm_code: "EG_HALL_TWO_TRUTHS", entered_at: "2026-06-09T00:00:00Z", left_at: null },
-      ],
-    });
-    wrap(
-      <SoulLedgerProgress
-        soul={{ ...SOUL, civilization: "EGYPTIAN" } as Soul}
-        judgments={[]}
-        dispositions={[]}
-        reincarnations={[] as Reincarnation[]}
-        birthDisplay={null}
-        deathDisplay={null}
-      />
-    );
-    const route = await screen.findByTestId("soul-route");
-    await within(route).findAllByRole("listitem");
-    const topo = route.querySelector('[data-route-topology="fork_two"]')!;
-    expect(topo.getAttribute("data-schematic")).toBe("false");
-    const states = (sel: string) =>
-      Array.from(topo.querySelectorAll(`${sel} li`), (li) => [li.querySelector("[title]")?.getAttribute("title"), li.getAttribute("data-station-state")]);
-    // 七道通路没有记录:待行,不因为「现在」在称心就算走过(规则 16)。
-    expect(Array.from(topo.querySelectorAll(":scope ol")[0].querySelectorAll(":scope > li"), (li) => li.getAttribute("data-station-state")))
-      .toEqual(["travelled", "pending", "current"]);
-    expect(states('[data-fork="PASS"]').map(([, st]) => st)).toEqual(["pending", "pending"]);
-    expect(states('[data-fork="FAIL"]').map(([, st]) => st)).toEqual(["pending"]);
-    expect(topo.querySelector('[data-fork="FAIL"]')?.getAttribute("data-terminal")).toBe("dashed");
-    expect(topo.querySelector('[data-fork="PASS"]')?.getAttribute("data-terminal")).toBeNull();
+  const eg = (id: string, order: number, extra: Record<string, unknown> = {}) => ({
+    id, realm_code: id, name: id, civilization: "EGYPTIAN", realm_type: "PURGATORY", tier: order,
+    is_eternal: false, order, is_judgment_hall: false, fork: null, ...extra,
+  });
+  const DUAT = [
+    eg("EG_DUAT_ENTRY", 1),
+    eg("EG_SEVEN_ARRWT", 2),
+    eg("EG_HALL_TWO_TRUTHS", 3, { is_judgment_hall: true }),
+    eg("EG_TWENTYONE_SEBKHET", 4, { fork: "PASS" }),
+    eg("EG_AARU", 5, { fork: "PASS" }),
+    eg("EG_ANNIHILATION", 4, { fork: "FAIL" }),
+  ];
+  const stop = (id: string, seq: number, left: string | null) => ({
+    id: `p${seq}`, sequence: seq, realm_id: id, realm_code: id, entered_at: `2026-06-0${seq + 7}T00:00:00Z`, left_at: left,
   });
 
-  it("称心二岔, the FAIL road once walked: its segment is solid (path[] decides), its end stays a dashed square (not a place)", async () => {
+  it("draws an Egyptian soul's route on 称心二岔 before the weighing settles: both roads ahead, the fail road ends in a dashed square", async () => {
+    coreApi.realmsApi.list.mockResolvedValue({ data: { results: DUAT, count: 6 } });
+    coreApi.soulsApi.path.mockResolvedValue({
+      data: [stop("EG_DUAT_ENTRY", 1, "2026-06-09T00:00:00Z"), stop("EG_HALL_TWO_TRUTHS", 2, null)],
+    });
+    progress({ ...SOUL, civilization: "EGYPTIAN" } as Soul);
+    const route = await screen.findByTestId("soul-route");
+    await waitFor(() => expect(stations(route).length).toBe(6));
+    expect(route.querySelector('[data-route-topology="fork_two"]')?.getAttribute("data-schematic")).toBe("false");
+    // 七道通路没有记录:待行(规则 16);称心未定,两条去路都是待行,不是「不在此路」。
+    expect(stations(route).map((g) => [g.getAttribute("data-station-state"), g.getAttribute("data-route")])).toEqual([
+      ["travelled", "on"],
+      ["pending", "on"],
+      ["current", "on"],
+      ["pending", "on"],
+      ["pending", "on"],
+      ["pending", "on"],
+    ]);
+    expect(route.querySelector('[data-edge="EG_HALL_TWO_TRUTHS>EG_ANNIHILATION"]')?.getAttribute("data-segment")).toBe("ahead");
+    expect(route.querySelectorAll('[data-terminal="dashed"]')).toHaveLength(1);
+    expect(stations(route)[5]).toHaveAttribute("data-terminal", "dashed");
+    expect(route).toHaveTextContent("不是地方");
+    expect(screen.getByTestId("soul-journey-count")).toHaveTextContent("之后两条路之一");
+  });
+
+  it("称心二岔, the FAIL road once walked: its segment is solid (path[] decides), its end stays a dashed square, the other road is off this route", async () => {
     // Design, 2026-09-26: a segment's line depends only on whether path[] records it; the end square's
     // dash depends only on whether the realm is a place. Neither affects the other.
-    const eg = (id: string, order: number, extra: Record<string, unknown> = {}) => ({
-      id, realm_code: id, name: id, civilization: "EGYPTIAN", realm_type: "PURGATORY", tier: order,
-      is_eternal: false, order, is_judgment_hall: false, fork: null, ...extra,
-    });
-    coreApi.realmsApi.list.mockResolvedValue({
-      data: {
-        results: [
-          eg("EG_DUAT_ENTRY", 1),
-          eg("EG_SEVEN_ARRWT", 2),
-          eg("EG_HALL_TWO_TRUTHS", 3, { is_judgment_hall: true }),
-          eg("EG_TWENTYONE_SEBKHET", 4, { fork: "PASS" }),
-          eg("EG_AARU", 5, { fork: "PASS" }),
-          eg("EG_ANNIHILATION", 4, { fork: "FAIL" }),
-        ],
-        count: 6,
-      },
-    });
+    coreApi.realmsApi.list.mockResolvedValue({ data: { results: DUAT, count: 6 } });
     coreApi.soulsApi.path.mockResolvedValue({
       data: [
-        { id: "p1", sequence: 1, realm_id: "EG_DUAT_ENTRY", realm_code: "EG_DUAT_ENTRY", entered_at: "2026-06-08T00:00:00Z", left_at: "2026-06-09T00:00:00Z" },
-        { id: "p2", sequence: 2, realm_id: "EG_SEVEN_ARRWT", realm_code: "EG_SEVEN_ARRWT", entered_at: "2026-06-09T00:00:00Z", left_at: "2026-06-10T00:00:00Z" },
-        { id: "p3", sequence: 3, realm_id: "EG_HALL_TWO_TRUTHS", realm_code: "EG_HALL_TWO_TRUTHS", entered_at: "2026-06-10T00:00:00Z", left_at: "2026-06-11T00:00:00Z" },
-        { id: "p4", sequence: 4, realm_id: "EG_ANNIHILATION", realm_code: "EG_ANNIHILATION", entered_at: "2026-06-11T00:00:00Z", left_at: null },
+        stop("EG_DUAT_ENTRY", 1, "2026-06-09T00:00:00Z"),
+        stop("EG_SEVEN_ARRWT", 2, "2026-06-10T00:00:00Z"),
+        stop("EG_HALL_TWO_TRUTHS", 3, "2026-06-11T00:00:00Z"),
+        stop("EG_ANNIHILATION", 4, null),
       ],
     });
-    wrap(
-      <SoulLedgerProgress
-        soul={{ ...SOUL, civilization: "EGYPTIAN" } as Soul}
-        judgments={[]}
-        dispositions={[]}
-        reincarnations={[] as Reincarnation[]}
-        birthDisplay={null}
-        deathDisplay={null}
-      />
-    );
+    progress({ ...SOUL, civilization: "EGYPTIAN" } as Soul);
     const route = await screen.findByTestId("soul-route");
-    await within(route).findAllByRole("listitem");
-    const topo = route.querySelector('[data-route-topology="fork_two"]')!;
-    const fail = topo.querySelector('[data-fork="FAIL"]')!;
-    const li = fail.querySelector("li")!;
-    expect(li.getAttribute("data-station-state")).toBe("current");
-    // The segment into the second death: walked, so solid (2px ink, 补足 C15) — and not the dashed "ahead" line.
-    const into = li.querySelector('[aria-hidden="true"] > span')!;
-    expect(into.className).toContain("border-t-2");
-    expect(into.className).not.toContain("border-dashed");
-    // The end is still a dashed square: not a place.
-    expect(li.querySelector('[data-mark][data-terminal="dashed"]')).not.toBeNull();
-    // The PASS road was not walked: its segments stay dashed.
-    const passInto = topo.querySelector('[data-fork="PASS"] li [aria-hidden="true"] > span')!;
-    expect(passInto.className).toContain("border-dashed");
+    await waitFor(() => expect(stations(route).length).toBe(6));
+    const end = stations(route).find((g) => g.getAttribute("data-terminal") === "dashed")!;
+    expect(end).toHaveAttribute("data-station-state", "current");
+    expect(end).toHaveAttribute("aria-current", "step");
+    // The segment into the second death: walked — solid main line, not the dashed "ahead" one.
+    const into = route.querySelector('[data-edge="EG_HALL_TWO_TRUTHS>EG_ANNIHILATION"]')!;
+    expect(into.getAttribute("data-segment")).toBe("walked");
+    expect(into.getAttribute("class")).toBe("journey-walked");
+    // The PASS road was not walked and now cannot be: dotted, off this route — not "ahead".
+    const pass = route.querySelector('[data-edge="EG_HALL_TWO_TRUTHS>EG_TWENTYONE_SEBKHET"]')!;
+    expect(pass.getAttribute("data-segment")).toBe("off");
+    expect(pass.getAttribute("class")).toBe("journey-off");
+    expect(route.querySelector('[data-segment="ahead"]')).toBeNull();
+    expect(stations(route).filter((g) => g.getAttribute("data-route") === "off")).toHaveLength(2);
   });
 });
 

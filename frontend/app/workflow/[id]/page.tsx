@@ -884,6 +884,7 @@ export default function WorkflowDetailPage() {
             nodes={sortedNodes}
             currentNodeId={workflow.status !== "COMPLETED" ? workflow.current_node ?? null : null}
             endLabel={statusLabel("COMPLETED")}
+            completed={workflow.status === "COMPLETED"}
             label={t("workflow.detail.nodes")}
           />
         </div>
