@@ -21,10 +21,21 @@ A test file is selected for a changed app A when any of:
   - its source calls one of A's URL prefixes, `/api/v1/<prefix>/`, read from
     backend/config/urls.py (`path("api/v1/<prefix>/", include("apps.A.urls"))`).
 
-What it can miss, accepted by the user: a test that reaches app A only through
-another app's code, with neither A's name nor A's URL in its own source. `--full`
-still runs everything.
+ONE LAYER OF REVERSE DEPENDENCY (2026-11-10, test-suite review #5). When A
+changes, every app B whose non-test code imports `apps.A` (read with `ast`, not
+regex; migrations and test files do not count) also gets its own tests, the
+files under backend/apps/B/. One layer only: if C imports B, C's tests are not
+added for a change in A. Measured 2026-11-10 (591 test files, a one-file change
+in each of the 27 apps): 2320 → 2693 selected in sum, +16%; per app +0% (menus)
+to +75% (org 20 → 35); judgment 166 → 180. Applying all three rules to B instead
+selected 300–560 of 591 for most apps (nearly every test names `apps.authentication`
+or `apps.tenants`) — that is `--full`, not a selection, so B gets its directory only.
+
+What it can still miss, accepted by the user: a test outside backend/apps/B/ that
+reaches A only through B, or a test that reaches A through two or more apps, with
+A's name and URL absent from its own source. `--full` still runs everything.
 """
+import ast
 import os
 import re
 import sys
@@ -87,6 +98,37 @@ def url_prefixes():
     return pre
 
 
+def importers():
+    """{A: {B, …}}: apps whose non-test, non-migration code imports `apps.A`."""
+    root = os.path.join(BACKEND, "apps")
+    names = {a for a in os.listdir(root) if os.path.isdir(os.path.join(root, a)) and not a.startswith("_")}
+    graph = {}
+    for b in names:
+        for d, dirs, files in os.walk(os.path.join(root, b)):
+            dirs[:] = [x for x in dirs if x not in ("__pycache__", "migrations", "tests")]
+            for f in files:
+                if not f.endswith(".py") or is_test_file(f):
+                    continue
+                try:
+                    with open(os.path.join(d, f), encoding="utf-8") as fh:
+                        tree = ast.parse(fh.read())
+                except (OSError, SyntaxError):
+                    continue
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Import):
+                        mods = [a.name for a in node.names]
+                    elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                        # `from apps import judgment` names the app in the alias, not the module
+                        mods = [node.module] + ([f"apps.{a.name}" for a in node.names] if node.module == "apps" else [])
+                    else:
+                        continue
+                    for m in mods:
+                        parts = m.split(".")
+                        if len(parts) > 1 and parts[0] == "apps" and parts[1] in names and parts[1] != b:
+                            graph.setdefault(parts[1], set()).add(b)
+    return graph
+
+
 def select(changed):
     changed = [c for c in changed if c]
     for path in changed:
@@ -94,6 +136,9 @@ def select(changed):
             if re.search(rule, path):
                 return None, f"{why}: {path}"
     apps = sorted({p.split("/")[2] for p in changed if p.startswith("backend/apps/") and p.count("/") >= 3})
+    graph = importers() if apps else {}
+    # one layer: the importers of the changed apps, not the importers of those
+    importing = set().union(*(graph.get(a, set()) for a in apps)) - set(apps)
     prefixes = url_prefixes()
     tests = all_test_files()
     src = {}
@@ -114,6 +159,7 @@ def select(changed):
         for t in tests:
             if t.startswith(f"apps/{app}/") or name.search(text(t)) or any(u in text(t) for u in urls):
                 picked.add(t)
+    picked.update(t for t in tests if t.split("/")[0] == "apps" and t.split("/")[1] in importing)
     for path in changed:
         if not path.startswith("backend/"):
             continue
