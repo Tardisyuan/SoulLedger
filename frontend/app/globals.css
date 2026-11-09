@@ -2446,6 +2446,9 @@ li:last-child > .route-row {
 /* 条:底是文明墨 16%,填充越满越实(--occ 0–1 同时管宽度与不透明度);≥ 90% 右端一道 danger 竖线。 */
 .realm-occ {
   position: relative;
+  /* 分岔两栏很窄(埃及称心后):条可以收到 1.5rem,人数不被挤到隔壁「湮灭」框上(2026-11-10 演示站)。 */
+  flex: 0 1 5rem;
+  min-width: 1.5rem;
   width: 5rem;
   height: 6px;
   border-radius: 9999px;

@@ -64,7 +64,7 @@ export function RouteMap({
           <span
             aria-hidden="true"
             data-occupancy-bar={b.danger ? "danger" : b.hot ? "hot" : "ok"}
-            className="realm-occ shrink-0"
+            className="realm-occ"
             style={{ "--occ": Math.min(b.ratio, 1) } as CSSProperties}
           >
             <span className="realm-occ-fill" />
