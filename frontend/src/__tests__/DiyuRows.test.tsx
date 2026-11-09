@@ -19,6 +19,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   soulsApi: { moveStation: (...args: unknown[]) => mockMove(...args) },
+  eventsApi: { list: () => Promise.resolve({ data: { results: [] } }) },
 }));
 
 import { DiyuRows, DiyuStationStrip } from "@/src/components/souls/detail/DiyuRows";

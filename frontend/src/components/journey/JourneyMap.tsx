@@ -28,6 +28,8 @@ export interface JourneyNarrow {
 export interface JourneyPlate {
   heading: string;
   sub?: string | null;
+  /** 有时长的站(希腊千年):已走的份额 0..1,画成「现在」外的一道弧;null / 缺省不画。 */
+  progress?: number | null;
 }
 
 const NARROW_BELOW = 520;
@@ -109,7 +111,8 @@ export function JourneyMap({
 
 function useStateText() {
   const { t } = useI18n();
-  return (s: JStop) => (s.route === "off" ? t("realms.journey.off_route") : t(`realms.topology.state_${s.state}`));
+  return (s: JStop) =>
+    s.route === "off" ? t("realms.journey.off_route") : s.implied ? t("realms.journey.implied") : t(`realms.topology.state_${s.state}`);
 }
 
 function WideJourney({
@@ -201,9 +204,10 @@ function WideJourney({
             data-station-state={s.state}
             data-route={s.route}
             data-terminal={s.terminal ? "dashed" : undefined}
+            data-implied={s.implied ? "true" : undefined}
             {...stopAttrs?.(s)}
           >
-            <StopMark s={s} />
+            <StopMark s={s} progress={s === current ? plate?.progress : null} />
             {named && (
               <text x={lx} y={ly} textAnchor={anchor} className="journey-label" data-station-state={s.state} data-route={s.route}>
                 {lines.map((l, k) => (
@@ -233,7 +237,7 @@ function WideJourney({
   );
 }
 
-function StopMark({ s }: { s: JStop }) {
+function StopMark({ s, progress }: { s: JStop; progress?: number | null }) {
   if (s.terminal)
     return (
       <g aria-hidden="true">
@@ -249,24 +253,40 @@ function StopMark({ s }: { s: JStop }) {
         <circle cx={s.x} cy={s.y} r={17} className="journey-now-glow" />
         <circle cx={s.x} cy={s.y} r={12} className="journey-pulse" />
         <circle cx={s.x} cy={s.y} r={9} className="journey-now" />
+        {progress != null && (
+          <g data-progress={progress.toFixed(3)}>
+            <circle cx={s.x} cy={s.y} r={13.5} className="journey-arc-base" />
+            <circle
+              cx={s.x}
+              cy={s.y}
+              r={13.5}
+              pathLength={1}
+              strokeDasharray={`${Math.min(1, Math.max(0, progress))} 1`}
+              transform={`rotate(-90 ${s.x} ${s.y})`}
+              className="journey-arc"
+            />
+          </g>
+        )}
       </g>
     );
   if (s.state === "travelled")
     return (
       <g aria-hidden="true">
         <circle cx={s.x} cy={s.y} r={7} className="journey-stop-done" />
-        <path d={`M${s.x - 3} ${s.y}L${s.x - 0.8} ${s.y + 2.3}L${s.x + 3.2} ${s.y - 2.4}`} className="journey-check" />
+        {/* 已过(未登记)不打勾:有记录的站和推断的站看得出不同。 */}
+        {!s.implied && <path d={`M${s.x - 3} ${s.y}L${s.x - 0.8} ${s.y + 2.3}L${s.x + 3.2} ${s.y - 2.4}`} className="journey-check" />}
       </g>
     );
   return <circle aria-hidden="true" cx={s.x} cy={s.y} r={6} className="journey-stop-ahead" />;
 }
 
-/** 「现在」名牌:默认在站上方;漏斗靠底的站放右侧;右边要分岔的站把名牌往左靠(§一.3)。 */
+/** 「现在」名牌:默认在站上方;漏斗一律放站旁(右侧,出界就左侧)—— 放上方会盖住斜线上前面的站
+ *  (2026-11-10:第二圈的名牌盖住了死亡与「第一圈 · 林勃」);右边要分岔的站把名牌往左靠(§一.3)。 */
 function plateBox(s: JStop, graph: JGraph, plate: JourneyPlate, label: string) {
   const w = Math.min(240, Math.max(textWidth(plate.heading, 10.5), textWidth(label, 13), plate.sub ? textWidth(plate.sub, 11) : 0) + 22);
   const h = plate.sub ? 56 : 42;
   const forksRight = graph.edges.some((e) => e.from === s.id && e.curve);
-  const side = graph.backdrop === "funnel" && s.y > graph.h * 0.55;
+  const side = graph.backdrop === "funnel";
   let x: number;
   let y: number;
   let tip: string;

@@ -32,5 +32,10 @@
   "souls.detail.journey.stage_done",
   "souls.detail.journey.stage_current",
   "souls.detail.journey.stage_future",
-  "souls.detail.journey.stage_na"
+  "souls.detail.journey.stage_na",
+  "realms.journey.years_here",
+  "realms.journey.implied",
+  "realms.journey.judged_at",
+  "realms.journey.weighing",
+  "realms.journey.year_of"
 ]

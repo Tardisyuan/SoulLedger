@@ -1,12 +1,12 @@
 import type { ApprovalNode } from "@soulledger/core/api";
 import type { Station, StationState, Topology } from "./routeTopology";
-import { offRoute, type Road } from "./journeyModel";
+import { offRoute, trunkOrder, type Road } from "./journeyModel";
 
 /**
  * 行程图的坐标(Design 第二十五批 §二):一套画法,四种形状 + 示意 + 工作流实例。
  * 只算位置与每段线的种类,不碰颜色 —— 颜色全在 globals.css 的 `.journey-*`(都是令牌)。
  *
- *   walked  两端都是有记录的站(规则 16,与 routeTopology.segmentWalked 同一条)
+ *   walked  两端都是走过的站:有记录的(规则 16),或本人这条路上「现在」之前没记录的(已过未登记)
  *   ahead   还没走,但在这条路上
  *   off     不在此路:没走的岔路、支线
  *
@@ -21,8 +21,10 @@ export interface JStop {
   id: string;
   x: number;
   y: number;
-  /** The underlying path state — never rewritten; `route` says whether this road is the soul's. */
+  /** The path state; an implied stop (`implied`) is drawn as travelled. `route` says whether this road is the soul's. */
   state: StationState;
+  /** 已过(未登记):path 里没有,但在本人这条路上「现在」之前(journeyModel `Road.implied`)。画成已行、不打勾。 */
+  implied?: boolean;
   route: "on" | "off";
   label: string;
   /** 站号(地府的殿号),画在站名下面。 */
@@ -96,7 +98,8 @@ export function topologyGraph(topology: Topology, road: Road, text: TopologyText
     id: s.id,
     x,
     y,
-    state: s.state,
+    state: road.implied.has(s.id) ? "travelled" : s.state,
+    ...(road.implied.has(s.id) ? { implied: true } : {}),
     route: off.has(s.id) ? "off" : "on",
     label: text.name(s),
     labelAt,
@@ -138,9 +141,7 @@ export function topologyGraph(topology: Topology, road: Road, text: TopologyText
 
     case "fork": {
       const y = 150;
-      const ordered = topology.trunk.every((s) => s.realm?.order != null)
-        ? [...topology.trunk].sort((a, b) => a.realm!.order! - b.realm!.order!)
-        : topology.trunk;
+      const ordered = trunkOrder(topology.trunk);
       // 岔路从哪一站分出去:岔路第一站的 parent_realm;找不到就从主干最后一站。
       const parent = topology.roads[0]?.stations[0]?.realm?.parent_realm;
       let at = ordered.findIndex((s) => parent != null && (s.id === parent || s.code === parent));

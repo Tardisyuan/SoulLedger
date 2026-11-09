@@ -2,7 +2,7 @@
  * 第二十五批 §五:界域拓扑的在押 / 容量条(≥ 78% 放大加光圈,≥ 90% 右端竖线,没记容量不画条)
  * 与地府十三站卡(已过窄条、现在展开、未到虚线框)。
  */
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Realm, Soul } from "@soulledger/core/api";
 import type { Station, Topology } from "@/src/lib/routeTopology";
@@ -13,9 +13,15 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: tZh, tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true }),
 }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
+const mockEvents = jest.fn();
+jest.mock("@soulledger/core/api", () => ({
+  ...jest.requireActual("@soulledger/core/api"),
+  eventsApi: { list: (...args: unknown[]) => mockEvents(...args) },
+}));
+beforeEach(() => mockEvents.mockReset().mockResolvedValue({ data: { results: [] } }));
 
 import { RouteMap, occupancyBar, OCC_HOT, OCC_DANGER } from "@/src/components/realms/RouteMap";
-import { DiyuStationStrip, diyuCardState } from "@/src/components/souls/detail/DiyuRows";
+import { DiyuStationStrip, diyuArrival, diyuCardState } from "@/src/components/souls/detail/DiyuRows";
 
 describe("occupancyBar thresholds", () => {
   it("78% is hot, 90% is danger, just under each is not", () => {
@@ -103,5 +109,34 @@ describe("十三站卡折叠", () => {
     expect(cards[12].textContent).not.toContain("✓");
     expect(cards[12].querySelector(".sr-only")).toHaveTextContent("未到");
     expect(cards.filter((c) => c.hasAttribute("aria-current"))).toHaveLength(1);
+  });
+
+  it("diyuArrival: the latest station event, only when it moved the soul to this station", () => {
+    const ev = (to: string, at: string) => ({ payload: { from: "", to, via: "officer" }, create_time: at });
+    expect(diyuArrival([ev("GHOST_FORT", "2026-11-01T00:00:00Z"), ev("FENGDU_CITY", "2026-11-06T00:00:00Z")], "FENGDU_CITY")).toBe("2026-11-06T00:00:00Z");
+    expect(diyuArrival([ev("FENGDU_CITY", "2026-11-06T00:00:00Z"), ev("GHOST_FORT", "2026-11-07T00:00:00Z")], "FENGDU_CITY")).toBeNull();
+    expect(diyuArrival([], "FENGDU_CITY")).toBeNull();
+  });
+
+  it("the current card says how long the soul has been there; no event → nothing, never 0", async () => {
+    const soul = { id: "s2", name: "李四", civilization: "CHINESE", current_state: "JUDGING", diyu_station: "FENGDU_CITY" } as unknown as Soul;
+    const arrived = new Date(Date.now() - 3 * 86_400_000 - 3_600_000).toISOString();
+    mockEvents.mockResolvedValue({ data: { results: [{ payload: { to: "FENGDU_CITY" }, create_time: arrived }] } });
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DiyuStationStrip soul={soul} canMove={false} />
+      </QueryClientProvider>
+    );
+    expect(await screen.findByTestId("diyu-card-stay")).toHaveTextContent("到此 3 日");
+    expect(mockEvents).toHaveBeenCalledWith(expect.objectContaining({ soul: "s2", event_type: "DIYU_STATION_CHANGED" }));
+    unmount();
+    mockEvents.mockResolvedValue({ data: { results: [] } });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DiyuStationStrip soul={soul} canMove={false} />
+      </QueryClientProvider>
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByTestId("diyu-card-stay")).toBeNull();
   });
 });

@@ -2587,6 +2587,19 @@ li:last-child > .route-row {
 .journey-now-glow {
   fill: oklch(var(--color-metal) / 0.18);
 }
+/* 有时长的站(希腊千年,第二十五批 §二):「现在」外一道进度弧,底环 + 已走的部分。 */
+.journey-arc-base,
+.journey-arc {
+  fill: none;
+  stroke-width: 2.4;
+}
+.journey-arc-base {
+  stroke: oklch(var(--color-line-strong));
+}
+.journey-arc {
+  stroke: oklch(var(--color-metal));
+  stroke-linecap: round;
+}
 .journey-pulse {
   fill: none;
   stroke: oklch(var(--color-metal));
