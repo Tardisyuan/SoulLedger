@@ -40,7 +40,63 @@ details[open] summary{margin-bottom:12px}
 </header>
 
 <article>
-<h2>第二十五批 · 行程与进度「可视化度太低」:灵魂详情的行程条、四格进度,以及同类的线路图<span class="tag new">待回 · 2026-11-10</span></h2>
+<h2>第二十六批 · egy:再会页、行程块、界域在押条、十三站卡的 34 个新键<span class="tag new">待回 · 2026-11-10</span></h2>
+<p>请把下表 34 个键的 egy 写进 <code>v4-batch26-egy.json</code>(扁平,键是下表的完整路径,值是 egy 文本),说明写在 <code>v4-batch26-reply.md</code>。照第十八批的规矩:新词根、专名在回复里列出来;<code>{{name}}</code>、<code>{{n}}</code> 占位原样保留。</p>
+<section>
+<h3>这些键从哪来</h3>
+<ul>
+<li><code>auth.goodbye.*</code>:退出登录之后的「再会」页(新页 <code>/goodbye</code>)。四句告别各属一个文明,<code>line.neutral</code> 是没有文明时的那句。</li>
+<li><code>realms.journey.*</code>、<code>souls.detail.journey.stage_*</code>:第二十五批你画的行程块(标题、阶段条、行程图、窄屏胶囊、读屏状态字)。</li>
+<li><code>realms.map.legend_bar</code>、<code>souls.diyu_station.*</code>:界域页在押条的图例、地府十三站卡。</li>
+</ul>
+</section>
+<section>
+<h3>34 个键</h3>
+<table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>auth.goodbye.title</code></td><td>再会</td><td>Farewell</td></tr>
+<tr><td><code>auth.goodbye.title_named</code></td><td>再会，{{name}}</td><td>Farewell, {{name}}</td></tr>
+<tr><td><code>auth.goodbye.signed_out</code></td><td>已安全退出登录</td><td>You have been signed out.</td></tr>
+<tr><td><code>auth.goodbye.returning</code></td><td>{{n}} 秒后回到首页</td><td>Back to the home page in {{n}} s</td></tr>
+<tr><td><code>auth.goodbye.home</code></td><td>回到首页</td><td>Home page</td></tr>
+<tr><td><code>auth.goodbye.login</code></td><td>重新登录</td><td>Sign in again</td></tr>
+<tr><td><code>auth.goodbye.line.neutral</code></td><td>簿已合上。</td><td>The ledger is closed.</td></tr>
+<tr><td><code>auth.goodbye.line.cn</code></td><td>灯已熄，簿已合。</td><td>The lamp is out; the ledger is closed.</td></tr>
+<tr><td><code>auth.goodbye.line.eu</code></td><td>门在身后合上了。</td><td>The gate has closed behind you.</td></tr>
+<tr><td><code>auth.goodbye.line.eg</code></td><td>天平归于平静。</td><td>The scales are at rest.</td></tr>
+<tr><td><code>auth.goodbye.line.gr</code></td><td>渡船已经离岸。</td><td>The ferry has left the shore.</td></tr>
+<tr><td><code>realms.map.legend_bar</code></td><td>条长 = 在押 / 容量；≥ 78% 方块放大、加光圈；≥ 90% 右端一道竖线；没记容量的站只写在押</td><td>bar = held / capacity; ≥ 78% enlarged mark with a halo; ≥ 90% a tick at the end; no capacity recorded, count only</td></tr>
+<tr><td><code>souls.diyu_station.now_card</code></td><td>现在 · 第 {{n}} 站</td><td>Now · station {{n}}</td></tr>
+<tr><td><code>souls.diyu_station.state_passed</code></td><td>已过</td><td>passed</td></tr>
+<tr><td><code>souls.diyu_station.state_ahead</code></td><td>未到</td><td>ahead</td></tr>
+<tr><td><code>realms.journey.now</code></td><td>现在</td><td>Now</td></tr>
+<tr><td><code>realms.journey.now_station</code></td><td>现在 · 第 {{n}} 站</td><td>Now · stop {{n}}</td></tr>
+<tr><td><code>realms.journey.station_n</code></td><td>第 {{n}} 站</td><td>Stop {{n}}</td></tr>
+<tr><td><code>realms.journey.walked_n</code></td><td>已行 {{n}} 站</td><td>{{n}} stops walked</td></tr>
+<tr><td><code>realms.journey.ahead_n</code></td><td>待行 {{n}} 站</td><td>{{n}} stops ahead</td></tr>
+<tr><td><code>realms.journey.left_to</code></td><td>余 {{n}} 站到{{name}}</td><td>{{n}} left to {{name}}</td></tr>
+<tr><td><code>realms.journey.days_here</code></td><td>到此 {{n}} 日</td><td>{{n}} days here</td></tr>
+<tr><td><code>realms.journey.two_roads</code></td><td>之后两条路之一</td><td>one of two roads next</td></tr>
+<tr><td><code>realms.journey.schematic_suffix</code></td><td>（示意）</td><td> (schematic)</td></tr>
+<tr><td><code>realms.journey.off_route</code></td><td>不在此路</td><td>Not on this route</td></tr>
+<tr><td><code>realms.journey.off_note</code></td><td>{{names}} 不在此路，宽屏可见</td><td>{{names}}: not on this route, visible on a wider screen</td></tr>
+<tr><td><code>realms.journey.branch_legend</code></td><td>点线小圈 = 支线，这一世没走</td><td>Dotted ring = a branch not walked in this life</td></tr>
+<tr><td><code>realms.journey.not_a_place</code></td><td>不是地方</td><td>Not a place</td></tr>
+<tr><td><code>realms.journey.no_rebirth</code></td><td>不轮回</td><td>No rebirth</td></tr>
+<tr><td><code>realms.journey.returned</code></td><td>退回重审 · {{n}} 次</td><td>Sent back · {{n}}×</td></tr>
+<tr><td><code>souls.detail.journey.stage_done</code></td><td>已完成</td><td>done</td></tr>
+<tr><td><code>souls.detail.journey.stage_current</code></td><td>现在</td><td>now</td></tr>
+<tr><td><code>souls.detail.journey.stage_future</code></td><td>待办</td><td>to do</td></tr>
+<tr><td><code>souls.detail.journey.stage_na</code></td><td>不适用</td><td>not applicable</td></tr>
+
+</tbody></table>
+<p class="ask">请给:<code>v4-batch26-egy.json</code>(34 个键齐全)和回复里的新词根 / 专名清单。</p>
+</section>
+</article>
+
+<details>
+<summary>第二十五批 · 行程与进度重画<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十五批 · 行程与进度「可视化度太低」:灵魂详情的行程条、四格进度,以及同类的线路图<span class="tag done">已回 · 2026-11-10</span></h2>
 <p>回复写到 <code>v4-batch25-reply.md</code>,稿子 <code>V4Batch25.dc.html</code>,深浅各一张合成图。第二十四批已上线(落地页 F 嵌彩、其余 G 天体仪)。</p>
 <section>
 <h3>用户的话</h3>
@@ -65,6 +121,7 @@ details[open] summary{margin-bottom:12px}
 <p class="ask">请给:合成图(四种形状 × 深浅,外加 393 窄屏一张)、每个元素的尺寸与颜色变量、动效说明;另列你挑出的「同类」页面及各自的方案。</p>
 </section>
 </article>
+</details>
 
 <details>
 <summary>第二十四批 · 徽记定稿(F 嵌彩 / G 天体仪)<span class="tag done">已回 · 已上线</span></summary>
