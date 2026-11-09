@@ -102,7 +102,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
               {where === "current" ? (
                 <>
                   <span className="diyu-card-now text-2xs font-semibold">{t("souls.diyu_station.now_card", { n })}</span>
-                  <span className="w-full truncate font-title text-md font-semibold text-[oklch(var(--color-ink))]">{name(s)}</span>
+                  <span title={name(s)} className="w-full truncate font-title text-md font-semibold text-[oklch(var(--color-ink))]">{name(s)}</span>
                 </>
               ) : (
                 <>
@@ -110,6 +110,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
                   <span aria-hidden="true" className="font-mono text-2xs">{n}</span>
                   <span className="sr-only">{t(`souls.diyu_station.state_${where}`)}</span>
                   <span
+                    title={name(s)}
                     className={cn(
                       "truncate text-2xs",
                       // 已过的窄条永远只给读屏;未到的 xl 起写出来。w-full 只给看得见的站名(和 sr-only 同写会压过它的 1px 宽)

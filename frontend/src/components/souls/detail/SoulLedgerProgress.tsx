@@ -185,7 +185,7 @@ function StageCell({ stage, label, fill, body }: { stage: StageState; label: str
     <li data-step-status={stage} aria-current={stage === "current" ? "step" : undefined} className="relative min-w-0">
       <div className="flex items-center gap-2 text-sm">
         <span aria-hidden="true" className="journey-stage-icon" data-step-status={stage} />
-        <span className={`journey-stage-name truncate ${stage === "current" ? "font-semibold" : ""}`} data-step-status={stage}>
+        <span title={label} className={`journey-stage-name truncate ${stage === "current" ? "font-semibold" : ""}`} data-step-status={stage}>
           {label}
         </span>
         {stage === "current" && <span className="journey-now-word ml-auto text-2xs">{t("realms.journey.now")}</span>}
@@ -194,7 +194,7 @@ function StageCell({ stage, label, fill, body }: { stage: StageState; label: str
       <div aria-hidden="true" data-testid="soul-ledger-bar" className="journey-stage-bar mt-1" data-step-status={stage}>
         {stage === "current" && <span className="journey-stage-fill" style={{ "--fill": `${Math.round(fill * 100)}%` } as CSSProperties} />}
       </div>
-      {body !== null && <div className="mt-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] truncate">{body}</div>}
+      {body !== null && <div className="mt-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{body}</div>}
     </li>
   );
 }

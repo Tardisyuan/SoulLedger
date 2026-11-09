@@ -308,7 +308,7 @@ function NarrowJourney({
         <span aria-hidden="true" className="journey-dot" data-station-state={s.state} data-route={s.route} data-terminal={s.terminal ? "dashed" : undefined} />
         {line(out)}
       </span>
-      <span aria-hidden="true" className={`block max-w-full truncate px-1 text-2xs journey-text ${s.state === "current" ? "font-semibold" : ""}`} data-station-state={s.state}>
+      <span aria-hidden="true" title={s.label} className={`block max-w-full truncate px-1 text-2xs journey-text ${s.state === "current" ? "font-semibold" : ""}`} data-station-state={s.state}>
         {s.label}
       </span>
     </li>
@@ -348,7 +348,7 @@ function NarrowJourney({
                   {road.slice(item.from, item.to + 1).map((s) => (
                     <li key={s.id} data-station-state={s.state} data-route={s.route} aria-label={`${s.label} · ${stateText(s)}`} className="flex items-center gap-2 min-h-6 text-2xs journey-text">
                       <span aria-hidden="true" className="journey-dot" data-station-state={s.state} data-route={s.route} />
-                      <span className="truncate">{s.label}</span>
+                      <span className="truncate" title={s.label}>{s.label}</span>
                     </li>
                   ))}
                 </ol>
@@ -362,7 +362,7 @@ function NarrowJourney({
               <span key={s.id} aria-label={`${s.label} · ${stateText(s)}`} data-station-state={s.state} className="flex items-center gap-1 text-2xs journey-text min-w-0">
                 <span aria-hidden="true" data-segment="ahead" className="journey-seg w-4" />
                 <span aria-hidden="true" className="journey-dot" data-station-state={s.state} data-route={s.route} data-terminal={s.terminal ? "dashed" : undefined} />
-                <span className="truncate">{s.label}</span>
+                <span className="truncate" title={s.label}>{s.label}</span>
                 {s.terminal && <span className="journey-neg shrink-0">{t("realms.journey.not_a_place")}</span>}
               </span>
             ))}

@@ -577,7 +577,6 @@
         "opened": "Opened {{date}}",
         "decided": "decided {{date}}",
         "progress_label": "Account progress",
-        "current": "current",
         "route_title": "Route",
         "identity": "Identity",
         "karma": "Merit & demerit",

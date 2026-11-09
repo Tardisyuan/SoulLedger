@@ -49,7 +49,7 @@ describe("RouteMap · 在押 / 容量条", () => {
     branches: [],
     offShape: [],
   };
-  const held = new Map([["LOW", 4], ["HOT", 31], ["FULL", 9], ["NOCAP", 7]]);
+  const held = new Map([["LOW", 4], ["HOT", 32], ["FULL", 9], ["NOCAP", 7]]);
   const at = (id: string) => document.querySelector(`[data-station="${id}"]`)!;
 
   it("draws a bar per station with capacity, marks hot and danger, and none without capacity", () => {

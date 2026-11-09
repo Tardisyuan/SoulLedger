@@ -577,7 +577,6 @@
         "opened": "{{date}} 开庭",
         "decided": "{{date}} 判",
         "progress_label": "户头进度",
-        "current": "当前",
         "route_title": "行程",
         "identity": "身份",
         "karma": "功过",

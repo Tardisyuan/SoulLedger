@@ -2492,7 +2492,8 @@ li:last-child > .route-row {
 }
 .diyu-card--current {
   flex: 0 1 168px;
-  min-width: 6rem;
+  /* 393 宽下 6rem 会让整排多出 3px(batch-57-surfaces 的十三站 393 用例量的);5rem 仍放得下「现在 · 第 13 站」。 */
+  min-width: 5rem;
   align-items: flex-start;
   padding-inline: 0.75rem;
   text-align: left;
