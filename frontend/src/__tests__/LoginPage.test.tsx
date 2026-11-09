@@ -13,6 +13,7 @@ import LoginPage from "@/app/(auth)/login/page";
 import { authApi } from "@soulledger/core/api";
 import { LOGIN_STATUTES, type LoginStatute } from "@/src/lib/loginStatutes";
 import { defaultViewRoute } from "@/src/lib/defaultView";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   // A12: the page branches on this; the real one is a one-line type guard.
@@ -27,8 +28,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 jest.mock("@soulledger/core/platform", () => ({ setAccessToken: jest.fn(), setRefreshToken: jest.fn() }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ setUser: jest.fn() }) }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   LOCALE_LABELS: jest.requireActual("@/src/contexts/I18nContext").LOCALE_LABELS,

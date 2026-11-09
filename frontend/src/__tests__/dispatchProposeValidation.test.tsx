@@ -19,6 +19,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import ProposeDispatchPage from "@/app/dispatch/propose/page";
 import { dispatchApi, soulsApi, ledgerApi } from "@soulledger/core/api";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => {
   // The real rule, not a copy of it: a stub that re-implemented the count
@@ -62,10 +63,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 // The real gate, fed a real permission list — `suiteShape` forbids stubbing
 // the gate component itself, and rightly: a passthrough stub would let the

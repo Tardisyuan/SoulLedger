@@ -9,12 +9,11 @@
  * into an average balance; a wrong parse there produces a plausible-looking
  * number and nothing else.
  */
-import { cleanup, render, screen, waitFor, fireEvent } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, screen, waitFor, fireEvent } from "@testing-library/react";
 import DashboardPage from "@/app/dashboard/page";
 import { deathSyncApi, dispatchApi, judgmentApi, ledgerApi, officerAppApi } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 const mockReplace = jest.fn();
 let mockSearch = new URLSearchParams();
@@ -140,11 +139,7 @@ async function found(container: HTMLElement, selector: string): Promise<HTMLElem
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-  return render(<DashboardPage />, { wrapper: Wrapper });
+  return renderWithProviders(<DashboardPage />, { i18n: false });
 }
 
 beforeEach(() => {

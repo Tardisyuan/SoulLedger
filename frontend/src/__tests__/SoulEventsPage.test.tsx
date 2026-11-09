@@ -5,12 +5,11 @@
  * 是翻译过的词,原样的枚举成员一个都不能出现在格子里。
  */
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulEventsPage from "@/app/events/page";
 import { EventTypeFilter } from "@/src/components/events/EventTypeFilter";
 import { eventsApi } from "@soulledger/core/api";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   eventsApi: { list: jest.fn(), actors: jest.fn() },
@@ -60,11 +59,7 @@ function page(results: unknown[], count = results.length) {
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-  return render(<SoulEventsPage />, { wrapper: Wrapper });
+  return renderWithProviders(<SoulEventsPage />, { i18n: false });
 }
 
 beforeEach(() => {

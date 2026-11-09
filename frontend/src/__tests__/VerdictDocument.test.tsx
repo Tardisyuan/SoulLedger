@@ -7,14 +7,14 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { VerdictDocument, VerdictPrintSheet, type VerdictDocumentProps } from "@/src/components/judgment/VerdictDocument";
 import { saveBlob } from "@/src/lib/saveBlob";
+import { mockShowToast } from "./support/mocks";
 
 let mockLocale = "zh-Hans";
 let mockReady = true;
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (k: string) => k, locale: mockLocale, ready: mockReady }),
 }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 const mockPdf = jest.fn();
 jest.mock("@soulledger/core/api/judgment", () => ({
   judgmentApi: { verdictDocumentPdf: (...args: unknown[]) => mockPdf(...args) },

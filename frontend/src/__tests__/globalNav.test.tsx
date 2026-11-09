@@ -91,6 +91,7 @@ import { navItems, navSections } from "@/src/lib/navSections";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
+import { renderWithProviders } from "./support/render";
 
 const ALL_PATHS = ["/dashboard", "/souls", "/menus", "/soul-credentials", "/audit"];
 
@@ -109,9 +110,7 @@ function Nav({ collapsed = false, currentId = 3 }: { collapsed?: boolean; curren
 }
 
 function renderLayout() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<AppLayout>page body</AppLayout>, { wrapper: Wrapper });
+  return renderWithProviders(<AppLayout>page body</AppLayout>, { i18n: false });
 }
 
 /** 769–1199 与 ≥ 1200 两种宽度;GlobalNav 只问 `(max-width: 1199.98px)`。 */

@@ -25,10 +25,7 @@ jest.mock("next/navigation", () => ({
   useParams: () => ({ id: SOUL_ID }),
 }));
 
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
-}));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 
 const mockT = (key: string) => key;
 const mockI18n = {

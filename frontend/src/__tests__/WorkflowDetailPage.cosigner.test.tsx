@@ -4,11 +4,10 @@
  * passing verdicts, says why with the ◇ line (the officer App's `wait_cosigner` key) and lists the
  * owed signer as ◐. A refusal and a signed co-signer are not held.
  */
-import { fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen } from "@testing-library/react";
 import WorkflowDetailPage from "@/app/workflow/[id]/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -70,9 +69,7 @@ function workflow(node: Record<string, unknown>) {
 const OWED = { cosigners: [{ user_id: 2, name: "孟判官", signed: false }], waiting_on_cosigner: { id: 2, name: "孟判官" } };
 
 function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  return render(<WorkflowDetailPage />, { wrapper: Wrapper });
+  return renderWithProviders(<WorkflowDetailPage />, { i18n: false });
 }
 
 const pick = async (verdictKey: string) => fireEvent.click(await screen.findByLabelText(tZh(`workflow.verdicts.${verdictKey}`)));

@@ -8,10 +8,10 @@
  * members from `/audit-logs/actions/`); top resources sort by count, ties by
  * name, and each row links to the list pre-filtered by that resource.
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, within } from "@testing-library/react";
 import AuditStatsPage from "@/app/audit/stats/page";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: { stats: jest.fn(), actions: jest.fn() },
@@ -62,12 +62,7 @@ const STATS = {
 };
 
 function renderRoute() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <AuditStatsPage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<AuditStatsPage />, { i18n: false });
 }
 
 beforeEach(() => {

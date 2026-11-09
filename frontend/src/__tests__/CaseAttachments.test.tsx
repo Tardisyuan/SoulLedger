@@ -3,11 +3,11 @@
  * 真 QueryClient、真 hook;只替换 HTTP 层。服务端的规则(类型、大小、结案后不能删)有 pytest 管着,
  * 这里断言的是界面怎么说:按钮有没有、提示写在哪一行、取消和重试是不是真的动了请求。
  */
-import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import { judgmentApi } from "@soulledger/core/api";
 import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
 import { CaseAttachmentsPrintList } from "@/src/components/judgment/CaseAttachmentsPrintList";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -35,8 +35,7 @@ const file = (name: string, size = 1000, type = "application/pdf") => {
 };
 
 function renderIt(canWrite = true, ui = <CaseAttachments judgmentId="j-1" canWrite={canWrite} />) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { i18n: false });
 }
 const pick = (...files: File[]) => fireEvent.change(screen.getByTestId("attachments-input"), { target: { files } });
 

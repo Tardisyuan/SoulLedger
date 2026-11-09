@@ -2,10 +2,10 @@
  * 四十二条否定告白(埃及称心,2026-10-28):逐条记「如实 / 不实 / 未记」,结案后只读,不称心的案子不画。
  * Real QueryClient, real hooks; only the HTTP layer is stubbed.
  */
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { judgmentApi } from "@soulledger/core/api";
 import { NegativeConfessionPanel } from "@/src/components/judgment/NegativeConfessionPanel";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -29,12 +29,7 @@ const listing = (over: object = {}) => ({
 });
 
 function renderIt(canRecord = true) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <NegativeConfessionPanel judgmentId="j-1" canRecord={canRecord} />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<NegativeConfessionPanel judgmentId="j-1" canRecord={canRecord} />, { i18n: false });
 }
 
 beforeEach(() => jest.resetAllMocks());

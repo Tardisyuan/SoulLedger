@@ -41,8 +41,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 
 jest.mock("@xyflow/react", () => {
   const React = require("react");
@@ -129,13 +128,13 @@ jest.mock("@/src/components/ui/Modal", () => ({
 
 import { Flip } from "gsap/Flip";
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
+import { renderWithProviders as renderInProviders } from "./support/render";
 
 const getState = Flip.getState as unknown as jest.Mock;
 const from = Flip.from as unknown as jest.Mock;
 
 function renderWithProviders(ui: React.ReactElement) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return renderInProviders(ui, { i18n: false });
 }
 
 /**

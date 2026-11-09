@@ -11,13 +11,12 @@
  * that has to happen whenever a filter changes — otherwise the operator
  * lands on page 4 of a one-page result and sees nothing.
  */
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import AuditPage from "@/app/audit/page";
 import { auditApi, tenantsApi } from "@soulledger/core/api";
 import { saveBlob } from "@/src/lib/saveBlob";
 import { tZh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: { list: jest.fn(), exportCsv: jest.fn(), actions: jest.fn(), resources: jest.fn() },
@@ -85,11 +84,7 @@ function entry(over: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-  return render(<AuditPage />, { wrapper: Wrapper });
+  return renderWithProviders(<AuditPage />, { i18n: false });
 }
 
 /** The params object of the most recent auditApi.list call. */

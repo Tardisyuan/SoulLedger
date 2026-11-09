@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { wangsiApi, type Judgment } from "@soulledger/core/api";
 import { OffenceField, WangsiPanel, untimelyLine } from "@/src/components/judgment/DiyuCaseFields";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -45,8 +46,7 @@ const judgment = (over: Partial<Judgment> = {}) =>
   }) as Judgment;
 
 function renderIt(ui: ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { i18n: false });
 }
 
 beforeEach(() => jest.resetAllMocks());

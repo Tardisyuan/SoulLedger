@@ -117,6 +117,7 @@ import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
 import { savedTemplateToFlow, type TemplateNode } from "@/src/components/workflow/workflowEditorGraph";
 import { SAVE_BLOCKING, nodeRoles, validateFlow } from "@/src/components/workflow/workflowValidation";
 import { overlaps, region } from "@/src/components/workflow/workflowConditions";
+import { renderWithProviders } from "./support/render";
 
 const api = () => require("@soulledger/core/api").workflowApi.templates;
 
@@ -248,12 +249,7 @@ function renderEditor(published: unknown[] = STORED.nodes) {
       { id: "v3", number: 3, status: "PUBLISHED", nodes: published, created_at: "", updated_at: "", published_at: "2026-09-20T00:00:00Z", saved_by_name: null, published_by_name: "崔珏" },
     ],
   });
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <WorkflowEditor templateId="t1" />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<WorkflowEditor templateId="t1" />, { i18n: false });
 }
 
 describe("WorkflowEditor — versions and the engine fields", () => {

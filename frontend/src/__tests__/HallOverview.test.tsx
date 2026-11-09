@@ -3,10 +3,10 @@
  * 本殿文明的冥界图缩略(去 /realms 的链接,不发接口请求)。
  * 失败不说「已清空」(errorIsNotAnEmptyState 同一条约定)。
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi } from "@soulledger/core/api";
 import { HallOverview } from "@/src/components/dashboard/HallOverview";
+import { renderWithProviders } from "./support/render";
 
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
@@ -67,12 +67,7 @@ const STATS = {
 const page = <T,>(results: T[]) => ({ data: { count: results.length, results } });
 
 function renderIt() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <HallOverview />
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<HallOverview />, { i18n: false });
 }
 
 beforeEach(() => {

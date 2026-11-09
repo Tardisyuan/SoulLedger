@@ -11,12 +11,12 @@ import path from "node:path";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NAVIGABLE, NOT_NAVIGABLE, NotificationTargetLink, notificationTarget } from "@/src/components/notifications/NotificationTarget";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
+import { mockShowToast } from "./support/mocks";
 
 jest.mock("@soulledger/core/api/sentence-plans", () => ({ sentencePlansApi: { get: jest.fn() } }));
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
-const mockShowToast = jest.fn();
-jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 
 const APPS = path.resolve(__dirname, "..", "..", "..", "backend", "apps");

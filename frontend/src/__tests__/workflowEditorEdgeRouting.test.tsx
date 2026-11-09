@@ -14,8 +14,7 @@
  * The failure it pins is silent in exactly the way that matters: the save
  * answers 201 and the branch the operator just drew is simply not in the body.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 
 jest.mock("@xyflow/react", () => {
   const React = require("react");
@@ -97,24 +96,23 @@ jest.mock("@/src/components/ui/Modal", () => ({
 }));
 
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
+import { renderWithProviders } from "./support/render";
 
 function renderEditor() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <WorkflowEditor
-        initialTemplateData={{
-          name: "two node chain",
-          civilization: "CHINESE",
-          case_type: "ROUTINE",
-          priority: 0,
-          nodes_json: [
-            { id: "A", node_name: "A", node_type: "TRIAL", node_order: 1, approver_type: "ROLE" },
-            { id: "B", node_name: "B", node_type: "FINAL", node_order: 2, approver_type: "ROLE" },
-          ],
-        }}
-      />
-    </QueryClientProvider>
+  return renderWithProviders(
+    <WorkflowEditor
+      initialTemplateData={{
+        name: "two node chain",
+        civilization: "CHINESE",
+        case_type: "ROUTINE",
+        priority: 0,
+        nodes_json: [
+          { id: "A", node_name: "A", node_type: "TRIAL", node_order: 1, approver_type: "ROLE" },
+          { id: "B", node_name: "B", node_type: "FINAL", node_order: 2, approver_type: "ROLE" },
+        ],
+      }}
+    />,
+    { i18n: false },
   );
 }
 

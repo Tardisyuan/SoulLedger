@@ -10,12 +10,12 @@
  * activity and its own states; the first-time setup screen and the
  * `onboarded` flag; and the absence of what A9 removed.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import WelcomePage from "@/app/welcome/page";
 import { auditApi, authApi, ledgerApi, permApi } from "@soulledger/core/api";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { tZh, zh } from "./support/zhBundle";
+import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
@@ -73,12 +73,7 @@ const mockedPrefs = authApi.preferences as jest.Mock;
 const mockedSavePrefs = authApi.updatePreferences as jest.Mock;
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <WelcomePage />
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<WelcomePage />, { i18n: false });
 }
 
 const stats = {

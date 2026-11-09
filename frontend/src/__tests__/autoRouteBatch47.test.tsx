@@ -5,8 +5,7 @@
  * 检查器类型只读并写「N 条出口未连」;存草稿时没连的出口照样存成分支(去处留空),读回时仍认得它;
  * 从通过端口拖出的线依次接 欧洲 → 亚洲 → 不详;「问题」里点一行,焦点落到那条出口的下拉。
  */
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { tZh } from "./support/zhBundle";
 
@@ -93,12 +92,12 @@ jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: 
 
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
 import { workflowApi } from "@soulledger/core/api";
+import { renderWithProviders } from "./support/render";
 
 const update = workflowApi.templates.update as jest.Mock;
 
 function wrap(ui: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return renderWithProviders(ui, { i18n: false });
 }
 
 const BASE = { court_code: "岔路口草地", approver_type: "ROLE", approver_role: "JUDGE" };
