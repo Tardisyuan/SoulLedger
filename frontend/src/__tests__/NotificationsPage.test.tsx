@@ -8,7 +8,7 @@
  * whose notifications happen to be unread. Both are pinned here, along with
  * the failure toasts for the two mutations.
  */
-import { screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NotificationsPage from "@/app/notifications/page";
