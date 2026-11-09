@@ -40,7 +40,7 @@ details[open] summary{margin-bottom:12px}
 </header>
 
 <article>
-<h2>第二十六批 · egy:再会页、行程块、界域在押条、十三站卡的 34 个新键<span class="tag new">待回 · 2026-11-10</span></h2>
+<h2>第二十六批 · egy:再会页、行程块、界域在押条、十三站卡的 39 个新键<span class="tag new">待回 · 2026-11-10</span></h2>
 <p>请把下表 34 个键的 egy 写进 <code>v4-batch26-egy.json</code>(扁平,键是下表的完整路径,值是 egy 文本),说明写在 <code>v4-batch26-reply.md</code>。照第十八批的规矩:新词根、专名在回复里列出来;<code>{{name}}</code>、<code>{{n}}</code> 占位原样保留。</p>
 <section>
 <h3>这些键从哪来</h3>
@@ -89,7 +89,16 @@ details[open] summary{margin-bottom:12px}
 <tr><td><code>souls.detail.journey.stage_na</code></td><td>不适用</td><td>not applicable</td></tr>
 
 </tbody></table>
-<p class="ask">请给:<code>v4-batch26-egy.json</code>(34 个键齐全)和回复里的新词根 / 专名清单。</p>
+<h3>补充:又加了 5 个(2026-11-10,行程块补数据)</h3>
+<p>停留超过一年写年数、隐含经过的站、审判中的说明句、称心未定、希腊千年的「第 N 年」。一起写进同一份 json。</p>
+<table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>realms.journey.years_here</code></td><td>到此 {{n}} 年</td><td>{{n}} years here</td></tr>
+<tr><td><code>realms.journey.implied</code></td><td>已过（未登记）</td><td>Passed (not recorded)</td></tr>
+<tr><td><code>realms.journey.judged_at</code></td><td>{{court}}受审中</td><td>Under judgment at {{court}}</td></tr>
+<tr><td><code>realms.journey.weighing</code></td><td>心在天平上，结果未定</td><td>The heart is on the scales; no verdict yet</td></tr>
+<tr><td><code>realms.journey.year_of</code></td><td>第 {{n}} 年 · {{n}} / {{total}}</td><td>Year {{n}} · {{n}} / {{total}}</td></tr>
+</tbody></table>
+<p class="ask">请给:<code>v4-batch26-egy.json</code>(39 个键齐全)和回复里的新词根 / 专名清单。</p>
 </section>
 </article>
 
