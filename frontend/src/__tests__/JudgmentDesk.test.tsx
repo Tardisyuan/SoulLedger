@@ -1303,15 +1303,16 @@ describe("v3 · 全案(F)", () => {
     expect(desk()).toHaveAttribute("data-view", "case");
     expect(screen.queryAllByRole("tab")).toHaveLength(0);
     for (const m of ["confession", "evidence", "law"]) expect(panel(m)).not.toHaveAttribute("hidden");
-    expect(document.getElementById("desk-draft")).toHaveClass("hidden");
-    expect(document.getElementById("desk-soul")).toHaveClass("hidden");
+    expect(document.getElementById("desk-draft")).toHaveAttribute("hidden");
+    expect(document.getElementById("desk-soul")).toHaveAttribute("hidden");
     // 1–4 在全案里照样选判。
     fireEvent.keyDown(document.body, { key: "4" });
     expect(radio("RETRY").checked).toBe(true);
 
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(desk()).toHaveAttribute("data-view", "focus");
-    expect(document.getElementById("desk-draft")).not.toHaveClass("hidden");
+    expect(document.getElementById("desk-draft")).not.toHaveAttribute("hidden");
+    expect(document.getElementById("desk-soul")).not.toHaveAttribute("hidden");
     expect(screen.getAllByRole("tab")).toHaveLength(3);
     // 裁决还在:全案只是换栏,不卸载。
     expect(radio("RETRY").checked).toBe(true);
@@ -1405,18 +1406,21 @@ describe("v3 · 草稿与批注开关(768–1279)", () => {
     await screen.findAllByRole("radio");
     expect(toggle()).toHaveAttribute("aria-expanded", "false");
     expect(toggle()).toHaveAttribute("aria-controls", "desk-draft");
+    expect(draftSection()).toHaveAttribute("data-collapsed", "true");
+    // 收着 = 768–1279 下不显示。只在这里钉一次类名;其余看 data-collapsed(两者出自同一个变量)。
     expect(draftSection()).toHaveClass("md:max-xl:hidden");
     // 收着也挂着:判词框在 DOM 里,能写,写了会存。
     fireEvent.change(notesBox(), { target: { value: "收着写" } });
 
     fireEvent.click(toggle());
     expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(draftSection()).not.toHaveAttribute("data-collapsed");
     expect(draftSection()).not.toHaveClass("md:max-xl:hidden");
     expect(draftSection()).toHaveClass("md:order-3");
     expect(notesBox().value).toBe("收着写");
 
     fireEvent.click(toggle());
-    expect(draftSection()).toHaveClass("md:max-xl:hidden");
+    expect(draftSection()).toHaveAttribute("data-collapsed", "true");
     expect(notesBox().value).toBe("收着写");
   });
 
@@ -1447,7 +1451,7 @@ describe("v3 · 草稿与批注开关(768–1279)", () => {
     renderPage();
     await screen.findByText(tZh("judgment.detail.final"));
     expect(screen.queryByTestId("draft-toggle")).toBeNull();
-    expect(draftSection()).not.toHaveClass("md:max-xl:hidden");
+    expect(draftSection()).not.toHaveAttribute("data-collapsed");
   });
 
   it("realm_full 被拒:确认层收起,草稿栏自己展开(拒绝写在 戊 里)", async () => {
@@ -1458,7 +1462,7 @@ describe("v3 · 草稿与批注开关(768–1279)", () => {
     await concludeViaLayer();
     await waitFor(() => expect(screen.queryByTestId("confirm-layer")).toBeNull());
     expect(toggle()).toHaveAttribute("aria-expanded", "true");
-    expect(draftSection()).not.toHaveClass("md:max-xl:hidden");
+    expect(draftSection()).not.toHaveAttribute("data-collapsed");
   });
 });
 

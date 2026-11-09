@@ -789,6 +789,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const CURSOR_LINK =
     "inline-flex items-center gap-2 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]";
   const fullCase = view === "case";
+  /** 768–1279 下草稿栏收着(`data-collapsed` 与 `md:max-xl:hidden` 同出这一处)。 */
+  const draftCollapsed = !fullCase && !isFinal && !draftOpen;
   /* 版式(v3 第 7 轮 `JudgmentDesk`):≥1280 三栏 灵魂 | 当前这一判 | 草稿;768–1279 两栏,草稿落到资料舱下面;
      <768 单栏,顺序是 判 → 资料舱 → 草稿 → 灵魂(原型的手机版:案卷导航 + 判 + 资料),灵魂与草稿由导航跳到。
      全案(F)时只剩资料舱三栏并置 + 右侧窄栏的判。一份 DOM,只换栏与顺序:判词、检索框里的字都不丢。 */
@@ -1028,7 +1030,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section
           id="desk-soul"
           aria-label={t("judgment.queue.case")}
-          className={`min-w-0 scroll-mt-28 ${fullCase ? "hidden" : "order-4 md:order-1"}`}
+          hidden={fullCase || undefined}
+          className={`min-w-0 scroll-mt-28 ${fullCase ? "" : "order-4 md:order-1"}`}
         >
           <JudgmentSectionHead mark="甲" title={t("judgment.detail.soul_info")} />
           <p className="mt-3 text-lg text-[oklch(var(--color-ink))] wrap-break-word">
@@ -1348,12 +1351,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section
           id="desk-draft"
           aria-label={t("judgment.desk.nav_draft")}
+          hidden={fullCase || undefined}
+          data-collapsed={draftCollapsed || undefined}
           className={`min-w-0 scroll-mt-28 ${
             fullCase
-              ? "hidden"
+              ? ""
               : `order-3 md:col-span-2 xl:order-3 xl:col-span-1 ${
                   /* 已结案没有可编辑的东西,判词照常摊开;未结案在 768–1279 收着,打开后排在资料舱上面。 */
-                  isFinal ? "md:order-4" : draftOpen ? "md:order-3" : "md:order-4 md:max-xl:hidden"
+                  isFinal ? "md:order-4" : draftCollapsed ? "md:order-4 md:max-xl:hidden" : "md:order-3"
                 }`
           }`}
         >

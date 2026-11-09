@@ -276,11 +276,9 @@ describe("arriving at one node by its anchor", () => {
     await preview();
     const row = document.getElementById("node-n1")!;
     expect(row).toHaveAttribute("data-anchored", "true");
-    expect(row).toHaveClass("bg-[oklch(var(--color-surface-2))]", "shadow-[inset_3px_0_0_oklch(var(--color-ink))]");
     expect(scroll.mock.contexts).toContain(row);
     for (const other of ["node-n2", "node-n3"]) {
       expect(document.getElementById(other)).not.toHaveAttribute("data-anchored");
-      expect(document.getElementById(other)).not.toHaveClass("shadow-[inset_3px_0_0_oklch(var(--color-ink))]");
     }
   });
 

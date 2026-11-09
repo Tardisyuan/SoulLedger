@@ -53,14 +53,14 @@ describe("FilterChipToggle", () => {
     );
     const btn = screen.getByRole("button", { name: "仅看有问题的" });
     expect(btn).toHaveAttribute("aria-pressed", "false");
-    expect(btn.className).not.toContain("bg-[oklch(var(--color-ink))]");
+    expect(btn).not.toHaveAttribute("data-active");
     expect(btn).not.toHaveTextContent("✓");
     fireEvent.click(btn);
     expect(onPressedChange).toHaveBeenCalledWith(true);
 
     rerender(<FilterChipToggle pressed onPressedChange={onPressedChange}>仅看有问题的</FilterChipToggle>);
     const on = screen.getByRole("button", { pressed: true });
-    expect(on).toHaveClass("bg-[oklch(var(--color-ink))]");
+    expect(on).toHaveAttribute("data-active", "true");
     expect(on).toHaveTextContent("✓");
   });
 });

@@ -62,7 +62,6 @@ describe("RouteMap · 在押 / 容量条", () => {
     expect(at("LOW")).toHaveTextContent("4 / 40");
     expect(at("HOT").querySelector("[data-occupancy-bar]")).toHaveAttribute("data-occupancy-bar", "hot");
     expect(at("HOT").querySelector('[data-mark="held"]')).toHaveAttribute("data-hot", "true");
-    expect(at("HOT").querySelector('[data-mark="held"]')).toHaveClass("realm-occ-hot");
     expect(at("FULL").querySelector("[data-occupancy-bar]")).toHaveAttribute("data-occupancy-bar", "danger");
     // 没记容量:只写在押,不画条,不写「/」
     expect(at("NOCAP").querySelector("[data-occupancy-bar]")).toBeNull();

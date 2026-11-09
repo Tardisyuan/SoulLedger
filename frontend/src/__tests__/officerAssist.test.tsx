@@ -186,7 +186,7 @@ describe("pushed beside the page, or a drawer (1a 一, 1g)", () => {
     const drawer = await screen.findByRole("dialog", { name: "问一问" });
     expect(drawer).toHaveAttribute("aria-modal", "true");
     expect(screen.queryByRole("complementary", { name: "问一问" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("app-content").className).not.toContain("pr-[420px]");
+    expect(screen.getByTestId("app-content")).not.toHaveAttribute("data-assist-pushed");
   });
 });
 
@@ -245,7 +245,6 @@ describe("Design E 组: the panel's head, its room, and the connection bar", () 
     expect(drawer).toHaveAttribute("data-assist-mode", "overlay");
     expect(screen.queryByRole("complementary", { name: "问一问" })).not.toBeInTheDocument();
     expect(screen.getByTestId("app-content")).not.toHaveAttribute("data-assist-pushed");
-    expect(screen.getByTestId("app-content").className).not.toContain("pr-[420px]");
     // The scrim token, not a hand-mixed black.
     expect(document.querySelector("[class*='--color-scrim']")).not.toBeNull();
   });
