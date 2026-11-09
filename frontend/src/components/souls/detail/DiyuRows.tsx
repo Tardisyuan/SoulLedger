@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { DIYU_STATIONS, diyuStationOrdinal, soulsApi, type Soul } from "@soulledger/core/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DIYU_STATIONS, diyuStationOrdinal, eventsApi, soulsApi, type Soul } from "@soulledger/core/api";
 import { soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -13,6 +13,7 @@ import { SelectField } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { responseCode } from "@soulledger/core/api/client";
 import { SoulUnderworldMap } from "./SoulUnderworldMap";
+import { stayFrom, stayText } from "@/src/lib/journeyModel";
 
 const ROW = "border-t border-[oklch(var(--color-line))] py-3";
 const DT = "text-2xs text-[oklch(var(--color-ink-subtle))]";
@@ -47,15 +48,30 @@ export function DiyuRows({ soul }: { soul: Soul }) {
  *
  * 第二十五批 §五.2:十三张卡不再等宽 —— 已过折成约 30 宽的窄条(勾 + 站号)、现在那张展开约 168 宽
  * (1.5 metal 内描,「现在 · 第 N 站」+ 站名)、未到是虚线框(站号;xl 起写站名)。三种状态靠宽度 / 实底 / 虚线分开,
- * 不靠颜色;已过与未到另有 sr-only 状态字。稿里的「到此 N 日」没画:灵魂上只有 `diyu_station`,没有到站时间,不编。
+ * 不靠颜色;已过与未到另有 sr-only 状态字。现在那张写「到此 N 日」(满一年写年):到站时间是最近一条
+ * `DIYU_STATION_CHANGED` 事件(每次挪站一条,与那一笔同一事务;path 里只有十殿,没有十三站),
+ * 而且只认它的 `to` 就是现在这站 —— 不是就不写,不写 0。
  * 样式在 globals.css 末尾「十三站卡」一节。
  */
 export type DiyuCardState = "passed" | "current" | "ahead";
+/** When the soul reached `station`: the latest station event, and only if it moved the soul there. */
+export function diyuArrival(events: readonly { payload?: Record<string, unknown> | null; create_time: string }[], station: string): string | null {
+  const last = events[events.length - 1];
+  return last && last.payload?.to === station ? last.create_time : null;
+}
 /** Station `i` (0-based) against the soul's 1-based ordinal `at`. */
 export const diyuCardState = (i: number, at: number): DiyuCardState => (i + 1 < at ? "passed" : i + 1 === at ? "current" : "ahead");
 export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boolean }) {
   const { t } = useI18n();
   const [moving, setMoving] = useState(false);
+  // 与 SoulUnderworldMap 同一个键:按时间正序的第一页(一世十三站,够用)。
+  const moves = useQuery({
+    queryKey: [...soulKeys.all, "station-events", soul.id],
+    queryFn: () =>
+      eventsApi.list({ soul: soul.id, event_type: "DIYU_STATION_CHANGED", ordering: "create_time" }).then((r) => r.data.results ?? []),
+    enabled: soul.civilization === "CHINESE",
+    staleTime: 60_000,
+  });
   if (soul.civilization !== "CHINESE") return null;
   const at = diyuStationOrdinal(soul.diyu_station);
   if (at === null) {
@@ -66,6 +82,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
     );
   }
   const name = (s: Station) => t(`souls.diyu_station.${s}`);
+  const stay = stayFrom(Array.isArray(moves.data) ? diyuArrival(moves.data, DIYU_STATIONS[at - 1]) : null);
   return (
     <section
       data-testid="soul-diyu-station"
@@ -103,6 +120,11 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
                 <>
                   <span className="diyu-card-now text-2xs font-semibold">{t("souls.diyu_station.now_card", { n })}</span>
                   <span title={name(s)} className="w-full truncate font-title text-md font-semibold text-[oklch(var(--color-ink))]">{name(s)}</span>
+                  {stay && (
+                    <span data-testid="diyu-card-stay" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
+                      {stayText(t, stay)}
+                    </span>
+                  )}
                 </>
               ) : (
                 <>

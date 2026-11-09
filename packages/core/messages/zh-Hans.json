@@ -3278,7 +3278,12 @@
       "branch_legend": "点线小圈 = 支线，这一世没走",
       "not_a_place": "不是地方",
       "no_rebirth": "不轮回",
-      "returned": "退回重审 · {{n}} 次"
+      "returned": "退回重审 · {{n}} 次",
+      "years_here": "到此 {{n}} 年",
+      "implied": "已过（未登记）",
+      "judged_at": "{{court}}受审中",
+      "weighing": "心在天平上，结果未定",
+      "year_of": "第 {{n}} 年 · {{n}} / {{total}}"
     }
   },
   "organization": {

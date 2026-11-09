@@ -4,8 +4,8 @@
  */
 import type { ApprovalNode, Realm } from "@soulledger/core/api";
 import type { Station, StationState, Topology } from "@/src/lib/routeTopology";
-import { collapseRoad, journeyCounts, offRoute, soulRoad, stageStates } from "@/src/lib/journeyModel";
-import { returnCounts, workflowGraph } from "@/src/lib/journeyLayout";
+import { collapseRoad, journeyCounts, judgingLine, offRoute, soulRoad, stageStates, stayFrom } from "@/src/lib/journeyModel";
+import { returnCounts, topologyGraph, workflowGraph } from "@/src/lib/journeyLayout";
 import { wrapLabel } from "@/src/components/journey/JourneyMap";
 
 const st = (id: string, state: StationState, realm: Partial<Realm> = {}): Station => ({
@@ -127,7 +127,7 @@ describe("journeyCounts — the title's right-hand count", () => {
       offShape: [],
     };
     const counts = journeyCounts(topology, soulRoad(topology));
-    expect(counts.walked).toBe(2); // c1 + 待审所;c2 没有记录,不算(规则 16)
+    expect(counts.walked).toBe(3); // c1 + 待审所 + c2(没有记录,但在「现在」之前:已过未登记)
     expect(counts.current?.id).toBe("c3");
     expect(counts.remaining).toBe(2);
     expect(counts.end?.id).toBe("c5");
@@ -194,5 +194,118 @@ describe("wrapLabel (2026-11-10: one-line fit cut every court to 「第一殿秦
     const [a, b] = wrapLabel("第十殿转轮王与六道轮回", 40, 12);
     expect(a).toBe("第十殿");
     expect(b.endsWith("…")).toBe(true);
+  });
+});
+
+describe("implied stops — 已过（未登记）: a soul cannot be past a station it never went through", () => {
+  const TEXT = { name: (s: Station) => s.id, notAPlace: "x", offRoute: "off", region: (r: string) => r, fork: (f: string) => f };
+  const drawn = (topology: Topology) => {
+    const road = soulRoad(topology);
+    const graph = topologyGraph(topology, road, TEXT);
+    return { road, graph, at: (id: string) => graph.stops.find((s) => s.id === id)! };
+  };
+
+  it("Egypt at Aaru with only the entry and the hall recorded: 七道通路 and 二十一道门户 are passed, not ahead", () => {
+    const topology: Topology = {
+      kind: "fork_two",
+      schematic: false,
+      trunk: [st("entry", "travelled"), st("seven", "pending"), st("hall", "travelled")],
+      roads: [
+        { fork: "PASS", terminal: false, stations: [st("gates", "pending"), st("aaru", "current")] },
+        { fork: "FAIL", terminal: true, stations: [st("gone", "pending")] },
+      ],
+      branches: [],
+      offShape: [],
+    };
+    const { road, graph, at } = drawn(topology);
+    expect([...road.implied].sort()).toEqual(["gates", "seven"]);
+    expect([at("seven").state, at("seven").implied]).toEqual(["travelled", true]);
+    expect([at("gates").state, at("gates").implied]).toEqual(["travelled", true]);
+    expect(at("hall").implied).toBeUndefined();
+    expect(at("gone").route).toBe("off");
+    const kind = (id: string) => graph.edges.find((e) => e.id === id)?.kind;
+    expect([kind("entry>seven"), kind("seven>hall"), kind("hall>gates"), kind("gates>aaru")]).toEqual(["walked", "walked", "walked", "walked"]);
+    expect(journeyCounts(topology, road)).toMatchObject({ walked: 4, remaining: 0 });
+  });
+
+  it("Greece at the Isles with only Acheron and the Isles recorded: the meadow is passed (trunk in `order`)", () => {
+    const topology: Topology = {
+      kind: "fork",
+      schematic: false,
+      trunk: [st("meadow", "pending", { order: 2 }), st("acheron", "travelled", { order: 1 })],
+      roads: [
+        { fork: "LEFT", stations: [st("tartarus", "pending")] },
+        { fork: "RIGHT", stations: [st("isles", "current")] },
+      ],
+      branches: [],
+      offShape: [],
+    };
+    const { road, at, graph } = drawn(topology);
+    expect(ids(road.stations)).toEqual(["acheron", "meadow", "isles"]);
+    expect([...road.implied]).toEqual(["meadow"]);
+    expect(at("meadow")).toMatchObject({ state: "travelled", implied: true });
+    expect(at("tartarus").route).toBe("off");
+    expect(graph.edges.find((e) => e.id === "acheron>meadow")?.kind).toBe("walked");
+  });
+
+  it("a line soul with a complete path: nothing implied, states as recorded", () => {
+    const topology: Topology = {
+      kind: "line",
+      schematic: false,
+      stations: [st("c1", "travelled"), st("c2", "travelled"), st("c3", "current"), st("c4", "pending")],
+      branches: [],
+      offShape: [],
+    };
+    const { road, graph } = drawn(topology);
+    expect(road.implied.size).toBe(0);
+    expect(graph.stops.map((s) => [s.state, s.implied])).toEqual([
+      ["travelled", undefined],
+      ["travelled", undefined],
+      ["current", undefined],
+      ["pending", undefined],
+    ]);
+  });
+
+  it("nothing walked yet: nothing implied", () => {
+    const topology: Topology = { kind: "line", schematic: false, stations: [st("c1", "pending"), st("c2", "pending")], branches: [], offShape: [] };
+    expect(soulRoad(topology).implied.size).toBe(0);
+  });
+});
+
+describe("stayFrom — days under a year, then whole years", () => {
+  const now = Date.parse("2026-11-09T00:00:00Z");
+  it("counts days below 365", () => {
+    expect(stayFrom("2026-11-06T00:00:00Z", now)).toEqual({ unit: "days", n: 3 });
+    expect(stayFrom("2025-11-10T00:00:00Z", now)).toEqual({ unit: "days", n: 364 });
+  });
+  it("switches to whole years (1285 → 741, not 270705 days)", () => {
+    expect(stayFrom("2025-11-09T00:00:00Z", now)).toEqual({ unit: "years", n: 1 });
+    expect(stayFrom("1285-06-01T00:00:00Z", now)).toEqual({ unit: "years", n: 741 });
+  });
+  it("no or unreadable start → null, never 0", () => {
+    expect(stayFrom(null, now)).toBeNull();
+    expect(stayFrom("not a date", now)).toBeNull();
+  });
+});
+
+describe("judgingLine — the sentence under the title", () => {
+  const j = (over: Partial<{ court: string; verdict: unknown; concluded_at: string | null; created_at: string }> = {}) => ({
+    court: "第五殿",
+    verdict: null,
+    concluded_at: null,
+    created_at: "2026-06-01T00:00:00Z",
+    ...over,
+  });
+  it("JUDGING with an open case names its court; the latest open case wins", () => {
+    expect(judgingLine("JUDGING", "CHINESE", [j({ court: "第一殿" }), j({ created_at: "2026-06-02T00:00:00Z" })])).toEqual({ kind: "court", court: "第五殿" });
+  });
+  it("Egypt before a verdict: the heart is on the scales", () => {
+    expect(judgingLine("JUDGING", "EGYPTIAN", [j({ court: "两真之殿" })])).toEqual({ kind: "weighing" });
+    expect(judgingLine("JUDGING", "EGYPTIAN", [j({ verdict: "PASSED" })])).toBeNull();
+  });
+  it("not judging, only concluded cases, or no court → null (the shape name stays)", () => {
+    expect(judgingLine("DISPOSED", "CHINESE", [j()])).toBeNull();
+    expect(judgingLine("JUDGING", "CHINESE", [j({ concluded_at: "2026-06-03T00:00:00Z" })])).toBeNull();
+    expect(judgingLine("JUDGING", "CHINESE", [j({ court: "  " })])).toBeNull();
   });
 });

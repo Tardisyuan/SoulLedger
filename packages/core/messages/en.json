@@ -3278,7 +3278,12 @@
       "branch_legend": "Dotted ring = a branch not walked in this life",
       "not_a_place": "Not a place",
       "no_rebirth": "No rebirth",
-      "returned": "Sent back · {{n}}×"
+      "returned": "Sent back · {{n}}×",
+      "years_here": "{{n}} years here",
+      "implied": "Passed (not recorded)",
+      "judged_at": "Under judgment at {{court}}",
+      "weighing": "The heart is on the scales; no verdict yet",
+      "year_of": "Year {{n}} · {{n}} / {{total}}"
     }
   },
   "organization": {

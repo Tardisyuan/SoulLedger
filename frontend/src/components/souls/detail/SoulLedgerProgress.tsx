@@ -10,7 +10,19 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
 import { buildTopology, type Station, type Topology } from "@/src/lib/routeTopology";
-import { journeyCounts, offRoute, roadFraction, soulRoad, stageStates, type Road, type StageState } from "@/src/lib/journeyModel";
+import {
+  journeyCounts,
+  judgingLine,
+  offRoute,
+  roadFraction,
+  soulRoad,
+  stageStates,
+  stayFrom,
+  stayText,
+  type Road,
+  type StageState,
+} from "@/src/lib/journeyModel";
+import { courtLabel, courtSlug } from "@soulledger/core/domain/courts";
 import { topologyGraph } from "@/src/lib/journeyLayout";
 import { JourneyMap } from "@/src/components/journey/JourneyMap";
 import { MissingValue } from "@/src/components/ui/DomainValue";
@@ -49,10 +61,18 @@ export function SoulLedgerProgress({
     queryKey: soulKeys.path(soul.id),
     queryFn: () => soulsApi.path(soul.id).then((r) => r.data),
   });
+  // 希腊千年弧:与 SoulUnderworldMap 同一个键、同一条规则(永罚或起点没登记 → null → 不画)。
+  const disposition = latest(dispositions, (d) => d.executed_at ?? d.created_at);
+  const greekTerm = soul.civilization === "GREEK" && !disposition?.is_eternal;
+  const ledger = useQuery({
+    queryKey: soulKeys.ledger(soul.id),
+    queryFn: async () => (await soulsApi.karma(soul.id)).data,
+    enabled: greekTerm,
+    staleTime: 30_000,
+  });
 
   const opened = judgments.length ? judgments.reduce((a, b) => (a.created_at <= b.created_at ? a : b)) : null;
   const decided = latest(judgments.filter((j) => j.concluded_at), (j) => j.concluded_at);
-  const disposition = latest(dispositions, (d) => d.executed_at ?? d.created_at);
   const rebirth = latest(reincarnations, (r) => r.reincarnated_at);
 
   const statuses = stepStatuses(soul.current_state, [true, judgments.length > 0, dispositions.length > 0, reincarnations.length > 0]);
@@ -97,7 +117,20 @@ export function SoulLedgerProgress({
       ? `${t("realms.journey.station_n", { n: String(numbered) })} · ${name(here)}`
       : name(here)
     : labels[Math.max(0, stageAt)];
-  const days = here ? daysHere(ready!.path, here) : null;
+  const stay = here ? stayHere(ready!.path, here) : null;
+  const stayLine = stay ? stayText(t, stay) : null;
+  const reading = greekTerm ? ledger.data?.reading : undefined;
+  const term =
+    here?.code === "GR_TARTARUS" && reading?.kind === "SENTENCE" && reading.elapsed_years != null
+      ? { years: Math.max(0, reading.elapsed_years), total: reading.circuit_years }
+      : null;
+  const judging = judgingLine(soul.current_state, soul.civilization, judgments);
+  const courtName = judging?.kind === "court" ? courtLabel(t, judging.court) : "";
+  const sentence = !judging
+    ? null
+    : judging.kind === "weighing"
+      ? t("realms.journey.weighing")
+      : `${courtSlug(judging.court)?.startsWith("court_") ? `${t("workflow.court.ten_courts")} · ` : ""}${t("realms.journey.judged_at", { court: courtName })}`;
   const countText = counts
     ? [
         t("realms.journey.walked_n", { n: String(counts.walked) }),
@@ -106,7 +139,7 @@ export function SoulLedgerProgress({
           : counts.end
             ? t("realms.journey.left_to", { n: String(counts.remaining), name: name(counts.end) })
             : null,
-        days !== null ? t("realms.journey.days_here", { n: String(days) }) : null,
+        stayLine,
       ]
         .filter(Boolean)
         .join(" · ") + (topology?.schematic ? t("realms.journey.schematic_suffix") : "")
@@ -119,8 +152,8 @@ export function SoulLedgerProgress({
         <div className="flex flex-wrap items-baseline gap-x-3 min-w-0">
           <h2 data-testid="soul-journey-title" className="font-serif text-lg text-[oklch(var(--color-ink))]">{title}</h2>
           {topology && (
-            <span className="text-sm text-[oklch(var(--color-ink-muted))]">
-              {topology.schematic ? t("realms.topology.shape_line") : t(`realms.topology.shape_${topology.kind}`)}
+            <span data-testid="soul-journey-sub" className="text-sm text-[oklch(var(--color-ink-muted))]">
+              {sentence ?? (topology.schematic ? t("realms.topology.shape_line") : t(`realms.topology.shape_${topology.kind}`))}
               {topology.schematic && (
                 <span data-testid="topology-schematic" className="journey-pill ml-2 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] px-2 text-2xs">
                   {t("realms.topology.schematic")}
@@ -159,7 +192,14 @@ export function SoulLedgerProgress({
             <Skeleton className="h-6 w-full" />
           </div>
         ) : (
-          <SoulRoute topology={topology} road={road} name={name} heading={numbered !== null ? t("realms.journey.now_station", { n: String(numbered) }) : t("realms.journey.now")} sub={days !== null ? t("realms.journey.days_here", { n: String(days) }) : null} />
+          <SoulRoute
+            topology={topology}
+            road={road}
+            name={name}
+            heading={numbered !== null ? t("realms.journey.now_station", { n: String(numbered) }) : t("realms.journey.now")}
+            sub={term ? t("realms.journey.year_of", { n: String(term.years), total: String(term.total) }) : stayLine}
+            progress={term && term.total > 0 ? term.years / term.total : null}
+          />
         )}
       </div>
       {/* 地府的图在十三站卡里(DiyuStationStrip);其余三个文明的图在行程下面。 */}
@@ -170,12 +210,10 @@ export function SoulLedgerProgress({
   );
 }
 
-/** Whole days since the open path entry for `here` began. */
-function daysHere(path: readonly SoulPathEntry[], here: Station): number | null {
+/** How long since the open path entry for `here` began (days under a year, then whole years). */
+function stayHere(path: readonly SoulPathEntry[], here: Station) {
   const entry = path.find((e) => e.left_at === null && (e.realm_id ?? e.id) === here.id);
-  if (!entry) return null;
-  const ms = Date.now() - new Date(entry.entered_at).getTime();
-  return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 86_400_000)) : null;
+  return entry ? stayFrom(entry.entered_at) : null;
 }
 
 /** One cell of the stage bar: icon + name above a 10-high bar. Four states differ by shape, not only colour. */
@@ -206,12 +244,14 @@ function SoulRoute({
   name,
   heading,
   sub,
+  progress,
 }: {
   topology: Topology;
   road: Road;
   name: (s: Station) => string;
   heading: string;
   sub: string | null;
+  progress: number | null;
 }) {
   const { t } = useI18n();
   const graph = topologyGraph(topology, road, {
@@ -235,7 +275,7 @@ function SoulRoute({
         <JourneyMap
           graph={graph}
           label={t("souls.detail.ledger.route_title")}
-          plate={{ heading, sub }}
+          plate={{ heading, sub, progress }}
           narrow={{
             road: road.stations.map((s) => s.id),
             tails: road.tails.map((x) => x.station.id),

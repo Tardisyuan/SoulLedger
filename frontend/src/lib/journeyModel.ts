@@ -16,11 +16,30 @@ export interface Road {
   decided: boolean;
   /** 称心未定:两条路各自的终点,窄屏画成两条短尾巴。 */
   tails: { station: Station; terminal: boolean }[];
+  /**
+   * 已过(未登记):这条路上「现在」(没有现在就是最远的已行站)之前、path 里没有记录的站。
+   * 走不到一站而不经过它前面的站,所以行程块把它们画成已行(不打勾),读屏写「已过(未登记)」。
+   * 只是画法与计数 —— Station.state(规则 16)不改,/realms 也不受影响。
+   */
+  implied: Set<string>;
 }
 
 const walked = (stations: readonly Station[]) => stations.some((s) => s.state !== "pending");
 
+/** 希腊的主干按 `order` 排(与 journeyLayout 画的次序同一条);有一站没有 order 就照原样。 */
+export const trunkOrder = (trunk: readonly Station[]): Station[] =>
+  trunk.every((s) => s.realm?.order != null) ? [...trunk].sort((a, b) => a.realm!.order! - b.realm!.order!) : [...trunk];
+
 export function soulRoad(topology: Topology): Road {
+  const road = roadOf(topology);
+  const states = road.stations.map((s) => s.state);
+  let at = states.indexOf("current");
+  if (at < 0) at = states.lastIndexOf("travelled");
+  const implied = new Set(road.stations.slice(0, Math.max(0, at)).filter((s) => s.state === "pending").map((s) => s.id));
+  return { ...road, implied };
+}
+
+function roadOf(topology: Topology): Omit<Road, "implied"> {
   switch (topology.kind) {
     case "line":
       return { stations: topology.stations, others: [], decided: true, tails: [] };
@@ -52,7 +71,7 @@ export function soulRoad(topology: Topology): Road {
       // 用户决定(第二十五批):希腊没走的岔路(塔尔塔罗斯、至福岛)一律「不在此路」,不画成待行。
       const taken = topology.roads.find((r) => walked(r.stations));
       return {
-        stations: [...topology.trunk, ...(taken?.stations ?? [])],
+        stations: [...trunkOrder(topology.trunk), ...(taken?.stations ?? [])],
         others: topology.roads.filter((r) => r !== taken).flatMap((r) => r.stations),
         decided: true,
         tails: [],
@@ -67,7 +86,7 @@ export function offRoute(road: Road): Set<string> {
 }
 
 export interface JourneyCounts {
-  /** Recorded stops left behind — on the road and on branches. */
+  /** Stops left behind — on the road and on branches, counting the implied ones (已过未登记). */
   walked: number;
   current: Station | null;
   /** Pending stations after where the soul stands, on its road. */
@@ -87,7 +106,7 @@ export function journeyCounts(topology: Topology, road: Road): JourneyCounts {
   );
   const remaining = road.stations.slice(at + 1).filter((s) => s.state === "pending").length;
   return {
-    walked: all.filter((s) => s.state === "travelled").length,
+    walked: all.filter((s) => s.state === "travelled").length + road.implied.size,
     current,
     remaining,
     end: remaining > 0 ? road.stations[road.stations.length - 1] : null,
@@ -99,7 +118,7 @@ export function journeyCounts(topology: Topology, road: Road): JourneyCounts {
 export function roadFraction(road: Road): number {
   const n = road.stations.length;
   if (!n) return 0;
-  const done = road.stations.filter((s) => s.state !== "pending").length;
+  const done = road.stations.filter((s) => s.state !== "pending" || road.implied.has(s.id)).length;
   return done / n;
 }
 
@@ -141,4 +160,38 @@ export type StageState = StepStatus | "na";
 
 export function stageStates(statuses: readonly StepStatus[], civilization: string | null | undefined): StageState[] {
   return statuses.map((s, i) => (i === 3 && !hasRebirth(civilization) ? "na" : s));
+}
+
+/** 停留多久:不满一年按日,满一年按整年(演示里 1285 年进来的灵魂,「到此 270705 日」读不出意思)。 */
+export type Stay = { unit: "days" | "years"; n: number };
+const DAY = 86_400_000;
+
+export function stayFrom(enteredAt: string | null | undefined, now: number = Date.now()): Stay | null {
+  if (!enteredAt) return null;
+  const ms = now - new Date(enteredAt).getTime();
+  if (!Number.isFinite(ms)) return null;
+  const days = Math.max(0, Math.floor(ms / DAY));
+  return days < 365 ? { unit: "days", n: days } : { unit: "years", n: Math.max(1, Math.floor(days / 365.2425)) };
+}
+
+export const stayText = (t: (key: string, vars?: Record<string, string>) => string, stay: Stay): string =>
+  t(stay.unit === "days" ? "realms.journey.days_here" : "realms.journey.years_here", { n: String(stay.n) });
+
+/**
+ * 标题下那句说明(第二十五批 §一.1):审判中、有一桩没结的审判时说在哪儿受审;埃及称心、还没判时说心在天平上。
+ * 其余 null(调用方仍写形状名)。只读 `current_state` 与审判本身,不推断别的。
+ */
+export type JudgingLine = { kind: "weighing" } | { kind: "court"; court: string };
+
+export function judgingLine(
+  state: string | null | undefined,
+  civilization: string | null | undefined,
+  judgments: readonly { court: string; verdict: unknown; concluded_at: string | null; created_at: string }[],
+): JudgingLine | null {
+  if (state !== "JUDGING") return null;
+  const open = judgments.filter((j) => !j.concluded_at).sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
+  if (!open) return null;
+  if (civilization === "EGYPTIAN") return open.verdict == null ? { kind: "weighing" } : null;
+  const court = open.court.trim();
+  return court ? { kind: "court", court } : null;
 }

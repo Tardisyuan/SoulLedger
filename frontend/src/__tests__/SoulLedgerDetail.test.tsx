@@ -143,23 +143,26 @@ describe("SoulLedgerProgress", () => {
     expect(steps[3]).not.toHaveTextContent("未至");
   });
 
-  it("draws the route from the soul's path on its civilization's shape — only recorded stops count as walked", async () => {
+  it("draws the route from the soul's path on its civilization's shape — unrecorded stops before 现在 are passed, not recorded", async () => {
     const { container } = progress();
     const route = await screen.findByTestId("soul-route");
     await waitFor(() => expect(stations(route).length).toBeGreaterThan(0));
     expect(route.querySelector('[data-route-topology="line"]')?.getAttribute("data-schematic")).toBe("false");
-    // 一线:第一、二殿没有记录 —— 待行,不因为「现在」在第三殿就算走过(规则 16)。
-    expect(stations(route).map((g) => g.getAttribute("data-station-state"))).toEqual(["pending", "pending", "current"]);
+    // 一线:第一、二殿没有记录,但「现在」在第三殿 —— 走不到第三殿而不经过它们:画成已行(已过未登记,不打勾)。
+    expect(stations(route).map((g) => g.getAttribute("data-station-state"))).toEqual(["travelled", "travelled", "current"]);
+    expect(stations(route).map((g) => g.getAttribute("data-implied"))).toEqual(["true", "true", null]);
+    expect(stations(route)[0].getAttribute("aria-label")).toContain("已过（未登记）");
+    expect(stations(route)[0].querySelector(".journey-check")).toBeNull();
     expect(stations(route)[2]).toHaveAttribute("aria-current", "step");
-    // 没有一段是实线:两端都要有记录。
-    expect(route.querySelector('[data-segment="walked"]')).toBeNull();
-    expect(route.querySelectorAll('[data-segment="ahead"]')).toHaveLength(2);
+    expect(route.querySelectorAll('[data-segment="walked"]')).toHaveLength(2);
+    expect(route.querySelector('[data-segment="ahead"]')).toBeNull();
     // 待审所不在一线上:作为支线列在下面,已行。
     const branches = within(route).getByTestId("topology-branches");
     expect(branches.querySelector("li")?.getAttribute("data-station-state")).toBe("travelled");
     // 标题写现在在哪:第 3 站(殿号)。
     expect(screen.getByTestId("soul-journey-title")).toHaveTextContent("第 3 站 · Court 3");
-    expect(screen.getByTestId("soul-journey-count")).toHaveTextContent("已行 1 站");
+    // 待审所 + 两站已过未登记
+    expect(screen.getByTestId("soul-journey-count")).toHaveTextContent("已行 3 站");
     expect(container.querySelectorAll("[aria-current=step]").length).toBeGreaterThan(0);
     expect(coreApi.soulsApi.path).toHaveBeenCalledWith("s1");
   });
@@ -189,10 +192,10 @@ describe("SoulLedgerProgress", () => {
     const route = await screen.findByTestId("soul-route");
     await waitFor(() => expect(stations(route).length).toBe(6));
     expect(route.querySelector('[data-route-topology="fork_two"]')?.getAttribute("data-schematic")).toBe("false");
-    // 七道通路没有记录:待行(规则 16);称心未定,两条去路都是待行,不是「不在此路」。
+    // 七道通路没有记录,但在称心之前:已过(未登记);称心未定,两条去路都是待行,不是「不在此路」。
     expect(stations(route).map((g) => [g.getAttribute("data-station-state"), g.getAttribute("data-route")])).toEqual([
       ["travelled", "on"],
-      ["pending", "on"],
+      ["travelled", "on"],
       ["current", "on"],
       ["pending", "on"],
       ["pending", "on"],
@@ -233,6 +236,28 @@ describe("SoulLedgerProgress", () => {
     expect(pass.getAttribute("class")).toBe("journey-off");
     expect(route.querySelector('[data-segment="ahead"]')).toBeNull();
     expect(stations(route).filter((g) => g.getAttribute("data-route") === "off")).toHaveLength(2);
+  });
+
+  it("says under the title where the open case is heard, and keeps the shape name otherwise", async () => {
+    const open = judgment({ id: "j1", created_at: "2026-06-09T00:00:00Z", court: "第五殿" });
+    const judging = { ...SOUL, current_state: "JUDGING" } as Soul;
+    const { unmount } = wrap(
+      <SoulLedgerProgress soul={judging} judgments={[open]} dispositions={[]} reincarnations={[]} birthDisplay={null} deathDisplay={null} />
+    );
+    expect(await screen.findByTestId("soul-journey-sub")).toHaveTextContent("十殿 · 第五殿受审中");
+    unmount();
+    // 结了的审判不算「受审中」:写回形状名。
+    wrap(
+      <SoulLedgerProgress
+        soul={judging}
+        judgments={[{ ...open, concluded_at: "2026-06-10T00:00:00Z", verdict: "PASSED" }]}
+        dispositions={[]}
+        reincarnations={[]}
+        birthDisplay={null}
+        deathDisplay={null}
+      />
+    );
+    expect(await screen.findByTestId("soul-journey-sub")).not.toHaveTextContent("受审中");
   });
 });
 
