@@ -6,10 +6,7 @@ import { ShortcutHelp } from "@/src/components/layout/ShortcutHelp";
 import { SINGLE_KEYS_STORAGE_KEY, setSingleKeyShortcuts, useShortcutHelp } from "@/src/lib/hotkeys";
 import { tZh } from "./support/zhBundle";
 
-jest.mock("@/src/contexts/I18nContext", () => {
-  const { tZh: t } = jest.requireActual("./support/zhBundle");
-  return { ...jest.requireActual("@/src/contexts/I18nContext"), useI18n: () => ({ t, locale: "zh-Hans", hydrated: true }) };
-});
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", locale: "zh-Hans", hydrated: true }));
 
 const ROWS = [{ key: "J / K", label: "shortcuts.move_rows" }] as const;
 function Page({ register = true }: { register?: boolean }) {

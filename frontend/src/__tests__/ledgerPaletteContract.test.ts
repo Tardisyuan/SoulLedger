@@ -19,9 +19,8 @@
  *   `--color-civ-x*` tokens and declares nothing else; no source file reads a civ token directly.
  *   (v3 的规则是「文明只进匾色,五处用」—— 用户 2026-11-06 决定撤销,照 v4 的范围。)
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 
 import {
   FRONTEND_ROOT,
@@ -259,17 +258,17 @@ describe("civilization colour enters through [data-civ] only (规范 v4,用户 2
   });
 
   it("no source file reads a civ token directly — they go through the five slots", () => {
-    let hits = "";
-    try {
-      hits = execFileSync(
-        "git",
-        ["grep", "--untracked", "-lE", String.raw`var\(--(color-)?civ-`, "--", "app", "src", "components", "lib", ":!src/__tests__", ":!app/globals.css"],
-        { cwd: FRONTEND_ROOT, encoding: "utf8" }
-      );
-    } catch (e) {
-      // git grep exits 1 when nothing matches — that is the pass; anything else is a real failure.
-      if ((e as { status?: number }).status !== 1) throw e;
-    }
-    expect(hits).toBe("");
+    const skip = new Set(["src/__tests__", "app/globals.css"]);
+    const hits: string[] = [];
+    const walk = (rel: string): void => {
+      for (const e of readdirSync(path.join(FRONTEND_ROOT, rel), { withFileTypes: true })) {
+        const child = `${rel}/${e.name}`;
+        if (skip.has(child)) continue;
+        if (e.isDirectory()) walk(child);
+        else if (/var\(--(color-)?civ-/.test(readFileSync(path.join(FRONTEND_ROOT, child), "utf8"))) hits.push(child);
+      }
+    };
+    for (const dir of ["app", "src", "components", "lib"]) walk(dir);
+    expect(hits).toEqual([]);
   });
 });

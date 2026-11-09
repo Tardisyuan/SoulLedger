@@ -24,21 +24,20 @@ import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) =>
-      ({
-        "common.cancel": "取消",
-        "permissions.submit": "提交",
-        "permissions.codename_label": "权限代码",
-        "permissions.name_label": "权限名称",
-        "permissions.category_label": "分类",
-        "permissions.category_hint": "从现有分类中选择，或输入一个新分类",
-      })[key] ?? key,
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "common.cancel": "取消",
+      "permissions.submit": "提交",
+      "permissions.codename_label": "权限代码",
+      "permissions.name_label": "权限名称",
+      "permissions.category_label": "分类",
+      "permissions.category_hint": "从现有分类中选择，或输入一个新分类",
+    },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 /**
  * The caller's shape, not a convenient one: `existingCategories` is derived

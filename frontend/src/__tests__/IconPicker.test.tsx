@@ -5,36 +5,33 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 
 // ── Mock I18nContext ──────────────────────────────────
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "icon_picker.select": "Select Icon",
+      "icon_picker.clear": "Clear",
+      "icon_picker.search": "Search icons...",
+      "icon_picker.no_results": "No results found",
+      "icon_picker.categories.navigation": "Navigation",
+      "icon_picker.categories.users": "Users",
+      "icon_picker.categories.notifications": "Notifications",
+      "icon_picker.categories.actions": "Actions",
+      "icon_picker.categories.view": "View",
+      "icon_picker.categories.status": "Status",
+      "icon_picker.categories.security": "Security",
+      "icon_picker.categories.soul": "Soul",
+      "icon_picker.categories.travel": "Travel",
+      "icon_picker.categories.files": "Files",
+      "icon_picker.categories.charts": "Charts",
+      "icon_picker.categories.admin": "Admin",
+      "icon_picker.categories.time": "Time",
+      "icon_picker.categories.media": "Media",
+    },
     locale: "en",
     setLocale: jest.fn(),
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "icon_picker.select": "Select Icon",
-        "icon_picker.clear": "Clear",
-        "icon_picker.search": "Search icons...",
-        "icon_picker.no_results": "No results found",
-        "icon_picker.categories.navigation": "Navigation",
-        "icon_picker.categories.users": "Users",
-        "icon_picker.categories.notifications": "Notifications",
-        "icon_picker.categories.actions": "Actions",
-        "icon_picker.categories.view": "View",
-        "icon_picker.categories.status": "Status",
-        "icon_picker.categories.security": "Security",
-        "icon_picker.categories.soul": "Soul",
-        "icon_picker.categories.travel": "Travel",
-        "icon_picker.categories.files": "Files",
-        "icon_picker.categories.charts": "Charts",
-        "icon_picker.categories.admin": "Admin",
-        "icon_picker.categories.time": "Time",
-        "icon_picker.categories.media": "Media",
-      };
-      return map[key] ?? key;
-    },
     hydrated: true,
   }),
-}));
+);
 
 // ── Mock BaseModal (headlessui Dialog is hard to test in jsdom) ──
 jest.mock("@/src/components/ui/Modal", () => ({

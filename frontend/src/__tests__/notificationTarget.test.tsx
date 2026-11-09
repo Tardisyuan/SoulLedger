@@ -17,7 +17,7 @@ jest.mock("@soulledger/core/api/sentence-plans", () => ({ sentencePlansApi: { ge
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
-jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock());
 
 const APPS = path.resolve(__dirname, "..", "..", "..", "backend", "apps");
 

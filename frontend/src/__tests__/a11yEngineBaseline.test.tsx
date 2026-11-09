@@ -111,10 +111,9 @@ import { audit, DISABLED_RULES } from "./support/axeHarness";
 // accessible name — and is NOT evidence that the real bundles are non-empty.
 // That is `messageValuesAreNotTheirOwnKeys.test.ts` and
 // `notifyKeysExistInTheBundles.test.ts`'s job, and they already do it.
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({
-    t: (key: string) => key,
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    actual: true,
     locale: "en",
     setLocale: jest.fn(),
     hydrated: true,
@@ -122,7 +121,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     formatDateTime: (v: unknown) => `dt(${String(v)})`,
     formatNumber: (v: unknown) => String(v),
   }),
-}));
+);
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),
@@ -772,9 +771,9 @@ const SUBJECTS: Subject[] = [
 // ── Baseline ────────────────────────────────────────────────────────────────
 
 const BASELINE_FILE = "axe-baseline.json";
-const ROOT = path.join(__dirname, "..", "..");
+const FRONTEND = path.join(__dirname, "..", "..");
 const BASELINE: Record<string, Record<string, number>> = JSON.parse(
-  fs.readFileSync(path.join(ROOT, BASELINE_FILE), "utf8"),
+  fs.readFileSync(path.join(FRONTEND, BASELINE_FILE), "utf8"),
 );
 
 /**

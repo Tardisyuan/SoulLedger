@@ -5,25 +5,22 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
 import type { Role } from "@soulledger/core/api";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "common.cancel": "取消",
-        "permissions.submit": "提交",
-        "permissions.submitting": "提交中...",
-        "permissions.role_name_label": "角色名称",
-        "permissions.role_name_placeholder": "请输入角色名称",
-        "permissions.display_name_label": "显示名称",
-        "permissions.display_name_placeholder": "请输入显示名称",
-        "permissions.role_name_builtin_hint": "内置角色,名称固定",
-      };
-      return map[key] ?? key;
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "common.cancel": "取消",
+      "permissions.submit": "提交",
+      "permissions.submitting": "提交中...",
+      "permissions.role_name_label": "角色名称",
+      "permissions.role_name_placeholder": "请输入角色名称",
+      "permissions.display_name_label": "显示名称",
+      "permissions.display_name_placeholder": "请输入显示名称",
+      "permissions.role_name_builtin_hint": "内置角色,名称固定",
     },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 const defaultProps = {
   isOpen: true,

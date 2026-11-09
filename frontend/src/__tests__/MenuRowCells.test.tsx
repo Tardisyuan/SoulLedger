@@ -16,7 +16,7 @@ import { MenuRowCells } from "@/src/components/menus/MenuRowCells";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 import type { MenuItemFull } from "@/src/components/menus/menuTypes";
 
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ locale: "en", setLocale: jest.fn(), t: (key: string) => key, hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "en", setLocale: jest.fn(), hydrated: true }));
 
 // The real permission gate runs; only the user behind it is supplied.
 jest.mock("@/src/contexts/TenantContext", () => ({

@@ -39,7 +39,7 @@ const { deathSyncApi } = jest.requireMock("@soulledger/core/api") as { deathSync
 
 let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: tZh, formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", formatDateTime: (v: string) => `dt(${v})`, locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 let mockPath = "/death-sync/webhooks";

@@ -203,14 +203,14 @@ describe("the placeholder spelling is written down correctly, once", () => {
     return out;
   }
 
-  const REPO = path.join(__dirname, "..", "..");
-  const ALL_SOURCES = SOURCE_ROOTS.flatMap((root) => sourceFiles(path.join(REPO, root)));
+  const FRONTEND = path.join(__dirname, "..", "..");
+  const ALL_SOURCES = SOURCE_ROOTS.flatMap((root) => sourceFiles(path.join(FRONTEND, root)));
 
   it("scanned a real tree (an empty scan makes the next case vacuously green)", () => {
     expect(ALL_SOURCES.length).toBeGreaterThan(100);
     // And the stripper is doing its job in both directions: Field.tsx names the
     // malformed form in a comment, so raw source must hit and stripped must not.
-    const field = readFileSync(path.join(REPO, "src", "components", "ui", "Field.tsx"), "utf8");
+    const field = readFileSync(path.join(FRONTEND, "src", "components", "ui", "Field.tsx"), "utf8");
     expect(field).toMatch(/placeholder:\[/);
     expect(strip(field)).not.toMatch(/placeholder:\[/);
   });
@@ -218,7 +218,7 @@ describe("the placeholder spelling is written down correctly, once", () => {
   it("no file in app/ src/ components/ writes the no-op variant form", () => {
     const offenders = ALL_SOURCES.filter((file) =>
       /placeholder:\[/.test(strip(readFileSync(file, "utf8")))
-    ).map((file) => path.relative(REPO, file));
+    ).map((file) => path.relative(FRONTEND, file));
     expect(offenders).toEqual([]);
   });
 });

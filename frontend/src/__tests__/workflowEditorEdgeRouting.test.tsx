@@ -70,22 +70,21 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) =>
-      ({
-        "workflow.editor.add_node": "Add Node",
-        "workflow.editor.save_template": "Save Template",
-        "workflow.editor.new_node": "New Node",
-        "workflow.detail.priority": "Priority",
-        "workflow.detail.normal": "Normal",
-        "workflow.detail.urgent": "Urgent",
-        "workflow.detail.critical": "Critical",
-      })[key] || key,
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "workflow.editor.add_node": "Add Node",
+      "workflow.editor.save_template": "Save Template",
+      "workflow.editor.new_node": "New Node",
+      "workflow.detail.priority": "Priority",
+      "workflow.detail.normal": "Normal",
+      "workflow.detail.urgent": "Urgent",
+      "workflow.detail.critical": "Critical",
+    },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),

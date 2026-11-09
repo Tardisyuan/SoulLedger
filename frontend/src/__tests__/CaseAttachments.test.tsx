@@ -13,7 +13,7 @@ jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   judgmentApi: { attachments: jest.fn(), uploadAttachment: jest.fn(), deleteAttachment: jest.fn(), attachmentLink: jest.fn() },
 }));
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k), formatDateTime: (v: unknown) => `at:${String(v)}`, locale: "zh-Hans", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, params: "json", formatDateTime: (v: unknown) => `at:${String(v)}`, locale: "zh-Hans", hydrated: true }));
 
 const api = judgmentApi as unknown as Record<"attachments" | "uploadAttachment" | "deleteAttachment" | "attachmentLink", jest.Mock>;
 const MB = 1024 * 1024;

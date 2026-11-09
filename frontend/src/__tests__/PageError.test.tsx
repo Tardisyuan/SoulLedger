@@ -9,21 +9,18 @@ import zh from "@soulledger/core/messages/zh-Hans.json";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "error.title": "Server Error",
-        "error.description": "Something went wrong",
-        "error.retry": "Retry",
-        "error.home": "Return Home",
-      };
-      return map[key] || key;
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "error.title": "Server Error",
+      "error.description": "Something went wrong",
+      "error.retry": "Retry",
+      "error.home": "Return Home",
     },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 describe("PageError", () => {
   let consoleError: jest.SpyInstance;

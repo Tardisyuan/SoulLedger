@@ -93,70 +93,67 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "workflow.editor.template_name_placeholder": "Template name...",
-        "workflow.editor.add_node": "Add Node",
-        "workflow.editor.auto_layout": "Auto layout",
-        "workflow.editor.delete_selected": "Delete Selected",
-        "workflow.editor.save_template": "Save Template",
-        "workflow.editor.saving": "Saving...",
-        "workflow.editor.edit_node": "Edit Node",
-        "workflow.editor.node_name": "Node Name",
-        "workflow.editor.node_type": "Node Type",
-        "workflow.editor.court_code": "Court Code",
-        "workflow.editor.court_placeholder": "e.g. First Court",
-        "workflow.editor.approver_type": "Approver Type",
-        "workflow.editor.approver_role": "Approver Role",
-        // The inspector form's short labels (v3 A1 · 72px column).
-        "workflow.editor.field.name": "Name",
-        "workflow.editor.field.court": "Court",
-        "workflow.editor.field.role": "Role",
-        "workflow.editor.approver_placeholder": "— select —",
-        "users.roles.JUDGE": "判官",
-        "workflow.editor.new_node": "New Node",
-        "workflow.editor.hint": "Double-click nodes to edit",
-        "workflow.editor.saved": "Saved!",
-        "workflow.editor.save_failed": "Save failed",
-        "workflow.node_type.trial": "Trial",
-        "workflow.node_type.evaluation": "Evaluation",
-        "workflow.node_type.appeal": "Appeal",
-        "workflow.node_type.final": "Final",
-        "workflow.node_type.execution": "Execution",
-        "workflow.approver_types.ROLE": "Role",
-        "workflow.approver_types.ACTOR": "Actor",
-        "workflow.approver_types.SYSTEM": "System",
-        "workflow.civilizations.CHINESE": "Chinese",
-        "workflow.civilizations.EUROPEAN": "European",
-        "workflow.civilizations.EGYPTIAN": "Egyptian",
-        "workflow.case_types.ROUTINE": "Routine",
-        "workflow.case_types.APPEAL": "Appeal",
-        "workflow.case_types.CROSS_REALM": "Cross-Realm",
-        "workflow.case_types.SPECIAL": "Special",
-        "workflow.case_types.CANONIZATION": "Canonization",
-        "workflow.case_types.PURGATORY_REVIEW": "Purgatory Review",
-        "workflow.case_types.HERESY_TRIAL": "Heresy Trial",
-        "workflow.case_types.HEART_WEIGHING": "Heart Weighing",
-        "workflow.case_types.DIVINE_TRIAL": "Divine Trial",
-        // The three priority labels are `workflow.detail.*`, reused rather
-        // than duplicated: `app/workflow/[id]/page.tsx` shows the *instance*
-        // priority with the same keys, and this select sets the template
-        // default that instance inherits.
-        "workflow.detail.priority": "Priority",
-        "workflow.detail.normal": "Normal",
-        "workflow.detail.urgent": "Urgent",
-        "workflow.detail.critical": "Critical",
-        "common.cancel": "Cancel",
-        "common.save": "Save",
-      };
-      return map[key] || key;
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "workflow.editor.template_name_placeholder": "Template name...",
+      "workflow.editor.add_node": "Add Node",
+      "workflow.editor.auto_layout": "Auto layout",
+      "workflow.editor.delete_selected": "Delete Selected",
+      "workflow.editor.save_template": "Save Template",
+      "workflow.editor.saving": "Saving...",
+      "workflow.editor.edit_node": "Edit Node",
+      "workflow.editor.node_name": "Node Name",
+      "workflow.editor.node_type": "Node Type",
+      "workflow.editor.court_code": "Court Code",
+      "workflow.editor.court_placeholder": "e.g. First Court",
+      "workflow.editor.approver_type": "Approver Type",
+      "workflow.editor.approver_role": "Approver Role",
+      // The inspector form's short labels (v3 A1 · 72px column).
+      "workflow.editor.field.name": "Name",
+      "workflow.editor.field.court": "Court",
+      "workflow.editor.field.role": "Role",
+      "workflow.editor.approver_placeholder": "— select —",
+      "users.roles.JUDGE": "判官",
+      "workflow.editor.new_node": "New Node",
+      "workflow.editor.hint": "Double-click nodes to edit",
+      "workflow.editor.saved": "Saved!",
+      "workflow.editor.save_failed": "Save failed",
+      "workflow.node_type.trial": "Trial",
+      "workflow.node_type.evaluation": "Evaluation",
+      "workflow.node_type.appeal": "Appeal",
+      "workflow.node_type.final": "Final",
+      "workflow.node_type.execution": "Execution",
+      "workflow.approver_types.ROLE": "Role",
+      "workflow.approver_types.ACTOR": "Actor",
+      "workflow.approver_types.SYSTEM": "System",
+      "workflow.civilizations.CHINESE": "Chinese",
+      "workflow.civilizations.EUROPEAN": "European",
+      "workflow.civilizations.EGYPTIAN": "Egyptian",
+      "workflow.case_types.ROUTINE": "Routine",
+      "workflow.case_types.APPEAL": "Appeal",
+      "workflow.case_types.CROSS_REALM": "Cross-Realm",
+      "workflow.case_types.SPECIAL": "Special",
+      "workflow.case_types.CANONIZATION": "Canonization",
+      "workflow.case_types.PURGATORY_REVIEW": "Purgatory Review",
+      "workflow.case_types.HERESY_TRIAL": "Heresy Trial",
+      "workflow.case_types.HEART_WEIGHING": "Heart Weighing",
+      "workflow.case_types.DIVINE_TRIAL": "Divine Trial",
+      // The three priority labels are `workflow.detail.*`, reused rather
+      // than duplicated: `app/workflow/[id]/page.tsx` shows the *instance*
+      // priority with the same keys, and this select sets the template
+      // default that instance inherits.
+      "workflow.detail.priority": "Priority",
+      "workflow.detail.normal": "Normal",
+      "workflow.detail.urgent": "Urgent",
+      "workflow.detail.critical": "Critical",
+      "common.cancel": "Cancel",
+      "common.save": "Save",
     },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({

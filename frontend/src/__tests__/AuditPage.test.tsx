@@ -50,10 +50,9 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) =>
-      params ? `${key}(${Object.values(params).join(",")})` : key,
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    params: "paren",
     formatDateTime: (v: string) => `dt(${v})`,
     // Day headers. Keyed on the local calendar day, so the stub echoes that.
     formatDate: (v: string) => {
@@ -63,7 +62,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 const mockedList = auditApi.list as jest.Mock;
 const mockedTenants = tenantsApi.list as jest.Mock;

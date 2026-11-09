@@ -5,27 +5,24 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
 import type { Permission } from "@soulledger/core/api";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "common.cancel": "取消",
-        "permissions.submit": "提交",
-        "permissions.submitting": "提交中...",
-        "permissions.codename_label": "权限代码",
-        "permissions.codename_placeholder": "请输入权限代码",
-        "permissions.name_label": "权限名称",
-        "permissions.name_placeholder": "请输入权限名称",
-        "permissions.category_label": "分类",
-        "permissions.category_placeholder": "如：soul（或输入新分类）",
-        "permissions.category_hint": "从现有分类中选择，或输入一个新分类",
-      };
-      return map[key] ?? key;
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "common.cancel": "取消",
+      "permissions.submit": "提交",
+      "permissions.submitting": "提交中...",
+      "permissions.codename_label": "权限代码",
+      "permissions.codename_placeholder": "请输入权限代码",
+      "permissions.name_label": "权限名称",
+      "permissions.name_placeholder": "请输入权限名称",
+      "permissions.category_label": "分类",
+      "permissions.category_placeholder": "如：soul（或输入新分类）",
+      "permissions.category_hint": "从现有分类中选择，或输入一个新分类",
     },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 // The real, current categories (apps/perm/models.py::DEFAULT_PERMISSIONS has
 // 14 today) — not the 5-entry hardcoded list this component used to ship

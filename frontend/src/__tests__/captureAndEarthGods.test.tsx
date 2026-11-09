@@ -4,7 +4,6 @@
  */
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { Disposition, Soul } from "@soulledger/core/api";
-import { tZh } from "./support/zhBundle";
 
 const mockShowToast = jest.fn();
 const mockList = jest.fn();
@@ -17,17 +16,7 @@ const mockRegister = jest.fn();
 const mockCaseGet = jest.fn();
 const mockSendOn = jest.fn();
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({
-    t: tZh,
-    tf: (_k: string, f: string) => f,
-    locale: "zh-Hans",
-    hydrated: true,
-    formatDate: (v: string) => v.slice(0, 10),
-    formatDateTime: (v: string) => v.slice(0, 16).replace("T", " "),
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true, formatDate: (v: string) => v.slice(0, 10), formatDateTime: (v: string) => v.slice(0, 16).replace("T", " ") }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 jest.mock("@/src/components/ui/Toast", () => ({
   ...jest.requireActual("@/src/components/ui/Toast"),

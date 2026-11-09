@@ -37,7 +37,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
-const APP_ROOT = path.join(__dirname, "..", "..", "app");
+const APP_DIR = path.join(__dirname, "..", "..", "app");
 
 function pageFiles(dir: string): string[] {
   const out: string[] = [];
@@ -59,8 +59,8 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(?<![:\w])\/\/[^\n]*/g, "");
 }
 
-const PAGES = pageFiles(APP_ROOT).map((full) => ({
-  label: path.relative(path.join(APP_ROOT, ".."), full),
+const PAGES = pageFiles(APP_DIR).map((full) => ({
+  label: path.relative(path.join(APP_DIR, ".."), full),
   source: stripComments(readFileSync(full, "utf8")),
 }));
 

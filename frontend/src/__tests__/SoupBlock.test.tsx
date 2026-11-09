@@ -7,7 +7,7 @@ import { SoupBlock } from "@/src/components/souls/detail/SoupBlock";
 jest.mock("@/src/hooks/usePermissions", () => ({
   usePermissions: () => ({ isAdmin: true, hasPermission: () => true, hasAnyPermission: () => true, hasAllPermissions: () => true }),
 }));
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k), formatDateTime: (v: unknown) => `at:${String(v)}`, locale: "zh-Hans", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, params: "json", formatDateTime: (v: unknown) => `at:${String(v)}`, locale: "zh-Hans", hydrated: true }));
 
 test("not taken: the badge and the register button, and nothing is sent before the confirm", async () => {
   const onRegister = jest.fn().mockResolvedValue(undefined);

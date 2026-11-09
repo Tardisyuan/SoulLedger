@@ -44,7 +44,7 @@ import fs from "fs";
 import path from "path";
 import { menuKeys, workflowKeys } from "@soulledger/core/query_keys";
 
-const ROOT = path.resolve(__dirname, "..", "..");
+const FRONTEND = path.resolve(__dirname, "..", "..");
 
 /**
  * Read a source file with its comments blanked out.
@@ -62,7 +62,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
  */
 const read = (rel: string) =>
   fs
-    .readFileSync(path.join(ROOT, rel), "utf8")
+    .readFileSync(path.join(FRONTEND, rel), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/(^|[^:])\/\/[^\n]*/g, (m, p1) => p1 + " ".repeat(m.length - p1.length));
 

@@ -33,7 +33,7 @@ import path from "node:path";
 
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
 
-const FRONTEND_ROOT = path.join(__dirname, "..", "..");
+const FRONTEND = path.join(__dirname, "..", "..");
 
 /** The same roots and skips `cssTokenReferenceContract` and `statusTokenLayering` scan. */
 const SOURCE_ROOTS = ["app", "components", "lib", "src"];
@@ -57,7 +57,7 @@ function sourceFiles(): string[] {
       }
     }
   };
-  for (const root of SOURCE_ROOTS) walk(path.join(FRONTEND_ROOT, root));
+  for (const root of SOURCE_ROOTS) walk(path.join(FRONTEND, root));
   return out;
 }
 
@@ -72,15 +72,15 @@ describe("the tab recipe is written once", () => {
   it("`src/lib/tabClasses.ts` is among them and does spell it", () => {
     // Presence, asserted before absence: this is what proves the scanner is
     // looking where it thinks it is.
-    const home = FILES.find((f) => path.relative(FRONTEND_ROOT, f) === HOME);
+    const home = FILES.find((f) => path.relative(FRONTEND, f) === HOME);
     expect(home).toBeDefined();
     expect(readFileSync(home as string, "utf8")).toContain(GEOMETRY);
   });
 
   it("and nothing else does", () => {
-    const offenders = FILES.map((f) => path.relative(FRONTEND_ROOT, f))
+    const offenders = FILES.map((f) => path.relative(FRONTEND, f))
       .filter((rel) => rel !== HOME)
-      .filter((rel) => readFileSync(path.join(FRONTEND_ROOT, rel), "utf8").includes(GEOMETRY));
+      .filter((rel) => readFileSync(path.join(FRONTEND, rel), "utf8").includes(GEOMETRY));
     expect(offenders).toEqual([]);
   });
 });
@@ -125,9 +125,9 @@ describe("the five strips read it from there", () => {
   ];
 
   it("exactly these files import the module", () => {
-    const importers = FILES.map((f) => path.relative(FRONTEND_ROOT, f))
+    const importers = FILES.map((f) => path.relative(FRONTEND, f))
       .filter((rel) =>
-        readFileSync(path.join(FRONTEND_ROOT, rel), "utf8").includes('from "@/src/lib/tabClasses"')
+        readFileSync(path.join(FRONTEND, rel), "utf8").includes('from "@/src/lib/tabClasses"')
       )
       .sort();
     expect(importers).toEqual(EXPECTED_IMPORTERS);

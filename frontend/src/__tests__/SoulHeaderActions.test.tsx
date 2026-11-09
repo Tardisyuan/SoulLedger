@@ -19,14 +19,7 @@ import { useState } from "react";
 
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-    tf: (_key: string, fallback: string) => fallback,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ tf: (_key: string, fallback: string) => fallback, locale: "en", hydrated: true }));
 
 // 真门禁,喂真权限清单 —— `suiteShape` 禁止把门本身桩掉,而且有道理:
 // 一个直通的桩会让门被删掉时什么都不红。

@@ -28,10 +28,10 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser, tenantCode: "CN_DIYU", permissionsReady: mockReady }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({
-    t: tZh,
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    actual: true,
+    zh: "stable",
     formatDateTime: (v: string) => `dt(${v})`,
     // Day heads ask for year/month/day; the entry's own time asks for hour/minute only.
     formatDate: (v: string, o?: Intl.DateTimeFormatOptions) =>
@@ -39,7 +39,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     locale: "zh-Hans",
     hydrated: true,
   }),
-}));
+);
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 jest.mock("next/navigation", () => ({
   usePathname: () => "/audit/permissions",

@@ -4,22 +4,19 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        "icon_picker.select": "Select Icon",
-        "icon_picker.clear": "Clear",
-        "icon_picker.search": "Search icons...",
-        "icon_picker.no_results": "No results found",
-        "common.close": "关闭",
-      };
-      return map[key] || key;
+jest.mock("@/src/contexts/I18nContext", () =>
+  require("./support/mocks").i18nMock({
+    map: {
+      "icon_picker.select": "Select Icon",
+      "icon_picker.clear": "Clear",
+      "icon_picker.search": "Search icons...",
+      "icon_picker.no_results": "No results found",
+      "common.close": "关闭",
     },
     locale: "en",
     hydrated: true,
   }),
-}));
+);
 
 describe("BaseModal", () => {
   it("renders children when isOpen is true", () => {

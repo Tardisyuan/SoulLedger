@@ -7,7 +7,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { CITY_GOD_BUREAU_PRESETS } from "@soulledger/core/domain/cityGods";
 import { BureauPicker } from "@/src/components/city-gods/CityGodEditor";
 
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k), locale: "zh-Hans", hydrated: true }) }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, params: "json", locale: "zh-Hans", hydrated: true }));
 
 let latest: string[] = [];
 function Harness({ rank, initial }: { rank: string; initial: string[] }) {

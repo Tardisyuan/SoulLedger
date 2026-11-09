@@ -10,13 +10,7 @@ import { renderWithProviders } from "./support/render";
 let mockUser: Record<string, unknown> = { id: 7, tenant: { code: "CN_DIYU" } };
 
 jest.mock("@soulledger/core/api", () => ({ judgmentApi: { annual: jest.fn() } }));
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => jest.requireActual("./support/zhBundle").tZh(key, params),
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ zh: "per-call", locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
 const annual = judgmentApi.annual as jest.Mock;

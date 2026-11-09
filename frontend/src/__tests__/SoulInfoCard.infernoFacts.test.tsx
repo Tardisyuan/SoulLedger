@@ -5,19 +5,8 @@
 import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { Soul } from "@soulledger/core/api";
-import { tZh } from "./support/zhBundle";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  ...jest.requireActual("@/src/contexts/I18nContext"),
-  useI18n: () => ({
-    t: tZh,
-    tf: (_k: string, f: string) => f,
-    locale: "zh-Hans",
-    hydrated: true,
-    formatDate: (v: string) => v,
-    formatDateTime: (v: string) => v,
-  }),
-}));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", tf: (_k: string, f: string) => f, locale: "zh-Hans", hydrated: true, formatDate: (v: string) => v, formatDateTime: (v: string) => v }));
 
 import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
 import { renderWithProviders, createTestQueryClient } from "./support/render";
