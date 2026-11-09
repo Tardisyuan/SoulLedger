@@ -4,6 +4,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { globsToMatcher } from "jest-util";
 
 /**
  * The suite's own shape: which files run, and roughly how much runs in them.
@@ -36,485 +37,125 @@ import path from "node:path";
  * that owns the list knows how long it should be.
  */
 
-// Every test file jest collects, pinned by name.
+// Which files jest collects is DERIVED, not pinned by name (2026-11-10,
+// docs/test-suite-review-2026-11-10.md §2.2). The name list this replaced had to
+// gain a line for every new test file, so the commonest way to see this file red
+// was adding a test, which has nothing to do with the incident it guards: a file
+// that LOOKS like a test and is not collected. That incident is checked directly
+// below, from two sides that do not depend on each other:
 //
-// A count would be weaker in the specific way that matters: adding one file and
-// deleting another in the same change nets to zero and passes, which is exactly
-// the edit where a file goes missing without anyone deciding it should. The list
-// is the record of a deliberate set; adding a test file means adding a line
-// here, and removing one means removing a line here on purpose.
-const COLLECTED_FILES = [
-  "AboutPage.test.tsx",
-  // 2026-10-16 core 每个 xxxApi 方法的路径都在后端 OpenAPI 里。
-  "apiEndpointContract.test.ts",
-  // 2026-10-16 灵魂端客户端:失败分类与 401 换令牌。
-  "HallLifecycleDialogs.test.tsx",
-  "HallsOverviewPage.test.tsx",
-  "soulClientErrors.test.ts",
-  // 2026-10-16 官员端审批 / 加签被拒的读法。
-  "officerDecisionErrors.test.ts",
-  "ActorsPage.test.tsx",
-  // 2026-10-04 外部接入与登录日志:/death-sync/api-keys 与 /audit/logins。
-  "ApiKeysPanel.test.tsx",
-  // 2026-10-08 管理端 Webhook:/death-sync/webhooks。
-  "SoupBlock.test.tsx",
-  "SoupCell.test.tsx",
-  "WebhooksPanel.test.tsx",
-  "LoginLogPage.test.tsx",
-  "AppLayout.test.tsx",
-  "AppealLadder.test.tsx",
-  "AuditDetailPage.test.tsx",
-  "AuditPage.impersonate.test.tsx",
-  "AuditPage.test.tsx",
-  // 2026-10-17 第三十七批 W-9:审计的「权限变更」时间线与「统计」页签。
-  "AuditPermissionChanges.test.tsx",
-  "AuditStats.test.tsx",
-  // 2026-10-29 管理员的在线会话与强退 /audit/sessions。
-  "AuditSessionsPage.test.tsx",
-  // 2026-10-17 第三十七批 W-13「灵魂事件」页 /events:筛选参数、×N、链接、事件分组守卫。
-  "SoulEventsPage.test.tsx",
-  "soulEventGroups.test.ts",
-  "Badge.test.tsx",
-  "Button.test.tsx",
-  "CaseAttachments.test.tsx",
-  "Collapse.test.tsx",
-  "ColumnMenu.test.tsx",
-  "CommentThread.test.tsx",
-  "CorpusInsertIntoDesk.test.tsx",
-  "CorpusPage.test.tsx",
-  "CorpusRelated.test.tsx",
-  "DashboardPage.test.tsx",
-  "DataGrid.test.tsx",
-  // 2026-10-11 登录交付单:二维码矩阵、单上内容无密码、编号 3-4-3。
-  "DeliverySlip.test.tsx",
-  "DeathSyncPage.pagination.test.tsx",
-  // 2026-11-01 review Web 1:个人资料里的「默认视图」,未选时按角色勾选。
-  "DefaultViewSection.test.tsx",
-  "DevicesSection.test.tsx",
-  "DispositionPage.pagination.test.tsx",
-  "DataTable.test.tsx",
-  // 2026-11-08 灵魂缺 date_problems 时面板不崩。
-  "DateProblemsPanel.missingFields.test.tsx",
-  "EmptyState.test.tsx",
-  "Field.test.tsx",
-  "FilterChip.test.tsx",
-  "I18nContext.formatters.test.tsx",
-  "I18nContext.test.tsx",
-  "IconPicker.test.tsx",
-  "ImpersonationBanner.test.tsx",
-  "ImpersonationSession.test.ts",
-  "JudgmentDetailPage.notesDraft.test.tsx",
-  "JudgmentDetailPage.claimAndReopen.test.tsx",
-  "JudgmentDetailPage.print.test.tsx",
-  "JudgmentGroundsPanel.test.tsx",
-  "JudgmentQueueConsole.test.tsx",
-  "LedgerPage.test.tsx",
-  "LoginPage.test.tsx",
-  // 2026-10-09 官员邮箱重置密码:/forgot-password、/reset-password、/verify-email 与资料页的邮箱验证行。
-  "OfficerPasswordReset.test.tsx",
-  // 2026-10-27 第五十四批:/accept-invite、移交在途案件对话框、停用前的移交提示。
-  "OfficerInviteHandover.test.tsx",
-  // 2026-10-09 官员两步验证(A12):码框、登录第二步、向导、个人中心面板、用户列表列与重置、殿设置的角色开关。
-  "CodeInput.test.tsx",
-  "MfaVerifyPage.test.tsx",
-  "MfaSetupWizard.test.tsx",
-  "MfaSection.test.tsx",
-  "MenusPage.tree.test.tsx",
-  "UsersPage.mfaColumn.test.tsx",
-  "TenantSettingsDialog.mfaRoles.test.tsx",
-  "brandTokensMatchIcon.test.ts",
-  "draftAutosaveReadOnly.test.tsx",
-  "draftSavedFlash.test.tsx",
-  "judgmentFullCaseMotion.test.ts",
-  // 2026-10-24 第五十二批 审判申诉:距截止、被拒的读法、时间线三种事件。
-  "judgmentAppeals.test.ts",
-  "listExportButtons.test.tsx",
-  "loginStatutes.test.ts",
-  "RealmsPage.test.tsx",
-  "RecycleBinPage.test.tsx",
-  "TreeRow.test.tsx",
-  "Modal.test.tsx",
-  "ModerationPage.test.tsx",
-  "NotificationsPage.batch.test.tsx",
-  "NotificationsPage.test.tsx",
-  "PageError.test.tsx",
-  "PageSection.test.tsx",
-  "PageShell.test.tsx",
-  "Pagination.test.tsx",
-  // 2026-10-29 第 8 条:重置密码给一次性链接;对管理员要操作人自己的两步验证码。
-  "PasswordResetDialog.test.tsx",
-  "formatAsOf.test.ts",
-  "PermissionConfigTransfer.test.tsx",
-  "PermissionDenied.test.tsx",
-  "PermissionFormModal.test.tsx",
-  "PermissionsMatrixCells.test.tsx",
-  "PermissionsMatrixDiff.test.ts",
-  // 2026-10-15 列表页记住筛选 + 列菜单:/permissions 定义一段的列菜单、/social 的页签。
-  "PermissionsPage.columns.test.tsx",
-  "PermissionsPage.roleRename.test.tsx",
-  "PostCard.test.tsx",
-  "PostComposer.test.tsx",
-  "PostEdit.test.tsx",
-  "PostMediaGrid.test.tsx",
-  "paginatedPagesCanBePaged.test.ts",
-  "permissionGatesActuallyWithhold.test.tsx",
-  "platformAdapterIsInstalled.test.tsx",
-  "ProfileCard.test.tsx",
-  "ProfilePage.notificationPrefs.test.tsx",
-  "ProfilePage.password.test.tsx",
-  "ProfilePage.roleBadge.test.tsx",
-  "RebirthApplicationsPage.test.tsx",
-  "RebirthApplicationsPage.cooldownShortening.test.tsx",
-  "RebirthFormSelect.test.tsx",
-  "RequireButton.test.tsx",
-  "RequirePermission.test.tsx",
-  "SchedulerPage.test.tsx",
-  "RoleFormModal.test.tsx",
-  // 2026-10-29 角色数据范围(第六十二批):角色抽屉里的数据范围段与机构树选择。
-  "RoleDataScopeSection.test.tsx",
-  "RoleMembersSection.test.tsx",
-  "OrgTreeSelect.test.tsx",
-  // 2026-09-30 v2 管理页(v2-web-p3b):租户印字编辑、审批流节点框。
-  "SealGlyphsDialog.test.tsx",
-  "TenantSettingsDialog.test.tsx",
-  "EditableNodeFrame.test.tsx",
-  "EmailLocaleSync.test.tsx",
-  "queueRowScroll.test.ts",
-  "sealStamp.test.tsx",
-  "selectionIsNotColourOnly.test.tsx",
-  "SettingsDrawer.test.tsx",
-  "ShortcutHelp.test.tsx",
-  "Skeleton.test.tsx",
-  "SocialFeedPage.remembered.test.tsx",
-  "SocialProfilePage.test.tsx",
-  "SoulAccountCard.test.tsx",
-  "SoulCredentialsPage.test.tsx",
-  "SoulInboxPage.test.tsx",
-  "SoulInfoCard.infernoFacts.test.tsx",
-  // 2026-10-28 地府十三站与出身部洲(身份栏),换站与勾魂的时间线一行。
-  "DiyuRows.test.tsx",
-  // 2026-11-09 第二十五批 §五:界域拓扑的在押 / 容量条阈值、十三站卡折叠。
-  "batch25OccupancyAndDiyuCards.test.tsx",
-  // 2026-10-28 枉死城案卷字段、城隍「下属诸司」(第五十七批 D-3)、埃及四十二条否定告白。
-  "DiyuCaseFields.test.tsx",
-  "CityGodBureauPicker.test.tsx",
-  "NegativeConfessionPanel.test.tsx",
-  // 2026-10-28 第五十七批:勾魂卡、下一世部洲、以土地公名义登记死亡、待发勾魂牒的「超 N 天」。
-  "captureAndEarthGods.test.tsx",
-  "SentencePlanPanels.test.tsx",
-  "SentenceNodeRetry.test.tsx",
-  "SentencePlanForms.test.tsx",
-  // 2026-10-17 审计第 8 条:受刑计划列表页 /sentence-plans。
-  "SentencePlansPage.test.tsx",
-  // 2026-10-17 第四十批 W-c:转生登记簿(/rebirths)。
-  "RebirthsPage.test.tsx",
-  "JudgmentAmendmentConclude.test.tsx",
-  "JudgmentComments.test.tsx",
-  // 2026-09-25 审判台 / 审判队列 / 处置(规范 v1 第三类 A)。
-  "JudgmentDesk.test.tsx",
-  "JudgmentListExport.test.tsx",
-  "JudgmentListPage.test.tsx",
-  "DispositionPage.sections.test.tsx",
-  "hotkeys.test.tsx",
-  "SoulHeaderActions.test.tsx",
-  "CorrectSettlementDialog.test.tsx",
-  "SoulDetailPage.correctSettlement.test.tsx",
-  "SoulDetailPage.recalculate.test.tsx",
-  "SoulDetailPage.cacheInvalidation.test.tsx",
-  "SoulDetailPage.inheritance.test.tsx",
-  "SoulDetailPage.caseRef.test.tsx",
-  "SoulDetailPage.openJudgment.test.tsx",
-  "Plaque.caseRef.test.tsx",
-  "SoulDetailPage.rebirthForm.test.tsx",
-  // 2026-10-01 灵魂详情 v3(首字页头、账页两标签、功过栏、PageShell 首格 / 尾格)。
-  "SoulDetailV3.test.tsx",
-  "SoulEditModal.test.tsx",
-  // 2026-10-28 欧洲灵魂详情卡的受洗 / 否认灵魂不灭两行。
-  "SoulLedgerBook.test.tsx",
-  "SoulLedgerDetail.test.tsx",
-  // 2026-10-08 /souls 的 CSV 导入对话框。
-  "SoulImportDialog.test.tsx",
-  "SoulLifecycleTimeline.test.tsx",
-  // 功过台账的新增 / 修改表单(2026-10-08)。
-  "SoulRecordFormModal.test.tsx",
-  "SoulReadingPanel.test.tsx",
-  "SoulReadingPanelFork.test.tsx",
-  "SoulReadingPanelSentence.test.tsx",
-  "SoulsBatchRecycle.test.tsx",
-  "SoulsListExport.test.tsx",
-  "SoulsPreviewDrawer.test.tsx",
-  "Spinner.test.tsx",
-  "TenantContext.test.tsx",
-  "Toast.test.tsx",
-  // 2026-10-08 仪表盘「趋势」面板:加载 / 出错 / 快照不足 / 有线四态与范围、维度开关。
-  "TrendsPanel.test.tsx",
-  // 2026-11-06 v4 概览三张卡(第七批 S04):hall-stats 读数、12 周趋势的十字线、待经手三类行、认领下一件。
-  "HallOverview.test.tsx",
-  // 2026-11-07 v4 冥界年报(第八批 S14,/dashboard/annual)。
-  "AnnualReport.test.tsx",
-  "toastColourContract.test.ts",
-  "OrganizationsPage.test.tsx",
-  // 数据范围 B1:接口不建根(新建 / 移动必须选上级),删除被名下灵魂 / 审判挡住时说出两个数。
-  "OrganizationDialogs.root.test.tsx",
-  "PasswordChangeRequired.test.tsx",
-  "UserDeleteDialog.test.tsx",
-  // 2026-10-17 审计 1017 #3:编辑用户时设所属机构(只列同租户)与职务。
-  "UserModal.organization.test.tsx",
-  "UsersPage.impersonate.test.tsx",
-  "UsersPage.locate.test.tsx",
-  // 2026-10-09 多角色:角色签、设置角色对话框、批量启用 / 停用、非管理员什么都看不到。
-  "UsersPage.multiRole.test.tsx",
-  "UsersPage.orgFilter.test.tsx",
-  "VerdictDocument.test.tsx",
-  "UsersPage.roleBadge.test.tsx",
-  "WebSocketContext.currentUserId.test.tsx",
-  // 2026-10-29 第 10 条:服务端推的 permission.refreshed 交给 TenantContext 重取权限。
-  "WebSocketContext.permissionRefresh.test.tsx",
-  "WebSocketContext.sessionResume.test.tsx",
-  "WebSocketContext.test.tsx",
-  "WebSocketContext.tokenRefresh.test.tsx",
-  "WelcomePage.test.tsx",
-  "WorkflowDetailPage.advanceReason.test.tsx",
-  "WorkflowDetailPage.codedRefusals.test.tsx",
-  "WorkflowDetailPage.cosigner.test.tsx",
-  "WorkflowDetailPage.linearPreview.test.tsx",
-  "WorkflowDetailPage.reasonForSoul.test.tsx",
-  "WorkflowEditor.test.tsx",
-  "WorkflowPage.instances.test.tsx",
-  "WorkflowPage.test.tsx",
-  // 2026-10-17 手动发起审批的弹层(W-11):依赖、模板三态、跟随模板、每种拒绝、成功跳转。
-  "StartWorkflowDialog.test.tsx",
-  // 2026-10-18 第四十三批 W-1 ~ W-5:选站列表、门口那一块、加减站与 segment_changed、审批页「待我选站」、记录句子。
-  "workflowSegments.test.tsx",
-  // 2026-10-31 core 分支覆盖率回到门槛之上(A3):分段规则、拒绝读法与请求形状、表单校验 hook 直接测。
-  "workflowSegmentRules.test.ts",
-  "coreRefusalReaders.test.ts",
-  "useFormValidation.test.ts",
-  // 2026-10-19 第四十五批:出身地域的表单 / 详情、编辑器自动分流、流程详情没走到的站、选站的分流理由。
-  "originRegionBatch45.test.tsx",
-  // 2026-10-19 第四十六批:补录出身地域的入口(soul.update)、预览表、无可更新、完成页先给跳过的行、文件级错误。
-  "soulRegionBackfill.test.tsx",
-  // 2026-10-19 殿名按界面语言(courtLabel):同一个殿的中英写法一个键,egy 写英文,认不出的原样。
-  "courtLabel.test.ts",
-  "workflowTitle.test.ts",
-  "workflowRoutingRoundTrip.test.ts",
-  "a11yEngineBaseline.test.tsx",
-  "a11yRoundWeb.test.tsx",
-  "accessTokenNeverBecomesACookie.test.ts",
-  "api.test.ts",
-  "arrowNotDoubled.test.ts",
-  "assistAdmin.test.tsx",
-  "auditGrouping.test.ts",
-  "autoRouteBatch47.test.tsx",
-  "breadcrumbSegmentLabels.test.ts",
-  "chartColourContract.test.ts",
-  "civilizationCopyCoverage.test.ts",
-  "civilizationMapCoverage.test.ts",
-  "civilizationSigilContract.test.ts",
-  "connectionRecovery.test.tsx",
-  "creditsOssDrift.test.ts",
-  "cssTokenReferenceContract.test.ts",
-  "ledgerPaletteContract.test.ts",
-  "dispatchApproveConfirms.test.tsx",
-  "dispatchCancel.test.tsx",
-  "dispatchDecisionReason.test.tsx",
-  "dispatchListDrafts.test.tsx",
-  "dispatchProposeValidation.test.tsx",
-  "dispatchReturnHome.test.tsx",
-  "contextValueIdentity.test.tsx",
-  "crossJudgmentActivate.test.tsx",
-  // 2026-10-17 第四十批 W-a:跨域审判的结束 / 取消,原审判被它挡住时的提示。
-  "crossJudgmentEnd.test.tsx",
-  "crossJudgmentDetailFetchBudget.test.tsx",
-  "crossJudgmentsColumnMenu.test.tsx",
-  "dataGridToneContract.test.ts",
-  "dangerButtonPlacement.test.ts",
-  "datascopeOwnerOrg.test.tsx",
-  // 2026-11-06 v4 第十批第 1 条:演示站灵魂入口的几屏读录制，地方与 App 的 soulRoute 一致。
-  "demoSoulScreens.test.tsx",
-  "demoStaysOutOfTheNormalBuild.test.ts",
-  "demoStoreFilters.test.ts",
-  "dialogsAreNotHandRolled.test.ts",
-  "designGuardContract.test.ts",
-  "rootAttributes.test.tsx",
-  "motionTokens.test.ts",
-  "domainDisplayContract.test.tsx",
-  "domainDisplayRendering.test.tsx",
-  "domainNamespaceContract.test.ts",
-  "drawerFocusTrap.test.tsx",
-  "egyLexiconRules.test.ts",
-  // 2026-11-09 落地页主视觉的描线、光泽、倾斜(用户定 A):倾斜夹角、只画一次、减少动态效果全关。
-  "emblemFx.test.tsx",
-  "localName.test.ts",
-  "workflowPresetEnglish.test.ts",
-  "eventInvalidationReachesCache.test.ts",
-  "eventRegistry.test.ts",
-  "exportFileName.test.ts",
-  "enumsMatchTheSchema.test.ts",
-  "errorIsNotAnEmptyState.test.ts",
-  "focusRingContract.test.ts",
-  "gridPopupKeyboardContract.test.tsx",
-  "hideTheWheel.test.ts",
-  "workflowEditorNodeName.test.ts",
-  "historicalDateLocale.test.ts",
-  "HomePageIdentity.test.tsx",
-  "inkOnSurfaceContract.test.ts",
-  "jestAlwaysRunList.test.ts",
-  "jestRunsNextVendoredReact.test.ts",
-  "ledgerQuantityContract.render.test.tsx",
-  "messageValuesAreNotTheirOwnKeys.test.ts",
-  // 2026-11-08 语言包每个键要么有人引用,要么在基线里。
-  "messageKeysAreReferenced.test.ts",
-  "proxyAuthGate.test.ts",
-  "ledgerQuantityContract.test.tsx",
-  // 2026-10-17 第四十批 W-b:配置页只列接上的按钮(取代 editFailure 那份:通用增改表单已拿掉);配置读法与关掉的按钮。
-  "MenuButtonsPage.test.tsx",
-  "menuButtonConfig.test.tsx",
-  "menuButtonGates.test.ts",
-  "MenuRowCells.test.tsx",
-  "menuCacheRootsAreInvalidatedTogether.test.ts",
-  // 2026-10-30 perf A1:侧栏静态图标表覆盖菜单迁移与 E2E 夹具里的全部图标名。
-  "menuIconTable.test.ts",
-  "menuTranslationCoverage.test.ts",
-  // 2026-10-17 审计 1017 #5:通知点进哪一页;后端每个 related_resource 都要有去处或写明不跳。
-  "notificationTarget.test.tsx",
-  "notifyKeysExistInTheBundles.test.ts",
-  "notifyPortCarriesTheToast.test.ts",
-  "officerAssist.test.tsx",
-  "oneRealtimeSocketPerSession.test.ts",
-  "permissionFormCategoryStability.test.tsx",
-  "platformPortsSecureAndResume.test.ts",
-  "plaqueTitleStaysLargeText.test.ts",
-  "presetNodeTypes.test.tsx",
-  "printLayout.test.tsx",
-  "QueryProviderDefaults.test.tsx",
-  "ReactionBar.test.tsx",
-  "proseLinkIsNotColourOnly.test.ts",
-  "readingQuantityContract.test.tsx",
-  "realmTypeByCivilization.test.ts",
-  "reducedMotionContract.test.ts",
-  "refreshCookieLifetime.test.ts",
-  "roleForbiddenCodenamesMatchBackend.test.ts",
-  "routeTopology.test.ts",
-  "searchSelectIsServerFiltered.test.tsx",
-  // 2026-11-06 v4 第十批第 3 条:受刑站状态按文明与去处说;去处类型表与种子表逐条核对。
-  "sentenceNodeStateByCivilization.test.ts",
-  "setup.test.ts",
-  "soulCodeMatchesBackend.test.ts",
-  "soulFallbackCopyContract.test.tsx",
-  "soulFire.test.ts",
-  "soulLifecycleEventCopy.test.tsx",
-  "soulLifecycleRows.test.ts",
-  "soulMutationFeedback.test.tsx",
-  "soulReadingCopyCoverage.test.tsx",
-  "soulStateBadgeContract.test.ts",
-  "statusGlyphFont.test.ts",
-  "statusTokenLayering.test.ts",
-  "submitErrorFocus.test.tsx",
-  "suiteShape.test.ts",
-  "tabClassContract.test.ts",
-  "TemplatePreview.test.tsx",
-  "themeSwapTransition.test.tsx",
-  "truncatedValuesAreRecoverable.test.ts",
-  // 2026-11-06 v4 阶段 5:冥界地图 SVG 的安全检查、站码对照与按行程上色。
-  "underworldMap.test.ts",
-  "UnderworldMapLayout.test.tsx",
-  "unreadBadgeCountsTheWholeInbox.test.tsx",
-  "useDebouncedValue.test.ts",
-  "useDispositions.test.ts",
-  "useJudgmentClaims.test.ts",
-  "useJudgmentQueue.test.tsx",
-  "useJudgments.test.ts",
-  "usePermissionMatrix.test.tsx",
-  "usePermissions.test.ts",
-  "useRowTransitions.test.ts",
-  "useScheduler.test.tsx",
-  "useSidebarMenus.test.tsx",
-  "useSocial.queries.test.ts",
-  "useSocial.test.ts",
-  "useSocialScreening.test.ts",
-  "useSoulMediaUploads.test.ts",
-  "useSouls.lifecycle.test.ts",
-  "useSouls.test.ts",
-  "workflowAutoLayoutMotion.test.tsx",
-  "workflowEditorEdgeRouting.test.tsx",
-  "workflowRouteEdgeArrow.test.tsx",
-  "workflowEngineEditor.test.tsx",
-  "workflowEdgeArrowSingleSource.test.ts",
-  "workflowEditorLayout.test.ts",
-  "workflowGraphChanges.test.ts",
-  "viewportHeightContract.test.ts",
-  "v3DataDisplayContract.test.tsx",
-  "workflowTemplateLore.test.ts",
-  "wsClient.reconnect.test.ts",
-  "wsClient.test.ts",
-  "zIndexOrderContract.test.ts",
-  "zhuyinShell.test.tsx",
-  // 规范 v3 外框导航:模式持久化、`[`、769–1199 强制收起、文明色只在当前项、图标来自 menu.icon。
-  "globalNav.test.tsx",
-  // 规范 v3 A8 全局搜索:四类顺序、403 整类隐去、单类失败重试、完整案号、键盘、最近打开、防抖。
-  "globalSearch.test.tsx",
-  "goodbye.test.tsx",
-  "loadingScreensFitAPhone.test.ts",
-  "passwordRulesMatchBackend.test.ts",
-  "permissionCodesStayOutOfCopy.test.ts",
-  "rememberedFilters.test.tsx",
-  "cityGodDisplay.test.tsx",
-  // 第二十五批行程块:本人那条路、窄屏折叠、计数、阶段四格(含「不轮回」)、工作流退回次数。
-  "journeyModel.test.ts",
-];
+//   on disk   every file under frontend/ whose name says "test" (`.test.` /
+//             `.spec.`, any js/ts extension) or that sits in a `__tests__/`
+//             directory outside its helper subtree;
+//   in jest   the same walk filtered through jest.config.js's own `roots`,
+//             `testMatch` and `testPathIgnorePatterns`, matched with the matcher
+//             jest itself uses (`jest-util`'s globsToMatcher).
+//
+// The two must be equal. What was given up: deleting a test file no longer
+// needs a line here. Git history and review carry that; the floor below catches
+// the bulk case (a directory dropped, the walk returning nothing).
+
+const FRONTEND = path.resolve(__dirname, "../..");
+const JEST_CONFIG = require(path.join(FRONTEND, "jest.config.js")) as {
+  rootDir: string;
+  roots?: string[];
+  testMatch: string[];
+  testPathIgnorePatterns?: string[];
+};
+
+/** Not walked. `e2e/` is Playwright's testDir (its `.spec.ts` files are a
+ *  different runner's, collected by playwright.config.ts); the rest are build
+ *  and report output. */
+const NOT_SOURCE = new Set(["node_modules", ".next", "coverage", "e2e", "playwright-report", "test-results"]);
+
+/** What may sit in a `__tests__/` directory without being a test. */
+const isHelper = (file: string) =>
+  file.split(path.sep).includes("support") || file.endsWith(".d.ts");
+
+const LOOKS_LIKE_A_TEST = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
+
+/** Floor under the derived set (363 files on 2026-11-10). Lower it on purpose,
+ *  with the reason, if a block of test files is genuinely retired. */
+const MIN_FILES = 300;
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves
  *  whenever a table grows. Lower it deliberately, with the reason, if a block of
  *  tests is genuinely retired. */
 const MIN_DECLARATIONS = 900;
 
-const TESTS_DIR = path.join(__dirname);
-
-function collect(dir: string, out: string[] = [], base = dir): string[] {
+function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (NOT_SOURCE.has(entry.name)) continue;
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) collect(full, out, base);
-    else if (/\.test\.tsx?$/.test(entry.name)) out.push(path.relative(base, full));
+    if (entry.isDirectory()) walk(full, out);
+    else out.push(full);
   }
   return out;
 }
 
-const PRESENT = collect(TESTS_DIR).sort();
+const ALL_FILES = walk(FRONTEND);
+const rel = (file: string) => path.relative(FRONTEND, file);
+
+const withRootDir = (pattern: string) => pattern.replace(/<rootDir>/g, JEST_CONFIG.rootDir);
+const ROOTS = (JEST_CONFIG.roots ?? ["<rootDir>"]).map(withRootDir);
+const matchesTestMatch = globsToMatcher(JEST_CONFIG.testMatch.map(withRootDir));
+const IGNORED = (JEST_CONFIG.testPathIgnorePatterns ?? ["/node_modules/"]).map(
+  (pattern) => new RegExp(withRootDir(pattern))
+);
+
+/** What jest collects, absolute paths. */
+const COLLECTED = ALL_FILES.filter(
+  (file) =>
+    ROOTS.some((root) => file.startsWith(root + path.sep)) &&
+    matchesTestMatch(file) &&
+    !IGNORED.some((re) => re.test(file))
+).sort();
+
+const IN_TESTS_DIR = (file: string) => rel(file).split(path.sep).includes("__tests__");
+
+/** What a reader would take for a test, absolute paths. */
+const LOOKS_LIKE_TESTS = ALL_FILES.filter(
+  (file) => LOOKS_LIKE_A_TEST.test(path.basename(file)) || (IN_TESTS_DIR(file) && !isHelper(rel(file)))
+).sort();
 
 describe("the suite is the suite we think it is", () => {
-  it("collects exactly the files this list names", () => {
-    // `testMatch` is `**&#47;__tests__&#47;**&#47;*.test.ts(x)`. A file renamed to `.spec.tsx`,
-    // moved out of `__tests__/`, or given a name the glob no longer matches
-    // stops running without failing — the suite reports one fewer file and
-    // nothing reports that as a problem.
-    expect(PRESENT).toEqual([...COLLECTED_FILES].sort());
+  it("collects every file that looks like a test, and nothing else", () => {
+    // A file renamed to `.spec.tsx`, given a suffix `testMatch` no longer
+    // matches, put in a `__tests__/` without `.test.` in its name, moved out of
+    // `roots`, or caught by a new `testPathIgnorePatterns` entry stops running
+    // without failing — the suite reports one fewer file and nothing reports
+    // that as a problem. Here it is on one side of this diff and not the other.
+    expect(COLLECTED.map(rel)).toEqual(LOOKS_LIKE_TESTS.map(rel));
+  });
+
+  it("derives the collected set the way jest does, at least for this file", () => {
+    // This file is running, so jest collected it. If the derivation above says
+    // otherwise, the derivation is wrong and the equality above means nothing.
+    expect(COLLECTED).toContain(__filename);
   });
 
   it("finds a non-trivial number of them, so the walk itself is doing something", () => {
-    // The guard for the guard. If `collect` returned `[]` the assertion above
-    // would compare two empty lists on the day COLLECTED_FILES was also
-    // emptied, and this file would be the thing it exists to prevent.
-    expect(PRESENT.length).toBeGreaterThan(50);
+    // The guard for the guard: two empty sets are equal.
+    expect(COLLECTED.length).toBeGreaterThanOrEqual(MIN_FILES);
   });
 
   it("gives every collected file at least one test to run", () => {
     // A file that collects and declares nothing is invisible in a run summary:
     // it contributes a passing suite with zero tests. Everything that used to
     // be in it is simply not being asserted any more.
-    const empty = PRESENT.filter((file) => {
-      const source = readFileSync(path.join(TESTS_DIR, file), "utf8");
+    const empty = COLLECTED.filter((file) => {
+      const source = readFileSync(file, "utf8");
       return !/(?:^|\n)\s*(?:it|test)(?:\.each\([\s\S]*?\))?\s*\(/.test(source);
     });
-    expect(empty).toEqual([]);
+    expect(empty.map(rel)).toEqual([]);
   });
 
   it("declares at least as many tests as it used to", () => {
     // Catches the shape the file list cannot: a `describe` block deleted, or an
     // early `return` inside one, leaving the file present and most of its
     // assertions gone.
-    const declarations = PRESENT.reduce((total, file) => {
-      const source = readFileSync(path.join(TESTS_DIR, file), "utf8");
+    const declarations = COLLECTED.reduce((total, file) => {
+      const source = readFileSync(file, "utf8");
       return total + (source.match(/(?:^|\n)\s*(?:it|test)(?:\.each\([\s\S]*?\))?\s*\(/g) ?? []).length;
     }, 0);
     expect(declarations).toBeGreaterThanOrEqual(MIN_DECLARATIONS);
@@ -527,10 +168,10 @@ describe("the suite is the suite we think it is", () => {
     // it is the shape most likely to be committed by accident, because it is
     // what you write while debugging.
     const offenders: string[] = [];
-    for (const file of PRESENT) {
-      const source = readFileSync(path.join(TESTS_DIR, file), "utf8");
+    for (const file of COLLECTED) {
+      const source = readFileSync(file, "utf8");
       for (const match of source.matchAll(/\b(?:it|test|describe)\.(only|skip)\s*\(/g)) {
-        offenders.push(`${file}: .${match[1]}`);
+        offenders.push(`${rel(file)}: .${match[1]}`);
       }
     }
     expect(offenders).toEqual([]);
@@ -564,8 +205,8 @@ describe("the suite is the suite we think it is", () => {
     // 而注释行以 `//` 或 ` * ` 开头。第一版用正则扫全文,把两份说明这条规则的
     // 文件自己报成了违规者 —— 一个连自己的文档都读成违规的扫描器,说明它读的
     // 不是代码。
-    const offenders = PRESENT.filter((file) =>
-      readFileSync(path.join(TESTS_DIR, file), "utf8")
+    const offenders = COLLECTED.map(rel).filter((file) =>
+      readFileSync(path.join(FRONTEND, file), "utf8")
         .split("\n")
         .some(
           (line) =>
