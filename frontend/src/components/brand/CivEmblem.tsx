@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * 文明主视觉(Design 第二十四批定稿 G 版天体仪,`emblems/`):外圈刻度慢转、中心呼吸;四个文明靠中心物与底座区分。
- * 概览主卡右上角、/rebirths 的「没有转世」页、空态用它;落地页四张卡用内联版 `LandingEmblem`(原文构建时嵌入,服务端第一帧就有图)。
+ * 概览主卡右上角、/rebirths 的「没有转世」页、空态用它;落地页四张卡用内联版 `LandingEmblem`(原文构建时嵌进 JS,水合后插入 —— 写进服务端 HTML 会让整页被外置成隐藏的第二份,见那个文件)。
  *
  * 用 `<img>` 载 SVG:动画写在 SVG 自己的 <style> 里,只在图里生效,不进文档;那段样式自带
  * `prefers-reduced-motion` 一条(停在静态图)。深浅两份都放,`:root.light` 决定显示哪一份(globals.css
