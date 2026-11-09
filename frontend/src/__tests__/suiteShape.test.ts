@@ -460,6 +460,8 @@ const COLLECTED_FILES = [
   "permissionCodesStayOutOfCopy.test.ts",
   "rememberedFilters.test.tsx",
   "cityGodDisplay.test.tsx",
+  // 第二十五批行程块:本人那条路、窄屏折叠、计数、阶段四格(含「不轮回」)、工作流退回次数。
+  "journeyModel.test.ts",
 ];
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves

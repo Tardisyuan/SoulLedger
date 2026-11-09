@@ -621,6 +621,12 @@
         "LETHE": "The water of Lethe",
         "SPELL": "Spell recitation",
         "NONE": "No reset"
+      },
+      "journey": {
+        "stage_done": "done",
+        "stage_current": "now",
+        "stage_future": "to do",
+        "stage_na": "not applicable"
       }
     },
     "date_problem_filter": "Problems only",
@@ -3257,6 +3263,23 @@
       "legend_near": "◐ nearly full = ≥ 90%",
       "legend_eternal": "≡ eternal = no release, no rebirth",
       "sheet_hint": "Tap a row to change its capacity"
+    },
+    "journey": {
+      "now": "Now",
+      "now_station": "Now · stop {{n}}",
+      "station_n": "Stop {{n}}",
+      "walked_n": "{{n}} stops walked",
+      "ahead_n": "{{n}} stops ahead",
+      "left_to": "{{n}} left to {{name}}",
+      "days_here": "{{n}} days here",
+      "two_roads": "one of two roads next",
+      "schematic_suffix": " (schematic)",
+      "off_route": "Not on this route",
+      "off_note": "{{names}}: not on this route, visible on a wider screen",
+      "branch_legend": "Dotted ring = a branch not walked in this life",
+      "not_a_place": "Not a place",
+      "no_rebirth": "No rebirth",
+      "returned": "Sent back · {{n}}×"
     }
   },
   "organization": {

@@ -621,6 +621,12 @@
         "LETHE": "勒忒之水",
         "SPELL": "诵咒",
         "NONE": "不重置"
+      },
+      "journey": {
+        "stage_done": "已完成",
+        "stage_current": "现在",
+        "stage_future": "待办",
+        "stage_na": "不适用"
       }
     },
     "date_problem_filter": "仅看有问题的",
@@ -3257,6 +3263,23 @@
       "legend_near": "◐ 将满 = ≥ 90%",
       "legend_eternal": "≡ 永恒 = 不出狱、不轮回",
       "sheet_hint": "窄屏下点一行，从底部抽屉改容量"
+    },
+    "journey": {
+      "now": "现在",
+      "now_station": "现在 · 第 {{n}} 站",
+      "station_n": "第 {{n}} 站",
+      "walked_n": "已行 {{n}} 站",
+      "ahead_n": "待行 {{n}} 站",
+      "left_to": "余 {{n}} 站到{{name}}",
+      "days_here": "到此 {{n}} 日",
+      "two_roads": "之后两条路之一",
+      "schematic_suffix": "（示意）",
+      "off_route": "不在此路",
+      "off_note": "{{names}} 不在此路，宽屏可见",
+      "branch_legend": "点线小圈 = 支线，这一世没走",
+      "not_a_place": "不是地方",
+      "no_rebirth": "不轮回",
+      "returned": "退回重审 · {{n}} 次"
     }
   },
   "organization": {

@@ -2194,10 +2194,9 @@ html.theme-switching *::after {
   }
 }
 
-/* ── 行程条与四格进度(2026-11-10 用户:「可视化度太低」;src/components/realms/RouteTopology.tsx、
-   souls/detail/SoulLedgerProgress.tsx)────────────────────────────────────────────────────────────
-   借落地页徽记的三样效果:描线(已行的段逐段画出)、呼吸(当前站一圈金环慢慢扩散,3.2 s,避开魂火 0.5–1 Hz)、
-   反光(进度条 11 s 一次扫光)。颜色只用文明的 civT / glow / metal,线型规则不变(实 = 已行,虚 = 待行)。 */
+/* ── 行程拓扑(2026-11-10 用户:「可视化度太低」;src/components/realms/RouteTopology.tsx,界域页用)──────
+   借落地页徽记的两样效果:描线(已行的段逐段画出)、呼吸(当前站一圈金环慢慢扩散,3.2 s,避开魂火 0.5–1 Hz)。
+   灵魂详情的四格进度与行程条已换成文件末尾的「行程块」(第二十五批),那条 11 s 的扫光随之去掉。颜色只用文明的 civT / glow / metal,线型规则不变(实 = 已行,虚 = 待行)。 */
 .route-walked {
   box-shadow: 0 0 6px oklch(var(--color-glow) / 0.55);
 }
@@ -2259,66 +2258,9 @@ li:last-child > .route-row {
   }
 }
 
-.soul-progress-bar {
-  position: relative;
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: oklch(var(--color-rule));
-  margin-bottom: 2px;
-}
-.soul-progress-bar > span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, oklch(var(--color-main-ink) / 0.55), oklch(var(--color-main-ink)) 80%, oklch(var(--color-metal)));
-  box-shadow: 0 0 8px oklch(var(--color-glow) / 0.7);
-  transform-origin: left;
-  animation: route-draw 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.1s backwards;
-  overflow: hidden;
-}
-.soul-progress-bar > span::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.55), transparent);
-  translate: -100% 0;
-  animation: progress-sheen 11s ease-in-out 2s infinite;
-}
-@keyframes progress-sheen {
-  0%,
-  88% {
-    translate: -100% 0;
-  }
-  100% {
-    translate: 100% 0;
-  }
-}
-.soul-progress-now {
-  background: linear-gradient(180deg, oklch(var(--color-main-ink) / 0.06), oklch(var(--color-main-ink) / 0.16));
-  box-shadow: inset 0 -3px 0 oklch(var(--color-main-ink));
-}
-.soul-progress-dot {
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 999px;
-  border: 1px solid oklch(var(--color-ink-subtle));
-}
-.soul-progress-dot[data-step-dot="done"] {
-  border-color: transparent;
-  background: oklch(var(--color-metal));
-}
-.soul-progress-dot[data-step-dot="current"] {
-  border-color: transparent;
-  background: oklch(var(--color-main-ink));
-  box-shadow: 0 0 6px oklch(var(--color-glow));
-}
 @media (prefers-reduced-motion: reduce) {
   .route-row .route-walked,
-  .route-now::after,
-  .soul-progress-bar > span,
-  .soul-progress-bar > span::after {
+  .route-now::after {
     animation: none;
   }
 }
@@ -2565,4 +2507,308 @@ li:last-child > .route-row {
   padding-inline: 0.25rem;
   border: 1.5px dashed oklch(var(--color-ink-muted));
   color: oklch(var(--color-ink-muted));
+}
+/* ── 行程块(Design 第二十五批,2026-11-09;src/components/journey/JourneyMap.tsx、
+   souls/detail/SoulLedgerProgress.tsx、workflow/detail/WorkflowLinearPreview.tsx)──────────────────────────
+   三条线索并用,颜色之外照样分得开:实 / 虚 / 点线;实心带勾 / 空心 / 点线小圈;metal 名牌。
+   颜色只用令牌:civT = main-ink,glow,metal(只给「现在」),danger(只给「不是地方」),墨阶。
+   动效两样:已行段描出一次(每段 1.4 s,错开 0.12 s);当前站的环 4.2 s 呼吸一次(约 0.24 Hz,
+   避开魂火的 0.5–1 Hz 与徽记的 11 s)。其余不动 —— 阶段条不扫光,线上没有流光。 */
+.journey-svg text {
+  font-family: inherit;
+}
+.journey-glow {
+  fill: none;
+  stroke: oklch(var(--color-glow));
+  stroke-width: 12;
+  stroke-linecap: round;
+  opacity: 0.22;
+}
+.light .journey-glow {
+  opacity: 0.16;
+}
+.journey-walked {
+  fill: none;
+  stroke: oklch(var(--color-main-ink));
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: journey-draw 1.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 0.12s);
+}
+.journey-ahead {
+  fill: none;
+  stroke: oklch(var(--color-ink-subtle));
+  stroke-width: 2;
+  stroke-dasharray: 5 6;
+}
+.journey-off {
+  fill: none;
+  stroke: oklch(var(--color-ink-subtle));
+  stroke-width: 1.5;
+  stroke-dasharray: 1.5 5;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+.journey-stop-done {
+  fill: oklch(var(--color-main-ink));
+  stroke: oklch(var(--color-surface-1));
+  stroke-width: 2.5;
+}
+.journey-check {
+  fill: none;
+  stroke: oklch(var(--color-surface-1));
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.journey-stop-ahead {
+  fill: oklch(var(--color-surface-1));
+  stroke: oklch(var(--color-ink-subtle));
+  stroke-width: 2;
+}
+.journey-stop-off {
+  fill: oklch(var(--color-surface-1));
+  stroke: oklch(var(--color-ink-subtle));
+  stroke-width: 1.2;
+  stroke-dasharray: 1.5 2.5;
+  opacity: 0.6;
+}
+.journey-now {
+  fill: oklch(var(--color-metal));
+  stroke: oklch(var(--color-surface-1));
+  stroke-width: 3;
+}
+.journey-now-glow {
+  fill: oklch(var(--color-metal) / 0.18);
+}
+.journey-pulse {
+  fill: none;
+  stroke: oklch(var(--color-metal));
+  stroke-width: 1.6;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: journey-breathe 4.2s ease-out infinite;
+}
+.journey-terminal {
+  fill: none;
+  stroke: oklch(var(--color-danger));
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2.5;
+}
+.journey-terminal-x {
+  stroke: oklch(var(--color-danger));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.journey-label {
+  font-size: var(--text-xs);
+  fill: oklch(var(--color-ink-muted));
+}
+.journey-label[data-station-state="pending"] {
+  fill: oklch(var(--color-ink-subtle));
+}
+.journey-label[data-route="off"] {
+  font-size: var(--text-2xs);
+  fill: oklch(var(--color-ink-subtle));
+}
+.journey-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: oklch(var(--color-ink-subtle));
+}
+.journey-caption {
+  font-size: var(--text-2xs);
+  fill: oklch(var(--color-ink-subtle));
+}
+.journey-caption-neg {
+  fill: oklch(var(--color-danger));
+}
+.journey-plate,
+.journey-plate-tip {
+  fill: oklch(var(--color-surface-2));
+  stroke: oklch(var(--color-metal));
+  stroke-width: 1.2;
+}
+.journey-plate-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: oklch(var(--color-metal));
+}
+.journey-plate-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  fill: oklch(var(--color-ink));
+}
+.journey-plate-sub {
+  font-size: var(--text-2xs);
+  fill: oklch(var(--color-ink-muted));
+}
+.journey-backdrop {
+  fill: oklch(var(--color-ink) / 0.03);
+  stroke: oklch(var(--color-line));
+  stroke-width: 1;
+}
+.journey-backdrop-line,
+.journey-backdrop-ring {
+  fill: none;
+  stroke: oklch(var(--color-line));
+  stroke-width: 1;
+}
+
+/* 窄屏(HTML):同一套线型与站。 */
+.journey-seg {
+  height: 0;
+  border-top: 2px dashed oklch(var(--color-ink-subtle));
+}
+.journey-seg[data-segment="walked"] {
+  border-top: 4px solid oklch(var(--color-main-ink));
+  border-radius: 9999px;
+  box-shadow: 0 0 6px oklch(var(--color-glow) / 0.5);
+}
+.journey-seg[data-segment="off"] {
+  border-top: 1.5px dotted oklch(var(--color-ink-subtle));
+  opacity: 0.55;
+}
+.journey-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: oklch(var(--color-surface-1));
+  border: 2px solid oklch(var(--color-ink-subtle));
+}
+.journey-dot[data-station-state="travelled"] {
+  background: oklch(var(--color-main-ink));
+  border-color: oklch(var(--color-surface-1));
+}
+.journey-dot[data-station-state="current"] {
+  width: 16px;
+  height: 16px;
+  background: oklch(var(--color-metal));
+  border-color: oklch(var(--color-surface-1));
+  box-shadow: 0 0 0 4px oklch(var(--color-metal) / 0.18);
+}
+.journey-dot[data-route="off"] {
+  width: 9px;
+  height: 9px;
+  border: 1.5px dotted oklch(var(--color-ink-subtle));
+  opacity: 0.6;
+}
+.journey-dot[data-terminal="dashed"] {
+  border-radius: 0;
+  border: 1.5px dashed oklch(var(--color-danger));
+  background: transparent;
+  box-shadow: none;
+}
+.journey-text {
+  color: oklch(var(--color-ink-muted));
+}
+.journey-text[data-station-state="pending"],
+.journey-text[data-route="off"] {
+  color: oklch(var(--color-ink-subtle));
+}
+.journey-text[data-station-state="current"] {
+  color: oklch(var(--color-ink));
+}
+.journey-now-word {
+  color: oklch(var(--color-metal));
+}
+.journey-neg {
+  color: oklch(var(--color-danger));
+}
+
+/* 阶段条:每格一根 10 高的条,完成 / 现在 / 待办 / 不适用 四种形状。 */
+.journey-stage-icon {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  border: 1.5px solid oklch(var(--color-ink-subtle));
+}
+.journey-stage-icon[data-step-status="done"] {
+  border-color: oklch(var(--color-main-ink));
+  background: oklch(var(--color-main-ink));
+}
+.journey-stage-icon[data-step-status="current"] {
+  border: 2px solid oklch(var(--color-metal));
+  background: oklch(var(--color-metal));
+  box-shadow: inset 0 0 0 2px oklch(var(--color-surface-1));
+}
+.journey-stage-icon[data-step-status="na"] {
+  border-style: dotted;
+}
+.journey-stage-name {
+  color: oklch(var(--color-ink-subtle));
+}
+.journey-stage-name[data-step-status="done"] {
+  color: oklch(var(--color-ink-muted));
+}
+.journey-stage-name[data-step-status="current"] {
+  color: oklch(var(--color-ink));
+}
+.journey-stage-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1.5px oklch(var(--color-line));
+}
+.journey-stage-bar[data-step-status="done"] {
+  background: oklch(var(--color-main-ink));
+  box-shadow: none;
+}
+.journey-stage-bar[data-step-status="current"] {
+  background: oklch(var(--color-main-ink) / 0.16);
+  box-shadow: none;
+}
+.journey-stage-bar[data-step-status="na"] {
+  background: repeating-linear-gradient(45deg, oklch(var(--color-line)) 0 1px, transparent 1px 6px);
+}
+.journey-stage-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fill, 50%);
+  border-radius: 9999px 0 0 9999px;
+  background: oklch(var(--color-main-ink));
+}
+/* 进度头:4 宽的 metal 游标,外描 2px 卡底色。 */
+.journey-stage-fill::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  right: -2px;
+  width: 4px;
+  background: oklch(var(--color-metal));
+  box-shadow: 0 0 0 2px oklch(var(--color-surface-1));
+}
+@keyframes journey-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes journey-breathe {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-walked {
+    animation: none;
+  }
+  .journey-pulse {
+    animation: none;
+    transform: scale(1.15);
+    opacity: 0.6;
+  }
+}
+/* 胶囊:「已行 N 站」「待行 N 站」「示意」(Design 第二十五批 §三)。 */
+.journey-pill {
+  border-radius: 9999px;
 }

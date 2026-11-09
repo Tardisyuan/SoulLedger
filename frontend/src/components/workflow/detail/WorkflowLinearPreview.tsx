@@ -3,20 +3,19 @@
 import { useI18n } from "@/src/contexts/I18nContext";
 import { localNodeName } from "@soulledger/core/domain/localName";
 import type { ApprovalNode } from "@soulledger/core/api";
-import { cn } from "@/lib/utils";
+import { JourneyMap } from "@/src/components/journey/JourneyMap";
+import { workflowGraph } from "@/src/lib/journeyLayout";
 
 /**
- * 甲 之下的线性预览(Design 第三类 C「模板预览 · 线性」):节点名放进 1 px 边框的
- * 方块,用 → 连起来,末尾一个虚线的终点块。
+ * 实例详情的节点进度 —— Design 第二十五批 §五.3:和灵魂的行程同一个组件(`JourneyMap`),一线。
  *
- *   - 运行中实例的当前节点:左 3 px 墨色内嵌线 + 600。`currentNodeId` 为 null
- *     (已结案、或还没有当前节点)时不标任何一块。
- *   - 条件节点(node_type CONDITION)用等宽 12 px。实例节点今天的五种类型里没有它,
- *     模板里有;写在这里是为了同一条预览放到模板上时不必改。
- *   - 出错的节点(status REJECTED)用危险色边框 —— 颜色之外,节点账里同一行
- *     还有 ✕ 字形,这里不重复。
- *   - 终点块没有对应的节点记录:它是「流程走完」这件事本身,文案用审批流的
- *     COMPLETED 状态名,不另起一个键。
+ *   - 已决的节点 = 已行(实线、实心带勾);当前节点 = 现在(metal,全图唯一);其余待行。
+ *     `currentNodeId` 为 null(已结案、或还没有当前节点)时没有「现在」。
+ *   - 跳过的节点没走过:点线小圈,主线从它旁边连过去。
+ *   - 「退回重审」画成从被退回到的那一站挂下去的点线支线,标次数(`decision_history` 的 `round`,
+ *     见 journeyLayout.returnCounts)。没有退回就不画。
+ *   - 末尾的终点没有对应的节点记录:它是「流程走完」这件事本身,文案用 COMPLETED 状态名;
+ *     流程走完(`completed`)才算到达。
  *
  * 顺序就是传进来的顺序;调用方按 `node_order` 排好。
  */
@@ -25,48 +24,32 @@ export function WorkflowLinearPreview({
   currentNodeId,
   endLabel,
   label,
+  completed = false,
 }: {
   nodes: ApprovalNode[];
   currentNodeId: string | null;
   endLabel: string;
   label: string;
+  completed?: boolean;
 }) {
   const { locale, t } = useI18n();
+  const graph = workflowGraph(nodes, currentNodeId, { label: endLabel, reached: completed }, {
+    name: (n) => localNodeName(n, locale, t),
+    returned: (n) => t("realms.journey.returned", { n: String(n) }),
+  });
+  const order = new Map(nodes.map((n) => [n.id, String(n.node_order)]));
   return (
-    <div className="pt-3">
+    <div className="pt-3" data-testid="workflow-journey">
       <p className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</p>
-      <ol aria-label={label} className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-        {nodes.map((node) => {
-          const current = node.id === currentNodeId;
-          return (
-            <li key={node.id} className="flex items-center gap-2">
-              <span
-                data-preview-chip={node.node_order}
-                data-current={current || undefined}
-                aria-current={current ? "step" : undefined}
-                className={cn(
-                  "px-2 py-1 border border-[oklch(var(--color-line))] text-[oklch(var(--color-ink))]",
-                  node.node_type.toUpperCase() === "CONDITION" && "font-mono text-xs",
-                  node.status === "REJECTED" &&
-                    "border-[oklch(var(--color-danger))] text-[oklch(var(--color-danger))]",
-                  current && "font-semibold shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
-                )}
-              >
-                {localNodeName(node, locale, t)}
-              </span>
-              <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">→</span>
-            </li>
-          );
-        })}
-        <li>
-          <span
-            data-preview-chip="end"
-            className="px-2 py-1 border border-dashed border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-subtle))]"
-          >
-            {endLabel}
-          </span>
-        </li>
-      </ol>
+      <div className="mt-2">
+        <JourneyMap
+          graph={graph}
+          label={label}
+          plate={{ heading: t("realms.journey.now") }}
+          narrow={{ road: graph.stops.filter((s) => !s.spur && s.route === "on").map((s) => s.id) }}
+          stopAttrs={(s) => ({ "data-preview-chip": s.id === "end" ? "end" : order.get(s.id) })}
+        />
+      </div>
     </div>
   );
 }
