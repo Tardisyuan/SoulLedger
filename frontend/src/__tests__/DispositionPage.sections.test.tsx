@@ -14,7 +14,6 @@ import type { Disposition } from "@soulledger/core/api";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
-import { renderWithProviders } from "./support/render";
 import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({

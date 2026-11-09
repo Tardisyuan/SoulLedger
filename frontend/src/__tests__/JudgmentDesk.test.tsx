@@ -32,7 +32,6 @@ import JudgmentDetailPage from "@/app/judgment/[id]/page";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/src/components/judgment/JudgmentDraftAutosave";
 import { renderWithProviders } from "./support/render";
 import { mockShowToast } from "./support/mocks";
-import { renderWithProviders } from "./support/render";
 
 /**
  * 越过自动保存的去抖窗口,在假时钟上:断言「没存」之前,去抖的定时器**一定**已经到点。

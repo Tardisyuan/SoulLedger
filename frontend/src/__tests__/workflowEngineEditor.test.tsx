@@ -117,7 +117,6 @@ import { savedTemplateToFlow, type TemplateNode } from "@/src/components/workflo
 import { SAVE_BLOCKING, nodeRoles, validateFlow } from "@/src/components/workflow/workflowValidation";
 import { overlaps, region } from "@/src/components/workflow/workflowConditions";
 import { renderWithProviders } from "./support/render";
-import { renderWithProviders } from "./support/render";
 
 const api = () => require("@soulledger/core/api").workflowApi.templates;
 

@@ -8,9 +8,8 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
 import { tZh } from "./support/zhBundle";
-import { renderWithProviders } from "./support/render";
-import { mockShowToast, page, http } from "./support/mocks";
 import { renderWithProviders, createTestQueryClient, testProviders } from "./support/render";
+import { mockShowToast, page, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   soulAccountsApi: { accounts: jest.fn(), provision: jest.fn(), resetCredential: jest.fn(), resetMfa: jest.fn() },

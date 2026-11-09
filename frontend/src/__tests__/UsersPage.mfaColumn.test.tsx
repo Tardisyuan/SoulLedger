@@ -10,7 +10,6 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
-import { renderWithProviders } from "./support/render";
 import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({

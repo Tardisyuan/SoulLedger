@@ -6,7 +6,6 @@
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { DevicesSection, SIGNED_OUT_LINGER_MS } from "@/src/components/profile/DevicesSection";
 import { renderWithProviders } from "./support/render";
-import { renderWithProviders } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({
   sessionsApi: { list: jest.fn(), revoke: jest.fn(), revokeOthers: jest.fn() },

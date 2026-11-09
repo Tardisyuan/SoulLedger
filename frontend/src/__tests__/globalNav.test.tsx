@@ -12,7 +12,6 @@
  */
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
 import * as lucide from "lucide-react";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 
@@ -91,7 +90,6 @@ import { navItems, navSections } from "@/src/lib/navSections";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
-import { renderWithProviders } from "./support/render";
 import { renderWithProviders, createTestQueryClient, testProviders } from "./support/render";
 
 const ALL_PATHS = ["/dashboard", "/souls", "/menus", "/soul-credentials", "/audit"];
@@ -366,9 +364,7 @@ describe("usePlaque:页面给身份带的题字", () => {
     return <>page body</>;
   }
   function renderWith(children: ReactNode) {
-    const client = createTestQueryClient();
-    const Wrapper = ({ children: c }: { children: ReactNode }) => <QueryClientProvider client={client}>{c}</QueryClientProvider>;
-    return render(<AppLayout>{children}</AppLayout>, { wrapper: Wrapper });
+    return renderWithProviders(<AppLayout>{children}</AppLayout>, { i18n: false });
   }
   const band = () => screen.getByTestId("plaque");
   const title = () => band().querySelector("[data-tier]");

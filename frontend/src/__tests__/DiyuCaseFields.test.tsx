@@ -6,7 +6,6 @@ import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { wangsiApi, type Judgment } from "@soulledger/core/api";
 import { OffenceField, WangsiPanel, untimelyLine } from "@/src/components/judgment/DiyuCaseFields";
-import { renderWithProviders } from "./support/render";
 import { renderWithProviders, createTestQueryClient } from "./support/render";
 
 jest.mock("@soulledger/core/api", () => ({

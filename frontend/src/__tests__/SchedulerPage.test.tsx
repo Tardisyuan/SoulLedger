@@ -21,9 +21,8 @@ import egy from "@soulledger/core/messages/egy.json";
 import zhHans from "@soulledger/core/messages/zh-Hans.json";
 import egyPendingKeys from "./support/egyPendingKeys.json";
 import { tZh, zh } from "./support/zhBundle";
-import { renderWithProviders } from "./support/render";
-import { mockShowToast, http } from "./support/mocks";
 import { renderWithProviders, createTestQueryClient } from "./support/render";
+import { mockShowToast, http } from "./support/mocks";
 
 jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
