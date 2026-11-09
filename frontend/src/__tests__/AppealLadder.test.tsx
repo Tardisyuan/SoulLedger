@@ -52,8 +52,10 @@ it("draws each station with its glyph, the final one on its own row below, and t
   const last = screen.getByTestId("appeal-station-final");
   expect(last).toHaveTextContent(tZh("appeals.ladder_final", { name: "梵蒂冈" }));
   expect(last).toHaveTextContent(tZh("appeals.ladder_state.AHEAD"));
-  expect(last.closest("ol")).toHaveClass("border-dashed");
-  expect(screen.getByTestId("appeal-station-2").closest("ol")).not.toHaveClass("border-dashed");
+  // Its own list, not the last item of the stations' list (the dashed rule between the two is styling).
+  expect(last.closest("ol")).not.toBeNull();
+  expect(last.closest("ol")).not.toContainElement(screen.getByTestId("appeal-station-1"));
+  expect(last.closest("ol")).not.toContainElement(screen.getByTestId("appeal-station-2"));
 });
 
 it("after a rejection the stations beyond it say 不再审 on a grey □, not 'not reached'", () => {
