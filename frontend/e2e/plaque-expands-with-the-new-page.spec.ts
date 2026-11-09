@@ -27,6 +27,10 @@ test("从滚过的页点侧栏进另一页:新页在顶上时标题行没有一�
     window.scrollTo({ top: 400, behavior: "instant" });
   });
   await expect(band).toHaveAttribute("data-compact", "");
+  // 收起是 200ms 的 height 过渡,标题行在内容之上:过渡期间它下面的内容每帧上移,滚动锚定可能跟着改 scrollY(未实测),
+  // 点击若落在这段里,新页提交时标题行的高度与滚动位置都还在动。等它停下:用户看到的「收起的标题行」是这个状态,
+  // 测试量的是「从这里点侧栏」,不是「在收起的半途点」(同 fixtures.ts `selectPreset` 的等法)。
+  await page.waitForFunction(() => document.querySelector("[data-testid='plaque']")!.getAnimations().length === 0);
 
   await page.evaluate(() => {
     const frames: Frame[] = [];
@@ -41,15 +45,17 @@ test("从滚过的页点侧栏进另一页:新页在顶上时标题行没有一�
 
   await page.locator("nav[aria-label='导航菜单']:visible").getByRole("link", { name: "灵魂" }).click();
   await expect(page).toHaveURL(/\/souls$/);
-  await expect(band).not.toHaveAttribute("data-compact");
 
-  // 新页落地后再多看一段,覆盖晚到的提交(加载边界 → 列表)。
+  // 新页落地后再多看一段,覆盖晚到的提交(加载边界 → 列表)。先取帧再断「展开」:那条红时,帧里的 scrollY 才说得出
+  // 是「新页没落在顶上」(收着是对的)还是「落在顶上却没展开」(2026-11-09 唯一一次红只留下了「一直收着」)。
   await page.waitForFunction(() => {
     const f = (window as unknown as { __frames: Frame[] }).__frames;
     const first = f.findIndex((x) => x.path === "/souls");
     return first >= 0 && f.length - first >= 30;
   });
   const frames = await page.evaluate(() => (window as unknown as { __frames: Frame[] }).__frames);
+  const last = frames.filter((f) => f.path === "/souls").slice(-3);
+  await expect(band, `新页最后几帧:${JSON.stringify(last)}`).not.toHaveAttribute("data-compact");
   const arrived = frames.filter((f) => f.path === "/souls" && f.y === 0);
   expect(arrived.length).toBeGreaterThan(0);
   expect(

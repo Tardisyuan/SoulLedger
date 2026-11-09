@@ -71,11 +71,16 @@ for (const role of ["admin", "moderator"] as Role[]) {
   });
 }
 
-test("signing out comes back to the four cards", async ({ page }) => {
+test("signing out says farewell in Greece's words, then comes back to the four cards", async ({ page }) => {
   await enter(page, "judge_gr");
   await page.getByTestId("user-menu").click();
   await page.getByRole("button", { name: "登出", exact: true }).click();
   await page.getByRole("alertdialog").or(page.getByRole("dialog")).getByRole("button").last().click();
+  // /goodbye first (AppLayout's handleLogout): named, the Greek line; it goes home by itself after six seconds.
+  await expect(page).toHaveURL(/\/goodbye$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^再会，.+/);
+  await expect(page.getByText("渡船已经离岸。")).toBeVisible();
+  await expect(page).toHaveURL((u) => u.pathname === "/", { timeout: 10_000 });
   await expect(page.getByTestId("landing-civs")).toBeVisible();
 });
 
