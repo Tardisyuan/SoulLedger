@@ -45,6 +45,55 @@ test("the judge claims a case, concludes it, and a disposition comes out", async
   clean(seen, "the judge's main line");
 });
 
+// 落印之后的那圈光(`Seal.tsx` `useStamp`:320ms 的压印之后,第二段 WAAPI `STAMP_GLOW_KEYFRAMES` 从印边散开一圈
+// `--color-glow`)。jest 只测得到 `animate` 被调用;这里在真浏览器里看它确实挂在落判层的那枚印上。
+// 不在落定之后去读 `getAnimations()`:光一共约 0.94 s(延迟 240 + 700),读晚了它已经结束、从列表里消失,
+// 红的原因会是「慢」。改成在 `animate` 被调用的那一刻记下:是哪枚印、关键帧动的是哪些属性、它在不在那枚印的
+// `getAnimations()` 里。减少动态效果时印直接是落定的样子,一段都不该有。
+type SealAnimation = { props: string[]; listed: boolean };
+async function recordSealAnimations(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const log: SealAnimation[] = [];
+    (window as unknown as { __sealAnims: SealAnimation[] }).__sealAnims = log;
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (this: Element, ...args: Parameters<Element["animate"]>) {
+      const a = animate.apply(this, args);
+      if (this.matches("[data-testid='confirm-layer'] [data-testid='seal']")) {
+        const frames = (a.effect as KeyframeEffect | null)?.getKeyframes() ?? [];
+        const props = [...new Set(frames.flatMap((k) => Object.keys(k).filter((p) => !["offset", "easing", "composite", "computedOffset"].includes(p))))];
+        log.push({ props: props.sort(), listed: this.getAnimations().includes(a) });
+      }
+      return a;
+    };
+  });
+}
+const sealAnimations = (page: Page) => page.evaluate(() => (window as unknown as { __sealAnims: SealAnimation[] }).__sealAnims);
+
+for (const reduced of [false, true]) {
+  test(`the verdict seal throws its glow after the press${reduced ? " — and nothing under reduced motion" : ""}`, async ({ page, context }) => {
+    const seen = watch(context, page);
+    await page.emulateMedia({ reducedMotion: reduced ? "reduce" : "no-preference" });
+    await recordSealAnimations(page);
+    await enter(page, "judge");
+    const name = await claimFirst(page);
+    await concludeOpen(page, name, "FAILED");
+    const layer = page.getByTestId("confirm-layer");
+    await expect(layer.getByText("判决已写入记录。")).toBeVisible();
+    const seal = layer.getByTestId("seal");
+    await expect(seal).toBeVisible(); // 印真的落了 —— 不然下面「一段都没有」量的是一枚不存在的印
+    if (reduced) {
+      expect(await sealAnimations(page)).toEqual([]);
+      expect(await seal.evaluate((el) => el.getAnimations().length)).toBe(0);
+    } else {
+      await expect.poll(() => sealAnimations(page)).toEqual([
+        { props: ["opacity", "transform"], listed: true },
+        { props: ["boxShadow"], listed: true },
+      ]);
+    }
+    clean(seen, "the verdict seal");
+  });
+}
+
 const judgedFlow = () => rows(recording("admin"), "/workflows/").find((w) => w.status === "IN_PROGRESS" && w.case_type !== "REBIRTH_APPLICATION")?.id;
 
 async function decide(page: Page, verdict: string): Promise<void> {
