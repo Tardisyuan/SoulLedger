@@ -44,8 +44,8 @@ def test_officer_screens_are_the_web_route_segments():
     # 曾有具名例外 NO_SCREEN = {"about"}:关于页归到 "other"。2026-09-30 用户拍板给它一个页面 id,
     # 例外随之删掉 —— 现在每个有页面的段都有助手页面 id,没有例外。
     # 唯一不算的是 `verdict-print`(2026-11-07):只给无头 Chromium 渲染判决书 PDF 的页,不登录、没有页头,
-    # 官员不会在那里打开助手。
-    assert set(OFFICER_SCREENS) - {"other"} == segments - {"verdict-print"}
+    # 官员不会在那里打开助手。`goodbye`(2026-11-10)同理:退出登录之后的再会页,已经没有会话、没有外壳。
+    assert set(OFFICER_SCREENS) - {"other"} == segments - {"verdict-print", "goodbye"}
 
 
 def test_every_screen_has_an_officer_entry(locale):

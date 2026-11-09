@@ -48,6 +48,7 @@ PUBLIC_OR_SELF_SERVICE = {
     "/judgment/[id]": "页内 judgment.execute 门。",
     "/dispatch/[id]": "页内 dispatch.approve / reject / execute 三道门。",
     "/workflow/[id]": "页内 workflow.approve / advance 门。",
+    "/goodbye": "退出登录之后的再会页(2026-11-10):这时已经没有会话;页面只读本标签页里退出前留的名字与文明,不请求任何数据。",
     "/verdict-print": "判决文书 PDF 的打印页:只有无头 Chromium 打开,一次性键是凭据;数据由后端在下载人自己的请求里按详情的权限备好(apps/judgment/verdict_pdf.py)。",
     "/about": "关于 / 致谢:字体、纹样、图像的授权清单,静态内容,不含任何租户数据(OFL / CC0 本就要求可见)。",
 }

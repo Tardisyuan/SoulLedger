@@ -50,6 +50,7 @@ export default function GoodbyePage() {
   }, [left, router]);
 
   const civ = note?.civ ?? null;
+  const farewell = note?.name ? t("auth.goodbye.title_named", { name: note.name }) : t("auth.goodbye.title");
   return (
     <main data-testid="goodbye" data-civ={civ ?? undefined} data-still={still ? "" : undefined} className="goodbye">
       {!still && (
@@ -63,7 +64,11 @@ export default function GoodbyePage() {
         <div aria-hidden="true" className="goodbye-mark">
           {civ ? <LandingEmblem civ={civ as SealCiv} size={168} /> : <BrandMark size={96} />}
         </div>
-        <h1 className="goodbye-title font-title">{note?.name ? t("auth.goodbye.title_named", { name: note.name }) : t("auth.goodbye.title")}</h1>
+        {/* 页面标题守卫要 <h1> 是 text-lg:读屏用这一个,看得见的大字是下面那行(同欢迎页的做法)。 */}
+        <h1 className="sr-only font-title text-lg">{farewell}</h1>
+        <p aria-hidden="true" className="goodbye-title font-title">
+          {farewell}
+        </p>
         <p className="goodbye-line">{t(`auth.goodbye.line.${civ ?? "neutral"}`)}</p>
         <p role="status" className="goodbye-status">
           {t("auth.goodbye.signed_out")} · {t("auth.goodbye.returning", { n: String(Math.max(left, 0)) })}
