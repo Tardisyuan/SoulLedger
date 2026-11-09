@@ -22,7 +22,8 @@ const SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" class="emblem2" data-civ="x" data-theme="dark" viewBox="0 0 240 240">' +
   '<style>.emblem2[data-civ="x"] .e-l{stroke-width:6}</style><defs><radialGradient id="g"></radialGradient></defs>' +
   '<circle class="e-l" cx="120" cy="120" r="80"/><line class="e-l2" x1="0" y1="0" x2="10" y2="10"/><line class="e-t" x1="1" y1="1" x2="2" y2="2"/>' +
-  '<ellipse class="e-l2 em2-wave e-l" rx="9"/><line class="e-l" style="stroke-dasharray:2 5"/><path class="e-l" pathLength="10" d="M0 0"/><line class="e-ll"/></svg>';
+  '<ellipse class="e-l2 em2-wave e-l" rx="9"/><line class="e-l" style="stroke-dasharray:2 5"/><path class="e-l" pathLength="10" d="M0 0"/><line class="e-ll"/>' +
+  '<path class="e-halo" d="M1 1"/><path class="e-tk em2-tick" stroke-dasharray="0.9 4.4" d="M2 2"/><path class="e-tk e-far" d="M3 3"/></svg>';
 const parse = (text: string) => new DOMParser().parseFromString(text, "image/svg+xml").documentElement;
 
 /** 只认括号里的单项特性:一条查询里每一项都在 `features` 里才算匹配(和浏览器对 `and` 的读法一样)。 */
@@ -88,18 +89,30 @@ describe("the draw-in: pure CSS from the first frame, once per civ", () => {
 
   it("withDrawLengths gives the main lines pathLength=1 and touches nothing else", () => {
     const out = withDrawLengths(SVG);
-    expect([...parse(out).querySelectorAll('[pathLength="1"]')].map((e) => e.getAttribute("class"))).toEqual(["e-l", "e-l2", "e-l2 em2-wave e-l"]);
+    expect([...parse(out).querySelectorAll('[pathLength="1"]')].map((e) => e.getAttribute("class"))).toEqual(["e-l", "e-l2", "e-l2 em2-wave e-l", "e-halo"]);
     // 自己写了虚线或 pathLength 的不碰;去掉加的那几处就是原文。
     expect(parse(out).querySelector("path")!.getAttribute("pathLength")).toBe("10");
     expect(out.split(' pathLength="1"').join("")).toBe(SVG);
   });
 
-  it.each(Object.keys(EMBLEM_SVGS))("%s: every solid main line gets its pathLength, and only those", (key) => {
+  it.each(Object.keys(EMBLEM_SVGS))("%s: every solid main line and halo gets its pathLength, and only those", (key) => {
     const svg = parse(withDrawLengths(EMBLEM_SVGS[key]));
-    const lines = [...svg.querySelectorAll(".e-l, .e-l2")];
+    const lines = [...svg.querySelectorAll(".e-l, .e-l2, .e-halo")];
     expect(lines.length).toBeGreaterThan(0);
     for (const el of lines) expect(el.getAttribute("pathLength")).toBe(/dasharray/.test(el.outerHTML) ? null : "1");
     expect(svg.querySelectorAll("[pathLength]").length).toBe(lines.filter((el) => !/dasharray/.test(el.outerHTML)).length);
+    // 刻度带(C 版地府的主动效就是它的 dashoffset)与光流自带虚线,不能被描线顶掉。
+    expect(svg.querySelectorAll(".e-tk[pathLength], .e-flow[pathLength]")).toHaveLength(0);
+  });
+
+  // globals.css 的描线按类名挂(`.e-l / .e-l2 / .e-halo`),动画里临时把虚线设成 1:一个靠类名在图自己的 <style> 里拿到虚线的主线
+  // 会被画成一串点。所以图里有虚线的类不能和这三类同在一个元素上(withDrawLengths 只看得见属性里的虚线)。
+  it.each(Object.keys(EMBLEM_SVGS))("%s: no drawn line takes a dash from its own stylesheet", (key) => {
+    const svg = parse(EMBLEM_SVGS[key]);
+    const dashed = [...svg.querySelector("style")!.textContent!.matchAll(/\.([\w-]+)\{[^}]*dasharray/g)].map((m) => m[1]);
+    expect(dashed).toEqual(expect.arrayContaining(["e-tk", "e-flow"]));
+    const drawn = [...svg.querySelectorAll(".e-l, .e-l2, .e-halo")];
+    expect(drawn.filter((el) => dashed.some((c) => el.classList.contains(c)) || el.hasAttribute("stroke-dasharray"))).toEqual([]);
   });
 
   it("the markup is in the render itself, both themes, no fetch", () => {

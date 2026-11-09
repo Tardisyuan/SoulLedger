@@ -4,7 +4,8 @@
  *      JS 到了之后只做两件事:开头不在视口里的卡先停着、进视口再画;画过的不再画(重挂、换主题)。
  *   2. 金属光泽:每 11 秒一道斜光扫过(CSS,`globals.css` 的 `.emblem-sheen`)。
  *   3. 卡片随指针轻微倾斜(≤ 6°),主视觉比卡底多挪几像素。
- * 只认元素的类名(`.e-l` 主线、`.e-l2`、`.e-t` 刻度),不认几何:Design 还在改线稿(更细的线、2.5D 版)。
+ * 只认元素的类名(`.e-l` 主线、`.e-halo` 主线下的柔线、`.e-l2`、`.e-t` 刻度),不认几何。
+ * 落地页用 Design 第二十批的 C 版(2.5D,`public/v4/emblems-c/`),别处用 B 版(`public/v4/emblems/`)。
  * 这里只放纯逻辑与 DOM 小操作,组件在 `components/landing/LandingEmblem.tsx` 与 `Landing.tsx`。
  */
 
@@ -58,13 +59,15 @@ export const markDrawn = (key: string) => void drawn.add(key);
 
 /**
  * 描线要主线带 `pathLength="1"`(虚线长度按 1 算,CSS 动画才不用量长度)。在渲染时往 SVG 原文里加,
- * 服务端与客户端得到同一串,水合不会对不上。只加给类名里有 `e-l` / `e-l2` 且自己没写 pathLength、没写虚线的元素
- * —— 这些线本来是实线,pathLength 对实线没有任何作用,所以画完留着也不改样子。
+ * 服务端与客户端得到同一串,水合不会对不上。只加给类名里有 `e-l` / `e-l2` / `e-halo` 且自己没写 pathLength、没写虚线的元素
+ * —— 这些线本来是实线,pathLength 对实线没有任何作用,所以画完留着也不改样子。`.e-halo` 和它上面的 `.e-l` 是同一条路径,
+ * 一起画(第二十批 §1)。虚线由类名给的(`.e-tk` 刻度带、`.e-flow` 光流,写在图自己的 <style> 里)不在这三类里,不碰。
  */
+export const DRAW_CLASSES = ["e-l", "e-l2", "e-halo"] as const;
 export function withDrawLengths(svg: string): string {
   return svg.replace(/<([a-zA-Z]+)\b([^>]*)>/g, (tag, name: string, attrs: string) => {
     const cls = attrs.match(/\sclass="([^"]*)"/)?.[1].split(/\s+/) ?? [];
-    if (!cls.includes("e-l") && !cls.includes("e-l2")) return tag;
+    if (!DRAW_CLASSES.some((c) => cls.includes(c))) return tag;
     if (/\spathLength=|dasharray/.test(attrs)) return tag;
     return `<${name} pathLength="1"${attrs}>`;
   });
