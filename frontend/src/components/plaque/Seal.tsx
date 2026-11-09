@@ -58,6 +58,11 @@ export const STAMP_KEYFRAMES: Keyframe[] = [
   { offset: 1, opacity: 1, transform: "scale(1)" },
 ];
 
+export const STAMP_GLOW_KEYFRAMES: Keyframe[] = [
+  { boxShadow: "0 0 0 0 oklch(var(--color-glow) / 0.75)" },
+  { boxShadow: "0 0 0 18px oklch(var(--color-glow) / 0)" },
+];
+
 function useStamp(stampKey: number | undefined) {
   const root = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -67,7 +72,12 @@ function useStamp(stampKey: number | undefined) {
       duration: MOTION_DURATIONS.slow * 1000,
       easing: `cubic-bezier(${MOTION_EASINGS.drop.join(",")})`,
     });
-    return () => press.cancel();
+    // 落定那一下,一圈文明光从印边散开(徽记「盖印」那一闪,2026-11-10)。
+    const glow = el.animate(STAMP_GLOW_KEYFRAMES, { duration: 700, delay: MOTION_DURATIONS.slow * 750, easing: "ease-out" });
+    return () => {
+      press.cancel();
+      glow.cancel();
+    };
   }, [stampKey]);
   return root;
 }

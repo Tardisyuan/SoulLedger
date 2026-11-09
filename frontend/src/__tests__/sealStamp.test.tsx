@@ -26,7 +26,11 @@ afterAll(() => {
 
 it("stamps by scale 1.7 → .96 → 1 with opacity 0 → 1, 320ms on the emphasis curve", () => {
   render(<Seal size={72} civ="cn" stampKey={1} />);
-  expect(animate).toHaveBeenCalledTimes(1);
+  // The press, then a ring of the civilization's glow as it lands (2026-11-10).
+  expect(animate).toHaveBeenCalledTimes(2);
+  const [glowFrames, glowOptions] = animate.mock.calls[1] as unknown as [Keyframe[], KeyframeAnimationOptions];
+  expect(JSON.stringify(glowFrames)).toContain("--color-glow");
+  expect(glowOptions.delay).toBe(240);
   const [frames, options] = animate.mock.calls[0] as unknown as [Keyframe[], KeyframeAnimationOptions];
   expect(frames).toEqual([
     { offset: 0, opacity: 0, transform: "scale(1.7)" },

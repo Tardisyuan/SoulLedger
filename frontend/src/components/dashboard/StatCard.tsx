@@ -45,7 +45,7 @@ function StatCardInner({
       className={
         compactLine
           ? "flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 py-4 max-md:col-span-2 max-md:flex-row max-md:items-center max-md:gap-2 max-md:border-0 max-md:bg-transparent max-md:p-0 max-md:text-xs max-md:text-[oklch(var(--color-ink-muted))]"
-          : "flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-3 md:px-4 md:py-4"
+          : "kpi-fx flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-3 md:px-4 md:py-4"
       }
     >
       <div className="text-xs text-[oklch(var(--color-ink-muted))] md:text-sm">{label}</div>
@@ -65,7 +65,7 @@ function StatCardInner({
       </div>
       <div aria-hidden="true" className={`h-1 bg-[oklch(var(--color-surface-2))] md:h-1.5 ${compactLine ? "max-md:hidden" : ""}`}>
         {known && (value as number) > 0 && (
-          <div className={`h-full min-w-0.5 ${barClass}`} style={{ width: `${share * 100}%` }} />
+          <div className={`kpi-fill h-full min-w-0.5 ${barClass}`} style={{ width: `${share * 100}%` }} />
         )}
       </div>
       <div className="font-mono text-xs text-[oklch(var(--color-ink-muted))] max-md:hidden">

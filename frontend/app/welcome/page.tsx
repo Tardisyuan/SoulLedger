@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant, type AuthUser } from "@/src/contexts/TenantContext";
+import { civSkinOf } from "@/src/lib/civSkin";
+import dynamic from "next/dynamic";
+
+// 嵌彩徽记的 SVG 原文(四文明深浅八份,约 340 KB)在落地页的模块里:这里单独成块、按需加载,不压欢迎页首屏。
+const LandingEmblem = dynamic(() => import("@/src/components/landing/LandingEmblem").then((m) => m.LandingEmblem), { ssr: false });
+import type { SealCiv } from "@/src/components/plaque/Seal";
 import { auditApi, ledgerApi, type AuditLogEntry, type LedgerStatsOverview } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RoleName } from "@/src/components/users/RoleName";
@@ -298,6 +304,7 @@ export default function WelcomePage() {
   const { t, formatDate } = useI18n();
   const { user } = useTenant();
   const name = user?.display_name || user?.username || "";
+  const skin = civSkinOf(user?.tenant?.code ?? null);
 
   // 问候只分三档(A9):12 点前早上好,18 点前下午好,其余晚上好。
   const hour = new Date().getHours();
@@ -393,7 +400,13 @@ export default function WelcomePage() {
         <WelcomeSetup user={user} startAt={setupAt} onDone={() => setSetupAt(null)} />
       ) : (
         <div className="flex flex-col gap-6">
-          <StatsPanel load={stats} asOf={asOf} onRetry={loadStats} />
+          {/* 本殿文明的嵌彩徽记(落地页卡上那一枚,描线登场 + 11 s 扫光;2026-11-10 用户定)。中性皮不画。 */}
+          <div className="flex items-stretch gap-6">
+            <div className="min-w-0 flex-1">
+              <StatsPanel load={stats} asOf={asOf} onRetry={loadStats} />
+            </div>
+            {skin !== "neutral" && <LandingEmblem civ={skin as SealCiv} size={136} className="shrink-0 self-center max-md:hidden" />}
+          </div>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
             <NextPanel user={user} judging={judging} onRedo={() => setSetupAt(0)} onShortcuts={() => setSetupAt(3)} />
             <ActivityPanel load={activity} onRetry={loadActivity} formatTimestamp={formatTimestamp} />

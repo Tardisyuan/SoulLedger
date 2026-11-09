@@ -81,6 +81,8 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { CivEmblem } from "@/src/components/brand/CivEmblem";
+import { skinOfCivilization } from "@/src/lib/civSkin";
 import { PrintFrame } from "@/src/components/print/PrintFrame";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -849,7 +851,19 @@ export default function SoulDetailPage() {
       title={headerTitle}
       subtitle={headerSubtitle}
       actions={headerActions}
-      aside={soul && !loading ? <SoulHeadingFigures soul={soul} /> : undefined}
+      aside={
+        soul && !loading ? (
+          // 页头右侧一枚淡淡的天体仪(G 版,外环自己慢转,进页时淡入;2026-11-10 用户定把徽记效果铺到这里)。
+          <div className="relative">
+            {skinOfCivilization(soul.civilization) && (
+              <CivEmblem civ={skinOfCivilization(soul.civilization)!} size={136} className="soul-head-emblem absolute -top-14 -right-6 max-md:hidden" />
+            )}
+            <div className="relative">
+              <SoulHeadingFigures soul={soul} />
+            </div>
+          </div>
+        ) : undefined
+      }
     >
       {soul && !loading && (
         <ArchiveBanner

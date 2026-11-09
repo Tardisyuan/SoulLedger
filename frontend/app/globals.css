@@ -2322,3 +2322,56 @@ li:last-child > .route-row {
     animation: none;
   }
 }
+
+/* ── 徽记效果铺开(2026-11-10 用户定:灵魂详情页头、判决落印、概览 KPI 卡、欢迎页)──────────────
+   落印的光环在 Seal.tsx(WAAPI);欢迎页用落地页同一个 LandingEmblem(描线 + 扫光)。 */
+.soul-head-emblem {
+  opacity: 0.3;
+  animation: soul-head-emblem-in 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) 0.15s backwards;
+}
+@keyframes soul-head-emblem-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) rotate(-8deg);
+  }
+}
+.kpi-fx {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.kpi-fx::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, oklch(var(--color-metal) / 0.18) 50%, transparent 65%);
+  translate: -100% 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .kpi-fx:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px -8px oklch(var(--color-glow) / 0.55);
+  }
+  .kpi-fx:hover::after {
+    translate: 100% 0;
+    transition: translate 0.9s ease-in-out;
+  }
+}
+.kpi-fill {
+  transform-origin: left;
+  animation: route-draw 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .soul-head-emblem,
+  .kpi-fill {
+    animation: none;
+  }
+  .kpi-fx,
+  .kpi-fx:hover {
+    transform: none;
+    transition: none;
+  }
+}
