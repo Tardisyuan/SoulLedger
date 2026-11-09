@@ -137,7 +137,8 @@ test("China: the ten courts, the stations, Meng Po", async ({ page }) => {
 
 const NO_REBIRTH = /轮回|转世|转生|rebirth|reincarnat/i;
 /** Copy that really does say there is none, and the app's fixed labels that apply to every civilization. */
-const SAYS_THERE_IS_NONE = /没有转生|没有转世|无转世|no rebirth/i;
+// 「不轮回」: the hatched fourth cell of the soul's stage bar (Design batch 25, user 2026-11-10) — it says there is none.
+const SAYS_THERE_IS_NONE = /没有转生|没有转世|无转世|不轮回|no rebirth/i;
 for (const role of ["judge_eu", "judge_eg"] as Role[]) {
   test.describe(`${role}: its afterlife has no wheel`, () => {
     const rec = recording(role);
