@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { MissingValue } from "@/src/components/ui/DomainValue";
@@ -16,13 +16,17 @@ import { segmentWalked, type Station, type StationState, type Topology } from "@
  *   □ 站     空心方块;map 模式里有在押的站填墨
  *   ⬚ 终点   虚线方块 + 虚线路:杜阿特「不过」那条路的尽头(第二次死亡不是地方)
  *
+ * 2026-11-10(用户:「可视化度太低」):已行的线与站改用文明色(civT)并带一层光晕,横排时逐段描出来;
+ * 当前站外加一圈慢慢扩散的金环(和徽记的呼吸同一种节奏,避开魂火);横排自动滚到当前站,两端淡出。
+ * 线型规则不变:实线 = 已行,虚线 = 待行。样式在 globals.css 的 `.route-*`。
+ *
  * 每个站是一个 `<li data-station-state>`,状态另有 sr-only 文字 —— 线型与方块
  * 只是看的,不单靠形状说「这一站走过没有」。
  */
 export type RouteTopologyMode = "map" | "route";
 
-const WALKED = "border-[oklch(var(--color-ink))]";
-const AHEAD = "border-dashed border-[oklch(var(--color-ink-subtle))]";
+const WALKED = "route-walked border-[oklch(var(--color-main-ink))]";
+const AHEAD = "border-dashed border-[oklch(var(--color-ink-muted))]";
 
 /** The station's name, or null when nothing names it (a stop whose realm row is gone
  *  and whose entry carried no code) — the caller renders a typed miss for that. */
@@ -57,6 +61,13 @@ export function RouteTopology({
   /** Full name plus code, for the `title` of every truncated label. */
   const tip = (s: Station) => [realmStationLabel(t, s), s.code].filter(Boolean).join(" · ") || undefined;
   const held = (s: Station) => occupancy?.get(s.id) ?? 0;
+  // 横排放不下时先看见「现在」:把当前站滚到中间(此前停在最左,当前站常在屏外)。
+  const strip = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = strip.current;
+    const now = box?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (box && now && box.scrollWidth > box.clientWidth) box.scrollLeft = now.offsetLeft + now.offsetWidth / 2 - box.clientWidth / 2;
+  }, [topology]);
 
   const mark = (s: Station, emphasis = false, terminal = false) => (
     <StationMark state={s.state} filled={mode === "map" && held(s) > 0} emphasis={emphasis} terminal={terminal} />
@@ -110,16 +121,17 @@ export function RouteTopology({
           key={s.id}
           data-station-state={s.state}
           aria-current={s.state === "current" ? "step" : undefined}
-          className="min-w-16 flex-1 pr-1"
+          className="min-w-18 flex-1 pr-1"
+          style={{ "--i": i } as CSSProperties}
         >
-          <span aria-hidden="true" className="flex items-center h-3">
+          <span aria-hidden="true" className="route-row flex items-center h-5">
             <span className={`flex-1 h-0 ${into === null ? "" : into ? `border-t-2 ${WALKED}` : `border-t-2 ${AHEAD}`}`} />
             {mark(s, bold?.(s), terminal)}
             <span className={`flex-1 h-0 ${i === stations.length - 1 ? "" : segmentWalked(stations, i + 1) ? `border-t-2 ${WALKED}` : `border-t-2 ${AHEAD}`}`} />
           </span>
           <span
             title={tip(s)}
-            className={`block text-center text-2xs mt-1 truncate ${textTone(s.state)} ${bold?.(s) ? "font-semibold" : ""}`}
+            className={`block text-center text-xs mt-1 truncate ${textTone(s.state)} ${bold?.(s) ? "font-semibold" : ""}`}
           >
             {label(s)}
           </span>
@@ -134,13 +146,13 @@ export function RouteTopology({
   let body: ReactNode;
   switch (topology.kind) {
     case "line":
-      body = compact ? <div className="relative overflow-x-auto max-w-full">{horizontal(topology.stations)}</div> : vertical(topology.stations);
+      body = compact ? <div ref={strip} className="route-strip relative overflow-x-auto max-w-full">{horizontal(topology.stations)}</div> : vertical(topology.stations);
       break;
     case "fork_two": {
       // Horizontal trunk to the weighing, then the two roads out of it: PASS up, FAIL down.
       const hall = topology.trunk[topology.trunk.length - 1];
       body = (
-        <div className="relative overflow-x-auto max-w-full">
+        <div ref={strip} className="route-strip relative overflow-x-auto max-w-full">
           <div className="flex items-center min-w-max">
             {horizontal(topology.trunk, (s) => s.realm?.is_judgment_hall === true)}
             <div className="flex flex-col gap-3">
@@ -263,7 +275,7 @@ export function RouteTopology({
 }
 
 function textTone(state: StationState): string {
-  if (state === "current") return "font-semibold text-[oklch(var(--color-ink))]";
+  if (state === "current") return "font-semibold text-[oklch(var(--color-main-ink))]";
   if (state === "travelled") return "text-[oklch(var(--color-ink))]";
   return "text-[oklch(var(--color-ink-muted))]";
 }
@@ -274,10 +286,10 @@ function StationMark({ state, filled, emphasis, terminal }: { state: StationStat
     ? `size-2.5 border border-dashed border-[oklch(var(--color-ink))] ${state === "current" ? "bg-[oklch(var(--color-metal))]" : "bg-[oklch(var(--color-canvas))]"}`
     :
     state === "current"
-      ? "size-3 bg-[oklch(var(--color-metal))]"
+      ? "route-now size-3.5 bg-[oklch(var(--color-metal))]"
       : state === "travelled" || filled
-        ? `size-2 bg-[oklch(var(--color-ink))] ${emphasis ? "outline outline-1 outline-offset-1 outline-[oklch(var(--color-ink))]" : ""}`
-        : `size-2 bg-[oklch(var(--color-canvas))] ${ring} border-[oklch(var(--color-ink-subtle))]`;
+        ? `route-done size-2.5 bg-[oklch(var(--color-main-ink))] ${emphasis ? "outline outline-1 outline-offset-1 outline-[oklch(var(--color-main-ink))]" : ""}`
+        : `size-2.5 bg-[oklch(var(--color-canvas))] ${ring} border-[oklch(var(--color-ink-muted))]`;
   return <span aria-hidden="true" data-mark={state} data-terminal={terminal ? "dashed" : undefined} className={`shrink-0 ${cls}`} />;
 }
 

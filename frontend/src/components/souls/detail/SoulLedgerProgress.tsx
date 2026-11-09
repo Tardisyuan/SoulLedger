@@ -83,8 +83,14 @@ export function SoulLedgerProgress({
     hasRebirth(soul.civilization) ? t("souls.detail.timeline.stage_reincarnating") : t("souls.detail.timeline.stage_final"),
   ];
 
+  // 进度条(2026-11-10 用户:「可视化度太低」):走到第几格就填到那格的中间;走完的格前面一颗金点。
+  const reached = statuses.lastIndexOf("current") >= 0 ? statuses.lastIndexOf("current") + 0.5 : statuses.lastIndexOf("done") + 1;
+
   return (
     <div className="min-w-0">
+      <div aria-hidden="true" data-testid="soul-ledger-bar" className="soul-progress-bar">
+        <span style={{ width: `${(Math.max(0, reached) / statuses.length) * 100}%` }} />
+      </div>
       <ol
         aria-label={t("souls.detail.ledger.progress_label")}
         data-testid="soul-ledger-progress"
@@ -96,18 +102,19 @@ export function SoulLedgerProgress({
             data-step-status={status}
             aria-current={status === "current" ? "step" : undefined}
             className={`px-2 py-2 border-r border-[oklch(var(--color-rule))] last:border-r-0 ${
-              status === "current"
-                ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_0_-3px_0_oklch(var(--color-ink))]"
-                : ""
+              status === "current" ? "soul-progress-now" : ""
             }`}
           >
             <div
-              className={
+              className={`flex items-center gap-2 ${
                 status === "current"
-                  ? "font-semibold text-[oklch(var(--color-ink))]"
-                  : "text-[oklch(var(--color-ink-subtle))]"
-              }
+                  ? "font-semibold text-[oklch(var(--color-main-ink))]"
+                  : status === "done"
+                    ? "text-[oklch(var(--color-ink-muted))]"
+                    : "text-[oklch(var(--color-ink-subtle))]"
+              }`}
             >
+              <span aria-hidden="true" data-step-dot={status} className="soul-progress-dot" />
               {String(i + 1).padStart(2, "0")} {labels[i]}
               {status === "current" && ` · ${t("souls.detail.ledger.current")}`}
             </div>
