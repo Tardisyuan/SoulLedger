@@ -6,6 +6,7 @@ import type { ApprovalNode, Realm } from "@soulledger/core/api";
 import type { Station, StationState, Topology } from "@/src/lib/routeTopology";
 import { collapseRoad, journeyCounts, offRoute, soulRoad, stageStates } from "@/src/lib/journeyModel";
 import { returnCounts, workflowGraph } from "@/src/lib/journeyLayout";
+import { wrapLabel } from "@/src/components/journey/JourneyMap";
 
 const st = (id: string, state: StationState, realm: Partial<Realm> = {}): Station => ({
   id,
@@ -179,5 +180,19 @@ describe("workflow returns — 退回重审 spurs", () => {
       ["a~loop", "off"],
     ]);
     expect(graph.captions.map((c) => c.text)).toEqual(["x1"]);
+  });
+});
+
+describe("wrapLabel (2026-11-10: one-line fit cut every court to 「第一殿秦…」)", () => {
+  it("keeps a name that fits on one line", () => {
+    expect(wrapLabel("土地庙", 54, 12)).toEqual(["土地庙"]);
+  });
+  it("breaks after 殿 onto a second line instead of cutting", () => {
+    expect(wrapLabel("第一殿秦广王", 54, 12)).toEqual(["第一殿", "秦广王"]);
+  });
+  it("still ends the second line in … when even two lines are too short", () => {
+    const [a, b] = wrapLabel("第十殿转轮王与六道轮回", 40, 12);
+    expect(a).toBe("第十殿");
+    expect(b.endsWith("…")).toBe(true);
   });
 });

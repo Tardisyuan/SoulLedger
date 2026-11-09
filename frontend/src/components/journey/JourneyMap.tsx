@@ -38,6 +38,24 @@ function textWidth(s: string, size: number): number {
   return w;
 }
 
+/** A label that does not fit goes onto two lines (第一殿 / 秦广王), breaking after 殿 or · when that
+ *  falls in the first line; the second line still ends in … if it is too long (2026-11-10:
+ *  at ~500 px the one-line fit cut every court to 「第一殿秦…」). */
+export function wrapLabel(s: string, max: number, size: number): string[] {
+  if (textWidth(s, size) <= max) return [s];
+  let first = "";
+  for (const c of s) {
+    if (textWidth(first + c, size) > max) break;
+    first += c;
+  }
+  const brk = Math.max(first.lastIndexOf("殿"), first.lastIndexOf("·"));
+  if (brk > 0 && brk < first.length - 1) first = first.slice(0, brk + 1);
+  if (!first) return [fit(s, max, size)];
+  return [first, fit(s.slice(first.length).replace(/^\s*·?\s*/, ""), max, size)];
+}
+
+const LINE = 14;
+
 function fit(s: string, max: number, size: number): string {
   if (textWidth(s, size) <= max) return s;
   let out = "";
@@ -116,12 +134,37 @@ function WideJourney({
     for (const o of graph.stops) if (o !== s && !o.spur && Math.abs(o.y - s.y) < 4) gap = Math.min(gap, Math.abs(o.x - s.x));
     return gap - 6;
   };
+  const linesOf = (s: JStop): string[] => {
+    const size = s.route === "off" ? 11 : 12;
+    return s.labelAt === "right" || s.labelAt === "left" ? [fit(s.label, room(s), size)] : wrapLabel(s.label, room(s), size);
+  };
+  // 可见范围按内容裁:当前站不在线上(在支线)时没有名牌,线上方不再空出名牌那一截(2026-11-10,约 70px)。
+  // 漏斗的背景体积画在固定坐标上,它照旧用整张。
+  const box = (() => {
+    if (graph.backdrop === "funnel") return { y: 0, h: graph.h };
+    let top = Infinity;
+    let bottom = -Infinity;
+    for (const s of graph.stops) {
+      const n = s.labelAt === "none" ? 0 : linesOf(s).length;
+      top = Math.min(top, s.y - 20, s.labelAt === "above" ? s.y - 16 - (n - 1) * LINE - 12 : Infinity);
+      bottom = Math.max(bottom, s.y + 20, s.labelAt === "below" ? s.y + 26 + (n - 1) * LINE + 4 : -Infinity);
+      if (s.num) bottom = Math.max(bottom, s.y + 44 + (s.labelAt === "below" ? (n - 1) * LINE : 0));
+    }
+    for (const c of graph.captions) {
+      top = Math.min(top, c.y - 12);
+      bottom = Math.max(bottom, c.y + 4);
+    }
+    if (current && plate) top = Math.min(top, plateBox(current, graph, plate, current.label).y);
+    if (!Number.isFinite(top)) return { y: 0, h: graph.h };
+    const y = Math.max(0, Math.floor(top - 6));
+    return { y, h: Math.ceil(bottom + 6) - y };
+  })();
 
   return (
     <svg
       role="list"
       aria-label={label}
-      viewBox={`0 0 ${graph.w} ${graph.h}`}
+      viewBox={`0 ${box.y} ${graph.w} ${box.h}`}
       className="journey-svg block w-full h-auto"
       data-backdrop={graph.backdrop}
     >
@@ -145,9 +188,9 @@ function WideJourney({
       {graph.stops.map((s) => {
         if (s.spur) return <circle key={s.id} aria-hidden="true" cx={s.x} cy={s.y} r={4.5} className="journey-stop-off" />;
         const named = s.labelAt !== "none" && !(s === current && plate);
-        const size = s.route === "off" ? 11 : 12;
+        const lines = linesOf(s);
         const lx = s.labelAt === "right" ? s.x + 14 : s.labelAt === "left" ? s.x - 14 : s.x;
-        const ly = s.labelAt === "above" ? s.y - 16 : s.labelAt === "below" ? s.y + 26 : s.y + 4;
+        const ly = s.labelAt === "above" ? s.y - 16 - (lines.length - 1) * LINE : s.labelAt === "below" ? s.y + 26 : s.y + 4;
         const anchor = s.labelAt === "right" ? "start" : s.labelAt === "left" ? "end" : "middle";
         return (
           <g
@@ -163,11 +206,15 @@ function WideJourney({
             <StopMark s={s} />
             {named && (
               <text x={lx} y={ly} textAnchor={anchor} className="journey-label" data-station-state={s.state} data-route={s.route}>
-                {fit(s.label, room(s), size)}
+                {lines.map((l, k) => (
+                  <tspan key={k} x={lx} dy={k === 0 ? 0 : LINE}>
+                    {l}
+                  </tspan>
+                ))}
               </text>
             )}
             {s.num && (
-              <text x={s.x} y={s.y + 40} textAnchor="middle" className="journey-num">
+              <text x={s.x} y={s.y + 40 + (s.labelAt === "below" ? (lines.length - 1) * LINE : 0)} textAnchor="middle" className="journey-num">
                 {s.num}
               </text>
             )}
@@ -215,7 +262,7 @@ function StopMark({ s }: { s: JStop }) {
 }
 
 /** 「现在」名牌:默认在站上方;漏斗靠底的站放右侧;右边要分岔的站把名牌往左靠(§一.3)。 */
-function Plate({ s, graph, plate, label }: { s: JStop; graph: JGraph; plate: JourneyPlate; label: string }) {
+function plateBox(s: JStop, graph: JGraph, plate: JourneyPlate, label: string) {
   const w = Math.min(240, Math.max(textWidth(plate.heading, 10.5), textWidth(label, 13), plate.sub ? textWidth(plate.sub, 11) : 0) + 22);
   const h = plate.sub ? 56 : 42;
   const forksRight = graph.edges.some((e) => e.from === s.id && e.curve);
@@ -234,6 +281,11 @@ function Plate({ s, graph, plate, label }: { s: JStop; graph: JGraph; plate: Jou
     y = Math.max(2, s.y - 22 - h);
     tip = `M${s.x - 5} ${y + h}L${s.x} ${y + h + 6}L${s.x + 5} ${y + h}`;
   }
+  return { x, y, w, h, tip };
+}
+
+function Plate({ s, graph, plate, label }: { s: JStop; graph: JGraph; plate: JourneyPlate; label: string }) {
+  const { x, y, w, h, tip } = plateBox(s, graph, plate, label);
   return (
     <g aria-hidden="true" data-plate="">
       <rect x={x} y={y} width={w} height={h} rx={8} className="journey-plate" />
