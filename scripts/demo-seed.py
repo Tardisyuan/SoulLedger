@@ -979,6 +979,15 @@ def write_lives():
     Path(os.environ["DEMO_LIVES"]).write_text(json.dumps({"souls": souls, "owner": owner}))
 
 
+def seed_capacities():
+    """Room per station, so /realms draws its occupancy bars (Design batch 25 §五.1, 2026-11-10). The mythology seeding
+    leaves `Realm.capacity` empty on purpose (apps/actors/mythology/seeding.py NOT_SEEDED: it is operational, no
+    source gives it); a hall would set it. 12 everywhere, and 11 at the Field of Reeds, where the demo keeps ten
+    souls — one station past 90 %, so the red mark has something to show."""
+    Realm.all_objects.update(capacity=12)
+    Realm.all_objects.filter(realm_code="EG_AARU").update(capacity=11)
+
+
 def seed_audit(users):
     verbs = [(AuditAction.LOGIN, "auth", "登录"), (AuditAction.UPDATE, "soul", "修改功过"), (AuditAction.CREATE, "judgment", "开案"),
              (AuditAction.UPDATE, "role", "调整角色权限"), (AuditAction.DELETE, "post", "删除违规帖")]
@@ -1044,6 +1053,7 @@ def main():
     spread_time(started)
     backdate_deaths()
     write_lives()
+    seed_capacities()
     call_command("snapshot_balances", stdout=StringIO())
     seed_history()
     print("realms:", Realm.all_objects.count(), "users:", User.objects.count(), "workflows:", ApprovalWorkflow.all_objects.count())
