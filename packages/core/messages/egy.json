@@ -9275,6 +9275,73 @@
       "back": "Wehem Er Sab Wedja",
       "strip": "Maa · Medjat Ba",
       "back_short": "Er Sab Wedja"
+    },
+    "home": {
+      "eyebrow": "Maa · Nen Sesh Ren",
+      "lede": "Medjat Ba: Sesh Wa Em Duat 4. Er Khet Mut: Wedja, Wetep, Wehem Mesut — Sesh Neb Dy. Duat Sherer, Pet Hena Duat, Duat Kemet, Duat Haunebut: Djedu Djes-Ef.",
+      "route_title": "Mawy · Wat 3",
+      "step1": "Wedja Ba Mi Sab",
+      "step1_sub": "Maa Nefer Hena Isfet · Khetem Wedja",
+      "step2": "Maa Wat Ba Em Ankh Pen",
+      "step2_sub": "Em Mut Er Sekhet Emu · Maa Wa",
+      "step3": "Aq Mi Ba · Maa Sesh Djes-Ef",
+      "step3_sub": "Medjat Ba: Ankh Pen, Wat, Em Hetep",
+      "cta": "Tepy Em Wat 1",
+      "cta_sub": "Aq Mi Sab {{hall}}",
+      "cta_hall": "Duat Sherer · Wesekhet 5",
+      "peek": "Maa Tepy (30)",
+      "preview_title": "Maa · Wat Ba Wa",
+      "preview_sub": "Duat 4, Wa Er Wa · Smen Er Maa",
+      "preview_manual": "Setep Duat",
+      "preview_static": "Tut Smen · Setep: Shem",
+      "preview_soul": "{{name}} · Wat",
+      "preview_tabs": "Setep Duat Er Maa",
+      "civ_title": "Duat 4 · Wat 4",
+      "civ_sub": "Setep Wesekhet Wa · Aq Mi Sab Pen",
+      "enter_officer": "Aq Mi Sab Wedja",
+      "hall": {
+        "cn": "Wesekhet 5 · Yanluo",
+        "eu": "Wesekhet Minos",
+        "eg": "Weret Maaty",
+        "gr": "Wesekhet Sab 3"
+      },
+      "feat": {
+        "cn": "Wesekhet 10 · Wat Wa",
+        "cn_body": "Sekhet 13, Wat Wa; Wesekhet 1 Er 10; Setep: Duat 18.",
+        "eu": "Duat 9 Er Khery",
+        "eu_body": "Wedja Em Mut: Duat 9, Khery Er Khery; Ta Hesmen, Hery Er Pet.",
+        "eg": "Fai Ib · Wat 2",
+        "eg_body": "Fai Ib · Shut Maat: Menkh → Sekhet Aaru; Nen Menkh → Mut Sen.",
+        "gr": "Wat 3",
+        "gr_body": "Wedja 3: Ta Nefer, Renpet 1000, Tartaros; Pehwy: Mu Lethe."
+      },
+      "roles_title": "Netjer 4",
+      "role": {
+        "officer": "Sab Wedja",
+        "officer_body": "Wedja Ba, Khetem, Iri Wetep",
+        "officer_go": "Setep Wesekhet Em Hery",
+        "soul": "Ba",
+        "soul_body": "Maa Sesh Hena Wat Em Ankh Pen",
+        "soul_go": "Aq Mi Ba",
+        "admin": "Sab Hery",
+        "admin_body": "Wesekhet, Was, Medu Sesh",
+        "admin_go": "Aq Mi Sab Hery",
+        "inspector": "Sab Shemsu",
+        "inspector_body": "Maat Shemsu: Sedjem, Gerh, Medu Djeseru",
+        "inspector_go": "Aq Mi Sab Shemsu"
+      },
+      "peek_title": "Maa Tepy (30)",
+      "peek_sub": "Tut 4, Wa Er Wa (7) · Em Tepy / Em Khet",
+      "peek_frames": {
+        "bench": "Wedja · Khetem",
+        "road": "Wat",
+        "app": "Medjat Ba",
+        "farewell": "Em Hetep"
+      },
+      "peek_prev": "Em Tepy",
+      "peek_next": "Em Khet",
+      "peek_done": "Khetem · Tepy Em Wat 1",
+      "footer": "Medjat Ba · Maa"
     }
   },
   "action": {
