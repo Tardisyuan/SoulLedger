@@ -75,7 +75,7 @@ test("the landing page opens without signing in, four cards first", async ({ pag
   await page.waitForLoadState("networkidle");
   await expect(page.getByTestId("demo-banner")).toBeVisible();
   await expect(page.getByTestId("landing-civs").getByRole("button")).toHaveCount(4);
-  await expect(page.getByTestId("landing-numbers")).toBeVisible();
+  await expect(page.getByTestId("demo-home-steps").getByRole("listitem")).toHaveCount(3);
   clean(seen, "/");
 });
 
