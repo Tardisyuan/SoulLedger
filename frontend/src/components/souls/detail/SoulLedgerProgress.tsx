@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import type { Disposition, Judgment, Reincarnation, Soul, SoulPathEntry } from "@soulledger/core/api";
+import type { Disposition, Judgment, LedgerReading, Realm, Reincarnation, Soul, SoulPathEntry } from "@soulledger/core/api";
 import { useQuery } from "@tanstack/react-query";
 import { soulsApi } from "@soulledger/core/api";
 import { useRealms } from "@soulledger/core/hooks/useRealms";
@@ -55,7 +55,6 @@ export function SoulLedgerProgress({
   birthDisplay: string | null;
   deathDisplay: string | null;
 }) {
-  const { t, formatDate } = useI18n();
   const realms = useRealms();
   const path = useQuery({
     queryKey: soulKeys.path(soul.id),
@@ -70,6 +69,63 @@ export function SoulLedgerProgress({
     enabled: greekTerm,
     staleTime: 30_000,
   });
+  return (
+    <JourneyBlock
+      soul={soul}
+      judgments={judgments}
+      dispositions={dispositions}
+      reincarnations={reincarnations}
+      birthDisplay={birthDisplay}
+      deathDisplay={deathDisplay}
+      realms={realms.data}
+      path={path.data}
+      failed={realms.isError || path.isError}
+      reading={greekTerm ? ledger.data?.reading : undefined}
+    >
+      {/* 地府的图在十三站卡里(DiyuStationStrip);其余三个文明的图在行程下面。 */}
+      {soul.civilization !== "CHINESE" && (
+        <SoulUnderworldMap soul={soul} eternal={!!disposition?.is_eternal} className="py-3 border-b border-[oklch(var(--color-line))]" />
+      )}
+    </JourneyBlock>
+  );
+}
+
+type JourneyBlockProps = {
+  soul: Pick<Soul, "civilization" | "current_state">;
+  judgments: Judgment[];
+  dispositions: Disposition[];
+  reincarnations: Reincarnation[];
+  birthDisplay: string | null;
+  deathDisplay: string | null;
+  realms: readonly Realm[] | undefined;
+  path: readonly SoulPathEntry[] | undefined;
+  failed?: boolean;
+  /** 希腊千年弧的读数(只在希腊、非永罚时给)。 */
+  reading?: LedgerReading;
+  /** 演示首页的预览:阶段条下不写日期那一行。 */
+  bare?: boolean;
+  children?: ReactNode;
+};
+
+/**
+ * 行程块本身,只吃数据(灵魂详情从查询来,演示首页的预览从录制来)。
+ */
+export function JourneyBlock({
+  soul,
+  judgments,
+  dispositions,
+  reincarnations,
+  birthDisplay,
+  deathDisplay,
+  realms,
+  path,
+  failed = false,
+  reading,
+  bare = false,
+  children,
+}: JourneyBlockProps) {
+  const { t, formatDate } = useI18n();
+  const disposition = latest(dispositions, (d) => d.executed_at ?? d.created_at);
 
   const opened = judgments.length ? judgments.reduce((a, b) => (a.created_at <= b.created_at ? a : b)) : null;
   const decided = latest(judgments.filter((j) => j.concluded_at), (j) => j.concluded_at);
@@ -102,7 +158,7 @@ export function SoulLedgerProgress({
     hasRebirth(soul.civilization) ? t("souls.detail.timeline.stage_reincarnating") : t("realms.journey.no_rebirth"),
   ];
 
-  const ready = realms.data && path.data ? { realms: realms.data, path: path.data } : null;
+  const ready = realms && path ? { realms, path } : null;
   const topology = ready ? buildTopology(soul.civilization, ready.realms, ready.path) : null;
   const road = topology ? soulRoad(topology) : null;
   const name = (s: Station) => realmStationLabel(t, s) ?? t("common.value.unrecorded");
@@ -119,7 +175,6 @@ export function SoulLedgerProgress({
     : labels[Math.max(0, stageAt)];
   const stay = here ? stayHere(ready!.path, here) : null;
   const stayLine = stay ? stayText(t, stay) : null;
-  const reading = greekTerm ? ledger.data?.reading : undefined;
   const term =
     here?.code === "GR_TARTARUS" && reading?.kind === "SENTENCE" && reading.elapsed_years != null
       ? { years: Math.max(0, reading.elapsed_years), total: reading.circuit_years }
@@ -176,13 +231,13 @@ export function SoulLedgerProgress({
             stage={stage}
             label={labels[i]}
             fill={fraction > 0 && fraction < 1 ? fraction : 0.5}
-            body={stage === "na" ? null : stage === "future" ? t("souls.detail.ledger.not_yet") : bodies[i]}
+            body={bare || stage === "na" ? null : stage === "future" ? t("souls.detail.ledger.not_yet") : bodies[i]}
           />
         ))}
       </ol>
 
       <div data-testid="soul-route" className="min-w-0 max-w-full mt-3 pt-3 pb-3 border-t border-b border-[oklch(var(--color-line))]">
-        {realms.isError || path.isError ? (
+        {failed ? (
           <p role="alert" className="text-2xs text-[oklch(var(--color-danger))]">
             ! {t("realms.topology.load_failed")}
           </p>
@@ -202,10 +257,7 @@ export function SoulLedgerProgress({
           />
         )}
       </div>
-      {/* 地府的图在十三站卡里(DiyuStationStrip);其余三个文明的图在行程下面。 */}
-      {soul.civilization !== "CHINESE" && (
-        <SoulUnderworldMap soul={soul} eternal={!!disposition?.is_eternal} className="py-3 border-b border-[oklch(var(--color-line))]" />
-      )}
+      {children}
     </div>
   );
 }

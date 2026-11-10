@@ -42,35 +42,28 @@ export function Landing({
   const { user } = useTenant();
   return (
     <div className="flex min-h-dvh flex-col bg-[oklch(var(--color-canvas))]">
-      <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] landing-gutter">
-        <div data-testid="landing-brand" className="flex min-w-0 items-center gap-3">
-          <BrandMark size={28} />
-          <span className="font-title text-md text-[oklch(var(--color-ink))]">灵魂簿</span>
-          <span className="truncate text-sm text-[oklch(var(--color-ink-muted))] max-md:hidden">SoulLedger</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <a href="/#how-built" className="whitespace-nowrap text-sm text-[oklch(var(--color-ink-muted))] underline-offset-2 hover:underline">
-            {t("demo.build.title")}
-          </a>
-          <span className="max-md:hidden"><LanguageSwitcher /></span>
-          <ThemeToggle />
-          {!onEnter && (
-            <Link
-              href={user ? "/dashboard" : "/login"}
-              data-testid="landing-console"
-              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-control border border-[oklch(var(--color-ink))] px-4 text-sm font-medium text-[oklch(var(--color-ink))]"
-            >
-              {t("home.console")}
-              <span aria-hidden="true">→</span>
-            </Link>
-          )}
-        </div>
-      </header>
+      <LandingHeader>
+        <a href="/#how-built" className="whitespace-nowrap text-sm text-[oklch(var(--color-ink-muted))] underline-offset-2 hover:underline">
+          {t("demo.build.title")}
+        </a>
+        <span className="max-md:hidden"><LanguageSwitcher /></span>
+        <ThemeToggle />
+        {!onEnter && (
+          <Link
+            href={user ? "/dashboard" : "/login"}
+            data-testid="landing-console"
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-control border border-[oklch(var(--color-ink))] px-4 text-sm font-medium text-[oklch(var(--color-ink))]"
+          >
+            {t("home.console")}
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
+      </LandingHeader>
 
       <main className="flex-1 landing-gutter">
         <section className="pt-8">
           {kicker && <p className="m-0 mb-3 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{kicker}</p>}
-          <h1 className="m-0 font-title text-xl text-[oklch(var(--color-ink))] md:text-display-lg">{t("landing.title")}</h1>
+          <LandingTitle />
           <p className="mt-3 max-w-[44em] text-md text-[oklch(var(--color-ink-muted))]">{t("landing.lede")}</p>
         </section>
 
@@ -107,6 +100,26 @@ export function Landing({
       </footer>
     </div>
   );
+}
+
+/** The top bar: the brand on the left, `children` on the right. The demo's home page has its own right side. */
+export function LandingHeader({ children }: { children: ReactNode }) {
+  return (
+    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] landing-gutter">
+      <div data-testid="landing-brand" className="flex min-w-0 items-center gap-3">
+        <BrandMark size={28} />
+        <span className="font-title text-md text-[oklch(var(--color-ink))]">灵魂簿</span>
+        <span className="truncate text-sm text-[oklch(var(--color-ink-muted))] max-md:hidden">SoulLedger</span>
+      </div>
+      <div className="flex items-center gap-3">{children}</div>
+    </header>
+  );
+}
+
+/** The cover title (`PageShell.test.tsx` H1_COVER: the one literal cover `<h1>` lives here). The demo's home page uses it too. */
+export function LandingTitle() {
+  const { t } = useI18n();
+  return <h1 className="m-0 font-title text-xl text-[oklch(var(--color-ink))] md:text-display-lg">{t("landing.title")}</h1>;
 }
 
 function CivCard({
@@ -179,7 +192,7 @@ function CivCard({
 }
 
 /** 卡片随指针倾斜(`emblemFx.ts` 第 3 条):指针移动按帧节流,只写两个角度和主视觉的位移(transform / translate)。 */
-function useCardTilt() {
+export function useCardTilt() {
   const frame = useRef(0);
   const rect = useRef<DOMRect | null>(null);
   const apply = (el: HTMLElement, tilt: Tilt | null) => {

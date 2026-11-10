@@ -9275,6 +9275,73 @@
       "back": "Back to the judge's view",
       "strip": "Demo · how the app looks",
       "back_short": "Back to judge"
+    },
+    "home": {
+      "eyebrow": "Demo · no sign-up",
+      "lede": "SoulLedger is one ledger across four underworlds: after a death, every step of judgment, placement and rebirth is recorded here. Diyu, Heaven and Hell, the Duat and Hades each keep their own rules.",
+      "route_title": "New here? Three steps",
+      "step1": "Judge a soul as an officer",
+      "step1_sub": "Read the record at the bench and seal a verdict",
+      "step2": "Follow the road it walked",
+      "step2_sub": "From death to the present stop, at a glance",
+      "step3": "Switch to the soul and see its own ledger",
+      "step3_sub": "The soul's phone app: this life, where it goes, farewell",
+      "cta": "Start with step 1",
+      "cta_sub": "Enter as an officer of {{hall}}",
+      "cta_hall": "the Fifth Court of Diyu",
+      "peek": "Take a 30-second look",
+      "preview_title": "Preview · one soul's road",
+      "preview_sub": "Cycles through the four underworlds · hover to pause",
+      "preview_manual": "Pick an underworld",
+      "preview_static": "Still · tap to play",
+      "preview_soul": "{{name}} · road",
+      "preview_tabs": "Which underworld to preview",
+      "civ_title": "Four underworlds, four roads",
+      "civ_sub": "Pick a hall and enter as its officer",
+      "enter_officer": "Enter as officer",
+      "hall": {
+        "cn": "Fifth Court · Yanluo",
+        "eu": "Court of Minos",
+        "eg": "Hall of Two Truths",
+        "gr": "Court of the Three Judges"
+      },
+      "feat": {
+        "cn": "Ten courts, one line",
+        "cn_body": "Thirteen stops on a single road; the ten courts one by one, with the eighteen hells as a branch.",
+        "eu": "The nine-ring funnel",
+        "eu_body": "Judged at death: down through nine narrowing circles, or up the narrowing mountain to Heaven.",
+        "eg": "The weighing, two ways",
+        "eg_body": "The heart against the feather of Ma'at: pass to the Field of Reeds, or be annihilated.",
+        "gr": "Three roads",
+        "gr_body": "The three judges part the ways: the Isles, the thousand-year cycle, Tartarus — and at last the water of Lethe."
+      },
+      "roles_title": "Four roles",
+      "role": {
+        "officer": "Officer",
+        "officer_body": "Judges, seals, places souls",
+        "officer_go": "Pick any hall above",
+        "soul": "Soul",
+        "soul_body": "Sees its own ledger and road",
+        "soul_go": "Look as a soul",
+        "admin": "Admin",
+        "admin_body": "Halls, permissions, corpus",
+        "admin_go": "Admin entrance",
+        "inspector": "Inspector",
+        "inspector_body": "Moderates the social feed: reports, mutes, banned words",
+        "inspector_go": "Inspector entrance"
+      },
+      "peek_title": "A 30-second look",
+      "peek_sub": "Four frames, 7 s each, swipe to browse",
+      "peek_frames": {
+        "bench": "The bench · sealing",
+        "road": "The road",
+        "app": "Soul app",
+        "farewell": "Farewell"
+      },
+      "peek_prev": "Previous",
+      "peek_next": "Next",
+      "peek_done": "Done — start with step 1",
+      "footer": "SoulLedger · demo"
     }
   },
   "action": {

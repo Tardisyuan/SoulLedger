@@ -2832,3 +2832,265 @@ li:last-child > .route-row {
 .journey-pill {
   border-radius: 9999px;
 }
+
+/* ── 演示站首页(Design 第二十七批,2026-11-10;frontend/demo/DemoHome.tsx、HomePreview.tsx、HomePeek.tsx)──────
+   只在演示版出现,正式版落地页不受影响。整页一处主动效(预览的描线 + 轮换)、一处呼吸(预览当前站的环)。
+   卡上 F 徽记只留首次描线:图里自己的动画(`em2-*`)在这页关掉,光泽只在悬停时扫(倾斜照旧)。 */
+.demo-home .emblem-fx [class*="em2-"] {
+  animation: none !important;
+}
+.demo-home .emblem-sheen::before {
+  animation: none;
+}
+.demo-home .landing-card:hover .emblem-sheen::before {
+  animation: emblem-sheen 11s ease-in-out infinite;
+}
+/* 首屏光晕:跟着预览当前的文明换色(data-civ 只在这一层上,不改眉题与按钮)。 */
+.demo-home-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(55% 60% at 80% 10%, oklch(var(--color-glow) / calc(var(--glow-alpha) * 0.55)), transparent 70%);
+}
+.demo-home-eyebrow {
+  color: oklch(var(--color-metal));
+  letter-spacing: 0.08em;
+}
+/* 三步:编号圆 28,竖线串起;第一步实心。 */
+.demo-home-steps li:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 13.5px;
+  top: 30px;
+  bottom: 2px;
+  width: 1px;
+  background: oklch(var(--color-line-strong));
+}
+.demo-home-step-num {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid oklch(var(--color-line-strong));
+  border-radius: 50%;
+  font-size: 12px;
+  color: oklch(var(--color-ink-muted));
+}
+.demo-home-step-num[data-first] {
+  background: oklch(var(--color-ink));
+  border-color: oklch(var(--color-ink));
+  color: oklch(var(--color-canvas));
+  font-weight: 600;
+}
+/* 全页唯一的主按钮(浮层底部「看完了」同款):ink 底、canvas 字,圆角 10。 */
+.demo-home-cta {
+  border-radius: 10px;
+  background: oklch(var(--color-ink));
+  color: oklch(var(--color-canvas));
+  font-weight: 600;
+}
+.demo-home-cta-sub {
+  opacity: 0.7;
+}
+.demo-home-peek-link {
+  color: oklch(var(--color-ink));
+  text-decoration: underline;
+  text-decoration-color: oklch(var(--color-line-strong));
+  text-underline-offset: 4px;
+}
+/* 预览卡:1px 线 + 一层柔影;换文明时淡入 400 ms。 */
+.demo-preview-card {
+  border: 1px solid oklch(var(--color-line));
+  border-radius: 14px;
+  background: oklch(var(--color-surface-1));
+  box-shadow: var(--shadow-card);
+}
+.demo-preview-frame {
+  animation: demo-home-fade 400ms ease-out;
+}
+.demo-preview-wait {
+  min-height: 12rem;
+}
+/* 窄屏静帧:不描线(呼吸照旧),点一下才在原位播一遍。 */
+.demo-preview-card[data-still] .journey-walked {
+  animation: none;
+}
+.demo-preview-play {
+  cursor: pointer;
+  background: transparent;
+}
+.demo-preview-tab {
+  color: oklch(var(--color-ink-subtle));
+}
+.demo-preview-tab[aria-pressed="true"] {
+  color: oklch(var(--color-ink));
+  font-weight: 600;
+}
+/* 当前签后面 24 × 2 的倒计时条;它的 animationend 就是轮换的时钟(HomePreview.tsx),悬停 / 聚焦时停。 */
+.demo-preview-countdown {
+  position: relative;
+  display: block;
+  width: 24px;
+  height: 2px;
+  overflow: hidden;
+  background: oklch(var(--color-line));
+}
+.demo-preview-countdown-fill {
+  position: absolute;
+  inset: 0;
+  background: oklch(var(--color-ink));
+  transform-origin: left;
+  animation: demo-home-countdown 11s linear forwards;
+}
+.demo-preview-countdown-fill[data-paused] {
+  animation-play-state: paused;
+}
+@keyframes demo-home-countdown {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes demo-home-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* 四张卡:圆角 14;特点短语与缩略图用本文明的字色;入口 1px 描边(窄屏只是一行字)。 */
+.demo-home-card {
+  border-radius: 14px;
+}
+.demo-home-feat {
+  color: oklch(var(--color-main-ink));
+}
+@media (min-width: 48rem) {
+  .demo-home-enter {
+    border: 1px solid oklch(var(--color-line-strong));
+    border-radius: 8px;
+  }
+}
+.demo-shape-walked,
+.demo-shape-ahead {
+  fill: none;
+  stroke: oklch(var(--color-main-ink));
+  stroke-width: 1.6;
+}
+.demo-shape-ahead {
+  stroke: oklch(var(--color-ink-subtle));
+  stroke-dasharray: 3 3;
+}
+.demo-shape-stop {
+  fill: oklch(var(--color-main-ink));
+}
+.demo-shape-end {
+  fill: oklch(var(--color-surface-1));
+  stroke: oklch(var(--color-ink-subtle));
+  stroke-width: 1.2;
+}
+.demo-shape-now {
+  fill: oklch(var(--color-metal));
+}
+/* 四种身份:一行四格,格间竖线;窄屏竖排清单。 */
+.demo-home-roles {
+  border: 1px solid oklch(var(--color-line));
+  border-radius: 12px;
+}
+.demo-home-roles > li + li {
+  border-top: 1px solid oklch(var(--color-line));
+}
+@media (min-width: 48rem) {
+  .demo-home-roles > li + li {
+    border-top: 0;
+    border-left: 1px solid oklch(var(--color-line));
+  }
+}
+@media (max-width: 47.99rem) {
+  .demo-home-roles {
+    border-inline: 0;
+    border-radius: 0;
+  }
+}
+/* 「先看 30 秒」浮层:宽 760;窄屏铺满,一次一帧。 */
+.demo-peek {
+  max-width: 760px;
+  max-height: 100dvh;
+  overflow-y: auto;
+  border: 1px solid oklch(var(--color-line));
+  border-radius: 14px;
+  background: oklch(var(--color-surface-1));
+  box-shadow: var(--shadow-overlay);
+}
+.demo-peek-tile {
+  border: 1px solid oklch(var(--color-line));
+  border-radius: 10px;
+}
+.demo-peek-tile[aria-current] {
+  border-color: oklch(var(--color-ink));
+  box-shadow: inset 0 0 0 1px oklch(var(--color-ink));
+}
+.demo-peek-progress {
+  position: relative;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  background: oklch(var(--color-line));
+}
+.demo-peek-progress-fill {
+  position: absolute;
+  inset: 0;
+  background: oklch(var(--color-ink));
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.demo-peek-progress-fill[data-full] {
+  transform: none;
+}
+.demo-peek-progress-fill[data-run] {
+  animation: demo-peek-progress 7s linear forwards;
+}
+@keyframes demo-peek-progress {
+  to {
+    transform: none;
+  }
+}
+.demo-peek-sheet,
+.demo-peek-phone {
+  border: 1px solid oklch(var(--color-line-strong));
+  border-radius: 8px;
+  background: oklch(var(--color-surface-2));
+}
+.demo-peek-phone {
+  width: 72px;
+  height: 140px;
+  border-radius: 12px;
+}
+.demo-peek-line {
+  display: block;
+  height: 6px;
+  border-radius: 9999px;
+  background: oklch(var(--color-line-strong));
+}
+.demo-peek-accent {
+  background: oklch(var(--color-main-ink));
+}
+.demo-peek-seal {
+  transform: rotate(-8deg);
+}
+.demo-peek-nav {
+  color: oklch(var(--color-ink));
+}
+@media (max-width: 47.99rem) {
+  .demo-peek {
+    max-width: none;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .demo-peek-tile:not([aria-current]) {
+    display: none;
+  }
+}
