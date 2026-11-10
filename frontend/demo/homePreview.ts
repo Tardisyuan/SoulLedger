@@ -1,14 +1,15 @@
 import type { Disposition, Judgment, Realm, Reincarnation, Soul, SoulPathEntry } from "@soulledger/core/api";
 import type { SealCiv } from "@/src/components/plaque/Seal";
-import { allRows, type Recording } from "./store";
+import { type DemoLang, shiftStamps } from "./store";
 
 /**
- * The demo home page's moving preview (Design 第二十七批 §一.2, §二): one real soul per underworld, taken from that
- * underworld's judge recording, drawn with the soul page's own journey block. Pure, so it is tested without a page.
+ * The demo home page's moving preview (Design 第二十七批 §一.2, §二): one real soul per underworld, drawn with the soul
+ * page's own journey block. Not from the judge recordings (1.6–3.6 MB each, loaded only on the way in): from their
+ * extract `data/home-preview.json` (~19 KB), written by `scripts/demo-home-preview.mjs`, which also holds the rule for
+ * which soul. Pure, so it is tested without a page.
  */
 
 export const PREVIEW_ORDER: readonly SealCiv[] = ["cn", "eu", "eg", "gr"];
-export const CIVILIZATION_OF: Record<SealCiv, string> = { cn: "CHINESE", eu: "EUROPEAN", eg: "EGYPTIAN", gr: "GREEK" };
 
 /** One underworld's turn: 1.4 s draw-on + 9 s hold + the 400 ms crossfade, rounded (four turns ≈ 44 s). */
 export const TURN_MS = 11_000;
@@ -22,35 +23,19 @@ export interface PreviewSoul {
   reincarnations: Reincarnation[];
 }
 
-type Row = Record<string, unknown>;
+type Shown = Omit<PreviewSoul, "realms"> & { recordedAt: string };
+export interface PreviewExtract {
+  realms: Partial<Record<SealCiv, unknown[]>>;
+  zh: Partial<Record<SealCiv, Shown | null>>;
+  en: Partial<Record<SealCiv, Shown | null>>;
+}
 
-/**
- * The soul the preview follows: one of this underworld with a road already walked and exactly one stop it is at now.
- * The longest walked road wins (more to see); a tie keeps the recording's order. `null` when no soul qualifies.
- */
-export function previewSoul(rec: Recording, skin: SealCiv): PreviewSoul | null {
-  const civilization = CIVILIZATION_OF[skin];
-  let best: { soul: Row; path: SoulPathEntry[]; walked: number } | null = null;
-  for (const soul of allRows(rec, "/souls/")) {
-    if (soul.civilization !== civilization) continue;
-    const path = rec.docs[`/souls/${String(soul.id)}/path/`]?.b;
-    if (!Array.isArray(path)) continue;
-    const entries = path as SoulPathEntry[];
-    const now = entries.filter((e) => e.left_at === null).length;
-    const walked = entries.length - now;
-    if (now !== 1 || walked < 1) continue;
-    if (!best || walked > best.walked) best = { soul, path: entries, walked };
-  }
-  if (!best) return null;
-  const rows = <T,>(collection: string) => (rec.lists[`${collection}?soul=${String(best.soul.id)}`]?.rows ?? []) as T[];
-  return {
-    soul: best.soul as unknown as PreviewSoul["soul"],
-    path: best.path,
-    realms: allRows(rec, "/realms/") as unknown as Realm[],
-    judgments: rows<Judgment>("/judgment/"),
-    dispositions: rows<Disposition>("/disposition/"),
-    reincarnations: rows<Reincarnation>("/reincarnation/"),
-  };
+/** The soul to draw for one underworld and language, its stamps moved with the calendar like the recordings'. */
+export function previewOf(extract: PreviewExtract, skin: SealCiv, lang: DemoLang): PreviewSoul | null {
+  const shown = extract[lang][skin];
+  if (!shown) return null;
+  const { soul, path, judgments, dispositions, reincarnations } = shiftStamps(shown, shown.recordedAt);
+  return { soul, path, judgments, dispositions, reincarnations, realms: (extract.realms[skin] ?? []) as Realm[] };
 }
 
 /**

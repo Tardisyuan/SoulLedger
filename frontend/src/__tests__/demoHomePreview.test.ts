@@ -1,61 +1,66 @@
 /**
- * The demo home page's preview (Design 第二十七批): which recorded soul it follows per underworld, and how it moves.
+ * @jest-environment node
+ *
+ * The demo home page's preview (Design 第二十七批): the extract it draws from, and how it moves.
+ *
+ * The extract (`frontend/demo/data/home-preview.json`) is written by `scripts/demo-home-preview.mjs` from the judge
+ * recordings, so the page never loads a 1.6–3.6 MB recording just to draw a few stops. Two things can go wrong
+ * silently: a re-record without re-running the script (the preview shows a soul the recordings no longer have), and
+ * the extract growing back toward a recording's size. Both are checked here.
  */
-import { PEEK_FRAMES, nextCiv, peekStep, previewMode, previewSoul } from "@/demo/homePreview";
-import type { Recording } from "@/demo/store";
+import { execFileSync } from "node:child_process";
+import { statSync } from "node:fs";
+import path from "node:path";
+import extract from "@/demo/data/home-preview.json";
+import { PEEK_FRAMES, PREVIEW_ORDER, nextCiv, peekStep, previewMode, previewOf, type PreviewExtract } from "@/demo/homePreview";
 
-const entry = (realm: string, left: string | null) => ({ id: `${realm}-e`, sequence: 1, realm_id: realm, realm_code: realm, entered_at: "2024-01-01T00:00:00Z", left_at: left });
+const FRONTEND = path.resolve(__dirname, "..", "..");
+const SCRIPT = path.join(FRONTEND, "..", "scripts", "demo-home-preview.mjs");
+const EXTRACT = path.join(FRONTEND, "demo", "data", "home-preview.json");
+const committed = extract as unknown as PreviewExtract;
 
-function rec(): Recording {
-  const souls = [
-    { id: "other-civ", name: "Lucia", civilization: "EUROPEAN", current_state: "DISPOSED" },
-    { id: "only-now", name: "王", civilization: "CHINESE", current_state: "JUDGING" },
-    { id: "short", name: "马", civilization: "CHINESE", current_state: "DISPOSED" },
-    { id: "long", name: "孙", civilization: "CHINESE", current_state: "DISPOSED" },
-    { id: "gone", name: "屈", civilization: "CHINESE", current_state: "REINCARNATING" },
-    { id: "no-path", name: "董", civilization: "CHINESE", current_state: "DISPOSED" },
-  ];
-  return {
-    role: "judge",
-    lang: "zh",
-    recordedAt: "2026-11-01T00:00:00Z",
-    login: { user: {} },
-    lists: {
-      "/souls/": { rows: souls, extra: {} },
-      "/realms/": { rows: [{ id: "r1", civilization: "CHINESE" }], extra: {} },
-      "/judgment/?soul=long": { rows: [{ id: "j1" }], extra: {} },
-    },
-    docs: {
-      "/souls/other-civ/path/": { s: 200, b: [entry("a", "x"), entry("b", null), entry("c", "y"), entry("d", "z")] },
-      "/souls/only-now/path/": { s: 200, b: [entry("a", null)] },
-      "/souls/short/path/": { s: 200, b: [entry("a", "x"), entry("b", null)] },
-      "/souls/long/path/": { s: 200, b: [entry("a", "x"), entry("b", "y"), entry("c", null)] },
-      "/souls/gone/path/": { s: 200, b: [entry("a", "x"), entry("b", "y"), entry("c", "z"), entry("d", "w")] },
-    },
-  } as unknown as Recording;
-}
-
-describe("previewSoul", () => {
-  it("follows the soul of this underworld with the longest walked road and one stop now", () => {
-    const shown = previewSoul(rec(), "cn");
-    expect(shown?.soul.id).toBe("long");
-    expect(shown?.path).toHaveLength(3);
-    expect(shown?.judgments).toEqual([{ id: "j1" }]);
-    expect(shown?.dispositions).toEqual([]);
-    expect(shown?.realms.map((r) => r.id)).toEqual(["r1"]);
+describe("the preview's extract", () => {
+  it("is what the script gives from the committed recordings", () => {
+    // Throws (exit 1) when they differ; the message says to run the script.
+    expect(() => execFileSync(process.execPath, [SCRIPT, "--check"], { stdio: "pipe" })).not.toThrow();
   });
 
-  it("skips a soul with no current stop, one that has walked nothing, and another underworld's", () => {
-    const r = rec();
-    r.docs["/souls/long/path/"] = { s: 200, b: [entry("a", "x"), entry("b", "y")] };
-    r.docs["/souls/short/path/"] = { s: 200, b: [entry("a", null)] };
-    expect(previewSoul(r, "cn")).toBeNull();
+  it("stays small: under 30 KB", () => {
+    expect(statSync(EXTRACT).size).toBeLessThan(30 * 1024);
   });
 
-  it("keeps the recording's order on a tie", () => {
-    const r = rec();
-    r.docs["/souls/long/path/"] = { s: 200, b: [entry("a", "x"), entry("b", null)] };
-    expect(previewSoul(r, "cn")?.soul.id).toBe("short");
+  it.each(PREVIEW_ORDER.flatMap((skin) => (["zh", "en"] as const).map((lang) => [skin, lang] as const)))(
+    "%s / %s: a soul with a walked road and one stop now, and its underworld's realms",
+    (skin, lang) => {
+      const shown = previewOf(committed, skin, lang);
+      expect(shown).not.toBeNull();
+      const now = shown!.path.filter((e) => e.left_at === null);
+      expect(now).toHaveLength(1);
+      expect(shown!.path.length).toBeGreaterThan(1);
+      expect(shown!.realms.some((r) => r.id === now[0].realm_id)).toBe(true);
+    },
+  );
+
+  it("moves its stamps with the calendar, as the recordings' are moved", () => {
+    const at = "2026-01-01T00:00:00.000Z";
+    const fake: PreviewExtract = {
+      realms: { cn: [{ id: "r1" }] },
+      zh: {
+        cn: {
+          recordedAt: at,
+          soul: { id: "s", name: "马", civilization: "CHINESE", current_state: "DISPOSED" },
+          path: [{ id: "e", sequence: 1, realm_id: "r1", realm_code: "X", entered_at: at, left_at: null }],
+          judgments: [],
+          dispositions: [],
+          reincarnations: [],
+        },
+      },
+      en: {},
+    };
+    const shown = previewOf(fake, "cn", "zh")!;
+    expect(shown.realms).toEqual([{ id: "r1" }]);
+    expect(Date.parse(shown.path[0].entered_at)).toBeGreaterThan(Date.parse(at));
+    expect(previewOf(fake, "cn", "en")).toBeNull();
   });
 });
 
