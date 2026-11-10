@@ -81,7 +81,22 @@
     "verify_invalid": "Menf Nen Wenen",
     "verify_invalid_body": "Dbh Menf Ky.",
     "verify_go_profile": "Wehem Er Djes",
-    "reset_open_in_app": "Wen Em Medjat Sab"
+    "reset_open_in_app": "Wen Em Medjat Sab",
+    "goodbye": {
+      "title": "Em Hetep",
+      "title_named": "Em Hetep, {{name}}",
+      "signed_out": "Per Aq Seth",
+      "returning": "Er Tepy · Er Khet {{n}}",
+      "home": "Tepy",
+      "login": "Wehem Aq",
+      "line": {
+        "neutral": "Medjat Ba Khetem Seth.",
+        "cn": "Khabes Nen Wen; Medjat Ba Khetem Seth.",
+        "eu": "Sebkhet Khetem Em Pehwy.",
+        "eg": "Fai Em Hetep.",
+        "gr": "Per Em Hena Itru Seth."
+      }
+    }
   },
   "mfa": {
     "title": "Aq Sep Sen",
@@ -602,6 +617,12 @@
         "MENGPO": "Mu Mengpo",
         "NONE": "Nen Fekh Rekh",
         "SPELL": "Djed Heka"
+      },
+      "journey": {
+        "stage_done": "Iri Seth",
+        "stage_current": "Emu",
+        "stage_future": "Nen Iri Djer",
+        "stage_na": "Nen Sesen"
       }
     },
     "balance_range": "Pehwy Nefer Isfet",
@@ -802,7 +823,10 @@
       "FENGDU_CITY": "Nut Duat Sherer",
       "EIGHTEEN_HELLS": "Duat 18",
       "LOTUS_TERRACE": "Sekhet Lianhua",
-      "HUANHUN_CLIFF": "Sekhet Huanhun"
+      "HUANHUN_CLIFF": "Sekhet Huanhun",
+      "now_card": "Emu · Sekhet {{n}}",
+      "state_passed": "Shem Seth",
+      "state_ahead": "Nen Shem Djer"
     },
     "capture": {
       "escort_hint": "Nefer Er Isfet: {{merit_escort}}. Isfet Er Nefer: {{demerit_escort}}.",
@@ -3220,7 +3244,8 @@
       "legend_held": "■ Em Sekhet",
       "legend_empty": "□ Nen",
       "legend_count": "Hesb = Em Sekhet",
-      "read_only": "Maa Wa · Tut"
+      "read_only": "Maa Wa · Tut",
+      "legend_bar": "━ = Em Sekhet / Hesb Aq · ≥ 78%: ■ Wer, Hedj · ≥ 90%: | Em Pehwy · Nen Sesh Hesb Aq: Em Sekhet Wa"
     },
     "facts": {
       "show": "Medu",
@@ -3237,6 +3262,28 @@
       "legend_near": "◐ Er Meh = ≥ 90%",
       "legend_eternal": "≡ Djet = Nen Per, Nen Wehem Mesut",
       "sheet_hint": "Khemen Hesb Aq"
+    },
+    "journey": {
+      "now": "Emu",
+      "now_station": "Emu · Sekhet {{n}}",
+      "station_n": "Sekhet {{n}}",
+      "walked_n": "Shem Seth: {{n}}",
+      "ahead_n": "Nen Shem Djer: {{n}}",
+      "left_to": "Nen Shem Djer: {{n}} · Er {{name}}",
+      "days_here": "Hru {{n}} · Ahau",
+      "two_roads": "Wat 2 · Setep Wa",
+      "schematic_suffix": " (Tut)",
+      "off_route": "Nen Em Wat",
+      "off_note": "{{names}}: Nen Em Wat · Maa Em Tut Wer",
+      "branch_legend": "◌ = Setep · Nen Shem Em Ankh Pen",
+      "not_a_place": "Nen Ta",
+      "no_rebirth": "Nen Wehem Mesut",
+      "returned": "Wehem Wedja · Sep {{n}}",
+      "years_here": "Renpet {{n}} · Ahau",
+      "implied": "Shem Seth (Nen Sesh)",
+      "judged_at": "{{court}} · Em Wedja",
+      "weighing": "Ib Em Fai · Nen Wedja Djer",
+      "year_of": "Renpet {{n}} · {{n}} / {{total}}"
     }
   },
   "organization": {
