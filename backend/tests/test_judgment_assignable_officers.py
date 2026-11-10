@@ -49,7 +49,7 @@ class TestAssignableOfficers:
                                           tenant=crowd.cn)
         listed = _ids(_officers(crowd.clients["mod"], case))
         assert listed == {u["a"].pk, u["b"].pk, u["mod"].pk}
-        assert circle.pk not in listed  # 朋友圈巡察不办案,不在改派名单里
+        assert circle.pk not in listed  # 朋友圈审核员不办案,不在改派名单里
         assert _officers(_client(circle), case).status_code == 403  # 也打不开名单
 
     def test_each_row_carries_exactly_five_fields(self, crowd):

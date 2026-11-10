@@ -1,4 +1,4 @@
-"""Data migration: 朋友圈巡察(MODERATOR)只管朋友圈审核(用户 2026-11-07)。
+"""Data migration: 朋友圈审核员(MODERATOR)只管朋友圈审核(用户 2026-11-07)。
 
 perm/0035 收回了 `judgment.execute` / `judgment.assign`;这里收回其余一切殿务 —— 审判读写、工作流设计、
 调拨、处置、轮回、功德、灵魂增改、灵魂账号与收件箱、审计、组织。`ROLE_PERMISSIONS["MODERATOR"]` 同步只剩

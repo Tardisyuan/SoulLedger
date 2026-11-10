@@ -159,7 +159,7 @@ def test_an_admin_with_a_hall_reads_that_halls_switch(cn_tenant, cn_admin_user):
 
 def test_only_permitted_tools_are_offered(cn_tenant, judge_user):
     """JUDGE 不持有 soul_inbox.read;殿管理员(绑殿的 ADMIN)持有。断言缺席,不只断言在场。
-    朋友圈巡察(MODERATOR,2026-11-07 起只管朋友圈审核)只剩 my_permissions。
+    朋友圈审核员(MODERATOR,2026-11-07 起只管朋友圈审核)只剩 my_permissions。
     变异:`offered` 不过滤 → JUDGE 的列表里出现 inbox_counts,红。"""
     _enable(cn_tenant)
     _ask(officer_client(judge_user))
@@ -262,7 +262,7 @@ def test_pending_approvals_count_only_nodes_this_user_may_decide(cn_tenant, eu_t
 
 def test_my_permissions_answers_why_a_moderator_cannot_approve(cn_tenant):
     """「为什么我点不了批准」来自 check_permission,不来自语料(ROLE_FORBIDDEN_CODENAMES)。
-    2026-11-07 起朋友圈巡察只管朋友圈审核:流程、调拨、用户管理一样都没有。"""
+    2026-11-07 起朋友圈审核员只管朋友圈审核:流程、调拨、用户管理一样都没有。"""
     _enable(cn_tenant)
     moderator = _officer("m", "MODERATOR", cn_tenant)
     out = _tool_result(officer_client(moderator), "my_permissions")

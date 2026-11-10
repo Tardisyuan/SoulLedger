@@ -1,4 +1,4 @@
-"""Data migration: MODERATOR 的显示名「Realm Lead」→「Circle Moderator」(用户 2026-11-07:朋友圈巡察)。
+"""Data migration: MODERATOR 的显示名「Realm Lead」→「Circle Moderator」(用户 2026-11-07:朋友圈审核员)。
 
 0017 播种时写的是 Realm Lead(殿主);这个角色从 perm/0036 起只管朋友圈审核。只改仍是种子原值的那一行 ——
 管理员在角色页改过显示名的不动。可逆:backward 把仍是新值的改回 Realm Lead。

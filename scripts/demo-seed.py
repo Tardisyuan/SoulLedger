@@ -1028,7 +1028,7 @@ def main():
             if role == "JUDGE" and code not in judges:
                 judges[code] = u
     demo = [officer("demo_admin", "太史令", "ADMIN", None), officer("demo_judge", "崔判官", "JUDGE", tenants["CN_DIYU"]),
-            # 朋友圈巡察(MODERATOR,2026-11-07 起只管朋友圈审核)不是神职,用普通官员的名字(用户 2026-11-07)。
+            # 朋友圈审核员(MODERATOR,2026-11-07 起只管朋友圈审核)不是神职,用普通官员的名字(用户 2026-11-07)。
             # 此前这里是「殿主」阎罗王;孟婆是第十殿醧忘台司汤之神,上面 OFFICERS 里是普通官员(docs/09、docs/02 §三)。
             officer("demo_moderator", "林清", "MODERATOR", tenants["CN_DIYU"]),
             officer("demo_judge_eu", "Christ", "JUDGE", tenants["EU_HEAVEN_HELL"]),

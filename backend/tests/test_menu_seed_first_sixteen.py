@@ -350,7 +350,7 @@ def test_0029_names_the_page_codename_on_the_seeded_rows():
 
 
 def test_a_moderator_sees_the_dashboard_and_the_circle_review_and_nothing_of_the_hall(cn_tenant):
-    """2026-11-07(用户决定):朋友圈巡察只管朋友圈审核。此前它是殿主,这条断言的是它看得见十个殿务页面。"""
+    """2026-11-07(用户决定):朋友圈审核员只管朋友圈审核。此前它是殿主,这条断言的是它看得见十个殿务页面。"""
     from tests.perm_support import seeded_grants
 
     seeded_grants()

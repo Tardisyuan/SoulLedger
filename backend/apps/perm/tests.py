@@ -541,7 +541,7 @@ class ModeratorRealmLeadTest(TestCase):
             self.assertFalse(check_permission(judge, codename))
 
     def test_moderator_holds_only_the_circle_moderation_set(self):
-        """2026-11-07(用户决定):朋友圈巡察只管朋友圈审核。0014 那轮「殿主设计本殿流程」的格局
+        """2026-11-07(用户决定):朋友圈审核员只管朋友圈审核。0014 那轮「殿主设计本殿流程」的格局
         已经收回(perm/0035、perm/0036);上面几条测的是 0014 这条迁移本身,仍然成立。"""
         self.assertEqual(
             set(ROLE_PERMISSIONS["MODERATOR"]),

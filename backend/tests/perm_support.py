@@ -65,7 +65,7 @@ def seeded_menus():
                 op.code(django_apps, SCHEMA_EDITOR)
 
 
-#: The codenames MODERATOR held as 殿主 before 2026-11-07, when it became 朋友圈巡察 and kept only
+#: The codenames MODERATOR held as 殿主 before 2026-11-07, when it became 朋友圈审核员 and kept only
 #: social.moderate (perm/0035, perm/0036). For tests that need a *non-ADMIN* officer holding a hall
 #: lead's codenames — data scopes and per-role rules, which ADMIN skips — not for tests about what
 #: MODERATOR holds today.

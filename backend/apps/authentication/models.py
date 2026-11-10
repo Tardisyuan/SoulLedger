@@ -58,7 +58,7 @@ class UserRole(models.TextChoices):
     """
 
     ADMIN = "ADMIN", "Administrator (阎罗王)"
-    MODERATOR = "MODERATOR", "Circle Moderator (朋友圈巡察)"
+    MODERATOR = "MODERATOR", "Circle Moderator (朋友圈审核员)"
     JUDGE = "JUDGE", "Judge (判官)"
     GUARDIAN = "GUARDIAN", "Guardian (牛头马面)"
     VIEWER = "VIEWER", "Viewer (访客)"

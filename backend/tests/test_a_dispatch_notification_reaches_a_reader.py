@@ -138,7 +138,7 @@ def test_only_officers_who_can_read_dispatches_are_notified(
             username=name, password="x", role=role, tenant=target_tenant, **kw)
 
     moderator = make("duat_moderator", "ADMIN")  # the hall's ADMIN holds dispatch.read
-    circle = make("duat_circle", "MODERATOR")  # 朋友圈巡察:2026-11-07 起不持 dispatch.read
+    circle = make("duat_circle", "MODERATOR")  # 朋友圈审核员:2026-11-07 起不持 dispatch.read
     judge = make("duat_judge", "JUDGE")
     viewer = make("duat_viewer", "VIEWER")
     soul_account = make("duat_soul", "SOUL")

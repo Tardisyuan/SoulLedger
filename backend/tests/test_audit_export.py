@@ -36,7 +36,7 @@ def tenant(db):
 @pytest.fixture
 def moderator(db, tenant):
     # A custom non-ADMIN role holding both codes: MODERATOR held audit.read / audit.export until
-    # 2026-11-07 (perm/0036), when it became 朋友圈巡察.
+    # 2026-11-07 (perm/0036), when it became 朋友圈审核员.
     role, _ = Role.objects.get_or_create(name="EXP_AUDITOR", defaults={"display_name": "Auditor"})
     for codename, name in (("audit.read", "查看审计日志"), ("audit.export", "导出审计日志")):
         perm, _ = Permission.objects.get_or_create(codename=codename, defaults={"name": name, "category": "audit"})

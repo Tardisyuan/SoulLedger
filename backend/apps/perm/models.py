@@ -333,7 +333,7 @@ DEFAULT_PERMISSIONS = [
     # 既没有人要,也把私密内容多摊给了一个角色)。族名是 `social`,与官员侧那五个
     # 社交 viewset 无关 —— 它们在 apps/perm/test_codename_coverage.py 的
     # EXEMPT_VIEWS 里,仍然不声明任何码名。
-    # 默认 ADMIN 与 MODERATOR(朋友圈巡察)持有 —— 2026-11-07 起这是巡察唯一的业务码。JUDGE / GUARDIAN / VIEWER 不持有 —— 被举报的内容里会有
+    # 默认 ADMIN 与 MODERATOR(朋友圈审核员)持有 —— 2026-11-07 起这是巡察唯一的业务码。JUDGE / GUARDIAN / VIEWER 不持有 —— 被举报的内容里会有
     # PRIVATE 与待审的帖子,按最小可见收。perm 迁移 0023 播种这一行。
     ("social.moderate", "审核灵魂朋友圈", "social"),
     # souls.mfa_reset(灵魂端两步验证,2026-10-11):官员替灵魂关闭两步验证(丢了手机又没有恢复码时)。
@@ -412,7 +412,7 @@ ROLE_PERMISSIONS = {
         "org.read",
         "notification.read", "menu.read",
     ],
-    # 朋友圈巡察(Circle Moderator):**只管灵魂朋友圈的审核**(用户 2026-11-07)。此前这一格是「殿主」——
+    # 朋友圈审核员(Circle Moderator):**只管灵魂朋友圈的审核**(用户 2026-11-07)。此前这一格是「殿主」——
     # 设计本殿流程、调拨、管灵魂账号与收件箱、读审计、开案;那些全部收回(perm/0035 收 judgment.execute /
     # assign,perm/0036 收其余),殿里的事归 ADMIN(殿管理员)与 JUDGE / GUARDIAN。逐项理由:
     #
@@ -448,7 +448,7 @@ ROLE_PERMISSIONS = {
 # 跳过——地区主宰在新装环境里是个有权限矩阵却没有实体的角色。
 DEFAULT_ROLES = [
     ("ADMIN", "Administrator"),
-    ("MODERATOR", "Circle Moderator"),  # 朋友圈巡察;2026-11-07 之前是 Realm Lead(殿主),perm/0037 改已入库的那行
+    ("MODERATOR", "Circle Moderator"),  # 朋友圈审核员;2026-11-07 之前是 Realm Lead(殿主),perm/0037 改已入库的那行
     ("JUDGE", "Judge"),
     ("GUARDIAN", "Guardian"),
     ("VIEWER", "Viewer"),

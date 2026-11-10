@@ -454,7 +454,7 @@ class TestConcludeRespectsTheClaim:
         assert _fresh(case).is_final is True
 
     def test_the_circle_moderator_cannot_conclude_any_case(self, world):
-        """2026-11-07(用户决定):朋友圈巡察只管朋友圈审核 —— 不结案,别人认领的、没人认领的都不行。
+        """2026-11-07(用户决定):朋友圈审核员只管朋友圈审核 —— 不结案,别人认领的、没人认领的都不行。
         (这一格此前是「殿主越过认领结案」;殿管理员那一半由上面的 ADMIN 那条测。)"""
         moderator = User.objects.create_user(username="claim_circle_mod", password="x", role="MODERATOR",
                                              tenant=world.cn)

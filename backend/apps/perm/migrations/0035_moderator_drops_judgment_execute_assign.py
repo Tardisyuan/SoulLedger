@@ -1,4 +1,4 @@
-"""Data migration: 朋友圈巡察(MODERATOR)不再持有 `judgment.execute` / `judgment.assign`(用户 2026-11-07)。
+"""Data migration: 朋友圈审核员(MODERATOR)不再持有 `judgment.execute` / `judgment.assign`(用户 2026-11-07)。
 
 `ROLE_PERMISSIONS` 同步去掉了这两项,这里收回已入库的授予:只删 MODERATOR 这个角色名下的两条
 RolePermission,别的角色(含自建角色、兼任)不动。码名写死:迁移是冻结的快照。

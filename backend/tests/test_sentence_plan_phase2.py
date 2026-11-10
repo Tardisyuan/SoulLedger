@@ -206,7 +206,7 @@ def people(cn, eg, eu):
         "cn_judge": make("cn_judge", "JUDGE", cn),
         "cn_admin": make("cn_admin", "ADMIN", cn),
         "eg_judge": make("eg_judge", "JUDGE", eg),
-        # 不该收的(朋友圈巡察 2026-11-07 起不持 judgment.read,perm/0036):
+        # 不该收的(朋友圈审核员 2026-11-07 起不持 judgment.read,perm/0036):
         "cn_mod": make("cn_mod", "MODERATOR", cn),
         "cn_guardian": make("cn_guardian", "GUARDIAN", cn), "cn_retired": make("cn_retired", "JUDGE", cn, is_active=False),
         "eu_judge": make("eu_judge", "JUDGE", eu), "eu_admin": make("eu_admin", "ADMIN", eu),

@@ -9326,9 +9326,9 @@
         "admin": "Admin",
         "admin_body": "Halls, permissions, corpus",
         "admin_go": "Admin entrance",
-        "inspector": "Inspector",
+        "inspector": "Circle moderator",
         "inspector_body": "Moderates the social feed: reports, mutes, banned words",
-        "inspector_go": "Inspector entrance"
+        "inspector_go": "Moderator entrance"
       },
       "peek_title": "A 30-second look",
       "peek_sub": "Four frames, 7 s each, swipe to browse",

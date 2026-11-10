@@ -1,4 +1,4 @@
-"""Data migration: /corpus 的 `roles` 去掉 MODERATOR(用户 2026-11-07:朋友圈巡察只管朋友圈审核)。
+"""Data migration: /corpus 的 `roles` 去掉 MODERATOR(用户 2026-11-07:朋友圈审核员只管朋友圈审核)。
 
 0013 按「持有 `judgment.read` 的三个角色」写了 `["ADMIN", "JUDGE", "MODERATOR"]`;perm/0036 收回了
 MODERATOR 的 `judgment.read`,这一格再留着就是一扇打不开的门(`/statutes/` 403)。别的菜单行的 `roles`

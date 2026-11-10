@@ -1110,7 +1110,7 @@
     "role_name_placeholder": "如: MODERATOR",
     "role_name_builtin_hint": "内置角色,名称固定(代码按字面量比较);显示名称可改",
     "display_name_label": "显示名称 *",
-    "display_name_placeholder": "例如：朋友圈巡察",
+    "display_name_placeholder": "例如：朋友圈审核员",
     "role_delete_error": "删除角色失败",
     "role_create_error": "创建角色失败",
     "role_edit_error": "更新角色失败",
@@ -1159,7 +1159,7 @@
         "failed": "失败",
         "conflict": "冲突",
         "lock": "始终 · ADMIN",
-        "deny": "禁止 · 朋友圈巡察"
+        "deny": "禁止 · 朋友圈审核员"
       },
       "refused": {
         "admin_only_permission": "与规则「回收站的恢复与彻底删除仅限 ADMIN」冲突，已退回。",
@@ -1169,14 +1169,14 @@
         "database_error": "数据库出错，这一格没有写入。",
         "admin_always_all": "管理员始终拥有全部权限",
         "conflict_unacknowledged": "这项撤销会让审批流无人可批，未经确认，已退回。请在冲突提示里勾选确认后再保存。",
-        "role_forbidden_permission": "与规则冲突：朋友圈巡察（MODERATOR）不能持有流程审批、流程推进或用户管理，已退回。"
+        "role_forbidden_permission": "与规则冲突：朋友圈审核员（MODERATOR）不能持有流程审批、流程推进或用户管理，已退回。"
       },
       "conflict_workflow_line": "{{causes}} 改动后，进行中的审批流「{{workflow}}」第 {{step}} 步（{{step_name}}）将无人可批。",
       "conflict_acknowledge": "确认冲突：这次改动影响 {{n}} 条审批流，含进行中 {{m}} 条。",
       "lock_word": "始终",
       "lock_hint": "管理员角色始终拥有全部权限，不能取消勾选。",
       "deny_word": "禁授",
-      "deny_hint": "朋友圈巡察不能授予「{{perm}}」。",
+      "deny_hint": "朋友圈审核员不能授予「{{perm}}」。",
       "conflict_view": "查看",
       "category_all": "全选",
       "category_none": "全不选",
@@ -3559,7 +3559,7 @@
     "last_name_placeholder": "姓",
     "roles": {
       "ADMIN": "管理员",
-      "MODERATOR": "朋友圈巡察",
+      "MODERATOR": "朋友圈审核员",
       "JUDGE": "判官",
       "GUARDIAN": "守护者",
       "VIEWER": "查看者",
@@ -3574,7 +3574,7 @@
       "primary": "主角色",
       "primary_hint": "主角色决定是否为管理员，以及权限高低的排名。",
       "extra": "兼任角色",
-      "extra_hint": "权限是主角色与各附加角色的并集。每个角色自己的禁项只管它自己，所以兼任判官的朋友圈巡察可以以判官身份审批。只限管理员的操作仍看主角色。",
+      "extra_hint": "权限是主角色与各附加角色的并集。每个角色自己的禁项只管它自己，所以兼任判官的朋友圈审核员可以以判官身份审批。只限管理员的操作仍看主角色。",
       "extra_none": "没有可兼任的角色",
       "admin_locked": "管理员已拥有全部权限，不能再兼任其它角色。",
       "saved": "角色已更新",
@@ -9065,7 +9065,7 @@
     "role_judge_desc": "官员日常:认领案件、结案、出处置、审批。",
     "role_admin": "管理员",
     "role_admin_desc": "四个文明都看得到:用户、角色权限、系统配置、审计。",
-    "role_moderator": "朋友圈巡察",
+    "role_moderator": "朋友圈审核员",
     "role_moderator_desc": "朋友圈审核:举报、禁言、敏感词。",
     "banner_short": "演示 · 数据只在本浏览器",
     "landing": {
@@ -9326,9 +9326,9 @@
         "admin": "管理员",
         "admin_body": "管殿司、权限、语料",
         "admin_go": "管理员入口",
-        "inspector": "巡察",
+        "inspector": "朋友圈审核员",
         "inspector_body": "朋友圈审核：举报、禁言、敏感词",
-        "inspector_go": "巡察入口"
+        "inspector_go": "审核员入口"
       },
       "peek_title": "先看 30 秒",
       "peek_sub": "四个画面，每张 7 秒，可左右翻",

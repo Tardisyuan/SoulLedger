@@ -106,7 +106,7 @@ ROLES = ["ADMIN", "MODERATOR", "JUDGE", "GUARDIAN", "VIEWER"]
 # those 403s is a hardcoded role string, never the codename system.
 OPEN_TO_ALL = dict.fromkeys(ROLES, 200)
 ADMIN_ONLY = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
-# Every role but MODERATOR. Since 2026-11-07 (user decision) MODERATOR — 朋友圈巡察 — holds only
+# Every role but MODERATOR. Since 2026-11-07 (user decision) MODERATOR — 朋友圈审核员 — holds only
 # `social.moderate` plus `dashboard.read` / `notification.read` / `menu.read` (perm/0035, perm/0036), so
 # the codenames "all five roles hold" (soul.read, ledger.read, reincarnation.read, realms.read,
 # actors.read, org.read) are now held by four.

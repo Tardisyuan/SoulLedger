@@ -279,7 +279,7 @@ DECLARED = {
 # ---------------------------------------------------------------------------
 
 
-# Since 2026-11-07 (user decision) MODERATOR — 朋友圈巡察 — holds only social.moderate plus
+# Since 2026-11-07 (user decision) MODERATOR — 朋友圈审核员 — holds only social.moderate plus
 # dashboard.read / notification.read / menu.read (perm/0035, perm/0036), so it is denied on every
 # reincarnation / dispatch / cross_judgment / org write below. Where a comment in this file still names
 # MODERATOR among a codename's holders, it describes the grant table before that date.
@@ -1371,7 +1371,7 @@ def test_every_denial_traces_to_a_missing_codename():
     by_app = {}
     for endpoint, _role in denials:
         by_app[_app_of(endpoint)] = by_app.get(_app_of(endpoint), 0) + 1
-    # 3 / 25 / 9 = 37 until 2026-11-07; then MODERATOR (朋友圈巡察, perm/0035-0036) lost every
+    # 3 / 25 / 9 = 37 until 2026-11-07; then MODERATOR (朋友圈审核员, perm/0035-0036) lost every
     # reincarnation / dispatch / cross_judgment / org codename: +1, +11 (6 records + 5 CTJ), +3.
     assert by_app == {"reincarnation": 4, "dispatch": 36, "organizations": 12}, by_app
     assert len(denials) == 52, sorted(denials)
