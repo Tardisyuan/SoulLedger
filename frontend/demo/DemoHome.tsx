@@ -184,7 +184,8 @@ function CivCard({ skin, civilization, enter, warm }: { skin: SealCiv; civilizat
           <RouteShape shape={CIVILIZATION_SHAPE[civilization]} className="max-md:hidden" />
           <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t(`demo.home.feat.${skin}_body`)}</span>
           <span className="demo-home-enter mt-auto flex min-h-9 items-center gap-2 text-sm md:px-3">
-            <span className="text-[oklch(var(--color-ink))]">{t("demo.home.enter_officer")}</span>
+            {/* 不折行:卡宽约 275 时「以判官身份进入」曾折成两行;放不下时让后面的殿名截断(带 title)。 */}
+            <span className="shrink-0 whitespace-nowrap text-[oklch(var(--color-ink))]">{t("demo.home.enter_officer")}</span>
             <span className="min-w-0 truncate text-[oklch(var(--color-ink-subtle))]" title={t(`demo.home.hall.${skin}`)}>· {t(`demo.home.hall.${skin}`)}</span>
             <span aria-hidden="true" className="ml-auto max-md:ml-0">→</span>
           </span>
