@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { clean, enter, expectSealHandedOver, handOff, watch, watchHandOff } from "./support";
 
-test("the landing page's two app recordings load", async ({ page }) => {
+// Design 第二十七批: the demo's home page no longer has the 「怎么做的」 section (its two app recordings); narrow, the
+// journey preview is a still frame that a tap plays once.
+test("393px: the journey preview is a still frame until tapped", async ({ page }) => {
   await page.goto("/");
-  const videos = page.locator("#how-built video");
-  await expect(videos).toHaveCount(2);
-  for (const video of await videos.all()) {
-    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
+  const preview = page.getByTestId("demo-home-preview");
+  await expect(preview).toHaveAttribute("data-mode", /still|manual/);
+  await expect(preview.getByTestId("soul-journey")).toBeVisible();
+  if ((await preview.getAttribute("data-mode")) === "still") {
+    await page.getByTestId("demo-home-preview-play").click();
+    await expect(preview).toHaveAttribute("data-shown", "cn");
   }
 });
 

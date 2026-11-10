@@ -106,18 +106,23 @@ export const langOf = (acceptLanguage: unknown): DemoLang => (String(acceptLangu
 
 /** Timestamps move with the calendar: a case recorded as "two hours ago" reads that way whenever the demo is opened. */
 function shifted(raw: Recording): Recording {
-  const delta = Date.now() - Date.parse(raw.recordedAt);
+  return shiftAnnual(shiftStamps(raw, raw.recordedAt), new Date(Date.now()).getUTCFullYear() - new Date(raw.recordedAt).getUTCFullYear());
+}
+
+/** Every stamp in `value` moved as `shifted` moves a recording made at `recordedAt` (the home page's preview extract too). */
+export function shiftStamps<T>(value: T, recordedAt: string): T {
+  const delta = Date.now() - Date.parse(recordedAt);
   // Every stamp moves by the same amount, so the spread between them is kept. Whole days for a bare date (the census's
   // `day`), and only dates near the recording: 1283-05-01 is someone's birthday, not a stamp.
   const days = Math.round(delta / 86400000) * 86400000;
-  const recent = new Date(raw.recordedAt).getUTCFullYear() - 2;
-  const text = JSON.stringify(raw)
+  const recent = new Date(recordedAt).getUTCFullYear() - 2;
+  const text = JSON.stringify(value)
     // A stamp from long ago is a life's history, not "two hours ago": it stays put.
     .replace(STAMP, (s) => (Number(s.slice(0, 4)) < recent ? s : new Date(Date.parse(s) + delta).toISOString()))
     .replace(BARE_DATE, (whole, date: string) =>
       Number(date.slice(0, 4)) < recent ? whole : `"${new Date(Date.parse(date) + days).toISOString().slice(0, 10)}"`,
     );
-  return shiftAnnual(JSON.parse(text) as Recording, new Date(Date.now()).getUTCFullYear() - new Date(raw.recordedAt).getUTCFullYear());
+  return JSON.parse(text) as T;
 }
 
 /** The annual report names its year as a number, not a stamp: it moves with the calendar too, and so do the `?year=` it was asked with. */

@@ -24,6 +24,7 @@ import { chromium } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeHomePreview } from "./demo-home-preview.mjs";
 
 const FRONT = process.env.DEMO_FRONT || "http://localhost:3333";
 const API_ORIGIN = process.env.DEMO_API_ORIGIN || "http://localhost:8000";
@@ -411,3 +412,6 @@ for (const [civ, { soul_code, name }] of Object.entries(SOUL_LOGINS)) {
     console.log(`soul_${civ} (${name}) ${lang}: ${Object.keys(out.docs).length} docs, ${Object.keys(out.lists).length} lists; refused: ${[...rec.errors].join(" | ") || "none"}`);
   }
 }
+
+// The home page's journey preview reads a few KB of the judges' recordings, not the recordings (scripts/demo-home-preview.mjs).
+writeHomePreview();

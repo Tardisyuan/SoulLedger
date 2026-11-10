@@ -422,3 +422,28 @@ for (const [skin, rebirth] of [["cn", true], ["eg", false]] as const) {
     clean(seen, `soul entrance ${skin}`);
   });
 }
+
+// Design 第二十七批: three steps and one primary button, which enters as 地府第五殿's judge, like the 地府 card.
+test("home: three steps and one primary button, which enters as the 地府 judge", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await page.goto("/");
+  await expect(page.getByTestId("demo-home-steps").getByRole("listitem")).toHaveCount(3);
+  await expect(page.locator(".demo-home-cta")).toHaveCount(1);
+  await page.getByTestId("demo-home-start").click();
+  await page.waitForURL((u) => u.pathname !== "/");
+  await expect(page.locator("html")).toHaveAttribute("data-civ", "cn");
+  await expect(page.getByTestId("demo-tour")).toBeVisible();
+  clean(seen, "home start");
+});
+
+test("home: 先看 30 秒 opens as an overlay and Escape closes it", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("demo-home-peek")).toHaveCount(0);
+  await page.getByTestId("demo-home-peek-open").click();
+  const peek = page.getByRole("dialog");
+  await expect(peek).toBeVisible();
+  await expect(peek.locator("[data-frame]")).toHaveCount(4);
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("demo-home-peek")).toHaveCount(0);
+  await expect(page.getByTestId("demo-home-peek-open")).toBeFocused();
+});

@@ -3,7 +3,7 @@
 /**
  * 演示站的灵魂入口(v4 第十批第 1 条)。只在演示版有:正式网页只给官员和管理员用,灵魂只在 App 里。
  *
- * - 落地页:四张卡片正下方一条带子(`DemoSoulEntry`),四个「以灵魂身份看看」与上面的卡片同列。
+ * - 首页:「四种身份」那一行的灵魂格,四个冥界各一个「以灵魂身份看看」(`DemoHome` 的 `Roles`)。
  * - 进去之后,≥ 1024 宽:左边说明栏,右边 393 × 852 原大的手机框;更窄:不套框，铺满，顶上一条 40 高的深色演示条。
  * - 「回到判官视角」回到同一个冥界的判官概览，也就是演示账号的判官身份(`useEnter`)。
  * - 胶囊标签栏照 App:不透明，贴在页底。锁屏的实时进度是演示里多出来的一屏，标「只在演示里」。
@@ -24,35 +24,6 @@ const TABS: Record<Exclude<SoulScreen, "lock">, string> = {
   rebirth: "soul_app.tabs.rebirth",
 };
 const tabsOf = (civ: SealCiv) => (Object.keys(TABS) as (keyof typeof TABS)[]).filter((s) => s !== "rebirth" || REBIRTH_CIVS.has(civ));
-
-/** The band under the four cards. The cards keep their one action; this is the second way in. */
-export function DemoSoulEntry({ onLook }: { onLook: (civ: SealCiv) => void }) {
-  const { t, locale } = useI18n();
-  return (
-    <section data-testid="demo-soul-entry" aria-labelledby="demo-soul-entry-title" className="mt-4 rounded-panel border border-[oklch(var(--color-line))] p-4">
-      <h3 id="demo-soul-entry-title" className="m-0 font-title text-md text-[oklch(var(--color-ink))]">{t("demo.soul.entry_title")}</h3>
-      <p className="m-0 mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("demo.soul.entry_body")}</p>
-      <ul className="m-0 mt-3 grid list-none grid-cols-2 gap-4 p-0 xl:grid-cols-4">
-        {SKINS.map((civ) => (
-          <li key={civ} data-civ={civ}>
-            <button
-              type="button"
-              data-testid={`demo-soul-${civ}`}
-              onClick={() => onLook(civ)}
-              onPointerEnter={() => void soulRecording(civ, langOf(locale))}
-              onFocus={() => void soulRecording(civ, langOf(locale))}
-              aria-label={`${t("demo.soul.entry_button")} · ${t(`demo.civ.${civ}.name`)}`}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-control border border-[oklch(var(--color-line-strong))] px-3 text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-1))] focus-visible:outline-2 focus-visible:outline-[oklch(var(--color-focus))]"
-            >
-              <span className="max-md:hidden">{t("demo.soul.entry_button")} ·</span>
-              <span>{t(`demo.civ.${civ}.name`)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 /** Read in the render itself when it has already loaded (it usually has: `DemoHome` waits for it), so the phone's first
  *  frame is not an empty screen. */
