@@ -40,7 +40,49 @@ details[open] summary{margin-bottom:12px}
 </header>
 
 <article>
-<h2>第二十六批 · egy:再会页、行程块、界域在押条、十三站卡的 39 个新键<span class="tag new">待回 · 2026-11-10</span></h2>
+<h2>第二十七批 · 演示站首页:更精美、有引导,第一次来的人知道从哪开始<span class="tag new">待回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch27-reply.md</code>,稿子 <code>V4Batch27.dc.html</code>,宽屏(1280)与 393 窄屏各一张合成图,深浅各一。第二十六批 egy 已上线。</p>
+<section>
+<h3>用户的话</h3>
+<p>「演示版有没有更精美一点、有引导性的?比方说主页面根目录这边。」</p>
+</section>
+<section>
+<h3>现在的样子(演示站 <code>soulledger.tardisyuan.ltd</code> 根目录)</h3>
+<ul>
+<li>就是产品落地页(<code>Landing</code>):大标题「同一个问题:这个灵魂过得了关吗?」,四张文明卡(F 嵌彩徽记、描线 + 扫光 + 倾斜),点卡片直接以那一殿的判官身份进去(先盖一枚印做转场)。</li>
+<li>卡片下面两条入口:「以灵魂身份看看」(四个文明的 App 屏幕,网页上的副本)和次要入口(管理员、巡察)。</li>
+<li>进去之后才有导览(<code>DemoTour</code>,六步:死亡 → 审判 → 处置 → …,右下角浮层)。</li>
+<li>顶部一条细横幅:「演示环境 · 数据只在你的浏览器里,重新登录即恢复」。</li>
+</ul>
+<p>问题:第一次来的人不知道该点哪、点了会看到什么、这东西是干嘛的;四张卡只写了名字和「以判官身份进入」。</p>
+</section>
+<section>
+<h3>请重新设计演示首页(只是演示站的首页;正式版落地页另说)</h3>
+<p>几个方向,欢迎你取舍或给更好的:</p>
+<ul>
+<li><strong>一句话 + 一条推荐路线</strong>:讲清这是什么(四种冥界、一本账:灵魂从死亡到审判、处置、轮回的管理系统),再给编号的三步——「① 以判官身份审一个灵魂 → ② 看它这一世走过的行程 → ③ 换成灵魂本人,看自己的账」,第一步是全页唯一的主按钮。</li>
+<li><strong>首屏一段会动的预览</strong>:用第二十五批的行程块(标题 + 阶段条 + 行程图),一个灵魂沿着行程走一遍(已行段描出、当前站金环),不点进去就看到系统在做什么。可以四个文明轮换。</li>
+<li><strong>四张文明卡写出各自的特点</strong>:地府十殿一线、欧洲九圈漏斗、埃及称心二分、希腊三岔,一句话 + 那种形状的小缩略图。</li>
+<li><strong>身份说明</strong>:判官 / 灵魂 / 管理员 / 巡察,各能做什么、各从哪进,一行说清。</li>
+<li><strong>「30 秒先看看」</strong>:不进系统、不登录,按顺序看几张关键画面(审判台落印、行程、灵魂端 App 屏、再会页)。</li>
+<li>页脚:GitHub 链接(用户之前定过作者信息只放 GitHub)。</li>
+</ul>
+<p>约束:</p>
+<ul>
+<li>沿用 v4 的视觉语言与 token(<code>--civT / --glow / --metal</code>、墨阶);F 嵌彩徽记与魂火照旧可用。</li>
+<li>深浅两套;393 窄屏成立(路线三步竖排、预览缩小或换成静帧)。</li>
+<li>动效:一处主动效 + 一处呼吸,避开魂火 0.5–1 Hz;减少动效时静止。</li>
+<li>首屏要快:徽记 SVG 已经很大(八份约 340 KB),预览别再加同量级的图;能用组件画的就别用位图。</li>
+<li>新文案列出来(中 / 英),egy 等代码定了再一起给你。</li>
+</ul>
+<p class="ask">请给:合成图(宽屏 / 393 × 深浅)、各区块的尺寸与变量、动效说明、新文案表;以及你最推荐保留哪几块、砍掉哪几块。</p>
+</section>
+</article>
+
+<details>
+<summary>第二十六批 · egy 39 键<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十六批 · egy:再会页、行程块、界域在押条、十三站卡的 39 个新键<span class="tag done">已回 · 2026-11-10</span></h2>
 <p>请把下表 34 个键的 egy 写进 <code>v4-batch26-egy.json</code>(扁平,键是下表的完整路径,值是 egy 文本),说明写在 <code>v4-batch26-reply.md</code>。照第十八批的规矩:新词根、专名在回复里列出来;<code>{{name}}</code>、<code>{{n}}</code> 占位原样保留。</p>
 <section>
 <h3>这些键从哪来</h3>
@@ -101,6 +143,7 @@ details[open] summary{margin-bottom:12px}
 <p class="ask">请给:<code>v4-batch26-egy.json</code>(39 个键齐全)和回复里的新词根 / 专名清单。</p>
 </section>
 </article>
+</details>
 
 <details>
 <summary>第二十五批 · 行程与进度重画<span class="tag done">已回 · 已上线</span></summary>
