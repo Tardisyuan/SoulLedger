@@ -40,6 +40,7 @@ from apps.perm.filters import DataScopeFilter
 from apps.realms.models import Realm, resolve_localized_name
 from apps.souls.dates import format_death_date
 from apps.souls.models import Soul, SoulState
+from apps.souls.serializers import hidden_scores_refusal, scores_hidden_from
 from apps.tenants.models import Tenant
 
 
@@ -78,6 +79,9 @@ class LedgerBalanceView(APIView):
 
     @extend_schema(responses={200: LedgerSummarySerializer, 404: LedgerErrorSerializer})
     def get(self, request, soul_id):
+        refused = hidden_scores_refusal(request.user)  # the body is the score (P-02)
+        if refused:
+            return refused
         tenant = getattr(request, 'tenant', None)
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
@@ -142,6 +146,9 @@ class LedgerEffectiveView(APIView):
 
     @extend_schema(responses={200: LedgerEffectiveSerializer, 404: LedgerErrorSerializer})
     def get(self, request, soul_id):
+        refused = hidden_scores_refusal(request.user)  # the body is the score (P-02)
+        if refused:
+            return refused
         tenant = getattr(request, 'tenant', None)
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
@@ -185,6 +192,9 @@ class LedgerInheritanceView(APIView):
         }
     )
     def get(self, request, soul_id):
+        refused = hidden_scores_refusal(request.user)  # the body is the score (P-02)
+        if refused:
+            return refused
         tenant = getattr(request, 'tenant', None)
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
@@ -728,6 +738,7 @@ class LedgerExportStatsView(APIView):
         # defensible on the endpoint that produces a file.
         # Use iterator() to stream results without loading all into memory
         rows = 0
+        hide = scores_hidden_from(request.user)  # 列留着、格子空着,同灵魂详情(P-02)
         for soul in qs.iterator(chunk_size=1000):
             rows += 1
             writer.writerow([
@@ -741,9 +752,9 @@ class LedgerExportStatsView(APIView):
                 csv_safe(soul.name),
                 csv_safe(soul.civilization),
                 csv_safe(soul.current_state),
-                soul.merit_score,
-                soul.demerit_score,
-                soul.karmic_balance,
+                "" if hide else soul.merit_score,
+                "" if hide else soul.demerit_score,
+                "" if hide else soul.karmic_balance,
                 # soul.death_date (the legacy property) reads back as blank
                 # for BCE deaths, so build the CSV cell from the raw
                 # year/month/day instead — e.g. "-612-03" for a

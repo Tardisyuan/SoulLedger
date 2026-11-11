@@ -66,12 +66,31 @@ def _this_lifes_records(soul):
     return [r for r in soul.records.all() if r.cycle == index]
 
 
+def scores_hidden_from(user) -> bool:
+    """Whether `user` may not see merit / demerit scores or the karmic balance — the floor documented on
+    `SoulSerializer` (main role VIEWER). The one answer for every exit that carries a score: the soul
+    serializers, `souls/{id}/karma/`, `souls/export/`, `ledger/balance/`, `ledger/stats/export/`
+    (audit 2026-11-11 P-02: the four endpoints handed out what the serializers withheld)."""
+    return getattr(user, "role", None) == "VIEWER"
+
+
+def hidden_scores_refusal(user):
+    """403 for an endpoint whose whole body is the score (karma / balance summary), or None. Rows that carry
+    other data keep it and lose only the score cells, as the soul detail does."""
+    if not scores_hidden_from(user):
+        return None
+    from rest_framework.response import Response
+
+    return Response({"error": "Merit and demerit scores are not shown to this role.", "code": "scores_hidden"},
+                    status=403)
+
+
 def is_viewer(context) -> bool:
-    """Check if the current user has VIEWER role."""
+    """`scores_hidden_from` for the serializer's request user."""
     request = context.get("request")
     if not request or not request.user:
         return False
-    return getattr(request.user, "role", None) == "VIEWER"
+    return scores_hidden_from(request.user)
 
 
 def _date_after_write(attrs, instance, prefix) -> tuple:
