@@ -243,8 +243,38 @@ REMOTE_DEPS='
 # One `playwright test` for all the projects (2026-10-30): one `next start`, and the workers move on to
 # the next project's tests instead of idling at each project's tail. Per-project passed / failed / flaky,
 # and the failed and flaky tests by name, come from the json reporter (scripts/e2e-report.py).
+#
+# A PASS IS RECORDED (2026-11-12, user decision), as the gates' are: a green E2E run on a clean checkout
+# (tree_is_clean) appends HEAD's tree and the projects it ran to $STAMP-e2e; an E2E run asking for
+# projects that tree already passed — in one run or several — prints "already passed" and exits 0.
+# A dirty checkout neither skips nor records (what runs there is not HEAD's tree). FORCE=1 runs anyway.
+# tree_is_clean — tracked files equal HEAD, and no untracked file where the sync sends it (remote_sync's
+# directories) or a gate reads it. Sets CLEAN_WHY when not. Shared with record_pass below.
+tree_is_clean() {
+    CLEAN_WHY=""
+    if ! git -C "$ROOT" diff --quiet HEAD --; then CLEAN_WHY="tracked files differ from HEAD"; return 1; fi
+    local stray
+    stray="$(git -C "$ROOT" ls-files --others --exclude-standard -- backend frontend packages mobile mobile-officer scripts | head -3)"
+    [ -z "$stray" ] || { CLEAN_WHY="untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 1; }
+}
+E2E_STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}-e2e"
 if [ -n "$E2E" ]; then
     [ -n "${GATES_REMOTE:-}" ] || { echo "$P: --e2e runs on the machine GATES_REMOTE names (.prepush.env), never on this one"; exit 2; }
+    E2E="$(echo "$E2E" | tr , '\n' | grep -v '^$' | sort -u | paste -sd, -)"
+    E2E_TREE=""
+    if tree_is_clean; then
+        E2E_TREE="$(git rev-parse HEAD^{tree})"
+        if [ "${FORCE:-}" != 1 ] && [ -f "$E2E_STAMP" ]; then
+            # Every requested project among those this tree passed, across all its lines.
+            MISSING="$(awk -F'\t' -v t="$E2E_TREE" -v want="$E2E" '
+                $1 == t { m = split($2, r, ","); for (i = 1; i <= m; i++) have[r[i]] = 1 }
+                END { n = split(want, w, ","); for (i = 1; i <= n; i++) if (!(w[i] in have)) print w[i] }' "$E2E_STAMP")"
+            if [ -z "$MISSING" ]; then
+                echo "$P: tree ${E2E_TREE:0:10} already passed E2E for ${E2E//,/ } ($(grep -m1 "^$E2E_TREE	" "$E2E_STAMP" | cut -f3)) — not running it again (FORCE=1 runs it)"
+                exit 0
+            fi
+        fi
+    fi
     EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
     ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1" 2>/dev/null \
         || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
@@ -278,7 +308,19 @@ if [ -n "$E2E" ]; then
     ERC=$?
     trap - EXIT
     remote_verdict "$ERC" "$ELIMIT" GATES_REMOTE_E2E_TIMEOUT
-    [ "$ERC" -eq 0 ] && { echo "$P: E2E ok on $GATES_REMOTE"; exit 0; }
+    if [ "$ERC" -eq 0 ]; then
+        echo "$P: E2E ok on $GATES_REMOTE"
+        if [ -z "$E2E_TREE" ]; then
+            echo "$P: not recording this E2E pass — $CLEAN_WHY"
+        elif ! tree_is_clean || [ "$(git rev-parse HEAD^{tree})" != "$E2E_TREE" ]; then
+            echo "$P: not recording this E2E pass — the checkout changed while it ran"
+        else
+            printf '%s\t%s\t%s, %s\n' "$E2E_TREE" "$E2E" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$E2E_STAMP"
+            tail -n 50 "$E2E_STAMP" >"$E2E_STAMP.tmp" && mv "$E2E_STAMP.tmp" "$E2E_STAMP"
+            echo "$P: recorded an E2E pass for tree ${E2E_TREE:0:10} (${E2E//,/ }) — the same tree and projects will not run again"
+        fi
+        exit 0
+    fi
     echo "$P: E2E failed on $GATES_REMOTE (exit $ERC). Log: $GATES_REMOTE:$RDIR/tmp/$RID/e2e.log"
     exit 1
 fi
@@ -361,14 +403,7 @@ fi
 record_pass() {
     [ "$PREPUSH" = 0 ] && [ "$REAL_PG" = 0 ] || return 0
     cd "$ROOT" || return 0
-    if ! git diff --quiet HEAD --; then
-        echo "$P: not recording this pass — tracked files differ from HEAD"; return 0
-    fi
-    local stray
-    stray="$(git ls-files --others --exclude-standard -- backend frontend packages mobile mobile-officer scripts | head -3)"
-    if [ -n "$stray" ]; then
-        echo "$P: not recording this pass — untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 0
-    fi
+    tree_is_clean || { echo "$P: not recording this pass — $CLEAN_WHY"; return 0; }
     local tree file; tree="$(git rev-parse HEAD^{tree})"
     if [ "$FULL_RUN" = 1 ]; then
         file="$STAMP"

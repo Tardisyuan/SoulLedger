@@ -17,6 +17,22 @@ RDIR="${GATES_REMOTE_DIR:-/srv/appdata/sl-gates}"
 RWORK="$RDIR/work/demo-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
 IMG="${DEMO_IMAGE:-sl-gates-e2e:1}"
 
+# THE DEMO E2E'S PASS IS RECORDED (2026-11-12, user decision), as the gates' and E2E's are: a green
+# `scripts/demo-remote.sh scripts/demo-e2e-inner.sh` (no extra arguments: a filtered run proves less) on a
+# clean checkout appends HEAD's tree to <git common dir>/soulledger-gates-passed-demo, and the same tree is
+# not run again. Clean here is `git status --porcelain` empty: this sync sends every untracked file.
+# FORCE=1 runs anyway. GATES_STAMP_FILE is the test seam, as in run-gates.sh.
+DEMO_STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}-demo"
+DEMO_TREE=""
+case "${1:-}" in
+    scripts/demo-e2e-inner.sh|./scripts/demo-e2e-inner.sh)
+        if [ $# -eq 1 ] && [ -z "$(git status --porcelain)" ]; then DEMO_TREE="$(git rev-parse HEAD^{tree})"; fi ;;
+esac
+if [ -n "$DEMO_TREE" ] && [ "${FORCE:-}" != 1 ] && [ -f "$DEMO_STAMP" ] && grep -q "^$DEMO_TREE	" "$DEMO_STAMP"; then
+    echo "demo-remote: tree ${DEMO_TREE:0:10} already passed the demo E2E ($(grep -m1 "^$DEMO_TREE	" "$DEMO_STAMP" | cut -f2)) — not running it again (FORCE=1 runs it)"
+    exit 0
+fi
+
 ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RWORK $RDIR/tmp/demo" || exit 1
 # First run: borrow the gates' installed dependencies rather than installing them again.
 ssh -o BatchMode=yes "$GATES_REMOTE" "cd $RWORK && if [ ! -d node_modules ]; then S=\$(ls -d $RDIR/work/SoulLedger-*-e2e | head -1); cp -a \$S/node_modules . ; mkdir -p backend; cp -a \$S/backend/.venv backend/ ; for w in frontend packages/core mobile mobile-officer; do if [ -d \$S/\$w/node_modules ]; then mkdir -p \$w; cp -a \$S/\$w/node_modules \$w/; fi; done; fi" || exit 1
@@ -72,4 +88,13 @@ case "$RC" in
     137) echo "demo-remote: killed on $GATES_REMOTE (exit 137): the time limit's KILL, 60 s after ${LIMIT:-its limit}, or the" \
               "container's memory limit. The container is removed and the lock released." ;;
 esac
+if [ "$RC" -eq 0 ] && [ -n "$DEMO_TREE" ]; then
+    if [ -n "$(git status --porcelain)" ] || [ "$(git rev-parse HEAD^{tree})" != "$DEMO_TREE" ]; then
+        echo "demo-remote: not recording this demo E2E pass — the checkout changed while it ran"
+    else
+        printf '%s\t%s, %s\n' "$DEMO_TREE" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$DEMO_STAMP"
+        tail -n 50 "$DEMO_STAMP" >"$DEMO_STAMP.tmp" && mv "$DEMO_STAMP.tmp" "$DEMO_STAMP"
+        echo "demo-remote: recorded a demo E2E pass for tree ${DEMO_TREE:0:10} — the same tree will not run again"
+    fi
+fi
 exit "$RC"

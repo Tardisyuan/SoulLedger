@@ -1591,6 +1591,67 @@ class TestRemoteTimeLimits:
         assert "timeout -k 60 2h bash /app/scripts/demo-serve-inner.sh" in (tmp_path / "remote-run").read_text()
 
 
+class TestBrowserSuitesRecordAPass:
+    """A green E2E / demo E2E run on a clean checkout is recorded, like the gates' passes (2026-11-12, user
+    decision): E2E by tree + projects, the demo by tree. The same request again prints "already passed"."""
+
+    e2e = TestEndToEndOnAnotherMachine()
+    limits = TestRemoteTimeLimits()
+
+    def _e2e(self, main, tmp_path, *args, **env):
+        (tmp_path / "remote-run").unlink(missing_ok=True)
+        return self.e2e._run(main, tmp_path, *args, GATES_STAMP_FILE=str(tmp_path / "passed"), **env)
+
+    def test_the_same_tree_and_projects_do_not_run_again(self, checkouts, tmp_path):
+        main, _ = checkouts
+        first = self._e2e(main, tmp_path, "--e2e=mobile-chrome,chromium")
+        assert first.returncode == 0 and "recorded an E2E pass" in first.stdout, first.stdout
+        tree = subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=main, env=_clean_env(),
+                              capture_output=True, text=True, check=True).stdout.strip()
+        assert (tmp_path / "passed-e2e").read_text().startswith(f"{tree}\tchromium,mobile-chrome\t")
+        for again in ("--e2e=chromium,mobile-chrome", "--e2e"):  # the same set, and a subset of it
+            proc = self._e2e(main, tmp_path, again)
+            assert proc.returncode == 0 and "already passed" in proc.stdout, proc.stdout
+            assert not (tmp_path / "remote-run").exists(), "E2E ran for a tree and projects that passed"
+
+    def test_another_project_or_force_runs(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._e2e(main, tmp_path, "--e2e")
+        assert "already passed" not in self._e2e(main, tmp_path, "--e2e=chromium,firefox").stdout
+        assert (tmp_path / "remote-run").exists()
+        assert "already passed" not in self._e2e(main, tmp_path, "--e2e", FORCE="1").stdout
+        assert (tmp_path / "remote-run").exists()
+
+    def test_a_red_run_or_a_dirty_checkout_records_nothing(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._e2e(main, tmp_path, "--e2e", remote_status=1)
+        assert not (tmp_path / "passed-e2e").exists()
+        (main / "frontend").mkdir()
+        (main / "frontend" / "x.ts").write_text("export {};\n")
+        proc = self._e2e(main, tmp_path, "--e2e")
+        assert proc.returncode == 0 and "not recording this E2E pass" in proc.stdout, proc.stdout
+        assert not (tmp_path / "passed-e2e").exists()
+
+    def test_the_demo_e2e_records_its_tree(self, checkouts, tmp_path):
+        main, _ = checkouts
+        (main / "scripts" / "demo-remote.sh").write_text(
+            (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8"))
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "demo")
+        env = {"GATES_STAMP_FILE": str(tmp_path / "passed")}
+        first = self.limits._demo(main, tmp_path, "scripts/demo-e2e-inner.sh", **env)
+        assert first.returncode == 0 and "recorded a demo E2E pass" in first.stdout, first.stdout + first.stderr
+        (tmp_path / "remote-run").unlink()
+        again = self.limits._demo(main, tmp_path, "scripts/demo-e2e-inner.sh", **env)
+        assert "already passed" in again.stdout and not (tmp_path / "remote-run").exists(), again.stdout
+        forced = self.limits._demo(main, tmp_path, "scripts/demo-e2e-inner.sh", FORCE="1", **env)
+        assert "already passed" not in forced.stdout and (tmp_path / "remote-run").exists()
+        # A recording is not the demo E2E, and is never recorded as one.
+        (tmp_path / "passed-demo").unlink()
+        self.limits._demo(main, tmp_path, "scripts/demo-record-inner.sh", **env)
+        assert not (tmp_path / "passed-demo").exists()
+
+
 # ── 2026-10-30 gate speed-ups (user decision): deps hashes, jest cache, two sides at once, e2e report ──
 
 

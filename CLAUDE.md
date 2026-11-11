@@ -350,6 +350,10 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     实测(10-28,逐 project 跑的时候):build 31 s;chromium 236 passed / 70 s;firefox 236 / 86 s;mobile-chrome 229 / 68 s;`--e2e=all` 全程 243 s
     (本机 10-27:3.6 / 7.9 / 4.5 分钟)。10-30 一次调用之后 `--e2e=all` 全程 **309 s**(unRAID,与 10-28 不是同一棵树)。mobile-chrome 在 4 worker 下偶有一条慢到超时(两轮里各一条、每次不同),单独跑 10/10 过 ——
     所以用一次重试并点名，不加 skip。
+    **E2E 与演示 E2E 通过也记账(2026-11-12 用户决定)**:干净工作区上跑绿,E2E 把「树哈希 + project 集合」记进
+    `<git common dir>/soulledger-gates-passed-e2e`,演示 E2E(`scripts/demo-remote.sh scripts/demo-e2e-inner.sh`,不带别的参数)把树哈希记进
+    `…-passed-demo`;同一棵树再要同样的(或其子集的)project,打印 `already passed` 直接放行。工作区不干净时不放行也不记;`FORCE=1` 照跑。
+    演示录制和演示的常驻服务不记账。
   - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
     改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前 chromium + mobile-chrome;firefox 交给每日 CI,2026-11-12)。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /
