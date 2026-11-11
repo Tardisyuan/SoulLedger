@@ -234,7 +234,11 @@ function LedgerBody({
         /* C15「空」:给一条出路 —— 有筛选就清筛选,没有就去上一月。 */
         <EmptyState
           title={t("ledger.journal.empty_title")}
-          reason={t("ledger.journal.empty_reason", { month: data.month, opening: signed(data.opening) })}
+          reason={t("ledger.journal.empty_reason", {
+            month: data.month,
+            // null 对 VIEWER(P-02):句子里写「余额未提供」,不写成「0」。
+            opening: data.opening == null ? t("souls.balance_withheld") : signed(data.opening),
+          })}
           action={
             onClearFilters ? (
               <Button type="button" variant="secondary" size="sm" onClick={onClearFilters}>
@@ -291,7 +295,7 @@ function FourPillars({ data, civilization }: { data: LedgerJournal; civilization
   );
 }
 
-function Journal({ rows, closing }: { rows: LedgerJournalRow[]; closing: number }) {
+function Journal({ rows, closing }: { rows: LedgerJournalRow[]; closing: number | null }) {
   const { t } = useI18n();
   const balances = runningBalances(rows, closing);
   const sticky = rows.length > STICKY_AFTER;
@@ -329,11 +333,12 @@ function Journal({ rows, closing }: { rows: LedgerJournalRow[]; closing: number 
 }
 
 /** 整行可点:一条 `Link` 用 `::after` 盖住整行,进入该户详情的「乙 · 功过」。 */
-function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number }) {
+function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number | null }) {
   const { t, formatDateTime } = useI18n();
   const merit = row.record_type === "MERIT";
   // VIEWER 拿到的 `weight` 是 null(P-02):收 / 支 / 结余三格都空着,不把 null 画成 0、不从期末倒推结余。
-  const hidden = row.weight == null;
+  const weight = row.weight;
+  const hidden = weight == null;
   const category = t(`souls.categories.${row.category}`);
   // 摘要 = 事目,有依据就接在后面(v1 的「依据」一列,B10 并进摘要)。
   const summary = row.statute_clause ? `${row.description} · ${row.statute_clause}` : row.description;
@@ -361,10 +366,10 @@ function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number }
         </span>
         {summary}
       </span>
-      <span className="[grid-area:r] font-mono text-sm tabular-nums text-right">{merit && !hidden ? signed(row.weight) : ""}</span>
-      <span className="[grid-area:p] font-mono text-sm tabular-nums text-right">{merit || hidden ? "" : signed(-row.weight)}</span>
+      <span className="[grid-area:r] font-mono text-sm tabular-nums text-right">{merit && weight != null ? signed(weight) : ""}</span>
+      <span className="[grid-area:p] font-mono text-sm tabular-nums text-right">{merit || weight == null ? "" : signed(-weight)}</span>
       <span className="[grid-area:b] font-mono text-sm tabular-nums text-right" data-testid="row-balance">
-        {hidden ? "" : signed(balance)}
+        {hidden || balance == null ? "" : signed(balance)}
       </span>
     </div>
   );

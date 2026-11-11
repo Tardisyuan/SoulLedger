@@ -24,12 +24,13 @@ export function signed(n: number): string {
  * 往下每一行再减去上一行的发生额(功 +、过 −)。只在拿到**整月**的行时成立 —— 页面
  * 因此不分页。
  */
-export function runningBalances(rows: LedgerJournalRow[], closing: number): number[] {
-  const out: number[] = [];
+export function runningBalances(rows: LedgerJournalRow[], closing: number | null): (number | null)[] {
+  // VIEWER 拿到的 weight / 期末是 null(P-02):从那一行往下都算不出,记 null,不当 0 减。
+  const out: (number | null)[] = [];
   let balance = closing;
   for (const r of rows) {
     out.push(balance);
-    balance -= r.record_type === "MERIT" ? r.weight : -r.weight;
+    balance = balance === null || r.weight === null ? null : balance - (r.record_type === "MERIT" ? r.weight : -r.weight);
   }
   return out;
 }

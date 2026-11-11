@@ -166,12 +166,14 @@ export type LedgerReadingKind = (typeof READING_KINDS)[number];
  * apps/ledger/readings.py deliberately does not force one shape on all four.
  */
 export type LedgerReading =
-  | { kind: "BALANCE"; civilization: string; balance: number; merit: number; demerit: number }
-  | { kind: "THRESHOLD"; civilization: string; heart_weight: number; counterweight: number; heavier_than_feather: boolean }
+  // Score fields are `number | null`: null for a reader the backend withholds scores from (VIEWER,
+  // `apps/souls/serializers.py::READING_SCORE_KEYS`, audit P-02). Counts and clocks are never nulled.
+  | { kind: "BALANCE"; civilization: string; balance: number | null; merit: number | null; demerit: number | null }
+  | { kind: "THRESHOLD"; civilization: string; heart_weight: number | null; counterweight: number; heavier_than_feather: boolean }
   | {
       kind: "GUILT_AND_PENALTY";
       civilization: string;
-      culpa: number;
+      culpa: number | null;
       culpa_record_count: number;
       poena: null;
       /** Non-empty for as long as `poena` is null — see POENA_MISSING_INPUTS. */
@@ -252,8 +254,9 @@ export interface LedgerRecord {
   type: string;
   category: string;
   description: string;
-  original_weight: number;
-  effective_weight: number;
+  /** null for VIEWER (P-02), as is `effective_weight`. */
+  original_weight: number | null;
+  effective_weight: number | null;
   years_elapsed: number;
   decay_factor: number;
   civilization: string;
@@ -293,9 +296,10 @@ export interface StatuteSnapshot {
 export interface LedgerSummary {
   soul_id: string;
   soul_name: string;
-  merit_score: number;
-  demerit_score: number;
-  karmic_balance: number;
+  /** The three totals are null for VIEWER (`LEDGER_SCORE_KEYS`, P-02). */
+  merit_score: number | null;
+  demerit_score: number | null;
+  karmic_balance: number | null;
   record_count: number;
   records: LedgerRecord[];
   reading: LedgerReading;
@@ -304,8 +308,9 @@ export interface LedgerSummary {
 // 200 body of GET /ledger/inheritance/{soul_id}/.
 export interface LedgerInheritance {
   soul_id: string;
-  inherited_merit: number;
-  inherited_demerit: number;
+  /** null for VIEWER (P-02); the rates below are not scores and stay. */
+  inherited_merit: number | null;
+  inherited_demerit: number | null;
   /** Fraction of merit that survives the gate — 0.2 today. Was an English
    * `inheritance_note` sentence composed in apps/ledger/services.py; the rates
    * come over as numbers now so the wording can live in the message bundles
@@ -336,8 +341,9 @@ export interface LedgerRecalculation {
 /** One category's weight inside the month (LedgerJournalCategorySerializer). */
 export interface LedgerJournalCategory {
   category: string;
-  merit: number;
-  demerit: number;
+  /** null for VIEWER under a search (the sums are then the named souls' scores, P-02). */
+  merit: number | null;
+  demerit: number | null;
 }
 
 /** One MERIT / DEMERIT record of the month. `day` is the UTC date the month
@@ -349,7 +355,8 @@ export interface LedgerJournalRow {
   record_type: "MERIT" | "DEMERIT";
   category: string;
   description: string;
-  weight: number;
+  /** null for VIEWER (P-02). */
+  weight: number | null;
   statute_clause: string;
   recorded_at: string;
   day: string;
@@ -362,10 +369,11 @@ export interface LedgerJournalRow {
  */
 export interface LedgerJournal {
   month: string;
-  opening: number;
-  received: number;
-  disbursed: number;
-  closing: number;
+  /** The four pillars are null for VIEWER under a search (P-02). */
+  opening: number | null;
+  received: number | null;
+  disbursed: number | null;
+  closing: number | null;
   soul_count: number;
   record_count: number;
   /** 明细按数据范围收窄、合计仍是全殿时为 true。 */

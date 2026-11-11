@@ -65,8 +65,8 @@ interface LedgerBookRow {
   record: LedgerRecord;
   /** 1-based, in settlement order — see `settlementOrder`. */
   n: number;
-  /** 销算余 after this entry. */
-  runningBalance: number;
+  /** 销算余 after this entry; null once any weight so far is withheld (VIEWER, P-02). */
+  runningBalance: number | null;
 }
 
 /**
@@ -95,9 +95,10 @@ export function settlementOrder(records: LedgerRecord[]): LedgerBookRow[] {
     (a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
   );
 
-  let running = 0;
+  let running: number | null = 0;
   return ordered.map((record, i) => {
-    running += record.type === "MERIT" ? record.original_weight : -record.original_weight;
+    const w = record.original_weight;
+    running = running === null || w === null ? null : running + (record.type === "MERIT" ? w : -w);
     return { record, n: i + 1, runningBalance: running };
   });
 }
@@ -113,8 +114,19 @@ export function settlementOrder(records: LedgerRecord[]): LedgerBookRow[] {
  * footer that cannot be tied to a figure already on the page is a total nobody
  * can check.
  */
-function entryWeight(record: LedgerRecord): number {
+function entryWeight(record: LedgerRecord): number | null {
   return record.original_weight;
+}
+
+/** Sum of the weights, or null when any is withheld — a total of the visible ones would be a false figure. */
+function sumWeights(rows: LedgerBookRow[]): number | null {
+  let total = 0;
+  for (const r of rows) {
+    const w = entryWeight(r.record);
+    if (w === null) return null;
+    total += w;
+  }
+  return total;
 }
 
 /**
@@ -259,13 +271,9 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
     </div>
   ) : null;
 
-  const meritTotal = rows
-    .filter((r) => r.record.type === "MERIT")
-    .reduce((s, r) => s + entryWeight(r.record), 0);
-  const demeritTotal = rows
-    .filter((r) => r.record.type === "DEMERIT")
-    .reduce((s, r) => s + entryWeight(r.record), 0);
-  const netTotal = meritTotal - demeritTotal;
+  const meritTotal = sumWeights(rows.filter((r) => r.record.type === "MERIT"));
+  const demeritTotal = sumWeights(rows.filter((r) => r.record.type === "DEMERIT"));
+  const netTotal = meritTotal === null || demeritTotal === null ? null : meritTotal - demeritTotal;
 
   if (rows.length === 0) {
     return (
@@ -429,8 +437,8 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
                   <BodyCell numeric>
                     <Amount
                       field="running_balance"
-                      sign={runningBalance < 0 ? "-" : "+"}
-                      value={Math.abs(runningBalance)}
+                      sign={runningBalance !== null && runningBalance < 0 ? "-" : "+"}
+                      value={runningBalance === null ? null : Math.abs(runningBalance)}
                       className="text-[oklch(var(--color-ink))]"
                     />
                   </BodyCell>
@@ -470,8 +478,8 @@ export function SoulLedgerBook({ records, edit, civilization }: SoulLedgerBookPr
               <FootCell numeric>
                 <Amount
                   field="net_total"
-                  sign={netTotal < 0 ? "-" : "+"}
-                  value={Math.abs(netTotal)}
+                  sign={netTotal !== null && netTotal < 0 ? "-" : "+"}
+                  value={netTotal === null ? null : Math.abs(netTotal)}
                   className="text-[oklch(var(--color-ink))]"
                 />
               </FootCell>
@@ -597,9 +605,18 @@ function Amount({
 }: {
   field: string;
   sign: "+" | "-";
-  value: number;
+  /** null = withheld from this reader (VIEWER, P-02): a mark, never a bare sign or a 0. */
+  value: number | null;
   className: string;
 }) {
+  const { t } = useI18n();
+  if (value === null) {
+    return (
+      <span data-quantity-field={field} data-testid="ledger-book-withheld">
+        <MissingValue kind="unrecorded" reason={t("souls.balance_withheld")} />
+      </span>
+    );
+  }
   return (
     <span
       data-quantity={RECORD_QUANTITIES.original_weight}

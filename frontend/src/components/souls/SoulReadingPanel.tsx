@@ -18,9 +18,9 @@ interface SoulReadingPanelProps {
   /** Raw ledger sums — always true of any ledger, always present in the
    * payload even for UNAVAILABLE, but only meaningful as "plain data" there
    * (see UnavailableReading below). */
-  meritScore: number;
-  demeritScore: number;
-  karmicBalance: number;
+  meritScore: number | null;
+  demeritScore: number | null;
+  karmicBalance: number | null;
 }
 
 /**
@@ -197,10 +197,11 @@ function ThresholdReading({
   reading: Extract<LedgerReading, { kind: "THRESHOLD" }>;
   t: TFunc;
 }) {
-  const ratio = reading.counterweight > 0 ? reading.heart_weight / reading.counterweight : reading.heart_weight;
+  const heart = reading.heart_weight;
+  const hidden = heart == null; // VIEWER(P-02):心重是分数,后端置 null
+  const ratio = heart == null ? 0 : reading.counterweight > 0 ? heart / reading.counterweight : heart;
   const ratioText = `${Number.isInteger(ratio) ? ratio : ratio.toFixed(1)}×`;
   const failed = reading.heavier_than_feather;
-  const hidden = reading.heart_weight == null; // VIEWER(P-02):心重是分数,后端置 null
 
   return (
     <div className="space-y-3">
@@ -370,9 +371,9 @@ function UnavailableReading({
   t,
 }: {
   reasonCode: UnavailableReasonCode;
-  meritScore: number;
-  demeritScore: number;
-  karmicBalance: number;
+  meritScore: number | null;
+  demeritScore: number | null;
+  karmicBalance: number | null;
   t: TFunc;
 }) {
   // Both strings are keyed on the code rather than being the flat

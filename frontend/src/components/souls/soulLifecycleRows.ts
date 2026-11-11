@@ -35,8 +35,9 @@ export interface KarmaRow extends BaseRow {
   kind: "karma";
   category: "karma";
   date: HistoricalDate | null;
-  effectiveSigned: number;
-  originalSigned: number;
+  /** null = the weight is withheld from this reader (VIEWER, P-02) — never 0. */
+  effectiveSigned: number | null;
+  originalSigned: number | null;
   decayFactor: number;
   yearsElapsed: number;
   title: string;
@@ -148,8 +149,9 @@ export function buildKarmaRows(records: LedgerRecord[]): KarmaRow[] {
       category: "karma",
       sortKey,
       date: r.event_date ? yearLabel(r.event_date) : isoDateLabel(r.recorded_at),
-      effectiveSigned: sign * r.effective_weight,
-      originalSigned: sign * r.original_weight,
+      // `sign * null` is 0: a withheld weight would print as「+0」.
+      effectiveSigned: r.effective_weight === null ? null : sign * r.effective_weight,
+      originalSigned: r.original_weight === null ? null : sign * r.original_weight,
       decayFactor: r.decay_factor,
       yearsElapsed: r.years_elapsed,
       title: r.description,

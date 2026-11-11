@@ -78,6 +78,12 @@ describe("buildKarmaRows", () => {
     expect(demerit.originalSigned).toBe(-6);
   });
 
+  it("keeps a withheld weight null — `sign * null` would be 0 (P-02)", () => {
+    const [row] = buildKarmaRows([record({ type: "DEMERIT", original_weight: null, effective_weight: null })]);
+    expect(row.effectiveSigned).toBeNull();
+    expect(row.originalSigned).toBeNull();
+  });
+
   it("labels the row by event_date year, not recorded_at, when event_date is present", () => {
     const rows = buildKarmaRows([record({ event_date: { year: -44, month: 3, day: 15 } })]);
     expect(rows[0].date).toEqual({ year: -44, month: null, day: null });

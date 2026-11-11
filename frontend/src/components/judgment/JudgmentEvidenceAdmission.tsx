@@ -101,7 +101,8 @@ export function JudgmentEvidenceAdmission({
             const ruling = rulings.get(record.id);
             const admitted = ruling?.admitted !== false;
             const when = formatHistoricalDate(record.event_date, locale) ?? formatDate(record.recorded_at);
-            const signed = record.type === "MERIT" ? record.original_weight : -record.original_weight;
+            const w = record.original_weight; // null = withheld (VIEWER, P-02): DomainNumber draws the mark
+            const signed = w === null ? null : record.type === "MERIT" ? w : -w;
             const label = record.description || record.category;
             const clause = clauseCode(record);
             return (
@@ -175,7 +176,7 @@ export function JudgmentEvidenceAdmission({
                   {clause ? <ClauseLink record={record} code={clause} /> : <MissingValue kind="unrecorded" />}
                 </span>
                 <span className="text-right text-xs">
-                  <DomainNumber value={signed} signed toned={admitted} />
+                  <DomainNumber value={signed} signed toned={admitted} missingReason={signed === null ? t("souls.balance_withheld") : undefined} />
                 </span>
               </li>
             );
