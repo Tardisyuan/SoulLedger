@@ -12635,7 +12635,7 @@ export interface components {
          * @description * `TUDI_TEMPLE` - 土地庙
          *     * `YELLOW_SPRINGS_ROAD` - 黄泉路
          *     * `WANGXIANG_TERRACE` - 望乡台
-         *     * `EVIL_DOG_VILLAGE` - 恶狗村
+         *     * `EVIL_DOG_VILLAGE` - 恶狗岭
          *     * `GOLDEN_ROOSTER_HILL` - 金鸡山
          *     * `WILD_GHOST_VILLAGE` - 野鬼村
          *     * `MIHUN_HALL` - 迷魂殿
