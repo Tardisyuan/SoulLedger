@@ -86,6 +86,33 @@ def test_one_event_on_two_devices_is_one_row(cn_tenant):
     assert page["count"] == 2 and len(page["results"]) == 2
 
 
+def test_a_new_life_does_not_see_the_previous_lifes_notifications(cn_tenant):
+    """A2-03(2026-11-11 用户决定):通知记录按本世账号,不按灵魂。前世的书信推送带对方名字与会话 id,
+    新一世读不到;行仍在库里。变异:查询改回 `soul_id=self.account.soul_id` → 新一世看到「前世的信」,红。"""
+    from django.contrib.auth import get_user_model
+
+    from apps.soul_accounts import services as accounts
+    from apps.soul_accounts.models import AccountOrigin, SoulAccount
+    from tests.soul_account_support import soul_client
+
+    old, _ = ready_soul(cn_tenant, name="转世者")
+    _delivery(old, "chat:1", title="前世的信", data={"screen": "Chat", "conversation_id": "c-1"})
+    accounts.retire_account_for_rebirth(old.soul, old.cycle)
+    user = get_user_model().objects.create_user(
+        username=f"soul.{old.soul.soul_code}.{old.cycle + 1}", role="SOUL",
+        tenant=old.soul.home_tenant, display_name=old.soul.name,
+    )
+    new = SoulAccount.objects.create(user=user, soul=old.soul, cycle=old.cycle + 1, previous_account=old,
+                                     origin=AccountOrigin.OFFICER, must_change_password=False)
+    _delivery(new, "judgment:9", token=TOKEN_B, title="今世的")
+
+    page = soul_client(new).get(URL)
+    assert page.status_code == 200, page.data
+    assert [r["title"] for r in page.data["results"]] == ["今世的"]
+    assert page.data["count"] == 1
+    assert PushDelivery.objects.filter(account=old, title="前世的信").exists(), "前世的行该留在库里"
+
+
 # ── 没有设备也有记录 ──────────────────────────────────────────────────────
 
 

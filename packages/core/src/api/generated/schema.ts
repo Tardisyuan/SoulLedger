@@ -5231,9 +5231,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description `GET /me/notifications/`:本灵魂收到过的推送,最新在前,分页(PAGE_SIZE 20)。
+         * @description `GET /me/notifications/`:本世账号收到过的推送,最新在前,分页(PAGE_SIZE 20)。
          *
-         *     只读。范围是**灵魂**而不是本世账号:转世换账号,记录仍是同一个灵魂的。
+         *     只读。范围是**本世账号**(`PushDelivery.account`,每一行写入时就是收件的那个账号),不是灵魂:
+         *     新一世看不见前世的通知(2026-11-11 用户决定,审计 A2-03)—— 前世的书信推送带着对方显示名与
+         *     `conversation_id`,而会话列表本来就按账号隔开(`chat/views.py`:「新一世看不见前世的会话」)。
+         *     前世的行仍留在库里,只是不从这里给。
          *     `PushDelivery` 一台设备一行,两台手机登同一账号就是同一件事两行 —— 这里按
          *     `dedupe_key` 只给最早那一行,记录讲的是「发生过什么」,不是「发到了哪台」。
          */
