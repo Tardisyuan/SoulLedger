@@ -45,7 +45,7 @@ tests/test_frontend_civilization_members.py                      config packages
 tests/test_frontend_event_types_track_the_backend.py             frontend packages
 tests/test_frontend_notification_categories_match_the_backend.py  packages
 tests/test_frontend_page_size.py                                 config frontend packages
-tests/test_frontend_permission_strings_are_real.py               frontend packages
+tests/test_frontend_permission_strings_are_real.py               frontend mobile-officer packages
 tests/test_frontend_role_labels.py                               frontend packages
 tests/test_frontend_statute_enums.py                             packages
 tests/test_menu_seed_first_sixteen.py                            *

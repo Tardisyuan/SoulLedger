@@ -1270,6 +1270,10 @@ export class ApiMock {
   /** Live 兼任 per role name (user ids), for the roles drawer's 「成员」 tab. Nobody holds GUARDIAN at first. */
   readonly roleExtras: Record<string, number[]> = {};
 
+  /** Codenames the server has deleted since the page loaded: a grant of one is refused `permission_not_found`.
+   *  The one refusal the client cannot foresee (admin-only and role rules are drawn as 禁授 since 2026-11-11). */
+  readonly goneCodenames = new Set<string>();
+
   /** The signed-in user's avatar URL, so a successful upload is visible on
    *  the next GET of the same profile — same live-state shape as
    *  `roleVersions` above. */
@@ -1587,7 +1591,7 @@ export class ApiMock {
           return { ...base, status: "refused", code, detail: code };
         };
         if (!(c.role in this.roleVersions)) return refuse("role_not_found");
-        if (!perm) return refuse("permission_not_found");
+        if (!perm || this.goneCodenames.has(perm.codename)) return refuse("permission_not_found");
         if (c.role in expected && expected[c.role] !== this.roleVersions[c.role]) return refuse("version_conflict");
         if (c.action === "grant" && c.role !== "ADMIN" && ADMIN_ONLY_CODENAMES.includes(perm.codename)) return refuse("admin_only_permission");
         const ids = this.roleGrants[c.role] ?? (this.roleGrants[c.role] = []);

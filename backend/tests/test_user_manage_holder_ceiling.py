@@ -58,7 +58,7 @@ def test_an_invitation_respects_the_role_ceiling(world):
 def test_a_custom_role_is_assignable_only_when_the_caller_holds_all_it_grants(world):
     """P-05:自建角色曾一律排名 999,任何调用者都「不高于」它 —— GUARDIAN 可给自己兼任一个持 judgment.execute 的角色。"""
     _grant("DEPUTY", "judgment.execute")  # GUARDIAN 不持有
-    _grant("LESSER", "soul.read")  # GUARDIAN 持有
+    _grant("LESSER", "ledger.read")  # GUARDIAN 持有(soul.read 不行:_grant 建出它的 Permission 行后，按码判定时 GUARDIAN 没有那一行)
     g, me = world["g"], world["guardian"]
     viewer = User.objects.create_user(username="um_viewer", password="x", role="VIEWER", tenant=world["tenant"])
 

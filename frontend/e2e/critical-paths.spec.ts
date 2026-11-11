@@ -399,15 +399,17 @@ test.describe("Critical path: permission matrix save", () => {
 
   test("a partial save: the refused cell stays pending with !, the banner counts both, 定位 focuses it", async ({ page, isMobile }) => {
     test.skip(isMobile, "393 px shows the role-first list; covered below");
-    // recycle_bin.restore to JUDGE is ADMIN-only → refused; menu.read to … JUDGE already has it.
-    await page.getByRole("checkbox", { name: cell("JUDGE", "recycle_bin.restore") }).click();
+    // soul.create to JUDGE is refused because the server deleted that codename after the page loaded — the one
+    // refusal the client cannot draw in advance (admin-only and role rules are 禁授 cells since 2026-11-11).
+    api.goneCodenames.add("soul.create");
+    await page.getByRole("checkbox", { name: cell("JUDGE", "soul.create") }).click();
     await page.getByRole("checkbox", { name: cell("GUARDIAN", "dispatch.approve") }).click();
     await unsaved(page).getByRole("button", { name: "保存改动" }).click();
 
     const banner = page.getByRole("alert").filter({ hasText: "部分保存失败" });
     await expect(banner).toContainText("已存 1 项，失败 1 项");
-    await expect(banner).toContainText("回收站的恢复与彻底删除仅限 ADMIN");
-    const refused = page.getByRole("checkbox", { name: cell("JUDGE", "recycle_bin.restore") });
+    await expect(banner).toContainText("权限项已不存在");
+    const refused = page.getByRole("checkbox", { name: cell("JUDGE", "soul.create") });
     await expect(refused).toHaveText("!");
     await expect(page.getByRole("checkbox", { name: cell("GUARDIAN", "dispatch.approve") })).toHaveText("");
     await expect(unsaved(page)).toContainText("1 处待改");
