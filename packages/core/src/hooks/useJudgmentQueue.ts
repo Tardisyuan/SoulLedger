@@ -29,8 +29,8 @@ import { notify } from "../platform/index";
  *    not hand it straight back; it leaves `holding` when the request settles.
  *  - A refusal is never silent. A failed POST puts the case back in the queue
  *    and says so (`commit_error`). A 409 `claimed_by_other` — somebody else
- *    has claimed the case, and only they, a MODERATOR or an ADMIN may conclude
- *    it — defers the case for the sitting instead, since handing it back would
+ *    has claimed the case, and only they or a holder of `judgment.assign` (by
+ *    default ADMIN) may conclude it — defers the case for the sitting instead, since handing it back would
  *    only invite the same refusal, and is handed to the screen as
  *    `claimRefusal` (a standing warning with the claimant's name, 第三类 F 组
  *    2.2), not a toast that is gone before it is read.

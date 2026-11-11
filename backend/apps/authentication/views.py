@@ -268,9 +268,13 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
     # user.read / user.create / user.update / user.delete.
     #
     # NOTE for whoever splits this later: migration 0015's docstring records
-    # why MODERATOR is withheld user.manage — this viewset carries no tenant
-    # mixin, so the codename spans every tenant and puts no bound on the role
-    # being assigned. Any finer-grained family has to solve that first.
+    # why MODERATOR was withheld user.manage — at the time this viewset carried
+    # no tenant scoping, so the codename spanned every tenant and put no bound
+    # on the role being assigned. Both have since been fixed: a
+    # non-hall-less holder sees only their own hall's users (`get_queryset`,
+    # `scope_to_tenant`) and assigns nothing above their own rank
+    # (`may_assign_role`). MODERATOR is still barred from it by
+    # ROLE_FORBIDDEN_CODENAMES; a finer-grained family has to keep both bounds.
     permission_codename = "user"
     extra_permissions = {
         'list': ['user.manage'],

@@ -18,15 +18,16 @@ _permission_cache = get_permission_cache()
 #: default (maintainer decision, 2026-09-25). `check_permission` answers False
 #: for these whatever the grant table says, and the matrix, `assign` and import
 #: refuse to write them (`role_forbidden_permission`, apps/perm/matrix.py).
-#: MODERATOR (殿主): see the reasons above its entry in ROLE_PERMISSIONS.
+#: MODERATOR (朋友圈审核员;2026-11-07 之前是殿主): see the reasons above its entry in ROLE_PERMISSIONS.
 #: 「设计流程的人不审批」不再按角色名写在这里,改成下面按码组合的规则(用户 2026-10-29 第 13 条)。
 ROLE_FORBIDDEN_CODENAMES = {
     "MODERATOR": frozenset({"user.manage"}),
 }
 
 #: 「设计流程的人不审批」按能力(用户 2026-10-29 第 13 条):同一个角色持有设计类码,就不能再持有审批类码
-#: —— 不论角色叫什么(复制殿主、自建角色都一样)。按角色各算:殿主兼任判官,判官那份审批照算。
-#: 殿主的 dispatch.approve / workflow.escalate / judgment.execute 不在审批类里(不是审批流节点)。
+#: —— 不论角色叫什么(复制出来的角色、自建角色都一样)。按角色各算:一个角色兼任判官,判官那份审批照算。
+#: dispatch.approve / workflow.escalate / judgment.execute 不在审批类里(不是审批流节点)。这三项 2026-11-07 之前
+#: 殿主(MODERATOR)也持有,perm/0035、0036 收回后默认只有 ADMIN 持有(judgment.execute 另有 JUDGE)。
 WORKFLOW_DESIGN_CODENAMES = frozenset({"workflow.create", "workflow.update"})
 WORKFLOW_APPROVE_CODENAMES = frozenset({"workflow.approve", "workflow.advance"})
 
@@ -91,7 +92,7 @@ def check_permission(user, codename):
         return False
 
     # 多角色:每个持有的角色先过自己的硬规则,再对各角色的答案取并集。
-    # 殿主的禁用清单只剔掉「来自殿主这个角色」的授予;殿主兼任判官,判官的授予照算
+    # MODERATOR 的禁用清单只剔掉「来自 MODERATOR 这个角色」的授予;兼任判官时,判官的授予照算
     # (用户 2026-10-09 定)。ADMIN / SOUL 即使被写进 extra_roles 也无视,它们只能是主角色。
     if codename in ADMIN_ONLY_CODENAMES:
         return False

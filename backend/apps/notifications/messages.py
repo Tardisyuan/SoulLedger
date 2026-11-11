@@ -249,9 +249,12 @@ SYSTEM_KINDS = {
 #: name into the row's `params["kind"]`; `kind_for` honours it only if it is
 #: listed here under the type's own kind, so a row cannot name any other text.
 #:
-#: `password_help_requested_moderator`: a realm lead (殿主) is told about a
-#: colleague's 「忘记密码」 but cannot open user management (ADMIN only), so
-#: their text says to ask an administrator instead (2026-09-25 decision).
+#: `password_help_requested_moderator`: from 2026-09-25 until 2026-11-07 a realm
+#: lead (殿主, the MODERATOR role then) was told about a colleague's 「忘记密码」
+#: but could not open user management, so their text said to ask an
+#: administrator instead. Nothing sends it any more (every recipient now holds
+#: `user.manage`, `apps/authentication/tasks.py::notify_password_help`); it
+#: stays so notifications stored before 2026-11-07 still re-render.
 VARIANTS = {
     # 系统没能发起调拨(`_dispatch_not_started`):没有哪个殿拒绝过,不能说「被拒」。
     "sentence_node_refused": {"sentence_node_not_dispatched"},

@@ -149,7 +149,7 @@ export function useJudgmentCourts() {
 /**
  * The reassign picker's list (`GET /judgment/assignable-officers/`): officers these
  * cases may be reassigned to, by the same rule `reassign` checks. Needs `judgment.assign`
- * — which is what a MODERATOR has and `/users/` (`user.manage`) is not.
+ * (by default ADMIN only; MODERATOR held it until 2026-11-07, perm/0035), not `user.manage`.
  */
 export function useAssignableOfficers(ids: readonly string[], enabled = true) {
   return useQuery({
@@ -249,7 +249,7 @@ export function useReleaseJudgment() {
   return useClaimMutation((id: string) => judgmentApi.release(id));
 }
 
-/** Needs `judgment.assign` (ADMIN, MODERATOR). */
+/** Needs `judgment.assign` (by default ADMIN only; MODERATOR held it until 2026-11-07, perm/0035). */
 export function useReassignJudgment() {
   return useClaimMutation(({ id, to }: { id: string; to: number }) => judgmentApi.reassign(id, to));
 }

@@ -329,7 +329,8 @@ export interface JudgmentBatchResult {
  * `already_claimed` · `not_claimed` · `not_claimant` · `not_pending` ·
  * `already_deferred` · `not_deferred` · `invalid_assignee` · `not_found` ·
  * `permission_denied` · `claimed_by_other` (409 from `conclude`: the case is
- * claimed by another officer; only they, ADMIN or MODERATOR may conclude it).
+ * claimed by another officer; only they or a holder of `judgment.assign` — by
+ * default ADMIN — may conclude it).
  */
 export interface JudgmentClaimRefusal {
   error: string;
@@ -801,7 +802,7 @@ export const judgmentApi = {
   claim: (id: string) => api.post<Judgment>(`/judgment/${id}/claim/`, {}),
   /** `reason`: releasing someone else's claim (needs `judgment.assign`) -- it reaches them with the notice. */
   release: (id: string, reason?: string) => api.post<Judgment>(`/judgment/${id}/release/`, reason ? { reason } : {}),
-  /** Needs `judgment.assign` (ADMIN, MODERATOR). `to` is a User pk in the case's tenant; the previous holder is told, with `reason`. */
+  /** Needs `judgment.assign` (by default ADMIN only; MODERATOR until 2026-11-07, perm/0035). `to` is a User pk in the case's tenant; the previous holder is told, with `reason`. */
   reassign: (id: string, to: number, reason?: string) =>
     api.post<Judgment>(`/judgment/${id}/reassign/`, reason ? { to, reason } : { to }),
   /**

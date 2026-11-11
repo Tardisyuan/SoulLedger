@@ -137,11 +137,12 @@ export default function AuditPage() {
   usePlaque({ hall: useHall(t("plaque.office.records")) });
   // `hasPermission("audit.read")`, not `isAdmin`.
   //
-  // The backend grants `audit.read` to ADMIN **and MODERATOR**
-  // (`apps/perm/models.py::ROLE_PERMISSIONS`), while this page asked
-  // `role === "ADMIN"`. Measured: MODERATOR got "访问被拒绝 / 仅管理员可查看审计
+  // By default only ADMIN holds `audit.read` (`apps/perm/models.py::ROLE_PERMISSIONS`),
+  // but the matrix can grant it to any role, so the page asks the codename.
+  // Until 2026-11-07 (perm/0036) MODERATOR held it too, while this page asked
+  // `role === "ADMIN"`. Measured then: MODERATOR got "访问被拒绝 / 仅管理员可查看审计
   // 日志" and issued zero requests — refused by the UI for a permission it
-  // holds. The audit finding that first described this page said it had **no**
+  // held. The audit finding that first described this page said it had **no**
   // gate at all; it had one, pointed at the wrong question. Both are in the
   // same ledger (M47 and M65), which is why this comment names the codename
   // rather than the role.
