@@ -9932,7 +9932,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 激活指定用户 */
+        /**
+         * @description 激活指定用户。与停用同一条规则(`_target_refusal`,审计 2026-11-11 P-06):对另一位 ADMIN 只许无殿 ADMIN
+         *     带自己的两步验证码,否则绑殿 ADMIN 能把全局管理员停用的同殿 ADMIN 重新启用。
+         */
         post: operations["v1_users_activate_create"];
         delete?: never;
         options?: never;

@@ -250,12 +250,6 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             except serializers.ValidationError as exc:
                 raise serializers.ValidationError({"soul": exc.detail}) from exc
 
-        # The hall-less ADMIN names the source hall itself; omitted, `propose(None, …)` failed on `source_tenant.id`
-        # with a 500 (audit 2026-11-11 A1-03). Everyone else without one was already refused above.
-        if validated.get("source_tenant") is None:
-            return Response({"error": "Name the hall that holds the soul.", "code": "source_tenant_required"},
-                            status=status.HTTP_400_BAD_REQUEST)
-
         # Q3(受刑计划进行中不许手动调拨)与灵魂状态在 `propose` 的灵魂行锁内判断(用户 2026-11-01),
         # 拒绝经 `_refused` 答 400 + `code`(`sentence_plan_active` / `soul_not_in_underworld`)。
 

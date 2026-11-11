@@ -249,7 +249,7 @@ def test_a_soul_with_an_open_judgment_at_home_is_not_dispatched_by_hand(realms):
     assert resp.status_code == 409 and resp.data["code"] == "soul_has_pending_judgment", resp.data
     draft = realms["client_cn"].post(f"{URL}drafts/", {k: v for k, v in body.items() if k != "source_tenant"},
                                      format="json")
-    assert draft.status_code == 200, draft.data
+    assert draft.status_code == 201, draft.data
     resp = realms["client_cn"].post(f"{URL}{draft.data['id']}/submit/", {}, format="json")
     assert resp.status_code == 409 and resp.data["code"] == "soul_has_pending_judgment", resp.data
     assert not DispatchRecord.all_objects.filter(soul=soul).exclude(status=DispatchStatus.DRAFT).exists()
@@ -268,10 +268,11 @@ def test_a_soul_with_an_open_judgment_at_home_is_not_dispatched_by_hand(realms):
 
 @pytest.mark.django_db
 def test_the_hall_less_admin_without_a_source_hall_gets_a_400_not_a_500(realms):
+    """The serializer requires `source_tenant` (audit A1-03 thought this was a 500; it never was)."""
     resp = realms["client_admin"].post(URL, {
         "target_tenant": realms["cn"].pk,
         "soul": str(realms["eu_soul"].id),
         "reason": "admin forgot to say where the soul is",
     }, format="json")
-    assert resp.status_code == 400 and resp.data["code"] == "source_tenant_required", resp.data
+    assert resp.status_code == 400 and "source_tenant" in resp.data, resp.data
     assert not DispatchRecord.all_objects.filter(soul=realms["eu_soul"]).exists()

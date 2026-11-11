@@ -133,7 +133,6 @@ def test_two_tenants_cannot_share_a_username_or_an_email():
         User.all_objects.create_user(username="g5-two", password="x", email="same@example.COM", tenant=b)
 
 
-@pytest.mark.django_db
 def _tree(fn):
     return ast.parse(textwrap.dedent(inspect.getsource(fn)))
 
@@ -159,6 +158,7 @@ def test_the_structural_reads_ignore_prose():
     assert not [n for n in ast.walk(tree) if isinstance(n, (ast.ExceptHandler, ast.keyword))]
 
 
+@pytest.mark.django_db
 def test_case_numbers_of_two_tenants_with_the_same_first_segment_still_differ():
     """The generator behind `case_number`: the counter key is `<prefix>-<year>`,
     not the tenant, so CN_DIYU and CN_TEST share a row and cannot issue the same number."""

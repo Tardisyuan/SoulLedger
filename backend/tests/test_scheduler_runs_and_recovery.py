@@ -408,7 +408,7 @@ def test_the_failure_edge_also_posts_to_the_ops_webhook_once(db, admin_user, set
     import requests
 
     posts = []
-    monkeypatch.setattr(requests, "post", lambda url, json, timeout: posts.append((url, json)) or SimpleNamespace(raise_for_status=lambda: None))
+    monkeypatch.setattr(requests, "post", lambda url, json, timeout, **_: posts.append((url, json)) or SimpleNamespace(raise_for_status=lambda: None))
     settings.OPS_ALERT_WEBHOOK_URL = "https://hooks.example/ops"
     _job("tests.scheduler_boom")
 
