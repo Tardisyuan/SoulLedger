@@ -15,6 +15,7 @@ from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.dispatch.services import DispatchService
 from apps.social import moderation
 from apps.social.models import SocialMute
+from apps.souls.models import Soul
 from tests.chat_support import can_speak, matrix, mutual, mxid  # noqa: F401
 from tests.soul_account_support import ready_soul
 
@@ -64,6 +65,38 @@ def test_a_mute_silences_the_soul_in_every_direct_room_and_lifting_restores_it(
     with django_capture_on_commit_callbacks(execute=True):
         moderation.lift_mute(mute, actor=None)
     assert can_speak(conversation.room_id, mxid(a))
+
+
+def test_a_recycled_soul_is_silenced_in_every_room_and_restoring_it_gives_its_voice_back(
+        cn_tenant, pair, matrix, django_capture_on_commit_callbacks):  # noqa: F811
+    """审计 2026-11-11 A2-01 的 Matrix 那半:灵魂进回收站后它手里的 Matrix 令牌还在,
+    房间里必须降到 0(发 / 编辑 50、撤回 100 都不够);恢复后按原规则算回来。
+    变异:删掉 `signals._soul_recycled` 或 `_speaking_levels` 里的 `recycled` → 删除后仍能说话,红。
+    变异:`sync_rooms_task` 用 `Soul.objects` → 取不到已删的灵魂,同上,红。"""
+    from apps.core.recycle_bin import restore_cascade
+
+    a, a_client, b, _, direct = pair
+    inbox = Conversation.objects.get(pk=a_client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"},
+                                                       format="json").data["id"])
+    assert can_speak(direct.room_id, mxid(a)) and can_speak(inbox.room_id, mxid(a))
+
+    with django_capture_on_commit_callbacks(execute=True):
+        cascade_id = a.soul.delete_with_cascade()
+    assert not can_speak(direct.room_id, mxid(a))
+    assert not can_speak(inbox.room_id, mxid(a))
+    assert can_speak(direct.room_id, mxid(b))  # 只降被删的那一个
+    with pytest.raises(MatrixError):
+        matrix.says(direct.room_id, mxid(a), "删了还在说")
+    writes = matrix.rooms[direct.room_id]["level_writes"]
+
+    # 幂等:再同步一次不写。
+    with django_capture_on_commit_callbacks(execute=True):
+        Soul.all_objects.get(pk=a.soul_id).save(update_fields=["is_deleted"])
+    assert matrix.rooms[direct.room_id]["level_writes"] == writes
+
+    with django_capture_on_commit_callbacks(execute=True):
+        restore_cascade(cascade_id)
+    assert can_speak(direct.room_id, mxid(a)) and can_speak(inbox.room_id, mxid(a))
 
 
 def test_an_expired_mute_lifts_the_next_time_the_soul_opens_chat(cn_tenant, pair, django_capture_on_commit_callbacks):

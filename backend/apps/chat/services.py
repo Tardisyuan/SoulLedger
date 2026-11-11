@@ -292,9 +292,17 @@ def refusal(conversation, account, peer_account=None):
 
 
 def _speaking_levels(conversation, identities):
-    """{mxid: 级别}。每个成员此刻该是几级 —— 发言权的唯一出处。"""
+    """{mxid: 级别}。每个成员此刻该是几级 —— 发言权的唯一出处。
+
+    灵魂在回收站里 → 0 级(审计 2026-11-11 A2-01):不能发、不能编辑、不能撤;恢复后下一次同步按其余规则算回来。
+    `soul_a` / `soul_b` 经 select_related 取,不经默认管理器,软删的行也取得到。"""
+    recycled = {soul.pk for soul in (conversation.soul_a, conversation.soul_b)
+                if soul is not None and soul.is_deleted}
     levels = {}
     for soul_id, (account, identity) in identities.items():
+        if soul_id in recycled:
+            levels[identity.matrix_user_id] = SILENT
+            continue
         peer = next((acc for sid, (acc, _) in identities.items() if sid != soul_id), None)
         if peer is None and conversation.kind == ConversationKind.DIRECT:
             peer = conversation.other_account(account.pk)

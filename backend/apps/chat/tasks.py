@@ -65,7 +65,8 @@ def sync_rooms_task(soul_id):
     from apps.chat import services
     from apps.souls.models import Soul
 
-    soul = Soul.objects.filter(pk=soul_id).first()
+    # all_objects:进回收站的灵魂也要同步(降到 0 级),默认管理器会把它滤掉。
+    soul = Soul.all_objects.filter(pk=soul_id).first()
     if soul is not None:
         services.sync_rooms_quietly(soul)
 

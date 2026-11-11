@@ -50,6 +50,15 @@ def _mute_changed(sender, instance, **kwargs):
         transaction.on_commit(lambda: _sync(soul))
 
 
+@receiver(post_save, sender="souls.Soul", dispatch_uid="chat_soul_recycled")
+def _soul_recycled(sender, instance, created, update_fields=None, **kwargs):
+    """进回收站与恢复(`SoftDeleteMixin.soft_delete` / `restore` 都以 `update_fields` 含 `is_deleted` 保存):
+    重算它所有房间的发言权 —— 删了降到 0,恢复了按规则算回来(审计 2026-11-11 A2-01)。
+    幂等:`set_user_levels` 没变就不写。"""
+    if not created and update_fields is not None and "is_deleted" in update_fields:
+        transaction.on_commit(lambda: _sync(instance))
+
+
 def _sync(soul):
     from apps.chat.services import enqueue_sync_rooms
 
