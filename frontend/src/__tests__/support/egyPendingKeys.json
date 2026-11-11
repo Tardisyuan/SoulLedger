@@ -15,5 +15,9 @@
   "sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.ACTIVE",
   "sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.COMPLETED",
   "judgment.verdicts_by_civ.gr.purgatory",
-  "social_moderation.errors.shared_source_only"
+  "social_moderation.errors.shared_source_only",
+  "soul_push.push_device_claimed.title",
+  "soul_push.push_device_claimed.body",
+  "official_notify.push_device_claimed.title",
+  "official_notify.push_device_claimed.body"
 ]

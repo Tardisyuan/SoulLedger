@@ -6522,6 +6522,10 @@
       "title": "Two-step verification turned off",
       "body": "{{name}}, an officer of your hall, turned off your two-step verification"
     },
+    "push_device_claimed": {
+      "title": "Your push device was registered by another account",
+      "body": "Your push device was registered by another account and no longer gets your notifications. If you did not change phones yourself, contact your hall."
+    },
     "export_ready": {
       "title": "Your data is ready",
       "body": "The data export you asked for is ready for 7 days. Open Soul Ledger to save it."
@@ -6852,6 +6856,10 @@
     "city_god_case_returned": {
       "title": "Case returned for correction",
       "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"
+    },
+    "push_device_claimed": {
+      "title": "Your push device was registered by another account",
+      "body": "Your push device was registered by another account and no longer gets your to-do pushes. If you did not change phones yourself, contact an administrator."
     },
     "wangsi_grievance_filed": {
       "title": "New grievance in the City of Wrongful Death",

@@ -92,3 +92,75 @@ def test_a_shared_phone_token_moves_to_whoever_signed_in_last_and_stops_for_the_
     services.register_device(b, T1, "IOS")
     assert not PushDevice.objects.filter(account=a, token=T1, is_active=True).exists()
     assert PushDevice.objects.filter(account=b, token=T1, is_active=True).count() == 1
+
+
+# ── token 从另一个账号转过来:通知旧账号 + 审计(2026-11-11 用户决定,审计 A2-04)────────────────
+
+
+def test_a_soul_token_taken_by_another_account_tells_the_old_one_and_is_audited(cn_tenant):
+    """变异:`_register` 去掉 `_tell_previous_owner(...)` → 甲没有通知、也没有审计,红。
+    同一账号重复登记不再发、不再记(变异:条件改成恒真 → 第二次多一行,红)。"""
+    from apps.audit.models import AuditLog
+    from apps.soul_push import messages
+    from apps.soul_push.models import PushDelivery, PushStatus
+
+    a, _ = ready_soul(cn_tenant, name="甲")
+    b, _ = ready_soul(cn_tenant, name="乙")
+    services.register_device(a, T1, "IOS")
+    services.register_device(a, T2, "ANDROID")  # 甲还有一部手机,通知推到那一部
+    services.register_device(b, T1, "IOS")
+
+    (notice,) = PushDelivery.objects.filter(kind="push_device_claimed")
+    assert notice.account_id == a.pk and notice.device.token == T2 and notice.status == PushStatus.QUEUED
+    assert (notice.title, notice.body) == messages.render("zh-Hans", "push_device_claimed")
+    assert not PushDelivery.objects.filter(account=b).exists(), "新主人不该收到这条"
+    (log,) = AuditLog.objects.filter(resource="soul_push_device")
+    assert log.user_id == b.user_id and log.tenant_id == a.soul.home_tenant_id
+    assert log.resource_id == str(PushDevice.objects.get(token=T1).pk)
+    assert log.changes["account"] == [str(a.pk), str(b.pk)]
+
+    services.register_device(b, T1, "IOS")  # 同一账号再登记一次
+    assert PushDelivery.objects.filter(kind="push_device_claimed").count() == 1
+    assert AuditLog.objects.filter(resource="soul_push_device").count() == 1
+
+
+def test_a_soul_token_the_old_account_had_already_given_up_is_audited_but_not_announced(cn_tenant):
+    """旧账号已注销这部手机(登记无效)时它本来就收不到这部手机的推送:只记审计,不发通知。"""
+    from apps.audit.models import AuditLog
+    from apps.soul_push.models import PushDelivery
+
+    a, _ = ready_soul(cn_tenant, name="甲")
+    b, _ = ready_soul(cn_tenant, name="乙")
+    services.register_device(a, T1, "IOS")
+    services.unregister_device(a, T1)
+    services.register_device(b, T1, "IOS")
+    assert not PushDelivery.objects.filter(kind="push_device_claimed").exists()
+    assert AuditLog.objects.filter(resource="soul_push_device").count() == 1
+
+
+def test_an_officer_token_taken_by_another_officer_tells_the_old_one_and_is_audited(
+    cn_tenant, django_capture_on_commit_callbacks
+):
+    """变异:官员端 `_register` 去掉 `_tell_previous_owner(...)` → 旧官员没有站内通知、也没有审计,红。"""
+    from apps.audit.models import AuditLog
+    from apps.notifications import messages
+    from apps.notifications.models import UserNotification
+
+    a, b = _officer(cn_tenant, "push_a"), _officer(cn_tenant, "push_b")
+    push.register_device(a, T1, "IOS")
+    with django_capture_on_commit_callbacks(execute=True):
+        push.register_device(b, T1, "IOS")
+
+    (note,) = UserNotification.objects.filter(user=a)
+    assert note.notification_type == "SYSTEM" and note.params == {"kind": "push_device_claimed"}
+    assert (note.title, note.message) == messages.render("zh-Hans", "push_device_claimed", {})
+    assert not UserNotification.objects.filter(user=b).exists(), "新主人不该收到这条"
+    (log,) = AuditLog.objects.filter(resource="officer_push_device")
+    assert log.user_id == b.pk and log.tenant_id == cn_tenant.pk
+    assert log.resource_id == str(OfficerPushDevice.objects.get(token=T1).pk)
+    assert log.changes["user"] == [a.pk, b.pk]
+
+    with django_capture_on_commit_callbacks(execute=True):
+        push.register_device(b, T1, "IOS")  # 同一位官员再登记一次
+    assert UserNotification.objects.filter(user=a).count() == 1
+    assert AuditLog.objects.filter(resource="officer_push_device").count() == 1

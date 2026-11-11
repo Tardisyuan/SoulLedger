@@ -36,7 +36,8 @@ CATEGORY = "officer_todo"
 
 
 def register_device(user, token, platform, session=None):
-    """登记或认领一个 token。已属于别人的 token **转给这位官员**(同一部手机换人登录,旧人从此收不到它)。
+    """登记或认领一个 token。已属于别人的 token **转给这位官员**(同一部手机换人登录,旧人从此收不到它;
+    旧人收到一条站内通知并留一条审计,`_tell_previous_owner`,审计 A2-04)。
     同一个登录会话再登记一个**新** token(Expo 轮换了 token),这个会话上旧的那条停用 —— 否则每次轮换多留一条
     死登记,直到 Expo 报「设备未注册」才清。"""
     device, created = _register(user, token, platform, session)
@@ -57,14 +58,52 @@ def _register(user, token, platform, session):
                                                             session=session, last_seen_at=now), True
             except IntegrityError:
                 device = OfficerPushDevice.objects.select_for_update(of=("self",)).get(token=token)
-        previous_user = device.user_id
+        previous_user, was_active = device.user_id, device.is_active
         device.user, device.platform, device.is_active, device.last_seen_at = user, platform, True, now
         # 注册请求不带 `sid` 时不抹掉已记下的会话(那会让到期判断退回「按人」);但 token 换了主人,
         # 旧主人的会话不能留在新主人的行上。
         if session is not None or previous_user != user.pk:
             device.session = session
         device.save()
+        if previous_user != user.pk:
+            _tell_previous_owner(previous_user, was_active, device, user)
     return device, False
+
+
+def _tell_previous_owner(previous_user_id, was_active, device, user):
+    """token 从另一位官员那里转过来(2026-11-11 用户决定,审计 A2-04):转移照旧,但写一条审计;
+    旧主人还在用这部设备(登记有效)且账号没停用时,提交后再给他一条站内通知「你的推送设备已被另一个账号登记」。
+    官员端的站内通知是 `UserNotification`(本模块文件头),走 `SYSTEM` + `params["kind"]`,文案在
+    `apps/notifications/messages.py`。同一位官员重复登记走不到这里。"""
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.authentication.models import User
+
+    previous = User.objects.select_related("tenant").filter(pk=previous_user_id).first()
+    if previous is None:
+        return
+    AuditLog.objects.create(
+        tenant=previous.tenant, user=user, action=AuditAction.UPDATE,
+        resource="officer_push_device", resource_id=str(device.pk),
+        description=f"推送设备被另一个账号登记({previous.username} → {user.username})"[:500],
+        changes={"user": [previous.pk, user.pk], "was_active": was_active},
+    )
+    if not (was_active and previous.is_active):
+        return
+    previous_id, device_id = previous.pk, str(device.pk)
+
+    def send():
+        from apps.events.services import EventService
+        from apps.notifications import messages
+
+        recipient = User.objects.select_related("tenant").filter(pk=previous_id, is_active=True).first()
+        if recipient is None:
+            return
+        params = {"kind": "push_device_claimed"}
+        title, body = messages.render(messages.DEFAULT_LOCALE, params["kind"], params)
+        EventService.notify_user(recipient, title=title, message=body, params=params, notification_type="SYSTEM",
+                                 related_resource="officer_push_device", related_id=device_id)
+
+    transaction.on_commit(send)
 
 
 def unregister_device(user, token):

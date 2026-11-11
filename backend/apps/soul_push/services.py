@@ -258,6 +258,8 @@ KIND_CATEGORY = {
     "mfa_reset_by_officer": None,
     # 个人资料导出好了(apps/soul_accounts/data_export.py):灵魂自己申请的结果,不给关 —— 文件只留 7 天。
     "export_ready": None,
+    # 这一世的推送设备被另一个账号登记走了(`_register`,审计 A2-04):安全通知,不给关(同两步验证被关)。
+    "push_device_claimed": None,
     # 警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送;第四十批 S-c 设置里显示「不能关」)。
     # 按被举报的是什么分三种文案(2026-09-26 产品定):帖子 / 评论 / 账号。
     **{f"social_warned_{target}": None for target in ("post", "comment", "user")},
@@ -471,6 +473,17 @@ def record_export_ready(account, export):
                    {"screen": "DataExport"})
 
 
+#: 一个 token 从这个账号转给了另一个账号(`_register`;2026-11-11 用户决定,审计 A2-04)。转移照旧 ——
+#: 那是「同一部手机换人登录」的正常机制 —— 但旧账号要知道:若不是本人换的手机,就是有人拿到了它的 token。
+#: 不进偏好;锁屏上不带对方是谁。这部手机已经不是它的了,所以推到它别的设备上,没有就只记一行历史。
+PUSH_DEVICE_CLAIMED_EVENT = "SOUL_PUSH_DEVICE_CLAIMED"
+
+
+def record_push_device_claimed(account, device):
+    return _record(account, PUSH_DEVICE_CLAIMED_EVENT, None, "push_device_claimed",
+                   f"push-claimed:{device.pk}:{timezone.now().timestamp()}"[:120], {})
+
+
 def _record(account, event_type, category, kind, dedupe_key, data, params=None, wording=None):
     preference = PushPreference.objects.filter(account=account).first()
     if preference is not None and category and not getattr(preference, category):
@@ -535,7 +548,8 @@ MAX_ACTIVE_DEVICES = 10
 
 
 def register_device(account, token, platform, session=None):
-    """登记或认领一个 token。已属于别的账号的 token **转给这个账号** —— 旧账号从此收不到它。
+    """登记或认领一个 token。已属于别的账号的 token **转给这个账号** —— 旧账号从此收不到它,
+    但会收到一条「你的推送设备已被另一个账号登记」并留一条审计(`_tell_previous_owner`,审计 A2-04)。
     同一会话换了新 token(Expo 轮换)时,这个会话上旧的停用;账号的有效设备不超过 `MAX_ACTIVE_DEVICES`。"""
     device, created = _register(account, token, platform, session)
     stale = PushDevice.objects.filter(account=account, is_active=True).exclude(pk=device.pk)
@@ -560,7 +574,7 @@ def _register(account, token, platform, session):
                 return device, True
             except IntegrityError:  # 并发的同一 token 注册;退回认领路径
                 device = PushDevice.objects.select_for_update(of=("self",)).get(token=token)
-        previous_account = device.account_id
+        previous_account, was_active = device.account_id, device.is_active
         device.account = account
         device.soul = account.soul
         device.platform = platform
@@ -570,7 +584,26 @@ def _register(account, token, platform, session):
         device.invalid_reason = ""
         device.last_seen_at = now
         device.save()
+        if previous_account != account.pk:
+            _tell_previous_owner(previous_account, was_active, device, account)
     return device, False
+
+
+def _tell_previous_owner(previous_account_id, was_active, device, account):
+    """token 从另一个账号转过来(审计 A2-04):写一条审计;旧账号还在用这部设备(登记有效)且没停用(没转世)时,
+    再给它一条站内通知。同一账号重复登记走不到这里。审计与通知都在转移的同一事务里,推送提交后才入队。"""
+    from apps.audit.models import AuditAction
+    from apps.soul_accounts.models import SoulAccount
+    from apps.soul_accounts.services import audit
+
+    previous = SoulAccount.objects.select_related("soul").filter(pk=previous_account_id).first()
+    if previous is None:
+        return
+    audit(AuditAction.UPDATE, previous.soul, f"推送设备被另一个账号登记({previous.soul.soul_code} → {account.soul.soul_code})",
+          actor=account.user, resource="soul_push_device", resource_id=device.pk,
+          changes={"account": [str(previous.pk), str(account.pk)], "was_active": was_active})
+    if was_active and previous.retired_at is None:
+        enqueue_on_commit(record_push_device_claimed(previous, device))
 
 
 def unregister_device(account, token):

@@ -40,6 +40,7 @@ MESSAGES = {
         "social_warned_comment": {"title": "评论收到警告", "body": "你的评论收到警告：{{reason}}"},
         "social_warned_user": {"title": "账号收到警告", "body": "你的账号收到警告：{{reason}}"},
         "mfa_reset_by_officer": {"title": "两步验证已关闭", "body": "本殿官员 {{name}} 已关闭你的两步验证"},
+        "push_device_claimed": {"title": "推送设备已被另一个账号登记", "body": "你的推送设备已被另一个账号登记，这部设备不再收到你的通知。如果不是你本人换的手机，请联系殿司。"},
         "export_ready": {"title": "资料已准备好", "body": "你申请导出的资料已准备好，7 天内可取。打开灵魂簿保存。"},
         "content_hidden_post": {"title": "帖子已被隐藏", "body": "你的帖子被殿司隐藏，打开灵魂簿查看。"},
         "content_hidden_comment": {"title": "评论已被隐藏", "body": "你的评论被殿司隐藏，打开灵魂簿查看。"},
@@ -145,6 +146,10 @@ MESSAGES = {
         "mfa_reset_by_officer": {
             "title": "Two-step verification turned off",
             "body": "{{name}}, an officer of your hall, turned off your two-step verification",
+        },
+        "push_device_claimed": {
+            "title": "Your push device was registered by another account",
+            "body": "Your push device was registered by another account and no longer gets your notifications. If you did not change phones yourself, contact your hall.",
         },
         "export_ready": {
             "title": "Your data is ready",
