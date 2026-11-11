@@ -49,7 +49,7 @@ from apps.chat import inbox
 from apps.chat.grant import KEY as GRANT_KEY
 from apps.chat.grant import sign as sign_grant
 from apps.chat.identity import deactivate_identity, display_name, ensure_identity
-from apps.chat.matrix import MatrixError, get_client, login_jwt
+from apps.chat.matrix import ROOM_EVENT_LEVELS, MatrixError, get_client, login_jwt
 from apps.chat.models import ChatBlock, ChatIdentity, Conversation, ConversationKind
 from apps.social import soul_circle as circle
 from apps.social.models import Follow
@@ -72,13 +72,14 @@ class ChatError(Exception):
 
 
 def _power_levels(service_user, members):
-    """`members` 是 {mxid: 级别}。`events: {}` 不能省:`private_chat` 预设自带的 `events`
-    表让 50 级成员能改房间名、头像、置顶(2026-09-18 对真 Synapse 实测改名 200),
-    覆盖成空表之后所有状态事件都落到 `state_default` 100。"""
+    """`members` 是 {mxid: 级别}。`events` 不能省、也不能用预设的:`private_chat` 预设自带的 `events`
+    表让 50 级成员能改房间名、头像、置顶(2026-09-18 对真 Synapse 实测改名 200)。
+    覆盖成只含 `ROOM_EVENT_LEVELS` 的表之后,所有状态事件都落到 `state_default` 100,
+    而撤回(`m.room.redaction`)是 100 —— 灵魂撤不了自己的信(审计 2026-11-11 A2-02)。"""
     return {
         "users": {service_user: 100, **members},
         "users_default": 0,
-        "events": {},
+        "events": dict(ROOM_EVENT_LEVELS),
         "events_default": EVENTS_DEFAULT,
         "state_default": 100,
         "invite": 100,

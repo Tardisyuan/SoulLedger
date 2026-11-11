@@ -95,7 +95,8 @@ def test_unchanged_levels_are_not_rewritten(synapse_settings):
     变异:去掉「没变就返回」→ 第一次调用也 PUT,红。"""
     from apps.chat.matrix import SynapseClient
 
-    state = {"users": {"@a:x": 50, "@s:x": 100}, "users_default": 0, "events_default": 50}
+    state = {"users": {"@a:x": 50, "@s:x": 100}, "users_default": 0, "events_default": 50,
+             "events": {"m.room.redaction": 100}}
     calls = []
 
     def fake_admin(method, path, **kwargs):
@@ -108,6 +109,32 @@ def test_unchanged_levels_are_not_rewritten(synapse_settings):
     assert calls == ["GET"]
     assert client.set_user_levels("!r:x", {"@a:x": 0}) is True
     assert calls == ["GET", "GET", "PUT"]
+
+
+def test_a_room_from_before_the_redaction_rule_gets_it_on_the_next_sync(synapse_settings):
+    """审计 2026-11-11 A2-02:旧房间的 `events` 是空表,撤回落到 `events_default` 50,能说话的灵魂撤得掉
+    自己的信。下一次同步(每天的 `chat.sync_all_rooms` 也走这里)即使发言权没变也要补上撤回 100,补过就不再写。
+    真客户端 `SynapseClient.set_user_levels`,只换 HTTP 那一层。
+    变异:去掉 `ROOM_EVENT_LEVELS` 那一半判断 → 第一次调用不写,红。"""
+    from apps.chat.matrix import SynapseClient
+
+    state = {"users": {"@a:x": 50, "@s:x": 100}, "users_default": 0, "events_default": 50, "events": {}}
+    puts = []
+
+    def fake_admin(method, path, **kwargs):
+        if method == "PUT":
+            puts.append(kwargs["json"])
+            state.update(kwargs["json"])
+            return {}
+        return {**state, "users": dict(state["users"]), "events": dict(state["events"])}
+
+    client = SynapseClient()
+    client._admin = fake_admin
+    assert client.set_user_levels("!old:x", {"@a:x": 50}) is True
+    assert puts[0]["events"] == {"m.room.redaction": 100}
+    assert puts[0]["users"] == {"@a:x": 50, "@s:x": 100}  # 发言权原样
+    assert client.set_user_levels("!old:x", {"@a:x": 50}) is False
+    assert len(puts) == 1
 
 
 @pytest.fixture

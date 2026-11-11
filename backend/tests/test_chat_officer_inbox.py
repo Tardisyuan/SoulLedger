@@ -45,7 +45,7 @@ def test_a_soul_writes_to_the_hall_it_is_in_now(cn_tenant, eu_tenant, matrix):  
     # 灵魂可以直接在 Matrix 里写;房间形状仍只有服务账号能改。
     assert can_speak(conversation.room_id, mxid(account))
     levels = room_of(conversation)["power_levels"]
-    assert levels["state_default"] == 100 and levels["events"] == {}
+    assert levels["state_default"] == 100 and levels["events"] == {"m.room.redaction": 100}
     # 同一殿司再开一次:同一个会话。
     again = client.post("/api/v1/me/chat/conversations/", {"kind": "OFFICER_INBOX"}, format="json")
     assert again.status_code == 200 and again.data["id"] == data["id"]

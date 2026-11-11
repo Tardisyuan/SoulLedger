@@ -112,9 +112,10 @@ def test_mutual_follows_get_a_free_room(cn_tenant, matrix):  # noqa: F811
     assert can_speak(conversation.room_id, a_id) and can_speak(conversation.room_id, b_id)
     levels = room["power_levels"]
     # 房间的形状只有服务账号能改:状态事件与邀请都要 100,而灵魂只有 50;
-    # `events` 必须是空表 —— private_chat 预设自带的那张让 50 级成员能改房间名(真 Synapse 实测)。
+    # `events` 只有撤回一项且是 100 —— private_chat 预设自带的那张让 50 级成员能改房间名(真 Synapse 实测);
+    # 撤回落到 50 时灵魂能撤空自己的信(审计 2026-11-11 A2-02)。
     assert levels["state_default"] == levels["invite"] == 100
-    assert levels["events"] == {}
+    assert levels["events"] == {"m.room.redaction": 100}
     assert max(v for k, v in levels["users"].items() if k != matrix().service_user) < 100
     # 互关房间里双方直接在 Matrix 里说话,后端不在路径上。
     matrix.says(conversation.room_id, a_id, "直接发")

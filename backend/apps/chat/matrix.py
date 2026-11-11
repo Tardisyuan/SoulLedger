@@ -40,6 +40,11 @@ TIMEOUT = (5, 20)
 #: access token 在 Synapse 里不过期;缓存只是为了少一次登录往返,过期了重新登录即可。
 TOKEN_CACHE_SECONDS = 3600
 ADMIN_TOKEN_KEY = "chat:matrix:admin_token"
+#: 房间 power level 的 `events` 表:只有这一项,其余事件按 `events_default` / `state_default`。
+#: 撤回要 100(审计 2026-11-11 A2-02):Matrix 撤回**自己**的事件只看这一项,`redact: 100` 只管撤别人的;
+#: 落到 `events_default` 50 时,能说话的灵魂可用自己的令牌把写给殿司 / 对方的信撤空,而正文不落我们的库。
+#: 服务账号是 100,仍可撤回。建房(`services._power_levels`)与每次同步(`set_user_levels`)都写它。
+ROOM_EVENT_LEVELS = {"m.room.redaction": 100}
 
 
 class MatrixError(Exception):
@@ -200,17 +205,23 @@ class SynapseClient:
         self._admin("POST", f"/_synapse/admin/v1/join/{room_id}", json={"user_id": user_id})
 
     def set_user_levels(self, room_id, levels):
-        """把 `levels`({mxid: 级别})写进房间的 power level。**没变就不写** ——
+        """把 `levels`({mxid: 级别})写进房间的 power level,顺带补上 `ROOM_EVENT_LEVELS`。**没变就不写** ——
         每次写都是一条状态事件,会出现在双方的时间线上。返回是否写了。
+
+        补 `ROOM_EVENT_LEVELS` 是为了建房早于这条规则的旧房间:每天的 `chat.sync_all_rooms` 经这里把它们
+        一并改掉,不需要另一条迁移路径。
 
         先 GET 后 PUT,PUT 的是整张表:调用方要持有这个会话的行锁(`services.sync_levels` 与发送路径),
         否则两个写入者会互相盖掉对方改的那一项。"""
         path = f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels"
         content = self._admin("GET", path)
         users = content.setdefault("users", {})
-        if all(users.get(mxid, content.get("users_default", 0)) == level for mxid, level in levels.items()):
+        events = content.setdefault("events", {})
+        if (all(users.get(mxid, content.get("users_default", 0)) == level for mxid, level in levels.items())
+                and all(events.get(kind) == level for kind, level in ROOM_EVENT_LEVELS.items())):
             return False
         users.update(levels)
+        events.update(ROOM_EVENT_LEVELS)
         self._admin("PUT", path, json=content)
         return True
 

@@ -36,7 +36,7 @@ from django.utils import timezone
 
 from apps.chat.grant import KEY as GRANT_KEY
 from apps.chat.grant import verify
-from apps.chat.matrix import MatrixError
+from apps.chat.matrix import ROOM_EVENT_LEVELS, MatrixError
 
 SERVER_NAME = "test.soulledger"
 
@@ -90,9 +90,12 @@ class FakeMatrix:
     def set_user_levels(self, room_id, levels):
         pl = FakeMatrix.rooms[room_id]["power_levels"]
         users = pl.setdefault("users", {})
-        if all(users.get(m, pl.get("users_default", 0)) == lvl for m, lvl in levels.items()):
+        events = pl.setdefault("events", {})
+        if (all(users.get(m, pl.get("users_default", 0)) == lvl for m, lvl in levels.items())
+                and all(events.get(k) == lvl for k, lvl in ROOM_EVENT_LEVELS.items())):
             return False
         users.update(levels)
+        events.update(ROOM_EVENT_LEVELS)
         FakeMatrix.rooms[room_id]["level_writes"] += 1
         FakeMatrix.rooms[room_id]["level_log"].append(dict(levels))
         return True

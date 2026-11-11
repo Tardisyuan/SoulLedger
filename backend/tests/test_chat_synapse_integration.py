@@ -136,7 +136,7 @@ def test_a_soul_cannot_reshape_rooms_with_its_own_token(cn_tenant, eu_tenant, sy
     status, _ = _matrix("POST", f"/_matrix/client/v3/rooms/{room_id}/invite", a_token,
                         json={"user_id": mxid(beatrice)})
     assert status == 403
-    # 改房间名、改 power level:power level 拒绝(`events: {}` 让它们都落到 100)。
+    # 改房间名、改 power level:power level 拒绝(`events` 表只列撤回,它们都落到 state_default 100)。
     status, _ = _matrix("PUT", f"/_matrix/client/v3/rooms/{room_id}/state/m.room.name", a_token,
                         json={"name": "改名"})
     assert status == 403
