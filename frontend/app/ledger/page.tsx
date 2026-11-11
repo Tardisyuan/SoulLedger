@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { isMonthTooLarge, ledgerApi, type LedgerJournal, type LedgerJournalParams, type LedgerJournalRow } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
@@ -26,6 +26,7 @@ import { currentMonth, runningBalances, shiftMonth, signed } from "@/src/lib/led
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { DedicationTag } from "@/src/components/souls/SoulLedgerBook";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 
 /**
  * 功过总账 —— 规范 v2 补足 B10:按月日记账,页首四柱,**不分页**。
@@ -256,11 +257,14 @@ function LedgerBody({
 /** 四柱(B10):28 等宽,柱间 1px 行线,期末一柱 s1 底;数字不上色。 */
 function FourPillars({ data, civilization }: { data: LedgerJournal; civilization?: string }) {
   const { t } = useI18n();
-  const cells: { key: string; label: string; value: string; closing?: boolean }[] = [
-    { key: "opening", label: t("ledger.journal.pillar_opening"), value: signed(data.opening) },
-    { key: "received", label: t(civKey(t, "ledger.journal.pillar_received", civilization)), value: signed(data.received) },
-    { key: "disbursed", label: t(civKey(t, "ledger.journal.pillar_disbursed", civilization)), value: signed(-data.disbursed) },
-    { key: "closing", label: t("ledger.journal.pillar_closing"), value: signed(data.closing), closing: true },
+  // 后端对 VIEWER 在带搜索时把四柱置 null(审计 P-02:收窄到点名的灵魂,合计就是那几个灵魂的分数)。
+  const pillar = (n: number | null, sign = 1): ReactNode =>
+    n == null ? <MissingValue kind="unrecorded" reason={t("souls.balance_withheld")} /> : signed(sign * n);
+  const cells: { key: string; label: string; value: ReactNode; closing?: boolean }[] = [
+    { key: "opening", label: t("ledger.journal.pillar_opening"), value: pillar(data.opening) },
+    { key: "received", label: t(civKey(t, "ledger.journal.pillar_received", civilization)), value: pillar(data.received) },
+    { key: "disbursed", label: t(civKey(t, "ledger.journal.pillar_disbursed", civilization)), value: pillar(data.disbursed, -1) },
+    { key: "closing", label: t("ledger.journal.pillar_closing"), value: pillar(data.closing), closing: true },
   ];
   return (
     <dl
@@ -328,6 +332,8 @@ function Journal({ rows, closing }: { rows: LedgerJournalRow[]; closing: number 
 function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number }) {
   const { t, formatDateTime } = useI18n();
   const merit = row.record_type === "MERIT";
+  // VIEWER 拿到的 `weight` 是 null(P-02):收 / 支 / 结余三格都空着,不把 null 画成 0、不从期末倒推结余。
+  const hidden = row.weight == null;
   const category = t(`souls.categories.${row.category}`);
   // 摘要 = 事目,有依据就接在后面(v1 的「依据」一列,B10 并进摘要)。
   const summary = row.statute_clause ? `${row.description} · ${row.statute_clause}` : row.description;
@@ -355,10 +361,10 @@ function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number }
         </span>
         {summary}
       </span>
-      <span className="[grid-area:r] font-mono text-sm tabular-nums text-right">{merit ? signed(row.weight) : ""}</span>
-      <span className="[grid-area:p] font-mono text-sm tabular-nums text-right">{merit ? "" : signed(-row.weight)}</span>
+      <span className="[grid-area:r] font-mono text-sm tabular-nums text-right">{merit && !hidden ? signed(row.weight) : ""}</span>
+      <span className="[grid-area:p] font-mono text-sm tabular-nums text-right">{merit || hidden ? "" : signed(-row.weight)}</span>
       <span className="[grid-area:b] font-mono text-sm tabular-nums text-right" data-testid="row-balance">
-        {signed(balance)}
+        {hidden ? "" : signed(balance)}
       </span>
     </div>
   );

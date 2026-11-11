@@ -13,8 +13,8 @@ export type SoulTab = "identity" | "judgments" | "karma" | "fate" | "events";
 export const SOUL_PAGE = 20;
 
 /**
- * By permission CODE, like the desk. Reading this screen at all needs `soul.read`, which is also what 功过 needs,
- * and the event log has no code of its own (`apps/events/views.py`), so 身份 · 功过 · 事件 are always there.
+ * By permission CODE, like the desk. Reading this screen at all needs `soul.read`, which is also what 功过 needs
+ * and, since 2026-11-11, what the event log needs (`apps/events/views.py`), so 身份 · 功过 · 事件 are always there.
  * A tab nobody may see is not drawn (no 「需要 ×× 权限」).
  */
 export function soulTabs(permissions: readonly string[]): SoulTab[] {
