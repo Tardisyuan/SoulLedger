@@ -40,7 +40,54 @@ details[open] summary{margin-bottom:12px}
 </header>
 
 <article>
-<h2>第二十八批 · egy:演示首页的 57 个新键<span class="tag new">待回 · 2026-11-10</span></h2>
+<h2>第二十九批 · 希腊加了阿斯福得草原:17 个 egy 词 + 希腊冥界图补一个节点<span class="tag new">待回 · 2026-11-11</span></h2>
+<p>回复写到 <code>v4-batch29-reply.md</code>,egy 写进 <code>v4-batch29-egy.json</code>(扁平，键是下表完整路径;最后一行界域名用键 <code>realms.GR_ASPHODEL_MEADOW.name_egy</code>),图写到 <code>v4-batch29-map-gr-dark.svg</code> / <code>-light.svg</code>。第二十八批 egy 已上线。</p>
+<section>
+<h3>这一轮改了什么(用户 2026-11-11 拍板)</h3>
+<ul>
+<li><strong>希腊审判改三分</strong>(依 <code>docs/04_希腊冥界详解.md</code> §三):善 → 至福岛，恶 → 塔尔塔罗斯，<strong>普通 → 阿斯福得草原</strong>(新界域 <code>GR_ASPHODEL_MEADOW</code>,挂在岔路口草地下，取「中」路;之后照常饮勒忒转世，不进千年循环)。希腊判决里原来的「存疑 / 再审」一档改名「普通」。</li>
+<li><strong>地府第四站名用「恶狗岭」</strong>(此前用 §〇 考证的「恶狗村」)。原 egy「Nut Egou」里 Nut 是「村」,已删，请给「岭」的写法。</li>
+<li>权限矩阵「禁授」提示按三种原因分开(角色禁项 / 设计流程的人不审批 / 只限管理员);判官演示说明改为「结案定发落」;灵魂暂居别殿时不能删除的新提示。</li>
+</ul>
+</section>
+<section>
+<h3>一 · 17 个 egy 词</h3>
+<p>照第十八批的规矩：新词根、专名在回复里列出来;<code>{{perm}}</code> 占位原样保留;Maat 规则与 <code>Wehem Ankh</code> 禁用照旧。</p>
+<table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>permissions.matrix.legend.deny</code></td><td>禁授 · 按规则</td><td>forbidden · by rule</td></tr>
+<tr><td><code>permissions.matrix.refused.admin_only_permission</code></td><td>与规则冲突：这项权限只有管理员（ADMIN）能持有，已退回。</td><td>Conflicts with the rule that only ADMIN may hold this permission; sent back.</td></tr>
+<tr><td><code>permissions.matrix.refused.role_forbidden_permission</code></td><td>与规则冲突：这个角色不能持有这项权限（角色禁项，或「设计流程的人不审批」），已退回。</td><td>Conflicts with a rule: this role may not hold this permission (a role-forbidden permission, or “who designs a workflow does not approve it”); sent back.</td></tr>
+<tr><td><code>permissions.matrix.deny_hint</code></td><td>角色禁项：这个角色不能持有「{{perm}}」。</td><td>Role rule: this role may never hold 「{{perm}}」.</td></tr>
+<tr><td><code>permissions.matrix.deny_hint_capability</code></td><td>设计流程的人不审批：这个角色持有流程设计权限时不能再授流程审批或推进，持有审批或推进时不能再授设计，「{{perm}}」此刻不能授予。</td><td>Who designs a workflow does not approve it: while this role holds workflow design it cannot be granted approve or advance, and while it holds approve or advance it cannot be granted design — 「{{perm}}」 cannot be granted now.</td></tr>
+<tr><td><code>permissions.matrix.deny_hint_admin_only</code></td><td>「{{perm}}」只有管理员（ADMIN）能持有。</td><td>Only ADMIN may hold 「{{perm}}」.</td></tr>
+<tr><td><code>souls.detail.error_delete_residing</code></td><td>这个灵魂正暂居别殿，不能删除：先结束暂居，再由原属殿删除。</td><td>This soul is residing in another hall and cannot be deleted. End the residence first; its home hall deletes it.</td></tr>
+<tr><td><code>demo.role_judge_desc</code></td><td>官员日常:认领案件、结案定发落、审批。</td><td>An officer&#x27;s day: claim cases, conclude them with a sentence, approve.</td></tr>
+<tr><td><code>souls.diyu_station.EVIL_DOG_VILLAGE</code></td><td>恶狗岭</td><td>Vicious Dog Ridge</td></tr>
+<tr><td><code>realms.codes.GR_ASPHODEL_MEADOW</code></td><td>阿斯福得草原</td><td>Asphodel Meadow</td></tr>
+<tr><td><code>realms.names.GR_ASPHODEL_MEADOW</code></td><td>阿斯福得草原</td><td>The Asphodel Meadow</td></tr>
+<tr><td><code>realms.map.fork.MIDDLE</code></td><td>→ 中 · 平路</td><td>→ Middle · level</td></tr>
+<tr><td><code>realms.topology.fork.MIDDLE</code></td><td>中 · 阿斯福得草原</td><td>Middle · the Asphodel Meadow</td></tr>
+<tr><td><code>sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.ACTIVE</code></td><td>居于阿斯福得草原</td><td>On the Asphodel Meadow</td></tr>
+<tr><td><code>sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.COMPLETED</code></td><td>已离阿斯福得草原</td><td>Left the Asphodel Meadow</td></tr>
+<tr><td><code>judgment.verdicts_by_civ.gr.purgatory</code></td><td>普通</td><td>Ordinary</td></tr>
+<tr><td><code>realms.py · GR_ASPHODEL_MEADOW.name_egy</code></td><td>阿斯福得草原(界域表的 egy 名)</td><td>Asphodel Meadow</td></tr>
+</tbody></table>
+</section>
+<section>
+<h3>二 · 希腊冥界图补阿斯福得草原节点</h3>
+<ul>
+<li>现有 <code>frontend/public/v4/maps/soulledger-map-gr-dark.svg</code> / <code>-light.svg</code> 只有草地(岔路口)、渡口、至福岛、塔尔塔罗斯;在草原上的灵魂在图上标不出位置。</li>
+<li>请在岔路口草地与另两条路之间补「中」路与阿斯福得草原节点(灰白、无风、常春花;不是惩罚也不是福地),节点 id 用 <code>GR_ASPHODEL_MEADOW</code>,与其余节点同一套属性写法(代码按 id 找节点)。若该图有主角节点(hero)写法，也请给草原一个。</li>
+<li>深浅两版;字与其余节点同级。</li>
+</ul>
+<p class="ask">请给:egy json + 回复说明 + 两张更新后的 svg(只改草原相关部分，其余节点不动)。</p>
+</section>
+</article>
+
+<details>
+<summary>第二十八批 · egy 57 键<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十八批 · egy:演示首页的 57 个新键<span class="tag done">已回 · 2026-11-10</span></h2>
 <p>请把下表 57 个键的 egy 写进 <code>v4-batch28-egy.json</code>(扁平,键是下表的完整路径,值是 egy 文本),说明写在 <code>v4-batch28-reply.md</code>。照第十八批的规矩:新词根、专名在回复里列出来;双花括号占位原样保留。第二十七批演示首页已按你的稿子上线(<code>soulledger.tardisyuan.ltd</code>)。</p>
 <section>
 <h3>这些键从哪来</h3>
@@ -109,6 +156,7 @@ details[open] summary{margin-bottom:12px}
 </tbody></table>
 </section>
 </article>
+</details>
 
 <details>
 <summary>第二十七批 · 演示首页<span class="tag done">已回 · 已上线</span></summary>
