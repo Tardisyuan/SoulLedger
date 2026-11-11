@@ -89,13 +89,24 @@ describe("「以此人身份查看」入口", () => {
     expect(screen.queryAllByText(OPEN)).toHaveLength(0);
   });
 
-  it("不是管理员的人一行都看不到", async () => {
+  it("持 user.manage 的非管理员进得了页、看得到行,但没有代看入口", async () => {
     mockTenant.user = { id: 9, username: "judge", role: "JUDGE", tenant: null, permissions: ["user.manage"] };
     renderPage();
-    // 页级门(rbac-web L-1):users/ 是 IsAdmin,非管理员整页 403,一行都不画。
+    // 页级门按码 `user.manage`(与后端 UserViewSet、菜单行同一个码,审计 C-01);代看仍只给管理员。
+    await screen.findByText("mengpo");
+    expect(screen.queryByTestId("permission-denied")).toBeNull();
+    for (const name of ["yama", "cui", "mengpo", "gone", "soulx"]) {
+      expect(labelsOf(menuOf(rowOf(name)))).not.toContain(OPEN);
+    }
+    expect(screen.queryByText(OPEN)).toBeNull();
+  });
+
+  it("没有 user.manage 的人整页拒绝,一行都不画", async () => {
+    mockTenant.user = { id: 9, username: "judge", role: "JUDGE", tenant: null, permissions: ["soul.read"] };
+    renderPage();
     expect(await screen.findByTestId("permission-denied")).toBeInTheDocument();
     expect(screen.queryByText("mengpo")).toBeNull();
-    expect(screen.queryByText(OPEN)).toBeNull();
+    expect(usersApi.list).not.toHaveBeenCalled();
   });
 
   it("弹层理由必填;开始时把账号与去掉首尾空白的理由交出去", async () => {
