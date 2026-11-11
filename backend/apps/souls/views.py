@@ -16,7 +16,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
-from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
@@ -37,6 +36,7 @@ from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.souls.serializers import (
     SOUL_BATCH_RECYCLE_MAX,
+    SOUL_EXPORT_COLUMNS,
     SoulBatchRecycleErrorSerializer,
     SoulBatchRecycleResultSerializer,
     SoulBatchRecycleSerializer,
@@ -53,7 +53,8 @@ from apps.souls.serializers import (
     SoulStationRefusalSerializer,
     SoulTransitionSerializer,
     ledger_body_for,
-    scores_hidden_from,
+    soul_export_cells,
+    soul_export_hidden,
 )
 
 
@@ -378,31 +379,17 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             if not ids or len(ids) > SOUL_BATCH_RECYCLE_MAX:
                 raise ValidationError({"ids": [f"1-{SOUL_BATCH_RECYCLE_MAX} comma-separated soul UUIDs."]})
             souls = self.get_queryset().filter(pk__in=ids, is_deleted=False).order_by("name", "pk")
-        from apps.souls.dates import format_death_date
-
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=souls_export.csv"
         writer = csv.writer(response)
-        writer.writerow([
-            "Soul ID", "Name", "Civilization", "State", "Merit Score", "Demerit Score",
-            "Karmic Balance", "Death Date", "Created At",
-        ])
+        writer.writerow([header for header, _ in SOUL_EXPORT_COLUMNS])
         rows = 0
-        hide = scores_hidden_from(request.user)  # 列留着、格子空着,同详情拿掉分数(P-02)
+        # 列留着、格子空着:VIEWER 的分数(P-02)与字段权限藏掉的字段(P-11),同详情。
+        hidden = soul_export_hidden(request.user)
         # 文件里没有功过明细:不要列表为日期检查预取的 records / reincarnations(至多五万行)。
         for soul in souls.prefetch_related(None).iterator(chunk_size=2000):
             rows += 1
-            writer.writerow([
-                str(soul.id),
-                csv_safe(soul.name),
-                csv_safe(soul.civilization),
-                csv_safe(soul.current_state),
-                "" if hide else soul.merit_score,
-                "" if hide else soul.demerit_score,
-                "" if hide else soul.karmic_balance,
-                csv_safe(format_death_date(soul)),
-                soul.create_time.isoformat(),
-            ])
+            writer.writerow(soul_export_cells(soul, hidden))
         record_export(request, resource="soul", rows=rows)
         return response
 

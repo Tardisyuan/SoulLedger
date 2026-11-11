@@ -371,7 +371,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             qs=self.filter_queryset(self.get_queryset()),
             serializer_class=DispositionSerializer,
             columns=[
-                ("Disposition ID", "id"), ("Soul", "soul_name"), ("Section", "section"),
+                ("Disposition ID", "id"), ("Soul", "soul_name", "name"), ("Section", "section"),
                 ("Verdict", "verdict"), ("Realm", "realm_code"), ("Sentence Years", "sentence_years"),
                 ("Eternal", "is_eternal"), ("Memory Reset", "memory_reset"), ("Executed", "is_executed"),
                 ("Term Start", "term_start"), ("Executed At", "executed_at"), ("Term End", "term_end"),

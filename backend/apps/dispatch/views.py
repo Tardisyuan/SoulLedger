@@ -484,7 +484,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             qs=self.filter_queryset(qs),
             serializer_class=DispatchRecordListSerializer,
             columns=[
-                ("Dispatch ID", "id"), ("Soul", "soul_name"), ("From", "source_tenant_code"),
+                ("Dispatch ID", "id"), ("Soul", "soul_name", "name"), ("From", "source_tenant_code"),
                 ("To", "target_tenant_code"), ("Target Realm", "target_realm"), ("Status", "status"),
                 ("Proposed At", "proposed_at"), ("Executed At", "executed_at"), ("Returned At", "returned_at"),
             ],

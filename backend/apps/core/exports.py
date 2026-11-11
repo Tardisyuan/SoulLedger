@@ -9,6 +9,11 @@ through `csv_safe`; the export itself is written to the audit log.
 Cells come from the list **serializer**, not from model fields: whatever the list
 hides from this caller (a field permission, a field the list never sends) is
 blank in the file too. Enum cells are the raw member, as in the soul export.
+
+A column that shows a field of the **soul** (its name on a case, a dispatch, a
+workflow) names that Soul field as a third element, and the Soul field rules
+blank it as they blank the soul's own export (audit 2026-11-11 P-11): the column
+stays, the cell is empty.
 """
 import csv
 
@@ -16,6 +21,7 @@ from django.http import HttpResponse
 from rest_framework.exceptions import ValidationError
 
 from apps.core.csv_safe import csv_safe
+from apps.core.field_permissions import hidden_fields, withhold
 from apps.core.tenant import request_tenant
 
 #: Every export's ceiling, the audit export included. Design batch 28 W5 greys the
@@ -37,13 +43,15 @@ def refuse_if_too_many(qs):
 
 
 def export_csv(request, *, qs, serializer_class, columns, filename, resource):
-    """`columns` is [(header, serializer_key), ...]. Returns the CSV response."""
+    """`columns` is [(header, serializer_key) or (header, serializer_key, soul_field), ...]. Returns the CSV response."""
     refuse_if_too_many(qs)
+    soul_hidden = hidden_fields(request.user, "Soul", {c[2] for c in columns if len(c) > 2})
+    blank = {c[1] for c in columns if len(c) > 2 and c[2] in soul_hidden}
 
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f"attachment; filename={filename}"
     writer = csv.writer(response)
-    writer.writerow([header for header, _ in columns])
+    writer.writerow([header for header, *_ in columns])
 
     written, chunk = 0, []
 
@@ -51,7 +59,8 @@ def export_csv(request, *, qs, serializer_class, columns, filename, resource):
         nonlocal written
         data = serializer_class(chunk, many=True, context={"request": request}).data
         for row in data:
-            writer.writerow([_cell(row.get(key)) for _, key in columns])
+            row = withhold(row, blank)
+            writer.writerow([_cell(row.get(key)) for _, key, *_ in columns])
         written += len(chunk)
         chunk.clear()
 

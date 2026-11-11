@@ -399,7 +399,7 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
             columns=[
                 ("Registration ID", "id"), ("Status", "status"), ("Source System", "source_system"),
                 ("Source Reference", "source_reference_id"), ("Idempotency Key", "idempotency_key"),
-                ("Soul ID", "soul"), ("Error Code", "error_code"), ("Error Message", "error_message"),
+                ("Soul ID", "soul", "id"), ("Error Code", "error_code"), ("Error Message", "error_message"),
                 ("Retry Count", "retry_count"), ("Received At", "request_timestamp"),
             ],
             filename="death_registrations_export.csv",

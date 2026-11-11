@@ -559,7 +559,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             qs=self.filter_queryset(self.get_queryset()).select_related("create_user"),
             serializer_class=ApprovalWorkflowExportSerializer,
             columns=[
-                ("Workflow ID", "id"), ("Name", "workflow_name"), ("Soul", "soul_name"),
+                ("Workflow ID", "id"), ("Name", "workflow_name"), ("Soul", "soul_name", "name"),
                 ("Case Type", "case_type"), ("Priority", "priority"), ("Status", "status"),
                 ("Current Node", "current_node_name"), ("Initiator", "initiator"),
                 ("Started At", "created_at"), ("Completed At", "completed_at"),

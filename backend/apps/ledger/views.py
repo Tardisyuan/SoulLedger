@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from apps.audit.models import AuditLog
 from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export, refuse_if_too_many
+from apps.core.field_permissions import hidden_fields
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
@@ -38,9 +39,14 @@ from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.ledger.snapshots import previous_month_average
 from apps.perm.filters import DataScopeFilter
 from apps.realms.models import Realm, resolve_localized_name
-from apps.souls.dates import format_death_date
 from apps.souls.models import Soul, SoulState
-from apps.souls.serializers import ledger_body_for, scores_hidden_from
+from apps.souls.serializers import (
+    SOUL_EXPORT_COLUMNS,
+    ledger_body_for,
+    scores_hidden_from,
+    soul_export_cells,
+    soul_export_hidden,
+)
 from apps.tenants.models import Tenant
 
 
@@ -342,14 +348,16 @@ class LedgerJournalExportView(APIView):
         rows = rows_in_data_scope(request, period).select_related("soul").order_by("-recorded_at", "-id")
         written = 0
         hide = scores_hidden_from(request.user)  # 列留着、格子空着(P-02)
+        # The soul's id and name follow the Soul field rules, as in the soul's own export (P-11).
+        soul_hidden = hidden_fields(request.user, "Soul", ("id", "name"))
         for r in rows.iterator(chunk_size=1000):
             written += 1
             merit = r.record_type == "MERIT"
             writer.writerow([
                 r.recorded_at.isoformat(),
                 timezone.localtime(r.recorded_at).date().isoformat(),
-                str(r.soul_id),
-                csv_safe(r.soul.name),
+                "" if "id" in soul_hidden else str(r.soul_id),
+                "" if "name" in soul_hidden else csv_safe(r.soul.name),
                 csv_safe(r.record_type),
                 csv_safe(r.category),
                 csv_safe(r.description),
@@ -721,11 +729,7 @@ class LedgerExportStatsView(APIView):
         response["Content-Disposition"] = "attachment; filename=souls_ledger_export.csv"
 
         writer = csv.writer(response)
-        writer.writerow([
-            "Soul ID", "Name", "Civilization", "State",
-            "Merit Score", "Demerit Score", "Karmic Balance",
-            "Death Date", "Created At"
-        ])
+        writer.writerow([header for header, _ in SOUL_EXPORT_COLUMNS])
 
         # `request.tenant` is set by TenantMiddleware from the token's
         # `tenant_code` claim; a caller reaching a view without passing through
@@ -750,32 +754,14 @@ class LedgerExportStatsView(APIView):
         # Unified downward deliberately: a reader of either function would draw
         # the wrong conclusion about the other, and the exemption is least
         # defensible on the endpoint that produces a file.
-        # Use iterator() to stream results without loading all into memory
+        # Same columns and cells as `souls/export/` (`soul_export_cells`): free text through `csv_safe`, BCE
+        # death dates from year/month/day, and the cells the caller may not see blank — the VIEWER floor (P-02)
+        # and the Soul field rules (P-11).
         rows = 0
-        hide = scores_hidden_from(request.user)  # 列留着、格子空着,同灵魂详情(P-02)
+        hidden = soul_export_hidden(request.user)
         for soul in qs.iterator(chunk_size=1000):
             rows += 1
-            writer.writerow([
-                str(soul.id),
-                # `csv_safe` on every free-text cell (apps/core/csv_safe.py —
-                # shared with the user export, which had no such guard at all
-                # until DB-02). `name` is the one an external system supplies,
-                # but `civilization` and `current_state` are strings too, and a
-                # whitelist that has to be re-checked whenever a column is
-                # added is the kind of guard that silently stops covering things.
-                csv_safe(soul.name),
-                csv_safe(soul.civilization),
-                csv_safe(soul.current_state),
-                "" if hide else soul.merit_score,
-                "" if hide else soul.demerit_score,
-                "" if hide else soul.karmic_balance,
-                # soul.death_date (the legacy property) reads back as blank
-                # for BCE deaths, so build the CSV cell from the raw
-                # year/month/day instead — e.g. "-612-03" for a
-                # year+month-only BCE record.
-                csv_safe(format_death_date(soul)),
-                soul.create_time.isoformat(),
-            ])
+            writer.writerow(soul_export_cells(soul, hidden))
 
         record_export(request, resource="soul_ledger", rows=rows)
         return response

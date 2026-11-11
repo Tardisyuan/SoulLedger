@@ -56,22 +56,9 @@ class FieldPermissionMixin:
         are — the most open role wins: a field is hidden only when every role hides it, read-only only when
         every role locks it, and a role with no rule for this model leaves every field as it is.
         """
-        model_name = self._get_field_permission_model_name()
-        user = self._get_user()
-        user_role = getattr(user, 'role', None)
-
-        if not model_name or not user_role:
-            return  # No model or user — skip
-
-        # ADMIN bypasses field permissions
-        if user_role == 'ADMIN':
+        rule_sets = role_rule_sets(self._get_user(), self._get_field_permission_model_name())
+        if rule_sets is None:
             return
-
-        from apps.perm.checker import live_extra_roles
-
-        rule_sets = [FieldPermission.get_field_rules(role, model_name) for role in [user_role, *live_extra_roles(user)]]
-        if not all(rule_sets):
-            return  # Some role has no rules here — it sees and edits every field
 
         fields_to_remove = []
         for field_name, field in self.fields.items():
@@ -84,6 +71,51 @@ class FieldPermissionMixin:
         # Remove invisible fields
         for field_name in fields_to_remove:
             del self.fields[field_name]
+
+
+def role_rule_sets(user, model_name):
+    """The FieldPermission rules of every role `user` holds for `model_name`, or None when nothing is narrowed.
+
+    The primary role plus live extra roles (用户决定第 27 条:字段权限认兼任角色), combined like grants
+    are — the most open role wins: a field is hidden only when every role hides it, read-only only when
+    every role locks it, and a role with no rule for this model leaves every field as it is. ADMIN, an
+    anonymous caller and a missing model name are never narrowed.
+    """
+    role = getattr(user, "role", None)
+    if not model_name or not role or role == "ADMIN" or not getattr(user, "is_authenticated", False):
+        return None
+
+    from apps.perm.checker import live_extra_roles
+
+    rule_sets = [FieldPermission.get_field_rules(r, model_name) for r in [role, *live_extra_roles(user)]]
+    if not all(rule_sets):
+        return None  # Some role has no rules here — it sees and edits every field
+    return rule_sets
+
+
+def hidden_fields(user, model_name, field_names) -> frozenset:
+    """Which of `field_names` the FieldPermission rules hide from `user` — the one answer the detail
+    serializers (through the mixin), the soul list, every CSV export and the ledger bodies (`souls/{id}/karma/`
+    and friends) share (audit 2026-11-11 P-11: only the four detail serializers used to apply it).
+    One query per role: compute once per response, not per row."""
+    rule_sets = role_rule_sets(user, model_name)
+    if rule_sets is None:
+        return frozenset()
+    return frozenset(n for n in field_names if not any(_outcome(rules, n)[0] for rules in rule_sets))
+
+
+#: `withhold(..., blank=DROP)` removes the key instead of blanking it — what the serializers do.
+DROP = object()
+
+
+def withhold(row: dict, hidden, blank=None) -> dict:
+    """`row` with every key in `hidden` set to `blank` (CSV: "" — the column stays, the cell is empty;
+    JSON bodies: None) or removed (`DROP`). A copy when anything changes: callers pass cached bodies."""
+    if not hidden or not hidden.intersection(row):
+        return row
+    if blank is DROP:
+        return {k: v for k, v in row.items() if k not in hidden}
+    return {k: (blank if k in hidden else v) for k, v in row.items()}
 
 
 def _outcome(rules, field_name):

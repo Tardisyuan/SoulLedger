@@ -7,11 +7,12 @@ from rest_framework import serializers
 from rest_framework.exceptions import APIException
 
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
-from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.csv_safe import csv_safe
+from apps.core.field_permissions import DROP, FieldPermissionMixin, hidden_fields, withhold
 from apps.core.tenant import is_tenant_exempt, request_tenant
 from apps.org.ownership import check_owner_org, owner_org_field
 from apps.souls import acheron
-from apps.souls.dates import ERROR, WARNING, check_birth_date, check_record_date, check_soul_dates
+from apps.souls.dates import ERROR, WARNING, check_birth_date, check_record_date, check_soul_dates, format_death_date
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul, SoulState
 from apps.souls.record_models import SoulRecord
@@ -101,9 +102,62 @@ def hide_ledger_scores(body: dict) -> dict:
     return body
 
 
+#: Ledger-body key → the Soul field whose FieldPermission rule governs it (P-11). The effective and inherited
+#: figures follow the score they are a version of: hiding `merit_score` and handing out `effective_merit` hides nothing.
+LEDGER_KEY_SOUL_FIELD = {
+    "soul_id": "id", "soul_name": "name", "records": "records",
+    "merit_score": "merit_score", "effective_merit": "merit_score",
+    "demerit_score": "demerit_score", "effective_demerit": "demerit_score",
+    "karmic_balance": "karmic_balance", "effective_balance": "karmic_balance",
+    "inherited_merit": "inherited_merit", "inherited_demerit": "inherited_demerit",
+}
+_SCORE_FIELDS = frozenset({"merit_score", "demerit_score", "karmic_balance"})
+
+
 def ledger_body_for(user, body: dict) -> dict:
-    """`body` as `user` may see it."""
-    return hide_ledger_scores(body) if scores_hidden_from(user) else body
+    """`body` as `user` may see it: the VIEWER floor, then the Soul field rules (a hidden key is null, as the
+    floor does; a hidden score also nulls the reading's scores, which restate it)."""
+    if scores_hidden_from(user):
+        body = hide_ledger_scores(body)
+    hidden_soul = hidden_fields(user, "Soul", set(LEDGER_KEY_SOUL_FIELD.values()))
+    if not hidden_soul:
+        return body
+    body = withhold(body, {k for k, f in LEDGER_KEY_SOUL_FIELD.items() if f in hidden_soul})
+    if hidden_soul & _SCORE_FIELDS and isinstance(body.get("reading"), dict):
+        body = {**body, "reading": withhold(body["reading"], set(READING_SCORE_KEYS))}
+    return body
+
+
+#: `souls/export/` and `ledger/stats/export/` — one file shape, (header, Soul field) per column. The field name is
+#: the serializer's, so a FieldPermission rule on it blanks the cell (P-11).
+SOUL_EXPORT_COLUMNS = (
+    ("Soul ID", "id"), ("Name", "name"), ("Civilization", "civilization"), ("State", "current_state"),
+    ("Merit Score", "merit_score"), ("Demerit Score", "demerit_score"), ("Karmic Balance", "karmic_balance"),
+    ("Death Date", "death_date"), ("Created At", "create_time"),
+)
+
+
+def soul_export_hidden(user) -> frozenset:
+    """The columns of `SOUL_EXPORT_COLUMNS` this caller gets blank: the VIEWER floor plus the Soul field rules."""
+    hidden = hidden_fields(user, "Soul", [field for _, field in SOUL_EXPORT_COLUMNS])
+    return hidden | _SCORE_FIELDS if scores_hidden_from(user) else hidden
+
+
+def soul_export_cells(soul, hidden) -> list:
+    """One row of the soul CSV; the columns in `hidden` keep their place and are empty."""
+    row = withhold({
+        "id": str(soul.id),
+        "name": csv_safe(soul.name),
+        "civilization": csv_safe(soul.civilization),
+        "current_state": csv_safe(soul.current_state),
+        "merit_score": soul.merit_score,
+        "demerit_score": soul.demerit_score,
+        "karmic_balance": soul.karmic_balance,
+        # soul.death_date (the legacy property) reads back blank for BCE deaths; built from year/month/day.
+        "death_date": csv_safe(format_death_date(soul)),
+        "create_time": soul.create_time.isoformat(),
+    }, hidden, "")
+    return [row[field] for _, field in SOUL_EXPORT_COLUMNS]
 
 
 def is_viewer(context) -> bool:
@@ -977,7 +1031,12 @@ class SoulListSerializer(serializers.ModelSerializer):
             data.pop("merit_score", None)
             data.pop("demerit_score", None)
             data.pop("karmic_balance", None)
-        return data
+        # The detail's FieldPermission rules, on the list too (P-11): a hidden field is absent, as on the detail.
+        # Worked out once per serializer — for a page that is the one child the ListSerializer reuses.
+        if not hasattr(self, "_rule_hidden"):
+            request = self.context.get("request")
+            self._rule_hidden = hidden_fields(getattr(request, "user", None), "Soul", self.fields.keys())
+        return withhold(data, self._rule_hidden, DROP)
 
 
 class SoulTransitionSerializer(serializers.Serializer):

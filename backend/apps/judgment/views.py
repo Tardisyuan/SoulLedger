@@ -349,7 +349,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             qs=self.filter_queryset(self.get_queryset()),
             serializer_class=JudgmentListSerializer,
             columns=[
-                ("Case ID", "id"), ("Case Number", "case_number"), ("Soul", "soul_name"),
+                ("Case ID", "id"), ("Case Number", "case_number"), ("Soul", "soul_name", "name"),
                 ("Civilization", "civilization"), ("Judge", "judge_name"), ("Court", "court"),
                 ("Verdict", "verdict"), ("Final", "is_final"), ("Created At", "created_at"),
                 ("Concluded At", "concluded_at"),
