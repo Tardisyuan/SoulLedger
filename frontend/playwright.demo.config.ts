@@ -7,7 +7,9 @@ export default defineConfig({
   testDir: "./e2e/demo",
   fullyParallel: true,
   workers: Number(process.env.PW_WORKERS) || 2,
-  retries: 0,
+  // One retry (user 2026-11-11): a test that passes only on retry is reported by name as flaky
+  // (scripts/e2e-report.py counts it), so it is not hidden — but one stall no longer reds the whole run.
+  retries: 1,
   use: { baseURL, locale: "zh-CN", trace: "off", screenshot: "only-on-failure", actionTimeout: 8000 },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /narrow/ },

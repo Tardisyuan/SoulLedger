@@ -40,8 +40,11 @@ trap 'exit 130' INT TERM
 # a time: no frames, so no requestAnimationFrame, so Playwright's "stable" check and the entrance cover's closing never
 # finished. Trace 2026-11-08: frames stopped for 19 328 ms, exactly as long as three web fonts took, while a probe in
 # the same container curling that font every 0.2 s never waited. Two runs on disk: 10 and 15 failed; on tmpfs: none.
+# flock e2e.lock: the same lock as `run-gates.sh --e2e`, so two browser suites never share the machine (2026-11-10:
+# gates + E2E + demo E2E at once = 28 cores asked of 20; one E2E and six demo tests went red, all green apart).
+# The gates' own run.lock is separate, so the gates may still run beside one browser suite (user 2026-11-11).
 # shellcheck disable=SC2029
-ssh -o BatchMode=yes "$GATES_REMOTE" "docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
+ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/e2e.lock docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
     --tmpfs /tmp:rw,exec,size=8g ${DEMO_PUBLISH:-} --cpus ${DEMO_CPUS:-8} --memory ${DEMO_MEMORY:-16g} --shm-size 2g -v $RWORK:/app -v $RDIR/tmp/demo:/sl-tmp -w /app \
     -e SL_PG_BASE='$BASE_URL' -e SL_DEMO_DB_URL='$BASE_URL/sl_demo_record' -e PW_WORKERS=${PW_WORKERS:-4} -e DEMO_PARALLEL=${DEMO_PARALLEL:-5} -e CI= \
     $IMG bash $ARGS"
