@@ -9065,7 +9065,7 @@
     "login_desc": "This is a portfolio demo: no backend, no password. Whatever you change stays in this tab and resets when you sign out or back in.",
     "enter_as": "Enter as {{role}}",
     "role_judge": "Judge",
-    "role_judge_desc": "An officer's day: claim cases, conclude them, issue dispositions, approve.",
+    "role_judge_desc": "An officer's day: claim cases, conclude them with a sentence, approve.",
     "role_admin": "Administrator",
     "role_admin_desc": "Sees all four civilizations: users, roles and permissions, configuration, audit.",
     "role_moderator": "Circle moderator",

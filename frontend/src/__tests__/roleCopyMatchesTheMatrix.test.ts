@@ -20,3 +20,13 @@ describe("C-07: who may reopen a judgment on a cancelled approval flow", () => {
     expect(enText).toMatch(/reassign/);
   });
 });
+
+describe("C-09: the demo's judge description", () => {
+  // JUDGE holds disposition.read / export only; creating or executing a disposition needs
+  // disposition.execute (ADMIN). What a judge does decide is the sentence (发落) when concluding.
+  it("does not promise to issue dispositions", () => {
+    expect(zh.demo.role_judge_desc).not.toMatch(/出处置/);
+    expect(en.demo.role_judge_desc).not.toMatch(/issue dispositions?/i);
+    expect(zh.demo.role_judge_desc).toContain("结案");
+  });
+});
