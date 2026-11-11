@@ -38,9 +38,9 @@ interface SoulKarmaLedgerCardProps {
   /** Decayed totals from LedgerSummary — despite the field names, these are
    * time-decayed sums (LedgerService.get_ledger_summary sums effective_weight,
    * not weight), not raw ones. Raw totals are derived from `records` below. */
-  meritScore: number;
-  demeritScore: number;
-  karmicBalance: number;
+  meritScore: number | null;
+  demeritScore: number | null;
+  karmicBalance: number | null;
   recordCount: number;
   records: LedgerRecord[];
   inheritance: LedgerInheritance | null;
@@ -75,8 +75,9 @@ function getLifespanChartData(records: LedgerRecord[], series: Pick<ChartColors[
     .sort((a, b) => sortKey(a) - sortKey(b))
     .map((r) => {
       const sign = r.type === "MERIT" ? 1 : -1;
-      const effective = sign * r.effective_weight;
-      const original = sign * r.original_weight;
+      // Only drawn when the scores are not withheld (see `withheld` below), so the `?? 0` never reaches the screen.
+      const effective = sign * (r.effective_weight ?? 0);
+      const original = sign * (r.original_weight ?? 0);
       return {
         key: r.id,
         label: yearLabel(r.event_date, r.recorded_at),
@@ -121,8 +122,9 @@ export function SoulKarmaLedgerCard({
   // VIEWER: the backend nulls every score (audit P-02). The raw / decayed breakdown, the bar chart and the
   // next-life preview are nothing but scores, so they are left out rather than drawn as zeros.
   const withheld = meritScore == null;
-  const rawMerit = records.filter((r) => r.type === "MERIT").reduce((s, r) => s + r.original_weight, 0);
-  const rawDemerit = records.filter((r) => r.type === "DEMERIT").reduce((s, r) => s + r.original_weight, 0);
+  // Read only under `!withheld`; a withheld weight is null and never summed into a figure on screen.
+  const rawMerit = records.filter((r) => r.type === "MERIT").reduce((s, r) => s + (r.original_weight ?? 0), 0);
+  const rawDemerit = records.filter((r) => r.type === "DEMERIT").reduce((s, r) => s + (r.original_weight ?? 0), 0);
   const rawBalance = rawMerit - rawDemerit;
   // 埃及没有功德:同两个数读作羽侧 / 心侧(`_by_civ.eg`,用户 2026-11-08)。
   const civ = life?.civilization ?? reading.civilization;
@@ -275,7 +277,7 @@ export function SoulKarmaLedgerCard({
                   t={t}
                   className="text-md tabular-nums text-[oklch(var(--color-ink))]"
                 >
-                  {karmicBalance >= 0 ? "+" : ""}
+                  {karmicBalance !== null && karmicBalance >= 0 ? "+" : ""}
                   {karmicBalance}
                 </Figure>
               </div>
@@ -354,7 +356,7 @@ export function SoulKarmaLedgerCard({
       {/* 下一世继承 — only when the API actually has a forward preview (a
           409/REBIRTH_NOT_APPLICABLE for a terminal cosmology resolves this to
           null; see ledgerApi.inheritance's caller in page.tsx). */}
-      {inheritance && !withheld && (
+      {inheritance && !withheld && inheritance.inherited_merit !== null && inheritance.inherited_demerit !== null && (
         <div>
           <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 mb-3 border-b border-[oklch(var(--color-block))]">
             {t("ledger.next_life_inheritance")}

@@ -361,6 +361,20 @@ describe("功 and 过 carry no colour — the heads and the signs tell them apar
   });
 });
 
+describe("weights withheld from VIEWER (P-02)", () => {
+  it("every amount, running balance and total is the withheld mark — no bare sign, no 0", () => {
+    const { container } = renderBook(RECORDS.map((r) => ({ ...r, original_weight: null, effective_weight: null })));
+    const amounts = Array.from(container.querySelectorAll("[data-quantity-field]"));
+    // empty-scan guard: 3 rows × (one side + running) + 3 totals
+    expect(amounts).toHaveLength(9);
+    for (const el of amounts) {
+      expect(el.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+      expect(el.textContent).not.toMatch(/^[+-]?0?$/);
+      expect(el.textContent).not.toMatch(/[+-]\s*$/);
+    }
+  });
+});
+
 describe("欧洲大罪 / 小罪 (第五十七批 E-1)", () => {
   it("未悔大罪 2px 方框、已告解 1px 方框、小罪只写灰字;没分级不画", () => {
     const eu = { type: "DEMERIT" as const, civilization: "EUROPEAN" };

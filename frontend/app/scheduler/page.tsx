@@ -47,9 +47,9 @@ function SchedulerPageContent() {
   const queryClient = useQueryClient();
   const { isConnected, subscribe } = useWebSocket();
   // Codenames, not role names: `scheduler.manage` can be granted to any role
-  // in the permission matrix. `isAdmin` is only for rebuild, which the backend
-  // refuses to anyone who is not tenant-exempt (views.py `rebuild`).
-  const { hasPermission, isAdmin } = usePermissions();
+  // in the permission matrix. `isTenantExempt` is only for rebuild, which the backend
+  // refuses to anyone who is not tenant-exempt (views.py `rebuild`) — a hall-bound ADMIN got the button and a 403 (P-07).
+  const { hasPermission, isAdmin, isTenantExempt } = usePermissions();
   const canManage = hasPermission("scheduler.manage");
   const jobName = useJobName();
 
@@ -159,7 +159,7 @@ function SchedulerPageContent() {
         <RefreshCw aria-hidden="true" className={`w-4 h-4 mr-1 inline ${jobs.isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} />
         {t("scheduler.refresh")}
       </Button>
-      {isAdmin && canManage && (
+      {isTenantExempt && canManage && (
         <Button type="button" variant="warning" size="sm" onClick={() => setConfirmRebuild(true)}>
           {t("scheduler.rebuild")}
         </Button>

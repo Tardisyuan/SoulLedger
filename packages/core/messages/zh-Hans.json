@@ -4465,7 +4465,7 @@
     "flow_waiting": {
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
       "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
-      "approval_cancelled": "审批流程因跨域审判取消或管理员结束而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
+      "approval_cancelled": "审批流程因跨域审判取消或管理员结束而中止，没有走完：不能直接执行。持改派权限的人可对这件审判「重开一案」。"
     },
     "term_overdue": "期满未释放",
     "overdue_since": "期满于 {{date}}",
@@ -9065,7 +9065,7 @@
     "login_desc": "这是作品演示,没有后端,不用密码。你做的任何改动只留在这个标签页里,登出或重新登录后恢复原样。",
     "enter_as": "以{{role}}身份进入",
     "role_judge": "判官",
-    "role_judge_desc": "官员日常:认领案件、结案、出处置、审批。",
+    "role_judge_desc": "官员日常:认领案件、结案定发落、审批。",
     "role_admin": "管理员",
     "role_admin_desc": "四个文明都看得到:用户、角色权限、系统配置、审计。",
     "role_moderator": "朋友圈审核员",

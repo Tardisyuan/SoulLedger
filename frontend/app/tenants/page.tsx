@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -33,6 +34,8 @@ function TenantsPageContent() {
   const [creating, setCreating] = useState(false);
   const [deactivating, setDeactivating] = useState<Tenant | null>(null);
   const activate = useHallActiveMutation();
+  // 建殿 / 停用 / 启用是 `IsGlobalAdminPermission`(tenants/views.py):绑殿 ADMIN 点下去 403,所以只给无殿 ADMIN 画(P-07)。
+  const { isTenantExempt } = usePermissions();
 
   const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: tenantKeys.page(page),
@@ -55,9 +58,11 @@ function TenantsPageContent() {
       }
       subtitle={t("tenants.subtitle") || "Tenant management"}
       actions={
-        <Button type="button" variant="primary" size="sm" data-testid="hall-create-open" onClick={() => setCreating(true)}>
-          {t("halls.create")}
-        </Button>
+        isTenantExempt ? (
+          <Button type="button" variant="primary" size="sm" data-testid="hall-create-open" onClick={() => setCreating(true)}>
+            {t("halls.create")}
+          </Button>
+        ) : undefined
       }
     >
       {/* 账页(规范 v1 §2):卡片列换成表格 —— 名称、编号(等宽)、状态徽章。
@@ -99,7 +104,7 @@ function TenantsPageContent() {
               <SealGlyphsCell tenant={tenant} />
             </td>
             <td className="px-4 py-3 text-right">
-              {tenant.is_active === false ? (
+              {!isTenantExempt ? null : tenant.is_active === false ? (
                 <Button
                   type="button"
                   variant="secondary"

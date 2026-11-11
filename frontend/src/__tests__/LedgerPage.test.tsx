@@ -99,6 +99,12 @@ describe("pure helpers", () => {
     // +40, −120, −25 arrive newest first; the newest row's balance is the closing.
     expect(runningBalances(JOURNAL.results, 19692)).toEqual([19692, 19652, 19772]);
   });
+
+  it("stops at a withheld weight or closing instead of treating null as 0 (P-02)", () => {
+    const [a, b, c] = JOURNAL.results;
+    expect(runningBalances([a, { ...b, weight: null }, c], 19692)).toEqual([19692, 19652, null]);
+    expect(runningBalances(JOURNAL.results, null)).toEqual([null, null, null]);
+  });
 });
 
 describe("the four pillars", () => {
@@ -208,6 +214,16 @@ describe("加载中 / 空 / 失败 是三屏", () => {
     expect(await screen.findByText("本期没有流水")).toBeInTheDocument();
     expect(screen.getByText("2026-06 尚无功过登记;旧管 = 实在 = +18,420。")).toBeInTheDocument();
     expect(screen.queryByTestId("ledger-journal")).toBeNull();
+  });
+
+  it("VIEWER under a search: the empty sentence says the opening is withheld, not 0 (P-02)", async () => {
+    mockedJournal.mockResolvedValue({
+      data: { ...JOURNAL, opening: null, received: null, disbursed: null, closing: null, record_count: 0, soul_count: 0, count: 0, results: [], categories: [] },
+    });
+    renderPage();
+    expect(await screen.findByText("本期没有流水")).toBeInTheDocument();
+    expect(screen.getByText("2026-06 尚无功过登记;旧管 = 实在 = 余额未提供 — 本角色不可见。")).toBeInTheDocument();
+    expect(screen.queryByText(/旧管 = 实在 = 0/)).toBeNull();
   });
 
   it("says a failure is a failure, with a retry, and draws no pillars", async () => {

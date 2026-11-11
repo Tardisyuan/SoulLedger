@@ -177,6 +177,32 @@ describe("SoulLifecycleTimeline — awaiting-judgment action row", () => {
   });
 });
 
+describe("SoulLifecycleTimeline — weights withheld from VIEWER (P-02)", () => {
+  it("draws the withheld mark, not +0, and leaves out the 原始 figure", () => {
+    const withheld: LedgerRecord = {
+      id: "rec-w", type: "MERIT", category: "CHARITY", description: "withheld entry",
+      original_weight: null, effective_weight: null, years_elapsed: 2, decay_factor: 0.8,
+      civilization: "CHINESE", recorded_at: "2020-01-01T00:00:00Z", event_date: { year: 2020, month: 1, day: 1 },
+      is_milestone: false, statute_clause: "", occurrence_count: null,
+    };
+    const { container } = render(
+      <SoulLifecycleTimeline
+        soul={baseSoul({ current_state: "DISPOSED" })}
+        judgments={[]}
+        dispositions={[]}
+        reincarnations={[]}
+        events={[]}
+        ledgerRecords={[withheld]}
+        onOpenJudgmentQueue={noop}
+      />
+    );
+    expect(screen.getByText("withheld entry")).toBeInTheDocument();
+    expect(container.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(container.textContent).not.toMatch(/\+0\b/);
+    expect(container.textContent).not.toMatch(/原始 \+?0/);
+  });
+});
+
 describe("SoulLifecycleTimeline — tabs and system-event toggle", () => {
   const ledgerRecords: LedgerRecord[] = [
     {

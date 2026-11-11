@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Collapse } from "@/src/components/ui/Collapse";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { verdictNamespace, verdictText } from "@/src/lib/domainNames";
 import { RowShell, TONE_DOT } from "@/src/components/souls/SoulLifecycleRowShell";
 import { DedicationTag } from "@/src/components/souls/SoulLedgerBook";
@@ -280,15 +280,20 @@ export function SoulLifecycleTimeline({
           visibleRows.map((row, idx) => {
             const isLast = idx === visibleRows.length - 1;
             if (row.kind === "karma") {
-              const positive = row.effectiveSigned >= 0;
+              const positive = row.effectiveSigned !== null && row.effectiveSigned >= 0;
+              // 分数对 VIEWER 置空(P-02):「原始 …」那一段整段不写,不写成「原始 0」。
               const detail = [
                 t(civKey(t, row.type === "MERIT" ? "souls.detail.merit" : "souls.detail.demerit", soul.civilization)),
                 `${tf(`souls.categories.${row.category_code}`, row.category_code)} ${row.category_code}`,
-                tf("souls.detail.timeline.original", "原始 {{sign}}{{n}}", {
-                  sign: row.originalSigned >= 0 ? "+" : "",
-                  n: String(row.originalSigned),
-                }),
-              ].join(" · ");
+                row.originalSigned === null
+                  ? null
+                  : tf("souls.detail.timeline.original", "原始 {{sign}}{{n}}", {
+                      sign: row.originalSigned >= 0 ? "+" : "",
+                      n: String(row.originalSigned),
+                    }),
+              ]
+                .filter((part) => part !== null)
+                .join(" · ");
               return (
                 <RowShell
                   key={row.id}
@@ -299,8 +304,14 @@ export function SoulLifecycleTimeline({
                   right={
                     <div>
                       <div className="text-sm font-semibold text-[oklch(var(--color-ink))]">
-                        {positive ? "+" : ""}
-                        {row.effectiveSigned}
+                        {row.effectiveSigned === null ? (
+                          <MissingValue kind="unrecorded" reason={t("souls.balance_withheld")} />
+                        ) : (
+                          <>
+                            {positive ? "+" : ""}
+                            {row.effectiveSigned}
+                          </>
+                        )}
                       </div>
                       <div className="text-xs text-[oklch(var(--color-ink-subtle))]">
                         ×{row.decayFactor.toFixed(3)} · {row.yearsElapsed.toFixed(1)} {tf("souls.detail.timeline.years", "年")}
