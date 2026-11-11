@@ -14,5 +14,6 @@
   "realms.topology.fork.MIDDLE",
   "sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.ACTIVE",
   "sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.COMPLETED",
-  "judgment.verdicts_by_civ.gr.purgatory"
+  "judgment.verdicts_by_civ.gr.purgatory",
+  "souls.field_withheld"
 ]

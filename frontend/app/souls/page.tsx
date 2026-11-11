@@ -454,6 +454,7 @@ function SoulsList({
           // points elsewhere for the rest rather than guessing at their
           // headline figure without the actual reading in hand.
           const showsBalance = balanceApplies(soul.civilization);
+          const withheld = t("souls.field_withheld");
           return (
           <>
             {/* `whitespace-nowrap` on every cell: at 393 px the auto-layout table
@@ -468,7 +469,8 @@ function SoulsList({
                   </span>
                 )}
                 <Link href={`/souls/${soul.id}`} className={ROW_LINK}>
-                  {soul.name}
+                  {/* A field the caller's field permissions hide is absent from the row (P-11), not empty. */}
+                  {soul.name === undefined ? <MissingValue kind="unrecorded" reason={withheld} /> : soul.name}
                 </Link>
                 {/* The drawer's trigger. The row stays one link to the full
                     record (click, middle-click, screen readers — unchanged);
@@ -491,13 +493,20 @@ function SoulsList({
             </td>
             {showsColumn("civilization") && (
             <td className="px-4 py-3 whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
-              <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
+              <DomainEnum
+                namespace="souls.civilizations"
+                value={soul.civilization}
+                missingReason={soul.civilization === undefined ? withheld : undefined}
+              />
             </td>
             )}
             {showsColumn("state") && (
             <td className="px-4 py-3 whitespace-nowrap">
               {/* 领域枚举徽章(补足 C15):ink 字 + ink3 框,审判中加 s2 底,不用状态色。
                   表在 src/lib/soulStateBadge.ts —— 它曾是这里与详情页两份逐字相同的拷贝。 */}
+              {soul.current_state === undefined ? (
+                <MissingValue kind="unrecorded" reason={withheld} />
+              ) : (
               <Badge
                 title={soul.current_state}
                 glyph={soulStateGlyph(soul.current_state)}
@@ -505,6 +514,7 @@ function SoulsList({
               >
                 {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
               </Badge>
+              )}
               {soul.is_eval_identity && <EvalIdentityTag />}
               {soul.is_archived && (
                 <span data-testid="soul-archived" className="ml-2 text-xs text-[oklch(var(--color-ink-muted))]">
@@ -541,7 +551,11 @@ function SoulsList({
             {showsColumn("death") && (
               /* 02 档：日期是元数据，不是正文。 */
               <td className="px-4 py-3 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
-                <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
+                {soul.death_date === undefined ? (
+                  <MissingValue kind="unrecorded" reason={withheld} />
+                ) : (
+                  <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
+                )}
               </td>
             )}
             {showsColumn("soup") && (

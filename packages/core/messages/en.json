@@ -632,6 +632,7 @@
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
     "balance_withheld": "Balance withheld — not visible to this role",
+    "field_withheld": "Hidden — not visible to this role",
     "date_problem_marker": {
       "error": "Date error — see soul detail",
       "warning": "Date warning — see soul detail"

@@ -632,6 +632,7 @@
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
     "balance_withheld": "余额未提供 — 本角色不可见",
+    "field_withheld": "已隐藏 — 本角色不可见",
     "date_problem_marker": {
       "error": "日期错误 — 详见灵魂详情",
       "warning": "日期警告 — 详见灵魂详情"
