@@ -9,7 +9,12 @@
    把发起方临时提到 50 级、以本人身份发、再降回 0;这条规则让提权窗口里发起方自己多发的
    任何一条都被拒(backend/apps/chat/grant.py 写了为什么)。
 
-3. 新消息推送:每条 `m.room.message` 落库之后,回调后端 `push_url`(签名见
+3. 信是记录:除服务账号外,不能编辑已发的消息(`m.relates_to.rel_type == "m.replace"` 的事件一律拒,
+   不论房间、不论节流)。撤回由 power level 管(`m.room.redaction` 100,backend/apps/chat/matrix.py
+   `ROOM_EVENT_LEVELS`);编辑是一条普通的 `m.room.message`,power level 挡不住,所以在这里挡
+   (审计 2026-11-11 A2-02)。
+
+4. 新消息推送:每条 `m.room.message` 落库之后,回调后端 `push_url`(签名见
    backend/apps/chat/hook.py,密钥同 grant_secret)。后端定收件人、按偏好记推送。
    回调在后台进程里跑、在消息落库**之后**:后端慢、挂、拒,都不影响消息本身,只记一行日志。
    不配 `push_url` 就不回调。
@@ -96,6 +101,9 @@ class SoulLedgerPolicy:
     async def _check_event(self, event):
         if event.is_state() or event.sender == self._service:
             return NOT_SPAM
+        relates = event.content.get("m.relates_to") if isinstance(event.content, dict) else None
+        if isinstance(relates, dict) and relates.get("rel_type") == "m.replace":
+            return Codes.FORBIDDEN
         state = await self._api.get_room_state(event.room_id, [(THROTTLE, "")])
         throttle = state.get((THROTTLE, ""))
         if throttle is None or throttle.content.get("initiator") != event.sender:

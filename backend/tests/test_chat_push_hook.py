@@ -269,3 +269,19 @@ def test_the_module_only_calls_back_for_new_messages(matrix):  # noqa: F811
 
     _, bare = policy(push_url=None)
     assert "on_new_event" not in bare.callbacks
+
+
+def test_a_soul_cannot_edit_a_sent_letter(matrix):  # noqa: F811
+    """审计 2026-11-11 A2-02:信是记录。非服务账号发出的 `m.replace` 编辑一律拒;服务账号与普通消息照常。
+    变异:删掉模块里 `m.replace` 那一条 → 第一条断言答 NOT_SPAM,红。"""
+    from tests.chat_support import SERVER_NAME, run_coroutine
+
+    _, api = policy()
+    check = api.callbacks["check_event_for_spam"]
+    edit = {"body": "* 改", "m.new_content": {"body": "改"},
+            "m.relates_to": {"rel_type": "m.replace", "event_id": "$1"}}
+    assert run_coroutine(check(FakeEvent("!r", "$2", "@a:x", "m.room.message", edit))) == "M_FORBIDDEN"
+    assert run_coroutine(check(FakeEvent("!r", "$3", f"@soulledger:{SERVER_NAME}", "m.room.message", edit))) == "NOT_SPAM"
+    assert run_coroutine(check(FakeEvent("!r", "$4", "@a:x", "m.room.message", {"body": "新"}))) == "NOT_SPAM"
+    reply = {"body": "回", "m.relates_to": {"m.in_reply_to": {"event_id": "$1"}}}
+    assert run_coroutine(check(FakeEvent("!r", "$5", "@a:x", "m.room.message", reply))) == "NOT_SPAM"

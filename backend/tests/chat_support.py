@@ -243,6 +243,10 @@ class FakeModuleApi:
 
         self.http_client = _Http()
 
+    async def get_room_state(self, room_id, types):
+        """没有节流状态的房间。"""
+        return {}
+
     def register_spam_checker_callbacks(self, **callbacks):
         self.callbacks.update(callbacks)
 
