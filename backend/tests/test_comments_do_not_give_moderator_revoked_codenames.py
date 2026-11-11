@@ -1,4 +1,4 @@
-"""注释不能再用现在时说 MODERATOR 持有它 2026-11-07 被收回的码(审计 2026-11-11 C-08)。
+r"""注释不能再用现在时说 MODERATOR 持有它 2026-11-07 被收回的码(审计 2026-11-11 C-08)。
 
 2026-11-07 起 MODERATOR 只管朋友圈审核(`apps/perm/models.py::ROLE_PERMISSIONS`,perm/0035、0036
 收回其余全部)。此后九处注释仍写着「Needs `judgment.assign` (ADMIN, MODERATOR)」「MODERATOR 持有
