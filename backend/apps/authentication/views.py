@@ -92,6 +92,7 @@ from .serializers import (
     default_officer_organization,
     email_already_registered,
     may_assign_role,
+    may_manage_user,
     reissue_for_device,
 )
 
@@ -155,6 +156,20 @@ def _admin_target_refusal(request, target):
                         status=status.HTTP_403_FORBIDDEN)
     outcome = mfa.confirm_second_factor(row, method=method, code=code, request=request)
     return None if outcome['code'] == 'ok' else _refuse_outcome(outcome)
+
+
+def _target_refusal(request, target):
+    """Whether the caller may act on `target` at all: `_admin_target_refusal` for another ADMIN, then the
+    ceiling for everyone else (audit 2026-11-11 P-05) — a non-ADMIN holder of `user.manage` may not reset,
+    deactivate, delete, edit or re-role an account holding a codename the caller lacks
+    (`serializers.may_manage_user`). 403 `target_outranks_caller`."""
+    refused = _admin_target_refusal(request, target)
+    if refused:
+        return refused
+    if not may_manage_user(request.user, target):
+        return Response({'error': 'This account holds permissions you do not; you cannot act on it.',
+                         'code': 'target_outranks_caller'}, status=status.HTTP_403_FORBIDDEN)
+    return None
 
 
 def _self_refusal(code, message):
@@ -388,7 +403,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         `is_active=false` 与 `POST deactivate/` 同一套(第 9 条 / M-2):不能停用自己;手上有在途的事 → 409
         `officer_has_open_work`(交接要走 deactivate 的 `handover_to`);停用后退出全部设备。"""
         target = self.get_object()
-        refused = _admin_target_refusal(request, target)
+        refused = _target_refusal(request, target)
         if refused:
             return refused
         if target.is_active and 'is_active' in request.data:
@@ -422,7 +437,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         target = self.get_object()
         if target.pk == request.user.pk:
             return _self_refusal('cannot_delete_self', 'You cannot delete your own account.')
-        refused = _admin_target_refusal(request, target)
+        refused = _target_refusal(request, target)
         if refused:
             return refused
         work = _open_work(target)
@@ -443,7 +458,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user = self.get_object()
         serializer = UserMfaResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        refused = _admin_target_refusal(request, user)
+        refused = _target_refusal(request, user)
         if refused:
             return refused
         if not mfa.is_enabled(user):
@@ -476,7 +491,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         body.is_valid(raise_exception=True)
         if user.pk == request.user.pk:
             return _self_refusal('cannot_deactivate_self', 'You cannot deactivate your own account.')
-        refused = _admin_target_refusal(request, user)
+        refused = _target_refusal(request, user)
         if refused:
             return refused
         to = body.validated_data.get('handover_to')
@@ -510,7 +525,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         from . import officer_invite
 
         user = self.get_object()
-        refused = _admin_target_refusal(request, user)
+        refused = _target_refusal(request, user)
         if refused:
             return refused
         link, seconds = officer_invite.issue_setup_link(user, actor=request.user, request=request)
@@ -526,11 +541,16 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         uses), and a batch never includes an ADMIN account or the caller;
         toggling an ADMIN stays a deliberate single-user action.
         """
-        return (
+        qs = (
             User.objects.filter(pk__in=self.get_queryset().filter(id__in=user_ids).values('pk'))
             .exclude(role='ADMIN')
             .exclude(pk=self.request.user.pk)
         )
+        # Nor anyone holding a codename the caller lacks (P-05); ADMIN holds everything, so only non-ADMIN
+        # callers pay for the look. ponytail: one checker pass per selected user, fine for a page of them.
+        if getattr(self.request.user, 'role', None) != 'ADMIN':
+            qs = qs.exclude(pk__in=[u.pk for u in qs if not may_manage_user(self.request.user, u)])
+        return qs
 
     def _batch_set_active(self, request, active):
         user_ids = request.data.get('user_ids', [])
@@ -590,7 +610,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         body = AssignRolesSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        refused = _admin_target_refusal(request, user)
+        refused = _target_refusal(request, user)
         if refused:
             return refused
         if 'role' not in data and 'extra_roles' not in data:

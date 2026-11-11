@@ -75,11 +75,38 @@ def role_rank(role):
     return ROLE_HIERARCHY.get(role, _UNRANKED_ROLE)
 
 
+def holds_at_least(caller, role, extra_roles=()) -> bool:
+    """Whether `caller` effectively holds every codename `role` (plus `extra_roles`) grants — both sides the
+    union of main and additional roles, answered by the checker (`get_role_permission_codenames`).
+    ADMIN holds everything. Audit 2026-11-11 P-05: custom roles have no rank, so this is their ceiling."""
+    if getattr(caller, 'role', None) == 'ADMIN':
+        return True
+    from apps.perm.services import get_role_permission_codenames
+
+    wanted = set(get_role_permission_codenames(role, extra_roles))
+    held = get_role_permission_codenames(getattr(caller, 'role', None), getattr(caller, 'extra_roles', ()))
+    return wanted <= set(held)
+
+
+def may_manage_user(caller, target) -> bool:
+    """Whether `caller` may act on `target`'s account (reset password, deactivate, delete, edit, change roles):
+    never on someone holding a codename the caller lacks (P-05). ADMIN targets have their own rule
+    (`views._admin_target_refusal`); non-ADMIN callers never see them."""
+    return holds_at_least(caller, target.role, target.extra_roles or ())
+
+
 def may_assign_role(caller, role) -> bool:
     """Whether `caller` may give someone `role`: never a role more privileged than its own, and ADMIN only
     from the hall-less ADMIN. A hall's ADMIN appointing another ADMIN is not escalation inside the hall, but
-    it is the one role whose holder could later be made global (2026-10-29: hall admins are hall-scoped)."""
+    it is the one role whose holder could later be made global (2026-10-29: hall admins are hall-scoped).
+
+    The rank covers the five built-ins only; a custom role ranks 999 and so passed every caller. Since
+    2026-11-11 (P-05) a custom role is assignable only when every codename it grants is one the caller holds.
+    Every way of giving a role comes through here: create, update, assign_roles, CSV import, invite, the
+    role drawer."""
     if role_rank(getattr(caller, 'role', None)) > role_rank(role):
+        return False
+    if role not in ROLE_HIERARCHY and not holds_at_least(caller, role):
         return False
     return role != 'ADMIN' or is_tenant_exempt(caller)
 
