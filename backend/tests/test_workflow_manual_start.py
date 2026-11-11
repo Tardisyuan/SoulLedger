@@ -142,6 +142,32 @@ def test_another_tenant_s_soul_is_404(cn):
 
 
 @pytest.mark.django_db
+def test_the_home_hall_s_judgment_on_a_visiting_soul_is_404(cn):
+    """审计 2026-11-11 A1-02:灵魂在本殿暂居,它身上原属殿的审判不能被本殿的手动流程占住一对一位。
+    此前 `judgment` 只按 `soul` 过滤,这里是 201,且 J 再也挂不上原属殿自己的流程。"""
+    home = _tenant(Civilization.EGYPTIAN)
+    Soul.all_objects.filter(pk=cn["soul"].pk).update(home_tenant=home)
+    theirs = Judgment.objects.create(soul=cn["soul"], civilization=Civilization.EGYPTIAN, tenant=home)
+    ours = Judgment.objects.create(soul=cn["soul"], civilization=Civilization.CHINESE, tenant=cn["tenant"])
+
+    refused = cn["moderator"].post(
+        START, {"soul": str(cn["soul"].pk), "judgment": str(theirs.pk), "case_type": CaseType.ROUTINE, "reason": "x"},
+        format="json",
+    )
+    assert refused.status_code == 404, refused.data
+    assert refused.data["code"] == "judgment_not_found"
+    assert not ApprovalWorkflow.objects.filter(judgment=theirs).exists()
+
+    # 对照:同一个灵魂上本殿自己的审判照常可挂。
+    accepted = cn["moderator"].post(
+        START, {"soul": str(cn["soul"].pk), "judgment": str(ours.pk), "case_type": CaseType.ROUTINE, "reason": "x"},
+        format="json",
+    )
+    assert accepted.status_code == 201, accepted.data
+    assert ApprovalWorkflow.objects.get(pk=accepted.data["id"]).judgment_id == ours.pk
+
+
+@pytest.mark.django_db
 def test_another_tenant_s_template_is_404(cn):
     eg = _tenant(Civilization.EGYPTIAN)
     template = WorkflowTemplate.objects.create(

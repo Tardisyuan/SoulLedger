@@ -476,7 +476,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         judgment = None
         if data.get("judgment"):
-            judgment = Judgment.objects.filter(pk=data["judgment"], soul=soul).first()
+            # 与 flow_preview 同一条查询:殿 + 数据范围,再要求是这个灵魂的(审计 2026-11-11 A1-02)。
+            # 只按 soul 过滤时,暂居殿能把原属殿的审判挂到本殿流程的一对一位上。
+            judgment = (DataScopeFilter.filter_queryset(
+                request, scope_to_tenant(Judgment.objects.all(), request), Judgment)
+                        .filter(pk=data["judgment"], soul=soul).first())
             if judgment is None:
                 return Response({"code": "judgment_not_found", "error": "Judgment not found for this soul"},
                                 status=status.HTTP_404_NOT_FOUND)
