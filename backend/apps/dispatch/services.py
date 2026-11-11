@@ -147,14 +147,19 @@ class SentencePlanActiveError(ValueError):
         super().__init__("This soul has a sentence plan in progress; dispatches follow the plan")
 
 
+#: 随手动移交撤掉的空审判写在回收站里的原因。
+WITHDRAWN_FOR_DISPATCH = "移交他殿:尚未有人办理的审判随移交撤案"
+
+
 class SoulHasPendingJudgmentError(ValueError):
-    """源殿还有这个灵魂未结案的审判:手动移交拒绝(用户 2026-11-11)。视图答 409(`http_status`)并带 `code`。"""
+    """源殿这个灵魂未结案的审判已经有人在办(已认领、已援引律条或已定证据):手动移交拒绝(用户 2026-11-11)。
+    还没人动过的那件(登记死亡时自动开的)随移交撤案,不拒(同日用户改定)。视图答 409(`http_status`)并带 `code`。"""
 
     code = "soul_has_pending_judgment"
     http_status = 409
 
     def __init__(self):
-        super().__init__("The soul has an open judgment in this hall; conclude or withdraw it before dispatching")
+        super().__init__("The soul's judgment in this hall is already being handled (claimed, citing statutes or with evidence decided); conclude or withdraw it before dispatching")
 
 
 def _after_commit(send):
@@ -234,7 +239,7 @@ class DispatchService:
             raise ValueError(f"Realm {realm.realm_code} is not a realm of {target_tenant.code}")
 
     @staticmethod
-    def _check_proposable(source_tenant, target_tenant, soul, *, manual):
+    def _check_proposable(source_tenant, target_tenant, soul, *, manual, actor=None):
         """提交审批前的业务检查,`propose` 与 `submit` 共用(受刑计划的 `_dispatch` 走 `propose`,`manual=False`)。
         **调用方持有灵魂行锁**,`soul` 是锁下读到的那一行:灵魂状态与「计划进行中」都在锁内判断(用户 2026-11-01;
         此前计划检查只在视图里、锁外,状态根本不查)。"""
@@ -250,12 +255,19 @@ class DispatchService:
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
         if manual:
-            # 用户 2026-11-11:源殿还有这个灵魂未结的审判,不许手动移交 —— 先结案或撤案。受刑计划的自动移交
-            # (`manual=False`)不受影响:计划本身就是审判结出来的。
+            # 用户 2026-11-11:源殿不能带着这个灵魂未结的审判把它手动移交出去(否则未结案跟着灵魂进了别殿,
+            # 审计 A1-01 / A1-02 都出在这种状态)。登记死亡时会在死亡所在殿自动开一件审判,外邦亡魂移交回本文明
+            # 是最常见的移交 —— 所以还没人动过的那件(未认领、未援引律条、未定证据)随移交撤案,软删并写明原因,
+            # 可在回收站恢复;已经有人在办的照旧拒绝,先结案或撤案。受刑计划的自动移交(`manual=False`)不受影响:
+            # 计划本身就是审判结出来的。在调用方的事务与灵魂行锁里做,后面的检查失败时撤案一并回滚。
             from apps.judgment.models import open_judgments
 
-            if open_judgments(soul).filter(tenant_id=source_tenant.id).exists():
-                raise SoulHasPendingJudgmentError()
+            for case in open_judgments(soul).filter(tenant_id=source_tenant.id):
+                untouched = (case.claimed_by_id is None and not case.citations.exists()
+                             and not case.evidence_admissions.exists())
+                if not untouched:
+                    raise SoulHasPendingJudgmentError()
+                case.delete_or_raise(user=actor, reason=WITHDRAWN_FOR_DISPATCH)
         # 暂居中的灵魂不再转调。原是保守默认;受刑计划落地后它就是用户的原话(设计稿
         # docs/ARCHITECTURE-sentence-plan.md §0):「完成后回到 A,检查还有嘛,有 C,那就去 C」——
         # 每一站执行完先回原属,再由原属(计划推进,`SentencePlanService.advance`)发起下一段。
@@ -306,7 +318,8 @@ class DispatchService:
         with transaction.atomic():
             # `dispatcher=None` 是系统(受刑计划 `_dispatch`)发起的:它就是计划本身,不受「计划进行中」那条拦。
             locked = Soul.lock(soul.pk)
-            DispatchService._check_proposable(source_tenant, target_tenant, locked, manual=dispatcher is not None)
+            DispatchService._check_proposable(source_tenant, target_tenant, locked, manual=dispatcher is not None,
+                                              actor=dispatcher)
             dispatch_record = DispatchRecord.objects.create(
                 source_tenant=source_tenant,
                 target_tenant=target_tenant,
@@ -368,7 +381,7 @@ class DispatchService:
             if locked.soul_id is None or locked.target_tenant_id is None:
                 raise ValueError("A dispatch needs a soul and a target civilization")
             DispatchService._check_proposable(locked.source_tenant, locked.target_tenant, Soul.lock(locked.soul_id),
-                                              manual=True)
+                                              manual=True, actor=dispatcher)
             locked.status = DispatchStatus.PROPOSED
             locked.proposed_at = timezone.now()
             locked.save()

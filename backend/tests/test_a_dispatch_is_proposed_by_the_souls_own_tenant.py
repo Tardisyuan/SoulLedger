@@ -235,13 +235,17 @@ def test_a_direct_proposal_honours_the_callers_data_scope(realms):
 
 @pytest.mark.django_db
 def test_a_soul_with_an_open_judgment_at_home_is_not_dispatched_by_hand(realms):
-    """User 2026-11-11: the source hall still has an open judgment for the soul → a manual dispatch is refused,
-    409 `soul_has_pending_judgment`, on the direct POST and on submitting a draft. The sentence plan's own
-    dispatch (`dispatcher=None`, manual=False) is not held by it, and a case in another hall does not count."""
+    """User 2026-11-11: a manual dispatch never leaves the source hall's open judgment behind. A case nobody has
+    touched yet (the one recording the death opens) is withdrawn with the dispatch — soft-deleted, the reason
+    written, restorable; one already being handled (claimed here) refuses it, 409 `soul_has_pending_judgment`,
+    on the direct POST and on submitting a draft. The sentence plan's own dispatch (`dispatcher=None`,
+    manual=False) is not held by it, and a case in another hall does not count."""
+    from apps.dispatch.services import WITHDRAWN_FOR_DISPATCH
     from apps.judgment.models import Judgment
 
     cn, eu, soul = realms["cn"], realms["eu"], realms["cn_soul"]
-    case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
+    officer = realms["cn_mod"]
+    case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn, claimed_by=officer)
     body = {"source_tenant": cn.pk, "target_tenant": eu.pk, "soul": str(soul.pk),
             "reason": "exchange between the two halls, as agreed"}
 
@@ -253,6 +257,8 @@ def test_a_soul_with_an_open_judgment_at_home_is_not_dispatched_by_hand(realms):
     resp = realms["client_cn"].post(f"{URL}{draft.data['id']}/submit/", {}, format="json")
     assert resp.status_code == 409 and resp.data["code"] == "soul_has_pending_judgment", resp.data
     assert not DispatchRecord.all_objects.filter(soul=soul).exclude(status=DispatchStatus.DRAFT).exists()
+    case.refresh_from_db()
+    assert not case.is_deleted
 
     # The plan's dispatch is not manual.
     DispatchRecord.all_objects.filter(soul=soul).delete()
@@ -260,10 +266,18 @@ def test_a_soul_with_an_open_judgment_at_home_is_not_dispatched_by_hand(realms):
     assert record.status == DispatchStatus.PROPOSED
     record.delete()
 
-    # A case closed at home, or open in another hall, does not hold it.
-    case.soft_delete(reason="撤案")
-    Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=eu)
+    # Nobody has touched it: withdrawn with the dispatch, reason written.
+    Judgment.objects.filter(pk=case.pk).update(claimed_by=None)
     assert realms["client_cn"].post(URL, body, format="json").status_code == 201
+    case = Judgment.all_objects.get(pk=case.pk)
+    assert case.is_deleted and case.delete_reason == WITHDRAWN_FOR_DISPATCH
+    DispatchRecord.all_objects.filter(soul=soul).delete()
+
+    # A case open in another hall does not count, and is left alone.
+    other = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=eu, claimed_by=officer)
+    assert realms["client_cn"].post(URL, body, format="json").status_code == 201
+    other.refresh_from_db()
+    assert not other.is_deleted
 
 
 @pytest.mark.django_db
