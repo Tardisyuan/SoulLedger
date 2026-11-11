@@ -164,6 +164,32 @@ remote_sync() {
         | grep -vxF -f <(printf '%s\n' "$keep") \
         | ssh "$GATES_REMOTE" "cd '$RWORK' && xargs -r -d '\n' rm -f --"
 }
+# ── TIME LIMITS ON THE REMOTE MACHINE (2026-11-12, user decision) ────────────────────────────────
+# Each delegated run has a total limit: selective gates 30 min, --full 90 min, E2E 20 min (and the demo
+# 25 min, scripts/demo-remote.sh). GATES_REMOTE_TIMEOUT / GATES_REMOTE_FULL_TIMEOUT / GATES_REMOTE_E2E_TIMEOUT
+# override, in GNU timeout's syntax (1800, 30m, 1.5h). The limit is enforced THERE, not here:
+#   - `timeout` is the container's own command (under --init), so the run ends at the limit whether or not
+#     this machine's ssh is still connected. It TERMs the run's whole process group, then KILLs after 60 s;
+#     the container exits 124 (137 after the KILL).
+#   - the lock is held by a subshell on that machine — `( flock 9; docker run …; docker rm -f <name> ) 9>lock`
+#     — not by `flock <lock> docker run`. When this machine's ssh drops, the docker client there dies on its
+#     next write (SIGPIPE) while the container runs on; before, flock then exited too and released the lock
+#     with the old container still holding 12 cores. Now the subshell goes on to `docker rm -f`, so the lock
+#     is released only once the container is gone. (No SIGHUP reaches it: ssh without a tty sends none.)
+# The time spent waiting for the lock does not count: `timeout` starts inside the container.
+remote_limit() {  # <value> <variable name>: refuse anything `timeout` would not read as a duration
+    [[ "$1" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: $2=$1 is not a time limit (e.g. 30m, 1800)"; exit 2; }
+}
+# remote_verdict <exit status> <limit> <variable> — say so when the remote run ended on the limit.
+remote_verdict() {
+    case "$1" in
+        124) echo "$P: TIMED OUT on $GATES_REMOTE after $2 ($3 overrides). The run was stopped there (its container" \
+                  "removed with docker rm -f) and the lock released; nothing of it is still running." ;;
+        137) echo "$P: killed on $GATES_REMOTE (exit 137): either the time limit's KILL, 60 s after it ran out ($2," \
+                  "$3), or the container's memory limit. The container is removed and the lock released." ;;
+    esac
+}
+
 # Installed in the synced tree by whichever container runs first, and only when its inputs change — two
 # hashes, decided apart (2026-10-30): a version bump in one package.json used to reinstall node_modules AND
 # rebuild the venv from nothing. JS: the dependency fields of every package.json (not "version", "scripts"
@@ -230,14 +256,16 @@ if [ -n "$E2E" ]; then
     remote_sync || { echo "$P: could not rsync this tree to $GATES_REMOTE:$RWORK"; exit 1; }
     ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RDIR/tmp/$RID" || exit 1
     ENAME="sl-e2e-$RID-$$"
+    ELIMIT="${GATES_REMOTE_E2E_TIMEOUT:-20m}"; remote_limit "$ELIMIT" GATES_REMOTE_E2E_TIMEOUT
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $ENAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
     # /tmp in memory, as in scripts/demo-remote.sh: Chromium's profile and cache on the shared btrfs image stalled
     # frames for 5–19 s under load (2026-11-08 trace evidence there).
-    ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/e2e.lock docker run --rm --init --name $ENAME \
+    # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, above.
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $ENAME \
         --tmpfs /tmp:rw,exec,size=8g --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
         -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
-        -e PROJECTS='$E2E' $EIMG bash -c '$REMOTE_DEPS
+        -e PROJECTS='$E2E' $EIMG timeout -k 60 $ELIMIT bash -c '$REMOTE_DEPS
           cd frontend && npm run build > /sl-tmp/e2e-build.log 2>&1 || { tail -30 /sl-tmp/e2e-build.log; echo \"e2e: next build failed\"; exit 1; }
           PF=\"\"; for p in \$(echo \$PROJECTS | tr , \" \"); do PF=\"\$PF --project=\$p\"; done
           T=\$(date +%s); rm -f /sl-tmp/e2e.json
@@ -246,9 +274,10 @@ if [ -n "$E2E" ]; then
           echo \"  → \$PROJECTS in one run (\$(( \$(date +%s) - T ))s)\"
           python3 /app/scripts/e2e-report.py /sl-tmp/e2e.json \$(echo \$PROJECTS | tr , \" \") \
             || { tail -30 /sl-tmp/e2e.log; [ \$rc -eq 0 ] && rc=1; }
-          exit \$rc'"
+          exit \$rc'; rc=\$?; docker rm -f $ENAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/e2e.lock"
     ERC=$?
     trap - EXIT
+    remote_verdict "$ERC" "$ELIMIT" GATES_REMOTE_E2E_TIMEOUT
     [ "$ERC" -eq 0 ] && { echo "$P: E2E ok on $GATES_REMOTE"; exit 0; }
     echo "$P: E2E failed on $GATES_REMOTE (exit $ERC). Log: $GATES_REMOTE:$RDIR/tmp/$RID/e2e.log"
     exit 1
@@ -707,6 +736,9 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     echo "    (synced in $(( $(date +%s) - T_SYNC ))s)"
     RFLAGS="--prepush"; [ "$MODE" = full ] && RFLAGS="$RFLAGS --full"; [ "$REAL_PG" = 1 ] && RFLAGS="$RFLAGS --real-pg"
     RNAME="sl-gates-$RID-$$"
+    if [ "$FULL_RUN" = 1 ]; then RLIMIT="${GATES_REMOTE_FULL_TIMEOUT:-90m}"; RLIMIT_VAR=GATES_REMOTE_FULL_TIMEOUT
+    else RLIMIT="${GATES_REMOTE_TIMEOUT:-30m}"; RLIMIT_VAR=GATES_REMOTE_TIMEOUT; fi
+    remote_limit "$RLIMIT" "$RLIMIT_VAR"
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $RNAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
     # TMPDIR is OUTSIDE the tree (/sl-tmp): under /app, test_testdb_name's child pytest found the tree's
@@ -718,18 +750,20 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # named pid 7, the next container had a live pid 7, and that push waited 30 minutes (2026-10-28).
     # Workers: 6 for pytest + 6 for the JS runners = the container's 12 CPUs, because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/run.lock docker run --rm --init --name $RNAME \
+    # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $RNAME \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6} \
         -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
-        -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG bash -c '
+        -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG timeout -k 60 $RLIMIT bash -c '
           find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
           $REMOTE_DEPS
           export PREPUSH_CHANGED=\"\$(cat .sl-changed)\"
-          exec bash scripts/run-gates.sh $RFLAGS'"
+          exec bash scripts/run-gates.sh $RFLAGS'; rc=\$?; docker rm -f $RNAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/run.lock"
     RSTATUS=$?
     trap - EXIT
+    remote_verdict "$RSTATUS" "$RLIMIT" "$RLIMIT_VAR"
     # Logs it names as /sl-tmp/… are kept there: $RDIR/tmp/$RID/ on $GATES_REMOTE (a day).
     [ "$RSTATUS" -eq 0 ] || fail "the gates failed on $GATES_REMOTE (exit $RSTATUS) — see above; a log named /sl-tmp/… is $GATES_REMOTE:$RDIR/tmp/$RID/…"
     record_pass

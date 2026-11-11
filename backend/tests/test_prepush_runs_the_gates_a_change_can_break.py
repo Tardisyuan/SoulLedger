@@ -1388,9 +1388,10 @@ class TestTheWholeRunOnAnotherMachine:
             "#!/bin/bash\n"
             'case "$*" in\n'
             f'  *"docker image inspect"*) exit {0 if image_ok else 1} ;;\n'
+            # Before "docker rm -f": the run's own command ends in one (TIME LIMITS ON THE REMOTE MACHINE).
+            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; echo "pre-push: ok (remote)"; exit {remote_status} ;;\n'
             '  *"docker rm -f"*) exit 0 ;;\n'
             f'  *"cat > "*) cat > "{tmp_path}/changed" ; exit 0 ;;\n'
-            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; echo "pre-push: ok (remote)"; exit {remote_status} ;;\n'
             "esac\nexit 0\n")
         (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
         for f in ("ssh", "rsync"):
@@ -1453,15 +1454,15 @@ class TestTheWholeRunOnAnotherMachine:
 class TestEndToEndOnAnotherMachine:
     """`run-gates.sh --e2e` (2026-10-28, user decision): Playwright runs on GATES_REMOTE, never here."""
 
-    def _bin(self, tmp_path: Path, image_ok=True) -> Path:
+    def _bin(self, tmp_path: Path, image_ok=True, remote_status=0) -> Path:
         b = tmp_path / "bin"
         b.mkdir(exist_ok=True)
         (b / "ssh").write_text(
             "#!/bin/bash\n"
             'case "$*" in\n'
             f'  *"docker image inspect"*) exit {0 if image_ok else 1} ;;\n'
+            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; exit {remote_status} ;;\n'
             '  *"docker rm -f"*) exit 0 ;;\n'
-            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; exit 0 ;;\n'
             "esac\nexit 0\n")
         (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
         for f in ("ssh", "rsync"):
@@ -1469,8 +1470,8 @@ class TestEndToEndOnAnotherMachine:
         return b
 
     def _run(self, repo, tmp_path, *args, remote="fake-host", **kw):
-        b = self._bin(tmp_path, **kw)
-        env = _clean_env(**({"GATES_REMOTE": remote} if remote else {}))
+        b = self._bin(tmp_path, **{k: kw.pop(k) for k in ("image_ok", "remote_status") if k in kw})
+        env = _clean_env(**({"GATES_REMOTE": remote} if remote else {}), **kw)
         env["PATH"] = f"{b}:{env['PATH']}"
         return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), *args], cwd=repo, env=env,
                               capture_output=True, text=True, timeout=120)
@@ -1510,6 +1511,84 @@ class TestEndToEndOnAnotherMachine:
         proc = self._run(main, tmp_path, "--e2e", image_ok=False)
         assert proc.returncode == 1 and "does not run on this machine" in proc.stdout, proc.stdout
         assert not (tmp_path / "remote-run").exists()
+
+
+class TestRemoteTimeLimits:
+    """Every remote run has a total limit, enforced on that machine (2026-11-12, user decision): selective
+    gates 30 min, --full 90, E2E 20, demo 25. `timeout` is the container's own command, so the limit holds
+    when this machine's ssh drops; the lock is a subshell's that removes the container before letting go."""
+
+    gates = TestTheWholeRunOnAnotherMachine()
+    e2e = TestEndToEndOnAnotherMachine()
+
+    @staticmethod
+    def _locked_then_removed(remote: str, inner_end: str, lock: str, name: str):
+        # The fake ssh records "$*": its options and host come first.
+        assert " fake-host ( flock 9 || exit 1; docker run" in remote, remote
+        assert remote.rstrip().endswith(f") 9>/srv/appdata/sl-gates/{lock}"), remote
+        # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
+        tail = remote.split(inner_end, 1)[1]
+        assert f"docker rm -f {name}" in tail and tail.index("docker rm -f") < tail.index(") 9>"), tail
+
+    def test_a_selective_gate_run_has_30_minutes(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self.gates._run(main, tmp_path)
+        remote = (tmp_path / "remote-run").read_text()
+        assert "sl-gates-all:1 timeout -k 60 30m bash -c" in remote, remote
+        self._locked_then_removed(remote, "exec bash scripts/run-gates.sh --prepush'", "run.lock", "sl-gates-")
+
+    def test_a_full_run_has_90_minutes(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self.gates._run(main, tmp_path, "--full")
+        assert "timeout -k 60 90m bash -c" in (tmp_path / "remote-run").read_text()
+
+    def test_the_limits_can_be_overridden_but_not_with_anything(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self.gates._run(main, tmp_path, GATES_REMOTE_TIMEOUT="45m")
+        assert "timeout -k 60 45m bash -c" in (tmp_path / "remote-run").read_text()
+        (tmp_path / "remote-run").unlink()
+        proc = self.gates._run(main, tmp_path, GATES_REMOTE_TIMEOUT="5; reboot")
+        assert proc.returncode == 2 and "is not a time limit" in proc.stdout, proc.stdout
+        assert not (tmp_path / "remote-run").exists()
+
+    def test_a_run_that_hit_the_limit_is_red_and_says_so(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self.gates._run(main, tmp_path, remote_status=124)
+        assert proc.returncode != 0
+        assert "TIMED OUT" in proc.stdout and "GATES_REMOTE_TIMEOUT" in proc.stdout, proc.stdout
+
+    def test_e2e_has_20_minutes_under_its_own_lock(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self.e2e._run(main, tmp_path, "--e2e", remote_status=124)
+        remote = (tmp_path / "remote-run").read_text()
+        assert "sl-gates-e2e:1 timeout -k 60 20m bash -c" in remote, remote
+        self._locked_then_removed(remote, "exit $rc'", "e2e.lock", "sl-e2e-")
+        assert proc.returncode != 0 and "TIMED OUT" in proc.stdout and "GATES_REMOTE_E2E_TIMEOUT" in proc.stdout
+
+    def _demo(self, main: Path, tmp_path: Path, script: str, status=0, **env):
+        (main / "scripts" / "demo-remote.sh").write_text(
+            (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8"))
+        (main / ".prepush.env").write_text("GATES_REMOTE=fake-host\nGATES_REMOTE_DB_URL=postgres://sl:x@sl-pg-test:5432/s\n")
+        b = self.e2e._bin(tmp_path, remote_status=status)
+        e = _clean_env(**env)
+        e["PATH"] = f"{b}:{e['PATH']}"
+        return subprocess.run(["bash", str(main / "scripts" / "demo-remote.sh"), script], cwd=main, env=e,
+                              capture_output=True, text=True, timeout=120)
+
+    def test_the_demo_e2e_has_25_minutes_under_the_e2e_lock(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo(main, tmp_path, "scripts/demo-e2e-inner.sh", status=124)
+        remote = (tmp_path / "remote-run").read_text()
+        assert "sl-gates-e2e:1 timeout -k 60 25m bash /app/scripts/demo-e2e-inner.sh" in remote, remote
+        self._locked_then_removed(remote, "demo-e2e-inner.sh;", "e2e.lock", "sl-demo-")
+        assert proc.returncode == 124 and "TIMED OUT" in proc.stdout and "DEMO_TIMEOUT" in proc.stdout, proc.stdout
+
+    def test_the_demo_servers_stay_up_unless_told(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._demo(main, tmp_path, "scripts/demo-serve-inner.sh")
+        assert "timeout" not in (tmp_path / "remote-run").read_text()
+        self._demo(main, tmp_path, "scripts/demo-serve-inner.sh", DEMO_TIMEOUT="2h")
+        assert "timeout -k 60 2h bash /app/scripts/demo-serve-inner.sh" in (tmp_path / "remote-run").read_text()
 
 
 # ── 2026-10-30 gate speed-ups (user decision): deps hashes, jest cache, two sides at once, e2e report ──

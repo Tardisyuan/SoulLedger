@@ -29,6 +29,7 @@ ssh -o BatchMode=yes "$GATES_REMOTE" "rm -rf $RWORK/frontend/e2e/demo" || exit 1
 
 : "${1:?usage: scripts/demo-remote.sh <script under /app> [args...]}"
 # Every argument goes through, each %q-quoted once for the remote shell, so one with a space stays one.
+SCRIPT="$1"
 ARGS="/app/$(printf '%q' "$1")"; shift
 [ $# -gt 0 ] && ARGS="$ARGS$(printf ' %q' "$@")"
 BASE_URL="${GATES_REMOTE_DB_URL%/*}"
@@ -44,7 +45,31 @@ trap 'exit 130' INT TERM
 # gates + E2E + demo E2E at once = 28 cores asked of 20; one E2E and six demo tests went red, all green apart).
 # The gates' own run.lock is separate, so the gates may still run beside one browser suite (user 2026-11-11).
 # shellcheck disable=SC2029
-ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/e2e.lock docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
+# A TIME LIMIT, ENFORCED THERE (2026-11-12, user decision): 25 minutes for the demo E2E and the recording, DEMO_TIMEOUT
+# overrides (GNU timeout's syntax: 1500, 25m). `timeout` is the container's own command, so the run ends at the limit
+# even when this machine's ssh has dropped; the lock is held by a subshell that removes the container (docker rm -f)
+# before letting go, so a dropped ssh no longer frees the lock under a container still running. Same scheme as
+# scripts/run-gates.sh (TIME LIMITS ON THE REMOTE MACHINE). The two servers (demo-serve-inner.sh,
+# demo-app-backend-inner.sh) are meant to stay up, so they get no limit unless DEMO_TIMEOUT is set.
+case "$SCRIPT" in
+    *serve-inner.sh|*backend-inner.sh) LIMIT="${DEMO_TIMEOUT:-}" ;;
+    *) LIMIT="${DEMO_TIMEOUT:-25m}" ;;
+esac
+TIMED=""
+if [ -n "$LIMIT" ]; then
+    [[ "$LIMIT" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "demo-remote: DEMO_TIMEOUT=$LIMIT is not a time limit (e.g. 25m, 1500)"; exit 2; }
+    TIMED="timeout -k 60 $LIMIT"
+fi
+ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
     --tmpfs /tmp:rw,exec,size=8g ${DEMO_PUBLISH:-} --cpus ${DEMO_CPUS:-8} --memory ${DEMO_MEMORY:-16g} --shm-size 2g -v $RWORK:/app -v $RDIR/tmp/demo:/sl-tmp -w /app \
     -e SL_PG_BASE='$BASE_URL' -e SL_DEMO_DB_URL='$BASE_URL/sl_demo_record' -e PW_WORKERS=${PW_WORKERS:-4} -e DEMO_PARALLEL=${DEMO_PARALLEL:-5} -e CI= \
-    $IMG bash $ARGS"
+    $IMG $TIMED bash $ARGS; rc=\$?; docker rm -f $NAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/e2e.lock"
+RC=$?
+trap - EXIT
+case "$RC" in
+    124) echo "demo-remote: TIMED OUT on $GATES_REMOTE after $LIMIT (DEMO_TIMEOUT overrides). The run was stopped there" \
+              "(its container removed with docker rm -f) and the lock released; nothing of it is still running." ;;
+    137) echo "demo-remote: killed on $GATES_REMOTE (exit 137): the time limit's KILL, 60 s after ${LIMIT:-its limit}, or the" \
+              "container's memory limit. The container is removed and the lock released." ;;
+esac
+exit "$RC"

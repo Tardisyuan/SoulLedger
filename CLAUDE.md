@@ -319,6 +319,12 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     最后两份日志都打印、两个退出码一起决定。本机仍是先后跑(本机缺的是内存不是 CPU)。
     三份 jest 配置(web、灵魂端、官员端)的 `cacheDirectory` 在 `node_modules/.cache/jest`,随同步树留着,下一轮转译命中缓存。
     各 checkout 的运行在那台上用 `flock` 排队。**连不上就拒绝，不退回本机**(本机跑正是卡死电脑的原因);临时要在本机跑就注释掉 `GATES_REMOTE`。
+    **每轮有总时限(2026-11-12 用户决定)**:选择性门禁 30 分钟、`--full` 90 分钟、E2E 20 分钟、演示 E2E 与录制 25 分钟
+    (`GATES_REMOTE_TIMEOUT` / `GATES_REMOTE_FULL_TIMEOUT` / `GATES_REMOTE_E2E_TIMEOUT` / `DEMO_TIMEOUT` 覆盖,写法同 GNU `timeout`:`45m`、`1800`)。
+    时限在 unRAID 上生效:`timeout` 是容器自己的命令,本机 ssh 断了照样到点停;锁由远端一个子 shell 持有
+    (`( flock 9; docker run …; docker rm -f <名字> ) 9>锁`),容器删掉之后才放锁 —— 此前是 `flock 锁 docker run`,ssh 一断 docker 客户端
+    死于 SIGPIPE、flock 随之放锁,而旧容器还在吃 12 核。超时退出码 124(宽限 60 s 后 KILL 是 137),本机打印 `TIMED OUT` 并报红。
+    排队等锁的时间不算。演示的两个常驻服务(`demo-serve-inner.sh` / `demo-app-backend-inner.sh`)默认不限时。
     远端失败日志在 `/srv/appdata/sl-gates/tmp/<checkout>-<哈希>/`,留一天。**临时目录不能放在同步树里**:放在 `/app` 下时，
     `test_testdb_name` 的子 pytest 会在它的 tmp_path 上层找到仓库根的 conftest,配置生效两次，每次委托运行都红(10-28)。
     实测(后端同一组：judgment 选择 + 28 条 PG-only):unRAID `-n 8` **2983 passed / 306 s,本机 CPU ≈ 0**;本机 SQLite `-n 2` 313 s / CPU 566 s;
