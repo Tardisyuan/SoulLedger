@@ -9,7 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.audit.views import parse_date_param
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.events.models import SoulEvent
 from apps.events.serializers import SoulEventSerializer
@@ -48,17 +48,16 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     not credentials or cross-tenant data. Tenant scoping still applies through
     `DataScopeViewSetMixin`.
     """
-    permission_classes = [TenantPermission]
-    # EXEMPT, and deliberately so — not a queued decision.
-    #
-    # The earlier note here said a seeded `event.read` was "queued rather than
-    # invented". Re-examined 2026-09-07: there is nothing to queue. A codename
-    # would have to be granted to every role that can open a soul page, which is
-    # every role including VIEWER, and a permission held by everyone is a
-    # permission that only adds a way to get it wrong. The previous "event"
-    # declaration produced `event.read` held by nobody, which would have hidden
-    # the timeline from ADMIN too.
-    permission_codename = None
+    permission_classes = [TenantPermission, CodenamePermission]
+    # `soul.read`, every action (audit 2026-11-11 P-03). Until then this viewset declared no codename,
+    # on the 2026-09-07 reasoning that every role able to log in holds `soul.read`, so a codename could only
+    # add a way to get it wrong. That stopped being true on 2026-11-07: perm/0036 took `soul.read` from
+    # MODERATOR (朋友圈审核员), and a custom role may lack it too — and such a role could list and search
+    # every soul's timeline in its hall. The timeline is soul data; it takes the codename the soul page takes.
+    # ADMIN / JUDGE / GUARDIAN / VIEWER hold `soul.read` by default (`ROLE_PERMISSIONS`), so the page they
+    # open is unchanged. The soul app does not read this endpoint.
+    permission_codename = "soul"
+    extra_permissions = {"actors": ["soul.read"]}
     queryset = SoulEvent.objects.select_related("soul", "tenant").all()
     serializer_class = SoulEventSerializer
     # 暂居只读例外(apps/core/tenant.py):原属租户看得到暂居地的时间线,

@@ -207,7 +207,8 @@ READ_MATRIX = {
     # 200 for everyone, but NOT a cross-tenant leak: TenantViewSet.get_queryset
     # scopes non-ADMIN to their own tenant row.
     "/api/v1/tenants/": OPEN_TO_ALL,
-    "/api/v1/events/": OPEN_TO_ALL,
+    # `soul.read` since 2026-11-11 (P-03): was OPEN_TO_ALL, so MODERATOR read every soul's timeline.
+    "/api/v1/events/": NOT_MODERATOR,
     # likewise tenant-filtered in get_queryset
     # ENFORCED (tranche 3): declares `audit.read`, held by ADMIN and MODERATOR
     # only -- and enforced nothing, because `permission_classes` listed
