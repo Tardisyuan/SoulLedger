@@ -40,6 +40,20 @@ def session_is_current(token, user) -> bool:
     return token.get("sv", 0) == getattr(user, "session_version", 0) and not is_revoked(token)
 
 
+SOUL_RECYCLED = {"detail": "灵魂已移入回收站,账号暂停使用。", "code": "soul_recycled"}
+
+
+def soul_is_recycled(account) -> bool:
+    """灵魂在回收站里:access 与刷新一律 401 `soul_recycled`(审计 2026-11-11 A2-01)。
+
+    软删不动账号(恢复出回收站后照常能登录),所以在认证这一侧挡,不在删除那一侧停用账号。
+    按 id 用 `Soul.all_objects` 查:默认管理器滤掉软删的行,经它问「删了没有」只会答「找不到」。
+    """
+    from apps.souls.models import Soul
+
+    return account is not None and Soul.all_objects.filter(pk=account.soul_id, is_deleted=True).exists()
+
+
 def _parses_as(token_class, raw) -> bool:
     try:
         token_class(raw)
@@ -129,6 +143,8 @@ class SoulJWTAuthentication(JWTAuthentication):
         account = getattr(user, "soul_account", None)
         if account is None or account.retired_at is not None:
             raise AuthenticationFailed("账号已停用。", code="account_retired")
+        if soul_is_recycled(account):
+            raise AuthenticationFailed(SOUL_RECYCLED)
         # 官员关闭两步验证、重置密码、改密码、邮箱重置、转世都会 `session_version`+1:更早签发的 access 立刻 401。
         if not session_is_current(validated_token, user):
             raise AuthenticationFailed("登录已失效,请重新登录。", code="session_revoked")

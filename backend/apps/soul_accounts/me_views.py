@@ -19,7 +19,12 @@ from apps.core.idempotency import idempotent
 from apps.soul_accounts import mfa as soul_mfa
 from apps.soul_accounts import rebirth
 from apps.soul_accounts import services as svc
-from apps.soul_accounts.authentication import SoulJWTAuthentication, SoulRefreshToken
+from apps.soul_accounts.authentication import (
+    SOUL_RECYCLED,
+    SoulJWTAuthentication,
+    SoulRefreshToken,
+    soul_is_recycled,
+)
 from apps.soul_accounts.models import RebirthApplication, SoulAccount
 from apps.soul_accounts.serializers import (
     ChangePasswordRequestSerializer,
@@ -216,11 +221,21 @@ class SoulRefreshView(APIView):
                    responses={200: SoulTokenPairSerializer, 401: SoulErrorSerializer})
     def post(self, request):
         from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+        from rest_framework_simplejwt.settings import api_settings
 
         from apps.authentication.signin_sessions import SessionAwareRefreshMixin
 
         class _Serializer(SessionAwareRefreshMixin, TokenRefreshSerializer):
             token_class = SoulRefreshToken
+
+        # 灵魂在回收站里不续期(审计 2026-11-11 A2-01);恢复后旧的刷新令牌照常可用。
+        # 在视图里答 401:这个视图没有认证类,序列化器里抛 AuthenticationFailed 会被 DRF 改成 403。
+        try:
+            user_id = SoulRefreshToken(request.data.get("refresh", "")).payload.get(api_settings.USER_ID_CLAIM)
+        except TokenError:
+            user_id = None  # 无效令牌交给下面的序列化器,答同一句 token_not_valid
+        if user_id is not None and soul_is_recycled(SoulAccount.objects.filter(user_id=user_id).first()):
+            return Response(SOUL_RECYCLED, status=status.HTTP_401_UNAUTHORIZED)
 
         body = _Serializer(data=request.data)
         try:
