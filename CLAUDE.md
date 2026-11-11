@@ -700,6 +700,11 @@ jest 250 suites / 4252,core vitest 18 文件 / 180(改到 core 时),mobile 616,�
 事件类型必须先登记进 `EventType`(`tests/test_event_types_fit_the_column.py` 会点名),登记后前端那几道守卫会跟着要词条;
 egy 没有 Design 的词时把键写进 `frontend/src/__tests__/support/egyPendingKeys.json`,后端和前端的守卫现在都认这份清单。
 
+**按业务域拆：先上线再量(2026-11-12 用户决定)**:只读副本与聊天独立部署(设计稿 `docs/ARCHITECTURE-soul-app-and-domain-split.md` 第 2 档)
+**等读数再做** —— 上线后 `/me/` 的 p95 超过 500 ms,或主库 CPU 持续一周超过 60%,才动手。在那之前只守住切口不变难：
+核心域(judgment / souls / workflow / disposition / sentence_plan / dispatch)的非测试代码对 `apps.chat` / `apps.social` 的 import
+(含函数内)以 11-12 的 6 处为基线,新增就红、少了要更新清单(`backend/tests/test_core_domains_do_not_reach_into_chat_and_social.py`)。
+
 **`scripts/run-gates.sh` 自己起的临时 Redis 现在在被打断时也会关掉**(EXIT trap,2026-10-10)。
 此前只有正常跑完才关:2026-10-09 一次中途停掉的推送留下一个 `redis-server`(随机端口)挂了一天。
 `pgrep -fl redis-server` 看到除 6399 以外的,先看启动时间和 `lsof -p <pid> | grep cwd`,确认是门禁留下的空库再 `redis-cli -p <端口> shutdown nosave`。
