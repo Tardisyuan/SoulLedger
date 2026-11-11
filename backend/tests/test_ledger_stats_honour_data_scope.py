@@ -38,3 +38,20 @@ def test_the_overview_counts_only_souls_in_scope(scoped_judge):
     assert data["karma_distribution_total"] == 1
     assert sum(t["total_souls"] for t in data["tenants"]) == 1
     assert sum(s["count"] for s in data["state_distribution"]) == 1
+
+
+def test_the_trends_give_a_narrowed_caller_no_hall_totals(scoped_judge, judge_user, cn_tenant):
+    """Audit 2026-11-11 P-09: the census snapshots are the whole hall's sums; the trends handed them to a
+    caller the overview had already narrowed. Same rule as the overview: no comparable line, no points."""
+    from django.utils import timezone
+
+    from apps.ledger.models import SoulCensusSnapshot
+    from apps.perm.models import RoleDataScope
+
+    SoulCensusSnapshot.objects.create(tenant=cn_tenant, day=timezone.now().date(), soul_count=2)
+    client, _ = scoped_judge
+    assert client.get("/api/v1/ledger/stats/trends/").json()["points"] == []
+    # The same judge without the narrowing reads the hall's line.
+    RoleDataScope.objects.all().delete()
+    points = officer_client(judge_user).get("/api/v1/ledger/stats/trends/").json()["points"]
+    assert [p["soul_count"] for p in points] == [2]

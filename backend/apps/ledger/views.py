@@ -819,6 +819,15 @@ class LedgerTrendsView(APIView):
         else:
             qs = scope_to_tenant(qs, request)  # ADMIN: all halls; anyone else without a hall: none
 
+        # Narrowed by the caller's data scope (audit 2026-11-11 P-09), the overview's rule: a snapshot is the
+        # whole hall's sum, so a caller limited to their organisation or themselves has no line of their own in
+        # it — no points, rather than the hall's totals and distributions the overview already withholds.
+        if not is_tenant_exempt(request.user):
+            tenant = request_tenant(request)
+            hall_souls = Soul.objects.filter(tenant=tenant) if tenant is not None else Soul.objects.none()
+            if DataScopeFilter.filter_queryset(request, hall_souls, Soul) is not hall_souls:
+                qs = qs.none()
+
         days: dict = {}
         for row in qs.order_by("day").iterator():
             point = days.setdefault(
