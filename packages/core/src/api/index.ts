@@ -314,4 +314,4 @@ export {
   type DecisionFailureCode,
 } from "./officer-app";
 
-export { isArchivableConflict, type ArchiveFields } from "./archive";
+export { isArchivableConflict, isResidingDeleteRefusal, type ArchiveFields } from "./archive";

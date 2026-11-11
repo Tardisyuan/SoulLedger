@@ -72,6 +72,7 @@ def test_the_host_hall_cannot_delete_a_visiting_soul(world):
     response = world["clerk"].delete(f"/api/v1/souls/{world['soul'].pk}/")
     assert response.status_code == 409, response.content
     assert response.json()["archivable"] is False
+    assert response.json()["code"] == "soul_residing"
     _untouched(world)
 
 

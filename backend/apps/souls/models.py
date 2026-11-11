@@ -581,6 +581,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 "This soul is residing in another hall and cannot be deleted. "
                 "End the residence first; its home hall deletes it.",
                 archivable=False,
+                code="soul_residing",
             )
         if self.has_concluded_judgment:
             raise DeletionNotAllowedError(

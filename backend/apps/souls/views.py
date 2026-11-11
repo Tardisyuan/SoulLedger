@@ -229,10 +229,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             soul.delete_with_cascade(user=request.user, reason=reason)
         except DeletionNotAllowedError as exc:
-            return Response(
-                {"error": str(exc), "archivable": exc.archivable},
-                status=status.HTTP_409_CONFLICT,
-            )
+            body = {"error": str(exc), "archivable": exc.archivable}
+            if exc.code:
+                body["code"] = exc.code
+            return Response(body, status=status.HTTP_409_CONFLICT)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(

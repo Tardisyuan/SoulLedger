@@ -487,6 +487,7 @@
       "delete_confirm_message": "会移入回收站，不会真的抹去。可在「系统设置 › 回收站」恢复，其审判、处置记录一并保留。",
       "error_update": "更新失败",
       "error_delete": "删除失败",
+      "error_delete_residing": "这个灵魂正暂居别殿，不能删除：先结束暂居，再由原属殿删除。",
       "failed": "失败",
       "no_ledger": "暂无功过记录",
       "generation": "第 {{n}} 世",

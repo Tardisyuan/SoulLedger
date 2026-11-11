@@ -22,3 +22,12 @@ export function isArchivableConflict(error: unknown): boolean {
     (error.response.data as { archivable?: unknown } | undefined)?.archivable === true
   );
 }
+
+/** 409 `soul_residing`: the soul is residing in another hall; end the residence, then its home hall deletes it. */
+export function isResidingDeleteRefusal(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    error.response?.status === 409 &&
+    (error.response.data as { code?: unknown } | undefined)?.code === "soul_residing"
+  );
+}

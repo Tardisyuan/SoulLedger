@@ -374,4 +374,23 @@ describe("the shared 「删除失败」 key still reaches single deletes", () =>
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockShowToast).toHaveBeenCalledWith("souls.detail.error_delete", "error");
   });
+
+  it("useDeleteSoul names the residence when the refusal is 409 soul_residing (audit A1-01)", async () => {
+    const refusal = new AxiosError("refused", "409", undefined, undefined, {
+      status: 409,
+      statusText: "",
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { error: "x", archivable: false, code: "soul_residing" },
+    });
+    (soulsApi.delete as jest.Mock).mockRejectedValueOnce(refusal);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useDeleteSoul(), { wrapper });
+    await act(async () => {
+      result.current.mutate("soul-1");
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).toHaveBeenCalledWith("souls.detail.error_delete_residing", "error");
+    expect(mockShowToast).not.toHaveBeenCalledWith("souls.detail.error_delete", "error");
+  });
 });

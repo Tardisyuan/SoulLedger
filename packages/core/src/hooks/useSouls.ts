@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { soulsApi, type SoulBatchRecycleRequest, type SoulInput } from "../api/index";
 import { soulBatchRecycleErrorOf } from "../api/souls";
-import { isArchivableConflict } from "../api/archive";
+import { isArchivableConflict, isResidingDeleteRefusal } from "../api/archive";
 import { notify } from "../platform/index";
 import { recycleBinKeys, soulKeys } from "../query_keys";
 
@@ -133,7 +133,7 @@ export function useDeleteSoul() {
     onError: (error) => {
       // 409 `archivable`: the page turns the confirm into the archive screen; a failure toast beside it would contradict it.
       if (isArchivableConflict(error)) return;
-      notify("souls.detail.error_delete", "error");
+      notify(isResidingDeleteRefusal(error) ? "souls.detail.error_delete_residing" : "souls.detail.error_delete", "error");
     },
   });
 }

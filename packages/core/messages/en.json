@@ -487,6 +487,7 @@
       "delete_confirm_message": "It moves to the recycle bin and is not erased. It can be restored from Settings › Recycle bin, with its judgments and dispositions.",
       "error_update": "Update failed",
       "error_delete": "Delete failed",
+      "error_delete_residing": "This soul is residing in another hall and cannot be deleted. End the residence first; its home hall deletes it.",
       "failed": "Failed",
       "no_ledger": "No deed records",
       "generation": "Life {{n}}",

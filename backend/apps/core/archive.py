@@ -87,6 +87,8 @@ class DeletionNotAllowedError(Exception):
     it just isn't reached through the delete verb once a verdict exists.
     """
 
-    def __init__(self, message, archivable=False):
+    def __init__(self, message, archivable=False, code=None):
         super().__init__(message)
         self.archivable = archivable
+        #: Machine-readable reason for the client (e.g. `soul_residing`); None when `archivable` says it all.
+        self.code = code
