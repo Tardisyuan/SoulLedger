@@ -73,7 +73,10 @@ def print_data(key: str):
 
 def _post(url, fields):
     # multipart/form-data:Gotenberg 只收表单。`(None, value)` 让 requests 发成普通表单字段而不是文件。
-    return requests.post(url, files={k: (None, v) for k, v in fields.items()}, timeout=settings.VERDICT_PDF_TIMEOUT_SECONDS)
+    # `allow_redirects=False` like every other outbound call (audit 2026-11-11): the renderer is an operator-set
+    # internal address, so no public-only guard — but a redirect from it is not followed anywhere else.
+    return requests.post(url, files={k: (None, v) for k, v in fields.items()},
+                         timeout=settings.VERDICT_PDF_TIMEOUT_SECONDS, allow_redirects=False)
 
 
 def render(payload: dict, locale: str) -> bytes:
