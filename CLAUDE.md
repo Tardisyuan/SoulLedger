@@ -354,6 +354,12 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     `<git common dir>/soulledger-gates-passed-e2e`,演示 E2E(`scripts/demo-remote.sh scripts/demo-e2e-inner.sh`,不带别的参数)把树哈希记进
     `…-passed-demo`;同一棵树再要同样的(或其子集的)project,打印 `already passed` 直接放行。工作区不干净时不放行也不记;`FORCE=1` 照跑。
     演示录制和演示的常驻服务不记账。
+    **不碰前端就跳过浏览器(2026-11-12 用户决定)**:`scripts/run-gates.sh --e2e=auto` 用选择性门禁同一份改动清单(与 `--base`,
+    默认 origin/main 的 merge-base 比，加未跟踪文件);只有 `frontend/`、`packages/core/`、根上的 JS 依赖(package*.json、.nvmrc)、
+    E2E 自己的运行脚本(`run-gates.sh`、`e2e-report.py`)或不认识的根文件改了才跑，跑的是 chromium + mobile-chrome,否则打印原因退出 0。
+    E2E 用夹具、只起 `next start`,后端改动到不了它。明确写 project(`--e2e`、`--e2e=…`)时照跑。
+    演示 E2E 同理：`scripts/demo-remote.sh --auto scripts/demo-e2e-inner.sh`(基准 `DEMO_BASE`,默认同上;录制数据在 `frontend/demo/data/`,
+    已在 `frontend/` 之内;另认演示自己的运行脚本)。
   - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
     改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前 chromium + mobile-chrome;firefox 交给每日 CI,2026-11-12)。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /

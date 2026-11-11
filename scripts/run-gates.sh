@@ -258,6 +258,50 @@ tree_is_clean() {
     [ -z "$stray" ] || { CLEAN_WHY="untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 1; }
 }
 E2E_STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}-e2e"
+
+# WHAT CHANGED. The hook passes the pushed range's files in PREPUSH_CHANGED (one
+# path per line, `git diff --no-renames`, so a rename shows its old path as
+# deleted). PREPUSH_CHANGED is also the test seam, with PREPUSH_CLASSIFY_ONLY=1,
+# which prints the decisions and exits before running any gate — both exist for
+# `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`.
+changed_since_base() {
+    if [ -n "${PREPUSH_CHANGED+x}" ]; then
+        CHANGED="$PREPUSH_CHANGED"
+        RANGE="${PREPUSH_RANGE:-(PREPUSH_CHANGED)}"
+    else
+        if [ -z "$BASE" ]; then
+            BASE="$(git merge-base HEAD origin/main 2>/dev/null)" \
+                || { echo "$P: no merge-base with origin/main; pass --base <ref>"; exit 2; }
+        fi
+        git rev-parse --verify -q "$BASE^{commit}" >/dev/null || { echo "$P: --base $BASE is not a commit"; exit 2; }
+        CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
+        RANGE="$(git rev-parse --short "$BASE")..(working tree)"
+    fi
+}
+# Root-level files that change nothing a gate measures (documentation, deployment). Used by the root-level
+# rules further down (where the list is explained) and by --e2e=auto.
+INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)'
+
+# --e2e=auto (2026-11-12, user decision): browsers only when the change can reach them. The change list is
+# the selective gates' (changed_since_base: the diff against --base, default the merge-base with
+# origin/main, plus untracked files). E2E serves the frontend build with mocked API fixtures
+# (frontend/e2e/fixtures.ts, `next start` only — no backend), so what it can see is frontend/ (pages,
+# playwright.config.ts, e2e/, demo/), packages/core/ (compiled into the build; e2e reads its messages),
+# the JS dependency tree, its own runner (this script, e2e-report.py), and — failing closed — any
+# root-level file not on INERT_ROOT_RE. Nothing of that changed → print why and exit 0. Something did →
+# chromium + mobile-chrome, the set CLAUDE.md asks for before main. An explicit list always runs.
+E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(run-gates\.sh|e2e-report\.py)$)'
+if [ "$E2E" = auto ]; then
+    changed_since_base
+    HIT="$(echo "$CHANGED" | grep -E "$E2E_AUTO_RE" | head -1)"
+    [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE "$INERT_ROOT_RE" | grep -v '^$' | head -1)"
+    if [ -z "$HIT" ]; then
+        echo "$P: --e2e=auto: nothing in $RANGE reaches the browser suites (no frontend/, packages/core/, JS dependency, E2E runner or unknown root-level file changed) — not running E2E"
+        exit 0
+    fi
+    echo "$P: --e2e=auto: $HIT changed — chromium + mobile-chrome"
+    E2E="chromium,mobile-chrome"
+fi
 if [ -n "$E2E" ]; then
     [ -n "${GATES_REMOTE:-}" ] || { echo "$P: --e2e runs on the machine GATES_REMOTE names (.prepush.env), never on this one"; exit 2; }
     E2E="$(echo "$E2E" | tr , '\n' | grep -v '^$' | sort -u | paste -sd, -)"
@@ -341,23 +385,8 @@ if [ -z "${SECRET_KEY:-}" ] && [ ! -f "$ROOT/backend/.env" ]; then
     export DEBUG="true"
 fi
 
-# WHAT CHANGED. The hook passes the pushed range's files in PREPUSH_CHANGED (one
-# path per line, `git diff --no-renames`, so a rename shows its old path as
-# deleted). PREPUSH_CHANGED is also the test seam, with PREPUSH_CLASSIFY_ONLY=1,
-# which prints the decisions and exits before running any gate — both exist for
-# `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`.
-if [ -n "${PREPUSH_CHANGED+x}" ]; then
-    CHANGED="$PREPUSH_CHANGED"
-    RANGE="${PREPUSH_RANGE:-(PREPUSH_CHANGED)}"
-else
-    if [ -z "$BASE" ]; then
-        BASE="$(git merge-base HEAD origin/main 2>/dev/null)" \
-            || { echo "$P: no merge-base with origin/main; pass --base <ref>"; exit 2; }
-    fi
-    git rev-parse --verify -q "$BASE^{commit}" >/dev/null || { echo "$P: --base $BASE is not a commit"; exit 2; }
-    CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
-    RANGE="$(git rev-parse --short "$BASE")..(working tree)"
-fi
+# WHAT CHANGED: changed_since_base, defined above the E2E block (which uses it for --e2e=auto).
+changed_since_base
 # A TREE THAT ALREADY PASSED `--full` IS NOT RUN AGAIN (2026-10-19, user decision).
 # A push to main runs the full set, which is exactly what `scripts/run-gates.sh --full`
 # runs; doing it twice for the same files cost ~22 minutes a push. A full run that
@@ -498,7 +527,7 @@ TOUCHES_OFFICER=$(echo "$CHANGED" | grep -cE '^(mobile-officer/|mobile/)' || tru
 ROOT_LEVEL=$(echo "$CHANGED" | grep -vE '/' | grep -vE '^$' || true)
 JS_ROOT_RE='^(package\.json|package-lock\.json|\.nvmrc)$'
 BACKEND_ROOT_RE='^(pytest\.ini|conftest\.py)$'
-INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)'
+# INERT_ROOT_RE (the inert list above) is defined near the top: --e2e=auto uses it too.
 JS_ROOT=$(echo "$ROOT_LEVEL" | grep -cE "$JS_ROOT_RE" || true)
 BACKEND_ROOT=$(echo "$ROOT_LEVEL" | grep -cE "$BACKEND_ROOT_RE" || true)
 UNKNOWN_ROOT=$(echo "$ROOT_LEVEL" | grep -vE "$JS_ROOT_RE" | grep -vE "$BACKEND_ROOT_RE" | grep -vE "$INERT_ROOT_RE" | grep -vE '^$' || true)

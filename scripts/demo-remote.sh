@@ -17,6 +17,29 @@ RDIR="${GATES_REMOTE_DIR:-/srv/appdata/sl-gates}"
 RWORK="$RDIR/work/demo-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
 IMG="${DEMO_IMAGE:-sl-gates-e2e:1}"
 
+# --auto (2026-11-12, user decision): `scripts/demo-remote.sh --auto scripts/demo-e2e-inner.sh` runs the demo E2E
+# only when the change can reach it, like `run-gates.sh --e2e=auto`. The change list is the selective gates':
+# the diff against DEMO_BASE (default: the merge-base with origin/main) plus untracked files. The demo build sees
+# frontend/ (its pages, frontend/demo/ and the recordings in frontend/demo/data/, e2e/demo, the demo playwright
+# config), packages/core/, the JS dependency tree, its own runner scripts, and — failing closed — any root-level
+# file not on run-gates.sh's INERT_ROOT_RE (copied below). Without --auto it always runs.
+if [ "${1:-}" = --auto ]; then
+    shift
+    case "${1:-}" in scripts/demo-e2e-inner.sh|./scripts/demo-e2e-inner.sh) ;;
+        *) echo "demo-remote: --auto is for scripts/demo-e2e-inner.sh only"; exit 2 ;; esac
+    BASE="${DEMO_BASE:-$(git merge-base HEAD origin/main 2>/dev/null)}" \
+        && git rev-parse --verify -q "$BASE^{commit}" >/dev/null \
+        || { echo "demo-remote: --auto needs a base: no merge-base with origin/main, and DEMO_BASE is not set"; exit 2; }
+    CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
+    HIT="$(echo "$CHANGED" | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
+    [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE '(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)' | grep -v '^$' | head -1)"
+    if [ -z "$HIT" ]; then
+        echo "demo-remote: --auto: nothing since $(git rev-parse --short "$BASE") reaches the demo (no frontend/, packages/core/, JS dependency, demo runner or unknown root-level file changed) — not running the demo E2E"
+        exit 0
+    fi
+    echo "demo-remote: --auto: $HIT changed — running the demo E2E"
+fi
+
 # THE DEMO E2E'S PASS IS RECORDED (2026-11-12, user decision), as the gates' and E2E's are: a green
 # `scripts/demo-remote.sh scripts/demo-e2e-inner.sh` (no extra arguments: a filtered run proves less) on a
 # clean checkout appends HEAD's tree to <git common dir>/soulledger-gates-passed-demo, and the same tree is

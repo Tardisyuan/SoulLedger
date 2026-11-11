@@ -1565,14 +1565,14 @@ class TestRemoteTimeLimits:
         self._locked_then_removed(remote, "exit $rc'", "e2e.lock", "sl-e2e-")
         assert proc.returncode != 0 and "TIMED OUT" in proc.stdout and "GATES_REMOTE_E2E_TIMEOUT" in proc.stdout
 
-    def _demo(self, main: Path, tmp_path: Path, script: str, status=0, **env):
+    def _demo(self, main: Path, tmp_path: Path, *args: str, status=0, **env):
         (main / "scripts" / "demo-remote.sh").write_text(
             (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8"))
         (main / ".prepush.env").write_text("GATES_REMOTE=fake-host\nGATES_REMOTE_DB_URL=postgres://sl:x@sl-pg-test:5432/s\n")
         b = self.e2e._bin(tmp_path, remote_status=status)
         e = _clean_env(**env)
         e["PATH"] = f"{b}:{e['PATH']}"
-        return subprocess.run(["bash", str(main / "scripts" / "demo-remote.sh"), script], cwd=main, env=e,
+        return subprocess.run(["bash", str(main / "scripts" / "demo-remote.sh"), *args], cwd=main, env=e,
                               capture_output=True, text=True, timeout=120)
 
     def test_the_demo_e2e_has_25_minutes_under_the_e2e_lock(self, checkouts, tmp_path):
@@ -1650,6 +1650,76 @@ class TestBrowserSuitesRecordAPass:
         (tmp_path / "passed-demo").unlink()
         self.limits._demo(main, tmp_path, "scripts/demo-record-inner.sh", **env)
         assert not (tmp_path / "passed-demo").exists()
+
+
+class TestBrowserSuitesSkipAChangeTheyCannotSee:
+    """`--e2e=auto` / `demo-remote.sh --auto` (2026-11-12, user decision): no browser run for a change that
+    cannot reach the frontend build; an explicit project list always runs."""
+
+    e2e = TestEndToEndOnAnotherMachine()
+    limits = TestRemoteTimeLimits()
+
+    def _auto(self, main, tmp_path, changed, *args):
+        (tmp_path / "remote-run").unlink(missing_ok=True)
+        return self.e2e._run(main, tmp_path, *(args or ("--e2e=auto",)), PREPUSH_CHANGED="\n".join(changed))
+
+    @pytest.mark.parametrize("changed", [
+        ["backend/apps/souls/views.py"], ["docs/ARCHITECTURE.md"], ["README.md"], ["mobile/src/navigation.tsx"],
+        [".github/workflows/ci.yml", "backend/tests/test_x.py"], ["scripts/demo-record.sh"],
+    ])
+    def test_a_change_the_browsers_cannot_see_runs_nothing(self, checkouts, tmp_path, changed):
+        main, _ = checkouts
+        proc = self._auto(main, tmp_path, changed)
+        assert proc.returncode == 0 and "not running E2E" in proc.stdout, proc.stdout
+        assert not (tmp_path / "remote-run").exists()
+
+    @pytest.mark.parametrize("changed", [
+        ["frontend/app/page.tsx"], ["frontend/e2e/home.spec.ts"], ["frontend/playwright.config.ts"],
+        ["frontend/demo/data/judge.zh.json"], ["packages/core/src/index.ts"], ["package-lock.json"], [".nvmrc"],
+        ["scripts/e2e-report.py"], ["scripts/run-gates.sh"],
+        ["tsconfig.base.json"],  # a root-level file nobody listed: fail closed
+        ["backend/apps/souls/views.py", "frontend/app/globals.css"],  # one is enough
+    ])
+    def test_a_change_they_can_see_runs_chromium_and_mobile_chrome(self, checkouts, tmp_path, changed):
+        main, _ = checkouts
+        proc = self._auto(main, tmp_path, changed)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "PROJECTS='chromium,mobile-chrome'" in (tmp_path / "remote-run").read_text()
+
+    def test_an_explicit_project_runs_whatever_changed(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._auto(main, tmp_path, ["backend/apps/souls/views.py"], "--e2e")
+        assert "PROJECTS='chromium'" in (tmp_path / "remote-run").read_text()
+
+    def _demo_auto(self, main, tmp_path, path: str, *args):
+        (main / "scripts" / "demo-remote.sh").write_text(
+            (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8"))
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "demo")
+        (main / path).parent.mkdir(parents=True, exist_ok=True)
+        (main / path).write_text("x\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "change")
+        (tmp_path / "remote-run").unlink(missing_ok=True)
+        return self.limits._demo(main, tmp_path, "--auto", *(args or ("scripts/demo-e2e-inner.sh",)),
+                                 DEMO_BASE="HEAD~1", GATES_STAMP_FILE=str(tmp_path / "passed"))
+
+    def test_the_demo_skips_a_backend_change(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "backend/apps/x.py")
+        assert proc.returncode == 0 and "not running the demo E2E" in proc.stdout, proc.stdout
+        assert not (tmp_path / "remote-run").exists()
+
+    def test_the_demo_runs_for_its_recordings(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/demo/data/judge.zh.json")
+        assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
+        assert "bash /app/scripts/demo-e2e-inner.sh" in (tmp_path / "remote-run").read_text()
+
+    def test_auto_is_only_for_the_demo_e2e(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/x.ts", "scripts/demo-record-inner.sh")
+        assert proc.returncode == 2 and not (tmp_path / "remote-run").exists(), proc.stdout
 
 
 # ── 2026-10-30 gate speed-ups (user decision): deps hashes, jest cache, two sides at once, e2e report ──
