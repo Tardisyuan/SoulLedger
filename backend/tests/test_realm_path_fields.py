@@ -630,6 +630,6 @@ def test_the_committed_schema_describes_the_new_shapes():
     assert "realm_id" in schemas["Disposition"]["properties"]
     for name in ("Realm", "RealmList"):
         assert {"order", "kind", "level", "region", "hour", "fork"} <= set(schemas[name]["properties"]), name
-    assert schemas["RealmForkEnum"]["enum"] == ["LEFT", "RIGHT", "PASS", "FAIL"]
+    assert schemas["RealmForkEnum"]["enum"] == ["LEFT", "MIDDLE", "RIGHT", "PASS", "FAIL"]  # MIDDLE back 2026-11-11 (realms/0033, Asphodel)
     assert "GreekForkEnum" not in schemas
     assert schemas["RealmKindEnum"]["enum"] == ["HALL", "GATE", "LAYER", "PATH"]
