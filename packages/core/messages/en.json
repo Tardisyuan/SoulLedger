@@ -4465,7 +4465,7 @@
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
       "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed.",
-      "approval_cancelled": "The approval workflow was stopped, by a cancelled cross-realm judgment or by an administrator, and never finished: it cannot be executed as is. The hall lead (an officer who can reassign cases) can reopen this judgment as a new case."
+      "approval_cancelled": "The approval workflow was stopped, by a cancelled cross-realm judgment or by an administrator, and never finished: it cannot be executed as is. Someone who holds the reassign-cases permission can reopen this judgment as a new case."
     },
     "term_overdue": "Term ended, not released",
     "overdue_since": "Ended {{date}}",
