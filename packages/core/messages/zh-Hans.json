@@ -823,7 +823,7 @@
       "TUDI_TEMPLE": "土地庙",
       "YELLOW_SPRINGS_ROAD": "黄泉路",
       "WANGXIANG_TERRACE": "望乡台",
-      "EVIL_DOG_VILLAGE": "恶狗村",
+      "EVIL_DOG_VILLAGE": "恶狗岭",
       "GOLDEN_ROOSTER_HILL": "金鸡山",
       "WILD_GHOST_VILLAGE": "野鬼村",
       "MIHUN_HALL": "迷魂殿",
@@ -2729,6 +2729,9 @@
       },
       "eg": {
         "purgatory": "天平摇摆"
+      },
+      "gr": {
+        "purgatory": "普通"
       }
     },
     "greek_account": {
@@ -3106,6 +3109,7 @@
       "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
       "GR_TARTARUS": "塔尔塔罗斯",
+      "GR_ASPHODEL_MEADOW": "阿斯福得草原",
       "EG_DUAT_ENTRY": "杜阿特入口",
       "EG_HALL_TWO_TRUTHS": "两真之殿",
       "EG_SEVEN_ARRWT": "七道通路",
@@ -3152,6 +3156,7 @@
       "GR_ACHERON": "阿刻戎渡口",
       "GR_ISLES_OF_THE_BLESSED": "至福岛",
       "GR_TARTARUS": "塔尔塔罗斯",
+      "GR_ASPHODEL_MEADOW": "阿斯福得草原",
       "EG_DUAT_ENTRY": "杜阿特入口",
       "EG_HALL_TWO_TRUTHS": "两真之殿",
       "EG_SEVEN_ARRWT": "七道通路",
@@ -3178,6 +3183,7 @@
       },
       "fork": {
         "LEFT": "左 · 塔尔塔罗斯",
+        "MIDDLE": "中 · 阿斯福得草原",
         "RIGHT": "右 · 至福岛",
         "PASS": "过 · 称心通过",
         "FAIL": "不过 · 第二次死亡"
@@ -3241,6 +3247,7 @@
         "PASS": "✓ 过 · 心不重于羽",
         "FAIL": "✕ 不过 · 心重于羽",
         "LEFT": "← 左 · 向下",
+        "MIDDLE": "→ 中 · 平路",
         "RIGHT": "右 · 向上 →"
       },
       "terminal": "≡ 吞噬即终结",
@@ -7437,6 +7444,10 @@
       "GR_PLATO_MEADOW": {
         "ACTIVE": "草地上候判",
         "COMPLETED": "已出草地"
+      },
+      "GR_ASPHODEL_MEADOW": {
+        "ACTIVE": "居于阿斯福得草原",
+        "COMPLETED": "已离阿斯福得草原"
       }
     },
     "panel_title_by_civ": {

@@ -284,10 +284,10 @@ class JudgmentConclusionService:
                     "A cross-realm judgment is open on this case; conclude it before weighing again",
                     "wavering_with_open_cross", status=409)
 
-            # 重审(用户 2026-10-29 四文明统一,`hears_again`):RETRY,及欧洲以外的 PURGATORY,重开一案。
+            # 重审(用户 2026-10-29 四文明统一,`hears_again`):RETRY,及地府、埃及的 PURGATORY,重开一案(希腊的 PURGATORY 去阿斯福得草原,2026-11-11)。
             # 照埃及天平摇摆的做法(见下):不建处置、不动计划与灵魂状态。欧洲原来就这样(炼狱只收确定得救者,
             # docs/01_欧洲 §1.2,RETRY 送进炼狱期满就升了天堂);地府的待审所、希腊的草地同样不是刑罚,
-            # 只是「还没被送走」(docs/02_希腊 §5.2),docs/11 第八步「重新审理」。欧洲的 PURGATORY 照旧送炼狱。
+            # 只是「还没被送走」(docs/02_希腊 §5.2),docs/11 第八步「重新审理」。欧洲的 PURGATORY 照旧送炼狱;希腊的 PURGATORY 自 2026-11-11 起送阿斯福得草原,草地只留 RETRY。
             # 重开 / 申诉改判成这些裁决在 sentence_plan/requests.py 拒绝(那两条路本身就是再审)。
             from apps.judgment.models import acquitted_to_rebirth, case_civilization, hears_again
             from apps.souls.models import Civilization

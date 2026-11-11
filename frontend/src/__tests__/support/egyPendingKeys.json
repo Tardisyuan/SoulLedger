@@ -6,5 +6,13 @@
   "permissions.matrix.deny_hint_capability",
   "permissions.matrix.deny_hint_admin_only",
   "souls.detail.error_delete_residing",
-  "demo.role_judge_desc"
+  "demo.role_judge_desc",
+  "souls.diyu_station.EVIL_DOG_VILLAGE",
+  "realms.codes.GR_ASPHODEL_MEADOW",
+  "realms.names.GR_ASPHODEL_MEADOW",
+  "realms.map.fork.MIDDLE",
+  "realms.topology.fork.MIDDLE",
+  "sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.ACTIVE",
+  "sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.COMPLETED",
+  "judgment.verdicts_by_civ.gr.purgatory"
 ]

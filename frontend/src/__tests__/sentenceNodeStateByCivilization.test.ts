@@ -34,6 +34,8 @@ describe("nodeStateNamespace", () => {
     expect(word("EU_HEAVEN_HELL", "EU_ACHERON", "ACTIVE")).toBe("岸边等候");
     expect(word("EU_HEAVEN_HELL", "GR_PLATO_MEADOW", "ACTIVE")).toBe("草地上候判");
     expect(word("GR_HADES", "GR_ISLES_OF_THE_BLESSED", "ACTIVE")).toBe("居于至福岛");
+    // 阿斯福得草原(2026-11-11):NEUTRAL,但不读希腊 NEUTRAL 的「岸边等候」—— 那是渡口的词。
+    expect(word("GR_HADES", "GR_ASPHODEL_MEADOW", "ACTIVE")).toBe("居于阿斯福得草原");
     // Absence: 炼狱 no longer reads 「受刑中」.
     expect(word("EU_HEAVEN_HELL", "EU_PURGATORY", "ACTIVE")).not.toBe(t("sentence_plan.node_states.ACTIVE"));
   });

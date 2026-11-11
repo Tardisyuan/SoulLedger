@@ -823,7 +823,7 @@
       "TUDI_TEMPLE": "Earth God's Temple",
       "YELLOW_SPRINGS_ROAD": "Road of the Yellow Springs",
       "WANGXIANG_TERRACE": "Terrace for Viewing Home",
-      "EVIL_DOG_VILLAGE": "Village of Vicious Dogs",
+      "EVIL_DOG_VILLAGE": "Vicious Dog Ridge",
       "GOLDEN_ROOSTER_HILL": "Golden Rooster Hill",
       "WILD_GHOST_VILLAGE": "Village of Wild Ghosts",
       "MIHUN_HALL": "Hall of Bewilderment",
@@ -2729,6 +2729,9 @@
       },
       "eg": {
         "purgatory": "The scale wavers"
+      },
+      "gr": {
+        "purgatory": "Ordinary"
       }
     },
     "greek_account": {
@@ -3106,6 +3109,7 @@
       "GR_ACHERON": "Acheron",
       "GR_ISLES_OF_THE_BLESSED": "Isles of the Blessed",
       "GR_TARTARUS": "Tartarus",
+      "GR_ASPHODEL_MEADOW": "Asphodel Meadow",
       "EG_DUAT_ENTRY": "Duat entrance",
       "EG_HALL_TWO_TRUTHS": "Hall of Two Truths",
       "EG_SEVEN_ARRWT": "Seven Approaches",
@@ -3152,6 +3156,7 @@
       "GR_ACHERON": "The Crossing of Acheron",
       "GR_ISLES_OF_THE_BLESSED": "The Isles of the Blessed",
       "GR_TARTARUS": "Tartarus",
+      "GR_ASPHODEL_MEADOW": "The Asphodel Meadow",
       "EG_DUAT_ENTRY": "Entrance to the Duat",
       "EG_HALL_TWO_TRUTHS": "Hall of Two Truths",
       "EG_SEVEN_ARRWT": "The Seven Approaches to the House of Osiris",
@@ -3178,6 +3183,7 @@
       },
       "fork": {
         "LEFT": "Left · Tartarus",
+        "MIDDLE": "Middle · the Asphodel Meadow",
         "RIGHT": "Right · the Isles of the Blessed",
         "PASS": "Pass · the heart is true",
         "FAIL": "Fail · the second death"
@@ -3241,6 +3247,7 @@
         "PASS": "✓ Pass · the heart no heavier than the feather",
         "FAIL": "✕ Fail · the heart heavier than the feather",
         "LEFT": "← Left · downward",
+        "MIDDLE": "→ Middle · level",
         "RIGHT": "Right · upward →"
       },
       "terminal": "≡ Devoured: the end",
@@ -7437,6 +7444,10 @@
       "GR_PLATO_MEADOW": {
         "ACTIVE": "Awaiting judgment in the meadow",
         "COMPLETED": "Left the meadow"
+      },
+      "GR_ASPHODEL_MEADOW": {
+        "ACTIVE": "On the Asphodel Meadow",
+        "COMPLETED": "Left the Asphodel Meadow"
       }
     },
     "panel_title_by_civ": {

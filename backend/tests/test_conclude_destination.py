@@ -112,10 +112,11 @@ def _nothing_written(case):
 def test_the_allowed_sets_are_the_whole_routing_image():
     D = DispositionService
     assert allowed_realm_codes("CHINESE", "FAILED") == frozenset(D.CHINESE_HELL_TIERS.values())
-    # 地府判无罪不发落(用户 2026-10-29);「再审」的裁决(RETRY,欧洲以外的 PURGATORY)也不发落:没有门可选。
+    # 地府判无罪不发落(用户 2026-10-29);「再审」的裁决(RETRY,地府、埃及的 PURGATORY)也不发落:没有门可选。
     assert allowed_realm_codes("CHINESE", "PASSED") == frozenset()
     assert allowed_realm_codes("CHINESE", "PURGATORY") == frozenset()
-    assert allowed_realm_codes("GREEK", "PURGATORY") == frozenset()
+    assert allowed_realm_codes("GREEK", "PURGATORY") == {D.GR_ASPHODEL}  # 普通亡灵,2026-11-11
+    assert allowed_realm_codes("GREEK", "RETRY") == frozenset()
     assert allowed_realm_codes("EUROPEAN", "PURGATORY") >= {D.EU_PURGATORY}  # 欧洲的炼狱是真正的去处
     assert allowed_realm_codes("EUROPEAN", "FAILED") == frozenset(D.EU_HELL_CIRCLES.values()) | {D.EU_ANTINFERNO}
     assert allowed_realm_codes("EGYPTIAN", "RETRY", "HEART_WEIGHING") == frozenset()

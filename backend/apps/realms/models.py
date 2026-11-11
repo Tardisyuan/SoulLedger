@@ -75,9 +75,9 @@ class RealmFork(models.TextChoices):
     """岔路一站在审判之后的哪一支。两个文明用它,各用各的两个值,互不借用。
 
     希腊(冥府「三岔」):左 / 右出自柏拉图《理想国》X 614c-d:正义者向右、向上,
-    不义者向左、向下 —— 这是 left/right 的出处,不是设计稿的约定。设计稿的契约里曾有
-    第三个值 MIDDLE,从没有任何种子行取它,2026-09-25 决定删掉(迁移 0020):中间那条
-    (常说的 Asphodel)是现代教科书的三分法,见 apps/actors/mythology/realms.py
+    不义者向左、向下 —— 这是 left/right 的出处,不是设计稿的约定。中间那条 MIDDLE
+    2026-09-25 删过(迁移 0020,当时以三分法是现代系统化为由不建);2026-11-11 用户定
+    依 docs/04 §三 三分，加回来给阿斯福得草原(迁移 0033)。见 apps/actors/mythology/realms.py
     GREEK_REALMS 的说明。
 
     埃及(杜阿特「称心二岔」,2026-09-26 起,迁移 0022):过 / 不过,即称心的两个结果
@@ -85,6 +85,7 @@ class RealmFork(models.TextChoices):
     行上就是替《亡灵书》说了一句它没说的「向左」。类原名 GreekFork,两个文明共用后改名。
     """
     LEFT = "LEFT", "左(塔尔塔罗斯)"
+    MIDDLE = "MIDDLE", "中(阿斯福得草原)"
     RIGHT = "RIGHT", "右(至福岛)"
     PASS = "PASS", "过(称心通过)"
     FAIL = "FAIL", "不过(第二次死亡)"

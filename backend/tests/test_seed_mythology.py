@@ -188,10 +188,10 @@ GREEK_CAST = {
 #
 # The two destinations are here because Gorgias 524a names them in the same
 # sentence as the fork — "the two ways leading, one to the Isles of the Blest,
-# and the other to Tartarus" — and for no other reason. Asphodel and the five
-# rivers are deliberately absent; see GREEK_REALMS' header in
-# apps/actors/mythology/realms.py.
-GREEK_REALM_CODES = ["GR_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"]
+# and the other to Tartarus". Asphodel is the middle road by the owner's
+# decision of 2026-11-11 (docs/04 §三); the five rivers are deliberately absent;
+# see GREEK_REALMS' header in apps/actors/mythology/realms.py.
+GREEK_REALM_CODES = ["GR_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS", "GR_ASPHODEL_MEADOW"]
 
 # EU_ACHERON is NOT in the list above. It stays EUROPEAN with Charon, whose
 # anchor is Dante at the gate of hell (Inf. III); the crossing is the threshold

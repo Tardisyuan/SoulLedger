@@ -68,6 +68,13 @@ describe("soulRoute", () => {
     expect(eternal.steps[eternal.at]).toMatchObject({ id: "GR_TARTARUS", end: true });
   });
 
+  it("希腊: an ordinary soul on the Asphodel Meadow is on the middle road, not the thousand years (2026-11-11)", () => {
+    const r = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_ASPHODEL_MEADOW"), hall: "", now: NOW }, tr)!;
+    expect(r.steps[r.at]).toMatchObject({ id: "GR_ASPHODEL_MEADOW", label: "阿斯福得草原" });
+    expect(r.steps.map((s) => s.id)).toEqual(["DEATH", "GR_ACHERON", "GR_PLATO_MEADOW", "GR_ASPHODEL_MEADOW", "LETHE"]);
+    expect(r.steps.map((s) => s.id)).not.toContain("CYCLE");
+  });
+
   it("no definite place, no route: alive, an unknown station, a plan with nothing current", () => {
     expect(soulRoute({ me: me({ diyu_station: "" } as never), civ: "cn", hall: "", now: NOW }, tr)).toBeNull();
     expect(soulRoute({ me: me({ current_state: "ALIVE" }), civ: "eg", hall: "", now: NOW }, tr)).toBeNull();

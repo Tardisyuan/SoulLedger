@@ -504,19 +504,24 @@ EUROPEAN_REALMS = [
 # and a soul in it reads the European ledger reading (culpa/poena) rather than
 # the term-served one Republic X actually describes.
 #
-# WHY THERE ARE EXACTLY THREE ROWS, AND WHY THE OBVIOUS FOURTH IS NOT HERE.
+# WHY THREE OF THE ROWS ARE 524a'S (the crossing is Virgil's; Asphodel, below, is
+# neither author's but the owner's 2026-11-11 decision).
 # Gorgias 524a is one passage and it names three places: the meadow at the
 # parting of the ways, and the two roads out of it — "the two ways leading, one
 # to the Isles of the Blest, and the other to Tartarus". The two destinations
 # are added *because that sentence names them*, and for no other reason. They
 # are not the start of a map of the Greek underworld.
 #
-# Asphodel is the case that proves the rule and it is deliberately absent.
-# Homer's ἀσφοδελὸς λειμών (Od. 11.538-540) is where Achilles walks — a hero,
-# not a middling soul — and the neat Tartarus/Asphodel/Elysium triad is a modern
-# textbook systematisation, not a division any ancient author makes. Adopting
-# Aeneid 6 does not rescue it: Virgil has no asphodel region either. It stays out
-# under both halves of the basis, which is a stronger statement than it was.
+# ASPHODEL IS NOW A FIFTH ROW, BY THE OWNER'S DECISION AND NOT BY EITHER TEXT.
+# Until 2026-11-11 it was deliberately absent: Homer's ἀσφοδελὸς λειμών (Od.
+# 11.538-540) is where Achilles walks — a hero, not a middling soul — the neat
+# Tartarus/Asphodel/Elysium triad is a modern textbook systematisation, and
+# Virgil has no asphodel region either. Those findings still stand (docs/01 §2.5,
+# docs/04 §2.2). On 2026-11-11 the owner ruled that the judgment follows docs/04
+# §三's flow chart, which is three-way: the just to the Isles, ordinary souls to
+# the Asphodel Meadow, the great wrongdoers to Tartarus. So GR_ASPHODEL_MEADOW is
+# seeded as the middle road out of the fork, and it is the one row whose basis is
+# that decision rather than Gorgias 524a or Aeneid 6 — its description says so.
 #
 # THE RIVERS ARE NOW PLACED BY ONE AUTHOR RATHER THAN SYNTHESISED FROM FOUR,
 # which is what changed when the basis did. This paragraph used to refuse all
@@ -553,7 +558,10 @@ EUROPEAN_REALMS = [
 # and other tables quote, so realms/0032 rewrites every stored copy (as realms/0012
 # and realms/0015 did for theirs).
 #
-# TWO OF THE THREE ARE DISPOSITION DESTINATIONS NOW; THE MEADOW IS NOT ONE.
+# THREE ROWS ARE DISPOSITION DESTINATIONS NOW; THE MEADOW IS NOT ONE.
+# (Since 2026-11-11 the third is GR_ASPHODEL_MEADOW, where a PURGATORY verdict
+# goes — see the comment on its row. The paragraph below predates it: what it
+# says of PURGATORY now holds of RETRY alone.)
 # This paragraph used to say that none of them was, because `DispositionService`
 # had no Greek branch and "routing to Tartarus or the Isles requires a Greek
 # verdict vocabulary this system does not have". It has one now, and the
@@ -680,6 +688,27 @@ GREEK_REALMS = [
      "Hesiod (Theogony 720ff) is a third account — the pit the Titans are "
      "imprisoned in, not a destination for human dead — and is not seeded.",
      "LETHE", False, None),
+    # THE MIDDLE ROAD (owner, 2026-11-11; docs/04 §三): ordinary souls — the
+    # verdict PURGATORY, "intermediate", which for this civilization no longer
+    # means "not yet decided" (`apps/judgment/models.py::hears_again`). docs/04
+    # gives no numeric condition, so no ledger figure selects it: the judges'
+    # middle verdict does, the same way PASSED and FAILED select the other two.
+    # After it: docs/04 does not put the meadow on the thousand-year circuit
+    # (Republic X has no asphodel), so it has no default term (`default_terms`)
+    # and is not eternal — the soul is rebirth-capable like every Greek soul
+    # whose disposition is executed. LETHE for the reason given on the Isles row:
+    # the drink is on the road back to a body, and a rebirth follows from here.
+    # name_egy is blank: Design has given no egy word yet (egyPendingKeys.json).
+    ("GR_ASPHODEL_MEADOW", "阿斯福得草原", "阿斯福得草原", "The Asphodel Meadow", "",
+     RealmType.NEUTRAL, 1,
+     "Where ordinary souls go — neither the just sent right nor the great "
+     "wrongdoers sent left — on the three-way judgment this system follows by "
+     "the owner's decision of 2026-11-11 (docs/04 §三). Homer's asphodel field "
+     "(Od. 11.538-540, 11.573) is where all shades walk, Achilles among them, "
+     "and draws no moral line; the middling-souls precinct is a later "
+     "systematisation, and neither Plato nor Virgil has the region. Recorded "
+     "here so the row is not mistaken for a source claim.",
+     "LETHE", False, None),
 ]
 
 # child realm_code -> the realm it is a part of. `Realm.parent_realm` has
@@ -714,8 +743,10 @@ REALM_PARENTS = {
     # branches out of it — Gorgias 524a, "the two ways leading, one to the
     # Isles of the Blest, and the other to Tartarus". Which branch is which is
     # REALM_TOPOLOGY's `fork`, at the bottom of this file.
+    # Asphodel is the third branch (MIDDLE) since 2026-11-11.
     "GR_TARTARUS": "GR_PLATO_MEADOW",
     "GR_ISLES_OF_THE_BLESSED": "GR_PLATO_MEADOW",
+    "GR_ASPHODEL_MEADOW": "GR_PLATO_MEADOW",
 }
 
 # THE GATES OF THE DUAT ARE THE DEAD PERSON'S, NOT RA'S.
@@ -960,9 +991,9 @@ EGYPTIAN_REALMS = [
 # GREEK. `fork` places each road out of the meadow. LEFT / RIGHT are Plato's own
 # words and not a drawing convention: Republic X 614c-d has the judges send
 # the just to the right and upward through the heaven, and the unjust to the
-# left and downward. There is no middle road — that would be Asphodel, which
-# this table refuses (see GREEK_REALMS above); the contract's unused MIDDLE value
-# was removed on 2026-09-25 (apps/realms/migrations/0020).
+# left and downward. The middle road is Asphodel: MIDDLE was removed on
+# 2026-09-25 (realms/0020) while the table refused the row, and restored on
+# 2026-11-11 (realms/0033) when the owner adopted docs/04 §三's three-way split.
 # The meadow and the crossing are not roads and carry no fork.
 # --------------------------------------------------------------------------
 _COURT_ORDER = {
@@ -1013,4 +1044,5 @@ REALM_TOPOLOGY = {
     },
     "GR_TARTARUS": {"fork": RealmFork.LEFT},
     "GR_ISLES_OF_THE_BLESSED": {"fork": RealmFork.RIGHT},
+    "GR_ASPHODEL_MEADOW": {"fork": RealmFork.MIDDLE},
 }

@@ -126,7 +126,7 @@ class DiyuStation(models.TextChoices):
     TUDI_TEMPLE = "TUDI_TEMPLE", "土地庙"
     YELLOW_SPRINGS_ROAD = "YELLOW_SPRINGS_ROAD", "黄泉路"
     WANGXIANG_TERRACE = "WANGXIANG_TERRACE", "望乡台"
-    EVIL_DOG_VILLAGE = "EVIL_DOG_VILLAGE", "恶狗村"
+    EVIL_DOG_VILLAGE = "EVIL_DOG_VILLAGE", "恶狗岭"
     GOLDEN_ROOSTER_HILL = "GOLDEN_ROOSTER_HILL", "金鸡山"
     WILD_GHOST_VILLAGE = "WILD_GHOST_VILLAGE", "野鬼村"
     MIHUN_HALL = "MIHUN_HALL", "迷魂殿"
@@ -251,7 +251,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
     #: 地府十三站(2026-10-28,docs/06 §一 总览表):亡魂此刻走到哪一站。空 = 不在路上(在世、或还没有记录)。
     #: 次序取 §一 总览表(2026-10-28 用户定;06 §二 详解章与 docs/09 §4.3 已改成同一套)。
-    #: 第四站用 06 §〇 的正名「恶狗村」。只在地府;只经 `apps/souls/stations.py` 写。
+    #: 第四站叫「恶狗岭」(06 §一 总览表;2026-11-11 用户定，不用 §〇 考出的「恶狗村」)。存的值仍是 `EVIL_DOG_VILLAGE`。只在地府;只经 `apps/souls/stations.py` 写。
     DiyuStation = DiyuStation  # module level, so drf-spectacular can name it (config/settings.py)
 
     diyu_station = models.CharField(max_length=20, choices=DiyuStation.choices, blank=True, default="")

@@ -212,7 +212,11 @@ export function RouteMap({
       body = (
         <div>
           {run(topology.trunk)}
-          <div className="grid grid-cols-2 gap-3 mt-1 pt-3 border-t border-[oklch(var(--color-line-strong))]">
+          {/* 两条或三条路(希腊的中间那条是阿斯福得草原,2026-11-11),一条一栏。 */}
+          <div
+            className="grid gap-3 mt-1 pt-3 border-t border-[oklch(var(--color-line-strong))]"
+            style={{ gridTemplateColumns: `repeat(${topology.roads.length}, minmax(0, 1fr))` }}
+          >
             {topology.roads.map((road) => {
               const end = road.fork === "RIGHT";
               return (

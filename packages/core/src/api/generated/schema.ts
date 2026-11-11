@@ -12635,7 +12635,7 @@ export interface components {
          * @description * `TUDI_TEMPLE` - 土地庙
          *     * `YELLOW_SPRINGS_ROAD` - 黄泉路
          *     * `WANGXIANG_TERRACE` - 望乡台
-         *     * `EVIL_DOG_VILLAGE` - 恶狗村
+         *     * `EVIL_DOG_VILLAGE` - 恶狗岭
          *     * `GOLDEN_ROOSTER_HILL` - 金鸡山
          *     * `WILD_GHOST_VILLAGE` - 野鬼村
          *     * `MIHUN_HALL` - 迷魂殿
@@ -18794,6 +18794,7 @@ export interface components {
              * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中(阿斯福得草原)
              *     * `RIGHT` - 右(至福岛)
              *     * `PASS` - 过(称心通过)
              *     * `FAIL` - 不过(第二次死亡)
@@ -18864,6 +18865,7 @@ export interface components {
              * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中(阿斯福得草原)
              *     * `RIGHT` - 右(至福岛)
              *     * `PASS` - 过(称心通过)
              *     * `FAIL` - 不过(第二次死亡)
@@ -18874,12 +18876,13 @@ export interface components {
         };
         /**
          * @description * `LEFT` - 左(塔尔塔罗斯)
+         *     * `MIDDLE` - 中(阿斯福得草原)
          *     * `RIGHT` - 右(至福岛)
          *     * `PASS` - 过(称心通过)
          *     * `FAIL` - 不过(第二次死亡)
          * @enum {string}
          */
-        RealmForkEnum: "LEFT" | "RIGHT" | "PASS" | "FAIL";
+        RealmForkEnum: "LEFT" | "MIDDLE" | "RIGHT" | "PASS" | "FAIL";
         /**
          * @description * `HALL` - 殿
          *     * `GATE` - 门
@@ -18938,6 +18941,7 @@ export interface components {
              * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中(阿斯福得草原)
              *     * `RIGHT` - 右(至福岛)
              *     * `PASS` - 过(称心通过)
              *     * `FAIL` - 不过(第二次死亡)

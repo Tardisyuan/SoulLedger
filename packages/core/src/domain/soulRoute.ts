@@ -159,6 +159,12 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
       const steps = [...base, step(r.code, realm(r.code)), cycle, lethe];
       return { civ, steps, at: 3, place: steps[3].label, path: tr("live.path.gr_isles") };
     }
+    if (r?.code === "GR_ASPHODEL_MEADOW") {
+      // Ordinary souls (docs/04 §三, user 2026-11-11): the middle road. Not the thousand-year circuit — no term;
+      // a rebirth follows, so Lethe comes after it as on the other two roads.
+      const steps = [...base, step(r.code, realm(r.code)), lethe];
+      return { civ, steps, at: 3, place: steps[3].label, path: steps[3].label };
+    }
     if (r?.code === "GR_TARTARUS" && r.station.is_eternal) {
       const steps = [...base, step(r.code, realm(r.code), { end: true })];
       return { civ, steps, at: 3, place: steps[3].label, path: steps[3].label };
