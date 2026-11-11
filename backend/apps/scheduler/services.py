@@ -383,7 +383,7 @@ def ops_alert(text: str) -> bool:
         logger.warning("ops alert (OPS_ALERT_WEBHOOK_URL not set; in-app only): %s", text)
         return False
     try:
-        requests.post(url, json={"text": text, "content": text}, timeout=10).raise_for_status()
+        requests.post(url, json={"text": text, "content": text}, timeout=10, allow_redirects=False).raise_for_status()
     except requests.RequestException:
         logger.exception("ops alert POST to OPS_ALERT_WEBHOOK_URL failed: %s", text)
         return False

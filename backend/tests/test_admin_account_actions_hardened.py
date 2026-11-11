@@ -104,6 +104,19 @@ class TestAdminOnAdmin:
         assert other_admin.is_active and other_admin.role == "ADMIN" and other_admin.check_password(OLD)
         assert other_admin.email == "other@example.com" and mfa.is_enabled(other_admin)
 
+    def test_a_hall_admin_may_not_reactivate_an_admin_the_global_admin_stopped(self, hall_admin, other_admin):
+        # Audit 2026-11-11 P-06: `activate/` skipped the rule `deactivate/` applies.
+        other_admin.is_active = False
+        other_admin.save(update_fields=["is_active"])
+        row, _ = _enable_mfa(hall_admin)
+        from tests.soul_account_support import officer_client
+
+        res = officer_client(hall_admin).post(f"{USERS}{other_admin.pk}/activate/", {"mfa_code": _code(row)},
+                                              format="json")
+        assert res.status_code == 403 and res.data["code"] == "admin_target_global_only", res.data
+        other_admin.refresh_from_db()
+        assert not other_admin.is_active
+
     def test_the_global_admin_needs_its_own_second_factor_turned_on(self, admin_user, other_admin):
         for method, url, body in _admin_actions(other_admin):
             res = _call(_client(admin_user), method, url, body)

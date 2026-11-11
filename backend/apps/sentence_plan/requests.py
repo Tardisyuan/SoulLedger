@@ -59,6 +59,7 @@ def normalize_changes(plan, from_tenant_code, changes, kind):
     * `realm_code` 必须是请求方文明的 realm(与联审参与方同一立场,§2.1);`is_eternal` / `memory_reset`
       由服务端抄 realm。
     * 只有 PENDING 节点能被减项(§3.2);已开始的刑要 ABORTED 或撤销整份计划。
+    * 减项与加项对称:只能减**自己殿**的节点(别殿的 → 400 `foreign_node`,审计 2026-11-11 A1-05)。
     * REOPEN 不带改动(重开审判的结论才改计划,N1=(a))。
     """
     from apps.realms.models import realm_by_code
@@ -113,6 +114,13 @@ def normalize_changes(plan, from_tenant_code, changes, kind):
             raise PlanChangeRefusedError(
                 f"Node {node.order} is {node.status}; only a PENDING node can be removed",
                 "node_not_pending", node_status=node.status,
+            )
+        # Symmetric with `add` (audit 2026-11-11 A1-05): a hall removes only its own stops. Another hall's stop —
+        # the home hall's included — is taken off by the home judge, not asked away by a third party.
+        if node.tenant_code != from_tenant_code:
+            raise PlanChangeRefusedError(
+                f"{from_tenant_code} may remove only its own nodes; node {node.order} is {node.tenant_code}'s",
+                "foreign_node",
             )
     return {"add": added, "remove": removed}
 

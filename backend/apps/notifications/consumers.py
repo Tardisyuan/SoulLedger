@@ -17,6 +17,7 @@ Event Domains received:
   - dispatch      — cross-tenant dispatch events
   - deathsync     — death registration sync events
 """
+import asyncio
 import json
 import logging
 
@@ -24,6 +25,12 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 logger = logging.getLogger(__name__)
+
+#: A socket opened without `?token=` must send its `{"type": "auth"}` frame within this many seconds, or it is
+#: closed with 4001 (audit 2026-11-11 A2-05). Such a socket joins no group and receives nothing, but it held a
+#: connection for as long as the proxy's idle timeout allowed. The web client sends the frame right after `open`
+#: (one round trip); ten seconds leaves room for a slow phone, and a client that misses it simply reconnects.
+AUTH_DEADLINE_SECONDS = 10
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -58,11 +65,23 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 getattr(self.tenant, "code", None),
             )
         else:
-            # No token in query — accept and wait for auth message
+            # No token in query — accept and wait for auth message, for AUTH_DEADLINE_SECONDS at most.
             await self.accept()
+            self._auth_deadline = asyncio.ensure_future(self._close_unless_authenticated())
+
+    async def _close_unless_authenticated(self):
+        await asyncio.sleep(AUTH_DEADLINE_SECONDS)
+        if not getattr(self.user, "is_authenticated", False):
+            await self.close(code=4001)
+
+    def _cancel_auth_deadline(self):
+        deadline = getattr(self, "_auth_deadline", None)
+        if deadline is not None and not deadline.done():
+            deadline.cancel()
 
     async def disconnect(self, close_code):
         """Leave all joined groups."""
+        self._cancel_auth_deadline()
         for group_attr in ("user_group", "tenant_group", "officers_group"):
             if hasattr(self, group_attr):
                 await self.channel_layer.group_discard(
@@ -95,6 +114,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 await self.close(code=4001)
                 return
 
+            self._cancel_auth_deadline()
             self.user = user
             self.tenant = getattr(user, "tenant", None)
             # Write the identity back into the scope, and the permissions INTO

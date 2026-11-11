@@ -468,8 +468,12 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
 
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
-        """激活指定用户"""
+        """激活指定用户。与停用同一条规则(`_target_refusal`,审计 2026-11-11 P-06):对另一位 ADMIN 只许无殿 ADMIN
+        带自己的两步验证码,否则绑殿 ADMIN 能把全局管理员停用的同殿 ADMIN 重新启用。"""
         user = self.get_object()
+        refused = _target_refusal(request, user)
+        if refused:
+            return refused
         user.is_active = True
         user.save(update_fields=['is_active'])
         return Response(UserManagementSerializer(user).data)

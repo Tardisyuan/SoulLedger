@@ -173,7 +173,13 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # (has_concluded_judgment souls that were archived instead of
         # deleted) never come back through *this* toggle; `show_archived`
         # below is theirs.
-        show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
+        # Only for holders of `recycle_bin.read` (audit 2026-11-11 P-08): the deleted souls are the recycle bin's
+        # contents, and `soul.read` alone (VIEWER) must not reach them by a query parameter. Without the codename
+        # the parameter is ignored, not refused.
+        from apps.perm.checker import check_permission
+        show_deleted = (self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
+                        and self.request.user.is_authenticated
+                        and check_permission(self.request.user, 'recycle_bin.read'))
         if not show_deleted:
             qs = qs.filter(is_deleted=False)
         # 详情与取消归档要找得到已归档的灵魂(链接、搜索打开时详情页显示横条);列表默认不带。
