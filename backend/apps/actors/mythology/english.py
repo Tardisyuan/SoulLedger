@@ -44,7 +44,7 @@ REALM_DESCRIPTION_EN = {
     "叫唤大地狱 and the 十六诛心小地狱 - the court that tries the intent behind the act: malice, ingratitude, envy, miserliness. The 望乡台 stands here": "The Howling Hell and its sixteen small hells of the heart - the court that tries the intent behind the act: malice, ingratitude, envy, miserliness. The Terrace for Viewing Home stands here",
     "合大地狱 - refusing grain tax and rent, fraud in trade": "Great Crushing Hell - refusing grain tax and rent, fraud in trade",
     "大叫唤大地狱 - sacrilege and irreverence": "Great Howling Hell - sacrilege and irreverence",
-    "大热恼大地狱 - unfilial conduct and betrayal of one's own house": "Great Burning Hell - unfilial conduct and betrayal of one's own house",
+    "大热恼大地狱 - unfilial conduct: the parent left unkept in life and unburied in death": "Great Burning Hell - unfilial conduct: the parent left unkept in life and unburied in death",
     "活大地狱 - the mildest punishment court; abducting the young, seizing others' property, maiming others' eyes, ears, hands or feet": "Great Reviving Hell - the mildest punishment court; abducting the young, seizing others' property, maiming others' eyes, ears, hands or feet",
     "热恼大地狱 - taking bones for medicine, scattering of kin": "Burning Hell - taking bones for medicine, scattering of kin",
     "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy": "Avici Hell - the deepest hell; murder, arson, the crimes with no remedy",
