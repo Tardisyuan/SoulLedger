@@ -58,11 +58,12 @@ from apps.tenants.models import Tenant
 
 
 def _refused(exc):
-    """ValueError → 400 的响应体。带 `code` 的(`TargetHallClosedError`)一并写出,前端照 code 翻译。"""
+    """ValueError → 400 的响应体。带 `code` 的(`TargetHallClosedError`)一并写出,前端照 code 翻译。
+    异常带 `http_status` 的(`SoulHasPendingJudgmentError` 是 409)用它。"""
     body = {"error": str(exc)}
     if getattr(exc, "code", None):
         body["code"] = exc.code
-    return Response(body, status=status.HTTP_400_BAD_REQUEST)
+    return Response(body, status=getattr(exc, "http_status", status.HTTP_400_BAD_REQUEST))
 
 
 def hide_others_drafts(qs, user):

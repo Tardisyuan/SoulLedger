@@ -147,6 +147,16 @@ class SentencePlanActiveError(ValueError):
         super().__init__("This soul has a sentence plan in progress; dispatches follow the plan")
 
 
+class SoulHasPendingJudgmentError(ValueError):
+    """源殿还有这个灵魂未结案的审判:手动移交拒绝(用户 2026-11-11)。视图答 409(`http_status`)并带 `code`。"""
+
+    code = "soul_has_pending_judgment"
+    http_status = 409
+
+    def __init__(self):
+        super().__init__("The soul has an open judgment in this hall; conclude or withdraw it before dispatching")
+
+
 def _after_commit(send):
     """站内通知提交之后才发(与 `sentence_plan.services.notify_judges` 同一处理,`30052b65`)。
 
@@ -239,6 +249,13 @@ class DispatchService:
         # Validate soul belongs to source tenant
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
+        if manual:
+            # 用户 2026-11-11:源殿还有这个灵魂未结的审判,不许手动移交 —— 先结案或撤案。受刑计划的自动移交
+            # (`manual=False`)不受影响:计划本身就是审判结出来的。
+            from apps.judgment.models import open_judgments
+
+            if open_judgments(soul).filter(tenant_id=source_tenant.id).exists():
+                raise SoulHasPendingJudgmentError()
         # 暂居中的灵魂不再转调。原是保守默认;受刑计划落地后它就是用户的原话(设计稿
         # docs/ARCHITECTURE-sentence-plan.md §0):「完成后回到 A,检查还有嘛,有 C,那就去 C」——
         # 每一站执行完先回原属,再由原属(计划推进,`SentencePlanService.advance`)发起下一段。
