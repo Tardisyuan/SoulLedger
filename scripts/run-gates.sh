@@ -207,7 +207,8 @@ REMOTE_DEPS='
 # ── --e2e: PLAYWRIGHT ON THE REMOTE MACHINE (2026-10-28, user decision) ─────────────────────────
 #
 # `--e2e` runs chromium, `--e2e=all` the three projects, `--e2e=chromium,mobile-chrome` a list — the
-# project rule in CLAUDE.md (everyday chromium; layout adds mobile-chrome; all three before main).
+# project rule in CLAUDE.md (everyday chromium; layout adds mobile-chrome; chromium + mobile-chrome before
+# main — firefox is left to the daily CI since 2026-11-12, user decision; `--e2e=all` still runs all three).
 # It builds (`next build`) and runs `playwright test` in the image GATES_REMOTE_E2E_IMAGE (the gate
 # image plus Playwright 1.63's chromium and firefox), 4 workers, one retry: a test green on the retry
 # is reported as flaky, by name, not hidden. Measured 2026-10-28 on the unRAID box: build 31 s,

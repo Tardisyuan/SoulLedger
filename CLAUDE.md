@@ -345,7 +345,7 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     (本机 10-27:3.6 / 7.9 / 4.5 分钟)。10-30 一次调用之后 `--e2e=all` 全程 **309 s**(unRAID,与 10-28 不是同一棵树)。mobile-chrome 在 4 worker 下偶有一条慢到超时(两轮里各一条、每次不同),单独跑 10/10 过 ——
     所以用一次重试并点名，不加 skip。
   - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
-    改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前三个全跑)。
+    改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前 chromium + mobile-chrome;firefox 交给每日 CI,2026-11-12)。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /
   源码里写了 `apps.<app>` / 调了该 app 的 `/api/v1/<前缀>/`」的测试文件,前缀从 `config/urls.py` 读;
   再加上 `reads-outside-backend.txt` 里命中的读文件测试。改了 `backend/config/`、任一 conftest、`pytest.ini`、
@@ -546,10 +546,14 @@ npm run --workspace mobile typecheck
 npm run --workspace mobile lint
 npm run --workspace mobile test      # jest + jest-expo
 
-# E2E —— **先 build;本地按改动挑 project,合进 main 之前三个全跑**(2026-10-19 用户决定):
+# E2E —— **先 build;本地按改动挑 project**(2026-10-19 用户决定;合 main 那一档 2026-11-12 用户改定):
 #   日常改动          只跑 chromium
 #   改了布局或样式     chromium + mobile-chrome(393px 窄屏,下面那条真缺陷只有它抓得到)
-#   合进 main 之前     chromium + firefox + mobile-chrome,三个全跑
+#   合进 main 之前     chromium + mobile-chrome(`scripts/run-gates.sh --e2e=chromium,mobile-chrome`)。
+#                     **firefox 只交给每日 CI**(2026-11-12 用户改定;此前是三个全跑):三引擎 309 s 对两引擎 162 s,
+#                     而这里的推送全是推 main,10-19 那条实际执行的一直是两个。CI 的 matrix 仍是三个,
+#                     所以 firefox 独有的回归最晚晚一天发现(`test_ci_runs_on_a_budget.py` 守着 matrix 里有它)。
+#                     `--e2e=all` 仍可手动跑三个。
 # 本地默认 2 个 worker(`playwright.config.ts`,`PW_WORKERS=4` 临时调高;CI 仍是 1):
 # 默认的「核数一半」是 4 套浏览器加 `next start`,会把这台机器吃满。CI 的 matrix 仍是三个都跑。
 # 下面是这条规矩之前的理由 —— 三个 project 为什么都存在:

@@ -117,3 +117,11 @@ def test_the_demo_build_is_checked_against_its_recording():
     job = yaml.safe_load((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))["jobs"]["e2e-demo"]
     assert job["env"]["NEXT_PUBLIC_DEMO_MODE"] == "1"
     assert any("playwright.demo.config.ts" in step.get("run", "") for step in job["steps"])
+
+
+def test_the_daily_e2e_still_runs_all_three_engines():
+    """Firefox runs only here since 2026-11-12 (user decision): before main, the gates run chromium +
+    mobile-chrome (CLAUDE.md, E2E). Dropping firefox from this matrix would leave it run nowhere."""
+    data, _ = _load("ci.yml")
+    projects = {leg["project"] for leg in data["jobs"]["e2e"]["strategy"]["matrix"]["include"]}
+    assert projects == {"chromium", "firefox", "mobile-chrome"}, projects
