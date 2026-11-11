@@ -1159,24 +1159,26 @@
         "failed": "Failed",
         "conflict": "Conflict",
         "lock": "always · ADMIN",
-        "deny": "forbidden · circle moderator"
+        "deny": "forbidden · by rule"
       },
       "refused": {
-        "admin_only_permission": "Conflicts with the rule that recycle-bin restore and hard delete are ADMIN-only; sent back.",
+        "admin_only_permission": "Conflicts with the rule that only ADMIN may hold this permission; sent back.",
         "version_conflict": "Someone else changed this role; it was reloaded — look again.",
         "role_not_found": "The role no longer exists.",
         "permission_not_found": "The permission no longer exists.",
         "database_error": "A database error: this cell was not written.",
         "admin_always_all": "ADMIN always holds every permission",
         "conflict_unacknowledged": "This revoke leaves a workflow with no approver and was not acknowledged; sent back. Tick the acknowledgement in the conflict notice, then save.",
-        "role_forbidden_permission": "Conflicts with the rule that a Circle Moderator (MODERATOR) may not hold workflow approve, workflow advance or user management; sent back."
+        "role_forbidden_permission": "Conflicts with a rule: this role may not hold this permission (a role-forbidden permission, or “who designs a workflow does not approve it”); sent back."
       },
       "conflict_workflow_line": "After {{causes}}, step {{step}} ({{step_name}}) of the in-flight workflow “{{workflow}}” would have no approver.",
       "conflict_acknowledge": "Confirm the conflict: these changes affect {{n}} workflows, {{m}} of them in flight.",
       "lock_word": "always",
       "lock_hint": "The ADMIN role always holds every permission; it cannot be unticked.",
       "deny_word": "forbidden",
-      "deny_hint": "A Circle Moderator cannot be granted 「{{perm}}」.",
+      "deny_hint": "Role rule: this role may never hold 「{{perm}}」.",
+      "deny_hint_capability": "Who designs a workflow does not approve it: while this role holds workflow design it cannot be granted approve or advance, and while it holds approve or advance it cannot be granted design — 「{{perm}}」 cannot be granted now.",
+      "deny_hint_admin_only": "Only ADMIN may hold 「{{perm}}」.",
       "conflict_view": "View",
       "category_all": "All",
       "category_none": "None",
