@@ -768,6 +768,10 @@ class TestJestSelection:
             # 2026-10-27: a language pack is traced through its static imports.
             ["packages/core/messages/en.json"],
             ["frontend/app/page.tsx", "packages/core/messages/egy.json"],
+            # 2026-11-12: imported by their jest readers, or read by always-run tests, or reached by none.
+            ["frontend/src/__tests__/support/egyPendingKeys.json"],
+            ["frontend/src/__tests__/support/egyVocabulary.json"],
+            ["frontend/demo/data/judge.zh.json", "frontend/demo/data/home-preview.json"],
         ],
     )
     def test_an_ordinary_source_change_is_selective(self, hook, changed):
@@ -782,7 +786,9 @@ class TestJestSelection:
             ["frontend/tsconfig.json"],
             ["packages/core/package.json"],
             ["package-lock.json"],
-            ["frontend/src/__tests__/support/egyVocabulary.json"],
+            # The 2026-11-12 exemption is those three names, not every data file next to them.
+            ["frontend/src/__tests__/support/egyVocabulary.json", "frontend/src/config/landing-stats.json"],
+            ["frontend/src/__tests__/support/egyOffLexicon.json"],  # exists: not the deleted-file rule
             ["scripts/run-gates.sh"],
             ["scripts/install-hooks.sh"],
             # A path that no longer exists: deleted, or the old half of a rename.

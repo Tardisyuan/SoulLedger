@@ -268,7 +268,9 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
 - **推到 main 不再强制全跑(2026-10-24 用户决定)**:此前推 main 一律全量，每次 15–20 分钟、负载近 20,而这里的推送全是推 main。
   现在 main 和任何分支一样按改动跑;要全量就 `scripts/run-gates.sh --full` 或 `GATES_FULL=1`。跨区漏网靠「读文件」清单兜底。
 - **什么强制全跑**(输出里逐条写明是哪条规则、哪个文件):`--full`、`GATES_FULL=1`、
-  `frontend/` 或 `packages/core/` 下的 JSON / MD / YAML(语言包除外)、这两处的顶层配置文件(jest / ts / next / eslint 配置、package.json,
+  `frontend/` 或 `packages/core/` 下的 JSON / MD / YAML(语言包除外;**2026-11-12 起(用户决定)`egyPendingKeys.json`、`egyVocabulary.json`、
+  `frontend/demo/data/*.json` 也除外**:前两个被读它们的 jest 测试静态 import 或在 always-run 里，录制数据没有任何 jest 测试走得到、由演示 E2E 守;
+  此前最近 400 个提交里 104 个因这三类全量)、这两处的顶层配置文件(jest / ts / next / eslint 配置、package.json,
   也包括 `jest.always-run.txt` 本身)、根上的 JS 依赖树(package*.json、.nvmrc)、删掉或改名的文件、
   不认识的根文件、以及门禁脚本本身(`run-gates.sh` / `install-hooks.sh`)。
   `--affected` 就是默认行为;**没有任何办法强制选择性运行** —— `GATES_FULL=0` 不是开关。

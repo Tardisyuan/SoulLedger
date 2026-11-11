@@ -716,8 +716,21 @@ full() { FULL_F="$FULL_F$1"$'\n'; }
 [ "${GATES_FULL:-}" = 1 ] && full "GATES_FULL=1"
 unset PREPUSH_TO_MAIN
 [ -n "$UNKNOWN_ROOT" ] && full "a root-level file this script does not recognise"
+# THREE MORE KINDS OF DATA FILE ARE SELECTIVE (2026-11-12, user decision). They sent 104 of the last 400
+# commits to a full jest (egyPendingKeys.json 42, egyVocabulary.json 30, each recording 17–19), and a full
+# run tests them no better than the selection does:
+#   - egyPendingKeys.json is a static `import` in its jest readers (SchedulerPage, courtLabel,
+#     domainNamespaceContract tests), which --findRelatedTests follows as it does a language pack;
+#   - egyVocabulary.json is imported and written by egyLexiconRules.test.ts, which is always-run;
+#   - frontend/demo/data/*.json: soul-letters / home-preview / assist-replies are imported (statically, or
+#     by a literal `import()`), and the recordings are loaded by a computed `import(\`./data/${role}…\`)` that
+#     no jest test reaches at all — a full run executes the same tests on them as the selection. The demo
+#     E2E is what tests the recordings.
+# A test that reads one of them with fs is always-run by construction (jestAlwaysRunList.test.ts), and
+# every frontend change runs the whole always-run list.
+JEST_TRACED_DATA_RE='^(packages/core/messages/|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/[^/]+\.json$)'
 while IFS=$'\t' read -r re name; do
-    hit=$(echo "$CHANGED" | grep -v '^packages/core/messages/' | grep -E "$re" | head -1)
+    hit=$(echo "$CHANGED" | grep -vE "$JEST_TRACED_DATA_RE" | grep -E "$re" | head -1)
     [ -n "$hit" ] && full "$name: $hit"
 done <<<"$FULL_RULES"
 # A deleted or renamed file cannot be traced: the import edge to it is gone
