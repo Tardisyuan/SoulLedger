@@ -123,8 +123,14 @@ def send_after_commit(user):
 
 def invite(email, role, tenant, *, actor, username="", display_name="", request=None) -> tuple[User, bool]:
     """(被邀请人, 是否新建)。"""
+    from .serializers import may_assign_role
+
     email = email.strip()
     existing = validate(email, role, tenant, username=username)
+    # The ceiling every other way of giving a role applies (create, update, assign_roles, CSV import, the role
+    # drawer): an invitation is an account with that role, sent to an address the inviter chooses (audit P-04).
+    if not may_assign_role(actor, role):
+        raise InviteRefusedError("role_forbidden", "Cannot assign a role more privileged than your own.", "role")
     with transaction.atomic():
         user = existing or create_invitee(email, role, tenant, username=username, display_name=display_name)
         _audit(user, f"管理员邀请官员 {email}" + ("(重发)" if existing else ""), request=request,
