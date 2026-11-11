@@ -69,20 +69,41 @@ def _this_lifes_records(soul):
 def scores_hidden_from(user) -> bool:
     """Whether `user` may not see merit / demerit scores or the karmic balance — the floor documented on
     `SoulSerializer` (main role VIEWER). The one answer for every exit that carries a score: the soul
-    serializers, `souls/{id}/karma/`, `souls/export/`, `ledger/balance/`, `ledger/stats/export/`
-    (audit 2026-11-11 P-02: the four endpoints handed out what the serializers withheld)."""
+    serializers (record weights included), `souls/{id}/karma/`, `souls/{id}/records/`, `souls/export/`,
+    `ledger/balance/` / `effective/` / `inheritance/`, `ledger/journal/` and its export, `ledger/stats/export/`,
+    and the one-soul averages of `ledger/stats/overview/` (audit 2026-11-11 P-02: those exits handed out what
+    the serializers withheld)."""
     return getattr(user, "role", None) == "VIEWER"
 
 
-def hidden_scores_refusal(user):
-    """403 for an endpoint whose whole body is the score (karma / balance summary), or None. Rows that carry
-    other data keep it and lose only the score cells, as the soul detail does."""
-    if not scores_hidden_from(user):
-        return None
-    from rest_framework.response import Response
+#: Score keys of a ledger body (`LedgerService.get_ledger_summary` / `get_effective_ledger` /
+#: `get_reincarnation_inheritance`), nulled for a caller `scores_hidden_from` names.
+LEDGER_SCORE_KEYS = (
+    "merit_score", "demerit_score", "karmic_balance",
+    "effective_merit", "effective_demerit", "effective_balance",
+    "inherited_merit", "inherited_demerit",
+)
+#: Score keys inside `reading` (apps/ledger/readings.py): the Chinese balance and its pools, the Egyptian
+#: heart weight, the European culpa. Record counts (Greek wrongs / benefactions, culpa_record_count), the
+#: Greek sentence clock and the Egyptian verdict flag are not scores and stay: the Greek itinerary and the
+#: underworld map draw from them for every reader.
+READING_SCORE_KEYS = ("balance", "merit", "demerit", "non_fungible", "heart_weight", "culpa")
 
-    return Response({"error": "Merit and demerit scores are not shown to this role.", "code": "scores_hidden"},
-                    status=403)
+
+def hide_ledger_scores(body: dict) -> dict:
+    """A copy of a ledger body with every score nulled and the rest kept — the detail's reading applied to
+    `souls/{id}/karma/`, `ledger/balance/`, `effective/`, `inheritance/`. A copy: the summary is cached."""
+    body = {key: (None if key in LEDGER_SCORE_KEYS else value) for key, value in body.items()}
+    if isinstance(body.get("records"), list):
+        body["records"] = [{**r, "original_weight": None, "effective_weight": None} for r in body["records"]]
+    if isinstance(body.get("reading"), dict):
+        body["reading"] = {k: (None if k in READING_SCORE_KEYS else v) for k, v in body["reading"].items()}
+    return body
+
+
+def ledger_body_for(user, body: dict) -> dict:
+    """`body` as `user` may see it."""
+    return hide_ledger_scores(body) if scores_hidden_from(user) else body
 
 
 def is_viewer(context) -> bool:
@@ -225,6 +246,12 @@ class SoulRecordSerializer(serializers.ModelSerializer):
     # (`SoulSerializer.civilization`) already has.
     civilization = serializers.CharField(read_only=True)
     statute = _StatuteField(required=False, allow_null=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if is_viewer(self.context):
+            data["weight"] = None  # summed, the weights are the score the soul serializers withhold (P-02)
+        return data
 
     class Meta:
         model = SoulRecord

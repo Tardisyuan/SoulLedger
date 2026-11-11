@@ -118,6 +118,9 @@ export function SoulKarmaLedgerCard({
   const { t, tf } = useI18n();
   const { CHART_SERIES } = useChartColors();
 
+  // VIEWER: the backend nulls every score (audit P-02). The raw / decayed breakdown, the bar chart and the
+  // next-life preview are nothing but scores, so they are left out rather than drawn as zeros.
+  const withheld = meritScore == null;
   const rawMerit = records.filter((r) => r.type === "MERIT").reduce((s, r) => s + r.original_weight, 0);
   const rawDemerit = records.filter((r) => r.type === "DEMERIT").reduce((s, r) => s + r.original_weight, 0);
   const rawBalance = rawMerit - rawDemerit;
@@ -171,6 +174,7 @@ export function SoulKarmaLedgerCard({
           karmicBalance={karmicBalance}
         />
 
+        {!withheld && (
         <div className="mt-4 pt-3 border-t border-[oklch(var(--color-line))] space-y-2">
           <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">
             {tf("ledger.raw_vs_decayed", "原始 / 衰减后")}
@@ -288,6 +292,7 @@ export function SoulKarmaLedgerCard({
             </p>
           </div>
         </div>
+        )}
 
         {/* A count, classified as one in SUMMARY_QUANTITIES and deliberately not
             a figure: it already carries its noun ("12 条记录"), which is what
@@ -298,7 +303,7 @@ export function SoulKarmaLedgerCard({
           {recordCount} {t("souls.detail.records")}
         </div>
 
-        {records.length > 0 && (
+        {!withheld && records.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-[oklch(var(--color-ink-muted))] mb-2">{t("ledger.timeline")}</p>
             <LifespanBarChart
@@ -349,7 +354,7 @@ export function SoulKarmaLedgerCard({
       {/* 下一世继承 — only when the API actually has a forward preview (a
           409/REBIRTH_NOT_APPLICABLE for a terminal cosmology resolves this to
           null; see ledgerApi.inheritance's caller in page.tsx). */}
-      {inheritance && (
+      {inheritance && !withheld && (
         <div>
           <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 mb-3 border-b border-[oklch(var(--color-block))]">
             {t("ledger.next_life_inheritance")}

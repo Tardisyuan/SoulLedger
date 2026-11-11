@@ -52,7 +52,7 @@ from apps.souls.serializers import (
     SoulStationMoveSerializer,
     SoulStationRefusalSerializer,
     SoulTransitionSerializer,
-    hidden_scores_refusal,
+    ledger_body_for,
     scores_hidden_from,
 )
 
@@ -756,12 +756,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     @action(detail=True, methods=["get"])
     def karma(self, request, pk=None):
         """Get full karma summary for a soul."""
-        refused = hidden_scores_refusal(request.user)
-        if refused:
-            return refused
         soul = self.get_object()
         summary = LedgerService.get_ledger_summary(soul)
-        return Response(summary)
+        return Response(ledger_body_for(request.user, summary))
 
     @action(detail=True, methods=["post"])
     def add_record(self, request, pk=None):
@@ -816,7 +813,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """List all records for a soul."""
         soul = self.get_object()
         records = soul.records.all()
-        serializer = SoulRecordSerializer(records, many=True)
+        serializer = SoulRecordSerializer(records, many=True, context={"request": request})
         return Response(serializer.data)
 
     @extend_schema(responses=SoulPathEntrySerializer(many=True))

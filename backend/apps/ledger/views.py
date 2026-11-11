@@ -40,7 +40,7 @@ from apps.perm.filters import DataScopeFilter
 from apps.realms.models import Realm, resolve_localized_name
 from apps.souls.dates import format_death_date
 from apps.souls.models import Soul, SoulState
-from apps.souls.serializers import hidden_scores_refusal, scores_hidden_from
+from apps.souls.serializers import ledger_body_for, scores_hidden_from
 from apps.tenants.models import Tenant
 
 
@@ -79,9 +79,6 @@ class LedgerBalanceView(APIView):
 
     @extend_schema(responses={200: LedgerSummarySerializer, 404: LedgerErrorSerializer})
     def get(self, request, soul_id):
-        refused = hidden_scores_refusal(request.user)  # the body is the score (P-02)
-        if refused:
-            return refused
         tenant = getattr(request, 'tenant', None)
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
@@ -92,7 +89,7 @@ class LedgerBalanceView(APIView):
             )
 
         summary = LedgerService.get_ledger_summary(soul)
-        return Response(summary)
+        return Response(ledger_body_for(request.user, summary))
 
 
 class LedgerRecalculateView(APIView):
@@ -146,9 +143,6 @@ class LedgerEffectiveView(APIView):
 
     @extend_schema(responses={200: LedgerEffectiveSerializer, 404: LedgerErrorSerializer})
     def get(self, request, soul_id):
-        refused = hidden_scores_refusal(request.user)  # the body is the score (P-02)
-        if refused:
-            return refused
         tenant = getattr(request, 'tenant', None)
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
@@ -159,7 +153,7 @@ class LedgerEffectiveView(APIView):
             )
 
         result = LedgerService.get_effective_ledger(soul)
-        return Response(result)
+        return Response(ledger_body_for(request.user, result))
 
 
 class LedgerInheritanceView(APIView):
@@ -192,9 +186,6 @@ class LedgerInheritanceView(APIView):
         }
     )
     def get(self, request, soul_id):
-        refused = hidden_scores_refusal(request.user)  # the body is the score (P-02)
-        if refused:
-            return refused
         tenant = getattr(request, 'tenant', None)
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
@@ -213,7 +204,7 @@ class LedgerInheritanceView(APIView):
             result = LedgerService.get_reincarnation_inheritance(soul)
         except RebirthNotApplicable as exc:
             return Response(exc.detail, status=exc.status_code)
-        return Response(result)
+        return Response(ledger_body_for(request.user, result))
 
 
 class LedgerJournalView(APIView):
@@ -268,7 +259,22 @@ class LedgerJournalView(APIView):
             )
         except JournalParamError as exc:
             return _journal_param_error(exc)
+        if scores_hidden_from(request.user):
+            _hide_journal_scores(body, searched=bool(params.get("search", "").strip()))
         return Response(LedgerJournalSerializer(body).data)
+
+
+def _hide_journal_scores(body: dict, *, searched: bool) -> None:
+    """P-02 for the journal. Each row's weight is a soul's deed score: nulled. The pillars and the category
+    sums are hall aggregates and stay — unless a search narrowed them to the souls it names, where they are
+    those souls' scores again (a one-soul search is that soul's ledger)."""
+    for row in body["results"]:
+        row["weight"] = None
+    if searched:
+        for key in ("opening", "received", "disbursed", "closing"):
+            body[key] = None
+        for row in body["categories"]:
+            row["merit"] = row["demerit"] = None
 
 
 def _journal_param_error(exc: JournalParamError) -> Response:
@@ -335,6 +341,7 @@ class LedgerJournalExportView(APIView):
         ])
         rows = rows_in_data_scope(request, period).select_related("soul").order_by("-recorded_at", "-id")
         written = 0
+        hide = scores_hidden_from(request.user)  # 列留着、格子空着(P-02)
         for r in rows.iterator(chunk_size=1000):
             written += 1
             merit = r.record_type == "MERIT"
@@ -347,8 +354,8 @@ class LedgerJournalExportView(APIView):
                 csv_safe(r.category),
                 csv_safe(r.description),
                 csv_safe(r.statute_clause),
-                r.weight if merit else "",
-                "" if merit else r.weight,
+                "" if hide or not merit else r.weight,
+                "" if hide or merit else r.weight,
             ])
         record_export(request, resource="ledger_journal", rows=written)
         return response
@@ -433,6 +440,13 @@ class LedgerOverviewStatsView(APIView):
         ]
         average_raw = soul_qs.aggregate(avg=Avg(balance))["avg"]
         average_balance = _one_decimal(average_raw)
+        # P-02: an average over one soul is that soul's balance. Hall aggregates stay for every reader.
+        if scores_hidden_from(user):
+            for row in state_distribution:
+                if row["count"] == 1:
+                    row["average_balance"] = None
+            if total_souls == 1:
+                average_raw = average_balance = None
 
         # 较上月:上个月的快照(apps/ledger/snapshots.py),与上面的 soul_qs 同一个划界 ——
         # 不带租户的 ADMIN 看全部,带租户的只看这个租户。没有上月快照就是 null,前端隐藏。

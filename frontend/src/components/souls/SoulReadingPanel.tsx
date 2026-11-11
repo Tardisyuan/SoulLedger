@@ -3,6 +3,7 @@
 import type { LedgerReading, UnavailableReasonCode } from "@soulledger/core/api/ledger";
 import { READING_QUANTITIES, SUMMARY_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 // The Greek fork — its geometry, and the long argument for why the two roads
 // have no cell to be combined in — lives in its own module. It is the one
 // branch whose *layout* is the load-bearing part, so it is the one worth
@@ -145,7 +146,7 @@ function BalanceReading({
           t={t}
           className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          +{reading.merit}
+          {reading.merit == null ? <Withheld t={t} /> : `+${reading.merit}`}
         </Figure>
       </span>
       <span className={`${cell} ${wide}`} />
@@ -160,7 +161,7 @@ function BalanceReading({
           t={t}
           className="font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          -{reading.demerit}
+          {reading.demerit == null ? <Withheld t={t} /> : `-${reading.demerit}`}
         </Figure>
       </span>
       <span className={`${last} ${wide}`} />
@@ -175,13 +176,17 @@ function BalanceReading({
           t={t}
           className="text-md font-mono tabular-nums text-[oklch(var(--color-ink))]"
         >
-          {reading.balance >= 0 ? "+" : ""}
-          {reading.balance}
+          {reading.balance == null ? <Withheld t={t} /> : `${reading.balance >= 0 ? "+" : ""}${reading.balance}`}
         </Figure>
       </span>
     </div>
     </div>
   );
+}
+
+/** A score the backend withheld (null for VIEWER, audit P-02): a marked gap, never "+", "0" or "null". */
+function Withheld({ t }: { t: TFunc }) {
+  return <MissingValue kind="unrecorded" reason={t("souls.balance_withheld")} />;
 }
 
 // ── EGYPTIAN (称心) — a threshold: the heart against a fixed feather ──
@@ -195,6 +200,7 @@ function ThresholdReading({
   const ratio = reading.counterweight > 0 ? reading.heart_weight / reading.counterweight : reading.heart_weight;
   const ratioText = `${Number.isInteger(ratio) ? ratio : ratio.toFixed(1)}×`;
   const failed = reading.heavier_than_feather;
+  const hidden = reading.heart_weight == null; // VIEWER(P-02):心重是分数,后端置 null
 
   return (
     <div className="space-y-3">
@@ -212,7 +218,7 @@ function ThresholdReading({
           t={t}
           className="text-lg tabular-nums text-[oklch(var(--color-ink))]"
         >
-          {ratioText}
+          {hidden ? <Withheld t={t} /> : ratioText}
         </Figure>
         {/* The hint states the two magnitudes and names the scale they are on;
             the multiple is the headline's business alone.
@@ -224,13 +230,15 @@ function ThresholdReading({
             the same "a number is not the kind it looks like" defect this whole
             change is about, one field along. The scale word is interpolated
             rather than written into the sentence so there is one copy of it. */}
-        <span className="text-xs text-[oklch(var(--color-ink-muted))] mt-1 text-center">
-          {t("souls.detail.reading.threshold_hint", {
-            weight: String(reading.heart_weight),
-            counterweight: String(reading.counterweight),
-            scale: t("ledger.figure_scale_weight"),
-          })}
-        </span>
+        {!hidden && (
+          <span className="text-xs text-[oklch(var(--color-ink-muted))] mt-1 text-center">
+            {t("souls.detail.reading.threshold_hint", {
+              weight: String(reading.heart_weight),
+              counterweight: String(reading.counterweight),
+              scale: t("ledger.figure_scale_weight"),
+            })}
+          </span>
+        )}
       </div>
       <div className="flex justify-center">
         {/* 判决结果,不是操作失败(Design E 组):ink 字 + 1px ink3 框,「未过」前加 ✕,
@@ -271,7 +279,7 @@ function GuiltAndPenaltyReading({
             t={t}
             className="text-md tabular-nums text-[oklch(var(--color-ink))]"
           >
-            {reading.culpa}
+            {reading.culpa == null ? <Withheld t={t} /> : reading.culpa}
           </Figure>
         </div>
         {/* `culpa_record_count` is classified a count and deliberately stays in
@@ -400,19 +408,19 @@ function UnavailableReading({
         <div className="flex justify-between text-sm">
           <span className="text-[oklch(var(--color-ink-muted))]">{t("souls.detail.merit")}</span>
           <Figure field="merit_score" quantity={SUMMARY_QUANTITIES.merit_score} t={t} className="tabular-nums text-[oklch(var(--color-ink))]">
-            {meritScore}
+            {meritScore ?? <Withheld t={t} />}
           </Figure>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-[oklch(var(--color-ink-muted))]">{t("souls.detail.demerit")}</span>
           <Figure field="demerit_score" quantity={SUMMARY_QUANTITIES.demerit_score} t={t} className="tabular-nums text-[oklch(var(--color-ink))]">
-            {demeritScore}
+            {demeritScore ?? <Withheld t={t} />}
           </Figure>
         </div>
         <div className="flex justify-between text-sm border-t border-[oklch(var(--color-line))] pt-1">
           <span className="text-[oklch(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
           <Figure field="karmic_balance" quantity={SUMMARY_QUANTITIES.karmic_balance} t={t} className="tabular-nums text-[oklch(var(--color-ink))]">
-            {karmicBalance}
+            {karmicBalance ?? <Withheld t={t} />}
           </Figure>
         </div>
       </div>
