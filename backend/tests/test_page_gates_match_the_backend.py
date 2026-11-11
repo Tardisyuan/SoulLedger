@@ -205,10 +205,8 @@ ADMIN = "ADMIN"
 
 #: 菜单码与页门码不同、而哪边对还没定的页面 -> 原因。不是豁免:每条都要写明待谁定;
 #: 一旦两边对齐,`test_the_page_gate_admits_the_menu_rows_codename` 会要求删掉这一条。
-GATE_CODE_UNDECIDED = {
-    "/menus": "审计 2026-11-11 C-06:菜单 menu.manage(只有无殿管理员)、页门 menu.read(人人持有),哪边对待用户定。",
-    "/judgment/capture-due": "审计 2026-11-11 C-06:菜单 capture.issue、页门 capture.read,哪边对待用户定。",
-}
+#: 2026-11-11 用户定 C-06 的两条(`/menus`、`/judgment/capture-due`)都让菜单跟页门走(menus/0038),名单清空。
+GATE_CODE_UNDECIDED: dict[str, str] = {}
 
 _OUTER_PERMISSIONS = re.compile(r'<RequirePermission\b[^>]*?\bpermissions=(?:"([^"]+)"|\{\[([^\]]*)\]\})', re.S)
 _EARLY_CODE = re.compile(r'^  if \(\s*!\s*(?:hasPermission\("([^"]+)"\)|(isAdmin)\b|(can[A-Z]\w*)\s*\))', re.M)

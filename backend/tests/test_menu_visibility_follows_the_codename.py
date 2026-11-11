@@ -59,7 +59,12 @@ def _names(payload):
 @pytest.fixture
 def system_settings(db):
     """The seeded shape: an ADMIN-only directory with ADMIN-only pages, one of
-    which also names a codename (`/scheduler`, menus/0015)."""
+    which also names a codename (`/scheduler`, menus/0015).
+
+    The migrated rows go first: since menus/0038 the seeded `/menus` page carries `menu.read`, which every
+    built-in role holds, so the seeded 系统设置 would be open to VIEWER for that page's own reason and the
+    "the directory opens only for the one page" assertions below would be about the wrong rows."""
+    Menu.all_objects.all().delete()
     directory = Menu.objects.create(name="系统设置", menu_type="DIRECTORY", roles=["ADMIN"], order=60)
     users = Menu.objects.create(name="用户管理", path="/users", parent=directory, roles=["ADMIN"], order=10)
     scheduler = Menu.objects.create(

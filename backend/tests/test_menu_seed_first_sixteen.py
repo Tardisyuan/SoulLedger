@@ -20,6 +20,7 @@ codename_module = importlib.import_module("apps.menus.migrations.0029_first_sixt
 # 0032 收窄了 /dispatch /workflow /disposition /death-sync 的 roles(rbac-web H-1),全新的库最终是它写的值。
 four_module = importlib.import_module("apps.menus.migrations.0032_four_menus_follow_their_page_codename")
 split_module = importlib.import_module("apps.menus.migrations.0033_menus_follow_the_split_codenames")
+page_gate_module = importlib.import_module("apps.menus.migrations.0038_menus_and_capture_due_follow_their_page_gate")
 FIRST_SIXTEEN = [m["path"] for m in seed_module.MENUS]
 
 pytestmark = pytest.mark.django_db
@@ -70,7 +71,10 @@ def test_a_fresh_database_gets_a_complete_sidebar():
     assert set(FIRST_SIXTEEN) <= set(live), sorted(set(FIRST_SIXTEEN) - set(live))
     for item in seed_module.MENUS:
         row = live[item["path"]]
-        roles = four_module.CHANGES[item["path"]][2] if item["path"] in four_module.CHANGES else item["roles"]
+        roles = item["roles"]
+        for later in (four_module, page_gate_module):  # 0032 与 0038 改过 roles 的几行
+            if item["path"] in later.CHANGES:
+                roles = later.CHANGES[item["path"]][2]
         assert (row.name, row.icon, row.order, row.roles, row.visible) == (
             item["name"], item["icon"], item["order"], roles, item["visible"]
         )
@@ -125,7 +129,8 @@ def test_reverse_removes_only_untouched_seed_rows():
     Menu.all_objects.filter(path="/souls").update(version=2)       # 有人保存过
     Menu.all_objects.filter(path="/users").update(name="成员管理")  # 改过名
 
-    split_module.backward(django_apps, SCHEMA_EDITOR)  # 真实回退里 0033 先退(它给 /permissions 写了码)
+    page_gate_module.backward(django_apps, SCHEMA_EDITOR)  # 真实回退里 0038 先退(它改了 /menus 的码)
+    split_module.backward(django_apps, SCHEMA_EDITOR)  # 再退 0033(它给 /permissions 写了码)
     four_module.backward(django_apps, SCHEMA_EDITOR)  # 再退 0032
     codename_module.unfill(django_apps, SCHEMA_EDITOR)  # 再退 0029
     seed_module.unseed(django_apps, SCHEMA_EDITOR)
@@ -309,17 +314,20 @@ def test_the_appeal_and_city_god_entries_are_for_whoever_reads_judgments(cn_tena
 
 def test_the_capture_due_and_earth_god_entries(cn_tenant):
     """menus/0028(第五十七批):待发勾魂牒在「灵魂业务」里排在城隍初审(18)前面,只给能发牒的人(`soul.die`);
-    土地公在「系统设置」里紧跟城隍(25),和城隍一样是 `judgment.read`。menus/0033 改成 `capture.issue` / `tudi.read`。"""
+    土地公在「系统设置」里紧跟城隍(25),和城隍一样是 `judgment.read`。menus/0033 改成 `capture.issue` / `tudi.read`。
+    menus/0038(用户 2026-11-11,审计 C-06):待发勾魂牒跟页门走,改成 `capture.read` —— 持读码的查看者也看得见入口,
+    页内的「签发」仍按 `capture.issue` 判。"""
     seeded_menus()
     rows = {m.path: m for m in Menu.objects.filter(path__in=("/judgment/capture-due", "/death-sync/tudi-gods"),
                                                       is_deleted=False)}
     assert {p: (r.name, r.parent.name, r.permission, r.order) for p, r in rows.items()} == {
-        "/judgment/capture-due": ("待发勾魂牒", "灵魂业务", "capture.issue", 17),
+        "/judgment/capture-due": ("待发勾魂牒", "灵魂业务", "capture.read", 17),
         "/death-sync/tudi-gods": ("土地公", "系统设置", "tudi.read", 26),
     }
     assert rows["/judgment/capture-due"].order < Menu.objects.get(path="/city-god-cases", is_deleted=False).order
     assert {"待发勾魂牒", "土地公"} <= _seen_by("JUDGE", cn_tenant)
-    assert not {"待发勾魂牒", "土地公"} & _seen_by("VIEWER", cn_tenant)
+    viewer = _seen_by("VIEWER", cn_tenant)
+    assert "待发勾魂牒" in viewer and "土地公" not in viewer, viewer
 
 
 # ── 0029:16 条写上页面读码,殿主与持码的自定义角色看得见(RBAC 审查 H2)────────────────
@@ -345,7 +353,9 @@ def test_0029_names_the_page_codename_on_the_seeded_rows():
     seeded_menus()
     got = {m.path: m.permission for m in Menu.objects.filter(path__in=FIRST_SIXTEEN)}
     # /permissions 由 menus/0033 写上 system.settings(权限页的读接口 2026-10-29 起按这个码判)。
-    assert got == {**dict.fromkeys(FIRST_SIXTEEN, ""), **codename_module.CODENAMES, "/permissions": "system.settings"}
+    # /menus 由 menus/0038 改成页门的 menu.read(用户 2026-11-11,审计 C-06)。
+    assert got == {**dict.fromkeys(FIRST_SIXTEEN, ""), **codename_module.CODENAMES, "/permissions": "system.settings",
+                   "/menus": "menu.read"}
     assert got["/welcome"] == ""  # 故意不写,见 0029 文件头
 
 
@@ -360,7 +370,9 @@ def test_a_moderator_sees_the_dashboard_and_the_circle_review_and_nothing_of_the
     assert {"仪表盘", "朋友圈审核"} <= seen, seen
     assert seen.isdisjoint({"灵魂管理", "审判队列", "跨域审判", "功德管理", "审批流程", "调度管理",
                             "领域管理", "神祇名录", "审计日志", "语料条文"}), seen
-    assert seen.isdisjoint({"用户管理", "权限与角色", "菜单管理"}), seen
+    assert seen.isdisjoint({"用户管理", "权限与角色"}), seen
+    # 菜单管理跟页门走(menus/0038,用户 2026-11-11):它持 menu.read,看得见、只读;改菜单仍要 menu.manage。
+    assert "菜单管理" in seen, seen
 
 
 def test_a_custom_role_sees_exactly_the_pages_its_codenames_open(cn_tenant):
