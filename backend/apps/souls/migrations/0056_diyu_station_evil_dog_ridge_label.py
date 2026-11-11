@@ -4,7 +4,6 @@
 """
 from django.db import migrations, models
 
-
 FIELD = models.CharField(
     blank=True,
     choices=[
