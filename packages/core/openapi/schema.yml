@@ -41522,6 +41522,7 @@ components:
             Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
+            * `MIDDLE` - 中(阿斯福得草原)
             * `RIGHT` - 右(至福岛)
             * `PASS` - 过(称心通过)
             * `FAIL` - 不过(第二次死亡)
@@ -41657,6 +41658,7 @@ components:
             Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
+            * `MIDDLE` - 中(阿斯福得草原)
             * `RIGHT` - 右(至福岛)
             * `PASS` - 过(称心通过)
             * `FAIL` - 不过(第二次死亡)
@@ -41681,12 +41683,14 @@ components:
     RealmForkEnum:
       enum:
       - LEFT
+      - MIDDLE
       - RIGHT
       - PASS
       - FAIL
       type: string
       description: |-
         * `LEFT` - 左(塔尔塔罗斯)
+        * `MIDDLE` - 中(阿斯福得草原)
         * `RIGHT` - 右(至福岛)
         * `PASS` - 过(称心通过)
         * `FAIL` - 不过(第二次死亡)
@@ -41799,6 +41803,7 @@ components:
             Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
 
             * `LEFT` - 左(塔尔塔罗斯)
+            * `MIDDLE` - 中(阿斯福得草原)
             * `RIGHT` - 右(至福岛)
             * `PASS` - 过(称心通过)
             * `FAIL` - 不过(第二次死亡)

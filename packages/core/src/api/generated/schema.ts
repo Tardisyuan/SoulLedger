@@ -18794,6 +18794,7 @@ export interface components {
              * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中(阿斯福得草原)
              *     * `RIGHT` - 右(至福岛)
              *     * `PASS` - 过(称心通过)
              *     * `FAIL` - 不过(第二次死亡)
@@ -18864,6 +18865,7 @@ export interface components {
              * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中(阿斯福得草原)
              *     * `RIGHT` - 右(至福岛)
              *     * `PASS` - 过(称心通过)
              *     * `FAIL` - 不过(第二次死亡)
@@ -18874,12 +18876,13 @@ export interface components {
         };
         /**
          * @description * `LEFT` - 左(塔尔塔罗斯)
+         *     * `MIDDLE` - 中(阿斯福得草原)
          *     * `RIGHT` - 右(至福岛)
          *     * `PASS` - 过(称心通过)
          *     * `FAIL` - 不过(第二次死亡)
          * @enum {string}
          */
-        RealmForkEnum: "LEFT" | "RIGHT" | "PASS" | "FAIL";
+        RealmForkEnum: "LEFT" | "MIDDLE" | "RIGHT" | "PASS" | "FAIL";
         /**
          * @description * `HALL` - 殿
          *     * `GATE` - 门
@@ -18938,6 +18941,7 @@ export interface components {
              * @description Greek (LEFT/RIGHT) and Egyptian (PASS/FAIL): which road out of the judgment place
              *
              *     * `LEFT` - 左(塔尔塔罗斯)
+             *     * `MIDDLE` - 中(阿斯福得草原)
              *     * `RIGHT` - 右(至福岛)
              *     * `PASS` - 过(称心通过)
              *     * `FAIL` - 不过(第二次死亡)

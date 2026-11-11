@@ -179,7 +179,7 @@ def test_a_european_acquittal_is_still_placed(eu_tenant):
 
 
 @pytest.mark.parametrize("home, verdict", [
-    ("CN_DIYU", "RETRY"), ("CN_DIYU", "PURGATORY"), ("GR_HADES", "RETRY"), ("GR_HADES", "PURGATORY"),
+    ("CN_DIYU", "RETRY"), ("CN_DIYU", "PURGATORY"), ("GR_HADES", "RETRY"),
     ("EU_HEAVEN_HELL", "RETRY"),
 ])
 def test_an_undecided_original_verdict_opens_a_retrial_and_places_nothing(home, verdict):
@@ -201,8 +201,17 @@ def test_a_european_purgatory_verdict_is_still_a_destination(eu_tenant):
     assert Disposition.all_objects.filter(judgment=case).exists()
 
 
+def test_a_greek_purgatory_verdict_is_a_destination_not_a_retrial():
+    """希腊的 PURGATORY 是普通亡灵去阿斯福得草原(2026-11-11 用户定,docs/04 §三),不再重开一案。"""
+    soul, case = sp.open_case(sp.tenant("GR_HADES"))
+    case.conclude(Verdict.PURGATORY, "")
+    assert Disposition.all_objects.filter(judgment=case).exists()
+    assert not Judgment.objects.filter(retrial_of=case).exists()
+
+
 @pytest.mark.parametrize("home, verdict, refused", [
     ("CN_DIYU", "PURGATORY", True), ("GR_HADES", "RETRY", True), ("EG_DUAT", "PURGATORY", True),
+    ("GR_HADES", "PURGATORY", False),
     ("EU_HEAVEN_HELL", "PURGATORY", False), ("CN_DIYU", "FAILED", False),
 ])
 def test_reopen_and_appeal_refuse_an_undecided_verdict(home, verdict, refused):

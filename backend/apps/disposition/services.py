@@ -133,15 +133,16 @@ class DispositionService:
 
     # Greek realms — Plato's fork and the two roads out of it (Gorgias 524a).
     #
-    # THERE ARE THREE CODES HERE AND ONLY TWO OF THEM ARE DESTINATIONS. The
-    # meadow is the ground the judging happens on, not a place anyone is sent
-    # to; see `_route_greek` for why an inconclusive verdict lands there anyway
-    # and why that is not a third road. The meadow's code was `EU_PLATO_MEADOW`
+    # FOUR CODES, THREE DESTINATIONS. The meadow is the ground the judging
+    # happens on, not a place anyone is sent to; see `_route_greek` for why a
+    # RETRY lands there anyway. Asphodel is the third road (owner 2026-11-11,
+    # docs/04 §三): the middle verdict, PURGATORY, goes there. The meadow's code was `EU_PLATO_MEADOW`
     # until realms/0032 (user decision 2026-11-07; see GREEK_REALMS §CODES in
     # apps/actors/mythology/realms.py).
     GR_MEADOW = "GR_PLATO_MEADOW"
     GR_ISLES = "GR_ISLES_OF_THE_BLESSED"
     GR_TARTARUS = "GR_TARTARUS"
+    GR_ASPHODEL = "GR_ASPHODEL_MEADOW"
 
     _AUTO = object()
 
@@ -710,7 +711,16 @@ class DispositionService:
 
     @classmethod
     def _route_greek(cls, soul: Soul, verdict: str) -> str:
-        """Route a Greek soul. Two roads out of one meadow, and nothing to grade.
+        """Route a Greek soul. Three roads out of one meadow, and nothing to grade.
+
+        THREE ROADS SINCE 2026-11-11 (owner's decision; docs/04 §三): the just
+        to the Isles, ordinary souls to the Asphodel Meadow, the great
+        wrongdoers to Tartarus. docs/04 gives no numeric condition for
+        「ordinary」, so no ledger figure is read here either: the middle road is
+        taken by the middle verdict, PURGATORY ("intermediate"), and only RETRY
+        is left standing on the meadow. Where the paragraphs below speak of two
+        roads, or of PURGATORY as unsettled, they describe Gorgias 524a and the
+        system before that decision; the no-severity argument is unchanged.
 
         THE SOURCE IS ONE SENTENCE AND IT NAMES ALL THREE PLACES. Plato,
         Gorgias 524a: the dead are judged 「in the meadow at the dividing of the
@@ -804,8 +814,11 @@ class DispositionService:
             # `is_eternal` is False, the Republic X norm; an INCURABLE mark makes
             # the disposition eternal in `create_from_judgment`.
             return cls.GR_TARTARUS
-        # PURGATORY and RETRY: no road taken yet, so the soul is still on the
-        # ground the judging happens on. Not a third destination.
+        if verdict == Verdict.PURGATORY:
+            # Ordinary souls: the middle road (docs/04 §三, owner 2026-11-11).
+            return cls.GR_ASPHODEL
+        # RETRY: no road taken yet, so the soul is still on the ground the
+        # judging happens on. Not a destination.
         return cls.GR_MEADOW
 
     @staticmethod

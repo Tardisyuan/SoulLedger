@@ -455,7 +455,7 @@ def _refuse_open_case(open_ids):
 
 
 def _refuse_undecided(soul, verdict):
-    """「再审一次」的裁决(`hears_again`:RETRY,及欧洲以外的 PURGATORY)不是一个去处。原审判结案时它们重开一案
+    """「再审一次」的裁决(`hears_again`:RETRY,及地府、埃及的 PURGATORY)不是一个去处。原审判结案时它们重开一案
     (`JudgmentConclusionService`,用户 2026-10-29 四文明统一);重开审判与申诉改判本身就是再审,没有「再开一案」
     这一步,所以拒绝 —— 给一个终局裁决(欧洲还可以给 PURGATORY),或另开审判。此前只拒欧洲的 RETRY,
     地府 / 希腊会把灵魂排进待审所 / 草地这一「站」,埃及会排进永远执行不了的 Duat 入口。"""

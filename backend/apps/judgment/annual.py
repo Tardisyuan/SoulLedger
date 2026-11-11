@@ -6,7 +6,7 @@
 * `received` —— 这一年开案的案子涉及多少个灵魂(按灵魂去重:重审另开的一件不再算一个)。
   `annual.lead` 后面那个大数。
 * `placed` —— 其中有了去处的灵魂:它这一年开的某件案子已结案,且裁决不是「再审一次」(`models.hears_again`:
-  RETRY,或欧洲以外的 PURGATORY)。`annual.total_rest` 的 `{{m}}`。按 `soul.civilization` 判,
+  RETRY,或欧洲、希腊以外的 PURGATORY)。`annual.total_rest` 的 `{{m}}`。按 `soul.civilization` 判,
   ponytail:与 `case_civilization` 只在「原属地开案、灵魂暂居别处」那一种案子上不同,年报不为它多查一次殿。
 * `by_civ` —— `received` 按灵魂的文明分(`annual.by_civ`),只列有数的文明。一殿只看得到自己,就只有一行。
 * `concluded` / `avg_days` —— 这一年结案的件数、可认领到结案扣掉待定的平均天数(与概览同一口径,`hall_stats.span_seconds`)。
@@ -44,8 +44,8 @@ def _civ_of(code, declared) -> str:
     return declared if declared in Civilization.values else UNKNOWN_CIVILIZATION
 
 
-#: 「再审一次」的裁决(`models.hears_again`),写成查询:RETRY,或欧洲以外的 PURGATORY。
-HEARS_AGAIN_Q = Q(verdict="RETRY") | (Q(verdict="PURGATORY") & ~_soul_civ_q("EUROPEAN"))
+#: 「再审一次」的裁决(`models.hears_again`),写成查询:RETRY,或欧洲、希腊以外的 PURGATORY。
+HEARS_AGAIN_Q = Q(verdict="RETRY") | (Q(verdict="PURGATORY") & ~_soul_civ_q("EUROPEAN") & ~_soul_civ_q("GREEK"))
 CIV_ORDER = ("CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK")
 
 

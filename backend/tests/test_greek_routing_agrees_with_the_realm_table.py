@@ -15,7 +15,8 @@
 这里从**两个互相独立的方向**钉:
 1. 字面量 —— 常量的值就是那三个字符串;
 2. 语义 —— 路由目的地在 realm 表里的 `realm_type` 必须对得上
-   (通过 → BLISS,失败 → HELL,未决 → 既不是 BLISS 也不是 HELL)。
+   (通过 → BLISS,失败 → HELL,普通(PURGATORY,2026-11-11 起)→ NEUTRAL 的阿斯福得草原,
+   再审(RETRY)→ 既不是 BLISS 也不是 HELL)。
 第 2 条即使有人把字面量和常量一起改了也还站得住:它问的是**那个地方是什么**,
 而这个答案写在语料里,不写在路由器里。
 """
@@ -58,6 +59,7 @@ def test_the_three_greek_constants_hold_the_codes_they_are_named_for():
     assert DispositionService.GR_ISLES == "GR_ISLES_OF_THE_BLESSED"
     assert DispositionService.GR_TARTARUS == "GR_TARTARUS"
     assert DispositionService.GR_MEADOW == "GR_PLATO_MEADOW"
+    assert DispositionService.GR_ASPHODEL == "GR_ASPHODEL_MEADOW"
 
 
 @pytest.mark.django_db
@@ -81,7 +83,7 @@ def test_the_router_sends_the_unjust_to_a_place_the_realm_table_calls_hell(greek
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("verdict", [Verdict.PURGATORY, Verdict.RETRY])
+@pytest.mark.parametrize("verdict", [Verdict.RETRY])
 def test_an_unfinished_verdict_lands_on_ground_that_is_neither(greek_soul, verdict):
     """未决不是第三条路 —— 它是「还站在分岔口上」。
 
@@ -97,10 +99,20 @@ def test_an_unfinished_verdict_lands_on_ground_that_is_neither(greek_soul, verdi
 
 
 @pytest.mark.django_db
-def test_the_three_destinations_are_three_different_places(greek_soul):
-    """守卫的守卫:上面三条在三个常量指向同一行时会一起绿掉两条。"""
+def test_an_ordinary_soul_lands_on_the_neutral_asphodel_meadow(greek_soul):
+    """普通亡灵(PURGATORY)去阿斯福得草原(2026-11-11 用户定,docs/04 §三):种子里它是 NEUTRAL 的去处,
+    父界域是草地,在中间那条路上。"""
+    code = DispositionService._route_to_realm(greek_soul, Verdict.PURGATORY)
+    realm = Realm.all_objects.get(realm_code=code)
+    assert (realm.realm_code, realm.realm_type, realm.fork) == ("GR_ASPHODEL_MEADOW", RealmType.NEUTRAL, "MIDDLE")
+    assert realm.parent_realm.realm_code == "GR_PLATO_MEADOW"
+
+
+@pytest.mark.django_db
+def test_the_four_outcomes_are_four_different_places(greek_soul):
+    """守卫的守卫:上面几条在常量指向同一行时会一起绿掉。"""
     codes = {
         DispositionService._route_to_realm(greek_soul, v)
-        for v in (Verdict.PASSED, Verdict.FAILED, Verdict.PURGATORY)
+        for v in (Verdict.PASSED, Verdict.FAILED, Verdict.PURGATORY, Verdict.RETRY)
     }
-    assert len(codes) == 3, codes
+    assert len(codes) == 4, codes

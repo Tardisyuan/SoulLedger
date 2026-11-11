@@ -107,15 +107,19 @@ def test_egypt_has_one_judgment_hall_and_no_hour_or_gate(seeded):
 
 
 @pytest.mark.django_db
-def test_greek_roads_fork_left_and_right_off_the_meadow_and_nothing_takes_the_middle(seeded):
+def test_greek_roads_fork_left_middle_and_right_off_the_meadow(seeded):
     meadow = _realm("GR_PLATO_MEADOW")
     assert (_realm("GR_TARTARUS").fork, _realm("GR_TARTARUS").parent_realm_id) == (RealmFork.LEFT, meadow.pk)
     isles = _realm("GR_ISLES_OF_THE_BLESSED")
     assert (isles.fork, isles.parent_realm_id) == (RealmFork.RIGHT, meadow.pk)
+    # 中间那条:阿斯福得草原(2026-11-11 用户定,docs/04 §三;MIDDLE 由 realms/0033 加回)。
+    asphodel = _realm("GR_ASPHODEL_MEADOW")
+    assert (asphodel.fork, asphodel.parent_realm_id) == (RealmFork.MIDDLE, meadow.pk)
     assert (meadow.fork, meadow.parent_realm_id) == (None, None)
-    assert not Realm.all_objects.filter(fork="MIDDLE").exists()
-    assert RealmFork.values == ["LEFT", "RIGHT", "PASS", "FAIL"]  # MIDDLE removed 2026-09-25; PASS/FAIL are Egypt's
-    assert set(Realm.objects.filter(civilization="GREEK").values_list("fork", flat=True)) == {"LEFT", "RIGHT", None}
+    assert list(Realm.all_objects.filter(fork="MIDDLE").values_list("realm_code", flat=True)) == ["GR_ASPHODEL_MEADOW"]
+    assert RealmFork.values == ["LEFT", "MIDDLE", "RIGHT", "PASS", "FAIL"]  # PASS/FAIL are Egypt's
+    assert set(Realm.objects.filter(civilization="GREEK").values_list("fork", flat=True)) == {
+        "LEFT", "MIDDLE", "RIGHT", None}
     assert set(Realm.objects.exclude(civilization__in=["GREEK", "EGYPTIAN"]).values_list("fork", flat=True)) == {None}
 
 
@@ -184,7 +188,9 @@ def test_the_migration_that_drops_middle_refuses_a_row_still_holding_it(seeded):
     from django.apps import apps as registry
 
     check = import_module("apps.realms.migrations.0020_remove_greek_fork_middle").refuse_if_any_row_takes_middle
-    check(registry, SCHEMA_EDITOR)  # the seed has none
+    # Since 2026-11-11 the seed puts Asphodel on MIDDLE (realms/0033); clear it to replay 0020's world.
+    Realm.all_objects.filter(fork="MIDDLE").update(fork=None)
+    check(registry, SCHEMA_EDITOR)  # nothing holds MIDDLE now
     Realm.objects.filter(realm_code="GR_TARTARUS").update(fork="MIDDLE")
     with pytest.raises(RuntimeError, match="GR_TARTARUS"):
         check(registry, SCHEMA_EDITOR)

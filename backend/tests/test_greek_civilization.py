@@ -57,6 +57,8 @@ MEADOW = "GR_PLATO_MEADOW"
 LEGACY_MEADOW = "EU_PLATO_MEADOW"
 ISLES = "GR_ISLES_OF_THE_BLESSED"
 TARTARUS = "GR_TARTARUS"
+#: The middle road, by the owner's decision of 2026-11-11 (docs/04 §三).
+ASPHODEL = "GR_ASPHODEL_MEADOW"
 #: The crossing, added when the basis became Gorgias plus Aeneid 6. Not a move:
 #: `EU_ACHERON` and Dante's Charon stay EUROPEAN exactly as realms/0018 argues,
 #: and this is a second row for the same figure under the other poem — the move
@@ -255,18 +257,16 @@ def test_the_greek_realms_are_greek_and_the_crossing_is_not(seeded):
         Realm.objects.filter(civilization="GREEK")
         .values_list("realm_code", "realm_type")
     )
-    assert sorted(greek) == sorted([MEADOW, ACHERON, ISLES, TARTARUS]), (
+    assert sorted(greek) == sorted([MEADOW, ACHERON, ISLES, TARTARUS, ASPHODEL]), (
         f"the GREEK realms are {sorted(greek)}. Expected the fork and the two "
         f"roads out of it that Gorgias 524a names — 'the two ways leading, one "
         f"to the Isles of the Blest, and the other to Tartarus' — plus "
         f"GR_ACHERON, the crossing, from Aeneid 6.295-297 under the two-text "
-        f"basis stated at the top of GREEK_REALMS: Plato supplies the "
-        f"judgment, Virgil the ground it happens on. A FIFTH row still means "
-        f"somebody completed the geography from a textbook, and the basis "
-        f"change licenses none — Virgil's borderland sorts by manner of death, "
-        f"which this system does not record, and Asphodel is in neither text "
-        f"as a destination. A missing one means the seed table and "
-        f"realms/0018 disagree."
+        f"basis stated at the top of GREEK_REALMS, plus GR_ASPHODEL_MEADOW, the "
+        f"middle road the owner adopted on 2026-11-11 from docs/04 §三. A SIXTH "
+        f"row means somebody completed the geography from a textbook — Virgil's "
+        f"borderland sorts by manner of death, which this system does not "
+        f"record. A missing one means the seed table and realms/0018 disagree."
     )
     # The two roads are opposite outcomes, and a row that says otherwise would
     # make a soul sent to Tartarus indistinguishable from one sent to the

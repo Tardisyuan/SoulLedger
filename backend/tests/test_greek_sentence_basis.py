@@ -9,9 +9,10 @@ branch at all: `Civilization.GREEK` existed, `GR_HADES` held souls,
 sentence that names them. Plato, Gorgias 524a: judgment happens 「in the meadow
 at the dividing of the road, whence are the two ways leading, one to the Isles
 of the Blest, and the other to Tartarus」. PASSED takes the first road, FAILED
-the second, and the two verdicts that settle nothing (PURGATORY, RETRY) leave
-the soul standing on the meadow, which is the one place in that sentence that is
-not a destination.
+the second. Since 2026-11-11 (owner's decision, docs/04 §三) there is a third:
+PURGATORY, the middle verdict, sends an ordinary soul to the Asphodel Meadow.
+RETRY settles nothing and leaves the soul standing on the meadow, which is the
+one place in that sentence that is not a destination.
 
 **Landed, and pinned because the neighbours are louder.** The Greek router reads
 the verdict and no ledger figure whatsoever. A fork has two roads and no depth,
@@ -67,6 +68,7 @@ from apps.tenants.models import Tenant
 ISLES = DispositionService.GR_ISLES
 TARTARUS = DispositionService.GR_TARTARUS
 MEADOW = DispositionService.GR_MEADOW
+ASPHODEL = DispositionService.GR_ASPHODEL
 
 #: Every realm code the other three cosmologies route to. A Greek soul reaching
 #: any of them is the pre-split behaviour returning — Plato's judges sentencing
@@ -177,28 +179,39 @@ def test_a_failed_greek_soul_takes_the_road_to_tartarus(make_greek_soul):
 
 @pytest.mark.django_db
 def test_an_unsettled_verdict_leaves_the_soul_on_the_meadow(make_greek_soul):
-    """The verdicts 524a has no outcome for, answered by the place it does have.
+    """The verdict 524a has no outcome for, answered by the place it does have.
 
-    PURGATORY and RETRY say the outcome is not fixed. Plato's fork has no
-    「pending」 road, and inventing a third destination for one is the failure
-    this whole directory catalogues — so the soul is placed where 524a puts a
-    soul that has not been sent down either road: the meadow the judging happens
-    on. The absence of both roads is asserted, because "it went somewhere Greek"
-    would stay green if the meadow had quietly become a third outcome to which
-    souls are sentenced.
+    RETRY says the outcome is not fixed, so the soul is placed where 524a puts a
+    soul that has not been sent down any road: the meadow the judging happens
+    on. The absence of every road is asserted, because "it went somewhere Greek"
+    would stay green if the meadow had quietly become an outcome to which souls
+    are sentenced. (PURGATORY was here too until 2026-11-11; it is a road now —
+    see the next test.)
     """
     soul = make_greek_soul("still at the fork")
     with SoulRecord.batch():
         _killing(soul)
     soul.refresh_from_db()
 
-    for verdict in (Verdict.PURGATORY, Verdict.RETRY):
-        destination = DispositionService._route_to_realm(soul, verdict)
-        assert destination == MEADOW, f"{verdict} was concluded by something"
-        assert destination not in (ISLES, TARTARUS), (
-            f"{verdict} sent an unfinished case down a road; 524a's judges send "
-            f"a soul one way or the other only once they have tried it"
-        )
+    destination = DispositionService._route_to_realm(soul, Verdict.RETRY)
+    assert destination == MEADOW, "RETRY was concluded by something"
+    assert destination not in (ISLES, TARTARUS, ASPHODEL), (
+        "RETRY sent an unfinished case down a road; the judges send a soul "
+        "one way or another only once they have tried it"
+    )
+
+
+@pytest.mark.django_db
+def test_an_ordinary_soul_takes_the_middle_road_to_asphodel(make_greek_soul):
+    """docs/04 §三, adopted by the owner on 2026-11-11: ordinary souls go to the
+    Asphodel Meadow. The middle verdict, PURGATORY, is what says "ordinary" —
+    docs/04 gives no numeric condition, so no ledger figure does. Asserted
+    against all three other Greek places so it cannot quietly fall back to the
+    meadow (the old behaviour) or down either of the other two roads."""
+    soul = make_greek_soul("neither just nor wicked")
+    destination = DispositionService._route_to_realm(soul, Verdict.PURGATORY)
+    assert destination == ASPHODEL == "GR_ASPHODEL_MEADOW"
+    assert destination not in (MEADOW, ISLES, TARTARUS)
 
 
 @pytest.mark.django_db
@@ -260,7 +273,8 @@ def test_the_gongguoge_partition_does_not_reach_a_greek_soul(make_greek_soul):
 
 # The Greek realms this system seeds, and the ones it deliberately does not.
 #
-# Four rows on a two-text basis, divided by what each text is asked for:
+# Four rows on a two-text basis, plus Asphodel by the owner's decision of
+# 2026-11-11 (docs/04 §三). The four are divided by what each text is asked for:
 # Gorgias 524a supplies the judgment — the meadow and the two roads out of it —
 # and Aeneid 6 supplies the topography, which here is the crossing a soul
 # arrives by. `apps/actors/mythology/realms.py` states the division at the top
@@ -270,21 +284,15 @@ GREEK_REALM_CODES = [
     "GR_ACHERON",
     "GR_ISLES_OF_THE_BLESSED",
     "GR_TARTARUS",
+    # Owner's decision 2026-11-11 (docs/04 §三 three-way), not a source claim.
+    "GR_ASPHODEL_MEADOW",
 ]
 
 # Named here so their absence is a decision with a citation attached rather
 # than a gap someone fills in good faith. Each entry is (code, why not).
 GREEK_REALMS_DELIBERATELY_ABSENT = {
-    "GR_ASPHODEL": (
-        "Homer's asphodel field (Od. 11.538-540) is where Achilles' shade walks "
-        "— a hero, not a middling soul. Homer draws no line between it and "
-        "anywhere else, and the Tartarus/Asphodel/Elysium three-way split is a "
-        "later systematization, mostly modern; docs/lore-verification/"
-        "verify-greek.md records both findings and the source it cites for the "
-        "split self-declares the relationship as uncertain. Seeding it as a "
-        "NEUTRAL destination would invent a third road out of a fork whose own "
-        "sentence names two, which is the mistake EG_AM_TYAT was retired for."
-    ),
+    # GR_ASPHODEL was here until 2026-11-11, when the owner adopted docs/04
+    # §三's three-way split; it is seeded as GR_ASPHODEL_MEADOW now.
     "GR_LUGENTES_CAMPI": (
         "Virgil's borderland sorts by manner of death — infants, the falsely "
         "condemned, suicides, and the Fields of Mourning for those who died of "
@@ -306,11 +314,11 @@ GREEK_REALMS_DELIBERATELY_ABSENT = {
 }
 
 
-def test_the_greek_realms_are_exactly_the_fork_and_its_two_roads():
+def test_the_greek_realms_are_exactly_the_fork_and_its_three_roads():
     """The subject set, pinned — not counted and not sampled.
 
-    `GREEK_REALMS` is where a fourth Greek realm would land, and a fourth realm
-    is a fourth destination a judge could send a soul to. Pinning the list by
+    `GREEK_REALMS` is where another Greek realm would land, and another realm
+    is another destination a judge could send a soul to. Pinning the list by
     name means adding one fails here first, with the basis stated above it,
     rather than being noticed later as a routing surprise.
     """
@@ -364,10 +372,11 @@ def test_a_disposition_carries_its_realms_memory_reset(make_greek_soul):
     """
     call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
 
-    # FAILED → GR_TARTARUS (LETHE); PURGATORY → the meadow (NONE). Two
-    # mechanisms, so no single hardcoded value satisfies both.
+    # FAILED → GR_TARTARUS (LETHE); RETRY → the meadow (NONE). Two
+    # mechanisms, so no single hardcoded value satisfies both. (PURGATORY was
+    # the second route until 2026-11-11; it goes to Asphodel, LETHE, now.)
     seen = {}
-    for label, verdict in (("failed", Verdict.FAILED), ("unsettled", Verdict.PURGATORY)):
+    for label, verdict in (("failed", Verdict.FAILED), ("unsettled", Verdict.RETRY)):
         soul = make_greek_soul(f"忘川探针·{label}")
         judgment = Judgment.objects.create(
             soul=soul, verdict=verdict, tenant=soul.tenant
@@ -419,6 +428,7 @@ def test_both_greek_roads_reset_memory_and_the_two_thresholds_do_not(db):
         "GR_ACHERON": "NONE",
         "GR_ISLES_OF_THE_BLESSED": "LETHE",
         "GR_TARTARUS": "LETHE",
+        "GR_ASPHODEL_MEADOW": "LETHE",
     }, mechanisms
 
 
