@@ -13,6 +13,7 @@
 给的是硬编码 ADMIN 的端点)。所以下面是一份**决定的记录**,不是豁免清单 ——
 加一条要写一句话。
 """
+import ast
 import re
 from pathlib import Path
 
@@ -53,8 +54,42 @@ def declared_families():
     return {family for _, _, family in DEFAULT_PERMISSIONS}
 
 
+_CODENAME = re.compile(r"^([a-z_]+)\.[a-z_]+$")
+
+
+def families_claimed_in(source):
+    """一份视图源码里声明的族 —— 用 `ast` 读,只认真的声明(审计 2026-11-11 G-03)。
+
+    此前按行滤掉 `#` 开头的行,再在全文上跑正则 —— docstring 不是 `#` 行,于是
+    `apps/judgment/views.py` 里一句「`permission_codename = "judgment"` rather than a new `statute.*` family」
+    被算成了 `judgment` 族的一次声明。真声明全删掉,它照样绿。现在:
+
+    * `permission_codename = "x"` 只认**类体里的赋值语句**(含带注解的),值是字符串常量;
+    * `APIView` 没有 queryset,走 `get_required_permissions()` 返回 `['x.read']` —— 只认 `return` 语句的值里
+      的列表 / 元组字面量中的字符串常量(`return [...] if … else [...]` 两边都算)。
+    """
+    out = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ClassDef):
+            for stmt in node.body:
+                targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target] if isinstance(stmt, ast.AnnAssign) else []
+                value = getattr(stmt, "value", None)
+                if (any(isinstance(t, ast.Name) and t.id == "permission_codename" for t in targets)
+                        and isinstance(value, ast.Constant) and isinstance(value.value, str)):
+                    out.append(value.value)
+        elif isinstance(node, ast.Return) and node.value is not None:
+            for sub_node in ast.walk(node.value):
+                if isinstance(sub_node, (ast.List, ast.Tuple)):
+                    for elt in sub_node.elts:
+                        if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                            m = _CODENAME.match(elt.value)
+                            if m:
+                                out.append(m.group(1))
+    return out
+
+
 def claimed_families():
-    """被某个视图以 `permission_codename` 声明的族,以及声明它的文件。"""
+    """被某个视图声明的族,以及声明它的文件。"""
     out = {}
     # `*views*.py`,不是 `views.py`。**主体清单又一次不全**:这个仓库的视图并不都
     # 叫 views.py —— `apps/soul_accounts/me_views.py`、`apps/social/soul_views.py`、
@@ -63,25 +98,35 @@ def claimed_families():
     # `social.moderate` 由 `apps/social/moderation_views.py` 声明,这条断言却报
     # 「social 族没有任何视图声明」—— 与模块 docstring 里记的 `ledger` 是同一个形状,
     # 只是这次错在文件名而不是声明写法。
+    #
+    # 两种声明方式,不是一种(见 `families_claimed_in`):第一版只认 `permission_codename`,
+    # 于是把 `ledger` 报成「没有任何视图声明」—— 而 apps/ledger/views.py 里**六个 APIView**
+    # 每一个都用 `get_required_permissions()` 声明了它。
     for path in (BACKEND / "apps").rglob("*views*.py"):
-        source = path.read_text(encoding="utf-8")
-        # 只看代码行:这个仓库已经五次栽在「扫描器读到了自己的注释」上。
-        code = "\n".join(
-            line for line in source.split("\n") if not line.lstrip().startswith("#")
-        )
-        # 两种声明方式,不是一种。
-        #
-        # `permission_codename = "x"` 是 viewset 的写法;`APIView` 没有 queryset,
-        # 走的是 `get_required_permissions()` 返回 `['x.read']`。第一版只认前者,
-        # 于是把 `ledger` 报成「没有任何视图声明」—— 而 apps/ledger/views.py 里
-        # **六个 APIView** 每一个都声明了它。主体清单不全,是这个仓库反复出现的
-        # 那个形状:检查在跑、会报红、而它看的不是全部。
-        for m in re.finditer(r'permission_codename\s*=\s*"([^"]+)"', code):
-            out.setdefault(m.group(1), []).append(str(path.relative_to(BACKEND)))
-        for m in re.finditer(r"return \[([^\]]*)\]", code):
-            for codename in re.findall(r"['\"]([a-z_]+)\.[a-z_]+['\"]", m.group(1)):
-                out.setdefault(codename, []).append(str(path.relative_to(BACKEND)))
+        for family in families_claimed_in(path.read_text(encoding="utf-8")):
+            out.setdefault(family, []).append(str(path.relative_to(BACKEND)))
     return out
+
+
+def test_a_docstring_or_comment_is_not_a_declaration():
+    """守卫的守卫(G-03):文档里提到的声明不算,类属性与 `return [...]` 才算。"""
+    prose = (
+        'class V:\n'
+        '    """Uses `permission_codename = "judgment"` rather than a new family."""\n'
+        '    # permission_codename = "audit"\n'
+        '    note = \'return ["ledger.read"]\'\n'
+        '    def f(self):\n'
+        '        permission_codename = "local"\n'
+        '        return permission_codename\n'
+    )
+    assert families_claimed_in(prose) == []
+    real = (
+        'class V:\n'
+        '    permission_codename = "soul"\n'
+        '    def get_required_permissions(self):\n'
+        '        return ["ledger.read"] if self.x else ("dispatch.manage",)\n'
+    )
+    assert sorted(families_claimed_in(real)) == ["dispatch", "ledger", "soul"]
 
 
 def test_the_scan_found_a_non_trivial_number_of_viewsets():
