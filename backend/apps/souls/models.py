@@ -572,6 +572,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         from apps.judgment.models import Judgment
         from apps.souls.record_models import SoulRecord
 
+        # 暂居中的灵魂不删(审计 2026-11-11 A1-01):它的记录与审判多半属原属殿,
+        # 删除由暂居殿发起时整串级联跨两殿,两殿的绑殿管理员都恢复不了。
+        # 不改成「只级联本殿的行」:灵魂本身也是原属殿的,原属殿看到的仍是自己的灵魂消失。
+        # 要删就先结束暂居,回到原属殿再删。
+        if self.is_residing:
+            raise DeletionNotAllowedError(
+                "This soul is residing in another hall and cannot be deleted. "
+                "End the residence first; its home hall deletes it.",
+                archivable=False,
+            )
         if self.has_concluded_judgment:
             raise DeletionNotAllowedError(
                 "This soul has a concluded judgment and cannot be deleted. "

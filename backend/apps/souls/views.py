@@ -263,7 +263,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
           * 404 `not_found` — some ids are not reachable. Checked before any
             write. The listed ids are the caller's own input, so this says
             nothing the single endpoint's 404 would not.
-          * 409 `not_deletable` — some souls have a concluded judgment. Every
+          * 409 `not_deletable` — some souls have a concluded judgment, or are
+            residing in another hall (`archivable` false then). Every
             soul is attempted inside one transaction so that ALL blocked ids
             are reported, then the transaction is rolled back.
 
@@ -324,8 +325,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                     {
                         "code": "not_deletable",
                         "error": (
-                            "These souls have a concluded judgment and cannot be "
-                            "deleted. Archive them instead. Nothing was deleted."
+                            "These souls cannot be deleted: a concluded judgment "
+                            "(archive them instead) or residing in another hall "
+                            "(end the residence first). Nothing was deleted."
                         ),
                         "ids": blocked,
                         "archivable": archivable,
