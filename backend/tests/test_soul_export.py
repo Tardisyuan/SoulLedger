@@ -99,6 +99,24 @@ def test_a_deleted_soul_is_not_exported(world):
 
 
 @pytest.mark.django_db
+def test_show_deleted_needs_the_recycle_bin_codename(world):
+    """Audit 2026-11-11 P-08: `?show_deleted=1` brought deleted souls back for any `soul.read` holder —
+    list, detail and the unfiltered export. Without `recycle_bin.read` the parameter is ignored."""
+    a, b, _ = world["souls"]
+    Soul.all_objects.filter(pk=b.pk).update(is_deleted=True)
+    reader = world["reader"]
+    assert str(b.pk) not in {r[0] for r in _rows(reader.get(URL, {"show_deleted": "1"}))}
+    assert reader.get(f"/api/v1/souls/{b.pk}/", {"show_deleted": "1"}).status_code == 404
+    assert str(b.pk) not in reader.get("/api/v1/souls/", {"show_deleted": "1"}).content.decode()
+
+    cn = Tenant.objects.get(code="CN_DIYU")
+    _role("BIN_KEEPER", "soul.read", "soul.export", "recycle_bin.read")
+    keeper = _client_for(User.objects.create_user(username="ex_keeper", password="x", role="BIN_KEEPER", tenant=cn), cn)
+    assert str(b.pk) in {r[0] for r in _rows(keeper.get(URL, {"show_deleted": "1"}))}
+    assert keeper.get(f"/api/v1/souls/{b.pk}/", {"show_deleted": "1"}).status_code == 200
+
+
+@pytest.mark.django_db
 def test_a_formula_name_is_neutralised(world):
     evil = world["souls"][2]
     rows = _rows(world["reader"].get(URL, {"ids": _ids(evil)}))
