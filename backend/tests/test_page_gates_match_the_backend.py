@@ -4,8 +4,10 @@
 
   M47 说 `/audit`、`/actors`、`/realms` 三页**没有任何权限门**,VIEWER 直接输 URL
       就能打开功能完整的页面 —— 因为侧边栏的菜单过滤**只藏链接、不挡路由**
-  M65 说 `/audit` **有**门,而且门开错了:它问 `role === "ADMIN"`,而后端把
+  M65 说 `/audit` **有**门,而且门开错了:它问 `role === "ADMIN"`,而后端当时把
       `audit.read` 授予 ADMIN **与 MODERATOR** —— 一个持有该权限的人被界面挡在外面
+      (MODERATOR 2026-11-07 由 perm/0036 收回 `audit.read`,默认只剩 ADMIN;矩阵仍可授给别的角色,
+      所以门照样要问码)
 
 两条互相矛盾,而 M65 是对的(`app/audit/page.tsx` 当时的 `enabled: isAdmin` 与
 `if (!isAdmin)` 都在)。**「有洞」和「哪一层有洞」不是一回事**,而按名字 grep
@@ -169,8 +171,9 @@ def test_public_routes_are_read_from_the_proxy_with_their_reasons():
 def test_the_audit_page_gates_on_the_codename_not_the_role():
     """M65 那一条,单独钉住。
 
-    后端把 `audit.read` 授予 ADMIN **与 MODERATOR**。这一页曾问 `role === "ADMIN"`,
-    于是 MODERATOR 看到「访问被拒绝 / 仅管理员可查看审计日志」并且一个请求都没发。
+    后端当时把 `audit.read` 授予 ADMIN **与 MODERATOR**(MODERATOR 2026-11-07 收回)。这一页曾问
+    `role === "ADMIN"`,于是 MODERATOR 看到「访问被拒绝 / 仅管理员可查看审计日志」并且一个请求都没发。
+    默认只有 ADMIN 持有之后,矩阵仍能把它授给别的角色,所以门仍须问码。
     上面那条通用规则抓不到它 —— `isAdmin` 也是一个合法的门标记。
     """
     source = (APP / "audit" / "page.tsx").read_text(encoding="utf-8")
@@ -202,10 +205,8 @@ ADMIN = "ADMIN"
 
 #: 菜单码与页门码不同、而哪边对还没定的页面 -> 原因。不是豁免:每条都要写明待谁定;
 #: 一旦两边对齐,`test_the_page_gate_admits_the_menu_rows_codename` 会要求删掉这一条。
-GATE_CODE_UNDECIDED = {
-    "/menus": "审计 2026-11-11 C-06:菜单 menu.manage(只有无殿管理员)、页门 menu.read(人人持有),哪边对待用户定。",
-    "/judgment/capture-due": "审计 2026-11-11 C-06:菜单 capture.issue、页门 capture.read,哪边对待用户定。",
-}
+#: 2026-11-11 用户定 C-06 的两条(`/menus`、`/judgment/capture-due`)都让菜单跟页门走(menus/0038),名单清空。
+GATE_CODE_UNDECIDED: dict[str, str] = {}
 
 _OUTER_PERMISSIONS = re.compile(r'<RequirePermission\b[^>]*?\bpermissions=(?:"([^"]+)"|\{\[([^\]]*)\]\})', re.S)
 _EARLY_CODE = re.compile(r'^  if \(\s*!\s*(?:hasPermission\("([^"]+)"\)|(isAdmin)\b|(can[A-Z]\w*)\s*\))', re.M)

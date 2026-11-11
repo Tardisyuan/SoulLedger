@@ -173,7 +173,7 @@ CHINESE_REALMS = [
     # 卞城 not 变成, 泰山 not 太山), so the choice is at least consistent.
     ("DY_COURT_08_DUSHI", "第八殿", "第八殿都市王", "Eighth Court Dushi", "Wesekhet 8 · Dushi",
      RealmType.HELL, 8,
-     "大热恼大地狱 - unfilial conduct and betrayal of one's own house", "MENGPO", False, 20),
+     "大热恼大地狱 - unfilial conduct: the parent left unkept in life and unburied in death", "MENGPO", False, 20),
     ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Wesekhet 9 · Pingdeng",
      RealmType.HELL, 9,
      "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy",

@@ -503,12 +503,14 @@ export const workflowApi = {
   /**
    * ApprovalWorkflowViewSet.escalate — 越级推进,`workflow.escalate` 码名。
    *
-   * 这个方法此前**不存在**。`ROLE_PERMISSIONS` 把 `workflow.escalate` 写成
+   * 这个方法此前**不存在**。当时 `ROLE_PERMISSIONS` 把 `workflow.escalate` 写成
    * 「realm lead 越过停滞流程的唯一正途」,并为此刻意**不**给 MODERATOR
-   * approve/advance —— 而那条正途在界面上一个入口都没有。实拍:
+   * approve/advance —— 而那条正途在界面上一个入口都没有。当时的实拍:
    *
    *   [wf-detail MODERATOR] 可见控件 = [导航, 返回审批列表, 节点(1), 历史]
    *   [wf-detail JUDGE    ] = [… 提交决定, 推进 …]
+   *
+   * 2026-11-07 起(perm/0036)MODERATOR 不再持有 `workflow.escalate`,默认只有 ADMIN 持有。
    *
    * `reason` 是必填的,后端也这么要求:越级留痕是这条路径存在的全部意义,
    * 没有理由的越级和 advance 没有区别。

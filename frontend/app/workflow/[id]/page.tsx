@@ -217,9 +217,11 @@ export default function WorkflowDetailPage() {
 
   // Escalate mutation —— `workflow.escalate` 的界面入口,此前完全不存在。
   //
-  // `ROLE_PERMISSIONS` 把这个码名写成「realm lead 越过停滞流程的唯一正途」,
+  // 当时 `ROLE_PERMISSIONS` 把这个码名写成「realm lead 越过停滞流程的唯一正途」,
   // 并为此刻意**不**给 MODERATOR approve/advance。实拍:MODERATOR 打开这一页,
   // 可见控件只有导航、返回、节点计数与历史 —— 那条正途在界面上一个入口都没有。
+  // 2026-11-07 起(perm/0036)MODERATOR 不再持有 `workflow.escalate`,默认只有 ADMIN 持有;
+  // 矩阵仍可把它授给别的角色,所以入口按码判。
   const escalateMutation = useMutation({
     mutationFn: (reason: string) => workflowApi.escalate(id, { reason }),
     onSuccess: () => {
@@ -707,9 +709,9 @@ export default function WorkflowDetailPage() {
                     {t("workflow.detail.advance")}
                   </Button>
                 </RequirePermission>
-                {/* 越级推进。MODERATOR 持有 `workflow.escalate` 而**不**持有
-                    approve/advance —— 这是 ROLE_PERMISSIONS 刻意的安排:越级要留痕,
-                    所以理由是必填的,而这道门与上面两道互不重叠。 */}
+                {/* 越级推进。`workflow.escalate` 与 approve/advance 是两道互不重叠的门:
+                    越级要留痕,所以理由是必填的。默认只有 ADMIN 持有它(MODERATOR 2026-11-07
+                    由 perm/0036 收回);矩阵可以把它单独授给不持有 approve/advance 的角色。 */}
                 <RequirePermission permissions="workflow.escalate">
                   <Button type="button" variant="ghost" onClick={() => setEscalateOpen((v) => !v)} aria-expanded={escalateOpen}>
                     {t("workflow.detail.escalate")}

@@ -21,6 +21,7 @@ Follows the pattern of the 17 backend tests that already read frontend source
 in jest: the fact being asserted belongs to Django.
 """
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -85,9 +86,26 @@ def test_the_role_selectors_read_the_role_table_not_a_restated_list(rel):
     `permKeys.roles`), which calls `permApi.roles.list()`; what this pins is that
     no literal role option creeps back in beside it.
     """
-    page = (FRONTEND / rel).read_text(encoding="utf-8")
-    hook = (FRONTEND.parent / "packages/core/src/hooks/usePermissionMatrix.ts").read_text(encoding="utf-8")
+    page = _code((FRONTEND / rel).read_text(encoding="utf-8"))
+    hook = _code((FRONTEND.parent / "packages/core/src/hooks/usePermissionMatrix.ts").read_text(encoding="utf-8"))
     assert "useRoles(" in page or "permApi.roles.list()" in page, f"{rel} no longer reads the role table"
     assert "permApi.roles.list()" in hook, "core useRoles() no longer reads the role table"
     restated = [r for r in UserRole.values if f'value="{r}"' in page or f'value: "{r}"' in page]
     assert not restated, f"{rel} restates role option(s) {restated} beside the table-driven list"
+
+
+def _code(text):
+    """TS/TSX with `/* */` (JSX `{/* */}` included) and `//` comments removed (审计 2026-11-11 G-05):
+    a page that only mentions `useRoles(` in a comment does not read the role table. The `//` rule
+    skips `://` and a `//` right after a quote, as `frontend/src/__tests__/menuButtonGates.test.ts` does."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return re.sub(r"(^|[^:\"'`])//[^\n]*", r"\1", text)
+
+
+def test_a_role_table_read_named_only_in_a_comment_does_not_count():
+    """什么改动会让上一条红:把页面里的 `useRoles(` 调用(或 core hook 里的 `permApi.roles.list()`)
+    删掉、只在注释里留着它。"""
+    commented = "// useRoles()\n{/* permApi.roles.list() */}\n/** useRoles( */\nconst url = \"https://x\";"
+    assert "useRoles(" not in _code(commented) and "permApi.roles.list()" not in _code(commented)
+    assert "https://x" in _code(commented)
+    assert "useRoles(" in _code("const { data } = useRoles(); // reads the table")
