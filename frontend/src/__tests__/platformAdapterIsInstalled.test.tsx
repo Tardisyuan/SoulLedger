@@ -23,6 +23,11 @@ import path from "node:path";
 
 import { installWebPlatform } from "@/lib/platform/web";
 
+/** `/* *\/`(含 JSX 的 `{/* *\/}`)与 `//` 注释去掉;写法同 menuButtonGates.test.ts。 */
+function stripComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/[^\n]*/g, (_, lead: string) => lead);
+}
+
 /**
  * 两次 require **必须来自同一个 registry**,这是这个文件唯一的技术要点。
  *
@@ -90,6 +95,13 @@ describe("根布局真的挂了它", () => {
   });
 
   it("并且渲染了它 —— 只 import 不渲染,打包器可能整块摇掉", () => {
-    expect(source).toMatch(/<PlatformProvider\s*\/>/);
+    // 剥掉注释再找(审计 2026-11-11 G-05):`{/* <PlatformProvider /> */}` 不是渲染。
+    // 什么改动会让它红:把 layout.tsx 里的 `<PlatformProvider />` 删掉或注释掉。
+    expect(stripComments(source)).toMatch(/<PlatformProvider\s*\/>/);
+  });
+
+  it("注释里的标签不算渲染", () => {
+    expect(stripComments("{/* <PlatformProvider /> */}\n// <PlatformProvider />")).not.toMatch(/<PlatformProvider\s*\/>/);
+    expect(stripComments("<PlatformProvider /> {/* installs the adapter */}")).toMatch(/<PlatformProvider\s*\/>/);
   });
 });

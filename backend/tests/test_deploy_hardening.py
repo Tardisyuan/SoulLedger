@@ -91,8 +91,21 @@ def test_production_nginx_runs_the_entrypoint_with_the_domain():
     assert nginx["environment"]["TLS_DOMAIN"] == "${TLS_DOMAIN:-}"
     assert {"80:80", "443:443"} <= set(nginx["ports"])
     # renewal reload still keyed on the marker certbot's deploy-hook touches
-    assert '"$LE/.deployed" -nt /tmp/.reloaded' in ENTRY.read_text()
-    assert "nginx -s reload" in ENTRY.read_text()
+    code = _shell_code(ENTRY.read_text())
+    assert '"$LE/.deployed" -nt /tmp/.reloaded' in code
+    assert "nginx -s reload" in code
+
+
+def _shell_code(text):
+    """The script with its `#` comments removed (a `#` at line start or after whitespace), so a
+    commented-out command does not count as one (审计 2026-11-11 G-05)."""
+    return "\n".join(re.sub(r"(^|\s)#.*$", "", line) for line in text.splitlines())
+
+
+def test_a_commented_out_reload_is_not_a_reload():
+    """什么改动会让上一条红:把 entrypoint 里 `nginx -s reload` 那一行注释掉(或删掉,只在注释里提到它)。"""
+    assert "nginx -s reload" not in _shell_code("#   nginx -s reload && touch /tmp/.reloaded\n  : # nginx -s reload")
+    assert "nginx -s reload" in _shell_code("    nginx -s reload && touch /tmp/.reloaded  # renewed")
 
 
 def _check(tmp_path, env, cert=True, **process_env):

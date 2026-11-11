@@ -167,9 +167,40 @@ class TestResetRequestCodes:
 
 def test_every_declared_code_has_a_test_above():
     """The schema's enum and this file cover the same set: a new code needs a
-    test that makes the view answer it."""
+    test that makes the view answer it.
+
+    Read from the AST, not the text (审计 2026-11-11 G-05): a code counts only
+    as the code argument of a real `_refusal(res, status, code)` or
+    `_not_returned(body, code)` call (the latter for the two codes kept declared
+    but no longer answered), so a comment or a docstring naming it does not.
+    什么改动会让它红:枚举里加一个码却没有一条这样的调用测它;或者把测它的那条调用删掉、
+    只在注释里留着那个码。
+    """
     from pathlib import Path
 
-    source = Path(__file__).read_text(encoding="utf-8")
+    asserted = _refusal_codes(Path(__file__).read_text(encoding="utf-8"))
     for value, _ in PASSWORD_RESET_REFUSAL_CODES:
-        assert f'"{value}")' in source, value
+        assert value in asserted, value
+
+
+def _refusal_codes(source):
+    import ast
+
+    position = {"_refusal": 2, "_not_returned": 1}
+    out = set()
+    for n in ast.walk(ast.parse(source)):
+        i = position.get(getattr(getattr(n, "func", None), "id", None)) if isinstance(n, ast.Call) else None
+        if i is not None and len(n.args) > i and isinstance(n.args[i], ast.Constant):
+            out.add(n.args[i].value)
+    return out
+
+
+def test_a_code_named_only_in_prose_is_not_covered():
+    prose = (
+        "def test_x():\n"
+        '    """_refusal(res, 400, "in_a_docstring")"""\n'
+        '    # _refusal(res, 400, "in_a_comment")\n'
+        '    _refusal(res, 400, "really_called")\n'
+        '    _not_returned(body, "really_not_returned")\n'
+    )
+    assert _refusal_codes(prose) == {"really_called", "really_not_returned"}

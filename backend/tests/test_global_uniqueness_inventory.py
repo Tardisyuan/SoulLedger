@@ -18,7 +18,9 @@ Kinds (`tests/tenancy_global_uniqueness.py`):
   PER_TENANT    unique with the tenant in the key (Statute.code per tenant ...).
                 NOT global -- code that looks these up without a tenant is ambiguous.
 """
+import ast
 import inspect
+import textwrap
 
 import pytest
 from django.apps import apps
@@ -132,6 +134,31 @@ def test_two_tenants_cannot_share_a_username_or_an_email():
 
 
 @pytest.mark.django_db
+def _tree(fn):
+    return ast.parse(textwrap.dedent(inspect.getsource(fn)))
+
+
+def _called(fn):
+    """Names called in `fn`'s body, from its AST — a comment or docstring naming one is not a call."""
+    return {
+        n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, "id", None)
+        for n in ast.walk(_tree(fn)) if isinstance(n, ast.Call)
+    }
+
+
+def test_the_structural_reads_ignore_prose():
+    """什么改动会让上下两条红:把 `Judgment.save` 里的 `next_number(...)` 调用删掉、只在注释里留着它;
+    把 `_ensure_soul_code` 的 `except IntegrityError` 或 `soul_code__isnull=True` 过滤删掉、只在注释里留着。"""
+    def prose():
+        """next_number IntegrityError soul_code__isnull=True"""
+        # next_number(tenant)  except IntegrityError
+        return None
+
+    assert "next_number" not in _called(prose)
+    tree = _tree(prose)
+    assert not [n for n in ast.walk(tree) if isinstance(n, (ast.ExceptHandler, ast.keyword))]
+
+
 def test_case_numbers_of_two_tenants_with_the_same_first_segment_still_differ():
     """The generator behind `case_number`: the counter key is `<prefix>-<year>`,
     not the tenant, so CN_DIYU and CN_TEST share a row and cannot issue the same number."""
@@ -143,12 +170,22 @@ def test_case_numbers_of_two_tenants_with_the_same_first_segment_still_differ():
     first, second = JudgmentCaseCounter.next_number(a), JudgmentCaseCounter.next_number(b)
     assert first != second
     assert JudgmentCaseCounter._meta.pk.name == "key", "the counter must stay keyed by prefix-year, not by tenant"
-    assert "next_number" in inspect.getsource(Judgment.save), "Judgment.save no longer draws case numbers from the counter"
+    assert "next_number" in _called(Judgment.save), "Judgment.save no longer draws case numbers from the counter"
 
 
 def test_soul_code_generator_retries_on_collision_and_never_overwrites():
     from apps.soul_accounts import services
 
-    src = inspect.getsource(services._ensure_soul_code)
-    assert "IntegrityError" in src and "soul_code__isnull=True" in src
+    tree = _tree(services._ensure_soul_code)
+    # 结构而不是子串(审计 2026-11-11 G-05):注释或 docstring 里写着这两个词不算。
+    caught = {
+        n.type.id for n in ast.walk(tree)
+        if isinstance(n, ast.ExceptHandler) and isinstance(n.type, ast.Name)
+    }
+    guarded = any(
+        isinstance(n, ast.keyword) and n.arg == "soul_code__isnull"
+        and isinstance(n.value, ast.Constant) and n.value.value is True
+        for n in ast.walk(tree)
+    )
+    assert "IntegrityError" in caught and guarded
     assert _field("souls.Soul", "soul_code").null, "soul_code must stay nullable until provisioned (unique ignores NULL)"
