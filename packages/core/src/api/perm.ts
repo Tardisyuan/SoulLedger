@@ -108,7 +108,7 @@ export type PermissionImportDocument = Omit<Schemas["PermissionImportRequest"], 
  * (backend/apps/perm/matrix.py). One result per change, in request order:
  * `saved`, `unchanged` (the cell was already in that state), `refused` with a
  * `code` (`role_not_found` / `permission_not_found` / `version_conflict` /
- * `admin_only_permission`: recycle-bin restore / hard delete to a non-ADMIN role /
+ * `admin_only_permission`: an `ADMIN_ONLY_CODENAMES` codename to a non-ADMIN role /
  * `admin_always_all`: any revoke on an ADMIN cell) or
  * `failed` (`database_error`, that cell rolled back alone). 200 whatever the
  * mix; `versions` is each named role's version after the call.
@@ -125,6 +125,18 @@ export const ADMIN_ROLE_NAME = "ADMIN";
 export const ROLE_FORBIDDEN_CODENAMES: Readonly<Record<string, readonly string[]>> = {
   MODERATOR: ["user.manage"],
 };
+/**
+ * Codenames only the ADMIN role may hold — a copy of `ADMIN_ONLY_CODENAMES` in backend/apps/perm/checker.py,
+ * pinned to it by `roleForbiddenCodenamesMatchBackend.test.ts`. The matrix draws them 「禁授」 in every other column;
+ * the server refuses them with `admin_only_permission`.
+ */
+export const ADMIN_ONLY_CODENAMES: readonly string[] = [
+  "recycle_bin.restore",
+  "recycle_bin.hard_delete",
+  "soul.correct_settlement",
+  "menu.manage",
+  "scheduler.manage",
+];
 /**
  * 「设计流程的人不审批」按能力,不按角色名(2026-10-29 第 13 条;backend/apps/perm/checker.py 的
  * `WORKFLOW_DESIGN_CODENAMES` / `WORKFLOW_APPROVE_CODENAMES` / `capability_conflicts`):同一个角色持有设计码,

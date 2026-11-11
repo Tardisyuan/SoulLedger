@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import {
+  ADMIN_ONLY_CODENAMES,
   ROLE_FORBIDDEN_CODENAMES,
   WORKFLOW_APPROVE_CODENAMES,
   WORKFLOW_DESIGN_CODENAMES,
@@ -60,4 +61,22 @@ it("capabilityForbids: approve beside design, design beside approve, never for A
   const both = new Set(["workflow.create", "workflow.approve"]);
   expect(capabilityForbids("X", "workflow.approve", both)).toBe(true);
   expect(capabilityForbids("X", "workflow.create", both)).toBe(false);
+});
+
+/**
+ * `ADMIN_ONLY_CODENAMES` (audit 2026-11-11 C-04): the matrix draws these 禁授 in every non-ADMIN column. Anchored on the
+ * assignment at the start of a line, and `#` comments inside the literal are stripped before the strings are read —
+ * a codename commented out in Python must drop out here too, not linger as a quoted word in a comment.
+ */
+function backendAdminOnly(): string[] {
+  const m = readFileSync(CHECKER, "utf8").match(/^ADMIN_ONLY_CODENAMES = frozenset\(\{([\s\S]*?)^\}\)/m);
+  if (!m) throw new Error("ADMIN_ONLY_CODENAMES not found in checker.py");
+  const body = m[1].split("\n").map((line) => line.replace(/#.*$/, "")).join("\n");
+  return [...body.matchAll(/"([^"]+)"/g)].map((c) => c[1]).sort();
+}
+
+it("core's only-ADMIN codenames are the backend's ADMIN_ONLY_CODENAMES", () => {
+  const backend = backendAdminOnly();
+  expect(backend.length).toBeGreaterThan(0);
+  expect([...ADMIN_ONLY_CODENAMES].sort()).toEqual(backend);
 });
