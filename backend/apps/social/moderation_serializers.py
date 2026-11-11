@@ -224,7 +224,7 @@ class SensitiveWordBatchUpdateResultSerializer(serializers.Serializer):
 class SensitiveWordCopySerializer(serializers.Serializer):
     """Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
     civilization by code. The target is the caller's own hall; the hall-less ADMIN, which has none, names it in
-    `target_tenant` (2026-10-29). A hall's ADMIN may only copy into its own hall."""
+    `target_tenant` (2026-10-29). A hall's ADMIN is refused (2026-11-11): it may copy only from a shared list, and there is none."""
 
     source_tenant = serializers.CharField(max_length=50)
     target_tenant = serializers.CharField(max_length=50, required=False, allow_blank=True)

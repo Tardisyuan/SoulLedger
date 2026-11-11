@@ -174,15 +174,19 @@ def test_assist_hall_switch_is_own_hall_for_a_bound_admin(world):
     assert {r["code"] for r in world["g"].get("/api/v1/assist-admin/halls/").json()} >= {"CN_DIYU", "EG_DUAT"}
 
 
-def test_copy_from_goes_into_the_callers_hall_or_the_one_the_global_admin_names(world):
+def test_copy_from_is_the_global_admins_and_goes_into_the_hall_it_names(world):
+    """绑殿 ADMIN 只许从全站共享词表复制(A1-04,2026-11-11),而现在没有共享词表 —— 一律 403,
+    别殿的词不进本殿。全局 ADMIN 照旧跨殿,目标殿由它点名。"""
     from apps.social.models import SensitiveWord
 
     SensitiveWord.objects.create(tenant=world["eg"], word="禁词")
     url = "/api/v1/social-moderation/sensitive-words/copy-from/"
     b = world["b"]
-    assert b.post(url, {"source_tenant": "EG_DUAT", "target_tenant": "EG_DUAT"}, format="json").status_code == 404
-    assert b.post(url, {"source_tenant": "EG_DUAT"}, format="json").status_code == 200
-    assert SensitiveWord.objects.filter(tenant=world["cn"], word="禁词").exists()
+    for body in ({"source_tenant": "EG_DUAT"}, {"source_tenant": "EG_DUAT", "target_tenant": "EG_DUAT"}):
+        res = b.post(url, body, format="json")
+        assert (res.status_code, res.json()["code"]) == (403, "shared_source_only")
+    assert not SensitiveWord.objects.filter(tenant=world["cn"]).exists()
+    assert not SensitiveWord.objects.filter(tenant=world["eg"]).exclude(word="禁词").exists()
     g = world["g"]
     assert g.post(url, {"source_tenant": "CN_DIYU"}, format="json").status_code == 400  # no target named
     gr = Tenant.objects.create(code="GR_HADES", display_name="哈迪斯")

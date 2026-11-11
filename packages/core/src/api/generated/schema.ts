@@ -8106,10 +8106,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 从另一个文明复制整张词表到一个殿。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+         * @description 从另一个文明复制整张词表到一个殿。**只有没绑殿的全局 ADMIN**(其余一律 403,码名之外再判一次):
          *     这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
-         *     不该借它看见别处的词。回包只有计数,不含词本身。
-         *     目标(2026-10-29):绑殿的 ADMIN 只复制进本殿;没有殿的全局 ADMIN 在 `target_tenant` 里点名目标殿。
+         *     不该借它看见别处的词。回包只有计数,不含词本身。全局 ADMIN 在 `target_tenant` 里点名目标殿。
+         *     绑殿 ADMIN(2026-11-11):只许从全站共享词表复制;现在没有共享词表,一律 403 `shared_source_only`。
          */
         post: operations["v1_social_moderation_sensitive_words_copy_from_create"];
         delete?: never;
@@ -19554,7 +19554,7 @@ export interface components {
         /**
          * @description Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
          *     civilization by code. The target is the caller's own hall; the hall-less ADMIN, which has none, names it in
-         *     `target_tenant` (2026-10-29). A hall's ADMIN may only copy into its own hall.
+         *     `target_tenant` (2026-10-29). A hall's ADMIN is refused (2026-11-11): it may copy only from a shared list, and there is none.
          */
         SensitiveWordCopy: {
             source_tenant: string;

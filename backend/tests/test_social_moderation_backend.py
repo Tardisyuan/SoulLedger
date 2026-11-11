@@ -374,45 +374,46 @@ def test_batch_update_is_all_or_nothing_across_civilizations(cn_tenant, eu_tenan
 COPY = f"{MODERATION}/sensitive-words/copy-from/"
 
 
-def test_admin_copies_another_civilizations_words_skipping_duplicates(cn_tenant, eu_tenant, eu_admin_user):
+def test_admin_copies_another_civilizations_words_skipping_duplicates(cn_tenant, eu_tenant, admin_user):
     word(cn_tenant, "还阳", SensitiveWordAction.HIDE, category="INDUCEMENT")
     word(cn_tenant, "门牌号", SensitiveWordAction.MASK, category="PRIVACY")
     counted = word(cn_tenant, "已有", SensitiveWordAction.HIDE, category="ABUSE")
     mod.record_hits([counted.pk])
     kept = word(eu_tenant, "已有", SensitiveWordAction.REVIEW, category="PRIVACY")
 
-    res = officer_client(eu_admin_user).post(COPY, {"source_tenant": "CN_DIYU"}, format="json")
+    res = officer_client(admin_user).post(COPY, {"source_tenant": "CN_DIYU", "target_tenant": "EU_HEAVEN_HELL"}, format="json")
 
     assert res.status_code == 200, res.content
     assert res.json() == {"copied": 2, "skipped": 1}
     rows = {w.word: (w.category, w.action, w.created_by_id) for w in SensitiveWord.objects.filter(tenant=eu_tenant)}
     assert rows == {
-        "还阳": ("INDUCEMENT", "HIDE", eu_admin_user.pk),
-        "门牌号": ("PRIVACY", "MASK", eu_admin_user.pk),
+        "还阳": ("INDUCEMENT", "HIDE", admin_user.pk),
+        "门牌号": ("PRIVACY", "MASK", admin_user.pk),
         "已有": ("PRIVACY", "REVIEW", None),  # 目标里原有的那条不被覆盖
     }
     kept.refresh_from_db()
     assert kept.action == SensitiveWordAction.REVIEW
     assert SensitiveWord.objects.filter(tenant=cn_tenant).count() == 3, "源文明的词表被动了"
-    copies = SensitiveWord.objects.filter(tenant=eu_tenant, created_by=eu_admin_user)
+    copies = SensitiveWord.objects.filter(tenant=eu_tenant, created_by=admin_user)
     assert not SensitiveWordDailyHit.objects.filter(word__in=copies).exists(), "命中计数不该跟着复制"
     for row in copies:
         assert AuditLog.objects.filter(resource="social_moderation", resource_id=str(row.pk), action="CREATE").count() == 1
 
 
-def test_copying_again_copies_nothing(cn_tenant, eu_tenant, eu_admin_user):
+def test_copying_again_copies_nothing(cn_tenant, eu_tenant, admin_user):
     word(cn_tenant, "还阳", category="INDUCEMENT")
-    client = officer_client(eu_admin_user)
-    assert client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json").json() == {"copied": 1, "skipped": 0}
-    assert client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json").json() == {"copied": 0, "skipped": 1}
+    client = officer_client(admin_user)
+    body = {"source_tenant": "CN_DIYU", "target_tenant": "EU_HEAVEN_HELL"}
+    assert client.post(COPY, body, format="json").json() == {"copied": 1, "skipped": 0}
+    assert client.post(COPY, body, format="json").json() == {"copied": 0, "skipped": 1}
 
 
-def test_copy_refuses_its_own_civilization_and_unknown_ones(cn_tenant, cn_admin_user):
+def test_copy_refuses_its_own_civilization_and_unknown_ones(cn_tenant, admin_user):
     word(cn_tenant, "还阳", category="INDUCEMENT")
-    client = officer_client(cn_admin_user)
-    same = client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json")
+    client = officer_client(admin_user)
+    same = client.post(COPY, {"source_tenant": "CN_DIYU", "target_tenant": "CN_DIYU"}, format="json")
     assert same.status_code == 400 and same.json()["code"] == "same_tenant"
-    assert client.post(COPY, {"source_tenant": "NOPE"}, format="json").status_code == 404
+    assert client.post(COPY, {"source_tenant": "NOPE", "target_tenant": "CN_DIYU"}, format="json").status_code == 404
     assert client.post(COPY, {}, format="json").status_code == 400
     assert SensitiveWord.objects.count() == 1
 
@@ -436,6 +437,24 @@ def test_only_admin_may_copy_and_a_moderator_learns_nothing_about_the_other_list
     assert officer_client(eu_moderator).get(f"{MODERATION}/sensitive-words/").json()["results"] == []
     # 没有 social.moderate 的更进不来。
     assert officer_client(judge_user).post(COPY, {"source_tenant": "CN_DIYU"}, format="json").status_code == 403
+
+
+def test_a_halls_admin_cannot_copy_another_halls_words_into_its_own(cn_tenant, eu_tenant, eu_admin_user):
+    """A1-04(2026-11-11 用户决定):绑殿 ADMIN 只许从全站共享词表复制,不能从别的殿复制。
+    现在没有共享词表(`SensitiveWord.tenant` 不可为空),所以它一律 403 —— 词没有落进本殿,
+    之后列本殿词表也读不到别殿的词;来源殿存不存在答同一个 403。"""
+    word(cn_tenant, "地府机密词", category="CONFIDENTIAL")
+    client = officer_client(eu_admin_user)
+
+    res = client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json")
+
+    assert res.status_code == 403, res.content
+    assert res.json()["code"] == "shared_source_only"
+    assert not SensitiveWord.objects.filter(tenant=eu_tenant).exists()
+    assert "地府机密词" not in client.get(f"{MODERATION}/sensitive-words/").content.decode()
+    unknown = client.post(COPY, {"source_tenant": "NOPE"}, format="json")
+    assert (unknown.status_code, unknown.json()) == (403, res.json())
+    assert AuditLog.objects.filter(resource="social_moderation").count() == 0
 
 
 # ── 批量删词 ─────────────────────────────────────────────────────────────

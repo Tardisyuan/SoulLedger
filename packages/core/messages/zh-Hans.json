@@ -6950,6 +6950,7 @@
       "not_found": "对象不存在或不在本文明",
       "reason_required": "请写处理理由",
       "admin_only": "只有管理员可以跨文明复制词表",
+      "shared_source_only": "殿管理员只能从全站共享词表复制,不能从别的殿复制",
       "same_tenant": "源文明就是当前文明",
       "no_tenant": "没有当前文明",
       "invalid_days": "禁言天数须在 1–365 之间"

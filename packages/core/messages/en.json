@@ -6950,6 +6950,7 @@
       "not_found": "Not found, or not in this civilization",
       "reason_required": "Write a reason first",
       "admin_only": "Only an administrator can copy a word list across civilizations",
+      "shared_source_only": "A hall administrator can copy only the shared site-wide list, not another hall's",
       "same_tenant": "The source is this civilization",
       "no_tenant": "No current civilization",
       "invalid_days": "A mute lasts 1–365 days"

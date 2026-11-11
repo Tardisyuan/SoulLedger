@@ -264,7 +264,7 @@ SITES = [
     ('apps/social/moderation_views.py', 'HandledContentViewSet.list', 'PostMedia.all_objects', 1, 'PK', 'posts by pk taken from the already scoped page rows'),
     ('apps/social/moderation_views.py', 'ModeratedPostViewSet', 'PostMedia.all_objects', 1, 'PK', 'Prefetch of media for already scoped posts'),
     ('apps/social/moderation_views.py', 'ReportViewSet', 'PostMedia.all_objects', 1, 'PK', 'Prefetch of media for already scoped reports'),
-    ('apps/social/moderation_views.py', 'SensitiveWordViewSet.copy_from', 'Tenant.objects', 2, 'CROSS', "ADMIN copies another civilization's sensitive-word list (source named by code): a hall-bound ADMIN into its own hall only, the hall-less ADMIN into the hall it names in target_tenant (2026-10-29)"),
+    ('apps/social/moderation_views.py', 'SensitiveWordViewSet.copy_from', 'Tenant.objects', 2, 'CROSS', "the hall-less ADMIN copies one civilization's sensitive-word list into the hall it names in target_tenant (2026-10-29); a hall-bound ADMIN is refused before either lookup: it may copy only a shared site-wide list and there is none (A1-04, 2026-11-11)"),
     ('apps/soul_accounts/rebirth.py', 'eligibility', 'SentencePlan.all_objects', 1, 'PK', 'plan of one soul and cycle'),
     ('apps/soul_accounts/rebirth.py', 'decide_cross_civilization', 'ApprovalWorkflow._base_manager', 1, 'LOCK', 'locks the workflow row of an application already fetched by pk through the scoped path, before locking the application (lock order: workflow, then application)'),
     ('apps/soul_accounts/services.py', '_ensure_soul_code', 'Soul.all_objects', 1, 'PK', 'writes soul_code of one soul by pk; code is globally unique (G5)'),

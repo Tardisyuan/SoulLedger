@@ -673,40 +673,13 @@ describe("敏感词 · E-08b", () => {
     expect(tenantsMock.list).not.toHaveBeenCalled();
   });
 
-  it("ADMIN copies another civilization's list: the current one is not offered as a source; the counts come back", async () => {
+  it("a hall's ADMIN is not offered the copy: it may copy only a shared list, and there is none (A1-04)", async () => {
     asAdmin();
-    tenantsMock.list.mockResolvedValue(
-      page([
-        { id: 1, code: "CN_DIYU", display_name: "中国地府" },
-        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂与地狱" },
-      ])
-    );
-    apiMock.copyWords.mockResolvedValue({ data: { copied: 5, skipped: 1 } });
     renderPage();
     fireEvent.click(segment("words"));
-    fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
-    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.copy_from") });
-    const select = within(dialog).getByLabelText(tZh("social_moderation.words.copy_source"));
-    await within(select).findByRole("option", { name: "欧洲天堂与地狱" });
-    expect(within(select).queryByRole("option", { name: "中国地府" })).toBeNull();
-    const confirm = within(dialog).getByRole("button", { name: tZh("social_moderation.words.copy_confirm") });
-    expect(confirm).toBeDisabled();
-    fireEvent.change(select, { target: { value: "EU_HEAVEN_HELL" } });
-    fireEvent.click(confirm);
-    await waitFor(() => expect(apiMock.copyWords).toHaveBeenCalledWith("EU_HEAVEN_HELL"));
-    await waitFor(() =>
-      expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.words.copy_done", { copied: "5", skipped: "1" }), "success")
-    );
-  });
-
-  it("a hall's ADMIN is not asked for a target: it copies into its own hall", async () => {
-    asAdmin();
-    tenantsMock.list.mockResolvedValue(page([{ id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂与地狱" }]));
-    renderPage();
-    fireEvent.click(segment("words"));
-    fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
-    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.copy_from") });
-    expect(within(dialog).queryByLabelText(tZh("social_moderation.words.copy_target"))).toBeNull();
+    await screen.findByText(tZh("social_moderation.empty.words"));
+    expect(screen.queryByRole("button", { name: tZh("social_moderation.words.copy_from") })).toBeNull();
+    expect(tenantsMock.list).not.toHaveBeenCalled();
   });
 
   it("the hall-less ADMIN names the target hall; the source list leaves the target out; both go to the server", async () => {
@@ -731,6 +704,9 @@ describe("敏感词 · E-08b", () => {
     fireEvent.change(source, { target: { value: "EU_HEAVEN_HELL" } });
     fireEvent.click(confirm);
     await waitFor(() => expect(apiMock.copyWords).toHaveBeenCalledWith("EU_HEAVEN_HELL", "CN_DIYU"));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.words.copy_done", { copied: "2", skipped: "0" }), "success")
+    );
   });
 
   it("clicking a row opens the edit drawer; an uncategorised word cannot be saved until it gets a category", async () => {
