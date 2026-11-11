@@ -3,7 +3,7 @@
 import { localName } from "@soulledger/core/domain/localName";
 import { memo, useId } from "react";
 import { Permission, Role } from "@soulledger/core/api";
-import { ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids } from "@soulledger/core/api/perm";
+import { ADMIN_ONLY_CODENAMES, ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids } from "@soulledger/core/api/perm";
 import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { roleLabel } from "@/src/lib/domainNames";
@@ -21,9 +21,10 @@ import { ROW_HOVER } from "@/components/ui/data-table";
  *   ◇ 冲突 — 1px 墨色虚线框 + 2px 墨色强调环;这次改动会让某条审批流的某一步无人可批
  *   始终 — ADMIN 整列:只有 11px ink3 的「始终」二字。服务端对 ADMIN 在读授权之前就答
  *          「有」(`admin_always_all`),所以这里点不动,悬停 / 聚焦说明原因
- *   禁授 — 11px ink3 字 + 135° 细斜线底。服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`,以及按能力的
- *          「设计流程的人不审批」:这一列此刻(含未保存的勾)持有设计码时的审批码格,持有审批码时的设计码格),
- *          一开始就摆明;不用反馈色 —— 禁授是规则,「!」失败才是事后结果
+ *   禁授 — 11px ink3 字 + 135° 细斜线底。服务端禁止授予该角色的格子,一开始就摆明。原因三种(`denyReason`),提示各说各的:
+ *          只限管理员(`ADMIN_ONLY_CODENAMES`)、角色禁项(`ROLE_FORBIDDEN_CODENAMES`)、按能力的「设计流程的人不审批」
+ *          (这一列此刻(含未保存的勾)持有设计码时的审批码格,持有审批码时的设计码格)。
+ *          不用反馈色 —— 禁授是规则,「!」失败才是事后结果
  *
  * 格子里没有文明色,也不再借警示 / 强调色:未保存与冲突靠环与字形,不靠色相。
  *
@@ -36,9 +37,24 @@ export type CellState = "on" | "off" | "grant" | "revoke" | "failed" | "conflict
  *  `held` = the role's codenames as ticked now (unsaved included), for the design-vs-approve rule. */
 export function ruleState(role: string, codename: string, held: ReadonlySet<string> = new Set()): "lock" | "deny" | null {
   if (role === ADMIN_ROLE_NAME) return "lock";
-  if (ROLE_FORBIDDEN_CODENAMES[role]?.includes(codename)) return "deny";
-  return capabilityForbids(role, codename, held) ? "deny" : null;
+  return denyReason(role, codename, held) ? "deny" : null;
 }
+
+/** Why the server refuses this grant — each reason has its own hint and refusal code. ADMIN is never refused. */
+export type DenyReason = "admin_only" | "role" | "capability";
+export function denyReason(role: string, codename: string, held: ReadonlySet<string> = new Set()): DenyReason | null {
+  if (role === ADMIN_ROLE_NAME) return null;
+  if (ADMIN_ONLY_CODENAMES.includes(codename)) return "admin_only";
+  if (ROLE_FORBIDDEN_CODENAMES[role]?.includes(codename)) return "role";
+  return capabilityForbids(role, codename, held) ? "capability" : null;
+}
+
+/** The hint key and the server's refusal code for each reason. */
+const DENY_WORDS: Record<DenyReason, { hint: string; code: string }> = {
+  admin_only: { hint: "permissions.matrix.deny_hint_admin_only", code: "admin_only_permission" },
+  role: { hint: "permissions.matrix.deny_hint", code: "role_forbidden_permission" },
+  capability: { hint: "permissions.matrix.deny_hint_capability", code: "role_forbidden_permission" },
+};
 
 export function cellState({
   granted,
@@ -112,7 +128,10 @@ export interface MatrixCellInfo {
 function describeCell(info: MatrixCellInfo, role: string, perm: Permission, t: ReturnType<typeof useI18n>["t"], locale?: string) {
   const key = matrixCellKey(role, perm.id);
   const failure = info.failure(key);
-  const rule = ruleState(role, perm.codename, info.heldCodenames?.(role));
+  const held = info.heldCodenames?.(role);
+  const rule = ruleState(role, perm.codename, held);
+  const reason = rule === "deny" ? denyReason(role, perm.codename, held) : null;
+  const deny = reason ? DENY_WORDS[reason] : null;
   const state =
     rule ??
     cellState({
@@ -124,8 +143,8 @@ function describeCell(info: MatrixCellInfo, role: string, perm: Permission, t: R
   const words =
     state === "lock"
       ? `${t("permissions.matrix.lock_word")} · ${ADMIN_ROLE_NAME}　${t("permissions.matrix.lock_hint")}`
-      : state === "deny"
-        ? `${t("permissions.matrix.deny_word")}　${t("permissions.matrix.deny_hint", { perm: localName(perm, locale) || perm.codename })} role_forbidden_permission`
+      : deny
+        ? `${t("permissions.matrix.deny_word")}　${t(deny.hint, { perm: localName(perm, locale) || perm.codename })} ${deny.code}`
         : state === "failed" && failure
       ? `${t("permissions.matrix.state.failed")}: ${info.failureReason(failure)}`
       : state === "on" || state === "off"

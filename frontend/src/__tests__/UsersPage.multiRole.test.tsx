@@ -301,8 +301,8 @@ describe("batch activate / deactivate", () => {
 });
 
 describe("a user without user.manage", () => {
-  // 页级门(rbac-web L-1):users/ 后端是 IsAdmin + user.manage,非管理员连列表都拿不到 —— 整页 403,
-  // 不再画一个空表加一片「加载失败」。
+  // 页级门(rbac-web L-1):users/ 按码 `user.manage`(后端 UserViewSet 同一个码),没有它就连列表都拿不到 ——
+  // 整页 403,不再画一个空表加一片「加载失败」。
   it("gets the denied page: no list, no checkboxes, no 设置角色, no bar", async () => {
     mockUser = { id: 9, username: "judge9", role: "JUDGE", tenant: null, permissions: ["soul.read"] };
     renderPage();

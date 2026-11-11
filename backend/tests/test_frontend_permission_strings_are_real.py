@@ -51,7 +51,24 @@ _PROP = re.compile(r'permissions?=\{?\[?((?:\s*["\'][^"\']+["\']\s*,?)+)\]?\}?')
 _CALL = re.compile(
     r'has(?:Any|All)?Permissions?\(\s*\[?((?:\s*["\'][^"\']+["\']\s*,?)+)\]?\s*\)'
 )
+# The officer App (`mobile-officer/`) spells its gates differently (audit 2026-11-11 G-01): `useCan("x")`
+# and `permissions.includes("x")` / `held.includes("x")` on the officer's code list.
+_USE_CAN = re.compile(r'useCan\(\s*((?:["\'][^"\']+["\']))\s*\)')
+_HELD_INCLUDES = re.compile(r'\b(?:permissions|held)\??\.includes\(\s*((?:["\'][^"\']+["\']))\s*\)')
 _STRING = re.compile(r'["\']([^"\']+)["\']')
+#: A codename as the catalogue spells it — `family.action`. Used only inside the code tables below,
+#: whose other strings are keys (`MODERATOR`, `approve`, a tab name).
+_CODENAME_SHAPE = re.compile(r"^[a-z_]+\.[a-z_]+$")
+
+#: Tables of codenames that are not a gate call: the officer App's tab and verdict codes, and core's rule
+#: tables. Named, so a rename is red here instead of silently dropping the table from the scan. Besides
+#: these, every `const <NAME>_CODENAMES` in any root is read too (the name says what it holds).
+#: `*_CODES` is not swept by name: most of those are error-code lists (`CITY_GOD_CASE_ERROR_CODES` …).
+CODE_TABLES = {
+    "mobile-officer/src/kit.tsx": ("TAB_CODES",),
+    "mobile-officer/src/rules.ts": ("VERDICT_CODES",),
+}
+_CODENAMES_CONST = re.compile(r"\bconst\s+([A-Z][A-Z0-9_]*_CODENAMES)\b")
 
 
 #: Every tree that ships code calling the permission hook or the RBAC
@@ -63,6 +80,8 @@ _ROOTS = (
     FRONTEND / "components",
     FRONTEND / "lib",
     REPO / "packages" / "core" / "src",
+    # The officer App gates screens and buttons on the same catalogue (audit 2026-11-11 G-01).
+    REPO / "mobile-officer" / "src",
 )
 
 
@@ -92,16 +111,46 @@ def _strip_comments(text):
     return _LINE_COMMENT.sub("", _BLOCK_COMMENT.sub("", text))
 
 
+def _literal_after(text, start):
+    """The `[...]` or `{...}` literal that the declaration at `start` is assigned, brackets balanced."""
+    eq = text.index("=", start)
+    i = eq + 1
+    while text[i] not in "[{":
+        i += 1
+    depth, j = 0, i
+    while True:
+        if text[j] in "[{":
+            depth += 1
+        elif text[j] in "]}":
+            depth -= 1
+            if depth == 0:
+                return text[i: j + 1]
+        j += 1
+
+
+def _table_codenames(text, names):
+    out = []
+    for name in names:
+        m = re.search(rf"\bconst\s+{name}\b", text)
+        if m is None:
+            raise AssertionError(f"code table {name} not found")
+        out += [c for c in _STRING.findall(_literal_after(text, m.start())) if _CODENAME_SHAPE.match(c)]
+    return out
+
+
 def _usages():
     found = {}
     for path in _sources():
+        rel = str(path.relative_to(REPO))
         text = _strip_comments(path.read_text(encoding="utf-8"))
-        for pattern in (_PROP, _CALL):
+        names = []
+        for pattern in (_PROP, _CALL, _USE_CAN, _HELD_INCLUDES):
             for match in pattern.finditer(text):
-                for name in _STRING.findall(match.group(1)):
-                    found.setdefault(name, set()).add(
-                        str(path.relative_to(REPO))
-                    )
+                names += _STRING.findall(match.group(1))
+        tables = CODE_TABLES.get(rel, ()) + tuple(_CODENAMES_CONST.findall(text))
+        names += _table_codenames(text, tables)
+        for name in names:
+            found.setdefault(name, set()).add(rel)
     return found
 
 
@@ -132,6 +181,38 @@ def test_the_scan_reads_hook_calls_as_well_as_props():
         assert path in usages.get(name, set()), (
             f"hasPermission({name!r}) in {path} is not seen by the scan"
         )
+
+
+def test_the_scan_reads_the_officer_app_spellings():
+    """`useCan("…")`, `held.includes("…")` and the code tables, each named, so one spelling cannot stop
+    matching while the others keep the floor above. Before 2026-11-11 `mobile-officer/` was not scanned at all."""
+    usages = _usages()
+    for name, path in (
+        ("judgment.assign", "mobile-officer/src/screens/judgmentActions.tsx"),  # useCan
+        ("wangsi.execute", "mobile-officer/src/kit.tsx"),  # TAB_CODES
+        ("dispatch.reject", "mobile-officer/src/rules.ts"),  # VERDICT_CODES
+        ("workflow.approve", "mobile-officer/src/screens/todo.tsx"),  # held.includes
+        ("reincarnation.read", "mobile-officer/src/screens/soulDetail.tsx"),  # permissions.includes
+        ("recycle_bin.restore", "packages/core/src/api/perm.ts"),  # ADMIN_ONLY_CODENAMES
+    ):
+        assert path in usages.get(name, set()), f"{name!r} in {path} is not seen by the scan"
+
+
+def test_a_misspelt_officer_app_codename_is_caught(tmp_path, monkeypatch):
+    """The guard of the guard: a typo in each new spelling lands in the unknown set."""
+    app = tmp_path / "mobile-officer" / "src"
+    app.mkdir(parents=True)
+    (app / "kit.tsx").write_text('export const TAB_CODES = { todo: ["workflow.aprove"], me: null };\n', encoding="utf-8")
+    (app / "rules.ts").write_text('const VERDICT_CODES = { x: { approve: "dispatch.aprove", reject: "dispatch.reject" } };\n',
+                                  encoding="utf-8")
+    (app / "screen.tsx").write_text(
+        'const a = useCan("judgment.asign");\nconst b = held.includes("soul.raed");\n'
+        '// useCan("comment.only") is prose, not a gate\n', encoding="utf-8")
+    monkeypatch.setitem(globals(), "REPO", tmp_path)
+    monkeypatch.setitem(globals(), "_ROOTS", (app,))
+    found = _usages()
+    assert {"workflow.aprove", "dispatch.aprove", "judgment.asign", "soul.raed"} <= set(found) - CATALOGUE
+    assert "comment.only" not in found
 
 
 def test_every_permission_string_names_a_real_codename():

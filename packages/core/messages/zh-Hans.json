@@ -1159,24 +1159,26 @@
         "failed": "失败",
         "conflict": "冲突",
         "lock": "始终 · ADMIN",
-        "deny": "禁止 · 朋友圈审核员"
+        "deny": "禁授 · 按规则"
       },
       "refused": {
-        "admin_only_permission": "与规则「回收站的恢复与彻底删除仅限 ADMIN」冲突，已退回。",
+        "admin_only_permission": "与规则冲突：这项权限只有管理员（ADMIN）能持有，已退回。",
         "version_conflict": "此角色已被别人改过，已重新加载，请再看一遍。",
         "role_not_found": "角色已不存在。",
         "permission_not_found": "权限项已不存在。",
         "database_error": "数据库出错，这一格没有写入。",
         "admin_always_all": "管理员始终拥有全部权限",
         "conflict_unacknowledged": "这项撤销会让审批流无人可批，未经确认，已退回。请在冲突提示里勾选确认后再保存。",
-        "role_forbidden_permission": "与规则冲突：朋友圈审核员（MODERATOR）不能持有流程审批、流程推进或用户管理，已退回。"
+        "role_forbidden_permission": "与规则冲突：这个角色不能持有这项权限（角色禁项，或「设计流程的人不审批」），已退回。"
       },
       "conflict_workflow_line": "{{causes}} 改动后，进行中的审批流「{{workflow}}」第 {{step}} 步（{{step_name}}）将无人可批。",
       "conflict_acknowledge": "确认冲突：这次改动影响 {{n}} 条审批流，含进行中 {{m}} 条。",
       "lock_word": "始终",
       "lock_hint": "管理员角色始终拥有全部权限，不能取消勾选。",
       "deny_word": "禁授",
-      "deny_hint": "朋友圈审核员不能授予「{{perm}}」。",
+      "deny_hint": "角色禁项：这个角色不能持有「{{perm}}」。",
+      "deny_hint_capability": "设计流程的人不审批：这个角色持有流程设计权限时不能再授流程审批或推进，持有审批或推进时不能再授设计，「{{perm}}」此刻不能授予。",
+      "deny_hint_admin_only": "「{{perm}}」只有管理员（ADMIN）能持有。",
       "conflict_view": "查看",
       "category_all": "全选",
       "category_none": "全不选",

@@ -8,7 +8,7 @@
  *   carried by a glyph and an accessible description, not colour alone;
  * - the save sends exactly the pending cells, with the versions it loaded;
  * - a partial save keeps ONLY the refused cells pending, says 「已存 N 项，失败 M
- *   项」, names the reason (admin_only_permission), and 定位 focuses the cell;
+ *   项」, names the reason (role_forbidden_permission), and 定位 focuses the cell;
  * - the impact check's conflict names the workflow step that would lose its
  *   last approver and marks the causing cell ◇;
  * - 只看差异, 放弃, ⌘S, and the 393 px role-first flow;
@@ -60,7 +60,7 @@ function composeAllRolePermissions(p: { roles: { list: jest.Mock }; rolePermissi
 const PERMS: Permission[] = [
   { id: 1, codename: "soul.read", name: "读灵魂", category: "soul" } as Permission,
   { id: 2, codename: "soul.update", name: "改灵魂", category: "soul" } as Permission,
-  { id: 3, codename: "recycle_bin.hard_delete", name: "彻底删除", category: "system" } as Permission,
+  { id: 3, codename: "audit.read", name: "读审计", category: "system" } as Permission,
 ];
 const role = (over: Partial<Role>) =>
   ({ id: 0, name: "", display_name: "", user_count: 0, member_count: 0,
@@ -179,24 +179,24 @@ describe("saving", () => {
       GRANTS.YIN_CLERK = [1, 2]; // saved; JUDGE's refused grant is not on the server
       return { data: { saved: 1, unchanged: 0, refused: 1, failed: 0, versions: { JUDGE: 8, YIN_CLERK: 3 },
         results: [
-          { index: 0, role: "JUDGE", permission_id: 3, codename: "recycle_bin.hard_delete", action: "grant", status: "refused", code: "admin_only_permission", detail: "x" },
+          { index: 0, role: "JUDGE", permission_id: 3, codename: "audit.read", action: "grant", status: "refused", code: "role_forbidden_permission", detail: "x" },
           { index: 1, role: "YIN_CLERK", permission_id: 2, codename: "soul.update", action: "grant", status: "saved", code: null, detail: null },
         ] } };
     });
     renderPage();
     await ready();
-    fireEvent.click(cell("JUDGE", "recycle_bin.hard_delete"));
+    fireEvent.click(cell("JUDGE", "audit.read"));
     fireEvent.click(cell("YIN_CLERK", "soul.update"));
     save();
 
     const banner = await screen.findByRole("alert");
     expect(within(banner).getByText(/permissions\.matrix\.partial_title:1,1/)).toBeInTheDocument();
-    expect(within(banner).getByText("permissions.matrix.refused.admin_only_permission")).toBeInTheDocument();
+    expect(within(banner).getByText("permissions.matrix.refused.role_forbidden_permission")).toBeInTheDocument();
     // The refused cell: still pending, marked !, reason in its description.
-    const refused = cell("JUDGE", "recycle_bin.hard_delete");
+    const refused = cell("JUDGE", "audit.read");
     expect(stateOf(refused)).toBe("failed");
     expect(glyphOf(refused)).toBe("!");
-    expect(refused).toHaveAccessibleDescription(/permissions\.matrix\.refused\.admin_only_permission/);
+    expect(refused).toHaveAccessibleDescription(/permissions\.matrix\.refused\.role_forbidden_permission/);
     // The saved one is simply granted now — no mark, not pending.
     expect(stateOf(cell("YIN_CLERK", "soul.update"))).toBe("on");
     expect(within(unsavedBar() as HTMLElement).getByText("permissions.matrix.pending_cells:1")).toBeInTheDocument();
@@ -217,7 +217,7 @@ describe("saving", () => {
     GRANTS = { ADMIN: [1], JUDGE: [1, 2], YIN_CLERK: [1] }; // a missing row changes nothing: ADMIN holds it anyway
     renderPage();
     await ready();
-    for (const codename of ["soul.read", "soul.update", "recycle_bin.hard_delete"]) {
+    for (const codename of ["soul.read", "soul.update", "audit.read"]) {
       const locked = cell("ADMIN", codename);
       expect(stateOf(locked)).toBe("lock");
       expect(glyphOf(locked)).toBe("permissions.matrix.lock_word");
@@ -277,6 +277,54 @@ describe("saving", () => {
   });
 });
 
+describe("禁授 says why (audit 2026-11-11 C-02 / C-04)", () => {
+  // Three reasons, three hints: only-ADMIN, the role's own forbidden list, and design-vs-approve.
+  // Each cell must carry its own reason — and not another's: before, every 禁授 read 「朋友圈审核员不能授予…」.
+  it("only-ADMIN codenames are 禁授 in every other column; role-forbidden and design-vs-approve each say their own rule", async () => {
+    const MOD = role({ id: 4, name: "MODERATOR", display_name: "朋友圈审核员", is_builtin: true, version: 3 });
+    const extra = [
+      { id: 4, codename: "user.manage", name: "用户管理", category: "system" },
+      { id: 5, codename: "recycle_bin.hard_delete", name: "彻底删除", category: "system" },
+      { id: 6, codename: "scheduler.manage", name: "管理定时任务", category: "system" },
+      { id: 7, codename: "workflow.approve", name: "流程审批", category: "workflow" },
+      { id: 8, codename: "workflow.create", name: "创建工作流", category: "workflow" },
+    ] as Permission[];
+    const all = [...PERMS, ...extra];
+    api.list.mockResolvedValue({ data: all });
+    api.roles.list.mockResolvedValue({ data: [ADMIN, JUDGE, CLERK, MOD] });
+    GRANTS = { ADMIN: [1, 2, 3, 4, 5, 6, 7, 8], JUDGE: [1, 2, 7], YIN_CLERK: [1], MODERATOR: [1] };
+    api.rolePermissions.mockImplementation(async (name: string) => ({
+      data: { role: name, permissions: [], details: (GRANTS[name] ?? []).map((id) => all[id - 1]) },
+    }));
+    renderPage();
+    await ready();
+
+    for (const r of ["JUDGE", "YIN_CLERK", "MODERATOR"]) {
+      for (const [codename, name] of [["recycle_bin.hard_delete", "彻底删除"], ["scheduler.manage", "管理定时任务"]]) {
+        const c = cell(r, codename);
+        expect(stateOf(c)).toBe("deny");
+        expect(c).toHaveAccessibleDescription(new RegExp(`permissions\\.matrix\\.deny_hint_admin_only:${name} admin_only_permission`));
+        fireEvent.click(c);
+      }
+    }
+    expect(unsavedBar()).toBeNull();
+    expect(stateOf(cell("ADMIN", "recycle_bin.hard_delete"))).toBe("lock");
+
+    const roleRule = cell("MODERATOR", "user.manage");
+    expect(roleRule).toHaveAccessibleDescription(/permissions\.matrix\.deny_hint:用户管理 role_forbidden_permission/);
+    expect(roleRule).not.toHaveAccessibleDescription(/deny_hint_(admin_only|capability)/);
+
+    // JUDGE holds workflow.approve, so workflow.create is refused by capability — not by a role name.
+    const capability = cell("JUDGE", "workflow.create");
+    expect(stateOf(capability)).toBe("deny");
+    expect(capability).toHaveAccessibleDescription(/permissions\.matrix\.deny_hint_capability:创建工作流 role_forbidden_permission/);
+    expect(capability).not.toHaveAccessibleDescription(/permissions\.matrix\.deny_hint:/);
+    // Absence: the same codename is ordinary where the rule does not apply.
+    expect(stateOf(cell("YIN_CLERK", "workflow.create"))).toBe("off");
+    expect(stateOf(cell("JUDGE", "user.manage"))).toBe("off");
+  });
+});
+
 describe("category select-all (rbac-snowy 2026-10-29)", () => {
   const toggle = (label: string) => screen.getAllByRole("button", { name: label })[0];
 
@@ -287,7 +335,7 @@ describe("category select-all (rbac-snowy 2026-10-29)", () => {
     fireEvent.click(toggle("permissions.matrix.category_all_label:soul,YIN_CLERK"));
     expect(stateOf(cell("YIN_CLERK", "soul.update"))).toBe("grant");
     expect(stateOf(cell("YIN_CLERK", "soul.read"))).toBe("on");
-    expect(stateOf(cell("YIN_CLERK", "recycle_bin.hard_delete"))).toBe("off");
+    expect(stateOf(cell("YIN_CLERK", "audit.read"))).toBe("off");
     expect(stateOf(cell("JUDGE", "soul.read"))).toBe("on");
     expect(within(unsavedBar() as HTMLElement).getByText("permissions.matrix.pending_cells:1")).toBeInTheDocument();
 

@@ -1158,25 +1158,21 @@
         "unsaved": "Nen Sau",
         "failed": "Nen Sau",
         "conflict": "Khenn",
-        "lock": "Neheh · Sab Hery",
-        "deny": "Nen Redi · Sab Shemsu"
+        "lock": "Neheh · Sab Hery"
       },
       "refused": {
-        "admin_only_permission": "Khesef: Ankh Wehem Hena Fekh Em Per Wehem — Sab Hery Wa.",
         "version_conflict": "Ky Khemen Netjer Pen; Wehem Ini Seth. Maa Wehem.",
         "role_not_found": "Nen Gem Netjer.",
         "permission_not_found": "Nen Gem Was.",
         "database_error": "Sethet: Nen Sau.",
         "admin_always_all": "Netjer Em Tepy Shesep Seth Was Neb",
-        "conflict_unacknowledged": "Wat Hesy Nen Netjer Er Wedja; Nen Maa — Khesef.",
-        "role_forbidden_permission": "Khesef: Sab Shemsu Nen Shesep Seth Was Wat Hesy — Netjer Em Tepy Wa."
+        "conflict_unacknowledged": "Wat Hesy Nen Netjer Er Wedja; Nen Maa — Khesef."
       },
       "conflict_workflow_line": "{{causes}}: Wat Hesy «{{workflow}}» Em Wedja, Sekhet {{step}} ({{step_name}}) Nen Netjer Er Wedja.",
       "conflict_acknowledge": "Maa Seth: {{n}} Wat Hesy ({{m}} Em Wedja) Nen Netjer Er Wedja",
       "lock_word": "Neheh",
       "lock_hint": "Netjer Em Tepy Shesep Seth Was Neb.",
       "deny_word": "Nen Redi",
-      "deny_hint": "Sab Shemsu Nen Redi «{{perm}}».",
       "conflict_view": "Maa",
       "category_all": "Neb",
       "category_none": "Nen Wenen",

@@ -28,7 +28,7 @@ import { useSecondFactor } from "@/src/components/users/SecondFactorPrompt";
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
-import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { DataTable, parseOrdering, type DataTableColumn } from "@/components/ui/data-table";
 import { ActionsMenu, ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
@@ -58,13 +58,14 @@ const USERS_FILTER_FIELDS = ["role", "mfa", "status", "ordering"] as const;
 
 export default function UsersPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/death-sync/page.tsx).
-  // 页级门(rbac-web L-1):users/ 是 IsAdmin + user.manage;殿主的交接入口在审判队列。
+  // 页级门(rbac-web L-1):按码 `user.manage`,与后端 `UserViewSet`(CodenamePermission)、菜单行、
+  // 帮助文档同一个码;不是管理员的持有人只看得到本殿的人(服务端收窄)。代看、动另一位管理员仍按 isAdmin 判。
   return (
-    <RequireAdmin fallback={<PermissionDenied />}>
+    <RequirePermission permissions="user.manage" fallback={<PermissionDenied permission="user.manage" />}>
       <Suspense fallback={null}>
         <UsersRoute />
       </Suspense>
-    </RequireAdmin>
+    </RequirePermission>
   );
 }
 
