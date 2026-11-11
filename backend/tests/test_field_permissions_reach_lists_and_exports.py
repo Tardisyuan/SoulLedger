@@ -85,13 +85,14 @@ def test_the_soul_list_drops_what_the_rule_hides(hall):
 @pytest.mark.parametrize("path", ["/api/v1/souls/export/", "/api/v1/ledger/stats/export/"])
 def test_soul_exports_keep_the_column_and_blank_the_cell(hall, path):
     soul, judge, viewer = hall
-    row = _csv_row(judge, path, "Soul ID", str(soul.pk))
-    assert (row["Name"], row["Merit Score"]) == ("Ruled Soul", "77")
+    before = _csv_row(judge, path, "Soul ID", str(soul.pk))
+    # ledger/stats/export/ 读的是账本汇总，不是 Soul 上存的分数,所以不写死 77,只要求规则生效前有值。
+    assert before["Name"] == "Ruled Soul" and before["Merit Score"] != ""
     _hide_from_judges()
     row = _csv_row(judge, path, "Soul ID", str(soul.pk))
     assert "Name" in row and "Merit Score" in row  # 表头留着
     assert (row["Name"], row["Merit Score"]) == ("", "")
-    assert row["Demerit Score"] == "13" and row["State"] == SoulState.REINCARNATING
+    assert row["Demerit Score"] == before["Demerit Score"] != "" and row["State"] == SoulState.REINCARNATING
     assert _csv_row(viewer, path, "Soul ID", str(soul.pk))["Name"] == "Ruled Soul"
 
 

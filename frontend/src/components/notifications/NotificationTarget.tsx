@@ -69,6 +69,8 @@ export const NOT_NAVIGABLE: Record<string, string> = {
   user: "password help has its own request_context row; impersonation points at the actor",
   // 只发给灵魂本人的账号(`apps/soul_accounts/`),灵魂不用 Web。`notificationTarget.test` 核对它真的只从那里发。
   cooldown_shortening: "sent to the soul's own account only; souls do not use the Web",
+  // 推送设备被另一个账号登记(审计 2026-11-11 A2-04):只是告知,没有可去的页;id 是设备行。
+  officer_push_device: "a notice that another account registered this device; nothing to open",
 };
 
 export function notificationTarget(n: NotificationRef): NotificationTarget | null {

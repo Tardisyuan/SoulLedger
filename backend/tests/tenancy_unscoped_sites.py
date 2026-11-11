@@ -47,6 +47,8 @@ SITES = [
     ('apps/judgment/handover.py', '_log_per_soul', 'Judgment.all_objects', 1, 'PK', 'the soul ids of judgments this handover just moved; their pks came from a query filtered by the handover hall'),
     ('apps/judgment/handover.py', '_log_per_soul', 'JudgmentAppeal.all_objects', 2, 'PK', 'the soul ids of appeals this handover just moved; their pks came from a query filtered by the handover hall'),
     ('apps/judgment/handover.py', '_log_per_soul', 'Soul.all_objects', 1, 'PK', 'the souls of those judgments, appeals and letters, by their FKs'),
+    ('apps/chat/tasks.py', 'sync_rooms_task', 'Soul.all_objects', 1, 'PK', "the one soul the signal enqueued, by its pk — soft-deleted included, so a recycled soul's rooms drop it to level 0 (audit 2026-11-11 A2-01)"),
+    ('apps/soul_accounts/authentication.py', 'soul_is_recycled', 'Soul.all_objects', 1, 'PK', "the authenticated account's own soul, by its FK, only to ask is_deleted (the default manager hides the recycled row the question is about)"),
     ('apps/judgment/deadline.py', 'overdue_q', 'Tenant.objects', 1, 'PK', "the halls of the judgments already in the caller's scoped queryset, by their tenant_id; only each hall's deadline days are read"),
     ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'SentenceNode.all_objects', 1, 'PK', "the soul's own plan nodes (plan__soul_id), to tell a pardoned eternal sentence"),
     ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'Disposition.all_objects', 2, 'PK', "the soul's own dispositions, by its pk (eternal ones; and unexecuted ones of this life)"),
@@ -363,5 +365,4 @@ BY_ID_SITES = [
     ('apps/social/soul_views.py', 'MeSocialCommentsView.post', 'Comment', 1, 'also filtered by author=request.user (the caller\'s own comment)'),
     ('apps/social/soul_views.py', 'MeSocialFeedView._one', 'Post', 1, 're-reads a post already returned to this caller, to annotate it'),
     ('apps/social/soul_views.py', 'MeSocialFeedView.post', 'Post', 1, 'also filtered by author=request.user (the caller\'s own post)'),
-    ('apps/workflow/views.py', 'ApprovalWorkflowViewSet.start', 'Judgment', 1, 'also filtered by soul=, a soul already read through scope_to_tenant'),
 ]

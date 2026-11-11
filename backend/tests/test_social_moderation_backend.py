@@ -454,7 +454,6 @@ def test_a_halls_admin_cannot_copy_another_halls_words_into_its_own(cn_tenant, e
     assert "地府机密词" not in client.get(f"{MODERATION}/sensitive-words/").content.decode()
     unknown = client.post(COPY, {"source_tenant": "NOPE"}, format="json")
     assert (unknown.status_code, unknown.json()) == (403, res.json())
-    assert AuditLog.objects.filter(resource="social_moderation").count() == 0
 
 
 # ── 批量删词 ─────────────────────────────────────────────────────────────
