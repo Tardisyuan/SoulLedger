@@ -155,7 +155,8 @@ export function topologyGraph(topology: Topology, road: Road, text: TopologyText
       const captions: JCaption[] = [];
       for (const road of topology.roads) {
         const up = road.fork === "RIGHT";
-        const ry = up ? y - 74 : y + 74;
+        // 中间那条(阿斯福得草原)与主干同一行,左下右上(《理想国》614c-d)。
+        const ry = road.fork === "MIDDLE" ? y : up ? y - 74 : y + 74;
         const rxs = spread(road.stations.length, fork.x + 96, JOURNEY_W - PAD, Math.min(fork.x + 120, JOURNEY_W - PAD));
         const run = road.stations.map((s, i) => stop(s, rxs[i], ry, up ? "above" : "below"));
         stops.push(...run);

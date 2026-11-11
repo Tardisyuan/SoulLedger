@@ -12,7 +12,7 @@ import type { Realm, SoulPathEntry } from "@soulledger/core/api";
  *   EUROPEAN 漏斗          `region` + `level`(圈 / 台阶)
  *   EGYPTIAN 称心二岔      `order` 排主干(称心 `is_judgment_hall` 加粗),出称心按 `fork`
  *                          分两条:PASS 向上,FAIL 向下、以虚线终点收尾(第二次死亡不是地方)
- *   GREEK    三岔          `fork`(LEFT / RIGHT),其余为主干
+ *   GREEK    三岔          `fork`(LEFT / MIDDLE / RIGHT;中间那条是阿斯福得草原,2026-11-11),其余为主干
  *
  * **形状字段缺失就画「一条线 · 示意」,不猜。** 杜阿特曾是「十二时之河」,要每站一个
  * 《阿姆杜阿特》的时辰;种子的六站出自《亡灵书》,没有公认的站→时对照,`hour` 每行都是
@@ -44,7 +44,7 @@ export interface Station {
 }
 
 export type FunnelRegion = "INFERNO" | "PURGATORIO" | "PARADISO";
-export type Fork = "LEFT" | "RIGHT";
+export type Fork = "LEFT" | "MIDDLE" | "RIGHT";
 /** 称心的两个结果。不是柏拉图的左右 —— 见 backend/apps/realms/models.py RealmFork。 */
 export type WeighingRoad = "PASS" | "FAIL";
 
@@ -81,7 +81,7 @@ export function stationStates(path: readonly SoulPathEntry[] | null | undefined)
 }
 
 const REGION_ORDER: FunnelRegion[] = ["INFERNO", "PURGATORIO", "PARADISO"];
-const FORK_ORDER: Fork[] = ["LEFT", "RIGHT"];
+const FORK_ORDER: Fork[] = ["LEFT", "MIDDLE", "RIGHT"];
 const WEIGHING_ROADS: WeighingRoad[] = ["PASS", "FAIL"];
 /** 称心二岔里走进「不是地方」的那条路。拓扑的虚线终点与界域表的「不计」都读它。 */
 const TERMINAL_ROAD: WeighingRoad = "FAIL";

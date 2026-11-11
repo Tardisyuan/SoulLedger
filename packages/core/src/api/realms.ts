@@ -38,7 +38,7 @@ export interface Realm {
   gate?: number | null;
   is_judgment_hall?: boolean | null;
   // 出审判处的哪一条路:冥府「三岔」LEFT / RIGHT(柏拉图的左右),杜阿特「称心二岔」PASS / FAIL。
-  fork?: "LEFT" | "RIGHT" | "PASS" | "FAIL" | null;
+  fork?: "LEFT" | "MIDDLE" | "RIGHT" | "PASS" | "FAIL" | null;
 }
 
 /**

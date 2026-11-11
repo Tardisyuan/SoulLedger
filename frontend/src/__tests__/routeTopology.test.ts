@@ -59,6 +59,8 @@ const GREECE = [
   realm("GREEK", "GR_ACHERON"),
   realm("GREEK", "GR_TARTARUS", { fork: "LEFT" }),
   realm("GREEK", "GR_ISLES_OF_THE_BLESSED", { fork: "RIGHT" }),
+  // The middle road: ordinary souls (docs/04 §三, user 2026-11-11).
+  realm("GREEK", "GR_ASPHODEL_MEADOW", { fork: "MIDDLE" }),
 ];
 const ALL = [...COURTS, PEN, ...EUROPE, ...EGYPT, ...GREECE];
 
@@ -143,14 +145,24 @@ describe("the four shapes", () => {
     expect(topo.branches).toEqual([]);
   });
 
-  it("三岔: the unforked rows are the trunk, the forked ones the roads, LEFT before RIGHT", () => {
+  it("三岔: the unforked rows are the trunk, the forked ones the roads, LEFT · MIDDLE · RIGHT", () => {
     const topo = buildTopology("GREEK", ALL, [stop("GR_ACHERON", 1), stop("GR_ISLES_OF_THE_BLESSED", 2, true)]);
     if (topo.kind !== "fork") throw new Error(topo.kind);
     expect(topo.trunk.map((s) => [s.code, s.state])).toEqual([["GR_ACHERON", "travelled"]]);
     expect(topo.roads.map((r) => [r.fork, r.stations.map((s) => s.state)])).toEqual([
       ["LEFT", ["pending"]],
+      ["MIDDLE", ["pending"]],
       ["RIGHT", ["current"]],
     ]);
+  });
+
+  it("三岔: a soul on the Asphodel Meadow stands on the middle road, not a branch", () => {
+    const topo = buildTopology("GREEK", ALL, [stop("GR_ACHERON", 1), stop("GR_ASPHODEL_MEADOW", 2, true)]);
+    if (topo.kind !== "fork") throw new Error(topo.kind);
+    expect(topo.roads.find((r) => r.fork === "MIDDLE")?.stations.map((s) => [s.code, s.state])).toEqual([
+      ["GR_ASPHODEL_MEADOW", "current"],
+    ]);
+    expect(topo.branches).toEqual([]);
   });
 });
 
