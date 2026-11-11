@@ -113,6 +113,9 @@ ADMIN_ONLY = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VI
 # Every MODERATOR cell in the tables below is 403 for the same reason; where a comment below still
 # lists MODERATOR among a codename's holders, it describes the matrix before 2026-11-07.
 NOT_MODERATOR = {**OPEN_TO_ALL, "MODERATOR": 403}
+# A body that is nothing but merit / demerit scores: VIEWER holds `ledger.read` but never sees a score
+# (`apps/souls/serializers.py::scores_hidden_from`, audit 2026-11-11 P-02), so it is refused outright.
+NO_SCORES = {**NOT_MODERATOR, "VIEWER": 403}
 
 # The three read shapes tranche 2 introduces. Each is named for the codename
 # that produces it, not for the roles it happens to admit, because the roles
@@ -154,9 +157,10 @@ READ_MATRIX = {
     # is the useful part: these rows prove CodenamePermission grants as well as
     # it denies. A codename layer that only ever produced 403s would be
     # indistinguishable from an outage.
-    "/api/v1/ledger/balance/{soul}/": NOT_MODERATOR,
-    "/api/v1/ledger/effective/{soul}/": NOT_MODERATOR,
-    "/api/v1/ledger/inheritance/{soul}/": NOT_MODERATOR,
+    # VIEWER 403 since 2026-11-11 (P-02): the codename lets it in, the score floor sends it away.
+    "/api/v1/ledger/balance/{soul}/": NO_SCORES,
+    "/api/v1/ledger/effective/{soul}/": NO_SCORES,
+    "/api/v1/ledger/inheritance/{soul}/": NO_SCORES,
     # Were ADMIN_ONLY because the view bodies spelled `role != 'ADMIN'` by hand.
     # Retired 2026-10-29 (user items 3 and 33): the overview is `ledger.read`,
     # the CSV its own `ledger.export` (perm/0030 grants it to every
@@ -203,7 +207,8 @@ READ_MATRIX = {
     # 200 for everyone, but NOT a cross-tenant leak: TenantViewSet.get_queryset
     # scopes non-ADMIN to their own tenant row.
     "/api/v1/tenants/": OPEN_TO_ALL,
-    "/api/v1/events/": OPEN_TO_ALL,
+    # `soul.read` since 2026-11-11 (P-03): was OPEN_TO_ALL, so MODERATOR read every soul's timeline.
+    "/api/v1/events/": NOT_MODERATOR,
     # likewise tenant-filtered in get_queryset
     # ENFORCED (tranche 3): declares `audit.read`, held by ADMIN and MODERATOR
     # only -- and enforced nothing, because `permission_classes` listed

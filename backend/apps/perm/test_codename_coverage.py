@@ -56,7 +56,7 @@ EXEMPT_VIEWS = {
     # No `tenant.*` / `event.*` codename exists anywhere. Both viewsets stay
     # scoped by tenant through their querysets.
     "apps.tenants.views.TenantViewSet": "no tenant.* codename exists; queryset-scoped",
-    "apps.events.views.SoulEventViewSet": "no event.* codename exists",
+    # (SoulEventViewSet was exempt here until 2026-11-11: it now reads on `soul.read`, audit P-03.)
     # (The two menu viewsets were exempt here until perm migration 0017 seeded
     # `menu.read` and granted it to all five roles. They now declare `menu`
     # again, reads on menu.read and writes on menu.manage.)

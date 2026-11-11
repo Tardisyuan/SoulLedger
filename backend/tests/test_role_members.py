@@ -181,3 +181,29 @@ def test_granting_and_revoking_through_the_drawer_pushes_a_permission_refresh(wo
     res = world["b"].post(_url(world["scribe"]), {"action": "remove", "kind": "extra", "user_ids": [v.pk]},
                           format="json")
     assert res.status_code == 200 and pushed == [v.pk]
+
+
+def test_batch_touching_another_admin_follows_the_admin_target_rule(world):
+    """审计 2026-11-11 P-01:抽屉的「授为主角色」曾不过 `_admin_target_refusal`,绑殿 ADMIN 可把同殿另一位 ADMIN
+    降成 VIEWER,随后重置其密码。现在与 `assign_roles` 同一条:只许无殿 ADMIN 且带自己的两步验证码,整批不动。"""
+    from tests.test_admin_account_actions_hardened import _code, _enable_mfa
+
+    peer = User.objects.create_user(username="cn_admin2", password="x", role="ADMIN", tenant=world["cn"])
+    viewer = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})[0]
+    body = {"action": "add", "kind": "primary", "user_ids": [world["cn_judge"].pk, peer.pk]}
+
+    res = world["b"].post(_url(viewer), body, format="json")
+    assert res.status_code == 403, res.content
+    assert res.json()["code"] == "admin_target_global_only"
+    # 全局 ADMIN 没开两步验证也不行
+    res = world["g"].post(_url(viewer), body, format="json")
+    assert res.status_code == 403 and res.json()["code"] == "second_factor_unavailable"
+    peer.refresh_from_db()
+    world["cn_judge"].refresh_from_db()
+    assert peer.role == "ADMIN" and world["cn_judge"].role == "JUDGE"  # 整批不动
+
+    row, _ = _enable_mfa(world["glob"])
+    res = world["g"].post(_url(viewer), {**body, "mfa_code": _code(row)}, format="json")
+    assert res.status_code == 200, res.content
+    peer.refresh_from_db()
+    assert peer.role == "VIEWER"

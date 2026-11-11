@@ -52,6 +52,8 @@ from apps.souls.serializers import (
     SoulStationMoveSerializer,
     SoulStationRefusalSerializer,
     SoulTransitionSerializer,
+    hidden_scores_refusal,
+    scores_hidden_from,
 )
 
 
@@ -380,6 +382,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             "Karmic Balance", "Death Date", "Created At",
         ])
         rows = 0
+        hide = scores_hidden_from(request.user)  # 列留着、格子空着,同详情拿掉分数(P-02)
         # 文件里没有功过明细:不要列表为日期检查预取的 records / reincarnations(至多五万行)。
         for soul in souls.prefetch_related(None).iterator(chunk_size=2000):
             rows += 1
@@ -388,9 +391,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 csv_safe(soul.name),
                 csv_safe(soul.civilization),
                 csv_safe(soul.current_state),
-                soul.merit_score,
-                soul.demerit_score,
-                soul.karmic_balance,
+                "" if hide else soul.merit_score,
+                "" if hide else soul.demerit_score,
+                "" if hide else soul.karmic_balance,
                 csv_safe(format_death_date(soul)),
                 soul.create_time.isoformat(),
             ])
@@ -755,6 +758,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     @action(detail=True, methods=["get"])
     def karma(self, request, pk=None):
         """Get full karma summary for a soul."""
+        refused = hidden_scores_refusal(request.user)
+        if refused:
+            return refused
         soul = self.get_object()
         summary = LedgerService.get_ledger_summary(soul)
         return Response(summary)

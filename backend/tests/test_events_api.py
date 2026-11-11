@@ -191,3 +191,28 @@ def test_exclude_system_hides_system_and_blank_actors(api_client, viewer_user, c
     assert _ids(api_client.get(LIST)) == {str(system.pk), str(blank.pk), str(human.pk)}
     assert _ids(api_client.get(f"{LIST}&exclude_system=1")) == {str(human.pk)}
     assert api_client.get("/api/v1/events/actors/").data == ["cui"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("role", ["MODERATOR", "NO_SOUL_READ"])
+def test_a_role_without_soul_read_reads_no_timeline(api_client, django_user_model, cn_tenant, role):
+    """审计 2026-11-11 P-03:`/events/` 曾不挂码,朋友圈审核员(11-07 起不持 soul.read)与任何不持 soul.read 的自建角色
+    能列、搜全殿灵魂时间线。现在三个动作都要 soul.read;持有它的 VIEWER 照常读。"""
+    from apps.perm.models import Role
+
+    if role != "MODERATOR":
+        Role.objects.get_or_create(name=role, defaults={"display_name": role})
+    soul = Soul.objects.create(name="Timeline", tenant=cn_tenant)
+    event = SoulEvent.objects.create(soul=soul, tenant=cn_tenant, event_type=EventType.SOUL_CREATED,
+                                     payload={"name": "Timeline"}, actor="cui")
+
+    _auth(api_client, django_user_model.objects.create_user(username=f"u_{role}", password="x", role=role,
+                                                            tenant=cn_tenant))
+    for path in ("/api/v1/events/", f"/api/v1/events/{event.pk}/", "/api/v1/events/actors/",
+                 "/api/v1/events/?search=Timeline"):
+        assert api_client.get(path).status_code == 403, path
+
+    _auth(api_client, django_user_model.objects.create_user(username="u_viewer_tl", password="x", role="VIEWER",
+                                                            tenant=cn_tenant))
+    assert api_client.get(f"/api/v1/events/{event.pk}/").status_code == 200
+    assert api_client.get("/api/v1/events/actors/").data == ["cui"]
