@@ -193,3 +193,52 @@ def test_the_api_reports_that_refusal_not_success(realms):
     assert resp.status_code == 400, resp.data
     soul = Soul.objects.get(pk=realms["cn_soul"].pk)
     assert soul.tenant_id == realms["cn"].pk
+
+
+# ---------------------------------------------------------------------------
+# Audit 2026-11-11 A1-03
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+def test_a_direct_proposal_honours_the_callers_data_scope(realms):
+    """The draft path checked the soul's data scope (`tenant_scoped("soul")`); the direct POST did not, so an
+    officer narrowed to one organisation proposed a soul of another. Now both answer the same 400."""
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Permission, Role, RolePermission
+    from tests.data_scope_support import org, scope
+
+    invalidate_all_permissions()
+    role = Role.objects.create(name="DISPATCH_CLERK", display_name="DISPATCH_CLERK")
+    for codename in ("dispatch.read", "dispatch.manage"):
+        perm, _ = Permission.objects.get_or_create(codename=codename,
+                                                   defaults={"name": codename, "category": "dispatch"})
+        RolePermission.objects.get_or_create(role=role, permission=perm)
+    cn = realms["cn"]
+    mine, theirs = org(cn, "本司"), org(cn, "他司")
+    clerk = User.objects.create_user(username="dp_clerk", password="x", role="DISPATCH_CLERK", tenant=cn,
+                                     organization=mine)
+    scope("DISPATCH_CLERK", "ORG")
+    outside = Soul.objects.create(name="范围外魂", current_state=SoulState.JUDGING, tenant=cn, owner_org=theirs)
+    inside = Soul.objects.create(name="范围内魂", current_state=SoulState.JUDGING, tenant=cn, owner_org=mine)
+    client = _jwt_client(clerk, cn)
+
+    def post(soul):
+        return client.post(URL, {"source_tenant": cn.pk, "target_tenant": realms["eu"].pk, "soul": str(soul.pk),
+                                 "reason": "exchange between the two halls, as agreed"}, format="json")
+
+    resp = post(outside)
+    assert resp.status_code == 400 and "soul" in resp.data, resp.data
+    assert not DispatchRecord.all_objects.filter(soul=outside).exists()
+    assert post(inside).status_code == 201
+    invalidate_all_permissions()
+
+
+@pytest.mark.django_db
+def test_the_hall_less_admin_without_a_source_hall_gets_a_400_not_a_500(realms):
+    resp = realms["client_admin"].post(URL, {
+        "target_tenant": realms["cn"].pk,
+        "soul": str(realms["eu_soul"].id),
+        "reason": "admin forgot to say where the soul is",
+    }, format="json")
+    assert resp.status_code == 400 and resp.data["code"] == "source_tenant_required", resp.data
+    assert not DispatchRecord.all_objects.filter(soul=realms["eu_soul"]).exists()

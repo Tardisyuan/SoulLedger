@@ -15,6 +15,7 @@ from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import is_tenant_exempt, request_tenant
+from apps.core.tenant_fields import same_tenant_or_404_message
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import CrossTenantJudgmentFilter, DispatchFilter
 from apps.dispatch.models import (
@@ -240,6 +241,19 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                     {"error": "Only the tenant that holds the soul may propose its dispatch"},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+            # The draft / submit path's `validate_soul = tenant_scoped("soul")`, here after the party check so a
+            # foreign hall's soul still answers 403 above (audit 2026-11-11 A1-03): a caller narrowed to one
+            # organisation could propose any soul of the hall directly, though its draft was refused.
+            try:
+                same_tenant_or_404_message(validated.get("soul"), self.get_serializer_context(), "soul")
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({"soul": exc.detail}) from exc
+
+        # The hall-less ADMIN names the source hall itself; omitted, `propose(None, …)` failed on `source_tenant.id`
+        # with a 500 (audit 2026-11-11 A1-03). Everyone else without one was already refused above.
+        if validated.get("source_tenant") is None:
+            return Response({"error": "Name the hall that holds the soul.", "code": "source_tenant_required"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # Q3(受刑计划进行中不许手动调拨)与灵魂状态在 `propose` 的灵魂行锁内判断(用户 2026-11-01),
         # 拒绝经 `_refused` 答 400 + `code`(`sentence_plan_active` / `soul_not_in_underworld`)。
