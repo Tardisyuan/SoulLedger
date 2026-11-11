@@ -159,3 +159,26 @@ describe("isTenantExempt (无殿 ADMIN = 后端 is_tenant_exempt)", () => {
     expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
   });
 });
+
+describe("global-only codenames (后端 GLOBAL_ONLY_CODENAMES,P-07)", () => {
+  const withHall = (role: UserRole, hall: { code: string } | null, permissions: string[] = []) => ({
+    ...mockContext(role, permissions),
+    user: { ...mockUser(role, permissions), tenant: hall },
+  });
+
+  it("a hall-bound ADMIN does not hold menu.manage, even when the reported list says so", () => {
+    mockUseTenant.mockReturnValue(withHall("ADMIN", { code: "CN_DIYU" }, ["menu.manage"]) as never);
+    const { result } = renderHook(() => usePermissions());
+    expect(result.current.hasPermission("menu.manage")).toBe(false);
+    expect(result.current.hasPermission("menu.manage", { evenWhileViewing: true })).toBe(false);
+    // the ADMIN short-circuit still answers everything else
+    expect(result.current.hasPermission("soul.create")).toBe(true);
+  });
+
+  it("the no-hall ADMIN does; no other role does, whatever it was granted", () => {
+    mockUseTenant.mockReturnValue(withHall("ADMIN", null) as never);
+    expect(renderHook(() => usePermissions()).result.current.hasPermission("menu.manage")).toBe(true);
+    mockUseTenant.mockReturnValue(withHall("JUDGE", null, ["menu.manage"]) as never);
+    expect(renderHook(() => usePermissions()).result.current.hasPermission("menu.manage")).toBe(false);
+  });
+});

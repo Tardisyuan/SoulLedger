@@ -32,7 +32,7 @@ const { schedulerApi } = jest.requireMock("@soulledger/core/api") as {
   schedulerApi: Record<"jobs" | "runs" | "updateJob" | "runJob" | "rebuild", jest.Mock>;
 };
 
-let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
+let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant?: { code: string } | null } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
 const mockI18n = {
@@ -141,6 +141,16 @@ describe("access", () => {
     expect(screen.getAllByRole("switch")).toHaveLength(3);
     expect(screen.getAllByRole("button", { name: tZh("scheduler.actions.run_now") })).toHaveLength(3);
     expect(screen.getAllByRole("button", { name: tZh("scheduler.actions.edit") })).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: tZh("scheduler.rebuild") })).toBeNull();
+  });
+
+  it("a hall-bound ADMIN gets no rebuild — the backend refuses anyone not tenant-exempt (P-07)", async () => {
+    mockUser = { id: 1, username: "hall_admin", role: "ADMIN", permissions: [], tenant: { code: "CN_DIYU" } };
+    renderPage();
+    await screen.findAllByText(tZh("scheduler.jobs.ledger_recalculate_tenant"));
+    // still manages the rows (scheduler.manage is not global-only) …
+    expect(screen.getAllByRole("button", { name: tZh("scheduler.actions.run_now") }).length).toBeGreaterThan(0);
+    // … but the rebuild button that answered 403 is gone.
     expect(screen.queryByRole("button", { name: tZh("scheduler.rebuild") })).toBeNull();
   });
 

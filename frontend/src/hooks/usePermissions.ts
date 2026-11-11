@@ -6,6 +6,13 @@ import { READ_ONLY_CODENAME, useImpersonation } from "@/src/components/impersona
 type ViewingOpt = { evenWhileViewing?: boolean };
 
 /**
+ * 后端 `perm/checker.py` 的 `GLOBAL_ONLY_CODENAMES` 镜像:全站共用的配置(菜单是所有殿共用的一棵树),
+ * 只有无殿 ADMIN 持有,任何角色都授不到 —— 绑殿 ADMIN 也不行。此前前端对 ADMIN 一律放行,
+ * 绑殿 ADMIN 看得到菜单的增改删,点下去 403(P-07)。后端加一个码,这里跟着加。
+ */
+export const GLOBAL_ONLY_CODENAMES: ReadonlySet<string> = new Set(["menu.manage"]);
+
+/**
  * Hook for checking user permissions
  *
  * 代看 / 进殿查看(`useImpersonation()` 非空)期间:`hasPermission` 只认读码,`isAdmin` 为假 ——
@@ -27,6 +34,8 @@ export function usePermissions() {
 
   const hasPermission = (permission: string, opts?: ViewingOpt): boolean => {
     if (viewing && !opts?.evenWhileViewing && !READ_ONLY_CODENAME.test(permission)) return false;
+    // 不读上报的清单:后端上报对绑殿 ADMIN 也含这个码(RoleHolder 没有殿),真请求却被拒。
+    if (GLOBAL_ONLY_CODENAMES.has(permission)) return roleIsAdmin && !user?.tenant;
     if (roleIsAdmin) return true;
     return user?.permissions?.includes(permission) ?? false;
   };
