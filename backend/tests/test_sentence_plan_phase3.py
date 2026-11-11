@@ -281,6 +281,22 @@ def test_a_request_for_another_civilizations_node_is_refused(cn, eg, eu, judges)
     _nothing_changed(p, before)
 
 
+def test_a_request_to_remove_another_halls_pending_node_is_refused(cn, eg, eu, judges):
+    """Audit 2026-11-11 A1-05: `add` was limited to the requester's own civilization, `remove` was not — EU could
+    ask a PENDING Egyptian stop away. Symmetric now; EU's own pending stop still goes."""
+    gr = plan.tenant("GR_HADES")
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5), (eu, plan.stop_realm(eu), 7),
+                                (gr, plan.stop_realm(gr), 3)])
+    plan.serve(soul, p, 1)
+    plan.arrive(soul, p, 2)
+    before = _shape(p)
+    assert plan.node(p, 4).tenant_code == "GR_HADES" and plan.node(p, 4).status == "PENDING"
+    response = _file(judges["eu"], p, kind="AMEND", changes={"remove": [str(plan.node(p, 4).pk)]})
+    assert response.status_code == 400 and response.data["code"] == "foreign_node", response.data
+    _nothing_changed(p, before)
+    assert _file(judges["eu"], p, kind="AMEND", changes={"remove": [str(plan.node(p, 3).pk)]}).status_code == 201
+
+
 def test_removing_a_started_node_by_request_is_refused_with_its_state(cn, eg, eu, judges):
     soul, p = _two_stops(cn, eg, eu)
     before = _shape(p)
