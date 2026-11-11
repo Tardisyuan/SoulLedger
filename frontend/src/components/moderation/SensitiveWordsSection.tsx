@@ -46,8 +46,9 @@ type WordDraft = { id: string; word: string; category: SensitiveWordCategory | "
  * 点整行打开编辑抽屉(PATCH:类别每次都必填,与新建同一条规则 —— 旧的未分类词要先选类别才能存);
  * 批量条的「改动作…」走 batch-update,与 batch-delete 一样全有或全无。
  *
- * 空词表不是死路(E-08b 空态):ADMIN 看得到「从其他文明复制」,别人看不到 —— 那是唯一一条
- * 读别的文明词表的路径,服务端也只放 ADMIN。
+ * 空词表不是死路(E-08b 空态):没绑殿的全局 ADMIN 看得到「从其他文明复制」,别人看不到 —— 那是唯一一条
+ * 读别的文明词表的路径,服务端也只放它。绑殿 ADMIN 只许从全站共享词表复制(2026-11-11),而现在没有共享词表,
+ * 服务端答 403 `shared_source_only`,所以按钮也不给它。
  */
 export function SensitiveWordsSection() {
   const { t, locale, formatDateTime } = useI18n();
@@ -75,16 +76,17 @@ export function SensitiveWordsSection() {
   const [editing, setEditing] = useState<WordDraft | null>(null);
   const [batchAction, setBatchAction] = useState<SensitiveWordAction | null>(null);
 
-  const { isAdmin, isTenantExempt } = usePermissions();
+  const { isTenantExempt } = usePermissions();
   const { tenantCode } = useTenant();
-  // 没绑殿的全局 ADMIN 要点名复制进哪个殿(服务端 `target_tenant`,impl-sec 2026-10-29);绑殿的只进本殿。
+  // 只有没绑殿的全局 ADMIN 能复制,它要点名复制进哪个殿(服务端 `target_tenant`,impl-sec 2026-10-29)。
+  const canCopy = isTenantExempt;
   const pickTarget = isTenantExempt;
   const copy = useCopySensitiveWords();
   const [copying, setCopying] = useState(false);
   const [source, setSource] = useState("");
   const [targetPick, setTargetPick] = useState("");
   const target = pickTarget ? targetPick || tenantCode || "" : tenantCode;
-  const tenants = useTenantNames({ enabled: isAdmin && copying });
+  const tenants = useTenantNames({ enabled: canCopy && copying });
   const sources = (tenants.data ?? []).filter((c) => c.code !== target);
   const copyFrom = () =>
     source &&
@@ -234,7 +236,7 @@ export function SensitiveWordsSection() {
         onRetry={() => list.refetch()}
         emptyMessage={t("social_moderation.empty.words")}
         emptyAction={
-          isAdmin ? (
+          canCopy ? (
             <Button type="button" variant="secondary" size="sm" onClick={() => setCopying(true)}>
               {t("social_moderation.words.copy_from")}
             </Button>

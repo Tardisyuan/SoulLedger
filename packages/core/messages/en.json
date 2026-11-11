@@ -6523,6 +6523,10 @@
       "title": "Two-step verification turned off",
       "body": "{{name}}, an officer of your hall, turned off your two-step verification"
     },
+    "push_device_claimed": {
+      "title": "Your push device was registered by another account",
+      "body": "Your push device was registered by another account and no longer gets your notifications. If you did not change phones yourself, contact your hall."
+    },
     "export_ready": {
       "title": "Your data is ready",
       "body": "The data export you asked for is ready for 7 days. Open Soul Ledger to save it."
@@ -6854,6 +6858,10 @@
       "title": "Case returned for correction",
       "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"
     },
+    "push_device_claimed": {
+      "title": "Your push device was registered by another account",
+      "body": "Your push device was registered by another account and no longer gets your to-do pushes. If you did not change phones yourself, contact an administrator."
+    },
     "wangsi_grievance_filed": {
       "title": "New grievance in the City of Wrongful Death",
       "body": "{{soul}} has filed a grievance, waiting for review."
@@ -6951,6 +6959,7 @@
       "not_found": "Not found, or not in this civilization",
       "reason_required": "Write a reason first",
       "admin_only": "Only an administrator can copy a word list across civilizations",
+      "shared_source_only": "A hall administrator can copy only the shared site-wide list, not another hall's",
       "same_tenant": "The source is this civilization",
       "no_tenant": "No current civilization",
       "invalid_days": "A mute lasts 1–365 days"

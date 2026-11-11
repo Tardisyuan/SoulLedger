@@ -128,8 +128,9 @@ export const socialModerationApi = {
    * ADMIN only (403 `admin_only` for anyone else): copy every word of another
    * civilization into the current one, keeping category and action. Words the
    * current list already has are skipped. The reply is two counts, never words.
-   * `targetTenant`: the hall-less ADMIN must name the hall it copies into (400 `no_tenant` without it);
-   * a hall's ADMIN copies into its own hall and leaves it out.
+   * `targetTenant`: the hall-less ADMIN must name the hall it copies into (400 `no_tenant` without it).
+   * A hall's ADMIN gets 403 `shared_source_only` (2026-11-11): it may copy only from a shared site-wide list,
+   * and there is none yet.
    */
   copyWords: (sourceTenant: string, targetTenant?: string) =>
     api.post<{ copied: number; skipped: number }>("/social-moderation/sensitive-words/copy-from/", {

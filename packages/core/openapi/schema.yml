@@ -11843,9 +11843,12 @@ paths:
     get:
       operationId: v1_me_notifications_retrieve
       description: |-
-        `GET /me/notifications/`:本灵魂收到过的推送,最新在前,分页(PAGE_SIZE 20)。
+        `GET /me/notifications/`:本世账号收到过的推送,最新在前,分页(PAGE_SIZE 20)。
 
-        只读。范围是**灵魂**而不是本世账号:转世换账号,记录仍是同一个灵魂的。
+        只读。范围是**本世账号**(`PushDelivery.account`,每一行写入时就是收件的那个账号),不是灵魂:
+        新一世看不见前世的通知(2026-11-11 用户决定,审计 A2-03)—— 前世的书信推送带着对方显示名与
+        `conversation_id`,而会话列表本来就按账号隔开(`chat/views.py`:「新一世看不见前世的会话」)。
+        前世的行仍留在库里,只是不从这里给。
         `PushDelivery` 一台设备一行,两台手机登同一账号就是同一件事两行 —— 这里按
         `dedupe_key` 只给最早那一行,记录讲的是「发生过什么」,不是「发到了哪台」。
       tags:
@@ -18022,10 +18025,10 @@ paths:
     post:
       operationId: v1_social_moderation_sensitive_words_copy_from_create
       description: |-
-        从另一个文明复制整张词表到一个殿。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        从另一个文明复制整张词表到一个殿。**只有没绑殿的全局 ADMIN**(其余一律 403,码名之外再判一次):
         这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
-        不该借它看见别处的词。回包只有计数,不含词本身。
-        目标(2026-10-29):绑殿的 ADMIN 只复制进本殿;没有殿的全局 ADMIN 在 `target_tenant` 里点名目标殿。
+        不该借它看见别处的词。回包只有计数,不含词本身。全局 ADMIN 在 `target_tenant` 里点名目标殿。
+        绑殿 ADMIN(2026-11-11):只许从全站共享词表复制;现在没有共享词表,一律 403 `shared_source_only`。
       tags:
       - v1
       requestBody:
@@ -43152,7 +43155,7 @@ components:
       description: |-
         Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
         civilization by code. The target is the caller's own hall; the hall-less ADMIN, which has none, names it in
-        `target_tenant` (2026-10-29). A hall's ADMIN may only copy into its own hall.
+        `target_tenant` (2026-10-29). A hall's ADMIN is refused (2026-11-11): it may copy only from a shared list, and there is none.
       properties:
         source_tenant:
           type: string

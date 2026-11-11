@@ -35,7 +35,7 @@ def test_every_kind_the_rules_can_produce_has_text_in_every_locale():
             "disposition_executed", "appeal_upheld", "appeal_amended", "residence_approved", "residence_started", "residence_returned",
             "sentence_waiting", "sentence_completed", "sentence_amended", "sentence_pardoned", "chat_message",
             "social_warned_post", "social_warned_comment", "social_warned_user",
-            "mfa_reset_by_officer", "export_ready",
+            "mfa_reset_by_officer", "export_ready", "push_device_claimed",
             *(f"content_{outcome}_{target}" for outcome in ("hidden", "deleted", "approved", "restored")
               for target in ("post", "comment")),
             *(f"content_{outcome}_{target}_reason" for outcome in ("hidden", "deleted")

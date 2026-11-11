@@ -373,7 +373,8 @@ def test_a_device_that_changed_hands_before_sending_is_not_pushed(cn_tenant, pus
     assert register(second_client).status_code == 200  # 记下之后、发送之前,手机换了主人
     services.send_deliveries(_ids())
     assert FakeSender.batches == []
-    assert PushDelivery.objects.get().status == PushStatus.CANCELLED
+    # 另一行是给甲的「推送设备已被另一个账号登记」(A2-04):甲没有别的设备,只记历史(NO_DEVICE),不发。
+    assert PushDelivery.objects.get(kind="judgment_result").status == PushStatus.CANCELLED
 
 
 def test_a_retired_account_is_not_pushed_even_if_already_queued(cn_tenant, push_on, enqueued):  # noqa: F811

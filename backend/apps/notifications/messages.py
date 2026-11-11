@@ -70,6 +70,7 @@ MESSAGES = {
         "assistant_reopened": {"title": "助手已自动重开:新的一个月", "body": "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。"},
         "city_god_case_received": {"title": "城隍收案待初审", "body": "灵魂「{{soul}}」的案子已交到{{city_god}}，等待初审。"},
         "city_god_case_returned": {"title": "城隍退回补正", "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需要补正资料。经办：{{by}}。批语：{{reason}}"},
+        "push_device_claimed": {"title": "推送设备已被另一个账号登记", "body": "你的推送设备已被另一个账号登记，这部手机不再收到你的待办推送。如果不是你本人换的手机，请联系管理员。"},
         "wangsi_grievance_filed": {"title": "枉死城有新申诉", "body": "灵魂「{{soul}}」提出了冤情申诉，等待审核。"},
     },
     "en": {
@@ -136,6 +137,7 @@ MESSAGES = {
         "assistant_reopened": {"title": "Assistant switched back on: new month", "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."},
         "city_god_case_received": {"title": "New case for first review", "body": "The case of {{soul}} has reached {{city_god}} and is waiting for first review."},
         "city_god_case_returned": {"title": "Case returned for correction", "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"},
+        "push_device_claimed": {"title": "Your push device was registered by another account", "body": "Your push device was registered by another account and no longer gets your to-do pushes. If you did not change phones yourself, contact an administrator."},
         "wangsi_grievance_filed": {"title": "New grievance in the City of Wrongful Death", "body": "{{soul}} has filed a grievance, waiting for review."},
     },
     "egy": {
@@ -242,6 +244,8 @@ SYSTEM_KINDS = {
     "cooldown_decided_approved", "cooldown_decided_rejected",
     # 助手花费上限的三种提醒(`apps/soul_assist/usage.py`)。
     "assistant_cap_warning", "assistant_cap_closed", "assistant_reopened",
+    # 这位官员的推送设备被另一个账号登记走了(`apps/officer_app/push.py::_register`,审计 A2-04)。
+    "push_device_claimed",
 }
 
 
