@@ -249,6 +249,7 @@ describe("PageShell 的首格与尾格", () => {
     const inner = container.querySelector("[data-page-shell-header]")!.firstElementChild!;
     // 宽度盒子的第一个孩子仍是标题行,不是新加的包装。
     expect(inner.firstElementChild!.querySelector("h1")).toHaveTextContent("判决卷宗");
-    expect(inner.firstElementChild!.className).toBe("flex items-start gap-4");
+    // 第三十批第 1 步的页头(PageHead):标题行是这一层,不给首格尾格时它前面没有包装。
+    expect(inner.firstElementChild!.className).toBe("flex flex-wrap items-end gap-x-4 gap-y-3");
   });
 });

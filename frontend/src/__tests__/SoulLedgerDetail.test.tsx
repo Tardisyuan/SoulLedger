@@ -284,7 +284,9 @@ describe("SoulJudgmentHistory — 全部审判", () => {
     const rows = screen.getAllByTestId("ledger-judgment-row");
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("待决");
-    expect(rows[1]).toHaveTextContent("◇");
+    // 第三十批:「待定」是 ‖(此前与「审判中」共用 ◇,verdictGlyph.ts)。
+    expect(rows[1]).toHaveTextContent("‖");
+    expect(rows[1]).not.toHaveTextContent("◇");
     expect(rows[2]).toHaveTextContent("✕");
   });
 
