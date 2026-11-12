@@ -257,7 +257,8 @@ export default function SoulDetailPage() {
   const dispositions = useMemo(() => [...(dispositionsQuery.data?.results ?? NO_DISPOSITIONS), ...moreDispositions.rows], [dispositionsQuery.data, moreDispositions.rows]);
   // 第十殿按结案时的功过给的六道建议(docs/07 §四,2026-10-27):不改就按它办,官员可改。
   // 地府里没有建议(功过为负而不到地狱道:畜生 / 饿鬼由官员定,用户 2026-10-27)时不预选,官员选了才能办。
-  const suggestedRebirthForm = (dispositions.find((d) => !d.is_executed)?.suggested_rebirth_form ?? null) as RebirthFormValue | null;
+  // 办转世时(候转世)本世处置都已执行(F-REB-01),所以取列表里最新的一份(列表按新到旧),不再只看未执行的。
+  const suggestedRebirthForm = (dispositions[0]?.suggested_rebirth_form ?? null) as RebirthFormValue | null;
   // 六道只属于地府(按原属文明,同后端 `rebirth_form_for`;2026-10-27 G-2):希腊的再生是饮忘川后回来,
   // 没有道可选,不显示选择器、不发 `rebirth_form`(后端记成 OTHER「六道之外」,发了一道反而 400)。
   const sixPaths = (soul?.home_civilization ?? soul?.civilization) === "CHINESE";
@@ -408,10 +409,10 @@ export default function SoulDetailPage() {
   });
 
   const reincarnateMutation = useMutation({
-    mutationFn: (dispositionId: string) =>
+    // 不带 disposition_id(F-REB-01):转世只在候转世时办,那时本世处置都已执行;带一份未执行的必 409。
+    mutationFn: () =>
       reincarnationApi.reborn({
         soul_id: soul?.id,
-        disposition_id: dispositionId,
         // 不传 new_identity:服务端缺省用灵魂原名(`ReincarnationService.reborn`)。此前写死英文「名 (rebirth)」,
         // 而那个值会写回 `soul.name` —— 每转一世名字后面多一截英文。
         ...(sixPaths && rebirthForm ? { rebirth_form: rebirthForm } : {}),
@@ -516,11 +517,11 @@ export default function SoulDetailPage() {
     startJudgmentMutation.mutate(soul);
   }
 
-  function handleReincarnate(dispositionId: string) {
+  function handleReincarnate() {
     if (sixPaths && !rebirthForm) return;
     if (formOverridden && !formReason.trim()) return;
     setQuotaRefusal(null);
-    reincarnateMutation.mutate(dispositionId);
+    reincarnateMutation.mutate();
   }
 
   function handleRelease(dispositionId: string) {
@@ -589,7 +590,7 @@ export default function SoulDetailPage() {
   // 菜单按钮配置(第四十批 W-b):编辑与删除另要配置允许。在下面的提前返回之前取(hook 顺序)。
   const buttonOn = useMenuButtonConfig();
   // 本月转世配额(第五十一批 Q-3):只在真有转世可办时才问。
-  const rebirthQuota = useRebirthQuota(soul?.current_state === "DISPOSED" && dispositions.some((d) => !d.is_executed)).data;
+  const rebirthQuota = useRebirthQuota(soul?.current_state === "REINCARNATING").data;
 
   // Error state - only show when we have actual data fetch error, not during initial load
   // 数据范围(B8):灵魂本身读到 404 / 403 是「无权查看或已不存在」,不回显后端那句英文。

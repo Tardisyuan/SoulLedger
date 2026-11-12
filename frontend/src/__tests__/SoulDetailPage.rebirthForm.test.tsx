@@ -6,6 +6,10 @@
  * product performed was written into 人道 while the backend enum carried all
  * six paths. Rendering a picker is only half the fix; these pin that what the
  * operator picks is what gets posted.
+ *
+ * F-REB-01(2026-11-12):转世只在候转世(REINCARNATING)时办,不带处置。此前表单和按钮挂在 DISPOSED 上、
+ * 每份未执行的处置一个按钮 —— 后端对有未执行处置的灵魂一律 409 `disposition_not_executed`,
+ * 到了 REINCARNATING 又没有按钮,Web 上办不了转世。
  */
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import SoulDetailPage from "@/app/souls/[id]/page";
@@ -118,7 +122,7 @@ const disposedSoul = {
   id: SOUL_ID,
   name: "Test Soul",
   civilization: "CHINESE",
-  current_state: "DISPOSED",
+  current_state: "REINCARNATING",
   birth_date: null,
   death_date: null,
   birth_name: null,
@@ -128,7 +132,7 @@ const disposedSoul = {
 
 const pendingDisposition = {
   id: DISPOSITION_ID,
-  is_executed: false,
+  is_executed: true,
   realm_name: "第五殿",
   realm_code: "DY_COURT_05_YANLUO",
 };
@@ -157,10 +161,11 @@ describe("SoulDetailPage — rebirth form selection", () => {
     expect(mockReborn).toHaveBeenCalledWith(
       expect.objectContaining({
         soul_id: SOUL_ID,
-        disposition_id: DISPOSITION_ID,
         rebirth_form: "HUNGRY_GHOST",
       })
     );
+    // 不带处置:候转世时本世处置都已执行,带一份就是让后端去查它(F-REB-01)。
+    expect(mockReborn.mock.calls[0][0]).not.toHaveProperty("disposition_id");
     // 不带 new_identity:服务端缺省用原名。此前写死「Test Soul (rebirth)」,而它会写回 soul.name。
     expect(mockReborn.mock.calls[0][0]).not.toHaveProperty("new_identity");
   });
@@ -222,14 +227,24 @@ describe("SoulDetailPage — rebirth form selection", () => {
     expect(mockReborn.mock.calls[0][0]).not.toHaveProperty("rebirth_form");
   });
 
-  it("shows no picker for a soul with nothing to reincarnate into", async () => {
+  it("a soul awaiting rebirth with no disposition at all (acquitted) still gets the button (F-REB-01)", async () => {
     mockDispositionList.mockResolvedValue({ data: { results: [] } });
     renderPage();
 
+    fireEvent.click(await screen.findByRole("radio", { name: "HUMAN" }));
+    fireEvent.click(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ }));
+    await waitFor(() => expect(mockReborn).toHaveBeenCalledTimes(1));
+  });
+
+  it("a DISPOSED soul with an unexecuted disposition offers no rebirth: the server refuses it 409 (F-REB-01)", async () => {
+    mockSoulsGet.mockResolvedValue({ data: { ...disposedSoul, current_state: "DISPOSED" } });
+    mockDispositionList.mockResolvedValue({ data: { results: [{ ...pendingDisposition, is_executed: false }] } });
+    renderPage();
+
     await screen.findByText("souls.detail.actions");
-    await waitFor(() => {
-      expect(screen.queryByRole("radio")).not.toBeInTheDocument();
-    });
+    await waitFor(() => expect(mockDispositionList).toHaveBeenCalled());
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /souls\.detail\.reincarnate/ })).not.toBeInTheDocument();
   });
 });
 
