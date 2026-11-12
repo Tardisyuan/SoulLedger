@@ -3952,7 +3952,14 @@
   "filter": {
     "all": "全部",
     "clear_all": "清除全部",
-    "clear_one": "清除「{{name}}」筛选"
+    "clear_one": "清除「{{name}}」筛选",
+    "bar": {
+      "open": "筛选",
+      "open_n": "筛选 · {{n}}",
+      "title": "筛选条件",
+      "quick": "快捷筛选",
+      "done": "查看结果"
+    }
   },
   "list": {
     "columns": {

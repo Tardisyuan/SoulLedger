@@ -152,6 +152,9 @@ const ROUND_ALLOW = new Set([
   // 审批流画布的节点卡片与连线(Design v4 第十四批 §2):选中时左右两个 10px 连线圆点、出错的 18 / 16 圆「!」徽记、
   // 20 高的连线标签胶囊。选中与出错按**形状**分开(地府的强调色本身是红),圆是那个形状的一部分。
   "src/components/workflow/EditableNode.tsx",
+  // 第三十批「卷宗」第 1 步第 4 条:393 窄屏筛选条的快捷 chip 高 44、圆角 22(Design 稿 `.chip`),是胶囊。
+  // 只有 `FilterBar` 的快捷 chip 用 rounded-full;同文件的 `FilterChipSelect` / `FilterChipToggle` 仍是 4px 方角。
+  "src/components/ui/FilterChip.tsx",
 ]);
 
 // 规范 v2 A2:全站不用阴影,**浮层也不用**(v1 放行的 shadow-overlay 撤掉,弹层改 1px ink 框)。

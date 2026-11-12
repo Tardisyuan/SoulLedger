@@ -15,7 +15,8 @@ import { useSoul } from "@soulledger/core/hooks/useSouls";
 import { DataTable, parseOrdering, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
 import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { FilterChipSelect, filterChipClass } from "@/src/components/ui/FilterChip";
+import { FilterBar, filterChipClass } from "@/src/components/ui/FilterChip";
+import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import { fieldControl } from "@/src/components/ui/Field";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { resolveEnumDisplay } from "@soulledger/core/domain/enumDisplay";
@@ -155,6 +156,11 @@ function JudgmentQueuePageContent() {
     { key: "created_at", header: t("judgment.created"), sortable: true, align: "right" },
   ];
   const columnVis = useColumnVisibility(JUDGMENT_COLUMNS_KEY, allColumns);
+  // 选了文明就按那个文明叫(欧洲「炼狱」、埃及「天平摇摆」);没选文明是几个文明一起筛,写通用的「存疑」。
+  const verdictOptions = [
+    { value: "", label: t("filter.all") },
+    ...VERDICT_OPTIONS.map((v) => ({ value: v, label: resolveEnumDisplay(t, verdictNamespace(t, civilization, v), v).label ?? v })),
+  ];
 
   return (
     <PageShell
@@ -212,60 +218,75 @@ function JudgmentQueuePageContent() {
         />
       ) : (
       <>
-      {/* 「已结案」的筛选条:搜索 / 裁决 / 文明;导出在右端,带同一组筛选与灵魂、排序(不带页码)。 */}
-      <div data-testid="concluded-filters" className="flex flex-wrap items-center gap-3 py-3">
-        <input
-          type="search"
-          data-testid="concluded-search"
-          placeholder={t("judgment.concluded_filter.search")}
-          aria-label={t("judgment.concluded_filter.search")}
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className={`${fieldControl({ size: "md" })} min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[200px]`}
-        />
-        <FilterChipSelect
-          label={t("judgment.verdict")}
-          value={verdict}
-          options={[
-            { value: "", label: t("filter.all") },
-            // 选了文明就按那个文明叫(欧洲「炼狱」、埃及「天平摇摆」);没选文明是几个文明一起筛,写通用的「存疑」。
-            ...VERDICT_OPTIONS.map((v) => ({ value: v, label: resolveEnumDisplay(t, verdictNamespace(t, civilization, v), v).label ?? v })),
-          ]}
-          clearLabel={t("filter.clear_one", { name: t("judgment.verdict") })}
-          onChange={(v) => { setVerdict(v); setPage(1); }}
-        />
-        <FilterChipSelect
-          label={t("judgment.civilization")}
-          value={civilization}
-          options={[
-            { value: "", label: t("filter.all") },
-            ...CIVILIZATION_OPTIONS.map((c) => ({ value: c, label: resolveEnumDisplay(t, "souls.civilizations", c).label ?? c })),
-          ]}
-          clearLabel={t("filter.clear_one", { name: t("judgment.civilization") })}
-          onChange={(v) => { setCivilization(v); setPage(1); }}
-        />
-        <div className="ml-auto flex items-center justify-end gap-3">
-        {buttonOn("judgment.export") && (
-          <RequirePermission permissions="judgment.export">
-            <ExportCsvButton
-              size="sm"
-              fetchCsv={() => judgmentApi.exportCsv(exportParams)}
-              page={t("judgment.title")}
-              hall={hall}
-              count={judgmentData?.count}
-            />
-          </RequirePermission>
+      {/* 「已结案」的筛选条:搜索 / 裁决 / 文明;导出在右端,带同一组筛选与灵魂、排序(不带页码)。
+          第三十批起走共享的 `FilterBar`:桌面照旧一行;393 窄屏是 搜索 +「筛选 · N」、裁决的快捷 chip 横滑、其余进底部抽屉。 */}
+      <FilterBar
+        testId="concluded-filters"
+        search={(where) => (
+          <input
+            type="search"
+            data-testid={where === "wide" ? "concluded-search" : "concluded-search-narrow"}
+            placeholder={t("judgment.concluded_filter.search")}
+            aria-label={t("judgment.concluded_filter.search")}
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className={`${fieldControl({ size: "md" })} min-w-0 ${where === "wide" ? "flex-1 basis-auto min-w-[200px]" : "w-full"}`}
+          />
         )}
-        <ColumnMenu
-          columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
-          visibility={columnVis}
-          buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
-          pinnedLabel={t("list.columns.pinned")}
-          hintLabel={t("list.columns.hint")}
-          resetLabel={t("list.columns.reset")}
-        />
-        </div>
-      </div>
+        selects={[
+          {
+            label: t("judgment.verdict"),
+            value: verdict,
+            options: verdictOptions,
+            clearLabel: t("filter.clear_one", { name: t("judgment.verdict") }),
+            onChange: (v) => { setVerdict(v); setPage(1); },
+          },
+          {
+            label: t("judgment.civilization"),
+            value: civilization,
+            options: [
+              { value: "", label: t("filter.all") },
+              ...CIVILIZATION_OPTIONS.map((c) => ({ value: c, label: resolveEnumDisplay(t, "souls.civilizations", c).label ?? c })),
+            ],
+            clearLabel: t("filter.clear_one", { name: t("judgment.civilization") }),
+            onChange: (v) => { setCivilization(v); setPage(1); },
+          },
+        ]}
+        /* 窄屏的快捷 chip:四种裁决,带各自的字形;再点一次是取消。 */
+        quick={VERDICT_OPTIONS.map((v) => ({
+          label: (
+            <>
+              <span aria-hidden="true">{verdictGlyph(v)}</span>
+              {verdictOptions.find((o) => o.value === v)?.label ?? v}
+            </>
+          ),
+          active: verdict === v,
+          onToggle: () => { setVerdict(verdict === v ? "" : v); setPage(1); },
+        }))}
+        trailing={
+          <>
+            {buttonOn("judgment.export") && (
+              <RequirePermission permissions="judgment.export">
+                <ExportCsvButton
+                  size="sm"
+                  fetchCsv={() => judgmentApi.exportCsv(exportParams)}
+                  page={t("judgment.title")}
+                  hall={hall}
+                  count={judgmentData?.count}
+                />
+              </RequirePermission>
+            )}
+            <ColumnMenu
+              columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+              visibility={columnVis}
+              buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+              pinnedLabel={t("list.columns.pinned")}
+              hintLabel={t("list.columns.hint")}
+              resetLabel={t("list.columns.reset")}
+            />
+          </>
+        }
+      />
       <DataTable<Judgment>
         linkedRows
         caption={t("judgment.title")}

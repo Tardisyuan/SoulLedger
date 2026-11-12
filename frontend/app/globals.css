@@ -837,6 +837,16 @@
     background: oklch(var(--color-canvas));
   }
 
+  /* 393 窄屏筛选条的快捷 chip 一行(`FilterBar`,第三十批第 1 步第 4 条):横滑,右缘 40px 渐隐,告诉人后面还有。 */
+  .chip-scroll {
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+  }
+  .chip-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
   /* 页头 =「顶线 + 卷宗头」(第三十批「卷宗」第 1 步,Design v4 第三十批回复第一节第 1 条;`PageHead`,
      src/components/ui/PageShell.tsx)。取代 v3 的 156px 身份带与 v4 的 96px 标题行(`Plaque`):不再有第二个标题,
      页头的标题就是 `<h1>`。自上而下:2px 文明色顶线(`--topline`,civT);标题上方一行等宽小字(mono 12/18);

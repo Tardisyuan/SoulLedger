@@ -3952,7 +3952,14 @@
   "filter": {
     "all": "All",
     "clear_all": "Clear All",
-    "clear_one": "Clear the {{name}} filter"
+    "clear_one": "Clear the {{name}} filter",
+    "bar": {
+      "open": "Filters",
+      "open_n": "Filters · {{n}}",
+      "title": "Filters",
+      "quick": "Quick filters",
+      "done": "Show results"
+    }
   },
   "list": {
     "columns": {
