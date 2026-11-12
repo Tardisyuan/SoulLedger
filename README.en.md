@@ -14,6 +14,38 @@
 ![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 
+## 30-second version
+
+**In one sentence**: a full-stack application (Django, Next.js and two Expo apps) that tracks souls through the afterlife of four mythologies (Chinese, European, Egyptian, Greek) in one system, where the four civilizations are four structurally different models, not reskins.
+
+**Live demo**: <https://soulledger.tardisyuan.ltd> (front end only, on recorded data; every sign-in starts over) · **API reference**: <https://soulledger.tardisyuan.ltd/api-docs>
+
+```mermaid
+flowchart LR
+  W["Web (Next.js 16)"] --> API
+  S["Soul app (Expo)"] --> API
+  O["Officer app (Expo)"] --> API
+  W -. shares .- C["packages/core<br/>API contract / hooks / language packs<br/>(no DOM)"]
+  S -. shares .- C
+  O -. shares .- C
+  API["Django 5 + DRF<br/>tenant scoping / RBAC / event log"] --> PG[("PostgreSQL 16")]
+  API --> R[("Redis: Channels + Celery")]
+  API --> M["Synapse (Matrix)<br/>letters between souls"]
+  R --> WS["WebSocket push"] --> W
+```
+
+**Three things worth a look**
+
+1. **Four civilizations, four models**: Chinese is a signed running account, Egyptian is a threshold test against a feather, European is two independent quantities that do not offset each other, Greek is a procedure rather than a number. The code refuses to flatten them ([`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py)).
+2. **Isolation and consistency are pinned by tests, not by discipline**: tenant scoping goes through one function and a contract test checks every ViewSet ([ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)); the event log shares the business transaction, so a failed write rolls the whole operation back ([ADR 0002](docs/adr/0002-event-log-in-the-business-transaction.md)).
+3. **Gates that make green mean something**: only the tests a change can break, run on a separate build machine, real PostgreSQL as its own path for what SQLite hides, and every new check is proven to go red first ([ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)).
+
+**Test scale** (reading dated 2026-11-06, from [`landing-stats.json`](frontend/src/config/landing-stats.json); numbers go stale, trust the latest measurement): back end 9,243 · web 5,677 · soul app 1,204 · officer app 1,095 · E2E about 270. CI runs once a day, not on every push; the pre-push check is the local gate script.
+
+**Go deeper**: [architecture decision records](docs/adr/README.md) · [How I built this (draft, in Chinese)](docs/portfolio/HOW-I-BUILT.md) · [demo deployment](docs/DEPLOYMENT-demo.md)
+
+---
+
 > **`README.md` (Chinese) is the authority.** This translation has drifted before — it
 > sat 50 commits behind through the npm-workspaces move, and told readers to run
 > `npm test`, which does not evaluate the coverage threshold. Both files were

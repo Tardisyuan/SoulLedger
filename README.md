@@ -14,6 +14,38 @@
 ![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 
+## 30 秒版
+
+**一句话**：一个全栈应用（Django + Next.js + 两个 Expo App），在同一套系统里追踪灵魂在四种神话体系（中国地府、欧洲、埃及、希腊）中的审判与轮回，而且四种文明是四个结构不同的模型，不是换皮。
+
+**在线演示**：<https://soulledger.tardisyuan.ltd>（纯前端，数据是录好的，每次登录回原样）　·　**API 参考**：<https://soulledger.tardisyuan.ltd/api-docs>
+
+```mermaid
+flowchart LR
+  W["Web (Next.js 16)"] --> API
+  S["灵魂端 App (Expo)"] --> API
+  O["官员端 App (Expo)"] --> API
+  W -. 共用 .- C["packages/core<br/>API 契约 / hooks / 语言包<br/>(不含 DOM)"]
+  S -. 共用 .- C
+  O -. 共用 .- C
+  API["Django 5 + DRF<br/>租户收口 / RBAC / 事件日志"] --> PG[("PostgreSQL 16")]
+  API --> R[("Redis: Channels + Celery")]
+  API --> M["Synapse (Matrix)<br/>灵魂之间的书信"]
+  R --> WS["WebSocket 推送"] --> W
+```
+
+**三个亮点**
+
+1. **四种文明，四个模型**：中国是带符号的累积账户，埃及是对羽毛的阈值检验，欧洲是两个互不削减的独立量，希腊是一段程序而不是一个数。代码拒绝把它们抹平（[`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py)）。
+2. **隔离与一致性是被测试钉住的，不是靠自觉**：租户过滤收口在一个函数，元测试逐个检查每个 ViewSet（[ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)）；事件日志与业务同一事务，写不进就整笔回滚（[ADR 0002](docs/adr/0002-event-log-in-the-business-transaction.md)）。
+3. **门禁让「绿」可信**：只测改动影响到的部分、整轮跑在独立构建机、SQLite 看不见的缺陷另走真 PostgreSQL 一条路径，新检查必须先证明会变红（[ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)）。
+
+**测试规模**（读数日期 2026-11-06，来源 [`landing-stats.json`](frontend/src/config/landing-stats.json)；数字会过期，以最近一次实测为准）：后端 9,243 · 网页 5,677 · 灵魂端 App 1,204 · 官员端 App 1,095 · E2E 约 270。CI 每天跑一次（不在每次推送上跑），推送前的检查是本地门禁，见[测试、门禁与 CI](#测试门禁与-ci)。
+
+**想深入**：[架构决策记录（英文）](docs/adr/README.md) · [我怎么做的这个项目（初稿）](docs/portfolio/HOW-I-BUILT.md) · [演示站部署](docs/DEPLOYMENT-demo.md)
+
+---
+
 > SoulLedger is a working full-stack web application (Django + Next.js) that tracks
 > souls through the afterlife pipelines of four different mythologies — Chinese,
 > European, Egyptian and Greek — each with a genuinely different data model. It is an
