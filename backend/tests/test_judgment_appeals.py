@@ -306,6 +306,48 @@ def test_amend_keeping_foreign_stops_lets_the_one_in_transit_go_on(cn_tenant):
     assert SentencePlan.all_objects.get(pk=plan.pk).status == "ACTIVE"
 
 
+def _home_and_a_pending_foreign_stop(cn_tenant):
+    away = sp.tenant("EG_DUAT")
+    soul, plan = sp.planned(cn_tenant, [(away, sp.stop_realm(away), 5)], verdict=Verdict.FAILED)
+    return soul, plan, Judgment.all_objects.get(pk=plan.origin_judgment_id), away
+
+
+def test_amend_in_place_to_an_eternal_sentence_before_a_kept_foreign_stop_is_refused(cn_tenant, monkeypatch):
+    """F-DISP-05(2026-11-12):申诉改判此前不问 Q5,原属站就地改成永久而保留外地站,永久刑之后仍被调往外地。"""
+    from django.db import transaction
+
+    from apps.sentence_plan import requests as plan_requests
+    from apps.souls.models import Soul
+
+    soul, plan, judgment, _ = _home_and_a_pending_foreign_stop(cn_tenant)
+    assert sp.node(plan, 1).status == "ACTIVE" and sp.node(plan, 2).status == "PENDING"
+    eternal = sp.realm("CN_DIYU_TEST_ETERNAL", "CHINESE", eternal=True).realm_code
+    monkeypatch.setattr(plan_requests, "_route_home_realm", lambda *a, **k: eternal)
+    with pytest.raises(plan_requests.PlanChangeRefusedError) as refused, transaction.atomic():
+        locked = Soul.lock(soul.pk)
+        plan_requests.amend_for_appeal(locked, judgment, "FAILED", keep_foreign=True)
+    assert refused.value.code == "eternal_not_last"
+
+
+def test_amend_after_the_home_stop_puts_the_new_home_stop_before_the_kept_foreign_one(cn_tenant):
+    """F-DISP-05:与重开审判结案同一个锚点 —— 已开始的站之后、保留的外地站之前。此前排在外地站之后。"""
+    from django.db import transaction
+
+    from apps.sentence_plan import requests as plan_requests
+    from apps.souls.models import Soul
+
+    soul, plan, judgment, away = _home_and_a_pending_foreign_stop(cn_tenant)
+    sp.serve(soul, plan, 1)
+    DispatchService.reject(DispatchRecord.all_objects.get(pk=sp.node(plan, 2).dispatch_record_id),
+                           sp.officer("eg", "ADMIN", away), "不收")
+    assert sp.node(plan, 2).status == "PENDING"
+    with transaction.atomic():
+        locked = Soul.lock(soul.pk)
+        plan_requests.amend_for_appeal(locked, judgment, "FAILED", keep_foreign=True)
+    live = [(n.order, n.tenant_code, n.is_home) for n in SentenceNode.all_objects.filter(plan=plan).order_by("order")]
+    assert live == [(1, "CN_DIYU", True), (2, "CN_DIYU", True), (3, "EG_DUAT", False)]
+
+
 def test_amend_after_the_plan_finished_only_compensates(case):
     judgment, soul = case["judgment"], case["soul"]
     sp.walk_flow(judgment)  # 原审的处置等审批流程走完才执行(2026-10-29)

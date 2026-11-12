@@ -755,12 +755,21 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
         in_place.reason = f"申诉改判:{verdict}"
         _save(in_place, *content, "reason")
     else:
+        # 与 `conclude_reopened` 同一个锚点(F-DISP-05):排在已开始的站之后、未执行的站(保留的外地站)之前,
+        # 灵魂回原属后先受这一站。此前排在 `max(order) + 1`,即保留的外地站之后。
         live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
+        started = [n for n in live if n.status != SentenceNodeStatus.PENDING]
+        anchor = max(n.order for n in started) if started else 0
+        for node in sorted((n for n in live if n.order > anchor), key=lambda n: -n.order):
+            node.order += 1
+            _save(node, "order")
         added.append(SentenceNode.objects.create(
-            plan=plan, order=max(n.order for n in live) + 1, tenant_code=plan.tenant.code, is_home=True,
+            plan=plan, order=anchor + 1, tenant_code=plan.tenant.code, is_home=True,
             status=SentenceNodeStatus.PENDING, added_by_judgment_id=judgment.pk, reason=f"申诉改判:{verdict}",
             **content,
         ))
+    # Q5 在改动之后再问(F-DISP-05):就地改成永久、或追加的永久站,后面不能还有保留的外地站。
+    _assert_eternal_last(list(nodes) + added)
     plan_amended(soul, plan, touched, judgment_id=judgment.pk, added=added)
     return executed
 
