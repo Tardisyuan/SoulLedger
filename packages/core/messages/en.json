@@ -5076,10 +5076,10 @@
       "life": "This life",
       "applications": "Rebirth",
       "rebirth": "Rebirth",
-      "glyph_life": "世",
-      "glyph_rebirth": "生",
-      "glyph_letters": "信",
-      "glyph_circle": "圈"
+      "glyph_life": "L",
+      "glyph_rebirth": "R",
+      "glyph_letters": "M",
+      "glyph_circle": "C"
     },
     "life": {
       "cycle": "Life {{cycle}}",
