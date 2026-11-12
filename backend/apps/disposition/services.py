@@ -1131,7 +1131,6 @@ class DispositionService:
     def _return_home(soul, locked, disposition, how):
         """无计划暂居的处置了结:回原属地;被未结案审判拦下就记 `DISPATCH_RETURN_BLOCKED`。"""
         from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
-
         from apps.sentence_plan.services import in_progress_plan
         from apps.souls.models import Soul, SoulState
 
