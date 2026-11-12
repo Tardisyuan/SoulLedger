@@ -19642,6 +19642,13 @@ export interface components {
          * @enum {string}
          */
         SentenceNodeStatusEnum: "PENDING" | "DISPATCHING" | "ACTIVE" | "WAITING" | "COMPLETED" | "ETERNAL" | "ABORTED" | "REMOVED" | "CANCELLED";
+        /**
+         * @description For a serializer of a row that *quotes* its soul (a case's `soul_name`, a disposition's, a dispatch's, a
+         *     sentence plan's): each key in `soul_field_keys` follows the **Soul** FieldPermission rule of the field it
+         *     copies, and is absent when that rule hides it — the soul list's reading (用户 2026-11-11, P-11). Without this
+         *     a rule hiding `Soul.name` was walked around by every queue that prints the name beside the case.
+         *     Worked out once per serializer instance (a page reuses one child). Put it before `ModelSerializer`.
+         */
         SentencePlan: {
             /** Format: uuid */
             readonly id: string;
