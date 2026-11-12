@@ -83,15 +83,16 @@ test("the 「并发与事务」 link is only on a case's own page", async ({ pag
   await expect(page.getByTestId("demo-txn-open")).toHaveCount(0);
 });
 
-test("the administrator from the roles row still opens on the dashboard, with no tour", async ({ page }) => {
+test("the administrator from the roles row opens on the 总簿, with no tour and the hint", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("demo-home-guard").click();
   await page.waitForURL((u) => u.pathname === "/tenants");
   await page.goto("/");
   await page.getByTestId("demo-enter-admin").click();
-  await page.waitForURL((u) => u.pathname !== "/" && u.pathname !== "/tenants");
+  await page.waitForURL((u) => u.pathname === "/desk/overview");
   await page.getByTestId("demo-entrance").waitFor({ state: "detached" });
   await expect(page.getByTestId("demo-tour")).toHaveCount(0);
+  await expect(page.getByTestId("demo-admin-hint")).toBeVisible();
 });
 
 test("the finished tour's 「这是怎么做的」 lands on that section, not on a missing anchor", async ({ page, context }) => {

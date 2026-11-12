@@ -16,6 +16,7 @@ import {
   dropFromList,
   getOverlay,
   listOf,
+  matches,
   newId,
   patchRow,
   read,
@@ -49,7 +50,81 @@ function groupOf(row: Row, me: number): string {
 }
 
 /** The queue never sees a case still before the city god, or held, the same as the server's PENDING. */
-const inQueue = (row: Row) => isPending(row) && row.city_god_status !== "PENDING" && row.city_god_status !== "RETURNED";
+const inQueue = (row: Row) => isPending(row) && !row.is_archived && row.city_god_status !== "PENDING" && row.city_god_status !== "RETURNED";
+
+const OPEN_CROSS = ["PROPOSED", "ACTIVE"];
+
+/** The judgments a still-open cross-hall bench hangs on: the list rows lack `judgment`, their recorded details have it. */
+function openCrossJudgments(rec: Recording): Set<string> {
+  const path = "/dispatch/cross-tenant-judgments/";
+  return new Set(rowsNow(rec, path).filter((c) => OPEN_CROSS.includes(String(c.status)))
+    .map((c) => String(c.judgment ?? (rec.docs[`${path}${c.id}/`]?.b as Row | undefined)?.judgment ?? "")).filter(Boolean));
+}
+
+/** `source` by the server's rule (backend/apps/judgment/sources.py), for recordings made before rows carried it.
+ * A row's tenant is not in the list form; the soul's recorded detail gives where it resides and its home hall. */
+function sourceOf(rec: Recording, row: Row, openCross: Set<string>): string {
+  if (row.city_god_status === "SENT_ON") return "city_god";
+  const soul = rec.docs[`/souls/${row.soul}/`]?.b as Row | undefined;
+  const away = soul?.home_tenant != null && soul?.tenant != null && String(soul.home_tenant) !== String(soul.tenant);
+  return row.source === "cross" || away || openCross.has(String(row.id)) ? "cross" : "queue";
+}
+
+/** Every judgment as it stands, each with its `source`. */
+function judgmentsNow(rec: Recording): Row[] {
+  const openCross = openCrossJudgments(rec);
+  return rowsNow(rec, "/judgment/").map((row) => ({ ...row, source: sourceOf(rec, row, openCross) }));
+}
+
+/** 「退回重审」: opened because its first case was ruled RETRY (`RETURNED` in views.py), or recorded under `?returned=true`. */
+function returnedIds(rec: Recording, rows: Row[]): Set<string> {
+  const byId = new Map(rows.map((r) => [String(r.id), r]));
+  const recorded = (rec.lists["/judgment/?returned=true"]?.rows ?? []).map((r) => String(r.id));
+  return new Set([...recorded, ...rows.filter((r) => byId.get(String(r.retrial_of))?.verdict === "RETRY").map((r) => String(r.id))]);
+}
+
+/** `elsewhere` of queue-counts: each from its own recorded list; null without the read or without the list. */
+const ELSEWHERE: [string, string, string, (row: Row) => boolean][] = [
+  ["appeal", "judgment.read", "/judgment/appeals/", (r) => r.status === "PENDING" || r.status === "IN_REVIEW"],
+  ["city_god_review", "city_god.read", "/judgment/city-god-cases/", (r) => r.city_god_status === "PENDING" || r.city_god_status === "RETURNED"],
+  ["cross_judgment", "cross_judgment.read", "/dispatch/cross-tenant-judgments/", (r) => OPEN_CROSS.includes(String(r.status))],
+  ["capture_due", "capture.read", "/dispatch/capture-warrants/due/", () => true],
+];
+
+function elsewhereOf(rec: Recording): Record<string, number | null> {
+  const held = new Set((rec.login.user as Row).permissions as string[] | undefined);
+  const recorded = (path: string) => Object.keys(rec.lists).some((k) => k.split("?")[0] === path);
+  return Object.fromEntries(ELSEWHERE.map(([key, code, path, open]) =>
+    [key, held.has(code) && recorded(path) ? rowsNow(rec, path).filter(open).length : null]));
+}
+
+/** `GET /judgment/queue-counts/` as `queue_counts` answers it: `?source=` narrows groups / total / overdue / returned,
+ * never `sources`; `?civilization=`, `?court=`, `?search=` narrow all of them; `group` is ignored. */
+function queueCounts(rec: Recording, query: URLSearchParams): Answer {
+  const me = meOf(rec).id;
+  const all = judgmentsNow(rec);
+  const returned = returnedIds(rec, all);
+  const unsourced = new URLSearchParams(query);
+  unsourced.delete("group");
+  unsourced.delete("source");
+  const open = all.filter((row) => inQueue(row) && matches(row, unsourced));
+  const source = query.get("source");
+  const narrowed = source ? open.filter((row) => row.source === source) : open;
+  const count = (g: string) => narrowed.filter((row) => groupOf(row, me) === g).length;
+  const sources = Object.fromEntries(["queue", "city_god", "cross"].map((v) => [v, open.filter((row) => row.source === v).length]));
+  return ok({
+    total: narrowed.length,
+    mine: count("mine"),
+    unclaimed: count("unclaimed"),
+    others: count("others"),
+    deferred: count("deferred"),
+    // `overdue_q`: past the hall's deadline and not deferred; the row's own `is_overdue` carries the hall's days.
+    overdue: narrowed.filter((row) => row.is_overdue === true && !row.deferred_at).length,
+    returned: narrowed.filter((row) => returned.has(String(row.id))).length,
+    sources,
+    elsewhere: elsewhereOf(rec),
+  });
+}
 
 function claimPatch(action: string, body: Row, me: ReturnType<typeof meOf>): Row | null {
   switch (action) {
@@ -587,6 +662,8 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
   const edited = roleEdit(rec, method, path, body) ?? confession(rec, method, path, body);
   if (edited) return edited;
   if (method !== "POST") return null;
+  // A warrant issued takes its soul off 「阳寿已到」, which `elsewhere.capture_due` counts; the warrant row itself is generic.
+  if (path === "/dispatch/capture-warrants/" && body.soul) dropFromList("/dispatch/capture-warrants/due/", String(body.soul));
   const approve = /^\/workflows\/([^/]+)\/approve_node\/$/.exec(path);
   if (approve) return approveNode(rec, approve[1], body);
   if (path === "/notifications/mark_all_read/") {
@@ -670,11 +747,12 @@ export function derived(rec: Recording, path: string, query: URLSearchParams): A
       ...letterCounts(rec),
     });
   }
-  if (path === "/judgment/" && (query.has("group") || query.has("has_verdict") || query.has("verdict_null"))) {
+  if (path === "/judgment/" && ["group", "has_verdict", "verdict_null", "source", "civilization"].some((k) => query.has(k))) {
     const me = meOf(rec).id;
     const group = query.get("group");
     const hasVerdict = query.get("has_verdict");
-    const rows = rowsNow(rec, path).filter((row) => {
+    // `source` and `civilization` are columns of the decorated rows, so `listOf` filters them like any other.
+    const rows = judgmentsNow(rec).filter((row) => {
       if (group && (!inQueue(row) || groupOf(row, me) !== group)) return false;
       if (hasVerdict === "true" && row.verdict == null) return false;
       if ((hasVerdict === "false" || query.get("verdict_null") === "true") && row.verdict != null) return false;
@@ -688,12 +766,7 @@ export function derived(rec: Recording, path: string, query: URLSearchParams): A
   }
   // The real feed is who you follow; a visitor came to see the circle, so here it is everyone's posts.
   if (path === "/social/posts/feed/") return listOf(rowsNow(rec, "/social/posts/"), query, {});
-  if (path === "/judgment/queue-counts/") {
-    const me = meOf(rec).id;
-    const open = rowsNow(rec, "/judgment/").filter(inQueue);
-    const count = (g: string) => open.filter((row) => groupOf(row, me) === g).length;
-    return ok({ total: open.length, mine: count("mine"), unclaimed: count("unclaimed"), others: count("others"), deferred: count("deferred") });
-  }
+  if (path === "/judgment/queue-counts/") return queueCounts(rec, query);
   if (path === "/dispatch/records/proposed/" || path === "/dispatch/records/history/") {
     const pending = path.endsWith("proposed/");
     const rows = rowsNow(rec, "/dispatch/records/").filter((d) => (d.status === "PROPOSED") === pending && d.status !== "DRAFT");

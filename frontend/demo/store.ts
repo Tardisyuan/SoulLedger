@@ -258,7 +258,7 @@ export function allRows(rec: Recording, path: string): Row[] {
   return [...seen.values()];
 }
 
-function matches(row: Row, query: URLSearchParams): boolean {
+export function matches(row: Row, query: URLSearchParams): boolean {
   for (const [k, v] of query.entries()) {
     if (NO_FILTER.has(k) || v === "") continue;
     // Filters that are not a column, read the way the server reads them (apps/events/views.py, apps/audit): a day range

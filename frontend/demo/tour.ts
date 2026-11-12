@@ -32,7 +32,7 @@ const NAME_EN: Record<string, string> = { 屈原: "Qu Yuan" };
 /**
  * 「系统怎么保护自己」(作品集建议 A3): the administrator's console, walked through what keeps the data safe. Only when the
  * home page's second entrance asked for it (this flag, in the tab like the tour's own place): the administrator signed in
- * from the roles row opens on the dashboard as before. The key starts `soulledger_demo_tour`, which a sign-in leaves alone.
+ * from the roles row opens on the 总簿 (`/desk/overview`), as any sign-in of theirs does. The key starts `soulledger_demo_tour`, which a sign-in leaves alone.
  */
 export const GUARD_KEY = "soulledger_demo_tour_guard";
 
@@ -75,7 +75,8 @@ export function tourOf(rec: Recording): Tour | null {
   const soulRoute = soul ? `/souls/${soul.id}` : "/souls";
   const named = soul ? String(soul.name) : name;
   const judgment = rowsNow(rec, "/judgment/").find((j) => j.soul === soul?.id);
-  const desk = judgment ? `/judgment/${judgment.id}` : "/judgment";
+  // No case of theirs recorded: the 案卷台, the judge's list of cases now (`defaultView.ts`).
+  const desk = judgment ? `/judgment/${judgment.id}` : "/desk";
   const flow = rowsNow(rec, "/workflows/").find((w) => w.soul === soul?.id && w.case_type !== "REBIRTH_APPLICATION");
   const flowRoute = flow ? `/workflow/${flow.id}` : "/workflow";
   const decision = "[data-testid='current-decision']";

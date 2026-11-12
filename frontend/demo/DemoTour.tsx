@@ -593,8 +593,9 @@ export default function DemoTour() {
     }
   }
 
-  // The administrator has no tour, and lands on the densest page there is.
-  if (!card && username === DEMO_USERNAMES.admin && pathname === "/dashboard" && !state.closed) {
+  // The administrator has no tour, and lands on the densest page there is: the 总簿 now (`defaultView.ts`), or the
+  // dashboard it used to be, which the sidebar still opens.
+  if (!card && username === DEMO_USERNAMES.admin && (pathname === "/desk/overview" || pathname === "/dashboard") && !state.closed) {
     card = (
       <aside ref={panelRef} data-testid="demo-admin-hint" className={panel}>
         <p className="m-0 text-sm text-[oklch(var(--color-ink))]">{t("demo.admin_hint")}</p>

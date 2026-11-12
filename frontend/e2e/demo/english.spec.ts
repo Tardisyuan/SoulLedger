@@ -28,11 +28,11 @@ test("a visitor's choice of language sticks", async ({ page }) => {
 });
 
 const PAGES: [Role, string][] = [
-  ["judge", "/judgment"], ["judge", "/judgment/queue"], ["judge", "/souls"], ["judge", "/disposition"], ["judge", "/sentence-plans"], ["judge", "/rebirths"], ["judge", "/realms"], ["judge", "/social"], ["judge", "/dashboard"],
+  ["judge", "/desk"], ["judge", "/judgment"], ["judge", "/judgment/queue"], ["judge", "/souls"], ["judge", "/disposition"], ["judge", "/sentence-plans"], ["judge", "/rebirths"], ["judge", "/realms"], ["judge", "/social"], ["judge", "/dashboard"],
   ["judge_eu", "/judgment"], ["judge_eu", "/disposition"], ["judge_eu", "/realms"],
   ["judge_eg", "/judgment"], ["judge_eg", "/disposition"], ["judge_eg", "/realms"],
   ["judge_gr", "/judgment"], ["judge_gr", "/disposition"], ["judge_gr", "/realms"],
-  ["admin", "/dashboard"], ["admin", "/menus"], ["admin", "/users"], ["admin", "/permissions"], ["admin", "/audit"],
+  ["admin", "/desk/overview"], ["admin", "/dashboard"], ["admin", "/menus"], ["admin", "/users"], ["admin", "/permissions"], ["admin", "/audit"],
   ["moderator", "/moderation"], ["admin", "/soul-inbox"], ["judge", "/profile"], ["judge", "/about"],
   ["judge", "/actors"], ["judge_eu", "/actors"], ["judge_eg", "/actors"], ["judge_gr", "/actors"], ["admin", "/tenants"],
   ["judge", "/workflow"], ["judge_eu", "/workflow"], ["judge_eg", "/workflow"], ["judge_gr", "/workflow"],

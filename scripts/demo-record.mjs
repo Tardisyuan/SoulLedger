@@ -34,7 +34,7 @@ const PASSWORD = "demo-only-not-a-secret";
 const ROLES = { admin: "demo_admin", judge: "demo_judge", judge_eu: "demo_judge_eu", judge_eg: "demo_judge_eg", judge_gr: "demo_judge_gr", moderator: "demo_moderator" };
 const STATIC_ROUTES = `/dashboard /dashboard/annual /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins
   /audit/permissions /audit/sessions /audit/stats /city-god-cases /city-gods /corpus /cross-judgments /death-sync
-  /death-sync/api-keys /death-sync/tudi-gods /death-sync/webhooks /dispatch /dispatch/propose /disposition /events /halls
+  /death-sync/api-keys /death-sync/tudi-gods /death-sync/webhooks /desk /desk/overview /dispatch /dispatch/propose /disposition /events /halls
   /judgment /judgment/appeals /judgment/capture-due /judgment/queue /ledger /menus /menus/buttons /moderation
   /notifications /organizations /permissions /profile /realms /rebirth-applications /rebirths /recycle-bin /scheduler
   /sentence-plans /sentence-requests /social /social/follows /soul-credentials /soul-inbox /souls /tenants /users /welcome
@@ -274,6 +274,23 @@ async function sweepWithParams(rec, access, login) {
   for (const code of codes) await getAll(rec, access, `${rec.api}/dispatch/records/realm-options/?target_tenant_code=${code}`);
   for (const civ of CIVILIZATIONS) await getAll(rec, access, `${rec.api}/workflows/case-types/?civilization=${civ}`);
   for (const id of tenantIds) await getAll(rec, access, `${rec.api}/judgment/handover/officers/?tenant=${id}`);
+  // 案卷台 (/desk) and 总簿 (/desk/overview): the counts by source and by civilization, and each group by source. The demo
+  // derives these from the rows (`queueCounts` in flows.ts); recorded, they are what that derivation is checked against.
+  // `hall-stats/?civilization=` is asked ahead of the server having it: until then it answers the whole hall.
+  const SOURCES = ["queue", "city_god", "cross"];
+  for (const source of SOURCES) {
+    await getAll(rec, access, `${rec.api}/judgment/queue-counts/?source=${source}`);
+    for (const group of ["mine", "unclaimed", "others", "deferred"]) {
+      await getAll(rec, access, `${rec.api}/judgment/?group=${group}&ordering=created_at&source=${source}`);
+    }
+  }
+  for (const civ of CIVILIZATIONS) {
+    await getAll(rec, access, `${rec.api}/judgment/queue-counts/?civilization=${civ}`);
+    await getAll(rec, access, `${rec.api}/judgment/?civilization=${civ}&has_verdict=false&ordering=created_at`);
+    await getAll(rec, access, `${rec.api}/judgment/hall-stats/?civilization=${civ}`);
+  }
+  await getAll(rec, access, `${rec.api}/dispatch/records/?ordering=-proposed_at`);
+  await getAll(rec, access, `${rec.api}/dispatch/cross-tenant-judgments/?ordering=-create_time`);
   // The annual report's 「去年」 button.
   const year = rec.docs["/judgment/annual/"]?.b?.year;
   if (typeof year === "number") await getAll(rec, access, `${rec.api}/judgment/annual/?year=${year - 1}`);

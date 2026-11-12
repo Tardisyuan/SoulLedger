@@ -3,7 +3,7 @@ import { BROKEN, clean, enter, recording, rows, watch, type Role } from "./suppo
 
 const STATIC = `/dashboard /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins /audit/permissions
   /audit/sessions /audit/stats /city-god-cases /city-gods /corpus /cross-judgments /death-sync /death-sync/api-keys /death-sync/tudi-gods
-  /death-sync/webhooks /dispatch /dispatch/propose /disposition /events /halls /judgment /judgment/appeals /judgment/capture-due
+  /death-sync/webhooks /desk /dispatch /dispatch/propose /disposition /events /halls /judgment /judgment/appeals /judgment/capture-due
   /judgment/queue /ledger /menus /menus/buttons /moderation /notifications /organizations /permissions /profile /realms
   /rebirth-applications /rebirths /recycle-bin /scheduler /sentence-plans /sentence-requests /social /social/follows /soul-credentials
   /soul-inbox /souls /tenants /users /welcome /workflow`.split(/\s+/);
@@ -18,7 +18,8 @@ const ROLES: Role[] = ["admin", "judge", "judge_eu", "judge_eg", "judge_gr", "mo
 
 for (const role of ROLES) {
   const rec = recording(role);
-  const routes = [...STATIC];
+  // 总簿 is ADMIN only (`defaultView.ts`); anyone else is shown a 403 there, which is not this test's subject.
+  const routes = [...STATIC, ...(role === "admin" ? ["/desk/overview"] : [])];
   for (const [list, route] of DETAIL) {
     const first = rows(rec, list)[0];
     if (first) routes.push(`${route}${first.id}`);
