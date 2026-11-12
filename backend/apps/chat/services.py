@@ -513,6 +513,17 @@ def open_direct(account, target_user, *, request=None):
         interval = timedelta(seconds=settings.CHAT_REQUEST_INTERVAL_SECONDS)
         if declined is not None and timezone.now() - declined < interval:
             raise _throttled(declined + interval)
+        # 按发起人限量(F-CHAT-03):节流只按「每对 24 小时一条」,此前一个灵魂可以对同文明每个人各开一间
+        # 请求房间 —— 每间都把对方 force_join 进去、在对方列表里多一行「来信申请」。
+        window = timezone.now() - timedelta(days=1)
+        recent = list(Conversation.objects.filter(
+            kind=ConversationKind.DIRECT, initiator=soul, created_at__gte=window,
+        ).order_by("created_at").values_list("created_at", flat=True)[:settings.CHAT_NEW_REQUESTS_PER_DAY])
+        if len(recent) >= settings.CHAT_NEW_REQUESTS_PER_DAY:
+            error = ChatError(f"24 小时内最多向 {settings.CHAT_NEW_REQUESTS_PER_DAY} 位新的灵魂发私聊请求。",
+                              "request_throttled", status=429)
+            error.retry_at = recent[0] + timedelta(days=1)
+            raise error
 
     client = get_client()
     mine = ensure_identity(account, client=client)
