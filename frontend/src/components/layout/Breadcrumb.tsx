@@ -71,7 +71,7 @@ const linkable = (href: string) => (PAGELESS_PREFIXES.has(href) ? undefined : hr
 // H1 是仅有的两处例外，补一个"译名 中文原名"的对照）。
 export type Crumb = { label: string; gloss?: string; href?: string };
 
-/** 当前路由的面包屑各段。匾的题字取最后一段(AppLayout),面包屑本身画全部。 */
+/** 当前路由的面包屑各段。面包屑画全部;末段与页面 `<h1>` 相同时 `Breadcrumb` 省掉它(第三十批)。 */
 export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
   const pathname = usePathname();
   const { t, locale } = useI18n();
