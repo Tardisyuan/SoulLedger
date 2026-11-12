@@ -204,6 +204,8 @@ export interface Judgment extends ArchiveFields {
   deadline_at?: string | null;
   deadline_remaining_seconds?: number | null;
   is_overdue?: boolean;
+  /** 案卷台的来源(`backend/apps/judgment/sources.py`);列表的 `?source=` 按它筛。 */
+  source?: JudgmentQueueSource;
 }
 
 type Schemas = components["schemas"];
@@ -274,6 +276,24 @@ export interface JudgmentDraftPayload {
 /** The four queue groups. Mutually exclusive over pending cases; deferred wins. */
 export type JudgmentQueueGroup = "mine" | "unclaimed" | "others" | "deferred";
 
+/**
+ * 案卷台队列行的来源,互斥(`backend/apps/judgment/sources.py`):`city_god` = 经城隍初审解送来的;
+ * `cross` = 灵魂不在原属的殿,或挂着未了结的跨殿联审;`queue` = 其余。
+ */
+export type JudgmentQueueSource = "queue" | "city_god" | "cross";
+
+/**
+ * 别处等着办的(不是队列的行,不随筛选走);null = 调用者不持对应读码。去处:
+ * `appeal` → /judgment/appeals,`city_god_review` → /city-god-cases,
+ * `cross_judgment` → /cross-judgments,`capture_due` → /judgment/capture-due。
+ */
+export interface JudgmentElsewhereCounts {
+  appeal: number | null;
+  city_god_review: number | null;
+  cross_judgment: number | null;
+  capture_due: number | null;
+}
+
 /** `GET /judgment/queue-counts/`. The four add up to `total`. */
 export interface JudgmentQueueCounts {
   mine: number;
@@ -284,6 +304,9 @@ export interface JudgmentQueueCounts {
   /** v4:已过期限(待定中的不算)与退回重审(判 RETRY 另开的一件);与四组不互斥。 */
   overdue?: number;
   returned?: number;
+  /** 三个来源各几件,相加等于不带 `source` 时的 `total`;不随 `source` 参数变。 */
+  sources?: Record<JudgmentQueueSource, number>;
+  elsewhere?: JudgmentElsewhereCounts;
 }
 
 /** `GET /judgment/courts/`: one court (殿) in the caller's scope and its pending cases. */
@@ -303,6 +326,8 @@ export interface JudgmentQueueCountsParams {
   /** v4 队列标签:`"true"` 只数已过期限 / 退回重审的(与列表同一谓词)。 */
   overdue?: string;
   returned?: string;
+  /** 只数这个来源的(四组与 `total`);`sources` 不随它变。 */
+  source?: JudgmentQueueSource;
 }
 
 export type JudgmentBatchOperation = "claim" | "reassign" | "defer";

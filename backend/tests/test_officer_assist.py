@@ -215,7 +215,7 @@ def test_queue_counts_are_this_halls_and_carry_no_soul_data(cn_tenant, eu_tenant
 
     out = _tool_result(officer_client(judge_user), "judgment_queue_counts")
     assert out == {"scope": "this_hall", "total": 3, "mine": 1, "unclaimed": 1, "others": 1, "deferred": 0,
-                   "overdue": 0, "returned": 0}
+                   "overdue": 0, "returned": 0, "sources": {"queue": 3, "city_god": 0, "cross": 0}}
     blob = json.dumps(out, ensure_ascii=False)
     for name in ("我的魂", "无主魂", "Foreign"):
         assert name not in blob
@@ -229,7 +229,8 @@ def test_the_tool_agrees_with_the_queue_counts_endpoint(cn_tenant, judge_user):
     client = officer_client(judge_user)
     endpoint = client.get("/api/v1/judgment/queue-counts/").data
     tool = _tool_result(client, "judgment_queue_counts")
-    assert {k: v for k, v in tool.items() if k != "scope"} == dict(endpoint)
+    # `elsewhere`(申诉、城隍处、联审、待发勾魂牒)只在接口上:它不是队列的数。
+    assert {k: v for k, v in tool.items() if k != "scope"} == {k: v for k, v in endpoint.items() if k != "elsewhere"}
 
 
 def test_an_admin_sees_only_halls_that_turned_the_assistant_on(cn_tenant, eu_tenant, admin_user):

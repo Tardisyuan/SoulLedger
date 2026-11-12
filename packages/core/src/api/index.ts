@@ -115,6 +115,8 @@ export {
   type QueuePriorCycle,
   type QueueRealm,
   type JudgmentQueueGroup,
+  type JudgmentQueueSource,
+  type JudgmentElsewhereCounts,
   type JudgmentQueueCounts,
   type JudgmentCourt,
   type JudgmentQueueCountsParams,

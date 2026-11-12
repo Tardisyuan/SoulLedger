@@ -103,7 +103,9 @@ TOOLS = {
                               "How many open judgment cases are in the asking officer's queue: total, and per "
                               "group (mine = claimed by me, unclaimed, others = claimed by someone else, "
                               "deferred), plus overdue (past the hall's deadline, not on hold) and returned "
-                              "(reopened after a RETRY verdict). Counts only."),
+                              "(reopened after a RETRY verdict), and sources (queue = ordinary, city_god = sent on by a city "
+                              "god, cross = a soul away from its home hall or a case under an open joint judgment). "
+                              "Counts only."),
     "my_pending_approvals": ("workflow.read", _my_pending_approvals,
                              "How many workflows have a current step waiting for the asking officer's own "
                              "decision, grouped by case type, and whether the officer holds workflow.approve. If it "

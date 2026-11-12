@@ -10,7 +10,7 @@ from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.disposition.destination import MAX_TERM_YEARS
-from apps.judgment import deadline, snapshot, wangsi
+from apps.judgment import deadline, snapshot, sources, wangsi
 from apps.judgment.claims import BATCH_LIMIT, ClaimRefusedError, assert_concludable, ferry_barred, may_edit
 from apps.judgment.models import (
     CitationSnapshotKind,
@@ -199,6 +199,8 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
     deadline_at = serializers.SerializerMethodField()
     deadline_remaining_seconds = serializers.SerializerMethodField()
     is_overdue = serializers.SerializerMethodField()
+    # 案卷台的来源:queue / city_god / cross(`apps/judgment/sources.py`)。列表在查询里算好,别处逐个判。
+    source = serializers.SerializerMethodField()
 
     validate_judge = tenant_scoped("judge")
     # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
@@ -254,6 +256,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
             "fail_reasons", "fail_reason_note", "greek_account", "greek_curability",
             "concluded_tz", "concluded_at_local",
             "claimable_since", "deadline_at", "deadline_remaining_seconds", "is_overdue",
+            "source",
             *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
@@ -347,6 +350,10 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
     def get_is_overdue(self, obj) -> bool:
         """已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。"""
         return deadline.is_overdue(obj)
+
+    @extend_schema_field(serializers.ChoiceField(choices=sources.CHOICES))
+    def get_source(self, obj) -> str:
+        return sources.source_of(obj)
 
     def get_ferry_barred(self, obj) -> str:
         return ferry_barred(obj)
@@ -986,6 +993,21 @@ class JudgmentCourtSerializer(serializers.Serializer):
     pending = serializers.IntegerField()
 
 
+class JudgmentQueueSourceCountsSerializer(serializers.Serializer):
+    queue = serializers.IntegerField()
+    city_god = serializers.IntegerField()
+    cross = serializers.IntegerField()
+
+
+class JudgmentElsewhereCountsSerializer(serializers.Serializer):
+    """去处见 `apps/judgment/sources.py` 文件头的表。"""
+
+    appeal = serializers.IntegerField(allow_null=True)
+    city_god_review = serializers.IntegerField(allow_null=True)
+    cross_judgment = serializers.IntegerField(allow_null=True)
+    capture_due = serializers.IntegerField(allow_null=True)
+
+
 class JudgmentQueueCountsSerializer(serializers.Serializer):
     """`GET /judgment/queue-counts/`:四个组各有几件未结案的案子。
 
@@ -1001,6 +1023,10 @@ class JudgmentQueueCountsSerializer(serializers.Serializer):
     #: v4:已过期限(D10,待定中的不算)与退回重审(判了 RETRY 另开的一件)。与上面四组不互斥,不计入 `total` 的分解。
     overdue = serializers.IntegerField()
     returned = serializers.IntegerField()
+    #: 案卷台的三个来源(`apps/judgment/sources.py`),互斥,相加等于不带 `source` 时的 `total`。
+    sources = JudgmentQueueSourceCountsSerializer()
+    #: 别处等着办的(不是队列里的行,不随筛选走);null = 调用者不持对应读码。
+    elsewhere = JudgmentElsewhereCountsSerializer()
 
 
 class JudgmentHallStatsWeekSerializer(serializers.Serializer):

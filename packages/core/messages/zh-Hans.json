@@ -8073,7 +8073,11 @@
       "sources": {
         "queue": "审判队列",
         "city_god": "城隍初审",
-        "cross": "跨域"
+        "cross": "跨域",
+        "appeal": "申诉",
+        "city_god_review": "城隍初审中",
+        "cross_judgment": "跨殿联审",
+        "capture_due": "待发勾魂牒"
       },
       "groups": {
         "mine": "我认领",
