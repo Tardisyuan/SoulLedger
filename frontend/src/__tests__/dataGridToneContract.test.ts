@@ -29,7 +29,7 @@ const MEASURED_TEXT = new Set([
 ]);
 
 const TONES = Object.entries(ENUM_TONE_CLASSES);
-const tokenOf = (prefix: "text" | "border", classes: string) =>
+const tokenOf = (prefix: "text" | "border" | "bg", classes: string) =>
   new RegExp(`${prefix}-\\[oklch\\(var\\((--[\\w-]+)\\)\\)\\]`).exec(classes)?.[1];
 
 /** Follow one alias hop (`--color-status-error` → `--color-danger`). */
@@ -40,15 +40,19 @@ describe("data-grid enum badge token contract", () => {
     expect(TONES.map(([tone]) => tone).sort()).toEqual(["error", "info", "neutral", "success", "warning"]);
   });
 
-  it.each(TONES)("tone %s declares no background", (_tone, classes) => {
-    expect(classes).not.toMatch(/\bbg-/);
+  // 第三十批: a tag is a declared tint behind its text, never an alpha of the text colour, and no border.
+  it.each(TONES)("tone %s fills with a declared token, not an alpha of its text", (_tone, classes) => {
+    const bg = tokenOf("bg", classes);
+    expect(bg).toBeDefined();
+    expect(ROOT_TOKENS[bg!]).toBeDefined();
+    expect(classes).not.toMatch(/\/0?\.\d+\)\]/);
   });
 
-  it.each(TONES)("tone %s draws text and border in one declared token", (_tone, classes) => {
+  it.each(TONES)("tone %s draws text in one declared token and no border", (_tone, classes) => {
     const text = tokenOf("text", classes);
     expect(text).toBeDefined();
-    expect(tokenOf("border", classes)).toBe(text);
     expect(ROOT_TOKENS[text!]).toBeDefined();
+    expect(tokenOf("border", classes)).toBeUndefined();
   });
 
   it.each(TONES)("tone %s uses a text colour whose contrast is measured", (_tone, classes) => {

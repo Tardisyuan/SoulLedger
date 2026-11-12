@@ -135,42 +135,55 @@ describe("Badge and EnumBadge cannot drift apart", () => {
     }
   });
 
-  it("has no fill: the tone is the text and a same-colour border (规范 v1 §2 徽章)", () => {
-    // A tint over a row was the one place badge text could drop under AA; with
-    // no fill the text colour sits on the row's own ground, which
-    // inkOnSurfaceContract measures for every text token.
+  // 第三十批「卷宗」第 1 步(Design v4 第三十批第一节第 2 条)replaced 规范 v1 §2's no-fill, same-colour-border badge:
+  // a tag is a tint, no border, and there are exactly four colour pairs. Each pair is one inkOnSurfaceContract
+  // measures (TINTS: danger / success / warning on their own tint; ink-muted on surface-2 is an INK_TOKENS ×
+  // TEXT_GROUNDS cell), so pinning the pairs here is what keeps the text over AA — an alpha fill or a civ colour
+  // would not be measured anywhere.
+  const PAIRS: Record<string, string> = {
+    "--color-ink-muted": "--color-surface-2",
+    "--color-success": "--color-success-tint",
+    "--color-warning": "--color-warning-tint",
+    "--color-danger": "--color-danger-tint",
+  };
+  it("is tinted: every tone is one of the four measured text / tint pairs, and none draws a border", () => {
+    const seen = new Set<string>();
     for (const tone of BADGE_TONES) {
       const classes = BADGE_TONE_CLASSES[tone];
-      expect(classes).not.toMatch(/\bbg-/);
+      expect(classes).not.toMatch(/\bborder\b|border-/);
       const text = /text-\[oklch\(var\((--[\w-]+)\)\)\]/.exec(classes)?.[1];
-      const border = /border-\[oklch\(var\((--[\w-]+)\)\)\]/.exec(classes)?.[1];
-      expect(text).toBeDefined();
-      expect(border).toBe(text);
+      const bg = /bg-\[oklch\(var\((--[\w-]+)\)\)\]/.exec(classes)?.[1];
+      expect(text && PAIRS[text]).toBe(bg);
+      seen.add(text!);
     }
+    // Four colours, not five: the civ accent and the v3 `ink` tone both fold into neutral.
+    expect([...seen].sort()).toEqual(Object.keys(PAIRS).sort());
+    expect(BADGE_TONE_CLASSES.info).toBe(BADGE_TONE_CLASSES.neutral);
+    expect(BADGE_TONE_CLASSES.accent).toBe(BADGE_TONE_CLASSES.neutral);
+    expect(BADGE_TONE_CLASSES.ink).toBe(BADGE_TONE_CLASSES.neutral);
   });
 });
 
 describe("shape", () => {
-  it("is square by default, because 63 of the 66 were", () => {
+  it("has the 4 px control corner and nothing rounder (第三十批: radius 4, not a pill)", () => {
     const classes = classesOf(<Badge>NEUTRAL</Badge>);
     expect(classes).not.toContain("rounded-full");
-    // And no `rounded` either: borderRadius.DEFAULT is 0, so writing it would
-    // emit `border-radius: 0` and read as a decision that was never made.
-    expect(classes.filter((c) => c.startsWith("rounded"))).toEqual([]);
+    expect(classes.filter((c) => c.startsWith("rounded"))).toEqual(["rounded-control"]);
   });
 
 });
 
 describe("geometry and content", () => {
-  it("keeps EnumBadge's geometry so the two are swappable without a visual diff", () => {
+  it("has the tag's geometry: --tag-h high (22 fine pointer / 28 touch), 8 px sides, sans 12 / 500, no frame", () => {
     const classes = classesOf(<Badge>X</Badge>);
-    expect(classes).toEqual(expect.arrayContaining(["px-1.5", "py-0.5", "font-mono", "font-normal", "border"]));
+    expect(classes).toEqual(expect.arrayContaining(["h-(--tag-h)", "px-2", "text-xs", "font-medium"]));
+    expect(classes).not.toContain("border");
+    expect(classes).not.toContain("font-mono");
   });
 
-  it("carries the 11 px label slot of the type scale, not a bare text-xs", () => {
-    // 规范 v1: badges are 11 / 16 mono. This is also the assertion that goes
-    // red if `cn()` starts eating the scale — the tone strings end in a colour.
-    expect(classesOf(<Badge tone="error">X</Badge>)).toContain("text-2xs");
+  it("keeps the 12 px type slot after cn() merges a tone colour in", () => {
+    // The assertion that goes red if `cn()` starts eating the scale — the tone strings end in a colour.
+    expect(classesOf(<Badge tone="error">X</Badge>)).toContain("text-xs");
   });
 
   it("does not wrap mid-label inside a narrow cell", () => {

@@ -15,7 +15,7 @@
   font-family: 'SoulLedger Glyphs';
   src: url('/fonts/SoulLedgerGlyphs.ttf') format('truetype');
   font-display: block;
-  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1;
+  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1, U+2016;
 }
 
 @theme {
@@ -754,6 +754,46 @@
     --color-focus: var(--color-main-ink);
   }
 
+  /* 第三十批「卷宗」第 1 步(v4 第三十批回复第四节)新加的 token。底层 / 语义 / 文明色沿用上面的 v4 名字与值,
+     这里只加 Design 新给的那几样。颜色仍是 oklch 三元组(`--color-seal`),`--seal` / `--field` 是可直接用的颜色值。
+       --topline     页顶文明色线的粗细(PageShell 的页头;色 = civT,即 --color-main-ink)
+       --seal        印(第 3 步)。地府是朱色,与罪业红 --color-danger 分开,不混用;其余文明暂取 civT
+       --rail-w / --stack-w / --spine-h   案卷台的门栏、案卷摞宽,卷宗脊高(第 2、3 步)
+       --toast-bar   toast 左侧色条
+       --juan / --juan-strong   「卷」语域正文与卷里的人名(font 简写)
+       --tai / --tai-touch      「台」语域:桌面可点的部分 / 触屏
+       --glowA       页头光晕强度(深 .30 / 浅 .22)。--glow-alpha(深 .30 / 浅 .24)仍给侧栏与工具条,值不动
+       --field       输入框底 */
+  :root {
+    --topline: 2px;
+    --rail-w: 64px;
+    --stack-w: 360px;
+    --spine-h: 44px;
+    --toast-bar: 3px;
+    --juan: 400 16px/28px var(--font-title);
+    --juan-strong: 600 16px/28px var(--font-title);
+    --tai: 400 14px/22px var(--font-sans);
+    --tai-touch: 400 15px/24px var(--font-sans);
+    --glowA: 0.3;
+    --field: rgba(255, 255, 255, 0.05);
+    --color-seal: var(--color-main-ink);
+    --seal: oklch(var(--color-seal));
+  }
+  .light {
+    --glowA: 0.22;
+    --field: rgba(0, 0, 0, 0.035);
+  }
+  [data-civ] {
+    --color-seal: var(--color-main-ink);
+  }
+  [data-civ="cn"] {
+    --color-seal: 0.645074 0.173464 34.1221; /* #E35D3F */
+  }
+  .light[data-civ="cn"],
+  .light [data-civ="cn"] {
+    --color-seal: 0.520861 0.174215 31.9795; /* #B8321C */
+  }
+
   /* (v3 时这里写「文明皮只有上面这一条匾色」;v4 起是上面五个值加强调 / 焦点。)v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
      v3 身份带撤掉(2026-10-01);v2 的实底印(遮罩素材、残边扫描、三款印文字体)随 v3 描边印撤掉
      (2026-10-02),印的外形见下面 `.seal`;v2 的分节纹(public/v2/svg/section-*,与 `SectionTitle`
@@ -764,6 +804,8 @@
      裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
   html {
     --bottom-bar: 0px;
+    /* 状态标签的高(第三十批第 1 步第 2 条):触屏 28,精确指针 22(下面「精确指针的默认档」里覆盖)。 */
+    --tag-h: 28px;
     /* 「以此人身份查看」固定条的高度(代看时 AppLayout 写成 2.5rem;平时 0)。它在工具条之上,
        所以工具条、身份带、导航与页面里的吸顶条都再让出这一段。 */
     --imp-h: 0px;
@@ -1053,6 +1095,7 @@
       --control-h-md: 36px;
       --control-h-lg: 40px;
       --table-row-h: 46px;
+      --tag-h: 22px;
     }
   }
 
