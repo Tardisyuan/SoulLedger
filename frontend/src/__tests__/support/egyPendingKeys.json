@@ -29,5 +29,13 @@
   "soul_app.errors.soul_recycled",
   "dispatch.withdraw_approval",
   "dispatch.withdraw_approval_warning",
-  "dispatch.withdraw_approval_success"
+  "dispatch.withdraw_approval_success",
+  "soul_accounts.rebirth.cross_to",
+  "soul_accounts.rebirth.cross_no_targets",
+  "soul_accounts.rebirth.cross_target_refused",
+  "soul_app.detail.cross_to",
+  "officer_app.rebirth.cross_civ_to",
+  "officer_app.rebirth.cross_civ_pick",
+  "officer_app.rebirth.cross_option_none",
+  "officer_app.rebirth.approve_cross"
 ]

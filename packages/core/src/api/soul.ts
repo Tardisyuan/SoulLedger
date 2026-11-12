@@ -100,7 +100,11 @@ export type MeReincarnation = Schemas["MeReincarnation"];
 export type MeSentencePlan = Schemas["MeSentencePlan"];
 export type MeSentenceStation = Schemas["MeSentenceStation"];
 export type SentenceStationStatus = Schemas["SoulSentenceStationStatusEnum"];
-export type MeRebirthApplication = Schemas["MeRebirthApplication"];
+/** `target_hall` (F-REB-11: the hall a cross-civilization rebirth goes to) spelled out until the schema is
+ *  regenerated; once it is, the intersection is a no-op. */
+export type MeRebirthApplication = Schemas["MeRebirthApplication"] & {
+  target_hall?: { code: string; display_name: string } | null;
+};
 export type MeRebirthApplicationList = Schemas["MeRebirthApplicationList"];
 export type DesiredRebirthForm = Schemas["DesiredRebirthFormEnum"];
 export type RebirthApplicationStatus = Schemas["RebirthApplicationStatusEnum"];

@@ -103,6 +103,8 @@ export interface OfficerRebirthApplication {
   appeal_workflow: string | null;
   /** null = the initial review has not decided yet. */
   cross_civilization: boolean | null;
+  /** The hall a cross-civilization rebirth goes to (F-REB-11); null when not crossing or not decided. */
+  target_hall: RebirthTargetHall | null;
   /** What the approver wrote FOR THE SOUL on rejection; internal node notes are never here. */
   rejection_reason: string;
   decided_at: string | null;
@@ -119,8 +121,17 @@ export interface OfficerRebirthApplication {
   /** Whether THIS user may decide cross-civilization now — the same check the
    *  `cross-civilization/` endpoint runs. Read it; do not re-derive it from `current_step`. */
   can_decide_cross_civilization: boolean;
+  /** The halls the initial review may choose for a cross-civilization rebirth: rebirth-capable, not the soul's
+   *  own civilization (`rebirth.cross_civilization_targets`). Empty unless `can_decide_cross_civilization`. */
+  cross_civilization_targets: RebirthTargetHall[];
   created_at: string;
   updated_at: string;
+}
+
+/** A hall a cross-civilization rebirth can go to (F-REB-11). Name it with `tenantLabel` / `realmLabel`. */
+export interface RebirthTargetHall {
+  code: string;
+  display_name: string;
 }
 
 export type CooldownShorteningStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -238,10 +249,12 @@ export const soulAccountsApi = {
   retry: (id: string) => api.post<InitialCredential>(`/soul-accounts/credentials/${id}/retry/`),
   rebirthApplications: (params: RebirthApplicationFilters) =>
     api.get<PaginatedResponse<OfficerRebirthApplication>>("/soul-accounts/rebirth-applications/", { params }),
-  /** 403 `not_the_approver`; 409 `not_in_initial_review`. */
-  decideCrossCivilization: (id: string, crossCivilization: boolean) =>
+  /** 403 `not_the_approver`; 409 `not_in_initial_review`. Crossing needs `targetTenant` (a code from
+   *  `cross_civilization_targets`): 400 `cross_civilization_target_required` / `_unknown` / `_terminal` / `_same`. */
+  decideCrossCivilization: (id: string, crossCivilization: boolean, targetTenant = "") =>
     api.post<OfficerRebirthApplication>(`/soul-accounts/rebirth-applications/${id}/cross-civilization/`, {
       cross_civilization: crossCivilization,
+      ...(crossCivilization ? { target_tenant: targetTenant } : {}),
     }),
   cooldownShortenings: (params: CooldownShorteningFilters) =>
     api.get<PaginatedResponse<OfficerCooldownShortening>>("/soul-accounts/cooldown-shortenings/", { params }),

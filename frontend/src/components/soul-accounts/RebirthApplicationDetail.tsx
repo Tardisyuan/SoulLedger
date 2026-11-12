@@ -10,6 +10,7 @@ import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { failureKey, lifeNumber, rebirthBadgeClass } from "./soulAccountsView";
 import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
+import { tenantLabel } from "@/src/lib/domainNames";
 
 interface Props {
   application: OfficerRebirthApplication;
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export function RebirthApplicationDetail({ application: a, onClose }: Props) {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, locale } = useI18n();
   const { showToast } = useToast();
   const decide = useDecideCrossCivilization();
   /* The backend's answer, not a local reconstruction. It is computed by the same
@@ -28,9 +29,13 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
   const canDecide = a.can_decide_cross_civilization;
   const step = a.current_step;
 
-  const setCross = (value: boolean) =>
+  // F-REB-11: crossing names the hall the soul is reborn into; the choices are the backend's
+  // (`cross_civilization_targets`: rebirth-capable, not the soul's own civilization), never a local list.
+  const targets = a.cross_civilization_targets ?? [];
+  const hallName = (hall: { code: string; display_name: string }) => tenantLabel(t, hall, locale);
+  const setCross = (value: boolean, target?: string) =>
     decide.mutate(
-      { id: a.id, value },
+      { id: a.id, value, target },
       {
         onSuccess: () => showToast(t("soul_accounts.rebirth.cross_saved"), "success"),
         onError: (error) =>
@@ -48,7 +53,9 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
   const crossText =
     a.cross_civilization === null
       ? t("soul_accounts.rebirth.cross.undecided")
-      : t(a.cross_civilization ? "soul_accounts.rebirth.cross.yes" : "soul_accounts.rebirth.cross.no");
+      : a.cross_civilization && a.target_hall
+        ? t("soul_accounts.rebirth.cross_to", { hall: hallName(a.target_hall) })
+        : t(a.cross_civilization ? "soul_accounts.rebirth.cross.yes" : "soul_accounts.rebirth.cross.no");
 
   const currentStep: React.ReactNode = step ? (
     <span className="inline-flex flex-wrap gap-1">
@@ -111,21 +118,39 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
             <h3 className="text-sm font-medium">{t("soul_accounts.rebirth.cross_title")}</h3>
             <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("soul_accounts.rebirth.cross_hint")}</p>
             <div className="flex flex-wrap gap-2">
-              {[false, true].map((value) => (
-                <Button
-                  key={String(value)}
-                  type="button"
-                  size="sm"
-                  variant={a.cross_civilization === value ? "primary" : "secondary"}
-                  aria-pressed={a.cross_civilization === value}
-                  loading={decide.isPending && decide.variables?.value === value}
-                  disabled={decide.isPending}
-                  onClick={() => setCross(value)}
-                >
-                  {t(value ? "soul_accounts.rebirth.cross.yes" : "soul_accounts.rebirth.cross.no")}
-                </Button>
-              ))}
+              <Button
+                type="button"
+                size="sm"
+                variant={a.cross_civilization === false ? "primary" : "secondary"}
+                aria-pressed={a.cross_civilization === false}
+                loading={decide.isPending && decide.variables?.value === false}
+                disabled={decide.isPending}
+                onClick={() => setCross(false)}
+              >
+                {t("soul_accounts.rebirth.cross.no")}
+              </Button>
+              {targets.map((hall) => {
+                const chosen = a.cross_civilization === true && a.target_hall?.code === hall.code;
+                return (
+                  <Button
+                    key={hall.code}
+                    type="button"
+                    size="sm"
+                    data-testid={`cross-target-${hall.code}`}
+                    variant={chosen ? "primary" : "secondary"}
+                    aria-pressed={chosen}
+                    loading={decide.isPending && decide.variables?.value === true && decide.variables?.target === hall.code}
+                    disabled={decide.isPending}
+                    onClick={() => setCross(true, hall.code)}
+                  >
+                    {t("soul_accounts.rebirth.cross_to", { hall: hallName(hall) })}
+                  </Button>
+                );
+              })}
             </div>
+            {targets.length === 0 && (
+              <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("soul_accounts.rebirth.cross_no_targets")}</p>
+            )}
           </section>
         )}
 

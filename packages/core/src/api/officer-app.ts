@@ -18,7 +18,17 @@ export type Todo = components["schemas"]["Todo"] & { sentence_changes?: TodoGrou
 export type TodoItemDetail = components["schemas"]["TodoItemDetail"];
 export type SignerCandidate = components["schemas"]["SignerCandidate"];
 export type OfficerPushToken = components["schemas"]["OfficerPushToken"];
-export type TodoFacts = components["schemas"]["TodoFacts"] & { cross_civilization?: boolean | null; status?: string };
+/** `target_hall` / `cross_civilization_targets`: F-REB-11 (the initial review picks the hall a cross-civilization rebirth goes to). */
+export type TodoFacts = components["schemas"]["TodoFacts"] & {
+  cross_civilization?: boolean | null;
+  status?: string;
+  target_hall?: TodoHall | null;
+  cross_civilization_targets?: TodoHall[];
+};
+export interface TodoHall {
+  code: string;
+  display_name: string;
+}
 /**
  * Per-kind row fields. A `pick` row (待我选站, 第四十三批): `title` is the soul, `target.id` the workflow; this
  * realm's `segment_order`, its stations to run / all (`go` / `total`), the convening hall (`realm` code, `hall`
