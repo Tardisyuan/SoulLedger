@@ -3,7 +3,8 @@
  * GET/PUT /perm/roles/{id}/data-scope/ → {default:{scope,orgs}, overrides:[{resource,scope,orgs}]}。
  *
  * 钉住:ADMIN 角色只显示「全部(固定)」、不取接口;只有无殿管理员能改,有殿管理员与非管理员只读;
- * 自定义机构未选机构不能保存;覆盖行选了就进 body、改回「跟随默认」就不进;保存提示「对方刷新后生效」。
+ * 自定义机构未选机构不能保存;覆盖行选了就进 body、改回「跟随默认」就不进;保存提示「对方刷新后生效」;
+ * 默认「未配置」(`default_configured: false`)选中「未配置」、保存不带 default;显式「全部」才发 ALL。
  */
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import type { Role } from "@soulledger/core/api";
@@ -141,4 +142,47 @@ it("a resources list of the wrong shape still leaves the default editable and sa
   await waitFor(() => expect(radio("ALL")).toBeChecked());
   expect(await screen.findByRole("alert")).toHaveTextContent("permissions.datascope.load_error");
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+});
+
+describe("an unconfigured default is not the same as 'all'", () => {
+  const unset = () => screen.getByRole("radio", { name: "permissions.datascope.default_unset" });
+  beforeEach(() => {
+    api.getRoleDataScope.mockResolvedValue({ data: { default: { scope: "ALL", orgs: [] }, default_configured: false, overrides: [] } });
+  });
+
+  it("reads as 'not set', and saving an override sends no default", async () => {
+    // 此前读成「全部」、保存时带上 default → 服务器多存一行默认 ALL,这个角色兼任时就让人看到全部。
+    renderSection(role("JUDGE"));
+    await waitFor(() => expect(unset()).toBeChecked());
+    expect(radio("ALL")).not.toBeChecked();
+    fireEvent.click(screen.getByText("permissions.datascope.per_resource"));
+    fireEvent.change(await screen.findByLabelText("灵魂"), { target: { value: "SELF" } });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(api.putRoleDataScope).toHaveBeenCalledTimes(1));
+    const body = api.putRoleDataScope.mock.calls[0][1];
+    expect(body).not.toHaveProperty("default");
+    expect(body).toEqual({ overrides: [{ resource: "soul", scope: "SELF", orgs: [] }] });
+  });
+
+  it("choosing 'all' explicitly sends ALL", async () => {
+    renderSection(role("JUDGE"));
+    await waitFor(() => expect(unset()).toBeChecked());
+    fireEvent.click(radio("ALL"));
+    expect(unset()).not.toBeChecked();
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(api.putRoleDataScope).toHaveBeenCalledTimes(1));
+    expect(api.putRoleDataScope.mock.calls[0][1]).toEqual({ default: { scope: "ALL", orgs: [] }, overrides: [] });
+  });
+
+  it("a configured role can be set back to 'not set'", async () => {
+    api.getRoleDataScope.mockResolvedValue({ data: { default: { scope: "ORG", orgs: [] }, default_configured: true, overrides: [] } });
+    renderSection(role("JUDGE"));
+    await waitFor(() => expect(radio("ORG")).toBeChecked());
+    expect(unset()).not.toBeChecked();
+    fireEvent.click(unset());
+    expect(radio("ORG")).not.toBeChecked();
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(api.putRoleDataScope).toHaveBeenCalledTimes(1));
+    expect(api.putRoleDataScope.mock.calls[0][1]).toEqual({ overrides: [] });
+  });
 });

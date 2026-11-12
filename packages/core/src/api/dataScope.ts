@@ -18,9 +18,19 @@ export interface DataScopeOverride extends DataScopeRule {
   resource: string;
 }
 
-/** GET / PUT /perm/roles/{id}/data-scope/ 的 body(两边同形)。 */
+/**
+ * GET / PUT /perm/roles/{id}/data-scope/ 的回应。`default` 没配时也显示 ALL;`default_configured: false` 才说明
+ * 没有默认行 —— 没配的角色兼任时不放宽,显式「全部」的会(后端 `data_scope.org_ids`)。
+ */
 export interface RoleDataScopeConfig {
   default: DataScopeRule;
+  default_configured: boolean;
+  overrides: DataScopeOverride[];
+}
+
+/** PUT 的 body。不给 `default`(或 null)= 默认没配,不存默认行;显式「全部」要发 `{scope: "ALL"}`。 */
+export interface RoleDataScopeBody {
+  default?: DataScopeRule | null;
   overrides: DataScopeOverride[];
 }
 
@@ -34,6 +44,6 @@ export const dataScopeApi = {
   getDataScopeResources: () => api.get<DataScopeResource[]>("/perm/data-scope/resources/"),
   getRoleDataScope: (roleId: number) => api.get<RoleDataScopeConfig>(`/perm/roles/${roleId}/data-scope/`),
   /** 只有无殿 ADMIN 能写;DEFINE 机构为空、或角色是 ADMIN 时服务器 400。 */
-  putRoleDataScope: (roleId: number, body: RoleDataScopeConfig) =>
+  putRoleDataScope: (roleId: number, body: RoleDataScopeBody) =>
     api.put<RoleDataScopeConfig>(`/perm/roles/${roleId}/data-scope/`, body),
 };

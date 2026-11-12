@@ -1294,6 +1294,7 @@
       "orgs_required": "自定义机构至少选一个",
       "per_resource": "按业务单独设置",
       "follow_default": "跟随默认",
+      "default_unset": "未配置(兼任时不放宽)",
       "save": "保存数据范围",
       "saved": "数据范围已保存，对方刷新后生效",
       "save_error": "数据范围保存失败",
