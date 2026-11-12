@@ -42,6 +42,7 @@ from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.officer_app import facts as item_facts
 from apps.perm.checker import check_permission
 from apps.perm.filters import DataScopeFilter
+from apps.soul_accounts import rebirth
 from apps.soul_accounts.models import (
     CooldownShorteningRequest,
     CooldownShorteningStatus,
@@ -257,8 +258,10 @@ def build(user, request=None, kind=None, offset=0):
 
     cooldowns, reassignments = [], []
     if check_permission(user, "workflow.approve"):
+        # 冷却已结束 / 作废的待决行批不了,不算待办、不进角标(F-OFF-01)。
         cooldowns = [_item("cooldown", c.pk, c.soul.name, c.created_at)
-                     for c in _cooldowns(scope).filter(status=CooldownShorteningStatus.PENDING).order_by("created_at")]
+                     for c in _cooldowns(scope).filter(status=CooldownShorteningStatus.PENDING)
+                     .select_related("application").order_by("created_at") if rebirth.shortening_is_live(c)]
     if check_permission(user, "dispatch.approve"):
         reassignments = [_item("reassignment", d.pk, d.soul.name if d.soul_id else "", d.proposed_at)
                          for d in _dispatches(scope).filter(status=DispatchStatus.PROPOSED).order_by("proposed_at")]
@@ -366,11 +369,12 @@ def detail(user, kind, pk, request=None):
         if row is None:
             return None
         pending = row.status == CooldownShorteningStatus.PENDING
-        ok = pending and check_permission(user, "workflow.approve")
+        live = rebirth.shortening_is_live(row)
+        ok = live and check_permission(user, "workflow.approve")
         who = decision_codes.person(row.decided_by)
+        code = "already_handled" if not pending else "deadline_passed" if not live else "permission_changed"
         return {"kind": kind, "id": str(row.pk), "title": row.soul.name, "created_at": row.created_at,
-                "facts": item_facts.cooldown_facts(row),
-                **_state(ok, "already_handled" if not pending else "permission_changed", who, row.decided_at)}
+                "facts": item_facts.cooldown_facts(row), **_state(ok, code, who, row.decided_at)}
     if kind == "reassignment":
         row = _dispatches(scope).filter(pk=pk).first()
         if row is None:

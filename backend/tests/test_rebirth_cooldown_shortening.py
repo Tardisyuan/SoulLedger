@@ -257,6 +257,46 @@ def test_a_decision_after_the_cooldown_ended_is_refused(cn_tenant, judge_user, d
     assert refused.status_code == 409 and refused.data["code"] == "cooldown_over"
 
 
+def test_a_pending_request_whose_cooldown_ended_is_not_a_dead_end(cn_tenant, judge_user,
+                                                                   django_capture_on_commit_callbacks):
+    """F-REB-02 / F-OFF-01(2026-11-12):冷却结束时没人决定的那份,此前批不了也驳不了、一直算待办,
+    还按「每魂一份待决」挡住这只灵魂以后的每一次申请。现在:不进待办与计数,驳回可以,下一段冷却能再申请。"""
+    from apps.officer_app import todo
+    from apps.tenants.overview import hall_row
+
+    account, client, application = _rejected_soul(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    row_id = _request(client).data["id"]
+    assert todo.build(judge_user)["cooldowns"]["count"] == 1
+    RebirthApplication.objects.filter(pk=application.pk).update(decided_at=timezone.now() - timezone.timedelta(days=31))
+
+    assert todo.build(judge_user)["cooldowns"]["count"] == 0
+    assert todo.detail(judge_user, "cooldown", row_id)["actionable"] is False
+    assert hall_row(cn_tenant)["todo"]["cooldowns"] == 0
+
+    # 下一段冷却(本世又一份被驳回):上一份失效的不再挡,灵魂能再申请;旧的那份收成已驳回。
+    RebirthApplication.objects.create(
+        soul=account.soul, account=account, cycle=account.cycle, desired_form="HUMAN", status="REJECTED",
+        workflow=application.workflow.__class__.objects.create(soul=account.soul, workflow_name="x",
+                                                               case_type="REBIRTH_APPLICATION"),
+        decided_at=timezone.now(),
+    )
+    created = _request(client)
+    assert created.status_code == 201, created.data
+    stale = CooldownShorteningRequest.objects.get(pk=row_id)
+    assert stale.status == "REJECTED" and stale.decision_note == rebirth.STALE_SHORTENING_NOTE
+
+
+def test_an_officer_can_still_reject_a_request_whose_cooldown_ended(cn_tenant, judge_user,
+                                                                     django_capture_on_commit_callbacks):
+    _, client, application = _rejected_soul(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    row_id = _request(client).data["id"]
+    RebirthApplication.objects.filter(pk=application.pk).update(decided_at=timezone.now() - timezone.timedelta(days=31))
+    with django_capture_on_commit_callbacks(execute=True):
+        done = officer_client(judge_user).post(f"{OFFICER}{row_id}/reject/", {"note": "冷却已过"}, format="json")
+    assert done.status_code == 200, done.data
+    assert CooldownShorteningRequest.objects.get(pk=row_id).status == "REJECTED"
+
+
 # ── 行锁 ─────────────────────────────────────────────────────────────────
 
 SQLITE = connection.vendor == "sqlite"
