@@ -18,13 +18,16 @@ docs/DEPLOYMENT.md「灵魂聊天」)。
 """
 import hashlib
 import hmac
+import logging
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from apps.chat.matrix import get_client
+from apps.chat.matrix import MatrixError, get_client
 from apps.chat.models import ChatIdentity
+
+logger = logging.getLogger(__name__)
 
 
 def localpart_for(account):
@@ -71,3 +74,25 @@ def deactivate_identity(account, *, client=None):
     identity.deactivated_at = timezone.now()
     identity.save(update_fields=["deactivated_at"])
     return identity
+
+
+def end_matrix_sessions(account):
+    """账号的会话被结束(改密、官员重置凭据、关两步验证、退出其余设备 / 某一台):提交后删掉它在 Synapse 里的全部设备,
+    每一张 access token 随之失效(F-CHAT-02)。此前只作废后端令牌,Matrix 令牌在 Synapse 里不过期,
+    旧设备的 `/sync` 照样收信、在互关房间里照样能发。
+
+    仍登录着的设备(包括改密的这一台)下次 `/sync` 收到 401,App 拿一张新凭据重新登录(`chat.tsx`)——
+    凭据要后端会话有效才给,所以只有被结束的那几台回不来。没开过聊天、或聊天没部署时什么都不做。
+    ponytail: 提交后在请求里同步调 Synapse(两次 HTTP);Synapse 不在时只记一条 warning,令牌留到下次结束会话。"""
+    localpart = ChatIdentity.objects.filter(account=account, deactivated_at__isnull=True).values_list(
+        "localpart", flat=True).first()
+    if localpart is None:
+        return
+
+    def run():
+        try:
+            get_client().logout_user(localpart)
+        except MatrixError as exc:  # 含 MatrixNotConfiguredError
+            logger.warning("chat: could not end the Matrix sessions of %s: %s", localpart, type(exc).__name__)
+
+    transaction.on_commit(run)

@@ -531,6 +531,8 @@ MATRIX_USER_SALT = os.getenv("MATRIX_USER_SALT", "")
 MATRIX_LOGIN_TOKEN_TTL_SECONDS = int(os.getenv("MATRIX_LOGIN_TOKEN_TTL_SECONDS", "120"))
 # 非互关私聊请求的间隔(2026-09-17 用户决定:每 24 小时一条)。
 CHAT_REQUEST_INTERVAL_SECONDS = int(os.getenv("CHAT_REQUEST_INTERVAL_SECONDS", str(24 * 3600)))
+# 一个灵魂 24 小时内最多新开几间请求房间(非互关的私聊,F-CHAT-03)。互关的私聊不计。
+CHAT_NEW_REQUESTS_PER_DAY = int(os.getenv("CHAT_NEW_REQUESTS_PER_DAY", "10"))
 # 客户端的类路径。测试换成假实现(tests/chat_support.py),于是单元测试一条 HTTP 都不发。
 MATRIX_CLIENT = os.getenv("MATRIX_CLIENT", "apps.chat.matrix.SynapseClient")
 

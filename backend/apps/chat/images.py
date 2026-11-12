@@ -52,9 +52,15 @@ def _speaker_check(account, conversation):
     不是我的会话答 404(不说出它存在)。"""
     if not conversation.has_account(account.pk):
         raise svc.ChatError("会话不存在。", "not_found", status=404)
-    error = svc.refusal(conversation, account, conversation.other_account(account.pk))
+    peer = conversation.other_account(account.pk)
+    error = svc.refusal(conversation, account, peer)
     if error is not None:
         raise error
+    if conversation.throttled and svc.block_between(account, peer) != "by_peer":
+        # 对方的回信直接进 Synapse,后端的 `throttled` 没人改(F-CHAT-01):先问一次再判,与经后端发文字同一条路。
+        # 此前读的是没刷新过的值,对方回信后两边 App 都显示图片按钮,而接收方的文字从不经后端,永远解除不了。
+        with transaction.atomic():
+            conversation.throttled = svc.refresh_throttle(svc._locked(conversation.pk)).throttled
     if conversation.throttled:
         raise svc.ChatError("对方回复之前只能发文字请求。", "images_unavailable", status=409)
 

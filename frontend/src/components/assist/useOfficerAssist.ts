@@ -232,8 +232,12 @@ export function useOfficerAssist(wide: boolean) {
           setThread((th) => ({ id: end.conversation_id, messages: [...th.messages, mine, end.answer] }));
           setAnnounce(end.answer.content);
           if (!openRef.current) setUnseen(true);
-        } else if (how === "stopped") {
+        } else if (how === "stopped" && text) {
           keep("stopped");
+        } else if (how === "stopped") {
+          // Stopped before the first word (F-AST-01): the server stored nothing -- no message, no new conversation
+          // -- so the id from `meta` names nothing; keeping it made the next question a 404. The question goes back.
+          setDraft(question);
         } else if (text) {
           // Broke after text: the server kept what was sent (A7). `interrupted` event or a lost connection alike.
           if (end?.event === "error" && end.conversation_id) conversationId = end.conversation_id;

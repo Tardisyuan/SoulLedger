@@ -95,10 +95,20 @@ class SoulDeviceLoginView(APIView):
             return Response({"detail": "登录尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
                             status=status.HTTP_429_TOO_MANY_REQUESTS)
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
-        soul = Soul.objects.filter(soul_code=svc.normalize_soul_code(soul_code)).first()
+        # all_objects:回收站里的灵魂也找得到(F-ACCT-06)。此前答 `device_login_invalid`,App 读成「面容有变动」
+        # 删掉本机凭据,灵魂恢复后面容登录已没了,服务端那行却还有效。
+        soul = Soul.all_objects.filter(soul_code=svc.normalize_soul_code(soul_code)).first()
         row = device_login.find(soul, body.validated_data["credential"])  # 哈希先算,编号存不存在耗时一样
         username = sign_in_username(soul_code)
         account = row.account if row is not None else None
+        if soul is not None and soul.is_deleted and row is not None and row.revoked_at is None \
+                and account.retired_at is None and account.user.is_active:
+            LoginLog.objects.create(username=username, status="FAILED", ip_address=ip, user_agent=user_agent,
+                                    failure_reason="soul_recycled")
+            return Response({"detail": "灵魂已移入回收站,账号暂停使用。", "code": "soul_recycled"},
+                            status=status.HTTP_401_UNAUTHORIZED)
+        if soul is not None and soul.is_deleted:
+            soul, row, account = None, None, None
         # 账号已停用而凭据没标(不该发生,转生时同事务标了):按转生答,而不是「不认识」。
         reason = (row.revoked_reason or "account_reincarnated") if row is not None and (
             row.revoked_at is not None or account.retired_at is not None) else None

@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from apps.authentication import session_views as shared
 from apps.authentication import signin_sessions
 from apps.authentication.models import LoginLog
+from apps.chat.identity import end_matrix_sessions
 from apps.soul_accounts.me_views import SoulAPIView
 from apps.soul_accounts.serializers import SoulErrorSerializer
 from apps.soul_accounts.services import audit
@@ -86,6 +87,7 @@ class MeSessionRevokeView(SoulAPIView):
         if refusal is not None:
             return refusal
         device_login.revoke_signed_out(self.account, sessions=[session.pk])
+        end_matrix_sessions(self.account)  # F-CHAT-02:退出的那几台的书信令牌也作废(其余设备重新拿凭据)
         audit("UPDATE", self.account.soul, f"灵魂退出登录设备:{session.label}", actor=request.user,
               request=request, resource="soul_session", resource_id=session.pk,
               changes={"session_revoked": str(session.pk), "label": session.label})
@@ -102,6 +104,7 @@ class MeSessionsRevokeOthersView(SoulAPIView):
         if refusal is not None:
             return refusal
         device_login.revoke_signed_out(self.account, keep_session=signin_sessions.session_of(request.auth))
+        end_matrix_sessions(self.account)  # F-CHAT-02:退出的那几台的书信令牌也作废(其余设备重新拿凭据)
         audit("UPDATE", self.account.soul, f"灵魂退出其他全部登录设备({count} 台)", actor=request.user,
               request=request, resource="soul_session", resource_id=self.account.pk,
               changes={"sessions_revoked": count})

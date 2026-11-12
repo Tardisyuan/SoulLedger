@@ -311,6 +311,14 @@ class MePasswordView(SoulAPIView):
         from apps.authentication import signin_sessions
 
         # 这台设备留着(其余退出):它的会话从 access 的 `sid` 认;老令牌没有 `sid`,就给它补一条。
+        from apps.core.client_ip import get_client_ip
+
+        # 原密码错与「确认是本人」(`mfa_views.confirm_current_password`)算同一份预算(F-ACCT-03):
+        # 此前这里错了只答 400、不计数,拿着一张 access 的人可以在这里无限次猜密码。
+        keys = _rate_keys(get_client_ip(request), self.account.soul.soul_code, scope="confirm")
+        if rate_limited(keys):
+            return Response({"detail": "尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
         keep = signin_sessions.session_of(request.auth) or signin_sessions.start(request.user, request)
         try:
             tokens = svc.change_password(self.account, body.validated_data["old_password"],
@@ -319,9 +327,13 @@ class MePasswordView(SoulAPIView):
                                          device_credential=body.validated_data["device_credential"],
                                          keep_session=keep)
         except svc.SoulAccountError as exc:
+            if exc.code == "invalid_old_password":
+                return Response({"detail": str(exc), "code": exc.code, "remaining_attempts": count_failure(keys)},
+                                status=exc.status)
             return _error(exc)
         except ValidationError as exc:
             return Response({"detail": " ".join(exc.messages), "code": "weak_password"}, status=400)
+        clear_after_success(keys)
         return Response(tokens)
 
 

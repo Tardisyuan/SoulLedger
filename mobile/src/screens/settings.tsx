@@ -21,6 +21,7 @@ import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Linking, Pressable, StyleSheet, View } from "react-native";
 
+import { useAssist } from "../assist";
 import { Emblem, Icon, type IconName } from "../emblems";
 import { useToast } from "../feedback";
 import { useAskLogout } from "../logout";
@@ -476,6 +477,7 @@ export function SettingsScreen() {
   const { t } = useI18n();
   const toast = useToast();
   const askLogout = useAskLogout();
+  const assist = useAssist();
   const { state } = useSession();
   const { gutter } = useLayout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -568,6 +570,10 @@ export function SettingsScreen() {
       <GroupLabel testID="group-data">{t("soul_app.settings.group_data")}</GroupLabel>
       <View style={[styles.rows, { borderTopColor: theme.hair }]}>
         <NavRow testID="open-export" label={t("soul_app.export.title")} onPress={() => navigation.navigate("DataExport")} />
+        {/* F-AST-10: the hall switched 问一问 off -- the header entry is gone, the soul's own 30 days are not. */}
+        {assist?.historyOnly ? (
+          <NavRow testID="open-assist-history" label={t("soul_app.assist.history_entry")} onPress={assist.openHistory} />
+        ) : null}
       </View>
       {/* 第二十八批 S5: the bottom section; feedback is reached from the help page, not from a row of its own.
           关于 sits in it, under 帮助: on its own it was an unlabelled block between two labelled ones (seen on the simulator 2026-10-15). */}

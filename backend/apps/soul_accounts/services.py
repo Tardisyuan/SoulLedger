@@ -280,6 +280,20 @@ def expire_due_credentials():
     ).update(status=CredentialStatus.VOID, secret="")
 
 
+#: QUEUED 停这么久还没发出去,就当作入队丢了(F-ACCT-02):broker 收下而 worker 没在跑、或消息丢失时 `.delay` 不抛,
+#: 行会一直停在 QUEUED —— 不能查看、不能重试、不在「待交付」签里,72 小时后作废。
+QUEUED_STALL_AFTER = timedelta(minutes=10)
+
+
+def release_stalled_credentials():
+    """停住的 QUEUED → PENDING(进待交付,可查看 / 重试 / 打印),与 `expire_due_credentials` 一样由列表接口每次调用。
+    worker 之后若照常取到这条,`send_credential` 对 PENDING 照发,只是同一个密码可能既被发出也被当面交付。"""
+    return InitialCredential.objects.filter(
+        status=CredentialStatus.QUEUED, created_at__lte=timezone.now() - QUEUED_STALL_AFTER,
+        expires_at__gt=timezone.now(),
+    ).update(status=CredentialStatus.PENDING, last_error="QueueStalled")
+
+
 def _void_open_credentials(account):
     InitialCredential.objects.filter(
         account=account,
@@ -402,8 +416,14 @@ def authenticate(soul_code, password):
     from apps.souls.models import Soul
 
     bad = SoulAccountError("灵魂编号或密码错误。", "invalid_credentials", 401)
-    soul = Soul.objects.filter(soul_code=normalize_soul_code(soul_code)).first()
+    # all_objects:回收站里的灵魂也要找得到(F-ACCT-06)。此前默认管理器滤掉它,答「编号或密码错误」并计失败,
+    # 灵魂以为密码错了去走邮箱重置,改完照样登不进。**只有密码对时**才说出原因,与被吞噬同一条规矩。
+    soul = Soul.all_objects.filter(soul_code=normalize_soul_code(soul_code)).first()
     account = current_account_of(soul) if soul is not None else None
+    if soul is not None and soul.is_deleted:
+        if account is not None and account.user.is_active and account.user.check_password(password):
+            raise SoulAccountError("灵魂已移入回收站,账号暂停使用。", "soul_recycled", 401)
+        raise bad
     if account is None or not account.user.is_active:
         # 被阿米特吞噬的灵魂没有本世账号了。**只有密码对时**才说出原因(第四十九批):编号加错密码照旧是
         # 「编号或密码错误」,不向试编号的人泄露这个灵魂的结局。
@@ -485,6 +505,7 @@ def end_account_sessions(account, keep_push_token="", keep_session=None):
     推送登记除 `keep_push_token` 外一律停用 —— 退出的设备不该再收到推送。与官员端同一套
     (`authentication.passwords.end_sessions`);调用方负责事务,之后给当前设备签的新令牌带新的 `sv`。"""
     from apps.authentication.passwords import end_sessions
+    from apps.chat.identity import end_matrix_sessions
     from apps.soul_push.models import DeviceInvalidReason, PushDevice
 
     end_sessions(account.user, keep_session=keep_session)
@@ -492,6 +513,7 @@ def end_account_sessions(account, keep_push_token="", keep_session=None):
     if keep_push_token:
         rows = rows.exclude(token=keep_push_token)
     rows.update(is_active=False, invalid_reason=DeviceInvalidReason.UNREGISTERED)
+    end_matrix_sessions(account)  # 书信的 Matrix 令牌不随后端令牌失效,要单独吊销(F-CHAT-02)
 
 
 def _void_mfa_devices(account):

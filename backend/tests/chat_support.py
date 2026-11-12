@@ -76,6 +76,9 @@ class FakeMatrix:
         for room in FakeMatrix.rooms.values():
             room["members"].discard(self.user_id(localpart))
 
+    def logout_user(self, localpart):
+        FakeMatrix.calls.append(("logout_user", localpart))
+
     # ── 房间 ──
     def create_room(self, *, name, power_levels):
         FakeMatrix.calls.append(("create_room", name))

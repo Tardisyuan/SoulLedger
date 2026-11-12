@@ -272,6 +272,8 @@ SITES = [
     ('apps/soul_accounts/rebirth.py', 'eligibility', 'SentencePlan.all_objects', 1, 'PK', 'plan of one soul and cycle'),
     ('apps/soul_accounts/rebirth.py', 'decide_cross_civilization', 'ApprovalWorkflow._base_manager', 1, 'LOCK', 'locks the workflow row of an application already fetched by pk through the scoped path, before locking the application (lock order: workflow, then application)'),
     ('apps/soul_accounts/services.py', '_ensure_soul_code', 'Soul.all_objects', 1, 'PK', 'writes soul_code of one soul by pk; code is globally unique (G5)'),
+    ('apps/soul_accounts/services.py', 'authenticate', 'Soul.all_objects', 1, 'CODE', 'soul sign-in by its globally unique soul_code (G5); soft-deleted included only to answer soul_recycled after the right password (F-ACCT-06)'),
+    ('apps/soul_accounts/device_login_views.py', 'SoulDeviceLoginView.post', 'Soul.all_objects', 1, 'CODE', 'soul face sign-in by its globally unique soul_code (G5); soft-deleted included only to answer soul_recycled for a still-valid credential (F-ACCT-06)'),
     ('apps/soul_accounts/views.py', 'OfficerCooldownShorteningViewSet._ordered', 'Tenant.objects', 1, 'FANOUT', "tenants of the already scoped request queryset (pk__in subquery), to read each one's cooldown setting"),
     ('apps/soul_assist/admin_views.py', 'HallDetailView.patch', 'Tenant.objects', 1, 'CROSS', 'locks one tenant row to flip its assistant setting: the hall-less ADMIN any hall, a hall-bound ADMIN its own hall only (404 otherwise, checked before the lookup; 2026-10-29)'),
     ('apps/soul_assist/admin_views.py', '_halls', 'Tenant.objects', 1, 'CROSS', 'halls list for the assistant switch: every hall for the hall-less ADMIN, `only=` the caller\'s own hall for a hall-bound ADMIN (2026-10-29)'),

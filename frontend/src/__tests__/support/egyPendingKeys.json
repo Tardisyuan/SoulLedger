@@ -24,5 +24,7 @@
   "soul_push.push_device_claimed.body",
   "official_notify.push_device_claimed.title",
   "official_notify.push_device_claimed.body",
-  "menu_buttons.display_only_note"
+  "menu_buttons.display_only_note",
+  "soul_app.assist.history_entry",
+  "soul_app.errors.soul_recycled"
 ]

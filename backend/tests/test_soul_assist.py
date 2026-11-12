@@ -131,6 +131,26 @@ def test_the_tenant_switch_is_read_from_the_home_tenant(cn_tenant, eu_tenant):
     assert _ask(client).status_code == 503
 
 
+@pytest.mark.parametrize("off", ["hall", "global"])
+def test_switched_off_only_new_questions_stop_the_soul_still_lists_and_deletes_its_own(cn_tenant, settings, off):
+    """F-AST-10(用户 2026-11-12 定):殿里关掉问一问只停止新的提问;本人 30 天内的会话照样能列、能删。
+    变异:列表或删除接口里加 `enabled_for` 的闸 → 红。"""
+    _enable(cn_tenant)
+    account, client = ready_soul(cn_tenant)
+    cid = _ask(client).data["conversation_id"]
+    if off == "hall":
+        _enable(cn_tenant, False)
+    else:
+        settings.ASSISTANT_ENABLED = False
+
+    assert _ask(client).data["code"] == "assistant_not_configured"
+    listed = client.get(LIST)
+    assert listed.status_code == 200 and [c["id"] for c in listed.data] == [str(cid)]
+    assert client.delete(f"{LIST}{cid}/").status_code == 204
+    assert client.get(LIST).data == []
+    assert AssistConversation._base_manager.get(pk=cid).is_deleted
+
+
 # ── 一次问答 ─────────────────────────────────────────────────────────────
 
 
@@ -294,7 +314,7 @@ def test_deleting_a_conversation_hides_it_and_is_audited(cn_tenant):
     assert [c["first_question"] for c in client.get(LIST).data] == ["怎么申请转生?"]
     assert client.delete(f"{LIST}{cid}/").status_code == 204
     assert client.get(LIST).data == []
-    assert AssistConversation.all_objects.get(pk=cid).is_deleted
+    assert AssistConversation._base_manager.get(pk=cid).is_deleted
     assert AuditLog.objects.filter(resource="assistant", action="DELETE", resource_id=cid).exists()
 
 

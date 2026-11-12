@@ -15,7 +15,7 @@ import * as SecureStore from "expo-secure-store";
 import fs from "fs";
 import path from "path";
 
-import { AssistProvider, assistAckKey } from "../assist";
+import { AssistProvider, assistAckKey, useAssist } from "../assist";
 import { AssistPanel } from "../assistPanel";
 import { AppHeader } from "../chrome";
 import { I18nProvider } from "../i18n";
@@ -24,7 +24,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { SessionProvider } from "../session";
 import { PROFILE, heldReply, life, stubApi, resetLoginMemory } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AccessibilityInfo, StyleSheet } from "react-native";
+import { AccessibilityInfo, Pressable, StyleSheet } from "react-native";
 import { motion, themeFor, v4, type Theme } from "../theme";
 import { ThemeContext } from "../ui";
 
@@ -292,7 +292,7 @@ describe("streaming (流式输出)", () => {
     expect(announce.mock.calls.map((c) => c[0])).toEqual(["正在查帮助文档与你的簿册", "正在回答", "你已有**一份**申请正在审批。"]);
   });
 
-  it("A5/A6: stop keeps the text with 已停止 and no retry, even before the first text", async () => {
+  it("A5/A6: stop keeps the text with 已停止 and no retry", async () => {
     const ask = await openAndAsk(null);
     await act(async () => ask.send({ event: "delta", text: "可以申诉" }));
     await act(async () => {
@@ -304,6 +304,27 @@ describe("streaming (流式输出)", () => {
     expect(screen.queryByTestId("assist-interrupted")).toBeNull();
     expect(screen.queryByTestId("assist-retry-interrupted")).toBeNull();
     expect(announce).toHaveBeenLastCalledWith("已停止 可以申诉");
+  });
+
+  // F-AST-01 (flow walk 2026-11-12): stopped before the first word, the server stores nothing and builds no
+  // conversation; keeping the id `meta` announced made the next question a 404 「没有答上来」.
+  it("a stop before the first word keeps nothing, puts the question back, and the next ask starts a new conversation", async () => {
+    const ask = await openAndAsk(null);
+    await act(async () => ask.send({ event: "meta", conversation_id: CONVERSATION }));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("assist-stop"));
+    });
+    expect(ask.aborted()).toBe(true);
+    expect(screen.queryByTestId("assist-stopped")).toBeNull();
+    expect(screen.queryByTestId("assist-question")).toBeNull();
+    expect(screen.getByTestId("assist-input").props.value).toBe("我为什么不能申请？");
+    scripts.push(reply("可以申诉。"));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("assist-send"));
+    });
+    expect(asks[1].body).toMatchObject({ question: "我为什么不能申请？", new: true });
+    expect(asks[1].body).not.toHaveProperty("conversation_id");
+    expect(answerText()).toBe("可以申诉。");
   });
 
   it("A7: interrupted keeps the text, 「! 回答中断」 in the warning colour, and 重试 re-asks and replaces it", async () => {
@@ -493,6 +514,54 @@ describe("history (1f)", () => {
     expect(screen.queryByTestId("assist-row-c1")).toBeNull();
     expect(screen.getByTestId("assist-row-c2")).toBeTruthy();
     expect(screen.queryByTestId("assist-delete-sheet")).toBeNull();
+  });
+});
+
+// F-AST-10 (user 2026-11-12): the hall switched 问一问 off -- only new questions stop. The soul still opens its
+// history (设置 › 我的问一问记录, `openHistory`), reads a conversation, and deletes it; there is no box to ask in.
+describe("switched off for the hall", () => {
+  function OpenHistory() {
+    const assist = useAssist();
+    return assist?.historyOnly ? <Pressable testID="t-open-history" onPress={assist.openHistory} /> : null;
+  }
+
+  it("has no entry, but the history opens, a conversation reads without a box, and delete works", async () => {
+    const calls = stubApi({
+      [LIST]: { status: 200, data: [conversation("c1", "下一站什么时候开始？")] },
+      "DELETE /me/assist/conversations/c1/": { status: 204 },
+    });
+    render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <I18nProvider>
+          <AssistProvider profile={{ ...PROFILE, assistant_enabled: false } as never} onOpenLetters={openLetters}>
+            <AppHeader title="转生申请" assist="applications" onAccount={() => {}} />
+            <OpenHistory />
+            <AssistPanel />
+          </AssistProvider>
+        </I18nProvider>
+      </SafeAreaProvider>
+    );
+    expect(screen.queryByTestId("assist-entry")).toBeNull();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("t-open-history"));
+    });
+    await screen.findByTestId("assist-row-c1");
+    expect(screen.queryByTestId("assist-new")).toBeNull();
+    expect(screen.queryByTestId("assist-input")).toBeNull();
+
+    fireEvent.press(screen.getByText("下一站什么时候开始？"));
+    expect(await screen.findByTestId("assist-question")).toBeTruthy();
+    expect(screen.queryByTestId("assist-input")).toBeNull();
+    expect(screen.queryByTestId("assist-history")).toBeNull();
+    fireEvent.press(screen.getByTestId("assist-back"));
+
+    fireEvent.press(await screen.findByTestId("assist-delete-c1"));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("assist-delete-confirm"));
+    });
+    expect(calls.filter((c) => c.method === "DELETE").map((c) => c.url)).toEqual(["/me/assist/conversations/c1/"]);
+    expect(screen.queryByTestId("assist-row-c1")).toBeNull();
+    expect(calls.some((c) => c.url === "/me/assist/" && c.method === "POST")).toBe(false);
   });
 });
 

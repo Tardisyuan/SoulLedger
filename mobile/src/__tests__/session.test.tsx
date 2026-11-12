@@ -16,6 +16,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
+import { PUSH_TOKEN_KEY } from "../push";
 import { PENDING_LOGOUT_KEY, SessionProvider } from "../session";
 import { NEUTRAL_CIV, v4 } from "../theme";
 import { PROFILE, ageAnswers, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
@@ -435,6 +436,33 @@ describe("a stored session", () => {
     await screen.findByTestId("login-submit");
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
     await waitFor(() => expect(calls.some((c) => c.url === "/soul-auth/logout/")).toBe(true));
+  });
+
+  // F-ACCT-04 (flow walk 2026-11-12): the push unregister hit a 401 and rotated R → R2; sign-out compared the stored
+  // token with the R it read first, so it left R2 in the secure store and logged out the blacklisted R (a no-op).
+  it("a token rotated during sign-out is the one cleared and logged out", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    persistentStore.set(PUSH_TOKEN_KEY, "ExponentPushToken[f-acct-04]");
+    const calls = stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/soul-auth/refresh/": [
+        { status: 200, data: { access: "A", refresh: "R" } },
+        { status: 200, data: { access: "A2", refresh: "R2" } },
+      ],
+      "/me/push-tokens/unregister/": [{ status: 401, data: {} }, { status: 204 }],
+      "/soul-auth/logout/": { status: 204 },
+      "/me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, locale: "zh-Hans" } },
+    });
+    renderApp();
+    fireEvent.press(await screen.findByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("logout"));
+    fireEvent.press(await screen.findByTestId("logout-confirm"));
+    await screen.findByTestId("login-submit");
+    await waitFor(() => expect(calls.some((c) => c.url === "/soul-auth/logout/")).toBe(true));
+    expect(calls.filter((c) => c.url === "/soul-auth/logout/").map((c) => c.body)).toEqual([{ refresh: "R2" }]);
+    expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
+    persistentStore.remove(PUSH_TOKEN_KEY);
   });
 
   it("a sign-out the server never heard is sent again at the next start (2026-10-23)", async () => {

@@ -17,6 +17,7 @@ import {
   soulErrorMessage,
   soulErrorStatus,
   soulHttp,
+  soulRefreshSettled,
   storeSoulTokens,
   type MeProfile,
   type SoulErrorMessage,
@@ -141,6 +142,19 @@ export function stateAfterFailedMe(error: unknown): SessionState {
   return { status: "signedOut", notice: soulErrorMessage(error) };
 }
 
+/**
+ * True while the signed-in session is one restored from the stored refresh token (a cold start), not one the soul
+ * just signed into. 切回 App 时也要验证 reads it once (`takeRestoredSession`): a cold start skips the sign-in page,
+ * so without it swiping the app away and reopening it walked past the lock (F-ACCT-05).
+ */
+let restoredSession = false;
+
+export function takeRestoredSession(): boolean {
+  const was = restoredSession;
+  restoredSession = false;
+  return was;
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>(() =>
     getRefreshToken() ? { status: "booting" } : { status: "signedOut" }
@@ -148,6 +162,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const { setLocale } = useI18n();
   const password = useRef<string | null>(null);
   const fresh = useRef(false);
+  /** Bumped by every sign-in: a sign-out's clean-up tells its own tokens from a later session's. */
+  const signIns = useRef(0);
 
   /**
    * The account's language is the one the settings screen promises to follow:
@@ -189,6 +205,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    * ends the session; no answer (offline) keeps the tokens and shows the retry screen.
    */
   const boot = useCallback(() => {
+    restoredSession = true;
     const refresh = getRefreshToken();
     if (!refresh || getAccessToken()) return enter();
     return rotateSoulTokens(refresh).then(enter, (e: unknown) => {
@@ -230,6 +247,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   /** Both ways in (the password alone, or the password and the second step) end here. */
   const finishSignIn = useCallback(
     async (response: SoulLoginResponse) => {
+      signIns.current += 1;
+      restoredSession = false;
       storeSoulTokens(response);
       if (response.account.must_change_password) {
         setState({ status: "mustChangePassword", expiresAt: response.account.initial_password_expires_at ?? null });
@@ -327,18 +346,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    */
   const signOut = useCallback(() => {
     const refresh = getRefreshToken();
+    const epoch = signIns.current;
+    restoredSession = false;
     clearOutbox();
     clearVoiceNumbers();
     clearSocialStatus();
     password.current = null;
     fresh.current = false;
     setState({ status: "signedOut" });
-    const end = () => {
-      if (getRefreshToken() === refresh) clearSoulTokens();
-      if (refresh) soulApi.logout(refresh).catch((e: unknown) => keepPendingLogout(e, refresh));
+    // F-ACCT-04: the push unregister (or a request already out) may hit a 401 and rotate the token read above;
+    // the server then blacklists that one, so logging out with it is a silent no-op and the rotated pair stays
+    // stored -- the next cold start signed straight back in. Wait for any rotation, then end whatever this
+    // session holds now. A sign-in in between (`signIns` moved) owns the stored pair: only the old token goes.
+    const end = async () => {
+      await soulRefreshSettled();
+      const latest = signIns.current === epoch ? getRefreshToken() ?? refresh : refresh;
+      if (signIns.current === epoch) clearSoulTokens();
+      if (latest) soulApi.logout(latest).catch((e: unknown) => keepPendingLogout(e, latest));
     };
     if (hasRegisteredDevice()) void unregisterDevice().finally(end);
-    else end();
+    else void end();
   }, []);
 
   const refreshProfile = useCallback(async () => {
