@@ -87,6 +87,10 @@ def eligibility(account):
     )
     # CANCELLED = 撤销,即赦免剩余刑期、视为完成(2026-09-19 用户决定),同样开放。
     served = plan is not None and plan.status in (SentencePlanStatus.COMPLETED, SentencePlanStatus.CANCELLED)
+    # 候转世而本世没有计划(F-DISP-07,用户 2026-11-12):无计划暂居在外地受完刑、回原属即候转世 —— 那份审判在
+    # 暂居殿,不建原属的计划。灵魂已经候转世,就没有在受的刑;刑期与处置另由 `assert_may_be_reborn` 把关。
+    if plan is None and soul.current_state == "REINCARNATING":
+        served = True
     if soul.current_state not in SOUL_STATES_THAT_MAY_APPLY:
         # 计划期间灵魂保持 DISPOSED(§3.3):那时答「受刑未完」比答「状态不对」说得清楚。
         # 计划已完成而灵魂仍是 DISPOSED(ADMIN 修过数据)→ soul_state,不放行(D12)。

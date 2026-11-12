@@ -1132,6 +1132,9 @@ class DispositionService:
         """无计划暂居的处置了结:回原属地;被未结案审判拦下就记 `DISPATCH_RETURN_BLOCKED`。"""
         from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
 
+        from apps.sentence_plan.services import in_progress_plan
+        from apps.souls.models import Soul, SoulState
+
         try:
             DispatchService.end_residence(
                 soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION,
@@ -1139,3 +1142,9 @@ class DispositionService:
             )
         except ResidenceReturnBlockedError as blocked:
             DispatchService.record_blocked_return(locked, blocked, disposition)
+            return
+        # 回到原属后直接往下走(F-DISP-07,用户 2026-11-12):可转世的原属文明 → 候转世(可申请转生),终局的 → 安息。
+        # 此前停在「已处置、无计划」:开不了案、申请不了转生、没有待办,只能原属殿手建一份处置再执行。
+        home = Soul.lock(soul.pk)
+        if home.current_state == SoulState.DISPOSED and not home.is_residing and in_progress_plan(home) is None:
+            DispositionService._move_on(disposition, home, f"Residence ended; disposition {disposition.pk} {how}")
