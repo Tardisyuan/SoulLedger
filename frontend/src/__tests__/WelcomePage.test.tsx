@@ -5,7 +5,7 @@
  * `user` is null during the first render, so an auth guard here used to bounce
  * signed-in visitors to /login. That is pinned below ("anonymous visitor").
  *
- * What is covered: the greeting in the identity band; the one stats panel and
+ * What is covered: the greeting and date in the page's own head (PageHead); the one stats panel and
  * its own loading / error / retry; 「接着做」 by role and by menu; my recent
  * activity and its own states; the first-time setup screen and the
  * `onboarded` flag; and the absence of what A9 removed.
@@ -34,11 +34,6 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 let mockMenus: SidebarMenu[] = [];
 jest.mock("@/src/hooks/useSidebarMenus", () => ({
   useSidebarMenus: () => ({ data: mockMenus }),
-}));
-
-const mockPlaque = jest.fn();
-jest.mock("@/src/components/plaque/Plaque", () => ({
-  usePlaque: (text: unknown) => mockPlaque(text),
 }));
 
 const mockSetTheme = jest.fn();
@@ -132,8 +127,8 @@ const nextPanel = () => panel("welcome-next-title");
 
 // ── Greeting ─────────────────────────────────────────────────────────
 
-describe("greeting: in the identity band, three buckets", () => {
-  const bandTitle = () => mockPlaque.mock.calls.at(-1)?.[0]?.title;
+describe("greeting: the page head's <h1>, three buckets, the date above it", () => {
+  const bandTitle = () => screen.getByRole("heading", { level: 1 }).textContent;
 
   it.each([
     [9, "welcome.greeting_morning(阎罗)"],
@@ -146,10 +141,10 @@ describe("greeting: in the identity band, three buckets", () => {
     signedInJudge();
     renderPage();
     await waitFor(() => expect(bandTitle()).toBe(expected));
-    expect(mockPlaque.mock.calls.at(-1)?.[0]?.meta).toBe("FORMATTED_DATE");
-    // The readers' <h1> says the same thing; there is no visible greeting block.
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(expected as string);
-    expect(screen.getByRole("heading", { level: 1 }).className).toContain("sr-only");
+    // Visible again (the identity band that carried it is gone): one <h1>, not a screen-reader-only one.
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1 }).className).not.toContain("sr-only");
+    expect(screen.getByTestId("page-head").querySelector("[data-page-shell-eyebrow]")).toHaveTextContent("FORMATTED_DATE");
   });
 
   it("falls back to username, and greets an anonymous visitor without a name", async () => {

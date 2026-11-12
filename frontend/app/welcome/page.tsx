@@ -17,7 +17,7 @@ import { RoleName } from "@/src/components/users/RoleName";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Spinner } from "@/src/components/ui/Spinner";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
-import { usePlaque } from "@/src/components/plaque/Plaque";
+import { PageHead } from "@/src/components/ui/PageShell";
 import { WelcomeSetup, loadOnboarded } from "@/src/components/welcome/WelcomeSetup";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
@@ -312,10 +312,8 @@ export default function WelcomePage() {
   const hour = new Date().getHours();
   const greetingKey = hour < 12 && hour >= 5 ? "morning" : hour >= 12 && hour < 18 ? "afternoon" : "evening";
   const greeting = name ? t(`welcome.greeting_${greetingKey}`, { name }) : t(`nav.greeting_${greetingKey}`);
-  usePlaque({
-    title: greeting,
-    meta: formatDate(new Date(), { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
-  });
+  // 这一页不在 PageShell 里:问候与日期写在它自己的页头(同一个 PageHead),问候即 <h1>,日期在上方那行小字。
+  const today = formatDate(new Date(), { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   // ── 首次设置:这个账号还没做完(服务器说的)→ 单独一屏。null = 常规页。
   const [setupAt, setSetupAt] = useState<number | null>(null);
@@ -396,33 +394,34 @@ export default function WelcomePage() {
     stats.state === "ready" ? (stats.data.state_distribution?.find((s) => s.state === "JUDGING")?.count ?? 0) : null;
 
   return (
-    <div className="bg-[oklch(var(--color-canvas))] px-4 py-6 md:p-6">
-      {/* 这一页的 <h1>:看得见的问候在身份带上(壳里的题字是 div),这里给读屏一个标题。 */}
-      <h1 className="sr-only font-title text-lg">{greeting}</h1>
-      {userId !== null && !setupKnown ? (
-        <div className="flex justify-center py-12" data-testid="welcome-loading">
-          <Spinner size="lg" label={t("common.loading")} />
-        </div>
-      ) : setupAt !== null && user ? (
-        <WelcomeSetup user={user} startAt={setupAt} onDone={() => setSetupAt(null)} />
-      ) : (
-        <div className="flex flex-col gap-6">
-          {/* 本殿文明的嵌彩徽记(落地页卡上那一枚,描线登场 + 11 s 扫光;2026-11-10 用户定)。中性皮不画。 */}
-          <div className="flex items-stretch gap-6">
-            <div className="min-w-0 flex-1">
-              <StatsPanel load={stats} asOf={asOf} onRetry={loadStats} />
+    <div className="bg-[oklch(var(--color-canvas))]">
+      <PageHead title={greeting} meta={today} />
+      <div className="px-4 py-6 md:p-6">
+        {userId !== null && !setupKnown ? (
+          <div className="flex justify-center py-12" data-testid="welcome-loading">
+            <Spinner size="lg" label={t("common.loading")} />
+          </div>
+        ) : setupAt !== null && user ? (
+          <WelcomeSetup user={user} startAt={setupAt} onDone={() => setSetupAt(null)} />
+        ) : (
+          <div className="flex flex-col gap-6">
+            {/* 本殿文明的嵌彩徽记(落地页卡上那一枚,描线登场 + 11 s 扫光;2026-11-10 用户定)。中性皮不画。 */}
+            <div className="flex items-stretch gap-6">
+              <div className="min-w-0 flex-1">
+                <StatsPanel load={stats} asOf={asOf} onRetry={loadStats} />
+              </div>
+              {skin !== "neutral" && <LandingEmblem civ={skin as SealCiv} size={136} className="shrink-0 self-center max-md:hidden" />}
             </div>
-            {skin !== "neutral" && <LandingEmblem civ={skin as SealCiv} size={136} className="shrink-0 self-center max-md:hidden" />}
+            <div className={cn("grid grid-cols-1 gap-6", showActivity && "lg:grid-cols-[400px_minmax(0,1fr)]")}>
+              <NextPanel user={user} judging={judging} onRedo={() => setSetupAt(0)} onShortcuts={() => setSetupAt(3)} />
+              {showActivity && <ActivityPanel load={activity} onRetry={loadActivity} formatTimestamp={formatTimestamp} />}
+            </div>
+            <footer className={cn("text-xs", MUTED)}>
+              {t("welcome.system_version")} · <span className="font-mono">{APP_VERSION}</span>
+            </footer>
           </div>
-          <div className={cn("grid grid-cols-1 gap-6", showActivity && "lg:grid-cols-[400px_minmax(0,1fr)]")}>
-            <NextPanel user={user} judging={judging} onRedo={() => setSetupAt(0)} onShortcuts={() => setSetupAt(3)} />
-            {showActivity && <ActivityPanel load={activity} onRetry={loadActivity} formatTimestamp={formatTimestamp} />}
-          </div>
-          <footer className={cn("text-xs", MUTED)}>
-            {t("welcome.system_version")} · <span className="font-mono">{APP_VERSION}</span>
-          </footer>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
