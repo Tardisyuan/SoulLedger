@@ -6873,7 +6873,7 @@
     },
     "push_device_claimed": {
       "title": "Your push device was registered by another account",
-      "body": "Your push device was registered by another account and no longer gets your to-do pushes. If you did not change phones yourself, contact an administrator."
+      "body": "This push device was registered by another account and no longer gets to-do pushes. If the phone was not changed by its owner, contact an administrator."
     },
     "wangsi_grievance_filed": {
       "title": "New grievance in the City of Wrongful Death",

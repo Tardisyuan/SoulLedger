@@ -623,7 +623,8 @@
         "stage_current": "Emu",
         "stage_future": "Nen Iri Djer",
         "stage_na": "Nen Sesen"
-      }
+      },
+      "error_delete_residing": "Ba Pen Hemes Em Wesekhet Ky: Nen Fekh. Khetem Hemes Tepy; Wesekhet Tepy Fekh."
     },
     "balance_range": "Pehwy Nefer Isfet",
     "balance_max": "Er Pehwy",
@@ -825,7 +826,8 @@
       "HUANHUN_CLIFF": "Sekhet Huanhun",
       "now_card": "Emu · Sekhet {{n}}",
       "state_passed": "Shem Seth",
-      "state_ahead": "Nen Shem Djer"
+      "state_ahead": "Nen Shem Djer",
+      "EVIL_DOG_VILLAGE": "Sekhet Egou"
     },
     "capture": {
       "escort_hint": "Nefer Er Isfet: {{merit_escort}}. Isfet Er Nefer: {{demerit_escort}}.",
@@ -922,7 +924,8 @@
     "life_label": {
       "this_life": "Ankh Pen",
       "this_life_prior": "Ankh Pen · Ankh {{m}} Em Tepy"
-    }
+    },
+    "field_withheld": "Imen Seth — Nen Maa Em Netjer Pen"
   },
   "common": {
     "close": "Khetem",
@@ -1157,7 +1160,8 @@
         "unsaved": "Nen Sau",
         "failed": "Nen Sau",
         "conflict": "Khenn",
-        "lock": "Neheh · Sab Hery"
+        "lock": "Neheh · Sab Hery",
+        "deny": "Nen Redi · Djedu"
       },
       "refused": {
         "version_conflict": "Ky Khemen Netjer Pen; Wehem Ini Seth. Maa Wehem.",
@@ -1165,7 +1169,9 @@
         "permission_not_found": "Nen Gem Was.",
         "database_error": "Sethet: Nen Sau.",
         "admin_always_all": "Netjer Em Tepy Shesep Seth Was Neb",
-        "conflict_unacknowledged": "Wat Hesy Nen Netjer Er Wedja; Nen Maa — Khesef."
+        "conflict_unacknowledged": "Wat Hesy Nen Netjer Er Wedja; Nen Maa — Khesef.",
+        "admin_only_permission": "Khesef: Was Pen — Sab Hery Wa.",
+        "role_forbidden_permission": "Khesef: Netjer Pen Nen Shesep Was Pen (Djedu Netjer, Er «Iri Wat Hesy: Nen Hesy»)."
       },
       "conflict_workflow_line": "{{causes}}: Wat Hesy «{{workflow}}» Em Wedja, Sekhet {{step}} ({{step_name}}) Nen Netjer Er Wedja.",
       "conflict_acknowledge": "Maa Seth: {{n}} Wat Hesy ({{m}} Em Wedja) Nen Netjer Er Wedja",
@@ -1177,7 +1183,10 @@
       "category_none": "Nen Wenen",
       "category_all_label": "{{role}}: Redi Was Neb · «{{category}}»",
       "category_none_label": "{{role}}: Fekh Was Neb · «{{category}}»",
-      "saved_all_refresh": "Sau Seth {{n}} · Wehem Maa: Wenen"
+      "saved_all_refresh": "Sau Seth {{n}} · Wehem Maa: Wenen",
+      "deny_hint": "Djedu Netjer: Netjer Pen Nen Shesep «{{perm}}» Neheh.",
+      "deny_hint_capability": "Iri Wat Hesy: Nen Hesy. Netjer Shesep Iri Wat Hesy: Nen Redi Hesy Er Khemen; Netjer Shesep Hesy Er Khemen: Nen Redi Iri — «{{perm}}» Nen Redi Emu.",
+      "deny_hint_admin_only": "«{{perm}}»: Sab Hery Wa."
     },
     "segments": {
       "label": "Aat Was",
@@ -2707,6 +2716,9 @@
       },
       "eg": {
         "purgatory": "Fai Nen Smen"
+      },
+      "gr": {
+        "purgatory": "Mi Neb"
       }
     },
     "greek_account": {
@@ -3104,7 +3116,8 @@
       "EG_TWENTYONE_SEBKHET": "Sebkhet 21",
       "EG_AARU": "Ta Aaru",
       "EG_ANNIHILATION": "Mut Sen",
-      "EU_ANTINFERNO": "Antinferno"
+      "EU_ANTINFERNO": "Antinferno",
+      "GR_ASPHODEL_MEADOW": "Leimon Asphodelos"
     },
     "names": {
       "DY_01_HEAVEN": "Tianjie",
@@ -3150,7 +3163,8 @@
       "EG_TWENTYONE_SEBKHET": "Sebkhet 21",
       "EG_AARU": "Sekhet Aaru",
       "EG_ANNIHILATION": "Mut Sen",
-      "EU_ANTINFERNO": "Duat · Antinferno"
+      "EU_ANTINFERNO": "Duat · Antinferno",
+      "GR_ASPHODEL_MEADOW": "Leimon Asphodelos"
     },
     "no_realms": "Nen Ta Djer",
     "topology": {
@@ -3172,7 +3186,8 @@
         "LEFT": "Tartaros",
         "RIGHT": "Ta Nefer",
         "PASS": "Ib Maa",
-        "FAIL": "Mut Sen"
+        "FAIL": "Mut Sen",
+        "MIDDLE": "Leimon Asphodelos"
       },
       "off_shape": "Ta {{n}}: Nen Em Tut; Maa Sesh",
       "no_stops": "Nen Wat Djer",
@@ -3233,7 +3248,8 @@
         "PASS": "✓ Menkh · Ib Nen Er Hry Shut",
         "FAIL": "✕ Nen Menkh · Ib Er Hry Shut",
         "LEFT": "← Tartaros",
-        "RIGHT": "Ta Nefer →"
+        "RIGHT": "Ta Nefer →",
+        "MIDDLE": "→ Leimon Asphodelos"
       },
       "terminal": "≡ Ammit: Pehwy",
       "legend_held": "■ Em Sekhet",
@@ -6563,6 +6579,10 @@
     "social_muted_reason": {
       "body": "Gerh Hru {{days}}: {{reason}}",
       "title": "Gerh Er-Ek"
+    },
+    "push_device_claimed": {
+      "title": "Medjat Sedjem: Aq Ky Sesh Seth",
+      "body": "Medjat Sedjem-Ek: Aq Ky Sesh Seth. Medjat Pen: Nen Sedjem-Ek Emu. Nen Khemen-Ek Medjat? Hab Er Wesekhet."
     }
   },
   "official_notify": {
@@ -6854,6 +6874,10 @@
       "body_by_civ": {
         "cn": "{{soul}}: Sekhet {{order}} ({{tenant}}) · Hab-Ba Nen Tepy. Sekhet Em Smen Djer; Iri Khet, Er Khet Wehem Tepy."
       }
+    },
+    "push_device_claimed": {
+      "title": "Medjat Sedjem: Aq Ky Sesh Seth",
+      "body": "Medjat Sedjem-Ek: Aq Ky Sesh Seth. Medjat Pen: Nen Sedjem Sep Emu. Nen Khemen-Ek Medjat? Hab Er Sab Hery."
     }
   },
   "social_moderation": {
@@ -6926,7 +6950,8 @@
       "admin_only": "Sab Hery Wa: Sesh Em Taui Ky",
       "same_tenant": "Taui Ky Nen: Taui Pen",
       "no_tenant": "Nen Taui Pen",
-      "invalid_days": "Hru Gerh: 1–365"
+      "invalid_days": "Hru Gerh: 1–365",
+      "shared_source_only": "Sab Hery Wesekhet: Sesh Em Medu Djeseru Neb Wa; Nen Em Wesekhet Ky"
     },
     "empty": {
       "words": "Nen Medu Djeseru Djer",
@@ -7418,6 +7443,10 @@
       "GR_PLATO_MEADOW": {
         "ACTIVE": "Smen Em Leimon",
         "COMPLETED": "Per Em Leimon Seth"
+      },
+      "GR_ASPHODEL_MEADOW": {
+        "ACTIVE": "Hemes Em Leimon Asphodelos",
+        "COMPLETED": "Per Em Leimon Asphodelos Seth"
       }
     },
     "panel_title_by_civ": {
@@ -9336,7 +9365,8 @@
       "peek_next": "Em Khet",
       "peek_done": "Khetem · Tepy Em Wat 1",
       "footer": "Medjat Ba · Maa"
-    }
+    },
+    "role_judge_desc": "Hru Sab: Shesep Sep, Khetem Wedja Hena Wetep, Hesy."
   },
   "action": {
     "undo": "Sehen"

@@ -670,13 +670,15 @@ const ROOTS_BATCH67 = ["Shena"];
  * 口 / 洞口 Tephet(四口之间)、坐 Hems、夜 Gereh(时辰)、季 Tera(概览趋势)。
  * 第三批收的 Nedjnedj 不登:它原来的两个键改用了 officer_assist.*,包里没有地方用它。
  */
+// 第二十九批:Asphodelos = 阿斯福得(专名,同 Tartaros / Lethe 的写法)。
+const ROOTS_BATCH29 = ["Asphodelos"];
 const ROOTS_V4 = ["Wenmy", "Semehy", "Tephet", "Hems", "Gereh", "Tera"];
 /**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...ROOTS_V4, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...ROOTS_V4, ...ROOTS_BATCH29, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 

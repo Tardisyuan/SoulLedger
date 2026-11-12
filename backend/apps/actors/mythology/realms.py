@@ -446,7 +446,6 @@ EUROPEAN_REALMS = [
     # recorded `Soul.neutral_in_life` here. HELL rather than NEUTRAL because it
     # is a punishment (stung by wasps and hornets, worms at their feet) and it
     # does not end; `tier` 0 because it is above the first circle and is none.
-    # name_egy is blank: Design has given no egy word yet (egyPendingKeys.json).
     ("EU_ANTINFERNO", "地狱前庭", "地狱前庭", "The Vestibule of Hell", "Duat · Antinferno",
      RealmType.HELL, 0,
      "The vestibule inside the gate of hell, before Acheron (Inferno III): the "
@@ -698,8 +697,7 @@ GREEK_REALMS = [
     # and is not eternal — the soul is rebirth-capable like every Greek soul
     # whose disposition is executed. LETHE for the reason given on the Isles row:
     # the drink is on the road back to a body, and a rebirth follows from here.
-    # name_egy is blank: Design has given no egy word yet (egyPendingKeys.json).
-    ("GR_ASPHODEL_MEADOW", "阿斯福得草原", "阿斯福得草原", "The Asphodel Meadow", "",
+    ("GR_ASPHODEL_MEADOW", "阿斯福得草原", "阿斯福得草原", "The Asphodel Meadow", "Leimon Asphodelos",
      RealmType.NEUTRAL, 1,
      "Where ordinary souls go — neither the just sent right nor the great "
      "wrongdoers sent left — on the three-way judgment this system follows by "
