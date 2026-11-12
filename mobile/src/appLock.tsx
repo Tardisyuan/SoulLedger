@@ -53,7 +53,11 @@ export function AppLock() {
   }, [t]);
 
   useEffect(() => {
-    if (coldStart) void unlock(); // asks once, as on a return
+    // Asks once, as on a return. From a timer callback, not the effect body: `unlock` sets state before its
+    // first await, and react-hooks/set-state-in-effect refuses that synchronously in an effect.
+    if (!coldStart) return;
+    const id = setTimeout(() => void unlock(), 0);
+    return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the cold start is asked about once, on mount
   }, []);
 
