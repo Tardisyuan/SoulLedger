@@ -211,13 +211,15 @@ describe("the paired texts the spec measures", () => {
   });
 });
 
-/** 文明皮的五个通用名,`[data-civ="x"]` 把它们各自指到 `--color-civ-x` 加这个后缀。 */
+/** 文明皮的六个通用名(v4 五个 + 第三十批的印),`[data-civ="x"]` 把它们各自指到 `--color-civ-x` 加这个后缀。 */
 const CIV_SLOTS: Record<string, string> = {
   "--color-main": "",
   "--color-main-ink": "-ink",
   "--color-glow": "-glow",
   "--color-metal": "-metal",
   "--color-side": "-side",
+  // 第三十批「卷宗」的印(`--seal`):第六个槽。地府朱色,其余暂取 civT。
+  "--color-seal": "-seal",
 };
 
 /** `[data-civ="x"] { … }` 的声明(注释已剥掉);`.seal[data-civ="eu"]` 这类形状规则不带自定义属性,不计。 */

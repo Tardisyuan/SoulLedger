@@ -599,6 +599,12 @@
     --color-civ-neutral-glow: 0.662027 0.014518 262.3609; /* #8E939C */
     --color-civ-neutral-metal: 0.782429 0.142657 75.8527; /* #ECAA3D */
     --color-civ-neutral-side: 0.168171 0.004477 264.4473; /* #0E0F11 */
+    /* 印(第三十批 `--seal`):地府朱色,其余暂取 civT。var() 在 <html> 上求值,所以浅色下 civT 自动是浅色那一档。 */
+    --color-civ-neutral-seal: var(--color-civ-neutral-ink);
+    --color-civ-cn-seal: 0.645074 0.173464 34.1221; /* #E35D3F */
+    --color-civ-eu-seal: var(--color-civ-eu-ink);
+    --color-civ-eg-seal: var(--color-civ-eg-ink);
+    --color-civ-gr-seal: var(--color-civ-gr-ink);
     --color-civ-cn: 0.428514 0.102617 30.6112; /* #7E362B */
     --color-civ-cn-ink: 0.710969 0.100324 32.0926; /* #D98A7A */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
@@ -624,6 +630,7 @@
     --color-glow: var(--color-civ-neutral-glow);
     --color-metal: var(--color-civ-neutral-metal);
     --color-side: var(--color-civ-neutral-side);
+    --color-seal: var(--color-civ-neutral-seal);
     /* 图表 · A5:灵魂状态的冷灰蓝明度梯度(OKLCH 色相 250、彩度 .045),先后有序;
        深色从亮到暗。chart-1 同时是去向 / 功过图案的基色。v4 没定义图表色,沿用。 */
     --color-chart-1: 0.946168 0.032488 229.2456;
@@ -698,6 +705,7 @@
     --color-civ-neutral-ink: 0.455822 0.008971 260.7269; /* #54575C */
     --color-civ-neutral-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
     --color-civ-neutral-side: 0.957588 0.002656 106.4494; /* #F1F1EF */
+    --color-civ-cn-seal: 0.520861 0.174215 31.9795; /* #B8321C */
     --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
     --color-civ-cn-ink: 0.508662 0.123408 31.8759; /* #A04636 */
     --color-civ-cn-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
@@ -732,6 +740,7 @@
     --color-glow: var(--color-civ-cn-glow);
     --color-metal: var(--color-civ-cn-metal);
     --color-side: var(--color-civ-cn-side);
+    --color-seal: var(--color-civ-cn-seal);
   }
   [data-civ="eu"] {
     --color-main: var(--color-civ-eu);
@@ -739,6 +748,7 @@
     --color-glow: var(--color-civ-eu-glow);
     --color-metal: var(--color-civ-eu-metal);
     --color-side: var(--color-civ-eu-side);
+    --color-seal: var(--color-civ-eu-seal);
   }
   [data-civ="eg"] {
     --color-main: var(--color-civ-eg);
@@ -746,6 +756,7 @@
     --color-glow: var(--color-civ-eg-glow);
     --color-metal: var(--color-civ-eg-metal);
     --color-side: var(--color-civ-eg-side);
+    --color-seal: var(--color-civ-eg-seal);
   }
   [data-civ="gr"] {
     --color-main: var(--color-civ-gr);
@@ -753,6 +764,7 @@
     --color-glow: var(--color-civ-gr-glow);
     --color-metal: var(--color-civ-gr-metal);
     --color-side: var(--color-civ-gr-side);
+    --color-seal: var(--color-civ-gr-seal);
   }
   /* 强调、链接、焦点环随文明的字色(v4 `.btn.t` / `.tag` / `.btn:focus-visible` 都是 civT)。
      中性皮不在这里:没有 data-civ 时三者是 :root / .light 里的墨。 */
@@ -765,7 +777,8 @@
   /* 第三十批「卷宗」第 1 步(v4 第三十批回复第四节)新加的 token。底层 / 语义 / 文明色沿用上面的 v4 名字与值,
      这里只加 Design 新给的那几样。颜色仍是 oklch 三元组(`--color-seal`),`--seal` / `--field` 是可直接用的颜色值。
        --topline     页顶文明色线的粗细(PageShell 的页头;色 = civT,即 --color-main-ink)
-       --seal        印(第 3 步)。地府是朱色,与罪业红 --color-danger 分开,不混用;其余文明暂取 civT
+       --seal        印(第 3 步)。第六个文明槽 `--color-seal`(上面的 [data-civ="x"] 指到 `--color-civ-x-seal`):
+                     地府是朱色 深 #E35D3F / 浅 #B8321C,与罪业红 --color-danger 分开,不混用;其余文明与中性皮暂取 civT
        --rail-w / --stack-w / --spine-h   案卷台的门栏、案卷摞宽,卷宗脊高(第 2、3 步)
        --toast-bar   toast 左侧色条
        --juan / --juan-strong   「卷」语域正文与卷里的人名(font 简写)
@@ -784,22 +797,10 @@
     --tai-touch: 400 15px/24px var(--font-sans);
     --glowA: 0.3;
     --field: rgba(255, 255, 255, 0.05);
-    --color-seal: var(--color-main-ink);
-    --seal: oklch(var(--color-seal));
   }
   .light {
     --glowA: 0.22;
     --field: rgba(0, 0, 0, 0.035);
-  }
-  [data-civ] {
-    --color-seal: var(--color-main-ink);
-  }
-  [data-civ="cn"] {
-    --color-seal: 0.645074 0.173464 34.1221; /* #E35D3F */
-  }
-  .light[data-civ="cn"],
-  .light [data-civ="cn"] {
-    --color-seal: 0.520861 0.174215 31.9795; /* #B8321C */
   }
 
   /* (v3 时这里写「文明皮只有上面这一条匾色」;v4 起是上面五个值加强调 / 焦点。)v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
@@ -1514,6 +1515,8 @@ html.theme-switching *::after {
   :root,
   [data-civ] {
     --main-fill: oklch(var(--color-ink));
+    /* 印的颜色(第三十批 `--seal`,第 3 步用):同样挂在 [data-civ] 上,自己带 data-civ 的子树取到它自己的印色。 */
+    --seal: oklch(var(--color-seal));
   }
 
   /* A1「日期 · 原生控件」:根元素声明 color-scheme,原生日历与滚动条随主题变色。 */
