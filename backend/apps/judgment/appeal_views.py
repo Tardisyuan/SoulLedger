@@ -191,7 +191,8 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "judgment"
-    extra_permissions = {"claim": ["judgment.execute"], "decide": ["judgment.execute"]}
+    # release: the reviewer, or a `judgment.assign` hall lead — decided in `appeals.release`.
+    extra_permissions = {"claim": ["judgment.execute"], "decide": ["judgment.execute"], "release": ["judgment.read"]}
     queryset = JudgmentAppeal.objects.select_related("judgment", "soul", "reviewer", "workflow").prefetch_related(
         "workflow__nodes").all()
     serializer_class = JudgmentAppealSerializer
@@ -210,6 +211,12 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     def claim(self, request, pk=None):
         """认领复核。作出原判的官员 → 403 `original_judge`;别人已认领 → 409 `already_claimed`。"""
         return self._answer(lambda pk: appeals.claim(pk, request.user))
+
+    @extend_schema(request=None, responses={200: JudgmentAppealSerializer, **_REFUSALS})
+    @action(detail=True, methods=["post"])
+    def release(self, request, pk=None):
+        """放回待复核(F-JUDG-06)。复核人自己,或持 judgment.assign;不是 → 403 `not_reviewer`;没人认领 → 409 `not_claimed`。"""
+        return self._answer(lambda pk: appeals.release(pk, request.user))
 
     @extend_schema(request=JudgmentAppealDecideSerializer,
                    responses={200: JudgmentAppealSerializer, 400: JudgmentClaimRefusalSerializer, **_REFUSALS})
