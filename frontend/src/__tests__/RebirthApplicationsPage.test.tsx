@@ -46,6 +46,8 @@ function application(over: Record<string, unknown> = {}) {
     workflow: "w1",
     appeal_workflow: null,
     cross_civilization: null,
+    target_hall: null as { code: string; display_name: string } | null,
+    cross_civilization_targets: [] as { code: string; display_name: string }[],
     rejection_reason: "",
     decided_at: null,
     current_step: INITIAL_STEP as typeof INITIAL_STEP | null,
@@ -175,18 +177,56 @@ describe("cross-civilization", () => {
   /* The dialog offers the decision exactly when the backend says
    * `can_decide_cross_civilization` — the field is computed by the same function the
    * endpoint runs. Nothing here may re-derive it from the step or the role. */
-  it("offered when the backend says so, and it posts", async () => {
+  const HADES = { code: "GR_HADES", display_name: "Greek Underworld" };
+  const toHades = () => tZh("soul_accounts.rebirth.cross_to", { hall: tZh("organization.civilizations.GREEK") });
+
+  it("offered when the backend says so, and crossing posts the chosen target hall (F-REB-11)", async () => {
     as("JUDGE", "workflow.read", "workflow.approve");
-    soulAccountsApi.rebirthApplications.mockResolvedValue(page([application({ can_decide_cross_civilization: true })]));
+    soulAccountsApi.rebirthApplications.mockResolvedValue(
+      page([application({ can_decide_cross_civilization: true, cross_civilization_targets: [HADES] })])
+    );
     soulAccountsApi.decideCrossCivilization.mockResolvedValue({
-      data: application({ cross_civilization: true, can_decide_cross_civilization: true }),
+      data: application({ cross_civilization: true, target_hall: HADES, can_decide_cross_civilization: true }),
     });
     renderPage();
     const dialog = await openDetail();
     const decision = within(dialog).getByTestId("cross-civilization-decision");
-    fireEvent.click(within(decision).getByRole("button", { name: tZh("soul_accounts.rebirth.cross.yes") }));
-    await waitFor(() => expect(soulAccountsApi.decideCrossCivilization).toHaveBeenCalledWith("r1", true));
+    // One button per target the backend offers; no bare 「跨文明」 without a hall.
+    expect(within(decision).queryByRole("button", { name: tZh("soul_accounts.rebirth.cross.yes") })).toBeNull();
+    fireEvent.click(within(decision).getByRole("button", { name: toHades() }));
+    await waitFor(() => expect(soulAccountsApi.decideCrossCivilization).toHaveBeenCalledWith("r1", true, "GR_HADES"));
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.rebirth.cross_saved"), "success"));
+  });
+
+  it("a decided cross shows where the soul goes", async () => {
+    as("GUARDIAN", "workflow.read");
+    soulAccountsApi.rebirthApplications.mockResolvedValue(page([application({ cross_civilization: true, target_hall: HADES })]));
+    renderPage();
+    const dialog = await openDetail();
+    expect(within(dialog).getByText(toHades())).toBeInTheDocument();
+    expect(within(dialog).queryByText(tZh("soul_accounts.rebirth.cross.yes"))).toBeNull();
+  });
+
+  it("with no target offered, only 「本文明内」 can be chosen, and it says why", async () => {
+    as("JUDGE", "workflow.read", "workflow.approve");
+    soulAccountsApi.rebirthApplications.mockResolvedValue(page([application({ can_decide_cross_civilization: true })]));
+    renderPage();
+    const dialog = await openDetail();
+    const decision = within(dialog).getByTestId("cross-civilization-decision");
+    expect(within(decision).getAllByRole("button")).toHaveLength(1);
+    expect(within(decision).getByText(tZh("soul_accounts.rebirth.cross_no_targets"))).toBeInTheDocument();
+  });
+
+  it("a refused target is reported by its own words", async () => {
+    as("JUDGE", "workflow.read", "workflow.approve");
+    soulAccountsApi.rebirthApplications.mockResolvedValue(
+      page([application({ can_decide_cross_civilization: true, cross_civilization_targets: [HADES] })])
+    );
+    soulAccountsApi.decideCrossCivilization.mockRejectedValue(http(400, { detail: "x", code: "cross_civilization_target_terminal" }));
+    renderPage();
+    const dialog = await openDetail();
+    fireEvent.click(within(within(dialog).getByTestId("cross-civilization-decision")).getByRole("button", { name: toHades() }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.rebirth.cross_target_refused"), "error"));
   });
 
   it("not offered when the backend says no, even to the initial-review role holding workflow.approve", async () => {

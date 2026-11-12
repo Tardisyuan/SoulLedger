@@ -247,6 +247,36 @@ describe("a rebirth's first review on the phone (O-b)", () => {
     await act(async () => {}); // 底页收起、加签名单取回的更新
   });
 
+  // F-REB-11(用户 2026-11-12):初审在手机上也能选去处 —— 选项是服务端给的目标殿,选了就按「跨到那里」写下再批准。
+  const WITH_TARGETS = { ...REBIRTH, facts: { ...REBIRTH.facts, cross_civilization_targets: [{ code: "GR_HADES", display_name: "Greek Underworld" }] } };
+
+  it("offers the server's target halls; choosing one writes the cross with that hall, then approves", async () => {
+    mockDecideCross.mockResolvedValue({});
+    mockApproveNode.mockResolvedValue({});
+    await openRebirth(WITH_TARGETS);
+    expect(await screen.findByText("批准 · 不跨")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("decision-cross-target-GR_HADES"));
+    expect(await screen.findByText("⇄ 跨文明：投生到哈迪斯")).toBeTruthy();
+    expect(screen.getByText("批准 · 跨到哈迪斯")).toBeTruthy();
+    expect(screen.queryByText("批准 · 不跨")).toBeNull();
+    fireEvent.press(screen.getByTestId("decision-confirm"));
+    await waitFor(() => expect(mockApproveNode).toHaveBeenCalled());
+    expect(mockDecideCross).toHaveBeenCalledWith("ra-1", true, "GR_HADES");
+    expect(mockDecideCross).not.toHaveBeenCalledWith("ra-1", false);
+    await act(async () => {});
+  });
+
+  it("a chosen cross that the server refuses is not approved as 不跨", async () => {
+    mockDecideCross.mockRejectedValue(httpError(409, { code: "not_in_initial_review" }));
+    mockApproveNode.mockResolvedValue({});
+    await openRebirth(WITH_TARGETS);
+    fireEvent.press(await screen.findByTestId("decision-cross-target-GR_HADES"));
+    fireEvent.press(screen.getByTestId("decision-confirm"));
+    expect(await screen.findByTestId("decision-failure")).toBeTruthy();
+    expect(mockApproveNode).not.toHaveBeenCalled();
+    await act(async () => {});
+  });
+
   it("set to cross: no approval on the phone, only 在电脑上继续", async () => {
     await openRebirth({ ...REBIRTH, facts: { ...REBIRTH.facts, cross_civilization: true } });
     expect(await screen.findByTestId("decision-cross-wanted")).toBeTruthy();

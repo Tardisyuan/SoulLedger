@@ -477,8 +477,9 @@ def _rebirth_cross_civ():
 
     account, application = _submitted_application()
     judge = _judge()
-    return (lambda: rebirth.decide_cross_civilization(application.pk, judge, True),
-            lambda: RebirthApplication.objects.get(pk=application.pk).cross_civilization is True,
+    # 「不跨」:跨文明还要建一个目标殿(F-REB-11),写事件的路径是同一条。
+    return (lambda: rebirth.decide_cross_civilization(application.pk, judge, False),
+            lambda: RebirthApplication.objects.get(pk=application.pk).cross_civilization is False,
             "REBIRTH_CROSS_CIV_DECIDED")
 
 

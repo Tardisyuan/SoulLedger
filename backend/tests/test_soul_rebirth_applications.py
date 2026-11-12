@@ -60,7 +60,7 @@ def test_submit_creates_a_rebirth_workflow_and_shows_only_the_role(cn_tenant, ju
                                              "is_appeal": False}
     assert set(response.data) == {
         "id", "cycle", "desired_form", "statement", "appeal_statement", "status", "cross_civilization",
-        "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at", "current_step", "can_appeal",
+        "target_hall", "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at", "current_step", "can_appeal",
         "created_at", "updated_at"}
     assert set(response.data["current_step"]) == {"node_type", "approver_role", "is_appeal"}
     assert SoulEvent.objects.filter(soul=account.soul, event_type="REBIRTH_APPLICATION_SUBMITTED").exists()
@@ -195,7 +195,12 @@ def test_cross_civilization_is_decided_by_the_initial_reviewer_only(cn_tenant, j
     refused = officer_client(cn_admin).post(url, {"cross_civilization": True}, format="json")
     assert refused.status_code == 403 and refused.data["code"] == "not_the_approver"
 
-    decided = officer_client(judge_user).post(url, {"cross_civilization": True}, format="json")
+    # 跨文明要带目标殿(F-REB-11,tests/test_rebirth_cross_civilization_target.py 细测)。
+    from apps.tenants.models import Tenant
+
+    Tenant.objects.get_or_create(code="GR_HADES", defaults={"display_name": "Hades"})
+    decided = officer_client(judge_user).post(
+        url, {"cross_civilization": True, "target_tenant": "GR_HADES"}, format="json")
     assert decided.status_code == 200 and decided.data["cross_civilization"] is True
     application.refresh_from_db()
     assert application.workflow.cross_civilization is True
@@ -363,7 +368,8 @@ def test_can_decide_cross_civilization_agrees_with_the_endpoint(stage, who, expe
     field = officer_client(user).get(base).data["can_decide_cross_civilization"]
     listed = [row for row in _rows(officer_client(user).get("/api/v1/soul-accounts/rebirth-applications/").data)
               if row["id"] == str(application.pk)]
-    response = officer_client(user).post(f"{base}cross-civilization/", {"cross_civilization": True}, format="json")
+    # 「不跨」:判定与「跨」同一个(`cross_civilization_refusal` 先于目标殿的校验),不必为它建目标殿。
+    response = officer_client(user).post(f"{base}cross-civilization/", {"cross_civilization": False}, format="json")
     assert (field, response.status_code) == expected
     assert [row["can_decide_cross_civilization"] for row in listed] == [field]
     if field:

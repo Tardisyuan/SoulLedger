@@ -118,6 +118,7 @@ export function application(overrides: Record<string, unknown> = {}) {
     appeal_statement: "",
     status: "UNDER_REVIEW",
     cross_civilization: null,
+    target_hall: null,
     rejection_reason: "",
     decided_at: null,
     first_rejection_reason: "",

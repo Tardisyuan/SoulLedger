@@ -131,9 +131,10 @@ export function useRejectCooldownShortening() {
   );
 }
 
+/** `target`: the hall code when `value` is true (F-REB-11); ignored otherwise. */
 export function useDecideCrossCivilization() {
-  return useSoulAccountWrite(async ({ id, value }: { id: string; value: boolean }) =>
-    (await soulAccountsApi.decideCrossCivilization(id, value)).data
+  return useSoulAccountWrite(async ({ id, value, target }: { id: string; value: boolean; target?: string }) =>
+    (await soulAccountsApi.decideCrossCivilization(id, value, value ? target ?? "" : "")).data
   );
 }
 

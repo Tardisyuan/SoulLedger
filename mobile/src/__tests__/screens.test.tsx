@@ -215,6 +215,19 @@ describe("application detail", () => {
     expect(StyleSheet.flatten(screen.getByTestId("status-badge-slot").props.style)).toMatchObject({ flexShrink: 0 });
   });
 
+  it("a cross-civilization decision names where the soul will be reborn (F-REB-11)", async () => {
+    stubApi({
+      "/me/rebirth-applications/a1/": {
+        status: 200,
+        data: application({ cross_civilization: true, target_hall: { code: "GR_HADES", display_name: "Greek Underworld" } }),
+      },
+    });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    await screen.findByTestId("application-detail");
+    expect(screen.getByText("是 · 投生到哈迪斯")).toBeTruthy();
+    expect(screen.queryByText("Greek Underworld")).toBeNull();
+  });
+
   it("a 404 says it is no longer there, with no retry and the way back (audit 2026-10-17 #8, 第四十批 O-c)", async () => {
     stubApi({ "/me/rebirth-applications/a1/": { status: 404, data: { detail: "Not found." } } });
     wrap(<ApplicationDetailScreen id="a1" />);

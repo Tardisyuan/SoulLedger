@@ -75,5 +75,13 @@
   "demo.txn.try_body",
   "demo.txn.try",
   "demo.txn.no_case",
-  "demo.txn.result_note"
+  "demo.txn.result_note",
+  "soul_accounts.rebirth.cross_to",
+  "soul_accounts.rebirth.cross_no_targets",
+  "soul_accounts.rebirth.cross_target_refused",
+  "soul_app.detail.cross_to",
+  "officer_app.rebirth.cross_civ_to",
+  "officer_app.rebirth.cross_civ_pick",
+  "officer_app.rebirth.cross_option_none",
+  "officer_app.rebirth.approve_cross"
 ]

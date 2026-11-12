@@ -4389,7 +4389,10 @@
       "empty": "No rebirth applications yet",
       "empty_filtered": "No applications with this status",
       "cooldown_until": "Cooling down until {{time}}; the soul cannot apply again before then",
-      "step_appeal": "(appeal)"
+      "step_appeal": "(appeal)",
+      "cross_to": "Cross-civilization → {{hall}}",
+      "cross_no_targets": "No other civilization takes rebirths right now.",
+      "cross_target_refused": "That hall cannot be chosen: it is closed, its civilization is terminal, or it is the soul's own civilization."
     },
     "cooldown": {
       "tabs": {
@@ -5257,7 +5260,8 @@
       "first_rejection_reason": "First rejection",
       "appeal_rejection_reason": "Appeal rejected because",
       "not_recorded": "Not recorded",
-      "new_result": "New result"
+      "new_result": "New result",
+      "cross_to": "Yes · reborn into {{hall}}"
     },
     "errors": {
       "invalid_credentials": "Wrong soul code or password",
@@ -8416,7 +8420,11 @@
       "cross_civ_body": "Cross-civilisation can only be set at first review, on a computer. Approving now sets it to \"no\" for good.",
       "approve_no_cross": "Approve · no cross",
       "decide_on_desk": "Decide on computer",
-      "cross_wanted": "This asks for another civilisation; review it on a computer."
+      "cross_wanted": "This asks for another civilisation; review it on a computer.",
+      "cross_civ_to": "⇄ Cross-civilisation: to {{hall}}",
+      "cross_civ_pick": "Cross-civilisation is set at first review. Choose where the soul goes, then approve; it cannot be changed afterwards.",
+      "cross_option_none": "No cross",
+      "approve_cross": "Approve · to {{hall}}"
     },
     "dispatch": {
       "approved_next": "Approved. The receiving hall still has to carry it out on a computer before the soul moves.",

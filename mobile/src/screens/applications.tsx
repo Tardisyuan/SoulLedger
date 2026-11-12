@@ -10,6 +10,7 @@ import {
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
 import { fetchFailureOf } from "@soulledger/core/api/client";
+import { realmLabel } from "@soulledger/core/config/civilizations";
 import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
@@ -552,7 +553,10 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
             <DataRow label={t("soul_app.detail.cross_civilization")}>
               {a.cross_civilization === null || a.cross_civilization === undefined
                 ? t("soul_app.detail.cross_undecided")
-                : t(a.cross_civilization ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}
+                : a.cross_civilization && a.target_hall
+                  ? // F-REB-11: where the soul will be reborn, named as the soul knows it (哈迪斯, not 「GR_HADES」).
+                    t("soul_app.detail.cross_to", { hall: realmLabel(t, a.target_hall.code, a.target_hall.display_name) })
+                  : t(a.cross_civilization ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}
             </DataRow>
           </DataRows>
         </Block>

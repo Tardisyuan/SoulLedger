@@ -134,6 +134,11 @@ class TodoFactsSerializer(serializers.Serializer):
     merit_balance = serializers.IntegerField(required=False, help_text="仅转生:功过结余 = 功 − 过。")
     cross_civilization = serializers.BooleanField(
         required=False, allow_null=True, help_text="仅转生:是否跨文明;null = 初审还没定(批准即按「不跨」)。")
+    target_hall = FactHallSerializer(
+        required=False, allow_null=True, help_text="仅转生:跨文明时投生到的殿;不跨或未定为 null(F-REB-11)。")
+    cross_civilization_targets = FactHallSerializer(
+        many=True, required=False,
+        help_text="仅转生:此刻由你决定初审时可选的目标殿(能转生、不是原属文明);不能决定时为空。")
     status = serializers.CharField(required=False, help_text="仅调拨:记录此刻的状态(PROPOSED / APPROVED / …)。")
     cooldown_now_days = serializers.IntegerField(required=False, help_text="仅缩短冷却:现在还剩几天。")
     cooldown_asked_days = serializers.IntegerField(required=False, allow_null=True, help_text="仅缩短冷却:申请改成剩几天。")

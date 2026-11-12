@@ -454,16 +454,24 @@ class MeCurrentStepSerializer(serializers.Serializer):
     is_appeal = serializers.BooleanField()
 
 
+class TargetHallSerializer(serializers.Serializer):
+    """跨文明投生的目标殿(F-REB-11):code 与展示名,与官员 App 的 FactHall 同形。"""
+
+    code = serializers.CharField()
+    display_name = serializers.CharField()
+
+
 class MeRebirthApplicationSerializer(serializers.ModelSerializer):
     current_step = serializers.SerializerMethodField()
     can_appeal = serializers.SerializerMethodField()
+    target_hall = serializers.SerializerMethodField()
 
     class Meta:
         model = RebirthApplication
         fields = [
             "id", "cycle", "desired_form", "statement", "appeal_statement", "status",
-            "cross_civilization", "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at",
-            "current_step", "can_appeal", "created_at", "updated_at",
+            "cross_civilization", "target_hall", "rejection_reason", "decided_at", "first_rejection_reason",
+            "first_decided_at", "current_step", "can_appeal", "created_at", "updated_at",
         ]
 
     @extend_schema_field(MeCurrentStepSerializer(allow_null=True))
@@ -476,6 +484,13 @@ class MeRebirthApplicationSerializer(serializers.ModelSerializer):
         from apps.soul_accounts.rebirth import can_appeal
 
         return can_appeal(obj, self.context.get("account"))
+
+    @extend_schema_field(TargetHallSerializer(allow_null=True))
+    def get_target_hall(self, obj):
+        """跨文明时投生到哪个殿(F-REB-11);不跨或尚未决定为 null。"""
+        from apps.soul_accounts.rebirth import target_hall_of
+
+        return target_hall_of(obj)
 
 
 class MeReincarnationSerializer(serializers.Serializer):
@@ -681,15 +696,17 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
     can_appeal = serializers.SerializerMethodField()
     cooldown_until = serializers.SerializerMethodField()
     can_decide_cross_civilization = serializers.SerializerMethodField()
+    target_hall = serializers.SerializerMethodField()
+    cross_civilization_targets = serializers.SerializerMethodField()
 
     class Meta:
         model = RebirthApplication
         fields = [
             "id", "soul", "soul_code", "soul_name", "account", "cycle", "desired_form", "statement",
-            "appeal_statement", "status", "workflow", "appeal_workflow", "cross_civilization",
+            "appeal_statement", "status", "workflow", "appeal_workflow", "cross_civilization", "target_hall",
             "rejection_reason", "decided_at", "first_rejection_reason", "first_decided_at",
             "current_step", "can_appeal", "cooldown_until",
-            "can_decide_cross_civilization", "created_at", "updated_at",
+            "can_decide_cross_civilization", "cross_civilization_targets", "created_at", "updated_at",
         ]
         read_only_fields = fields
 
@@ -718,9 +735,30 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return request is not None and cross_civilization_refusal(obj, request.user) is None
 
+    @extend_schema_field(TargetHallSerializer(allow_null=True))
+    def get_target_hall(self, obj):
+        """初审选的目标殿(F-REB-11);不跨或尚未决定为 null。"""
+        from apps.soul_accounts.rebirth import target_hall_of
+
+        return target_hall_of(obj)
+
+    @extend_schema_field(TargetHallSerializer(many=True))
+    def get_cross_civilization_targets(self, obj):
+        """初审可选的目标殿(`rebirth.cross_civilization_targets`:能转生、不是原属文明的启用殿)。
+        只在此刻能决定时给出,否则是空列表 —— 选项只给能写的人。"""
+        if not self.get_can_decide_cross_civilization(obj):
+            return []
+        from apps.soul_accounts.rebirth import cross_civilization_targets, target_hall_fact
+
+        return [target_hall_fact(hall) for hall in cross_civilization_targets(obj.soul)]
+
 
 class CrossCivilizationDecisionSerializer(serializers.Serializer):
     cross_civilization = serializers.BooleanField()
+    target_tenant = serializers.CharField(
+        max_length=50, required=False, allow_blank=True, default="",
+        help_text="跨文明时必填:目标殿的 code(`cross_civilization_targets` 之一)。不跨时忽略。",
+    )
 
 
 # ── 缩短冷却申请 ──────────────────────────────────────────────────────────
