@@ -320,6 +320,9 @@ jobs:
       SYNAPSE_TEST_PUSH: '1'
       SYNAPSE_TEST_SERVER_NAME: soulledger.test
       SYNAPSE_TEST_JWT_SECRET: ci-synapse-jwt-secret-not-for-production
+      # Three distinct keys, as in deployment (audit A2-07): a grant or hook signed with the login key must fail here.
+      SYNAPSE_TEST_GRANT_SECRET: ci-synapse-grant-secret-not-for-production
+      SYNAPSE_TEST_HOOK_SECRET: ci-synapse-hook-secret-not-for-production
       SYNAPSE_TEST_SHARED_SECRET: ci-synapse-shared-secret-not-for-production
       SYN_DOCKER_ARGS: -p 127.0.0.1:18008:8008 --add-host=host.docker.internal:host-gateway
     services:

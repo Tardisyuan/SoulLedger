@@ -781,6 +781,23 @@ describe("队列页:认领 · 改派 · 我认领的", () => {
     expect(within(panel).getAllByText("judgment.row_mark.mine")).toHaveLength(2);
   });
 
+  // P-11:缺 `soul_name` 键 = 字段权限藏了姓名 →「已隐藏」;值为 null = 后端没给 →「未返回」。两句不同。
+  it("「我认领的」:缺姓名键写「已隐藏」,null 写「未返回」,不印灵魂主键、不留空白", async () => {
+    const SOUL_ID = "9f1c2d3e-0000-4000-8000-00000000abcd";
+    const { soul_name: _withheld, ...ruled } = mine({ ...JUDGMENT, soul: SOUL_ID });
+    const nulled = { ...mine(NEXT_JUDGMENT), soul: `${SOUL_ID}-n`, soul_name: null };
+    mockList.mockResolvedValue({ data: { count: 2, next: null, previous: null, results: [ruled, nulled] } });
+    renderConsole();
+    const panel = await screen.findByTestId("queue-mine");
+    await waitFor(() => expect(within(panel).getAllByTestId("queue-mine-row")).toHaveLength(2));
+    const WITHHELD = "common.value.unrecorded — souls.field_withheld";
+    const NOT_RETURNED = "common.value.unrecorded — judgment.soul_name_not_returned";
+    // 两行各一句,不是同一句出现两次。
+    expect(within(panel).getAllByRole("button", { name: WITHHELD })).toHaveLength(1);
+    expect(within(panel).getAllByRole("button", { name: NOT_RETURNED })).toHaveLength(1);
+    expect(within(panel).queryByText(new RegExp(SOUL_ID))).toBeNull();
+  });
+
   it("刚认领的那一件排到「我认领的」最上面", async () => {
     // 服务端按入队时间排:认领之前只有第二件,认领之后第一件排在它后面。
     mockList.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [mine(NEXT_JUDGMENT)] } });

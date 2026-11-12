@@ -38,11 +38,11 @@ jest.mock("@/src/hooks/usePermissions", () => ({
   },
 }));
 
-function renderPage(over: Record<string, unknown>) {
-  (dispatchApi.get as jest.Mock).mockResolvedValue({
-    data: { id: "d1", status: "PROPOSED", soul_name: "孟婆", reason: "先在彼处受罚", decision_reason: "",
-            source_tenant_code: "CN_DIYU", target_tenant_code: "EG_DUAT", executed_at: null, returned_at: null, ...over },
-  });
+function renderPage(over: Record<string, unknown>, omit: string[] = []) {
+  const data: Record<string, unknown> = { id: "d1", status: "PROPOSED", soul_name: "孟婆", reason: "先在彼处受罚", decision_reason: "",
+            source_tenant_code: "CN_DIYU", target_tenant_code: "EG_DUAT", executed_at: null, returned_at: null, ...over };
+  for (const k of omit) delete data[k];
+  (dispatchApi.get as jest.Mock).mockResolvedValue({ data });
   return renderWithProviders(<DispatchDetailPage params={Promise.resolve({ id: "d1" })} />, { i18n: false });
 }
 
@@ -69,5 +69,23 @@ describe("the decision reason on a dispatch", () => {
     renderPage({ status, decision_reason });
     await screen.findByText("先在彼处受罚");
     expect(screen.queryByTestId("dispatch-decision-reason")).toBeNull();
+  });
+});
+
+// P-11:缺 `soul_name` 键 = 字段权限藏了姓名 →「已隐藏」,不把灵魂主键印成名字;null 不带「已隐藏」。
+describe("a withheld soul name on a dispatch", () => {
+  const WITHHELD = "common.value.unrecorded — souls.field_withheld";
+  const SOUL_ID = "9f1c2d3e-0000-4000-8000-00000000abcd";
+
+  it("shows 已隐藏 when the key is absent, never the soul's id", async () => {
+    renderPage({ soul: SOUL_ID }, ["soul_name"]);
+    expect(await screen.findByLabelText(WITHHELD)).toBeInTheDocument();
+    expect(screen.queryByText(SOUL_ID)).not.toBeInTheDocument();
+  });
+
+  it("does not say 已隐藏 when the key is there but null", async () => {
+    renderPage({ soul: SOUL_ID, soul_name: null });
+    await screen.findByText("先在彼处受罚");
+    expect(screen.queryByLabelText(WITHHELD)).not.toBeInTheDocument();
   });
 });

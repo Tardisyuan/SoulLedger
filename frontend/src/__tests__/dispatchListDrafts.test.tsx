@@ -75,6 +75,32 @@ it("marks a draft 草稿 and links it back into the form; a proposal still opens
   expect(screen.queryByRole("link", { name: /沈青梧/ })?.getAttribute("href")).not.toContain("draft=");
 });
 
+// P-11:缺 `soul_name` 键 = 字段权限藏了姓名 →「已隐藏」;null = 草稿还没选灵魂 → 只写「未记录」。
+describe("a withheld soul name", () => {
+  const WITHHELD = "common.value.unrecorded — souls.field_withheld";
+  const SOUL_ID = "9f1c2d3e-0000-4000-8000-00000000abcd";
+  const serve = (r: Record<string, unknown>) => {
+    (dispatchApi.proposed as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
+    (dispatchApi.history as jest.Mock).mockResolvedValue({ data: { results: [r], count: 1 } });
+    renderWithProviders(<DispatchPage />, { client: createTestQueryClient(), i18n: false });
+  };
+
+  it("shows 已隐藏 when the key is absent, never the soul's id or a blank link", async () => {
+    const { soul_name: _withheld, ...ruled } = { ...base, id: "p2", status: "PROPOSED", soul: SOUL_ID, soul_name: "x" };
+    serve(ruled);
+    const marks = await screen.findAllByLabelText(WITHHELD);
+    for (const m of marks) expect(m.closest("a")).toHaveAttribute("href", "/dispatch/p2");
+    expect(screen.queryByText(SOUL_ID)).not.toBeInTheDocument();
+  });
+
+  it("a null name (a draft with no soul yet) is 未记录 without 已隐藏", async () => {
+    serve({ ...base, id: "d2", status: "DRAFT", soul: null, soul_name: null });
+    const links = await screen.findAllByRole("link", { name: "common.value.unrecorded" });
+    expect(links.map((a) => a.getAttribute("href"))).toContain("/dispatch/propose?draft=d2");
+    expect(screen.queryByLabelText(WITHHELD)).not.toBeInTheDocument();
+  });
+});
+
 describe("dispatch column menu", () => {
   const COLS = "soulledger.dispatch.columns";
   const headers = () => screen.queryAllByRole("columnheader").map((h) => h.textContent);

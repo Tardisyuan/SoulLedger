@@ -110,3 +110,35 @@ describe("disposition list pagination", () => {
     expect(mockList).not.toHaveBeenCalledWith(expect.objectContaining({ section: "executing", page: "2" }));
   });
 });
+
+// P-11:接口缺 `soul_name` 键 = 字段权限藏了姓名,行上写「已隐藏」,不把灵魂主键印成名字;
+// 值为 null(键在、值空)是另一回事,不带「已隐藏」。
+describe("a withheld soul name", () => {
+  const WITHHELD = "common.value.unrecorded — souls.field_withheld";
+  const SOUL_ID = "9f1c2d3e-0000-4000-8000-00000000abcd";
+
+  function serve(r: Record<string, unknown>) {
+    mockList.mockImplementation(async (params?: Record<string, string>) => ({
+      data:
+        params?.section === "pending"
+          ? { count: 1, next: null, previous: null, results: [r], section_counts: { pending: 1, executing: 0, expired: 0 } }
+          : { count: 0, next: null, previous: null, results: [], section_counts: {} },
+    }));
+  }
+
+  it("shows 已隐藏 when the key is absent, never the soul's id", async () => {
+    const { soul_name: _withheld, ...ruled } = { ...row(1), soul: SOUL_ID };
+    serve(ruled);
+    renderPage();
+    const marks = await screen.findAllByLabelText(WITHHELD);
+    for (const m of marks) expect(m.closest("a")).toHaveAttribute("href", `/souls/${SOUL_ID}`);
+    expect(screen.queryByText(SOUL_ID)).not.toBeInTheDocument();
+  });
+
+  it("does not say 已隐藏 when the key is there but null", async () => {
+    serve({ ...row(1), soul: SOUL_ID, soul_name: null });
+    renderPage();
+    await screen.findAllByRole("link", { name: SOUL_ID });
+    expect(screen.queryByLabelText(WITHHELD)).not.toBeInTheDocument();
+  });
+});

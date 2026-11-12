@@ -1040,6 +1040,50 @@ describe("枉死城 (第五十一批 F-2)", () => {
 });
 
 // review-2026-11-01 Web 6:「已结案」一面有筛选 —— 搜索、裁决、文明,带进请求;「待审」一面不画这一条。
+// P-11:缺 `soul_name` 键 = 字段权限藏了姓名 →「已隐藏」;值为 null = 后端没给 →「未返回」。两句不同。
+describe("灵魂姓名被字段权限隐藏", () => {
+  const SOUL_ID = "9f1c2d3e-0000-4000-8000-00000000abcd";
+  const unrecorded = tZh("common.value.unrecorded");
+  const WITHHELD = `${unrecorded} — ${tZh("souls.field_withheld")}`;
+  const NOT_RETURNED = `${unrecorded} — ${tZh("judgment.soul_name_not_returned")}`;
+  const withheldRow = () => {
+    const { soul_name: _withheld, ...ruled } = row("w", "x", { soul: SOUL_ID });
+    return ruled;
+  };
+
+  it("待审队列(JudgmentClaimQueue):缺键写「已隐藏」,null 写「未返回」,都不印主键", async () => {
+    GROUP_ROWS.unclaimed = [withheldRow() as ReturnType<typeof row>];
+    GROUP_ROWS.others = [row("n", "", { soul: `${SOUL_ID}-n`, soul_name: null })];
+    try {
+      renderPage();
+      expect((await screen.findAllByLabelText(WITHHELD)).length).toBeGreaterThan(0);
+      expect(screen.getAllByLabelText(NOT_RETURNED).length).toBeGreaterThan(0);
+      expect(WITHHELD).not.toBe(NOT_RETURNED);
+      expect(screen.queryByText(new RegExp(SOUL_ID))).toBeNull();
+    } finally {
+      GROUP_ROWS.unclaimed = [row("b", "Marguerite Vey", { civilization: "EUROPEAN", court: "米诺斯", karmic_balance: null, evidence_count: 7, merit_score: 641, demerit_score: 602, cycle: 0 })];
+      GROUP_ROWS.others = [row("c", "陆晚晴", { claimed_by: 2, claimed_by_name: "秦广" })];
+    }
+  });
+
+  it("已结案表:缺键写「已隐藏」,null 写「未返回」,都不印主键", async () => {
+    const concluded = [withheldRow(), row("n", "", { soul: `${SOUL_ID}-n`, soul_name: null, verdict: "PASSED", is_final: true })];
+    const pending = judgmentApi.list.getMockImplementation()!;
+    judgmentApi.list.mockImplementation(async (params: Record<string, string>) =>
+      params.has_verdict === "true" && !params.group
+        ? { data: { count: 2, next: null, previous: null, results: concluded } }
+        : pending(params)
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /已结案/ }));
+    const hrefs = (name: string) => screen.getAllByRole("link", { name }).map((a) => a.getAttribute("href"));
+    await screen.findAllByRole("link", { name: WITHHELD });
+    expect(hrefs(WITHHELD)).toContain("/judgment/w");
+    expect(hrefs(NOT_RETURNED)).toContain("/judgment/n");
+    expect(screen.queryByText(new RegExp(SOUL_ID))).toBeNull();
+  });
+});
+
 describe("已结案的筛选", () => {
   it("待审没有这一条;已结案按裁决与文明筛,参数带进请求", async () => {
     renderPage();

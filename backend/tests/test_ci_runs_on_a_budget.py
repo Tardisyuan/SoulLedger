@@ -104,6 +104,19 @@ def test_the_synapse_integration_runs_against_a_started_synapse_and_a_skip_fails
     assert (WORKFLOWS.parents[1] / "scripts" / "synapse-test.sh").is_file()
 
 
+def test_the_synapse_job_uses_three_distinct_keys_and_the_script_writes_each_into_the_module():
+    """Audit A2-07: login (JWT), speaking grant and push hook each have their own key. With the grant and hook
+    unset the script falls back to the JWT key, so a code path that signs with the wrong one would stay green."""
+    env = _load("ci.yml")[0]["jobs"]["synapse"]["env"]
+    keys = [env.get(k) for k in ("SYNAPSE_TEST_JWT_SECRET", "SYNAPSE_TEST_GRANT_SECRET", "SYNAPSE_TEST_HOOK_SECRET")]
+    assert all(keys) and len(set(keys)) == 3, keys
+    script = (WORKFLOWS.parents[1] / "scripts" / "synapse-test.sh").read_text()
+    assert "${MATRIX_GRANT_SECRET}|${SYNAPSE_TEST_GRANT_SECRET" in script
+    assert "${MATRIX_HOOK_SECRET}|${SYNAPSE_TEST_HOOK_SECRET" in script
+    conf = (WORKFLOWS.parents[1] / "config" / "synapse" / "homeserver.soulledger.yaml").read_text()
+    assert 'grant_secret: "${MATRIX_GRANT_SECRET}"' in conf and 'hook_secret: "${MATRIX_HOOK_SECRET}"' in conf
+
+
 @pytest.mark.parametrize("job,app", [("mobile", "mobile"), ("officer", "mobile-officer")])
 def test_the_app_jobs_run_test_coverage_once_the_app_defines_it(job, app):
     """Review C22: the apps get coverage thresholds through a `test:coverage` script. The step runs it when the
