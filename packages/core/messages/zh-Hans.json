@@ -8093,6 +8093,9 @@
         "overdue": "超期 {{n}} 日"
       },
       "release": "放回",
+      "chips": {
+        "city_god": "城隍送来"
+      },
       "release_failed": "没能放回",
       "empty_title": "案卷台上没有案卷",
       "empty_body": "新的案子到了会出现在这里。"

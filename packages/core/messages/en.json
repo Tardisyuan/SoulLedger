@@ -8093,6 +8093,9 @@
         "overdue": "{{n}} days overdue"
       },
       "release": "Put back",
+      "chips": {
+        "city_god": "Sent on by the city god"
+      },
       "release_failed": "Couldn't put back",
       "empty_title": "No cases on the desk",
       "empty_body": "New cases will appear here."
