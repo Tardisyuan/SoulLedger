@@ -11,13 +11,17 @@ from django.utils import timezone
 
 from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
-from apps.souls.dates import parse_historical_date, to_legacy_date
+from apps.souls.dates import ERROR, check_soul_dates, parse_historical_date, to_legacy_date
 from apps.souls.querysets import SoulManager
 
 if TYPE_CHECKING:  # the annotation on Soul.die only; judgment imports souls, so not at runtime
     from apps.judgment.models import Judgment
 
 logger = logging.getLogger(__name__)
+
+
+class DeathDateError(ValueError):
+    """The death `Soul.die` would record contradicts the soul's birth (`apps.souls.dates.check_soul_dates`)."""
 
 
 class Civilization(models.TextChoices):
@@ -890,6 +894,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         self.current_state = locked_soul.current_state
         return True
 
+    def effective_death_date(self, death_date=None):
+        """The (year, month, day) `die(death_date)` would record: the one given, else the one on file, else today
+        (the same today `transition_to` writes). Raises ValueError on a malformed `death_date`."""
+        if death_date:
+            return parse_historical_date(death_date)
+        if self.death_year is not None:
+            return self.death_year, self.death_month, self.death_day
+        today = timezone.now().date()
+        return today.year, today.month, today.day
+
     def die(self, death_date=None, location: str = "", account_origin: str = "OFFICER",
             city_god=None) -> "Judgment | None":
         """Mark soul as dead, transition to JUDGING, and create a Judgment record.
@@ -900,6 +914,14 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         if self.current_state != SoulState.ALIVE:
             return None
+        # 死亡日(F-DEATH-01,2026-11-12):给了就用给的;没给就沿用已录的(建档、导入时录过的那一个),都没有才是今天
+        # (`transition_to` 补)。此前没给也写成今天,已录的死亡日被覆盖,阳寿、防腐、衰减的锚点跟着错。
+        # 跨日期规则查的是最终落库的那一天,所以在这里查,不在各个入口各查一遍。
+        died = self.effective_death_date(death_date)
+        errors = [p.message for p in check_soul_dates((self.birth_year, self.birth_month, self.birth_day), died)
+                  if p.severity == ERROR]
+        if errors:
+            raise DeathDateError(" ".join(errors))
         # 本殿没有能收案的城隍就不许开案(用户 2026-10-29):在状态变化之前问,内存里的灵魂不留一个回滚掉的 JUDGING。
         # `opening_fields` 里还会再问一次(手开审判那条路也走它),这里只是先拦。
         if self.civilization == Civilization.CHINESE and city_god is None:
@@ -916,7 +938,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                     SoulState.JUDGING,
                     "Death recorded, judgment initiated",
                     account_origin=account_origin,
-                    death_date=death_date or timezone.now().date(),
+                    **({"death_date": death_date} if death_date else {}),
                     **({"origin_location": location} if location else {}),
                 )
             if not result:
