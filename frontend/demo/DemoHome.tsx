@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { CARD_SKIN, LandingHeader, LandingTitle, useCardTilt } from "@/src/components/landing/Landing";
+import { CARD_SKIN, HowBuilt, LandingHeader, LandingTitle, useCardTilt } from "@/src/components/landing/Landing";
 import { LandingEmblem } from "@/src/components/landing/LandingEmblem";
 import { SoulFire } from "@/src/components/landing/SoulFire";
 import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
@@ -22,7 +22,8 @@ import { langOf, soulRecording } from "./store";
  * The demo's home page (Design 第二十七批): a guided start instead of the product's landing page, which the real build
  * keeps as it is (`Landing.tsx`). From the top: the title, three steps and one primary button (地府第五殿's judge); the
  * moving journey preview; the four underworld cards (each signs in as its judge, behind the seal); the four roles in
- * one row; the GitHub footer. 「先看 30 秒」 is an overlay, mounted only while open.
+ * one row; 「这是怎么做的」, the product landing page's own section (architecture, test counts, the two app recordings),
+ * which the finished tour links to; the GitHub footer. 「先看 30 秒」 is an overlay, mounted only while open.
  *
  * The soul's view is this page in another state, not a route: the demo adds no route a normal build could reach.
  */
@@ -33,6 +34,11 @@ export default function DemoHome() {
   const [peek, setPeek] = useState(false);
   const [glow, setGlow] = useState<SealCiv>("cn");
   const onShown = useCallback((skin: SealCiv) => setGlow(skin), []);
+  // `/#how-built` (the finished tour's link) is a full load, and this page is a lazy chunk drawn after the browser looked
+  // for the anchor and found nothing: scrolled to here instead.
+  useEffect(() => {
+    if (window.location.hash === "#how-built") document.getElementById("how-built")?.scrollIntoView();
+  }, []);
   // The phone opens with its screen already drawn: the recording first (a few KB, usually fetched on hover), then the view.
   const look = (civ: SealCiv, top: boolean) =>
     void soulRecording(civ, langOf(locale)).then(() => {
@@ -100,6 +106,8 @@ export default function DemoHome() {
 
         <CivCards enter={(skin, card) => void enter(ROLE_OF_SKIN[skin], card)} warm={(skin) => warm(ROLE_OF_SKIN[skin])} />
         <Roles onLook={(civ) => look(civ, true)} entering={entering !== null} enter={(role, el) => void enter(role, el)} />
+        <GuardEntry entering={entering !== null} enter={(el) => void enter("admin", el, { guard: true })} />
+        <HowBuilt />
       </main>
 
       <footer className="shrink-0 border-t border-[oklch(var(--color-line))]">
@@ -244,6 +252,28 @@ function Roles({ onLook, entering, enter }: { onLook: (civ: SealCiv) => void; en
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** The second tour (作品集建议 A3): the administrator's console, walked through what keeps the data safe. */
+function GuardEntry({ entering, enter }: { entering: boolean; enter: (el: HTMLElement) => void }) {
+  const { t } = useI18n();
+  return (
+    <section aria-labelledby="demo-home-guard" className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-[oklch(var(--color-line))] pt-6 pb-4 max-md:flex-col max-md:items-stretch">
+      <div className="min-w-0 flex-1">
+        <h2 id="demo-home-guard" className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t("demo.home.guard_title")}</h2>
+        <p className="m-0 mt-1 max-w-[48em] text-sm text-[oklch(var(--color-ink-muted))]">{t("demo.home.guard_body")}</p>
+      </div>
+      <button
+        type="button"
+        data-testid="demo-home-guard"
+        disabled={entering}
+        onClick={(e) => enter(e.currentTarget)}
+        className="inline-flex min-h-11 items-center justify-center gap-2 border border-[oklch(var(--color-ink))] px-4 text-sm text-[oklch(var(--color-ink))] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[oklch(var(--color-focus))] disabled:opacity-60"
+      >
+        {t("demo.home.guard_cta")} <span aria-hidden="true">→</span>
+      </button>
     </section>
   );
 }

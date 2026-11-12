@@ -11,7 +11,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 import { DEMO_USERNAMES, type DemoRole, langOf, recording } from "./store";
-import { type Tour, tourOf } from "./tour";
+import { type Tour, requestGuard, tourOf } from "./tour";
 
 export const ROLE_OF_SKIN: Record<SealCiv, DemoRole> = { cn: "judge", eu: "judge_eu", eg: "judge_eg", gr: "judge_gr" };
 export const SKINS = Object.keys(ROLE_OF_SKIN) as SealCiv[];
@@ -83,7 +83,9 @@ export function useEnter() {
   const router = useRouter();
   const warm = useWarm();
   const [entering, setEntering] = useState<DemoRole | null>(null);
-  const enter = async (role: DemoRole, from?: HTMLElement) => {
+  /** `guard`: the administrator, on the second tour (「系统怎么保护自己」); any other way in turns it off. */
+  const enter = async (role: DemoRole, from?: HTMLElement, { guard = false }: { guard?: boolean } = {}) => {
+    requestGuard(guard && role === "admin");
     startEntrance(SKIN_OF_ROLE[role], from);
     setEntering(role);
     warm(role);

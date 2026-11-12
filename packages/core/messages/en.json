@@ -9286,10 +9286,45 @@
         "desk": "Judgment desk",
         "disposition": "Disposition",
         "rebirth": "Rebirth",
-        "workflow_fork": "Workflow · the three judges' fork"
+        "workflow_fork": "Workflow · the three judges' fork",
+        "tenants": "the list of halls",
+        "matrix": "the permission matrix",
+        "overreach": "the overreach test",
+        "data_scope": "the roles",
+        "audit": "the audit records",
+        "recycle": "the recycle bin"
       },
       "skipped_title": "Tour skipped",
-      "skipped_body": "Look around on your own, or try another underworld."
+      "skipped_body": "Look around on your own, or try another underworld.",
+      "guard": {
+        "1": {
+          "name": "Each hall's data kept apart",
+          "body": "Each underworld is a tenant. You are the global administrator, so every hall is listed here; a judge sees only their own hall's souls. The screen does not do this: every endpoint's query is narrowed by scope_to_tenant, and a request with no resolvable hall gets an empty set."
+        },
+        "2": {
+          "name": "Permission codes",
+          "body": "Every action has a permission code (judgment.execute, for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes."
+        },
+        "3": {
+          "name": "Try an overreach",
+          "body": "A judge never sees this page, but a hidden button is not a safeguard. Press the button below to see what the server answers when a judge asks this page's endpoint directly."
+        },
+        "4": {
+          "name": "Data scopes",
+          "body": "Permission codes decide what a role may do; data scopes decide on which rows. Open a role to set one of five scopes per business area: all, own unit and below, own unit, own records only, chosen units. They narrow again after the hall-level isolation."
+        },
+        "5": {
+          "name": "The audit log",
+          "body": "Every write leaves a row: who, when, which fields, before and after. Passwords and tokens never go into it, and an audit write that fails always leaves an error in the log rather than vanishing."
+        },
+        "6": {
+          "name": "The recycle bin",
+          "body": "A delete is a soft delete: the record goes to the recycle bin and can be restored. Only the administrator may restore or purge: the matrix refuses to grant those two codes to any other role, and the endpoint refuses again."
+        },
+        "title": "How the system protects itself",
+        "done_title": "That is the safeguards tour",
+        "done_body": "Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul's life as its judge."
+      }
     },
     "enter": {
       "entering": "Entering {{civ}}",
@@ -9374,7 +9409,36 @@
       "peek_prev": "Previous",
       "peek_next": "Next",
       "peek_done": "Done — start with step 1",
-      "footer": "SoulLedger · demo"
+      "footer": "SoulLedger · demo",
+      "guard_title": "How the system protects itself",
+      "guard_body": "Six steps as the Grand Scribe (the administrator): how each hall's data is kept apart, permission codes, how an overreach is refused, data scopes, the audit log, the recycle bin.",
+      "guard_cta": "Take the safeguards tour"
+    },
+    "probe": {
+      "try": "Ask this page's endpoint directly, as a judge",
+      "recorded": "This is the server's real answer, recorded when {{user}} made this request, and replayed as it was. The demo did not make it up.",
+      "why_title": "How the server refused",
+      "why_front": "The screens take this page out of a judge's menu by permission code, but that is only display: the request can still be sent around the interface.",
+      "why_back": "The backend is what stops it: the endpoint carries the CanReadPermissionCatalogue permission class, which lets through only holders of system.settings or menu.manage. A judge holds neither, so the answer is 403 before the view itself runs.",
+      "code": "Code",
+      "test": "Guarded by",
+      "not_recorded": "The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise."
+    },
+    "txn": {
+      "open": "Concurrency",
+      "title": "Concurrency and transactions: a case is concluded once",
+      "lede": "Two judges may press 结案 on the same case at the same moment. The backend has to conclude it once, and never leave half of it written.",
+      "step1": "Judges A and B each read the case as still open, and both submit a conclusion.",
+      "step2": "A takes the row lock first (select_for_update), inside a transaction, and writes the verdict, the disposition and the event.",
+      "step3": "B's conclusion waits on the same lock. Once A commits, B gets the lock, reads the row again under it, and finds a verdict already there.",
+      "step4": "B gets 409 already_concluded, and nothing of B's is written.",
+      "rollback_title": "All or nothing",
+      "rollback_body": "The verdict, the disposition and the event log share one database transaction. If the event row cannot be written, the whole conclusion rolls back and the caller gets the original error; notifications and pushes go out only after the commit, so a rollback sends none.",
+      "try_title": "Try it",
+      "try_body": "Take case {{case}}, which is already concluded. The button below sends B's request again, with the copy B read before the first conclusion.",
+      "try": "Send B's conclusion",
+      "no_case": "No case here is concluded yet. Conclude one on the bench, then come back.",
+      "result_note": "The demo has no backend: this answer comes from a rule the demo layer copies from the server (demo/flows.ts), with the code and message word for word as in services.py, and nothing was written. On the real API, a second request sent after the first is stopped earlier, by the view's already-concluded check, with 400; only two requests that both pass that check reach the 409 under the lock. The wait on the lock can only be tested on PostgreSQL, since SQLite has no row locks, so the concurrency test above runs on PostgreSQL only."
     }
   },
   "action": {
