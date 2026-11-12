@@ -264,7 +264,14 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   `MATRIX_ENABLED`(默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 一律 503)、
   `MATRIX_PUBLIC_BASEURL`(App → Synapse,即经 nginx 的公开地址,如 `https://example.com/`;
   也写进 homeserver 的 `public_baseurl`)、`MATRIX_SERVER_NAME`(**定了不能改**,它在每个 mxid 里)、
-  `MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节)、
+  `MATRIX_JWT_SECRET`(= Synapse `jwt_config.secret`,≥32 字节,**只用于登录**)、
+  `MATRIX_GRANT_SECRET`(= 模块配置 `grant_secret`,节流私聊请求的一次性发言凭据,≥32 字节)、
+  `MATRIX_HOOK_SECRET`(= 模块配置 `hook_secret`,新消息回调的签名,≥32 字节)——三把**互不相同**
+  (审计 2026-11-11 A2-07:共用一把时,任一处副本泄漏就既能冒任何灵魂登录、又能伪造回调)。
+  **过渡**:后两项没设时退回 `MATRIX_JWT_SECRET`,后端启动日志与 `scripts/synapse-init.sh` 各打一条警告
+  (模块配置里没写 `hook_secret` 时 Synapse 启动日志也有一条,回调改用 `grant_secret` 签),功能照常;
+  **上线前必须分别设置**,后端 `.env` 与 homeserver.yaml 的模块配置两边同值。
+  `scripts/check-deploy-env.sh` 对没设的给 WARN,与 `MATRIX_JWT_SECRET` 相同的给 FAIL。另有
   `MATRIX_REGISTRATION_SHARED_SECRET`(= Synapse `registration_shared_secret`,只用来把服务账号
   注册成 admin 一次)、`MATRIX_USER_SALT`(mxid 由账号 id 经 HMAC 派生;**不可轮换**,换了所有 mxid
   都变)。`MATRIX_INTERNAL_URL` 在 compose 里写死为 `http://synapse:8008`;
@@ -274,7 +281,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - **新书信推送(Synapse → 后端回调)**:模块配置里的 `push_url`(模板里是 `${MATRIX_PUSH_HOOK_URL}`),指向后端
   `http://<后端内网地址>/api/v1/chat/hooks/new-message/`(容器网络内,不经 nginx、不对外暴露)。
   每条 `m.room.message` 落库之后,模块在后台进程里 POST `{room_id, event_id, sender, ts, mac}`;
-  `mac` 用 `grant_secret`(= `MATRIX_JWT_SECRET`)签,后端 `apps/chat/hook.py` 验签、限 5 分钟时间窗,
+  `mac` 用 `hook_secret`(= `MATRIX_HOOK_SECRET`;模块里没写 `hook_secret` 时退回 `grant_secret`)签,后端 `apps/chat/hook.py` 验签、限 5 分钟时间窗,
   不认令牌。后端按会话定收件人(那一世的本世账号;官员回信推给灵魂,灵魂写给殿司的不推),
   按收件人的「书信」偏好(`PushPreference.chat`)记推送,走 soul_push 的同一条发送 / 补发 / 回执路径
   (`SOUL_PUSH_ENABLED` 关着时照常记为 DISABLED)。**回调失败不影响消息本身**:Synapse 在落库之后才调,
@@ -308,8 +315,14 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
 ```
 
   改 homeserver 的值:编辑 `synapse_data` 卷里的 `/data/homeserver.yaml` 后 `$DC restart synapse`,
-  或删掉它重跑脚本(签名密钥是单独的文件,不受影响)。**改 `MATRIX_JWT_SECRET` 要两边一起改**,
-  否则 App 登录与后端代发全部 403。
+  或删掉它重跑脚本(签名密钥是单独的文件,不受影响)。**改 `MATRIX_JWT_SECRET` / `MATRIX_GRANT_SECRET` / `MATRIX_HOOK_SECRET` 都要两边一起改**
+  (分别对 `jwt_config.secret` / 模块 `grant_secret` / 模块 `hook_secret`),
+  否则依次是:App 登录与后端代发全部 403;私聊请求被模块当作无凭据拒绝;新书信推送全部 403(消息照常收发)。
+  **已部署、还在共用一把的环境**(脚本「已合并过」就不再追加模板,所以要手改):根 `.env` 加
+  `MATRIX_GRANT_SECRET` 与 `MATRIX_HOOK_SECRET`(各自 `python -c "import secrets; print(secrets.token_urlsafe(48))"`),
+  卷里 `/data/homeserver.yaml` 的 `modules` → `SoulLedgerPolicy` → `config` 下把 `grant_secret` 换成新的
+  `MATRIX_GRANT_SECRET`、加一行 `hook_secret: "<MATRIX_HOOK_SECRET>"`;然后 `$DC restart synapse`、
+  `$DC up -d backend celery celery-beat`。先重启哪边都会有几秒对不上(私聊请求或推送 403),对齐后自愈,消息不丢。
 - 2026-09-19 本机实跑过上面这套(synapse + 临时 postgres + nginx,端口只绑 127.0.0.1):脚本两次运行
   第二次全部跳过;`/_matrix/client/versions` 经 nginx 200,`/_synapse/admin/*` 经 nginx 403;
   `setup_matrix` 两次均成功(第二次走「已注册 → JWT 登录」);`test_chat_synapse_integration.py`
@@ -604,7 +617,7 @@ backend、celery、celery-beat 三个容器读同一组变量,一起重建。
 3. 等 `JWT_REFRESH_LIFETIME`(默认 7 天)过去 —— 那之后旧 key 签的刷新令牌都已过期或已被轮换掉。
 4. 删掉 `SECRET_KEY_FALLBACKS`,再重建。
 
-不受影响:`MATRIX_USER_SALT`(**不可轮换**,见上文聊天一节)与 `MATRIX_JWT_SECRET` 是各自的密钥。
+不受影响:`MATRIX_USER_SALT`(**不可轮换**,见上文聊天一节)与 `MATRIX_JWT_SECRET` / `MATRIX_GRANT_SECRET` / `MATRIX_HOOK_SECRET` 是各自的密钥。
 会变的:助手审计里「问题的 HMAC」与助手配置的缓存指纹用 `SECRET_KEY` 作 HMAC 键,换 key 之后新旧两段
 哈希不能互相比对(缓存只是失效一次)。
 

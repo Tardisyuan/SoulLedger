@@ -7,7 +7,8 @@
 # (secrets substituted) with config/synapse mounted as the module path — a service starts before checkout.
 #
 # Needs SYNAPSE_TEST_SERVER_NAME, SYNAPSE_TEST_JWT_SECRET, SYNAPSE_TEST_SHARED_SECRET (the same values the
-# test reads). SYN_PUSH_URL: where the policy module calls back (default: the test's --liveserver on
+# test reads). SYNAPSE_TEST_GRANT_SECRET / SYNAPSE_TEST_HOOK_SECRET are optional and fall back to the JWT one,
+# as the backend's MATRIX_GRANT_SECRET / MATRIX_HOOK_SECRET do. SYN_PUSH_URL: where the policy module calls back (default: the test's --liveserver on
 # host.docker.internal:18099). SYN_DOCKER_ARGS: extra `docker run` flags (ports, network, --add-host).
 set -euo pipefail
 NAME="${SYN_NAME:-sl-synapse-test}"
@@ -29,6 +30,8 @@ docker run --rm -v "$DIR:/data" "${OWNER[@]}" -e SYNAPSE_SERVER_NAME="$SYNAPSE_T
     -e SYNAPSE_REPORT_STATS=no "$IMAGE" generate >/dev/null
 # Appended, as in deployment: for a key both define, the later one wins.
 sed -e "s|\${MATRIX_JWT_SECRET}|$SYNAPSE_TEST_JWT_SECRET|g" \
+    -e "s|\${MATRIX_GRANT_SECRET}|${SYNAPSE_TEST_GRANT_SECRET:-$SYNAPSE_TEST_JWT_SECRET}|g" \
+    -e "s|\${MATRIX_HOOK_SECRET}|${SYNAPSE_TEST_HOOK_SECRET:-$SYNAPSE_TEST_JWT_SECRET}|g" \
     -e "s|\${MATRIX_REGISTRATION_SHARED_SECRET}|$SYNAPSE_TEST_SHARED_SECRET|g" \
     -e "s|\${MATRIX_SERVER_NAME}|$SYNAPSE_TEST_SERVER_NAME|g" \
     -e "s|\${MATRIX_PUSH_HOOK_URL}|$PUSH|g" \

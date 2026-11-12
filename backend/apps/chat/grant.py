@@ -9,8 +9,9 @@
 * 是消息,但 content 里没有有效的 `io.soulledger.grant` → 拒绝;
 * 凭据有效但 nonce 用过 → 拒绝。
 
-凭据只有后端签得出(密钥是 `MATRIX_JWT_SECRET`,与登录凭据同一信任边界 —— 拿到它本来就能
-以任何人身份登录),绑定房间与发送者、30 秒过期、一次有效。于是提权窗口里发起方能发出的
+凭据只有后端签得出(密钥是 `MATRIX_GRANT_SECRET` = 模块配置 `grant_secret`,与登录、回调签名各用一把,
+审计 2026-11-11 A2-07;没设时退回 `MATRIX_JWT_SECRET`,启动时警告,**上线前必须分别设置**),
+绑定房间与发送者、30 秒过期、一次有效。于是提权窗口里发起方能发出的
 **恰好是后端替它签的那一条**。
 
 模块里有一份同样的 `verify`(Synapse 进程里 import 不到 Django);两份是否一致由
@@ -21,8 +22,15 @@ import hmac
 import secrets
 import time
 
+from django.conf import settings
+
 KEY = "io.soulledger.grant"
 TTL_SECONDS = 30
+
+
+def secret():
+    """发言凭据的密钥。`MATRIX_GRANT_SECRET` 没设时退回 `MATRIX_JWT_SECRET`(过渡)。"""
+    return settings.MATRIX_GRANT_SECRET or settings.MATRIX_JWT_SECRET
 
 
 def _mac(secret, room_id, sender, nonce, exp):

@@ -4,9 +4,11 @@
 Synapse 模块(config/synapse/soulledger_policy.py)在消息落库后 `POST /api/v1/chat/hooks/new-message/`,
 body 是 `{room_id, event_id, sender, ts, mac}`,`mac` 由这里同一算法签。
 
-**密钥沿用 grant_secret(= 后端 `MATRIX_JWT_SECRET`)**:同一条信任边界 —— 拿到它本来就能以任何人
-身份登录 Synapse,多一份密钥只多一处要配、要轮换的地方。签名串以 `push\\n` 开头,与发言凭据
-(`grant.py`,以房间 id `!` 开头)不会互相冒充。
+**密钥是 `MATRIX_HOOK_SECRET`(= 模块配置 `hook_secret`),与登录(`MATRIX_JWT_SECRET`)、发言凭据
+(`MATRIX_GRANT_SECRET`)各用各的**(审计 2026-11-11 A2-07,用户 11-11 定):此前三处共用一把,
+任一处落盘的副本泄漏,就既能冒任何灵魂登录 Synapse、又能伪造回调。过渡:没设时退回 `MATRIX_JWT_SECRET`,
+启动时警告一次(`apps.py`);**上线前必须分别设置**。签名串以 `push\\n` 开头,与发言凭据
+(`grant.py`,以房间 id `!` 开头)即使密钥相同也不会互相冒充。
 
 签的是字段而不是 HTTP body 的字节:Synapse 的 http client 自己序列化 JSON,我们控制不了字节。
 `ts` 限 5 分钟,挡旧回调的重放;窗口内的重放由推送的 dedupe_key(`chat:<event_id>`)挡。
@@ -18,8 +20,15 @@ import hashlib
 import hmac
 import time
 
+from django.conf import settings
+
 MAX_SKEW_SECONDS = 300
 FIELDS = ("room_id", "event_id", "sender")
+
+
+def secret():
+    """回调签名的密钥。`MATRIX_HOOK_SECRET` 没设时退回 `MATRIX_JWT_SECRET`(过渡)。"""
+    return settings.MATRIX_HOOK_SECRET or settings.MATRIX_JWT_SECRET
 
 
 def _mac(secret, room_id, event_id, sender, ts):

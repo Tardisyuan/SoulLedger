@@ -48,7 +48,7 @@
 | `DISABLE_SERVER_SIDE_CURSORS` | — | 生产叠加文件对三个 Django 服务都设 `"true"`(pgbouncer 事务池) | `production.yml:57,79,94` |
 | `SOUL_PUSH_ENABLED` / `EXPO_ACCESS_TOKEN` | 推(见 §0.1) | 不开:推送只记 `DISABLED` 行。开:backend 与 celery worker **都要有**;worker 要能出站 `exp.host:443`。`EXPO_ACCESS_TOKEN` 仅在 Expo 控制台开了「增强推送安全」时才必需 | `settings.py:415-417`;`DEPLOYMENT.md` 推送一节 |
 | `MATRIX_ENABLED` | — | 默认 `False`,关着时 `/me/chat/` 与 `/chat/inbox/` 答 503 | `settings.py:424` |
-| `MATRIX_PUBLIC_BASEURL` `MATRIX_SERVER_NAME` `MATRIX_JWT_SECRET` `MATRIX_REGISTRATION_SHARED_SECRET` `MATRIX_USER_SALT` | 开聊天时必 | `MATRIX_USER_SALT` 空则**拒绝启用聊天**(`settings.py:440` 注释);`MATRIX_SERVER_NAME` 与 `MATRIX_USER_SALT` 定了就不能改(mxid 全变);`MATRIX_JWT_SECRET` ≥32 字节,**两边(后端与 homeserver.yaml)一起改**。这几项已在 `x-django-env` 里(`docker-compose.yml:31-37`) | `DEPLOYMENT.md`「灵魂聊天」 |
+| `MATRIX_PUBLIC_BASEURL` `MATRIX_SERVER_NAME` `MATRIX_JWT_SECRET` `MATRIX_GRANT_SECRET` `MATRIX_HOOK_SECRET` `MATRIX_REGISTRATION_SHARED_SECRET` `MATRIX_USER_SALT` | 开聊天时必 | `MATRIX_USER_SALT` 空则**拒绝启用聊天**(`settings.py:440` 注释);`MATRIX_SERVER_NAME` 与 `MATRIX_USER_SALT` 定了就不能改(mxid 全变);`MATRIX_JWT_SECRET` / `MATRIX_GRANT_SECRET` / `MATRIX_HOOK_SECRET` 各 ≥32 字节、互不相同,**两边(后端与 homeserver.yaml 的 `jwt_config.secret` / 模块 `grant_secret` / `hook_secret`)一起改**;后两项没设时退回 `MATRIX_JWT_SECRET` 并警告(过渡,上线前必须设)。这几项已在 `x-django-env` 里(`docker-compose.yml:31-37`) | `DEPLOYMENT.md`「灵魂聊天」 |
 | `ASSISTANT_ENABLED` `ASSISTANT_PROVIDER` `ASSISTANT_API_KEY` `ASSISTANT_BASE_URL` `ASSISTANT_MODEL` `ASSISTANT_EMBEDDING_URL` … | 开「问一问」时 | 默认关(`ASSISTANT_ENABLED=False`,接口 503)。**`ASSISTANT_EMBEDDING_URL` 默认 `http://gates-host.lan:11434`(局域网 Ollama),上线前必须换成部署内可达的服务**;每殿还要 `Tenant.settings["assistant_enabled"]=true`。也不在 `x-django-env` 里(§0.1) | `settings.py:452-485` |
 | `SCHEDULER_*`、`CACHE_PERMISSION_*` | — | 有默认值,见 `settings.py` 对应注释 | |
 
@@ -70,7 +70,7 @@
 
 ### 1.4 Synapse / Matrix
 
-见 `DEPLOYMENT.md`「灵魂聊天」。清单:根 `.env` 填 `MATRIX_PUBLIC_BASEURL`(含末尾 `/`,如 `https://example.com/`)、`MATRIX_SERVER_NAME`、`MATRIX_JWT_SECRET`(≥32)、`MATRIX_REGISTRATION_SHARED_SECRET`、`MATRIX_USER_SALT`、`SYNAPSE_DB_PASSWORD`;
+见 `DEPLOYMENT.md`「灵魂聊天」。清单:根 `.env` 填 `MATRIX_PUBLIC_BASEURL`(含末尾 `/`,如 `https://example.com/`)、`MATRIX_SERVER_NAME`、`MATRIX_JWT_SECRET`(≥32)、`MATRIX_GRANT_SECRET`(≥32)、`MATRIX_HOOK_SECRET`(≥32,三把互不相同)、`MATRIX_REGISTRATION_SHARED_SECRET`、`MATRIX_USER_SALT`、`SYNAPSE_DB_PASSWORD`;
 `MATRIX_ENABLED` 先留 `False`,跑完 `scripts/synapse-init.sh`、`up -d --wait synapse`、`up -d nginx` 后改 `True`,再 `up -d backend celery celery-beat` 并 `exec backend python manage.py setup_matrix`。
 `config/synapse/soulledger_policy.py` 必须挂进去(`docker-compose.yml:152`),少了它灵魂能绕过全部聊天规则。
 

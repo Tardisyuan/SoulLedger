@@ -62,6 +62,13 @@ if missing:
     sys.exit(f"缺少环境变量(写进根 .env):{', '.join(missing)}")
 if len(os.environ["MATRIX_JWT_SECRET"].encode()) < 32:
     sys.exit("MATRIX_JWT_SECRET 至少 32 字节")
+# 模块的两把密钥(审计 2026-11-11 A2-07)。过渡:没设时退回 MATRIX_JWT_SECRET,与后端同一条规则;上线前必须分别设置。
+for name in ("MATRIX_GRANT_SECRET", "MATRIX_HOOK_SECRET"):
+    if not os.environ.get(name):
+        print(f"警告:{name} 未设置,退回 MATRIX_JWT_SECRET;上线前必须分别设置", file=sys.stderr)
+        os.environ[name] = os.environ["MATRIX_JWT_SECRET"]
+    elif len(os.environ[name].encode()) < 32:
+        sys.exit(f"{name} 至少 32 字节")
 if os.environ["SYNAPSE_SERVER_NAME"] != os.environ["MATRIX_SERVER_NAME"]:
     sys.exit("SYNAPSE_SERVER_NAME 与 MATRIX_SERVER_NAME 不一致")
 

@@ -28,6 +28,7 @@ import requests
 from django.db import transaction
 
 from apps.chat.grant import KEY as GRANT_KEY
+from apps.chat.grant import secret as grant_secret
 from apps.chat.grant import sign as sign_grant
 from apps.chat.models import Conversation
 from tests.chat_support import follow, mutual, mxid
@@ -58,6 +59,9 @@ def synapse(settings, monkeypatch):
     settings.MATRIX_PUBLIC_BASEURL = URL
     settings.MATRIX_SERVER_NAME = os.environ["SYNAPSE_TEST_SERVER_NAME"]
     settings.MATRIX_JWT_SECRET = os.environ["SYNAPSE_TEST_JWT_SECRET"]
+    # 与 scripts/synapse-test.sh 同一条退回规则:没设就是空,后端退回上面那把。
+    settings.MATRIX_GRANT_SECRET = os.environ.get("SYNAPSE_TEST_GRANT_SECRET", "")
+    settings.MATRIX_HOOK_SECRET = os.environ.get("SYNAPSE_TEST_HOOK_SECRET", "")
     settings.MATRIX_REGISTRATION_SHARED_SECRET = os.environ["SYNAPSE_TEST_SHARED_SECRET"]
     settings.MATRIX_SERVICE_LOCALPART = "soulledger"
     # 每次一个新盐:同一台 Synapse 上重跑,mxid 不与上一次的撞。
@@ -184,7 +188,7 @@ def test_the_request_rule_the_mute_and_retirement_against_synapse(cn_tenant, syn
                         json={"m.relates_to": {"rel_type": "m.annotation", "event_id": texts[0]["event_id"],
                                                "key": "+"}})
     assert status == 403
-    fresh = sign_grant(synapse.MATRIX_JWT_SECRET, room_id, mxid(a))
+    fresh = sign_grant(grant_secret(), room_id, mxid(a))
     assert _say(a_token, room_id, "带新凭据", extra={GRANT_KEY: fresh})[0] == 200
     _set_level(service, room_id, mxid(a), 0)
 

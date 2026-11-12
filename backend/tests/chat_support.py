@@ -35,7 +35,9 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.chat.grant import KEY as GRANT_KEY
+from apps.chat.grant import secret as grant_secret
 from apps.chat.grant import verify
+from apps.chat.hook import secret as hook_secret
 from apps.chat.matrix import ROOM_EVENT_LEVELS, MatrixError
 
 SERVER_NAME = "test.soulledger"
@@ -119,7 +121,7 @@ class FakeMatrix:
             raise MatrixError(f"user_level ({have}) < send_level ({need})", errcode="M_FORBIDDEN", status=403)
         if room["throttle"] == sender:
             grant = (extra or {}).get(GRANT_KEY)
-            if not verify(settings.MATRIX_JWT_SECRET, room_id, sender, grant) or grant["nonce"] in FakeMatrix.used:
+            if not verify(grant_secret(), room_id, sender, grant) or grant["nonce"] in FakeMatrix.used:
                 raise MatrixError("This message has been rejected as probable spam", errcode="M_FORBIDDEN",
                                   status=403)
             FakeMatrix.used.add(grant["nonce"])
@@ -273,7 +275,8 @@ def policy(client=None, *, push_url=PUSH_URL):
     module = load_policy_module()
     api = FakeModuleApi(client)
     config = module.SoulLedgerPolicy.parse_config({
-        "service_user": f"@soulledger:{SERVER_NAME}", "grant_secret": settings.MATRIX_JWT_SECRET,
+        "service_user": f"@soulledger:{SERVER_NAME}", "grant_secret": grant_secret(),
+        "hook_secret": hook_secret(),
         **({"push_url": push_url} if push_url else {}),
     })
     return module.SoulLedgerPolicy(config, api), api

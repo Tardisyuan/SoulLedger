@@ -120,6 +120,17 @@ if is_true "$(get MATRIX_ENABLED)"; then
     n=$(get MATRIX_JWT_SECRET | wc -c | tr -d ' ')
     if [ "$n" -ge 32 ]; then pass "MATRIX_JWT_SECRET length >= 32 bytes"; else fail "MATRIX_JWT_SECRET is $n bytes; needs >= 32"; fi
   fi
+  # Audit 2026-11-11 A2-07: the grant and hook secrets are separate from the login one. Unset still works
+  # (both fall back to MATRIX_JWT_SECRET) but means one leaked copy forges logins and callbacks alike.
+  for v in MATRIX_GRANT_SECRET MATRIX_HOOK_SECRET; do
+    if [ -z "$(get "$v")" ]; then
+      warn "$v unset; falls back to MATRIX_JWT_SECRET (set it, and the module's matching key in homeserver.yaml)"
+    else
+      n=$(get "$v" | wc -c | tr -d ' ')
+      if [ "$n" -ge 32 ]; then pass "$v length >= 32 bytes"; else fail "$v is $n bytes; needs >= 32"; fi
+      if [ "$(get "$v")" = "$(get MATRIX_JWT_SECRET)" ]; then fail "$v equals MATRIX_JWT_SECRET"; fi
+    fi
+  done
 else
   pass "MATRIX_ENABLED is off (chat checks skipped)"
 fi

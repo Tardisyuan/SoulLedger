@@ -262,7 +262,7 @@ class MeChatMessagesView(ChatView):
 class ChatPushHookView(APIView):
     """`POST /api/v1/chat/hooks/new-message/` —— Synapse 模块在新消息落库后回调这里。
 
-    **不认任何令牌,只认签名**(`apps/chat/hook.py`,密钥即 grant_secret = `MATRIX_JWT_SECRET`)。
+    **不认任何令牌,只认签名**(`apps/chat/hook.py`,密钥 `MATRIX_HOOK_SECRET`,见 `hook.secret`)。
     签名不对 403、没启用聊天 503:两种都不写任何东西。收件人由会话定(`services.notify_new_message`),
     回调里的字段只用来找会话与发送者,伪造不出「推给谁」。
 
@@ -276,10 +276,10 @@ class ChatPushHookView(APIView):
 
     @extend_schema(exclude=True)
     def post(self, request):
-        if not settings.MATRIX_ENABLED or not settings.MATRIX_JWT_SECRET:
+        if not settings.MATRIX_ENABLED or not hook.secret():
             return Response({"detail": "聊天未启用。", "code": "chat_not_configured"},
                             status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        if not hook.verify(settings.MATRIX_JWT_SECRET, request.data):
+        if not hook.verify(hook.secret(), request.data):
             return Response({"detail": "签名无效。", "code": "bad_signature"}, status=status.HTTP_403_FORBIDDEN)
         ids = svc.notify_new_message(request.data["room_id"], request.data["event_id"], request.data["sender"])
         return Response({"queued": len(ids)})

@@ -15,7 +15,7 @@
    (审计 2026-11-11 A2-02)。
 
 4. 新消息推送:每条 `m.room.message` 落库之后,回调后端 `push_url`(签名见
-   backend/apps/chat/hook.py,密钥同 grant_secret)。后端定收件人、按偏好记推送。
+   backend/apps/chat/hook.py,密钥 `hook_secret` = 后端 `MATRIX_HOOK_SECRET`)。后端定收件人、按偏好记推送。
    回调在后台进程里跑、在消息落库**之后**:后端慢、挂、拒,都不影响消息本身,只记一行日志。
    不配 `push_url` 就不回调。
 
@@ -27,8 +27,12 @@ homeserver.yaml:
       - module: soulledger_policy.SoulLedgerPolicy
         config:
           service_user: "@soulledger:<server_name>"
-          grant_secret: "<与后端 MATRIX_JWT_SECRET 相同>"
+          grant_secret: "<与后端 MATRIX_GRANT_SECRET 相同>"
+          hook_secret: "<与后端 MATRIX_HOOK_SECRET 相同>"
           push_url: "http://backend:8000/api/v1/chat/hooks/new-message/"   # 可选
+
+两把密钥与 `jwt_config.secret`(登录)各不相同(审计 2026-11-11 A2-07)。**过渡**:没写 `hook_secret` 时
+回调用 `grant_secret` 签,并在启动时警告 —— 只改了后端、还没改这份配置的部署照常推送;上线前必须写上。
 
 ponytail: 用过的 nonce 记在进程内存里。单进程 Synapse 足够;拆 worker 时换成共享存储。
 `tests/test_chat_synapse_integration.py` 对着真 Synapse 断言这里每一条拒绝。
@@ -71,6 +75,9 @@ class SoulLedgerPolicy:
         self._api = api
         self._service = config["service_user"]
         self._secret = config["grant_secret"]
+        self._hook_secret = config.get("hook_secret") or self._secret
+        if not config.get("hook_secret"):
+            logger.warning("soulledger_policy: 未配置 hook_secret,回调签名退回 grant_secret;上线前必须分别设置")
         self._used = {}  # nonce -> exp
         self._push_url = config.get("push_url") or ""
         if self._push_url:
@@ -90,6 +97,8 @@ class SoulLedgerPolicy:
             raise ValueError("soulledger_policy: service_user 必须是完整 mxid")
         if len(str(config.get("grant_secret", ""))) < 32:
             raise ValueError("soulledger_policy: grant_secret 至少 32 字节")
+        if config.get("hook_secret") and len(str(config["hook_secret"])) < 32:
+            raise ValueError("soulledger_policy: hook_secret 至少 32 字节")
         if config.get("push_url") and not str(config["push_url"]).startswith(("http://", "https://")):
             raise ValueError("soulledger_policy: push_url 必须是 http(s) URL")
         return config
@@ -129,7 +138,7 @@ class SoulLedgerPolicy:
                                             event.sender)
 
     async def _push(self, room_id, event_id, sender):
-        body = _push_body(self._secret, room_id, event_id, sender, int(time.time()))
+        body = _push_body(self._hook_secret, room_id, event_id, sender, int(time.time()))
         try:
             await self._api.http_client.post_json_get_json(self._push_url, body)
         except Exception as exc:  # noqa: BLE001 — 回调失败只影响推送,不影响消息

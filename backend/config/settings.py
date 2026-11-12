@@ -509,8 +509,16 @@ MATRIX_INTERNAL_URL = os.getenv("MATRIX_INTERNAL_URL", "http://synapse:8008")
 MATRIX_PUBLIC_BASEURL = os.getenv("MATRIX_PUBLIC_BASEURL", "")
 MATRIX_SERVER_NAME = os.getenv("MATRIX_SERVER_NAME", "")
 # 与 Synapse 的 jwt_config.secret 是同一个值。后端用它签两种东西:发给 App 的
-# 短时效登录凭据,以及后端自己代灵魂发言时换取的 access token。
+# 短时效登录凭据,以及后端自己代灵魂发言时换取的 access token。**只用于登录。**
 MATRIX_JWT_SECRET = os.getenv("MATRIX_JWT_SECRET", "")
+# 另两把,各 ≥32 字节、互不相同(审计 2026-11-11 A2-07):此前三处共用 MATRIX_JWT_SECRET,任一份副本泄漏
+# 就既能冒任何灵魂登录、又能伪造回调。
+# MATRIX_GRANT_SECRET = Synapse 模块配置 grant_secret:节流私聊请求的一次性发言凭据(apps/chat/grant.py)。
+# MATRIX_HOOK_SECRET  = Synapse 模块配置 hook_secret:新消息回调的签名(apps/chat/hook.py)。
+# **过渡**:没设时退回 MATRIX_JWT_SECRET,启动时打一条警告(apps/chat/apps.py),已部署的环境不改配置照常运行。
+# 上线前必须分别设置,并与 homeserver.yaml 的模块配置同步。
+MATRIX_GRANT_SECRET = os.getenv("MATRIX_GRANT_SECRET", "")
+MATRIX_HOOK_SECRET = os.getenv("MATRIX_HOOK_SECRET", "")
 # 与 Synapse 的 registration_shared_secret 同一个值。**只用一次**:把服务账号
 # 注册成 admin(`/_synapse/admin/v1/register`)。之后一律走 JWT 登录。
 MATRIX_REGISTRATION_SHARED_SECRET = os.getenv("MATRIX_REGISTRATION_SHARED_SECRET", "")

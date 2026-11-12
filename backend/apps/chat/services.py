@@ -47,6 +47,7 @@ from django.utils import timezone
 
 from apps.chat import inbox
 from apps.chat.grant import KEY as GRANT_KEY
+from apps.chat.grant import secret as grant_secret
 from apps.chat.grant import sign as sign_grant
 from apps.chat.identity import deactivate_identity, display_name, ensure_identity
 from apps.chat.matrix import ROOM_EVENT_LEVELS, MatrixError, get_client, login_jwt
@@ -677,7 +678,7 @@ def _send_request(client, conversation, identity, body):
     mxid = identity.matrix_user_id
     last = conversation.last_request_at
     txn = _txn(conversation.room_id, mxid, f"request:{last.isoformat() if last else 'first'}")
-    grant = sign_grant(settings.MATRIX_JWT_SECRET, conversation.room_id, mxid)
+    grant = sign_grant(grant_secret(), conversation.room_id, mxid)
     client.set_user_levels(conversation.room_id, {mxid: SPEAK})
     try:
         return client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
