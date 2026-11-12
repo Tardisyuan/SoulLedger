@@ -169,6 +169,32 @@ def test_a_diyu_acquittal_waits_for_its_flow_then_goes_to_rebirth(cn):
     assert (plan.status, soul.current_state) == ("COMPLETED", SoulState.REINCARNATING)
 
 
+def test_a_diyu_acquittal_with_a_merged_cross_judgment_gets_its_foreign_stops(cn):
+    """F-DISP-02(2026-11-12):判无罪的计划没有站,联审以 PASS 结束时 `append_cross_stops` 对空列表取 `max()`,
+    ValueError 被包成 CrossConclusionRefusedError,流程终审永远批不过。外地站应从 2 起。"""
+    from apps.dispatch.models import CrossTenantJudgment, ParticipantRole
+    from apps.dispatch.services import CrossTenantJudgmentService
+    from tests.test_workflow_segments import _template
+
+    eg = sp.tenant("EG_DUAT")
+    _template(cn, "CHINESE")
+    _template(eg, "EGYPTIAN")
+    soul, case = sp.open_case(cn)
+    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj.judgment = case
+    cj.save(update_fields=["judgment"])
+    seat = CrossTenantJudgmentService.add_participant(cj, eg, None, ParticipantRole.CO_JUDGE, node_order=2)
+    CrossTenantJudgmentService.submit_sentence(seat, sp.stop_realm(eg), 5, "", None)
+    CrossTenantJudgmentService.activate(cj)
+    case.conclude(Verdict.PASSED, "", create_workflow=True)
+    plan = SentencePlan.all_objects.get(soul=soul)
+    assert not SentenceNode.all_objects.filter(plan=plan).exists()
+
+    CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None, by_workflow=True)
+    stops = list(SentenceNode.all_objects.filter(plan=plan).order_by("order").values_list("order", "tenant_code", "is_home"))
+    assert stops == [(2, "EG_DUAT", False)]
+
+
 def test_a_european_acquittal_is_still_placed(eu_tenant):
     soul, case = sp.open_case(eu_tenant)
     case.conclude(Verdict.PASSED, "")

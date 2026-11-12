@@ -381,7 +381,10 @@ def append_cross_stops(cross):
     if not seats:
         return []
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
-    anchor = max(n.order for n in live)
+    # 判无罪的计划一个站都没有(F-DISP-02,2026-11-12):此前 `max()` 对空列表抛 ValueError,被包成
+    # CrossConclusionRefusedError,流程终审永远批不过。锚点取 1:外地站从 2 起(1 号只能是原属站,
+    # `first_sentence_node_is_home`),与 `create_from_conclusion` 抄席位的序号一致。
+    anchor = max((n.order for n in nodes), default=1) if not live else max(n.order for n in live)
     added = [
         SentenceNode.objects.create(
             plan=plan, order=anchor + i, tenant_code=seat.participant_tenant.code, is_home=False,
