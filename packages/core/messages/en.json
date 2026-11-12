@@ -2988,7 +2988,7 @@
     },
     "mfa_must_setup": "Your role requires two-step verification. Turn it on to carry on.",
     "default_view_admin": "Administrator",
-    "default_view_unset": "Not chosen yet: you land by role — officers on the judgment queue, administrators on the overview."
+    "default_view_unset": "Not chosen yet: you land by role — officers on the case desk, administrators on the ledger."
   },
   "notifications": {
     "title": "Notifications",
@@ -3732,8 +3732,8 @@
     "default_view": "Default view",
     "default_view_desc": "What you see first after signing in. Saved on your account, in any browser.",
     "view_operator": "Operator",
-    "view_operator_desc": "Opens on the judgment queue; keyboard first.",
-    "view_admin_desc": "Opens on the statistics overview.",
+    "view_operator_desc": "Opens on the case desk; keyboard first.",
+    "view_admin_desc": "Opens on the ledger (administrators); other roles get the statistics overview.",
     "prefs": "Language and theme",
     "prefs_desc": "Interface language and light or dark theme; change them any time from the user menu.",
     "keys_desc": "These work throughout the judgment queue.",

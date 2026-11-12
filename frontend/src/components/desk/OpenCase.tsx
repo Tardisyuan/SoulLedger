@@ -5,10 +5,12 @@ import { judgmentApi, type Judgment, type JudgmentQueueCounts, type JudgmentQueu
 import { soulsApi, type SoulRecordEntry } from "@soulledger/core/api/souls";
 import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { formatHistoricalDate, type HistoricalDate } from "@soulledger/core/domain/dates";
+import { formatHistoricalDate, formatListDate, type HistoricalDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
+import { PageHead } from "@/src/components/ui/PageShell";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { deadlineText, deskTag, sourceLabel } from "./deskRules";
 import s from "./desk.module.css";
@@ -52,7 +54,8 @@ export function OpenCase({
   claim: Action;
   release: Action;
 }) {
-  const { t, locale, formatDate } = useI18n();
+  const { t, locale } = useI18n();
+  const day = (v: string | null | undefined) => formatListDate(v, locale, { time: false });
   const { hasPermission } = usePermissions();
   const detail = useQuery({ queryKey: judgmentKeys.detail(row.id), queryFn: async () => (await judgmentApi.get(row.id)).data });
   const soul = useQuery({
@@ -63,6 +66,7 @@ export function OpenCase({
   // The list row until the detail lands: the stack never shows a blank sheet while J is held down.
   const j: Judgment = detail.data ?? row;
   const tag = deskTag(t, j, group);
+  const entered = day(j.created_at);
   const court = courtLabel(t, j.court, locale);
   const hist = (d: HistoricalDate | null | undefined) => (d ? formatHistoricalDate(d, locale) : "");
 
@@ -93,46 +97,46 @@ export function OpenCase({
         <span data-testid="desk-position">{t("officer_app.desk.position", { n: String(position.n), total: String(position.total) })}</span>
       </div>
 
-      <header className={s.caseHead}>
-        <p className={s.meta}>
-          {[j.case_number, court, t("caseDesk.meta.entered", { date: formatDate(j.created_at, { month: "long", day: "numeric" }) })].filter(Boolean).join(" · ")}
-        </p>
-        <h1 className={s.caseName} data-testid="desk-case-name">
-          {j.soul_name}
-        </h1>
-        <div>
+      <PageHead
+        kind="dossier"
+        loading={detail.isPending}
+        meta={[j.case_number, court, entered ? t("caseDesk.meta.entered", { date: entered }) : ""].filter(Boolean).join(" · ")}
+        title={<span data-testid="desk-case-name">{j.soul_name}</span>}
+        subtitle={
           <Badge tone={tag.tone} glyph={tag.glyph || undefined}>
             {tag.text}
           </Badge>
-        </div>
-        <div className={s.actions}>
-          {release ? (
-            <button type="button" className={`${s.btn} ${s.btnGhost}`} disabled={release.busy} onClick={release.run} data-testid="desk-release">
-              {t("caseDesk.actions.release")}
-            </button>
-          ) : null}
-          {claim ? (
-            <button type="button" className={s.btn} disabled={claim.busy} onClick={claim.run} data-testid="desk-claim">
-              {t("officer_app.queue.claim")}
+        }
+        actions={
+          <>
+            {release ? (
+              <Button variant="ghost" disabled={release.busy} onClick={release.run} data-testid="desk-release">
+                {t("caseDesk.actions.release")}
+              </Button>
+            ) : null}
+            {claim ? (
+              <Button disabled={claim.busy} onClick={claim.run} data-testid="desk-claim" aria-keyshortcuts="C">
+                {t("officer_app.queue.claim")}
+                <span className={s.kbd} aria-hidden="true">
+                  C
+                </span>
+              </Button>
+            ) : null}
+            <Button className={s.hideNarrow} onClick={onNext} disabled={position.n >= position.total} data-testid="desk-next" aria-keyshortcuts="J">
+              {t("caseDesk.actions.next")}
               <span className={s.kbd} aria-hidden="true">
-                C
+                J
               </span>
-            </button>
-          ) : null}
-          <button type="button" className={`${s.btn} ${s.hideNarrow}`} onClick={onNext} disabled={position.n >= position.total} data-testid="desk-next" aria-keyshortcuts="J">
-            {t("caseDesk.actions.next")}
-            <span className={s.kbd} aria-hidden="true">
-              J
-            </span>
-          </button>
-          <button type="button" className={`${s.btn} ${s.btnInk}`} onClick={onOpen} data-testid="desk-open" aria-keyshortcuts="Enter">
-            {t("caseDesk.actions.open")}
-            <span className={s.kbd} aria-hidden="true">
-              ↵
-            </span>
-          </button>
-        </div>
-      </header>
+            </Button>
+            <Button variant="primary" onClick={onOpen} data-testid="desk-open" aria-keyshortcuts="Enter">
+              {t("caseDesk.actions.open")}
+              <span className={s.kbd} aria-hidden="true">
+                ↵
+              </span>
+            </Button>
+          </>
+        }
+      />
 
       {/* 脊:第 3 步交四种正式的;这里先占住位置(页头下方)与高度。 */}
       <div className={s.spine} aria-hidden="true" data-testid="desk-spine" />
@@ -164,7 +168,7 @@ export function OpenCase({
             <JuanRow label={t("caseDesk.juan.handler")}>
               {j.claimed_by_name
                 ? j.claimed_at
-                  ? t("caseDesk.juan.claimed", { name: j.claimed_by_name, date: formatDate(j.claimed_at, { month: "long", day: "numeric" }) })
+                  ? t("caseDesk.juan.claimed", { name: j.claimed_by_name, date: day(j.claimed_at) ?? "" })
                   : j.claimed_by_name
                 : t("caseDesk.juan.unclaimed")}
             </JuanRow>
@@ -176,7 +180,7 @@ export function OpenCase({
               {records.map((r) => {
                 const sign = r.record_type === "MERIT" ? 1 : -1;
                 return (
-                  <JuanRow key={r.id} label={r.event_date ? hist(r.event_date) : formatDate(r.recorded_at)} num={<span className={sign > 0 ? s.pos : s.neg}>{`${sign > 0 ? "+" : "−"}${r.weight}`}</span>}>
+                  <JuanRow key={r.id} label={r.event_date ? hist(r.event_date) : (day(r.recorded_at) ?? "")} num={<span className={sign > 0 ? s.pos : s.neg}>{`${sign > 0 ? "+" : "−"}${r.weight}`}</span>}>
                     {r.description}
                   </JuanRow>
                 );

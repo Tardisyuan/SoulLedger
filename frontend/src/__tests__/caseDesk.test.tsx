@@ -34,6 +34,15 @@ jest.mock("@soulledger/core/api/judgment", () => ({
   },
 }));
 
+jest.mock("@soulledger/core/api/souls", () => ({
+  ...jest.requireActual("@soulledger/core/api/souls"),
+  soulsApi: {
+    get: jest.fn().mockResolvedValue({
+      data: { id: "s-1", name: "赵志强", birth_date: { year: 1982, month: 8, day: 7 }, death_date: { year: 2026, month: 10, day: 22 }, origin_location: "洛阳", records: [] },
+    }),
+  },
+}));
+
 /** An echo `t`: the key, then `k=v` for each variable — enough to tell which branch a rule took. */
 const t = (key: string, vars?: Record<string, string>) => (vars ? `${key}(${Object.entries(vars).map(([k, v]) => `${k}=${v}`).join(",")})` : key);
 

@@ -12,6 +12,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { isTypingTarget, useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { DESK_GROUPS, dedupeGroups, deskTag, heldBeforeClaim, matchesSearch, onDeskCount, overviewParts, rowNotes, sourceChips, sourceLabel, step } from "./deskRules";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
@@ -135,9 +137,10 @@ export function CaseDesk() {
     <div className={s.desk} data-open={phoneOpen && current ? "" : undefined} data-testid="case-desk">
       <section className={s.stack} aria-labelledby="desk-title">
         <div className={s.stackHead}>
-          <h1 id="desk-title" className={s.stackTitle}>
+          {/* 栏头,不是标题:这一页的 <h1> 是右边摊开那一份的人名(PageHead)。 */}
+          <p id="desk-title" className={s.stackTitle}>
             {t("officer_app.desk.title")}
-          </h1>
+          </p>
           {overview.length ? (
             <p className={s.overview} data-testid="desk-overview">
               {overview.map((p, i) => (
@@ -197,16 +200,19 @@ export function CaseDesk() {
         {failed && !lists.some((l) => l.data) ? (
           <p className={s.note} role="alert">
             {t("caseDesk.load_failed")}{" "}
-            <button type="button" className={s.btn} onClick={() => lists.forEach((l) => void l.refetch())}>
+            <Button size="sm" onClick={() => lists.forEach((l) => void l.refetch())}>
               {t("common.retry")}
-            </button>
+            </Button>
           </p>
         ) : loading && flat.length === 0 ? (
           <p className={s.note}>{t("common.loading")}</p>
         ) : flat.length === 0 ? (
-          <div className={s.note} data-testid="desk-empty">
-            <p>{t(query ? "caseDesk.search_none" : "officer_app.desk.empty_title")}</p>
-            {query ? null : <p>{t("officer_app.desk.empty_body")}</p>}
+          <div data-testid="desk-empty">
+            {query ? (
+              <p className={s.note}>{t("caseDesk.search_none")}</p>
+            ) : (
+              <EmptyState title={t("officer_app.desk.empty_title")} reason={t("officer_app.desk.empty_body")} />
+            )}
           </div>
         ) : (
           groups.map(({ group, rows }) =>

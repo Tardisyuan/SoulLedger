@@ -6,8 +6,11 @@ import { judgmentApi } from "@soulledger/core/api/judgment";
 import { crossTenantJudgmentsApi, dispatchApi } from "@soulledger/core/api/dispatch";
 import { CIVILIZATION_OPTIONS, civShortCode } from "@soulledger/core/config/civilizations";
 import { judgmentKeys } from "@soulledger/core/query_keys";
+import { formatListDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { buttonVariants } from "@/src/components/ui/Button";
 import { deadlineText, overviewParts } from "./deskRules";
+import { BrandMark } from "@/src/components/brand/BrandMark";
 import s from "./desk.module.css";
 
 const TOP = 3;
@@ -23,7 +26,7 @@ const CROSS_ROWS = 5;
  * 栏里照实说没有这个数。后端给 `hall-stats/` 加 `?civilization=` 之后,栏里再画进度条。
  */
 export function Zongbu() {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
 
   const counts = useQueries({
     queries: CIVILIZATION_OPTIONS.map((civilization) => ({
@@ -81,8 +84,8 @@ export function Zongbu() {
   return (
     <div className={s.zongbu} data-testid="zongbu">
       <header className={s.zbHead}>
-        <span className={s.watermark} aria-hidden="true">
-          ⚖
+        <span className={s.watermark}>
+          <BrandMark size={200} tone="gold" />
         </span>
         <p className={s.meta}>{[t("zongbu.realms"), asOf ? t("zongbu.as_of", { time: formatDateTime(asOf, { hour: "2-digit", minute: "2-digit" }) }) : ""].filter(Boolean).join(" · ")}</p>
         <h1 className={s.zbTitle}>{t("zongbu.title")}</h1>
@@ -94,7 +97,7 @@ export function Zongbu() {
           ))}
         </p>
         <div className={s.actions}>
-          <Link href="/judgment" className={`${s.btn} ${s.btnInk}`}>
+          <Link href="/judgment" className={buttonVariants({ variant: "primary", size: "md" })}>
             {t("zongbu.open_all")}
           </Link>
         </div>
@@ -153,7 +156,7 @@ export function Zongbu() {
           <div className={s.juan}>
             {crossRows.map((r) => (
               <Link key={r.key} href={r.href} className={s.crossRow}>
-                <span className={s.juanKey}>{r.when ? formatDateTime(r.when, { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</span>
+                <span className={s.juanKey}>{formatListDate(r.when, locale) ?? ""}</span>
                 <span className={s.juanVal}>{r.text}</span>
                 <span className={s.juanKey}>{r.status}</span>
               </Link>

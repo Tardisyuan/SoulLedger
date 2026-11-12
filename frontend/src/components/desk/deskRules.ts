@@ -7,6 +7,8 @@
  */
 import type { Judgment, JudgmentElsewhereCounts, JudgmentQueueCounts, JudgmentQueueGroup, JudgmentQueueSource } from "@soulledger/core/api/judgment";
 import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import type { BadgeTone } from "@/src/components/ui/Badge";
+import { DOSSIER_TAG } from "@/src/components/ui/StatusBadge";
 
 export type T = (key: string, vars?: Record<string, string>) => string;
 
@@ -43,23 +45,21 @@ export function deadlineText(t: T, j: Pick<Judgment, "deadline_remaining_seconds
   return t("queue.deadline.days", { n: String(Math.ceil(s / DAY)) });
 }
 
-export type DeskTone = "neutral" | "error" | "warning";
-
 /**
  * 行的那一个标签:超期 > 退回重审 > 组自己的(待定;候审 / 到不了殿;他人认领;审判中 / 待宣判);否则写期限。
- * `deadline`:标签已经写了期限,第二行不再重复。
+ * 字形与色调取第 1 步的 `DOSSIER_TAG`。`deadline`:标签已经写了期限,第二行不再重复。
  */
-export function deskTag(t: T, row: Judgment, group: JudgmentQueueGroup): { tone: DeskTone; glyph: string; text: string; deadline: boolean } {
+export function deskTag(t: T, row: Judgment, group: JudgmentQueueGroup): { tone: BadgeTone; glyph: string; text: string; deadline: boolean } {
   const s = row.deadline_remaining_seconds;
   if (group !== "deferred" && row.is_overdue && s != null && s < 0) {
-    return { tone: "error", glyph: "!", text: t("officer_app.desk.tag.overdue", { n: String(Math.ceil(-s / DAY)) }), deadline: true };
+    return { ...DOSSIER_TAG.overdue, text: t("officer_app.desk.tag.overdue", { n: String(Math.ceil(-s / DAY)) }), deadline: true };
   }
-  if (row.retrial_of) return { tone: "warning", glyph: "↺", text: t("officer_app.desk.tag.returned"), deadline: false };
-  if (group === "deferred") return { tone: "neutral", glyph: "‖", text: t("officer_app.desk.groups.deferred"), deadline: false };
-  if (group === "unclaimed" && isDuatBarred(row)) return { tone: "neutral", glyph: "‖", text: t("judgment.claim.duat_barred_short"), deadline: false };
-  if (group === "unclaimed" && isHeldUntilFatedDate(row)) return { tone: "neutral", glyph: "‖", text: t("judgment.claim.held_short"), deadline: false };
-  if (group === "others") return { tone: "neutral", glyph: "◌", text: t("officer_app.desk.tag.others"), deadline: false };
-  if (group === "mine") return { tone: "warning", glyph: "◇", text: t(row.is_final ? "officer_app.desk.tag.reviewing" : "officer_app.desk.tag.awaiting"), deadline: false };
+  if (row.retrial_of) return { ...DOSSIER_TAG.retry, text: t("officer_app.desk.tag.returned"), deadline: false };
+  if (group === "deferred") return { ...DOSSIER_TAG.pending, text: t("officer_app.desk.groups.deferred"), deadline: false };
+  if (group === "unclaimed" && isDuatBarred(row)) return { ...DOSSIER_TAG.pending, text: t("judgment.claim.duat_barred_short"), deadline: false };
+  if (group === "unclaimed" && isHeldUntilFatedDate(row)) return { ...DOSSIER_TAG.pending, text: t("judgment.claim.held_short"), deadline: false };
+  if (group === "others") return { ...DOSSIER_TAG.claimedByOther, text: t("officer_app.desk.tag.others"), deadline: false };
+  if (group === "mine") return { ...DOSSIER_TAG.judging, text: t(row.is_final ? "officer_app.desk.tag.reviewing" : "officer_app.desk.tag.awaiting"), deadline: false };
   return { tone: "neutral", glyph: "", text: deadlineText(t, row), deadline: true };
 }
 

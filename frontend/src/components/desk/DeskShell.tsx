@@ -10,6 +10,7 @@ import { HallViewExpired } from "@/src/components/impersonation/HallViewExpired"
 import { useHallViewExpired } from "@/src/components/impersonation/hallViewExpiry";
 import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
+import { BrandMark } from "@/src/components/brand/BrandMark";
 import s from "./desk.module.css";
 
 /**
@@ -55,8 +56,8 @@ export function DeskShell({ children }: { children: React.ReactNode }) {
       <PasswordChangeRedirect />
       <div className={s.shell} data-testid="desk-shell">
         <nav className={s.rail} aria-label={t("caseDesk.rail.label")} data-testid="desk-rail">
-          <span className={s.railMark} aria-hidden="true">
-            ⚖
+          <span className={s.railMark}>
+            <BrandMark size={28} tone="gold" />
           </span>
           {doors.map((d) => (
             <Link

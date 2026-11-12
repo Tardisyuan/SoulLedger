@@ -2,7 +2,8 @@
  * 案卷台与总簿(Design 第三十批 第 2 步)。新 token(`--topline` `--rail-w` `--stack-w` `--spine-h` `--juan` `--tai`
  * `--field` `--glowA`)由第 1 步写进 globals.css;这里一律带回退值,第 1 步落地前后都对。
  * 颜色只读 globals.css 的令牌(OKLCH 三元组),这里不写色值。
- * 文明色只在四处:顶线、当前行的左线、焦点、脊(第 3 步)。主按钮是墨色实底。
+ * 文明色只在四处:顶线、当前行的左线、焦点、脊(第 3 步)。摊开那一份的页头是第 1 步的 `PageHead kind="dossier"`,
+ * 按钮是 `Button`(主按钮墨色实底),这里不再画。
  */
 
 .shell {
@@ -177,9 +178,11 @@
   font-size: 11px;
   line-height: 16px;
   padding: 0 4px;
-  border: 1px solid oklch(var(--color-line-strong));
+  /* 跟着所在的字色走:在墨色实底的主按钮里也看得见。 */
+  border: 1px solid currentColor;
   border-radius: 3px;
-  color: oklch(var(--color-ink-muted));
+  color: inherit;
+  opacity: 0.72;
 }
 .triage {
   font-size: 13px;
@@ -275,16 +278,6 @@
   display: flex;
   flex-direction: column;
 }
-.caseHead {
-  position: relative;
-  padding: 20px 28px 12px;
-  border-top: var(--topline, 2px) solid oklch(var(--color-main-ink));
-  background: radial-gradient(120% 140% at 0% 0%, color-mix(in oklch, oklch(var(--color-glow)) calc(var(--glowA, var(--glow-alpha, 0.3)) * 100%), transparent), transparent 60%);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 24px;
-  align-items: end;
-}
 .phoneBar {
   display: none;
 }
@@ -295,51 +288,12 @@
   color: oklch(var(--color-ink-muted));
   margin: 0;
 }
-.caseName {
-  font-family: var(--font-title);
-  font-size: 32px;
-  line-height: 40px;
-  font-weight: 600;
-  margin: 0;
-}
 .actions {
   display: flex;
   gap: 8px;
   align-items: center;
   grid-column: 2;
   grid-row: 1 / span 3;
-}
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 4px;
-  border: 1px solid oklch(var(--color-line));
-  background: transparent;
-  color: oklch(var(--color-ink));
-  font-size: 14px;
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.btn:disabled {
-  color: oklch(var(--color-disabled-ink));
-  cursor: default;
-}
-.btnGhost {
-  border-color: transparent;
-  color: oklch(var(--color-ink-muted));
-}
-.btnInk {
-  background: oklch(var(--color-ink));
-  border-color: oklch(var(--color-ink));
-  color: oklch(var(--color-canvas));
-}
-.btnInk .kbd {
-  color: oklch(var(--color-canvas));
-  border-color: oklch(var(--color-canvas));
 }
 .spine {
   height: var(--spine-h, 44px);
@@ -456,10 +410,6 @@
   position: absolute;
   right: 24px;
   top: -8px;
-  font-family: var(--font-title);
-  font-size: 160px;
-  line-height: 1;
-  color: oklch(var(--color-civ-neutral-metal));
   opacity: 0.07;
   pointer-events: none;
   user-select: none;
@@ -657,17 +607,6 @@
     min-height: 44px;
     padding: 0;
     cursor: pointer;
-  }
-  .caseHead {
-    padding: 12px 16px;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .actions {
-    grid-column: 1;
-    grid-row: auto;
-    position: sticky;
-    bottom: 64px;
-    order: 10;
   }
   .spine {
     margin: 0 16px;
