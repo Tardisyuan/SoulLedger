@@ -108,6 +108,9 @@ export const judgmentKeys = {
    * invalidate of `judgmentKeys.all` has to reach these pages too.
    */
   statutes: (params?: Record<string, string>) => [...judgmentKeys.all, "statutes", params] as const,
+  /** 概览的数(`hall-stats/`);`civilization` 给了就是那一文明的(总簿分栏)。Under `all`: a conclusion's invalidate reaches it. */
+  hallStats: (civilization?: string) =>
+    (civilization ? [...judgmentKeys.all, "hall-stats", { civilization }] : [...judgmentKeys.all, "hall-stats"]) as readonly unknown[],
   /**
    * 「据 · 先例」. Under `judgmentKeys.all` because a verdict landing anywhere
    * in the tenant can change the ranking, and concluding already invalidates

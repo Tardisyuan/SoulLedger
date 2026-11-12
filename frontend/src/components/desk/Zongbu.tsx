@@ -21,9 +21,9 @@ const CROSS_ROWS = 5;
  * 下面一张「跨界往来」(调拨与跨界会审,各取最近几条)。四栏顶上各一条 2px 文明色线(用户认可的唯一例外)。
  *
  * 只读管理员本来就读得到的:`queue-counts/?civilization=`、`GET /judgment/?civilization=&has_verdict=false`、
- * `hall-stats/`、`/dispatch/records/`、`/dispatch/cross-tenant-judgments/`。
- * **本月已结按文明分不出来**:`hall-stats/` 不带过滤器(整个范围一个数),所以本月已结只在页头写一次,
- * 栏里照实说没有这个数。后端给 `hall-stats/` 加 `?civilization=` 之后,栏里再画进度条。
+ * `hall-stats/`(页头)与 `hall-stats/?civilization=`(每栏的本月已结进度条)、`/dispatch/records/`、
+ * `/dispatch/cross-tenant-judgments/`(未了结的会审按开案时间 `create_time` 标「某日起」)。
+ * 一栏本月既没结案也没未结的(`month_done_pct` 为 null),照实说没有,不画空条。
  */
 export function Zongbu() {
   const { t, locale, formatDateTime } = useI18n();
@@ -40,7 +40,13 @@ export function Zongbu() {
       return { queryKey: judgmentKeys.list(params), queryFn: async () => (await judgmentApi.list(params)).data };
     }),
   });
-  const stats = useQuery({ queryKey: [...judgmentKeys.all, "hall-stats"], queryFn: async () => (await judgmentApi.hallStats()).data });
+  const stats = useQuery({ queryKey: judgmentKeys.hallStats(), queryFn: async () => (await judgmentApi.hallStats()).data });
+  const monthly = useQueries({
+    queries: CIVILIZATION_OPTIONS.map((civilization) => ({
+      queryKey: judgmentKeys.hallStats(civilization),
+      queryFn: async () => (await judgmentApi.hallStats(civilization)).data,
+    })),
+  });
   const dispatches = useQuery({
     queryKey: ["dispatch", "zongbu"],
     queryFn: async () => (await dispatchApi.list({ ordering: "-proposed_at" })).data,
@@ -63,7 +69,8 @@ export function Zongbu() {
     return short ? t(`zongbu.civ.${short}`) : (code ?? "");
   };
 
-  type CrossRow = { key: string; href: string; when: string | null; text: string; status: string };
+  type CrossRow = { key: string; href: string; when: string | null; since?: boolean; text: string; status: string };
+  const isOpen = (status: string) => status === "PROPOSED" || status === "ACTIVE";
   const crossRows: CrossRow[] = [
     ...(dispatches.data?.results ?? []).slice(0, CROSS_ROWS).map((d) => ({
       key: `d-${d.id}`,
@@ -75,7 +82,9 @@ export function Zongbu() {
     ...(crossings.data?.results ?? []).slice(0, CROSS_ROWS).map((c) => ({
       key: `c-${c.id}`,
       href: `/cross-judgments/${c.id}`,
-      when: c.concluded_at,
+      // 未了结的没有结案时间,标开案那天(「某日起」)。
+      when: isOpen(c.status) ? c.create_time : c.concluded_at,
+      since: isOpen(c.status),
       text: [c.title, t("zongbu.kind.cross"), civName(c.initiating_tenant_code)].filter(Boolean).join(" · "),
       status: t(`crossJudgments.states.${c.status}`),
     })),
@@ -107,6 +116,7 @@ export function Zongbu() {
         {CIVILIZATION_OPTIONS.map((civ, i) => {
           const short = civShortCode(civ) ?? "";
           const c = counts[i].data;
+          const month = monthly[i].data;
           const rows = (tops[i].data?.results ?? []).slice(0, TOP);
           return (
             <section key={civ} className={s.col} data-civ-col={short} data-testid={`zongbu-col-${short}`} aria-labelledby={`zongbu-${short}`}>
@@ -130,7 +140,25 @@ export function Zongbu() {
               ) : (
                 <p className={s.colLine}>{counts[i].isError ? t("zongbu.col.failed") : t("common.loading")}</p>
               )}
-              <p className={s.colLine}>{t("zongbu.col.month_unknown")}</p>
+              {month ? (
+                month.month_done_pct != null ? (
+                  <>
+                    <p className={s.colLine}>{t("overview.month_done_pct", { pct: String(month.month_done_pct) })}</p>
+                    <div
+                      className={s.bar}
+                      role="progressbar"
+                      aria-label={t("overview.month_done_pct", { pct: String(month.month_done_pct) })}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={month.month_done_pct}
+                    >
+                      <div className={s.barFill} style={{ width: `${month.month_done_pct}%` }} />
+                    </div>
+                  </>
+                ) : (
+                  <p className={s.colLine}>{t("zongbu.col.month_none")}</p>
+                )
+              ) : null}
               {rows.length ? (
                 <ul className={s.top}>
                   {rows.map((r) => (
@@ -156,7 +184,9 @@ export function Zongbu() {
           <div className={s.juan}>
             {crossRows.map((r) => (
               <Link key={r.key} href={r.href} className={s.crossRow}>
-                <span className={s.juanKey}>{formatListDate(r.when, locale) ?? ""}</span>
+                <span className={s.juanKey}>
+                  {r.since && r.when ? t("zongbu.cross_since", { date: formatListDate(r.when, locale) ?? "" }) : (formatListDate(r.when, locale) ?? "")}
+                </span>
                 <span className={s.juanVal}>{r.text}</span>
                 <span className={s.juanKey}>{r.status}</span>
               </Link>

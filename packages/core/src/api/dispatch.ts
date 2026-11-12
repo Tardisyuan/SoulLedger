@@ -59,9 +59,9 @@ export interface DispatchRecord {
 
 /**
  * CrossTenantJudgmentListSerializer (backend/apps/dispatch/serializers.py:148) —
- * the element type of GET /dispatch/cross-tenant-judgments/. It carries six
- * fields and no more: `description`, `participants`, `create_time` and
- * `update_time` are detail-only.
+ * the element type of GET /dispatch/cross-tenant-judgments/. `description`,
+ * `participants` and `update_time` are detail-only; `create_time` is on both
+ * (added to the list 2026-11-13 for the 总簿 「跨界往来」 卷).
  */
 export interface CrossTenantJudgmentListItem {
   id: string;
@@ -76,6 +76,8 @@ export interface CrossTenantJudgmentListItem {
   status: string;
   concluded_at: string | null;
   conclusion_type: string | null;
+  /** When the bench was opened (the model's `create_time`), read-only. */
+  create_time: string;
 }
 
 /**
@@ -88,7 +90,6 @@ export interface CrossTenantJudgment extends CrossTenantJudgmentListItem {
    *  meeting with no soul and no sentence nodes (every pre-plan row). */
   judgment: string | null;
   participants: CrossTenantJudgmentParticipant[];
-  create_time: string;
   update_time: string;
   /** 结束时的说明(第四十批 W-a;原审判页也显示)。存量行为空串。 */
   conclusion_note?: string;

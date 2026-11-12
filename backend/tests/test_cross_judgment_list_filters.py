@@ -5,6 +5,7 @@
 """
 import pytest
 from django.contrib.auth import get_user_model
+from django.utils.dateparse import parse_datetime
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -67,3 +68,10 @@ def test_export_takes_the_same_filters(world):
     assert response.status_code == 200
     body = response.content.decode("utf-8-sig")
     assert "忘川之案" in body and "冥河之案" not in body
+
+
+def test_list_rows_carry_their_create_time(world):
+    """总簿「跨界往来」给未了结的标开案那天。变异:列表 serializer 去掉 `create_time` → 不相等,红。"""
+    client, mine, *_ = world
+    rows = {row["id"]: row for row in client.get(URL).json()["results"]}
+    assert parse_datetime(rows[str(mine.pk)].get("create_time") or "") == mine.create_time

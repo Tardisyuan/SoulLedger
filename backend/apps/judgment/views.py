@@ -1226,15 +1226,27 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             counts["sources"] = source_counts_of(filtered(params))
         return Response({**counts, "elsewhere": sources.elsewhere_counts(request)})
 
-    @extend_schema(responses=JudgmentHallStatsSerializer)
-    # 不分页、不挂列表的过滤器:概览是整个殿的数,不随队列的筛选走。
+    @extend_schema(
+        responses=JudgmentHallStatsSerializer,
+        parameters=[OpenApiParameter("civilization", str, description="只数这一文明的案子(与列表的 `civilization` 同义)")],
+    )
+    # 不分页、不挂列表的过滤器:概览是整个殿的数,不随队列的筛选走。唯一的例外是 `?civilization=`(总簿按文明分列)。
     @action(detail=False, methods=["get"], url_path="hall-stats", pagination_class=None, filter_backends=[])
     def hall_stats(self, request):
         """本殿概览(v4 `overview.*`):未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案。
-        范围与列表相同(`self.get_queryset()`);时间按殿的时区。定义见 `apps/judgment/hall_stats.py`。"""
+        范围与列表相同(`self.get_queryset()`);时间按殿的时区。定义见 `apps/judgment/hall_stats.py`。
+        `?civilization=` 在这个范围里再按文明收窄,校验与列表的 `JudgmentFilter` 同一份(值不合法 400)。"""
         from apps.judgment import hall_stats
 
-        return Response(hall_stats.overview(self.get_queryset(), PENDING, getattr(request, "tenant", None)))
+        queryset = self.get_queryset()
+        civilization = request.query_params.get("civilization")
+        if civilization is not None:
+            filterset = JudgmentFilter({"civilization": civilization}, queryset=queryset, request=request)
+            if not filterset.is_valid():
+                raise translate_validation(filterset.errors)
+            queryset = filterset.qs
+        return Response(hall_stats.overview(queryset, PENDING, getattr(request, "tenant", None),
+                                            narrowed=civilization is not None))
 
     @extend_schema(
         responses=JudgmentAnnualSerializer,
