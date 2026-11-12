@@ -90,6 +90,9 @@ function MenuButtonsPageContent() {
 
   return (
     <PageShell variant="page" title={t("menu_buttons.title")} subtitle={t("menu_buttons.rule")}>
+      <p data-testid="menu-buttons-display-only" className="mb-3 text-xs text-[oklch(var(--color-ink-muted))]">
+        {t("menu_buttons.display_only_note")}
+      </p>
       {config.isLoading ? (
         <ListSkeleton count={3} />
       ) : config.isError ? (

@@ -3888,6 +3888,7 @@
     "delete_error": "Failed to delete button",
     "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role",
     "rule": "A button shows only if it's on here and the user has the permission. Off here means hidden even for users with permission.",
+    "display_only_note": "This only controls whether the button is shown; the server does not refuse the action. To forbid an action, take the permission away.",
     "count": "{{menu}} · {{n}} buttons",
     "col_show": "Show",
     "col_where": "Appears in",

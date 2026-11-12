@@ -3888,6 +3888,7 @@
     "delete_error": "删除按钮失败",
     "permission_mismatch_warning": "“{{codename}}” 不对应任何真实权限——此按钮将对所有非管理员角色静默隐藏",
     "rule": "按钮要在这里打开，并且用户有对应权限，才会显示。这里关掉，有权限的人也看不到。",
+    "display_only_note": "这里只控制按钮是否显示，不会让服务端拒绝操作。要禁止某项操作，请收回对应权限。",
     "count": "{{menu}} · {{n}} 个按钮",
     "col_show": "显示",
     "col_where": "出现在",

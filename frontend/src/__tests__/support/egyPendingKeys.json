@@ -21,5 +21,6 @@
   "soul_push.push_device_claimed.title",
   "soul_push.push_device_claimed.body",
   "official_notify.push_device_claimed.title",
-  "official_notify.push_device_claimed.body"
+  "official_notify.push_device_claimed.body",
+  "menu_buttons.display_only_note"
 ]
