@@ -370,7 +370,11 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulField
         from apps.workflow.models import ApprovalWorkflowStatus
 
         flow = getattr(obj, "approval_workflow", None)
-        return flow is not None and flow.decides_judgment and flow.status == ApprovalWorkflowStatus.CANCELLED
+        if flow is None or not flow.decides_judgment or flow.status != ApprovalWorkflowStatus.CANCELLED:
+            return False
+        from apps.judgment.weighing import has_retrial
+
+        return not has_retrial(obj)  # reopened once already (F-JUDG-02): no button
 
     def get_realm_name(self, obj) -> str | None:
         realm = obj.realm

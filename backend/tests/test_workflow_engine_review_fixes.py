@@ -332,12 +332,14 @@ def test_a_failing_auto_reject_is_recorded_once_and_the_admins_are_told(
     monkeypatch.setattr("apps.events.services.EventService.notify_user",
                         staticmethod(lambda **kw: told.append((kw["user"].username, kw["params"]["kind"]))))
 
-    def refuse(flow):
+    def refuse(*args, **kwargs):
         raise weighing.WeighingRefusedError("no", "soul_cannot_reopen", status=409)
 
-    monkeypatch.setattr(weighing, "reweigh_after_rejection", refuse)
+    # On a flow that decides its judgment an AUTO_REJECT escalates and rejects nothing (F-JUDG-14), so the
+    # refusal is raised by the auto-rejection's own event write, on a flow that does not decide one.
+    monkeypatch.setattr(WorkflowService, "record_events", staticmethod(refuse))
     sp.officer("timeout_admin", "ADMIN", cn)
-    flow = _workflow(cn, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)])
+    flow = _workflow(cn, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)], deciding=False)
     _age(flow.current_node, 2)
     with django_capture_on_commit_callbacks(execute=True):
         assert timeouts.process_due()["failed"] == 1

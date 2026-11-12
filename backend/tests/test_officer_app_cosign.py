@@ -189,3 +189,24 @@ def test_the_desks_workflow_detail_carries_the_same_cosign_facts(cn_tenant, judg
     assert seen["cosigners"] == [{"user_id": colleague.pk, "name": "联署人", "signed": False}]
     assert seen["waiting_on_cosigner"] == {"id": colleague.pk, "name": "联署人"}
     assert theirs.get(url).data["current_node_detail"]["waiting_on_cosigner"] is None
+
+
+def test_an_unsigned_cosigner_who_left_can_be_taken_off_and_the_node_passes(cn_tenant, judge_user, colleague):
+    """Flow walk 2026-11-12 F-JUDG-05: there was no way to undo 加签, so a co-signer deactivated (moved, stripped of
+    workflow.approve, or added by mistake) held the node for good."""
+    wf, node = _plain_workflow(cn_tenant)
+    mine = officer_client(judge_user)
+    assert mine.post(_cosign_url(wf), {"user_id": colleague.pk}, format="json").status_code == 201
+    User.objects.filter(pk=colleague.pk).update(is_active=False)
+    assert _decide(mine, wf, node).data["code"] == "cosigners_pending"
+
+    removed = mine.delete(f"{_cosign_url(wf)}{colleague.pk}/")
+    assert removed.status_code == 204, removed.data
+    node.refresh_from_db()
+    assert node.cosigners_json == []
+    assert AuditLog.objects.filter(resource="workflow.cosign_remove", resource_id=str(wf.pk)).count() == 1
+    # Once: nothing left to take off.
+    assert mine.delete(f"{_cosign_url(wf)}{colleague.pk}/").status_code == 404
+    assert _decide(mine, wf, node).status_code == 200
+    node.refresh_from_db()
+    assert node.status == NodeStatus.APPROVED

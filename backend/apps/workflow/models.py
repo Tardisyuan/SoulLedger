@@ -951,6 +951,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                     "notes": n.notes,
                     "decided_at": n.decided_at.isoformat() if n.decided_at else None,
                     "signatures": n.signatures_json or [],
+                    "cosigners": n.cosigners_json or [],
                 },
             ]
             n.status = NodeStatus.PENDING
@@ -959,9 +960,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             n.approver = None
             n.decided_at = None
             n.signatures_json = []
+            # 加签 is per round (F-JUDG-05): the last round's co-signatures do not sign the new one.
+            n.cosigners_json = []
             n.save(update_fields=[
                 "decision_history", "status", "verdict", "notes", "approver", "decided_at",
-                "signatures_json",
+                "signatures_json", "cosigners_json",
             ])
         target.refresh_from_db()
         self._enter(target, now)

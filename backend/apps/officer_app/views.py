@@ -189,6 +189,49 @@ class CosignView(OfficerAppBaseView):
                         status=status.HTTP_201_CREATED)
 
 
+class CosignRemoveView(OfficerAppBaseView):
+    """撤销加签(流程走查 2026-11-12 F-JUDG-05):把一位还没签的联署人从当前节点撤下。指定审批人或本殿 ADMIN 可撤;
+    已签的不撤。联署人停用、调走、失权或加错人时，节点不再被一份永远等不来的签名卡住。
+
+    403 `not_allowed`:不是你的节点 / 节点已被处理;404 `not_found`:这一节点上没有这位未签的联署人。留痕:一条审计。
+    """
+
+    permission_classes = [*OfficerAppBaseView.permission_classes, CodenamePermission]
+
+    def get_required_permissions(self):
+        return ["workflow.approve"]
+
+    @extend_schema(operation_id="officer_app_cosign_remove", request=None,
+                   responses={204: None, 403: CosignRefusalSerializer, 404: CosignRefusalSerializer})
+    def delete(self, request, kind, item_id, user_id):
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.workflow import cosign
+        from apps.workflow.models import ApprovalNode
+
+        scope = todo.scope_of(request.user, request)
+        workflow = todo.workflow_for(scope, kind, item_id)
+        if workflow is None or workflow.current_node_id is None:
+            raise NotFound()
+        try:
+            with transaction.atomic():
+                node = ApprovalNode.objects.select_for_update().get(pk=workflow.current_node_id)
+                entry = cosign.remove(node, request.user, user_id)
+                node.save(update_fields=["cosigners_json"])
+                AuditLog.objects.create(
+                    tenant=workflow.tenant, user=request.user, action=AuditAction.EXECUTE,
+                    resource="workflow.cosign_remove", resource_id=str(workflow.id),
+                    description=f"撤销加签:{node.node_name} — {entry.get('user_name', '')}"[:500],
+                    changes={"node": str(node.id), "node_name": node.node_name, "cosigner_id": entry.get("user_id"),
+                             "cosigner": entry.get("user_name", "")},
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                )
+        except cosign.CosignRefusedError as refused:
+            code = status.HTTP_404_NOT_FOUND if refused.code == cosign.NOT_FOUND else status.HTTP_403_FORBIDDEN
+            return Response({"code": refused.code, "detail": refused.detail}, status=code)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class PushTokenView(OfficerAppBaseView):
     @extend_schema(operation_id="officer_app_push_register", request=OfficerPushTokenSerializer,
                    responses={200: None, 201: None, 400: OpenApiResponse(description="token 格式不对")})

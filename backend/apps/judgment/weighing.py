@@ -98,6 +98,11 @@ def open_retrial(judgment, reason=WeighingResult.WAVERING.value, method=Judgment
     return retrial
 
 
+def has_retrial(judgment) -> bool:
+    """A case opened to hear this one again (`retrial_of`) and not withdrawn."""
+    return Judgment.objects.filter(retrial_of_id=judgment.pk).exists()
+
+
 def reweigh_after_rejection(flow, because: str = "REJECTED") -> Judgment | None:
     """A station refused an original judgment's approval flow: the case is heard again (user 2026-10-27 for the
     Egyptian weighing; 2026-10-29 for every civilization's original judgment).
@@ -114,6 +119,11 @@ def reweigh_after_rejection(flow, because: str = "REJECTED") -> Judgment | None:
     """
     judgment = flow.judgment
     if judgment is None or judgment.kind != JudgmentKind.ORIGINAL or not judgment.is_final:
+        return None
+    # Once (flow walk 2026-11-12 F-JUDG-02): a case already heard again is not withdrawn a second time. A CANCELLED
+    # flow stays CANCELLED, so without this `reopen-cancelled` reopened it again after the retrial concluded —
+    # the soul back in JUDGING, a third case open, and the retrial's own disposition / plan / flow still live.
+    if has_retrial(judgment):
         return None
     from apps.core.recycle_bin import system_void
     from apps.disposition.models import Disposition

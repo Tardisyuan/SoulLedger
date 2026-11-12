@@ -487,6 +487,12 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             if hasattr(judgment, "approval_workflow"):
                 return Response({"code": "judgment_has_workflow", "error": "Workflow already exists for this judgment"},
                                 status=status.HTTP_409_CONFLICT)
+            # 只收已结案的(流程走查 2026-11-12 F-JUDG-03):`judgment` 是一对一,手动流程占住一件未结案的位置,
+            # 原审结案时要建的审批流程就建不了,那件案子从此结不成。
+            if not judgment.is_final:
+                return Response({"code": "judgment_not_concluded",
+                                 "error": "Only a concluded judgment can be attached to a workflow"},
+                                status=status.HTTP_409_CONFLICT)
 
         template = None
         case_type = data.get("case_type")

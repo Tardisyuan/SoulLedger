@@ -14,7 +14,13 @@ THE RULE, stated once:
     * a co-signer's approval is recorded and the node stays PENDING; a co-signer's
       refusal refuses the node, as any refusal does;
     * the designated approver's approval is refused (`cosigners_pending`) until
-      every co-signer has signed. A refusal is never blocked.
+      every co-signer has signed. A refusal is never blocked;
+    * a co-signer who has not signed can be taken off again — by the node's designated
+      approver or the hall's ADMIN (flow walk 2026-11-12 F-JUDG-05): one who was
+      deactivated, moved or lost `workflow.approve` would otherwise hold the node for
+      good. A signature already given stays;
+    * a node reopened by 驳回到 starts its round without co-signers (the last round's
+      go into `decision_history`).
 
 Entries of `ApprovalNode.cosigners_json`:
     {user_id, user_name, added_by_id, added_at, signed_at}   (signed_at null = owed)
@@ -24,6 +30,7 @@ from __future__ import annotations
 from django.utils import timezone
 
 NOT_ALLOWED = "not_allowed"
+NOT_FOUND = "not_found"
 NOT_ELIGIBLE = "not_eligible"
 DUPLICATE = "duplicate"
 
@@ -102,4 +109,23 @@ def add(node, adder, candidate) -> dict:
         "signed_at": None,
     }
     node.cosigners_json = [*(node.cosigners_json or []), entry]
+    return entry
+
+
+def remove(node, actor, user_id) -> dict:
+    """Take the unsigned co-signer `user_id` off `node`. Raises CosignRefusedError.
+
+    The caller holds the node lock and saves `cosigners_json`.
+    """
+    from apps.workflow.models import NodeKind, NodeStatus
+
+    if node.status != NodeStatus.PENDING or node.kind != NodeKind.APPROVAL:
+        raise CosignRefusedError(NOT_ALLOWED, "co-signers can only be removed from a pending approval node")
+    hall_admin = actor.role == "ADMIN" and actor.tenant_id is not None and actor.tenant_id == node.workflow.tenant_id
+    if not hall_admin and (_slot(node, actor) is not None or not node.can_approve(actor)):
+        raise CosignRefusedError(NOT_ALLOWED, "only the node's designated approver or the hall's ADMIN can remove one")
+    entry = next((e for e in node.cosigners_json or [] if str(e.get("user_id")) == str(user_id)), None)
+    if entry is None or entry.get("signed_at"):
+        raise CosignRefusedError(NOT_FOUND, "no unsigned co-signer with that id on this node")
+    node.cosigners_json = [e for e in node.cosigners_json if e is not entry]
     return entry

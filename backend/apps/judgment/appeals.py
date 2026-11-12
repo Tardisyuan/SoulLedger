@@ -147,7 +147,16 @@ def appeal_refusal(judgment, account):
         return AppealRefusedError("This judgment has not been concluded.", "not_concluded")
     if judgment.kind != JudgmentKind.ORIGINAL:
         return AppealRefusedError("Only an original judgment can be appealed.", "not_appealable")
-    from apps.judgment.weighing import origin_flow_open
+    from apps.judgment.models import case_civilization, hears_again
+    from apps.judgment.weighing import has_retrial, origin_flow_open
+
+    # A conclusion that no longer stands (flow walk 2026-11-12 F-JUDG-01): a verdict that hears the case again
+    # (RETRY, a wavering scale) or a case withdrawn and heard again after its flow was refused / cancelled. The
+    # retrial carries the soul's fate; amending the old case only rewrote its `verdict`, moving nothing.
+    if hears_again(case_civilization(judgment), judgment.verdict) or has_retrial(judgment):
+        # `not_appealable`, the code the soul apps already word (not a new one): to the soul it is the same answer.
+        return AppealRefusedError("This judgment is being heard again; appeal the new judgment instead.",
+                                  "not_appealable")
 
     if origin_flow_open(judgment=judgment):
         # 原审的审批流程没走完,结论还不算定(用户 2026-10-29,审查 B):申诉与上诉都等它走完。
@@ -379,6 +388,28 @@ def claim(appeal_id, user):
         appeal.reviewer = user
         appeal.claimed_at = timezone.now()
         appeal.status = AppealStatus.IN_REVIEW
+        appeal.save(update_fields=["reviewer", "claimed_at", "status"])
+    return appeal
+
+
+def release(appeal_id, user):
+    """把认领了的申诉放回待复核(流程走查 2026-11-12 F-JUDG-06):复核人自己,或持 `judgment.assign` 的殿主。
+    此前认领后只有整人交接才改得动复核人,误认领或长期不在的那一份就停在 IN_REVIEW。
+    没人认领 → 409 `not_claimed`;别人认领的、自己又不持 `judgment.assign` → 403 `not_reviewer`。"""
+    from apps.perm.checker import check_permission
+
+    with transaction.atomic():
+        appeal = _lock_appeal(appeal_id)
+        if appeal.status not in OPEN_APPEAL_STATUSES:
+            raise AppealRefusedError(f"This appeal is {appeal.status}.", "appeal_closed")
+        if appeal.reviewer_id is None:
+            raise AppealRefusedError("Nobody is reviewing this appeal.", "not_claimed")
+        if appeal.reviewer_id != user.pk and not check_permission(user, "judgment.assign"):
+            raise AppealRefusedError("Only its reviewer or the hall lead can put this appeal back.", "not_reviewer",
+                                     status=403)
+        appeal.reviewer = None
+        appeal.claimed_at = None
+        appeal.status = AppealStatus.PENDING
         appeal.save(update_fields=["reviewer", "claimed_at", "status"])
     return appeal
 

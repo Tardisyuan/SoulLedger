@@ -36,10 +36,14 @@ def _node(i, name=None, **extra):
     return base
 
 
-def _workflow(tenant, nodes, *, validated=True):
+def _workflow(tenant, nodes, *, validated=True, deciding=True):
     """Build a workflow from `nodes`. `validated=False` writes the graph straight
     into `nodes_json`, as an ORM fixture or a pre-versioning row would — the only
-    way to reach the engine with a graph the publish validator refuses."""
+    way to reach the engine with a graph the publish validator refuses.
+
+    `deciding=False`: the flow names its judgment but does not decide it (as one started by hand,
+    `manually_started`). An AUTO_REJECT timeout rejects only on such a flow; on one that decides a judgment it
+    escalates instead (F-JUDG-14, `timeouts._fire`)."""
     template = WorkflowTemplate.objects.create(
         name="回退测试", civilization="CHINESE", case_type="ROUTINE", tenant=tenant,
         nodes_json=[] if validated else nodes,
@@ -52,7 +56,11 @@ def _workflow(tenant, nodes, *, validated=True):
         soul=soul, civilization=soul.civilization, court="—",
         verdict="PASSED", is_final=True, tenant=tenant,
     )
-    return WorkflowService.create_from_judgment(judgment)
+    flow = WorkflowService.create_from_judgment(judgment)
+    if not deciding:
+        type(flow).all_objects.filter(pk=flow.pk).update(manually_started=True)
+        flow.refresh_from_db()
+    return flow
 
 
 def _decide(workflow, order, verdict):
@@ -203,7 +211,7 @@ def test_escalate_redesignates_the_node_once(cn_tenant, django_capture_on_commit
 
 @pytest.mark.django_db
 def test_a_node_not_yet_due_is_left_alone(cn_tenant):
-    wf = _workflow(cn_tenant, [_node(1, timeout_hours=2, timeout_action="AUTO_REJECT")])
+    wf = _workflow(cn_tenant, [_node(1, timeout_hours=2, timeout_action="AUTO_REJECT")], deciding=False)
     _age(wf.current_node, 1)
     assert timeouts.process_due() == {"ESCALATE": 0, "AUTO_REJECT": 0, "NOTIFY": 0, "skipped": 0}
     wf.refresh_from_db()
@@ -214,7 +222,7 @@ def test_a_node_not_yet_due_is_left_alone(cn_tenant):
 def test_auto_reject_goes_through_complete_node_and_honours_reject_to(cn_tenant):
     wf = _workflow(cn_tenant, [
         _node(1), _node(2, reject_to="n1", timeout_hours=1, timeout_action="AUTO_REJECT"),
-    ])
+    ], deciding=False)
     _decide(wf, 1, "PASSED")
     _age(wf.current_node, 2)
 
@@ -229,7 +237,7 @@ def test_auto_reject_goes_through_complete_node_and_honours_reject_to(cn_tenant)
 
 @pytest.mark.django_db
 def test_auto_reject_without_reject_to_ends_the_flow(cn_tenant):
-    wf = _workflow(cn_tenant, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)])
+    wf = _workflow(cn_tenant, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)], deciding=False)
     _age(wf.current_node, 2)
     timeouts.process_due()
     wf.refresh_from_db()
@@ -274,7 +282,7 @@ def test_a_return_restarts_the_clock(cn_tenant):
 
 @pytest.mark.django_db
 def test_the_command_runs_the_same_processor(cn_tenant):
-    wf = _workflow(cn_tenant, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT")])
+    wf = _workflow(cn_tenant, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT")], deciding=False)
     out = io.StringIO()
     later = (timezone.now() + timedelta(hours=2)).isoformat()
     call_command("process_workflow_timeouts", "--now", later, stdout=out)
@@ -301,10 +309,10 @@ def test_the_scheduled_run_fires_only_its_own_tenant_and_records_success(cn_tena
     from apps.workflow.tasks import process_timeouts_for_tenant
 
     sync_schedules()
-    mine = _workflow(cn_tenant, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT")])
+    mine = _workflow(cn_tenant, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT")], deciding=False)
     # `_workflow`'s template is CHINESE, so an EU soul falls through to the
     # hardcoded flow, which has no timeout: set one on its node directly.
-    theirs = _workflow(eu_tenant, [_node(1)])
+    theirs = _workflow(eu_tenant, [_node(1)], deciding=False)
     ApprovalNode.objects.filter(pk=theirs.current_node_id).update(timeout_hours=1, timeout_action="AUTO_REJECT")
     _age(mine.current_node, 2)
     _age(theirs.current_node, 2)

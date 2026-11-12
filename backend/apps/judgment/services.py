@@ -14,7 +14,15 @@ class CitationRefusedError(Exception):
     the operator has to be told: a cross-tenant article, an article from
     another cosmology, and an article that does not exist are three different
     mistakes and only one of them is a typo.
+
+    `code` / `status` / `extra` are set by the refusals that carry them (`statute_retired` at conclusion).
     """
+
+    def __init__(self, message="", code="", status=400, **extra):
+        super().__init__(message)
+        self.code = code
+        self.status = status
+        self.extra = extra
 
 
 def _is_uuid(value) -> bool:
@@ -38,7 +46,7 @@ class StatuteCitationService:
     """
 
     @staticmethod
-    def resolve(judgment, statute_id):
+    def resolve(judgment, statute_id, *, allow_retired=False):
         """The Statute this judgment may cite, or `CitationRefusedError`.
 
         Looked up through `Statute.all_objects` and then checked, rather than
@@ -54,7 +62,7 @@ class StatuteCitationService:
         statute = Statute.all_objects.filter(pk=statute_id).first() if _is_uuid(statute_id) else None
         if statute is None:
             raise CitationRefusedError(f"No statute with id {statute_id}.")
-        if statute.is_deleted:
+        if statute.is_deleted and not allow_retired:
             raise CitationRefusedError(
                 f"Statute {statute.code} has been retired and cannot be newly "
                 f"cited. Citations already recorded against it stand."
@@ -125,6 +133,23 @@ class StatuteCitationService:
         ]
 
     @staticmethod
+    def assert_none_retired(judgment):
+        """Refuse to conclude on an article retired while the case was open (flow walk 2026-11-12 F-JUDG-13, user
+        decision): `resolve` refuses citing a retired article, but one cited before it was retired stayed and was
+        frozen into the verdict. 409 `statute_retired`, naming each (`statutes`: id and code); the officer cites
+        another and concludes again. Citations of a concluded case stand — that is the record."""
+        from apps.judgment.models import JudgmentCitation
+
+        retired = list(JudgmentCitation.all_objects.filter(judgment=judgment, is_deleted=False,
+                                                           statute__is_deleted=True)
+                       .order_by("statute__code").values_list("statute_id", "statute__code"))
+        if retired:
+            codes = ", ".join(code for _, code in retired)
+            raise CitationRefusedError(
+                f"Cited statutes have been retired since: {codes}. Cite current articles instead.",
+                "statute_retired", status=409, statutes=[{"id": str(pk), "code": code} for pk, code in retired])
+
+    @staticmethod
     def snapshot(judgment, *, at):
         """Freeze what each cited article says right now onto its citation.
 
@@ -158,8 +183,9 @@ class StatuteCitationService:
 
         cls.assert_amendable(judgment)
         # Resolve first, so removing a cross-tenant id reports the same refusal
-        # adding it would have — never a silent "nothing to do".
-        statute = cls.resolve(judgment, statute_id)
+        # adding it would have — never a silent "nothing to do". A retired article may be removed (F-JUDG-13):
+        # it is what the conclusion now refuses, so taking it off is the way forward.
+        statute = cls.resolve(judgment, statute_id, allow_retired=True)
         deleted, _ = JudgmentCitation.all_objects.filter(
             judgment=judgment, statute=statute
         ).delete()
@@ -377,6 +403,12 @@ class JudgmentConclusionService:
                     raise weighing.WeighingRefusedError(
                         "An original judgment is concluded through its approval workflow", "approval_flow_required")
                 create_workflow = True
+            # The flow is one-to-one with its judgment (F-JUDG-03): a flow started by hand on this case while it was
+            # still open (before `start` refused that) holds the place, and the flow this conclusion makes would
+            # break the unique constraint — a 500. A 409 the desk can show, before anything is written.
+            if create_workflow and hasattr(locked, "approval_workflow"):
+                raise weighing.WeighingRefusedError(
+                    "This judgment already has an approval workflow", "judgment_has_workflow", status=409)
 
             # Step -½: the officer's own destination / term (审判台「戊 · 发落」).
             # Validated — and the chosen realm row locked for its capacity —
@@ -400,6 +432,7 @@ class JudgmentConclusionService:
             # Step 0: Grounds, before the verdict they explain.
             if statute_ids:
                 StatuteCitationService.cite_many(judgment, statute_ids)
+            StatuteCitationService.assert_none_retired(judgment)
 
             # Step 1: Update judgment state
             judgment.verdict = verdict
@@ -731,6 +764,29 @@ def enter_judgment_realm(soul, judgment):
     SoulPathService.enter(soul, judgment.realm, tenant_id=judgment.tenant_id)
 
 
+#: The stations a first-instance case stands at (城隍初审 docs/08, 枉死城 docs/10, 防腐 / 不入冥界 docs/02 §1.1) and
+#: what was decided there. Written once, when the death opens the case (`Soul.opening_fields`).
+STATION_CARRIES = (
+    "duat_stage", "city_god", "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "grievance_filed_at",
+)
+
+
+def _withdrawn_case_stations(soul) -> dict:
+    """A case opened again on a JUDGING soul whose open original case was withdrawn (flow walk 2026-11-12 F-JUDG-04 /
+    F-DEATH-02): it stands where the withdrawn one stood. Without this, withdrawing a case still at the city god,
+    held in 枉死城 or embalming, or nameless, and opening another skipped every one of those stations — the new case
+    had no city god, no `held_until`, no `duat_stage` and was claimable at once. Called under the soul's lock."""
+    from apps.judgment.models import Judgment, JudgmentKind
+    from apps.judgment.weighing import RETRIAL_CARRIES
+
+    withdrawn = (Judgment.all_objects.filter(soul_id=soul.pk, cycle=soul.life_index, kind=JudgmentKind.ORIGINAL,
+                                             is_deleted=True, is_final=False)
+                 .order_by("-created_at").first())
+    if withdrawn is None:
+        return {}
+    return {field: getattr(withdrawn, field) for field in (*RETRIAL_CARRIES, *STATION_CARRIES)}
+
+
 class JudgmentService:
     @staticmethod
     def open_case(soul, *, actor=None, in_tenant=None, tenant=None, **fields):
@@ -776,6 +832,8 @@ class JudgmentService:
             was_alive = soul.current_state == SoulState.ALIVE
             if was_alive:
                 fields.update(soul.opening_fields(timezone.now().date()))
+            elif fields.get("kind", JudgmentKind.ORIGINAL) == JudgmentKind.ORIGINAL:
+                fields.update(_withdrawn_case_stations(soul))
             judgment = Judgment.objects.create(soul=soul, tenant=tenant or soul.tenant, **fields)
             if was_alive:
                 from apps.judgment import city_gods

@@ -166,6 +166,27 @@ def test_the_officer_who_decided_cannot_review_and_only_the_reviewer_decides(cas
     assert taken.status_code == 409 and taken.data["code"] == "already_claimed"
 
 
+def test_a_claimed_appeal_can_be_put_back_by_its_reviewer_or_the_hall_lead(case, cn_tenant):
+    """流程走查 2026-11-12 F-JUDG-06:认领后没有放回的接口,误认领或复核人长期不在,申诉就停在 IN_REVIEW,
+    只有整人交接才动得了。"""
+    appeal_id = _file(case).data["id"]
+    third = sp.officer("third_rel", "JUDGE", cn_tenant)
+    assert officer_client(case["reviewer"]).post(f"{HALL}{appeal_id}/claim/").status_code == 200
+
+    stranger = officer_client(third).post(f"{HALL}{appeal_id}/release/")
+    assert stranger.status_code == 403 and stranger.data["code"] == "not_reviewer", stranger.data
+    released = officer_client(case["reviewer"]).post(f"{HALL}{appeal_id}/release/")
+    assert released.status_code == 200 and released.data["status"] == "PENDING", released.data
+    assert JudgmentAppeal.all_objects.get(pk=appeal_id).reviewer_id is None
+    assert officer_client(third).post(f"{HALL}{appeal_id}/release/").data["code"] == "not_claimed"
+
+    # Someone else takes it, and the hall lead (judgment.assign) can put it back too.
+    assert officer_client(third).post(f"{HALL}{appeal_id}/claim/").status_code == 200
+    lead = sp.officer("lead_rel", "ADMIN", cn_tenant)
+    assert officer_client(lead).post(f"{HALL}{appeal_id}/release/").status_code == 200
+    assert JudgmentAppeal.all_objects.get(pk=appeal_id).status == "PENDING"
+
+
 def test_the_claimant_of_the_original_case_is_also_excluded(case, cn_tenant):
     claimant = sp.officer("claimant", "JUDGE", cn_tenant)
     Judgment.all_objects.filter(pk=case["judgment"].pk).update(claimed_by=claimant)
