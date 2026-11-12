@@ -52,7 +52,9 @@ def test_it_creates_a_user_per_actor_with_the_mapped_role_and_org(orgs):
     assert user.position == "第一殿"
     assert user.display_name == "秦广王"
     assert user.actor == actor
-    assert user.check_password("soul123456")
+    # F-ADM-05: no well-known password in a public repo; a one-off secret, changed at first login.
+    assert not user.check_password("soul123456")
+    assert user.must_change_password
 
 
 @pytest.mark.django_db
@@ -61,7 +63,7 @@ def test_it_creates_a_user_per_actor_with_the_mapped_role_and_org(orgs):
     [
         ("EXECUTOR", UserRole.JUDGE),
         ("JUDGE", UserRole.JUDGE),
-        ("OVERSEER", UserRole.ADMIN),
+        ("OVERSEER", UserRole.GUARDIAN),  # never a hall-less (= global) ADMIN, F-ADM-05
         ("CONDUIT", UserRole.GUARDIAN),
         ("GUARDIAN", UserRole.GUARDIAN),
     ],
@@ -69,7 +71,7 @@ def test_it_creates_a_user_per_actor_with_the_mapped_role_and_org(orgs):
 def test_every_row_of_the_role_map_is_exercised(orgs, actor_role, expected):
     """整张表,不是抽一行。
 
-    `OVERSEER → ADMIN` 是这里唯一发放管理员权限的一条 —— 它被改错了不该只在
+    这张表里不得出现 ADMIN(无殿 ADMIN = 全局管理员) —— 它被改错了不该只在
     某次抽样里才可能被发现。
     """
     make_actor(name=f"actor_{actor_role}", role=actor_role)
