@@ -25,8 +25,11 @@ logger = logging.getLogger(__name__)
 
 #: 改了 `Soul.tenant` 的两条写路径(apps/dispatch/services.py)写的 STATE_CHANGED 动作。
 #: 私聊不看文明(2026-09-19),这里要同步的只剩**殿司收件箱**:灵魂只能写给当前所在的殿司,
-#: 调走之后原殿司那封变只读(它在房间里降到 0),回来之后恢复。灵魂之间的房间 `sync_rooms`
-#: 也会算一遍,但级别不变、不写(`set_user_levels` 没变就不写)。
+#: 调走之后原殿司那封变只读(它在房间里降到 0),回来之后恢复。灵魂之间的房间不受调拨影响,不算。
+#:
+#: **提交时当场写,不进 celery**(审计 2026-11-11 A2-06,用户 11-11 定):入队的话,任务跑之前灵魂仍能用自己的
+#: Matrix 令牌直接往旧殿房间写;celery 没部署的环境里这个窗口要等到每天 03:50 的 `chat.sync_all_rooms`。
+#: 收件箱一个殿一封,往返有限。失败只记日志、不让调拨回滚(调拨此时已提交),每天的那次同步兜底。
 TENANT_MOVES = {"DISPATCH_EXECUTED", "DISPATCH_RETURNED"}
 
 
@@ -38,7 +41,20 @@ def _payload(instance):
 def _soul_moved(sender, instance, created, **kwargs):
     if created and _payload(instance).get("action") in TENANT_MOVES:
         soul = instance.soul
-        transaction.on_commit(lambda: _sync(soul))
+        transaction.on_commit(lambda: _sync_inboxes_now(soul))
+
+
+def _sync_inboxes_now(soul):
+    from apps.chat.matrix import MatrixError
+    from apps.chat.models import ConversationKind
+    from apps.chat.services import sync_rooms
+
+    try:
+        sync_rooms(soul, kind=ConversationKind.OFFICER_INBOX)
+    except MatrixError as exc:
+        logger.warning("chat: 调拨后同步收件箱发言权失败 soul=%s,留给每日同步: %s", soul.pk, exc)
+    except Exception:  # noqa: BLE001 — 调拨已提交,这里抛出只会把已成功的请求答成 500
+        logger.exception("chat: 调拨后同步收件箱发言权失败 soul=%s,留给每日同步", soul.pk)
 
 
 @receiver(post_save, sender=SocialMute, dispatch_uid="chat_mute_changed")

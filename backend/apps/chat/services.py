@@ -339,14 +339,16 @@ def _sync_room(conversation, client):
         _mark_silenced(locked)
 
 
-def sync_rooms(soul, *, client=None):
-    """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。
+def sync_rooms(soul, *, client=None, kind=None):
+    """把 `soul` 所在的每个未关闭房间的发言权重算一遍并写进 Synapse(没变的不写)。`kind` 只算这一种会话。
 
     **已关闭但还欠一次降权的也在里面**(`silenced_at` 为空):关闭时那一次写失败了
     (Synapse 不可达),下一次任何一方的同步 —— 留下的一方打开聊天、被禁言、被调拨 —— 补上。"""
     rows = Conversation.objects.filter(
         Q(soul_a=soul) | Q(soul_b=soul), Q(closed_at__isnull=True) | Q(silenced_at__isnull=True)
     )
+    if kind is not None:
+        rows = rows.filter(kind=kind)
     rows = list(rows)
     if not rows:
         return

@@ -236,6 +236,43 @@ def test_the_inbox_follows_the_hall_the_soul_is_in(cn_tenant, eu_tenant, matrix,
     assert _send(a_client, away.data["id"]).status_code == 201
 
 
+def test_leaving_a_hall_silences_its_inbox_at_commit_without_waiting_for_celery(
+        cn_tenant, eu_tenant, matrix, monkeypatch, django_capture_on_commit_callbacks):  # noqa: F811
+    """审计 2026-11-11 A2-06:调走那笔事务一提交,灵魂在旧殿收件箱就是 0 级 —— 不等 celery,也不等每天的兜底;
+    否则窗口里它用自己的 Matrix 令牌照样能往旧殿房间写。
+    变异:`_soul_moved` 改回 `_sync`(入队)→ 任务没跑,旧殿房间里仍是 50,红。"""
+    from apps.chat import tasks
+
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    home = a_client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
+    assert can_speak(home["room_id"], mxid(a))
+    monkeypatch.setattr(tasks.sync_rooms_task, "delay", lambda *_a, **_k: None)  # celery 没在跑
+
+    with django_capture_on_commit_callbacks(execute=True):
+        _dispatch(a.soul, cn_tenant, eu_tenant)
+    assert matrix.rooms[home["room_id"]]["power_levels"]["users"][mxid(a)] == 0
+    with pytest.raises(MatrixError):
+        matrix.says(home["room_id"], mxid(a), "调走了还在写")
+
+
+def test_a_failed_inbox_sync_does_not_undo_the_dispatch(
+        cn_tenant, eu_tenant, matrix, monkeypatch, django_capture_on_commit_callbacks):  # noqa: F811
+    """Synapse 那一刻不可达:调拨照常生效(已提交、请求不报错),发言权留给每天的 `chat.sync_all_rooms`。
+    变异:`_sync_inboxes_now` 去掉 `except` → 异常从提交回调里冒出来,红。"""
+    from tests.chat_support import FakeMatrix
+
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    a_client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json")
+
+    def down(*_a, **_k):
+        raise MatrixError("Synapse 无法访问:ConnectionError")
+
+    monkeypatch.setattr(FakeMatrix, "set_user_levels", down)
+    with django_capture_on_commit_callbacks(execute=True):
+        _dispatch(a.soul, cn_tenant, eu_tenant)
+    assert Soul.all_objects.get(pk=a.soul_id).tenant_id == eu_tenant.pk
+
+
 # ── 转世 ─────────────────────────────────────────────────────────────────
 
 
