@@ -141,7 +141,7 @@ def test_force_overwrites_the_existing_user(orgs):
     run(force=True)
 
     user = User.objects.get(username="秦广王")
-    assert user.role == UserRole.ADMIN
+    assert user.role == UserRole.GUARDIAN
     assert user.position == "第一殿"
     assert user.organization is not None
 
