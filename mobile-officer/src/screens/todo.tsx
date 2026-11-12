@@ -38,7 +38,24 @@ function readFilter(): TodoKind[] {
 const countOf = (data: Todo, field: keyof Todo): number => data[field]?.count ?? 0;
 
 /** `gone`: rows whose detail turned out to be gone (O-c), greyed and not pressable -- keyed by `goneKey`. */
-export function TodoTab({ onOpen, highlight, gone, version }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null; gone?: ReadonlySet<string>; version?: number }) {
+/**
+ * `initialFilter`: a filter for this visit only (城隍初审中 on 案卷台 opens 待办 on 城隍初审; user 2026-11-13) -- the
+ * saved one is not overwritten, and the next ordinary open of 待办 shows it. A chip the officer then taps is a choice
+ * of their own and is saved as usual.
+ */
+export function TodoTab({
+  onOpen,
+  highlight,
+  gone,
+  version,
+  initialFilter,
+}: {
+  onOpen: (item: ItemRef) => void;
+  highlight: ItemRef | null;
+  gone?: ReadonlySet<string>;
+  version?: number;
+  initialFilter?: TodoKind[];
+}) {
   const { t, locale } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -56,7 +73,7 @@ export function TodoTab({ onOpen, highlight, gone, version }: { onOpen: (item: I
   useEffect(() => {
     if (data) publishVoiceNumber("todo", TODO_GROUPS.reduce((sum, g) => sum + countOf(data, g.field), 0));
   }, [data]);
-  const [chosen, setChosen] = useState<TodoKind[]>(readFilter);
+  const [chosen, setChosen] = useState<TodoKind[]>(() => initialFilter ?? readFilter());
   const toggle = (kind: TodoKind) =>
     setChosen((prev) => {
       const next = prev.includes(kind) ? prev.filter((k) => k !== kind) : [...prev, kind];

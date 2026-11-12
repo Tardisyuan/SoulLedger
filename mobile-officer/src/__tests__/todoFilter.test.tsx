@@ -84,6 +84,19 @@ describe("the to-do type filter", () => {
     expect(platform().persistent.get(TODO_FILTER_KEY)).toBeFalsy();
   });
 
+  it("a one-visit filter (城隍初审中 on 案卷台) applies without overwriting the saved one; the next ordinary mount shows the saved", async () => {
+    platform().persistent.set(TODO_FILTER_KEY, JSON.stringify(["reassignment"]));
+    const once = renderOfficer(<TodoTab highlight={null} onOpen={() => {}} initialFilter={["approval"]} />);
+    expect(await screen.findByTestId("todo-group-approval")).toBeTruthy();
+    expect(screen.queryByTestId("todo-group-reassignment")).toBeNull();
+    expect(JSON.parse(platform().persistent.get(TODO_FILTER_KEY) ?? "null")).toEqual(["reassignment"]);
+    once.unmount();
+
+    mount();
+    expect(await screen.findByTestId("todo-group-reassignment")).toBeTruthy();
+    expect(screen.queryByTestId("todo-group-approval")).toBeNull();
+  });
+
   it("ignores a stored value it does not understand", async () => {
     platform().persistent.set(TODO_FILTER_KEY, JSON.stringify(["nope", 3]));
     mount();

@@ -7,7 +7,6 @@
  * and a push landing is just "set the detail". A detail reached by a push remembers its item; going
  * back to the list washes that row for 1.2 s (kit.tsx `Highlight`; none under reduce-motion).
  */
-import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "@soulledger/core/api/notifications";
 import { BackHandler, StyleSheet, View } from "react-native";
@@ -31,7 +30,8 @@ import { NoticesTab } from "./screens/notices";
 import { QueueTab } from "./screens/queue";
 import { ResetPasswordScreen } from "./screens/reset";
 import { SearchTab } from "./screens/search";
-import { TODO_FILTER_KEY, TodoTab, type ItemRef } from "./screens/todo";
+import { TodoTab, type ItemRef } from "./screens/todo";
+import type { TodoKind } from "@soulledger/core/api/officer-app";
 import { needsMfaSetup, useSession } from "./session";
 import { onForeground, useI18n, useTheme } from "./shared";
 
@@ -43,6 +43,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   // while the recovery codes are on screen unconfirmed it waits, like every other thing that would move the officer away.
   const [resetLink, setResetLink] = useState<ResetLink | null>(null);
   const [tab, setTab] = useState<TabKey>("todo");
+  // 城隍初审中 opens 待办 on 城隍初审 for that visit only (user 2026-11-13): the saved filter stays; any other way into 待办 clears this.
+  const [todoOnce, setTodoOnce] = useState<TodoKind[] | null>(null);
   const [detail, setDetail] = useState<DetailTarget | null>(null);
   // 我的's two sub-screens, drawn over the tabs like a detail (not a tab, so no tab-bar entry).
   const [account, setAccount] = useState<AccountScreen | null>(null);
@@ -80,6 +82,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       setDetail(landing.judgment ? { type: "judgment", id: landing.judgment } : { type: "soul", id: landing.soul! });
       return;
     }
+    setTodoOnce(null);
     setTab("todo");
     setVersion((v) => v + 1);
     if (landing.item) {
@@ -123,6 +126,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       officerLinks.subscribe((link) => {
         setSwipe(false);
         setVersion((v) => v + 1);
+        setTodoOnce(null);
         if (link.item) {
           setTab("todo");
           setOrigin("todo");
@@ -199,6 +203,9 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   // starting 待办 of a 访客, a link, a landing) shows the first one there is -- 通知 and 我的 are always there.
   const tabs = visibleTabs(user.permissions);
   const current = tabs.includes(tab) ? tab : tabs[0];
+  useEffect(() => {
+    if (current !== "todo") setTodoOnce(null);
+  }, [current]);
 
   return (
     <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
@@ -250,14 +257,14 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             onGone={markGone}
           />
         ) : current === "todo" ? (
-          <TodoTab version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
+          <TodoTab key={todoOnce ? "once" : "saved"} initialFilter={todoOnce ?? undefined} version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : current === "queue" ? (
           <QueueTab
             version={version}
             gone={gone}
             onSwipe={() => setSwipe(true)}
-            // 城隍初审中 (第三十批): 待办 filtered to 城隍初审 -- the filter 待办 reads when it mounts.
-            onOpenCityGod={tabs.includes("todo") ? () => { platform().persistent.set(TODO_FILTER_KEY, JSON.stringify(["city_god"])); setTab("todo"); } : undefined}
+            // 城隍初审中 (第三十批): 待办 filtered to 城隍初审, this visit only -- the saved filter is not touched.
+            onOpenCityGod={tabs.includes("todo") ? () => { setTodoOnce(["city_god"]); setTab("todo"); } : undefined}
             onOpen={(id, position) => { setOrigin("queue"); setDeskPosition(position ?? null); setDetail({ type: "judgment", id }); }} />
         ) : current === "search" ? (
           <SearchTab
@@ -281,6 +288,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           setDetail(null);
           setAccount(null);
           setSwipe(false);
+          setTodoOnce(null);
           setTab(next);
         }}
       />
