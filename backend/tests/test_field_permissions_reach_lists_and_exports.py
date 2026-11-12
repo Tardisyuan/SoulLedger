@@ -120,3 +120,48 @@ def test_karma_nulls_the_hidden_keys_and_the_reading_scores(hall):
     assert after["demerit_score"] is not None and after["soul_id"] == str(soul.pk)
     assert after["records"][0]["original_weight"] == 5  # 规则没藏 records
     assert _ok(viewer.get(path)).json()["soul_name"] == "Ruled Soul"
+
+
+# ── 功过记录的权重跟 Soul 的 `records` 规则走(用户 2026-11-11)──────────────────────────────────────
+# `records` 是 Soul 上 SoulRecord 的关联名，也是灵魂详情里嵌套的那个字段名。规则藏它时：行留着、权重为 null
+# (CSV 留空),与 VIEWER 分数同一口径 —— 不是整段 records 拿掉。
+
+
+def _hide_records_from_judges():
+    role = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "判官"})[0]
+    FieldPermission.objects.create(role=role, model_name="Soul", field_name="records", visible=False)
+
+
+def _journal_row(client, soul):
+    body = _ok(client.get("/api/v1/ledger/journal/", {"all": "1"})).json()
+    return next(r for r in body["results"] if r["soul_id"] == str(soul.pk))
+
+
+def test_the_records_rule_nulls_every_weight_and_keeps_the_rows(hall):
+    soul, judge, _viewer = hall
+    detail, records = f"/api/v1/souls/{soul.pk}/", f"/api/v1/souls/{soul.pk}/records/"
+    karma = f"/api/v1/souls/{soul.pk}/karma/"
+    assert _ok(judge.get(detail)).json()["records"][0]["weight"] == 5
+    assert _ok(judge.get(records)).json()[0]["weight"] == 5
+    assert _ok(judge.get(karma)).json()["records"][0]["original_weight"] == 5
+    assert _journal_row(judge, soul)["weight"] == 5
+
+    _hide_records_from_judges()
+    nested = _ok(judge.get(detail)).json()["records"]
+    assert len(nested) == 1 and nested[0]["weight"] is None and nested[0]["description"] == "a deed"
+    listed = _ok(judge.get(records)).json()
+    assert len(listed) == 1 and listed[0]["weight"] is None
+    row = _ok(judge.get(karma)).json()["records"][0]
+    assert (row["original_weight"], row["effective_weight"]) == (None, None)
+    assert _journal_row(judge, soul)["weight"] is None
+    assert _ok(judge.get(detail)).json()["name"] == "Ruled Soul"  # 别的字段不受牵连
+
+
+def test_the_records_rule_blanks_the_journal_export_weights(hall):
+    soul, judge, _viewer = hall
+    path = "/api/v1/ledger/journal/export/"
+    assert _csv_row(judge, path, "Soul ID", str(soul.pk))["Merit"] == "5"
+    _hide_records_from_judges()
+    row = _csv_row(judge, path, "Soul ID", str(soul.pk))
+    assert (row["Merit"], row["Demerit"]) == ("", "")  # 列留着、格子空着
+    assert row["Description"] == "a deed"

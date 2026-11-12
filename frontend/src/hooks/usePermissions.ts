@@ -34,7 +34,8 @@ export function usePermissions() {
 
   const hasPermission = (permission: string, opts?: ViewingOpt): boolean => {
     if (viewing && !opts?.evenWhileViewing && !READ_ONLY_CODENAME.test(permission)) return false;
-    // 不读上报的清单:后端上报对绑殿 ADMIN 也含这个码(RoleHolder 没有殿),真请求却被拒。
+    // 不读上报的清单(双保险):后端上报曾对绑殿 ADMIN 也含这个码(RoleHolder 没有殿),2026-11-11 起按用户的殿报。
+    // 与后端集合一致由 roleForbiddenCodenamesMatchBackend.test.ts 守着。
     if (GLOBAL_ONLY_CODENAMES.has(permission)) return roleIsAdmin && !user?.tenant;
     if (roleIsAdmin) return true;
     return user?.permissions?.includes(permission) ?? false;

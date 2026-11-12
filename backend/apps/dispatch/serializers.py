@@ -4,6 +4,7 @@ Serializers for dispatch app.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.field_permissions import SoulFieldRulesMixin
 from apps.core.tenant import request_tenant
 from apps.core.tenant_fields import tenant_scoped
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
@@ -17,7 +18,7 @@ from apps.workflow.serializers import CrossJudgmentWorkflowSummarySerializer
 DISPATCH_REASON_MIN_CHARS = 20
 
 
-class DispatchRecordSerializer(serializers.ModelSerializer):
+class DispatchRecordSerializer(SoulFieldRulesMixin, serializers.ModelSerializer):
     """Serializer for DispatchRecord.
 
     `status` and `dispatched_by` are read-only on purpose. They used to be
@@ -53,6 +54,7 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
     through it. That is the whole defect: the invariant lives in the create
     path and the update path was never told about it.
     """
+    soul_field_keys = {"soul_name": "name"}  # the Soul field rules (SoulFieldRulesMixin, P-11)
     # allow_null:草稿可以还没选灵魂或目标文明(`DispatchStatus.DRAFT`)。
     soul_name = serializers.CharField(source="soul.name", read_only=True, allow_null=True)
     source_tenant_code = serializers.CharField(source="source_tenant.code", read_only=True)
@@ -255,8 +257,9 @@ class DispatchSubmitSerializer(DispatchDraftSerializer):
         return value
 
 
-class DispatchRecordListSerializer(serializers.ModelSerializer):
+class DispatchRecordListSerializer(SoulFieldRulesMixin, serializers.ModelSerializer):
     """Lightweight serializer for listing dispatch records."""
+    soul_field_keys = {"soul_name": "name"}  # the Soul field rules (SoulFieldRulesMixin, P-11)
     # allow_null:草稿可以还没选灵魂或目标文明(`DispatchStatus.DRAFT`)。
     soul_name = serializers.CharField(source="soul.name", read_only=True, allow_null=True)
     source_tenant_code = serializers.CharField(source="source_tenant.code", read_only=True)

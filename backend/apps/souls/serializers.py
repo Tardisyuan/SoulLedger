@@ -77,6 +77,23 @@ def scores_hidden_from(user) -> bool:
     return getattr(user, "role", None) == "VIEWER"
 
 
+def record_weights_hidden_from(user) -> bool:
+    """Whether `user` gets each deed's weight as null (the row itself stays): the VIEWER floor, or a Soul field
+    rule hiding `records` — the name of Soul's relation to its SoulRecord rows and of the detail's nested field
+    (用户 2026-11-11: the rule governs the weights, as the floor does). The one answer for the detail's nested
+    records, `souls/{id}/records/`, the ledger bodies' `records` and `ledger/journal/` with its export."""
+    return scores_hidden_from(user) or "records" in hidden_fields(user, "Soul", ("records",))
+
+
+def _record_weights_hidden(context) -> bool:
+    """`record_weights_hidden_from` for the serializer's request user, worked out once per serializer tree
+    (a soul's nested records share the root's context)."""
+    if "_record_weights_hidden" not in context:
+        request = context.get("request")
+        context["_record_weights_hidden"] = record_weights_hidden_from(getattr(request, "user", None))
+    return context["_record_weights_hidden"]
+
+
 #: Score keys of a ledger body (`LedgerService.get_ledger_summary` / `get_effective_ledger` /
 #: `get_reincarnation_inheritance`), nulled for a caller `scores_hidden_from` names.
 LEDGER_SCORE_KEYS = (
@@ -94,18 +111,23 @@ READING_SCORE_KEYS = ("balance", "merit", "demerit", "non_fungible", "heart_weig
 def hide_ledger_scores(body: dict) -> dict:
     """A copy of a ledger body with every score nulled and the rest kept — the detail's reading applied to
     `souls/{id}/karma/`, `ledger/balance/`, `effective/`, `inheritance/`. A copy: the summary is cached."""
-    body = {key: (None if key in LEDGER_SCORE_KEYS else value) for key, value in body.items()}
-    if isinstance(body.get("records"), list):
-        body["records"] = [{**r, "original_weight": None, "effective_weight": None} for r in body["records"]]
+    body = _null_record_weights({key: (None if key in LEDGER_SCORE_KEYS else value) for key, value in body.items()})
     if isinstance(body.get("reading"), dict):
         body["reading"] = {k: (None if k in READING_SCORE_KEYS else v) for k, v in body["reading"].items()}
+    return body
+
+
+def _null_record_weights(body: dict) -> dict:
+    """A copy of `body` whose `records` rows keep everything but their weights (null)."""
+    if isinstance(body.get("records"), list):
+        body = {**body, "records": [{**r, "original_weight": None, "effective_weight": None} for r in body["records"]]}
     return body
 
 
 #: Ledger-body key → the Soul field whose FieldPermission rule governs it (P-11). The effective and inherited
 #: figures follow the score they are a version of: hiding `merit_score` and handing out `effective_merit` hides nothing.
 LEDGER_KEY_SOUL_FIELD = {
-    "soul_id": "id", "soul_name": "name", "records": "records",
+    "soul_id": "id", "soul_name": "name",
     "merit_score": "merit_score", "effective_merit": "merit_score",
     "demerit_score": "demerit_score", "effective_demerit": "demerit_score",
     "karmic_balance": "karmic_balance", "effective_balance": "karmic_balance",
@@ -116,12 +138,15 @@ _SCORE_FIELDS = frozenset({"merit_score", "demerit_score", "karmic_balance"})
 
 def ledger_body_for(user, body: dict) -> dict:
     """`body` as `user` may see it: the VIEWER floor, then the Soul field rules (a hidden key is null, as the
-    floor does; a hidden score also nulls the reading's scores, which restate it)."""
+    floor does; a hidden score also nulls the reading's scores, which restate it; a hidden `records` keeps the
+    rows and nulls their weights, as the floor does — 用户 2026-11-11)."""
     if scores_hidden_from(user):
         body = hide_ledger_scores(body)
-    hidden_soul = hidden_fields(user, "Soul", set(LEDGER_KEY_SOUL_FIELD.values()))
+    hidden_soul = hidden_fields(user, "Soul", {*LEDGER_KEY_SOUL_FIELD.values(), "records"})
     if not hidden_soul:
         return body
+    if "records" in hidden_soul:
+        body = _null_record_weights(body)
     body = withhold(body, {k for k, f in LEDGER_KEY_SOUL_FIELD.items() if f in hidden_soul})
     if hidden_soul & _SCORE_FIELDS and isinstance(body.get("reading"), dict):
         body = {**body, "reading": withhold(body["reading"], set(READING_SCORE_KEYS))}
@@ -303,8 +328,9 @@ class SoulRecordSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if is_viewer(self.context):
-            data["weight"] = None  # summed, the weights are the score the soul serializers withhold (P-02)
+        if _record_weights_hidden(self.context):
+            # summed, the weights are the score the soul serializers withhold (P-02); a Soul `records` rule too
+            data["weight"] = None
         return data
 
     class Meta:
@@ -664,6 +690,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     needs to be made deliberately, not inherited from a stale fixture.
     """
 
+    # A rule hiding `records` keeps the rows and nulls their weights (SoulRecordSerializer), 用户 2026-11-11.
+    field_permission_redacted = ("records",)
     karmic_balance = serializers.IntegerField(read_only=True)
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
     records = SoulRecordSerializer(many=True, read_only=True)

@@ -778,7 +778,8 @@ export function JudgmentClaimQueue({
                           <RowMark on={marked} />
                           <span className="block truncate text-sm font-medium text-[oklch(var(--color-ink))]" title={j.soul_name || undefined}>
                             <Link href={withFrom(`/judgment/${j.id}`, "/judgment")} onClick={() => rememberOpened(j.id)} data-row-link={j.id} className={ROW_LINK}>
-                              {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />}
+                              {/* 缺键 = 字段权限藏了灵魂姓名(P-11)。 */}
+                              {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason={t(j.soul_name === undefined ? "souls.field_withheld" : "judgment.soul_name_not_returned")} />}
                             </Link>
                           </span>
                           {/* v3「案号 / 灵魂」:名字下面一行是案号(可复制,所以压在整行链接之上)与文明。 */}

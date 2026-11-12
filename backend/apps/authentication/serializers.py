@@ -247,7 +247,7 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         a fourth answer to this same question and is not reconciled yet.
         """
         from apps.perm.services import get_role_permission_codenames
-        return get_role_permission_codenames(obj.role, obj.extra_roles)
+        return get_role_permission_codenames(obj.role, obj.extra_roles, user=obj)
 
 
 class LoginHallSerializer(serializers.Serializer):
@@ -510,7 +510,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_permissions(self, obj) -> list[str]:
         from apps.perm.services import get_role_permission_codenames
 
-        return get_role_permission_codenames(obj.role, obj.extra_roles)
+        return get_role_permission_codenames(obj.role, obj.extra_roles, user=obj)
 
     #: 邮箱已验证(官员邮箱重置密码的前提);改邮箱即变回 false。见 `User.email_verified`。
     email_verified = serializers.BooleanField(read_only=True)

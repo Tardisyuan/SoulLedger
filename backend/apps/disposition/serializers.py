@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
-from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.field_permissions import FieldPermissionMixin, SoulFieldRulesMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.disposition.expiry import effective_term_start, term_end
@@ -16,8 +16,10 @@ from apps.souls.fields import HistoricalDateField
 from apps.souls.models import SoulState
 
 
-class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.ModelSerializer):
-    soul_name = serializers.CharField(source="soul.name", read_only=True)
+class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulFieldRulesMixin, serializers.ModelSerializer):
+    # What the disposition quotes from its soul follows the Soul field rules (SoulFieldRulesMixin, P-11).
+    soul_field_keys = {"soul_name": "name", "soul_state": "current_state"}
+    soul_name =serializers.CharField(source="soul.name", read_only=True)
     realm_code = serializers.CharField(source="destination_realm.realm_code", read_only=True)
     # `get_localized_name`, not `name_en`.
     #

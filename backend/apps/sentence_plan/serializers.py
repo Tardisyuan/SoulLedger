@@ -4,6 +4,7 @@ AMENDMENT 审判结案那条路径要守,写在序列化器里就只守住一边
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.field_permissions import SoulFieldRulesMixin
 from apps.core.tenant import request_tenant
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestKind
@@ -69,8 +70,9 @@ class SentencePlanRequestSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class SentencePlanSerializer(serializers.ModelSerializer):
-    soul_name = serializers.CharField(source="soul.name", read_only=True)
+class SentencePlanSerializer(SoulFieldRulesMixin, serializers.ModelSerializer):
+    soul_field_keys = {"soul_name": "name"}  # the Soul field rules (SoulFieldRulesMixin, P-11)
+    soul_name =serializers.CharField(source="soul.name", read_only=True)
     tenant_code = serializers.CharField(source="tenant.code", read_only=True, allow_null=True)
     nodes = SentenceNodeSerializer(many=True, read_only=True)
     requests = SentencePlanRequestSerializer(many=True, read_only=True)

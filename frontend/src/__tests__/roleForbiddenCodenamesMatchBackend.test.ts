@@ -14,6 +14,7 @@ import {
   WORKFLOW_DESIGN_CODENAMES,
   capabilityForbids,
 } from "@soulledger/core/api/perm";
+import { GLOBAL_ONLY_CODENAMES } from "@/src/hooks/usePermissions";
 
 const CHECKER = path.resolve(__dirname, "../../../backend/apps/perm/checker.py");
 
@@ -74,6 +75,15 @@ function backendAdminOnly(): string[] {
   const body = m[1].split("\n").map((line) => line.replace(/#.*$/, "")).join("\n");
   return [...body.matchAll(/"([^"]+)"/g)].map((c) => c[1]).sort();
 }
+
+it("usePermissions' hall-less-ADMIN-only codenames are the backend's GLOBAL_ONLY_CODENAMES", () => {
+  // The hook refuses these to a hall-bound ADMIN whatever the reported list says (a second guard: the backend
+  // no longer reports them to that ADMIN, 2026-11-11). A codename added on one side only would be a button
+  // the bound ADMIN sees and the server refuses, or the reverse.
+  const backend = backendSet("GLOBAL_ONLY_CODENAMES");
+  expect(backend.length).toBeGreaterThan(0);
+  expect([...GLOBAL_ONLY_CODENAMES].sort()).toEqual(backend);
+});
 
 it("core's only-ADMIN codenames are the backend's ADMIN_ONLY_CODENAMES", () => {
   const backend = backendAdminOnly();

@@ -526,9 +526,9 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         page = self.paginate_queryset(proposals)
         if page is not None:
             return self.get_paginated_response(
-                DispatchRecordListSerializer(page, many=True).data
+                DispatchRecordListSerializer(page, many=True, context=self.get_serializer_context()).data
             )
-        return Response(DispatchRecordListSerializer(proposals, many=True).data)
+        return Response(DispatchRecordListSerializer(proposals, many=True, context=self.get_serializer_context()).data)
 
     @extend_schema(responses=DispatchRecordListSerializer(many=True))
     @action(detail=False, methods=["get"])
@@ -553,9 +553,9 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         page = self.paginate_queryset(history)
         if page is not None:
             return self.get_paginated_response(
-                DispatchRecordListSerializer(page, many=True).data
+                DispatchRecordListSerializer(page, many=True, context=self.get_serializer_context()).data
             )
-        return Response(DispatchRecordListSerializer(history, many=True).data)
+        return Response(DispatchRecordListSerializer(history, many=True, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=["post"])
     @idempotent

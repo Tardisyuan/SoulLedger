@@ -190,7 +190,8 @@ function DispositionPageContent() {
 
   const soulLink = (d: Disposition) => (
     <Link href={`/souls/${d.soul}`} className="font-medium text-[oklch(var(--color-ink))] hover:underline">
-      {d.soul_name || d.soul}
+      {/* 缺键 = 字段权限藏了灵魂姓名(P-11):不把主键印成名字。 */}
+      {d.soul_name === undefined ? <MissingValue kind="unrecorded" reason={t("souls.field_withheld")} /> : d.soul_name || d.soul}
     </Link>
   );
   const realm = (d: Disposition) => (

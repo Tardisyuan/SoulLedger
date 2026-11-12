@@ -28,6 +28,10 @@ class FieldPermissionMixin:
     Priority: specific (field_name) > wildcard (field_name="*")
     """
 
+    #: Fields a hiding rule leaves in place because the serializer redacts them itself
+    #: (`SoulSerializer.records`: rows kept, weights null — 用户 2026-11-11).
+    field_permission_redacted = ()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_field_permissions()
@@ -64,7 +68,8 @@ class FieldPermissionMixin:
         for field_name, field in self.fields.items():
             outcomes = [_outcome(rules, field_name) for rules in rule_sets]
             if not any(visible for visible, _ in outcomes):
-                fields_to_remove.append(field_name)
+                if field_name not in self.field_permission_redacted:
+                    fields_to_remove.append(field_name)
             elif all(locked for _, locked in outcomes):
                 field.read_only = True
 
@@ -116,6 +121,25 @@ def withhold(row: dict, hidden, blank=None) -> dict:
     if blank is DROP:
         return {k: v for k, v in row.items() if k not in hidden}
     return {k: (blank if k in hidden else v) for k, v in row.items()}
+
+
+class SoulFieldRulesMixin:
+    """For a serializer of a row that *quotes* its soul (a case's `soul_name`, a disposition's, a dispatch's, a
+    sentence plan's): each key in `soul_field_keys` follows the **Soul** FieldPermission rule of the field it
+    copies, and is absent when that rule hides it — the soul list's reading (用户 2026-11-11, P-11). Without this
+    a rule hiding `Soul.name` was walked around by every queue that prints the name beside the case.
+    Worked out once per serializer instance (a page reuses one child). Put it before `ModelSerializer`."""
+
+    #: serializer key -> the Soul field it copies
+    soul_field_keys: dict = {}
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not hasattr(self, "_soul_hidden_keys"):
+            request = self.context.get("request")
+            hidden = hidden_fields(getattr(request, "user", None), "Soul", set(self.soul_field_keys.values()))
+            self._soul_hidden_keys = frozenset(k for k, f in self.soul_field_keys.items() if f in hidden)
+        return withhold(data, self._soul_hidden_keys, DROP)
 
 
 def _outcome(rules, field_name):

@@ -28,16 +28,23 @@ class RoleHolder:
     on a fresh deployment there may be no user holding it at all. Routing every
     caller through one probe means the admin's role editor, a user's own
     permission list and the login payload cannot disagree about the same role.
+
+    One answer is not the role's: `GLOBAL_ONLY_CODENAMES` (apps/perm/checker.py) go to the hall-less ADMIN
+    only, read through `is_tenant_exempt` (`tenant_id`, `hall_view`). A holder without `user` has neither and
+    so reads as hall-less — right for the role editor, wrong for a hall-bound ADMIN's own list, which then
+    offered `menu.manage` the server refuses (用户 2026-11-11). Pass the real `user` when the list is theirs.
     """
 
     is_authenticated = True
 
-    def __init__(self, role_name, extra_roles=()):
+    def __init__(self, role_name, extra_roles=(), user=None):
         self.role = role_name
         self.extra_roles = list(extra_roles or ())
+        self.tenant_id = getattr(user, "tenant_id", None)
+        self.hall_view = getattr(user, "hall_view", None)
 
 
-def get_role_permission_codenames(role_name, extra_roles=()):
+def get_role_permission_codenames(role_name, extra_roles=(), user=None):
     """Codenames this role effectively holds — answered by check_permission itself.
 
     This is what fills the frontend's permission list, by both routes that
@@ -90,7 +97,7 @@ def get_role_permission_codenames(role_name, extra_roles=()):
         | set(ROLE_PERMISSIONS.get(role_name, []))
         | {c for r in extra_roles or () for c in ROLE_PERMISSIONS.get(r, [])}
     )
-    holder = RoleHolder(role_name, extra_roles)
+    holder = RoleHolder(role_name, extra_roles, user)  # `user`: whose hall decides GLOBAL_ONLY_CODENAMES
     return sorted(codename for codename in candidates if check_permission(holder, codename))
 
 
