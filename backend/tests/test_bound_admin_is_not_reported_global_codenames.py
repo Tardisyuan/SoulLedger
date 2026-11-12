@@ -52,4 +52,4 @@ def test_a_hall_bound_admin_is_not_reported_what_the_server_refuses_it(admins):
         assert not reported & GLOBAL_ONLY_CODENAMES, f"{path} reports {sorted(reported & GLOBAL_ONLY_CODENAMES)}"
         assert "soul.read" in reported, path  # 别的码照报
     for path, reported in _reports(hallless).items():
-        assert GLOBAL_ONLY_CODENAMES <= reported, path
+        assert reported >= GLOBAL_ONLY_CODENAMES, path

@@ -316,7 +316,9 @@ test("the bell lists unread notifications, and reading them clears the badge", a
 test("the souls died on different days, and the dashboard's trend is not a flat line", async ({ page, context }) => {
   const seen = watch(context, page);
   const deaths = rows(recording("admin"), "/souls/").map((s) => JSON.stringify(s.death_date)).filter((d) => d !== "null");
-  expect(new Set(deaths).size).toBeGreaterThan(deaths.length * 0.8);
+  // Half, not 80%: the seed spreads deaths over days relative to the recording day, so collisions drift with the date
+  // (2026-11-12: 62 → 60 of 76 between two recordings of the same seed). Broken spread_time puts them all on one day.
+  expect(new Set(deaths).size).toBeGreaterThan(deaths.length / 2);
   const events = rows(recording("admin"), "/events/").map((e) => String(e.create_time ?? e.created_at ?? e.timestamp).slice(0, 10));
   // The recording keeps the newest 200 events. Since judges got this week's verdicts (edd6dae45) those 200 fall on
   // 4 days, not 6+; what this guards is spread_time working at all (broken, every event lands on one day).
