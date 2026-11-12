@@ -11,13 +11,17 @@ from django.utils import timezone
 
 from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
-from apps.souls.dates import parse_historical_date, to_legacy_date
+from apps.souls.dates import ERROR, check_soul_dates, parse_historical_date, to_legacy_date
 from apps.souls.querysets import SoulManager
 
 if TYPE_CHECKING:  # the annotation on Soul.die only; judgment imports souls, so not at runtime
     from apps.judgment.models import Judgment
 
 logger = logging.getLogger(__name__)
+
+
+class DeathDateError(ValueError):
+    """The death `Soul.die` would record contradicts the soul's birth (`apps.souls.dates.check_soul_dates`)."""
 
 
 class Civilization(models.TextChoices):
@@ -218,6 +222,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
     )
     origin_location = models.CharField(max_length=255, blank=True)
+    #: Where this life ended, as the death was reported (F-DEATH-06, 2026-11-12). `die()` used to write it over
+    #: `origin_location`, so the birthplace was lost and the city god was matched by the place of death.
+    death_location = models.CharField(max_length=255, blank=True)
 
     #: Which judge of the Greek meadow tries this soul (2026-10-19): Gorgias 524a gives Rhadamanthus the dead
     #: of Asia and Aeacus those of Europe, Minos only when they are in doubt. A recorded fact, not inferred from
@@ -890,6 +897,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         self.current_state = locked_soul.current_state
         return True
 
+    def effective_death_date(self, death_date=None):
+        """The (year, month, day) `die(death_date)` would record: the one given, else the one on file, else today
+        (the same today `transition_to` writes). Raises ValueError on a malformed `death_date`."""
+        if death_date:
+            return parse_historical_date(death_date)
+        if self.death_year is not None:
+            return self.death_year, self.death_month, self.death_day
+        today = timezone.now().date()
+        return today.year, today.month, today.day
+
     def die(self, death_date=None, location: str = "", account_origin: str = "OFFICER",
             city_god=None) -> "Judgment | None":
         """Mark soul as dead, transition to JUDGING, and create a Judgment record.
@@ -900,12 +917,20 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         if self.current_state != SoulState.ALIVE:
             return None
+        # 死亡日(F-DEATH-01,2026-11-12):给了就用给的;没给就沿用已录的(建档、导入时录过的那一个),都没有才是今天
+        # (`transition_to` 补)。此前没给也写成今天,已录的死亡日被覆盖,阳寿、防腐、衰减的锚点跟着错。
+        # 跨日期规则查的是最终落库的那一天,所以在这里查,不在各个入口各查一遍。
+        died = self.effective_death_date(death_date)
+        errors = [p.message for p in check_soul_dates((self.birth_year, self.birth_month, self.birth_day), died)
+                  if p.severity == ERROR]
+        if errors:
+            raise DeathDateError(" ".join(errors))
         # 本殿没有能收案的城隍就不许开案(用户 2026-10-29):在状态变化之前问,内存里的灵魂不留一个回滚掉的 JUDGING。
         # `opening_fields` 里还会再问一次(手开审判那条路也走它),这里只是先拦。
         if self.civilization == Civilization.CHINESE and city_god is None:
             from apps.judgment import city_gods
 
-            if city_gods.match(self.tenant_id, location or self.origin_location) is None:
+            if city_gods.match(self.tenant_id, self.origin_location) is None:
                 raise city_gods.NoCityGodError()
 
         from apps.dispatch import capture
@@ -916,8 +941,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                     SoulState.JUDGING,
                     "Death recorded, judgment initiated",
                     account_origin=account_origin,
-                    death_date=death_date or timezone.now().date(),
-                    **({"origin_location": location} if location else {}),
+                    **({"death_date": death_date} if death_date else {}),
+                    **({"death_location": location} if location else {}),
                 )
             if not result:
                 return None
@@ -1030,6 +1055,56 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             SoulPathService.enter_on_death(self)  # 回到杜阿特入口(租户没有入口这一站就不写)
         EventService.log(self, "DUAT_PASSAGE_CHANGED", {
             "from": old, "to": new, "judgments": [str(case.pk) for case in cases]})
+
+    def death_dates(self):
+        """The two dates an open case's hold is computed from (`opening_fields`, `_duat_fields`)."""
+        return ((self.death_year, self.death_month, self.death_day),
+                (self.fated_death_year, self.fated_death_month, self.fated_death_day))
+
+    def follow_death_dates(self, old):
+        """An officer changed the death date or the 阳寿 after death (F-DEATH-07, 2026-11-12); the open
+        first-instance case's hold follows, by the rule it was set with at death. `old`: `death_dates()` before.
+
+        * 地府: 枉死 and its hold until the fated date (`opening_fields`). A case whose grievance was upheld stays
+          released — that decision (`wangsi.decide_grievance`) is not the officer's date edit to undo.
+        * 埃及: the 70 days of embalming count from the new death date (`_duat_fields`); other stages untouched.
+
+        A change that would newly hold a case an officer has claimed is refused (`DjangoValidationError`, the
+        serializer's 400), as `follow_duat_passage` refuses moving a claimed case. Releasing one is not.
+        """
+        from datetime import timedelta
+
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from apps.judgment.models import EMBALMING_DAYS, DuatStage, GrievanceStatus, Judgment, JudgmentKind
+
+        if old == self.death_dates() or self.civilization not in (Civilization.CHINESE, Civilization.EGYPTIAN):
+            return
+        died = to_legacy_date(self.death_year, self.death_month, self.death_day)
+        fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
+        released = (GrievanceStatus.UPHELD, GrievanceStatus.UPHELD_LATE, GrievanceStatus.DELIVERED)
+        today = timezone.localdate()
+        cases = Judgment.objects.select_for_update(of=("self",)).filter(
+            soul=self, kind=JudgmentKind.ORIGINAL, verdict__isnull=True, is_final=False, is_deleted=False)
+        for case in cases:
+            if self.civilization == Civilization.CHINESE:
+                if case.grievance_status in released:
+                    continue
+                untimely = bool(fated and died and died < fated)
+                fields = {"untimely": untimely, "held_until": fated if untimely else None}
+            elif case.duat_stage == DuatStage.EMBALMING:
+                fields = {"held_until": died + timedelta(days=EMBALMING_DAYS) if died else None}
+            else:
+                continue
+            was_held = bool(case.held_until and case.held_until > today)
+            now_held = bool(fields["held_until"] and fields["held_until"] > today)
+            if now_held and not was_held and case.claimed_by_id:
+                raise DjangoValidationError("An officer has claimed this soul's case; it is being decided.")
+            if all(getattr(case, name) == value for name, value in fields.items()):
+                continue
+            for name, value in fields.items():
+                setattr(case, name, value)
+            case.save(update_fields=list(fields))
 
     def _arrive_in_the_hall(self, judgment):
         """埃及:亡者穿过杜阿特,抵达两真之殿受审(docs/02 §1.1、01 §2.1)。案子挂在殿上,行程从杜阿特入口

@@ -24,13 +24,7 @@ from apps.ledger.serializers import LedgerSummarySerializer
 from apps.ledger.services import LedgerService
 from apps.realms.serializers import SoulPathEntrySerializer
 from apps.souls import importer, region_update
-from apps.souls.dates import (
-    ERROR,
-    check_record_date,
-    check_soul_dates,
-    date_warning_fingerprint,
-    parse_historical_date,
-)
+from apps.souls.dates import check_record_date, date_warning_fingerprint
 from apps.souls.filters import SoulFilter
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
@@ -621,32 +615,14 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 status=status.HTTP_400_BAD_REQUEST,
             )
         location = request.data.get("location", "")
+        if not isinstance(location, str) or len(location) > 255:  # Soul.death_location's width
+            return Response({"error": "location must be text of at most 255 characters"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        # Absent = keep the death date on file (F-DEATH-01), else today. The cross-date rules (death before
+        # birth, a lifespan past 150 years) are checked inside `Soul.die` against the date it will record, so
+        # every door into a death — this one, death sync, 土地公, the capture hand-over — applies them alike;
+        # `DeathDateError` and a malformed date are both ValueErrors and answer 400 below.
         death_date = request.data.get("death_date")
-        try:
-            # Parse before soul.die() so the date can be checked against the
-            # soul's birth. This endpoint writes death_date straight from the
-            # request body and never touches SoulSerializer, so without this
-            # it was the one way past the cross-date rules the serializer
-            # enforces — and the likeliest one to carry a bad date, since it
-            # is where a death gets entered in a hurry.
-            parsed_death = parse_historical_date(death_date)
-        except ValueError as exc:
-            # Malformed death_date (e.g. bad string, year 0, out-of-range
-            # month/day) — see apps.souls.dates.parse_historical_date.
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Same rules as SoulSerializer.validate, called rather than restated,
-        # so the two cannot drift apart.
-        errors = [
-            p.message
-            for p in check_soul_dates(
-                (soul.birth_year, soul.birth_month, soul.birth_day), parsed_death
-            )
-            if p.severity == ERROR
-        ]
-        if errors:
-            return Response({"error": " ".join(errors)}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             success = soul.die(death_date=death_date, location=location)
         except ValueError as exc:

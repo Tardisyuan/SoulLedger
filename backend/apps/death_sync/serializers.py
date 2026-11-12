@@ -45,7 +45,7 @@ class DeathRegistrationCreateSerializer(serializers.Serializer):
     """Serializer for death registration creation."""
     soul_lookup = serializers.DictField(required=False)
     death_date = serializers.DateField()
-    death_location = serializers.CharField(max_length=500, required=False, default="")
+    death_location = serializers.CharField(max_length=255, required=False, default="")  # = Soul.death_location
     cause_of_death = serializers.CharField(max_length=500, required=False, default="")
     source_reference = serializers.CharField(max_length=200, required=False, default="")
     # 灵魂端初始密码的投递渠道(2026-09-17)。都可选;没有就进「待交付」。

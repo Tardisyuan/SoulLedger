@@ -319,3 +319,28 @@ def test_tudi_gods_are_diyu_only_and_their_city_god_must_be_of_the_hall(cn_tenan
                                            "regions": ["石桥村", "", "石桥村"]}, format="json")
     assert res.status_code == 201 and res.data["regions"] == ["石桥村"]
     assert res.data["city_god_name"] == "本殿城隍"
+
+
+def test_a_tudi_registration_only_reaches_souls_in_the_officers_data_scope(cn_tenant):
+    """F-DEATH-04: the lookup filtered by hall only, so a 土地公 officer could register any soul of the hall by id;
+    issuing a warrant and `/souls/{id}/die/` both go through the data scope."""
+    from tests.data_scope_support import org, scope
+
+    mine_unit, their_unit = org(cn_tenant, "本司"), org(cn_tenant, "他司")
+    clerk = sp.officer("tudi_scoped", "JUDGE", cn_tenant, organization=mine_unit)
+    scope("JUDGE", "ORG")
+    tudi = TudiGod.objects.create(tenant=cn_tenant, name="范围土地")
+    tudi.officers.add(clerk)
+    mine = Soul.objects.create(name="本司魂", tenant=cn_tenant, owner_org=mine_unit)
+    theirs = Soul.objects.create(name="他司魂", tenant=cn_tenant, owner_org=their_unit)
+    client = officer_client(clerk)
+
+    def register(soul):
+        return client.post(f"{TUDI}{tudi.pk}/register-death/", {
+            "soul_lookup": {"soul_id": str(soul.pk)}, "death_date": "2026-10-01"}, format="json")
+
+    res = register(theirs)
+    assert (res.data["status"], res.data["error_code"]) == ("FAILED", "SOUL_NOT_FOUND"), res.data
+    assert Soul.objects.get(pk=theirs.pk).current_state == SoulState.ALIVE
+    res = register(mine)
+    assert res.data["status"] == "PROCESSED", res.data

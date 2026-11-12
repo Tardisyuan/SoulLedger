@@ -4115,6 +4115,7 @@
     "error": {
       "SOUL_NOT_FOUND": "No matching soul",
       "SOUL_NOT_ALIVE": "Soul is no longer alive",
+      "SOUL_AMBIGUOUS": "More than one living soul by this name",
       "INVALID_TRANSITION": "State does not allow judgment",
       "INTERNAL_ERROR": "Internal error",
       "VALIDATION_ERROR": "Invalid registration data",
@@ -4138,6 +4139,7 @@
     "next": {
       "SOUL_NOT_FOUND": "Check the name and birth date in the soul roster. If the registration is wrong, the source system must correct it and resubmit under a new idempotency key (resending it as is counts as the same request).",
       "SOUL_NOT_ALIVE": "This soul is no longer among the living and has most likely been registered already; check its current state — usually nothing more is needed.",
+      "SOUL_AMBIGUOUS": "More than one living soul has this name, so nothing was registered; the source system should add the birth date or the soul ID and resubmit with a new idempotency key.",
       "INVALID_TRANSITION": "The soul's current state cannot move into judgment; check its state and timeline before deciding whether to handle it by hand.",
       "INTERNAL_ERROR": "An internal error; you can press “Retry”.",
       "VALIDATION_ERROR": "The registration is malformed (see the text above); the source system must correct it and resubmit under a new idempotency key.",

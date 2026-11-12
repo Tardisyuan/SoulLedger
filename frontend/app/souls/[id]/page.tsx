@@ -2,7 +2,6 @@
 
 import { localName } from "@soulledger/core/domain/localName";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
-import { localDateString } from "@soulledger/core/domain/dates";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useCallback, useMemo, useState } from "react";
@@ -62,6 +61,7 @@ import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { CorrectSettlementDialog } from "@/src/components/souls/detail/CorrectSettlementDialog";
 import { LostBanner, LostTransitionDialog, latestLostEvent } from "@/src/components/souls/detail/LostTransitionDialog";
+import { MarkDeadDialog } from "@/src/components/souls/detail/MarkDeadDialog";
 import { StartWorkflowDialog } from "@/src/components/workflow/StartWorkflowDialog";
 import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
 import { SoulLedgerTabs } from "@/src/components/souls/detail/SoulLedgerTabs";
@@ -124,6 +124,7 @@ export default function SoulDetailPage() {
   const [isStartWorkflowOpen, setIsStartWorkflowOpen] = useState(false);
   // 「以土地公名义登记死亡」(第五十七批 S-6):⋯ 菜单里,只地府、在世、持 `soul.die`,且能以某位土地公名义登记(下面 `mayRegisterByTudi`)。
   const [isTudiRegisterOpen, setIsTudiRegisterOpen] = useState(false);
+  const [isMarkDeadOpen, setIsMarkDeadOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   const { hasPermission } = usePermissions();
   // The rebirth destination. Was not state at all: handleReincarnate posted a
@@ -355,8 +356,9 @@ export default function SoulDetailPage() {
   // 译回操作卡认的那个名字。失效与拒绝文案逐条照旧。
 
   const dieMutation = useMutation({
-    // 发用户本地的日期:不发时服务端按 UTC 取「今天」,东八区凌晨标记会写成前一天。
-    mutationFn: (soulId: string) => soulsApi.die(soulId, { death_date: localDateString() }),
+    // 日期由 MarkDeadDialog 定(F-DEATH-01):已录死亡日的不发(后端沿用),没录的发官员填的那天。
+    mutationFn: ({ soulId, deathDate }: { soulId: string; deathDate?: string }) =>
+      soulsApi.die(soulId, deathDate ? { death_date: deathDate } : {}),
     onSuccess: () => {
       // 直接调 API 而不是用 `useMarkSoulDead`,是有意的:那个 hook 的 onError
       // 走 `notify` 报一句固定文案,而这里要显示后端给的 `data.error`。
@@ -500,9 +502,7 @@ export default function SoulDetailPage() {
             : "";
 
   function handleDie() {
-    if (!soul) return;
-    const soulId = soul.id;
-    confirm.ask(t("souls.detail.mark_dead_confirm", { name: soul.name }), () => dieMutation.mutate(soulId));
+    if (soul) setIsMarkDeadOpen(true);
   }
 
   function handleRecalculate() {
@@ -1057,6 +1057,16 @@ export default function SoulDetailPage() {
           isOpen={isStartWorkflowOpen}
           onClose={() => setIsStartWorkflowOpen(false)}
           lockedSoul={soul}
+        />
+      )}
+
+      {soul && isMarkDeadOpen && (
+        <MarkDeadDialog
+          soulName={soul.name}
+          recordedDeath={soul.death_date ? deathDisplay || null : null}
+          isOpen
+          onClose={() => setIsMarkDeadOpen(false)}
+          onConfirm={(deathDate) => dieMutation.mutate({ soulId: soul.id, deathDate })}
         />
       )}
 

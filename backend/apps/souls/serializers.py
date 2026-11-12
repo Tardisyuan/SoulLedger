@@ -917,13 +917,19 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         from django.db import transaction
 
         old = instance.duat_passage
+        old_dates = instance.death_dates()
         self._require_assign_to_move_an_open_case(instance, old, validated_data.get("duat_passage", old))
+        field = "duat_passage"
         try:
             with transaction.atomic():
                 soul = super().update(instance, validated_data)
                 soul.follow_duat_passage(old)
+                # A changed death date / 阳寿 moves the open case's hold with it (F-DEATH-07): it was set once, at
+                # death, and a correction afterwards left the soul page and the case disagreeing.
+                field = "death_date"
+                soul.follow_death_dates(old_dates)
         except DjangoValidationError as exc:
-            raise serializers.ValidationError({"duat_passage": exc.messages}) from exc
+            raise serializers.ValidationError({field: exc.messages}) from exc
         return soul
 
     def _require_assign_to_move_an_open_case(self, instance, old, new):

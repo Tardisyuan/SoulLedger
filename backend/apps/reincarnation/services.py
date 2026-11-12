@@ -536,6 +536,7 @@ class ReincarnationService:
             soul.birth_name = soul.birth_name or new_identity
             soul.death_date = None
             soul.origin_location = ""
+            soul.death_location = ""
             soul.soup_taken_at = None  # 每世一次:下一世转世前要再饮
             # 新的一世不在十三站上;生在哪一洲由这次转世定(人道才有,其余空 = 不详)。
             soul.diyu_station = ""

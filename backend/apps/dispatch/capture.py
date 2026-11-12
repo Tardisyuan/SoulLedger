@@ -28,7 +28,7 @@ from django.utils import timezone
 from rest_framework.exceptions import APIException
 
 from apps.dispatch.models import OPEN_CAPTURE, CaptureEscort, CaptureStatus, CaptureWarrant
-from apps.souls.models import Civilization, Soul, SoulState
+from apps.souls.models import Civilization, DeathDateError, Soul, SoulState
 
 #: `hand_over` 正在登记这一次死亡:那张牒已经写成 HANDED_OVER,`close_on_death` 不再补发。
 _handing_over: ContextVar[bool] = ContextVar("capture_handing_over", default=False)
@@ -150,6 +150,8 @@ def hand_over(pk, location: str = "") -> CaptureWarrant:
         try:
             judgment = soul.die(death_date=timezone.localdate(warrant.captured_at), location=location,
                                 account_origin="OFFICER", city_god=warrant.city_god)
+        except DeathDateError as exc:  # 拘到那天与生年对不上(F-DEATH-05):答 400,不是 500
+            raise CaptureRefused("invalid_death_date", str(exc), status=400) from exc
         finally:
             _handing_over.reset(token)
         if judgment is None:

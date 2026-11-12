@@ -12,7 +12,7 @@ from apps.death_sync.models import (
     DeathRegistrationStatus,
 )
 from apps.souls.dates import parse_historical_date
-from apps.souls.models import Soul, SoulState
+from apps.souls.models import DeathDateError, Soul, SoulState
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,10 @@ class RetryRefusedError(Exception):
         self.record = record
 
 
+class AmbiguousSoulError(Exception):
+    """A name lookup matched more than one living soul (`lookup_soul`); recorded as SOUL_AMBIGUOUS."""
+
+
 #: `DeathRegistrationRequest.source_system` of a registration a 土地公 made (no API key).
 TUDI_SOURCE = "TUDI"
 
@@ -41,13 +45,15 @@ class DeathSyncService:
     """
 
     @staticmethod
-    def lookup_soul(tenant, lookup_data):
+    def lookup_soul(tenant, lookup_data, souls=None):
         """
         Find a soul by soul_id or by name+birth_date+tenant.
 
         Args:
             tenant: The tenant to search within
             lookup_data: Dict with soul_id or name/birth_date/civilization
+            souls: the souls the registrant may reach (土地公登记:the officer's data scope, F-DEATH-04);
+                None = every soul of the tenant (an external system's API key)
 
         Returns:
             Soul instance or None
@@ -55,15 +61,16 @@ class DeathSyncService:
         Raises:
             ValueError: If lookup criteria are invalid
         """
+        souls = Soul.objects.all() if souls is None else souls
         soul_id = lookup_data.get("soul_id")
         if soul_id:
-            return Soul.objects.filter(id=soul_id, tenant=tenant).first()
+            return souls.filter(id=soul_id, tenant=tenant).first()
 
         name = lookup_data.get("name")
         if not name:
             raise ValueError("Must provide soul_id or name in soul_lookup")
 
-        queryset = Soul.objects.filter(name=name, tenant=tenant)
+        queryset = souls.filter(name=name, tenant=tenant)
         birth_date = lookup_data.get("birth_date")
         if birth_date:
             # Soul.birth_date is no longer a queryable DateField — it's
@@ -80,7 +87,13 @@ class DeathSyncService:
                 date_filters["birth_day"] = day
             queryset = queryset.filter(**date_filters)
 
-        return queryset.first()
+        # F-DEATH-03: 此前取 `.first()`(默认序是最新建的那个),不看状态 —— 重名时登记到错的人,或那人已死就报
+        # SOUL_NOT_ALIVE,而真在世的同名者没登记上。只在在世者里找;多于一个就拒绝,让来源系统补生辰或 soul_id。
+        # 一个在世的都没有时仍答找到的那个(已死 → SOUL_NOT_ALIVE,「多半已登记过」),一个都没有才是 SOUL_NOT_FOUND。
+        alive = list(queryset.filter(current_state=SoulState.ALIVE)[:2])
+        if len(alive) > 1:
+            raise AmbiguousSoulError("More than one living soul matches; add birth_date or send soul_id")
+        return alive[0] if alive else queryset.first()
 
     @staticmethod
     def register_death(tenant, api_key, payload, idempotency_key, source_ip=None):
@@ -126,7 +139,7 @@ class DeathSyncService:
         return DeathSyncService._process_or_replay(request_record, tenant, payload, start_time)
 
     @staticmethod
-    def _process_or_replay(request_record, tenant, payload, start_time):
+    def _process_or_replay(request_record, tenant, payload, start_time, souls=None):
         """`_process` a new row; when its idempotency key already belongs to a FAILED row, run that row again
         (review 2026-11-01 #13). A failed registration answered nothing, so resending the same request — the same
         key — must not be held off as a duplicate: after the hall sets a city god, or the soul is entered, the
@@ -140,7 +153,7 @@ class DeathSyncService:
             # Its own atomic: the failure row `_process` writes after its work rolled back is what collides
             # with the key, and outside a savepoint that IntegrityError would break a caller's transaction.
             with transaction.atomic():
-                return DeathSyncService._process(request_record, tenant, payload, start_time)
+                return DeathSyncService._process(request_record, tenant, payload, start_time, souls)
         except IntegrityError:
             with transaction.atomic():
                 # Locked as retry_failed locks it: two resends cannot both run die().
@@ -160,10 +173,10 @@ class DeathSyncService:
                 record.source_payload = request_record.source_payload
                 record.source_reference_id = request_record.source_reference_id
                 record.source_ip = request_record.source_ip
-                return DeathSyncService._process(record, tenant, payload, start_time)
+                return DeathSyncService._process(record, tenant, payload, start_time, souls)
 
     @staticmethod
-    def _process(request_record, tenant, payload, start_time):
+    def _process(request_record, tenant, payload, start_time, souls=None):
         """Look the soul up, call die(), and record the outcome on `request_record`.
 
         Shared by `register_death` (a new, unsaved row) and `retry_failed`
@@ -191,7 +204,14 @@ class DeathSyncService:
                     request_record.error_message = "This hall is deactivated and accepts no new registrations"
                     request_record.save()
                     return request_record
-                soul = DeathSyncService.lookup_soul(tenant, lookup_data)
+                try:
+                    soul = DeathSyncService.lookup_soul(tenant, lookup_data, souls)
+                except AmbiguousSoulError as e:
+                    request_record.status = DeathRegistrationStatus.FAILED
+                    request_record.error_code = "SOUL_AMBIGUOUS"
+                    request_record.error_message = str(e)
+                    request_record.save()
+                    return request_record
                 if soul is None:
                     request_record.status = DeathRegistrationStatus.FAILED
                     request_record.error_code = "SOUL_NOT_FOUND"
@@ -267,6 +287,15 @@ class DeathSyncService:
             request_record.judgment = None
             request_record.save()
             return request_record
+        except DeathDateError as e:
+            # 死早于生、寿命超 150 年(F-DEATH-05):与 `/souls/{id}/die/` 同一条规则(`Soul.die` 里查)。
+            # 是数据的答案,不是故障:不记 INTERNAL_ERROR,也就不给「重试」。
+            request_record.status = DeathRegistrationStatus.FAILED
+            request_record.error_code = "VALIDATION_ERROR"
+            request_record.error_message = str(e)
+            request_record.judgment = None
+            request_record.save()
+            return request_record
         except Exception as e:
             logger.exception(f"Death registration failed: {e}")
             request_record.status = DeathRegistrationStatus.FAILED
@@ -279,9 +308,9 @@ class DeathSyncService:
             return request_record
 
     @staticmethod
-    def register_by_tudi(tudi, payload, idempotency_key=None):
+    def register_by_tudi(tudi, payload, idempotency_key=None, souls=None):
         """土地公登记一条死亡(`POST /death-sync/tudi-gods/{id}/register-death/`):同一张表、同一条处理,
-        `api_key` 为空,`source_system` 是 "TUDI"。重复的 `idempotency_key` 与外部登记一样:登记失败过的重跑那一条,其余抛 IntegrityError。"""
+        `api_key` 为空,`source_system` 是 "TUDI"。`souls`:登记人数据范围内的灵魂(视图给),范围外的答 SOUL_NOT_FOUND。重复的 `idempotency_key` 与外部登记一样:登记失败过的重跑那一条,其余抛 IntegrityError。"""
         request_record = DeathRegistrationRequest(
             tenant=tudi.tenant,
             tudi_god=tudi,
@@ -291,7 +320,7 @@ class DeathSyncService:
             source_payload=payload,
             status=DeathRegistrationStatus.PENDING,
         )
-        return DeathSyncService._process_or_replay(request_record, tudi.tenant, payload, timezone.now())
+        return DeathSyncService._process_or_replay(request_record, tudi.tenant, payload, timezone.now(), souls)
 
     @staticmethod
     def retry_failed(registration_id, tenant):

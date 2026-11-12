@@ -205,6 +205,33 @@ class TestDieActionDateEnforcement:
         soul.refresh_from_db()
         assert soul.death_year is not None
 
+    def test_dying_with_no_date_keeps_the_recorded_death_date(self):
+        """F-DEATH-01: the web page used to send today, and `Soul.die` wrote `death_date or today` — a death date
+        entered at creation or import was replaced by the day someone clicked."""
+        soul = Soul.objects.create(name="Recorded", tenant=self.tenant, birth_year=1943,
+                                   death_year=1990, death_month=5, death_day=7)
+        assert self._die(soul).status_code == status.HTTP_200_OK
+        soul.refresh_from_db()
+        assert (soul.death_year, soul.death_month, soul.death_day) == (1990, 5, 7)
+        assert soul.current_state == SoulState.JUDGING
+
+    def test_an_ancient_soul_with_a_recorded_death_can_be_marked_dead(self):
+        """The other half of F-DEATH-01: with today sent, birth −612 → today is a 2,600-year life and a 400."""
+        soul = Soul.objects.create(name="Ancient Recorded", tenant=self.tenant, birth_year=-612, death_year=-580)
+        assert self._die(soul).status_code == status.HTTP_200_OK
+        soul.refresh_from_db()
+        assert soul.death_year == -580
+
+    def test_defaulting_to_today_is_held_to_the_same_rules(self):
+        """No date given and none recorded: the day `Soul.die` writes (today) is checked too. It used to be
+        written unchecked, since the view only checked a date it was sent."""
+        soul = Soul.objects.create(name="Ancient Undated", tenant=self.tenant, birth_year=-612)
+        resp = self._die(soul)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.ALIVE
+        assert soul.death_year is None
+
     def test_a_malformed_date_still_answers_in_the_endpoints_own_shape(self):
         """This endpoint reports errors as {"error": ...}. Adding a check
         must not make it answer in two different shapes depending on which

@@ -84,3 +84,50 @@ def test_a_held_judgment_cannot_be_concluded_by_any_path(cn_tenant):
     with pytest.raises(ClaimRefusedError) as refused:
         JudgmentConclusionService.conclude_judgment(judgment, "PASSED")
     assert refused.value.code == "held_until_fated_date"
+
+
+def test_correcting_the_fated_date_after_death_moves_the_hold(cn_tenant, admin_user):
+    """F-DEATH-07 (2026-11-12): the hold was set once, at death. A 阳寿 entered or corrected afterwards left the
+    case unheld (or held) while the soul page said otherwise."""
+    from tests.soul_account_support import officer_client
+
+    judgment = die_and_send_on(_soul(cn_tenant, None), death_date=date.today())
+    assert (judgment.untimely, judgment.held_until) == (False, None)
+    client = officer_client(admin_user)
+    url = f"/api/v1/souls/{judgment.soul_id}/"
+    fated = date.today() + timedelta(days=400)
+    assert client.patch(url, {"fated_death_date": fated.isoformat()}, format="json").status_code == 200
+    judgment.refresh_from_db()
+    assert (judgment.untimely, judgment.held_until) == (True, fated)
+    assert client.patch(url, {"fated_death_date": None}, format="json").status_code == 200
+    judgment.refresh_from_db()
+    assert (judgment.untimely, judgment.held_until) == (False, None)
+
+
+def test_an_upheld_grievance_is_not_undone_by_a_date_edit(cn_tenant, admin_user):
+    from apps.judgment.models import GrievanceStatus
+    from tests.soul_account_support import officer_client
+
+    judgment = die_and_send_on(_soul(cn_tenant, date.today() + timedelta(days=400)), death_date=date.today())
+    judgment.grievance_status, judgment.held_until = GrievanceStatus.UPHELD, None
+    judgment.save(update_fields=["grievance_status", "held_until"])
+    later = date.today() + timedelta(days=800)
+    res = officer_client(admin_user).patch(
+        f"/api/v1/souls/{judgment.soul_id}/", {"fated_death_date": later.isoformat()}, format="json")
+    assert res.status_code == 200, res.data
+    judgment.refresh_from_db()
+    assert judgment.held_until is None
+
+
+def test_a_date_edit_does_not_newly_hold_a_claimed_case(cn_tenant, admin_user, judge_user):
+    from tests.soul_account_support import officer_client
+
+    judgment = die_and_send_on(_soul(cn_tenant, None), death_date=date.today())
+    claims.claim(judgment.pk, judge_user)
+    fated = date.today() + timedelta(days=400)
+    res = officer_client(admin_user).patch(
+        f"/api/v1/souls/{judgment.soul_id}/", {"fated_death_date": fated.isoformat()}, format="json")
+    assert res.status_code == 400 and "death_date" in res.data, res.data
+    judgment.refresh_from_db()
+    assert judgment.held_until is None
+    assert Soul.objects.get(pk=judgment.soul_id).fated_death_year is None

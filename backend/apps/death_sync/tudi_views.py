@@ -15,7 +15,7 @@ from rest_framework.response import Response
 
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import request_tenant
+from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.death_sync.models import DeathRegistrationRequest, TudiGod
 from apps.death_sync.serializers import DeathRegistrationCreateSerializer, DeathRegistrationRequestSerializer
@@ -180,7 +180,12 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         payload = dict(body.validated_data)
         key = payload.pop("idempotency_key", None)
         try:
-            record = DeathSyncService.register_by_tudi(tudi, payload, key)
+            # 灵魂只在登记人的数据范围里找(F-DEATH-04),与发勾魂牒、`/souls/{id}/die/` 同一口径;范围外的答 SOUL_NOT_FOUND。
+            from apps.perm.filters import DataScopeFilter
+            from apps.souls.models import Soul
+
+            souls = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul)
+            record = DeathSyncService.register_by_tudi(tudi, payload, key, souls)
         except IntegrityError:
             existing = DeathRegistrationRequest.objects.filter(
                 tenant=tudi.tenant, source_system="TUDI", idempotency_key=key).first()
