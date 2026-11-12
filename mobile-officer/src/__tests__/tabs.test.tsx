@@ -31,9 +31,10 @@ jest.mock("@soulledger/core/api/auth", () => ({
 const mockClaim = jest.fn();
 const mockRelease = jest.fn();
 const mockCounts = jest.fn();
+const mockHallStats = jest.fn(async () => ({ data: { month_done_pct: null as number | null } }));
 jest.mock("@soulledger/core/api/judgment", () => ({
   // `get` never settles: a case opened from the list just sits loading (the shell test below only needs it open).
-  judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), release: (...a: unknown[]) => mockRelease(...a), queueCounts: (...a: unknown[]) => mockCounts(...a), get: () => new Promise(() => {}) },
+  judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), release: (...a: unknown[]) => mockRelease(...a), queueCounts: (...a: unknown[]) => mockCounts(...a), hallStats: () => mockHallStats(), get: () => new Promise(() => {}) },
 }));
 const mockSouls = jest.fn();
 jest.mock("@soulledger/core/api/souls", () => ({
@@ -545,19 +546,21 @@ describe("the shell", () => {
 
 // 案卷台 (Design 第三十批 第 2 步 · 官员端): the overview line, the source chips, the groups, and the full-screen case.
 describe("the 案卷台", () => {
-  it("the overview: 0 overdue reads 「无超期」 unmarked; an overdue count is marked; the month is a share", () => {
+  it("the overview: 0 overdue reads 「无超期」 unmarked; an overdue count is marked; the month is the server's share", () => {
     const t = (key: string, vars?: Record<string, string>) => `${key}${vars ? JSON.stringify(vars) : ""}`;
     expect(overviewParts(t, 7, 0, null)).toEqual([{ text: 'officer_app.desk.overview.today{"n":"7"}' }, { text: "officer_app.desk.overview.no_overdue" }]);
-    expect(overviewParts(t, 7, 1, { done: 22, open: 78 })[1]).toEqual({ text: 'officer_app.desk.overview.overdue{"n":"1"}', neg: true });
-    expect(overviewParts(t, 7, 1, { done: 22, open: 78 })[2]).toEqual({ text: 'officer_app.desk.overview.month_done{"pct":"22"}' });
-    // Nothing this month and nothing open: no share at all, not 「0%」 of nothing.
-    expect(overviewParts(t, null, null, { done: 0, open: 0 })).toEqual([]);
+    expect(overviewParts(t, 0, 0, null)).toEqual([{ text: 'officer_app.desk.overview.today{"n":"0"}' }, { text: "officer_app.desk.overview.no_overdue" }]);
+    expect(overviewParts(t, 7, 1, 22)[1]).toEqual({ text: 'officer_app.desk.overview.overdue{"n":"1"}', neg: true });
+    expect(overviewParts(t, 7, 1, 22)[2]).toEqual({ text: 'officer_app.desk.overview.month_done{"pct":"22"}' });
+    // The server says null when the month has nothing concluded and nothing open: no share, not 「0%」 of nothing.
+    expect(overviewParts(t, null, null, null)).toEqual([]);
   });
 
-  it("draws the overview from the counts and the officer's month", async () => {
+  it("draws the overview from the counts and the hall's month_done_pct (the web desk's figure, not one worked out here)", async () => {
     mockCounts.mockResolvedValue({ data: { mine: 2, unclaimed: 4, others: 9, deferred: 1, overdue: 0 } });
+    mockHallStats.mockResolvedValueOnce({ data: { month_done_pct: 37 } });
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    await waitFor(() => expect(screen.getByTestId("desk-overview")).toHaveTextContent("今日 7 件 · 无超期"));
+    await waitFor(() => expect(screen.getByTestId("desk-overview")).toHaveTextContent("今日 7 件 · 无超期 · 本月已结 37%"));
   });
 
   it("the four groups in order, 他人手上 last and read-only", async () => {

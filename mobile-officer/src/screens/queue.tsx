@@ -13,7 +13,6 @@
  * A chip whose count is 0 or null is not drawn.
  */
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
-import { officerAppApi } from "@soulledger/core/api/officer-app";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
@@ -75,14 +74,12 @@ export function overviewParts(
   t: (key: string, vars?: Record<string, string>) => string,
   onDesk: number | null,
   overdue: number | null,
-  month: { done: number; open: number } | null
+  monthPct: number | null
 ): { text: string; neg?: boolean }[] {
   const parts: { text: string; neg?: boolean }[] = [];
   if (onDesk != null) parts.push({ text: t("officer_app.desk.overview.today", { n: String(onDesk) }) });
   if (overdue != null) parts.push(overdue > 0 ? { text: t("officer_app.desk.overview.overdue", { n: String(overdue) }), neg: true } : { text: t("officer_app.desk.overview.no_overdue") });
-  if (month && month.done + month.open > 0) {
-    parts.push({ text: t("officer_app.desk.overview.month_done", { pct: String(Math.round((100 * month.done) / (month.done + month.open))) }) });
-  }
+  if (monthPct != null) parts.push({ text: t("officer_app.desk.overview.month_done", { pct: String(monthPct) }) });
   return parts;
 }
 
@@ -133,13 +130,14 @@ export function QueueTab({
   const others = useGroupRows("others", source);
   const groups = [mine, deferred, unclaimed, others];
 
-  // Counts (the overview and the group headings) and this officer's month: not in the read cache, asked again on reconnect.
+  // Counts (the overview and the group headings) and the hall's month: not in the read cache, asked again on reconnect.
   // Unfiltered: the overview, the chips and (under 全部) the group headings are the whole desk.
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
   const counts = useRemote(loadCounts);
   useReloadOnReconnect(counts.reload, counts);
-  // async: a test double without `stats` rejects instead of throwing out of the loader.
-  const loadStats = useCallback(async () => (await officerAppApi.stats()).data, []);
+  // 本月已结 % is the hall's figure, the same `hall-stats` `month_done_pct` the web desk shows (user 2026-11-13).
+  // async: a test double without `hallStats` rejects instead of throwing out of the loader.
+  const loadStats = useCallback(async () => (await judgmentApi.hallStats()).data, []);
   const stats = useRemote(loadStats);
 
   const refresh = () => Promise.all([mine.reload(), deferred.reload(), unclaimed.reload(), others.reload(), counts.reload(), stats.reload()]);
@@ -178,12 +176,11 @@ export function QueueTab({
   };
 
   const c = counts.data;
-  const s = stats.data;
   const overview = overviewParts(
     t,
     c ? (c.mine ?? 0) + (c.deferred ?? 0) + (c.unclaimed ?? 0) : null,
     c?.overdue ?? null,
-    s ? { done: s.concluded_this_month, open: s.open_claims } : null
+    stats.data?.month_done_pct ?? null
   );
   // 全部 / 审判队列 / 跨域 from `sources` (which `?source=` does not change); the elsewhere chips that have a screen.
   const sources = c?.sources;
