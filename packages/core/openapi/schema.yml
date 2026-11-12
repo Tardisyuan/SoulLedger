@@ -20050,6 +20050,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/OfficerRebirthApplication'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
         '403':
           content:
             application/json:
@@ -27112,6 +27118,11 @@ components:
       properties:
         cross_civilization:
           type: boolean
+        target_tenant:
+          type: string
+          default: ''
+          description: 跨文明时必填:目标殿的 code(`cross_civilization_targets` 之一)。不跨时忽略。
+          maxLength: 50
       required:
       - cross_civilization
     CrossFlowAt:
@@ -34488,6 +34499,11 @@ components:
         cross_civilization:
           type: boolean
           nullable: true
+        target_hall:
+          allOf:
+          - $ref: '#/components/schemas/TargetHall'
+          nullable: true
+          readOnly: true
         rejection_reason:
           type: string
         decided_at:
@@ -34524,6 +34540,7 @@ components:
       - desired_form
       - id
       - status
+      - target_hall
       - updated_at
     MeRebirthApplicationList:
       type: object
@@ -36239,6 +36256,11 @@ components:
           type: boolean
           readOnly: true
           nullable: true
+        target_hall:
+          allOf:
+          - $ref: '#/components/schemas/TargetHall'
+          nullable: true
+          readOnly: true
         rejection_reason:
           type: string
           readOnly: true
@@ -36273,6 +36295,11 @@ components:
           description: 与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为
             False。
           readOnly: true
+        cross_civilization_targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetHall'
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -36290,6 +36317,7 @@ components:
       - cooldown_until
       - created_at
       - cross_civilization
+      - cross_civilization_targets
       - current_step
       - cycle
       - decided_at
@@ -36303,6 +36331,7 @@ components:
       - soul_name
       - statement
       - status
+      - target_hall
       - updated_at
       - workflow
     OfficerReply:
@@ -46204,6 +46233,17 @@ components:
         * `POLICE` - Police Household Registration
         * `MESSAGE_BUS` - Message Bus Integration
         * `CUSTOM` - Custom Integration
+    TargetHall:
+      type: object
+      description: 跨文明投生的目标殿(F-REB-11):code 与展示名,与官员 App 的 FactHall 同形。
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+      required:
+      - code
+      - display_name
     TaskRun:
       type: object
       properties:
@@ -46676,6 +46716,16 @@ components:
           type: boolean
           nullable: true
           description: 仅转生:是否跨文明;null = 初审还没定(批准即按「不跨」)。
+        target_hall:
+          allOf:
+          - $ref: '#/components/schemas/FactHall'
+          nullable: true
+          description: 仅转生:跨文明时投生到的殿;不跨或未定为 null(F-REB-11)。
+        cross_civilization_targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactHall'
+          description: 仅转生:此刻由你决定初审时可选的目标殿(能转生、不是原属文明);不能决定时为空。
         status:
           type: string
           description: 仅调拨:记录此刻的状态(PROPOSED / APPROVED / …)。

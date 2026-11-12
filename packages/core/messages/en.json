@@ -9311,7 +9311,7 @@
         },
         "2": {
           "name": "Permission codes",
-          "body": "Every action has a permission code (\"Judgment · execute\", for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes."
+          "body": "Every action has a permission code (\"Execute judgment\", for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes."
         },
         "3": {
           "name": "Try an overreach",

@@ -12207,6 +12207,11 @@ export interface components {
         };
         CrossCivilizationDecision: {
             cross_civilization: boolean;
+            /**
+             * @description 跨文明时必填:目标殿的 code(`cross_civilization_targets` 之一)。不跨时忽略。
+             * @default
+             */
+            target_tenant: string;
         };
         CrossFlowAt: {
             segment: number;
@@ -15311,6 +15316,7 @@ export interface components {
             appeal_statement?: string;
             status: components["schemas"]["RebirthApplicationStatusEnum"];
             cross_civilization?: boolean | null;
+            readonly target_hall: components["schemas"]["TargetHall"] | null;
             rejection_reason?: string;
             /** Format: date-time */
             decided_at?: string | null;
@@ -16065,6 +16071,7 @@ export interface components {
             /** Format: uuid */
             readonly appeal_workflow: string | null;
             readonly cross_civilization: boolean | null;
+            readonly target_hall: components["schemas"]["TargetHall"] | null;
             readonly rejection_reason: string;
             /** Format: date-time */
             readonly decided_at: string | null;
@@ -16077,6 +16084,7 @@ export interface components {
             readonly cooldown_until: string | null;
             /** @description 与 `cross-civilization/` 端点同一个判定(rebirth.cross_civilization_refusal)。没有请求上下文时为 False。 */
             readonly can_decide_cross_civilization: boolean;
+            readonly cross_civilization_targets: components["schemas"]["TargetHall"][];
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -20929,6 +20937,11 @@ export interface components {
          * @enum {string}
          */
         SystemTypeEnum: "GOVERNMENT" | "HOSPITAL" | "POLICE" | "MESSAGE_BUS" | "CUSTOM";
+        /** @description 跨文明投生的目标殿(F-REB-11):code 与展示名,与官员 App 的 FactHall 同形。 */
+        TargetHall: {
+            code: string;
+            display_name: string;
+        };
         TaskRun: {
             readonly id: number;
             readonly job: number | null;
@@ -21119,6 +21132,10 @@ export interface components {
             merit_balance?: number;
             /** @description 仅转生:是否跨文明;null = 初审还没定(批准即按「不跨」)。 */
             cross_civilization?: boolean | null;
+            /** @description 仅转生:跨文明时投生到的殿;不跨或未定为 null(F-REB-11)。 */
+            target_hall?: components["schemas"]["FactHall"] | null;
+            /** @description 仅转生:此刻由你决定初审时可选的目标殿(能转生、不是原属文明);不能决定时为空。 */
+            cross_civilization_targets?: components["schemas"]["FactHall"][];
             /** @description 仅调拨:记录此刻的状态(PROPOSED / APPROVED / …)。 */
             status?: string;
             /** @description 仅缩短冷却:现在还剩几天。 */
@@ -39201,6 +39218,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfficerRebirthApplication"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
                 };
             };
             403: {
