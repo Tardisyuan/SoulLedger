@@ -148,7 +148,9 @@ def test_the_home_hall_s_judgment_on_a_visiting_soul_is_404(cn):
     home = _tenant(Civilization.EGYPTIAN)
     Soul.all_objects.filter(pk=cn["soul"].pk).update(home_tenant=home)
     theirs = Judgment.objects.create(soul=cn["soul"], civilization=Civilization.EGYPTIAN, tenant=home)
-    ours = Judgment.objects.create(soul=cn["soul"], civilization=Civilization.CHINESE, tenant=cn["tenant"])
+    # 已结案的(F-JUDG-03:未结案的挂不上,答 409 judgment_not_concluded)。
+    ours = Judgment.objects.create(soul=cn["soul"], civilization=Civilization.CHINESE, tenant=cn["tenant"],
+                                   verdict="PASSED", is_final=True)
 
     refused = cn["moderator"].post(
         START, {"soul": str(cn["soul"].pk), "judgment": str(theirs.pk), "case_type": CaseType.ROUTINE, "reason": "x"},

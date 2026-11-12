@@ -151,13 +151,14 @@ describe("StartWorkflowDialog — 灵魂与依赖", () => {
     expect(within(caseTypeSelect()).getByRole("option", { name: "常规审判" })).toBeInTheDocument();
   });
 
-  it("关联审判只列这个灵魂的;已有审批的置灰并标「已有审批」", async () => {
+  it("关联审判只列这个灵魂已结案的;已有审批的置灰并标「已有审批」", async () => {
     mockJudgments.mockResolvedValue({
       data: {
-        count: 2,
+        count: 3,
         results: [
-          { id: "j1", case_number: "CN-2026-0001", workflow: null },
-          { id: "j2", case_number: "CN-2026-0002", workflow: "wf-old" },
+          { id: "j1", case_number: "CN-2026-0001", workflow: null, is_final: true },
+          { id: "j2", case_number: "CN-2026-0002", workflow: "wf-old", is_final: true },
+          { id: "j3", case_number: "CN-2026-0003", workflow: null, is_final: false },
         ],
       },
     });
@@ -168,6 +169,8 @@ describe("StartWorkflowDialog — 灵魂与依赖", () => {
     const taken = within(select).getByRole("option", { name: "CN-2026-0002 · workflow.start.judgment_taken" });
     expect(free).not.toBeDisabled();
     expect(taken).toBeDisabled();
+    // 未结案的不列(F-JUDG-03):挂上去,原审结案就建不了自己的审批流程。
+    expect(within(select).queryByRole("option", { name: /CN-2026-0003/ })).not.toBeInTheDocument();
   });
 });
 

@@ -377,6 +377,12 @@ class JudgmentConclusionService:
                     raise weighing.WeighingRefusedError(
                         "An original judgment is concluded through its approval workflow", "approval_flow_required")
                 create_workflow = True
+            # The flow is one-to-one with its judgment (F-JUDG-03): a flow started by hand on this case while it was
+            # still open (before `start` refused that) holds the place, and the flow this conclusion makes would
+            # break the unique constraint — a 500. A 409 the desk can show, before anything is written.
+            if create_workflow and hasattr(locked, "approval_workflow"):
+                raise weighing.WeighingRefusedError(
+                    "This judgment already has an approval workflow", "judgment_has_workflow", status=409)
 
             # Step -½: the officer's own destination / term (审判台「戊 · 发落」).
             # Validated — and the chosen realm row locked for its capacity —

@@ -51,3 +51,30 @@ def test_reopen_cancelled_does_not_reopen_a_case_already_heard_again(cn, lead):
     assert soul.current_state == SoulState.DISPOSED
     # And the page stops drawing the button.
     assert client.get(f"/api/v1/judgment/{case.pk}/").data["flow_cancelled"] is False
+
+
+# ── F-JUDG-03 a hand-started flow does not take an open case's place ────────
+
+
+def test_a_flow_started_by_hand_cannot_take_an_open_case(cn, lead):
+    soul, case = plan.open_case(cn)
+    res = officer_client(lead).post("/api/v1/workflows/start/", {
+        "soul": str(soul.pk), "judgment": str(case.pk), "case_type": "SPECIAL", "reason": "复查"}, format="json")
+    assert res.status_code == 409 and res.data["code"] == "judgment_not_concluded", res.data
+    assert not ApprovalWorkflow.all_objects.filter(judgment=case).exists()
+    # The place stays free for the flow the conclusion builds.
+    case.conclude("FAILED", "")
+    assert ApprovalWorkflow.all_objects.get(judgment=case).manually_started is False
+
+
+def test_concluding_a_case_a_hand_started_flow_already_holds_is_a_409_not_a_500(cn):
+    from apps.judgment.weighing import WeighingRefusedError
+
+    soul, case = plan.open_case(cn)
+    # A row from before `start` refused open cases.
+    ApprovalWorkflow.objects.create(tenant=cn, soul=soul, judgment=case, workflow_name="手动", manually_started=True)
+    with pytest.raises(WeighingRefusedError) as refused:
+        case.conclude("FAILED", "")
+    assert (refused.value.code, refused.value.status) == ("judgment_has_workflow", 409)
+    case.refresh_from_db()
+    assert not case.is_final and case.verdict is None

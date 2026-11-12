@@ -234,7 +234,8 @@ export function StartWorkflowDialog({
 
   const judgmentOptions: SelectOption[] = [
     { value: "", label: t("workflow.start.judgment_none") },
-    ...(judgments.data?.results ?? []).map((j) => ({
+    // 只列已结案的:后端对未结案的答 409 `judgment_not_concluded`(F-JUDG-03,一对一位不能被手动流程先占住)。
+    ...(judgments.data?.results ?? []).filter((j) => j.is_final).map((j) => ({
       value: j.id,
       label: j.workflow ? `${j.case_number} · ${t("workflow.start.judgment_taken")}` : j.case_number,
       disabled: Boolean(j.workflow),
