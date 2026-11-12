@@ -267,7 +267,7 @@ function ConsolePreview() {
 
 const TESTS = ["backend", "web", "soul_app", "officer_app", "e2e"] as const;
 
-function HowBuilt() {
+export function HowBuilt() {
   const { t } = useI18n();
   const box = "border border-[oklch(var(--color-line-strong))] p-3 text-sm text-[oklch(var(--color-ink))]";
   return (

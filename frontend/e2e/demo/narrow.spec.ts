@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { clean, enter, expectSealHandedOver, handOff, watch, watchHandOff } from "./support";
 
-// Design 第二十七批: the demo's home page no longer has the 「怎么做的」 section (its two app recordings); narrow, the
-// journey preview is a still frame that a tap plays once.
+// Narrow, the journey preview is a still frame that a tap plays once. (第二十七批 took the 「怎么做的」 section off the demo's
+// home page; 2026-11-12 A1 put it back, below the roles.)
 test("393px: the journey preview is a still frame until tapped", async ({ page }) => {
   await page.goto("/");
   const preview = page.getByTestId("demo-home-preview");
@@ -12,6 +12,17 @@ test("393px: the journey preview is a still frame until tapped", async ({ page }
     await page.getByTestId("demo-home-preview-play").click();
     await expect(preview).toHaveAttribute("data-shown", "cn");
   }
+});
+
+test("393px: 「这是怎么做的」 is on the home page and nothing in it overflows", async ({ page }) => {
+  await page.goto("/");
+  const section = page.locator("#how-built");
+  await section.scrollIntoViewIfNeeded();
+  await expect(section.getByTestId("landing-numbers")).toBeVisible();
+  const box = await section.boundingBox();
+  expect(box && box.x + box.width).toBeLessThanOrEqual(393);
+  const width = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(width).toBeLessThanOrEqual(0);
 });
 
 test("the landing page's footer opens the credits without signing in", async ({ page }) => {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { CARD_SKIN, LandingHeader, LandingTitle, useCardTilt } from "@/src/components/landing/Landing";
+import { CARD_SKIN, HowBuilt, LandingHeader, LandingTitle, useCardTilt } from "@/src/components/landing/Landing";
 import { LandingEmblem } from "@/src/components/landing/LandingEmblem";
 import { SoulFire } from "@/src/components/landing/SoulFire";
 import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
@@ -22,7 +22,8 @@ import { langOf, soulRecording } from "./store";
  * The demo's home page (Design 第二十七批): a guided start instead of the product's landing page, which the real build
  * keeps as it is (`Landing.tsx`). From the top: the title, three steps and one primary button (地府第五殿's judge); the
  * moving journey preview; the four underworld cards (each signs in as its judge, behind the seal); the four roles in
- * one row; the GitHub footer. 「先看 30 秒」 is an overlay, mounted only while open.
+ * one row; 「这是怎么做的」, the product landing page's own section (architecture, test counts, the two app recordings),
+ * which the finished tour links to; the GitHub footer. 「先看 30 秒」 is an overlay, mounted only while open.
  *
  * The soul's view is this page in another state, not a route: the demo adds no route a normal build could reach.
  */
@@ -33,6 +34,11 @@ export default function DemoHome() {
   const [peek, setPeek] = useState(false);
   const [glow, setGlow] = useState<SealCiv>("cn");
   const onShown = useCallback((skin: SealCiv) => setGlow(skin), []);
+  // `/#how-built` (the finished tour's link) is a full load, and this page is a lazy chunk drawn after the browser looked
+  // for the anchor and found nothing: scrolled to here instead.
+  useEffect(() => {
+    if (window.location.hash === "#how-built") document.getElementById("how-built")?.scrollIntoView();
+  }, []);
   // The phone opens with its screen already drawn: the recording first (a few KB, usually fetched on hover), then the view.
   const look = (civ: SealCiv, top: boolean) =>
     void soulRecording(civ, langOf(locale)).then(() => {
@@ -100,6 +106,7 @@ export default function DemoHome() {
 
         <CivCards enter={(skin, card) => void enter(ROLE_OF_SKIN[skin], card)} warm={(skin) => warm(ROLE_OF_SKIN[skin])} />
         <Roles onLook={(civ) => look(civ, true)} entering={entering !== null} enter={(role, el) => void enter(role, el)} />
+        <HowBuilt />
       </main>
 
       <footer className="shrink-0 border-t border-[oklch(var(--color-line))]">
