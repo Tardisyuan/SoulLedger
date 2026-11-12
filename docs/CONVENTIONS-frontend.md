@@ -20,7 +20,7 @@
 ### 三件影响全部读法的前提
 
 1. **`frontend/tailwind.config.js` 不存在。**【实跑】`ls tailwind.config.*` 无命中。
-   `8fb0da4`（Tailwind 3.4→4.3.3）把配置搬进了 `app/globals.css` 的 `@theme`。
+   `d4e7f28`（Tailwind 3.4→4.3.3）把配置搬进了 `app/globals.css` 的 `@theme`。
    **仍有 27 处引用它**（2026-09-06 实测，分布在约 20 个文件）。其中一部分是
    过去时的历史记录（"used to override the `amber` palette"），那是合理的；
    另一部分是**现在时**的断言，读起来像在描述当前配置，例如
@@ -142,7 +142,7 @@ global 的 67/58/57/67 互不影响。2026-09-14 实测:前端 global
 ### 2.1 颜色
 
 `:root` 是 dark（`:376-540`），`.light` 是 light（`:541-799`）。值是**裸 OKLCH 三元组**
-`L C H`（`7db2c6e` 起，此前是 HSL；旧拼法 `hsl(var(--color-ink))` 会把亮度钳到 100%，静默变白字），消费方式：
+`L C H`（`022b8f8` 起，此前是 HSL；旧拼法 `hsl(var(--color-ink))` 会把亮度钳到 100%，静默变白字），消费方式：
 
 ```
 text-[oklch(var(--color-ink))]              ✅ 唯一正确拼法
@@ -156,7 +156,7 @@ text-ink                                  ❌ Tailwind 4 的 @theme 与 :root �
 
 ### 2.2 七条 design-guard eslint 规则（全部 `error`）
 
-> **2026-09-26 按规范 v1（`16f4e149` 字号、`a2044b28` 间距与色板、`e78e5d88` 圆角与阴影）改过这张表。**
+> **2026-09-26 按规范 v1（`bb010544` 字号、`2c6aaf57` 间距与色板、`1ab9f65f` 圆角与阴影）改过这张表。**
 > 行号是 `frontend/eslint.config.mjs` 当天的行号；启用清单在 `:663-671`。
 
 | 规则 | 禁什么 | 位置 |
@@ -190,7 +190,7 @@ lint 违规片段，确认其中六条会红（`no-styles-in-csstext` 没有探�
   `--ease-enter/exit`，**无 overshoot**（`globals.css:49-145`）
 - **层级（elevation）仍未定义** —— surface 相邻步差仅 1.02–1.05:1，靠 1px hairline 分层
   （`DESIGN.md:50-57`）。此前由 `civilizationColourContract` 反向钉住「ramp 必须保持平」；
-  那份测试随文明色一起删除（`a2044b28`），色板现由 `[test:ledgerPaletteContract]` 按规范 v1 的 hex 逐项钉住
+  那份测试随文明色一起删除（`2c6aaf57`），色板现由 `[test:ledgerPaletteContract]` 按规范 v1 的 hex 逐项钉住
 - **容器** `--container-prose: 720px` / `--container-page: 1200px`。旧值 `max-w-5xl/6xl` 还有 12 处，`[文字]`
 - **z 轴** progress 60 / drawer 70 / dialog 80。旧值 `z-10`…`z-50` 还有 26 处，`[文字]`
 - **三族字体一职**：Archivo（UI）/ IBM Plex Mono（标识与数字）/ **Source Serif 4 只用于
@@ -220,7 +220,7 @@ lint 违规片段，确认其中六条会红（`no-styles-in-csstext` 没有探�
 ## 3. 四文明主题
 
 > **2026-09-26 注：本节「三个 token 族」与「表面 ramp」两小节是 2026-09-06 的记录，不是现状。**
-> 规范 v1 撤销了文明色（`a2044b28`，§1.8 / 第 4 节 06）：`--color-civ-hue-*` / `-mark-*` / `-ink-*`、
+> 规范 v1 撤销了文明色（`2c6aaf57`，§1.8 / 第 4 节 06）：`--color-civ-hue-*` / `-mark-*` / `-ink-*`、
 > `[data-civ]` 规则、`TenantProvider` 的 `data-civ` 标记与 `TenantSignal` 全部删除，
 > `civilizationColourContract` / `tenantSignalContract` 两份测试随之删除；
 > `[test:ledgerPaletteContract]`（`describe("civilization is not a colour")`）断言没有任何 civ token
@@ -265,7 +265,7 @@ lint 违规片段，确认其中六条会红（`no-styles-in-csstext` 没有探�
 Negative Confession `§ n / 42`、Stephanus 页。`[test:civilizationSigilContract]`
 
 ~~Greek 用 88° 而不是 138°，理由是避免与 merit 绿（150°）语义冲突 —— 值被 contract 钉住，
-理由是 `[文字]`。~~ 2026-09-26：色相随文明色一起撤销（`a2044b28`），这一条已无对象。
+理由是 `[文字]`。~~ 2026-09-26：色相随文明色一起撤销（`2c6aaf57`），这一条已无对象。
 
 ---
 
@@ -443,7 +443,7 @@ export default function XPage() {                    // 页级权限门包在默
   于是测试测的是 stub
 - 三份 bundle 每个 namespace 的成员集合必须相同（`[test:domainNamespaceContract]`）
 
-> 曾经的"domainDisplayContract 42 条测试"记录已失效 —— `d80ac68` 把它拆成三份，
+> 曾经的"domainDisplayContract 42 条测试"记录已失效 —— `d15890a` 把它拆成三份，
 > 42 现在既不等于其中任何一份，也不等于合计。
 
 ---
@@ -619,7 +619,7 @@ cd frontend && npx playwright test --project=mobile-chrome
 出处写的是 `AGENTS.md:17` 与 `:23`。**两条都错，而且错法不同：**
 
 **出处已不存在，是我自己删的。** 那两行属于 `AGENTS.md` 旧的 Linear 风格章节，
-`06213e2` 重写 §1 时连着删掉了。于是有一段时间，全仓**只剩这张表**在陈述这两条禁令，
+`3ca1eb5` 重写 §1 时连着删掉了。于是有一段时间，全仓**只剩这张表**在陈述这两条禁令，
 而它指向的行号是空的——正是这份文档反复警告的形状，我自己造了一个。
 
 **更要紧的是：这两条不是"没人执法的规则"，是被有意废止的规则。**
@@ -718,7 +718,7 @@ cd frontend && npx playwright test --project=mobile-chrome
 9. **pre-commit 注释** —— 说「eslint config ignores `src/__tests__/**`」
    vs `eslint.config.mjs:441`「不再被忽略」。
 10. **`AGENTS.md:173`** 说 Footer 象形文字按语言显示 —— 三份 bundle 圣书体字符 **0 个**，
-    `𓋴` 在 `7bd1e8c` 已删。
+    `𓋴` 在 `05133b1` 已删。
 11. **`AGENTS.md:174`** 说语言切换器用下拉菜单 vs `BRIEF.md:198-199` 把
     「native unstyled `<select>`」列为**缺陷**；现状 `LanguageSwitcher.tsx:25-38`
     仍是原生 `<select>`（且带 `text-sm`，在基线里）。

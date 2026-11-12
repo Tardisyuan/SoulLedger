@@ -320,7 +320,7 @@ test("the souls died on different days, and the dashboard's trend is not a flat 
   // (2026-11-12: 62 → 60 of 76 between two recordings of the same seed). Broken spread_time puts them all on one day.
   expect(new Set(deaths).size).toBeGreaterThan(deaths.length / 2);
   const events = rows(recording("admin"), "/events/").map((e) => String(e.create_time ?? e.created_at ?? e.timestamp).slice(0, 10));
-  // The recording keeps the newest 200 events. Since judges got this week's verdicts (edd6dae45) those 200 fall on
+  // The recording keeps the newest 200 events. Since judges got this week's verdicts (564986ab8) those 200 fall on
   // 4 days, not 6+; what this guards is spread_time working at all (broken, every event lands on one day).
   expect(new Set(events).size).toBeGreaterThan(3);
   await enter(page, "admin");

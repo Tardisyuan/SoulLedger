@@ -125,7 +125,7 @@ describe("one quantity keeps one kind across the tables that name it", () => {
   });
 
   it("keeps the carry-forward rates ratios, not weights", () => {
-    // `66a5a3f` put these on the wire as fractions so the card would stop
+    // `0dd0e92` put these on the wire as fractions so the card would stop
     // mirroring the backend constants. A fraction classified `magnitude` would
     // pick up the weight scale marker and say the rate was measured in weight.
     expect(INHERITANCE_QUANTITIES.inheritance_merit_rate).toBe("ratio");

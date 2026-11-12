@@ -165,7 +165,7 @@ CHANNEL_LAYERS = {
                     # BZPOPMIN for up to 5 s (its brpop_timeout) when no message is queued: every
                     # idle socket read then times out, the consumer dies and the web shows
                     # "reconnecting" every few seconds. redis-py 6.4 defaulted to no timeout; the
-                    # lock has carried redis 8.x since a4d6ce79 (2026-09-14). Seen 2026-09-30:
+                    # lock has carried redis 8.x since 5670af03 (2026-09-14). Seen 2026-09-30:
                     # 280 TimeoutErrors in one local session. The read must outlast the pop.
                     "socket_timeout": CHANNEL_LAYER_SOCKET_TIMEOUT,
                 }

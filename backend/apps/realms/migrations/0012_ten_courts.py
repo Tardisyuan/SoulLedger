@@ -10,7 +10,7 @@ king had been filed there (阎罗殿, 泰山府), and five of them held two or t
 kings at once — 秦广王 and 楚江王 shared DY_03_QISHI, while DY_10_YAMA held
 阎罗王, 平等王 and 判官. On top of that the codes carried numbers that agreed
 with nothing: DY_03_QISHI's `name_en` was "Seventh Court Qishi", and DY_10_YAMA
-was displayed as 第十殿 / "Tenth Court Yama" even though 22d9cd0 had just
+was displayed as 第十殿 / "Tenth Court Yama" even though a87006f had just
 settled 阎罗王 as the *fifth* court everywhere else in the repo
 (apps/org's init_organizations, apps/workflow's 十殿审判流程 template, the actor
 titles in seed_mythology). "Which court is this" had three answers.

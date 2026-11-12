@@ -186,7 +186,7 @@ export function SoulKarmaLedgerCard({
               is the worst place to be inconsistent: a marked figure above an
               unmarked one does not read as "one of these names its scale", it
               reads as "these are different quantities", which is the exact
-              misreading `185e70c` set out to end one card higher up.
+              misreading `91254bb` set out to end one card higher up.
 
               The raw pair take their kind from `original_weight`, the field
               they are sums of, rather than from a literal typed here; the
@@ -368,7 +368,7 @@ export function SoulKarmaLedgerCard({
               switch for the same civilization-conditional pattern). A single
               number can't distinguish a 20% carry from a 100% one; two bars
               at a glance can. `inheritance` is non-null wherever the backend
-              has a forward preview, which since f92ed35 is CHINESE *and*
+              has a forward preview, which since 4207bd8 is CHINESE *and*
               GREEK — REBIRTH_CAPABLE_CIVILIZATIONS gained the Spindle of
               Necessity (Republic X 617d-620d). This comment used to say
               "today: Chinese only"; it was true when written and stopped being

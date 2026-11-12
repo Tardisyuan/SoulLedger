@@ -1,6 +1,6 @@
 # 审批流引擎——模板版本、审批人预览、超时与驳回到、会签 / 通知 / 条件分支
 
-Branch `feat/workflow-engine`, merged with `main` at `07706a5e`. Built against canvas C
+Branch `feat/workflow-engine`, merged with `main` at `5dbfb8e2`. Built against canvas C
 (`web-third/SoulLedger_第三类_C_…dc.html` on `origin/design/refs-2026-09`, read with `git show`,
 not merged).
 
@@ -8,14 +8,14 @@ Commits, in the order asked (each can be cut without losing the earlier ones):
 
 | # | commit | item |
 |---|--------|------|
-| 1 | `00ca435` | template versions + data migration |
-| 2 | `6a30c4c` | approver preview |
-| 3 | `8fa19b2` | timeout and 驳回到, return cap |
+| 1 | `2b537ec` | template versions + data migration |
+| 2 | `6a7def4` | approver preview |
+| 3 | `8425975` | timeout and 驳回到, return cap |
 | 4 | `3900993` | 会签 / 通知 / 结束, declarative conditions, graph validation |
-| 5 | `d054c0a` | editor (+ zh-Hans copy) |
-| 6 | `f1d2715` | en / egy copy |
-| — | `93cf706` | merge of `main`; `schema.yml`, `generated/schema.ts`, `egyVocabulary.json` regenerated, not hand-merged |
-| — | `27e6c67` | fix found by the full run on the merged tree (see Gates) |
+| 5 | `070b7ff` | editor (+ zh-Hans copy) |
+| 6 | `aa80bc0` | en / egy copy |
+| — | `732b23a` | merge of `main`; `schema.yml`, `generated/schema.ts`, `egyVocabulary.json` regenerated, not hand-merged |
+| — | `0a658d3` | fix found by the full run on the merged tree (see Gates) |
 
 ## 1. Template versions
 
@@ -155,16 +155,16 @@ Could not be expressed, or only approximately:
 
 | gate | command | exit | result |
 |------|---------|------|--------|
-| backend pytest (SQLite), full, `93cf706` | `.venv/bin/python -m pytest --tb=short -q` | 1 | 5097 passed / **3 failed** / 26 skipped; coverage 94.05% |
-| backend, after the fix `27e6c67` | workflow + verdict-bundle + schema tests | 0 | 293 passed |
-| backend pytest (SQLite), full, `27e6c67` | same | 0 | **5100 passed / 0 failed / 26 skipped**; coverage 94.05% (includes the schema gates: 0 warnings / 0 errors) |
+| backend pytest (SQLite), full, `732b23a` | `.venv/bin/python -m pytest --tb=short -q` | 1 | 5097 passed / **3 failed** / 26 skipped; coverage 94.05% |
+| backend, after the fix `0a658d3` | workflow + verdict-bundle + schema tests | 0 | 293 passed |
+| backend pytest (SQLite), full, `0a658d3` | same | 0 | **5100 passed / 0 failed / 26 skipped**; coverage 94.05% (includes the schema gates: 0 warnings / 0 errors) |
 | ruff | `.venv/bin/ruff check .` | 0 | clean |
 | makemigrations | `manage.py makemigrations --check --dry-run` | 0 | no changes |
 | schema gate | `test_schema_has_no_warnings`, `test_committed_schema_matches_the_backend`, `test_declared_response_shapes_match_the_views` (in the full run); schema.yml regenerated and byte-identical to a fresh `spectacular` | — | 0 warnings / 0 errors |
 | core typecheck / lint / test | `npm run --workspace packages/core …` | 0 / 0 / 0 | vitest 145 passed |
 | frontend tsc | `npx tsc --noEmit` | 0 | — |
 | frontend lint | `npm run lint` | 0 | 0 warnings |
-| frontend test:coverage (`27e6c67`) | `npm run test:coverage` | 0 | 187 suites / 3059 tests; all files 80.92/74.04/71.95/81.84 |
+| frontend test:coverage (`0a658d3`) | `npm run test:coverage` | 0 | 187 suites / 3059 tests; all files 80.92/74.04/71.95/81.84 |
 | build | `npm run build` | 0 | — |
 | playwright chromium | `npx playwright test --project=chromium` | 0 | 153 passed, 1 skipped |
 | playwright mobile-chrome | `--project=mobile-chrome` | 0 | 149 passed, 5 skipped |
@@ -172,8 +172,8 @@ Could not be expressed, or only approximately:
 
 The 3 failures were `test_the_workflow_picker_invents_nothing[en|zh-Hans|egy]`: I had added
 `workflow.verdicts.notified`, but that namespace is the approval picker's vocabulary and may only hold
-verdicts `WorkflowNodeActionSerializer` accepts. Fixed in `27e6c67`: notify nodes carry an empty verdict
-(`TRAVERSED` is the record) and the key is gone. Playwright was run on `93cf706`; `27e6c67` touches only a
+verdicts `WorkflowNodeActionSerializer` accepts. Fixed in `0a658d3`: notify nodes carry an empty verdict
+(`TRAVERSED` is the record) and the key is gone. Playwright was run on `732b23a`; `0a658d3` touches only a
 verdict string, two detail-page map entries and one bundle key per locale.
 
 Playwright ran with `executablePath: /opt/pw-browsers/chromium` through a throwaway config wrapper (the

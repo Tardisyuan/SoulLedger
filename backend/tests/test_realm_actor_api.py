@@ -247,7 +247,7 @@ class TestRealmDescriptionStaysOffTheCard:
 
     Realm text that *is* product copy already has a home: the page reads
     `realms.names.<code>` and `realms.codes.<code>` out of the three message
-    bundles, which is the same split `66a5a3f` and `52cf8e4` drew for the
+    bundles, which is the same split `0dd0e92` and `fd39b1f` drew for the
     ledger — a string a component renders belongs where the translations are.
     Adding `description` to the list serializer in order to display it would
     have crossed that line in the one direction those two commits spent their

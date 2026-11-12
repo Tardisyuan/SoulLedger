@@ -62,13 +62,13 @@ import {
  * these goes red" and nothing asserted it, so it was free to rot — and it had.
  * The `soul detail` row named `useSouls.ts` while the page that actually
  * rendered a soul detail held its copy in `useState` and read no cache entry at
- * all (fixed in 5593e90); the row was true of `judgment/[id]` and quietly false
+ * all (fixed in fa81139); the row was true of `judgment/[id]` and quietly false
  * of the page a reader would have gone looking for.
  *
- * That is the `d80ac68` class exactly: a documentation-only anchor survives a
+ * That is the `d15890a` class exactly: a documentation-only anchor survives a
  * file split or a rewrite, keeps its old text, and nothing turns red. Four
  * references to `AppLayout.tsx:418` sat 43 lines off the thing they named for
- * over a week (29e82df), inside a file whose own subject is defects that
+ * over a week (c3d4269), inside a file whose own subject is defects that
  * "不报错、不报类型、不影响任何断言".
  *
  * So the two assertions below make `owner` carry weight. Deliberately NOT a

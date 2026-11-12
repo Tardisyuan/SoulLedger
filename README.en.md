@@ -502,7 +502,7 @@ steps and the one radius are all **restrictions**, and a restriction has no
 expression in Tailwind — only lint can impose it. `frontend/eslint.config.mjs`
 carries seven custom rules (type-scale / spacing-rhythm / dead-radius / no-page-shadow /
 no-raw-palette / no-hex-colour / no-styles-in-csstext) plus jsx-a11y, all at `error`.
-There are no civilization colours: `--color-civ-*` was removed in `a2044b28`, and
+There are no civilization colours: `--color-civ-*` was removed in `2c6aaf57`, and
 `ledgerPaletteContract.test.ts` holds that.
 
 `npm run lint` is `eslint . --max-warnings 0` in both `frontend` and `packages/core`
@@ -657,7 +657,7 @@ folder. The short version:
   is the source material the domain model was derived from, and it is why
   `readings.py` looks the way it does. These used to be mirrored byte-for-byte
   at the repo root under `地府结构研究/`, `欧洲天堂地狱/` and `埃及冥界/`;
-  **de-duplicated on 2026-08-15** (`b2645e3`), which deleted the 19 copies and
+  **de-duplicated on 2026-08-15** (`e4eee54`), which deleted the 19 copies and
   left each directory holding one README that maps the old filenames into
   `docs/`; those pointer READMEs and their directories were removed on
   2026-10-30.

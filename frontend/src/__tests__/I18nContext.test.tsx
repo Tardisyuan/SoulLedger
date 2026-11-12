@@ -263,7 +263,7 @@ describe('I18nContext', () => {
   // move safe to trust.
   //
   // WHAT MAKES IT DIFFERENT FROM THE 26 DEAD `t(k) || "fallback"` CALL SITES
-  // deleted in b491f8c: those could never reach their right-hand side, because
+  // deleted in 22f5f12: those could never reach their right-hand side, because
   // `t` answers a miss with the key — a truthy string. `tf` compares against
   // the key, so it can see the miss. The first case below is the one that goes
   // red if `t` ever stops echoing (returning "" or null instead), which would

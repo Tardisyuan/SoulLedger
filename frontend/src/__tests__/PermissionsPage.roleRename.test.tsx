@@ -10,7 +10,7 @@
  * empty set, so the live diff for the renamed role is "remove all N grants" —
  * tier 3, with the confirmation modal asking the operator to type the role's
  * name. Type it, and the role really is stripped (FL-05). The rename cascade
- * on the backend (`3ecd5af`) made this reachable from the UI.
+ * on the backend (`8217f6f`) made this reachable from the UI.
  *
  * WHY THE PAGE AND NOT THE HOOK. `useMatrixSave` is doing the right thing
  * with what it is given; the defect is in how the page reconciles `checked`

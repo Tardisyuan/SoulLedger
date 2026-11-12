@@ -2,7 +2,7 @@
 
 What this finishes
 ------------------
-``79dee57`` corrected what this row *claims* — it is 「第二次死亡 / 湮灭 /
+``dde8696`` corrected what this row *claims* — it is 「第二次死亡 / 湮灭 /
 Second Death」 now, not 「吞噬者 / Devourer's Realm」, and Ammit was moved back
 to ``EG_HALL_TWO_TRUTHS`` where every standard vignette draws her (Budge,
 Papyrus of Ani, Plate III; BM EA 9901). It deliberately left the ``realm_code``

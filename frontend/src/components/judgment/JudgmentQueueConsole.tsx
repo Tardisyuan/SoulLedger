@@ -584,7 +584,7 @@ function CaseFactsPanel({ court, confession, stale }: { court: string; confessio
       </div>
       {/* 忏悔在自己的框里滚,而不是把它下面的东西推走。
        *
-       * `d53ede1` 用 `sticky bottom-0` 锚住了裁决按钮,那解决的是「按钮够不着」。
+       * `51851ea` 用 `sticky bottom-0` 锚住了裁决按钮,那解决的是「按钮够不着」。
        * 它解决不了的是**按钮需要的上下文**够不着:`RealmOptionsPanel` —— 那块说
        * 每种裁决会把灵魂送去哪的面板,§4.2 列为必需的决策上下文 —— 就排在这段
        * 忏悔下面、同一左列里。而忏悔是调用方传进来的任意长文本,没有上限,

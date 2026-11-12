@@ -19,9 +19,9 @@
   The canonical *right answer* is already in the tree: `backend/apps/actors/mythology/
   realms.py:16-29` records a split considered at 826 lines and **refused**, because
   "a mechanical split turns twenty true sentences into twenty possibly-false ones,
-  silently." Compare `d80ac68`, which split sixteen files for the line count and left
+  silently." Compare `d15890a`, which split sixteen files for the line count and left
   behind a `Breadcrumb` re-export shim (removed 2026-10-23), four stale `AppLayout.tsx:418`
-  references (fixed in `29e82df`), and a "42 tests" record that now equals no file and
+  references (fixed in `c3d4269`), and a "42 tests" record that now equals no file and
   no sum. `domainDisplayContract.test.tsx` was back over the ceiling nine days later.
   A split needs a defect to justify it, not a number.
 - Validate input at system boundaries
@@ -37,15 +37,15 @@ Named agents coordinate via `SendMessage`, not polling or shared state.
 - NEVER poll status — agents message back or complete automatically
 
 **子代理的 worktree 不保证在分支尖端 —— 每个 prompt 都要让它先确认。**
-2026-09-07 一轮里五个代理,**四个的 worktree 停在 `main`(`35e28a5`)**,不含
+2026-09-07 一轮里五个代理,**四个的 worktree 停在 `main`(`de7c61a`)**,不含
 当时分支上已有的十几个提交。三个自己发现并 reset 了,两个没有,而这两次都造成了
 实际后果:
 
 - `audit-rest` 自报「139 suites / 2530 全绿」—— 真的绿,但绿在一棵没有本轮任何
   工作的树上。**那个绿不作数**,重跑才是 2574。
-- 同一个代理报告「`--z-toast` 被引用却从未声明」。那个缺陷**在 `c3039a6` 里
-  已经修好**,而 `c3039a6` 在 `35e28a5` 之后。它写下那条时缺陷已不存在,而那句话
-  被转告了用户、并写进了 `2aa8494` 的提交信息 —— **一条关于已修缺陷的活体报告
+- 同一个代理报告「`--z-toast` 被引用却从未声明」。那个缺陷**在 `8d7b725` 里
+  已经修好**,而 `8d7b725` 在 `de7c61a` 之后。它写下那条时缺陷已不存在,而那句话
+  被转告了用户、并写进了 `ed33975` 的提交信息 —— **一条关于已修缺陷的活体报告
   进了 git 历史。**
 - `a11y-guard` 在陈旧树上量覆盖率,据此把 `jest.config.js` 的阈值棘轮到
   59/51/50/60。真实的树上是 60.58/52.89/51.12/61.23,**守得住是运气不是验证**:
@@ -212,7 +212,7 @@ Python **3.11** + `requirements.lock` + `requirements-dev.txt`(只有钉死的 r
 --no-deps -r …` 装同样两份。)`.venv` 被 `.gitignore` 与 `.dockerignore` 挡住。
 
 为什么不再用别的环境(2026-09-14 用户决定):此前本地命令与钩子用的是共享的 conda
-`vision` 环境 —— Python 3.12,依赖停在 `d561340` 升级之前,即仍是 pip-audit 报
+`vision` 环境 —— Python 3.12,依赖停在 `84876ad` 升级之前,即仍是 pip-audit 报
 46 个已知漏洞的那批版本。**本地绿测的是另一套依赖**,而它和线上那套只在
 「碰巧兼容」时一致。不要往 `vision` 里装东西去「对齐」:它是共享环境,里面有别的项目。
 
@@ -304,7 +304,7 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     相关测试只执行其中一部分,按它判一定低于门槛 —— 判不准，所以不做。守卫 `TestCoverageOnFull`。
   - **`--dist worksteal` 已打开(2026-10-29),`--ff` 仍不加。** 10-28 加过又撤回:实时类测试随顺序变红(两次 9 / 11 条)。
     根因是 `test_event_bus.py` 的 `EventBus().reset()` 清空了全进程共用的事件处理器表,之后同一 worker 上通知、事件、
-    WebSocket 推送全丢;根 `conftest.py` 的 `_restore_event_handlers` 现在每条测试后还原(`6d2c21dd`),worksteal 全量两轮 8076 passed。
+    WebSocket 推送全丢;根 `conftest.py` 的 `_restore_event_handlers` 现在每条测试后还原(`e56a6a2e`),worksteal 全量两轮 8076 passed。
     打开它是因为不带时 xdist 预先分块,1–2 分钟一条的迁移往返堆在同一个 worker 上:全量在 99% 停 30–40 分钟、七个 worker 空等。
     2026-10-30 起 `--durations=30 --durations-min=5`(此前 `--durations=10`):列出最慢的三十条里超过 5 秒的。
   - **整轮门禁放到 unRAID 上跑(2026-10-28 用户决定，做法一)**:`.prepush.env` 设 `GATES_REMOTE=unraid`(ssh 别名 → `root@gates-host.lan`,
@@ -348,7 +348,7 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     由 json 报告器经 `scripts/e2e-report.py` 汇总。日志在 unRAID 的 `sl-gates/tmp/<checkout>/e2e.log`(此前每个 project 一份)。
     **2026-10-29 起 E2E 有自己的同步树(`work/<checkout>-<哈希>-e2e`)和自己的锁(`e2e.lock`,容器默认 8 核 / 16 GB,
     `GATES_REMOTE_E2E_CPUS` / `GATES_REMOTE_E2E_MEMORY` 覆盖)**,可以和一轮门禁同时跑,不再排在 `run.lock` 后面。
-    安卓调试包与 Metro 也能放到那台上:`scripts/mobile-remote.sh`(本机只剩 adb 装包,`67fa9e90` / `7d4c36e7`)。
+    安卓调试包与 Metro 也能放到那台上:`scripts/mobile-remote.sh`(本机只剩 adb 装包,`0048a6ff` / `a367fe23`)。
     实测(10-28,逐 project 跑的时候):build 31 s;chromium 236 passed / 70 s;firefox 236 / 86 s;mobile-chrome 229 / 68 s;`--e2e=all` 全程 243 s
     (本机 10-27:3.6 / 7.9 / 4.5 分钟)。10-30 一次调用之后 `--e2e=all` 全程 **309 s**(unRAID,与 10-28 不是同一棵树)。mobile-chrome 在 4 worker 下偶有一条慢到超时(两轮里各一条、每次不同),单独跑 10/10 过 ——
     所以用一次重试并点名，不加 skip。
@@ -413,20 +413,20 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     core 改动选 31 个文件;只改 README / docs 选 3 个,另跑 jest 读文件测试(58 个,约 19 s)。
 - 验证(2026-09-30,6 个真实提交各跑选择性与全量,再各注入一处会让测试红的改动)。
   方法:在本分支尖端上 `git revert` 该提交再 `cherry-pick` 回来,`--base` 取 revert 那一格,
-  于是改动集恰好是那个提交的 diff,依赖是今天的;`127dff04` revert 冲突,改用 `PREPUSH_CHANGED`
+  于是改动集恰好是那个提交的 diff,依赖是今天的;`d90fd854` revert 冲突,改用 `PREPUSH_CHANGED`
   给出它的文件清单。时间是锁拿到之后的门禁时间(负载 5–12)。注入的破坏各让选择性与全量
   **红在同一组测试上**:
 
       提交       内容              jest 选中/总数        门禁时间 选择性/全量   注入破坏 → 两边都红
-      905bbe84   前端组件           53/197 文件 (1437/3295 条)  19 s / 33 s   Breadcrumb 不再跳过无页前缀 → AppLayout.test
-      c1fc7d77   core hook         104/197 (2066/3295)        76 s / 74 s   useBatchRecycleSouls 判断取反 → useSouls.test 4 条
-      40dfcdc4   语言包            全量(规则:语言包)            102 s / 78 s  egy.json 一个值 → egyLexiconRules 2 条
-      8b50dca9   后端 view         不涉及 jest;pytest 全量      108 s / 122 s views.py 分支取反 → 6 条
-      4033dcc1   迁移              不涉及 jest;pytest 全量+往返  565 s / 497 s 0002 反向不删官员会话 → 1 条
-      127dff04   语料 md + 语言包   全量(规则)                   254 s / 267 s md 加一个未知 code → 语料测试 2 条
+      4bd22aba   前端组件           53/197 文件 (1437/3295 条)  19 s / 33 s   Breadcrumb 不再跳过无页前缀 → AppLayout.test
+      3650953b   core hook         104/197 (2066/3295)        76 s / 74 s   useBatchRecycleSouls 判断取反 → useSouls.test 4 条
+      43136a88   语言包            全量(规则:语言包)            102 s / 78 s  egy.json 一个值 → egyLexiconRules 2 条
+      1ed1dca5   后端 view         不涉及 jest;pytest 全量      108 s / 122 s views.py 分支取反 → 6 条
+      afc159a1   迁移              不涉及 jest;pytest 全量+往返  565 s / 497 s 0002 反向不删官员会话 → 1 条
+      d90fd854   语料 md + 语言包   全量(规则)                   254 s / 267 s md 加一个未知 code → 语料测试 2 条
 
   jest 本身:选择性 9 s 对全量 25 s(组件那条);core 那条选中 58 个相关文件,和全量差不多快。
-  后端两列本来就是同一条命令,差值是噪声。c1fc7d77 那条的 `useSouls.test.ts` **不在** always-run
+  后端两列本来就是同一条命令,差值是噪声。3650953b 那条的 `useSouls.test.ts` **不在** always-run
   里,只能靠 `--roots` 补上 core 之后的关联选中 —— 不补那一项,这次破坏在选择性运行里会是绿的。
 
 pip-audit 不装进 venv(CI 也是临时装):`cd backend && uvx pip-audit --strict --desc
@@ -609,7 +609,7 @@ cd frontend && npx playwright test --project=mobile-chrome
 # 不覆盖,于是 REDIS_URL 也读 `.env` 指向 115 —— 最上面那段 2026-08-27 验证过的
 # 情形:`apps/perm/cache.py` 自开 Redis 客户端(conftest 的 LocMem 覆盖不到它),
 # 套件往 115 写权限缓存键,每次无前缀的 `invalidate_all_permissions()` 还会删掉
-# 那里所有 `perm:*`。`28a374a` 给 pre-push 修的是同一件事,这条漏了。
+# 那里所有 `perm:*`。`9d5fa71` 给 pre-push 修的是同一件事,这条漏了。
 # 另:`test_invalidate_all_clears_its_own_prefix_and_only_its_own` 在 REDIS_URL
 # 不是本机时跳过(它不往共享 Redis 写)—— 不带下面三个变量跑,skip 会多一条。
 cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
@@ -625,14 +625,14 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 # 2026-10-09 起(用户决定):**4 进程并行，迁移往返只在改了迁移时跑。**
 # 串行全量 53 分钟(6384 passed),
 # 卡在 76% 附近的是迁移往返与 transaction=True 的并发测试。
-# `-n 4 -m "not migration"` 实测 13.5 分钟(`d51b7d2e`:6360 passed / 7 skipped / exit 0,
+# `-n 4 -m "not migration"` 实测 13.5 分钟(`585d2fdb`:6360 passed / 7 skipped / exit 0,
 # 跑完 115 残留 NONE)。每个 worker 在 115 上建自己的库(`test_soulledger_gw0_<后缀>`)。
 # **2026-10-19 起这些库从一个模板克隆**(根 `conftest.py` + `backend/config/testdb.py`):xdist 主进程先建
 # `test_soulledger_tpl_<后缀>` 并完整迁移一次,worker 用 `CREATE DATABASE … TEMPLATE` 建自己的库,迁移无事可做;
 # 会话结束(或建模板失败时当场)`DROP DATABASE … WITH (FORCE)`。此前四个 worker 各自重放约 389 个迁移。
 # 只对 PostgreSQL 且带 `-n` 时生效;SQLite、`-n 0`、`--reuse-db`、`--nomigrations` 走原路径。
 # 查残留时 `like 'test_soulledger%'` 同样匹配 `_tpl_`。
-# 实测(2026-10-19,`6a10df06`):7654 passed / 15 skipped / exit 0,**950 s**(10-10 那次各自迁移是约 18 分钟,
+# 实测(2026-10-19,`1833f730`):7654 passed / 15 skipped / exit 0,**950 s**(10-10 那次各自迁移是约 18 分钟,
 # 测试还少一千多条);跑完 `_tpl_` 已删,本轮无残留。被 Ctrl-C 打断时模板同样被删,只留下当时那个 worker 的库。
 # 改到迁移、`tests/migration_roundtrip.py`、conftest 或 `pytest.ini` 时，去掉 `-m "not migration"`
 # 跑全量(规则同 pre-push 的 SQLite 那条)。
@@ -658,32 +658,32 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true 
 
 (2026-08-31 那次是 3435 / 3440。绝对值会随测试增长,**+5/−5 这个差值才是结论**。)
 
-**2026-09-25 复测(`638929e2`,云端十个任务合入后):** SQLite **4809 passed / 25 skipped**,
+**2026-09-25 复测(`d24df886`,云端十个任务合入后):** SQLite **4809 passed / 25 skipped**,
 真 PostgreSQL **4829 passed / 5 skipped**,差值 **+20/−20** —— 正好是
 `test_the_postgres_only_set_is_the_set_we_think_it_is` 名单的长度(20)。PG-only 集合随并发认领等功能增长,
 **差值应等于那份名单的长度**,不是固定的 5。同一天前端 jest 182 suites / 2974,mobile 235,core vitest 122,
 E2E 三个 project 各 140。
 
-**2026-09-25 再测(`07706a5e`,读退出码):** pre-push SQLite **5040 passed / 26 skipped**;真 PostgreSQL(`26554de7` + 修复)**5060 passed / 5 skipped / 1 failed**,修后重跑那 15 条全过。
-差值 26 − 5 = **21**,等于此时名单长度(21)。integ `8c799840` 门禁:jest 186 suites / 3045,
+**2026-09-25 再测(`5dbfb8e2`,读退出码):** pre-push SQLite **5040 passed / 26 skipped**;真 PostgreSQL(`d29fd29c` + 修复)**5060 passed / 5 skipped / 1 failed**,修后重跑那 15 条全过。
+差值 26 − 5 = **21**,等于此时名单长度(21)。integ `1bf72ade` 门禁:jest 186 suites / 3045,
 core vitest 15 文件 / 145,mobile 259,E2E chromium 153 / firefox 153 / mobile-chrome 149。
 
-**2026-09-26 再测(读退出码):** main `35f2d95f` pre-push SQLite **5328 passed / 26 skipped**;
-真 PostgreSQL(第六轮 integ `33a38e77`)**5349 passed / 5 skipped**,跑完 `test_soulledger*` 残留 `NONE`。
+**2026-09-26 再测(读退出码):** main `4548da6f` pre-push SQLite **5328 passed / 26 skipped**;
+真 PostgreSQL(第六轮 integ `11cf0b1b`)**5349 passed / 5 skipped**,跑完 `test_soulledger*` 残留 `NONE`。
 差值 26 − 5 = **21** = 名单长度(21);通过数之差大于 21,因为两个数量的是不同的树。
 第六轮 integ 门禁:jest 192 suites / 3183(egy-sec14 之后 3187),core vitest 16 文件 / 158,
 mobile 300,E2E chromium 155 / firefox 155 / mobile-chrome 151,egyLexiconRules 28。
 
-**2026-10-10 再测(`d6242d87`,读退出码):** pre-push SQLite **6608 passed / 40 skipped**;真 PostgreSQL
+**2026-10-10 再测(`3259fcea`,读退出码):** pre-push SQLite **6608 passed / 40 skipped**;真 PostgreSQL
 **6602 passed / 15 skipped**,跑完 `test_soulledger*` 残留 `NONE`。PG 的 15 = 原来的 7 加 8 条多库守卫
 (`tests/test_multidb_shadow.py`,不带 `--ds=config.settings_multidb` 就跳过,设计如此)。
 jest 250 suites / 4252,core vitest 18 文件 / 180(改到 core 时),mobile 616,官员端 244。E2E 这两天没有跑。
 `-n 4` 下真 PG 约 18 分钟(测试变多了,此前 13.5 分钟)。
 
-**2026-10-12 再测(`03fb1f2c`,读退出码):** 前端 jest **270 suites / 4526**,core vitest 22 文件 / 228,灵魂端 856,
-官员端 407,E2E chromium 234 / firefox 234 / mobile-chrome 227(这三项在 `fd69f56c` 之后的树上跑,其后只改了语言包与 App)。
+**2026-10-12 再测(`6e2a47d1`,读退出码):** 前端 jest **270 suites / 4526**,core vitest 22 文件 / 228,灵魂端 856,
+官员端 407,E2E chromium 234 / firefox 234 / mobile-chrome 227(这三项在 `83035b10` 之后的树上跑,其后只改了语言包与 App)。
 后端这两天只改了测试与文案:pre-push 的读文件测试 904 passed;全量 SQLite 与真 PostgreSQL 没有重跑,
-上一次是 `1e17a4aa` 的真 PG 含迁移 7020 passed / 1 failed(那一条是后端一处文案副本,随后修掉;修后没有重跑全量)。
+上一次是 `910d49d5` 的真 PG 含迁移 7020 passed / 1 failed(那一条是后端一处文案副本,随后修掉;修后没有重跑全量)。
 
 **事件日志(`EventService.log*`)是业务记录的一部分(2026-10-10 用户决定):**写 `SoulEvent` 失败,整笔业务回滚,
 调用方拿到原始异常。因此 **`log*` 必须写在它所描述的那笔业务的事务里面**,给人的通知和推送才放 `transaction.on_commit`。
@@ -743,7 +743,7 @@ egy 没有 Design 的词时把键写进 `frontend/src/__tests__/support/egyPendi
 残留,**不是空库**。删它之前先确认 `pg_stat_activity` 里对它的连接数为 0。
 成因没查出来:我自己那次全量跑是正常结束的(exit 0、打了汇总行),
 所以要么残留早于它,要么有一次没被观察到的 teardown 被打断 —— **分不出是哪种**。
-**2026-09-26 查到并修掉(`bf406a6f`):两种都不是。** `database_sync_to_async` 的单线程
+**2026-09-26 查到并修掉(`d1d2e5eb`):两种都不是。** `database_sync_to_async` 的单线程
 executor 因 `conn_max_age` 一直握着一条连接,DROP 失败,而 pytest-django 把它降成一条
 warning —— exit 0、汇总行照打,残留照留。修法是根 `conftest.py` 的 `django_db_setup`
 包装(会话结束前关掉那条连接),加 `pytest.ini` 把那条 warning 升成 error。
@@ -812,7 +812,7 @@ transactions, constraints, or column widths, run it against PostgreSQL.
 
 *Why:* `docs/PRODUCTION_READINESS_REPORT.md` claimed "Production Ready / Security 8.5" on
 2026-05-30; the 2026-08-07 M15 audit found 4 CRITICAL tenant-isolation gaps in that same code.
-Many of the 61 fix commits in 2026-08 patch what the previous fix missed — e.g. `d879960`
+Many of the 61 fix commits in 2026-08 patch what the previous fix missed — e.g. `580302e`
 "close the last two tenant-scoping gaps the M15 pass missed".
 
 *Why:* the 2026-08-14 BRIEF §4.6 session hit the same unverified-claim shape four times.

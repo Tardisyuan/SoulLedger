@@ -296,7 +296,7 @@ everywhere; there is no bidirectional text in this app.
 > **2026-08-26 更正。** 本段此前还写着「with three strings carrying hieroglyphs as
 > ornament and the locale labelled `𓋴 Kemet`」。实测两句都已不成立:三份 bundle 里
 > U+13000–U+1342F 区段的字符 **0 个**,区域标签是纯文本 `Kemet`。`𓋴`(U+132F4)在
-> `7bd1e8c` 被删,因为它需要一个 Windows/Linux 默认都不装的字体。左到右与无双向文本
+> `05133b1` 被删,因为它需要一个 Windows/Linux 默认都不装的字体。左到右与无双向文本
 > 这两句仍然成立(egy.json 1275 条里阿拉伯字符 0 个)。
 
 What does mix is **script, not direction**: database content stays Chinese in every

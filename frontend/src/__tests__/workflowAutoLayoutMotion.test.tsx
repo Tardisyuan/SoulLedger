@@ -196,7 +196,7 @@ beforeEach(() => {
 
 describe("a mutation mid-travel stops the travel", () => {
   /**
-   * THE DEFECT THIS PINS, WHICH SHIPPED IN `e966f15`. `.kill()` lived in
+   * THE DEFECT THIS PINS, WHICH SHIPPED IN `a91cc6b`. `.kill()` lived in
    * exactly two places — the unmount cleanup and `autoLayout` itself — while
    * four other handlers mutate the very nodes gsap is animating: `addNode`,
    * `deleteSelectedNode`, `updateNodeData` and `onConnect` each

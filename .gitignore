@@ -80,7 +80,7 @@ frontend/next-env.d.ts
 # existed only on one machine. MILESTONE_M15.md documents that the menu/perm
 # endpoints are deliberately tenant-global; nobody reading the repo could see
 # that, so the "missing" filter was later added back as a fix and 500'd every
-# non-admin role (c2ca5ac). Track the Markdown; `/docs/*` above still catches
+# non-admin role (d5a80ba). Track the Markdown; `/docs/*` above still catches
 # loose screenshots, exports and other binaries dropped into this directory.
 !/docs/*.md
 # Same deal one level down: descend into archive/, re-ignore its contents, then

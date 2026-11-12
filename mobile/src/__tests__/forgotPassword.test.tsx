@@ -144,7 +144,7 @@ describe("step 1: the email", () => {
     expect(screen.queryByTestId("login-reset-notice")).toBeNull();
   });
 
-  // THE GUARD. Mutation-proved in cloud-reports/soul-app-password-reset.md, a report since moved out of the repo (638929e2).
+  // THE GUARD. Mutation-proved in cloud-reports/soul-app-password-reset.md, a report since moved out of the repo (d24df886).
   it("a 200 and a 400 (an address the server will not take) render the SAME screen, word for word", async () => {
     const trees: string[] = [];
     for (const reply of [

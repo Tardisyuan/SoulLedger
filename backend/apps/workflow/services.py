@@ -109,10 +109,10 @@ class WorkflowService:
         ``WorkflowTemplate.nodes_json``, and ``create_from_judgment`` prefers a
         stored template over ``WORKFLOW_TEMPLATES``. Reading only the ``actor``
         key therefore made *every* preset-built node ``SYSTEM``, and since
-        ``7fe9a28`` a ``SYSTEM`` node can be decided by nobody: a workflow
+        ``7b30fa6`` a ``SYSTEM`` node can be decided by nobody: a workflow
         created from a preset was stuck from birth, while its labels named
         Christ and Michael, both of whom the cast supplies. Measured in
-        ``e7e87e7``::
+        ``a01dde3``::
 
             1.'Christ · 私审判' SYSTEM None   2.'Michael · 引领入光' SYSTEM None
             3.'Christ · 公审判' SYSTEM None
@@ -173,13 +173,13 @@ class WorkflowService:
         A node saved from /workflow can set ``approver_type="ROLE"`` with an
         ``approver_role`` — and a non-empty ``approver_role`` is one of exactly
         two things ``designates_approver`` accepts, so discarding it would hand
-        the user back the un-approvable node ``e7e87e7`` measured, arriving
+        the user back the un-approvable node ``a01dde3`` measured, arriving
         through a different key. It is tried *after* the name because naming a
         person is the more specific designation and because ``"ROLE"`` is what
         ``WorkflowEditor.getTemplateNodes`` defaults **every** node to
         (``approver_type ?? "ROLE"``, ``approver_role`` usually ``""``) — an
         empty role is a default, not a decision, and honouring the default
-        ahead of the label would have unpicked ``625f4d1`` for every template
+        ahead of the label would have unpicked ``61adf11`` for every template
         the editor has ever saved. An empty role designates nobody, so it falls
         through to ``SYSTEM`` exactly as before.
         """
@@ -284,7 +284,7 @@ class WorkflowService:
         This was a latent defect, not an outage: ``create_appeal_workflow`` has
         no production caller anywhere in the backend (only tests reach it). It
         is repaired because the two doors are meant to answer the same question
-        the same way — the same reason ``8b5aa00`` gave that method the
+        the same way — the same reason ``d392f3a`` gave that method the
         case-type validation this one already ran.
 
         **The second element is the template's own priority**, or ``None`` when
@@ -485,7 +485,7 @@ class WorkflowService:
                 required_verdicts=[],
                 # Was a hardcoded `approver_type="SYSTEM"`, which is why all 30
                 # nodes in the live database designate nobody and why the
-                # identity check `4ceffe8` added could not refuse a single one
+                # identity check `773ef24` added could not refuse a single one
                 # of them. Backfilling the existing rows
                 # (0011_backfill_ten_court_approvers) without fixing this would
                 # have closed the hole for exactly as long as it took someone
@@ -818,7 +818,7 @@ class WorkflowService:
         # The notification half, after commit, not "outside the atomic block above": `conclude_judgment(create_workflow=True)` calls
         # this from inside the judgment's own transaction. A notification INSERT that fails there is swallowed
         # by the event bus but marks that transaction for rollback, so the conclusion is lost silently
-        # (same defect as `30052b65`; tests/test_dispatch_notifications_after_commit.py). Outside any
+        # (same defect as `eff2a32c`; tests/test_dispatch_notifications_after_commit.py). Outside any
         # transaction `on_commit` runs at once.
         transaction.on_commit(lambda: cls.announce(workflow, created=True))
         if cross is not None:

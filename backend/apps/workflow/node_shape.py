@@ -76,7 +76,7 @@ the frontend presets turned out to hold Chinese step names there. Reasoned, not
 measured, because the sandbox still cannot reach shared-box.lan:
 
 * Only three things write ``WorkflowTemplate.nodes_json``. The API has validated
-  ``node_type`` against a five-member ``ChoiceField`` since ``14a4c44``, the
+  ``node_type`` against a five-member ``ChoiceField`` since ``5ad81e5``, the
   commit that introduced the app — so the one path a user can drive has never
   been able to store 「分流」; it answered 400 instead, which *is* the defect
   being fixed. ``seed_workflow_templates`` writes ``WORKFLOW_TEMPLATES``, whose

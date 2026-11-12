@@ -180,8 +180,8 @@ def test_the_detector_recognises_the_canonical_map_itself():
 #:
 #: The last is the real dict from
 #: `apps/tenants/management/commands/migrate_to_multitenant.py`, deleted in
-#: `d1fcb8f` and recoverable with
-#: `git show d1fcb8f^:backend/apps/tenants/management/commands/migrate_to_multitenant.py`.
+#: `2130fcc` and recoverable with
+#: `git show 2130fcc^:backend/apps/tenants/management/commands/migrate_to_multitenant.py`.
 #: It is here as a **negative**, and deliberately so: that command's commit
 #: message called it "a hand-written three-key copy of the civilization map",
 #: and it is not one. It is keyed by tenant code with `Tenant` objects on the

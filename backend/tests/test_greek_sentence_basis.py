@@ -246,7 +246,7 @@ def test_the_verdict_is_the_only_thing_the_greek_router_reads(make_greek_soul):
 
 @pytest.mark.django_db
 def test_the_gongguoge_partition_does_not_reach_a_greek_soul(make_greek_soul):
-    """452616f's 不可折 rule is Chinese arithmetic, and Plato has none to limit.
+    """5ef73ed's 不可折 rule is Chinese arithmetic, and Plato has none to limit.
 
     Republic X 615b repays well-doing on its own road in its own measure; a good
     deed never discharges part of the term owed on the other. There is no

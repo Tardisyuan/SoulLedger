@@ -1,6 +1,6 @@
 """An address can be held by one live user, and the database says so.
 
-BP-04, second half. The serializer check landed on 2026-09-12 (`a6a0c49`) and
+BP-04, second half. The serializer check landed on 2026-09-12 (`495c705`) and
 closed the path where a PATCH to `/auth/profile/` claimed the victim's address
 and broke their password reset. What it could not close is the race: two
 concurrent requests both read "no such address", both pass `validate_email`,

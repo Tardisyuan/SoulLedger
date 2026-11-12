@@ -99,7 +99,7 @@ export default function NotificationsPage() {
     // Meanwhile eventInvalidationReachesCache.test.ts asserted that
     // `notificationKeys.list()` gets invalidated, and nothing read that entry:
     // the row was green and vacuous, the same shape the `soul detail` row had
-    // before 5593e90.
+    // before fa81139.
     queryKey: notificationKeys.list(filter === "unread" ? { is_read: "false" } : undefined),
     queryFn: async () => {
       const params: Record<string, string> | undefined = filter === "unread" ? { is_read: "false" } : undefined;

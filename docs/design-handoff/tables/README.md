@@ -32,7 +32,7 @@ transliterated Egyptian consistent with the rest of the bundle, and the locale l
 **但「三条带圣书体作装饰」和「区域标签是 `𓋴 Kemet`」这两句已经不成立了**,
 `BRIEF.md` §5 里的同一句话也一样。实测:三份 bundle 里 U+13000–U+1342F 区段的字符
 **0 个**,区域标签现在是纯文本 `Kemet`(`src/contexts/I18nContext.tsx:25`)。
-`𓋴`(U+132F4)在 `7bd1e8c` 被删掉,理由写在该文件的注释里:它需要一个 Windows 与 Linux
+`𓋴`(U+132F4)在 `05133b1` 被删掉,理由写在该文件的注释里:它需要一个 Windows 与 Linux
 默认都不装的字体,在大多数机器上渲染成豆腐块,而它旁边两个区域标签本来就是不带字形的
 纯词。**不要为一个不存在的字形留位,也不要指定圣书体字库。**
 

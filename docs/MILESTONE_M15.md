@@ -11,9 +11,9 @@
 > 3 条确认是有意为之的设计（Menu/`perm` 端点全局共享不分租户、dispatch 的
 > `_base_manager` 跨租户查重是防重复调度的既定选择），其余在两个月的其他改动中顺带修好。
 > 具体提交：Celery 四个 CRITICAL 任务改为按租户分发子任务并对齐审计归属
-> (`dc5dbbe`)、`TenantMiddleware`/`TenantPermission` 加入 JWT 租户与用户真实租户的
-> 交叉校验 (`44d12f7`)、服务层四处创建记录补上 `tenant`
-> (`e3c7c9f`)、API 层四处补上租户过滤或纠正权限类 (`368f0e6`)。
+> (`d589592`)、`TenantMiddleware`/`TenantPermission` 加入 JWT 租户与用户真实租户的
+> 交叉校验 (`405c8a3`)、服务层四处创建记录补上 `tenant`
+> (`f089094`)、API 层四处补上租户过滤或纠正权限类 (`a49afbe`)。
 >
 > 过程中额外发现两个不在本审计范围内的问题，未在此修复，已各自开了独立任务：
 > social 序列化器的 `post`/`comment` 字段可跨租户提交（写入侧漏洞，权限类之外的一层）；
@@ -418,7 +418,7 @@ def cleanup_old_requests(days=90, batch_size=1000):
 | 依赖 | 状态 | 说明 |
 |------|------|------|
 | M14 完成 | ⏳ 待开始 | 前端租户切换功能 |
-| TenantManager contextvar 修复 | ✅ 已完成 | `fb32356` |
+| TenantManager contextvar 修复 | ✅ 已完成 | `047e262` |
 | DataScopeViewSetMixin | ✅ 已存在 | ViewSet 层隔离 |
 | TenantPermission | ✅ 已存在 | 权限检查 |
 | Celery + django-celery-beat | ✅ 已配置 | 后台任务基础设施 |

@@ -102,7 +102,7 @@ class OrganizationAPITest(TestCase):
     """
     组织架构 API 测试.
 
-    Stale as of 0ea97ff, corrected here: `Organization` DOES now carry a
+    Stale as of f9469c5, corrected here: `Organization` DOES now carry a
     `tenant` FK, and reads/writes are gated by `org.read`/`org.manage` via
     `CodenameViewSetMixin` + `CodenamePermission`. Before that fix,
     `TenantQuerySetMixin` filtered on `tenant` unconditionally against a model
@@ -158,7 +158,7 @@ class OrganizationAPITest(TestCase):
         TenantQuerySetMixin used to filter on `tenant` unconditionally before
         the field existed, raising FieldError for every non-ADMIN caller.
         VIEWER holds `org.read` (all five roles do), so this also confirms
-        the codename gate added in 0ea97ff doesn't itself block an ordinary
+        the codename gate added in f9469c5 doesn't itself block an ordinary
         read — a regression there would 403, not 500, which the old
         status-code-only assertion would not have distinguished from success.
         """

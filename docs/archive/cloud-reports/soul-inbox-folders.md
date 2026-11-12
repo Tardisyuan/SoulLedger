@@ -1,6 +1,6 @@
 # 殿司收件箱:待回复 / 已回复 / 草稿 / 归档 / 未读与回复模板
 
-分支 `feat/soul-inbox-folders`,自 `main` `05631b1` 起。环境:云端,Node **22.22.2**(没有 20.19.5),
+分支 `feat/soul-inbox-folders`,自 `main` `234a1a8` 起。环境:云端,Node **22.22.2**(没有 20.19.5),
 npm 11 `ci` + `rebuild`,锁文件已还原;Python 3.11 `backend/.venv`;一次性 redis-server :6399。
 
 ## 1. 后端能看见什么(动手之前先查的)

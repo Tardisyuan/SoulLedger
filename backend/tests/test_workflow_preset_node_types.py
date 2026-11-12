@@ -455,7 +455,7 @@ def test_a_preset_saved_through_the_api_builds_a_workflow(seeded):
         ("泰山王 · 六审", "TRIAL"), ("都市王 · 七审", "TRIAL"),
         ("平等王 · 八审", "TRIAL"), ("转轮王 · 终审", "FINAL"),
     ]
-    # …and the identity work `625f4d1` does off the label still happens, so the
+    # …and the identity work `61adf11` does off the label still happens, so the
     # type fix did not buy a saveable template at the price of a stuck one.
     assert workflow.nodes.filter(approver_type="SYSTEM").count() == 0
 
@@ -514,7 +514,7 @@ def test_a_stored_step_name_normalises_instead_of_landing_in_the_column(seeded):
 
     `ApprovalNode.node_type` is `choices`-constrained but `objects.create()` runs
     no `full_clean()`, so whatever a stored template says goes straight in. The
-    API has validated this field since `14a4c44`, so no row it wrote can carry a
+    API has validated this field since `5ad81e5`, so no row it wrote can carry a
     step name — but a hand-written UPDATE can, and the production database is not
     reachable from here to say otherwise (`nc -z -w 3 shared-box.lan 5432` → no
     route to host). The queries an operator can run are in `node_shape.py`'s

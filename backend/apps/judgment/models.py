@@ -655,7 +655,7 @@ class StatuteCorpus(models.TextChoices):
         two together would state the Egyptian material as prohibitions it does
         not contain.
       * DEADLY_SIN is the seven capital sins, one article per terrace of Mount
-        Purgatory (EU-DS-T1..T7). It was seeded in 6017f04 against Dante's nine
+        Purgatory (EU-DS-T1..T7). It was seeded in 925eba8 against Dante's nine
         circles, withdrawn in 8308204 because that frame does not exist — the
         Inferno is layered on Aristotle's tripartite scheme (Inf. XI.79-84) and
         pride, envy and sloth get no circle at all — and re-anchored to
@@ -689,7 +689,7 @@ class StatuteCorpus(models.TextChoices):
         backend/tests/test_european_hell_basis.py still pass. An article is
         something a judge can cite by hand.
       * HELL_LAW (冥律) is EMPTY, and its emptiness is a finding rather than a
-        backlog item. It was seeded in 6017f04 and withdrawn: there is no
+        backlog item. It was seeded in 925eba8 and withdrawn: there is no
         codified 冥律 to transcribe — 《玉历宝钞》 is a hall-by-hall morality
         tract with no articles, no numbering and no sentence lengths. The
         withdrawal note in seed_mythology.py has the detail; migration

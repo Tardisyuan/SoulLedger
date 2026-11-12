@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-`3b634c5` corrected the mythology in the frontend presets and deliberately left
+`c115f90` corrected the mythology in the frontend presets and deliberately left
 one error standing, saying so in the commit:
 
     Michael is left serving as both first and final instance in three European
@@ -19,7 +19,7 @@ The first is "the system cannot supply": a preset node naming somebody with no
 line the UI shows as who is deciding this step. Nothing fails when the name
 denotes nobody; the node is created `SYSTEM` and becomes un-approvable, quietly.
 
-The second is "was not in the database when this was written". `79dee57` seeded
+The second is "was not in the database when this was written". `dde8696` seeded
 Christ, and nothing anywhere went red or green as a result. A recorded reason of
 the form "X is not in the cast" decays the moment X joins the cast, and it decays
 silently — it keeps reading like a finding while having become false. That is the
@@ -257,7 +257,7 @@ def test_every_preset_node_names_somebody_the_cast_can_supply(seeded):
     Either the label resolves to an `Actor` of that preset's civilization, or
     the node is recorded in `NODES_THAT_NAME_NO_ACTOR`. Never both — "both" is a
     reason that has expired, which is precisely what happened to "Christ is not
-    in the database" the day `79dee57` put him in it.
+    in the database" the day `dde8696` put him in it.
     """
     find = _resolver()
     reasons = _preset_reasons()

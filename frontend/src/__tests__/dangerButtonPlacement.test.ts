@@ -24,7 +24,7 @@ const SKIP = new Set(["node_modules", ".next", "__tests__", "coverage"]);
  * 输入名称是 danger 的必要条件,不是充分条件。下面最后一条钉住它仍要输入角色名。
  */
 const TYPED_NAME_DIALOGS = [
-  // v2/web-p3b(cd5c6880)新建的通用「输入名称以确认」对话框;合入前本分支没有这个文件。
+  // v2/web-p3b(b2834479)新建的通用「输入名称以确认」对话框;合入前本分支没有这个文件。
   "src/components/admin/NameConfirmDialog.tsx",
   // 管理员「重置两步验证」(A12):理由必填之外,还要输入被重置账号的用户名才解锁确认键(`typed.trim() === user.username`);
   // Design 定稿保留红色确认键。

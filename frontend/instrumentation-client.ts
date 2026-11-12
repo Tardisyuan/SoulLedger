@@ -23,7 +23,7 @@
  * every build, whether or not `withSentryConfig` wrapped anything. With the SDK
  * called unconditionally, **143 KB gzipped** of it sat in the root bundle of
  * builds with no DSN — dev builds, and any deployment that never configured
- * Sentry (measured 2026-10-30 on e5ae6546; perf A2). An `import()` would fix
+ * Sentry (measured 2026-10-30 on a33e461f; perf A2). An `import()` would fix
  * that and open a window at start-up in which an error is not reported — not
  * accepted (user decision 2026-10-30).
  *

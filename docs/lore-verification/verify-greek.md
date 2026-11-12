@@ -323,7 +323,7 @@ Gorgias 侧同样按此法逐节核对（Lamb 1925）。详见
 
 ## 附录二（2026-08-28）：GORGIAS 新增一条、一句撤回的伪造引文，与两处出处更正
 
-同附录一：本节只追加，不改上面任何一行。以下是 2026-08-27 考据审计（commit `6ec90e5`）
+同附录一：本节只追加，不改上面任何一行。以下是 2026-08-27 考据审计（commit `afab234`）
 落在希腊侧的变化，落点 `backend/apps/actors/mythology/actors_greek.py`、
 `statutes_gorgias_entries.py` 与 `__init__.py` 的 `CORPUS_PROVENANCE`：
 
@@ -347,7 +347,7 @@ Gorgias 侧同样按此法逐节核对（Lamb 1925）。详见
   Apollodorus 3.12.6（τὰς κλεῖς τοῦ Ἅιδου φυλάττει）；品达给 Aeacus 的是为诸神断
   争讼（Isthmian 8.23-24）。`actors_greek.py` 的 Aeacus 行现将两者分开记。
 
-另一处措辞更正（commit `7b6d5d2`）：statutes_gorgias.py / statutes_republic.py 曾称分节
+另一处措辞更正（commit `38136d8`）：statutes_gorgias.py / statutes_republic.py 曾称分节
 定位用「Perseus canonical XML 的 Loeb 本」——实测 canonical 的**希腊文**（perseus-grc2）
 是 Burnet 牛津本（1903/1905），Loeb 是旁边的英译（perseus-eng2：Lamb 1925 / Shorey
 1935-37）。两份文件的 `unit="section"` milestone 序列逐项相同（Gorgias 404/404、

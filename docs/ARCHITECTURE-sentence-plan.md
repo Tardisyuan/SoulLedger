@@ -3,7 +3,7 @@
 > **现状(2026-10-28):阶段 1–5 基本已落地。** 后端 `backend/apps/sentence_plan/`(迁移 `0001`、`0002`),Web `frontend/app/sentence-plans`、`frontend/app/sentence-requests`,灵魂转生入口 `backend/apps/soul_accounts/rebirth.py:60`(`SOUL_STATES_THAT_MAY_APPLY`)。**G11「未结案审判的部分唯一约束」没做**:`backend/apps/judgment/models.py` 里没有该约束,只有 `:81` 的查询;与决策记录 D6 一致。下面「阶段 2 起要等拍板」是当时的原记。
 >
 > **(原记)状态:设计稿,第 10 节列出的 11 条已由用户拍板(2026-09-18);第 11 节是拍板后新出现、仍需确认的问题。**
-> 基于 `main` = `0ac91b99`。「现状」每一条都写了代码出处(文件:行);没有实跑过的推断标「未核实」。
+> 基于 `main` = `3b419e6c`。「现状」每一条都写了代码出处(文件:行);没有实跑过的推断标「未核实」。
 > 阶段 1(只加模型、行为不变)可以在第 11 节拍板之前实施;阶段 2 起要等它。
 
 ## 决策记录(2026-09-18 用户拍板;Q13–Q17、N1、N2、D1–D11 于 2026-09-19 用户确认)
@@ -166,7 +166,7 @@ flowchart TD
 | G7 | `end_residence` 在灵魂行锁下问 `open_judgments`,但**开新审判不锁灵魂行**(注释 `ponytail:`),并发时可能漏看刚建的审判。 | `apps/dispatch/services.py:326-328`;`apps/judgment/views.py:118-137` | 计划推进用同一把锁,一并补上。 |
 | G8 | 工作流 `announce` 只通知 `approver_actor`,按 ROLE 指定的节点**没人被通知**。 | `apps/workflow/services.py:597-609` | 追加请求不走工作流的理由之一(§4.4)。 |
 | G9 | `EventType` 声明了 `DISPATCH_*` 成员(`:36-40`)却没有任何一处写入它们:调拨全部事件都是 `STATE_CHANGED` + `payload.action`;`SoulPushHandler.should_handle` 只认 `HANDLED_EVENTS` 三种。 | `apps/events/models.py:12-40`;`apps/dispatch/services.py:101`、`:262`、`:354`;`apps/soul_push/services.py:120` | Q9 已拍板:加 `SENTENCE_*` 成员并让处理器认。 |
-| G10 | 本地分支 `feat/notify-judges`(1 提交 `1a1d0d62`,2 文件 +25/−4,新增 1 条测试):给「回归被拦下」通知加上**暂居地**持有 `judgment.execute` 的判官。 | `git log main..feat/notify-judges` | Q8 已拍板:不合并,并入阶段 2(§7.3)。 |
+| G10 | 本地分支 `feat/notify-judges`(1 提交 `e092c62d`,2 文件 +25/−4,新增 1 条测试):给「回归被拦下」通知加上**暂居地**持有 `judgment.execute` 的判官。 | `git log main..feat/notify-judges` | Q8 已拍板:不合并,并入阶段 2(§7.3)。 |
 | G11 | 「一个灵魂同时只能有一个未结案审判」只在序列化器里(`validate_soul`),ADMIN 免检;**没有数据库约束**。 | `apps/judgment/serializers.py:130-150` | 规则本身**不变**(Q7 澄清);可选加固:把它落成部分唯一约束 `UniqueConstraint(fields=["soul"], condition=Q(verdict__isnull=True, is_final=False, is_deleted=False))`,与 G7 一起在阶段 3 做。 |
 
 ### 1.3 分库约束(2026-09-14 用户拍板,`docs/ARCHITECTURE-soul-app-and-domain-split.md:10-11`、`:29`)
@@ -588,7 +588,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 
 ## 10. 已拍板(见文首决策记录)
 
-Q1–Q11 全部已决,原选项与代价见 git 历史里的上一版(`42dffd4d`)。
+Q1–Q11 全部已决,原选项与代价见 git 历史里的上一版(`903cdf9c`)。
 
 ## 11. 拍板后仍需确认
 

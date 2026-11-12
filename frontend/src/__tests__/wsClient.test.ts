@@ -42,12 +42,12 @@ describe("WSClient authentication gate", () => {
 
   /* WHERE THE TOKEN GOES. It used to be the query string
    * (`/ws/notifications/?token=<jwt>`). nginx's access log for `/ws/` was
-   * changed not to print query strings (`0331f70`), but when the upstream
+   * changed not to print query strings (`0e13c58`), but when the upstream
    * fails nginx's error_log still writes the full request line, and that
    * format cannot be changed — so a bearer token landed in a log file every
    * time daphne was down. The backend has always accepted the token as the
    * first frame instead (`apps/core/ws_auth.py`, `{"type":"auth","token":…}`),
-   * and since `7edf590` that path gates events the same way the query path
+   * and since `5aa75b3` that path gates events the same way the query path
    * does. The client now uses it. */
   const authFrame = (socket: FakeWebSocket) => JSON.parse(socket.sent[0] ?? "null");
 

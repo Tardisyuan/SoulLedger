@@ -117,7 +117,7 @@ def test_the_committed_schema_equals_what_this_backend_generates():
     # its `operationId` all live under `paths`, and none of them was ever looked
     # at. So a viewset docstring could be rewritten, the committed YAML left
     # untouched, and this gate stayed green — which is exactly what happened to
-    # `SoulEventViewSet` in `52e177f`: its description was rewritten, the schema
+    # `SoulEventViewSet` in `f28cdbd`: its description was rewritten, the schema
     # was never regenerated, the full suite reported 3518 passed, and the stale
     # `description: Read-only audit log.` sat in the committed document until a
     # *component* change (`realm_name` gaining `nullable: true`) finally forced a

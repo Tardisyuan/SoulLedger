@@ -3,7 +3,7 @@
 2026-10-09 起草。记忆和文档里都没有这件事的既有决定(过去的对话提到过，但没有落成结论)。
 本文起草时只写计划，不改代码。
 
-**现状(2026-10-28):一期已做;二期代码已合入(`041e09c4`),只在模拟器上验证过,真机未验;三期(小爱)没做。** 两个 App 现在都配了 scheme(`mobile/app.json:7` 的 `soulledger`、`mobile-officer/app.json:7` 的 `soulledger-officer`),下面 §2 的「没有配置 scheme」是起草时的状态。实现位置:`mobile/plugins/appIntents.js`、`androidShortcuts.js`、`voiceEntries.js`,`mobile/modules/soulledger-voice/`,`mobile/src/voiceCache.ts`。
+**现状(2026-10-28):一期已做;二期代码已合入(`6aead8bc`),只在模拟器上验证过,真机未验;三期(小爱)没做。** 两个 App 现在都配了 scheme(`mobile/app.json:7` 的 `soulledger`、`mobile-officer/app.json:7` 的 `soulledger-officer`),下面 §2 的「没有配置 scheme」是起草时的状态。实现位置:`mobile/plugins/appIntents.js`、`androidShortcuts.js`、`voiceEntries.js`,`mobile/modules/soulledger-voice/`,`mobile/src/voiceCache.ts`。
 
 ## 0. 结论先说
 

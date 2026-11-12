@@ -498,7 +498,7 @@ from the Internet Archive.
 This section is appended; nothing above it has been changed. The report above is
 dated 2026-08-14 and its roster was adopted into
 `backend/apps/actors/mythology/actors_egyptian.py` (`EGYPTIAN_ASSESSORS`). The
-2026-08-27 full-collation audit (commits `6ec90e5` and `f675015`) re-checked all
+2026-08-27 full-collation audit (commits `afab234` and `cf6fe57`) re-checked all
 42 rows against Budge 1901 vol. II pp. 366-371 itself (the
 `bookofdeadenglis0002unse` scan) and against UCL/Maiherperi, with these
 corrections — each is recorded on the affected row's `notes` in

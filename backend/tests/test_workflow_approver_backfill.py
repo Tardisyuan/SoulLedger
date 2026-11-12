@@ -1,7 +1,7 @@
 """`workflow/0011_backfill_ten_court_approvers` — what it writes, what it
 refuses to write, and that it can be taken back.
 
-The migration exists because the identity check `4ceffe8` added could not
+The migration exists because the identity check `773ef24` added could not
 refuse anything: measured against the live database on 2026-08-15, all 30
 ApprovalNodes were `approver_type='SYSTEM'` with `approver_actor IS NULL`, and
 `approve_node` only consulted `can_approve` for nodes that named an approver.

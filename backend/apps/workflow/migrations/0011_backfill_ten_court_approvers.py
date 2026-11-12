@@ -2,7 +2,7 @@
 
 背景
 ----
-`4ceffe8 fix(workflow): actually check who is approving` 修好了 `can_approve`
+`773ef24 fix(workflow): actually check who is approving` 修好了 `can_approve`
 的身份比对，也补上了它缺失的调用者，但把新门**限定在「已指定审批人」的节点**
 上。理由写在那条提交信息里：`WorkflowService` 建的每个节点都是 `SYSTEM`，
 一旦让 `can_approve` 成为唯一的门，在途流程会当场全部卡死。
@@ -28,7 +28,7 @@
 「十殿审判流程」每个节点都**指名道姓**：节点名 `秦广王 · 分流`、`阎罗王 ·
 四审` …… 而且 `court_code` 独立地说了同一件事——第一殿、第五殿。这两列与
 `seed_mythology.CHINESE_ACTORS` 校订后的座次(第 N 殿之王坐 DY_COURT_NN，见
-`79dee57`，`test_seed_mythology` 有断言)**逐条相符**。两条互不相干的列指向同
+`dde8696`，`test_seed_mythology` 有断言)**逐条相符**。两条互不相干的列指向同
 一个人，才使这份回填不需要任何判断。
 
 `ROWS` 只收录这种节点：27 个模板节点里 13 个指名到人(十殿 10、申诉首节点 1、

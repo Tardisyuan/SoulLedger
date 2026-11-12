@@ -9,7 +9,7 @@
  * constants — and REORDERED the active/inactive strings while doing it
  * (`border-… text-…` where the five inline copies wrote `text-… border-…`).
  * Same rendered result, independently reformatted. That is the state
- * `CIVILIZATION_ICONS` was found in (commit 1f68be0): values still equal,
+ * `CIVILIZATION_ICONS` was found in (commit 9d3b739): values still equal,
  * spelling already diverged, which is the moment before the values diverge
  * too.
  *

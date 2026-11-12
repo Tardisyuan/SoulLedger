@@ -7,7 +7,7 @@
  * empty space: `avatar-upload.spec.ts` clicked 编辑资料, missed, and timed out
  * waiting for the dialog, 1 run in 16. Design E 组 then floated it `fixed` across the
  * top of the viewport, where it covered the top of every toolbar button; an in-flow
- * try pushed the page 28px again and was reverted (`125d0229`). v4 第八批: it is a pill
+ * try pushed the page 28px again and was reverted (`44ca2db4`). v4 第八批: it is a pill
  * inside the 52px toolbar (≤ 768: floating under the toolbar's edge), so it takes no
  * height anywhere. This pins that: the content starts where the masthead ends.
  */

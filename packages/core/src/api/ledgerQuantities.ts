@@ -73,7 +73,7 @@ export type NumericFields<T> = {
  * `Record<NumericFields<...>, QuantityKind>` is the half `tsc` can hold: a
  * numeric field added to a reading without an entry here fails to compile, and
  * so does an entry for a field that does not exist. That is the direction the
- * `READING_KINDS` array could not cover on its own — `f92ed35` added a whole
+ * `READING_KINDS` array could not cover on its own — `4207bd8` added a whole
  * `kind` and the compiler stayed green because the *union* was the half nobody
  * updated. Here the union is the source, so the compiler is looking at the
  * thing that actually moved.
@@ -89,7 +89,7 @@ export type NumericFields<T> = {
  *     count that culpa is *not*, which is exactly why it must not become a
  *     second numeral of the same size beside it.
  *   * `repayment_multiple` — interpolated into the fork's apex rule. Rendering
- *     it standalone would restate a rule as a figure, which `ef7df3d` argued
+ *     it standalone would restate a rule as a figure, which `4078b5f` argued
  *     out already.
  *   * `circuit_years` — interpolated into the circuit sentence, below the fork,
  *     deliberately not a headline (1000 next to the word "sentence" would say
@@ -169,7 +169,7 @@ export const RECORD_QUANTITIES: Record<NumericFields<LedgerRecord>, QuantityKind
  * second indexing scheme to the same object — some keys reading kinds, some
  * keys payload types — and that mapped type has to be loosened to accommodate
  * both, at which point the compile-time half stops being a guarantee and
- * becomes a convention. The whole reason `185e70c` beat the `READING_KINDS`
+ * becomes a convention. The whole reason `91254bb` beat the `READING_KINDS`
  * array is that the compiler was looking at the thing that actually moved.
  *
  * So: one table per wire type, each one exactly `Record<NumericFields<T>,
@@ -209,7 +209,7 @@ export const SUMMARY_QUANTITIES: Record<NumericFields<LedgerSummary>, QuantityKi
  * `inherited_demerit` are weight sums that have been through the gate, so they
  * are magnitudes and belong on the same scale as everything above.
  *
- * The two rates are NOT. They are fractions — 0.2 and 1.0 — and `66a5a3f`
+ * The two rates are NOT. They are fractions — 0.2 and 1.0 — and `0dd0e92`
  * turned them from an English sentence composed on the backend into numbers on
  * the wire precisely so the frontend would stop mirroring the constants. A
  * fraction rendered with the weight scale beside it would say the *rate* was

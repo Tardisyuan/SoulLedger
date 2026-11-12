@@ -62,7 +62,7 @@ WORKFLOW_TEMPLATES = {
     #
     # Every node here names a king, and the court it names him in agrees with
     # the court he sits in per CHINESE_ACTORS / CHINESE_REALMS (king N in
-    # DY_COURT_NN, as `79dee57` corrected and test_seed_mythology asserts). Two
+    # DY_COURT_NN, as `dde8696` corrected and test_seed_mythology asserts). Two
     # independent columns saying the same thing is why this template — and only
     # this one — can be backfilled without judgement calls.
     (Civilization.CHINESE, CaseType.ROUTINE): {
@@ -340,7 +340,7 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     # THIS ONE IS NOW A DECISION RATHER THAN AN ABSENCE, AND IT IS WHY THE
     # REASON GREW. It used to say only "Names the gate. Peter is not in
     # EUROPEAN_ACTORS." — true when written, and no longer the whole story:
-    # `79dee57` seeded Christ, so the cast does contain a judge who could be
+    # `dde8696` seeded Christ, so the cast does contain a judge who could be
     # named here, and the next reader who notices that will point this node at
     # him. Do not. There is no second adjudication at the exit of purgatory:
     # the particular judgment already referred the life to Christ (CCC
@@ -350,7 +350,7 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     # preset used to run (see the European section of
     # packages/core/src/config/workflow-templates.ts).
     "天堂准入终审": "Names the gate. Peter is not in EUROPEAN_ACTORS, and Christ — "
-               "who is, since 79dee57 — does not judge here: the particular "
+               "who is, since dde8696 — does not judge here: the particular "
                "judgment referred the life to him already (CCC 1021-1022) and "
                "purgation is followed by entry, not by a second verdict (CCC "
                "1030-1032).",

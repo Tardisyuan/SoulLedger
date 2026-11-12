@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-`79dee57` corrected what the Egyptian annihilation realm *claims* — Ammit does
+`dde8696` corrected what the Egyptian annihilation realm *claims* — Ammit does
 not live in a hell, being devoured by her is the second death — and
 deliberately did not rename its `realm_code`, saying so in the commit:
 

@@ -2,7 +2,7 @@
 
 请接在「egy 旧词审定 · 277.md」后面，新开一节「第三节 · v3 新增文案」。
 
-- **范围**：`feat/v3-modern` 相对 `main`（`7e139aa4`）在 `packages/core/messages/egy.json` 里新增的 49 条和改动的 1 条，由脚本从 git 逐条比对得出，不是手抄。
+- **范围**：`feat/v3-modern` 相对 `main`（`17bf67c7`）在 `packages/core/messages/egy.json` 里新增的 49 条和改动的 1 条，由脚本从 git 逐条比对得出，不是手抄。
 - **约束**：这些全部只用已定稿的词根拼成；仓库里的词表守卫（`egyLexiconRules`）确认没有生词（`lexicon:false` 为 0）。所以要审的是**拼法与语义是否贴切**，不是有没有新造词。
 - **还在做的分支**（App 调色板、身份带、控件尺寸）合入后如有新增，会再补一节。
 - 第二节（`error.title` / `error.retry` / `permission.go_back`）Design 已审过，存档在 `egy-277-v3-addendum.md`；其中 `Khet` 是否足以表达「返回上一页」，仍需懂埃及语的人最后确认。

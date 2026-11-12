@@ -48,7 +48,7 @@ popups 6"); under v3 they were square, because on 2026-10-01 the v3 prototype's 
 over its own token table. `Button.tsx` says so beside its `size` block. Pills remain
 the other exception, for avatars and spinners only, in the files listed in
 `ROUND_ALLOW` (`frontend/eslint.config.mjs`). The focus ring went square with
-spec v1 (`e78e5d88`), and `--radius-focus` was deleted with it.
+spec v1 (`1ab9f65f`), and `--radius-focus` was deleted with it.
 `Badge`'s `shape: "square"` variant emits *no class at all*, because `rounded`
 would render `border-radius: 0` and read as a choice that had been made when it
 had not. Pills exist only where a shape carries meaning.
@@ -87,7 +87,7 @@ Three things this table does on purpose:
 - **The section label is 11px and smaller than body text.** It is a label —
   uppercase, 0.1em tracking, subtle ink — that sits *above* a card or chart, not
   a title competing with it. Spec v3 names the 11px step "micro-label".
-  Its weight is 400: `--text-2xs` has carried no weight since `16f4e149` (spec v1
+  Its weight is 400: `--text-2xs` has carried no weight since `bb010544` (spec v1
   §1.4); the 600 that `PageShell.tsx` used to cite belonged to the old `--text-01`.
 - **The page-header title is the one heading that changes step at runtime.** It
   measures its own width and steps down 28 → 20 → 20 on two lines (from 20 at ≤ 768);
@@ -169,7 +169,7 @@ generated no CSS after the Tailwind v4 migration — the `@theme` wrapper and th
 with every gate green. `cssTokenReferenceContract.test.ts` now fails the build
 if a bare form comes back. The raw triple has to stay raw: it is what makes
 `oklch(… / 0.2)` possible, and hundreds of sites need the alpha. The triple is
-OKLCH since `7db2c6e` (2026-09-09); wrapping it in `hsl()` the old way clamps
+OKLCH since `022b8f8` (2026-09-09); wrapping it in `hsl()` the old way clamps
 lightness to 100% and paints white, with every gate green.
 
 **Four cosmologies, and they number their own scripture.**
@@ -178,7 +178,7 @@ lightness to 100% and paints white, with every gate green.
 is a 卷-numbered 門; an Inferno circle is a roman numeral; a Platonic citation
 is a Stephanus page. Numbering is one of two visual differences; the other is
 the narrow colour-and-plaque route described in the table above. What v1 removed
-in `a2044b28` (a per-tenant surface tint `--civ-hue`, separate mark and ink) has
+in `2c6aaf57` (a per-tenant surface tint `--civ-hue`, separate mark and ink) has
 not come back: surfaces, ink and every status colour are shared by all four.
 
 **Reduced motion collapses to 1ms, not `none`.** Base UI waits for

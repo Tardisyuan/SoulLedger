@@ -75,7 +75,7 @@ export function SoulLifecycleTimeline({
   // the property the `stageLabels` and `rows` memos below depend on: a fresh
   // closure every render would make both recompute every render — i.e.
   // memoise nothing. This file used to build its own; so did
-  // SoulKarmaLedgerCard, and so did the page above them before `b3a3e7c`.
+  // SoulKarmaLedgerCard, and so did the page above them before `6bdfe87`.
   const { t, tf, locale } = useI18n();
   const [tab, setTab] = useState<SpineTab>("all");
   const [includeSystemEvents, setIncludeSystemEvents] = useState(false);

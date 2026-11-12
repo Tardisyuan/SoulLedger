@@ -11,9 +11,9 @@ until 2026-09-11 nothing tested that decision at all.
 
 Nothing at the repository root matched any of the three prefixes. Two
 consecutive pushes that day were blind: a regenerated `package-lock.json`
-(`694aec9` — 182 packages moved, one of them `nwsapi`, which turned eight jest
+(`e85a2f5` — 182 packages moved, one of them `nwsapi`, which turned eight jest
 tests into timeouts and one file from about a second into 262 s) and the
-`nwsapi` pin in the root `package.json` (`c6368ea`). For both the hook printed
+`nwsapi` pin in the root `package.json` (`cf5534a`). For both the hook printed
 
     frontend:0 backend:0 core:0 changed files
 
@@ -45,7 +45,7 @@ Each case was checked by breaking the hook, before being trusted green
 (2026-09-11, one mutation at a time, 18 tests):
 
 * `package-lock.json` out of `JS_ROOT_RE` → 2 red: the lockfile-only test (the
-  exact `694aec9` push) and the mixed README + lockfile one;
+  exact `e85a2f5` push) and the mixed README + lockfile one;
 * `pytest.ini` out of `BACKEND_ROOT_RE` → 1 red, the pytest.ini case;
 * the unknown-root branch replaced with `if false` → 1 red,
   `test_an_unrecognised_root_file_runs_every_gate` — the one that keeps the NEXT
@@ -186,7 +186,7 @@ class TestRootLevelFiles:
         assert _classify(hook, [name]) == NONE
 
     def test_an_inert_file_does_not_hide_a_real_one_beside_it(self, hook):
-        """`e4683f3` pushed README.md, README.en.md and package-lock.json
+        """`cf84b3d` pushed README.md, README.en.md and package-lock.json
         together. An inert file in the set must not carry the rest with it."""
         assert _classify(hook, ["README.md", "package-lock.json"]) == JS
 
@@ -403,7 +403,7 @@ class TestTheProjectVenv:
     Before, the interpreter was `PYTHON_BIN` from `.prepush.env`, else a bare
     `python` on PATH. On this machine that was the shared conda `vision`
     environment — Python 3.12 and the dependency versions from before
-    `d561340` — while the image and CI install `requirements.lock` on 3.11. A
+    `84876ad` — while the image and CI install `requirements.lock` on 3.11. A
     green push measured a different dependency set from the one that ships;
     and the bare-`python` fallback is the 2026-09-11 refusal above.
     """

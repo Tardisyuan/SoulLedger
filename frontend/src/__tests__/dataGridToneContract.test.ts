@@ -3,7 +3,7 @@
  *
  * History: the badges used to be a 10 % tint of their status token, and the
  * light-mode status tokens were re-measured against exactly that tint depth —
- * a 16 % fill (d5af1e9) dropped error text to 4.37:1. 规范 v1 §2 removed the
+ * a 16 % fill (78bdd91) dropped error text to 4.37:1. 规范 v1 §2 removed the
  * fill: a badge is its text colour plus a same-colour 1 px border, over the
  * row's own ground. So the contract is now:
  *

@@ -887,7 +887,7 @@ def test_only_the_ten_courts_and_heaven_wash_a_chinese_soul(seeded):
     while its own description says souls wait there to be reunited with people
     they would no longer remember.
 
-    It was decoration until `2e354f8` made `create_from_judgment` copy the
+    It was decoration until `987905f` made `create_from_judgment` copy the
     realm's mechanism onto the disposition, and live from then on.
 
     ASSERTED AS AN EXACT SET, not as "the holding pen is NONE". The bug was one
@@ -912,7 +912,7 @@ def test_only_the_ten_courts_and_heaven_wash_a_chinese_soul(seeded):
 def test_no_seeded_name_is_placeholder_junk(seeded):
     """`DY_01_HEAVEN.name_egy` was "TLITLITLI" for three months.
 
-    Keyboard junk from the first i18n commit (89094de), and not inert: the
+    Keyboard junk from the first i18n commit (cea57da), and not inert: the
     Egyptian locale resolves `name_egy` FIRST for a realm's display name
     (`apps/realms/models.py`), so it reached the screen. Every other Chinese
     realm's `name_egy` is pinyin.

@@ -83,7 +83,7 @@ class AuditLogFilter(filters.FilterSet):
 #: `/audit-logs/timeline/?limit=` 的上界。没有它,`?limit=999999999` 是一次全表
 #: 扫描,而它返回 **200** —— 一个「成功」的响应,是最不容易被发现的拒绝服务面。
 #:
-#: 2026-08-29 台账 M29 记「已修 1b882b7」,那次 diff 只加了这个常量,没有一处
+#: 2026-08-29 台账 M29 记「已修 0574c0c」,那次 diff 只加了这个常量,没有一处
 #: 引用它 —— 记为已修、实际未落地,直到 2026-09-12(BP-02)`_parse_limit` 用上它。
 TIMELINE_MAX_LIMIT = 500
 TIMELINE_DEFAULT_LIMIT = 50

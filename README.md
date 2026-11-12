@@ -469,7 +469,7 @@ Tailwind 的 `theme.extend` 只能新增或覆盖，不能删除：`text-sm` 仍
 没有表达方式——只能由 lint 施加。`frontend/eslint.config.mjs` 里有七条自定义规则
 （type-scale / spacing-rhythm / dead-radius / no-page-shadow / no-raw-palette / no-hex-colour /
 no-styles-in-csstext）加上 jsx-a11y，全部 `error` 级。
-没有文明色：`--color-civ-*` 已在 `a2044b28` 撤销，`ledgerPaletteContract.test.ts` 守着。
+没有文明色：`--color-civ-*` 已在 `2c6aaf57` 撤销，`ledgerPaletteContract.test.ts` 守着。
 
 `npm run lint` 是 `eslint . --max-warnings 0`（`frontend` 与 `packages/core` 两个
 workspace 都是；2026-09-05 之前是裸 `eslint .`，只有 warning 时退出码为 0）。迁移期的出路
@@ -606,7 +606,7 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 - **神话研究（中文）**：约 20 篇关于四套死后世界体系的文档——地府十殿、但丁九圈与
   希腊/北欧冥界、杜阿特十二门与心脏称量。这是领域模型的来源材料，也是
   `readings.py` 长成那样的原因。仓库根目录下的 `地府结构研究/`、`欧洲天堂地狱/`、
-  `埃及冥界/` 曾是同一批文件的逐字节镜像，**2026-08-15 已去重**（`b2645e3`）：19 份
+  `埃及冥界/` 曾是同一批文件的逐字节镜像，**2026-08-15 已去重**（`e4eee54`）：19 份
   副本删除，三个目录各留一份把旧文件名映射到 `docs/` 的 README;2026-10-30 这三份
   跳转 README 连同目录一并删除。
 - **工程文档**：架构、规约、API 说明、里程碑，以及一批带日期的评审/审计报告。

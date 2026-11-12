@@ -607,7 +607,7 @@ class TestSeededCorpora:
     THREE corpora are seeded. The Egyptian Forty-Two, derived from assessor rows
     whose provenance was checked clause by clause; the seven capital sins, one
     per terrace of Purgatorio (EU-DS-T1..T7); and 《太微仙君功過格》 (1171) under
-    GONGGUOGE. The Chinese (HELL_LAW) table that shipped in 6017f04 stays
+    GONGGUOGE. The Chinese (HELL_LAW) table that shipped in 925eba8 stays
     withdrawn — not because entries were missing but because the frame was
     fabricated: there is no codified 冥律 with numbered articles to transcribe,
     and the 功過格 arriving under its own corpus value does not make there be

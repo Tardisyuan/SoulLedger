@@ -218,7 +218,7 @@ EUROPEAN_ACTORS = [
      "heads (Theogony 311-312); the three are Apollodorus, Virgil and Dante"),
     # THE TWO STREAMS OF THE EARTHLY PARADISE, AND WHY THEY ARE BOTH HERE.
     #
-    # `79dee57` corrected what Lethe *means*: the row used to say souls drink to
+    # `dde8696` corrected what Lethe *means*: the row used to say souls drink to
     # forget their past lives, which is Virgil's Lethe (Aen. 6.703ff), drunk
     # before rebirth by souls who are going round again — and Dante's Purgatory
     # has no rebirth in it at all. His Lethe takes away the memory of sin and

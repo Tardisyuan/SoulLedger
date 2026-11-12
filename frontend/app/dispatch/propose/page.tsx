@@ -124,7 +124,7 @@ function ProposeDispatchForm() {
    * PAGE_SIZE is 20 — so a tenant's twenty-first soul could not be nominated
    * for a dispatch at all. There was no pagination, no search and no count, so
    * a truncated list looked exactly like a complete one. Same root cause as
-   * `cfe9f99`, in the shape that scan missed because it only looked at tables.
+   * `5e8f580`, in the shape that scan missed because it only looked at tables.
    *
    * `search` goes to the server because the client is the one thing that does
    * NOT hold the whole collection; filtering here would narrow the twenty rows

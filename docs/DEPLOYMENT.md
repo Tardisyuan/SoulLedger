@@ -412,7 +412,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
 ### 备份异地副本与告警(2026-10-30)
 
 `backup` 服务用 `postgres:16-alpine`,不是库用的 `pgvector/pgvector:pg16`:它的命令要 busybox `crond`,
-而 Debian 版的 pgvector 镜像里没有(`dc61b349` 把两者一起换了,于是每日 cron 从没起来,容器在首次备份后反复重启)。
+而 Debian 版的 pgvector 镜像里没有(`2cb14da8` 把两者一起换了,于是每日 cron 从没起来,容器在首次备份后反复重启)。
 `pg_dump` 不需要服务端扩展,dump 里的 `CREATE EXTENSION vector` 在恢复时由库执行。
 
 根 `.env` 里可设(都可不设,不设时脚本**打印一行**说明而不是静默):

@@ -245,7 +245,7 @@ def eager():
 
 @pytest.mark.django_db
 class TestPasswordHelpNeverSaysWhetherAnAccountExists:
-    """The guard. Mutation-proved in cloud-reports/auth-account.md (moved out of the repo in 638929e2)."""
+    """The guard. Mutation-proved in cloud-reports/auth-account.md (moved out of the repo in d24df886)."""
 
     @pytest.mark.parametrize("username", ["cn_judge", "nobody_here", "cn_gone", "soul_x"])
     def test_the_response_is_identical_for_every_kind_of_username(self, api_client, cast, eager, username):
@@ -554,7 +554,7 @@ class TestPreferences:
 
 @pytest.mark.django_db
 class TestPreferencesAreOnlyEverYourOwn:
-    """The ownership guard. Mutation-proved in cloud-reports/auth-account.md (moved out of the repo in 638929e2)."""
+    """The ownership guard. Mutation-proved in cloud-reports/auth-account.md (moved out of the repo in d24df886)."""
 
     def test_writing_mine_leaves_everyone_elses_alone(self, api_client, judge_user, admin_user):
         admin_user.preferences = {"default_view": "admin"}

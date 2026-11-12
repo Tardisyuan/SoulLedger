@@ -187,7 +187,7 @@
 **按 `DEPLOYMENT.md`「部署回滚」做**(2026-10-30:部署前给镜像打 `prev-<sha>` 标签并备份;先在新镜像里倒回迁移再换旧镜像;不可逆迁移登记在 `backend/tests/irreversible_migrations.txt`,当天为空)。仍没有回滚脚本,整套也未演练。下面是 10-09 的原记录:
 
 - **只回滚代码、迁移没变**:`git checkout <上一个 tag>` → `$DC build backend frontend` → `$DC up -d`。镜像是本地构建、标签固定为 `soulledger-backend`(`docker-compose.yml:72`),不是从镜像仓库拉的,所以「回滚」= 重新构建旧提交。如果想要可秒回的回滚,发布时给镜像打带版本的标签并保留旧镜像(目前没有这样做)。
-- **迁移已经跑过**:backend 启动命令只会 `migrate` 向前。要退回:先停 `backend celery celery-beat pgbouncer`,用第 8 节的备份按 `DEPLOYMENT.md` 恢复进空库(会丢失备份之后的数据),再启动旧版本。逐条 `migrate <app> <旧编号>` 的反向迁移:**未核实**哪些迁移可逆(CLAUDE.md 提到 `4033dcc1` 迁移往返测试存在,说明有一部分被往返验证过,但不是全部)。
+- **迁移已经跑过**:backend 启动命令只会 `migrate` 向前。要退回:先停 `backend celery celery-beat pgbouncer`,用第 8 节的备份按 `DEPLOYMENT.md` 恢复进空库(会丢失备份之后的数据),再启动旧版本。逐条 `migrate <app> <旧编号>` 的反向迁移:**未核实**哪些迁移可逆(CLAUDE.md 提到 `afc159a1` 迁移往返测试存在,说明有一部分被往返验证过,但不是全部)。
 - **前端**:`NEXT_PUBLIC_API_URL` 烘焙在镜像里,回滚前端 = 重建旧提交的镜像。
 - **证书/nginx 配置出错**:`nginx.conf` 是只读挂载的单文件;改坏了还原文件后 `$DC restart nginx`(或 `exec nginx nginx -s reload`)。`/.well-known/acme-challenge/` 与 80 端口别动。
 - **App**:商店版本无法立即撤回。发布前先走 TestFlight / 内部测试轨道。

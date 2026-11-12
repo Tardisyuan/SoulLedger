@@ -196,7 +196,7 @@ export const webPlatform: PlatformAdapter = {
     // the verdict is already persisted at the moment it is given rather than at
     // the moment of a suspend. So the event would have nothing to do here, and
     // adding an event with no consumer is what `onSessionResume` was criticised
-    // for in `c8863fb`. A browser discarding a hidden tab outright is the one
+    // for in `f588708`. A browser discarding a hidden tab outright is the one
     // case it would cover, and the persisted record covers that already.
     if (typeof window === "undefined") return () => {};
     const onBeforeUnload = () => handler("terminal");

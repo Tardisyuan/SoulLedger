@@ -154,7 +154,7 @@ export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civ
       {/* The same three weight sums the soul detail page draws, at the moment
           of decision instead of after it, and until now the one place they were
           drawn bare. This card sits next to a Greek soul's road counts in the
-          same operator's day; `185e70c` fixed the panel where those two meet
+          same operator's day; `91254bb` fixed the panel where those two meet
           and left the triage card, where the operator is actually choosing,
           saying nothing about what its numbers measure.
 

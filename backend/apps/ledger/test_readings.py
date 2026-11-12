@@ -347,7 +347,7 @@ class TestCivilizationReadings:
         be the difference of the two roads, their product, or `wrongs` and
         `benefactions` multiplied out by the repayment rule.
 
-        The last of those is the `ef7df3d` prohibition applied to the new road.
+        The last of those is the `4078b5f` prohibition applied to the new road.
         Tenfold repayment is a rule Republic X states, not a balance it
         computes; `3 × 10 = 30` is a quantity of nothing this system has a unit
         for, and printing it beside a term would read as a debt.
@@ -588,7 +588,7 @@ class TestFrontendMemberListsAgree:
 
         The two comparisons above are about members *inside* a reading. This one
         is about the reading's own discriminator, and it is the check whose
-        absence let `f92ed35` ship a `kind` no frontend branch handled.
+        absence let `4207bd8` ship a `kind` no frontend branch handled.
 
         Nothing on the TypeScript side could have caught it: the panel switched
         exhaustively over `LedgerReading`, and `LedgerReading` is declared in

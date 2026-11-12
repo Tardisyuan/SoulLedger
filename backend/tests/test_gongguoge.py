@@ -3,7 +3,7 @@
 Why this file exists
 --------------------
 The Chinese side has been through this once. Thirteen ``HELL_LAW`` articles were
-seeded in 6017f04 with article numbers and minimum sentences in years, and
+seeded in 925eba8 with article numbers and minimum sentences in years, and
 withdrawn in 8308204: there is no codified 冥律, 《玉历宝钞》 has no articles to
 number, and 《太上老君律》 — cited as a source — is a book that does not exist.
 Nothing caught it because nothing compared the articles to a document.

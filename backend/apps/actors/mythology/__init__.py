@@ -130,7 +130,7 @@ SIX CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
 WITHDRAWN: THE CHINESE (HELL_LAW) CORPUS.
 RE-ANCHORED: THE EUROPEAN (DEADLY_SIN) ONE.
 
-Commit 6017f04 seeded thirteen Chinese rows (CN-HL-O01..O06, CN-HL-M01..M07)
+Commit 925eba8 seeded thirteen Chinese rows (CN-HL-O01..O06, CN-HL-M01..M07)
 and seven European ones (EU-DS-01..07) from this file. Both tables were
 removed in 8308204 after independent verification of their sources. Rows that
 already reached a database are soft-deleted by

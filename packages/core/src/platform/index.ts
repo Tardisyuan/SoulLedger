@@ -102,7 +102,7 @@ export function platform(): PlatformAdapter {
  * own paraphrase of the same warning. All three copies happened to agree; the
  * point is that nothing made them agree, and this repository has already been
  * bitten by two copies of a table whose values matched while their comments had
- * drifted apart (`CIVILIZATION_ICONS`, commit 1f68be0).
+ * drifted apart (`CIVILIZATION_ICONS`, commit 9d3b739).
  *
  * The warning, once. Reading the persistent store first is the old order, and
  * it is what let a 24-hour `soulledger_access` **cookie** written by

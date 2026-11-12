@@ -162,7 +162,7 @@ it("folds the tree into two-line cards for the phone, with the same rows in the 
   const order = (root: Element, attr: string) => Array.from(root.querySelectorAll(`[${attr}]`)).map((r) => r.getAttribute(attr));
   expect(order(cards, "data-realm-card")).toEqual(order(tree, "data-realm-row"));
   expect(cards.querySelector('[data-realm-card="SUB_GATE"]')).toHaveTextContent("SUB_GATE · 门");
-  // Read-only: a card is not a button. Its only control is the 「说明」 disclosure (0f16d5fc).
+  // Read-only: a card is not a button. Its only control is the 「说明」 disclosure (35aea509).
   for (const b of within(cards).queryAllByRole("button")) expect(b).toHaveAttribute("data-facts-toggle");
 });
 

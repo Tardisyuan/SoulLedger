@@ -8,7 +8,7 @@
  * key* — `t` returns the key itself on a miss, so `t(k) || fallback` can never
  * reach its right-hand side (I18nContext's `makeTranslateWithFallback` carries
  * the full argument). Both components below used to declare a private copy of
- * that helper; `b3a3e7c` had already moved a third copy out of
+ * that helper; `6bdfe87` had already moved a third copy out of
  * `app/souls/[id]/page.tsx` into the context.
  *
  * Measured before those copies were removed, by mutation rather than by

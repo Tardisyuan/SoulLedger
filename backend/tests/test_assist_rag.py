@@ -647,7 +647,7 @@ def test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_mo
         cursor.execute("SET LOCAL enable_seqscan = off")
     # 只断言「走了索引、拿回了结果」,不断言头一条是谁。替身给每个条目一个基向量,同一条目在
     # 各语言 × 各受众下是同一个向量:整张表是成组的完全重复点,彼此等距。HNSW 在这种图上
-    # 会有走不到的节点,放宽 ef_search 也救不回来(b1766f48 设到 1000 后,10-31 仍得到
+    # 会有走不到的节点,放宽 ef_search 也救不回来(585f7057 设到 1000 后,10-31 仍得到
     # 'this-life-ledger')。排序对不对由上面的精确扫描那条测。
     with CaptureQueriesContext(connection) as ctx:
         assert len(vectors.nearest(rows, ollama.vector(vectors.QUERY_INSTRUCTION + "申诉", None), 3)) == 3

@@ -12,7 +12,7 @@
  * of ledger rows (Republic X counts deeds) — and a ledger view that sorts
  * across tenants will put them in one column regardless.
  *
- * `3fdbbba` made the two class strings stop being character-identical, but only
+ * `7ffd9a5` made the two class strings stop being character-identical, but only
  * as a side effect of the Greek fork refusing the merit/demerit palette. The
  * distinction itself did not exist, which is why it could be arrived at by
  * accident and could be lost the same way.

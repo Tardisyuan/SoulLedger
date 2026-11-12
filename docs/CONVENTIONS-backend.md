@@ -46,7 +46,7 @@ cd backend && uv venv --python 3.11 .venv && uv pip install --python .venv/bin/p
 PATH 上的 `python` 不是它：这台机器上是 anaconda base，`python -m pytest` 会 exit 4 报
 `ModuleNotFoundError: No module named 'django'` —— 那句话指向"缺依赖"，真实原因是
 "解释器选错了"。2026-09-14 之前本地用的是共享 conda `vision` 环境（Python 3.12、
-`d561340` 升级前的依赖版本），**已弃用，不要往里装东西**。跑任何后端命令前先问一句：
+`84876ad` 升级前的依赖版本），**已弃用，不要往里装东西**。跑任何后端命令前先问一句：
 
 ```bash
 backend/.venv/bin/python -c "import django; print(django.VERSION)"
@@ -275,7 +275,7 @@ def recalculate_for_tenant(tenant_id):
 Redis 客户端与 channel layer 各拿一个按进程区分的前缀（`_private_permission_cache_prefix` /
 `_private_channel_layer_prefix`）；`django_db_setup` 包装在会话结束前关掉
 `database_sync_to_async` 线程握着的连接，否则 PostgreSQL 上 `DROP DATABASE` 失败、
-`test_soulledger` 留在 115 上（`bf406a6f`，2026-09-26）。`pytest.ini` 的 `filterwarnings`
+`test_soulledger` 留在 115 上（`d1d2e5eb`，2026-09-26）。`pytest.ini` 的 `filterwarnings`
 把 pytest-django 那条「Error when trying to teardown test databases」warning 升成 error，
 下一次泄漏的连接不再以 exit 0 收场。`django_db_modify_db_settings` 包装给 PostgreSQL
 测试库加每次运行的后缀（`test_soulledger_<8 位 hex>`，xdist 下是 `test_soulledger_gw0_<hex>`；

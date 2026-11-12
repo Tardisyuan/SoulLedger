@@ -95,7 +95,7 @@ describe("the list belongs to the server", () => {
 
 describe("pending is not the same as empty", () => {
   it("says it is loading, and does not say there is nothing", async () => {
-    // `de66a5f` closed eight pages that drew "请求失败" as "there is nothing
+    // `e45b646` closed eight pages that drew "请求失败" as "there is nothing
     // here". In a picker it is worse: the reflex is to retype a query that was
     // already right.
     render(<Harness options={[]} loading />);

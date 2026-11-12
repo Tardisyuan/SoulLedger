@@ -303,7 +303,7 @@ being broken by omission rather than by choice.
 `CN_DIYU`, `EU_HEAVEN_HELL`, `EG_DUAT` — and has no `GR_HADES`, so any chart
 that colours by civilization hands Greek an `undefined`.
 
-**Done, in `f62fdaa`.** Greek has `--color-civ-hue-gr: 88` and
+**Done, in `3d245eb`.** Greek has `--color-civ-hue-gr: 88` and
 `--color-civ-mark-gr`, a `[data-civ="gr"]` rule, and a `GR_HADES` entry in
 `CIVILIZATION_COLORS` in both themes. 88deg rather than the 138deg that would
 have maximised the gap to the other three, because 138 sits 12deg off
@@ -418,7 +418,7 @@ failed twice on civilization colours and five times on lifecycle states.
 
 开篇写着「Everything below landed after that and is not reflected in either」——
 那句话给这份文档定了一项义务:做 `BRIEF.md` 之后所有变化的追补层。它最后一次改动是
-2026-08-23(`cf2ea06`)。此后 `frontend/` 又有 **35 个提交**,其中包含 Stage 11 与
+2026-08-23(`15bc10a`)。此后 `frontend/` 又有 **35 个提交**,其中包含 Stage 11 与
 Stage 12 的全部内容 —— 也就是 `BRIEF.md` §4.8 索要的那套东西本身。
 
 不逐条转述,只说清读这份文档时会踩到哪里:

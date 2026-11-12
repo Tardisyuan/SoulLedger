@@ -899,7 +899,7 @@ def backdate_deaths():
             case = Judgment.all_objects.filter(soul=soul).order_by("created_at").first()
             if case is None:
                 continue
-            # A case opens some days after the death, not on it: with this week's verdicts (edd6dae45) many open cases
+            # A case opens some days after the death, not on it: with this week's verdicts (564986ab8) many open cases
             # share a week, and dying on the opening day put five souls on one date (demo E2E 2026-11-08: 59 of 76 distinct).
             day = case.created_at - timedelta(days=random.randint(1, 9))
             Soul.all_objects.filter(pk=soul.pk).update(death_year=day.year, death_month=day.month, death_day=day.day)

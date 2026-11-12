@@ -17,7 +17,7 @@ The backend keeps one direction and derives the other:
 The frontend hand-writes both. `CIVILIZATION_CODES` and
 `TENANT_CODE_TO_CIVILIZATION` are two literal objects that happen to be
 inverses today, with nothing requiring them to stay that way — the shape
-`f62fdaa` found five times over in the colour tokens, where the cost was a
+`3d245eb` found five times over in the colour tokens, where the cost was a
 fully modelled civilization rendering as a logged-out session.
 
 So there are three claims here: each frontend map against the backend map that

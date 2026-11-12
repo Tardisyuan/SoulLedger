@@ -1,7 +1,7 @@
 """The six `EventService.notify_user` sites in `apps/dispatch/services.py` (propose / approve / reject /
 return-blocked / joint add_participant / joint conclude) send AFTER the business transaction commits.
 
-Why (same defect `30052b65` fixed for `sentence_plan.notify_judges`): the event bus swallows a handler's
+Why (same defect `eff2a32c` fixed for `sentence_plan.notify_judges`): the event bus swallows a handler's
 exception, but a failed notification INSERT has already marked the surrounding transaction for rollback. The
 first enclosing `atomic()` then rolls back its own writes SILENTLY -- the service returns normally with a
 participant / status change that is not in the database. G4 counted that as "clean" because the snapshot

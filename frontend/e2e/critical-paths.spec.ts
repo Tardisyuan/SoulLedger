@@ -56,7 +56,7 @@ test.describe("Critical path: login and create a soul", () => {
     // cell must be the "not applicable" mark. Located by the cell's own
     // `data-missing`, not by a glyph: this used to look for an em dash, which
     // the row did contain — in the death-date column. The balance cell renders
-    // the word 不适用 (规范 v1 §2: 「不适用」用字, since 3b1fa189 — it was a
+    // the word 不适用 (规范 v1 §2: 「不适用」用字, since b7552a4e — it was a
     // middle dot before), so a balance that degraded to a netted `0` stayed
     // green. `app/souls/page.tsx` has exactly one `inapplicable` site, so the
     // count pins the column as well as the kind.

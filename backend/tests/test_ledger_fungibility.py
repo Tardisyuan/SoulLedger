@@ -335,7 +335,7 @@ def test_a_condemned_soul_with_no_recorded_fault_lands_at_the_floor(make_chinese
 @pytest.mark.django_db
 def test_an_unoffset_killing_does_not_overturn_the_verdict(almsgiving_killer):
     """Severity picks a tier *within* the outcome the verdict already
-    determined — the precedence rule 7fe9a28 established, now checked from the
+    determined — the precedence rule 7b30fa6 established, now checked from the
     other side. A killing that no merit could discharge is the strongest signal
     this ledger can produce, and it still does not get to sentence a soul the
     court passed, or to conclude an appeal the court left open."""

@@ -556,7 +556,7 @@ GONGGUOGE = "GONGGUOGE", "功過格 — Ledger of Merit and Demerit (Chinese)"
 ## 附录（2026-08-28）：不軌門定谳为六條、四处省略号补全 —— 正文两处「需影印本」的后续
 
 本节是**后加的**，不改上面任何一行。上面的报告日期是 2026-08-15，其结论是那一次所见；
-2026-08-27 的全量校勘改变了其中三件事的状态（commit `f675015` / `d75b4d2` / `ca65fae`，
+2026-08-27 的全量校勘改变了其中三件事的状态（commit `cf6fe57` / `226194f` / `e080761`，
 落点 `backend/apps/actors/mythology/gongguoge_entries.py` 与
 `backend/apps/judgment/migrations/0018_split_bugui_gate_article.py`）。
 

@@ -7,7 +7,7 @@ What this is about
 spells the same god 「奥西里斯」. One Wsir, two current Chinese renderings, one
 in each of two files.
 
-`7fe9a28`'s backfill migration resolved that node to the Osiris row anyway — but
+`7b30fa6`'s backfill migration resolved that node to the Osiris row anyway — but
 its own docstring said, in as many words, that the pairing was an inference from
 the template's title and not something recorded anywhere, and asked the owner to
 decide. The owner decided: keep both renderings, and make the correspondence

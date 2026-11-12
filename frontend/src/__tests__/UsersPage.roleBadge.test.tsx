@@ -8,7 +8,7 @@
  * badge fell into `DomainEnum`'s "unrecognized" state: italic, muted, the
  * translated word for "unrecognised" with the raw name in `title`. On the
  * same page the role FILTER already reads the role table and labels a custom
- * role by its `display_name` (`3ecd5af`); the badge is the same decision, one
+ * role by its `display_name` (`8217f6f`); the badge is the same decision, one
  * column over, and the user's ruling for this round is that it follows suit.
  *
  * Built-ins keep `DomainEnum`: their labels are translated, and that path is

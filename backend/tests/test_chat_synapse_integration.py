@@ -45,7 +45,7 @@ CONVERSATIONS = "/api/v1/me/chat/conversations/"
 
 @pytest.fixture
 def synapse(settings, monkeypatch):
-    # The room power-level sync and the Matrix deactivation are celery tasks since 575d78d8; run `.delay` in
+    # The room power-level sync and the Matrix deactivation are celery tasks since facb7293; run `.delay` in
     # place, as `chat_support.matrix` does. This file then ran nowhere, so the mute step's 403 went
     # unasserted until CI's synapse job (2026-10-31: it read 200).
     from apps.chat import tasks

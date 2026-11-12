@@ -3,7 +3,7 @@
  *
  * A page that asks the server for page N must give the user a way to change N.
  *
- * THE LEFTOVER THIS CLOSES. `cfe9f99` fixed two list pages that requested a
+ * THE LEFTOVER THIS CLOSES. `5e8f580` fixed two list pages that requested a
  * page and rendered no pagination — records past the twentieth were on screen
  * nowhere and reachable by nothing. Its own commit message says: "这一条目前
  * 没有自动守卫,我不假装它有 … 留给后续." The reason given was that `.results`

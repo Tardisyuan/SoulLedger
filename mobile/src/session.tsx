@@ -373,7 +373,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setState((prev) => withProfile(prev, profile));
   }, []);
 
-  // Back in the foreground, `/me/` is asked again (as the officer app does, 192ad39d): the record can change while
+  // Back in the foreground, `/me/` is asked again (as the officer app does, 847150bf): the record can change while
   // the app sleeps -- a judgment delivered, a name corrected -- and 本世 reads the profile from here (phone QA 10-29b).
   // Only a session still signed in takes the answer; a failure keeps what is shown (a 401 / 403 is the client's to end).
   // An answer equal to what is shown keeps the state object, so nothing under the session redraws (opt-apps2 R1).

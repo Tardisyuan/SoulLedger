@@ -469,7 +469,7 @@ function scanHardcodedDashes(): Violation[] {
  * Both of those were being rendered straight into a JSX text position while
  * every rule in this file was green, because the rule ran, could go red, and
  * its subject list did not contain them. That is the same shape as
- * `conclusion_type` two entries below in ENUM_FIELDS, and as commit `4051e51`.
+ * `conclusion_type` two entries below in ENUM_FIELDS, and as commit `2c0b565`.
  * Found by diffing the hand-written API types against the generated OpenAPI
  * schema: both were typed `string` in the frontend and `number | null` in the
  * document.

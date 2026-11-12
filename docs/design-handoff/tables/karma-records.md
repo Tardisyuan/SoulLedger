@@ -65,4 +65,4 @@ decayed balance **+13.0**
 
 - `category` is one of thirteen values on the model — six merit (CHARITY, COMPASSION, HONESTY, COURAGE, WISDOM, PIETY), six demerit (CRUELTY, DECEPTION, COWARDICE, GREED, BLASPHEMY, MURDER), plus OTHER. There is no Chinese translation for them in the bundles yet; the column above is a suggestion, not shipped copy.
 - `is_milestone` is also stored per record and is true for the deed that defines the life. Neither soul's milestones are surfaced anywhere today.
-- `decay_factor` and `years_elapsed` are computed by the backend from `event_date`. They only became real in ace2625.
+- `decay_factor` and `years_elapsed` are computed by the backend from `event_date`. They only became real in e2a988b.

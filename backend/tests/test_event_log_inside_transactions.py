@@ -1,9 +1,9 @@
 """A `SoulEvent` row is part of the business record: if it cannot be written, the business write rolls back and
 the caller gets the REAL error (the failed insert), not a later `TransactionManagementError`.
 
-History: `8e3f33f7` proved that `EventService.notify_user` inside a business transaction was defective; this file
+History: `43f039db` proved that `EventService.notify_user` inside a business transaction was defective; this file
 began as the same experiment for `EventService.log*` and found 17 of 51 (path, context) cells silently losing the
-business write while the function reported success (xfail(strict) in `dddee9e9`). The decision (user, 2026-10-10)
+business write while the function reported success (xfail(strict) in `f91f41f7`). The decision (user, 2026-10-10)
 was fail-loud, and these cells now pin it.
 
 Mechanism that made it silent: `AuditHandler` swallowed the exception and the registry swallowed it again, but

@@ -286,7 +286,7 @@ def test_the_seed_command_writes_the_canonical_shape(seeded):
 
 @pytest.mark.django_db
 def test_the_label_is_still_what_designates_the_approver(seeded):
-    """`625f4d1`'s fallback, asked in the canonical spelling.
+    """`61adf11`'s fallback, asked in the canonical spelling.
 
     That fix resolves a node's approver from its label when the node carries no
     `actor` key. Every test of it hands `_resolve_approver` a node spelled
@@ -344,7 +344,7 @@ def test_an_explicit_role_designates_when_the_label_names_nobody(seeded):
     `approver_role` is one of exactly two things `designates_approver` accepts.
     A node whose label names no person but whose row says JUDGE must come out
     ROLE/JUDGE, not SYSTEM — SYSTEM is approvable by nobody, which is the stuck
-    flow `e7e87e7` measured, reached through a different key.
+    flow `a01dde3` measured, reached through a different key.
     """
     tenant = _tenant(Civilization.CHINESE)
     _stored(
@@ -397,7 +397,7 @@ def test_a_named_person_wins_over_a_role_the_node_also_carries(seeded):
     The ordering matters in one direction only: `approver_type: "ROLE"` is what
     the editor writes on *every* node, so a role-first rule would have taken
     「秦广王 · 分流」 away from 秦广王 for every template saved from /workflow —
-    unpicking `625f4d1` through the door it was written to close.
+    unpicking `61adf11` through the door it was written to close.
     """
     tenant = _tenant(Civilization.CHINESE)
     _stored(

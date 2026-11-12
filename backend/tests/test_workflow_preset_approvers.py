@@ -2,9 +2,9 @@
 
 Why this file exists
 --------------------
-`7fe9a28` made `can_approve` `approve_node`'s only gate, deliberately
+`7b30fa6` made `can_approve` `approve_node`'s only gate, deliberately
 fail-closed: a node with no `approver_actor` cannot be decided by anyone and has
-to go through the audited `escalate`. `e7e87e7` then found what that costs on
+to go through the audited `escalate`. `a01dde3` then found what that costs on
 the path nobody had measured — a workflow built from a *preset*:
 
     packages/core/src/config/workflow-templates.ts nodes carry `name/court/type/order`
@@ -121,7 +121,7 @@ def _by_order(workflow) -> list:
 
 
 def test_a_preset_saved_as_a_template_designates_the_people_it_names(seeded):
-    """THE regression test, in the shape `e7e87e7` measured.
+    """THE regression test, in the shape `a01dde3` measured.
 
     Before the fallback existed all three nodes came out `SYSTEM`/None and the
     workflow was un-approvable by anybody the moment it was created.
@@ -185,7 +185,7 @@ def test_the_named_judge_can_decide_his_own_node_and_nobody_else_can(seeded):
     assert first.can_approve(michael) is False
     assert second.can_approve(michael) is True
     assert second.can_approve(christ) is False
-    # ADMIN still gets no bypass — `7fe9a28`/`4ceffe8`'s position, restated
+    # ADMIN still gets no bypass — `7b30fa6`/`773ef24`'s position, restated
     # here because this file is the one that made these nodes approvable.
     assert first.can_approve(unlinked) is False
 
@@ -193,7 +193,7 @@ def test_the_named_judge_can_decide_his_own_node_and_nobody_else_can(seeded):
 def test_a_label_naming_somebody_the_cast_lacks_stays_system(seeded):
     """Unresolvable stays fail-closed, and invents nobody.
 
-    `Peter` is the name `e7e87e7` measured as unresolvable ('Peter'->SYSTEM
+    `Peter` is the name `a01dde3` measured as unresolvable ('Peter'->SYSTEM
     None) and the reason 天堂准入终审 is excused on the backend side.
     """
     tenant = _tenant(Civilization.EUROPEAN)

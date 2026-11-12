@@ -2,7 +2,7 @@
  * Tests for app/actors/page.tsx — the split between the major gods and the
  * Forty-Two Assessors of Ma'at.
  *
- * The page had no coverage at all when db47b3c seated the bench of 42, which
+ * The page had no coverage at all when f502dcf seated the bench of 42, which
  * took the Egyptian JUDGE count from 4 to 46. Nothing on an actor row tells an
  * assessor from Osiris — same civilization, same role, same card — so the
  * distinction rests entirely on `assessor_index`, and every way of getting it
@@ -218,7 +218,7 @@ describe("the bench starts folded", () => {
     await waitForRoster();
 
     // 4 Egyptian gods + 2 Chinese. The regression this guards is the flat
-    // render of 51 Egyptian cards that db47b3c would otherwise have produced.
+    // render of 51 Egyptian cards that f502dcf would otherwise have produced.
     expect(container.querySelectorAll("[data-actor-card]")).toHaveLength(6);
   });
 

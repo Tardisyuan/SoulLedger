@@ -1,5 +1,5 @@
 /**
- * Back in the foreground the soul app asks `/me/` again (phone QA 10-29b; the officer app does since 192ad39d), so
+ * Back in the foreground the soul app asks `/me/` again (phone QA 10-29b; the officer app does since 847150bf), so
  * 本世 shows what changed while it slept. Only a background → active turn asks; a session that is no longer signed
  * in keeps its state; a failed read keeps the profile shown.
  */

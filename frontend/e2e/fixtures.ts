@@ -92,7 +92,7 @@ function b64url(value: object): string {
  * A structurally valid unsigned JWT. Nothing verifies the signature here —
  * every request is answered by a route mock — but the payload deliberately
  * carries `tenant_code: CN_DIYU`, matching TEST_USER.tenant.code, so this
- * token would also satisfy the JWT-tenant/user cross-check added in 44d12f7
+ * token would also satisfy the JWT-tenant/user cross-check added in 405c8a3
  * (backend TenantPermission) if these specs were ever pointed at a real API.
  */
 export const MOCK_ACCESS_TOKEN = [

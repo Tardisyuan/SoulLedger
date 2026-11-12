@@ -1188,7 +1188,7 @@ class WorkflowTemplate(AuditUserFields, models.Model):
     # template value, then the floor (0 for a judgment, 1 for an appeal). The
     # column exists because 「this procedure is for urgent cases」 was previously
     # sayable only by picking a CaseType member for it, which is the mistake
-    # `a77a41e` undid: case_type answers "which kind of case", priority answers
+    # `16d71a1` undid: case_type answers "which kind of case", priority answers
     # "how urgent", and EMERGENCY was the second answer written into the first
     # column. See packages/core/src/config/workflow-templates.ts::CHINESE_EMERGENCY.
     priority = models.IntegerField(

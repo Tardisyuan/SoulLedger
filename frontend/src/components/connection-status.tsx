@@ -117,7 +117,7 @@ const TONE_COLOUR: Record<Tone, string> = {
  * status colour along the toolbar's lower edge. The toolbar is 52 high either way, so nothing moves and
  * nothing is covered. This replaces Design E 组's 28px bar fixed across the top of the viewport, which
  * covered the top of every toolbar button (the 问一问 panel had to start below it), and the in-flow
- * version that was tried and reverted (`125d0229`) because it pushed the page down 28px when it came up
+ * version that was tried and reverted (`44ca2db4`) because it pushed the page down 28px when it came up
  * (`connection-banner-does-not-shift-content.spec.ts`, `content-slot-fits-viewport.spec.ts`).
  *
  * ≤ 768 (393): the toolbar has no room for a second pill, so the same pill floats, centred, just under

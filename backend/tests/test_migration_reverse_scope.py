@@ -1,6 +1,6 @@
 """The four migrations whose reverse reached further than their forward.
 
-``2e82fcd`` built the round-trip harness and, on the way, audited every
+``6ffb7eb`` built the round-trip harness and, on the way, audited every
 ``RunPython`` in the tree. Four came back with the same shape — a *conditional*
 forward paired with an *unconditional* reverse. Each of those reverses ran
 without error and still destroyed rows the migration had never written:
@@ -24,7 +24,7 @@ Every test here seeds a row the forward provably skips and then requires it to
 survive the rollback. Against the unfixed reverses each of these failed, with
 the harness naming the row that went missing.
 
-Two of the four had forwards that did not work, which ``2e82fcd`` recorded and
+Two of the four had forwards that did not work, which ``6ffb7eb`` recorded and
 left alone: authentication/0010 raised ``AttributeError`` whenever perm had
 reached 0012, and perm/0008 inserted nothing on any backend that tolerates a
 NULL primary key in ``INSERT OR IGNORE``. Both are repaired here, and each has

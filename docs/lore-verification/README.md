@@ -173,7 +173,7 @@ against the code on 2026-08-28:
   `fungibility_class` marker per article
   (`backend/apps/actors/mythology/gongguoge_entries.py`); what the ledger does
   with them is the ledger's own story (`apps/ledger/`).
-- A 2026-08-27 audit pass (commits `6ec90e5`..`ca65fae`) corrected a dozen
+- A 2026-08-27 audit pass (commits `afab234`..`e080761`) corrected a dozen
   claims that had been standing in the seed comments and in these reports —
   each affected report now ends with a dated addendum saying what changed and
   where the code records it.

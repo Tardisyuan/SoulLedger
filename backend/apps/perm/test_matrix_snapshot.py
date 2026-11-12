@@ -1067,7 +1067,7 @@ def test_removing_those_rows_actually_moved_workflow_onto_the_dict_path(
 #   a narrow codename guards a custom @action, while the SAME fields stay
 #   writable through the viewset's own CRUD route under a wider codename.
 #
-# a9f3556 shipped the first of them describing it as "exact mirrors, both
+# ee2b2aa shipped the first of them describing it as "exact mirrors, both
 # declared policy" — GUARDIAN may edit but not kill, JUDGE may kill but not
 # edit. Half of that mirror had a way round it.
 #

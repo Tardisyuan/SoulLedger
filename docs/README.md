@@ -121,7 +121,7 @@ draft was deleted on 2026-10-24.*
 > `/docs/*` 把这里大部分文件排除在外，它们只存在于维护者的工作副本里。这造成过实际
 > 损害：`MILESTONE_M15.md` 记录了「menu/perm 端点全局共享、不分租户」是**有意设计**，
 > 但仓库里的人看不到，于是那个「缺失」的租户过滤被当成 bug 补了回去，导致
-> `GET /menus/buttons/` 对每个非 ADMIN 角色都 500（已由 `c2ca5ac` 修复）。
+> `GET /menus/buttons/` 对每个非 ADMIN 角色都 500（已由 `d5a80ba` 修复）。
 > 现在 `.gitignore` 只继续排除散落在本目录的截图与其他二进制文件。
 >
 > *All Markdown in this folder is now tracked. Until 2026-08-14 `/docs/*` excluded

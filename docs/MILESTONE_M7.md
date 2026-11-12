@@ -8,7 +8,7 @@
 > **前提已被推翻**：本文的目标是「将 Actors 合并到 User 表」，并把删除 Actor API 端点记为
 > 已完成。今天 `Actor` 是神话人物表，四个文明的班底都在里面
 > （`backend/apps/actors/mythology/actors_*.py`，由 `manage.py seed_mythology` 播种），
-> `Organization.category` 也已加入 GREEK（`apps/org/models.py:59`）。2026-08-28 的 `39b1f54`
+> `Organization.category` 也已加入 GREEK（`apps/org/models.py:59`）。2026-08-28 的 `a145fe3`
 > 退役的是 2026-05 迁移遗留的那批 Actor，不是 Actor 模型本身。
 
 ## 概述

@@ -3,7 +3,7 @@
  *
  * Colours are v4's (定稿 `SoulLedger v4/V4Batch07.dc.html`, its `.th-dark` / `.th-light` and
  * `[data-civ]` blocks; user decision 2026-11-06: 一律按 v4, 深浅色做到一样好). The slot names are the
- * ones every screen already reads; only their values moved, as v3 did in `dba34ac3`:
+ * ones every screen already reads; only their values moved, as v3 did in `4f6a74db`:
  *
  *   s0 ← --main   s1 ← --card   s2 ← --card2   hair ← --line   hair2 ← --line2
  *   ink ← --ink   inkMuted ← --sub   inkSubtle ← --sub (see `faint` in Theme)   faint ← --faint

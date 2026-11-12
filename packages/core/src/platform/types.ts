@@ -86,7 +86,7 @@ export type UnauthorizedHandler = () => void;
  * can be taken back. On a terminal suspend it must send it — the alternative is
  * losing a decision the operator made. On a transient one it must NOT: the undo
  * window is still open, the undo bar is still on screen, and sending is the
- * defect this argument exists to fix (recorded, unfixed, in `c8863fb`; the
+ * defect this argument exists to fix (recorded, unfixed, in `f588708`; the
  * verdict went out seconds into an eight-second window and undo then silently
  * did nothing).
  *
@@ -267,7 +267,7 @@ export type NotifyMessage =
  *
  * WHY THIS IS A PORT. Seven hooks in `frontend/src/hooks` end every mutation
  * with `showToast(...)`, and `showToast` is the one thing keeping them in the
- * web tree. Commit `750ea1a` left ten hooks behind on the stated grounds that
+ * web tree. Commit `1036786` left ten hooks behind on the stated grounds that
  * the four contexts they use are "全都是 DOM 耦合的 (localStorage /
  * document.cookie / classList / dataset)". For `ToastContext` that reason does
  * not hold: it touches no DOM API and holds no React state. Its provider passes

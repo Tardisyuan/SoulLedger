@@ -342,7 +342,7 @@ class TestDockerConfiguration:
         assert 'PGHOST="${PGHOST:-' in script
 
     def test_backup_image_has_the_crond_its_command_runs(self):
-        """dc61b349 moved backup to pgvector/pgvector:pg16 with the db; that image is
+        """2cb14da8 moved backup to pgvector/pgvector:pg16 with the db; that image is
         Debian and has no `crond`, so the daily run never started (2026-10-30).
         busybox crond is in the alpine image. Off-site and alert settings reach it."""
         backup = _production_services()['backup']

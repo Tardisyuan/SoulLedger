@@ -202,7 +202,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
    *
    * Empty deps on purpose. The handler reaches the client through `clientRef`
    * at call time instead of closing over it, so it cannot go stale the way the
-   * three `useCallback` handlers above did before `6d3d05c` — and the
+   * three `useCallback` handlers above did before `a3a6e8f` — and the
    * subscription is therefore installed once for the life of the provider
    * rather than being torn down and rebuilt on every `user` identity change
    * that `TenantContext`'s hydration causes. The returned unsubscribe is the

@@ -126,7 +126,7 @@ def test_a_failure_mid_import_rolls_the_overwrite_back(seeded, monkeypatch):
     before = _grants_of(seeded["role"])
 
     # Patch the call the import loop actually makes. This was
-    # `Permission.objects.get_or_create` until 3ecd5af switched the loop to
+    # `Permission.objects.get_or_create` until 8217f6f switched the loop to
     # `Permission.revive_or_create`; the patch then intercepted nothing, the
     # simulated failure never fired, and this test went red with
     # "DID NOT RAISE" — the right outcome for a test whose subject moved.

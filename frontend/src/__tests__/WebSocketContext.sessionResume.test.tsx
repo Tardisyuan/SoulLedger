@@ -9,7 +9,7 @@
  * while nothing is running to notice, and the client comes back believing it is
  * still connected, or waiting on a backoff timer that was paused mid-count.
  * `WSClient.reconnect()` has always existed; `platform.onSessionResume` (added
- * by `c8863fb`) is its trigger, and until this file there was no line joining
+ * by `f588708`) is its trigger, and until this file there was no line joining
  * the two. `packages/core/src/platform/index.ts:165` says so in its own doc:
  * the port being there does not by itself fix anything.
  *

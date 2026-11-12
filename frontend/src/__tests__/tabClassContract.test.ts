@@ -11,7 +11,7 @@
  * active/inactive strings — `border-… text-…` where the five wrote
  * `text-… border-…` — so the sixth copy was independently reformatted while
  * still rendering identically. That is exactly the state `CIVILIZATION_ICONS`
- * was found in (1f68be0): equal values, drifted spelling.
+ * was found in (9d3b739): equal values, drifted spelling.
  *
  * What makes it worth a guard rather than only a cleanup is WHICH token is in
  * there. `TAB_ON` names `--color-accent-ink`, and accent-vs-accent-ink is the

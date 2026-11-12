@@ -1,6 +1,6 @@
 # 朋友圈帖子图片 — upload, storage, moderation
 
-Branch `feat/social-media`, from `main` at `74e05f4`, then merged with `origin/main` at `07706a5e`. The merge re-added only this branch's keys onto `main`'s bundles; `schema.yml`, `generated/schema.ts` and `egyVocabulary.json` were regenerated, not hand-merged. Draft PR: `feat(social): 朋友圈帖子图片（上传、存储、审核）`.
+Branch `feat/social-media`, from `main` at `577a1de`, then merged with `origin/main` at `5dbfb8e2`. The merge re-added only this branch's keys onto `main`'s bundles; `schema.yml`, `generated/schema.ts` and `egyVocabulary.json` were regenerated, not hand-merged. Draft PR: `feat(social): 朋友圈帖子图片（上传、存储、审核）`.
 
 ## What souls and officers get
 
@@ -205,7 +205,7 @@ A real bug found by the tests: the viewer's counter was resynced only through `M
 
 ## Gates
 
-All gates were re-run on the **merged tree** (`a7664a75` = this branch + `origin/main` `07706a5e`), with Node 22.22.2, Python 3.11, SQLite and a throwaway Redis on 6399. The exit code is read directly, never through a pipe.
+All gates were re-run on the **merged tree** (`9b3b756f` = this branch + `origin/main` `5dbfb8e2`), with Node 22.22.2, Python 3.11, SQLite and a throwaway Redis on 6399. The exit code is read directly, never through a pipe.
 
 | Gate | Command | Exit | Count |
 |---|---|---|---|
@@ -236,7 +236,7 @@ All gates were re-run on the **merged tree** (`a7664a75` = this branch + `origin
   - A core vitest run once timed out (5 s) in `nodeGlobals.test.ts` under the same load, and was green on the re-run.
   - On the merged tree, everything above passed on the first run.
 - **Frontend coverage was red on my first run, and the cause was mine.** The web grid imported `mediaUrl` from `api/soul-social`, which pulled the whole soul HTTP client (`soul.ts`, 16% covered) into the web coverage denominator: core `api/` fell from 54.44% to 44.29%. The web admin never holds a soul token, so the import was wrong regardless of coverage. The helpers moved to `domain/postMedia.ts` and the number came back.
-- **Two backend tests that were red on the old base are green now.** Before the merge, `test_realm_seed_egy_names_match_the_language_pack` and `test_official_notify_messages_match_the_language_packs[egy]` failed identically on `main` at `74e05f4`, with or without this branch. `origin/main` has since fixed them, and they pass on the merged tree.
+- **Two backend tests that were red on the old base are green now.** Before the merge, `test_realm_seed_egy_names_match_the_language_pack` and `test_official_notify_messages_match_the_language_packs[egy]` failed identically on `main` at `577a1de`, with or without this branch. `origin/main` has since fixed them, and they pass on the merged tree.
 
 ## Copy
 

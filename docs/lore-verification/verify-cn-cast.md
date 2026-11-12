@@ -341,7 +341,7 @@
 ## 附录（2026-08-28）：§3.2 的方法抓不到的第五条 —— 阎罗王「审最重之罪」
 
 本节是**后加的**，不改上面任何一行。上面的报告完成于 2026-08-14；2026-08-27 的考据
-审计（commit `6ec90e5`，落点 `backend/apps/actors/mythology/actors_chinese.py` 与
+审计（commit `afab234`，落点 `backend/apps/actors/mythology/actors_chinese.py` 与
 `realms.py`）发现了 §3.2 那类错误的第五条，而 §3.2 的方法**原理上抓不到它**：
 
 - §1.2 清单第 1 行照录的 actor 描述「十王中最知名，**审最重之罪**」是错的——十殿沿

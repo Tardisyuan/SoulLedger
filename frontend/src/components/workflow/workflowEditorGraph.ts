@@ -147,7 +147,7 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
  *
  * Written once rather than FOUR times: the two hydration paths, `onConnect`,
  * and `addNode`'s auto-connect each used to carry a copy, and one drifted
- * (`387c29c` → `051bf9a`). `workflowEdgeArrowSingleSource.test.ts` asserts the
+ * (`e26516e` → `f4a5648`). `workflowEdgeArrowSingleSource.test.ts` asserts the
  * single source. The name stays for the same reason — it is the one symbol
  * those call sites and that test agree on.
  */

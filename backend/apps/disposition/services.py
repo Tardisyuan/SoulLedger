@@ -118,7 +118,7 @@ class DispositionService:
     # Ammit living in it. Being devoured by Ammit is the second death: the heart
     # is destroyed and the person ceases to exist. There is no damned population
     # and nowhere for it to be, and Ammit stands at the balance in the Hall of
-    # Two Truths, which is where seed_mythology seeds her. 79dee57 corrected the
+    # Two Truths, which is where seed_mythology seeds her. dde8696 corrected the
     # row's name and description on 2026-08-15 and deliberately left the code
     # alone, because the string was a live identifier in three places at once
     # and renaming it in any one of them alone would have broken the other two.
@@ -460,7 +460,7 @@ class DispositionService:
         DEMERIT total alone for exactly that reason, and the router now reads
         the same figure off the same column.
 
-        This is NOT the 不可折 treatment 452616f gave `_route_chinese`.
+        This is NOT the 不可折 treatment 5ef73ed gave `_route_chinese`.
         「功過有不可折者」 is a limit on 功過相抵, 功過相抵 is a Chinese mechanic,
         and a 1724 Daoist ledger has no jurisdiction over Dante's circles;
         `LedgerService.get_unoffset_demerit` still returns None here and is still

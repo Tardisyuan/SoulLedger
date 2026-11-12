@@ -343,7 +343,7 @@ def detail(user, kind, pk, request=None):
     if kind in ("approval", "rebirth"):
         wf = workflow_for(scope, kind, pk)
         if wf is None and kind == "approval":
-            # Notices written before 638b4e17 name a rebirth application's workflow as a plain `workflow`:
+            # Notices written before 63154bd8 name a rebirth application's workflow as a plain `workflow`:
             # answer with the application's item (kind/id say so) instead of 404.
             from apps.workflow.services import WorkflowService
 

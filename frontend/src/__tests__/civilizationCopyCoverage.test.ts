@@ -4,7 +4,7 @@
  * Every civilization must have copy in every bundle, in every namespace that
  * names civilizations.
  *
- * This exists because of how the gap it guards was found. `48a5e74` added GREEK
+ * This exists because of how the gap it guards was found. `80e6c77` added GREEK
  * as a fourth civilization and inserted it into the five `*.civilizations`
  * blocks — but not into `ledger.civ`, which is a sixth namespace doing the same
  * job under a different key. Nothing failed. A Greek soul's ledger heading fell

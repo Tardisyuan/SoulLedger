@@ -173,7 +173,7 @@ describe("SoulKarmaLedgerCard — every number says which kind it is", () => {
   });
 
   it("gives a Greek soul the same three inheritance figures without the Chinese bars", () => {
-    // `f92ed35` made GREEK rebirth-capable, so this card renders for two
+    // `4207bd8` made GREEK rebirth-capable, so this card renders for two
     // cosmologies. The bars are the Chinese mechanic; the three sums are not.
     const { container } = renderCard(SENTENCE_READING, INHERITANCE);
 

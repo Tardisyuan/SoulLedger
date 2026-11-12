@@ -6,7 +6,7 @@ Why this file exists
 reading "Must match DRF's ``REST_FRAMEWORK["PAGE_SIZE"]`` in
 backend/config/settings.py". Nothing made that true. Two integers in two
 languages, joined by a sentence — the KEEP-IN-SYNC shape this repository has now
-found in the colour tokens (`f62fdaa`), in `lib/chart-colors.ts`, and most
+found in the colour tokens (`3d245eb`), in `lib/chart-colors.ts`, and most
 recently in a test helper whose comment claimed to be "the one prefix rule,
 written once" from a directory production code cannot import.
 

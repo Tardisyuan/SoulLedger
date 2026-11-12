@@ -310,7 +310,7 @@ class TestInheritanceCivilizationGate:
     def test_rebirth_capable_soul_still_gets_a_number(self, civ):
         """Both sides of REBIRTH_CAPABLE_CIVILIZATIONS, by name.
 
-        GREEK joined that frozenset in f92ed35 (Republic X 617d-620d: the soul
+        GREEK joined that frozenset in 4207bd8 (Republic X 617d-620d: the soul
         chooses a new life at the Spindle). It reaches this endpoint's 200 path,
         so it reaches the *new response shape* too, and the rates have to be on
         a Greek body for the same reason they are on a Chinese one — the card

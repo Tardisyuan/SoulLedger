@@ -4,12 +4,12 @@ meant to carry.
 背景
 ----
 `packages/core/src/config/workflow-templates.ts` 里有三套预设叫「紧急审判流程」——中国、
-欧洲、埃及各一套。`a77a41e` 之前它们写的是 `caseType: "EMERGENCY"`，而 `CaseType`
-没有这个成员，所以**存不下来**（400）。`a77a41e` 把它们按案件类别分别归入
+欧洲、埃及各一套。`16d71a1` 之前它们写的是 `caseType: "EMERGENCY"`，而 `CaseType`
+没有这个成员，所以**存不下来**（400）。`16d71a1` 把它们按案件类别分别归入
 SPECIAL / ROUTINE / DIVINE_TRIAL，并在注释里写明：急缓不是案件类别，急缓留给
 `ApprovalWorkflow.priority`。
 
-于是从 `a77a41e` 到 `0013` 之间存下来的这三套模板，把「这是给急件用的程序」这句话
+于是从 `16d71a1` 到 `0013` 之间存下来的这三套模板，把「这是给急件用的程序」这句话
 丢在了半路上：case_type 不再说它，模板上又还没有一列能说它。本迁移就是把这句话补回
 已经落库的那些行——**只补这三套**。
 

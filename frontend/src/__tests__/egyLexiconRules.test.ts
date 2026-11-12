@@ -111,8 +111,8 @@ const ENGLISH_RESIDUE = [
  * 星期词组里的 Ra / Ka 与厅名里的 Maaty 不在这里 —— 它们整体出现时合规,单独出现由封闭词汇拦下。
  */
 // 用户 2026-11-06 决定(v4):Anpu、Shen、Wu 解除废止,改作专名(见 PROPER_NAMES 的 v4 一段)。
-// 当初废止的是误用,不是词本身:Anpu 在第十节被当成「杨柳」的填充词(DY_02_YANGLIU「Yanglju Anpu」→ Yangliu,1a8f7d52);
-// Shen、Wu 在第十二节是万能填充(「Shen Medu」「Kheme Wu」「Sethet Wu」,bffd96cc)。v4 里它们只作阿努比斯之名与申时、午时的拼音。
+// 当初废止的是误用,不是词本身:Anpu 在第十节被当成「杨柳」的填充词(DY_02_YANGLIU「Yanglju Anpu」→ Yangliu,9e439339);
+// Shen、Wu 在第十二节是万能填充(「Shen Medu」「Kheme Wu」「Sethet Wu」,5f38c6a6)。v4 里它们只作阿努比斯之名与申时、午时的拼音。
 const ABOLISHED_TEN_WORDS = [
   "Aashu", "Aba-Ef", "Amenti", "Ami", "Amset", "An", "Aper", "Awy", "Benet", "Bu", "Dema", "Diu", "Diyu",
   "Djam", "Djed-Tep", "Djeser", "Djew", "Eremitee", "Fedu", "Fekh-Es", "Hanacht", "Herep", "Hor", "Ier", "Ii", "Im",

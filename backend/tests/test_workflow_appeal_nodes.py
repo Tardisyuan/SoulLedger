@@ -42,7 +42,7 @@ Scope
 This was a **latent** defect. ``create_appeal_workflow`` has no production
 caller anywhere in the backend — only tests reach it — so no stuck row has
 actually been created. It is repaired because the two doors are meant to answer
-the same question the same way, which is the same reason ``8b5aa00`` gave this
+the same question the same way, which is the same reason ``d392f3a`` gave this
 method the case-type validation the other door already ran.
 
 What "would really fail" means here

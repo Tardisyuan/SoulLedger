@@ -212,7 +212,7 @@ module.exports = {
   //
   // AND THEN IT SAT TEN POINTS BELOW THE REAL NUMBER. The four values stayed at
   // 59/51/50/60 while the suite grew to 153 suites / 2805 tests. Measured
-  // 2026-09-14 on `91c698d`, `npm run test:coverage`, exit 0:
+  // 2026-09-14 on `82ef754`, `npm run test:coverage`, exit 0:
   //
   //   statements 69.07 / branches 60.69 / functions 59.38 / lines 69.95
   //
@@ -222,8 +222,8 @@ module.exports = {
   // gate that could not have caught anything smaller than a thousand lines of
   // untested code.
   //
-  // MOVING rootDir TO THE REPO ROOT (2026-09-14, branched from `45c4c20` —
-  // not the `91c698d` the 2805-test reading above was taken on, a different
+  // MOVING rootDir TO THE REPO ROOT (2026-09-14, branched from `defe0da` —
+  // not the `82ef754` the 2805-test reading above was taken on, a different
   // branch point, so the two test counts below aren't directly comparable)
   // DID NOT MOVE THE GLOBAL NUMBERS BEYOND ORDINARY NOISE. `roots:
   // ['<rootDir>/frontend']` keeps test discovery unchanged, and `global` here

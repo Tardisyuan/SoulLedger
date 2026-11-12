@@ -204,7 +204,7 @@ def test_the_gongguoge_rule_still_does_not_reach_the_european_router(
 ):
     """The fix is a European doctrine, not the Chinese one arriving late.
 
-    452616f gave `_route_chinese` the 「功過有不可折者」 partition and argued, per
+    5ef73ed gave `_route_chinese` the 「功過有不可折者」 partition and argued, per
     call site, that neither other cosmology gets it. That argument still holds
     and this asserts it: `get_unoffset_demerit` refuses a European soul, and the
     refusal is None — the absence of a claim — not 0.

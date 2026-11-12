@@ -76,7 +76,7 @@ export function SoulReadingPanel({ reading, meritScore, demeritScore, karmicBala
       // nothing at all, with no warning and no error.
       const unhandled: never = reading;
       // Run time: the half that actually matters here, and the one `tsc` cannot
-      // ever provide. `f92ed35` added `kind: "SENTENCE"` on the backend; this
+      // ever provide. `4207bd8` added `kind: "SENTENCE"` on the backend; this
       // file's union did not know about it, so the switch stayed exhaustive
       // *over the union* and compiled clean while a Greek soul's panel rendered
       // blank. A kind the union has never heard of is not a type error, it is

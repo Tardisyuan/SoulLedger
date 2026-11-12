@@ -12,7 +12,7 @@ import { Field, fieldControl, type SelectOption } from "@/src/components/ui/Fiel
  * `soulsApi.list({ page: 1 })` — one page, and DRF's `PAGE_SIZE` is 20. A
  * tenant's twenty-first soul could not be nominated for a dispatch at all, and
  * the control gave no sign that it was showing a slice: no pagination, no
- * search, no count. It is the same defect `cfe9f99` closed for the dispatch and
+ * search, no count. It is the same defect `5e8f580` closed for the dispatch and
  * cross-judgments tables, in the one shape that scan missed, because a
  * truncated `<select>` looks exactly like a complete one.
  *
@@ -41,7 +41,7 @@ import { Field, fieldControl, type SelectOption } from "@/src/components/ui/Fiel
  * form still carries.
  *
  * EMPTY IS NOT THE SAME AS PENDING. `loading` renders its own row. An
- * in-flight request that draws "no matches" is `de66a5f` again — a request
+ * in-flight request that draws "no matches" is `e45b646` again — a request
  * state painted as an answer — and here it is worse than on a page, because
  * the reflex is to retype the query that was already correct.
  */

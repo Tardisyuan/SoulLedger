@@ -26,7 +26,7 @@ and were checked by a person, so a wrong document cost nothing: nobody read it.
 `packages/core` now generates types from this schema for the Expo and Tauri
 clients, and nobody will re-check those. A wrong declaration becomes a
 compile-time green light on a call that fails at runtime — the exact inversion
-of the 2026-09-01 decision (`f9aa138`) to keep hand-written types, which was
+of the 2026-09-01 decision (`948ec8e`) to keep hand-written types, which was
 correct *because* the generated ones were not yet trusted. They are about to
 be. This check is what makes trusting them defensible.
 
@@ -34,7 +34,7 @@ HOW THE SUBJECT LIST IS BUILT, AND WHY THAT WAY. The population is taken from
 Django's URL resolver and then from the class object the resolver hands back —
 not by globbing `apps/*/views*.py`. A file scan is the shape of defect this
 repository keeps re-committing: a rule that runs, can go red, and is looking at
-an incomplete list (see `4051e51`, where a hand-written `ENUM_FIELDS` missed
+an incomplete list (see `2c0b565`, where a hand-written `ENUM_FIELDS` missed
 one field and the bug shipped green). Here, if a view is routed it is in the
 population, because the route is where the population comes from.
 
@@ -300,7 +300,7 @@ def test_declared_response_shapes_match_the_views(schema, actions):
     Deliberately not a list of known-bad names. An allowlist of endpoints whose
     document lies about them is an invitation to append a line instead of a
     decorator, and it has to be kept in sync with a set that is supposed to be
-    empty. `e64cb1a` removed exactly such a list from the sibling check for the
+    empty. `f79f579` removed exactly such a list from the sibling check for the
     same reason.
     """
     components = schema["components"]["schemas"]

@@ -163,7 +163,7 @@ class SoulHasPendingJudgmentError(ValueError):
 
 
 def _after_commit(send):
-    """站内通知提交之后才发(与 `sentence_plan.services.notify_judges` 同一处理,`30052b65`)。
+    """站内通知提交之后才发(与 `sentence_plan.services.notify_judges` 同一处理,`eff2a32c`)。
 
     事件总线吞掉处理器的异常,但失败的通知 INSERT 已把事务标成回滚:最先退出的 `atomic()`
     静默回滚自己那一段、调用方却拿到「成功」的返回值。回调里失败只丢这一条通知。

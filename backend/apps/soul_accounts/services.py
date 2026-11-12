@@ -672,7 +672,7 @@ def _tell_officers_provisioning_failed(soul):
     """开号失败不回滚死亡,但不能只留一行日志:通知灵魂原属租户的在职 ADMIN(该租户没有就通知
     全局 ADMIN,与 `judgment.claims.request_reassign` 同一条退路),外加当下操作的官员。
 
-    站内通知提交之后才发(与 `dispatch` / `sentence_plan` 同一处理,`30052b65`、`8e3f33f7`):失败的
+    站内通知提交之后才发(与 `dispatch` / `sentence_plan` 同一处理,`eff2a32c`、`43f039db`):失败的
     通知 INSERT 会把外层事务标成回滚。注册在失败的保存点之外 —— 保存点里注册的回调会随它回滚而丢掉。
     """
     from apps.core.request_local import get_current_user

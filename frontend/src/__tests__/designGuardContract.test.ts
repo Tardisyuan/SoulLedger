@@ -542,7 +542,7 @@ describe("DESIGN.md cannot prescribe against the code", () => {
   /*
    * 字阶与标题表:DESIGN.md 里唯二保留数值的地方,所以每个数都要从 globals.css 重算。
    *
-   * 为什么要这条。DESIGN.md 的「Type scale」那一行在 `16f4e149` 之后写着「七档、
+   * 为什么要这条。DESIGN.md 的「Type scale」那一行在 `bb010544` 之后写着「七档、
    * 16 / 22px、有 quote 档」,而 v2 早把 16→15、22→20、删掉了 quote;它就那样
    * 躺了一个月。2026-10-01 用户问「一级、二级标题各多少号多少字体」时,仓库里唯一
    * 写成文字的回答就是那一行 —— 而它是错的。所以这里不信文档,只信 css。

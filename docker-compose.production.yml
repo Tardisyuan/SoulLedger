@@ -160,7 +160,7 @@ services:
   #
   # The image is postgres:16-alpine, not the db's pgvector/pgvector:pg16: the
   # command below needs busybox `crond`, which the Debian-based pgvector image
-  # does not have (dc61b349 switched both; measured 2026-10-30, `command -v
+  # does not have (2cb14da8 switched both; measured 2026-10-30, `command -v
   # crond` empty there), so the daily run never started and the container
   # restart-looped on its first backup. pg_dump needs no server extension;
   # the dump's CREATE EXTENSION vector runs on the db at restore time.

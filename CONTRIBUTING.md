@@ -60,7 +60,7 @@ Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
   sub-blocks within a page. `TableSkeleton` has zero callers under `app/` —
   table loading goes through `<DataTable isLoading>`)
 - Colours have exactly one spelling: `text-[oklch(var(--color-ink))]`. The bare
-  `text-ink` form silently renders the wrong value, and so does the pre-`7db2c6e`
+  `text-ink` form silently renders the wrong value, and so does the pre-`022b8f8`
   `hsl(var(...))` form (the tokens are OKLCH triples now; `hsl()` clamps the
   lightness to 100% and paints white) — see `docs/CONVENTIONS-frontend.md` §2
 - Use TanStack Query for API calls with proper query keys

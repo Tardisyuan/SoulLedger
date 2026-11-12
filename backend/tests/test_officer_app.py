@@ -454,7 +454,7 @@ def test_a_rebirth_workflow_notice_names_the_application_not_the_workflow(
 
 def test_an_old_rebirth_notice_naming_the_workflow_lands_on_the_rebirth_item(cn_tenant, judge_user,
                                                                             django_capture_on_commit_callbacks):
-    """Notices from before 638b4e17 carry related_resource="workflow" + the workflow id; `approval/<workflow>` used
+    """Notices from before 63154bd8 carry related_resource="workflow" + the workflow id; `approval/<workflow>` used
     to 404 for a rebirth workflow. It now answers with the application's own item; a real unknown id still 404s."""
     import uuid
 

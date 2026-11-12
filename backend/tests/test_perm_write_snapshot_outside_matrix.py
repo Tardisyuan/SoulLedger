@@ -11,7 +11,7 @@ of what happens to be true, defects included, pinned so a change arrives as a
 reviewed diff rather than as behaviour nobody noticed. A failure here is not
 automatically a regression; it is a question.
 
-This file was called ``..._unenforced_apps.py`` when it was built (a938ef4),
+This file was called ``..._unenforced_apps.py`` when it was built (0a0397b),
 because at the time none of these apps had ``CodenamePermission`` attached.
 Four of the five do now, so that name had stopped being true. The property
 that has not expired, and that the current name records, is which routes
@@ -28,7 +28,7 @@ three writes), for 43 total. Nothing was deleted either time.
 
 The prediction, and how it landed
 ---------------------------------
-a938ef4 built this file into a prediction: from each route's declared codename
+0a0397b built this file into a prediction: from each route's declared codename
 and that codename's holders per ``ROLE_PERMISSIONS``, it computed that 34 of
 the 135 cases would turn 403 the day enforcement arrived — reincarnation 9,
 dispatch 25, notifications 0. **All 34 moved, and only those 34.** Measured
@@ -89,7 +89,7 @@ The first of these three is resolved by this tranche. The other two are
 1. RESOLVED. ``OrganizationViewSet`` (POST/PATCH/DELETE
    ``/api/v1/organizations/``) used to declare no codename and have no
    ``get_required_permissions()``, so attaching ``CodenamePermission`` would
-   have been a no-op (verified in a938ef4 by monkeypatching it on and watching
+   have been a no-op (verified in 0a0397b by monkeypatching it on and watching
    all five roles still get 201) and ``Organization`` had no ``tenant`` field,
    so ``TenantQuerySetMixin``'s hasattr guard skipped filtering entirely. Both
    are fixed: ``org.read``/``org.manage`` now exist in ``DEFAULT_PERMISSIONS``
@@ -1267,7 +1267,7 @@ def test_notification_read_is_held_by_every_role():
     That comment ("only ADMIN and MODERATOR hold notification.read, so under
     enforcement JUDGE, GUARDIAN and VIEWER lose their own inbox") read as a
     reason to add grants before enforcing the app. It was wrong about
-    ROLE_PERMISSIONS, a938ef4 pinned the fact here, and this tranche corrected
+    ROLE_PERMISSIONS, 0a0397b pinned the fact here, and this tranche corrected
     the comment in place while enforcing the app — moving none of the 25
     notification cases above, because no grant was ever needed.
 
@@ -1313,7 +1313,7 @@ def _app_of(endpoint):
 def test_every_denial_traces_to_a_missing_codename():
     """The prediction, run in reverse now that it has landed.
 
-    a938ef4 derived — from the declared codenames and ROLE_PERMISSIONS alone,
+    0a0397b derived — from the declared codenames and ROLE_PERMISSIONS alone,
     before any enforcement existed — that exactly 34 of the 135 cases would
     turn 403: reincarnation 9, dispatch 25, notifications 0. All 34 moved, and
     only those 34.

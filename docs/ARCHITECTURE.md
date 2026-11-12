@@ -64,7 +64,7 @@ Core domains (directory names under `backend/apps/`):
   health checks. NOT in `INSTALLED_APPS`.
 
 `apps/permissions` no longer exists. It held cross-tenant judgment
-authorization and was deleted on 2026-09-03 (`1b59ec4`) as the only model in
+authorization and was deleted on 2026-09-03 (`5310c4c`) as the only model in
 the repo with prod=0 / test=0 / admin=0 readers; its table was dropped with
 it. This file listed it, and warned readers not to confuse it with `perm`,
 until 2026-09-06. The authoritative list is `INSTALLED_APPS` in `config/settings.py`.

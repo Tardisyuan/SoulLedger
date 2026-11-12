@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-``ef7df3d`` fixed a blank Greek panel whose cause was not a missing branch: the
+``4078b5f`` fixed a blank Greek panel whose cause was not a missing branch: the
 panel's ``switch`` *was* exhaustive, over a union the frontend declared itself,
 and the union was missing the member the backend had started sending. ``tsc``
 cannot see that class of defect — a hand-written union is a claim about the
@@ -16,7 +16,7 @@ either of them is a comparison ``tsc`` believes can never be true.
 
 The fix was to stop declaring the set there at all — both fields now read
 ``CivilizationOption``, derived from ``packages/core/src/config/civilizations.ts``'s
-``CIVILIZATION_OPTIONS``, which ``f62fdaa`` established as the frontend's one
+``CIVILIZATION_OPTIONS``, which ``3d245eb`` established as the frontend's one
 list. That leaves exactly one seam this side has to hold: that list against the
 enum, plus the fact that ``souls.ts`` still derives rather than re-enumerating.
 
@@ -111,7 +111,7 @@ class TestFrontendCivilizationMembersAgree:
 
         Asserted as derivation rather than as members, because a second
         hand-written copy is the defect: `CIVILIZATION_OPTIONS` already exists
-        and `f62fdaa` found the set enumerated by hand in five places, one of
+        and `3d245eb` found the set enumerated by hand in five places, one of
         which (`TenantContext.tsx`'s literal whitelist) is why Greek rendered
         at 240°. A copy that happens to agree today is not the same thing as
         no copy.

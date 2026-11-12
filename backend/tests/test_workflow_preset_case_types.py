@@ -11,7 +11,7 @@ before the fix, through the real endpoint with a real Bearer token::
     POST /api/v1/workflow/templates/  {"case_type": "EMERGENCY", …} -> 400
     {'case_type': ['"EMERGENCY" is not a valid choice.']}
 
-This is a *different* defect from the one ``f60254f`` fixed. That one was
+This is a *different* defect from the one ``5a5dd17`` fixed. That one was
 ``node_type`` carrying a Chinese step name; its test
 (``test_workflow_preset_node_types.py::test_no_preset_is_rejected_for_its_node_types``)
 deliberately narrowed its assertion to the ``nodes`` key so the two would not be
@@ -87,7 +87,7 @@ from apps.souls.models import Civilization
 from apps.workflow.models import ApprovalWorkflow, CaseType, WorkflowTemplate
 from apps.workflow.services import VALID_CASE_TYPES_BY_CIVILIZATION
 
-# The parser and the HTTP helpers are the ones `f60254f` wrote for the node_type
+# The parser and the HTTP helpers are the ones `5a5dd17` wrote for the node_type
 # half of this same boundary. Copying them would give two parsers that drift;
 # importing gives one that fails loudly if the module moves. `seeded` comes
 # across as a fixture the same way.
@@ -146,7 +146,7 @@ CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION: dict[str, str] = {
     # `EGYPTIAN_TRIALS` was here because a preset *named* 神判流程 carried
     # SPECIAL rather than DIVINE_TRIAL — and 神判 is DIVINE_TRIAL's own label.
     # It now carries DIVINE_TRIAL, so it too is gone from here. Note that
-    # `EGYPTIAN_EMERGENCY` (re-filed by `a77a41e`) carries DIVINE_TRIAL as well;
+    # `EGYPTIAN_EMERGENCY` (re-filed by `16d71a1`) carries DIVINE_TRIAL as well;
     # nothing selects a unique template by `(civilization, case_type)`
     # (`create_from_judgment` uses `.first()`, `WorkflowTemplate` has no such
     # constraint since `0006`/`0008`, and the presets are keyed by their own
@@ -485,7 +485,7 @@ def test_each_preset_case_type_is_valid_for_its_civilization_or_is_recorded():
     )
     # Every preset re-filed out of this table, named directly so the decisions
     # do not rest on the arithmetic above alone: the three EMERGENCY ones
-    # (`a77a41e`), EGYPTIAN_TRIALS (`8b5aa00`), and the last three SPECIALs.
+    # (`16d71a1`), EGYPTIAN_TRIALS (`d392f3a`), and the last three SPECIALs.
     for key in (
         "CHINESE_EMERGENCY", "EUROPEAN_EMERGENCY", "EGYPTIAN_EMERGENCY",
         "EGYPTIAN_TRIALS",

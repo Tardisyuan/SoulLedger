@@ -151,7 +151,7 @@ test.describe("Workflow editor toolbar", () => {
   /**
    * `WorkflowTemplate.priority` in a real browser, end to end.
    *
-   * `20994df` added the column, the toolbar `<select>` and Jest coverage for
+   * `b74f41f` added the column, the toolbar `<select>` and Jest coverage for
    * the label, the three option strings, the default and the save payload —
    * but every one of those assertions runs against a jsdom tree that was never
    * navigated to, and the backend assertion starts from a hand-built POST. The

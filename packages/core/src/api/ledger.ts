@@ -139,7 +139,7 @@ export type SentenceMissingInput = (typeof SENTENCE_MISSING_INPUTS)[number];
  *
  * Declared as an array and not only as the union below because the union is
  * unreadable from Python, and Python is the only side that can see the failure
- * this list exists for. `f92ed35` added a fourth civilization whose reading
+ * this list exists for. `4207bd8` added a fourth civilization whose reading
  * carries `kind: "SENTENCE"`; the union here stayed at four members, the
  * `switch` in SoulReadingPanel stayed at four branches with no `default`, and
  * `tsc` was satisfied throughout — a switch is exhaustive over the union *this

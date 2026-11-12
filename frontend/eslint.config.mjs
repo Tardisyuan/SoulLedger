@@ -410,7 +410,7 @@ const designSystem = {
      * `src/components/ui/Toast.tsx` 就整个从这条门出去了,五处:两个
      * `border-radius`(全站 borderRadius 表每一档都是 0)、一个裸 `0.25s` 加
      * 一条**第三种**缓动曲线(globals.css 只定义两条)、一份私有的 `font-family`
-     * 拷贝(于是 `--font-sans` 变了它不会跟)。而 `2e14343` 那一轮的自述正是
+     * 拷贝(于是 `--font-sans` 变了它不会跟)。而 `ad558a2` 那一轮的自述正是
      * 「motion 是唯一一个每个决定都还是裸数字的轴」—— 它没数到这个文件。
      *
      * 报的是**属性**,不是整个赋值:一条 `display:flex` 没有任何问题,而

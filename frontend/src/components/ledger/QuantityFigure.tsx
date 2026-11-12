@@ -14,7 +14,7 @@ type TFunc = (key: string, params?: Record<string, string>) => string;
 // and 4 is a tally of ledger rows. Nothing relates them, and a cross-tenant
 // listing will sort them into one column anyway.
 //
-// `3fdbbba` left the two class strings no longer identical, but only because
+// `7ffd9a5` left the two class strings no longer identical, but only because
 // the Greek fork had just been told to stop using the merit/demerit palette.
 // A distinction arrived at as a side effect can be lost as a side effect, so
 // the kind is now declared — `data-quantity` — rather than inferred from

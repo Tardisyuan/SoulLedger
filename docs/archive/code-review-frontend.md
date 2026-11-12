@@ -5,7 +5,7 @@
 > A 2026-05-27 snapshot. Two things to know before reading it:
 >
 > - The `CIVILIZATION_LABELS` tables below list **three** civilizations. There are **four** —
->   GREEK was added on 2026-08-18 (`48a5e74`).
+>   GREEK was added on 2026-08-18 (`80e6c77`).
 > - **Finding #1 is still open.** `frontend/app/layout.tsx:29` still hardcodes
 >   `<html lang="zh-Hans" className={`dark …`}>`.
 >

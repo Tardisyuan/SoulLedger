@@ -1030,7 +1030,7 @@ class TestCreateFromJudgmentTemplateTenantScoping:
 class TestServiceCreatedNodeApproverIdentity:
     """The gate as it applies to the nodes that actually exist.
 
-    `4ceffe8` scoped the identity check to nodes that *designate* an approver,
+    `773ef24` scoped the identity check to nodes that *designate* an approver,
     and `WorkflowService` creates every node as `SYSTEM` — measured against the
     live database on 2026-08-15: 30 ApprovalNodes, 30 of them SYSTEM, 0 ACTOR,
     0 ROLE, all PENDING, all with `approver_actor IS NULL`, spread over 3
@@ -1211,7 +1211,7 @@ class TestServiceCreatedNodeApproverIdentity:
 #: ever be built — and for these five that pair was unreachable through both
 #: doors until the same change that added them.
 NODES_ADDED_AFTER_THE_BACKFILL = {
-    # (EUROPEAN, APPEAL) and (EGYPTIAN, APPEAL). Until `8b5aa00`
+    # (EUROPEAN, APPEAL) and (EGYPTIAN, APPEAL). Until `d392f3a`
     # `VALID_CASE_TYPES_BY_CIVILIZATION` carried APPEAL for the Chinese only,
     # so `create_from_judgment` raised ValueError for both pairs; and
     # `create_appeal_workflow`, which did not validate, had no template for
@@ -1220,7 +1220,7 @@ NODES_ADDED_AFTER_THE_BACKFILL = {
     # for a backfill migration to match — one written for them would update
     # zero rows by construction, and the comparison would then be the template
     # against a copy of itself.
-    "Michael · 引领呈上": "(EUROPEAN, APPEAL) was unbuildable before 8b5aa00; "
+    "Michael · 引领呈上": "(EUROPEAN, APPEAL) was unbuildable before d392f3a; "
                       "no stored node has ever carried this name.",
     "Christ · 终审": "Same template, same reason.",
     "Isis · 受理": "(EGYPTIAN, APPEAL), same reason.",

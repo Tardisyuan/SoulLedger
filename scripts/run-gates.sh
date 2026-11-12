@@ -489,9 +489,9 @@ TOUCHES_OFFICER=$(echo "$CHANGED" | grep -cE '^(mobile-officer/|mobile/)' || tru
 #
 # The three prefixes above match nothing at the repository root, and several
 # files there decide what every gate below is testing. On 2026-09-11 two
-# consecutive pushes — a regenerated `package-lock.json` (`694aec9`: 182 packages
+# consecutive pushes — a regenerated `package-lock.json` (`e85a2f5`: 182 packages
 # moved, one of them `nwsapi`, which turned eight jest tests into timeouts) and
-# the `nwsapi` pin in the root `package.json` (`c6368ea`) — went out with this
+# the `nwsapi` pin in the root `package.json` (`cf5534a`) — went out with this
 # hook printing
 #
 #     frontend:0 backend:0 core:0 changed files
@@ -904,7 +904,7 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     # It used to be PYTHON_BIN from .prepush.env, else a bare `python` on PATH.
     # On the machine this hook was written for, PYTHON_BIN named the shared
     # conda `vision` environment: Python 3.12 and the dependency versions from
-    # before `d561340` upgraded the lock, so a green push measured a different
+    # before `84876ad` upgraded the lock, so a green push measured a different
     # set of packages from the one that ships. The bare-`python` fallback was
     # the 2026-09-11 refusal described above (anaconda base, no Django). There
     # is no PATH fallback any more: no venv is a refusal that says how to make one.
@@ -1205,7 +1205,7 @@ PROBE_PY
         # at 99% for 30–40 minutes on one busy worker with seven idle (2026-10-29, twice).
         # It was off from 2026-10-28 because reordering turned realtime tests red (9 and 11 failures). The
         # cause was test_event_bus emptying the process-wide handler registry; the root conftest now restores
-        # it after every test (6d2c21dd), and two worksteal full runs then passed 8076/8076.
+        # it after every test (e56a6a2e), and two worksteal full runs then passed 8076/8076.
         # Still no --ff: it reorders across runs for no gain once the suite is this short.
         XDIST="-n $PYTEST_WORKERS --dist worksteal"
         echo "    (pytest-xdist: $XDIST)"

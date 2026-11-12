@@ -235,7 +235,7 @@ describe("a hook drives the port, not the context", () => {
 
 describe("all five hooks, pinned by name", () => {
   // The list, not a scan for offenders: a scan is clean when it scans nothing.
-  // These are six of the seven files commit 750ea1a recorded as blocked on
+  // These are six of the seven files commit 1036786 recorded as blocked on
   // ToastContext.
   //
   // NONE OF THEM IS IN `frontend/` ANY MORE. Dropping the toast dependency and

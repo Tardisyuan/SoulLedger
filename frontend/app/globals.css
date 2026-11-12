@@ -40,7 +40,7 @@
    * value as `'oklch(var(--color-ink))'` in its OWN namespace, so the wrapper
    * lived in the class and the variable held the triple. Moving to `@theme`
    * put the wrapper into a variable of the same name. That is the bug, and it
-   * arrived with the v4 migration in 8fb0da4.
+   * arrived with the v4 migration in d4e7f28.
    *
    * The two spellings cannot coexist under one name, so the repo now has one:
    * `text-[oklch(var(--color-ink))]`. It also has to be that one — the raw triple
@@ -497,7 +497,7 @@
      每个颜色令牌是 OKLCH 三元组 `L C H`,消费处在 oklch() 里包 var() 取用;值由设计稿
      交付的 hex 换算(行尾注释是原 hex),`src/__tests__/ledgerPaletteContract.test.ts` 逐个换回 hex 对账。
 
-     **名字一个不动,只换值**(同 v3 的 dba34ac3 / ab130a5b)。v4 的 17 个主题角色对到这里:
+     **名字一个不动,只换值**(同 v3 的 4f6a74db / 885414c5)。v4 的 17 个主题角色对到这里:
        main → canvas · card → surface-1 · card2 → surface-2 · ink → ink / block
        sub → ink-muted 与 ink-subtle(v4 的 faint 在 surface-2 上只有 3.91 / 2.94,托不住正文)
        faint → line-strong 与 disabled-ink(输入框边框、禁用字;对 surface-1 4.29 / 3.33 ≥ 3)
@@ -1701,7 +1701,7 @@ html.theme-switching *::after {
      animation: … 0.25s cubic-bezier(0.22,1,0.36,1)
                                 a bare duration and a THIRD easing curve, in a
                                 file that defines exactly two — added by the
-                                same pass (2e14343) whose stated job was
+                                same pass (ad558a2) whose stated job was
                                 "motion is the one axis where every decision is
                                 a bare number", which did not count this file
      font-family: ui-sans-serif,…

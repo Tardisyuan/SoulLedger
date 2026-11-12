@@ -207,7 +207,7 @@ def test_a_heart_weighing_workflow_is_built_with_the_corrected_reading(seeded):
         ("结束 · 称心毕", NodeType.FINAL),
     ]
 
-    # …and the approver work `625f4d1` does off the label still happens: Anubis
+    # …and the approver work `61adf11` does off the label still happens: Anubis
     # resolves through his `actor` key, the bench stays SYSTEM because it is
     # recorded as naming nobody, and Osiris resolves through his alias. A
     # rename that quietly turned the first node SYSTEM would pass the list

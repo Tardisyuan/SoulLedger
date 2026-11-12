@@ -140,7 +140,7 @@ describe("SoulReadingPanel — poena bullets follow the payload", () => {
 // Exhaustiveness — the property, not the four instances of it
 // ---------------------------------------------------------------------------
 //
-// `f92ed35` gave the Greek reading `kind: "SENTENCE"`. `packages/core/src/api/ledger.ts`
+// `4207bd8` gave the Greek reading `kind: "SENTENCE"`. `packages/core/src/api/ledger.ts`
 // declared four kinds, the component switched over those four with no
 // `default`, and so a SENTENCE payload fell out of the switch, the function
 // returned `undefined`, and React 18 rendered that as nothing. A Greek soul's
@@ -191,7 +191,7 @@ describe("SoulReadingPanel — every kind renders something", () => {
 
   it("says so out loud when the backend sends a kind this build has never heard of", () => {
     // The window between a backend deploy and a frontend one, which is exactly
-    // the window `f92ed35` opened and nobody closed. `tsc` cannot help here —
+    // the window `4207bd8` opened and nobody closed. `tsc` cannot help here —
     // the payload is data, not a type — so the `default` branch is the only
     // thing between this and a blank card.
     const unknown = { kind: "ORDEAL", civilization: "NORSE" } as unknown as LedgerReading;

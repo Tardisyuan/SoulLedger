@@ -1,7 +1,7 @@
 /**
  * GREEK — the panel that did not exist, and the clock it could not read.
  *
- * `f92ed35` gave the Greek reading `kind: "SENTENCE"`. `packages/core/src/api/ledger.ts`
+ * `4207bd8` gave the Greek reading `kind: "SENTENCE"`. `packages/core/src/api/ledger.ts`
  * declared four kinds, this component switched over those four with no
  * `default`, and so a SENTENCE payload fell out of the switch, the function
  * returned `undefined`, and React 18 rendered that as nothing. A Greek soul's
@@ -83,7 +83,7 @@ describe("SoulReadingPanel — the Greek sentence renders at all", () => {
     // The whole reason merit stayed out of this reading until now. Every
     // number below is a way of collapsing two parallel repayments into one
     // figure: their difference (the Chinese balance), their sum, their product,
-    // and each multiplied out by the repayment rule (`ef7df3d`: tenfold is a
+    // and each multiplied out by the repayment rule (`4078b5f`: tenfold is a
     // rule Republic X states, not a total it computes).
     //
     // `queryByText` matches an element's whole text, so "1" here means an

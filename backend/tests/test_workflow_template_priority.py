@@ -8,7 +8,7 @@ nothing else can. So 「this procedure is for urgent cases」 was not expressibl
 at all — which is why the three 「紧急审判流程」 presets in
 `packages/core/src/config/workflow-templates.ts` once wrote it into `caseType` as
 `"EMERGENCY"`, a `CaseType` member that does not exist, and answered 400 on
-every save. `a77a41e` filed them under real case types and left the urgency
+every save. `16d71a1` filed them under real case types and left the urgency
 homeless. `WorkflowTemplate.priority` is the home.
 
 What this file holds
@@ -345,7 +345,7 @@ def test_the_migration_backfills_exactly_the_presets_marked_urgent():
             marked.add((fields["name"], fields["civilization"], fields["caseType"]))
 
     # EGYPTIAN_AFTERLIFE 已合并进 EGYPTIAN_ROUTINE（它是同一次称心的低分辨率写法，Budge《亚尼纸草》1895 图版 III–IV），17→16。
-    # 欧洲异端审判有了自己的流程(306e0833),16→17。
+    # 欧洲异端审判有了自己的流程(d78ee43d),16→17。
     assert seen_priorities == len(starts) == 17, (
         f"parsed {seen_priorities} priorities across {len(starts)} presets"
     )

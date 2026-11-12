@@ -71,7 +71,7 @@ the sentence had one clause listing three things — and drew the unmapped-tenan
 panel from `unavailable_explanation` and `unavailable_cta`. Both fields were
 declared in `packages/core/src/api/ledger.ts` and read by nothing in the repository.
 
-So the split `66a5a3f` drew holds and these two fall on the catalogue side of
+So the split `0dd0e92` drew holds and these two fall on the catalogue side of
 it. What distinguishes them from TERMINAL_COSMOLOGY_REASON, which stays in
 services.py in English on purpose: that one is the `detail` of a 409 whose only
 readers are non-browser clients and the logs. These two were fields of a 200
@@ -79,7 +79,7 @@ body that a component renders, and a rendered string belongs where the
 translations are.
 
 What replaced them is not a shorter sentence, it is the members the sentence
-was enumerating — the same move `66a5a3f` made when it took `inheritance_note`
+was enumerating — the same move `0dd0e92` made when it took `inheritance_note`
 out and left the two rates as numbers. A hard-coded clause on this side and a
 hard-coded list of three bullets on the other is two copies of one fact, and
 the second copy is the one that does not move: had the missing-input list here
@@ -540,7 +540,7 @@ CIVILIZATION_READING = {
 #: checked against the three message bundles. That derivation is the point: the
 #: keys used to be the flat `unavailable_explanation` / `unavailable_cta`, which
 #: a second cause of UNAVAILABLE would have silently inherited and been
-#: mis-described by. It is the `ledger.civ.UNKNOWN` failure `48a5e74` shipped —
+#: mis-described by. It is the `ledger.civ.UNKNOWN` failure `80e6c77` shipped —
 #: a plausible string in the right place saying the wrong thing — and keying on
 #: the code is what turns it into a visible miss.
 REASON_TENANT_NOT_MAPPED = "TENANT_NOT_MAPPED"

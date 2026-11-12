@@ -188,7 +188,7 @@ function PermissionsPageContent() {
   // by one role's save landing.
   //
   // THE KEY SET HAS TO FOLLOW, AND THIS WAS THE HOLE. `checked` is keyed by
-  // role name. Rename a custom role (the backend cascades it, `3ecd5af`) and
+  // role name. Rename a custom role (the backend cascades it, `8217f6f`) and
   // the roles query comes back with the new name: `baseline` is rebuilt under
   // that key, `checked` still holds the old one, and `checked[newName]` is
   // undefined — which `useMatrixSave` reads as an empty set. The live diff

@@ -4,7 +4,7 @@ terraces of Mount Purgatory.
 
 What was wrong
 --------------
-The seven sins were seeded in 6017f04 as seven ``DEADLY_SIN`` statutes, each
+The seven sins were seeded in 925eba8 as seven ``DEADLY_SIN`` statutes, each
 carrying a ``dante_circle`` — and that field names a coordinate the *Commedia*
 does not have. Dante layers hell on Aristotle's tripartition, said outright by
 Virgil in Inf. XI.79-84 (*incontinenza / malizia / matta bestialitade*), and

@@ -119,7 +119,7 @@ CHINESE_REALMS = [
     # so the row went on asserting, in the one field a machine reads, exactly
     # the thing its own comment had just refuted.
     #
-    # It was decoration until `2e354f8`, which made `create_from_judgment` copy
+    # It was decoration until `987905f`, which made `create_from_judgment` copy
     # the realm's mechanism onto the disposition. From then on a Chinese soul
     # held for retrial — `_route_chinese` sends PURGATORY and RETRY here —
     # carried a record saying its memory had been wiped before its case was
@@ -227,7 +227,7 @@ EUROPEAN_REALMS = [
     # ----------------------------------------------------------------------
     # THE SEVEN TERRACES OF MOUNT PURGATORY.
     #
-    # WHY THEY EXIST. The seven capital sins were seeded in 6017f04 as seven
+    # WHY THEY EXIST. The seven capital sins were seeded in 925eba8 as seven
     # DEADLY_SIN statutes carrying a `dante_circle`, and were withdrawn whole in
     # 8308204: Dante does not layer hell by the seven sins. He layers it on
     # Aristotle's tripartition — incontinenza / malizia / matta bestialitade,
@@ -895,7 +895,7 @@ EGYPTIAN_REALMS = [
     # (Budge, Papyrus of Ani, Plate III; BM EA 9901), and she has moved back
     # there in EGYPTIAN_ACTORS below.
     #
-    # THE CODE WAS `EG_DEVOURER` AND IS NOW `EG_ANNIHILATION`. 79dee57 corrected
+    # THE CODE WAS `EG_DEVOURER` AND IS NOW `EG_ANNIHILATION`. dde8696 corrected
     # what this row claims and deliberately left the code alone, because the
     # string was a live identifier in three places at once — `DispositionService`
     # routes every failed Egyptian heart to it, existing databases record it as

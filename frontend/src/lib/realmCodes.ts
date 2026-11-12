@@ -13,7 +13,7 @@
  *
  * `EG_DEVOURER` was the previous spelling of the code below, and it was
  * hard-coded into `SoulLifecycleTimeline` as a bare literal. That made the
- * rename a coordinated-deploy problem: `79dee57` corrected the realm's name and
+ * rename a coordinated-deploy problem: `dde8696` corrected the realm's name and
  * description but deliberately left the code alone, because renaming it in the
  * backend alone would have left the timeline comparing against a string no row
  * answered to any more — and nothing would have failed. The annihilation state

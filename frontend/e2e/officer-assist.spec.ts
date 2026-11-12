@@ -25,7 +25,7 @@ test.describe("问一问", () => {
     await expect(box).toBeFocused();
     await box.fill("我的队列有多少？");
     await box.press("Enter");
-    // The visible bubble (`assist-stream-text`); the same words also go to an sr-only live region (c84a0441).
+    // The visible bubble (`assist-stream-text`); the same words also go to an sr-only live region (68387788).
     await expect(panel.getByTestId("assist-stream-text")).toHaveText("答：我的队列有多少？");
     expect(api.lastCall("POST", "/assist/")?.body).toEqual({ question: "我的队列有多少？", screen: "judgment", stream: true, new: true }); // 第一句开新会话(问一问修正)
 

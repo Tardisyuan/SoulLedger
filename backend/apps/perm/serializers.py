@@ -106,7 +106,7 @@ class RoleSerializer(serializers.ModelSerializer):
     # unintrospectable view: the moment the view got a declared response, the
     # generator reached this field and typed a count as `string`. It is the
     # 20th SerializerMethodField in that state — the other 19 were found in
-    # 0779d6b, and this one was hiding behind the error channel.
+    # 84f63bf, and this one was hiding behind the error channel.
     def get_user_count(self, obj) -> int:
         annotated = getattr(obj, "user_count_annotated", None)
         if annotated is not None:

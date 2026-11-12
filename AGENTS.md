@@ -24,7 +24,7 @@ text-ink                                  ❌ 裸形
 ```
 
 Tailwind 4 把 `@theme` 变量提进 theme 层并从中生成 `.text-ink`，而 `:root` 里同名的
-变量存的是**裸 OKLCH 三元组**（`L C H`，`7db2c6e` 起；此前是 HSL），于是裸形生成非颜色值 —— **静默失效，不报错**。
+变量存的是**裸 OKLCH 三元组**（`L C H`，`022b8f8` 起；此前是 HSL），于是裸形生成非颜色值 —— **静默失效，不报错**。
 照旧文档写 `hsl(var(--color-ink))` 同样静默失效：得到 `hsl(0.97 0.0017 247.8)`，亮度被钳到 100%，是白字。
 `globals.css` 开头记录了这次事故：同一页面里 10 个写 `text-[oklch(var(--color-ink-subtle))]`
 的元素正常变暗，2 个写 `text-ink-subtle` 的以全亮度渲染，而 lint / tsc / build 全绿。
@@ -76,7 +76,7 @@ token，浅色模式下失效或过淡。执法：eslint `design-system/no-raw-p
 > 要你撤销刻意工作的指令"，但这一节仍在原地照抄它，并让人"必读 DESIGN.md"。
 >
 > （2026-09-26 注：上面「四类全部是 eslint error」里的 `text-sm` 一项已不成立 ——
-> 规范 v1 的七档字号（`16f4e149`）把 `text-sm`（13px）收回成合法档位；其余三类仍是 error。）
+> 规范 v1 的七档字号（`bb010544`）把 `text-sm`（13px）收回成合法档位；其余三类仍是 error。）
 
 ---
 
@@ -443,7 +443,7 @@ SoulLedger/
 ### 添加按钮/组件到页头
 
 `src/components/NavBar.tsx` 已不存在。页头与侧栏在 `src/components/layout/AppLayout.tsx`：
-- 页头 40px：面包屑 · 通知 · 用户菜单（`a2044b28`）
+- 页头 40px：面包屑 · 通知 · 用户菜单（`2c6aaf57`）
 - 语言 / 主题 / 设置 / 登出收在用户菜单的弹层里（`AppLayout.tsx:38`、`:282-291`）
 - 连接状态只在断线时出现在页头下的警示条
 
