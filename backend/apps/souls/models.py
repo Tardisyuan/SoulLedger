@@ -1056,6 +1056,56 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         EventService.log(self, "DUAT_PASSAGE_CHANGED", {
             "from": old, "to": new, "judgments": [str(case.pk) for case in cases]})
 
+    def death_dates(self):
+        """The two dates an open case's hold is computed from (`opening_fields`, `_duat_fields`)."""
+        return ((self.death_year, self.death_month, self.death_day),
+                (self.fated_death_year, self.fated_death_month, self.fated_death_day))
+
+    def follow_death_dates(self, old):
+        """An officer changed the death date or the 阳寿 after death (F-DEATH-07, 2026-11-12); the open
+        first-instance case's hold follows, by the rule it was set with at death. `old`: `death_dates()` before.
+
+        * 地府: 枉死 and its hold until the fated date (`opening_fields`). A case whose grievance was upheld stays
+          released — that decision (`wangsi.decide_grievance`) is not the officer's date edit to undo.
+        * 埃及: the 70 days of embalming count from the new death date (`_duat_fields`); other stages untouched.
+
+        A change that would newly hold a case an officer has claimed is refused (`DjangoValidationError`, the
+        serializer's 400), as `follow_duat_passage` refuses moving a claimed case. Releasing one is not.
+        """
+        from datetime import timedelta
+
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from apps.judgment.models import EMBALMING_DAYS, DuatStage, GrievanceStatus, Judgment, JudgmentKind
+
+        if old == self.death_dates() or self.civilization not in (Civilization.CHINESE, Civilization.EGYPTIAN):
+            return
+        died = to_legacy_date(self.death_year, self.death_month, self.death_day)
+        fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
+        released = (GrievanceStatus.UPHELD, GrievanceStatus.UPHELD_LATE, GrievanceStatus.DELIVERED)
+        today = timezone.localdate()
+        cases = Judgment.objects.select_for_update(of=("self",)).filter(
+            soul=self, kind=JudgmentKind.ORIGINAL, verdict__isnull=True, is_final=False, is_deleted=False)
+        for case in cases:
+            if self.civilization == Civilization.CHINESE:
+                if case.grievance_status in released:
+                    continue
+                untimely = bool(fated and died and died < fated)
+                fields = {"untimely": untimely, "held_until": fated if untimely else None}
+            elif case.duat_stage == DuatStage.EMBALMING:
+                fields = {"held_until": died + timedelta(days=EMBALMING_DAYS) if died else None}
+            else:
+                continue
+            was_held = bool(case.held_until and case.held_until > today)
+            now_held = bool(fields["held_until"] and fields["held_until"] > today)
+            if now_held and not was_held and case.claimed_by_id:
+                raise DjangoValidationError("An officer has claimed this soul's case; it is being decided.")
+            if all(getattr(case, name) == value for name, value in fields.items()):
+                continue
+            for name, value in fields.items():
+                setattr(case, name, value)
+            case.save(update_fields=list(fields))
+
     def _arrive_in_the_hall(self, judgment):
         """埃及:亡者穿过杜阿特,抵达两真之殿受审(docs/02 §1.1、01 §2.1)。案子挂在殿上,行程从杜阿特入口
         走到殿里;租户没有这一殿就什么都不写。两组门(七道 ꜥrrwt、廿一道 sbḫt)不入行程 —— 门的位置是 Design
