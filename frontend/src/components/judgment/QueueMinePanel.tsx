@@ -115,7 +115,8 @@ export function QueueMinePanel({
                       title={j.soul_name || undefined}
                       className={`min-w-0 flex-1 truncate text-left text-[oklch(var(--color-ink))] hover:underline ${j.id === currentId ? "font-semibold" : ""}`}
                     >
-                      {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />}
+                      {/* 缺键 = 字段权限藏了灵魂姓名(P-11)。 */}
+                      {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason={t(j.soul_name === undefined ? "souls.field_withheld" : "judgment.soul_name_not_returned")} />}
                     </button>
                     {j.court ? (
                       <span className="truncate text-xs text-[oklch(var(--color-ink-subtle))] max-sm:hidden" title={j.court}>

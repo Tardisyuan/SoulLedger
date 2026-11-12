@@ -118,6 +118,25 @@ def withhold(row: dict, hidden, blank=None) -> dict:
     return {k: (blank if k in hidden else v) for k, v in row.items()}
 
 
+class SoulFieldRulesMixin:
+    """For a serializer of a row that *quotes* its soul (a case's `soul_name`, a disposition's, a dispatch's, a
+    sentence plan's): each key in `soul_field_keys` follows the **Soul** FieldPermission rule of the field it
+    copies, and is absent when that rule hides it — the soul list's reading (用户 2026-11-11, P-11). Without this
+    a rule hiding `Soul.name` was walked around by every queue that prints the name beside the case.
+    Worked out once per serializer instance (a page reuses one child). Put it before `ModelSerializer`."""
+
+    #: serializer key -> the Soul field it copies
+    soul_field_keys: dict = {}
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not hasattr(self, "_soul_hidden_keys"):
+            request = self.context.get("request")
+            hidden = hidden_fields(getattr(request, "user", None), "Soul", set(self.soul_field_keys.values()))
+            self._soul_hidden_keys = frozenset(k for k, f in self.soul_field_keys.items() if f in hidden)
+        return withhold(data, self._soul_hidden_keys, DROP)
+
+
 def _outcome(rules, field_name):
     """(visible, locked) for one role: the field's own rule, else the role's wildcard `*`, else open."""
     wildcard = rules.get('*', {})

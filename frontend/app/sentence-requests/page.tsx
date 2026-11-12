@@ -15,7 +15,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
@@ -76,7 +76,8 @@ function SentenceRequestsContent() {
                 <li key={plan.id} data-plan-id={plan.id} className="px-3 py-3 space-y-2 border-b border-[oklch(var(--color-rule))]">
                   <p className="flex flex-wrap items-center gap-2">
                     <Link href={`/souls/${plan.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline underline-offset-2">
-                      {plan.soul_name}
+                      {/* 缺键 = 字段权限藏了灵魂姓名(P-11)。 */}
+                      {plan.soul_name === undefined ? <MissingValue kind="unrecorded" reason={t("souls.field_withheld")} /> : plan.soul_name}
                     </Link>
                     <StatusBadge namespace="sentence_plan.plan_states" value={plan.status} tone={PLAN_TONES[plan.status] ?? "neutral"} />
                     {mine === plan.tenant_code && <Badge tone="accent" glyph="→">{t("sentence_plan.awaiting_you")}</Badge>}

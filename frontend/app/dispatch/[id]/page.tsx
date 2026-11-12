@@ -282,7 +282,10 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         <PageSection title={t("dispatch.detail_title")}>
           <dl className="grid grid-cols-[7rem_1fr] text-sm">
             <dt className={DT}>{t("dispatch.soul")}</dt>
-            <dd className={`${DD} font-medium`}>{dispatch.soul_name || dispatch.soul}</dd>
+            {/* 缺键 = 字段权限藏了灵魂姓名(P-11)。 */}
+            <dd className={`${DD} font-medium`}>
+              {dispatch.soul_name === undefined ? <MissingValue kind="unrecorded" reason={t("souls.field_withheld")} /> : dispatch.soul_name || dispatch.soul}
+            </dd>
             <dt className={DT}>{t("dispatch.status")}</dt>
             <dd title={dispatch.status} className={DD}>{statusLabel}</dd>
             <dt className={DT}>{t("dispatch.source_tenant")}</dt>

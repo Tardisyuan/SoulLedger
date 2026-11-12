@@ -101,6 +101,15 @@ describe("SentencePlansPage", () => {
     await waitFor(() => expect(mockedList).toHaveBeenLastCalledWith({ page: 1 }));
   });
 
+  it("shows 已隐藏 when the Soul field rules withhold the soul's name (the key is absent, P-11)", async () => {
+    const { soul_name: _withheld, ...ruled } = plan;
+    mockedList.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [ruled] } });
+    renderPage();
+    const link = await screen.findByRole("link", { name: `${zh("common.value.unrecorded")} — ${zh("souls.field_withheld")}` });
+    expect(link).toHaveAttribute("href", "/souls/soul-1");
+    expect(screen.queryByText("周阿满")).not.toBeInTheDocument();
+  });
+
   it("says so when nothing matches", async () => {
     mockedList.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     renderPage();

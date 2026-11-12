@@ -309,7 +309,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                 status=status.HTTP_409_CONFLICT,
             )
 
-        return Response(DispositionSerializer(disposition).data)
+        return Response(DispositionSerializer(disposition, context=self.get_serializer_context()).data)
 
     @extend_schema(request=None, responses={200: DispositionSerializer, 409: OpenApiTypes.OBJECT})
     @action(detail=True, methods=["post"])
@@ -393,11 +393,11 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             )
         reason = request.data.get("reason", "")
         disposition.archive(user=request.user, reason=reason)
-        return Response(DispositionSerializer(disposition).data)
+        return Response(DispositionSerializer(disposition, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=["post"])
     def unarchive(self, request, pk=None):
         """Undo archive(): the disposition returns to the lists."""
         disposition = self.get_object()
         disposition.unarchive()
-        return Response(DispositionSerializer(disposition).data)
+        return Response(DispositionSerializer(disposition, context=self.get_serializer_context()).data)

@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
-from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.field_permissions import FieldPermissionMixin, SoulFieldRulesMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
@@ -143,7 +143,7 @@ class JudgmentCitationSerializer(serializers.ModelSerializer):
         }
 
 
-class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.ModelSerializer):
+class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulFieldRulesMixin, serializers.ModelSerializer):
     """A proceeding. Soul and judge are the requester's own (BD-01).
 
     `validate_soul` / `validate_judge` were declared on
@@ -158,6 +158,11 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     then refused it as already concluded. `civilization` is read-only and
     derived from the soul (BD-08).
     """
+    # What the case quotes from its soul follows the Soul field rules (SoulFieldRulesMixin, P-11).
+    soul_field_keys = {
+        "soul_name": "name", "merit_score": "merit_score", "demerit_score": "demerit_score",
+        "karmic_balance": "karmic_balance",
+    }
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     judge_name = serializers.CharField(source="judge.name", read_only=True)
     judge_name_en = serializers.CharField(source="judge.name_en", read_only=True)
@@ -805,7 +810,7 @@ class JudgmentQueueCursorSerializer(serializers.Serializer):
     realm_options = RealmLocalizedSerializer(many=True)
 
 
-class JudgmentPrecedentSerializer(serializers.Serializer):
+class JudgmentPrecedentSerializer(SoulFieldRulesMixin, serializers.Serializer):
     """One row of 「据 · 先例」 — see apps/judgment/precedents.py for the ranking.
 
     `balance` is withheld (null) for VIEWER, the rule SoulSerializer applies to
@@ -814,8 +819,9 @@ class JudgmentPrecedentSerializer(serializers.Serializer):
     does not also grant it the scores."""
     id = serializers.UUIDField(read_only=True)
     soul = serializers.UUIDField(source="soul_id", read_only=True)
+    soul_field_keys = {"name": "name"}  # P-11, as on the case
     name = serializers.CharField(source="soul.name", read_only=True)
-    verdict = serializers.ChoiceField(choices=Verdict.choices, read_only=True)
+    verdict =serializers.ChoiceField(choices=Verdict.choices, read_only=True)
     court = serializers.CharField(read_only=True)
     concluded_at = serializers.DateTimeField(read_only=True, allow_null=True)
     balance = serializers.SerializerMethodField()

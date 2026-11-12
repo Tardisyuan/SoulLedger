@@ -352,7 +352,8 @@ function DispatchTable({
               href={d.status === "DRAFT" ? `/dispatch/propose?draft=${d.id}` : `/dispatch/${d.id}`}
               className={ROW_LINK}
             >
-              {d.soul_name || <MissingValue kind="unrecorded" />}
+              {/* 缺键 = 字段权限藏了灵魂姓名(P-11);null = 草稿还没选灵魂。 */}
+              {d.soul_name || <MissingValue kind="unrecorded" reason={d.soul_name === undefined ? t("souls.field_withheld") : undefined} />}
             </Link>
             {d.reason && (
               <p className="max-w-80 truncate text-xs font-normal text-[oklch(var(--color-ink-muted))]" title={d.reason}>{d.reason}</p>

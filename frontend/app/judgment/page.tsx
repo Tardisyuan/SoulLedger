@@ -289,10 +289,14 @@ function JudgmentQueuePageContent() {
                 <Link href={`/judgment/${judgment.id}`} className={ROW_LINK}>
                   {/* `MissingValue`,不是 UUID:`soul_name || soul` 在名字缺失时把主键印成
                       灵魂名 —— 兜底方向违反 IDENTIFIER_POLICY。 */}
+                  {/* 缺键 = 字段权限藏了灵魂姓名(P-11);空值 = 后端没给。 */}
                   {judgment.soul_name ? (
                     judgment.soul_name
                   ) : (
-                    <MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />
+                    <MissingValue
+                      kind="unrecorded"
+                      reason={t(judgment.soul_name === undefined ? "souls.field_withheld" : "judgment.soul_name_not_returned")}
+                    />
                   )}
                 </Link>
               </td>
