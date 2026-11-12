@@ -115,3 +115,27 @@ def test_a_soul_the_judge_created_stays_visible_under_any_scope(w):
     assert _counts(w.client) == dict.fromkeys(LISTS, 0)
     Soul.all_objects.filter(pk=w.theirs.soul.pk).update(create_user=w.judge)
     assert _counts(w.client) == dict.fromkeys(LISTS, 1)
+
+
+def test_another_halls_souls_are_not_held_back_by_this_halls_org_scope(w, cn_tenant, eu_tenant):
+    """数据范围只划本殿的机构(2026-11-12):原属别殿的灵魂在本殿没有机构,执行地本机构判官仍看得到它的受刑计划,
+    收件殿司本机构的官员仍看得到暂居灵魂的来信;本殿别机构的灵魂照样看不到。"""
+    from apps.sentence_plan.models import SentenceNode
+
+    scope("JUDGE", "ORG")
+    abroad = Soul.objects.create(name="外殿魂", tenant=eu_tenant, owner_org=org(eu_tenant, "欧司"),
+                                 current_state=SoulState.JUDGING)
+    plan = SentencePlan.all_objects.create(soul=abroad, tenant=eu_tenant, cycle=0, status=SentencePlanStatus.ACTIVE)
+    SentenceNode.objects.create(plan=plan, order=2, tenant_code=cn_tenant.code)
+    Soul.all_objects.filter(pk=abroad.pk).update(tenant=cn_tenant)  # 暂居本殿,原属仍是欧殿
+    letter = Conversation.objects.create(kind=ConversationKind.OFFICER_INBOX, room_id="!p10abroad:x", soul_a=abroad,
+                                         tenant=cn_tenant, last_from="soul", assignee=w.judge)
+
+    plans = w.client.get("/api/v1/sentence-plans/").data["results"]
+    assert {str(p["id"]) for p in plans} == {str(w.mine.plan.pk), str(plan.pk)}
+    assert w.client.get(f"/api/v1/sentence-plans/{plan.pk}/").status_code == 200
+    assert w.client.get(f"/api/v1/sentence-plans/{w.theirs.plan.pk}/").status_code == 404
+
+    assert w.client.get("/api/v1/chat/inbox/").data["count"] == 2
+    assert w.client.get(f"/api/v1/chat/inbox/{w.theirs.letter.pk}/").status_code == 404
+    assert {i["id"] for i in todo.build(w.judge)["letters"]["items"]} == {str(w.mine.letter.pk), str(letter.pk)}
