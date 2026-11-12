@@ -292,7 +292,7 @@ describe("streaming (流式输出)", () => {
     expect(announce.mock.calls.map((c) => c[0])).toEqual(["正在查帮助文档与你的簿册", "正在回答", "你已有**一份**申请正在审批。"]);
   });
 
-  it("A5/A6: stop keeps the text with 已停止 and no retry, even before the first text", async () => {
+  it("A5/A6: stop keeps the text with 已停止 and no retry", async () => {
     const ask = await openAndAsk(null);
     await act(async () => ask.send({ event: "delta", text: "可以申诉" }));
     await act(async () => {
@@ -304,6 +304,27 @@ describe("streaming (流式输出)", () => {
     expect(screen.queryByTestId("assist-interrupted")).toBeNull();
     expect(screen.queryByTestId("assist-retry-interrupted")).toBeNull();
     expect(announce).toHaveBeenLastCalledWith("已停止 可以申诉");
+  });
+
+  // F-AST-01 (flow walk 2026-11-12): stopped before the first word, the server stores nothing and builds no
+  // conversation; keeping the id `meta` announced made the next question a 404 「没有答上来」.
+  it("a stop before the first word keeps nothing, puts the question back, and the next ask starts a new conversation", async () => {
+    const ask = await openAndAsk(null);
+    await act(async () => ask.send({ event: "meta", conversation_id: CONVERSATION }));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("assist-stop"));
+    });
+    expect(ask.aborted()).toBe(true);
+    expect(screen.queryByTestId("assist-stopped")).toBeNull();
+    expect(screen.queryByTestId("assist-question")).toBeNull();
+    expect(screen.getByTestId("assist-input").props.value).toBe("我为什么不能申请？");
+    scripts.push(reply("可以申诉。"));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("assist-send"));
+    });
+    expect(asks[1].body).toMatchObject({ question: "我为什么不能申请？", new: true });
+    expect(asks[1].body).not.toHaveProperty("conversation_id");
+    expect(answerText()).toBe("可以申诉。");
   });
 
   it("A7: interrupted keeps the text, 「! 回答中断」 in the warning colour, and 重试 re-asks and replaces it", async () => {

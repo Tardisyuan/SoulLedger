@@ -525,16 +525,26 @@ describe("streaming (canvas「问一问 · 流式输出」)", () => {
     expect(screen.getByRole("button", { name: "问" })).toBeInTheDocument();
   });
 
-  it("A5: stop works before the first text too", async () => {
+  // F-AST-01 (flow walk 2026-11-12): this used to expect an empty 已停止 bubble. Stopped before the first word, the
+  // server stores nothing and builds no conversation; keeping the id `meta` announced made the next question a 404.
+  it("A5: a stop before the first text keeps nothing, puts the question back, and the next ask is a new conversation", async () => {
     const ask = await streaming();
+    await act(async () => ask.send({ event: "meta", conversation_id: CONVERSATION_ID }));
     fireEvent.click(screen.getByRole("button", { name: "停止回答" }));
     await waitFor(() => expect(ask.aborted()).toBe(true));
-    expect(await screen.findByTestId("officer-assist-stopped")).toBeInTheDocument();
-    expect(screen.queryByTestId("officer-assist-waiting")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId("officer-assist-waiting")).not.toBeInTheDocument());
+    expect(screen.queryByTestId("officer-assist-stopped")).not.toBeInTheDocument();
+    expect(input()).toHaveValue("我的队列有多少？");
+    scripts.push(reply("有 3 件。"));
+    fireEvent.keyDown(input(), { key: "Enter" });
+    await waitFor(() => expect(asks).toHaveLength(2));
+    expect(asks[1].body).toMatchObject({ question: "我的队列有多少？", new: true });
+    expect(asks[1].body).not.toHaveProperty("conversation_id");
   });
 
   it("A5: Esc stops the answer (pushed panel) and does not close the panel", async () => {
     const ask = await streaming();
+    await act(async () => ask.send({ event: "delta", text: "可以" }));
     fireEvent.keyDown(input(), { key: "Escape" });
     await waitFor(() => expect(ask.aborted()).toBe(true));
     expect(await screen.findByTestId("officer-assist-stopped")).toBeInTheDocument();
@@ -547,6 +557,7 @@ describe("streaming (canvas「问一问 · 流式输出」)", () => {
   it("A5: Esc stops the answer in the drawer too, without closing it", async () => {
     setWidth(false);
     const ask = await streaming();
+    await act(async () => ask.send({ event: "delta", text: "可以" }));
     fireEvent.keyDown(input(), { key: "Escape" });
     await waitFor(() => expect(ask.aborted()).toBe(true));
     expect(await screen.findByTestId("officer-assist-stopped")).toBeInTheDocument();
