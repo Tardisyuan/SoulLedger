@@ -462,3 +462,18 @@ def test_a_hand_made_disposition_does_not_bypass_a_plan_in_progress(cn):
     refused = officer_client(_moderator(cn)).post(f"/api/v1/disposition/{stray.pk}/execute/", {}, format="json")
     assert refused.status_code == 409 and refused.data["code"] == "plan_in_progress", refused.data
 
+
+def test_a_plan_stops_term_is_not_patched_on_the_disposition(cn):
+    """F-DISP-04(2026-11-12):挂在计划节点上的处置,PATCH 改刑期 / 永久 / 去处此前只改这一行 —— 改空刑期让站
+    永远 ACTIVE,改成永久绕过「永久必须最后」。现在 400 `on_sentence_plan`;不碰这些列的编辑照旧。"""
+    soul, plan, disposition = _termed(cn)
+    client = officer_client(_moderator(cn))
+    url = f"/api/v1/disposition/{disposition.pk}/"
+    for body in ({"sentence_years": None}, {"is_eternal": True}, {"sentence_years": 9}):
+        refused = client.patch(url, body, format="json")
+        assert refused.status_code == 400, (body, refused.data)
+        assert str(refused.data[next(iter(body))][0].code) == "on_sentence_plan"
+    row = Disposition.all_objects.get(pk=disposition.pk)
+    assert (row.sentence_years, row.is_eternal) == (3, False)
+    assert client.patch(url, {"sentence_years": 3, "notes": "核对过"}, format="json").status_code == 200
+
