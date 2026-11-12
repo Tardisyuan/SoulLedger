@@ -20,6 +20,8 @@ export interface DecisionInput {
   reason: string;
   /** Cooldown shortening only: the days to approve. */
   days?: number;
+  /** A rebirth's first review only: the hall a cross-civilization rebirth goes to (F-REB-11); null / absent = 不跨. */
+  crossTarget?: string | null;
 }
 
 /**
@@ -27,17 +29,21 @@ export interface DecisionInput {
  * asks the server to enforce the same rule (400 `reason_required`). Rejects with the axios error;
  * `decisionFailure` reads it.
  */
-export async function submitDecision({ detail, verdict, reason, days, passVerdict }: DecisionInput): Promise<void> {
+export async function submitDecision({ detail, verdict, reason, days, passVerdict, crossTarget }: DecisionInput): Promise<void> {
   const note = reason.trim();
   if (verdict === "reject" && note === "") throw new Error("reason_required");
   if (detail.kind === "approval" || detail.kind === "rebirth") {
     if (!detail.workflow_id || !detail.node_id) throw new Error("no_node");
     // O-b: approving the first review on the phone settles 跨文明 as 「不跨」 -- written first, so the record says so.
     // 409 = the first review is already past (the flag is no longer this step's to set): approve as before.
+    // F-REB-11: a chosen target hall settles it as 「跨」 to that hall instead. Then a 409 is NOT swallowed --
+    // approving without the cross that was chosen would turn the choice into 「不跨」.
     if (verdict === "approve" && rebirthCross(detail) === "no" && (detail.facts as TodoFacts | undefined)?.cross_civilization == null) {
-      await soulAccountsApi.decideCrossCivilization(detail.id, false).catch((e: unknown) => {
-        if ((e as { response?: { status?: number } })?.response?.status !== 409) throw e;
-      });
+      if (crossTarget) await soulAccountsApi.decideCrossCivilization(detail.id, true, crossTarget);
+      else
+        await soulAccountsApi.decideCrossCivilization(detail.id, false).catch((e: unknown) => {
+          if ((e as { response?: { status?: number } })?.response?.status !== 409) throw e;
+        });
     }
     await workflowApi.approveNode(detail.workflow_id, detail.node_id, {
       verdict: verdict === "approve" ? (passVerdict ?? passVerdictsOf(detail)[0]) : refuseVerdictOf(detail),

@@ -5,7 +5,7 @@
  * button is never disabled beforehand. The confirmation is ink-solid, not the hall's colour. A
  * failure puts a Notice inside the sheet and KEEPS what was typed.
  */
-import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
+import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoFacts, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { useCallback, useEffect, useState } from "react";
 import { Share, View } from "react-native";
 
@@ -66,6 +66,11 @@ export function DecisionSheet({
   // O-b: a rebirth's first review says 「不跨」 on the sheet and on the button; one already set to cross is the desk's.
   const cross = verdict === "approve" ? rebirthCross(detail) : null;
   const toDesk = () => void Share.share({ message: deskUrl({ kind: "rebirth", id: detail.id }) }).catch(() => {});
+  // F-REB-11: the first review may also send the soul to another civilization -- the halls are the server's
+  // (`cross_civilization_targets`: rebirth-capable, not the soul's own). "none" = 不跨.
+  const crossTargets = cross === "no" ? ((detail.facts as TodoFacts | undefined)?.cross_civilization_targets ?? []) : [];
+  const [crossPick, setCrossPick] = useState<string>("none");
+  const crossHall = crossTargets.find((h) => h.code === crossPick) ?? null;
   // Kept by item and verdict (keptText.ts): closing the sheet, or leaving the detail by a tab switch, keeps the words; the
   // next opening starts with them. Before this a new `key` per opening wiped a half-written reason (review 2026-11-01).
   const [reason, setReason, dropReason] = useKeptText(`decision:${verdict}:${detail.kind}:${detail.id}`);
@@ -102,7 +107,14 @@ export function DecisionSheet({
     setFailure(null);
     setUnconfirmed(null);
     confirmedDecision(t("officer_app.biometric.prompt"), () =>
-      submitDecision({ detail, verdict, reason, days: parsedDays ?? undefined, passVerdict: verdict === "approve" ? chosenPass : undefined })
+      submitDecision({
+        detail,
+        verdict,
+        reason,
+        days: parsedDays ?? undefined,
+        passVerdict: verdict === "approve" ? chosenPass : undefined,
+        crossTarget: crossHall?.code ?? null,
+      })
     )
       .then(() => {
         // O-f: an approved dispatch has not moved the soul yet -- the receiving hall executes it on the desk.
@@ -122,8 +134,22 @@ export function DecisionSheet({
         {cross === "no" ? (
           // Written first, above the object: approving here settles it for good.
           <View testID="decision-cross" style={{ gap: space[1] }}>
-            <Txt variant="bodyLg">{t("officer_app.rebirth.cross_civ_none")}</Txt>
-            <Txt variant="body" tone="muted">{t("officer_app.rebirth.cross_civ_body")}</Txt>
+            <Txt variant="bodyLg">
+              {crossHall ? t("officer_app.rebirth.cross_civ_to", { hall: hall(crossHall) }) : t("officer_app.rebirth.cross_civ_none")}
+            </Txt>
+            <Txt variant="body" tone="muted">{t(crossTargets.length > 0 ? "officer_app.rebirth.cross_civ_pick" : "officer_app.rebirth.cross_civ_body")}</Txt>
+            {crossTargets.length > 0 ? (
+              <Segmented
+                testID="decision-cross-target"
+                role="radiogroup"
+                value={crossPick}
+                onChange={setCrossPick}
+                options={[
+                  { key: "none", label: t("officer_app.rebirth.cross_option_none") },
+                  ...crossTargets.map((h) => ({ key: h.code, label: hall(h) })),
+                ]}
+              />
+            ) : null}
           </View>
         ) : cross === "desk" ? (
           <Txt variant="body" testID="decision-cross-wanted">{t("officer_app.rebirth.cross_wanted")}</Txt>
@@ -203,7 +229,11 @@ export function DecisionSheet({
               testID="decision-confirm"
               kind={verdict === "approve" ? "primary" : "ink"}
               busy={busy}
-              title={t(cross === "no" ? "officer_app.rebirth.approve_no_cross" : verdict === "approve" ? "officer_app.confirm.approve_ok" : "officer_app.confirm.reject_ok")}
+              title={
+                crossHall
+                  ? t("officer_app.rebirth.approve_cross", { hall: hall(crossHall) })
+                  : t(cross === "no" ? "officer_app.rebirth.approve_no_cross" : verdict === "approve" ? "officer_app.confirm.approve_ok" : "officer_app.confirm.reject_ok")
+              }
               onPress={confirm}
             />
           </View>
