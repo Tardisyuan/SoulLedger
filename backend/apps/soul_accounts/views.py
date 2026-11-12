@@ -83,17 +83,24 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
                               409: SoulErrorSerializer})
     @action(detail=False, methods=["post"])
     def provision(self, request):
-        """手动开通。本世已有账号时幂等返回 200,不重发密码;要新密码用 reset_credential。"""
+        """手动开通。本世已有账号时幂等返回 200,不重发密码、**不改联系方式**;要新密码用 reset_credential。
+
+        灵魂按调用者的数据范围选(F-ACCT-01):此前只按殿,受限官员可给范围外的灵魂开号,
+        或把它已有账号的登录邮箱换成自己的再走邮箱重置接管;事务提交后 `get_queryset` 才按范围找不到它,答 500。"""
         from apps.souls.models import Soul
 
         body = ProvisionRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        soul = scope_to_tenant(Soul.objects.all(), request, field="home_tenant").filter(pk=body.validated_data["soul_id"]).first()
+        souls = DataScopeFilter.filter_queryset(
+            request, scope_to_tenant(Soul.objects.all(), request, field="home_tenant"), Soul)
+        soul = souls.filter(pk=body.validated_data["soul_id"]).first()
         if soul is None:
             return Response({"detail": "灵魂不存在。", "code": "not_found"}, status=404)
         try:
             with transaction.atomic():
-                _apply_contacts(soul, body.validated_data)
+                locked = Soul.lock(soul.pk)
+                if not SoulAccount.objects.filter(soul=locked, cycle=locked.life_index).exists():
+                    _apply_contacts(soul, body.validated_data)
                 account, created = svc.provision_account(
                     soul, AccountOrigin.OFFICER, actor=request.user, request=request)
         except svc.SoulAccountError as exc:
