@@ -1,12 +1,14 @@
 """角色数据范围的接口(数据范围设计 B4,local-gates/rbac-2026-10-29/datascope-design.md「接口(B4)」)。
 
 GET     /perm/data-scope/resources/     可单独设置范围的业务 [{key, label}](label 按 Accept-Language,zh 中文、其余英文)
-GET|PUT /perm/roles/<id>/data-scope/    {default:{scope,orgs}, overrides:[{resource,scope,orgs}]}
+GET|PUT /perm/roles/<id>/data-scope/    {default:{scope,orgs}, default_configured, overrides:[{resource,scope,orgs}]}
 
 读:持 system.settings(与权限页同一个码)。写:无殿且持 system.settings(`CanWriteGlobalSettings`)——
 角色是各殿共用的。PUT 整份替换;ADMIN 角色拒改(它跳过范围,配了也不生效);DEFINE 机构不能空,机构可跨殿挑。
 「从没配过」不存行;「配成全部」2026-11-12 起存一行 ALL(兼任时它让结果变成全部,没配的不贡献,
-`data_scope.org_ids`,审计 P-12)。GET 两者读回来一样(默认都显示 ALL),行不一样。
+`data_scope.org_ids`,审计 P-12)。GET 的 `default` 两者都显示 ALL,`default_configured` 区分有没有那一行;
+PUT 的 `default` 缺省或 null =「没配」,不存默认行(此前角色页总带着 default,改一项覆盖再保存就凭空多一行 ALL)。
+覆盖不需要同样的标记:`overrides` 里列出的就是存了行的,没列出的就是跟随默认。
 此前写入的「默认 ALL」没有存行,与「从没配」无从区分,所以**不做数据迁移补行**:那些角色按「没配」算,
 管理员在角色页再保存一次「全部」就有了那一行。
 """
@@ -74,7 +76,8 @@ class DataScopeOverrideSerializer(DataScopeRuleSerializer):
 
 
 class RoleDataScopeConfigSerializer(serializers.Serializer):
-    default = DataScopeRuleSerializer()
+    #: 缺省或 null =「默认没配」:不存默认行,兼任时这个角色不放宽(`data_scope.org_ids`)。显式「全部」要发 {scope: ALL}。
+    default = DataScopeRuleSerializer(required=False, allow_null=True)
     overrides = DataScopeOverrideSerializer(many=True, required=False, default=list)
 
     def validate(self, attrs):
@@ -83,7 +86,9 @@ class RoleDataScopeConfigSerializer(serializers.Serializer):
         keys = [o["resource"] for o in attrs["overrides"]]
         if len(keys) != len(set(keys)):
             raise serializers.ValidationError({"overrides": ["Each resource at most once."]}, code="duplicate_resource")
-        wanted = {pk for rule in (attrs["default"], *attrs["overrides"]) for pk in rule["orgs"]}
+        attrs["default"] = attrs.get("default")
+        rules = [r for r in (attrs["default"], *attrs["overrides"]) if r]
+        wanted = {pk for rule in rules for pk in rule["orgs"]}
         missing = wanted - set(Organization.objects.filter(pk__in=wanted).values_list("pk", flat=True))
         if missing:
             raise serializers.ValidationError(
@@ -91,23 +96,32 @@ class RoleDataScopeConfigSerializer(serializers.Serializer):
         return attrs
 
 
+class RoleDataScopeConfigResponseSerializer(serializers.Serializer):
+    default = DataScopeRuleSerializer(help_text="没配时显示 ALL;看 default_configured 区分。")
+    default_configured = serializers.BooleanField(help_text="有没有默认范围那一行。false = 没配,兼任时不放宽。")
+    overrides = DataScopeOverrideSerializer(many=True, help_text="列出的都是存了行的;没列出的业务跟随默认。")
+
+
 def role_config(role):
-    """角色当前的配置,GET / PUT 同形。"""
+    """角色当前的配置。`default_configured` 让「没配」与「显式全部」不同形,审计的前后比较靠它看见那一行的增减。"""
     default = {"scope": data_scope.ALL, "orgs": []}
+    configured = False
     overrides = []
     for row in RoleDataScope.objects.filter(role=role).prefetch_related("orgs").order_by("resource"):
         rule = {"scope": row.scope, "orgs": sorted(o.pk for o in row.orgs.all())}
         if row.resource:
             overrides.append({"resource": row.resource, **rule})
         else:
-            default = rule
-    return {"default": default, "overrides": overrides}
+            default, configured = rule, True
+    return {"default": default, "default_configured": configured, "overrides": overrides}
 
 
 def replace_role_config(role, config):
-    """整份替换。默认范围也存一行,ALL 也存(显式「全部」≠ 没配,P-12,2026-11-12)。调用方负责事务。"""
+    """整份替换。给了默认范围就存一行,ALL 也存(显式「全部」≠ 没配,P-12,2026-11-12);
+    `default` 为 None(请求里缺省或 null)= 没配,不存。调用方负责事务。"""
     RoleDataScope.objects.filter(role=role).delete()
-    rules = [("", config["default"])] + [(o["resource"], o) for o in config["overrides"]]
+    default = config.get("default")
+    rules = ([("", default)] if default else []) + [(o["resource"], o) for o in config["overrides"]]
     for resource, rule in rules:
         row = RoleDataScope.objects.create(role=role, resource=resource, scope=rule["scope"])
         if rule["orgs"]:
@@ -131,10 +145,11 @@ def data_scope_resources(request):
     return Response([{"key": k, "label": LABELS[k][0 if zh else 1]} for k in resource_keys()])
 
 
-@extend_schema(methods=["GET"], request=None, responses={200: RoleDataScopeConfigSerializer, 404: ErrorResponseSerializer})
+@extend_schema(methods=["GET"], request=None,
+               responses={200: RoleDataScopeConfigResponseSerializer, 404: ErrorResponseSerializer})
 @extend_schema(
     methods=["PUT"], request=RoleDataScopeConfigSerializer,
-    responses={200: RoleDataScopeConfigSerializer, 400: ErrorResponseSerializer, 404: ErrorResponseSerializer},
+    responses={200: RoleDataScopeConfigResponseSerializer, 400: ErrorResponseSerializer, 404: ErrorResponseSerializer},
 )
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated, HasSystemSettings])
@@ -159,6 +174,7 @@ def role_data_scope(request, pk):
         before = role_config(role)
         replace_role_config(role, serializer.validated_data)
         after = role_config(role)
+        # `default_configured` 在比较里:只多 / 少一行默认 ALL 的保存(没配 ↔ 全部)显示一样,权限不一样,也要记。
         if after != before:
             AuditLog.objects.create(
                 tenant=getattr(request, "tenant", None),

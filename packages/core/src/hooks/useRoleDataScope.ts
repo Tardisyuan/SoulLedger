@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { dataScopeApi, type DataScopeResource, type RoleDataScopeConfig } from "../api/index";
+import { dataScopeApi, type DataScopeResource, type RoleDataScopeBody, type RoleDataScopeConfig } from "../api/index";
 
 export const dataScopeKeys = {
   resources: ["data-scope", "resources"] as const,
@@ -43,7 +43,7 @@ export function useRoleDataScope(roleId: number, enabled = true) {
 export function useSaveRoleDataScope() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ roleId, body }: { roleId: number; body: RoleDataScopeConfig }) =>
+    mutationFn: async ({ roleId, body }: { roleId: number; body: RoleDataScopeBody }) =>
       (await dataScopeApi.putRoleDataScope(roleId, body)).data,
     onSuccess: (data, { roleId }) => qc.setQueryData(dataScopeKeys.role(roleId), data),
   });

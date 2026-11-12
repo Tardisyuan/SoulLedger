@@ -1,4 +1,5 @@
 [
+  "permissions.datascope.default_unset",
   "permissions.matrix.legend.deny",
   "permissions.matrix.refused.admin_only_permission",
   "permissions.matrix.refused.role_forbidden_permission",

@@ -42,6 +42,8 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
   const save = useSaveRoleDataScope();
   const [draft, setDraft] = useState<RoleDataScopeConfig | null>(null);
   const current = draft ?? config.data;
+  // 「未配置」与「全部」是两回事:没配的角色兼任时不放宽。旧接口没有这个字段时按「配了」读(与此前一样)。
+  const defaultSet = current?.default_configured !== false;
 
   const scopeLabel = (s: DataScope) => t(`permissions.datascope.scope.${s}`);
   const missingOrgs = (r: DataScopeRule) => r.scope === "DEFINE" && r.orgs.length === 0;
@@ -87,7 +89,7 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
       overrides: value === FOLLOW ? rest : [...rest, { resource: key, scope: value as DataScope, orgs: overrideOf(key)?.orgs ?? [] }],
     });
   };
-  const invalid = missingOrgs(current.default) || current.overrides.some(missingOrgs);
+  const invalid = (defaultSet && missingOrgs(current.default)) || current.overrides.some(missingOrgs);
   const clean = (r: DataScopeRule): DataScopeRule => ({ scope: r.scope, orgs: r.scope === "DEFINE" ? r.orgs : [] });
 
   const submit = () => {
@@ -95,7 +97,10 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
     save.mutate(
       {
         roleId: role.id,
-        body: { default: clean(draft.default), overrides: draft.overrides.map((o) => ({ resource: o.resource, ...clean(o) })) },
+        body: {
+          ...(draft.default_configured !== false && { default: clean(draft.default) }),
+          overrides: draft.overrides.map((o) => ({ resource: o.resource, ...clean(o) })),
+        },
       },
       {
         onSuccess: () => {
@@ -125,19 +130,28 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
       {header}
       <fieldset disabled={!canEdit} className="space-y-1">
         <legend className="sr-only">{t("permissions.datascope.default")}</legend>
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name={`${headingId}-default`}
+            checked={!defaultSet}
+            onChange={() => edit({ ...current, default_configured: false })}
+          />
+          {t("permissions.datascope.default_unset")}
+        </label>
         {DATA_SCOPES.map((s) => (
           <label key={s} className="flex min-h-11 items-center gap-2 text-sm">
             <input
               type="radio"
               name={`${headingId}-default`}
-              checked={current.default.scope === s}
-              onChange={() => edit({ ...current, default: { ...current.default, scope: s } })}
+              checked={defaultSet && current.default.scope === s}
+              onChange={() => edit({ ...current, default_configured: true, default: { ...current.default, scope: s } })}
             />
             {scopeLabel(s)}
           </label>
         ))}
       </fieldset>
-      {current.default.scope === "DEFINE" &&
+      {defaultSet && current.default.scope === "DEFINE" &&
         orgPicker(current.default, (ids) => edit({ ...current, default: { ...current.default, orgs: ids } }), t("permissions.datascope.orgs"))}
 
       <details className="border-t border-[oklch(var(--color-rule))] pt-2">

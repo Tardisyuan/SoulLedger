@@ -1294,6 +1294,7 @@
       "orgs_required": "Choose at least one unit",
       "per_resource": "Set per record type",
       "follow_default": "Follow default",
+      "default_unset": "Not set (does not widen combined roles)",
       "save": "Save data scope",
       "saved": "Data scope saved; it applies once they refresh",
       "save_error": "Could not save the data scope",
