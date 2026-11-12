@@ -640,6 +640,48 @@ class DispatchService:
         return dispatch_record
 
     @staticmethod
+    def withdraw_approval(dispatch_record, user, reason):
+        """目标殿撤回自己的批准(F-DISP-01,2026-11-12):APPROVED → CANCELLED,理由记在记录上,通知发起殿。
+
+        此前 APPROVED 只有「执行」一个出口:目标殿关了调拨、灵魂失踪等执行不了时,记录永远 APPROVED,
+        占着 `unique_active_dispatch`,计划那一站停在 DISPATCHING。发起殿在对方批准之后不能单方面撤回
+        (2026-10-11 用户决定,`cancel_proposed`),所以出口给批准它的那一方。行锁下查,与执行串行。
+        """
+        from apps.souls.models import Soul
+
+        with transaction.atomic():
+            soul = Soul.lock(dispatch_record.soul_id)
+            current = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=dispatch_record.pk)
+            if current.status != DispatchStatus.APPROVED or not dispatch_record.transition_to(
+                DispatchStatus.CANCELLED, decided_at=timezone.now(), decided_by=_decider(user),
+                decision_reason=reason or "",
+            ):
+                raise DispatchNotCancellableError(current.status)
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.on_dispatch_refused(soul, dispatch_record)
+            _log(soul, {"action": "DISPATCH_CANCELLED", "dispatch_id": str(dispatch_record.id), "reason": reason,
+                        "approval_withdrawn": True}, user, tenant=dispatch_record.source_tenant)
+            DispatchService._notify_approval(dispatch_record, approved=False, reason=reason)
+        return dispatch_record
+
+    @staticmethod
+    def void_in_flight(soul, reason):
+        """灵魂离开可调拨的状态(失踪、候转世、安息……;F-DISP-01):它在途的调拨(PROPOSED / APPROVED)作废。
+
+        否则陈旧的批准还能在日后被执行 —— 灵魂转生再死后又在源殿 JUDGING,三项检查全过,被上一世的批准搬走;
+        而且记录一直占着 `unique_active_dispatch`。由 `Soul.transition_to` 在灵魂行锁与它的事务里调用。"""
+        records = DispatchRecord._base_manager.filter(
+            soul_id=soul.pk, status__in=[DispatchStatus.PROPOSED, DispatchStatus.APPROVED], is_deleted=False)
+        for record in records.select_related("source_tenant", "target_tenant", "soul"):
+            if not record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now(), decision_reason=reason):
+                continue
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.on_dispatch_refused(soul, record)
+            _log(soul, {"action": "DISPATCH_CANCELLED", "dispatch_id": str(record.id), "reason": reason}, "system",
+                 tenant=record.source_tenant)
+            # ponytail: 不发站内通知 —— 现有「已被发起方取消」那句不对;事件照写,两殿的列表里它已不在待办。
+
+    @staticmethod
     def _notify_cancelled(dispatch_record, reason):
         """告诉执行地:这次移交已被发起方取消(他们的待批列表里它已经消失)。"""
         target_users = _holders([dispatch_record.target_tenant], "dispatch.read")

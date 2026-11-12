@@ -838,6 +838,12 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
             hold_term_while_lost(locked_soul, old_state, new_state)
 
+            # 离开可调拨的状态:在途的调拨作废(F-DISP-01),免得陈旧的批准日后被执行。
+            from apps.dispatch.services import DISPATCHABLE_SOUL_STATES, DispatchService
+
+            if old_state in DISPATCHABLE_SOUL_STATES and new_state not in DISPATCHABLE_SOUL_STATES:
+                DispatchService.void_in_flight(locked_soul, f"soul left {old_state} for {new_state}")
+
             log_soul_state_change(locked_soul, old_state, new_state, reason, actor)
 
         # Sync back to self instance. Copy the raw year/month/day (not via

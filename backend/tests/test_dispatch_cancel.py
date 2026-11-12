@@ -166,3 +166,38 @@ def test_the_service_cancel_used_by_the_plan_is_unchanged(world):
     record = DispatchRecord.all_objects.get(pk=world["record"].pk)
     DispatchService.cancel(record, None)
     assert DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.CANCELLED
+
+
+# ── APPROVED 的出口(F-DISP-01,2026-11-12)────────────────────────────────
+
+
+def _approved(world):
+    DispatchRecord.all_objects.filter(pk=world["record"].pk).update(status=DispatchStatus.APPROVED)
+    return DispatchRecord.all_objects.get(pk=world["record"].pk)
+
+
+def test_the_target_hall_withdraws_its_approval_and_the_sender_is_told(world, django_capture_on_commit_callbacks):
+    """此前 APPROVED 只有「执行」一个出口:执行不了时记录永远 APPROVED、占着 unique_active_dispatch。"""
+    record = _approved(world)
+    url = f"{BASE}{record.pk}/withdraw-approval/"
+    assert world["client_b"].post(url, {}, format="json").status_code == 400  # 理由必填
+    assert world["client_a"].post(url, {"reason": REASON}, format="json").status_code == 403  # 发起方不能
+    with django_capture_on_commit_callbacks(execute=True):
+        res = world["client_b"].post(url, {"reason": REASON}, format="json")
+    assert res.status_code == 200, res.data
+    record = DispatchRecord.all_objects.get(pk=record.pk)
+    assert record.status == DispatchStatus.CANCELLED and record.decision_reason == REASON
+    assert SoulEvent.objects.filter(soul=world["soul"], payload__action="DISPATCH_CANCELLED").exists()
+    assert UserNotification.objects.filter(user=world["mod_a"], related_id=str(record.pk)).exists()
+    again = world["client_b"].post(url, {"reason": REASON}, format="json")
+    assert again.status_code == 409 and again.data["code"] == "not_cancellable"
+
+
+def test_a_soul_leaving_a_dispatchable_state_voids_its_dispatch_in_flight(world):
+    """陈旧的批准不能日后被执行:灵魂失踪 / 候转世时,在途的调拨作废。"""
+    record = _approved(world)
+    Soul.all_objects.filter(pk=world["soul"].pk).update(current_state=SoulState.DISPOSED)
+    soul = Soul.all_objects.get(pk=world["soul"].pk)
+    assert soul.transition_to(SoulState.LOST, "失踪")
+    assert DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.CANCELLED
+    assert SoulEvent.objects.filter(soul=soul, payload__action="DISPATCH_CANCELLED").exists()

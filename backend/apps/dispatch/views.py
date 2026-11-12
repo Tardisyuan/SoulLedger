@@ -145,6 +145,8 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         'submit': ['dispatch.manage'],
         # 发起方在对方批准前取消:与发起(create)同一权限。
         'cancel': ['dispatch.manage'],
+        # 目标殿撤回自己的批准(F-DISP-01):与驳回同一权限。
+        'withdraw_approval': ['dispatch.reject'],
         'realm_options': ['dispatch.manage'],
         'create': ['dispatch.manage'],
         'update': ['dispatch.manage'],
@@ -621,6 +623,24 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             dispatch_record = DispatchService.cancel_proposed(
                 dispatch_record, request.user, body.validated_data["reason"],
             )
+        except DispatchNotCancellableError as exc:
+            return Response({"error": str(exc), "code": exc.code, "status": exc.status},
+                            status=status.HTTP_409_CONFLICT)
+        return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
+
+    @extend_schema(request=DispatchCancelSerializer, responses=DispatchRecordSerializer)
+    @action(detail=True, methods=["post"], url_path="withdraw-approval")
+    def withdraw_approval(self, request, pk=None):
+        """目标殿撤回自己的批准(APPROVED → CANCELLED,理由必填;F-DISP-01)。只给目标殿;不在 APPROVED 答 409。"""
+        dispatch_record = self.get_object()
+        refused = self._not_target_or_403(request, dispatch_record, "withdraw approval of")
+        if refused is not None:
+            return refused
+        body = DispatchCancelSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            dispatch_record = DispatchService.withdraw_approval(dispatch_record, request.user,
+                                                                body.validated_data["reason"])
         except DispatchNotCancellableError as exc:
             return Response({"error": str(exc), "code": exc.code, "status": exc.status},
                             status=status.HTTP_409_CONFLICT)

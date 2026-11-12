@@ -209,6 +209,9 @@ export const dispatchApi = {
    * once the target has approved / rejected it. A draft is discarded with `discardDraft`, not this.
    */
   cancel: (id: string, reason: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/cancel/`, { reason }),
+  /** The TARGET hall withdraws its own approval (APPROVED → CANCELLED; F-DISP-01). `reason` required; 409 `not_cancellable`. */
+  withdrawApproval: (id: string, reason: string) =>
+    api.post<DispatchRecord>(`/dispatch/records/${id}/withdraw-approval/`, { reason }),
   // A dispatch is a residence, not a change of citizenship (2026-09-17). An
   // EXECUTED record is an ongoing residence; the soul goes home by itself when
   // its disposition there is executed. This ends it early. Home tenant or ADMIN

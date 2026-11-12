@@ -393,6 +393,10 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                     </RequirePermission>}
                   </>
                 )}
+                {isApproved && (
+                  // 目标殿撤回自己的批准(F-DISP-01):执行不了时的出口;门在按钮自己里(目标殿 + dispatch.reject)。
+                  <CancelDispatchButton dispatch={dispatch} withdrawApproval triggerClassName="mr-auto" />
+                )}
                 {isApproved && isTargetHall && (
                   <RequirePermission permissions="dispatch.execute">
                     <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>

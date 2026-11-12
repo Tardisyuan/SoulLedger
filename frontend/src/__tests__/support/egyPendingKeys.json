@@ -21,5 +21,8 @@
   "soul_push.push_device_claimed.title",
   "soul_push.push_device_claimed.body",
   "official_notify.push_device_claimed.title",
-  "official_notify.push_device_claimed.body"
+  "official_notify.push_device_claimed.body",
+  "dispatch.withdraw_approval",
+  "dispatch.withdraw_approval_warning",
+  "dispatch.withdraw_approval_success"
 ]
