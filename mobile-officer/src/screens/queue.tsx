@@ -1,203 +1,332 @@
 /**
- * 审判: 「我手上 / 待认领」. On the phone an officer can claim, read and comment, and (v4 S09) conclude the
- * cases in hand in 「滑卡审判」 (screens/swipe.tsx) with the automatic routing; choosing a destination and citing
- * articles stay the desk's. Each row carries its deadline (v4 D10, `queue.deadline.*`; none in 待定), and two
- * filters under the segments pick the overdue and the sent-back cases (`?overdue=` / `?returned=`).
+ * 案卷台 (Design 第三十批 第 2 步 · 官员端): the 393 stack on the phone. Top to bottom: the overview line, the
+ * source chips (one sideways row), and three groups -- 我认领 / 待定 / 待认领 -- of 72-high rows: the person's name
+ * in serif, 「来源 · 殿」 under it, the tag and the case number at the right. A row swipes left to 「认领」 (待认领)
+ * or 「放回」 (我认领), ink-filled; a pull asks everything again. No search box: the magnifier in the top bar
+ * opens 查询 (shell.tsx). 他人手上 is not on the desk (Design draws three groups); 滑卡审判 (v4 S09) stays,
+ * at the 我认领 heading.
+ *
+ * Sources are read off the rows this list has loaded, not asked of the server (the queue has no source filter):
+ * 城隍初审 = a case still with a 城隍 (地府 only), 跨域 = a case of another civilization than the hall's,
+ * 审判队列 = the rest. A chip is drawn only for a source that has rows, so a civilization only shows its own.
+ * 申诉 / 分诊 / 待发勾魂牒 live in other lists (待办, the desk), not here.
  */
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
+import { officerAppApi } from "@soulledger/core/api/officer-app";
+import { civShortCode } from "@soulledger/core/config/civilizations";
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
-import { View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 
-import { ActionButton, FilterChips, RefreshFailed, Row, Segmented, StateView, viewStateOf } from "../kit";
+import { FilterChips, RefreshFailed, StateView, Tag, TAG_SHAPE, touch, type TagTone, type ViewState } from "../kit";
 import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote, useOnBump } from "../readCache";
 import { goneKey, isDenied } from "../rules";
 import { useCan, useSession } from "../session";
-import { Screen, Txt, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useToast } from "../shared";
-import { deadlineText } from "../verdict";
+import { GUTTER, Screen, Txt, family, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useTheme, useToast } from "../shared";
+import { deadlineText, heldBeforeClaim } from "../verdict";
 
-/** 他人手上 / 暂缓 are read-only on the phone: no claim button, the row opens the case. */
-const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
+type DeskGroup = Extract<JudgmentQueueGroup, "mine" | "deferred" | "unclaimed">;
+const GROUPS: readonly DeskGroup[] = ["mine", "deferred", "unclaimed"];
 
-/** 分段上的「名 · 数」。两位数起去掉「 · 」(用户 2026-10-29):360dp 上四段各自放得下;数字等宽见 `kit` 的 segmentTight。 */
-export function segmentLabel(label: string, count?: number | null): string {
-  // null: the counts did not load (offline, a failed fetch) -- 「—」, and they are asked again on reconnect.
-  if (count === null) return `${label} · —`;
-  if (count == null) return label;
-  return count >= 10 ? `${label}${count}` : `${label} · ${count}`;
+export type Source = "queue" | "city_god" | "cross";
+const SOURCES: readonly Source[] = ["queue", "city_god", "cross"];
+const DAY = 86_400;
+
+/** Where a case came from, as far as the row says (see the header). `hall`: the officer's tenant code. */
+export function sourceOf(row: Pick<Judgment, "city_god_status" | "civilization">, hall: string | null | undefined): Source {
+  if (row.city_god_status) return "city_god";
+  const mine = civShortCode(hall);
+  const its = civShortCode(row.civilization);
+  return mine && its && mine !== its ? "cross" : "queue";
 }
-type Group = JudgmentQueueGroup;
-/** v4 队列的两个标签(与四组不互斥):已过期限、退回重审。在手机上是分段下面的两个筛选。 */
-type Flag = "overdue" | "returned";
-const FLAGS: readonly Flag[] = ["overdue", "returned"];
+
+/** The row's one tag: 超期 over 退回重审 over a hold over the group's own. */
+export function deskTag(t: (key: string, vars?: Record<string, string>) => string, row: Judgment, group: DeskGroup): { tone: TagTone; text: string } {
+  const s = row.deadline_remaining_seconds;
+  if (group !== "deferred" && row.is_overdue && s != null && s < 0) {
+    return { tone: "neg", text: `${TAG_SHAPE.overdue} ${t("officer_app.desk.tag.overdue", { n: String(Math.ceil(-s / DAY)) })}` };
+  }
+  if (row.retrial_of) return { tone: "warn", text: `${TAG_SHAPE.returned} ${t("officer_app.desk.tag.returned")}` };
+  if (group === "deferred") return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("officer_app.desk.groups.deferred")}` };
+  if (group === "mine" && !heldBeforeClaim(row)) return { tone: "warn", text: `${TAG_SHAPE.reviewing} ${t("officer_app.desk.tag.reviewing")} · ${deadlineText(t, row)}` };
+  return { tone: "neutral", text: deadlineText(t, row) };
+}
+
+/** 「今日 7 件 · 超期 1 · 本月已结 22%」; 0 overdue reads 「无超期」, unmarked. Parts that did not load are left out. */
+export function overviewParts(
+  t: (key: string, vars?: Record<string, string>) => string,
+  onDesk: number | null,
+  overdue: number | null,
+  month: { done: number; open: number } | null
+): { text: string; neg?: boolean }[] {
+  const parts: { text: string; neg?: boolean }[] = [];
+  if (onDesk != null) parts.push({ text: t("officer_app.desk.overview.today", { n: String(onDesk) }) });
+  if (overdue != null) parts.push(overdue > 0 ? { text: t("officer_app.desk.overview.overdue", { n: String(overdue) }), neg: true } : { text: t("officer_app.desk.overview.no_overdue") });
+  if (month && month.done + month.open > 0) {
+    parts.push({ text: t("officer_app.desk.overview.month_done", { pct: String(Math.round((100 * month.done) / (month.done + month.open))) }) });
+  }
+  return parts;
+}
+
+/** One group's first page (kept in the read cache as before, `list:queue:<group>`) and its 「加载更多」. */
+function useGroupRows(group: DeskGroup) {
+  const load = useCallback(() => judgmentApi.list({ group }).then((r) => r.data), [group]);
+  const { data, error, loading, reload } = useCachedRemote(`list:queue:${group}`, load);
+  const fetchPage = useCallback((page: number) => judgmentApi.list({ group, page: String(page) }).then((r) => r.data), [group]);
+  const { rows, more, moreState } = useMoreRows(data, fetchPage);
+  return { group, rows, error, loading, reload, more, moreState };
+}
 
 /**
- * `gone`: cases whose detail turned out to be gone (O-c), greyed and not pressable.
- * `initialGroup` / `onGroup`: the shell keeps the chosen segment. Opening a case unmounts this tab and
- * closing it mounts it again, so a segment kept here alone fell back to 我手上 on every
- * return from a case opened under 待认领 (华为真机 10-29 第二轮). `version`: the shell's bump, reloaded in place.
+ * `onOpen(id, position)`: the case and where it sits among the rows shown (「第 1 / 7 件」 in the detail's bar).
+ * `gone`: cases whose detail turned out to be gone (O-c), greyed and not pressable. `version`: the shell's bump.
  */
 export function QueueTab({
   onOpen,
   gone,
-  initialGroup = "mine",
   version,
-  onGroup,
   onSwipe,
 }: {
-  onOpen: (id: string) => void;
-  /** 「滑卡审判」(v4 S09):打开我手上的卡堆。 */
+  onOpen: (id: string, position?: { n: number; total: number }) => void;
+  /** 「滑卡审判」(v4 S09):打开我认领的卡堆。 */
   onSwipe?: () => void;
   gone?: ReadonlySet<string>;
-  initialGroup?: Group;
-  onGroup?: (group: Group) => void;
   version?: number;
 }) {
   const { t, locale } = useI18n();
+  const theme = useTheme();
   const toast = useToast();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
-  const [group, setGroup] = useState<Group>(initialGroup);
-  const [claiming, setClaiming] = useState<string | null>(null);
+  const hall = state.status === "signedIn" ? state.user.tenant?.code : null;
   const { offline } = useOnline();
-  // 认领要 `judgment.execute`;只有 judgment.read 的角色看得到队列,但不画认领键。
+  // 认领 / 放回 need `judgment.execute`; a judgment.read role sees the desk without the swipe.
   const canClaim = useCan("judgment.execute");
-  const [flags, setFlags] = useState<readonly Flag[]>([]);
-  const params = useCallback(
-    (extra?: Record<string, string>) => ({ group, ...Object.fromEntries(flags.map((f) => [f, "true"])), ...extra }),
-    [group, flags]
-  );
-  const load = useCallback(() => judgmentApi.list(params()).then((r) => r.data), [params]);
-  const { data: firstPage, error, loading, reload } = useCachedRemote(flags.length ? `list:queue:${group}:${flags.join(",")}` : `list:queue:${group}`, load);
-  const fetchPage = useCallback((page: number) => judgmentApi.list(params({ page: String(page) })).then((r) => r.data), [params]);
-  const { rows: data, more, moreState } = useMoreRows(firstPage, fetchPage);
-  const view = viewStateOf({ data, error }, (rows) => rows.length === 0, isDenied);
-  // The four counts. They are not in the read cache: offline they fail and the segments say 「—」; back online
-  // they are asked again by themselves, like the list (phone QA 10-29c: they stayed blank until a pull).
-  const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
-  const { data: counts, error: countsError, reload: reloadCounts } = useRemote(loadCounts);
-  useReloadOnReconnect(reloadCounts, { data: counts, error: countsError });
-  // A pull, a claim, a 409: the list and its four counts are asked again together.
-  const refresh = () => Promise.all([reload(), reloadCounts()]);
-  useOnBump(version, refresh); // the shell's bump (a push, the foreground): reloaded in place
+  const [busy, setBusy] = useState<string | null>(null);
+  const [source, setSource] = useState<Source | "all">("all");
 
-  const claim = (row: Judgment) => {
-    setClaiming(row.id);
-    judgmentApi
-      .claim(row.id)
+  const mine = useGroupRows("mine");
+  const deferred = useGroupRows("deferred");
+  const unclaimed = useGroupRows("unclaimed");
+  const groups = [mine, deferred, unclaimed];
+
+  // Counts (the overview and the group headings) and this officer's month: not in the read cache, asked again on reconnect.
+  const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
+  const counts = useRemote(loadCounts);
+  useReloadOnReconnect(counts.reload, counts);
+  // async: a test double without `stats` rejects instead of throwing out of the loader.
+  const loadStats = useCallback(async () => (await officerAppApi.stats()).data, []);
+  const stats = useRemote(loadStats);
+
+  const refresh = () => Promise.all([mine.reload(), deferred.reload(), unclaimed.reload(), counts.reload(), stats.reload()]);
+  useOnBump(version, refresh);
+
+  // A case is in one group; a refetch race could show it twice, so the first group keeps it.
+  const seen = new Set<string>();
+  const shown = groups.map((g) => {
+    const rows = (g.rows ?? []).filter((r) => {
+      if (seen.has(r.id)) return false;
+      seen.add(r.id);
+      return true;
+    });
+    return { ...g, all: rows, rows: source === "all" ? rows : rows.filter((r) => sourceOf(r, hall) === source) };
+  });
+  const loaded = shown.flatMap((g) => g.all);
+  const flat = shown.flatMap((g) => g.rows);
+
+  const denied = groups.some((g) => g.error && isDenied(g.error));
+  const pending = groups.find((g) => g.rows === null);
+  const view: ViewState | null = denied ? "denied" : pending ? (pending.error ? "error" : "loading") : loaded.length === 0 ? "empty" : null;
+  const failed = groups.find((g) => g.rows !== null && g.error);
+
+  const move = (row: Judgment, kind: "claim" | "release") => {
+    setBusy(row.id);
+    (kind === "claim" ? judgmentApi.claim(row.id) : judgmentApi.release(row.id))
       .then(refresh)
       .catch((e: unknown) => {
-        // 409: someone claimed it first. Say so and drop the stale row (the list and the counts are asked again).
-        if ((e as { response?: { status?: number } })?.response?.status === 409) {
+        // 409 on a claim: someone was first. Say so; the list and the counts are asked again.
+        if (kind === "claim" && (e as { response?: { status?: number } })?.response?.status === 409) {
           toast(t("officer_app.queue.claim_taken"), "failure");
           void refresh();
-        } else toast(t("officer_app.queue.claim_failed"), "failure");
+        } else toast(t(kind === "claim" ? "officer_app.queue.claim_failed" : "officer_app.desk.release_failed"), "failure");
       })
-      .finally(() => setClaiming(null));
+      .finally(() => setBusy(null));
   };
 
+  const c = counts.data;
+  const s = stats.data;
+  const overview = overviewParts(
+    t,
+    c ? (c.mine ?? 0) + (c.deferred ?? 0) + (c.unclaimed ?? 0) : null,
+    c?.overdue ?? null,
+    s ? { done: s.concluded_this_month, open: s.open_claims } : null
+  );
+  const sourceCount = (key: Source) => loaded.filter((r) => sourceOf(r, hall) === key).length;
+
   return (
-    <Screen testID="tab-queue-screen" edges={["left", "right"]} refreshing={loading && data !== null} onRefresh={refresh}>
-      <Segmented
-        testID="queue-group"
-        value={group}
-        onChange={(next) => {
-          setGroup(next);
-          onGroup?.(next);
-        }}
-        options={GROUPS.map((key) => ({ key, label: segmentLabel(t(`officer_app.queue.${key}`), counts ? counts[key] : countsError ? null : undefined) }))}
-      />
-      {counts && (counts.overdue != null || counts.returned != null) ? (
+    <Screen testID="tab-queue-screen" edges={["left", "right"]} refreshing={groups.some((g) => g.loading && g.rows !== null)} onRefresh={refresh}>
+      {overview.length ? (
+        <Txt testID="desk-overview" variant="caption" tone="muted" style={styles.overview}>
+          {overview.map((p, i) => (
+            <Txt key={p.text} variant="caption" tone={p.neg ? "neg" : "muted"}>
+              {i ? ` · ${p.text}` : p.text}
+            </Txt>
+          ))}
+        </Txt>
+      ) : null}
+      {loaded.length ? (
         <FilterChips
-          testID="queue-flags"
-          options={FLAGS.map((key) => ({ key, label: t(`queue.tab.${key}`), count: counts[key] ?? 0 }))}
-          selected={flags}
-          onToggle={(key) => setFlags((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]))}
+          testID="desk-sources"
+          size="lg"
+          options={[
+            { key: "all" as const, label: t("officer_app.desk.all"), count: loaded.length },
+            ...SOURCES.filter((key) => sourceCount(key) > 0).map((key) => ({ key, label: t(`officer_app.desk.sources.${key}`), count: sourceCount(key) })),
+          ]}
+          selected={[source]}
+          onToggle={(key) => setSource(key === source ? "all" : key)}
         />
       ) : null}
-      <View style={{ paddingHorizontal: space[5], paddingVertical: space[3], gap: space[3] }}>
-        <Txt variant="caption" tone="muted">
-          {group === "deferred" ? t("queue.deferred_hint") : t("officer_app.queue.scope_note")}
-        </Txt>
-        {group === "mine" && canClaim && onSwipe && (counts?.mine ?? 0) > 0 ? (
-          <ActionButton testID="queue-open-swipe" kind="primary" disabled={offline} title={t("officer_app.queue.open_swipe")} onPress={onSwipe} />
-        ) : null}
-      </View>
-      {/* Retry asks the counts again too: offline, both failed (phone QA 10-29b: the counts stayed blank). */}
-      <RefreshFailed data={data} error={error} onRetry={() => void refresh()} />
+      <RefreshFailed data={failed?.rows ?? null} error={failed?.error} onRetry={() => void refresh()} />
       {view ? (
         <StateView
           state={view}
           onRetry={() => void refresh()}
           role={role}
           area={t("officer_app.areas.queue")}
-          emptyTitle={t("officer_app.queue.empty_title")}
-          emptyBody={t("officer_app.queue.empty_body")}
+          emptyTitle={t("officer_app.desk.empty_title")}
+          emptyBody={t("officer_app.desk.empty_body")}
         />
       ) : (
-        data!.map((row) => {
-          // 枉死城(第五十一批):候审中的不放「认领」,换一行「到期后可认领」;徽标一直留着。
-          const held = isHeldUntilFatedDate(row);
-          // 埃及入殿前(review P2-9):无名、葬仪不当的到不了殿,永远候着,不放「认领」。
-          const barred = isDuatBarred(row);
-          return (
-          <Row
-            key={row.id}
-            testID={`queue-row-${row.id}`}
-            minHeight={88}
-            strong
-            glyph="§"
-            title={`${row.case_number} · ${row.soul_name}`}
-            lines={[
-              courtLabel(t, row.court, locale),
-              // v4 期限:待定的不计期限(停表),那一组不写。
-              ...(group === "deferred" ? [] : [{ one: `${row.is_overdue ? "◐ " : ""}${t("queue.col.deadline")} · ${deadlineText(t, row)}` }]),
-              ...(group === "mine" && !row.is_final ? [{ one: `◇ ${t("officer_app.queue.desk_only")}` }] : []),
-              // 滞留:定时任务盖的章(30 天无进展,不结案);下一次进展就清掉。
-              ...(row.stale_since ? [{ one: `◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}` }] : []),
-              ...(row.untimely
-                ? [{ one: [`▢ ${t("judgment.untimely")}`, ...(held ? [t("judgment.held_until", { date: formatIsoDay(row.held_until, locale) })] : [])].join(" · ") }]
-                : []),
-              ...(row.duat_stage
-                ? [{ one: [`▢ ${t(`judgment.duat_stage.${row.duat_stage}`)}`, ...(held ? [t("judgment.held_until", { date: formatIsoDay(row.held_until, locale) })] : [])].join(" · ") }]
-                : []),
-            ].filter(Boolean)}
-            onPress={() => onOpen(row.id)}
-            gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
-            right={
-              group === "unclaimed" && canClaim && barred ? (
-                <View style={{ width: 88 }}>
-                  <Txt variant="caption" tone="muted" testID={`queue-held-${row.id}`}>
-                    {t("judgment.claim.duat_barred_short")}
+        shown.map(({ group, rows, more, moreState }) =>
+          rows.length === 0 && !more ? null : (
+            <View key={group} testID={`desk-group-${group}`}>
+              <View style={[styles.groupHead, { borderBottomColor: theme.hair }]}>
+                <Txt variant="caption" style={{ color: theme.faintText }}>
+                  {t(`officer_app.desk.groups.${group}`)}
+                </Txt>
+                <View style={styles.groupRight}>
+                  {group === "mine" && canClaim && onSwipe ? (
+                    <Pressable testID="queue-open-swipe" accessibilityRole="button" disabled={offline} onPress={onSwipe} hitSlop={12}>
+                      <Txt variant="caption" style={{ color: offline ? theme.faint : theme.ink }}>{`${t("officer_app.queue.open_swipe")} ›`}</Txt>
+                    </Pressable>
+                  ) : null}
+                  <Txt variant="value" style={{ color: theme.faintText }}>
+                    {String(c?.[group] ?? rows.length)}
                   </Txt>
                 </View>
-              ) : group === "unclaimed" && canClaim && held ? (
-                <View style={{ width: 88 }}>
-                  <Txt variant="caption" tone="muted" testID={`queue-held-${row.id}`}>
-                    {t("judgment.claim.held_short")}
-                  </Txt>
-                </View>
-              ) : group === "unclaimed" && canClaim ? (
-                <View style={{ width: 88 }}>
-                  <ActionButton
-                    testID={`queue-claim-${row.id}`}
-                    kind="outline"
-                    title={t("officer_app.queue.claim")}
-                    busy={claiming === row.id}
-                    disabled={offline}
-                    accessibilityHint={offline ? t("officer_app.offline.banner_bare") : undefined}
-                    onPress={() => claim(row)}
+              </View>
+              {rows.map((row) => {
+                const position = { n: flat.indexOf(row) + 1, total: flat.length };
+                const action = !canClaim ? null : group === "unclaimed" && !heldBeforeClaim(row) ? "claim" : group === "mine" ? "release" : null;
+                return (
+                  <DeskRow
+                    key={`${group}:${row.id}`}
+                    row={row}
+                    lineTwo={`${t(`officer_app.desk.sources.${sourceOf(row, hall)}`)} · ${courtLabel(t, row.court, locale)}`}
+                    tag={deskTag(t, row, group)}
+                    gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
+                    onPress={() => onOpen(row.id, position)}
+                    action={
+                      action
+                        ? {
+                            testID: `queue-${action}-${row.id}`,
+                            label: t(action === "claim" ? "officer_app.queue.claim" : "officer_app.desk.release"),
+                            disabled: offline || busy === row.id,
+                            onPress: () => move(row, action),
+                          }
+                        : null
+                    }
                   />
-                </View>
-              ) : undefined
-            }
-          />
-          );
-        })
+                );
+              })}
+              <MoreRow more={more} state={moreState} />
+            </View>
+          )
+        )
       )}
-      <MoreRow more={more} state={moreState} />
     </Screen>
   );
 }
+
+/** 72 high: the name in serif 16/24, 「来源 · 殿」 under it; the tag over the case number at the right. */
+function DeskRow({
+  row,
+  lineTwo,
+  tag,
+  gone,
+  onPress,
+  action,
+}: {
+  row: Judgment;
+  lineTwo: string;
+  tag: { tone: TagTone; text: string };
+  gone: boolean;
+  onPress: () => void;
+  action: { testID: string; label: string; disabled: boolean; onPress: () => void } | null;
+}) {
+  const theme = useTheme();
+  const body = (
+    <Pressable
+      testID={`queue-row-${row.id}`}
+      accessibilityRole="button"
+      accessibilityState={gone ? { disabled: true } : undefined}
+      disabled={gone}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, { borderBottomColor: theme.hair, backgroundColor: pressed ? theme.s2 : theme.s0 }, gone ? styles.gone : null]}
+    >
+      <View style={styles.rowText}>
+        <Txt numberOfLines={1} style={[styles.name, { color: theme.ink }]}>
+          {row.soul_name}
+        </Txt>
+        <Txt variant="caption" tone="muted" numberOfLines={1}>
+          {lineTwo}
+        </Txt>
+      </View>
+      <View style={styles.rowRight}>
+        <Tag tone={tag.tone}>{tag.text}</Tag>
+        <Txt variant="value" tone="muted" numberOfLines={1}>
+          {row.case_number}
+        </Txt>
+      </View>
+    </Pressable>
+  );
+  if (!action || gone) return body;
+  return (
+    <Swipeable
+      overshootRight={false}
+      friction={2}
+      renderRightActions={() => (
+        <Pressable
+          testID={action.testID}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+          accessibilityState={{ disabled: action.disabled }}
+          disabled={action.disabled}
+          onPress={action.onPress}
+          style={[styles.swipeAction, { backgroundColor: action.disabled ? theme.s2 : theme.ink }]}
+        >
+          <Txt variant="nav" style={{ color: action.disabled ? theme.inkSubtle : theme.s0 }}>
+            {action.label}
+          </Txt>
+        </Pressable>
+      )}
+    >
+      {body}
+    </Swipeable>
+  );
+}
+
+const styles = StyleSheet.create({
+  overview: { paddingHorizontal: GUTTER, paddingTop: space[3], paddingBottom: space[2] },
+  groupHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: GUTTER, paddingTop: space[4], paddingBottom: space[2], borderBottomWidth: StyleSheet.hairlineWidth },
+  groupRight: { flexDirection: "row", alignItems: "center", gap: space[4] },
+  row: { minHeight: touch.row, flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[2], borderBottomWidth: 1 },
+  rowText: { flex: 1, minWidth: 0, gap: space[1] },
+  rowRight: { alignItems: "flex-end", gap: space[1], flexShrink: 0 },
+  // Serif 16/24 (Design 第三十批 二.2). A Text, not a TextInput: the Android clipping of serif lines is TextInput's.
+  name: { fontFamily: family.title, fontSize: 16, lineHeight: 24 },
+  gone: { opacity: 0.45 },
+  swipeAction: { width: 96, alignItems: "center", justifyContent: "center" },
+});

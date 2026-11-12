@@ -26,7 +26,7 @@ import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDi
 
 import { ActionButton, type TabKey } from "./kit";
 import { useSession } from "./session";
-import { Button, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, radius, space, useI18n, useTheme } from "./shared";
+import { Button, Icon, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, radius, space, useI18n, useTheme } from "./shared";
 
 /**
  * Each tab as a page the backend knows (`OFFICER_SCREENS`). 待办 → `workflow`: its first and main
@@ -127,15 +127,24 @@ export function useOfficerAssist() {
 export type OfficerAssist = ReturnType<typeof useOfficerAssist>;
 
 /** The tab's top bar: its name, and 「问一问」 at the right (O-13a). No floating button: it would cover the lists' bottom bars. */
-export function TabHead({ tab, onAsk }: { tab: TabKey; onAsk: () => void }) {
+/**
+ * `onSearch`: the magnifier (第三十批 二.7) -- 审判's title reads 「案卷台」 and its search sits behind this, not in a
+ * box on the page. The assist label keeps the tab's name.
+ */
+export function TabHead({ tab, onAsk, onSearch }: { tab: TabKey; onAsk: () => void; onSearch?: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
   const name = t(`officer_app.tabs.${tab}`);
   return (
     <View style={[styles.head, { borderBottomColor: theme.hair }]}>
       <Txt variant="title" numberOfLines={1} style={styles.grow}>
-        {name}
+        {tab === "queue" ? t("officer_app.desk.title") : name}
       </Txt>
+      {onSearch ? (
+        <Pressable testID="desk-search" accessibilityRole="button" accessibilityLabel={t("officer_app.desk.search")} onPress={onSearch} style={styles.headButton}>
+          <Icon name="search" size={18} color={theme.ink} />
+        </Pressable>
+      ) : null}
       <Pressable
         testID="assist-entry"
         accessibilityRole="button"

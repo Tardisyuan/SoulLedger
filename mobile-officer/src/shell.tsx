@@ -9,7 +9,6 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "@soulledger/core/api/notifications";
-import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
@@ -60,8 +59,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [landed, setLanded] = useState<ItemRef | null>(null);
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
   const [unread, setUnread] = useState(false);
-  // 审判's segment, kept above the tab: opening a case unmounts the tab, and 「返回」 should land where it was.
-  const [queueGroup, setQueueGroup] = useState<JudgmentQueueGroup>("mine");
+  // 案卷台: where the opened case sits among the rows shown, for 「第 1 / 7 件」 in the detail's bar (第三十批 二.6).
+  const [deskPosition, setDeskPosition] = useState<{ n: number; total: number } | null>(null);
   // 查询's last search, kept above the tab for the same reason.
   const [searchQuery, setSearchQuery] = useState("");
   const assist = useOfficerAssist();
@@ -73,6 +72,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
 
   const land = useCallback((landing: Landing, from?: TabKey) => {
     setSwipe(false);
+    setDeskPosition(null);
     setOrigin(from ?? (landing.judgment ? "queue" : landing.soul ? "search" : "todo"));
     if (landing.judgment || landing.soul) {
       setTab(landing.judgment ? "queue" : "search");
@@ -145,6 +145,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
 
   const close = useCallback(() => {
     setDetail(null);
+    setDeskPosition(null);
     setVersion((v) => v + 1);
     if (landed) {
       setHighlight(landed);
@@ -210,6 +211,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       {account || detail || swipe ? null : (
         <TabHead
           tab={current}
+          onSearch={current === "queue" && tabs.includes("search") ? () => setTab("search") : undefined}
           onAsk={() => {
             assist.setView("chat");
             assist.setOpen(true);
@@ -235,6 +237,9 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <Detail
             target={detail}
             from={t(`officer_app.tabs.${origin}`)}
+            {...(origin === "queue" && deskPosition
+              ? { backLabel: t("officer_app.desk.title"), position: t("officer_app.desk.position", { n: String(deskPosition.n), total: String(deskPosition.total) }) }
+              : {})}
             onBack={close}
             onLeave={() => {
               close();
@@ -246,7 +251,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         ) : current === "todo" ? (
           <TodoTab version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : current === "queue" ? (
-          <QueueTab version={version} gone={gone} initialGroup={queueGroup} onGroup={setQueueGroup} onSwipe={() => setSwipe(true)} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
+          <QueueTab version={version} gone={gone} onSwipe={() => setSwipe(true)} onOpen={(id, position) => { setOrigin("queue"); setDeskPosition(position ?? null); setDetail({ type: "judgment", id }); }} />
         ) : current === "search" ? (
           <SearchTab
             initialQuery={searchQuery}

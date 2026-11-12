@@ -8054,6 +8054,37 @@
       "claim_taken": "Someone else claimed it first",
       "open_swipe": "Swipe to judge"
     },
+    "desk": {
+      "title": "Case desk",
+      "search": "Search cases",
+      "position": "{{n}} of {{total}}",
+      "all": "All",
+      "overview": {
+        "today": "{{n}} today",
+        "overdue": "{{n}} overdue",
+        "no_overdue": "None overdue",
+        "month_done": "{{pct}}% closed this month"
+      },
+      "sources": {
+        "queue": "Judgment queue",
+        "city_god": "City god review",
+        "cross": "Cross-realm"
+      },
+      "groups": {
+        "mine": "Claimed by me",
+        "deferred": "On hold",
+        "unclaimed": "Unclaimed"
+      },
+      "tag": {
+        "reviewing": "In judgment",
+        "returned": "Sent back for retrial",
+        "overdue": "{{n}} days overdue"
+      },
+      "release": "Put back",
+      "release_failed": "Couldn't put back",
+      "empty_title": "No cases on the desk",
+      "empty_body": "New cases will appear here."
+    },
     "continue_on_desk": "Continue on desktop",
     "search": {
       "souls": "Souls",
