@@ -766,6 +766,13 @@
     --color-side: var(--color-civ-gr-side);
     --color-seal: var(--color-civ-gr-seal);
   }
+  /* 中性皮的子树(总簿,第三十批第 2 步):品牌金的顶线与水印,不随管理员的殿换色。只换这三槽 ——
+     强调与焦点照旧跟 <html> 的殿走,四栏各自的文明色由栏上的 data-civ 给。 */
+  [data-skin="neutral"] {
+    --color-main-ink: var(--color-civ-neutral-ink);
+    --color-glow: var(--color-civ-neutral-glow);
+    --color-metal: var(--color-civ-neutral-metal);
+  }
   /* 强调、链接、焦点环随文明的字色(v4 `.btn.t` / `.tag` / `.btn:focus-visible` 都是 civT)。
      中性皮不在这里:没有 data-civ 时三者是 :root / .light 里的墨。 */
   [data-civ] {

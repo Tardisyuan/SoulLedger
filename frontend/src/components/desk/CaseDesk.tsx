@@ -13,6 +13,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { isTypingTarget, useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { DESK_GROUPS, dedupeGroups, deskTag, heldBeforeClaim, matchesSearch, onDeskCount, overviewParts, rowNotes, sourceChips, sourceLabel, step } from "./deskRules";
@@ -248,7 +249,9 @@ export function CaseDesk() {
                             <Badge tone={tag.tone} glyph={tag.glyph || undefined}>
                               {tag.text}
                             </Badge>
-                            <span className={s.caseNo}>{row.case_number}</span>
+                            <span className={s.caseNo}>
+                              <CaseNumber value={row.case_number} plain />
+                            </span>
                           </span>
                           <span className={s.rowLine} title={line}>
                             {line}

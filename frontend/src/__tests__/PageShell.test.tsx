@@ -356,7 +356,16 @@ function lineAt(src: string, index: number): number {
  * 一旦被改好或改标签就会报红要求删除。一份不会陈旧的白名单才是这个仓库真正
  * 怕的东西。
  */
-const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
+const H2_ROLE_EXEMPTIONS = new Map<string, string>([
+  // 2026-11-13 第三十批「卷宗」第 2 步(案卷台与总簿):这几页的 `<h2>` 照稿是 12px 常规字重的淡色栏头
+  // (案卷摞的分组头、卷里与侧栏的「近事」「本案」一类小标)和总簿每栏 14px 的文明名,排版写在
+  // `src/components/desk/desk.module.css`,不是三个角色里的任何一档 —— 11px 大写的 eyebrow 不适用于中文栏头。
+  // 规则的依据(壳文件头第 4 条)没覆盖 Design 新画的这一种栏头;第 4 步重画全站时要么把它补成第四个角色,
+  // 要么这几处换回三档之一。
+  ["src/components/desk/CaseDesk.tsx", "className={s.groupHead}"],
+  ["src/components/desk/OpenCase.tsx", "className={s.juanTitle}"],
+  ["src/components/desk/Zongbu.tsx", "className={s."],
+]);
 
 /**
  * 同一张表,给 `<h3>`。键是相对 `frontend/` 的路径,值是当时量到的那段排版。
@@ -888,6 +897,12 @@ const H1_COVER = { file: "src/components/landing/Landing.tsx", steps: "text-xl m
  * 同样只许在那一个文件、必须真的出现一次。
  * 登录第二步 `/login/verify`(A12:标题「两步验证」font-title 28/36)沿用同一档,同一规则。
  */
+/**
+ * 总簿的标题(Design 第三十批第 2 步):卷宗页那一档 `text-dossier` 32/40,但不在壳的 `PageHead` 里 ——
+ * 总簿是中性皮(品牌金顶线、天平水印,`data-skin="neutral"`),`PageHead` 的顶线与水印跟着此刻的殿走。
+ * 与登录、封面同一个写法:只许在这一个文件、必须真的出现一次。
+ */
+const H1_ZONGBU = { file: "src/components/desk/Zongbu.tsx", steps: "text-dossier" };
 // The officer e-mail reset pages sit in the same LoginShell and take the login title step.
 const H1_LOGIN = {
   files: [
@@ -935,6 +950,7 @@ describe("页面标题 <h1>", () => {
     const offenders: string[] = [];
     const shellSteps: string[] = [];
     let coverSeen = 0;
+    let zongbuSeen = 0;
     const loginSeen = new Set<string>();
     for (const h of found) {
       if (h.file === "app/global-error.tsx") {
@@ -957,6 +973,11 @@ describe("页面标题 <h1>", () => {
         shellSteps.push(h.steps.join(" "));
         continue;
       }
+      if (h.file === H1_ZONGBU.file) {
+        zongbuSeen += 1;
+        if (h.steps.join(" ") !== H1_ZONGBU.steps) offenders.push(`${h.file}:${h.line}  the 总簿 title is ${H1_ZONGBU.steps} (32/40)`);
+        continue;
+      }
       if (h.steps.some((st) => st === "text-head" || st === "text-dossier")) {
         offenders.push(`${h.file}:${h.line}  text-head / text-dossier belong to the shell's page head only`);
         continue;
@@ -976,6 +997,7 @@ describe("页面标题 <h1>", () => {
     }
 
     expect(coverSeen).toBe(1);
+    expect(zongbuSeen).toBe(1);
     expect(loginSeen.size).toBe(H1_LOGIN.files.length);
     expect(shellSteps.sort()).toEqual(["text-dossier", "text-head"]);
     if (offenders.length > 0) {

@@ -12,6 +12,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { deadlineText, overviewParts, zongbuCivilizations } from "./deskRules";
 import { BrandMark } from "@/src/components/brand/BrandMark";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 import s from "./desk.module.css";
 
 const TOP = 3;
@@ -19,7 +20,7 @@ const CROSS_ROWS = 5;
 
 /**
  * 总簿(Design 第三十批 第 2 步 · 管理员,中性皮):品牌金的顶线与天平水印;四个冥界各一栏 —— 今日待审、超期、前三件;
- * 下面一张「跨界往来」(调拨与跨界会审,各取最近几条)。四栏顶上各一条 2px 文明色线(用户认可的唯一例外)。
+ * 下面一张「跨界往来」(调拨与跨界会审,各取最近几条)。四栏顶上各一条 2px 文明色线(用户认可的唯一例外;栏上的 data-civ 换五槽)。
  *
  * 只读管理员本来就读得到的:`queue-counts/?civilization=`、`GET /judgment/?civilization=&has_verdict=false`、
  * `hall-stats/`(页头)与 `hall-stats/?civilization=`(每栏的本月已结进度条)、`/dispatch/records/`、
@@ -73,7 +74,7 @@ export function Zongbu() {
     return short ? t(`zongbu.civ.${short}`) : (code ?? "");
   };
 
-  type CrossRow = { key: string; href: string; when: string | null; since?: boolean; text: string; status: string };
+  type CrossRow = { key: string; href: string; when: string | null; since?: boolean; text: string; statusNs: string; status: string };
   const isOpen = (status: string) => status === "PROPOSED" || status === "ACTIVE";
   const crossRows: CrossRow[] = [
     ...(dispatches.data?.results ?? []).slice(0, CROSS_ROWS).map((d) => ({
@@ -81,7 +82,8 @@ export function Zongbu() {
       href: `/dispatch/${d.id}`,
       when: d.update_time ?? d.proposed_at,
       text: [d.soul_name, t("zongbu.kind.dispatch"), `${civName(d.source_tenant_code)} → ${civName(d.target_tenant_code)}`].filter(Boolean).join(" · "),
-      status: t(`dispatch.states.${d.status}`),
+      statusNs: "dispatch.states",
+      status: d.status,
     })),
     ...(crossings.data?.results ?? []).slice(0, CROSS_ROWS).map((c) => ({
       key: `c-${c.id}`,
@@ -90,18 +92,19 @@ export function Zongbu() {
       when: isOpen(c.status) ? c.create_time : c.concluded_at,
       since: isOpen(c.status),
       text: [c.title, t("zongbu.kind.cross"), civName(c.initiating_tenant_code)].filter(Boolean).join(" · "),
-      status: t(`crossJudgments.states.${c.status}`),
+      statusNs: "crossJudgments.states",
+      status: c.status,
     })),
   ].sort((a, b) => (b.when ?? "").localeCompare(a.when ?? ""));
 
   return (
-    <div className={s.zongbu} data-testid="zongbu">
+    <div className={s.zongbu} data-skin="neutral" data-testid="zongbu">
       <header className={s.zbHead}>
         <span className={s.watermark}>
           <BrandMark size={200} tone="gold" />
         </span>
         <p className={s.meta}>{[civs.length === 1 ? t(`zongbu.civ.${civShortCode(civs[0])}`) : t("zongbu.realms"), asOf ? t("zongbu.as_of", { time: formatDateTime(asOf, { hour: "2-digit", minute: "2-digit" }) }) : ""].filter(Boolean).join(" · ")}</p>
-        <h1 className={s.zbTitle}>{t("zongbu.title")}</h1>
+        <h1 className={`${s.zbTitle} font-title text-dossier`}>{t("zongbu.title")}</h1>
         <p className={s.overview} data-testid="zongbu-overview">
           {overview.map((p, i) => (
             <span key={p.text} className={p.neg ? s.neg : undefined}>
@@ -123,7 +126,7 @@ export function Zongbu() {
           const month = monthly[i].data;
           const rows = (tops[i].data?.results ?? []).slice(0, TOP);
           return (
-            <section key={civ} className={s.col} data-civ-col={short} data-testid={`zongbu-col-${short}`} aria-labelledby={`zongbu-${short}`}>
+            <section key={civ} className={s.col} data-civ={short || undefined} data-testid={`zongbu-col-${short}`} aria-labelledby={`zongbu-${short}`}>
               <h2 id={`zongbu-${short}`} className={s.colName}>
                 {t(`zongbu.civ.${short}`)}
               </h2>
@@ -192,7 +195,7 @@ export function Zongbu() {
                   {r.since && r.when ? t("zongbu.cross_since", { date: formatListDate(r.when, locale) ?? "" }) : (formatListDate(r.when, locale) ?? "")}
                 </span>
                 <span className={s.juanVal}>{r.text}</span>
-                <span className={s.juanKey}>{r.status}</span>
+                <DomainEnum namespace={r.statusNs} value={r.status} className={s.juanKey} />
               </Link>
             ))}
           </div>

@@ -204,11 +204,11 @@ export function OpenCase({
           <h2 className={s.juanTitle}>{t("caseDesk.side.hall_today")}</h2>
           <dl className={s.card}>
             <dt>{t("officer_app.desk.groups.unclaimed")}</dt>
-            <dd className={s.juanNum}>{counts ? counts.unclaimed : "—"}</dd>
+            <dd className={s.juanNum}>{counts ? counts.unclaimed : <MissingValue kind="unrecorded" />}</dd>
             <dt>{t("caseDesk.side.overdue")}</dt>
-            <dd className={s.juanNum}>{counts?.overdue ?? "—"}</dd>
+            <dd className={s.juanNum}>{counts?.overdue ?? <MissingValue kind="unrecorded" />}</dd>
             <dt>{t("caseDesk.side.done")}</dt>
-            <dd className={s.juanNum}>{monthPct != null ? `${monthPct}%` : "—"}</dd>
+            <dd className={s.juanNum}>{monthPct != null ? `${monthPct}%` : <MissingValue kind="unrecorded" />}</dd>
           </dl>
         </aside>
       </div>

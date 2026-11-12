@@ -393,10 +393,7 @@
 
 /* ── 总簿 ──────────────────────────────────────────── */
 .zongbu {
-  /* 中性皮:品牌金的顶线与水印,不随管理员的殿换色。 */
-  --color-main-ink: var(--color-civ-neutral-ink);
-  --color-glow: var(--color-civ-neutral-glow);
-  --color-metal: var(--color-civ-neutral-metal);
+  /* 中性皮:元素上的 data-skin="neutral"(globals.css)。 */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -405,8 +402,8 @@
   position: relative;
   overflow: hidden;
   padding: 20px 28px 16px;
-  border-top: var(--topline, 2px) solid oklch(var(--color-civ-neutral-metal));
-  background: radial-gradient(120% 140% at 0% 0%, color-mix(in oklch, oklch(var(--color-civ-neutral-metal)) 18%, transparent), transparent 60%);
+  border-top: var(--topline, 2px) solid oklch(var(--color-metal));
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in oklch, oklch(var(--color-metal)) 18%, transparent), transparent 60%);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px 24px;
@@ -421,10 +418,7 @@
   user-select: none;
 }
 .zbTitle {
-  font-family: var(--font-title);
-  font-size: 32px;
-  line-height: 40px;
-  font-weight: 600;
+  /* 字是 font-title text-dossier(32/40,600),写在元素上 —— PageShell.test 的「页面标题」按类名读它。 */
   margin: 0;
 }
 .cols {
@@ -439,7 +433,7 @@
 }
 .col {
   border: 1px solid oklch(var(--color-line));
-  border-top: var(--topline, 2px) solid oklch(var(--zb-civ));
+  border-top: var(--topline, 2px) solid oklch(var(--color-main-ink));
   border-radius: 6px;
   background: oklch(var(--color-surface-1));
   padding: 14px 16px;
@@ -448,13 +442,9 @@
   gap: 8px;
   margin: 0;
 }
-.col[data-civ-col="cn"] { --zb-civ: var(--color-civ-cn-ink); }
-.col[data-civ-col="eu"] { --zb-civ: var(--color-civ-eu-ink); }
-.col[data-civ-col="eg"] { --zb-civ: var(--color-civ-eg-ink); }
-.col[data-civ-col="gr"] { --zb-civ: var(--color-civ-gr-ink); }
 .colName {
   font-size: 14px;
-  color: oklch(var(--zb-civ));
+  color: oklch(var(--color-main-ink));
   margin: 0;
   font-weight: 600;
 }
@@ -479,7 +469,7 @@
 }
 .barFill {
   height: 100%;
-  background: oklch(var(--zb-civ));
+  background: oklch(var(--color-main-ink));
 }
 .top {
   list-style: none;
