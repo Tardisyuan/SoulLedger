@@ -427,6 +427,10 @@
   gap: 16px;
   padding: 8px 28px 0;
 }
+/* 绑殿的管理员只有本殿一栏:不拉满整行(一栏铺满 1200 读起来像空着三栏),取四栏时两栏的宽。 */
+.cols[data-single] {
+  grid-template-columns: minmax(0, 560px);
+}
 .col {
   border: 1px solid oklch(var(--color-line));
   border-top: var(--topline, 2px) solid oklch(var(--zb-civ));

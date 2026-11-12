@@ -9,6 +9,7 @@ import type { Judgment, JudgmentElsewhereCounts, JudgmentQueueCounts, JudgmentQu
 import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import type { BadgeTone } from "@/src/components/ui/Badge";
 import { DOSSIER_TAG } from "@/src/components/ui/StatusBadge";
+import { CIVILIZATION_OPTIONS, civShortCode } from "@soulledger/core/config/civilizations";
 
 export type T = (key: string, vars?: Record<string, string>) => string;
 
@@ -144,4 +145,16 @@ export function step(ids: readonly string[], current: string | null, delta: 1 | 
   const at = current ? ids.indexOf(current) : -1;
   if (at < 0) return delta === 1 ? ids[0] : ids[ids.length - 1];
   return ids[Math.min(ids.length - 1, Math.max(0, at + delta))];
+}
+
+/**
+ * 总簿的栏(用户决定):没绑殿的管理员(全局的,`is_tenant_exempt`)看四个冥界;绑了殿的只看本殿那一栏。
+ * 只读登录信封里已有的殿(`user.tenant` 的 civilization,旧信封没有时按殿码前缀);认不出就照旧四栏
+ * —— 服务端按殿过滤,别的栏读出来是 0,不会多看见什么。
+ */
+export function zongbuCivilizations(tenant: { code: string; civilization?: string } | null | undefined): readonly (typeof CIVILIZATION_OPTIONS)[number][] {
+  if (!tenant) return CIVILIZATION_OPTIONS;
+  const short = civShortCode(tenant.civilization) ?? civShortCode(tenant.code);
+  const own = CIVILIZATION_OPTIONS.filter((c) => civShortCode(c) === short);
+  return own.length ? own : CIVILIZATION_OPTIONS;
 }

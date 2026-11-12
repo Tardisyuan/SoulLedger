@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { judgmentApi } from "@soulledger/core/api/judgment";
 import { crossTenantJudgmentsApi, dispatchApi } from "@soulledger/core/api/dispatch";
-import { CIVILIZATION_OPTIONS, civShortCode } from "@soulledger/core/config/civilizations";
+import { civShortCode } from "@soulledger/core/config/civilizations";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { formatListDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { buttonVariants } from "@/src/components/ui/Button";
-import { deadlineText, overviewParts } from "./deskRules";
+import { deadlineText, overviewParts, zongbuCivilizations } from "./deskRules";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import s from "./desk.module.css";
 
@@ -27,22 +28,25 @@ const CROSS_ROWS = 5;
  */
 export function Zongbu() {
   const { t, locale, formatDateTime } = useI18n();
+  const { user } = useTenant();
+  // 绑殿的管理员只有本殿一栏(`zongbuCivilizations`)。
+  const civs = zongbuCivilizations(user?.tenant);
 
   const counts = useQueries({
-    queries: CIVILIZATION_OPTIONS.map((civilization) => ({
+    queries: civs.map((civilization) => ({
       queryKey: judgmentKeys.queueCounts({ civilization }),
       queryFn: async () => (await judgmentApi.queueCounts({ civilization })).data,
     })),
   });
   const tops = useQueries({
-    queries: CIVILIZATION_OPTIONS.map((civilization) => {
+    queries: civs.map((civilization) => {
       const params = { civilization, has_verdict: "false", ordering: "created_at" };
       return { queryKey: judgmentKeys.list(params), queryFn: async () => (await judgmentApi.list(params)).data };
     }),
   });
   const stats = useQuery({ queryKey: judgmentKeys.hallStats(), queryFn: async () => (await judgmentApi.hallStats()).data });
   const monthly = useQueries({
-    queries: CIVILIZATION_OPTIONS.map((civilization) => ({
+    queries: civs.map((civilization) => ({
       queryKey: judgmentKeys.hallStats(civilization),
       queryFn: async () => (await judgmentApi.hallStats(civilization)).data,
     })),
@@ -96,7 +100,7 @@ export function Zongbu() {
         <span className={s.watermark}>
           <BrandMark size={200} tone="gold" />
         </span>
-        <p className={s.meta}>{[t("zongbu.realms"), asOf ? t("zongbu.as_of", { time: formatDateTime(asOf, { hour: "2-digit", minute: "2-digit" }) }) : ""].filter(Boolean).join(" · ")}</p>
+        <p className={s.meta}>{[civs.length === 1 ? t(`zongbu.civ.${civShortCode(civs[0])}`) : t("zongbu.realms"), asOf ? t("zongbu.as_of", { time: formatDateTime(asOf, { hour: "2-digit", minute: "2-digit" }) }) : ""].filter(Boolean).join(" · ")}</p>
         <h1 className={s.zbTitle}>{t("zongbu.title")}</h1>
         <p className={s.overview} data-testid="zongbu-overview">
           {overview.map((p, i) => (
@@ -112,8 +116,8 @@ export function Zongbu() {
         </div>
       </header>
 
-      <div className={s.cols}>
-        {CIVILIZATION_OPTIONS.map((civ, i) => {
+      <div className={s.cols} data-single={civs.length === 1 ? "" : undefined}>
+        {civs.map((civ, i) => {
           const short = civShortCode(civ) ?? "";
           const c = counts[i].data;
           const month = monthly[i].data;

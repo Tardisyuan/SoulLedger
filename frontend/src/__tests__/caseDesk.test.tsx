@@ -6,7 +6,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import type { Judgment } from "@soulledger/core/api/judgment";
 import { judgmentApi } from "@soulledger/core/api/judgment";
 import { CaseDesk } from "@/src/components/desk/CaseDesk";
-import { dedupeGroups, deskTag, matchesSearch, onDeskCount, overviewParts, sourceChips, sourceLabel, sourceOf, step } from "@/src/components/desk/deskRules";
+import { dedupeGroups, deskTag, matchesSearch, onDeskCount, overviewParts, sourceChips, sourceLabel, sourceOf, step, zongbuCivilizations } from "@/src/components/desk/deskRules";
 import { renderWithProviders } from "./support/render";
 
 const mockPush = jest.fn();
@@ -89,6 +89,15 @@ describe("deskRules", () => {
     expect(overviewParts(t, null, null, null)).toEqual([]);
     expect(onDeskCount({ mine: 2, deferred: 1, unclaimed: 4 })).toBe(7);
     expect(onDeskCount(null)).toBeNull();
+  });
+
+  it("总簿: a global admin sees the four realms, a hall-bound admin only their own", () => {
+    expect(zongbuCivilizations(null)).toEqual(["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"]);
+    expect(zongbuCivilizations({ code: "EG_DUAT", civilization: "EGYPTIAN" })).toEqual(["EGYPTIAN"]);
+    // An envelope cached before `civilization` existed: the hall code's prefix decides.
+    expect(zongbuCivilizations({ code: "GR_HADES" })).toEqual(["GREEK"]);
+    // Unrecognised: the server scopes anyway, so the four columns stay (the others read 0).
+    expect(zongbuCivilizations({ code: "XX_NOWHERE" })).toHaveLength(4);
   });
 
   it("keeps a case in the first group it appears in", () => {
