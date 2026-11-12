@@ -2886,6 +2886,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/records/{id}/withdraw-approval/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 目标殿撤回自己的批准(APPROVED → CANCELLED,理由必填;F-DISP-01)。只给目标殿;不在 APPROVED 答 409。 */
+        post: operations["v1_dispatch_records_withdraw_approval_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/records/drafts/": {
         parameters: {
             query?: never;
@@ -3933,6 +3950,23 @@ export interface paths {
         put?: never;
         /** @description 维持(UPHELD)或改判(AMENDED + verdict)。`note` 必填,灵魂看得到。 */
         post: operations["v1_judgment_appeals_decide_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/appeals/{id}/release/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 放回待复核(F-JUDG-06)。复核人自己,或持 judgment.assign;不是 → 403 `not_reviewer`;没人认领 → 409 `not_claimed`。 */
+        post: operations["v1_judgment_appeals_release_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6314,6 +6348,28 @@ export interface paths {
          */
         post: operations["officer_app_cosign_add"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/officer-app/items/{kind}/{item_id}/cosigners/{user_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description 撤销加签(流程走查 2026-11-12 F-JUDG-05):把一位还没签的联署人从当前节点撤下。指定审批人或本殿 ADMIN 可撤;
+         *     已签的不撤。联署人停用、调走、失权或加错人时，节点不再被一份永远等不来的签名卡住。
+         *
+         *     403 `not_allowed`:不是你的节点 / 节点已被处理;404 `not_found`:这一节点上没有这位未签的联署人。留痕:一条审计。
+         */
+        delete: operations["officer_app_cosign_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -8739,7 +8795,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 手动开通。本世已有账号时幂等返回 200,不重发密码;要新密码用 reset_credential。 */
+        /**
+         * @description 手动开通。本世已有账号时幂等返回 200,不重发密码、**不改联系方式**;要新密码用 reset_credential。
+         *
+         *     灵魂按调用者的数据范围选(F-ACCT-01):此前只按殿,受限官员可给范围外的灵魂开号,
+         *     或把它已有账号的登录邮箱换成自己的再走邮箱重置接管;事务提交后 `get_queryset` 才按范围找不到它,答 500。
+         */
         post: operations["v1_soul_accounts_accounts_provision_create"];
         delete?: never;
         options?: never;
@@ -27340,6 +27401,34 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_records_withdraw_approval_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Dispatch Record. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchCancel"];
+                "application/x-www-form-urlencoded": components["schemas"]["DispatchCancel"];
+                "multipart/form-data": components["schemas"]["DispatchCancel"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchRecord"];
+                };
+            };
+        };
+    };
     v1_dispatch_records_drafts_create: {
         parameters: {
             query?: never;
@@ -29360,6 +29449,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_appeals_release_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this judgment appeal. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentAppeal"];
                 };
             };
             403: {
@@ -34561,6 +34696,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    officer_app_cosign_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+                kind: string;
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CosignRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CosignRefusal"];
+                };
             };
         };
     };

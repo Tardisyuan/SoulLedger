@@ -6199,6 +6199,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/DispatchRecord'
           description: ''
+  /api/v1/dispatch/records/{id}/withdraw-approval/:
+    post:
+      operationId: v1_dispatch_records_withdraw_approval_create
+      description: 目标殿撤回自己的批准(APPROVED → CANCELLED,理由必填;F-DISP-01)。只给目标殿;不在 APPROVED
+        答 409。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Dispatch Record.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchCancel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DispatchCancel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DispatchCancel'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchRecord'
+          description: ''
   /api/v1/dispatch/records/drafts/:
     post:
       operationId: v1_dispatch_records_drafts_create
@@ -9099,6 +9135,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/appeals/{id}/release/:
+    post:
+      operationId: v1_judgment_appeals_release_create
+      description: 放回待复核(F-JUDG-06)。复核人自己,或持 judgment.assign;不是 → 403 `not_reviewer`;没人认领
+        → 409 `not_claimed`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this judgment appeal.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentAppeal'
           description: ''
         '403':
           content:
@@ -14395,6 +14473,50 @@ paths:
           description: ''
         '404':
           description: No response body
+  /api/v1/officer-app/items/{kind}/{item_id}/cosigners/{user_id}/:
+    delete:
+      operationId: officer_app_cosign_remove
+      description: |-
+        撤销加签(流程走查 2026-11-12 F-JUDG-05):把一位还没签的联署人从当前节点撤下。指定审批人或本殿 ADMIN 可撤;
+        已签的不撤。联署人停用、调走、失权或加错人时，节点不再被一份永远等不来的签名卡住。
+
+        403 `not_allowed`:不是你的节点 / 节点已被处理;404 `not_found`:这一节点上没有这位未签的联署人。留痕:一条审计。
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CosignRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CosignRefusal'
+          description: ''
   /api/v1/officer-app/push-tokens/:
     post:
       operationId: officer_app_push_register
@@ -19323,7 +19445,11 @@ paths:
   /api/v1/soul-accounts/accounts/provision/:
     post:
       operationId: v1_soul_accounts_accounts_provision_create
-      description: 手动开通。本世已有账号时幂等返回 200,不重发密码;要新密码用 reset_credential。
+      description: |-
+        手动开通。本世已有账号时幂等返回 200,不重发密码、**不改联系方式**;要新密码用 reset_credential。
+
+        灵魂按调用者的数据范围选(F-ACCT-01):此前只按殿,受限官员可给范围外的灵魂开号,
+        或把它已有账号的登录邮箱换成自己的再走邮箱重置接管;事务提交后 `get_queryset` 才按范围找不到它,答 500。
       tags:
       - v1
       requestBody:
