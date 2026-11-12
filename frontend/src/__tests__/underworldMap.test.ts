@@ -546,10 +546,11 @@ describe("hero nodes (Design batch 16 §1)", () => {
     },
   );
 
-  it("there are fifteen, and every delivered file is wired to a node", () => {
+  // 第二十九批加了第十六个:希腊中路的阿斯福得草原(hero-gr-asphodel.svg)。
+  it("there are sixteen, and every delivered file is wired to a node", () => {
     const wired = Object.values(HERO_NODES).flatMap((nodes) => Object.values(nodes).map((n) => `maps/nodes/hero-${n}.svg`));
     expect(wired.sort()).toEqual([...HEROES].sort());
-    expect(wired).toHaveLength(15);
+    expect(wired).toHaveLength(16);
   });
 
   it("a station hero is 56 and centred; a dot-row hero is 48 and hangs left of the row", () => {

@@ -332,7 +332,7 @@ export const HERO_NODES: Record<"cn" | "eu" | "eg" | "gr", Record<string, string
   cn: { "dy-ghost-gate": "cn-ghost-gate", FENGDU_CITY: "cn-fengdu-city", "dy-ten-courts": "cn-ten-courts", "dy-six-paths": "cn-six-paths" },
   eu: { EU_ANTINFERNO: "eu-hell-gate", "eu-hell": "eu-cocytus", EU_PURGATORY: "eu-purgatory-mount", EU_HEAVEN: "eu-heaven" },
   eg: { EG_DUAT_ENTRY: "eg-duat-gate", EG_HALL_TWO_TRUTHS: "eg-two-truths", EG_AARU: "eg-aaru" },
-  gr: { GR_ACHERON: "gr-acheron", "gr-three-judges": "gr-three-judges", GR_TARTARUS: "gr-tartarus", GR_ISLES_OF_THE_BLESSED: "gr-isles" },
+  gr: { GR_ACHERON: "gr-acheron", "gr-three-judges": "gr-three-judges", GR_ASPHODEL_MEADOW: "gr-asphodel", GR_TARTARUS: "gr-tartarus", GR_ISLES_OF_THE_BLESSED: "gr-isles" },
 };
 export const heroUrl = (name: string) => `/v4/maps/nodes/hero-${name}.svg`;
 
