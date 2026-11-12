@@ -29,12 +29,13 @@ test.describe("案卷台", () => {
     });
     api.on("GET", "/perm/role-permissions/", { role: "JUDGE", permissions: CODENAMES, details: [] });
     api.on("GET", "/judgment/", (call) => ({ body: page1(call.query.group === "mine" ? [MINE] : call.query.group === "unclaimed" ? [UNCLAIMED] : []) }));
+    api.on("GET", "/judgment/:id/", (call) => ({ body: call.path.includes(UNCLAIMED.id) ? UNCLAIMED : MINE }));
+    // After `:id/`: routes are unshifted (the last registered wins), and `:id` matches `queue-counts` too.
     api.on("GET", "/judgment/queue-counts/", {
       mine: 1, unclaimed: 1, others: 0, deferred: 0, total: 2, overdue: 0,
       sources: { queue: 1, city_god: 1, cross: 0 },
       elsewhere: { appeal: null, city_god_review: null, cross_judgment: null, capture_due: null },
     });
-    api.on("GET", "/judgment/:id/", (call) => ({ body: call.path.includes(UNCLAIMED.id) ? UNCLAIMED : MINE }));
 
     await page.goto("/login");
     await page.getByLabel("账号").fill(JUDGE.username);

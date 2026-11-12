@@ -83,6 +83,8 @@ describe("deskRules", () => {
       { text: "officer_app.desk.overview.month_done(pct=22)" },
     ]);
     expect(overviewParts(t, 7, 1, null)).toEqual([{ text: "officer_app.desk.overview.today(n=7)" }, { text: "officer_app.desk.overview.overdue(n=1)", neg: true }]);
+    // An empty desk still says 无超期.
+    expect(overviewParts(t, 0, 0, null)).toEqual([{ text: "officer_app.desk.overview.today(n=0)" }, { text: "officer_app.desk.overview.no_overdue" }]);
     // Nothing loaded yet: nothing written (not 「今日 0 件」).
     expect(overviewParts(t, null, null, null)).toEqual([]);
     expect(onDeskCount({ mine: 2, deferred: 1, unclaimed: 4 })).toBe(7);

@@ -1443,7 +1443,7 @@ export class ApiMock {
     });
     // The /judgment page's four group headers (JudgmentQueueCounts) and the desk's
     // 据 · 先例 panel. After `:id/` for the same reason as `next/`.
-    this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0 });
+    this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0, overdue: 0, returned: 0 });
     // v4 概览的三张卡(HallOverview):hall-stats 是一个对象(12 周全 0),申诉是分页。都在 `:id/` 之后,理由同上。
     this.on("GET", "/judgment/hall-stats/", {
       timezone: "Asia/Shanghai", pending: 0, overdue: 0, concluded_this_month: 0, month_done_pct: null,
