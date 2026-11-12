@@ -468,8 +468,10 @@ class TestPasswordHelpReachesTheRightAdministrators:
         assert _recipients(lonely) == {"root"}
 
     def test_an_admin_asking_is_not_their_own_recipient(self, api_client, cast):
+        # Only the hall-less ADMIN may act on another administrator (audit P-01, flow-walk F-ADM-04), so a hall
+        # ADMIN's request reaches the hall-less one — not the other ADMIN of the same hall.
         tasks.notify_password_help.run("cn_admin")
-        assert _recipients(cast["cn_admin"]) == {"cn_admin_2"}
+        assert _recipients(cast["cn_admin"]) == {"root"}
 
     def test_a_global_admin_asking_reaches_the_other_global_admins(self, django_user_model, cast):
         _user(django_user_model, "root_2", role="ADMIN", tenant=None)

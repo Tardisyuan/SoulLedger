@@ -156,7 +156,7 @@ def test_a_second_in_progress_plan_is_not_recorded_and_the_conclusion_still_stan
 
 
 def test_a_residing_soul_executing_an_away_disposition_touches_no_plan(cn, eg):
-    """手动调拨的暂居(不挂节点)里的处置:照旧回归,计划原样。"""
+    """手动调拨的暂居(不挂节点)里手建的处置:计划进行中不执行,灵魂留在暂居地,计划原样。"""
     case = _concluded(cn)
     record = DispatchRecord.objects.create(
         source_tenant=cn, target_tenant=eg, soul=case.soul, status=DispatchStatus.APPROVED, reason="x", tenant=cn,
@@ -164,10 +164,12 @@ def test_a_residing_soul_executing_an_away_disposition_touches_no_plan(cn, eg):
     DispatchService.execute(record, "executor")
     case.soul.refresh_from_db()
     away = Disposition.objects.create(soul=case.soul, tenant=eg)
-    assert DispositionService.execute(away) is True
+    # A plan is in progress, so a hand-made disposition does not run (F-DISP-03, 2026-11-12): before, it sent the
+    # soul home and left the plan's stop ACTIVE for good. The soul stays where it is; the plan is untouched.
+    assert DispositionService.execute(away) is False
 
     case.soul.refresh_from_db()
-    assert case.soul.tenant_id == cn.pk
+    assert case.soul.tenant_id == eg.pk
     plan = SentencePlan.objects.get(soul=case.soul)
     assert plan.status == SentencePlanStatus.ACTIVE
     assert [n.status for n in plan.nodes.all()] == [SentenceNodeStatus.ACTIVE]
@@ -523,6 +525,12 @@ def test_backfill_describes_what_happened_and_a_second_run_writes_nothing(cn, eg
     DispatchService.execute(record, "executor")
     returned.soul.refresh_from_db()
     assert DispositionService.execute(Disposition.objects.create(soul=returned.soul, tenant=eg)) is True
+    # Back home with no plan, the soul now moves straight on (F-DISP-07, user 2026-11-12). The rows this backfill
+    # exists for predate that: a returned soul stayed DISPOSED and its home disposition was executed afterwards.
+    # Put the soul back in that shape, then play the legacy step.
+    returned.soul.refresh_from_db()
+    assert returned.soul.current_state == SoulState.REINCARNATING
+    Soul.all_objects.filter(pk=returned.soul.pk).update(current_state=SoulState.DISPOSED)
     assert DispositionService.execute(Disposition.objects.get(judgment=returned)) is True
 
     first = _backfill()

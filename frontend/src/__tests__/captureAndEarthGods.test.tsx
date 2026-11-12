@@ -155,11 +155,12 @@ describe("勾魂卡(S-4)", () => {
 });
 
 describe("下一世部洲(S-3)", () => {
-  const disp = [{ id: "d1", is_executed: false, realm_name: "人间" } as unknown as Disposition];
+  // The rebirth form lives on REINCARNATING since F-REB-01 (2026-11-12): DISPOSED has no rebirth button any more.
+  const disp = [{ id: "d1", is_executed: true, realm_name: "人间" } as unknown as Disposition];
   const card = (rebirthForm: "HUMAN" | "ANIMAL", soul: Partial<Soul> = {}, onChange = jest.fn()) =>
     wrap(
       <SoulActionsCard
-        soul={{ ...SOUL, current_state: "DISPOSED", ...soul } as Soul}
+        soul={{ ...SOUL, current_state: "REINCARNATING", ...soul } as Soul}
         loading={false}
         actionLoading=""
         dispositions={disp}

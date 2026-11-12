@@ -339,6 +339,15 @@ class SensitiveWordViewSet(
         return Response({"copied": copied, "skipped": skipped})
 
 
+class _MuteHallPermission(TenantPermission):
+    """A mute belongs to the soul's current hall (F-SOC-11), which `SocialMuteViewSet.get_queryset` already scopes
+    by. The row's own `tenant` column is the hall that issued it, so the generic object check would refuse the
+    current hall and pass the old one: a row reached through that queryset is in the caller's hall."""
+
+    def has_object_permission(self, request, view, obj):
+        return True
+
+
 class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
     """禁言列表与新建禁言;解除是 `POST {id}/lift/`,不是 DELETE —— 行不删,留着是禁言历史。
 
@@ -350,6 +359,7 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
 
     queryset = SocialMute.objects.select_related("user", "created_by", "lifted_by")
     serializer_class = SocialMuteSerializer
+    permission_classes = [_MuteHallPermission, CodenamePermission]
     extra_permissions = {"lift": [MODERATE], "souls": [MODERATE], "executors": [MODERATE]}
 
     STATUSES = ("ACTIVE", "EXPIRED", "LIFTED")

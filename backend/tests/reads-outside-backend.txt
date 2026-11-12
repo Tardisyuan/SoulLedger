@@ -22,6 +22,7 @@ tests/test_chat_lives.py                                         config
 tests/test_chat_lookup.py                                        config
 tests/test_chat_matrix_off_the_request.py                        config
 tests/test_chat_moves_and_mutes.py                               config
+tests/test_chat_new_requests_are_capped_per_initiator.py         config
 tests/test_chat_officer_inbox.py                                 config
 tests/test_chat_policy.py                                        config
 tests/test_chat_push_hook.py                                     config
@@ -41,6 +42,7 @@ tests/test_diyu_offence_wangsi_city_god.py                       packages
 tests/test_dropped_connection_costs_one_test.py                  conftest.py pytest.ini
 tests/test_e2e_fixtures_match_the_serializers.py                 frontend packages
 tests/test_egyptian_routine_is_the_weighing.py                   config packages
+tests/test_ending_sessions_ends_the_matrix_sessions.py           config
 tests/test_every_realm_has_its_three_names.py                    frontend packages
 tests/test_expired_jwt_rows_are_flushed_on_a_schedule.py .env.example docker-compose.override.yml docker-compose.production.yml docker-compose.staging.yml docker-compose.yml frontend nginx-admin-allow.conf nginx.conf scripts
 tests/test_frontend_civilization_codes.py                        config packages

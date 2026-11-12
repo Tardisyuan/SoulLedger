@@ -104,7 +104,7 @@ def _picture_post(cn_tenant, cn_moderator, name, filename):
 
     author, _ = soul(cn_tenant, name)
     target = post(author, f"带图的帖子{name}", Visibility.PUBLIC)
-    PostMedia.objects.create(post=target, uploader=author, file=filename, width=1, height=1,
+    PostMedia.objects.create(post=target, uploader=author.user, file=filename, width=1, height=1,
                              byte_size=1, content_type="image/jpeg")
     mod.moderate_content(target, "DELETE", actor=cn_moderator, reason="违规")
     return target, str(Post.all_objects.get(pk=target.pk).delete_cascade_id)

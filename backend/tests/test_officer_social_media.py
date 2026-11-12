@@ -233,9 +233,11 @@ class TestFileAccess:
         type(cn_b).objects.filter(pk=cn_b.pk).update(is_active=False)
         assert fetch(url)[0] == 404
 
-    def test_the_author_deleting_the_post_really_deletes_the_files(
+    def test_the_author_deleting_the_post_sends_it_and_its_files_to_the_recycle_bin(
         self, cn_a, media_root, django_capture_on_commit_callbacks,
     ):
+        """User 2026-11-12 (flow-walk F-SOC-15): an author's own delete goes to the recycle bin — the files stay
+        on disk, the image stops being served, the rows are soft-deleted (restorable or purged from there)."""
         client = officer_client(cn_a)
         post_id, _ = post_with_images(client, 2)
         url = detail_urls(client, post_id)[0]
@@ -243,7 +245,9 @@ class TestFileAccess:
         with django_capture_on_commit_callbacks(execute=True):
             assert client.delete(f"{SOCIAL}/posts/{post_id}/").status_code == 204
         assert fetch(url)[0] == 404
-        assert stored(media_root) == [] and not PostMedia.all_objects.exists()
+        assert len(stored(media_root)) == 2
+        assert not PostMedia.objects.filter(post_id=post_id).exists()
+        assert PostMedia.all_objects.filter(post_id=post_id, is_deleted=True).count() == 2
 
 
 class TestSoulPostsStayOut:
