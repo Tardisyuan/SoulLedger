@@ -837,6 +837,37 @@
     background: oklch(var(--color-canvas));
   }
 
+  /* 整页加载(`PageSpinner`,第三十批第 1 步第 5 条):不放转圈。页顶一根 2px 文明色进度线(底 line,一段 32%
+     的 civT 来回走,同页头顶线的加载态),下面是骨架块(surface-2 的淡渐变)。整块 400 ms 后淡入,快的页不闪。
+     减少动态效果时进度段停在左边。 */
+  .page-wait {
+    animation: content-in var(--transition-duration-fast) var(--ease-enter) 400ms backwards;
+  }
+  .page-wait-line {
+    position: relative;
+    height: var(--topline);
+    overflow: hidden;
+    background: oklch(var(--color-line));
+  }
+  .page-wait-line::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 32%;
+    background: oklch(var(--color-main-ink));
+    animation: page-head-progress 1.2s var(--ease-standard) infinite;
+  }
+  .page-sk {
+    display: block;
+    border-radius: var(--radius-control);
+    background: linear-gradient(90deg, oklch(var(--color-surface-2)), color-mix(in srgb, oklch(var(--color-surface-2)) 60%, oklch(var(--color-line-strong))), oklch(var(--color-surface-2)));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .page-wait-line::after {
+      animation: none;
+    }
+  }
+
   /* 393 窄屏筛选条的快捷 chip 一行(`FilterBar`,第三十批第 1 步第 4 条):横滑,右缘 40px 渐隐,告诉人后面还有。 */
   .chip-scroll {
     scrollbar-width: none;
@@ -2099,8 +2130,9 @@ html.theme-switching *::after {
   }
 }
 
-/* 空态背后的文明主视觉线稿:压到很淡,靠右,不挡字(EmptyState 的 `civilization`)。 */
-.empty-emblem {
+/* 空态的 G 天体仪记号(第三十批第 1 步第 5 条,EmptyState):96,文明字色,12% 不透明。装饰,aria-hidden。 */
+.empty-mark {
+  color: oklch(var(--color-main-ink));
   opacity: 0.12;
 }
 

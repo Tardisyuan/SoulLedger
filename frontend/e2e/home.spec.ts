@@ -198,7 +198,7 @@ test.describe("Routing edge cases", () => {
 
     // Past middleware now, so app/not-found.tsx is what should show.
     await expect(page.getByText("404")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "页面未找到" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "卷宗里没有这一页" })).toBeVisible();
   });
 
   test("welcome page is public and renders its quick actions", async ({ page }) => {

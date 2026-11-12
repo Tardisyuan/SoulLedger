@@ -65,7 +65,14 @@ export function RebirthQuotaStrip() {
                 <span className="truncate" title={t(`reincarnation.forms.${form}`)}>{t(`reincarnation.forms.${form}`)}</span>
                 {full ? <Badge tone="ink">{t("rebirths.quota.full_badge")}</Badge> : null}
               </span>
-              <span className="mt-1 block font-mono text-sm tabular-nums text-[oklch(var(--color-ink))]">{quotaUsedText(row, t)}</span>
+              {/* 第三十批「卷宗」第 1 步第 5 条:这一道本月一个都还没办时,不写「0 / 20」,写一句「本月还没有 · 上限 20」。 */}
+              {row.used === 0 && !full ? (
+                <span data-zero="" className="mt-1 block text-sm text-[oklch(var(--color-ink-muted))]">
+                  {row.limit == null ? t("rebirths.quota.none_unlimited") : t("rebirths.quota.none_of", { limit: String(row.limit) })}
+                </span>
+              ) : (
+                <span className="mt-1 block font-mono text-sm tabular-nums text-[oklch(var(--color-ink))]">{quotaUsedText(row, t)}</span>
+              )}
             </li>
           );
         })}

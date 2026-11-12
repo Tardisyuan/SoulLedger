@@ -183,18 +183,25 @@ export function AnnualReport() {
         </div>
       ) : (
         <>
-          <section data-annual-lead="">
-            <div className="text-md font-normal text-[oklch(var(--color-ink-muted))]">{lead}</div>
-            <div data-annual-received="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-ink))]">
-              {data.received}
-            </div>
-            <div className="text-lg font-normal text-[oklch(var(--color-ink))]">
-              {withNumber(
-                t("annual.total_rest", { m: "\u0000" }),
-                <span data-annual-placed="" className="font-semibold text-[oklch(var(--color-metal))]">{data.placed}</span>,
-              )}
-            </div>
-          </section>
+          {/* 第三十批「卷宗」第 1 步第 5 条:一年一个都没收时,不画 88 的「0」,写成一句话。 */}
+          {data.received === 0 ? (
+            <section data-annual-lead="" data-zero="">
+              <p data-annual-received="" className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t("annual.zero_received")}</p>
+            </section>
+          ) : (
+            <section data-annual-lead="">
+              <div className="text-md font-normal text-[oklch(var(--color-ink-muted))]">{lead}</div>
+              <div data-annual-received="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-ink))]">
+                {data.received}
+              </div>
+              <div className="text-lg font-normal text-[oklch(var(--color-ink))]">
+                {withNumber(
+                  t("annual.total_rest", { m: "\u0000" }),
+                  <span data-annual-placed="" className="font-semibold text-[oklch(var(--color-metal))]">{data.placed}</span>,
+                )}
+              </div>
+            </section>
+          )}
 
           {data.by_civ.length > 0 && (
             <section className="grid gap-6 md:grid-cols-[18rem_1fr]">

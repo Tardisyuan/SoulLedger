@@ -63,9 +63,10 @@ interface StatusCardProps {
 }
 
 /**
- * 规范 v3 的状态页卡片(2026-10-01):403 / 404 / 500 是同一块卡(用户拍板)。
- * 内容区里一块 s1 底、至少 200px 高、居中的卡片 —— 不换整页(壳与侧栏都在)。
- * 从上到下:等宽 28 / 500 的代码;标题;一句说明;等宽的细节行;一颗次按钮。
+ * 状态页(403 / 404 / 500 是同一块,用户 2026-10-01 拍板;第三十批「卷宗」第 1 步第 5 条重画):
+ * 内容区里至少 200px 高、居中的一块,直接在 canvas 上 —— 不换整页(壳与侧栏都在)。
+ * 从上到下:**等宽小码**(12 / 500,字距 `tracking-meta`,faint);**宋体一句**(标题);**说明**(13);等宽的细节行;
+ * **一个出口**。v3 的 28px 大号代码与 s1 底卡随这一批撤掉。
  *
  * **冷玫红只给 500 的代码** —— 冷玫红只表系统出错,而 403 / 404 不是系统出错,它们的代码是 ink。
  * 标题是 `<h1>`:500 的 error 边界、404 的 not-found、403 的 `RequirePermission` fallback
@@ -81,24 +82,24 @@ export function StatusCard({ code, title, message, detail, detailTestId, action,
       role={isFault ? "alert" : "status"}
       data-page-error=""
       data-testid={testId}
-      className="flex min-h-[200px] flex-col items-center justify-center gap-2 bg-[oklch(var(--color-surface-1))] px-4 py-8 text-center"
+      className="flex min-h-[200px] flex-col items-center justify-center gap-3 px-4 py-12 text-center"
     >
       <span
         data-page-error-code=""
-        className={`font-mono text-xl font-medium ${
-          isFault ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink))]"
+        className={`font-mono text-xs font-medium tracking-meta ${
+          isFault ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-faint-text))]"
         }`}
       >
         {code}
       </span>
       <h1 className="font-title text-lg text-[oklch(var(--color-ink))]">{title}</h1>
-      <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{message}</p>
+      <p className="max-w-prose text-sm text-[oklch(var(--color-ink-subtle))]">{message}</p>
       {detail && (
         <p data-testid={detailTestId} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
           {detail}
         </p>
       )}
-      {action}
+      <div className="mt-3">{action}</div>
     </div>
   );
 }

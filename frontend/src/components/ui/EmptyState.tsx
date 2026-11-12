@@ -1,42 +1,36 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { CivEmblem } from "@/src/components/brand/CivEmblem";
+import { CivMark } from "@/src/components/brand/CivEmblem";
 import type { SealCiv } from "@/src/components/plaque/Seal";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { mapSkinOf } from "@/src/lib/underworldMap";
 
 /**
- * 空态 —— Stage 11 B slots。
+ * 空态 —— Stage 11 B slots;第三十批「卷宗」第 1 步第 5 条重画(Design v4 第三十批回复第一节)。
  *
- * 迁移前站内有 23 处手搓空态、15 种写法（`text-center py-12` 系、
- * 「暂无数据」裸 `<p>` 系、带插画的卡片系…）。这里收成一种。
+ * 迁移前站内有 23 处手搓空态、15 种写法。这里收成一种:
  *
- * 三条规格，逐条对应下面的实现：
+ * 1) **G 天体仪记号 96,12% 不透明**(`CivMark`,文明字色 civT;中性皮只画环),压在说明上方。它是装饰,
+ *    aria-hidden。取代 v3 的 28px □ 与 2026-11-08 加的 160 线稿背景。
+ * 2) **一句说明**:标题(宋体 20/28,`font-title text-lg`)说「这里没有什么」,`reason` 一句话补「为什么 /
+ *    什么时候会有」——「新的案子到了会出现在这里。」而不是「无数据」。
+ * 3) **一个下一步**(`action`):**一个** —— 空态不是工具栏。不再叠第二个图标、第二行空话。
  *
- * 1) **居左，不居中。** 空态是卷宗里的一条注记，不是一张海报。居中会把它读成
- *    页面的主体内容，而它恰恰是「这里什么都没有」。所以没有 `text-center`、
- *    没有 `items-center`、没有 `mx-auto` —— `src/__tests__/EmptyState.test.tsx`
- *    盯着这四个类名。
- *
- * 2) **标题上方一个 28px 的 □ 字形**(规范 v3,2026-10-01;v1 / v2 是一条 24×2 的
- *    `--color-block` 短线),用 `--color-ink-muted`。它不按文明染色(规范 v1 §1.8 的
- *    那条照旧):空态说的是「这里没有东西」,和哪个文明无关。
- *
- * 3) 标题 15 / 600 + 12 ink3 一句原因 + 一个动作(规范 v2 补足 C15「空」:「本月没有账目」
- *    「换个月份，或清除类别筛选。」「清除筛选」)。v1 是 `text-2xs` 标题 + `text-sm` 原因。原因写成一句话，不是一个
- *    名词短语：「还没有灵魂被登记」而不是「无数据」。
-
+ * 居中(稿子 `.state`)。v1 / v2 的「居左,卷宗里的一条注记」随这一批撤掉 —— 空态现在是这一块的全部内容,
+ * 一个记号、一句话、一个出口。
  */
 export interface EmptyStateProps {
-  /** 标题,15 / 600。一个短语。 */
+  /** 标题,宋体 20/28。一个短句。 */
   title: React.ReactNode;
-  /** 一句原因,12 ink3。为什么这里是空的、下一步去哪。 */
+  /** 一句说明,13 ink-muted。为什么这里是空的、下一步去哪。 */
   reason?: React.ReactNode;
   /** 一个动作。**一个** —— 空态不是工具栏。 */
   action?: React.ReactNode;
   className?: string;
   /**
-   * 知道是哪个文明时(`CHINESE` 或皮名 `cn`):右侧压一张很淡的文明主视觉线稿(2026-11-08 用户决定)。
-   * □ 仍不染色 —— 主视觉是背景,不是标记。认不出的文明不画。
+   * 记号画哪个文明的(`CHINESE` 或皮名 `cn`)。不给就是此刻所在的殿的文明;认不出就只画环。
    */
   civilization?: string | null;
 }
@@ -49,36 +43,24 @@ function emblemSkin(civ: string | null | undefined): SealCiv | null {
 }
 
 export function EmptyState({ title, reason, action, className, civilization }: EmptyStateProps) {
-  const skin = emblemSkin(civilization);
+  const hall = useHallCivilization();
+  const skin = emblemSkin(civilization ?? hall);
   return (
-    // min-h-40 = 主视觉的 160px:短的空态(一行标题)比它矮时,overflow-hidden 会把主视觉的光晕上下切平。
-    <div data-empty-state="" className={cn("py-8", skin && "relative isolate min-h-40 overflow-hidden", className)}>
-      {skin && (
-        <span className="empty-emblem pointer-events-none absolute right-0 top-1/2 -z-10 -translate-y-1/2">
-          <CivEmblem civ={skin} size={160} />
-        </span>
-      )}
-      {/* 规范 v3 的 □,28px(text-xl)。aria-hidden —— 它是标记，不是内容。 */}
-      <span
-        data-empty-state-mark=""
-        aria-hidden="true"
-        className="block text-xl leading-none text-[oklch(var(--color-ink-muted))]"
-      >
-        □
-      </span>
+    <div data-empty-state="" className={cn("flex flex-col items-center py-8 text-center", className)}>
+      <CivMark civ={skin} size={96} className="empty-mark" />
 
-      <p data-empty-state-title="" className="text-md font-semibold text-[oklch(var(--color-ink))] mt-4">
+      <p data-empty-state-title="" className="mt-4 font-title text-lg text-[oklch(var(--color-ink))]">
         {title}
       </p>
 
       {reason ? (
-        <p data-empty-state-reason="" className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">
+        <p data-empty-state-reason="" className="mt-2 max-w-prose text-sm text-[oklch(var(--color-ink-subtle))]">
           {reason}
         </p>
       ) : null}
 
       {action ? (
-        <div data-empty-state-action="" className="mt-4">
+        <div data-empty-state-action="" className="mt-6">
           {action}
         </div>
       ) : null}

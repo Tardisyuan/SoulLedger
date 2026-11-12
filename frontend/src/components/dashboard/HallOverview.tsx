@@ -87,8 +87,18 @@ function RollingCount({ n }: { n: number }) {
   );
 }
 
-/** `overview.count_unit`「件 · 其中 {n} 件已过期限」:n 用金属色(定稿 `.metal`,600)。按占位符把句子切开,词序归语言包。 */
+/**
+ * `overview.count_unit`「件 · 其中 {n} 件已过期限」:n 用金属色(定稿 `.metal`,600)。按占位符把句子切开,词序归语言包。
+ * 第三十批:没有超期时写「件 · 无超期」(`overview.count_unit_none`),不标色、不写一个 0。
+ */
 function OverdueLine({ t, n }: { t: (k: string, p?: Record<string, string>) => string; n: number }) {
+  if (n === 0) {
+    return (
+      <div data-overview-overdue="" className="mt-1 text-md font-normal text-[oklch(var(--color-ink))]">
+        {t("overview.count_unit_none")}
+      </div>
+    );
+  }
   const [before, after = ""] = t("overview.count_unit", { n: "\u0000" }).split("\u0000");
   return (
     <div data-overview-overdue="" className="mt-1 text-md font-normal text-[oklch(var(--color-ink))]">
@@ -99,11 +109,18 @@ function OverdueLine({ t, n }: { t: (k: string, p?: Record<string, string>) => s
   );
 }
 
-function Figure({ label, value }: { label: string; value: React.ReactNode }) {
+/**
+ * 一格小数字。第三十批「卷宗」第 1 步第 5 条:数字是 0 时不用大字号,改写成一句话(`zero`,如「本月还没有退回重审」)。
+ */
+function Figure({ label, value, zero }: { label: string; value: React.ReactNode; zero?: string }) {
   return (
     <div>
       <div className="text-xs text-[oklch(var(--color-ink-muted))]">{label}</div>
-      <div className="font-mono text-xl tabular-nums text-[oklch(var(--color-ink))]">{value}</div>
+      {zero ? (
+        <div data-zero="" className="mt-1 max-w-48 text-sm text-[oklch(var(--color-ink))]">{zero}</div>
+      ) : (
+        <div className="font-mono text-xl tabular-nums text-[oklch(var(--color-ink))]">{value}</div>
+      )}
     </div>
   );
 }
@@ -147,14 +164,21 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
       <div className="relative max-w-xs">
         <div className="text-sm text-[oklch(var(--color-ink-muted))]">{t("overview.greet", { name })}</div>
         <div className="mt-2 flex items-center gap-4">
-          <span data-overview-pending="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-main-ink))]">
-            {loading ? <Skeleton as="span" className="inline-block h-23 w-20" /> : stats ? <RollingCount n={stats.pending} /> : <MissingValue kind="unrecorded" />}
-          </span>
+          {/* 第三十批:今日待审是 0 时不画 88 的「0」,写一句「今天没有待审的案卷」。 */}
+          {!loading && stats?.pending === 0 ? (
+            <span data-overview-pending="" data-zero="" className="font-title text-lg text-[oklch(var(--color-ink))]">
+              {t("overview.zero.pending")}
+            </span>
+          ) : (
+            <span data-overview-pending="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-main-ink))]">
+              {loading ? <Skeleton as="span" className="inline-block h-23 w-20" /> : stats ? <RollingCount n={stats.pending} /> : <MissingValue kind="unrecorded" />}
+            </span>
+          )}
           {!loading && stats && <DoneRing pct={stats.month_done_pct} />}
         </div>
         {stats && (
           <>
-            <OverdueLine t={t} n={stats.overdue} />
+            {(stats.pending > 0 || stats.overdue > 0) && <OverdueLine t={t} n={stats.overdue} />}
             {stats.month_done_pct != null && (
               <div className="text-sm text-[oklch(var(--color-ink-muted))]">
                 {t("overview.month_done_pct", { pct: String(stats.month_done_pct) })}
@@ -173,12 +197,20 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
       </div>
       <MapThumb />
       <div className="relative mt-auto flex flex-wrap gap-8 pt-6">
-        <Figure label={t("officer_app.stats.concluded_this_month")} value={value(stats?.concluded_this_month)} />
+        <Figure
+          label={t("officer_app.stats.concluded_this_month")}
+          value={value(stats?.concluded_this_month)}
+          zero={!loading && stats?.concluded_this_month === 0 ? t("overview.zero.concluded") : undefined}
+        />
         <Figure
           label={t("overview.stat.avg_time")}
           value={value(stats?.avg_days, (n) => t("overview.days", { n: n.toFixed(1) }))}
         />
-        <Figure label={t("overview.stat.returned")} value={value(stats?.returned_this_month)} />
+        <Figure
+          label={t("overview.stat.returned")}
+          value={value(stats?.returned_this_month)}
+          zero={!loading && stats?.returned_this_month === 0 ? t("overview.zero.returned") : undefined}
+        />
       </div>
     </section>
   );

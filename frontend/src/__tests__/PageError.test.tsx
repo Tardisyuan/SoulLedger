@@ -77,21 +77,22 @@ describe("PageError", () => {
 describe("PageError · 规范 v3", () => {
   const render500 = () => render(<PageError error={new Error("boom")} reset={() => {}} />);
 
-  it("一块 s1 底、至少 200px 高、居中的卡片", () => {
+  it("至少 200px 高、居中,直接在 canvas 上(第三十批:不再是 s1 底卡)", () => {
     const { container } = render500();
     const root = container.querySelector<HTMLElement>("[data-page-error]")!;
-    expect(root.className).toContain("bg-[oklch(var(--color-surface-1))]");
+    expect(root.className).not.toMatch(/\bbg-/);
     expect(root.className).toMatch(/\bmin-h-\[200px\]/);
     expect(root.className).toMatch(/\bitems-center\b/);
     expect(root.className).toMatch(/\bjustify-center\b/);
   });
 
-  it("代码 500:等宽、28px(text-xl)、冷玫红", () => {
+  it("代码 500:等宽小码 12(text-xs)、冷玫红", () => {
     const { container } = render500();
     const code = container.querySelector<HTMLElement>("[data-page-error-code]")!;
     expect(code.textContent).toBe("500");
     expect(code.className).toMatch(/\bfont-mono\b/);
-    expect(code.className).toMatch(/\btext-xl\b/);
+    expect(code.className).toMatch(/\btext-xs\b/);
+    expect(code.className).not.toMatch(/\btext-xl\b/);
     expect(code.className).toContain("text-[oklch(var(--color-danger))]");
   });
 
@@ -117,13 +118,13 @@ jest.mock("next/navigation", () => ({ usePathname: () => "/no-such-page" }));
 describe("StatusCard · 403 / 404 与 500 同一块卡", () => {
   const danger = (root: HTMLElement) => root.querySelectorAll('[class*="--color-danger"]').length;
 
-  it.each(["403", "404"] as const)("%s 的代码是 ink,整块卡里没有冷玫红", (code) => {
+  it.each(["403", "404"] as const)("%s 的代码是 faint 的等宽小码,整块里没有冷玫红", (code) => {
     const { container } = render(
       <StatusCard code={code} title="T" message="M" action={<button type="button">B</button>} />
     );
     const el = container.querySelector<HTMLElement>("[data-page-error-code]")!;
     expect(el.textContent).toBe(code);
-    expect(el.className).toContain("text-[oklch(var(--color-ink))]");
+    expect(el.className).toContain("text-[oklch(var(--color-faint-text))]");
     expect(danger(container)).toBe(0);
     expect(screen.getByRole("status")).toBe(container.firstChild);
     expect(screen.queryByRole("alert")).toBeNull();
@@ -135,7 +136,7 @@ describe("StatusCard · 403 / 404 与 500 同一块卡", () => {
     expect(danger(container)).toBe(1);
   });
 
-  it("not-found:同一块卡,代码 404 是 ink,标题是唯一的 <h1>,一颗「回到首页」链接,路径在细节行", () => {
+  it("not-found:同一块,代码 404,标题是唯一的 <h1>,一个出口「回案卷台」(墨色实底,先指向默认页),路径在细节行", () => {
     const { container } = render(<NotFound />);
     expect(container.querySelector("[data-page-error]")).not.toBeNull();
     expect(container.querySelector("[data-page-error-code]")!.textContent).toBe("404");
@@ -143,7 +144,10 @@ describe("StatusCard · 403 / 404 与 500 同一块卡", () => {
     const h1s = container.querySelectorAll("h1");
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent("not_found.title");
-    expect(screen.getByRole("link", { name: "not_found.home" })).toHaveAttribute("href", "/");
+    const exit = screen.getByRole("link", { name: "not_found.to_desk" });
+    // 没登录(这份测试没有 TenantProvider):默认页是 /dashboard,壳再送去登录。案卷台的路由第 2 步才有。
+    expect(exit).toHaveAttribute("href", "/dashboard");
+    expect(exit.className).toContain("bg-(--main-fill)");
     // v2 的「返回」按钮与匾都没了:卡里只有一个动作。
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByText("/no-such-page").className).toMatch(/\bfont-mono\b/);

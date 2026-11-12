@@ -134,15 +134,16 @@ describe("PermissionDenied", () => {
     expect(egy.permission.ask_admin).not.toContain("Wesekhet");
   });
 
-  // 规范 v3(2026-10-01):403 与 404 / 500 是同一块卡;代码 403 是 ink,冷玫红只给 500。
-  it("is the v3 status card: code 403 in ink, and nothing in the card is cold rose", () => {
+  // 403 与 404 / 500 是同一块(2026-10-01);第三十批起是 canvas 上的等宽小码 + 宋体一句,代码 403 是 faint,冷玫红只给 500。
+  it("is the status block: a small faint mono 403, and nothing in it is cold rose", () => {
     const { container } = render(<PermissionDenied />);
     const card = screen.getByTestId("permission-denied");
     expect(card).toHaveAttribute("data-page-error");
-    expect(card.className).toContain("bg-[oklch(var(--color-surface-1))]");
+    expect(card.className).not.toMatch(/\bbg-/);
     const code = card.querySelector<HTMLElement>("[data-page-error-code]")!;
     expect(code.textContent).toBe("403");
-    expect(code.className).toContain("text-[oklch(var(--color-ink))]");
+    expect(code.className).toContain("text-[oklch(var(--color-faint-text))]");
+    expect(code.className).toMatch(/\btext-xs\b/);
     expect(container.querySelectorAll('[class*="--color-danger"]')).toHaveLength(0);
   });
 
