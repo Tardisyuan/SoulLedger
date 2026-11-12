@@ -368,6 +368,15 @@ export default function DemoTour() {
   const [lift, setLift] = useState(0);
   const username = user?.username ?? null;
 
+  // Every entrance, not only a change of user: re-entering as the same role from the home page (the administrator,
+  // first on the guard tour and then from the roles row) keeps the username, and kept the earlier answer with it.
+  const [entries, setEntries] = useState(0);
+  useEffect(() => {
+    const again = () => setEntries((n) => n + 1);
+    window.addEventListener(ENTERED, again);
+    return () => window.removeEventListener(ENTERED, again);
+  }, []);
+
   useEffect(() => {
     setState(load());
     if (!username) {
@@ -382,7 +391,7 @@ export default function DemoTour() {
     return () => {
       live = false;
     };
-  }, [username]);
+  }, [username, entries]);
 
   const step = tour?.steps[state.step];
   const here = !!step && pathname === step.route;
