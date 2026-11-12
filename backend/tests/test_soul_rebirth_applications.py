@@ -287,6 +287,7 @@ OFFICER_KEYS = {
     "status", "workflow", "appeal_workflow", "cross_civilization", "rejection_reason", "decided_at",
     "first_rejection_reason", "first_decided_at",
     "current_step", "can_appeal", "cooldown_until", "can_decide_cross_civilization", "created_at", "updated_at",
+    "target_hall", "cross_civilization_targets",  # F-REB-11 (2026-11-12): the hall a cross-civilization rebirth goes to
 }
 
 
