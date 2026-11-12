@@ -12,7 +12,7 @@ from apps.death_sync.models import (
     DeathRegistrationStatus,
 )
 from apps.souls.dates import parse_historical_date
-from apps.souls.models import Soul, SoulState
+from apps.souls.models import DeathDateError, Soul, SoulState
 
 logger = logging.getLogger(__name__)
 
@@ -263,6 +263,15 @@ class DeathSyncService:
             # 本殿没有能收案的城隍(用户 2026-10-29):不开案,死亡与开号随事务一起撤。设好兜底城隍后可以重试。
             request_record.status = DeathRegistrationStatus.FAILED
             request_record.error_code = "NO_CITY_GOD"
+            request_record.error_message = str(e)
+            request_record.judgment = None
+            request_record.save()
+            return request_record
+        except DeathDateError as e:
+            # 死早于生、寿命超 150 年(F-DEATH-05):与 `/souls/{id}/die/` 同一条规则(`Soul.die` 里查)。
+            # 是数据的答案,不是故障:不记 INTERNAL_ERROR,也就不给「重试」。
+            request_record.status = DeathRegistrationStatus.FAILED
+            request_record.error_code = "VALIDATION_ERROR"
             request_record.error_message = str(e)
             request_record.judgment = None
             request_record.save()
