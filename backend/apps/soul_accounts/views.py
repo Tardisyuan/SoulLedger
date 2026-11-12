@@ -176,6 +176,7 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
 
     def get_queryset(self):
         svc.expire_due_credentials()
+        svc.release_stalled_credentials()
         # 回收站里的灵魂不上待交付列表,也看不了明文、打不了交付单(只隐藏,凭据状态不动;恢复后原样回来)。
         qs = InitialCredential.objects.filter(soul__is_deleted=False).select_related(
             "soul", "account__user", "revealed_by", "delivered_by")

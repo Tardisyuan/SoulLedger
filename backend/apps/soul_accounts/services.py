@@ -280,6 +280,20 @@ def expire_due_credentials():
     ).update(status=CredentialStatus.VOID, secret="")
 
 
+#: QUEUED 停这么久还没发出去,就当作入队丢了(F-ACCT-02):broker 收下而 worker 没在跑、或消息丢失时 `.delay` 不抛,
+#: 行会一直停在 QUEUED —— 不能查看、不能重试、不在「待交付」签里,72 小时后作废。
+QUEUED_STALL_AFTER = timedelta(minutes=10)
+
+
+def release_stalled_credentials():
+    """停住的 QUEUED → PENDING(进待交付,可查看 / 重试 / 打印),与 `expire_due_credentials` 一样由列表接口每次调用。
+    worker 之后若照常取到这条,`send_credential` 对 PENDING 照发,只是同一个密码可能既被发出也被当面交付。"""
+    return InitialCredential.objects.filter(
+        status=CredentialStatus.QUEUED, created_at__lte=timezone.now() - QUEUED_STALL_AFTER,
+        expires_at__gt=timezone.now(),
+    ).update(status=CredentialStatus.PENDING, last_error="QueueStalled")
+
+
 def _void_open_credentials(account):
     InitialCredential.objects.filter(
         account=account,
