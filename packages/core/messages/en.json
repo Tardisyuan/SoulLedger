@@ -5075,7 +5075,11 @@
     "tabs": {
       "life": "This life",
       "applications": "Rebirth",
-      "rebirth": "Rebirth"
+      "rebirth": "Rebirth",
+      "glyph_life": "世",
+      "glyph_rebirth": "生",
+      "glyph_letters": "信",
+      "glyph_circle": "圈"
     },
     "life": {
       "cycle": "Life {{cycle}}",
@@ -5119,6 +5123,7 @@
       "here": "Where you are now",
       "stage": "Stage {{at}} / {{total}}",
       "balance": "Balance, this life",
+      "balance_none": "Nothing has been entered for or against you yet.",
       "ledger": "This life's ledger",
       "ledger_hint": "Open an item to read it",
       "station": "Where you are",

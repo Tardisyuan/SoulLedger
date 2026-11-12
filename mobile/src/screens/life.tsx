@@ -55,6 +55,7 @@ import {
   SectionError,
   Skeleton,
   ThemeContext,
+  Topline,
   Txt,
   enumText,
   shade,
@@ -402,6 +403,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
   return (
     <View testID="plaque" style={[styles.bandFrame, { backgroundColor: t.s0, paddingTop: insets.top }]}>
       <GlowTop testID="band-glow" color={t.glow} scheme={t.scheme} width={width} height={insets.top + BAND_FULL * k} />
+      <Topline />
       <Animated.View testID="identity" style={[styles.band, stack ? null : { height }, small && styles.bandSmall]}>
         {/* Drawn for the band at its tallest (large text stacks it), clipped by the band as it compacts. */}
         <BandPattern testID="band-pattern" civ={t.civ} color={t.glow} width={width} height={BAND_FULL * Math.max(k, 3)} ringBase={BAND_FULL * k} />
@@ -680,6 +682,8 @@ function Balance({ me, lex }: { me: MeProfile; lex: CivKey }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
+  // 第三十批 零值: nothing entered either way is a sentence, not a display-size 0.
+  const none = !me.merit_score && !me.demerit_score;
   const side = (word: "merit" | "demerit", value: number) => (
     <View testID={`score-${word}`} style={styles.side}>
       <Txt variant="caption" tone="subtle">
@@ -695,12 +699,18 @@ function Balance({ me, lex }: { me: MeProfile; lex: CivKey }) {
           <Txt variant="caption" tone="subtle">
             {tr("soul_app.life.balance")}
           </Txt>
-          <Txt testID="balance-value" numberOfLines={1} adjustsFontSizeToFit style={[styles.balanceValue, { color: t.ink }]}>
-            {signedBalance(me.merit_score, me.demerit_score)}
-          </Txt>
+          {none ? (
+            <Txt testID="balance-none" tone="muted">
+              {tr("soul_app.life.balance_none")}
+            </Txt>
+          ) : (
+            <Txt testID="balance-value" numberOfLines={1} adjustsFontSizeToFit style={[styles.balanceValue, { color: t.ink }]}>
+              {signedBalance(me.merit_score, me.demerit_score)}
+            </Txt>
+          )}
         </View>
-        {side("merit", me.merit_score)}
-        {side("demerit", me.demerit_score)}
+        {none ? null : side("merit", me.merit_score)}
+        {none ? null : side("demerit", me.demerit_score)}
       </View>
     </View>
   );
@@ -1024,7 +1034,8 @@ export function MyLifeScreen() {
         <VestibuleCard vestibule={me.european_vestibule} />
         <Balance me={me} lex={residence.home} />
         <Block>
-          <DataRows>
+          {/* 第三十批: 本世 is a 「卷」 — the serif at 16/28, hairline rules, the field names a column of their own. */}
+          <DataRows juan>
             <DataRow label={t("soul_app.life.birth")} mono>
               {formatHistoricalDate(me.birth_date, locale) ?? unrecorded}
             </DataRow>

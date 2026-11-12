@@ -84,8 +84,8 @@ describe("v1's accent and mark are gone (第三阶段)", () => {
 
 describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
   const STATUS = {
-    dark: "pos #8AD3A1 · neg #F2849B · negStrong #F2849B · onNeg #16171A · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · warnBg #301904 · lamp #F2CC7A · lampBg #241B0C",
-    light: "pos #1F6B3F · neg #A81E3C · negStrong #A81E3C · onNeg #FFFFFF · negBg #FFECEF · negInk #8A0C33 · warn #9F4A00 · warnBg #FFF1E2 · lamp #6A3E00 · lampBg #FBF1DC",
+    dark: "pos #8AD3A1 · posBg #16261C · neg #F2849B · negStrong #F2849B · onNeg #16171A · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · warnBg #301904 · lamp #F2CC7A · lampBg #241B0C",
+    light: "pos #1F6B3F · posBg #EAF6EE · neg #A81E3C · negStrong #A81E3C · onNeg #FFFFFF · negBg #FFECEF · negInk #8A0C33 · warn #9F4A00 · warnBg #FFF1E2 · lamp #6A3E00 · lampBg #FBF1DC",
   };
   const pairs = (line: string) => line.split(" · ").map((p) => p.split(" "));
 

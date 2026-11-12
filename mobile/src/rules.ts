@@ -32,11 +32,11 @@ export { daysLeft };
 // ── badges ──────────────────────────────────────────────────────────────
 
 export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
-  UNDER_REVIEW: { glyph: "◇", border: "solid", pending: true },
+  UNDER_REVIEW: { glyph: "◇", border: "solid", pending: true, tone: "warn" },
   REJECTED: { glyph: "✕", border: "solid" },
-  APPEALING: { glyph: "↺", border: "solid", pending: true },
+  APPEALING: { glyph: "↺", border: "solid", pending: true, tone: "warn" },
   APPEAL_REJECTED: { glyph: "✕", border: "dashed" },
-  APPROVED: { glyph: "✓", border: "solid" },
+  APPROVED: { glyph: "✓", border: "solid", tone: "pos" },
 };
 
 /**
@@ -46,7 +46,7 @@ export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
  */
 export const SOUL_STATE_BADGES: Record<string, BadgeSpec> = {
   /** Still to be decided: the open diamond, on s2 — C15's 待审. */
-  JUDGING: { glyph: "◇", border: "solid", pending: true },
+  JUDGING: { glyph: "◇", border: "solid", pending: true, tone: "warn" },
   /** A disposition is on record: a filled box within the frame. */
   DISPOSED: { glyph: "▣", border: "solid" },
   /** Moving on: the cycle arrow. */

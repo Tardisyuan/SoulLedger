@@ -288,19 +288,20 @@ describe("the tab bar (补足 B11 / C14)", () => {
   };
   const label = (name: string) => flat(screen.getByTestId(`tab-${name}-label`));
 
-  it("v4 capsule: the current tab is the civilization's colour (600) on 18% of its glow; the rest --sub 400", () => {
+  it("第三十批: one character over a small label; the current is ink with a 14×2 rule in the civilization's colour, the rest --faint-text", () => {
     const t = themeFor("CHINESE", "light");
-    expect([t.plaque, t.ink, t.inkMuted, t.s1]).toEqual([v4.civ.cn.tL, v4.light.ink, v4.light.sub, v4.light.card]);
+    expect([t.plaque, t.ink]).toEqual([v4.civ.cn.tL, v4.light.ink]);
     wrap(bar(["本世", "转生", "书信", "朋友圈"], 2), signedIn());
-    expect(screen.getAllByTestId("tab-current-pill")).toHaveLength(1);
-    expect(flat(screen.getByTestId("tab-current-pill"))).toMatchObject({ backgroundColor: `${v4.civ.cn.glow}2E`, borderRadius: 999 });
-    expect(label("Letters")).toMatchObject({ color: t.plaque, fontFamily: "SoulLedgerSans_600", fontSize: 11 });
-    expect(label("Life")).toMatchObject({ color: t.inkMuted, fontFamily: "SoulLedgerSans_400" });
+    expect(["Life", "Applications", "Letters", "Circle"].map((n) => screen.getByTestId(`tab-${n}-glyph`).props.children)).toEqual(["世", "生", "信", "圈"]);
+    expect(flat(screen.getByTestId("tab-Letters-glyph"))).toMatchObject({ fontSize: 18, lineHeight: 22, fontFamily: "NotoSerifSC_600", color: t.ink });
+    expect(screen.getAllByTestId("tab-current-mark")).toHaveLength(1);
+    expect(flat(screen.getByTestId("tab-current-mark"))).toMatchObject({ backgroundColor: t.plaque, width: 14, height: 2 });
+    expect(label("Letters")).toMatchObject({ color: t.ink, fontFamily: "SoulLedgerSans_600", fontSize: 11 });
+    expect(label("Life")).toMatchObject({ color: t.faintText, fontFamily: "SoulLedgerSans_400" });
     expect(label("Life").color).not.toBe(t.plaque);
-    // A round capsule on the opaque card (用户 2026-11-06: not v4's 70% until a device pass), 64 high.
-    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: v4.light.card, borderRadius: 999, minHeight: 64 });
-    // v4's 14 is off the App's spacing scale (补足 A2): 16.
-    expect(flat(screen.getByTestId("tab-bar-ground"))).toMatchObject({ paddingHorizontal: 16, backgroundColor: v4.light.main });
+    // No capsule: the page's ground under a hairline.
+    expect(flat(screen.getByTestId("tab-bar-ground"))).toMatchObject({ backgroundColor: v4.light.main, borderTopColor: t.hair, borderTopWidth: 1 });
+    expect(flat(screen.getByTestId("tab-bar")).borderRadius).toBeUndefined();
   });
 
   it("one label past the pillar's threshold (core's pillarIsWide): all four may take two lines, not only that one", () => {

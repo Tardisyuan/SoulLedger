@@ -8,13 +8,19 @@
 // ── badges ──────────────────────────────────────────────────────────────
 
 /**
- * 补足 C15「状态徽章 · 领域枚举」: a badge is a domain value, never a status colour — ink
- * words in a 1px ink3 frame, told apart by glyph and border. The ones still waiting on
- * someone (`pending`: 待审 / 申诉中) sit on s2. A ✕ is ink too: 冷玫红 is for the system
- * failing, not for a decision (B8). `unknown` is the value the app cannot name.
+ * 补足 C15「状态徽章 · 领域枚举」, redrawn by 第三十批 淡染: a badge is a domain value, told apart by its
+ * glyph — a tinted ground, no frame (`Badge`). `tone` picks one of the three tints; the rest are neutral. A ✕
+ * stays neutral: 冷玫红 is for the system failing, not for a decision (B8). `border` and `pending` are the
+ * C15 shapes, no longer drawn (the unknown value alone keeps its dotted frame). `unknown` is the value the
+ * app cannot name.
  */
 export interface BadgeSpec {
   glyph: string;
+  /**
+   * 第三十批 淡染: four colours only — absent is neutral (card2 under --sub); pos / neg / warn their tints.
+   * Never a civilization colour. The glyph still says it without the colour.
+   */
+  tone?: "pos" | "neg" | "warn";
   border: "solid" | "dashed" | "dotted";
   pending?: boolean;
   unknown?: boolean;

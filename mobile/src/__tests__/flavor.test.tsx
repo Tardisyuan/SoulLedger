@@ -68,7 +68,9 @@ describe("every other title bar (v4: no band)", () => {
     expect(StyleSheet.flatten(screen.getByRole("header").props.style)).toMatchObject({ fontSize: 20, fontFamily: "NotoSerifSC_600", color: theme.ink });
     // v1's 6pt band is gone, not doubled under the plaque's; v2's dark-scheme top highlight too.
     expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
-    expect(screen.getByTestId("header").children).toHaveLength(1);
+    // 第三十批: the frame holds the 2px top line in the civilization's colour and the bar — nothing else.
+    expect(screen.getByTestId("header").children).toHaveLength(2);
+    expect(StyleSheet.flatten(screen.getByTestId("topline").props.style)).toMatchObject({ height: 2, backgroundColor: theme.plaque });
     await act(async () => {});
   });
 });

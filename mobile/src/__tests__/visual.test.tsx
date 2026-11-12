@@ -64,7 +64,7 @@ function tree(children: ReactNode, civilization: string | null = "CHINESE") {
 beforeEach(() => installMobilePlatform());
 
 describe("the unrecognized-value badge", () => {
-  it("shows the label AND the raw member, in mono, inside a dotted border", () => {
+  it("shows the label AND the raw member, in mono, inside a dotted border (the one tag that keeps a frame)", () => {
     wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value="PENDING_SYNC" />);
     const badge = screen.getByTestId("b");
     expect(within(badge).getByText("?")).toBeTruthy();
@@ -74,13 +74,29 @@ describe("the unrecognized-value badge", () => {
     expect(flat(badge).borderStyle).toBe("dotted");
   });
 
-  it("a known member shows its label only — no raw value beside it, no dotted border", () => {
+  it("a known member shows its label only — no raw value beside it, no frame (第三十批 淡染)", () => {
     wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value="REJECTED" />);
     const badge = screen.getByTestId("b");
     expect(within(badge).getByText("已驳回")).toBeTruthy();
     expect(within(badge).queryByText("REJECTED")).toBeNull();
     expect(within(badge).queryByText("未识别取值")).toBeNull();
-    expect(flat(badge).borderStyle).toBe("solid");
+    expect(flat(badge).borderWidth).toBeUndefined();
+    // Neutral: card2 under --sub, radius 4, 28 high.
+    const t = themeFor("CHINESE", "dark");
+    expect(flat(badge)).toMatchObject({ backgroundColor: t.s2, borderRadius: 4, minHeight: 28 });
+    expect(flat(within(badge).getByText("已驳回")).color).toBe(t.inkMuted);
+  });
+
+  it.each([
+    ["UNDER_REVIEW", "warn", "warnBg"],
+    ["APPROVED", "pos", "posBg"],
+  ] as const)("%s is tinted %s: its colour on its tint, never the civilization's", (value, ink, ground) => {
+    wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value={value} />);
+    const t = themeFor("CHINESE", "dark");
+    const badge = screen.getByTestId("b");
+    expect(flat(badge).backgroundColor).toBe(t[ground]);
+    expect(flat(screen.getByTestId("b-glyph")).color).toBe(t[ink]);
+    expect([t.plaque, t.glow]).not.toContain(flat(badge).backgroundColor);
   });
 
   it("a known pill never wraps (iOS put its glyph over its label); only the raw member may", () => {
@@ -97,7 +113,7 @@ describe("soul-state badges", () => {
     ["ALIVE", "在世", "○", "solid"],
     ["LOST", "失踪", "◌", "dashed"],
     ["SETTLED", "已结算", "≡", "solid"],
-  ])("%s is named (%s) with its own glyph %s — not the unknown badge", (state, label, glyph, border) => {
+  ])("%s is named (%s) with its own glyph %s — not the unknown badge", (state, label, glyph, _border) => {
     wrap(<EnumBadge testID="b" namespace={["soul_app", "soul_states"].join(".")} table={SOUL_STATE_BADGES} value={state} />);
     const badge = screen.getByTestId("b");
     expect(within(badge).getByText(label)).toBeTruthy();
@@ -107,7 +123,8 @@ describe("soul-state badges", () => {
     expect(flat(within(badge).getByText(label)).fontFamily).not.toBe("SoulLedgerGlyphs");
     expect(within(badge).queryByText("未识别取值")).toBeNull();
     expect(within(badge).queryByText(state)).toBeNull();
-    expect(flat(badge).borderStyle).toBe(border);
+    // 第三十批: no frame; the glyph carries the shape (the table's `border` is no longer drawn).
+    expect(flat(badge).borderWidth).toBeUndefined();
   });
 
   it("a state the app does not know still gets the unknown badge with its raw value", () => {
@@ -330,17 +347,17 @@ describe("v2 base components", () => {
   const hosts = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.type === "string");
   const hasPath = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.props.d === "string").length > 0;
 
-  it("primary is the plaque's fill (v4 --solid, the band) under onPlaque; pressing darkens it 24%, never lightens it", () => {
+  it("primary is ink under the page's ground (第三十批 墨色实底, not the civilization's colour); pressing darkens it 24%, never lightens it", () => {
     wrap(<Button testID="go" title="提交" onPress={jest.fn()} />);
-    expect(flat(screen.getByTestId("go")).backgroundColor).toBe(cn.plaqueFill);
-    expect(cn.plaqueFill).toBe(cn.band); // v4 --solid: white text clears AA on every civilization, both schemes
-    expect(flat(screen.getByText("提交")).color).toBe(cn.onPlaque);
+    expect(flat(screen.getByTestId("go")).backgroundColor).toBe(cn.ink);
+    expect(flat(screen.getByTestId("go")).backgroundColor).not.toBe(cn.plaqueFill);
+    expect(flat(screen.getByText("提交")).color).toBe(cn.s0);
     // The Pressable's own style function, asked for its pressed look (the test renderer has no touch).
     let pressable = screen.getByTestId("go").parent;
     while (pressable && typeof pressable.props.style !== "function") pressable = pressable.parent;
     const styleOf = pressable!.props.style as (s: { pressed: boolean }) => unknown;
     const pressed = StyleSheet.flatten(styleOf({ pressed: true }) as never) as Record<string, unknown>;
-    expect(pressed.backgroundColor).toBe(shade(cn.plaqueFill));
+    expect(pressed.backgroundColor).toBe(shade(cn.ink));
     expect(shade("#B3402C")).toBe("#883121");
   });
 

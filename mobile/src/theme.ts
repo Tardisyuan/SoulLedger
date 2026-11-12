@@ -90,9 +90,10 @@ export const FAINT_TEXT = { dark: "#8E9197", light: "#686B70" } as const;
  * light's crimson. neg is always drawn with ✕ and words, never by colour alone.
  */
 export const semantic = {
-  dark: { pos: v4.dark.pos, neg: v4.dark.neg, negStrong: v4.dark.neg, onNeg: v4.dark.onNeg, negInk: "#FFD3DC", negBg: "#33101A", warn: "#FF9A3C", warnBg: "#301904", lamp: "#F2CC7A", lampBg: "#241B0C", scrim: "rgba(0,0,0,0.62)" },
-  light: { pos: v4.light.pos, neg: v4.light.neg, negStrong: v4.light.neg, onNeg: v4.light.onNeg, negInk: "#8A0C33", negBg: "#FFECEF", warn: "#9F4A00", warnBg: "#FFF1E2", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
+  dark: { pos: v4.dark.pos, posBg: "#16261C", neg: v4.dark.neg, negStrong: v4.dark.neg, onNeg: v4.dark.onNeg, negInk: "#FFD3DC", negBg: "#33101A", warn: "#FF9A3C", warnBg: "#301904", lamp: "#F2CC7A", lampBg: "#241B0C", scrim: "rgba(0,0,0,0.62)" },
+  light: { pos: v4.light.pos, posBg: "#EAF6EE", neg: v4.light.neg, negStrong: v4.light.neg, onNeg: v4.light.onNeg, negInk: "#8A0C33", negBg: "#FFECEF", warn: "#9F4A00", warnBg: "#FFF1E2", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
 } as const;
+// `posBg`: 第三十批 the pos tag's tint (`--pos-tint`); a neg / warn tag sits on `negBg` / `warnBg`.
 // `warnBg` (补足 D 组 警示底): the ground of a warning box; the text on it is `warn` itself.
 // `scrim` rides along here because it is global too (补足 A2 阴影与遮罩): one use —
 // under a dialog or a sheet — and one value per scheme, 0.42 light / 0.62 dark.
@@ -104,6 +105,15 @@ export const semantic = {
  */
 export const space = [2, 4, 8, 12, 16, 24, 32, 48] as const;
 export const GUTTER_PT = 20;
+
+/**
+ * 第三十批「卷宗」 step 1, the touch sizes — the web's tokens of the same names, same values:
+ *   controlSm / Md / Lg   --control-h-sm 44 · --control-h-md 48 · --control-h-lg 56
+ *   tag                   a status tag on a touch screen (the web's 22 on a desk)
+ *   topline               --topline, the 2px civilization line across the top of a page
+ *   toastBar              --toast-bar, a toast's 3px semantic rule on its left
+ */
+export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, tag: 28, topline: 2, toastBar: 3 } as const;
 /**
  * v4 (user decision 2026-11-06): controls 4 — inputs, buttons, tags / badges; panels, dialogs and
  * sheets 6 (a sheet rounds its top corners only; v3's 8 became 6). The pill (the lamp, a drawer
@@ -121,13 +131,15 @@ export const radius = { none: 0, control: 4, dialog: 6, pill: 999 } as const;
  *                            the home is usable from 480 and the splash layer is gone at 720
  *   sheetIn / sheetOut       a bottom sheet opens / closes: v3 --duration-layout 240, and 180 out
  *                            (v3 B2 改派弹层「240ms 进入 … 180ms 退出」; until 2026-10-03 200 / 120)
- *   toastHold                v3 B2 Toast「停留 4s」 (until 2026-10-03 1.9s)
+ *   toastHold                v3 B2 Toast「停留 4s」 (until 2026-10-03 1.9s) — a success; `toastInfoHold` 6s a notice
  *   sectionIn / sectionOut   a section's body appears (base, 4px down) / goes (fast) — 第 2 轮 4b
  */
 export const motion = {
   fade: 120,
   toast: 160,
   toastHold: 4000,
+  // 第三十批: a plain notice stays 6s; a success 4s (`toastHold`); a failure until it is closed.
+  toastInfoHold: 6000,
   breath: 1600,
   welcomeIn: 600,
   welcomeHold: 1200,
@@ -204,6 +216,8 @@ export interface Theme {
   /** v4 第八批 `--faint-text`: readable text lighter than `--sub` (counts, group headings). See `FAINT_TEXT`. */
   faintText: string;
   pos: string;
+  /** 第三十批 `--pos-tint`: a pos tag's ground. */
+  posBg: string;
   neg: string;
   negStrong: string;
   /** Text on a `negStrong` fill (v4 `--onNeg`). */

@@ -26,7 +26,7 @@ import { useI18n } from "../i18n";
 import { TAG_GLYPH } from "../rules";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
-import { radius, type Theme } from "../theme";
+import { radius, touch, type Theme } from "../theme";
 import { Button, Empty, FadeIn, LATIN_KEYBOARD, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "../navTypes";
 
@@ -61,21 +61,23 @@ export function Glyph({ text, tone, dotted, size = 30 }: { text: string; tone: "
   );
 }
 
-/** A small square-cornered label: 待回复 (dotted ink), 已闭 / 封存 (hairline), 互关 (solid ink). */
-/** `waiting` (dotted: not settled yet) and `marked` (solid) are both ink; `quiet` is ink3 on a hairline. */
+/**
+ * 第三十批 淡染, as `Badge`: no frame, radius 4, 28 high. `waiting` (待回复, 审核中: not settled yet) is the warn
+ * tint; `marked` (互关) and `quiet` (已闭 / 封存 / 公开范围) are neutral — card2 under --sub, `marked` in ink.
+ */
 /**
  * `glyph` (v3: glyph + word, `TAG_GLYPH` in rules.ts) sits before the word, from the bundled glyph
  * font. It is hidden from screen readers: the tag is one accessible element labelled by the word.
  */
 export function Tag({ text, tone, glyph, testID }: { text: string; tone: "waiting" | "marked" | "quiet"; glyph?: string; testID?: string }) {
   const t = useTheme();
-  const color = tone === "quiet" ? t.inkSubtle : t.ink;
+  const color = tone === "waiting" ? t.warn : tone === "marked" ? t.ink : t.inkMuted;
   return (
     <View
       testID={testID}
       accessible
       accessibilityLabel={text}
-      style={[styles.tag, { borderColor: tone === "quiet" ? t.hair2 : color, borderStyle: tone === "waiting" ? "dotted" : "solid" }]}
+      style={[styles.tag, { backgroundColor: tone === "waiting" ? t.warnBg : t.s2 }]}
     >
       {glyph ? (
         <Txt
@@ -533,8 +535,8 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, marginTop: 8 },
   glyph: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   glyphText: { fontFamily: family.ui[500] },
-  tag: { flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  tagText: { fontFamily: family.ui[500], fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
+  tag: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: touch.tag, borderRadius: radius.control, paddingHorizontal: 8, paddingVertical: 4 },
+  tagText: { fontFamily: family.ui[500], fontSize: 13, lineHeight: 18, letterSpacing: 0 },
   tagGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
   empty: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48 },
   emptyButton: { alignSelf: "stretch", marginTop: 4 },

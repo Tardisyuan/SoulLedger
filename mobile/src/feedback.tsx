@@ -1,6 +1,7 @@
 /**
- * Transient feedback: the toast (bottom, 110pt up, 4s, success / failure). It only fades —
- * 160ms, or 0 under reduce-motion. And `Sheet`, v2's bottom sheet, at the end. The sign-out
+ * Transient feedback: the toast (第三十批: card2 with a 3px rule on its left in the semantic colour, above the
+ * tab bar, 16 from the sides; a success stays 4s, a notice 6s, a failure until it is closed; at most 3 stacked,
+ * the newest at the bottom). It only fades — 160ms, or 0 under reduce-motion. And `Sheet`, v2's bottom sheet, at the end. The sign-out
  * confirmation is in `logout.tsx`: it reads `loginRules`, which the officer app (it shares this
  * file) has no use for.
  */
@@ -15,79 +16,110 @@ import {
   useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { Animated, BackHandler, Dimensions, Keyboard, StyleSheet, type ScrollView, type TextInput } from "react-native";
+import { Animated, BackHandler, Dimensions, Keyboard, Pressable, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
 import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
-import { radius } from "./theme";
-import { InSheetContext, SheetRevealContext, GUTTER, Txt, useReducedMotionDurations, useTheme } from "./ui";
+import { useI18n } from "./i18n";
+import { radius, touch } from "./theme";
+import { InSheetContext, SheetRevealContext, Txt, useReducedMotionDurations, useTheme } from "./ui";
 
-type ToastKind = "success" | "failure";
+type ToastKind = "success" | "info" | "failure";
 type Show = (message: string, kind?: ToastKind) => void;
+type Item = { message: string; kind: ToastKind; id: number };
+
+/** 第三十批: at most three at once; a fourth pushes the oldest out. */
+const MAX_TOASTS = 3;
 
 /** Without a provider (a screen rendered alone in a test) a toast is a no-op, not a crash. */
 const ToastContext = createContext<Show>(() => {});
 export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const t = useTheme();
-  const durations = useReducedMotionDurations();
-  const [toast, setToast] = useState<{ message: string; kind: ToastKind; id: number } | null>(null);
-  const [opacity] = useState(() => new Animated.Value(0));
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const show = useCallback<Show>((message, kind = "success") => setToast({ message, kind, id: Date.now() }), []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const duration = durations.toast;
-    Animated.timing(opacity, { toValue: 1, duration, useNativeDriver: true }).start();
-    timer.current = setTimeout(() => {
-      Animated.timing(opacity, { toValue: 0, duration, useNativeDriver: true }).start(() => setToast(null));
-    }, durations.toastHold);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [toast, opacity, durations]);
-
+  const [toasts, setToasts] = useState<Item[]>([]);
+  const seq = useRef(0);
+  const show = useCallback<Show>((message, kind = "success") => setToasts((list) => [...list, { message, kind, id: ++seq.current }].slice(-MAX_TOASTS)), []);
+  const close = useCallback((id: number) => setToasts((list) => list.filter((x) => x.id !== id)), []);
   return (
     <ToastContext.Provider value={show}>
       {children}
-      {toast ? (
-        <Animated.View
-          pointerEvents="none"
-          accessibilityLiveRegion="polite"
-          accessibilityRole="alert"
-          style={[
-            styles.toast,
-            { opacity, backgroundColor: toast.kind === "failure" ? t.negBg : t.ink, borderColor: toast.kind === "failure" ? t.negStrong : t.ink },
-          ]}
-        >
-          <Icon name={toast.kind === "failure" ? "alert" : "check"} size={15} color={toast.kind === "failure" ? t.neg : t.s0} strokeWidth={1.5} />
-          <Txt testID="toast" variant="caption" style={[styles.toastText, { color: toast.kind === "failure" ? t.negInk : t.s0 }]}>
-            {toast.message}
-          </Txt>
-        </Animated.View>
+      {toasts.length ? (
+        <View pointerEvents="box-none" style={styles.stack}>
+          {toasts.map((item, i) => (
+            // The newest carries `toast`: what a screen just said (older ones are `toast-earlier`).
+            <Toast key={item.id} item={item} newest={i === toasts.length - 1} onGone={close} />
+          ))}
+        </View>
       ) : null}
     </ToastContext.Provider>
   );
 }
 
+function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: (id: number) => void }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const durations = useReducedMotionDurations();
+  const [opacity] = useState(() => new Animated.Value(0));
+  const failure = item.kind === "failure";
+  const bar = failure ? t.neg : item.kind === "success" ? t.pos : t.hair2;
+  const icon = failure ? "alert" : item.kind === "success" ? "check" : "info";
+  const leave = useCallback(() => {
+    Animated.timing(opacity, { toValue: 0, duration: durations.toast, useNativeDriver: true }).start(() => onGone(item.id));
+  }, [opacity, durations.toast, onGone, item.id]);
+  useEffect(() => {
+    Animated.timing(opacity, { toValue: 1, duration: durations.toast, useNativeDriver: true }).start();
+    // A failure often leaves a draft for the person to deal with: it stays until it is closed.
+    if (failure) return;
+    const timer = setTimeout(leave, item.kind === "success" ? durations.toastHold : durations.toastInfoHold);
+    return () => clearTimeout(timer);
+  }, [opacity, durations, failure, item.kind, leave]);
+  return (
+    <Animated.View
+      pointerEvents={failure ? "box-none" : "none"}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="alert"
+      style={[styles.toast, { opacity, backgroundColor: t.s2, borderColor: t.hair2, borderLeftColor: bar }]}
+    >
+      <View style={styles.toastIcon}>
+        <Icon name={icon} size={15} color={failure ? t.neg : item.kind === "success" ? t.pos : t.inkMuted} strokeWidth={1.5} />
+      </View>
+      <Txt testID={newest ? "toast" : "toast-earlier"} variant="body" style={styles.toastText}>
+        {item.message}
+      </Txt>
+      {failure ? (
+        <Pressable
+          testID={newest ? "toast-close" : undefined}
+          accessibilityRole="button"
+          accessibilityLabel={tr("common.close")}
+          onPress={() => onGone(item.id)}
+          style={styles.toastClose}
+        >
+          <Icon name="close" size={14} color={t.faintText} strokeWidth={1.4} />
+        </Pressable>
+      ) : null}
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
+  // Above the tab bar, 16 from the sides (第三十批 窄屏).
+  stack: { position: "absolute", left: 16, right: 16, bottom: 110, gap: 8 },
   toast: {
-    position: "absolute",
-    left: GUTTER,
-    right: GUTTER,
-    bottom: 110,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingLeft: 16,
+    paddingRight: 4,
+    paddingVertical: 12,
     borderWidth: 1,
+    borderLeftWidth: touch.toastBar,
+    borderRadius: radius.dialog,
   },
-  toastText: { flex: 1, fontSize: 13 },
+  toastIcon: { paddingVertical: 4 },
+  toastText: { flex: 1, paddingVertical: 0, paddingRight: 12 },
+  // The close is a 44pt target in the toast's corner.
+  toastClose: { width: touch.controlSm, height: touch.controlSm, marginVertical: -12, alignItems: "center", justifyContent: "center" },
 });
 
 /**

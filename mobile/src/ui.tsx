@@ -62,7 +62,7 @@ import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useOnline } from "./online";
 import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./layout";
-import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme";
+import { GUTTER_PT, motion, radius, space, themeFor, touch, type Theme } from "./theme";
 
 // ── theme & motion ─────────────────────────────────────────────────────
 
@@ -165,6 +165,12 @@ export const TYPE = {
   caption: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
   valueLg: { fontSize: 30, lineHeight: 38, fontFamily: family.mono[500] },
+  /**
+   * 第三十批 `--juan`: the 「卷」 register — a record's own words, the serif 16/28. Design draws 400; the app
+   * bundles Noto Serif SC at 500 / 600 only, so it is 500 (a value with no Han takes EB Garamond, `quoteFamily`,
+   * as quoted words do). `--juan-strong` (600) waits for the screen that draws it.
+   */
+  juan: { fontSize: 16, lineHeight: 28, fontFamily: family.serifHan },
 } satisfies Record<string, TextStyle>;
 
 export type Tone = "ink" | "muted" | "subtle" | "neg" | "negInk" | "pos" | "warn";
@@ -758,19 +764,28 @@ export function GoneState({ from, onBack, testID, style }: { from?: string; onBa
 }
 
 /**
- * 文明气质 1e: the civilization's illustration over a WHOLE-PAGE empty state —
- * 书信, 朋友圈, 申请. One drawing per
- * civilization for all three; which page it is, the language bundle says. An
- * empty section inside a page keeps `Empty`'s dash.
+ * 第三十批 空态: over a WHOLE-PAGE empty state (书信, 朋友圈, 申请) the civilization's G mark (the armillary
+ * sphere, the neutral skin's ledger) at 96 and 12% in its colour; the page then says one sentence and one
+ * next step. Which page it is, the language bundle says. An empty section inside a page keeps `Empty`'s dash.
+ * The 12% view holds no touch target (an iOS view under opacity 0 takes none; this one is not 0, and is inert).
  */
 export function PageEmptyArt() {
   const t = useTheme();
   const compact = useFlavorCompact();
   return (
-    <View style={styles.emptyArt}>
-      <Hero testID={`empty-hero-${t.civ}`} civ={t.civ} stroke={t.inkSubtle} compact={compact} />
+    <View testID={`empty-hero-${t.civ}`} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none" style={[styles.emptyArt, styles.emptyMark]}>
+      <Emblem civ={t.civ} size={compact ? 64 : 96} stroke={t.plaque} />
     </View>
   );
+}
+
+/**
+ * 第三十批 页头: the 2px line in the civilization's colour (`--topline`, v4 --civT; the neutral skin's --sub)
+ * across the very top of the page. Drawn over the frame, holds no touch.
+ */
+export function Topline() {
+  const t = useTheme();
+  return <View testID="topline" pointerEvents="none" style={[styles.topline, { backgroundColor: t.plaque }]} />;
 }
 
 export function Hairline({ style }: { style?: StyleProp<ViewStyle> }) {
@@ -1058,13 +1073,14 @@ export function Button({
 }) {
   const t = useTheme();
   const inert = disabled || busy;
-  // A1 按钮, v4 `.btn`: primary = `--solid` under `--onSolid`; danger = solid neg under `--onNeg`
+  // A1 按钮, v4 `.btn`: primary = ink under the page's ground (第三十批: 墨色实底 — the civilization's colour is
+  // kept to the top line, the seal, the spine and focus); danger = solid neg under `--onNeg`
   // (dark ink on dark's pink), always with ✕; secondary = ghost, the `--line2` outline. Disabled and
   // busy: s2 ground, ink3 text, same opacity. Pressed: fills darken 24%, the ghost takes hair.
   const look = inert
     ? { bg: t.s2, border: t.s2, ink: t.inkSubtle, pressed: t.s2 }
     : kind === "primary"
-      ? { bg: t.plaqueFill, border: t.plaqueFill, ink: t.onPlaque, pressed: shade(t.plaqueFill) }
+      ? { bg: t.ink, border: t.ink, ink: t.s0, pressed: shade(t.ink) }
       : kind === "danger"
         ? { bg: t.negStrong, border: t.negStrong, ink: t.onNeg, pressed: shade(t.negStrong) }
         : { bg: "transparent", border: t.hair2, ink: t.ink, pressed: t.hair };
@@ -1239,8 +1255,19 @@ export function FailedLine({ text, onRetry, testID, retryTestID }: { text: strin
 
 // ── values ─────────────────────────────────────────────────────────────
 
-export function DataRows({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.rows, style]}>{children}</View>;
+/**
+ * `juan` (第三十批 卷): the rows are a 「卷」 — hairline-ruled, the field names in a column of their own, the
+ * values in the serif at 16/28 (`TYPE.juan`) in ink. The 本世 page's rows. Without it, the compact list.
+ */
+const JuanContext = createContext(false);
+
+export function DataRows({ children, style, juan }: { children: ReactNode; style?: StyleProp<ViewStyle>; juan?: boolean }) {
+  const t = useTheme();
+  return (
+    <JuanContext.Provider value={!!juan}>
+      <View style={[juan ? [styles.juan, { borderTopColor: t.hair }] : styles.rows, style]}>{children}</View>
+    </JuanContext.Provider>
+  );
 }
 
 /**
@@ -1262,25 +1289,31 @@ export function DataRow({
   mono?: boolean;
   testID?: string;
 }) {
+  const t = useTheme();
   const { compact } = useLayout();
   const { locale } = useI18n();
+  const juan = useContext(JuanContext);
   // Two lines for a long label (EN / egy), and for every row on a narrow screen (handoff 2c).
   const stacked = compact || stacksLabel(label);
+  const tone: Tone = juan ? "ink" : "muted";
+  // 卷: a mono value (a date, a code) keeps its face on the serif's 28 line; words take the serif.
+  const juanFace = juan ? (mono ? styles.juanMono : [TYPE.juan, typeof children === "string" ? { fontFamily: quoteFamily(children) } : null]) : null;
   const value =
     isValidElement(children) && typeof (children as ReactElement).type !== "string" ? (
       children
     ) : mono && typeof children === "string" ? (
-      <OneLine variant="value" tone="muted" style={!stacked && styles.fill}>
+      <OneLine variant="value" tone={tone} style={[!stacked && styles.fill, juanFace]}>
         {children}
       </OneLine>
     ) : (
-      <Txt variant={mono ? "value" : "body"} tone="muted" style={!stacked && styles.fill}>
+      <Txt variant={mono ? "value" : "body"} tone={tone} style={[!stacked && styles.fill, juanFace]}>
         {children}
       </Txt>
     );
+  const labelStyle = stacked ? undefined : juan && locale === "zh-Hans" ? styles.juanLabel : locale === "zh-Hans" ? styles.rowLabel : styles.rowLabelFixed;
   return (
-    <View testID={testID} style={stacked ? styles.rowStacked : styles.row}>
-      <Txt variant="caption" tone="subtle" style={stacked ? undefined : locale === "zh-Hans" ? styles.rowLabel : styles.rowLabelFixed}>
+    <View testID={testID} style={[stacked ? styles.rowStacked : styles.row, juan && [styles.juanRow, { borderBottomColor: t.hair }]]}>
+      <Txt variant="caption" tone="subtle" style={[labelStyle, juan && !stacked && styles.juanLabelLine]}>
         {label}
       </Txt>
       <View style={stacked ? undefined : styles.fill}>{value}</View>
@@ -1319,8 +1352,12 @@ export function EnumValue({
 
 export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: string; raw?: string | null; testID?: string }) {
   const t = useTheme();
-  // 补足 C15: ink words, an ink3 frame, s2 under what is still pending — no status colour.
-  const color = t.ink;
+  // 第三十批 淡染: a tinted ground, no frame, radius 4, 28 high on a phone, the glyph before the word. Four
+  // colours: neutral (s2 under --sub) and the pos / neg / warn tints. Only a value the app cannot name keeps a
+  // (dotted) frame, so it never reads as a status.
+  const tint = spec.unknown ? null : spec.tone;
+  const color = tint ? t[tint] : t.inkMuted;
+  const ground = tint === "pos" ? t.posBg : tint === "neg" ? t.negBg : tint === "warn" ? t.warnBg : t.s2;
   return (
     <View
       testID={testID}
@@ -1332,7 +1369,8 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
       style={[
         styles.badge,
         raw ? styles.badgeWraps : null,
-        { borderColor: t.inkSubtle, borderStyle: spec.border, backgroundColor: spec.pending ? t.s2 : "transparent" },
+        spec.unknown ? { borderWidth: 1, borderColor: t.inkSubtle, borderStyle: "dotted" } : null,
+        { backgroundColor: ground },
       ]}
     >
       <Text testID={testID ? `${testID}-glyph` : undefined} maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.badgeText, styles.badgeGlyph, { color }]}>{spec.glyph}</Text>
@@ -1414,16 +1452,41 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
 
 // ── loading ────────────────────────────────────────────────────────────
 
-/** 补足 C15: s2 bars in the shape of what is coming — static, no shimmer. */
+/**
+ * 第三十批 加载: a 2px line in the civilization's colour runs across the top (no spinner), over s2 bars in
+ * the shape of what is coming — hairline-ruled rows, static, no shimmer. Under reduce motion the line stands
+ * still. `${testID}-bars` holds the bars.
+ */
 export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: string }) {
   const t = useTheme();
   const { t: tr } = useI18n();
+  const reduced = useReducedMotion();
+  const [x] = useState(() => new Animated.Value(0));
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (reduced || !width) return;
+    const run = Animated.loop(Animated.timing(x, { toValue: 1, duration: motion.breath, easing: Easing.inOut(Easing.ease), useNativeDriver: true }));
+    run.start();
+    return () => run.stop();
+  }, [x, reduced, width]);
   const widths = ["70%", "90%", "50%", "80%", "60%"] as const;
   return (
-    <View testID={testID} accessible accessibilityLabel={tr("soul_app.common.loading")} style={styles.skeleton}>
-      {Array.from({ length: lines }, (_, i) => (
-        <View key={i} style={{ width: widths[i % widths.length], height: 12, backgroundColor: t.s2 }} />
-      ))}
+    <View testID={testID} accessible accessibilityRole="progressbar" accessibilityLabel={tr("soul_app.common.loading")} accessibilityState={{ busy: true }}>
+      <View testID={testID ? `${testID}-line` : undefined} onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={[styles.progressTrack, { backgroundColor: t.hair }]}>
+        <Animated.View
+          style={[
+            styles.progressRun,
+            { backgroundColor: t.plaque, transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [-0.32 * width, width] }) }] },
+          ]}
+        />
+      </View>
+      <View testID={testID ? `${testID}-bars` : undefined} style={styles.skeleton}>
+        {Array.from({ length: lines }, (_, i) => (
+          <View key={i} style={[styles.skeletonRow, { borderBottomColor: t.hair }]}>
+            <View style={{ width: widths[i % widths.length], height: 12, borderRadius: radius.control, backgroundColor: t.s2 }} />
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -1610,6 +1673,9 @@ export const styles = StyleSheet.create({
   gone: { gap: space[4] },
   goneMark: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed" },
   emptyArt: { alignSelf: "center", marginBottom: space[2] },
+  // 第三十批 空态: the G mark at 12%.
+  emptyMark: { opacity: 0.12 },
+  topline: { position: "absolute", top: 0, left: 0, right: 0, height: touch.topline },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
@@ -1649,6 +1715,12 @@ export const styles = StyleSheet.create({
   home: { alignSelf: "stretch" },
   errorCode: { fontSize: 11, opacity: 0.8 },
   rows: { gap: space[2] },
+  juan: { borderTopWidth: 1 },
+  juanRow: { paddingVertical: space[3], borderBottomWidth: 1 },
+  // 第三十批 卷: the field names one column, 72 wide (two to four Han characters), on the value's 28 line.
+  juanLabel: { width: 72 },
+  juanLabelLine: { lineHeight: 28 },
+  juanMono: { fontSize: 14, lineHeight: 28 },
   row: { flexDirection: "row", gap: space[4], alignItems: "flex-start" },
   rowStacked: { flexDirection: "column", gap: space[1] },
   rowLabel: { minWidth: 56, maxWidth: "45%" },
@@ -1658,17 +1730,16 @@ export const styles = StyleSheet.create({
   badge: {
     alignSelf: "flex-start",
     maxWidth: "100%",
-    minHeight: 28,
+    minHeight: touch.tag,
     flexDirection: "row",
     alignItems: "center",
-    columnGap: space[2],
-    borderWidth: 1,
+    columnGap: space[1],
     borderRadius: radius.control,
     paddingHorizontal: space[3],
     paddingVertical: space[1],
   },
   badgeWraps: { flexWrap: "wrap" },
-  badgeText: { fontFamily: family.ui[500], fontSize: 12, lineHeight: 18, letterSpacing: 0.9 },
+  badgeText: { fontFamily: family.ui[500], fontSize: 13, lineHeight: 18, letterSpacing: 0 },
   // Design E 组: every status glyph from the one bundled font, never a per-glyph OS fallback.
   badgeGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
   badgeRaw: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, opacity: 0.85 },
@@ -1678,7 +1749,10 @@ export const styles = StyleSheet.create({
   original: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2], marginTop: space[2] },
   originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[1], paddingVertical: 2 },
   originalText: { fontSize: 11, lineHeight: 16, letterSpacing: 0.4 },
-  skeleton: { gap: space[3], paddingVertical: space[4] },
+  skeleton: { paddingVertical: space[2] },
+  skeletonRow: { paddingVertical: space[3], borderBottomWidth: 1 },
+  progressTrack: { height: touch.topline, overflow: "hidden" },
+  progressRun: { width: "32%", height: touch.topline },
   radio: { width: 16, height: 16, borderWidth: 1.5, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   radioDot: { width: 8, height: 8, borderRadius: radius.pill },
   track: { width: 44, height: 26, borderWidth: 1.5, padding: 2, justifyContent: "center" },

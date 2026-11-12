@@ -5075,7 +5075,11 @@
     "tabs": {
       "life": "本世",
       "applications": "转生申请",
-      "rebirth": "转生"
+      "rebirth": "转生",
+      "glyph_life": "世",
+      "glyph_rebirth": "生",
+      "glyph_letters": "信",
+      "glyph_circle": "圈"
     },
     "life": {
       "cycle": "第 {{cycle}} 世",
@@ -5119,6 +5123,7 @@
       "here": "你现在在哪",
       "stage": "本世阶段 {{at}} / {{total}}",
       "balance": "本世余额",
+      "balance_none": "功过都还没有记上。",
       "ledger": "本世账目",
       "ledger_hint": "展开一项查看",
       "station": "所在之站",

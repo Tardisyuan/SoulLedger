@@ -349,10 +349,13 @@ describe("a part that failed, and one still loading (补足 C15)", () => {
     expect(retry).toHaveBeenCalled();
   });
 
-  it("loading: static s2 bars, no hairline grey and nothing animated", () => {
+  it("loading: a 2px line in the civilization's colour on top (第三十批, no spinner), over static s2 bars", () => {
     wrap(<Skeleton testID="sk" lines={3} />);
-    const bars = (screen.getByTestId("sk") as unknown as { children: { props: { style?: unknown } }[] }).children;
-    expect(bars.map((b) => flat(b).backgroundColor)).toEqual(Array(3).fill(themeFor("CHINESE", "light").s2));
+    const t = themeFor("CHINESE", "light");
+    const rows = (screen.getByTestId("sk-bars") as unknown as { children: { children: { props: { style?: unknown } }[] }[] }).children;
+    expect(rows.map((r) => flat(r.children[0]).backgroundColor)).toEqual(Array(3).fill(t.s2));
+    expect(flat(screen.getByTestId("sk-line")).height).toBe(2);
+    expect(screen.getByTestId("sk-line").findAll((n) => !!n.props.style && flat(n).backgroundColor === t.plaque).length).toBeGreaterThan(0);
   });
 });
 

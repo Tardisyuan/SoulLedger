@@ -4,7 +4,8 @@
  * it. A tab's root wears the big title: the outline seal (38) in the civilization's colour, the title in the
  * serif at 30/38 and its sub line (civilization · life · hall) in --sub. Every other bar is one row, title 20.
  * Before sign-in, or for a civilization the app does not know, the light is grey and there is no seal.
- * The tab bar is v4's floating capsule.
+ * 第三十批: every page's top is a 2px line in the civilization's colour (`Topline`); the tab bar is four single
+ * characters, each over its small label.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { pillarIsWide } from "@soulledger/core/domain/pillar";
@@ -23,7 +24,7 @@ import { useCurrentHall } from "./useCurrentHall";
 import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
 import { radius, type Theme } from "./theme";
-import { MAX_FONT_SCALE, Txt, enumText, useLayout, useTheme } from "./ui";
+import { MAX_FONT_SCALE, Topline, Txt, enumText, useLayout, useTheme } from "./ui";
 
 /**
  * The page's theme, for what a bar's control opens away from the bar. Since v4 the bar is on the page's own
@@ -55,6 +56,7 @@ export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNo
           <BandPattern civ={t.civ} color={t.glow} width={width} height={height} ringBase={height} />
         </>
       ) : null}
+      <Topline />
       <PageThemeContext.Provider value={t}>{children}</PageThemeContext.Provider>
     </View>
   );
@@ -248,79 +250,79 @@ export function PlaqueHeader({
   );
 }
 
-const TAB_ICONS: Record<string, IconName> = { Life: "tabLife", Applications: "tabRebirth", Letters: "tabLetters", Circle: "tabCircle" };
+/** 第三十批 底栏: each tab is one character (世 / 信 / 圈 / 生) over its small label. Literal keys: messages.test harvests them. */
+const TAB_GLYPHS: Record<string, string> = {
+  Life: "soul_app.tabs.glyph_life",
+  Applications: "soul_app.tabs.glyph_rebirth",
+  Letters: "soul_app.tabs.glyph_letters",
+  Circle: "soul_app.tabs.glyph_circle",
+};
 
 const STACKED_TAB_LABEL_SCALE = 1.5;
 
 /**
- * v4 悬浮胶囊 (V4Batch07 02 外壳 ⑦ / 05 App): a capsule 16 from the screen's sides (v4 14, on the App's scale 16), 64 high, round, on the
- * card (opaque for now; v4 draws it at 70%) — icon 22 over an 11 label; the current item is the civilization's colour (`plaque`, v4 --civT,
- * which holds 4.5:1 on its scheme's grounds) on 18% of its glow. C14: when any label is too long for one line
- * (`pillarIsWide`, the web's pillar rule) all of them may take two lines; a label that still does not fit is cut
- * and read whole by its accessibility label. At >= 1.7x text (handoff 2d) the items become rows, as before.
- *
- * ponytail: v4 floats the capsule over the page with a 20pt blur, so content slides under it. Here it sits at the
- * page's foot on the page's own ground — no blur without a new native module (expo-blur), and over the page each
- * tab's list, FAB and 问一问 button would need the bar's height as clearance. 用户 2026-11-06 决定: opaque, at the
- * page's foot, until a device pass decides.
+ * 第三十批 底栏 (step 1 灵魂端): the four items as one character in the title serif (18/22) over an 11 label, on
+ * the page's ground under a hairline. The current item is ink with a 14×2 rule in the civilization's colour under
+ * its character (the focus is one of the four places that colour may go); the rest are --faint-text. The
+ * character is hidden from screen readers: the tab is named by its label. C14: when any label is too long for one
+ * line (`pillarIsWide`, the web's pillar rule) all of them may take two lines; a label that still does not fit is
+ * cut and read whole by its accessibility label. At >= 1.7x text (handoff 2d) the items become rows, as before.
+ * (v4's floating capsule, opaque at the page's foot since 用户 2026-11-06, went with this.)
  */
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
   const { stack } = useLayout();
   const labels = state.routes.map((route) => descriptors[route.key].options.title ?? route.name);
   const wide = pillarIsWide(labels);
   return (
-    <View testID="tab-bar-ground" style={[styles.capsuleGround, { backgroundColor: t.s0, paddingBottom: Math.max(insets.bottom - 12, 8) }]}>
-    <View
-      testID="tab-bar"
-      style={[
-        stack ? styles.tabsStacked : styles.tabs,
-        // Opaque card, at the page's foot (用户 2026-11-06: 先这样，上机看过再定 v4 的 70% + 毛玻璃).
-        { backgroundColor: t.s1, borderColor: t.hair2 },
-      ]}
-    >
-      {state.routes.map((route, index) => {
-        const selected = state.index === index;
-        const { tabBarBadge } = descriptors[route.key].options;
-        const label = labels[index];
-        const color = selected ? t.plaque : t.inkMuted;
-        return (
-          <Pressable
-            key={route.key}
-            testID={`tab-${route.name}`}
-            accessibilityRole="tab"
-            accessibilityLabel={tabBarBadge ? `${label}, ${tabBarBadge}` : label}
-            accessibilityState={{ selected }}
-            onPress={() => {
-              const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-              if (!selected && !event.defaultPrevented) navigation.navigate(route.name, route.params);
-            }}
-            style={({ pressed }) => [
-              stack ? [styles.tabRow, { borderBottomColor: t.hair }] : [styles.tab, wide && styles.tabWide],
-              !selected && pressed && { backgroundColor: t.s2 },
-            ]}
-          >
-            {selected ? <View testID="tab-current-pill" style={[styles.tabCurrent, { backgroundColor: `${t.glow}2E` }]} /> : null}
-            <View style={styles.tabIcon}>
-              {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
-              <Icon name={TAB_ICONS[route.name] ?? "chevron"} size={22} color={color} strokeWidth={1.5} />
-            </View>
-            <Txt
-              testID={`tab-${route.name}-label`}
-              variant="label"
-              numberOfLines={wide || stack ? 2 : 1}
-              // Stacked, four rows share the screen with the page: the label stops at 1.5x (11 → 16.5pt)
-              // instead of the app's 2.35 cap.
-              maxFontSizeMultiplier={stack ? STACKED_TAB_LABEL_SCALE : MAX_FONT_SCALE}
-              style={[styles.tabLabel, { color, fontFamily: family.ui[selected ? 600 : 400] }]}
+    <View testID="tab-bar-ground" style={[styles.tabGround, { backgroundColor: t.s0, borderTopColor: t.hair, paddingBottom: Math.max(insets.bottom - 12, 8) }]}>
+      <View testID="tab-bar" style={stack ? [styles.tabsStacked, { borderColor: t.hair2 }] : styles.tabs}>
+        {state.routes.map((route, index) => {
+          const selected = state.index === index;
+          const { tabBarBadge } = descriptors[route.key].options;
+          const label = labels[index];
+          const color = selected ? t.ink : t.faintText;
+          const glyph = TAB_GLYPHS[route.name] ? tr(TAB_GLYPHS[route.name]) : label.slice(0, 1);
+          return (
+            <Pressable
+              key={route.key}
+              testID={`tab-${route.name}`}
+              accessibilityRole="tab"
+              accessibilityLabel={tabBarBadge ? `${label}, ${tabBarBadge}` : label}
+              accessibilityState={{ selected }}
+              onPress={() => {
+                const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+                if (!selected && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+              }}
+              style={({ pressed }) => [
+                stack ? [styles.tabRow, { borderBottomColor: t.hair }] : [styles.tab, wide && styles.tabWide],
+                !selected && pressed && { backgroundColor: t.s2 },
+              ]}
             >
-              {label}
-            </Txt>
-          </Pressable>
-        );
-      })}
-    </View>
+              <View style={styles.tabGlyphBox} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Txt testID={`tab-${route.name}-glyph`} maxFontSizeMultiplier={STACKED_TAB_LABEL_SCALE} style={[styles.tabGlyph, { color, fontFamily: titleFamily(glyph) }]}>
+                  {glyph}
+                </Txt>
+                {selected ? <View testID="tab-current-mark" style={[styles.tabCurrent, { backgroundColor: t.plaque }]} /> : null}
+                {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
+              </View>
+              <Txt
+                testID={`tab-${route.name}-label`}
+                variant="label"
+                numberOfLines={wide || stack ? 2 : 1}
+                // Stacked, four rows share the screen with the page: the label stops at 1.5x (11 → 16.5pt)
+                // instead of the app's 2.35 cap.
+                maxFontSizeMultiplier={stack ? STACKED_TAB_LABEL_SCALE : MAX_FONT_SCALE}
+                style={[styles.tabLabel, { color, fontFamily: family.ui[selected ? 600 : 400] }]}
+              >
+                {label}
+              </Txt>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -338,17 +340,19 @@ const styles = StyleSheet.create({
   /** 16 from the edge, as 1e draws it: the bar's 4 plus this. */
   titleStart: { paddingLeft: 12 },
   frame: { overflow: "hidden" },
-  /** v4 capsule: 16 from the sides, 64 high (4 + 56 + 4), round; the page's ground around it. */
-  // v4 draws 14 from the sides and 6 inside; the App's spacing scale (补足 A2, zhuyinPages.test) has 16 and 4.
-  capsuleGround: { paddingHorizontal: 16, paddingTop: 8 },
-  tabs: { flexDirection: "row", minHeight: 64, padding: 4, gap: 4, borderWidth: 1, borderRadius: radius.pill },
-  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 2, borderRadius: radius.pill },
+  /** 第三十批 底栏: the page's ground under a hairline, the four items 56 high. */
+  tabGround: { paddingHorizontal: 8, paddingTop: 4, borderTopWidth: 1 },
+  tabs: { flexDirection: "row", minHeight: 56 },
+  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 2, borderRadius: radius.control },
   tabWide: { justifyContent: "flex-start", paddingTop: 4 },
   tabsStacked: { flexDirection: "column", borderWidth: 1, borderRadius: radius.dialog, overflow: "hidden" },
   tabRow: { minHeight: 48, paddingVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
-  tabCurrent: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.pill },
-  tabIcon: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
-  tabBadge: { position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: radius.pill },
+  tabGlyphBox: { alignItems: "center" },
+  /** v4's title serif: 18 / 22. */
+  tabGlyph: { fontSize: 18, lineHeight: 22, letterSpacing: 0 },
+  /** The current item's 14 × 2 rule, 3 under its character. */
+  tabCurrent: { position: "absolute", bottom: -3, width: 14, height: 2, borderRadius: 1 },
+  tabBadge: { position: "absolute", top: -2, right: -8, width: 8, height: 8, borderRadius: radius.pill },
   /** v4: 11 / 14 under a 22 icon. */
   tabLabel: { fontSize: 11, lineHeight: 14, letterSpacing: 0, textAlign: "center" },
   /** v4 page header: the seal, then the big title over its sub line. */
