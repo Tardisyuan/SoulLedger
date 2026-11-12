@@ -10,15 +10,14 @@ interface ToastItem {
   id: string;
   message: string;
   type: ToastType;
-  timer: ReturnType<typeof setTimeout>;
+  timer: ReturnType<typeof setTimeout> | undefined;
 }
 
 // ── Pure DOM toast — no React state, no effects, no portals ──
 
-// 规范 v3(2026-10-01):toast 是一块实心 ink 底、反白字;失败是实心冷玫红
-// (`--color-danger`)底。颜色全部在 `app/globals.css` 的 `.toast` 块里,按
-// `data-type` 选 —— 这里只给字形。图标跟着字色走,不再各带一种状态色:在实心 ink
-// 底上,浅色主题的状态绿 / 蓝是深色字形压在近黑底上,读不出来。
+// 第三十批「卷宗」第 1 步(Design v4 第三十批第一节第 3 条):surface-2 底、ink 字,语义色只在左侧 3px
+// 色条与图标上。颜色全部在 `app/globals.css` 的 `.toast` 块里,按 `data-type` 选 —— 这里只给字形、
+// 停留时长与叠放上限。
 const ICON: Record<ToastType, string> = {
   success: "✓",
   error: "✕",
@@ -41,6 +40,19 @@ const ROLE: Record<ToastType, "alert" | "status"> = {
   info: "status",
   error: "alert",
 };
+
+/**
+ * 停留多久(第三十批):成功 4 s、普通 6 s 后自动收起;失败**不自动收起** —— 失败往往有草稿要用户处理,
+ * 自己消失等于把那件事藏起来。`null` = 等用户点 ×。调用方显式传的时长只对成功与普通生效。
+ */
+export const TOAST_DURATION: Record<ToastType, number | null> = {
+  success: 4000,
+  info: 6000,
+  error: null,
+};
+
+/** 最多叠 3 条;第 4 条进来时最早的那条让位。 */
+export const MAX_TOASTS = 3;
 
 let toasts: ToastItem[] = [];
 let nextId = 0;
@@ -129,14 +141,17 @@ function removeToast(id: string) {
 export function showToast(
   message: string,
   type: ToastType = "info",
-  // 默认停留 4 秒(规范 v3;v2 是 5 秒)。调用方显式传的时长照旧生效。
-  duration: number = 4000
+  // 不传就按 TOAST_DURATION;失败一律不自动收起,传了也不。
+  duration?: number
 ): string {
   if (typeof document === "undefined") return "";
 
   const id = String(nextId++);
-  const timer = setTimeout(() => removeToast(id), duration);
+  const stay = type === "error" ? null : (duration ?? TOAST_DURATION[type] ?? TOAST_DURATION.info);
+  const timer = stay === null ? undefined : setTimeout(() => removeToast(id), stay);
   const item: ToastItem = { id, message, type, timer };
+  // 叠满了:最早的先走,再放新的。
+  while (toasts.length >= MAX_TOASTS) removeToast(toasts[0].id);
   toasts = [...toasts, item];
 
   const container = getContainer();

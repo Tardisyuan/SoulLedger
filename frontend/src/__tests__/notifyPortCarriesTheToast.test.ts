@@ -166,8 +166,8 @@ describe("the web adapter's notify reaches the browser's toast", () => {
       expect(toastTexts().some((t) => t.includes("short"))).toBe(false);
       expect(toastTexts().some((t) => t.includes("default"))).toBe(true);
 
-      // Past showToast's own 5000ms default, fade included.
-      jest.advanceTimersByTime(4200);
+      // Past showToast's own default for info (6000ms since 第三十批), fade included.
+      jest.advanceTimersByTime(5000);
       expect(toastTexts().some((t) => t.includes("default"))).toBe(false);
     } finally {
       jest.useRealTimers();

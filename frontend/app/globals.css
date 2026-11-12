@@ -1751,84 +1751,96 @@ html.theme-switching *::after {
                                 a private copy of the font stack, so a toast
                                 would keep the old stack after --font-sans moved
 
-   规范 v3(2026-10-01)取代了 v2 的「弹层一律 s1 底 + 1px ink 框、状态只由图标色说」:
-   toast 现在是**实心 ink 底、反白字**(字 = --color-surface-1),失败是**实心冷玫红底**
-   (`.toast[data-type="error"]`,--color-danger)。成功与信息只靠字形 ✓ / ℹ 分,不再各
-   带一种状态色 —— 在实心 ink 底上,浅色主题的状态绿 / 蓝是深字压深底。所以 builder
-   不再往元素上写任何内联样式(v2 时唯一的内联 `--toast-accent` 一并删掉)。
-   仍然没有 3px 状态色左边线:行首 3px 色标是「待我处理」的专用记号。
-
-   字色两种底上都是 --color-surface-1,不写死 #fff:深色主题的冷玫红是 #FF7A9A,白字
-   在上面只有 2.47:1;surface-1 在深色下是近黑,在浅色下是近白,一条规则两种主题都过。
-   实测对比度由 `src/__tests__/toastColourContract.test.ts` 从本文件算出并守住(≥ 4.5)。
+   第三十批「卷宗」第 1 步(Design v4 第三十批第一节第 3 条)取代了 v3 的「实心 ink 底、反白字,失败实心冷玫红」:
+   底一律 surface-2(v4 card2),字 ink;语义色只出现在左侧 3px 色条(`--toast-bar`,inset 阴影画,不占宽)
+   和图标上 —— 成功 success、失败 danger、普通是中性的 line-strong 条 + ink-muted 图标。宽 360;桌面在左下,
+   距边 24;≤ 768 在底栏上方,左右各 16。停留时长与最多 3 条在 `Toast.tsx`。
+   字(ink)、图标(success / danger / ink-muted)都压在 surface-2 上,inkOnSurfaceContract 与
+   `src/__tests__/toastColourContract.test.ts` 从本文件算出并守住(字 ≥ 4.5,色条与焦点环 ≥ 3)。
 
    `src/__tests__/designGuardContract.test.ts` has a rule for `cssText` so the
    next file to reach for it goes red instead of quietly leaving the system. */
 #toast-container {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 24px;
+  bottom: 24px;
+  width: 360px;
+  max-width: calc(100vw - 48px);
   z-index: var(--z-index-toast);
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 8px;
   pointer-events: none;
 }
+@media (max-width: 768px) {
+  #toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: calc(var(--bottom-bar) + 16px);
+    width: auto;
+    max-width: none;
+  }
+}
 
-/* v3 原型:min-height 56、三栏 24px 图标 / 文字 / 关闭、栏距 8。原型的左右内边距是 13px,
-   这里取 12 —— 间距节奏(规范 v2 A2)里没有 13。 */
+/* v4 `.toast`:三栏 20px 图标 / 文字 / 关闭,栏距 8(稿子是 10,节奏里没有 10),内边距 12 / 12 / 12 / 16。 */
 .toast {
+  --toast-c: var(--color-line-strong);
   display: grid;
-  grid-template-columns: 24px 1fr auto;
-  align-items: center;
+  grid-template-columns: 20px 1fr auto;
+  align-items: start;
   gap: 8px;
-  min-height: 56px;
-  min-width: 240px;
-  max-width: 420px;
-  padding: 0 12px;
-  /* 规范 v4(用户 2026-11-08):弹层一律 `--radius-panel`、`--shadow-overlay`。此前是 0、无阴影,
-     顶栏右侧一排弹层里只有它和通知 / 用户菜单是方角。 */
+  padding: 12px 12px 12px 16px;
   border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-overlay);
   border: none;
-  background: oklch(var(--color-ink));
-  color: oklch(var(--color-surface-1));
-  /* 规范 v3:进场 160(fast)、进场曲线、位移 8px;出场 140(dismiss)、出场曲线。停留时长不归这里管。 */
+  background: oklch(var(--color-surface-2));
+  color: oklch(var(--color-ink));
+  box-shadow:
+    inset var(--toast-bar) 0 0 oklch(var(--toast-c)),
+    inset 0 0 0 1px oklch(var(--color-line)),
+    var(--shadow-overlay);
+  /* 进场 160(fast)、进场曲线、自下而上 8px;出场 140(dismiss)、出场曲线。停留时长不归这里管。 */
   animation: toast-in var(--transition-duration-fast) var(--ease-enter);
   pointer-events: auto;
   /* NO `font-family`. Inheriting from `body` is what makes the toast follow
-     --font-sans; the private copy is exactly how it would stop. */
-  font-size: 13px;
-  line-height: 1.55;
+     --font-sans; the private copy is exactly how it would stop. 字 14/22(v4「台」语域)。 */
+  font-size: 14px;
+  line-height: 22px;
 }
 
+.toast[data-type="success"] {
+  --toast-c: var(--color-success);
+}
 .toast[data-type="error"] {
-  background: oklch(var(--color-danger));
+  --toast-c: var(--color-danger);
 }
 
-/* 字形跟着字色走,12px 粗体(原型 `.toast-row b`)。 */
+/* 图标是语义色(普通提示是 ink-muted),与色条同一个 token —— 只有这两处带颜色。 */
 .toast-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
+  height: 22px;
+  font-weight: 600;
+  color: oklch(var(--color-ink-muted));
+}
+.toast[data-type="success"] .toast-icon {
+  color: oklch(var(--color-success));
+}
+.toast[data-type="error"] .toast-icon {
+  color: oklch(var(--color-danger));
 }
 
 .toast-close {
   width: 24px;
-  height: 24px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   border: none;
   cursor: pointer;
-  /* 全不透明:v2 的 0.5 透明度是在浅底上调的,压在实心底上会把 × 调成一块半色。 */
-  color: inherit;
+  color: oklch(var(--color-ink-muted));
   font-size: 16px;
   padding: 0;
   line-height: 1;
@@ -1836,22 +1848,20 @@ html.theme-switching *::after {
 }
 
 .toast-close:hover {
-  background: oklch(var(--color-surface-1) / 0.16);
+  background: oklch(var(--color-surface-3));
+  color: oklch(var(--color-ink));
 }
 
-/* 全局焦点环是 --color-focus,两种主题下都等于 --color-ink —— 正是 toast 的底色,
-   环画上去看不见。在 toast 里环换成字色,内缩到按钮里。 */
+/* 焦点环用字色 ink,内缩到按钮里:文明的焦点色在 surface-2 上不一定够 3:1(中性皮下它就是 ink)。 */
 .toast-close:focus-visible {
-  outline-color: oklch(var(--color-surface-1)) !important;
+  outline-color: oklch(var(--color-ink)) !important;
   outline-offset: -2px;
 }
 
-/* Leaving. `exit` is the curve for something getting out of the way, and the
-   8px lift (v3; was 6) is under the threshold where a reader tracks the movement
-   itself. */
+/* Leaving. `exit` is the curve for something getting out of the way; it sinks the 8px it rose. */
 .toast-leaving {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(8px);
   transition:
     opacity var(--transition-duration-dismiss) var(--ease-exit),
     transform var(--transition-duration-dismiss) var(--ease-exit);
@@ -1861,7 +1871,7 @@ html.theme-switching *::after {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

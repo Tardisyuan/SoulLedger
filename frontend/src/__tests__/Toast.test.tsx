@@ -4,12 +4,15 @@
  * Toast is a pure-DOM module (no React rendering).
  * We test the exported showToast / dismissToast functions.
  */
-import { showToast, dismissToast } from "@/src/components/ui/Toast";
+import { showToast, dismissToast, MAX_TOASTS, TOAST_DURATION } from "@/src/components/ui/Toast";
 
 // ── Helpers ──────────────────────────────────────────
 
 /** Remove the toast container between tests. */
 function cleanupToasts() {
+  // A failure toast no longer leaves by itself (第三十批), so the module's list would carry it into the next
+  // test. Close every one the way a user does, then drop whatever is still fading.
+  document.querySelectorAll<HTMLButtonElement>(".toast-close").forEach((b) => b.click());
   document.getElementById("toast-container")?.remove();
   // `toast-keyframes` used to be a <style> node this module appended at import
   // time. The keyframes are in `app/globals.css` now, so there is nothing left
@@ -109,14 +112,45 @@ describe("Toast", () => {
     expect(document.getElementById(`toast-${id}`)).toBeNull();
   });
 
-  it("默认停留 4000ms(规范 v3;v2 是 5000)—— 3999 时还在,4000 + 离场 200 后没了", () => {
-    const id = showToast("default duration");
-    jest.advanceTimersByTime(3999);
+  // 第三十批:成功 4 s、普通 6 s,失败不自动收起。
+  it.each([
+    ["success", 4000],
+    ["info", 6000],
+  ] as const)("%s 默认停留 %i ms —— 差 1 ms 时还在,到点 + 离场 200 后没了", (type, ms) => {
+    expect(TOAST_DURATION[type]).toBe(ms);
+    const id = showToast("default duration", type);
+    jest.advanceTimersByTime(ms - 1);
     expect(document.getElementById(`toast-${id}`)).not.toBeNull();
 
     jest.advanceTimersByTime(1);
     jest.advanceTimersByTime(200); // fade-out
     expect(document.getElementById(`toast-${id}`)).toBeNull();
+  });
+
+  it("不传类型就是普通提示,停 6 s", () => {
+    const id = showToast("fyi");
+    jest.advanceTimersByTime(5999);
+    expect(document.getElementById(`toast-${id}`)).not.toBeNull();
+    jest.advanceTimersByTime(201);
+    expect(document.getElementById(`toast-${id}`)).toBeNull();
+  });
+
+  it("失败提示不自动收起,调用方传了时长也不;只有 × 关得掉", () => {
+    const id = showToast("boom", "error", 2000);
+    jest.advanceTimersByTime(60 * 60 * 1000);
+    expect(document.getElementById(`toast-${id}`)).not.toBeNull();
+    document.getElementById(`toast-close-${id}`)!.click();
+    jest.advanceTimersByTime(200);
+    expect(document.getElementById(`toast-${id}`)).toBeNull();
+  });
+
+  it("最多叠 3 条:第 4 条进来,最早的那条让位", () => {
+    expect(MAX_TOASTS).toBe(3);
+    const ids = ["a", "b", "c", "d"].map((m) => showToast(m, "error"));
+    jest.advanceTimersByTime(200); // the evicted one's fade-out
+    expect(document.querySelectorAll(".toast")).toHaveLength(3);
+    expect(document.getElementById(`toast-${ids[0]}`)).toBeNull();
+    for (const id of ids.slice(1)) expect(document.getElementById(`toast-${id}`)).not.toBeNull();
   });
 
   // --- dismissToast ---
@@ -181,8 +215,8 @@ describe("Toast 回到设计系统里", () => {
     const info = document.getElementById(`toast-${showToast("fyi")}`)!;
 
     expect(bad.className).toBe("toast");
-    // 规范 v3:失败是实心冷玫红底,规则是 `.toast[data-type="error"]`
-    // (颜色与对比度见 toastColourContract.test.ts)。其余两种是同一块 ink 底。
+    // 第三十批:底一律 surface-2,失败 / 成功只换色条与图标,规则是 `.toast[data-type="…"]`
+    // (颜色与对比度见 toastColourContract.test.ts)。
     expect(bad.dataset.type).toBe("error");
     expect(ok.dataset.type).toBe("success");
     expect(info.dataset.type).toBe("info");
