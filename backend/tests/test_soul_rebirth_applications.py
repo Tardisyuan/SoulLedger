@@ -207,6 +207,31 @@ def test_cross_civilization_is_decided_by_the_initial_reviewer_only(cn_tenant, j
     assert late.status_code == 409 and late.data["code"] == "not_in_initial_review"
 
 
+def test_the_initial_reviewer_decides_cross_civilization_for_a_soul_outside_his_data_scope(
+        cn_tenant, judge_user, django_capture_on_commit_callbacks):
+    """F-OFF-02(2026-11-12):初审派给他(待我审批不看数据范围),官员端批准前先写「跨文明」。
+    这个接口此前按灵魂的数据范围找申请,范围外的答 404,手机上批准整个走不通。"""
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.souls.models import Soul
+    from tests.data_scope_support import org, scope
+
+    account, client = rebirth_ready_soul(cn_tenant)
+    application = RebirthApplication.objects.get(pk=_submit(client, django_capture_on_commit_callbacks).data["id"])
+    judge_user.organization = org(cn_tenant, "本司")
+    judge_user.save(update_fields=["organization"])
+    Soul.all_objects.filter(pk=account.soul_id).update(owner_org=org(cn_tenant, "他司"))
+    scope("JUDGE", "ORG")
+    invalidate_all_permissions()
+
+    url = f"/api/v1/soul-accounts/rebirth-applications/{application.pk}/cross-civilization/"
+    decided = officer_client(judge_user).post(url, {"cross_civilization": False}, format="json")
+    assert decided.status_code == 200, decided.data
+    application.refresh_from_db()
+    assert application.cross_civilization is False
+    # 列表照旧跟灵魂的范围走(P-10)。
+    assert officer_client(judge_user).get(f"/api/v1/soul-accounts/rebirth-applications/{application.pk}/").status_code == 404
+
+
 def test_officer_rebirth_list_is_tenant_scoped(cn_tenant, eu_tenant, judge_user,
                                                django_capture_on_commit_callbacks):
     account, client = rebirth_ready_soul(cn_tenant)

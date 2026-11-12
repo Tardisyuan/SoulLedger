@@ -239,7 +239,13 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
         qs = RebirthApplication.objects.select_related(
             "soul__tenant", "soul__home_tenant", "workflow__current_node", "appeal_workflow__current_node"
         )
-        return DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
+        qs = scope_to_tenant(qs, self.request, field="soul__home_tenant")
+        if self.action == "cross_civilization":
+            # 只有初审节点指定的审批人能写(`cross_civilization_refusal`),而「待我审批」本来就不受数据范围限制
+            # (`data_scope._awaiting_me`):范围外的灵魂照样派到他这一站。这里再套范围,他在官员端批准初审就
+            # 先撞 404,整个批准中止(F-OFF-02,2026-11-12)。殿级隔离仍在。
+            return qs
+        return DataScopeFilter.through_soul(self.request, qs)
 
     @extend_schema(request=CrossCivilizationDecisionSerializer,
                    responses={200: OfficerRebirthApplicationSerializer, 403: SoulErrorSerializer,
