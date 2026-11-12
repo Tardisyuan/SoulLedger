@@ -104,7 +104,7 @@ export async function watchHandOff(page: Page): Promise<void> {
       if (cover) {
         seen.frames++;
         const mine = cover.querySelector("[data-testid='seal'], [data-brand-mark]");
-        const css = mine?.matches("[data-brand-mark]") ? "[data-nav-brand] [data-brand-mark]" : "[data-testid='plaque'] .identity-title [data-testid='seal']";
+        const css = mine?.matches("[data-brand-mark]") ? "[data-nav-brand] [data-brand-mark]" : ".nav-hall-card [data-testid='seal']";
         seen.cover = rect(mine);
         seen.real = Array.from(document.querySelectorAll(css)).map(rect).find(Boolean) ?? null;
         seen.landing = !!document.querySelector("[data-testid='landing-civs']");
@@ -112,8 +112,8 @@ export async function watchHandOff(page: Page): Promise<void> {
         const coverBox = cover.querySelector<HTMLElement>(".demo-cover")?.getBoundingClientRect();
         const label = cover.querySelector(".demo-seal-name");
         if (coverBox && label && coverBox.height < innerHeight - 1 && cover.hasAttribute("data-land") && Number(getComputedStyle(label).opacity) > 0) seen.nameWhileClosing++;
-        // While it closes, the band's title is the real band's, drawn, not under the cover.
-        const title = Array.from(document.querySelectorAll("[data-testid='plaque'] [data-tier]")).map(rect).find(Boolean);
+        // While it closes, the page head's title (第三十批: the page's <h1>) is the real one, drawn, not under the cover.
+        const title = Array.from(document.querySelectorAll("[data-testid='page-head'] h1")).map(rect).find(Boolean);
         if (after && cover.hasAttribute("data-land") && title) {
           const hit = document.elementFromPoint(title.x + title.w / 2, title.y + title.h / 2);
           const now = !!hit?.closest(".demo-cover");
@@ -122,7 +122,7 @@ export async function watchHandOff(page: Page): Promise<void> {
           if (twice) {
             seen.titleCovered++;
             const box = cover.querySelector<HTMLElement>(".demo-cover");
-            const band = document.querySelector("[data-testid='plaque']");
+            const band = document.querySelector("[data-testid='page-head']");
             (window as unknown as { __covered?: string }).__covered ??= JSON.stringify({ title, band: rect(band), box: rect(box), clip: box?.style.clipPath, y: scrollY });
           }
         }

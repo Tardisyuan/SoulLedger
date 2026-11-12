@@ -37,20 +37,20 @@ for (const [path, name] of [
 }
 
 /**
- * 身份带题字与殿名:页面不报时,壳退回面包屑末段 —— /dispatch/propose 上印的是路径段
- * `propose`,详情页上是「详情」;/soul-inbox 不报殿名,带上落回租户展示名「中国地府」。
+ * 殿名:这三页经 `usePlaque` 报殿名,第三十批「卷宗」起写在页头标题上方那一行等宽小字里;
+ * 一页只有一个页头、一个 `<h1>`(身份带与它的第二个标题撤掉了)。
  */
-for (const [path, title, hall] of [
-  ["/dispatch/propose", "发起调度", "酆都 · 第十殿"],
-  [`/dispatch/${PROPOSED_DISPATCH.id}`, "调度详情", "酆都 · 第十殿"],
-  ["/soul-inbox", "殿司收件箱", "酆都 · 第十殿"],
+for (const [path, hall] of [
+  ["/dispatch/propose", "酆都 · 第十殿"],
+  [`/dispatch/${PROPOSED_DISPATCH.id}`, "酆都 · 第十殿"],
+  ["/soul-inbox", "酆都 · 第十殿"],
 ] as const) {
-  test(`${path} 的身份带是「${hall}」「${title}」`, async ({ page }) => {
+  test(`${path} 的页头写「${hall}」`, async ({ page }) => {
     await setupAuthenticatedPage(page);
     await page.goto(path);
-    const band = page.getByTestId("plaque");
-    await expect(band.locator(".identity-court")).toHaveText(hall);
-    // 题字在 `.identity-title` 里那一格 `[data-tier]`(壳里不是 heading,页面的 <h1> 在 PageShell)。
-    await expect(band.locator("[data-tier]")).toHaveText(title);
+    const head = page.getByTestId("page-head");
+    await expect(head.locator("[data-page-shell-eyebrow]")).toHaveText(new RegExp(`^${hall}( · |$)`));
+    await expect(head).toHaveCount(1);
+    await expect(page.locator("h1")).toHaveCount(1);
   });
 }

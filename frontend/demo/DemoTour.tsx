@@ -50,7 +50,7 @@ body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max
 @keyframes demo-seal-out{to{opacity:0}}
 @keyframes demo-seal-in{from{opacity:0}}
 .demo-entrance{position:fixed;inset:0;z-index:9999;color:oklch(var(--color-ink))}
-.demo-cover{position:fixed;left:0;top:0;width:100vw;height:100vh;overflow:hidden;background-color:oklch(var(--color-canvas));background-image:radial-gradient(70% var(--glow-r) at 30% -52px,color-mix(in srgb,oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%),transparent),transparent 70%)}
+.demo-cover{position:fixed;left:0;top:0;width:100vw;height:100vh;overflow:hidden;background-color:oklch(var(--color-canvas));background-image:radial-gradient(60% 180px at 24% 0%,color-mix(in srgb,oklch(var(--color-glow)) calc(var(--glowA) * 100%),transparent),transparent 72%)}
 .demo-seal-mark{position:fixed;left:0;top:0;transform-origin:0 0;will-change:transform;line-height:0}
 .demo-seal-name{position:absolute;left:50%;top:calc(50% + 56px);transform:translateX(-50%);animation:demo-seal-in var(--transition-duration-base) var(--ease-enter) 160ms both}
 .demo-seal-skip{position:fixed;top:8px;right:8px}
@@ -118,10 +118,13 @@ function inView(el: Element | null | undefined): el is Element {
 }
 const firstInView = (css: string) => Array.from(document.querySelectorAll(css)).find(inView) ?? null;
 
-/** The console's identity band, and the mark the seal lands on: the band's seal, or with no underworld the sidebar's. */
+/**
+ * The console's page head (第三十批: 顶线 + 卷宗头, which replaced the identity band), and the mark the seal lands on: the
+ * sidebar's hall seal, or with no underworld the sidebar's brand mark. The page head carries no seal of its own any more.
+ */
 function handOffTargets(sealed: boolean): { band: Element | null; mark: Element | null } {
-  const band = firstInView("[data-testid='plaque']");
-  const mark = sealed ? (band?.querySelector(".identity-title [data-testid='seal']") ?? null) : firstInView("[data-nav-brand] [data-brand-mark]");
+  const band = firstInView("[data-testid='page-head']");
+  const mark = sealed ? firstInView(".nav-hall-card [data-testid='seal']") : firstInView("[data-nav-brand] [data-brand-mark]");
   return { band, mark: inView(mark) ? mark : null };
 }
 
@@ -342,7 +345,7 @@ function EntranceOverlay() {
       className="demo-entrance"
     >
       <div ref={cover} className="demo-cover">
-        <div aria-hidden="true" className="identity-pattern" />
+        <div aria-hidden="true" className="page-head-pat" />
         <span ref={label} className="demo-seal-name whitespace-nowrap font-title text-lg">{name}</span>
       </div>
       <span aria-live="polite" className="sr-only">{t("demo.enter.entering", { civ: name })}</span>

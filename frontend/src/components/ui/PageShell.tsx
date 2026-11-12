@@ -1,5 +1,15 @@
+"use client";
+
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
+import { CivMark } from "@/src/components/brand/CivEmblem";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
+import { usePlaqueValue, useReportHeading } from "@/src/components/plaque/pageHeadContext";
+import type { PlaqueCase } from "@/src/components/plaque/Plaque";
+import type { SealCiv } from "@/src/components/plaque/Seal";
 
 /**
  * 页面外壳 —— Stage 11 B。
@@ -141,6 +151,15 @@ import { cn } from "@/lib/utils";
 export type PageShellVariant = "prose" | "page" | "full";
 
 /**
+ * 页头的两种(第三十批「卷宗」第 1 步,Design v4 第三十批回复第一节第 1 条):
+ *   gate     门页(名册、律令、殿司 …):标题是门名,宋体 24/32(`text-head`)
+ *   dossier  卷宗页:标题是人名,宋体 32/40(`text-dossier`);上面那行等宽小字写案号、殿、入册日期
+ * 两种都是「顶线 + 卷宗头」:页顶一条 2px 文明色线(`--topline`),背后铺光晕(`.glowtop`)、纹样(`.pat`,5%)
+ * 与 G 天体仪水印(`.wm`,深 7% / 浅 9%),右侧是操作,主按钮是墨色实底(Button 的 `primary`)。
+ */
+export type PageHeadKind = "gate" | "dossier";
+
+/**
  * 内容列宽。**由 variant 决定，不由页面自选** —— 迁移前站内有 8 种宽度。
  *
  * `full` 的含义不是某个值，是「不加 max-width 类名」，所以这里是空串而不是
@@ -180,12 +199,15 @@ export interface PageShellPagination {
 }
 
 export interface PageShellProps {
-  /** 页面标题。全页仅此一处 `<h1>`，`font-title text-lg`(Noto Serif SC 600,规范 v3)。 */
+  /** 页面标题。全页仅此一处 `<h1>`:门页 `font-title text-head`(24/32),卷宗页 `font-title text-dossier`(32/40)。 */
   title: React.ReactNode;
+  /** 页头的种类,见 `PageHeadKind`。默认 `gate`。卷宗页(灵魂、审判、调拨 … 的详情)在第 3 步改用 `dossier`。 */
+  kind?: PageHeadKind;
   /** 内容列宽。默认 `page`（1200px），绝大多数页面用它。 */
   variant?: PageShellVariant;
   /**
-   * 标题上方一行小字，`text-2xs font-mono uppercase`。
+   * 标题上方一行等宽小字(mono 12/18,ink-muted):卷宗页写案号 · 殿 · 入册日期,门页写文明 · 殿。
+   * 页面经 `usePlaque` 报的殿名、案号排在它前面,用「 · 」连成一行。
    * **不是面包屑** —— 面包屑归 AppLayout，见文件头第 1 条。
    */
   eyebrow?: React.ReactNode;
@@ -272,8 +294,184 @@ export interface PageShellProps {
   className?: string;
 }
 
+/** 一行里的几段,中间用「 · 」隔开;空的段不画。 */
+function joinDot(parts: React.ReactNode[]): React.ReactNode {
+  const kept = parts.filter((p) => p !== null && p !== undefined && p !== false && p !== "");
+  return kept.length === 0
+    ? null
+    : kept.map((p, i) => (
+        <React.Fragment key={i}>
+          {i > 0 ? <span aria-hidden="true"> · </span> : null}
+          {p}
+        </React.Fragment>
+      ));
+}
+
+/** 页面经 `usePlaque` 报的案号:审判台自己那一场(可复制),或灵魂详情的「最相关一场」。 */
+function PlaqueCaseValue({ caseNumber, caseRef }: { caseNumber?: string; caseRef?: PlaqueCase }) {
+  const { t } = useI18n();
+  if (caseNumber) {
+    return (
+      <span data-case="">
+        <CaseNumber value={caseNumber} variant="band" />
+      </span>
+    );
+  }
+  if (!caseRef) return null;
+  if (!caseRef.number) {
+    return (
+      <span data-case="" data-case-ref="">
+        {t("judgment.case_number")} <MissingValue kind="unrecorded" />
+      </span>
+    );
+  }
+  return (
+    <span data-case="" data-case-ref="">
+      <CaseNumber value={caseRef.number} href={caseRef.href} variant="band" />
+      {caseRef.label ? <span> · {caseRef.label}</span> : null}
+      {caseRef.allHref && caseRef.allCount ? (
+        <>
+          {" · "}
+          <Link href={caseRef.allHref} data-case-all="" className="underline underline-offset-2">
+            {t("souls.detail.case_all", { n: String(caseRef.allCount) })}
+          </Link>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
+export interface PageHeadProps {
+  /**
+   * 标题,是这一页的 `<h1>` —— 一页只有一个。案卷台(第 2 步)右侧摊开的那一份,人名就是那一页的 `<h1>`
+   * (左边案卷摞的「案卷台」是 15px 的栏头,不是标题)。
+   */
+  title: React.ReactNode;
+  kind?: PageHeadKind;
+  /** 标题上方的等宽小字一行(案号 · 殿 · 入册日期)。 */
+  meta?: React.ReactNode;
+  /** 标题下面一行(text-sm,ink-muted)。 */
+  subtitle?: React.ReactNode;
+  /** 右侧的操作;主按钮用 `<Button variant="primary">`(墨色实底)。 */
+  actions?: React.ReactNode;
+  /** 与等宽小字同一行最左的返回链接。 */
+  backLink?: React.ReactNode;
+  /** 首格 / 尾格(灵魂详情的首字方块与功过),见 PageShell 的同名两槽。 */
+  leading?: React.ReactNode;
+  aside?: React.ReactNode;
+  /** 内容列宽的类(PageShell 传它的 variant 宽度);不给就铺满。 */
+  widthClassName?: string;
+  /**
+   * 加载中(第三十批第 1 步第 5 条):顶线变成一根 2px 的文明色进度线,不放转圈。骨架由页面按真实版式画
+   * (PageShell 的 `skeleton`);进度线是装饰,读屏跳过 —— 「正在加载」由骨架所在区域的 `aria-busy` 说。
+   */
+  loading?: boolean;
+  className?: string;
+}
+
+/**
+ * 「顶线 + 卷宗头」(第三十批「卷宗」第 1 步)。PageShell 用它画页头;案卷台右侧摊开的那一份(第 2 步)直接用它。
+ * 文明由 <html data-civ> 选(顶线 civT、光晕 glow × `--glowA`、纹样、水印都随文明换);水印的中心物读此刻所在的殿。
+ * 不吸顶:卷宗的封面不跟着滚,滚动时还需要的只有筛选栏。
+ */
+export function PageHead({
+  title,
+  kind = "gate",
+  meta,
+  subtitle,
+  actions,
+  backLink,
+  leading,
+  aside,
+  widthClassName,
+  loading = false,
+  className,
+}: PageHeadProps) {
+  const civ = (useHallCivilization() ?? null) as SealCiv | null;
+  const body = (
+    <>
+      {/* 返回链接与等宽小字共用标题上方那一行,但它们不是一回事:小字说**这一页是什么**(案号、殿、日期),
+          返回链接是**离开这一页**。 */}
+      {backLink || meta ? (
+        <div className="flex items-baseline gap-3 mb-1">
+          {backLink ? (
+            <div data-page-shell-back="" className="shrink-0">
+              {backLink}
+            </div>
+          ) : null}
+          {meta ? (
+            <p data-page-shell-eyebrow="" className="page-head-meta min-w-0">
+              {meta}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        {/* 两个字面 `<h1>` 各写自己的档,PageShell.test 的「页面标题」逐个读它们。 */}
+        {kind === "dossier" ? (
+          <h1 className="font-title text-dossier text-[oklch(var(--color-ink))] flex-1 min-w-0 basis-60 [overflow-wrap:anywhere]">{title}</h1>
+        ) : (
+          <h1 className="font-title text-head text-[oklch(var(--color-ink))] flex-1 min-w-0 basis-60 [overflow-wrap:anywhere]">{title}</h1>
+        )}
+        {actions ? (
+          <div data-page-shell-actions="" className="shrink-0 ml-auto flex flex-wrap items-center gap-2">
+            {actions}
+          </div>
+        ) : null}
+      </div>
+
+      {subtitle ? (
+        /* `max-w-prose` 是行长上限，不是列宽。
+           A <div>, not a <p>: a page's loading subtitle is a <Skeleton>, itself a <div>. The HTML parser closes a <p> at a
+           <div>, so the server's markup and the client's tree disagreed and React threw away the page (#418 on
+           /cross-judgments/[id]; every server-rendered page with a loading subtitle was exposed). */
+        <div
+          data-page-shell-subtitle=""
+          className="text-sm text-[oklch(var(--color-ink-subtle))] max-w-prose mt-2"
+        >
+          {subtitle}
+        </div>
+      ) : null}
+    </>
+  );
+
+  return (
+    <header data-page-shell-header="" data-testid="page-head" data-kind={kind} className={cn("page-head", className)}>
+      {/* 列宽盒是第一个孩子(PageShell.test 的 widthBox 按它读);顶线与三层装饰是绝对定位的,写在它后面。
+          `pt-6`:24 = 顶线 2 + 稿子 `.phead` 的上边距 20(取节奏里最近的一档)。 */}
+      <div className={cn(widthClassName, "relative px-4 md:px-8 pt-6 pb-4")}>
+        {leading || aside ? (
+          /* 首格 / 标题块 / 尾格。标题块 `basis-60`:flex-wrap 按基准宽决定换不换行,
+             basis 0 时尾格永远不换行、只会把标题挤成一列字。 */
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-4">
+            {leading ? (
+              <div data-page-shell-leading="" className="shrink-0 self-start">
+                {leading}
+              </div>
+            ) : null}
+            <div className="min-w-0 flex-1 basis-60">{body}</div>
+            {aside ? (
+              <div data-page-shell-aside="" className="w-full md:w-auto">
+                {aside}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          body
+        )}
+      </div>
+      <div aria-hidden="true" data-loading={loading ? "" : undefined} className="page-head-topline" />
+      <div aria-hidden="true" className="page-head-glow" />
+      <div aria-hidden="true" className="page-head-pat" />
+      <CivMark civ={civ} size={180} className="page-head-wm" />
+    </header>
+  );
+}
+
 export function PageShell({
   title,
+  kind = "gate",
   variant = "page",
   density = "table",
   eyebrow,
@@ -293,63 +491,20 @@ export function PageShell({
   className,
 }: PageShellProps) {
   const width = WIDTH_CLASS[variant];
+  const plaque = usePlaqueValue();
+  useReportHeading(typeof title === "string" ? title : null);
 
   // 三选一，顺序是有意的：还在加载时不该先闪一下空态。
   const showingSkeleton = Boolean(isLoading && skeleton);
   const body = showingSkeleton ? skeleton : isEmpty && empty ? empty : children;
 
-  const heading = (
-    <>
-      {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
-          两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
-          （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
-          各自手写这条链接（judgment/[id]:127、dispatch/[id]:112、
-          souls/[id]:282、social/[id]:23、social/profile/[id]:32、
-          social/follows:29、users:71）；塞进 eyebrow 会让一个导航控件继承
-          一个纯排版位的 uppercase + 字距，读起来像标签而不是链接。 */}
-      {backLink || eyebrow ? (
-        <div className="flex items-baseline gap-3 mb-3">
-          {backLink ? (
-            <div data-page-shell-back="" className="shrink-0">
-              {backLink}
-            </div>
-          ) : null}
-          {eyebrow ? (
-            <p
-              data-page-shell-eyebrow=""
-              className="text-2xs font-mono uppercase text-[oklch(var(--color-ink-subtle))] min-w-0"
-            >
-              {eyebrow}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className="flex items-start gap-4">
-        <h1 className="font-title text-lg text-[oklch(var(--color-ink))] flex-1 min-w-0">{title}</h1>
-        {actions ? (
-          <div data-page-shell-actions="" className="shrink-0">
-            {actions}
-          </div>
-        ) : null}
-      </div>
-
-      {subtitle ? (
-        /* `max-w-prose` 是行长上限，不是列宽：在 variant="full" 下一句副标题
-           铺满 1800px 不可读。列宽仍然只由上面那个 `width` 决定，
-           PageShell.test.tsx 的 variant 断言也只看四个容器位。 */
-        // A <div>, not a <p>: a page's loading subtitle is a <Skeleton>, itself a <div>. The HTML parser closes a <p> at a
-        // <div>, so the server's markup and the client's tree disagreed and React threw away the page (#418 on
-        // /cross-judgments/[id]; every server-rendered page with a loading subtitle was exposed).
-        <div
-          data-page-shell-subtitle=""
-          className="text-sm text-[oklch(var(--color-ink-subtle))] max-w-prose mt-3"
-        >
-          {subtitle}
-        </div>
-      ) : null}
-    </>
-  );
+  // 等宽小字一行:页面报的殿名、案号在前,页面自己的 eyebrow 在后。标题下面一行:副标题,再接页面报的概览。
+  const meta = joinDot([
+    plaque?.hall,
+    plaque?.caseNumber || plaque?.caseRef ? <PlaqueCaseValue key="case" caseNumber={plaque.caseNumber} caseRef={plaque.caseRef} /> : null,
+    eyebrow,
+  ]);
+  const sub = joinDot([subtitle, plaque?.meta]);
 
   return (
     <div
@@ -357,33 +512,18 @@ export function PageShell({
       data-variant={variant}
       className={cn("bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))]", className)}
     >
-      {/* 页头：不 sticky。 */}
-      <header
-        data-page-shell-header=""
-        className="border-b border-[oklch(var(--color-line))]"
-      >
-        <div className={cn(width, "px-4 md:px-8 pt-8 pb-6")}>
-          {leading || aside ? (
-            /* 首格 / 标题块 / 尾格。标题块 `basis-60`:flex-wrap 按基准宽决定换不换行,
-               basis 0 时尾格永远不换行、只会把标题挤成一列字。 */
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-4">
-              {leading ? (
-                <div data-page-shell-leading="" className="shrink-0 self-start">
-                  {leading}
-                </div>
-              ) : null}
-              <div className="min-w-0 flex-1 basis-60">{heading}</div>
-              {aside ? (
-                <div data-page-shell-aside="" className="w-full md:w-auto">
-                  {aside}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            heading
-          )}
-        </div>
-      </header>
+      <PageHead
+        title={title}
+        kind={kind}
+        meta={meta}
+        subtitle={sub}
+        actions={actions}
+        backLink={backLink}
+        leading={leading}
+        aside={aside}
+        widthClassName={width}
+        loading={showingSkeleton}
+      />
 
       {/* 标签页条：在页头之下、筛选栏之上，且**不 sticky**。
           五个页面有这一条（judgment:72、workflow:155、dashboard:168、
@@ -441,6 +581,7 @@ export function PageShell({
         data-page-shell-body=""
         data-density={density}
         data-motion={skeleton ? "fade" : undefined}
+        aria-busy={showingSkeleton || undefined}
         className={cn(width, BODY_CLASS[density], skeleton && !showingSkeleton && "animate-content-in")}
       >
         {body}

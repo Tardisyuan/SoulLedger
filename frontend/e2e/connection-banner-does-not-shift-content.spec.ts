@@ -24,15 +24,15 @@ test("the connection banner takes no layout space: content starts right under th
   const banner = page.getByRole("status").filter({ hasText: /重连中|连接失败|已断开/ });
   await expect(banner).toBeVisible({ timeout: 15_000 });
 
-  // 规范 v3: the masthead is the 52 px toolbar, then the plaque, then the page — the
-  // banner pushes none of them: the toolbar sits at the very top, and each starts where
-  // the one above it ends.
+  // 第三十批: the masthead is the 52 px toolbar, then the page (its page head — topline and title — is the top of
+  // the page itself). The banner pushes neither: the toolbar sits at the very top, the page starts where it ends, and
+  // the page head is the first thing in the page.
   const header = await page.getByTestId("global-topbar").boundingBox();
-  const plaque = await page.getByTestId("plaque").boundingBox();
   const content = await page.getByTestId("app-content").boundingBox();
+  const head = await page.getByTestId("page-head").boundingBox();
   expect(header, "no masthead box").not.toBeNull();
-  expect(plaque, "no plaque box").not.toBeNull();
   expect(content, "no content box").not.toBeNull();
+  expect(head, "no page head box").not.toBeNull();
   expect(Math.round(header!.y), `the toolbar starts at y=${header!.y}, under the banner's height`).toBe(0);
   // The toolbar keeps its 52px with the pill in it, and the pill is inside it (desktop project).
   expect(Math.round(header!.height)).toBe(52);
@@ -42,11 +42,8 @@ test("the connection banner takes no layout space: content starts right under th
     expect(pill!.y + pill!.height).toBeLessThanOrEqual(header!.y + header!.height);
   }
   expect(
-    Math.abs(plaque!.y - (header!.y + header!.height)),
-    `plaque starts at y=${plaque!.y}, masthead ends at y=${header!.y + header!.height}`
+    Math.abs(content!.y - (header!.y + header!.height)),
+    `content starts at y=${content!.y}, masthead ends at y=${header!.y + header!.height}`
   ).toBeLessThanOrEqual(1);
-  expect(
-    Math.abs(content!.y - (plaque!.y + plaque!.height)),
-    `content starts at y=${content!.y}, plaque ends at y=${plaque!.y + plaque!.height}`
-  ).toBeLessThanOrEqual(1);
+  expect(Math.abs(head!.y - content!.y), `page head starts at y=${head!.y}, content at y=${content!.y}`).toBeLessThanOrEqual(1);
 });

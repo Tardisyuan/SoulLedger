@@ -455,14 +455,15 @@ function WorkflowPageContent() {
           /* Editor tab. The fixed height is the canvas's (xyflow fills its
              parent); below 1024 px the editor is the read-only view, which is
              a document and takes the height its content needs.
-             Fills the viewport below the band: 52 toolbar + the band's live height
-             (`--below-band`, 156 before it collapses) + 153 for this page's own head
-             (title, tabs, padding — measured 2026-10-02 at 1440; +6 on 2026-10-03 when the
-             underline tabs went from 38 to the 44 touch target) + 24 for PageShell's
-             `py-6` under it, so the page ends at the viewport's bottom and does not scroll.
-             The old `100vh-220px` predates the v3 band and ran ~135px off the bottom at 1440×900.
+             Fills the viewport below the toolbar: 52 (`--below-band`) + 190 for this page's own head
+             + 24 for PageShell's `py-6` under it, so the page ends at the viewport's bottom and does not scroll.
+             The head was 153 (title, tabs, padding — measured 2026-10-02 at 1440; +6 on 2026-10-03 when the
+             underline tabs went from 38 to the 44 touch target) under a 96 identity band that `--below-band` carried;
+             第三十批 dropped the band and the head grew by 37, worked out, not yet measured (24 / 16 padding, the
+             topline inside the top one, + the 22 mono line with the hall + 32 title + the 28 line under it with the
+             editor's meta, against 32 / 24 padding + a 28 title + a 1 rule). The e2e allows 8.
              `e2e/workflow-editor-fits-viewport.spec.ts` holds the bottom edge to the viewport. */
-          <div data-testid="workflow-editor-frame" className="lg:h-[calc(100vh-var(--below-band)-177px)] lg:min-h-[480px]">
+          <div data-testid="workflow-editor-frame" className="lg:h-[calc(100vh-var(--below-band)-214px)] lg:min-h-[480px]">
             <LazyWorkflowEditor
               templateId={editingTemplateId || undefined}
               initialTemplateData={editingTemplateData}

@@ -6,7 +6,8 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
 
 /**
  * 规范 v2 补足 C14:「用 egy 语言包里最长的 20 个键跑一遍截图测试,钉住这三条」——
- * 匾题字按实测宽度 28 → 20 → 20 两行(v4,2026-11-07;v3 是 40 → 28 → 20);侧栏项(规范 v3 起:252 里一行、放不下截断、全文在 title)不溢出;窄屏底栏两行截断。
+ * 面包屑的当前段(第三十批「卷宗」起匾 / 标题行撤掉了,菜单名落在工具条的面包屑上:一行、放不下截断、全文在 title)
+ * 与页头的 `<h1>`(长的就换行,不横向溢出);侧栏项(规范 v3 起:252 里一行、放不下截断、全文在 title)不溢出;窄屏底栏两行截断。
  * (第三条的 App 底栏在 mobile/,这里钉的是 Web 393 下的同形底栏。)
  *
  * 字串从 egy.json 现取,不抄进这里:以后谁加了更长的页题或菜单名,它自动进这 20 条。
@@ -16,9 +17,8 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
  * 代码里总是带参数调用,从不原样当页题 —— 原样塞进菜单名,匾上就画出一个生的 `{{soul}}`
  * (2026-10-02 截图里的那一条,它恰好是最长的一条)。所以不选。
  *
- * 怎么让一条任意字串当上匾题与侧栏项:菜单名(Menu.name)没有登记译名的路径,在 egy 下
- * 原样显示(`src/lib/menuI18n.ts`),而匾题取面包屑最后一段。所以把 20 条字串做成 20 个
- * 菜单项,被测那条挂在 /about 上,打开 /about。
+ * 怎么让一条任意字串当上面包屑末段与侧栏项:菜单名(Menu.name)没有登记译名的路径,在 egy 下
+ * 原样显示(`src/lib/menuI18n.ts`)。所以把 20 条字串做成 20 个菜单项,被测那条挂在 /about 上,打开 /about。
  *
  * 断言量的是布局(浏览器真排版),截图作为附件留档 —— 像素基线在三个引擎、两种系统上
  * 各不相同,拿它当门禁只会训练人去更新基线。
@@ -73,29 +73,22 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
       api.on("GET", "/menus/list-public/", menusFor(i));
       await page.goto("/about");
 
-      // ── 匾题字:完整文字在 title 里;前两档一行不溢出,第三档是界面字两行截断。
-      const title = page.getByTestId("plaque").locator("[data-tier]");
-      await expect(title).toHaveAttribute("title", label);
-      await expect(title).not.toContainText("{{");
+      // ── 面包屑末段:完整文字在 title 里,一行截断(末段与 <h1> 相同时不画,那时 <h1> 就是它)。
       await page.evaluate(() => document.fonts.ready);
-      const plaque = await title.evaluate((el) => {
-        const cs = getComputedStyle(el);
-        return {
-          tier: el.getAttribute("data-tier"),
-          overflowX: el.scrollWidth - el.clientWidth,
-          clamp: cs.getPropertyValue("-webkit-line-clamp"),
-          fontSize: parseFloat(cs.fontSize),
-          lines: Math.round(el.clientHeight / parseFloat(cs.lineHeight)),
-        };
-      });
-      if (plaque.tier === "2") {
-        expect(plaque.clamp).toBe("2");
-        expect(plaque.fontSize).toBe(20);
-        expect(plaque.lines).toBeLessThanOrEqual(2);
+      const h1 = page.getByTestId("page-head").locator("h1");
+      await expect(h1).toHaveCount(1);
+      const crumb = page.getByTestId("global-topbar").locator("[aria-current='page']");
+      if ((await h1.textContent())?.trim() === label) {
+        await expect(crumb).toHaveCount(0);
       } else {
-        expect(plaque.overflowX).toBeLessThanOrEqual(1);
-        expect(plaque.fontSize).toBe(plaque.tier === "0" ? 28 : 20);
+        await expect(crumb).toHaveAttribute("title", label);
+        await expect(crumb).not.toContainText("{{");
+        const clip = await crumb.evaluate((el) => ({ lines: Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)), ellipsis: getComputedStyle(el).textOverflow }));
+        expect(clip.lines).toBeLessThanOrEqual(1);
+        expect(clip.ellipsis).toBe("ellipsis");
       }
+      // ── 页头的 <h1>:换行而不横向溢出。
+      expect(await h1.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
 
       // ── 侧栏(≥ 769,规范 v3 展开 252)或底栏(≤ 768)。
       const wide = (page.viewportSize()?.width ?? 0) > 768;
