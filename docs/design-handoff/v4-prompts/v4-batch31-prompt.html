@@ -1,0 +1,145 @@
+<article>
+<h2>第三十一批 · egy:卷宗改版第 1、2 步的 126 个键<span class="tag new">待回 · 2026-11-13</span></h2>
+<p>回复写到 <code>v4-batch31-reply.md</code>,egy 写进 <code>v4-batch31-egy.json</code>(扁平,键是下表完整路径)。照第十八批的规矩:新词根、专名在回复里列出来;<code>{{…}}</code> 占位原样保留;Maat 规则与 <code>Wehem Ankh</code> 禁用照旧。</p>
+<section>
+<h3>这些键从哪来</h3>
+<ul>
+<li><strong>新 119 个</strong>:第三十批第 1、2 步落地时新加的界面文字 —— 网页案卷台(<code>caseDesk.*</code>)、总簿(<code>zongbu.*</code>)、窄屏筛选(<code>filter.bar.*</code>)、零值句子(<code>overview.zero.*</code> 等)、官员端案卷台(<code>officer_app.desk.*</code>)、灵魂端底栏单字(<code>soul_app.tabs.glyph_*</code>;英文版用字母 L / R / M / C,egy 请给适合单字位的写法)。</li>
+<li><strong>改 7 个</strong>:中文或英文改了,原 egy 已过期:404 与无权限页的标题和说明、默认进站页的三处说明(落地页改成案卷台 / 总簿),以及第二十九批你提醒的官员端推送正文(已去掉「你」,中文为「这个推送设备已被另一个账号登记……」)。</li>
+<li>门名(审 / 册 / 律 / 司 / 人间)和案卷台的来源名在第 4 步定稿后可能再动;这一批先按现在的文案给。</li>
+</ul>
+</section>
+<section>
+<h3>键表</h3>
+<div class="scroll"><table><thead><tr><th>键</th><th>中文</th><th>English</th><th>新 / 改</th></tr></thead><tbody>
+<tr><td><code>soul_app.tabs.glyph_life</code></td><td>世</td><td>L</td><td>新</td></tr>
+<tr><td><code>soul_app.tabs.glyph_rebirth</code></td><td>生</td><td>R</td><td>新</td></tr>
+<tr><td><code>soul_app.tabs.glyph_letters</code></td><td>信</td><td>M</td><td>新</td></tr>
+<tr><td><code>soul_app.tabs.glyph_circle</code></td><td>圈</td><td>C</td><td>新</td></tr>
+<tr><td><code>soul_app.life.balance_none</code></td><td>功过都还没有记上。</td><td>Nothing has been entered for or against you yet.</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.title</code></td><td>案卷台</td><td>Case desk</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.search</code></td><td>搜索案卷</td><td>Search cases</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.position</code></td><td>第 {{n}} / {{total}} 件</td><td>{{n}} of {{total}}</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.all</code></td><td>全部</td><td>All</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.today</code></td><td>今日 {{n}} 件</td><td>{{n}} today</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.overdue</code></td><td>超期 {{n}}</td><td>{{n}} overdue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.no_overdue</code></td><td>无超期</td><td>None overdue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.month_done</code></td><td>本月已结 {{pct}}%</td><td>{{pct}}% closed this month</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.queue</code></td><td>审判队列</td><td>Judgment queue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.city_god</code></td><td>城隍初审</td><td>City god review</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.cross</code></td><td>跨域</td><td>Cross-realm</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.appeal</code></td><td>申诉</td><td>Appeals</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.city_god_review</code></td><td>城隍初审中</td><td>With the city god</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.cross_judgment</code></td><td>跨殿联审</td><td>Joint judgments</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.capture_due</code></td><td>待发勾魂牒</td><td>Warrants due</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.mine</code></td><td>我认领</td><td>Claimed by me</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.deferred</code></td><td>待定</td><td>On hold</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.unclaimed</code></td><td>待认领</td><td>Unclaimed</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.others</code></td><td>他人手上</td><td>With others</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.reviewing</code></td><td>审判中</td><td>In judgment</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.returned</code></td><td>退回重审</td><td>Sent back for retrial</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.overdue</code></td><td>超期 {{n}} 日</td><td>{{n}} days overdue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.others</code></td><td>他人认领</td><td>Held by another</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.awaiting</code></td><td>待宣判</td><td>Ready for verdict</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.release</code></td><td>放回</td><td>Put back</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.chips.city_god</code></td><td>城隍送来</td><td>Sent on by the city god</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.release_failed</code></td><td>没能放回</td><td>Couldn&#x27;t put back</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.empty_title</code></td><td>案卷台上没有案卷</td><td>No cases on the desk</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.empty_body</code></td><td>新的案子到了会出现在这里。</td><td>New cases will appear here.</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.label</code></td><td>门</td><td>Doors</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.desk</code></td><td>案卷</td><td>Cases</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.desk_glyph</code></td><td>审</td><td>C</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.souls</code></td><td>名册</td><td>Register</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.souls_glyph</code></td><td>册</td><td>R</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.corpus</code></td><td>律令</td><td>Statutes</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.corpus_glyph</code></td><td>律</td><td>S</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.hall</code></td><td>殿司</td><td>Hall office</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.hall_glyph</code></td><td>司</td><td>H</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.moderation</code></td><td>人间</td><td>Mortal world</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.moderation_glyph</code></td><td>人</td><td>W</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.me</code></td><td>本人</td><td>Me</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.me_glyph</code></td><td>我</td><td>M</td><td>新</td></tr>
+<tr><td><code>caseDesk.chip.city_god_sent</code></td><td>城隍送来</td><td>Sent by city gods</td><td>新</td></tr>
+<tr><td><code>caseDesk.sources_label</code></td><td>按来源看</td><td>By source</td><td>新</td></tr>
+<tr><td><code>caseDesk.search_placeholder</code></td><td>搜姓名、案号</td><td>Search name or case number</td><td>新</td></tr>
+<tr><td><code>caseDesk.search_none</code></td><td>没有对得上的案卷。</td><td>No case matches.</td><td>新</td></tr>
+<tr><td><code>caseDesk.triage</code></td><td>分诊</td><td>Triage</td><td>新</td></tr>
+<tr><td><code>caseDesk.load_failed</code></td><td>没能读到案卷台。</td><td>Could not load the case desk.</td><td>新</td></tr>
+<tr><td><code>caseDesk.open_case</code></td><td>摊开的一份</td><td>Open case</td><td>新</td></tr>
+<tr><td><code>caseDesk.pick</code></td><td>从左边选一件案卷。</td><td>Pick a case on the left.</td><td>新</td></tr>
+<tr><td><code>caseDesk.actions.release</code></td><td>放回待认领</td><td>Put back</td><td>新</td></tr>
+<tr><td><code>caseDesk.actions.next</code></td><td>下一件</td><td>Next</td><td>新</td></tr>
+<tr><td><code>caseDesk.actions.open</code></td><td>打开卷宗</td><td>Open file</td><td>新</td></tr>
+<tr><td><code>caseDesk.meta.entered</code></td><td>{{date}}入册</td><td>Entered {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.life</code></td><td>本世</td><td>This life</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.born</code></td><td>{{date}} 生</td><td>Born {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.born_at</code></td><td>{{date}} 生于{{place}}</td><td>Born {{date}} in {{place}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.died</code></td><td>{{date}} 卒</td><td>Died {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.source</code></td><td>来源</td><td>Source</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.merits</code></td><td>功过</td><td>Merit and demerit</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.merits_value</code></td><td>功 {{merit}} · 过 {{demerit}}</td><td>Merit {{merit}} · Demerit {{demerit}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.net</code></td><td>净</td><td>Net</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.confession</code></td><td>供词</td><td>Confession</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.confession_none</code></td><td>无。</td><td>None.</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.deadline</code></td><td>期限</td><td>Deadline</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.handler</code></td><td>经手</td><td>Handled by</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.claimed</code></td><td>{{name}} · 认领于 {{date}}</td><td>{{name}} · claimed {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.unclaimed</code></td><td>还没有人认领</td><td>Nobody has claimed it</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.recent</code></td><td>最近三条记录</td><td>Latest three records</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.recent_none</code></td><td>还没有记录。</td><td>No records yet.</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.unreadable</code></td><td>没有读名册的权限</td><td>No permission to read the register</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.this</code></td><td>这一件</td><td>This case</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.hall_today</code></td><td>同殿今天</td><td>This hall today</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.court</code></td><td>殿</td><td>Court</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.claimed</code></td><td>认领</td><td>Claimed by</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.overdue</code></td><td>超期</td><td>Overdue</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.done</code></td><td>本月已结</td><td>Done this month</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.move</code></td><td>上下一件</td><td>Next / previous</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.open</code></td><td>打开卷宗</td><td>Open file</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.claim</code></td><td>认领</td><td>Claim</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.search</code></td><td>搜索</td><td>Search</td><td>新</td></tr>
+<tr><td><code>zongbu.title</code></td><td>总簿</td><td>Ledger of the four realms</td><td>新</td></tr>
+<tr><td><code>zongbu.realms</code></td><td>四个冥界</td><td>Four underworlds</td><td>新</td></tr>
+<tr><td><code>zongbu.as_of</code></td><td>数据截至 {{time}}</td><td>As of {{time}}</td><td>新</td></tr>
+<tr><td><code>zongbu.today</code></td><td>今日待审 {{n}}</td><td>Awaiting judgment {{n}}</td><td>新</td></tr>
+<tr><td><code>zongbu.open_all</code></td><td>打开全部案卷</td><td>Open all cases</td><td>新</td></tr>
+<tr><td><code>zongbu.cross_title</code></td><td>跨界往来</td><td>Across the realms</td><td>新</td></tr>
+<tr><td><code>zongbu.cross_none</code></td><td>还没有跨界往来。</td><td>Nothing has crossed the realms yet.</td><td>新</td></tr>
+<tr><td><code>zongbu.footer</code></td><td>总簿只给管理员;判官看见的是自己那一殿的案卷台。</td><td>The ledger is for administrators; a judge sees the case desk of their own hall.</td><td>新</td></tr>
+<tr><td><code>zongbu.legacy</code></td><td>旧版概览</td><td>Previous overview</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.cn</code></td><td>地府</td><td>Diyu</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.eu</code></td><td>欧洲</td><td>Europe</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.eg</code></td><td>埃及</td><td>Egypt</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.gr</code></td><td>希腊</td><td>Greece</td><td>新</td></tr>
+<tr><td><code>zongbu.kind.dispatch</code></td><td>调拨</td><td>Transfer</td><td>新</td></tr>
+<tr><td><code>zongbu.kind.cross</code></td><td>跨界会审</td><td>Joint judgment</td><td>新</td></tr>
+<tr><td><code>zongbu.col.pending</code></td><td>今日待审</td><td>Awaiting judgment</td><td>新</td></tr>
+<tr><td><code>zongbu.col.none_pending</code></td><td>今日没有待审的案卷</td><td>Nothing awaits judgment today</td><td>新</td></tr>
+<tr><td><code>zongbu.col.failed</code></td><td>没能读到这一栏</td><td>Could not load this column</td><td>新</td></tr>
+<tr><td><code>zongbu.col.month_none</code></td><td>本月已结:这个冥界本月没有案卷</td><td>Done this month: no cases in this realm this month</td><td>新</td></tr>
+<tr><td><code>zongbu.cross_since</code></td><td>{{date}} 起</td><td>since {{date}}</td><td>新</td></tr>
+<tr><td><code>filter.bar.open</code></td><td>筛选</td><td>Filters</td><td>新</td></tr>
+<tr><td><code>filter.bar.open_n</code></td><td>筛选 · {{n}}</td><td>Filters · {{n}}</td><td>新</td></tr>
+<tr><td><code>filter.bar.title</code></td><td>筛选条件</td><td>Filters</td><td>新</td></tr>
+<tr><td><code>filter.bar.quick</code></td><td>快捷筛选</td><td>Quick filters</td><td>新</td></tr>
+<tr><td><code>filter.bar.done</code></td><td>查看结果</td><td>Show results</td><td>新</td></tr>
+<tr><td><code>not_found.to_desk</code></td><td>回案卷台</td><td>Back to the desk</td><td>新</td></tr>
+<tr><td><code>overview.count_unit_none</code></td><td>件 · 无超期</td><td>cases · none overdue</td><td>新</td></tr>
+<tr><td><code>overview.zero.pending</code></td><td>今天没有待审的案卷</td><td>No cases are waiting today</td><td>新</td></tr>
+<tr><td><code>overview.zero.concluded</code></td><td>本月还没有结案</td><td>Nothing concluded this month yet</td><td>新</td></tr>
+<tr><td><code>overview.zero.returned</code></td><td>本月还没有退回重审</td><td>Nothing sent back for retrial this month</td><td>新</td></tr>
+<tr><td><code>annual.zero_received</code></td><td>这一年还没有收到灵魂。</td><td>No souls were received this year.</td><td>新</td></tr>
+<tr><td><code>rebirths.quota.none_of</code></td><td>本月还没有 · 上限 {{limit}}</td><td>None yet · limit {{limit}}</td><td>新</td></tr>
+<tr><td><code>rebirths.quota.none_unlimited</code></td><td>本月还没有 · 不限</td><td>None yet · no limit</td><td>新</td></tr>
+<tr><td><code>profile.default_view_unset</code></td><td>还没选过：按你的角色落地 —— 官员先到案卷台，管理员先到总簿。</td><td>Not chosen yet: you land by role — officers on the case desk, administrators on the ledger.</td><td>改</td></tr>
+<tr><td><code>welcome.view_operator_desc</code></td><td>进来先看案卷台；快捷键优先。</td><td>Opens on the case desk; keyboard first.</td><td>改</td></tr>
+<tr><td><code>welcome.view_admin_desc</code></td><td>进来先看总簿（管理员）；其他角色是统计概览。</td><td>Opens on the ledger (administrators); other roles get the statistics overview.</td><td>改</td></tr>
+<tr><td><code>permission.denied_title</code></td><td>这一页不归这个身份</td><td>This page is not for your role</td><td>改</td></tr>
+<tr><td><code>not_found.title</code></td><td>卷宗里没有这一页</td><td>This page is not in the ledger</td><td>改</td></tr>
+<tr><td><code>not_found.description</code></td><td>链接可能是旧的，或者这一页已经不在这里了。</td><td>The link may be old, or the page has moved.</td><td>改</td></tr>
+<tr><td><code>official_notify.push_device_claimed.body</code></td><td>这个推送设备已被另一个账号登记，这部手机不再收到待办推送。如果不是本人换的手机，请联系管理员。</td><td>This push device was registered by another account and no longer gets to-do pushes. If the phone was not changed by its owner, contact an administrator.</td><td>改</td></tr>
+</tbody></table></div>
+<p class="ask">请给:egy json + 回复说明。第三十批第 3、4 步照常进行,两批互不影响。</p>
+</section>
+</article>
+
