@@ -1,6 +1,5 @@
 {
   "nav": {
-    "title": "SoulLedger",
     "greeting_morning": "Good Morning",
     "greeting_afternoon": "Good Afternoon",
     "greeting_evening": "Good Evening",
@@ -3914,7 +3913,6 @@
   "not_found": {
     "title": "This page is not in the ledger",
     "description": "The link may be old, or the page has moved.",
-    "home": "Return Home",
     "to_desk": "Back to the desk"
   },
   "search": {
@@ -8054,12 +8052,6 @@
       "empty_body_other": "Anything that comes to you will be pushed to you."
     },
     "queue": {
-      "mine": "Mine",
-      "unclaimed": "Unclaimed",
-      "others": "With others",
-      "deferred": "Deferred",
-      "empty_title": "No cases in hand",
-      "empty_body": "Claim one from Unclaimed.",
       "desk_only": "Ready for verdict · conclude it in Swipe to judge",
       "scope_note": "On the phone you can claim, read, comment, and conclude in Swipe to judge. Choosing a destination and citing articles are done at the desk.",
       "claim": "Claim",

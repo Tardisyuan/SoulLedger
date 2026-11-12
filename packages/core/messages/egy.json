@@ -1,6 +1,5 @@
 {
   "nav": {
-    "title": "Medjat Ba",
     "greeting_morning": "Dua · Tepy Hru",
     "greeting_afternoon": "Dua · Hru Pen",
     "greeting_evening": "Dua · Pehwy Hru",
@@ -3731,7 +3730,6 @@
   "not_found": {
     "title": "Nen Medjat Pen Em Sesh",
     "description": "Wat Tepyu; Er Khemen Seth Medjat Pen.",
-    "home": "Iyi Er Tepy",
     "to_desk": "Er Hat · Medjat Sepu"
   },
   "icon_picker": {
@@ -8029,16 +8027,10 @@
       "letter": "Sesh"
     },
     "queue": {
-      "mine": "Shesep-I",
-      "unclaimed": "Nen Shesep Djer",
       "claim": "Shesep",
-      "empty_title": "Nen Shesep-I Djer",
-      "empty_body": "Shesep Wa Em «Nen Shesep Djer».",
       "desk_only": "Djed Wedja Djer · Khetem Em «Khemen Sesh · Wedja»",
       "scope_note": "Em Medjat Ba: Shesep, Maa, Sesh Wesheb · Khetem Em «Khemen Sesh · Wedja». Setep Ta Hena Djed Hep: Em Medjat Sab.",
       "claim_failed": "Nen Shesep-Ek",
-      "deferred": "Sedjer",
-      "others": "Em Djeret Ky",
       "claim_taken": "Shesep Ky Seth",
       "open_swipe": "Khemen Sesh · Wedja"
     },

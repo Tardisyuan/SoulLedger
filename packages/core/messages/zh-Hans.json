@@ -1,6 +1,5 @@
 {
   "nav": {
-    "title": "灵魂账本",
     "welcome": "欢迎页",
     "greeting_morning": "上午好",
     "greeting_afternoon": "下午好",
@@ -3914,7 +3913,6 @@
   "not_found": {
     "title": "卷宗里没有这一页",
     "description": "链接可能是旧的，或者这一页已经不在这里了。",
-    "home": "返回首页",
     "to_desk": "回案卷台"
   },
   "search": {
@@ -8054,12 +8052,6 @@
       "empty_body_other": "有轮到你的事时会推送给你。"
     },
     "queue": {
-      "mine": "我手上",
-      "unclaimed": "待认领",
-      "others": "他人手上",
-      "deferred": "待定",
-      "empty_title": "手上没有案子",
-      "empty_body": "到「待认领」里认领一件。",
       "desk_only": "待宣判 · 可在「滑卡审判」里结案",
       "scope_note": "手机上可以认领、查看、写评议，并在「滑卡审判」里结案。自选去处与引用条文请在官员台。",
       "claim": "认领",
