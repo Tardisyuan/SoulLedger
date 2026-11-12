@@ -737,6 +737,29 @@ def enter_judgment_realm(soul, judgment):
     SoulPathService.enter(soul, judgment.realm, tenant_id=judgment.tenant_id)
 
 
+#: The stations a first-instance case stands at (城隍初审 docs/08, 枉死城 docs/10, 防腐 / 不入冥界 docs/02 §1.1) and
+#: what was decided there. Written once, when the death opens the case (`Soul.opening_fields`).
+STATION_CARRIES = (
+    "duat_stage", "city_god", "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "grievance_filed_at",
+)
+
+
+def _withdrawn_case_stations(soul) -> dict:
+    """A case opened again on a JUDGING soul whose open original case was withdrawn (flow walk 2026-11-12 F-JUDG-04 /
+    F-DEATH-02): it stands where the withdrawn one stood. Without this, withdrawing a case still at the city god,
+    held in 枉死城 or embalming, or nameless, and opening another skipped every one of those stations — the new case
+    had no city god, no `held_until`, no `duat_stage` and was claimable at once. Called under the soul's lock."""
+    from apps.judgment.models import Judgment, JudgmentKind
+    from apps.judgment.weighing import RETRIAL_CARRIES
+
+    withdrawn = (Judgment.all_objects.filter(soul_id=soul.pk, cycle=soul.life_index, kind=JudgmentKind.ORIGINAL,
+                                             is_deleted=True, is_final=False)
+                 .order_by("-created_at").first())
+    if withdrawn is None:
+        return {}
+    return {field: getattr(withdrawn, field) for field in (*RETRIAL_CARRIES, *STATION_CARRIES)}
+
+
 class JudgmentService:
     @staticmethod
     def open_case(soul, *, actor=None, in_tenant=None, tenant=None, **fields):
@@ -782,6 +805,8 @@ class JudgmentService:
             was_alive = soul.current_state == SoulState.ALIVE
             if was_alive:
                 fields.update(soul.opening_fields(timezone.now().date()))
+            elif fields.get("kind", JudgmentKind.ORIGINAL) == JudgmentKind.ORIGINAL:
+                fields.update(_withdrawn_case_stations(soul))
             judgment = Judgment.objects.create(soul=soul, tenant=tenant or soul.tenant, **fields)
             if was_alive:
                 from apps.judgment import city_gods

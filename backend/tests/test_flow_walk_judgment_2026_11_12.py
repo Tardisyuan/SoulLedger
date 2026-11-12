@@ -78,3 +78,33 @@ def test_concluding_a_case_a_hand_started_flow_already_holds_is_a_409_not_a_500(
     assert (refused.value.code, refused.value.status) == ("judgment_has_workflow", 409)
     case.refresh_from_db()
     assert not case.is_final and case.verdict is None
+
+
+# ── F-JUDG-04 / F-DEATH-02 withdrawing a case does not skip its stations ─────
+
+
+def test_a_case_opened_again_after_a_withdrawal_stands_where_the_withdrawn_one_stood(cn):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.judgment.services import JudgmentService
+
+    soul, case = plan.open_case(cn)
+    until = timezone.now().date() + timedelta(days=30)
+    # Held in 枉死城 until the fated date, as `Soul.die` opens an untimely death.
+    Judgment.all_objects.filter(pk=case.pk).update(untimely=True, held_until=until, wrongful_death_cause="ACCIDENT")
+    case.refresh_from_db()
+    case.delete_or_raise(reason="撤案")
+
+    again = JudgmentService.open_case(soul, actor=plan.officer("fw_judge", "JUDGE", cn))
+    assert (again.untimely, again.held_until, again.wrongful_death_cause) == (True, until, "ACCIDENT")
+    assert again.pk != case.pk and again.verdict is None
+
+
+def test_a_soul_with_no_withdrawn_case_opens_a_plain_one(cn):
+    from apps.judgment.services import JudgmentService
+
+    soul = Soul.objects.create(name="无撤案", tenant=cn, current_state=SoulState.JUDGING)
+    opened = JudgmentService.open_case(soul, actor=plan.officer("fw_judge2", "JUDGE", cn))
+    assert (opened.untimely, opened.held_until, opened.city_god_id) == (False, None, None)
