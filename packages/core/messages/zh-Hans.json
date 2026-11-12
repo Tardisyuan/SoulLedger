@@ -9888,5 +9888,100 @@
     "eu": "正在取来这一生的记录…",
     "eg": "托特正在取来记录…",
     "gr": "判官正在看这个灵魂…"
+  },
+  "caseDesk": {
+    "rail": {
+      "label": "门",
+      "desk": "案卷",
+      "desk_glyph": "审",
+      "souls": "名册",
+      "souls_glyph": "册",
+      "corpus": "律令",
+      "corpus_glyph": "律",
+      "hall": "殿司",
+      "hall_glyph": "司",
+      "moderation": "人间",
+      "moderation_glyph": "人",
+      "me": "本人",
+      "me_glyph": "我"
+    },
+    "chip": {
+      "city_god_sent": "城隍送来"
+    },
+    "sources_label": "按来源看",
+    "search_placeholder": "搜姓名、案号",
+    "search_none": "没有对得上的案卷。",
+    "triage": "分诊",
+    "load_failed": "没能读到案卷台。",
+    "open_case": "摊开的一份",
+    "pick": "从左边选一件案卷。",
+    "actions": {
+      "release": "放回待认领",
+      "next": "下一件",
+      "open": "打开卷宗"
+    },
+    "meta": {
+      "entered": "{{date}}入册"
+    },
+    "juan": {
+      "life": "本世",
+      "born": "{{date}} 生",
+      "born_at": "{{date}} 生于{{place}}",
+      "died": "{{date}} 卒",
+      "source": "来源",
+      "merits": "功过",
+      "merits_value": "功 {{merit}} · 过 {{demerit}}",
+      "net": "净",
+      "confession": "供词",
+      "confession_none": "无。",
+      "deadline": "期限",
+      "handler": "经手",
+      "claimed": "{{name}} · 认领于 {{date}}",
+      "unclaimed": "还没有人认领",
+      "recent": "最近三条记录",
+      "recent_none": "还没有记录。",
+      "unreadable": "没有读名册的权限"
+    },
+    "side": {
+      "this": "这一件",
+      "hall_today": "同殿今天",
+      "court": "殿",
+      "claimed": "认领",
+      "overdue": "超期",
+      "done": "本月已结"
+    },
+    "keys": {
+      "move": "上下一件",
+      "open": "打开卷宗",
+      "claim": "认领",
+      "search": "搜索"
+    }
+  },
+  "zongbu": {
+    "title": "总簿",
+    "realms": "四个冥界",
+    "as_of": "数据截至 {{time}}",
+    "today": "今日待审 {{n}}",
+    "open_all": "打开全部案卷",
+    "cross_title": "跨界往来",
+    "cross_none": "还没有跨界往来。",
+    "footer": "总簿只给管理员;判官看见的是自己那一殿的案卷台。",
+    "legacy": "旧版概览",
+    "civ": {
+      "cn": "地府",
+      "eu": "欧洲",
+      "eg": "埃及",
+      "gr": "希腊"
+    },
+    "kind": {
+      "dispatch": "调拨",
+      "cross": "跨界会审"
+    },
+    "col": {
+      "pending": "今日待审",
+      "none_pending": "今日没有待审的案卷",
+      "failed": "没能读到这一栏",
+      "month_unknown": "本月已结:还没有分冥界的数"
+    }
   }
 }

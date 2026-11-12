@@ -429,14 +429,14 @@ describe("defaultViewRoute", () => {
 
   it("follows the server's value", async () => {
     mockedPrefs.mockResolvedValue({ data: { default_view: "operator" } });
-    expect(await defaultViewRoute()).toBe("/judgment/queue");
+    expect(await defaultViewRoute()).toBe("/desk");
     mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
     expect(await defaultViewRoute()).toBe("/dashboard");
   });
 
   it("migrates a value left in this browser, once", async () => {
     localStorage.setItem("soulledger_default_view", "operator");
-    expect(await defaultViewRoute()).toBe("/judgment/queue");
+    expect(await defaultViewRoute()).toBe("/desk");
     expect(mockedSavePrefs).toHaveBeenCalledWith({ default_view: "operator" });
     expect(localStorage.getItem("soulledger_default_view")).toBeNull();
   });
@@ -447,25 +447,25 @@ describe("defaultViewRoute", () => {
     expect(mockedSavePrefs).not.toHaveBeenCalled();
   });
 
-  // review-2026-11-01 Web 1:没选过默认视图时按角色落地 —— 官员进待办队列,不是仪表盘。
-  it("lands an officer who never chose on the queue, and an admin on /dashboard", async () => {
+  // review-2026-11-01 Web 1:没选过默认视图时按角色落地 —— 官员进案卷台(第三十批),管理员进总簿,不是仪表盘。
+  it("lands an officer who never chose on the case desk, and an admin on the ledger (总簿)", async () => {
     const judge = { role: "JUDGE", permissions: ["judgment.read"] };
-    expect(await defaultViewRoute(judge)).toBe("/judgment/queue");
+    expect(await defaultViewRoute(judge)).toBe("/desk");
     expect(await defaultViewRoute(judge)).not.toBe("/dashboard");
-    expect(await defaultViewRoute({ role: "ADMIN", permissions: [] })).toBe("/dashboard");
+    expect(await defaultViewRoute({ role: "ADMIN", permissions: [] })).toBe("/desk/overview");
     // No judgment access: the queue would be a 403, so the dashboard it stays.
     expect(await defaultViewRoute({ role: "VIEWER", permissions: ["soul.read"] })).toBe("/dashboard");
     // A choice on the server still wins over the role.
     mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
     expect(await defaultViewRoute(judge)).toBe("/dashboard");
     mockedPrefs.mockRejectedValue(new Error("offline"));
-    expect(await defaultViewRoute(judge)).toBe("/judgment/queue");
+    expect(await defaultViewRoute(judge)).toBe("/desk");
   });
 
   it("still lets the operator in when the server cannot be asked", async () => {
     mockedPrefs.mockRejectedValue(new Error("offline"));
     expect(await defaultViewRoute()).toBe("/dashboard");
     localStorage.setItem("soulledger_default_view", "operator");
-    expect(await defaultViewRoute()).toBe("/judgment/queue");
+    expect(await defaultViewRoute()).toBe("/desk");
   });
 });

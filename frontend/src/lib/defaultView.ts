@@ -17,10 +17,14 @@ export type { DefaultView };
 
 export const DEFAULT_VIEW_KEY = "soulledger_default_view";
 
+// 判官进来先到案卷台(Design 第三十批 第 2 步,2026-11-13);此前是 `/judgment/queue`(分诊),它照旧在。
 const ROUTES: Record<DefaultView, string> = {
-  operator: "/judgment/queue",
+  operator: "/desk",
   admin: "/dashboard",
 };
+
+/** 管理员的「管理」视图是总簿(`/desk/overview`,只给 ADMIN);别的角色选了「管理」仍是 /dashboard(总簿对他们是 403)。 */
+const ADMIN_LEDGER = "/desk/overview";
 
 function readLegacy(): DefaultView | null {
   try {
@@ -70,8 +74,8 @@ export type ViewUser = { role?: string; permissions?: string[] } | null | undefi
 
 /**
  * The view for someone who never chose one (review-2026-11-01 Web 1): an
- * administrator lands on /dashboard; an officer who can read judgments lands
- * on the 待办 queue, which is what their day is. Anyone else — a viewer with
+ * administrator lands on the 总簿 (/desk/overview); an officer who can read
+ * judgments lands on the 案卷台 (/desk), which is what their day is. Anyone else — a viewer with
  * no judgment access — keeps /dashboard rather than being sent to a 403.
  */
 export function defaultViewFor(user: ViewUser): DefaultView {
@@ -81,7 +85,8 @@ export function defaultViewFor(user: ViewUser): DefaultView {
 
 /** Unset falls back to the role's view; with no user at all, /dashboard. */
 export function routeForView(view: DefaultView | null, user?: ViewUser): string {
-  return ROUTES[view ?? defaultViewFor(user)];
+  const chosen = view ?? defaultViewFor(user);
+  return chosen === "admin" && user?.role === "ADMIN" ? ADMIN_LEDGER : ROUTES[chosen];
 }
 
 /**

@@ -328,6 +328,8 @@ export interface JudgmentQueueCountsParams {
   returned?: string;
   /** 只数这个来源的(四组与 `total`);`sources` 不随它变。 */
   source?: JudgmentQueueSource;
+  /** 列表同一个 `?civilization=`(`JudgmentFilter.Meta.fields`):总簿按文明各数一栏。 */
+  civilization?: string;
 }
 
 export type JudgmentBatchOperation = "claim" | "reassign" | "defer";

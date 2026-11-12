@@ -9888,5 +9888,100 @@
     "eu": "Bringing out the record of this life…",
     "eg": "Thoth is bringing the record…",
     "gr": "The judge is looking at the soul…"
+  },
+  "caseDesk": {
+    "rail": {
+      "label": "Doors",
+      "desk": "Cases",
+      "desk_glyph": "C",
+      "souls": "Register",
+      "souls_glyph": "R",
+      "corpus": "Statutes",
+      "corpus_glyph": "S",
+      "hall": "Hall office",
+      "hall_glyph": "H",
+      "moderation": "Mortal world",
+      "moderation_glyph": "W",
+      "me": "Me",
+      "me_glyph": "M"
+    },
+    "chip": {
+      "city_god_sent": "Sent by city gods"
+    },
+    "sources_label": "By source",
+    "search_placeholder": "Search name or case number",
+    "search_none": "No case matches.",
+    "triage": "Triage",
+    "load_failed": "Could not load the case desk.",
+    "open_case": "Open case",
+    "pick": "Pick a case on the left.",
+    "actions": {
+      "release": "Put back",
+      "next": "Next",
+      "open": "Open file"
+    },
+    "meta": {
+      "entered": "Entered {{date}}"
+    },
+    "juan": {
+      "life": "This life",
+      "born": "Born {{date}}",
+      "born_at": "Born {{date}} in {{place}}",
+      "died": "Died {{date}}",
+      "source": "Source",
+      "merits": "Merit and demerit",
+      "merits_value": "Merit {{merit}} · Demerit {{demerit}}",
+      "net": "Net",
+      "confession": "Confession",
+      "confession_none": "None.",
+      "deadline": "Deadline",
+      "handler": "Handled by",
+      "claimed": "{{name}} · claimed {{date}}",
+      "unclaimed": "Nobody has claimed it",
+      "recent": "Latest three records",
+      "recent_none": "No records yet.",
+      "unreadable": "No permission to read the register"
+    },
+    "side": {
+      "this": "This case",
+      "hall_today": "This hall today",
+      "court": "Court",
+      "claimed": "Claimed by",
+      "overdue": "Overdue",
+      "done": "Done this month"
+    },
+    "keys": {
+      "move": "Next / previous",
+      "open": "Open file",
+      "claim": "Claim",
+      "search": "Search"
+    }
+  },
+  "zongbu": {
+    "title": "Ledger of the four realms",
+    "realms": "Four underworlds",
+    "as_of": "As of {{time}}",
+    "today": "Awaiting judgment {{n}}",
+    "open_all": "Open all cases",
+    "cross_title": "Across the realms",
+    "cross_none": "Nothing has crossed the realms yet.",
+    "footer": "The ledger is for administrators; a judge sees the case desk of their own hall.",
+    "legacy": "Previous overview",
+    "civ": {
+      "cn": "Diyu",
+      "eu": "Europe",
+      "eg": "Egypt",
+      "gr": "Greece"
+    },
+    "kind": {
+      "dispatch": "Transfer",
+      "cross": "Joint judgment"
+    },
+    "col": {
+      "pending": "Awaiting judgment",
+      "none_pending": "Nothing awaits judgment today",
+      "failed": "Could not load this column",
+      "month_unknown": "Done this month: no per-realm figure yet"
+    }
   }
 }
