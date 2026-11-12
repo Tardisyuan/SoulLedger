@@ -9311,7 +9311,7 @@
         },
         "2": {
           "name": "Permission codes",
-          "body": "Every action has a permission code (judgment.execute, for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes."
+          "body": "Every action has a permission code (\"Judgment · execute\", for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes."
         },
         "3": {
           "name": "Try an overreach",
@@ -9427,7 +9427,7 @@
       "recorded": "This is the server's real answer, recorded when {{user}} made this request, and replayed as it was. The demo did not make it up.",
       "why_title": "How the server refused",
       "why_front": "The screens take this page out of a judge's menu by permission code, but that is only display: the request can still be sent around the interface.",
-      "why_back": "The backend is what stops it: the endpoint carries the CanReadPermissionCatalogue permission class, which lets through only holders of system.settings or menu.manage. A judge holds neither, so the answer is 403 before the view itself runs.",
+      "why_back": "The backend is what stops it: the endpoint carries its own permission class, which lets through only holders of \"System settings\" or \"Menu management\". A judge holds neither, so the answer is 403 before the view itself runs.",
       "code": "Code",
       "test": "Guarded by",
       "not_recorded": "The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise."
