@@ -281,6 +281,27 @@ def test_a_soul_with_an_open_judgment_at_home_is_not_dispatched_by_hand(realms):
 
 
 @pytest.mark.django_db
+def test_a_case_opened_while_the_proposal_waits_stops_the_execution(realms):
+    """F-DISP-06(2026-11-12):提案 PROPOSED / APPROVED 期间源殿又开了一案,执行时不再查未结案,未结案留在源殿、
+    灵魂到了别殿。执行在锁下再问一次:409 `soul_has_pending_judgment`,灵魂不动。"""
+    from apps.judgment.models import Judgment
+
+    cn, eu, soul = realms["cn"], realms["eu"], realms["cn_soul"]
+    resp = realms["client_cn"].post(URL, {"source_tenant": cn.pk, "target_tenant": eu.pk, "soul": str(soul.pk),
+                                          "reason": "exchange between the two halls, as agreed"}, format="json")
+    assert resp.status_code == 201, resp.data
+    record_id = resp.data["id"]
+    assert realms["client_eu"].post(f"{URL}{record_id}/approve/", {}, format="json").status_code == 200
+    Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
+
+    refused = realms["client_eu"].post(f"{URL}{record_id}/execute/", {}, format="json")
+    assert refused.status_code == 409 and refused.data["code"] == "soul_has_pending_judgment", refused.data
+    soul.refresh_from_db()
+    assert soul.tenant_id == cn.pk
+    assert DispatchRecord.all_objects.get(pk=record_id).status == DispatchStatus.APPROVED
+
+
+@pytest.mark.django_db
 def test_the_hall_less_admin_without_a_source_hall_gets_a_400_not_a_500(realms):
     """The serializer requires `source_tenant` (audit A1-03 thought this was a 500; it never was)."""
     resp = realms["client_admin"].post(URL, {

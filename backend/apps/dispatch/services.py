@@ -545,6 +545,15 @@ class DispatchService:
             # 提议到执行之间灵魂可能已离开冥府(转生、失踪):同一条状态规则,锁下再问一次。
             if soul.current_state not in DISPATCHABLE_SOUL_STATES:
                 raise SoulNotDispatchableError(soul.current_state)
+            # 手动移交:提案挂着期间源殿可能又开了一案(F-DISP-06,2026-11-12)。提议时那条规则(11-11:不带着
+            # 源殿未结的审判移交)在这里锁下再问一次,否则未结案留在源殿、灵魂到了目标殿,两边都动不了。
+            # 受刑计划的调拨不受这条约束(与 `_check_proposable` 的 `manual` 同一个区分)。
+            from apps.judgment.models import open_judgments
+            from apps.sentence_plan.models import SentenceNode
+
+            manual = not SentenceNode.all_objects.filter(dispatch_record_id=dispatch_record.pk).exists()
+            if manual and open_judgments(soul).filter(tenant_id=dispatch_record.source_tenant_id).exists():
+                raise SoulHasPendingJudgmentError()
             old_tenant = soul.tenant
             source_owner_org_id = soul.owner_org_id
             soul.tenant = dispatch_record.target_tenant
