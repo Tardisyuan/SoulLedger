@@ -57,7 +57,7 @@ def test_resources_are_the_registry_with_a_label_per_language(w):
 def test_an_unconfigured_role_reads_as_all(w):
     response = officer_client(w.admin).get(url(w.role))
     assert response.status_code == 200
-    assert response.data == {"default": {"scope": "ALL", "orgs": []}, "overrides": []}
+    assert response.data == {"default": {"scope": "ALL", "orgs": []}, "default_configured": False, "overrides": []}
 
 
 def test_the_hall_less_admin_replaces_the_whole_config_and_it_is_audited(w):
@@ -67,6 +67,7 @@ def test_the_hall_less_admin_replaces_the_whole_config_and_it_is_audited(w):
     assert response.status_code == 200, response.content
     expected = {
         "default": {"scope": "ORG", "orgs": []},
+        "default_configured": True,
         "overrides": [{"resource": "judgment", "scope": "ALL", "orgs": []},
                       {"resource": "soul", "scope": "DEFINE", "orgs": sorted([w.a.pk, w.e.pk])}],
     }
@@ -87,7 +88,8 @@ def test_setting_all_back_stores_an_all_row_that_widens_an_extra_role(w):
     client.put(url(w.role), GOOD(w), format="json")
     response = client.put(url(w.role), {"default": {"scope": "ALL"}, "overrides": []}, format="json")
     assert response.status_code == 200
-    assert response.data == {"default": {"scope": "ALL", "orgs": []}, "overrides": []}
+    assert response.data == {"default": {"scope": "ALL", "orgs": []}, "default_configured": True, "overrides": []}
+    assert client.get(url(w.role)).data["default_configured"] is True
     assert list(RoleDataScope.objects.filter(role=w.role).values_list("resource", "scope")) == [("", "ALL")]
 
     viewer = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})[0]
@@ -96,6 +98,22 @@ def test_setting_all_back_stores_an_all_row_that_widens_an_extra_role(w):
     assert data_scope.org_ids(w.judge, "soul") is None  # JUDGE 显式全部 → 全部
     RoleDataScope.objects.filter(role=w.role).delete()  # 回到「没配」
     assert data_scope.org_ids(w.judge, "soul") == {w.a.pk}
+
+
+@pytest.mark.parametrize("default", ["omitted", None], ids=["omitted", "null"])
+def test_an_override_saved_on_an_unconfigured_role_adds_no_default_row(w, default):
+    """从没配过的角色只改一项覆盖再保存:不多出默认 ALL 那一行(否则兼任时它让结果变成全部)。"""
+    body = {"overrides": [{"resource": "soul", "scope": "SELF"}]}
+    if default is None:
+        body["default"] = None
+    response = officer_client(w.admin).put(url(w.role), body, format="json")
+    assert response.status_code == 200, response.content
+    assert response.data["default_configured"] is False
+    assert list(RoleDataScope.objects.filter(role=w.role).values_list("resource", "scope")) == [("soul", "SELF")]
+
+    scope("VIEWER", "ORG")
+    w.judge.role, w.judge.extra_roles = "VIEWER", ["JUDGE"]
+    assert data_scope.org_ids(w.judge, "judgment") == {w.a.pk}, "JUDGE 没配默认,兼任时不放宽"
 
 
 def test_copying_an_unconfigured_role_leaves_the_copy_unconfigured(w):
@@ -170,7 +188,8 @@ def test_a_copy_carries_the_data_scope_and_the_source_keeps_its_own(w):
                            format="json")
     assert response.status_code == 201, response.content
     copy = Role.objects.get(name="ASSESSOR")
-    assert role_config(copy) == role_config(w.role) != {"default": {"scope": "ALL", "orgs": []}, "overrides": []}
+    assert role_config(copy) == role_config(w.role) != {
+        "default": {"scope": "ALL", "orgs": []}, "default_configured": False, "overrides": []}
     assert RoleDataScope.objects.filter(role=w.role).count() == 3
 
 
