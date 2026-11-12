@@ -374,6 +374,22 @@ def test_a_mute_follows_the_soul_to_its_current_hall(cn_tenant, eu_tenant, eu_mo
     assert officer_client(eu_moderator).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json").status_code == 200
 
 
+def test_an_officers_mute_stays_with_the_hall_that_issued_it(cn_tenant, eu_tenant, eu_moderator, django_user_model):
+    """An officer has no soul account, so their mute has no soul to follow: it stays with the issuing hall (the
+    demo's 「解除禁言」 found nothing to lift once F-SOC-11 scoped every mute by the soul's hall)."""
+    cn_mod = django_user_model.objects.create(username="cn_mute_mod2", role="MODERATOR", tenant=cn_tenant)
+    officer = django_user_model.objects.create(username="cn_noisy_officer", role="JUDGE", tenant=cn_tenant)
+    mute = SocialMute.objects.create(tenant=cn_tenant, user=officer, until=timezone.now() + timedelta(days=7),
+                                     reason="x", created_by=cn_mod)
+
+    def ids(user):
+        return {r["id"] for r in officer_client(user).get(f"{MODERATION}/mutes/").json()["results"]}
+
+    assert str(mute.pk) in ids(cn_mod) and str(mute.pk) not in ids(eu_moderator)
+    assert officer_client(eu_moderator).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json").status_code == 404
+    assert officer_client(cn_mod).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json").status_code == 200
+
+
 def test_the_old_hall_cannot_mute_through_a_report_a_soul_that_has_moved_on(cn_tenant, eu_tenant, cn_admin_user):
     account, _ = soul(cn_tenant, "被举报后调走")
     _, reporter = soul(cn_tenant, "举报人")

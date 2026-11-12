@@ -371,8 +371,11 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
     def get_queryset(self):
         # A mute belongs to the soul's current hall, not to the hall that issued it: after a transfer the new
         # hall's officers see it and can lift it, the old hall's no longer can (F-SOC-11).
-        qs = scope_to_tenant(self.queryset.all(), self.request, field="user__soul_account__soul__tenant")
-        return qs.order_by("-created_at")
+        # An officer has no soul account: an officer's mute stays with the hall that issued it.
+        souls = scope_to_tenant(self.queryset.filter(user__soul_account__isnull=False), self.request,
+                                field="user__soul_account__soul__tenant")
+        officers = scope_to_tenant(self.queryset.filter(user__soul_account__isnull=True), self.request)
+        return (souls | officers).order_by("-created_at")
 
     def filter_queryset(self, queryset):
         qs = super().filter_queryset(queryset)
