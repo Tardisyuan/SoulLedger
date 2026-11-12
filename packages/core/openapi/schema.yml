@@ -47005,7 +47005,7 @@ components:
         death_location:
           type: string
           default: ''
-          maxLength: 500
+          maxLength: 255
         cause_of_death:
           type: string
           default: ''

@@ -222,6 +222,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
     )
     origin_location = models.CharField(max_length=255, blank=True)
+    #: Where this life ended, as the death was reported (F-DEATH-06, 2026-11-12). `die()` used to write it over
+    #: `origin_location`, so the birthplace was lost and the city god was matched by the place of death.
+    death_location = models.CharField(max_length=255, blank=True)
 
     #: Which judge of the Greek meadow tries this soul (2026-10-19): Gorgias 524a gives Rhadamanthus the dead
     #: of Asia and Aeacus those of Europe, Minos only when they are in doubt. A recorded fact, not inferred from
@@ -927,7 +930,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         if self.civilization == Civilization.CHINESE and city_god is None:
             from apps.judgment import city_gods
 
-            if city_gods.match(self.tenant_id, location or self.origin_location) is None:
+            if city_gods.match(self.tenant_id, self.origin_location) is None:
                 raise city_gods.NoCityGodError()
 
         from apps.dispatch import capture
@@ -939,7 +942,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                     "Death recorded, judgment initiated",
                     account_origin=account_origin,
                     **({"death_date": death_date} if death_date else {}),
-                    **({"origin_location": location} if location else {}),
+                    **({"death_location": location} if location else {}),
                 )
             if not result:
                 return None

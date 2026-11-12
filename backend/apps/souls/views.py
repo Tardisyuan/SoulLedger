@@ -615,6 +615,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 status=status.HTTP_400_BAD_REQUEST,
             )
         location = request.data.get("location", "")
+        if not isinstance(location, str) or len(location) > 255:  # Soul.death_location's width
+            return Response({"error": "location must be text of at most 255 characters"},
+                            status=status.HTTP_400_BAD_REQUEST)
         # Absent = keep the death date on file (F-DEATH-01), else today. The cross-date rules (death before
         # birth, a lifespan past 150 years) are checked inside `Soul.die` against the date it will record, so
         # every door into a death — this one, death sync, 土地公, the capture hand-over — applies them alike;

@@ -77,3 +77,26 @@ class TestNameLookupFindsTheLivingSoul:
     def test_only_a_dead_namesake_still_answers_not_alive(self, tenant, api_key):
         Soul.objects.create(name="Wang Wu", tenant=tenant, current_state=SoulState.JUDGING)
         assert _register(tenant, api_key, {"name": "Wang Wu"}, "name-3").error_code == "SOUL_NOT_ALIVE"
+
+
+class TestThePlaceOfDeathIsNotTheBirthplace:
+    """F-DEATH-06: `die()` wrote the place of death over `origin_location`, and the city god was then matched by it."""
+
+    def test_the_birthplace_stays_and_picks_the_city_god(self, tenant, api_key):
+        from apps.judgment.models import CityGod
+
+        hangzhou = CityGod.objects.create(tenant=tenant, name="杭州府城隍", regions=["杭州"])
+        CityGod.objects.create(tenant=tenant, name="顺天府城隍", regions=["北京"])
+        soul = Soul.objects.create(name="客死", tenant=tenant, origin_location="杭州")
+        record = _register(tenant, api_key, {"soul_id": str(soul.id)}, "place-1", death_location="北京协和医院")
+        assert record.status == DeathRegistrationStatus.PROCESSED
+        soul.refresh_from_db()
+        assert (soul.origin_location, soul.death_location) == ("杭州", "北京协和医院")
+        assert record.judgment.city_god == hangzhou
+
+    def test_a_place_wider_than_the_column_is_refused_at_the_door(self):
+        from apps.death_sync.serializers import DeathRegistrationCreateSerializer
+
+        body = {"soul_lookup": {"name": "x"}, "death_date": "2026-06-01"}
+        assert DeathRegistrationCreateSerializer(data={**body, "death_location": "地" * 255}).is_valid()
+        assert not DeathRegistrationCreateSerializer(data={**body, "death_location": "地" * 256}).is_valid()

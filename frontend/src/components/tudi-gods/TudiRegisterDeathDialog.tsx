@@ -177,7 +177,7 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
         <TextField
           id="tudi-register-location"
           label={t("earthGods.death_location")}
-          maxLength={500}
+          maxLength={255}
           value={location}
           onChange={(e) => setLocation(e.target.value)}
         />
