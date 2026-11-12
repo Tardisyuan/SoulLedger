@@ -144,6 +144,17 @@ it("a resources list of the wrong shape still leaves the default editable and sa
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
 });
 
+it("a save answered with an empty list (the demo's old answer) does not crash the drawer (F-DEMO-01)", async () => {
+  api.putRoleDataScope.mockResolvedValue({ data: Object.assign([], { count: 0, next: null, previous: null, results: [] }) });
+  renderSection(role("JUDGE"));
+  await waitFor(() => expect(radio("ALL")).toBeChecked());
+  fireEvent.click(radio("SELF"));
+  fireEvent.click(saveButton());
+  await waitFor(() => expect(api.putRoleDataScope).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(mockToast).toHaveBeenCalled());
+  expect(screen.getAllByRole("radio").length).toBeGreaterThan(0);
+});
+
 describe("an unconfigured default is not the same as 'all'", () => {
   const unset = () => screen.getByRole("radio", { name: "permissions.datascope.default_unset" });
   beforeEach(() => {

@@ -43,6 +43,16 @@ function generic(rec: Recording, method: string, path: string, query: URLSearchP
     console.info("[demo] accepted without effect:", method, path);
     return { status: 200, data: owner.data };
   }
+  // A document written whole (`PUT /perm/roles/1/data-scope/`, a settings PATCH): the answer is the document with
+  // the new values in it, kept for the next read. An empty list here crashed every screen that reads fields off the
+  // answer (F-DEMO-01/03/06).
+  if ((method === "PUT" || method === "PATCH") && !lastIsId) {
+    const current = read(rec, path, query).data;
+    const isDoc = current !== null && typeof current === "object" && !Array.isArray(current);
+    const next = { ...(isDoc ? (current as Row) : {}), ...body };
+    getOverlay().docs[path] = next;
+    return { status: 200, data: next };
+  }
   console.info("[demo] accepted without effect:", method, path);
   return { status: 200, data: emptyLike() };
 }

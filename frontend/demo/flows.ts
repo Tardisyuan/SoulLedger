@@ -560,8 +560,21 @@ function recycleBin(rec: Recording, path: string, body: Row): Answer | null {
 }
 
 /** A write with mainline behaviour, or null for the generic rule. */
+/** One of the 42 negative confessions: the whole list comes back, as the server answers (F-DEMO-02). */
+function confession(rec: Recording, method: string, path: string, body: Row): Answer | null {
+  const m = /^(\/judgment\/[^/]+\/negative-confessions\/)(\d+)\/$/.exec(path);
+  if (!m || method !== "PUT") return null;
+  const list = read(rec, m[1], qs()).data as { items?: Row[]; tally?: Row | null } | null;
+  if (!list || !Array.isArray(list.items)) return null;
+  const items = list.items.map((row) => (String(row.ordinal) === m[2] ? { ...row, truthful: body.truthful ?? null, note: String(body.note ?? "") } : row));
+  const count = (want: boolean | null) => items.filter((row) => (row.truthful ?? null) === want).length;
+  const next = { ...list, items, tally: { truthful: count(true), untruthful: count(false), unheard: count(null), total: items.length } };
+  getOverlay().docs[m[1]] = next;
+  return ok(next);
+}
+
 export function flow(rec: Recording, method: string, path: string, _query: URLSearchParams, body: Row): Answer | null {
-  const edited = roleEdit(rec, method, path, body);
+  const edited = roleEdit(rec, method, path, body) ?? confession(rec, method, path, body);
   if (edited) return edited;
   if (method !== "POST") return null;
   const approve = /^\/workflows\/([^/]+)\/approve_node\/$/.exec(path);
