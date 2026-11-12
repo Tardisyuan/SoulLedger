@@ -5,13 +5,13 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { AccessibilityInfo, AppState, StyleSheet } from "react-native";
+import { AccessibilityInfo, AppState } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { RefreshFailed, Row, visibleTabs } from "../kit";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
-import { QueueTab, segmentLabel } from "../screens/queue";
+import { QueueTab, overviewParts, sourceOf } from "../screens/queue";
 import { SearchTab } from "../screens/search";
 import { TodoTab } from "../screens/todo";
 import { Shell } from "../shell";
@@ -29,10 +29,11 @@ jest.mock("@soulledger/core/api/auth", () => ({
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: false, required: true } })) },
 }));
 const mockClaim = jest.fn();
+const mockRelease = jest.fn();
 const mockCounts = jest.fn();
 jest.mock("@soulledger/core/api/judgment", () => ({
   // `get` never settles: a case opened from the list just sits loading (the shell test below only needs it open).
-  judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), queueCounts: (...a: unknown[]) => mockCounts(...a), get: () => new Promise(() => {}) },
+  judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), release: (...a: unknown[]) => mockRelease(...a), queueCounts: (...a: unknown[]) => mockCounts(...a), get: () => new Promise(() => {}) },
 }));
 const mockSouls = jest.fn();
 jest.mock("@soulledger/core/api/souls", () => ({
@@ -132,101 +133,106 @@ describe("the to-do tab", () => {
 });
 
 describe("the other tabs have the same four states", () => {
-  it("judgments: empty, denied", async () => {
+  // 案卷台 (第三十批): three groups asked separately; a row is drawn once, in the first group that has it.
+  const byGroup = (groups: Record<string, object[]>) => async (p: { group: string }) => ({ data: { results: groups[p.group] ?? [] } });
+
+  it("judgments: empty", async () => {
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    expect(await screen.findByText("手上没有案子")).toBeTruthy();
+    expect(await screen.findByText("案卷台上没有案卷")).toBeTruthy();
+    expect(screen.getByText("新的案子到了会出现在这里。")).toBeTruthy();
+  });
+
+  it("judgments: denied names the role and the area", async () => {
     mockList.mockRejectedValue(httpError(403));
-    fireEvent.press(screen.getByTestId("queue-group-unclaimed"));
+    renderOfficer(<QueueTab onOpen={() => {}} />);
     expect(await screen.findByTestId("state-denied")).toBeTruthy();
   });
 
-  it("judgments: a row waiting for a verdict points to 滑卡审判 (v4 S09), and carries its deadline", async () => {
-    mockList.mockResolvedValue({
-      data: { results: [{ id: "j1", case_number: "CN-2026-0007", soul_name: "李白", court: "一殿", is_final: false, deadline_remaining_seconds: -86_400, is_overdue: true }] },
-    });
-    renderOfficer(<QueueTab onOpen={() => {}} />);
-    expect(await screen.findByText("◇ 待宣判 · 可在「滑卡审判」里结案")).toBeTruthy();
-    expect(screen.getByText("◐ 期限 · 超 1 日")).toBeTruthy();
-  });
-
-  it("judgments: a stale row says 滞留 and why; a fresh one says nothing", async () => {
-    mockList.mockResolvedValue({
-      data: {
-        results: [
-          { id: "j1", case_number: "CN-1", soul_name: "李白", court: "一殿", is_final: false, stale_since: "2026-10-01T01:00:00Z" },
-          { id: "j2", case_number: "CN-2", soul_name: "杜甫", court: "一殿", is_final: false, stale_since: null },
+  it("judgments: an overdue case in hand carries 「! 超期 N 日」, a fresh one 「◇ 审判中 · N 日」", async () => {
+    mockList.mockImplementation(
+      byGroup({
+        mine: [
+          { id: "j1", case_number: "CN-2026-0007", soul_name: "李白", court: "一殿", is_final: false, deadline_remaining_seconds: -86_400, is_overdue: true },
+          { id: "j2", case_number: "CN-2026-0008", soul_name: "杜甫", court: "一殿", is_final: false, deadline_remaining_seconds: 3 * 86_400 },
         ],
-      },
-    });
+      })
+    );
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    const stale = await screen.findByTestId("queue-row-j1");
-    expect(within(stale).getByText("◐ 滞留 · 30 天无进展")).toBeTruthy();
-    expect(within(screen.getByTestId("queue-row-j2")).queryByText(/滞留/)).toBeNull();
+    const late = await screen.findByTestId("queue-row-j1");
+    expect(within(late).getByText("! 超期 1 日")).toBeTruthy();
+    expect(within(late).getByText("CN-2026-0007")).toBeTruthy();
+    expect(within(late).getByText("李白")).toBeTruthy();
+    expect(within(screen.getByTestId("queue-row-j2")).getByText("◇ 审判中 · 3 日")).toBeTruthy();
+    expect(within(screen.getByTestId("queue-row-j2")).queryByText(/超期/)).toBeNull();
   });
 
   const UNCLAIMED = { data: { results: [{ id: "j9", case_number: "CN-9", soul_name: "王九", court: "一殿", is_final: true }] } };
 
-  it("judgments: 认领 that someone beat us to (409) asks the list and the counts again", async () => {
-    mockList.mockResolvedValue(UNCLAIMED);
+  it("judgments: 认领 that someone beat us to (409) asks the lists and the counts again", async () => {
+    mockList.mockImplementation(byGroup({ unclaimed: UNCLAIMED.data.results }));
     mockClaim.mockRejectedValue(httpError(409));
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
     fireEvent.press(await screen.findByTestId("queue-claim-j9"));
     await waitFor(() => expect(mockCounts).toHaveBeenCalledTimes(2));
     expect(mockList.mock.calls.filter(([p]) => (p as { group: string }).group === "unclaimed").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("judgments: 重试 after a failed start asks the four counts again too (phone QA 10-29b: offline, both failed)", async () => {
+  it("judgments: a case in hand swipes to 「放回」, which releases it", async () => {
+    mockList.mockImplementation(byGroup({ mine: UNCLAIMED.data.results }));
+    mockRelease.mockResolvedValue({ data: {} });
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    const put = await screen.findByTestId("queue-release-j9");
+    expect(put).toHaveTextContent("放回");
+    expect(screen.queryByTestId("queue-claim-j9")).toBeNull();
+    fireEvent.press(put);
+    await waitFor(() => expect(mockRelease).toHaveBeenCalledWith("j9"));
+  });
+
+  it("judgments: 重试 after a failed start asks the counts again too (phone QA 10-29b: offline, both failed)", async () => {
     mockList.mockRejectedValue(httpError(500));
     mockCounts.mockRejectedValue(new Error("Network Error"));
     renderOfficer(<QueueTab onOpen={() => {}} />);
     const retry = await screen.findByTestId("state-retry");
     expect(mockCounts).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("queue-group-unclaimed")).not.toHaveTextContent(/7/);
+    expect(screen.queryByTestId("desk-overview")).toBeNull();
     mockList.mockResolvedValue({ data: { results: [] } });
     mockCounts.mockResolvedValue({ data: { mine: 0, unclaimed: 7, others: 0, deferred: 0 } });
     fireEvent.press(retry);
     await waitFor(() => expect(mockCounts).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.getByTestId("queue-group-unclaimed")).toHaveTextContent(/7/));
+    await waitFor(() => expect(screen.getByTestId("desk-overview")).toHaveTextContent(/今日 7 件/));
   });
 
-  it("judgments: no 认领 button without judgment.execute (it would 403)", async () => {
-    mockList.mockResolvedValue(UNCLAIMED);
+  it("judgments: no 认领 without judgment.execute (it would 403)", async () => {
+    mockList.mockImplementation(byGroup({ unclaimed: UNCLAIMED.data.results }));
     renderOfficer(<QueueTab onOpen={() => {}} />, { user: { ...OFFICER, permissions: ["judgment.read"] } });
-    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
-    await screen.findByText("CN-9 · 王九");
+    await screen.findByText("王九");
     expect(screen.queryByTestId("queue-claim-j9")).toBeNull();
   });
 
-  it("judgments: held in 枉死城 — the mark and 候至, no 认领 but 到期后可认领; past the date the button is back", async () => {
-    mockList.mockResolvedValue({
-      data: {
-        results: [
+  it("judgments: held in 枉死城 — 候审中 and no 认领; past the date 认领 is back", async () => {
+    mockList.mockImplementation(
+      byGroup({
+        unclaimed: [
           { id: "j7", case_number: "CN-7", soul_name: "王守仁", court: "十殿", is_final: false, untimely: true, held_until: "2999-11-03" },
           { id: "j8", case_number: "CN-8", soul_name: "严嵩", court: "十殿", is_final: false, untimely: true, held_until: "2000-01-01" },
         ],
-      },
-    });
+      })
+    );
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
     const held = await screen.findByTestId("queue-row-j7");
-    expect(within(held).getByText("▢ 枉死 · 候至 2999年 · 11月3日")).toBeTruthy();
-    expect(within(held).queryByText(/2999-11-03/)).toBeNull();
-    expect(screen.getByTestId("queue-held-j7")).toHaveTextContent("到期后可认领");
+    expect(within(held).getByText("候审中 · 不计期限")).toBeTruthy();
     expect(screen.queryByTestId("queue-claim-j7")).toBeNull();
-    const past = screen.getByTestId("queue-row-j8");
-    expect(within(past).getByText("▢ 枉死")).toBeTruthy();
     expect(screen.getByTestId("queue-claim-j8")).toBeTruthy();
   });
 
   it("「加载更多」 that fails says so under the list, and 重试 asks again", async () => {
     let fail = true;
-    mockList.mockImplementation(async (params: { page?: string }) => {
+    mockList.mockImplementation(async (params: { group: string; page?: string }) => {
       if (params.page === "2") {
         if (fail) throw new Error("Network Error");
         return { data: { results: [], next: null } };
       }
-      return { data: { results: UNCLAIMED.data.results, next: "http://x/?page=2" } };
+      return params.group === "unclaimed" ? { data: { results: UNCLAIMED.data.results, next: "http://x/?page=2" } } : { data: { results: [] } };
     });
     renderOfficer(<QueueTab onOpen={() => {}} />);
     fireEvent.press(await screen.findByTestId("list-more"));
@@ -235,6 +241,7 @@ describe("the other tabs have the same four states", () => {
     fireEvent.press(screen.getByText("重试"));
     await waitFor(() => expect(screen.queryByTestId("list-more-failed")).toBeNull());
   });
+
 
   it("notices: unread is ● and bold, and tapping marks it read (○)", async () => {
     mockNotices.mockResolvedValue({ data: { results: [{ id: 1, title: "新审批", message: "有一件待办", is_read: false, created_at: "2026-10-09T01:00:00Z" }] } });
@@ -286,32 +293,22 @@ describe("lists the server pages (20 a page) show the rest on 「加载更多」
   const judgment = (n: number) => ({ id: `j${n}`, case_number: `CN-${n}`, soul_name: `魂${n}`, court: "一殿", is_final: true });
 
   it("judgments: page 2 is appended under page 1 and the button goes with the last page", async () => {
-    mockList.mockImplementation(async (params: { page?: string }) =>
-      params.page === "2" ? { data: { results: [judgment(21)], next: null } } : { data: { results: [judgment(1), judgment(2)], next: "http://x/?page=2" } }
+    mockList.mockImplementation(async (params: { group: string; page?: string }) =>
+      params.group !== "mine"
+        ? { data: { results: [] } }
+        : params.page === "2"
+          ? { data: { results: [judgment(21)], next: null } }
+          : { data: { results: [judgment(1), judgment(2)], next: "http://x/?page=2" } }
     );
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    expect(await screen.findByText("CN-1 · 魂1")).toBeTruthy();
+    expect(await screen.findByText("魂1")).toBeTruthy();
     fireEvent.press(screen.getByTestId("list-more"));
-    expect(await screen.findByText("CN-21 · 魂21")).toBeTruthy();
-    expect(screen.getByText("CN-2 · 魂2")).toBeTruthy();
+    expect(await screen.findByText("魂21")).toBeTruthy();
+    expect(screen.getByText("魂2")).toBeTruthy();
     expect(screen.queryByTestId("list-more")).toBeNull();
     expect(mockList).toHaveBeenCalledWith({ group: "mine", page: "2" });
   });
 
-  it("judgments: a list with no next page has no button, and switching tab drops the extra pages", async () => {
-    mockList.mockImplementation(async (params: { group: string; page?: string }) =>
-      params.page === "2"
-        ? { data: { results: [judgment(21)], next: null } }
-        : { data: { results: [judgment(params.group === "mine" ? 1 : 7)], next: params.group === "mine" ? "http://x/?page=2" : null } }
-    );
-    renderOfficer(<QueueTab onOpen={() => {}} />);
-    fireEvent.press(await screen.findByTestId("list-more"));
-    await screen.findByText("CN-21 · 魂21");
-    fireEvent.press(screen.getByTestId("queue-group-unclaimed"));
-    expect(await screen.findByText("CN-7 · 魂7")).toBeTruthy();
-    expect(screen.queryByText("CN-21 · 魂21")).toBeNull();
-    expect(screen.queryByTestId("list-more")).toBeNull();
-  });
 
   it("notices: the same", async () => {
     const notice = (id: number) => ({ id, title: `通知${id}`, message: "", is_read: true, created_at: "2026-10-09T01:00:00Z" });
@@ -527,55 +524,103 @@ describe("the shell", () => {
   });
 });
 
-// 华为真机 10-29 第二轮: 「他人手上 · 0」 put its count on a second line, and coming back from a
-// case opened under 待认领 showed 我手上 again.
-describe("the judgments tab's segments", () => {
-  it("each label keeps to one line, at 13pt when there are four", async () => {
+// 案卷台 (Design 第三十批 第 2 步 · 官员端): the overview line, the source chips, the groups, and the full-screen case.
+describe("the 案卷台", () => {
+  it("the overview: 0 overdue reads 「无超期」 unmarked; an overdue count is marked; the month is a share", () => {
+    const t = (key: string, vars?: Record<string, string>) => `${key}${vars ? JSON.stringify(vars) : ""}`;
+    expect(overviewParts(t, 7, 0, null)).toEqual([{ text: 'officer_app.desk.overview.today{"n":"7"}' }, { text: "officer_app.desk.overview.no_overdue" }]);
+    expect(overviewParts(t, 7, 1, { done: 22, open: 78 })[1]).toEqual({ text: 'officer_app.desk.overview.overdue{"n":"1"}', neg: true });
+    expect(overviewParts(t, 7, 1, { done: 22, open: 78 })[2]).toEqual({ text: 'officer_app.desk.overview.month_done{"pct":"22"}' });
+    // Nothing this month and nothing open: no share at all, not 「0%」 of nothing.
+    expect(overviewParts(t, null, null, { done: 0, open: 0 })).toEqual([]);
+  });
+
+  it("draws the overview from the counts and the officer's month", async () => {
+    mockCounts.mockResolvedValue({ data: { mine: 2, unclaimed: 4, others: 9, deferred: 1, overdue: 0 } });
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    const label = await within(screen.getByTestId("queue-group-others")).findByText("他人手上 · 0");
-    expect(label.props.numberOfLines).toBe(1);
-    expect(StyleSheet.flatten(label.props.style).fontSize).toBe(13);
-    expect(StyleSheet.flatten(label.props.style).fontVariant).toEqual(["tabular-nums"]);
-    expect(screen.getByTestId("queue-group").props.accessibilityRole).toBe("tablist");
-    expect(screen.getByTestId("queue-group-others").props.accessibilityRole).toBe("tab");
+    await waitFor(() => expect(screen.getByTestId("desk-overview")).toHaveTextContent("今日 7 件 · 无超期"));
   });
 
-  // 用户 2026-10-29:两位数起去掉「 · 」,一位数照旧。
-  it("drops the 「 · 」 once a count has two digits", () => {
-    expect(segmentLabel("待认领", 12)).toBe("待认领12");
-    expect(segmentLabel("待认领", 12)).not.toContain("·");
-    expect(segmentLabel("待认领", 10)).toBe("待认领10");
-    expect(segmentLabel("待认领", 9)).toBe("待认领 · 9");
-    expect(segmentLabel("待认领", 0)).toBe("待认领 · 0");
-    expect(segmentLabel("待认领")).toBe("待认领");
+  it("the three groups in order, 他人手上 not among them", async () => {
+    const row = (id: string) => ({ id, case_number: `CN-${id}`, soul_name: id, court: "一殿", is_final: true });
+    mockList.mockImplementation(async (p: { group: string }) => ({ data: { results: p.group === "others" ? [row("o")] : [row(p.group)] } }));
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    await screen.findByTestId("queue-row-unclaimed");
+    const drawn = screen.root.findAll((n) => typeof n.props.testID === "string" && /^desk-group-/.test(n.props.testID)).map((n) => n.props.testID);
+    expect([...new Set(drawn)]).toEqual(["desk-group-mine", "desk-group-deferred", "desk-group-unclaimed"]);
+    expect(within(screen.getByTestId("desk-group-mine")).getByText("我认领")).toBeTruthy();
+    expect(screen.queryByTestId("queue-row-o")).toBeNull();
+    expect(mockList).not.toHaveBeenCalledWith({ group: "others" });
   });
 
-  it("starts on the segment it is given and reports a change", async () => {
-    const onGroup = jest.fn();
-    renderOfficer(<QueueTab onOpen={() => {}} initialGroup="unclaimed" onGroup={onGroup} />);
-    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ group: "unclaimed" }));
-    expect(mockList).not.toHaveBeenCalledWith({ group: "mine" });
-    expect(screen.getByTestId("queue-group-unclaimed").props.accessibilityState).toMatchObject({ selected: true });
-    fireEvent.press(screen.getByTestId("queue-group-others"));
-    expect(onGroup).toHaveBeenCalledWith("others");
-    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ group: "others" }));
-    await act(async () => {});
+  it("source chips: only the sources the rows have, with counts; a chip filters the groups", async () => {
+    mockList.mockImplementation(async (p: { group: string }) => ({
+      data: {
+        results:
+          p.group === "unclaimed"
+            ? [
+                { id: "c1", case_number: "CN-1", soul_name: "哪吒", court: "一殿", civilization: "CHINESE", city_god_status: "PENDING" },
+                { id: "q1", case_number: "CN-2", soul_name: "沉香", court: "一殿", civilization: "CHINESE" },
+              ]
+            : [],
+      },
+    }));
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    await screen.findByTestId("queue-row-c1");
+    expect(screen.getByTestId("desk-sources-all")).toHaveTextContent(/全部\s*2/);
+    expect(screen.getByTestId("desk-sources-city_god")).toHaveTextContent(/城隍初审\s*1/);
+    expect(screen.queryByTestId("desk-sources-cross")).toBeNull();
+    expect(within(screen.getByTestId("queue-row-c1")).getByText(/^城隍初审 · /)).toBeTruthy();
+    fireEvent.press(screen.getByTestId("desk-sources-city_god"));
+    expect(screen.queryByTestId("queue-row-q1")).toBeNull();
+    expect(screen.getByTestId("queue-row-c1")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("desk-sources-city_god")); // again: back to 全部
+    expect(screen.getByTestId("queue-row-q1")).toBeTruthy();
   });
 
-  it("a case opened under 待认领 returns to 待认领, not 我手上", async () => {
+  it("a case of another civilization than the hall's reads 跨域", () => {
+    expect(sourceOf({ civilization: "EUROPEAN", city_god_status: "" }, "CN_DIYU")).toBe("cross");
+    expect(sourceOf({ civilization: "CHINESE", city_god_status: "" }, "CN_DIYU")).toBe("queue");
+    expect(sourceOf({ civilization: "CHINESE", city_god_status: "RETURNED" }, "CN_DIYU")).toBe("city_god");
+    // A hall or a case the table does not know is not called cross.
+    expect(sourceOf({ civilization: "EUROPEAN", city_god_status: "" }, null)).toBe("queue");
+  });
+
+  it("opening a case reports where it sits among the rows shown", async () => {
+    const row = (id: string) => ({ id, case_number: `CN-${id}`, soul_name: id, court: "一殿", is_final: true });
+    mockList.mockImplementation(async (p: { group: string }) => ({ data: { results: p.group === "mine" ? [row("a"), row("b")] : p.group === "unclaimed" ? [row("c")] : [] } }));
+    const onOpen = jest.fn();
+    renderOfficer(<QueueTab onOpen={onOpen} />);
+    fireEvent.press(await screen.findByTestId("queue-row-c"));
+    expect(onOpen).toHaveBeenCalledWith("c", { n: 3, total: 3 });
+  });
+
+  it("in the shell: the case is full-screen under 「‹ 案卷台」 and 「第 1 / 1 件」; back lands on the desk", async () => {
     mockList.mockImplementation(async (p: { group: string }) => ({
       data: { results: p.group === "unclaimed" ? [{ id: "j9", case_number: "CN-9", soul_name: "王九", court: "一殿", is_final: true }] : [] },
     }));
     renderOfficer(<Shell />);
     fireEvent.press(await screen.findByTestId("tab-queue"));
-    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
+    expect(await screen.findByText("案卷台")).toBeTruthy();
     fireEvent.press(await screen.findByTestId("queue-row-j9"));
-    fireEvent.press(await screen.findByTestId("detail-back"));
+    expect(screen.getByTestId("detail-back").props.accessibilityLabel).toBe("案卷台");
+    expect(screen.getByTestId("detail-position")).toHaveTextContent("第 1 / 1 件");
+    expect(screen.queryByTestId("tab-queue-screen")).toBeNull();
+    fireEvent.press(screen.getByTestId("detail-back"));
     expect(await screen.findByTestId("queue-row-j9")).toBeTruthy();
-    expect(screen.getByTestId("queue-group-unclaimed").props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByTestId("queue-group-mine").props.accessibilityState).toMatchObject({ selected: false });
+  });
+
+  it("no search box on the desk; the magnifier in the top bar opens 查询", async () => {
+    renderOfficer(<Shell />);
+    fireEvent.press(await screen.findByTestId("tab-queue"));
+    await screen.findByTestId("tab-queue-screen");
+    expect(screen.queryByTestId("soul-search")).toBeNull();
+    fireEvent.press(screen.getByTestId("desk-search"));
+    expect(await screen.findByTestId("soul-search")).toBeTruthy();
+    await act(async () => {});
   });
 });
+
 
 // ── Design 第四十批 ─────────────────────────────────────────────────────
 
@@ -652,31 +697,29 @@ describe("the judgments tab across a dropped network", () => {
   }
   beforeEach(() => clearReadCache());
 
-  it("offline from the cache: no error, counts 「—」; back online: the list and the counts are asked again by themselves", async () => {
+  it("offline from the cache: no error, no overview; back online: the lists and the counts are asked again by themselves", async () => {
     cacheWrite("list:queue:mine", { results: [{ id: "j-old", case_number: "CN-0", soul_name: "旧", court: "一殿", is_final: true }] });
+    cacheWrite("list:queue:deferred", { results: [] });
+    cacheWrite("list:queue:unclaimed", { results: [] });
     mockCounts.mockRejectedValueOnce(new Error("Network Error")).mockResolvedValue({ data: { mine: 3, unclaimed: 0, others: 0, deferred: 0 } });
-    mockList.mockResolvedValue({ data: { results: [{ id: "j-new", case_number: "CN-1", soul_name: "新", court: "一殿", is_final: true }] } });
+    mockList.mockImplementation(async (p: { group: string }) => ({
+      data: { results: p.group === "mine" ? [{ id: "j-new", case_number: "CN-1", soul_name: "新", court: "一殿", is_final: true }] : [] },
+    }));
     renderOfficer(
       <Net>
         <QueueTab onOpen={() => {}} />
       </Net>
     );
     expect(await screen.findByTestId("queue-row-j-old")).toBeTruthy();
-    expect(await within(screen.getByTestId("queue-group-mine")).findByText("我手上 · —")).toBeTruthy();
+    expect(screen.queryByTestId("desk-overview")).toBeNull();
     expect(screen.queryByTestId("refresh-failed")).toBeNull();
     expect(mockList).not.toHaveBeenCalled();
     expect(mockCounts).toHaveBeenCalledTimes(1);
 
     await act(async () => net.set({ offline: false, back: 1 }));
     expect(await screen.findByTestId("queue-row-j-new")).toBeTruthy();
-    expect(await within(screen.getByTestId("queue-group-mine")).findByText("我手上 · 3")).toBeTruthy();
-    expect(screen.queryByText("我手上 · —")).toBeNull();
+    await waitFor(() => expect(screen.getByTestId("desk-overview")).toHaveTextContent(/今日 3 件/));
     expect(screen.queryByTestId("queue-row-j-old")).toBeNull();
     expect(mockCounts).toHaveBeenCalledTimes(2);
-  });
-
-  it("「—」 only when the counts failed: still loading is the bare name", () => {
-    expect(segmentLabel("我手上", null)).toBe("我手上 · —");
-    expect(segmentLabel("我手上", undefined)).toBe("我手上");
   });
 });

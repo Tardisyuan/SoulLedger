@@ -8059,6 +8059,37 @@
       "claim_taken": "已被别人认领",
       "open_swipe": "滑卡审判"
     },
+    "desk": {
+      "title": "案卷台",
+      "search": "搜索案卷",
+      "position": "第 {{n}} / {{total}} 件",
+      "all": "全部",
+      "overview": {
+        "today": "今日 {{n}} 件",
+        "overdue": "超期 {{n}}",
+        "no_overdue": "无超期",
+        "month_done": "本月已结 {{pct}}%"
+      },
+      "sources": {
+        "queue": "审判队列",
+        "city_god": "城隍初审",
+        "cross": "跨域"
+      },
+      "groups": {
+        "mine": "我认领",
+        "deferred": "待定",
+        "unclaimed": "待认领"
+      },
+      "tag": {
+        "reviewing": "审判中",
+        "returned": "退回重审",
+        "overdue": "超期 {{n}} 日"
+      },
+      "release": "放回",
+      "release_failed": "没能放回",
+      "empty_title": "案卷台上没有案卷",
+      "empty_body": "新的案子到了会出现在这里。"
+    },
     "continue_on_desk": "在电脑上继续",
     "search": {
       "souls": "查灵魂",

@@ -215,7 +215,7 @@ describe("names, not codes", () => {
     mockList.mockResolvedValue({ data: { results: [{ ...JUDGMENT, is_final: true }] } });
     renderOfficer(<QueueTab onOpen={() => {}} />);
     const row = await screen.findByTestId("queue-row-j-1");
-    expect(within(row).getByText("第十殿")).toBeTruthy();
+    expect(within(row).getByText(/ · 第十殿$/)).toBeTruthy(); // 案卷台: 「来源 · 殿」 on the second line
     expect(within(row).queryByText("Tenth Court")).toBeNull();
   });
 

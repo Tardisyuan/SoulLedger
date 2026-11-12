@@ -52,8 +52,14 @@ export function Detail({
   onLeave,
   onSettled,
   onGone,
+  backLabel,
+  position,
 }: {
   target: DetailTarget;
+  /** The back row's words when opened from a list that names itself (「‹ 案卷台」); 「返回」 otherwise and over a layer. */
+  backLabel?: string;
+  /** Where the case sits in that list (「第 1 / 7 件」), at the right of the back row. */
+  position?: string;
   /** The list it was opened from, for 「回到{from}」 when what it shows is gone (O-c). */
   from?: string;
   onBack: () => void;
@@ -95,12 +101,19 @@ export function Detail({
       <Pressable
         testID="detail-back"
         accessibilityRole="button"
-        accessibilityLabel={t("officer_app.back")}
+        accessibilityLabel={(!top && backLabel) || t("officer_app.back")}
         onPress={back}
         style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: space[5], borderBottomWidth: 1, borderBottomColor: theme.hair }}
       >
         <Icon name="back" size={16} color={theme.ink} />
-        <Txt variant="nav">{t("officer_app.back")}</Txt>
+        <Txt variant="nav" style={{ flex: 1 }}>
+          {(!top && backLabel) || t("officer_app.back")}
+        </Txt>
+        {!top && position ? (
+          <Txt testID="detail-position" variant="caption" tone="muted">
+            {position}
+          </Txt>
+        ) : null}
       </Pressable>
       <GoneContext.Provider value={base}>
       <View style={top ? { display: "none" } : { flex: 1 }}>

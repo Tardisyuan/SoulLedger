@@ -2,8 +2,9 @@
  * The officer app's own small pieces, built on the soul app's tokens (see shared.ts): the four
  * states every tab shares, a list row, the 44-high square action buttons, the segmented switch,
  * the identity band and the five-tab bar. Constraints from the spec (§七): buttons 44 high and
- * square; rows 56 / 64 / 72 / 88 high; spacing 4 / 8 / 12 / 16 / 24; the civilization colour only
- * on the identity band, the primary button and the current tab; states by glyph plus words.
+ * square; rows 56 / 64 / 72 / 88 high; spacing 4 / 8 / 12 / 16 / 24; states by glyph plus words.
+ * 第三十批 (卷宗): the civilization colour only in the 2px top line, the seal, the spine and focus -- the primary
+ * button is ink-filled; the tinted status tag (`Tag`) and the touch sizes (`touch`) are here too.
  */
 import { fetchFailureOf } from "@soulledger/core/api/client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
@@ -11,7 +12,46 @@ import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions,
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { BandPattern, Button, GUTTER, GlowTop, GoneState, Notice, OneLine, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
+import { BandPattern, Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
+
+/**
+ * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
+ * controls 44 / 48 / 56, the 2px top line, a status tag 28 high, a desk row 72.
+ */
+export const touch = { controlSm: 44, controlMd: 48, controlLg: 56, topline: 2, tag: 28, row: 72 } as const;
+
+// ── status tags ────────────────────────────────────────────────────────
+
+/** Each tag's shape prefix (第三十批 一.2): a state is never told by colour alone. */
+export const TAG_SHAPE = {
+  reviewing: "◇",
+  returned: "↺",
+  overdue: "!",
+  deferred: "‖",
+  others: "◌",
+  disposed: "▣",
+  reincarnating: "↻",
+  done: "✓",
+  demerit: "−",
+  merit: "+",
+} as const;
+
+export type TagTone = "neutral" | "pos" | "neg" | "warn";
+
+/** A tinted tag: no border, radius 4, 28 high. Neutral is `card2` under `sub`; the other three a tint of their colour. */
+export function Tag({ tone = "neutral", children, testID }: { tone?: TagTone; children: string; testID?: string }) {
+  const t = useTheme();
+  const ink = tone === "neutral" ? t.inkMuted : t[tone];
+  // `pos` / `neg` / `warn` are #RRGGBB in both schemes: 8-digit hex puts the tint at ~14%.
+  const ground = tone === "neutral" ? t.s2 : `${ink}24`;
+  return (
+    <View testID={testID} style={[styles.tag, { backgroundColor: ground }]}>
+      <Txt variant="caption" numberOfLines={1} style={{ color: ink }}>
+        {children}
+      </Txt>
+    </View>
+  );
+}
 
 // ── the four states ────────────────────────────────────────────────────
 
@@ -48,6 +88,8 @@ export function LoadingRows() {
   const { t: tr } = useI18n();
   return (
     <View testID="state-loading" accessible accessibilityLabel={tr("soul_app.common.loading")} accessibilityState={{ busy: true }}>
+      {/* 第三十批 一.5: a 2px line in the civilization's colour at the top, never a spinner. */}
+      <View testID="state-loading-line" style={{ height: touch.topline, width: "30%", backgroundColor: t.plaque }} />
       {[0, 1, 2, 3, 4].map((i) => (
         <View key={i} style={[styles.skeletonRow, { borderBottomColor: t.hair }]}>
           <View style={{ width: i % 2 ? "60%" : "78%", height: 12, backgroundColor: t.s2 }} />
@@ -103,12 +145,16 @@ export function StateView({
     );
   }
   return (
-    <View testID="state-empty" style={styles.state}>
-      <Txt variant="title" style={{ color: t.ink }}>
+    <View testID="state-empty" style={[styles.state, styles.empty]}>
+      {/* The hall's mark at 96, 12%: decoration, never a target. */}
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.emptyMark}>
+        <Emblem civ={t.civ} size={96} stroke={t.ink} />
+      </View>
+      <Txt variant="title" style={{ color: t.ink, textAlign: "center" }}>
         {emptyTitle ?? ""}
       </Txt>
       {emptyBody ? (
-        <Txt variant="body" tone="muted">
+        <Txt variant="body" tone="muted" style={{ textAlign: "center" }}>
           {emptyBody}
         </Txt>
       ) : null}
@@ -233,8 +279,8 @@ export function Highlight() {
 
 /**
  * 44 high, square. `outline`: the secondary (ink3 border); `ink-outline`: ink border (驳回);
- * `ink`: ink-solid (the reject confirmation -- never the civilization colour); `primary`: the
- * hall's colour (批准).
+ * `ink`: ink-solid (the reject confirmation); `primary` (批准): ink-solid too since 第三十批 五.1 -- the
+ * civilization colour stays out of buttons. The two kinds are kept apart for their callers' meaning.
  */
 export function ActionButton({
   title,
@@ -260,10 +306,8 @@ export function ActionButton({
   const inert = busy || disabled;
   const look = disabled
     ? { bg: t.s2, border: t.s2, ink: t.inkSubtle }
-    : kind === "primary"
-      ? { bg: t.plaqueFill, border: t.plaqueFill, ink: t.onPlaque }
-      : kind === "ink"
-        ? { bg: t.ink, border: t.ink, ink: t.s0 }
+    : kind === "primary" || kind === "ink"
+      ? { bg: t.ink, border: t.ink, ink: t.s0 }
         : { bg: "transparent", border: kind === "ink-outline" ? t.ink : t.inkSubtle, ink: t.ink };
   return (
     <Pressable
@@ -339,11 +383,14 @@ export function FilterChips<K extends string>({
   selected,
   onToggle,
   testID,
+  size = "md",
 }: {
   options: readonly { key: K; label: string; count: number }[];
   selected: readonly K[];
   onToggle: (key: K) => void;
   testID?: string;
+  /** `lg`: the 393 chip (第三十批 一.4), 44 high and round (22). */
+  size?: "md" | "lg";
 }) {
   const t = useTheme();
   return (
@@ -360,7 +407,7 @@ export function FilterChips<K extends string>({
               accessibilityState={{ selected: on }}
               hitSlop={{ top: 4, bottom: 4 }}
               onPress={() => onToggle(key)}
-              style={[styles.chip, { borderColor: on ? t.ink : t.hair2, backgroundColor: on ? t.ink : "transparent" }]}
+              style={[styles.chip, size === "lg" && styles.chipLg, { borderColor: on ? t.ink : t.hair2, backgroundColor: on ? t.ink : "transparent" }]}
             >
               <Txt variant="caption" style={{ color: on ? t.s0 : t.ink, fontFamily: on ? family.ui[500] : family.ui[400] }}>
                 {label}
@@ -405,6 +452,8 @@ export function IdentityBand({ hall, name }: { hall: string; name: string }) {
           <BandPattern civ={t.civ} color={t.glow} width={width} height={height} ringBase={height} />
         </>
       ) : null}
+      {/* 第三十批 一.1: the 2px line in the civilization's colour at the top of every page. */}
+      <View testID="topline" style={[styles.topline, { backgroundColor: t.plaque }]} />
       <View style={styles.band}>
         <Txt variant="nav" numberOfLines={1} style={[styles.bandHall, { color: t.ink, fontFamily: family.title }]}>
           {hall}
@@ -552,6 +601,10 @@ export function RefreshFailed({ data, error, onRetry }: { data: unknown; error: 
 const styles = StyleSheet.create({
   skeletonRow: { height: 72, justifyContent: "center", gap: space[3], paddingHorizontal: GUTTER, borderBottomWidth: 1 },
   state: { padding: GUTTER, gap: space[4] },
+  empty: { alignItems: "center", paddingTop: space[7] },
+  emptyMark: { opacity: 0.12 },
+  tag: { minHeight: touch.tag, borderRadius: radius.control, paddingHorizontal: space[2], justifyContent: "center", alignSelf: "flex-end" },
+  topline: { position: "absolute", top: 0, left: 0, right: 0, height: touch.topline },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },
   rowText: { flex: 1, gap: space[1] },
@@ -563,6 +616,7 @@ const styles = StyleSheet.create({
   // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.
   segmentTight: { fontSize: 13, lineHeight: 18, fontVariant: ["tabular-nums"] },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
+  chipLg: { minHeight: 44, borderRadius: 22, paddingHorizontal: space[4] },
   chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },
