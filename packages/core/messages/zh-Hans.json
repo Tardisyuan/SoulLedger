@@ -5262,6 +5262,7 @@
       "weak_password": "新密码强度不足，请换一个更长、更不常见的密码",
       "password_change_required": "请先修改初始密码",
       "account_retired": "账号已停用",
+      "soul_recycled": "灵魂已移入回收站,账号暂停使用",
       "application_open": "已有一份进行中的转生申请",
       "cooldown": "驳回后的冷却期内不能重新申请",
       "terminal_cosmology": "你所属的文明没有转生。此处的去向是终局。",

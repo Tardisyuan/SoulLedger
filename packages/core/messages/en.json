@@ -5262,6 +5262,7 @@
       "weak_password": "That password is too weak. Choose a longer, less common one",
       "password_change_required": "Change your initial password first",
       "account_retired": "This account is closed",
+      "soul_recycled": "This soul is in the recycle bin; the account is paused",
       "application_open": "An application is already under review",
       "cooldown": "You cannot apply again during the cooling-off period",
       "terminal_cosmology": "Your civilization has no rebirth. Where you go from here is final.",

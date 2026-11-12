@@ -470,6 +470,8 @@ export const SOUL_ERROR_CODES = [
   "weak_password",
   "password_change_required",
   "account_retired",
+  // 灵魂在回收站里:已登录的会话收到它;登录(密码对时)与面容登录也答它(F-ACCT-06)。
+  "soul_recycled",
   "application_open",
   "desired_form_required",
   "rebirth_form_not_applicable",

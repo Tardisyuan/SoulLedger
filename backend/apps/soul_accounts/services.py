@@ -416,8 +416,14 @@ def authenticate(soul_code, password):
     from apps.souls.models import Soul
 
     bad = SoulAccountError("灵魂编号或密码错误。", "invalid_credentials", 401)
-    soul = Soul.objects.filter(soul_code=normalize_soul_code(soul_code)).first()
+    # all_objects:回收站里的灵魂也要找得到(F-ACCT-06)。此前默认管理器滤掉它,答「编号或密码错误」并计失败,
+    # 灵魂以为密码错了去走邮箱重置,改完照样登不进。**只有密码对时**才说出原因,与被吞噬同一条规矩。
+    soul = Soul.all_objects.filter(soul_code=normalize_soul_code(soul_code)).first()
     account = current_account_of(soul) if soul is not None else None
+    if soul is not None and soul.is_deleted:
+        if account is not None and account.user.is_active and account.user.check_password(password):
+            raise SoulAccountError("灵魂已移入回收站,账号暂停使用。", "soul_recycled", 401)
+        raise bad
     if account is None or not account.user.is_active:
         # 被阿米特吞噬的灵魂没有本世账号了。**只有密码对时**才说出原因(第四十九批):编号加错密码照旧是
         # 「编号或密码错误」,不向试编号的人泄露这个灵魂的结局。
