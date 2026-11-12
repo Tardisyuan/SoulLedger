@@ -138,7 +138,9 @@ describe("v3 general motion rows", () => {
   it("toast: 160 in, 140 out, 8px", () => {
     expect(css).toMatch(/animation: toast-in var\(--transition-duration-fast\) var\(--ease-enter\);/);
     expect(css).toMatch(/opacity var\(--transition-duration-dismiss\) var\(--ease-exit\)/);
-    expect(css).toMatch(/@keyframes toast-in\s*\{\s*from\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(-8px\);/);
+    // 第三十批第 1 步:toast 挪到左下角,从下面升起 8px(此前在上方,自上而下 -8px);离场沉回同样的 8px。
+    expect(css).toMatch(/@keyframes toast-in\s*\{\s*from\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(8px\);/);
+    expect(css).toMatch(/\.toast-leaving\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(8px\);/);
   });
 
   it("skeleton → content: PageShell fades the body in over `reveal` once the skeleton goes", () => {

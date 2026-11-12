@@ -129,12 +129,14 @@ function removeToast(id: string) {
     // bare duration; `.toast-leaving` uses `dismiss` (140ms, 规范 v3) and
     // `ease-exit`. The 200 below only has to outlast it.
     el.classList.add("toast-leaving");
-    setTimeout(() => el.remove(), 200);
-  }
-
-  if (toasts.length === 0) {
-    const container = document.getElementById("toast-container");
-    if (container) container.remove();
+    // The container goes with the last toast, but only after it has left: removed at once, it took the
+    // leaving toast out of the document before `.toast-leaving` could play.
+    setTimeout(() => {
+      el.remove();
+      if (toasts.length === 0) document.getElementById("toast-container")?.remove();
+    }, 200);
+  } else if (toasts.length === 0) {
+    document.getElementById("toast-container")?.remove();
   }
 }
 
