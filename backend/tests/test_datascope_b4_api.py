@@ -81,12 +81,29 @@ def test_the_hall_less_admin_replaces_the_whole_config_and_it_is_audited(w):
     assert data_scope.org_ids(w.judge, "judgment") is None
 
 
-def test_setting_all_back_stores_no_row_and_reads_as_unconfigured(w):
+def test_setting_all_back_stores_an_all_row_that_widens_an_extra_role(w):
+    """显式「全部」存一行 ALL(P-12,2026-11-12):GET 读回来与没配一样,但兼任时它让结果变成全部;没配的不会。"""
     client = officer_client(w.admin)
     client.put(url(w.role), GOOD(w), format="json")
     response = client.put(url(w.role), {"default": {"scope": "ALL"}, "overrides": []}, format="json")
     assert response.status_code == 200
-    assert not RoleDataScope.objects.filter(role=w.role).exists()
+    assert response.data == {"default": {"scope": "ALL", "orgs": []}, "overrides": []}
+    assert list(RoleDataScope.objects.filter(role=w.role).values_list("resource", "scope")) == [("", "ALL")]
+
+    viewer = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})[0]
+    client.put(url(viewer), {"default": {"scope": "ORG"}, "overrides": []}, format="json")
+    w.judge.role, w.judge.extra_roles = "VIEWER", ["JUDGE"]
+    assert data_scope.org_ids(w.judge, "soul") is None  # JUDGE 显式全部 → 全部
+    RoleDataScope.objects.filter(role=w.role).delete()  # 回到「没配」
+    assert data_scope.org_ids(w.judge, "soul") == {w.a.pk}
+
+
+def test_copying_an_unconfigured_role_leaves_the_copy_unconfigured(w):
+    """复制逐行照抄:源角色没配,副本也没有行(不会凭空多一行 ALL)。"""
+    response = officer_client(w.admin).post(f"/api/v1/perm/roles/{w.role.pk}/copy/",
+                                            {"name": "CLERK", "display_name": "书吏"}, format="json")
+    assert response.status_code == 201, response.content
+    assert not RoleDataScope.objects.filter(role__name="CLERK").exists()
 
 
 @pytest.mark.parametrize("who", ["hall_admin", "judge"])

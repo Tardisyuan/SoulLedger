@@ -177,7 +177,8 @@ def org_ids(user, resource, cache=None):
     # 兼任的合并规则(审计 P-12,用户 2026-11-11):只有**所有**角色(主角色 + 兼任)对这项业务都没配,才是「全部」。
     # 只要有一个角色配了范围,没配的角色不贡献「全部」,结果是配了的那些角色的并集 —— 否则给本机构的判官
     # 兼一个没配范围的访客,他就看到全殿。配成 ALL 的(按业务覆盖的 ALL 行)仍然是全部。
-    # 注意:默认范围配成 ALL 不存行(`data_scope_api.replace_role_config`),读起来与「没配」相同,所以也不贡献。
+    # 显式设成「全部」的默认范围 2026-11-12 起存一行 ALL(`data_scope_api.replace_role_config`),所以它算全部;
+    # 此前设的「默认 ALL」没有行,与「没配」分不出,按没配算(不做迁移补行)。
     ids, configured = set(), False
     for rows in by_role.values():
         row = rows.get(resource) or rows.get("")
