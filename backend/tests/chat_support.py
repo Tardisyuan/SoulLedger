@@ -31,7 +31,6 @@ import types
 from pathlib import Path
 
 import pytest
-from django.conf import settings
 from django.utils import timezone
 
 from apps.chat.grant import KEY as GRANT_KEY
