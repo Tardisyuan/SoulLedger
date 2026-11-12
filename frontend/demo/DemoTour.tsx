@@ -396,8 +396,15 @@ export default function DemoTour() {
     const timer = setInterval(() => {
       if (step?.tab) {
         const label = t(step.tab);
-        const tab = Array.from(document.querySelectorAll<HTMLElement>("[role='tab']")).find((el) => onScreen(el) && el.textContent?.includes(label));
-        if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
+        // A tab, or a segment of a segmented control (the permissions page's 矩阵 / 角色).
+        const tab = Array.from(document.querySelectorAll<HTMLElement>("[role='tab'], [role='radio']")).find((el) => onScreen(el) && el.textContent?.includes(label));
+        if (tab && tab.getAttribute("aria-selected") !== "true" && tab.getAttribute("aria-checked") !== "true") {
+          tab.click();
+          // Looked for on the next tick: until React draws the opened tab, the selector still finds the old tab's table.
+          tries += 1;
+          if (tries > 25) clearInterval(timer);
+          return;
+        }
       }
       const found = findTarget(step?.css, step?.text, step?.up);
       tries += 1;
@@ -484,13 +491,16 @@ export default function DemoTour() {
     "fixed z-toast border border-[oklch(var(--color-line-strong))] border-t-3 border-t-[oklch(var(--color-main))] bg-[oklch(var(--color-surface-1))] p-4 shadow-overlay max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[40vh] max-md:overflow-y-auto md:right-6 md:bottom-6 md:w-90";
   let card = null;
   if (tour && step && !outside && !state.closed) {
-    const civ = t(`demo.civ.${tour.skin}.name`);
+    // 「系统怎么保护自己」 belongs to no underworld: its own title and ending, and the four seals all stay on offer.
+    const guard = tour.skin === "guard";
+    const civ = guard ? "" : t(`demo.civ.${tour.skin}.name`);
     const total = tour.steps.length;
     if (state.finished) {
+      const done = guard ? ["demo.tour.guard.done_title", t("demo.tour.guard.done_body")] : ["demo.tour.done_title", t("demo.tour.done_body", { civ })];
       card = (
         <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={panel}>
-          <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t(state.skipped ? "demo.tour.skipped_title" : "demo.tour.done_title")}</p>
-          <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{state.skipped ? t("demo.tour.skipped_body") : t("demo.tour.done_body", { civ })}</p>
+          <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t(state.skipped ? "demo.tour.skipped_title" : done[0])}</p>
+          <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{state.skipped ? t("demo.tour.skipped_body") : done[1]}</p>
           <ul className="m-0 mt-3 flex list-none gap-2 p-0">
             {SKINS.filter((skin) => skin !== tour.skin).map((skin) => (
               <li key={skin} data-civ={skin}>
@@ -532,9 +542,9 @@ export default function DemoTour() {
     } else {
       const last = state.step === total - 1;
       card = (
-        <aside ref={panelRef} data-testid="demo-tour" data-civ={tour.skin} className={panel} style={lift ? { bottom: lift } : undefined}>
+        <aside ref={panelRef} data-testid="demo-tour" data-civ={guard ? undefined : tour.skin} data-tour={tour.skin} className={panel} style={lift ? { bottom: lift } : undefined}>
           <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-xs text-[oklch(var(--color-ink-muted))]">{t("demo.tour.title_civ", { civ })}</span>
+            <span className="min-w-0 truncate text-xs text-[oklch(var(--color-ink-muted))]">{guard ? t("demo.tour.guard.title") : t("demo.tour.title_civ", { civ })}</span>
             <span className="flex shrink-0 items-center gap-2">
               <span data-testid="demo-tour-progress" className="font-mono text-xs text-[oklch(var(--color-ink))]">{state.step + 1} / {total}</span>
               <button type="button" data-testid="demo-tour-collapse" aria-label={t("demo.tour.collapse")} onClick={() => update({ collapsed: true })} className="h-6 min-w-6 text-sm text-[oklch(var(--color-ink-muted))]">—</button>

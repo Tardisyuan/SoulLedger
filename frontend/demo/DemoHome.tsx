@@ -106,6 +106,7 @@ export default function DemoHome() {
 
         <CivCards enter={(skin, card) => void enter(ROLE_OF_SKIN[skin], card)} warm={(skin) => warm(ROLE_OF_SKIN[skin])} />
         <Roles onLook={(civ) => look(civ, true)} entering={entering !== null} enter={(role, el) => void enter(role, el)} />
+        <GuardEntry entering={entering !== null} enter={(el) => void enter("admin", el, { guard: true })} />
         <HowBuilt />
       </main>
 
@@ -251,6 +252,28 @@ function Roles({ onLook, entering, enter }: { onLook: (civ: SealCiv) => void; en
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** The second tour (作品集建议 A3): the administrator's console, walked through what keeps the data safe. */
+function GuardEntry({ entering, enter }: { entering: boolean; enter: (el: HTMLElement) => void }) {
+  const { t } = useI18n();
+  return (
+    <section aria-labelledby="demo-home-guard" className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-[oklch(var(--color-line))] pt-6 pb-4 max-md:flex-col max-md:items-stretch">
+      <div className="min-w-0 flex-1">
+        <h2 id="demo-home-guard" className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t("demo.home.guard_title")}</h2>
+        <p className="m-0 mt-1 max-w-[48em] text-sm text-[oklch(var(--color-ink-muted))]">{t("demo.home.guard_body")}</p>
+      </div>
+      <button
+        type="button"
+        data-testid="demo-home-guard"
+        disabled={entering}
+        onClick={(e) => enter(e.currentTarget)}
+        className="inline-flex min-h-11 items-center justify-center gap-2 border border-[oklch(var(--color-ink))] px-4 text-sm text-[oklch(var(--color-ink))] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[oklch(var(--color-focus))] disabled:opacity-60"
+      >
+        {t("demo.home.guard_cta")} <span aria-hidden="true">→</span>
+      </button>
     </section>
   );
 }
