@@ -4,12 +4,11 @@
  */
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { api } from "@soulledger/core/api/client";
-import { type Answer, type DemoLang, type DemoRole, DEMO_USERNAMES, allRows, currentRole, langOf, read, recording, resetOverlay, setRole } from "./store";
+import { type Answer, type DemoLang, type DemoRole, DEMO_USERNAMES, allRows, clearVisitorState, currentRole, langOf, read, recording, resetOverlay, setRole } from "./store";
 import { derived } from "./flows";
 import { write } from "./writes";
 
 const API_PREFIX = /^.*\/api\/v1/;
-const LOCAL_STATE = /^soulledger_(?!theme|last_tenant|demo_role)/;
 
 function parseBody(data: unknown): Record<string, unknown> {
   if (data instanceof FormData) return Object.fromEntries(data.entries());
@@ -26,11 +25,7 @@ function parseBody(data: unknown): Record<string, unknown> {
 /** Back to the seed: a sign-in or sign-out leaves nothing of the last visit, in this tab's overlay or in drafts on disk. */
 function freshSession(): void {
   resetOverlay();
-  try {
-    for (const key of Object.keys(localStorage)) if (LOCAL_STATE.test(key)) localStorage.removeItem(key);
-  } catch {
-    /* no storage: nothing to clear */
-  }
+  clearVisitorState();
 }
 
 async function auth(path: string, body: Record<string, unknown>, lang: DemoLang): Promise<Answer | null> {
