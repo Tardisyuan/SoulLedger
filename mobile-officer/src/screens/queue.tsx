@@ -3,8 +3,8 @@
  * source chips (one sideways row), and three groups -- 我认领 / 待定 / 待认领 -- of 72-high rows: the person's name
  * in serif, 「来源 · 殿」 under it, the tag and the case number at the right. A row swipes left to 「认领」 (待认领)
  * or 「放回」 (我认领), ink-filled; a pull asks everything again. No search box: the magnifier in the top bar
- * opens 查询 (shell.tsx). 他人手上 is not on the desk (Design draws three groups); 滑卡审判 (v4 S09) stays,
- * at the 我认领 heading.
+ * opens 查询 (shell.tsx). 他人手上 comes last (the Design draws three; user 2026-11-13 kept the fourth), read-only;
+ * 滑卡审判 (v4 S09) stays, at the 我认领 heading.
  *
  * Sources are read off the rows this list has loaded, not asked of the server (the queue has no source filter):
  * 城隍初审 = a case still with a 城隍 (地府 only), 跨域 = a case of another civilization than the hall's,
@@ -15,6 +15,7 @@ import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger
 import { officerAppApi } from "@soulledger/core/api/officer-app";
 import { civShortCode } from "@soulledger/core/config/civilizations";
 import { courtLabel } from "@soulledger/core/domain/courts";
+import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
@@ -24,17 +25,20 @@ import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote, useOnBump } from "../readCache";
 import { goneKey, isDenied } from "../rules";
 import { useCan, useSession } from "../session";
-import { GUTTER, Screen, Txt, family, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useTheme, useToast } from "../shared";
+import { GUTTER, OneLine, Screen, Txt, family, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useTheme, useToast } from "../shared";
 import { deadlineText, heldBeforeClaim } from "../verdict";
 
-type DeskGroup = Extract<JudgmentQueueGroup, "mine" | "deferred" | "unclaimed">;
-const GROUPS: readonly DeskGroup[] = ["mine", "deferred", "unclaimed"];
+type DeskGroup = JudgmentQueueGroup;
 
 export type Source = "queue" | "city_god" | "cross";
 const SOURCES: readonly Source[] = ["queue", "city_god", "cross"];
 const DAY = 86_400;
 
-/** Where a case came from, as far as the row says (see the header). `hall`: the officer's tenant code. */
+/**
+ * Where a case came from, as far as the row says (see the header). `hall`: the officer's tenant code.
+ * THE ONE PLACE sources are worked out: the chips, their counts, the filter and the rows all call this. When the
+ * queue API carries `source` (and its filter and counts), swap this body for the field and the chips for the server's.
+ */
 export function sourceOf(row: Pick<Judgment, "city_god_status" | "civilization">, hall: string | null | undefined): Source {
   if (row.city_god_status) return "city_god";
   const mine = civShortCode(hall);
@@ -42,16 +46,39 @@ export function sourceOf(row: Pick<Judgment, "city_god_status" | "civilization">
   return mine && its && mine !== its ? "cross" : "queue";
 }
 
-/** The row's one tag: 超期 over 退回重审 over a hold over the group's own. */
-export function deskTag(t: (key: string, vars?: Record<string, string>) => string, row: Judgment, group: DeskGroup): { tone: TagTone; text: string } {
+/**
+ * The row's one tag: 超期 over 退回重审 over the group's own -- 待定; 到期后可认领 / 到不了殿 for a held or barred
+ * case nobody holds (no 认领 then); 他人认领; 待宣判 (in hand, not yet final: 滑卡审判) or 审判中; else the deadline.
+ * `deadline`: the tag already says the deadline, so the second line does not repeat it.
+ */
+export function deskTag(t: (key: string, vars?: Record<string, string>) => string, row: Judgment, group: DeskGroup): { tone: TagTone; text: string; deadline: boolean } {
   const s = row.deadline_remaining_seconds;
   if (group !== "deferred" && row.is_overdue && s != null && s < 0) {
-    return { tone: "neg", text: `${TAG_SHAPE.overdue} ${t("officer_app.desk.tag.overdue", { n: String(Math.ceil(-s / DAY)) })}` };
+    return { tone: "neg", text: `${TAG_SHAPE.overdue} ${t("officer_app.desk.tag.overdue", { n: String(Math.ceil(-s / DAY)) })}`, deadline: true };
   }
-  if (row.retrial_of) return { tone: "warn", text: `${TAG_SHAPE.returned} ${t("officer_app.desk.tag.returned")}` };
-  if (group === "deferred") return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("officer_app.desk.groups.deferred")}` };
-  if (group === "mine" && !heldBeforeClaim(row)) return { tone: "warn", text: `${TAG_SHAPE.reviewing} ${t("officer_app.desk.tag.reviewing")} · ${deadlineText(t, row)}` };
-  return { tone: "neutral", text: deadlineText(t, row) };
+  if (row.retrial_of) return { tone: "warn", text: `${TAG_SHAPE.returned} ${t("officer_app.desk.tag.returned")}`, deadline: false };
+  if (group === "deferred") return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("officer_app.desk.groups.deferred")}`, deadline: false };
+  if (group === "unclaimed" && isDuatBarred(row)) return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("judgment.claim.duat_barred_short")}`, deadline: false };
+  if (group === "unclaimed" && isHeldUntilFatedDate(row)) return { tone: "neutral", text: `${TAG_SHAPE.deferred} ${t("judgment.claim.held_short")}`, deadline: false };
+  if (group === "others") return { tone: "neutral", text: `${TAG_SHAPE.others} ${t("officer_app.desk.tag.others")}`, deadline: false };
+  if (group === "mine") return { tone: "warn", text: `${TAG_SHAPE.reviewing} ${t(row.is_final ? "officer_app.desk.tag.reviewing" : "officer_app.desk.tag.awaiting")}`, deadline: false };
+  return { tone: "neutral", text: deadlineText(t, row), deadline: true };
+}
+
+/**
+ * What the old list wrote under the title, now after 「来源 · 殿」 on the one second line (cut with …, a long press
+ * reads it whole): the deadline (none in 待定, none when the tag says it), 他人认领's holder, 滞留, 枉死 / 入殿前 with
+ * 候至 while held.
+ */
+export function rowNotes(t: (key: string, vars?: Record<string, string>) => string, row: Judgment, group: DeskGroup, tagHasDeadline: boolean, locale?: Parameters<typeof formatIsoDay>[1]): string[] {
+  const held = isHeldUntilFatedDate(row) ? [t("judgment.held_until", { date: formatIsoDay(row.held_until, locale) })] : [];
+  return [
+    ...(group === "deferred" || tagHasDeadline ? [] : [`${t("queue.col.deadline")} ${deadlineText(t, row)}`]),
+    ...(group === "others" && row.claimed_by_name ? [row.claimed_by_name] : []),
+    ...(row.stale_since ? [t("judgment.stale.label")] : []),
+    ...(row.untimely ? [t("judgment.untimely"), ...held] : []),
+    ...(row.duat_stage ? [t(`judgment.duat_stage.${row.duat_stage}`), ...(row.untimely ? [] : held)] : []),
+  ];
 }
 
 /** 「今日 7 件 · 超期 1 · 本月已结 22%」; 0 overdue reads 「无超期」, unmarked. Parts that did not load are left out. */
@@ -110,7 +137,9 @@ export function QueueTab({
   const mine = useGroupRows("mine");
   const deferred = useGroupRows("deferred");
   const unclaimed = useGroupRows("unclaimed");
-  const groups = [mine, deferred, unclaimed];
+  // 他人手上 last: read-only on the phone, no swipe.
+  const others = useGroupRows("others");
+  const groups = [mine, deferred, unclaimed, others];
 
   // Counts (the overview and the group headings) and this officer's month: not in the read cache, asked again on reconnect.
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
@@ -120,7 +149,7 @@ export function QueueTab({
   const loadStats = useCallback(async () => (await officerAppApi.stats()).data, []);
   const stats = useRemote(loadStats);
 
-  const refresh = () => Promise.all([mine.reload(), deferred.reload(), unclaimed.reload(), counts.reload(), stats.reload()]);
+  const refresh = () => Promise.all([mine.reload(), deferred.reload(), unclaimed.reload(), others.reload(), counts.reload(), stats.reload()]);
   useOnBump(version, refresh);
 
   // A case is in one group; a refetch race could show it twice, so the first group keeps it.
@@ -219,13 +248,14 @@ export function QueueTab({
               </View>
               {rows.map((row) => {
                 const position = { n: flat.indexOf(row) + 1, total: flat.length };
+                const tag = deskTag(t, row, group);
                 const action = !canClaim ? null : group === "unclaimed" && !heldBeforeClaim(row) ? "claim" : group === "mine" ? "release" : null;
                 return (
                   <DeskRow
                     key={`${group}:${row.id}`}
                     row={row}
-                    lineTwo={`${t(`officer_app.desk.sources.${sourceOf(row, hall)}`)} · ${courtLabel(t, row.court, locale)}`}
-                    tag={deskTag(t, row, group)}
+                    lineTwo={[t(`officer_app.desk.sources.${sourceOf(row, hall)}`), courtLabel(t, row.court, locale), ...rowNotes(t, row, group, tag.deadline, locale)].join(" · ")}
+                    tag={tag}
                     gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
                     onPress={() => onOpen(row.id, position)}
                     action={
@@ -261,7 +291,7 @@ function DeskRow({
 }: {
   row: Judgment;
   lineTwo: string;
-  tag: { tone: TagTone; text: string };
+  tag: { tone: TagTone; text: string; deadline: boolean };
   gone: boolean;
   onPress: () => void;
   action: { testID: string; label: string; disabled: boolean; onPress: () => void } | null;
@@ -280,9 +310,9 @@ function DeskRow({
         <Txt numberOfLines={1} style={[styles.name, { color: theme.ink }]}>
           {row.soul_name}
         </Txt>
-        <Txt variant="caption" tone="muted" numberOfLines={1}>
+        <OneLine variant="caption" tone="muted" onPress={gone ? undefined : onPress}>
           {lineTwo}
-        </Txt>
+        </OneLine>
       </View>
       <View style={styles.rowRight}>
         <Tag tone={tag.tone}>{tag.text}</Tag>

@@ -8078,9 +8078,12 @@
       "groups": {
         "mine": "Claimed by me",
         "deferred": "On hold",
-        "unclaimed": "Unclaimed"
+        "unclaimed": "Unclaimed",
+        "others": "With others"
       },
       "tag": {
+        "others": "Held by another",
+        "awaiting": "Ready for verdict",
         "reviewing": "In judgment",
         "returned": "Sent back for retrial",
         "overdue": "{{n}} days overdue"
