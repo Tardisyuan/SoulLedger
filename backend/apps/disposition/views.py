@@ -267,6 +267,12 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             # 挂在受刑计划节点上的处置:转生 / 终局由计划完成时的 `advance` 做
             # (docs/ARCHITECTURE-sentence-plan.md §3.3,原来在这里的那次调用挪过去了)。
             on_plan = SentencePlanService.node_for_disposition(disposition) is not None
+            from apps.disposition.services import plan_blocks_nodeless
+
+            if not on_plan and plan_blocks_nodeless(disposition.soul):
+                # 手建的处置不越过进行中的受刑计划(F-DISP-03);服务层同一条,这里给出能读的码。
+                return Response({"error": "The soul's sentence plan is in progress; this disposition is not on it",
+                                 "code": "plan_in_progress"}, status=status.HTTP_409_CONFLICT)
             executed = DispositionService.execute(disposition)
             from apps.disposition.expiry import serving
 

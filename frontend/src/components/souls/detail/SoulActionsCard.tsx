@@ -61,7 +61,8 @@ export function SoulActionsCard({
   onRebirthFormChange: (value: RebirthFormValue) => void;
   onDie: () => void;
   onStartJudgment: () => void;
-  onReincarnate: (dispositionId: string) => void;
+  /** 办转世(候转世的灵魂)。不带处置:那时本世处置都已执行完,后端按灵魂办(F-REB-01)。 */
+  onReincarnate: () => void;
   /** 期满释放(2026-10-29):执行了、刑期已满的处置;没有就不画按钮。 */
   onRelease?: (dispositionId: string) => void;
   /** 办转世被 409 `rebirth_quota_full` 拒了(并发时配额刚被别人用完):同一句话留在这里,不弹 toast。 */
@@ -138,15 +139,21 @@ export function SoulActionsCard({
                   )}
                 </div>
               ))}
-          {soul?.current_state === "DISPOSED" && (
+          {soul?.current_state === "REINCARNATING" && (
+            <div className="text-center text-[oklch(var(--color-ink-muted))] text-sm py-2">
+              <span aria-hidden="true">↻ </span>
+              {t("souls.detail.being_reborn")}
+            </div>
+          )}
+          {soul?.current_state === "REINCARNATING" && soul.civilization === "CHINESE" && onDrinkSoup && (
+            <SoupBlock name={soul.name} takenAt={soul.soup_taken_at} refused={!!soupRefused} onRegister={onDrinkSoup} />
+          )}
+          {soul?.current_state === "REINCARNATING" && (
             <RequirePermission permissions="reincarnation.reborn">
-              {/* The form is chosen before the destination realm, not
-                  after: each button below commits the rebirth
-                  immediately, so there is no later screen on which to
-                  pick 道. Rendered only when there is something to
-                  commit — a soul with no pending disposition has no
-                  rebirth to configure. */}
-              {sixPaths && dispositions.some(d => !d.is_executed) && (
+              {/* 转世只在候转世时办(F-REB-01,2026-11-12):此前这组表单和按钮挂在 DISPOSED 上、按「未执行的处置」
+                  逐个出,而后端对有未执行处置的灵魂一律 409 `disposition_not_executed` —— 按钮必拒;
+                  到了 REINCARNATING 又没有按钮。道在按钮之前选:按钮一按就办,之后没有再选的地方。 */}
+              {sixPaths && (
                 <div className="pb-3 mb-3 border-b border-[oklch(var(--color-line))]">
                   <RebirthFormSelect
                     value={rebirthForm}
@@ -216,45 +223,16 @@ export function SoulActionsCard({
                   )}
                 </div>
               )}
-              {dispositions.filter(d => !d.is_executed).map((disp) => (
-                <Button
-                  key={disp.id}
-                  type="button"
-                  variant="primary"
-                  size="lg"
-                  className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
-                  onClick={() => onReincarnate(disp.id)}
-                  disabled={!!actionLoading || !!full || (sixPaths && !rebirthForm) || reasonMissing}
-                >
-                  {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
-                </Button>
-              ))}
-            </RequirePermission>
-          )}
-          {soul?.current_state === "REINCARNATING" && (
-            <div className="text-center text-[oklch(var(--color-ink-muted))] text-sm py-2">
-              <span aria-hidden="true">↻ </span>
-              {t("souls.detail.being_reborn")}
-            </div>
-          )}
-          {soul?.current_state === "REINCARNATING" && soul.civilization === "CHINESE" && onDrinkSoup && (
-            <SoupBlock name={soul.name} takenAt={soul.soup_taken_at} refused={!!soupRefused} onRegister={onDrinkSoup} />
-          )}
-          {soul?.current_state === "REINCARNATING" && soupRefused && soul.soup_taken_at && (
-            <RequirePermission permissions="reincarnation.reborn">
-              {dispositions.filter((d) => !d.is_executed).map((disp) => (
-                <Button
-                  key={disp.id}
-                  type="button"
-                  variant="primary"
-                  size="lg"
-                  className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
-                  onClick={() => onReincarnate(disp.id)}
-                  disabled={!!actionLoading}
-                >
-                  {`${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
-                </Button>
-              ))}
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
+                onClick={() => onReincarnate()}
+                disabled={!!actionLoading || !!full || (sixPaths && !rebirthForm) || reasonMissing}
+              >
+                {actionLoading === "reincarnate" ? t("souls.detail.processing") : t("souls.detail.reincarnate")}
+              </Button>
             </RequirePermission>
           )}
           {soul?.current_state === "ALIVE" && reincarnations.length > 0 && (

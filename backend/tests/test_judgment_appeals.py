@@ -279,7 +279,7 @@ def test_amend_compensates_an_executed_stop_and_replaces_the_pending_ones(cn_ten
     assert soul.current_state == SoulState.REINCARNATING
 
 
-def test_amend_waits_while_the_soul_is_in_transit_and_writes_nothing(cn_tenant):
+def _in_transit(cn_tenant):
     away = sp.tenant("EG_DUAT")
     soul, plan = sp.planned(cn_tenant, [(away, sp.stop_realm(away), 5)], verdict=Verdict.FAILED)
     _realm_for(soul, Verdict.PASSED)
@@ -289,13 +289,84 @@ def test_amend_waits_while_the_soul_is_in_transit_and_writes_nothing(cn_tenant):
     reviewer = sp.officer("reviewer", "JUDGE", cn_tenant)
     appeal = JudgmentAppeal.objects.create(judgment=judgment, soul=soul, tenant=cn_tenant, round=1, reason="x",
                                            original_verdict="FAILED", status="IN_REVIEW", reviewer=reviewer)
-    response = officer_client(reviewer).post(f"{HALL}{appeal.pk}/decide/",
-                                             {"outcome": "AMENDED", "verdict": "PASSED", "note": "改"}, format="json")
-    assert response.status_code == 409 and response.data["code"] == "plan_in_transit"
+    return soul, plan, judgment, appeal, officer_client(reviewer)
+
+
+def test_amend_with_a_foreign_stop_in_transit_asks_whether_it_stays_and_writes_nothing(cn_tenant):
+    """F-DISP-14(用户 2026-11-12):在途 / 已到未执行的外地站也按 `keep_foreign_stops` 走,不再答 409 `plan_in_transit`。"""
+    soul, plan, judgment, appeal, reviewer = _in_transit(cn_tenant)
+    response = reviewer.post(f"{HALL}{appeal.pk}/decide/",
+                             {"outcome": "AMENDED", "verdict": "PASSED", "note": "改"}, format="json")
+    assert response.status_code == 400 and response.data["code"] == "foreign_stops_choice_required", response.data
+    assert response.data["foreign_orders"] == [2]
     judgment.refresh_from_db()
     appeal.refresh_from_db()
     assert judgment.verdict == "FAILED" and appeal.status == "IN_REVIEW"
-    assert not SoulRecord.objects.filter(soul=soul, category=RecordCategory.COMPENSATION).exists()
+    assert sp.node(plan, 2).status == "DISPATCHING"
+
+
+def test_amend_without_keeping_foreign_stops_withdraws_the_one_in_transit(cn_tenant):
+    soul, plan, judgment, appeal, reviewer = _in_transit(cn_tenant)
+    record_id = sp.node(plan, 2).dispatch_record_id
+    response = reviewer.post(f"{HALL}{appeal.pk}/decide/", {"outcome": "AMENDED", "verdict": "PASSED", "note": "改",
+                                                            "keep_foreign_stops": False}, format="json")
+    assert response.status_code == 200, response.data
+    assert SentenceNode.all_objects.get(plan=plan, order=2).status == "REMOVED"
+    assert DispatchRecord.all_objects.get(pk=record_id).status == "CANCELLED"
+    assert SentencePlan.all_objects.get(pk=plan.pk).status == "COMPLETED"
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.REINCARNATING
+
+
+def test_amend_keeping_foreign_stops_lets_the_one_in_transit_go_on(cn_tenant):
+    soul, plan, judgment, appeal, reviewer = _in_transit(cn_tenant)
+    response = reviewer.post(f"{HALL}{appeal.pk}/decide/", {"outcome": "AMENDED", "verdict": "PASSED", "note": "改",
+                                                            "keep_foreign_stops": True}, format="json")
+    assert response.status_code == 200, response.data
+    assert sp.node(plan, 2).status == "DISPATCHING"
+    assert SentencePlan.all_objects.get(pk=plan.pk).status == "ACTIVE"
+
+
+def _home_and_a_pending_foreign_stop(cn_tenant):
+    away = sp.tenant("EG_DUAT")
+    soul, plan = sp.planned(cn_tenant, [(away, sp.stop_realm(away), 5)], verdict=Verdict.FAILED)
+    return soul, plan, Judgment.all_objects.get(pk=plan.origin_judgment_id), away
+
+
+def test_amend_in_place_to_an_eternal_sentence_before_a_kept_foreign_stop_is_refused(cn_tenant, monkeypatch):
+    """F-DISP-05(2026-11-12):申诉改判此前不问 Q5,原属站就地改成永久而保留外地站,永久刑之后仍被调往外地。"""
+    from django.db import transaction
+
+    from apps.sentence_plan import requests as plan_requests
+    from apps.souls.models import Soul
+
+    soul, plan, judgment, _ = _home_and_a_pending_foreign_stop(cn_tenant)
+    assert sp.node(plan, 1).status == "ACTIVE" and sp.node(plan, 2).status == "PENDING"
+    eternal = sp.realm("CN_DIYU_TEST_ETERNAL", "CHINESE", eternal=True).realm_code
+    monkeypatch.setattr(plan_requests, "_route_home_realm", lambda *a, **k: eternal)
+    with pytest.raises(plan_requests.PlanChangeRefusedError) as refused, transaction.atomic():
+        locked = Soul.lock(soul.pk)
+        plan_requests.amend_for_appeal(locked, judgment, "FAILED", keep_foreign=True)
+    assert refused.value.code == "eternal_not_last"
+
+
+def test_amend_after_the_home_stop_puts_the_new_home_stop_before_the_kept_foreign_one(cn_tenant):
+    """F-DISP-05:与重开审判结案同一个锚点 —— 已开始的站之后、保留的外地站之前。此前排在外地站之后。"""
+    from django.db import transaction
+
+    from apps.sentence_plan import requests as plan_requests
+    from apps.souls.models import Soul
+
+    soul, plan, judgment, away = _home_and_a_pending_foreign_stop(cn_tenant)
+    sp.serve(soul, plan, 1)
+    DispatchService.reject(DispatchRecord.all_objects.get(pk=sp.node(plan, 2).dispatch_record_id),
+                           sp.officer("eg", "ADMIN", away), "不收")
+    assert sp.node(plan, 2).status == "PENDING"
+    with transaction.atomic():
+        locked = Soul.lock(soul.pk)
+        plan_requests.amend_for_appeal(locked, judgment, "FAILED", keep_foreign=True)
+    live = [(n.order, n.tenant_code, n.is_home) for n in SentenceNode.all_objects.filter(plan=plan).order_by("order")]
+    assert live == [(1, "CN_DIYU", True), (2, "CN_DIYU", True), (3, "EG_DUAT", False)]
 
 
 def test_amend_after_the_plan_finished_only_compensates(case):

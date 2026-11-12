@@ -27,6 +27,7 @@ def hall_row(tenant) -> dict:
     )
     from apps.reincarnation.services import quota_usage
     from apps.soul_accounts.models import CooldownShorteningRequest, CooldownShorteningStatus
+    from apps.soul_accounts.rebirth import shortening_is_live
     from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
     todo = {
@@ -34,8 +35,10 @@ def hall_row(tenant) -> dict:
             tenant=tenant, status__in=(ApprovalWorkflowStatus.PENDING, ApprovalWorkflowStatus.IN_PROGRESS)).count(),
         "dispatch_proposals": DispatchRecord.objects.filter(
             target_tenant=tenant, status=DispatchStatus.PROPOSED).count(),
-        "cooldowns": CooldownShorteningRequest.objects.filter(
-            soul__home_tenant=tenant, status=CooldownShorteningStatus.PENDING).count(),
+        # 只数还能决定的(F-OFF-01):冷却已结束 / 作废的待决行不是待办。
+        "cooldowns": sum(1 for c in CooldownShorteningRequest.objects.filter(
+            soul__home_tenant=tenant, status=CooldownShorteningStatus.PENDING).select_related("application")
+            if shortening_is_live(c)),
         "letters_awaiting": Conversation.objects.filter(
             AWAITING_REPLY, tenant=tenant, kind=ConversationKind.OFFICER_INBOX).count(),
     }

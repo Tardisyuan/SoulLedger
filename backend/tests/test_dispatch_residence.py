@@ -132,8 +132,8 @@ def test_without_a_plan_executing_the_residence_disposition_returns_the_soul_hom
     disposition.refresh_from_db()
     assert disposition.is_executed is True
     assert soul.tenant_id == cn.pk and soul.is_residing is False
-    # 生命周期不推进:下一世还是终局,由原文明决定。
-    assert soul.current_state == SoulState.DISPOSED
+    # 回到原属即往下走(F-DISP-07,用户 2026-11-12):地府原属可转世 → 候转世。此前停在 DISPOSED、无计划,没有下一步。
+    assert soul.current_state == SoulState.REINCARNATING
     assert record.status == DispatchStatus.RETURNED and record.returned_at is not None
     [event] = _returned_events(soul)
     assert event.tenant_id == cn.pk
@@ -141,6 +141,19 @@ def test_without_a_plan_executing_the_residence_disposition_returns_the_soul_hom
     assert (event.payload["from_tenant"], event.payload["to_tenant"]) == ("EG_DUAT", "CN_DIYU")
     audit = AuditLog.objects.filter(resource="dispatch_record", resource_id=str(record.pk))
     assert [a.changes["soul_tenant"] for a in audit] == [["EG_DUAT", "CN_DIYU"]]
+
+
+def test_without_a_plan_a_soul_home_from_its_residence_may_apply_for_rebirth(cn, eg):
+    """F-DISP-07:回原属后候转世,本世没有计划(审判在暂居殿)也能申请转生(此前答「受刑计划尚未完成」)。"""
+    from apps.soul_accounts import rebirth
+    from apps.soul_accounts import services as svc
+    from apps.soul_accounts.models import AccountOrigin
+
+    soul, _ = _residing(cn, eg)
+    account, _ = svc.provision_account(soul, AccountOrigin.OFFICER)
+    assert DispositionService.execute(_disposition(soul, eg)) is True
+    account.refresh_from_db()
+    assert rebirth.eligibility(account) == (True, None, None)
 
 
 def test_without_a_plan_an_eternal_sentence_does_not_end_the_residence(cn, eg):

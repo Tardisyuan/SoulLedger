@@ -87,6 +87,10 @@ def eligibility(account):
     )
     # CANCELLED = 撤销,即赦免剩余刑期、视为完成(2026-09-19 用户决定),同样开放。
     served = plan is not None and plan.status in (SentencePlanStatus.COMPLETED, SentencePlanStatus.CANCELLED)
+    # 候转世而本世没有计划(F-DISP-07,用户 2026-11-12):无计划暂居在外地受完刑、回原属即候转世 —— 那份审判在
+    # 暂居殿,不建原属的计划。灵魂已经候转世,就没有在受的刑;刑期与处置另由 `assert_may_be_reborn` 把关。
+    if plan is None and soul.current_state == "REINCARNATING":
+        served = True
     if soul.current_state not in SOUL_STATES_THAT_MAY_APPLY:
         # 计划期间灵魂保持 DISPOSED(§3.3):那时答「受刑未完」比答「状态不对」说得清楚。
         # 计划已完成而灵魂仍是 DISPOSED(ADMIN 修过数据)→ soul_state,不放行(D12)。
@@ -358,6 +362,31 @@ def cooldown_shortening_eligibility(account):
     return True, None, application
 
 
+def shortening_is_live(shortening) -> bool:
+    """待决、且它那段冷却还在:只有这样的才能批准、才算待办(F-REB-02 / F-OFF-01,2026-11-12)。
+
+    冷却自然到期、或那份驳回因申诉不再是终局时,PENDING 行就失了效:批不了(没有剩余天数可缩),
+    此前也驳不了,又按灵魂的部分唯一约束挡住它以后的每一次申请。现在它不进待办与计数,官员可以驳回,
+    灵魂再申请时由 `close_stale_shortenings` 收掉。
+    """
+    return shortening.status == CooldownShorteningStatus.PENDING and cooldown_until(shortening.application) is not None
+
+
+STALE_SHORTENING_NOTE = "冷却期已经结束或已作废,这份缩短申请随之作废。"
+
+
+def close_stale_shortenings(soul):
+    """把这个灵魂已失效的待决缩短申请收成「已驳回」(系统,无决定人)。在账号行锁下、新申请之前调用。"""
+    now = timezone.now()
+    for row in CooldownShorteningRequest.objects.select_for_update(of=("self",)).select_related("application").filter(
+            soul=soul, status=CooldownShorteningStatus.PENDING):
+        if cooldown_until(row.application) is None:
+            row.status = CooldownShorteningStatus.REJECTED
+            row.decision_note = STALE_SHORTENING_NOTE
+            row.decided_at = now
+            row.save(update_fields=["status", "decision_note", "decided_at", "updated_at"])
+
+
 def current_cooldown_shortening(account):
     """本世最近一份缩短冷却申请(给 /me 列表):没有为 None。"""
     return CooldownShorteningRequest.objects.filter(soul=account.soul, cycle=account.cycle).first()
@@ -375,6 +404,8 @@ def request_cooldown_shortening(account, reason, desired_remaining_days=None):
             if not 0 <= desired_remaining_days < remaining:
                 raise SoulAccountError(f"希望的天数须在 0 到 {remaining - 1} 之间(剩余 {remaining} 天)。",
                                        "invalid_days", 400)
+        # 上一段冷却里没人决定的那份(已失效)还占着「每魂一份待决」的位:先收掉(F-REB-02)。
+        close_stale_shortenings(account.soul)
         try:
             with transaction.atomic():
                 shortening = CooldownShorteningRequest.objects.create(
@@ -406,7 +437,8 @@ def decide_cooldown_shortening(request_id, user, *, approve: bool, approved_days
         if shortening.status != CooldownShorteningStatus.PENDING:
             raise SoulAccountError("这份申请已经决定过了。", "already_decided", 409)
         until = cooldown_until(shortening.application)
-        if until is None:
+        if until is None and approve:
+            # 冷却已结束 / 已作废:没有剩余天数可缩,批不了;驳回照样可以,把这一行收掉(F-REB-02)。
             raise SoulAccountError("冷却期已经结束或已作废,无需决定。", "cooldown_over", 409)
         now = timezone.now()
         if approve:

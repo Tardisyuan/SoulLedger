@@ -3387,6 +3387,9 @@
     "cancel_placeholder": "请说明为什么取消",
     "confirm_cancel": "确认取消调拨",
     "cancel_success": "调拨已取消",
+    "withdraw_approval": "撤回批准",
+    "withdraw_approval_warning": "本殿已经批准、还没执行。撤回后这次调拨作废,灵魂留在原处,发起殿会收到通知。",
+    "withdraw_approval_success": "已撤回批准",
     "cancel_error": "取消调拨失败",
     "cancel_not_cancellable": "对方已经处理了这次调拨,不能再取消",
     "approve": "批准",
@@ -8705,7 +8708,7 @@
     },
     "decide": {
       "foreign_title": "跨域审判带来的外地站",
-      "foreign_hint": "这几站还没开始，是跨域审判带进来的。改判不会替你处理它们：请选全部保留，还是全部撤掉。",
+      "foreign_hint": "这几站是跨域审判带进来的(含还没开始、在途、正在服的)。全部保留:照旧服完再回来;全部撤掉:当场终止。请选一个。",
       "foreign_keep": "全部保留",
       "foreign_remove": "全部撤掉",
       "foreign_required": "请决定这些外地站保留还是撤掉"

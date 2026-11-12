@@ -12,6 +12,16 @@ class _TransitionRefusedError(Exception):
     """无节点处置执行时灵魂的转移被拒:抛出以回滚同一保存点里已写的执行标记。"""
 
 
+def plan_blocks_nodeless(soul) -> bool:
+    """灵魂有进行中的受刑计划时,不挂计划节点的处置(手建的)不能执行(F-DISP-03,2026-11-12)。
+
+    此前它走「无节点」那条路:在原属把灵魂推成 REINCARNATING / SETTLED,在暂居殿把灵魂送回原属 ——
+    而计划和它的站还 ACTIVE,此后完成不了也撤不了。计划进行中,去处由计划定。调用方持有灵魂行锁。"""
+    from apps.sentence_plan.services import in_progress_plan
+
+    return in_progress_plan(soul) is not None
+
+
 class DispositionService:
     """
     Handles disposition creation and execution.
@@ -925,6 +935,8 @@ class DispositionService:
                 # The soul is not in a state this disposition can act on. Say so
                 # instead of recording an execution that did not happen.
                 return False
+            if plan_blocks_nodeless(soul):
+                return False
             DispositionService._mark_executed(disposition)
             if serving(disposition):
                 return True
@@ -1096,6 +1108,8 @@ class DispositionService:
                 or locked.current_state != SoulState.DISPOSED
             ):
                 return False
+            if SentencePlanService.node_for_disposition(disposition) is None and plan_blocks_nodeless(locked):
+                return False
             DispositionService._mark_executed(disposition)
             node = SentencePlanService.on_disposition_executed(locked, disposition)
             from apps.disposition.expiry import serving
@@ -1118,6 +1132,9 @@ class DispositionService:
         """无计划暂居的处置了结:回原属地;被未结案审判拦下就记 `DISPATCH_RETURN_BLOCKED`。"""
         from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
 
+        from apps.sentence_plan.services import in_progress_plan
+        from apps.souls.models import Soul, SoulState
+
         try:
             DispatchService.end_residence(
                 soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION,
@@ -1125,3 +1142,9 @@ class DispositionService:
             )
         except ResidenceReturnBlockedError as blocked:
             DispatchService.record_blocked_return(locked, blocked, disposition)
+            return
+        # 回到原属后直接往下走(F-DISP-07,用户 2026-11-12):可转世的原属文明 → 候转世(可申请转生),终局的 → 安息。
+        # 此前停在「已处置、无计划」:开不了案、申请不了转生、没有待办,只能原属殿手建一份处置再执行。
+        home = Soul.lock(soul.pk)
+        if home.current_state == SoulState.DISPOSED and not home.is_residing and in_progress_plan(home) is None:
+            DispositionService._move_on(disposition, home, f"Residence ended; disposition {disposition.pk} {how}")

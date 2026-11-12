@@ -381,7 +381,10 @@ def append_cross_stops(cross):
     if not seats:
         return []
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
-    anchor = max(n.order for n in live)
+    # 判无罪的计划一个站都没有(F-DISP-02,2026-11-12):此前 `max()` 对空列表抛 ValueError,被包成
+    # CrossConclusionRefusedError,流程终审永远批不过。锚点取 1:外地站从 2 起(1 号只能是原属站,
+    # `first_sentence_node_is_home`),与 `create_from_conclusion` 抄席位的序号一致。
+    anchor = max((n.order for n in nodes), default=1) if not live else max(n.order for n in live)
     added = [
         SentenceNode.objects.create(
             plan=plan, order=anchor + i, tenant_code=seat.participant_tenant.code, is_home=False,
@@ -551,6 +554,30 @@ def _withdraw_stop(soul, node, reason, why):
         SoulPathService.leave(soul, realm=disposition.destination_realm)
 
 
+def _withdraw_foreign_stop(soul, node, reason, why):
+    """申诉改判、不保留外地站(F-DISP-14):在途的撤调拨,已到未执行的撤刑(`_withdraw_stop`)。"""
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+
+    if node.status == SentenceNodeStatus.DISPATCHING and node.dispatch_record_id is not None:
+        record = DispatchRecord._base_manager.filter(pk=node.dispatch_record_id).first()
+        if record is not None and record.status in (DispatchStatus.PROPOSED, DispatchStatus.APPROVED):
+            record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now())
+    _withdraw_stop(soul, node, reason, why)
+
+
+def _return_from_withdrawn_stop(soul, plan):
+    """撤下的是灵魂此刻所在的外地站:节点是 REMOVED,`advance` 不会把它送回(它只认 COMPLETED),这里送。"""
+    from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
+
+    try:
+        DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_ON_CASE_CLOSED,
+                                      reason=f"appeal amended sentence plan {plan.pk}; foreign stop withdrawn")
+    except ResidenceReturnBlockedError as exc:
+        raise PlanChangeRefusedError("The soul has an open judgment where it resides; it cannot be returned yet",
+                                     "open_judgment", status=409, open_judgment_ids=exc.judgment_ids) from None
+    soul.refresh_from_db()
+
+
 def _acquit_home_stops(soul, plan, nodes, judgment):
     """重开审判改判地府无罪:原属的刑期就此撤下(见 `conclude_reopened`)。调用方持有灵魂、计划、节点的锁。"""
     from apps.disposition.models import Disposition
@@ -582,11 +609,13 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     * 原属地正受着的节点(ACTIVE)而处置还没执行 → 就地改:节点与处置换成新裁决路由的 realm;
     * 未开始的节点(PENDING,含联审抄来的外地站)→ REMOVED —— 它们是按原判排的;
     * 没有就地可改的节点(原属那一站已执行)→ 追加一个原属节点,内容按新裁决路由,与重开审判结案同形;
-    * 外地站正在调拨或已到而处置未执行 → 409 `plan_in_transit`,等那一站执行完再决定;
+    * 外地站(未开始、在途、已到未执行、正在服)一律按 `keep_foreign`(F-DISP-14,用户 2026-11-12):保留则照旧
+      服完再回来;不保留则在途的撤调拨、已到未执行的撤刑(灵魂当场送回)、正在服的记期满;有外地站而没给选择 → 400;
+    * 原属站在途(灵魂正被送回原属)→ 409 `plan_in_transit`;
     * 计划在重审 / 永久挂起 / 有待决请求 → 409 `plan_busy`;
     * 计划已结束 → 只返回已执行的部分(灵魂可能已转生,不再开新的一站)。
     没有计划的(早于受刑计划的结案)看审判自己的处置:未执行就地改,已执行记补偿。
-    * 受刑中的站(处置已执行、刑期没满,节点仍 ACTIVE;用户 2026-10-29)→ 原判被改,刑期就此止:记期满、节点
+    * 受刑中的原属站(处置已执行、刑期没满,节点仍 ACTIVE;用户 2026-10-29)→ 原判被改,刑期就此止:记期满、节点
       COMPLETED、离开那个界域;已服的部分照样交还调用方记补偿。
     * 新裁决是地府判无罪(`acquitted_to_rebirth`)→ 不加刑期节点;就地可改的那一站(处置未执行)撤下
       (节点 REMOVED、处置由系统作废),随后的 `advance` 完成计划 → 灵魂候转世。
@@ -677,25 +706,39 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
             plan_id=plan.pk, is_deleted=False, status=SentenceRequestStatus.PENDING).exists():
         raise PlanChangeRefusedError("The sentence plan is in retrial, held, or awaiting a request; decide later",
                                      "plan_busy", status=409, plan_status=plan.status)
-    _end_serving(soul, plan, executed)
     done = {n.pk for n, _ in executed}
+    # 外地站一律按「保留外地站」走(F-DISP-14,用户 2026-11-12):开着,外地这一站(未开始、在途、已到未执行、
+    # 正在服)照旧服完再回来;关着,正在服的与已到 / 在途未执行的当场终止。此前正在服的不问开关一律终止,
+    # 在途 / 已到未执行的答 409 `plan_in_transit`。只在真有外地站时才要这个选择。
+    foreign = [n for n in nodes if not n.is_home and (
+        n.status == SentenceNodeStatus.PENDING or n.status in OCCUPYING_NODE_STATUSES)]
+    if foreign and keep_foreign is None:
+        raise PlanChangeRefusedError("Decide whether the foreign stops stay (keep_foreign_stops)",
+                                     "foreign_stops_choice_required", status=400,
+                                     foreign_orders=[n.order for n in foreign])
+    _end_serving(soul, plan, [(n, d) for n, d in executed if n.is_home or not keep_foreign])
     in_place = None
+    withdrawn_abroad = False
+    touched = {plan.tenant.code}
     for node in nodes:
         if node.status not in OCCUPYING_NODE_STATUSES or node.pk in done:
             continue
-        if not (node.is_home and node.status == SentenceNodeStatus.ACTIVE):
-            raise PlanChangeRefusedError("The soul is on its way to, or at, a stop whose sentence has not been "
-                                         "executed yet; decide once it has", "plan_in_transit", status=409,
-                                         node_order=node.order)
-        in_place = node
-    touched = {plan.tenant.code}
-    # Foreign stops a joint judgment added and not yet started: the reviewing judge decides whether they stand
-    # (2026-10-24 user decision). Asked only when there are some.
-    foreign = [n for n in nodes if n.status == SentenceNodeStatus.PENDING and not n.is_home]
-    if foreign and keep_foreign is None:
-        raise PlanChangeRefusedError("Decide whether the not-yet-started foreign stops stay (keep_foreign_stops)",
-                                     "foreign_stops_choice_required", status=400,
-                                     foreign_orders=[n.order for n in foreign])
+        if node.is_home and node.status == SentenceNodeStatus.ACTIVE:
+            in_place = node
+            continue
+        if not node.is_home:
+            if keep_foreign:
+                continue
+            # 已到(ACTIVE)的那一站就是灵魂此刻暂居的地方;在途的灵魂还在原属。
+            withdrawn_abroad = withdrawn_abroad or (node.status == SentenceNodeStatus.ACTIVE and soul.is_residing)
+            _withdraw_foreign_stop(soul, node, f"申诉改判:{verdict}", why)
+            touched.add(node.tenant_code)
+            continue
+        raise PlanChangeRefusedError("The soul is on its way to a home stop whose sentence has not been "
+                                     "executed yet; decide once it has", "plan_in_transit", status=409,
+                                     node_order=node.order)
+    if withdrawn_abroad:
+        _return_from_withdrawn_stop(soul, plan)
     for node in nodes:
         if node.status == SentenceNodeStatus.PENDING and not (keep_foreign and not node.is_home):
             node.status = SentenceNodeStatus.REMOVED
@@ -712,12 +755,21 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
         in_place.reason = f"申诉改判:{verdict}"
         _save(in_place, *content, "reason")
     else:
+        # 与 `conclude_reopened` 同一个锚点(F-DISP-05):排在已开始的站之后、未执行的站(保留的外地站)之前,
+        # 灵魂回原属后先受这一站。此前排在 `max(order) + 1`,即保留的外地站之后。
         live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
+        started = [n for n in live if n.status != SentenceNodeStatus.PENDING]
+        anchor = max(n.order for n in started) if started else 0
+        for node in sorted((n for n in live if n.order > anchor), key=lambda n: -n.order):
+            node.order += 1
+            _save(node, "order")
         added.append(SentenceNode.objects.create(
-            plan=plan, order=max(n.order for n in live) + 1, tenant_code=plan.tenant.code, is_home=True,
+            plan=plan, order=anchor + 1, tenant_code=plan.tenant.code, is_home=True,
             status=SentenceNodeStatus.PENDING, added_by_judgment_id=judgment.pk, reason=f"申诉改判:{verdict}",
             **content,
         ))
+    # Q5 在改动之后再问(F-DISP-05):就地改成永久、或追加的永久站,后面不能还有保留的外地站。
+    _assert_eternal_last(list(nodes) + added)
     plan_amended(soul, plan, touched, judgment_id=judgment.pk, added=added)
     return executed
 

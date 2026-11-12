@@ -26,5 +26,8 @@
   "official_notify.push_device_claimed.body",
   "menu_buttons.display_only_note",
   "soul_app.assist.history_entry",
-  "soul_app.errors.soul_recycled"
+  "soul_app.errors.soul_recycled",
+  "dispatch.withdraw_approval",
+  "dispatch.withdraw_approval_warning",
+  "dispatch.withdraw_approval_success"
 ]

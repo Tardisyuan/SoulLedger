@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { DispatchRecord } from "@soulledger/core/api/dispatch";
-import { useCancelDispatch } from "@soulledger/core/hooks/useDispatchDrafts";
+import { useCancelDispatch, useWithdrawDispatchApproval } from "@soulledger/core/hooks/useDispatchDrafts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -19,30 +19,40 @@ import { responseCode } from "@soulledger/core/api/client";
  * (与发起同一个码);其余一律什么都不渲染 —— 不显示禁用而没有说明的按钮。服务端再判一次:
  * 对方在这期间批准了,答 409 `not_cancellable`,这里说清「对方已经处理了」而不是笼统的失败。
  * 理由必填(按钮在输入框为空时不可点)。
+ *
+ * `withdrawApproval`(F-DISP-01,2026-11-12):同一个按钮的另一面 —— **目标殿**撤回自己已给的批准(APPROVED,
+ * 持 `dispatch.reject`)。此前 APPROVED 只有「执行」一个出口,执行不了时永远卡住。
  */
 export function CancelDispatchButton({
   dispatch,
   size = "md",
   triggerClassName,
   onCancelled,
+  withdrawApproval = false,
 }: {
-  dispatch: Pick<DispatchRecord, "id" | "status" | "source_tenant_code" | "soul_name">;
+  dispatch: Pick<DispatchRecord, "id" | "status" | "source_tenant_code" | "soul_name"> &
+    Partial<Pick<DispatchRecord, "target_tenant_code">>;
   size?: "sm" | "md";
   /** In a `linkedRows` table the trigger has to sit above the row link's overlay (`relative z-10`). */
   triggerClassName?: string;
   onCancelled?: () => void;
+  withdrawApproval?: boolean;
 }) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
   const { hasPermission, isTenantExempt } = usePermissions();
-  const cancel = useCancelDispatch();
+  const cancelProposal = useCancelDispatch();
+  const withdraw = useWithdrawDispatchApproval();
+  const cancel = withdrawApproval ? withdraw : cancelProposal;
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
 
   // 无殿 ADMIN 才算任一殿(后端 `cancel` 看 `is_tenant_exempt`);绑殿 ADMIN 只在本殿发起的提案上有按钮。
-  const ownHall = isTenantExempt || (!!user?.tenant?.code && user.tenant.code === dispatch.source_tenant_code);
-  if (dispatch.status !== "PROPOSED" || !ownHall || !hasPermission("dispatch.manage")) return null;
+  const hallCode = withdrawApproval ? dispatch.target_tenant_code : dispatch.source_tenant_code;
+  const ownHall = isTenantExempt || (!!user?.tenant?.code && user.tenant.code === hallCode);
+  const [wanted, codename] = withdrawApproval ? ["APPROVED", "dispatch.reject"] : ["PROPOSED", "dispatch.manage"];
+  if (dispatch.status !== wanted || !ownHall || !hasPermission(codename)) return null;
 
   const close = () => {
     setOpen(false);
@@ -54,7 +64,7 @@ export function CancelDispatchButton({
       {
         onSuccess: () => {
           close();
-          showToast(t("dispatch.cancel_success"), "success");
+          showToast(t(withdrawApproval ? "dispatch.withdraw_approval_success" : "dispatch.cancel_success"), "success");
           onCancelled?.();
         },
         onError: (err: unknown) => {
@@ -74,12 +84,12 @@ export function CancelDispatchButton({
         onClick={() => setOpen(true)}
         data-testid="cancel-dispatch"
       >
-        {t("dispatch.cancel_dispatch")}
+        {t(withdrawApproval ? "dispatch.withdraw_approval" : "dispatch.cancel_dispatch")}
       </Button>
       <BaseModal
         isOpen={open}
         onClose={close}
-        title={t("dispatch.cancel_title")}
+        title={t(withdrawApproval ? "dispatch.withdraw_approval" : "dispatch.cancel_title")}
         footer={
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={close}>
@@ -97,7 +107,7 @@ export function CancelDispatchButton({
           </div>
         }
       >
-        <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("dispatch.cancel_warning")}</p>
+        <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t(withdrawApproval ? "dispatch.withdraw_approval_warning" : "dispatch.cancel_warning")}</p>
         <TextAreaField
           label={t("dispatch.cancel_reason")}
           value={reason}

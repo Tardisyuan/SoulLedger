@@ -59,6 +59,16 @@ export function useCancelDispatch() {
   });
 }
 
+/** 目标殿撤回自己的批准(F-DISP-01)。 */
+export function useWithdrawDispatchApproval() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) =>
+      (await dispatchApi.withdrawApproval(id, reason)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: dispatchKeys.all }),
+  });
+}
+
 /** Discard = soft delete into the recycle bin, so the bin's list is stale too. */
 export function useDiscardDispatchDraft() {
   const qc = useQueryClient();

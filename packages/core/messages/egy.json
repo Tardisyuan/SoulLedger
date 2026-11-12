@@ -3425,6 +3425,9 @@
     "cancel_placeholder": "Sesh Khet Sehen",
     "confirm_cancel": "Sehen Hab-Ba",
     "cancel_success": "Sehen Hab-Ba Seth",
+    "withdraw_approval": "Withdraw approval",
+    "withdraw_approval_warning": "This hall approved it and it has not been executed. Withdrawing voids the dispatch, the soul stays where it is, and the sending hall is notified.",
+    "withdraw_approval_success": "Approval withdrawn",
     "cancel_error": "Nen Sehen Hab-Ba",
     "cancel_not_cancellable": "Wesekhet Ky Iri Seth: Nen Sehen Hab-Ba Pen.",
     "filter": {

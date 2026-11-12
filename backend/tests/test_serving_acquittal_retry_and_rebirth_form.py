@@ -169,6 +169,32 @@ def test_a_diyu_acquittal_waits_for_its_flow_then_goes_to_rebirth(cn):
     assert (plan.status, soul.current_state) == ("COMPLETED", SoulState.REINCARNATING)
 
 
+def test_a_diyu_acquittal_with_a_merged_cross_judgment_gets_its_foreign_stops(cn):
+    """F-DISP-02(2026-11-12):判无罪的计划没有站,联审以 PASS 结束时 `append_cross_stops` 对空列表取 `max()`,
+    ValueError 被包成 CrossConclusionRefusedError,流程终审永远批不过。外地站应从 2 起。"""
+    from apps.dispatch.models import CrossTenantJudgment, ParticipantRole
+    from apps.dispatch.services import CrossTenantJudgmentService
+    from tests.test_workflow_segments import _template
+
+    eg = sp.tenant("EG_DUAT")
+    _template(cn, "CHINESE")
+    _template(eg, "EGYPTIAN")
+    soul, case = sp.open_case(cn)
+    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj.judgment = case
+    cj.save(update_fields=["judgment"])
+    seat = CrossTenantJudgmentService.add_participant(cj, eg, None, ParticipantRole.CO_JUDGE, node_order=2)
+    CrossTenantJudgmentService.submit_sentence(seat, sp.stop_realm(eg), 5, "", None)
+    CrossTenantJudgmentService.activate(cj)
+    case.conclude(Verdict.PASSED, "", create_workflow=True)
+    plan = SentencePlan.all_objects.get(soul=soul)
+    assert not SentenceNode.all_objects.filter(plan=plan).exists()
+
+    CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None, by_workflow=True)
+    stops = list(SentenceNode.all_objects.filter(plan=plan).order_by("order").values_list("order", "tenant_code", "is_home"))
+    assert stops == [(2, "EG_DUAT", False)]
+
+
 def test_a_european_acquittal_is_still_placed(eu_tenant):
     soul, case = sp.open_case(eu_tenant)
     case.conclude(Verdict.PASSED, "")
@@ -419,3 +445,35 @@ def test_the_default_term_backfill_touches_only_unexecuted_unwritten_rows(cn):
     assert years == {pending.pk: 20, written.pk: 5, executed.pk: None}
     node.refresh_from_db()
     assert node.sentence_years == 20
+
+
+def test_a_hand_made_disposition_does_not_bypass_a_plan_in_progress(cn):
+    """F-DISP-03(2026-11-12):手建的处置(无节点)此前在计划进行中照样执行,把灵魂推成 REINCARNATING / SETTLED,
+    计划与站仍 ACTIVE,此后完成不了也撤不了。现在执行被拒,什么都不写;接口答 409 `plan_in_progress`。"""
+    soul, plan, disposition = _termed(cn)
+    assert disposition.is_executed is False and plan.status == "ACTIVE"
+    stray = Disposition.objects.create(soul=Soul.all_objects.get(pk=soul.pk), tenant=cn)
+
+    assert DispositionService.execute(stray) is False
+    stray.refresh_from_db()
+    assert not stray.is_executed
+    assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.DISPOSED
+
+    refused = officer_client(_moderator(cn)).post(f"/api/v1/disposition/{stray.pk}/execute/", {}, format="json")
+    assert refused.status_code == 409 and refused.data["code"] == "plan_in_progress", refused.data
+
+
+def test_a_plan_stops_term_is_not_patched_on_the_disposition(cn):
+    """F-DISP-04(2026-11-12):挂在计划节点上的处置,PATCH 改刑期 / 永久 / 去处此前只改这一行 —— 改空刑期让站
+    永远 ACTIVE,改成永久绕过「永久必须最后」。现在 400 `on_sentence_plan`;不碰这些列的编辑照旧。"""
+    soul, plan, disposition = _termed(cn)
+    client = officer_client(_moderator(cn))
+    url = f"/api/v1/disposition/{disposition.pk}/"
+    for body in ({"sentence_years": None}, {"is_eternal": True}, {"sentence_years": 9}):
+        refused = client.patch(url, body, format="json")
+        assert refused.status_code == 400, (body, refused.data)
+        assert str(refused.data[next(iter(body))][0].code) == "on_sentence_plan"
+    row = Disposition.all_objects.get(pk=disposition.pk)
+    assert (row.sentence_years, row.is_eternal) == (3, False)
+    assert client.patch(url, {"sentence_years": 3, "notes": "核对过"}, format="json").status_code == 200
+

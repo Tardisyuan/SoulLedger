@@ -10,8 +10,10 @@ import { tZh } from "./support/zhBundle";
 import { mockShowToast } from "./support/mocks";
 import { renderWithProviders } from "./support/render";
 
-jest.mock("@soulledger/core/api", () => ({ dispatchApi: { cancel: jest.fn() } }));
-const { dispatchApi } = jest.requireMock("@soulledger/core/api") as { dispatchApi: { cancel: jest.Mock } };
+jest.mock("@soulledger/core/api", () => ({ dispatchApi: { cancel: jest.fn(), withdrawApproval: jest.fn() } }));
+const { dispatchApi } = jest.requireMock("@soulledger/core/api") as {
+  dispatchApi: { cancel: jest.Mock; withdrawApproval: jest.Mock };
+};
 
 let mockTenant: string | null = "CN_DIYU";
 jest.mock("@/src/contexts/TenantContext", () => ({
@@ -40,6 +42,7 @@ beforeEach(() => {
   mockHeld = new Set(["dispatch.manage"]);
   mockAdmin = false;
   dispatchApi.cancel.mockResolvedValue({ data: {} });
+  dispatchApi.withdrawApproval.mockResolvedValue({ data: {} });
 });
 
 describe("取消移交", () => {
@@ -117,6 +120,38 @@ describe("取消移交", () => {
     mockHeld = new Set(["dispatch.read", "dispatch.approve"]);
     renderButton();
     expect(trigger()).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("撤回批准(F-DISP-01)", () => {
+  const approved = (over: Record<string, unknown> = {}) =>
+    record({ status: "APPROVED", source_tenant_code: "EG_DUAT", target_tenant_code: "CN_DIYU", ...over });
+  const withdrawTrigger = () => screen.queryByRole("button", { name: tZh("dispatch.withdraw_approval") });
+  const renderWithdraw = (dispatch: Record<string, unknown>) =>
+    renderWithProviders(<CancelDispatchButton dispatch={dispatch as never} withdrawApproval />,
+      { retryOff: false, mutations: { retry: false }, i18n: false });
+
+  it("目标殿、持 dispatch.reject:带理由撤回已给的批准", async () => {
+    mockHeld = new Set(["dispatch.reject"]);
+    renderWithdraw(approved());
+    fireEvent.click(withdrawTrigger() as HTMLElement);
+    fireEvent.change(await screen.findByLabelText(tZh("dispatch.cancel_reason")), { target: { value: "本殿停收" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("dispatch.confirm_cancel") }));
+    await waitFor(() => expect(dispatchApi.withdrawApproval).toHaveBeenCalledWith("d1", "本殿停收"));
+    expect(dispatchApi.cancel).not.toHaveBeenCalled();
+  });
+
+  it("发起殿、还没批准的、没有 dispatch.reject:都不渲染", () => {
+    mockHeld = new Set(["dispatch.reject"]);
+    const fromSender = renderWithdraw(approved({ source_tenant_code: "CN_DIYU", target_tenant_code: "EG_DUAT" }));
+    expect(withdrawTrigger()).toBeNull();
+    fromSender.unmount();
+    const proposed = renderWithdraw(approved({ status: "PROPOSED" }));
+    expect(withdrawTrigger()).toBeNull();
+    proposed.unmount();
+    mockHeld = new Set(["dispatch.manage"]);
+    renderWithdraw(approved());
     expect(screen.queryByRole("button")).toBeNull();
   });
 });

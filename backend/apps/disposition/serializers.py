@@ -273,6 +273,22 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, SoulFi
             raise serializers.ValidationError(
                 {f: "Not changeable once the disposition is filed (destination: once executed)." for f in changed},
                 code="disposition_fixed")
+        # 挂在受刑计划节点上的处置(F-DISP-04,2026-11-12):去处与刑期是计划的,节点、计划、行程与发落规则
+        # (Q5、`resolve_placement`)都按它们排。PATCH 只改这一行,于是执行后改空刑期 / 改成永久让站永远 ACTIVE,
+        # 期满后延长把已离开的灵魂挡在转世前,执行前改成永久绕过 Q5。这些改动走受刑计划的变更请求。
+        on_plan = {
+            "destination_realm": lambda v: getattr(v, "pk", None) != instance.destination_realm_id,
+            **{f: (lambda v, f=f: v != getattr(instance, f)) for f in (
+                "sentence_years", "is_eternal", "memory_reset", "term_start_year", "term_start_month", "term_start_day")},
+        }
+        touched = [f for f, differs in on_plan.items() if f in attrs and differs(attrs[f])]
+        if touched:
+            from apps.sentence_plan.services import SentencePlanService
+
+            if SentencePlanService.node_for_disposition(instance) is not None:
+                raise serializers.ValidationError(
+                    {f: "This disposition is a stop of a sentence plan; change it through a plan request."
+                     for f in touched}, code="on_sentence_plan")
 
     #: The columns a term is made of. Changing any of them on an expired row may
     #: move its end past today (see `update`).
