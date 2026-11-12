@@ -138,3 +138,6 @@ ds-bundle/
 
 # Claude Design HTML pulled for reference while porting; regenerable, not source.
 /design-cache/
+
+# Copied from packages/core/openapi/schema.yml by the demo build (frontend/vercel.json); not a source file.
+/frontend/public/api-docs/schema.yml

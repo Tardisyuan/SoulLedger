@@ -45,6 +45,12 @@ DEMO_PUBLISH="-p 3334:3334" scripts/demo-remote.sh scripts/demo-serve-inner.sh  
 Or on any machine with the dependencies installed: `cd frontend && export NEXT_PUBLIC_DEMO_MODE=1 && npx next build && npx next start -p 3334`.
 The variable has to be set for `next start` as well: `next.config.js` reads it at both steps, and without it `next start` warns that it does not work with `output: "standalone"`. The app still runs, but the warning is right about that config.
 
+## The API reference page
+
+`/api-docs` redirects (in `frontend/vercel.json`) to `public/api-docs/index.html`, a static page that renders the OpenAPI schema
+in the browser with Redoc (loaded from jsDelivr, version pinned). The demo build copies `packages/core/openapi/schema.yml` next
+to it as `schema.yml` (`buildCommand`; the copy is gitignored). No server is involved, and the schema has no hostnames in it.
+
 ## The app recordings
 
 `frontend/public/demo-videos/` holds two short clips of the apps, recorded on a phone with `scrcpy` against the demo's
