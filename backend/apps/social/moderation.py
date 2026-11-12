@@ -7,7 +7,7 @@
 (同一条帖子被两个官员同时「恢复」与「删除」只有一个生效,另一个看到新状态后得 409)。
 锁的语义只在 PostgreSQL 上成立 —— SQLite 没有行锁,见报告「需真 PG 验证」一节。
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
@@ -195,6 +195,15 @@ def screen_content(tenant, content):
         decisive_word=decisive,
         hit_ids=[pk for pk, _, _ in hits],
     )
+
+
+def screen_officer_content(tenant, content):
+    """官员自己的帖子 / 评论只吃 MASK。送审 / 隐藏要官员放行,而审核后台只看灵魂的内容
+    (`author__role="SOUL"`),官员内容进 PENDING / HIDDEN 就永远出不来(F-SOC-01)。"""
+    screening = screen_content(tenant, content)
+    if screening.status == ModerationStatus.PUBLISHED:
+        return screening
+    return replace(screening, status=ModerationStatus.PUBLISHED, decisive_word="")
 
 
 def record_hits(word_ids):

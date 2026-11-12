@@ -40,7 +40,7 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.social import media as post_media
 from apps.social.models import Comment, Follow, ModerationStatus, Post, PostMedia, Reaction, UserProfile, Visibility
-from apps.social.moderation import record_hits, screen_content
+from apps.social.moderation import record_hits, screen_officer_content
 from apps.social.permissions import (
     IsAuthorOrReadOnly,
     IsFollowOwnerOrReadOnly,
@@ -154,7 +154,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         cannot be attached (not the caller's, already used, deleted) means no
         post at all — `media.attach`, the soul circle's rule."""
         media_ids = serializer.validated_data.pop("media", [])
-        screening = screen_content(getattr(self.request, "tenant", None), serializer.validated_data.get("content", ""))
+        screening = screen_officer_content(getattr(self.request, "tenant", None), serializer.validated_data.get("content", ""))
         try:
             with transaction.atomic():
                 post = serializer.save(
@@ -177,7 +177,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         data = serializer.validated_data
         screening = None
         if "content" in data and data["content"] != serializer.instance.content:
-            screening = screen_content(serializer.instance.tenant, data["content"])
+            screening = screen_officer_content(serializer.instance.tenant, data["content"])
             data["content"] = screening.content
             data["edited_at"] = timezone.now()
             if screening.status != ModerationStatus.PUBLISHED:
@@ -347,7 +347,7 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
         parent = serializer.validated_data.get("parent")
         tenant = getattr(self.request, "tenant", None)
         # The soul circle's screening (soul_circle.create_comment), not a second copy of it.
-        screening = screen_content(tenant or post.tenant, serializer.validated_data["content"])
+        screening = screen_officer_content(tenant or post.tenant, serializer.validated_data["content"])
         with transaction.atomic():
             comment = CommentService.create_comment(
                 author=self.request.user,
@@ -364,6 +364,18 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
                     "post_id": str(post.pk), "comment_id": str(comment.pk), "user_id": str(comment.author_id),
                 })
         serializer.context["screening"] = screening.outcome
+
+    def perform_update(self, serializer):
+        """An edited comment goes through the same word list as a new one (MASK only, like
+        every officer-authored text — see `screen_officer_content`); it used to skip it."""
+        data = serializer.validated_data
+        screening = screen_officer_content(serializer.instance.tenant, data["content"]) if "content" in data else None
+        if screening:
+            data["content"] = screening.content
+        with transaction.atomic():
+            super().perform_update(serializer)
+            if screening:
+                record_hits(screening.hit_ids)
 
     def perform_destroy(self, instance):
         was_seen = instance.moderation_status == ModerationStatus.PUBLISHED and _seen_by_others(instance.post)

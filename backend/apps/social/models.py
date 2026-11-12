@@ -127,6 +127,8 @@ class PostMedia(SoftDeleteMixin, models.Model):
     (`media.may_view`);帖子被官员删除,图片以同一个 `delete_cascade_id` 一起软删除,
     随回收站的恢复一起回来。作者自己删帖,图片的行与文件真删。
     """
+    #: recycle_bin._cascade_outside: this model has no tenant column, its hall is its post's.
+    RECYCLE_TENANT_PATH = "post__tenant_id"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     post = models.ForeignKey(
         Post, null=True, blank=True, on_delete=models.CASCADE, related_name="media",
