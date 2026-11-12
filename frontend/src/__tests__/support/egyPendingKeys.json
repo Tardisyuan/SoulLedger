@@ -61,5 +61,19 @@
   "demo.probe.why_back",
   "demo.probe.code",
   "demo.probe.test",
-  "demo.probe.not_recorded"
+  "demo.probe.not_recorded",
+  "demo.txn.open",
+  "demo.txn.title",
+  "demo.txn.lede",
+  "demo.txn.step1",
+  "demo.txn.step2",
+  "demo.txn.step3",
+  "demo.txn.step4",
+  "demo.txn.rollback_title",
+  "demo.txn.rollback_body",
+  "demo.txn.try_title",
+  "demo.txn.try_body",
+  "demo.txn.try",
+  "demo.txn.no_case",
+  "demo.txn.result_note"
 ]

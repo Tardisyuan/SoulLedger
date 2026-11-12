@@ -9423,6 +9423,22 @@
       "code": "Code",
       "test": "Guarded by",
       "not_recorded": "The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise."
+    },
+    "txn": {
+      "open": "Concurrency",
+      "title": "Concurrency and transactions: a case is concluded once",
+      "lede": "Two judges may press 结案 on the same case at the same moment. The backend has to conclude it once, and never leave half of it written.",
+      "step1": "Judges A and B each read the case as still open, and both submit a conclusion.",
+      "step2": "A takes the row lock first (select_for_update), inside a transaction, and writes the verdict, the disposition and the event.",
+      "step3": "B's conclusion waits on the same lock. Once A commits, B gets the lock, reads the row again under it, and finds a verdict already there.",
+      "step4": "B gets 409 already_concluded, and nothing of B's is written.",
+      "rollback_title": "All or nothing",
+      "rollback_body": "The verdict, the disposition and the event log share one database transaction. If the event row cannot be written, the whole conclusion rolls back and the caller gets the original error; notifications and pushes go out only after the commit, so a rollback sends none.",
+      "try_title": "Try it",
+      "try_body": "Take case {{case}}, which is already concluded. The button below sends B's request again, with the copy B read before the first conclusion.",
+      "try": "Send B's conclusion",
+      "no_case": "No case here is concluded yet. Conclude one on the bench, then come back.",
+      "result_note": "The demo has no backend: this answer comes from a rule the demo layer copies from the server (demo/flows.ts), with the code and message word for word as in services.py, and nothing was written. On the real API, a second request sent after the first is stopped earlier, by the view's already-concluded check, with 400; only two requests that both pass that check reach the 409 under the lock. The wait on the lock can only be tested on PostgreSQL, since SQLite has no row locks, so the concurrency test above runs on PostgreSQL only."
     }
   },
   "action": {

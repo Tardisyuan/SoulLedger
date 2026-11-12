@@ -3,7 +3,8 @@
  * server computes (the queue's groups and counts). Everything else takes the generic rule in `writes.ts`.
  *
  * ponytail: these imitate the server's outcome, not its rules. A real refusal (not your claim, wrong order, quota) never
- * happens here; nothing a visitor can do in a demo should end in an error.
+ * happens here; nothing a visitor can do in a demo should end in an error. One exception, asked for on purpose: a second
+ * conclusion of a concluded case (`ALREADY_CONCLUDED`).
  */
 import { inboxRead, inboxWrite, letterCounts } from "./inbox";
 import { tourOf } from "./tour";
@@ -118,9 +119,18 @@ function startFlow(rec: Recording, judgment: Row): string | null {
   return id;
 }
 
+/**
+ * The one refusal the demo does give, because a visitor can ask for it (「并发与事务」, `TransactionCard`): a case that
+ * already has its verdict is not concluded again. The server's rule, `JudgmentConclusionService.conclude_judgment`
+ * (apps/judgment/services.py): under the row lock, a verdict already there is 409 `already_concluded`, nothing written.
+ * Its message and code, word for word; the screens never send this for a concluded case, so nothing else meets it.
+ */
+export const ALREADY_CONCLUDED = { error: "This judgment has already been concluded.", code: "already_concluded" };
+
 function conclude(rec: Recording, id: string, body: Row): Answer {
   const row = find(rec, "/judgment/", id);
   if (!row) return ok({});
+  if (!isPending(row)) return ok(ALREADY_CONCLUDED, 409);
   const verdict = String(body.verdict ?? "PASSED");
   const concluded = { ...row, verdict };
   const flowId = body.create_workflow === false ? null : startFlow(rec, concluded);

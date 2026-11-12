@@ -1,13 +1,16 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import stats from "@/src/config/landing-stats.json";
+import { CASE_PAGE, TransactionCard } from "./TransactionCard";
 
 /** Sits in the flow above everything, and tells the sticky bars through `--imp-h` (the variable the impersonation strip uses). */
 const ROOM = `:root{--imp-h:1.75rem}.min-h-screen{min-height:calc(100vh - 1.75rem)}.min-h-dvh{min-height:calc(100dvh - 1.75rem)}@media (min-width:48rem){.md\\:h-dvh{height:calc(100dvh - 1.75rem)}}`;
 
 export default function DemoBanner() {
   const { t } = useI18n();
+  const pathname = usePathname() ?? "";
   return (
     <>
       <style>{ROOM}</style>
@@ -16,6 +19,8 @@ export default function DemoBanner() {
         className="sticky top-0 z-toast flex h-7 items-center justify-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-3 text-xs text-[oklch(var(--color-ink-muted))]"
       >
         <span className="min-w-0 truncate">{t("demo.banner")}</span>
+        {/* 「并发与事务」 on a case's own page (作品集建议 A5): up here it never sits on the verdict bar or the tour card. */}
+        {CASE_PAGE.test(pathname) ? <TransactionCard key={pathname} caseId={pathname.split("/")[2]} /> : null}
         <a
           data-testid="demo-github"
           href={stats.github}
