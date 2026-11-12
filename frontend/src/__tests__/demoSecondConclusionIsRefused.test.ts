@@ -3,12 +3,15 @@
  * server's own message, nothing written — and a first conclusion still goes through. Before, every conclusion
  * "succeeded", so the card's 「试一下」 would have shown a second verdict and a second disposition.
  */
-import judge from "@/demo/data/judge.zh.json";
 import { ALREADY_CONCLUDED } from "@/demo/flows";
-import { type Recording, getOverlay, resetOverlay, rowsNow } from "@/demo/store";
+import { type Recording, getOverlay, recording, resetOverlay, rowsNow } from "@/demo/store";
 import { write } from "@/demo/writes";
 
-const rec = judge as unknown as Recording;
+// Loaded as the demo loads it (no typed import of a 3 MB file).
+let rec: Recording;
+beforeAll(async () => {
+  rec = await recording("judge", "zh");
+});
 const judgments = () => rowsNow(rec, "/judgment/");
 const conclude = (id: unknown, verdict: unknown) => write(rec, "POST", `/judgment/${id}/conclude/`, new URLSearchParams(), { verdict, notes: "" });
 
