@@ -7,7 +7,7 @@ exceptions, so adding `/goodbye` meant editing both (docs/test-suite-review-2026
 §2.1). The decisions live in two frontend files and are read from there:
 
 * `frontend/proxy.ts` `PUBLIC_PATHS` — route -> why it needs no sign-in;
-* `frontend/src/components/layout/AppLayoutWrapper.tsx` `AUTH_PATHS` (prefix) /
+* `frontend/src/components/layout/AppLayoutWrapper.tsx` `AUTH_PATHS` / `DESK_PATHS` (prefix) /
   `PUBLIC_PATHS` (exact) — routes rendered without the AppLayout shell.
 
 The frontend twin is `frontend/src/__tests__/support/appRoutes.ts`.
@@ -63,8 +63,9 @@ def _string_array(name: str) -> list[str]:
 
 def is_outside_app_layout(route: str) -> bool:
     """Whether `AppLayoutWrapper` renders this route bare (same test it applies to the pathname)."""
-    auth, public = _string_array("AUTH_PATHS"), _string_array("PUBLIC_PATHS")
-    return any(route == p or route.startswith(p + "/") for p in auth) or route in public
+    # DESK_PATHS (prefix, like AUTH_PATHS): signed in, but in `DeskShell` instead of AppLayout — so no 问一问 entry.
+    prefixed = _string_array("AUTH_PATHS") + _string_array("DESK_PATHS")
+    return any(route == p or route.startswith(p + "/") for p in prefixed) or route in _string_array("PUBLIC_PATHS")
 
 
 def top_segments() -> dict[str, list[str]]:
