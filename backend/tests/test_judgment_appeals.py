@@ -258,7 +258,7 @@ def test_amend_compensates_an_executed_stop_and_replaces_the_pending_ones(cn_ten
     assert soul.current_state == SoulState.REINCARNATING
 
 
-def test_amend_waits_while_the_soul_is_in_transit_and_writes_nothing(cn_tenant):
+def _in_transit(cn_tenant):
     away = sp.tenant("EG_DUAT")
     soul, plan = sp.planned(cn_tenant, [(away, sp.stop_realm(away), 5)], verdict=Verdict.FAILED)
     _realm_for(soul, Verdict.PASSED)
@@ -268,13 +268,42 @@ def test_amend_waits_while_the_soul_is_in_transit_and_writes_nothing(cn_tenant):
     reviewer = sp.officer("reviewer", "JUDGE", cn_tenant)
     appeal = JudgmentAppeal.objects.create(judgment=judgment, soul=soul, tenant=cn_tenant, round=1, reason="x",
                                            original_verdict="FAILED", status="IN_REVIEW", reviewer=reviewer)
-    response = officer_client(reviewer).post(f"{HALL}{appeal.pk}/decide/",
-                                             {"outcome": "AMENDED", "verdict": "PASSED", "note": "改"}, format="json")
-    assert response.status_code == 409 and response.data["code"] == "plan_in_transit"
+    return soul, plan, judgment, appeal, officer_client(reviewer)
+
+
+def test_amend_with_a_foreign_stop_in_transit_asks_whether_it_stays_and_writes_nothing(cn_tenant):
+    """F-DISP-14(用户 2026-11-12):在途 / 已到未执行的外地站也按 `keep_foreign_stops` 走,不再答 409 `plan_in_transit`。"""
+    soul, plan, judgment, appeal, reviewer = _in_transit(cn_tenant)
+    response = reviewer.post(f"{HALL}{appeal.pk}/decide/",
+                             {"outcome": "AMENDED", "verdict": "PASSED", "note": "改"}, format="json")
+    assert response.status_code == 400 and response.data["code"] == "foreign_stops_choice_required", response.data
+    assert response.data["foreign_orders"] == [2]
     judgment.refresh_from_db()
     appeal.refresh_from_db()
     assert judgment.verdict == "FAILED" and appeal.status == "IN_REVIEW"
-    assert not SoulRecord.objects.filter(soul=soul, category=RecordCategory.COMPENSATION).exists()
+    assert sp.node(plan, 2).status == "DISPATCHING"
+
+
+def test_amend_without_keeping_foreign_stops_withdraws_the_one_in_transit(cn_tenant):
+    soul, plan, judgment, appeal, reviewer = _in_transit(cn_tenant)
+    record_id = sp.node(plan, 2).dispatch_record_id
+    response = reviewer.post(f"{HALL}{appeal.pk}/decide/", {"outcome": "AMENDED", "verdict": "PASSED", "note": "改",
+                                                            "keep_foreign_stops": False}, format="json")
+    assert response.status_code == 200, response.data
+    assert SentenceNode.all_objects.get(plan=plan, order=2).status == "REMOVED"
+    assert DispatchRecord.all_objects.get(pk=record_id).status == "CANCELLED"
+    assert SentencePlan.all_objects.get(pk=plan.pk).status == "COMPLETED"
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.REINCARNATING
+
+
+def test_amend_keeping_foreign_stops_lets_the_one_in_transit_go_on(cn_tenant):
+    soul, plan, judgment, appeal, reviewer = _in_transit(cn_tenant)
+    response = reviewer.post(f"{HALL}{appeal.pk}/decide/", {"outcome": "AMENDED", "verdict": "PASSED", "note": "改",
+                                                            "keep_foreign_stops": True}, format="json")
+    assert response.status_code == 200, response.data
+    assert sp.node(plan, 2).status == "DISPATCHING"
+    assert SentencePlan.all_objects.get(pk=plan.pk).status == "ACTIVE"
 
 
 def test_amend_after_the_plan_finished_only_compensates(case):

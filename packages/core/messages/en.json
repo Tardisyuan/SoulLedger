@@ -8700,7 +8700,7 @@
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",
-      "foreign_hint": "These stations haven't started and came from the cross-realm judgment. Changing the verdict doesn't decide them: keep them all, or remove them all.",
+      "foreign_hint": "These stations came from the cross-realm judgment (not started, on the way, or being served). Keep them all and they are served out; remove them all and they end now. Choose one.",
       "foreign_keep": "Keep them all",
       "foreign_remove": "Remove them all",
       "foreign_required": "Choose whether to keep or remove these stations"
