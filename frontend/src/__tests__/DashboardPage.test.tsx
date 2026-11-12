@@ -41,9 +41,12 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("@/src/components/dashboard/HallOverview", () => ({ HallOverview: () => null }));
 
 jest.mock("@soulledger/core/api/sentence-plans", () => ({ sentencePlansApi: { list: jest.fn() } }));
-jest.mock("@soulledger/core/api/social-moderation", () => ({ socialModerationApi: { reports: jest.fn() } }));
-const mockedReports = (jest.requireMock("@soulledger/core/api/social-moderation") as { socialModerationApi: { reports: jest.Mock } })
-  .socialModerationApi.reports;
+jest.mock("@soulledger/core/api/social-moderation", () => ({ socialModerationApi: { reports: jest.fn(), content: jest.fn() } }));
+const mockedModeration = (jest.requireMock("@soulledger/core/api/social-moderation") as {
+  socialModerationApi: { reports: jest.Mock; content: jest.Mock };
+}).socialModerationApi;
+const mockedReports = mockedModeration.reports;
+const mockedContent = mockedModeration.content;
 const mockedPlans = (jest.requireMock("@soulledger/core/api/sentence-plans") as { sentencePlansApi: { list: jest.Mock } })
   .sentencePlansApi.list;
 
@@ -154,6 +157,7 @@ beforeEach(() => {
   mockedPlans.mockResolvedValue({ data: { count: 0, results: [] } });
   mockedOfficerTodo.mockResolvedValue(officerTodo());
   mockedReports.mockResolvedValue({ data: { count: 0, results: [] } });
+  mockedContent.mockResolvedValue({ data: { count: 0, results: [] } });
 });
 
 // ── Overview tab ─────────────────────────────────────────────────────
@@ -474,7 +478,9 @@ describe("DashboardPage 更多 (the v3 overview, moved)", () => {
       mockedPlans.mockImplementation(async (params: { pending_request?: boolean }) => ({
         data: { count: params.pending_request ? 6 : 0, results: [] },
       }));
-      mockedReports.mockResolvedValue({ data: { count: 7, results: [] } });
+      // F-SOC-04: the cell counts word-list holds (PENDING posts + comments) with the OPEN reports: 4 + 2 + 1.
+      mockedReports.mockResolvedValue({ data: { count: 4, results: [] } });
+      mockedContent.mockImplementation(async (kind: string) => ({ data: { count: kind === "posts" ? 2 : 1, results: [] } }));
       const { container } = renderPage();
       const cell = async (label: string) => {
         await screen.findByText(label);

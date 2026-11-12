@@ -156,6 +156,17 @@ describe("page header", () => {
   });
 });
 
+describe("举报 tab count", () => {
+  // F-SOC-04: word-list holds sit in the same queue; counting reports alone read 0 for a queue with work in it.
+  it("adds the PENDING posts and comments to the reports", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([report()]));
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post({ id: "pp1" }), post({ id: "pp2" })] : []));
+    renderPage();
+    await waitFor(() => expect(segment("reports")).toHaveAccessibleName(new RegExp(`^${tZh("social_moderation.tabs.reports")}.*3`)));
+  });
+});
+
 describe("举报 · images (C-08 MediaTile)", () => {
   const grid = () => within(detail()).queryByRole("list", { name: tZh("social_moderation.review.media_label") });
 
