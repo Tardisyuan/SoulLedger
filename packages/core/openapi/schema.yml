@@ -15433,7 +15433,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RoleDataScopeConfig'
+                $ref: '#/components/schemas/RoleDataScopeConfigResponse'
           description: ''
         '404':
           content:
@@ -15462,7 +15462,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/RoleDataScopeConfig'
-        required: true
       security:
       - jwtAuth: []
       responses:
@@ -15470,7 +15469,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RoleDataScopeConfig'
+                $ref: '#/components/schemas/RoleDataScopeConfigResponse'
           description: ''
         '400':
           content:
@@ -42637,13 +42636,32 @@ components:
       type: object
       properties:
         default:
-          $ref: '#/components/schemas/DataScopeRule'
+          allOf:
+          - $ref: '#/components/schemas/DataScopeRule'
+          nullable: true
         overrides:
           type: array
           items:
             $ref: '#/components/schemas/DataScopeOverride'
+    RoleDataScopeConfigResponse:
+      type: object
+      properties:
+        default:
+          allOf:
+          - $ref: '#/components/schemas/DataScopeRule'
+          description: 没配时显示 ALL;看 default_configured 区分。
+        default_configured:
+          type: boolean
+          description: 有没有默认范围那一行。false = 没配,兼任时不放宽。
+        overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataScopeOverride'
+          description: 列出的都是存了行的;没列出的业务跟随默认。
       required:
       - default
+      - default_configured
+      - overrides
     RoleDeleteRefusal:
       type: object
       description: |-

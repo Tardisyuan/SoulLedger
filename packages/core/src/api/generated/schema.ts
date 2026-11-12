@@ -19337,8 +19337,16 @@ export interface components {
             description?: string;
         };
         RoleDataScopeConfig: {
-            default: components["schemas"]["DataScopeRule"];
+            default?: components["schemas"]["DataScopeRule"] | null;
             overrides?: components["schemas"]["DataScopeOverride"][];
+        };
+        RoleDataScopeConfigResponse: {
+            /** @description 没配时显示 ALL;看 default_configured 区分。 */
+            default: components["schemas"]["DataScopeRule"];
+            /** @description 有没有默认范围那一行。false = 没配,兼任时不放宽。 */
+            default_configured: boolean;
+            /** @description 列出的都是存了行的;没列出的业务跟随默认。 */
+            overrides: components["schemas"]["DataScopeOverride"][];
         };
         /**
          * @description 400 body of `DELETE /perm/roles/<pk>/`. `user_count` comes with
@@ -35423,7 +35431,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoleDataScopeConfig"];
+                    "application/json": components["schemas"]["RoleDataScopeConfigResponse"];
                 };
             };
             404: {
@@ -35445,7 +35453,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["RoleDataScopeConfig"];
                 "application/x-www-form-urlencoded": components["schemas"]["RoleDataScopeConfig"];
@@ -35458,7 +35466,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoleDataScopeConfig"];
+                    "application/json": components["schemas"]["RoleDataScopeConfigResponse"];
                 };
             };
             400: {
