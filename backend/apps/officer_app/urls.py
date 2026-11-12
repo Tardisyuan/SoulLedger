@@ -7,6 +7,8 @@ urlpatterns = [
     path("stats/", views.StatsView.as_view(), name="officer-app-stats"),
     path("items/<str:kind>/<uuid:item_id>/", views.TodoItemView.as_view(), name="officer-app-item"),
     path("items/<str:kind>/<uuid:item_id>/cosigners/", views.CosignView.as_view(), name="officer-app-cosign"),
+    path("items/<str:kind>/<uuid:item_id>/cosigners/<int:user_id>/", views.CosignRemoveView.as_view(),
+         name="officer-app-cosign-remove"),
     path("signer-candidates/", views.SignerCandidatesView.as_view(), name="officer-app-signer-candidates"),
     path("push-tokens/", views.PushTokenView.as_view(), name="officer-app-push-tokens"),
     path("push-tokens/unregister/", views.PushTokenUnregisterView.as_view(), name="officer-app-push-unregister"),
