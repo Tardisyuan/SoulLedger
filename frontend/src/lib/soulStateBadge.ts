@@ -42,9 +42,15 @@ export type SoulState = SoulListItem["current_state"];
  * (审判中 = 规范的「待审」)加 s2 底。`--color-status-*` 仍在 globals.css 里,
  * 读者只剩图表(`lib/chart-colors.ts`)。
  */
-const DOMAIN_BADGE = "text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))]";
-/** 「还要处理」的领域值:待审、待定(判决)。 */
-export const DOMAIN_BADGE_PENDING = `${DOMAIN_BADGE} bg-[oklch(var(--color-surface-2))]`;
+/*
+ * 第三十批「卷宗」第 1 步(Design v4 第三十批第一节第 2 条)取代上面两段:标签是**淡染**,无边框。
+ * 领域值多数是中性(surface-2 底 + ink-muted 字);「还要处理、而且在走」的两种 —— 审判中、退回重审 —— 是 warn
+ * 淡染(warning-tint 底 + warning 字)。颜色仍不是唯一的区分,字形照旧承担它(下面的表)。四对颜色都由
+ * inkOnSurfaceContract 量过。状态色 `--color-status-*` 仍不进标签。
+ */
+const DOMAIN_BADGE = "text-[oklch(var(--color-ink-muted))] bg-[oklch(var(--color-surface-2))]";
+/** 审判中、退回重审(判决 RETRY)、待办中的审批节点:warn 淡染。 */
+export const DOMAIN_BADGE_PENDING = "text-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))]";
 export { DOMAIN_BADGE };
 
 export const SOUL_STATE_BADGE_CLASSES: Record<SoulState, string> = {
@@ -61,7 +67,7 @@ export const SOUL_STATE_BADGE_CLASSES: Record<SoulState, string> = {
  * ALIVE ○、JUDGING ◇、DISPOSED ▣(已处置 = 在界域里受刑)、REINCARNATING ↻、
  * SETTLED ≡(已终结 = 永居;Design E 组:◎ 与迷失的 ◌ 同属圆形、小字号易混,≡ 像账簿结账划的线,与 App 一致)。LOST(迷失)样张没画,取 ◌ —— 旧的 × 与判决的 ✕
  * 在颜色撤掉之后几乎同形。◈ 待处置 Design 已从样张删掉(E 组),不新增这个状态。
- * ◇ 与判决「待定」共用:样张两处都画 ◇ + s2 底,意思都是「还要处理」。
+ * (第三十批起判决「待定」改画 ‖,◇ 只给「审判中」;此前两处共用 ◇ + s2 底。)
  */
 export const SOUL_STATE_GLYPH: Record<SoulState, string> = {
   ALIVE: "○",
@@ -81,7 +87,7 @@ export function soulStateGlyph(state: string | null | undefined): string {
  * A state the payload carries but this table does not know. No colour claim.
  */
 export const UNKNOWN_SOUL_STATE_BADGE_CLASS =
-  "text-[oklch(var(--color-ink-muted))] border border-dashed border-[oklch(var(--color-line))]";
+  "text-[oklch(var(--color-ink-muted))] bg-transparent border border-dashed border-[oklch(var(--color-line))]";
 
 /** The badge classes for a state off the wire, which may be absent or unknown. */
 export function soulStateBadgeClass(state: string | null | undefined): string {

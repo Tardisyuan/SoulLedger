@@ -2,11 +2,9 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { civSkinOf } from "@/src/lib/civSkin";
-import { Seal } from "@/src/components/plaque/Seal";
 
 /**
  * The one busy indicator.
@@ -138,50 +136,34 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
 export function PageSpinner({ label }: { label?: string }) {
   const { t } = useI18n();
   const civ = civSkinOf(useTenant().user?.tenant?.code ?? null);
-  // v4 第十批第 2 条: inside a hall the wait says the hall's line (`loading.<civ>`), under the hall's seal breathing
-  // as the empty state's does (CivEmptyState). A route given its own `label`, and the neutral skin, keep the ring.
-  if (!label && civ !== "neutral") return <CivLoading text={t(`loading.${civ}`)} />;
+  // v4 第十批第 2 条: inside a hall the wait says the hall's line (`loading.<civ>`); a route's own `label` wins, and the
+  // neutral skin says 「加载中…」.
+  const text = label ?? (civ !== "neutral" ? t(`loading.${civ}`) : t("common.loading"));
   return (
-    // `min-h-(--content-min-h)`, the same variable as AppLayout's slot (globals.css:
-    // viewport − toolbar − identity band − bottom bar) — NOT `min-h-screen`, and not a
-    // hand-written `calc` either: this was `100vh-4rem` while the slot was `100vh-2.5rem`
-    // and later the v3 band made it ~208px shorter still. A route's `loading.tsx` renders
-    // inside that slot, so anything taller here is dead scroll handed back through the
-    // component all 21 loading files adopt. One class in one file, 21 routes.
+    // `min-h-(--content-min-h)`, the same variable as AppLayout's slot (globals.css: viewport − toolbar − bottom bar) —
+    // NOT `min-h-screen`: a route's `loading.tsx` renders inside that slot, so anything taller is dead scroll handed
+    // back through the component every loading file adopts.
     //
-    // The two routes outside AppLayout (`/` and `(auth)/login` — see
-    // AppLayoutWrapper's PUBLIC_PATHS) get a busy screen 52px shorter than the
-    // viewport (no band there, so only the toolbar's height is taken off). For a
-    // centred spinner that is invisible, and it is the right trade.
-    <div className="min-h-(--content-min-h) bg-[oklch(var(--color-canvas))] flex items-center justify-center">
-      <Spinner size="lg" label={label ?? t("common.loading")} />
-    </div>
-  );
-}
-
-/** How long a wait stays blank before it says anything (v4 第十批第 2 条): a quick page never flashes a line. */
-export const CIV_LOADING_DELAY_MS = 400;
-
-/**
- * A hall's wait: its seal breathing (`.empty-breathe`, as the empty state's) and one line. Under reduced motion only
- * the line is left. Errors never come here: they stay plain (`QueryError`), as the reply asks.
- */
-function CivLoading({ text }: { text: string }) {
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setShown(true), CIV_LOADING_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, []);
-  return (
-    <div data-civ-loading="" className="min-h-(--content-min-h) bg-[oklch(var(--color-canvas))] flex items-center justify-center">
-      {shown && (
-        <div role="status" className="flex flex-col items-center gap-4">
-          <span aria-hidden="true" className="empty-breathe inline-block motion-reduce:hidden">
-            <Seal size={48} />
-          </span>
-          <p className="m-0 font-title text-md text-[oklch(var(--color-ink-muted))]">{text}</p>
+    // 第三十批「卷宗」第 1 步第 5 条:加载不放转圈 —— 页顶一根 2px 文明色进度线(`.page-wait-line`),下面按页面的
+    // 版式画骨架(页头小字行、标题、几行列表),都是装饰;「正在加载」由读屏的 status 说。整块 400 ms 后才淡入
+    // (`.page-wait`,CSS 的 animation-delay):快的页不会闪一下骨架(此前是 JS 计时器,只给有文明的殿)。
+    <div data-civ-loading="" className="page-wait min-h-(--content-min-h) bg-[oklch(var(--color-canvas))]">
+      <div aria-hidden="true" className="page-wait-line" />
+      <div role="status" className="sr-only">
+        {text}
+      </div>
+      <div aria-hidden="true" data-page-skeleton="" className="px-4 md:px-8 pt-6 pb-6 grid gap-3">
+        <span className="page-sk h-3 w-32" />
+        <span className="page-sk h-8 w-64 max-w-full" />
+        <div className="mt-6 grid gap-4">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="grid gap-2 border-b border-[oklch(var(--color-line))] pb-4">
+              <span className="page-sk h-4 w-48 max-w-full" />
+              <span className="page-sk h-3 w-80 max-w-full" />
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

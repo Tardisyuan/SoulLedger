@@ -27,7 +27,7 @@ recoverable from the code, and it points at the code for everything else.
 | What | Where | Notes |
 |---|---|---|
 | Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v4 (Design batch 07, `V4Batch07.dc.html`, 2026-11-06; token names unchanged since v1, only values); `ledgerPaletteContract` holds each token to the spec's hex. |
-| Type scale | `frontend/app/globals.css` `@theme` | Nine steps — `text-2xs` 11 · `xs` 12 · `sm` 13 · `md` 15 · `lg` 20 · `xl` 28 · `display` 40 · `display-lg` 56 · `display-xl` 88 (px), each with its line-height attached. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
+| Type scale | `frontend/app/globals.css` `@theme` | Eleven steps — `text-2xs` 11 · `xs` 12 · `sm` 13 · `md` 15 · `lg` 20 · `head` 24 · `xl` 28 · `dossier` 32 · `display` 40 · `display-lg` 56 · `display-xl` 88 (px); `head` and `dossier` are the page head's two title sizes (batch 30 「卷宗」) and nothing else, each with its line-height attached. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
 | Font families | `frontend/app/fonts.ts`, `--font-title` in `globals.css` | Four roles, each with one stated job — see "Four faces, one job each" below. |
 | Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | Spec v4 (user decision 2026-11-06: the v4 range, replacing v3's "five uses only"). Each civilization has five values per theme — `--color-civ-cn` (the solid fill, white text on it), `-ink` (civ-coloured text), `-glow`, `-metal`, `-side` — and each `[data-civ]` rule points five generic names at them: `--color-main`, `--color-main-ink`, `--color-glow`, `--color-metal`, `--color-side`. A second `[data-civ]` rule points `--color-accent`, `--color-accent-ink` and `--color-focus` at `--color-main-ink`, so links, selection and the focus ring take the civilization's text colour; with no `data-civ` (before login) they stay ink. `--color-main` is a fill only: the dark v4 solids are about 2:1 on surface-1, so the 3px marks read `--color-metal` and the seal reads `--color-main-ink`. Nothing outside `globals.css` reads a civ token — `ledgerPaletteContract` asserts it. The seal is an outline in `currentColor` whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon); the page header has no solid fill: it is the canvas under the civilization's glow (see "The page header" below). |
 | Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:663-671`. These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
@@ -62,15 +62,14 @@ every row below and checks the step, size, line-height and weight against
 
 | 角色 | 标签 | 写法 | 字号 / 行高 px | 字重 | 字体 | 由谁守 |
 |---|---|---|---|---|---|---|
-| 页面标题 | `<h1>`,每页一个 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC | `PageShell.test`「页面标题」 |
+| 页面标题 · 门页(壳的页头 `PageHead`,第三十批「卷宗」) | `<h1>`,每页一个 | `font-title text-head` | 24 / 32 | 600 | Noto Serif SC | `PageShell.test`「页面标题」、`plaqueTitleStaysLargeText` |
+| 页面标题 · 卷宗页(人名;上面一行等宽小字写案号 · 殿 · 入册日期) | `<h1>`,每页一个 | `font-title text-dossier` | 32 / 40 | 600 | Noto Serif SC | 同上 |
+| 页面标题 · 壳外(403 / 404 卡、语料、审判台等自己画页头的页) | `<h1>`,每页一个 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC | `PageShell.test`「页面标题」 |
 | 封面标题(只在首页;md 起 28 / 36) | `<h1>` | `font-title text-lg md:text-xl` | 20 / 28 | 600 | Noto Serif SC | 同上 |
-| 页头题字 · 第一档(≤ 768 不用) | 页头标题行里的 `<Title>`(`Plaque`) | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | `plaqueTitleStaysLargeText` |
-| 页头题字 · 第二档 | 同上,第一档放不下时;≤ 768 从这一档起 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC | 同上 |
-| 页头题字 · 第三档 | 同上,第二档还放不下时 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC,最多两行 | 同上 |
 | 面板标题(区块、卡片的题) | `<h2>` 或 `<h3>` | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC(规范 v4,用户 2026-11-07) | `PageShell.test` h2 / h3 |
 | 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 13 / 20 | 500 | 界面字体 | 同上 |
 | 区块标签 | `<h2>` 或 `<h3>` | `text-2xs uppercase`,不带 `font-mono` | 11 / 16 | 400 | 界面字体 | 同上 |
-| 眉题 | 壳的 `eyebrow`,不是标题 | `text-2xs font-mono uppercase` | 11 / 16 | 400 | Geist Mono | `PageShell.test` |
+| 页头小字行 | 壳的 `eyebrow`(加上页面报的殿名、案号),不是标题;`.page-head-meta` | `text-xs` | 12 / 18 | 400 | Geist Mono | `PageShell.test` |
 | 正文 | `<p>` | `text-sm` | 13 / 20 | 400 | 界面字体 | — |
 | 展示数字 | 当前这一判(审判台、盖印层) | `font-title text-display-lg` | 56 / 62 | 600 | Noto Serif SC | — |
 | 展示数字 · 主角 | 概览主卡的今日待审、冥界年报的总数(v4;一张卡里只有这一个数)。lint `type-scale` 只为 `HallOverview.tsx`、`AnnualReport.tsx` 两个文件放行(`DISPLAY_XL_ALLOW`) | `font-title text-display-xl` | 88 / 92 | 600 | Noto Serif SC | `designGuardContract` |
@@ -104,23 +103,22 @@ mask artwork went with spec v3's outline seal (2026-10-02); only Noto Sans Egypt
 Hieroglyphs still ships, as the fallback for the Egyptian glyph (U+13184), which
 Noto Serif SC does not have.
 
-**The page header (spec v4, user decision 2026-11-07).** v3's 156px full-width
-identity band is gone, and with it the short band (116px on the queue and soul
-detail) and the band's SOULLEDGER brand line (v4 puts the brand mark at the top of
-the sidebar). The header is now two sticky rows on the canvas: the 52px toolbar
-(breadcrumb, the hour chip, density, 问一问, search, notifications, the user menu),
-then the title row (`Plaque`, `.identity-band` in `globals.css`): a 44px seal, the
-hall's name in 12px above the title, the case number on the right. The title row is
-96px on a desktop and at least 76px at ≤ 768 (a 36px seal; it grows with a
-two-line title), and collapses to 44px (a 24px seal and the hall's name) once the
-page has scrolled 60px. Behind both rows: the civilization's glow from 30% across the
-top (dark .30, light .24 — `--glow-alpha`), the civilization's pattern (地府 grid,
-Europe rings, Egypt reeds, Greece hatching; none for the neutral administrator skin),
-the dark theme's noise, and a watermark seal (140px, 112px at ≤ 768, 7% dark / 9%
-light, pressed out of the top-right corner; not drawn when collapsed or with no
-civilization). v4's glow is a 260px ellipse fading at 70%; ours ends at the header's
-foot instead (`--glow-r` = header height ÷ 0.7: 212 / 183 / 137 px), the same choice
-as the apps' `IdentityBand`, whose `GlowTop` is as tall as the band.
+**The page header (batch 30 「卷宗」, step 1).** One header per page, and it is the
+page's own: `PageHead` in `src/components/ui/PageShell.tsx` (`.page-head*` in
+`globals.css`). v3's 156px identity band and v4's 96px sticky title row (`Plaque`, with
+its second title, its width-fitted 28 → 20 tiers and its collapse to 44px) are gone;
+the 52px toolbar above stays neutral canvas. Top to bottom: a 2px line in the
+civilization's text colour (`--topline`); a 12px mono line (case number · hall · date
+on a dossier page, civilization · hall on a gate page — `usePlaque`'s hall and case
+number lead it); the title, which is the `<h1>` (gate pages 24/32 `text-head`, dossier
+pages a person's name at 32/40 `text-dossier`); a 13px line under it. Actions sit on
+the right; the primary button is an ink fill with canvas text. Behind it, all
+`aria-hidden`: the glow (`--glowA`, dark .30 / light .22, from 24% across the top,
+fading by 180px), the civilization's pattern in civT at 5%, and the G armillary mark
+as a watermark (7% dark / 9% light). It does not stick; the filter bar sticks under the
+toolbar (`--below-band`). The breadcrumb drops its last crumb when it says the same
+thing as the `<h1>`. While a page shows its skeleton the topline is a 2px progress line
+instead; there is no spinner.
 
 **Settled 2026-10-01** (each was an open question in the first version of this table):
 

@@ -9,12 +9,10 @@ import { Spinner } from "./Spinner";
  * The one button — 规范 v2「朱印」补足 A1 的按钮行,尺寸见下面 size 那段(触屏 44 / 48 / 56,精确指针 v4 的 32 / 36 / 40),
  * 圆角是控件那一档 4px(`rounded-control`,规范 v4,用户 2026-11-06):
  *
- * - **主**:匾色实底(`--color-main`,按 <html data-civ> 换文明)、onMain 字、无边框。
- *   主按钮是匾色的五处用法之一,只给落判这一类决定。深色主题下底色是身份带同一档
- *   `color-mix(in srgb, main 90%, #111)`(`--main-fill`,globals.css:深色是这一档、浅色就是 main;
- *   Design 第六十三批:深色埃及 / 希腊的 main 上白字只有 3.99 / 4.16,加深后 4.66 / 4.87)。
- *   按钮字与按钮里的键帽一律纯白、不加透明度。悬停 / 按下 = 这一底色再叠黑 12% / 24%
- *   (`color-mix(… 88% / 76%, black)`),只会更深,对比只升不降。
+ * - **主**:墨色实底(第三十批「卷宗」第 1 步,Design v4 第三十批第五节第 1 条):`--main-fill` = ink,
+ *   字是 canvas,无边框。此前是文明的 solid(`--color-main`)配白字;主按钮每一页都有,用文明色就破了
+ *   「文明色只在顶线、印、脊、焦点四处」那条规矩。按钮字与键帽不加透明度。悬停 / 按下 = 这一底色再叠黑
+ *   12% / 24%(`color-mix(… 88% / 76%, black)`)。
  * - **次**(默认)= A1 的「幽灵」:无底色、1px ink3 描边、ink 字;悬停 s2,按下 line。
  * - **幽**:行内、弹层里的「取消」;同上但无边框。
  * - **危险**:neg.strong 实底、白字,悬停 / 按下同样叠黑。A1:永远带 ✕ 和动作文字,
@@ -40,9 +38,9 @@ const button = cva(
   {
     variants: {
       variant: {
-        /** One per screen. The civilization's plaque colour, onMain text. */
+        /** One per screen. Ink fill, canvas text (第三十批: the civilization colour left the button). */
         primary: [
-          "bg-(--main-fill) text-[oklch(var(--color-on-main))] border-transparent",
+          "bg-(--main-fill) text-[oklch(var(--color-canvas))] border-transparent",
           "hover:bg-[color-mix(in_oklab,var(--main-fill)_88%,black)]",
           "active:bg-[color-mix(in_oklab,var(--main-fill)_76%,black)]",
         ],

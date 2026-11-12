@@ -92,6 +92,11 @@ describe("本月配额 (第五十一批 Q-2)", () => {
     expect(cell("HUMAN")).not.toHaveAttribute("data-full");
     expect(cell("HUNGRY_GHOST")).toHaveTextContent(tZh("rebirths.quota.used_of", { used: "31", limit: "40" }));
     expect(cell("HUNGRY_GHOST")).not.toHaveTextContent(tZh("rebirths.quota.full_badge"));
+    // 第三十批:一个都还没办的道写成一句话,不写「0 · 不限」;0 上限的那道是「已满」,照旧写数。
+    expect(cell("ASURA")).toHaveTextContent(tZh("rebirths.quota.none_unlimited"));
+    expect(cell("ASURA")).not.toHaveTextContent(tZh("rebirths.quota.used_unlimited", { used: "0" }));
+    expect(cell("ASURA").querySelector("[data-zero]")).not.toBeNull();
+    expect(cell("HELL_BEING").querySelector("[data-zero]")).toBeNull();
   });
 
   it("配额没拿到时不画这一行,表格照常", async () => {

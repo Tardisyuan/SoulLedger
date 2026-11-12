@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { act, render, screen } from "@testing-library/react";
-import { Spinner, PageSpinner, CIV_LOADING_DELAY_MS } from "@/src/components/ui/Spinner";
+import { render, screen } from "@testing-library/react";
+import { Spinner, PageSpinner } from "@/src/components/ui/Spinner";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 
 // The hall the page is in; null is the neutral skin every test above renders in.
@@ -151,8 +151,18 @@ describe("PageSpinner is the whole-route shape those 20 files hand-roll", () => 
     expect(root.className).toContain("min-h-(--content-min-h)");
     expect(root.className).not.toContain("min-h-screen");
     expect(root.className).toContain("bg-[oklch(var(--color-canvas))]");
-    expect(classesIn(container)).toEqual(expect.arrayContaining(["w-16", "h-16", "border-4"]));
     expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  // 第三十批「卷宗」第 1 步第 5 条:整页加载不放转圈 —— 页顶 2px 文明色进度线 + 按版式画的骨架。
+  it("is a progress line and a skeleton, not a spinner", () => {
+    const { container } = render(<PageSpinner label="载入中" />);
+    expect(container.querySelector(".page-wait-line")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector("[data-page-skeleton]")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelectorAll(".page-sk").length).toBeGreaterThanOrEqual(5);
+    // Absence: no ring of any size, nothing spinning.
+    expect(container.querySelector(".animate-spin")).toBeNull();
+    expect(classesIn(container)).not.toEqual(expect.arrayContaining(["border-4"]));
   });
 });
 
@@ -212,20 +222,18 @@ describe("a hall's wait says the hall's line (v4 第十批第 2 条)", () => {
   });
   const inProvider = (node: React.ReactElement) => render(<I18nProvider>{node}</I18nProvider>);
 
-  it("stays blank for the first 400 ms, then shows the seal and 「托特正在取来记录…」", () => {
-    jest.useFakeTimers();
+  it("says 「托特正在取来记录…」 in the Duat; the 400 ms hold is the CSS fade-in, not a blank status", () => {
     mockTenantCode = "EG_DUAT";
     const { container } = inProvider(<PageSpinner />);
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-    act(() => jest.advanceTimersByTime(CIV_LOADING_DELAY_MS));
     expect(screen.getByRole("status")).toHaveTextContent("托特正在取来记录…");
     expect(screen.getByRole("status")).not.toHaveTextContent("加载中");
-    // The seal breathes and drops out under reduced motion; the ring is not drawn as well.
-    expect(container.querySelector(".empty-breathe")).toHaveClass("motion-reduce:hidden");
+    expect(container.firstElementChild).toHaveClass("page-wait");
+    // No breathing seal any more (第三十批: the wait is a skeleton), and no ring.
+    expect(container.querySelector(".empty-breathe")).toBeNull();
     expect(container.querySelector(".animate-spin")).toBeNull();
   });
 
-  it("a route's own label keeps the plain ring, in a hall too", () => {
+  it("a route's own label wins in a hall too", () => {
     mockTenantCode = "CN_DIYU";
     inProvider(<PageSpinner label="载入判词" />);
     expect(screen.getByRole("status")).toHaveTextContent("载入判词");

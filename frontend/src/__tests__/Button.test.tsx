@@ -176,19 +176,20 @@ describe("interaction states are on every variant and every size", () => {
   });
 });
 
-describe("规范 v2 A1 按钮:主 = 匾色实底,危险 = neg.strong 实底白字", () => {
-  it.each(BUTTON_SIZES)("primary/%s is onMain text on the plaque colour", (size) => {
+describe("按钮:主 = 墨色实底(第三十批),危险 = neg.strong 实底", () => {
+  it.each(BUTTON_SIZES)("primary/%s is canvas text on the ink fill", (size) => {
     const classes = classesOf("primary", size);
-    // Design 第六十三批:底是 `--main-fill`(globals.css:深色 = 身份带那一档 main 90% + #111,浅色 = main)。
+    // 第三十批(Design v4 第三十批第五节第 1 条):底是 `--main-fill`,globals.css 里它是 ink;字是 canvas。
     const FILL = "var(--main-fill)";
     expect(classes).toContain("bg-(--main-fill)");
     expect(classes).not.toContain("bg-[oklch(var(--color-main))]");
-    expect(classes).toContain("text-[oklch(var(--color-on-main))]");
+    expect(classes).toContain("text-[oklch(var(--color-canvas))]");
+    expect(classes).not.toContain("text-[oklch(var(--color-on-main))]");
     // Hover / press darken the same fill by 12% / 24% black (A1), not a second colour.
     expect(classes).toContain(`hover:bg-[color-mix(in_oklab,${FILL}_88%,black)]`);
     expect(classes).toContain(`active:bg-[color-mix(in_oklab,${FILL}_76%,black)]`);
-    // Absence too: no ink fill (v1), no accent fill (retired).
-    expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(ink|accent)/);
+    // Absence too: the fill goes through --main-fill only, never a civ or accent colour written in.
+    expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(ink|accent|main)/);
   });
 
   it("danger is a solid neg.strong fill with on-danger text, shaded per theme", () => {
@@ -204,9 +205,9 @@ describe("规范 v2 A1 按钮:主 = 匾色实底,危险 = neg.strong 实底白�
     }
   });
 
-  it("the plaque colour appears on the primary button and on no other variant", () => {
-    for (const variant of BUTTON_VARIANTS.filter((v) => v !== "primary")) {
-      expect(classesOf(variant, "md").join(" ")).not.toContain("--color-main");
+  it("no variant draws the civilization colour (第三十批: civ colour only on topline, seal, spine and focus)", () => {
+    for (const variant of BUTTON_VARIANTS) {
+      expect(classesOf(variant, "md").join(" ")).not.toMatch(/--color-main\b|--color-main-ink/);
     }
   });
 

@@ -123,7 +123,7 @@ describe("PageShell · 滚动行为", () => {
     );
   });
 
-  it("筛选栏 sticky 在 --below-band（AppLayout 的 52px 工具条 + 身份带此刻的高度），高 64（h-16 = 上下各 8 padding + 规范 v3 md 档 48 的控件）", () => {
+  it("筛选栏 sticky 在 --below-band（AppLayout 的 52px 工具条 + 代看条;第三十批起没有吸顶的标题行了），高 64（h-16 = 上下各 8 padding + 规范 v3 md 档 48 的控件）", () => {
     const { container } = renderFull("page");
     const filters = container.querySelector<HTMLElement>("[data-page-shell-filters]")!;
     expect(filters.className).toMatch(/\bsticky\b/);
@@ -153,7 +153,7 @@ describe("PageShell · 滚动行为", () => {
 });
 
 describe("PageShell · 页头两行", () => {
-  it("每页仅一处 h1，用 font-title text-lg(Noto Serif SC 600,规范 v3)", () => {
+  it("每页仅一处 h1:门页 font-title text-head(24/32),卷宗页 font-title text-dossier(32/40)", () => {
     const { container } = render(
       <PageShell title="判决卷宗" subtitle="一句副标题" eyebrow="LEDGER / 0042">
         <h2>区块标题</h2>
@@ -162,17 +162,19 @@ describe("PageShell · 页头两行", () => {
     const h1s = container.querySelectorAll("h1");
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent("判决卷宗");
-    expect(h1s[0].className).toMatch(/\btext-lg\b/);
+    expect(h1s[0].className).toMatch(/\btext-head\b/);
     expect(h1s[0].className).toMatch(/\bfont-title\b/);
+    const { container: dossier } = render(<PageShell title="赵志强" kind="dossier">body</PageShell>);
+    expect(dossier.querySelectorAll("h1")).toHaveLength(1);
+    expect(dossier.querySelector("h1")!.className).toMatch(/\btext-dossier\b/);
   });
 
-  it("eyebrow 是 text-2xs + font-mono + uppercase", () => {
+  it("标题上方那行是等宽小字(`.page-head-meta`,mono 12/18),不再是 v3 的 text-2xs uppercase 眉题", () => {
     const { container } = render(<PageShell title="T" eyebrow="LEDGER / 0042">body</PageShell>);
     const eyebrow = container.querySelector<HTMLElement>("[data-page-shell-eyebrow]")!;
     expect(eyebrow).toHaveTextContent("LEDGER / 0042");
-    expect(eyebrow.className).toMatch(/\btext-2xs\b/);
-    expect(eyebrow.className).toMatch(/\bfont-mono\b/);
-    expect(eyebrow.className).toMatch(/\buppercase\b/);
+    expect(eyebrow.className).toMatch(/\bpage-head-meta\b/);
+    expect(eyebrow.className).not.toMatch(/\b(uppercase|text-2xs)\b/);
   });
 
   it("副标题是 text-sm + text-[oklch(var(--color-ink-subtle))]", () => {
@@ -864,10 +866,11 @@ describe("PageShell density", () => {
  * 13 / 15 的三处改成 `text-lg`,并删掉 `not-found` 上 `text-lg` 旁边空操作的
  * `font-semibold`(同一个 600,和 `<h2>` 那条 `text-md font-semibold` 是同一个论证)。
  *
- * 不在这里管的两种 `<h1>`,都有别的东西在管:
- *   - 匾题字(`Plaque.tsx` 的 `<Title>`,登录页那一处 `<h1>`):它按实测宽度在
- *     40 / 28 / 20 三档之间降档,`plaqueTitleStaysLargeText.test.ts` 管它。
- *     它写的是 `<Title>` 不是字面 `<h1>`,这里的正则本来就看不见它。
+ * 壳自己的 `<h1>`(第三十批「卷宗」的页头 `PageHead`)是两档:门页 `text-head` 24/32、卷宗页 `text-dossier`
+ * 32/40,下面单独登记,大号文字由 `plaqueTitleStaysLargeText.test.ts` 管。(此前的匾题字 `Plaque` 的 `<Title>`
+ * 按实测宽度降档,随身份带一起撤掉。)
+ *
+ * 不在这里管的一种 `<h1>`,有别的东西在管:
  *   - `app/global-error.tsx`:它**替换掉根 layout**,`globals.css` 不保证加载,
  *     所以只能用行内 `style`。这里单独断言它写的是 `1.25rem`(= 20px,与 `text-lg`
  *     同值),而不是放它走 —— 否则那一处就是一个没有任何东西看着的标题。
@@ -916,12 +919,12 @@ describe("页面标题 <h1>", () => {
           line: lineAt(src, m.index),
           tag: m[0],
           steps: [
-            ...new Set(m[0].match(/(?<![\w-])(?:[a-z]+:)?text-(?:2xs|xs|sm|md|lg|xl|display-lg|display)(?![\w-])/g) ?? []),
+            ...new Set(m[0].match(/(?<![\w-])(?:[a-z]+:)?text-(?:2xs|xs|sm|md|lg|xl|display-lg|display|head|dossier)(?![\w-])/g) ?? []),
           ],
         });
       }
     }
-    // 下限:读到零个会让下面的循环一条都不跑而照样绿。2026-10-01 起是六处:壳、首页封面、
+    // 下限:读到零个会让下面的循环一条都不跑而照样绿。2026-10-01 起是六处(第三十批起壳里是两处:门页、卷宗页):壳、首页封面、
     // 语料、审判台、global-error,加 `PageError.tsx` 的 `StatusCard` —— 403 / 404 / 500
     // 与 welcome 的 error 边界共用那一块卡,于是 not-found / PermissionDenied /
     // welcome/error 各自的字面 `<h1>` 合进了它那一处(此前是七处)。
@@ -930,6 +933,7 @@ describe("页面标题 <h1>", () => {
     expect(found.some((h) => h.file === "src/components/ui/PageShell.tsx")).toBe(true);
 
     const offenders: string[] = [];
+    const shellSteps: string[] = [];
     let coverSeen = 0;
     const loginSeen = new Set<string>();
     for (const h of found) {
@@ -945,6 +949,16 @@ describe("页面标题 <h1>", () => {
       if (h.steps.join(" ") === H1_COVER.steps) {
         if (h.file === H1_COVER.file) coverSeen += 1;
         else offenders.push(`${h.file}:${h.line}  the cover title (text-xl md:text-display-lg) belongs to ${H1_COVER.file} only`);
+        continue;
+      }
+      // 第三十批「卷宗」:壳的页头(`PageHead`)有两档 —— 门页 text-head 24/32、卷宗页 text-dossier 32/40;
+      // 这两档只给壳,壳也只用这两档。
+      if (h.file === "src/components/ui/PageShell.tsx") {
+        shellSteps.push(h.steps.join(" "));
+        continue;
+      }
+      if (h.steps.some((st) => st === "text-head" || st === "text-dossier")) {
+        offenders.push(`${h.file}:${h.line}  text-head / text-dossier belong to the shell's page head only`);
         continue;
       }
       if (H1_LOGIN.files.includes(h.file)) {
@@ -963,10 +977,11 @@ describe("页面标题 <h1>", () => {
 
     expect(coverSeen).toBe(1);
     expect(loginSeen.size).toBe(H1_LOGIN.files.length);
+    expect(shellSteps.sort()).toEqual(["text-dossier", "text-head"]);
     if (offenders.length > 0) {
       throw new Error(
-        `<h1> is the page title and has one step: text-lg (20px / 600). The plaque title ` +
-          `is the one exception and has its own guard.\n\n` + offenders.join("\n")
+        `<h1> outside the shell is the page title and has one step: text-lg (20px / 600). The shell's page head ` +
+          `has its own two (text-head / text-dossier), guarded by plaqueTitleStaysLargeText.\n\n` + offenders.join("\n")
       );
     }
     expect(offenders).toEqual([]);

@@ -15,7 +15,7 @@
   font-family: 'SoulLedger Glyphs';
   src: url('/fonts/SoulLedgerGlyphs.ttf') format('truetype');
   font-display: block;
-  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1;
+  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1, U+2016;
 }
 
 @theme {
@@ -287,6 +287,14 @@
   --text-lg--font-weight: 600;
   --text-xl: 28px;
   --text-xl--line-height: 36px;
+  /* 第三十批「卷宗」第 1 步:页头标题的两档,只给 PageShell 的 `<h1>`(`PageHead`)。门页(名册、律令、殿司)
+     宋体 24/32,卷宗页(人名)宋体 32/40。字重 600,同其余标题。 */
+  --text-head: 24px;
+  --text-head--line-height: 32px;
+  --text-head--font-weight: 600;
+  --text-dossier: 32px;
+  --text-dossier--line-height: 40px;
+  --text-dossier--font-weight: 600;
   --text-display: 40px;
   /* 54 = v3 身份带题字的 1.35。48(1.2)在 v3 第七轮实测墨迹越界 1px;题字带 overflow-hidden,
      越界就是被裁。身份带定高,这一档加高不再推动它。字重 600:v3 的标题一律 600。 */
@@ -591,6 +599,12 @@
     --color-civ-neutral-glow: 0.662027 0.014518 262.3609; /* #8E939C */
     --color-civ-neutral-metal: 0.782429 0.142657 75.8527; /* #ECAA3D */
     --color-civ-neutral-side: 0.168171 0.004477 264.4473; /* #0E0F11 */
+    /* 印(第三十批 `--seal`):地府朱色,其余暂取 civT。var() 在 <html> 上求值,所以浅色下 civT 自动是浅色那一档。 */
+    --color-civ-neutral-seal: var(--color-civ-neutral-ink);
+    --color-civ-cn-seal: 0.645074 0.173464 34.1221; /* #E35D3F */
+    --color-civ-eu-seal: var(--color-civ-eu-ink);
+    --color-civ-eg-seal: var(--color-civ-eg-ink);
+    --color-civ-gr-seal: var(--color-civ-gr-ink);
     --color-civ-cn: 0.428514 0.102617 30.6112; /* #7E362B */
     --color-civ-cn-ink: 0.710969 0.100324 32.0926; /* #D98A7A */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
@@ -616,6 +630,7 @@
     --color-glow: var(--color-civ-neutral-glow);
     --color-metal: var(--color-civ-neutral-metal);
     --color-side: var(--color-civ-neutral-side);
+    --color-seal: var(--color-civ-neutral-seal);
     /* 图表 · A5:灵魂状态的冷灰蓝明度梯度(OKLCH 色相 250、彩度 .045),先后有序;
        深色从亮到暗。chart-1 同时是去向 / 功过图案的基色。v4 没定义图表色,沿用。 */
     --color-chart-1: 0.946168 0.032488 229.2456;
@@ -690,6 +705,7 @@
     --color-civ-neutral-ink: 0.455822 0.008971 260.7269; /* #54575C */
     --color-civ-neutral-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
     --color-civ-neutral-side: 0.957588 0.002656 106.4494; /* #F1F1EF */
+    --color-civ-cn-seal: 0.520861 0.174215 31.9795; /* #B8321C */
     --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
     --color-civ-cn-ink: 0.508662 0.123408 31.8759; /* #A04636 */
     --color-civ-cn-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
@@ -724,6 +740,7 @@
     --color-glow: var(--color-civ-cn-glow);
     --color-metal: var(--color-civ-cn-metal);
     --color-side: var(--color-civ-cn-side);
+    --color-seal: var(--color-civ-cn-seal);
   }
   [data-civ="eu"] {
     --color-main: var(--color-civ-eu);
@@ -731,6 +748,7 @@
     --color-glow: var(--color-civ-eu-glow);
     --color-metal: var(--color-civ-eu-metal);
     --color-side: var(--color-civ-eu-side);
+    --color-seal: var(--color-civ-eu-seal);
   }
   [data-civ="eg"] {
     --color-main: var(--color-civ-eg);
@@ -738,6 +756,7 @@
     --color-glow: var(--color-civ-eg-glow);
     --color-metal: var(--color-civ-eg-metal);
     --color-side: var(--color-civ-eg-side);
+    --color-seal: var(--color-civ-eg-seal);
   }
   [data-civ="gr"] {
     --color-main: var(--color-civ-gr);
@@ -745,6 +764,7 @@
     --color-glow: var(--color-civ-gr-glow);
     --color-metal: var(--color-civ-gr-metal);
     --color-side: var(--color-civ-gr-side);
+    --color-seal: var(--color-civ-gr-seal);
   }
   /* 强调、链接、焦点环随文明的字色(v4 `.btn.t` / `.tag` / `.btn:focus-visible` 都是 civT)。
      中性皮不在这里:没有 data-civ 时三者是 :root / .light 里的墨。 */
@@ -754,25 +774,55 @@
     --color-focus: var(--color-main-ink);
   }
 
+  /* 第三十批「卷宗」第 1 步(v4 第三十批回复第四节)新加的 token。底层 / 语义 / 文明色沿用上面的 v4 名字与值,
+     这里只加 Design 新给的那几样。颜色仍是 oklch 三元组(`--color-seal`),`--seal` / `--field` 是可直接用的颜色值。
+       --topline     页顶文明色线的粗细(PageShell 的页头;色 = civT,即 --color-main-ink)
+       --seal        印(第 3 步)。第六个文明槽 `--color-seal`(上面的 [data-civ="x"] 指到 `--color-civ-x-seal`):
+                     地府是朱色 深 #E35D3F / 浅 #B8321C,与罪业红 --color-danger 分开,不混用;其余文明与中性皮暂取 civT
+       --rail-w / --stack-w / --spine-h   案卷台的门栏、案卷摞宽,卷宗脊高(第 2、3 步)
+       --toast-bar   toast 左侧色条
+       --juan / --juan-strong   「卷」语域正文与卷里的人名(font 简写)
+       --tai / --tai-touch      「台」语域:桌面可点的部分 / 触屏
+       --glowA       页头光晕强度(深 .30 / 浅 .22)。--glow-alpha(深 .30 / 浅 .24)仍给侧栏与工具条,值不动
+       --field       输入框底 */
+  :root {
+    --topline: 2px;
+    --rail-w: 64px;
+    --stack-w: 360px;
+    --spine-h: 44px;
+    --toast-bar: 3px;
+    --juan: 400 16px/28px var(--font-title);
+    --juan-strong: 600 16px/28px var(--font-title);
+    --tai: 400 14px/22px var(--font-sans);
+    --tai-touch: 400 15px/24px var(--font-sans);
+    --glowA: 0.3;
+    --field: rgba(255, 255, 255, 0.05);
+  }
+  .light {
+    --glowA: 0.22;
+    --field: rgba(0, 0, 0, 0.035);
+  }
+
   /* (v3 时这里写「文明皮只有上面这一条匾色」;v4 起是上面五个值加强调 / 焦点。)v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
      v3 身份带撤掉(2026-10-01);v2 的实底印(遮罩素材、残边扫描、三款印文字体)随 v3 描边印撤掉
      (2026-10-02),印的外形见下面 `.seal`;v2 的分节纹(public/v2/svg/section-*,与 `SectionTitle`
-     一起)撤掉(2026-10-03)。身份带的纹样是纯 CSS 渐变,见下面 `.identity-pattern`。 */
+     一起)撤掉(2026-10-03)。页头的纹样是纯 CSS 渐变,见下面 `.page-head-pat`。 */
 
   /* 宽度 ≤ 768 时没有侧栏,导航是固定在底部的 56px 底栏(GlobalNav.tsx 的 BottomBar;v3 四档,
      侧栏从 769 起 —— 与 AppLayout 的 `min-[769px]:` 同一条线)。页面里吸底的操作条(审判队列的
      裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
   html {
     --bottom-bar: 0px;
+    /* 状态标签的高(第三十批第 1 步第 2 条):触屏 28,精确指针 22(下面「精确指针的默认档」里覆盖)。 */
+    --tag-h: 28px;
     /* 「以此人身份查看」固定条的高度(代看时 AppLayout 写成 2.5rem;平时 0)。它在工具条之上,
        所以工具条、身份带、导航与页面里的吸顶条都再让出这一段。 */
     --imp-h: 0px;
-    /* 吸顶的工具条(52)+ 身份带此刻的高度(Plaque 写 `--identity-band`;没有身份带的页是 0)。
-       页面里吸顶的条写 `top-(--below-band)`。代看时再加上固定条的高度。 */
-    --below-band: calc(var(--spacing) * 13 + var(--identity-band, 0px) + var(--imp-h));
-    /* AppLayout 内容槽位的最小高:视口减去吸顶的工具条 + 身份带,再减去窄屏的底栏(main 的
-       `pb-14`)—— 内容短的页恰好一屏,不多出滚动。此前是 `100vh-2.5rem`,早于 v3 身份带,
-       编辑器页因此多滚约 168px(用户 2026-10-02)。PageSpinner 填同一个槽位,用同一个值。 */
+    /* 吸顶的工具条(52)的下沿。页面里吸顶的条写 `top-(--below-band)`。代看时再加上固定条的高度。
+       (第三十批之前这里还加着吸顶标题行此刻的高度;标题行撤掉了,页头不吸顶。) */
+    --below-band: calc(var(--spacing) * 13 + var(--imp-h));
+    /* AppLayout 内容槽位的最小高:视口减去吸顶的工具条,再减去窄屏的底栏(main 的
+       `pb-14`)—— 内容短的页恰好一屏,不多出滚动。PageSpinner 填同一个槽位,用同一个值。 */
     --content-min-h: calc(100vh - var(--below-band) - var(--bottom-bar));
   }
   @media (max-width: 768px) {
@@ -781,177 +831,162 @@
     }
   }
 
-  /* 页头(规范 v4,用户 2026-11-07:去掉 v3 的 156px 满幅身份带,「页头是一层文明色的柔光加该文明纹样,
-     再加一枚水印巨印」—— v4 第一批)。v4 定稿的页头是 52 的工具条(面包屑、时辰)下面一行 `.ph`:44 的印 +
-     殿名小字 + 衬线标题,光从左上 30% 处向下铺开。这里的页头 = 工具条 + 下面这条标题行(`Plaque`),两条都吸顶、
-     内容从下面滚过,所以 canvas 实底垫在光下面,光在两条的总高里淡尽(与 App 端 `IdentityBand` 的 `GlowTop`
-     同一个做法:光的高度就是页头的高度)。v4 稿的光是 260 高的椭圆、70% 处淡尽(182);我们的页头没有 182 高,
-     照 260 画会在标题行下沿留一道切边,所以椭圆的竖半径取「页头总高 ÷ 0.7」,淡尽处正好落在下沿:
-       桌面   52 + 96 = 148 → 212      ≤ 768   52 + 76 = 128 → 183      收起   52 + 44 = 96 → 137
-     最亮处(圆心)= glow 按 alpha 混进 canvas;字的对比度按这一处量(plaqueTitleStaysLargeText)。 */
-  html {
-    --glow-r: 212px;
-  }
-  @media (max-width: 768px) {
-    html {
-      --glow-r: 183px;
-    }
-  }
-  html:has(.identity-band[data-compact]) {
-    --glow-r: 137px;
-  }
+  /* 工具条(52,`global-topbar`)是中性的 canvas 实底。v4 时它与下面的标题行共用一片页头光(`.shell-glow` 的
+     径向渐变);第三十批「卷宗」撤掉了那条标题行,光只在页头(PageShell 的 `.page-head`)里,工具条不再带光 ——
+     文明色只在顶线、印、脊、焦点四处(Design v4 第三十批第五节第 1 条),光晕随页头。类名留着,AppLayout 与测试按它找。 */
   .shell-glow {
-    --glow-y: 0px;
-    background:
-      radial-gradient(70% var(--glow-r) at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
-      oklch(var(--color-canvas));
+    background: oklch(var(--color-canvas));
   }
 
-  /* 标题行(`src/components/plaque/Plaque.tsx`,v4 `.ph`):印 + 殿名 / 题字,右边是案号。桌面 96 高(v4:工具条下
-     20 + 行高 52 + 22),≤ 768 至少 76;滚过 60px 收成 44(只留小印与殿名)。光的椭圆圆心在它上沿之上 52px
-     (工具条的高),与工具条接成一片。没有 v3 的品牌小字:v4 的品牌在侧栏左上角。对比度见 plaqueTitleStaysLargeText.test.ts。 */
-  .identity-band {
+  /* 整页加载(`PageSpinner`,第三十批第 1 步第 5 条):不放转圈。页顶一根 2px 文明色进度线(底 line,一段 32%
+     的 civT 来回走,同页头顶线的加载态),下面是骨架块(surface-2 的淡渐变)。整块 400 ms 后淡入,快的页不闪。
+     减少动态效果时进度段停在左边。 */
+  .page-wait {
+    animation: content-in var(--transition-duration-fast) var(--ease-enter) 400ms backwards;
+  }
+  .page-wait-line {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    height: 96px;
-    padding: 0 32px;
+    height: var(--topline);
     overflow: hidden;
-    color: oklch(var(--color-ink));
-    --glow-y: -52px;
-    background:
-      radial-gradient(70% var(--glow-r) at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%),
-      oklch(var(--color-canvas));
-    transition: height var(--transition-duration-reveal) var(--ease-standard);
+    background: oklch(var(--color-line));
   }
-  .identity-band[data-compact] {
-    height: 44px;
-    padding: 0 20px;
-  }
-  /* 纹样(v4 `.pat`):每个文明一种,线是 glow 的 22–30%,整层 .5,自上而下淡出;只在光里,不进卡片和表格。
-     中性皮没有纹样。下面再叠一层噪点(v4「3 · 噪点」:160px 分形噪点,深色 overlay 9%,向下渐隐);
-     浅色 v4 写的是白噪点 multiply 6%,白色 multiply 等于不变,所以浅色不画。噪点的透明度写在 SVG 的
-     alpha 里(.09),不用 opacity —— 身份带上「opacity 只给纹样层」那条守卫(inkOnSurfaceContract)照旧。 */
-  .identity-pattern {
-    position: absolute;
-    inset: 0;
-    opacity: 0.5;
-    pointer-events: none;
-    mask-image: linear-gradient(#000, transparent);
-  }
-  :root:not(.light) .identity-pattern::after {
+  .page-wait-line::after {
     content: "";
     position: absolute;
-    inset: 0;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    inset: 0 auto 0 0;
+    width: 32%;
+    background: oklch(var(--color-main-ink));
+    animation: page-head-progress 1.2s var(--ease-standard) infinite;
   }
-  /* 水印巨印(规范 v4 `.wm`):v4 稿是 300 宽、右 −40、上 −30,压出页头的右上角;我们的标题行只有 96 高,
-     300 的印露出来只是一段弧,所以按比例缩成 140(≤ 768 是 112),同样压出右上角。文明字色(印的默认色),
-     深色 7%、浅色 9%。和纹样层一样不是字(印文 aria-hidden),所以可以用 opacity(inkOnSurfaceContract
-     规定 3 的白名单)。收起的 44 与中性皮(没有印)不画。 */
-  .identity-watermark {
+  .page-sk {
+    display: block;
+    border-radius: var(--radius-control);
+    background: linear-gradient(90deg, oklch(var(--color-surface-2)), color-mix(in srgb, oklch(var(--color-surface-2)) 60%, oklch(var(--color-line-strong))), oklch(var(--color-surface-2)));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .page-wait-line::after {
+      animation: none;
+    }
+  }
+
+  /* 393 窄屏筛选条的快捷 chip 一行(`FilterBar`,第三十批第 1 步第 4 条):横滑,右缘 40px 渐隐,告诉人后面还有。 */
+  .chip-scroll {
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+  }
+  .chip-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 页头 =「顶线 + 卷宗头」(第三十批「卷宗」第 1 步,Design v4 第三十批回复第一节第 1 条;`PageHead`,
+     src/components/ui/PageShell.tsx)。取代 v3 的 156px 身份带与 v4 的 96px 标题行(`Plaque`):不再有第二个标题,
+     页头的标题就是 `<h1>`。自上而下:2px 文明色顶线(`--topline`,civT);标题上方一行等宽小字(mono 12/18);
+     标题(门页 `text-head` 24/32,卷宗页 `text-dossier` 32/40,宋体 600);标题下面一行 text-sm。右侧是操作。
+     背后三层,都 aria-hidden、不吃指针、随文明换:
+       .page-head-glow   光晕(v4 `.glowtop`):glow 按 `--glowA` 混进透明,从左上 24% 处向下 180px 淡尽
+       .page-head-pat    纹样(v4 `.pat`):civT 细线,整层 5%,自上而下淡出
+       .page-head-wm     G 天体仪水印(v4 `.wm`,`CivMark`):civT,深 7% / 浅 9%,压出右上角
+     不吸顶:卷宗的封面不跟着滚。 */
+  .page-head {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    color: oklch(var(--color-ink));
+  }
+  .page-head-topline {
     position: absolute;
-    top: -22px;
-    right: -28px;
-    opacity: 0.07;
-    pointer-events: none;
+    inset: 0 0 auto 0;
+    height: var(--topline);
+    background: oklch(var(--color-main-ink));
   }
-  .light .identity-watermark {
+  /* 加载中:顶线变成一根进度线 —— 底是 line,一段 32% 的 civT 来回走。减少动态效果时停在左边。 */
+  .page-head-topline[data-loading] {
+    overflow: hidden;
+    background: oklch(var(--color-line));
+  }
+  .page-head-topline[data-loading]::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 32%;
+    background: oklch(var(--color-main-ink));
+    animation: page-head-progress 1.2s var(--ease-standard) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .page-head-topline[data-loading]::after {
+      animation: none;
+    }
+  }
+  .page-head-glow {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 180px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(60% 100% at 24% 0%, color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glowA) * 100%), transparent), transparent 72%);
+  }
+  .page-head-pat {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.05;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(90deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 24px);
+    mask-image: linear-gradient(#000, transparent 85%);
+  }
+  /* 每个文明一种纹样(沿用 v4 标题行的四种走向),线一律 civT,透明度在整层的 5% 上。 */
+  [data-civ="cn"] .page-head-pat {
+    background-image:
+      repeating-linear-gradient(0deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 12px),
+      repeating-linear-gradient(90deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 72px);
+  }
+  [data-civ="eu"] .page-head-pat {
+    background-image: repeating-radial-gradient(circle at 85% -40%, transparent 0 22px, oklch(var(--color-main-ink)) 22px 23px);
+  }
+  [data-civ="eg"] .page-head-pat {
+    background-image:
+      repeating-linear-gradient(90deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(0deg, oklch(var(--color-main-ink)) 0 2px, transparent 2px 48px);
+  }
+  [data-civ="gr"] .page-head-pat {
+    background-image: repeating-linear-gradient(45deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 14px);
+  }
+  .page-head-wm {
+    position: absolute;
+    top: -14px;
+    right: 20px;
+    z-index: -1;
+    color: oklch(var(--color-main-ink));
+    opacity: 0.07;
+  }
+  .light .page-head-wm {
     opacity: 0.09;
   }
-  .identity-band[data-compact] .identity-watermark {
-    display: none;
+  @media (max-width: 768px) {
+    .page-head-wm {
+      --emblem-size: 120px !important;
+      right: -16px;
+    }
   }
-  [data-civ="cn"] .identity-pattern {
-    background-image:
-      repeating-linear-gradient(0deg, color-mix(in srgb, oklch(var(--color-glow)) 22%, transparent) 0 1px, transparent 1px 12px),
-      repeating-linear-gradient(90deg, color-mix(in srgb, oklch(var(--color-glow)) 22%, transparent) 0 1px, transparent 1px 72px);
-  }
-  [data-civ="eu"] .identity-pattern {
-    background-image: repeating-radial-gradient(circle at 85% -40%, transparent 0 22px, color-mix(in srgb, oklch(var(--color-glow)) 26%, transparent) 22px 23px);
-  }
-  [data-civ="eg"] .identity-pattern {
-    background-image:
-      repeating-linear-gradient(90deg, color-mix(in srgb, oklch(var(--color-glow)) 22%, transparent) 0 1px, transparent 1px 8px),
-      repeating-linear-gradient(0deg, color-mix(in srgb, oklch(var(--color-glow)) 30%, transparent) 0 2px, transparent 2px 48px);
-  }
-  [data-civ="gr"] .identity-pattern {
-    background-image: repeating-linear-gradient(45deg, color-mix(in srgb, oklch(var(--color-glow)) 24%, transparent) 0 1px, transparent 1px 14px);
-  }
-  .identity-title,
-  .identity-case {
-    position: relative;
-    min-width: 0;
-  }
-  .identity-title {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    gap: 16px;
-  }
-  .identity-court {
-    display: block;
-    margin-bottom: 2px;
+  /* 标题上方那一行(案号 · 殿 · 入册日期;门页是文明 · 殿):Geist Mono 12/18、ink-muted,数字等宽。 */
+  .page-head-meta {
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
     line-height: var(--text-xs--line-height);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+    color: oklch(var(--color-ink-muted));
     overflow-wrap: anywhere;
   }
-  .identity-case {
-    flex: none;
-    text-align: right;
-    font-size: var(--text-xs);
-  }
-  /* 案号(审判台,v3 `.identity-case span` / `b`):「案号」小字 11 在上,可复制的案号在下。
-     带上的字一律是带的字色(v4 起 ink),不用透明度降级(Design 第六十三批;殿名、「案号」靠字号
-     与等宽字区分)。守卫:inkOnSurfaceContract。收起时照样在右,并成一行。 */
-  .identity-case[data-case] > span {
-    display: block;
-    margin-bottom: 5px;
-    font-size: var(--text-2xs);
-  }
-  .identity-band[data-compact] .identity-case[data-case] > span {
-    display: inline;
-    margin: 0 8px 0 0;
-  }
-  /* 带上的链接随带上的字色(v4 起 ink;v3 时是匾色底上的白字):base 层的 `a` 是 ink-muted(悬停 accent-ink)
-     (灵魂详情的案号与「全部 N 场」)。守卫:plaqueTitleStaysLargeText「身份带上的链接」。 */
-  .identity-band a {
+  /* 小字行里的链接(灵魂详情的案号、「全部 N 场」)随小字的颜色。 */
+  .page-head-meta a {
     color: inherit;
   }
-  /* 收起:只留印与殿名(v3 `is-compact`)。没有殿名(租户没给展示名)时留题字,不然带上只剩一枚印。 */
-  .identity-band[data-compact] .identity-court ~ [data-tier] {
-    display: none;
+  .page-head h1 {
+    letter-spacing: 0.01em;
   }
-  .identity-band[data-compact] .identity-title {
-    gap: 10px;
-  }
-  .identity-band[data-compact] .identity-court {
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  /* ≤ 768(底栏那一档):印 36、题字从 20 起,随题字行数长高(egy 两行 20 时约 92)。右栏只留案号。 */
-  @media (max-width: 768px) {
-    .identity-band:not([data-compact]) {
-      height: auto;
-      min-height: 76px;
-      padding: 12px 16px;
-      gap: 12px;
-    }
-    .identity-band:not([data-compact]) .identity-title {
-      gap: 12px;
-    }
-    .identity-band .identity-case:not([data-case]) {
-      display: none;
-    }
-    .identity-band[data-compact] {
-      padding: 0 12px;
-    }
-  }
+
   /* 印(规范 v3 `.product-seal`,`src/components/plaque/Seal.tsx`):描边,不填色。2px 外框 +
      内缩 6px 的 1px 细框;≤ 32 是 1px 外框、内缩 4px。颜色是 currentColor:默认文明的字色
      (`--color-main-ink`,v4 civT),身份带上也是(v3 时随匾上的白字,`color: inherit`)。
@@ -999,8 +1034,7 @@
   .seal-on-band .seal {
     color: inherit;
   }
-  /* (v3 时这里有 `.identity-band .seal { color: inherit }`,让印随匾上的白字。v4 的身份带是 canvas 上的光,
-     印回到默认的文明字色 civT —— 对比度在 plaqueTitleStaysLargeText 里按光最亮处量。) */
+  /* (v3 时身份带上的印随匾上的白字,`color: inherit`。v4 起印是默认的文明字色 civT;第三十批起页头不再放印。) */
 
   /* 卡片随主题(规范 v4 `.card`):深色用 1px 内描边(这里就是原来那条 line 框),浅色不画线框,
      只靠两层很淡的阴影(1px 2px 5% + 6px 20px 16%)。值在 :root / .light 的 `--shadow-card`。
@@ -1053,6 +1087,7 @@
       --control-h-md: 36px;
       --control-h-lg: 40px;
       --table-row-h: 46px;
+      --tag-h: 22px;
     }
   }
 
@@ -1473,13 +1508,15 @@ html.theme-switching *::after {
     border: 2px solid oklch(var(--color-danger));
   }
 
-  /* 主按钮底(Button.tsx `primary`)。规范 v4:就是 solid(`--color-main`),两个主题一样 —— v4 的
-     sD / sL 本身就是给白字配的深色(白字 5.6–9.5:1)。v3 深色曾用身份带同一档 main 90% + #111
-     (Design 第六十三批),v4 不再需要。挂在 [data-civ] 上,是因为 var() 在声明处求值:自己带
-     data-civ 的子树(交付单)要按它自己的 main 算。 */
+  /* 主按钮底(Button.tsx `primary`)。第三十批「卷宗」第 1 步(Design v4 第三十批第五节第 1 条):墨色实底 ——
+     ink 底、canvas 字,四个文明、深浅两套对比度都稳定(深 #F3F3F1 / #111113、浅 #16171A / #F8F8F6,都在 16:1 以上),
+     不用每个文明单独调;文明色只留在顶线、印、脊、焦点四处。名字沿用 v4 的 `--main-fill`(此前是 solid
+     `--color-main` 配白字)。挂在 [data-civ] 上,是因为 var() 在声明处求值:自己带 data-civ 的子树照样取到。 */
   :root,
   [data-civ] {
-    --main-fill: oklch(var(--color-main));
+    --main-fill: oklch(var(--color-ink));
+    /* 印的颜色(第三十批 `--seal`,第 3 步用):同样挂在 [data-civ] 上,自己带 data-civ 的子树取到它自己的印色。 */
+    --seal: oklch(var(--color-seal));
   }
 
   /* A1「日期 · 原生控件」:根元素声明 color-scheme,原生日历与滚动条随主题变色。 */
@@ -1708,84 +1745,96 @@ html.theme-switching *::after {
                                 a private copy of the font stack, so a toast
                                 would keep the old stack after --font-sans moved
 
-   规范 v3(2026-10-01)取代了 v2 的「弹层一律 s1 底 + 1px ink 框、状态只由图标色说」:
-   toast 现在是**实心 ink 底、反白字**(字 = --color-surface-1),失败是**实心冷玫红底**
-   (`.toast[data-type="error"]`,--color-danger)。成功与信息只靠字形 ✓ / ℹ 分,不再各
-   带一种状态色 —— 在实心 ink 底上,浅色主题的状态绿 / 蓝是深字压深底。所以 builder
-   不再往元素上写任何内联样式(v2 时唯一的内联 `--toast-accent` 一并删掉)。
-   仍然没有 3px 状态色左边线:行首 3px 色标是「待我处理」的专用记号。
-
-   字色两种底上都是 --color-surface-1,不写死 #fff:深色主题的冷玫红是 #FF7A9A,白字
-   在上面只有 2.47:1;surface-1 在深色下是近黑,在浅色下是近白,一条规则两种主题都过。
-   实测对比度由 `src/__tests__/toastColourContract.test.ts` 从本文件算出并守住(≥ 4.5)。
+   第三十批「卷宗」第 1 步(Design v4 第三十批第一节第 3 条)取代了 v3 的「实心 ink 底、反白字,失败实心冷玫红」:
+   底一律 surface-2(v4 card2),字 ink;语义色只出现在左侧 3px 色条(`--toast-bar`,inset 阴影画,不占宽)
+   和图标上 —— 成功 success、失败 danger、普通是中性的 line-strong 条 + ink-muted 图标。宽 360;桌面在左下,
+   距边 24;≤ 768 在底栏上方,左右各 16。停留时长与最多 3 条在 `Toast.tsx`。
+   字(ink)、图标(success / danger / ink-muted)都压在 surface-2 上,inkOnSurfaceContract 与
+   `src/__tests__/toastColourContract.test.ts` 从本文件算出并守住(字 ≥ 4.5,色条与焦点环 ≥ 3)。
 
    `src/__tests__/designGuardContract.test.ts` has a rule for `cssText` so the
    next file to reach for it goes red instead of quietly leaving the system. */
 #toast-container {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 24px;
+  bottom: 24px;
+  width: 360px;
+  max-width: calc(100vw - 48px);
   z-index: var(--z-index-toast);
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 8px;
   pointer-events: none;
 }
+@media (max-width: 768px) {
+  #toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: calc(var(--bottom-bar) + 16px);
+    width: auto;
+    max-width: none;
+  }
+}
 
-/* v3 原型:min-height 56、三栏 24px 图标 / 文字 / 关闭、栏距 8。原型的左右内边距是 13px,
-   这里取 12 —— 间距节奏(规范 v2 A2)里没有 13。 */
+/* v4 `.toast`:三栏 20px 图标 / 文字 / 关闭,栏距 8(稿子是 10,节奏里没有 10),内边距 12 / 12 / 12 / 16。 */
 .toast {
+  --toast-c: var(--color-line-strong);
   display: grid;
-  grid-template-columns: 24px 1fr auto;
-  align-items: center;
+  grid-template-columns: 20px 1fr auto;
+  align-items: start;
   gap: 8px;
-  min-height: 56px;
-  min-width: 240px;
-  max-width: 420px;
-  padding: 0 12px;
-  /* 规范 v4(用户 2026-11-08):弹层一律 `--radius-panel`、`--shadow-overlay`。此前是 0、无阴影,
-     顶栏右侧一排弹层里只有它和通知 / 用户菜单是方角。 */
+  padding: 12px 12px 12px 16px;
   border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-overlay);
   border: none;
-  background: oklch(var(--color-ink));
-  color: oklch(var(--color-surface-1));
-  /* 规范 v3:进场 160(fast)、进场曲线、位移 8px;出场 140(dismiss)、出场曲线。停留时长不归这里管。 */
+  background: oklch(var(--color-surface-2));
+  color: oklch(var(--color-ink));
+  box-shadow:
+    inset var(--toast-bar) 0 0 oklch(var(--toast-c)),
+    inset 0 0 0 1px oklch(var(--color-line)),
+    var(--shadow-overlay);
+  /* 进场 160(fast)、进场曲线、自下而上 8px;出场 140(dismiss)、出场曲线。停留时长不归这里管。 */
   animation: toast-in var(--transition-duration-fast) var(--ease-enter);
   pointer-events: auto;
   /* NO `font-family`. Inheriting from `body` is what makes the toast follow
-     --font-sans; the private copy is exactly how it would stop. */
-  font-size: 13px;
-  line-height: 1.55;
+     --font-sans; the private copy is exactly how it would stop. 字 14/22(v4「台」语域)。 */
+  font-size: 14px;
+  line-height: 22px;
 }
 
+.toast[data-type="success"] {
+  --toast-c: var(--color-success);
+}
 .toast[data-type="error"] {
-  background: oklch(var(--color-danger));
+  --toast-c: var(--color-danger);
 }
 
-/* 字形跟着字色走,12px 粗体(原型 `.toast-row b`)。 */
+/* 图标是语义色(普通提示是 ink-muted),与色条同一个 token —— 只有这两处带颜色。 */
 .toast-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
+  height: 22px;
+  font-weight: 600;
+  color: oklch(var(--color-ink-muted));
+}
+.toast[data-type="success"] .toast-icon {
+  color: oklch(var(--color-success));
+}
+.toast[data-type="error"] .toast-icon {
+  color: oklch(var(--color-danger));
 }
 
 .toast-close {
   width: 24px;
-  height: 24px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   border: none;
   cursor: pointer;
-  /* 全不透明:v2 的 0.5 透明度是在浅底上调的,压在实心底上会把 × 调成一块半色。 */
-  color: inherit;
+  color: oklch(var(--color-ink-muted));
   font-size: 16px;
   padding: 0;
   line-height: 1;
@@ -1793,32 +1842,40 @@ html.theme-switching *::after {
 }
 
 .toast-close:hover {
-  background: oklch(var(--color-surface-1) / 0.16);
+  background: oklch(var(--color-surface-3));
+  color: oklch(var(--color-ink));
 }
 
-/* 全局焦点环是 --color-focus,两种主题下都等于 --color-ink —— 正是 toast 的底色,
-   环画上去看不见。在 toast 里环换成字色,内缩到按钮里。 */
+/* 焦点环用字色 ink,内缩到按钮里:文明的焦点色在 surface-2 上不一定够 3:1(中性皮下它就是 ink)。 */
 .toast-close:focus-visible {
-  outline-color: oklch(var(--color-surface-1)) !important;
+  outline-color: oklch(var(--color-ink)) !important;
   outline-offset: -2px;
 }
 
-/* Leaving. `exit` is the curve for something getting out of the way, and the
-   8px lift (v3; was 6) is under the threshold where a reader tracks the movement
-   itself. */
+/* Leaving. `exit` is the curve for something getting out of the way; it sinks the 8px it rose. */
 .toast-leaving {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(8px);
   transition:
     opacity var(--transition-duration-dismiss) var(--ease-exit),
     transform var(--transition-duration-dismiss) var(--ease-exit);
+}
+
+/* 页头顶线的进度段(加载中):从左外走到右外。 */
+@keyframes page-head-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(320%);
+  }
 }
 
 /* 只动 opacity 与 translate(动效 v2「属性」一条:缩放只留给盖印那 60ms)。 */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -2076,8 +2133,9 @@ html.theme-switching *::after {
   }
 }
 
-/* 空态背后的文明主视觉线稿:压到很淡,靠右,不挡字(EmptyState 的 `civilization`)。 */
-.empty-emblem {
+/* 空态的 G 天体仪记号(第三十批第 1 步第 5 条,EmptyState):96,文明字色,12% 不透明。装饰,aria-hidden。 */
+.empty-mark {
+  color: oklch(var(--color-main-ink));
   opacity: 0.12;
 }
 

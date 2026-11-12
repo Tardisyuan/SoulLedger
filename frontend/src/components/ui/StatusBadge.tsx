@@ -24,25 +24,40 @@ export const TONE_GLYPH: Record<BadgeTone, string> = {
 };
 
 /**
- * 无底色徽章 + 字形,里面是 `DomainEnum`(原始枚举值仍在 `title` 上,BRIEF §4.6)。
- *
- * 2026-10-01 规范 v3:框一律中性灰 `--color-line`,不再跟 tone 同色 —— 意思由字形 +
- * 文字承担,颜色不再画两遍。字仍是 tone 色:这些是流程状态,不是 C15 的领域枚举,
- * 规范 v1 §1.2 给它们「颜色 + 字形」,v3 只改了框。
+ * 第三十批「卷宗」的十个状态标签:形状前缀与色(Design v4 第三十批第一节第 2 条)。灵魂状态与判决仍各读自己的表
+ * (`soulStateBadge.ts` / `verdictGlyph.ts`,同样的字形);这张给案卷台、卷宗这类不经那两张表的标签用 ——
+ * `<Badge tone={DOSSIER_TAG.overdue.tone} glyph={DOSSIER_TAG.overdue.glyph}>`。
  */
-export const STATUS_BADGE_BORDER = "border-[oklch(var(--color-line))]";
+export const DOSSIER_TAG = {
+  judging: { glyph: "◇", tone: "warning" },
+  retry: { glyph: "↺", tone: "warning" },
+  overdue: { glyph: "!", tone: "error" },
+  pending: { glyph: "‖", tone: "neutral" },
+  claimedByOther: { glyph: "◌", tone: "neutral" },
+  disposed: { glyph: "▣", tone: "neutral" },
+  reincarnating: { glyph: "↻", tone: "neutral" },
+  settled: { glyph: "✓", tone: "success" },
+  demerit: { glyph: "−", tone: "error" },
+  merit: { glyph: "+", tone: "success" },
+} as const satisfies Record<string, { glyph: string; tone: BadgeTone }>;
+
+/**
+ * 淡染标签 + 字形,里面是 `DomainEnum`(原始枚举值仍在 `title` 上,BRIEF §4.6)。
+ *
+ * 第三十批起标签无边框(Design v4 第三十批第一节第 2 条):tone 给底和字(`Badge` 的四色表),字形承担区分。
+ * v3 的 `STATUS_BADGE_BORDER`(中性灰框)随之删掉。
+ */
 
 export function StatusBadge({ namespace, value, tone = "neutral" }: { namespace: string; value: string | null | undefined; tone?: BadgeTone }) {
   return (
-    <Badge tone={tone} glyph={TONE_GLYPH[tone]} className={STATUS_BADGE_BORDER}>
+    <Badge tone={tone} glyph={TONE_GLYPH[tone]}>
       <DomainEnum namespace={namespace} value={value} />
     </Badge>
   );
 }
 
 /**
- * 判决徽章(补足 B8):领域枚举,ink 字 + 1px 中性灰框(2026-10-01 v3,原 ink3),「待定」加 s2 底。字形与底色
- * 都读 `verdictGlyph.ts` 那一张表 —— 审判列表、审判台、灵魂详情、处置页都画这一个。
+ * 判决标签(补足 B8):领域枚举,淡染(第三十批)。字形与底色都读 `verdictGlyph.ts` 那一张表 —— 审判列表、审判台、灵魂详情、处置页都画这一个。
  */
 export function VerdictBadge({
   verdict,
@@ -62,7 +77,7 @@ export function VerdictBadge({
   );
 }
 
-/** 灵魂状态徽章(补足 C15):同上,读 `soulStateBadge.ts`,「审判中」加 s2 底。 */
+/** 灵魂状态标签(补足 C15):同上,读 `soulStateBadge.ts`,「审判中」是 warn 淡染。 */
 export function SoulStateBadge({ state, className }: { state: string | null | undefined; className?: string }) {
   return (
     <Badge glyph={soulStateGlyph(state)} className={`${soulStateBadgeClass(state)} ${className ?? ""}`} data-soul-state-badge={state ?? ""}>
@@ -73,14 +88,14 @@ export function SoulStateBadge({ state, className }: { state: string | null | un
 
 /**
  * 滞留徽章:判决的 `stale_since` 非空(未结案且 30 天无进展,定时任务盖章,**不结案**)。
- * 流程状态,走 warning 的「颜色 + 字形」;「30 天无进展」放在 `title` 与读屏文字里。
+ * 第三十批:超期类标签 =「! + neg 淡染」(Design 样张「! 超期」);「30 天无进展」放在 `title` 与读屏文字里。
  * 审判列表的待审一面与审判台的案情栏画这一个。
  */
 export function StaleBadge({ className }: { className?: string }) {
   const { t } = useI18n();
   const hint = t("judgment.stale.hint");
   return (
-    <Badge tone="warning" glyph={TONE_GLYPH.warning} className={`${STATUS_BADGE_BORDER} ${className ?? ""}`} title={hint} data-stale-badge="">
+    <Badge tone="error" glyph="!" className={className} title={hint} data-stale-badge="">
       {t("judgment.stale.label")}
       <span className="sr-only"> · {hint}</span>
     </Badge>

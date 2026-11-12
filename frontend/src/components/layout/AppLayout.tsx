@@ -17,10 +17,11 @@ import { ConnectionBanner } from "@/src/components/connection-status";
 import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
-import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
+import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
 import { BottomBar, EditorNavProvider, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
-import { Plaque, PlaqueProvider, type PlaqueText } from "@/src/components/plaque/Plaque";
+import { PlaqueProvider, type PlaqueText } from "@/src/components/plaque/Plaque";
+import { HeadingProvider, PlaqueValueProvider } from "@/src/components/plaque/pageHeadContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Bell } from "lucide-react";
@@ -42,13 +43,14 @@ import { leaveGoodbye } from "@/src/lib/goodbye";
 
 /**
  * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
- * 52px 中性工具条(`global-topbar`:导航开合、面包屑;右边问一问、通知、用户菜单)、
- * 标题行(`Plaque`,v4 `.ph` —— 页头光、纹样、水印、印、殿名、题字;不放面包屑与操作)、页面。
+ * 52px 中性工具条(`global-topbar`:导航开合、面包屑;右边问一问、通知、用户菜单)、页面。
+ * 第三十批「卷宗」第 1 步撤掉了工具条下面那条标题行(`Plaque`,v4 `.ph`)与它的第二个标题:页头只有一个,
+ * 是页面自己的 PageShell 页头(顶线 + 卷宗头,标题即 `<h1>`)。页面经 `usePlaque` 报的殿名 / 案号 / 概览
+ * 由这里收下,经 `PlaqueValueProvider` 交给那个页头;面包屑在末段与 `<h1>` 相同时省掉末段。
  *
  * - 四档宽度:≥ 1200 导航展开 / 收起由用户选;769–1199 强制收起;≤ 768 没有侧栏,
  *   是底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。规则在 `GlobalNav.tsx`。
- * - 工具条吸顶;身份带吸在它下沿,页面滚过 60px 收成 44px(PageShell 的筛选栏吸在两者
- *   下沿,`--below-band` = 52 + 身份带此刻的高度)。
+ * - 工具条吸顶;PageShell 的筛选栏吸在它下沿(`--below-band` = 52 + 代看条)。页头不吸顶。
  * - 连接状态只在断开时出现(`ConnectionBanner`,v4 第八批第 4 条):桌面是工具条里面包屑后面的一个
  *   胶囊,加工具条下沿一条 2px 状态色线;≤ 768 浮在工具条下沿正中。工具条高度不变,内容不动、不被盖住。
  * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
@@ -170,10 +172,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setOpenFor(currentNav);
     setOpenGroup(currentNav);
   }
-  const crumbs = useBreadcrumbs(menus);
-  // 页面经 `usePlaque` 报的题字 / 殿名 / 右栏优先;没报的退回面包屑末段与租户名。
+  // 页面经 `usePlaque` 报的殿名 / 案号 / 概览,交给 PageShell 的页头;PageShell 报它的 `<h1>` 文字给面包屑。
   const [plaque, setPlaque] = useState<PlaqueText | null>(null);
-  const title = plaque?.title ?? (crumbs.length ? crumbs[crumbs.length - 1].label : t("nav.title"));
+  const [heading, setHeading] = useState<string | null>(null);
 
   // `count`, not `results.length`: results is one page, the badge is the whole unread inbox. (FL-15)
   const { data: unread } = useQuery({
@@ -241,7 +242,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           }`}
         >
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <Breadcrumb menus={menus} />
+            <Breadcrumb menus={menus} heading={heading} />
             <ConnectionBanner />
             {user ? <HoursChip /> : null}
           </div>
@@ -374,17 +375,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <MfaRequiredBanner />
         <PasswordChangeRedirect />
 
-        {/* 标题行(规范 v4,用户 2026-11-07 去掉 156px 身份带):吸在工具条下沿;页面滚动后自己收成 44px,只留小印与殿名。
-            z 与筛选栏同一层:两者不重叠 —— 筛选栏吸在 52 + 身份带此刻的高度(`--below-band`)。 */}
-        <div className={`sticky top-[calc(var(--spacing)*13+var(--imp-h))] z-filters ${assist.pushed ? "pr-[420px]" : ""}`}>
-          <Plaque title={title} meta={plaque?.meta} caseNumber={plaque?.caseNumber} caseRef={plaque?.caseRef} hall={plaque?.hall} collapsible route={pathname} />
-        </div>
-
         {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its
             side padding drops to 24 (canvas 1a 一). The padding rule reaches into
             PageShell's `md:px-8` (v2: 32 px; v1 was `md:px-10`) by attribute, so no page
             has to know about the panel. */}
-        {/* The page itself is the landmark (and the skip link's target) — not the toolbar and band above it,
+        {/* The page itself is the landmark (and the skip link's target) — not the toolbar above it,
             which the `<main>` used to wrap. */}
         <main
           id="main"
@@ -397,7 +392,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           }`}
         >
           <PlaqueProvider value={setPlaque}>
-            <EditorNavProvider value={setEditorNav}>{hallViewExpired ? <HallViewExpired /> : children}</EditorNavProvider>
+            <PlaqueValueProvider value={plaque}>
+              <HeadingProvider value={setHeading}>
+                <EditorNavProvider value={setEditorNav}>{hallViewExpired ? <HallViewExpired /> : children}</EditorNavProvider>
+              </HeadingProvider>
+            </PlaqueValueProvider>
           </PlaqueProvider>
         </main>
       </div>

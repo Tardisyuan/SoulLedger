@@ -60,35 +60,32 @@ describe("the table covers the states the API can actually send", () => {
  * 的断言改成了「六个状态六个字形」,而颜色这一侧改成断言**缺席**:任何
  * `--color-status-*` / `--color-verdict-*` / 危险色回到徽章里都是红的。
  */
-const INK = ["--color-ink", "1"];
-/** 2026-10-01 规范 v3:框是中性灰 `--color-line`(v3 `--ds-line`),不再是 ink3。*/
-const LINE = ["--color-line", "1"];
-const S2 = ["--color-surface-2", "1"];
-const PENDING_STATES = ["JUDGING"];
-const PENDING_VERDICTS = ["PURGATORY"];
+/*
+ * 第三十批「卷宗」第 1 步(Design v4 第三十批第一节第 2 条)把上面那条再改一次:标签是淡染、无框,颜色只有四种。
+ * 领域值多数是中性(ink-muted 字 + surface-2 底);「审判中」与「退回重审」是 warn 淡染(warning 字 + warning-tint 底)。
+ * 区分仍靠字形。颜色这一侧仍断言**缺席**:状态色、判决色、罪业红、文明色、图表色回到领域标签里都是红的。
+ */
+const NEUTRAL = { text: ["--color-ink-muted", "1"], bg: ["--color-surface-2", "1"] };
+const WARN = { text: ["--color-warning", "1"], bg: ["--color-warning-tint", "1"] };
+const WARN_STATES = ["JUDGING"];
+const WARN_VERDICTS = ["RETRY"];
 
-describe("domain badges carry no status colour (C15)", () => {
-  it.each(readSoulStates())("%s is ink on a neutral-line frame", (state) => {
+describe("domain tags carry no status colour (C15, 第三十批 tints)", () => {
+  it.each(readSoulStates())("%s is a neutral or warn tint, with no frame", (state) => {
     const found = utilities(SOUL_STATE_BADGE_CLASSES[state as keyof typeof SOUL_STATE_BADGE_CLASSES]);
-    expect(found.text).toEqual(INK);
-    expect(found.border).toEqual(LINE);
-    // Equality on the key set: "ink is present" stays true while a status fill sits beside it.
-    const pending = PENDING_STATES.includes(state);
-    expect(Object.keys(found).sort()).toEqual(pending ? ["bg", "border", "text"] : ["border", "text"]);
-    if (pending) expect(found.bg).toEqual(S2);
+    // Equality on the whole map: "the text is right" stays true while a border or a second fill sits beside it.
+    expect(found).toEqual(WARN_STATES.includes(state) ? WARN : NEUTRAL);
   });
 
-  it.each(Object.keys(VERDICT_BADGE_CLASSES))("verdict %s is ink on a neutral-line frame, ✕ included", (verdict) => {
+  it.each(Object.keys(VERDICT_BADGE_CLASSES))("verdict %s is a neutral or warn tint, ✕ included", (verdict) => {
     const found = utilities(VERDICT_BADGE_CLASSES[verdict as keyof typeof VERDICT_BADGE_CLASSES]);
-    expect(found.text).toEqual(INK);
-    expect(found.border).toEqual(LINE);
-    const pending = PENDING_VERDICTS.includes(verdict);
-    expect(Object.keys(found).sort()).toEqual(pending ? ["bg", "border", "text"] : ["border", "text"]);
+    expect(found).toEqual(WARN_VERDICTS.includes(verdict) ? WARN : NEUTRAL);
   });
 
-  it("no badge class names a status, verdict or danger token", () => {
+  it("no domain tag names a status, verdict, danger, success, accent or chart token, or draws a border", () => {
     const all = [...Object.values(SOUL_STATE_BADGE_CLASSES), ...Object.values(VERDICT_BADGE_CLASSES)].join(" ");
-    expect(all).not.toMatch(/--color-(status|verdict|danger|success|warning|accent|chart)/);
+    expect(all).not.toMatch(/--color-(status|verdict|danger|success|accent|chart|main)/);
+    expect(all).not.toMatch(/\bborder\b/);
   });
 });
 
@@ -99,19 +96,16 @@ describe("glyphs carry the distinction colour no longer does", () => {
     expect(new Set(glyphs).size).toBe(STATES.length);
   });
 
-  it("draws C15's glyphs for the real enum", () => {
+  it("draws C15's glyphs for the real enum (第三十批: 待定 is ‖)", () => {
     expect(SOUL_STATE_GLYPH).toEqual({ ALIVE: "○", JUDGING: "◇", DISPOSED: "▣", REINCARNATING: "↻", LOST: "◌", SETTLED: "≡" });
-    expect(VERDICT_GLYPH).toEqual({ PASSED: "✓", FAILED: "✕", PURGATORY: "◇", RETRY: "↺" });
+    expect(VERDICT_GLYPH).toEqual({ PASSED: "✓", FAILED: "✕", PURGATORY: "‖", RETRY: "↺" });
   });
 
-  // 灵魂详情页把判决与状态画在同一页。C15 两处都画 ◇,意思都是「还要处理」,
-  // 且都带 s2 底 —— 那是唯一允许的共用字形;别的相交会让两件事读成一件。
-  it("verdicts and states share only ◇, and only between the two pending values", () => {
+  // 灵魂详情页把判决与状态画在同一页。第三十批起「待定」是 ‖、「审判中」是 ◇(Design 的标签表),
+  // 两张表不再共用任何字形 —— 一个相交会让两件事读成一件。
+  it("verdicts and states share no glyph", () => {
     const stateGlyphs = new Set(Object.values(SOUL_STATE_GLYPH));
-    const shared = Object.values(VERDICT_GLYPH).filter((g) => stateGlyphs.has(g));
-    expect(shared).toEqual(["◇"]);
-    expect(SOUL_STATE_GLYPH.JUDGING).toBe("◇");
-    expect(VERDICT_GLYPH.PURGATORY).toBe("◇");
+    expect(Object.values(VERDICT_GLYPH).filter((g) => stateGlyphs.has(g))).toEqual([]);
   });
 });
 

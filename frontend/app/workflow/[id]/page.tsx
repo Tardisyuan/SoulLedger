@@ -43,7 +43,7 @@ import { responseCode, responseStatus, responseError } from "@soulledger/core/ap
 
 /**
  * 审批流 / 节点状态与节点结论的徽章:字形 + 文字 + ink,不靠颜色(规范 v4,用户 2026-11-07;与判决、灵魂状态
- * 同一个 `DOMAIN_BADGE`)。「还要处理」的待办(PENDING)加 s2 底,同判决的「待定」。字形在下面两张表。
+ * 同一个 `DOMAIN_BADGE`,第三十批起是中性淡染)。「还要处理」的待办(PENDING)是 warn 淡染,同灵魂的「审判中」。字形在下面两张表。
  * 此前两张表按系统反馈色上色(`statusTokenLayering.test.ts` 记着它们),2026-11-07 一起改成 ink,登记随之删掉。
  */
 const STATUS_BADGE: Record<string, string> = {

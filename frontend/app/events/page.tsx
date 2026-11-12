@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatListDate } from "@soulledger/core/domain/dates";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { eventsApi, PAGE_SIZE } from "@soulledger/core/api";
@@ -51,7 +52,7 @@ const EVENTS_FILTER_FIELDS = ["eventType", "actor", "datePreset", "includeSystem
 const EVENTS_COLUMNS_KEY = "soulledger.events.columns";
 
 function SoulEventsContent() {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
 
   const [page, setPage] = useState(1);
@@ -121,7 +122,7 @@ function SoulEventsContent() {
       header: t("events.col_time"),
       width: "160px",
       value: (r) => r.lead.create_time,
-      format: (v) => formatDateTime(v),
+      format: (v) => formatListDate(v, locale) ?? "",
     },
     {
       type: "text",
