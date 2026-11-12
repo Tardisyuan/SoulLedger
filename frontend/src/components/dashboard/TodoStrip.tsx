@@ -166,7 +166,15 @@ export function TodoStrip() {
   const canModerate = hasPermission("social.moderate");
   const reportsQ = useQuery({
     queryKey: todoKeys.item("reports"),
-    queryFn: async () => (await socialModerationApi.reports({})).data.count,
+    // F-SOC-04: word-list holds (PENDING posts / comments) wait in the same queue as OPEN reports.
+    queryFn: async () => {
+      const [reports, posts, comments] = await Promise.all([
+        socialModerationApi.reports({}),
+        socialModerationApi.content("posts", {}),
+        socialModerationApi.content("comments", {}),
+      ]);
+      return reports.data.count + posts.data.count + comments.data.count;
+    },
     enabled: canModerate,
     staleTime: 60_000,
   });

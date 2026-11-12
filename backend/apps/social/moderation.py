@@ -7,7 +7,7 @@
 (同一条帖子被两个官员同时「恢复」与「删除」只有一个生效,另一个看到新状态后得 409)。
 锁的语义只在 PostgreSQL 上成立 —— SQLite 没有行锁,见报告「需真 PG 验证」一节。
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
@@ -195,6 +195,15 @@ def screen_content(tenant, content):
         decisive_word=decisive,
         hit_ids=[pk for pk, _, _ in hits],
     )
+
+
+def screen_officer_content(tenant, content):
+    """官员自己的帖子 / 评论只吃 MASK。送审 / 隐藏要官员放行,而审核后台只看灵魂的内容
+    (`author__role="SOUL"`),官员内容进 PENDING / HIDDEN 就永远出不来(F-SOC-01)。"""
+    screening = screen_content(tenant, content)
+    if screening.status == ModerationStatus.PUBLISHED:
+        return screening
+    return replace(screening, status=ModerationStatus.PUBLISHED, decisive_word="")
 
 
 def record_hits(word_ids):
@@ -544,6 +553,9 @@ def lift_mute(mute, *, actor, request=None):
     return row
 
 
+AUTHOR_DELETED_NOTE = "【作者已自行删除,未执行处置】"
+
+
 def resolve_report(report, resolution, *, actor, request=None, note="", mute_days=None, reason_code="",
                    reason_note=""):
     """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。
@@ -575,9 +587,17 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
             elif not content.is_deleted:
                 moderate_content(content, resolution, actor=actor, request=request, reason=note,
                                  reason_code=reason_code, reason_note=reason_note)
+            else:
+                # 作者先自删了(图片也已真删):没有任何内容被隐藏 / 删除,记录里如实写出,不记成官员的处置。
+                note = (AUTHOR_DELETED_NOTE + note)[:500]
         elif resolution == ReportResolution.MUTE:
             if mute_days is None:
                 raise SocialError("禁言须给出天数。", "invalid_days", 400)
+            # Same check as creating a mute: only a soul that is in this hall now (F-SOC-11).
+            from apps.social.soul_circle import souls_in
+
+            if not souls_in(row.tenant, include_retired=True).filter(pk=row.target_user_id).exists():
+                raise SocialError("对象已不在本文明。", "not_found", 404)
             mute_user(row.target_user, row.tenant, mute_days, actor=actor, request=request, reason=note)
         elif resolution == ReportResolution.WARN:
             publish_event("SOCIAL_WARNED", row.tenant, [row.target_user_id], {

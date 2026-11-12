@@ -101,6 +101,16 @@ class TestMenuCRUD:
         self.menu.refresh_from_db()
         assert self.menu.is_deleted
 
+    def test_delete_menu_with_live_children_is_refused(self):
+        """F-ADM-03: soft-deleting the parent hid its live children and the bin's hard delete cascaded over them."""
+        child = Menu.objects.create(name="Child", path="/settings/c", parent=self.menu, roles=["ADMIN"], order=1)
+        resp = self.admin_client.delete(f"{BASE}/{self.menu.pk}/")
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        self.menu.refresh_from_db()
+        assert not self.menu.is_deleted
+        assert self.admin_client.delete(f"{BASE}/{child.pk}/").status_code == status.HTTP_204_NO_CONTENT
+        assert self.admin_client.delete(f"{BASE}/{self.menu.pk}/").status_code == status.HTTP_204_NO_CONTENT
+
     def test_retrieve_menu(self):
         resp = self.admin_client.get(f"{BASE}/{self.menu.pk}/")
         assert resp.status_code == status.HTTP_200_OK

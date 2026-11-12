@@ -9,9 +9,11 @@ Actor -> User 迁移脚本
 - display_name = Actor.name_zh 或 name
 - organization 根据 Actor.civilization 映射到 Organization
 - position = Actor.title 或 ""
-- 设置默认密码：PBKDF2(soul123456)
+- 每个新账号一个随机密码(只在创建时打印一次),首次登录必须改密
 - 根据 Actor.role 自动分配权限角色
 """
+import secrets
+
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
 
@@ -30,12 +32,11 @@ CIVILIZATION_ORG_MAP = {
 ACTOR_ROLE_MAP = {
     "EXECUTOR": UserRole.JUDGE,
     "JUDGE": UserRole.JUDGE,
-    "OVERSEER": UserRole.ADMIN,
+    # 不再映射成 ADMIN:无殿 ADMIN 就是全局管理员,不能由一张旧表的 role 列授予(F-ADM-05)。
+    "OVERSEER": UserRole.GUARDIAN,
     "CONDUIT": UserRole.GUARDIAN,
     "GUARDIAN": UserRole.GUARDIAN,
 }
-
-DEFAULT_PASSWORD = "soul123456"
 
 
 class Command(BaseCommand):
@@ -140,7 +141,8 @@ class Command(BaseCommand):
         # 获取用户角色
         user_role = ACTOR_ROLE_MAP.get(actor.role, UserRole.VIEWER)
 
-        # 创建用户
+        # 创建用户:仓库是公开的,不能有写死的密码。
+        password = secrets.token_urlsafe(12)
         user = User.objects.create(
             username=actor.name,
             display_name=display_name,
@@ -148,9 +150,11 @@ class Command(BaseCommand):
             organization=organization,
             position=position,
             actor=actor,
-            password=make_password(DEFAULT_PASSWORD),
+            password=make_password(password),
+            must_change_password=True,
             is_active=actor.is_active,
         )
+        self.stdout.write(f"    一次性密码(首次登录须改): {password}")
         return user
 
     def _update_user(self, user, actor, org_map):

@@ -270,3 +270,15 @@ def test_move_to_does_not_carry_sub_units_or_people(w):
     res = w.c.delete(f"/api/v1/organizations/{w.A.pk}/?move_to={w.B.pk}")  # A 有下级与人员
     assert res.status_code == 409, res.data
     assert Soul.objects.get(pk=w.sA.pk).owner_org_id == w.A.pk
+
+
+def test_soft_deleted_sub_units_and_people_do_not_block_deleting_a_unit(w):
+    """F-ADM-01: the count walked the unfiltered reverse managers, so a deleted child or officer made the unit
+    undeletable (409 with a count nobody could see on any page)."""
+    RoleDataScope.objects.filter(role__name="MODERATOR").delete()
+    gone = org(w.cn, "空司")
+    child = org(w.cn, "空司下", parent=gone)
+    child.soft_delete()
+    ghost = User.objects.create_user(username="b3a_ghost", password="x", role="JUDGE", tenant=w.cn, organization=gone)
+    ghost.soft_delete()
+    assert w.c.delete(f"/api/v1/organizations/{gone.pk}/").status_code == 204

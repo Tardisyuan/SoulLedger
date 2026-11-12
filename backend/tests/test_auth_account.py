@@ -321,6 +321,11 @@ class TestPasswordHelpReachesTheRightAdministrators:
         # (cn_mod): since 2026-11-07 recipients are chosen by user.manage, which it never holds.
         assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2"}
 
+    def test_a_hall_admins_own_request_goes_to_the_hall_less_admin_only(self, api_client, cast, eager):
+        """F-ADM-04: the hall's other ADMINs cannot reset an ADMIN (403 admin_target_global_only)."""
+        _ask(api_client, "cn_admin")
+        assert _recipients(cast["cn_admin"]) == {"root"}
+
     def test_a_role_granted_user_manage_is_told_with_the_admin_text(self, api_client, django_user_model, cast, eager):
         """By codename, not role name: a hall role given user.manage in the matrix can reset the
         password, so it is told, and told to use User Management."""

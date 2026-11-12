@@ -359,7 +359,10 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
     PICKER_LIMIT = 20
 
     def get_queryset(self):
-        return super().get_queryset().order_by("-created_at")
+        # A mute belongs to the soul's current hall, not to the hall that issued it: after a transfer the new
+        # hall's officers see it and can lift it, the old hall's no longer can (F-SOC-11).
+        qs = scope_to_tenant(self.queryset.all(), self.request, field="user__soul_account__soul__tenant")
+        return qs.order_by("-created_at")
 
     def filter_queryset(self, queryset):
         qs = super().filter_queryset(queryset)

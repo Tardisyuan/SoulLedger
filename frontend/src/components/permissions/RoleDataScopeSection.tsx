@@ -43,7 +43,7 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
   const [draft, setDraft] = useState<RoleDataScopeConfig | null>(null);
   // A config without `default` (an unset default can be answered that way) reads as ALL-but-unset, never crashes.
   const raw = draft ?? config.data;
-  const current = raw && { ...raw, default: raw.default ?? { scope: "ALL" as DataScope, orgs: [] } };
+  const current = raw && { ...raw, default: raw.default ?? { scope: "ALL" as DataScope, orgs: [] }, overrides: raw.overrides ?? [] };
   // 「未配置」与「全部」是两回事:没配的角色兼任时不放宽。旧接口没有这个字段时按「配了」读(与此前一样)。
   const defaultSet = current?.default_configured !== false;
 

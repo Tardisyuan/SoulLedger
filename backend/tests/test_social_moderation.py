@@ -335,3 +335,56 @@ def test_only_holders_of_social_moderate_get_in(cn_tenant, django_user_model, ju
     for path in ["reports/", "posts/", "comments/", "sensitive-words/", "mutes/"]:
         assert officer_client(judge_user).get(f"{MODERATION}/{path}").status_code == 403, path
         assert officer_client(moderator).get(f"{MODERATION}/{path}").status_code == 200, path
+
+
+def test_a_report_resolved_after_the_author_deleted_the_post_says_nothing_was_done(cn_tenant, cn_admin_user):
+    """F-SOC-05: HIDE on an already self-deleted post was a silent no-op recorded as the officer's HIDE."""
+    author, author_client = soul(cn_tenant, "自删作者")
+    row = post(author, "被举报后自删", Visibility.PUBLIC)
+    _, reporter = soul(cn_tenant, "举报人")
+    reporter.post(f"{SOCIAL}/reports/", {"target_type": "POST", "target_id": str(row.pk), "reason": "SPAM"},
+                  format="json")
+    report = Report.objects.get(post=row)
+    assert author_client.delete(f"{SOCIAL}/posts/{row.pk}/").status_code == 204
+
+    res = officer_client(cn_admin_user).post(
+        f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "HIDE", "note": "违规"}, format="json"
+    )
+    assert res.status_code == 200, res.content
+    report.refresh_from_db()
+    assert report.resolution_note.startswith(mod.AUTHOR_DELETED_NOTE)
+
+
+def _move_soul(account, tenant):
+    type(account.soul).all_objects.filter(pk=account.soul_id).update(tenant=tenant)
+
+
+def test_a_mute_follows_the_soul_to_its_current_hall(cn_tenant, eu_tenant, eu_moderator, django_user_model):
+    """F-SOC-11: the old hall can no longer see or lift it, the new hall's officers can."""
+    cn_mod = django_user_model.objects.create(username="cn_mute_mod", role="MODERATOR", tenant=cn_tenant)
+    account, _ = soul(cn_tenant, "调走的灵魂")
+    mute = mod.mute_user(account.user, cn_tenant, 7, actor=cn_mod)
+    _move_soul(account, eu_tenant)
+
+    def ids(user):
+        return {r["id"] for r in officer_client(user).get(f"{MODERATION}/mutes/").json()["results"]}
+
+    assert str(mute.pk) in ids(eu_moderator) and str(mute.pk) not in ids(cn_mod)
+    assert officer_client(cn_mod).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json").status_code == 404
+    assert officer_client(eu_moderator).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json").status_code == 200
+
+
+def test_the_old_hall_cannot_mute_through_a_report_a_soul_that_has_moved_on(cn_tenant, eu_tenant, cn_admin_user):
+    account, _ = soul(cn_tenant, "被举报后调走")
+    _, reporter = soul(cn_tenant, "举报人")
+    row = post(account, "被举报的", Visibility.PUBLIC)
+    reporter.post(f"{SOCIAL}/reports/", {"target_type": "POST", "target_id": str(row.pk), "reason": "ABUSE"},
+                  format="json")
+    report = Report.objects.get(post=row)
+    _move_soul(account, eu_tenant)
+
+    res = officer_client(cn_admin_user).post(
+        f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "MUTE", "mute_days": 3, "note": "x"}, format="json"
+    )
+    assert res.status_code == 404, res.content
+    assert not SocialMute.objects.filter(user=account.user).exists()

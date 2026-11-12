@@ -20,4 +20,5 @@ A button is hidden or refused for one of two reasons.
   - Actions on another administrator's account: only an administrator who belongs to no hall, after entering their own two-step code.
   - While viewing as someone else, every write is unavailable.
   - Death sync: its data is for administrators only.
+  - The "Show" switch of a menu button (Menu management > Menu buttons) only controls whether the button is displayed; the server does not refuse the action because of it, so a user holding the permission can still perform it by calling the API directly. To forbid an action, take the permission away.
 If you should hold a permission you lack, ask an administrator ("管理员" / Administrator); only an administrator who belongs to no hall can change the permission matrix.

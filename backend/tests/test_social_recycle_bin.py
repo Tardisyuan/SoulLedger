@@ -61,7 +61,7 @@ def test_officer_deleted_post_and_comment_are_listed_and_restorable(cn_tenant, c
     assert ("social_post", str(target.pk)) not in rows and ("social_comment", str(comment.pk)) not in rows
 
 
-def test_a_souls_own_delete_is_not_in_the_bin_and_cannot_be_restored_through_it(cn_tenant, admin_user):
+def test_a_souls_own_delete_is_in_the_bin_and_an_admin_can_restore_it(cn_tenant, admin_user):
     author, author_client = soul(cn_tenant, "自删者")
     own = post(author, "我自己删的帖子", Visibility.PUBLIC)
     live = post(author, "有评论的帖子", Visibility.PUBLIC)
@@ -73,15 +73,16 @@ def test_a_souls_own_delete_is_not_in_the_bin_and_cannot_be_restored_through_it(
     own_comment = Comment.all_objects.get(pk=own_comment.pk)
     assert own.is_deleted and own_comment.is_deleted
 
+    # F-SOC-15 (user decision 2026-11-12): the author's own delete is in the bin and comes back through it.
     rows = _bin(admin_user)
-    assert ("social_post", str(own.pk)) not in rows
-    assert ("social_comment", str(own_comment.pk)) not in rows
+    assert ("social_post", str(own.pk)) in rows
+    assert ("social_comment", str(own_comment.pk)) in rows
 
     for row in (own, own_comment):
         res = officer_client(admin_user).post(f"{BIN}restore/", {"cascade_id": str(row.delete_cascade_id)}, format="json")
-        assert res.status_code == 404, res.content
-    assert Post.all_objects.get(pk=own.pk).is_deleted
-    assert Comment.all_objects.get(pk=own_comment.pk).is_deleted
+        assert res.status_code == 200, res.content
+    assert not Post.all_objects.get(pk=own.pk).is_deleted
+    assert not Comment.all_objects.get(pk=own_comment.pk).is_deleted
 
 
 def test_the_bin_listing_is_tenant_scoped_for_social_rows(cn_tenant, eu_tenant, cn_moderator, django_user_model):
@@ -96,3 +97,31 @@ def test_the_bin_listing_is_tenant_scoped_for_social_rows(cn_tenant, eu_tenant, 
     listed = {str(e["id"]) for e in list_bin_entries(tenant=cn_tenant) if e["entity_type"] == "social_post"}
     assert listed == {str(cn_post.pk)}
     assert restore_cascade(Post.all_objects.get(pk=eu_post.pk).delete_cascade_id) == 1
+
+
+def _picture_post(cn_tenant, cn_moderator, name, filename):
+    from apps.social.models import PostMedia
+
+    author, _ = soul(cn_tenant, name)
+    target = post(author, f"带图的帖子{name}", Visibility.PUBLIC)
+    PostMedia.objects.create(post=target, uploader=author, file=filename, width=1, height=1,
+                             byte_size=1, content_type="image/jpeg")
+    mod.moderate_content(target, "DELETE", actor=cn_moderator, reason="违规")
+    return target, str(Post.all_objects.get(pk=target.pk).delete_cascade_id)
+
+
+def test_a_hall_admin_restores_an_officer_deleted_post_with_pictures(cn_tenant, cn_moderator):
+    """F-SOC-03 / F-ADM-02: PostMedia has no tenant column; `_cascade_outside` read that as "another hall's row"
+    and answered 0 (a 404) for every picture post a hall-bound ADMIN tried to restore."""
+    from apps.social.models import PostMedia
+
+    target, cascade = _picture_post(cn_tenant, cn_moderator, "甲", "post_media/x.jpg")
+    assert restore_cascade(cascade, tenant=cn_tenant) == 2
+    assert not Post.all_objects.get(pk=target.pk).is_deleted
+    assert not PostMedia.all_objects.get(post=target).is_deleted
+
+
+def test_another_halls_admin_still_cannot_restore_a_picture_post(cn_tenant, eu_tenant, cn_moderator):
+    target, cascade = _picture_post(cn_tenant, cn_moderator, "乙", "post_media/y.jpg")
+    assert restore_cascade(cascade, tenant=eu_tenant) == 0
+    assert Post.all_objects.get(pk=target.pk).is_deleted

@@ -108,6 +108,13 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         the recycle bin's reference-data example (Stage 4 §4.7) and the bin
         listing shows both."""
         menu = self.get_object()
+        # A live child under a deleted parent vanishes from the sidebar tree, and the bin's hard delete later
+        # cascades over it for real (F-ADM-03). Delete the children first.
+        if Menu.objects.filter(parent=menu).exists():
+            return Response(
+                {"code": "has_children", "error": "Delete or move its sub-menus first."},
+                status=status.HTTP_409_CONFLICT,
+            )
         reason = request.data.get("reason", "") if hasattr(request, "data") else ""
         menu.soft_delete(user=request.user, reason=reason)
         return Response(status=status.HTTP_204_NO_CONTENT)

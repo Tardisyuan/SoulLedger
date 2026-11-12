@@ -87,7 +87,26 @@ export function resetOverlay(): void {
   }
 }
 
-export const currentRole = (): DemoRole =>
+/**
+ * What a visitor leaves in the browser besides the overlay: remembered filters and columns (`soulledger.<page>.filters`),
+ * recent searches, the claim queue's "deferred this session" (`soulledger-queue-…`, session storage), drafts
+ * (`soulledger_…`). The keys use all three separators; the preferences (theme, language, density, nav mode), the
+ * role and the demo's own entrance flags stay.
+ */
+const VISITOR_STATE = /^soulledger[._-](?!theme|last_tenant|demo_role|demo_tour|demo-|density|locale|nav-mode)/;
+
+export function clearVisitorState(): void {
+  for (const kind of ["localStorage", "sessionStorage"] as const) {
+    try {
+      const area = window[kind];
+      for (const key of Object.keys(area)) if (VISITOR_STATE.test(key)) area.removeItem(key);
+    } catch {
+      /* no storage: nothing to clear */
+    }
+  }
+}
+
+export const currentRole =(): DemoRole =>
   (storageGet("session", ROLE_KEY) || storageGet("local", ROLE_KEY) || "judge") as DemoRole;
 
 export function setRole(role: DemoRole): void {

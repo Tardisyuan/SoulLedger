@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   useHandledContent,
+  useModeratedContent,
   useModerationReports,
   useSensitiveWords,
   useSocialMutes,
@@ -58,6 +59,10 @@ function useSegmentInUrl(): [Segment, (next: Segment) => void] {
   return [current, change];
 }
 
+function sumCounts(...counts: (number | undefined)[]): number | undefined {
+  return counts.some((c) => c === undefined) ? undefined : counts.reduce<number>((a, c) => a + (c ?? 0), 0);
+}
+
 function ModerationPageContent() {
   const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
@@ -67,7 +72,12 @@ function ModerationPageContent() {
   // The switch's counts. Same query keys as the sections' first page, so these
   // are the requests the sections would make anyway, not extra ones.
   const counts: Record<Segment, number | undefined> = {
-    reports: useModerationReports({}).data?.count,
+    // Reports plus word-list holds (PENDING): the queue ReportsReview shows holds both (F-SOC-04).
+    reports: sumCounts(
+      useModerationReports({}).data?.count,
+      useModeratedContent("posts", {}).data?.count,
+      useModeratedContent("comments", {}).data?.count,
+    ),
     words: useSensitiveWords().data?.count,
     mutes: useSocialMutes({ status: "ACTIVE" }).data?.count, // 禁言中,与分区的默认筛选同一个 key
     handled: useHandledContent({}).data?.count,

@@ -112,8 +112,10 @@ class OrganizationViewSet(
         名下的灵魂 / 审判(数据范围,owner_org 是 PROTECT)同样拦下;`?move_to=<机构 id>` 先把它们
         (连回收站里的)转到同殿、在操作人数据范围内的另一个机构,再删,一个事务(B3a)。子机构与人员不随 move_to 走。"""
         org = self.get_object()
-        units = org.children.count()
-        people = org.users.exclude(role="SOUL").count()
+        # Soft-deleted rows are invisible on every page, so they must not block a delete (F-ADM-01):
+        # these reverse managers are the unfiltered ones.
+        units = org.children.filter(is_deleted=False).count()
+        people = org.users.exclude(role="SOUL").filter(is_deleted=False).count()
         souls = org.owned_souls.filter(is_deleted=False).count()
         judgments = org.owned_judgments.filter(is_deleted=False).count()
         move_to = request.query_params.get("move_to")

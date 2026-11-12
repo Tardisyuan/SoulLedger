@@ -65,6 +65,8 @@ describe("菜单按钮配置页", () => {
     expect(group.getAllByRole("checkbox")).toHaveLength(souls.length);
     expect(group.getByText("soul.create")).toBeInTheDocument();
     expect(screen.getByText(tZh("menu_buttons.rule"))).toBeInTheDocument();
+    // F-ADM-18: the switch is display only; the page says so and points at revoking the permission.
+    expect(screen.getByTestId("menu-buttons-display-only")).toHaveTextContent(tZh("menu_buttons.display_only_note"));
     expect(document.querySelectorAll("tbody tr")).toHaveLength(WIRED_BUTTONS.length);
   });
 

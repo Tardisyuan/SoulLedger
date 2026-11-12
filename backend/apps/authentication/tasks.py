@@ -127,6 +127,10 @@ def notify_password_help(username, ip_address=None, user_agent=""):
 
     cache = {}
     recipients = [r for r in recipients if visible_to(r, user, cache)]
+    # An ADMIN target can only be reset by a hall-less ADMIN (`_admin_target_refusal`): telling the hall's own
+    # holders of user.manage sends them to a 403 (F-ADM-04). Fall through to the global-admin fallback below.
+    if user.role == "ADMIN":
+        recipients = []
     if not recipients:
         recipients = list(active.filter(role="ADMIN", tenant__isnull=True).order_by("pk"))
 

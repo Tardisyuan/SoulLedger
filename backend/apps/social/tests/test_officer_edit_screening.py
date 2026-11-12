@@ -42,14 +42,16 @@ def _word(tenant, word, action):
     return SensitiveWord.objects.create(tenant=tenant, word=word, action=action)
 
 
-def test_create_with_review_word_starts_pending_and_counts_the_hit(world):
+def test_officer_post_with_review_word_is_published_not_stuck_pending(world):
+    """F-SOC-01: the moderation back office only sees souls' content, so an officer's
+    post parked in PENDING could never be released. REVIEW / HIDE do not apply to officers."""
     tenant, author, _ = world
     _word(tenant, "badword", SensitiveWordAction.REVIEW)
     r = _client(author, tenant).post(f"{BASE}/posts/", {"content": "a BadWord here"}, format="json")
     assert r.status_code == 201
     post = Post.objects.get(author=author)
-    assert post.moderation_status == ModerationStatus.PENDING
-    assert post.moderation_reason == "sensitive_word:badword"
+    assert post.moderation_status == ModerationStatus.PUBLISHED
+    assert post.moderation_reason == ""
     assert SensitiveWordDailyHit.objects.get().count == 1
 
 
@@ -78,7 +80,7 @@ def test_edit_clean_to_hit_is_hidden_and_stamps_edited_at(world):
     r = _client(author, tenant).patch(f"{BASE}/posts/{post.pk}/", {"content": "now badword"}, format="json")
     assert r.status_code == 200
     post.refresh_from_db()
-    assert post.moderation_status == ModerationStatus.HIDDEN
+    assert post.moderation_status == ModerationStatus.PUBLISHED  # F-SOC-01: HIDDEN would be a dead end
     assert post.edited_at is not None
     assert r.data["edited_at"] is not None
 
@@ -132,13 +134,13 @@ def test_edited_at_is_in_list_and_detail(world):
     assert c.get(f"{BASE}/posts/").data["results"][0]["edited_at"] is None
 
 
-def test_officer_comment_with_review_word_starts_pending(world):
+def test_officer_comment_with_review_word_is_published(world):
     tenant, author, other = world
     _word(tenant, "badword", SensitiveWordAction.REVIEW)
     post = Post.objects.create(author=author, content="p", tenant=tenant)
     r = _client(other, tenant).post(f"{BASE}/comments/", {"post": str(post.pk), "content": "badword"}, format="json")
     assert r.status_code == 201
-    assert Comment.objects.get().moderation_status == ModerationStatus.PENDING
+    assert Comment.objects.get().moderation_status == ModerationStatus.PUBLISHED
     assert SensitiveWordDailyHit.objects.get().count == 1
 
 
@@ -149,8 +151,8 @@ def test_officer_comment_with_review_word_starts_pending(world):
     "action,expected",
     [
         (SensitiveWordAction.MASK, "masked"),
-        (SensitiveWordAction.REVIEW, "pending_review"),
-        (SensitiveWordAction.HIDE, "hidden"),
+        (SensitiveWordAction.REVIEW, "masked"),  # officers: only MASK is enforced (F-SOC-01)
+        (SensitiveWordAction.HIDE, "masked"),
     ],
 )
 def test_post_comment_and_edit_responses_carry_the_outcome_and_never_the_word(world, action, expected):
@@ -186,11 +188,11 @@ def test_comment_count_follows_the_comments_status_for_everyone_including_the_au
     from apps.social.moderation import moderate_content
 
     tenant, author, other = world
-    _word(tenant, "badword", SensitiveWordAction.REVIEW)
     post = Post.objects.create(author=author, content="p", tenant=tenant)
     _client(other, tenant).post(f"{BASE}/comments/", {"post": str(post.pk), "content": "ok"}, format="json")
-    _client(other, tenant).post(f"{BASE}/comments/", {"post": str(post.pk), "content": "badword"}, format="json")
-    pending = Comment.objects.get(content="badword")
+    pending = Comment.objects.create(
+        post=post, author=other, content="badword", tenant=tenant, moderation_status=ModerationStatus.PENDING
+    )
 
     def counts():
         return {
@@ -210,10 +212,11 @@ def test_comment_count_follows_the_comments_status_for_everyone_including_the_au
 
 def test_comment_serializers_carry_moderation_status_for_the_author(world):
     tenant, author, other = world
-    _word(tenant, "badword", SensitiveWordAction.REVIEW)
     post = Post.objects.create(author=author, content="p", tenant=tenant)
     c = _client(other, tenant)
-    c.post(f"{BASE}/comments/", {"post": str(post.pk), "content": "badword"}, format="json")
+    Comment.objects.create(
+        post=post, author=other, content="badword", tenant=tenant, moderation_status=ModerationStatus.PENDING
+    )
     rows = c.get(f"{BASE}/comments/", {"post": str(post.pk)}).data["results"]
     assert [r["moderation_status"] for r in rows] == ["PENDING"]
     assert _client(author, tenant).get(f"{BASE}/comments/", {"post": str(post.pk)}).data["results"] == []
@@ -221,10 +224,9 @@ def test_comment_serializers_carry_moderation_status_for_the_author(world):
 
 def test_authors_pending_post_is_visible_to_the_author_only(world):
     tenant, author, other = world
-    _word(tenant, "badword", SensitiveWordAction.REVIEW)
-    r = _client(author, tenant).post(f"{BASE}/posts/", {"content": "badword", "visibility": "PUBLIC"}, format="json")
-    assert r.status_code == 201
-    pid = str(Post.objects.get(author=author).pk)
+    pid = str(Post.objects.create(
+        author=author, content="badword", tenant=tenant, moderation_status=ModerationStatus.PENDING
+    ).pk)
 
     def ids(who):
         return {p["id"] for p in _client(who, tenant).get(f"{BASE}/posts/").data["results"]}
@@ -232,3 +234,16 @@ def test_authors_pending_post_is_visible_to_the_author_only(world):
     assert pid in ids(author)
     assert pid not in ids(other)
     assert _client(other, tenant).get(f"{BASE}/posts/{pid}/").status_code == 404
+
+
+def test_editing_a_comment_is_screened_like_a_new_one(world):
+    """F-SOC-02: PATCH on a comment skipped the word list entirely."""
+    tenant, author, other = world
+    _word(tenant, "badword", SensitiveWordAction.MASK)
+    post = Post.objects.create(author=author, content="p", tenant=tenant)
+    comment = Comment.objects.create(post=post, author=other, content="fine", tenant=tenant)
+    r = _client(other, tenant).patch(f"{BASE}/comments/{comment.pk}/", {"content": "now badword"}, format="json")
+    assert r.status_code == 200
+    comment.refresh_from_db()
+    assert "badword" not in comment.content
+    assert SensitiveWordDailyHit.objects.get().count == 1

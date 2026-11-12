@@ -113,6 +113,11 @@ def _cascade_outside(cascade_id, tenant) -> bool:
     tenant column, a NULL tenant). A hall's ADMIN restores and destroys its own hall's rows only (2026-10-29)."""
     for model in _soft_deletable_models():
         rows = _unfiltered_manager(model).filter(delete_cascade_id=cascade_id, is_deleted=True)
+        via = getattr(model, "RECYCLE_TENANT_PATH", None)
+        if via:  # no tenant column of its own: the hall is read through the parent row (PostMedia -> post)
+            if rows.exclude(**{via: tenant.pk}).exists():
+                return True
+            continue
         if not any(f.name == "tenant" for f in model._meta.get_fields()):
             if rows.exists():
                 return True
