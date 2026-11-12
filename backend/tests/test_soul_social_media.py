@@ -498,7 +498,7 @@ class TestModeration:
         assert (detail["media"], detail["media_count"]) == ([], 0)
 
 
-# ── 删除:官员删进回收站,作者删是真删 ──────────────────────────────────────
+# ── 删除:官员删与作者自删都进回收站 ──────────────────────────────────────
 
 
 class TestDeletion:
@@ -546,8 +546,8 @@ class TestDeletion:
         assert not PostMedia.all_objects.exists()
         assert stored(media_root) == []
 
-    def test_a_soul_deleting_its_own_post_really_deletes_the_files(
-        self, cn_tenant, media_root, django_capture_on_commit_callbacks,
+    def test_a_soul_deleting_its_own_post_puts_post_and_pictures_in_the_bin(
+        self, cn_tenant, media_root, admin_user, django_capture_on_commit_callbacks,
     ):
         _, author = soul(cn_tenant, "作者")
         body = post_with_images(author, 2)
@@ -556,12 +556,17 @@ class TestDeletion:
         assert len(stored(media_root)) == 3
         with django_capture_on_commit_callbacks(execute=True):
             assert author.delete(f"{SOCIAL}/posts/{body['id']}/").status_code == 204
-        assert not PostMedia.all_objects.filter(post_id=body["id"]).exists()
-        assert len(stored(media_root)) == 1
+        # F-SOC-15: soft-deleted under one cascade, files kept until the bin's hard delete.
+        rows = PostMedia.all_objects.filter(post_id=body["id"])
+        assert rows.count() == 2 and all(m.is_deleted for m in rows)
+        assert len(stored(media_root)) == 3
         assert [fetch(u)[0] for u in urls] == [404, 404]
         assert fetch(urls_for(author, keep["id"])[0])[0] == 200
-        # 不在回收站里。
-        assert not [e for e in list_bin_entries(is_admin=True) if str(e["id"]) == body["id"]]
+        (entry,) = [e for e in list_bin_entries(is_admin=True) if str(e["id"]) == body["id"]]
+        assert entry["dependent_count"] == 2
+        res = officer_client(admin_user).post(f"{BIN}restore/", {"cascade_id": entry["cascade_id"]}, format="json")
+        assert res.status_code == 200 and res.json() == {"restored": 3}, res.content
+        assert [fetch(u)[0] for u in urls] == [200, 200]
 
 
 # ── 孤儿清理 ─────────────────────────────────────────────────────────────

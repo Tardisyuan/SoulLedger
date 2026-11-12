@@ -297,12 +297,12 @@ def delete_own_post(user, post_id):
         raise _not_found()
     if post.author_id != user.pk:
         raise SocialError("只能删除自己的帖子。", "not_author", 403)
-    from apps.social import media as post_media
+    from apps.core.recycle_bin import cascade_soft_delete
 
+    # 作者自己删也进回收站(2026-11-12,F-SOC-15):图片同一个 cascade 软删,恢复时一起回来,
+    # 彻底删除(30 天后)才真删行与文件。
     with transaction.atomic():
-        post.soft_delete(user=user, reason="author")
-        # 作者自己删:不进回收站、没有恢复路径,所以图片的行与文件真删。
-        post_media.purge_for_post(post)
+        cascade_soft_delete(post, post.media.filter(is_deleted=False), user=user, reason="author")
 
 
 def _ensure_not_sealed(post):

@@ -61,7 +61,7 @@ def test_officer_deleted_post_and_comment_are_listed_and_restorable(cn_tenant, c
     assert ("social_post", str(target.pk)) not in rows and ("social_comment", str(comment.pk)) not in rows
 
 
-def test_a_souls_own_delete_is_not_in_the_bin_and_cannot_be_restored_through_it(cn_tenant, admin_user):
+def test_a_souls_own_delete_is_in_the_bin_and_an_admin_can_restore_it(cn_tenant, admin_user):
     author, author_client = soul(cn_tenant, "自删者")
     own = post(author, "我自己删的帖子", Visibility.PUBLIC)
     live = post(author, "有评论的帖子", Visibility.PUBLIC)
@@ -73,15 +73,16 @@ def test_a_souls_own_delete_is_not_in_the_bin_and_cannot_be_restored_through_it(
     own_comment = Comment.all_objects.get(pk=own_comment.pk)
     assert own.is_deleted and own_comment.is_deleted
 
+    # F-SOC-15 (user decision 2026-11-12): the author's own delete is in the bin and comes back through it.
     rows = _bin(admin_user)
-    assert ("social_post", str(own.pk)) not in rows
-    assert ("social_comment", str(own_comment.pk)) not in rows
+    assert ("social_post", str(own.pk)) in rows
+    assert ("social_comment", str(own_comment.pk)) in rows
 
     for row in (own, own_comment):
         res = officer_client(admin_user).post(f"{BIN}restore/", {"cascade_id": str(row.delete_cascade_id)}, format="json")
-        assert res.status_code == 404, res.content
-    assert Post.all_objects.get(pk=own.pk).is_deleted
-    assert Comment.all_objects.get(pk=own_comment.pk).is_deleted
+        assert res.status_code == 200, res.content
+    assert not Post.all_objects.get(pk=own.pk).is_deleted
+    assert not Comment.all_objects.get(pk=own_comment.pk).is_deleted
 
 
 def test_the_bin_listing_is_tenant_scoped_for_social_rows(cn_tenant, eu_tenant, cn_moderator, django_user_model):

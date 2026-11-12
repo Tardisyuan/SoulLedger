@@ -125,7 +125,7 @@ class PostMedia(SoftDeleteMixin, models.Model):
     **租户经帖子**(`post__tenant`),没有自己的 tenant 列;未挂帖子的图片只属于上传者。
     **可见性也经帖子**:没有自己的审核状态 —— 帖子被隐藏,它的图片就对灵魂不可见
     (`media.may_view`);帖子被官员删除,图片以同一个 `delete_cascade_id` 一起软删除,
-    随回收站的恢复一起回来。作者自己删帖,图片的行与文件真删。
+    随回收站的恢复一起回来。作者自己删帖同样进回收站(2026-11-12),图片同一个 cascade。
     """
     #: recycle_bin._cascade_outside: this model has no tenant column, its hall is its post's.
     RECYCLE_TENANT_PATH = "post__tenant_id"

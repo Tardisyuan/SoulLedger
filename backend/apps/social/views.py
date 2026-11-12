@@ -36,6 +36,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import TenantPermission
+from apps.core.recycle_bin import cascade_soft_delete
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.social import media as post_media
@@ -196,13 +197,11 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             serializer.context["screening"] = screening.outcome
 
     def perform_destroy(self, instance):
-        """The author's own delete never reaches the recycle bin (apps/social/apps.py
-        registers officer-moderated deletes only), so — as for a soul deleting its
-        own post — the images' rows and files really go."""
+        """The author's own delete goes to the recycle bin too, pictures in the same cascade (F-SOC-15)."""
         was_seen = _seen_by_others(instance)
         with transaction.atomic():
-            super().perform_destroy(instance)
-            post_media.purge_for_post(instance)
+            # The recycle bin holds the author's own deletes too (F-SOC-15): the pictures go with the post.
+            cascade_soft_delete(instance, instance.media.filter(is_deleted=False), user=self.request.user, reason="author")
             if was_seen:
                 _announce("POST_DELETED", instance.tenant, {"post_id": str(instance.pk), "user_id": str(instance.author_id)})
 
