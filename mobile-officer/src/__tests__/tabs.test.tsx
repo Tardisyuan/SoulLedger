@@ -148,7 +148,7 @@ describe("the other tabs have the same four states", () => {
     expect(await screen.findByTestId("state-denied")).toBeTruthy();
   });
 
-  it("judgments: an overdue case in hand carries 「! 超期 N 日」, a fresh one 「◇ 审判中 · N 日」", async () => {
+  it("judgments: an overdue case in hand carries 「! 超期 N 日」; one not yet final 「◇ 待宣判」 with its deadline on the second line", async () => {
     mockList.mockImplementation(
       byGroup({
         mine: [
@@ -162,8 +162,24 @@ describe("the other tabs have the same four states", () => {
     expect(within(late).getByText("! 超期 1 日")).toBeTruthy();
     expect(within(late).getByText("CN-2026-0007")).toBeTruthy();
     expect(within(late).getByText("李白")).toBeTruthy();
-    expect(within(screen.getByTestId("queue-row-j2")).getByText("◇ 审判中 · 3 日")).toBeTruthy();
+    expect(within(late).queryByText(/期限/)).toBeNull(); // the tag says it already
+    expect(within(screen.getByTestId("queue-row-j2")).getByText("◇ 待宣判")).toBeTruthy();
+    expect(within(screen.getByTestId("queue-row-j2")).getByText(/ · 期限 3 日$/)).toBeTruthy();
     expect(within(screen.getByTestId("queue-row-j2")).queryByText(/超期/)).toBeNull();
+  });
+
+  it("judgments: a stale case says 滞留 on its second line; a fresh one does not", async () => {
+    mockList.mockImplementation(
+      byGroup({
+        mine: [
+          { id: "j1", case_number: "CN-1", soul_name: "李白", court: "一殿", is_final: false, stale_since: "2026-10-01T01:00:00Z" },
+          { id: "j2", case_number: "CN-2", soul_name: "杜甫", court: "一殿", is_final: false, stale_since: null },
+        ],
+      })
+    );
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    expect(within(await screen.findByTestId("queue-row-j1")).getByText(/ · 滞留$/)).toBeTruthy();
+    expect(within(screen.getByTestId("queue-row-j2")).queryByText(/滞留/)).toBeNull();
   });
 
   const UNCLAIMED = { data: { results: [{ id: "j9", case_number: "CN-9", soul_name: "王九", court: "一殿", is_final: true }] } };
@@ -209,7 +225,7 @@ describe("the other tabs have the same four states", () => {
     expect(screen.queryByTestId("queue-claim-j9")).toBeNull();
   });
 
-  it("judgments: held in 枉死城 — 候审中 and no 认领; past the date 认领 is back", async () => {
+  it("judgments: held in 枉死城 — 到期后可认领, 枉死 · 候至 and no 认领; past the date 认领 is back", async () => {
     mockList.mockImplementation(
       byGroup({
         unclaimed: [
@@ -220,8 +236,11 @@ describe("the other tabs have the same four states", () => {
     );
     renderOfficer(<QueueTab onOpen={() => {}} />);
     const held = await screen.findByTestId("queue-row-j7");
-    expect(within(held).getByText("候审中 · 不计期限")).toBeTruthy();
+    expect(within(held).getByText("‖ 到期后可认领")).toBeTruthy();
+    expect(within(held).getByText(/ · 枉死 · 候至 2999年 · 11月3日$/)).toBeTruthy();
+    expect(within(held).queryByText(/2999-11-03/)).toBeNull();
     expect(screen.queryByTestId("queue-claim-j7")).toBeNull();
+    expect(within(screen.getByTestId("queue-row-j8")).getByText(/ · 枉死$/)).toBeTruthy();
     expect(screen.getByTestId("queue-claim-j8")).toBeTruthy();
   });
 
@@ -541,16 +560,18 @@ describe("the 案卷台", () => {
     await waitFor(() => expect(screen.getByTestId("desk-overview")).toHaveTextContent("今日 7 件 · 无超期"));
   });
 
-  it("the three groups in order, 他人手上 not among them", async () => {
+  it("the four groups in order, 他人手上 last and read-only", async () => {
     const row = (id: string) => ({ id, case_number: `CN-${id}`, soul_name: id, court: "一殿", is_final: true });
     mockList.mockImplementation(async (p: { group: string }) => ({ data: { results: p.group === "others" ? [row("o")] : [row(p.group)] } }));
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    await screen.findByTestId("queue-row-unclaimed");
+    await screen.findByTestId("queue-row-o");
     const drawn = screen.root.findAll((n) => typeof n.props.testID === "string" && /^desk-group-/.test(n.props.testID)).map((n) => n.props.testID);
-    expect([...new Set(drawn)]).toEqual(["desk-group-mine", "desk-group-deferred", "desk-group-unclaimed"]);
+    expect([...new Set(drawn)]).toEqual(["desk-group-mine", "desk-group-deferred", "desk-group-unclaimed", "desk-group-others"]);
     expect(within(screen.getByTestId("desk-group-mine")).getByText("我认领")).toBeTruthy();
-    expect(screen.queryByTestId("queue-row-o")).toBeNull();
-    expect(mockList).not.toHaveBeenCalledWith({ group: "others" });
+    expect(within(screen.getByTestId("desk-group-others")).getByText("他人手上")).toBeTruthy();
+    expect(within(screen.getByTestId("queue-row-o")).getByText("◌ 他人认领")).toBeTruthy();
+    expect(screen.queryByTestId("queue-claim-o")).toBeNull();
+    expect(screen.queryByTestId("queue-release-o")).toBeNull();
   });
 
   it("source chips: only the sources the rows have, with counts; a chip filters the groups", async () => {
@@ -701,6 +722,7 @@ describe("the judgments tab across a dropped network", () => {
     cacheWrite("list:queue:mine", { results: [{ id: "j-old", case_number: "CN-0", soul_name: "旧", court: "一殿", is_final: true }] });
     cacheWrite("list:queue:deferred", { results: [] });
     cacheWrite("list:queue:unclaimed", { results: [] });
+    cacheWrite("list:queue:others", { results: [] });
     mockCounts.mockRejectedValueOnce(new Error("Network Error")).mockResolvedValue({ data: { mine: 3, unclaimed: 0, others: 0, deferred: 0 } });
     mockList.mockImplementation(async (p: { group: string }) => ({
       data: { results: p.group === "mine" ? [{ id: "j-new", case_number: "CN-1", soul_name: "新", court: "一殿", is_final: true }] : [] },

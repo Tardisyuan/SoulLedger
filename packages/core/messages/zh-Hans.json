@@ -8078,9 +8078,12 @@
       "groups": {
         "mine": "我认领",
         "deferred": "待定",
-        "unclaimed": "待认领"
+        "unclaimed": "待认领",
+        "others": "他人手上"
       },
       "tag": {
+        "others": "他人认领",
+        "awaiting": "待宣判",
         "reviewing": "审判中",
         "returned": "退回重审",
         "overdue": "超期 {{n}} 日"
