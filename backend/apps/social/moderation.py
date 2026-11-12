@@ -593,6 +593,11 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
         elif resolution == ReportResolution.MUTE:
             if mute_days is None:
                 raise SocialError("禁言须给出天数。", "invalid_days", 400)
+            # Same check as creating a mute: only a soul that is in this hall now (F-SOC-11).
+            from apps.social.soul_circle import souls_in
+
+            if not souls_in(row.tenant, include_retired=True).filter(pk=row.target_user_id).exists():
+                raise SocialError("对象已不在本文明。", "not_found", 404)
             mute_user(row.target_user, row.tenant, mute_days, actor=actor, request=request, reason=note)
         elif resolution == ReportResolution.WARN:
             publish_event("SOCIAL_WARNED", row.tenant, [row.target_user_id], {
