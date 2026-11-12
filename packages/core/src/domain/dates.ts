@@ -10,7 +10,7 @@
  * had a type-only dependency on the CSS layer. `cn()` stays in the frontend;
  * this comes here.
  */
-import { DEFAULT_LOCALE, isLocale, type Locale } from "../config/locale";
+import { BCP47_FOR_LOCALE, DEFAULT_LOCALE, isLocale, type Locale } from "../config/locale";
 
 export interface HistoricalDate {
   year: number;
@@ -207,3 +207,29 @@ export const pad2 = (n: number): string => String(n).padStart(2, "0");
 export const hhmm = (d: Date): string => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 /** `MM-DD`, device time. */
 export const mmdd = (d: Date): string => `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+/**
+ * 列表里的日期(第三十批「卷宗」第 1 步,Design v4 第三十批回复第三节「日期」):当年的省年份、不写秒;跨年的写全年。
+ * zh-Hans「10月28日 14:05」/「2025年10月28日 14:05」,en「Oct 28, 14:05」/「Oct 28, 2025, 14:05」;
+ * `time: false` 只写日子。显示用 sans + tabular-nums、不换行 —— 那是调用处的类(`whitespace-nowrap tabular-nums`)。
+ * 「当年」按设备本地时间判断(与 `localDateString` 同一个钟)。读不出的值返回 null,由调用处画 MissingValue。
+ *
+ * ponytail: 走 `Intl`,所以只给网页用;React Native 没有完整 ICU 时 `month: "short"` 可能被忽略(见上面月名表的
+ * 第 2 条),App 要用时先换成表驱动。
+ */
+export function formatListDate(
+  value: Date | string | number | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+  { time = true, now = new Date() }: { time?: boolean; now?: Date } = {},
+): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  const options: Intl.DateTimeFormatOptions = {
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+    month: "short",
+    day: "numeric",
+    ...(time ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" } : {}),
+  };
+  return new Intl.DateTimeFormat(BCP47_FOR_LOCALE[isLocale(locale) ? locale : DEFAULT_LOCALE], options).format(date);
+}

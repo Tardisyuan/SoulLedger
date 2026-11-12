@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { formatListDate } from "@soulledger/core/domain/dates";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { Suspense, useState } from "react";
 import Link from "next/link";
@@ -78,7 +79,7 @@ function SoulFilterChip({ soulId, onClear }: { soulId: string; onClear: () => vo
 }
 
 function JudgmentQueuePageContent() {
-  const { t, locale, formatDate } = useI18n();
+  const { t, locale } = useI18n();
   const hall = useHall(t("plaque.office.trials"));
   usePlaque({ hall });
   const buttonOn = useMenuButtonConfig();
@@ -330,8 +331,9 @@ function JudgmentQueuePageContent() {
               {columnVis.isVisible("verdict") && <td className="px-3 whitespace-nowrap">
                 {judgment.verdict && <VerdictBadge verdict={judgment.verdict} civilization={judgment.civilization} />}
               </td>}
-              {columnVis.isVisible("created_at") && <td className="px-3 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
-                {formatDate(judgment.concluded_at ?? judgment.created_at)}
+              {columnVis.isVisible("created_at") && <td className="px-3 text-right text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
+                {/* 第三十批:列表日期当年省年份、跨年写全年(core `formatListDate`),sans + tabular-nums。 */}
+                {formatListDate(judgment.concluded_at ?? judgment.created_at, locale, { time: false })}
               </td>}
             </>
           );
