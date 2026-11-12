@@ -240,6 +240,20 @@ class TestSending:
         res = upload(a_client, opened["id"])
         assert (res.status_code, res.json()["code"]) == (409, "images_unavailable")
 
+    def test_once_the_recipient_has_replied_in_matrix_either_side_can_send_images(self, cn_tenant, matrix):  # noqa: F811
+        """F-CHAT-01(流程走查 2026-11-12):乙的回信直接进 Synapse,`throttled` 没人改;`_speaker_check` 读旧值,
+        乙(它的文字从不经后端)永远发不了图,甲也要先经后端发一条文字。变异:去掉刷新那一步 → 两个 409,红。"""
+        a, a_client = ready_soul(cn_tenant, name="甲")
+        b, b_client = ready_soul(cn_tenant, name="乙")
+        cid = a_client.post(CONVERSATIONS, {"target_user": b.user_id}, format="json").data["id"]
+        assert a_client.post(f"{CONVERSATIONS}{cid}/messages/", {"body": "你好"}, format="json").status_code == 201
+        matrix.says(Conversation.objects.get(pk=cid).room_id, mxid(b))
+
+        assert upload(b_client, cid).status_code == 201
+        image_id = uploaded(a_client, cid)["id"]
+        assert send(a_client, image_id).status_code == 201
+        assert Conversation.objects.get(pk=cid).throttled is False
+
     def test_mutual_souls_can_send_each_other_images(self, cn_tenant, matrix):  # noqa: F811
         a, a_client = ready_soul(cn_tenant, name="甲")
         b, b_client = ready_soul(cn_tenant, name="乙")
