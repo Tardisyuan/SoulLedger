@@ -9984,6 +9984,7 @@
     "today": "Awaiting judgment {{n}}",
     "open_all": "Open all cases",
     "cross_title": "Across the realms",
+    "cross_since": "since {{date}}",
     "cross_none": "Nothing has crossed the realms yet.",
     "footer": "The ledger is for administrators; a judge sees the case desk of their own hall.",
     "legacy": "Previous overview",
@@ -10001,7 +10002,7 @@
       "pending": "Awaiting judgment",
       "none_pending": "Nothing awaits judgment today",
       "failed": "Could not load this column",
-      "month_unknown": "Done this month: no per-realm figure yet"
+      "month_none": "Done this month: no cases in this realm this month"
     }
   }
 }

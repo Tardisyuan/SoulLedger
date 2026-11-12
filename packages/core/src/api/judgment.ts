@@ -855,8 +855,10 @@ export const judgmentApi = {
     api.get<JudgmentQueueCounts>("/judgment/queue-counts/", { params }),
   /** Every court in the caller's scope (unfiltered, unpaginated) — the court filter's options. */
   courts: () => api.get<JudgmentCourt[]>("/judgment/courts/"),
-  /** v4 概览屏:未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案(殿的时区)。 */
-  hallStats: () => api.get<JudgmentHallStats>("/judgment/hall-stats/"),
+  /** v4 概览屏:未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案(殿的时区)。
+   *  `civilization`:只数这一文明的案子(总簿按文明分列);不给 = 整个殿。 */
+  hallStats: (civilization?: string) =>
+    api.get<JudgmentHallStats>("/judgment/hall-stats/", { params: civilization ? { civilization } : undefined }),
   /** v4 冥界年报:收了多少灵魂、有了去处、按文明、最久的一件、引用最多的条文、退回重审率、每月结案(殿的时区)。 */
   annual: (year?: number) => api.get<JudgmentAnnual>("/judgment/annual/", { params: year ? { year } : undefined }),
 };

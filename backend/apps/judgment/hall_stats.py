@@ -12,6 +12,8 @@
   `claimable_since` 为空的老案子按开案时间算。
 * `returned_this_month` —— 「退回重审」(用户 2026-11-06:两种都算):本月判 RETRY 的件数,加本月城隍「退回补正」
   的次数(`CITY_GOD_RETURNED` 事件;同一件退两次算两次)。
+* `?civilization=`(`narrowed`)—— 调用方已把 `queryset` 收窄到一个文明;上面每个数都只数这些案子,
+  退回事件只数这些案子的灵魂的。
 * `weeks` —— 近 12 周(周一起,含本周)每周结案数,与 13 周前那一周(`previous_quarter`,「上季同期」)。
 
 ponytail: 平均用时与分周在 Python 里算(本月与近 25 周的结案行);一殿一季上万件时改成数据库里分组。
@@ -38,7 +40,7 @@ def average_days(rows) -> float | None:
     return round(sum(spans) / len(spans) / 86400, 1) if spans else None
 
 
-def overview(queryset, pending_q, tenant, now=None) -> dict:
+def overview(queryset, pending_q, tenant, now=None, narrowed=False) -> dict:
     from apps.events.models import SoulEvent
 
     now = now or timezone.now()
@@ -58,8 +60,11 @@ def overview(queryset, pending_q, tenant, now=None) -> dict:
     avg_days = average_days(month_rows)
 
     tenant_ids = set(queryset.order_by().values_list("tenant_id", flat=True).distinct())
-    returned = sum(1 for *_rest, verdict in month_rows if verdict == "RETRY") + SoulEvent.objects.filter(
-        tenant_id__in=tenant_ids, event_type="CITY_GOD_RETURNED", create_time__gte=month_start).count()
+    returns = SoulEvent.objects.filter(tenant_id__in=tenant_ids, event_type="CITY_GOD_RETURNED",
+                                       create_time__gte=month_start)
+    if narrowed:  # `?civilization=`:只数这些案子的灵魂被退回的次数
+        returns = returns.filter(soul_id__in=queryset.values("soul_id"))
+    returned = sum(1 for *_rest, verdict in month_rows if verdict == "RETRY") + returns.count()
 
     week0 = today - timedelta(days=today.weekday()) - timedelta(weeks=WEEKS - 1)
     earliest = datetime.combine(week0 - timedelta(weeks=QUARTER_WEEKS), time.min, tzinfo=tz)

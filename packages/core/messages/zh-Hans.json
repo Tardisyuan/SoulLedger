@@ -9984,6 +9984,7 @@
     "today": "今日待审 {{n}}",
     "open_all": "打开全部案卷",
     "cross_title": "跨界往来",
+    "cross_since": "{{date}} 起",
     "cross_none": "还没有跨界往来。",
     "footer": "总簿只给管理员;判官看见的是自己那一殿的案卷台。",
     "legacy": "旧版概览",
@@ -10001,7 +10002,7 @@
       "pending": "今日待审",
       "none_pending": "今日没有待审的案卷",
       "failed": "没能读到这一栏",
-      "month_unknown": "本月已结:还没有分冥界的数"
+      "month_none": "本月已结:这个冥界本月没有案卷"
     }
   }
 }

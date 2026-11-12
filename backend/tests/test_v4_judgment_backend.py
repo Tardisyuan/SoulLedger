@@ -273,6 +273,32 @@ def test_hall_stats_average_leaves_out_time_on_hold(cn_judge, cn_tenant):
     assert cn_judge.get(f"{BASE}hall-stats/").data["avg_days"] == 2.0
 
 
+@pytest.mark.django_db
+def test_hall_stats_civilization_narrows_within_the_same_scope_and_refuses_an_unknown_one(cn_judge, cn_tenant, eu_tenant):
+    """总簿按文明分栏(`?civilization=`)。变异:views.py 不收窄 queryset → pending 2,红;
+    hall_stats 不按灵魂收窄退回事件 → EUROPEAN 的 returned 1,红;不校验 → 200,红。"""
+    chinese = _case(cn_tenant, name="地府之魂")
+    european_soul = Soul.objects.create(name="欧洲之魂", tenant=cn_tenant, current_state=SoulState.JUDGING)
+    Judgment.objects.create(soul=european_soul, civilization=Civilization.EUROPEAN, court="第四殿", tenant=cn_tenant)
+    SoulEvent.objects.create(soul=chinese.soul, tenant=cn_tenant, event_type="CITY_GOD_RETURNED",
+                             payload={"judgment_id": str(chinese.pk)})
+    # 别殿的同文明案子:收窄只在调用者的范围之内,不放宽租户。
+    eu_soul = Soul.all_objects.create(name="别殿之魂", tenant=eu_tenant, current_state=SoulState.JUDGING)
+    Judgment.all_objects.create(soul=eu_soul, civilization=Civilization.EUROPEAN, court="第一殿", tenant=eu_tenant)
+
+    whole = cn_judge.get(f"{BASE}hall-stats/").data
+    assert (whole["pending"], whole["returned_this_month"]) == (2, 1)
+
+    chinese_only = cn_judge.get(f"{BASE}hall-stats/", {"civilization": "CHINESE"}).data
+    assert (chinese_only["pending"], chinese_only["returned_this_month"]) == (1, 1)
+    european = cn_judge.get(f"{BASE}hall-stats/", {"civilization": "EUROPEAN"}).data
+    assert (european["pending"], european["returned_this_month"], european["month_done_pct"]) == (1, 0, 0)
+    egyptian = cn_judge.get(f"{BASE}hall-stats/", {"civilization": "EGYPTIAN"}).data
+    assert (egyptian["pending"], egyptian["month_done_pct"]) == (0, None)
+
+    assert cn_judge.get(f"{BASE}hall-stats/", {"civilization": "ATLANTEAN"}).status_code == 400
+
+
 # ── 冥界年报 ──────────────────────────────────────────────────────────────────────────────────
 
 

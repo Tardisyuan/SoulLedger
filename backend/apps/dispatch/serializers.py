@@ -560,6 +560,8 @@ class CrossTenantJudgmentListSerializer(serializers.ModelSerializer):
             "status",
             "concluded_at",
             "conclusion_type",
+            # 开案时间(只读,模型的 `create_time`):总簿「跨界往来」给未了结的标「某日起」。
+            "create_time",
         ]
 
 
