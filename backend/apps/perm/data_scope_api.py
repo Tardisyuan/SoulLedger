@@ -174,6 +174,7 @@ def role_data_scope(request, pk):
         before = role_config(role)
         replace_role_config(role, serializer.validated_data)
         after = role_config(role)
+        # `default_configured` 在比较里:只多 / 少一行默认 ALL 的保存(没配 ↔ 全部)显示一样,权限不一样,也要记。
         if after != before:
             AuditLog.objects.create(
                 tenant=getattr(request, "tenant", None),

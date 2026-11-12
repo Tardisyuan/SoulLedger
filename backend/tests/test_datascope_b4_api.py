@@ -116,6 +116,21 @@ def test_an_override_saved_on_an_unconfigured_role_adds_no_default_row(w, defaul
     assert data_scope.org_ids(w.judge, "judgment") == {w.a.pk}, "JUDGE 没配默认,兼任时不放宽"
 
 
+@pytest.mark.parametrize("start", ["unconfigured", "all"])
+def test_toggling_only_the_default_all_row_is_audited(w, start):
+    """没配 ↔ 显式全部:GET 的 default 两边都是 ALL,但兼任时结果不同,所以要记审计。"""
+    client = officer_client(w.admin)
+    if start == "all":
+        scope("JUDGE", "ALL")
+    body = {"overrides": []} if start == "all" else {"default": {"scope": "ALL"}, "overrides": []}
+    assert client.put(url(w.role), body, format="json").status_code == 200
+    row = AuditLog.objects.get(action=AuditAction.PERMISSION_CHANGE, resource="role", resource_id=str(w.role.pk))
+    change = row.changes["data_scope"]
+    assert change["old"]["default_configured"] is (start == "all")
+    assert change["new"]["default_configured"] is (start != "all")
+    assert change["old"]["default"] == change["new"]["default"] == {"scope": "ALL", "orgs": []}
+
+
 def test_copying_an_unconfigured_role_leaves_the_copy_unconfigured(w):
     """复制逐行照抄:源角色没配,副本也没有行(不会凭空多一行 ALL)。"""
     response = officer_client(w.admin).post(f"/api/v1/perm/roles/{w.role.pk}/copy/",
