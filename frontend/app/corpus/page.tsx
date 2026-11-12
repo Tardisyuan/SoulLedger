@@ -664,9 +664,10 @@ function Reading({
           </p>
           <span className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">{sigilSystemName(s.civilization)}</span>
         </div>
-        <h1 className="font-title text-lg mt-2">
+        {/* 二级标题:一页只有一个一级标题,是页头(PageHead)的;条文标题是面板标题那一档。 */}
+        <h2 className="font-title text-lg mt-2">
           <MarkHits text={s.display_title} query={highlight} current={current} />
-        </h1>
+        </h2>
         <p className="text-2xs text-[oklch(var(--color-ink-subtle))] mt-1">
           <DomainEnum namespace="judgment.statute_polarity" value={s.polarity} />
         </p>
