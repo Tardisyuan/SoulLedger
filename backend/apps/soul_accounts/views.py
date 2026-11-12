@@ -5,6 +5,8 @@
 并要求调用者正是初审节点指定的审批人。租户隔离全部经 `scope_to_tenant(field="soul__home_tenant")`:
 账号、初始密码与转生申请属于灵魂的**原属**租户(2026-09-17:跨文明调拨是暂居)。灵魂暂居他乡时,
 原属租户照常管理它的账号、审批它的转生申请;暂居租户看不到这三样。
+四个列表(账号、待交付凭据、转生申请、缩短冷却)再按调用者能看到的灵魂收窄(审计 P-10,用户 2026-11-11,
+`DataScopeFilter.through_soul`);详情、计数与按 id 的动作经 `get_queryset` / `get_object` 走同一个 queryset。
 """
 from django.db import transaction
 from django.db.models import Q
@@ -18,6 +20,7 @@ from rest_framework.views import APIView
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
+from apps.perm.filters import DataScopeFilter
 from apps.soul_accounts import mfa, rebirth
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import (
@@ -73,7 +76,7 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         # 回收站里的灵魂不上官员列表(只隐藏,账号与凭据的状态不动;恢复后原样回来)。
         qs = SoulAccount.objects.filter(soul__is_deleted=False).select_related(
             "soul", "user", "mfa").order_by("soul", "cycle")
-        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
+        return DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
 
     @extend_schema(request=ProvisionRequestSerializer,
                    responses={201: SoulAccountSerializer, 200: SoulAccountSerializer, 404: SoulErrorSerializer,
@@ -169,7 +172,7 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
         # 回收站里的灵魂不上待交付列表,也看不了明文、打不了交付单(只隐藏,凭据状态不动;恢复后原样回来)。
         qs = InitialCredential.objects.filter(soul__is_deleted=False).select_related(
             "soul", "account__user", "revealed_by", "delivered_by")
-        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
+        return DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
 
     @extend_schema(request=None, responses={200: RevealedCredentialSerializer, 409: SoulErrorSerializer,
                                             410: SoulErrorSerializer})
@@ -236,7 +239,7 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
         qs = RebirthApplication.objects.select_related(
             "soul__tenant", "soul__home_tenant", "workflow__current_node", "appeal_workflow__current_node"
         )
-        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
+        return DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
 
     @extend_schema(request=CrossCivilizationDecisionSerializer,
                    responses={200: OfficerRebirthApplicationSerializer, 403: SoulErrorSerializer,
@@ -275,7 +278,7 @@ class OfficerCooldownShorteningViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
         qs = CooldownShorteningRequest.objects.select_related(
             "soul__home_tenant", "application__soul__home_tenant", "decided_by"
         )
-        qs = scope_to_tenant(qs, self.request, field="soul__home_tenant")
+        qs = DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request, field="soul__home_tenant"))
         return self._ordered(qs) if self.action == "list" else qs
 
     @staticmethod

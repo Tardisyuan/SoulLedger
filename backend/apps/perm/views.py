@@ -769,10 +769,10 @@ def copy_role(request, pk):
         ]
         FieldPermission.objects.bulk_create(field_rules)
         # The role's data scope (数据范围 B4) goes with it: a copy of a hall-only judge stays hall-only.
-        from .data_scope_api import replace_role_config, role_config
+        from .data_scope_api import copy_role_rows, role_config
 
         scope_config = role_config(source)
-        replace_role_config(role, scope_config)
+        copy_role_rows(source, role)
         from apps.audit.models import AuditAction, AuditLog
 
         AuditLog.objects.create(

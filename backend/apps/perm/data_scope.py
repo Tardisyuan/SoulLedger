@@ -1,7 +1,8 @@
 """数据范围求解器(数据范围设计 B2,local-gates/rbac-2026-10-29/datascope-design.md「注册表」「执行点」)。
 
 一行可见 = 殿级隔离之后(`scope_to_tenant` 先跑),再满足下面任一条:
-  * 持有的某个角色对这项业务是「全部」—— 包括这个角色**没有任何配置行**(没配 = 全部,上线行为不变);
+  * 持有的某个角色对这项业务配成了「全部」;或者**所有**角色对这项业务都没有配置行(都没配 = 全部,上线行为不变)。
+    只要有一个角色配了,没配的那个角色不贡献「全部」(审计 P-12,用户 2026-11-11,见 `org_ids`);
   * 行的归属机构落在各角色机构集合的并集里(ORG = 本机构;ORG_CHILD = 本机构及下级;
     DEFINE = 所列机构**及其下级**;SELF = 空集);
   * 本人创建或被指派(`user_paths`)—— 任何范围下都可见,防流程卡死;
@@ -173,17 +174,25 @@ def org_ids(user, resource, cache=None):
     by_role = _rows(user, cache)
     if not by_role:
         return None  # 没有角色 = 没有配置行 = 全部(权限检查另管)
-    ids = set()
+    # 兼任的合并规则(审计 P-12,用户 2026-11-11):只有**所有**角色(主角色 + 兼任)对这项业务都没配,才是「全部」。
+    # 只要有一个角色配了范围,没配的角色不贡献「全部」,结果是配了的那些角色的并集 —— 否则给本机构的判官
+    # 兼一个没配范围的访客,他就看到全殿。配成 ALL 的(按业务覆盖的 ALL 行)仍然是全部。
+    # 显式设成「全部」的默认范围 2026-11-12 起存一行 ALL(`data_scope_api.replace_role_config`),所以它算全部;
+    # 此前设的「默认 ALL」没有行,与「没配」分不出,按没配算(不做迁移补行)。
+    ids, configured = set(), False
     for rows in by_role.values():
         row = rows.get(resource) or rows.get("")
-        if row is None or row.scope == ALL:
+        if row is None:
+            continue
+        configured = True
+        if row.scope == ALL:
             return None
         own = getattr(user, "organization_id", None)
         if row.scope in (ORG, ORG_CHILD) and own:
             ids |= {own} if row.scope == ORG else _with_descendants([own], user, cache)
         elif row.scope == DEFINE:
             ids |= _with_descendants([o.pk for o in row.orgs.all()], user, cache)
-    return ids
+    return ids if configured else None
 
 
 def visible_q(user, resource, org_path, user_paths=(), extra_q=None, *, model=None, cache=None):

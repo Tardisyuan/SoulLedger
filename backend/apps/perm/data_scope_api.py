@@ -5,7 +5,10 @@ GET|PUT /perm/roles/<id>/data-scope/    {default:{scope,orgs}, overrides:[{resou
 
 读:持 system.settings(与权限页同一个码)。写:无殿且持 system.settings(`CanWriteGlobalSettings`)——
 角色是各殿共用的。PUT 整份替换;ADMIN 角色拒改(它跳过范围,配了也不生效);DEFINE 机构不能空,机构可跨殿挑。
-默认 ALL 不存行(没配 = 全部),所以「从没配过」与「配成全部」读回来一样。
+「从没配过」不存行;「配成全部」2026-11-12 起存一行 ALL(兼任时它让结果变成全部,没配的不贡献,
+`data_scope.org_ids`,审计 P-12)。GET 两者读回来一样(默认都显示 ALL),行不一样。
+此前写入的「默认 ALL」没有存行,与「从没配」无从区分,所以**不做数据迁移补行**:那些角色按「没配」算,
+管理员在角色页再保存一次「全部」就有了那一行。
 """
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
@@ -102,14 +105,22 @@ def role_config(role):
 
 
 def replace_role_config(role, config):
-    """整份替换。默认 ALL 不存行。调用方负责事务。"""
+    """整份替换。默认范围也存一行,ALL 也存(显式「全部」≠ 没配,P-12,2026-11-12)。调用方负责事务。"""
     RoleDataScope.objects.filter(role=role).delete()
-    rules = [("", config["default"])] if config["default"]["scope"] != data_scope.ALL else []
-    rules += [(o["resource"], o) for o in config["overrides"]]
+    rules = [("", config["default"])] + [(o["resource"], o) for o in config["overrides"]]
     for resource, rule in rules:
         row = RoleDataScope.objects.create(role=role, resource=resource, scope=rule["scope"])
         if rule["orgs"]:
             row.orgs.set(rule["orgs"])
+
+
+def copy_role_rows(source, role):
+    """复制角色:逐行照抄。不经 `role_config` → `replace_role_config`,那样会把源角色的「没配」写成一行 ALL。"""
+    for row in RoleDataScope.objects.filter(role=source).prefetch_related("orgs"):
+        copy = RoleDataScope.objects.create(role=role, resource=row.resource, scope=row.scope)
+        orgs = list(row.orgs.all())
+        if orgs:
+            copy.orgs.set(orgs)
 
 
 @extend_schema(request=None, responses={200: DataScopeResourceSerializer(many=True)})

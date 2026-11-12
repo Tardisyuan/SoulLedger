@@ -1,5 +1,5 @@
 """数据范围求解器(B2,`apps/perm/data_scope.py`):五种范围 × 本机构 / 下级 / 平级 / 上级 / 别殿 / 空机构 /
-本人创建 / 指派;多角色并集;按业务覆盖优先于默认;兼任算、已删的不算;没有配置 = 全部;ADMIN 跳过;
+本人创建 / 指派;多角色并集(没配的角色不贡献「全部」,P-12);按业务覆盖优先于默认;兼任算、已删的不算;没有配置 = 全部;ADMIN 跳过;
 序列化器外键(`tenant_scoped`)把范围外的行当作不存在;注册表每条路径都能编译成查询;真 PG 上走索引。
 """
 from types import SimpleNamespace
@@ -120,11 +120,39 @@ def test_roles_union_and_any_all_is_unlimited(w):
     assert _names(w.user) == CN_ALL
 
 
-def test_a_held_role_with_no_config_is_unlimited(w):
+def test_an_unconfigured_extra_role_does_not_widen_a_configured_one(w):
+    """审计 P-12(用户 2026-11-11):本机构的判官兼一个没配范围的访客,仍然只看本机构 —— 此前是全殿。"""
     scope("JUDGE", "ORG")
     Role.objects.get_or_create(name="VIEWER")
     w.user.extra_roles = ["VIEWER"]
+    assert _names(w.user) == {"本机构", "本人创建"}
+    assert data_scope.org_ids(w.user, "soul") == {w.a.pk}
+
+
+def test_an_unconfigured_primary_role_does_not_widen_a_configured_extra_one(w):
+    """反过来同样:主角色没配、兼任配了本机构 → 本机构(P-12)。"""
+    Role.objects.get_or_create(name="JUDGE")
+    scope("VIEWER", "ORG")
+    w.user.extra_roles = ["VIEWER"]
+    assert _names(w.user) == {"本机构", "本人创建"}
+
+
+def test_when_no_role_is_configured_the_whole_hall_is_visible(w):
+    """所有角色都没配 → 全殿,上线行为不变(P-12 只改「有人配了」的情形)。"""
+    Role.objects.get_or_create(name="VIEWER")
+    w.user.extra_roles = ["VIEWER"]
+    qs = Soul.objects.all()
+    assert DataScopeFilter.filter_queryset(_req(w.user), qs, Soul) is qs
     assert _names(w.user) == CN_ALL
+
+
+def test_a_configured_role_for_another_resource_does_not_count_here(w):
+    """「配了」按业务算:兼任只配了审判的覆盖、没有默认行,对灵魂仍是没配;两个角色对灵魂都没配 → 全部。"""
+    Role.objects.get_or_create(name="JUDGE")
+    scope("VIEWER", "SELF", resource="judgment")
+    w.user.extra_roles = ["VIEWER"]
+    assert _names(w.user) == CN_ALL
+    assert data_scope.org_ids(w.user, "judgment") == set()
 
 
 def test_a_deleted_extra_role_does_not_count(w):
