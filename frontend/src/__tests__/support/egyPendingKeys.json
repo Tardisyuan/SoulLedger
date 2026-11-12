@@ -1,4 +1,6 @@
 [
+  "death_sync.error.SOUL_AMBIGUOUS",
+  "death_sync.next.SOUL_AMBIGUOUS",
   "permissions.datascope.default_unset",
   "permissions.matrix.legend.deny",
   "permissions.matrix.refused.admin_only_permission",

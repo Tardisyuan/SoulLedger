@@ -248,11 +248,12 @@ describe("a failed row says what to do next", () => {
   it("every reason the server writes has a next step in zh-Hans and en, and the page has no English fallback", () => {
     const zh = require("@soulledger/core/messages/zh-Hans.json");
     const en = require("@soulledger/core/messages/en.json");
-    for (const code of ["SOUL_NOT_FOUND", "SOUL_NOT_ALIVE", "INVALID_TRANSITION", "INTERNAL_ERROR", "VALIDATION_ERROR", "NO_CITY_GOD", "HALL_INACTIVE", "retry_exhausted", "unknown"]) {
+    for (const code of ["SOUL_NOT_FOUND", "SOUL_NOT_ALIVE", "SOUL_AMBIGUOUS", "INVALID_TRANSITION", "INTERNAL_ERROR", "VALIDATION_ERROR", "NO_CITY_GOD", "HALL_INACTIVE", "retry_exhausted", "unknown"]) {
       expect(typeof zh.death_sync.next[code]).toBe("string");
       expect(typeof en.death_sync.next[code]).toBe("string");
     }
     expect(typeof zh.death_sync.error.HALL_INACTIVE).toBe("string");
+    expect(typeof zh.death_sync.error.SOUL_AMBIGUOUS).toBe("string");
   });
 
   it("a spent retry says so instead of 'press retry'", async () => {

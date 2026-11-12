@@ -30,6 +30,10 @@ class RetryRefusedError(Exception):
         self.record = record
 
 
+class AmbiguousSoulError(Exception):
+    """A name lookup matched more than one living soul (`lookup_soul`); recorded as SOUL_AMBIGUOUS."""
+
+
 #: `DeathRegistrationRequest.source_system` of a registration a 土地公 made (no API key).
 TUDI_SOURCE = "TUDI"
 
@@ -80,7 +84,13 @@ class DeathSyncService:
                 date_filters["birth_day"] = day
             queryset = queryset.filter(**date_filters)
 
-        return queryset.first()
+        # F-DEATH-03: 此前取 `.first()`(默认序是最新建的那个),不看状态 —— 重名时登记到错的人,或那人已死就报
+        # SOUL_NOT_ALIVE,而真在世的同名者没登记上。只在在世者里找;多于一个就拒绝,让来源系统补生辰或 soul_id。
+        # 一个在世的都没有时仍答找到的那个(已死 → SOUL_NOT_ALIVE,「多半已登记过」),一个都没有才是 SOUL_NOT_FOUND。
+        alive = list(queryset.filter(current_state=SoulState.ALIVE)[:2])
+        if len(alive) > 1:
+            raise AmbiguousSoulError("More than one living soul matches; add birth_date or send soul_id")
+        return alive[0] if alive else queryset.first()
 
     @staticmethod
     def register_death(tenant, api_key, payload, idempotency_key, source_ip=None):
@@ -191,7 +201,14 @@ class DeathSyncService:
                     request_record.error_message = "This hall is deactivated and accepts no new registrations"
                     request_record.save()
                     return request_record
-                soul = DeathSyncService.lookup_soul(tenant, lookup_data)
+                try:
+                    soul = DeathSyncService.lookup_soul(tenant, lookup_data)
+                except AmbiguousSoulError as e:
+                    request_record.status = DeathRegistrationStatus.FAILED
+                    request_record.error_code = "SOUL_AMBIGUOUS"
+                    request_record.error_message = str(e)
+                    request_record.save()
+                    return request_record
                 if soul is None:
                     request_record.status = DeathRegistrationStatus.FAILED
                     request_record.error_code = "SOUL_NOT_FOUND"

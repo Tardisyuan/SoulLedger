@@ -62,6 +62,7 @@ const canRetry = (reg: DeathRegistration) =>
  */
 const NEXT_LINKS: Record<string, (reg: DeathRegistration) => { href: string; label: string } | null> = {
   SOUL_NOT_FOUND: () => ({ href: "/souls", label: "death_sync.next.link_roster" }),
+  SOUL_AMBIGUOUS: () => ({ href: "/souls", label: "death_sync.next.link_roster" }),
   SOUL_NOT_ALIVE: (reg) => (reg.soul ? { href: `/souls/${reg.soul}`, label: "death_sync.next.link_soul" } : null),
   INVALID_TRANSITION: (reg) => (reg.soul ? { href: `/souls/${reg.soul}`, label: "death_sync.next.link_soul" } : null),
   NO_CITY_GOD: () => ({ href: "/city-gods", label: "death_sync.next.link_city_gods" }),

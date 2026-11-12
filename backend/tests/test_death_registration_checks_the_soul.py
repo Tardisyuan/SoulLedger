@@ -50,3 +50,30 @@ class TestDatesAreChecked:
         assert record.error_code == "VALIDATION_ERROR"
         soul.refresh_from_db()
         assert soul.current_state == SoulState.ALIVE
+
+
+class TestNameLookupFindsTheLivingSoul:
+    """F-DEATH-03: a name lookup took `.first()` (the newest) whatever its state."""
+
+    def test_the_living_namesake_dies_not_the_newer_dead_one(self, tenant, api_key):
+        living = Soul.objects.create(name="Zhang San", tenant=tenant)
+        dead = Soul.objects.create(name="Zhang San", tenant=tenant, current_state=SoulState.JUDGING)
+        record = _register(tenant, api_key, {"name": "Zhang San"}, "name-1")
+        assert record.status == DeathRegistrationStatus.PROCESSED
+        assert record.soul_id == living.pk
+        living.refresh_from_db()
+        assert living.current_state == SoulState.JUDGING
+        assert dead.pk != living.pk
+
+    def test_two_living_namesakes_are_refused_and_neither_dies(self, tenant, api_key):
+        first = Soul.objects.create(name="Li Si", tenant=tenant)
+        second = Soul.objects.create(name="Li Si", tenant=tenant)
+        record = _register(tenant, api_key, {"name": "Li Si"}, "name-2")
+        assert (record.status, record.error_code) == (DeathRegistrationStatus.FAILED, "SOUL_AMBIGUOUS")
+        for soul in (first, second):
+            soul.refresh_from_db()
+            assert soul.current_state == SoulState.ALIVE
+
+    def test_only_a_dead_namesake_still_answers_not_alive(self, tenant, api_key):
+        Soul.objects.create(name="Wang Wu", tenant=tenant, current_state=SoulState.JUDGING)
+        assert _register(tenant, api_key, {"name": "Wang Wu"}, "name-3").error_code == "SOUL_NOT_ALIVE"
