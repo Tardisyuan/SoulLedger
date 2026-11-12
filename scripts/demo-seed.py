@@ -452,11 +452,24 @@ def cite_grounds(case, soul, verdict):
             print("  citation refused:", soul.name, statute.code, str(exc)[:120])
 
 
+def record_death_first(soul):
+    """A finished life dies in its own year. Since F-DEATH-01 (2026-11-12) `die()` keeps a recorded death date and checks
+    the lifespan against it, so the historic year goes on first; dying "today" read as a 2,365-year life and was refused.
+    `backdate_deaths` still writes the final day afterwards (and the open cases' dates)."""
+    year = DIED.get(soul.pk)
+    if year is None:
+        return soul
+    month, day = PACE.get(soul.name, {}).get("date") or (6, 15)
+    Soul.all_objects.filter(pk=soul.pk).update(death_year=year, death_month=month, death_day=day)
+    soul.refresh_from_db()
+    return soul
+
+
 def carry_out(soul, tenant, fate, judges, stats):
     if fate in ("alive", "due"):
         return
     name = soul.name
-    case = soul.die(location=DIED_AT.get(name, soul.origin_location))
+    case = record_death_first(soul).die(location=DIED_AT.get(name, soul.origin_location))
     soul.refresh_from_db()
     if case is None:
         case = Judgment.all_objects.filter(soul=soul).first()
@@ -541,7 +554,7 @@ def seed_dispatches(tenants):
         dispatcher = User.objects.filter(tenant=tenants[src], role="OFFICER").first()
         approver = User.objects.filter(tenant=tenants[dst], role="OFFICER").first()
         try:
-            soul.die(location=soul.origin_location)
+            record_death_first(soul).die(location=soul.origin_location)
             soul.refresh_from_db()
             record = DispatchService.propose(tenants[src], tenants[dst], soul, dispatcher, reason)
             if i == 3:
@@ -748,7 +761,7 @@ def seed_cross_judgments(tenants):
     done = make_soul(cn, "项羽", 44, 61, 1, fate="failed")
     convening = make_soul(cn, "沉香", 61, 30, 2)
     try:
-        case = sent_on(convening.die(location=convening.origin_location))
+        case = sent_on(record_death_first(convening).die(location=convening.origin_location))
         Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
         cite_grounds(case, convening, None)
         cj = CrossTenantJudgmentService.create("沉香案·两界会审", "两界共审,先地府后希腊冥界", cn, None)
@@ -758,7 +771,7 @@ def seed_cross_judgments(tenants):
         print("  cross stuck: 沉香案·两界会审", type(exc).__name__, str(exc)[:200])
     for soul, conclude, title in ((sitting, False, "哪吒案·两界会审"), (done, True, "项羽案·两界会审")):
         try:
-            case = sent_on(soul.die(location=soul.origin_location))
+            case = sent_on(record_death_first(soul).die(location=soul.origin_location))
             Judgment.all_objects.filter(pk=case.pk).update(court="第五殿")
             # The Fifth Court's own grounds, written before the verdict as every other case's are (`cite_grounds`).
             cite_grounds(case, soul, Verdict.FAILED if conclude else None)

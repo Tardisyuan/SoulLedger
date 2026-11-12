@@ -190,7 +190,7 @@ const APPLICATIONS = { can_apply: false, reason: "application_open", cooldown_un
 function signedIn() {
   secure.set(REFRESH_TOKEN_KEY, "R");
   stubApi({
-    "/me/": { status: 200, data: PROFILE },
+    "/me/": { status: 200, data: { ...PROFILE, assistant_enabled: true } }, // 问一问开着:关着时只给记录(F-AST-10)
     "/me/life/": { status: 200, data: life(1) },
     "/me/rebirth-applications/": { status: 200, data: APPLICATIONS },
     "GET /me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" } },
