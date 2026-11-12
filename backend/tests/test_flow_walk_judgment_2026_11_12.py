@@ -175,3 +175,33 @@ def test_concluding_on_an_article_retired_since_it_was_cited_is_refused_naming_i
     assert case.conclude("FAILED", "")
     case.refresh_from_db()
     assert case.is_final and list(case.citations.values_list("statute__code", flat=True)) == ["FW13-KEPT"]
+
+
+# ── F-JUDG-14 a timeout does not refuse a judgment's flow ────────────────────
+
+
+def test_an_auto_reject_timeout_on_a_judgments_flow_escalates_and_withdraws_nothing(
+        cn, monkeypatch, django_capture_on_commit_callbacks):
+    from apps.workflow import timeouts
+    from apps.workflow.models import ApprovalWorkflowStatus, NodeStatus
+    from tests.test_workflow_timeout_and_reject_to import _age, _node, _workflow
+
+    told = []
+    monkeypatch.setattr("apps.events.services.EventService.notify_user",
+                        staticmethod(lambda **kw: told.append(kw["user"].username)))
+    plan.officer("fw14_admin", "ADMIN", cn)
+    flow = _workflow(cn, [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)])
+    assert flow.decides_judgment
+    _age(flow.current_node, 2)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        counts = timeouts.process_due()
+    assert (counts["ESCALATE"], counts["AUTO_REJECT"]) == (1, 0), counts
+    flow.refresh_from_db()
+    assert flow.status == ApprovalWorkflowStatus.IN_PROGRESS
+    node = flow.nodes.get(node_order=1)
+    assert node.status == NodeStatus.PENDING and (node.approver_type, node.approver_role) == ("ROLE", "ADMIN")
+    assert node.decision_history[-1]["instead_of"] == "AUTO_REJECT"
+    assert "fw14_admin" in told
+    assert not Judgment.objects.filter(retrial_of_id=flow.judgment_id).exists()
+    assert Judgment.all_objects.get(pk=flow.judgment_id).is_final

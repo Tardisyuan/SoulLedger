@@ -382,7 +382,7 @@ def _workflow_timeout_reject():
     from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus
     from tests.test_workflow_timeout_and_reject_to import _age, _node, _workflow
 
-    wf = _workflow(_cn(), [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)])
+    wf = _workflow(_cn(), [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)], deciding=False)
     _age(wf.current_node, 2)
     return (lambda: timeouts._fire(wf.pk, timezone.now()),
             lambda: ApprovalWorkflow.all_objects.get(pk=wf.pk).status == ApprovalWorkflowStatus.REJECTED

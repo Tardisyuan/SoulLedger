@@ -4,7 +4,10 @@
                  stays PENDING; everyone holding that role in the tenant is told.
     AUTO_REJECT  the node is decided FAILED through `complete_node`, on nobody's
                  behalf — so the node's 驳回到 and the return cap apply exactly
-                 as they would to a person's FAIL.
+                 as they would to a person's FAIL. Not on a flow that decides a
+                 judgment (2026-11-12, F-JUDG-14): there it escalates instead, to
+                 `timeout_role` or the hall's ADMIN, since a refusal there would
+                 withdraw the conclusion and only a person may do that.
     NOTIFY       whoever the node designates is reminded; it stays PENDING.
 
 THESE ONLY FIRE WHEN SOMETHING RUNS `process_due`. That is the scheduled job
@@ -32,6 +35,7 @@ from apps.workflow.models import (
     ApprovalNode,
     ApprovalWorkflow,
     ApprovalWorkflowStatus,
+    CaseType,
     NodeKind,
     NodeStatus,
     TimeoutAction,
@@ -159,8 +163,19 @@ def _fire(workflow_pk, now) -> str | None:
             return None
 
         action = node.timeout_action
+        escalate_to = node.timeout_role
         node.timed_out_at = now
         entry = {"event": "timeout", "action": action, "at": now.isoformat()}
+        if (action == TimeoutAction.AUTO_REJECT and workflow.decides_judgment
+                and workflow.case_type != CaseType.APPEAL):
+            # Only a person refusing withdraws a conclusion (`_finish`; user 2026-11-12, flow walk F-JUDG-14): a
+            # clock running out on a flow that decides a judgment refused it, and the refusal withdrew the
+            # conclusion and opened the case again. The step goes up instead — to the node's `timeout_role` when
+            # the template names one, else the hall's ADMIN — and they are told, as an ESCALATE timeout is.
+            # An appeal ladder's refusal withdraws nothing (it closes upheld), so it keeps its AUTO_REJECT.
+            action = TimeoutAction.ESCALATE
+            escalate_to = node.timeout_role or "ADMIN"
+            entry.update(action=action, instead_of=TimeoutAction.AUTO_REJECT)
         if action == TimeoutAction.ESCALATE:
             entry["from"] = {
                 "approver_type": node.approver_type,
@@ -168,14 +183,14 @@ def _fire(workflow_pk, now) -> str | None:
                 "approver_role": node.approver_role,
             }
             node.approver_type = "ROLE"
-            node.approver_role = node.timeout_role
+            node.approver_role = escalate_to
             node.approver_actor = None
             # 会签: the slots still unsigned go to the role; signed ones stand.
             signed = {sig["signer"] for sig in node.signatures_json or []}
             node.signers_json = [
                 slot if index in signed else {
                     **slot, "approver_type": "ROLE", "approver_actor_id": None,
-                    "approver_role": node.timeout_role,
+                    "approver_role": escalate_to,
                 }
                 for index, slot in enumerate(node.signers_json or [])
             ]
