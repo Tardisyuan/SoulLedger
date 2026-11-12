@@ -360,6 +360,12 @@ def detail(user, kind, pk, request=None):
             facts["reason"] = app.appeal_statement if wf.is_appeal and app.appeal_statement else app.statement
             # O-b:初审批准底页按它写「不跨」或只给「在电脑上继续」。
             facts["cross_civilization"] = app.cross_civilization
+            # F-REB-11:跨文明时投生到哪个殿;初审此刻能由他决定时,一并给出可选的目标殿(与 Web 同一个函数)。
+            facts["target_hall"] = rebirth.target_hall_of(app)
+            facts["cross_civilization_targets"] = (
+                [rebirth.target_hall_fact(h) for h in rebirth.cross_civilization_targets(app.soul)]
+                if rebirth.cross_civilization_refusal(app, user) is None else []
+            )
         return {"kind": kind, "id": str(pk), "title": wf.soul.name if kind == "rebirth" else wf.workflow_name,
                 "title_en": "" if kind == "rebirth" else wf.workflow_name_en,
                 "workflow_id": str(wf.pk), "created_at": wf.created_at, "facts": facts,

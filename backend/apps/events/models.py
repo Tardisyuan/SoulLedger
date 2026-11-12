@@ -72,7 +72,8 @@ class EventType(models.TextChoices):
     # Soul account events (灵魂端,2026-09-17;apps/soul_accounts)
     #
     # 都记在灵魂自己的时间线上(EventService.log),payload 里没有密码、没有联系方式。
-    # 跨文明转生只发 REBIRTH_CROSS_CIV_DECIDED,不写目标文明的数据。
+    # 初审定跨文明记 REBIRTH_CROSS_CIV_DECIDED(payload 带目标殿 code);办转世时迁到目标殿,
+    # 迁籍记在 REINCARNATION_COMPLETED 的 payload 里(from_tenant / to_tenant,F-REB-11 2026-11-12)。
     SOUL_ACCOUNT_CREATED = "SOUL_ACCOUNT_CREATED"
     SOUL_ACCOUNT_RETIRED = "SOUL_ACCOUNT_RETIRED"
     REBIRTH_APPLICATION_SUBMITTED = "REBIRTH_APPLICATION_SUBMITTED"

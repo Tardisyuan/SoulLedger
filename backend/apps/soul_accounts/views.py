@@ -256,8 +256,8 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
         return DataScopeFilter.through_soul(self.request, qs)
 
     @extend_schema(request=CrossCivilizationDecisionSerializer,
-                   responses={200: OfficerRebirthApplicationSerializer, 403: SoulErrorSerializer,
-                              409: SoulErrorSerializer})
+                   responses={200: OfficerRebirthApplicationSerializer, 400: SoulErrorSerializer,
+                              403: SoulErrorSerializer, 409: SoulErrorSerializer})
     @action(detail=True, methods=["post"], url_path="cross-civilization")
     def cross_civilization(self, request, pk=None):
         application = self.get_object()
@@ -265,7 +265,8 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
         body.is_valid(raise_exception=True)
         try:
             application = rebirth.decide_cross_civilization(
-                application.pk, request.user, body.validated_data["cross_civilization"])
+                application.pk, request.user, body.validated_data["cross_civilization"],
+                body.validated_data["target_tenant"])
         except svc.SoulAccountError as exc:
             return _error(exc)
         return Response(OfficerRebirthApplicationSerializer(application, context={"request": request}).data,

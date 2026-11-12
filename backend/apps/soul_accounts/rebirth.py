@@ -584,9 +584,79 @@ def cross_civilization_refusal(application, user):
     return None
 
 
-def decide_cross_civilization(application_id, user, value: bool):
-    """判官初审决定是否跨文明。只在初审节点仍待决、且调用者正是该节点指定的审批人时可写。
-    跨文明时只发事件 —— 本服务不去写目标文明的任何数据(分库约束)。"""
+def cross_civilization_targets(soul):
+    """跨文明转生可选的目标殿(F-REB-11,用户 2026-11-12):启用中的殿,文明能转生
+    (`REBIRTH_CAPABLE_CIVILIZATIONS`;欧洲天堂地狱、埃及是终局,不在其中),且不是灵魂的原属文明。
+
+    **唯一一处判定。** 初审写目标(`decide_cross_civilization`)、两个官员端给出的选项
+    (`OfficerRebirthApplicationSerializer.cross_civilization_targets`、官员 App 待办的 facts)、
+    办转世时再核一次(`approved_rebirth_target`)都读它。"""
+    from apps.ledger.constants import REBIRTH_CAPABLE_CIVILIZATIONS
+    from apps.tenants.models import Tenant
+
+    home = soul.home_civilization
+    return [
+        hall for hall in Tenant.objects.filter(is_active=True).order_by("code")
+        if hall.civilization in REBIRTH_CAPABLE_CIVILIZATIONS and hall.civilization != home
+    ]
+
+
+def target_hall_fact(hall):
+    """目标殿给客户端的形状:与官员 App 的 `FactHallSerializer` 同形(code + display_name)。"""
+    return {"code": hall.code, "display_name": hall.display_name}
+
+
+def target_hall_of(application):
+    """申请上记的目标殿(`target_hall_fact` 的形状);不跨或没选为 None。殿被删了仍给出 code(展示名退回 code)。"""
+    from apps.tenants.models import Tenant
+
+    code = application.target_tenant_code
+    if not application.cross_civilization or not code:
+        return None
+    hall = Tenant.objects.filter(code=code).first()
+    return target_hall_fact(hall) if hall else {"code": code, "display_name": code}
+
+
+def _target_refusal(soul, code):
+    """`code` 能不能作这个灵魂的跨文明目标。None = 能;否则 400 的 SoulAccountError。"""
+    from apps.ledger.constants import REBIRTH_CAPABLE_CIVILIZATIONS
+    from apps.tenants.models import Tenant
+
+    if not code:
+        return SoulAccountError("跨文明要选目标殿。", "cross_civilization_target_required", 400)
+    if any(hall.code == code for hall in cross_civilization_targets(soul)):
+        return None
+    hall = Tenant.objects.filter(code=code).first()
+    if hall is None or not hall.is_active:
+        return SoulAccountError("没有这个殿,或它已停用。", "cross_civilization_target_unknown", 400)
+    if hall.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+        return SoulAccountError("那个文明是终局,灵魂不在那里投生。", "cross_civilization_target_terminal", 400)
+    return SoulAccountError("目标殿与灵魂原属同一文明,不是跨文明。", "cross_civilization_target_same", 400)
+
+
+def approved_rebirth_target(soul):
+    """本世已批准、且初审定为跨文明的申请所选的目标殿;没有就是 None(照旧在原文明转世)。
+
+    办转世时(`ReincarnationService.complete_rebirth`,灵魂行锁下)再核一次:初审之后殿可能停用。
+    核不过就拒绝(409 `rebirth_target_unavailable`),灵魂留在候转世 —— 不悄悄留在原文明,
+    那会违背判官的决定;殿重新启用后再办。没有目标的旧申请(此前跨文明只是标记)照旧不迁。"""
+    from apps.reincarnation.services import RebirthTargetUnavailable
+
+    code = (soul.rebirth_applications.filter(
+        cycle=soul.life_index, status=RebirthApplicationStatus.APPROVED, cross_civilization=True,
+    ).exclude(target_tenant_code="").order_by("-created_at").values_list("target_tenant_code", flat=True).first())
+    if not code:
+        return None
+    for hall in cross_civilization_targets(soul):
+        if hall.code == code:
+            return hall
+    raise RebirthTargetUnavailable(code)
+
+
+def decide_cross_civilization(application_id, user, value: bool, target_tenant_code: str = ""):
+    """判官初审决定是否跨文明;跨文明时一并选目标殿(F-REB-11)。只在初审节点仍待决、且调用者正是该节点
+    指定的审批人时可写。目标殿只写成 code 记在申请上;真正迁到目标文明是办转世那一刻
+    (`ReincarnationService.complete_rebirth`)。"""
     from apps.events.services import EventService
     from apps.workflow.models import ApprovalWorkflow
 
@@ -596,18 +666,25 @@ def decide_cross_civilization(application_id, user, value: bool):
         ApprovalWorkflow._base_manager.select_for_update().get(pk=workflow_id)
         application = (
             RebirthApplication.objects.select_for_update(of=("self",))
-            .select_related("workflow__current_node", "soul__tenant").get(pk=application_id)
+            .select_related("workflow__current_node", "soul__tenant", "soul__home_tenant").get(pk=application_id)
         )
         refusal = cross_civilization_refusal(application, user)
         if refusal is not None:
             raise refusal
+        target = (target_tenant_code or "").strip() if value else ""
+        if value:
+            refusal = _target_refusal(application.soul, target)
+            if refusal is not None:
+                raise refusal
         workflow = application.workflow
         application.cross_civilization = value
-        application.save(update_fields=["cross_civilization", "updated_at"])
+        application.target_tenant_code = target
+        application.save(update_fields=["cross_civilization", "target_tenant_code", "updated_at"])
         workflow.cross_civilization = value
         workflow.save(update_fields=["cross_civilization"])
         EventService.log(application.soul, "REBIRTH_CROSS_CIV_DECIDED", {
             "application_id": str(application.pk), "cross_civilization": value,
+            "target_tenant": target or None,
             "desired_form": application.desired_form, "decided_by": user.username,
         })
     return application

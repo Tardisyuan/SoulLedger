@@ -141,7 +141,7 @@ class RebirthApplication(models.Model):
     `status` 是两个工作流状态的投影,由 `rebirth.sync_from_workflow` 在工作流变化时写。
 
     灵魂只表达期望形态(`desired_form`);是否跨文明由判官初审决定
-    (`cross_civilization`,NULL = 尚未决定)。
+    (`cross_civilization`,NULL = 尚未决定),跨文明时一并选目标殿(`target_tenant_code`)。
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -160,6 +160,10 @@ class RebirthApplication(models.Model):
         related_name="rebirth_appeal",
     )
     cross_civilization = models.BooleanField(null=True, blank=True)
+    # 跨文明时投生到哪个殿(F-REB-11,用户 2026-11-12):租户 code,不跨或未决定为空。存 code 不存外键 ——
+    # 新代码不加跨租户外键(分库约束,docs/ARCHITECTURE-soul-app-and-domain-split.md)。
+    # 只经 `rebirth.decide_cross_civilization` 写;`ReincarnationService.complete_rebirth` 读它迁籍。
+    target_tenant_code = models.CharField(max_length=50, blank=True, default="")
     # `rejection_reason` / `decided_at` 是**最近一次**决定:未申诉时是初审结论,申诉后是申诉结论
     # (APPROVED 或 APPEAL_REJECTED;申诉审理中两者为空)。冷却期起点读 `decided_at`,
     # 于是始终是最近一次终局驳回 —— 这层语义不变,冷却与 can_appeal 都不用改。

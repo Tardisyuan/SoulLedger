@@ -44,6 +44,19 @@ class RebirthQuotaFull(APIException):
                           "detail": f"This month's quota for {form} is full ({used}/{limit})"})
 
 
+class RebirthTargetUnavailable(APIException):
+    """初审定了跨文明、选了目标殿,而此刻那个殿已不能投生(停用,或文明不再可转世)(F-REB-11):409,什么都不写,
+    灵魂留在候转世。不悄悄留在原文明 —— 那会违背判官的决定。"""
+
+    status_code = 409
+    default_code = "rebirth_target_unavailable"
+
+    def __init__(self, code):
+        super().__init__({"code": "rebirth_target_unavailable", "target_tenant": code,
+                          "detail": f"The hall chosen for this cross-civilization rebirth ({code}) no longer "
+                                    f"takes rebirths."})
+
+
 class SoupNotTaken(APIException):
     """地府的灵魂还没饮孟婆汤(2026-10-25):转世拒绝,灵魂留在 REINCARNATING,饮过之后再转。"""
 
@@ -461,6 +474,12 @@ class ReincarnationService:
             if getattr(settings, "MENGPO_SOUP_REQUIRED", True) and needs_soup(soul) and soul.soup_taken_at is None:
                 raise SoupNotTaken()
 
+            # 跨文明(F-REB-11,用户 2026-11-12):本世已批准的申请初审选了目标殿,转世即迁到那里。
+            # 在任何写入之前核对,核不过 409、什么都不写。
+            from apps.soul_accounts.rebirth import approved_rebirth_target
+
+            target_hall = approved_rebirth_target(soul)
+
             # Monthly quota per path (2026-10-24). The hall row is locked first so two rebirths in one hall cannot
             # both take the last place; a full path refuses and the soul stays REINCARNATING, waiting.
             if soul.tenant_id is not None:
@@ -594,6 +613,8 @@ class ReincarnationService:
             from apps.realms.path import SoulPathService
             SoulPathService.leave(soul)
 
+            # 记在原文明(灵魂此刻还在那里):转世是原文明办的,配额与转世记录也在那里。
+            origin = soul.tenant
             EventService.log(
                 soul,
                 "REINCARNATION_COMPLETED",
@@ -604,7 +625,24 @@ class ReincarnationService:
                     "rebirth_form": rebirth_form,
                     "desired_form": desired_form,
                     "rebirth_form_reason": form_reason,
+                    "from_tenant": origin.code if target_hall is not None and origin is not None else None,
+                    "to_tenant": target_hall.code if target_hall is not None else None,
                 }
             )
+
+            # 迁籍(F-REB-11):跨文明投生是转世,不是调拨的暂居 —— `tenant` 与 `home_tenant` 一起改到目标殿,
+            # 下一世属于目标文明(转生资格、下一世的灵魂账号、审判都跟它走);归属机构取目标殿的根,
+            # 与调拨执行同一条规则(`DispatchService.execute`)。上一世的记录、事件、转世记录留在原文明。
+            # 灵魂此刻不在暂居(`assert_may_be_reborn` 要求 REINCARNATING,暂居的灵魂进不了那个状态)。
+            if target_hall is not None:
+                from apps.org.ownership import tenant_root
+
+                # 重读一次再写:`transition_to` 写的是它自己锁到的那一份,手上这份的状态与版本已旧(同一事务,锁已在手)。
+                moved = Soul.lock(soul.pk)
+                moved.tenant = target_hall
+                moved.home_tenant = target_hall
+                moved.owner_org = tenant_root(target_hall)
+                moved.save(update_fields=["tenant", "home_tenant", "owner_org"])
+                soul = moved
 
         return reincarnation
