@@ -165,7 +165,7 @@ class JudgmentFilter(filters.FilterSet):
         return pending.filter(RETURNED) if value else pending.exclude(RETURNED)
 
     def filter_source(self, queryset, name, value):
-        return sources.annotate(queryset).filter(queue_source=value)
+        return queryset.filter(sources.q(value))
 
     def filter_statute(self, queryset, name, value):
         return queryset.filter(pk__in=citing_judgments(value))
@@ -355,13 +355,17 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.action == "list":
-            # 每行的 `source` 在同一条查询里算(`sources.annotate`),不逐行再查。
-            qs = sources.annotate(qs)
         if self.action == "retrieve":
             # The grounds only where they are answered (perf-audit A3): the list serializer has no `citations`.
             qs = qs.prefetch_related("evidence_admissions", "citations__statute", "citations__statute__source_actor")
         return qs
+
+    def paginate_queryset(self, queryset):
+        # 每行的 `source`:这一页一条查询(`sources.attach`),不在 SQL 里逐行子查询,也不逐行再查。
+        page = super().paginate_queryset(queryset)
+        if page is not None and self.action == "list":
+            sources.attach(page)
+        return page
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
     @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
@@ -1224,7 +1228,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         if "source" in params:
             params.pop("source")
             counts["sources"] = source_counts_of(filtered(params))
-        return Response({**counts, "elsewhere": sources.elsewhere_counts(request)})
+        counts["elsewhere"] = sources.elsewhere_counts(request)
+        return Response(counts)
 
     @extend_schema(
         responses=JudgmentHallStatsSerializer,

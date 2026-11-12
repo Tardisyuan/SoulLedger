@@ -66,6 +66,42 @@ def annotate(queryset):
     ))
 
 
+def q(value) -> Q:
+    """`?source=value` 的 WHERE 条件:与 `annotate` 同一判定,但不进 SELECT —— 列表按它筛时不多一列逐行子查询。"""
+    from apps.dispatch.models import CrossTenantJudgment
+    from apps.judgment.models import CityGodStatus
+
+    city_god = Q(city_god_status=CityGodStatus.SENT_ON)
+    cross = Q(Exists(CrossTenantJudgment.objects.filter(
+        judgment=OuterRef("pk"), status__in=_open_cross_statuses()))) | _away_q()
+    return {CITY_GOD: city_god, CROSS: ~city_god & cross, QUEUE: ~city_god & ~cross}[value]
+
+
+def attach(judgments) -> None:
+    """给一页对象设好 `queue_source`,一条查询取「挂着未了结联审」的那几件。
+
+    列表不用 `annotate`:SELECT 里的 EXISTS 在 PostgreSQL 上是一行执行一次的 SubPlan
+    (`tests/test_datascope_b8_pg_performance.py` 钉住列表不许有),而这一页只有几十行。"""
+    from apps.dispatch.models import CrossTenantJudgment
+
+    pending = [j for j in judgments if not getattr(j, "queue_source", None)]
+    open_cross = set(CrossTenantJudgment.objects.filter(
+        judgment_id__in=[j.pk for j in pending], status__in=_open_cross_statuses()).values_list("judgment_id", flat=True))
+    for judgment in pending:
+        judgment.queue_source = _source(judgment, judgment.pk in open_cross)
+
+
+def _source(judgment, has_open_cross) -> str:
+    from apps.judgment.models import CityGodStatus
+
+    if judgment.city_god_status == CityGodStatus.SENT_ON:
+        return CITY_GOD
+    home, here = judgment.soul.home_tenant_id, judgment.tenant_id
+    if has_open_cross or (home is not None and here is not None and home != here):
+        return CROSS
+    return QUEUE
+
+
 def source_of(judgment) -> str:
     """单个对象的同一个判定(不是从 `annotate` 过的查询集来的对象,如认领、`next/` 的回包)。"""
     from apps.dispatch.models import CrossTenantJudgment
@@ -76,12 +112,8 @@ def source_of(judgment) -> str:
         return annotated
     if judgment.city_god_status == CityGodStatus.SENT_ON:
         return CITY_GOD
-    home, here = judgment.soul.home_tenant_id, judgment.tenant_id
-    if home is not None and here is not None and home != here:
-        return CROSS
-    if CrossTenantJudgment.objects.filter(judgment_id=judgment.pk, status__in=_open_cross_statuses()).exists():
-        return CROSS
-    return QUEUE
+    return _source(judgment, CrossTenantJudgment.objects.filter(
+        judgment_id=judgment.pk, status__in=_open_cross_statuses()).exists())
 
 
 def elsewhere_counts(request) -> dict:
