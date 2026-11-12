@@ -594,6 +594,11 @@ def _ids(response):
     return {row["id"] for row in response.data["results"]}
 
 
+def _group_counts(data):
+    """`queue-counts/` 减去案卷台的 `sources` / `elsewhere`(那两样在 test_judgment_queue_sources.py 测)。"""
+    return {k: v for k, v in data.items() if k not in ("sources", "elsewhere")}
+
+
 @pytest.mark.django_db
 class TestQueueList:
     @pytest.mark.parametrize("group", ["mine", "unclaimed", "others", "deferred"])
@@ -611,20 +616,20 @@ class TestQueueList:
     def test_counts(self, world, four_groups):
         response = world.clients["a"].get(f"{BASE}queue-counts/")
         assert response.status_code == 200
-        assert response.data == {"mine": 1, "unclaimed": 1, "others": 1, "deferred": 1, "total": 4,
+        assert _group_counts(response.data) == {"mine": 1, "unclaimed": 1, "others": 1, "deferred": 1, "total": 4,
                                  "overdue": 0, "returned": 0}
 
     def test_counts_follow_court_and_search_and_ignore_group(self, world, four_groups):
         by_court = world.clients["a"].get(f"{BASE}queue-counts/", {"court": "第一殿", "group": "mine"})
-        assert by_court.data == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3,
+        assert _group_counts(by_court.data) == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3,
                                  "overdue": 0, "returned": 0}
         by_name = world.clients["a"].get(f"{BASE}queue-counts/", {"search": "无人"})
-        assert by_name.data == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1,
+        assert _group_counts(by_name.data) == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1,
                                 "overdue": 0, "returned": 0}
 
     def test_counts_are_tenant_scoped(self, world, four_groups):
         eu = world.clients["eu_judge"].get(f"{BASE}queue-counts/")
-        assert eu.data == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1,
+        assert _group_counts(eu.data) == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1,
                            "overdue": 0, "returned": 0}
 
     def test_courts_lists_every_court_in_scope_with_pending_counts(self, world, four_groups):
@@ -666,7 +671,7 @@ class TestQueueList:
         }
         assert _ids(client.get(BASE, {"group": "unclaimed", "civilization": "CHINESE"})) == set()
         counts = client.get(f"{BASE}queue-counts/", {"civilization": "CHINESE"}).data
-        assert counts == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3,
+        assert _group_counts(counts) == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3,
                           "overdue": 0, "returned": 0}
         # 另一租户的欧洲案子不因文明筛选漏进来。
         assert str(four_groups["foreign"].pk) not in _ids(client.get(BASE, {"civilization": "EUROPEAN"}))

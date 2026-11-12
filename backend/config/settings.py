@@ -693,6 +693,8 @@ SPECTACULAR_SETTINGS = {
         "CrossTenantJudgmentStatusEnum": "apps.dispatch.models.JudgmentStatus.choices",
         "DispatchStatusEnum": "apps.dispatch.models.DispatchStatus.choices",
         "JudgmentAppealStatusEnum": "apps.judgment.models.AppealStatus.choices",
+        # 案卷台的来源(apps/judgment/sources.py):`source` 已有别的选项集(证据、价格、密钥状态),钉住免得互相改名。
+        "JudgmentQueueSourceEnum": "apps.judgment.sources.CHOICES",
         # 地府:罪目、城隍级别与司(2026-10-28)。`offence` / `rank` / `bureaus` 是通用的字段名,钉住免得下一个同名字段改名。
         "ChineseOffenceEnum": "apps.judgment.models.ChineseOffence.choices",
         "CityGodRankEnum": "apps.judgment.models.CityGodRank.choices",

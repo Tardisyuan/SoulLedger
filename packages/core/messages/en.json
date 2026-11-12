@@ -8073,7 +8073,11 @@
       "sources": {
         "queue": "Judgment queue",
         "city_god": "City god review",
-        "cross": "Cross-realm"
+        "cross": "Cross-realm",
+        "appeal": "Appeals",
+        "city_god_review": "With the city god",
+        "cross_judgment": "Joint judgments",
+        "capture_due": "Warrants due"
       },
       "groups": {
         "mine": "Claimed by me",

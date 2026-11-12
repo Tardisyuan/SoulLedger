@@ -28,7 +28,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
 from apps.judgment import attachments as _attachments  # noqa: F401  (注册 post_delete 收文件的接收器)
-from apps.judgment import claims, verdict_pdf
+from apps.judgment import claims, sources, verdict_pdf
 from apps.judgment.attachment_views import CaseAttachmentActionsMixin
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.confession_views import NegativeConfessionActionsMixin
@@ -143,6 +143,8 @@ class JudgmentFilter(filters.FilterSet):
     # 两者都隐含「未结案」。
     overdue = filters.BooleanFilter(method="filter_overdue")
     returned = filters.BooleanFilter(method="filter_returned")
+    # 案卷台的来源(`apps/judgment/sources.py`)。不隐含「未结案」:来源是行本身的属性;案卷台总是同时带 `group`。
+    source = filters.ChoiceFilter(choices=sources.CHOICES, method="filter_source")
 
     class Meta:
         model = Judgment
@@ -162,6 +164,9 @@ class JudgmentFilter(filters.FilterSet):
         pending = queryset.filter(PENDING)
         return pending.filter(RETURNED) if value else pending.exclude(RETURNED)
 
+    def filter_source(self, queryset, name, value):
+        return sources.annotate(queryset).filter(queue_source=value)
+
     def filter_statute(self, queryset, name, value):
         return queryset.filter(pk__in=citing_judgments(value))
 
@@ -175,17 +180,33 @@ def citing_judgments(statute_id):
 
 
 def queue_counts_of(queryset, user) -> dict:
-    """`total` 加四个组各几件,一条查询。`queryset` 已收窄到未结案件与调用者的范围。
+    """`total` 加四个组各几件,加案卷台的三个来源(`sources`),一条查询。`queryset` 已收窄到未结案件与调用者的范围。
     `queue_counts` 与官员助手的 `judgment_queue_counts` 工具(apps/soul_assist/officer_tools.py)共用。"""
     from apps.judgment import deadline
 
-    return deadline.with_due_base(queryset).aggregate(
+    counts = sources.annotate(deadline.with_due_base(queryset)).aggregate(
         total=Count("pk"),
         **{group: Count("pk", filter=group_q(group, user)) for group, _label in QueueGroup.CHOICES},
         # v4 队列的两个标签(与 `?overdue=` / `?returned=` 同一谓词;与四个组不互斥)。
         overdue=Count("pk", filter=deadline.overdue_q(queryset)),
         returned=Count("pk", filter=RETURNED),
+        **_source_aggregates(),
     )
+    counts["sources"] = _pop_sources(counts)
+    return counts
+
+
+def source_counts_of(queryset) -> dict:
+    """案卷台三个来源各几件(`apps/judgment/sources.py`);互斥,相加等于这个查询集的件数。"""
+    return _pop_sources(sources.annotate(queryset).aggregate(**_source_aggregates()))
+
+
+def _source_aggregates() -> dict:
+    return {f"source_{value}": Count("pk", filter=Q(queue_source=value)) for value in sources.VALUES}
+
+
+def _pop_sources(counts) -> dict:
+    return {value: counts.pop(f"source_{value}") for value in sources.VALUES}
 
 
 def visible_judgments(request):
@@ -334,6 +355,9 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
 
     def get_queryset(self):
         qs = super().get_queryset()
+        if self.action == "list":
+            # 每行的 `source` 在同一条查询里算(`sources.annotate`),不逐行再查。
+            qs = sources.annotate(qs)
         if self.action == "retrieve":
             # The grounds only where they are answered (perf-audit A3): the list serializer has no `citations`.
             qs = qs.prefetch_related("evidence_admissions", "citations__statute", "citations__statute__source_actor")
@@ -1172,23 +1196,35 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
                 "search", OpenApiTypes.STR, OpenApiParameter.QUERY,
                 description="Soul name (contains) or soul / judgment id (exact).",
             ),
+            OpenApiParameter(
+                "source", OpenApiTypes.STR, OpenApiParameter.QUERY, enum=sources.VALUES,
+                description="Narrows the group counts to one desk source; `sources` itself ignores it.",
+            ),
         ],
     )
     @action(detail=False, methods=["get"], url_path="queue-counts")
     def queue_counts(self, request):
-        """四个组各几件,一条查询。
+        """四个组各几件,一条查询;加案卷台的三个来源(`sources`)与别处的数(`elsewhere`)。
 
         `court` 与 `search` 与列表同样生效(标签上的数跟着当前筛选走);`group` 被忽略。
+        `source` 收窄四个组与 total,但 `sources` 不随它变(来源标签上的数是选中之前的)。
+        `elsewhere` 不是队列里的行,不随任何筛选走(`apps/judgment/sources.py`)。
         范围与列表相同:`self.get_queryset()`,即 DataScopeViewSetMixin 的租户范围。
         """
         params = request.query_params.copy()
         params.pop("group", None)
-        filterset = JudgmentFilter(params, queryset=self.get_queryset().filter(PENDING), request=request)
-        if not filterset.is_valid():
-            raise translate_validation(filterset.errors)
-        queryset = filterset.qs
-        queryset = SearchFilter().filter_queryset(request, queryset, self)
-        return Response(queue_counts_of(queryset, request.user))
+
+        def filtered(params):
+            filterset = JudgmentFilter(params, queryset=self.get_queryset().filter(PENDING), request=request)
+            if not filterset.is_valid():
+                raise translate_validation(filterset.errors)
+            return SearchFilter().filter_queryset(request, filterset.qs, self)
+
+        counts = queue_counts_of(filtered(params), request.user)
+        if "source" in params:
+            params.pop("source")
+            counts["sources"] = source_counts_of(filtered(params))
+        return Response({**counts, "elsewhere": sources.elsewhere_counts(request)})
 
     @extend_schema(responses=JudgmentHallStatsSerializer)
     # 不分页、不挂列表的过滤器:概览是整个殿的数,不随队列的筛选走。
