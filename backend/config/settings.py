@@ -576,7 +576,8 @@ ASSISTANT_MAX_CONCURRENT = int(os.getenv("ASSISTANT_MAX_CONCURRENT", "8"))
 ASSISTANT_HISTORY_TURNS = int(os.getenv("ASSISTANT_HISTORY_TURNS", "20"))
 # 向量检索(docs/ARCHITECTURE-soul-assist.md §7)。管理页可覆盖这几项(库优先,env 是初始值)。
 # 地址是局域网里的 Ollama;上线前要换成部署内可达的服务(§7.8)。
-ASSISTANT_EMBEDDING_URL = os.getenv("ASSISTANT_EMBEDDING_URL", "http://gates-host.lan:11434")
+# Where the embedding model runs: set ASSISTANT_EMBEDDING_URL per deployment; the default is a local Ollama.
+ASSISTANT_EMBEDDING_URL = os.getenv("ASSISTANT_EMBEDDING_URL", "http://localhost:11434")
 ASSISTANT_EMBEDDING_MODEL = os.getenv("ASSISTANT_EMBEDDING_MODEL", "qwen3-embedding:4b-q4_K_M")
 # 管理页能填的供应商 / 向量地址默认只许指向公网(防 SSRF:管理员账号被盗时拿它探内网)。
 # 这里列出的主机名或 IP 例外(逗号分隔),例如本机或内网的 Ollama。上面两个 env 地址的主机自动算在内。

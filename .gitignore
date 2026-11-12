@@ -141,3 +141,5 @@ ds-bundle/
 
 # Copied from packages/core/openapi/schema.yml by the demo build (frontend/vercel.json); not a source file.
 /frontend/public/api-docs/schema.yml
+# Machine-specific notes for Claude Code (internal hosts, paths): never committed (2026-11-12).
+CLAUDE.local.md
