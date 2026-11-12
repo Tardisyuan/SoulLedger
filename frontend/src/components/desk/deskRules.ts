@@ -130,7 +130,7 @@ export function sourceChips(t: T, counts: Pick<JudgmentQueueCounts, "sources" | 
   const chips: SourceChip[] = [{ kind: "filter", key: "all", label: t("officer_app.desk.all"), count: all }];
   for (const key of SOURCES) {
     const count = sources?.[key] ?? 0;
-    if (count > 0) chips.push({ kind: "filter", key, label: key === "city_god" ? t("caseDesk.chip.city_god_sent") : t(`officer_app.desk.sources.${key}`), count });
+    if (count > 0) chips.push({ kind: "filter", key, label: key === "city_god" ? t("officer_app.desk.chips.city_god") : t(`officer_app.desk.sources.${key}`), count });
   }
   for (const { key, href } of ELSEWHERE) {
     const count = counts.elsewhere?.[key];

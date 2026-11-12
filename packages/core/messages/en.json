@@ -9925,9 +9925,6 @@
       "me": "Me",
       "me_glyph": "M"
     },
-    "chip": {
-      "city_god_sent": "Sent by city gods"
-    },
     "sources_label": "By source",
     "search_placeholder": "Search name or case number",
     "search_none": "No case matches.",

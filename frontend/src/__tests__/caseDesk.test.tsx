@@ -122,7 +122,7 @@ describe("deskRules", () => {
       ["link", "city_god_review", 1],
     ]);
     // Two city-god chips (user 2026-11-13): 城隍送来 filters, 城隍初审中 leaves for /city-god-cases.
-    expect(chips.find((c) => c.key === "city_god")?.label).toBe("caseDesk.chip.city_god_sent");
+    expect(chips.find((c) => c.key === "city_god")?.label).toBe("officer_app.desk.chips.city_god");
     expect(chips.find((c) => c.key === "city_god_review")).toMatchObject({ kind: "link", href: "/city-god-cases" });
     expect(chips.some((c) => c.key === "cross" || c.key === "cross_judgment" || c.key === "capture_due")).toBe(false);
     expect(sourceChips(t, null)).toEqual([]);
