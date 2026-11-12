@@ -5,6 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { CivMark } from "@/src/components/brand/CivEmblem";
+import type { SealCiv } from "@/src/components/plaque/Seal";
 
 /**
  * 队列清空时的空状态(规范 v4 第七批 S08):每个文明用自己的说法 ——
@@ -24,7 +25,7 @@ export function CivEmptyState({ action }: { action?: ReactNode }) {
   const neutral = civ === "neutral";
   return (
     <div data-empty-state="" data-civ-empty={neutral ? undefined : civ} className="flex flex-col items-center py-8 text-center">
-      <CivMark civ={civ === "neutral" ? null : civ} size={96} className="empty-mark" />
+      <CivMark civ={neutral ? null : (civ as SealCiv)} size={96} className="empty-mark" />
       <p data-empty-state-title="" className="mt-4 font-title text-lg text-[oklch(var(--color-ink))]">
         {neutral ? t("empty.body") : t(`empty.${civ}`)}
       </p>

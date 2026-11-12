@@ -68,7 +68,7 @@ export function OpenCase({
   const tag = deskTag(t, j, group);
   const entered = day(j.created_at);
   const court = courtLabel(t, j.court, locale);
-  const hist = (d: HistoricalDate | null | undefined) => (d ? formatHistoricalDate(d, locale) : "");
+  const hist = (d: HistoricalDate | null | undefined) => (d ? (formatHistoricalDate(d, locale) ?? "") : "");
 
   const life = (() => {
     const so = soul.data;
