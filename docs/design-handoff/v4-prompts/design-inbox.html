@@ -40,18 +40,19 @@ details[open] summary{margin-bottom:12px}
 </header>
 
 <article>
-<h2>第二十九批 · 希腊加了阿斯福得草原:17 个 egy 词 + 希腊冥界图补一个节点<span class="tag new">待回 · 2026-11-11</span></h2>
+<h2>第二十九批 · 希腊加了阿斯福得草原:23 个 egy 词 + 希腊冥界图补一个节点<span class="tag new">待回 · 2026-11-11(11-12 追加)</span></h2>
 <p>回复写到 <code>v4-batch29-reply.md</code>,egy 写进 <code>v4-batch29-egy.json</code>(扁平，键是下表完整路径;最后一行界域名用键 <code>realms.GR_ASPHODEL_MEADOW.name_egy</code>),图写到 <code>v4-batch29-map-gr-dark.svg</code> / <code>-light.svg</code>。第二十八批 egy 已上线。</p>
 <section>
 <h3>这一轮改了什么(用户 2026-11-11 拍板)</h3>
 <ul>
 <li><strong>希腊审判改三分</strong>(依 <code>docs/04_希腊冥界详解.md</code> §三):善 → 至福岛，恶 → 塔尔塔罗斯，<strong>普通 → 阿斯福得草原</strong>(新界域 <code>GR_ASPHODEL_MEADOW</code>,挂在岔路口草地下，取「中」路;之后照常饮勒忒转世，不进千年循环)。希腊判决里原来的「存疑 / 再审」一档改名「普通」。</li>
 <li><strong>地府第四站名用「恶狗岭」</strong>(此前用 §〇 考证的「恶狗村」)。原 egy「Nut Egou」里 Nut 是「村」,已删，请给「岭」的写法。</li>
+<li><strong>11-12 追加 6 个</strong>(发出后才定下的):字段权限的「已隐藏 — 本角色不可见」;朋友圈敏感词只许从共享词表复制的拒绝提示;灵魂端与官员端「推送设备已被另一个账号登记」的通知标题与正文。</li>
 <li>权限矩阵「禁授」提示按三种原因分开(角色禁项 / 设计流程的人不审批 / 只限管理员);判官演示说明改为「结案定发落」;灵魂暂居别殿时不能删除的新提示。</li>
 </ul>
 </section>
 <section>
-<h3>一 · 17 个 egy 词</h3>
+<h3>一 · 23 个 egy 词</h3>
 <p>照第十八批的规矩：新词根、专名在回复里列出来;<code>{{perm}}</code> 占位原样保留;Maat 规则与 <code>Wehem Ankh</code> 禁用照旧。</p>
 <table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
 <tr><td><code>permissions.matrix.legend.deny</code></td><td>禁授 · 按规则</td><td>forbidden · by rule</td></tr>
@@ -70,6 +71,12 @@ details[open] summary{margin-bottom:12px}
 <tr><td><code>sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.ACTIVE</code></td><td>居于阿斯福得草原</td><td>On the Asphodel Meadow</td></tr>
 <tr><td><code>sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.COMPLETED</code></td><td>已离阿斯福得草原</td><td>Left the Asphodel Meadow</td></tr>
 <tr><td><code>judgment.verdicts_by_civ.gr.purgatory</code></td><td>普通</td><td>Ordinary</td></tr>
+<tr><td><code>souls.field_withheld</code></td><td>已隐藏 — 本角色不可见</td><td>Hidden — not visible to this role</td></tr>
+<tr><td><code>social_moderation.errors.shared_source_only</code></td><td>殿管理员只能从全站共享词表复制,不能从别的殿复制</td><td>A hall administrator can copy only the shared site-wide list, not another hall&#x27;s</td></tr>
+<tr><td><code>soul_push.push_device_claimed.title</code></td><td>推送设备已被另一个账号登记</td><td>Your push device was registered by another account</td></tr>
+<tr><td><code>soul_push.push_device_claimed.body</code></td><td>你的推送设备已被另一个账号登记，这部设备不再收到你的通知。如果不是你本人换的手机，请联系殿司。</td><td>Your push device was registered by another account and no longer gets your notifications. If you did not change phones yourself, contact your hall.</td></tr>
+<tr><td><code>official_notify.push_device_claimed.title</code></td><td>推送设备已被另一个账号登记</td><td>Your push device was registered by another account</td></tr>
+<tr><td><code>official_notify.push_device_claimed.body</code></td><td>你的推送设备已被另一个账号登记，这部手机不再收到你的待办推送。如果不是你本人换的手机，请联系管理员。</td><td>Your push device was registered by another account and no longer gets your to-do pushes. If you did not change phones yourself, contact an administrator.</td></tr>
 <tr><td><code>realms.py · GR_ASPHODEL_MEADOW.name_egy</code></td><td>阿斯福得草原(界域表的 egy 名)</td><td>Asphodel Meadow</td></tr>
 </tbody></table>
 </section>
