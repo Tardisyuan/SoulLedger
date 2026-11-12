@@ -38,6 +38,26 @@ test("the safeguards tour enters as the administrator and lights up something on
   clean(seen, "guard tour");
 });
 
+// A4:越权试验回放的是录下来的真实 403,不是演示编的成功。
+test("the overreach step replays the judge's recorded 403, with the reason and where it is enforced", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await page.goto("/");
+  await page.getByTestId("demo-home-guard").click();
+  await page.waitForURL((u) => u.pathname === "/tenants");
+  await page.getByTestId("demo-tour-next").click();
+  await page.getByTestId("demo-tour-next").click();
+  await expect(page.getByTestId("demo-tour-progress")).toContainText("3 / 6");
+  await page.getByTestId("demo-overreach-try").click();
+  const answer = page.getByTestId("demo-overreach-answer");
+  await expect(page.getByTestId("demo-overreach-status")).toHaveText("403");
+  await expect(answer).toContainText("You do not have permission to perform this action.");
+  await expect(answer).toContainText("demo_judge");
+  await expect(answer).toContainText("CanReadPermissionCatalogue");
+  // Still the administrator's console: the probe changed no one's sign-in.
+  await expect(page.locator("main table").first()).toBeVisible();
+  clean(seen, "overreach");
+});
+
 test("the administrator from the roles row still opens on the dashboard, with no tour", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("demo-home-guard").click();

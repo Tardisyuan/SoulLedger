@@ -9413,6 +9413,16 @@
       "guard_title": "How the system protects itself",
       "guard_body": "Six steps as the Grand Scribe (the administrator): how each hall's data is kept apart, permission codes, how an overreach is refused, data scopes, the audit log, the recycle bin.",
       "guard_cta": "Take the safeguards tour"
+    },
+    "probe": {
+      "try": "Ask this page's endpoint directly, as a judge",
+      "recorded": "This is the server's real answer, recorded when {{user}} made this request, and replayed as it was. The demo did not make it up.",
+      "why_title": "How the server refused",
+      "why_front": "The screens take this page out of a judge's menu by permission code, but that is only display: the request can still be sent around the interface.",
+      "why_back": "The backend is what stops it: the endpoint carries the CanReadPermissionCatalogue permission class, which lets through only holders of system.settings or menu.manage. A judge holds neither, so the answer is 403 before the view itself runs.",
+      "code": "Code",
+      "test": "Guarded by",
+      "not_recorded": "The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise."
     }
   },
   "action": {

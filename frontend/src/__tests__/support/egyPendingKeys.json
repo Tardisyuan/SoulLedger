@@ -53,5 +53,13 @@
   "demo.tour.target.overreach",
   "demo.tour.target.data_scope",
   "demo.tour.target.audit",
-  "demo.tour.target.recycle"
+  "demo.tour.target.recycle",
+  "demo.probe.try",
+  "demo.probe.recorded",
+  "demo.probe.why_title",
+  "demo.probe.why_front",
+  "demo.probe.why_back",
+  "demo.probe.code",
+  "demo.probe.test",
+  "demo.probe.not_recorded"
 ]

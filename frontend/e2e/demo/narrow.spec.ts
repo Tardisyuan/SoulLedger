@@ -25,6 +25,24 @@ test("393px: 「这是怎么做的」 is on the home page and nothing in it over
   expect(width).toBeLessThanOrEqual(0);
 });
 
+test("393px: the safeguards tour's overreach answer fits the card and the page does not scroll sideways", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await page.goto("/");
+  await page.getByTestId("demo-home-guard").click();
+  await page.waitForURL((u) => u.pathname === "/tenants");
+  await page.getByTestId("demo-tour-next").click();
+  await page.getByTestId("demo-tour-next").click();
+  await page.getByTestId("demo-overreach-try").click();
+  const answer = page.getByTestId("demo-overreach-answer");
+  await answer.scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("demo-overreach-status")).toHaveText("403");
+  const box = await page.getByTestId("demo-tour").boundingBox();
+  expect(box && box.x + box.width).toBeLessThanOrEqual(393);
+  const width = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(width).toBeLessThanOrEqual(0);
+  clean(seen, "393 overreach");
+});
+
 test("the landing page's footer opens the credits without signing in", async ({ page }) => {
   await page.goto("/");
   await page.locator('footer a[href="/about"]').click();
