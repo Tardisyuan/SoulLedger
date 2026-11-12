@@ -505,6 +505,7 @@ def end_account_sessions(account, keep_push_token="", keep_session=None):
     推送登记除 `keep_push_token` 外一律停用 —— 退出的设备不该再收到推送。与官员端同一套
     (`authentication.passwords.end_sessions`);调用方负责事务,之后给当前设备签的新令牌带新的 `sv`。"""
     from apps.authentication.passwords import end_sessions
+    from apps.chat.identity import end_matrix_sessions
     from apps.soul_push.models import DeviceInvalidReason, PushDevice
 
     end_sessions(account.user, keep_session=keep_session)
@@ -512,6 +513,7 @@ def end_account_sessions(account, keep_push_token="", keep_session=None):
     if keep_push_token:
         rows = rows.exclude(token=keep_push_token)
     rows.update(is_active=False, invalid_reason=DeviceInvalidReason.UNREGISTERED)
+    end_matrix_sessions(account)  # 书信的 Matrix 令牌不随后端令牌失效,要单独吊销(F-CHAT-02)
 
 
 def _void_mfa_devices(account):

@@ -188,6 +188,15 @@ class SynapseClient:
         self._admin("POST", f"/_synapse/admin/v1/deactivate/{self.user_id(localpart)}",
                     json={"erase": False})
 
+    def logout_user(self, localpart):
+        """删掉该用户的全部设备:它的每一张 access token 当场失效(包括后端代发缓存的那张,一并清掉缓存)。"""
+        user_id = self.user_id(localpart)
+        devices = self._admin("GET", f"/_synapse/admin/v2/users/{user_id}/devices").get("devices", [])
+        if devices:
+            self._admin("POST", f"/_synapse/admin/v2/users/{user_id}/delete_devices",
+                        json={"devices": [d["device_id"] for d in devices]})
+        cache.delete(f"chat:matrix:token:{localpart}")
+
     # ── 房间 ──────────────────────────────────────────────────────────────
 
     def create_room(self, *, name, power_levels):
