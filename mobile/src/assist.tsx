@@ -82,6 +82,13 @@ export interface Thread {
 export interface Assist {
   /** The header entry is rendered at all. */
   visible: boolean;
+  /**
+   * The hall has 问一问 switched off (F-AST-10, user 2026-11-12): only new questions stop. The soul still sees and
+   * deletes its own conversations of the last 30 days -- from 设置 › 我的问一问记录, a drawer with no box to ask in.
+   */
+  historyOnly: boolean;
+  /** Opens the drawer on the history (the 设置 row while `historyOnly`). */
+  openHistory: () => void;
   /** The drawer is open, from this page. */
   openFrom: AssistScreen | null;
   open: (screen: AssistScreen) => void;
@@ -296,8 +303,15 @@ export function AssistProvider({
 
   const stop = useCallback(() => waiting.current?.abort(), []);
 
+  const historyOnly = profile !== null && profile.assistant_enabled !== true;
   const value: Assist = {
       visible: profile?.assistant_enabled === true && !hidden,
+      historyOnly,
+      openHistory: () => {
+        setFailure(null);
+        void fetchHistory().catch(() => setHistory((h) => h ?? []));
+        setOpenFrom(thread.screen);
+      },
       openFrom,
       open,
       close,

@@ -180,7 +180,8 @@ export function AssistPanel() {
 
 /** Inside the Modal, so each opening starts on the conversation, not the history. */
 function Sheet({ assist }: { assist: Assist }) {
-  const [view, setView] = useState<"chat" | "history">("chat");
+  // Switched off for the hall (F-AST-10): the history is the drawer's whole job; a conversation opens read-only.
+  const [view, setView] = useState<"chat" | "history">(assist.historyOnly ? "history" : "chat");
   return (
     <>
       <Head view={view} setView={setView} assist={assist} />
@@ -194,10 +195,13 @@ function Head({ view, setView, assist }: { view: "chat" | "history"; setView: (v
   const t = useTheme();
   const { t: tr } = useI18n();
   const history = view === "history";
+  const only = assist.historyOnly;
+  // History only: back from a conversation goes to the list, back from the list closes the drawer.
+  const back = history ? (only ? assist.close : () => setView("chat")) : only ? () => setView("history") : null;
   return (
     <View style={[styles.head, { borderBottomColor: t.ink }]}>
-      {history ? (
-        <Pressable testID="assist-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={() => setView("chat")} style={styles.icon}>
+      {back ? (
+        <Pressable testID="assist-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={back} style={styles.icon}>
           <Icon name="back" size={17} color={t.inkMuted} strokeWidth={1.4} />
         </Pressable>
       ) : (
@@ -215,7 +219,7 @@ function Head({ view, setView, assist }: { view: "chat" | "history"; setView: (v
           </Txt>
         )}
       </View>
-      {history ? (
+      {only ? null : history ? (
         <HeadButton
           testID="assist-new"
           label={tr("soul_app.assist.new")}
@@ -330,7 +334,7 @@ function Conversation({ assist }: { assist: Assist }) {
           </Txt>
         </Pressable>
       ) : null}
-      <Composer assist={assist} />
+      {assist.historyOnly ? null : <Composer assist={assist} />}
     </>
   );
 }

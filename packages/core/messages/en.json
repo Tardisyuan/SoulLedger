@@ -5981,6 +5981,7 @@
       "read_only": "Assistant · read-only",
       "history": "History",
       "history_title": "Past conversations",
+      "history_entry": "My Ask history",
       "footnote": "AI-generated · what the page officially shows prevails",
       "close": "Close",
       "suggest_intro": "Often asked about {{screen}}:",

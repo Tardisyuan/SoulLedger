@@ -5981,6 +5981,7 @@
       "read_only": "助手 · 只读",
       "history": "历史",
       "history_title": "历史会话",
+      "history_entry": "我的问一问记录",
       "footnote": "AI 生成 · 以页面上的正式信息为准",
       "close": "关闭",
       "suggest_intro": "关于{{screen}}，常被问到的：",
