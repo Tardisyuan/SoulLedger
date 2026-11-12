@@ -53,6 +53,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.throttling import ClientIPIdentMixin
 from apps.core.viewsets import CodenameViewSetMixin
+from apps.perm.filters import DataScopeFilter
 from apps.soul_accounts.me_views import SoulAPIView
 
 
@@ -334,7 +335,9 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related(
             "soul_a", "tenant", "assignee"
         ).order_by(F("last_message_at").desc(nulls_last=True), "-created_at")
-        return inbox.annotate_for(scope_to_tenant(qs, self.request), self.request.user)
+        # 再按调用者能看到的灵魂收窄(审计 P-10,用户 2026-11-11);`folders/` 的计数同出这里。
+        qs = DataScopeFilter.through_soul(self.request, scope_to_tenant(qs, self.request), "soul_a")
+        return inbox.annotate_for(qs, self.request.user)
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)

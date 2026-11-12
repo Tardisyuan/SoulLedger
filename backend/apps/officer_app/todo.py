@@ -95,7 +95,7 @@ def _judgments_in_scope(scope):
 
 
 def _cooldowns(scope):
-    """缩短冷却申请跟灵魂的数据范围走(B3b)。调拨、受刑计划变更、书信按设计不套范围。"""
+    """缩短冷却申请跟灵魂的数据范围走(B3b)。受刑计划变更、书信 2026-11-11 起也跟(审计 P-10);调拨仍不套范围。"""
     from apps.souls.models import Soul
 
     qs = scope_to_tenant(CooldownShorteningRequest.objects.select_related("soul", "decided_by"), scope,
@@ -116,7 +116,8 @@ def _sentence_changes(scope):
     from apps.sentence_plan.models import SentencePlanRequest, SentenceRequestStatus
 
     qs = SentencePlanRequest.objects.filter(status=SentenceRequestStatus.PENDING).select_related("plan__soul")
-    return scope_to_tenant(qs, scope, field="plan__tenant").order_by("create_time")
+    qs = DataScopeFilter.through_soul(scope, scope_to_tenant(qs, scope, field="plan__tenant"), "plan__soul")
+    return qs.order_by("create_time")
 
 
 def _letters(scope, unassigned=False):
@@ -129,7 +130,7 @@ def _letters(scope, unassigned=False):
     from apps.chat.models import Conversation, ConversationKind
 
     qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related("soul_a")
-    qs = inbox.annotate_for(scope_to_tenant(qs, scope), scope.user)
+    qs = inbox.annotate_for(DataScopeFilter.through_soul(scope, scope_to_tenant(qs, scope), "soul_a"), scope.user)
     qs = qs.filter(inbox.folder_q("awaiting_reply")).order_by(
         F("last_soul_message_at").asc(nulls_last=True), "created_at")
     if unassigned:

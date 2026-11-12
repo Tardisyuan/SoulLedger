@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
+from apps.perm.filters import DataScopeFilter
 from apps.sentence_plan import requests as plan_requests
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestStatus
 from apps.sentence_plan.serializers import (
@@ -125,13 +126,14 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
 
         右半边是「节点方可读」(设计稿 §2.5),形状同 `DispatchRecordViewSet` 的「源或目标」;
         `.distinct()`:它连了 nodes,一个计划有几个本租户节点就回来几次。
+        两边都再按调用者能看到的灵魂收窄(审计 P-10,用户 2026-11-11):列表、详情、动作同出这里。
         """
         qs = SentencePlan.objects.select_related("soul", "tenant").prefetch_related(*_ordered_children())
         home = scope_to_tenant(qs, self.request)
         tenant = getattr(self.request, "tenant", None)
-        if tenant is None or is_tenant_exempt(self.request.user):
-            return home
-        return (home | qs.filter(nodes__tenant_code=tenant.code, nodes__is_deleted=False)).distinct()
+        if tenant is not None and not is_tenant_exempt(self.request.user):
+            home = (home | qs.filter(nodes__tenant_code=tenant.code, nodes__is_deleted=False)).distinct()
+        return DataScopeFilter.through_soul(self.request, home)
 
     def _home_or_403(self, plan):
         if is_tenant_exempt(self.request.user):
