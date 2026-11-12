@@ -95,6 +95,17 @@ frontend/next-env.d.ts
 /docs/lore-verification/**/*
 !/docs/lore-verification/**/
 !/docs/lore-verification/**/*.md
+# Public portfolio documents: architecture decision records and the "how I built this" write-up.
+# Same four lines, same reason: descend, re-ignore, take back only the Markdown. The private
+# audit ledgers under docs/audit/ stay ignored (not listed here, on purpose).
+!/docs/adr/
+/docs/adr/**/*
+!/docs/adr/**/
+!/docs/adr/**/*.md
+!/docs/portfolio/
+/docs/portfolio/**/*
+!/docs/portfolio/**/
+!/docs/portfolio/**/*.md
 .playwright-mcp/
 
 # Scripts
