@@ -4222,6 +4222,7 @@ export interface paths {
         /**
          * @description 本殿概览(v4 `overview.*`):未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案。
          *     范围与列表相同(`self.get_queryset()`);时间按殿的时区。定义见 `apps/judgment/hall_stats.py`。
+         *     `?civilization=` 在这个范围里再按文明收窄,校验与列表的 `JudgmentFilter` 同一份(值不合法 400)。
          */
         get: operations["v1_judgment_hall_stats_retrieve"];
         put?: never;
@@ -4382,9 +4383,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 四个组各几件,一条查询。
+         * @description 四个组各几件,一条查询;加案卷台的三个来源(`sources`)与别处的数(`elsewhere`)。
          *
          *     `court` 与 `search` 与列表同样生效(标签上的数跟着当前筛选走);`group` 被忽略。
+         *     `source` 收窄四个组与 total,但 `sources` 不随它变(来源标签上的数是选中之前的)。
+         *     `elsewhere` 不是队列里的行,不随任何筛选走(`apps/judgment/sources.py`)。
          *     范围与列表相同:`self.get_queryset()`,即 DataScopeViewSetMixin 的租户范围。
          */
         get: operations["v1_judgment_queue_counts_retrieve"];
@@ -12303,6 +12306,8 @@ export interface components {
             concluded_at?: string | null;
             /** @description PASS or FAIL */
             conclusion_type?: string | null;
+            /** Format: date-time */
+            readonly create_time: string;
         };
         /** @description 发起方重排各站:全部带节点席位的 id,按新顺序;服务端依次给 2、3……(`reorder_nodes`)。 */
         CrossTenantJudgmentOrder: {
@@ -13925,6 +13930,7 @@ export interface components {
             readonly deadline_remaining_seconds: number | null;
             /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
             readonly is_overdue: boolean;
+            readonly source: components["schemas"]["JudgmentQueueSourceEnum"];
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14333,6 +14339,7 @@ export interface components {
             readonly deadline_remaining_seconds: number | null;
             /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
             readonly is_overdue: boolean;
+            readonly source: components["schemas"]["JudgmentQueueSourceEnum"];
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14374,6 +14381,13 @@ export interface components {
          * @enum {string}
          */
         JudgmentDraftConflictCodeEnum: "draft_conflict" | "concluded";
+        /** @description 去处见 `apps/judgment/sources.py` 文件头的表。 */
+        JudgmentElsewhereCounts: {
+            appeal: number | null;
+            city_god_review: number | null;
+            cross_judgment: number | null;
+            capture_due: number | null;
+        };
         /** @description 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。 */
         JudgmentFlowProgress: {
             /** Format: uuid */
@@ -14546,6 +14560,7 @@ export interface components {
             readonly deadline_remaining_seconds: number | null;
             /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
             readonly is_overdue: boolean;
+            readonly source: components["schemas"]["JudgmentQueueSourceEnum"];
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14597,6 +14612,8 @@ export interface components {
             total: number;
             overdue: number;
             returned: number;
+            sources: components["schemas"]["JudgmentQueueSourceCounts"];
+            elsewhere: components["schemas"]["JudgmentElsewhereCounts"];
         };
         /**
          * @description The envelope `GET /api/v1/judgment/next/` returns.
@@ -14630,6 +14647,18 @@ export interface components {
             prior_cycles: components["schemas"]["Reincarnation"][];
             realm_options: components["schemas"]["RealmLocalized"][];
         };
+        JudgmentQueueSourceCounts: {
+            queue: number;
+            city_god: number;
+            cross: number;
+        };
+        /**
+         * @description * `queue` - 审判队列
+         *     * `city_god` - 城隍初审
+         *     * `cross` - 跨域
+         * @enum {string}
+         */
+        JudgmentQueueSourceEnum: "queue" | "city_god" | "cross";
         /** @description 429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema only。 */
         JudgmentRateLimited: {
             error: string;
@@ -17809,6 +17838,7 @@ export interface components {
             readonly deadline_remaining_seconds?: number | null;
             /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
             readonly is_overdue?: boolean;
+            readonly source?: components["schemas"]["JudgmentQueueSourceEnum"];
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -28200,6 +28230,12 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                /**
+                 * @description * `queue` - 审判队列
+                 *     * `city_god` - 城隍初审
+                 *     * `cross` - 跨域
+                 */
+                source?: "city_god" | "cross" | "queue";
                 stale?: boolean;
                 statute?: string;
                 /**
@@ -28523,6 +28559,12 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                /**
+                 * @description * `queue` - 审判队列
+                 *     * `city_god` - 城隍初审
+                 *     * `cross` - 跨域
+                 */
+                source?: "city_god" | "cross" | "queue";
                 stale?: boolean;
                 statute?: string;
                 /**
@@ -28669,6 +28711,12 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                /**
+                 * @description * `queue` - 审判队列
+                 *     * `city_god` - 城隍初审
+                 *     * `cross` - 跨域
+                 */
+                source?: "city_god" | "cross" | "queue";
                 stale?: boolean;
                 statute?: string;
                 /**
@@ -30085,7 +30133,10 @@ export interface operations {
     };
     v1_judgment_hall_stats_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 只数这一文明的案子(与列表的 `civilization` 同义) */
+                civilization?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -30229,6 +30280,8 @@ export interface operations {
                 court?: string;
                 /** @description Soul name (contains) or soul / judgment id (exact). */
                 search?: string;
+                /** @description Narrows the group counts to one desk source; `sources` itself ignores it. */
+                source?: "city_god" | "cross" | "queue";
             };
             header?: never;
             path?: never;

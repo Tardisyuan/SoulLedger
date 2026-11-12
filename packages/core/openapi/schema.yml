@@ -7472,6 +7472,18 @@ paths:
           type: string
           format: uuid
       - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - city_god
+          - cross
+          - queue
+        description: |-
+          * `queue` - 审判队列
+          * `city_god` - 城隍初审
+          * `cross` - 跨域
+      - in: query
         name: stale
         schema:
           type: boolean
@@ -7908,6 +7920,18 @@ paths:
           type: string
           format: uuid
       - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - city_god
+          - cross
+          - queue
+        description: |-
+          * `queue` - 审判队列
+          * `city_god` - 城隍初审
+          * `cross` - 跨域
+      - in: query
         name: stale
         schema:
           type: boolean
@@ -8133,6 +8157,18 @@ paths:
         schema:
           type: string
           format: uuid
+      - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - city_god
+          - cross
+          - queue
+        description: |-
+          * `queue` - 审判队列
+          * `city_god` - 城隍初审
+          * `cross` - 跨域
       - in: query
         name: stale
         schema:
@@ -9794,6 +9830,13 @@ paths:
       description: |-
         本殿概览(v4 `overview.*`):未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案。
         范围与列表相同(`self.get_queryset()`);时间按殿的时区。定义见 `apps/judgment/hall_stats.py`。
+        `?civilization=` 在这个范围里再按文明收窄,校验与列表的 `JudgmentFilter` 同一份(值不合法 400)。
+      parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+        description: 只数这一文明的案子(与列表的 `civilization` 同义)
       tags:
       - v1
       security:
@@ -9996,9 +10039,11 @@ paths:
     get:
       operationId: v1_judgment_queue_counts_retrieve
       description: |-
-        四个组各几件,一条查询。
+        四个组各几件,一条查询;加案卷台的三个来源(`sources`)与别处的数(`elsewhere`)。
 
         `court` 与 `search` 与列表同样生效(标签上的数跟着当前筛选走);`group` 被忽略。
+        `source` 收窄四个组与 total,但 `sources` 不随它变(来源标签上的数是选中之前的)。
+        `elsewhere` 不是队列里的行,不随任何筛选走(`apps/judgment/sources.py`)。
         范围与列表相同:`self.get_queryset()`,即 DataScopeViewSetMixin 的租户范围。
       parameters:
       - in: query
@@ -10011,6 +10056,16 @@ paths:
         schema:
           type: string
         description: Soul name (contains) or soul / judgment id (exact).
+      - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - city_god
+          - cross
+          - queue
+        description: Narrows the group counts to one desk source; `sources` itself
+          ignores it.
       tags:
       - v1
       security:
@@ -27353,7 +27408,12 @@ components:
           nullable: true
           description: PASS or FAIL
           maxLength: 20
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - create_time
       - id
       - initiating_tenant
       - initiating_tenant_code
@@ -30909,6 +30969,10 @@ components:
           type: boolean
           description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
           readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentQueueSourceEnum'
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -30995,6 +31059,7 @@ components:
       - sent_on_at
       - soul
       - soul_name
+      - source
       - stale_since
       - untimely
       - verdict
@@ -31997,6 +32062,10 @@ components:
           type: boolean
           description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
           readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentQueueSourceEnum'
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -32118,6 +32187,7 @@ components:
       - sent_on_at
       - soul
       - soul_name
+      - source
       - stale_since
       - untimely
       - verdict
@@ -32192,6 +32262,27 @@ components:
       description: |-
         * `draft_conflict` - draft_conflict
         * `concluded` - concluded
+    JudgmentElsewhereCounts:
+      type: object
+      description: 去处见 `apps/judgment/sources.py` 文件头的表。
+      properties:
+        appeal:
+          type: integer
+          nullable: true
+        city_god_review:
+          type: integer
+          nullable: true
+        cross_judgment:
+          type: integer
+          nullable: true
+        capture_due:
+          type: integer
+          nullable: true
+      required:
+      - appeal
+      - capture_due
+      - city_god_review
+      - cross_judgment
     JudgmentFlowProgress:
       type: object
       description: 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。
@@ -32613,6 +32704,10 @@ components:
           type: boolean
           description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
           readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentQueueSourceEnum'
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -32698,6 +32793,7 @@ components:
       - sent_on_at
       - soul
       - soul_name
+      - source
       - stale_since
       - untimely
       - verdict
@@ -32799,12 +32895,18 @@ components:
           type: integer
         returned:
           type: integer
+        sources:
+          $ref: '#/components/schemas/JudgmentQueueSourceCounts'
+        elsewhere:
+          $ref: '#/components/schemas/JudgmentElsewhereCounts'
       required:
       - deferred
+      - elsewhere
       - mine
       - others
       - overdue
       - returned
+      - sources
       - total
       - unclaimed
     JudgmentQueueCursor:
@@ -32869,6 +32971,29 @@ components:
       - skipped
       - soul
       - total
+    JudgmentQueueSourceCounts:
+      type: object
+      properties:
+        queue:
+          type: integer
+        city_god:
+          type: integer
+        cross:
+          type: integer
+      required:
+      - city_god
+      - cross
+      - queue
+    JudgmentQueueSourceEnum:
+      enum:
+      - queue
+      - city_god
+      - cross
+      type: string
+      description: |-
+        * `queue` - 审判队列
+        * `city_god` - 城隍初审
+        * `cross` - 跨域
     JudgmentRateLimited:
       type: object
       description: 429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema
@@ -39526,6 +39651,10 @@ components:
         is_overdue:
           type: boolean
           description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentQueueSourceEnum'
           readOnly: true
         is_archived:
           type: boolean
