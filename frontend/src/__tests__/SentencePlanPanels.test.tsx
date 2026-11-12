@@ -196,6 +196,26 @@ describe("受刑请求收件箱", () => {
     renderWith(<SentenceRequestsPage />);
     expect(await screen.findByText(tZh("sentence_plan.inbox_empty"))).toBeInTheDocument();
   });
+
+  // P-11:缺 `soul_name` 键 = 字段权限藏了姓名 →「已隐藏」;键在而值为 null 不带「已隐藏」。
+  const WITHHELD = `${tZh("common.value.unrecorded")} — ${tZh("souls.field_withheld")}`;
+  it("缺 soul_name 键:行上写「已隐藏」,不印灵魂主键、不留空白链接", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    const { soul_name: _withheld, ...ruled } = plan({ soul: "9f1c2d3e-0000-4000-8000-00000000abcd" });
+    planApi.list.mockResolvedValue(page([ruled]));
+    renderWith(<SentenceRequestsPage />);
+    const link = await screen.findByRole("link", { name: WITHHELD });
+    expect(link).toHaveAttribute("href", "/souls/9f1c2d3e-0000-4000-8000-00000000abcd");
+    expect(screen.queryByText("9f1c2d3e-0000-4000-8000-00000000abcd")).toBeNull();
+  });
+
+  it("soul_name 为 null:不说「已隐藏」", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    planApi.list.mockResolvedValue(page([plan({ soul_name: null })]));
+    renderWith(<SentenceRequestsPage />);
+    await screen.findByText("另案已抵");
+    expect(screen.queryByLabelText(WITHHELD)).toBeNull();
+  });
 });
 
 // ── 计划面板 ──────────────────────────────────────────────────────────────
