@@ -445,3 +445,20 @@ def test_the_default_term_backfill_touches_only_unexecuted_unwritten_rows(cn):
     assert years == {pending.pk: 20, written.pk: 5, executed.pk: None}
     node.refresh_from_db()
     assert node.sentence_years == 20
+
+
+def test_a_hand_made_disposition_does_not_bypass_a_plan_in_progress(cn):
+    """F-DISP-03(2026-11-12):手建的处置(无节点)此前在计划进行中照样执行,把灵魂推成 REINCARNATING / SETTLED,
+    计划与站仍 ACTIVE,此后完成不了也撤不了。现在执行被拒,什么都不写;接口答 409 `plan_in_progress`。"""
+    soul, plan, disposition = _termed(cn)
+    assert disposition.is_executed is False and plan.status == "ACTIVE"
+    stray = Disposition.objects.create(soul=Soul.all_objects.get(pk=soul.pk), tenant=cn)
+
+    assert DispositionService.execute(stray) is False
+    stray.refresh_from_db()
+    assert not stray.is_executed
+    assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.DISPOSED
+
+    refused = officer_client(_moderator(cn)).post(f"/api/v1/disposition/{stray.pk}/execute/", {}, format="json")
+    assert refused.status_code == 409 and refused.data["code"] == "plan_in_progress", refused.data
+
