@@ -236,6 +236,7 @@ MESSAGES = {
         "wangsi_rejected": {"title": "Nehet Nen Maat", "body": "Nehet-Ek Nen Maat. Wen Medjat Ba Er Maa Wesheb."},
         "social_muted": {"title": "Gerh Er-Ek", "body": "Gerh Hru {{days}}: Shemsu Maa Wa; Nen Shemes Ba."},
         "social_muted_reason": {"title": "Gerh Er-Ek", "body": "Gerh Hru {{days}}: {{reason}}"},
+        "push_device_claimed": {"title": "Medjat Sedjem: Aq Ky Sesh Seth", "body": "Medjat Sedjem-Ek: Aq Ky Sesh Seth. Medjat Pen: Nen Sedjem-Ek Emu. Nen Khemen-Ek Medjat? Hab Er Wesekhet."},
     },
 }
 
