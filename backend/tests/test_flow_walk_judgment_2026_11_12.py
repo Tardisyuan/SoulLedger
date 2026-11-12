@@ -108,3 +108,42 @@ def test_a_soul_with_no_withdrawn_case_opens_a_plain_one(cn):
     soul = Soul.objects.create(name="无撤案", tenant=cn, current_state=SoulState.JUDGING)
     opened = JudgmentService.open_case(soul, actor=plan.officer("fw_judge2", "JUDGE", cn))
     assert (opened.untimely, opened.held_until, opened.city_god_id) == (False, None, None)
+
+
+# ── F-JUDG-01 a conclusion being heard again is not appealed ─────────────────
+
+MINE = "/api/v1/me/judgment-appeals/"
+
+
+def test_a_retry_verdict_cannot_be_appealed(cn):
+    from apps.judgment.services import JudgmentConclusionService
+    from tests.soul_account_support import ready_soul
+
+    account, client = ready_soul(cn)
+    case = Judgment.objects.create(soul=account.soul, civilization=account.soul.civilization, court="第一殿",
+                                   tenant=cn)
+    JudgmentConclusionService.conclude_judgment(case, "RETRY", "再审")
+    res = client.post(MINE, {"judgment": str(case.pk), "reason": "冤"}, format="json")
+    assert res.data.get("code") == "not_appealable", res.data
+    assert not case.appeals.exists()
+
+
+def test_a_case_withdrawn_and_heard_again_cannot_be_appealed(cn):
+    from apps.judgment.services import JudgmentConclusionService
+    from tests.soul_account_support import ready_soul
+
+    account, client = ready_soul(cn, name="亡魂乙")
+    case = Judgment.objects.create(soul=account.soul, civilization=account.soul.civilization, court="第一殿",
+                                   tenant=cn)
+    JudgmentConclusionService.conclude_judgment(case, "FAILED", "原判")
+    plan.walk_flow(case)
+    row = next(r for r in client.get(MINE).data["judgments"] if str(r["judgment_id"]) == str(case.pk))
+    assert (row["can_appeal"], row["refusal_code"]) == (True, None)
+
+    # The conclusion was withdrawn and a new case opened to hear it again (`reweigh_after_rejection`).
+    Judgment.objects.create(soul=account.soul, civilization=case.civilization, court="第一殿", tenant=cn,
+                            retrial_of=case)
+    row = next(r for r in client.get(MINE).data["judgments"] if str(r["judgment_id"]) == str(case.pk))
+    assert (row["can_appeal"], row["refusal_code"]) == (False, "not_appealable")
+    res = client.post(MINE, {"judgment": str(case.pk), "reason": "冤"}, format="json")
+    assert res.data.get("code") == "not_appealable", res.data

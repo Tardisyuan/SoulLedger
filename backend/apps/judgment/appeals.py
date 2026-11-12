@@ -147,7 +147,16 @@ def appeal_refusal(judgment, account):
         return AppealRefusedError("This judgment has not been concluded.", "not_concluded")
     if judgment.kind != JudgmentKind.ORIGINAL:
         return AppealRefusedError("Only an original judgment can be appealed.", "not_appealable")
-    from apps.judgment.weighing import origin_flow_open
+    from apps.judgment.models import case_civilization, hears_again
+    from apps.judgment.weighing import has_retrial, origin_flow_open
+
+    # A conclusion that no longer stands (flow walk 2026-11-12 F-JUDG-01): a verdict that hears the case again
+    # (RETRY, a wavering scale) or a case withdrawn and heard again after its flow was refused / cancelled. The
+    # retrial carries the soul's fate; amending the old case only rewrote its `verdict`, moving nothing.
+    if hears_again(case_civilization(judgment), judgment.verdict) or has_retrial(judgment):
+        # `not_appealable`, the code the soul apps already word (not a new one): to the soul it is the same answer.
+        return AppealRefusedError("This judgment is being heard again; appeal the new judgment instead.",
+                                  "not_appealable")
 
     if origin_flow_open(judgment=judgment):
         # 原审的审批流程没走完,结论还不算定(用户 2026-10-29,审查 B):申诉与上诉都等它走完。
