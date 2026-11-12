@@ -64,6 +64,12 @@
   line-height: 24px;
   font-weight: 600;
 }
+/* 多于一个字符的门字(egy 的 Wedja / Sesh / Hep / Per / Remetj / Djes):12 一行,行高仍 24,门不跳高。 */
+.doorGlyphWord {
+  font-size: 12px;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
 .doorLabel {
   font-size: 11px;
   line-height: 14px;

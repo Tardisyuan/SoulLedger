@@ -23,6 +23,14 @@ import s from "./desk.module.css";
  */
 type Door = { href: string; glyph: string; label: string; match: (p: string) => boolean; wideOnly?: boolean };
 
+/**
+ * 门上的字:一个汉字是 18 的题字;拉丁字(en 的 L / R / M / C 是一个字母,egy 是 Wedja、Sesh 这样最多 6 个字母的词)
+ * 多于一个字符时换成 12 的一行(`doorGlyphWord`),在 52 宽的门里不折行、不截断。导出给测试。
+ */
+export function doorGlyphClass(glyph: string): string {
+  return Array.from(glyph).length > 1 ? `${s.doorGlyph} ${s.doorGlyphWord}` : s.doorGlyph;
+}
+
 export function DeskShell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const pathname = usePathname();
@@ -67,7 +75,7 @@ export function DeskShell({ children }: { children: React.ReactNode }) {
               aria-current={d.match(pathname) ? "page" : undefined}
               aria-label={d.label}
             >
-              <span className={s.doorGlyph} aria-hidden="true">
+              <span className={doorGlyphClass(d.glyph)} aria-hidden="true" data-testid="desk-door-glyph">
                 {d.glyph}
               </span>
               <span className={s.doorLabel} aria-hidden="true">
@@ -77,7 +85,7 @@ export function DeskShell({ children }: { children: React.ReactNode }) {
           ))}
           {/* 窄屏第四格:「我」(本人与设置)。宽屏是底部的头像。 */}
           <Link href="/profile" className={`${s.door} ${s.doorNarrow}`} aria-label={t("caseDesk.rail.me")}>
-            <span className={s.doorGlyph} aria-hidden="true">
+            <span className={doorGlyphClass(t("caseDesk.rail.me_glyph"))} aria-hidden="true" data-testid="desk-door-glyph">
               {t("caseDesk.rail.me_glyph")}
             </span>
             <span className={s.doorLabel} aria-hidden="true">

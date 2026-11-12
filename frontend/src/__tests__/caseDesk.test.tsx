@@ -7,6 +7,8 @@ import type { Judgment } from "@soulledger/core/api/judgment";
 import { judgmentApi } from "@soulledger/core/api/judgment";
 import { CaseDesk } from "@/src/components/desk/CaseDesk";
 import { dedupeGroups, deskTag, matchesSearch, onDeskCount, overviewParts, sourceChips, sourceLabel, sourceOf, step, zongbuCivilizations } from "@/src/components/desk/deskRules";
+import { doorGlyphClass } from "@/src/components/desk/DeskShell";
+import egy from "@soulledger/core/messages/egy.json";
 import { renderWithProviders } from "./support/render";
 
 const mockPush = jest.fn();
@@ -240,5 +242,22 @@ describe("CaseDesk", () => {
     fireEvent.click(await screen.findByTestId("desk-source-cross"));
     await waitFor(() => expect(mockList).toHaveBeenCalledWith(expect.objectContaining({ group: "unclaimed", source: "cross" })));
     expect(mockCounts).toHaveBeenCalledWith({ source: "cross" });
+  });
+});
+
+// Design egy batch 31: the door glyphs are short words in egy (Wedja, Sesh … up to 6 letters). jsdom cannot measure,
+// so this pins the switch: more than one character takes the 12px no-wrap class; one Han character or en letter stays 18.
+describe("the door rail's glyph size", () => {
+  it("every egy door glyph longer than one character takes the word size; one character keeps the full size", () => {
+    const rail = (egy as unknown as { caseDesk: { rail: Record<string, string> } }).caseDesk.rail;
+    const glyphs = Object.entries(rail)
+      .filter(([k]) => k.endsWith("_glyph"))
+      .map(([, v]) => v);
+    expect(glyphs.length).toBeGreaterThanOrEqual(6);
+    expect(glyphs.filter((g) => Array.from(g).length > 1).length).toBeGreaterThan(0);
+    for (const g of glyphs) expect(doorGlyphClass(g)).toBe(Array.from(g).length > 1 ? "doorGlyph doorGlyphWord" : "doorGlyph");
+    expect(doorGlyphClass("审")).toBe("doorGlyph");
+    expect(doorGlyphClass("L")).toBe("doorGlyph");
+    expect(doorGlyphClass("Remetj")).toBe("doorGlyph doorGlyphWord");
   });
 });

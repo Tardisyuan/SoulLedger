@@ -8,7 +8,8 @@ import type { ReactNode } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { AppHeader, PlaqueHeader, TabBar } from "../chrome";
+import egy from "@soulledger/core/messages/egy.json";
+import { AppHeader, PlaqueHeader, TabBar, tabGlyphSize } from "../chrome";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { FONT_ASSETS, HIEROGLYPH_FONT, family } from "../fonts";
@@ -310,5 +311,14 @@ describe("the tab bar (补足 B11 / C14)", () => {
     screen.unmount();
     wrap(bar(["本世", "转生", "书信", "朋友圈"]), signedIn());
     for (const name of ["Life", "Applications", "Letters", "Circle"]) expect([label(name).fontSize, screen.getByTestId(`tab-${name}-label`).props.numberOfLines]).toEqual([11, 1]);
+  });
+
+  it("egy batch 31: a glyph that is a word (Ankh, Mesut, Shemes, Shemsu) is 12 on the same line; one character stays 18", () => {
+    const tabs = (egy as unknown as { soul_app: { tabs: Record<string, string> } }).soul_app.tabs;
+    const words = ["glyph_life", "glyph_rebirth", "glyph_letters", "glyph_circle"].map((k) => tabs[k]);
+    expect(words.every((w) => Array.from(w).length > 1)).toBe(true);
+    for (const w of words) expect(tabGlyphSize(w)).toBe(12);
+    expect(tabGlyphSize("世")).toBe(18);
+    expect(tabGlyphSize("L")).toBe(18);
   });
 });

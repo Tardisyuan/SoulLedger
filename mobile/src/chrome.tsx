@@ -250,6 +250,13 @@ export function PlaqueHeader({
   );
 }
 
+/**
+ * The tab glyph's size: one character (a Han glyph, en's single letter) is the 18 title serif; a word (egy's Ankh /
+ * Mesut / Shemes / Shemsu, up to 6 letters; Design egy batch 31) is 12 on the same 22 line, so it neither wraps nor
+ * is cut and the bar does not jump. Exported for the test.
+ */
+export const tabGlyphSize = (glyph: string): number => (Array.from(glyph).length > 1 ? 12 : 18);
+
 /** 第三十批 底栏: each tab is one character (世 / 信 / 圈 / 生) over its small label. Literal keys: messages.test harvests them. */
 const TAB_GLYPHS: Record<string, string> = {
   Life: "soul_app.tabs.glyph_life",
@@ -302,7 +309,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               ]}
             >
               <View style={styles.tabGlyphBox} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <Txt testID={`tab-${route.name}-glyph`} maxFontSizeMultiplier={STACKED_TAB_LABEL_SCALE} style={[styles.tabGlyph, { color, fontFamily: titleFamily(glyph) }]}>
+                <Txt testID={`tab-${route.name}-glyph`} maxFontSizeMultiplier={STACKED_TAB_LABEL_SCALE} style={[styles.tabGlyph, { fontSize: tabGlyphSize(glyph), color, fontFamily: titleFamily(glyph) }]}>
                   {glyph}
                 </Txt>
                 {selected ? <View testID="tab-current-mark" style={[styles.tabCurrent, { backgroundColor: t.plaque }]} /> : null}
