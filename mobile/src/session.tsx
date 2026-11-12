@@ -17,6 +17,7 @@ import {
   soulErrorMessage,
   soulErrorStatus,
   soulHttp,
+  soulRefreshSettled,
   storeSoulTokens,
   type MeProfile,
   type SoulErrorMessage,
@@ -148,6 +149,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const { setLocale } = useI18n();
   const password = useRef<string | null>(null);
   const fresh = useRef(false);
+  /** Bumped by every sign-in: a sign-out's clean-up tells its own tokens from a later session's. */
+  const signIns = useRef(0);
 
   /**
    * The account's language is the one the settings screen promises to follow:
@@ -230,6 +233,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   /** Both ways in (the password alone, or the password and the second step) end here. */
   const finishSignIn = useCallback(
     async (response: SoulLoginResponse) => {
+      signIns.current += 1;
       storeSoulTokens(response);
       if (response.account.must_change_password) {
         setState({ status: "mustChangePassword", expiresAt: response.account.initial_password_expires_at ?? null });
@@ -327,18 +331,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    */
   const signOut = useCallback(() => {
     const refresh = getRefreshToken();
+    const epoch = signIns.current;
     clearOutbox();
     clearVoiceNumbers();
     clearSocialStatus();
     password.current = null;
     fresh.current = false;
     setState({ status: "signedOut" });
-    const end = () => {
-      if (getRefreshToken() === refresh) clearSoulTokens();
-      if (refresh) soulApi.logout(refresh).catch((e: unknown) => keepPendingLogout(e, refresh));
+    // F-ACCT-04: the push unregister (or a request already out) may hit a 401 and rotate the token read above;
+    // the server then blacklists that one, so logging out with it is a silent no-op and the rotated pair stays
+    // stored -- the next cold start signed straight back in. Wait for any rotation, then end whatever this
+    // session holds now. A sign-in in between (`signIns` moved) owns the stored pair: only the old token goes.
+    const end = async () => {
+      await soulRefreshSettled();
+      const latest = signIns.current === epoch ? getRefreshToken() ?? refresh : refresh;
+      if (signIns.current === epoch) clearSoulTokens();
+      if (latest) soulApi.logout(latest).catch((e: unknown) => keepPendingLogout(e, latest));
     };
     if (hasRegisteredDevice()) void unregisterDevice().finally(end);
-    else end();
+    else void end();
   }, []);
 
   const refreshProfile = useCallback(async () => {

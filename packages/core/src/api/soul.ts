@@ -194,6 +194,15 @@ export function rotateSoulTokens(refresh: string): Promise<string> {
   return refreshInFlight;
 }
 
+/**
+ * Resolves once no rotation is in flight (whatever its outcome). Sign-out waits on it (F-ACCT-04): a rotation that
+ * lands after the tokens were cleared would write a live pair back, and one that rotated the token sign-out read
+ * leaves that one blacklisted -- its logout a silent no-op while the new pair stays stored.
+ */
+export function soulRefreshSettled(): Promise<void> {
+  return refreshInFlight ? refreshInFlight.then(() => undefined, () => undefined) : Promise.resolve();
+}
+
 type RetriableConfig = InternalAxiosRequestConfig & { _soulRetry?: boolean };
 
 soulHttp.interceptors.response.use(
