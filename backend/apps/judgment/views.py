@@ -1596,6 +1596,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             # 加减项 / 重开审判结案时对计划的改动被拒:什么都没写(同一事务)。
             return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except CitationRefusedError as exc:
+            if exc.code:  # `statute_retired` (F-JUDG-13): 409 with the retired articles named
+                return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except CrossJudgmentOpenError as exc:
             # Q17:挂着的联审的节点内容不再通过校验(409),或联审没结束而请求说不生成审批流程(400

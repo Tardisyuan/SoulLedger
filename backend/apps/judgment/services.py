@@ -14,7 +14,15 @@ class CitationRefusedError(Exception):
     the operator has to be told: a cross-tenant article, an article from
     another cosmology, and an article that does not exist are three different
     mistakes and only one of them is a typo.
+
+    `code` / `status` / `extra` are set by the refusals that carry them (`statute_retired` at conclusion).
     """
+
+    def __init__(self, message="", code="", status=400, **extra):
+        super().__init__(message)
+        self.code = code
+        self.status = status
+        self.extra = extra
 
 
 def _is_uuid(value) -> bool:
@@ -38,7 +46,7 @@ class StatuteCitationService:
     """
 
     @staticmethod
-    def resolve(judgment, statute_id):
+    def resolve(judgment, statute_id, *, allow_retired=False):
         """The Statute this judgment may cite, or `CitationRefusedError`.
 
         Looked up through `Statute.all_objects` and then checked, rather than
@@ -54,7 +62,7 @@ class StatuteCitationService:
         statute = Statute.all_objects.filter(pk=statute_id).first() if _is_uuid(statute_id) else None
         if statute is None:
             raise CitationRefusedError(f"No statute with id {statute_id}.")
-        if statute.is_deleted:
+        if statute.is_deleted and not allow_retired:
             raise CitationRefusedError(
                 f"Statute {statute.code} has been retired and cannot be newly "
                 f"cited. Citations already recorded against it stand."
@@ -125,6 +133,23 @@ class StatuteCitationService:
         ]
 
     @staticmethod
+    def assert_none_retired(judgment):
+        """Refuse to conclude on an article retired while the case was open (flow walk 2026-11-12 F-JUDG-13, user
+        decision): `resolve` refuses citing a retired article, but one cited before it was retired stayed and was
+        frozen into the verdict. 409 `statute_retired`, naming each (`statutes`: id and code); the officer cites
+        another and concludes again. Citations of a concluded case stand — that is the record."""
+        from apps.judgment.models import JudgmentCitation
+
+        retired = list(JudgmentCitation.all_objects.filter(judgment=judgment, is_deleted=False,
+                                                           statute__is_deleted=True)
+                       .order_by("statute__code").values_list("statute_id", "statute__code"))
+        if retired:
+            codes = ", ".join(code for _, code in retired)
+            raise CitationRefusedError(
+                f"Cited statutes have been retired since: {codes}. Cite current articles instead.",
+                "statute_retired", status=409, statutes=[{"id": str(pk), "code": code} for pk, code in retired])
+
+    @staticmethod
     def snapshot(judgment, *, at):
         """Freeze what each cited article says right now onto its citation.
 
@@ -158,8 +183,9 @@ class StatuteCitationService:
 
         cls.assert_amendable(judgment)
         # Resolve first, so removing a cross-tenant id reports the same refusal
-        # adding it would have — never a silent "nothing to do".
-        statute = cls.resolve(judgment, statute_id)
+        # adding it would have — never a silent "nothing to do". A retired article may be removed (F-JUDG-13):
+        # it is what the conclusion now refuses, so taking it off is the way forward.
+        statute = cls.resolve(judgment, statute_id, allow_retired=True)
         deleted, _ = JudgmentCitation.all_objects.filter(
             judgment=judgment, statute=statute
         ).delete()
@@ -406,6 +432,7 @@ class JudgmentConclusionService:
             # Step 0: Grounds, before the verdict they explain.
             if statute_ids:
                 StatuteCitationService.cite_many(judgment, statute_ids)
+            StatuteCitationService.assert_none_retired(judgment)
 
             # Step 1: Update judgment state
             judgment.verdict = verdict

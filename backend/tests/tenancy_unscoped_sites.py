@@ -172,6 +172,7 @@ SITES = [
     ('apps/judgment/services.py', 'JudgmentDraftService.touch_after_plain_update', 'Judgment.all_objects', 1, 'PK', 'bumps draft_version of one judgment by pk'),
     ('apps/judgment/services.py', 'StatuteCitationService.cite', 'JudgmentCitation.all_objects', 1, 'PK', 'get_or_create keyed by judgment+statute; tenant copied from judgment.tenant'),
     ('apps/judgment/services.py', 'StatuteCitationService.resolve', 'Statute.all_objects', 1, 'FILTERED', 'looked up by pk on purpose, then statute.tenant_id is compared with judgment.tenant_id and a mismatch is refused (so the error can say why)'),
+    ('apps/judgment/services.py', 'StatuteCitationService.assert_none_retired', 'JudgmentCitation.all_objects', 1, 'PK', 'citations of one judgment, by its FK (the retired statutes it cites)'),
     ('apps/judgment/services.py', 'StatuteCitationService.snapshot', 'JudgmentCitation.all_objects', 2, 'PK', 'citations of one judgment'),
     ('apps/judgment/services.py', 'StatuteCitationService.uncite', 'JudgmentCitation.all_objects', 1, 'PK', 'citations of one judgment'),
     ('apps/judgment/tasks.py', 'auto_conclude_stale_judgments_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant_id'),

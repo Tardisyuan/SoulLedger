@@ -147,3 +147,31 @@ def test_a_case_withdrawn_and_heard_again_cannot_be_appealed(cn):
     assert (row["can_appeal"], row["refusal_code"]) == (False, "not_appealable")
     res = client.post(MINE, {"judgment": str(case.pk), "reason": "冤"}, format="json")
     assert res.data.get("code") == "not_appealable", res.data
+
+
+# ── F-JUDG-13 concluding on an article retired since it was cited ───────────
+
+
+def test_concluding_on_an_article_retired_since_it_was_cited_is_refused_naming_it(cn):
+    from apps.judgment.services import CitationRefusedError, StatuteCitationService
+    from tests.test_judgment_statutes import make_statute
+
+    _soul, case = plan.open_case(cn)
+    kept = make_statute(cn, "FW13-KEPT", ordinal=1)
+    gone = make_statute(cn, "FW13-GONE", ordinal=2)
+    StatuteCitationService.cite(case, kept.id)
+    StatuteCitationService.cite(case, gone.id)
+    gone.soft_delete(reason="废止")
+
+    with pytest.raises(CitationRefusedError) as refused:
+        case.conclude("FAILED", "")
+    assert (refused.value.code, refused.value.status) == ("statute_retired", 409)
+    assert refused.value.extra["statutes"] == [{"id": str(gone.pk), "code": "FW13-GONE"}]
+    case.refresh_from_db()
+    assert case.verdict is None and not case.is_final
+
+    # The officer takes the retired article off and concludes on the current one.
+    assert StatuteCitationService.uncite(case, gone.id) is True
+    assert case.conclude("FAILED", "")
+    case.refresh_from_db()
+    assert case.is_final and list(case.citations.values_list("statute__code", flat=True)) == ["FW13-KEPT"]
