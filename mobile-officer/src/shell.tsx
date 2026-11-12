@@ -203,9 +203,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   // starting 待办 of a 访客, a link, a landing) shows the first one there is -- 通知 and 我的 are always there.
   const tabs = visibleTabs(user.permissions);
   const current = tabs.includes(tab) ? tab : tabs[0];
-  useEffect(() => {
-    if (current !== "todo") setTodoOnce(null);
-  }, [current]);
+  // A one-visit filter only applies while 待办 is the current tab; every other way into 待办 clears it (above).
+  const todoFilterOnce = current === "todo" ? todoOnce : null;
 
   return (
     <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
@@ -257,7 +256,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             onGone={markGone}
           />
         ) : current === "todo" ? (
-          <TodoTab key={todoOnce ? "once" : "saved"} initialFilter={todoOnce ?? undefined} version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
+          <TodoTab key={todoFilterOnce ? "once" : "saved"} initialFilter={todoFilterOnce ?? undefined} version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : current === "queue" ? (
           <QueueTab
             version={version}
