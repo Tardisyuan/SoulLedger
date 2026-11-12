@@ -156,8 +156,8 @@ test.describe("Data scope: a judge set to 本机构 sees only that organization"
     await judge.getByLabel("账号").fill(JUDGE_USER.username);
     await judge.getByLabel("密码").fill("correct-horse-battery");
     await judge.getByRole("button", { name: "登录" }).click();
-    // A judge with judgment.read lands on the queue when no default view is set (review 2026-11-01).
-    await expect(judge).toHaveURL(/\/judgment\/queue/);
+    // A judge with judgment.read lands on the 案卷台 when no default view is set (review 2026-11-01; 第三十批 第 2 步).
+    await expect(judge).toHaveURL(/\/desk$/);
 
     // ── 灵魂:本机构的 + 自己登记的;平级机构的不在 ──
     await judge.goto("/souls");

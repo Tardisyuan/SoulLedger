@@ -26,8 +26,8 @@ test.describe("Critical path: login and create a soul", () => {
     await page.getByLabel("密码").fill("correct-horse-battery");
     await page.getByRole("button", { name: "登录" }).click();
 
-    // ── The login actually took ──
-    await expect(page).toHaveURL(/\/dashboard/);
+    // ── The login actually took ── (an ADMIN with no default view lands on the 总簿, 第三十批 第 2 步)
+    await expect(page).toHaveURL(/\/desk\/overview/);
     const loginCall = api.lastCall("POST", "/auth/login/");
     expect(loginCall?.body).toEqual({ username: TEST_USER.username, password: "correct-horse-battery", remember: false });
 
