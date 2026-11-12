@@ -28,6 +28,10 @@ class FieldPermissionMixin:
     Priority: specific (field_name) > wildcard (field_name="*")
     """
 
+    #: Fields a hiding rule leaves in place because the serializer redacts them itself
+    #: (`SoulSerializer.records`: rows kept, weights null — 用户 2026-11-11).
+    field_permission_redacted = ()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_field_permissions()
@@ -64,7 +68,8 @@ class FieldPermissionMixin:
         for field_name, field in self.fields.items():
             outcomes = [_outcome(rules, field_name) for rules in rule_sets]
             if not any(visible for visible, _ in outcomes):
-                fields_to_remove.append(field_name)
+                if field_name not in self.field_permission_redacted:
+                    fields_to_remove.append(field_name)
             elif all(locked for _, locked in outcomes):
                 field.read_only = True
 

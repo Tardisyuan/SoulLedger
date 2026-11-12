@@ -43,6 +43,7 @@ from apps.souls.models import Soul, SoulState
 from apps.souls.serializers import (
     SOUL_EXPORT_COLUMNS,
     ledger_body_for,
+    record_weights_hidden_from,
     scores_hidden_from,
     soul_export_cells,
     soul_export_hidden,
@@ -265,7 +266,8 @@ class LedgerJournalView(APIView):
             )
         except JournalParamError as exc:
             return _journal_param_error(exc)
-        if scores_hidden_from(request.user):
+        # Each row is a SoulRecord: the VIEWER floor or a Soul `records` rule nulls its weight (用户 2026-11-11).
+        if record_weights_hidden_from(request.user):
             _hide_journal_scores(body, searched=bool(params.get("search", "").strip()))
         return Response(LedgerJournalSerializer(body).data)
 
@@ -347,7 +349,7 @@ class LedgerJournalExportView(APIView):
         ])
         rows = rows_in_data_scope(request, period).select_related("soul").order_by("-recorded_at", "-id")
         written = 0
-        hide = scores_hidden_from(request.user)  # 列留着、格子空着(P-02)
+        hide = record_weights_hidden_from(request.user)  # 列留着、格子空着(P-02;Soul 的 records 规则同)
         # The soul's id and name follow the Soul field rules, as in the soul's own export (P-11).
         soul_hidden = hidden_fields(request.user, "Soul", ("id", "name"))
         for r in rows.iterator(chunk_size=1000):
