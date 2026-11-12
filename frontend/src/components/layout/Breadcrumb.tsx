@@ -71,7 +71,7 @@ const linkable = (href: string) => (PAGELESS_PREFIXES.has(href) ? undefined : hr
 // H1 是仅有的两处例外，补一个"译名 中文原名"的对照）。
 export type Crumb = { label: string; gloss?: string; href?: string };
 
-/** 当前路由的面包屑各段。匾的题字取最后一段(AppLayout),面包屑本身画全部。 */
+/** 当前路由的面包屑各段。面包屑画全部;末段与页面 `<h1>` 相同时 `Breadcrumb` 省掉它(第三十批)。 */
 export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
   const pathname = usePathname();
   const { t, locale } = useI18n();
@@ -163,9 +163,14 @@ function BackToSource({ crumbs, label }: { crumbs: Crumb[]; label: string }) {
   );
 }
 
-export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
+/**
+ * `heading`:页面此刻的 `<h1>` 文字(PageShell 经 AppLayout 报上来)。末段与它相同时不画末段 —— 第三十批
+ * 「卷宗」只有一个标题,同一句话不在工具条上再说一遍(Design v4 第三十批第一节第 1 条)。返回键仍按全部各段找上级。
+ */
+export function Breadcrumb({ menus, heading }: { menus: SidebarMenu[]; heading?: string | null }) {
   const { t } = useI18n();
-  const crumbs = useBreadcrumbs(menus);
+  const all = useBreadcrumbs(menus);
+  const crumbs = heading && all.length > 1 && all[all.length - 1].label === heading ? all.slice(0, -1) : all;
   const label = (key: string, fallback: string) => {
     const value = t(key);
     return value === key ? fallback : value;
@@ -178,7 +183,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
       className="flex flex-1 min-w-0 items-center"
     >
       <Suspense fallback={null}>
-        <BackToSource crumbs={crumbs} label={label("breadcrumb.back", "返回")} />
+        <BackToSource crumbs={all} label={label("breadcrumb.back", "返回")} />
       </Suspense>
       {/* 规范 v3「工具条 · 面包屑」:界面字 12、斜杠分隔、间距 8;上级 ink-muted(链接悬停
           ink 加下划线),当前页 ink、不可点(aria-current),放不下就截断。不再有首页图标 ——

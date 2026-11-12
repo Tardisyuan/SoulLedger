@@ -111,35 +111,33 @@ const stripCode = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(
 const rgbOf = (theme: ThemeName, name: string): Rgb => oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], name));
 /** `color-mix(in srgb, fg p, transparent)` 叠在不透明的 bg 上 = 在 gamma sRGB 上逐通道 fg·p + bg·(1−p)。 */
 const over = (fg: Rgb, bg: Rgb, p: number): Rgb => fg.map((v, i) => Math.round(v * p + bg[i] * (1 - p))) as unknown as Rgb;
-/** v4 `--glowA`:深 .30 / 浅 .24,读 globals.css。读不到就抛,不要当成 0 放行(0 = 没有光,对比度只会更好看)。 */
+/** 页头光的强度 `--glowA`(第三十批:深 .30 / 浅 .22),读 globals.css。读不到就抛,不要当成 0 放行(0 = 没有光,对比度只会更好看)。 */
 const glowAlpha = (theme: ThemeName): number => {
-  const raw = Number(TOKENS_BY_THEME[theme]["--glow-alpha"]);
-  if (!(raw > 0 && raw < 1)) throw new Error(`--glow-alpha 在 ${theme} 读到 ${TOKENS_BY_THEME[theme]["--glow-alpha"]} —— 修读取器,别删这条检查`);
+  const raw = Number(TOKENS_BY_THEME[theme]["--glowA"]);
+  if (!(raw > 0 && raw < 1)) throw new Error(`--glowA 在 ${theme} 读到 ${TOKENS_BY_THEME[theme]["--glowA"]} —— 修读取器,别删这条检查`);
   return raw;
 };
-/** 主按钮底 `--main-fill`(Button.tsx primary 读它):v4 起两个主题都是 main 本身,只声明一次。 */
+/** 主按钮底 `--main-fill`(Button.tsx primary 读它):第三十批起是 ink(墨色实底),两个主题只声明一次。 */
 const MAIN_FILL_DECLS = [...stripCode(CSS).matchAll(/--main-fill:\s*([^;]+);/g)].map((m) => m[1].trim());
 const MAIN_FILL_ON_ROOT = /:root,\s*\[data-civ\]\s*\{[^}]*--main-fill:\s*([^;]+);/.exec(stripCode(CSS))?.[1].trim();
-const BAND_BG = /\n {2}\.identity-band\s*\{[^}]*background:\s*([^;]+);/.exec(stripCode(CSS))?.[1].replace(/\s+/g, " ").trim();
-/** 身份带的底:glow 的椭圆光 + canvas 实底(v4 `.glowtop`)。下面按光最亮处(圆心)= glow·alpha + canvas 量字。 */
+const BAND_BG = /\n {2}\.page-head-glow\s*\{[^}]*background:\s*([^;]+);/.exec(stripCode(CSS))?.[1].replace(/\s+/g, " ").trim();
+/** 页头的光(第三十批 `.page-head-glow`,v4 `.glowtop`):glow × --glowA 的径向渐变,铺在 canvas 上。下面按光最亮处(圆心)= glow·alpha + canvas 量字。 */
 const GLOW_BAND_BG =
-  "radial-gradient(70% var(--glow-r) at 30% var(--glow-y), color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 100%), transparent), transparent 70%), oklch(var(--color-canvas))";
+  "radial-gradient(60% 100% at 24% 0%, color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glowA) * 100%), transparent), transparent 72%)";
 
 type Cell = { key: string; ratio: number; min: number };
 const cellOf = (key: string, fg: Rgb, bg: Rgb, min = AA_NORMAL_TEXT): Cell => ({ key, ratio: contrastRatio(fg, bg), min });
 
 const RENDERED: Cell[] = THEMES.flatMap((theme) => {
-  const onMain = rgbOf(theme, "--color-on-main");
   const surface1 = rgbOf(theme, "--color-surface-1");
   return CIVS.flatMap((civ) => {
-    const main = rgbOf(theme, `--color-civ-${civ}`);
     return [
       // 3px 指示条(侧栏左标、底栏顶标、行首色标)对 surface-1:非文字,3:1。v4 起是 metal。
       cellOf(`${theme}:metal-${civ} mark on surface-1`, rgbOf(theme, `--color-civ-${civ}-metal`), surface1, AA_NON_TEXT),
-      // 身份带上的字(题字之外:品牌、殿名、「案号」11 / 12px):ink,不透明,压在光最亮处。
-      cellOf(`${theme}:ink on band-glow-${civ}`, rgbOf(theme, "--color-ink"), over(rgbOf(theme, `--color-civ-${civ}-glow`), rgbOf(theme, "--color-canvas"), glowAlpha(theme))),
-      // 主按钮上的字与按钮里的键帽 ⌘⏎ / ⌘S,纯白不透明;13–15px 不是大字。v4:主按钮底 = main。
-      cellOf(`${theme}:on-main on primary-${civ}`, onMain, main),
+      // 页头上的字(标题之外:殿名、案号、日期那一行 12px 是 ink-muted;标题与副标题是 ink / ink-muted):压在光最亮处。
+      cellOf(`${theme}:ink-muted on band-glow-${civ}`, rgbOf(theme, "--color-ink-muted"), over(rgbOf(theme, `--color-civ-${civ}-glow`), rgbOf(theme, "--color-canvas"), glowAlpha(theme))),
+      // 主按钮上的字与按钮里的键帽 ⌘⏎ / ⌘S,不透明;13–15px 不是大字。第三十批:墨色实底,canvas 字,不随文明。
+      cellOf(`${theme}:canvas on primary-${civ}`, rgbOf(theme, "--color-canvas"), rgbOf(theme, "--color-ink")),
     ];
   });
 });
@@ -154,15 +152,15 @@ describe("渲染后的对比度(指示条 / 身份带 / 主按钮,四文明 × �
     expect(c.ratio).toBeGreaterThanOrEqual(c.min);
   });
 
-  it("主按钮底两主题都是 main 本身(v4 solid),只声明一次;身份带是 canvas 上的 glow 光(上面那组量的就是它)", () => {
-    expect(MAIN_FILL_DECLS).toEqual(["oklch(var(--color-main))"]);
-    expect(MAIN_FILL_ON_ROOT).toBe("oklch(var(--color-main))");
+  it("主按钮底两主题都是 ink(第三十批墨色实底),只声明一次;页头是 canvas 上的 glow 光(上面那组量的就是它)", () => {
+    expect(MAIN_FILL_DECLS).toEqual(["oklch(var(--color-ink))"]);
+    expect(MAIN_FILL_ON_ROOT).toBe("oklch(var(--color-ink))");
     expect(BAND_BG).toBe(GLOW_BAND_BG);
     expect(glowAlpha("dark")).toBe(0.3);
-    expect(glowAlpha("light")).toBe(0.24);
+    expect(glowAlpha("light")).toBe(0.22);
   });
 
-  it("身份带上的字不再是 on-main:v4 的光是浅的,白字在浅色光上托不住(这一格是承重的)", () => {
+  it("页头上的字不是 on-main:光是浅的,白字在浅色光上托不住(这一格是承重的)", () => {
     for (const civ of CIVS) {
       const bg = over(rgbOf("light", `--color-civ-${civ}-glow`), rgbOf("light", "--color-canvas"), glowAlpha("light"));
       expect(contrastRatio(rgbOf("light", "--color-on-main"), bg)).toBeLessThan(AA_NON_TEXT);
@@ -278,12 +276,12 @@ describe("main 的用法与文字透明度(源码扫描)", () => {
     expect(kbds.filter((k) => /\bopacity-/.test(k))).toEqual([]);
   });
 
-  // 2026-11-06 v4 阶段 5:水印巨印(`.identity-watermark`,v4 `.wm`)和纹样层同类 —— 装饰,印文 aria-hidden,
-  // 不是要读的字;它的淡就是 opacity(深 .07 / 浅 .09)。白名单加它两条,题字等仍不许。
-  it("规定 3:身份带上的字(品牌 / 题字 / 殿名 / 案号)不带 opacity;纹样层与水印不是字,可以", () => {
-    const rules = [...stripCode(CSS).matchAll(/([^{}]*\.identity-[^{}]*)\{([^}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
-    expect(rules.length).toBeGreaterThan(10);
+  // 第三十批「卷宗」的页头(`.page-head*`,取代身份带 `.identity-*`):纹样(`.page-head-pat`,5%)与水印
+  // (`.page-head-wm`,深 .07 / 浅 .09)是装饰、aria-hidden,不是要读的字,它们的淡就是 opacity。标题、小字行仍不许。
+  it("规定 3:页头上的字(标题 / 殿名 / 案号 / 日期)不带 opacity;纹样层与水印不是字,可以", () => {
+    const rules = [...stripCode(CSS).matchAll(/([^{}]*\.page-head[^{}]*)\{([^}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
+    expect(rules.length).toBeGreaterThan(8);
     const withOpacity = rules.filter((r) => /(?<![-\w])opacity\s*:/.test(r.body)).map((r) => r.sel);
-    expect(withOpacity).toEqual([".identity-pattern", ".identity-watermark", ".light .identity-watermark"]);
+    expect(withOpacity).toEqual([".page-head-pat", ".page-head-wm", ".light .page-head-wm"]);
   });
 });

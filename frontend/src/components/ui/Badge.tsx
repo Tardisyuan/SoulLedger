@@ -36,31 +36,36 @@ import { cn } from "@/lib/utils";
  * every tone the grid uses. Hand-rolling a class string back into `EnumBadge`
  * turns that red; re-deriving `ENUM_TONE_CLASSES` from itself could not.
  *
- * The 10% fill is a measurement, not a taste. columns.tsx records that a 16%
- * tint of the error token drops light-mode badge text to 4.37:1, under the
- * 4.5:1 AA floor; 10% keeps it over. Do not raise it.
+ * The fill is a declared tint token, never an alpha of the text colour: columns.tsx
+ * records that a 16% alpha tint of the error token dropped light-mode badge text to
+ * 4.37:1. The tint tokens are measured against their own text in inkOnSurfaceContract.
  *
- * NO PILL SHAPE. There was a rounded `pill` variant for "identity" badges;
- * 规范 v1 (第 4 节表态 2) gives round corners to avatars only, so every badge is
- * square. `shape` stays as a one-member variant so call sites keep compiling.
+ * NO PILL SHAPE. There was a rounded `pill` variant for "identity" badges; it stays
+ * gone. 第三十批 gives every tag the 4 px control corner, not a pill.
  */
 
 /**
  * The app's one badge tone table. `ENUM_TONE_CLASSES` is a view onto it.
  *
- * 规范 v1 §2「徽章 · 只有常态」: no fill — the colour is the text and a 1 px
- * border in the same token, over whatever the row is. Colour is never the only
- * channel: domain badges carry a glyph too (○ ◐ ■ ↻ × / ✓ ✕ ◇ ↺, §1.2).
+ * 第三十批「卷宗」第 1 步(Design v4 第三十批回复第一节第 2 条):状态标签是**淡染**——色调底、无边框、圆角 4,
+ * 高 22(精确指针)/ 28(触屏,`--tag-h`)。只有四种色:中性(surface-2 底 + ink-muted 字,即 v4 的
+ * card2 + sub)与 pos / neg / warn 三种淡染(success / danger / warning 配各自的 tint)。四对都由
+ * inkOnSurfaceContract 量过(tint 配本色 ≥ 4.5;ink-muted 在 surface-2 上 ≥ 4.5)。文明色不进标签
+ * (Design 第五节第 2 条:文明色只在顶线、印、脊、焦点四处),所以 `info` / `accent` 与 `ink` 都落到中性。
+ * 颜色从来不是唯一的区分:每个标签带一个形状前缀(`glyph`)。
+ *
+ * (规范 v1 §2「徽章 · 只有常态」的无底 + 同色 1px 框,v3 的中性灰框,随这一条撤掉。)
  */
+const NEUTRAL_TAG = "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))]";
 export const BADGE_TONE_CLASSES = {
-  neutral: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]",
-  /** 已处置 ■ — ink, not a hue (§1.2 split it from 轮回中). */
-  ink: "text-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]",
-  success: "text-[oklch(var(--color-success))] border-[oklch(var(--color-success))]",
-  warning: "text-[oklch(var(--color-warning))] border-[oklch(var(--color-warning))]",
-  error: "text-[oklch(var(--color-danger))] border-[oklch(var(--color-danger))]",
-  info: "text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent))]",
-  accent: "text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent))]",
+  neutral: NEUTRAL_TAG,
+  /** 已处置 ▣ 一类:v3 时是 ink 字;四色之外不再有第五种,落到中性。 */
+  ink: NEUTRAL_TAG,
+  success: "bg-[oklch(var(--color-success-tint))] text-[oklch(var(--color-success))]",
+  warning: "bg-[oklch(var(--color-warning-tint))] text-[oklch(var(--color-warning))]",
+  error: "bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))]",
+  info: NEUTRAL_TAG,
+  accent: NEUTRAL_TAG,
 } as const;
 
 export type BadgeTone = keyof typeof BADGE_TONE_CLASSES;
@@ -72,15 +77,10 @@ const badge = cva(
     // `inline-flex` + `gap-1` so a leading glyph needs no wrapper. `align-middle`
     // keeps it off the baseline when it sits inside a run of text.
     "inline-flex items-center gap-1 align-middle",
-    // The geometry EnumBadge used to restate, and now receives: 8px/2px
-    // padding, 12px type, medium weight, hairline border. Changing the vertical
-    // padding here changes every table row in the app, which is why
+    // 第三十批:高 `--tag-h`(22 / 28)、左右 8、圆角 4(`rounded-control`)、无边框;字 sans 12 / 500,
+    // 触屏 13。Changing the geometry here changes every table row in the app, which is why
     // eslint.config.mjs exempts it by class name rather than by budget.
-    // `text-xs` IS 12px — it is the eight-step scale's slot for IDs and meta,
-    // which is what a badge is — but it also brings 0.04em tracking, which a
-    // bare `text-xs` did not, and short uppercase-ish labels need it.
-    // 规范 v1: 11 / 16 IBM Plex Mono, 400, 1 px border, 2 px / 6 px padding.
-    "px-1.5 py-0.5 font-mono text-2xs font-normal border",
+    "h-(--tag-h) px-2 rounded-control text-xs font-medium pointer-coarse:text-sm",
     // A badge is a label, not a paragraph. Wrapping one mid-word inside a table
     // cell is how the 66 hand-rolled ones each discovered `whitespace-nowrap`
     // separately.
@@ -90,9 +90,8 @@ const badge = cva(
     variants: {
       tone: BADGE_TONE_CLASSES,
       shape: {
-        // No class: `borderRadius.DEFAULT` is 0, so `rounded` would emit
-        // `border-radius: 0` and read as a decision that had been made when it
-        // had not. Square is the absence of a corner instruction.
+        // One shape: the tag's 4 px corner is in the base list above. Kept as a one-member
+        // variant so call sites keep compiling.
         square: "",
       },
     },
@@ -104,7 +103,7 @@ export interface BadgeProps
   extends Omit<React.HTMLAttributes<HTMLSpanElement>, "color">,
     VariantProps<typeof badge> {
   /**
-   * Decorative leading mark (◆ ◑ ■ ↻ ✕ …). Rendered `aria-hidden` — the label
+   * Decorative leading mark (◇ ↺ ! ‖ ◌ ▣ ↻ ✓ − + …). Rendered `aria-hidden` — the label
    * beside it is the content, and a screen reader reading "black diamond
    * ALIVE" is worse than reading "ALIVE".
    */

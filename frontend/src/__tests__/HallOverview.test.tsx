@@ -7,6 +7,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi } from "@soulledger/core/api";
 import { HallOverview } from "@/src/components/dashboard/HallOverview";
 import { renderWithProviders } from "./support/render";
+import { tZh } from "./support/zhBundle";
 
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
@@ -119,7 +120,7 @@ describe("主卡", () => {
     expect(overdue.className).toContain("--color-metal");
   });
 
-  it("本月既没结也没待审:不写百分比,不画进度环", async () => {
+  it("本月既没结也没待审:不写百分比,不画进度环;两个 0 写成句子,不是大号的 0(第三十批)", async () => {
     hallStats.mockResolvedValue({ data: { ...STATS, pending: 0, concluded_this_month: 0, month_done_pct: null, avg_days: null } });
     renderIt();
     const hero = await waitFor(() => {
@@ -129,6 +130,24 @@ describe("主卡", () => {
     });
     expect(hero).not.toHaveTextContent("本月已结 %");
     expect(hero.querySelector("[data-done-ring]")).toBeNull();
+    const pending = hero.querySelector("[data-overview-pending]") as HTMLElement;
+    expect(pending).toHaveAttribute("data-zero");
+    expect(pending).toHaveTextContent(tZh("overview.zero.pending"));
+    expect(pending).not.toHaveClass("text-display-xl");
+    expect(hero.querySelector(".v4-roll")).toBeNull();
+    expect(hero).toHaveTextContent(tZh("overview.zero.concluded"));
+  });
+
+  it("没有超期:写「无超期」,不写一个金属色的 0;本月没有退回重审:写成一句话", async () => {
+    hallStats.mockResolvedValue({ data: { ...STATS, overdue: 0, returned_this_month: 0 } });
+    renderIt();
+    const hero = await waitFor(() => {
+      const el = document.querySelector("[data-overview-hero]") as HTMLElement;
+      expect(el).toHaveTextContent(tZh("overview.count_unit_none"));
+      return el;
+    });
+    expect(hero.querySelector("[data-overdue-count]")).toBeNull();
+    expect(hero).toHaveTextContent(tZh("overview.zero.returned"));
   });
 
   it("认领下一件:别人的不认领就进不去 —— 先认领再进审判台", async () => {

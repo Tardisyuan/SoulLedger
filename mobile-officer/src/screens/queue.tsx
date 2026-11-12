@@ -1,19 +1,19 @@
 /**
  * 案卷台 (Design 第三十批 第 2 步 · 官员端): the 393 stack on the phone. Top to bottom: the overview line, the
- * source chips (one sideways row), and three groups -- 我认领 / 待定 / 待认领 -- of 72-high rows: the person's name
+ * source chips (one sideways row), and four groups -- 我认领 / 待定 / 待认领 / 他人手上 -- of 72-high rows: the person's name
  * in serif, 「来源 · 殿」 under it, the tag and the case number at the right. A row swipes left to 「认领」 (待认领)
  * or 「放回」 (我认领), ink-filled; a pull asks everything again. No search box: the magnifier in the top bar
  * opens 查询 (shell.tsx). 他人手上 comes last (the Design draws three; user 2026-11-13 kept the fourth), read-only;
  * 滑卡审判 (v4 S09) stays, at the 我认领 heading.
  *
- * Sources are read off the rows this list has loaded, not asked of the server (the queue has no source filter):
- * 城隍初审 = a case still with a 城隍 (地府 only), 跨域 = a case of another civilization than the hall's,
- * 审判队列 = the rest. A chip is drawn only for a source that has rows, so a civilization only shows its own.
- * 申诉 / 分诊 / 待发勾魂牒 live in other lists (待办, the desk), not here.
+ * Sources come from the server (`backend/apps/judgment/sources.py`): each row's `source` names its second line, the
+ * 审判队列 / 城隍送来 / 跨域 chips filter the four lists with `?source=` and count from `counts.sources`. The other chips count
+ * what waits elsewhere (`counts.elsewhere`, null = not this officer's to read) and open its list when the app has
+ * one: 城隍初审中 opens 待办 filtered to 城隍初审. 申诉 / 跨殿联审 / 待发勾魂牒 have no screen in this app, so no chip.
+ * A chip whose count is 0 or null is not drawn.
  */
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { officerAppApi } from "@soulledger/core/api/officer-app";
-import { civShortCode } from "@soulledger/core/config/civilizations";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
@@ -30,21 +30,10 @@ import { deadlineText, heldBeforeClaim } from "../verdict";
 
 type DeskGroup = JudgmentQueueGroup;
 
-export type Source = "queue" | "city_god" | "cross";
-const SOURCES: readonly Source[] = ["queue", "city_god", "cross"];
+/** The chips that filter the desk with `?source=` (user 2026-11-13: 城隍送来 filters, 城隍初审中 opens its list). */
+const FILTER_SOURCES = ["queue", "city_god", "cross"] as const;
+type FilterSource = (typeof FILTER_SOURCES)[number];
 const DAY = 86_400;
-
-/**
- * Where a case came from, as far as the row says (see the header). `hall`: the officer's tenant code.
- * THE ONE PLACE sources are worked out: the chips, their counts, the filter and the rows all call this. When the
- * queue API carries `source` (and its filter and counts), swap this body for the field and the chips for the server's.
- */
-export function sourceOf(row: Pick<Judgment, "city_god_status" | "civilization">, hall: string | null | undefined): Source {
-  if (row.city_god_status) return "city_god";
-  const mine = civShortCode(hall);
-  const its = civShortCode(row.civilization);
-  return mine && its && mine !== its ? "cross" : "queue";
-}
 
 /**
  * The row's one tag: 超期 over 退回重审 over the group's own -- 待定; 到期后可认领 / 到不了殿 for a held or barred
@@ -98,10 +87,11 @@ export function overviewParts(
 }
 
 /** One group's first page (kept in the read cache as before, `list:queue:<group>`) and its 「加载更多」. */
-function useGroupRows(group: DeskGroup) {
-  const load = useCallback(() => judgmentApi.list({ group }).then((r) => r.data), [group]);
-  const { data, error, loading, reload } = useCachedRemote(`list:queue:${group}`, load);
-  const fetchPage = useCallback((page: number) => judgmentApi.list({ group, page: String(page) }).then((r) => r.data), [group]);
+function useGroupRows(group: DeskGroup, source: FilterSource | "all") {
+  const params = useCallback((extra?: Record<string, string>) => ({ group, ...(source === "all" ? {} : { source }), ...extra }), [group, source]);
+  const load = useCallback(() => judgmentApi.list(params()).then((r) => r.data), [params]);
+  const { data, error, loading, reload } = useCachedRemote(source === "all" ? `list:queue:${group}` : `list:queue:${group}:${source}`, load);
+  const fetchPage = useCallback((page: number) => judgmentApi.list(params({ page: String(page) })).then((r) => r.data), [params]);
   const { rows, more, moreState } = useMoreRows(data, fetchPage);
   return { group, rows, error, loading, reload, more, moreState };
 }
@@ -115,7 +105,10 @@ export function QueueTab({
   gone,
   version,
   onSwipe,
+  onOpenCityGod,
 }: {
+  /** The 城隍初审 chip: 待办, filtered to 城隍初审 (shell.tsx). Without it the chip is not drawn. */
+  onOpenCityGod?: () => void;
   onOpen: (id: string, position?: { n: number; total: number }) => void;
   /** 「滑卡审判」(v4 S09):打开我认领的卡堆。 */
   onSwipe?: () => void;
@@ -127,21 +120,21 @@ export function QueueTab({
   const toast = useToast();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
-  const hall = state.status === "signedIn" ? state.user.tenant?.code : null;
   const { offline } = useOnline();
   // 认领 / 放回 need `judgment.execute`; a judgment.read role sees the desk without the swipe.
   const canClaim = useCan("judgment.execute");
   const [busy, setBusy] = useState<string | null>(null);
-  const [source, setSource] = useState<Source | "all">("all");
+  const [source, setSource] = useState<FilterSource | "all">("all");
 
-  const mine = useGroupRows("mine");
-  const deferred = useGroupRows("deferred");
-  const unclaimed = useGroupRows("unclaimed");
+  const mine = useGroupRows("mine", source);
+  const deferred = useGroupRows("deferred", source);
+  const unclaimed = useGroupRows("unclaimed", source);
   // 他人手上 last: read-only on the phone, no swipe.
-  const others = useGroupRows("others");
+  const others = useGroupRows("others", source);
   const groups = [mine, deferred, unclaimed, others];
 
   // Counts (the overview and the group headings) and this officer's month: not in the read cache, asked again on reconnect.
+  // Unfiltered: the overview, the chips and (under 全部) the group headings are the whole desk.
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
   const counts = useRemote(loadCounts);
   useReloadOnReconnect(counts.reload, counts);
@@ -160,9 +153,9 @@ export function QueueTab({
       seen.add(r.id);
       return true;
     });
-    return { ...g, all: rows, rows: source === "all" ? rows : rows.filter((r) => sourceOf(r, hall) === source) };
+    return { ...g, rows };
   });
-  const loaded = shown.flatMap((g) => g.all);
+  const loaded = shown.flatMap((g) => g.rows);
   const flat = shown.flatMap((g) => g.rows);
 
   const denied = groups.some((g) => g.error && isDenied(g.error));
@@ -192,7 +185,18 @@ export function QueueTab({
     c?.overdue ?? null,
     s ? { done: s.concluded_this_month, open: s.open_claims } : null
   );
-  const sourceCount = (key: Source) => loaded.filter((r) => sourceOf(r, hall) === key).length;
+  // 全部 / 审判队列 / 跨域 from `sources` (which `?source=` does not change); the elsewhere chips that have a screen.
+  const sources = c?.sources;
+  const elsewhere = [
+    ...(onOpenCityGod && c?.elsewhere?.city_god_review ? [{ key: "city_god_review" as const, count: c.elsewhere.city_god_review }] : []),
+  ];
+  const chips = sources
+    ? [
+        { key: "all" as const, label: t("officer_app.desk.all"), count: sources.queue + sources.city_god + sources.cross },
+        ...FILTER_SOURCES.filter((key) => sources[key] > 0).map((key) => ({ key, label: t(key === "city_god" ? "officer_app.desk.chips.city_god" : `officer_app.desk.sources.${key}`), count: sources[key] })),
+        ...elsewhere.map(({ key, count }) => ({ key, label: t(`officer_app.desk.sources.${key}`), count })),
+      ]
+    : [];
 
   return (
     <Screen testID="tab-queue-screen" edges={["left", "right"]} refreshing={groups.some((g) => g.loading && g.rows !== null)} onRefresh={refresh}>
@@ -205,16 +209,13 @@ export function QueueTab({
           ))}
         </Txt>
       ) : null}
-      {loaded.length ? (
+      {chips.length > 1 ? (
         <FilterChips
           testID="desk-sources"
           size="lg"
-          options={[
-            { key: "all" as const, label: t("officer_app.desk.all"), count: loaded.length },
-            ...SOURCES.filter((key) => sourceCount(key) > 0).map((key) => ({ key, label: t(`officer_app.desk.sources.${key}`), count: sourceCount(key) })),
-          ]}
+          options={chips}
           selected={[source]}
-          onToggle={(key) => setSource(key === source ? "all" : key)}
+          onToggle={(key) => (key === "city_god_review" ? onOpenCityGod?.() : setSource(key === source ? "all" : key))}
         />
       ) : null}
       <RefreshFailed data={failed?.rows ?? null} error={failed?.error} onRetry={() => void refresh()} />
@@ -242,7 +243,7 @@ export function QueueTab({
                     </Pressable>
                   ) : null}
                   <Txt variant="value" style={{ color: theme.faintText }}>
-                    {String(c?.[group] ?? rows.length)}
+                    {String((source === "all" ? c?.[group] : null) ?? rows.length)}
                   </Txt>
                 </View>
               </View>
@@ -254,7 +255,7 @@ export function QueueTab({
                   <DeskRow
                     key={`${group}:${row.id}`}
                     row={row}
-                    lineTwo={[t(`officer_app.desk.sources.${sourceOf(row, hall)}`), courtLabel(t, row.court, locale), ...rowNotes(t, row, group, tag.deadline, locale)].join(" · ")}
+                    lineTwo={[t(`officer_app.desk.sources.${row.source ?? "queue"}`), courtLabel(t, row.court, locale), ...rowNotes(t, row, group, tag.deadline, locale)].join(" · ")}
                     tag={tag}
                     gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
                     onPress={() => onOpen(row.id, position)}

@@ -78,3 +78,17 @@ export function CivEmblem({ civ, size, className }: { civ: SealCiv; size: number
     </span>
   );
 }
+
+/**
+ * 单色 G 天体仪记号,任意大小(第三十批「卷宗」第 1 步):页头水印(`.wm`,深 7% / 浅 9%)与空态(96,12%)用它。
+ * 颜色是 currentColor(调用处给文明字色 civT),透明度由调用处的类给 —— 记号是装饰,读屏跳过。
+ * 没有文明(中性皮)时只画环与地平环,不放任何一个文明的中心物。
+ */
+export function CivMark({ civ, size, className }: { civ: SealCiv | null; size: number; className?: string }) {
+  const style = { "--emblem-size": `${size}px` } as CSSProperties;
+  return (
+    <span aria-hidden="true" data-civ-mark={civ ?? "neutral"} className={cn("pointer-events-none inline-block size-(--emblem-size)", className)} style={style}>
+      {civ ? MARKS[civ] : mark(null)}
+    </span>
+  );
+}

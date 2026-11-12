@@ -18,7 +18,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import { BATCH_BAR, ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
-import { StatusBadge, STATUS_BADGE_BORDER } from "@/src/components/ui/StatusBadge";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { Button } from "@/src/components/ui/Button";
 import {
   FRONTEND_ROOT,
@@ -198,17 +198,19 @@ describe("batch bar (v3 .ds-batch, inverted)", () => {
   });
 });
 
-describe("domain status badges (v3: neutral-line frame, still square)", () => {
-  it("StatusBadge keeps its tone text but draws a --color-line frame, not a tone frame", () => {
+describe("domain status badges (第三十批: tinted, no frame, 4 px corner)", () => {
+  it("StatusBadge draws its tone as text on that tone's tint, with no border at all", () => {
     const { container } = render(<StatusBadge namespace="x" value="y" tone="success" />);
     const cls = (container.firstElementChild as HTMLElement).className.split(/\s+/);
-    expect(cls).toContain(STATUS_BADGE_BORDER);
     expect(cls).toContain("text-[oklch(var(--color-success))]");
-    expect(cls).not.toContain("border-[oklch(var(--color-success))]");
-    expect(cls.filter((c) => c.startsWith("rounded"))).toEqual([]);
+    expect(cls).toContain("bg-[oklch(var(--color-success-tint))]");
+    // Absence: no frame of any colour (v3 drew a --color-line one), and the one corner the tag has.
+    expect(cls.filter((c) => c === "border" || c.startsWith("border-"))).toEqual([]);
+    expect(cls.filter((c) => c.startsWith("rounded"))).toEqual(["rounded-control"]);
   });
 
-  it.each(THEMES)("%s: the line frame is decorative (glyph + text carry the meaning) — measured, not required", (theme) => {
+  // The line token is still every table's row rule; the measurement stays as a record of it.
+  it.each(THEMES)("%s: the line rule is decorative (glyph + text carry the meaning) — measured, not required", (theme) => {
     // WCAG 1.4.11 does not apply to a border the text already identifies. Recorded so a change is visible.
     const r = ratio(tok(theme, "--color-line"), tok(theme, "--color-surface-1"));
     // v4(2026-11-06)的 line 是 8% 白 / 黑压在 card 上:深 1.25、浅 1.19(v3 时 >1.3)。

@@ -54,10 +54,12 @@ import { sectionMark } from "@/src/lib/sectionMark";
  * a claim the deceased makes, and Ma'at's scale is a threshold rather than an
  * accusation (see apps/ledger/readings.py).
  *
- * `error`/`success`/`info` all resolve to a 0.1-alpha fill in
- * `BADGE_TONE_CLASSES`, which is the cap src/__tests__/dataGridToneContract.ts
- * enforces; nothing here declares its own background.
+ * `error`/`success`/`info` resolve to the tint fills in `BADGE_TONE_CLASSES`
+ * (第三十批淡染; `info` is neutral there); nothing here declares its own background.
+ * The shape prefix is the spec's 罪业 − / 功德 + (Design v4 第三十批第一节第 2 条),
+ * so the charge does not ride on colour alone.
  */
+const POLARITY_GLYPH: Partial<Record<StatutePolarity, string>> = { OFFENCE: "−", MERIT: "+" };
 const POLARITY_TONE: Record<StatutePolarity, BadgeTone> = {
   OFFENCE: "error",
   MERIT: "success",
@@ -229,7 +231,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-medium text-[oklch(var(--color-ink))]">{title}</h3>
-          <Badge tone={POLARITY_TONE[statute.polarity] ?? "neutral"}>
+          <Badge tone={POLARITY_TONE[statute.polarity] ?? "neutral"} glyph={POLARITY_GLYPH[statute.polarity]}>
             <DomainEnum namespace="judgment.statute_polarity" value={statute.polarity} />
           </Badge>
           <Badge tone="neutral">

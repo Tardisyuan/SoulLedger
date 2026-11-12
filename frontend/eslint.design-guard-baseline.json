@@ -8,9 +8,6 @@
   "src/components/layout/AppLayout.tsx": {
     "space": 1
   },
-  "src/components/ui/Badge.tsx": {
-    "space": 1
-  },
   "src/components/ui/DomainValue.tsx": {
     "space": 1
   }

@@ -1,5 +1,5 @@
 /**
- * 外框:印(规范 v3 描边印)、身份带(规范 v3,取代 v2 的匾)的题字降档、矮带与滚动收起、
+ * 外框:印(规范 v3 描边印)、页头(第三十批「卷宗」的顶线 + 卷宗头,取代 v3 身份带与 v4 标题行)、
  * 立柱横排阈值,以及 `[data-civ]` 规则里不再有 v2 素材(`app/globals.css` → `public/v2/`)。
  *
  * 素材那一组:v2 的实底印(遮罩 + 残边扫描)随 v3 描边印撤掉;v2 的分节纹(CSS 遮罩
@@ -7,7 +7,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 const mockTenant: { code: string; display_name: string; seal_glyphs?: string[] } = { code: "CN_DIYU", display_name: "第五殿" };
 jest.mock("@/src/contexts/TenantContext", () => ({
@@ -21,7 +21,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 import { Seal, sealGlyphsFor, DEFAULT_SEAL_GLYPHS } from "@/src/components/plaque/Seal";
-import { fitTier, Plaque } from "@/src/components/plaque/Plaque";
+import { PageShell } from "@/src/components/ui/PageShell";
 import { labelTooLongForVerticalPillar, pillarIsWide } from "@soulledger/core/domain/pillar";
 
 const FRONTEND = path.join(__dirname, "..", "..");
@@ -92,143 +92,58 @@ describe("印", () => {
   });
 });
 
-describe("页头题字按实测宽度降档(C14;规范 v4 28 → 20 → 20 两行)", () => {
-  /** jsdom 不排版;给一个按档位报宽度的元素:28 档 300、一行 20 档 `at20`、两行 20 档 50,容器 100。 */
-  function measured(at20: number) {
-    const el = document.createElement("div");
-    Object.defineProperty(el, "clientWidth", { value: 100 });
-    Object.defineProperty(el, "scrollWidth", {
-      get: () => (el.className.includes("text-xl") ? 300 : el.className.includes("line-clamp-2") ? 50 : at20),
-    });
-    return el;
-  }
-
-  it("28 放不下、20 一行放得下 → 20 一行", () => {
-    const el = measured(90);
-    expect(fitTier(el)).toBe(1);
-    expect(el.className).toContain("text-lg");
-    expect(el.className).not.toContain("line-clamp-2");
+/**
+ * 页头(第三十批「卷宗」第 1 步,Design v4 第三十批第一节第 1 条)取代了 v3 的身份带与 v4 的 96px 标题行
+ * (`Plaque`,按实测宽度 28 → 20 → 20 两行降档、滚过 60 收成 44 并把高度写进 `--identity-band`)。
+ * 现在只有一个页头:顶线 + 卷宗头,标题就是页面的 `<h1>`,不吸顶、不收起、不降档(长的就换行)。
+ */
+describe("页头:顶线 + 卷宗头,只有一个标题", () => {
+  it("一个 <h1>,门页 24/32(text-head);顶线、光晕、纹样、水印都只是装饰;没有身份带", () => {
+    const { container } = render(<PageShell title="名册">body</PageShell>);
+    const head = screen.getByTestId("page-head");
+    expect(head).toHaveAttribute("data-kind", "gate");
+    for (const layer of [".page-head-topline", ".page-head-glow", ".page-head-pat", ".page-head-wm"]) {
+      expect(head.querySelector(layer)).toHaveAttribute("aria-hidden", "true");
+    }
+    const h1s = container.querySelectorAll("h1");
+    expect(h1s).toHaveLength(1);
+    expect(h1s[0]).toHaveTextContent("名册");
+    expect(h1s[0].className).toMatch(/\btext-head\b/);
+    // Absence: the band, its second title and its brand / v2 layers are gone.
+    expect(screen.queryByTestId("plaque")).toBeNull();
+    expect(container.querySelector("[data-tier], .identity-band, .plaque-band, .plaque-tex")).toBeNull();
   });
 
-  it("20 一行也放不下 → 20 两行,仍是标题字体", () => {
-    const el = measured(140);
-    expect(fitTier(el)).toBe(2);
-    expect(el.className).toContain("line-clamp-2");
-    expect(el.className).toContain("font-title");
+  it("卷宗页的标题是人名,32/40(text-dossier);水印是此刻所在文明的 G 天体仪", () => {
+    render(<PageShell title="赵志强" kind="dossier">body</PageShell>);
+    const head = screen.getByTestId("page-head");
+    expect(head).toHaveAttribute("data-kind", "dossier");
+    expect(head.querySelector("h1")!.className).toMatch(/\btext-dossier\b/);
+    expect(head.querySelector("h1")!.className).not.toMatch(/\btext-head\b/);
+    expect(head.querySelector(".page-head-wm")).toHaveAttribute("data-civ-mark", "cn");
   });
 
-  it("28 放得下就是 28", () => {
-    const el = document.createElement("div");
-    expect(fitTier(el)).toBe(0);
-    expect(el.className).toContain("text-xl");
-  });
-
-  it("≤ 768 从 20 起:放得下 28 也不用 28", () => {
-    const el = document.createElement("div");
-    expect(fitTier(el, 1)).toBe(1);
-    expect(el.className).not.toContain("text-xl");
-  });
-});
-
-describe("v3 的矮带随 v4 撤掉(用户 2026-11-07)", () => {
-  it("队列也是同一条标题行:不标 data-short,放得下就是 28,印 44", () => {
-    render(<Plaque title="审判队列" collapsible />);
-    const band = screen.getByTestId("plaque");
-    expect(band).not.toHaveAttribute("data-short");
-    expect(band.querySelector("[data-tier]")).toHaveAttribute("data-tier", "0");
-    expect(screen.getByRole("img").style.width).toBe("44px");
+  it("中性皮(不认得的租户)的水印只画环,不放任何一个文明的中心物", () => {
+    mockTenant.code = "UNKNOWN";
+    render(<PageShell title="名册">body</PageShell>);
+    expect(screen.getByTestId("page-head").querySelector(".page-head-wm")).toHaveAttribute("data-civ-mark", "neutral");
   });
 
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
-  it("标题行 96 高、收起 44,没有 data-short 的规则", () => {
-    expect(/\.identity-band \{[^}]*\bheight: 96px;/.test(css)).toBe(true);
-    expect(/\.identity-band\[data-compact\] \{\s*height: 44px;/.test(css)).toBe(true);
-    expect(css).not.toContain("[data-short]");
-  });
-});
-
-describe("页头标题行(规范 v4)", () => {
-  it("殿名、题字;纹样与水印只是装饰;没有 v3 的品牌小字(v4 的品牌在侧栏),没有 v2 的回纹带", () => {
-    render(<Plaque title="审判台" />);
-    const band = screen.getByTestId("plaque");
-    expect(band).toHaveClass("identity-band");
-    expect(band.querySelector(".identity-pattern")).toHaveAttribute("aria-hidden", "true");
-    expect(band.querySelector(".identity-watermark")).toHaveAttribute("aria-hidden", "true");
-    expect(band.querySelector(".identity-brand")).toBeNull();
-    // No hall given: the civilization's realm name, not the tenant's stored display name —
-    // on the 115 box that name is English ("Chinese Afterlife") under a Chinese UI.
-    expect(band.querySelector(".identity-court")).toHaveTextContent("plaque.realm.cn");
-    expect(band.querySelector(".identity-court")).not.toHaveTextContent("第五殿");
-    expect(band.querySelector("[data-tier]")).toHaveTextContent("审判台");
-    expect(band.querySelector(".plaque-band, .plaque-tex")).toBeNull();
+  it("不吸顶、不收起:globals.css 里没有身份带的规则,`--below-band` 只是工具条 + 代看条", () => {
+    expect(css).not.toMatch(/\.identity-(band|pattern|watermark|title|court|case)\b/);
+    expect(css).not.toContain("--identity-band");
+    expect(css).toMatch(/--below-band: calc\(var\(--spacing\) \* 13 \+ var\(--imp-h\)\);/);
+    expect(/\.page-head \{[^}]*\}/.exec(css)?.[0] ?? "").not.toMatch(/sticky/);
   });
 
-  describe("滚动收起", () => {
-    let scrollY = 0;
-    let scrollHeight = 3000;
-    beforeEach(() => {
-      scrollY = 0;
-      scrollHeight = 3000;
-      Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
-      Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, get: () => scrollHeight });
-    });
-    const scrollTo = (y: number) =>
-      act(() => {
-        scrollY = y;
-        fireEvent.scroll(window);
-      });
-
-    it("滚过 60 收起,印缩到 24;回到顶才展开", () => {
-      render(<Plaque title="审判台" collapsible />);
-      const band = screen.getByTestId("plaque");
-      scrollTo(60);
-      expect(band).not.toHaveAttribute("data-compact");
-      scrollTo(61);
-      expect(band).toHaveAttribute("data-compact");
-      expect(screen.getByRole("img").style.width).toBe("24px");
-      scrollTo(10);
-      expect(band).toHaveAttribute("data-compact");
-      scrollTo(0);
-      expect(band).not.toHaveAttribute("data-compact");
-      expect(screen.getByRole("img").style.width).toBe("44px");
-    });
-
-    it("页面不够长就不收:收了会把滚动位置夹回顶、又展开,在页底来回跳", () => {
-      // 展开 96、收起 44:收起让文档短 52。可滚的余量只有 100,收了只剩 48 —— 不收。
-      scrollHeight = window.innerHeight + 100;
-      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(96);
-      try {
-        render(<Plaque title="审判台" collapsible />);
-        scrollTo(100);
-        expect(screen.getByTestId("plaque")).not.toHaveAttribute("data-compact");
-        // 同一个页面再长 50 就收得下了 —— 判据是余量,不是一律不收。
-        scrollHeight = window.innerHeight + 150;
-        scrollTo(101);
-        expect(screen.getByTestId("plaque")).toHaveAttribute("data-compact");
-      } finally {
-        offset.mockRestore();
-      }
-    });
-
-    it("吸顶的那条把自己的实际高度写到 <html> 的 --identity-band(筛选栏据此吸顶);卸载时擦掉", () => {
-      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(96);
-      try {
-        const { unmount } = render(<Plaque title="审判台" collapsible />);
-        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("96px");
-        unmount();
-        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("");
-        render(<Plaque title="灵魂账本" heading />);
-        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("");
-      } finally {
-        offset.mockRestore();
-      }
-    });
-
-    it("不是 collapsible 的(登录页)不收", () => {
-      render(<Plaque title="灵魂账本" heading />);
-      scrollTo(500);
-      expect(screen.getByTestId("plaque")).not.toHaveAttribute("data-compact");
-    });
+  it("顶线是 --topline 粗的文明字色;加载中变成进度线,不放转圈", () => {
+    const topline = /\n {2}\.page-head-topline \{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(topline).toMatch(/height: var\(--topline\);/);
+    expect(topline).toMatch(/background: oklch\(var\(--color-main-ink\)\);/);
+    render(<PageShell title="名册" isLoading skeleton={<div data-testid="sk" />}>body</PageShell>);
+    expect(screen.getByTestId("page-head").querySelector(".page-head-topline")).toHaveAttribute("data-loading", "");
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });
 
@@ -278,9 +193,10 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
     expect(seal).toMatch(/border: 2px solid currentColor;/);
     expect(seal).toMatch(/outline: 1px solid currentColor;/);
     expect(seal).not.toMatch(/background/);
-    // v4(2026-11-06):身份带是 canvas 上的光、字是 ink,印不再随带上的白字 —— 那条 inherit 规则删掉了。
+    // v4(2026-11-06):身份带是 canvas 上的光、字是 ink,印不再随带上的白字 —— 那条 inherit 规则删掉了;
+    // 第三十批起身份带整个撤掉,页头(`.page-head`)的字同样是 ink。
     expect(rule(".identity-band .seal")).toBe("");
-    expect(rule(".identity-band")).toMatch(/color: oklch\(var\(--color-ink\)\);/);
+    expect(rule(".page-head")).toMatch(/color: oklch\(var\(--color-ink\)\);/);
     expect(rule(".seal-glyphs")).toMatch(/font-family: var\(--font-title\), var\(--font-hieroglyphs\);/);
     expect(rule('.seal[data-civ="eu"]')).toMatch(/border-radius: 50%;/);
     expect(rule('.seal[data-civ="gr"]')).toMatch(/clip-path: polygon\(/);

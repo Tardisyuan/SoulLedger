@@ -88,6 +88,7 @@ import { BottomBar, GlobalNav, NAV_MODE_KEY } from "@/src/components/layout/Glob
 import { iconResolver } from "@/src/lib/menuIcons";
 import { navItems, navSections } from "@/src/lib/navSections";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { PageShell } from "@/src/components/ui/PageShell";
 import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
 import { renderWithProviders, createTestQueryClient, testProviders } from "./support/render";
@@ -357,45 +358,44 @@ describe("长标签(egy)在 252 里截断,全文在 title", () => {
   });
 });
 
-// 身份带的题字 / 殿名 / 右栏由页面经 `usePlaque` 给(用户 2026-10-02);没给就是面包屑末段。
-describe("usePlaque:页面给身份带的题字", () => {
-  function Page({ text }: { text: { title?: string; meta?: string; hall?: string; caseNumber?: string } }) {
+// 页面经 `usePlaque` 报的殿名 / 案号 / 概览(用户 2026-10-02)。第三十批「卷宗」起身份带撤掉了:
+// 它们写在页面自己的 PageShell 页头里,一页只有一个标题(`<h1>`);面包屑末段与 `<h1>` 相同时省掉末段。
+describe("usePlaque:页面报给页头的殿名 / 案号 / 概览", () => {
+  function Page({ text, heading = "页面" }: { text: { title?: string; meta?: string; hall?: string; caseNumber?: string }; heading?: string }) {
     usePlaque(text);
-    return <>page body</>;
+    return <PageShell title={heading}>page body</PageShell>;
   }
   function renderWith(children: ReactNode) {
     return renderWithProviders(<AppLayout>{children}</AppLayout>, { i18n: false });
   }
-  const band = () => screen.getByTestId("plaque");
-  const title = () => band().querySelector("[data-tier]");
+  const head = () => screen.getByTestId("page-head");
+  const metaLine = () => head().querySelector("[data-page-shell-eyebrow]");
+  const subLine = () => head().querySelector("[data-page-shell-subtitle]");
 
-  it("没有页面报题字时,题字是面包屑末段,右栏不画", () => {
-    renderWith("page body");
-    expect(title()).toHaveTextContent("菜单");
-    expect(band().querySelector(".identity-case")).toBeNull();
+  it("壳里不再有身份带:没有 plaque,也没有第二个标题", () => {
+    renderWith(<Page text={{}} />);
+    expect(screen.queryByTestId("plaque")).toBeNull();
+    expect(document.querySelectorAll("h1")).toHaveLength(1);
+    expect(screen.getAllByTestId("page-head")).toHaveLength(1);
   });
 
-  it("页面报的题字、殿名、右栏取代默认;页面离开后还给面包屑", () => {
+  it("页面报的殿名在标题上方、概览在标题下方;页面报的 title 不再画出来;页面离开后都还给壳", () => {
     const { rerender } = renderWith(<Page text={{ title: "审批实例", meta: "生死簿复核 v3 · 第 4 / 6 步", hall: "酆都 · 第三殿" }} />);
-    expect(title()).toHaveTextContent("审批实例");
-    expect(title()).not.toHaveTextContent("菜单");
-    expect(band().querySelector(".identity-case")).toHaveTextContent("生死簿复核 v3 · 第 4 / 6 步");
-    expect(band().querySelector(".identity-court")).toHaveTextContent("酆都 · 第三殿");
+    expect(metaLine()).toHaveTextContent("酆都 · 第三殿");
+    expect(subLine()).toHaveTextContent("生死簿复核 v3 · 第 4 / 6 步");
+    expect(screen.queryByText("审批实例")).toBeNull();
 
     rerender(<AppLayout>page body</AppLayout>);
-    expect(title()).toHaveTextContent("菜单");
-    expect(band().querySelector(".identity-case")).toBeNull();
-    expect(band().querySelector(".identity-court")).toBeNull();
+    expect(screen.queryByTestId("page-head")).toBeNull();
+    expect(screen.queryByText("酆都 · 第三殿")).toBeNull();
   });
 
-  it("案号槽:右栏是「案号」小字 + 可复制的整串,不画 meta;收起与手机档都保留(data-case)", async () => {
+  it("案号槽:可复制的整串写在标题上方那一行", async () => {
     const writeText = jest.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    renderWith(<Page text={{ title: "审判台", meta: "不该出现", caseNumber: "CN-2026-0042" }} />);
-    const slot = band().querySelector(".identity-case") as HTMLElement;
-    expect(slot).toHaveAttribute("data-case");
-    expect(slot).toHaveTextContent(/^案号CN-2026-0042 ⧉$/);
-    expect(slot).not.toHaveTextContent("不该出现");
+    renderWith(<Page text={{ title: "审判台", caseNumber: "CN-2026-0042" }} />);
+    const slot = head().querySelector("[data-case]") as HTMLElement;
+    expect(slot).toHaveTextContent(/^CN-2026-0042 ⧉$/);
     // 这份 t 不代参数:读屏名是 key 本身,案号由 data-case-number 认。
     const chip = within(slot).getByRole("button", { name: "common.value.copy_case_number" });
     expect(chip).toHaveAttribute("data-case-number", "CN-2026-0042");
@@ -404,10 +404,15 @@ describe("usePlaque:页面给身份带的题字", () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("CN-2026-0042"));
   });
 
-  it("只报右栏、题字留空(数据没到)时,题字仍是面包屑末段", () => {
-    renderWith(<Page text={{ title: undefined, meta: "在押 3" }} />);
-    expect(title()).toHaveTextContent("菜单");
-    expect(band().querySelector(".identity-case")).toHaveTextContent("在押 3");
+  it("面包屑末段与 <h1> 相同时不画末段;不同时照画", () => {
+    // /menus:面包屑是「系统设置 / 菜单」。
+    const { unmount } = renderWith(<Page text={{}} heading="菜单" />);
+    const crumbs = () => within(screen.getByTestId("global-topbar")).queryAllByRole("listitem");
+    expect(crumbs().map((li) => li.textContent?.replace("/", "").trim())).toEqual(["系统设置"]);
+    expect(within(screen.getByTestId("global-topbar")).queryByText("菜单")).toBeNull();
+    unmount();
+    renderWith(<Page text={{}} heading="另一个标题" />);
+    expect(crumbs().map((li) => li.textContent?.replace("/", "").trim())).toEqual(["系统设置", "菜单"]);
   });
 });
 

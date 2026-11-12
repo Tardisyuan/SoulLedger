@@ -30,7 +30,8 @@ ROOT = Path(__file__).resolve().parent.parent
 # ■□ (2026-10-03): v3's EmptyState draws a 28px □, and the route map and permission matrix
 # legends draw ■/□ beside ○◇▣ — they were left out, so the squares came from the OS font
 # while their neighbours came from here.
-GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄■□"
+# ‖ (2026-11-13): 第三十批「卷宗」— 待定 (verdict PURGATORY) is ‖, no longer ◇ shared with 审判中.
+GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄■□‖"
 FAMILY = "SoulLedger Glyphs"
 PS_NAME = "SoulLedgerGlyphs-Regular"
 OUT = [ROOT / "frontend/public/fonts/SoulLedgerGlyphs.ttf", ROOT / "mobile/assets/fonts/SoulLedgerGlyphs.ttf"]

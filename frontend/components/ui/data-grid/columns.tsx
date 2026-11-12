@@ -84,7 +84,7 @@ export interface NumericColumnDef<T> extends BaseColumnDef {
 export interface TimestampColumnDef<T> extends BaseColumnDef {
   type: 'timestamp'
   value: (row: T) => string | number | Date | null | undefined
-  /** Locale-aware formatter — pass `formatDateTime` from useI18n(). */
+  /** Locale-aware formatter — a list wants `formatListDate` from `@soulledger/core/domain/dates` (第三十批). */
   format: (value: string | number | Date) => string
   /**
    * Copy for an empty cell where the column has something better to say than
@@ -264,7 +264,8 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
       if (value === null || value === undefined || value === '') {
         return empty(column.emptyLabel)
       }
-      return <span className="font-mono tabular-nums text-[oklch(var(--color-ink))] whitespace-nowrap">{column.format(value)}</span>
+      // 第三十批「卷宗」:列表日期是 sans + tabular-nums、不换行(格式见 core 的 `formatListDate`:当年省年份、不写秒)。
+      return <span className="tabular-nums text-[oklch(var(--color-ink))] whitespace-nowrap">{column.format(value)}</span>
     }
     case 'actions': {
       const primary = column.primary?.(row) ?? null

@@ -266,7 +266,7 @@ export function IdentifierChip({ id, ariaLabel, variant = "chip" }: IdentifierCh
  * 抄的,截到 8 位就成了 `CN-2026-`,序号恰好是被截掉的那一段。没有案号(旧接口、拿不到)是
  * `unrecorded`,不拿 UUID 顶上。
  */
-/** 身份带上的案号(Plaque 右栏):字色随带上的白字,不用 ink 色 —— 匾色底上 ink-muted 看不见。 */
+/** 页头小字行里的案号(`variant="band"`,名字沿用身份带时代):字色随那一行(ink-muted),不另上色。 */
 const CASE_NUMBER_BAND_CLASS =
   "font-mono font-medium text-xs underline decoration-dotted decoration-current/50 underline-offset-2 hover:decoration-current";
 

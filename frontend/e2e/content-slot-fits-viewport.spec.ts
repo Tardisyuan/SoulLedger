@@ -22,7 +22,7 @@ for (const [w, h] of [[1440, 900], [393, 852]] as const) {
       // 「空回收站」:默认夹具里有一条(别的用例要用),这里按注释给它一个空的 —— 有条目时还有筛选条,页面就不短了。
       api.on("GET", "/recycle-bin/", { results: [], count: 0 });
       await page.goto(path);
-      await expect(page.getByTestId("plaque")).toBeVisible();
+      await expect(page.getByTestId("page-head")).toBeVisible();
       await page.waitForLoadState("networkidle").catch(() => {});
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollHeight), { timeout: 5_000 })

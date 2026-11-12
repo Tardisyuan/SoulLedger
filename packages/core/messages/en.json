@@ -3771,7 +3771,7 @@
     "onboarding_theme_dark": "Dark"
   },
   "permission": {
-    "denied_title": "Permission Denied",
+    "denied_title": "This page is not for your role",
     "denied_message": "You don't have permission to access this page or perform this action.",
     "ask_admin": "Ask your hall's administrator.",
     "go_back": "Go back",
@@ -3912,9 +3912,10 @@
     "next_body": "No server response. The case is unchanged."
   },
   "not_found": {
-    "title": "Page Not Found",
-    "description": "Sorry, the page you visited does not exist",
-    "home": "Return Home"
+    "title": "This page is not in the ledger",
+    "description": "The link may be old, or the page has moved.",
+    "home": "Return Home",
+    "to_desk": "Back to the desk"
   },
   "search": {
     "aria_label": "Search",
@@ -3952,7 +3953,14 @@
   "filter": {
     "all": "All",
     "clear_all": "Clear All",
-    "clear_one": "Clear the {{name}} filter"
+    "clear_one": "Clear the {{name}} filter",
+    "bar": {
+      "open": "Filters",
+      "open_n": "Filters · {{n}}",
+      "title": "Filters",
+      "quick": "Quick filters",
+      "done": "Show results"
+    }
   },
   "list": {
     "columns": {
@@ -8093,6 +8101,9 @@
         "overdue": "{{n}} days overdue"
       },
       "release": "Put back",
+      "chips": {
+        "city_god": "Sent on by the city god"
+      },
       "release_failed": "Couldn't put back",
       "empty_title": "No cases on the desk",
       "empty_body": "New cases will appear here."
@@ -8650,7 +8661,9 @@
       "used_of": "{{used}} of {{limit}}",
       "used_unlimited": "{{used}} · no limit",
       "full_badge": "Full",
-      "full": "{{form}} is full this month ({{used}} of {{limit}}). The soul stays among those awaiting rebirth; try next month or once the limit is raised."
+      "full": "{{form}} is full this month ({{used}} of {{limit}}). The soul stays among those awaiting rebirth; try next month or once the limit is raised.",
+      "none_of": "None yet · limit {{limit}}",
+      "none_unlimited": "None yet · no limit"
     },
     "not_applicable": {
       "title": "No rebirth in the {{civ}} tradition",
@@ -9510,7 +9523,8 @@
     "returned_up": "{{n}} points higher than last year",
     "this_year": "This year",
     "title": "The underworld year",
-    "total_rest": "souls. {{m}} already have a destination."
+    "total_rest": "souls. {{m}} already have a destination.",
+    "zero_received": "No souls were received this year."
   },
   "cmdk": {
     "defer": "Skip to the next · move to Deferred",
@@ -9700,6 +9714,12 @@
       "this_week": "This week",
       "title": "Concluded · last 12 weeks",
       "week": "Week {{n}} · {{date}}"
+    },
+    "count_unit_none": "cases · none overdue",
+    "zero": {
+      "pending": "No cases are waiting today",
+      "concluded": "Nothing concluded this month yet",
+      "returned": "Nothing sent back for retrial this month"
     }
   },
   "queue": {

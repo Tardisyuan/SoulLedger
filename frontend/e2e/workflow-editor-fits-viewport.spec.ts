@@ -32,13 +32,13 @@ test("at 1440×900 the editor ends at the viewport's bottom edge and the ten-nod
 
   const scrolledBy = await page.evaluate(() => window.scrollY);
   await page.evaluate(() => window.scrollTo(0, 0));
-  await expect(page.getByTestId("plaque")).not.toHaveAttribute("data-compact");
+  await expect(page.getByTestId("page-head")).toBeVisible();
   const m = await page.evaluate(async () => {
-    // Two consecutive frames with the same frame rect and band height: the band's height
-    // transition (and the `--identity-band` var it writes) has finished.
+    // Two consecutive frames with the same frame rect and page-head height: fonts and the head's
+    // meta line (the hall, reported after mount) have settled.
     const read = () => {
       const r = document.querySelector('[data-testid="workflow-editor-frame"]')!.getBoundingClientRect();
-      return `${r.top},${r.bottom},${(document.querySelector('[data-testid="plaque"]') as HTMLElement).offsetHeight}`;
+      return `${r.top},${r.bottom},${(document.querySelector('[data-testid="page-head"]') as HTMLElement).offsetHeight}`;
     };
     const frameTick = () => new Promise((resolve) => requestAnimationFrame(resolve));
     for (let prev = "", i = 0; i < 120; i++) {

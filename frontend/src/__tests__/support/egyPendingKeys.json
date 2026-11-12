@@ -92,6 +92,7 @@
   "officer_app.desk.tag.others",
   "officer_app.desk.tag.awaiting",
   "officer_app.desk.release",
+  "officer_app.desk.chips.city_god",
   "officer_app.desk.release_failed",
   "officer_app.desk.empty_title",
   "officer_app.desk.empty_body",
@@ -165,5 +166,18 @@
   "zongbu.col.pending",
   "zongbu.col.none_pending",
   "zongbu.col.failed",
-  "zongbu.col.month_unknown"
+  "zongbu.col.month_unknown",
+  "filter.bar.open",
+  "filter.bar.open_n",
+  "filter.bar.title",
+  "filter.bar.quick",
+  "filter.bar.done",
+  "not_found.to_desk",
+  "overview.count_unit_none",
+  "overview.zero.pending",
+  "overview.zero.concluded",
+  "overview.zero.returned",
+  "annual.zero_received",
+  "rebirths.quota.none_of",
+  "rebirths.quota.none_unlimited"
 ]

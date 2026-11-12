@@ -3771,7 +3771,7 @@
     "onboarding_theme_dark": "深色"
   },
   "permission": {
-    "denied_title": "权限不足",
+    "denied_title": "这一页不归这个身份",
     "denied_message": "您没有权限访问此页面或执行此操作。",
     "ask_admin": "请找本殿管理员。",
     "go_back": "返回上一页",
@@ -3912,9 +3912,10 @@
     "next_body": "服务器没有回应。手上这一件没有改动。"
   },
   "not_found": {
-    "title": "页面未找到",
-    "description": "抱歉，你访问的页面不存在",
-    "home": "返回首页"
+    "title": "卷宗里没有这一页",
+    "description": "链接可能是旧的，或者这一页已经不在这里了。",
+    "home": "返回首页",
+    "to_desk": "回案卷台"
   },
   "search": {
     "aria_label": "搜索",
@@ -3952,7 +3953,14 @@
   "filter": {
     "all": "全部",
     "clear_all": "清除全部",
-    "clear_one": "清除「{{name}}」筛选"
+    "clear_one": "清除「{{name}}」筛选",
+    "bar": {
+      "open": "筛选",
+      "open_n": "筛选 · {{n}}",
+      "title": "筛选条件",
+      "quick": "快捷筛选",
+      "done": "查看结果"
+    }
   },
   "list": {
     "columns": {
@@ -8093,6 +8101,9 @@
         "overdue": "超期 {{n}} 日"
       },
       "release": "放回",
+      "chips": {
+        "city_god": "城隍送来"
+      },
       "release_failed": "没能放回",
       "empty_title": "案卷台上没有案卷",
       "empty_body": "新的案子到了会出现在这里。"
@@ -8650,7 +8661,9 @@
       "used_of": "{{used}} / {{limit}}",
       "used_unlimited": "{{used}} · 不限",
       "full_badge": "已满",
-      "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在原处等候转生，下月或调高配额后再办。"
+      "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在原处等候转生，下月或调高配额后再办。",
+      "none_of": "本月还没有 · 上限 {{limit}}",
+      "none_unlimited": "本月还没有 · 不限"
     },
     "not_applicable": {
       "title": "{{civ}}没有转生",
@@ -9510,7 +9523,8 @@
     "returned_up": "比上一年多 {{n}} 个百分点",
     "this_year": "本年",
     "title": "冥界年报",
-    "total_rest": "个灵魂。其中 {{m}} 个已经有了去处。"
+    "total_rest": "个灵魂。其中 {{m}} 个已经有了去处。",
+    "zero_received": "这一年还没有收到灵魂。"
   },
   "cmdk": {
     "defer": "跳到下一件 · 放进待定分组",
@@ -9700,6 +9714,12 @@
       "this_week": "本周",
       "title": "近 12 周结案",
       "week": "第 {{n}} 周 · {{date}}"
+    },
+    "count_unit_none": "件 · 无超期",
+    "zero": {
+      "pending": "今天没有待审的案卷",
+      "concluded": "本月还没有结案",
+      "returned": "本月还没有退回重审"
     }
   },
   "queue": {

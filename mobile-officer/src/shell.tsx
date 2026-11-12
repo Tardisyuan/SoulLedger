@@ -7,6 +7,7 @@
  * and a push landing is just "set the detail". A detail reached by a push remembers its item; going
  * back to the list washes that row for 1.2 s (kit.tsx `Highlight`; none under reduce-motion).
  */
+import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "@soulledger/core/api/notifications";
 import { BackHandler, StyleSheet, View } from "react-native";
@@ -30,7 +31,7 @@ import { NoticesTab } from "./screens/notices";
 import { QueueTab } from "./screens/queue";
 import { ResetPasswordScreen } from "./screens/reset";
 import { SearchTab } from "./screens/search";
-import { TodoTab, type ItemRef } from "./screens/todo";
+import { TODO_FILTER_KEY, TodoTab, type ItemRef } from "./screens/todo";
 import { needsMfaSetup, useSession } from "./session";
 import { onForeground, useI18n, useTheme } from "./shared";
 
@@ -251,7 +252,13 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         ) : current === "todo" ? (
           <TodoTab version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : current === "queue" ? (
-          <QueueTab version={version} gone={gone} onSwipe={() => setSwipe(true)} onOpen={(id, position) => { setOrigin("queue"); setDeskPosition(position ?? null); setDetail({ type: "judgment", id }); }} />
+          <QueueTab
+            version={version}
+            gone={gone}
+            onSwipe={() => setSwipe(true)}
+            // 城隍初审中 (第三十批): 待办 filtered to 城隍初审 -- the filter 待办 reads when it mounts.
+            onOpenCityGod={tabs.includes("todo") ? () => { platform().persistent.set(TODO_FILTER_KEY, JSON.stringify(["city_god"])); setTab("todo"); } : undefined}
+            onOpen={(id, position) => { setOrigin("queue"); setDeskPosition(position ?? null); setDetail({ type: "judgment", id }); }} />
         ) : current === "search" ? (
           <SearchTab
             initialQuery={searchQuery}

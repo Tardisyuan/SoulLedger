@@ -11,7 +11,7 @@ import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { RefreshFailed, Row, visibleTabs } from "../kit";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
-import { QueueTab, overviewParts, sourceOf } from "../screens/queue";
+import { QueueTab, overviewParts } from "../screens/queue";
 import { SearchTab } from "../screens/search";
 import { TodoTab } from "../screens/todo";
 import { Shell } from "../shell";
@@ -574,37 +574,56 @@ describe("the 案卷台", () => {
     expect(screen.queryByTestId("queue-release-o")).toBeNull();
   });
 
-  it("source chips: only the sources the rows have, with counts; a chip filters the groups", async () => {
+  const SOURCED = {
+    mine: 1, unclaimed: 3, others: 0, deferred: 0, total: 4,
+    sources: { queue: 1, city_god: 3, cross: 0 },
+    elsewhere: { appeal: 5, city_god_review: 2, cross_judgment: null, capture_due: 0 },
+  };
+
+  it("source chips come from the counts: 0 / null hidden, no chip for a list the app has no screen for", async () => {
+    mockCounts.mockResolvedValue({ data: SOURCED });
     mockList.mockImplementation(async (p: { group: string }) => ({
-      data: {
-        results:
-          p.group === "unclaimed"
-            ? [
-                { id: "c1", case_number: "CN-1", soul_name: "哪吒", court: "一殿", civilization: "CHINESE", city_god_status: "PENDING" },
-                { id: "q1", case_number: "CN-2", soul_name: "沉香", court: "一殿", civilization: "CHINESE" },
-              ]
-            : [],
-      },
+      data: { results: p.group === "unclaimed" ? [{ id: "c1", case_number: "CN-1", soul_name: "哪吒", court: "一殿", source: "city_god" }] : [] },
     }));
-    renderOfficer(<QueueTab onOpen={() => {}} />);
-    await screen.findByTestId("queue-row-c1");
-    expect(screen.getByTestId("desk-sources-all")).toHaveTextContent(/全部\s*2/);
-    expect(screen.getByTestId("desk-sources-city_god")).toHaveTextContent(/城隍初审\s*1/);
-    expect(screen.queryByTestId("desk-sources-cross")).toBeNull();
+    renderOfficer(<QueueTab onOpen={() => {}} onOpenCityGod={() => {}} />);
+    await screen.findByTestId("desk-sources-city_god_review");
+    expect(screen.getByTestId("desk-sources-all")).toHaveTextContent(/全部\s*4/);
+    expect(screen.getByTestId("desk-sources-queue")).toHaveTextContent(/审判队列\s*1/);
+    expect(screen.getByTestId("desk-sources-city_god")).toHaveTextContent(/城隍送来\s*3/);
+    expect(screen.getByTestId("desk-sources-city_god_review")).toHaveTextContent(/城隍初审中\s*2/);
+    expect(screen.queryByTestId("desk-sources-cross")).toBeNull(); // 0
+    expect(screen.queryByTestId("desk-sources-cross_judgment")).toBeNull(); // null
+    expect(screen.queryByTestId("desk-sources-capture_due")).toBeNull(); // 0, and no screen
+    expect(screen.queryByTestId("desk-sources-appeal")).toBeNull(); // 5, but no screen in this app
+    // The row's second line names its own source.
     expect(within(screen.getByTestId("queue-row-c1")).getByText(/^城隍初审 · /)).toBeTruthy();
-    fireEvent.press(screen.getByTestId("desk-sources-city_god"));
-    expect(screen.queryByTestId("queue-row-q1")).toBeNull();
-    expect(screen.getByTestId("queue-row-c1")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("desk-sources-city_god")); // again: back to 全部
-    expect(screen.getByTestId("queue-row-q1")).toBeTruthy();
   });
 
-  it("a case of another civilization than the hall's reads 跨域", () => {
-    expect(sourceOf({ civilization: "EUROPEAN", city_god_status: "" }, "CN_DIYU")).toBe("cross");
-    expect(sourceOf({ civilization: "CHINESE", city_god_status: "" }, "CN_DIYU")).toBe("queue");
-    expect(sourceOf({ civilization: "CHINESE", city_god_status: "RETURNED" }, "CN_DIYU")).toBe("city_god");
-    // A hall or a case the table does not know is not called cross.
-    expect(sourceOf({ civilization: "EUROPEAN", city_god_status: "" }, null)).toBe("queue");
+  it("城隍送来 filters the four lists with ?source= (the counts stay the whole desk); again goes back to 全部", async () => {
+    mockCounts.mockResolvedValue({ data: SOURCED });
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    fireEvent.press(await screen.findByTestId("desk-sources-city_god"));
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ group: "unclaimed", source: "city_god" }));
+    expect(mockList).toHaveBeenCalledWith({ group: "others", source: "city_god" });
+    expect(mockCounts).not.toHaveBeenCalledWith({ source: "city_god" });
+    expect(screen.getByTestId("desk-sources-city_god").props.accessibilityState).toMatchObject({ selected: true });
+    mockList.mockClear();
+    fireEvent.press(screen.getByTestId("desk-sources-city_god"));
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ group: "mine" }));
+    expect(screen.getByTestId("desk-sources-all").props.accessibilityState).toMatchObject({ selected: true });
+  });
+
+  it("城隍初审中 opens its list instead of filtering; without a way there it is not drawn", async () => {
+    mockCounts.mockResolvedValue({ data: SOURCED });
+    const onOpenCityGod = jest.fn();
+    const { unmount } = renderOfficer(<QueueTab onOpen={() => {}} onOpenCityGod={onOpenCityGod} />);
+    fireEvent.press(await screen.findByTestId("desk-sources-city_god_review"));
+    expect(onOpenCityGod).toHaveBeenCalledTimes(1);
+    expect(mockList).not.toHaveBeenCalledWith(expect.objectContaining({ source: expect.anything() }));
+    unmount();
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    await screen.findByTestId("desk-sources-city_god");
+    expect(screen.queryByTestId("desk-sources-city_god_review")).toBeNull();
   });
 
   it("opening a case reports where it sits among the rows shown", async () => {

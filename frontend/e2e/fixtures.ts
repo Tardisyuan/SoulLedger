@@ -2129,24 +2129,15 @@ export async function seedAuthState(page: Page, user: object = TEST_USER): Promi
  * Returns the ApiMock so tests can override routes and assert on payloads.
  */
 /**
- * Pick a predefined workflow template, then wait for the identity band to stop moving (2026-10-20).
+ * Pick a predefined workflow template.
  *
- * The preset button sits below the fold, so the click scrolls the page and the band collapses (scrollY > 60).
- * A shorter preset then shortens the page, the browser clamps scrollY back to 0, and the band re-expands
- * 44 → 96 px (v4; v3 was 48 → 156) with its `height` transition — pushing everything under it down. Firefox delivers that scroll
- * event late enough that the expansion landed between the NEXT click's pointerdown and pointerup: 「编辑」
- * took focus on the way down, the up landed on the container, no click (logged: y 361 → 399 in 12 ms;
- * about 1 run in 50 of workflow.spec.ts). Expanding on the way back to the top is the band's spec (v3), so
- * the wait belongs here: not "compact at the top" (an expansion still due), no transition running.
+ * From 2026-10-20 this also waited for the identity band to stop moving: the click scrolled the page, the band
+ * collapsed, a shorter preset clamped scrollY back to 0 and the band re-expanded under the next click (Firefox,
+ * about 1 run in 50 of workflow.spec.ts). 第三十批「卷宗」removed the band; the page head does not stick or
+ * resize on scroll, so there is nothing left to wait for. Kept as a helper so the call sites stay one line.
  */
 export async function selectPreset(page: Page, name: RegExp | string): Promise<void> {
   await page.getByRole("button", { name }).first().click();
-  await page.waitForFunction(() => {
-    const band = document.querySelector(".identity-band");
-    if (!band) return true;
-    if (band.hasAttribute("data-compact") && window.scrollY === 0) return false;
-    return band.getAnimations().length === 0;
-  });
 }
 
 export async function setupAuthenticatedPage(page: Page): Promise<ApiMock> {

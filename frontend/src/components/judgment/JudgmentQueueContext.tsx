@@ -1,6 +1,7 @@
 "use client";
 
 import { DataGrid, EnumBadge, type DataGridColumn, type EnumTone } from "@/components/ui/data-grid";
+import { formatListDate } from "@soulledger/core/domain/dates";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
@@ -107,7 +108,7 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
 
 /** `civilization`:灵魂的文明。埃及没有功德,同两个数读作羽侧 / 心侧(`_by_civ.eg`,用户 2026-11-08)。 */
 export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civilization?: string }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale } = useI18n();
 
   const columns: DataGridColumn<QueueLedgerRecord>[] = [
     {
@@ -140,7 +141,7 @@ export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civ
       type: "timestamp",
       header: t("judgment.queue.ledger_recorded"),
       value: (row) => row.recorded_at,
-      format: (value) => formatDateTime(value as string),
+      format: (value) => formatListDate(value, locale) ?? "",
       emptyLabel: t("judgment.queue.not_recorded"),
       width: "18ch",
     },
@@ -243,7 +244,7 @@ export function LedgerPanel({ ledger, civilization }: { ledger: QueueLedger; civ
 }
 
 export function PriorCyclesPanel({ cycles }: { cycles: QueuePriorCycle[] }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale } = useI18n();
 
   const columns: DataGridColumn<QueuePriorCycle>[] = [
     {
@@ -279,7 +280,7 @@ export function PriorCyclesPanel({ cycles }: { cycles: QueuePriorCycle[] }) {
       type: "timestamp",
       header: t("judgment.queue.reborn_at"),
       value: (row) => row.reincarnated_at,
-      format: (value) => formatDateTime(value as string),
+      format: (value) => formatListDate(value, locale) ?? "",
       emptyLabel: t("judgment.queue.not_recorded"),
       width: "18ch",
     },
