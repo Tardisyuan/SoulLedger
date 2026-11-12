@@ -553,6 +553,9 @@ def lift_mute(mute, *, actor, request=None):
     return row
 
 
+AUTHOR_DELETED_NOTE = "【作者已自行删除,未执行处置】"
+
+
 def resolve_report(report, resolution, *, actor, request=None, note="", mute_days=None, reason_code="",
                    reason_note=""):
     """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。
@@ -584,6 +587,9 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
             elif not content.is_deleted:
                 moderate_content(content, resolution, actor=actor, request=request, reason=note,
                                  reason_code=reason_code, reason_note=reason_note)
+            else:
+                # 作者先自删了(图片也已真删):没有任何内容被隐藏 / 删除,记录里如实写出,不记成官员的处置。
+                note = (AUTHOR_DELETED_NOTE + note)[:500]
         elif resolution == ReportResolution.MUTE:
             if mute_days is None:
                 raise SocialError("禁言须给出天数。", "invalid_days", 400)
