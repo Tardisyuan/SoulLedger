@@ -71,6 +71,8 @@ beforeEach(async () => {
   secure.clear();
   await AsyncStorage.clear();
   bioMod.__state.recognised = true;
+  bioMod.__state.prompts.length = 0;
+  bioMod.__state.gate = null;
   listeners = new Set();
   offset = 0;
   jest.spyOn(Date, "now").mockImplementation(() => realNow() + offset);
@@ -137,12 +139,19 @@ describe("the switch under 面容登录", () => {
   });
 });
 
+/** A cold start with the session restored: the lock comes up once (F-ACCT-05) and the face is recognised. */
+async function coldStartUnlocked() {
+  signedIn();
+  renderApp();
+  await screen.findByTestId("profile-card");
+  await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
+  bioMod.__state.prompts.length = 0;
+}
+
 describe("the lock", () => {
   it("comes up after five minutes away, asks the system, and success lets the app back", async () => {
     phone({ lock: true });
-    signedIn();
-    renderApp();
-    await screen.findByTestId("profile-card");
+    await coldStartUnlocked();
     expect(screen.queryByTestId("app-lock")).toBeNull();
     await background();
     // the cover goes up as the app leaves, so the screen underneath is never what the switcher or the return shows
@@ -166,9 +175,7 @@ describe("the lock", () => {
     persistentStore.set(LOCALE_COOKIE, "en");
     try {
       phone({ lock: true });
-      signedIn();
-      renderApp();
-      await screen.findByTestId("profile-card");
+      await coldStartUnlocked();
       await background();
       // Hold the prompt open, so the lock is still on screen to be found (it unlocks the moment the prompt answers).
       let recognise!: () => void;
@@ -188,9 +195,7 @@ describe("the lock", () => {
     const { BackHandler } = jest.requireActual<typeof import("react-native")>("react-native");
     const added = jest.spyOn(BackHandler, "addEventListener");
     phone({ lock: true });
-    signedIn();
-    renderApp();
-    await screen.findByTestId("profile-card");
+    await coldStartUnlocked();
     await background();
     let recognise!: () => void;
     bioMod.__state.gate = new Promise<void>((resolve) => (recognise = resolve));
@@ -214,9 +219,7 @@ describe("the lock", () => {
 
   it("does not lock on a brief switch: under five minutes the cover comes down and nothing is asked", async () => {
     phone({ lock: true });
-    signedIn();
-    renderApp();
-    await screen.findByTestId("profile-card");
+    await coldStartUnlocked();
     await background();
     await foreground(4.9);
     expect(screen.queryByTestId("app-lock")).toBeNull();
@@ -226,9 +229,7 @@ describe("the lock", () => {
 
   it("does not lock, even after an hour away, when the switch is off", async () => {
     phone({ lock: false });
-    signedIn();
-    renderApp();
-    await screen.findByTestId("profile-card");
+    await coldStartUnlocked();
     await background();
     expect(screen.queryByTestId("app-lock-cover")).toBeNull();
     await foreground(60);
@@ -236,26 +237,46 @@ describe("the lock", () => {
     expect(bioMod.__state.prompts).toEqual([]);
   });
 
-  it("does not lock on a first launch: nothing has left the foreground yet", async () => {
+  // F-ACCT-05 (flow walk 2026-11-12): this used to read "does not lock on a first launch". A cold start restores the
+  // stored session without the sign-in page, so swiping the app away and reopening it walked straight past the lock.
+  it("locks a cold start that restores the stored session, and asks once", async () => {
     phone({ lock: true });
+    let recognise!: () => void;
+    bioMod.__state.gate = new Promise<void>((resolve) => (recognise = resolve));
     signedIn();
     renderApp();
-    await screen.findByTestId("profile-card");
-    expect(screen.queryByTestId("app-lock")).toBeNull();
-    expect(screen.queryByTestId("app-lock-cover")).toBeNull();
-    expect(bioMod.__state.prompts).toEqual([]);
+    await screen.findByTestId("app-lock");
+    expect(bioMod.__state.prompts).toEqual(["用来解锁灵魂簿。"]);
+    await act(async () => recognise());
+    await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
+    expect(screen.getByTestId("profile-card")).toBeTruthy();
     // a return that was never preceded by a departure is not a return
     await foreground(60);
     expect(screen.queryByTestId("app-lock")).toBeNull();
+  });
+
+  it("does not lock a session the soul has just signed into with the password", async () => {
+    phone({ lock: true });
+    stubApi({
+      "/soul-auth/login/": { status: 200, data: { access: "A", refresh: "R", soul_code: PROFILE.soul_code, account: PROFILE.account } },
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "GET /me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" } },
+    });
+    renderApp();
+    fireEvent.changeText(await screen.findByTestId("login-soul-code"), PROFILE.soul_code);
+    fireEvent.changeText(screen.getByTestId("login-password"), "a-password");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await screen.findByTestId("profile-card");
+    expect(screen.queryByTestId("app-lock")).toBeNull();
+    expect(bioMod.__state.prompts).toEqual([]);
   });
 
   it("when the face is not recognised it stays locked, says so, offers another try and 「输入密码」, which is the sign-in page's way", async () => {
     phone({ lock: true });
     rememberAccount(PROFILE.soul_code, PROFILE.name);
     spendAutoPrompt();
-    signedIn();
-    renderApp();
-    await screen.findByTestId("profile-card");
+    await coldStartUnlocked();
     bioMod.__state.recognised = false;
     await background();
     await foreground(6);
@@ -274,9 +295,7 @@ describe("the lock", () => {
     phone({ lock: true });
     rememberAccount(PROFILE.soul_code, PROFILE.name);
     spendAutoPrompt();
-    signedIn();
-    renderApp();
-    await screen.findByTestId("profile-card");
+    await coldStartUnlocked();
     bioMod.__state.recognised = false;
     await background();
     await foreground(6);

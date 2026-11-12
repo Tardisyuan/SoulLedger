@@ -142,6 +142,19 @@ export function stateAfterFailedMe(error: unknown): SessionState {
   return { status: "signedOut", notice: soulErrorMessage(error) };
 }
 
+/**
+ * True while the signed-in session is one restored from the stored refresh token (a cold start), not one the soul
+ * just signed into. 切回 App 时也要验证 reads it once (`takeRestoredSession`): a cold start skips the sign-in page,
+ * so without it swiping the app away and reopening it walked past the lock (F-ACCT-05).
+ */
+let restoredSession = false;
+
+export function takeRestoredSession(): boolean {
+  const was = restoredSession;
+  restoredSession = false;
+  return was;
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>(() =>
     getRefreshToken() ? { status: "booting" } : { status: "signedOut" }
@@ -192,6 +205,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    * ends the session; no answer (offline) keeps the tokens and shows the retry screen.
    */
   const boot = useCallback(() => {
+    restoredSession = true;
     const refresh = getRefreshToken();
     if (!refresh || getAccessToken()) return enter();
     return rotateSoulTokens(refresh).then(enter, (e: unknown) => {
@@ -234,6 +248,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const finishSignIn = useCallback(
     async (response: SoulLoginResponse) => {
       signIns.current += 1;
+      restoredSession = false;
       storeSoulTokens(response);
       if (response.account.must_change_password) {
         setState({ status: "mustChangePassword", expiresAt: response.account.initial_password_expires_at ?? null });
@@ -332,6 +347,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     const refresh = getRefreshToken();
     const epoch = signIns.current;
+    restoredSession = false;
     clearOutbox();
     clearVoiceNumbers();
     clearSocialStatus();

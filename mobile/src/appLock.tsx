@@ -5,8 +5,10 @@
  * not, the way out is the sign-in page's own: 「输入密码」 signs out, and the sign-in page asks for the password.
  *
  * No flash of the screen underneath: the cover goes up when the app LEAVES the foreground (the OS snapshots the app
- * switcher then too), and comes down on return if the time away was short. A cold start is never locked -- the
- * sign-in page already asks for the face. The time is fixed at five minutes; there is no option.
+ * switcher then too), and comes down on return if the time away was short. The time is fixed at five minutes; there
+ * is no option. A cold start that restores the stored session is locked too (F-ACCT-05, flow walk 2026-11-12): it
+ * never passes the sign-in page -- `boot()` trades the stored refresh token straight for the home page -- so swiping
+ * the app away and reopening it used to walk past the lock. A session the soul has just signed into is not locked.
  */
 import { onSessionResume, onSessionSuspend } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -16,7 +18,7 @@ import { BackHandler, Pressable, StyleSheet, View } from "react-native";
 import { BrandMark } from "./brandMarkView";
 import { appLockOn } from "./deviceLogin";
 import { useI18n } from "./i18n";
-import { useSession } from "./session";
+import { takeRestoredSession, useSession } from "./session";
 import { Button, Txt, useTheme } from "./ui";
 import { useBiometry } from "./useBiometry";
 
@@ -29,7 +31,8 @@ export function AppLock() {
   const { t } = useI18n();
   const { signOut } = useSession();
   const bio = useBiometry();
-  const [phase, setPhase] = useState<Phase>("off");
+  const [coldStart] = useState(() => takeRestoredSession() && appLockOn());
+  const [phase, setPhase] = useState<Phase>(coldStart ? "locked" : "off");
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const leftAt = useRef<number | null>(null);
@@ -48,6 +51,11 @@ export function AppLock() {
     if (ok) setPhase("off");
     else setFailed(true);
   }, [t]);
+
+  useEffect(() => {
+    if (coldStart) void unlock(); // asks once, as on a return
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the cold start is asked about once, on mount
+  }, []);
 
   useEffect(() => {
     const offSuspend = onSessionSuspend(() => {
