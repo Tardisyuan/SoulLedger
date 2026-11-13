@@ -103,7 +103,7 @@ describe("feed", () => {
     expect(await screen.findByTestId("circle-empty")).toBeTruthy();
     expect(screen.getByText("还没有可看的帖子")).toBeTruthy();
     // 文明气质 1e: a whole-page empty state carries the illustration (neutral here: no theme provided).
-    expect(within(screen.getByTestId("circle-empty")).getByTestId("empty-hero-neutral")).toBeTruthy();
+    expect(within(screen.getByTestId("circle-empty")).getByTestId("empty-hero-neutral", { includeHiddenElements: true })).toBeTruthy();
     fireEvent.press(screen.getByTestId("circle-write"));
     expect(mockNavigate).toHaveBeenCalledWith("ComposePost");
   });

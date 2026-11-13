@@ -238,29 +238,31 @@ describe("a past life has no action in it", () => {
 });
 
 describe("status badges are domain enums, not status colours (补足 C15)", () => {
-  it("every civilization draws the same badge: ink words, an ink3 frame — never its plaque", () => {
+  // 第三十批 淡染: no frame, a tinted ground; neutral is --sub on s2. The civilization never colours a tag.
+  it("every civilization draws the same neutral badge: --sub words on s2, no frame — never its plaque", () => {
     const looks = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((civ) => {
       const { unmount } = wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value="REJECTED" />, civ);
       const box = flat(screen.getByTestId("b"));
       const glyph = flat(within(screen.getByTestId("b")).getByText("✕"));
       unmount();
       const t = themeFor(civ, "dark");
-      expect([box.borderColor, glyph.color]).toEqual([t.inkSubtle, t.ink]);
+      expect([box.borderWidth, box.backgroundColor, glyph.color]).toEqual([undefined, t.s2, t.inkMuted]);
       expect([t.neg, t.negStrong, t.plaque, t.pos, t.warn]).not.toContain(glyph.color);
-      return box.borderColor;
+      return `${box.backgroundColor} ${glyph.color}`;
     });
     expect(new Set(looks).size).toBe(1);
   });
 
-  it("the ones still waiting on someone (待审 / 申诉中) sit on s2; a decided one on nothing", () => {
+  it("the ones still waiting on someone (待审 / 申诉中) sit on the warn tint, approved on pos, rejected on neutral s2", () => {
     const t = themeFor("CHINESE", "dark");
-    for (const [value, ground] of [["UNDER_REVIEW", t.s2], ["APPEALING", t.s2], ["APPROVED", "transparent"], ["REJECTED", "transparent"]]) {
+    for (const [value, ground] of [["UNDER_REVIEW", t.warnBg], ["APPEALING", t.warnBg], ["APPROVED", t.posBg], ["REJECTED", t.s2]]) {
       const { unmount } = wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value={value} />);
       expect([value, flat(screen.getByTestId("b")).backgroundColor]).toEqual([value, ground]);
       unmount();
     }
+    expect(new Set([t.warnBg, t.posBg, t.s2]).size).toBe(3);
     wrap(<EnumBadge testID="b" namespace={["soul_app", "soul_states"].join(".")} table={SOUL_STATE_BADGES} value="JUDGING" />);
-    expect(flat(screen.getByTestId("b")).backgroundColor).toBe(t.s2);
+    expect(flat(screen.getByTestId("b")).backgroundColor).toBe(t.warnBg);
   });
 });
 

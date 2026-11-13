@@ -80,7 +80,8 @@ describe("stacksLabel", () => {
   it(`switches to two lines above ${LABEL_STACK_THRESHOLD} characters`, () => {
     expect(stacksLabel("Cross-civilization")).toBe(false); // 18
     expect(stacksLabel("Cross-civilization.")).toBe(true); // 19
-    expect(stacksLabel("Wat Wedja Khetem-N")).toBe(true);
+    expect(stacksLabel("Wat Wedja Khetem-N")).toBe(false); // 18: egy "completed" since batch 33 (was "… Seth", 21)
+    expect(stacksLabel("Wat Wedja Khetem Seth")).toBe(true); // 21
     expect(stacksLabel("是否跨文明")).toBe(false);
   });
 

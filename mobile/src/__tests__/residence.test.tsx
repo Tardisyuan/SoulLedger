@@ -171,8 +171,8 @@ describe("a soul residing in another civilization", () => {
     expect(apply.props.accessibilityState.disabled).toBe(false);
     expect(screen.getByText("还没有转生申请")).toBeTruthy();
     // 文明气质 1e: the whole-page empty state wears the illustration of where the soul IS.
-    expect(within(screen.getByTestId("applications-empty")).getByTestId("empty-hero-eg")).toBeTruthy();
-    expect(screen.queryByTestId("empty-hero-cn")).toBeNull();
+    expect(within(screen.getByTestId("applications-empty")).getByTestId("empty-hero-eg", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId("empty-hero-cn", { includeHiddenElements: true })).toBeNull();
   });
 
   it("an application from before the dispatch is appealable whenever the server says can_appeal", async () => {

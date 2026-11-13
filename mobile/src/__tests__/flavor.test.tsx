@@ -75,7 +75,7 @@ describe("the empty illustration is for whole pages only (1e)", () => {
   it("an empty section inside the life page keeps its dash: no illustration anywhere", () => {
     wrap(<LifeSections lex="cn" life={life(1) as never} />, "cn");
     expect(screen.getByText("尚未收案。审理殿定下后此处入簿。")).toBeTruthy();
-    expect(screen.queryAllByTestId(/^empty-hero-/)).toEqual([]);
+    expect(screen.queryAllByTestId(/^empty-hero-/, { includeHiddenElements: true })).toEqual([]);
   });
 });
 

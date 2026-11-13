@@ -58,17 +58,19 @@ it("app.json asks the OS to follow the system setting", () => {
 // v2: the primary button is one of the plaque's five places; before sign-in that is
 // the neutral plaque (补足 C 组 login: 中性皮), no longer the canvas's ink fill.
 // v3 (2026-10-02): no parchment before sign-in — the login is on v3's neutrals.
-it.each(["dark", "light"] as const)("system %s → v4's neutrals of that scheme, primary button in the neutral plaque", async (scheme) => {
+// 第三十批 墨色实底 (dossier step 1): the primary button is ink everywhere, the login included —
+// the scheme's own ink, no longer the neutral plaque.
+it.each(["dark", "light"] as const)("system %s → v4's neutrals of that scheme, primary button in that scheme's ink", async (scheme) => {
   mockScheme = scheme;
   renderApp();
   await screen.findByTestId("login-submit");
   expect(loginGround()).toBe(v4[scheme].card);
-  // 「登录」 is pressable once there is a full number and a password: only then is it the plaque button.
+  // 「登录」 is pressable once there is a full number and a password: only then is it the ink button.
   fireEvent.changeText(screen.getByTestId("login-soul-code"), "QU33Q9FW5F");
   fireEvent.changeText(screen.getByTestId("login-password"), "x");
-  expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
-    backgroundColor: (scheme === "dark" ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL),
-  });
+  const submit = StyleSheet.flatten(screen.getByTestId("login-submit").props.style) as { backgroundColor?: string };
+  expect(submit.backgroundColor).toBe(v4[scheme].ink);
+  expect(submit.backgroundColor).not.toBe(scheme === "dark" ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL);
   expect(loginGround()).not.toBe(v4[scheme === "dark" ? "light" : "dark"].card);
 });
 
