@@ -32,6 +32,7 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { REACTIONS } from "@/src/components/social/ReactionBar";
 import { MediaGrid } from "./MediaGrid";
+import { AiScoreTag, AiScreenBar, byRiskOrder, useAiScreen } from "@/src/components/ai/ModerationPreScreen";
 import {
   CommentCounts,
   MODERATION_REASONS,
@@ -212,6 +213,14 @@ export function ReportsReview() {
       ),
     [reports.data, posts.data, comments.data]
   );
+  // AI 预筛(src/components/ai/ModerationPreScreen.tsx):只排序,不改任何一条的状态。
+  const screenRows = useMemo(
+    () => [...(posts.data?.results ?? []), ...(comments.data?.results ?? [])] as Parameters<typeof useAiScreen>[0],
+    [posts.data, comments.data]
+  );
+  const screen = useAiScreen(screenRows);
+  const riskOf = (it: ReviewItem) => (it.target ? screen.scores[it.target.id] : undefined);
+  const shown = screen.byRisk ? byRiskOrder(items, (it) => riskOf(it)?.score) : items;
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [reason, setReason] = useState("");
@@ -389,9 +398,11 @@ export function ReportsReview() {
     return <EmptyState title={t("social_moderation.empty.review")} reason={t("social_moderation.empty.review_reason")} />;
 
   return (
+    <>
+    <AiScreenBar screen={screen} />
     <div className="grid grid-cols-1 border-t border-[oklch(var(--color-block))] md:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
       <ul aria-label={t("social_moderation.review.list_label")} className="md:border-r border-[oklch(var(--color-rule))]">
-        {items.map((it) => {
+        {shown.map((it) => {
           const on = it.key === selected?.key;
           const reportCount = it.report?.report_count ?? 0;
           return (
@@ -425,6 +436,7 @@ export function ReportsReview() {
                     {it.pending && (
                       <span className="text-[oklch(var(--color-warning))]">{ruleHit(it.pending.row)}</span>
                     )}
+                    <AiScoreTag score={riskOf(it)} />
                   </span>
                 </span>
               </button>
@@ -701,5 +713,6 @@ export function ReportsReview() {
         onCancel={() => setDeleting(false)}
       />
     </div>
+    </>
   );
 }

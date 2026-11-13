@@ -10046,5 +10046,50 @@
     },
     "clear_field": "Remove “{name}”",
     "demo_not_recorded": "This is the demo, so only recorded questions are answered. Try: {examples}"
+  },
+  "ai_assist": {
+    "statutes": {
+      "title": "AI suggested articles",
+      "ask": "Suggest articles",
+      "note": "Suggestions only: read each article; only the ones you tick are cited.",
+      "why": "Why",
+      "keyword": "Keyword match",
+      "fallback": "AI is unavailable or not switched on for this hall; these are keyword matches.",
+      "none": "No applicable article found.",
+      "cite_selected": "Cite selected ({n})",
+      "discard": "Use none",
+      "dropped": "Dropped suggestions with no basis: {codes}",
+      "model": "Model · {model}",
+      "error": "Could not get suggestions; search the articles directly."
+    },
+    "verdict": {
+      "ask": "Draft the verdict text",
+      "need_verdict": "Choose the verdict first, then draft.",
+      "note": "AI drafts only the verdict you chose; once in the text box it is yours to edit and save.",
+      "insert": "Put in the text box",
+      "replace": "Replace the text in the box",
+      "discard": "Discard",
+      "fallback": "AI is unavailable or not switched on for this hall; this is a template sentence.",
+      "check_unknown": "Articles not among the adopted citations: {codes}",
+      "check_contrary": "Words of a different verdict: {words}",
+      "check_name": "Names the soul or its code",
+      "model": "Model · {model}",
+      "error": "Could not get a draft; write the verdict text directly."
+    },
+    "screen": {
+      "run": "AI pre-screen",
+      "sort": "Sort by risk",
+      "note": "Sorts only; nothing is hidden or deleted. You decide.",
+      "score": "Risk {score}",
+      "fallback": "AI is unavailable or not switched on for this hall; rule scores only.",
+      "model": "Model · {model}",
+      "error": "Pre-screen failed; the queue works as usual.",
+      "signals": {
+        "sensitive_word": "Sensitive word",
+        "reported": "Reported",
+        "injection_phrase": "Tries to steer the score",
+        "media": "Has images"
+      }
+    }
   }
 }
