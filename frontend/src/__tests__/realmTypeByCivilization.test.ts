@@ -21,6 +21,9 @@ describe("realmTypeNamespace", () => {
     expect(t(`${realmTypeNamespace(t, "CHINESE", "BLISS")}.BLISS`)).toBe("天界");
     expect(t(`${realmTypeNamespace(t, "EGYPTIAN", "PURGATORY")}.PURGATORY`)).toBe("杜阿特");
     expect(t(`${realmTypeNamespace(t, "GREEK", "HELL")}.HELL`)).toBe("塔尔塔罗斯");
+    // 希腊的 NEUTRAL 有三处:阿刻戎、岔路口草地、阿斯福得草原 —— 类型词不能是只指第一处的「渡口」(审计 2026-11-13 GR-4a)。
+    expect(t(`${realmTypeNamespace(t, "GREEK", "NEUTRAL")}.NEUTRAL`)).toBe("中立之地");
+    expect(translator(en)(`${realmTypeNamespace(t, "GREEK", "NEUTRAL")}.NEUTRAL`)).not.toMatch(/crossing/i);
     // Absence: 地府 no longer reads 「天堂」.
     expect(t(`${realmTypeNamespace(t, "CHINESE", "BLISS")}.BLISS`)).not.toBe(t("realms.types.BLISS"));
   });

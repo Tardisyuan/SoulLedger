@@ -176,7 +176,7 @@ CHINESE_REALMS = [
      "大热恼大地狱 - unfilial conduct: the parent left unkept in life and unburied in death", "MENGPO", False, 20),
     ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Wesekhet 9 · Pingdeng",
      RealmType.HELL, 9,
-     "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy",
+     "阿鼻大地狱 - the deepest hell; murder, arson, the crimes with no remedy",
      "MENGPO", False, 10),
     ("DY_COURT_10_ZHUANLUN", "第十殿", "第十殿转轮王", "Tenth Court Zhuanlun", "Wesekhet 10 · Zhuanlun",
      RealmType.HELL, 10,
@@ -317,8 +317,8 @@ EUROPEAN_REALMS = [
      "NONE", False, None),
     ("EU_PURGATORY_T7_LUST", "炼狱第七层", "第七层 - 淫欲", "Seventh Terrace - Lust",
      "Ta Hesmen 7 · Luxuria", RealmType.PURGATORY, 7,
-     "Seventh and last terrace: lust. The penitent passes through a wall of "
-     "flame (Purg. XXV-XXVII). Love excessive. What lies above is not an "
+     "Seventh and last terrace: lust. The penitent walks within the flames "
+     "(Purg. XXV-XXVII). Love excessive. What lies above is not an "
      "eighth terrace but the summit itself — the Earthly Paradise, Lethe and "
      "Eunoè, and the ascent to the stars",
      "NONE", False, None),
@@ -455,11 +455,14 @@ EUROPEAN_REALMS = [
      "NONE", True, None),
     ("EU_ACHERON", "阿刻戎河渡口", "阿刻戎河渡口", "The Crossing of Acheron", "Acheron",
      RealmType.NEUTRAL, 0,
-     "The far bank of Acheron, where the dead are ferried in. Virgil, Aeneid "
-     "6.295-297 ('the way leads to that Tartarean stream of Acheron'); Dante "
-     "puts Charon here too, before the first circle (Inferno III), which is why "
-     "this is a threshold and not a circle. Euripides, Alcestis 252-256 has the "
-     "same crossing as a lake. Not a destination: nobody is sentenced here.",
+     "The near bank of Acheron, past the vestibule, where Charon takes the dead "
+     "on board. Virgil, Aeneid 6.295-297 ('the way leads to that Tartarean "
+     "stream of Acheron'); Dante puts Charon here too, before the first circle "
+     "(Inferno III), which is why this is a threshold and not a circle. "
+     "Euripides, Alcestis 252-256 has the same crossing as a lake. In the poem "
+     "only those bound for hell gather here; this system records every European "
+     "soul here at death, before any verdict, as its entry station. Not a "
+     "destination: nobody is sentenced here.",
      "NONE", False, None),
 ]
 
@@ -543,7 +546,8 @@ EUROPEAN_REALMS = [
 #     Republic X has the same act at the river Ameles on the plain of Lethe
 #     (621a-b) — so both halves of the basis agree, and Greek souls in this
 #     system *are* rebirth-capable. That is recorded on the realms instead:
-#     the two destinations, GR_ISLES_OF_THE_BLESSED and GR_TARTARUS, carry
+#     the destinations — GR_ISLES_OF_THE_BLESSED, GR_TARTARUS and, since
+#     2026-11-11, GR_ASPHODEL_MEADOW — carry
 #     `memory_reset_mechanism="LETHE"`, while GR_PLATO_MEADOW and GR_ACHERON
 #     carry "NONE" because nobody is sentenced to either (see the comment
 #     above GR_ISLES_OF_THE_BLESSED). An earlier version of this note said
@@ -579,9 +583,11 @@ GREEK_REALMS = [
      "Tartarus. This is a sorting point that stands BEFORE any punishment, "
      "which is the whole reason the three judges cannot be housed in a circle "
      "of Dante's hell. Both roads out of it are seeded, because the same "
-     "sentence names them, and GR_ACHERON is the crossing a soul reaches it "
-     "by — the one piece of the map that comes from Aeneid 6 rather than "
-     "from this passage. See the basis note at the top of GREEK_REALMS.",
+     "sentence names them; a third, to GR_ASPHODEL_MEADOW for ordinary souls, "
+     "is the owner's decision of 2026-11-11 and not in 524a. GR_ACHERON is the "
+     "crossing a soul reaches it by — the one piece of the map that comes from "
+     "Aeneid 6 rather than from this passage. See the basis note at the top "
+     "of GREEK_REALMS.",
      "NONE", False, None),
     # `is_eternal` IS STILL FALSE ON BOTH ROADS, AND IT NOW MEANS SOMETHING.
     # It was written as a recorded limitation: Gorgias 524a says where the roads

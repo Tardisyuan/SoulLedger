@@ -231,7 +231,8 @@ WORKFLOW_TEMPLATES = {
             #   so it is EVALUATION too.
             #
             # The frontend had already corrected its own copies of these two —
-            # `Anubis · 引导与称量` and `42审判者 · 否定告白`, both mapped to
+            # `Anubis · 引导与称量` and `42审判者 · 否定告白` (the bench is 「四十二判官」 on both sides
+            # since 2026-11-13, docs/02 §2.2; rows already stored: workflow/0031), both mapped to
             # EVALUATION in `packages/core/src/config/workflow-node-types.ts`, whose
             # comment on 灵魂引导 said outright that the backend node was still
             # carrying 「阿努比斯审判」的旧读法. It no longer is, and that comment
@@ -252,7 +253,7 @@ WORKFLOW_TEMPLATES = {
             # fork cannot be skipped. Osiris receives in the Hall of Two Truths (02 L88–91), not 「Duat」.
             # Both ends meet at 结束. Execution waits for this flow (DispositionService.execute).
             {"id": "n1", "name": "阿努比斯 · 引导与称量", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 1, "actor": "Anubis", "on_pass": "n2"},
-            {"id": "n2", "name": "四十二神官 · 否定告白", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 2, "on_pass": "n3"},
+            {"id": "n2", "name": "四十二判官 · 否定告白", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 2, "on_pass": "n3"},
             {"id": "n3", "name": "托特 · 记录并宣读", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 3,
              "actor": "Thoth", "kind": "NOTIFY", "on_pass": "n4",
              "branches": [{"id": "heavier", "when": [{"fact": "verdict", "op": "in", "value": ["FAILED"]}], "target": "n7"}]},
@@ -357,7 +358,7 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     # Renamed from 「四十二神官 · 罪行核实」 with the node itself — the reason is
     # unchanged, but the old step word claimed the bench performed a
     # verification, which is the reading the rename removes.
-    "四十二神官 · 否定告白": "The forty-two assessors are forty-two Actor rows "
+    "四十二判官 · 否定告白": "The forty-two assessors are forty-two Actor rows "
                      "(seed_mythology seeds them individually). One FK cannot "
                      "hold a bench, and the declarations are addressed to all "
                      "of them in one passage of the hall (BD 125).",
@@ -381,7 +382,7 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
 # preset labels (a preset saved from /workflow becomes ``nodes_json``, which
 # ``create_from_judgment`` prefers over ``WORKFLOW_TEMPLATES``). Consulting only
 # the backend table would leave every frontend-only bench, institution and
-# action name — 42审判者 · 否定告白, 城隍申诉审理, 枉死城登记, … — to be
+# action name — 四十二判官 · 否定告白, 城隍申诉审理, 枉死城登记, … — to be
 # resolved if the cast happens to contain a row answering to it. "Nothing
 # currently answers to that name" is luck; the two tables are the decision.
 #
@@ -410,7 +411,7 @@ PRESET_NODES_THAT_NAME_NO_ACTOR = frozenset({
     # 欧洲(异端审判,2026-10-27)
     "异端裁定",
     # 埃及
-    "42审判者 · 否定告白",
+    "四十二判官 · 否定告白",
     "神庭 · 确认",
     "结束 · 称心毕",
     # 希腊(分流与终点,2026-10-19)
@@ -483,7 +484,8 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
         CaseType.HEART_WEIGHING, CaseType.DIVINE_TRIAL, CaseType.ROUTINE,
         CaseType.APPEAL,
     },
-    # GREEK, AND WHY IT IS TWO MEMBERS RATHER THAN A COPY OF EUROPEAN'S SET.
+    # GREEK, AND WHY IT IS ONE MEMBER RATHER THAN A COPY OF EUROPEAN'S SET.
+    # (It was two — ROUTINE and APPEAL — until 2026-10-27; see NO APPEAL below.)
     #
     # This entry is not optional decoration on the GREEK split; without it the
     # civilization is validated against `.get(civilization, set())`, i.e. the

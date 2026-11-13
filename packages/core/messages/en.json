@@ -776,7 +776,7 @@
       "BAPTISED": "Baptised",
       "UNBAPTISED": "Unbaptised",
       "BEFORE_CHRIST": "Born before Christ",
-      "help": "Unbaptised or born before Christ, with no heavier sin: the first circle, Limbo (not a punishment). A heavier sin decides instead. A baptised soul never lands in Limbo."
+      "help": "Unbaptised or born before Christ, with no heavier sin: the first circle, Limbo (not a punishment). A heavier sin decides instead. Such a soul cannot be given Purgatory. A baptised soul never lands in Limbo."
     },
     "denied_immortality": {
       "label": "Denied the soul's immortality",
@@ -2588,13 +2588,13 @@
         "9": "Pingdeng"
       },
       "hells": {
-        "2": "Reviving Hell",
-        "3": "Black Rope Hell",
-        "4": "Crushing Hell",
-        "5": "Wailing Hell",
-        "6": "Great Wailing Hell",
-        "7": "Scorching Hell",
-        "8": "Great Scorching Hell",
+        "2": "Great Reviving Hell",
+        "3": "Great Black Rope Hell",
+        "4": "Great Crushing Hell",
+        "5": "Howling Hell",
+        "6": "Great Howling Hell",
+        "7": "Burning Hell",
+        "8": "Great Burning Hell",
         "9": "Avici Hell"
       }
     },
@@ -3048,7 +3048,7 @@
       "gr": {
         "HELL": "Tartarus",
         "BLISS": "Isles of the Blessed",
-        "NEUTRAL": "The crossing"
+        "NEUTRAL": "Neutral ground"
       }
     },
     "codes": {
@@ -3761,7 +3761,7 @@
         "read": "View figures"
       },
       "capture": {
-        "read": "View summons warrants"
+        "read": "View capture warrants"
       },
       "city_god": {
         "read": "View City Gods"
@@ -3818,7 +3818,7 @@
         "settings": "System settings"
       },
       "tudi": {
-        "read": "View Tudi Gong"
+        "read": "View Earth Gods"
       },
       "workflow": {
         "read": "View workflows"
@@ -4506,7 +4506,7 @@
       },
       "eternal_sentence_by_civ": {
         "cn": {
-          "BLISS": "{{name}} dwells in the heavens forever; there is no next life."
+          "BLISS": "{{name}} stays in the heavens under an old ruling; there is no next life."
         },
         "gr": {
           "BLISS": "{{name}} dwells in the Isles of the Blessed forever; there is no next life."
@@ -5163,7 +5163,8 @@
           "BLISS": "Stay"
         },
         "gr": {
-          "BLISS": "Stay"
+          "BLISS": "Stay",
+          "NEUTRAL": "Stay"
         },
         "eu": {
           "PURGATORY": "Term"
@@ -5177,7 +5178,8 @@
           "BLISS": "{{years}} years"
         },
         "gr": {
-          "BLISS": "{{years}} years"
+          "BLISS": "{{years}} years",
+          "NEUTRAL": "{{years}} years"
         },
         "eu": {
           "PURGATORY": "{{years}} years"
@@ -5809,7 +5811,8 @@
           "BLISS": "My dwelling"
         },
         "gr": {
-          "BLISS": "My dwelling"
+          "BLISS": "My dwelling",
+          "NEUTRAL": "My dwelling"
         },
         "gr_republic": {
           "BLISS": "My thousand years"
@@ -5820,7 +5823,8 @@
           "BLISS": "Stay"
         },
         "gr": {
-          "BLISS": "Stay"
+          "BLISS": "Stay",
+          "NEUTRAL": "Stay"
         },
         "eu": {
           "PURGATORY": "Term"
@@ -5831,7 +5835,7 @@
       },
       "eternal_title_by_civ": {
         "cn": {
-          "BLISS": "In the heavens forever"
+          "BLISS": "In the heavens under an old ruling"
         },
         "eu": {
           "BLISS": "In Heaven forever"
@@ -5845,7 +5849,7 @@
       },
       "eternal_no_rebirth_by_civ": {
         "cn": {
-          "BLISS": "Those who dwell in the heavens forever do not apply for rebirth."
+          "BLISS": "Those kept in the heavens under an old ruling do not apply for rebirth."
         },
         "gr": {
           "BLISS": "Those who dwell in the Isles of the Blessed forever do not apply for rebirth."
@@ -5856,7 +5860,8 @@
           "BLISS": "Your stay is over"
         },
         "gr": {
-          "BLISS": "Your stay is over"
+          "BLISS": "Your stay is over",
+          "NEUTRAL": "Your stay is over"
         },
         "gr_republic": {
           "BLISS": "The thousand years are over"
@@ -5869,7 +5874,8 @@
           "BLISS": "Your stay is not over yet"
         },
         "gr": {
-          "BLISS": "Your stay is not over yet"
+          "BLISS": "Your stay is not over yet",
+          "NEUTRAL": "Your stay is not over yet"
         },
         "gr_republic": {
           "BLISS": "The thousand years are not over yet"
@@ -5882,7 +5888,8 @@
           "BLISS": "See my dwelling"
         },
         "gr": {
-          "BLISS": "See my dwelling"
+          "BLISS": "See my dwelling",
+          "NEUTRAL": "See my dwelling"
         },
         "gr_republic": {
           "BLISS": "See my thousand years"
@@ -5902,7 +5909,8 @@
               "BLISS": "Stay over"
             },
             "gr": {
-              "BLISS": "Stay over"
+              "BLISS": "Stay over",
+              "NEUTRAL": "Stay over"
             },
             "gr_republic": {
               "BLISS": "The thousand years are over"
@@ -5919,7 +5927,8 @@
               "BLISS": "Your stay in the heavens is over. Open Soul Ledger to see it."
             },
             "gr": {
-              "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it."
+              "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it.",
+              "NEUTRAL": "Your stay is over. Open Soul Ledger to see it."
             },
             "gr_republic": {
               "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
@@ -5938,7 +5947,8 @@
               "BLISS": "One of your stays is over. Open Soul Ledger to see it."
             },
             "gr": {
-              "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+              "BLISS": "One of your stays is over. Open Soul Ledger to see it.",
+              "NEUTRAL": "One of your stays is over. Open Soul Ledger to see it."
             },
             "eu": {
               "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
@@ -5952,7 +5962,8 @@
               "BLISS": "A stay is over; you remain for now"
             },
             "gr": {
-              "BLISS": "A stay is over; you remain for now"
+              "BLISS": "A stay is over; you remain for now",
+              "NEUTRAL": "A stay is over; you remain for now"
             },
             "eu": {
               "PURGATORY": "A stage of cleansing is complete; you remain for now"
@@ -6421,7 +6432,8 @@
           "BLISS": "Stay over"
         },
         "gr": {
-          "BLISS": "Stay over"
+          "BLISS": "Stay over",
+          "NEUTRAL": "Stay over"
         },
         "gr_republic": {
           "BLISS": "The thousand years are over"
@@ -6438,7 +6450,8 @@
           "BLISS": "Your stay in the heavens is over. Open Soul Ledger to see it."
         },
         "gr": {
-          "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it."
+          "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it.",
+          "NEUTRAL": "Your stay is over. Open Soul Ledger to see it."
         },
         "gr_republic": {
           "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
@@ -6459,7 +6472,8 @@
           "BLISS": "One of your stays is over. Open Soul Ledger to see it."
         },
         "gr": {
-          "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+          "BLISS": "One of your stays is over. Open Soul Ledger to see it.",
+          "NEUTRAL": "One of your stays is over. Open Soul Ledger to see it."
         },
         "eu": {
           "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
@@ -6473,7 +6487,8 @@
           "BLISS": "A stay is over; you remain for now"
         },
         "gr": {
-          "BLISS": "A stay is over; you remain for now"
+          "BLISS": "A stay is over; you remain for now",
+          "NEUTRAL": "A stay is over; you remain for now"
         },
         "eu": {
           "PURGATORY": "A stage of cleansing is complete; you remain for now"
@@ -7289,6 +7304,7 @@
       "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: give a final verdict, or open a new judgment.",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Purgatory.",
+      "unbaptised_no_purgatory": "This soul is unbaptised or was born before Christ: not Purgatory, which holds those who died in grace. With no heavier sin give Passed (Limbo); otherwise Failed.",
       "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again.",
       "five_heinous_must_fail": "The offence is one of the five heinous crimes: the verdict cannot be passed."
     },
@@ -7461,7 +7477,8 @@
       },
       "GR_ASPHODEL_MEADOW": {
         "ACTIVE": "On the Asphodel Meadow",
-        "COMPLETED": "Left the Asphodel Meadow"
+        "COMPLETED": "Left the Asphodel Meadow",
+        "WAITING": "Stay over; remaining on the meadow"
       }
     },
     "panel_title_by_civ": {
@@ -8798,6 +8815,7 @@
       "not_final_judge": "Only the final judge can decide",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",
+      "unbaptised_no_purgatory": "This soul is unbaptised or was born before Christ: the amended verdict can't be Purgatory, which holds those who died in grace.",
       "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed.",
       "five_heinous_must_fail": "The original offence is one of the five heinous crimes: the appeal cannot amend it to passed.",
       "plan_busy_by_civ": {
@@ -9108,7 +9126,7 @@
       "sort_todo": "Most to-do first",
       "col_hall": "Hall",
       "col_todo": "Hall to-do",
-      "col_judgments": "Open judgments · City God · Wangsi City · Claimed · Unclaimed",
+      "col_judgments": "Open judgments · City God · City of Wrongful Death · Claimed · Unclaimed",
       "col_rebirth": "Rebirths this month",
       "col_appeals": "Appeals to review",
       "col_enter": "Enter",
@@ -9116,9 +9134,9 @@
       "todo_dispatch": "Transfers in {{n}}",
       "todo_cooldowns": "Cool-downs {{n}}",
       "todo_letters": "Letters {{n}}",
-      "judgments_label": "Open judgments: at the City God {{at_city_god}} · in Wangsi City {{held}} · claimed {{claimed}} · unclaimed {{unclaimed}}",
+      "judgments_label": "Open judgments: at the City God {{at_city_god}} · in the City of Wrongful Death {{held}} · claimed {{claimed}} · unclaimed {{unclaimed}}",
       "note": "Hall to-do is the hall's count, not any one officer's \"waiting on me\".",
-      "legend": "Bar, light to dark: at the City God · in Wangsi City · claimed. The lightest gap is unclaimed.",
+      "legend": "Bar, light to dark: at the City God · in the City of Wrongful Death · claimed. The lightest gap is unclaimed.",
       "enter": "Enter →",
       "enter_label": "Enter {{name}} to view",
       "empty": "No halls yet",
@@ -9213,7 +9231,7 @@
       "cn": {
         "name": "Diyu",
         "realm": "Diyu",
-        "line": "Ten courts in turn, six paths of rebirth — and a bowl of Meng Po's soup before the bridge."
+        "line": "Ten courts in turn, six paths of rebirth — and a bowl of Meng Po's soup beyond the six bridges."
       },
       "eu": {
         "name": "Heaven and Hell",
@@ -9280,7 +9298,7 @@
         },
         "2": {
           "name": "Summons",
-          "body": "The City God issues a summons warrant; the escorts bring the soul in."
+          "body": "The City God issues a capture warrant; the escorts bring the soul in."
         },
         "3": {
           "name": "First review",
@@ -9354,7 +9372,7 @@
         },
         "3": {
           "name": "The three judges",
-          "body": "The three judges part the ways: the good to the Isles of the Blessed, the wicked down to Tartarus."
+          "body": "The three judges part the ways: the good to the Isles of the Blessed, the ordinary to the Asphodel Meadow, the wicked down to Tartarus."
         },
         "4": {
           "name": "The destination",
@@ -9485,7 +9503,7 @@
         "eg": "The weighing, two ways",
         "eg_body": "The heart against the feather of Ma'at: pass to the Field of Reeds, or be annihilated.",
         "gr": "Three roads",
-        "gr_body": "The three judges part the ways: the Isles, the thousand-year cycle, Tartarus — and at last the water of Lethe."
+        "gr_body": "The three judges part the ways: the Isles, the Asphodel Meadow, Tartarus — a thousand years on the first and the last, and at last the water of Lethe."
       },
       "roles_title": "Four roles",
       "role": {

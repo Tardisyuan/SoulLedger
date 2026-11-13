@@ -16,7 +16,9 @@ EGY_PENDING_KINDS = {
     key.split(".")[1]
     for key in json.loads((Path(__file__).resolve().parents[2] / "frontend" / "src" / "__tests__" / "support"
                            / "egyPendingKeys.json").read_text(encoding="utf-8"))
-    if key.startswith("soul_push.")
+    # 整个种类待填才算;`<kind>.<字段>_by_civ.<文明>.<类型>` 只是那个种类里少一格按文明的词
+    # (egy 回落到该种类自己的底键,`render` 的 `word`),种类本身 egy 是有的(2026-11-13,希腊 NEUTRAL)。
+    if key.startswith("soul_push.") and "_by_civ." not in key
 }
 
 

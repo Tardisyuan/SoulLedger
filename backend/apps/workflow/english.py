@@ -39,6 +39,7 @@ NAME_EN = {
     "卞城王 · 五审": "King Biancheng · fifth hearing",
     "原殿阎王 · 复核": "King of the original court · review",
     "四十二神官 · 否定告白": "The forty-two assessors · negative confession",
+    "四十二判官 · 否定告白": "The forty-two assessors · negative confession",
     "地狱圈层流程": "Circles of Hell flow",
     "地藏王菩萨 · 超度": "Ksitigarbha · deliverance",
     "埃及申诉流程": "Egyptian appeal flow",

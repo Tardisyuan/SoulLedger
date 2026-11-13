@@ -10,7 +10,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
  *   功過格      同门:`payload.gate` 相同(救濟門、口業門……);
  *   INFERNO     同圈:`payload.circle` 相同 —— 圈的总条与它的环 / 囊(`parent_code`
  *               指回 `EU-INF-C<n>`)同属一圈,所以按圈号归并已经涵盖 parent_code;
- *   DEADLY_SIN  同台阶:`payload.terrace_realm_code`(没有时读 `realm_code`)相同。
+ *   DEADLY_SIN  同层:`payload.terrace_realm_code`(没有时读 `realm_code`)相同。
  *
  * 别的语料没有这类分组,不硬凑 —— 什么都不显示。
  */

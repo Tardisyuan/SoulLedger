@@ -8,8 +8,9 @@ else in the survey:
 
   * EGYPTIAN judgment is not a score, it is a threshold. The heart is weighed
     once against the feather of Maat and must be "not heavier than" it — a
-    comparison against a fixed counterweight, not a magnitude, and emphatically
-    not one where good deeds subtract from bad.
+    comparison against a fixed counterweight, not a running account. Since
+    2026-10-27 the heart put on the scale is demerit lightened by merit
+    (`_egyptian_reading`): a product rule (系统自设,非出典), not a sourced one.
   * EUROPEAN (Dante) judgment is not an account at all. Purgatorio works off
     *poena* after *culpa* has already been forgiven; guilt and penalty come
     apart, which is exactly the thing a netting total cannot represent.
@@ -184,11 +185,11 @@ def _egyptian_reading(merit: int, demerit: int, merit_count: int,
     """A threshold. The heart against a fixed counterweight — pass or fail.
 
     The heart's weight is the recorded wrongdoing *lightened by* the recorded
-    good: demerit minus merit, never below zero. docs/02 §3.2's table names both
-    pans of the heart — 加重心脏(罪恶) and 减轻心脏(良善): 善待动物, 施舍穷人,
-    照顾孤儿 … (user decision 2026-10-27: where code and docs disagree, the docs
-    win). This reading used to put the demerit total alone on the scale; the
-    doc says the good a heart carries makes it lighter, so it does here.
+    good: demerit minus merit, never below zero. This is 系统自设,非出典
+    (docs/02 文末「系统自设」). It follows docs/02 §3.2's table of 加重心脏 /
+    减轻心脏 (user decision 2026-10-27: where code and docs disagree, the docs
+    win), and that table itself carries no Egyptian source. This reading used
+    to put the demerit total alone on the scale.
 
     Floored at zero: a heart whose good outweighs its wrongs is as light as a
     heart can be, and a negative weight on a pan is not a thing a scale shows.
@@ -451,10 +452,11 @@ def _greek_reading(merit: int, demerit: int, merit_count: int,
     tally would file two different things under one heading. Republic X counts
     deeds on both sides or neither.
 
-    WHY THAT IS NOT THE EGYPTIAN REASON, EITHER. In the Egyptian weighing merit
-    is absent because there is no offsetting step at all — nothing a good deed
-    could be reported *as*. Here there is: its own road, its own tenfold, and no
-    arithmetic connecting it to the term owed.
+    WHY THIS IS NOT THE EGYPTIAN READING, EITHER. The Egyptian weighing has had
+    an offsetting step since 2026-10-27 (`_egyptian_reading`: demerit minus
+    merit, floored at zero), so merit there disappears into the heart's weight.
+    Here a good deed has its own road, its own tenfold, and no arithmetic
+    connecting it to the term owed.
 
     WHEN `elapsed_years` IS A NUMBER, AND WHEN IT IS STILL None. This used to
     be unconditionally None, on the ground that the ledger held no start date:

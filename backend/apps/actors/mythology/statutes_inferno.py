@@ -45,8 +45,11 @@ from apps.actors.mythology.statutes_inferno_entries import INFERNO_ENTRIES
 # much wrong was done. Virgil says the basis outright at Inf. XI.79-84, citing
 # the Ethics: 「Incontinence, and Malice, and insane Bestiality」 (Longfellow
 # 1867, Project Gutenberg #1001 — public domain). Incontinenza is circles 2-5,
-# outside the walls; malizia (violence, then fraud) and matta bestialitade are
-# 6-9, inside them. `_route_european` sorts by a demerit total, which is a
+# outside the walls; inside them malizia works "by force or fraud" (XI.22-24):
+# violence in 7, fraud in 8, and the fraud that betrays a special trust in 9
+# (XI.52-66). Which circle matta bestialitade names is disputed and this corpus
+# assigns it to none; 6, heresy, has no heading (audit EU-5, 2026-11-13).
+# `_route_european` sorts by a demerit total, which is a
 # magnitude ladder and cannot express a division by kind whatever number is fed
 # into it. That contradiction is pinned in tests/test_european_hell_basis.py and
 # THIS CORPUS DOES NOT RESOLVE IT.
@@ -153,8 +156,8 @@ DIS_WALL = {
     "outside": (1, 2, 3, 4, 5),
     "inside": (6, 7, 8, 9),
     "what_it_divides": (
-        "incontinenza outside; malizia and matta bestialitade inside "
-        "(Inf. XI.79-84)"
+        "incontinenza outside; malizia (violence, fraud, and the fraud that "
+        "betrays a trust) inside (Inf. XI.22-66, 79-84)"
     ),
 }
 

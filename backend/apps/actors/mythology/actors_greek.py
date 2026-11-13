@@ -128,8 +128,9 @@ GREEK_ACTORS = [
      "One of the three judges of the dead - tries those who come from Asia "
      "(Plato, Gorgias 524a). Homer instead has him living in Elysium rather "
      "than judging (Odyssey 4.563-565) and Virgil has him ruling and punishing "
-     "in Tartarus (Aeneid 6.566); the brotherhood with Minos is usually cited "
-     "to Iliad 14.321-322, which has not been checked line by line here. He "
+     "in Tartarus (Aeneid 6.566); the brotherhood with Minos is Iliad "
+     "14.321-322, where Zeus says the daughter of Phoenix bore him Minos and "
+     "Rhadamanthys (checked 2026-10-24; Homer does not name her Europa). He "
      "does not appear in Dante"),
     # PLATO'S MINOS. The only row this table adds that did not already exist
     # somewhere, and the justification is the Dante row's own words: the two are
@@ -212,11 +213,14 @@ GREEK_ACTORS = [
     # BOTH STAND ON GR_ACHERON, AND FOR BOTH IT IS A COMPROMISE. Hermes in Od.
     # 24.1-14 leads the souls to the asphodel meadow, and Cerberus keeps the gate
     # of Hades' house (Theog. 769-773) or "the gates of Acheron" (Apollodorus
-    # 2.5.12) or a cave just past the crossing (Aen. 6.417-425). None of those
-    # places is modelled — Asphodel is excluded on purpose (GREEK_REALMS' header)
-    # and no house of Hades exists, which is why Hades himself is on the meadow.
-    # The crossing is the one modelled place on the way in, so both are filed
-    # there, as Hades is filed on the meadow: an engineering placement, labelled.
+    # 2.5.12) or a cave just past the crossing (Aen. 6.417-425). No house of
+    # Hades exists, which is why Hades himself is on the meadow; and the asphodel
+    # meadow, modelled since 2026-11-11 as GR_ASPHODEL_MEADOW, is there as the
+    # place ordinary souls are sent AFTER judgment, not as a stop on the way in
+    # (audit 2026-11-13 GR-5: this note used to say Asphodel was excluded on
+    # purpose). The crossing is the one modelled place on the way in, so both
+    # are filed there, as Hades is filed on the meadow: an engineering
+    # placement, labelled.
     #
     # The Dante Cerberus stays EUROPEAN in EU_HELL_3RD, untouched; this is a
     # second row for the Greek office, as the Greek Charon is beside Dante's.
@@ -231,8 +235,9 @@ GREEK_ACTORS = [
      "goes down and back freely, sent by Zeus to fetch Persephone (Hymn to Demeter "
      "334-337). He does not appear in Frogs, and in Aeneid 6 the guide is the "
      "Sibyl. PLACEMENT IS AN ENGINEERING CHOICE: the meadow of asphodel he leads "
-     "them to is not modelled, so he stands at the crossing, the first modelled "
-     "place on the way in"),
+     "them to is modelled (GR_ASPHODEL_MEADOW, since 2026-11-11) only as where "
+     "ordinary souls go after judgment, so he stands at the crossing, the first "
+     "modelled place on the way in"),
     ("Cerberus", "刻耳柏洛斯", "Cerberus", "Kerberos", ActorRole.GUARDIAN, "GR_ACHERON",
      "冥府门犬刻耳柏洛斯", "冥府门犬刻耳柏洛斯", "Cerberus - Hound of the Gate", "Kerberos",
      "THIS ROW IS THE GREEK CERBERUS, not Dante's. He keeps the entrance of the "

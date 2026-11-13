@@ -51,19 +51,21 @@ def plan_state(plan, statuses):
     return "between"
 
 
-#: 希腊可医者服的千年在塔尔塔罗斯(Rep. 615a;`DispositionService._route_greek`)。
-GREEK_THOUSAND_YEARS_REALM = "GR_TARTARUS"
+#: 希腊走千年的两处:至福岛与塔尔塔罗斯同为一千年(Rep. 615a;docs/02 §4.3;`disposition/default_terms.py`
+#: 两处都给 1000)。此前只认塔尔塔罗斯(审计 2026-11-13 GR-2)。阿斯福得草原不设刑期,不在内。
+#: 前端 `frontend/src/lib/underworldMap.ts` 的 `GREEK_THOUSAND_YEARS_REALMS` 同一张表。
+GREEK_THOUSAND_YEARS_REALMS = frozenset({"GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"})
 
 
 def thousand_years_run(soul, node, status):
-    """希腊:可医者在塔尔塔罗斯的千年已过几年 —— 与官员端账本的 SENTENCE 读数 `elapsed_years` 同一个数
+    """希腊:至福岛或(可医者的)塔尔塔罗斯那一千年已过几年 —— 与官员端账本的 SENTENCE 读数 `elapsed_years` 同一个数
     (`LedgerService._term_start_for` 取最近一份处置的 `term_start_*`,`sentence_elapsed_years` 量到今天)。
-    不可医(永罚,`is_eternal`)、不在塔尔塔罗斯、这一站没在受 / 暂留、刑期起点没登记:None。
+    不可医(永罚,`is_eternal`)、不在这两处、这一站没在受 / 暂留、刑期起点没登记:None。
     灵魂端地图据此点亮千年格并写「第 n 年」(用户 2026-11-07)。"""
     from apps.ledger.readings import sentence_elapsed_years
     from apps.ledger.services import LedgerService
 
-    if node.realm_code != GREEK_THOUSAND_YEARS_REALM or node.is_eternal or status not in ("active", "waiting"):
+    if node.realm_code not in GREEK_THOUSAND_YEARS_REALMS or node.is_eternal or status not in ("active", "waiting"):
         return None
     return sentence_elapsed_years(LedgerService._term_start_for(soul))
 

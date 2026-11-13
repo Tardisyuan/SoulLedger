@@ -110,7 +110,7 @@ TERRACES = {
         "sin_en": "Lust",
         "sin_zh": "淫欲",
         "latin": "Luxuria",
-        "penance": "wall of flame",
+        "penance": "within the flames",
         "love_disorder": "excessive",
     },
 }

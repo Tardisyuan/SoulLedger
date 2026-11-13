@@ -24,7 +24,7 @@ Both the name and the type asserted the same rejected claim, twice each.
 
 The frontend had already corrected its copies —
 `packages/core/src/config/workflow-templates.ts` renamed them to
-`Anubis · 引导与称量` and `42审判者 · 否定告白`, and
+`Anubis · 引导与称量` and `42审判者 · 否定告白` (「四十二判官」 since 2026-11-13), and
 `packages/core/src/config/workflow-node-types.ts` maps both to `EVALUATION` — while leaving a
 comment saying the backend still carried the old reading. It did, so the same
 question had two answers depending on which end you asked.
@@ -159,7 +159,7 @@ def test_neither_name_still_carries_the_reading_the_type_no_longer_does():
         f"heart-weighing node labels still asserting what their type denies: "
         f"{offenders}"
     )
-    assert names == ["阿努比斯 · 引导与称量", "四十二神官 · 否定告白"], names
+    assert names == ["阿努比斯 · 引导与称量", "四十二判官 · 否定告白"], names
 
 
 def test_the_renamed_bench_is_still_recorded_as_naming_nobody():
@@ -198,7 +198,7 @@ def test_a_heart_weighing_workflow_is_built_with_the_corrected_reading(seeded):
 
     assert built == [
         ("阿努比斯 · 引导与称量", NodeType.EVALUATION),
-        ("四十二神官 · 否定告白", NodeType.EVALUATION),
+        ("四十二判官 · 否定告白", NodeType.EVALUATION),
         ("托特 · 记录并宣读", NodeType.EVALUATION),
         ("神庭 · 确认", NodeType.EVALUATION),
         ("荷鲁斯 · 引导", NodeType.EXECUTION),
@@ -360,3 +360,65 @@ def test_workflow_0012_round_trip(migration_round_trip):
         check_forward=check_forward,
         check_reverse=check_reverse,
     )
+
+
+# ── workflow/0031: the bench is 四十二判官 on both sides (2026-11-13, EG-22) ──
+
+BENCH_MIGRATION = "apps.workflow.migrations.0031_egypt_the_forty_two_are_assessors_panguan"
+
+
+@pytest.mark.django_db
+def test_0031_renames_both_old_spellings_and_only_those(db):
+    from django.apps import apps
+
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow
+
+    migration = import_module(BENCH_MIGRATION)
+    clear_current_tenant()
+    tenant = Tenant.objects.create(code="EG_DUAT_Y", display_name="Duat")
+    soul = Soul.objects.create(name="旧名的魂", tenant=tenant)
+    workflow = ApprovalWorkflow.objects.create(
+        soul=soul, workflow_name="欧西里斯称重流程", case_type=CaseType.HEART_WEIGHING, tenant=tenant,
+    )
+
+    def node(order, name, english=""):
+        return ApprovalNode.objects.create(
+            workflow=workflow, node_name=name, node_name_en=english, court_code="Hall of Two Truths",
+            node_order=order, node_type="EVALUATION", approver_type="SYSTEM", status="PENDING",
+        )
+
+    backend_spelling = node(1, "四十二神官 · 否定告白", "The forty-two assessors · negative confession")
+    preset_spelling = node(2, "42审判者 · 否定告白", "The 42 assessors · negative confession")
+    hand_named = node(3, "四十二神官 · 我自己起的名", "My own name")
+
+    migration.forwards(apps, SCHEMA_EDITOR)
+
+    def read(row):
+        row.refresh_from_db()
+        return row.node_name, row.node_name_en
+
+    assert read(backend_spelling) == (migration.NEW, migration.NEW_EN)
+    assert read(preset_spelling) == (migration.NEW, migration.NEW_EN)
+    assert read(hand_named) == ("四十二神官 · 我自己起的名", "My own name")
+    assert WORKFLOW_TEMPLATES[WEIGHING]["nodes"][1]["name"] == migration.NEW
+
+    migration.backwards(apps, SCHEMA_EDITOR)
+    assert read(backend_spelling)[0] == "四十二神官 · 否定告白"
+    assert read(hand_named)[0] == "四十二神官 · 我自己起的名"
+
+
+def test_0031_rewrites_stored_template_nodes_and_leaves_the_rest():
+    migration = import_module(BENCH_MIGRATION)
+    stored = [
+        {"node_name": "42审判者 · 否定告白", "name_en": "The 42 assessors · negative confession", "node_order": 2},
+        {"name": "四十二神官 · 否定告白", "name_en": "Somebody's own English"},
+        {"node_name": "Thoth · 记录与宣读判词"},
+    ]
+    assert migration._rewrite(stored, migration.RENAMES, migration.OLD_EN) == [
+        {"node_name": migration.NEW, "name_en": migration.NEW_EN, "node_order": 2},
+        {"name": migration.NEW, "name_en": "Somebody's own English"},
+        {"node_name": "Thoth · 记录与宣读判词"},
+    ]
+    # Nothing matched: None, so the row is not written at all.
+    assert migration._rewrite([{"node_name": "Thoth · 记录与宣读判词"}], migration.RENAMES, migration.OLD_EN) is None
+    assert migration._rewrite(None, migration.RENAMES, migration.OLD_EN) is None

@@ -193,6 +193,9 @@ def _bundle(name):
 def test_city_god_titles_follow_the_ming_enfeoffment():
     zh = _bundle("zh-Hans")["cityGods"]["rank_titles"]
     assert (zh["PREFECTURE"], zh["DEPARTMENT"], zh["COUNTY"]) == ("威灵公", "灵佑侯", "显佑伯")
-    assert zh["PROVINCE"] == "承天鉴国司民升福明灵王"
+    # 四级都用简称(2026-11-13 核对 CN-24):此前只有都省一级是全称;全称在 docs/08 的表里。
+    assert zh["PROVINCE"] == "明灵王"
+    en = _bundle("en")["cityGods"]["rank_titles"]
+    assert (en["PROVINCE"], en["PREFECTURE"]) == ("King Mingling", "Duke Weiling")
     doc = (REPO / "docs" / "08_城隍体系详解.md").read_text(encoding="utf-8")
     assert "显正伯" not in doc and "子爵" not in doc

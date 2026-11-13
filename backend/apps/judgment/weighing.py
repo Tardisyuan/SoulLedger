@@ -4,13 +4,14 @@ Anubis weighs, Thoth records, and the result is the scale's: a heart not
 heavier than the feather passes (02 §5.1), a heavier one goes to Ammit (02
 §5.2). The officer does not pick between the two — a verdict that contradicts
 the scale is refused (`verdict_contradicts_weighing`). What the officer may
-say is that the scale wavers (02 §5.3: 托特记录 · 可能需要更多证据 · 延迟审判):
+say is that the scale wavers. That third outcome is 系统自设,非出典 (docs/02 文末「系统自设」; the
+Ani verdict has only the two endings above, and 02 §5.3's old wording carried no source):
 a PURGATORY / RETRY verdict on a weighed case records WAVERING and opens a new
 weighing of the same kind; no destination, no disposition, no plan node, so the
 soul is never left SETTLED at no station (user decision 2026-10-27).
 
 The scale reads the case's admitted evidence — the same sums the desk shows —
-through the Egyptian reading (demerit lightened by merit, 02 §3.2).
+through the Egyptian reading (demerit lightened by merit — also 系统自设, same section).
 """
 from apps.judgment.models import DuatStage, Judgment, JudgmentKind, JudgmentMethod, Verdict, WeighingResult
 

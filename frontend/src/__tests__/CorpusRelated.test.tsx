@@ -1,5 +1,5 @@
 /**
- * 语料页「相关条目」(src/components/judgment/CorpusRelated.tsx):同门 / 同圈 / 同台阶,
+ * 语料页「相关条目」(src/components/judgment/CorpusRelated.tsx):同门 / 同圈 / 同层,
  * 纯前端从 payload 推导。钉住的:只在同一部语料里比;自己不算自己;没有分组的语料
  * 什么都不显示;圈的总条与它的环 / 囊按圈号归到一起。
  */

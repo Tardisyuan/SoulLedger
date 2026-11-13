@@ -155,10 +155,6 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
     const cycle = step("CYCLE", tr("map.greece.thousand_year_cycle"));
     const lethe = step("LETHE", tr("souls.detail.memory_mechanisms.LETHE"));
     const r = realmOf(plan);
-    if (r?.code === "GR_ISLES_OF_THE_BLESSED") {
-      const steps = [...base, step(r.code, realm(r.code)), cycle, lethe];
-      return { civ, steps, at: 3, place: steps[3].label, path: tr("live.path.gr_isles") };
-    }
     if (r?.code === "GR_ASPHODEL_MEADOW") {
       // Ordinary souls (docs/04 §三, user 2026-11-11): the middle road. Not the thousand-year circuit — no term;
       // a rebirth follows, so Lethe comes after it as on the other two roads.
@@ -169,21 +165,25 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
       const steps = [...base, step(r.code, realm(r.code), { end: true })];
       return { civ, steps, at: 3, place: steps[3].label, path: steps[3].label };
     }
-    if (r?.code === "GR_TARTARUS") {
-      // The repository's Tartarus is the thousand years of Rep. 615a (disposition/services.py): v4's 千年循环.
+    if (r?.code === "GR_TARTARUS" || r?.code === "GR_ISLES_OF_THE_BLESSED") {
+      // Both roads are a thousand years (Rep. 615a; docs/02 §4.3; `default_terms.py` gives each 1000 — audit
+      // 2026-11-13 GR-2, user decision): the realm, then v4's 千年循环, then Lethe. Before this the Isles had the
+      // cycle step without a year and Tartarus was replaced by it, so 「塔尔塔罗斯」 never appeared on the road.
       // The years are the ledger's SENTENCE reading (`elapsed_years`, from `Disposition.term_start_*`), the same
       // figure the officer's map shows (user 2026-11-07) — not the station's start, which is when the office
-      // carried the paperwork out. No term start recorded: no number.
+      // carried the paperwork out. With a figure the soul stands on the cycle and the realm is walked, as on the
+      // map (`greekVisits`); no term start recorded: no number, and the soul stands at the realm.
       const run = r.station.elapsed_years;
       const years = run == null ? null : String(Math.max(0, run));
-      const steps = [...base, years === null ? cycle : { ...cycle, sub: tr("map.greece.year_n", { n: years }) }, lethe];
+      const steps = [...base, step(r.code, realm(r.code)), years === null ? cycle : { ...cycle, sub: tr("map.greece.year_n", { n: years }) }, lethe];
+      const at = years === null ? 3 : 4;
       return {
         civ,
         steps,
-        at: 3,
-        place: cycle.label,
+        at,
+        place: steps[at].label,
         line: years === null ? undefined : tr("soul.here.gr_thousand", { n: years }),
-        path: cycle.label,
+        path: r.code === "GR_TARTARUS" ? cycle.label : tr("live.path.gr_isles"),
       };
     }
     if (judging) return { civ, steps: base, at: 2, place: base[2].label };

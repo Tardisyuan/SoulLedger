@@ -196,16 +196,20 @@ export const pathVisits = (path: readonly { realm_code: string | null; left_at: 
 /** 希腊千年格的格数:十期,每期一百年(Rep. 615a-b,`gr-millennium-1` … `-10`)。 */
 export const MILLENNIUM_CELLS = 10;
 
+/** 希腊走千年的两处:至福岛与塔尔塔罗斯同为一千年(Rep. 615a;docs/02 §4.3;后端 `soul_view.GREEK_THOUSAND_YEARS_REALMS`)。 */
+export const GREEK_THOUSAND_YEARS_REALMS: ReadonlySet<string> = new Set(["GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"]);
+
 /**
- * 希腊:path 之外,可医者在塔尔塔罗斯服的千年(Rep. 615a)点亮千年格(用户 2026-11-07)。
+ * 希腊:path 之外,至福岛与(可医者的)塔尔塔罗斯那一千年(Rep. 615a)点亮千年格(用户 2026-11-07;
+ * 两条路都给:审计 2026-11-13 GR-2)。阿斯福得草原不设刑期,不点。
  * `years` 是账本 SENTENCE 读数的 `elapsed_years`;**不可医(永罚)、起点没登记的由调用方给 null**,千年格不亮。
- * 只在此刻就在塔尔塔罗斯时加:前面的格算走过,第 ⌊years / 100⌋ + 1 格是当前(满千年仍停在第十格)。
- * 当前于是落在千年格上,塔尔塔罗斯算走过 —— 与灵魂端路线(`soulRoute` 的 CYCLE)同一处。
+ * 只在此刻就在这两处之一时加:前面的格算走过,第 ⌊years / 100⌋ + 1 格是当前(满千年仍停在第十格)。
+ * 当前于是落在千年格上,那一处算走过 —— 与灵魂端路线(`soulRoute` 的 CYCLE)同一处。
  */
 export function greekVisits(path: readonly { realm_code: string | null; left_at: string | null }[], years: number | null): MapVisit[] {
   const visits = pathVisits(path);
   const last = visits[visits.length - 1];
-  if (years === null || !last?.current || last.id !== "GR_TARTARUS") return visits;
+  if (years === null || !last?.current || !GREEK_THOUSAND_YEARS_REALMS.has(last.id)) return visits;
   const at = Math.min(MILLENNIUM_CELLS, Math.floor(Math.max(0, years) / 100) + 1);
   visits[visits.length - 1] = { ...last, current: false };
   for (let n = 1; n <= at; n++) visits.push({ id: `gr-millennium-${n}`, current: n === at });

@@ -915,6 +915,8 @@ export const APPEAL_ERROR_CODES = [
   // 欧洲 大罪 / 小罪(2026-10-28):改判与已采信的罪不符。
   "mortal_sin_unrepented",
   "no_mortal_sin",
+  // 欧洲 未受洗 / 生于基督之前(2026-11-13,审计 EU-1):不能改判炼狱。
+  "unbaptised_no_purgatory",
   // 埃及否定告白(2026-10-28):原审有一条记为「不实」,不能改判通过。
   "untruthful_confession",
   // 地府五逆(2026-10-29,审查 J):不能改判通过。
@@ -1007,6 +1009,8 @@ export const SENTENCE_PLAN_REFUSAL_CODES = [
   "retry_with_open_cross", "retry_not_a_destination",
   // 欧洲 大罪 / 小罪(2026-10-28,DispositionService.refuse_against_gravity):结案裁决与已采信的罪不符。
   "mortal_sin_unrepented", "no_mortal_sin",
+  // 欧洲 未受洗 / 生于基督之前的灵魂不判炼狱(2026-11-13,审计 EU-1;同一个函数)。
+  "unbaptised_no_purgatory",
   // 埃及否定告白(2026-10-28,apps/judgment/confessions.py):有一条记为「不实」,不能判通过。
   "untruthful_confession",
   // 地府五逆(2026-10-29,审查 J;apps/judgment/models.py::refuse_passed_if_five_heinous):不能判通过。

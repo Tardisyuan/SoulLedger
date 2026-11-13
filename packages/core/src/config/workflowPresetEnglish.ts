@@ -6,7 +6,7 @@
  * carries it. Courts are not here: `courtLabel` already names them. `workflowPresetEnglish.test.ts` holds it complete.
  */
 export const PRESET_ENGLISH: Readonly<Record<string, string>> = {
-  "42审判者 · 否定告白": "The 42 assessors · negative confession",
+  "四十二判官 · 否定告白": "The forty-two assessors · negative confession",
   "Aeacus · 分区审判（欧洲亡魂）": "Aeacus · judges the souls of Europe",
   "Ammit · 吞噬（未通过分支）": "Ammit · devours (failed branch)",
   "Anubis · 引导与称量": "Anubis · guides and weighs",

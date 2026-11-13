@@ -13,7 +13,7 @@ the deceased says there is none (§2.2, §四: one wrong denied before each asse
 wickedness found. So any one row with `truthful=False` refuses PASSED at conclusion, at a reopened conclusion and at
 an appeal amended to PASSED (400 `untruthful_confession`, with the assessor ordinals). Nothing else changes: the scale
 still gives the verdict, so a light heart with a false denial is not FAILED either — the way on is WAVERING, which
-weighs again (§5.3: more evidence). No rows, or only true / unrecorded ones: not checked.
+weighs again (系统自设,非出典 — docs/02 文末「系统自设」). No rows, or only true / unrecorded ones: not checked.
 """
 from django.db import transaction
 

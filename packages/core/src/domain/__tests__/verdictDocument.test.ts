@@ -158,6 +158,20 @@ describe("希腊:按所选文书", () => {
   });
 });
 
+describe("希腊的「普通」(PURGATORY,去阿斯福得草原)先不出文书(审计 2026-11-13 GR-1)", () => {
+  const gr = { ...base, civilization: "GREEK", soulName: "Elpenor", judgeName: "艾亚哥斯", realmCode: "GR_ASPHODEL_MEADOW" };
+  it.each(["GORGIAS", "REPUBLIC", null])("文书选 %s:没有文书,也就没有「塔尔塔罗斯」", (greekAccount) => {
+    const doc = verdictDocument({ ...gr, verdict: "PURGATORY", greekAccount }, tz);
+    expect(doc).toBeNull();
+    expect(JSON.stringify(doc)).not.toContain("塔尔塔罗斯");
+    expect(verdictDocument({ ...gr, verdict: "PURGATORY", greekAccount }, ten)).toBeNull();
+  });
+  it("通过与不过照旧出", () => {
+    expect(verdictDocument({ ...gr, verdict: "PASSED", greekAccount: "GORGIAS" }, tz)!.ruling).toBe(tz("verdict_doc.gr.verdict.isles"));
+    expect(verdictDocument({ ...gr, verdict: "FAILED", greekAccount: "GORGIAS", greekCurability: "CURABLE" }, tz)!.ruling).toContain("塔尔塔罗斯");
+  });
+});
+
 it("待定、重审、未结案没有文书", () => {
   expect(verdictDocument({ ...base, verdict: "RETRY" }, tz)).toBeNull();
   expect(verdictDocument({ ...base, verdict: null }, tz)).toBeNull();
