@@ -500,6 +500,35 @@ export function narrowCamera(
   return { x, y, w, h };
 }
 
+/** 贴图边的字离边留的空(viewBox 单位)。 */
+export const LABEL_EDGE = 4;
+
+/**
+ * 近处才用:出了图边的字往里收 —— 左边出界的改成左对齐贴 `LABEL_EDGE`,右边出界的右对齐。镜头夹在图内,出了图的那一截近处
+ * 永远看不到(英文「Embalming · seventy days」以 x=60 居中,左端约在 -8)。宽:浏览器里量(`getComputedTextLength`),
+ * jsdom 里估(汉字一个字号宽,其余 0.56 个)。全景不动,桌面照 Design 的位置画。
+ * ponytail: 只管图边;横跨镜头左右边的字仍会切一截(平移就能看全),要第一眼全见得另做镜头适配或折行。
+ */
+export function anchorLabelsInside(svg: Element, width: number) {
+  for (const t of Array.from(svg.querySelectorAll("#labels text"))) {
+    if (t.closest(".map-badge") || !(t.textContent ?? "").trim()) continue;
+    const size = Number(t.getAttribute("font-size")) || 12;
+    let w = (t as SVGTextElement).getComputedTextLength?.() || 0;
+    if (!w) for (const ch of t.textContent ?? "") w += (ch.codePointAt(0) ?? 0) >= 0x2e80 ? size : size * 0.56;
+    const x = Number(t.getAttribute("x"));
+    const anchor = t.getAttribute("text-anchor") ?? "start";
+    const x0 = anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w : x;
+    if (!Number.isFinite(x) || w > width - 2 * LABEL_EDGE) continue;
+    if (x0 < LABEL_EDGE) {
+      t.setAttribute("text-anchor", "start");
+      t.setAttribute("x", String(LABEL_EDGE));
+    } else if (x0 + w > width - LABEL_EDGE) {
+      t.setAttribute("text-anchor", "end");
+      t.setAttribute("x", String(width - LABEL_EDGE));
+    }
+  }
+}
+
 /** 平移镜头:横向移 dx 并夹在图内(竖向不动)。 */
 export function panCamera(c: MapCamera, dx: number, box: { width: number; height: number }): MapCamera {
   return { ...c, x: Math.min(box.width - c.w, Math.max(0, Math.round(c.x + dx))) };
