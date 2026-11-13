@@ -594,3 +594,18 @@ def _mfa_setup_not_enforced_by_default(settings):
     """必需角色未开两步验证即受限(2026-10-29)只在专门的测试里打开(`settings.MFA_SETUP_ENFORCED = True`,
     `tests/test_mfa_setup_is_enforced.py`);其余测试里的管理员不必先绑验证器。生产恒为真(config/settings.py)。"""
     settings.MFA_SETUP_ENFORCED = False
+
+
+# WebsocketCommunicator.connect waits 1 s by default. The nightly CI runner is slow enough (backend 1h38m on
+# 2026-11-13) that a handshake that does succeed missed that second, so "a token without the tenant claim still
+# connects" read as refused (`test_ws_refuses_a_token_that_claims_the_wrong_tenant.py`, CancelledError on
+# disconnect). A refused socket answers at once either way, so a longer wait only lengthens a hang.
+def _patch_ws_connect_timeout():
+    from functools import partialmethod
+
+    from channels.testing import WebsocketCommunicator
+
+    WebsocketCommunicator.connect = partialmethod(WebsocketCommunicator.connect, timeout=10)
+
+
+_patch_ws_connect_timeout()
