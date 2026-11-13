@@ -72,7 +72,12 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
       // A click elsewhere is already choosing where focus goes.
       close(false)
     }
-    function onReposition() {
+    // Opening moves focus into the menu, and on a phone that focus can scroll the page's own container a few
+    // pixels; that scroll is ours, not the reader's, and closed the menu before it was seen (batch-57 tudi spec,
+    // mobile-chrome, 2026-11-14). Scrolls in the first moments after opening, or inside the menu, don't count.
+    const openedAt = performance.now()
+    function onReposition(e: Event) {
+      if (e.type === 'scroll' && (performance.now() - openedAt < 250 || menuRef.current?.contains(e.target as Node))) return
       // The panel is about to be wrong about where it is. Take focus with it
       // if the keyboard is inside, or it lands on <body>.
       close(!!menuRef.current?.contains(document.activeElement))
