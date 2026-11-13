@@ -50,6 +50,8 @@ import {
   nodeLoads,
   paintLight,
   panCamera,
+  ROUTE_PAD,
+  routeExtent,
 } from "@/src/lib/underworldMapLayers";
 
 const PUBLIC_V4 = path.join(__dirname, "..", "..", "public", "v4");
@@ -677,7 +679,7 @@ describe("narrow screens: close up on the current station", () => {
     expect(narrowCamera(box, { x: 500, y: 200 }, CLOSE_UP_BELOW_PX - 1, 10)).not.toBeNull();
   });
 
-  it("at 393 the camera is 1.25 px per unit, full height, with the station about 60% across", () => {
+  it("at 393 the camera is 1.25 px per unit, full height when no extent is given, with the station about 60% across", () => {
     const c = narrowCamera(box, { x: 700, y: 300 }, 361, 10)!;
     expect(c.w).toBe(Math.round(361 / CLOSE_SCALE));
     expect(c.h).toBe(box.height);
@@ -692,6 +694,55 @@ describe("narrow screens: close up on the current station", () => {
     expect(end.x + end.w).toBe(box.width);
     expect(panCamera(end, 500, box).x).toBe(end.x);
     expect(panCamera(end, -5000, box).x).toBe(0);
+  });
+
+  // 2026-11-14: the camera's height is the drawn route's, not the whole map's. Egypt's route is one band across the middle
+  // (y 104-284 of 400), so a whole-height close-up at 393 was mostly empty grid. Diyu's route goes out along the top and
+  // back along the bottom, so its extent is still both roads.
+  const extentOf = (skin: string) => routeExtent(map(skin, "light"))!;
+  /** The y of every point of every route segment (the four maps' edges use absolute M / L / C / S / H only). */
+  const edgeYs = (skin: string) =>
+    [...map(skin, "light").querySelectorAll("#terrain .edge")].flatMap((e) =>
+      (e.getAttribute("d")!.match(/[MLCS][^A-Za-z]*/g) ?? []).flatMap((seg) =>
+        seg.slice(1).trim().split(/[\s,]+/).map(Number).filter((_, i) => i % 2 === 1),
+      ),
+    );
+
+  it("Egypt's camera is framed on its route: the empty grid above and below is left out", () => {
+    const egBox = { width: 1120, height: 400 };
+    const extent = extentOf("eg");
+    const c = narrowCamera(egBox, { x: 60, y: 200 }, 330, 11, extent)!;
+    expect(c.y).toBe(extent.y);
+    expect(c.h).toBe(extent.h);
+    // Absence: not the whole map's height any more (the old rule's camera was 0 / 400).
+    expect(c.h).toBeLessThan(egBox.height * 0.8);
+    expect(c.y).toBeGreaterThan(40);
+    // Every point of the route, with its padding, is inside the frame; so is the lowest label (湮灭 · 第二次死亡).
+    const ys = edgeYs("eg");
+    expect(ys.length).toBeGreaterThan(5);
+    expect(Math.min(...ys) - ROUTE_PAD).toBeGreaterThanOrEqual(c.y);
+    expect(Math.max(...ys) + ROUTE_PAD).toBeLessThanOrEqual(c.y + c.h);
+    expect(c.y + c.h).toBeGreaterThan(325);
+  });
+
+  it("Diyu's extent keeps both roads, the upper (stations 1-10) and the lower (十八层地狱 · 莲花台)", () => {
+    const extent = extentOf("cn");
+    expect(extent.y).toBeLessThanOrEqual(80 - ROUTE_PAD);
+    expect(extent.y + extent.h).toBeGreaterThanOrEqual(435);
+  });
+
+  it("each civilization's extent holds every label and stays inside the map", () => {
+    for (const skin of ["cn", "eu", "eg", "gr"]) {
+      const svg = map(skin, "light");
+      const e = routeExtent(svg)!;
+      expect(e.y).toBeGreaterThanOrEqual(0);
+      expect(e.y + e.h).toBeLessThanOrEqual(Number(svg.getAttribute("viewBox")!.split(" ")[3]));
+      for (const t of svg.querySelectorAll("#labels text[y]")) {
+        const y = Number(t.getAttribute("y"));
+        expect(y).toBeGreaterThan(e.y);
+        expect(y).toBeLessThanOrEqual(e.y + e.h);
+      }
+    }
   });
 
   it("reads the smallest label size from the map (the Diyu map has 10)", () => {

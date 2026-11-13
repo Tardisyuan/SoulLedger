@@ -58,6 +58,10 @@ it("puts the zoom buttons beside the drawing, never over it", async () => {
   expect(toolbar.parentElement).toBe(viewport.parentElement);
   // Absence: not lifted out of the flow onto the picture.
   expect(toolbar.className).not.toMatch(/(^|\s)(absolute|fixed)(\s|$)/);
+  // Narrow (2026-11-14): a row above the picture, not a column eating a sixth of a 393 frame beside it.
+  expect(toolbar.className).toMatch(/(^|\s)max-md:flex-row(\s|$)/);
+  expect(toolbar.className).toMatch(/(^|\s)max-md:order-first(\s|$)/);
+  expect(toolbar.parentElement!.className).toMatch(/(^|\s)max-md:flex-col(\s|$)/);
 });
 
 it("opens close up at a narrow width: 1.25 px per unit, from the drawing's own width", async () => {
