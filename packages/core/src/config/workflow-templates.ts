@@ -382,7 +382,9 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // righteousness」，BD 30B 称「him who keepeth the scales」；托特持芦苇笔与
       // 调色板**记录**，并「Hear ye this judgment…」向九神会宣读。二者不可互换，
       // 此前把托特的节点排在告白之前，等于让书记先于陈述宣读判词。
-      { id: "n1", name: "Anubis · 引导与称量", court: "两真之殿", type: "灵魂引导", order: 1 },
+      // 2026-11-13（审计 EG-23，用户决定）：n1 由「Anubis · 引导与称量」改为「Anubis · 引导」——名字里的「称量」
+      // 排在了下一站的否定告白之前；顺序不动。
+      { id: "n1", name: "Anubis · 引导", court: "两真之殿", type: "灵魂引导", order: 1 },
       // One aggregate node, not shorthand for 42 nodes. The forty-two
       // assessors do exist as 42 real Actor rows (powers_json.assessor_index
       // 1-42), but the negative confession is one step of the weighing: the
@@ -467,7 +469,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     description: "神明主持的审判，同样经心脏称重",
     priority: 0,
     nodes: [
-      { id: "n1", name: "Anubis · 引导与称量", court: "两真之殿", type: "灵魂引导", order: 1 },
+      { id: "n1", name: "Anubis · 引导", court: "两真之殿", type: "灵魂引导", order: 1 },
       { id: "n2", name: "四十二判官 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
       { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
       { id: "n6", name: "神庭 · 确认", court: "两真之殿", type: "神庭确认", order: 4 },
@@ -499,7 +501,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     description: "优先排队，仍经心脏称重",
     priority: 1,
     nodes: [
-      { id: "n1", name: "Anubis · 引导与称量", court: "两真之殿", type: "灵魂引导", order: 1 },
+      { id: "n1", name: "Anubis · 引导", court: "两真之殿", type: "灵魂引导", order: 1 },
       { id: "n2", name: "四十二判官 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
       { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
       { id: "n6", name: "神庭 · 确认", court: "两真之殿", type: "神庭确认", order: 4 },

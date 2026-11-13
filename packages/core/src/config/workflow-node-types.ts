@@ -172,12 +172,12 @@ export const PRESET_NODE_TYPE: Record<string, NodeTypeMember> = {
   紧急审判: "FINAL",
 
   // ── 埃及 ────────────────────────────────────────────────────
-  // Anubis · 引导与称量：图版 III 铭文称他「O weigher of righteousness」，
+  // Anubis · 引导（2026-11-13 前作「Anubis · 引导与称量」，审计 EG-23）：图版 III 铭文称他「O weigher of righteousness」，
   // BD 30B「him who keepeth the scales」——他**操秤**，不是判官（文件的埃及一节
   // 反复写明这点）。称量产出的是一个量度，判词由托特宣读、九神会批准、
   // 奥西里斯接纳。所以是衡量。
   //
-  // 后端同一套流程里的节点现在叫「阿努比斯 · 引导与称量」，也记作 EVALUATION
+  // 后端同一套流程里的节点现在叫「阿努比斯 · 引导」，也记作 EVALUATION
   //（`apps/workflow/services.py`，已落库的行由 workflow/0012 更正）。它此前叫
   //「阿努比斯 · 引渡审判」并记作 TRIAL，即名字与类型各说了一遍「阿努比斯是判官」
   // 这个被否定的读法；两边现已一致。节点名仍不逐字相同——后端用中文神名、本文件

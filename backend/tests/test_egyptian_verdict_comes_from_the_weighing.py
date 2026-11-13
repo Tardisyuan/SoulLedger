@@ -123,7 +123,7 @@ def test_a_light_heart_walks_the_pass_branch_and_executes_only_after(eg_tenant):
     assert DispositionService.execute(disposition) is False  # the flow has not run yet
     flow, stops = _walk(ApprovalWorkflow.objects.get(judgment=case))
     assert flow.status == ApprovalWorkflowStatus.COMPLETED
-    assert stops == ["阿努比斯 · 引导与称量", "四十二判官 · 否定告白", "神庭 · 确认", "荷鲁斯 · 引导", "欧西里斯 · 终审"]
+    assert stops == ["阿努比斯 · 引导", "四十二判官 · 否定告白", "神庭 · 确认", "荷鲁斯 · 引导", "欧西里斯 · 终审"]
     assert DispositionService.execute(Disposition.objects.get(pk=disposition.pk)) is True
 
 
@@ -133,7 +133,7 @@ def test_a_heavy_heart_goes_to_ammit_and_skips_the_tribunal(eg_tenant):
     case = _case(eg_tenant, demerit=5)
     case.conclude("FAILED")
     flow, stops = _walk(ApprovalWorkflow.objects.get(judgment=case))
-    assert stops == ["阿努比斯 · 引导与称量", "四十二判官 · 否定告白", "阿米特 · 吞噬"]
+    assert stops == ["阿努比斯 · 引导", "四十二判官 · 否定告白", "阿米特 · 吞噬"]
     skipped = set(flow.nodes.filter(status=NodeStatus.SKIPPED).values_list("node_name", flat=True))
     assert {"神庭 · 确认", "荷鲁斯 · 引导", "欧西里斯 · 终审"} <= skipped
 
