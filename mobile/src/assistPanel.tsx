@@ -570,11 +570,13 @@ function LettersCard({ assist }: { assist: Assist }) {
 /** 1h: once per account, in place of the empty state. */
 function Intro({ onAck }: { onAck: () => void }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, locale } = useI18n();
+  // 一二三 in Chinese, 1 2 3 elsewhere (Design batch 37 §3).
+  const zh = locale === "zh-Hans";
   const items: [string, string, string][] = [
-    ["一", "soul_app.assist.intro_ai_title", "soul_app.assist.intro_ai_body"],
-    ["二", "soul_app.assist.intro_keep_title", "soul_app.assist.intro_keep_body"],
-    ["三", "soul_app.assist.intro_ro_title", "soul_app.assist.intro_ro_body"],
+    [zh ? "一" : "1", "soul_app.assist.intro_ai_title", "soul_app.assist.intro_ai_body"],
+    [zh ? "二" : "2", "soul_app.assist.intro_keep_title", "soul_app.assist.intro_keep_body"],
+    [zh ? "三" : "3", "soul_app.assist.intro_ro_title", "soul_app.assist.intro_ro_body"],
   ];
   return (
     <ScrollView style={styles.fill} contentContainerStyle={styles.body}>

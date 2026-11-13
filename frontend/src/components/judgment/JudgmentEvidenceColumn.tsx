@@ -43,7 +43,7 @@ function EvidenceValue({ value }: { value: unknown }) {
 }
 
 export function JudgmentEvidenceColumn({ evidence, mark = "丙" }: { evidence: Record<string, unknown>; mark?: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const entries = Object.entries(evidence ?? {});
 
   return (
@@ -61,10 +61,10 @@ export function JudgmentEvidenceColumn({ evidence, mark = "丙" }: { evidence: R
           <ol className="mt-4 divide-y divide-[oklch(var(--color-line))]">
             {entries.map(([key, value], index) => (
               <li key={key} className="grid grid-cols-[44px_1fr] gap-3 py-3">
-                {/* Han numerals, the same numbering the main clauses carry, so
-                    the two numbered lists on this page read as one document. */}
+                {/* Han numerals in Chinese; every other language counts 1. 2. 3. (Design batch 37 §3: a Han
+                    numeral reads as a stray glyph outside Chinese, the rule batch 36 gave 功 / 过). */}
                 <span className="font-mono tabular-nums text-xs text-[oklch(var(--color-ink-subtle))]">
-                  {toHanNumeral(index + 1) ?? String(index + 1)}
+                  {(locale === "zh-Hans" && toHanNumeral(index + 1)) || `${index + 1}.`}
                 </span>
                 <span className="min-w-0">
                   <span className="text-sm text-[oklch(var(--color-ink))] block wrap-break-word">

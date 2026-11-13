@@ -641,6 +641,22 @@ describe("first use (1h)", () => {
   });
 });
 
+describe("first use: the three items are numbered in the reader's language (batch 37 §3)", () => {
+  it.each([
+    ["zh-Hans", ["一", "二", "三"]],
+    ["en", ["1", "2", "3"]],
+  ])("%s", async (locale, nums) => {
+    persistentStore.remove(assistAckKey(PROFILE as never));
+    persistentStore.set(LOCALE_COOKIE, locale);
+    stubApi({ [LIST]: { status: 200, data: [] } });
+    renderDrawer();
+    fireEvent.press(screen.getByTestId("assist-entry"));
+    const intro = await screen.findByTestId("assist-intro");
+    for (const n of nums) expect(within(intro).getByText(n)).toBeTruthy();
+    if (locale !== "zh-Hans") expect(within(intro).queryByText("一")).toBeNull();
+  });
+});
+
 describe("drift against the backend (docs/ARCHITECTURE-soul-assist.md §5.3)", () => {
   const ROOT = path.join(__dirname, "..", "..", "..");
   const SRC = path.join(__dirname, "..");
