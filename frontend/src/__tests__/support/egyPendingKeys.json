@@ -62,5 +62,7 @@
   "officer_app.rebirth.cross_civ_pick",
   "officer_app.rebirth.cross_option_none",
   "officer_app.rebirth.approve_cross",
-  "demo.build.quality"
+  "demo.build.quality",
+  "soul_app.life.seal_title",
+  "soul_app.life.seal_pending"
 ]

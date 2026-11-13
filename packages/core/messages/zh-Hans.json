@@ -5110,6 +5110,8 @@
       "court": "审理殿",
       "judge": "主审",
       "verdict_pending": "未判",
+      "seal_title": "你的判词",
+      "seal_pending": "落印后会在这里出现印",
       "final": "终审",
       "eternal": "永久",
       "sentence_years": "刑期 {{years}} 年",

@@ -5110,6 +5110,8 @@
       "court": "Court",
       "judge": "Presiding judge",
       "verdict_pending": "Undecided",
+      "seal_title": "Your verdict",
+      "seal_pending": "The seal will appear here once it is set.",
       "final": "Final",
       "eternal": "Eternal",
       "sentence_years": "{{years}} years",

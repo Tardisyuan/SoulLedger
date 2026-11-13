@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist } from "../assist";
 import { BandPattern, Emblem, GlowTop, Icon, StageMotif } from "../emblems";
+import { DossierSeal, MeritMark } from "../dossierMarks";
 import { family, titleFamily } from "../fonts";
 import { useToast } from "../feedback";
 import { useGone } from "../gone";
@@ -94,6 +95,49 @@ const SOUL_STATES = ["soul_app", "soul_states"].join(".");
 
 type SectionKey = Exclude<LifeSectionKey, "sentence" | "past_lives">;
 
+/** 地府's seal reads 「第N殿印」: the court's number, from `court_5` or 「第五殿」; null when the court says none. */
+function courtNumber(court: string | null | undefined): number | null {
+  const digits = /(\d+)/.exec(court ?? "");
+  if (digits) return Number(digits[1]);
+  const han = /第([一二三四五六七八九十]+)殿/.exec(court ?? "");
+  return han ? "一二三四五六七八九十".indexOf(han[1]) + 1 || null : null;
+}
+
+/**
+ * 灵魂端的印 (batch 30 step 3 section 8·7): a final verdict shows the civilization's seal at 72; before that a
+ * dashed preview and one line saying the seal will appear. Nothing for a soul with no civilization, or a 地府
+ * judgment whose court has no number to read.
+ */
+function VerdictSeal({ civ, judgment }: { civ: CivKey; judgment: MeLife["judgments"][number] }) {
+  const t = useTheme();
+  const { t: tr, locale } = useI18n();
+  const court = courtNumber(judgment.court);
+  if (civ === "neutral" || (civ === "cn" && court === null)) return null;
+  const set = Boolean(judgment.is_final && judgment.verdict);
+  return (
+    <View testID={`verdict-seal-${judgment.id}`} style={styles.verdictSeal}>
+      <DossierSeal
+        civ={civ}
+        scheme={t.scheme}
+        pending={!set}
+        court={court ?? 1}
+        testID={`seal-${set ? "set" : "pending"}-${judgment.id}`}
+        label={set ? tr("seal.aria", { court: courtLabel(tr, judgment.court, locale) }) : undefined}
+      />
+      <View style={styles.fill}>
+        <Txt variant="caption" tone="subtle">
+          {tr("soul_app.life.seal_title")}
+        </Txt>
+        {set ? null : (
+          <Txt variant="caption" tone="subtle">
+            {tr("soul_app.life.seal_pending")}
+          </Txt>
+        )}
+      </View>
+    </View>
+  );
+}
+
 function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
   const t = useTheme();
   const { t: tr, locale } = useI18n();
@@ -112,10 +156,9 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
   return (
     <View style={styles.record}>
       <View style={styles.recordHead}>
-        <View style={[styles.kind, { borderColor: color }]}>
-          <Txt variant="label" style={[styles.kindText, { color }]}>
-            {tr(lexiconKey(lex, demerit ? "demerit_entry" : "merit_entry"))}
-          </Txt>
+        {/* 卷宗 batch 30: the mark says merit or demerit by shape, in ink; the colour is the signed number's. */}
+        <View accessible accessibilityLabel={tr(lexiconKey(lex, demerit ? "demerit_entry" : "merit_entry"))} style={styles.kind}>
+          <MeritMark testID={`mark-${record.id}`} civ={lex} demerit={demerit} ink={t.ink} ground={t.s0} />
         </View>
         <View style={styles.shrink}>
           <EnumValue namespace="souls.categories" value={record.category} tone="ink" variant="bodyLg" />
@@ -130,7 +173,7 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
         ) : null}
         {record.is_milestone && !stack ? milestone : null}
         <View style={styles.fill} />
-        <OneLine variant="value" tone="muted">{`${demerit ? "−" : "+"}${record.weight}`}</OneLine>
+        <OneLine variant="value" style={{ color }}>{`${demerit ? "−" : "+"}${record.weight}`}</OneLine>
       </View>
       {/* Handoff 2d: at large text the mark drops to its own line. */}
       {record.is_milestone && stack ? <View style={styles.milestoneLine}>{milestone}</View> : null}
@@ -266,6 +309,7 @@ export function LifeSections({
                 ) : null}
                 <DataRow label={tr("soul_app.life.final")}>{tr(j.is_final ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}</DataRow>
               </DataRows>
+              <VerdictSeal civ={lex} judgment={j} />
               {appeals?.data && !sealed ? (
                 <AppealLine
                   row={appeals.data.judgments.find((a) => a.judgment_id === j.id)}
@@ -1236,9 +1280,9 @@ const styles = StyleSheet.create({
   noSpacing: { letterSpacing: 0 },
   rule: { marginVertical: 16 },
   record: { paddingVertical: 12, gap: 4 },
+  verdictSeal: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
   recordHead: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  kind: { minWidth: 18, height: 18, paddingHorizontal: 4, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  kindText: { fontSize: 11, lineHeight: 14, letterSpacing: 0 },
+  kind: { width: 20, height: 18, alignItems: "flex-start", justifyContent: "center" },
   milestone: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
   milestoneText: { fontSize: 11, lineHeight: 14 },
   milestoneLine: { flexDirection: "row" },
