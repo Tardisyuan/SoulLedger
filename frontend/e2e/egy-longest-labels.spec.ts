@@ -91,9 +91,9 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
       expect(await h1.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
 
       // ── 门栏(第三十批第 4 步,取代侧栏与底栏):≥ 769 立在左边 64 宽,≤ 768 到底部。菜单名不再上门栏 ——
-      // 门上是固定的门字(egy 的 Wedja / Remetj 这样的词是 12px 一行),所以这里钉门字:一行、不折、门栏不横向溢出。
+      // 门上是固定的门名(第三十八批:egy 是图标 + Sesh Ba / Remetj 这样的词,11px 一行、不省略),所以这里钉门名:一行、不折、不截、门栏不横向溢出。
       const rail = page.getByTestId("door-rail");
-      const glyphs = await rail.locator("[data-testid='desk-door-glyph']:visible").evaluateAll((els) =>
+      const glyphs = await rail.locator("[data-testid='door-label']:visible").evaluateAll((els) =>
         els.map((el) => ({
           lines: Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
           clipped: el.scrollWidth - el.clientWidth > 1,

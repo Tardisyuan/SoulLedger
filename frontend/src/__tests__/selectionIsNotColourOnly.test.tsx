@@ -36,7 +36,8 @@ jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
+let mockLocale = "zh-Hans";
+jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (k: string) => k, locale: mockLocale, hydrated: true }) }));
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -73,7 +74,7 @@ const rail = () => screen.getByTestId("door-rail");
 describe("门栏:当前门不只靠文明色", () => {
   it("每一门都有名字,哪怕看得见的字被藏起来", () => {
     render(<DoorRail />);
-    for (const name of ["caseDesk.rail.desk", "caseDesk.rail.souls", "caseDesk.rail.corpus"]) {
+    for (const name of ["nav.doors.desk.label", "nav.doors.roll.label", "nav.doors.statutes.label"]) {
       expect(within(rail()).getByRole("link", { name })).toBeInTheDocument();
     }
     // Absence: the glyph is not the name (a lone 「审」 says nothing to a screen reader).
@@ -82,15 +83,15 @@ describe("门栏:当前门不只靠文明色", () => {
 
   it("当前门用 aria-current 说出来;别的门不挂", () => {
     render(<DoorRail />);
-    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.souls" })).toHaveAttribute("aria-current", "page");
-    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.desk" })).not.toHaveAttribute("aria-current");
-    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.corpus" })).not.toHaveAttribute("aria-current");
+    expect(within(rail()).getByRole("link", { name: "nav.doors.roll.label" })).toHaveAttribute("aria-current", "page");
+    expect(within(rail()).getByRole("link", { name: "nav.doors.desk.label" })).not.toHaveAttribute("aria-current");
+    expect(within(rail()).getByRole("link", { name: "nav.doors.statutes.label" })).not.toHaveAttribute("aria-current");
   });
 
   it("子页面(灵魂卷宗)点亮它所在的门", () => {
     mockPathname.mockReturnValueOnce("/souls/42");
     render(<DoorRail />);
-    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.souls" })).toHaveAttribute("aria-current", "page");
+    expect(within(rail()).getByRole("link", { name: "nav.doors.roll.label" })).toHaveAttribute("aria-current", "page");
   });
 });
 
@@ -111,7 +112,7 @@ describe("门外与借住(第三十六批 第一节第 4 条)", () => {
   it("判官的界域在「律」里,门内标签叫「冥界图」,不叫菜单名", () => {
     mockPathname.mockReturnValue("/realms");
     render(<DoorRail />);
-    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.corpus" })).toHaveAttribute("aria-current", "page");
+    expect(within(rail()).getByRole("link", { name: "nav.doors.statutes.label" })).toHaveAttribute("aria-current", "page");
     render(<DoorTabs />);
     const tabs = screen.getByTestId("door-tabs");
     expect(within(tabs).getByRole("link", { name: "overview.map.title" })).toHaveAttribute("aria-current", "page");
@@ -131,10 +132,40 @@ describe("门外与借住(第三十六批 第一节第 4 条)", () => {
   it("「我」的页:底部头像挂 aria-current(样式给它 2px civT 的圈);朋友圈不挂", () => {
     mockPathname.mockReturnValue("/profile");
     const { unmount } = render(<DoorRail />);
-    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.me" })).toHaveAttribute("aria-current", "page");
+    expect(within(rail()).getByRole("link", { name: "nav.doors.me.label" })).toHaveAttribute("aria-current", "page");
     unmount();
     mockPathname.mockReturnValue("/social");
     render(<DoorRail />);
-    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.me" })).not.toHaveAttribute("aria-current");
+    expect(within(rail()).getByRole("link", { name: "nav.doors.me.label" })).not.toHaveAttribute("aria-current");
+  });
+});
+
+// 第三十八批:en / egy 的门格是 24 的线条图标 + 门名,中文是门上的字 + 门名;每一格都有悬停提示(`.title`)。
+describe("门格上画什么跟着界面语言", () => {
+  afterEach(() => {
+    mockLocale = "zh-Hans";
+    mockPathname.mockReturnValue("/souls");
+  });
+
+  it.each(["en", "egy"])("%s:每一门画图标、写门名,不画门字;头像画「我」的图标,不写姓名首字", (locale) => {
+    mockLocale = locale;
+    render(<DoorRail />);
+    const souls = within(rail()).getByRole("link", { name: "nav.doors.roll.label" });
+    expect(souls.querySelector("[data-testid='door-icon']")).toHaveAttribute("data-icon", "roll");
+    expect(within(souls).getByTestId("door-label")).toHaveTextContent("nav.doors.roll.label");
+    expect(within(souls).getByTestId("door-tip")).toHaveTextContent("nav.doors.roll.title");
+    expect(within(rail()).queryAllByTestId("desk-door-glyph")).toEqual([]);
+    const me = within(rail()).getByRole("link", { name: "nav.doors.me.label" });
+    expect(me.querySelector("[data-icon='me']")).not.toBeNull();
+    expect(me).not.toHaveTextContent("崔");
+  });
+
+  it("中文:门上的字,不画图标;悬停提示也有;头像写姓名首字", () => {
+    render(<DoorRail />);
+    const souls = within(rail()).getByRole("link", { name: "nav.doors.roll.label" });
+    expect(within(souls).getByTestId("desk-door-glyph")).toHaveTextContent("caseDesk.rail.souls_glyph");
+    expect(within(souls).getByTestId("door-tip")).toHaveTextContent("nav.doors.roll.title");
+    expect(within(rail()).queryAllByTestId("door-icon")).toEqual([]);
+    expect(within(rail()).getByRole("link", { name: "nav.doors.me.label" })).toHaveTextContent("崔");
   });
 });

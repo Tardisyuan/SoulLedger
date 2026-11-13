@@ -9,7 +9,8 @@ import { AccessibilityInfo, AppState } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
-import { RefreshFailed, Row, TAB_CODES, doorOf, visibleTabs } from "../kit";
+import { RefreshFailed, Row, TAB_CODES, TabBar, doorOf, visibleTabs } from "../kit";
+import { useI18n } from "../shared";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, overviewParts } from "../screens/queue";
@@ -822,5 +823,44 @@ describe("the judgments tab across a dropped network", () => {
     await waitFor(() => expect(screen.getByTestId("desk-overview")).toHaveTextContent(/今日 3 件/));
     expect(screen.queryByTestId("queue-row-j-old")).toBeNull();
     expect(mockCounts).toHaveBeenCalledTimes(2);
+  });
+});
+
+// 第三十八批 四: in en / egy each door is the shared 24px line icon over its name; `.glyph` is drawn only in zh.
+describe("the door bar's marks follow the interface language", () => {
+  function InLocale({ locale, children }: { locale: "en" | "egy"; children: ReactNode }) {
+    const { locale: now, setLocale } = useI18n();
+    useEffect(() => {
+      setLocale(locale);
+      return () => setLocale("zh-Hans");
+    }, [locale, setLocale]);
+    return now === locale ? children : null;
+  }
+
+  it.each([
+    ["en", ["Cases", "Roll", "Me"]],
+    ["egy", ["Sepu", "Sesh Ba", "Djes"]],
+  ] as const)("%s: an icon and the door's name in every cell, no glyph; the current door has its short line", async (locale, names) => {
+    renderOfficer(
+      <InLocale locale={locale}>
+        <TabBar current="search" onSelect={() => {}} unread />
+      </InLocale>
+    );
+    const bar = await screen.findByTestId("tab-bar");
+    for (const [i, door] of (["desk", "roll", "me"] as const).entries()) {
+      expect(within(bar).getByTestId(`door-${door}-icon`)).toBeTruthy();
+      expect(within(screen.getByTestId(`door-${door}`)).getByText(names[i])).toBeTruthy();
+    }
+    for (const glyph of ["C", "R", "M", "Wedja", "Sesh", "审", "册", "我"]) expect(within(bar).queryByText(glyph)).toBeNull();
+    expect(screen.getByTestId("door-roll-current")).toBeTruthy();
+    expect(screen.queryByTestId("door-desk-current")).toBeNull();
+    expect(screen.getByTestId("door-me-unread")).toBeTruthy();
+  });
+
+  it("zh: the glyph over the name, no icon", () => {
+    renderOfficer(<TabBar current="queue" onSelect={() => {}} />);
+    expect(within(screen.getByTestId("door-desk")).getByText("审")).toBeTruthy();
+    expect(screen.queryByTestId("door-desk-icon")).toBeNull();
+    expect(screen.getByTestId("door-desk-current")).toBeTruthy();
   });
 });

@@ -12,7 +12,33 @@
     "more": "更多",
     "soul_events": "灵魂事件",
     "skip_to_main": "跳到正文",
-    "search_hint": "搜索、跳转、下指令"
+    "search_hint": "搜索、跳转、下指令",
+    "doors": {
+      "desk": {
+        "label": "案卷",
+        "title": "案卷"
+      },
+      "roll": {
+        "label": "名册",
+        "title": "名册"
+      },
+      "statutes": {
+        "label": "律令",
+        "title": "律令"
+      },
+      "office": {
+        "label": "殿司",
+        "title": "殿司"
+      },
+      "mortal": {
+        "label": "人间",
+        "title": "人间"
+      },
+      "me": {
+        "label": "本人",
+        "title": "本人"
+      }
+    }
   },
   "auth": {
     "login": "登录",
@@ -9985,17 +10011,11 @@
   "caseDesk": {
     "rail": {
       "label": "门",
-      "desk": "案卷",
       "desk_glyph": "审",
-      "souls": "名册",
       "souls_glyph": "册",
-      "corpus": "律令",
       "corpus_glyph": "律",
-      "hall": "殿司",
       "hall_glyph": "司",
-      "moderation": "人间",
       "moderation_glyph": "人",
-      "me": "本人",
       "me_glyph": "我"
     },
     "sources_label": "按来源看",

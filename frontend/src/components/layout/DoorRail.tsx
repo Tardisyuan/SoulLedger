@@ -12,6 +12,7 @@ import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { menuGlossParts } from "@/src/lib/menuI18n";
+import { DOOR_ICON, type DoorNavKey } from "@soulledger/core/domain/doors";
 import { DOORS, doorFor, doorHref, doorsFor, doorTabs, pageOf, type DoorId, type DoorPage, type Viewer } from "@/src/lib/doors";
 import s from "./doors.module.css";
 
@@ -22,11 +23,29 @@ export const BRAND_WORD = "灵魂簿";
 const ME_PATHS = ["/profile", "/notifications", "/welcome", "/about"];
 
 /**
- * 门上的字:一个汉字是 18 的题字;拉丁字(en 的 C / R / S / H / W / M 是一个字母,egy 是 Wedja、Sesh 这样最多 6 个字母的词)
- * 多于一个字符时换成 12 的一行(`doorGlyphWord`),在 52 宽的门里不折行、不截断。导出给测试。
+ * 门格上的图形(第三十八批):中文是门上的字(18 的宋体单字,`caseDesk.rail.<key>_glyph`);英文与 egy 是 24 的线条图标
+ * (`DOOR_ICON`,第三十批第 4 步那一套),下面一行都是门名(`nav.doors.<key>.label`)。一个字母、几个字母的缩写都要学,
+ * 图标配一个完整的词不用学,所以 en / egy 的门字不再画。
  */
-export function doorGlyphClass(glyph: string): string {
-  return Array.from(glyph).length > 1 ? `${s.doorGlyph} ${s.doorGlyphWord}` : s.doorGlyph;
+export function DoorIcon({ door, className }: { door: DoorNavKey; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className ?? s.doorIcon} aria-hidden="true" data-testid="door-icon" data-icon={door}>
+      {DOOR_ICON[door].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+/** 门格的上半:中文写字,别的语言画图标。 */
+function DoorMark({ door, glyphKey, zh }: { door: DoorNavKey; glyphKey: string; zh: boolean }) {
+  const { t } = useI18n();
+  if (!zh) return <DoorIcon door={door} />;
+  return (
+    <span className={s.doorGlyph} aria-hidden="true" data-testid="desk-door-glyph">
+      {t(glyphKey)}
+    </span>
+  );
 }
 
 /** 这个人(门、门内的页由它决定):角色、读码、菜单里的页。 */
@@ -81,7 +100,8 @@ function currentDoor(pathname: string, doors: readonly DoorId[]): DoorId | null 
  * ≤ 768 到底部,是门 +「我」—— 殿司在窄屏不放门,只读收进「我」的抽屉。
  */
 export function DoorRail() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const zh = locale === "zh-Hans";
   const pathname = usePathname();
   const { user } = useTenant();
   const { viewer, doors, menus } = useDoorViewer();
@@ -97,12 +117,12 @@ export function DoorRail() {
     setSheet(false);
   }
   const close = () => setSheet(false);
-  const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({ open: sheet, onClose: close, label: t("caseDesk.rail.me") });
+  const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({ open: sheet, onClose: close, label: t("nav.doors.me.label") });
   const officeTabs = doors.includes("office") ? doorTabs("office", viewer, doors) : [];
 
   const doorLink = (d: DoorId) => {
-    const glyph = t(`caseDesk.rail.${DOORS[d].key}_glyph`);
-    const name = t(`caseDesk.rail.${DOORS[d].key}`);
+    const nav = DOORS[d].nav;
+    const name = t(`nav.doors.${nav}.label`);
     return (
       <Link
         key={d}
@@ -112,11 +132,13 @@ export function DoorRail() {
         aria-label={name}
         data-door={d}
       >
-        <span className={doorGlyphClass(glyph)} aria-hidden="true" data-testid="desk-door-glyph">
-          {glyph}
-        </span>
-        <span className={s.doorLabel} aria-hidden="true">
+        <DoorMark door={nav} glyphKey={`caseDesk.rail.${DOORS[d].key}_glyph`} zh={zh} />
+        <span className={`${s.doorLabel} ${zh ? "" : s.doorLabelWord}`} aria-hidden="true" data-testid="door-label">
           {name}
+        </span>
+        {/* 悬停提示(`.title`,如 Hall office):只在宽屏的门栏,400ms 后出现。读屏器读 aria-label,这一块不读。 */}
+        <span className={s.tip} aria-hidden="true" data-testid="door-tip">
+          {t(`nav.doors.${nav}.title`)}
         </span>
       </Link>
     );
@@ -158,22 +180,21 @@ export function DoorRail() {
         <button
           type="button"
           className={`${s.door} ${s.doorNarrow}`}
-          aria-label={t("caseDesk.rail.me")}
+          aria-label={t("nav.doors.me.label")}
           aria-expanded={sheet}
           aria-current={onMe || (here === "office" && !sheet) ? "true" : undefined}
           onClick={() => setSheet((o) => !o)}
           data-testid="door-me"
         >
-          <span className={doorGlyphClass(t("caseDesk.rail.me_glyph"))} aria-hidden="true" data-testid="desk-door-glyph">
-            {t("caseDesk.rail.me_glyph")}
-          </span>
-          <span className={s.doorLabel} aria-hidden="true">
-            {t("caseDesk.rail.me")}
+          <DoorMark door="me" glyphKey="caseDesk.rail.me_glyph" zh={zh} />
+          <span className={`${s.doorLabel} ${zh ? "" : s.doorLabelWord}`} aria-hidden="true" data-testid="door-label">
+            {t("nav.doors.me.label")}
           </span>
         </button>
         <div className={s.railFoot}>
-          <Link href="/profile" className={s.me} title={name} aria-label={t("caseDesk.rail.me")} aria-current={onMe ? "page" : undefined}>
-            <span aria-hidden="true">{[...name][0] ?? "·"}</span>
+          {/* 头像:中文写姓名首字;en / egy 画「我」的图标(18,描边 1.7)—— 姓名可能是汉字,首字在英文界面里读不出。 */}
+          <Link href="/profile" className={s.me} title={name} aria-label={t("nav.doors.me.label")} aria-current={onMe ? "page" : undefined}>
+            {zh ? <span aria-hidden="true">{[...name][0] ?? "·"}</span> : <DoorIcon door="me" className={s.meIcon} />}
           </Link>
         </div>
       </nav>
@@ -212,7 +233,7 @@ export function DoorTabs() {
     return out;
   }, []);
   return (
-    <nav ref={tabsRef} className={s.tabs} aria-label={t(`caseDesk.rail.${DOORS[door].key}`)} data-testid="door-tabs" data-door={door}>
+    <nav ref={tabsRef} className={s.tabs} aria-label={t(`nav.doors.${DOORS[door].nav}.label`)} data-testid="door-tabs" data-door={door}>
       {sections.map((group) => {
         const name = t(`doors.section.${group[0].section}`);
         return (

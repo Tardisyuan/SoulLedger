@@ -159,7 +159,7 @@ describe("Breadcrumb", () => {
           "breadcrumb.queue": "Triage",
           "caseDesk.triage": "Triage",
           "officer_app.desk.title": "Case desk",
-          "caseDesk.rail.desk": "Cases",
+          "nav.doors.desk.label": "Cases",
           "caseDesk.rail.desk_glyph": "审",
         };
         return map[key] ?? key;

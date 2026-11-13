@@ -854,7 +854,7 @@
   }
   @media (max-width: 768px) {
     html {
-      --bottom-bar: 64px;
+      --bottom-bar: calc(56px + env(safe-area-inset-bottom, 0px));
     }
   }
 
