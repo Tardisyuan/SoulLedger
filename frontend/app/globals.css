@@ -905,6 +905,11 @@
   .chip-scroll::-webkit-scrollbar {
     display: none;
   }
+  /* 同一个渐隐,只在右边真有没露出来的东西时(`useOverflowEnd` 挂的属性):门内标签、页头下的筛选条。 */
+  [data-overflow-end] {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+  }
 
   /* 页头 =「顶线 + 卷宗头」(第三十批「卷宗」第 1 步,Design v4 第三十批回复第一节第 1 条;`PageHead`,
      src/components/ui/PageShell.tsx)。取代 v3 的 156px 身份带与 v4 的 96px 标题行(`Plaque`):不再有第二个标题,

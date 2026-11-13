@@ -478,7 +478,7 @@ export default function AuditPage() {
             placeholder={t("audit.filter_operator")}
             aria-label={t("audit.filter_operator")}
             autoComplete="off"
-            className={cn(fieldControl({ size: "md" }), "w-40 min-w-0")}
+            className={cn(fieldControl({ size: "md" }), "w-40 shrink-0")}
           />
           <datalist id="audit-operators">
             {[...new Set(logs.map((l) => l.username).filter((u): u is string => !!u))].map((u) => (

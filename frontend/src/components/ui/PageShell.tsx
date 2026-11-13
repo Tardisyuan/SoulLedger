@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { CivMark } from "@/src/components/brand/CivEmblem";
@@ -496,6 +497,7 @@ export function PageShell({
   className,
 }: PageShellProps) {
   const width = WIDTH_CLASS[variant];
+  const filtersRef = useOverflowEnd<HTMLDivElement>();
   const plaque = usePlaqueValue();
   useReportHeading(typeof title === "string" ? title : null);
 
@@ -570,6 +572,7 @@ export function PageShell({
               2026-10-01 控件换到 v3 之前这里是 `h-14 py-3`(32 内容)—— 48 的输入放进去会被
               这个 overflow 容器从上下两头裁掉。 */}
           <div
+            ref={filtersRef}
             className={cn(
               width,
               "px-4 md:px-8 h-16 py-2 flex items-center gap-3 overflow-x-auto"
