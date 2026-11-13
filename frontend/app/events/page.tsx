@@ -16,6 +16,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { isSystemActor } from "@/lib/events/event_registry";
 import { makeSystemEventLabels } from "@/src/components/souls/soulLifecycleRows";
 import { LIFECYCLE_ANCHOR } from "@/src/components/souls/detail/SoulTimelineColumn";
@@ -38,6 +39,17 @@ import {
  * 只有灵魂可点(进详情页、定位到生命周期时间线);操作人没有详情页,要只看某人用筛选。
  * 排序只按时间倒序 —— 类型已经能筛,不出「按事件类型排」。每页 20 条。
  */
+/** 操作人写成 `username (ROLE)`(User.__str__):角色走 users.roles 词条,原始成员留在 title。 */
+function ActorCell({ actor }: { actor: string }) {
+  const m = /^(.+) \(([A-Z_]+)\)$/.exec(actor);
+  if (!m) return <>{actor}</>;
+  return (
+    <>
+      {m[1]} · <DomainEnum namespace="users.roles" value={m[2]} />
+    </>
+  );
+}
+
 export default function SoulEventsPage() {
   // The sidebar hides the link without soul.read, but a typed URL still lands here.
   return (
@@ -161,7 +173,7 @@ function SoulEventsContent() {
         isSystemActor(lead.actor) ? (
           <span className="text-[oklch(var(--color-ink-muted))]">{t("events.actor_system")}</span>
         ) : (
-          lead.actor
+          <ActorCell actor={lead.actor} />
         ),
     },
     {

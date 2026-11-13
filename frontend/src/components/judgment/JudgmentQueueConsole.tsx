@@ -103,7 +103,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   // 身份带:题「审判队列」(v3 `queue-product`;面包屑末段是「分诊队列」),殿名是眼前这一案的殿;
   // 案子没记殿或队列空了就写刑名司。
   const hall = useHall(courtLabel(t, judgment?.court, locale) || t("plaque.office.trials"));
-  usePlaque({ title: t("plaque.queue"), hall });
+  usePlaque({ title: t("breadcrumb.menu.judgment"), hall });
 
   // Notes belong to the case in front of the operator, never to the next one.
   //
@@ -256,7 +256,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       {/* 窄屏把题目放在自己那一行,进度和两个按钮排第二行(393 宽四样挤一行时题目折两行,56 高撑出 48 的定高)。 */}
       <div className="min-h-12 flex flex-wrap items-center px-6 gap-x-4 max-sm:pt-2 border-b border-[oklch(var(--color-line))]/50">
         <h1 className="font-title text-lg text-[oklch(var(--color-accent-ink))] flex-1 max-sm:basis-full">
-          {t("judgment.queue.title")}
+          {t("breadcrumb.menu.judgment")}
         </h1>
         <p
           className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))] max-sm:flex-1"
