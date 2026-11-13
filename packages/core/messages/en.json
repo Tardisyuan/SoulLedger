@@ -9534,7 +9534,9 @@
       "footer": "SoulLedger · demo",
       "guard_title": "How the system protects itself",
       "guard_body": "Six steps as the Grand Scribe (the administrator): how each hall's data is kept apart, permission codes, how an overreach is refused, data scopes, the audit log, the recycle bin.",
-      "guard_cta": "Take the safeguards tour"
+      "guard_cta": "Take the safeguards tour",
+      "inside_cta": "See tenant isolation and the approval flow",
+      "inside_sub": "Two halls side by side on the same data, then one cross-hall case end to end · about 2 min"
     },
     "probe": {
       "try": "Ask this page's endpoint directly, as a judge",
@@ -9575,6 +9577,70 @@
       "expect": "Expected:",
       "recorded": "A recorded answer: asked for real as the eval officer in the test environment ({{at}}), replayed as it was.",
       "not_recorded": "No real answer has been recorded for this one yet, and none is made up here."
+    },
+    "inside": {
+      "crumb": "Demo",
+      "back_home": "Back to the start",
+      "eyebrow": "Under the hood",
+      "title": "One table: what each hall sees",
+      "lede": "Each hall is a tenant. Below, two judges send the same request and each gets back only their own hall’s souls. Further down, one cross-hall case runs, and you can see which part each hall gets to see.",
+      "same_request": "The same request",
+      "as_judge": "Signed in as a judge · {{hall}}",
+      "count": "{{n}} souls in this hall · {{total}} across all four halls",
+      "narrowed": "The difference is made in the query: every endpoint’s query goes through scope_to_tenant and is narrowed to the signed-in officer’s hall. The screen does no filtering.",
+      "probe_title": "Ask for the other hall’s soul by its number",
+      "probe_result": "{{status}} · this hall cannot find the record",
+      "probe_pending": "This request has not been recorded yet. After the next recording, the server’s real answer shows here.",
+      "recorded_short": "Recorded server answer",
+      "flow_title": "One cross-hall case, step by step",
+      "flow_sub": "A soul judged by the Fifth Court serves its term in two stops: stop 1 here, stop 2 at {{hall}}. Each hall decides its own stop.",
+      "step": {
+        "1": {
+          "name": "Joint judgment opened",
+          "who": "Fifth Court · judge",
+          "body": "The Fifth Court’s judge opens a joint judgment on the case and seats {{hall}} as co-judge, leaving stop 2 to it. Stop 1 is always the home hall."
+        },
+        "2": {
+          "name": "The other hall fills in its stop",
+          "who": "{{hall}} · judge",
+          "body": "The judge of {{hall}} fills in its own stop: the realm and the years. Only that hall can fill it (another hall gets a 403), and only with a realm of its own civilization."
+        },
+        "3": {
+          "name": "This hall concludes",
+          "who": "Fifth Court · judge",
+          "body": "With both stops set, the Fifth Court ends the joint judgment and concludes the original case. Concluding it writes the sentence plan, stop by stop."
+        },
+        "4": {
+          "name": "Served stop by stop",
+          "who": "System",
+          "body": "The soul serves stop 1 in this hall first; when that term ends, the system starts the transfer to stop 2 on its own."
+        }
+      },
+      "hall_sees": "What {{hall}} sees",
+      "sees": {
+        "1": {
+          "home": "The joint judgment and the soul’s whole dossier",
+          "away": "The joint judgment and its own seat"
+        },
+        "2": {
+          "home": "Stop 2, filled in by the other hall",
+          "away": "The stop it filled in"
+        },
+        "3": {
+          "home": "The sentence plan, listing both stops",
+          "away": "The same plan: every stop’s hall, years and status, but not the other hall’s reasons"
+        },
+        "4": {
+          "home": "The soul is still in this hall’s roll; its dossier opens as usual",
+          "away": "Until the soul arrives it is not in this hall’s roll, and its dossier does not open"
+        }
+      },
+      "audit_title": "Audit log · rows this step wrote",
+      "audit_pending": "This step’s audit rows have not been recorded yet.",
+      "restart": "Start over",
+      "more_guard": "The full safeguards tour (six steps)",
+      "more_code": "Code and tests ↗",
+      "pick_hall": "Which hall to view"
     }
   },
   "action": {
