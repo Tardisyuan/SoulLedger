@@ -2997,6 +2997,40 @@ li:last-child > .route-row {
   text-decoration-color: oklch(var(--color-line-strong));
   text-underline-offset: 4px;
 }
+/* 第三十八批「工程视角」的第二入口:描边按钮,高 44(窄屏 48、占满),圆角 10;主按钮仍是全页唯一的墨色实底。 */
+.demo-home-inside {
+  border: 1px solid oklch(var(--color-line-strong));
+  border-radius: 10px;
+  background: oklch(var(--color-surface-1));
+  color: oklch(var(--color-ink));
+  font-weight: 500;
+}
+/* 「工程视角」:两栏卷宗各带本文明 2px 顶线(页面本身 data-civ="all",文明色只在这两条线上)。 */
+.demo-inside-dossier {
+  border-top: 2px solid oklch(var(--color-main-ink));
+  border-radius: 10px;
+}
+/* 审批脊:走过的墨色实心,现在这一步是全图唯一的 metal 环,没走到的虚线圈。 */
+.demo-inside-dot {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px dashed oklch(var(--color-line-strong));
+  color: oklch(var(--color-ink-muted));
+  font-size: 12px;
+}
+.demo-inside-spine li[data-state="done"] .demo-inside-dot {
+  border: 1px solid oklch(var(--color-ink));
+  background: oklch(var(--color-ink));
+  color: oklch(var(--color-canvas));
+}
+.demo-inside-spine li[data-state="now"] .demo-inside-dot {
+  border: 2px solid oklch(var(--color-metal));
+  color: oklch(var(--color-metal));
+}
 /* 预览卡:1px 线 + 一层柔影;换文明时淡入 400 ms。 */
 .demo-preview-card {
   border: 1px solid oklch(var(--color-line));
