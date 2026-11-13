@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import { statSync } from "node:fs";
 import path from "node:path";
 import extract from "@/demo/data/home-preview.json";
-import { PEEK_FRAMES, PREVIEW_ORDER, nextCiv, peekStep, previewMode, previewOf, type PreviewExtract } from "@/demo/homePreview";
+import { PEEK_FRAMES, PREVIEW_ORDER, nextCiv, peekStep, previewMode, previewOf, type PreviewExtract } from "@/demo/homePreviewFrames";
 
 const FRONTEND = path.resolve(__dirname, "..", "..");
 const SCRIPT = path.join(FRONTEND, "..", "scripts", "demo-home-preview.mjs");

@@ -5,7 +5,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Seal } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useMedia } from "./HomePreview";
-import { PEEK_FRAMES, PEEK_MS, peekStep } from "./homePreview";
+import { PEEK_FRAMES, PEEK_MS, peekStep } from "./homePreviewFrames";
 import { RouteShape } from "./RouteShape";
 
 type Frame = (typeof PEEK_FRAMES)[number];
