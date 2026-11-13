@@ -621,6 +621,26 @@ backend、celery、celery-beat 三个容器读同一组变量,一起重建。
 会变的:助手审计里「问题的 HMAC」与助手配置的缓存指纹用 `SECRET_KEY` 作 HMAC 键,换 key 之后新旧两段
 哈希不能互相比对(缓存只是失效一次)。
 
+### JWT 签名(`JWT_SIGNING`,2026-11-14)
+
+**默认 `HS256`,并且有意保持关闭**(用户 2026-11-14 决定:没有第三方验签方之前不启用)。HS256 下令牌与此前完全相同:
+用 `SECRET_KEY` 签,没有 `aud` / `iss`,轮换走上面 `SECRET_KEY` 那一节;`/.well-known/jwks.json` 返回 404。
+
+有了只拿公钥验签的旁路服务(网关、另一套系统)时再开:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -out jwt-private.pem
+openssl ec -in jwt-private.pem -pubout -out jwt-public.pem
+```
+
+- `JWT_SIGNING=ES256`,`JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` 填 PEM 文本或 PEM 文件路径,`JWT_ISSUER` 可选(默认 `soulledger`)。
+  缺一把、解析不了、不是 P-256、或公钥不是那把私钥的另一半 → 启动即 `ImproperlyConfigured`。其他取值同样拒绝启动。
+- 开启后官员令牌 `aud=soulledger-officer`、灵魂令牌(`soul_*` 类型)`aud=soulledger-soul`,都带 `iss` 与 `kid` 头;
+  `aud` 与 `token_type` 对不上的令牌即使签名有效也拒。公钥在 `/.well-known/jwks.json`(`kid` = RFC 7638 指纹)。
+- **切换那一刻所有已签发的 HS256 令牌一并失效**(官员与两个 App 都要重新登录),`SECRET_KEY_FALLBACKS` 不覆盖 JWT。
+  选个低峰时段;App 不需要改代码。ES256 下换钥匙同样会让全部令牌失效 —— 多把公钥并存(按 `kid` 选)还没做,要不停机换钥匙时再加。
+- 私钥只给 backend、celery、celery-beat 三个容器;验签方只拿 `jwt-public.pem` 或 JWKS。
+
 ### ENCRYPTION_KEY
 
 加密的列:`WebhookConfig.signing_secret`、`DeathRegistrationRequest.source_payload`、官员 / 灵魂两步验证的

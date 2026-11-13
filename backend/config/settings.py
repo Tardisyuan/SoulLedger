@@ -378,6 +378,55 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
 }
 
+# 签名算法开关(审计 2026-11-14 be-sec 1.4;用户 11-14 决定:**实现了但默认不启用**,没有第三方验签方之前保持 HS256)。
+# HS256(默认):与此前逐字节相同 —— SECRET_KEY 签,令牌里没有 aud / iss,`/.well-known/jwks.json` 是 404。
+# ES256:私钥签、公钥验,官员与灵魂令牌各带自己的 aud,外加 iss;公钥经 `/.well-known/jwks.json` 发布,
+# 旁路服务只拿公钥就能验签。选 ES256 不选 RS256:签名 64 字节对 256 字节(每个请求头都带着它),
+# 签名快,JWKS 与各语言 JWT 库都支持;EdDSA 在一些现成验签方(网关、云厂商)里还不普遍。
+# 两把钥匙是 PEM 文本,或 PEM 文件的路径;生成法见 docs/DEPLOYMENT.md「JWT 签名」。
+from django.core.exceptions import ImproperlyConfigured  # noqa: E402
+
+JWT_SIGNING = os.getenv("JWT_SIGNING", "HS256").strip().upper()
+JWT_AUDIENCES = {}
+if JWT_SIGNING == "ES256":
+    def _jwt_pem(name):
+        value = os.getenv(name, "").strip()
+        if value and not value.startswith("-----BEGIN"):
+            try:
+                value = Path(value).read_text()
+            except OSError as exc:
+                raise ImproperlyConfigured(f"{name}: cannot read the PEM file {value!r}") from exc
+        if not value:
+            raise ImproperlyConfigured(f"JWT_SIGNING=ES256 needs {name} (PEM text or a path to a PEM file).")
+        return value
+
+    from cryptography.hazmat.primitives.asymmetric import ec  # noqa: E402
+    from cryptography.hazmat.primitives.serialization import (  # noqa: E402
+        load_pem_private_key,
+        load_pem_public_key,
+    )
+
+    _jwt_private, _jwt_public = _jwt_pem("JWT_PRIVATE_KEY"), _jwt_pem("JWT_PUBLIC_KEY")
+    try:
+        _priv, _pub = load_pem_private_key(_jwt_private.encode(), None), load_pem_public_key(_jwt_public.encode())
+    except (ValueError, TypeError) as exc:
+        raise ImproperlyConfigured("JWT_PRIVATE_KEY / JWT_PUBLIC_KEY is not an unencrypted PEM key.") from exc
+    if not (isinstance(_priv, ec.EllipticCurvePrivateKey) and isinstance(_priv.curve, ec.SECP256R1)):
+        raise ImproperlyConfigured("JWT_SIGNING=ES256 needs a P-256 (prime256v1) EC private key.")
+    if _priv.public_key().public_numbers() != getattr(_pub, "public_numbers", lambda: None)():
+        raise ImproperlyConfigured("JWT_PUBLIC_KEY is not the public half of JWT_PRIVATE_KEY.")
+    JWT_AUDIENCES = {"officer": "soulledger-officer", "soul": "soulledger-soul"}
+    SIMPLE_JWT.update({
+        "ALGORITHM": "ES256",
+        "SIGNING_KEY": _jwt_private,
+        "VERIFYING_KEY": _jwt_public,
+        # decode accepts either audience; apps/core/jwt_fallback.py then requires the one matching token_type.
+        "AUDIENCE": tuple(JWT_AUDIENCES.values()),
+        "ISSUER": os.getenv("JWT_ISSUER", "soulledger"),
+    })
+elif JWT_SIGNING != "HS256":
+    raise ImproperlyConfigured(f"JWT_SIGNING must be HS256 or ES256, not {JWT_SIGNING!r}.")
+
 # Permission Cache TTL (seconds)
 CACHE_PERMISSION_TTL = int(os.getenv("CACHE_PERMISSION_TTL", "300"))  # 5 minutes
 

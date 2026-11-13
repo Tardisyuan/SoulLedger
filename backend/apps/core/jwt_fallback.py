@@ -8,10 +8,24 @@ An expired token is refused as expired whichever key signed it; a token no key s
 SimpleJWT exposes no setting for its backend class (`TOKEN_BACKEND_CLASS` is in its removed-settings list);
 every token resolves `rest_framework_simplejwt.state.token_backend` lazily on first use, so `install()` swaps
 that one object, from `SoulAccountsConfig.ready()` — before any request is served.
+
+It is also where `JWT_SIGNING=ES256` (config/settings.py, off by default) takes effect: with an asymmetric
+algorithm every token gets the `aud` of its kind (officer, or soul for `soul_*` token types), `iss`, and a `kid`
+header naming the key `/.well-known/jwks.json` publishes; a token whose `aud` does not match its `token_type` is
+refused. Under HS256 none of this runs and tokens are exactly what SimpleJWT has always written.
 """
+import hashlib
+import json
+from functools import lru_cache
+
+import jwt
 from django.conf import settings
+from django.http import Http404, JsonResponse
+from jwt.algorithms import ECAlgorithm
+from jwt.utils import base64url_encode
 from rest_framework_simplejwt.backends import TokenBackend
 from rest_framework_simplejwt.exceptions import TokenBackendError, TokenBackendExpiredToken
+from rest_framework_simplejwt.settings import api_settings
 
 
 class FallbackTokenBackend(TokenBackend):
@@ -25,7 +39,23 @@ class FallbackTokenBackend(TokenBackend):
             for key in getattr(settings, "SECRET_KEY_FALLBACKS", [])
         ]
 
+    def _audience_for(self, payload):
+        kind = "soul" if str(payload.get(api_settings.TOKEN_TYPE_CLAIM, "")).startswith("soul_") else "officer"
+        return settings.JWT_AUDIENCES[kind]
+
+    def encode(self, payload):
+        if self.algorithm.startswith("HS"):
+            return super().encode(payload)
+        claims = {**payload, "aud": self._audience_for(payload), "iss": self.issuer}
+        return jwt.encode(claims, self.prepared_signing_key, algorithm=self.algorithm,
+                          headers={"kid": public_jwk(self.verifying_key)["kid"]}, json_encoder=self.json_encoder)
+
     def decode(self, token, verify=True):
+        if not self.algorithm.startswith("HS"):
+            payload = super().decode(token, verify=verify)
+            if verify and payload.get("aud") != self._audience_for(payload):
+                raise TokenBackendError("Token is invalid")
+            return payload
         try:
             return super().decode(token, verify=verify)
         except TokenBackendExpiredToken:
@@ -53,3 +83,23 @@ def install():
                                old.leeway, old.json_encoder)
     new.jwks_client = old.jwks_client
     state.token_backend = new
+
+
+@lru_cache(maxsize=4)
+def public_jwk(public_pem):
+    """The public key as a JWK, `kid` = its RFC 7638 thumbprint."""
+    jwk = ECAlgorithm.to_jwk(ECAlgorithm(ECAlgorithm.SHA256).prepare_key(public_pem), as_dict=True)
+    canonical = json.dumps({k: jwk[k] for k in ("crv", "kty", "x", "y")}, separators=(",", ":"), sort_keys=True)
+    kid = base64url_encode(hashlib.sha256(canonical.encode()).digest()).decode()
+    return {**jwk, "kid": kid, "use": "sig", "alg": "ES256"}
+
+
+def jwks_view(request):
+    """`/.well-known/jwks.json`: the verifying key for third parties. 404 while signing is HS256 (the default)."""
+    from rest_framework_simplejwt import state
+
+    backend = state.token_backend
+    if backend.algorithm.startswith("HS"):
+        raise Http404
+    return JsonResponse({"keys": [public_jwk(backend.verifying_key)]},
+                        headers={"Cache-Control": "public, max-age=3600"})
