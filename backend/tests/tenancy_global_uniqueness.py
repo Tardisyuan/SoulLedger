@@ -7,7 +7,7 @@ Key:   "app.Model:column_or_constraint_name"
 Value: (kind, one-line reason)
 
   GLOBAL_VALUE  unique over the whole database -- what a per-tenant database
-                split would silently weaken. 22 today; each has a guarantee
+                split would silently weaken. 21 today; each has a guarantee
                 (a UNIQUE index, plus a generator for soul_code / case_number / workflow number).
   PER_PARENT    unique within one parent row; a placement rule for sharding.
   PER_TENANT    tenant is part of the key; NOT global.
@@ -34,6 +34,7 @@ UNIQUE_KEYS = {
     'perm.RoleDataScope:perm_role_data_scope_unique_live': ('PER_PARENT', 'one live scope row per (role, resource); lives with its global role row'),
     'realms.Realm:unique_realm_tenant_code': ('PER_TENANT', '(tenant, realm_code) since 2026-10-27: a created hall gets its own copy of its civilization\'s realms; lookups ask within a hall (realm_by_code)'),
     'scheduler.TaskRun:celery_task_id': ('GLOBAL_VALUE', 'Celery task id'),
+    'social.ModerationScore:social_moderation_score_one_per_row': ('GLOBAL_VALUE', '(kind, object_id): one AI pre-screen score per post / comment; object_id is that row\'s uuid4 pk (no FK), so two databases cannot collide by construction'),
     'soul_assist.HelpChunk:help_chunk_one_per_entry': ('GLOBAL_VALUE', '(locale, entry_id) of the help corpus; global content'),
     'soul_push.PushDevice:token': ('GLOBAL_VALUE', 'push token of a soul device'),
     'soul_accounts.SoulDeviceLogin:credential_hash': ('GLOBAL_VALUE', 'hash of a soul app device-login credential; random 256-bit value, so two databases cannot collide by construction'),

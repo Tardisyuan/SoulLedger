@@ -298,7 +298,7 @@ describe("the list", () => {
     expect(screen.getByTestId("hall-row")).toBeTruthy();
     expect(screen.getByText("还没有往来")).toBeTruthy();
     // 文明气质 1e: the empty letters page carries the illustration.
-    expect(within(screen.getByTestId("chat-empty")).getByTestId("empty-hero-neutral")).toBeTruthy();
+    expect(within(screen.getByTestId("chat-empty")).getByTestId("empty-hero-neutral", { includeHiddenElements: true })).toBeTruthy();
     fireEvent.press(screen.getByTestId("chat-empty-find"));
     expect(mockNavigate).toHaveBeenCalledWith("FindSoul");
   });

@@ -99,7 +99,7 @@ test("393px: a post", async ({ page, context }) => {
   clean(seen, "393 post");
 });
 
-test("393px: the cover's seal lands on the band's 48px seal", async ({ page }) => {
+test("393px: the cover's seal lands on the page head's civilization mark (the bottom bar draws no brand mark)", async ({ page }) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await watchHandOff(page);

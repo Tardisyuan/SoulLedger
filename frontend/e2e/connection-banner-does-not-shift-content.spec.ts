@@ -24,7 +24,7 @@ test("the connection banner takes no layout space: content starts right under th
   const banner = page.getByRole("status").filter({ hasText: /重连中|连接失败|已断开/ });
   await expect(banner).toBeVisible({ timeout: 15_000 });
 
-  // 第三十批: the masthead is the 52 px toolbar, then the page (its page head — topline and title — is the top of
+  // 第三十批: the masthead is the 52 px toolbar (and the door tabs, below), then the page (its page head — topline and title — is the top of
   // the page itself). The banner pushes neither: the toolbar sits at the very top, the page starts where it ends, and
   // the page head is the first thing in the page.
   const header = await page.getByTestId("global-topbar").boundingBox();
@@ -41,9 +41,18 @@ test("the connection banner takes no layout space: content starts right under th
     expect(pill!.y).toBeGreaterThanOrEqual(header!.y);
     expect(pill!.y + pill!.height).toBeLessThanOrEqual(header!.y + header!.height);
   }
+  // 第三十批 第 4 步「五门」: the door's own tabs (`door-tabs`, in the flow under the toolbar) are part of the
+  // masthead when the door has more than one page; the banner pushes them no more than it pushes the page.
+  const tabs = page.getByTestId("door-tabs");
+  let mastEnd = header!.y + header!.height;
+  if (await tabs.isVisible()) {
+    const box = (await tabs.boundingBox())!;
+    expect(Math.abs(box.y - mastEnd), `door tabs start at y=${box.y}, toolbar ends at y=${mastEnd}`).toBeLessThanOrEqual(1);
+    mastEnd = box.y + box.height;
+  }
   expect(
-    Math.abs(content!.y - (header!.y + header!.height)),
-    `content starts at y=${content!.y}, masthead ends at y=${header!.y + header!.height}`
+    Math.abs(content!.y - mastEnd),
+    `content starts at y=${content!.y}, masthead ends at y=${mastEnd}`
   ).toBeLessThanOrEqual(1);
   expect(Math.abs(head!.y - content!.y), `page head starts at y=${head!.y}, content at y=${content!.y}`).toBeLessThanOrEqual(1);
 });

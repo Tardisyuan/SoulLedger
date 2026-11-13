@@ -81,8 +81,10 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
   const label = "md:hidden text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
 
   return (
+    // A disabled job is not dimmed: opacity 0.75 took its text under WCAG AA (ink-muted 3.8:1 light, faint 3.9:1 dark,
+    // rendered-contrast.spec). The ○ 停用 tag below says it.
     <li
-      className={`p-4 md:py-2 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${JOB_ROW_GRID}${job.enabled ? "" : " opacity-75"}`}
+      className={`p-4 md:py-2 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${JOB_ROW_GRID}`}
       data-job-id={job.id}
     >
       <div className="min-w-0 space-y-1">
