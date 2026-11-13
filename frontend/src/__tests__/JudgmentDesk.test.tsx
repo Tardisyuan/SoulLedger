@@ -129,7 +129,7 @@ const radio = (value: string) =>
 const notesBox = () => screen.getByLabelText(tZh("judgment.detail.notes")) as HTMLTextAreaElement;
 /** v3:引用签、律条检索、先例在资料舱的「律条引用」标签里;默认打开的是功过记录。 */
 const openLawTab = async () => fireEvent.click(await screen.findByRole("tab", { name: tZh("judgment.desk.tab_law") }));
-const toConfirm = () => screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") });
+const toConfirm = () => screen.getByRole("button", { name: tZh("caseDesk.dossier.judge.seal") });
 /** v3 落判两步:主按钮进盖印确认层,层里的落判键才发 conclude/。原审一律带审批流程(2026-10-29),所以那一键是
  *  「落判并发起」;本域无站可选(下面默认的 `nothing_to_pick`)时没有「下一步」。 */
 const concludeViaLayer = async () => {
@@ -298,7 +298,7 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     fireEvent.keyDown(document.body, { key: "2" });
     fireEvent.keyDown(document.body, { key: "Enter", metaKey: true });
     // 按钮本身也不在(RequirePermission),键不能是一条绕过它的路:层也不开。
-    expect(screen.queryByRole("button", { name: tZh("judgment.desk.to_confirm") })).toBeNull();
+    expect(screen.queryByRole("button", { name: tZh("caseDesk.dossier.judge.seal") })).toBeNull();
     expect(screen.queryByTestId("confirm-layer")).toBeNull();
     await act(async () => {});
     expect(judgmentApi.conclude).not.toHaveBeenCalled();
@@ -639,7 +639,8 @@ describe("乙 · 功过:结案时的余额快照", () => {
       ]);
     });
     expect(within(box).getAllByRole("term")[0].parentElement?.className).toMatch(/border-double/);
-    expect(screen.getByText(tZh("judgment.desk.concluded_on", { date: "06-01" }))).toBeInTheDocument();
+    // 结案日期与经手人在右栏落印那一格(第三十批第 3 步),不再挂在功过的节头上。
+    expect(screen.getByTestId("sealed-by")).toBeInTheDocument();
   });
 
   it("两值相同只写一行「余额」,不出现「现值」", async () => {
@@ -1198,15 +1199,14 @@ describe("插入审判台的落点(?cite=)", () => {
 
 // ── v3 版式:当前这一判 / 资料舱 / 全案 / 盖印确认层 ─────────────────────────────
 
-describe("v3 · 当前这一判", () => {
-  it("没选过、没存过草稿的案子预选「‖ 待定」(v3;第三十批改 ‖),以展示字号写在中轴;预选不算动过,不自动保存", async () => {
+describe("卷宗 · 台:去处 1–4", () => {
+  it("没选过、没存过草稿的案子预选「‖ 待定」;读屏念出当前所选;预选不算动过,不自动保存", async () => {
     renderPage();
     const ruling = await screen.findByTestId("current-ruling");
-    expect(ruling).toHaveClass("text-display-lg");
+    expect(ruling).toHaveAttribute("aria-live", "polite");
     await waitFor(() => expect(radio("PURGATORY").checked).toBe(true));
-    expect(ruling).toHaveTextContent(`‖${tZh("judgment.verdicts.purgatory")}`); // 第三十批:待定的前缀是 ‖
+    expect(ruling).toHaveTextContent(`‖ ${tZh("judgment.verdicts.purgatory")}`); // 第三十批:待定的前缀是 ‖
     expect(ruling).not.toHaveTextContent("◇");
-    expect(ruling).not.toHaveTextContent(tZh("judgment.detail.select_verdict"));
     for (const v of ["PASSED", "FAILED", "RETRY"]) {
       expect(radio(v).checked).toBe(false);
       expect(ruling).not.toHaveTextContent(tZh(`judgment.verdicts.${v.toLowerCase()}`));
@@ -1215,7 +1215,7 @@ describe("v3 · 当前这一判", () => {
     expect(toConfirm()).toBeEnabled();
 
     fireEvent.keyDown(document.body, { key: "1" });
-    expect(ruling).toHaveTextContent(`✓${tZh("judgment.verdicts.passed")}`);
+    expect(ruling).toHaveTextContent(`✓ ${tZh("judgment.verdicts.passed")}`);
     expect(ruling).not.toHaveTextContent(tZh("judgment.verdicts.purgatory"));
   });
 
@@ -1233,33 +1233,43 @@ describe("v3 · 当前这一判", () => {
     expect(radio("PURGATORY").checked).toBe(false);
   }, 15000);
 
-  it("选中是墨底反白,不是颜色:只有选中的那一个键有墨底", async () => {
-    renderPage();
-    await screen.findAllByRole("radio");
-    fireEvent.keyDown(document.body, { key: "2" });
-    const tile = (v: string) => radio(v).closest("label") as HTMLElement;
-    expect(tile("FAILED").className).toContain("bg-[oklch(var(--color-ink))]");
-    for (const v of ["PASSED", "PURGATORY", "RETRY"]) expect(tile(v).className).not.toContain("bg-[oklch(var(--color-ink))]");
-    // 判决不靠颜色:任何一个键都不读判决色或文明色。
-    for (const v of ["PASSED", "FAILED", "PURGATORY", "RETRY"]) expect(tile(v).className).not.toMatch(/--color-(verdict|main|civ)/);
-  });
-
-  it("键是 v3 的约 74 px(min-h-18.5);选中的那一个上移 6px 带 raised 阴影,别的不动;全案单列(52px)不上移", async () => {
+  it("选定是 1.5px 墨色描框,不是颜色、不是墨底:只有选定的那一行有框;四行一样高(--opt-h),一行一个", async () => {
     renderPage();
     await screen.findAllByRole("radio");
     fireEvent.keyDown(document.body, { key: "2" });
     const tile = (v: string) => (radio(v).closest("label") as HTMLElement).className.split(/\s+/);
-    for (const v of ["PASSED", "FAILED", "PURGATORY", "RETRY"]) expect(tile(v)).toContain("min-h-18.5");
-    expect(tile("FAILED")).toEqual(expect.arrayContaining(["-translate-y-1.5", "shadow-raised", "duration-fast"]));
-    for (const v of ["PASSED", "PURGATORY", "RETRY"]) {
+    expect(tile("FAILED")).toContain("shadow-[inset_0_0_0_1.5px_oklch(var(--color-ink))]");
+    for (const v of ["PASSED", "PURGATORY", "RETRY"]) expect(tile(v)).not.toContain("shadow-[inset_0_0_0_1.5px_oklch(var(--color-ink))]");
+    for (const v of ["PASSED", "FAILED", "PURGATORY", "RETRY"]) {
+      expect(tile(v)).toContain("min-h-(--opt-h)");
+      // 判决不靠颜色:任何一行都不读判决色或文明色;v3 的墨底反白与上移退场。
+      expect(tile(v).join(" ")).not.toMatch(/--color-(verdict|main|civ)/);
+      expect(tile(v)).not.toContain("bg-[oklch(var(--color-ink))]");
       expect(tile(v)).not.toContain("-translate-y-1.5");
-      expect(tile(v)).not.toContain("shadow-raised");
     }
+    expect(screen.getByTestId("verdict-bar")).toHaveClass("grid-cols-1");
+  });
 
-    fireEvent.keyDown(document.body, { key: "f" });
-    expect(screen.getByTestId("judgment-desk")).toHaveAttribute("data-view", "case");
-    expect(tile("FAILED")).toContain("min-h-13");
-    expect(tile("FAILED")).not.toContain("-translate-y-1.5");
+  it("落印前是虚线预览的印,落印后右栏换成判词、实印、日期与经手人、「看判词全文」", async () => {
+    const a = renderPage();
+    await screen.findAllByRole("radio");
+    expect(screen.getByTestId("dossier-seal-pending")).toBeInTheDocument();
+    expect(screen.queryByTestId("dossier-seal")).toBeNull();
+    expect(screen.getByText(tZh("caseDesk.dossier.judge.hint"))).toBeInTheDocument();
+    a.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: judgment({ is_final: true, verdict: "FAILED", notes: "所犯属实", concluded_at: "2026-06-01T08:00:00Z" }) });
+    renderPage();
+    const decision = await screen.findByTestId("current-decision");
+    await within(decision).findByText("所犯属实");
+    expect(within(decision).getByText(tZh("caseDesk.dossier.judge.sealed_head"))).toBeInTheDocument();
+    expect(within(decision).getByTestId("dossier-seal")).toBeInTheDocument();
+    expect(within(decision).queryByTestId("dossier-seal-pending")).toBeNull();
+    expect(within(decision).getByTestId("sealed-by")).toBeInTheDocument();
+    expect(within(decision).getByRole("link", { name: tZh("caseDesk.dossier.judge.full_text") })).toHaveAttribute("href", "#desk-doc-card");
+    // 落印之后不再有去处可选,也没有落印键。
+    expect(within(decision).queryByRole("radio")).toBeNull();
+    expect(screen.queryByRole("button", { name: tZh("caseDesk.dossier.judge.seal") })).toBeNull();
   });
 });
 
@@ -1291,65 +1301,16 @@ describe("v3 · 资料舱", () => {
   });
 });
 
-describe("v3 · 全案(F)", () => {
-  const desk = () => screen.getByTestId("judgment-desk");
-  const panel = (m: string) => document.querySelector(`[data-material="${m}"]`) as HTMLElement;
-
-  it("F 展开:三块并置、标签条不画、灵魂与草稿收起;Esc 回聚焦;判词框里按 F 是写字", async () => {
+describe("卷宗 · 一种版式", () => {
+  it("没有 F「展开全案」:按 F 什么都不换,卷与台都在,资料舱的三个标签照常", async () => {
     renderPage();
     await screen.findAllByRole("radio");
-    fireEvent.keyDown(notesBox(), { key: "f" });
-    expect(desk()).toHaveAttribute("data-view", "focus");
-
     fireEvent.keyDown(document.body, { key: "f" });
-    expect(desk()).toHaveAttribute("data-view", "case");
-    expect(screen.queryAllByRole("tab")).toHaveLength(0);
-    for (const m of ["confession", "evidence", "law"]) expect(panel(m)).not.toHaveAttribute("hidden");
-    expect(document.getElementById("desk-draft")).toHaveAttribute("hidden");
-    expect(document.getElementById("desk-soul")).toHaveAttribute("hidden");
-    // 1–4 在全案里照样选判。
-    fireEvent.keyDown(document.body, { key: "4" });
-    expect(radio("RETRY").checked).toBe(true);
-
-    fireEvent.keyDown(document.body, { key: "Escape" });
-    expect(desk()).toHaveAttribute("data-view", "focus");
-    expect(document.getElementById("desk-draft")).not.toHaveAttribute("hidden");
+    expect(screen.getByTestId("judgment-desk")).not.toHaveAttribute("data-view");
     expect(document.getElementById("desk-soul")).not.toHaveAttribute("hidden");
+    expect(screen.getByTestId("current-decision")).toBeInTheDocument();
     expect(screen.getAllByRole("tab")).toHaveLength(3);
-    // 裁决还在:全案只是换栏,不卸载。
-    expect(radio("RETRY").checked).toBe(true);
-  });
-
-  /** 视口宽 `width` 下的 matchMedia:按查询里的 min-width 真算,不是一律 true / false。 */
-  const viewport = (width: number) =>
-    ((q: string) => {
-      const min = /min-width:\s*(\d+)px/.exec(q);
-      return { matches: min ? width >= Number(min[1]) : false, media: q };
-    }) as unknown as typeof window.matchMedia;
-
-  it.each([
-    [768, "focus"],
-    [769, "case"],
-  ])("全案的门与导航同一个边界(769):视口 %ipx 按 F → %s", async (width, view) => {
-    // v3 四档:394–768 取消全案。768 正好是窄档,导航在 769 才换成侧栏。
-    const original = window.matchMedia;
-    window.matchMedia = viewport(width);
-    try {
-      renderPage();
-      await screen.findAllByRole("radio");
-      fireEvent.keyDown(document.body, { key: "f" });
-      expect(desk()).toHaveAttribute("data-view", view);
-    } finally {
-      window.matchMedia = original;
-    }
-  });
-
-  it("「全案」按钮也在 769 才画(md 是 768,正好差那一格)", async () => {
-    renderPage();
-    await screen.findAllByRole("radio");
-    const cls = screen.getByRole("button", { name: new RegExp(tZh("judgment.desk.full_case")) }).className.split(/\s+/);
-    expect(cls).toEqual(expect.arrayContaining(["hidden", "min-[769px]:inline-flex"]));
-    expect(cls).not.toContain("md:inline-flex");
+    expect(screen.queryByRole("button", { name: new RegExp(tZh("judgment.desk.full_case")) })).toBeNull();
   });
 });
 
@@ -1390,81 +1351,18 @@ describe("v3 · 盖印确认层", () => {
   });
 });
 
-describe("v3 · 草稿与批注开关(768–1279)", () => {
-  const draftSection = () => document.getElementById("desk-draft") as HTMLElement;
-  const toggle = () => screen.getByTestId("draft-toggle");
-  const CONFLICT = {
-    response: {
-      status: 409,
-      data: {
-        error: "draft conflict", code: "draft_conflict",
-        current: { notes: "他人的判词", draft_verdict: "PASSED", draft_version: 9, draft_saved_at: "2026-09-25T10:20:00Z" },
-      },
-    },
-  };
-
-  it("默认收起(md:max-xl:hidden),点开排到资料舱上面;收起时判词框仍挂着,打的字不丢", async () => {
-    renderPage();
-    await screen.findAllByRole("radio");
-    expect(toggle()).toHaveAttribute("aria-expanded", "false");
-    expect(toggle()).toHaveAttribute("aria-controls", "desk-draft");
-    expect(draftSection()).toHaveAttribute("data-collapsed", "true");
-    // 收着 = 768–1279 下不显示。只在这里钉一次类名;其余看 data-collapsed(两者出自同一个变量)。
-    expect(draftSection()).toHaveClass("md:max-xl:hidden");
-    // 收着也挂着:判词框在 DOM 里,能写,写了会存。
-    fireEvent.change(notesBox(), { target: { value: "收着写" } });
-
-    fireEvent.click(toggle());
-    expect(toggle()).toHaveAttribute("aria-expanded", "true");
-    expect(draftSection()).not.toHaveAttribute("data-collapsed");
-    expect(draftSection()).not.toHaveClass("md:max-xl:hidden");
-    expect(draftSection()).toHaveClass("md:order-3");
-    expect(notesBox().value).toBe("收着写");
-
-    fireEvent.click(toggle());
-    expect(draftSection()).toHaveAttribute("data-collapsed", "true");
-    expect(notesBox().value).toBe("收着写");
-  });
-
-  it("有没存上的改动挂 ◐,存上后摘掉;409 冲突挂 !", async () => {
-    let resolveSave: (_v: unknown) => void = () => {};
-    judgmentApi.saveDraft.mockImplementationOnce(() => new Promise((r) => { resolveSave = r; }));
-    renderPage();
-    await screen.findAllByRole("radio");
-    expect(screen.queryByTestId("draft-toggle-mark")).toBeNull();
-
-    fireEvent.change(notesBox(), { target: { value: "改了" } });
-    expect(screen.getByTestId("draft-toggle-mark")).toHaveTextContent("◐");
-    expect(screen.getByTestId("draft-toggle-mark")).toHaveTextContent(tZh("judgment.desk.draft_unsaved"));
-    await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1), WAIT);
-    expect(screen.getByTestId("draft-toggle-mark")).toHaveTextContent("◐"); // 正在存,还没存上
-    await act(async () => resolveSave({ data: { notes: "改了", draft_verdict: "PURGATORY", draft_version: 1, draft_saved_at: "2026-09-25T10:21:00Z" } }));
-    await waitFor(() => expect(screen.queryByTestId("draft-toggle-mark")).toBeNull());
-
-    judgmentApi.saveDraft.mockRejectedValueOnce(CONFLICT);
-    fireEvent.change(notesBox(), { target: { value: "又改了" } });
-    await screen.findByTestId("draft-conflict", {}, WAIT);
-    expect(screen.getByTestId("draft-toggle-mark")).toHaveTextContent("!");
-    expect(screen.getByTestId("draft-toggle-mark")).toHaveTextContent(tZh("judgment.desk.draft_conflict"));
-  }, 15000);
-
-  it("已结案没有开关,判词照常摊开", async () => {
-    judgmentApi.get.mockResolvedValue({ data: judgment({ is_final: true, verdict: "PASSED", notes: "定" }) });
-    renderPage();
-    await screen.findByText(tZh("judgment.detail.final"));
-    expect(screen.queryByTestId("draft-toggle")).toBeNull();
-    expect(draftSection()).not.toHaveAttribute("data-collapsed");
-  });
-
-  it("realm_full 被拒:确认层收起,草稿栏自己展开(拒绝写在 戊 里)", async () => {
+describe("卷宗 · 判词在台上", () => {
+  it("判词框一直摊开在右栏(没有平板的草稿开关);realm_full 被拒时确认层收起,拒绝写在发落那一节", async () => {
     judgmentApi.conclude.mockRejectedValue({ response: { status: 409, data: { error: "full", code: "realm_full" } } });
     renderPage();
     await screen.findAllByRole("radio");
-    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("draft-toggle")).toBeNull();
+    const draft = document.getElementById("desk-draft") as HTMLElement;
+    expect(within(screen.getByTestId("current-decision")).getByRole("textbox", { name: tZh("judgment.detail.notes") })).toBe(notesBox());
+    expect(draft).not.toHaveAttribute("hidden");
     await concludeViaLayer();
     await waitFor(() => expect(screen.queryByTestId("confirm-layer")).toBeNull());
-    expect(toggle()).toHaveAttribute("aria-expanded", "true");
-    expect(draftSection()).not.toHaveAttribute("data-collapsed");
+    expect(draft).not.toHaveAttribute("hidden");
   });
 });
 

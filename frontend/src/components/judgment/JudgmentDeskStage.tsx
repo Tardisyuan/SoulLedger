@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
-import type { gsap } from "gsap";
-import { prefersReducedMotion } from "@/lib/motion";
 import type { Judgment } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -77,75 +75,25 @@ export function CivMotif() {
   );
 }
 
-/* F 的转场用 gsap(只在审判台这一页)。gsap + CustomEase 不进这一页的首屏 JS(perf review 2026-10-27 #13):
-   资料舱挂上时开始加载 `deskMotion`,它到之前切版式就直接换布局、不起转场。 */
-let deskMotion: typeof import("./deskMotion") | null = null;
-export const loadDeskMotion = () =>
-  import("./deskMotion").then((mod) => {
-    deskMotion = mod;
-    return mod;
-  });
-
-/** 元素水平中心相对审判台左缘的位置 —— 判决区在两种版式里各在哪一栏。 */
-const centerIn = (desk: Element, el: Element) => {
-  const r = el.getBoundingClientRect();
-  return r.left + r.width / 2 - desk.getBoundingClientRect().left;
-};
-
 /**
- * 资料舱:供词 / 功过记录 / 律条引用三个标签,浮起一层(`shadow-raised`)。
- * `fullCase` 时三栏并置、标签条不画(原型的 F「展开全案」)。三块内容一直挂着 —— 不当前的
- * 标签只是 `hidden`,律条检索里打到一半的字、证据的焦点行在切标签和切全案时都留着。
+ * 资料舱:供词 / 功过记录 / 律条引用三个标签,浮起一层(`shadow-raised`)。三块内容一直挂着 —— 不当前的
+ * 标签只是 `hidden`,律条检索里打到一半的字、证据的焦点行在切标签时都留着。
+ * 第三十批第 3 步起它在卷宗页左栏「卷」的下面;v3 的 F「展开全案」(三栏并置 + gsap 转场)随审判台一起退场 ——
+ * 卷宗页本来就是两栏摊开的,判在右栏,不再有第二种版式。
  */
 export function MaterialDock({
   active,
   onActive,
-  fullCase,
-  onToggleFullCase,
   panels,
 }: {
   active: DeskMaterial;
   onActive: (m: DeskMaterial) => void;
-  fullCase: boolean;
-  onToggleFullCase: () => void;
   panels: Record<DeskMaterial, { label: string; node: ReactNode }>;
 }) {
   const { t } = useI18n();
   const base = useId();
   const tabId = (m: DeskMaterial) => `${base}-tab-${m}`;
   const panelId = (m: DeskMaterial) => `${base}-panel-${m}`;
-
-  /* F 的转场挂在资料舱上(它就在审判台里,`fullCase` 也只在这里换),页面不用知道。
-     每次提交后记下判决区的位置;`fullCase` 一变,旧位置与新位置之差就是判决区要走的那段。
-     转场进行中不重新量(量到的是带 transform 的位置)。 */
-  const sectionRef = useRef<HTMLElement>(null);
-  const verdictX = useRef<number | null>(null);
-  const shownCase = useRef(fullCase);
-  const timeline = useRef<gsap.core.Timeline | null>(null);
-  useLayoutEffect(() => {
-    const desk = sectionRef.current?.closest<HTMLElement>("[data-view]");
-    const verdict = desk?.querySelector('[data-testid="current-decision"]');
-    if (!desk || !verdict) return;
-    const changed = shownCase.current !== fullCase;
-    if (!changed && timeline.current?.isActive()) return;
-    if (changed) timeline.current?.progress(1).kill();
-    const x = centerIn(desk, verdict);
-    const from = verdictX.current;
-    verdictX.current = x;
-    if (!changed) return;
-    shownCase.current = fullCase;
-    if (!deskMotion) return;
-    timeline.current = deskMotion.fullCaseTimeline(desk, {
-      toCase: fullCase,
-      shiftX: from === null ? 0 : from - x,
-      active,
-      reduced: prefersReducedMotion(),
-    });
-  });
-  useEffect(() => {
-    void loadDeskMotion();
-    return () => void timeline.current?.kill();
-  }, []);
   /* ←/→ 在三个标签之间走(WAI-ARIA tabs);焦点跟着走,内容随之切换。 */
   const onTabKey = (event: React.KeyboardEvent, m: DeskMaterial) => {
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
@@ -158,73 +106,48 @@ export function MaterialDock({
 
   return (
     <section
-      ref={sectionRef}
       aria-label={t("judgment.desk.materials")}
       data-testid="material-dock"
       className="min-w-0 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] shadow-raised"
     >
       <header className="flex min-h-12 flex-wrap items-center gap-x-6 gap-y-1 border-b border-[oklch(var(--color-line))] px-4 md:px-6">
-        <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
-          {fullCase ? t("judgment.desk.full_case") : t("judgment.desk.materials")}
-        </h2>
-        {!fullCase && (
-          <div role="tablist" aria-label={t("judgment.desk.materials")} className="flex items-stretch gap-1 self-stretch">
-            {DESK_MATERIALS.map((m) => (
-              <button
-                key={m}
-                id={tabId(m)}
-                type="button"
-                role="tab"
-                aria-selected={m === active}
-                aria-controls={panelId(m)}
-                tabIndex={m === active ? 0 : -1}
-                onClick={() => onActive(m)}
-                onKeyDown={(event) => onTabKey(event, m)}
-                className={`relative px-3 text-sm transition-colors duration-fast ${
-                  m === active
-                    ? "font-semibold text-[oklch(var(--color-ink))] shadow-[inset_0_-2px_0_oklch(var(--color-ink))]"
-                    : "text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
-                }`}
-              >
-                {panels[m].label}
-              </button>
-            ))}
-          </div>
-        )}
-        {/* F 只在两栏以上有意义(原型:单栏不响应 F),所以按钮在 768 以下不画。 */}
-        <button
-          type="button"
-          onClick={onToggleFullCase}
-          aria-pressed={fullCase}
-          className="ml-auto hidden h-(--control-h-sm) items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] min-[769px]:inline-flex"
-        >
-          {fullCase ? t("judgment.desk.back_to_focus") : t("judgment.desk.full_case")}
-          <Kbd>F</Kbd>
-        </button>
+        <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.materials")}</h2>
+        <div role="tablist" aria-label={t("judgment.desk.materials")} className="flex items-stretch gap-1 self-stretch">
+          {DESK_MATERIALS.map((m) => (
+            <button
+              key={m}
+              id={tabId(m)}
+              type="button"
+              role="tab"
+              aria-selected={m === active}
+              aria-controls={panelId(m)}
+              tabIndex={m === active ? 0 : -1}
+              onClick={() => onActive(m)}
+              onKeyDown={(event) => onTabKey(event, m)}
+              className={`relative px-3 text-sm transition-colors duration-fast ${
+                m === active
+                  ? "font-semibold text-[oklch(var(--color-ink))] shadow-[inset_0_-2px_0_oklch(var(--color-ink))]"
+                  : "text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+              }`}
+            >
+              {panels[m].label}
+            </button>
+          ))}
+        </div>
       </header>
-      <div className={fullCase ? "grid grid-cols-1 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.5fr)_minmax(0,0.85fr)]" : undefined}>
-        {DESK_MATERIALS.map((m, i) => (
-          <div
-            key={m}
-            id={panelId(m)}
-            data-material={m}
-            {...(fullCase ? {} : { role: "tabpanel", "aria-labelledby": tabId(m), hidden: m !== active })}
-            className={`min-w-0 px-4 py-4 md:px-6 transition-[opacity,translate] duration-fast ease-enter starting:translate-y-1.5 starting:opacity-0 ${
-              fullCase ? "border-b border-[oklch(var(--color-line))] lg:border-b-0 lg:border-r lg:last:border-r-0" : ""
-            }`}
-          >
-            {fullCase && (
-              <h3 className="mb-3 flex items-baseline gap-3 font-title text-lg text-[oklch(var(--color-ink))]">
-                <span aria-hidden="true" className="font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                {panels[m].label}
-              </h3>
-            )}
-            {panels[m].node}
-          </div>
-        ))}
-      </div>
+      {DESK_MATERIALS.map((m) => (
+        <div
+          key={m}
+          id={panelId(m)}
+          data-material={m}
+          role="tabpanel"
+          aria-labelledby={tabId(m)}
+          hidden={m !== active}
+          className="min-w-0 px-4 py-4 md:px-6 transition-[opacity,translate] duration-fast ease-enter starting:translate-y-1.5 starting:opacity-0"
+        >
+          {panels[m].node}
+        </div>
+      ))}
     </section>
   );
 }

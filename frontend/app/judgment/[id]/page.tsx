@@ -53,10 +53,8 @@ import {
   VERDICT_KEY_COMPACT,
   VerdictKeyContent,
 } from "@/src/components/judgment/JudgmentDesk";
-import { Seal } from "@/src/components/plaque/Seal";
 import { VerdictDocument } from "@/src/components/judgment/VerdictDocument";
 import {
-  CivMotif,
   JudgmentConfirmLayer,
   MaterialDock,
   type DeskMaterial,
@@ -65,7 +63,7 @@ import { useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { FROM_PARAM, sourceFrom, withFrom } from "@/src/lib/backSource";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
-import { formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatHistoricalDate, formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
@@ -106,6 +104,15 @@ import { useShellCommands, type ShellCommand } from "@/src/lib/shellCommands";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { hasRebirth } from "@/src/lib/hasRebirth";
+import { sourceLabel } from "@/src/components/desk/deskRules";
+import { DossierSpine } from "@/src/components/dossier/DossierSpine";
+import { DossierSeal } from "@/src/components/dossier/DossierSeal";
+import { DossierTabs } from "@/src/components/dossier/DossierTabs";
+import { DossierLedger } from "@/src/components/dossier/DossierLedger";
+import { hallOf } from "@/src/components/dossier/spineModel";
+import { useSpineNow } from "@/src/components/dossier/useSpineNow";
+import { dossierTabHrefs } from "@/src/components/dossier/dossierTabHrefs";
+import { dossier } from "@/src/components/dossier/styles";
 import { rebirthFormNamespace, verdictNamespace, verdictText } from "@/src/lib/domainNames";
 
 /**
@@ -127,13 +134,14 @@ import { rebirthFormNamespace, verdictNamespace, verdictText } from "@/src/lib/d
  * `purple-500` put RETRY back beside DISPOSED — and being raw Tailwind they
  * did not follow the theme either. Every verdict colour here is now the token.
  *
- * ── STRUCTURE: v3 审判台(第 7 轮原型 `JudgmentDesk`) ───────────────────
- * 聚焦视图三栏:灵魂(身份、功过、前世)| 当前这一判(展示字号的判决、四个裁决键、
- * 「进入盖印确认」)| 草稿(丁 判词、戊 发落、审批流、开联审)。下面是资料舱
- * (`MaterialDock`):供词 / 功过记录(丙 证据采信)/ 律条引用(引用签、依据、检索、先例)。
- * F 展开全案:资料舱三栏并置,判收成右侧窄栏;Esc 或再按 F 回来。落判不在页面上而在
- * 盖印确认层(`JudgmentConfirmLayer`):主按钮或 ⌘⏎ 进层,层里「盖印并结案」或再一下 ⌘⏎
- * 才发 `conclude/`;成功后同一层落印。768 以下单栏:判 → 资料舱 → 草稿 → 灵魂,案卷导航跳到后两者。
+ * ── STRUCTURE: 卷宗页(Design 第三十批 第 3 步,2026-11-13)──────────────────
+ * 灵魂详情与审判台合成一份卷宗:页头是人名(`PageShell kind="dossier"`,唯一的 h1),下面是脊(`DossierSpine`,
+ * 灵魂此刻在哪一站)与一行页签(卷宗 · 功过 · 事件 · 轮回 · 受刑,后四节在 `/souls/{id}` 上)。左栏「卷」:本世 · 来源 ·
+ * 经手 · 殿 · 界域 …、功过(`DossierLedger`,各家记号)、前世,下面是资料舱(供词 / 功过记录 / 律条引用)、
+ * 文书卡、附件、评议。右栏「台」(`--judge-w`):去处 1–4、判词(自动保存)、发落、引律条、虚线印、落印 ⌘⏎ ——
+ * 落印仍在盖印确认层里(`JudgmentConfirmLayer`):主按钮或 ⌘⏎ 进层,层里再确认才发 `conclude/`。落印后右栏原地
+ * 换成判词、实印 96(`DossierSeal`)、日期与经手人、「看判词全文」。v3 的 F「展开全案」与平板的草稿开关随之退场。
+ * `/souls/{id}` 仍是灵魂的档案页(同样的页头、脊与页签);案卷台的「打开卷宗」来这里。
  * The four verdicts are still four clauses of one choice: 1–4 choose
  * (`src/lib/hotkeys.ts`). The other three stay fully legible: a verdict is
  * compared against the ones not given.
@@ -185,17 +193,11 @@ const VERDICTS: readonly VerdictMember[] = ["PASSED", "FAILED", "PURGATORY", "RE
 const DEFAULT_VERDICT: VerdictMember = "PURGATORY";
 
 /*
- * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个裁决键同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
- * 字形 + 文字。v3 把「选中」画成墨底反白(原型 `verdict-selector button.selected`):中性,不是第六处
- * 主色;✕ 也是墨色,冷玫红只给系统出错。键帽数字跟着反白(`[&_kbd]:text-current`)。
- * 2026-10-01 键改成 v3 的约 74px 高之后,原型「选中项上移 6px」也一起照做(`VERDICT_LIFT`):
- * translateY(0 → −6px)+ raised 阴影,160ms(键本身的 `duration-fast`);减少动态效果时全局把
- * 时长压到 1ms,即瞬时到位。单列的案卷视图不上移(v3 `.is-compact .selected { transform: none }`),
- * 已结案的「所判」一格也不上移 —— 那不是此刻的选择。
+ * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个去处同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
+ * 字形 + 文字。第三十批第 3 步起是卷宗右栏里一行一个(`VERDICT_KEY_COMPACT`,高 `--opt-h`),选定 = 1.5px 墨色
+ * 描框(样张 `.opt.on`):中性,不是第五处文明色;✕ 也是墨色,冷玫红只给系统出错。v3 的墨底反白与上移 6px 随之退场。
  */
-const VERDICT_CHOSEN =
-  "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-ink))] [&_kbd]:text-current";
-const VERDICT_LIFT = "-translate-y-1.5 shadow-raised";
+const OPT_CHOSEN = "shadow-[inset_0_0_0_1.5px_oklch(var(--color-ink))] [&_kbd]:text-[oklch(var(--color-ink))]";
 
 const NO_LIVES: Reincarnation[] = [];
 
@@ -215,7 +217,6 @@ interface PageProps {
 const DESK_SHORTCUTS = [
   { key: "1–4", label: "shortcuts.pick_verdict" },
   { key: "⌘/Ctrl ⏎", label: "shortcuts.conclude" },
-  { key: "F", label: "shortcuts.toggle_case" },
   { key: "J / K", label: "shortcuts.next_prev_case" },
   { key: "S", label: "judgment.claim.defer" },
 ] as const;
@@ -239,12 +240,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [reasonDraft, setReasonDraft] = useState<ReasonDraft>(EMPTY_REASONS);
   /** 放进待定的理由框(v4 D5:仍必填)。S 键、进度条上的按钮、⌘K 的「放进待定分组」都开它。 */
   const [deferAsking, setDeferAsking] = useState(false);
-  /** v3 审判台的三种样子:聚焦(默认)、全案(F)、盖印确认层(盖在两者之上)。 */
-  const [view, setView] = useState<"focus" | "case">("focus");
+  /** 盖印确认层(盖在卷宗之上)。 */
   const [confirming, setConfirming] = useState(false);
   const [material, setMaterial] = useState<DeskMaterial>("evidence");
-  /** 769–1279 草稿栏收在「草稿与批注」开关后(v3 平板);收起时仍挂着,判词与自动保存都不丢。 */
-  const [draftOpen, setDraftOpen] = useState(false);
   const previousLink = useRef<HTMLAnchorElement>(null);
   const nextLink = useRef<HTMLAnchorElement>(null);
   const { user } = useTenant();
@@ -345,7 +343,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         case "placement":
           // 发落被拒:画在 戊 那一节(placementRefusal),并重取占用 —— realm_full 说明手上的数字旧了。
           setConfirming(false); // 拒绝写在 戊 那一节里,确认层盖着它就看不见
-          setDraftOpen(true); // 平板上 戊 收着的话,也一并展开
           queryClient.invalidateQueries({ queryKey: [...judgmentKeys.all, "destinations", id] });
           return;
         case "cross_open":
@@ -503,11 +500,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       showToast(t("judgment.detail.select_verdict"), "error");
       return;
     }
-    // 改动不完整就不进层:先在 戊 改好,再走盖印。平板上草稿栏收着,就把它打开。
-    if (amendmentChanges() === null) {
-      setDraftOpen(true);
-      return;
-    }
+    // 改动不完整就不进层:先在 戊 改好,再走盖印。
+    if (amendmentChanges() === null) return;
     concludeMutation.reset(); // 每次进层从头来:上一次的结果(含被拒)不属于这一次
     setCrossRefused(false);
     setConfirmStep(1);
@@ -547,6 +541,16 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     enabled: !!soulId,
     staleTime: 30_000,
   });
+  /* 卷宗脊(第三十批第 3 步):灵魂此刻在哪一站 —— 地府读十三站与这件案子的殿,其余读灵魂的行程。 */
+  const spine = useSpineNow({
+    soulId,
+    civilization: judgment?.civilization,
+    currentState: soulData?.current_state,
+    diyuStation: soulData?.diyu_station,
+    court: judgment?.court,
+  });
+  const spineCiv = spine.civ;
+  const soulTabHref = dossierTabHrefs(soulId, `/judgment/${id}`);
 
   /* 据 · 引用 / 撤回:`/judgment/{id}/citations/`,持 judgment.execute。成功后整族失效 ——
      详情里的 `citations` 与语料页的 `citation_count` 都挂在 `judgmentKeys.all` 下。 */
@@ -581,17 +585,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       },
     },
     deskOpen
-  );
-  /* F 展开 / 收起全案,Esc 回聚焦(原型:单栏不响应 F)。确认层开着时都不接 —— Esc 归层自己。 */
-  useHotkeys(
-    {
-      f: () => {
-        const wide = typeof window.matchMedia !== "function" || window.matchMedia("(min-width: 769px)").matches;
-        if (wide) setView((v) => (v === "case" ? "focus" : "case"));
-      },
-      ...(view === "case" ? { Escape: () => setView("focus") } : {}),
-    },
-    !!judgment && !confirming
   );
 
   /* 放进待定(v4 S06 / D5):S、进度条上的按钮、⌘K 都开同一个理由框;放好就换下一件(J 那一条链接),
@@ -739,6 +732,22 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
   );
 
+  /* 卷的头三行(与案卷台摊开的那一份同一套字段):本世(生卒与出生地)、来源、经手。 */
+  const hist = (d: Parameters<typeof formatHistoricalDate>[0] | null | undefined) => (d ? (formatHistoricalDate(d, locale) ?? "") : "");
+  const lifeLine = soulData
+    ? [
+        soulData.birth_date
+          ? soulData.origin_location
+            ? t("caseDesk.juan.born_at", { date: hist(soulData.birth_date), place: soulData.origin_location })
+            : t("caseDesk.juan.born", { date: hist(soulData.birth_date) })
+          : "",
+        soulData.death_date ? t("caseDesk.juan.died", { date: hist(soulData.death_date) }) : "",
+      ]
+        .filter(Boolean)
+        .join(" · ") || null
+    : null;
+  const sourceLine = [sourceLabel(t, judgment), judgment.city_god_name].filter(Boolean).join(" · ");
+
   const subtitle = (
     <span className="inline-flex flex-wrap items-center gap-2">
       {civilisation}
@@ -788,15 +797,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   const CURSOR_LINK =
     "inline-flex items-center gap-2 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]";
-  const fullCase = view === "case";
-  /** 768–1279 下草稿栏收着(`data-collapsed` 与 `md:max-xl:hidden` 同出这一处)。 */
-  const draftCollapsed = !fullCase && !isFinal && !draftOpen;
-  /* 版式(v3 第 7 轮 `JudgmentDesk`):≥1280 三栏 灵魂 | 当前这一判 | 草稿;768–1279 两栏,草稿落到资料舱下面;
-     <768 单栏,顺序是 判 → 资料舱 → 草稿 → 灵魂(原型的手机版:案卷导航 + 判 + 资料),灵魂与草稿由导航跳到。
-     全案(F)时只剩资料舱三栏并置 + 右侧窄栏的判。一份 DOM,只换栏与顺序:判词、检索框里的字都不丢。 */
-  const deskGrid = fullCase
-    ? "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_240px]"
-    : "grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_300px]";
   const notesShown = isFinal ? judgment.notes : notes;
 
   const showPlacement =
@@ -833,17 +833,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {judgment.judgment_method === "HEART_WEIGHING" && (
             <NegativeConfessionPanel judgmentId={judgment.id} canRecord={canEditCase} />
           )}
-          {/* 全案时灵魂栏整栏隐藏,枉死城块随之不见;在供词下面另放一份(用户 2026-10-29 定)。一次只渲染一份。 */}
-          {fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canWangsi} />}
-          {/* 全案时草稿栏收起,判词在供词下面读(原型「判官批注」)。 */}
-          {fullCase && notesShown && (
-            <div className="mt-6 border-t border-[oklch(var(--color-line))] pt-3">
-              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("souls.detail.ledger.verdict_words")}</p>
-              <blockquote className="mt-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] whitespace-pre-wrap">
-                {notesShown}
-              </blockquote>
-            </div>
-          )}
         </>
       ),
     },
@@ -872,12 +861,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       label: t("judgment.desk.tab_law"),
       node: (
         <>
-          {!isFinal && (
-            <CitationChips
-              citations={citations}
-              onRemove={canEditGrounds ? (statuteId) => unciteMutation.mutate(statuteId) : undefined}
-            />
-          )}
+          {/* 引用签在右栏「引律条」那一格(第三十批第 3 步);这里是依据全文、检索与先例。 */}
           {/* 据 · 依据条文. Shown once the case is decided — INCLUDING when it cited nothing,
               which is the informative case: a concluded verdict with no stated
               basis is a fact to show, not a box to hide. On an open case, only
@@ -913,8 +897,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     <PageShell
       density="document"
       variant="full"
+      kind="dossier"
       backLink={backLink}
       eyebrow={eyebrow}
+      spine={<DossierSpine civ={spineCiv} now={spine.now} />}
+      tabs={<DossierTabs current="dossier" hrefs={soulTabHref} counts={{ merits: ledgerData?.record_count ?? null, lives: priorLives.length }} />}
       /* Clause 4: the id never substitutes for a name — a judgment with no
          recorded soul name reads as unrecorded, not as its primary key. */
       title={<DomainText value={soulName} />}
@@ -982,175 +969,144 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         onConfirm={(reason) => archiveMutation.mutate({ id, reason }, { onSuccess: () => setArchiveOpen(false) })}
         isPending={archiveMutation.isPending}
       />
-      {/* 案卷导航(原型 `mobile-case-nav` / `tablet-draft-trigger`)。≤767 单栏:两个锚点,内容一直在文档流里。
-          768–1279 两栏:「草稿与批注」是开关(v3 平板,2026-10-01 拍板),收起时草稿栏只是 hidden ——
-          判词、发落、自动保存都还在。收着的时候有没存上的改动或 409 冲突,开关上挂 ◐ / !,不会悄悄漏掉。 */}
-      {!fullCase && (
-        <nav
-          aria-label={t("judgment.desk.case_nav")}
-          className={`mb-4 flex h-(--control-h-sm) items-stretch gap-1 border-b border-[oklch(var(--color-line))] text-sm xl:hidden ${isFinal ? "md:hidden" : ""}`}
-        >
-          <a href="#desk-soul" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden">
-            {t("judgment.queue.identity")}
-          </a>
-          <a href="#desk-draft" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden">
-            {t("judgment.desk.nav_draft")}
-          </a>
-          {!isFinal && (
-            <button
-              type="button"
-              data-testid="draft-toggle"
-              aria-expanded={draftOpen}
-              aria-controls="desk-draft"
-              onClick={() => setDraftOpen((open) => !open)}
-              className={`hidden items-center gap-2 px-3 md:inline-flex ${
-                draftOpen
-                  ? "font-semibold text-[oklch(var(--color-ink))] shadow-[inset_0_-2px_0_oklch(var(--color-ink))]"
-                  : "text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
-              }`}
-            >
-              {t("judgment.desk.nav_draft")}
-              {draft.conflict ? (
-                <span data-testid="draft-toggle-mark" title={t("judgment.desk.draft_conflict")}>
-                  <span aria-hidden="true">!</span>
-                  <span className="sr-only">{t("judgment.desk.draft_conflict")}</span>
+      {/* 卷宗页(Design 第三十批 第 3 步):左「卷」—— 记下来的(本世 · 来源 · 经手 · 功过 · 供词 …,宋体语域),
+          右「台」—— 判这件事(去处 1–4 · 判词 · 引律条 · 虚线印 · 落印)。落印之后右栏原地换成判词、实印、日期与经手人。
+          一份 DOM,窄于 1024 时两栏叠成一栏(台在卷下面)。 */}
+      <div data-testid="judgment-desk" className={dossier.body}>
+        {/* ── 卷 ─────────────────────────────────────────────────────────── */}
+        <div className="min-w-0 flex flex-col gap-6">
+          <section id="desk-soul" aria-label={t("judgment.queue.case")} className="min-w-0 scroll-mt-28">
+            <dl className={dossier.juan}>
+              <JuanRow label={t("caseDesk.juan.life")}>{lifeLine ?? <MissingValue kind="unrecorded" />}</JuanRow>
+              <JuanRow label={t("caseDesk.juan.source")}>{sourceLine}</JuanRow>
+              <JuanRow label={t("caseDesk.juan.handler")}>
+                {judgment.claimed_by_name
+                  ? judgment.claimed_at
+                    ? t("caseDesk.juan.claimed", { name: judgment.claimed_by_name, date: formatDate(judgment.claimed_at) })
+                    : judgment.claimed_by_name
+                  : t("caseDesk.juan.unclaimed")}
+              </JuanRow>
+              <JuanRow label={t("judgment.detail.civilization")}>{civilisation}</JuanRow>
+              <JuanRow label={t("judgment.detail.court")}>
+                <DomainText value={courtLabel(t, judgment.court, locale)} />
+              </JuanRow>
+              {/* 所在界域(案子挂的那一站 `realm_id`,没挂写「未记录」)· 审判方式 · 世次 / 种类。 */}
+              <JuanRow label={t("judgment.detail.current_realm")}>
+                <DomainText value={judgment.realm_name} />
+              </JuanRow>
+              <JuanRow label={t("judgment.detail.method")}>
+                <DomainEnum namespace="judgment.methods" value={judgment.judgment_method} />
+              </JuanRow>
+              <JuanRow label={t("judgment.claim.col_cycle_kind")}>
+                <span data-testid="desk-life-kind">
+                  {judgment.cycle == null ? <MissingValue kind="unrecorded" /> : (thisLifeLabel(t, judgment.civilization, judgment.cycle + 1) ?? t("souls.detail.life_number", { n: String(judgment.cycle + 1) }))}
+                  {" / "}
+                  <DomainEnum namespace="judgment.claim.kinds" value={judgment.kind} />
                 </span>
-              ) : draft.unsaved ? (
-                <span data-testid="draft-toggle-mark" title={t("judgment.desk.draft_unsaved")}>
-                  <span aria-hidden="true">◐</span>
-                  <span className="sr-only">{t("judgment.desk.draft_unsaved")}</span>
-                </span>
-              ) : null}
-            </button>
-          )}
-        </nav>
-      )}
-      <div data-testid="judgment-desk" data-view={view} className={deskGrid}>
-        {/* ── 灵魂 · 身份 / 功过 / 前世 ───────────────────────────────────── */}
-        <section
-          id="desk-soul"
-          aria-label={t("judgment.queue.case")}
-          hidden={fullCase || undefined}
-          className={`min-w-0 scroll-mt-28 ${fullCase ? "" : "order-4 md:order-1"}`}
-        >
-          <JudgmentSectionHead mark="甲" title={t("judgment.detail.soul_info")} />
-          <p className="mt-3 text-lg text-[oklch(var(--color-ink))] wrap-break-word">
-            <DomainText value={soulName} />
-          </p>
-          <dl className="mt-3 divide-y divide-[oklch(var(--color-rule))]">
-            <MetaRow label={t("judgment.detail.civilization")}>{civilisation}</MetaRow>
-            <MetaRow label={t("judgment.detail.court")}>
-              <DomainText value={courtLabel(t, judgment.court, locale)} />
-            </MetaRow>
-            {/* v3 灵魂栏:所在界域(案子挂的那一站 `realm_id`,没挂写「未记录」)· 审判方式 · 世次 / 种类。 */}
-            <MetaRow label={t("judgment.detail.current_realm")}>
-              <DomainText value={judgment.realm_name} />
-            </MetaRow>
-            <MetaRow label={t("judgment.detail.method")}>
-              <DomainEnum namespace="judgment.methods" value={judgment.judgment_method} />
-            </MetaRow>
-            <MetaRow label={t("judgment.claim.col_cycle_kind")}>
-              <span data-testid="desk-life-kind">
-                {judgment.cycle == null ? <MissingValue kind="unrecorded" /> : (thisLifeLabel(t, judgment.civilization, judgment.cycle + 1) ?? t("souls.detail.life_number", { n: String(judgment.cycle + 1) }))}
-                {" / "}
-                <DomainEnum namespace="judgment.claim.kinds" value={judgment.kind} />
-              </span>
-            </MetaRow>
-            <MetaRow label={t("judgment.created")}>
-              <span className="font-mono tabular-nums">{formatDate(judgment.created_at)}</span>
-            </MetaRow>
-            <MetaRow label={t("judgment.detail.concluded_at")}>
-              {judgment.concluded_at ? (
-                <span className="font-mono tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
-              ) : (
-                <MissingValue kind="unrecorded" />
-              )}
-            </MetaRow>
-          </dl>
-          {/* 枉死城(第五十七批 D-2):只在枉死的案子上,放在身份这一组下面。未结案且持 judgment.execute 才可改。 */}
-          {!fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canWangsi} />}
+              </JuanRow>
+              <JuanRow label={t("judgment.detail.concluded_at")}>
+                {judgment.concluded_at ? (
+                  <span className="font-mono tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
+                ) : (
+                  <MissingValue kind="unrecorded" />
+                )}
+              </JuanRow>
+            </dl>
+            {/* 枉死城(第五十七批 D-2):只在枉死的案子上,放在身份这一组下面。未结案且持 judgment.execute 才可改。 */}
+            {judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canWangsi} />}
 
-          {/* 乙 · 功过:`/souls/{id}/karma/` 的 reading,与灵魂账页同一个面板 —— 功过格是
-              收 / 支 / 结 三列压双线,别的文明各按自己的读法,不硬套一个净额。 */}
-          <div className="mt-6">
-            <JudgmentSectionHead
-              mark="乙"
-              title={t("souls.detail.ledger.karma")}
-              meta={
-                isFinal && judgment.concluded_at
-                  ? t("judgment.desk.concluded_on", { date: judgment.concluded_at.slice(5, 10) })
-                  : undefined
-              }
-            />
-            {/* 结案了:判决依据的是结案时的值,所以它在上、用双线收住;现值在下(第三类 F 组 2.3)。 */}
-            {isFinal && judgment.admitted_balance?.balance != null && (
-              <ConcludedBalance
-                snapshot={judgment.admitted_balance.balance}
-                current={judgment.admitted_balance.current_balance}
-                recordedAfter={
-                  judgment.concluded_at
-                    ? (ledgerData?.records ?? []).filter(
-                        (r) =>
-                          (r.type === "MERIT" || r.type === "DEMERIT") &&
-                          r.recorded_at > (judgment.concluded_at as string)
-                      ).length
-                    : 0
-                }
-              />
-            )}
-            {ledgerData?.reading ? (
-              <div className="pt-2">
-                <SoulReadingPanel
-                  reading={ledgerData.reading}
-                  meritScore={ledgerData.merit_score}
-                  demeritScore={ledgerData.demerit_score}
-                  karmicBalance={ledgerData.karmic_balance}
+            {/* 功过:记号 + 带号的数(第 3 步第 4 条),下面是 `/souls/{id}/karma/` 的 reading —— 与灵魂账页同一个面板,
+                功过格是收 / 支 / 结三列压双线,别的文明各按自己的读法。 */}
+            <div className="mt-2">
+              {/* 结案了:判决依据的是结案时的值,所以它在上、用双线收住;现值在下(第三类 F 组 2.3)。 */}
+              {isFinal && judgment.admitted_balance?.balance != null && (
+                <ConcludedBalance
+                  snapshot={judgment.admitted_balance.balance}
+                  current={judgment.admitted_balance.current_balance}
+                  recordedAfter={
+                    judgment.concluded_at
+                      ? (ledgerData?.records ?? []).filter(
+                          (r) =>
+                            (r.type === "MERIT" || r.type === "DEMERIT") &&
+                            r.recorded_at > (judgment.concluded_at as string)
+                        ).length
+                      : 0
+                  }
                 />
-              </div>
-            ) : (
-              <p className="py-2 text-sm text-[oklch(var(--color-ink-subtle))]">
-                <MissingValue kind="unrecorded" />
-              </p>
-            )}
-          </div>
+              )}
+              <DossierLedger
+                civilization={judgment.civilization}
+                records={ledgerData?.records}
+                merit={ledgerData?.merit_score}
+                demerit={ledgerData?.demerit_score}
+                allHref={soulTabHref.merits}
+              />
+              {ledgerData?.reading ? (
+                <div className="pt-4">
+                  <SoulReadingPanel
+                    reading={ledgerData.reading}
+                    meritScore={ledgerData.merit_score}
+                    demeritScore={ledgerData.demerit_score}
+                    karmicBalance={ledgerData.karmic_balance}
+                  />
+                </div>
+              ) : null}
+            </div>
 
-          <div className={hasRebirth(judgment.civilization) || priorLives.length > 0 ? "mt-6" : "hidden"}>
-            <JudgmentSectionHead title={t("judgment.queue.prior_cycles")} meta={String(priorLives.length)} />
-            {priorLives.length === 0 ? (
-              <p className="py-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("judgment.queue.cycles_empty")}</p>
-            ) : (
-              <ul>
-                {priorLives.map((life) => (
-                  <li key={life.id} className="py-2 border-b border-[oklch(var(--color-rule))] text-sm">
-                    <div className="flex justify-between gap-2">
-                      <span>{t("judgment.queue.cycle")} {life.cycle_count}</span>
-                      <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">
-                        {formatDate(life.reincarnated_at)}
-                      </span>
-                    </div>
-                    <div className="text-[oklch(var(--color-ink-muted))] truncate" title={life.new_identity || undefined}>
-                      <DomainEnum namespace={rebirthFormNamespace(t, judgment.civilization, life.rebirth_form)} value={life.rebirth_form} />
-                      {life.new_identity && ` · ${life.new_identity}`}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+            <div className={hasRebirth(judgment.civilization) || priorLives.length > 0 ? "mt-6" : "hidden"}>
+              <JudgmentSectionHead title={t("judgment.queue.prior_cycles")} meta={String(priorLives.length)} />
+              {priorLives.length === 0 ? (
+                <p className="py-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("judgment.queue.cycles_empty")}</p>
+              ) : (
+                <ul>
+                  {priorLives.map((life) => (
+                    <li key={life.id} className="py-2 border-b border-[oklch(var(--color-rule))] text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span>{t("judgment.queue.cycle")} {life.cycle_count}</span>
+                        <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">
+                          {formatDate(life.reincarnated_at)}
+                        </span>
+                      </div>
+                      <div className="text-[oklch(var(--color-ink-muted))] truncate" title={life.new_identity || undefined}>
+                        <DomainEnum namespace={rebirthFormNamespace(t, judgment.civilization, life.rebirth_form)} value={life.rebirth_form} />
+                        {life.new_identity && ` · ${life.new_identity}`}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
 
-        {/* ── 判 · 当前这一判 / 裁决键 / 进入盖印确认 ───────────────────────── */}
-        <section
-          aria-labelledby={clausesId}
-          data-testid="current-decision"
-          data-print-ruling=""
-          className={`relative isolate min-w-0 overflow-clip py-6 text-center ${
-            fullCase ? "order-2 border border-[oklch(var(--color-line))] px-4 md:self-start" : "order-1 md:order-2 md:py-8"
-          }`}
-        >
-          <CivMotif />
+          {/* 资料舱 · 供词 / 功过记录 / 律条引用 */}
+          <div id="desk-materials" className="min-w-0 scroll-mt-28">
+            <MaterialDock active={material} onActive={setMaterial} panels={materials} />
+          </div>
+          {/* 判决文书(v4 S06 文书卡 / S15):取最后一次盖印;未结案或裁决不是 通过 / 不过 / 待定 时组件自己不画。
+              右栏的「看判词全文」跳到这里。 */}
+          {isFinal && (
+            <section id="desk-doc-card" data-testid="desk-doc-card" aria-label={t("desk.doc_card")} className="min-w-0 scroll-mt-28">
+              <JudgmentSectionHead title={t("desk.doc_card")} />
+              <VerdictDocument judgment={judgment} soul={soulData} />
+            </section>
+          )}
+          {/* 案卷附件(W4)与评议:次要信息,默认收起;写不写只看 judgment.read(服务端同一码名),结案后照样可写。 */}
+          {canReadAttachments && (
+            <div className="min-w-0">
+              <CaseAttachments judgmentId={id} canWrite={canEditCase} />
+            </div>
+          )}
+          <JudgmentComments id={id} canWrite={hasPermission("judgment.read")} concludedAt={judgment.concluded_at} />
+          {/* 打印时正文之后的「附件清单」一页;屏幕上不显示。 */}
+          <div className="min-w-0">
+            <CaseAttachmentsPrintList judgmentId={id} enabled={canReadAttachments} />
+          </div>
+        </div>
+
+        {/* ── 台 ─────────────────────────────────────────────────────────── */}
+        <section aria-labelledby={clausesId} data-testid="current-decision" data-print-ruling="" className={dossier.judge}>
           {judgment.deferred_at && !isFinal && (
-            <p data-testid="deferred-note" className="mb-4 border-l-3 border-[oklch(var(--color-warning))] pl-3 text-left text-sm text-[oklch(var(--color-ink-muted))]">
+            <p data-testid="deferred-note" className="border-l-3 border-[oklch(var(--color-warning))] pl-3 text-sm text-[oklch(var(--color-ink-muted))]">
               {t("judgment.desk.deferred_note", { reason: judgment.defer_reason ?? "" })}
               {canExecute && (
                 <Button
@@ -1173,349 +1129,301 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </p>
           )}
           <h2 id={clausesId} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
-            {t("judgment.desk.current_ruling")}
+            {t(isFinal ? "caseDesk.dossier.judge.sealed_head" : "caseDesk.dossier.judge.head")}
           </h2>
 
-          {isFinal && ordered ? (
-            <div className="mt-6 flex flex-col items-center gap-3">
-              {/* 进页时已结案:印就是落定的样子,不播。这一次会话里落的判在确认层里盖过了。 */}
-              <Seal size={72} court={judgment.court ?? undefined} className="shrink-0" />
-              <p data-testid="current-ruling" className={`font-title ${fullCase ? "text-xl font-semibold" : "text-display-lg"} text-[oklch(var(--color-ink))]`}>
-                <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(ordered)}</span>
+          {isFinal ? (
+            /* 落印之后:判词、实印 96、落印日期与经手人、看判词全文。这一次会话里刚落的印播一次落印(`stamp`)。 */
+            <div className="flex flex-col gap-3">
+              <p data-testid="current-ruling" className="font-title text-xl text-[oklch(var(--color-ink))]">
+                {ordered && <span aria-hidden="true" className="mr-2 font-normal">{verdictGlyph(ordered)}</span>}
                 <DomainEnum namespace={verdictNamespace(t, judgment.civilization, judgment.verdict)} value={judgment.verdict} />
               </p>
-              {/* 主审 · 结案时间. 印记 / 会审比数 have no fields — file header. */}
-              <p
-                className="max-w-full truncate font-mono text-xs text-[oklch(var(--color-ink-subtle))]"
-                title={
-                  [localName(judgment, locale, "judge_name"), judgment.concluded_at && formatDateTime(judgment.concluded_at)]
-                    .filter(Boolean)
-                    .join(" · ") || undefined
-                }
-              >
-                <DomainText value={localName(judgment, locale, "judge_name")} />
-                <span aria-hidden="true" className="mx-2 text-[oklch(var(--color-ink-subtle))]">·</span>
-                {judgment.concluded_at ? (
-                  <span className="tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
-                ) : (
+              {judgment.notes ? (
+                <blockquote className={dossier.verdictWords}>{judgment.notes}</blockquote>
+              ) : (
+                <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
                   <MissingValue kind="unrecorded" />
+                </p>
+              )}
+              <div className={dossier.sealBox}>
+                <DossierSeal civ={spineCiv} hall={hallOf(judgment.court)} stamp={stamp > 0} />
+                <div className="flex min-w-0 flex-col items-start gap-2">
+                  {/* 主审 · 结案时间。 */}
+                  <p
+                    data-testid="sealed-by"
+                    className="max-w-full truncate font-mono text-xs text-[oklch(var(--color-ink-subtle))]"
+                    title={
+                      [localName(judgment, locale, "judge_name"), judgment.concluded_at && formatDateTime(judgment.concluded_at)]
+                        .filter(Boolean)
+                        .join(" · ") || undefined
+                    }
+                  >
+                    {judgment.concluded_at ? (
+                      <span className="tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
+                    ) : (
+                      <MissingValue kind="unrecorded" />
+                    )}
+                    <span aria-hidden="true" className="mx-2">·</span>
+                    <DomainText value={localName(judgment, locale, "judge_name")} />
+                  </p>
+                  <Badge tone="neutral">{t("judgment.detail.final")}</Badge>
+                  <p>{t("caseDesk.dossier.judge.sealed_note")}</p>
+                  <a href="#desk-doc-card" data-print-hide="" className="text-sm text-[oklch(var(--color-ink))] underline underline-offset-2">
+                    {t("caseDesk.dossier.judge.full_text")}
+                  </a>
+                </div>
+              </div>
+              {judgment.weighing_result && (
+                <p data-testid="weighing-recorded" className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                  {t("judgment.weighing.recorded", {
+                    result: t(`judgment.weighing.result.${judgment.weighing_result}`),
+                    weight: String(judgment.heart_weight ?? 0),
+                  })}
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* 此刻选定的那一个,读屏念出来;看得见的「选定」是下面那一行的墨框。总有一个:没选过时是预选的「待定」。 */}
+              <p data-testid="current-ruling" aria-live="polite" className="sr-only">
+                {selectedVerdict && (
+                  <>
+                    {verdictGlyph(selectedVerdict as VerdictMember)}{" "}
+                    <DomainEnum namespace={verdictNamespace(t, judgment.civilization, selectedVerdict)} value={selectedVerdict} />
+                  </>
                 )}
               </p>
-              <Badge tone="neutral">{t("judgment.detail.final")}</Badge>
-            </div>
-          ) : (
-            <>
-              {/* 展示数字(DESIGN.md:当前判决 = text-display-lg)。换判时旧字形不留,新字形 160ms 淡入。 */}
-              <p
-                data-testid="current-ruling"
-                aria-live="polite"
-                className={`mt-6 font-title ${fullCase ? "text-xl font-semibold" : "text-display-lg"} text-[oklch(var(--color-ink))]`}
-              >
-                <span key={selectedVerdict} className="inline-block transition-opacity duration-fast ease-enter starting:opacity-0">
-                  {/* 总有一个裁决:没选过时是预选的「待定」(DEFAULT_VERDICT)。空串只在详情到达前的那一帧。 */}
-                  {selectedVerdict && (
-                    <>
-                      <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(selectedVerdict as VerdictMember)}</span>
-                      <DomainEnum namespace={verdictNamespace(t, judgment.civilization, selectedVerdict)} value={selectedVerdict} />
-                    </>
-                  )}
-                </span>
-              </p>
-              {!fullCase && (
-                <p data-print-hide="" className="mx-auto mt-3 max-w-prose text-xs text-[oklch(var(--color-ink-muted))]">{t("judgment.desk.ruling_hint")}</p>
+
+              {/* ── 去处 1–4:字形 + 文字 + 数字键,不靠颜色;选定 = 墨色描框(第 3 步 `.opt.on`)。 ── */}
+              <ol data-testid="verdict-bar" data-print-hide="" className="grid grid-cols-1 gap-2" role="group" aria-labelledby={clausesId}>
+                {VERDICTS.map((member, index) => {
+                  const isChosen = selectedVerdict === member;
+                  const barred = barredBy(member);
+                  const weighedLabel = weighedCase ? WEIGHED_LABEL[member] : undefined;
+                  return (
+                    <li key={member}>
+                      {/* The radio is `sr-only`, so the label carries the focus ring on the same `--color-focus` token. */}
+                      <label
+                        title={barred ? t(barred) : undefined}
+                        data-chosen={isChosen || undefined}
+                        className={`${VERDICT_KEY_CLASS} ${VERDICT_KEY_COMPACT} min-h-(--opt-h) bg-[oklch(var(--color-surface-1))] ${isChosen ? OPT_CHOSEN : ""} ${barred ? "cursor-not-allowed opacity-40" : "cursor-pointer"} focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[oklch(var(--color-focus))]`}
+                      >
+                        <input
+                          type="radio"
+                          name="verdict"
+                          value={member}
+                          checked={isChosen}
+                          disabled={barred !== null || !canEditCase}
+                          onChange={(event) => chooseVerdict(event.target.value)}
+                          className="sr-only"
+                        />
+                        <VerdictKeyContent
+                          code={member}
+                          keyHint={String(index + 1)}
+                          label={weighedLabel && t(weighedLabel)}
+                          namespace={verdictNamespace(t, judgment.civilization, member)}
+                        />
+                      </label>
+                    </li>
+                  );
+                })}
+              </ol>
+              {passedBarredBy && (
+                <p data-testid="verdict-passed-barred" className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                  {t(passedBarredBy)}
+                </p>
               )}
-            </>
-          )}
+              {/* 埃及:天平此刻的读数(按本案采信的证据)。 */}
+              {weighing && (
+                <p data-testid="weighing-scale" className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                  <span className="mb-1 block text-2xs uppercase">{t("desk.reading")}</span>
+                  {t("judgment.weighing.scale", { weight: String(weighing.heart_weight), counterweight: String(weighing.counterweight) })}
+                  {" · "}
+                  {t("judgment.weighing.gives", { verdict: verdictText(t, judgment.civilization, weighing.weighed_verdict) })}
+                  <span className="mt-1 block">{t("judgment.weighing.wavering_hint")}</span>
+                </p>
+              )}
 
-          {/* ── 裁决键组:字形 + 文字,不靠颜色;选中 = 墨底反白(v3)。 ── */}
-          {/* `role="group"` only while the clauses are choosable — four radios
-              sharing a `name` are a group to the browser but nothing names that
-              group; on a decided case there is nothing to choose. */}
-          <ol
-            data-testid="verdict-bar"
-            data-print-hide=""
-            className={`mx-auto mt-6 grid max-w-[540px] gap-2 text-left ${fullCase ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}
-            {...(isFinal ? {} : { role: "group", "aria-labelledby": clausesId })}
-          >
-            {VERDICTS.map((member, index) => {
-              const isOrdered = ordered === member;
-              const isChosen = selectedVerdict === member;
-              const barred = isFinal ? null : barredBy(member);
-              const offScale = barred !== null;
-              const marked = isFinal ? isOrdered : isChosen;
-              const weighedLabel = weighedCase ? WEIGHED_LABEL[member] : undefined;
-              const clause = (
-                <VerdictKeyContent
-                  code={member}
-                  keyHint={String(index + 1)}
-                  label={weighedLabel && t(weighedLabel)}
-                  namespace={verdictNamespace(t, judgment.civilization, member)}
-                />
-              );
-              const tile = `${VERDICT_KEY_CLASS} ${fullCase ? VERDICT_KEY_COMPACT : ""} ${
-                marked ? VERDICT_CHOSEN : "bg-[oklch(var(--color-surface-1))]"
-              } ${marked && !isFinal && !fullCase ? VERDICT_LIFT : ""}`;
-
-              return (
-                <li key={member}>
-                  {isFinal ? (
-                    <div className={`${tile} ${marked ? "" : "opacity-60"}`} aria-current={isOrdered ? "true" : undefined}>
-                      {clause}
-                    </div>
+              {/* ── 判词(宋体)与 戊 · 发落 ─────────────────────────────── */}
+              <div id="desk-draft" className="min-w-0 scroll-mt-28">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p aria-hidden="true" className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
+                    {t("caseDesk.dossier.judge.words")}
+                  </p>
+                  {!draft.conflict && <DraftSavedAt savedAt={judgment.draft_saved_at} />}
+                </div>
+                {!canEditCase ? (
+                  /* 判词是「有人说过的话」,所以衬线。不能改的人读草稿。 */
+                  notesShown ? (
+                    <blockquote className={`mt-2 ${dossier.verdictWords}`}>{notesShown}</blockquote>
                   ) : (
-                    /* The radio is `sr-only`, so the global `:focus-visible`
-                       outline lands on a 1px clipped box nobody sees. The label
-                       carries the ring instead, on the same `--color-focus`
-                       token globals.css uses. */
-                    <label
-                      title={barred ? t(barred) : undefined}
-                      className={`${tile} ${offScale ? "cursor-not-allowed opacity-40" : "cursor-pointer"} focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[oklch(var(--color-focus))]`}
-                    >
-                      <input
-                        type="radio"
-                        name="verdict"
-                        value={member}
-                        checked={isChosen}
-                        disabled={offScale || !canEditCase}
-                        onChange={(event) => chooseVerdict(event.target.value)}
-                        className="sr-only"
-                      />
-                      {clause}
+                    <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-2">
+                      <MissingValue kind="unrecorded" />
+                    </p>
+                  )
+                ) : (
+                  <>
+                    <label htmlFor={notesId} className="sr-only">
+                      {t("judgment.detail.notes")}
                     </label>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+                    <textarea
+                      id={notesId}
+                      value={notes}
+                      onChange={(event) => {
+                        notesTouched.current = true;
+                        setNotes(event.target.value);
+                        draft.markEdited();
+                      }}
+                      rows={4}
+                      placeholder={t("judgment.detail.notes_placeholder")}
+                      className="block w-full mt-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-(--field) px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-ink))] resize-y"
+                    />
+                    {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
+                    {!draft.conflict && <DraftStatusLine status={draft.status} saves={draft.saves} />}
+                    {draft.conflict && (
+                      <DraftConflictBanner
+                        civilization={judgment.civilization}
+                        current={draft.conflict}
+                        onUseServer={() => {
+                          const theirs = draft.acceptTheirs();
+                          if (!theirs) return;
+                          setNotes(theirs.notes);
+                          setSelectedVerdict(theirs.draft_verdict ?? DEFAULT_VERDICT);
+                          setPlacement(placementFromDraft(theirs) ?? EMPTY_PLACEMENT);
+                        }}
+                        onKeepMine={draft.keepMine}
+                      />
+                    )}
+                  </>
+                )}
 
-          {!isFinal && passedBarredBy && (
-            <p data-testid="verdict-passed-barred" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">
-              {t(passedBarredBy)}
-            </p>
-          )}
-          {/* 埃及:天平此刻的读数(按本案采信的证据)与结案时托特记下的结果。 */}
-          {weighing && !isFinal && (
-            <p data-testid="weighing-scale" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">
-              <span className="mb-1 block text-2xs uppercase">{t("desk.reading")}</span>
-              {t("judgment.weighing.scale", { weight: String(weighing.heart_weight), counterweight: String(weighing.counterweight) })}
-              {" · "}
-              {t("judgment.weighing.gives", { verdict: verdictText(t, judgment.civilization, weighing.weighed_verdict) })}
-              <span className="mt-1 block">{t("judgment.weighing.wavering_hint")}</span>
-            </p>
-          )}
-          {isFinal && judgment.weighing_result && (
-            <p data-testid="weighing-recorded" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">
-              {t("judgment.weighing.recorded", {
-                result: t(`judgment.weighing.result.${judgment.weighing_result}`),
-                weight: String(judgment.heart_weight ?? 0),
-              })}
-            </p>
-          )}
+                {/* 戊 · 发落:原审判选目的地与刑期;加减项审判的发落是计划改动。地府的罪目在最上面(第五十七批 D-1)。 */}
+                {showPlacement ? (
+                  <JudgmentPlacement
+                    lead={offenceField}
+                    noTerm={judgment.civilization === "EGYPTIAN"}
+                    civilization={judgment.civilization}
+                    judgmentId={judgment.id}
+                    verdict={selectedVerdict}
+                    value={placement}
+                    onChange={(next) => {
+                      concludeMutation.reset(); // 改了发落,上一次的拒绝就不再是这一份的
+                      placementTouched.current = true;
+                      setPlacement(next);
+                      draft.markEdited();
+                    }}
+                    refusal={placementRefusal}
+                    savedAt={draft.status === "idle" && !draft.conflict ? judgment.draft_saved_at : null}
+                  />
+                ) : (
+                  /* 没有发落一节(不能改、加减项)时,罪目只读一行,照样在这里。 */
+                  offenceField && <div className="mt-4">{offenceField}</div>
+                )}
+                {isAmendment && myTenant && (
+                  <AmendmentPlanChanges
+                    planId={judgment.amends_plan_id as string}
+                    tenantCode={myTenant}
+                    draft={planDraft}
+                    onChange={setPlanDraft}
+                  />
+                )}
+              </div>
 
-          {/* ── 进入盖印确认:落判在确认层里,不在这里 ─────────────────────── */}
-          {!isFinal && (
-            <div data-print-hide="" className="mt-6 flex flex-col items-center gap-2">
-              {crossBlocked && crossId && <CrossJudgmentBlockedNotice crossId={crossId} cross={cross} />}
-              <RequirePermission permissions="judgment.execute">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="lg"
-                  className={`gap-2 ${fullCase ? "w-full" : "min-w-60"}`}
-                  onClick={openConfirm}
-                  disabled={!selectedVerdict || crossBlocked || atCityGod || concludeHeld || !canEditCase}
-                >
-                  {t("judgment.desk.to_confirm")}
-                  <Kbd>⌘⏎</Kbd>
-                </Button>
-              </RequirePermission>
-              {atCityGod && (
-                <p data-testid="desk-at-city-god-reason" className="text-sm text-[oklch(var(--color-ink-muted))]">
-                  {t("judgment.error.at_city_god")}{" "}
-                  <Link href={`/city-god-cases?city_god=${judgment.city_god ?? ""}`} className="underline underline-offset-2">
-                    {t("cityGodCases.go_to_review")}
-                  </Link>
-                </p>
-              )}
-              {concludeHeld && (
-                <p data-testid="desk-held-reason" className="text-sm text-[oklch(var(--color-ink-muted))]">
-                  {claimRefusalMessage({ response: { data: { code: judgment.conclude_refusal, held_until: judgment.held_until } } }, t)}
-                </p>
-              )}
-              <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
-            </div>
-          )}
-        </section>
-
-        {/* ── 丁 · 判词 / 戊 · 发落 / 审批流 · 联审 ─────────────────────────── */}
-        <section
-          id="desk-draft"
-          aria-label={t("judgment.desk.nav_draft")}
-          hidden={fullCase || undefined}
-          data-collapsed={draftCollapsed || undefined}
-          className={`min-w-0 scroll-mt-28 ${
-            fullCase
-              ? ""
-              : `order-3 md:col-span-2 xl:order-3 xl:col-span-1 ${
-                  /* 已结案没有可编辑的东西,判词照常摊开;未结案在 768–1279 收着,打开后排在资料舱上面。 */
-                  isFinal ? "md:order-4" : draftCollapsed ? "md:order-4 md:max-xl:hidden" : "md:order-3"
-                }`
-          }`}
-        >
-          <JudgmentSectionHead
-            mark="丁"
-            title={t("souls.detail.ledger.verdict_words")}
-            meta={!isFinal && !draft.conflict ? <DraftSavedAt savedAt={judgment.draft_saved_at} /> : undefined}
-          />
-          {isFinal || !canEditCase ? (
-            /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。不能改的人读草稿。 */
-            notesShown ? (
-              <blockquote className="mt-3 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] max-w-[72ch]">
-                {notesShown}
-              </blockquote>
-            ) : (
-              <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-3">
-                <MissingValue kind="unrecorded" />
-              </p>
-            )
-          ) : (
-            <>
-              <label htmlFor={notesId} className="sr-only">
-                {t("judgment.detail.notes")}
-              </label>
-              {/* 衬线输入 QuoteInput:判词是正被说出的话,所以输入框本身用衬线、字号 text-md font-normal。 */}
-              <textarea
-                id={notesId}
-                value={notes}
-                onChange={(event) => {
-                  notesTouched.current = true;
-                  setNotes(event.target.value);
-                  draft.markEdited();
-                }}
-                rows={4}
-                placeholder={t("judgment.detail.notes_placeholder")}
-                className="block w-full mt-3 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-ink))] resize-y"
-              />
-              {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
-              {!draft.conflict && <DraftStatusLine status={draft.status} saves={draft.saves} />}
-              {draft.conflict && (
-                <DraftConflictBanner
-                  civilization={judgment.civilization}
-                  current={draft.conflict}
-                  onUseServer={() => {
-                    const theirs = draft.acceptTheirs();
-                    if (!theirs) return;
-                    setNotes(theirs.notes);
-                    setSelectedVerdict(theirs.draft_verdict ?? DEFAULT_VERDICT);
-                    setPlacement(placementFromDraft(theirs) ?? EMPTY_PLACEMENT);
-                  }}
-                  onKeepMine={draft.keepMine}
+              {/* ── 引律条:引用签在这里,检索与先例在左栏资料舱「律条引用」里。 ── */}
+              <div data-print-hide="">
+                <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("caseDesk.dossier.judge.cited")}</p>
+                <CitationChips
+                  citations={citations}
+                  onRemove={canEditGrounds ? (statuteId) => unciteMutation.mutate(statuteId) : undefined}
                 />
-              )}
+                {canEditGrounds && (
+                  <a
+                    href="#desk-materials"
+                    data-testid="cite-more"
+                    onClick={() => setMaterial("law")}
+                    className={`${buttonVariants({ variant: "ghost", size: "sm" })} mt-2`}
+                  >
+                    {`+ ${t("caseDesk.dossier.judge.cited")}`}
+                  </a>
+                )}
+              </div>
+
+              {/* ── 印与落印:落印前是虚线预览;主按钮进盖印确认层,落判在层里。 ─────── */}
+              <div data-print-hide="" className={dossier.sealBox}>
+                <DossierSeal civ={spineCiv} hall={hallOf(judgment.court)} pending />
+                <p>{t("caseDesk.dossier.judge.hint")}</p>
+              </div>
+              <div data-print-hide="" className="flex flex-col gap-2">
+                {crossBlocked && crossId && <CrossJudgmentBlockedNotice crossId={crossId} cross={cross} />}
+                <RequirePermission permissions="judgment.execute">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    className="w-full gap-2"
+                    onClick={openConfirm}
+                    disabled={!selectedVerdict || crossBlocked || atCityGod || concludeHeld || !canEditCase}
+                  >
+                    {t("caseDesk.dossier.judge.seal")}
+                    <Kbd>⌘⏎</Kbd>
+                  </Button>
+                </RequirePermission>
+                {atCityGod && (
+                  <p data-testid="desk-at-city-god-reason" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                    {t("judgment.error.at_city_god")}{" "}
+                    <Link href={`/city-god-cases?city_god=${judgment.city_god ?? ""}`} className="underline underline-offset-2">
+                      {t("cityGodCases.go_to_review")}
+                    </Link>
+                  </p>
+                )}
+                {concludeHeld && (
+                  <p data-testid="desk-held-reason" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                    {claimRefusalMessage({ response: { data: { code: judgment.conclude_refusal, held_until: judgment.held_until } } }, t)}
+                  </p>
+                )}
+              </div>
+
+              {/* ── 审批流 · 联审 ─────────────────────────────────────────── */}
+              <div data-print-hide="" className="flex flex-col gap-4 border-t border-[oklch(var(--color-line))] pt-4">
+                <div className="flex items-start gap-2 min-w-0">
+                  <input
+                    id={createWorkflowId}
+                    type="checkbox"
+                    checked={withWorkflow}
+                    disabled={crossForced || weighingForced || originalForced}
+                    onChange={(event) => setCreateWorkflow(event.target.checked)}
+                    className="mt-1 h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
+                  />
+                  <label htmlFor={createWorkflowId} className="cursor-pointer min-w-0">
+                    <span className="text-sm text-[oklch(var(--color-ink))] block">{t("judgment.detail.create_workflow")}</span>
+                    <span className="text-xs text-[oklch(var(--color-ink-subtle))] block mt-1 max-w-prose">
+                      {weighingForced
+                        ? t("judgment.weighing.workflow_forced")
+                        : crossForced
+                          ? t("workflow.pick.cross_forced")
+                          : originalForced
+                            ? t("judgment.detail.workflow_forced_original")
+                            : t("judgment.detail.create_workflow_hint")}
+                    </span>
+                  </label>
+                </div>
+                {/* 已挂着联审就不再给「开联审」(一份审判只能有一场,服务端会拒),换成去那一场的链接,谁都看得到。 */}
+                {judgment.cross_judgment_id ? (
+                  <Link
+                    href={`/cross-judgments/${judgment.cross_judgment_id}`}
+                    data-testid="judgment-cross-link"
+                    className={`${buttonVariants({ variant: "secondary", size: "sm" })} self-start`}
+                  >
+                    {t("sentence_plan.cross.view")}
+                  </Link>
+                ) : (
+                  canOpenCross && <OpenCrossJudgment judgmentId={judgment.id} soulName={soulName} />
+                )}
+              </div>
             </>
           )}
-
-          {/* ── 戊 · 发落:原审判选目的地与刑期;加减项审判的发落是计划改动。地府的罪目在最上面(第五十七批 D-1)。 ── */}
-          {showPlacement ? (
-            <JudgmentPlacement
-              lead={offenceField}
-              noTerm={judgment.civilization === "EGYPTIAN"}
-              civilization={judgment.civilization}
-              judgmentId={judgment.id}
-              verdict={selectedVerdict}
-              value={placement}
-              onChange={(next) => {
-                concludeMutation.reset(); // 改了发落,上一次的拒绝就不再是这一份的
-                placementTouched.current = true;
-                setPlacement(next);
-                draft.markEdited();
-              }}
-              refusal={placementRefusal}
-              savedAt={draft.status === "idle" && !draft.conflict ? judgment.draft_saved_at : null}
-            />
-          ) : (
-            /* 没有发落一节(已结案、不能改、加减项)时,罪目只读一行,照样在这里。 */
-            offenceField && <div className="mt-6">{offenceField}</div>
-          )}
-          {!isFinal && isAmendment && myTenant && (
-            <AmendmentPlanChanges
-              planId={judgment.amends_plan_id as string}
-              tenantCode={myTenant}
-              draft={planDraft}
-              onChange={setPlanDraft}
-            />
-          )}
-
-          {!isFinal && (
-            <div data-print-hide="" className="mt-6 flex flex-col gap-4 border-t border-[oklch(var(--color-line))] pt-4">
-              <div className="flex items-start gap-2 min-w-0">
-                <input
-                  id={createWorkflowId}
-                  type="checkbox"
-                  checked={withWorkflow}
-                  disabled={crossForced || weighingForced || originalForced}
-                  onChange={(event) => setCreateWorkflow(event.target.checked)}
-                  className="mt-1 h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
-                />
-                <label htmlFor={createWorkflowId} className="cursor-pointer min-w-0">
-                  <span className="text-sm text-[oklch(var(--color-ink))] block">{t("judgment.detail.create_workflow")}</span>
-                  <span className="text-xs text-[oklch(var(--color-ink-subtle))] block mt-1 max-w-prose">
-                    {weighingForced
-                      ? t("judgment.weighing.workflow_forced")
-                      : crossForced
-                        ? t("workflow.pick.cross_forced")
-                        : originalForced
-                          ? t("judgment.detail.workflow_forced_original")
-                          : t("judgment.detail.create_workflow_hint")}
-                  </span>
-                </label>
-              </div>
-              {/* 已挂着联审就不再给「开联审」(一份审判只能有一场,服务端会拒),换成去那一场的链接,谁都看得到。 */}
-              {judgment.cross_judgment_id ? (
-                <Link
-                  href={`/cross-judgments/${judgment.cross_judgment_id}`}
-                  data-testid="judgment-cross-link"
-                  className={`${buttonVariants({ variant: "secondary", size: "sm" })} self-start`}
-                >
-                  {t("sentence_plan.cross.view")}
-                </Link>
-              ) : (
-                canOpenCross && <OpenCrossJudgment judgmentId={judgment.id} soulName={soulName} />
-              )}
-            </div>
-          )}
         </section>
-
-        {/* ── 资料舱 · 供词 / 功过记录 / 律条引用 ──────────────────────────── */}
-        <div className={`min-w-0 ${fullCase ? "order-1" : `order-2 ${draftOpen && !isFinal ? "md:order-4" : "md:order-3"} md:col-span-2 xl:order-4 xl:col-span-3`}`}>
-          <MaterialDock
-            active={material}
-            onActive={setMaterial}
-            fullCase={fullCase}
-            onToggleFullCase={() => setView(fullCase ? "focus" : "case")}
-            panels={materials}
-          />
-        </div>
-        {/* 判决文书(v4 S06 文书卡 / S15):取最后一次盖印;未结案或裁决不是 通过 / 不过 / 待定 时组件自己不画。
-            去处(`disposition`)这一页没取,组件按裁决写判语。 */}
-        {isFinal && (
-          <section data-testid="desk-doc-card" aria-label={t("desk.doc_card")} className="min-w-0 md:col-span-2 xl:col-span-3 order-last">
-            <JudgmentSectionHead title={t("desk.doc_card")} />
-            <VerdictDocument judgment={judgment} soul={soulData} />
-          </section>
-        )}
-        {/* 评议:与资料舱同级的次要信息,默认收起;写不写只看 judgment.read(服务端同一码名),结案后照样可写。 */}
-        {/* 案卷附件(W4):评议区上面一节。两个 order-last 按 DOM 顺序排,所以放在评议之前。 */}
-        {canReadAttachments && (
-          <div className="min-w-0 md:col-span-2 xl:col-span-3 order-last">
-            <CaseAttachments judgmentId={id} canWrite={canEditCase} />
-          </div>
-        )}
-        <JudgmentComments id={id} canWrite={hasPermission("judgment.read")} concludedAt={judgment.concluded_at} />
-        {/* 打印时正文之后的「附件清单」一页;屏幕上不显示。 */}
-        <div className="min-w-0 md:col-span-2 xl:col-span-3 order-last">
-          <CaseAttachmentsPrintList judgmentId={id} enabled={canReadAttachments} />
-        </div>
       </div>
     </PageShell>
     </PrintFrame>
@@ -1583,12 +1491,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   );
 }
 
-/** `76px 标签 | 值`, one rule apart. */
-function MetaRow({ label, children }: { label: string; children: ReactNode }) {
+/** 卷的一行:字段名单独一栏,值是「卷」语域(宋体 16/28)。 */
+function JuanRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-2">
-      <dt className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</dt>
-      <dd className="text-sm text-[oklch(var(--color-ink))] min-w-0 wrap-break-word">{children}</dd>
+    <div className={dossier.juanRow}>
+      <dt className={dossier.juanKey}>{label}</dt>
+      <dd className={dossier.juanVal}>{children}</dd>
     </div>
   );
 }
