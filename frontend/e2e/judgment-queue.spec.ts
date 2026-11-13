@@ -76,8 +76,8 @@ test.describe("Critical path: the judgment triage queue", () => {
     await expect(page).toHaveURL(/\/judgment\/queue/);
 
     // ── One case, with its whole decision surface ──
-    // C9 (2026-11-13): the h1 is the page's menu name, 审判队列 (breadcrumb.menu.judgment).
-    await expect(page.getByRole("heading", { name: "审判队列", exact: true })).toBeVisible();
+    // C9 / Design 37 (2026-11-14): /judgment/queue is the triage page; its h1 is 分诊 (breadcrumb.queue).
+    await expect(page.getByRole("heading", { name: "分诊", exact: true })).toBeVisible();
     await expect(page.getByText(FIRST.soul_name)).toBeVisible();
     await expect(page.getByText("第 1 / 共 2 条")).toBeVisible();
     await expect(page.getByRole("heading", { name: "功过账簿" })).toBeVisible();

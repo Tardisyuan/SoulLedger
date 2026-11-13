@@ -100,8 +100,8 @@
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
-  visibility: hidden;
-  opacity: 0;
+  /* display, not visibility: a hidden tip still adds its width to the rail's scrollWidth (egy-longest-labels). */
+  display: none;
   z-index: 1;
 }
 .tip::before {
@@ -116,9 +116,11 @@
 }
 .door:hover .tip,
 .door:focus-visible .tip {
-  visibility: visible;
-  opacity: 1;
-  transition: visibility 0s 400ms, opacity 0s 400ms;
+  display: block;
+  animation: tipIn 0s 400ms backwards;
+}
+@keyframes tipIn {
+  from { opacity: 0; }
 }
 .railFoot {
   margin-top: auto;
