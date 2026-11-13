@@ -78,21 +78,36 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_
 # backend/tests/test_prepush_runs_the_gates_a_change_can_break.py.
 if [ -z "${PREPUSH_CHANGED+x}" ]; then
     # git feeds "<local ref> <local sha> <remote ref> <remote sha>" per ref.
-    RANGE=""; TO_MAIN=0
+    # Every ref of the push counts: the files are the union of the ranges (until 2026-11-13 only the
+    # last ref's range was looked at).
+    RANGE=""; RANGES=0; FILES=""; TO_MAIN=0
     while read -r _local_ref local_sha remote_ref remote_sha; do
         [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue   # branch deletion
         # Anything that lands on main runs every suite in full.
         [ "$remote_ref" = "refs/heads/main" ] && TO_MAIN=1
         if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-            RANGE="$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD~1)..$local_sha"   # new branch
+            ONE="$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD~1)..$local_sha"   # new branch
         else
-            RANGE="$remote_sha..$local_sha"
+            ONE="$remote_sha..$local_sha"
         fi
+        # FAIL CLOSED (2026-11-13). --no-renames: a rename is its old path deleted plus its new path
+        # added, and a deleted path is one of the things that forces a full jest run. When the diff
+        # itself fails (the remote's commit is not in this clone: someone else pushed and nobody
+        # fetched) there is no list of files — and an empty list used to reach run-gates.sh, which
+        # printed "no file changes" and let the push through with nothing run.
+        ONE_FILES="$(git diff --name-only --no-renames "$ONE")" || {
+            echo "pre-push: cannot work out what $ONE changes (git diff failed — is the remote's commit in this clone? \`git fetch\` first)."
+            echo "pre-push: push refused: without the list of changed files no gate can be chosen. SKIP_PREPUSH=1 git push  to override deliberately."
+            exit 1
+        }
+        FILES="$FILES$ONE_FILES"$'\n'
+        RANGES=$((RANGES + 1))
+        # One ref: `<base>..<pushed>`, which run-gates.sh reads the pushed commit from ("this tree already
+        # passed"). Several: a form without `..`, so that shortcut is off — one tree cannot vouch for all.
+        if [ "$RANGES" = 1 ]; then RANGE="$ONE"; else RANGE="$(echo "$RANGE" | sed 's/\.\./ to /g'), ${ONE/../ to }"; fi
     done
     [ -z "$RANGE" ] && { echo "pre-push: nothing to check"; exit 0; }
-    # --no-renames: a rename is its old path deleted plus its new path added,
-    # and a deleted path is one of the things that forces a full jest run.
-    PREPUSH_CHANGED="$(git diff --name-only --no-renames "$RANGE" 2>/dev/null)"
+    PREPUSH_CHANGED="$(printf '%s' "$FILES" | grep -v '^$' | sort -u)"
     export PREPUSH_CHANGED PREPUSH_RANGE="$RANGE" PREPUSH_TO_MAIN="$TO_MAIN"
 fi
 

@@ -32,9 +32,10 @@ def test_it_does_not_run_the_whole_suite_for_one_app():
     assert 0 < len(picked) < len(sel.all_test_files()) // 4
     # a prefix of another app's name is not that app; the apps that import soul_push bring their own dirs
     importers = sel.importers()["soul_push"]
+    contracts = sel.contract_readers()
     assert all("soul_push" in p or "soul_push" in (ROOT / "backend" / p).read_text() or
                "/api/v1/" in (ROOT / "backend" / p).read_text() or
-               (p.startswith("apps/") and p.split("/")[1] in importers) for p in picked)
+               (p.startswith("apps/") and p.split("/")[1] in importers) or p in contracts for p in picked)
 
 
 def test_a_url_prefix_owned_through_a_router_in_the_urlconf_counts():
@@ -43,15 +44,58 @@ def test_a_url_prefix_owned_through_a_router_in_the_urlconf_counts():
 
 
 def test_changes_it_cannot_trace_run_everything():
+    # apps/core: the hub app, imported by nearly every other (2026-11-13, user decision)
     for path in ("backend/config/settings.py", "backend/conftest.py", "conftest.py", "pytest.ini",
-                 "backend/requirements.lock", "backend/manage.py"):
+                 "backend/requirements.lock", "backend/manage.py", "backend/apps/core/tenant.py"):
         picked, full = pick(path)
         assert picked is None and full, path
+    # ... but one of apps/core's own test files is not the hub changing
+    own = next(t for t in sel.all_test_files() if t.startswith("apps/core/"))
+    picked, full = pick(f"backend/{own}")
+    assert full is None and own in picked
+
+
+CONTRACTS = ["tests/test_committed_schema_matches_the_backend.py", "tests/test_e2e_fixtures_match_the_serializers.py",
+             "tests/test_frontend_page_size.py"]
+
+
+def test_a_backend_app_change_runs_the_contracts_with_the_frontend_and_the_schema():
+    # 2026-11-13: none of the three names an app or calls a URL, so a new serializer field with a stale
+    # schema.yml pushed green. mutation: drop the `contract_readers()` update in select() -> red
+    for app in ("souls", "menus", "soul_push"):
+        picked, full = pick(f"backend/apps/{app}/serializers.py")
+        assert full is None and set(CONTRACTS) <= set(picked), app
+    # every one is a real file on the list, so the assertion above is about this tree
+    assert set(CONTRACTS) <= set(sel.contract_readers()) <= set(sel.all_test_files())
+    # the gate machinery's own test quotes frontend/ paths as data; it is not a contract with the backend.
+    # mutation: drop the `"scripts" not in` clause -> red
+    assert "tests/test_prepush_runs_the_gates_a_change_can_break.py" not in pick("backend/apps/menus/serializers.py")[0]
+    # a test-only change does not change what the backend serves. mutation: drop `not is_test_file(p)` -> red
+    assert not set(CONTRACTS) & set(pick("backend/apps/menus/tests.py")[0])
+    assert not set(CONTRACTS) & set(pick("backend/tests/test_hall_view.py")[0])
+
+
+def test_an_app_mounted_at_the_bare_api_root_gets_its_prefixes_from_its_own_urls():
+    # config/urls.py: path("api/v1/", include("apps.workflow.urls")) — no prefix there to read.
+    assert "workflows" in sel.url_prefixes()["workflow"]
+    picked, _ = pick("backend/apps/workflow/views.py")
+    for t in ("tests/test_datascope_b3b.py", "tests/test_dispatch_residence.py", "tests/test_rebirth_cooldown_shortening.py",
+              "tests/test_soul_auth_boundary.py", "tests/test_soul_push_delivery.py"):
+        src = (ROOT / "backend" / t).read_text()
+        # reached only by URL. mutation: drop the bare-root loop in url_prefixes() -> red
+        assert "/api/v1/workflows/" in src and "apps.workflow" not in src and "apps/workflow" not in src, t
+        assert t in picked, t
 
 
 def test_a_changed_test_and_a_changed_test_helper_select_their_readers():
     picked, _ = pick("backend/tests/test_hall_view.py")
-    assert picked == ["tests/test_hall_view.py"]
+    assert picked == ["tests/test_hall_view.py"]      # nothing imports it
+    # a test module other tests import helpers from. mutation: drop the importer rule for test files -> red
+    picked, _ = pick("backend/tests/test_judgment_claim.py")
+    importers = [t for t in sel.all_test_files() if "from tests.test_judgment_claim import" in (ROOT / "backend" / t).read_text()]
+    assert len(importers) >= 2
+    # a prefix of another module's name is not that module
+    assert set(picked) == set(importers) | {"tests/test_judgment_claim.py"}
     picked, _ = pick("backend/tests/tenancy_unscoped_sites.py")
     assert "tests/test_unscoped_query_sites_are_declared.py" in picked
 

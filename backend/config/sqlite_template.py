@@ -69,6 +69,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ENV_VAR = "SOULLEDGER_SQLITE_TEMPLATE"
@@ -216,6 +217,37 @@ class TemplateDriftError(RuntimeError):
     pass
 
 
+# --- telemetry (2026-11-13, test review #9) ------------------------------------
+# Whether a run paid for a migrate, and how long, was nowhere in its output — so nobody could say what
+# the wide input hash above costs. Every test-database setup in this process records one entry; the
+# root conftest carries the workers' entries to the xdist controller and prints `report_line` once at
+# the end of the run (scripts/run-gates.sh shows that line). Telemetry only: nothing reads it back.
+
+#: (kind, hash prefix, seconds). kind: "cold" = no template for this hash, migrated and saved one;
+#: "hot" = cloned an existing template; "verify" = migrated for real and compared (--full, migration tests).
+RECORDS: list = []
+WORKER_KEY = "soulledger_template_records"
+
+
+def record(kind: str, digest: str, seconds: float) -> None:
+    RECORDS.append((kind, digest[:8], round(seconds, 1)))
+
+
+def report_line(records):
+    """`test template: COLD|VERIFY|HOT <hash> <seconds>s …`, or None when no test database was set up."""
+    if not records:
+        return None
+    by_kind = {k: [r for r in records if r[0] == k] for k in ("cold", "verify", "hot")}
+    kind = next(k for k in ("cold", "verify", "hot") if by_kind[k])
+    what = {"cold": "no template for this input hash: migrated and saved one",
+            "verify": "migrated for real and checked against the template",
+            "hot": "cloned the template, no migrate"}[kind]
+    hashes = ",".join(sorted({r[1] for r in records}))
+    # the slowest setup of the deciding kind: a second worker that waited for the build clones "hot"
+    return (f"test template: {kind.upper()} {hashes} {max(r[2] for r in by_kind[kind]):.1f}s "
+            f"({what}; {len(records)} database setup(s))")
+
+
 def install(*, run_mode: str, directory: Path, backend_dir: Path):
     """Patch SQLite's create_test_db for this process. Returns an undo callable."""
     from django.conf import settings
@@ -229,7 +261,9 @@ def install(*, run_mode: str, directory: Path, backend_dir: Path):
         if keepdb or not self.is_in_memory_db(name):
             return original(self, verbosity, autoclobber, serialize, keepdb)
         alias = self.connection.alias
-        path = directory / f"{alias}-{input_hash(backend_dir, settings_inputs(settings, alias))}.sqlite3"
+        started = time.monotonic()  # the hash is part of the price: it reads every file under apps/
+        digest = input_hash(backend_dir, settings_inputs(settings, alias))
+        path = directory / f"{alias}-{digest}.sqlite3"
 
         if run_mode == "verify":
             result = original(self, verbosity, autoclobber, serialize, keepdb)
@@ -251,6 +285,7 @@ def install(*, run_mode: str, directory: Path, backend_dir: Path):
                         f"Template deleted. Differing tables/objects: {', '.join(diff)}"
                     )
                 print(f"\nSQLite test template {path.name} verified against a real migrate.", file=sys.stderr)
+            record("verify", digest, time.monotonic() - started)
             return result
 
         def clone():
@@ -275,6 +310,7 @@ def install(*, run_mode: str, directory: Path, backend_dir: Path):
             if serialize:
                 self.connection._test_serialized_contents = self.serialize_db_to_string()
             call_command("createcachetable", database=alias)
+            record("hot", digest, time.monotonic() - started)
             return name
 
         if path.exists():
@@ -285,6 +321,7 @@ def install(*, run_mode: str, directory: Path, backend_dir: Path):
                 return clone()
             result = original(self, verbosity, autoclobber, serialize, keepdb)
             _save(self.connection.connection, path)
+            record("cold", digest, time.monotonic() - started)
             return result
 
     DatabaseCreation.create_test_db = create_test_db

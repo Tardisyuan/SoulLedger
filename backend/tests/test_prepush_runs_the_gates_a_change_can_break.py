@@ -675,6 +675,24 @@ class TestWhatPytestIsInvokedWith:
         text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
         assert 'XDIST="-n $PYTEST_WORKERS --dist worksteal"' in text
 
+    def test_the_cold_or_hot_template_line_is_shown(self, hook, checkouts, fake_backend):
+        """Telemetry (2026-11-13): the root conftest prints `test template: COLD|HOT <hash> <seconds>`; the
+        gate shows pytest's last four lines only, so it names that line itself."""
+        _, wt = checkouts
+        py = Path(fake_backend)
+        body = py.read_text()
+        marked = body.replace(
+            'echo "PYTEST TEMPLATE',
+            'echo "test template: HOT abcdef12 0.5s (probe)"; printf \'summary line %s\\n\' 1 2 3 4 5; echo "PYTEST TEMPLATE')
+        assert marked != body, "precondition: the stand-in pytest still prints its PYTEST line"
+        py.write_text(marked)
+        proc = _run(hook, wt, ["backend/x.py"], PYTHON_BIN=str(py), RUFF_BIN=shutil.which("true"),
+                    REDIS_URL=os.environ.get("REDIS_URL", ""))
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        # five lines below it: `tail -4` alone would not show it. mutation: drop the grep in pytest_finish -> red
+        assert proc.stdout.count("test template: HOT abcdef12 0.5s (probe)") == 1, proc.stdout
+        assert "summary line 1" not in proc.stdout and "summary line 5" in proc.stdout, proc.stdout
+
     def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts
         assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"
@@ -772,6 +790,9 @@ class TestJestSelection:
             ["frontend/src/__tests__/support/egyPendingKeys.json"],
             ["frontend/src/__tests__/support/egyVocabulary.json"],
             ["frontend/demo/data/judge.zh.json", "frontend/demo/data/home-preview.json"],
+            # 2026-11-13: no jest test imports the generated schema; its readers are always-run, vitest, pytest.
+            ["packages/core/openapi/schema.yml"],
+            ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml", "packages/core/src/api/generated/schema.ts"],
         ],
     )
     def test_an_ordinary_source_change_is_selective(self, hook, changed):
@@ -795,7 +816,7 @@ class TestJestSelection:
             ["frontend/src/components/NoSuchComponent.tsx"],
             ["tsconfig.base.json"],
             # One matching file among ordinary ones still counts.
-            ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"],
+            ["frontend/app/page.tsx", "frontend/src/config/landing-stats.json"],
         ],
     )
     def test_what_jest_cannot_trace_forces_a_full_run_and_says_why(self, hook, changed):
@@ -805,6 +826,16 @@ class TestJestSelection:
 
     def test_gates_full_forces_it(self, hook):
         assert _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="1")[0] == 1
+
+    def test_a_module_the_setup_file_runs_before_every_test_forces_it(self, hook):
+        """2026-11-13: jest.setup.js requires it, so every test runs it and no import edge says so."""
+        assert "require('./lib/platform/web')" in (REPO_ROOT / "frontend" / "jest.setup.js").read_text()
+        full, out = _classify_jest(hook, ["frontend/lib/platform/web.ts"])
+        assert full == 1 and re.search(r"full because: a module frontend/jest\.setup\.js runs .*: frontend/lib/platform/web\.ts$",
+                                       out, re.M), out
+        # its neighbour is ordinary code
+        assert (REPO_ROOT / "frontend/lib/platform").is_dir()
+        assert _classify_jest(hook, ["frontend/lib/platform/index.ts"])[1].count("jest.setup.js runs") == 0
 
     def test_gates_full_0_does_not_force_selective(self, hook):
         """There is no way to force a selective run. GATES_FULL=0 is not one."""
@@ -816,8 +847,26 @@ class TestJestSelection:
         assert full == 0  # 2026-10-24: main is selective too
 
     def test_the_runner_names_the_file_that_forced_it(self, hook):
-        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"])
-        assert "data file" in out and "packages/core/openapi/schema.yml" in out
+        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "frontend/src/config/landing-stats.json"])
+        assert "data file" in out and "frontend/src/config/landing-stats.json" in out
+
+    def test_a_schema_change_still_runs_everything_that_reads_the_schema(self, hook):
+        """What makes leaving the full jest out safe (2026-11-13): the area gates still run, and the tests
+        that read schema.yml are picked by something other than a full run."""
+        full, out = _classify_jest(hook, ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml"])
+        assert full == 0, out
+        # core (vitest: generatedSchemaIsCurrent) and the frontend (tsc, eslint, jest with its always-run list)
+        assert "classify: core=1 frontend=1 backend=1" in out, out
+        always = (REPO_ROOT / "frontend" / "jest.always-run.txt").read_text()
+        assert "src/__tests__/apiEndpointContract.test.ts" in always
+        assert "openapi/schema.yml" in (REPO_ROOT / "frontend/src/__tests__/apiEndpointContract.test.ts").read_text()
+        readers = _listed_readers()
+        for name in ("tests/test_committed_schema_matches_the_backend.py", "tests/test_e2e_fixtures_match_the_serializers.py"):
+            assert "packages" in readers[name], name
+        # The exemption is that one file, not its directory or every yml: a neighbour is still a data file
+        # (the path does not exist, so the reason is matched by name — the deleted-file rule fires as well).
+        _, out = _classify_jest(hook, ["packages/core/openapi/other.yml"])
+        assert re.search(r"full because: a data file .*: packages/core/openapi/other\.yml$", out, re.M), out
 
 
 def _classify_app_jest(hook, changed: list[str], **extra) -> tuple[int, str]:
@@ -860,6 +909,20 @@ class TestAppJestSelection:
     def test_what_the_app_graph_cannot_trace_forces_a_full_run(self, hook, changed):
         full, out = _classify_app_jest(hook, changed)
         assert full == 1, out
+
+    @pytest.mark.parametrize("changed, setup, needle", [
+        ("mobile/src/platform.ts", "mobile/jest.setup.js", 'require("./src/platform")'),
+        ("mobile/src/platform.ts", "mobile-officer/jest.setup.js", 'require("../mobile/src/platform")'),
+        ("mobile-officer/src/keptText.ts", "mobile-officer/jest.setup.js", 'require("./src/keptText")'),
+    ])
+    def test_a_module_the_apps_setup_file_loads_forces_a_full_run(self, hook, changed, setup, needle):
+        """2026-11-13: code under src/, so the rule above calls it traceable — but the setup file runs it
+        around every test."""
+        assert (REPO_ROOT / changed).is_file() and needle in (REPO_ROOT / setup).read_text()
+        full, out = _classify_app_jest(hook, [changed])
+        assert full == 1 and f"jest.setup.js loads for every test changed: {changed}" in out, out
+        # web jest is not forced by an app's module
+        assert "classify-jest: full=0" in out, out
         assert "app full because:" in out
 
     def test_gates_full_forces_it(self, hook):
@@ -954,6 +1017,48 @@ class TestWhatTheHookHandsTheRunner:
         proc = _push(hook, wt, "refs/heads/feature")
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "classify-jest: full=0" in proc.stdout, proc.stdout
+
+    def _push_lines(self, hook, cwd: Path, lines: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["bash", str(hook)], cwd=cwd, env=_clean_env(PREPUSH_CLASSIFY_ONLY="1"), input=lines,
+            capture_output=True, text=True, timeout=60,
+        )
+
+    def _rev(self, cwd: Path, rev: str) -> str:
+        return subprocess.run(
+            ["git", "rev-parse", rev], cwd=cwd, env=_clean_env(), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    def test_a_range_git_cannot_diff_refuses_the_push(self, hook, checkouts):
+        """2026-11-13: the remote's commit is not in this clone (someone pushed, nobody fetched). `git diff`
+        failed, its empty output was the change list, and run-gates.sh said "no file changes", exit 0."""
+        _, wt = checkouts
+        self._commit_a_frontend_file(wt)
+        missing = "1234567890123456789012345678901234567890"
+        proc = self._push_lines(hook, wt, f"refs/heads/wt {self._rev(wt, 'HEAD')} refs/heads/wt {missing}\n")
+        assert proc.returncode != 0, proc.stdout + proc.stderr
+        assert "push refused" in proc.stdout and missing in proc.stdout, proc.stdout
+        # absence too: the runner was never reached, with an empty list or any other
+        assert "no file changes" not in proc.stdout and "classify:" not in proc.stdout, proc.stdout
+
+    def test_every_pushed_ref_counts_not_only_the_last(self, hook, checkouts):
+        _, wt = checkouts
+        (wt / "backend" / "x.py").write_text("X = 1\n")
+        _git(wt, "add", "-A")
+        _git(wt, "commit", "-q", "-m", "backend")
+        self._commit_a_frontend_file(wt)
+        c0, c1, c2 = (self._rev(wt, r) for r in ("HEAD~2", "HEAD~1", "HEAD"))
+        # the last line alone is the backend commit; the first carries the frontend one
+        proc = self._push_lines(hook, wt, f"refs/heads/a {c2} refs/heads/a {c1}\nrefs/heads/b {c1} refs/heads/b {c0}\n")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "classify: core=0 frontend=1 backend=1" in proc.stdout, proc.stdout
+        # no `<base>..<pushed>` for the runner to take ONE pushed tree from: "this tree already passed"
+        # must not vouch for several refs
+        assert f"{c1} to {c2}, {c0} to {c1} " in proc.stdout and ".." not in proc.stdout.split(" — ")[0], proc.stdout
+        # and one of several refs failing to diff refuses the whole push
+        missing = "1234567890123456789012345678901234567890"
+        proc = self._push_lines(hook, wt, f"refs/heads/a {c2} refs/heads/a {missing}\nrefs/heads/b {c1} refs/heads/b {c0}\n")
+        assert proc.returncode != 0 and "push refused" in proc.stdout and "classify:" not in proc.stdout, proc.stdout
 
     def test_a_checkout_without_the_runner_uses_the_installed_copy(self, hook, checkouts):
         main, wt = checkouts
@@ -1077,6 +1182,89 @@ class TestReadersOfAnotherArea:
 # changed only mobile-officer/ printed `core:0 frontend:0 backend:0` and ran nothing (the same hole mobile/
 # once had, see run-gates.sh). The runner prints `classify-officer: officer=<0|1>`. mobile-officer/ also
 # imports mobile/src's leaf modules in place, so a change under mobile/ must run it too.
+
+
+class TestMobileReadersFollowWhatChanged:
+    """2026-11-13: with the mobile app not running, its file-reading tests ran on every push — all 14, whole
+    rendered screens among them. Now only those that read something the push changed (run-gates.sh,
+    reader_follows_change)."""
+
+    def _mobile_readers(self, changed):
+        _, _, out = _readers(changed)
+        m = re.search(r"^classify-mobile-readers: (\d+)$", out, re.M)
+        assert m, out
+        files = re.findall(r"^  mobile reader: (\S+)$", out, re.M)
+        assert len(files) == int(m.group(1)), out
+        return files
+
+    ASSIST = "mobile/src/__tests__/assist.test.tsx"     # reads backend/apps/soul_assist
+    THEME = "mobile/src/__tests__/theme.test.ts"        # reads frontend/app/globals.css
+    VISUAL = "mobile/src/__tests__/visual.test.tsx"     # reads the app's own fonts
+
+    def test_the_examples_read_what_this_class_says(self):
+        assert '"backend"' in (REPO_ROOT / self.ASSIST).read_text() or "/backend/" in (REPO_ROOT / self.ASSIST).read_text()
+        assert "frontend/" in (REPO_ROOT / self.THEME).read_text()
+        visual = (REPO_ROOT / self.VISUAL).read_text()
+        assert re.search(r"readFileSync|readdirSync|existsSync|statSync|['\"](node:)?fs['\"]", visual)
+        assert "backend" not in visual and "frontend" not in visual
+
+    def test_a_backend_change_runs_the_readers_of_backend_only(self):
+        files = self._mobile_readers(["backend/apps/soul_assist/prompts.py"])
+        # mutation: drop `&& reader_follows_change "$f"` -> THEME and VISUAL come back -> red
+        assert self.ASSIST in files and self.THEME not in files and self.VISUAL not in files, files
+
+    def test_a_frontend_change_runs_the_readers_of_frontend(self):
+        files = self._mobile_readers(["frontend/app/page.tsx"])
+        assert self.THEME in files and self.ASSIST not in files and self.VISUAL not in files, files
+
+    def test_a_docs_change_runs_no_test_that_stays_inside_the_app(self):
+        assert self.VISUAL not in self._mobile_readers(["docs/ARCHITECTURE.md"])
+
+    def test_a_reader_that_cannot_be_placed_runs(self, checkouts):
+        """Fail open: a subprocess, or a climb to the repository root that names nothing."""
+        main, _ = checkouts
+        tests = main / "mobile" / "src" / "__tests__"
+        tests.mkdir(parents=True)
+        (tests / "spawns.test.ts").write_text('import { execSync } from "child_process";\n')
+        (tests / "climbs.test.ts").write_text('import { readFileSync } from "fs";\nconst ROOT = "../../..";\n')
+        (tests / "own.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../theme.ts");\n')
+        (tests / "names.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../../../backend/x.py");\n')
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "readers")
+
+        def readers(changed):
+            proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main,
+                                  env=_clean_env(PREPUSH_CHANGED=changed, PREPUSH_CLASSIFY_ONLY="1"),
+                                  capture_output=True, text=True, timeout=60)
+            assert proc.returncode == 0, proc.stdout + proc.stderr
+            return sorted(Path(f).name for f in re.findall(r"^  mobile reader: (\S+)$", proc.stdout, re.M))
+
+        assert readers("docs/x.md") == ["climbs.test.ts", "spawns.test.ts"]
+        assert readers("backend/x.py") == ["climbs.test.ts", "names.test.ts", "spawns.test.ts"]
+
+    def test_a_red_reader_is_named(self, checkouts, tmp_path, fake_backend):
+        """`| tail -4` showed jest's totals and not which test (2026-11-13: as app_jest, to a log and grep)."""
+        main, _ = checkouts
+        tests = main / "mobile" / "src" / "__tests__"
+        tests.mkdir(parents=True)
+        (tests / "names.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../../../backend/x.py");\n')
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "reader")
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "npm").write_text(
+            "#!/bin/bash\n"
+            "echo 'FAIL src/__tests__/names.test.ts'; echo '  ● names › reads the backend file'\n"
+            "printf 'filler %s\\n' 1 2 3 4 5 6\nexit 1\n")
+        (b / "npm").chmod(0o755)
+        env = _clean_env(PREPUSH_CHANGED="backend/x.py", PYTHON_BIN=fake_backend, RUFF_BIN=shutil.which("true"),
+                         DATABASE_URL="sqlite:///:memory:", REDIS_URL=os.environ.get("REDIS_URL", ""))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main,
+                              env=env, capture_output=True, text=True, timeout=120)
+        assert proc.returncode == 1 and "mobile jest (file readers) failed" in proc.stdout, proc.stdout + proc.stderr
+        # six lines of output below them. mutation: drop the grep after MOBILE_STATUS -> red
+        assert "FAIL src/__tests__/names.test.ts" in proc.stdout and "● names › reads the backend file" in proc.stdout, proc.stdout
 
 
 def _classify_officer(hook, changed: list[str]) -> int:
@@ -1672,6 +1860,15 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
     @pytest.mark.parametrize("changed", [
         ["backend/apps/souls/views.py"], ["docs/ARCHITECTURE.md"], ["README.md"], ["mobile/src/navigation.tsx"],
         [".github/workflows/ci.yml", "backend/tests/test_x.py"], ["scripts/demo-record.sh"],
+        # 2026-11-13: under frontend/ or packages/core/, and still nothing a browser loads
+        ["frontend/src/__tests__/SoulPage.test.tsx", "frontend/src/__tests__/support/mocks.ts"],
+        ["frontend/app/souls/page.test.tsx"], ["packages/core/src/api/__tests__/client.test.ts"],
+        ["packages/core/src/validation.test.ts"], ["frontend/README.md", "packages/core/README.md"],
+        ["frontend/jest.config.js", "frontend/jest.setup.js", "frontend/jest.always-run.txt"],
+        ["frontend/eslint.config.mjs", "frontend/eslint.design-guard-baseline.json"],
+        ["packages/core/vitest.config.ts", "packages/core/eslint.config.mjs"],
+        # the demo's own specs and recordings: playwright.config.ts ignores **/demo/**, the demo E2E has them
+        ["frontend/e2e/demo/pages.spec.ts"], ["frontend/demo/data/judge.zh.json"],
     ])
     def test_a_change_the_browsers_cannot_see_runs_nothing(self, checkouts, tmp_path, changed):
         main, _ = checkouts
@@ -1681,8 +1878,12 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
 
     @pytest.mark.parametrize("changed", [
         ["frontend/app/page.tsx"], ["frontend/e2e/home.spec.ts"], ["frontend/playwright.config.ts"],
-        ["frontend/demo/data/judge.zh.json"], ["packages/core/src/index.ts"], ["package-lock.json"], [".nvmrc"],
+        ["packages/core/src/index.ts"], ["package-lock.json"], [".nvmrc"],
         ["scripts/e2e-report.py"], ["scripts/run-gates.sh"],
+        # 2026-11-13: the exclusions are those files, not their neighbours
+        ["frontend/src/__tests__/SoulPage.test.tsx", "frontend/e2e/fixtures.ts"], ["frontend/next.config.js"],
+        ["frontend/tsconfig.json"], ["frontend/demo/tour.ts"], ["frontend/src/testing.ts"],
+        ["packages/core/messages/en.json"], ["packages/core/package.json"],
         ["tsconfig.base.json"],  # a root-level file nobody listed: fail closed
         ["backend/apps/souls/views.py", "frontend/app/globals.css"],  # one is enough
     ])
@@ -1721,6 +1922,24 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
         proc = self._demo_auto(main, tmp_path, "frontend/demo/data/judge.zh.json")
         assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
         assert "bash /app/scripts/demo-e2e-inner.sh" in (tmp_path / "remote-run").read_text()
+
+    def test_the_demo_carries_the_same_list_of_files_no_browser_loads(self):
+        """demo-remote.sh cannot source run-gates.sh, so it copies the pattern; the copy must not drift."""
+        m = re.search(r"^E2E_BLIND_COMMON_RE='(.+)'$", RUNNER.read_text(encoding="utf-8"), re.M)
+        assert m, "run-gates.sh no longer defines E2E_BLIND_COMMON_RE on one line"
+        assert f"grep -vE '{m.group(1)}'" in (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8")
+
+    def test_the_demo_skips_a_unit_test(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/src/__tests__/SoulPage.test.tsx")
+        assert proc.returncode == 0 and "not running the demo E2E" in proc.stdout, proc.stdout
+        assert not (tmp_path / "remote-run").exists()
+
+    def test_the_demo_runs_for_its_own_specs(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/e2e/demo/pages.spec.ts")
+        assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
+        assert (tmp_path / "remote-run").exists()
 
     def test_auto_is_only_for_the_demo_e2e(self, checkouts, tmp_path):
         main, _ = checkouts
@@ -1813,7 +2032,9 @@ class TestTwoSidesAtOnce:
     def _repo(self, checkouts, tmp_path):
         main, _ = checkouts
         (main / "mobile" / "src").mkdir(parents=True)
-        (main / "mobile" / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('x');\n")
+        (main / "mobile" / "src" / "r.test.ts").write_text(
+            # reads what this push changes: a reader that stays inside its app no longer runs (2026-11-13)
+            "import fs from 'fs'; fs.readFileSync('../../backend/x.py');\n")
         _git(main, "add", "-A")
         _git(main, "commit", "-q", "-m", "mobile reader")
         b = tmp_path / "bin"
