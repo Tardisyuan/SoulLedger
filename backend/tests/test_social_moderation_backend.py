@@ -710,6 +710,21 @@ def test_a_hidden_post_the_author_then_deletes_stays_in_handled_and_cannot_be_re
     assert Post.all_objects.get(pk=hidden.pk).is_deleted
 
 
+def test_an_author_deleting_their_post_puts_nobody_else_s_comments_in_handled(cn_tenant, cn_moderator):
+    """作者自删帖子:别人的评论不能因此以「帖子作者删的」(≠ 评论作者 → DELETED_BY_OFFICER)进「已处理」。"""
+    author, author_client = soul(cn_tenant, "作者")
+    target = post(author, "要被作者删的帖子", Visibility.PUBLIC)
+    _, commenter = soul(cn_tenant, "评论者")
+    commenter.post(f"{SOCIAL}/posts/{target.pk}/comments/", {"content": "别人的评论"}, format="json")
+    comment = Comment.objects.get(content="别人的评论")
+    assert author_client.delete(f"{SOCIAL}/posts/{target.pk}/").status_code == 204
+
+    row = Comment.all_objects.get(pk=comment.pk)
+    # Whatever happens to the comment, an author's delete is not a moderation decision.
+    assert row.deleted_by_id in (None, row.author_id), "评论被记成了帖子作者删的"
+    assert _handled(officer_client(cn_moderator)) == []
+
+
 def test_handled_is_newest_first(cn_tenant, cn_moderator):
     author, _ = soul(cn_tenant, "作者")
     older, newer = post(author, "早", Visibility.PUBLIC), post(author, "晚", Visibility.PUBLIC)

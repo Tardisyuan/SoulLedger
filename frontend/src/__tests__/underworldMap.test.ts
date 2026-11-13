@@ -54,6 +54,7 @@ import {
   routeExtent,
   anchorLabelsInside,
   LABEL_EDGE,
+  staggerCrowdedNames,
 } from "@/src/lib/underworldMapLayers";
 
 const PUBLIC_V4 = path.join(__dirname, "..", "..", "public", "v4");
@@ -765,6 +766,43 @@ describe("narrow screens: close up on the current station", () => {
     // Absence: a line well inside the map is not touched.
     expect(hall.getAttribute("x")).toBe(hallX);
     expect(hall.getAttribute("text-anchor")).toBe("middle");
+  });
+
+  // 2026-11-14: the Diyu panorama in English — 「Road of the Yellow Springs」 is wider than the 94 units between stations,
+  // so neighbouring names overlapped. A name that would hit one already placed moves down a line; zh is untouched.
+  it("staggers English station names that would overlap; Chinese names stay where Design put them", () => {
+    const zhMap = map("cn");
+    const before = Array.from(zhMap.querySelectorAll("#labels text"), (t) => t.getAttribute("y"));
+    staggerCrowdedNames(zhMap);
+    expect(Array.from(zhMap.querySelectorAll("#labels text"), (t) => t.getAttribute("y"))).toEqual(before);
+    expect(zhMap.querySelector("[data-staggered]")).toBeNull();
+
+    const svg = map("cn");
+    const names: Record<string, string> = {
+      TUDI_TEMPLE: "Earth God's Temple", "dy-ghost-gate": "Ghost Gate", YELLOW_SPRINGS_ROAD: "Road of the Yellow Springs",
+      WANGXIANG_TERRACE: "Terrace for Viewing Home", EVIL_DOG_VILLAGE: "Vicious Dog Ridge", GOLDEN_ROOSTER_HILL: "Golden Rooster Hill",
+    };
+    const line = (id: string) => svg.querySelector(`[data-for="${id}"] text:last-of-type`)!;
+    for (const [id, text] of Object.entries(names)) line(id).textContent = text;
+    anchorLabelsInside(svg, 1120);
+    staggerCrowdedNames(svg);
+    const box = (t: Element) => {
+      const size = Number(t.getAttribute("font-size"));
+      const w = (t.textContent ?? "").length * size * 0.56;
+      const x = Number(t.getAttribute("x"));
+      const a = t.getAttribute("text-anchor");
+      const x0 = a === "middle" ? x - w / 2 : a === "end" ? x - w : x;
+      return { x0, x1: x0 + w, y0: Number(t.getAttribute("y")) - size, y1: Number(t.getAttribute("y")) };
+    };
+    const boxes = Object.keys(names).map((id) => box(line(id)));
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const [a, b] = [boxes[i], boxes[j]];
+        expect(a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1).toBe(false);
+      }
+    expect(svg.querySelectorAll("[data-staggered]").length).toBeGreaterThan(0);
+    // Absence: the first name keeps its line.
+    expect(line("TUDI_TEMPLE").hasAttribute("data-staggered")).toBe(false);
   });
 
   it("reads the smallest label size from the map (the Diyu map has 10)", () => {

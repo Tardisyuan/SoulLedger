@@ -39,6 +39,7 @@ import {
   addHeroes,
   addScanRing,
   anchorLabelsInside,
+  staggerCrowdedNames,
   applyCamera,
   cameraCentre,
   heatByNode,
@@ -306,6 +307,7 @@ export function UnderworldMap({
     // 出了图边的字往里收,近处与全景都一样(`anchorLabelsInside`):桌面全景的图框就是 viewBox,
     // 英文「Earth God's Temple」「Embalming · seventy days」「Field of Reeds (Aaru)」原样画会被图边切掉一截。
     anchorLabelsInside(svg, box.width);
+    staggerCrowdedNames(svg);
     markYouAreHere(svg, states, visits ? t("map.soul.here") : null);
     setBranchInfo(applyBranches(svg, branchesHidden, states.current?.node ?? null));
     if (focused) svg.querySelector(`[id="${focused}"]`)?.setAttribute("data-focused", "");
