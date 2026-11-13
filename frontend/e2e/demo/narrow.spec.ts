@@ -135,3 +135,19 @@ test("393px: the soul entrance fills the screen under a 40px strip, nothing over
   await expect(page.locator("html")).toHaveAttribute("data-civ", "gr");
   clean(seen, "393 soul entrance");
 });
+
+test.describe("in English", () => {
+  test.use({ locale: "en-US" });
+  // Egypt's Field of Reeds is the one near-full realm in the recordings: its 「◐ nearly full」 sat in a 44px box sized for
+  // 「◐ 将满」 and spilled 35px past the card, so the phone's layout viewport grew to 399 and the door bar ended below the
+  // screen. On a phone that shows as innerWidth, not as scrollWidth - innerWidth (the viewport grows to fit), so read both.
+  test("393px: the Egyptian realms page does not widen the page", async ({ page }) => {
+    await enter(page, "judge_eg");
+    await page.goto("/realms");
+    await expect(page.locator('[data-realm-card="EG_AARU"] [data-load="near"]')).toBeVisible();
+    await page.getByTestId("underworld-map").locator("svg").first().waitFor();
+    const { inner, scroll } = await page.evaluate(() => ({ inner: window.innerWidth, scroll: document.documentElement.scrollWidth }));
+    expect(inner).toBe(393);
+    expect(scroll).toBeLessThanOrEqual(393);
+  });
+});
