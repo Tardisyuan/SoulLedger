@@ -7,7 +7,8 @@ import s from "./dossier.module.css";
 /**
  * 功过记号(Design 第三十批 第 3 步第 4 条):记号只回答「是功还是过」,靠形状(描线 vs 实底,加各家自己的形),
  * 16px(`--mark`)、墨色;颜色只上数字(`SignedNumber`),数字一律带 + / −。
- *   地府 「功」字描框 / 「过」字实底 —— 功过格的两栏,字就是记号
+ *   地府 「功」字描框 / 「过」字实底 —— 功过格的两栏,字就是记号;英文与 egy 框里换成 + / −(sans 600,
+ *        Design 第三十六批 第一节第 1 条:不读汉字的人看「功」「过」只是两块花纹),形状不变
  *   欧洲 四角星(德)/ 圆底 P(罪,炼狱篇第九歌)
  *   埃及 羽(描线)/ 心形罐(实底)
  *   希腊 白票:描线圆 + 实心中点 / 黑票:实底圆中间一个孔
@@ -16,12 +17,12 @@ import s from "./dossier.module.css";
 export type MeritKind = "merit" | "demerit";
 
 export function MeritMark({ civilization, kind }: { civilization: string | null | undefined; kind: MeritKind }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const civ = spineCivOf(civilization) ?? "cn";
   const name = t(`caseDesk.dossier.mark.${civ}.${kind}`);
   if (civ === "cn") {
     return (
-      <span role="img" aria-label={name} data-mark={`${civ}-${kind}`} className={`${s.mark} ${s.markCn} ${kind === "demerit" ? s.markCnSolid : ""}`}>
+      <span role="img" aria-label={name} data-mark={`${civ}-${kind}`} className={`${s.mark} ${s.markCn} ${kind === "demerit" ? s.markCnSolid : ""} ${locale === "zh-Hans" ? "" : s.markCnSign}`}>
         <span aria-hidden="true">{t(`caseDesk.dossier.mark.cn.${kind}_glyph`)}</span>
       </span>
     );
