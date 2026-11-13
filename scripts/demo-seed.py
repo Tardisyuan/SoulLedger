@@ -89,11 +89,13 @@ CITY_GODS = {"CN_DIYU": "都城隍", "EU_HEAVEN_HELL": "Saint Peter's Gate", "EG
 # an officer; Ma'at is the standard itself, the feather, and no office at all, so the hall's moderator is Isis, who
 # stands behind Osiris' throne in the hall (docs/02_奥西里斯审判详解.md, Budge pl. IV). Thoth stays the demo judge
 # (the user's 2026-10-28 decision: he sits as an assessor and records, docs/01 埃及 §1.2).
+# Officers who judge nobody hold GUARDIAN: there is no OFFICER role (apps/authentication/models.py), and the
+# roster showed them as an unrecognised value (2026-11-14).
 OFFICERS = {
-    "CN_DIYU": [("cui_jue", "崔珏", "JUDGE"), ("heibai", "黑白无常", "OFFICER"), ("zhong_kui", "钟馗", "JUDGE"), ("meng_po", "孟婆", "OFFICER")],
-    "EU_HEAVEN_HELL": [("minos", "Minos", "OFFICER"), ("uriel", "Uriel", "OFFICER"), ("beatrice", "Beatrice", "MODERATOR")],
-    "EG_DUAT": [("anubis", "Anubis", "OFFICER"), ("horus", "Horus", "OFFICER"), ("isis", "Isis", "MODERATOR")],
-    "GR_HADES": [("rhadamanthus", "Rhadamanthus", "JUDGE"), ("aeacus", "Aeacus", "OFFICER"), ("hermes", "Hermes", "MODERATOR")],
+    "CN_DIYU": [("cui_jue", "崔珏", "JUDGE"), ("heibai", "黑白无常", "GUARDIAN"), ("zhong_kui", "钟馗", "JUDGE"), ("meng_po", "孟婆", "GUARDIAN")],
+    "EU_HEAVEN_HELL": [("minos", "Minos", "GUARDIAN"), ("uriel", "Uriel", "GUARDIAN"), ("beatrice", "Beatrice", "MODERATOR")],
+    "EG_DUAT": [("anubis", "Anubis", "GUARDIAN"), ("horus", "Horus", "GUARDIAN"), ("isis", "Isis", "MODERATOR")],
+    "GR_HADES": [("rhadamanthus", "Rhadamanthus", "JUDGE"), ("aeacus", "Aeacus", "GUARDIAN"), ("hermes", "Hermes", "MODERATOR")],
 }
 
 # (name, merit, demerit, fate). Fates, most to least finished:
@@ -551,8 +553,8 @@ def seed_dispatches(tenants):
     made = 0
     for i, (src, dst, name, reason) in enumerate(pairs):
         soul = Soul.objects.filter(name=name).first()
-        dispatcher = User.objects.filter(tenant=tenants[src], role="OFFICER").first()
-        approver = User.objects.filter(tenant=tenants[dst], role="OFFICER").first()
+        dispatcher = User.objects.filter(tenant=tenants[src], role="GUARDIAN").first()
+        approver = User.objects.filter(tenant=tenants[dst], role="GUARDIAN").first()
         try:
             record_death_first(soul).die(location=soul.origin_location)
             soul.refresh_from_db()
