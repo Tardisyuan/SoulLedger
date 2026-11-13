@@ -43444,6 +43444,8 @@ components:
         * `wrong_status` - wrong_status
     ProblemFieldError:
       type: object
+      description: One validation error. A coded field refusal adds its facts as further
+        members (`region`, `city_god` …).
       properties:
         field:
           type: string

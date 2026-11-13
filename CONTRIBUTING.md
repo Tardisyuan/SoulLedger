@@ -36,10 +36,9 @@ git checkout -- package-lock.json     # npm ci rewrites the lockfile; keep it un
 npm run dev --workspace frontend
 ```
 
-**Signing in.** A new database has no account that can sign in. `manage.py seed_dev_users` *(being added)*
+**Signing in.** A new database has no account that can sign in. `manage.py seed_dev_users`
 creates one account for each of the six roles (ADMIN, MODERATOR, JUDGE, GUARDIAN, VIEWER, and a SOUL account
-for the soul app), runs only when `DEBUG=True`, and prints what it created. Until it lands, use
-`manage.py createsuperuser`.
+for the soul app), runs only when `DEBUG=True`, and prints what it created (`manage.py createsuperuser` also works).
 
 The two mobile apps, Docker, PostgreSQL and Redis, and every seed command are in
 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).

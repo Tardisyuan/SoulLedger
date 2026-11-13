@@ -290,7 +290,7 @@ bash scripts/install-hooks.sh  # installs the git hooks; see [Testing, gates and
 
 A fresh database has no officer who can sign in. Two ways to get one:
 
-- **`seed_dev_users`** *(being added; until it lands, use the second way)*. One command that creates one
+- **`seed_dev_users`**. One command that creates one
   sign-in account for each of the six roles (ADMIN, MODERATOR, JUDGE, GUARDIAN, VIEWER, and a SOUL account
   for the soul app). It refuses to run unless `DEBUG=True`, so it cannot create accounts on a real deployment.
 
