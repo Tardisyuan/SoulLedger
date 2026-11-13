@@ -70,6 +70,7 @@ tests/test_soul_csv_import.py                                    packages
 tests/test_soul_data_export.py                                   config
 tests/test_soul_feedback.py                                      config
 tests/test_soul_push_messages_match_the_language_packs.py        frontend packages
+tests/test_sqlite_template.py                                    README.md config conftest.py pytest.ini
 tests/test_system_mail_speaks_the_recipients_language.py         packages
 tests/test_testdb_name.py                                        conftest.py pytest.ini
 tests/test_the_image_installs_locked_versions.py                 .dockerignore .github
