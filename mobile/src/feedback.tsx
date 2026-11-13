@@ -40,6 +40,9 @@ const MAX_TOASTS = 3;
 /** Without a provider (a screen rendered alone in a test) a toast is a no-op, not a crash. */
 const ToastContext = createContext<Show>(() => {});
 export const useToast = () => useContext(ToastContext);
+/** Takes down the toast shown with `key` (if any): a decision that succeeds silently clears the failure it replaced. */
+const DismissContext = createContext<(key: string) => void>(() => {});
+export const useDismissToast = () => useContext(DismissContext);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Item[]>([]);
@@ -50,8 +53,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     []
   );
   const close = useCallback((id: number) => setToasts((list) => list.filter((x) => x.id !== id)), []);
+  const dismiss = useCallback((key: string) => setToasts((list) => list.filter((x) => x.key !== key)), []);
   return (
     <ToastContext.Provider value={show}>
+      <DismissContext.Provider value={dismiss}>
       {children}
       {toasts.length ? (
         <View pointerEvents="box-none" style={styles.stack}>
@@ -61,6 +66,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           ))}
         </View>
       ) : null}
+      </DismissContext.Provider>
     </ToastContext.Provider>
   );
 }

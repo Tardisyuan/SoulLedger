@@ -22,7 +22,7 @@ import Svg, { Circle } from "react-native-svg";
 import { submitVerdict } from "../decisions";
 import { DECISION_TOAST, confirmedDecision, decisionFailureKind, notConfirmedKey } from "../deviceCheck";
 import { ActionButton } from "../kit";
-import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast } from "../shared";
+import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast, useDismissToast } from "../shared";
 import { BLOCKED_DRAG, SWIPE_FRACTION, blockedSide, deadlineText, passPayload, waitedDays, type Side } from "../verdict";
 import { ReasonSheet } from "./judgmentActions";
 import { AccountSheet, RejectSheet } from "./rejectSheet";
@@ -58,6 +58,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
   const toast = useToast();
+  const dismissToast = useDismissToast();
   const reduced = useReducedMotion();
   const { offline } = useOnline();
   const { width } = useWindowDimensions();
@@ -159,7 +160,11 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     const x = (payload.verdict === "PASSED" ? 1.5 : -1.5) * width;
     setBusy(true);
     confirmedDecision(t("officer_app.biometric.prompt"), () => flyOut(id, x, () => submitVerdict(id, payload)))
-      .then(() => finish(id))
+      .then(() => {
+        // A swipe that lands says nothing itself; the failure an earlier try left up must not outlive it.
+        dismissToast(DECISION_TOAST);
+        finish(id);
+      })
       .catch((e: unknown) => {
         // 面容没过、服务端拒绝、网络失败:都回到原位,写出原因。卡若已经飞走,从飞出去的那一侧回来。
         toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST);

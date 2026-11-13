@@ -46,7 +46,7 @@ export { RootErrorBoundary } from "../../mobile/src/errorBoundary";
 export { VersionGate } from "../../mobile/src/versionGate";
 export { createLinkInbox, pathOf, queryOf } from "../../mobile/src/deepLink";
 export { clearVoiceNumbers, publishVoiceNumber } from "../../mobile/src/voiceCache";
-export { Sheet, ToastProvider, useToast } from "../../mobile/src/feedback";
+export { Sheet, ToastProvider, useDismissToast, useToast } from "../../mobile/src/feedback";
 export { NetworkProvider, useOnline } from "../../mobile/src/network";
 export { I18nProvider, useI18n, translate } from "../../mobile/src/i18n";
 export { family, FONT_ASSETS } from "../../mobile/src/fonts";

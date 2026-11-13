@@ -6,7 +6,7 @@ import { act, screen } from "@testing-library/react-native";
 import { useEffect } from "react";
 
 import { DECISION_TOAST, NotConfirmed, decisionFailureKind } from "../deviceCheck";
-import { ToastProvider, useToast } from "../shared";
+import { ToastProvider, useDismissToast, useToast } from "../shared";
 import { renderOfficer as render } from "./harness";
 
 function Say({ lines }: { lines: [string, "success" | "info" | "failure", string | undefined][] }) {
@@ -54,4 +54,25 @@ it("a notice goes by itself", () => {
   act(() => jest.advanceTimersByTime(10_000));
   expect(screen.queryByText("已取消")).toBeNull();
   jest.useRealTimers();
+});
+
+function SayThenClear() {
+  const toast = useToast();
+  const dismiss = useDismissToast();
+  useEffect(() => {
+    toast("别的事", "info");
+    toast("服务端拒绝", "failure", DECISION_TOAST);
+    dismiss(DECISION_TOAST); // the swipe that then lands says nothing itself
+  }, [toast, dismiss]);
+  return null;
+}
+
+it("a silent success takes down the keyed failure and only that one", () => {
+  render(
+    <ToastProvider>
+      <SayThenClear />
+    </ToastProvider>
+  );
+  expect(screen.queryByText("服务端拒绝")).toBeNull();
+  expect(screen.getByTestId("toast")).toHaveTextContent("别的事");
 });

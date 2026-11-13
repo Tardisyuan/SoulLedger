@@ -43,8 +43,8 @@ describe("judgmentActionState", () => {
   });
 
   it("a request made this session is its own state, and a deferral wins over it", () => {
-    expect(judgmentActionState({ claimed_by: ME, is_final: true }, ME, true)).toBe("reassign");
-    expect(judgmentActionState({ claimed_by: ME, is_final: true, deferred_at: "x" }, ME, true)).toBe("deferred");
+    expect(judgmentActionState({ claimed_by: ME }, ME, true)).toBe("reassign");
+    expect(judgmentActionState({ claimed_by: ME, deferred_at: "x" }, ME, true)).toBe("deferred");
   });
 
   it("a request the server remembers shows as reassign after a reopen, with no local flag", () => {
