@@ -16,7 +16,7 @@ src/__tests__/Field.test.tsx frontend
 src/__tests__/HomePageIdentity.test.tsx packages
 src/__tests__/LoginPage.test.tsx backend
 src/__tests__/PageShell.test.tsx frontend
-src/__tests__/SchedulerPage.test.tsx backend
+src/__tests__/SchedulerPage.contract.test.ts backend
 src/__tests__/Spinner.test.tsx frontend
 src/__tests__/a11yEngineBaseline.test.tsx frontend
 src/__tests__/accessTokenNeverBecomesACookie.test.ts frontend packages
@@ -44,7 +44,7 @@ src/__tests__/egyLexiconRules.test.ts frontend
 src/__tests__/enumsMatchTheSchema.test.ts packages
 src/__tests__/errorIsNotAnEmptyState.test.ts frontend
 src/__tests__/eventInvalidationReachesCache.test.ts packages
-src/__tests__/eventRegistry.test.ts backend
+src/__tests__/eventRegistry.contract.test.ts backend
 src/__tests__/focusRingContract.test.ts packages
 src/__tests__/inkOnSurfaceContract.test.ts packages
 src/__tests__/jestAlwaysRunList.test.ts *
@@ -61,7 +61,7 @@ src/__tests__/motionTokens.test.ts packages
 src/__tests__/notificationTarget.test.tsx backend
 src/__tests__/notifyKeysExistInTheBundles.test.ts frontend packages
 src/__tests__/notifyPortCarriesTheToast.test.ts packages
-src/__tests__/officerAssist.test.tsx backend config
+src/__tests__/officerAssist.contract.test.ts backend
 src/__tests__/oneRealtimeSocketPerSession.test.ts frontend packages
 src/__tests__/paginatedPagesCanBePaged.test.ts packages
 src/__tests__/plaqueTitleStaysLargeText.test.ts packages
