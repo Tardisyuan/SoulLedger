@@ -213,7 +213,7 @@ def test_patch_cannot_forge_a_conclusion(courts, open_case, payload):
 
     assert resp.status_code == 400, resp.data
     for field in payload:
-        assert field in resp.data, f"the refusal did not name {field!r}: {resp.data}"
+        assert field in field_errors(resp), f"the refusal did not name {field!r}: {resp.data}"
 
     open_case.refresh_from_db()
     assert open_case.verdict is None

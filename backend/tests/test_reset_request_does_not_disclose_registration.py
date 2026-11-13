@@ -60,7 +60,7 @@ def _answers(api_client, keys, email, ip_base):
     out = []
     for i in range(LIMIT + 1):
         res = _post(api_client, keys, email, f"198.51.100.{ip_base + i}")
-        out.append((res.status_code, dict(res.data)))
+        out.append((res.status_code, {k: v for k, v in res.data.items() if k != "instance"}))
     return out
 
 
@@ -120,7 +120,7 @@ class TestOneClientCannotWalkTheAddressBook:
         assert by_ip.status_code == 429
         # Same shape as the address refusal: the one `code` for both, and a
         # `retry_after` either way — nothing says which limit it was.
-        assert set(by_ip.data) == {"error", "code", "retry_after"}, by_ip.data
+        assert set(by_ip.data) == {"type", "title", "status", "code", "detail", "instance", "retry_after"}, by_ip.data
         assert by_ip.data["code"] == "rate_limited"
 
 

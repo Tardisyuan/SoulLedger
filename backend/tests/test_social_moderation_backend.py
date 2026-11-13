@@ -11,7 +11,7 @@ import pytest
 from django.utils import timezone
 
 from apps.audit.models import AuditLog
-from apps.core.problems import field_errors
+from apps.core.problems import field_errors, without_instance
 from apps.social import moderation as mod
 from apps.social.models import (
     Comment,
@@ -268,7 +268,7 @@ def test_a_new_word_must_name_its_category_and_old_ones_stay_uncategorised(cn_te
     client = officer_client(cn_moderator)
     for body in ({"word": "无类"}, {"word": "无类", "category": ""}):
         res = client.post(f"{MODERATION}/sensitive-words/", body, format="json")
-        assert res.status_code == 400 and "category" in res.json(), (body, res.content)
+        assert res.status_code == 400 and "category" in field_errors(res), (body, res.content)
     assert not SensitiveWord.objects.filter(tenant=cn_tenant, word="无类").exists()
 
     SensitiveWord.objects.create(tenant=cn_tenant, word="旧词")  # 0007 之前的词:未分类
@@ -308,7 +308,7 @@ def test_editing_a_word_keeps_creates_rules(cn_tenant, cn_moderator):
 
     for body in ({"action": "HIDE"}, {"category": "", "action": "HIDE"}, {"category": "隐私"}):
         res = client.patch(url, body, format="json")
-        assert res.status_code == 400 and "category" in res.json(), (body, res.content)
+        assert res.status_code == 400 and "category" in field_errors(res), (body, res.content)
     blank = client.patch(url, {"category": "ABUSE", "word": "   "}, format="json")
     assert blank.status_code == 400 and blank.json()["code"] == "invalid_word"
     dup = client.patch(url, {"category": "ABUSE", "word": "已有"}, format="json")
@@ -433,7 +433,7 @@ def test_only_admin_may_copy_and_a_moderator_learns_nothing_about_the_other_list
     assert not SensitiveWord.objects.filter(tenant=eu_tenant).exists()
     # 分不出源文明存不存在、有多少词:不存在的源答同一个 403。
     unknown = officer_client(eu_moderator).post(COPY, {"source_tenant": "NOPE"}, format="json")
-    assert (unknown.status_code, unknown.json()) == (403, res.json())
+    assert (unknown.status_code, without_instance(unknown)) == (403, without_instance(res))
     # 自己文明的词表照旧只列自己的。
     assert officer_client(eu_moderator).get(f"{MODERATION}/sensitive-words/").json()["results"] == []
     # 没有 social.moderate 的更进不来。
@@ -454,7 +454,7 @@ def test_a_halls_admin_cannot_copy_another_halls_words_into_its_own(cn_tenant, e
     assert not SensitiveWord.objects.filter(tenant=eu_tenant).exists()
     assert "地府机密词" not in client.get(f"{MODERATION}/sensitive-words/").content.decode()
     unknown = client.post(COPY, {"source_tenant": "NOPE"}, format="json")
-    assert (unknown.status_code, unknown.json()) == (403, res.json())
+    assert (unknown.status_code, without_instance(unknown)) == (403, without_instance(res))
 
 
 # ── 批量删词 ─────────────────────────────────────────────────────────────

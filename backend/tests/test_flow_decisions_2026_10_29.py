@@ -270,8 +270,8 @@ def test_rebirth_waits_for_the_original_flow():
     soul, case = _concluded(tenant)
     with pytest.raises(RebirthBlocked) as blocked:
         assert_may_be_reborn(Soul.objects.get(pk=soul.pk))
-    assert blocked.value.detail["code"] == "origin_flow_open"
+    assert blocked.value.problem_code == "origin_flow_open"
     sp.walk_flow(case)
     with pytest.raises(RebirthBlocked) as blocked:
         assert_may_be_reborn(Soul.objects.get(pk=soul.pk))
-    assert blocked.value.detail["code"] != "origin_flow_open"  # the next gate (the unexecuted disposition)
+    assert blocked.value.problem_code != "origin_flow_open"  # the next gate (the unexecuted disposition)

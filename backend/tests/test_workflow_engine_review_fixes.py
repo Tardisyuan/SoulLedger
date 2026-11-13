@@ -13,6 +13,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.audit.models import AuditLog
+from apps.core.problems import field_errors
 from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
 from apps.events.models import SoulEvent
@@ -526,7 +527,7 @@ def test_an_unexecuted_disposition_without_a_plan_stops_the_rebirth(cn):
     SentencePlan.all_objects.filter(pk=plan.pk).update(is_deleted=True)  # a soul with no plan to stop it
     with pytest.raises(RebirthBlocked) as blocked:
         assert_may_be_reborn(Soul.objects.get(pk=soul.pk))
-    assert blocked.value.detail["code"] == "disposition_not_executed"
+    assert blocked.value.problem_code == "disposition_not_executed"
     Disposition.all_objects.filter(pk=disposition.pk).update(is_deleted=True)  # a void one is not owed
     assert_may_be_reborn(Soul.objects.get(pk=soul.pk))
 
@@ -558,7 +559,7 @@ def test_a_warrant_is_refused_at_issue_when_no_city_god_can_take_the_case(cn):
 def test_creating_a_soul_with_another_civilizations_fact_is_refused(cn, field, value):
     admin = officer_client(sp.officer(f"create_{field}", "ADMIN", cn))
     res = admin.post("/api/v1/souls/", {"name": "新魂", field: value}, format="json")
-    assert res.status_code == 400 and field in res.data, res.data
+    assert res.status_code == 400 and field in field_errors(res), res.data
 
 
 # ── k. The 土地公 list counts registrations in the query, not per row ───────────────────────────

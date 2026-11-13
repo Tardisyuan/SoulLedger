@@ -19,7 +19,7 @@ from apps.audit.models import AuditLog
 from apps.authentication import tasks
 from apps.authentication.tokens import REMEMBER_CLAIM, RefreshToken
 from apps.authentication.views import PASSWORD_HELP_ACCEPTED
-from apps.core.problems import field_errors
+from apps.core.problems import field_errors, without_instance
 from apps.notifications.models import NotificationType, UserNotification
 from apps.tenants.models import Tenant
 from tests.soul_account_support import officer_client
@@ -291,7 +291,7 @@ class TestPasswordHelpNeverSaysWhetherAnAccountExists:
         known = _ask(api_client, "cn_judge", ip="10.3.0.1")
         unknown = _ask(api_client, "nobody_here", ip="10.3.0.1")
         assert known.status_code == 429
-        assert (known.status_code, known.content) == (unknown.status_code, unknown.content)
+        assert (known.status_code, without_instance(known)) == (unknown.status_code, without_instance(unknown))
         # Refused before the worker: the sixth request named nobody to anyone.
         assert [call.args[0] for call in eager.call_args_list] == [f"user_{i}" for i in range(5)]
 

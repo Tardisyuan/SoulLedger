@@ -57,8 +57,8 @@ def test_login_finds_the_hall_from_the_account(judge_user):
 def test_wrong_password_and_unknown_user_answer_the_same(judge_user):
     wrong, unknown = _login("judge", "nope"), _login("nobody", "nope")
     assert wrong.status_code == unknown.status_code == 401
-    assert {k: v for k, v in wrong.data.items() if k != "remaining_attempts"} == \
-        {k: v for k, v in unknown.data.items() if k != "remaining_attempts"}
+    assert {k: v for k, v in wrong.data.items() if k not in ("remaining_attempts", "instance")} == \
+        {k: v for k, v in unknown.data.items() if k not in ("remaining_attempts", "instance")}
 
 
 def test_a_soul_account_is_refused_with_the_generic_error(cn_tenant):

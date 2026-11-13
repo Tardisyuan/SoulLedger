@@ -199,7 +199,7 @@ def test_a_soul_with_a_workflow_of_the_same_case_type_in_progress_is_409(cn):
     # 审批编号(`WF-0582`)也在 409 里:提示条「已有一条…在进行中(WF-0582)」写的就是它。
     assert second.data["number"] == first.data["number"]
     assert second.data["number"].startswith("WF-")
-    assert second.data["status"] == first.data["status"]
+    assert second.data["workflow_status"] == first.data["status"]
     assert ApprovalWorkflow.objects.filter(soul=cn["soul"]).count() == 1
 
     # A finished one does not block a new one.

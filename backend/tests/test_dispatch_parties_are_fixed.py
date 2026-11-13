@@ -36,6 +36,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
@@ -168,7 +169,7 @@ def test_each_party_field_is_refused_on_its_own(two_tenants, attacker):
             f"PATCH of `{field}` alone returned {resp.status_code}; "
             f"it must be refused on its own, not only alongside the others."
         )
-        assert field in resp.data, (
+        assert field in field_errors(resp), (
             f"the 400 for `{field}` does not name the field it refused"
         )
 

@@ -151,7 +151,7 @@ def test_an_admin_can_set_organization_and_position_when_creating_a_user(api_cli
             "role": "VIEWER", "tenant": a.pk, "position": "判官"}
 
     refused = c.post("/api/v1/users/", {**body, "organization": str(org_b.pk)}, format="json")
-    assert refused.status_code == 400 and "organization" in refused.data, refused.data
+    assert refused.status_code == 400 and "organization" in field_errors(refused), refused.data
     assert not User.objects.filter(username="fresh_one").exists()
 
     ok = c.post("/api/v1/users/", {**body, "organization": str(org_a.pk)}, format="json")

@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.core.problems import field_errors
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
@@ -53,7 +54,7 @@ class TestSoulDateEnforcement:
     def test_a_birth_in_the_future_is_a_field_error(self):
         resp = self._post(birth_date={"year": 2999})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "in the future" in str(resp.data["birth_date"])
+        assert "in the future" in str(field_errors(resp)["birth_date"])
         assert not Soul.objects.filter(name="Dated Soul").exists()
 
     def test_editing_only_the_name_does_not_read_a_stored_future_birth(self):

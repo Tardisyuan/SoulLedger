@@ -10,6 +10,7 @@ from unittest import mock
 
 import pytest
 
+from apps.core.problems import without_instance
 from apps.social.models import Follow
 from tests.chat_support import matrix  # noqa: F401
 from tests.soul_account_support import ready_soul
@@ -39,7 +40,7 @@ def test_an_id_in_another_civilization_is_refused_like_one_that_does_not_exist(c
     foreign = _open(a_client, target_user=b.user_id)
     missing = _open(a_client, target_user=b.user_id + 10_000)
     assert foreign.status_code == missing.status_code == 404
-    assert foreign.content == missing.content
+    assert without_instance(foreign) == without_instance(missing)  # byte for byte but the request id
     assert "Beatrice" not in foreign.content.decode()
     assert not matrix.rooms
 

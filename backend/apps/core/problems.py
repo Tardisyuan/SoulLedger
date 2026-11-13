@@ -235,3 +235,11 @@ def field_errors(response_or_data) -> dict:
     for e in (data or {}).get("errors", []) if isinstance(data, dict) else []:
         out.setdefault(e.get("field", "non_field_errors"), []).append(e.get("detail", ""))
     return out
+
+
+def without_instance(response) -> bytes:
+    """The body bytes with the per-request `instance` (the request id) blanked: two refusals that must not tell
+    callers apart are byte-identical except for it."""
+    data = getattr(response, "data", None)
+    instance = data.get("instance") if isinstance(data, dict) else None
+    return response.content.replace(instance.encode(), b"") if instance else response.content

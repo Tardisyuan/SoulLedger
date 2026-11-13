@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from apps.core.problems import field_errors
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
 from apps.souls.models import Soul, SoulState
@@ -43,7 +44,7 @@ def test_a_fated_date_the_death_check_cannot_compare_is_refused_on_entry(cn_tena
     url = f"/api/v1/souls/{soul.pk}/"
     for value in ({"year": -200, "month": 3, "day": 1}, {"year": 2030, "month": None, "day": None}):
         res = client.patch(url, {"fated_death_date": value}, format="json")
-        assert res.status_code == 400 and "fated_death_date" in res.data, res.data
+        assert res.status_code == 400 and "fated_death_date" in field_errors(res), res.data
     assert client.patch(url, {"fated_death_date": "2030-03-01"}, format="json").status_code == 200
     assert client.patch(url, {"fated_death_date": None}, format="json").status_code == 200
 
@@ -127,7 +128,7 @@ def test_a_date_edit_does_not_newly_hold_a_claimed_case(cn_tenant, admin_user, j
     fated = date.today() + timedelta(days=400)
     res = officer_client(admin_user).patch(
         f"/api/v1/souls/{judgment.soul_id}/", {"fated_death_date": fated.isoformat()}, format="json")
-    assert res.status_code == 400 and "death_date" in res.data, res.data
+    assert res.status_code == 400 and "death_date" in field_errors(res), res.data
     judgment.refresh_from_db()
     assert judgment.held_until is None
     assert Soul.objects.get(pk=judgment.soul_id).fated_death_year is None

@@ -176,7 +176,7 @@ class TestCreate:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "events" in field_errors(resp)
+        assert "events.0" in field_errors(resp)  # the one bad item of the list
 
     def test_event_types_is_the_enum_the_handler_filters_on(self, users):
         resp = users["admin"].get(f"{ADMIN_URL}event-types/")

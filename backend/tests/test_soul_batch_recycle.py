@@ -335,7 +335,7 @@ def test_a_duplicate_id_is_400_and_nothing_moves(world):
     a, b, _ = world["souls"]
     response = world["clerk"].post(URL, {"ids": _ids(a, b, a)}, format="json")
     assert response.status_code == 400, response.content
-    assert str(a.pk) in str(response.json()["ids"])
+    assert str(a.pk) in str(field_errors(response)["ids"])
     assert _deleted(a, b) == [False, False]
 
 

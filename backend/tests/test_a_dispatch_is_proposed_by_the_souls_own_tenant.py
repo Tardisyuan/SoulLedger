@@ -31,6 +31,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.dispatch.services import DispatchService
 from apps.souls.models import Soul, SoulState
@@ -227,7 +228,7 @@ def test_a_direct_proposal_honours_the_callers_data_scope(realms):
                                  "reason": "exchange between the two halls, as agreed"}, format="json")
 
     resp = post(outside)
-    assert resp.status_code == 400 and "soul" in resp.data, resp.data
+    assert resp.status_code == 400 and "soul" in field_errors(resp), resp.data
     assert not DispatchRecord.all_objects.filter(soul=outside).exists()
     assert post(inside).status_code == 201
     invalidate_all_permissions()
@@ -309,5 +310,5 @@ def test_the_hall_less_admin_without_a_source_hall_gets_a_400_not_a_500(realms):
         "soul": str(realms["eu_soul"].id),
         "reason": "admin forgot to say where the soul is",
     }, format="json")
-    assert resp.status_code == 400 and "source_tenant" in resp.data, resp.data
+    assert resp.status_code == 400 and "source_tenant" in field_errors(resp), resp.data
     assert not DispatchRecord.all_objects.filter(soul=realms["eu_soul"]).exists()

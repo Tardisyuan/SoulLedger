@@ -248,8 +248,9 @@ def test_a_hall_admin_manages_city_gods_and_assigns_officers(hall, cn_tenant):
     assert created.status_code == 201, created.data
     assert created.data["regions"] == ["临安"] and created.data["officers"][0]["id"] == hall["clerk"].pk
     taken = lead.post(GODS, {"name": "别的", "regions": ["杭州"]}, format="json")
-    assert taken.status_code == 400 and taken.data["regions"]["code"] == "region_taken"
-    assert (taken.data["regions"]["region"], taken.data["regions"]["city_god"]) == ("杭州", "杭州府城隍")
+    refusal = next(e for e in taken.data["errors"] if e.get("field") == "regions")
+    assert taken.status_code == 400 and refusal["code"] == "region_taken"
+    assert (refusal["region"], refusal["city_god"]) == ("杭州", "杭州府城隍")
     assert officer_client(hall["judge"]).post(GODS, {"name": "x"}, format="json").status_code == 403
     assert officer_client(hall["judge"]).get(GODS).data["count"] == 3
     judgment = _dead(cn_tenant, "杭州")
