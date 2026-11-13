@@ -70,8 +70,8 @@ export const PAGES: readonly DoorPage[] = [
   { path: "/dashboard", door: "desk", section: "desk" },
   // 审 · 来源(案卷台的 chip 也去这几页)。转生申请是第七个来源(用户决定)。
   { path: "/judgment", door: "desk", section: "sources" },
-  // 这一页叫「审判队列」(第三十六批 第一节第 2 条:标题、面包屑、门内标签同一个名字);「分诊」是案卷台上另一个来源。
-  { path: "/judgment/queue", door: "desk", section: "sources", gate: { permission: "judgment.read" }, labelKey: "breadcrumb.menu.judgment" },
+  // 这一页叫「分诊」:标题、面包屑、门内标签同一个名字;「审判队列」是 /judgment(第三十七批第 1 条,改正第三十六批)。
+  { path: "/judgment/queue", door: "desk", section: "sources", gate: { permission: "judgment.read" }, labelKey: "caseDesk.triage" },
   { path: "/judgment/appeals", door: "desk", section: "sources" },
   { path: "/cross-judgments", door: "desk", section: "sources" },
   { path: "/city-god-cases", door: "desk", section: "sources" },

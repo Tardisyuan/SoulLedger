@@ -96,8 +96,8 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
         ? t(PATH_LABELS[path])
         : label(`breadcrumb.${segment}`, label(`breadcrumb.menu.${segment.replace(/-/g, "_")}`, segment));
 
-  // 不是菜单项的门内页(案卷台、审判队列、总簿)按门写:门 › 门的首页 › 这一页(Design 第三十六批 第一节第 2 条,
-  // 「审 › 案卷台 › 审判队列」)。菜单树里它们只能借住到前缀的菜单项下(/judgment/queue 曾读作「… / 分诊队列」)。
+  // 不是菜单项的门内页(案卷台、分诊、总簿)按门写:门 › 门的首页 › 这一页(Design 第三十六批 第一节第 2 条、
+  // 第三十七批第 1 条:「审 › 案卷台 › 分诊」)。菜单树里它们只能借住到前缀的菜单项下(/judgment/queue 曾读作「审判队列 / 分诊队列」)。
   // 门在中文里写门上的字(审),别的语言写门名(Cases):en 的门字是一个字母。
   const gated = pageOf(pathname);
   if (gated?.gate && gated.labelKey && gated.path === pathname) {

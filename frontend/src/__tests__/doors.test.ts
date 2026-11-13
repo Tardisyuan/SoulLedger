@@ -108,10 +108,10 @@ describe("门内看到哪几页:菜单决定", () => {
     expect(doorTabs("desk", noInbox).map((p) => p.path)).not.toContain("/soul-inbox");
   });
 
-  it("/judgment/queue 的门内标签是「审判队列」,不是「分诊」(第三十六批 第一节第 2 条)", () => {
+  it("/judgment/queue 的门内标签是「分诊」,不与 /judgment 的「审判队列」同名(第三十七批第 1 条)", () => {
     const page = pageOf("/judgment/queue");
-    expect(page?.labelKey).toBe("breadcrumb.menu.judgment");
-    expect(page?.labelKey).not.toBe("caseDesk.triage");
+    expect(page?.labelKey).toBe("caseDesk.triage");
+    expect(page?.labelKey).not.toBe("breadcrumb.menu.judgment");
   });
 
   it("界域:管理员在 司 · 殿司;判官在「律」里只读,叫「冥界图」(第三十六批 第一节第 4 条)", () => {

@@ -873,7 +873,7 @@ describe("身份带殿名跟着眼前这一案", () => {
   it("写这一案的殿,前面是租户名", async () => {
     const set = jest.fn();
     renderInBand(set);
-    await waitFor(() => expect(set).toHaveBeenLastCalledWith({ title: "breadcrumb.menu.judgment", meta: undefined, hall: "中国地府 · 第一殿" }));
+    await waitFor(() => expect(set).toHaveBeenLastCalledWith({ title: "breadcrumb.queue", meta: undefined, hall: "中国地府 · 第一殿" }));
     // 案子到之前(以及队列空了)写的是刑名司;案子到了就换成它的殿,不停在司名上。
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ hall: "中国地府 · plaque.office.trials" }));
   });
@@ -883,7 +883,7 @@ describe("身份带殿名跟着眼前这一案", () => {
     const set = jest.fn();
     renderInBand(set);
     await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0)); // 案情栏与「我认领的」列表各一处
-    expect(set).toHaveBeenLastCalledWith({ title: "breadcrumb.menu.judgment", meta: undefined, hall: "中国地府 · plaque.office.trials" });
+    expect(set).toHaveBeenLastCalledWith({ title: "breadcrumb.queue", meta: undefined, hall: "中国地府 · plaque.office.trials" });
   });
 });
 

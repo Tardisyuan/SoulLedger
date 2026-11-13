@@ -155,8 +155,9 @@ describe("Breadcrumb", () => {
           "audit.tabs.permissions": "Permission changes",
           "audit.tabs.stats": "Statistics",
           "audit.tabs.logins": "Login log",
-          "breadcrumb.menu.judgment": "Judgment Queue",
-          "breadcrumb.queue": "Triage queue",
+          "breadcrumb.menu.judgment": "Judgment queue",
+          "breadcrumb.queue": "Triage",
+          "caseDesk.triage": "Triage",
           "officer_app.desk.title": "Case desk",
           "caseDesk.rail.desk": "Cases",
           "caseDesk.rail.desk_glyph": "审",
@@ -239,14 +240,14 @@ describe("Breadcrumb", () => {
   });
 
   it.each([
-    ["en", ["Cases", "Case desk", "Judgment Queue"]],
-    ["zh-Hans", ["审", "Case desk", "Judgment Queue"]],
-  ] as const)("/judgment/queue (%s) reads door › case desk › Judgment Queue, not the triage name (batch 36 §1.2)", (locale, trail) => {
+    ["en", ["Cases", "Case desk", "Triage"]],
+    ["zh-Hans", ["审", "Case desk", "Triage"]],
+  ] as const)("/judgment/queue (%s) reads door › case desk › Triage, not the /judgment page's name (batch 37 §1)", (locale, trail) => {
     mockPathname = "/judgment/queue";
     mockLocale = locale;
     render(<Breadcrumb menus={menus} />);
     expect(screen.getAllByRole("listitem").map((li) => li.textContent?.replace("/", "").trim())).toEqual(trail);
-    expect(screen.queryByText("Triage queue")).not.toBeInTheDocument();
+    expect(screen.queryByText("Judgment queue")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Case desk" })).toHaveAttribute("href", "/desk");
   });
 

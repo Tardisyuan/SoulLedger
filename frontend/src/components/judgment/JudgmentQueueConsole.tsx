@@ -100,10 +100,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   });
   const crossForced = isCrossJudgmentOpen(cross) && (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
 
-  // 身份带:题「审判队列」(v3 `queue-product`;面包屑末段是「分诊队列」),殿名是眼前这一案的殿;
+  // 身份带:题「分诊」(第三十七批第 1 条;「审判队列」是 /judgment),殿名是眼前这一案的殿;
   // 案子没记殿或队列空了就写刑名司。
   const hall = useHall(courtLabel(t, judgment?.court, locale) || t("plaque.office.trials"));
-  usePlaque({ title: t("breadcrumb.menu.judgment"), hall });
+  usePlaque({ title: t("breadcrumb.queue"), hall });
 
   // Notes belong to the case in front of the operator, never to the next one.
   //
@@ -257,7 +257,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       <div className="min-h-12 flex flex-wrap items-center px-6 gap-x-4 max-sm:pt-2 border-b border-[oklch(var(--color-line))]/50">
         {/* 墨色:文明色只给顶线、印、卷宗脊、焦点四处,标题不在其中(第三十六批 第一节第 2 条)。 */}
         <h1 className="font-title text-lg text-[oklch(var(--color-ink))] flex-1 max-sm:basis-full">
-          {t("breadcrumb.menu.judgment")}
+          {t("breadcrumb.queue")}
         </h1>
         <p
           className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))] max-sm:flex-1"
