@@ -1,16 +1,25 @@
 import { APPEAL_ERROR_CODES, type JudgmentAppealStatus, type JudgmentClaimRefusal } from "@soulledger/core/api";
 import type { BadgeTone } from "@/src/components/ui/Badge";
+import { DOSSIER_TAG } from "@/src/components/ui/StatusBadge";
 import { responseCode, responseData } from "@soulledger/core/api/client";
 
 /** 申诉状态 → 徽章色调。改判不是失败,撤回也不是:中性;复核中是进行中。 */
 export const APPEAL_STATUS_TONES: Record<JudgmentAppealStatus, BadgeTone> = {
   PENDING: "neutral",
   IN_REVIEW: "info",
-  UPHELD: "neutral",
+  UPHELD: "error",
   AMENDED: "ink",
   WITHDRAWN: "neutral",
   // 灵魂被阿米特吞噬，申诉随之作废(P2-10)。
   VOID: "neutral",
+};
+
+/**
+ * 申诉被驳回(维持原判)的字形是 ⊘(第三十批第 3 步第 5 条),不取色调默认的 ✕ —— ✕ 留给「已驳回」。
+ * 别的状态用色调的默认字形。`statusGlyphFont.test.ts` 读这张表,字形必须在字体里。
+ */
+export const APPEAL_STATUS_GLYPHS: Partial<Record<JudgmentAppealStatus, string>> = {
+  UPHELD: DOSSIER_TAG.appealRejected.glyph,
 };
 
 export type AppealRefusal = { code: string; foreignOrders?: number[] };

@@ -31,7 +31,8 @@ ROOT = Path(__file__).resolve().parent.parent
 # legends draw ■/□ beside ○◇▣ — they were left out, so the squares came from the OS font
 # while their neighbours came from here.
 # ‖ (2026-11-13): 第三十批「卷宗」— 待定 (verdict PURGATORY) is ‖, no longer ◇ shared with 审判中.
-GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄■□‖"
+# ⊘ (2026-11-13): 第三十批第 3 步 — 申诉被驳回 is ⊘ (已驳回 keeps ✕).
+GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄■□‖⊘"
 FAMILY = "SoulLedger Glyphs"
 PS_NAME = "SoulLedgerGlyphs-Regular"
 OUT = [ROOT / "frontend/public/fonts/SoulLedgerGlyphs.ttf", ROOT / "mobile/assets/fonts/SoulLedgerGlyphs.ttf"]

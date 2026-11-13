@@ -39,6 +39,9 @@ export const DOSSIER_TAG = {
   settled: { glyph: "✓", tone: "success" },
   demerit: { glyph: "−", tone: "error" },
   merit: { glyph: "+", tone: "success" },
+  /* 第 3 步第 5 条:「已驳回」保留 ✕;「申诉被驳回」是 ⊘(圈 = 第二轮,与申诉的 ↺ 同属圆形一族)。两者都是 neg 淡染。 */
+  rejected: { glyph: "✕", tone: "error" },
+  appealRejected: { glyph: "⊘", tone: "error" },
 } as const satisfies Record<string, { glyph: string; tone: BadgeTone }>;
 
 /**
@@ -48,9 +51,20 @@ export const DOSSIER_TAG = {
  * v3 的 `STATUS_BADGE_BORDER`(中性灰框)随之删掉。
  */
 
-export function StatusBadge({ namespace, value, tone = "neutral" }: { namespace: string; value: string | null | undefined; tone?: BadgeTone }) {
+export function StatusBadge({
+  namespace,
+  value,
+  tone = "neutral",
+  glyph,
+}: {
+  namespace: string;
+  value: string | null | undefined;
+  tone?: BadgeTone;
+  /** 不取色调的默认字形时(如申诉被驳回 ⊘)。 */
+  glyph?: string;
+}) {
   return (
-    <Badge tone={tone} glyph={TONE_GLYPH[tone]}>
+    <Badge tone={tone} glyph={glyph ?? TONE_GLYPH[tone]}>
       <DomainEnum namespace={namespace} value={value} />
     </Badge>
   );

@@ -15,7 +15,7 @@
   font-family: 'SoulLedger Glyphs';
   src: url('/fonts/SoulLedgerGlyphs.ttf') format('truetype');
   font-display: block;
-  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1, U+2016;
+  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1, U+2016, U+2298;
 }
 
 @theme {
