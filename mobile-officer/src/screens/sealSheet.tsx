@@ -10,6 +10,7 @@
  */
 import type { GreekAccount, JudgmentDetail } from "@soulledger/core/api/judgment";
 import { verdictText } from "@soulledger/core/domain/verdictNames";
+import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 
@@ -23,6 +24,11 @@ import { verdictFailure } from "./swipe";
 
 /** 按住多久落印(十二.6)。 */
 export const HOLD_TO_SEAL_MS = 1000;
+
+/** The seal's feel (官员端真机 2026-11-14: it had none): a tick as the hold starts, a firm knock as the seal lands, the
+ *  system's success / error buzz on the server's answer. The system's own haptics setting turns them off; a phone
+ *  without a motor just does nothing. */
+const buzz = (p: Promise<void>) => void p.catch(() => {});
 const NOTES_MAX = 2000;
 
 export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean; judgment: JudgmentDetail; onClose: () => void; onSealed: () => void }) {
@@ -41,10 +47,14 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
     setBusy(true);
     confirmedDecision(t("officer_app.biometric.prompt"), () => submitVerdict(judgment.id, sealPayload(civ, c)))
       .then(() => {
+        buzz(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
         toast(t("officer_app.seal.done"), "success", DECISION_TOAST);
         onSealed();
       })
-      .catch((e: unknown) => toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST))
+      .catch((e: unknown) => {
+        if (decisionFailureKind(e) === "failure") buzz(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
+        toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST);
+      })
       .finally(() => setBusy(false));
   };
 
@@ -144,6 +154,7 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
   }, [busy, fill]);
   const pressIn = () => {
     fired.current = false;
+    buzz(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
     if (!reduced) Animated.timing(fill, { toValue: 1, duration: HOLD_TO_SEAL_MS, useNativeDriver: true }).start();
   };
   const pressOut = () => {
@@ -182,6 +193,7 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
         onPressOut={pressOut}
         onLongPress={() => {
           fired.current = true;
+          buzz(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy));
           fill.setValue(1);
           onSeal();
         }}

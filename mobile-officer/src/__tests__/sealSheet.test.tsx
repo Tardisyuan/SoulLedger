@@ -9,6 +9,14 @@ import { verdictFailure } from "../screens/swipe";
 import { NO_SEAL, passBarredBy, sealPayload, sealReady } from "../verdict";
 import { renderOfficer } from "./harness";
 
+import * as Haptics from "expo-haptics";
+
+jest.mock("expo-haptics", () => ({
+  ...jest.requireActual("expo-haptics"),
+  impactAsync: jest.fn(async () => {}),
+  notificationAsync: jest.fn(async () => {}),
+}));
+
 const mockConclude = jest.fn();
 jest.mock("@soulledger/core/api/judgment", () => ({
   ...jest.requireActual("@soulledger/core/api/judgment"),
@@ -84,6 +92,27 @@ describe("按住落印", () => {
     fireEvent(screen.getByTestId("seal-hold"), "longPress");
     await waitFor(() => expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "RETRY", notes: "证词互相矛盾" }));
     await waitFor(() => expect(sealed).toHaveBeenCalled());
+  });
+
+  it("feels like a seal: a tick as the hold starts, a knock as it lands, the success buzz on the answer", async () => {
+    mockConclude.mockResolvedValue({ data: {} });
+    open();
+    fireEvent.press(screen.getByTestId("seal-option-RETRY"));
+    fireEvent(screen.getByTestId("seal-hold"), "pressIn");
+    expect(Haptics.impactAsync).toHaveBeenLastCalledWith(Haptics.ImpactFeedbackStyle.Light);
+    fireEvent(screen.getByTestId("seal-hold"), "longPress");
+    expect(Haptics.impactAsync).toHaveBeenLastCalledWith(Haptics.ImpactFeedbackStyle.Heavy);
+    await waitFor(() => expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success));
+    expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
+  });
+
+  it("a refusal buzzes as an error", async () => {
+    mockConclude.mockRejectedValue({ response: { status: 400, data: { detail: "不行" } } });
+    open();
+    fireEvent.press(screen.getByTestId("seal-option-RETRY"));
+    fireEvent(screen.getByTestId("seal-hold"), "longPress");
+    await waitFor(() => expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error));
+    expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
   });
 
   it("a refusal the app has no words for is shown as the server said it, and nothing is sealed", async () => {
