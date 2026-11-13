@@ -138,3 +138,21 @@ def test_the_daily_e2e_still_runs_all_three_engines():
     data, _ = _load("ci.yml")
     projects = {leg["project"] for leg in data["jobs"]["e2e"]["strategy"]["matrix"]["include"]}
     assert projects == {"chromium", "firefox", "mobile-chrome"}, projects
+
+
+def test_a_green_main_run_leaves_its_suite_counts_as_an_artifact_and_commits_nothing():
+    """A10 (2026-11-13): the `stats` job turns the suites' own reports into landing-stats.json's shape and uploads it.
+    Writing back to the repository is deliberately not done (the job token is read-only), so it must stay that way
+    unless this test and the `permissions:` block are changed together."""
+    data, _ = _load("ci.yml")
+    assert data["permissions"] == {"contents": "read"}
+    stats = data["jobs"]["stats"]
+    assert {"backend", "frontend", "mobile", "officer"} <= set(stats["needs"])
+    assert "refs/heads/main" in stats["if"]
+    uses = [step.get("uses", "") for step in stats["steps"]]
+    assert any(u.startswith("actions/download-artifact@") for u in uses)
+    assert any(u.startswith("actions/upload-artifact@") for u in uses)
+    assert not any("git push" in step.get("run", "") or "git commit" in step.get("run", "") for step in stats["steps"])
+    # every count the script reads is uploaded by the job that produces it
+    artifacts = {(s.get("with") or {}).get("name") for j in data["jobs"].values() for s in j["steps"]}
+    assert {"count-backend", "count-web", "count-soul_app", "count-officer_app"} <= artifacts
