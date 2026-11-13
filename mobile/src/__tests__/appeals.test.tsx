@@ -3,15 +3,15 @@
  */
 import { appealRefusalKey, type MeAppealableJudgment, type MeJudgmentAppeal } from "@soulledger/core/api/soul";
 import { NavigationContainer } from "@react-navigation/native";
-import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { fireEvent, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "../feedback";
-import { I18nProvider, translate } from "../i18n";
+import { translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { AppealDeadlineNote, AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
+import { renderSoul } from "./harness";
 import { stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -25,12 +25,8 @@ jest.mock("@react-navigation/native", () => ({
 }));
 
 function wrap(children: ReactNode) {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <NavigationContainer>{children}</NavigationContainer>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <NavigationContainer>{children}</NavigationContainer>
   );
 }
 
@@ -291,16 +287,12 @@ it("withdrawing the first of two says one is left; the second says none is", () 
 
 it("a refused withdrawal (already decided / in the appeal flow) is said in words, not as the generic unknown-code line", async () => {
   stubApi({ "POST /me/judgment-appeals/a1/withdraw/": { status: 409, data: { code: "appeal_closed", detail: "This appeal is DECIDED." } } });
-  render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ToastProvider>
-          <NavigationContainer>
-            <AppealLine row={row({ rounds_used: 1 })} rounds={[round()]} focused onChanged={() => {}} />
-          </NavigationContainer>
-        </ToastProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  renderSoul(
+    <ToastProvider>
+      <NavigationContainer>
+        <AppealLine row={row({ rounds_used: 1 })} rounds={[round()]} focused onChanged={() => {}} />
+      </NavigationContainer>
+    </ToastProvider>
   );
   fireEvent.press(screen.getByTestId("appeal-withdraw-a1"));
   fireEvent.press(screen.getByTestId("appeal-withdraw-confirm"));

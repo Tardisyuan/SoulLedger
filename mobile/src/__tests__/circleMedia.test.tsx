@@ -7,19 +7,18 @@
  * 每个「能」都配一个「不能」:发出按钮可用的断言旁边,总有一条它在传图 / 失败时不可用。
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { Image } from "expo-image";
 import { AccessibilityInfo, Dimensions, StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "../feedback";
-import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { CircleScreen, ComposePostScreen } from "../screens/circle";
 import { gridColumns } from "../screens/circleMedia";
 import { themeFor, type ColorScheme } from "../theme";
 import { ThemeContext } from "../ui";
+import { renderSoul } from "./harness";
 import { heldReply, stubApi } from "./stubApi";
 
 const mockPopTo = jest.fn();
@@ -75,14 +74,10 @@ jest.mock("expo-image-manipulator", () => {
 
 function wrap(children: ReactNode, scheme?: ColorScheme) {
   const inner = scheme ? <ThemeContext.Provider value={themeFor("CHINESE", scheme)}>{children}</ThemeContext.Provider> : children;
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ToastProvider>
-          <NavigationContainer>{inner}</NavigationContainer>
-        </ToastProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <ToastProvider>
+      <NavigationContainer>{inner}</NavigationContainer>
+    </ToastProvider>
   );
 }
 

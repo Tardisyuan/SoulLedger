@@ -6,14 +6,13 @@ import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, within } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { useState, type ReactNode } from "react";
 import { AccessibilityInfo, StyleSheet, Text } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { Sheet, SHEET_CLOSE_DRAG_PT, SHEET_CLOSE_SPEED_PT_PER_MS, sheetReleaseCloses, useSheetGestures } from "../feedback";
-import { I18nProvider, translate } from "../i18n";
+import { translate } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { defaultLifeSection, lifePath, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
@@ -22,6 +21,7 @@ import { SessionProvider } from "../session";
 import { family } from "../fonts";
 import { GUTTER_PT, radius, space, themeFor, v4 } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
+import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
@@ -29,14 +29,10 @@ const secure = (SecureStore as unknown as { __store: Map<string, string> }).__st
 
 
 function wrap(children: ReactNode, civilization: string | null = "CHINESE") {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ThemeContext.Provider value={themeFor(civilization, "light")}>
-          <NavigationContainer>{children}</NavigationContainer>
-        </ThemeContext.Provider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <ThemeContext.Provider value={themeFor(civilization, "light")}>
+      <NavigationContainer>{children}</NavigationContainer>
+    </ThemeContext.Provider>
   );
 }
 
@@ -229,14 +225,10 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
   const NONE = { state: "none", rebirth_open: true, stations: [] };
 
   function renderApp() {
-    return render(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <SessionProvider>
-            <RootNavigator />
-          </SessionProvider>
-        </I18nProvider>
-      </SafeAreaProvider>
+    return renderSoul(
+      <SessionProvider>
+        <RootNavigator />
+      </SessionProvider>
     );
   }
   const expanded = (key: string) => screen.getByTestId(`section-${key}-toggle`).props.accessibilityState.expanded as boolean;

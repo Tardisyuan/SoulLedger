@@ -5,15 +5,14 @@
  */
 import { soulSocialApi, type SoulSocialStatus } from "@soulledger/core/api/soul-social";
 import { NavigationContainer } from "@react-navigation/native";
-import { act, render, renderHook, screen, waitFor } from "@testing-library/react-native";
+import { act, renderHook, screen, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "../feedback";
-import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { CircleInboxScreen, useUnreadInteractions } from "../screens/circleInbox";
 import { clearSocialStatus, invalidateSocialStatus, useSocialStatus } from "../socialStatus";
+import { renderSoul } from "./harness";
 import { stubApi } from "./stubApi";
 
 jest.mock("@react-navigation/native", () => ({
@@ -113,17 +112,13 @@ describe("circle status · 互动消息 wiring", () => {
           };
         })
     );
-    render(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <ToastProvider>
-            <NavigationContainer>
-              <Bar />
-              <CircleInboxScreen />
-            </NavigationContainer>
-          </ToastProvider>
-        </I18nProvider>
-      </SafeAreaProvider>
+    renderSoul(
+      <ToastProvider>
+        <NavigationContainer>
+          <Bar />
+          <CircleInboxScreen />
+        </NavigationContainer>
+      </ToastProvider>
     );
     await waitFor(() => expect(readSpy).toHaveBeenCalledTimes(1));
     expect((await screen.findByTestId("badge")).props.children).toBe("3");

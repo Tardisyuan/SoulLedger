@@ -4,16 +4,15 @@
  * on every screen including the sign-in.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, screen } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
 import { NEUTRAL_CIV, v4 } from "../theme";
+import { renderSoul } from "./harness";
 import { resetLoginMemory } from "./stubApi";
 
 const appJson = require("../../app.json") as { expo: { userInterfaceStyle?: string } };
@@ -27,14 +26,10 @@ jest.mock("react-native/Libraries/Utilities/useColorScheme", () => ({
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
 function renderApp() {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <SessionProvider>
-          <RootNavigator />
-        </SessionProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <SessionProvider>
+      <RootNavigator />
+    </SessionProvider>
   );
 }
 

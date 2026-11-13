@@ -5,18 +5,17 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, screen } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import Svg, { Path, Stop } from "react-native-svg";
 
-import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { ON_PLAQUE, motion, v4 } from "../theme";
+import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockWindow = { width: 390, height: 844, scale: 3, fontScale: 1 };
@@ -30,14 +29,10 @@ const secure = (SecureStore as unknown as { __store: Map<string, string> }).__st
 const ORDER = ["records", "judgments", "dispositions", "applications", "sentence", "past_lives"];
 
 function renderApp() {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <SessionProvider>
-          <RootNavigator />
-        </SessionProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <SessionProvider>
+      <RootNavigator />
+    </SessionProvider>
   );
 }
 

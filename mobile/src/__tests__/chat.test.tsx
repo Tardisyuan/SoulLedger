@@ -21,12 +21,11 @@ import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 
 import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
 import { AppState, FlatList, Platform, StyleSheet, TextInput, type AppStateStatus } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, OUTBOX_KEY, clearOutbox, readOutbox, useChat, useChatStatus, type Chat, type ChatStatus } from "../chat";
 import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { AppHeader } from "../chrome";
-import { I18nProvider, translate } from "../i18n";
+import { translate } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { family } from "../fonts";
@@ -34,6 +33,7 @@ import { formatStamp } from "../rules";
 import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
+import { renderSoul, inSoulFrame } from "./harness";
 import { PROFILE, heldReply, pressTab, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(), getStringAsync: jest.fn() }));
@@ -221,14 +221,10 @@ function wrap(chat: Chat, children: ReactNode) {
 }
 
 function providers(chat: Chat, children: ReactNode) {
-  return (
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ChatContext.Provider value={chat}>
-          <NavigationContainer>{children}</NavigationContainer>
-        </ChatContext.Provider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return inSoulFrame(
+    <ChatContext.Provider value={chat}>
+      <NavigationContainer>{children}</NavigationContainer>
+    </ChatContext.Provider>
   );
 }
 
@@ -1634,14 +1630,10 @@ describe("the fourth tab", () => {
       "/me/rebirth-applications/": { status: 200, data: { can_apply: false, reason: "not_eligible", cooldown_until: null, results: [] } },
       ...(chatRoutes as Record<string, Reply | Promise<Reply>>),
     });
-    render(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <SessionProvider>
-            <RootNavigator />
-          </SessionProvider>
-        </I18nProvider>
-      </SafeAreaProvider>
+    renderSoul(
+      <SessionProvider>
+        <RootNavigator />
+      </SessionProvider>
     );
     await screen.findByTestId("tab-Life");
     return calls;
@@ -1727,18 +1719,14 @@ describe("letters after the network comes back", () => {
   // The provider's first `getNetworkStateAsync` answers after mount; let it land before the
   // test changes the network, or its stale "connected" reads as a return.
   const online = async (chat: Chat) => {
-    render(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <NetworkProvider>
-            <ChatContext.Provider value={chat}>
-              <NavigationContainer>
-                <LettersScreen />
-              </NavigationContainer>
-            </ChatContext.Provider>
-          </NetworkProvider>
-        </I18nProvider>
-      </SafeAreaProvider>
+    renderSoul(
+      <NetworkProvider>
+        <ChatContext.Provider value={chat}>
+          <NavigationContainer>
+            <LettersScreen />
+          </NavigationContainer>
+        </ChatContext.Provider>
+      </NetworkProvider>
     );
     await act(async () => {});
   };

@@ -9,7 +9,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, ActivityIndicator, StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppHeader } from "../chrome";
 import { HERO } from "../emblems";
@@ -19,6 +18,7 @@ import { LifeSections } from "../screens/life";
 import { themeFor, type CivKey } from "../theme";
 import { Button, Loader, ThemeContext } from "../ui";
 import { Welcome, welcomeFrom } from "../welcome";
+import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi } from "./stubApi";
 
 const mockWindow = { width: 390, height: 844, scale: 3, fontScale: 1 };
@@ -36,14 +36,10 @@ const paths = (root: { findAll: (p: (n: Node) => boolean) => Node[] }) =>
   root.findAll((n) => typeof n.type === "string" && typeof n.props.d === "string").map((n) => n.props.d as string);
 
 function wrap(children: ReactNode, civ: CivKey = "cn") {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ThemeContext.Provider value={themeFor(CIVILIZATION[civ], "dark")}>
-          <NavigationContainer>{children}</NavigationContainer>
-        </ThemeContext.Provider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <ThemeContext.Provider value={themeFor(CIVILIZATION[civ], "dark")}>
+      <NavigationContainer>{children}</NavigationContainer>
+    </ThemeContext.Provider>
   );
 }
 

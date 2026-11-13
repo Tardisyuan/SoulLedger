@@ -7,18 +7,17 @@ import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { soulHttp } from "@soulledger/core/api/soul";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import Svg, { Stop } from "react-native-svg";
 
-import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { PUSH_TOKEN_KEY } from "../push";
 import { PENDING_LOGOUT_KEY, SessionProvider } from "../session";
 import { NEUTRAL_CIV, v4 } from "../theme";
+import { renderSoul } from "./harness";
 import { PROFILE, ageAnswers, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -28,14 +27,10 @@ const glowOf = (testID: string) =>
   screen.UNSAFE_getAllByType(Svg).find((el) => el.props.testID === testID)!.findAllByType(Stop)[0].props.stopColor;
 
 function renderApp() {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <SessionProvider>
-          <RootNavigator />
-        </SessionProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <SessionProvider>
+      <RootNavigator />
+    </SessionProvider>
   );
 }
 

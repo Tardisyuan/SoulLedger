@@ -9,14 +9,14 @@ import { EMPTY_TIMELINE } from "@soulledger/core/api/matrix";
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, type Chat } from "../chat";
 import { CLOSED_REASONS, chatMode } from "../chatRules";
-import { I18nProvider, translate } from "../i18n";
+import { translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { ChatBlocksScreen } from "../screens/chatBlocks";
 import { ConversationScreen } from "../screens/conversation";
+import { inSoulFrame } from "./harness";
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
@@ -85,14 +85,10 @@ function wrap(chat: Chat, children: ReactNode) {
 }
 
 function tree(chat: Chat, children: ReactNode) {
-  return (
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ChatContext.Provider value={chat}>
-          <NavigationContainer>{children}</NavigationContainer>
-        </ChatContext.Provider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return inSoulFrame(
+    <ChatContext.Provider value={chat}>
+      <NavigationContainer>{children}</NavigationContainer>
+    </ChatContext.Provider>
   );
 }
 

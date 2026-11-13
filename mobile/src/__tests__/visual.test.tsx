@@ -12,10 +12,8 @@ import { useSharedValue } from "react-native-reanimated";
 import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import { useState, type ReactNode } from "react";
 import { AccessibilityInfo, Animated, DeviceEventEmitter, Easing, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LogoutProvider, useAskLogout } from "../logout";
-import { I18nProvider } from "../i18n";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { FONT_ASSETS, quoteFamily, titleFamily } from "../fonts";
@@ -41,6 +39,7 @@ import {
   shade,
   useReducedMotionDurations,
 } from "../ui";
+import { inSoulFrame } from "./harness";
 import { application, life } from "./stubApi";
 
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
@@ -50,14 +49,10 @@ function wrap(children: ReactNode, civilization: string | null = "CHINESE") {
 }
 
 function tree(children: ReactNode, civilization: string | null = "CHINESE") {
-  return (
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ThemeContext.Provider value={themeFor(civilization, "dark")}>
-          <NavigationContainer>{children}</NavigationContainer>
-        </ThemeContext.Provider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return inSoulFrame(
+    <ThemeContext.Provider value={themeFor(civilization, "dark")}>
+      <NavigationContainer>{children}</NavigationContainer>
+    </ThemeContext.Provider>
   );
 }
 

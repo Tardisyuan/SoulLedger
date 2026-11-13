@@ -4,15 +4,15 @@
  * names, washed on the post page.
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "../feedback";
-import { I18nProvider, translate } from "../i18n";
+import { translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { PostScreen } from "../screens/circle";
 import { CircleInboxScreen, interactionStamp, mergedSentence } from "../screens/circleInbox";
+import { renderSoul } from "./harness";
 import { stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -24,14 +24,10 @@ jest.mock("@react-navigation/native", () => ({
 }));
 
 function wrap(children: ReactNode) {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ToastProvider>
-          <NavigationContainer>{children}</NavigationContainer>
-        </ToastProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <ToastProvider>
+      <NavigationContainer>{children}</NavigationContainer>
+    </ToastProvider>
   );
 }
 
