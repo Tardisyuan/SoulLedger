@@ -3070,7 +3070,7 @@
       "gr": {
         "HELL": "Tartarus",
         "BLISS": "Isles of the Blessed",
-        "NEUTRAL": "The crossing"
+        "NEUTRAL": "Neutral ground"
       }
     },
     "codes": {
@@ -5186,7 +5186,8 @@
           "BLISS": "Stay"
         },
         "gr": {
-          "BLISS": "Stay"
+          "BLISS": "Stay",
+          "NEUTRAL": "Stay"
         },
         "eu": {
           "PURGATORY": "Term"
@@ -5200,7 +5201,8 @@
           "BLISS": "{{years}} years"
         },
         "gr": {
-          "BLISS": "{{years}} years"
+          "BLISS": "{{years}} years",
+          "NEUTRAL": "{{years}} years"
         },
         "eu": {
           "PURGATORY": "{{years}} years"
@@ -5832,7 +5834,8 @@
           "BLISS": "My dwelling"
         },
         "gr": {
-          "BLISS": "My dwelling"
+          "BLISS": "My dwelling",
+          "NEUTRAL": "My dwelling"
         },
         "gr_republic": {
           "BLISS": "My thousand years"
@@ -5843,7 +5846,8 @@
           "BLISS": "Stay"
         },
         "gr": {
-          "BLISS": "Stay"
+          "BLISS": "Stay",
+          "NEUTRAL": "Stay"
         },
         "eu": {
           "PURGATORY": "Term"
@@ -5879,7 +5883,8 @@
           "BLISS": "Your stay is over"
         },
         "gr": {
-          "BLISS": "Your stay is over"
+          "BLISS": "Your stay is over",
+          "NEUTRAL": "Your stay is over"
         },
         "gr_republic": {
           "BLISS": "The thousand years are over"
@@ -5892,7 +5897,8 @@
           "BLISS": "Your stay is not over yet"
         },
         "gr": {
-          "BLISS": "Your stay is not over yet"
+          "BLISS": "Your stay is not over yet",
+          "NEUTRAL": "Your stay is not over yet"
         },
         "gr_republic": {
           "BLISS": "The thousand years are not over yet"
@@ -5905,7 +5911,8 @@
           "BLISS": "See my dwelling"
         },
         "gr": {
-          "BLISS": "See my dwelling"
+          "BLISS": "See my dwelling",
+          "NEUTRAL": "See my dwelling"
         },
         "gr_republic": {
           "BLISS": "See my thousand years"
@@ -5925,7 +5932,8 @@
               "BLISS": "Stay over"
             },
             "gr": {
-              "BLISS": "Stay over"
+              "BLISS": "Stay over",
+              "NEUTRAL": "Stay over"
             },
             "gr_republic": {
               "BLISS": "The thousand years are over"
@@ -5942,7 +5950,8 @@
               "BLISS": "Your stay in the heavens is over. Open Soul Ledger to see it."
             },
             "gr": {
-              "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it."
+              "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it.",
+              "NEUTRAL": "Your stay is over. Open Soul Ledger to see it."
             },
             "gr_republic": {
               "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
@@ -5961,7 +5970,8 @@
               "BLISS": "One of your stays is over. Open Soul Ledger to see it."
             },
             "gr": {
-              "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+              "BLISS": "One of your stays is over. Open Soul Ledger to see it.",
+              "NEUTRAL": "One of your stays is over. Open Soul Ledger to see it."
             },
             "eu": {
               "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
@@ -5975,7 +5985,8 @@
               "BLISS": "A stay is over; you remain for now"
             },
             "gr": {
-              "BLISS": "A stay is over; you remain for now"
+              "BLISS": "A stay is over; you remain for now",
+              "NEUTRAL": "A stay is over; you remain for now"
             },
             "eu": {
               "PURGATORY": "A stage of cleansing is complete; you remain for now"
@@ -6444,7 +6455,8 @@
           "BLISS": "Stay over"
         },
         "gr": {
-          "BLISS": "Stay over"
+          "BLISS": "Stay over",
+          "NEUTRAL": "Stay over"
         },
         "gr_republic": {
           "BLISS": "The thousand years are over"
@@ -6461,7 +6473,8 @@
           "BLISS": "Your stay in the heavens is over. Open Soul Ledger to see it."
         },
         "gr": {
-          "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it."
+          "BLISS": "Your stay on the Isles of the Blessed is over. Open Soul Ledger to see it.",
+          "NEUTRAL": "Your stay is over. Open Soul Ledger to see it."
         },
         "gr_republic": {
           "BLISS": "Your thousand years in the heavens are over. Open Soul Ledger to see it."
@@ -6482,7 +6495,8 @@
           "BLISS": "One of your stays is over. Open Soul Ledger to see it."
         },
         "gr": {
-          "BLISS": "One of your stays is over. Open Soul Ledger to see it."
+          "BLISS": "One of your stays is over. Open Soul Ledger to see it.",
+          "NEUTRAL": "One of your stays is over. Open Soul Ledger to see it."
         },
         "eu": {
           "PURGATORY": "One stage of your cleansing is complete. Open Soul Ledger to see it."
@@ -6496,7 +6510,8 @@
           "BLISS": "A stay is over; you remain for now"
         },
         "gr": {
-          "BLISS": "A stay is over; you remain for now"
+          "BLISS": "A stay is over; you remain for now",
+          "NEUTRAL": "A stay is over; you remain for now"
         },
         "eu": {
           "PURGATORY": "A stage of cleansing is complete; you remain for now"
@@ -7484,7 +7499,8 @@
       },
       "GR_ASPHODEL_MEADOW": {
         "ACTIVE": "On the Asphodel Meadow",
-        "COMPLETED": "Left the Asphodel Meadow"
+        "COMPLETED": "Left the Asphodel Meadow",
+        "WAITING": "Stay over; remaining on the meadow"
       }
     },
     "panel_title_by_civ": {
@@ -9315,7 +9331,7 @@
         },
         "3": {
           "name": "The three judges",
-          "body": "The three judges part the ways: the good to the Isles of the Blessed, the wicked down to Tartarus."
+          "body": "The three judges part the ways: the good to the Isles of the Blessed, the ordinary to the Asphodel Meadow, the wicked down to Tartarus."
         },
         "4": {
           "name": "The destination",
@@ -9441,7 +9457,7 @@
         "eg": "The weighing, two ways",
         "eg_body": "The heart against the feather of Ma'at: pass to the Field of Reeds, or be annihilated.",
         "gr": "Three roads",
-        "gr_body": "The three judges part the ways: the Isles, the thousand-year cycle, Tartarus — and at last the water of Lethe."
+        "gr_body": "The three judges part the ways: the Isles, the Asphodel Meadow, Tartarus — a thousand years on the first and the last, and at last the water of Lethe."
       },
       "roles_title": "Four roles",
       "role": {

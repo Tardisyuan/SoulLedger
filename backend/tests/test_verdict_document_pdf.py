@@ -171,3 +171,18 @@ def test_gotenberg_renders_the_real_print_page(live_server, judge_user, cn_tenan
     response = client.get(live_server.url + _url(_judgment(cn_tenant), locale="zh-Hans"))
     assert response.status_code == 200, response.content[:500]
     assert response.content.startswith(b"%PDF")
+
+
+@pytest.mark.parametrize(("civ", "verdict", "expected"), [
+    # 希腊的「普通」去阿斯福得草原,文书还没有那句判语:网页不出,PDF 也不出(审计 2026-11-13 GR-1)。
+    ("GREEK", "PURGATORY", False),
+    ("GREEK", "PASSED", True),
+    ("GREEK", "FAILED", True),
+    # 地府的存疑不是终判,网页同样不出;欧洲的炼狱是去处,照出。
+    ("CHINESE", "PURGATORY", False),
+    ("EUROPEAN", "PURGATORY", True),
+])
+def test_the_pdf_is_refused_where_the_web_page_renders_no_document(civ, verdict, expected):
+    from types import SimpleNamespace
+
+    assert verdict_pdf.has_document(SimpleNamespace(is_final=True, civilization=civ, verdict=verdict)) is expected
