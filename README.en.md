@@ -42,7 +42,7 @@ flowchart LR
 
 **Test scale** (reading dated 2026-11-06, from [`landing-stats.json`](frontend/src/config/landing-stats.json); numbers go stale, trust the latest measurement): back end 9,243 · web 5,677 · soul app 1,204 · officer app 1,095 · E2E about 270. CI runs once a day, not on every push; the pre-push check is the local gate script.
 
-**Go deeper**: [architecture decision records](docs/adr/README.md) · [How I built this (draft, in Chinese)](docs/portfolio/HOW-I-BUILT.md) · [demo deployment](docs/DEPLOYMENT-demo.md)
+**Go deeper**: [architecture decision records](docs/adr/README.md) · [How I built this (draft, in Chinese)](docs/portfolio/HOW-I-BUILT.md) · [quality evidence](docs/portfolio/QUALITY-EVIDENCE.md) · [demo deployment](docs/DEPLOYMENT-demo.md)
 
 ---
 

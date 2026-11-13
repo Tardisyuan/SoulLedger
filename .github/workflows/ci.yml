@@ -116,7 +116,13 @@ jobs:
           # -n auto (pytest-xdist, requirements-dev.txt): it ran serially (2026-10-30). worksteal, as the
           # local gates do: plain -n queues the slow migration round trips on one worker. Coverage and its
           # floor still apply (pytest-cov combines the workers).
-          python -m pytest --tb=short -q -n auto --dist worksteal
+          python -m pytest --tb=short -q -n auto --dist worksteal --junitxml="$RUNNER_TEMP/backend.xml"
+      - name: Upload suite count
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: count-backend
+          path: ${{ runner.temp }}/backend.xml
+          retention-days: 7
       # The multi-database guard (G3/G7) exists only under its own settings; the suite above skips it
       # (review C21, 2026-10-31). Same PostgreSQL and Redis. `run-gates.sh --real-pg --full` runs it too.
       - name: Multi-database guard
@@ -221,7 +227,13 @@ jobs:
       - name: Test
         run: |
           cd frontend
-          npm run test:coverage
+          npm run test:coverage -- --json --outputFile="$RUNNER_TEMP/web.json"
+      - name: Upload suite count
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: count-web
+          path: ${{ runner.temp }}/web.json
+          retention-days: 7
       # Blocks. The Next.js major this was waiting on turned out not to be
       # needed: next is on 16.x and sharp is pinned forward by an override, so
       # the two findings that once required `npm audit fix --force` are gone
@@ -271,7 +283,13 @@ jobs:
       # `test` — never neither. run-gates.sh --full makes the same choice.
       - name: Test mobile
         run: |
-          npm run --workspace @soulledger/mobile "$(node -p "require('./mobile/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'")"
+          npm run --workspace @soulledger/mobile "$(node -p "require('./mobile/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'")" -- --json --outputFile="$RUNNER_TEMP/soul_app.json"
+      - name: Upload suite count
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: count-soul_app
+          path: ${{ runner.temp }}/soul_app.json
+          retention-days: 7
 
   # The officer app (灵魂簿 · 官员, mobile-officer/). Same JS gates as `mobile`. It imports
   # mobile/src's leaf modules in place (mobile-officer/src/shared.ts), so it is a separate job:
@@ -300,7 +318,13 @@ jobs:
       # As `Test mobile`: test:coverage when mobile-officer/package.json defines it.
       - name: Test officer
         run: |
-          npm run --workspace @soulledger/officer "$(node -p "require('./mobile-officer/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'")"
+          npm run --workspace @soulledger/officer "$(node -p "require('./mobile-officer/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'")" -- --json --outputFile="$RUNNER_TEMP/officer_app.json"
+      - name: Upload suite count
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: count-officer_app
+          path: ${{ runner.temp }}/officer_app.json
+          retention-days: 7
 
   # backend/tests/test_chat_synapse_integration.py against a real Synapse (review C21, 2026-10-31): it skips
   # without SYNAPSE_TEST_URL, so it ran nowhere. Synapse is started by scripts/synapse-test.sh, not as a
@@ -474,3 +498,26 @@ jobs:
         with:
           name: demo-e2e-failures
           path: frontend/test-results/
+
+  # After a green run on main (daily or by hand): the suite counts of this run, in the shape of
+  # frontend/src/config/landing-stats.json, as the workflow artifact `landing-stats` (90 days). Nothing is
+  # committed from CI: the job token is read-only, and a bot commit to main would trip the local gates'
+  # clean-tree bookkeeping. To publish the numbers, copy them by hand:  gh run download <run-id> -n landing-stats
+  stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [backend, frontend, mobile, officer, synapse, e2e, e2e-demo]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: count-*
+          path: counts
+          merge-multiple: true
+      - run: python3 scripts/ci-stats.py counts > landing-stats.json && cat landing-stats.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: landing-stats
+          path: landing-stats.json
+          retention-days: 90

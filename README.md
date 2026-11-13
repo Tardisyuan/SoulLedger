@@ -42,7 +42,7 @@ flowchart LR
 
 **测试规模**（读数日期 2026-11-06，来源 [`landing-stats.json`](frontend/src/config/landing-stats.json)；数字会过期，以最近一次实测为准）：后端 9,243 · 网页 5,677 · 灵魂端 App 1,204 · 官员端 App 1,095 · E2E 约 270。CI 每天跑一次（不在每次推送上跑），推送前的检查是本地门禁，见[测试、门禁与 CI](#测试门禁与-ci)。
 
-**想深入**：[架构决策记录（英文）](docs/adr/README.md) · [我怎么做的这个项目（初稿）](docs/portfolio/HOW-I-BUILT.md) · [演示站部署](docs/DEPLOYMENT-demo.md)
+**想深入**：[架构决策记录（英文）](docs/adr/README.md) · [我怎么做的这个项目（初稿）](docs/portfolio/HOW-I-BUILT.md) · [质量证据（英文）](docs/portfolio/QUALITY-EVIDENCE.md) · [演示站部署](docs/DEPLOYMENT-demo.md)
 
 ---
 
