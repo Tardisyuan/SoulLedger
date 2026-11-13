@@ -75,6 +75,24 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     # through to `order_by`, which raised (2026-10-17). Only real columns.
     ordering_fields = ["create_time", "event_type"]
 
+    def paginate_queryset(self, queryset):
+        page = super().paginate_queryset(queryset)
+        if page is not None:
+            # One query for the whole page's actors (no N+1); read-only display data.
+            from django.contrib.auth import get_user_model
+
+            from apps.events.serializers import actor_username
+
+            names = {actor_username(e.actor) for e in page if e.actor}
+            rows = get_user_model().objects.filter(username__in=names).values_list("username", "display_name", "role")
+            self._actor_users = {u: (d, r) for u, d, r in rows}
+        return page
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["actor_users"] = getattr(self, "_actor_users", {})
+        return ctx
+
     def get_queryset(self):
         qs = super().get_queryset()
         params = self.request.query_params

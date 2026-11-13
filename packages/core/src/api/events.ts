@@ -14,6 +14,8 @@ export interface SoulEvent {
   event_type: string;
   payload: Record<string, unknown>;
   actor: string;
+  actor_display_name?: string;
+  actor_role?: string;
   create_time: string;
 }
 

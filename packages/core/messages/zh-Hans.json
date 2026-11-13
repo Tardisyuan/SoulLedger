@@ -8,6 +8,7 @@
     "collapse_locked": "窗口宽度不足 1200 像素，导航固定收起",
     "settings": "设置",
     "language": "界面语言",
+    "language_egy_note": "Kemet 是用中埃及语词根按现代语序拼成的界面语言，只作演示，不是真正的古埃及语句子。逐词根的出处核对见仓库 docs/lore-verification/egy-lexicon-roots.md。",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
     "mobile_menu": "导航菜单",
@@ -4570,7 +4571,7 @@
     "edit_media_locked": "图片不能修改",
     "screening": {
       "masked": "已发布。部分内容已被替换。",
-      "pending_review": "已发出,正在审核。审核通过前只有你看得到。",
+      "pending_review": "已发出,正在审核。审核通过前只有作者本人看得到。",
       "hidden": "这条内容没有通过筛查,已被隐藏。"
     },
     "no_posts": "暂无帖子",
@@ -5110,6 +5111,8 @@
       "court": "审理殿",
       "judge": "主审",
       "verdict_pending": "未判",
+      "seal_title": "你的判词",
+      "seal_pending": "落印后会在这里出现印",
       "final": "终审",
       "eternal": "永久",
       "sentence_years": "刑期 {{years}} 年",
@@ -6939,7 +6942,7 @@
     },
     "moderation_status": {
       "PUBLISHED": "已发布",
-      "PENDING": "待审",
+      "PENDING": "待审核",
       "HIDDEN": "已隐藏",
       "DELETED": "已删除"
     },
@@ -9214,7 +9217,8 @@
       },
       "video_soul": "灵魂端 App 录屏",
       "video_officer": "官员端 App 录屏",
-      "github": "在 GitHub 上看源码"
+      "github": "在 GitHub 上看源码",
+      "quality": "怎么测的：质量证据（英文）"
     },
     "tour": {
       "title": "一个灵魂的一生",

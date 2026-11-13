@@ -59,10 +59,13 @@ jobs:
       run: ${{ steps.check.outputs.run }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 50
       - id: check
         run: |
           if [ "${{ github.event_name }}" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+          # The stats job's own commit ([skip ci], github-actions[bot]) is not a change: it must not earn tomorrow's run.
+          age=$(( $(date +%s) - $(git log -1 --format=%ct --grep='\[skip ci\]' --invert-grep) ))
           if [ "$age" -lt 86400 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; echo "no commit on main in the last 24 h; skipping"; fi
 
   backend:
@@ -500,14 +503,16 @@ jobs:
           path: frontend/test-results/
 
   # After a green run on main (daily or by hand): the suite counts of this run, in the shape of
-  # frontend/src/config/landing-stats.json, as the workflow artifact `landing-stats` (90 days). Nothing is
-  # committed from CI: the job token is read-only, and a bot commit to main would trip the local gates'
-  # clean-tree bookkeeping. To publish the numbers, copy them by hand:  gh run download <run-id> -n landing-stats
+  # frontend/src/config/landing-stats.json, as the workflow artifact `landing-stats` (90 days), and
+  # committed into that file when the numbers changed (user decision 2026-11-13), by this job alone.
   stats:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [backend, frontend, mobile, officer, synapse, e2e, e2e-demo]
     if: github.ref == 'refs/heads/main'
+    # The only job with write access, for the one commit below.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -516,6 +521,27 @@ jobs:
           path: counts
           merge-multiple: true
       - run: python3 scripts/ci-stats.py counts > landing-stats.json && cat landing-stats.json
+      # Merge the counts into the committed file (its videos / github keys stay), commit only if the numbers changed.
+      # A GITHUB_TOKEN push does not start workflows; [skip ci] and the bot author keep the `changes` job from
+      # counting this commit as a change. Plain push, never forced: main is protected against force pushes.
+      - name: Commit the numbers
+        run: |
+          python3 - <<'PY'
+          import json
+          f = "frontend/src/config/landing-stats.json"
+          new = json.load(open("landing-stats.json"))
+          cur = json.load(open(f))
+          cur["measured"] = new["measured"]
+          cur["tests"].update(new["tests"])
+          open(f, "w", encoding="utf-8").write(json.dumps(cur, indent=2, ensure_ascii=False) + "\n")
+          PY
+          git diff --quiet -- frontend/src/config/landing-stats.json && { echo "numbers unchanged"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/config/landing-stats.json
+          git commit -m "chore(stats): CI numbers for $(date -u +%F) [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: landing-stats

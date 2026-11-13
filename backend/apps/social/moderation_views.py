@@ -8,9 +8,8 @@
 (它对自写的实现直接实例化求值)。
 
 **租户隔离照常走 `scope_to_tenant`**(`tests/test_tenant_scoping_contract.py` 对每个
-router 注册的 viewset 逐条断言)。这里额外一条:官员只审**灵魂的**内容 ——
-`author__role="SOUL"`。官员自己在 `/api/v1/social/` 的帖子不进这个后台,
-两个圈子在这里也不相交。
+router 注册的 viewset 逐条断言)。官员自己在 `/api/v1/social/` 的帖子 / 评论
+(2026-11-13 起也过词表)与灵魂的内容同在这个后台;自己的不能自己通过(`moderation.moderate_content`)。
 
 **暂居不放宽。** 这几张表挂在 `tenant` 上而不是灵魂上,所以不进
 `RESIDENCE_READABLE`:朋友圈按「当前所在文明」算,暂居的灵魂在暂居地发帖、
@@ -161,7 +160,7 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
     default_list_filter = {"moderation_status": ModerationStatus.PENDING}
 
     def get_queryset(self):
-        qs = super().get_queryset().filter(author__role="SOUL").select_related("author")
+        qs = super().get_queryset().select_related("author")
         return qs.annotate(
             open_report_count=Count("reports", filter=Q(reports__status=ReportStatus.OPEN), distinct=True)
         ).order_by("-create_time")
@@ -478,7 +477,7 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
 
 
 class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
-    """「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+    """「已处理」:被隐藏或被官员删除的帖子与评论,一张表,按处理时间倒序。
 
     * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
       (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
@@ -495,7 +494,7 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
     HANDLINGS = ("HIDDEN", "DELETED")
 
     def _part(self, base, model, kind, handling, date_from=None, date_to=None):
-        qs = base.filter(author__role="SOUL")
+        qs = base
         hidden = Q(is_deleted=False, moderation_status=ModerationStatus.HIDDEN)
         deleted = Q(is_deleted=True) & DELETED_BY_OFFICER
         qs = qs.filter({"HIDDEN": hidden, "DELETED": deleted}.get(handling, hidden | deleted))

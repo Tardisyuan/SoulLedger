@@ -363,18 +363,18 @@ describe("举报 · the C-08 review layout", () => {
     expect(counts).not.toHaveTextContent("评");
   });
 
-  it("the detail's comment line is 评论 N · 待审 N · 已隐藏 N, and leaves out 待审 / 已隐藏 at 0", async () => {
+  it("the detail's comment line is 评论 N · 待审核 N · 已隐藏 N, and leaves out 待审核 / 已隐藏 at 0", async () => {
     asRole("social.moderate");
     apiMock.item.mockResolvedValue({
       data: post({ id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 5, pending_comment_count: 2, hidden_comment_count: 1 }),
     });
     renderPage();
     await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
-    expect(detail().querySelector("[data-comment-counts]")).toHaveTextContent(/^评论 5·待审 2·已隐藏 1$/);
+    expect(detail().querySelector("[data-comment-counts]")).toHaveTextContent(/^评论 5·待审核 2·已隐藏 1$/);
   });
 
   it.each([
-    [{ pending_comment_count: 2, hidden_comment_count: 0 }, /^评论 3·待审 2$/],
+    [{ pending_comment_count: 2, hidden_comment_count: 0 }, /^评论 3·待审核 2$/],
     [{ pending_comment_count: 0, hidden_comment_count: 4 }, /^评论 3·已隐藏 4$/],
     [{ pending_comment_count: 0, hidden_comment_count: 0 }, /^评论 3$/],
   ])("a zero status segment is not drawn (%j)", async (over, shown) => {
@@ -890,7 +890,7 @@ describe("已处理 · E-08d", () => {
     await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "h1", "restore", undefined));
   });
 
-  it("a HIDDEN post's drawer shows 评论 N · 待审 N · 已隐藏 N (zero segments left out); a comment's drawer has no such line", async () => {
+  it("a HIDDEN post's drawer shows 评论 N · 待审核 N · 已隐藏 N (zero segments left out); a comment's drawer has no such line", async () => {
     asRole("social.moderate");
     apiMock.handled.mockResolvedValue(page(handled));
     apiMock.item.mockResolvedValue({
@@ -902,7 +902,7 @@ describe("已处理 · E-08d", () => {
     fireEvent.click(within(row).getByRole("button", { name: "王五" }));
     const drawer = await screen.findByRole("dialog");
     await within(drawer).findByText("被隐藏的帖子全文");
-    expect(drawer.querySelector("[data-comment-counts]")).toHaveTextContent(/^评论 5·待审 2$/);
+    expect(drawer.querySelector("[data-comment-counts]")).toHaveTextContent(/^评论 5·待审核 2$/);
   });
 
   it("改过正文的帖子:抽屉里直接写出「编辑于 时间」,不靠悬停;没改过的没有", async () => {
