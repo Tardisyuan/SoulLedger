@@ -4,8 +4,9 @@
 #   scripts/run-gates.sh [--full|--affected] [--base <ref>]
 #
 # Outside a push the changed files are `git diff <base>` (committed, staged and
-# unstaged) plus untracked files; <base> defaults to the merge-base with
-# origin/main. The pre-push hook (scripts/install-hooks.sh) calls this with
+# unstaged) plus untracked files; <base> defaults to the latest of HEAD's last 300
+# commits whose tree passed the gates (full, or selective covering it), else the
+# merge-base with origin/main; one line names it. The pre-push hook (scripts/install-hooks.sh) calls this with
 # `--prepush` and the pushed range's files in PREPUSH_CHANGED; there is one copy
 # of the logic, and it is this file.
 #
@@ -82,7 +83,7 @@ while [ $# -gt 0 ]; do
         --e2e=*)    E2E="${1#--e2e=}"; [ "$E2E" = all ] && E2E="chromium,firefox,mobile-chrome" ;;
         --affected) MODE=auto ;;
         --base)     BASE="${2:?--base needs a ref}"; shift ;;
-        -h|--help)  sed -n '2,36p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        -h|--help)  sed -n '2,37p' "${BASH_SOURCE[0]}"; exit 0 ;;
         *)          echo "run-gates: unknown argument $1 (see --help)"; exit 2 ;;
     esac
     shift
@@ -321,25 +322,77 @@ tree_is_clean() {
     stray="$(git -C "$ROOT" ls-files --others --exclude-standard -- backend frontend packages mobile mobile-officer scripts | head -3)"
     [ -z "$stray" ] || { CLEAN_WHY="untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 1; }
 }
-E2E_STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}-e2e"
+# The pass ledgers (record_pass at the end writes STAMP / SEL_STAMP; GATES_STAMP_FILE is the test seam).
+STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}"
+SEL_STAMP="$STAMP-selective"
+E2E_STAMP="$STAMP-e2e"
 
 # WHAT CHANGED. The hook passes the pushed range's files in PREPUSH_CHANGED (one
 # path per line, `git diff --no-renames`, so a rename shows its old path as
 # deleted). PREPUSH_CHANGED is also the test seam, with PREPUSH_CLASSIFY_ONLY=1,
 # which prints the decisions and exits before running any gate — both exist for
 # `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`.
+# THE BASE IS THE LAST TREE THAT PASSED (2026-11-14, user decision). With no --base, a run compares against the
+# most recent of the last 300 commits reachable from HEAD whose tree the ledgers vouch for, not the
+# merge-base with origin/main. A long branch's diff against main hits a force-full rule (gate scripts,
+# config, a deleted file, a migration) forever, so a one-file follow-up ran the whole suite (~45 minutes on
+# unRAID, mostly migration round trips); now it runs what changed since the last green tree, and the round
+# trips only when a migration changed since then. Which records count:
+#   - a FULL pass (STAMP): always — it tested the whole tree;
+#   - a SELECTIVE pass (SEL_STAMP): only when the files it covered (all records for that tree, united)
+#     include every file that commit changes against the merge-base. A selective pass vouches for the files
+#     it covered and nothing else; without the check, a run with an explicit --base that skipped a stretch
+#     of the branch would become a base and that stretch would never be gated. A run whose base came from
+#     here records diff(merge-base, HEAD) as covered (COVERED, below), so the chain passes its own check.
+#     The trade-off left is the selective gating's own, already accepted (CLAUDE.md, Build & Test): a test
+#     is trusted to be unaffected by files outside what selected it.
+# Not for --full / GATES_FULL=1, --real-pg (a SQLite pass says nothing about PostgreSQL) or --e2e (gate
+# passes say nothing about browsers; E2E has its own ledger). A push (PREPUSH_CHANGED) is unchanged: the
+# hook compares with the remote ref being pushed over. No record found: the merge-base, as before.
+# One line says which base was taken and why.
+ledger_base() {
+    local sha tree cov
+    [ -f "$STAMP" ] || [ -f "$SEL_STAMP" ] || { LEDGER_WHY="; no pass recorded"; return 0; }
+    while read -r sha tree; do
+        if [ -f "$STAMP" ] && grep -q "^$tree	" "$STAMP"; then
+            BASE="$sha"; BASE_KIND=full; return 0
+        fi
+        { [ -n "$MB" ] && [ -f "$SEL_STAMP" ]; } || continue
+        cov="$(awk -F'\t' -v t="$tree" '$1 == t { print $3 }' "$SEL_STAMP" | tr '|' '\n' | grep -v '^$')"
+        [ -n "$cov" ] || continue
+        if [ -z "$(git diff --name-only --no-renames "$MB" "$sha" | grep -vxF -e "$cov" | head -1)" ]; then
+            BASE="$sha"; BASE_KIND=selective; return 0
+        fi
+    done < <(git log --format='%H %T' -n 300 HEAD)
+    LEDGER_WHY="; none of the last 300 commits has a tree that passed"
+}
 changed_since_base() {
     if [ -n "${PREPUSH_CHANGED+x}" ]; then
         CHANGED="$PREPUSH_CHANGED"
         RANGE="${PREPUSH_RANGE:-(PREPUSH_CHANGED)}"
     else
+        local from_ledger=0
         if [ -z "$BASE" ]; then
-            BASE="$(git merge-base HEAD origin/main 2>/dev/null)" \
-                || { echo "$P: no merge-base with origin/main; pass --base <ref>"; exit 2; }
+            MB="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+            [ -z "$E2E" ] && [ "$REAL_PG" = 0 ] && [ "$MODE" != full ] && [ "${GATES_FULL:-}" != 1 ] && ledger_base
+            if [ -n "$BASE" ]; then
+                from_ledger=1
+                echo "$P: base: $(git rev-parse --short "$BASE") (last tree that passed, $BASE_KIND) — $(git rev-list --count "$BASE..HEAD") commits since"
+            else
+                [ -n "$MB" ] || { echo "$P: no merge-base with origin/main; pass --base <ref>"; exit 2; }
+                BASE="$MB"
+                echo "$P: base: $(git rev-parse --short "$BASE") (merge-base with origin/main${LEDGER_WHY:-})"
+            fi
         fi
         git rev-parse --verify -q "$BASE^{commit}" >/dev/null || { echo "$P: --base $BASE is not a commit"; exit 2; }
         CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
         RANGE="$(git rev-parse --short "$BASE")..(working tree)"
+        # What a pass of this run vouches for (record_pass): the base vouched for diff(MB, base), this run
+        # tests diff(base, HEAD), and diff(MB, HEAD) lies within the two.
+        COVERED="$CHANGED"
+        if [ "$from_ledger" = 1 ] && [ -n "$MB" ]; then
+            COVERED="$( { echo "$CHANGED"; git diff --name-only --no-renames "$MB" HEAD; } | grep -v '^$' | sort -u)"
+        fi
     fi
 }
 # Root-level files that change nothing a gate measures (documentation, deployment). Used by the root-level
@@ -472,7 +525,7 @@ changed_since_base
 # change at all — one byte in any tracked file — is a different tree and runs as before.
 # The real-PostgreSQL run and E2E were never part of this script; they are unaffected.
 # GATES_STAMP_FILE is the test seam.
-STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}"
+# (STAMP and SEL_STAMP are defined with E2E_STAMP, above changed_since_base, which reads them.)
 PUSHED_SHA=""
 case "${PREPUSH_RANGE:-}" in *..*) PUSHED_SHA="${PREPUSH_RANGE##*..}" ;; esac
 PUSHED_TREE=""
@@ -490,7 +543,6 @@ fi
 # through when its commit has that very tree and every file the push changes is among the recorded
 # ones. A larger change set never selects less: each rule only adds tests or forces a full run.
 # --full / GATES_FULL=1 at push time still run.
-SEL_STAMP="$STAMP-selective"
 if [ "$PREPUSH" = 1 ] && [ -n "${PUSHED_TREE:-}" ] && [ -f "$SEL_STAMP" ] \
     && [ "$MODE" != full ] && [ "${GATES_FULL:-}" != 1 ] && [ -n "$CHANGED" ]; then
     HIT="$(CHANGED="$CHANGED" awk -F'\t' -v t="$PUSHED_TREE" '
@@ -518,7 +570,7 @@ record_pass() {
     else
         file="$SEL_STAMP"
         printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" \
-            "$(echo "$CHANGED" | grep -v '^$' | paste -sd'|' -)" >>"$file"
+            "$(echo "${COVERED-$CHANGED}" | grep -v '^$' | paste -sd'|' -)" >>"$file"
         echo "$P: recorded a selective pass for tree ${tree:0:10} — a push of this tree changing only these files will not re-run the gates"
     fi
     tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"

@@ -1522,6 +1522,93 @@ class TestASelectivePassIsNotRunAgain:
         assert "for these changes" not in self._push(hook, main, stamp, ["backend/a.py"], GATES_FULL="1").stdout
 
 
+class TestTheBaseIsTheLastTreeThatPassed:
+    """With no --base, the gates compare against the latest commit whose tree passed (2026-11-14, user
+    decision), not the merge-base with origin/main: a long branch's diff against main hit a force-full rule
+    on every run. origin/main = init; then a migration, then backend/a.py, then backend/b.py (HEAD)."""
+
+    def _repo(self, checkouts) -> tuple[Path, dict[str, str]]:
+        main, _ = checkouts
+        _git(main, "update-ref", "refs/remotes/origin/main", "HEAD")
+        sha = {}
+        for name, rel in (("mig", "backend/apps/souls/migrations/0002_x.py"), ("a", "backend/a.py"),
+                          ("b", "backend/b.py")):
+            (main / rel).parent.mkdir(parents=True, exist_ok=True)
+            (main / rel).write_text("X = 1\n")
+            _git(main, "add", "-A")
+            _git(main, "commit", "-q", "-m", name)
+            sha[name] = subprocess.run(["git", "rev-parse", "HEAD"], cwd=main, env=_clean_env(),
+                                       capture_output=True, text=True, check=True).stdout.strip()
+        return main, sha
+
+    def _tree(self, main: Path, rev: str) -> str:
+        return subprocess.run(["git", "rev-parse", f"{rev}^{{tree}}"], cwd=main, env=_clean_env(),
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    def _gates(self, main: Path, tmp_path: Path, *args: str) -> str:
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), *args], cwd=main,
+                              env=_clean_env(GATES_STAMP_FILE=str(tmp_path / "passed"), PREPUSH_CLASSIFY_ONLY="1"),
+                              capture_output=True, text=True, timeout=60)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        return proc.stdout
+
+    def test_a_commit_whose_tree_passed_full_is_the_base(self, checkouts, tmp_path):
+        main, sha = self._repo(checkouts)
+        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        out = self._gates(main, tmp_path)
+        assert f"base: {sha['a'][:7]}" in out and "(last tree that passed, full) — 1 commits since" in out, out
+        assert "merge-base with origin/main" not in out
+        # The migration came before the base, so its round trips do not run again.
+        assert "classify-migration: migration=0" in out, out
+
+    def test_no_record_means_the_merge_base(self, checkouts, tmp_path):
+        main, _ = checkouts
+        init = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=main, env=_clean_env(),
+                              capture_output=True, text=True, check=True).stdout.strip()
+        self._repo(checkouts)
+        out = self._gates(main, tmp_path)
+        assert f"base: {init} (merge-base with origin/main; no pass recorded)" in out, out
+        assert "last tree that passed" not in out
+        assert "classify-migration: migration=1" in out, out
+
+    def test_a_selective_pass_counts_only_when_it_covered_its_commit(self, checkouts, tmp_path):
+        main, sha = self._repo(checkouts)
+        mig = "backend/apps/souls/migrations/0002_x.py"
+        sel = tmp_path / "passed-selective"
+        sel.write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py\n")
+        out = self._gates(main, tmp_path)
+        assert "merge-base with origin/main; none of the last 300" in out, out
+        sel.write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\tbackend/a.py|{mig}\n")
+        out = self._gates(main, tmp_path)
+        assert f"base: {sha['a'][:7]} (last tree that passed, selective)" in out, out
+
+    def test_a_pass_on_that_base_records_the_whole_branch_as_covered(self, checkouts, fake_backend, tmp_path):
+        main, sha = self._repo(checkouts)
+        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        run = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh")], cwd=main,
+                             env=_clean_env(PYTHON_BIN=fake_backend, RUFF_BIN=shutil.which("true"),
+                                            GATES_STAMP_FILE=str(tmp_path / "passed"),
+                                            REDIS_URL=os.environ.get("REDIS_URL", "")),
+                             capture_output=True, text=True, timeout=120)
+        assert run.returncode == 0, run.stdout + run.stderr
+        assert "recorded a selective pass" in run.stdout, run.stdout
+        line = (tmp_path / "passed-selective").read_text().rstrip().split("\t")
+        assert line[0] == self._tree(main, "HEAD"), line
+        assert line[2].split("|") == sorted(["backend/apps/souls/migrations/0002_x.py", "backend/a.py",
+                                             "backend/b.py"]), line
+        # ... so the next commit takes HEAD as its base, a selective link in the chain.
+        (main / "backend" / "c.py").write_text("")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "c")
+        assert "(last tree that passed, selective) — 1 commits since" in self._gates(main, tmp_path)
+
+    def test_full_and_an_explicit_base_ignore_the_ledger(self, checkouts, tmp_path):
+        main, sha = self._repo(checkouts)
+        (tmp_path / "passed").write_text(f"{self._tree(main, sha['a'])}\t2026-11-14 12:00, x\n")
+        assert "last tree that passed" not in self._gates(main, tmp_path, "--full")
+        assert "last tree that passed" not in self._gates(main, tmp_path, "--base", sha["mig"])
+
+
 class TestStaticChecksRunBeforeAnyTests:
     """2026-10-27: a ruff error used to surface only after the web and app jest had run.
 

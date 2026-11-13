@@ -46,7 +46,7 @@
 
 **推送门禁:`scripts/run-gates.sh`**(`bash scripts/install-hooks.sh` 装的 pre-push 钩子就是 exec 它;改脚本当场生效)
 
-    scripts/run-gates.sh                 # 按改动选择:与 origin/main 的 merge-base 比,含未提交与未跟踪
+    scripts/run-gates.sh                 # 按改动选择:与最近一个通过门禁的树比(见下),含未提交与未跟踪
     scripts/run-gates.sh --base <ref>
     scripts/run-gates.sh --full          # 全量,含覆盖率门槛
     scripts/run-gates.sh --real-pg       # 真 PostgreSQL:选中的 pytest + 全部 PG-only 测试
@@ -59,6 +59,8 @@
   `backend/tests/reads-outside-backend.txt` 里命中的测试。新写了读文件的测试要登记进对应清单,守卫会点名。
 - 配置、依赖、删改名、门禁脚本本身等改动会强制全量,输出里写明是哪条规则。没有强制选择性运行的开关。
 - 在干净工作区跑通后,树哈希会被记账,推送同一棵树时钩子直接放行。所以先提交、再跑 `scripts/run-gates.sh`、再推送。
+- 不带 `--base` 时,基准是 HEAD 最近 300 个提交里最新的、树记过账的那个(全量通过;或选择性通过且覆盖了它相对 merge-base 的全部改动),
+  找不到才退回与 origin/main 的 merge-base;输出第一行 `base: …` 写明取了哪个、为什么(2026-11-14 用户决定)。`--full`、`--real-pg`、`--e2e` 与推送不用这条。
 - 静态检查(tsc / eslint / ruff / makemigrations)排在测试之前;测试运行器默认 2 个 worker
   (`JEST_WORKERS` / `PYTEST_WORKERS` / `VITEST_WORKERS` 覆盖)。重门禁拿 `scripts/gate-lock.sh` 的锁。
 
