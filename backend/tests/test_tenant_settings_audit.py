@@ -7,25 +7,16 @@
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditLog
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING
+from tests.conftest import sign_in
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
 
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
-
-
 def _patch(user, tenant, path, body):
-    return _client(user).patch(f"/api/v1/tenants/{tenant.code}/{path}/", body, format="json",
+    return sign_in(APIClient(), user).patch(f"/api/v1/tenants/{tenant.code}/{path}/", body, format="json",
                                HTTP_USER_AGENT="pytest-ua", REMOTE_ADDR="10.9.8.7")
 
 
@@ -142,7 +133,7 @@ def test_one_edit_leaves_exactly_one_row(admin_user, cn_tenant, path, body, pref
 
 def test_the_assistant_hall_switch_leaves_exactly_one_row(admin_user, cn_tenant):
     AuditLog.objects.all().delete()
-    resp = _client(admin_user).patch(f"/api/v1/assist-admin/halls/{cn_tenant.pk}/",
+    resp = sign_in(APIClient(), admin_user).patch(f"/api/v1/assist-admin/halls/{cn_tenant.pk}/",
                                      {"assistant_enabled": True}, format="json")
     assert resp.status_code == 200, resp.data
     assert AuditLog.objects.filter(resource="tenant").count() == 0

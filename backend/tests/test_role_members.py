@@ -5,23 +5,14 @@
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
 from apps.perm.models import Role
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 pytestmark = pytest.mark.django_db
-
-
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -39,7 +30,7 @@ def world(db):
     eg_judge = User.objects.create_user(username="eg_judge", password="x", role="JUDGE", tenant=eg)
     return {"cn": cn, "scribe": scribe, "judge": judge, "admin": admin, "bound": bound, "glob": glob,
             "cn_judge": cn_judge, "cn_viewer": cn_viewer, "eg_judge": eg_judge,
-            "b": _client(bound), "g": _client(glob)}
+            "b": sign_in(APIClient(), bound), "g": sign_in(APIClient(), glob)}
 
 
 def _url(role):
@@ -63,7 +54,7 @@ def test_members_list_main_holders_first_then_extras_and_only_this_hall(world):
 
 
 def test_members_are_admin_only(world):
-    res = _client(world["cn_judge"]).get(_url(world["judge"]))
+    res = sign_in(APIClient(), world["cn_judge"]).get(_url(world["judge"]))
     assert res.status_code == 403
     assert world["b"].get("/api/v1/perm/roles/999999/members/").status_code == 404
 

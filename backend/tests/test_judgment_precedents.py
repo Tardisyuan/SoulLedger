@@ -5,26 +5,18 @@
 """
 import pytest
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, JudgmentCitation, Statute, Verdict
 from apps.judgment.serializers import JudgmentPrecedentSerializer
 from apps.realms.models import Realm
 from apps.souls.models import Soul
-
-
-def _client(api_client, user):
-    token = RefreshToken.for_user(user)
-    if user.tenant:
-        token["tenant_code"] = user.tenant.code
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return api_client
+from tests.conftest import sign_in
 
 
 @pytest.fixture
 def judge(api_client, judge_user):
-    return _client(api_client, judge_user)
+    return sign_in(api_client, judge_user)
 
 
 def _soul(tenant, name, balance):
@@ -184,7 +176,7 @@ class TestScope:
         assert _names(judge.get(_url(target))) == ["mine"]
 
     def test_admin_gets_the_judgments_tenant_not_everyone(self, api_client, admin_user, cn_tenant, eu_tenant):
-        admin = _client(api_client, admin_user)
+        admin = sign_in(api_client, admin_user)
         target = _judgment(eu_tenant, "target", verdict=None)
         _judgment(eu_tenant, "eu precedent")
         _judgment(cn_tenant, "cn case")
@@ -221,7 +213,7 @@ class TestShapeAndViewer:
 
     def test_viewer_cannot_read_precedents(self, api_client, viewer_user, cn_tenant):
         target = _judgment(cn_tenant, "target", verdict=None)
-        viewer = _client(api_client, viewer_user)
+        viewer = sign_in(api_client, viewer_user)
         assert viewer.get(_url(target)).status_code == 403
 
     def test_the_serializer_withholds_balance_from_viewer(self, rf, viewer_user, judge_user, cn_tenant):

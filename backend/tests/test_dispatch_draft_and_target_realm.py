@@ -22,21 +22,11 @@ from apps.realms.models import Realm, RealmType, SoulPathEntry
 from apps.realms.path import SoulPathService
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 User = get_user_model()
 URL = "/api/v1/dispatch/records/"
 LONG_REASON = "此魂生前口业深重,须往他界受审,理由写足二十个字以上。"
-
-
-def _client(user):
-    from rest_framework_simplejwt.tokens import RefreshToken
-
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:  # the hall-less ADMIN carries no hall
-        token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 def _realm(code, civilization, tenant, **extra):
@@ -70,7 +60,7 @@ def w(db):
 
 
 def _draft(w, **body):
-    resp = _client(w["cn_mod"]).post(f"{URL}drafts/", body, format="json")
+    resp = sign_in(APIClient(), w["cn_mod"]).post(f"{URL}drafts/", body, format="json")
     assert resp.status_code == 201, resp.data
     return DispatchRecord.all_objects.get(pk=resp.data["id"])
 
@@ -93,7 +83,7 @@ def test_an_empty_draft_is_saved_and_starts_nothing(w):
 
 def test_a_draft_takes_a_short_reason_and_submit_refuses_it(w):
     record = _draft(w, soul=str(w["soul"].pk))
-    client = _client(w["cn_mod"])
+    client = sign_in(APIClient(), w["cn_mod"])
     resp = client.patch(f"{URL}{record.pk}/draft/", {
         "target_tenant": w["eu"].pk, "target_realm": str(w["eu_ninth"].pk), "reason": "口业",
     }, format="json")
@@ -112,7 +102,7 @@ def test_submit_applies_the_last_form_values_and_proposes(w, django_capture_on_c
     record = _draft(w, soul=str(w["soul"].pk), reason="口业")
     drafted_at = record.proposed_at
     with django_capture_on_commit_callbacks(execute=True):  # notifications go out after commit
-        resp = _client(w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {
+        resp = sign_in(APIClient(), w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {
             "target_tenant": w["eu"].pk, "target_realm": str(w["eu_ninth"].pk), "reason": LONG_REASON,
         }, format="json")
     assert resp.status_code == 200, resp.data
@@ -125,26 +115,26 @@ def test_submit_applies_the_last_form_values_and_proposes(w, django_capture_on_c
     event = SoulEvent.all_objects.get(payload__action="DISPATCH_PROPOSED", payload__dispatch_id=str(record.pk))
     assert event.payload["target_realm"] == "EU_T_NINTH"
     # And it is now in the target's inbox.
-    inbox = _client(w["eu_mod"]).get(f"{URL}proposed/")
+    inbox = sign_in(APIClient(), w["eu_mod"]).get(f"{URL}proposed/")
     assert str(record.pk) in _ids(inbox)
     # A second submit is not a second proposal.
-    again = _client(w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {}, format="json")
+    again = sign_in(APIClient(), w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {}, format="json")
     assert again.status_code == 409
 
 
 def test_submit_needs_a_soul_and_a_target(w):
     record = _draft(w, reason=LONG_REASON)
-    resp = _client(w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {}, format="json")
+    resp = sign_in(APIClient(), w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {}, format="json")
     assert resp.status_code == 400
     assert {"soul", "target_tenant"} <= set(resp.data)
 
 
 def test_a_direct_proposal_still_needs_a_soul_and_a_target(w):
     """The columns became nullable for drafts; the direct proposal path did not."""
-    resp = _client(w["cn_mod"]).post(URL, {"source_tenant": w["cn"].pk, "reason": LONG_REASON}, format="json")
+    resp = sign_in(APIClient(), w["cn_mod"]).post(URL, {"source_tenant": w["cn"].pk, "reason": LONG_REASON}, format="json")
     assert resp.status_code == 400
     assert {"soul", "target_tenant"} <= set(resp.data)
-    resp = _client(w["cn_mod"]).post(URL, {
+    resp = sign_in(APIClient(), w["cn_mod"]).post(URL, {
         "source_tenant": w["cn"].pk, "target_tenant": w["eu"].pk, "soul": str(w["soul"].pk),
     }, format="json")
     assert resp.status_code == 400 and "reason" in resp.data
@@ -158,7 +148,7 @@ def test_a_draft_does_not_hold_the_souls_active_dispatch_slot(w):
     assert direct.status == DispatchStatus.PROPOSED
     # … and then the draft cannot be submitted over it.
     draft = DispatchRecord.all_objects.get(status=DispatchStatus.DRAFT)
-    resp = _client(w["cn_mod"]).post(f"{URL}{draft.pk}/submit/", {}, format="json")
+    resp = sign_in(APIClient(), w["cn_mod"]).post(f"{URL}{draft.pk}/submit/", {}, format="json")
     assert resp.status_code == 400
     assert "active dispatch" in resp.data["error"]
 
@@ -168,14 +158,14 @@ def test_a_draft_does_not_hold_the_souls_active_dispatch_slot(w):
 def test_a_draft_is_visible_only_to_its_creator_and_admin(w):
     record = _draft(w, soul=str(w["soul"].pk), target_tenant=w["eu"].pk)
     pid = str(record.pk)
-    assert pid in _ids(_client(w["cn_mod"]).get(URL))
-    assert pid in _ids(_client(w["cn_mod"]).get(f"{URL}history/"))
-    assert _client(w["cn_mod"]).get(f"{URL}{pid}/").status_code == 200
-    assert pid in _ids(_client(w["admin"]).get(URL))
+    assert pid in _ids(sign_in(APIClient(), w["cn_mod"]).get(URL))
+    assert pid in _ids(sign_in(APIClient(), w["cn_mod"]).get(f"{URL}history/"))
+    assert sign_in(APIClient(), w["cn_mod"]).get(f"{URL}{pid}/").status_code == 200
+    assert pid in _ids(sign_in(APIClient(), w["admin"]).get(URL))
 
     # A colleague in the same tenant, and the target tenant it names: not a trace.
     for user in (w["cn_mod2"], w["eu_mod"]):
-        client = _client(user)
+        client = sign_in(APIClient(), user)
         assert pid not in _ids(client.get(URL)), user.username
         assert pid not in _ids(client.get(f"{URL}history/")), user.username
         assert client.get(f"{URL}{pid}/").status_code == 404, user.username
@@ -183,14 +173,14 @@ def test_a_draft_is_visible_only_to_its_creator_and_admin(w):
         assert client.post(f"{URL}{pid}/submit/", {}, format="json").status_code == 404
         assert client.delete(f"{URL}{pid}/").status_code == 404
     # ADMIN sees it but does not submit someone else's draft.
-    assert _client(w["admin"]).post(f"{URL}{pid}/submit/", {}, format="json").status_code == 403
+    assert sign_in(APIClient(), w["admin"]).post(f"{URL}{pid}/submit/", {}, format="json").status_code == 403
 
 
 def test_a_draft_is_not_counted_in_the_approval_inbox(w):
     _draft(w, soul=str(w["soul"].pk), target_tenant=w["eu"].pk, reason=LONG_REASON)
     other = Soul.objects.create(name="另一魂", current_state=SoulState.JUDGING, tenant=w["cn"])
     proposed = DispatchService.propose(w["cn"], w["eu"], other, w["cn_mod"], LONG_REASON)
-    inbox = _client(w["eu_mod"]).get(f"{URL}proposed/", {"page": "1"})
+    inbox = sign_in(APIClient(), w["eu_mod"]).get(f"{URL}proposed/", {"page": "1"})
     # The dashboard's 「待我审批 · 移交」 is this count.
     assert inbox.data["count"] == 1
     assert _ids(inbox) == {str(proposed.pk)}
@@ -201,7 +191,7 @@ def test_a_draft_is_not_counted_in_the_approval_inbox(w):
 @pytest.mark.parametrize("which", ["cn_court", "stray", "misfiled"])
 def test_a_realm_of_another_tenant_is_refused_everywhere(w, which):
     foreign = str(w[which].pk)
-    client = _client(w["cn_mod"])
+    client = sign_in(APIClient(), w["cn_mod"])
     # Draft save, when present.
     resp = client.post(f"{URL}drafts/", {"target_tenant": w["eu"].pk, "target_realm": foreign}, format="json")
     assert resp.status_code == 400 and "target_realm" in resp.data
@@ -232,11 +222,11 @@ def test_the_service_refuses_a_foreign_realm_without_the_serializer(w):
 
 
 def test_realm_options_are_the_target_tenants_live_realms(w):
-    resp = _client(w["cn_mod"]).get(f"{URL}realm-options/", {"target_tenant_code": "EU_HEAVEN_HELL"})
+    resp = sign_in(APIClient(), w["cn_mod"]).get(f"{URL}realm-options/", {"target_tenant_code": "EU_HEAVEN_HELL"})
     assert resp.status_code == 200
     codes = [r["realm_code"] for r in resp.data]
     assert codes == ["EU_T_NINTH"]
-    assert _client(w["cn_mod"]).get(f"{URL}realm-options/", {"target_tenant_code": "NOPE"}).status_code == 404
+    assert sign_in(APIClient(), w["cn_mod"]).get(f"{URL}realm-options/", {"target_tenant_code": "NOPE"}).status_code == 404
 
 
 def test_execute_puts_the_soul_in_the_target_realm(w):
@@ -267,20 +257,20 @@ def test_execute_without_a_realm_only_leaves(w):
 
 def test_discard_moves_the_draft_to_the_recycle_bin_and_admin_restores_it(w):
     record = _draft(w, soul=str(w["soul"].pk), target_tenant=w["eu"].pk, reason="口业")
-    assert _client(w["cn_mod"]).delete(f"{URL}{record.pk}/").status_code == 204
+    assert sign_in(APIClient(), w["cn_mod"]).delete(f"{URL}{record.pk}/").status_code == 204
     record.refresh_from_db()
     assert record.is_deleted and record.deleted_by_id == w["cn_mod"].pk
-    assert str(record.pk) not in _ids(_client(w["cn_mod"]).get(URL))
+    assert str(record.pk) not in _ids(sign_in(APIClient(), w["cn_mod"]).get(URL))
 
     entries = [e for e in recycle_bin.list_bin_entries(is_admin=True) if e["entity_type"] == "dispatch_draft"]
     assert [(e["id"], e["label"]) for e in entries] == [(record.pk, "沈青梧 → EU_HEAVEN_HELL")]
 
-    resp = _client(w["admin"]).post("/api/v1/recycle-bin/restore/", {"cascade_id": entries[0]["cascade_id"]},
+    resp = sign_in(APIClient(), w["admin"]).post("/api/v1/recycle-bin/restore/", {"cascade_id": entries[0]["cascade_id"]},
                                     format="json")
     assert resp.status_code == 200, resp.data
     record.refresh_from_db()
     assert not record.is_deleted and record.status == DispatchStatus.DRAFT and record.reason == "口业"
-    assert str(record.pk) in _ids(_client(w["cn_mod"]).get(URL))
+    assert str(record.pk) in _ids(sign_in(APIClient(), w["cn_mod"]).get(URL))
 
 
 def test_only_drafts_are_listed_in_the_recycle_bin(w):

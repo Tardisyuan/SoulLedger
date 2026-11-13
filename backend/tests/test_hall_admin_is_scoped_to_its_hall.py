@@ -6,23 +6,14 @@
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
 from apps.core.tenant import is_tenant_exempt
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 pytestmark = pytest.mark.django_db
-
-
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -36,7 +27,7 @@ def world(db):
     own = Soul.objects.create(name="本殿", tenant=cn, current_state="ALIVE", birth_date="1990-01-15")
     other = Soul.objects.create(name="别殿", tenant=eg, current_state="ALIVE", birth_date="1990-01-15")
     return {"cn": cn, "eg": eg, "bound": bound, "glob": glob, "eg_judge": eg_judge, "cn_judge": cn_judge,
-            "own": own, "other": other, "b": _client(bound), "g": _client(glob)}
+            "own": own, "other": other, "b": sign_in(APIClient(), bound), "g": sign_in(APIClient(), glob)}
 
 
 def test_only_the_hall_less_admin_is_exempt(world):

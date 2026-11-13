@@ -5,7 +5,6 @@
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
@@ -13,6 +12,7 @@ from apps.judgment.models import Judgment
 from apps.org.models import Organization
 from apps.perm.models import RoleDataScope
 from apps.souls.models import Soul, SoulState
+from tests.conftest import sign_in
 from tests.data_scope_support import org, scope
 
 pytestmark = pytest.mark.django_db
@@ -48,15 +48,6 @@ def _grant(prefixes=("soul.", "judgment.", "org."), extra=tuple(("MODERATOR", c)
     invalidate_all_permissions()
 
 
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant is not None:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
-
-
 class World:
     pass
 
@@ -85,7 +76,7 @@ def w(cn_tenant, eu_tenant):
                                    owner_org=x.A)
     x.jB = Judgment.objects.create(soul=x.sB, civilization=x.sB.civilization, court="第一殿", tenant=cn_tenant,
                                    owner_org=x.B)
-    x.c = _client(x.mod)
+    x.c = sign_in(APIClient(), x.mod)
     return x
 
 
@@ -141,11 +132,11 @@ def test_changing_a_judgments_owner_needs_judgment_assign(w):
     scope("JUDGE", "ORG_CHILD", resource="judgment")
     scope("MODERATOR", "ORG_CHILD", resource="judgment")
     url = f"/api/v1/judgment/{w.jA.pk}/"
-    res = _client(w.judge_a).patch(url, {"owner_org": w.A1.pk}, format="json")
+    res = sign_in(APIClient(), w.judge_a).patch(url, {"owner_org": w.A1.pk}, format="json")
     assert res.status_code == 403, res.data
     assert Judgment.objects.get(pk=w.jA.pk).owner_org_id == w.A.pk
     # 不改 owner_org 的 PATCH 对判官照旧。
-    assert _client(w.judge_a).patch(url, {"summary": "案由"}, format="json").status_code == 200
+    assert sign_in(APIClient(), w.judge_a).patch(url, {"summary": "案由"}, format="json").status_code == 200
     assert w.c.patch(url, {"owner_org": w.B.pk}, format="json").status_code == 400
     res = w.c.patch(url, {"owner_org": w.A1.pk}, format="json")
     assert res.status_code == 200, res.data

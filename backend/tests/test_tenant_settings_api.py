@@ -5,25 +5,16 @@
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.soul_accounts.rebirth import cooldown_days
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING
+from tests.conftest import sign_in
 
 pytestmark = pytest.mark.django_db
 
 
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
-
-
 def _patch(user, tenant, body):
-    return _client(user).patch(f"/api/v1/tenants/{tenant.code}/settings/", body, format="json")
+    return sign_in(APIClient(), user).patch(f"/api/v1/tenants/{tenant.code}/settings/", body, format="json")
 
 
 def test_admin_updates_the_known_fields_and_the_response_carries_them(admin_user, cn_tenant):
@@ -123,7 +114,7 @@ def test_non_admin_cannot_change_even_their_own_tenant(request, cn_tenant, who):
 def test_the_list_carries_the_hall_names_so_the_form_can_start_from_them(judge_user, cn_tenant):
     cn_tenant.hall_name_en = "The Fifth Court"
     cn_tenant.save()
-    resp = _client(judge_user).get("/api/v1/tenants/")
+    resp = sign_in(APIClient(), judge_user).get("/api/v1/tenants/")
     assert resp.status_code == 200
     row = next(r for r in resp.data["results"] if r["code"] == cn_tenant.code)
     assert row["hall_name_en"] == "The Fifth Court"

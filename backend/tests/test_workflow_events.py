@@ -18,16 +18,6 @@ from channels.layers import get_channel_layer
 
 
 @pytest.fixture
-def cn_tenant(db):
-    from apps.tenants.models import Tenant
-    tenant, _ = Tenant.objects.get_or_create(
-        code="CN_DIYU",
-        defaults={"display_name": "Chinese Diyu"},
-    )
-    return tenant
-
-
-@pytest.fixture
 def soul(db, cn_tenant):
     from apps.souls.models import Soul, SoulState
     soul, _ = Soul.objects.get_or_create(

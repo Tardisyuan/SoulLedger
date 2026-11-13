@@ -12,21 +12,13 @@ and stays shut for its siblings; revoking the grant closes it again; nothing
 changes for ADMIN or for the seeded rows whose `permission` is empty.
 """
 import pytest
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.menus.models import Menu
 from apps.perm.models import RolePermission
+from tests.conftest import sign_in
 from tests.perm_support import seeded_menus, seeded_permission, seeded_role
 
 MENU_EXITS = ("/api/v1/menus/", "/api/v1/menus/tree/", "/api/v1/menus/list-public/")
-
-
-def _client(api_client, user):
-    token = RefreshToken.for_user(user)
-    if user.tenant:
-        token["tenant_code"] = user.tenant.code
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return api_client
 
 
 def _fetch(client, url):
@@ -91,7 +83,7 @@ def grant_viewer_scheduler_read(db):
 def test_a_viewer_sees_the_page_and_its_directory_only_while_holding_the_codename(
     api_client, viewer_user, system_settings, grant_viewer_scheduler_read, exit_url
 ):
-    client = _client(api_client, viewer_user)
+    client = sign_in(api_client, viewer_user)
 
     before = _names(_fetch(client, exit_url))
     assert "定时任务" not in before and "系统设置" not in before
@@ -109,7 +101,7 @@ def test_a_viewer_sees_the_page_and_its_directory_only_while_holding_the_codenam
 
 @pytest.mark.django_db
 def test_admin_sees_everything_regardless(api_client, admin_user, system_settings):
-    client = _client(api_client, admin_user)
+    client = sign_in(api_client, admin_user)
     for exit_url in MENU_EXITS:
         names = _names(_fetch(client, exit_url))
         assert {"系统设置", "用户管理", "定时任务", "动态"} <= names, exit_url
@@ -122,7 +114,7 @@ def test_a_codename_free_admin_row_is_not_opened_by_an_unrelated_grant(
     """`/users` has `permission=""`. Holding scheduler.read says nothing about
     it, and an empty codename must not read as "no gate"."""
     grant_viewer_scheduler_read()
-    client = _client(api_client, viewer_user)
+    client = sign_in(api_client, viewer_user)
     for exit_url in MENU_EXITS:
         assert "用户管理" not in _names(_fetch(client, exit_url)), exit_url
 
@@ -141,7 +133,7 @@ def test_a_soft_deleted_child_does_not_hold_its_directory_open(
     # and a live one would keep the seeded directory open for its own reason.
     for page in Menu.objects.filter(path="/scheduler"):
         page.soft_delete()
-    names = _names(_fetch(_client(api_client, viewer_user), exit_url))
+    names = _names(_fetch(sign_in(api_client, viewer_user), exit_url))
     assert "系统设置" not in names
     assert "定时任务" not in names
     assert "动态" in names  # the walk is not vacuous

@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User, UserRole
 from apps.core.recycle_bin import list_bin_entries, registered_types
@@ -18,19 +17,11 @@ from apps.perm.cache import invalidate_all_permissions
 from apps.perm.models import Role
 from apps.tenants.models import Tenant
 from apps.workflow.models import WorkflowTemplate
+from tests.conftest import sign_in
 
 BIN = "/api/v1/recycle-bin/"
 TEMPLATES = "/api/v1/workflow/templates/"
 PACKS = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages"
-
-
-def _client(user):
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:  # the hall-less ADMIN carries no hall
-        token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -40,7 +31,7 @@ def world(db):
     for name in UserRole.values:
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
     admin = User.objects.create_user(username="tplbin_admin", password="x", role="ADMIN", tenant=None)
-    yield {"tenant": tenant, "client": _client(admin)}
+    yield {"tenant": tenant, "client": sign_in(APIClient(), admin)}
     invalidate_all_permissions()
 
 

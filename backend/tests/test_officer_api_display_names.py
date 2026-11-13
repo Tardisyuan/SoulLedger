@@ -23,25 +23,17 @@ from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant
 from apps.scheduler.models import TaskRun
 from apps.tenants.models import Tenant
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow
+from tests.conftest import sign_in
 
 User = get_user_model()
 CJ = "/api/v1/dispatch/cross-tenant-judgments/"
 WORKFLOWS = "/api/v1/workflows/"
 RUNS = "/api/v1/scheduler/runs/"
-
-
-def _client(user):
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 def _tenant(code, name):
@@ -56,7 +48,7 @@ def world(db):
     b = _tenant("DN_B", "Beta Display Hall")
     c = _tenant("DN_C", "Gamma Display Hall")
     judge_a = User.objects.create_user(username="dn_judge_a", password="x", role="JUDGE", tenant=a)
-    return {"a": a, "b": b, "c": c, "judge_a": judge_a, "client_a": _client(judge_a)}
+    return {"a": a, "b": b, "c": c, "judge_a": judge_a, "client_a": sign_in(APIClient(), judge_a)}
 
 
 def _bench(initiator, *seats, title="bench"):

@@ -7,22 +7,14 @@ really changed.
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.notifications.models import UserNotification
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 User = get_user_model()
 READ = "/api/v1/notifications/batch-read/"
 DELETE = "/api/v1/notifications/batch-delete/"
-
-
-def _client(user):
-    token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -37,7 +29,7 @@ def inbox(db):
         return [UserNotification.objects.create(user=user, title=f"t{i}", message="m", **kw) for i in range(n)]
 
     return {
-        "client": _client(me), "mine": make(me, 3), "peer": make(peer, 1), "far": make(far, 1),
+        "client": sign_in(APIClient(), me), "mine": make(me, 3), "peer": make(peer, 1), "far": make(far, 1),
         "read": make(me, 1, is_read=True),
     }
 

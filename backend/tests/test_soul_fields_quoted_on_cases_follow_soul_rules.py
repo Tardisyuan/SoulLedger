@@ -11,7 +11,6 @@ import inspect
 
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
 from apps.core.field_permissions import SoulFieldRulesMixin
@@ -19,14 +18,7 @@ from apps.judgment.models import Judgment
 from apps.perm.models import FieldPermission, Role
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
-
-
-def _client(user):
-    token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
+from tests.conftest import sign_in
 
 
 def _case_row(client, case):
@@ -40,8 +32,8 @@ def test_the_judgment_list_drops_the_soul_name_the_soul_rule_hides():
     tenant = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})[0]
     soul = Soul.objects.create(name="Quoted Soul", current_state=SoulState.JUDGING, tenant=tenant)
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, court="第一殿", tenant=tenant)
-    judge = _client(User.objects.create_user(username="sq_judge", password="x", role="JUDGE", tenant=tenant))
-    admin = _client(User.objects.create_user(username="sq_admin", password="x", role="ADMIN", tenant=tenant))
+    judge = sign_in(APIClient(), User.objects.create_user(username="sq_judge", password="x", role="JUDGE", tenant=tenant))
+    admin = sign_in(APIClient(), User.objects.create_user(username="sq_admin", password="x", role="ADMIN", tenant=tenant))
 
     assert _case_row(judge, case)["soul_name"] == "Quoted Soul"
     role = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "判官"})[0]

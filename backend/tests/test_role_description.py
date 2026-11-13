@@ -5,19 +5,10 @@ edit goes through, and carried by the permission export / import.
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.perm.export import export_permissions, import_permissions
 from apps.perm.models import Role
-
-
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
+from tests.conftest import sign_in
 
 
 @pytest.fixture
@@ -27,7 +18,7 @@ def clerk_role(db):
 
 @pytest.mark.django_db
 def test_admin_writes_the_description_and_the_list_reads_it_back(admin_user, clerk_role):
-    client = _client(admin_user)
+    client = sign_in(APIClient(), admin_user)
     text = "各殿收发灵魂来信、处理日常事务。"
     response = client.put(f"/api/v1/perm/roles/{clerk_role.pk}/", {"description": text}, format="json")
     assert response.status_code == 200, response.content
@@ -42,7 +33,7 @@ def test_admin_writes_the_description_and_the_list_reads_it_back(admin_user, cle
 def test_blank_is_allowed_and_is_the_default(admin_user, clerk_role):
     assert clerk_role.description == ""
     Role.objects.filter(pk=clerk_role.pk).update(description="旧的")
-    response = _client(admin_user).put(f"/api/v1/perm/roles/{clerk_role.pk}/", {"description": ""}, format="json")
+    response = sign_in(APIClient(), admin_user).put(f"/api/v1/perm/roles/{clerk_role.pk}/", {"description": ""}, format="json")
     assert response.status_code == 200
     clerk_role.refresh_from_db()
     assert clerk_role.description == ""
@@ -50,7 +41,7 @@ def test_blank_is_allowed_and_is_the_default(admin_user, clerk_role):
 
 @pytest.mark.django_db
 def test_a_non_admin_cannot_write_it(judge_user, clerk_role):
-    response = _client(judge_user).put(f"/api/v1/perm/roles/{clerk_role.pk}/", {"description": "越权"}, format="json")
+    response = sign_in(APIClient(), judge_user).put(f"/api/v1/perm/roles/{clerk_role.pk}/", {"description": "越权"}, format="json")
     assert response.status_code == 403
     clerk_role.refresh_from_db()
     assert clerk_role.description == ""
