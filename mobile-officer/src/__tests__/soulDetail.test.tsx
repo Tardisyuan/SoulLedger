@@ -420,6 +420,22 @@ describe("historical dates", () => {
   });
 });
 
+// 第三十批 八.4:功过记号按文明,靠形状;颜色只上数字。
+describe("deed marks", () => {
+  it("each deed carries its civilization's mark, read as 功 / 过; the signed number carries the colour", async () => {
+    mockRecords.mockResolvedValue({ data: [record(1), record(2, 0, "DEMERIT")] });
+    await openSoul();
+    fireEvent.press(screen.getByTestId("soul-tab-karma"));
+    const merit = await screen.findByTestId("soul-karma-mark-r1");
+    const demerit = screen.getByTestId("soul-karma-mark-r2");
+    expect(merit.props.accessibilityLabel).not.toBe(demerit.props.accessibilityLabel);
+    const score = (id: string) => within(screen.getByTestId(`soul-karma-row-${id}`)).getByText(/^[+−]\d+$/);
+    expect(score("r1")).toHaveTextContent(/^\+/);
+    expect(score("r2")).toHaveTextContent(/^−/);
+    expect(score("r1").props.style).not.toEqual(score("r2").props.style); // pos vs neg
+  });
+});
+
 // 第五十七批 六:地府灵魂的身份页签多两行只读 —— 十三站「第 n / 13 站 · 站名」与勾魂状态。挪站、发牒留在网页上。
 describe("十三站与勾魂 (Design 第五十七批 六)", () => {
   it("on the road: station n of 13 by name; the latest warrant's status and escort, words not members", async () => {

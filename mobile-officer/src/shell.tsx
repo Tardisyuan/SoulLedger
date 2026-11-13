@@ -1,6 +1,6 @@
 /**
  * The signed-in shell: the identity band, the standing two-step-verification banner (when owed),
- * up to five tabs (only those the officer's codes reach), and one detail screen over them. Each tab's top bar has 「问一问」; its conversation is
+ * the doors 审 / 册 / 我 over the five pages (only those the officer's codes reach; kit.tsx `DOOR_PAGES`), and one detail screen over them. Each tab's top bar has 「问一问」; its conversation is
  * held here, above the tabs, so a tab switch or closing the sheet does not lose it (assist.tsx).
  *
  * Navigation is a state, not a navigator: five tabs and one level of detail do not need a stack,
@@ -12,7 +12,7 @@ import { notificationsApi } from "@soulledger/core/api/notifications";
 import { BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
-import { IdentityBand, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
+import { IdentityBand, PageSwitch, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
 import { listenForArrivals, listenForLandings, registerDevice } from "./push";
@@ -42,8 +42,9 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   // A reset link opened while signed in. Its form is drawn over the shell (nothing under it is lost on close);
   // while the recovery codes are on screen unconfirmed it waits, like every other thing that would move the officer away.
   const [resetLink, setResetLink] = useState<ResetLink | null>(null);
-  const [tab, setTab] = useState<TabKey>("todo");
-  // 城隍初审中 opens 待办 on 城隍初审 for that visit only (user 2026-11-13): the saved filter stays; any other way into 待办 clears this.
+  // 审 opens on 案卷台 (第三十批 九.3: a judge's first page); an officer without it gets the first page there is.
+  const [tab, setTab] = useState<TabKey>("queue");
+  // 城隍初审中 / 转生申请 open 待办 on that kind for that visit only (user 2026-11-13): the saved filter stays; any other way into 待办 clears this.
   const [todoOnce, setTodoOnce] = useState<TodoKind[] | null>(null);
   const [detail, setDetail] = useState<DetailTarget | null>(null);
   // 我的's two sub-screens, drawn over the tabs like a detail (not a tab, so no tab-bar entry).
@@ -205,6 +206,15 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const current = tabs.includes(tab) ? tab : tabs[0];
   // A one-visit filter only applies while 待办 is the current tab; every other way into 待办 clears it (above).
   const todoFilterOnce = current === "todo" ? todoOnce : null;
+  // A door in the bar or a page in the switch under the top bar: either way the officer moves to that page.
+  const go = (next: TabKey) => {
+    if (locked) return; // the recovery codes are on screen and not yet confirmed saved
+    setDetail(null);
+    setAccount(null);
+    setSwipe(false);
+    setTodoOnce(null);
+    setTab(next);
+  };
 
   return (
     <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
@@ -225,6 +235,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           }}
         />
       )}
+      {account || detail || swipe ? null : <PageSwitch current={current} tabs={tabs} unread={unread} onSelect={go} />}
       <View style={{ flex: 1 }}>
         {swipe ? (
           <SwipeScreen onBack={closeSwipe} />
@@ -264,6 +275,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             onSwipe={() => setSwipe(true)}
             // 城隍初审中 (第三十批): 待办 filtered to 城隍初审, this visit only -- the saved filter is not touched.
             onOpenCityGod={tabs.includes("todo") ? () => { setTodoOnce(["city_god"]); setTab("todo"); } : undefined}
+            // 转生申请 (第三十批 十二.2, the seventh source): 待办 filtered to 转生申请, the same one-visit way.
+            onOpenRebirth={tabs.includes("todo") ? () => { setTodoOnce(["rebirth"]); setTab("todo"); } : undefined}
             onOpen={(id, position) => { setOrigin("queue"); setDeskPosition(position ?? null); setDetail({ type: "judgment", id }); }} />
         ) : current === "search" ? (
           <SearchTab
@@ -282,14 +295,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         current={current}
         tabs={tabs}
         unread={unread}
-        onSelect={(next) => {
-          if (locked) return; // the recovery codes are on screen and not yet confirmed saved
-          setDetail(null);
-          setAccount(null);
-          setSwipe(false);
-          setTodoOnce(null);
-          setTab(next);
-        }}
+        onSelect={go}
       />
       <AssistSheet assist={assist} tab={current} />
       {resetLink && !locked ? (

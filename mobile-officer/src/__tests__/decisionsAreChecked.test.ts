@@ -44,7 +44,7 @@ const texts = files.map((f) => [relative(SRC, f), readFileSync(f, "utf8")] as co
 it("every decision call site goes through confirmedDecision", () => {
   const sites = texts.filter(([f]) => f !== "decisions.ts").flatMap(([f, s]) => [...s.matchAll(DECISION)].map(() => f));
   // Not vacuous: the scan still finds the four screens that send decisions.
-  expect(new Set(sites)).toEqual(new Set(["screens/sheets.tsx", "screens/wangsi.tsx", "screens/servingFact.tsx", "screens/cityGod.tsx", "screens/swipe.tsx"]));
+  expect(new Set(sites)).toEqual(new Set(["screens/sheets.tsx", "screens/wangsi.tsx", "screens/servingFact.tsx", "screens/cityGod.tsx", "screens/swipe.tsx", "screens/sealSheet.tsx"]));
   expect(sites.length).toBeGreaterThanOrEqual(5);
   expect(texts.flatMap(([f, s]) => unchecked(f, s))).toEqual([]);
 });

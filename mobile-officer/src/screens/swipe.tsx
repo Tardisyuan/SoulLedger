@@ -12,6 +12,7 @@
  * (`conclude_refusal` 非空:城隍、候审、防腐、杜阿特未走完、未渡)不进卡堆,仍在队列里。
  * 落印走 `confirmedDecision`(我的 › 批准前验证面容 / 指纹),同其他决定。
  */
+import { responseData } from "@soulledger/core/api/client";
 import { concludeRefusalOf, judgmentApi, type ConcludeJudgmentPayload, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { Animated, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
@@ -37,14 +38,20 @@ const RING = 30; // 60 的圆钮,外圈半径
 const RING_C = 2 * Math.PI * (RING - 2);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-/** 落印被拒:面容没过、天平、受刑计划有自己的话;别的(含 `FAIL_REASON_REFUSALS`,面板已先挡住)说一句没成。 */
+/**
+ * 落印被拒:面容没过、天平、受刑计划、理由各有自己译好的话;别的拒绝(如欧洲未受洗的灵魂不能判炼狱)照服务端
+ * 回的那句(`detail` / `error`)写出来(用户 2026-11-13);什么都没回的(断网、5xx 无正文)说一句没成。
+ */
 export function verdictFailure(t: T, e: unknown): string {
   const unconfirmed = notConfirmedKey(e);
   if (unconfirmed) return t(unconfirmed);
   const refusal = concludeRefusalOf(e);
   if (refusal?.kind === "weighing") return t(`judgment.weighing.errors.${refusal.code}`);
   if (refusal?.kind === "plan") return t(`sentence_plan.errors.${refusal.code}`);
-  return t("officer_app.state.error_title");
+  if (refusal?.kind === "fail_reason") return t(`judgment.fail_reason_errors.${refusal.code}`);
+  const body = responseData<{ detail: unknown; error: unknown }>(e);
+  const said = typeof body?.detail === "string" ? body.detail : typeof body?.error === "string" ? body.error : "";
+  return said.trim() || t("officer_app.state.error_title");
 }
 
 export function SwipeScreen({ onBack }: { onBack: () => void }) {

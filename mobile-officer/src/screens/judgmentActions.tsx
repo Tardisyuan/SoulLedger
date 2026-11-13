@@ -46,6 +46,7 @@ export function JudgmentActionBar({
   onChanged,
   onWrite,
   onDesk,
+  onJudge,
 }: {
   data: Judgment;
   me: number | null;
@@ -58,6 +59,8 @@ export function JudgmentActionBar({
   onWrite: () => void;
   /** 「在电脑上继续」。 */
   onDesk: () => void;
+  /** 「判」(第三十批 八.6):拉起落印抽屉。给了且案子在我手上、服务端判得了,底部就是「放回 / 判」两键。 */
+  onJudge?: () => void;
 }) {
   const { t, locale } = useI18n();
   const theme = useTheme();
@@ -177,6 +180,11 @@ export function JudgmentActionBar({
             <ActionButton testID="judgment-claim" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("officer_app.queue.claim")} onPress={claim} style={{ flex: 1 }} />
           ) : state === "deferred" && canExecute ? (
             <ActionButton testID="judgment-undefer" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("judgment.claim.undefer")} onPress={undefer} style={{ flex: 1 }} />
+          ) : state === "mine" && canExecute && onJudge && !data.conclude_refusal ? (
+            <>
+              <ActionButton testID="judgment-release" kind="outline" disabled={offline} accessibilityHint={hint} title={t("officer_app.desk.release")} onPress={() => open("release")} />
+              <ActionButton testID="judgment-judge" kind="primary" disabled={offline} accessibilityHint={hint} title={t("officer_app.seal.judge")} onPress={onJudge} style={{ flex: 1 }} />
+            </>
           ) : state === "desk" || state === "deferred" ? (
             <ActionButton testID="judgment-desk" kind="outline" title={t("officer_app.continue_on_desk")} onPress={onDesk} style={{ flex: 1 }} />
           ) : (

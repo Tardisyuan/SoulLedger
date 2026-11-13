@@ -102,17 +102,22 @@ describe("landing in the shell", () => {
     await waitFor(() => expect(screen.getByTestId("tab-notices").props.accessibilityState?.selected).toBe(true));
   });
 
-  it.each(["queue", "notices", "search"])("each voice / shortcut page (%s) lands on its own tab while signed in", async (tab) => {
+  it.each([
+    ["queue", "desk"],
+    ["notices", "me"],
+    ["search", "roll"],
+  ])("each voice / shortcut page (%s) lands on its own page, under its door (%s), while signed in", async (tab, door) => {
     renderOfficer(<Shell />);
     await screen.findByTestId("tab-bar");
     await act(async () => officerLinks.push(`soulledger-officer://${tab}`));
-    await waitFor(() => expect(screen.getByTestId(`tab-${tab}`).props.accessibilityState?.selected).toBe(true));
+    await waitFor(() => expect(screen.getByTestId(`door-${door}`).props.accessibilityState?.selected).toBe(true));
+    expect(await screen.findByTestId(`tab-${tab}-screen`)).toBeTruthy();
   });
 
   it("an unknown link changes nothing", async () => {
     renderOfficer(<Shell />);
     await screen.findByTestId("tab-bar");
     await act(async () => officerLinks.push("soulledger-officer://approve/wf-1"));
-    expect(screen.getByTestId("tab-todo").props.accessibilityState?.selected).toBe(true);
+    expect(screen.getByTestId("tab-queue").props.accessibilityState?.selected).toBe(true);
   });
 });
