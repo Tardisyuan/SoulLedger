@@ -310,7 +310,7 @@ const TECHNICAL: Record<string, string[]> = {
   // 键盘上的键名:抽屉页头的快捷键提示。
   "souls.preview.hint": ["J", "K", "Esc"],
   // 审阅详情的快捷键提示(C 组 08)。
-  "social_moderation.review.shortcuts": ["J", "K", "A", "H", "W"],
+  "social_moderation.review.shortcut_move": ["J", "K"],
   // 助手管理「供应商」区块(画布 provider-platforms,2026-09-30):价目表来源名、平台名里的缩写。
   "assist_admin.provider.price_ref": ["LiteLLM"],
   "assist_admin.provider.platforms.glm": ["GLM"],

@@ -475,13 +475,51 @@ describe("举报 · the C-08 review layout", () => {
     renderPage();
     await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
     expect(screen.queryByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.warn")}`) })).toBeNull();
-    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "x" } });
+    // No W here, so neither the legend nor the note's label mentions 警告.
+    const legend = detail().querySelector("[data-shortcuts]")!;
+    expect(legend).toHaveTextContent(`A ${tZh("social_moderation.review.approve")}`);
+    expect(legend).toHaveTextContent(`H ${tZh("social_moderation.actions.hide")}`);
+    expect(legend.textContent).not.toContain("W ");
+    expect(screen.queryByLabelText(tZh("social_moderation.review.reason_label"))).toBeNull();
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label_plain")), { target: { value: "x" } });
     fireEvent.keyDown(document.body, { key: "w" });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 20));
     });
     expect(apiMock.resolveReport).not.toHaveBeenCalled();
     expect(apiMock.act).not.toHaveBeenCalled();
+  });
+
+  it("one's own held-back post cannot be let through: 放行 is disabled with the reason, A does nothing, the legend drops A", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) =>
+      page(kind === "posts" ? [post({ author: { user_id: 2, display_name: "op" } })] : [])
+    );
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
+    const approve = within(detail()).getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) });
+    expect(approve).toBeDisabled();
+    expect(approve).toHaveAccessibleDescription(tZh("social_moderation.errors.self_moderation"));
+    fireEvent.keyDown(document.body, { key: "a" });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(apiMock.act).not.toHaveBeenCalled();
+    const legend = detail().querySelector("[data-shortcuts]")!;
+    expect(legend.textContent).not.toContain("A ");
+    expect(legend).toHaveTextContent(`H ${tZh("social_moderation.actions.hide")}`);
+  });
+
+  it("someone else's held-back post: 放行 stays enabled and carries no own-content hint", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
+    expect(within(detail()).getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) })).toBeEnabled();
+    expect(within(detail()).queryByText(tZh("social_moderation.errors.self_moderation"))).toBeNull();
   });
 
   it("letters typed into the reason box are text, not verdicts", async () => {
@@ -584,6 +622,16 @@ describe("举报 · the C-08 review layout", () => {
       expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.errors.already_resolved"), "error")
     );
   });
+
+  it("a code no bundle knows falls back to the generic failure, never the raw key", async () => {
+    asRole("social.moderate");
+    apiMock.resolveReport.mockRejectedValue(http(409, { detail: "x", code: "no_such_code_yet" }));
+    renderPage();
+    await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.failed"), "error"));
+    expect(mockShowToast).not.toHaveBeenCalledWith(expect.stringContaining("social_moderation.errors"), "error");
+  });
 });
 
 describe("敏感词 · E-08b", () => {
@@ -604,6 +652,11 @@ describe("敏感词 · E-08b", () => {
     fireEvent.change(input, { target: { value: "门牌号" } });
     fireEvent.submit(input.closest("form") as HTMLFormElement);
     await waitFor(() => expect(apiMock.addWord).toHaveBeenCalledWith({ word: "门牌号", category: "PRIVACY", action: "MASK" }));
+    // The toast names the word, not a bare 「已处理」.
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.words.added", { word: "门牌号" }), "success")
+    );
+    expect(mockShowToast).not.toHaveBeenCalledWith(tZh("social_moderation.done"), "success");
   });
 
   it("requires a category: 添加 stays disabled and Enter sends nothing until one is chosen", async () => {
@@ -943,6 +996,46 @@ describe("已处理 · E-08d", () => {
     expect(within(postRow).getByText(tZh("social_moderation.review.media_n", { n: "2" }))).toBeInTheDocument();
     const commentRow = screen.getByText("被删除的评论").closest("tr") as HTMLElement;
     expect(commentRow.querySelector("[data-media-count]")).toBeNull();
+  });
+
+  it("a post with no images says nothing about images (no 「图 0」), in the handled list and the reports list", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page([{ ...handled[0], media_count: 0 }]));
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    expect(within(list).getByText("被举报的帖子摘录")).toBeInTheDocument();
+    expect(list.querySelector("[data-media-count]")).toBeNull();
+    fireEvent.click(segment("handled"));
+    const postRow = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    expect(postRow.querySelector("[data-media-count]")).toBeNull();
+    expect(within(postRow).queryByText(tZh("social_moderation.review.media_n", { n: "0" }))).toBeNull();
+  });
+
+  it("the handling badge uses the feed's tone: 已隐藏 is error (red), not warning; 已删除 is ink", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const hidden = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    expect(within(hidden).getByText(tZh("social_moderation.handling.HIDDEN"))).toBeInTheDocument();
+    expect(hidden.outerHTML).toContain("--color-danger");
+    expect(hidden.outerHTML).not.toContain("--color-warning");
+    const deleted = screen.getByText("被删除的评论").closest("tr") as HTMLElement;
+    expect(deleted.outerHTML).not.toContain("--color-danger");
+  });
+
+  it("a hidden post the author later deleted stays in the history, says so, and offers no 恢复可见", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page([{ ...handled[0], author_deleted: true }]));
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const row = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "王五" }));
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText(tZh("social_moderation.handled.author_deleted"))).toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: tZh("social_moderation.handled.restore") })).toBeNull();
+    // The content is gone: the drawer does not ask for it.
+    expect(apiMock.item).not.toHaveBeenCalledWith("posts", "h1");
   });
 
   it("rangeStart counts today as the first of N days, in UTC", () => {

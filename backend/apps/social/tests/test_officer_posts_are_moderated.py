@@ -3,7 +3,7 @@ PENDING / HIDDEN, same queue `/social-moderation/`), and an author cannot approv
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.social.models import Comment, ModerationStatus, Post, SensitiveWord, SensitiveWordAction
+from apps.social.models import Comment, ModerationStatus, Post, Reaction, SensitiveWord, SensitiveWordAction
 from apps.tenants.models import Tenant
 
 from .test_officer_edit_screening import BASE, _client
@@ -80,3 +80,26 @@ def test_officer_comment_pending_hidden_from_others_until_approved(hall):
     assert _client(hall["author"], t).get(f"{BASE}/comments/", {"post": str(post.pk)}).data["results"] == []
     assert _client(hall["mod"], t).post(f"{MOD}/comments/{c.pk}/approve/", {}, format="json").status_code == 200
     assert len(_client(hall["author"], t).get(f"{BASE}/comments/", {"post": str(post.pk)}).data["results"]) == 1
+
+
+@pytest.mark.parametrize("status", [ModerationStatus.PENDING, ModerationStatus.HIDDEN])
+@pytest.mark.parametrize("reaction", ["LIKE", "ETERNAL_LIGHT"])
+def test_author_cannot_react_to_their_own_unpublished_post(hall, status, reaction):
+    """The author sees their own PENDING / HIDDEN post; seeing it is not leave to react or light a lamp."""
+    t = hall["t"]
+    post = Post.objects.create(author=hall["author"], content="p", tenant=t, moderation_status=status)
+    body = {"post": str(post.pk), "reaction_type": reaction}
+    assert _client(hall["author"], t).post(f"{BASE}/reactions/", body, format="json").status_code == 400
+    assert not Reaction.objects.filter(post=post).exists()
+    Post.objects.filter(pk=post.pk).update(moderation_status=ModerationStatus.PUBLISHED)
+    assert _client(hall["author"], t).post(f"{BASE}/reactions/", body, format="json").status_code == 201
+
+
+def test_author_cannot_react_to_their_own_pending_comment(hall):
+    t = hall["t"]
+    post = Post.objects.create(author=hall["author"], content="p", tenant=t)
+    c = Comment.objects.create(author=hall["author"], post=post, content="c", tenant=t,
+                               moderation_status=ModerationStatus.PENDING)
+    body = {"comment": str(c.pk), "reaction_type": "LIKE"}
+    assert _client(hall["author"], t).post(f"{BASE}/reactions/", body, format="json").status_code == 400
+    assert not Reaction.objects.filter(comment=c).exists()

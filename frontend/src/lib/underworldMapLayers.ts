@@ -504,9 +504,10 @@ export function narrowCamera(
 export const LABEL_EDGE = 4;
 
 /**
- * 近处才用:出了图边的字往里收 —— 左边出界的改成左对齐贴 `LABEL_EDGE`,右边出界的右对齐。镜头夹在图内,出了图的那一截近处
- * 永远看不到(英文「Embalming · seventy days」以 x=60 居中,左端约在 -8)。宽:浏览器里量(`getComputedTextLength`),
- * jsdom 里估(汉字一个字号宽,其余 0.56 个)。全景不动,桌面照 Design 的位置画。
+ * 出了图边的字往里收 —— 左边出界的改成左对齐贴 `LABEL_EDGE`,右边出界的右对齐。近处与全景都调用(2026-11-14):
+ * 镜头夹在图内,全景的图框就是整张图,出了图的那一截哪种视图都看不到(英文「Embalming · seventy days」以 x=60 居中,
+ * 左端约在 -8;地府「Earth God's Temple」、埃及「Field of Reeds (Aaru)」同理)。图内的字不动,照 Design 的位置画。
+ * 宽:浏览器里量(`getComputedTextLength`),jsdom 里估(汉字一个字号宽,其余 0.56 个)。
  * ponytail: 只管图边;横跨镜头左右边的字仍会切一截(平移就能看全),要第一眼全见得另做镜头适配或折行。
  */
 export function anchorLabelsInside(svg: Element, width: number) {

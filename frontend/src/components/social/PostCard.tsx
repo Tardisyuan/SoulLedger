@@ -120,6 +120,7 @@ export function PostCard({ post }: { post: Post }) {
           totals={{ reactions: post.reaction_count, comments: post.comment_count }}
           counts={post.reaction_counts}
           mine={post.my_reaction}
+          disabled={Boolean(post.moderation_status) && post.moderation_status !== "PUBLISHED"}
         />
       </div>
 

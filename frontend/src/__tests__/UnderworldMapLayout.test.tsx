@@ -22,6 +22,8 @@ const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 450">
   <g id="labels">
     <g data-for="TUDI_TEMPLE"><text x="160" y="300" font-size="10">01</text><text x="160" y="320" font-size="12">土地庙</text></g>
     <g data-for="HUANGQUAN_ROAD"><text x="1060" y="300" font-size="10">02</text><text x="1060" y="320" font-size="12">黄泉路</text></g>
+    <text id="edge-left" x="20" y="420" font-size="12" text-anchor="middle">Earth God's Temple</text>
+    <text id="edge-right" x="1110" y="420" font-size="12" text-anchor="middle">Field of Reeds (Aaru)</text>
   </g>
 </svg>`;
 
@@ -105,6 +107,21 @@ it("draws the whole map when it is wide enough for 11px labels", async () => {
   const { container } = draw();
   expect(await screen.findByTestId("underworld-map")).toHaveAttribute("data-camera", "whole");
   expect(container.querySelector(".v4-map-viewport > svg")!.getAttribute("viewBox")).toBe("0 0 1120 450");
+});
+
+// 2026-11-14: on the desktop panorama the English 「Earth God's Temple」 / 「Field of Reeds (Aaru)」 were cut at the map edge —
+// the anchoring ran close up only. The whole map anchors too; a line well inside stays where Design put it.
+it("the whole map anchors a line past either edge inside it, and leaves the inner lines alone", async () => {
+  width = 1300;
+  const { container } = draw();
+  expect(await screen.findByTestId("underworld-map")).toHaveAttribute("data-camera", "whole");
+  const left = container.querySelector("#edge-left")!;
+  const right = container.querySelector("#edge-right")!;
+  expect([left.getAttribute("text-anchor"), left.getAttribute("x")]).toEqual(["start", "4"]);
+  expect([right.getAttribute("text-anchor"), right.getAttribute("x")]).toEqual(["end", String(1120 - 4)]);
+  // Absence: a line inside the map keeps Design's position.
+  const inner = container.querySelector('[data-for="TUDI_TEMPLE"] text[y="300"]')!;
+  expect([inner.getAttribute("text-anchor"), inner.getAttribute("x")]).toEqual([null, "160"]);
 });
 
 it("opens at Fit on a desktop-width container (the Diyu labels alone would ask for a close-up)", async () => {

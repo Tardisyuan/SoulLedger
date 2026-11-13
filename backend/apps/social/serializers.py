@@ -8,7 +8,16 @@ from rest_framework import serializers
 
 from apps.social import images
 from apps.social import media as post_media
-from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, UserProfile, Visibility
+from apps.social.models import (
+    Comment,
+    Follow,
+    ModerationStatus,
+    Post,
+    Reaction,
+    ReactionType,
+    UserProfile,
+    Visibility,
+)
 from apps.social.soul_serializers import (
     PostMediaSerializer,
     ScreeningFieldMixin,
@@ -376,6 +385,14 @@ class ReactionCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "No such post."
             )
+        # Visible is not the same as open: a PENDING / HIDDEN post or comment is visible to its author
+        # only, and a reaction there would count (and light a lamp) on something nobody else can see.
+        # The soul circle refuses the same (soul_circle.toggle_reaction filters PUBLISHED).
+        for target in (target_post, comment):
+            if target is not None and target.moderation_status != ModerationStatus.PUBLISHED:
+                raise serializers.ValidationError(
+                    "Only published content takes reactions.", code="not_published"
+                )
         return attrs
 
 

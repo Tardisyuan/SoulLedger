@@ -381,6 +381,7 @@ function moderation(rec: Recording, path: string, body: Row): Answer | null {
         handled_by: { user_id: me.id, display_name: me.name },
         handled_at: now(),
         media_count: row.media_count ?? 0,
+        author_deleted: false,
       });
     }
     if (resolution === "MUTE" && row?.target_user) addMute(rec, row.target_user as Row, Number(body.mute_days) || 7, String(body.note ?? ""));

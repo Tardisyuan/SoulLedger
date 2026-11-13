@@ -250,8 +250,6 @@ export function UnderworldMap({
   const homeCamera = template ? narrowCamera(box, home, width, fontUnits, extent) : null;
   const localCamera = homeCamera && camX !== null ? panCamera(homeCamera, camX - homeCamera.x, box) : homeCamera;
   const camera = wholeMap || compact ? null : localCamera;
-  /** 近处开着:出了图边的字往里收(`anchorLabelsInside`);全景照 Design 画。 */
-  const closeUpOn = !!camera;
   const cameraKey = camera ? `${camera.x} ${camera.y} ${camera.w} ${camera.h}` : "";
 
   // 量宽要在第一次绘制之前(layout effect):用 useEffect 时第一帧按宽 0 画,窄屏先闪一下缩小的全景才换成近处。
@@ -305,7 +303,9 @@ export function UnderworldMap({
     }
     const badgeBoxes = stationLoads ? markLoads(svg, stationLoads) : new Map();
     moveGroupLabelsOffHeroes(svg, heroBoxes, badgeBoxes);
-    if (closeUpOn) anchorLabelsInside(svg, box.width);
+    // 出了图边的字往里收,近处与全景都一样(`anchorLabelsInside`):桌面全景的图框就是 viewBox,
+    // 英文「Earth God's Temple」「Embalming · seventy days」「Field of Reeds (Aaru)」原样画会被图边切掉一截。
+    anchorLabelsInside(svg, box.width);
     markYouAreHere(svg, states, visits ? t("map.soul.here") : null);
     setBranchInfo(applyBranches(svg, branchesHidden, states.current?.node ?? null));
     if (focused) svg.querySelector(`[id="${focused}"]`)?.setAttribute("data-focused", "");
@@ -313,7 +313,7 @@ export function UnderworldMap({
     applyCamera(svg, camera, box);
     // view / camera 不在依赖里:平移由下面两个 effect 单独处理。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary, currentDetail, replayAt, heat, stationLoads, heroes, closeUpOn]);
+  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary, currentDetail, replayAt, heat, stationLoads, heroes]);
 
   useEffect(() => {
     if (live.current) applyView(live.current, view);

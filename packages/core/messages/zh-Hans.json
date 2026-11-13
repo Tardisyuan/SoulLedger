@@ -6981,7 +6981,8 @@
       "shared_source_only": "殿管理员只能从全站共享词表复制,不能从别的殿复制",
       "same_tenant": "源文明就是当前文明",
       "no_tenant": "没有当前文明",
-      "invalid_days": "禁言天数须在 1–365 之间"
+      "invalid_days": "禁言天数须在 1–365 之间",
+      "self_moderation": "不能通过或恢复自己的内容。"
     },
     "empty": {
       "words": "还没有敏感词",
@@ -7016,9 +7017,10 @@
       "rule_hit": "规则命中 · 敏感词",
       "from": "来自 {{name}}",
       "reason_label": "处理备注（警告必填）",
+      "reason_label_plain": "处理备注",
       "reason_required": "警告必须写理由",
       "approve": "放行",
-      "shortcuts": "J / K 上下 · A 放行 · H 隐藏 · W 警告",
+      "shortcut_move": "J / K 上下",
       "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。",
       "held_for_word": "因敏感词「{{word}}」待审",
       "warn": "警告作者",
@@ -7035,6 +7037,7 @@
     },
     "words": {
       "add_row": "新增敏感词",
+      "added": "已添加敏感词「{{word}}」",
       "col_word": "词 / 规则",
       "col_category": "类别",
       "col_action": "命中后",
@@ -7092,6 +7095,7 @@
       "read_only": "只读：处理已生效。",
       "restore": "恢复可见",
       "in_recycle_bin": "在回收站",
+      "author_deleted": "作者之后自己删除了这条内容，不能再恢复可见。",
       "range": "时间",
       "range_30d": "近 30 天",
       "range_90d": "近 90 天",

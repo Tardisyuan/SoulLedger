@@ -46,15 +46,17 @@ interface ReactionBarProps {
   counts?: Record<(typeof REACTIONS)[number]["type"], number>;
   /** 当前用户的表态(`Post.my_reaction` / `Comment.my_reaction`)。 */
   mine?: (typeof REACTIONS)[number]["type"] | null;
+  /** 送审 / 隐藏中的帖子或评论不收表态(服务端同样拒,ReactionCreateSerializer.validate);卡片上的状态徽章说明原因。 */
+  disabled?: boolean;
 }
 
-export function ReactionBar({ postId, commentId, totals, counts, mine }: ReactionBarProps) {
+export function ReactionBar({ postId, commentId, totals, counts, mine, disabled = false }: ReactionBarProps) {
   const { t } = useI18n();
   const toggleReaction = useToggleReaction();
   const myReaction = mine ?? null;
 
   const handleToggle = (type: string) => {
-    if (!postId && !commentId) return;
+    if ((!postId && !commentId) || disabled) return;
     // 防重复:上一次还没回来就不再发 —— 按钮保持可点,已经乐观地显示了新状态。
     if (toggleReaction.isPending) return;
     toggleReaction.mutate({
@@ -68,7 +70,7 @@ export function ReactionBar({ postId, commentId, totals, counts, mine }: Reactio
   const lamps = counts?.ETERNAL_LIGHT ?? 0;
   const lightTotal = counts ? LIGHT.reduce((sum, r) => sum + (counts[r.type] ?? 0), 0) : totals?.reactions;
   const base =
-    "inline-flex h-(--control-h-sm) min-w-(--control-h-sm) shrink-0 items-center justify-center gap-1 text-sm transition-colors duration-fast ease-standard";
+    "inline-flex h-(--control-h-sm) min-w-(--control-h-sm) shrink-0 items-center justify-center gap-1 text-sm transition-colors duration-fast ease-standard disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -79,6 +81,7 @@ export function ReactionBar({ postId, commentId, totals, counts, mine }: Reactio
             key={type}
             type="button"
             onClick={() => handleToggle(type)}
+            disabled={disabled}
             aria-busy={toggleReaction.isPending || undefined}
             aria-pressed={isActive}
             data-reaction={type}
@@ -97,6 +100,7 @@ export function ReactionBar({ postId, commentId, totals, counts, mine }: Reactio
       <button
         type="button"
         onClick={() => handleToggle("ETERNAL_LIGHT")}
+        disabled={disabled}
         aria-busy={toggleReaction.isPending || undefined}
         aria-pressed={lit}
         data-reaction="ETERNAL_LIGHT"
