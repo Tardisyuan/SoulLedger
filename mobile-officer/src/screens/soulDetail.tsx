@@ -27,6 +27,7 @@ import type { Locale } from "@soulledger/core/config/locale";
 import { useCallback, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
+import { DeedMark, civOf } from "../dossierSeal";
 import { formatWhen } from "../format";
 import { ActionButton, LoadingRows, RefreshFailed, Row, StateView, detailStateOf } from "../kit";
 import { MoreRow, useMoreRows, type Page } from "../paged";
@@ -417,11 +418,16 @@ function KarmaTab({ soul }: { soul: Soul }) {
           {g.rows.map((r) => {
             const source = r.evidence_source ? enumLabel("souls.evidence_sources", r.evidence_source) : null;
             const when = r.event_date ? dateText(r.event_date, locale) : formatWhen(r.recorded_at).slice(0, 10);
+            const kind = t(civKey(t, r.record_type === "DEMERIT" ? "officer_app.soul.demerit_short" : "officer_app.soul.merit_short", soul.civilization));
             return (
-              <View key={r.id} testID={`soul-karma-row-${r.id}`} style={{ flexDirection: "row", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
-                <View style={{ width: 56 }}>
-                  <OneLine variant="value" style={{ fontSize: 15 }}>{deedScore(r)}</OneLine>
-                  <Txt variant="caption" tone="muted">{t(civKey(t, r.record_type === "DEMERIT" ? "officer_app.soul.demerit_short" : "officer_app.soul.merit_short", soul.civilization))}</Txt>
+              <View key={r.id} testID={`soul-karma-row-${r.id}`} style={{ flexDirection: "row", alignItems: "flex-start", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
+                {/* 第三十批 八.4:记号只答功还是过(形状),颜色只上数字;认不出文明的写字。 */}
+                <View style={{ paddingTop: 3 }}>
+                  {civOf(soul.civilization) ? (
+                    <DeedMark testID={`soul-karma-mark-${r.id}`} civilization={soul.civilization} demerit={r.record_type === "DEMERIT"} label={kind} />
+                  ) : (
+                    <Txt variant="caption" tone="muted">{kind}</Txt>
+                  )}
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Txt variant="body" numberOfLines={2}>{r.description}</Txt>
@@ -429,6 +435,7 @@ function KarmaTab({ soul }: { soul: Soul }) {
                     {[when, source ? t("officer_app.soul.source", { source: source.state === "known" ? source.label : r.evidence_source! }) : null].filter(Boolean).join(" · ")}
                   </OneLine>
                 </View>
+                <OneLine variant="value" tone={r.record_type === "DEMERIT" ? "neg" : "pos"} style={{ fontSize: 15 }}>{deedScore(r)}</OneLine>
               </View>
             );
           })}

@@ -81,6 +81,36 @@ export function passPayload(civ: string, account: "" | GreekAccount = ""): Concl
   return civ === "GREEK" ? { verdict: "PASSED", greek_account: account } : { verdict: "PASSED" };
 }
 
+/**
+ * 卷宗「判」抽屉(Design 第三十批 八.6)选的是哪一个判决;通过 / 不过之外的去处由服务端按规则选(同滑卡审判)。
+ * `PASSED` 只等希腊的文书,`FAILED` 等理由选全(`rejectReady`)。
+ */
+export type SealVerdict = "PASSED" | "FAILED";
+export interface SealChoice {
+  verdict: SealVerdict | null;
+  /** 希腊判通过时的文书。 */
+  account: "" | GreekAccount;
+  /** 判不过的理由。 */
+  reject: RejectChoice;
+  /** 判词(`notes`),可空。 */
+  notes: string;
+}
+export const NO_SEAL: SealChoice = { verdict: null, account: "", reject: NO_CHOICE, notes: "" };
+
+/** 「按住落印」可按了吗。 */
+export function sealReady(civ: string, c: SealChoice): boolean {
+  if (c.verdict === "PASSED") return civ !== "GREEK" || !!c.account;
+  if (c.verdict === "FAILED") return rejectReady(civ, c.reject);
+  return false;
+}
+
+/** 发给 `conclude/` 的:通过 / 不过各自的那一份,判词写了才带 `notes`。 */
+export function sealPayload(civ: string, c: SealChoice): ConcludeJudgmentPayload {
+  const base = c.verdict === "FAILED" ? failPayload(civ, c.reject) : passPayload(civ, c.account);
+  const notes = c.notes.trim();
+  return notes ? { ...base, notes } : base;
+}
+
 const HAN = ["〇", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 /** 殿号:中文写汉字(「四殿」「第四殿」,定稿如此),别的语言写数字。 */
 export function courtNumeral(n: number, locale: Locale): string {

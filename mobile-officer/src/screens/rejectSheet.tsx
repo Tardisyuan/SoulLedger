@@ -28,7 +28,7 @@ import {
 } from "../verdict";
 
 /** 一行可选项:单选画圆点,多选画方框。`aside` 在右边(地府的殿号)。 */
-function Choice({
+export function Choice({
   testID,
   label,
   on,
@@ -94,31 +94,13 @@ export function RejectSheet({
   onCancel: () => void;
   onConfirm: (payload: ConcludeJudgmentPayload) => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const theme = useTheme();
   const civ = judgment.civilization;
   const [choice, setChoice] = useState<RejectChoice>(NO_CHOICE);
-  const [more, setMore] = useState(false);
-  const pick = (code: string) => setChoice((c) => toggleReason(civ, c, code));
-  const has = (code: string) => choice.reasons.includes(code);
   const ready = rejectReady(civ, choice);
-  const preview = previewOf(t, civ, choice, locale);
-
-  // 欧洲:「否认灵魂不灭」「中立者」只在灵魂登记里写了时可选(否则服务端 `fail_reason_contradicts_record`)。
-  const loadSoul = useCallback(() => (open && civ === "EUROPEAN" ? soulsApi.get(judgment.soul).then((r) => r.data) : Promise.resolve(null)), [open, civ, judgment.soul]);
-  const soul = useRemote(loadSoul).data;
-  // 埃及:列出记为「不实」的否定告白,不能另选。
-  const loadDenials = useCallback(() => (open && civ === "EGYPTIAN" ? judgmentApi.negativeConfessions(judgment.id).then((r) => r.items) : Promise.resolve(null)), [open, civ, judgment.id]);
-  const untrue = (useRemote(loadDenials).data ?? []).filter((d) => d.truthful === false);
-
   const scope =
     civ === "EUROPEAN" ? t("reject.sheet.eu_scope") : civ === "EGYPTIAN" ? t("reject.sheet.eg_auto") : civ === "GREEK" && choice.account === "REPUBLIC" ? t("map.greece.thousand_year_cycle") : civ === "GREEK" ? t("reject.sheet.gr_scars") : null;
-  const otherLabel = civ === "GREEK" && choice.account === "REPUBLIC" ? t("reject_reason.gr_er.other") : t("reject_reason.other");
-  const courtName = (code: string) => {
-    const court = offenceCourt(code);
-    return court ? t("reject_reason.cn.court", { n: courtNumeral(court, locale) }) : undefined;
-  };
-  const offenceCount = OFFENCES_BY_COURT.reduce((sum, g) => sum + g.offences.length, 0);
 
   return (
     <Sheet open={open} onClose={onCancel} edge={theme.hair} closeLabel={t("reject.sheet.cancel")}>
@@ -129,6 +111,46 @@ export function RejectSheet({
           {[t("reject.sheet.unstamped", { soul: judgment.soul_name }), scope].filter(Boolean).join(" · ")}
         </Txt>
 
+        <RejectFields open={open} judgment={judgment} choice={choice} onChange={setChoice} />
+        <View style={{ flexDirection: "row", gap: space[3] }}>
+          <ActionButton testID="reject-cancel" kind="outline" title={t("reject.sheet.cancel")} onPress={onCancel} />
+          <ActionButton testID="reject-confirm" kind="ink" busy={busy} disabled={!ready} title={t("reject.sheet.confirm")} onPress={() => onConfirm(failPayload(civ, choice))} style={{ flex: 1 }} />
+        </View>
+      </View>
+    </Sheet>
+  );
+}
+
+/**
+ * The 「不过」 reasons, one set per civilization, with the 「其他 · 写一句」 box and the verdict preview -- the body of the
+ * swipe's reject sheet and of the dossier's 判 drawer (sealSheet.tsx). The caller holds `choice`.
+ */
+export function RejectFields({ open, judgment, choice, onChange }: { open: boolean; judgment: JudgmentDetail; choice: RejectChoice; onChange: (next: (c: RejectChoice) => RejectChoice) => void }) {
+  const { t, locale } = useI18n();
+  const theme = useTheme();
+  const civ = judgment.civilization;
+  const setChoice = onChange;
+  const [more, setMore] = useState(false);
+  const pick = (code: string) => setChoice((c) => toggleReason(civ, c, code));
+  const has = (code: string) => choice.reasons.includes(code);
+  const preview = previewOf(t, civ, choice, locale);
+
+  // 欧洲:「否认灵魂不灭」「中立者」只在灵魂登记里写了时可选(否则服务端 `fail_reason_contradicts_record`)。
+  const loadSoul = useCallback(() => (open && civ === "EUROPEAN" ? soulsApi.get(judgment.soul).then((r) => r.data) : Promise.resolve(null)), [open, civ, judgment.soul]);
+  const soul = useRemote(loadSoul).data;
+  // 埃及:列出记为「不实」的否定告白,不能另选。
+  const loadDenials = useCallback(() => (open && civ === "EGYPTIAN" ? judgmentApi.negativeConfessions(judgment.id).then((r) => r.items) : Promise.resolve(null)), [open, civ, judgment.id]);
+  const untrue = (useRemote(loadDenials).data ?? []).filter((d) => d.truthful === false);
+
+  const otherLabel = civ === "GREEK" && choice.account === "REPUBLIC" ? t("reject_reason.gr_er.other") : t("reject_reason.other");
+  const courtName = (code: string) => {
+    const court = offenceCourt(code);
+    return court ? t("reject_reason.cn.court", { n: courtNumeral(court, locale) }) : undefined;
+  };
+  const offenceCount = OFFENCES_BY_COURT.reduce((sum, g) => sum + g.offences.length, 0);
+
+  return (
+    <>
         {civ === "CHINESE" ? (
           more ? (
             <>
@@ -247,12 +269,7 @@ export function RejectSheet({
             {`${t("reject.sheet.preview_label")} · ${preview}`}
           </Txt>
         ) : null}
-        <View style={{ flexDirection: "row", gap: space[3] }}>
-          <ActionButton testID="reject-cancel" kind="outline" title={t("reject.sheet.cancel")} onPress={onCancel} />
-          <ActionButton testID="reject-confirm" kind="ink" busy={busy} disabled={!ready} title={t("reject.sheet.confirm")} onPress={() => onConfirm(failPayload(civ, choice))} style={{ flex: 1 }} />
-        </View>
-      </View>
-    </Sheet>
+    </>
   );
 }
 
