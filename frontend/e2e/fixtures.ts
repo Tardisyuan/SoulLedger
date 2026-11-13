@@ -1,6 +1,8 @@
-import { test as base, type Locator, type Page, type Request } from "@playwright/test";
+import { expect as baseExpect, test as base, type Locator, type Page, type Request } from "@playwright/test";
 import type { AssistAdminBackup, AssistAdminConfig, AssistAdminEmbedding } from "@soulledger/core/api/assist-admin";
 import type { AssistStreamEvent } from "@soulledger/core/api/assist-stream";
+import type { JudgmentAnnual } from "@soulledger/core/api/judgment";
+import { SIGNED_OUT } from "./routes";
 
 /**
  * Shared E2E setup: authenticated browser state + a route-level mock of the
@@ -1236,6 +1238,14 @@ const ASSIST_ADMIN_EMBEDDING = {
   },
 } satisfies AssistAdminEmbedding;
 
+/** `GET /judgment/annual/` for a year in which nothing was heard (年度簿's empty state). Exported and annotated so
+ *  backend/tests/test_e2e_fixtures_match_the_serializers.py reads its keys against the schema. */
+export const JUDGMENT_ANNUAL_EMPTY: JudgmentAnnual = {
+  timezone: "Asia/Shanghai", year: 2026, received: 0, placed: 0, by_civ: [], concluded: 0, avg_days: null, longest: null,
+  most_cited: null, returned: 0, returned_pct: null, last_year_returned_pct: null,
+  monthly: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], last_year_monthly: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+};
+
 export class ApiMock {
   /** Every intercepted request, in order. Assert against this. */
   readonly calls: RecordedCall[] = [];
@@ -2002,6 +2012,23 @@ export class ApiMock {
     this.on("DELETE", "/chat/inbox/:id/draft/", INBOX_STATE);
     this.on("GET", "/chat/inbox-templates/", INBOX_TEMPLATES);
 
+    // ── Pages the route tables reach since they are derived from app/ (routes.ts, 2026-11-13) ──
+    // Each is the endpoint's own empty answer. The two `/judgment/<word>/` lists were being answered by
+    // `/judgment/:id/` above with a whole judgment (no `results`); the rest fell to the unhandled default.
+    this.on("GET", "/judgment/city-gods/", paginated([]));
+    this.on("GET", "/judgment/city-gods/officer-choices/", []);
+    this.on("GET", "/judgment/city-god-cases/", paginated([]));
+    this.on("GET", "/judgment/annual/", JUDGMENT_ANNUAL_EMPTY);
+    this.on("GET", "/tenants/overview/", []);
+    this.on("GET", "/reincarnation/quota/", []);
+    this.on("GET", "/auth/login-logs/", paginated([]));
+    this.on("GET", "/auth/admin/sessions/", paginated([]));
+    this.on("GET", "/death-sync/api-keys/", paginated([]));
+    this.on("GET", "/death-sync/admin-webhooks/", paginated([]));
+    this.on("GET", "/death-sync/admin-webhooks/event-types/", []);
+    this.on("GET", "/death-sync/webhook-deliveries/", paginated([]));
+    this.on("GET", "/death-sync/tudi-gods/", paginated([]));
+
     return this;
   }
 }
@@ -2144,6 +2171,26 @@ export async function setupAuthenticatedPage(page: Page): Promise<ApiMock> {
   const api = await mockApi(page);
   await interceptWebSockets(page, api);
   await seedAuthState(page);
+  return api;
+}
+
+/**
+ * Open `route` the way the route-table specs do (routes.ts): signed in, or as a visitor for the `SIGNED_OUT` few, then
+ * wait until the network is quiet and the page has drawn something of its own.
+ *
+ * The floor is the point: `networkidle` and a non-empty `<body>` are both true of a blank shell and of a skeleton,
+ * and a width, or an axe run, taken then passes for the wrong reason. Inside AppLayout it is read off `<main>` (the
+ * shell's rail and toolbar are text too); six characters, because a Chinese page head alone can be that short.
+ */
+export async function openRoute(page: Page, route: string): Promise<ApiMock> {
+  const signedOut = SIGNED_OUT.has(route);
+  const api = signedOut ? await mockApi(page) : await setupAuthenticatedPage(page);
+  await page.goto(route);
+  await page.waitForLoadState("networkidle");
+  const content = signedOut ? page.locator("body") : page.locator("main").first();
+  await baseExpect
+    .poll(async () => (await content.innerText()).trim().length, { message: `${route}: 页面还是空壳,没有自己的内容` })
+    .toBeGreaterThan(5);
   return api;
 }
 
