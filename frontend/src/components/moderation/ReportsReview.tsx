@@ -430,7 +430,7 @@ export function ReportsReview() {
                   </span>
                   <span title={it.excerpt} className="mt-1 block truncate font-serif text-sm text-[oklch(var(--color-ink))]">{it.excerpt}</span>
                   <span className="mt-1 flex flex-wrap gap-3 font-mono text-2xs">
-                    {it.mediaCount !== null && (
+                    {Boolean(it.mediaCount) && (
                       <span data-media-count className="text-[oklch(var(--color-ink-subtle))]">
                         {t("social_moderation.review.media_n", { n: String(it.mediaCount) })}
                       </span>

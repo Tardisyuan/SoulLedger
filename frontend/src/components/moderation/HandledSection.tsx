@@ -9,13 +9,17 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
-import { CommentCounts, MODERATION_REASONS, useFailureToast } from "./shared";
+import { CommentCounts, MODERATION_REASONS, MODERATION_TONES, useFailureToast } from "./shared";
 
-const HANDLING_TONE = { HIDDEN: "warning", DELETED: "error" } as const;
+/** 处理结果的徽章:与动态流、审阅详情同一套 tone 与字形(`MODERATION_TONES`:HIDDEN 红 ✕、DELETED 墨 ■)。 */
+function HandlingBadge({ handling }: { handling: HandledContent["handling"] }) {
+  return <StatusBadge namespace="social_moderation.handling" value={handling} tone={MODERATION_TONES[handling]} />;
+}
 
 /** 时间范围(E-08d「近 30 天 ▾」):默认近 30 天,可放宽到 90 天或全部。 */
 const RANGES = ["30d", "90d", "all"] as const;
@@ -177,14 +181,14 @@ export function HandledSection() {
             </td>
             <td className="max-w-[40ch] px-3 py-2">
               <span title={r.excerpt} className="block truncate font-serif text-sm text-[oklch(var(--color-ink))]">{r.excerpt}</span>
-              {r.type === "POST" && (
+              {r.type === "POST" && r.media_count > 0 && (
                 <span data-media-count className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
                   {t("social_moderation.review.media_n", { n: String(r.media_count) })}
                 </span>
               )}
             </td>
             <td className="px-3 py-2">
-              <Badge tone={HANDLING_TONE[r.handling]}>{t(`social_moderation.handling.${r.handling}`)}</Badge>
+              <HandlingBadge handling={r.handling} />
             </td>
             <td className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]"><HandledReason reason={r.reason} /></td>
             <td className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]">{r.handled_by?.display_name ?? <MissingValue kind="unrecorded" />}</td>
@@ -212,7 +216,7 @@ export function HandledSection() {
           <div data-handled-detail={open.id} className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="neutral">{t(`social_moderation.target_type.${open.type}`)}</Badge>
-              <Badge tone={HANDLING_TONE[open.handling]}>{t(`social_moderation.handling.${open.handling}`)}</Badge>
+              <HandlingBadge handling={open.handling} />
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
                 {open.handled_at ? formatDateTime(open.handled_at) : ""}
               </span>

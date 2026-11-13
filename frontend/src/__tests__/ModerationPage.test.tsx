@@ -998,6 +998,32 @@ describe("已处理 · E-08d", () => {
     expect(commentRow.querySelector("[data-media-count]")).toBeNull();
   });
 
+  it("a post with no images says nothing about images (no 「图 0」), in the handled list and the reports list", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page([{ ...handled[0], media_count: 0 }]));
+    renderPage();
+    const list = await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    expect(within(list).getByText("被举报的帖子摘录")).toBeInTheDocument();
+    expect(list.querySelector("[data-media-count]")).toBeNull();
+    fireEvent.click(segment("handled"));
+    const postRow = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    expect(postRow.querySelector("[data-media-count]")).toBeNull();
+    expect(within(postRow).queryByText(tZh("social_moderation.review.media_n", { n: "0" }))).toBeNull();
+  });
+
+  it("the handling badge uses the feed's tone: 已隐藏 is error (red), not warning; 已删除 is ink", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const hidden = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    expect(within(hidden).getByText(tZh("social_moderation.handling.HIDDEN"))).toBeInTheDocument();
+    expect(hidden.outerHTML).toContain("--color-danger");
+    expect(hidden.outerHTML).not.toContain("--color-warning");
+    const deleted = screen.getByText("被删除的评论").closest("tr") as HTMLElement;
+    expect(deleted.outerHTML).not.toContain("--color-danger");
+  });
+
   it("rangeStart counts today as the first of N days, in UTC", () => {
     const now = Date.UTC(2026, 8, 25, 23, 30);
     expect(rangeStart("30d", now)).toBe("2026-08-27");
