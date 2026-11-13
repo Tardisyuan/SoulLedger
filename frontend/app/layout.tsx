@@ -15,7 +15,6 @@ import { plaqueFontVariables } from "@/src/components/plaque/fonts";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { BCP47_FOR_LOCALE, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
-import { localeFromBrowser } from "@/proxy";
 import { ThemeProvider } from "@/src/contexts/ThemeContext";
 import { TenantProvider } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
@@ -45,35 +44,30 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-/** The demo's page title follows the visitor's language, like the page itself (proxy.ts: cookie, else the
- *  browser's first language, Chinese only for `zh*`). Link previews go to crawlers that send no language, so the
- *  shared preview (Open Graph / Twitter) is English with a Chinese line under it. */
-const DEMO_TITLE = { "zh-Hans": "SoulLedger · 四种冥界，一本账", en: "SoulLedger · Four underworlds, one ledger" } as const;
-const DEMO_DESCRIPTION = "Four underworlds, each judging a soul by its own rules. 四种冥界，各按自己的规矩审一个灵魂。";
+/** One neutral English title and description, for the tab and for link previews alike (user decision 2026-11-14):
+ *  the page itself still follows the visitor's language (proxy.ts). */
+const TITLE = "SoulLedger – Multi-tenant case management and approval workflow demo";
+const DESCRIPTION =
+  "Multi-tenant case management with configurable approval workflows, role-based access and real-time events. Django + Next.js + Expo.";
 
-export async function generateMetadata(): Promise<Metadata> {
-  if (process.env.NEXT_PUBLIC_DEMO_MODE !== "1") {
-    return { title: "SoulLedger", description: "Cross-civilization soul management system" };
-  }
-  const cookieLocale = (await cookies()).get(LOCALE_COOKIE)?.value;
-  const locale = isLocale(cookieLocale) ? cookieLocale : localeFromBrowser((await headers()).get("accept-language"));
-  const title = locale === "zh-Hans" ? DEMO_TITLE["zh-Hans"] : DEMO_TITLE.en;
-  return {
-    // The demo's link is the one that gets passed around, so it is the one that needs a preview.
-    metadataBase: new URL("https://soulledger.tardisyuan.ltd"),
-    title,
-    description: DEMO_DESCRIPTION,
-    openGraph: {
-      type: "website",
-      siteName: "SoulLedger",
-      url: "/",
-      title: DEMO_TITLE.en,
-      description: DEMO_DESCRIPTION,
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: DEMO_TITLE.en }],
-    },
-    twitter: { card: "summary_large_image", title: DEMO_TITLE.en, description: DEMO_DESCRIPTION, images: ["/og-image.png"] },
-  };
-}
+export const metadata: Metadata =
+  process.env.NEXT_PUBLIC_DEMO_MODE === "1"
+    ? {
+        // The demo's link is the one that gets passed around, so it is the one that needs a preview.
+        metadataBase: new URL("https://soulledger.tardisyuan.ltd"),
+        title: TITLE,
+        description: DESCRIPTION,
+        openGraph: {
+          type: "website",
+          siteName: "SoulLedger",
+          url: "/",
+          title: TITLE,
+          description: DESCRIPTION,
+          images: [{ url: "/og-image.png", width: 1200, height: 630, alt: TITLE }],
+        },
+        twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: ["/og-image.png"] },
+      }
+    : { title: "SoulLedger", description: DESCRIPTION };
 
 /** 首帧就把主题类写到 `<html>` 上,在 React 接管之前。
  *

@@ -8,6 +8,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 
 import { WEB_PAGE_KEYS, pageNameOf } from "../assist";
 import { translate } from "../shared";
+import { doorOf, type TabKey } from "../kit";
 import { Shell } from "../shell";
 import { renderOfficer } from "./harness";
 
@@ -63,8 +64,12 @@ async function openSheet() {
   fireEvent.press(await screen.findByTestId("assist-entry"));
   return screen.findByTestId("assist-sheet");
 }
+/** A page sits behind its door (kit.tsx `DOOR_PAGES`): open the door, then the page if the door has two. */
 async function toTab(tab: string) {
-  fireEvent.press(screen.getByTestId(`tab-${tab}`));
+  fireEvent.press(screen.getByTestId(`door-${doorOf(tab as TabKey)}`));
+  await act(async () => {});
+  const page = screen.queryByTestId(`tab-${tab}`);
+  if (page) fireEvent.press(page);
   await act(async () => {}); // the tab's own loads land
 }
 
@@ -102,6 +107,7 @@ describe("suggested questions", () => {
 
   it("待办 asks as the workflow page, 查询 as souls (JUDGE's other-page pair)", async () => {
     renderOfficer(<Shell />);
+    await toTab("todo"); // the shell opens on the desk (案卷台) since 第三十批
     await openSheet();
     expect(screen.getByTestId("assist-suggestion-0")).toHaveTextContent("待我审批的有几件？");
     fireEvent.press(screen.getByTestId("assist-close"));
@@ -115,6 +121,7 @@ describe("the conversation lives above the tabs", () => {
   it("survives closing the sheet and switching tabs, and the next question continues it by id", async () => {
     mockAsk.mockResolvedValueOnce(answer("有 2 件。")).mockResolvedValueOnce(answer("下一步是终审。"));
     renderOfficer(<Shell />);
+    await toTab("todo"); // the shell opens on the desk (案卷台) since 第三十批
     await openSheet();
     fireEvent.changeText(screen.getByTestId("ask-input"), "待我审批的有几件？");
     fireEvent.press(screen.getByTestId("ask-send"));
