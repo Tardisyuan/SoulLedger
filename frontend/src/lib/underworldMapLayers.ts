@@ -513,12 +513,7 @@ export const LABEL_EDGE = 4;
 export function anchorLabelsInside(svg: Element, width: number) {
   for (const t of Array.from(svg.querySelectorAll("#labels text"))) {
     if (t.closest(".map-badge") || !(t.textContent ?? "").trim()) continue;
-    const size = Number(t.getAttribute("font-size")) || 12;
-    let w = (t as SVGTextElement).getComputedTextLength?.() || 0;
-    if (!w) for (const ch of t.textContent ?? "") w += (ch.codePointAt(0) ?? 0) >= 0x2e80 ? size : size * 0.56;
-    const x = Number(t.getAttribute("x"));
-    const anchor = t.getAttribute("text-anchor") ?? "start";
-    const x0 = anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w : x;
+    const { x, x0, w } = textSpan(t);
     if (!Number.isFinite(x) || w > width - 2 * LABEL_EDGE) continue;
     if (x0 < LABEL_EDGE) {
       t.setAttribute("text-anchor", "start");
@@ -527,6 +522,48 @@ export function anchorLabelsInside(svg: Element, width: number) {
       t.setAttribute("text-anchor", "end");
       t.setAttribute("x", String(width - LABEL_EDGE));
     }
+  }
+}
+
+/** 一行字的横向范围:浏览器里量(`getComputedTextLength`),jsdom 里估(汉字一个字号宽,其余 0.56 个)。 */
+function textSpan(t: Element): { x: number; x0: number; w: number; size: number } {
+  const size = Number(t.getAttribute("font-size")) || 12;
+  let w = (t as SVGTextElement).getComputedTextLength?.() || 0;
+  if (!w) for (const ch of t.textContent ?? "") w += (ch.codePointAt(0) ?? 0) >= 0x2e80 ? size : size * 0.56;
+  const x = Number(t.getAttribute("x"));
+  const anchor = t.getAttribute("text-anchor") ?? "start";
+  return { x, w, size, x0: anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w : x };
+}
+
+/** 两个站名之间至少留的空(viewBox 单位)。 */
+export const NAME_GAP = 6;
+
+/**
+ * 挤在一起的站名错开(2026-11-14):地府英文全景的「Road of the Yellow Springs」一类长名比站距宽,邻站的名字压在一起。
+ * 从左往右逐个放:和已放好的名字(框 = 字宽 × 字号,左右各留 `NAME_GAP`)撞上的,连同它的说明行往下挪一行;
+ * 挪了还撞就再挪一行(最多两行)。中文名短,撞不上,原样画。
+ * ponytail: 只看站名之间,不看说明行与图上的画;站距窄到三行也放不下时仍会挤,那时要折行或缩字。
+ */
+export function staggerCrowdedNames(svg: Element) {
+  const items: { name: Element; details: Element[]; x0: number; w: number; size: number; y: number }[] = [];
+  for (const node of nodesOf(svg)) {
+    const { name, details } = labelLines(svg, node.id);
+    if (!name || !(name.textContent ?? "").trim()) continue;
+    const y = Number(name.getAttribute("y"));
+    const span = textSpan(name);
+    if (Number.isFinite(y) && Number.isFinite(span.x)) items.push({ name, details, y, ...span });
+  }
+  items.sort((p, q) => p.x0 - q.x0);
+  const placed: Rect[] = [];
+  for (const it of items) {
+    const step = Math.round(it.size * 1.2);
+    const boxAt = (dy: number): Rect => ({ x: it.x0 - NAME_GAP / 2, y: it.y + dy - it.size, width: it.w + NAME_GAP, height: it.size });
+    let dy = 0;
+    while (dy < 2 * step && placed.some((r) => overlaps(boxAt(dy), r))) dy += step;
+    placed.push(boxAt(dy));
+    if (!dy) continue;
+    for (const line of [it.name, ...it.details]) line.setAttribute("y", String(Number(line.getAttribute("y")) + dy));
+    it.name.setAttribute("data-staggered", "");
   }
 }
 
