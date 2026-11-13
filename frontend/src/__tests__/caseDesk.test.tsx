@@ -193,6 +193,8 @@ describe("CaseDesk", () => {
     expect(screen.getByTestId("desk-source-city_god")).toHaveTextContent("城隍送来");
     expect(screen.getByTestId("desk-source-appeal")).toHaveAttribute("href", "/judgment/appeals");
     expect(screen.queryByTestId("desk-source-city_god_review")).not.toBeInTheDocument();
+    // 第 3 步:摊开那一份的脊是定稿的那一种(地府十殿一线),不再是占位的空条。
+    expect(within(screen.getByTestId("desk-spine")).getByRole("img", { name: "地府 · 十殿一线" })).toBeInTheDocument();
   });
 
   it("moves with J and K, opens with Enter, and announces the move", async () => {

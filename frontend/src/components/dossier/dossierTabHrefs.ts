@@ -10,7 +10,8 @@ export function dossierTabHrefs(soulId: string, dossierHref: string): Record<Dos
     dossier: dossierHref,
     merits: `${soul}#dossier-merits`,
     events: `${soul}#dossier-events`,
-    lives: `${soul}#dossier-lives`,
+    // 轮回记录与事件在同一条时间线里(`SoulTimelineColumn`)。
+    lives: `${soul}#dossier-events`,
     sentence: `${soul}#dossier-sentence`,
   };
 }

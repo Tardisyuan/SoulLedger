@@ -13,6 +13,9 @@ import { Button } from "@/src/components/ui/Button";
 import { PageHead } from "@/src/components/ui/PageShell";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { deadlineText, deskTag, sourceLabel } from "./deskRules";
+import { DossierSpine } from "@/src/components/dossier/DossierSpine";
+import { MeritMark, SignedNumber } from "@/src/components/dossier/MeritMark";
+import { useSpineNow } from "@/src/components/dossier/useSpineNow";
 import s from "./desk.module.css";
 
 type Action = { busy: boolean; run: () => void } | null;
@@ -86,6 +89,13 @@ export function OpenCase({
   const demerit = j.demerit_score;
   const net = j.karmic_balance ?? (merit != null && demerit != null ? merit - demerit : null);
   const records = recentRecords(soul.data?.records);
+  const spine = useSpineNow({
+    soulId: soul.data ? row.soul : null,
+    civilization: j.civilization,
+    currentState: soul.data?.current_state,
+    diyuStation: soul.data?.diyu_station,
+    court: j.court,
+  });
   const source = [sourceLabel(t, j), j.city_god_name].filter(Boolean).join(" · ");
 
   return (
@@ -138,8 +148,8 @@ export function OpenCase({
         }
       />
 
-      {/* 脊:第 3 步交四种正式的;这里先占住位置(页头下方)与高度。 */}
-      <div className={s.spine} aria-hidden="true" data-testid="desk-spine" />
+      {/* 脊(第 3 步定稿):页头下方,高 `--spine-h`;「现在」是这个灵魂此刻所在那一站。与卷宗页同一个组件。 */}
+      <DossierSpine civ={spine.civ} now={spine.now} testId="desk-spine" />
 
       <div className={s.body}>
         <div>
@@ -151,11 +161,14 @@ export function OpenCase({
             <JuanRow label={t("caseDesk.juan.merits")}>
               {merit != null && demerit != null ? (
                 <>
-                  {t("caseDesk.juan.merits_value", { merit: String(merit), demerit: String(demerit) })}
+                  {/* 第 3 步第 4 条:两枚记号各带数,颜色只上净额。 */}
+                  <MeritMark civilization={j.civilization} kind="merit" /> {merit}
+                  {" · "}
+                  <MeritMark civilization={j.civilization} kind="demerit" /> {demerit}
                   {net != null ? (
                     <>
                       {" · "}
-                      {t("caseDesk.juan.net")} <span className={net < 0 ? s.neg : net > 0 ? s.pos : undefined}>{net > 0 ? `+${net}` : String(net)}</span>
+                      {t("caseDesk.juan.net")} <SignedNumber value={net} />
                     </>
                   ) : null}
                 </>
@@ -178,10 +191,10 @@ export function OpenCase({
           {records.length ? (
             <dl className={s.juan} data-testid="desk-recent">
               {records.map((r) => {
-                const sign = r.record_type === "MERIT" ? 1 : -1;
+                const merit = r.record_type === "MERIT";
                 return (
-                  <JuanRow key={r.id} label={r.event_date ? hist(r.event_date) : (day(r.recorded_at) ?? "")} num={<span className={sign > 0 ? s.pos : s.neg}>{`${sign > 0 ? "+" : "−"}${r.weight}`}</span>}>
-                    {r.description}
+                  <JuanRow key={r.id} label={r.event_date ? hist(r.event_date) : (day(r.recorded_at) ?? "")} num={<SignedNumber value={r.weight} sign={merit ? 1 : -1} />}>
+                    <MeritMark civilization={j.civilization} kind={merit ? "merit" : "demerit"} /> {r.description}
                   </JuanRow>
                 );
               })}
