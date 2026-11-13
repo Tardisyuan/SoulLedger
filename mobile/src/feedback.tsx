@@ -26,8 +26,13 @@ import { radius, touch } from "./theme";
 import { InSheetContext, SheetRevealContext, Txt, useReducedMotionDurations, useTheme } from "./ui";
 
 type ToastKind = "success" | "info" | "failure";
-type Show = (message: string, kind?: ToastKind) => void;
-type Item = { message: string; kind: ToastKind; id: number };
+/**
+ * `key`: toasts that report the same thing (one decision's outcome, retried) share a key, and a new one replaces
+ * the shown one instead of stacking under it -- a cancelled check's line otherwise stayed on screen after the
+ * retry that succeeded (官员端真机 2026-11-14, a failure stays until it is closed).
+ */
+type Show = (message: string, kind?: ToastKind, key?: string) => void;
+type Item = { message: string; kind: ToastKind; id: number; key?: string };
 
 /** 第三十批: at most three at once; a fourth pushes the oldest out. */
 const MAX_TOASTS = 3;
@@ -39,7 +44,11 @@ export const useToast = () => useContext(ToastContext);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Item[]>([]);
   const seq = useRef(0);
-  const show = useCallback<Show>((message, kind = "success") => setToasts((list) => [...list, { message, kind, id: ++seq.current }].slice(-MAX_TOASTS)), []);
+  const show = useCallback<Show>(
+    (message, kind = "success", key) =>
+      setToasts((list) => [...list.filter((x) => key === undefined || x.key !== key), { message, kind, key, id: ++seq.current }].slice(-MAX_TOASTS)),
+    []
+  );
   const close = useCallback((id: number) => setToasts((list) => list.filter((x) => x.id !== id)), []);
   return (
     <ToastContext.Provider value={show}>

@@ -20,7 +20,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Circle } from "react-native-svg";
 
 import { submitVerdict } from "../decisions";
-import { confirmedDecision, notConfirmedKey } from "../deviceCheck";
+import { DECISION_TOAST, confirmedDecision, decisionFailureKind, notConfirmedKey } from "../deviceCheck";
 import { ActionButton } from "../kit";
 import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast } from "../shared";
 import { BLOCKED_DRAG, SWIPE_FRACTION, blockedSide, deadlineText, passPayload, waitedDays, type Side } from "../verdict";
@@ -162,7 +162,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
       .then(() => finish(id))
       .catch((e: unknown) => {
         // 面容没过、服务端拒绝、网络失败:都回到原位,写出原因。卡若已经飞走,从飞出去的那一侧回来。
-        toast(verdictFailure(t, e), "failure");
+        toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST);
         setOverlay(null);
         setAway(null);
         if (notConfirmedKey(e)) snapBack();

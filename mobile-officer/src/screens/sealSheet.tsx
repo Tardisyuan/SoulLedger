@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 
 import { submitVerdict } from "../decisions";
-import { confirmedDecision } from "../deviceCheck";
+import { DECISION_TOAST, confirmedDecision, decisionFailureKind } from "../deviceCheck";
 import { DossierSeal } from "../dossierSeal";
 import { Input, Sheet, Txt, family, radius, space, useI18n, useOnline, useReducedMotion, useTheme, useToast } from "../shared";
 import { GR_ACCOUNTS, NO_SEAL, SEAL_VERDICTS, blockedSide, passBarredBy, sealPayload, sealReady, type SealChoice, type SealVerdict } from "../verdict";
@@ -41,10 +41,10 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
     setBusy(true);
     confirmedDecision(t("officer_app.biometric.prompt"), () => submitVerdict(judgment.id, sealPayload(civ, c)))
       .then(() => {
-        toast(t("officer_app.seal.done"), "success");
+        toast(t("officer_app.seal.done"), "success", DECISION_TOAST);
         onSealed();
       })
-      .catch((e: unknown) => toast(verdictFailure(t, e), "failure"))
+      .catch((e: unknown) => toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST))
       .finally(() => setBusy(false));
   };
 

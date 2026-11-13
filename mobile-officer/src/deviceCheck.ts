@@ -124,6 +124,15 @@ export function foreground(ms = 2000): Promise<void> {
   });
 }
 
+/**
+ * How a decision's failure is toasted: an officer who cancelled the check themselves gets a notice that goes by
+ * itself, not a failure that waits to be closed. The key makes each new outcome of the same decision replace the last.
+ */
+export const DECISION_TOAST = "decision";
+export function decisionFailureKind(e: unknown): "info" | "failure" {
+  return e instanceof NotConfirmed && e.result === "cancelled" ? "info" : "failure";
+}
+
 /** The key of the line a screen shows when `confirmedDecision` threw; null when the error was the server's. */
 export function notConfirmedKey(e: unknown): string | null {
   if (!(e instanceof NotConfirmed)) return null;
