@@ -1429,6 +1429,17 @@ class TestTemplateApproverBasis:
         for old, new in latest.items():
             assert new in current or new in NAME_EN, f"0032 renames {old!r} to {new!r}, which no template carries"
             assert old not in current and old not in NAME_EN, f"0032 renames {old!r}, which a template still carries"
+        # 0033 (2026-11-13) moves the canonization second station's court and brings one older name up to date.
+        # Held to the live template from both ends: the station it looks for sits in the court it writes, nothing
+        # sits in the court it leaves, and the name it retires is carried nowhere.
+        newest = import_module("apps.workflow.migrations.0033_canonization_second_station_sits_in_the_vatican")
+        courts = {
+            node["name"]: node["court"] for template in WORKFLOW_TEMPLATES.values() for node in template["nodes"]
+        }
+        assert courts[newest.STATION] == newest.NEW_COURT, "0033 writes a court the template does not carry"
+        assert newest.OLD_COURT not in courts.values(), "0033 leaves a court a template still carries"
+        assert newest.NEW_NAME in current and NAME_EN[newest.NEW_NAME] == newest.NEW_NAME_EN
+        assert newest.OLD_NAME not in current and newest.OLD_NAME not in NAME_EN
         for old, new, _court, _order, _old_type, _new_type in renames:
             assert later.get(new, new) in current, (
                 f"0012 renames a node to {new!r}, which no template carries. "

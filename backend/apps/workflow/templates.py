@@ -103,12 +103,13 @@ WORKFLOW_TEMPLATES = {
     # European canonization. Station names are the steps of the procedure in force (*Divinus Perfectionis
     # Magister*, 1983; docs/01「系统自设」, audit EU-10, user 2026-11-13): 教区主教调查 → 列圣部审查 → 教宗裁定.
     # Until then: 教区初审 → 教省复审 → 罗马教廷终审, a province-level review the procedure does not have. Rows
-    # already stored: workflow/0032. The court column was not part of that decision and is unchanged.
+    # already stored: workflow/0032. The second station is the Roman congregation's, so its court is Vatican, not
+    # Archdiocese (user 2026-11-13; rows already stored: workflow/0033).
     (Civilization.EUROPEAN, CaseType.CANONIZATION): {
         "name": "封圣审查流程",
         "nodes": [
             {"name": "教区主教调查", "court": "Diocese", "type": NodeType.TRIAL, "order": 1},
-            {"name": "列圣部审查", "court": "Archdiocese", "type": NodeType.TRIAL, "order": 2},
+            {"name": "列圣部审查", "court": "Vatican", "type": NodeType.TRIAL, "order": 2},
             {"name": "教宗裁定", "court": "Vatican", "type": NodeType.FINAL, "order": 3},
         ],
     },
