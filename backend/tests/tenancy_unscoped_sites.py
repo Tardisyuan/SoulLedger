@@ -250,6 +250,8 @@ SITES = [
     ('apps/souls/management/commands/check_soul_dates.py', 'SoulRecord._base_manager', 2, 'CLI', 'operator audit command over every tenant; optional soft-deleted rows'),
     ('apps/souls/models.py', 'Realm.all_objects', 1, 'FILTERED', "explicit tenant_id=self.tenant_id: the soul's own Hall of Two Truths"),
     ('apps/souls/models.py', 'cls.all_objects', 2, 'LOCK', 'Soul.lock: locks one soul by the pk its caller already reached through a scoped path; all_objects only skips the soft-delete filter ‖ Soul.lock_many: locks souls by pks the caller took from its scoped queryset or from a scoped row (region_update.apply, batch_recycle, the lock-only callers); all_objects only skips the soft-delete filter'),
+    ('apps/souls/models.py', 'SoulEvent.all_objects', 1, 'PK', "Soul.purge: the purged soul's own events, by its locked pk (events of a residing soul may carry another hall's tenant; they belong to this soul and go with it)"),
+    ('apps/souls/models.py', 'Soul.all_objects', 1, 'PK', 'Soul.purge: deletes the one soul it just locked, by pk'),
     ('apps/souls/record_models.py', 'Soul.all_objects', 1, 'PK', 'marks one soul by pk; the ids are the souls whose records this batch just created through the scoped path'),
     ('apps/ledger/journal.py', 'Soul.all_objects', 1, 'FILTERED', 'only the IN-subquery that narrows an already hall-scoped journal queryset to the souls in the data scope; returns no row by itself'),
     ('apps/souls/serializers.py', 'Tenant.objects', 1, 'CODE', 'only the hall-less global admin reaches it: the seed hall of the civilization they chose, by globally unique code (Tenant has no tenant column)'),

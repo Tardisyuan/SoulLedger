@@ -167,7 +167,10 @@ class EventType(models.TextChoices):
 
 class SoulEvent(AuditUserFields, models.Model):
     """
-    Immutable audit log entry. Never delete.
+    Immutable audit log entry. Never delete — except with its soul, through `Soul.purge()`.
+
+    `soul` is PROTECT (user, 2026-11-14): a cascade from a soul, tenant or anything else cannot remove events
+    as a side effect; `Soul.purge()` deletes them explicitly and leaves one AuditLog row saying how many.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(
@@ -178,7 +181,7 @@ class SoulEvent(AuditUserFields, models.Model):
     )
     soul = models.ForeignKey(
         "souls.Soul",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="events",
     )
     event_type = models.CharField(max_length=50, choices=EventType.choices)

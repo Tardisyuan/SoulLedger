@@ -15,6 +15,12 @@ class SoulAdmin(admin.ModelAdmin):
     readonly_fields = ["id", "karmic_balance", "merit_score", "demerit_score", "create_time", "update_time"]
     ordering = ["-create_time"]
 
+    def has_delete_permission(self, request, obj=None):
+        # Admin's bulk "delete selected" was a raw queryset hard delete: past the concluded-judgment and
+        # residence gates of `delete_with_cascade`, and now blocked by `SoulEvent.soul` = PROTECT anyway.
+        # Soft delete goes through the API (recycle bin); a permanent delete is `Soul.purge()`.
+        return False
+
     def save_model(self, request, obj, form, change):
         # 联系邮箱的写者之一:和 apply_contacts 一样同步到本世账号的登录邮箱。
         old_email = Soul.all_objects.filter(pk=obj.pk).values_list("contact_email", flat=True).first() or ""

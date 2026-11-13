@@ -603,6 +603,40 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         )
         return cascade_soft_delete(self, dependents, user=user, reason=reason)
 
+    def purge(self, user=None) -> int:
+        """Permanently delete this soul — the one sanctioned hard delete. Returns how many events went with it.
+
+        `SoulEvent.soul` is PROTECT (user, 2026-11-14): the event log is never removed as a side effect of a
+        cascade, so a raw `Soul.objects.filter(...).delete()` raises `ProtectedError` once the soul has events.
+        Here they are deleted on purpose, in one transaction with the soul and with one `AuditLog` row naming
+        who purged which soul and how many events it took. That row is written INSIDE the transaction (not the
+        generic on_commit audit row): if it cannot be written, nothing is deleted. The soul is row-locked first;
+        on PostgreSQL a concurrent event insert needs a key-share lock on it, so it waits and then fails rather
+        than slipping in between the two deletes.
+        """
+        from django.db import transaction
+
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.events.models import SoulEvent
+
+        if user is None:
+            from apps.core.request_local import get_current_user
+
+            user = get_current_user()
+        with transaction.atomic():
+            soul = Soul.lock(self.pk)
+            events, _ = SoulEvent.all_objects.filter(soul=soul).delete()
+            AuditLog.objects.create(
+                tenant_id=soul.tenant_id,
+                user=user if getattr(user, "is_authenticated", False) else None,
+                action=AuditAction.DELETE,
+                resource="soul",
+                resource_id=str(soul.pk),
+                changes={"soul_events": [str(events), "0"]},
+            )
+            Soul.all_objects.filter(pk=soul.pk).delete()
+        return events
+
     # ------------------------------------------------------------------
     # Legacy DateField-shaped accessors, kept for callers outside this
     # app (death_sync webhook payloads, reincarnation reset, event
