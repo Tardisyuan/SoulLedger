@@ -12,6 +12,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { CIVILIZATION_SHAPE } from "@/src/lib/routeTopology";
 import stats from "@/src/config/landing-stats.json";
 import { ROLE_OF_SKIN, SKINS, useEnter } from "./DemoEntrances";
+import DemoInside from "./DemoInside";
 import DemoSoul from "./DemoSoul";
 import { HomePeek } from "./HomePeek";
 import { HomePreview } from "./HomePreview";
@@ -25,8 +26,11 @@ import { langOf, soulRecording } from "./store";
  * one row; 「这是怎么做的」, the product landing page's own section (architecture, test counts, the two app recordings),
  * which the finished tour links to; the GitHub footer. 「先看 30 秒」 is an overlay, mounted only while open.
  *
- * The soul's view is this page in another state, not a route: the demo adds no route a normal build could reach.
+ * The soul's view is this page in another state, not a route: the demo adds no route a normal build could reach. So is
+ * 「工程视角」(第三十八批), at `/#inside`: a hash, so the browser's back button leaves it.
  */
+const INSIDE_HASH = "#inside";
+
 export default function DemoHome() {
   const { t, locale } = useI18n();
   const { entering, enter, warm } = useEnter();
@@ -39,6 +43,22 @@ export default function DemoHome() {
   useEffect(() => {
     if (window.location.hash === "#how-built") document.getElementById("how-built")?.scrollIntoView();
   }, []);
+  const [inside, setInside] = useState(false);
+  useEffect(() => {
+    const read = () => setInside(window.location.hash === INSIDE_HASH);
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  const openInside = () => {
+    window.location.hash = INSIDE_HASH;
+    window.scrollTo(0, 0);
+  };
+  const leaveInside = () => {
+    window.history.pushState(null, "", window.location.pathname + window.location.search);
+    setInside(false);
+    window.scrollTo(0, 0);
+  };
   // The phone opens with its screen already drawn: the recording first (a few KB, usually fetched on hover), then the view.
   const look = (civ: SealCiv, top: boolean) =>
     void soulRecording(civ, langOf(locale)).then(() => {
@@ -46,6 +66,7 @@ export default function DemoHome() {
       if (top) window.scrollTo(0, 0);
     });
   if (soul) return <DemoSoul civ={soul} onCiv={(civ) => look(civ, false)} />;
+  if (inside) return <DemoInside onHome={leaveInside} />;
   const start = (from: HTMLElement) => void enter(ROLE_OF_SKIN.cn, from);
 
   return (
@@ -81,7 +102,7 @@ export default function DemoHome() {
                 </li>
               ))}
             </ol>
-            <div className="mt-4 flex flex-wrap items-center gap-4 max-md:flex-col max-md:items-stretch">
+            <div className="mt-4 flex max-md:flex-col max-md:items-stretch">
               <button
                 type="button"
                 data-testid="demo-home-start"
@@ -95,11 +116,30 @@ export default function DemoHome() {
                 <span className="demo-home-cta-sub text-sm font-normal">· {t("demo.home.cta_sub", { hall: t("demo.home.cta_hall") })}</span>
                 <span aria-hidden="true">→</span>
               </button>
+            </div>
+            {/* 第二入口(第三十八批第二节):1280 在主按钮下一行、「先看 30 秒」左边,说明在下面;393 三样竖排,说明紧跟第二入口。 */}
+            <div className="mt-4 flex items-center gap-4 max-md:flex-col max-md:items-stretch max-md:gap-3">
+              <button
+                type="button"
+                data-testid="demo-home-inside"
+                onClick={openInside}
+                className="demo-home-inside inline-flex min-h-11 items-center justify-center gap-3 px-4 text-sm max-md:min-h-12"
+              >
+                <svg aria-hidden="true" width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+                  <rect x="1" y="1.5" width="7.5" height="13" rx="1.5" />
+                  <rect x="11.5" y="1.5" width="7.5" height="13" rx="1.5" />
+                  <path d="M3.5 5h2.5M3.5 8h2.5M14 5h2.5M14 8h2.5" />
+                </svg>
+                <span>{t("demo.home.inside_cta")}</span>
+                <span aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">→</span>
+              </button>
+              <p className="m-0 text-center text-xs text-[oklch(var(--color-ink-subtle))] md:hidden">{t("demo.home.inside_sub")}</p>
               <button type="button" data-testid="demo-home-peek-open" onClick={() => setPeek(true)} className="demo-home-peek-link self-center text-sm">
                 <span aria-hidden="true">▸ </span>
                 {t("demo.home.peek")}
               </button>
             </div>
+            <p data-testid="demo-home-inside-sub" className="m-0 mt-2 text-xs text-[oklch(var(--color-ink-subtle))] max-md:hidden">{t("demo.home.inside_sub")}</p>
           </div>
           <HomePreview onShown={onShown} />
         </section>

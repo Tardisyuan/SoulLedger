@@ -28,7 +28,7 @@ export interface Tour {
 }
 
 const PROTAGONIST: Record<string, string> = { CN_DIYU: "屈原", EU_HEAVEN_HELL: "Francesca da Rimini", EG_DUAT: "Nefertari", GR_HADES: "Penelope" };
-const SKIN: Record<string, string> = { CN_DIYU: "cn", EU_HEAVEN_HELL: "eu", EG_DUAT: "eg", GR_HADES: "gr" };
+export const SKIN: Record<string, string> = { CN_DIYU: "cn", EU_HEAVEN_HELL: "eu", EG_DUAT: "eg", GR_HADES: "gr" };
 const NAME_EN: Record<string, string> = { 屈原: "Qu Yuan" };
 
 /**
