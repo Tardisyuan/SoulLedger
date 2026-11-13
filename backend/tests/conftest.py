@@ -68,6 +68,37 @@ def sign_in(client, user):
 
 
 @pytest.fixture
+def seeded(db):
+    """`seed_mythology` for every civilization, once per test; returns the command's output.
+
+    Function-scoped on purpose: the seeded rows live in the test's transaction. A module that needs one
+    civilization asks `seed_civilization` instead."""
+    import io
+
+    from django.core.management import call_command
+
+    out = io.StringIO()
+    call_command("seed_mythology", stdout=out, stderr=out)
+    return out.getvalue()
+
+
+@pytest.fixture
+def seed_civilization(db):
+    """Factory for `seed_mythology --civilization=<one>` (chinese / european / egyptian / greek); returns the
+    command's output. Call it from the test or from a module-local fixture."""
+    import io
+
+    from django.core.management import call_command
+
+    def seed(civilization):
+        out = io.StringIO()
+        call_command("seed_mythology", civilization=civilization, stdout=out, stderr=out)
+        return out.getvalue()
+
+    return seed
+
+
+@pytest.fixture
 def cn_admin_user(db, django_user_model, cn_tenant):
     """The ADMIN of the CN_DIYU hall: hall-scoped (2026-10-29). Sign it in with `sign_in`, not `force_authenticate`."""
     user, _ = django_user_model.objects.get_or_create(

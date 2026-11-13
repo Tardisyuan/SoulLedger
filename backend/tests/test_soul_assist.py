@@ -18,6 +18,7 @@ from apps.soul_assist import service, tools
 from apps.soul_assist.models import AssistConversation, AssistMessage
 from apps.soul_assist.providers import FakeProvider
 from apps.workflow.models import ApprovalWorkflow, CaseType
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -30,11 +31,10 @@ LIST = "/api/v1/me/assist/conversations/"
 def assistant_on(settings):
     settings.ASSISTANT_ENABLED = True
     settings.ASSISTANT_PROVIDER = "apps.soul_assist.providers.FakeProvider"
+    reset_fake_provider()
     FakeProvider.script = [{"text": "好的。"}]
-    FakeProvider.calls = []
     yield
-    FakeProvider.script = []
-    FakeProvider.calls = []
+    reset_fake_provider()
 
 
 def _enable(tenant, on=True):

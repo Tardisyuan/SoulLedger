@@ -81,13 +81,6 @@ ADDED_ACTORS = ["Minos", "Charon", "Hermes", "Cerberus"]
 DANTE_BORROWED = ["Cerberus", "Charon", "Minos"]
 
 
-@pytest.fixture
-def seeded(db):
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
-
-
 # --------------------------------------------------------------------------
 # 1. The tenant, without which the enum member is unreachable
 # --------------------------------------------------------------------------

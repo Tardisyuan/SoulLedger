@@ -150,13 +150,6 @@ KNOWN_CLASSES = {"LIFE", "MONEY", "RITUAL", "SPEECH", "CONDUCT"}
 
 
 @pytest.fixture
-def seeded(db):
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
-
-
-@pytest.fixture
 def articles(seeded):
     """The GONGGUOGE articles — the subject of every count in this file."""
     return {

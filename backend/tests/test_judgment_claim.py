@@ -17,11 +17,11 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul, SoulState
+from tests.conftest import sign_in
 
 BASE = "/api/v1/judgment/"
 
@@ -44,15 +44,6 @@ def _grant_judgment_family(extra=()):
         for codename in codenames:
             RolePermission.objects.get_or_create(role=role, permission=perms[codename])
     invalidate_all_permissions()
-
-
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant is not None:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -80,7 +71,7 @@ def world(db, cn_tenant, eu_tenant):
     w = World()
     w.cn, w.eu = cn_tenant, eu_tenant
     w.users = users
-    w.clients = {k: _client(u) for k, u in users.items()}
+    w.clients = {k: sign_in(APIClient(), u) for k, u in users.items()}
     return w
 
 
@@ -449,7 +440,7 @@ class TestConcludeRespectsTheClaim:
         admin = User.objects.create_user(username="claim_admin", password="x", role="ADMIN", tenant=world.cn)
         case = _case(world.cn)
         _post(world.clients["a"], case, "claim")
-        response = _conclude(_client(admin), case)
+        response = _conclude(sign_in(APIClient(), admin), case)
         assert response.status_code == 200, response.data
         assert _fresh(case).is_final is True
 
@@ -461,7 +452,7 @@ class TestConcludeRespectsTheClaim:
         claimed, unclaimed = _case(world.cn), _case(world.cn)
         _post(world.clients["a"], claimed, "claim")
         for case in (claimed, unclaimed):
-            assert _conclude(_client(moderator), case).status_code == 403
+            assert _conclude(sign_in(APIClient(), moderator), case).status_code == 403
             assert _fresh(case).is_final is False
 
     def test_an_unclaimed_case_is_concluded_by_any_judge(self, world):

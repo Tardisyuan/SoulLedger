@@ -18,22 +18,14 @@ import io
 
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 pytestmark = pytest.mark.django_db
-
-
-def _client(user):
-    token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -45,7 +37,7 @@ def hall():
     soul.refresh_from_db()
     viewer = User.objects.create_user(username="score_viewer", password="x", role="VIEWER", tenant=tenant)
     judge = User.objects.create_user(username="score_judge", password="x", role="JUDGE", tenant=tenant)
-    return soul, _client(viewer), _client(judge)
+    return soul, sign_in(APIClient(), viewer), sign_in(APIClient(), judge)
 
 
 def _ok(response):

@@ -57,11 +57,6 @@ def _webhook(tenant, key, url=PUBLIC_URL, **extra):
 
 
 @pytest.fixture
-def cn_tenant(db):
-    return Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Chinese Diyu"})[0]
-
-
-@pytest.fixture
 def eu_tenant(db):
     return Tenant.objects.get_or_create(code="EU_HEAVEN_HELL", defaults={"display_name": "EU"})[0]
 

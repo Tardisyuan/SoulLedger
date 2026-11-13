@@ -15,14 +15,6 @@ def api_client():
 
 
 @pytest.fixture
-def cn_tenant(db):
-    """Create a tenant for testing."""
-    from apps.tenants.models import Tenant
-    tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Chinese Diyu"})
-    return tenant
-
-
-@pytest.fixture
 def admin_user(db, django_user_model, cn_tenant):
     """Create admin user with tenant."""
     user = django_user_model.objects.create_user(

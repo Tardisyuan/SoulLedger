@@ -14,6 +14,7 @@ from apps.audit.models import AuditLog
 from apps.authentication.models import User
 from apps.soul_assist import config, platforms
 from apps.soul_assist.providers import FakeProvider
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client
 
 pytestmark = pytest.mark.django_db
@@ -38,9 +39,10 @@ def assistant_on(settings, monkeypatch):
     settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
     monkeypatch.setitem(config.PROVIDERS, "openai_compatible", f"{__name__}.KeyFake")
     monkeypatch.setitem(config.PROVIDERS, "anthropic", f"{__name__}.KeyFake2")
+    reset_fake_provider()
     FakeProvider.script = [{"text": "OK"}]
     yield
-    FakeProvider.script = []
+    reset_fake_provider()
 
 
 class KeyFake2(FakeProvider):

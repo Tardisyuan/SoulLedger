@@ -1,9 +1,9 @@
 """匾上的印字(`Tenant.seal_glyphs`):按文明校验、只有 ADMIN 能改、登录 / profile / /me/ 都带出来。"""
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 from tests.soul_account_support import ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -20,19 +20,8 @@ def tenants(cn_tenant, eu_tenant):
     return {"CN": cn_tenant, "EU": eu_tenant, "EG": eg, "GR": gr, "XX": odd}
 
 
-def _client(user):
-    """真 JWT(带 tenant_code),不用 force_authenticate:非 ADMIN 的 403 必须来自
-    `IsAdminPermission`,而不是来自 TenantPermission 读不到租户。"""
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
-
-
 def _patch(user, tenant, glyphs):
-    return _client(user).patch(f"/api/v1/tenants/{tenant.code}/seal-glyphs/", {"seal_glyphs": glyphs}, format="json")
+    return sign_in(APIClient(), user).patch(f"/api/v1/tenants/{tenant.code}/seal-glyphs/", {"seal_glyphs": glyphs}, format="json")
 
 
 VALID = [
@@ -95,7 +84,7 @@ def test_empty_means_default_and_is_always_allowed(admin_user, tenants, civ):
 def test_a_non_list_is_refused_and_an_absent_field_changes_nothing(admin_user, cn_tenant):
     cn_tenant.seal_glyphs = ["冥"]
     cn_tenant.save()
-    client = _client(admin_user)
+    client = sign_in(APIClient(), admin_user)
     url = f"/api/v1/tenants/{cn_tenant.code}/seal-glyphs/"
     assert client.patch(url, {"seal_glyphs": "府"}, format="json").status_code == 400
     assert client.patch(url, {"seal_glyphs": None}, format="json").status_code == 400
@@ -115,7 +104,7 @@ def test_non_admin_cannot_change_even_their_own_tenant(request, cn_tenant, who):
 
 
 def test_other_tenant_fields_stay_read_only(admin_user, cn_tenant):
-    client = _client(admin_user)
+    client = sign_in(APIClient(), admin_user)
     url = f"/api/v1/tenants/{cn_tenant.code}/"
     assert client.patch(url, {"display_name": "x"}, format="json").status_code == 405
     resp = client.patch(f"{url}seal-glyphs/", {"seal_glyphs": ["冥"], "display_name": "x"}, format="json")
@@ -127,7 +116,7 @@ def test_other_tenant_fields_stay_read_only(admin_user, cn_tenant):
 def test_tenant_api_reports_civilization_and_glyphs(judge_user, tenants):
     tenants["CN"].seal_glyphs = ["冥"]
     tenants["CN"].save()
-    client = _client(judge_user)
+    client = sign_in(APIClient(), judge_user)
     data = client.get("/api/v1/tenants/CN_DIYU/").data
     assert data["civilization"] == "CHINESE"
     assert data["seal_glyphs"] == ["冥"]

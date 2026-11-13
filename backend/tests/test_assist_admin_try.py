@@ -15,6 +15,7 @@ from apps.soul_accounts.models import SoulAccount
 from apps.soul_assist import admin_views, config
 from apps.soul_assist.models import AssistConversation, AssistUsage
 from apps.soul_assist.providers import FakeProvider
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client, ready_soul, soul_client
 
 pytestmark = pytest.mark.django_db
@@ -36,12 +37,11 @@ def assistant_on(settings, monkeypatch):
     settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
     for name in config.PROVIDERS:
         monkeypatch.setitem(config.PROVIDERS, name, f"{__name__}.OtherFake")
+    reset_fake_provider()
     FakeProvider.script = [{"text": "好的。"}]
-    FakeProvider.calls = []
     cache.clear()  # 节流计数
     yield
-    FakeProvider.script = []
-    FakeProvider.calls = []
+    reset_fake_provider()
 
 
 @pytest.fixture

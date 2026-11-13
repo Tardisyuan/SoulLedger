@@ -8,11 +8,11 @@
 import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication import mfa
 from apps.authentication.models import OfficerMfa, User
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 pytestmark = pytest.mark.django_db
 
@@ -27,15 +27,6 @@ def hall(db):
     return Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})[0]
 
 
-def _client(user):
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:
-        token["tenant_code"] = user.tenant.code
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
-
-
 def _turn_on(user):
     OfficerMfa.objects.create(user=user, secret=mfa.generate_secret(), confirmed_at=timezone.now())
 
@@ -48,7 +39,7 @@ def test_production_setting_is_on():
 
 def test_an_admin_without_mfa_is_held_at_setup(hall):
     admin = User.objects.create_user(username="a", password="x", role="ADMIN", tenant=hall)
-    client = _client(admin)
+    client = sign_in(APIClient(), admin)
     refused = client.get("/api/v1/souls/")
     assert refused.status_code == 403 and refused.json()["code"] == "mfa_setup_required"
     assert client.post("/api/v1/users/", {"username": "z"}, format="json").json()["code"] == "mfa_setup_required"
@@ -65,11 +56,11 @@ def test_an_admin_without_mfa_is_held_at_setup(hall):
 
 def test_a_role_the_hall_requires_is_held_and_others_are_not(hall):
     judge = User.objects.create_user(username="j", password="x", role="JUDGE", tenant=hall)
-    assert _client(judge).get("/api/v1/souls/").status_code == 200
+    assert sign_in(APIClient(), judge).get("/api/v1/souls/").status_code == 200
     hall.settings = {**(hall.settings or {}), mfa.MFA_REQUIRED_ROLES_SETTING: ["JUDGE"]}
     hall.save(update_fields=["settings"])
     judge = User.objects.get(pk=judge.pk)
-    assert _client(judge).get("/api/v1/souls/").json()["code"] == "mfa_setup_required"
+    assert sign_in(APIClient(), judge).get("/api/v1/souls/").json()["code"] == "mfa_setup_required"
 
 
 def test_the_login_payload_says_so(hall):

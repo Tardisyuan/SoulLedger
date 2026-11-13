@@ -11,10 +11,8 @@
 这个文件种一条那样的法条,要求守卫报红。**「今天完整」与「这条规则完整」是两件事,
 而只有后者在下一次数据变动时还成立。**
 """
-import io
 
 import pytest
-from django.core.management import call_command
 
 from apps.judgment.models import (
     Civilization,
@@ -22,13 +20,6 @@ from apps.judgment.models import (
     StatuteCorpus,
     StatutePolarity,
 )
-
-
-@pytest.fixture
-def seeded(db):
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
 
 
 def _plant_a_priced_article_without_clauses():

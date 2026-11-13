@@ -7,7 +7,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.death_sync.models import ExternalApiKey, WebhookConfig
-from apps.tenants.models import Tenant
 
 
 def _api_key_client(raw_key):
@@ -15,11 +14,6 @@ def _api_key_client(raw_key):
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"ApiKey {raw_key}")
     return client
-
-
-@pytest.fixture
-def cn_tenant(db):
-    return Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Chinese Diyu"})[0]
 
 
 @pytest.fixture

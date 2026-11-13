@@ -15,6 +15,7 @@ from apps.authentication.models import User
 from apps.soul_assist import config, corpus, evals, service, usage, vectors
 from apps.soul_assist.models import AssistConfig, AssistEvalCase, AssistEvalRun, AssistUsage, HelpChunk
 from apps.soul_assist.providers import FakeProvider
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -84,12 +85,11 @@ def assistant_on(settings):
     settings.ASSISTANT_EMBEDDING_DIMS = None
     settings.ASSISTANT_RETRIEVAL_K = 5
     settings.ASSISTANT_RETRIEVAL_MIN_SIMILARITY = 0.5
+    reset_fake_provider()
     FakeProvider.script = [{"text": "好的。"}]
-    FakeProvider.calls = []
     config.invalidate()
     yield
-    FakeProvider.script = []
-    FakeProvider.calls = []
+    reset_fake_provider()
 
 
 def _embeds(fake):

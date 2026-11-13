@@ -25,6 +25,7 @@ from apps.soul_assist.models import (
     AssistUsage,
 )
 from apps.soul_assist.providers import FakeProvider
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client, ready_soul, soul_client
 
 pytestmark = pytest.mark.django_db
@@ -39,11 +40,10 @@ def assistant_on(settings):
     settings.ASSISTANT_PROVIDER = "apps.soul_assist.providers.FakeProvider"
     settings.ASSISTANT_MODEL = "env-model"
     settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
+    reset_fake_provider()
     FakeProvider.script = [{"text": "好的。"}]
-    FakeProvider.calls = []
     yield
-    FakeProvider.script = []
-    FakeProvider.calls = []
+    reset_fake_provider()
 
 
 @pytest.fixture

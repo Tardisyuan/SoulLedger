@@ -7,11 +7,13 @@
 import time
 
 import pytest
+from rest_framework.test import APIClient
 
 from apps.authentication.models import User
 from apps.judgment import claims
 from apps.notifications.models import UserNotification
-from tests.test_judgment_claim import _case, _client, _post, world  # noqa: F401
+from tests.conftest import sign_in
+from tests.test_judgment_claim import _case, _post, world  # noqa: F401
 
 TYPE = "JUDGMENT_REASSIGN_REQUESTED"
 
@@ -74,7 +76,7 @@ class TestRecipients:
 
     def test_an_admin_asking_is_not_their_own_recipient(self, admins):
         me = admins.users["cn_admin"]
-        _ask(_client(me), _case(admins.cn))
+        _ask(sign_in(APIClient(), me), _case(admins.cn))
         # The other in-hall ADMINs hear it (claim_moderator is the hall ADMIN since 2026-11-07); the asker does not.
         assert _notified() == ["claim_moderator", "rr_cn_admin2"]
         assert "rr_cn_admin" not in _notified()
