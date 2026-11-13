@@ -8,7 +8,7 @@
 
 SoulLedger 是一个全栈系统：Django + DRF 后端、Next.js 网页、一个共享的平台无关层（`packages/core`）、
 两个 Expo 原生 App，追踪灵魂在四种神话体系（中国、欧洲、埃及、希腊）里的审判与轮回。
-架构见 [`README.md`](../../README.md#系统架构)，关键取舍见 [`docs/adr/`](../adr/README.md)。
+架构见 [`README.zh-CN.md`](../../README.zh-CN.md#系统架构)，关键取舍见 [`docs/adr/`](../adr/README.md)。
 
 分工（待作者确认措辞）：
 

@@ -16,7 +16,7 @@ enough to be worth explaining up front:
 3. **`design-handoff/`** — 交付给外部设计师的设计简报包。
    *A design brief package delivered to an external designer.*
 
-主 README 在上一层：[`../README.md`](../README.md) ／ [`../README.en.md`](../README.en.md)。
+主 README 在上一层：[`../README.md`](../README.md)（英文，默认）／ [`../README.zh-CN.md`](../README.zh-CN.md)（中文）；开发指南是 [`DEVELOPMENT.md`](DEVELOPMENT.md)。
 
 ---
 

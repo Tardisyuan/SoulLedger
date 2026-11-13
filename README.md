@@ -2,7 +2,7 @@
 
 # SoulLedger
 
-[English](README.en.md) | **中文**
+**English** | [中文](README.zh-CN.md)
 
 [![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
 [![Designed with Claude Design](https://img.shields.io/badge/Designed_with-Claude_Design-D97757?logo=claude&logoColor=white)](https://www.anthropic.com/)
@@ -14,681 +14,173 @@
 ![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 
-## 30 秒版
+**A multi-tenant case-management and approval-workflow system**: Django 5 + DRF + Channels back end,
+Next.js 16 web console, and two Expo (React Native) apps. It has tenant isolation, role-based access,
+configurable multi-step approvals, real-time events and an audit trail.
 
-**一句话**：一个全栈应用（Django + Next.js + 两个 Expo App），在同一套系统里追踪灵魂在四种神话体系（中国地府、欧洲、埃及、希腊）中的审判与轮回，而且四种文明是四个结构不同的模型，不是换皮。
+The demo domain is afterlife judgment in four mythologies: Chinese, European, Egyptian and Greek. It was
+chosen because their four rule sets cannot share one data model, so the system has to model real
+differences instead of reskinning one schema.
 
-**在线演示**：<https://soulledger.tardisyuan.ltd>（纯前端，数据是录好的，每次登录回原样）　·　**API 参考**：<https://soulledger.tardisyuan.ltd/api-docs>
+**[▶ Live demo](https://soulledger.tardisyuan.ltd)**: no sign-up, one click per role. It is the front end
+on recorded data, and every sign-in starts over. · **[API reference](https://soulledger.tardisyuan.ltd/api-docs)**
+
+**Contact**: open to full-stack roles, and to consulting on multi-tenant / approval-workflow systems.
+Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com).
+
+<p align="center">
+  <a href="frontend/public/demo-videos/app-soul.mp4"><img src="frontend/public/demo-videos/app-soul.jpg" width="260" alt="Soul app: a soul reading its own record"></a>
+  &nbsp;
+  <a href="frontend/public/demo-videos/app-officer.mp4"><img src="frontend/public/demo-videos/app-officer.jpg" width="260" alt="Officer app: a judge working the case queue"></a>
+</p>
+
+## Three things worth a look
+
+1. **Isolation and consistency are pinned by tests, not by discipline.** Tenant scoping goes through one
+   function, and a contract test checks every ViewSet against it
+   ([ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md),
+   [`core/tenant.py`](backend/apps/core/tenant.py)). The event log is written in the business transaction,
+   so a failed write rolls the whole operation back
+   ([ADR 0002](docs/adr/0002-event-log-in-the-business-transaction.md)).
+2. **Gates that make green mean something.** A push runs only the tests the change can reach, on a
+   separate build machine. Real PostgreSQL is its own path, for what SQLite hides: row locks, column
+   widths, aborted transactions. Every new check is shown to go red before it is trusted
+   ([ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md),
+   [quality evidence](docs/portfolio/QUALITY-EVIDENCE.md)).
+3. **Four rule sets, four models.** Chinese is a signed running account. Egyptian is a threshold test
+   against a feather. European is two quantities that do not offset each other. Greek is a procedure, not
+   a number. The code refuses to flatten them ([`ledger/readings.py`](backend/apps/ledger/readings.py)).
+
+**Go deeper**: [How I built this](docs/portfolio/HOW-I-BUILT.md) ·
+[quality evidence](docs/portfolio/QUALITY-EVIDENCE.md) ·
+[architecture decision records](docs/adr/README.md) ·
+[development guide](docs/DEVELOPMENT.md) · [demo deployment](docs/DEPLOYMENT-demo.md)
+
+## The domain, translated
+
+| In the demo | General concept | Code (`backend/apps/`) |
+|---|---|---|
+| A hall / an underworld | Tenant | `tenants/`, `core/tenant.py` |
+| Soul | Case subject / customer | `souls/` |
+| Judgment | Case | `judgment/` |
+| Judge, officer | Case worker / approver | `authentication/`, `perm/` |
+| Passing hall by hall | Multi-step approval | `workflow/` |
+| Cross-realm dispatch, joint judgment | Cross-tenant transfer and joint approval | `dispatch/` |
+| Merit ledger | Per-tenant scoring rules | `ledger/` |
+| Death registration | Intake API for external systems + HMAC webhooks | `death_sync/` |
+| Soul app | Customer self-service app | `mobile/` |
+
+## Architecture
 
 ```mermaid
 flowchart LR
   W["Web (Next.js 16)"] --> API
-  S["灵魂端 App (Expo)"] --> API
-  O["官员端 App (Expo)"] --> API
-  W -. 共用 .- C["packages/core<br/>API 契约 / hooks / 语言包<br/>(不含 DOM)"]
-  S -. 共用 .- C
-  O -. 共用 .- C
-  API["Django 5 + DRF<br/>租户收口 / RBAC / 事件日志"] --> PG[("PostgreSQL 16")]
+  S["Soul app (Expo)"] --> API
+  O["Officer app (Expo)"] --> API
+  W -. shares .- C["packages/core<br/>API contract / hooks / language packs<br/>(no DOM)"]
+  S -. shares .- C
+  O -. shares .- C
+  API["Django 5 + DRF<br/>tenant scoping / RBAC / event log"] --> PG[("PostgreSQL 16")]
   API --> R[("Redis: Channels + Celery")]
-  API --> M["Synapse (Matrix)<br/>灵魂之间的书信"]
-  R --> WS["WebSocket 推送"] --> W
+  API --> M["Synapse (Matrix)<br/>letters between souls"]
+  R --> WS["WebSocket push"] --> W
 ```
 
-**三个亮点**
-
-1. **四种文明，四个模型**：中国是带符号的累积账户，埃及是对羽毛的阈值检验，欧洲是两个互不削减的独立量，希腊是一段程序而不是一个数。代码拒绝把它们抹平（[`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py)）。
-2. **隔离与一致性是被测试钉住的，不是靠自觉**：租户过滤收口在一个函数，元测试逐个检查每个 ViewSet（[ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)）；事件日志与业务同一事务，写不进就整笔回滚（[ADR 0002](docs/adr/0002-event-log-in-the-business-transaction.md)）。
-3. **门禁让「绿」可信**：只测改动影响到的部分、整轮跑在独立构建机、SQLite 看不见的缺陷另走真 PostgreSQL 一条路径，新检查必须先证明会变红（[ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)）。
-
-**测试规模**（读数日期 2026-11-06，来源 [`landing-stats.json`](frontend/src/config/landing-stats.json)；数字会过期，以最近一次实测为准）：后端 9,243 · 网页 5,677 · 灵魂端 App 1,204 · 官员端 App 1,095 · E2E 约 270。CI 每天跑一次（不在每次推送上跑），推送前的检查是本地门禁，见[测试、门禁与 CI](#测试门禁与-ci)。
-
-**想深入**：[架构决策记录（英文）](docs/adr/README.md) · [我怎么做的这个项目（初稿）](docs/portfolio/HOW-I-BUILT.md) · [质量证据（英文）](docs/portfolio/QUALITY-EVIDENCE.md) · [演示站部署](docs/DEPLOYMENT-demo.md)
-
----
-
-> SoulLedger is a working full-stack web application (Django + Next.js) that tracks
-> souls through the afterlife pipelines of four different mythologies — Chinese,
-> European, Egyptian and Greek — each with a genuinely different data model. It is an
-> application, not a documentation repository. Full English README:
-> [README.en.md](README.en.md).
-
-**在线演示：<https://soulledger.tardisyuan.ltd>**（纯前端，数据是录好的，每次登录回原样）
-
-SoulLedger 是一个可运行的全栈应用（Django + Next.js，外加一个 Expo 灵魂端 App），在同一套
-系统里追踪灵魂在四种神话体系中的流转：中国地府、以基督教与但丁为主的「欧洲」死后世界、
-埃及杜阿特，以及柏拉图的希腊冥界。
-
-本仓库是应用代码，不是资料库。`docs/` 里的神话研究是这套领域模型的来源，而且是真正
-起作用的来源。
-
-最有意思的地方在于：四种文明不是同一个数据模型换四套配色。它们计算的是结构上不同的
-量，代码拒绝把它们抹平成一个数。
-
-**目录**：[四种文明](#四种文明为什么不是同一套系统) ·
-[功能一览](#功能一览) · [系统架构](#系统架构) · [快速启动](#快速启动) ·
-[API 与认证](#api-与认证) · [技术栈](#技术栈) · [工程契约与设计系统](#工程契约与设计系统) ·
-[测试、门禁与 CI](#测试门禁与-ci) · [仓库与文档](#仓库与文档) ·
-[安全、定位与许可](#安全现状)
-
----
-
-## 四种文明为什么不是同一套系统
-
-大多数「多文明」演示会挑一套机制再换皮。这里没有。见
-[`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py)：
-
-| 文明 | 账簿真正说的是什么 | 答案的形状 |
+| Area | What it covers | Code (`backend/apps/`) |
 |---|---|---|
-| **中国** | 累积账户（功過格）。功与过相互抵消，运行总额本身就是结论。 | 一个带符号的数 |
-| **埃及** | 阈值检验。心脏与玛特羽毛称量一次，必须「不重于」它。心重 = 恶行减善行，最低为 0：善行减轻心脏，不是另记一笔功德。四十二条否认是讯问，不进称量。 | 相对固定砝码的通过/不通过 |
-| **欧洲** | 两个互不相关的事实。*culpa*（罪责）与 *poena*（赦罪后仍需的补赎）互不削减，而本系统没有任何数据能诚实地推出 poena。 | 两个独立量，其中一个明确标注为不可得 |
-| **希腊** | 柏拉图的两个神话本身就不一致：《高尔吉亚》盖印即终局，《理想国》的厄尔千年循环后重生。所以 23 条语料里 21 条的极性是 `PROCEDURE`——**它们是庭规，不是罪名**。 | 一段程序，而不是一个量 |
+| Case pipeline | Judgment, disposition, reincarnation; correction of a closed case | `judgment/`, `disposition/`, `reincarnation/`, `souls/` |
+| Approval workflows | Multi-node flows with templates, versions, per-node timeouts | `workflow/` |
+| Cross-tenant transfer | Moving a case between tenants, through approval | `dispatch/` |
+| Access control | Six roles, codename permissions, row and field scopes | `perm/`, `authentication/` |
+| Events and realtime | Event bus, WebSocket push, tenant webhooks, audit log | `events/`, `notifications/`, `audit/` |
+| External intake | API-key registration (single or batch), signed webhooks | `death_sync/` |
+| Messaging and social | Private letters over Matrix (not end-to-end encrypted), posts and moderation | `chat/`, `social/` |
+| Assistant | Read-only Q&A for souls and officers; tool calls cannot choose whose data they read | `soul_assist/` |
+| Accounts | Officer and soul sign-in, two-step verification, face / fingerprint sign-in in the app | `authentication/`, `soul_accounts/` |
 
-若某灵魂所属租户没有映射到任何文明，系统不会给出任何读数——是一次带理由的明确拒绝，
-而不是回落到别人的算术。
+The details (tenancy model, roles, event routing, the state machine, the API map) are in the
+[development guide](docs/DEVELOPMENT.md#architecture).
 
-同样的原则贯穿衰减规则（`backend/apps/ledger/services.py`）：中国与埃及灵魂的功过
-按每年 1% 衰减，**欧洲则完全不衰减**，因为欧洲那一版对外文案本身就否认衰减。衰减以
-灵魂的死亡日期为锚，而非以今天为锚——否则公元前 612 年的一桩善行会仅仅因为年代久远
-就被磨到零。
+## Why the four civilizations are not one system
 
-这不是只活在后端里的区分。灵魂详情页的 `SoulReadingPanel`
-（[`frontend/src/components/souls/SoulReadingPanel.tsx`](frontend/src/components/souls/SoulReadingPanel.tsx)）
-按 `reading.kind` 切换渲染：中国是带趋势的净额，埃及把「不重于」画成倍数而非一个
-永远显示「不通过」的徽章，欧洲把 culpa 与 poena 分开摆放、poena 缺失时展示的是
-「为什么算不出来」而不是 0。灵魂列表的「余额」列同理——只有中国灵魂显示净额，其余
-文明显示「—」，不借用一个不属于自己的读数。
+Most "multi-culture" demos pick one mechanic and restyle it. This one does not:
 
-日期本身也分两种严重度：`death_before_birth`、`implausible_lifespan`、
-`event_before_birth` 是 ERROR，写入直接被拒绝；`event_after_death`（身后录入的记录）
-是 WARNING，放行但会在详情页的 `DateProblemsPanel` 里常驻显示，操作者可以「标记为
-已核」——标记绑定的是当时那一对日期的指纹，之后若死亡日期或事发日期又被改动，标记
-自动失效、警告重新出现，而不是被悄悄清空的布尔值捂住。列表页用 ⊘/△ 标出有问题的
-灵魂并可一键筛选。
-
----
-
-## 功能一览
-
-| 业务域 | 做什么 | 代码（`backend/apps/`） |
+| Civilization | What its ledger actually says | Shape of the answer |
 |---|---|---|
-| 审判流水线 | 案卷从审判到处置、轮回；殿的设置（仅 ADMIN）；SETTLED 灵魂的更正结案 | `judgment/`、`disposition/`、`reincarnation/`、`tenants/`、`souls/` |
-| 跨域调度 | 灵魂在租户之间转移，走审批，含跨租户会审 | `dispatch/` |
-| 审批流程 | 可配置的多节点审批流，含模板与节点超时 | `workflow/` |
-| 受刑计划 | 刑期节点编排与加减项请求 | `sentence_plan/` |
-| 书信 | 灵魂之间的私信：Matrix / Synapse（仅本机回环、无联邦），后端代签凭据并接收新消息回调。**不是端到端加密** | `chat/` |
-| 朋友圈 | 帖子、评论、表态、关注，内容处置，图片走签名地址 | `social/` |
-| 问一问（助手） | 灵魂端与官员端的问答助手，同一服务层；管理页仅 ADMIN | `soul_assist/` |
-| 外部死亡登记 | API Key 鉴权的登记接口（单条或批量）、HMAC 签名 webhook | `death_sync/` |
-| 推送与通知 | 站内通知 + WebSocket；灵魂端 App 走 Expo 推送 | `notifications/`、`soul_push/` |
-| 账号与登录 | 灵魂账号随死亡登记开通，初始密码由官员交付（可打印按文明排版的登录交付单，带二维码）；灵魂端扫码填编号、记住账号、面容 / 指纹登录；官员与灵魂都可开两步验证（TOTP + 恢复码）；设新密码时逐条列出要求 | `soul_accounts/`、`authentication/` |
-| 三个前端 | 管理端 Web（Next.js 16）+ 灵魂端 App + 官员端 App（都是 Expo SDK 57 / React Native），共用 `packages/core` | `frontend/`、`mobile/`、`mobile-officer/` |
+| **Chinese** | A cumulative account (功過格). Merit and demerit offset; the running total *is* the verdict. | One signed number |
+| **Egyptian** | The heart is weighed once against Ma'at's feather and must be "not heavier than" it. Good deeds lighten the heart instead of earning a separate credit. | Pass/fail against a fixed weight |
+| **European** | *Culpa* (guilt) and *poena* (penalty after absolution) do not reduce each other, and no data here can honestly derive poena. | Two independent quantities, one marked unavailable |
+| **Greek** | Plato's two myths disagree, so 21 of the 23 transcribed articles are rules of the court, not offences. | A procedure, not a quantity |
 
----
+A soul whose tenant has no civilization gets no reading at all: an explicit refusal, not a fallback to
+somebody else's arithmetic. The web page renders each shape differently
+([`SoulReadingPanel.tsx`](frontend/src/components/souls/SoulReadingPanel.tsx)).
 
-## 系统架构
+## Quick start
 
-```
-前端 (Next.js 16, App Router)  →  http://localhost:3333
-后端 (Django 5 + DRF)          →  http://localhost:8000/api/v1/
-API 文档 (drf-spectacular)     →  http://localhost:8000/api/docs/
-健康检查                        →  http://localhost:8000/health/ 与 /health/detailed/
-WebSocket (channels + daphne)  →  ws://localhost:8000/ws/notifications/
-灵魂端 App (Expo / RN)         →  expo start（mobile/，iOS 与 Android 模拟器；dev-client，不能用 Expo Go）
-Synapse（书信）                →  :8008   （仅回环，无联邦；灵魂之间的私信）
-PostgreSQL 16                  →  :5432   （本地开发回落 SQLite）
-Redis 7                        →  :6379   （Channel Layer + Celery broker）
-```
-
-**多租户**：`Tenant` 是一条管理记录，而「文明」是一项关于死者去向的主张。两者的映射
-只写在一个地方——`backend/apps/souls/models.py` 中的 `TENANT_CIVILIZATION`。行级隔离
-**不在 ORM 层**：`apps/tenants/managers.py` 的 `TenantManager` 只过滤软删除
-（`is_deleted=False`），名字是历史遗留。隔离全部在视图层，由
-`apps/core/tenant.py::scope_to_tenant` 收口（除没绑殿的 ADMIN 外一律按 `request.tenant` 过滤，
-缺字段则拒绝；2026-10-29 起绑了殿的 ADMIN 也只看本殿），`tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet 都走它。
-`contextvars` 里的当前租户只供 `apps/audit/signals.py` 归属写操作，不用于过滤。
-
-**权限**：六种角色（ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL，
-`backend/apps/authentication/models.py:56-67`；SOUL 是灵魂本人，不可分配、进不了官员接口）叠加 codename 权限，再加
-`RoleDataScope`（行可见性，五种数据范围）与 `FieldPermission`（字段可见性）。API 侧由
-`CodenameViewSetMixin` 强制；前端用 `RequirePermission` / `RequireButton` 做 UI 门控。
-前端门控只是外观，真正的检查在后端。`/permissions` 页面是一张角色×codename 矩阵而非
-逐角色选择器，保存前会做三层校验（越权、悖论式的人数/授权不一致等），每个角色带
-`user_count` 与乐观锁 `version`——两次并发保存里，后到的一次会因版本冲突被拒绝，而
-不是静默覆盖先到的那次。
-
-**双语外壳**：菜单名、面包屑、角色名是数据库里的自由文本，没有翻译字段，所以在
-`en`/`egy` 语言下永远保持中文原文——这是有意为之，不是漏翻。取而代之的是面包屑与
-页面 H1 在非中文语言下把翻译后的标签与中文原名并排显示（见
-[`frontend/src/lib/menuI18n.ts`](frontend/src/lib/menuI18n.ts)），侧栏图标则要求
-在同一父级下互不重复，因为在读不懂中文标签的语言下，图标是唯一的辨认通道。
-
-**关于 `egy`（界面上叫 Kemet）**：它是用中埃及语词根的简化转写、按现代语序拼成的
-界面语言，只作演示，**不是真正的古埃及语句子**——没有古埃及语的语法，一部分词是意思
-被借远了的真词，还有一部分是生造的。逐词根的出处核对与问题清单见
-[`docs/lore-verification/egy-lexicon-roots.md`](docs/lore-verification/egy-lexicon-roots.md)。
-
-**事件与实时**：
-
-```
-Service → EventBus → HandlerRegistry → ChannelLayer (Redis) → Consumer → 前端缓存失效
-```
-
-处理器可按事件类型、按域或全局订阅，注册表内 O(1) 分发。当前发事件的域：soul、
-workflow、notification、dispatch、deathsync、social、scheduler。
-
-**WebSocket 与 webhook 订阅的不是同一批。** scheduler 只进 WebSocket：每五分钟一条的
-运行心跳是运维遥测，不是外部系统会订阅的业务事实。唯一例外按事件类型单独注册——
-`SCHEDULER_RUN_FAILED`（某租户的任务运行到了 FAILURE 或 LOST）会投递给 webhook，
-全局任务则不发，因为它不属于任何租户。
-
-**灵魂状态机**（`backend/apps/souls/models.py` 的 `SoulState`）：
-
-```
-ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
-                     ├──→ SETTLED   （吸收态——永久处置）
-                     └──→ LOST      （中止）
-```
-
-`SETTLED` 被刻意设计为吸收态：与 `DISPOSED` 不同，它不再保留通往 `LOST` 的路径。
-更正结案（见 API 表的 `souls/`）不是状态转换：它为纠正录入错误把 SETTLED 退回 DISPOSED，
-必须写明原因，并单独记审计。
-
----
-
-## 快速启动
-
-**环境要求**：Python 3.11+（含 `uv`）、Node.js ≥ 20.9（仓库根 `.nvmrc`）；如需本地
-PostgreSQL 与 Redis 则需要 Docker。
-
-### 后端
+Python 3.11 (with `uv`) and Node.js ≥ 20.9 (`.nvmrc`). No Docker, PostgreSQL or Redis needed for this path.
 
 ```bash
-cd backend
-cp .env.example .env
+# back end: SQLite fallback, http://localhost:8000/api/v1/
+cd backend && cp .env.example .env
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
-.venv/bin/python manage.py migrate
-.venv/bin/python manage.py runserver 0.0.0.0:8000
+.venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
+
+# web, from the repository root: http://localhost:3333
+npx -y npm@11 ci && git checkout -- package-lock.json
+npm run dev --workspace frontend
 ```
 
-没有 `uv`：`python3.11 -m venv .venv` 后用 `.venv/bin/pip install --no-deps -r requirements.lock -r requirements-dev.txt` 装同样两份。
+Seed data, a sign-in account for each role, the two apps, Docker and the full test commands are in the
+[development guide](docs/DEVELOPMENT.md).
 
-未设置 `DATABASE_URL` 时 Django 回落到 SQLite（`backend/db.sqlite3`），因此不依赖任何
-外部服务即可跑起来（`DEBUG=False` 时会直接拒绝 SQLite）。Redis 只有 WebSocket 与
-Celery 需要，REST API 没有它也能运行。
+## Tests and CI
 
-### 前端
+Test counts, measured 2026-11-06
+([`landing-stats.json`](frontend/src/config/landing-stats.json); they go stale, so trust the latest run):
+back end 9,243 · web 5,677 · soul app 1,204 · officer app 1,095 · E2E about 270.
 
-> **Node ≥ 20.9**（`frontend/package.json` 的 `engines`）。Next 16 自己在 build 时就要求它，
-> 而 `eslint.config.mjs` 用到的 `import.meta.url` 派生需要 ES 模块语义——在 Node 18 上，
-> 这套 lint 配置曾经**在加载阶段整个崩掉并返回退出码 2**，而退出码 2 经过管道之后与 0
-> 无法区分。若 `npm run lint` 行为诡异，先 `node --version`。
+- **On every pull request**: static checks and a smoke test (`pr-checks.yml`).
+- **Daily on main**: the full suite in `ci.yml`. That means real PostgreSQL with a coverage floor, three
+  browser engines, a real Synapse, and pip and npm audit. The badge above is that run.
+- **Before a push**: the maintainer's local gate, `scripts/run-gates.sh`.
 
-> **在仓库根安装，不要在 `frontend/` 里。** 这是一个 npm workspaces 仓库（根 +
-> `frontend/` + `packages/*` + `mobile/`），唯一的锁文件是根上那份 `package-lock.json`
-> —— `frontend/` 下没有 lockfile，所以 `cd frontend && npm ci` 直接失效。
->
-> 另外：npm 只认**安装根**的 `overrides`。`package.json` 里那几条 pin（`sharp` 关一条
-> 公告、`nwsapi` 关一条 40 倍的测试性能退化）都写在根上，理由写在同文件的
-> `_overrides_notes` 里。别把它们复制到 `frontend/package.json` —— 那份曾经有过一份
-> 副本，完全不生效，而且看起来生效。
-
-```bash
-# 仓库根。用 npm 11,不要用 nvm 自带的 npm 10(后者退出码 0 却装不出 typescript 与 .bin);
-# 理由与实测见 CLAUDE.md 的 Build & Test
-npx -y npm@11 ci
-npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli   # npm 11 默认不跑安装脚本
-git checkout -- package-lock.json   # npm ci 会删掉锁文件里的 libc 字段;不是有意改依赖就还原
-npm run dev --workspace frontend   # 脚本内已固定 PORT=3333
-```
-
-### 灵魂端 App 与官员端 App
+What each command runs, and three cases where a guard was broken on purpose to prove it fails, are on the
+[quality evidence](docs/portfolio/QUALITY-EVIDENCE.md) page.
 
-```bash
-npm run --workspace mobile android              # 灵魂端；或 ios —— 即 expo run:*,构建并安装 dev client
-npm run --workspace @soulledger/officer android # 官员端（`mobile-officer/`）
-```
-
-官员端复用灵魂端的叶子模块（`mobile-officer/src/shared.ts`），所以改 `mobile/src` 可能连带影响它。
-改了 `app.json` 的 plugins（权限文案、新的原生模块）要先 `npx expo prebuild --platform ios|android --no-install`；
-App 的构建与重编规则见 [`CLAUDE.md`](CLAUDE.md) 的 Build & Test;真机签名、局域网测试机等与具体机器相关的笔记不在仓库里。
-
-改了原生依赖（如 `expo-image-picker`、`expo-image-manipulator`）之后要重新跑上面这条
-重建 dev client —— `expo start --clear` 只换 JS bundle，不会把新的原生模块装进已安装的 App。
-
-#### 两件有意留着没做的事（2026-10-10 决定，上真机前再做）
-
-两个 App（`mobile/`、`mobile-officer/`）的代码都已接好，只差用自己的账号做最后一步。
-不做不影响模拟器开发。
-
-**1. 真机推送：登记 Expo 项目。** 推送走 Expo 的推送服务，它要知道 App 属于哪个 Expo
-项目。两份 `app.json` 里现在都没有 `extra.eas.projectId`，于是真机上推送被当成「不可用」
-（不崩，只是收不到；模拟器本来就收不到真推送，所以平时看不出来）。
-
-```bash
-npm install -g eas-cli
-eas login                              # 用自己的 Expo 账号
-cd mobile && eas init                  # 项目名 soulledger-soul，会把 projectId 写进 app.json
-cd ../mobile-officer && eas init       # 项目名 soulledger-officer
-```
+## Security
 
-做完提交两份 `app.json` 的改动。这一步只是登记，**不等于**用 EAS 打包或发版；仓库里的
-`eas.json` 是为将来留的。iOS 的推送另外需要付费的 Apple 开发者账号，Android 不需要。
+Officer, soul and external credentials are separate, and none is accepted in another's place. Other
+measures: RBAC with row and field scopes, two-step verification (TOTP plus recovery codes), Fernet
+encryption for secrets and personal data, Redis rate limiting, SSRF checks on webhook URLs, and an audit
+trail on every write.
 
-**2. 崩溃上报：填 Sentry 的 DSN。** 两个 App 用 `@sentry/react-native`（与 Web 同一家）。
-没配 DSN 时完全不初始化，行为与没接入时一样。
+Known gaps are stated, not hidden. For example, an API key's `rate_limit_per_hour` is stored but not
+enforced. The list and how to report a problem are in [`SECURITY.md`](SECURITY.md).
 
-1. 在 sentry.io 建两个 React Native 项目，各复制一个 DSN。
-2. 新建 `mobile/.env`，写 `EXPO_PUBLIC_SENTRY_DSN_SOUL=<DSN>`；
-   新建 `mobile-officer/.env`，写 `EXPO_PUBLIC_SENTRY_DSN_OFFICER=<DSN>`。
-   两个文件都被 `.gitignore` 挡住，不要提交。
-3. 重建 dev client（Sentry 是原生依赖）。
-
-要让崩溃堆栈可读，发版时还要在构建环境里配 `SENTRY_AUTH_TOKEN`、组织名与项目名来上传
-source map；这一步没有配置，等真要发版再做。
-
-### PostgreSQL + Redis（可选，与 CI 一致）
-
-```bash
-docker compose up -d db redis   # postgres:16-alpine :5432，redis:7-alpine :6379
-```
-
-端口由 `docker-compose.override.yml` 发布（`docker compose up` 自动读它）；
-`DB_PASSWORD` 需在根 `.env` 里（见 `.env.example`）。
-
-随后让后端指向它，例如
-`DATABASE_URL=postgres://soulledger:devpassword@localhost:5432/soulledger`。
-
-### 整栈 Docker
-
-```bash
-docker compose up    # 根目录 docker-compose.yml：db、redis、backend、celery、celery-beat、synapse、frontend
-```
-
-需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入四种
-文明的领域与角色。
-
-生产栈（nginx、TLS 证书首签与续期、备份与恢复、异地副本与告警、恢复演练、RPO/RTO、部署回滚、`/metrics/` 与日志格式、
-数据保留、密钥轮换）见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)，上线清单见 [`docs/DEPLOY.md`](docs/DEPLOY.md)。
-
-### 种子数据
-
-根 compose 的启动顺序是 `python manage.py migrate` 再 `python manage.py
-seed_mythology`，后者会载入四种文明的领域与角色。它曾经调用
-`python scripts/seed_chinese_data.py` —— 同一批数据的第二份手工副本，改一处就得记得
-改另一处，而 docker 跑的恰好是没有测试覆盖的那一份。该脚本已删除，种子数据只有管理
-命令这一个入口。其余种子数据同样由 Django 管理命令提供：
-
-```bash
-cd backend   # 解释器是 backend/.venv,不是 PATH 上的 python
-.venv/bin/python manage.py seed_tenants               # CN_DIYU、EU_HEAVEN_HELL、EG_DUAT、GR_HADES
-.venv/bin/python manage.py seed_mythology             # 四种文明的领域与角色（幂等）
-.venv/bin/python manage.py consolidate_eu_pantheon
-.venv/bin/python manage.py seed_workflow_templates
-.venv/bin/python manage.py seed_field_permissions
-.venv/bin/python manage.py init_organizations
-.venv/bin/python manage.py create_api_key             # Death Sync 外部 API 用
-.venv/bin/python manage.py sync_permissions           # 补建库里缺的权限码名及默认授权;
-                                                      # 加了新码名的部署之后要跑(--dry-run 只列不写)
-```
-
-本地登录账号(只在 `DEBUG=True` 时可用,否则直接报错):
-
-```bash
-.venv/bin/python manage.py seed_dev_users [--tenant CN_DIYU]   # 管理员 / 判官 / 牛头马面 / 审核员 / 访客 / 灵魂各一个
-```
-
-每次运行给六个账号重新生成随机密码,只打印这一次;重跑不新增账号。灵魂用打印出的灵魂编号在灵魂端登录。
-
-维护类命令(也可手动运行):
-
-```bash
-.venv/bin/python manage.py backfill_soul_entry_path   # 给死亡时还没写入口站的灵魂补第一站(--dry-run)
-.venv/bin/python manage.py cleanup_orphan_post_media  # 删掉上传了却没挂到帖子上的朋友圈图片
-.venv/bin/python manage.py process_workflow_timeouts  # 触发到期的流程节点超时(升级 / 自动驳回 / 通知)
-.venv/bin/python manage.py reconcile_inbox            # 从 Synapse 重算殿司收件箱每个会话的最近来信
-```
-
-### 便捷脚本
-
-```bash
-bash scripts/start-all.sh      # 后端 + 前端（先 build 再 start，:3333）后台启动，日志在 scripts/logs/
-bash scripts/status.sh
-bash scripts/stop-all.sh
-bash scripts/install-hooks.sh  # 装 git 钩子，见「测试、门禁与 CI」
-```
-
----
-
-## API 与认证
-
-全部挂在 `/api/v1/` 下。`/api/schema/` 的 OpenAPI schema 与 `/api/docs/` 的 Swagger UI
-才是权威，下表只是索引，不是契约。
-
-**三种凭据，互不通用**：
-
-| 谁 | 怎么带 | 能进哪里 |
-|---|---|---|
-| 官员 | `Authorization: Bearer <access>`（`auth/` 签发的 simplejwt 令牌） | 默认认证类 `OfficerJWTAuthentication`：全部官员接口；灵魂令牌与 SOUL 角色一律 403 |
-| 灵魂本人 | `Authorization: Bearer <access>`（`soul-auth/` 签发，`token_type` 为 `soul_access`） | 只有 `me/` 下的接口（`SoulJWTAuthentication`） |
-| 外部系统 | `Authorization: ApiKey <key>` | 只有 `death-sync/` 的登记、查询与 webhook 接口，按能力位放行 |
-
-租户取自官员 JWT 里的 `tenant_code` claim，没有单独的租户请求头。三种凭据的分界写在
-[`backend/apps/soul_accounts/authentication.py`](backend/apps/soul_accounts/authentication.py)
-文件头。
-
-| 前缀 | 应用 |
-|---|---|
-| `auth/`、`users/` | JWT 登录/刷新，官员两步验证（`auth/mfa/`），用户管理，登录日志（`auth/login-logs/`，只读，仅 ADMIN） |
-| `recycle-bin/` | 回收站：软删除记录的查看、恢复与彻底删除 |
-| `souls/` | 灵魂 CRUD 与状态转换，更正结案（`{id}/correct_settlement/`，仅 SETTLED 灵魂，需 `soul.correct_settlement`） |
-| `ledger/` | 功过记录、余额、时间衰减、按文明的读数 |
-| `judgment/`、`disposition/`、`reincarnation/` | 审判流水线 |
-| `realms/`、`actors/` | 冥界地理及其人员 |
-| `dispatch/` | 跨域灵魂调度（含审批） |
-| `workflows/`、`nodes/`、`workflow/templates/` | 审批流程引擎 |
-| `perm/`、`menus/`、`organizations/`、`tenants/` | RBAC、导航、组织架构、租户（殿的设置 `tenants/{code}/settings/`，仅 ADMIN） |
-| `audit-logs/`、`events/`、`notifications/` | 审计轨迹、事件日志、通知 |
-| `death-sync/` | 外部死亡登记 API（API Key + HMAC 签名 webhook；密钥管理 `death-sync/api-keys/`）；对接说明见 [`docs/INTEGRATION.md`](docs/INTEGRATION.md) |
-| `social/`、`social-moderation/` | 帖子、评论、表态、关注、资料，以及内容处置 |
-| `sentence-plans/` | 受刑计划与加减项请求 |
-| `scheduler/` | 定时任务与执行记录（`runs/` 支持多状态、时间区间与搜索） |
-| `soul-accounts/`、`soul-auth/`、`me/` | 灵魂账号开通与凭据交付（含打印交付单 `credentials/{id}/print-slip/`，不返回密码）、灵魂端登录（密码、两步验证 `mfa/verify/`、这部手机的凭据 `device-login/`）、灵魂自己的接口（含推送令牌、书信、助手、朋友圈、两步验证 `me/mfa/`、面容登录 `me/device-login/`） |
-| `chat/` | 书信：Matrix 凭据代签与 Synapse 的新消息回调 |
-| `assist/`、`assist-admin/` | 官员端助手；助手管理页（仅 ADMIN） |
-| `social-media/<uuid>/` | 朋友圈帖子图片的文件出口（签名地址，每次重查可见性） |
-
-上文提到的按文明读数由 `GET /api/v1/ledger/balance/{soul_id}/` 返回。响应同时携带
-`karmic_balance`（原始净额，系统其余部分据此路由）与 `reading`（该灵魂自身文明使用的
-量具）。**任何展示给用户的数字都应当用 `reading`。**
-
----
-
-## 技术栈
-
-| 层级 | 技术 |
-|---|---|
-| 前端 | Next.js 16、React 19、TypeScript 5、Tailwind CSS 4、TanStack Query v5、@xyflow/react（流程画布）、class-variance-authority；图表用 div / CSS 画，没有图表库 |
-| 字体 | next/font + Archivo / Source Serif 4 / IBM Plex Mono；`@fontsource-variable/noto-sans-sc`、`-serif-sc` 自托管切片（各 101 片带 `unicode-range`，浏览器只取用到的那几片） |
-| 后端 | Django 5、Django REST Framework、drf-spectacular、channels + daphne |
-| 数据库 | PostgreSQL 16（Docker/生产，助手检索用 pgvector）、SQLite（本地默认） |
-| 灵魂端 App | Expo SDK 57 + React Native（`mobile/`，与 web 共用 `packages/core`） |
-| 书信 | Matrix / Synapse v1.161（仅本机回环，无联邦；灵魂之间的私信） |
-| 实时 | channels + channels-redis 的 WebSocket |
-| 异步 | Celery 5 + django-celery-beat，Redis broker |
-| 认证 | djangorestframework-simplejwt（官员与灵魂两种令牌），Death Sync 另用 API Key |
-| 测试 | pytest + pytest-django + pytest-cov + factory-boy；Jest + React Testing Library；vitest；Playwright |
-| 工具链 | ruff、ESLint、TypeScript、Sentry、structlog |
-
-**这里实际装着两份 React。** web 的生产构建与 jest 用的是 Next 自带的那份
-（`next/dist/compiled/react`，`frontend/jest.config.js` 的 `moduleNameMapper` 把
-`react` / `react-dom` 映射过去，`jestRunsNextVendoredReact.test.ts` 守着）；
-`packages/core` 的 vitest 与 `mobile/` 用已安装的 react 19.2.3。Expo 57 钉死 19.2.3，
-而 Next 每个版本只自带 canary，两边取不到同一个版本——升级 next 会顺带换掉 web
-测试里的 React。
-
----
-
-## 工程契约与设计系统
-
-### 两条会咬人的约定
-
-**`packages/core/src/config/workflow-templates.ts` 的缩进是后端契约。** 三个后端测试
-（`test_workflow_template_cast.py` / `test_workflow_preset_node_types.py` /
-`test_workflow_template_priority.py`）按硬编码路径打开这个前端文件，用正则匹配它的
-**排版**——两空格的键、四空格的字段、单行节点字面量。全文 499 行（2026-10-08）都是承重文本。**跑一遍
-`prettier` 会静默炸掉那三个后端测试。**
-
-**`min-h-screen` 只准出现在 AppLayout 之外的路由上。** `AppLayout` 把页面放进一个
-`min-h-[calc(100vh-4rem)]` 的槽位，页面再写一次 `min-h-screen` 就是 100vh 嵌在
-100vh−4rem 里——内容再短也永远多出 64px 死滚动，而且不报错、不报类型、不影响任何断言。
-`src/__tests__/viewportHeightContract.test.ts` 守着它。
-
-### 版式与组件
-
-界面此前用的是操作系统自带的 UI 字体，没有加载任何字族——中西文混排落在两套无关字库上，
-基线对不齐。现在有一套写下来的版式系统。
-
-| 层 | 内容 |
-|---|---|
-| 字体 | Archivo（UI）· Source Serif 4（引文）· IBM Plex Mono（数字/ID），各配 Noto Sans SC / Noto Serif SC，全部 SIL OFL 可商用 |
-| 字号 | 七档 `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl`（11/12/13/16/20/22/28px，`frontend/app/globals.css:162-177`；规范 v1）。表格正文 13px，密度不降 |
-| 圆角 | **全部方角**，焦点环也是。`rounded-full` 只留给头像与转圈，限 `eslint.config.mjs` 的 `ROUND_ALLOW` 所列文件 |
-| 线宽 | 四级：1px 行线 / 1px 区块边界 / 2px 章节下划线 / 3px 文明身份线与判决落印带 |
-| 外壳 | 页面统一用一个 `PageShell`，八种内容宽度收到三种 |
-| 原语 | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
-
-**衬线只出现在「有人说过的话」上**——172 条古典语料、忏悔录正文、判决理由、跨文明会审的
-合议意见。UI 的标签、表格、按钮、数字一律无衬线。所以「衬线 = 引文」是一条可读的规则，
-而不是装饰选择；忏悔录也因此不再需要 `italic` 加引号来提示这是引文。
-
-**四个文明的差异化走各自的编号法，不走颜色**：功过格是 `救濟門 · 十七`（門/條 二级 +
-汉字数字，**注意不是「卷」**——《太微仙君功過格》没有卷）；地狱篇是 `IX · XXVI`；否定告白是
-`§ 27 / 42`（**分母必须印出来**，这套体系的意义在于四十二则全数应答）；柏拉图是斯特方
-页码 `523a`。见 [`packages/core/src/config/civilizationSigil.ts`](packages/core/src/config/civilizationSigil.ts)。
-
-`/corpus` 是浏览这 172 条语料的页面（中国功过格 74、埃及否定告白 42、
-欧洲七宗罪 7 + 地狱篇 26、希腊高尔吉亚 12 + 厄尔神话 11 —— 与
-`backend/apps/actors/mythology/__init__.py::CORPUS_PROVENANCE` 逐条对上，
-那张表由 `backend/tests/test_corpus_provenance.py` 比对真实 seed 结果）。在此之前它们只在判决页的引用选择器里露过面——
-考据做了 172 条，界面上没有一个地方能看。右栏的「被引用」列出引用该条的判决（件数与清单取自调用者看得见的同一批判决），
-持 `judgment.execute` 的官员可「插入审判台」，把这一条引用到自己手上的未结案（`frontend/app/corpus/page.tsx`）。
-
-### 这些规矩由 lint 施加，不是靠自觉
-
-Tailwind 的 `theme.extend` 只能新增或覆盖，不能删除：`text-sm` 仍然解析，`rounded-lg` 仍然
-解析（只是解析成 0）。所以七档字号、十档间距、一种圆角全都是**限制**，而限制在 Tailwind 里
-没有表达方式——只能由 lint 施加。`frontend/eslint.config.mjs` 里有七条自定义规则
-（type-scale / spacing-rhythm / dead-radius / no-page-shadow / no-raw-palette / no-hex-colour /
-no-styles-in-csstext）加上 jsx-a11y，全部 `error` 级。
-没有文明色：`--color-civ-*` 已在 `2c6aaf57` 撤销，`ledgerPaletteContract.test.ts` 守着。
-
-`npm run lint` 是 `eslint . --max-warnings 0`（`frontend` 与 `packages/core` 两个
-workspace 都是；2026-09-05 之前是裸 `eslint .`，只有 warning 时退出码为 0）。迁移期的出路
-是**基线**：`frontend/eslint.design-guard-baseline.json` 记下每个文件当前的违规条数，
-超出报红，**低于也报红**——基线过期同样是静默失效的一种。
-
----
-
-## 测试、门禁与 CI
-
-**CI 不在分支推送与 PR 上跑**（GitHub Actions 额度耗尽过，2026-10-30 用户决定）：`ci.yml`
-每天 03:00 UTC 跑 main（过去 24 小时没有新提交就跳过）、推 `v*` tag 时跑、也可手动跑；`security.yml` 每周一 04:00 UTC 与手动。仓库公开，
-Linux runner 不计分钟。
-所以「CI 是绿的」最多说明上一次每天运行时是绿的，每次推送的检查是本地（unRAID）门禁
-`scripts/run-gates.sh`。`.github/workflows/ci.yml` 定义了五个 job：
-
-| Job | 步骤 |
-|---|---|
-| **backend** | `makemigrations --check --dry-run`、`migrate`、`pytest`、`ruff check`、`pip-audit` |
-| **frontend** | `packages/core` 的 typecheck / lint / vitest，然后 `tsc --noEmit`、`eslint`、`next build`、`npm run test:coverage`、`npm audit` |
-| **mobile** | `mobile/` 的 typecheck / lint / test |
-| **officer** | `mobile-officer/` 的 typecheck / lint / test（它就地引用 `mobile/src` 的模块，所以单独一个 job） |
-| **e2e** | Playwright 矩阵：chromium / firefox / mobile-chrome 各一条腿，`fail-fast: false`，每条腿单独上传报告 artifact |
-
-后端 CI 跑在真实的 PostgreSQL 16 与 Redis 7 service container 上。`pip-audit`（扫
-`-r requirements.lock --no-deps`）与 `npm audit --audit-level=high` 都是**阻断性**的，
-两处已接受的公告数都是 none；要放宽之前先读 workflow 文件里各自步骤旁边的注释。
-
-**本地门禁**：`bash scripts/install-hooks.sh` 装上钩子之后，pre-commit 对暂存的前端文件跑
-ESLint，pre-push 调用 [`scripts/run-gates.sh`](scripts/run-gates.sh)——按改动路径挑选
-后端 / 前端 / `packages/core` / `mobile` / `mobile-officer` 的门禁，前端 jest 只跑受影响的测试，后端 pytest
-按改动的 app 挑选（2026-10-27 起）。同一套门禁可以手动跑：
-
-```bash
-scripts/run-gates.sh           # 与 origin/main 的 merge-base 比较，跑推送时会跑的那一套
-scripts/run-gates.sh --full    # jest 也全跑
-scripts/run-gates.sh --help
-```
-
-单独跑某一项：
-
-```bash
-cd backend && .venv/bin/python -m pytest --tb=short -q   # 先隔离 DATABASE_URL 与 REDIS_URL，见下
-cd backend && .venv/bin/ruff check .
-cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
-npm run --workspace packages/core typecheck && npm run --workspace packages/core lint && npm run --workspace packages/core test
-npm run --workspace mobile typecheck && npm run --workspace mobile lint && npm run --workspace mobile test
-npm run --workspace @soulledger/officer typecheck && npm run --workspace @soulledger/officer lint && npm run --workspace @soulledger/officer test
-cd frontend && npm run build && npx playwright test   # 三个 project；要先 build
-```
-
-几条容易踩的：
-
-- **解释器是 `backend/.venv/bin/python`**，不是 PATH 上的 `python`。后者多半没有 Django，
-  报的 `ModuleNotFoundError` 指向「缺依赖」，真正的原因是「解释器选错了」。
-- **`.env` 的 `DATABASE_URL` 与 `REDIS_URL` 都指向共享测试机**，跑测试前两个都要覆盖：
-  只覆盖数据库，权限缓存键仍会写进共享 Redis。
-- **后端测试分散在两处**——`backend/tests/` 与 `backend/apps/` 各应用内的 `test_*.py` /
-  `tests.py`。`pytest.ini` 设了 `testpaths = backend`，从仓库根运行会同时收集两边；只跑
-  一处会得到一个证明不了多少的绿。覆盖率以 `--cov=apps` 度量（下限 80%）。
-- **前端用 `test:coverage`，不是 `npm test`**：后者是裸 jest，`coverageThreshold` 只在传
-  `--coverage` 时才评估。
-- **E2E 有三个 project，要先 build**：`webServer` 跑构建产物（`start:e2e`），不是
-  `next dev`——dev server 按需编译，`networkidle` 等的是「编译完没有」，结果随机。只跑
-  chromium 不等于「跑过 E2E」。
-- **SQLite 看不见一整类缺陷**（事务中止、`varchar` 长度），涉及事务、约束或列宽的改动要在
-  真 PostgreSQL 上再跑一遍。
-
-完整跑法见 [`CLAUDE.md`](CLAUDE.md) 的 Build & Test。
-
----
-
-## 仓库与文档
-
-```
-backend/
-  apps/
-    souls/          灵魂模型、状态机、租户→文明映射
-    ledger/         功过记录、时间衰减、按文明的读数
-    judgment/       审判记录与判决
-    disposition/    判决 → 目标领域
-    reincarnation/  轮回记录
-    actors/         判官、守卫、引渡者，以及四文明的语料与种子
-    realms/         冥界地理
-    dispatch/       跨域调度（含跨租户会审）
-    perm/           RBAC：Permission、Role、RoleDataScope、FieldPermission
-    tenants/        Tenant 模型、殿的设置、TenantManager（只过滤软删除）
-    authentication/ JWT 认证、User 模型、角色、登录日志
-    workflow/       审批流程引擎
-    menus/          树形导航 + MenuButton
-    events/         EventBus、EventEnvelope、HandlerRegistry
-    notifications/  通知 + WebSocket Consumer
-    death_sync/     外部死亡登记 API、API Key、webhook
-    social/         帖子、评论、表态、关注、资料、内容处置
-    sentence_plan/  受刑计划：刑罚节点、加减项请求
-    scheduler/      定时任务登记、TaskRun 执行记录、reap/prune 两道恢复
-    soul_accounts/  灵魂自己的账号：开号、凭据待交付、登录限流、两种令牌的分界
-    soul_push/      灵魂端 App 的推送令牌与 Expo 下发
-    soul_assist/    问一问：灵魂端与官员端助手、管理页
-    chat/           灵魂之间的书信：Matrix 凭据代签、房间策略、新消息回调
-    org/            组织架构
-    audit/          带 trace_id 的审计日志
-    core/           公共 viewset/mixin、权限类、租户收窄、WebSocket 认证、健康检查
-                    （不在 INSTALLED_APPS 里）
-  config/           settings、URL、ASGI、Celery
-  tests/            跨应用 pytest 套件（后端测试还有一半在 apps/*/ 里）
-packages/core/      平台无关层。**不含 DOM** —— 它的 tsconfig 没有 "dom"
-  src/api/          每个后端应用一个类型安全客户端
-  src/hooks/        数据 hook（useSouls、useJudgments、useSocial …），web 与 App 共用
-  src/platform/     宿主能力端口；web 实现在 frontend/lib/platform/web.ts
-  src/config/       领域配置：四文明映射、civilizationSigil、workflow-templates
-  messages/         i18n：zh-Hans、en、egy
-  openapi/          schema.yml —— 前端类型的来源，后端有门禁盯着它逐字节一致
-frontend/
-  app/              Next.js App Router 页面
-  src/hooks/        只属于 web 视图层的 hook
-  src/components/   UI，含 RBAC 门控组件
-  src/__tests__/    契约测试 —— 它们才是真正被执法的规范
-  components/ui/    第三个源根：data-table / data-grid / page-section / skeleton
-  lib/platform/     平台端口的 web 实现
-  e2e/              Playwright 用例
-mobile/             灵魂端 App（Expo SDK 57 / React Native）。平台无关的一切来自
-  src/              packages/core，这里只有屏幕、导航与移动端的端口实现
-mobile-officer/     官员端 App（同一套 Expo）。待办、队列、查询、通知、回信；
-  src/              界面零件与主题经 shared.ts 取自 mobile/src
-config/synapse/     Synapse 的 homeserver 模板与房间策略模块（书信）
-nginx.conf          production 合并里 nginx 的主配置
-scripts/            启停/状态、门禁（run-gates.sh）、数据库备份恢复、git hooks
-docs/               神话研究、工程文档、设计交付包——见 docs/README.md
-```
-
-文档从 [`docs/README.md`](docs/README.md) 开始，那里索引了整个目录。简版：
-
-- **神话研究（中文）**：约 20 篇关于四套死后世界体系的文档——地府十殿、但丁九圈与
-  希腊/北欧冥界、杜阿特十二门与心脏称量。这是领域模型的来源材料，也是
-  `readings.py` 长成那样的原因。仓库根目录下的 `地府结构研究/`、`欧洲天堂地狱/`、
-  `埃及冥界/` 曾是同一批文件的逐字节镜像，**2026-08-15 已去重**（`e4eee54`）：19 份
-  副本删除，三个目录各留一份把旧文件名映射到 `docs/` 的 README;2026-10-30 这三份
-  跳转 README 连同目录一并删除。
-- **工程文档**：架构、规约、API 说明、里程碑，以及一批带日期的评审/审计报告。
-- **[`docs/INTEGRATION.md`](docs/INTEGRATION.md)**：给外部系统的对接说明 —— 外部死亡登记接口与 webhook(请求头、V2 签名校验、重试、地址限制)。
-- **[`docs/design-handoff/`](docs/design-handoff/)**：发给外部设计师的设计简报包，含
-  29 张实际界面全页截图、设计 token 清单与多语言表格样本。`ADDENDUM.md` 记录了打包
-  之后发生的变化，应与 `BRIEF.md` 一起读。该包已被外部引用，请视为冻结内容。
-
-根目录：[`SPEC.md`](SPEC.md) 是完整项目规范，[`DESIGN.md`](DESIGN.md) 是设计系统，
-[`CONTRIBUTING.md`](CONTRIBUTING.md) 是协作流程，[`SECURITY.md`](SECURITY.md) 是漏洞
-披露政策，[`CLAUDE.md`](CLAUDE.md) 是构建、门禁与提交格式的权威说明。
-
----
-
-## 安全现状
-
-已实现：JWT 与 API Key 认证（官员、灵魂、外部系统三种凭据互不通用）、带数据与字段范围的
-RBAC、官员与灵魂的两步验证（TOTP，密钥 Fernet 加密落库；恢复码一次一用）、webhook secret 与 PII 载荷的 Fernet 加密、基于 Redis 的原子限流、webhook URL 的
-SSRF 校验、CSP/HSTS/X-Frame-Options，以及写操作的审计轨迹。
-
-外部 API Key（`backend/apps/death_sync/`，管理页 `/death-sync/api-keys`）按能力分开授权：
-`can_register_death` / `can_query_status` / `can_manage_webhooks` 三个布尔位各管一类接口；
-`allowed_ips` 非空时只放行列表里的来源地址；`ApiKeyRateThrottle` 用 Redis `INCR` 按
-`rate_limit_per_minute` 限流。**`rate_limit_per_hour` 目前只存储并在用量接口里回报，
-没有任何视图按它限流**——视图只挂了分钟级那一档。
-
-Fernet 加密**依赖 `ENCRYPTION_KEY`**（`config/settings.py`）：`DEBUG=False` 且未设置时
-拒绝启动；`DEBUG=True` 且未设置时只打一条 warning，加密列 **明文落库**：`WebhookConfig.signing_secret`、
-`DeathRegistrationRequest.source_payload`、官员与灵魂两步验证的 `secret`、灵魂账号初始凭据、助手平台 API key。
-开发环境看到那条 warning 时，库里的这些列就是明文。`SECRET_KEY` 与 `ENCRYPTION_KEY` 都能不停机轮换
-（`*_FALLBACKS` 与 `manage.py rotate_encryption_key`，步骤见 `docs/DEPLOYMENT.md`「密钥轮换」）。
-
-灵魂端的面容 / 指纹登录不存密码：服务端给这部手机发一个专用凭据，库里只有它的哈希；改密码、官员重置、转生都会吊销它，
-并把原因告诉登录页。登录交付单上的二维码只带灵魂编号（`SL1:<编号>`），不带密码。
-
-书信正文只在 Synapse，后端库与审计里都没有正文；它也不是端到端加密。问一问助手是仓库里唯一把灵魂的自由文本落库并发给
-第三方模型的地方（原文保存 30 天，审计里只有哈希）。
-
-这份清单描述的是代码做了什么，不是一份安全保证。报告问题的方式见
-[`SECURITY.md`](SECURITY.md)。
-
----
-
-## 定位与状态
-
-这是一个为其自身而做的个人项目——用来搞清楚：要把四套互不兼容的道德记账体系放进
-同一套 schema 而不悄悄抹平它们，究竟需要付出什么。它从未部署到任何真实环境，没有用户，
-不提供可用性、支持或向后兼容承诺。生产用的 Docker Compose、健康检查和 CI 之所以存在，
-是因为「把它们做对」本身就是这个练习的一部分，而不是因为有什么东西真的在跑生产。
-
-里程碑历史在 [`docs/MILESTONES.md`](docs/MILESTONES.md)，它落后于代码。`git log` 才是
-准确的记录。
-
----
-
-## 致谢
-
-菜单与权限系统的设计参考了 [Snowy](https://github.com/xiaonuobase/Snowy)（Apache-2.0）。
-
-代码、测试与文档用 [Claude Code](https://claude.com/claude-code) 协作完成，界面设计用 Claude Design。
-字体、开源软件、文献出处、模型与服务的完整清单在应用内的「关于 / 致谢」页（`/about`），
-数据在 [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)。
-
-维护者：Tardisyuan · <https://github.com/Tardisyuan/SoulLedger>
-
----
-
-## 许可证
-
-[Apache-2.0](LICENSE)。第三方声明见 [`NOTICE`](NOTICE)：App 内置的 Noto Serif SC
-子集字体采用 SIL OFL-1.1，原文在
-[`mobile/assets/fonts/OFL.txt`](mobile/assets/fonts/OFL.txt)。
+## Status
+
+A personal project. It has never been deployed for real users and makes no uptime or compatibility
+promise. The production compose file, health checks and CI exist because doing them properly was part of
+the exercise. `git log` is the accurate history; [`docs/MILESTONES.md`](docs/MILESTONES.md) lags it.
+
+## Contributing
+
+Pull requests are welcome. Small ones are best: documentation fixes, translations, corrections to the
+mythology research, and bug fixes with a reproduction. Open an issue before anything large.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the workflow and the rules for AI-assisted PRs. The maintainer
+works alone and usually replies within a week.
+
+## Credits
+
+The menu and permission design draws on [Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0). Code,
+tests and docs were written with [Claude Code](https://claude.com/claude-code), and the interface was
+designed with Claude Design. Fonts, libraries, literature and services are listed on the app's About page
+(data in [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)).
+
+Maintainer: [@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)
+
+## License
+
+[Apache-2.0](LICENSE). Third-party notices are in [`NOTICE`](NOTICE).

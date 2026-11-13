@@ -1,139 +1,14 @@
-<p align="center"><img src="docs/soulledger-mark.svg" width="112" alt="SoulLedger"></p>
+# Development guide
 
-# SoulLedger
+Everything a contributor needs to run, test and change SoulLedger locally. The front-page
+[README](../README.md) is the short version; [`CONTRIBUTING.md`](../CONTRIBUTING.md) covers the workflow
+for a pull request. `CLAUDE.md` at the repository root is the maintainer's working notes for AI coding
+agents; you do not need to read it.
 
-**English** | [中文](README.md)
-
-[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
-[![Designed with Claude Design](https://img.shields.io/badge/Designed_with-Claude_Design-D97757?logo=claude&logoColor=white)](https://www.anthropic.com/)
-[![Live demo](https://img.shields.io/badge/Live_demo-soulledger.tardisyuan.ltd-000000?logo=vercel&logoColor=white)](https://soulledger.tardisyuan.ltd)
-[![CI](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
-![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
-![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-
-## 30-second version
-
-**In one sentence**: a full-stack application (Django, Next.js and two Expo apps) that tracks souls through the afterlife of four mythologies (Chinese, European, Egyptian, Greek) in one system, where the four civilizations are four structurally different models, not reskins.
-
-**Live demo**: <https://soulledger.tardisyuan.ltd> (front end only, on recorded data; every sign-in starts over) · **API reference**: <https://soulledger.tardisyuan.ltd/api-docs>
-
-```mermaid
-flowchart LR
-  W["Web (Next.js 16)"] --> API
-  S["Soul app (Expo)"] --> API
-  O["Officer app (Expo)"] --> API
-  W -. shares .- C["packages/core<br/>API contract / hooks / language packs<br/>(no DOM)"]
-  S -. shares .- C
-  O -. shares .- C
-  API["Django 5 + DRF<br/>tenant scoping / RBAC / event log"] --> PG[("PostgreSQL 16")]
-  API --> R[("Redis: Channels + Celery")]
-  API --> M["Synapse (Matrix)<br/>letters between souls"]
-  R --> WS["WebSocket push"] --> W
-```
-
-**Three things worth a look**
-
-1. **Four civilizations, four models**: Chinese is a signed running account, Egyptian is a threshold test against a feather, European is two independent quantities that do not offset each other, Greek is a procedure rather than a number. The code refuses to flatten them ([`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py)).
-2. **Isolation and consistency are pinned by tests, not by discipline**: tenant scoping goes through one function and a contract test checks every ViewSet ([ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)); the event log shares the business transaction, so a failed write rolls the whole operation back ([ADR 0002](docs/adr/0002-event-log-in-the-business-transaction.md)).
-3. **Gates that make green mean something**: only the tests a change can break, run on a separate build machine, real PostgreSQL as its own path for what SQLite hides, and every new check is proven to go red first ([ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)).
-
-**Test scale** (reading dated 2026-11-06, from [`landing-stats.json`](frontend/src/config/landing-stats.json); numbers go stale, trust the latest measurement): back end 9,243 · web 5,677 · soul app 1,204 · officer app 1,095 · E2E about 270. CI runs once a day, not on every push; the pre-push check is the local gate script.
-
-**Go deeper**: [architecture decision records](docs/adr/README.md) · [How I built this (draft, in Chinese)](docs/portfolio/HOW-I-BUILT.md) · [quality evidence](docs/portfolio/QUALITY-EVIDENCE.md) · [demo deployment](docs/DEPLOYMENT-demo.md)
-
----
-
-> **`README.md` (Chinese) is the authority.** This translation has drifted before — it
-> sat 50 commits behind through the npm-workspaces move, and told readers to run
-> `npm test`, which does not evaluate the coverage threshold. Both files were
-> restructured together on 2026-10-08, and nothing checks that they stay level. Where
-> they disagree, believe the Chinese one, and please fix this file.
-
-**Live demo: <https://soulledger.tardisyuan.ltd>** (front end only, on recorded data; every sign-in starts over)
-
-SoulLedger is a working full-stack application — Django + Next.js, plus an Expo soul-side
-app — that tracks souls through an afterlife pipeline in four different mythologies at
-once: the Chinese Diyu, the Christian and Dantean afterlives grouped here as "European,"
-the Egyptian Duat, and Plato's Greek underworld. It is an application, not a
-documentation repository: the `docs/` folder holds the domain research that the code was
-built from, and the research is genuinely load-bearing.
-
-The interesting part is that the four cosmologies are not one data model in four
-colour schemes. They compute structurally different quantities, and the code
-refuses to average them.
-
-**Contents:** [Four civilizations](#why-the-four-civilizations-are-not-the-same-system) ·
-[What it does](#what-it-does) · [Architecture](#architecture) · [Quick start](#quick-start) ·
-[API and authentication](#api-and-authentication) · [Tech stack](#tech-stack) ·
-[Engineering contracts and design system](#engineering-contracts-and-design-system) ·
-[Testing, gates and CI](#testing-gates-and-ci) · [Repository and docs](#repository-and-docs) ·
-[Security, scope and license](#security-posture)
-
----
-
-## Why the four civilizations are not the same system
-
-Most "multi-culture" demos pick one mechanic and restyle it. This one does not.
-See [`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py):
-
-| Civilization | What its ledger actually says | Shape of the answer |
-|---|---|---|
-| **Chinese** | A cumulative account (功過格). Merit and demerit offset each other; the running total *is* the verdict. | One signed number |
-| **Egyptian** | A threshold test. The heart is weighed once against Ma'at's feather and must be "not heavier than" it. The heart's weight is wrongdoing minus good deeds, never below zero: good deeds lighten the heart rather than earn a separate credit. The forty-two denials are the interrogation and do not enter the weighing. | Pass/fail against a fixed counterweight |
-| **European** | Two unrelated facts. *Culpa* (guilt) and *poena* (penalty remaining after absolution) do not reduce each other, and this system holds no data from which poena could honestly be derived. | Two independent quantities, one of them explicitly unavailable |
-| **Greek** | Plato's two myths disagree with each other: the *Gorgias* stamps a soul and stops, the *Republic*'s Er returns it after a thousand years. So 21 of the 23 transcribed articles have polarity `PROCEDURE` — **they are rules of the court, not names of offences**. | A procedure, not a quantity |
-
-A soul whose tenant is not mapped to a cosmology gets no reading at all — an
-explicit refusal rather than a fallback to somebody else's arithmetic.
-
-The same principle runs through the ledger's decay rule
-(`backend/apps/ledger/services.py`): karma decays at 1%/year for Chinese and
-Egyptian souls and **not at all** for European ones, because the published
-European label denies decay outright. Decay is anchored to the soul's death date,
-not to today, so a 612 BCE deed is not eroded to nothing by the mere passage of
-civilizational time.
-
-This distinction is not backend-only. The soul detail page's `SoulReadingPanel`
-([`frontend/src/components/souls/SoulReadingPanel.tsx`](frontend/src/components/souls/SoulReadingPanel.tsx))
-switches on `reading.kind` and renders each shape differently: Chinese gets a net
-figure with a trend, Egyptian renders "not heavier than" as a ratio rather than a
-badge that would read "fail" for nearly every soul forever, European keeps culpa
-and poena visually separate and, when poena is unavailable, shows why rather than
-a 0. The souls list's Balance column follows the same rule — only Chinese souls
-get a net number; every other civilization gets an em dash rather than a
-borrowed reading.
-
-Dates carry two severities. `death_before_birth`, `implausible_lifespan` and
-`event_before_birth` are ERRORs — the write is refused outright.
-`event_after_death` (a record entered after the soul's death — legitimately
-common: posthumous judgments, deeds recorded after the fact) is a WARNING: it's
-let through and stays visible in the detail page's `DateProblemsPanel`, where an
-operator can mark it reviewed. That mark is bound to a fingerprint of the exact
-pair of dates it was reviewed against — if either date is edited afterward, the
-mark stops applying and the warning reappears, rather than a plain boolean
-silently hiding a warning that is now about different dates. The souls list marks
-affected rows with ⊘/△ and offers a one-click filter for them.
-
----
-
-## What it does
-
-| Domain | What it covers | Code (`backend/apps/`) |
-|---|---|---|
-| Judgment pipeline | Cases from judgment to disposition and reincarnation; court settings (ADMIN only); settlement correction for SETTLED souls | `judgment/`, `disposition/`, `reincarnation/`, `tenants/`, `souls/` |
-| Cross-realm dispatch | Moving souls between tenants, through approval, including cross-tenant joint judgment | `dispatch/` |
-| Approval workflows | Configurable multi-node approval flows, with templates and per-node timeouts | `workflow/` |
-| Sentence plans | Sentence stages and amendment requests | `sentence_plan/` |
-| Letters | Private messages between souls over Matrix / Synapse (loopback only, no federation); the backend mints credentials and receives the new-message hook. **Not end-to-end encrypted** | `chat/` |
-| Soul circle | Posts, comments, reactions, follows, moderation; images served via signed URLs | `social/` |
-| Ask (assistant) | A question-answering assistant for souls and for officers, one service layer; an ADMIN-only management page | `soul_assist/` |
-| External death registration | API-key-authenticated registration (single or batch), HMAC-signed webhooks | `death_sync/` |
-| Push and notifications | In-app notifications over WebSocket; Expo push for the soul app | `notifications/`, `soul_push/` |
-| Accounts and sign-in | A soul's account is provisioned with its death registration and the initial password is handed over by an officer (a printable sign-in slip laid out per civilization, with a QR code); the soul app scans the number, remembers the account and signs in by face / fingerprint; officers and souls can both turn on two-step verification (TOTP + recovery codes); every new-password form lists the rules and ticks them off | `soul_accounts/`, `authentication/` |
-| Three front ends | Admin web (Next.js 16) + the soul app + the officer app (both Expo SDK 57 / React Native), sharing `packages/core` | `frontend/`, `mobile/`, `mobile-officer/` |
+**Contents:** [Architecture](#architecture) · [Domain model notes](#domain-model-notes) · [Quick start](#quick-start) ·
+[Signing in locally](#signing-in-locally) · [API and authentication](#api-and-authentication) ·
+[Tech stack](#tech-stack) · [Engineering contracts](#engineering-contracts-and-design-system) ·
+[Testing, gates and CI](#testing-gates-and-ci) · [Repository layout](#repository-layout)
 
 ---
 
@@ -181,7 +56,7 @@ database content with no translation field, so they stay in Chinese regardless
 of the active locale (`en`/`egy`) — deliberately, not a missed translation.
 Instead, the breadcrumb trail and each page's H1 pair the translated label with
 the Chinese original when the locale differs
-(see [`frontend/src/lib/menuI18n.ts`](frontend/src/lib/menuI18n.ts)), and sidebar
+(see [`frontend/src/lib/menuI18n.ts`](../frontend/src/lib/menuI18n.ts)), and sidebar
 icons are required to be unique within their parent, since the icon is the only
 identification channel available in a locale that can't read the Chinese label.
 
@@ -190,7 +65,7 @@ simplified transliterations of Middle Egyptian roots in modern word order, for
 demonstration. **It is not real ancient Egyptian**: it has no Egyptian grammar,
 some of its words are real words stretched far from their meaning, and some are
 coinages. The root-by-root source check and the list of known problems are in
-[`docs/lore-verification/egy-lexicon-roots.md`](docs/lore-verification/egy-lexicon-roots.md)
+[`docs/lore-verification/egy-lexicon-roots.md`](lore-verification/egy-lexicon-roots.md)
 (written in Chinese).
 
 **Events and realtime.**
@@ -222,6 +97,42 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (next cycle)
 reachable. Settlement correction (the `souls/` row of the API table) is not a state
 transition: it reverts a SETTLED soul to DISPOSED to fix a data-entry error, requires a
 reason, and is audited separately.
+
+## Domain model notes
+
+The four readings are summarized in the [README](../README.md#why-the-four-civilizations-are-not-one-system); the code is
+[`backend/apps/ledger/readings.py`](../backend/apps/ledger/readings.py).
+
+A soul whose tenant is not mapped to a cosmology gets no reading at all — an
+explicit refusal rather than a fallback to somebody else's arithmetic.
+
+The same principle runs through the ledger's decay rule
+(`backend/apps/ledger/services.py`): karma decays at 1%/year for Chinese and
+Egyptian souls and **not at all** for European ones, because the published
+European label denies decay outright. Decay is anchored to the soul's death date,
+not to today, so a 612 BCE deed is not eroded to nothing by the mere passage of
+civilizational time.
+
+This distinction is not backend-only. The soul detail page's `SoulReadingPanel`
+([`frontend/src/components/souls/SoulReadingPanel.tsx`](../frontend/src/components/souls/SoulReadingPanel.tsx))
+switches on `reading.kind` and renders each shape differently: Chinese gets a net
+figure with a trend, Egyptian renders "not heavier than" as a ratio rather than a
+badge that would read "fail" for nearly every soul forever, European keeps culpa
+and poena visually separate and, when poena is unavailable, shows why rather than
+a 0. The souls list's Balance column follows the same rule — only Chinese souls
+get a net number; every other civilization gets an em dash rather than a
+borrowed reading.
+
+Dates carry two severities. `death_before_birth`, `implausible_lifespan` and
+`event_before_birth` are ERRORs — the write is refused outright.
+`event_after_death` (a record entered after the soul's death — legitimately
+common: posthumous judgments, deeds recorded after the fact) is a WARNING: it's
+let through and stays visible in the detail page's `DateProblemsPanel`, where an
+operator can mark it reviewed. That mark is bound to a fingerprint of the exact
+pair of dates it was reviewed against — if either date is edited afterward, the
+mark stops applying and the warning reappears, rather than a plain boolean
+silently hiding a warning that is now about different dates. The souls list marks
+affected rows with ⊘/△ and offers a one-click filter for them.
 
 ---
 
@@ -269,7 +180,7 @@ runs without it.
 
 ```bash
 # Repository root. Use npm 11, not the npm 10 that ships with nvm's node 20 (it exits 0
-# yet installs no typescript and no .bin); the measurements are in CLAUDE.md, Build & Test
+# yet installs no typescript and no .bin); measured 2026-09-17
 npx -y npm@11 ci
 npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli   # npm 11 skips install scripts
 git checkout -- package-lock.json   # npm ci strips the lockfile's libc fields; restore it
@@ -285,8 +196,8 @@ npm run --workspace @soulledger/officer android # officer app (`mobile-officer/`
 
 The officer app imports the soul app's leaf modules in place (`mobile-officer/src/shared.ts`), so a change
 under `mobile/src` can affect it. After changing `app.json` plugins (permission strings, a new native
-module) run `npx expo prebuild --platform ios|android --no-install` first. The app build and rebuild rules
-are in [`CLAUDE.md`](CLAUDE.md), Build & Test; notes tied to one machine (phone signing, LAN test boxes) are not in the repo.
+module) run `npx expo prebuild --platform ios|android --no-install` first. Rebuild the dev client only when a
+native dependency or an `app.json` plugin changed; a JS change needs only Metro.
 
 #### Two things left undone on purpose (decided 2026-10-10; do them before a real device)
 
@@ -330,8 +241,8 @@ migrations and seeds all four civilizations on boot.
 
 The production stack (nginx, first TLS issuance and renewal, backup and restore, off-site
 copy and alerts, restore drill, RPO/RTO, rollback, `/metrics/` and log format, retention, key
-rotation) is in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md); the go-live checklist is
-[`docs/DEPLOY.md`](docs/DEPLOY.md).
+rotation) is in [`docs/DEPLOYMENT.md`](DEPLOYMENT.md); the go-live checklist is
+[`docs/DEPLOY.md`](DEPLOY.md).
 
 ### Seed data
 
@@ -372,8 +283,32 @@ Maintenance commands (can also be run by hand):
 bash scripts/start-all.sh      # backend + frontend (build, then start on :3333), backgrounded, logs in scripts/logs/
 bash scripts/status.sh
 bash scripts/stop-all.sh
-bash scripts/install-hooks.sh  # installs the git hooks; see "Testing, gates and CI"
+bash scripts/install-hooks.sh  # installs the git hooks; see [Testing, gates and CI](#testing-gates-and-ci)
 ```
+
+## Signing in locally
+
+A fresh database has no officer who can sign in. Two ways to get one:
+
+- **`seed_dev_users`** *(being added; until it lands, use the second way)*. One command that creates one
+  sign-in account for each of the six roles (ADMIN, MODERATOR, JUDGE, GUARDIAN, VIEWER, and a SOUL account
+  for the soul app). It refuses to run unless `DEBUG=True`, so it cannot create accounts on a real deployment.
+
+  ```bash
+  cd backend && .venv/bin/python manage.py seed_dev_users
+  ```
+
+  It prints the accounts it created. Sign in at <http://localhost:3333>.
+- **Django's own command**, for a single admin account:
+
+  ```bash
+  cd backend && .venv/bin/python manage.py createsuperuser
+  ```
+
+Run `seed_tenants` and `seed_mythology` first (see [Seed data](#seed-data)) so there are halls to belong to.
+
+You do not need a local backend to look around: the [live demo](https://soulledger.tardisyuan.ltd) is
+the front end on recorded data, with a one-click sign-in for every role.
 
 ---
 
@@ -392,7 +327,7 @@ Swagger UI at `/api/docs/` are authoritative; the table below is a map, not a co
 
 The tenant is read from the officer JWT's `tenant_code` claim; there is no separate
 tenant header. The boundary between the three is written up at the top of
-[`backend/apps/soul_accounts/authentication.py`](backend/apps/soul_accounts/authentication.py).
+[`backend/apps/soul_accounts/authentication.py`](../backend/apps/soul_accounts/authentication.py).
 
 | Prefix | App |
 |---|---|
@@ -406,7 +341,7 @@ tenant header. The boundary between the three is written up at the top of
 | `workflows/`, `nodes/`, `workflow/templates/` | Approval workflow engine |
 | `perm/`, `menus/`, `organizations/`, `tenants/` | RBAC, navigation, org chart, tenants (court settings at `tenants/{code}/settings/`, ADMIN only) |
 | `audit-logs/`, `events/`, `notifications/` | Audit trail, event log, notifications |
-| `death-sync/` | External death-registration API (API key + HMAC-signed webhooks; key management at `death-sync/api-keys/`); integration guide in [`docs/INTEGRATION.md`](docs/INTEGRATION.md) |
+| `death-sync/` | External death-registration API (API key + HMAC-signed webhooks; key management at `death-sync/api-keys/`); integration guide in [`docs/INTEGRATION.md`](INTEGRATION.md) |
 | `social/`, `social-moderation/` | Posts, comments, reactions, follows, profiles, and content moderation |
 | `sentence-plans/` | Sentence plans and their amendment requests |
 | `scheduler/` | Scheduled jobs and run history (`runs/` takes several statuses, a time range and a search) |
@@ -464,33 +399,22 @@ page a `min-h-[calc(100vh-4rem)]` slot; writing `min-h-screen` inside it nests 1
 in 100vh−4rem, which is 64px of dead scroll on every route — no error, no type
 error, no failing assertion. `src/__tests__/viewportHeightContract.test.ts` guards it.
 
-### Type and components
 
-The interface used to render in whatever UI font the reader's OS supplied — no
-family was loaded at all, so mixed Latin/CJK runs sat on two unrelated baselines.
-There is now a written-down type system.
+### Type, colour and components
 
-| Layer | What it is |
-|---|---|
-| Type | Archivo (UI) · Source Serif 4 (quotation) · IBM Plex Mono (figures, identifiers), each paired with Noto Sans SC / Noto Serif SC. All SIL OFL. |
-| Scale | Seven steps, `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl` (11/12/13/16/20/22/28px, `frontend/app/globals.css:162-177`; spec v1). Table body is 13px, so density is not the price. |
-| Radius | **Square everywhere**, the focus ring included. `rounded-full` is for avatars and spinners only, in the files listed in `ROUND_ALLOW` in `eslint.config.mjs`. |
-| Rules | Four weights: 1px row rule / 1px block edge / 2px section underline / 3px civilization line and sealed-verdict band. |
-| Shell | Pages share one `PageShell`; eight content widths collapse to three. |
-| Primitives | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
+The numbers (type steps, spacing, radii, colours) live in
+[`frontend/app/globals.css`](../frontend/app/globals.css); the reasons for them are in
+[`DESIGN.md`](../DESIGN.md). They are not repeated here, because a copy in a README goes stale — this one did.
 
-**Serif marks what someone said** — the 172 transcribed articles, confession text,
-the reasoning of a judgment, the opinion of a cross-civilization panel. Every label,
-table, button and figure is sans. That makes "serif = quotation" a readable rule
-rather than a decorative choice, and it is why confession no longer needs `italic`
-plus quote marks to announce itself.
+**Serif marks what someone said** — transcribed articles, confession text, the reasoning of a judgment, the
+opinion of a cross-civilization panel. Every label, table, button and figure is sans.
 
 **The four cosmologies are told apart by how each numbers its own articles, not by
 colour**: 功過格 is `救濟門 · 十七` (gate and article in Han numerals — *not* 卷, which
 《太微仙君功過格》 does not have); the *Inferno* is `IX · XXVI`; the Negative Confession
 is `§ 27 / 42` (**the denominator is printed** — the system means nothing unless all
 forty-two are answered); Plato is a Stephanus page, `523a`. See
-[`packages/core/src/config/civilizationSigil.ts`](packages/core/src/config/civilizationSigil.ts).
+[`packages/core/src/config/civilizationSigil.ts`](../packages/core/src/config/civilizationSigil.ts).
 
 `/corpus` browses those 172 articles (Chinese 功過格 74, Egyptian Negative
 Confession 42, European Deadly Sins 7 + Inferno 26, Greek Gorgias 12 + Republic/Er
@@ -505,13 +429,11 @@ the same set of judgments the caller can see), and an officer holding `judgment.
 ### The rules are enforced by lint, not by discipline
 
 Tailwind's `theme.extend` can add and override but not remove: `text-sm` still
-resolves, `rounded-lg` still resolves (to 0). So the seven type steps, the ten spacing
-steps and the one radius are all **restrictions**, and a restriction has no
+resolves, `rounded-lg` still resolves (to 0). So the type scale, the spacing
+steps and the radii are all **restrictions**, and a restriction has no
 expression in Tailwind — only lint can impose it. `frontend/eslint.config.mjs`
 carries seven custom rules (type-scale / spacing-rhythm / dead-radius / no-page-shadow /
 no-raw-palette / no-hex-colour / no-styles-in-csstext) plus jsx-a11y, all at `error`.
-There are no civilization colours: `--color-civ-*` was removed in `2c6aaf57`, and
-`ledgerPaletteContract.test.ts` holds that.
 
 `npm run lint` is `eslint . --max-warnings 0` in both `frontend` and `packages/core`
 (until 2026-09-05 it was a bare `eslint .`, which exits 0 when only warnings exist).
@@ -524,12 +446,18 @@ unwatched gap.
 
 ## Testing, gates and CI
 
-**CI does not run on branch pushes or pull requests** (the GitHub Actions quota ran out;
-user decision 2026-10-30): `ci.yml` runs daily on main (03:00 UTC; skipped when main has no commit from the last 24 hours), on a pushed `v*` tag,
-and by hand; `security.yml` runs weekly (Monday 04:00 UTC) and by hand. The repository is
-public, and GitHub-hosted Linux runners bill no minutes for it. So "CI is green" speaks
-for the last daily run at most; the per-push check is the local (unRAID)
-gate, `scripts/run-gates.sh`.
+**Two workflows check code, on different schedules.**
+
+- **`pr-checks.yml` runs on every pull request**: static checks and a smoke test, about ten minutes, no
+  secrets and a read-only token. It is what a contributor sees on a PR.
+- **`ci.yml` is the full suite**: daily on main at 03:00 UTC (skipped when main has no commit from the last
+  24 hours), on a pushed `v*` tag, and by hand. `security.yml` runs weekly (Monday 04:00 UTC) and by hand.
+  The full suite does not run on pull requests or branch pushes: it once spent the whole Actions quota when
+  nearly every push went to main. The repository is now public, so Linux runners bill no minutes; the
+  daily cadence is a choice, not a limit.
+
+So a green `ci.yml` badge speaks for the last daily run at most. The maintainer's per-push check is the
+local gate, `scripts/run-gates.sh`, run on a separate build machine.
 `.github/workflows/ci.yml` defines five jobs:
 
 | Job | Steps |
@@ -546,7 +474,7 @@ Backend CI runs against real PostgreSQL 16 and Redis 7 service containers. Both
 step in the workflow file before loosening anything.
 
 **Local gates.** After `bash scripts/install-hooks.sh`, pre-commit runs ESLint on staged
-frontend files and pre-push calls [`scripts/run-gates.sh`](scripts/run-gates.sh), which
+frontend files and pre-push calls [`scripts/run-gates.sh`](../scripts/run-gates.sh), which
 picks the backend / frontend / `packages/core` / `mobile` / `mobile-officer` gates by changed path, runs
 frontend jest selectively, and picks backend pytest by the changed app (since 2026-10-27). The same gates run by hand:
 
@@ -588,11 +516,12 @@ Things that trip people up:
 - **SQLite hides a whole class of defect** (aborted transactions, `varchar` length); run a
   change that touches transactions, constraints or column widths against real PostgreSQL too.
 
-The full recipes are in [`CLAUDE.md`](CLAUDE.md), Build & Test.
+The maintainer's measurements and the incidents behind these rules are kept with the maintainer's
+notes for AI coding agents (`CLAUDE.md`); you do not need them to contribute.
 
 ---
 
-## Repository and docs
+## Repository layout
 
 ```
 backend/
@@ -655,7 +584,7 @@ scripts/            start/stop/status, gates (run-gates.sh), DB backup/restore, 
 docs/               Domain research, engineering docs, design handoff — see docs/README.md
 ```
 
-Documentation starts at [`docs/README.md`](docs/README.md), which indexes the whole
+Documentation starts at [`docs/README.md`](README.md), which indexes the whole
 folder. The short version:
 
 - **Domain research (Chinese-language).** ~20 files on the four afterlife
@@ -670,88 +599,15 @@ folder. The short version:
   2026-10-30.
 - **Engineering docs.** Architecture, conventions, API notes, milestones, and a
   set of dated review/audit reports.
-- **[`docs/INTEGRATION.md`](docs/INTEGRATION.md)** — the guide for external systems (in Chinese): the
+- **[`docs/INTEGRATION.md`](INTEGRATION.md)** — the guide for external systems (in Chinese): the
   death-registration API and webhooks (headers, V2 signature check, retries, address rules).
-- **[`docs/design-handoff/`](docs/design-handoff/)** — a design brief package sent
+- **[`docs/design-handoff/`](design-handoff/)** — a design brief package sent
   to an external designer, with 29 full-page screenshots of the live UI, a design
   token inventory, and localized table samples. `ADDENDUM.md` records what changed
   after the package was assembled and should be read alongside `BRIEF.md`. This
   package is referenced externally; treat it as frozen.
 
-Top level: [`SPEC.md`](SPEC.md) is the full project specification,
-[`DESIGN.md`](DESIGN.md) the design system, [`CONTRIBUTING.md`](CONTRIBUTING.md)
-the workflow, [`SECURITY.md`](SECURITY.md) the disclosure policy, and
-[`CLAUDE.md`](CLAUDE.md) the authority on builds, gates and commit format.
-
----
-
-## Security posture
-
-Implemented: JWT and API-key authentication (officer, soul and external credentials,
-none accepted in another's place), RBAC with data and field scoping, two-step verification
-for officers and souls (TOTP, the secret Fernet-encrypted at rest; single-use recovery codes), Fernet encryption
-for webhook secrets and PII payloads, atomic Redis rate limiting, SSRF validation on
-webhook URLs, CSP/HSTS/X-Frame-Options, and an audit trail on mutations.
-
-External API keys (`backend/apps/death_sync/`, managed at `/death-sync/api-keys`) are
-granted per capability: three booleans, `can_register_death` / `can_query_status` /
-`can_manage_webhooks`, each gate one class of endpoint. A non-empty `allowed_ips`
-admits only the listed source addresses. `ApiKeyRateThrottle` limits each key by
-`rate_limit_per_minute` with a Redis `INCR`. **`rate_limit_per_hour` is stored and
-reported by the usage endpoint, but no view throttles on it** — only the per-minute
-scope is wired.
-
-The Fernet encryption **depends on `ENCRYPTION_KEY`** (`config/settings.py`):
-with `DEBUG=False` and no key the process refuses to start; with `DEBUG=True`
-and no key it only warns, and the encrypted columns are **stored in plaintext**:
-`WebhookConfig.signing_secret`, `DeathRegistrationRequest.source_payload`, the officer and
-soul two-step `secret`s, a soul account's initial credentials, and the assistant's platform
-API keys. If you see that warning in development, those columns are plaintext. Both
-`SECRET_KEY` and `ENCRYPTION_KEY` rotate without downtime (`*_FALLBACKS` and
-`manage.py rotate_encryption_key`; steps in `docs/DEPLOYMENT.md`「密钥轮换」).
-
-Face / fingerprint sign-in in the soul app stores no password: the server issues a credential for that
-phone and keeps only its hash; a password change, an officer reset or a rebirth revokes it and tells the
-sign-in page why. The QR code on the sign-in slip carries the soul number only (`SL1:<number>`), never a password.
-
-Letter bodies live only in Synapse — none in the backend database or the audit log — and letters are not end-to-end encrypted. The Ask assistant is
-the one place in the repository that stores a soul's free text and sends it to a
-third-party model (the text is kept for 30 days; the audit log holds only a hash).
-
-That list describes what the code does, not a security guarantee. See
-[`SECURITY.md`](SECURITY.md) for how to report a problem.
-
----
-
-## Scope and status
-
-This is a personal project built for its own sake — a place to work out what it
-takes to model four incompatible moral accounting systems in one schema without
-quietly flattening them into one. It has never been deployed anywhere real, has
-no users, and carries no uptime, support, or backward-compatibility promise. The
-production Docker Compose file, health checks, and CI exist because doing them
-properly was part of the exercise, not because anything is in production.
-
-Milestone history is in [`docs/MILESTONES.md`](docs/MILESTONES.md), and it lags
-the code. `git log` is the accurate record.
-
----
-
-## Credits
-
-The menu and permission system design draws on
-[Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0).
-
-Code, tests and docs were written with [Claude Code](https://claude.com/claude-code); the interface was designed with Claude Design.
-The full list of fonts, open-source software, literature, models and services is on the app's About page (`/about`); the data is in
-[`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts).
-
-Maintainer: Tardisyuan · <https://github.com/Tardisyuan/SoulLedger>
-
----
-
-## License
-
-[Apache-2.0](LICENSE). Third-party notices are in [`NOTICE`](NOTICE): the Noto Serif SC
-subset bundled with the app is under the SIL OFL-1.1, full text in
-[`mobile/assets/fonts/OFL.txt`](mobile/assets/fonts/OFL.txt).
+Top level: [`SPEC.md`](../SPEC.md) is the original specification (a 2026-05 snapshot, not the current state),
+[`DESIGN.md`](../DESIGN.md) the design system, [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+the workflow, [`SECURITY.md`](../SECURITY.md) the disclosure policy, and
+[`CLAUDE.md`](../CLAUDE.md) the working notes for AI coding agents.
