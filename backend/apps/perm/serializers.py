@@ -4,6 +4,7 @@ Permission serializers
 from rest_framework import serializers
 
 from apps.authentication.serializers import LoginTenantRefSerializer
+from apps.core.problems import ProblemSerializer
 
 from .matrix import ACTIONS, RESULT_CODES, ROLE_DELETE_REFUSAL_CODES, STATUSES
 from .models import Permission, Role, RolePermission
@@ -251,11 +252,10 @@ class MatrixImpactResultSerializer(serializers.Serializer):
     workflow_conflicts = MatrixWorkflowConflictSerializer(many=True)
 
 
-class RoleDeleteRefusalSerializer(serializers.Serializer):
+class RoleDeleteRefusalSerializer(ProblemSerializer):
     """400 body of `DELETE /perm/roles/<pk>/`. `user_count` comes with
     `role_in_use`, `templates` with `role_referenced_by_workflow_templates`."""
 
-    error = serializers.CharField()
     code = serializers.ChoiceField(choices=ROLE_DELETE_REFUSAL_CODES)
     user_count = serializers.IntegerField(required=False)
     templates = RoleTemplateReferenceSerializer(many=True, required=False)
@@ -310,7 +310,7 @@ class RolePermissionAssignResultSerializer(serializers.Serializer):
     version = serializers.IntegerField()
 
 
-class RoleVersionConflictSerializer(serializers.Serializer):
+class RoleVersionConflictSerializer(ProblemSerializer):
     """409 body of `assign_role_permissions` — a stale-write rejection.
 
     Distinct from `ErrorResponseSerializer` because the two extra members are
@@ -318,7 +318,6 @@ class RoleVersionConflictSerializer(serializers.Serializer):
     operator what moved underneath it.
     """
 
-    error = serializers.CharField()
     expected_version = serializers.IntegerField()
     current_version = serializers.IntegerField()
 

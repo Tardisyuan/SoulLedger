@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 from apps.authentication.signin_sessions import session_of
 from apps.core.client_ip import get_client_ip
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.officer_app import push, todo
 from apps.officer_app.serializers import (
     CosignAddSerializer,
@@ -181,8 +182,8 @@ class CosignView(OfficerAppBaseView):
                 )
         except cosign.CosignRefusedError as refused:
             denied = refused.code == cosign.NOT_ALLOWED
-            return Response({"code": refused.code, "detail": refused.detail},
-                            status=status.HTTP_403_FORBIDDEN if denied else status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_403_FORBIDDEN if denied else status.HTTP_400_BAD_REQUEST, refused.code,
+                           refused.detail)
         EventService.notify_workflow_assigned(candidate, workflow)
         push.notify_users([candidate], target={"kind": kind, "id": str(item_id)})
         return Response({k: entry[k] for k in ("user_id", "user_name", "added_at", "signed_at")},
@@ -228,7 +229,7 @@ class CosignRemoveView(OfficerAppBaseView):
                 )
         except cosign.CosignRefusedError as refused:
             code = status.HTTP_404_NOT_FOUND if refused.code == cosign.NOT_FOUND else status.HTTP_403_FORBIDDEN
-            return Response({"code": refused.code, "detail": refused.detail}, status=code)
+            return problem(code, refused.code, refused.detail)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

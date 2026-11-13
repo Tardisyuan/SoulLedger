@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { schedulerApi, type ScheduledJob, type ScheduledJobUpdate, type TaskRunFilters } from "../api/index";
+import { problemFieldMessages } from "../api/problem";
 import { schedulerKeys } from "../query_keys";
 
 /**
@@ -99,7 +100,7 @@ export function useRebuildSchedules() {
  * are the contract in `backend/apps/scheduler/views.py`:
  *   409 → a run of this job holds the lock
  *   503 → the broker refused the message
- *   400 → field errors, keyed `cron` or `timezone` (a string or a list)
+ *   400 → a validation problem; its `errors` name `cron` or `timezone`
  *   403 → not allowed
  */
 export type SchedulerWriteError =
@@ -119,15 +120,7 @@ export function classifySchedulerError(error: unknown): SchedulerWriteError {
     case 403:
       return { kind: "forbidden" };
     case 400: {
-      const fields: Record<string, string[]> = {};
-      const data = response.data;
-      if (data && typeof data === "object") {
-        for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-          const messages = (Array.isArray(value) ? value : [value]).filter((m): m is string => typeof m === "string");
-          if (messages.length > 0) fields[key] = messages;
-        }
-      }
-      return { kind: "invalid", fields };
+      return { kind: "invalid", fields: problemFieldMessages(error) };
     }
     default:
       return { kind: "other" };

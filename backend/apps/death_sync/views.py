@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import HasValidApiKey, IsAdminPermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import scope_to_api_key, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin
 from apps.death_sync.authentication import APIKeyAuthentication
@@ -144,10 +145,7 @@ class ExternalApiKeyViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
         # key 属于一个殿(`ExternalApiKey.tenant` 非空)。无殿 ADMIN 没有当前殿时此前是 IntegrityError 500
         # (RBAC 严查 2026-10-29 L3);现在要求先进殿,缺就 400。
         if getattr(request, "tenant", None) is None:
-            return Response(
-                {"error": "Choose a hall before creating an API key", "code": "no_tenant"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "no_tenant", "Choose a hall before creating an API key")
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -217,19 +215,13 @@ class DeathRegistrationViewSet(
 
         # Check permission
         if not api_key.can_register_death:
-            return Response(
-                {"error": {"code": "KEY_NO_DEATH_PERMISSION", "message": "API key lacks death registration permission"}},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return problem(status.HTTP_403_FORBIDDEN, "KEY_NO_DEATH_PERMISSION", "API key lacks death registration permission")
 
         # Batch registration
         if data.get("batch") and "registrations" in data:
             registrations = data["registrations"]
             if len(registrations) > 50:
-                return Response(
-                    {"error": {"code": "BATCH_TOO_LARGE", "message": "Batch size limit is 50"}},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                return problem(status.HTTP_400_BAD_REQUEST, "BATCH_TOO_LARGE", "Batch size limit is 50")
             results = DeathSyncService.process_batch(
                 tenant=tenant,
                 api_key=api_key,
@@ -281,29 +273,16 @@ class DeathRegistrationViewSet(
                 idempotency_key=idempotency_key,
             ).first()
             if existing:
-                return Response({
-                    "status": "duplicate",
-                    "registration_id": str(existing.id),
-                    "existing_status": existing.status,
-                }, status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, "duplicate", registration_id=str(existing.id),
+                               existing_status=existing.status)
             raise
         except RetryRefusedError as refused:
-            return Response({
-                "error": {
-                    "code": refused.code,
-                    "message": refused.record.error_message,
-                    "request_id": str(refused.record.id),
-                },
-            }, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, refused.code, refused.record.error_message,
+                           request_id=str(refused.record.id))
 
         if result.status == DeathRegistrationStatus.FAILED:
-            return Response({
-                "error": {
-                    "code": result.error_code,
-                    "message": result.error_message,
-                    "request_id": str(result.id),
-                },
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, result.error_code, result.error_message,
+                           request_id=str(result.id))
 
         return Response({
             "status": "accepted",
@@ -435,10 +414,7 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             result = DeathSyncService.retry_failed(registration.pk, registration.tenant)
         except RetryRefusedError as exc:
-            return Response(
-                {"error": "Registration cannot be retried", "code": exc.code},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, exc.code, "Registration cannot be retried")
         if result.status != DeathRegistrationStatus.PROCESSED:
             _escalate_failed_retry(request, result)
         return Response(DeathRegistrationRequestSerializer(result, context=self.get_serializer_context()).data)
@@ -559,8 +535,7 @@ class AdminWebhookViewSet(
         """
         webhook = self.get_object()
         if not webhook.is_active:
-            return Response({"error": "Webhook is disabled", "code": "webhook_inactive"},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "webhook_inactive", "Webhook is disabled")
         delivery = _record_and_enqueue(
             webhook, domain="webhook", event_type=WEBHOOK_TEST_EVENT,
             payload_json={
@@ -627,13 +602,11 @@ class AdminWebhookDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
         original = self.get_object()
         webhook = original.webhook
         if not webhook.is_active:
-            return Response({"error": "Webhook is disabled", "code": "webhook_inactive"},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "webhook_inactive", "Webhook is disabled")
         finished = original.status == EventWebhookStatus.ABANDONED or (
             original.status == EventWebhookStatus.FAILED and original.attempt >= attempt_ceiling(webhook))
         if not finished:
-            return Response({"error": "Delivery is not a finished failure", "code": "not_finished"},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "not_finished", "Delivery is not a finished failure")
         delivery = _record_and_enqueue(
             webhook, domain=original.domain, event_type=original.event_type, payload_json=original.payload_json,
         )

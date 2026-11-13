@@ -35,14 +35,14 @@ class NoCityGodError(CityGodRefusedError, APIException):
     """本殿没有能收这件案子的城隍(没有匹配、也没有兜底),地府不许开案(用户 2026-10-29)。
 
     也是 `APIException`:`Soul.die` 的调用方很多(死亡登记、勾魂交接、手开审判……),各个视图不必各接一遍,
-    DRF 自己答 409 `{"error", "code": "no_city_god"}`。在任何调用方的事务里抛出,整笔回滚。"""
+    DRF 自己答 409 problem `no_city_god`。在任何调用方的事务里抛出,整笔回滚。"""
 
     status_code = 409
 
     def __init__(self):
         message = ("No city god of this hall can take the case: set a default city god under City gods first")
         CityGodRefusedError.__init__(self, message, "no_city_god")
-        self.detail = {"error": message, "code": "no_city_god"}
+        self.detail = {"code": "no_city_god", "detail": message}
 
 
 # ── 收案 ────────────────────────────────────────────────────────────────

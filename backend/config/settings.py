@@ -285,6 +285,8 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Every 4xx/5xx is an RFC 9457 problem (`application/problem+json`); see apps/core/problems.py.
+    "EXCEPTION_HANDLER": "apps.core.problems.exception_handler",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         # 只认官员令牌;灵魂令牌与 SOUL 角色一律 403。见该模块文档。
         "apps.soul_accounts.authentication.OfficerJWTAuthentication",
@@ -671,6 +673,7 @@ SPECTACULAR_SETTINGS = {
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
         "apps.core.schema.drop_engine_dependent_integer_bounds",
+        "apps.core.problems.problem_responses",
     ],
     "DESCRIPTION": "Cross-civilization soul management system API",
     "VERSION": "0.1.0",
@@ -689,6 +692,7 @@ SPECTACULAR_SETTINGS = {
     #
     # The keys below are the names; the values are the choice sets they name.
     "ENUM_NAME_OVERRIDES": {
+        "ProblemCodeEnum": "apps.core.problem_codes.PROBLEM_CODE_CHOICES",
         "ApprovalWorkflowStatusEnum": "apps.workflow.models.ApprovalWorkflowStatus.choices",
         "CrossTenantJudgmentStatusEnum": "apps.dispatch.models.JudgmentStatus.choices",
         "DispatchStatusEnum": "apps.dispatch.models.DispatchStatus.choices",

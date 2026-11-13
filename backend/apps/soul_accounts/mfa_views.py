@@ -23,6 +23,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.problems import problem
 from apps.soul_accounts import device_login, mfa
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.me_views import (
@@ -59,9 +60,8 @@ _MESSAGES = {
 
 
 def _refuse(code, http_status, **extra):
-    body = {"detail": _MESSAGES.get(code, code), "code": code, **extra}
     headers = {"Retry-After": str(extra["retry_after"])} if "retry_after" in extra else None
-    return Response(body, status=http_status, headers=headers)
+    return problem(http_status, code, _MESSAGES.get(code, code), headers=headers, **extra)
 
 
 def _refuse_outcome(outcome: dict):
@@ -77,7 +77,7 @@ def _refuse_outcome(outcome: dict):
 
 
 def _error(exc: svc.SoulAccountError):
-    return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc))
 
 
 def _client_ip(request):

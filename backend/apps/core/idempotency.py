@@ -25,6 +25,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.encoders import JSONEncoder
 
+from apps.core.problems import problem
+
 HEADER = "HTTP_IDEMPOTENCY_KEY"
 REPLAYED_HEADER = "Idempotent-Replayed"
 DONE_TTL = 24 * 3600
@@ -34,7 +36,7 @@ _VALID = re.compile(r"^[\x21-\x7e]{1,255}$")
 
 
 def _refuse(detail, code, http_status):
-    return Response({"detail": detail, "code": code}, status=http_status)
+    return problem(http_status, code, detail)
 
 
 def _fingerprint(request) -> str:

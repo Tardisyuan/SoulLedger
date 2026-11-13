@@ -21,7 +21,7 @@ from rest_framework.response import Response
 
 from apps.core.client_ip import get_client_ip
 from apps.core.locale import locale_from_request
-from apps.core.schema import ErrorResponseSerializer
+from apps.core.problems import ProblemSerializer, problem
 from apps.events.realtime import push_permission_refresh
 from apps.perm import data_scope
 from apps.perm.matrix import ADMIN_ROLE_NAME
@@ -146,26 +146,25 @@ def data_scope_resources(request):
 
 
 @extend_schema(methods=["GET"], request=None,
-               responses={200: RoleDataScopeConfigResponseSerializer, 404: ErrorResponseSerializer})
+               responses={200: RoleDataScopeConfigResponseSerializer, 404: ProblemSerializer})
 @extend_schema(
     methods=["PUT"], request=RoleDataScopeConfigSerializer,
-    responses={200: RoleDataScopeConfigResponseSerializer, 400: ErrorResponseSerializer, 404: ErrorResponseSerializer},
+    responses={200: RoleDataScopeConfigResponseSerializer, 400: ProblemSerializer, 404: ProblemSerializer},
 )
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated, HasSystemSettings])
 def role_data_scope(request, pk):
     if request.method == "PUT" and not CanWriteGlobalSettings().has_permission(request, None):
-        return Response({"error": "Only a hall-less administrator may change data scopes."},
-                        status=status.HTTP_403_FORBIDDEN)
+        return problem(status.HTTP_403_FORBIDDEN, None, "Only a hall-less administrator may change data scopes.")
     role = Role.objects.filter(pk=pk).first()
     if role is None:
-        return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+        return problem(status.HTTP_404_NOT_FOUND, None, "Role not found")
     if request.method == "GET":
         return Response(role_config(role))
 
     if role.name == ADMIN_ROLE_NAME:
-        return Response({"error": "ADMIN always sees everything; its data scope is fixed.", "code": "admin_role"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return problem(status.HTTP_400_BAD_REQUEST, "admin_role",
+                       "ADMIN always sees everything; its data scope is fixed.")
     serializer = RoleDataScopeConfigSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     from apps.audit.models import AuditAction, AuditLog

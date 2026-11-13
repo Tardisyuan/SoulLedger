@@ -16,6 +16,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
+from apps.core.problems import problem
 from apps.social import interactions
 from apps.social import media as post_media
 from apps.social import moderation as mod
@@ -85,7 +86,7 @@ BAD_REQUEST = {400: SoulSocialErrorSerializer}
 
 
 def _error(exc: circle.SocialError):
-    return Response({"detail": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc), **exc.extra)
 
 
 class SoulSocialView(SoulAPIView):

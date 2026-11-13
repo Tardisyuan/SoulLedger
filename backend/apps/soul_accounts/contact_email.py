@@ -28,6 +28,7 @@ from apps.authentication.views import (
     MAX_RESET_REQUESTS_PER_ADDRESS,
     RESET_REQUEST_WINDOW_SECONDS,
 )
+from apps.core.problems import ProblemSerializer, problem
 from apps.soul_accounts import mfa
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.me_views import SoulAPIView
@@ -69,7 +70,7 @@ def _bump(key, timeout):
 
 
 def _refuse(code, http_status, detail, **extra):
-    return Response({"detail": detail, "code": code, **extra}, status=http_status)
+    return problem(http_status, code, detail, **extra)
 
 
 def _in_person():
@@ -99,11 +100,9 @@ class ContactEmailConfirmSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6)
 
 
-class ContactEmailRefusalSerializer(serializers.Serializer):
+class ContactEmailRefusalSerializer(ProblemSerializer):
     """`code` ∈ email_in_person / wrong_password / rate_limited / mfa_required / wrong / expired / locked /
     proof_required / email_unchanged / reset_code_expired / reset_code_wrong / reset_code_attempts_exceeded / email_taken。"""
-    detail = serializers.CharField()
-    code = serializers.CharField()
 
 
 REFUSALS = {400: ContactEmailRefusalSerializer, 403: ContactEmailRefusalSerializer,

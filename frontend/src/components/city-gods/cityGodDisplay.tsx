@@ -1,5 +1,6 @@
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { CITY_GOD_CASE_ERROR_CODES, type CityGodStatus } from "@soulledger/core/api";
+import { problemErrors } from "@soulledger/core/api/client";
 import type { BadgeTone } from "@/src/components/ui/Badge";
 
 /** 初审状态的徽章色调:退回补正等的是补资料,用 warning;解送是走完了,中性。 */
@@ -46,7 +47,7 @@ export function cityGodCaseRefusalMessage(err: unknown, t: T): string {
   return code ? t(`cityGodCases.error.${code}`) : t("judgment.claim.refused.generic");
 }
 
-/** 编辑抽屉保存被拒(`city_god_views._refusal`):`{"<字段>": {code, region?, city_god?, name?}}`。 */
+/** 编辑抽屉保存被拒(`city_god_views._refusal`):校验问题里的一条 `errors`,`{field, code, region?, city_god?, name?}`。 */
 export interface CityGodFieldRefusal {
   code: string;
   region?: string;
@@ -58,14 +59,9 @@ export interface CityGodFieldRefusal {
 const FIELD_CODES = ["name_taken", "region_taken", "default_taken", "invalid_officer", "city_god_has_tudi_gods"];
 
 export function cityGodFieldRefusal(err: unknown): CityGodFieldRefusal | null {
-  const body = bodyOf(err);
-  if (!body) return null;
-  if (body.code === "city_gods_diyu_only") return { code: body.code };
-  for (const value of Object.values(body)) {
-    const v = value as Partial<CityGodFieldRefusal> | null;
-    if (v && typeof v === "object" && !Array.isArray(v) && v.code && FIELD_CODES.includes(v.code)) return v as CityGodFieldRefusal;
-  }
-  return null;
+  if (bodyOf(err)?.code === "city_gods_diyu_only") return { code: "city_gods_diyu_only" };
+  const item = problemErrors(err).find((e) => FIELD_CODES.includes(e.code));
+  return item ? (item as unknown as CityGodFieldRefusal) : null;
 }
 
 export function cityGodFieldMessage(refusal: CityGodFieldRefusal, t: T): string {

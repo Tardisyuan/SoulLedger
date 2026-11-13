@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import request_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
@@ -35,17 +36,9 @@ def _state_conflict(soul, target_state):
     Keeps the {"error", "message"} shape the rest of this viewset already
     returns, which is also what the frontend's toast handler reads.
     """
-    return Response(
-        {
-            "error": "INVALID_STATE_TRANSITION",
-            "message": (
-                f"Cannot move soul from {soul.current_state} to {target_state}."
-            ),
-            "current_state": soul.current_state,
-            "target_state": str(target_state),
-        },
-        status=status.HTTP_409_CONFLICT,
-    )
+    return problem(status.HTTP_409_CONFLICT, "invalid_state_transition",
+                   f"Cannot move soul from {soul.current_state} to {target_state}.",
+                   current_state=soul.current_state, target_state=str(target_state))
 
 
 # READ-ONLY (2026-10-27, review business #8). A Reincarnation row is produced only by
@@ -90,7 +83,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
         # 范围外的灵魂与别殿一样答 404(数据范围 B3b)。
         soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=body.validated_data["soul_id"]).first()
         if soul is None:
-            return Response({"error": "NOT_FOUND", "message": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Soul not found")
         soul = drink_soup(soul)
         return Response({"soul_id": str(soul.pk), "soup_taken_at": soul.soup_taken_at})
 
@@ -152,10 +145,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
         try:
             soul = soul_qs.get(id=soul_id)
         except Soul.DoesNotExist:
-            return Response(
-                {"error": "NOT_FOUND", "message": "Soul not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Soul not found")
 
         disposition = None
         if disposition_id:
@@ -164,10 +154,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
             try:
                 disposition = disp_qs.get(id=disposition_id)
             except Disposition.DoesNotExist:
-                return Response(
-                    {"error": "NOT_FOUND", "message": "Disposition not found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
+                return problem(status.HTTP_404_NOT_FOUND, "not_found", "Disposition not found")
 
         # The cosmology first, so a terminal soul gets the specific 409 and no
         # write: asked after the move to REINCARNATING, that move would already

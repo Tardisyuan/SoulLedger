@@ -54,7 +54,7 @@ class RebirthNotApplicable(APIException):
     """
 
     status_code = status.HTTP_409_CONFLICT
-    default_code = "REBIRTH_NOT_APPLICABLE"
+    default_code = "rebirth_not_applicable"
 
     def __init__(self, soul: Soul):
         civilization = str(soul.home_civilization)

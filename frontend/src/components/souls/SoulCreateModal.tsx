@@ -18,24 +18,22 @@ import { soulCreateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import type { SoulOriginRegion } from "@soulledger/core/api";
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
-import { responseData, responseStatus } from "@soulledger/core/api/client";
+import { problemErrors, responseStatus } from "@soulledger/core/api/client";
 
 const SOUL_CREATE_FIELDS = ["name", "civilization", "birth_date", "origin_location"] as const;
 type SoulCreateField = (typeof SOUL_CREATE_FIELDS)[number];
 
 /**
- * DRF 的 400:`{字段: [消息]}`。这张表单画得出来的字段落到字段下,其余(`origin_region`、
- * `non_field_errors`、`detail`)归到 `general`。不是 400 对象体时两边都空:`useCreateSoul` 已经报过了。
+ * 400 校验问题的 `errors`。这张表单画得出来的字段落到字段下,其余(`origin_region`、整份的)
+ * 归到 `general`。不是校验问题时两边都空:`useCreateSoul` 已经报过了。
  */
 function soulCreateErrorsOf(error: unknown): { fields: Partial<Record<SoulCreateField, string>>; general?: string } {
-  const data = responseData(error);
   const out: ReturnType<typeof soulCreateErrorsOf> = { fields: {} };
-  if (responseStatus(error) !== 400 || typeof data !== "object" || data === null || Array.isArray(data)) return out;
-  for (const [key, value] of Object.entries(data)) {
-    const message = Array.isArray(value) ? String(value[0] ?? "") : typeof value === "string" ? value : "";
-    if (!message) continue;
-    if ((SOUL_CREATE_FIELDS as readonly string[]).includes(key)) out.fields[key as SoulCreateField] = message;
-    else out.general ??= message;
+  if (responseStatus(error) !== 400) return out;
+  for (const e of problemErrors(error)) {
+    const key = e.field ?? "";
+    if ((SOUL_CREATE_FIELDS as readonly string[]).includes(key)) out.fields[key as SoulCreateField] ??= e.detail;
+    else out.general ??= e.detail;
   }
   return out;
 }

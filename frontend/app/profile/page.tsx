@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@soulledger/core/api";
+import { problemFieldErrors } from "@soulledger/core/api/client";
 import { passwordReasonKeys, splitCommonReasons } from "@soulledger/core/api/auth";
 import { passwordMinLength } from "@soulledger/core/domain/passwordRules";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -100,11 +101,10 @@ export default function ProfilePage() {
       if (mustChange && user) setUser({ ...user, password_change_required: false });
     },
     onError: (err: unknown) => {
-      const response = (err as { response?: { status?: number; data?: { old_password?: unknown } } })?.response;
-      const data = response?.data;
-      const reasons = passwordReasonKeys(data);
+      const response = (err as { response?: { status?: number; data?: unknown } })?.response;
+      const reasons = passwordReasonKeys(response?.data);
       const { common, rest } = splitCommonReasons(reasons);
-      const old = Array.isArray(data?.old_password) && data.old_password.length ? t("profile.password_old_wrong") : null;
+      const old = problemFieldErrors(err).old_password ? t("profile.password_old_wrong") : null;
       if (response?.status === 429) showToast(t("profile.password_locked"), "error");
       else if (!reasons.length && !old) showToast(t("profile.password_change_failed"), "error");
       setOldPasswordError(old);

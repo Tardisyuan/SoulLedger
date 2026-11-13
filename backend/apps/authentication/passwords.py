@@ -104,6 +104,11 @@ def weak_password_reasons(password: str, user) -> list[dict]:
     return []
 
 
+def reason_errors(reasons: list[dict], field: str = "new_password") -> list[dict]:
+    """`weak_password_reasons` as a problem's `errors` (apps/core/problems.py): one item per validator."""
+    return [{"field": field, "code": r["code"], "detail": r["message"]} for r in reasons]
+
+
 def end_sessions(user, keep_session=None) -> None:
     """该官员此前签发的全部令牌作废。调用方负责事务;之后给当前设备签的新令牌带新的 `sv`。
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi } from "@soulledger/core/api";
+import { problemDetail } from "@soulledger/core/api/client";
 import { judgmentKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -12,11 +13,8 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { TextAreaField, TextField } from "@/src/components/ui/Field";
 
 function errorText(error: unknown): string | null {
-  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
-  // DRF field errors arrive as `{judgment: ["…"]}`; the view's own refusals as `{error: "…"}`.
-  const first = data?.error ?? Object.values(data ?? {})[0];
-  const text = Array.isArray(first) ? first[0] : first;
-  return typeof text === "string" ? text : null;
+  // The problem's sentence: a refusal's own, or a validation problem's first message.
+  return problemDetail(error) ?? null;
 }
 
 /**

@@ -15,7 +15,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Modal } from "@/src/components/ui/Modal";
 import { TextField } from "@/src/components/ui/Field";
 import { saveBlob } from "@/src/lib/saveBlob";
-import { responseCode } from "@soulledger/core/api/client";
+import { problemDetail, problemErrors, responseCode } from "@soulledger/core/api/client";
 
 /**
  * 「导出配置 / 导入配置…」(后端 apps/perm/export.py,两个接口都只许 ADMIN)。
@@ -71,17 +71,13 @@ export function parsePermissionConfig(
   return { document: document as PermissionImportDocument, counts };
 }
 
-/** 后端的 400 有两种形状:`{error: "..."}` 或序列化器的 `{field: [msgs]}`。 */
+/** 后端的 400 是一个 problem:校验问题逐条写出 `字段: 消息`,其余是它的 `detail`。 */
 export function backendReason(error: unknown): string | null {
   const data = (error as { response?: { data?: unknown } })?.response?.data;
   if (typeof data === "string") return data;
-  if (data && typeof data === "object") {
-    const flat = Object.entries(data as Record<string, unknown>).map(([k, v]) =>
-      k === "error" || k === "detail" ? String(v) : `${k}: ${JSON.stringify(v)}`,
-    );
-    return flat.length ? flat.join("; ") : null;
-  }
-  return null;
+  const errors = problemErrors(error);
+  if (errors.length) return errors.map((e) => (e.field ? `${e.field}: ${e.detail}` : e.detail)).join("; ");
+  return problemDetail(error) ?? null;
 }
 
 type Stats = PermissionImportResult["stats"];

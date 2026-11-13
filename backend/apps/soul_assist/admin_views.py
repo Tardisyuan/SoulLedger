@@ -16,6 +16,7 @@ from rest_framework import exceptions, generics, permissions, status, throttling
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_assist import config, corpus, eval_identities, evals, failover, platforms, service, sse, usage, vectors
@@ -82,7 +83,7 @@ def _own_hall_id(request):
 
 
 def _error(detail, code, http=status.HTTP_400_BAD_REQUEST):
-    return Response({"detail": detail, "code": code}, status=http)
+    return problem(http, code, detail)
 
 
 def _key_required():
@@ -473,8 +474,8 @@ class EmbeddingRebuildView(AdminView):
         except vectors.RebuildRunningError:
             return _error("正在重建,请稍后再看。", "rebuild_running", status.HTTP_409_CONFLICT)
         except vectors.EmbeddingError as exc:
-            return Response({"detail": "向量服务不可用,没有改动任何向量。", "code": "embedding_unavailable",
-                             "error_kind": exc.kind}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return problem(status.HTTP_503_SERVICE_UNAVAILABLE, "embedding_unavailable", "向量服务不可用,没有改动任何向量。",
+                           error_kind=exc.kind)
         config.audit(request.user, "assistant vectors rebuilt",
                      {k: result[k] for k in ("embedded", "unchanged", "deleted", "model", "dims", "index", "dropped")},
                      request, resource_id="vectors")

@@ -17,11 +17,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.client_ip import get_client_ip
+from apps.core.problems import ProblemSerializer
 from apps.core.schema import DetailResponseSerializer
 
 from . import officer_reset
 from .officer_reset import ResetRefusedError
-from .serializers import PasswordReasonSerializer
+from .passwords import reason_errors
 from .views import _rate_limited, _reset_refusal, _throttle_wait
 
 logger = logging.getLogger(__name__)
@@ -46,20 +47,18 @@ class EmailVerifySerializer(serializers.Serializer):
     token = serializers.CharField(max_length=128)
 
 
-class OfficerResetRefusalSerializer(serializers.Serializer):
+class OfficerResetRefusalSerializer(ProblemSerializer):
     """Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid / invite_link_invalid / weak_password."""
 
-    error = serializers.CharField()
     code = serializers.ChoiceField(
         choices=["rate_limited", "reset_link_invalid", "verify_link_invalid", "invite_link_invalid", "weak_password"]
     )
     retry_after = serializers.IntegerField(required=False)
-    # `weak_password` only: one reason per validator, each with Django's stable code.
-    new_password = PasswordReasonSerializer(many=True, required=False)
+    # `weak_password` only: one `errors` item per validator, `field: new_password`, each with Django's stable code.
 
 
 def _refusal(exc: ResetRefusedError):
-    extra = {"new_password": exc.reasons} if exc.reasons else {}
+    extra = {"errors": reason_errors(exc.reasons)} if exc.reasons else {}
     return _reset_refusal(exc.message, exc.code, status.HTTP_400_BAD_REQUEST, **extra)
 
 

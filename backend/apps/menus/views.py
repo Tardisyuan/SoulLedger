@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
@@ -111,10 +112,7 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # A live child under a deleted parent vanishes from the sidebar tree, and the bin's hard delete later
         # cascades over it for real (F-ADM-03). Delete the children first.
         if Menu.objects.filter(parent=menu).exists():
-            return Response(
-                {"code": "has_children", "error": "Delete or move its sub-menus first."},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "has_children", "Delete or move its sub-menus first.")
         reason = request.data.get("reason", "") if hasattr(request, "data") else ""
         menu.soft_delete(user=request.user, reason=reason)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -124,10 +122,7 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
     def all(self, request):
         """GET /api/v1/menus/all/ - Get all menus (ADMIN only)"""
         if not is_tenant_exempt(request.user):
-            return Response(
-                {"error": "Only ADMIN can view all menus"},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return problem(status.HTTP_403_FORBIDDEN, None, "Only ADMIN can view all menus")
         menus = Menu.objects.filter(parent__isnull=True).order_by("order")
         # With no context, `MenuSerializer._caller()` finds no user and both
         # `get_children` and `get_buttons` fail closed — so this endpoint

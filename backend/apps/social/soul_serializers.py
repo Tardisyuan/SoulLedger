@@ -6,6 +6,7 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.problems import ProblemSerializer
 from apps.social import media as post_media
 from apps.social.models import (
     InteractionKind,
@@ -252,7 +253,5 @@ class SoulInteractionSerializer(serializers.Serializer):
         return target.content[:INTERACTION_EXCERPT]
 
 
-class SoulSocialErrorSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    code = serializers.CharField()
+class SoulSocialErrorSerializer(ProblemSerializer):
     muted_until = serializers.DateTimeField(required=False)

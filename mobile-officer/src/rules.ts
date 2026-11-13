@@ -6,6 +6,7 @@
 import { localName } from "@soulledger/core/domain/localName";
 import { NOTIFICATION_CATEGORIES, NOTIFICATION_LOCKED, passwordReasonKeys, type NotificationCategory } from "@soulledger/core/api/auth";
 import type { DispatchRecord } from "@soulledger/core/api/dispatch";
+import { problemFieldMessages } from "@soulledger/core/api/problem";
 import {
   decisionFailureOf,
   type DecisionFailureCode,
@@ -402,8 +403,8 @@ export function forgotFailureKey(error: unknown): string {
 
 /**
  * What a refused change-password says, by field, as i18n KEYS (`old`, `next`: one per reason --
- * the server's `new_password: [{code, message}]` is read by code, Django's English sentence is
- * never shown) -- never the password itself. `other` is a plain `detail` / `error` sentence.
+ * the problem's `errors` items on `new_password` are read by code, Django's English sentence is
+ * never shown) -- never the password itself. `other` is the problem's own sentence.
  * `network` when there was no answer at all.
  */
 export function passwordFailure(error: unknown): { network: boolean; old: string[]; next: string[]; other: string[] } {
@@ -413,11 +414,13 @@ export function passwordFailure(error: unknown): { network: boolean; old: string
   const body = (response.data && typeof response.data === "object" ? response.data : {}) as Record<string, unknown>;
   // Too many wrong old passwords: the server's sentence is Chinese only, so it is said by key (as the web's profile).
   if (statusOf(error) === 429 || body.code === "login_locked") return { network: false, old: ["profile.password_locked"], next: [], other: [] };
+  // A validation problem (`invalid`): its `errors` name the fields; its `detail` repeats one of them.
+  const fields = problemFieldMessages(error);
   return {
     network: false,
-    old: lines(body.old_password).length ? ["profile.password_old_wrong"] : [],
+    old: fields.old_password?.length ? ["profile.password_old_wrong"] : [],
     next: passwordReasonKeys(body),
-    other: [...lines(body.detail), ...lines(body.error)],
+    other: body.code === "invalid" ? (fields.non_field_errors ?? []) : lines(body.detail),
   };
 }
 

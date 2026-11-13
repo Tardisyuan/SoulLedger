@@ -40,6 +40,7 @@ import {
   setRefreshToken,
 } from "../platform/index";
 import { responseCode } from "./client";
+import { problemFieldErrors } from "./problem";
 import type {
   PasswordResetAccepted,
   PasswordResetRefusal,
@@ -521,7 +522,7 @@ export function soulErrorCode(error: unknown): string | null {
  *
  *   no response at all        → `network` (offline, DNS, timeout)
  *   a known `code` in the body → that code's copy
- *   a 400 without a `code`     → `validation` (DRF field errors)
+ *   a 400 validation problem   → `validation` (`code: invalid`, field `errors`)
  *   anything else              → `unknown`, CARRYING the raw code or status so
  *                                an unmapped value is shown, not swallowed
  */
@@ -538,8 +539,8 @@ function classifySoulError(error: unknown): SoulErrorMessage {
   const response = (error as AxiosError<{ code?: unknown }>).response;
   if (!response) return { key: "soul_app.errors.network" };
   const code = response.data?.code;
+  if (response.status === 400 && (code === "invalid" || typeof code !== "string")) return { key: "soul_app.errors.validation" };
   if (typeof code === "string") return soulCodeMessage(code);
-  if (response.status === 400) return { key: "soul_app.errors.validation" };
   return { key: "soul_app.errors.unknown", params: { code: String(response.status) } };
 }
 
@@ -573,8 +574,8 @@ const PASSWORD_RESET_REFUSAL_KEY: Record<PasswordResetRefusalCode, string> = {
  *
  *   no response                → `errors.network`
  *   a known `code`             → `PASSWORD_RESET_REFUSAL_KEY`
- *   400 {new_password: [...]}  → `errors.weak_password`       DRF field errors:
- *   400 {code: [...]}          → `forgot_password.err_wrong_title`  `code` is a list
+ *   400 errors[new_password]   → `errors.weak_password`       validation problem (`invalid`)
+ *   400 errors[code]           → `forgot_password.err_wrong_title`  (the `code` FIELD, not the problem code)
  *   any other 400              → `errors.validation`
  *   anything else              → `soulErrorMessage`: an unmapped code or status
  *                                is carried, not swallowed
@@ -587,10 +588,10 @@ export function passwordResetErrorMessage(error: unknown): SoulErrorMessage {
   if (code !== null && Object.prototype.hasOwnProperty.call(PASSWORD_RESET_REFUSAL_KEY, code)) {
     return { key: PASSWORD_RESET_REFUSAL_KEY[code as PasswordResetRefusalCode] };
   }
-  if (response.status === 400 && code === null) {
-    const body = (response.data ?? {}) as Record<string, unknown>;
-    if ("new_password" in body) return { key: "soul_app.errors.weak_password" };
-    if ("code" in body) return { key: "soul_app.forgot_password.err_wrong_title" };
+  if (response.status === 400 && code === "invalid") {
+    const fields = problemFieldErrors(error);
+    if ("new_password" in fields) return { key: "soul_app.errors.weak_password" };
+    if ("code" in fields) return { key: "soul_app.forgot_password.err_wrong_title" };
     return { key: "soul_app.errors.validation" };
   }
   return soulErrorMessage(error);

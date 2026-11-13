@@ -39,7 +39,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { WorkflowSegmentList } from "@/src/components/workflow/segments/WorkflowSegmentList";
 import { WorkflowSegmentHistory } from "@/src/components/workflow/segments/WorkflowSegmentHistory";
 import { WorkflowGateBanner } from "@/src/components/workflow/segments/WorkflowGateBanner";
-import { responseCode, responseStatus, responseError } from "@soulledger/core/api/client";
+import { problemDetail, problemFieldErrors, responseCode, responseStatus } from "@soulledger/core/api/client";
 
 /**
  * 审批流 / 节点状态与节点结论的徽章:字形 + 文字 + ink,不靠颜色(规范 v4,用户 2026-11-07;与判决、灵魂状态
@@ -181,11 +181,11 @@ export default function WorkflowDetailPage() {
     },
     onError: (err: unknown) => {
       // The backend's one field-shaped refusal here: land it beside the field, not in a toast.
-      if (responseStatus(err) === 400 && responseError(err) === "rejection_reason_for_soul is required") {
+      if (responseStatus(err) === 400 && problemFieldErrors(err).rejection_reason_for_soul) {
         setReasonForSoulError(t("workflow.detail.reason_for_soul_required"));
         return;
       }
-      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.approve_error")), "error");
+      showToast(codedRefusal(err, t) ?? (problemDetail(err) || t("workflow.detail.approve_error")), "error");
     },
   });
 
@@ -211,7 +211,7 @@ export default function WorkflowDetailPage() {
       refetch();
     },
     onError: (err: unknown) => {
-      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.advance_error")), "error");
+      showToast(codedRefusal(err, t) ?? (problemDetail(err) || t("workflow.detail.advance_error")), "error");
     },
   });
 
@@ -234,7 +234,7 @@ export default function WorkflowDetailPage() {
       showToast(
         responseCode(err) === "no_pending_node"
           ? t("workflow.detail.escalate_error")
-          : codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.escalate_error")),
+          : codedRefusal(err, t) ?? (problemDetail(err) || t("workflow.detail.escalate_error")),
         "error",
       );
     },
@@ -252,7 +252,7 @@ export default function WorkflowDetailPage() {
     },
     onError: (err: unknown) => {
       setTerminateConfirming(false);
-      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.terminate_error")), "error");
+      showToast(codedRefusal(err, t) ?? (problemDetail(err) || t("workflow.detail.terminate_error")), "error");
     },
   });
 

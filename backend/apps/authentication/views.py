@@ -38,7 +38,8 @@ from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export
 from apps.core.permissions import CodenamePermission, IsAdminPermission, TenantPermission
-from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
+from apps.core.problems import ProblemSerializer, problem
+from apps.core.schema import DetailResponseSerializer
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.events.realtime import close_user_sockets, push_permission_refresh
@@ -51,6 +52,7 @@ from .passwords import (
     RoleMinimumLengthValidator,
     end_push_registrations,
     end_sessions,
+    reason_errors,
     set_officer_password,
     weak_password_reasons,
 )
@@ -127,8 +129,8 @@ def _open_work(user):
 
 
 def _open_work_refusal(open_work):
-    return Response({'error': 'The officer still holds open work; hand it over first.',
-                     'code': 'officer_has_open_work', 'open_work': open_work}, status=status.HTTP_409_CONFLICT)
+    return problem(status.HTTP_409_CONFLICT, 'officer_has_open_work',
+                   'The officer still holds open work; hand it over first.', open_work=open_work)
 
 
 def _admin_target_refusal(request, target):
@@ -143,17 +145,17 @@ def _admin_target_refusal(request, target):
     if target.role != UserRole.ADMIN or target.pk == request.user.pk:
         return None
     if request.user.role != UserRole.ADMIN or request.user.tenant_id is not None:
-        return Response({'error': 'Only the hall-less administrator may act on another administrator.',
-                         'code': 'admin_target_global_only'}, status=status.HTTP_403_FORBIDDEN)
+        return problem(status.HTTP_403_FORBIDDEN, 'admin_target_global_only',
+                       'Only the hall-less administrator may act on another administrator.')
     row = mfa.get_mfa(request.user)
     if row is None or not row.enabled:
-        return Response({'error': 'Turn on two-step verification before acting on another administrator.',
-                         'code': 'second_factor_unavailable'}, status=status.HTTP_403_FORBIDDEN)
+        return problem(status.HTTP_403_FORBIDDEN, 'second_factor_unavailable',
+                       'Turn on two-step verification before acting on another administrator.')
     method = request.data.get('mfa_method') or 'totp'
     code = str(request.data.get('mfa_code') or '').strip()
     if method not in mfa.SECOND_FACTOR_METHODS or not code:
-        return Response({'error': 'Enter your own two-step verification code.', 'code': 'second_factor_required'},
-                        status=status.HTTP_403_FORBIDDEN)
+        return problem(status.HTTP_403_FORBIDDEN, 'second_factor_required',
+                       'Enter your own two-step verification code.')
     outcome = mfa.confirm_second_factor(row, method=method, code=code, request=request)
     return None if outcome['code'] == 'ok' else _refuse_outcome(outcome)
 
@@ -167,13 +169,13 @@ def _target_refusal(request, target):
     if refused:
         return refused
     if not may_manage_user(request.user, target):
-        return Response({'error': 'This account holds permissions you do not; you cannot act on it.',
-                         'code': 'target_outranks_caller'}, status=status.HTTP_403_FORBIDDEN)
+        return problem(status.HTTP_403_FORBIDDEN, 'target_outranks_caller',
+                       'This account holds permissions you do not; you cannot act on it.')
     return None
 
 
 def _self_refusal(code, message):
-    return Response({'error': message, 'code': code}, status=status.HTTP_400_BAD_REQUEST)
+    return problem(status.HTTP_400_BAD_REQUEST, code, message)
 
 
 def _end_everything(user):
@@ -452,7 +454,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             _end_everything(target)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @extend_schema(request=UserMfaResetSerializer, responses={200: DetailResponseSerializer, 400: OpenApiTypes.OBJECT, 409: ErrorResponseSerializer})
+    @extend_schema(request=UserMfaResetSerializer, responses={200: DetailResponseSerializer, 400: OpenApiTypes.OBJECT, 409: ProblemSerializer})
     @action(detail=True, methods=['post'], url_path='reset-mfa')
     def reset_mfa(self, request, pk=None):
         """管理员重置两步验证(A12):验证器、恢复码、「不再询问」设备令牌全清,该用户所有刷新令牌吊销。
@@ -466,7 +468,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if refused:
             return refused
         if not mfa.is_enabled(user):
-            return Response({"error": "该账号未开启两步验证", "code": "not_enabled"}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "not_enabled", "该账号未开启两步验证")
         mfa.admin_reset(user, actor=request.user, reason=serializer.validated_data["reason"], request=request)
         return Response({"detail": "两步验证已重置"})
 
@@ -520,11 +522,11 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 user.save(update_fields=['is_active'])
                 _end_everything(user)
         except handover.HandoverRefusedError as exc:
-            return Response(exc.as_payload(), status=exc.status)
+            return problem(exc.status, **exc.as_payload())
         return Response(UserManagementSerializer(user).data)
 
     @extend_schema(request=SecondFactorProofSerializer,
-                   responses={200: PasswordResetResultSerializer, 400: OpenApiTypes.OBJECT, 403: ErrorResponseSerializer,
+                   responses={200: PasswordResetResultSerializer, 400: OpenApiTypes.OBJECT, 403: ProblemSerializer,
                               429: OpenApiTypes.OBJECT})
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
@@ -563,7 +565,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
     def _batch_set_active(self, request, active):
         user_ids = request.data.get('user_ids', [])
         if not user_ids:
-            return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, 'user_ids is required')
         # `.update()` fires no signals, so the audit row is written by hand
         # (one BATCH_UPDATE row naming every user), from the same list the
         # update runs on.
@@ -622,12 +624,12 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if refused:
             return refused
         if 'role' not in data and 'extra_roles' not in data:
-            return Response({'error': 'role or extra_roles is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, 'role or extra_roles is required')
         new_role = data.get('role', user.role)
         extras, refusal = role_assignment_refusal(
             request.user, user, new_role, data.get('extra_roles', user.extra_roles or []))
         if refusal:
-            return Response({'error': refusal[0]}, status=refusal[1])
+            return problem(refusal[1], None, refusal[0])
         # The generic UPDATE audit row carries the role / extra_roles diff.
         user.role = new_role
         user.extra_roles = extras
@@ -637,7 +639,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         return Response(UserManagementSerializer(user).data)
 
     @extend_schema(request=OfficerInviteSerializer, responses={201: UserManagementSerializer, 200: UserManagementSerializer,
-                                                                400: ErrorResponseSerializer})
+                                                                400: ProblemSerializer})
     @action(detail=False, methods=['post'])
     def invite(self, request):
         """邮件邀请官员(`officer_invite.py`):建一个还没有密码的账号,发 7 天有效的一次性设密码链接。
@@ -654,13 +656,13 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if data.get('tenant') and not (tenant is not None and data['tenant'] == tenant.code):
             tenant = Tenant.objects.filter(code=data['tenant']).first() if is_tenant_exempt(request.user) else None
         if tenant is None:
-            return Response({'error': 'No tenant found', 'code': 'no_tenant'}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, 'no_tenant', 'No tenant found')
         try:
             user, created = officer_invite.invite(
                 data['email'], data['role'], tenant, actor=request.user, username=data.get('username', ''),
                 display_name=data.get('display_name', ''), request=request)
         except officer_invite.InviteRefusedError as exc:
-            return Response(exc.as_payload(), status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, **exc.as_payload())
         return Response(UserManagementSerializer(user).data,
                         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
@@ -722,42 +724,37 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
 
         file = request.FILES.get('file')
         if not file:
-            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, 'No file uploaded')
 
         # Check file extension
         if not file.name.endswith('.csv'):
-            return Response({'error': 'File must be a .csv'}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, 'File must be a .csv')
 
         tenant = getattr(request, 'tenant', None)
         if not tenant:
-            return Response({'error': 'No tenant found'}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, 'No tenant found')
 
         # The soul import's limits (2 MB / 1000 rows): each row here costs a password hash and
         # several queries inside this request, so an unbounded file was an unbounded request.
         from apps.souls.importer import MAX_BYTES, MAX_ROWS
 
         if file.size > MAX_BYTES:
-            return Response({'error': 'File is too large', 'code': 'file_too_large', 'max_bytes': MAX_BYTES},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, 'file_too_large', 'File is too large', max_bytes=MAX_BYTES)
         # `utf-8-sig`: the downloadable template starts with a BOM so Excel opens it as UTF-8.
         try:
             decoded_file = file.read().decode('utf-8-sig')
         except UnicodeDecodeError:
-            return Response(
-                {'error': 'File is not UTF-8', 'code': 'bad_encoding'}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, 'bad_encoding', 'File is not UTF-8')
         reader = csv.DictReader(io.StringIO(decoded_file))
         if not reader.fieldnames:
-            return Response({'error': 'File is empty', 'code': 'empty_file'}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, 'empty_file', 'File is empty')
         if 'username' not in reader.fieldnames:
-            return Response(
-                {'error': 'Missing column: username', 'code': 'missing_columns', 'columns': ['username']},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, 'missing_columns', 'Missing column: username',
+                           columns=['username'])
         all_rows = list(reader)
         if len(all_rows) > MAX_ROWS:
-            return Response({'error': f'More than {MAX_ROWS} rows', 'code': 'too_many_rows', 'max_rows': MAX_ROWS},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, 'too_many_rows', f'More than {MAX_ROWS} rows',
+                           max_rows=MAX_ROWS)
         # `dry_run=1`: the same row checks, nothing written -- the web import
         # dialog's preview step (batch 34 W-5), shaped like the soul import's.
         dry_run = str(request.query_params.get('dry_run') or request.data.get('dry_run', '')).lower() in ('1', 'true', 'yes')
@@ -993,11 +990,8 @@ class LoginView(TokenObtainPairView):
         if attempts >= LOGIN_MAX_ATTEMPTS:
             until = cache.get(until_key)
             retry_after = max(1, math.ceil(until - time.time())) if until else LOGIN_WINDOW_SECONDS
-            return Response(
-                {"error": "登录尝试过于频繁，请稍后再试", "code": "login_locked", "retry_after": retry_after},
-                status=status.HTTP_429_TOO_MANY_REQUESTS,
-                headers={"Retry-After": str(retry_after)},
-            )
+            return problem(status.HTTP_429_TOO_MANY_REQUESTS, "login_locked", "登录尝试过于频繁，请稍后再试",
+                           retry_after=retry_after, headers={"Retry-After": str(retry_after)})
 
         def _count_failure():
             cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
@@ -1109,7 +1103,7 @@ class RefreshView(TokenRefreshView):
             return refresh_cookie.move_to_cookie(request, super().post(request, *args, **kwargs))
         raw, refusal = refresh_cookie.from_cookie(request)
         if refusal:
-            return Response({"detail": "Origin not allowed", "code": refusal}, status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, refusal, "Origin not allowed")
         serializer = self.get_serializer(data={"refresh": raw} if raw else {})
         try:
             serializer.is_valid(raise_exception=True)
@@ -1140,7 +1134,7 @@ def logout_view(request):
     if not refresh_token:
         refresh_token, refusal = refresh_cookie.from_cookie(request)
         if refusal:
-            return Response({"detail": "Origin not allowed", "code": refusal}, status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, refusal, "Origin not allowed")
         from_cookie = bool(refresh_token)
     try:
         if refresh_token:
@@ -1157,7 +1151,7 @@ def logout_view(request):
     # Only a bad token is the caller's 400; anything else (database, sign_out) is ours and surfaces as a 500
     # instead of reading "Invalid token" while the refresh token stays valid (cq-backend 第 10 条).
     except TokenError:
-        response = Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+        response = problem(status.HTTP_400_BAD_REQUEST, None, "Invalid token")
     return refresh_cookie.clear(response) if from_cookie or refresh_cookie.wants_cookie(request) else response
 
 
@@ -1194,7 +1188,7 @@ def profile_view(request):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise DRFValidationError(serializer.errors)
 
 
 @extend_schema(
@@ -1220,10 +1214,8 @@ def change_password(request):
     if attempts >= LOGIN_MAX_ATTEMPTS:
         until = cache.get(until_key)
         retry_after = max(1, math.ceil(until - time.time())) if until else LOGIN_WINDOW_SECONDS
-        return Response(
-            {"error": "密码尝试过于频繁,请稍后再试", "code": "login_locked", "retry_after": retry_after},
-            status=status.HTTP_429_TOO_MANY_REQUESTS, headers={"Retry-After": str(retry_after)},
-        )
+        return problem(status.HTTP_429_TOO_MANY_REQUESTS, "login_locked", "密码尝试过于频繁,请稍后再试", retry_after=retry_after,
+                       headers={"Retry-After": str(retry_after)})
     serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
     try:
         serializer.is_valid(raise_exception=True)
@@ -1244,7 +1236,7 @@ def change_password(request):
         except TokenError:
             current = None
         if current is None or str(current.payload.get("user_id")) != str(user.pk):
-            return Response({"refresh": ["刷新令牌无效"]}, status=status.HTTP_400_BAD_REQUEST)
+            raise DRFValidationError({"refresh": ["刷新令牌无效"]})
 
     # 这台设备的登录设备行留着(其余在 `end_sessions` 里标成已退出);没带刷新令牌 = 这台也退出。
     keep = None
@@ -1265,15 +1257,14 @@ def change_password(request):
 
 
 def _reset_refusal(error, code, http_status, retry_after=None, **extra):
-    """A refusal of the email-reset endpoints: `{error, code}`, plus
+    """A refusal of the email-reset endpoints: a problem with its `code`, plus
     `retry_after` when throttled. Clients branch on `code`; see
     `PasswordResetRefusalSerializer` for the full set."""
-    body = {"error": error, "code": code, **extra}
     headers = None
     if retry_after is not None:
-        body["retry_after"] = retry_after
+        extra["retry_after"] = retry_after
         headers = {"Retry-After": str(retry_after)}
-    return Response(body, status=http_status, headers=headers)
+    return problem(http_status, code, error, headers=headers, **extra)
 
 
 def _rate_limited(retry_after):
@@ -1537,7 +1528,7 @@ def set_new_password(request):
     if reasons:
         return _reset_refusal(
             " ".join(r["message"] for r in reasons), "weak_password", status.HTTP_400_BAD_REQUEST,
-            new_password=reasons,
+            errors=reason_errors(reasons),
         )
 
     # Set new password — through the same path as a soul changing its initial
@@ -1607,7 +1598,7 @@ def civilizations_view(request):
         # soul account. See the view.
         200: DetailResponseSerializer,
         400: OpenApiTypes.OBJECT,
-        429: ErrorResponseSerializer,
+        429: ProblemSerializer,
     },
 )
 @api_view(["POST"])
@@ -1633,9 +1624,7 @@ def password_help_request(request):
     from .tasks import notify_password_help
     from .throttles import PasswordHelpThrottle
 
-    too_frequent = Response(
-        {"error": "请求过于频繁，请稍后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS
-    )
+    too_frequent = problem(status.HTTP_429_TOO_MANY_REQUESTS, None, "请求过于频繁，请稍后再试")
     if not PasswordHelpThrottle().allow_request(request, None):
         return too_frequent
 

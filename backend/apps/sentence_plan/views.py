@@ -17,6 +17,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.perm.filters import DataScopeFilter
@@ -61,7 +62,7 @@ def _ordered_children():
 
 
 def _refused(exc):
-    return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc), **exc.extra)
 
 
 class SentencePlanFilter(filters.FilterSet):
@@ -140,8 +141,7 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
             return None
         tenant = getattr(self.request, "tenant", None)
         if tenant is None or tenant.pk != plan.tenant_id:
-            return Response({"error": "Only the soul's home tenant may do this", "code": "not_home"},
-                            status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, "not_home", "Only the soul's home tenant may do this")
         return None
 
     def _plan_response(self, plan):
@@ -157,7 +157,7 @@ class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.
         body.is_valid(raise_exception=True)
         tenant = request_tenant(request)
         if tenant is None:
-            return Response({"error": "No tenant context", "code": "no_tenant"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "no_tenant", "No tenant context")
         try:
             req = plan_requests.file_request(
                 plan, tenant, kind=body.validated_data["kind"], changes=body.validated_data.get("changes"),

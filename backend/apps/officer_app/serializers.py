@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.core.problems import ProblemSerializer
 from apps.soul_push.models import PushPlatform
 from apps.soul_push.views import EXPO_TOKEN_RE
 from apps.workflow.serializers import CosignerRowSerializer, WaitingOnCosignerSerializer
@@ -191,10 +192,8 @@ class CosignerSerializer(serializers.Serializer):
     signed_at = serializers.CharField(allow_null=True)
 
 
-class CosignRefusalSerializer(serializers.Serializer):
-    code = serializers.CharField(help_text="not_allowed / not_eligible / duplicate")
-    detail = serializers.CharField()
-
+class CosignRefusalSerializer(ProblemSerializer):
+    pass
 
 class OfficerPushTokenSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=255)

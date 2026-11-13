@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { soulsApi } from "@soulledger/core/api";
+import { problemDetail, responseStatus } from "@soulledger/core/api/client";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 
-/** 后端 400 的 `{error}` 原样;别的形状交给调用方的通用文案。 */
+/** 后端 400 的 `detail` 原样;别的形状交给调用方的通用文案。 */
 export function correctSettlementError(error: unknown): string | null {
-  const r = (error as { response?: { status?: number; data?: { error?: unknown } } })?.response;
-  return r?.status === 400 && typeof r.data?.error === "string" ? r.data.error : null;
+  return responseStatus(error) === 400 ? (problemDetail(error) ?? null) : null;
 }
 
 /**

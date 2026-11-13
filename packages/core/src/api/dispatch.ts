@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { components } from "./generated/schema";
+import type { Problem } from "./problem";
 import type { PaginatedResponse } from "./users";
 import type { CrossJudgmentWorkflowSummary } from "./workflow";
 
@@ -302,7 +303,7 @@ export type CaptureDueSoul = components["schemas"]["CaptureDueSoul"];
 /** `due/` 的整份回答:`results` 最多 200 行,`count` 是全部待发的数。 */
 export type CaptureDueList = components["schemas"]["CaptureDueList"];
 /** 拒绝的 `code`:not_diyu / not_alive / lifespan_not_ended / warrant_open / wrong_status / reason_required。 */
-export type CaptureRefusal = components["schemas"]["CaptureRefusal"];
+export type CaptureRefusal = Problem;
 
 export const captureWarrantsApi = {
   list: (params: { soul?: string; status?: CaptureStatus; page?: string } = {}) =>

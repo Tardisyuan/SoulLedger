@@ -36,7 +36,7 @@ import {
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
 import { isArchivableConflict, tudiGodKeys, tudiGodsApi } from "@soulledger/core/api";
-import { fetchFailureOf, responseCode, responseError, responseStatus } from "@soulledger/core/api/client";
+import { fetchFailureOf, responseCode, problemDetail, responseStatus } from "@soulledger/core/api/client";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
@@ -328,7 +328,7 @@ export default function SoulDetailPage() {
   // the soul loads; both land on the neutral label.
   const ledgerLabel = tf(`ledger.civ.${soul?.civilization}`, t("ledger.civ.UNKNOWN"));
 
-  // 409 REBIRTH_NOT_APPLICABLE means this soul's cosmology is terminal
+  // 409 rebirth_not_applicable means this soul's cosmology is terminal
   // (Egyptian judgment ending at Aaru/Ammit, European ending at
   // Heaven/Hell/Purgatory-then-Heaven) — there is no next life, so that's
   // treated as a normal "no data" result (null) rather than a query error.
@@ -367,7 +367,7 @@ export default function SoulDetailPage() {
       soulsApi.die(soulId, deathDate ? { death_date: deathDate } : {}),
     onSuccess: () => {
       // 直接调 API 而不是用 `useMarkSoulDead`,是有意的:那个 hook 的 onError
-      // 走 `notify` 报一句固定文案,而这里要显示后端给的 `data.error`。
+      // 走 `notify` 报一句固定文案,而这里要显示后端给的 `detail`。
       // 它的 onSuccess 做的事就是下面这一行 —— 只是这里连判决/处置一起标脏,
       // 因为 Soul.die() 会顺手开一份判决(apps/souls/models.py)。
       refreshSoulViews();
@@ -381,7 +381,7 @@ export default function SoulDetailPage() {
       showToast(t("souls.detail.mark_dead_success"), "success");
     },
     // 本殿没有能收案的城隍(409 `no_city_god`,2026-10-29):死亡不登记,说清要先设兜底城隍。
-    onError: (e) => showToast(noCityGod(e) ?? (responseError(e) || "Failed"), "error"),
+    onError: (e) => showToast(noCityGod(e) ?? (problemDetail(e) || "Failed"), "error"),
   });
 
   // 重算功过(`POST /ledger/calculate/<id>/`):把 Soul 上存的功 / 过按全部事项重新算一遍。
@@ -412,7 +412,7 @@ export default function SoulDetailPage() {
         : (await judgmentApi.create({ soul: target.id, civilization: target.civilization })).data.id;
     },
     onSuccess: (judgmentId) => router.push(`/judgment/${judgmentId}`),
-    onError: (e) => showToast(noCityGod(e) ?? (responseError(e) || e?.message || "Failed"), "error"),
+    onError: (e) => showToast(noCityGod(e) ?? (problemDetail(e) || e?.message || "Failed"), "error"),
   });
 
   const reincarnateMutation = useMutation({

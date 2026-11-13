@@ -22,20 +22,9 @@ from rest_framework import serializers
 
 
 class DetailResponseSerializer(serializers.Serializer):
-    """`{"detail": "..."}` — the success/notice body DRF's own convention uses."""
+    """`{"detail": "..."}` — a success/notice body. Error bodies are `apps.core.problems.ProblemSerializer`."""
 
     detail = serializers.CharField()
-
-
-class ErrorResponseSerializer(serializers.Serializer):
-    """`{"error": "..."}` — this codebase's other, non-DRF, one-line body.
-
-    Kept distinct from `DetailResponseSerializer` rather than unified: the two
-    keys are what the views actually emit, and a client that reads `detail`
-    where the server writes `error` gets `undefined`, not a type error.
-    """
-
-    error = serializers.CharField()
 
 
 # ---------------------------------------------------------------------------

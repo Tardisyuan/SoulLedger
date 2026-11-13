@@ -343,7 +343,7 @@ def template_restore_refusal(cascade_id):
     if not missing:
         return None
     return {
-        "error": f"This workflow template names role(s) that no longer exist: {', '.join(missing)}. "
+        "detail": f"This workflow template names role(s) that no longer exist: {', '.join(missing)}. "
                  f"Restore or recreate the role(s) first.",
         "code": TEMPLATE_ROLE_MISSING,
         "missing_roles": missing,

@@ -18,6 +18,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 
+from apps.core.problems import ProblemSerializer, problem
 from apps.core.schema import DetailResponseSerializer
 
 from . import mfa, refresh_cookie, signin_sessions
@@ -38,11 +39,9 @@ class MfaVerifyRequestSerializer(serializers.Serializer):
         return attrs
 
 
-class MfaRefusalSerializer(serializers.Serializer):
+class MfaRefusalSerializer(ProblemSerializer):
     """`code` is what to branch on. wrong → `remaining_attempts` + `lock_minutes`; locked → `retry_after` (seconds)."""
 
-    error = serializers.CharField()
-    code = serializers.CharField()
     remaining_attempts = serializers.IntegerField(required=False)
     lock_minutes = serializers.IntegerField(required=False)
     retry_after = serializers.IntegerField(required=False)
@@ -102,9 +101,8 @@ _MESSAGES = {
 
 
 def _refuse(code, http_status, **extra):
-    body = {"error": _MESSAGES.get(code, code), "code": code, **extra}
     headers = {"Retry-After": str(extra["retry_after"])} if "retry_after" in extra else None
-    return Response(body, status=http_status, headers=headers)
+    return problem(http_status, code, _MESSAGES.get(code, code), headers=headers, **extra)
 
 
 def _refuse_outcome(outcome: dict):

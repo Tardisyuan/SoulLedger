@@ -7,12 +7,14 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsGlobalAdminPermission
-from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
+from apps.core.problems import ProblemSerializer, problem
+from apps.core.schema import DetailResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
 from apps.perm.checker import check_permission
 from apps.perm.matrix import (
@@ -120,11 +122,8 @@ def list_permissions(request):
         # PermissionSerializer, not the create serializer: the response adds
         # `id`, which is the only thing the caller cannot already know.
         201: PermissionSerializer,
-        # Two different 400s share this slot — a duplicate codename answers
-        # {"error": ...} and a validation failure answers DRF's field-keyed
-        # {"codename": [...]}. Documented as the former because it is the one
-        # this view writes itself.
-        400: ErrorResponseSerializer,
+        # A duplicate codename and a validation failure are both problems; the latter carries `errors`.
+        400: ProblemSerializer,
     },
 )
 @api_view(["POST"])
@@ -139,10 +138,7 @@ def create_permission(request):
         # Check duplicate codename
         codename = serializer.validated_data["codename"]
         if Permission.objects.filter(codename=codename).exists():
-            return Response(
-                {"error": "Permission with this codename already exists"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, "Permission with this codename already exists")
         # Permission is not in the recycle bin, so re-creating a deleted
         # codename IS its restore path: revive the row and apply the new
         # name/category, rather than shadowing it with a twin.
@@ -164,18 +160,18 @@ def create_permission(request):
         # apps/audit/signals.py does not fire. See assign_role_permissions.
         invalidate_all_permissions()
         return Response(PermissionSerializer(permission).data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    raise ValidationError(serializer.errors)
 
 
 @extend_schema(
     methods=["PUT"],
     request=PermissionCreateUpdateSerializer,
-    responses={200: PermissionSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
+    responses={200: PermissionSerializer, 400: OpenApiTypes.OBJECT, 404: ProblemSerializer},
 )
 @extend_schema(
     methods=["DELETE"],
     request=None,
-    responses={204: None, 400: ErrorResponseSerializer, 404: ErrorResponseSerializer},
+    responses={204: None, 400: ProblemSerializer, 404: ProblemSerializer},
 )
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated, CanWriteGlobalSettings])
@@ -188,44 +184,36 @@ def update_delete_permission(request, pk):
     try:
         permission = Permission.objects.get(pk=pk)
     except Permission.DoesNotExist:
-        return Response({"error": "Permission not found"}, status=status.HTTP_404_NOT_FOUND)
+        return problem(status.HTTP_404_NOT_FOUND, None, "Permission not found")
 
     requested_codename = request.data.get("codename", permission.codename) if request.method == "PUT" else None
     if permission.codename in CATALOGUE_CODENAMES and (
         request.method == "DELETE" or requested_codename != permission.codename
     ):
-        return Response(
-            {"error": f"{permission.codename} is in the permission catalogue; it cannot be deleted or renamed.",
-             "code": CATALOGUE_PERMISSION},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return problem(status.HTTP_400_BAD_REQUEST, CATALOGUE_PERMISSION,
+                       f"{permission.codename} is in the permission catalogue; it cannot be deleted or renamed.")
 
     if request.method == "PUT":
         # Renaming onto a catalogue codename would hand this row's holders a code the catalogue
         # gives to others (and dodge the grant rules). Refused before validation, which would answer
         # a different 400 for a catalogue codename that already has a row.
         if requested_codename != permission.codename and requested_codename in CATALOGUE_CODENAMES:
-            return Response(
-                {"error": f"{requested_codename} is in the permission catalogue; create it instead of "
-                          "renaming another permission onto it.", "code": CATALOGUE_PERMISSION},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, CATALOGUE_PERMISSION,
+                           f"{requested_codename} is in the permission catalogue; create it instead of "
+                          "renaming another permission onto it.")
         serializer = PermissionCreateUpdateSerializer(permission, data=request.data, partial=True)
         if serializer.is_valid():
             new_codename = serializer.validated_data.get("codename", permission.codename)
             if new_codename != permission.codename:
                 # Onto another live row: the unique index's 500 (rbac-be3 L-4).
                 if Permission.objects.filter(codename=new_codename).exists():
-                    return Response(
-                        {"error": "Permission with this codename already exists"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+                    return problem(status.HTTP_400_BAD_REQUEST, None, "Permission with this codename already exists")
             serializer.save()
             # A renamed codename is a new codename to check_permission, and the
             # old one falls back to the dict again. See assign_role_permissions.
             invalidate_all_permissions()
             return Response(PermissionSerializer(permission).data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(serializer.errors)
 
     elif request.method == "DELETE":
         # Also remove all RolePermission links
@@ -301,10 +289,7 @@ def get_permissions_for_role(request, name):
     响应结构与 get_role_permissions 一致，前端两处可以共用同一个解析。
     """
     if not Role.objects.filter(name=name).exists():
-        return Response(
-            {"detail": f"Role '{name}' not found."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return problem(status.HTTP_404_NOT_FOUND, None, f"Role '{name}' not found.")
 
     permission_codenames = _get_role_permissions_from_db(name)
     permissions = Permission.objects.filter(codename__in=permission_codenames)
@@ -347,7 +332,7 @@ def get_all_role_permissions(request):
     responses={
         200: RolePermissionAssignResultSerializer,
         400: OpenApiTypes.OBJECT,
-        404: ErrorResponseSerializer,
+        404: ProblemSerializer,
         409: RoleVersionConflictSerializer,
     },
 )
@@ -360,7 +345,7 @@ def assign_role_permissions(request):
     """
     serializer = RolePermissionAssignSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(serializer.errors)
 
     role_name = serializer.validated_data["role"]
     # A repeated id is one grant, not a second row against the unique index (500, rbac-be3 L-4).
@@ -377,10 +362,7 @@ def assign_role_permissions(request):
         try:
             role = Role.objects.select_for_update().get(name=role_name)
         except Role.DoesNotExist:
-            return Response(
-                {"error": f"Role '{role_name}' not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, None, f"Role '{role_name}' not found")
 
         if expected_version is not None and role.version != expected_version:
             # 409, not 400: the request itself is well-formed, it's the
@@ -388,39 +370,24 @@ def assign_role_permissions(request):
             # someone else's assign call landed first. Return the current
             # version so the client can reload and show the operator what
             # changed rather than just retrying blind.
-            return Response(
-                {
-                    "error": "Role has been modified since it was loaded.",
-                    "expected_version": expected_version,
-                    "current_version": role.version,
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, None, "Role has been modified since it was loaded.",
+                           expected_version=expected_version, current_version=role.version)
 
         # Validate permission IDs exist
         valid_ids = set(Permission.objects.filter(id__in=permission_ids).values_list("id", flat=True))
         invalid_ids = set(permission_ids) - valid_ids
         if invalid_ids:
-            return Response(
-                {"error": f"Permission IDs not found: {invalid_ids}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, f"Permission IDs not found: {invalid_ids}")
 
         requested = list(Permission.objects.filter(id__in=permission_ids).values_list("codename", flat=True))
         refused = admin_only_violations(role.name, requested)
         if refused:
-            return Response(
-                {"error": f"{', '.join(sorted(refused))} can only be granted to ADMIN",
-                 "code": ADMIN_ONLY_PERMISSION},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, ADMIN_ONLY_PERMISSION,
+                           f"{', '.join(sorted(refused))} can only be granted to ADMIN")
         forbidden = role_forbidden_violations(role.name, requested)
         if forbidden:
-            return Response(
-                {"error": f"{role.name} may not hold {', '.join(sorted(forbidden))}",
-                 "code": ROLE_FORBIDDEN_PERMISSION},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, ROLE_FORBIDDEN_PERMISSION,
+                           f"{role.name} may not hold {', '.join(sorted(forbidden))}")
         # The whole-set replace is a revoke of every row it leaves out; ADMIN
         # refuses those exactly as the matrix save does (apps/perm/matrix.py).
         kept = admin_always_all_violations(
@@ -429,11 +396,8 @@ def assign_role_permissions(request):
             - set(requested),
         )
         if kept:
-            return Response(
-                {"error": f"ADMIN always holds every permission; cannot remove {', '.join(sorted(kept))}",
-                 "code": ADMIN_ALWAYS_ALL},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, ADMIN_ALWAYS_ALL,
+                           f"ADMIN always holds every permission; cannot remove {', '.join(sorted(kept))}")
 
         # The same "who can still approve" check the matrix save makes (rbac-be3 M-6): a whole-set replace
         # that takes workflow.approve from the only role a template step or a live node names is refused
@@ -448,12 +412,10 @@ def assign_role_permissions(request):
                 + [{"role": role.name, "permission_id": pid, "action": GRANT} for pid in sorted(wanted_ids - current_ids)]
             )
             if impact["conflicts"] or impact["workflow_conflicts"]:
-                return Response(
-                    {"error": "This replace leaves a workflow step with no approver; "
+                return problem(status.HTTP_400_BAD_REQUEST, CONFLICT_UNACKNOWLEDGED,
+                               "This replace leaves a workflow step with no approver; "
                               "resend with acknowledge_conflicts",
-                     "code": CONFLICT_UNACKNOWLEDGED, **impact},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                               **impact)
 
         # Both sets, before anything is touched. They are written to a single
         # PERMISSION_CHANGE audit row below.
@@ -580,7 +542,7 @@ def list_roles(request):
 
 @extend_schema(
     request=RoleCreateUpdateSerializer,
-    responses={201: RoleSerializer, 400: ErrorResponseSerializer},
+    responses={201: RoleSerializer, 400: ProblemSerializer},
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanWriteGlobalSettings])
@@ -593,10 +555,10 @@ def create_role(request):
     if serializer.is_valid():
         taken = _role_name_taken(serializer.validated_data["name"])
         if taken:
-            return Response({"error": taken}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, taken)
         role = serializer.save()
         return Response(RoleSerializer(role).data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    raise ValidationError(serializer.errors)
 
 
 def _role_name_taken(name):
@@ -624,12 +586,12 @@ def _role_name_taken(name):
 @extend_schema(
     methods=["PUT"],
     request=RoleCreateUpdateSerializer,
-    responses={200: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
+    responses={200: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ProblemSerializer},
 )
 @extend_schema(
     methods=["DELETE"],
     request=None,
-    responses={204: None, 400: RoleDeleteRefusalSerializer, 404: ErrorResponseSerializer},
+    responses={204: None, 400: RoleDeleteRefusalSerializer, 404: ProblemSerializer},
 )
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated, CanWriteGlobalSettings])
@@ -642,12 +604,12 @@ def update_delete_role(request, pk):
     try:
         role = Role.objects.get(pk=pk)
     except Role.DoesNotExist:
-        return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+        return problem(status.HTTP_404_NOT_FOUND, None, "Role not found")
 
     if request.method == "PUT":
         serializer = RoleCreateUpdateSerializer(role, data=request.data, partial=True)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError(serializer.errors)
 
         # The role code (`name`) is immutable — RoleCreateUpdateSerializer
         # refuses a different one — so this save can no longer rename. The
@@ -659,11 +621,8 @@ def update_delete_role(request, pk):
 
     elif request.method == "DELETE":
         if role.is_builtin:
-            return Response(
-                {"error": f"'{role.name}' is a built-in role and cannot be deleted.",
-                 "code": "builtin_role"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "builtin_role",
+                           f"'{role.name}' is a built-in role and cannot be deleted.")
         from apps.authentication.models import User
 
         # Every non-deleted holder, active or not: a deactivated user still
@@ -677,15 +636,10 @@ def update_delete_role(request, pk):
             if role.name in (extras or ())
         )
         if holders:
-            return Response(
-                {
-                    "error": f"Role '{role.name}' is still held by {holders} user(s); "
+            return problem(status.HTTP_400_BAD_REQUEST, "role_in_use",
+                           f"Role '{role.name}' is still held by {holders} user(s); "
                              "reassign them before deleting it.",
-                    "code": "role_in_use",
-                    "user_count": holders,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+                           user_count=holders)
         from .matrix import role_template_references
 
         # A template step that designates this role would, once the role is
@@ -694,15 +648,10 @@ def update_delete_role(request, pk):
         # which templates to edit first.
         templates = role_template_references().get(role.name, [])
         if templates:
-            return Response(
-                {
-                    "error": f"Role '{role.name}' is designated as approver by "
+            return problem(status.HTTP_400_BAD_REQUEST, "role_referenced_by_workflow_templates",
+                           f"Role '{role.name}' is designated as approver by "
                              f"{len(templates)} workflow template(s); change those steps first.",
-                    "code": "role_referenced_by_workflow_templates",
-                    "templates": templates,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+                           templates=templates)
         from apps.core.recycle_bin import cascade_soft_delete
 
         # Grants go into the bin WITH the role under one cascade id, so a
@@ -718,7 +667,7 @@ def update_delete_role(request, pk):
 
 @extend_schema(
     request=RoleCreateUpdateSerializer,
-    responses={201: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
+    responses={201: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ProblemSerializer},
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanWriteGlobalSettings])
@@ -735,15 +684,15 @@ def copy_role(request, pk):
     try:
         source = Role.objects.get(pk=pk)
     except Role.DoesNotExist:
-        return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+        return problem(status.HTTP_404_NOT_FOUND, None, "Role not found")
 
     serializer = RoleCreateUpdateSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(serializer.errors)
     name = serializer.validated_data["name"]
     taken = _role_name_taken(name)
     if taken:
-        return Response({"error": taken}, status=status.HTTP_400_BAD_REQUEST)
+        return problem(status.HTTP_400_BAD_REQUEST, None, taken)
 
     with transaction.atomic():
         role = serializer.save()
@@ -818,7 +767,7 @@ def apply_matrix_changes(request):
 
     serializer = MatrixChangesRequestSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(serializer.errors)
     results, versions = apply_changes(
         serializer.validated_data["changes"],
         serializer.validated_data.get("expected_versions"),
@@ -855,7 +804,7 @@ def matrix_impact(request):
 
     serializer = MatrixChangesRequestSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(serializer.errors)
     return Response({
         "required_codenames": approve_codenames(),
         **impact_of_changes(serializer.validated_data["changes"]),
@@ -945,7 +894,7 @@ def _audit_import(request, overwrite, stats):
     request=PermissionImportRequestSerializer,
     responses={
         200: PermissionImportResultSerializer,
-        400: ErrorResponseSerializer,
+        400: ProblemSerializer,
         403: OpenApiTypes.OBJECT,
     },
 )
@@ -961,23 +910,17 @@ def import_permissions(request):
 
     data = request.data
     if not data:
-        return Response(
-            {"error": "No data provided"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return problem(status.HTTP_400_BAD_REQUEST, None, "No data provided")
     # A JSON list parses fine and then `.get` is an AttributeError 500.
     if not isinstance(data, dict):
-        return Response(
-            {"error": "Body must be a JSON object (the export document)."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return problem(status.HTTP_400_BAD_REQUEST, None, "Body must be a JSON object (the export document).")
 
     # Validate the whole document BEFORE touching a row. `overwrite` is three
     # `.all().delete()` calls; the shape errors this catches used to surface as
     # a KeyError after those had already run.
     serializer = PermissionImportRequestSerializer(data=data)
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(serializer.errors)
     document = serializer.validated_data
     overwrite = document["overwrite"]
     dry_run = document["dry_run"]
@@ -987,10 +930,7 @@ def import_permissions(request):
     # Refused before any row, cache key or audit row is touched - dry run included.
     overwrite_enabled = settings.PERM_IMPORT_OVERWRITE_ENABLED
     if overwrite and not overwrite_enabled:
-        return Response(
-            {"error": "Overwrite import is disabled.", "code": "overwrite_disabled"},
-            status=status.HTTP_403_FORBIDDEN,
-        )
+        return problem(status.HTTP_403_FORBIDDEN, "overwrite_disabled", "Overwrite import is disabled.")
 
     # One transaction (inside `do_import`): an overwrite that fails half-way
     # rolls its deletes back instead of answering 500 over an empty grant

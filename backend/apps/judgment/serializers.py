@@ -7,6 +7,7 @@ from rest_framework import serializers
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin, SoulFieldRulesMixin
 from apps.core.locale import locale_from_context
+from apps.core.problems import ProblemSerializer
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.disposition.destination import MAX_TERM_YEARS
@@ -680,10 +681,9 @@ class JudgmentDraftSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class JudgmentDraftConflictSerializer(serializers.Serializer):
+class JudgmentDraftConflictSerializer(ProblemSerializer):
     """409 body of `draft/`. `code` is `draft_conflict` (someone saved first;
     `current` is what they saved) or `concluded` (`current` is null)."""
-    error = serializers.CharField()
     code = serializers.ChoiceField(choices=["draft_conflict", "concluded"])
     current = JudgmentDraftSerializer(allow_null=True)
 
@@ -928,11 +928,9 @@ class JudgmentReassignRequestResultSerializer(serializers.Serializer):
     notified = serializers.IntegerField(read_only=True)
 
 
-class JudgmentRateLimitedSerializer(serializers.Serializer):
+class JudgmentRateLimitedSerializer(ProblemSerializer):
     """429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema only。"""
 
-    error = serializers.CharField()
-    code = serializers.CharField()
     retry_after = serializers.IntegerField()
 
 
@@ -964,7 +962,7 @@ class JudgmentBatchResultSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.UUIDField())
 
 
-class JudgmentClaimRefusalSerializer(serializers.Serializer):
+class JudgmentClaimRefusalSerializer(ProblemSerializer):
     """认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
 
     `claimed_by` 只在 `already_claimed` / `not_claimant` / `claimed_by_other` 上有,
@@ -972,8 +970,6 @@ class JudgmentClaimRefusalSerializer(serializers.Serializer):
     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
     """
 
-    error = serializers.CharField()
-    code = serializers.CharField()
     claimed_by = serializers.IntegerField(required=False, allow_null=True)
     claimed_by_name = serializers.CharField(required=False)
     id = serializers.UUIDField(required=False)

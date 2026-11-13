@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { soulsApi, type SoulBatchRecycleRequest, type SoulInput } from "../api/index";
 import { soulBatchRecycleErrorOf } from "../api/souls";
 import { isArchivableConflict, isResidingDeleteRefusal } from "../api/archive";
+import { problemErrors, problemOf } from "../api/problem";
 import { notify } from "../platform/index";
 import { recycleBinKeys, soulKeys } from "../query_keys";
 
@@ -66,10 +67,9 @@ export function useCreateSoul() {
   });
 }
 
-/** 400 + 对象体 = 后端按字段(或 non_field_errors)说了哪里不对;表单把它画在字段下,不再弹通用 toast。 */
+/** 400 校验问题(带 `errors`)= 后端按字段(或整份)说了哪里不对;表单把它画在字段下,不再弹通用 toast。 */
 function isFieldValidationError(error: unknown): boolean {
-  const r = (error as { response?: { status?: number; data?: unknown } })?.response;
-  return r?.status === 400 && typeof r.data === "object" && r.data !== null && !Array.isArray(r.data);
+  return problemOf(error)?.status === 400 && problemErrors(error).length > 0;
 }
 
 export function useAddSoulRecord() {

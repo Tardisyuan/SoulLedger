@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import appeals
 from apps.judgment.models import AppealStatus, Judgment, JudgmentAppeal, JudgmentKind, Verdict
@@ -203,7 +204,7 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         try:
             updated = run(appeal.pk)
         except appeals.AppealRefusedError as exc:
-            return Response(exc.as_payload(), status=exc.status)
+            return problem(exc.status, **exc.as_payload())
         return Response(self.get_serializer(self.get_queryset().get(pk=updated.pk)).data)
 
     @extend_schema(request=None, responses={200: JudgmentAppealSerializer, **_REFUSALS})
@@ -234,7 +235,7 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
 
 def _soul_error(exc):
-    return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc))
 
 
 class MeJudgmentAppealsView(SoulAPIView):

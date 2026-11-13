@@ -11313,9 +11313,24 @@ export interface components {
             readonly first_question: string;
             readonly messages: components["schemas"]["AssistMessage"][];
         };
+        /**
+         * @description RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+         *
+         *     A named error component that adds members subclasses this; one that adds nothing is folded into
+         *     `Problem` by `problem_responses` below.
+         */
         AssistError: {
-            detail: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             /** Format: date-time */
             retry_at?: string;
         };
@@ -11680,10 +11695,6 @@ export interface components {
             soul: string;
             escort?: components["schemas"]["CaptureEscortEnum"];
         };
-        CaptureRefusal: {
-            code: string;
-            detail: string;
-        };
         /**
          * @description * `ISSUED` - 已发牒
          *     * `CAPTURED` - 已拘到
@@ -11729,11 +11740,6 @@ export interface components {
             readonly created_at: string;
             /** @description 给界面决定要不要画「删除」;服务端在 DELETE 时仍然重判。 */
             readonly can_delete: boolean;
-        };
-        CaseAttachmentError: {
-            detail: string;
-            /** @description bad_type / too_large / case_full / too_many / concluded / not_uploader */
-            code: string;
         };
         CaseAttachmentLink: {
             /** @description 站点根相对路径 `/api/v1/case-attachments/<id>/?t=…`,10 分钟有效。 */
@@ -11782,12 +11788,6 @@ export interface components {
             /** @description Officer app only: this device's Expo push token. Every other push registration of the user is deleted with the sessions; without it (the web) all of them are. */
             token?: string;
         };
-        /** @description Doc-only 400 body: `old_password` is a list of sentences, `new_password` a list of reasons. */
-        ChangePasswordRefusal: {
-            old_password?: string[];
-            new_password?: components["schemas"]["PasswordReason"][];
-            refresh?: string[];
-        };
         ChangePasswordRequest: {
             old_password: string;
             new_password: string;
@@ -11818,9 +11818,24 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+         *
+         *     A named error component that adds members subclasses this; one that adds nothing is folded into
+         *     `Problem` by `problem_responses` below.
+         */
         ChatError: {
-            detail: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             /**
              * Format: date-time
              * @description 429 时:何时可以再试。
@@ -11998,8 +12013,17 @@ export interface components {
          *     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
          */
         CityGodCaseRefusal: {
-            error: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             claimed_by?: number | null;
             claimed_by_name?: string;
             /** Format: uuid */
@@ -12194,14 +12218,6 @@ export interface components {
         ContactEmailConfirm: {
             code: string;
         };
-        /**
-         * @description `code` ∈ email_in_person / wrong_password / rate_limited / mfa_required / wrong / expired / locked /
-         *     proof_required / email_unchanged / reset_code_expired / reset_code_wrong / reset_code_attempts_exceeded / email_taken。
-         */
-        ContactEmailRefusal: {
-            detail: string;
-            code: string;
-        };
         ContactEmailSent: {
             /** Format: email */
             sent_to: string;
@@ -12343,11 +12359,6 @@ export interface components {
         CosignAdd: {
             /** @description A `signer-candidates/` id: an officer of the same hall. */
             user_id: number;
-        };
-        CosignRefusal: {
-            /** @description not_allowed / not_eligible / duplicate */
-            code: string;
-            detail: string;
         };
         Cosigner: {
             user_id: number;
@@ -12668,7 +12679,7 @@ export interface components {
          * @enum {string}
          */
         DesiredRebirthFormEnum: "DIVINE" | "HUMAN" | "ASURA" | "ANIMAL" | "HUNGRY_GHOST" | "HELL_BEING";
-        /** @description `{"detail": "..."}` — the success/notice body DRF's own convention uses. */
+        /** @description `{"detail": "..."}` — a success/notice body. Error bodies are `apps.core.problems.ProblemSerializer`. */
         DetailResponse: {
             detail: string;
         };
@@ -12960,9 +12971,24 @@ export interface components {
             overridden: string[];
             status: components["schemas"]["EmbeddingStatus"];
         };
+        /**
+         * @description RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+         *
+         *     A named error component that adds members subclasses this; one that adds nothing is folded into
+         *     `Problem` by `problem_responses` below.
+         */
         EmbeddingError: {
-            detail: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             /** Format: date-time */
             retry_at?: string;
             error_kind: components["schemas"]["EmbeddingErrorKindEnum"];
@@ -13041,16 +13067,6 @@ export interface components {
          * @enum {string}
          */
         ErrorKindEnum: "auth" | "model_not_found" | "timeout" | "rate_limited" | "connection" | "tools_unsupported" | "other";
-        /**
-         * @description `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
-         *
-         *     Kept distinct from `DetailResponseSerializer` rather than unified: the two
-         *     keys are what the views actually emit, and a client that reads `detail`
-         *     where the server writes `error` gets `undefined`, not a type error.
-         */
-        ErrorResponse: {
-            error: string;
-        };
         /** @description 落库的候选配置,**不含 key**。 */
         EvalCandidateOut: {
             readonly provider: string;
@@ -13727,8 +13743,17 @@ export interface components {
         };
         /** @description Doc-only: the 409 body of the officer login (`code` is `hall_required`). */
         HallChoiceResponse: {
-            code: string;
-            detail: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             halls: components["schemas"]["LoginHall"][];
         };
         /** @description Doc-only: one row of `GET /tenants/overview/`. The shape is built in `apps/tenants/overview.py`. */
@@ -14139,11 +14164,6 @@ export interface components {
             readonly archived_by_name: string | null;
             readonly archive_reason: string;
         };
-        JudgmentAIError: {
-            error: string;
-            /** @description concluded (409) */
-            code: string;
-        };
         /** @description `GET /judgment/annual/`:v4 冥界年报的数。每个数的定义见 `apps/judgment/annual.py`。 */
         JudgmentAnnual: {
             timezone: string;
@@ -14305,8 +14325,17 @@ export interface components {
          *     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
          */
         JudgmentClaimRefusal: {
-            error: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             claimed_by?: number | null;
             claimed_by_name?: string;
             /** Format: uuid */
@@ -14578,8 +14607,17 @@ export interface components {
          *     `current` is what they saved) or `concluded` (`current` is null).
          */
         JudgmentDraftConflict: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code: components["schemas"]["JudgmentDraftConflictCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             current: components["schemas"]["JudgmentDraft"] | null;
         };
         /**
@@ -14869,8 +14907,17 @@ export interface components {
         JudgmentQueueSourceEnum: "queue" | "city_god" | "cross";
         /** @description 429 `rate_limited`:`retry_after` 秒后可再请(也在 `Retry-After` 头里)。Schema only。 */
         JudgmentRateLimited: {
-            error: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             retry_after: number;
         };
         /** @description `POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键),理由可省(官员端必填后带上,随通知给原认领人)。 */
@@ -14944,20 +14991,6 @@ export interface components {
             effective_balance: number;
         };
         /**
-         * @description `{"error": "NOT_FOUND", "message": "Soul not found"}`.
-         *
-         *     Two members, not one: `error` here is a machine code (NOT_FOUND,
-         *     FORBIDDEN) and `message` is the prose. That is a different body from the
-         *     `{"error": "<sentence>"}` the perm and auth views emit, which is why
-         *     apps/core/schema.py's ErrorResponseSerializer is not reused — a client
-         *     that printed this one's `error` would show the operator the word
-         *     "NOT_FOUND".
-         */
-        LedgerError: {
-            error: string;
-            message: string;
-        };
-        /**
          * @description 200 body of `LedgerInheritanceView`.
          *
          *     The two rates are the fractions the arithmetic above them used, not the
@@ -15004,9 +15037,18 @@ export interface components {
         };
         /** @description 400 body of `LedgerJournalView`: which parameter, and why. */
         LedgerJournalError: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             field: string;
-            message: string;
         };
         /**
          * @description One MERIT / DEMERIT record in the month. `day` is the UTC date the
@@ -15161,7 +15203,17 @@ export interface components {
          *     before the next request is refused with 429 (0 means the next one is).
          */
         LoginFailedResponse: {
-            detail: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             remaining_attempts?: number;
         };
         LoginHall: {
@@ -15175,8 +15227,17 @@ export interface components {
          *     window ends (also sent as the `Retry-After` header).
          */
         LoginLockedResponse: {
-            error: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             retry_after: number;
         };
         /** @description Serializer for login log entries. */
@@ -15836,8 +15897,17 @@ export interface components {
         };
         /** @description `code` is what to branch on. wrong → `remaining_attempts` + `lock_minutes`; locked → `retry_after` (seconds). */
         MfaRefusal: {
-            error: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             remaining_attempts?: number;
             lock_minutes?: number;
             retry_after?: number;
@@ -15981,10 +16051,6 @@ export interface components {
             user_id: number;
             display_name: string;
         };
-        ModerationError: {
-            detail: string;
-            code: string;
-        };
         MuteCreate: {
             user_id: number;
             days: number;
@@ -16003,11 +16069,6 @@ export interface components {
             id: number;
             tenant: components["schemas"]["LoginTenantRef"] | null;
             extra_roles: string[];
-        };
-        NegativeConfessionError: {
-            error: string;
-            /** @description concluded (409) / not_weighed (400) / unknown_clause (404) */
-            code: string;
         };
         NegativeConfessionList: {
             /** @description False: this case is not weighed and hears no denials. */
@@ -16043,9 +16104,24 @@ export interface components {
             truthful: boolean | null;
             note?: string;
         };
+        /**
+         * @description RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+         *
+         *     A named error component that adds members subclasses this; one that adds nothing is folded into
+         *     `Problem` by `problem_responses` below.
+         */
         NlFilterError: {
-            detail: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code: components["schemas"]["NlFilterErrorCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
         };
         /**
          * @description * `assistant_not_configured` - assistant_not_configured
@@ -16260,8 +16336,17 @@ export interface components {
         };
         /** @description 409 of a single deactivation. `open_work` is keyed by user id (one key). */
         OfficerHasOpenWork: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code: components["schemas"]["OfficerHasOpenWorkCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             open_work: {
                 [key: string]: components["schemas"]["OpenWork"];
             };
@@ -16386,10 +16471,18 @@ export interface components {
         };
         /** @description Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid / invite_link_invalid / weak_password. */
         OfficerResetRefusal: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code: components["schemas"]["OfficerResetRefusalCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             retry_after?: number;
-            new_password?: components["schemas"]["PasswordReason"][];
         };
         /**
          * @description * `rate_limited` - rate_limited
@@ -17361,15 +17454,6 @@ export interface components {
             username: string;
         };
         /**
-         * @description Doc-only: one reason a new password was refused. `code` is Django's validator code
-         *     (`password_too_short` / `password_too_common` / `password_entirely_numeric` /
-         *     `password_too_similar`); `message` is its English sentence, a fallback for clients.
-         */
-        PasswordReason: {
-            code: string;
-            message: string;
-        };
-        /**
          * @description Doc-only: every refusal of the two email-reset endpoints.
          *
          *     `error` is for people and may be reworded; `code` is the contract.
@@ -17377,8 +17461,17 @@ export interface components {
          *     when `code` is `rate_limited`.
          */
         PasswordResetRefusal: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code: components["schemas"]["PasswordResetRefusalCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             retry_after?: number;
             attempts_left?: number;
         };
@@ -18945,6 +19038,469 @@ export interface components {
          */
         PriceSourceEnum: "litellm" | "manual";
         /**
+         * @description RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+         *
+         *     A named error component that adds members subclasses this; one that adds nothing is folded into
+         *     `Problem` by `problem_responses` below.
+         */
+        Problem: {
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
+        };
+        /**
+         * @description * `BATCH_TOO_LARGE` - BATCH_TOO_LARGE
+         *     * `KEY_NO_DEATH_PERMISSION` - KEY_NO_DEATH_PERMISSION
+         *     * `MAX_RETRIES` - MAX_RETRIES
+         *     * `NOT_FAILED` - NOT_FAILED
+         *     * `NOT_RETRYABLE` - NOT_RETRYABLE
+         *     * `SENTENCE_NODE_REFUSED` - SENTENCE_NODE_REFUSED
+         *     * `TOO_MANY_REQUESTS` - TOO_MANY_REQUESTS
+         *     * `account_devoured` - account_devoured
+         *     * `account_retired` - account_retired
+         *     * `admin_only` - admin_only
+         *     * `admin_role` - admin_role
+         *     * `admin_target_global_only` - admin_target_global_only
+         *     * `admitted_in_concluded_case` - admitted_in_concluded_case
+         *     * `already_claimed` - already_claimed
+         *     * `already_concluded` - already_concluded
+         *     * `already_decided` - already_decided
+         *     * `already_deferred` - already_deferred
+         *     * `already_deleted` - already_deleted
+         *     * `already_enabled` - already_enabled
+         *     * `already_handled` - already_handled
+         *     * `already_lifted` - already_lifted
+         *     * `already_resolved` - already_resolved
+         *     * `appeal_closed` - appeal_closed
+         *     * `appeal_not_from_judgment` - appeal_not_from_judgment
+         *     * `appeal_open` - appeal_open
+         *     * `appeal_rounds_used` - appeal_rounds_used
+         *     * `appeal_used` - appeal_used
+         *     * `appeal_window_closed` - appeal_window_closed
+         *     * `application_open` - application_open
+         *     * `approval_flow_required` - approval_flow_required
+         *     * `assigned_to_other` - assigned_to_other
+         *     * `assignee_out_of_scope` - assignee_out_of_scope
+         *     * `assistant_busy` - assistant_busy
+         *     * `assistant_not_configured` - assistant_not_configured
+         *     * `assistant_unavailable` - assistant_unavailable
+         *     * `at_city_god` - at_city_god
+         *     * `authentication_failed` - authentication_failed
+         *     * `bad_before` - bad_before
+         *     * `bad_encoding` - bad_encoding
+         *     * `bad_encoding_gbk` - bad_encoding_gbk
+         *     * `bad_gateway` - bad_gateway
+         *     * `bad_request` - bad_request
+         *     * `bad_response` - bad_response
+         *     * `bad_signature` - bad_signature
+         *     * `bad_type` - bad_type
+         *     * `birth_in_future` - birth_in_future
+         *     * `builtin_role` - builtin_role
+         *     * `cannot_enter_judgment` - cannot_enter_judgment
+         *     * `cannot_reopen` - cannot_reopen
+         *     * `capture_refused` - capture_refused
+         *     * `case_full` - case_full
+         *     * `case_type_required` - case_type_required
+         *     * `chat_not_configured` - chat_not_configured
+         *     * `city_god_has_open_cases` - city_god_has_open_cases
+         *     * `city_gods_diyu_only` - city_gods_diyu_only
+         *     * `civilization_mismatch` - civilization_mismatch
+         *     * `civilization_or_soul` - civilization_or_soul
+         *     * `claimed_by_other` - claimed_by_other
+         *     * `closed` - closed
+         *     * `concluded` - concluded
+         *     * `condition_empty` - condition_empty
+         *     * `condition_invalid` - condition_invalid
+         *     * `condition_overlap` - condition_overlap
+         *     * `conflict` - conflict
+         *     * `conflicting_change` - conflicting_change
+         *     * `cooldown_over` - cooldown_over
+         *     * `cosigners_pending` - cosigners_pending
+         *     * `countersign_no_signers` - countersign_no_signers
+         *     * `credential_expired` - credential_expired
+         *     * `credential_not_pending` - credential_not_pending
+         *     * `credential_not_printable` - credential_not_printable
+         *     * `credential_not_revealable` - credential_not_revealable
+         *     * `credential_not_revealed` - credential_not_revealed
+         *     * `credential_void` - credential_void
+         *     * `cross_civilization_target_required` - cross_civilization_target_required
+         *     * `cross_civilization_target_same` - cross_civilization_target_same
+         *     * `cross_civilization_target_terminal` - cross_civilization_target_terminal
+         *     * `cross_civilization_target_unknown` - cross_civilization_target_unknown
+         *     * `cross_judgment_incomplete` - cross_judgment_incomplete
+         *     * `cross_judgment_invalid` - cross_judgment_invalid
+         *     * `cross_judgment_open` - cross_judgment_open
+         *     * `curability_required` - curability_required
+         *     * `dangling_route` - dangling_route
+         *     * `death_before_birth` - death_before_birth
+         *     * `declined` - declined
+         *     * `defer_reason_required` - defer_reason_required
+         *     * `deliver_needs_upheld` - deliver_needs_upheld
+         *     * `desired_form_required` - desired_form_required
+         *     * `destination_not_applicable` - destination_not_applicable
+         *     * `device_login_invalid` - device_login_invalid
+         *     * `device_login_revoked` - device_login_revoked
+         *     * `dims_mismatch` - dims_mismatch
+         *     * `dispatch_not_started` - dispatch_not_started
+         *     * `display_name_length` - display_name_length
+         *     * `display_name_sensitive` - display_name_sensitive
+         *     * `display_name_taken` - display_name_taken
+         *     * `disposition_not_executed` - disposition_not_executed
+         *     * `draft_conflict` - draft_conflict
+         *     * `duat_unfinished` - duat_unfinished
+         *     * `duplicate` - duplicate
+         *     * `duplicate_columns` - duplicate_columns
+         *     * `duplicate_media` - duplicate_media
+         *     * `duplicate_word` - duplicate_word
+         *     * `email_invalid` - email_invalid
+         *     * `email_taken` - email_taken
+         *     * `embedding_unavailable` - embedding_unavailable
+         *     * `empty_changes` - empty_changes
+         *     * `empty_file` - empty_file
+         *     * `empty_post` - empty_post
+         *     * `end_has_exit` - end_has_exit
+         *     * `error` - error
+         *     * `escalate_past_final` - escalate_past_final
+         *     * `eternal_light_locked` - eternal_light_locked
+         *     * `eternal_not_allowed` - eternal_not_allowed
+         *     * `eternal_not_last` - eternal_not_last
+         *     * `eternal_sentence` - eternal_sentence
+         *     * `event_after_death` - event_after_death
+         *     * `event_before_birth` - event_before_birth
+         *     * `expired` - expired
+         *     * `export_in_progress` - export_in_progress
+         *     * `fail_reason_contradicts_record` - fail_reason_contradicts_record
+         *     * `fail_reason_invalid` - fail_reason_invalid
+         *     * `fail_reason_not_failed` - fail_reason_not_failed
+         *     * `fail_reason_not_selectable` - fail_reason_not_selectable
+         *     * `fail_reason_note_required` - fail_reason_note_required
+         *     * `fail_reason_note_too_long` - fail_reason_note_too_long
+         *     * `fail_reason_required` - fail_reason_required
+         *     * `feedback_to_hall_only` - feedback_to_hall_only
+         *     * `file_required` - file_required
+         *     * `file_too_large` - file_too_large
+         *     * `final_required` - final_required
+         *     * `final_review_required` - final_review_required
+         *     * `five_heinous_must_fail` - five_heinous_must_fail
+         *     * `foreign_node` - foreign_node
+         *     * `foreign_realm` - foreign_realm
+         *     * `foreign_stops_choice_required` - foreign_stops_choice_required
+         *     * `gateway_timeout` - gateway_timeout
+         *     * `gone` - gone
+         *     * `greek_account_required` - greek_account_required
+         *     * `greek_mark_not_applicable` - greek_mark_not_applicable
+         *     * `grievance_not_major` - grievance_not_major
+         *     * `grievance_open` - grievance_open
+         *     * `hall_inactive` - hall_inactive
+         *     * `hall_required` - hall_required
+         *     * `handover_blocked` - handover_blocked
+         *     * `has_children` - has_children
+         *     * `held_until_fated_date` - held_until_fated_date
+         *     * `idempotency_in_progress` - idempotency_in_progress
+         *     * `idempotency_key_invalid` - idempotency_key_invalid
+         *     * `idempotency_key_reused` - idempotency_key_reused
+         *     * `image_not_found` - image_not_found
+         *     * `images_unavailable` - images_unavailable
+         *     * `implausible_lifespan` - implausible_lifespan
+         *     * `import_rows_invalid` - import_rows_invalid
+         *     * `incurable_is_eternal_in_tartarus` - incurable_is_eternal_in_tartarus
+         *     * `initial_password_expired` - initial_password_expired
+         *     * `invalid` - invalid
+         *     * `invalid_assignee` - invalid_assignee
+         *     * `invalid_batch` - invalid_batch
+         *     * `invalid_case_type` - invalid_case_type
+         *     * `invalid_changes` - invalid_changes
+         *     * `invalid_city_god` - invalid_city_god
+         *     * `invalid_civilization` - invalid_civilization
+         *     * `invalid_credentials` - invalid_credentials
+         *     * `invalid_days` - invalid_days
+         *     * `invalid_death_date` - invalid_death_date
+         *     * `invalid_draft` - invalid_draft
+         *     * `invalid_escort` - invalid_escort
+         *     * `invalid_kind` - invalid_kind
+         *     * `invalid_officer` - invalid_officer
+         *     * `invalid_old_password` - invalid_old_password
+         *     * `invalid_outcome` - invalid_outcome
+         *     * `invalid_range` - invalid_range
+         *     * `invalid_record_id` - invalid_record_id
+         *     * `invalid_resolution` - invalid_resolution
+         *     * `invalid_state_transition` - invalid_state_transition
+         *     * `invalid_station` - invalid_station
+         *     * `invalid_target` - invalid_target
+         *     * `invalid_transition` - invalid_transition
+         *     * `invalid_verdict` - invalid_verdict
+         *     * `invalid_word` - invalid_word
+         *     * `invite_link_invalid` - invite_link_invalid
+         *     * `judgment_has_workflow` - judgment_has_workflow
+         *     * `judgment_not_concluded` - judgment_not_concluded
+         *     * `judgment_not_found` - judgment_not_found
+         *     * `jump_target_required` - jump_target_required
+         *     * `ladder_running` - ladder_running
+         *     * `lifespan_not_ended` - lifespan_not_ended
+         *     * `locked` - locked
+         *     * `login_locked` - login_locked
+         *     * `malformed_csv` - malformed_csv
+         *     * `media_not_found` - media_not_found
+         *     * `method_not_allowed` - method_not_allowed
+         *     * `mfa_setup_required` - mfa_setup_required
+         *     * `missing_columns` - missing_columns
+         *     * `missing_id_column` - missing_id_column
+         *     * `missing_permission` - missing_permission
+         *     * `mixed_id_columns` - mixed_id_columns
+         *     * `model_not_found` - model_not_found
+         *     * `mortal_sin_unrepented` - mortal_sin_unrepented
+         *     * `muted` - muted
+         *     * `name_empty` - name_empty
+         *     * `name_taken` - name_taken
+         *     * `no_active_account` - no_active_account
+         *     * `no_appeal_above_minos` - no_appeal_above_minos
+         *     * `no_approver` - no_approver
+         *     * `no_chat_identity` - no_chat_identity
+         *     * `no_city_god` - no_city_god
+         *     * `no_draft` - no_draft
+         *     * `no_end` - no_end
+         *     * `no_exit` - no_exit
+         *     * `no_grievance_filed` - no_grievance_filed
+         *     * `no_mortal_sin` - no_mortal_sin
+         *     * `no_nodes` - no_nodes
+         *     * `no_pending_node` - no_pending_node
+         *     * `no_realm` - no_realm
+         *     * `no_rows` - no_rows
+         *     * `no_successor` - no_successor
+         *     * `no_tenant` - no_tenant
+         *     * `no_verdict_document` - no_verdict_document
+         *     * `node_changed` - node_changed
+         *     * `node_locked` - node_locked
+         *     * `node_not_found` - node_not_found
+         *     * `node_not_pending` - node_not_pending
+         *     * `node_not_retryable` - node_not_retryable
+         *     * `not_a_draft` - not_a_draft
+         *     * `not_a_request` - not_a_request
+         *     * `not_acceptable` - not_acceptable
+         *     * `not_alive` - not_alive
+         *     * `not_allowed` - not_allowed
+         *     * `not_an_image` - not_an_image
+         *     * `not_appealable` - not_appealable
+         *     * `not_at_city_god` - not_at_city_god
+         *     * `not_authenticated` - not_authenticated
+         *     * `not_author` - not_author
+         *     * `not_awaiting` - not_awaiting
+         *     * `not_cancellable` - not_cancellable
+         *     * `not_cancelled` - not_cancelled
+         *     * `not_city_god_officer` - not_city_god_officer
+         *     * `not_claimant` - not_claimant
+         *     * `not_claimed` - not_claimed
+         *     * `not_concluded` - not_concluded
+         *     * `not_current` - not_current
+         *     * `not_current_hall` - not_current_hall
+         *     * `not_deferred` - not_deferred
+         *     * `not_deletable` - not_deletable
+         *     * `not_diyu` - not_diyu
+         *     * `not_empty` - not_empty
+         *     * `not_enabled` - not_enabled
+         *     * `not_escalatable` - not_escalatable
+         *     * `not_finished` - not_finished
+         *     * `not_foreign` - not_foreign
+         *     * `not_found` - not_found
+         *     * `not_home` - not_home
+         *     * `not_home_hall` - not_home_hall
+         *     * `not_in_initial_review` - not_in_initial_review
+         *     * `not_in_tenant` - not_in_tenant
+         *     * `not_in_wangsi` - not_in_wangsi
+         *     * `not_inbox` - not_inbox
+         *     * `not_initiator` - not_initiator
+         *     * `not_next` - not_next
+         *     * `not_original_judge` - not_original_judge
+         *     * `not_pending` - not_pending
+         *     * `not_picked` - not_picked
+         *     * `not_refused` - not_refused
+         *     * `not_reincarnating` - not_reincarnating
+         *     * `not_requester` - not_requester
+         *     * `not_reviewer` - not_reviewer
+         *     * `not_started` - not_started
+         *     * `not_the_approver` - not_the_approver
+         *     * `not_tudi_officer` - not_tudi_officer
+         *     * `not_uploader` - not_uploader
+         *     * `not_weighed` - not_weighed
+         *     * `note_required` - note_required
+         *     * `nothing_to_change` - nothing_to_change
+         *     * `officer_has_open_work` - officer_has_open_work
+         *     * `one_segment` - one_segment
+         *     * `open_case` - open_case
+         *     * `open_judgment` - open_judgment
+         *     * `order_locked` - order_locked
+         *     * `origin_flow_open` - origin_flow_open
+         *     * `original_judge` - original_judge
+         *     * `overwrite_disabled` - overwrite_disabled
+         *     * `parent_not_found` - parent_not_found
+         *     * `parse_error` - parse_error
+         *     * `passed_has_no_destination` - passed_has_no_destination
+         *     * `password_change_required` - password_change_required
+         *     * `password_unchanged` - password_unchanged
+         *     * `past_life_read_only` - past_life_read_only
+         *     * `payload_too_large` - payload_too_large
+         *     * `peer_blocked` - peer_blocked
+         *     * `peer_retired` - peer_retired
+         *     * `pending_invalid` - pending_invalid
+         *     * `permission_denied` - permission_denied
+         *     * `plan_busy` - plan_busy
+         *     * `plan_closed` - plan_closed
+         *     * `plan_held` - plan_held
+         *     * `plan_in_progress` - plan_in_progress
+         *     * `plan_in_retrial` - plan_in_retrial
+         *     * `plan_in_transit` - plan_in_transit
+         *     * `post_sealed` - post_sealed
+         *     * `precondition_failed` - precondition_failed
+         *     * `private_address` - private_address
+         *     * `rate_limited` - rate_limited
+         *     * `realm_full` - realm_full
+         *     * `realm_not_allowed` - realm_not_allowed
+         *     * `realm_not_found` - realm_not_found
+         *     * `reason_locked` - reason_locked
+         *     * `reason_required` - reason_required
+         *     * `rebirth_continent_not_applicable` - rebirth_continent_not_applicable
+         *     * `rebirth_form_not_applicable` - rebirth_form_not_applicable
+         *     * `rebirth_form_reason_required` - rebirth_form_reason_required
+         *     * `rebirth_not_applicable` - rebirth_not_applicable
+         *     * `rebirth_not_approved` - rebirth_not_approved
+         *     * `rebirth_quota_full` - rebirth_quota_full
+         *     * `rebirth_target_unavailable` - rebirth_target_unavailable
+         *     * `refused` - refused
+         *     * `registration_exists` - registration_exists
+         *     * `reject_and_fail_route` - reject_and_fail_route
+         *     * `reject_not_earlier` - reject_not_earlier
+         *     * `remind_too_soon` - remind_too_soon
+         *     * `report_limit` - report_limit
+         *     * `request_closed` - request_closed
+         *     * `request_pending` - request_pending
+         *     * `request_throttled` - request_throttled
+         *     * `reset_link_invalid` - reset_link_invalid
+         *     * `retry_has_no_destination` - retry_has_no_destination
+         *     * `retry_not_a_destination` - retry_not_a_destination
+         *     * `retry_with_open_cross` - retry_with_open_cross
+         *     * `role_forbidden` - role_forbidden
+         *     * `role_in_use` - role_in_use
+         *     * `role_invalid` - role_invalid
+         *     * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
+         *     * `same_officer` - same_officer
+         *     * `same_tenant` - same_tenant
+         *     * `second_factor_required` - second_factor_required
+         *     * `second_factor_unavailable` - second_factor_unavailable
+         *     * `segment_changed` - segment_changed
+         *     * `segment_closed` - segment_closed
+         *     * `segment_done` - segment_done
+         *     * `segment_not_found` - segment_not_found
+         *     * `segment_started` - segment_started
+         *     * `self_conversation` - self_conversation
+         *     * `self_moderation` - self_moderation
+         *     * `self_report` - self_report
+         *     * `self_route` - self_route
+         *     * `sentence_plan_active` - sentence_plan_active
+         *     * `session_revoked` - session_revoked
+         *     * `shared_source_only` - shared_source_only
+         *     * `shortening_pending` - shortening_pending
+         *     * `skipped_not_a_verdict` - skipped_not_a_verdict
+         *     * `soul_alive` - soul_alive
+         *     * `soul_away` - soul_away
+         *     * `soul_cannot_reincarnate` - soul_cannot_reincarnate
+         *     * `soul_cannot_reopen` - soul_cannot_reopen
+         *     * `soul_devoured` - soul_devoured
+         *     * `soul_has_pending_judgment` - soul_has_pending_judgment
+         *     * `soul_is_here` - soul_is_here
+         *     * `soul_not_found` - soul_not_found
+         *     * `soul_not_in_underworld` - soul_not_in_underworld
+         *     * `soul_or_judgment` - soul_or_judgment
+         *     * `soul_recycled` - soul_recycled
+         *     * `soul_residing` - soul_residing
+         *     * `soul_state` - soul_state
+         *     * `soup_already_taken` - soup_already_taken
+         *     * `soup_not_taken` - soup_not_taken
+         *     * `soup_refused` - soup_refused
+         *     * `statute_retired` - statute_retired
+         *     * `system_void` - system_void
+         *     * `target_dispatch_disabled` - target_dispatch_disabled
+         *     * `target_outranks_caller` - target_outranks_caller
+         *     * `template_not_found` - template_not_found
+         *     * `template_role_missing` - template_role_missing
+         *     * `tenant_forbidden` - tenant_forbidden
+         *     * `tenant_not_found` - tenant_not_found
+         *     * `term_conflict` - term_conflict
+         *     * `term_not_applicable` - term_not_applicable
+         *     * `term_not_served` - term_not_served
+         *     * `term_start_before_death` - term_start_before_death
+         *     * `term_start_on_a_living_soul` - term_start_on_a_living_soul
+         *     * `threshold_out_of_range` - threshold_out_of_range
+         *     * `throttled` - throttled
+         *     * `timeout_incomplete` - timeout_incomplete
+         *     * `timeout_role_missing` - timeout_role_missing
+         *     * `token_not_valid` - token_not_valid
+         *     * `too_early` - too_early
+         *     * `too_large` - too_large
+         *     * `too_many` - too_many
+         *     * `too_many_media` - too_many_media
+         *     * `too_many_pending` - too_many_pending
+         *     * `too_many_pixels` - too_many_pixels
+         *     * `too_many_rows` - too_many_rows
+         *     * `totp_required` - totp_required
+         *     * `transition_not_manual` - transition_not_manual
+         *     * `tudi_city_god_not_county` - tudi_city_god_not_county
+         *     * `tudi_gods_diyu_only` - tudi_gods_diyu_only
+         *     * `unavailable` - unavailable
+         *     * `unbaptised_no_purgatory` - unbaptised_no_purgatory
+         *     * `undeliverable` - undeliverable
+         *     * `unferried` - unferried
+         *     * `unknown_civilization` - unknown_civilization
+         *     * `unknown_clause` - unknown_clause
+         *     * `unknown_columns` - unknown_columns
+         *     * `unknown_node` - unknown_node
+         *     * `unknown_print_key` - unknown_print_key
+         *     * `unprocessable` - unprocessable
+         *     * `unreachable` - unreachable
+         *     * `unsupported_media_type` - unsupported_media_type
+         *     * `untruthful_confession` - untruthful_confession
+         *     * `use_draft_endpoint` - use_draft_endpoint
+         *     * `username_taken` - username_taken
+         *     * `verdict_contradicts_weighing` - verdict_contradicts_weighing
+         *     * `verdict_not_accepted` - verdict_not_accepted
+         *     * `verdict_pdf_not_configured` - verdict_pdf_not_configured
+         *     * `verdict_pdf_unavailable` - verdict_pdf_unavailable
+         *     * `verdict_required` - verdict_required
+         *     * `verdict_unchanged` - verdict_unchanged
+         *     * `verify_link_invalid` - verify_link_invalid
+         *     * `warrant_open` - warrant_open
+         *     * `wavering_has_no_destination` - wavering_has_no_destination
+         *     * `wavering_with_open_cross` - wavering_with_open_cross
+         *     * `weak_password` - weak_password
+         *     * `webhook_inactive` - webhook_inactive
+         *     * `weighing_flow_required` - weighing_flow_required
+         *     * `workflow_closed` - workflow_closed
+         *     * `workflow_finished` - workflow_finished
+         *     * `workflow_in_progress` - workflow_in_progress
+         *     * `workflow_in_use` - workflow_in_use
+         *     * `workflow_required` - workflow_required
+         *     * `workflow_running` - workflow_running
+         *     * `workflow_started` - workflow_started
+         *     * `wrong` - wrong
+         *     * `wrong_status` - wrong_status
+         * @enum {string}
+         */
+        ProblemCodeEnum: "BATCH_TOO_LARGE" | "KEY_NO_DEATH_PERMISSION" | "MAX_RETRIES" | "NOT_FAILED" | "NOT_RETRYABLE" | "SENTENCE_NODE_REFUSED" | "TOO_MANY_REQUESTS" | "account_devoured" | "account_retired" | "admin_only" | "admin_role" | "admin_target_global_only" | "admitted_in_concluded_case" | "already_claimed" | "already_concluded" | "already_decided" | "already_deferred" | "already_deleted" | "already_enabled" | "already_handled" | "already_lifted" | "already_resolved" | "appeal_closed" | "appeal_not_from_judgment" | "appeal_open" | "appeal_rounds_used" | "appeal_used" | "appeal_window_closed" | "application_open" | "approval_flow_required" | "assigned_to_other" | "assignee_out_of_scope" | "assistant_busy" | "assistant_not_configured" | "assistant_unavailable" | "at_city_god" | "authentication_failed" | "bad_before" | "bad_encoding" | "bad_encoding_gbk" | "bad_gateway" | "bad_request" | "bad_response" | "bad_signature" | "bad_type" | "birth_in_future" | "builtin_role" | "cannot_enter_judgment" | "cannot_reopen" | "capture_refused" | "case_full" | "case_type_required" | "chat_not_configured" | "city_god_has_open_cases" | "city_gods_diyu_only" | "civilization_mismatch" | "civilization_or_soul" | "claimed_by_other" | "closed" | "concluded" | "condition_empty" | "condition_invalid" | "condition_overlap" | "conflict" | "conflicting_change" | "cooldown_over" | "cosigners_pending" | "countersign_no_signers" | "credential_expired" | "credential_not_pending" | "credential_not_printable" | "credential_not_revealable" | "credential_not_revealed" | "credential_void" | "cross_civilization_target_required" | "cross_civilization_target_same" | "cross_civilization_target_terminal" | "cross_civilization_target_unknown" | "cross_judgment_incomplete" | "cross_judgment_invalid" | "cross_judgment_open" | "curability_required" | "dangling_route" | "death_before_birth" | "declined" | "defer_reason_required" | "deliver_needs_upheld" | "desired_form_required" | "destination_not_applicable" | "device_login_invalid" | "device_login_revoked" | "dims_mismatch" | "dispatch_not_started" | "display_name_length" | "display_name_sensitive" | "display_name_taken" | "disposition_not_executed" | "draft_conflict" | "duat_unfinished" | "duplicate" | "duplicate_columns" | "duplicate_media" | "duplicate_word" | "email_invalid" | "email_taken" | "embedding_unavailable" | "empty_changes" | "empty_file" | "empty_post" | "end_has_exit" | "error" | "escalate_past_final" | "eternal_light_locked" | "eternal_not_allowed" | "eternal_not_last" | "eternal_sentence" | "event_after_death" | "event_before_birth" | "expired" | "export_in_progress" | "fail_reason_contradicts_record" | "fail_reason_invalid" | "fail_reason_not_failed" | "fail_reason_not_selectable" | "fail_reason_note_required" | "fail_reason_note_too_long" | "fail_reason_required" | "feedback_to_hall_only" | "file_required" | "file_too_large" | "final_required" | "final_review_required" | "five_heinous_must_fail" | "foreign_node" | "foreign_realm" | "foreign_stops_choice_required" | "gateway_timeout" | "gone" | "greek_account_required" | "greek_mark_not_applicable" | "grievance_not_major" | "grievance_open" | "hall_inactive" | "hall_required" | "handover_blocked" | "has_children" | "held_until_fated_date" | "idempotency_in_progress" | "idempotency_key_invalid" | "idempotency_key_reused" | "image_not_found" | "images_unavailable" | "implausible_lifespan" | "import_rows_invalid" | "incurable_is_eternal_in_tartarus" | "initial_password_expired" | "invalid" | "invalid_assignee" | "invalid_batch" | "invalid_case_type" | "invalid_changes" | "invalid_city_god" | "invalid_civilization" | "invalid_credentials" | "invalid_days" | "invalid_death_date" | "invalid_draft" | "invalid_escort" | "invalid_kind" | "invalid_officer" | "invalid_old_password" | "invalid_outcome" | "invalid_range" | "invalid_record_id" | "invalid_resolution" | "invalid_state_transition" | "invalid_station" | "invalid_target" | "invalid_transition" | "invalid_verdict" | "invalid_word" | "invite_link_invalid" | "judgment_has_workflow" | "judgment_not_concluded" | "judgment_not_found" | "jump_target_required" | "ladder_running" | "lifespan_not_ended" | "locked" | "login_locked" | "malformed_csv" | "media_not_found" | "method_not_allowed" | "mfa_setup_required" | "missing_columns" | "missing_id_column" | "missing_permission" | "mixed_id_columns" | "model_not_found" | "mortal_sin_unrepented" | "muted" | "name_empty" | "name_taken" | "no_active_account" | "no_appeal_above_minos" | "no_approver" | "no_chat_identity" | "no_city_god" | "no_draft" | "no_end" | "no_exit" | "no_grievance_filed" | "no_mortal_sin" | "no_nodes" | "no_pending_node" | "no_realm" | "no_rows" | "no_successor" | "no_tenant" | "no_verdict_document" | "node_changed" | "node_locked" | "node_not_found" | "node_not_pending" | "node_not_retryable" | "not_a_draft" | "not_a_request" | "not_acceptable" | "not_alive" | "not_allowed" | "not_an_image" | "not_appealable" | "not_at_city_god" | "not_authenticated" | "not_author" | "not_awaiting" | "not_cancellable" | "not_cancelled" | "not_city_god_officer" | "not_claimant" | "not_claimed" | "not_concluded" | "not_current" | "not_current_hall" | "not_deferred" | "not_deletable" | "not_diyu" | "not_empty" | "not_enabled" | "not_escalatable" | "not_finished" | "not_foreign" | "not_found" | "not_home" | "not_home_hall" | "not_in_initial_review" | "not_in_tenant" | "not_in_wangsi" | "not_inbox" | "not_initiator" | "not_next" | "not_original_judge" | "not_pending" | "not_picked" | "not_refused" | "not_reincarnating" | "not_requester" | "not_reviewer" | "not_started" | "not_the_approver" | "not_tudi_officer" | "not_uploader" | "not_weighed" | "note_required" | "nothing_to_change" | "officer_has_open_work" | "one_segment" | "open_case" | "open_judgment" | "order_locked" | "origin_flow_open" | "original_judge" | "overwrite_disabled" | "parent_not_found" | "parse_error" | "passed_has_no_destination" | "password_change_required" | "password_unchanged" | "past_life_read_only" | "payload_too_large" | "peer_blocked" | "peer_retired" | "pending_invalid" | "permission_denied" | "plan_busy" | "plan_closed" | "plan_held" | "plan_in_progress" | "plan_in_retrial" | "plan_in_transit" | "post_sealed" | "precondition_failed" | "private_address" | "rate_limited" | "realm_full" | "realm_not_allowed" | "realm_not_found" | "reason_locked" | "reason_required" | "rebirth_continent_not_applicable" | "rebirth_form_not_applicable" | "rebirth_form_reason_required" | "rebirth_not_applicable" | "rebirth_not_approved" | "rebirth_quota_full" | "rebirth_target_unavailable" | "refused" | "registration_exists" | "reject_and_fail_route" | "reject_not_earlier" | "remind_too_soon" | "report_limit" | "request_closed" | "request_pending" | "request_throttled" | "reset_link_invalid" | "retry_has_no_destination" | "retry_not_a_destination" | "retry_with_open_cross" | "role_forbidden" | "role_in_use" | "role_invalid" | "role_referenced_by_workflow_templates" | "same_officer" | "same_tenant" | "second_factor_required" | "second_factor_unavailable" | "segment_changed" | "segment_closed" | "segment_done" | "segment_not_found" | "segment_started" | "self_conversation" | "self_moderation" | "self_report" | "self_route" | "sentence_plan_active" | "session_revoked" | "shared_source_only" | "shortening_pending" | "skipped_not_a_verdict" | "soul_alive" | "soul_away" | "soul_cannot_reincarnate" | "soul_cannot_reopen" | "soul_devoured" | "soul_has_pending_judgment" | "soul_is_here" | "soul_not_found" | "soul_not_in_underworld" | "soul_or_judgment" | "soul_recycled" | "soul_residing" | "soul_state" | "soup_already_taken" | "soup_not_taken" | "soup_refused" | "statute_retired" | "system_void" | "target_dispatch_disabled" | "target_outranks_caller" | "template_not_found" | "template_role_missing" | "tenant_forbidden" | "tenant_not_found" | "term_conflict" | "term_not_applicable" | "term_not_served" | "term_start_before_death" | "term_start_on_a_living_soul" | "threshold_out_of_range" | "throttled" | "timeout_incomplete" | "timeout_role_missing" | "token_not_valid" | "too_early" | "too_large" | "too_many" | "too_many_media" | "too_many_pending" | "too_many_pixels" | "too_many_rows" | "totp_required" | "transition_not_manual" | "tudi_city_god_not_county" | "tudi_gods_diyu_only" | "unavailable" | "unbaptised_no_purgatory" | "undeliverable" | "unferried" | "unknown_civilization" | "unknown_clause" | "unknown_columns" | "unknown_node" | "unknown_print_key" | "unprocessable" | "unreachable" | "unsupported_media_type" | "untruthful_confession" | "use_draft_endpoint" | "username_taken" | "verdict_contradicts_weighing" | "verdict_not_accepted" | "verdict_pdf_not_configured" | "verdict_pdf_unavailable" | "verdict_required" | "verdict_unchanged" | "verify_link_invalid" | "warrant_open" | "wavering_has_no_destination" | "wavering_with_open_cross" | "weak_password" | "webhook_inactive" | "weighing_flow_required" | "workflow_closed" | "workflow_finished" | "workflow_in_progress" | "workflow_in_use" | "workflow_required" | "workflow_running" | "workflow_started" | "wrong" | "wrong_status";
+        ProblemFieldError: {
+            /** @description Dotted path (`items.0.name`); absent = the whole request. */
+            field?: string;
+            /** @description DRF's validation code (`required`, `blank`, `max_length` …) or the view's own. */
+            code: string;
+            detail: string;
+        };
+        /**
          * @description * `anthropic` - anthropic
          *     * `openai_compatible` - openai_compatible
          * @enum {string}
@@ -19400,9 +19956,18 @@ export interface components {
          *     `code` is the member to branch on.
          */
         RebirthNotApplicable: {
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             civilization: string;
-            detail: string;
         };
         /** @description One row of `GET /reincarnation/quota/`: this month's count for a path against its limit (null = unlimited). */
         RebirthQuotaUsage: {
@@ -19526,8 +20091,17 @@ export interface components {
          *     `error` alone.
          */
         RecycleBinRestoreRefusal: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code?: components["schemas"]["RecycleBinRestoreRefusalCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             missing_roles?: string[];
         };
         /**
@@ -19708,8 +20282,17 @@ export interface components {
          *     `role_in_use`, `templates` with `role_referenced_by_workflow_templates`.
          */
         RoleDeleteRefusal: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code: components["schemas"]["RoleDeleteRefusalCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             user_count?: number;
             templates?: components["schemas"]["RoleTemplateReference"][];
         };
@@ -19724,7 +20307,7 @@ export interface components {
             user_id: number;
             username: string;
             code: string;
-            error: string;
+            detail: string;
         };
         RoleMembersChange: {
             action: components["schemas"]["RoleMembersChangeActionEnum"];
@@ -19755,8 +20338,24 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["UserManagement"][];
         };
+        /**
+         * @description RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+         *
+         *     A named error component that adds members subclasses this; one that adds nothing is folded into
+         *     `Problem` by `problem_responses` below.
+         */
         RoleMembersRefused: {
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             refusals: components["schemas"]["RoleMemberRefusal"][];
         };
         RolePermissionAssign: {
@@ -19814,7 +20413,17 @@ export interface components {
          *     operator what moved underneath it.
          */
         RoleVersionConflict: {
-            error: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             expected_version: number;
             current_version: number;
         };
@@ -20114,10 +20723,6 @@ export interface components {
             circuit_years: number;
             elapsed_years: number | null;
             elapsed_missing: string[];
-        };
-        SessionRefusal: {
-            detail: string;
-            code: string;
         };
         /** @description Serializer for setting new password via code. */
         SetNewPassword: {
@@ -20421,8 +21026,17 @@ export interface components {
          *     selection. `archivable` is present on 409 only, as on the single delete.
          */
         SoulBatchRecycleError: {
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
             code: components["schemas"]["SoulBatchRecycleErrorCodeEnum"];
-            error: string;
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             ids: string[];
             archivable?: boolean;
         };
@@ -20558,19 +21172,23 @@ export interface components {
          *     account_reincarnated / turned_off)、device_login_invalid(401)、rate_limited(429)。
          */
         SoulDeviceLoginRefusal: {
-            detail: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             reason?: string;
         };
         SoulDeviceLoginRequest: {
             soul_code: string;
             credential: string;
             device_token?: string;
-        };
-        /** @description 所有业务拒绝的形状。`code` 稳定,App 按它分支;`detail` 是给人看的中文。 */
-        SoulError: {
-            detail: string;
-            code: string;
         };
         SoulEvent: {
             /** Format: uuid */
@@ -20610,12 +21228,22 @@ export interface components {
         };
         /** @description 400: the file as a whole is unusable. Nothing was read or written. */
         SoulImportFileError: {
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             columns?: string[];
             max_rows?: number;
             max_bytes?: number;
         };
-        /** @description 200 of `…/import/preview/` and 422 of `…/import/commit/` (rows have errors; nothing written). */
+        /** @description 200 of `…/import/preview/`; the 422 of `…/import/commit/` is `SoulImportRowsInvalidSerializer`. */
         SoulImportPreview: {
             total: number;
             ok_count: number;
@@ -20638,6 +21266,25 @@ export interface components {
          * @enum {string}
          */
         SoulImportRowStatusEnum: "ok" | "error";
+        /** @description 422 `import_rows_invalid` of `…/import/commit/`: the preview's members on a problem; nothing written. */
+        SoulImportRowsInvalid: {
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
+            total: number;
+            ok_count: number;
+            error_count: number;
+            max_rows: number;
+            rows: components["schemas"]["SoulImportRow"][];
+        };
         /** @description Multipart body of the two import endpoints: the CSV, nothing else. */
         SoulImportUpload: {
             /** Format: uri */
@@ -20734,8 +21381,17 @@ export interface components {
          *     the recovery codes with a password or a recovery code).
          */
         SoulMfaRefusal: {
-            detail: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             remaining_attempts?: number;
             lock_minutes?: number;
             retry_after?: number;
@@ -21113,9 +21769,24 @@ export interface components {
          * @enum {string}
          */
         SoulSentenceStationStatusEnum: "pending" | "active" | "waiting" | "done" | "eternal" | "pardoned";
+        /**
+         * @description RFC 9457 problem details. Every 4xx/5xx of this API is one (`apps/core/problems.py`).
+         *
+         *     A named error component that adds members subclasses this; one that adds nothing is folded into
+         *     `Problem` by `problem_responses` below.
+         */
         SoulSocialError: {
-            detail: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             /** Format: date-time */
             muted_until?: string;
         };
@@ -21145,10 +21816,6 @@ export interface components {
         /** @description `POST /souls/{id}/station/`:挪到十三站的哪一站(docs/06 §一)。 */
         SoulStationMove: {
             station: components["schemas"]["DiyuStationEnum"];
-        };
-        SoulStationRefusal: {
-            code: string;
-            error: string;
         };
         SoulTokenPair: {
             access: string;
@@ -21684,9 +22351,20 @@ export interface components {
             id: number;
             name: string;
         };
-        TudiRefusal: {
-            code: string;
-            error: string;
+        /** @description 409 `registration_exists`: the same idempotency key again; `registration` is the one already made. */
+        TudiRegistrationExists: {
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
+            registration: components["schemas"]["DeathRegistrationRequest"];
         };
         /** @description 与外部登记同一组字段,外加可选的 `idempotency_key`(重复提交答同一条登记)。灵魂只认 `soul_lookup.soul_id`。 */
         TudiRegistrationRequest: {
@@ -22267,8 +22945,17 @@ export interface components {
          *     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
          */
         WangsiRefusal: {
-            error: string;
-            code: string;
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
             claimed_by?: number | null;
             claimed_by_name?: string;
             /** Format: uuid */
@@ -22776,7 +23463,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             404: {
@@ -22784,7 +23471,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             429: {
@@ -22792,7 +23479,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             503: {
@@ -22800,7 +23487,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -22852,7 +23539,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -22923,7 +23610,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -22956,7 +23643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -22989,7 +23676,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23058,7 +23745,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23129,7 +23816,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23156,7 +23843,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             503: {
@@ -23164,7 +23851,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EmbeddingError"];
+                    "application/problem+json": components["schemas"]["EmbeddingError"];
                 };
             };
         };
@@ -23197,7 +23884,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23393,7 +24080,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23445,7 +24132,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23520,7 +24207,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23554,7 +24241,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             429: {
@@ -23562,7 +24249,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             503: {
@@ -23570,7 +24257,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23600,7 +24287,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23635,7 +24322,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             409: {
@@ -23643,7 +24330,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23670,7 +24357,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23698,7 +24385,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             404: {
@@ -23706,7 +24393,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -23888,7 +24575,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NlFilterError"];
+                    "application/problem+json": components["schemas"]["NlFilterError"];
                 };
             };
             503: {
@@ -23896,7 +24583,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NlFilterError"];
+                    "application/problem+json": components["schemas"]["NlFilterError"];
                 };
             };
         };
@@ -24067,7 +24754,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -24095,7 +24782,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -24103,7 +24790,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -24136,7 +24823,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -24144,7 +24831,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -24177,7 +24864,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChangePasswordRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -24223,7 +24910,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
             429: {
@@ -24231,7 +24918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
         };
@@ -24264,7 +24951,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
             429: {
@@ -24272,7 +24959,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
         };
@@ -24363,7 +25050,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginFailedResponse"];
+                    "application/problem+json": components["schemas"]["LoginFailedResponse"];
                 };
             };
             429: {
@@ -24371,7 +25058,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginLockedResponse"];
+                    "application/problem+json": components["schemas"]["LoginLockedResponse"];
                 };
             };
         };
@@ -24457,7 +25144,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -24484,7 +25171,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
         };
@@ -24517,7 +25204,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             409: {
@@ -24525,7 +25212,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
         };
@@ -24558,7 +25245,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             409: {
@@ -24566,7 +25253,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             429: {
@@ -24574,7 +25261,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
         };
@@ -24607,7 +25294,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             409: {
@@ -24615,7 +25302,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             429: {
@@ -24623,7 +25310,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
         };
@@ -24656,7 +25343,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             409: {
@@ -24664,7 +25351,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             429: {
@@ -24672,7 +25359,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
         };
@@ -24743,7 +25430,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             401: {
@@ -24751,7 +25438,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
             429: {
@@ -24759,7 +25446,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
+                    "application/problem+json": components["schemas"]["MfaRefusal"];
                 };
             };
         };
@@ -24792,7 +25479,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
             429: {
@@ -24800,7 +25487,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
         };
@@ -24833,7 +25520,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginFailedResponse"];
+                    "application/problem+json": components["schemas"]["LoginFailedResponse"];
                 };
             };
             409: {
@@ -24841,7 +25528,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HallChoiceResponse"];
+                    "application/problem+json": components["schemas"]["HallChoiceResponse"];
                 };
             };
             429: {
@@ -24849,7 +25536,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginLockedResponse"];
+                    "application/problem+json": components["schemas"]["LoginLockedResponse"];
                 };
             };
         };
@@ -24882,7 +25569,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
             429: {
@@ -24890,7 +25577,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
         };
@@ -24923,7 +25610,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                    "application/problem+json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
         };
@@ -24956,9 +25643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -24966,7 +25651,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -25018,9 +25703,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -25072,9 +25755,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -25132,7 +25813,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PasswordResetRefusal"];
+                    "application/problem+json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
         };
@@ -25179,7 +25860,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -25187,7 +25868,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -25214,7 +25895,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -25247,7 +25928,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PasswordResetRefusal"];
+                    "application/problem+json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
             404: {
@@ -25255,7 +25936,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PasswordResetRefusal"];
+                    "application/problem+json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
             409: {
@@ -25263,7 +25944,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PasswordResetRefusal"];
+                    "application/problem+json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
             429: {
@@ -25271,7 +25952,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PasswordResetRefusal"];
+                    "application/problem+json": components["schemas"]["PasswordResetRefusal"];
                 };
             };
         };
@@ -25606,7 +26287,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             409: {
@@ -25614,7 +26295,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -25700,7 +26381,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -25760,7 +26441,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -25768,7 +26449,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -25826,7 +26507,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -25834,7 +26515,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -26058,9 +26739,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -26472,9 +27151,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -26552,7 +27229,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TudiRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -26659,7 +27336,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TudiRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -26667,7 +27344,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeathRegistrationRequest"];
+                    "application/problem+json": components["schemas"]["TudiRegistrationExists"];
                 };
             };
         };
@@ -26754,9 +27431,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -26968,7 +27643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptureRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -26976,7 +27651,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptureRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -27034,7 +27709,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptureRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -27042,7 +27717,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptureRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -27072,7 +27747,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptureRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -27108,7 +27783,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptureRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -27521,9 +28196,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -27967,9 +28640,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -28326,9 +28997,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -28383,9 +29052,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -28907,7 +29574,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaseAttachmentError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -28915,7 +29582,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaseAttachmentError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -28945,7 +29612,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaseAttachmentError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -29112,7 +29779,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -29120,7 +29787,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -29247,7 +29914,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -29283,7 +29950,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             403: {
@@ -29291,7 +29958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -29299,7 +29966,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -29360,9 +30027,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -29370,7 +30035,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentDraftConflict"];
+                    "application/problem+json": components["schemas"]["JudgmentDraftConflict"];
                 };
             };
         };
@@ -29460,7 +30125,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NegativeConfessionError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -29468,7 +30133,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NegativeConfessionError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -29476,7 +30141,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NegativeConfessionError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -29537,7 +30202,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             403: {
@@ -29545,7 +30210,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -29553,7 +30218,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -29589,7 +30254,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -29597,7 +30262,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -29627,7 +30292,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -29663,7 +30328,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentRateLimited"];
+                    "application/problem+json": components["schemas"]["JudgmentRateLimited"];
                 };
             };
         };
@@ -29693,7 +30358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentAIError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -29757,7 +30422,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -29765,7 +30430,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -29798,9 +30463,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -29808,9 +30471,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             503: {
@@ -29818,9 +30479,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -29856,7 +30515,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentAIError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -29968,7 +30627,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             404: {
@@ -29976,7 +30635,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -29984,7 +30643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -30020,7 +30679,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             403: {
@@ -30028,7 +30687,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             404: {
@@ -30036,7 +30695,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -30044,7 +30703,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -30074,7 +30733,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             404: {
@@ -30082,7 +30741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -30090,7 +30749,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -30120,9 +30779,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -30130,7 +30787,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -30163,7 +30820,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             403: {
@@ -30171,7 +30828,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             404: {
@@ -30179,7 +30836,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             409: {
@@ -30187,7 +30844,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -30277,7 +30934,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             403: {
@@ -30285,7 +30942,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             404: {
@@ -30293,7 +30950,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             409: {
@@ -30301,7 +30958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
         };
@@ -30337,7 +30994,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             403: {
@@ -30345,7 +31002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             404: {
@@ -30353,7 +31010,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             409: {
@@ -30361,7 +31018,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
         };
@@ -30397,7 +31054,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             403: {
@@ -30405,7 +31062,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             404: {
@@ -30413,7 +31070,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
             409: {
@@ -30421,7 +31078,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                    "application/problem+json": components["schemas"]["CityGodCaseRefusal"];
                 };
             };
         };
@@ -30480,7 +31137,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -30531,7 +31188,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                    "application/problem+json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
         };
@@ -30631,9 +31288,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -30910,7 +31565,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
             403: {
@@ -30918,7 +31573,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
             404: {
@@ -30926,7 +31581,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
             409: {
@@ -30934,7 +31589,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
         };
@@ -30970,7 +31625,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
             403: {
@@ -30978,7 +31633,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
             404: {
@@ -30986,7 +31641,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
             409: {
@@ -30994,7 +31649,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WangsiRefusal"];
+                    "application/problem+json": components["schemas"]["WangsiRefusal"];
                 };
             };
         };
@@ -31023,7 +31678,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -31052,7 +31707,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -31081,7 +31736,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -31110,7 +31765,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -31118,7 +31773,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RebirthNotApplicable"];
+                    "application/problem+json": components["schemas"]["RebirthNotApplicable"];
                 };
             };
         };
@@ -31156,7 +31811,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerJournalError"];
+                    "application/problem+json": components["schemas"]["LedgerJournalError"];
                 };
             };
         };
@@ -31191,7 +31846,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerJournalError"];
+                    "application/problem+json": components["schemas"]["LedgerJournalError"];
                 };
             };
         };
@@ -31219,7 +31874,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -31246,7 +31901,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -31275,7 +31930,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LedgerError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -31302,7 +31957,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -31343,7 +31998,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             404: {
@@ -31351,7 +32006,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             429: {
@@ -31359,7 +32014,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             503: {
@@ -31367,7 +32022,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -31399,7 +32054,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             403: {
@@ -31407,7 +32062,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             404: {
@@ -31415,7 +32070,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -31443,7 +32098,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
             404: {
@@ -31451,7 +32106,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssistError"];
+                    "application/problem+json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -31498,7 +32153,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31525,7 +32180,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31566,7 +32221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             409: {
@@ -31574,7 +32229,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -31582,7 +32237,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31611,7 +32266,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31639,7 +32294,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             409: {
@@ -31647,7 +32302,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -31655,7 +32310,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31691,7 +32346,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             403: {
@@ -31699,7 +32354,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             404: {
@@ -31707,7 +32362,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             409: {
@@ -31715,7 +32370,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             429: {
@@ -31723,7 +32378,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -31731,7 +32386,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31766,7 +32421,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             409: {
@@ -31774,7 +32429,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             429: {
@@ -31782,7 +32437,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -31790,7 +32445,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31819,7 +32474,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31848,7 +32503,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             404: {
@@ -31856,7 +32511,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             409: {
@@ -31864,7 +32519,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -31872,7 +32527,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31905,7 +32560,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             404: {
@@ -31913,7 +32568,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             429: {
@@ -31921,7 +32576,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -31948,7 +32603,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -31956,7 +32611,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatError"];
+                    "application/problem+json": components["schemas"]["ChatError"];
                 };
             };
         };
@@ -32008,7 +32663,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -32016,7 +32671,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -32024,7 +32679,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -32032,7 +32687,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32065,7 +32720,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -32073,7 +32728,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -32081,7 +32736,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -32089,7 +32744,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32121,7 +32776,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -32129,7 +32784,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -32137,7 +32792,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -32145,7 +32800,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32178,7 +32833,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             429: {
@@ -32186,7 +32841,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -32213,7 +32868,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32246,7 +32901,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             409: {
@@ -32254,7 +32909,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -32262,7 +32917,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -32317,7 +32972,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32350,7 +33005,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -32358,7 +33013,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -32366,7 +33021,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32395,7 +33050,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -32403,7 +33058,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -32411,7 +33066,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32438,7 +33093,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32465,7 +33120,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -32498,7 +33153,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             409: {
@@ -32506,7 +33161,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -32539,7 +33194,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             409: {
@@ -32547,7 +33202,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             429: {
@@ -32555,7 +33210,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -32588,7 +33243,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             409: {
@@ -32596,7 +33251,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             429: {
@@ -32604,7 +33259,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -32637,7 +33292,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             409: {
@@ -32645,7 +33300,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             429: {
@@ -32653,7 +33308,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -32698,7 +33353,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32738,7 +33393,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32765,7 +33420,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32798,7 +33453,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -32806,7 +33461,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32833,7 +33488,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32881,7 +33536,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32913,7 +33568,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32940,7 +33595,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -32973,7 +33628,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -32981,7 +33636,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33010,7 +33665,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33045,7 +33700,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -33053,7 +33708,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -33061,7 +33716,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33094,7 +33749,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -33102,7 +33757,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33129,7 +33784,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33156,7 +33811,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33184,7 +33839,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -33192,7 +33847,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -33200,7 +33855,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33227,7 +33882,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -33235,7 +33890,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33262,7 +33917,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -33290,7 +33945,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33298,7 +33953,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33306,7 +33961,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33338,7 +33993,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33346,7 +34001,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33354,7 +34009,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33387,7 +34042,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             403: {
@@ -33395,7 +34050,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33403,7 +34058,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33411,7 +34066,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33438,7 +34093,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33446,7 +34101,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33454,7 +34109,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33481,7 +34136,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33489,7 +34144,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33497,7 +34152,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33524,7 +34179,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33532,7 +34187,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33540,7 +34195,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33566,7 +34221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33574,7 +34229,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33582,7 +34237,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33616,7 +34271,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             403: {
@@ -33624,7 +34279,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33632,7 +34287,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33640,7 +34295,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33668,7 +34323,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33676,7 +34331,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33684,7 +34339,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33713,7 +34368,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33721,7 +34376,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33729,7 +34384,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33757,7 +34412,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33765,7 +34420,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33773,7 +34428,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33802,7 +34457,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33810,7 +34465,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33818,7 +34473,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33853,7 +34508,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33861,7 +34516,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33869,7 +34524,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33904,7 +34559,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33912,7 +34567,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33920,7 +34575,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -33953,7 +34608,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             403: {
@@ -33961,7 +34616,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -33969,7 +34624,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -33977,7 +34632,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -34010,7 +34665,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -34018,7 +34673,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -34026,7 +34681,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -34058,7 +34713,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -34066,7 +34721,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -34074,7 +34729,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -34101,7 +34756,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -34109,7 +34764,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -34117,7 +34772,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -34146,7 +34801,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -34154,7 +34809,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -34162,7 +34817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -34191,7 +34846,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -34199,7 +34854,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -34207,7 +34862,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -34236,7 +34891,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             404: {
@@ -34244,7 +34899,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -34252,7 +34907,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -34279,7 +34934,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -34312,7 +34967,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -34320,7 +34975,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -34328,7 +34983,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -34368,7 +35023,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -35256,7 +35911,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CosignRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -35264,7 +35919,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CosignRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description No response body */
@@ -35301,7 +35956,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CosignRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -35309,7 +35964,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CosignRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -35708,7 +36363,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -35716,9 +36371,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -35772,9 +36425,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -35782,7 +36433,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -35810,7 +36461,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -35818,7 +36469,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -35851,7 +36502,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -35922,9 +36573,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -35932,7 +36581,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -35940,7 +36589,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoleVersionConflict"];
+                    "application/problem+json": components["schemas"]["RoleVersionConflict"];
                 };
             };
         };
@@ -35973,9 +36622,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36008,9 +36655,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36058,7 +36703,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36093,9 +36738,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -36103,7 +36746,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36131,7 +36774,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoleDeleteRefusal"];
+                    "application/problem+json": components["schemas"]["RoleDeleteRefusal"];
                 };
             };
             404: {
@@ -36139,7 +36782,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36174,9 +36817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -36184,7 +36825,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36213,7 +36854,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36248,7 +36889,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -36256,7 +36897,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36290,7 +36931,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36325,7 +36966,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoleMembersRefused"];
+                    "application/problem+json": components["schemas"]["RoleMembersRefused"];
                 };
             };
             403: {
@@ -36333,7 +36974,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoleMembersRefused"];
+                    "application/problem+json": components["schemas"]["RoleMembersRefused"];
                 };
             };
             404: {
@@ -36341,7 +36982,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36374,7 +37015,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36580,7 +37221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -36588,7 +37229,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36621,7 +37262,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecycleBinRestoreRefusal"];
+                    "application/problem+json": components["schemas"]["RecycleBinRestoreRefusal"];
                 };
             };
             403: {
@@ -36629,7 +37270,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -36637,7 +37278,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -36891,7 +37532,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             503: {
@@ -36899,7 +37540,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37287,7 +37928,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37295,7 +37936,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37303,7 +37944,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37338,7 +37979,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37346,7 +37987,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37354,7 +37995,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37389,7 +38030,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37397,7 +38038,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37405,7 +38046,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37440,7 +38081,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37448,7 +38089,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37456,7 +38097,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37483,7 +38124,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37491,7 +38132,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37499,7 +38140,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37600,7 +38241,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37608,7 +38249,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37616,7 +38257,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37646,7 +38287,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37654,7 +38295,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37662,7 +38303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37797,7 +38438,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37805,7 +38446,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37813,7 +38454,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37848,7 +38489,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37856,7 +38497,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37864,7 +38505,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37899,7 +38540,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37907,7 +38548,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37915,7 +38556,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37950,7 +38591,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -37958,7 +38599,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -37966,7 +38607,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -37993,7 +38634,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -38001,7 +38642,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -38009,7 +38650,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -38101,7 +38742,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -38109,7 +38750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -38117,7 +38758,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -38176,7 +38817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -38184,7 +38825,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -38192,7 +38833,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -38249,7 +38890,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -38257,7 +38898,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -38265,7 +38906,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -38298,7 +38939,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -38306,7 +38947,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -38314,7 +38955,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -38322,7 +38963,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -38355,7 +38996,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -38363,7 +39004,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -38371,7 +39012,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -38379,7 +39020,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -38412,7 +39053,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -38420,7 +39061,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -38428,7 +39069,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -38436,7 +39077,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ModerationError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -38806,7 +39447,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
             409: {
@@ -38814,7 +39455,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -38842,7 +39483,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulSocialError"];
+                    "application/problem+json": components["schemas"]["SoulSocialError"];
                 };
             };
         };
@@ -39347,7 +39988,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39389,7 +40030,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 账号不存在或不在本殿 */
@@ -39404,7 +40045,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39445,7 +40086,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -39453,7 +40094,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39544,7 +40185,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -39552,7 +40193,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39588,7 +40229,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -39596,7 +40237,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39704,7 +40345,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39734,7 +40375,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39764,7 +40405,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39794,7 +40435,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             410: {
@@ -39802,7 +40443,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39895,7 +40536,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -39903,7 +40544,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -39911,7 +40552,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -39951,7 +40592,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulDeviceLoginRefusal"];
+                    "application/problem+json": components["schemas"]["SoulDeviceLoginRefusal"];
                 };
             };
             429: {
@@ -39959,7 +40600,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulDeviceLoginRefusal"];
+                    "application/problem+json": components["schemas"]["SoulDeviceLoginRefusal"];
                 };
             };
         };
@@ -40023,7 +40664,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -40031,7 +40672,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -40088,7 +40729,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             401: {
@@ -40096,7 +40737,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
             429: {
@@ -40104,7 +40745,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                    "application/problem+json": components["schemas"]["SoulMfaRefusal"];
                 };
             };
         };
@@ -40137,7 +40778,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -40709,7 +41350,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulStationRefusal"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -40798,7 +41439,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulBatchRecycleError"];
+                    "application/problem+json": components["schemas"]["SoulBatchRecycleError"];
                 };
             };
             409: {
@@ -40806,7 +41447,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulBatchRecycleError"];
+                    "application/problem+json": components["schemas"]["SoulBatchRecycleError"];
                 };
             };
         };
@@ -40836,9 +41477,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -40869,7 +41508,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulImportFileError"];
+                    "application/problem+json": components["schemas"]["SoulImportFileError"];
                 };
             };
             422: {
@@ -40877,7 +41516,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulImportPreview"];
+                    "application/problem+json": components["schemas"]["SoulImportRowsInvalid"];
                 };
             };
         };
@@ -40908,7 +41547,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulImportFileError"];
+                    "application/problem+json": components["schemas"]["SoulImportFileError"];
                 };
             };
         };
@@ -40939,7 +41578,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulImportFileError"];
+                    "application/problem+json": components["schemas"]["SoulImportFileError"];
                 };
             };
         };
@@ -40970,7 +41609,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulImportFileError"];
+                    "application/problem+json": components["schemas"]["SoulImportFileError"];
                 };
             };
         };
@@ -41455,9 +42094,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -41465,7 +42102,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OfficerHasOpenWork"];
+                    "application/problem+json": components["schemas"]["OfficerHasOpenWork"];
                 };
             };
         };
@@ -41523,9 +42160,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -41533,7 +42168,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -41569,9 +42204,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -41579,7 +42212,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -41587,9 +42220,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -41725,7 +42356,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42133,9 +42764,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -42143,9 +42772,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -42153,9 +42780,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42191,9 +42816,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -42201,9 +42824,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42297,9 +42918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -42307,9 +42926,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -42317,9 +42934,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -42327,9 +42942,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42361,9 +42974,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -42371,9 +42982,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -42381,9 +42990,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             429: {
@@ -42391,9 +42998,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42431,9 +43036,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: {
@@ -42441,9 +43044,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -42451,9 +43052,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -42461,9 +43060,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42521,9 +43118,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -42531,9 +43126,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42584,9 +43177,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -42594,9 +43185,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42648,9 +43237,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42685,9 +43272,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -42695,9 +43280,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -42730,9 +43313,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             404: {
@@ -42740,9 +43321,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             409: {
@@ -42750,9 +43329,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };

@@ -9,6 +9,7 @@ import {
   type RebirthApplicationFilters,
   type SoulContactUpdate,
 } from "../api/index";
+import { problemFieldMessages, problemOf } from "../api/problem";
 import { soulAccountKeys } from "../query_keys";
 
 /**
@@ -152,19 +153,9 @@ export interface SoulAccountFailure {
 }
 
 export function classifySoulAccountError(error: unknown): SoulAccountFailure {
-  const response = (error as { response?: { status?: number; data?: unknown } } | null)?.response;
-  const data = response?.data;
-  const fields: Record<string, string[]> = {};
-  let code: string | null = null;
-  if (data && typeof data === "object") {
-    const body = data as Record<string, unknown>;
-    if (typeof body.code === "string") code = body.code;
-    else if (response?.status === 400) {
-      for (const [key, value] of Object.entries(body)) {
-        const messages = (Array.isArray(value) ? value : [value]).filter((m): m is string => typeof m === "string");
-        if (messages.length > 0) fields[key] = messages;
-      }
-    }
-  }
-  return { status: response?.status ?? null, code, fields };
+  const status = (error as { response?: { status?: number } } | null)?.response?.status ?? null;
+  const fields = problemFieldMessages(error);
+  // A validation problem's `code` is the generic `invalid`: its fields say what is wrong.
+  const code = problemOf(error)?.code ?? null;
+  return { status, code: code === "invalid" ? null : code, fields };
 }

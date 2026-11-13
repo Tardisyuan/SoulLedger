@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { problemDetail } from "@soulledger/core/api/client";
 import { TEMPLATE_PLACEHOLDERS, type InboxReplyTemplate } from "@soulledger/core/api/soul-inbox";
 import { useInboxTemplateMutations, useInboxTemplates } from "@soulledger/core/hooks/useSoulInbox";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -17,10 +18,7 @@ import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
  */
 
 function detailOf(error: unknown): string | null {
-  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
-  if (!data) return null;
-  const first = Object.values(data).flat()[0];
-  return typeof first === "string" ? first : null;
+  return problemDetail(error) ?? null;
 }
 
 export function TemplateManager({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

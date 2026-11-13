@@ -12,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import ProblemSerializer, problem
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch import capture as capture_service
@@ -46,10 +47,8 @@ class CaptureCancelSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=2000)
 
 
-class CaptureRefusalSerializer(serializers.Serializer):
-    code = serializers.CharField()
-    detail = serializers.CharField()
-
+class CaptureRefusalSerializer(ProblemSerializer):
+    pass
 
 class CaptureDueSoulSerializer(serializers.Serializer):
     id = serializers.UUIDField()
@@ -124,7 +123,7 @@ class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         # 数据范围(B3b):范围外的灵魂与别殿一样 404。
         soul = _souls(request).filter(pk=body.validated_data["soul"]).first()
         if soul is None:
-            return Response({"code": "not_found", "detail": "Soul not found."}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Soul not found.")
         warrant = capture_service.issue(soul, body.validated_data.get("escort"))
         return Response(CaptureWarrantSerializer(warrant).data, status=status.HTTP_201_CREATED)
 

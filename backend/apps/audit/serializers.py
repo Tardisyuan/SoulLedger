@@ -4,6 +4,8 @@ Audit serializers
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.problems import ProblemSerializer
+
 from .models import AuditLog
 
 
@@ -146,6 +148,5 @@ class NlFilterResponseSerializer(serializers.Serializer):
     model = serializers.CharField()
 
 
-class NlFilterErrorSerializer(serializers.Serializer):
-    detail = serializers.CharField()
+class NlFilterErrorSerializer(ProblemSerializer):
     code = serializers.ChoiceField(choices=("assistant_not_configured", "assistant_unavailable", "assistant_busy"))

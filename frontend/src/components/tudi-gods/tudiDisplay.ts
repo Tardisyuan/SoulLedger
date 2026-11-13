@@ -1,23 +1,15 @@
-/** 土地公接口的拒绝码(`apps/death_sync/tudi_views.py`)。在顶层 `code`,或在某个字段下 `{code}` / `{code: [..]}`。 */
+import { problemErrors, responseCode } from "@soulledger/core/api/client";
+/** 土地公接口的拒绝码(`apps/death_sync/tudi_views.py`)。在顶层 `code`,或在校验问题的某条 `errors` 上。 */
 const KNOWN = ["name_taken", "invalid_city_god", "tudi_city_god_not_county", "invalid_officer", "tudi_gods_diyu_only",
   "not_tudi_officer"] as const;
 export type TudiRefusalCode = (typeof KNOWN)[number];
 
-function codeIn(value: unknown): string | null {
-  if (!value || typeof value !== "object") return null;
-  const code = (value as { code?: unknown }).code;
-  if (typeof code === "string") return code;
-  if (Array.isArray(code) && typeof code[0] === "string") return code[0];
-  for (const v of Object.values(value)) {
-    const found = codeIn(v);
-    if (found) return found;
-  }
-  return null;
-}
+const isKnown = (code: string | null | undefined): code is TudiRefusalCode => !!code && (KNOWN as readonly string[]).includes(code);
 
 export function tudiRefusalCode(err: unknown): TudiRefusalCode | null {
-  const code = codeIn((err as { response?: { data?: unknown } })?.response?.data);
-  return code && (KNOWN as readonly string[]).includes(code) ? (code as TudiRefusalCode) : null;
+  const top = responseCode(err);
+  if (isKnown(top)) return top;
+  return problemErrors(err).map((e) => e.code).find(isKnown) ?? null;
 }
 
 type T = (key: string, params?: Record<string, string>) => string;

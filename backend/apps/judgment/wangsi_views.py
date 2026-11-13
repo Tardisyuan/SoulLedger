@@ -12,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import wangsi
 from apps.judgment.claims import ClaimRefusedError
@@ -57,9 +58,9 @@ class WangsiViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSe
         try:
             run(judgment.pk)
         except ClaimRefusedError as exc:  # 超度会结案:结案那一侧的拒绝(同一形状)也原样答复
-            return Response(exc.as_payload(), status=exc.status)
+            return problem(exc.status, **exc.as_payload())
         except PlanChangeRefusedError as exc:  # 结案的规则拒绝(五逆不能判 PASSED → 超度 400),整笔已回滚
-            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc), **exc.extra)
         return Response(JudgmentSerializer(Judgment.objects.get(pk=judgment.pk),
                                            context=self.get_serializer_context()).data)
 
@@ -143,6 +144,6 @@ class MeWangsiView(SoulAPIView):
         try:
             judgment = wangsi.file_grievance(data["judgment"], None, data["plea"], account=self.account)
         except wangsi.WangsiRefusedError as exc:
-            return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc))
         return Response(MeWangsiCaseSerializer(self._mine().get(pk=judgment.pk)).data,
                         status=status.HTTP_201_CREATED)

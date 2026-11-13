@@ -12,6 +12,7 @@ from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.problems import ProblemSerializer, problem
 from apps.judgment import ai_statutes, ai_verdict, claims
 from apps.judgment.models import Verdict
 from apps.soul_assist.views import OfficerAssistThrottle
@@ -59,17 +60,14 @@ class VerdictDraftResponseSerializer(serializers.Serializer):
     checks = VerdictDraftChecksSerializer()
 
 
-class JudgmentAIErrorSerializer(serializers.Serializer):
-    error = serializers.CharField()
-    code = serializers.CharField(help_text="concluded (409)")
-
+class JudgmentAIErrorSerializer(ProblemSerializer):
+    pass
 
 def _open_case(view, request, what):
     judgment = view.get_object()
     claims.assert_may_edit(judgment, request, what)
     if judgment.is_final or judgment.verdict is not None:
-        return judgment, Response({"error": "This judgment has been concluded.", "code": "concluded"},
-                                  status=status.HTTP_409_CONFLICT)
+        return judgment, problem(status.HTTP_409_CONFLICT, "concluded", "This judgment has been concluded.")
     return judgment, None
 
 

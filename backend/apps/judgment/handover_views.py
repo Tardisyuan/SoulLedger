@@ -11,11 +11,12 @@
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt
 from apps.judgment import handover
 from apps.perm.filters import DataScopeFilter
@@ -73,7 +74,7 @@ class _HandoverBase(APIView):
         return source, target
 
     def _refused(self, exc):
-        return Response(exc.as_payload(), status=exc.status)
+        return problem(exc.status, **exc.as_payload())
 
 
 class HandoverOfficerSerializer(serializers.Serializer):
@@ -104,7 +105,7 @@ class HandoverOfficersView(APIView):
         if is_tenant_exempt(request.user):
             raw = request.query_params.get("tenant", "")
             if not raw.isdigit():
-                return Response({"tenant": ["Give the hall id."]}, status=400)
+                raise ValidationError({"tenant": ["Give the hall id."]})
             tenant_id = int(raw)
         else:
             tenant = getattr(request, "tenant", None)

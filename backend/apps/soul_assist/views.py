@@ -20,6 +20,7 @@ from rest_framework.views import APIView
 
 from apps.core.locale import locale_from_request
 from apps.core.permissions import TenantPermission
+from apps.core.problems import problem
 from apps.core.throttling import ClientIPIdentMixin
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_accounts.me_views import SoulAPIView
@@ -84,11 +85,9 @@ class _AssistErrors:
 
     def handle_exception(self, exc):
         if isinstance(exc, service.AssistError):
-            body = {"detail": str(exc), "code": exc.code}
             retry_at = getattr(exc, "retry_at", None)
-            if retry_at is not None:
-                body["retry_at"] = retry_at.isoformat()
-            return Response(body, status=exc.status)
+            extra = {"retry_at": retry_at.isoformat()} if retry_at is not None else {}
+            return problem(exc.status, exc.code, str(exc), **extra)
         return super().handle_exception(exc)
 
     def throttled(self, request, wait):

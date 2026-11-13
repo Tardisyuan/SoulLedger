@@ -10,6 +10,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer as SimpleJWTTokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
+from apps.core.problems import ProblemSerializer
 from apps.core.tenant import is_tenant_exempt
 
 from . import signin_sessions
@@ -281,34 +282,29 @@ class MfaRequiredResponseSerializer(serializers.Serializer):
     username = serializers.CharField()
 
 
-class LoginFailedResponseSerializer(serializers.Serializer):
+class LoginFailedResponseSerializer(ProblemSerializer):
     """Doc-only: the 401 body of `LoginView` for wrong credentials.
 
     `remaining_attempts` is how many more failures this client IP may make
     before the next request is refused with 429 (0 means the next one is).
     """
 
-    detail = serializers.CharField()
     remaining_attempts = serializers.IntegerField(required=False)
 
 
-class LoginLockedResponseSerializer(serializers.Serializer):
+class LoginLockedResponseSerializer(ProblemSerializer):
     """Doc-only: the 429 body of `LoginView` once the limiter has tripped.
 
     `code` is always `login_locked`; `retry_after` is seconds until the
     window ends (also sent as the `Retry-After` header).
     """
 
-    error = serializers.CharField()
-    code = serializers.CharField()
     retry_after = serializers.IntegerField()
 
 
-class HallChoiceResponseSerializer(serializers.Serializer):
+class HallChoiceResponseSerializer(ProblemSerializer):
     """Doc-only: the 409 body of the officer login (`code` is `hall_required`)."""
 
-    code = serializers.CharField()
-    detail = serializers.CharField()
     halls = LoginHallSerializer(many=True)
 
 
@@ -618,10 +614,9 @@ class OpenWorkSerializer(serializers.Serializer):
     letters = serializers.IntegerField()
 
 
-class OfficerHasOpenWorkSerializer(serializers.Serializer):
+class OfficerHasOpenWorkSerializer(ProblemSerializer):
     """409 of a single deactivation. `open_work` is keyed by user id (one key)."""
 
-    error = serializers.CharField()
     code = serializers.ChoiceField(["officer_has_open_work"])
     open_work = serializers.DictField(child=OpenWorkSerializer())
 
@@ -851,15 +846,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class PasswordReasonSerializer(serializers.Serializer):
-    """Doc-only: one reason a new password was refused. `code` is Django's validator code
-    (`password_too_short` / `password_too_common` / `password_entirely_numeric` /
-    `password_too_similar`); `message` is its English sentence, a fallback for clients."""
-
-    code = serializers.CharField()
-    message = serializers.CharField()
-
-
 class ChangePasswordSerializer(serializers.Serializer):
     """Serializer for changing password with old password verification.
 
@@ -890,12 +876,9 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
 
-class ChangePasswordRefusalSerializer(serializers.Serializer):
-    """Doc-only 400 body: `old_password` is a list of sentences, `new_password` a list of reasons."""
-
-    old_password = serializers.ListField(child=serializers.CharField(), required=False)
-    new_password = PasswordReasonSerializer(many=True, required=False)
-    refresh = serializers.ListField(child=serializers.CharField(), required=False)
+class ChangePasswordRefusalSerializer(ProblemSerializer):
+    """Doc-only 400 body: a validation problem; `errors` carries `old_password` sentences and one `new_password`
+    item per failed validator, each with the validator's code."""
 
 
 class ChangePasswordResponseSerializer(serializers.Serializer):
@@ -937,7 +920,7 @@ PASSWORD_RESET_REFUSAL_CODES = [
 ]
 
 
-class PasswordResetRefusalSerializer(serializers.Serializer):
+class PasswordResetRefusalSerializer(ProblemSerializer):
     """Doc-only: every refusal of the two email-reset endpoints.
 
     `error` is for people and may be reworded; `code` is the contract.
@@ -945,7 +928,6 @@ class PasswordResetRefusalSerializer(serializers.Serializer):
     when `code` is `rate_limited`.
     """
 
-    error = serializers.CharField()
     code = serializers.ChoiceField(choices=PASSWORD_RESET_REFUSAL_CODES)
     retry_after = serializers.IntegerField(required=False)
     #: Present exactly when `code` is `reset_code_wrong`: further checks this code will take.

@@ -13,22 +13,12 @@ Every shape below was read off the function that builds it:
 from drf_spectacular.utils import PolymorphicProxySerializer, extend_schema_field
 from rest_framework import serializers
 
+from apps.core.problems import ProblemSerializer
 from apps.realms.models import RealmType
 
 
-class LedgerErrorSerializer(serializers.Serializer):
-    """`{"error": "NOT_FOUND", "message": "Soul not found"}`.
-
-    Two members, not one: `error` here is a machine code (NOT_FOUND,
-    FORBIDDEN) and `message` is the prose. That is a different body from the
-    `{"error": "<sentence>"}` the perm and auth views emit, which is why
-    apps/core/schema.py's ErrorResponseSerializer is not reused — a client
-    that printed this one's `error` would show the operator the word
-    "NOT_FOUND".
-    """
-
-    error = serializers.CharField()
-    message = serializers.CharField()
+class LedgerErrorSerializer(ProblemSerializer):
+    """The ledger's refusals: a plain problem (`not_found`, `invalid_range` …); the schema folds it into `Problem`."""
 
 
 # ── The reading: one shape per cosmology ─────────────────────────────────
@@ -273,7 +263,7 @@ class LedgerInheritanceSerializer(serializers.Serializer):
     inheritance_demerit_rate = serializers.FloatField()
 
 
-class RebirthNotApplicableSerializer(serializers.Serializer):
+class RebirthNotApplicableSerializer(ProblemSerializer):
     """409 body of `LedgerInheritanceView` — `RebirthNotApplicable.detail`.
 
     409 and not 404: the soul reads back fine, it is the operation its
@@ -281,9 +271,7 @@ class RebirthNotApplicableSerializer(serializers.Serializer):
     `code` is the member to branch on.
     """
 
-    code = serializers.CharField()
     civilization = serializers.CharField()
-    detail = serializers.CharField()
 
 
 # ── Overview statistics ──────────────────────────────────────────────────
@@ -440,12 +428,10 @@ class LedgerJournalSerializer(serializers.Serializer):
     results = LedgerJournalRowSerializer(many=True)
 
 
-class LedgerJournalErrorSerializer(serializers.Serializer):
+class LedgerJournalErrorSerializer(ProblemSerializer):
     """400 body of `LedgerJournalView`: which parameter, and why."""
 
-    error = serializers.CharField()
     field = serializers.CharField()
-    message = serializers.CharField()
 
 
 class LedgerTrendPointSerializer(serializers.Serializer):

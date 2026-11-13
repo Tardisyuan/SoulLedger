@@ -12,7 +12,7 @@
  * (`conclude_refusal` 非空:城隍、候审、防腐、杜阿特未走完、未渡)不进卡堆,仍在队列里。
  * 落印走 `confirmedDecision`(我的 › 批准前验证面容 / 指纹),同其他决定。
  */
-import { responseData } from "@soulledger/core/api/client";
+import { problemDetail } from "@soulledger/core/api/client";
 import { concludeRefusalOf, judgmentApi, type ConcludeJudgmentPayload, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { Animated, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
@@ -49,9 +49,7 @@ export function verdictFailure(t: T, e: unknown): string {
   if (refusal?.kind === "weighing") return t(`judgment.weighing.errors.${refusal.code}`);
   if (refusal?.kind === "plan") return t(`sentence_plan.errors.${refusal.code}`);
   if (refusal?.kind === "fail_reason") return t(`judgment.fail_reason_errors.${refusal.code}`);
-  const body = responseData<{ detail: unknown; error: unknown }>(e);
-  const said = typeof body?.detail === "string" ? body.detail : typeof body?.error === "string" ? body.error : "";
-  return said.trim() || t("officer_app.state.error_title");
+  return problemDetail(e)?.trim() || t("officer_app.state.error_title");
 }
 
 export function SwipeScreen({ onBack }: { onBack: () => void }) {

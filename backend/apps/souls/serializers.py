@@ -9,6 +9,7 @@ from rest_framework.exceptions import APIException
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.csv_safe import csv_safe
 from apps.core.field_permissions import DROP, FieldPermissionMixin, hidden_fields, withhold
+from apps.core.problems import ProblemSerializer
 from apps.core.tenant import is_tenant_exempt, request_tenant
 from apps.org.ownership import check_owner_org, owner_org_field
 from apps.souls import acheron
@@ -1131,7 +1132,7 @@ class SoulBatchRecycleResultSerializer(serializers.Serializer):
 SOUL_BATCH_RECYCLE_ERROR_CODES = [("not_found", "not_found"), ("not_deletable", "not_deletable")]
 
 
-class SoulBatchRecycleErrorSerializer(serializers.Serializer):
+class SoulBatchRecycleErrorSerializer(ProblemSerializer):
     """404 / 409 body of `POST /souls/batch-recycle/`. Nothing was recycled.
 
     `error` is the same key the single delete's 409 uses; `code` is added so a
@@ -1140,7 +1141,6 @@ class SoulBatchRecycleErrorSerializer(serializers.Serializer):
     selection. `archivable` is present on 409 only, as on the single delete.
     """
     code = serializers.ChoiceField(choices=SOUL_BATCH_RECYCLE_ERROR_CODES)
-    error = serializers.CharField()
     ids = serializers.ListField(child=serializers.UUIDField())
     archivable = serializers.BooleanField(required=False)
 
@@ -1167,12 +1167,16 @@ class SoulImportRowSerializer(serializers.Serializer):
 
 
 class SoulImportPreviewSerializer(serializers.Serializer):
-    """200 of `…/import/preview/` and 422 of `…/import/commit/` (rows have errors; nothing written)."""
+    """200 of `…/import/preview/`; the 422 of `…/import/commit/` is `SoulImportRowsInvalidSerializer`."""
     total = serializers.IntegerField()
     ok_count = serializers.IntegerField()
     error_count = serializers.IntegerField()
     max_rows = serializers.IntegerField()
     rows = SoulImportRowSerializer(many=True)
+
+
+class SoulImportRowsInvalidSerializer(ProblemSerializer, SoulImportPreviewSerializer):
+    """422 `import_rows_invalid` of `…/import/commit/`: the preview's members on a problem; nothing written."""
 
 
 class SoulImportCommitSerializer(serializers.Serializer):
@@ -1220,9 +1224,8 @@ class SoulRegionUpdateCommitSerializer(serializers.Serializer):
     rows = SoulRegionUpdateRowSerializer(many=True)
 
 
-class SoulImportFileErrorSerializer(serializers.Serializer):
+class SoulImportFileErrorSerializer(ProblemSerializer):
     """400: the file as a whole is unusable. Nothing was read or written."""
-    code = serializers.CharField()
     columns = serializers.ListField(child=serializers.CharField(), required=False)
     max_rows = serializers.IntegerField(required=False)
     max_bytes = serializers.IntegerField(required=False)
@@ -1234,6 +1237,5 @@ class SoulStationMoveSerializer(serializers.Serializer):
     station = serializers.ChoiceField(choices=Soul.DiyuStation.choices)
 
 
-class SoulStationRefusalSerializer(serializers.Serializer):
-    code = serializers.CharField()
-    error = serializers.CharField()
+class SoulStationRefusalSerializer(ProblemSerializer):
+    pass

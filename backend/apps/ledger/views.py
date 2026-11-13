@@ -19,6 +19,7 @@ from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.field_permissions import hidden_fields
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.disposition.models import Disposition
 from apps.ledger.journal import JournalParamError, build_journal, journal_records, rows_in_data_scope
@@ -35,7 +36,7 @@ from apps.ledger.serializers import (
     LedgerTrendsSerializer,
     RebirthNotApplicableSerializer,
 )
-from apps.ledger.services import LedgerService, RebirthNotApplicable
+from apps.ledger.services import LedgerService
 from apps.ledger.snapshots import previous_month_average
 from apps.perm.filters import DataScopeFilter
 from apps.realms.models import Realm, resolve_localized_name
@@ -90,10 +91,7 @@ class LedgerBalanceView(APIView):
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
-            return Response(
-                {"error": "NOT_FOUND", "message": "Soul not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Soul not found")
 
         summary = LedgerService.get_ledger_summary(soul)
         return Response(ledger_body_for(request.user, summary))
@@ -125,10 +123,7 @@ class LedgerRecalculateView(APIView):
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
-            return Response(
-                {"error": "NOT_FOUND", "message": "Soul not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Soul not found")
 
         result = LedgerService.recalculate_soul_ledger(soul)
         return Response(result)
@@ -154,10 +149,7 @@ class LedgerEffectiveView(APIView):
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
-            return Response(
-                {"error": "NOT_FOUND", "message": "Soul not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Soul not found")
 
         result = LedgerService.get_effective_ledger(soul)
         return Response(ledger_body_for(request.user, result))
@@ -197,20 +189,11 @@ class LedgerInheritanceView(APIView):
         try:
             soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
-            return Response(
-                {"error": "NOT_FOUND", "message": "Soul not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Soul not found")
 
-        # RebirthNotApplicable is an APIException, so DRF would render it
-        # correctly on its own. Caught here anyway so the 409 body is written
-        # where the endpoint's other error shapes are, and so it stays a
-        # machine-readable {code, civilization, detail} rather than whatever
-        # the default renderer happens to do with it.
-        try:
-            result = LedgerService.get_reincarnation_inheritance(soul)
-        except RebirthNotApplicable as exc:
-            return Response(exc.detail, status=exc.status_code)
+        # RebirthNotApplicable is an APIException: the exception handler answers it as a 409 problem
+        # `{code: rebirth_not_applicable, civilization, detail}` (apps/core/problems.py).
+        result = LedgerService.get_reincarnation_inheritance(soul)
         return Response(ledger_body_for(request.user, result))
 
 
@@ -286,11 +269,8 @@ def _hide_journal_scores(body: dict, *, searched: bool) -> None:
 
 
 def _journal_param_error(exc: JournalParamError) -> Response:
-    code = "MONTH_TOO_LARGE" if exc.field == "all" else "INVALID_PARAMETER"
-    return Response(
-        {"error": code, "field": exc.field, "message": str(exc)},
-        status=status.HTTP_400_BAD_REQUEST,
-    )
+    code = "month_too_large" if exc.field == "all" else "invalid_parameter"
+    return problem(status.HTTP_400_BAD_REQUEST, code, str(exc), field=exc.field)
 
 
 class LedgerJournalExportView(APIView):
@@ -794,10 +774,8 @@ class LedgerTrendsView(APIView):
     def get(self, request):
         key = request.query_params.get("range", "30d")
         if key not in TREND_RANGES:
-            return Response(
-                {"error": "INVALID_RANGE", "message": f"range must be one of {', '.join(TREND_RANGES)}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "invalid_range",
+                           f"range must be one of {', '.join(TREND_RANGES)}")
         until = timezone.now().date()
         since = until - timedelta(days=TREND_RANGES[key] - 1)
 

@@ -17,7 +17,7 @@ from rest_framework.response import Response
 
 from apps.core import recycle_bin
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.schema import ErrorResponseSerializer
+from apps.core.problems import ProblemSerializer, problem
 from apps.core.tenant import is_tenant_exempt
 from apps.core.viewsets import CodenameViewSetMixin
 
@@ -106,14 +106,13 @@ class RecycleBinRestoreRequestSerializer(serializers.Serializer):
     cascade_id = serializers.UUIDField()
 
 
-class RecycleBinRestoreRefusalSerializer(serializers.Serializer):
+class RecycleBinRestoreRefusalSerializer(ProblemSerializer):
     """400 body of restore. `code` / `missing_roles` come with a refusal from a
     registered restore check (`template_role_missing`: a workflow template in
     the cascade names roles that no longer exist) or `system_void` (the system voided the rows, e.g. a
     refused Egyptian weighing; they never come back through the bin); the other 400s carry
     `error` alone."""
 
-    error = serializers.CharField()
     code = serializers.ChoiceField(choices=["template_role_missing", "system_void"], required=False)
     missing_roles = serializers.ListField(child=serializers.CharField(), required=False)
 
@@ -150,10 +149,8 @@ def _admin_only():
     # delete are ADMIN's, whatever the grant table says. The matrix refuses
     # the grant (`admin_only_permission`, apps/perm/matrix.py); this refuses
     # the act, so a grant written some other way still does nothing.
-    return Response(
-        {"error": "Only ADMIN may restore or permanently delete from the recycle bin."},
-        status=status.HTTP_403_FORBIDDEN,
-    )
+    return problem(status.HTTP_403_FORBIDDEN, None,
+                   "Only ADMIN may restore or permanently delete from the recycle bin.")
 
 
 class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
@@ -186,8 +183,8 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         responses={
             200: RecycleBinRestoreResultSerializer,
             400: RecycleBinRestoreRefusalSerializer,
-            403: ErrorResponseSerializer,
-            404: ErrorResponseSerializer,
+            403: ProblemSerializer,
+            404: ProblemSerializer,
         },
     )
     @action(detail=False, methods=["post"])
@@ -205,18 +202,15 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
             return _admin_only()
         cascade_id = request.data.get("cascade_id")
         if not cascade_id:
-            return Response({"error": "cascade_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "cascade_id is required")
         try:
             restored = recycle_bin.restore_cascade(cascade_id, tenant=scope)
         except recycle_bin.RestoreRefusedError as refused:
-            return Response(refused.body, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, **refused.body)
         except (ValueError, TypeError):
-            return Response({"error": "cascade_id is not a valid UUID"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "cascade_id is not a valid UUID")
         if restored == 0:
-            return Response(
-                {"error": "No soft-deleted rows found for this cascade_id"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, None, "No soft-deleted rows found for this cascade_id")
         return Response({"restored": restored})
 
     @extend_schema(
@@ -225,7 +219,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         # unknown entity type, a domain record, a row still inside its
         # retention window. The view distinguishes them in `error`, not in the
         # status code.
-        responses={204: None, 400: ErrorResponseSerializer, 403: ErrorResponseSerializer},
+        responses={204: None, 400: ProblemSerializer, 403: ProblemSerializer},
     )
     @action(detail=False, methods=["post"], url_path="hard-delete")
     def hard_delete(self, request):
@@ -244,31 +238,17 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         entity_type = request.data.get("entity_type")
         pk = request.data.get("id")
         if not entity_type or pk is None:
-            return Response(
-                {"error": "entity_type and id are required"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, "entity_type and id are required")
         bin_type = recycle_bin.get_bin_type(entity_type)
         if bin_type is None:
-            return Response({"error": f"Unknown entity_type: {entity_type}"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, f"Unknown entity_type: {entity_type}")
         if bin_type.kind != "reference":
-            return Response(
-                {
-                    "error": (
-                        f"{entity_type} is a domain record, not reference data — it has no hard "
+            return problem(status.HTTP_400_BAD_REQUEST, None,
+                           f"{entity_type} is a domain record, not reference data — it has no hard "
                         "delete path. Archive it if it has a concluded judgment, or restore it "
-                        "if it was deleted in error."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+                        "if it was deleted in error.")
         if not recycle_bin.hard_delete(entity_type, pk, tenant=scope):
-            return Response(
-                {
-                    "error": (
-                        "Cannot hard-delete: row not found, not deleted, or still inside its "
-                        f"{recycle_bin.REFERENCE_DATA_RETENTION_DAYS}-day retention window."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None,
+                           "Cannot hard-delete: row not found, not deleted, or still inside its "
+                        f"{recycle_bin.REFERENCE_DATA_RETENTION_DAYS}-day retention window.")
         return Response(status=status.HTTP_204_NO_CONTENT)

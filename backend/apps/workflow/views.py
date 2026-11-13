@@ -14,6 +14,7 @@ from apps.core.client_ip import get_client_ip
 from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.perm.filters import DataScopeFilter
@@ -117,19 +118,13 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # A template saved before the pair was checked on save (2026-10-29) is refused here too.
         refusal = template_pair_refusal(template.civilization, template.case_type)
         if refusal is not None:
-            return Response(refusal, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, **refusal)
         try:
             versioning.publish(template, user=request.user)
         except versioning.NothingToPublishError:
-            return Response(
-                {"error": "no_draft", "detail": "该模板没有待发布的草稿。"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "no_draft", "该模板没有待发布的草稿。")
         except versioning.PublishRejectedError as rejected:
-            return Response(
-                {"error": "invalid_draft", "issues": rejected.issues},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "invalid_draft", issues=rejected.issues)
         template.refresh_from_db()
         return Response(WorkflowTemplateSerializer(template, context={"request": request}).data)
 
@@ -165,11 +160,11 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             None,
         ) if node_id else None
         if node is None:
-            return Response({"error": "node_not_found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, "node_not_found")
 
         civilization = request.query_params.get("civilization") or template.civilization
         if civilization not in Civilization.values:
-            return Response({"error": "invalid_civilization"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "invalid_civilization")
 
         own = request_tenant(request)
         code = request.query_params.get("tenant")
@@ -177,11 +172,11 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             code = code or CIVILIZATION_TENANT.get(civilization)
             tenant = Tenant.objects.filter(code=code).first() if code else own
         elif code and (own is None or code != own.code):
-            return Response({"error": "tenant_forbidden"}, status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, "tenant_forbidden")
         else:
             tenant = own
         if tenant is None:
-            return Response({"error": "tenant_not_found"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "tenant_not_found")
 
         body = preview.preview_node(node, civilization, tenant)
         body.update({"node": node_id, "civilization": civilization, "tenant": tenant.code})
@@ -227,7 +222,7 @@ _SEGMENT_ORDER = OpenApiParameter("order", int, OpenApiParameter.PATH, descripti
 
 
 def _refused(exc):
-    return Response({"code": exc.code, "error": str(exc), **exc.extra}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc), **exc.extra)
 
 
 def _hook_refusals() -> tuple:
@@ -243,8 +238,7 @@ def _hook_refusals() -> tuple:
 
 
 def _hook_refused(exc):
-    return Response({**getattr(exc, "extra", {}), "code": exc.code, "error": str(exc)},
-                    status=status.HTTP_409_CONFLICT)
+    return problem(status.HTTP_409_CONFLICT, exc.code, str(exc), **getattr(exc, "extra", {}))
 
 
 class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -343,24 +337,22 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         civilization = request.query_params.get("civilization", "")
         soul_id = request.query_params.get("soul", "")
         if bool(civilization) == bool(soul_id):
-            return Response({"code": "civilization_or_soul", "error": "Give exactly one of civilization or soul"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "civilization_or_soul",
+                           "Give exactly one of civilization or soul")
         if soul_id:
             try:
                 uuid.UUID(soul_id)
             except ValueError:
-                return Response({"code": "soul_not_found", "error": "Soul not found"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "soul_not_found", "Soul not found")
             # Same scoping as `start`: another tenant's soul is a 404.
             soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=soul_id).first()
             if soul is None:
-                return Response({"code": "soul_not_found", "error": "Soul not found"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "soul_not_found", "Soul not found")
             civilization = soul.civilization
         valid = VALID_CASE_TYPES_BY_CIVILIZATION.get(civilization)
         if not valid:
-            return Response({"code": "unknown_civilization", "error": f"Unknown civilization '{civilization}'"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "unknown_civilization",
+                           f"Unknown civilization '{civilization}'")
         rows = [
             {"value": c.value, "builtin": bool((formal_template(civilization, c) or {}).get("nodes"))}
             for c in CaseType
@@ -399,28 +391,25 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         soul_id, judgment_id, template_id = param_uuid("soul"), param_uuid("judgment"), param_uuid("template")
         if False in (soul_id, judgment_id, template_id):
-            return Response({"code": "not_found", "error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Not found")
         judgment = None
         if judgment_id:
             judgment = (DataScopeFilter.filter_queryset(
                 request, scope_to_tenant(Judgment.objects.select_related("soul", "tenant"), request), Judgment)
                         .filter(pk=judgment_id).first())
             if judgment is None:
-                return Response({"code": "judgment_not_found", "error": "Judgment not found"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "judgment_not_found", "Judgment not found")
         if soul_id:
             soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=soul_id).first()
             if soul is None:
-                return Response({"code": "soul_not_found", "error": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "soul_not_found", "Soul not found")
             if judgment is not None and judgment.soul_id != soul.pk:
-                return Response({"code": "judgment_not_found", "error": "Judgment not found for this soul"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "judgment_not_found", "Judgment not found for this soul")
             tenant = soul.tenant
         elif judgment is not None:
             soul, tenant = judgment.soul, judgment.tenant
         else:
-            return Response({"code": "soul_or_judgment", "error": "Give soul or judgment"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "soul_or_judgment", "Give soul or judgment")
 
         case_type = request.query_params.get("case_type") or None
         if template_id:
@@ -431,19 +420,17 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 .first()
             )
             if db_template is None:
-                return Response({"code": "template_not_found", "error": "No such template for this soul"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "template_not_found", "No such template for this soul")
             template, _priority = WorkflowService.stored_template(db_template)
             case_type = db_template.case_type
         else:
             if case_type is None:
                 if soul_id:
-                    return Response({"code": "case_type_required", "error": "Give case_type or template"},
-                                    status=status.HTTP_400_BAD_REQUEST)
+                    return problem(status.HTTP_400_BAD_REQUEST, "case_type_required", "Give case_type or template")
                 case_type = WorkflowService.judgment_case_type(soul.civilization)
             invalid = WorkflowService.validate_civilization_case_type(soul.civilization, case_type)
             if invalid:
-                return Response({"code": "invalid_case_type", "error": invalid}, status=status.HTTP_400_BAD_REQUEST)
+                return problem(status.HTTP_400_BAD_REQUEST, "invalid_case_type", invalid)
             template, _priority = WorkflowService._resolve_template(soul.civilization, case_type, tenant)
         body = segments.flow_preview(soul, case_type, tenant, template, judgment)
         return Response(FlowPreviewSerializer(body).data)
@@ -471,7 +458,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # its existence is not this caller's to learn.
         soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=data["soul"]).first()
         if soul is None:
-            return Response({"code": "soul_not_found", "error": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, "soul_not_found", "Soul not found")
         tenant = soul.tenant
 
         judgment = None
@@ -482,17 +469,15 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 request, scope_to_tenant(Judgment.objects.all(), request), Judgment)
                         .filter(pk=data["judgment"], soul=soul).first())
             if judgment is None:
-                return Response({"code": "judgment_not_found", "error": "Judgment not found for this soul"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "judgment_not_found", "Judgment not found for this soul")
             if hasattr(judgment, "approval_workflow"):
-                return Response({"code": "judgment_has_workflow", "error": "Workflow already exists for this judgment"},
-                                status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, "judgment_has_workflow",
+                               "Workflow already exists for this judgment")
             # 只收已结案的(流程走查 2026-11-12 F-JUDG-03):`judgment` 是一对一,手动流程占住一件未结案的位置,
             # 原审结案时要建的审批流程就建不了,那件案子从此结不成。
             if not judgment.is_final:
-                return Response({"code": "judgment_not_concluded",
-                                 "error": "Only a concluded judgment can be attached to a workflow"},
-                                status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, "judgment_not_concluded",
+                               "Only a concluded judgment can be attached to a workflow")
 
         template = None
         case_type = data.get("case_type")
@@ -506,9 +491,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 .first()
             )
             if db_template is None:
-                return Response({"code": "template_not_found",
-                                 "error": "No active template with nodes for this soul's civilization"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND, "template_not_found",
+                               "No active template with nodes for this soul's civilization")
             template = WorkflowService.stored_template(db_template)
             case_type = db_template.case_type
 
@@ -541,16 +525,14 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         except segments.SegmentRefusedError as refused:
             return _refused(refused)
         except WorkflowInProgressError as busy:
-            return Response(
-                {"code": "workflow_in_progress",
-                 "error": "This soul already has a workflow of this case type in progress",
-                 "workflow": str(busy.workflow.pk), "number": busy.workflow.number, "status": busy.workflow.status,
-                 "case_type": busy.workflow.case_type},
-                status=status.HTTP_409_CONFLICT,
+            return problem(
+                status.HTTP_409_CONFLICT, "workflow_in_progress",
+                "This soul already has a workflow of this case type in progress",
+                workflow=str(busy.workflow.pk), number=busy.workflow.number, workflow_status=busy.workflow.status,
+                case_type=busy.workflow.case_type,
             )
         except ValueError as e:
-            return Response({"code": getattr(e, "code", "invalid_case_type"), "error": str(e)},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, getattr(e, "code", "invalid_case_type"), str(e))
         return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
@@ -590,22 +572,17 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         workflow = self.get_object()
         reason = (request.data.get("reason") or "").strip()
         if not reason:
-            return Response(
-                {"code": "reason_required", "error": "reason is required", "detail": "推进必须说明理由"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "reason_required", "推进必须说明理由")
         node = workflow.current_node  # None on a hand-built flow with no pointer: advance only sets it
         try:
             advanced = workflow.advance_to_next(user=request.user, reason=reason)
         except FinalReviewRequiredError as exc:
-            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, exc.code, str(exc))
         except _hook_refusals() as exc:
             return _hook_refused(exc)
         if not advanced:
-            return Response(
-                {"code": "no_successor", "error": "No next node available or workflow already completed"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "no_successor",
+                           "No next node available or workflow already completed")
         from apps.audit.models import AuditAction, AuditLog
 
         AuditLog.objects.create(
@@ -647,10 +624,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         reason = (request.data.get("reason") or "").strip()
         if not reason:
-            return Response(
-                {"code": "reason_required", "error": "reason is required", "detail": "越级推进必须说明理由"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "reason_required", "越级推进必须说明理由")
 
         node = workflow.current_node
         # Marks the node ESCALATED before moving on. Calling `advance_to_next`
@@ -661,16 +635,13 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             escalated = workflow.escalate_current_node(user=request.user, reason=reason)
         except EscalationRefusedError as exc:
             # 越级最多到终审那一站(用户 2026-10-29,审查 A):越过终审、或越级会让流程直接走完,400,什么都没写。
-            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, exc.code, str(exc))
         except _hook_refusals() as exc:
             # Escalating past the last stop ends the flow, and with it the merged cross-realm judgment (or the
             # judgment the flow decides): a refusal there rolls the escalation back.
             return _hook_refused(exc)
         if not escalated:
-            return Response(
-                {"code": "no_pending_node", "error": "No pending node to escalate past"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "no_pending_node", "No pending node to escalate past")
 
         from apps.audit.models import AuditAction, AuditLog
 
@@ -707,10 +678,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         workflow = self.get_object()
         reason = (request.data.get("reason") or "").strip()
         if not reason:
-            return Response(
-                {"code": "reason_required", "error": "reason is required", "detail": "结束流程必须说明理由"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "reason_required", "结束流程必须说明理由")
         from django.db import transaction
 
         from apps.audit.models import AuditAction, AuditLog
@@ -718,8 +686,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         node = workflow.current_node
         with transaction.atomic():
             if not WorkflowService.terminate(workflow, user=request.user, reason=reason):
-                return Response({"code": "workflow_finished", "error": "This workflow has already ended"},
-                                status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, "workflow_finished", "This workflow has already ended")
             AuditLog.objects.create(
                 tenant=getattr(workflow, "tenant", None),
                 user=request.user,
@@ -752,12 +719,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             node = workflow.get_current_node()
 
         if not node:
-            return Response({"error": "Node not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, None, "Node not found")
 
         if node.status != NodeStatus.PENDING:
             code, extra = decision_codes.block_for(node, request.user)
-            return Response({"error": "Node already processed", "code": code, **extra},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, code, "Node already processed", **extra)
 
         # Approver identity. `workflow.approve` (CodenamePermission, above)
         # answers "may this user approve things" — it cannot answer "may this
@@ -790,31 +756,16 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # way past and leaves an AuditLog.
         if not node.can_approve(request.user):
             if not node.designates_approver:
-                return Response(
-                    {
-                        "code": "no_approver",
-                        "error": "Node designates no approver",
-                        "detail": (
-                            "该节点未指定审批人（approver_type=SYSTEM 或 approver_actor 为空），"
+                return problem(status.HTTP_403_FORBIDDEN, "no_approver",
+                               "该节点未指定审批人（approver_type=SYSTEM 或 approver_actor 为空），"
                             "无人满足其身份条件；请为节点配置审批人，或使用越级推进（escalate）"
-                            "留痕推进"
-                        ),
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-            return Response(
-                {
-                    "code": decision_codes.block_for(node, request.user)[0],
-                    "error": "Not the designated approver for this node",
-                    "detail": "只有该节点指定的审批人可以审批；如需推进请使用越级推进（escalate）",
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
+                            "留痕推进")
+            return problem(status.HTTP_403_FORBIDDEN, decision_codes.block_for(node, request.user)[0],
+                           "只有该节点指定的审批人可以审批；如需推进请使用越级推进（escalate）")
         if not workflow.is_current(node):
             # Only the stop the flow stands on (2026-10-18); a later stop waits its turn. After the identity
             # check: someone who is not this stop's approver is told so first.
-            return Response({"error": "This is not the current step.", "code": "not_current"},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "not_current", "This is not the current step.")
 
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
@@ -822,25 +773,16 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         from apps.workflow import cosign
 
         if node.cosigners_json and cosign.blocks_approval(node, request.user, verdict in ("PASSED", "CONFIRMED")):
-            return Response(
-                {"code": "cosigners_pending", "error": "Co-signatures are still owed.",
-                 "detail": "被加签的人还没有全部签完,你的批准暂不能生效。"},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "cosigners_pending", "被加签的人还没有全部签完,你的批准暂不能生效。")
         soul_reason = serializer.validated_data.get("rejection_reason_for_soul", "")
 
         # 转生申请:驳回必须附一段给灵魂看的理由(2026-09-17 用户决定)。节点 notes 是内部备注。
         from apps.soul_accounts import rebirth
 
         if rebirth.requires_reason_for_soul(workflow, verdict) and not soul_reason.strip():
-            return Response(
-                {
-                    "code": "reason_required",
-                    "error": "rejection_reason_for_soul is required",
-                    "detail": "驳回转生申请必须填写给灵魂的驳回理由(rejection_reason_for_soul);内部备注写在 notes。",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            said = "驳回转生申请必须填写给灵魂的驳回理由(rejection_reason_for_soul);内部备注写在 notes。"
+            return problem(status.HTTP_400_BAD_REQUEST, "reason_required", said,
+                           errors=[{"field": "rejection_reason_for_soul", "code": "required", "detail": said}])
 
         # 官员端 App 驳回必须写理由(`require_reason`,桌面端不传,行为不变)。
         # 转生申请的理由已由上面那道检查负责(给灵魂的那段)。
@@ -850,10 +792,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             and not notes.strip()
             and not rebirth.requires_reason_for_soul(workflow, verdict)
         ):
-            return Response(
-                {"code": "reason_required", "error": "reason is required", "detail": "驳回必须写理由。"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "reason_required", "驳回必须写理由。")
 
         try:
             # 决定与给灵魂的理由同一事务(申请状态的同步也在这个事务里,见下)。
@@ -880,15 +819,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             # `required_verdicts` and this verdict is not in it (`verdict_not_accepted`), or for SKIPPED
             # (`skipped_not_a_verdict`). A 400 rather than a 500: the client sent a verdict this node does not
             # accept, and it can see which ones it does.
-            return Response(
-                {
-                    "code": exc.code,
-                    "error": "This node does not accept that verdict.",
-                    "detail": str(exc),
-                    "required_verdicts": node.required_verdicts,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, exc.code, str(exc), required_verdicts=node.required_verdicts)
         if success:
             # Whoever the workflow moved on to hears about it (the timeline event was written above, in the
             # decision's transaction).
@@ -902,20 +833,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # -- and the whole point of the lock is that the loser must find out.
         node.refresh_from_db()
         if node.status != NodeStatus.PENDING:
-            return Response(
-                {
-                    "code": "already_handled",
-                    "handled_by": decision_codes.handled_by(node),
-                    "error": "This node was already decided.",
-                    "detail": (
-                        f"Its verdict is {node.verdict or node.status}. Your "
-                        f"decision was not recorded."
-                    ),
-                    "node_status": node.status,
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-        return Response({"error": "Failed to complete node"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_409_CONFLICT, "already_handled",
+                           f"Its verdict is {node.verdict or node.status}. Your "
+                        f"decision was not recorded.",
+                           handled_by=decision_codes.handled_by(node), node_status=node.status)
+        return problem(status.HTTP_400_BAD_REQUEST, None, "Failed to complete node")
 
     @extend_schema(responses=WorkflowStatsSerializer)
     @action(detail=True, methods=["get"])
@@ -989,7 +911,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         except segments.SegmentRefusedError as refused:
             return _refused(refused)
         except segments.CrossConclusionRefusedError as exc:
-            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, exc.code, str(exc))
         return self._segment_response(request, workflow.pk)
 
     @extend_schema(parameters=[_SEGMENT_ORDER], request=None,
@@ -1013,29 +935,26 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         """
         judgment_id = request.data.get("judgment_id")
         if not judgment_id:
-            return Response({"error": "judgment_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "judgment_id is required")
 
         from apps.judgment.models import Judgment
         tenant = getattr(request, "tenant", None)
         judgment = Judgment.objects.filter(id=judgment_id, tenant=tenant).first()
         if not judgment:
-            return Response({"error": "Judgment not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, None, "Judgment not found")
 
         if not judgment.is_final:
-            return Response({"error": "Judgment must be concluded first"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "Judgment must be concluded first")
 
         if hasattr(judgment, "approval_workflow"):
-            return Response({"error": "Workflow already exists for this judgment"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "Workflow already exists for this judgment")
 
         case_type = request.data.get("case_type")
         if request.data.get("is_appeal") or case_type == "APPEAL":
             # An APPEAL flow built here had no appeal behind it, so finishing it did nothing (2026-10-29). Appeals
             # go up their flow from the soul's side (`apps/judgment/appeals.py::file(escalate=True)`).
-            return Response(
-                {"code": "appeal_not_from_judgment",
-                 "error": "An appeal flow is opened by the soul's appeal, not from a judgment"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "appeal_not_from_judgment",
+                           "An appeal flow is opened by the soul's appeal, not from a judgment")
         # `.get("priority")`, NOT `.get("priority", 0)`. The default turned every
         # request that omitted the field into an explicit "normal", which
         # `WorkflowService._resolve_priority` cannot tell from a caller who
@@ -1053,12 +972,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 priority=priority,
             )
         except ValueError as e:
-            return Response({"code": getattr(e, "code", "invalid_case_type"), "error": str(e)},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, getattr(e, "code", "invalid_case_type"), str(e))
 
         if workflow:
             return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data, status=status.HTTP_201_CREATED)
-        return Response({"error": "Failed to create workflow"}, status=status.HTTP_400_BAD_REQUEST)
+        return problem(status.HTTP_400_BAD_REQUEST, None, "Failed to create workflow")
 
 
 class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):

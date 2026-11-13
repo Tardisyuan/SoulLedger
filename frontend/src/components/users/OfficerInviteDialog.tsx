@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { officerRefusalOf, usersApi, type OfficerInviteInput } from "@soulledger/core/api";
+import { problemFieldErrors } from "@soulledger/core/api/client";
 import { userKeys } from "@soulledger/core/query_keys";
 import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
@@ -56,7 +57,7 @@ export function OfficerInviteDialog({ isOpen, onClose }: { isOpen: boolean; onCl
       const field = refusal?.field ? (refusal.field as keyof typeof errors) : refusal ? FIELD_OF[refusal.code] : undefined;
       if (refusal && field && FIELD_OF[refusal.code]) {
         setErrors({ [field]: t(`officerInvite.error.${refusal.code}`) });
-      } else if ((error as { response?: { data?: { email?: unknown } } })?.response?.data?.email) {
+      } else if (problemFieldErrors(error).email) {
         setErrors({ email: t("officerInvite.error.email_invalid") });
       } else {
         showToast(t("users.create_error"), "error");

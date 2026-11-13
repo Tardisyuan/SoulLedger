@@ -50,6 +50,7 @@ from apps.chat.serializers import (
 )
 from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import scope_to_tenant
 from apps.core.throttling import ClientIPIdentMixin
 from apps.core.viewsets import CodenameViewSetMixin
@@ -58,7 +59,7 @@ from apps.soul_accounts.me_views import SoulAPIView
 
 
 def _error(exc):
-    response = Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+    response = problem(exc.status, exc.code, str(exc))
     retry_at = getattr(exc, "retry_at", None)
     if retry_at is not None:
         response.data["retry_at"] = retry_at.isoformat()
@@ -71,8 +72,7 @@ def _error(exc):
 def _unavailable(exc):
     """Synapse 没配 / 连不上。两者都不是调用者的错,所以是 503 而不是 4xx 也不是 500。"""
     code = "chat_not_configured" if isinstance(exc, MatrixNotConfiguredError) else "chat_unavailable"
-    return Response({"detail": str(exc), "code": code},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return problem(status.HTTP_503_SERVICE_UNAVAILABLE, code, str(exc))
 
 
 class ChatView(SoulAPIView):
@@ -278,10 +278,9 @@ class ChatPushHookView(APIView):
     @extend_schema(exclude=True)
     def post(self, request):
         if not settings.MATRIX_ENABLED or not hook.secret():
-            return Response({"detail": "聊天未启用。", "code": "chat_not_configured"},
-                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return problem(status.HTTP_503_SERVICE_UNAVAILABLE, "chat_not_configured", "聊天未启用。")
         if not hook.verify(hook.secret(), request.data):
-            return Response({"detail": "签名无效。", "code": "bad_signature"}, status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, "bad_signature", "签名无效。")
         ids = svc.notify_new_message(request.data["room_id"], request.data["event_id"], request.data["sender"])
         return Response({"queued": len(ids)})
 
@@ -377,12 +376,12 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         # `?before=<event_id>`:比这封更早的一页(App 的「更早」)。它进 Synapse 的路径,在 matrix.py 里转义。
         before = request.query_params.get("before") or None
         if before is not None and len(before) > 255:
-            return Response({"detail": "before 太长。", "code": "bad_before"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "bad_before", "before 太长。")
         try:
             rows = svc.officer_messages(conversation, request.user, request=request, before=before)
         except MatrixError as exc:
             if before is not None and getattr(exc, "status", None) == 404:
-                return Response({"detail": "没有这封信。", "code": "bad_before"}, status=status.HTTP_400_BAD_REQUEST)
+                return problem(status.HTTP_400_BAD_REQUEST, "bad_before", "没有这封信。")
             return _unavailable(exc)
         return Response(InboxMessageSerializer(rows, many=True).data)
 

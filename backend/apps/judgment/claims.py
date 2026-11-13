@@ -42,7 +42,7 @@ class ClaimRefusedError(Exception):
         self.extra = extra
 
     def as_payload(self) -> dict:
-        return {"error": str(self), "code": self.code, **self.extra}
+        return {"code": self.code, "detail": str(self), **self.extra}
 
 
 def _lock(pk) -> Judgment:
@@ -148,7 +148,7 @@ class NotClaimantError(APIException):
     def __init__(self, judgment: Judgment):
         holder = judgment.claimed_by
         super().__init__({
-            "error": "This judgment is claimed by another officer; only they, or an officer who may reassign, can change it.",
+            "detail": "This judgment is claimed by another officer; only they, or an officer who may reassign, can change it.",
             "code": "not_claimant", "claimed_by": judgment.claimed_by_id,
             "claimed_by_name": (holder.display_name or holder.username) if holder else None,
         })

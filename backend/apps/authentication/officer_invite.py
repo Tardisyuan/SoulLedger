@@ -64,7 +64,7 @@ class InviteRefusedError(Exception):
         self.code, self.message, self.field = code, message, field
 
     def as_payload(self):
-        return {"error": self.message, "code": self.code, **({"field": self.field} if self.field else {})}
+        return {"code": self.code, "detail": self.message, **({"field": self.field} if self.field else {})}
 
 
 def is_pending(user) -> bool:

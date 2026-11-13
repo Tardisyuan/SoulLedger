@@ -354,7 +354,7 @@ export function SoulKarmaLedgerCard({
       </div>
 
       {/* 下一世继承 — only when the API actually has a forward preview (a
-          409/REBIRTH_NOT_APPLICABLE for a terminal cosmology resolves this to
+          409/rebirth_not_applicable for a terminal cosmology resolves this to
           null; see ledgerApi.inheritance's caller in page.tsx). */}
       {inheritance && !withheld && inheritance.inherited_merit !== null && inheritance.inherited_demerit !== null && (
         <div>

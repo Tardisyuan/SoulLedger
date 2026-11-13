@@ -87,7 +87,7 @@ export function isMfaRequired(outcome: LoginOutcome): outcome is MfaRequiredResp
 }
 
 export type MfaStatus = components["schemas"]["MfaStatus"];
-/** `{error, code, …}`; branch on `code`: wrong (+remaining_attempts, lock_minutes) / expired / locked (+retry_after). */
+/** A problem `{code, detail, …}`; branch on `code`: wrong (+remaining_attempts, lock_minutes) / expired / locked (+retry_after). */
 export type MfaRefusal = components["schemas"]["MfaRefusal"];
 export type MfaSetupResponse = components["schemas"]["MfaSetupResponse"];
 export type MfaRecoveryCodes = components["schemas"]["MfaRecoveryCodes"];
@@ -216,7 +216,7 @@ export const NOTIFICATION_LOCKED: Partial<Record<NotificationCategory, readonly 
   approval_timeout: ["site"],
 };
 
-/** `{error, code}` of the officer e-mail reset / verification endpoints; branch on `code`. */
+/** The problem `{code, detail}` of the officer e-mail reset / verification endpoints; branch on `code`. */
 export type OfficerResetRefusal = components["schemas"]["OfficerResetRefusal"];
 
 /** The body `/auth/password-help/` answers 200 with, for every username alike. */
@@ -234,7 +234,7 @@ export type SetNewPasswordRequest = components["schemas"]["SetNewPassword"];
  */
 export type PasswordResetAccepted = components["schemas"]["DetailResponse"];
 /**
- * The body both answer a refusal with: `{error, code}`, plus `retry_after`
+ * The body both answer a refusal with: a problem `{code, detail}`, plus `retry_after`
  * (seconds) when `code` is `rate_limited`. Branch on `code`; `error` is a
  * sentence for people and may be reworded.
  */
@@ -385,13 +385,16 @@ export function splitCommonReasons(keys: string[]): { common: boolean; rest: str
   return { common: keys.some(isCommon), rest: keys.filter((key) => !isCommon(key)) };
 }
 
+/** The refused new password's reasons, from a problem body's `errors` items on `new_password` (one per validator). */
 export function passwordReasonKeys(body: unknown): string[] {
-  const list = (body as { new_password?: unknown } | null | undefined)?.new_password;
-  if (!Array.isArray(list)) return [];
-  const keys = list.map((item) => {
-    const code = item && typeof item === "object" ? (item as { code?: unknown }).code : undefined;
-    return (typeof code === "string" && PASSWORD_REASON_KEYS[code]) || "profile.password_reason_invalid";
-  });
+  const errors = (body as { errors?: unknown } | null | undefined)?.errors;
+  if (!Array.isArray(errors)) return [];
+  const keys = errors
+    .filter((item) => item && typeof item === "object" && (item as { field?: unknown }).field === "new_password")
+    .map((item) => {
+      const code = (item as { code?: unknown }).code;
+      return (typeof code === "string" && PASSWORD_REASON_KEYS[code]) || "profile.password_reason_invalid";
+    });
   return [...new Set(keys)];
 }
 

@@ -13,6 +13,7 @@ from apps.actors.models import Actor
 from apps.core.exports import export_csv
 from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission
+from apps.core.problems import problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import is_tenant_exempt, request_tenant
 from apps.core.tenant_fields import same_tenant_or_404_message
@@ -60,10 +61,7 @@ from apps.tenants.models import Tenant
 def _refused(exc):
     """ValueError → 400 的响应体。带 `code` 的(`TargetHallClosedError`)一并写出,前端照 code 翻译。
     异常带 `http_status` 的(`SoulHasPendingJudgmentError` 是 409)用它。"""
-    body = {"error": str(exc)}
-    if getattr(exc, "code", None):
-        body["code"] = exc.code
-    return Response(body, status=getattr(exc, "http_status", status.HTTP_400_BAD_REQUEST))
+    return problem(getattr(exc, "http_status", status.HTTP_400_BAD_REQUEST), getattr(exc, "code", None), str(exc))
 
 
 def hide_others_drafts(qs, user):
@@ -240,10 +238,8 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             requester_tenant = request_tenant(request)
             source = validated.get("source_tenant")
             if requester_tenant is None or source is None or source.pk != requester_tenant.pk:
-                return Response(
-                    {"error": "Only the tenant that holds the soul may propose its dispatch"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                return problem(status.HTTP_403_FORBIDDEN, None,
+                               "Only the tenant that holds the soul may propose its dispatch")
             # The draft / submit path's `validate_soul = tenant_scoped("soul")`, here after the party check so a
             # foreign hall's soul still answers 403 above (audit 2026-11-11 A1-03): a caller narrowed to one
             # organisation could propose any soul of the hall directly, though its draft was refused.
@@ -269,10 +265,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         except ValueError as e:
             return _refused(e)
         except IntegrityError:
-            return Response(
-                {"error": "An active dispatch already exists for this soul"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, "An active dispatch already exists for this soul")
         finally:
             clear_current_user()
 
@@ -286,10 +279,8 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         要结束一次移交,走 `cancel` / `reject` / `return-home`。"""
         instance = self.get_object()
         if instance.status != DispatchStatus.DRAFT:
-            return Response(
-                {"error": f"Only a draft can be deleted; this dispatch is {instance.status}", "code": "not_a_draft"},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "not_a_draft",
+                           f"Only a draft can be deleted; this dispatch is {instance.status}")
         return super().destroy(request, *args, **kwargs)
 
     # CRUD 更新只剩 `reason` 能改(其余字段 `validate()` 拦),而理由是发起方写的:
@@ -300,15 +291,11 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if not is_tenant_exempt(request.user):
             tenant = self._requester_tenant(request)
             if tenant is None or record.source_tenant_id != tenant.pk:
-                return Response({"error": "Only the proposing tenant may edit this dispatch"},
-                                status=status.HTTP_403_FORBIDDEN)
+                return problem(status.HTTP_403_FORBIDDEN, None, "Only the proposing tenant may edit this dispatch")
         # 目标殿据以批准的理由,批准 / 执行之后不能再改(RBAC 严查 2026-10-29 L2)。ADMIN 也一样。
         if record.status not in (DispatchStatus.DRAFT, DispatchStatus.PROPOSED):
-            return Response(
-                {"error": f"The reason can no longer be edited; this dispatch is {record.status}",
-                 "code": "reason_locked"},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "reason_locked",
+                           f"The reason can no longer be edited; this dispatch is {record.status}")
         return super().update(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
@@ -324,9 +311,9 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return None
         tenant = getattr(request, "tenant", None)
         if record.source_tenant != tenant and record.target_tenant != tenant:
-            return Response({"error": "Not authorized to modify this dispatch"}, status=403)
+            return problem(403, None, "Not authorized to modify this dispatch")
         if record.target_tenant != tenant:
-            return Response({"error": f"Only target tenant can {verb} dispatch"}, status=403)
+            return problem(403, None, f"Only target tenant can {verb} dispatch")
         return None
 
     def _requester_tenant(self, request):
@@ -335,11 +322,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     def _own_draft_or_error(self, request, record):
         """草稿只由发起人改、提交。ADMIN 看得见别人的草稿,但不替人改。"""
         if record.status != DispatchStatus.DRAFT:
-            return Response({"error": f"This dispatch is {record.status}, not a draft"},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, None, f"This dispatch is {record.status}, not a draft")
         if record.dispatched_by_id != request.user.pk:
-            return Response({"error": "Only the person who saved a draft may change or submit it"},
-                            status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, None,
+                           "Only the person who saved a draft may change or submit it")
         return None
 
     @extend_schema(request=DispatchDraftSerializer, responses={201: DispatchRecordSerializer})
@@ -348,7 +334,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """存草稿(新建)。四个字段全可省;不进审批流、不通知任何人。来源是发起人自己的租户。"""
         tenant = self._requester_tenant(request)
         if tenant is None:
-            return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "No tenant context")
         body = DispatchDraftSerializer(data=request.data, context={"request": request})
         body.is_valid(raise_exception=True)
         set_current_user(request.user)
@@ -358,7 +344,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                 None, source_tenant=tenant, dispatcher=request.user, **body.validated_data,
             )
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
         finally:
             clear_current_user()
         return Response(DispatchRecordSerializer(record, context=self.get_serializer_context()).data, status=status.HTTP_201_CREATED)
@@ -380,7 +366,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                 record, source_tenant=record.source_tenant, dispatcher=request.user, **body.validated_data,
             )
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
         finally:
             clear_current_user()
         return Response(DispatchRecordSerializer(record, context=self.get_serializer_context()).data)
@@ -412,10 +398,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         except ValueError as e:
             return _refused(e)
         except IntegrityError:
-            return Response(
-                {"error": "An active dispatch already exists for this soul"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, "An active dispatch already exists for this soul")
         finally:
             clear_current_user()
         return Response(DispatchRecordSerializer(record, context=self.get_serializer_context()).data)
@@ -436,7 +419,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """
         tenant = Tenant.objects.filter(code=request.query_params.get("target_tenant_code") or "").first()
         if tenant is None:
-            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, None, "Tenant not found")
         realms = DispatchService.eligible_realms(tenant)
         return Response(RealmLocalizedSerializer(realms, many=True, context={"request": request}).data)
 
@@ -472,7 +455,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if section in ("proposed", "history"):
             tenant = getattr(request, "tenant", None)
             if not tenant:
-                return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
+                return problem(status.HTTP_400_BAD_REQUEST, None, "No tenant context")
             qs = (
                 self._proposed_queryset(tenant) if section == "proposed"
                 else self._history_queryset(tenant, request.user)
@@ -518,7 +501,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """
         tenant = getattr(request, "tenant", None)
         if not tenant:
-            return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "No tenant context")
 
         # _base_manager (unfiltered) dodges the contextvar issue but also
         # drops the soft-delete filter — exclude deleted records explicitly.
@@ -546,7 +529,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """
         tenant = getattr(request, "tenant", None)
         if not tenant:
-            return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "No tenant context")
 
         # _base_manager (unfiltered) dodges the contextvar issue but also
         # drops the soft-delete filter — exclude deleted records explicitly.
@@ -598,7 +581,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             dispatch_record = DispatchService.reject(dispatch_record, rejector, reason)
             return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
 
     @extend_schema(request=DispatchCancelSerializer, responses=DispatchRecordSerializer)
     @action(detail=True, methods=["post"])
@@ -615,8 +598,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if not is_tenant_exempt(request.user):
             tenant = self._requester_tenant(request)
             if tenant is None or tenant.pk != dispatch_record.source_tenant_id:
-                return Response({"error": "Only the sending tenant may cancel this dispatch"},
-                                status=status.HTTP_403_FORBIDDEN)
+                return problem(status.HTTP_403_FORBIDDEN, None, "Only the sending tenant may cancel this dispatch")
         body = DispatchCancelSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         try:
@@ -624,8 +606,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                 dispatch_record, request.user, body.validated_data["reason"],
             )
         except DispatchNotCancellableError as exc:
-            return Response({"error": str(exc), "code": exc.code, "status": exc.status},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, exc.code, str(exc), dispatch_status=exc.status)
         return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
 
     @extend_schema(request=DispatchCancelSerializer, responses=DispatchRecordSerializer)
@@ -642,8 +623,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             dispatch_record = DispatchService.withdraw_approval(dispatch_record, request.user,
                                                                 body.validated_data["reason"])
         except DispatchNotCancellableError as exc:
-            return Response({"error": str(exc), "code": exc.code, "status": exc.status},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, exc.code, str(exc), dispatch_status=exc.status)
         return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=["post"])
@@ -682,15 +662,9 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if not is_tenant_exempt(request.user):
             requester_tenant = request_tenant(request)
             if requester_tenant is None or requester_tenant.pk != soul.home_tenant_id:
-                return Response(
-                    {"error": "Only the soul's home tenant may end its residence"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                return problem(status.HTTP_403_FORBIDDEN, None, "Only the soul's home tenant may end its residence")
         if dispatch_record.status != DispatchStatus.EXECUTED or soul.tenant_id != dispatch_record.target_tenant_id:
-            return Response(
-                {"error": "This dispatch is not an ongoing residence"},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, None, "This dispatch is not an ongoing residence")
         body = DispatchReturnSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         try:
@@ -699,12 +673,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                 reason=body.validated_data["reason"],
             )
         except ResidenceReturnBlockedError as blocked:
-            return Response(
-                {"error": str(blocked), "code": blocked.code, "open_judgment_ids": blocked.judgment_ids},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, blocked.code, str(blocked),
+                           open_judgment_ids=blocked.judgment_ids)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, None, str(e))
         dispatch_record.refresh_from_db()
         return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
 
@@ -882,11 +854,9 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         """
         own = request_tenant(request)
         if not own:
-            return Response({"error": "Tenant context required"}, status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, None, "Tenant context required")
         if judgment.initiating_tenant_id != own.pk:
-            return Response(
-                {"error": "Only the initiating tenant may do this"}, status=status.HTTP_403_FORBIDDEN
-            )
+            return problem(status.HTTP_403_FORBIDDEN, None, "Only the initiating tenant may do this")
         return None
 
     # 改标题 / 描述只归发起方:`CrossJudgmentPartyPermission` 放参与方进 `get_object()` 是为了看与入席,
@@ -922,7 +892,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         else:
             tenant = Tenant.objects.filter(id=serializer.validated_data["participant_tenant"]).first()
         if not tenant:
-            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, None, "Tenant not found")
 
         # 席位上的神祇属**被邀文明**(2026-09-20 用户决定)。此前这里按**发起方**租户找,
         # 且字段是整数而 Actor 主键是 UUID —— 永远找不到,静默落成 None。现在找不到或不可担任
@@ -931,7 +901,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         if actor_id:
             actor = Actor.all_objects.filter(pk=actor_id, is_deleted=False).first()
             if actor is None:
-                return Response({"error": "Actor not found"}, status=status.HTTP_400_BAD_REQUEST)
+                return problem(status.HTTP_400_BAD_REQUEST, None, "Actor not found")
 
         try:
             CrossTenantJudgmentService.add_participant(
@@ -941,9 +911,9 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             judgment.refresh_from_db()
             return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
         except OrderLockedError as e:
-            return Response({"error": str(e), "code": e.code}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, e.code, str(e))
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
 
     @extend_schema(
         parameters=[
@@ -968,18 +938,15 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         if refused is not None:
             return refused
         if judgment.status != JudgmentStatus.PROPOSED:
-            return Response({"error": "Seats are chosen only before the bench is convened"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "Seats are chosen only before the bench is convened")
         tenant = Tenant.objects.filter(code=request.query_params.get("tenant_code") or "").first()
         if tenant is None:
-            return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, None, "Tenant not found")
         if tenant.pk == judgment.initiating_tenant_id:
-            return Response({"error": "The initiating tenant does not seat itself"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "The initiating tenant does not seat itself")
         seat_role = request.query_params.get("role") or ""
         if seat_role not in ParticipantRole.values:
-            return Response({"error": "role must be ADVISOR, CO_JUDGE or CHAIRMAN"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "role must be ADVISOR, CO_JUDGE or CHAIRMAN")
         actors = CrossTenantJudgmentService.seatable_actors(tenant, seat_role)
         return Response(SeatableActorSerializer(actors, many=True).data)
 
@@ -999,19 +966,17 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             pk=data["participant"], is_deleted=False,
         ).first()
         if participant is None:
-            return Response({"error": "Participant not found"}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, None, "Participant not found")
         own = request_tenant(request)
         if own is None or participant.participant_tenant_id != own.pk:
-            return Response(
-                {"error": "Only the participant's own tenant may submit its sentence"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return problem(status.HTTP_403_FORBIDDEN, None,
+                           "Only the participant's own tenant may submit its sentence")
         try:
             CrossTenantJudgmentService.submit_sentence(
                 participant, data["realm_code"], data.get("sentence_years"), data["notes"], request.user,
             )
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
         judgment.refresh_from_db()
         return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
 
@@ -1029,9 +994,9 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             CrossTenantJudgmentService.reorder_nodes(judgment, serializer.validated_data["participants"])
         except OrderLockedError as e:
             # 第四十三批:审批流程已按这个顺序建了各域的段。
-            return Response({"error": str(e), "code": e.code}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, e.code, str(e))
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
         judgment = self.get_queryset().get(pk=judgment.pk)
         return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
 
@@ -1052,7 +1017,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             judgment = CrossTenantJudgmentService.activate(judgment)
             return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
 
     @action(detail=True, methods=["post"])
     def conclude(self, request, pk=None):
@@ -1063,9 +1028,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
 
         # 结束与取消同一道:召集人,或发起殿持 workflow.update 的人(默认殿管理员)。参与方入席表态,不替召集人收场。
         if not CrossTenantJudgmentService.can_end(judgment, request.user, getattr(request, "tenant", None)):
-            return Response(
-                {"error": "Only the convener or this hall's admin may conclude"}, status=status.HTTP_403_FORBIDDEN
-            )
+            return problem(status.HTTP_403_FORBIDDEN, None, "Only the convener or this hall's admin may conclude")
 
         serializer = CrossTenantJudgmentConcludeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -1079,9 +1042,9 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
         except WorkflowRunningError as e:
             # 2026-10-18:挂着的审批流程还在走,审判随流程结束;要提前收场用「取消」。
-            return Response({"error": str(e), "code": e.code}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, e.code, str(e))
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(e))
 
     @extend_schema(request=CrossTenantJudgmentCancelSerializer, responses=CrossTenantJudgmentSerializer)
     @action(detail=True, methods=["post"])
@@ -1093,13 +1056,11 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         """
         judgment = self.get_object()
         if not CrossTenantJudgmentService.can_end(judgment, request.user, getattr(request, "tenant", None)):
-            return Response(
-                {"error": "Only the convener or this hall's admin may cancel"}, status=status.HTTP_403_FORBIDDEN
-            )
+            return problem(status.HTTP_403_FORBIDDEN, None, "Only the convener or this hall's admin may cancel")
         serializer = CrossTenantJudgmentCancelSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
             judgment = CrossTenantJudgmentService.cancel(judgment, serializer.validated_data["reason"], request.user)
         except ValueError as e:
-            return Response({"error": str(e), "code": "not_cancellable"}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "not_cancellable", str(e))
         return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)

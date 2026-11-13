@@ -8,6 +8,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
 
+from apps.core.problems import Problem
 from apps.core.tenant_fields import tenant_scoped
 from apps.workflow.models import (
     ApprovalNode,
@@ -147,15 +148,11 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
         return super().to_representation(instance)
 
 
-class TemplatePairRefusedError(APIException):
-    """400 with `template_pair_refusal`'s body as it is (a `ValidationError` would wrap each value in a list, and
-    clients branch on a scalar `code`)."""
-
-    status_code = 400
-    default_code = "case_type_not_for_civilization"
+class TemplatePairRefusedError(Problem):
+    """400 problem built from `template_pair_refusal` (its `case_type` field error rides in `errors`)."""
 
     def __init__(self, body):
-        super().__init__(body)
+        super().__init__(400, **body)
 
 
 #: The refusal code of a template whose case type its civilization does not have.
@@ -169,7 +166,8 @@ def template_pair_refusal(civilization, case_type) -> dict | None:
     message = WorkflowService.validate_civilization_case_type(civilization, case_type)
     if message is None:
         return None
-    return {"code": CASE_TYPE_NOT_FOR_CIVILIZATION, "case_type": [message],
+    return {"code": CASE_TYPE_NOT_FOR_CIVILIZATION, "detail": message,
+            "errors": [{"field": "case_type", "code": CASE_TYPE_NOT_FOR_CIVILIZATION, "detail": message}],
             "civilization": civilization, "case_type_value": case_type}
 
 
@@ -454,13 +452,13 @@ class JumpSourceSerializer(serializers.Serializer):
 
 
 class WorkflowConflictError(APIException):
-    """409 `{"error", "code"}`: the flow is in a state that forbids this write (rbac-be1, 2026-10-29)."""
+    """409 problem with its `code`: the flow is in a state that forbids this write (rbac-be1, 2026-10-29)."""
 
     status_code = 409
     default_code = "workflow_started"
 
     def __init__(self, code: str, message: str):
-        super().__init__({"error": message, "code": code})
+        super().__init__({"code": code, "detail": message})
 
 
 def refuse_started(workflow, what: str) -> None:

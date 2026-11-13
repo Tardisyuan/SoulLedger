@@ -159,7 +159,7 @@ export interface OfficerInviteInput {
   tenant?: string;
 }
 
-/** 400 `{error, code, field?}` of the invite and handover routes; branch on `code`, place on `field`. */
+/** 400 problem `{code, detail, field?}` of the invite and handover routes; branch on `code`, place on `field`. */
 export interface OfficerRefusal {
   code: string;
   field?: string;
@@ -168,7 +168,8 @@ export interface OfficerRefusal {
 export function officerRefusalOf(error: unknown): OfficerRefusal | null {
   if (!axios.isAxiosError(error) || !error.response) return null;
   const data = error.response.data as (Partial<OfficerRefusal> & { problems?: string[] }) | undefined;
-  return data && typeof data.code === "string" ? (data as OfficerRefusal) : null;
+  // A validation problem (`invalid`) is the serializer's field errors, not one of these refusals.
+  return data && typeof data.code === "string" && data.code !== "invalid" ? (data as OfficerRefusal) : null;
 }
 
 /** 200 of POST /judgment/handover/preview/. `appeals` excludes `appeals_returned_to_pool`; `city_gods` are names. */

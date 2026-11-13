@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from apps.core.csv_safe import csv_safe
 from apps.core.exports import EXPORT_MAX_ROWS, record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.soul_assist.views import OfficerAssistThrottle
@@ -449,7 +450,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         try:
             done, filters, dropped, understood = nl_query.propose(request, question, lang=lang)
         except features.FeatureUnavailableError as exc:
-            return Response({"detail": exc.code, "code": exc.code}, status=exc.status)
+            return problem(exc.status, exc.code, exc.code)
         draft = drafts.record("audit_query", request, done, system=nl_query.SYSTEM, input_text=question,
                               output=json.dumps(filters, sort_keys=True, ensure_ascii=False), target_type="audit_log")
         return Response({"filters": filters, "dropped": dropped, "understood": understood, "draft_id": draft.pk,

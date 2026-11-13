@@ -16,6 +16,7 @@ from apps.authentication import impersonation
 from apps.authentication.impersonation_models import Impersonation
 from apps.authentication.models import User
 from apps.core.permissions import IsAdminPermission
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt
 
 
@@ -48,7 +49,7 @@ class ImpersonateEndResponseSerializer(serializers.Serializer):
 
 
 def _fail(code, detail):
-    return Response({"detail": detail, "code": code}, status=status.HTTP_400_BAD_REQUEST)
+    return problem(status.HTTP_400_BAD_REQUEST, code, detail)
 
 
 class ImpersonateStartView(APIView):

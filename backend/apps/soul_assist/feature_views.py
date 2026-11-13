@@ -7,6 +7,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.response import Response
 
+from apps.core.problems import problem
 from apps.soul_assist import drafts
 from apps.soul_assist.models import AIDraft
 from apps.soul_assist.serializers import AssistErrorSerializer
@@ -34,8 +35,8 @@ class AIDraftDecideView(OfficerAssistBaseView):
         body.is_valid(raise_exception=True)
         draft = AIDraft.objects.filter(pk=pk, created_by=request.user).first()
         if draft is None:
-            return Response({"detail": "Not found.", "code": "not_found"}, status=404)
+            return problem(404, "not_found", "Not found.")
         if not drafts.decide(draft, request, adopted=body.validated_data["adopted"],
                              final_text=body.validated_data["final_text"]):
-            return Response({"detail": "Already decided.", "code": "already_decided"}, status=409)
+            return problem(409, "already_decided", "Already decided.")
         return Response({"id": draft.pk, "status": draft.status, "edit_ratio": draft.edit_ratio})

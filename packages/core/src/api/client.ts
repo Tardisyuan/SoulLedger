@@ -383,8 +383,8 @@ export async function fetchAllPages<T>(url: string, params: Record<string, strin
 export type FetchFailure = "gone" | "network" | "other";
 
 /**
- * The `code` of a failed request's `{detail, code}` / `{error, code}` body, or `null` (no response,
- * no body, a non-string code). Reads any rejection shaped like an axios error, so tests' plain
+ * The `code` of a failed request's problem body (`./problem`), or `null` (no response, no body, a
+ * non-string code). Reads any rejection shaped like an axios error, so tests' plain
  * `{ response: { data } }` objects work too.
  */
 export function responseCode(error: unknown): string | null {
@@ -407,11 +407,16 @@ export function responseData<T extends object = Record<string, unknown>>(error: 
   return (error as { response?: { data?: Partial<T> } } | null)?.response?.data ?? undefined;
 }
 
-/** The legacy `{error: "..."}` sentence of a failed request, when it is a string; else `undefined`. */
-export function responseError(error: unknown): string | undefined {
-  const text = responseData<{ error: unknown }>(error)?.error;
-  return typeof text === "string" ? text : undefined;
-}
+export {
+  problemDetail,
+  problemErrors,
+  problemFieldCodes,
+  problemFieldErrors,
+  problemFieldMessages,
+  problemOf,
+  type Problem,
+  type ProblemFieldError,
+} from "./problem";
 
 export function fetchFailureOf(error: unknown): FetchFailure {
   const response = (error as { response?: { status?: number } } | null)?.response;

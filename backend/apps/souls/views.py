@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.ledger.serializers import LedgerSummarySerializer
@@ -37,6 +38,7 @@ from apps.souls.serializers import (
     SoulImportCommitSerializer,
     SoulImportFileErrorSerializer,
     SoulImportPreviewSerializer,
+    SoulImportRowsInvalidSerializer,
     SoulImportUploadSerializer,
     SoulListSerializer,
     SoulRecordSerializer,
@@ -53,15 +55,9 @@ from apps.souls.serializers import (
 
 
 def _record_errors(serializer):
-    """400 for a record write: the usual `{field: [message]}` plus `error_codes` — `{field: [code]}` in the
-    same order — so a client maps the stable code to its own words instead of matching English text."""
-    # `serializer.errors` holds DRF ErrorDetail strings, each carrying its `.code`. (A serializer has no
-    # `get_full_details()` — that is on ValidationError; calling it here was a 500 on every invalid write.)
-    codes = {
-        field: [getattr(d, "code", None) or "invalid" for d in (details if isinstance(details, list) else [details])]
-        for field, details in serializer.errors.items()
-    }
-    return Response({**serializer.errors, "error_codes": codes}, status=status.HTTP_400_BAD_REQUEST)
+    """400 for a record write: a validation problem whose `errors[].code` is DRF's stable code (`min_value`,
+    `statute_other_civilization` …), so a client maps the code to its own words instead of matching English."""
+    raise ValidationError(serializer.errors)
 
 
 class _ImportRefusedError(Exception):
@@ -73,7 +69,7 @@ class _ImportRefusedError(Exception):
         self.payload = payload
 
     def response(self):
-        return Response(self.payload, status=status.HTTP_400_BAD_REQUEST)
+        return problem(status.HTTP_400_BAD_REQUEST, **self.payload)
 
 
 class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -230,10 +226,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             soul.delete_with_cascade(user=request.user, reason=reason)
         except DeletionNotAllowedError as exc:
-            body = {"error": str(exc), "archivable": exc.archivable}
-            if exc.code:
-                body["code"] = exc.code
-            return Response(body, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, exc.code, str(exc), archivable=exc.archivable)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -324,19 +317,11 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
 
             if blocked:
                 transaction.set_rollback(True)
-                return Response(
-                    {
-                        "code": "not_deletable",
-                        "error": (
-                            "These souls cannot be deleted: a concluded judgment "
+                return problem(status.HTTP_409_CONFLICT, "not_deletable",
+                               "These souls cannot be deleted: a concluded judgment "
                             "(archive them instead) or residing in another hall "
-                            "(end the residence first). Nothing was deleted."
-                        ),
-                        "ids": blocked,
-                        "archivable": archivable,
-                    },
-                    status=status.HTTP_409_CONFLICT,
-                )
+                            "(end the residence first). Nothing was deleted.",
+                               ids=blocked, archivable=archivable)
 
         return Response(
             SoulBatchRecycleResultSerializer({"recycled": len(results), "results": results}).data
@@ -425,7 +410,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         responses={
             201: SoulImportCommitSerializer,
             400: SoulImportFileErrorSerializer,
-            422: SoulImportPreviewSerializer,
+            422: SoulImportRowsInvalidSerializer,
         },
     )
     @action(detail=False, methods=["post"], url_path="import/commit", pagination_class=None, filter_backends=[])
@@ -443,7 +428,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         except _ImportRefusedError as refused:
             return refused.response()
         if any(r.errors for r in results):
-            return Response(importer.summarize(results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return problem(status.HTTP_422_UNPROCESSABLE_ENTITY, "import_rows_invalid", **importer.summarize(results))
         try:
             with transaction.atomic():
                 batch = importer.create_souls(results, tenant)
@@ -463,7 +448,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                     description=f"CSV import of {len(results)} souls",
                 )
         except importer.ImportConflictError as conflict:
-            return Response(importer.summarize(conflict.results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return problem(status.HTTP_422_UNPROCESSABLE_ENTITY, "import_rows_invalid",
+                           **importer.summarize(conflict.results))
         return Response({"created": len(results), "batch_id": batch}, status=status.HTTP_201_CREATED)
 
     def _region_upload(self, request):
@@ -553,14 +539,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
 
     @staticmethod
     def _batch_not_found(ids):
-        return Response(
-            {
-                "code": "not_found",
-                "error": "These souls were not found. Nothing was deleted.",
-                "ids": ids,
-            },
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return problem(status.HTTP_404_NOT_FOUND, "not_found", "These souls were not found. Nothing was deleted.",
+                       ids=ids)
 
     @action(detail=True, methods=["post"])
     def archive(self, request, pk=None):
@@ -569,10 +549,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         judicial history can be unwound. See Soul.has_concluded_judgment."""
         soul = self.get_object()
         if not soul.has_concluded_judgment:
-            return Response(
-                {"error": "This soul has no concluded judgment; delete it instead of archiving."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None,
+                           "This soul has no concluded judgment; delete it instead of archiving.")
         reason = request.data.get("reason", "")
         soul.archive(user=request.user, reason=reason)
         return Response(SoulSerializer(soul).data)
@@ -595,14 +573,11 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         soul = self.get_object()
         reason = request.data.get("reason", "")
         if not reason:
-            return Response(
-                {"error": "A reason is required to correct a settlement."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, "A reason is required to correct a settlement.")
         try:
             soul.correct_settlement(user=request.user, reason=reason)
         except ValueError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
         return Response(SoulSerializer(soul).data)
 
     @action(detail=True, methods=["post"])
@@ -610,14 +585,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """Mark soul as dead and begin judgment."""
         soul = self.get_object()
         if soul.current_state != SoulState.ALIVE:
-            return Response(
-                {"error": f"Cannot die: soul is already {soul.current_state}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, f"Cannot die: soul is already {soul.current_state}")
         location = request.data.get("location", "")
         if not isinstance(location, str) or len(location) > 255:  # Soul.death_location's width
-            return Response({"error": "location must be text of at most 255 characters"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "location must be text of at most 255 characters")
         # Absent = keep the death date on file (F-DEATH-01), else today. The cross-date rules (death before
         # birth, a lifespan past 150 years) are checked inside `Soul.die` against the date it will record, so
         # every door into a death — this one, death sync, 土地公, the capture hand-over — applies them alike;
@@ -626,10 +597,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             success = soul.die(death_date=death_date, location=location)
         except ValueError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
         if success:
             return Response(SoulSerializer(soul).data)
-        return Response({"error": "Transition failed"}, status=status.HTTP_400_BAD_REQUEST)
+        return problem(status.HTTP_400_BAD_REQUEST, None, "Transition failed")
 
     @action(detail=True, methods=["post"])
     def transition(self, request, pk=None):
@@ -662,30 +633,20 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         if new_state == SoulState.JUDGING:
             from apps.perm.checker import check_permission
             if not check_permission(request.user, "soul.die"):
-                return Response(
-                    {
-                        "error": (
-                            "Not authorized to transition to JUDGING. This is the "
+                return problem(status.HTTP_403_FORBIDDEN, None,
+                               "Not authorized to transition to JUDGING. This is the "
                             "state change /die/ performs; use that action, which "
-                            "requires soul.die."
-                        )
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                            "requires soul.die.")
 
         # Marking a soul missing, or recalling it, says why (2026-10-24): the reason is the only record of what
         # happened in transit.
         lost_move = new_state == SoulState.LOST or soul.current_state == SoulState.LOST
         if lost_move and not reason.strip():
-            return Response(
-                {"error": "A reason is required to mark a soul lost or to recall it", "code": "reason_required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "reason_required",
+                           "A reason is required to mark a soul lost or to recall it")
         if not soul.can_transition_to(new_state):
-            return Response(
-                {"error": f"Invalid transition from {soul.current_state} to {new_state}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None,
+                           f"Invalid transition from {soul.current_state} to {new_state}")
         # ALIVE → JUDGING by hand is a death, so it is recorded the way /die/ records one (review 2026-11-01 #4):
         # the same date checks, then `Soul.die`, which opens the case, hands it to a city god (409 no_city_god
         # when the hall has none), and runs the Egyptian embalming / Duat routing. `transition_to` alone moved
@@ -697,11 +658,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # SETTLED and REINCARNATING → ALIVE belong to concluding a judgment, a sentence plan and a rebirth; driven
         # by hand they skip every gate those doors keep and leave a case nobody can close.
         if not (new_state == SoulState.JUDGING or lost_move):
-            return Response(
-                {"error": f"{soul.current_state} → {new_state} is not a manual move; it happens through its own "
-                          "business action", "code": "transition_not_manual"},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "transition_not_manual",
+                           f"{soul.current_state} → {new_state} is not a manual move; it happens through its own "
+                          "business action")
         # The return value used to be discarded. `can_transition_to` above runs
         # outside the row lock and `transition_to` re-decides inside it, so a
         # refusal there -- a concurrent transition, or now a terminal cosmology
@@ -711,16 +670,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # 经办人记进 STATE_CHANGED 的 actor:账页与失踪横条的「经办」读它。
         if not soul.transition_to(new_state, reason, actor=request.user.username):
             soul.refresh_from_db()
-            return Response(
-                {
-                    "error": (
-                        f"Transition to {new_state} was refused. The soul is in "
-                        f"{soul.current_state}."
-                    ),
-                    "current_state": soul.current_state,
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, None,
+                           f"Transition to {new_state} was refused. The soul is in "
+                        f"{soul.current_state}.",
+                           current_state=soul.current_state)
         return Response(SoulSerializer(soul).data)
 
     @extend_schema(responses=LedgerSummarySerializer)
@@ -764,12 +717,12 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             record = soul.records.get(pk=record_id)
         except (SoulRecord.DoesNotExist, DjangoValidationError):
-            return Response({"error": "Record not found on this soul."}, status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, None, "Record not found on this soul.")
         from apps.judgment.services import EvidenceAdmissionService
 
         if EvidenceAdmissionService.admitted_in_concluded_case(record):
-            return Response({"error": "This record was admitted as evidence in a concluded case and cannot be edited.",
-                             "code": "admitted_in_concluded_case"}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "admitted_in_concluded_case",
+                           "This record was admitted as evidence in a concluded case and cannot be edited.")
         serializer = SoulRecordSerializer(record, data=request.data, partial=True, context={"soul": soul})
         if not serializer.is_valid():
             return _record_errors(serializer)
@@ -821,7 +774,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             soul = stations.move(soul, body.validated_data["station"], request.user)
         except stations.StationRefusedError as exc:
-            return Response({"code": exc.code, "error": exc.detail}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, exc.code, exc.detail)
         return Response(SoulSerializer(soul, context=self.get_serializer_context()).data)
 
     @extend_schema(
@@ -869,23 +822,17 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             record = soul.records.get(pk=record_id)
         except SoulRecord.DoesNotExist:
-            return Response(
-                {"error": "Record not found on this soul."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, None, "Record not found on this soul.")
         except DjangoValidationError:  # not a UUID: a 400, not a 500 (rbac-be1 L7)
-            return Response({"error": "record_id is not a valid id.", "code": "invalid_record_id"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "invalid_record_id", "record_id is not a valid id.")
 
         event = (record.event_year, record.event_month, record.event_day)
         birth = (soul.birth_year, soul.birth_month, soul.birth_day)
         death = (soul.death_year, soul.death_month, soul.death_day)
         problems = check_record_date(event, birth, death)
         if not any(p.code == "event_after_death" for p in problems):
-            return Response(
-                {"error": "This record has no event_after_death warning to acknowledge."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None,
+                           "This record has no event_after_death warning to acknowledge.")
 
         record.date_warning_acknowledged_by = request.user
         record.date_warning_acknowledged_at = timezone.now()
@@ -927,13 +874,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         try:
             record = soul.records.get(pk=record_id)
         except SoulRecord.DoesNotExist:
-            return Response(
-                {"error": "Record not found on this soul."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, None, "Record not found on this soul.")
         except DjangoValidationError:  # not a UUID: a 400, not a 500 (rbac-be1 L7)
-            return Response({"error": "record_id is not a valid id.", "code": "invalid_record_id"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "invalid_record_id", "record_id is not a valid id.")
 
         record.date_warning_acknowledged_by = None
         record.date_warning_acknowledged_at = None

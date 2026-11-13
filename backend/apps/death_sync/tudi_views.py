@@ -15,6 +15,7 @@ from rest_framework.response import Response
 
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import ProblemSerializer, problem
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.death_sync.models import DeathRegistrationRequest, TudiGod
@@ -72,7 +73,7 @@ class TudiGodSerializer(serializers.ModelSerializer):
         if self.instance is not None:
             others = others.exclude(pk=self.instance.pk)
         if others.exists():
-            raise serializers.ValidationError({"code": "name_taken", "name": value})
+            raise serializers.ValidationError(f"A tudi god named {value!r} already exists in this hall.", code="name_taken")
         return value
 
     def validate_regions(self, value):
@@ -82,16 +83,17 @@ class TudiGodSerializer(serializers.ModelSerializer):
         """上级城隍必须是本殿的(与 `Judgment.city_god` 同一条:城隍不跨殿);已定级的必须是县城隍
         (2026-10-28 用户定:土地公是县城隍下面的一级,docs/08 §五),未定级的照收。"""
         if value is not None and value.tenant_id != self._tenant().pk:
-            raise serializers.ValidationError({"code": "invalid_city_god"})
+            raise serializers.ValidationError("The city god is not of this hall.", code="invalid_city_god")
         if value is not None and value.rank and value.rank != CityGodRank.COUNTY:
-            raise serializers.ValidationError({"code": "tudi_city_god_not_county", "rank": value.rank})
+            raise serializers.ValidationError(f"A tudi god serves a county city god, not a {value.rank} one.",
+                                              code="tudi_city_god_not_county")
         return value
 
     def validate_officer_ids(self, value):
         tenant = self._tenant()
         bad = sorted(u.pk for u in value if not is_assignable(u, tenant.pk, codename="tudi.register"))
         if bad:
-            raise serializers.ValidationError({"code": "invalid_officer", "ids": bad})
+            raise serializers.ValidationError(f"Not assignable here: {bad}.", code="invalid_officer")
         return value
 
 
@@ -106,10 +108,14 @@ class TudiRegistrationRequestSerializer(DeathRegistrationCreateSerializer):
         return value
 
 
-class TudiRefusalSerializer(serializers.Serializer):
-    code = serializers.CharField()
-    error = serializers.CharField()
+class TudiRegistrationExistsSerializer(ProblemSerializer):
+    """409 `registration_exists`: the same idempotency key again; `registration` is the one already made."""
 
+    registration = DeathRegistrationRequestSerializer()
+
+
+class TudiRefusalSerializer(ProblemSerializer):
+    pass
 
 class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。"""
@@ -140,8 +146,7 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
 
         tenant = self.get_serializer_context()["tenant"]
         if tenant is None or tenant.known_civilization != Civilization.CHINESE:
-            return Response({"error": "土地公 belong to 地府 only.", "code": "tudi_gods_diyu_only"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "tudi_gods_diyu_only", "土地公 belong to 地府 only.")
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -156,7 +161,8 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
             with transaction.atomic():
                 serializer.save(**extra)
         except IntegrityError:
-            raise serializers.ValidationError({"name": {"code": "name_taken"}}) from None
+            raise serializers.ValidationError({"name": "A tudi god with this name already exists in this hall."},
+                                              code="name_taken") from None
 
     @extend_schema(responses={204: None})
     def destroy(self, request, *args, **kwargs):
@@ -165,16 +171,15 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
 
     @extend_schema(request=TudiRegistrationRequestSerializer,
                    responses={201: DeathRegistrationRequestSerializer, 403: TudiRefusalSerializer,
-                              409: DeathRegistrationRequestSerializer})
+                              409: TudiRegistrationExistsSerializer})
     @action(detail=True, methods=["post"], url_path="register-death")
     def register_death(self, request, pk=None):
         from apps.perm.checker import check_permission
 
         tudi = self.get_object()
         if not (check_permission(request.user, "tudi.manage") or tudi.officers.filter(pk=request.user.pk).exists()):
-            return Response({"code": "not_tudi_officer",
-                             "error": "Only officers assigned to this 土地公, or a hall administrator, can register."},
-                            status=status.HTTP_403_FORBIDDEN)
+            return problem(status.HTTP_403_FORBIDDEN, "not_tudi_officer",
+                           "Only officers assigned to this 土地公, or a hall administrator, can register.")
         body = TudiRegistrationRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         payload = dict(body.validated_data)
@@ -189,7 +194,9 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         except IntegrityError:
             existing = DeathRegistrationRequest.objects.filter(
                 tenant=tudi.tenant, source_system="TUDI", idempotency_key=key).first()
-            return Response(DeathRegistrationRequestSerializer(existing).data, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "registration_exists",
+                           registration=DeathRegistrationRequestSerializer(existing).data)
         except RetryRefusedError as refused:
-            return Response(DeathRegistrationRequestSerializer(refused.record).data, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "registration_exists",
+                           registration=DeathRegistrationRequestSerializer(refused.record).data)
         return Response(DeathRegistrationRequestSerializer(record).data, status=status.HTTP_201_CREATED)

@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.core.idempotency import idempotent
+from apps.core.problems import problem
 from apps.soul_accounts import mfa as soul_mfa
 from apps.soul_accounts import rebirth
 from apps.soul_accounts import services as svc
@@ -104,7 +105,7 @@ LOGIN_OUTCOME = PolymorphicProxySerializer(
 
 
 def _error(exc: svc.SoulAccountError):
-    return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc))
 
 
 class IsCurrentSoulAccount(BasePermission):
@@ -157,8 +158,7 @@ class SoulLoginView(APIView):
         soul_code = body.validated_data["soul_code"]
         keys = _rate_keys(ip, soul_code)
         if rate_limited(keys):
-            return Response({"detail": "登录尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
-                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return problem(status.HTTP_429_TOO_MANY_REQUESTS, "rate_limited", "登录尝试过于频繁,请 15 分钟后再试。")
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
         try:
             account = svc.authenticate(soul_code, body.validated_data["password"])
@@ -235,14 +235,13 @@ class SoulRefreshView(APIView):
         except TokenError:
             user_id = None  # 无效令牌交给下面的序列化器,答同一句 token_not_valid
         if user_id is not None and soul_is_recycled(SoulAccount.objects.filter(user_id=user_id).first()):
-            return Response(SOUL_RECYCLED, status=status.HTTP_401_UNAUTHORIZED)
+            return problem(status.HTTP_401_UNAUTHORIZED, **SOUL_RECYCLED)
 
         body = _Serializer(data=request.data)
         try:
             body.is_valid(raise_exception=True)
         except TokenError:
-            return Response({"detail": "刷新令牌无效或已过期。", "code": "token_not_valid"},
-                            status=status.HTTP_401_UNAUTHORIZED)
+            return problem(status.HTTP_401_UNAUTHORIZED, "token_not_valid", "刷新令牌无效或已过期。")
         return Response(body.validated_data)
 
 
@@ -317,8 +316,7 @@ class MePasswordView(SoulAPIView):
         # 此前这里错了只答 400、不计数,拿着一张 access 的人可以在这里无限次猜密码。
         keys = _rate_keys(get_client_ip(request), self.account.soul.soul_code, scope="confirm")
         if rate_limited(keys):
-            return Response({"detail": "尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
-                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return problem(status.HTTP_429_TOO_MANY_REQUESTS, "rate_limited", "尝试过于频繁,请 15 分钟后再试。")
         keep = signin_sessions.session_of(request.auth) or signin_sessions.start(request.user, request)
         try:
             tokens = svc.change_password(self.account, body.validated_data["old_password"],
@@ -328,11 +326,10 @@ class MePasswordView(SoulAPIView):
                                          keep_session=keep)
         except svc.SoulAccountError as exc:
             if exc.code == "invalid_old_password":
-                return Response({"detail": str(exc), "code": exc.code, "remaining_attempts": count_failure(keys)},
-                                status=exc.status)
+                return problem(exc.status, exc.code, str(exc), remaining_attempts=count_failure(keys))
             return _error(exc)
         except ValidationError as exc:
-            return Response({"detail": " ".join(exc.messages), "code": "weak_password"}, status=400)
+            return problem(400, "weak_password", " ".join(exc.messages))
         clear_after_success(keys)
         return Response(tokens)
 
@@ -434,7 +431,7 @@ class MeRebirthApplicationDetailView(SoulAPIView):
     def get(self, request, application_id):
         application = RebirthApplication.objects.filter(pk=application_id, soul=self.account.soul).first()
         if application is None:
-            return Response({"detail": "申请不存在。", "code": "not_found"}, status=404)
+            return problem(404, "not_found", "申请不存在。")
         return Response(MeRebirthApplicationSerializer(application, context={"account": self.account}).data)
 
 

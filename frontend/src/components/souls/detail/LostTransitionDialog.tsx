@@ -9,15 +9,15 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import type { SoulEvent } from "@soulledger/core/api/events";
-import { responseCode, responseStatus, responseError } from "@soulledger/core/api/client";
+import { responseCode, responseStatus, problemDetail } from "@soulledger/core/api/client";
 
 export const LOST_REASON_MAX = 500;
 
-/** 后端 400 `reason_required` → 同一句文案;其余 400 的 `{error}` 原样;别的形状交给通用文案。 */
+/** 后端 400 `reason_required` → 同一句文案;其余 400 的 `detail` 原样;别的形状交给通用文案。 */
 function lostTransitionError(error: unknown): "reason_required" | string | null {
   if (responseStatus(error) !== 400) return null;
   if (responseCode(error) === "reason_required") return "reason_required";
-  return responseError(error) ?? null;
+  return problemDetail(error) ?? null;
 }
 
 /**

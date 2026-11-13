@@ -36,6 +36,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import TenantPermission
+from apps.core.problems import problem
 from apps.core.recycle_bin import cascade_soft_delete
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
@@ -251,7 +252,7 @@ class OfficerMediaView(APIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, SocialError):
-            return Response({"detail": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc), **exc.extra)
         return super().handle_exception(exc)
 
 
@@ -554,10 +555,7 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         """Toggle follow/unfollow for a target user."""
         following_id = request.data.get("following")
         if not following_id:
-            return Response(
-                {"detail": "'following' field is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None, "'following' field is required.")
         from apps.authentication.models import User
         # Scoped, not `User.objects.get(pk=...)`. Unscoped, this action was
         # two bugs at once: a caller in tenant A could follow a user in
@@ -578,10 +576,7 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
             User.objects.exclude(role="SOUL"), request, admin_bypass=False
         ).filter(pk=following_id).first()
         if following_user is None:
-            return Response(
-                {"detail": "User not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, None, "User not found.")
         tenant = getattr(request, "tenant", None)
         is_following = FollowService.is_following(
             request.user.pk, following_id, tenant

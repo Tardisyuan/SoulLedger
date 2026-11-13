@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.core.problems import ProblemSerializer
 from apps.soul_assist.models import OFFICER_SCREENS, SCREENS, AssistConversation, AssistMessage
 
 MAX_QUESTION_LENGTH = 1000
@@ -59,9 +60,7 @@ class OfficerAssistConversationSerializer(AssistConversationSerializer):
     screen = serializers.ChoiceField(choices=OFFICER_SCREENS, read_only=True)
 
 
-class AssistErrorSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    code = serializers.CharField()
+class AssistErrorSerializer(ProblemSerializer):
     retry_at = serializers.DateTimeField(required=False)
 
 

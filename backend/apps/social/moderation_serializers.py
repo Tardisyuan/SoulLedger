@@ -10,6 +10,7 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.problems import ProblemSerializer
 from apps.social import media as post_media
 from apps.social.models import (
     ModerationStatus,
@@ -336,7 +337,5 @@ class HandledContentSerializer(serializers.Serializer):
         return {"user_id": row["handled_by_ref"], "display_name": row["handled_by_name"]}
 
 
-class ModerationErrorSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    code = serializers.CharField()
-
+class ModerationErrorSerializer(ProblemSerializer):
+    pass

@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.client_ip import get_client_ip
+from apps.core.problems import ProblemSerializer, problem
 from apps.core.throttling import ClientIPRateThrottle
 from apps.judgment import attachments as svc
 from apps.judgment import claims
@@ -56,10 +57,8 @@ class CaseAttachmentListSerializer(serializers.Serializer):
     concluded = serializers.BooleanField()
 
 
-class CaseAttachmentErrorSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    code = serializers.CharField(help_text="bad_type / too_large / case_full / too_many / concluded / not_uploader")
-
+class CaseAttachmentErrorSerializer(ProblemSerializer):
+    pass
 
 class CaseAttachmentLinkSerializer(serializers.Serializer):
     url = serializers.CharField(help_text="站点根相对路径 `/api/v1/case-attachments/<id>/?t=…`,10 分钟有效。")
@@ -71,7 +70,7 @@ _UPLOAD_BODY = inline_serializer("CaseAttachmentUpload", {"file": serializers.Fi
 
 
 def _refused(exc):
-    return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc))
 
 
 class CaseAttachmentActionsMixin:
@@ -109,7 +108,7 @@ class CaseAttachmentActionsMixin:
         claims.assert_may_edit(judgment, request, "attachment")
         uploaded = request.FILES.get("file")
         if uploaded is None:
-            return Response({"detail": "file is required.", "code": "bad_type"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "bad_type", "file is required.")
         try:
             row = svc.upload(request.user, judgment, uploaded)
         except svc.AttachmentError as exc:

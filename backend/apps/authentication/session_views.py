@@ -13,6 +13,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.core.problems import ProblemSerializer, problem
+
 from . import signin_sessions
 from .models import SignInSession
 from .officer_reset import _audit
@@ -31,13 +33,11 @@ class RevokeOthersResponseSerializer(serializers.Serializer):
     revoked = serializers.IntegerField()
 
 
-class SessionRefusalSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    code = serializers.CharField()
-
+class SessionRefusalSerializer(ProblemSerializer):
+    pass
 
 def refuse(detail, code, http_status):
-    return Response({"detail": detail, "code": code}, status=http_status)
+    return problem(http_status, code, detail)
 
 
 def revoke_one(user, auth, session_id):

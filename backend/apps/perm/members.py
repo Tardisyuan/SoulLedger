@@ -21,7 +21,7 @@ from rest_framework.response import Response
 
 from apps.authentication.serializers import UserManagementSerializer
 from apps.core.permissions import IsAdminPermission
-from apps.core.schema import ErrorResponseSerializer
+from apps.core.problems import ProblemSerializer, problem
 from apps.events.realtime import push_permission_refresh
 
 from .models import Role
@@ -43,7 +43,7 @@ class RoleMemberRefusalSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     username = serializers.CharField(allow_blank=True)
     code = serializers.CharField()
-    error = serializers.CharField()
+    detail = serializers.CharField()
 
 
 class RoleMembersChangeResultSerializer(serializers.Serializer):
@@ -51,8 +51,7 @@ class RoleMembersChangeResultSerializer(serializers.Serializer):
     unchanged = serializers.IntegerField()
 
 
-class RoleMembersRefusedSerializer(serializers.Serializer):
-    code = serializers.CharField()
+class RoleMembersRefusedSerializer(ProblemSerializer):
     refusals = RoleMemberRefusalSerializer(many=True)
 
 
@@ -109,7 +108,7 @@ def _change(user, name, action, kind):
         OpenApiParameter("page", int),
         OpenApiParameter("page_size", int),
     ],
-    responses={200: RoleMembersPageSerializer, 404: ErrorResponseSerializer},
+    responses={200: RoleMembersPageSerializer, 404: ProblemSerializer},
 )
 @extend_schema(
     methods=["POST"],
@@ -118,7 +117,7 @@ def _change(user, name, action, kind):
         200: RoleMembersChangeResultSerializer,
         400: RoleMembersRefusedSerializer,
         403: RoleMembersRefusedSerializer,
-        404: ErrorResponseSerializer,
+        404: ProblemSerializer,
     },
 )
 @api_view(["GET", "POST"])
@@ -128,7 +127,7 @@ def role_members(request, pk):
 
     role = Role.objects.filter(pk=pk).first()
     if role is None:
-        return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+        return problem(status.HTTP_404_NOT_FOUND, None, "Role not found")
     name = role.name
 
     if request.method == "GET":
@@ -155,12 +154,12 @@ def role_members(request, pk):
         for uid in ids:
             user = found.get(uid)
             if user is None:
-                refusals.append({"user_id": uid, "username": "", "code": "not_found", "error": "No such user here"})
+                refusals.append({"user_id": uid, "username": "", "code": "not_found", "detail": "No such user here"})
                 continue
             new_role, extras, code = _change(user, name, action, kind)
             if code:
                 refusals.append({"user_id": uid, "username": user.username, "code": code,
-                                 "error": "Give this user another main role instead"})
+                                 "detail": "Give this user another main role instead"})
                 continue
             extras, refusal = role_assignment_refusal(request.user, user, new_role, extras)
             if refusal:
@@ -168,11 +167,11 @@ def role_members(request, pk):
                     http = status.HTTP_403_FORBIDDEN
                 refusals.append({"user_id": uid, "username": user.username,
                                  "code": "forbidden" if refusal[1] == status.HTTP_403_FORBIDDEN else "invalid",
-                                 "error": refusal[0]})
+                                 "detail": refusal[0]})
                 continue
             plans.append((user, new_role, extras))
         if refusals:
-            return Response({"code": "refused", "refusals": refusals}, status=http)
+            return problem(http, "refused", refusals=refusals)
         changed = 0
         for user, new_role, extras in plans:
             if user.role == new_role and list(user.extra_roles or []) == extras:

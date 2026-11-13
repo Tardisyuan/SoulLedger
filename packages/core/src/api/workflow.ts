@@ -554,8 +554,8 @@ export const workflowApi = {
     update: (id: string, data: object) => api.patch<WorkflowTemplate>(`/workflow/templates/${id}/`, data),
     delete: (id: string) => api.delete<void>(`/workflow/templates/${id}/`),
     /**
-     * Put the draft into service. 400 `{error: "no_draft"}` or
-     * `{error: "invalid_draft", issues: TemplateValidationIssue[]}`.
+     * Put the draft into service. 400 problem `no_draft` or
+     * `invalid_draft` with `issues: TemplateValidationIssue[]`.
      */
     publish: (id: string) => api.post<WorkflowTemplate>(`/workflow/templates/${id}/publish/`),
     versions: (id: string) => api.get<WorkflowTemplateVersion[]>(`/workflow/templates/${id}/versions/`),

@@ -23,6 +23,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.schema import DetailResponseSerializer
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
@@ -123,9 +124,9 @@ class ScheduledJobViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         try:
             run = services.trigger_manual(job, request.user)
         except services.JobLockedError:
-            return Response({"detail": "a run of this job is already in progress"}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, None, "a run of this job is already in progress")
         except services.EnqueueFailedError as exc:
-            return Response({"detail": f"could not enqueue: {exc}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return problem(status.HTTP_503_SERVICE_UNAVAILABLE, None, f"could not enqueue: {exc}")
         _audit(
             request, "EXECUTE", resource_id=job.pk, tenant=job.tenant,
             description=f"EXECUTE {job.periodic_task.name} (manual)", changes={"task_run": run.pk},

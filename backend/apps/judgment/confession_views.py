@@ -11,6 +11,7 @@ from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.problems import ProblemSerializer, problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.judgment import claims, confessions, weighing
 
@@ -51,10 +52,8 @@ class NegativeConfessionWriteSerializer(serializers.Serializer):
     note = serializers.CharField(allow_blank=True, required=False, max_length=2000)
 
 
-class NegativeConfessionErrorSerializer(serializers.Serializer):
-    error = serializers.CharField()
-    code = serializers.CharField(help_text="concluded (409) / not_weighed (400) / unknown_clause (404)")
-
+class NegativeConfessionErrorSerializer(ProblemSerializer):
+    pass
 
 def _listing(judgment, request) -> dict:
     applies = weighing.applies(judgment)
@@ -101,7 +100,7 @@ class NegativeConfessionActionsMixin:
             confessions.record(judgment, int(ordinal), serializer.validated_data["truthful"],
                                serializer.validated_data.get("note", ""))
         except confessions.ConfessionRefusedError as exc:
-            return Response({"error": str(exc), "code": exc.code}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc))
         finally:
             clear_current_user()
         judgment.refresh_from_db()

@@ -11,6 +11,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.authentication.mfa import OWNER_CONFIRM_METHODS, SECOND_FACTOR_METHODS
+from apps.core.problems import ProblemSerializer
 from apps.reincarnation.models import RebirthForm
 from apps.sentence_plan.soul_view import PLAN_STATES as SOUL_PLAN_STATES
 from apps.sentence_plan.soul_view import STATION_STATUSES as SOUL_STATION_STATUSES
@@ -73,14 +74,12 @@ class SoulMfaVerifyResponseSerializer(SoulLoginResponseSerializer):
     device_token = serializers.CharField(required=False)
 
 
-class SoulMfaRefusalSerializer(serializers.Serializer):
+class SoulMfaRefusalSerializer(ProblemSerializer):
     """`code` is what to branch on: wrong / expired (400; `remaining_attempts`, `lock_minutes`), locked (429;
     `retry_after` seconds + `locked_until`), pending_invalid (401: the step timed out), rate_limited (429),
     wrong_password / not_enabled / already_enabled / not_started (setup and disable), totp_required (regenerating
     the recovery codes with a password or a recovery code)."""
 
-    detail = serializers.CharField()
-    code = serializers.CharField()
     remaining_attempts = serializers.IntegerField(required=False)
     lock_minutes = serializers.IntegerField(required=False)
     retry_after = serializers.IntegerField(required=False)
@@ -162,12 +161,10 @@ class SoulDeviceLoginRequestSerializer(serializers.Serializer):
     device_token = serializers.CharField(max_length=128, required=False, allow_blank=True)
 
 
-class SoulDeviceLoginRefusalSerializer(serializers.Serializer):
+class SoulDeviceLoginRefusalSerializer(ProblemSerializer):
     """`code`: device_login_revoked(401,带 `reason`:password_changed / password_reset_by_officer /
     account_reincarnated / turned_off)、device_login_invalid(401)、rate_limited(429)。"""
 
-    detail = serializers.CharField()
-    code = serializers.CharField()
     reason = serializers.CharField(required=False)
 
 
@@ -194,11 +191,8 @@ class SoulDataExportStateSerializer(serializers.Serializer):
     export = SoulDataExportSerializer(allow_null=True, help_text="最近一次申请;从没申请过为 null。")
 
 
-class SoulErrorSerializer(serializers.Serializer):
+class SoulErrorSerializer(ProblemSerializer):
     """所有业务拒绝的形状。`code` 稳定,App 按它分支;`detail` 是给人看的中文。"""
-
-    detail = serializers.CharField()
-    code = serializers.CharField()
 
 
 class MeTenantSerializer(serializers.Serializer):

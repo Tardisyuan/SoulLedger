@@ -22,6 +22,7 @@ from apps.core.exports import export_csv
 from apps.core.idempotency import idempotent
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import request_tenant, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -226,7 +227,7 @@ class NotesOnOpenCaseError(APIException):
 
     def __init__(self):
         super().__init__({
-            "error": "The verdict text of an open case is saved through PATCH /judgment/{id}/draft/.",
+            "detail": "The verdict text of an open case is saved through PATCH /judgment/{id}/draft/.",
             "code": "use_draft_endpoint",
         })
 
@@ -459,10 +460,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         try:
             judgment.delete_or_raise(user=request.user, reason=reason)
         except DeletionNotAllowedError as exc:
-            return Response(
-                {"error": str(exc), "archivable": exc.archivable},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, None, str(exc), archivable=exc.archivable)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post"])
@@ -471,10 +469,8 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         deleted. See Judgment.can_delete."""
         judgment = self.get_object()
         if judgment.can_delete:
-            return Response(
-                {"error": "This judgment has no verdict; delete it instead of archiving."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None,
+                           "This judgment has no verdict; delete it instead of archiving.")
         reason = request.data.get("reason", "")
         judgment.archive(user=request.user, reason=reason)
         return Response(JudgmentSerializer(judgment).data)
@@ -815,11 +811,9 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
 
         judgment = self.get_object()
         if not judgment.is_final:
-            return Response({"error": "The judgment is not concluded.", "code": "judgment_not_concluded"},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "judgment_not_concluded", "The judgment is not concluded.")
         if not verdict_pdf.has_document(judgment):
-            return Response({"error": "This judgment has no verdict document.", "code": "no_verdict_document"},
-                            status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, "no_verdict_document", "This judgment has no verdict document.")
         context = self.get_serializer_context()
         soul = None
         # 生卒年在网页上来自灵魂详情(`soul.read`);没有这个码的人,网页写「未记录」,PDF 也一样。
@@ -830,8 +824,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         try:
             pdf = verdict_pdf.render(payload, request.query_params.get("locale", ""))
         except verdict_pdf.RendererUnavailableError as exc:
-            return Response({"error": "The PDF renderer is unavailable.", "code": exc.code},
-                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return problem(status.HTTP_503_SERVICE_UNAVAILABLE, exc.code, "The PDF renderer is unavailable.")
         response = HttpResponse(pdf, content_type="application/pdf")
         response["Content-Disposition"] = content_disposition_header(
             True, f"{judgment.case_number or judgment.pk}.pdf")
@@ -867,10 +860,8 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         # runs the filters — a pending case filtered by verdict=FAILED is a 404.
         verdict = request.query_params.get("candidate_verdict", "")
         if verdict not in Verdict.values:
-            return Response(
-                {"error": f"candidate_verdict must be one of {', '.join(Verdict.values)}", "code": "invalid_verdict"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, "invalid_verdict",
+                           f"candidate_verdict must be one of {', '.join(Verdict.values)}")
         options = []
         not_applicable = []
         default_realm_id = None
@@ -928,7 +919,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         try:
             limit = int(request.query_params.get("limit", DEFAULT_PRECEDENTS))
         except (TypeError, ValueError):
-            return Response({"limit": ["Must be an integer."]}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({"limit": ["Must be an integer."]}) from None
         limit = max(1, min(limit, MAX_PRECEDENTS))
         rows = precedents_for(judgment, limit=limit)
         return Response(
@@ -955,7 +946,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         try:
             updated = run(judgment.pk)
         except ClaimRefusedError as exc:
-            return Response(exc.as_payload(), status=exc.status)
+            return problem(exc.status, **exc.as_payload())
         return Response(JudgmentSerializer(
             self.get_queryset().get(pk=updated.pk), context=self.get_serializer_context()
         ).data)
@@ -1004,8 +995,8 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         serializer = JudgmentDeferSerializer(data=request.data)
         if not serializer.is_valid():
             if {e.code for e in serializer.errors.get("reason", [])} & {"required", "blank", "null"}:
-                return Response({"error": "A reason is required to put a case on hold.",
-                                 "code": "defer_reason_required"}, status=status.HTTP_400_BAD_REQUEST)
+                return problem(status.HTTP_400_BAD_REQUEST, "defer_reason_required",
+                               "A reason is required to put a case on hold.")
             raise ValidationError(serializer.errors)
         reason = serializer.validated_data["reason"]
         override = self._may_override()
@@ -1063,19 +1054,14 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             try:
                 ids.append(uuid.UUID(value))
             except ValueError:
-                return Response({"judgment": [f"Not a UUID: {value!r}."]}, status=status.HTTP_400_BAD_REQUEST)
+                raise ValidationError({"judgment": [f"Not a UUID: {value!r}."]}) from None
         if not ids or len(set(ids)) > claims.BATCH_LIMIT:
-            return Response(
-                {"judgment": [f"Give 1 to {claims.BATCH_LIMIT} judgment ids."]}, status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError({"judgment": [f"Give 1 to {claims.BATCH_LIMIT} judgment ids."]})
 
         tenants = dict(self.get_queryset().filter(pk__in=ids).values_list("pk", "tenant_id"))
         missing = [str(pk) for pk in ids if pk not in tenants]
         if missing:
-            return Response(
-                {"error": "Some judgments were not found.", "code": "not_found", "missing": missing},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Some judgments were not found.", missing=missing)
         tenant_ids = set(tenants.values())
         if len(tenant_ids) != 1:
             return Response([])
@@ -1127,12 +1113,9 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         if not cache.add(key, until, timeout=claims.REASSIGN_REQUEST_WINDOW_SECONDS):
             held = cache.get(key)
             retry_after = max(1, math.ceil(held - time.time())) if held else claims.REASSIGN_REQUEST_WINDOW_SECONDS
-            return Response(
-                {"error": "Already asked for this case; try again later.", "code": "rate_limited",
-                 "retry_after": retry_after},
-                status=status.HTTP_429_TOO_MANY_REQUESTS,
-                headers={"Retry-After": str(retry_after)},
-            )
+            return problem(status.HTTP_429_TOO_MANY_REQUESTS, "rate_limited",
+                           "Already asked for this case; try again later.", retry_after=retry_after,
+                           headers={"Retry-After": str(retry_after)})
         notified = claims.request_reassign(judgment, request.user, reason=body.validated_data.get("reason", ""))
         return Response({"notified": len(notified)})
 
@@ -1173,18 +1156,12 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         operation, ids = data["operation"], data["ids"]
         override = self._may_override()
         if operation == "reassign" and not override:
-            return Response(
-                {"error": "Permission denied: judgment.assign", "code": "permission_denied"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return problem(status.HTTP_403_FORBIDDEN, "permission_denied", "Permission denied: judgment.assign")
 
         visible = set(self.get_queryset().filter(pk__in=ids).values_list("pk", flat=True))
         missing = [str(pk) for pk in ids if pk not in visible]
         if missing:
-            return Response(
-                {"error": "Some judgments were not found.", "code": "not_found", "missing": missing},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, "not_found", "Some judgments were not found.", missing=missing)
 
         target = self._assignee(data["to"]) if operation == "reassign" else None
         try:
@@ -1193,7 +1170,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
                 target=target, reason=data.get("reason", ""), may_override=override,
             )
         except ClaimRefusedError as exc:
-            return Response(exc.as_payload(), status=exc.status)
+            return problem(exc.status, **exc.as_payload())
         return Response({"operation": operation, "count": len(done), "ids": [str(j.pk) for j in done]})
 
     @extend_schema(
@@ -1389,7 +1366,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         try:
             StatuteCitationService.assert_amendable(judgment)
         except CitationRefusedError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, None, str(exc))
         try:
             citation = StatuteCitationService.cite(
                 judgment,
@@ -1397,7 +1374,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
                 serializer.validated_data.get("note", ""),
             )
         except CitationRefusedError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
         return Response(
             JudgmentCitationSerializer(citation, context=self.get_serializer_context()).data,
             status=status.HTTP_201_CREATED,
@@ -1430,16 +1407,13 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         try:
             StatuteCitationService.assert_amendable(judgment)
         except CitationRefusedError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, None, str(exc))
         try:
             removed = StatuteCitationService.uncite(judgment, statute_id)
         except CitationRefusedError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
         if not removed:
-            return Response(
-                {"error": "This judgment does not cite that statute."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return problem(status.HTTP_404_NOT_FOUND, None, "This judgment does not cite that statute.")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # ------------------------------------------------------------------
@@ -1483,9 +1457,9 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
                 serializer.validated_data["admitted"], serializer.validated_data.get("reason", ""),
             )
         except JudgmentFrozenError as exc:
-            return Response({"error": str(exc), "code": "concluded"}, status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "concluded", str(exc))
         except EvidenceRefusedError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
         finally:
             clear_current_user()
         return Response(EvidenceRulingResultSerializer({
@@ -1522,25 +1496,16 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         if realm_id is not None and not Realm.objects.filter(
             pk=realm_id, tenant_id=judgment.tenant_id, civilization=judgment.soul.civilization,
         ).exists():
-            return Response(
-                {"draft_destination_realm_id": ["No such realm in this judgment's tenant."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"draft_destination_realm_id": ["No such realm in this judgment's tenant."]})
         set_current_user(request.user)
         set_current_request(request)
         try:
             saved = JudgmentDraftService.save(judgment, version, data)
         except JudgmentFrozenError as exc:
-            return Response(
-                {"error": str(exc), "code": "concluded", "current": None},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "concluded", str(exc), current=None)
         except DraftConflictError as exc:
-            return Response(
-                {"error": str(exc), "code": "draft_conflict",
-                 "current": JudgmentDraftSerializer(exc.judgment).data},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "draft_conflict", str(exc),
+                           current=JudgmentDraftSerializer(exc.judgment).data)
         finally:
             clear_current_user()
         return Response(JudgmentDraftSerializer(saved).data)
@@ -1565,15 +1530,15 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         with transaction.atomic():
             flow = ApprovalWorkflow._base_manager.select_for_update(of=("self",)).filter(judgment=judgment).first()
             if flow is None or not flow.decides_judgment or flow.status != ApprovalWorkflowStatus.CANCELLED:
-                return Response({"error": "This case's approval flow was not cancelled.", "code": "not_cancelled"},
-                                status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, "not_cancelled",
+                               "This case's approval flow was not cancelled.")
             try:
                 retrial = weighing.reweigh_after_rejection(flow, because="CANCELLED")
             except WeighingRefusedError as exc:
-                return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+                return problem(exc.status, exc.code, str(exc), **exc.extra)
             if retrial is None:
-                return Response({"error": "The soul has already been placed; reopen or appeal instead.",
-                                 "code": "cannot_reopen"}, status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, "cannot_reopen",
+                               "The soul has already been placed; reopen or appeal instead.")
         return Response(JudgmentSerializer(retrial, context=self.get_serializer_context()).data,
                         status=status.HTTP_201_CREATED)
 
@@ -1609,7 +1574,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         """
         judgment = self.get_object()
         if judgment.is_final:
-            return Response({"error": "Judgment already concluded"}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, "Judgment already concluded")
 
         serializer = JudgmentConcludeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -1639,31 +1604,31 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             # fail_reason_not_selectable / fail_reason_not_failed / fail_reason_note_required /
             # fail_reason_note_too_long / fail_reason_contradicts_record / greek_account_required /
             # curability_required / greek_mark_not_applicable)。什么都没写。
-            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except ClaimRefusedError as exc:
             # 409 `claimed_by_other`:别人认领的案子,只有认领人或持 judgment.assign 的人(默认 ADMIN)能结。什么都没写。
-            return Response(exc.as_payload(), status=exc.status)
+            return problem(exc.status, **exc.as_payload())
         except WeighingRefusedError as exc:
             # 埃及:裁决与天平不符(`verdict_contradicts_weighing`,带天平给的裁决),或天平摇摆却选了去处。
-            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except DestinationRefusedError as exc:
             # 「戊 · 发落」选的门或刑期不成立。什么都没写(同一事务)。
-            return Response({"error": str(exc), "code": exc.code}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc))
         except PlanChangeRefusedError as exc:
             # 加减项 / 重开审判结案时对计划的改动被拒:什么都没写(同一事务)。
-            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except CitationRefusedError as exc:
             if exc.code:  # `statute_retired` (F-JUDG-13): 409 with the retired articles named
-                return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+                return problem(exc.status, exc.code, str(exc), **exc.extra)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
         except CrossJudgmentOpenError as exc:
             # Q17:挂着的联审的节点内容不再通过校验(409),或联审没结束而请求说不生成审批流程(400
             # `workflow_required`,第四十三批)。什么都没写。
-            return Response({"error": str(exc), "code": exc.code}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc))
         except SegmentRefusedError as exc:
             # 选站:跳过了终审(`final_required`)、还有来源要走的驳回目标(`jump_target_required`)
             # 或模板里没有的站(`unknown_node`)。什么都没写。
-            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+            return problem(exc.status, exc.code, str(exc), **exc.extra)
         except JudgmentNotConcludableError as exc:
             # The soul cannot make the move a conclusion requires — it is not
             # under judgment. This used to be **silent**: `transition_to`'s
@@ -1671,7 +1636,7 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             # marked final, a disposition created, and a soul still ALIVE.
             # 400, not 500: the caller asked for something the case's state
             # does not allow, and the message says which state it is in.
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, None, str(exc))
         judgment.refresh_from_db()
         return Response(
             JudgmentSerializer(judgment, context=self.get_serializer_context()).data
@@ -1775,6 +1740,5 @@ class VerdictPrintDataView(APIView):
     def get(self, request, key):
         data = verdict_pdf.print_data(key)
         if data is None:
-            return Response({"error": "Unknown or expired key.", "code": "unknown_print_key"},
-                            status=status.HTTP_404_NOT_FOUND)
+            return problem(status.HTTP_404_NOT_FOUND, "unknown_print_key", "Unknown or expired key.")
         return Response(data)

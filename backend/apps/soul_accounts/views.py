@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.perm.filters import DataScopeFilter
@@ -50,7 +51,7 @@ from apps.soul_accounts.serializers import (
 
 
 def _error(exc):
-    return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+    return problem(exc.status, exc.code, str(exc))
 
 
 def _apply_contacts(soul, data):
@@ -95,7 +96,7 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             request, scope_to_tenant(Soul.objects.all(), request, field="home_tenant"), Soul)
         soul = souls.filter(pk=body.validated_data["soul_id"]).first()
         if soul is None:
-            return Response({"detail": "灵魂不存在。", "code": "not_found"}, status=404)
+            return problem(404, "not_found", "灵魂不存在。")
         try:
             with transaction.atomic():
                 locked = Soul.lock(soul.pk)
@@ -146,7 +147,7 @@ class SoulAccountMfaResetView(APIView):
                                    field="soul__home_tenant")
         account = get_object_or_404(accounts, pk=pk)
         if request.user.tenant_id is None or request.user.tenant_id != account.soul.home_tenant_id:
-            return Response({"detail": "只有本殿官员能关闭灵魂的两步验证。", "code": "not_home_hall"}, status=403)
+            return problem(403, "not_home_hall", "只有本殿官员能关闭灵魂的两步验证。")
         body = SoulMfaResetRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         try:

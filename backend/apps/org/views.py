@@ -10,6 +10,7 @@ from rest_framework.response import Response
 
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.org.models import Organization
 from apps.org.serializers import OrganizationSerializer
@@ -120,11 +121,9 @@ class OrganizationViewSet(
         judgments = org.owned_judgments.filter(is_deleted=False).count()
         move_to = request.query_params.get("move_to")
         if units or people or ((souls or judgments) and not move_to):
-            return Response(
-                {"code": "not_empty", "error": "Move its sub-units, people, souls and judgments first.",
-                 "units": units, "people": people, "souls": souls, "judgments": judgments},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, "not_empty",
+                           "Move its sub-units, people, souls and judgments first.", units=units, people=people,
+                           souls=souls, judgments=judgments)
         if move_to:
             target = self._move_target(request, org, move_to)
             with transaction.atomic():

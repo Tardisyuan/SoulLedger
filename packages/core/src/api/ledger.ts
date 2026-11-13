@@ -1,5 +1,5 @@
 import axios from "axios";
-import { api } from "./client";
+import { api, responseCode } from "./client";
 import type { HistoricalDate } from "../domain/dates";
 
 export type LedgerTrendRange = "30d" | "90d" | "12m";
@@ -395,12 +395,12 @@ export interface LedgerJournalParams {
 
 /**
  * The whole-month journal (`journalMonth`) refused because the month is over
- * `WHOLE_MONTH_MAX` rows: 400 `{"error": "MONTH_TOO_LARGE", "field": "all"}`
- * (apps/ledger/views.py). Retrying cannot help — the filters have to narrow.
+ * `WHOLE_MONTH_MAX` rows: 400 problem `month_too_large` (`field: "all"`, apps/ledger/views.py).
+ * Retrying cannot help — the filters have to narrow.
  */
 export function isMonthTooLarge(error: unknown): boolean {
   if (!axios.isAxiosError(error) || error.response?.status !== 400) return false;
-  return (error.response.data as { error?: unknown } | undefined)?.error === "MONTH_TOO_LARGE";
+  return responseCode(error) === "month_too_large";
 }
 
 export const ledgerApi = {
@@ -414,7 +414,7 @@ export const ledgerApi = {
   journal: (params: LedgerJournalParams & { page?: number }) => api.get<LedgerJournal>("/ledger/journal/", { params }),
   /**
    * 本月全部行,一次请求(`all=1`,B10 不分页)。超过后端上限(`WHOLE_MONTH_MAX`)时是
-   * 400 `MONTH_TOO_LARGE`,不截断 —— 调用方要把它当成「筛选再窄一点」,不是空账。
+   * 400 `month_too_large`,不截断 —— 调用方要把它当成「筛选再窄一点」,不是空账。
    */
   journalMonth: (params: LedgerJournalParams) =>
     api.get<LedgerJournal>("/ledger/journal/", { params: { ...params, all: 1 } }),

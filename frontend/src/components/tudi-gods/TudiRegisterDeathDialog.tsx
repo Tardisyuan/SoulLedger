@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { soulsApi, tudiGodKeys, tudiGodsApi, type TudiGod } from "@soulledger/core/api";
+import { responseCode, responseData } from "@soulledger/core/api/client";
 import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
@@ -98,9 +99,9 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
       }),
     onSuccess: ({ data }) => settle(data),
     onError: (err) => {
-      // 同一把幂等键再发一次(连点、超时后重试):后端 409 并答已有的那条登记 —— 那是同一次登记,按它的结果收尾。
-      const res = (err as { response?: { status?: number; data?: RegisterResult } })?.response;
-      if (res?.status === 409 && res.data?.id) return settle(res.data);
+      // 同一把幂等键再发一次(连点、超时后重试):后端 409 `registration_exists` 带上已有的那条登记 —— 那是同一次登记,按它的结果收尾。
+      const existing = responseData<{ registration: RegisterResult }>(err)?.registration;
+      if (responseCode(err) === "registration_exists" && existing?.id) return settle(existing);
       setRefusal(tudiRefusalMessage(err, t));
     },
   });

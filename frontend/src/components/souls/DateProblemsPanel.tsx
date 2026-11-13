@@ -6,7 +6,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { soulsApi } from "@soulledger/core/api";
-import { responseError } from "@soulledger/core/api/client";
+import { problemDetail } from "@soulledger/core/api/client";
 import type { SoulDateProblem, SoulRecordEntry } from "@soulledger/core/api/souls";
 
 interface DateProblemsPanelProps {
@@ -100,7 +100,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
       onChanged();
     } catch (e: unknown) {
       // 后端写的那句原因照显示;没有就给固定文案 —— 不回显 axios 的英文 message。
-      showToast(responseError(e) || t("souls.detail.date_problems.ack_error"), "error");
+      showToast(problemDetail(e) || t("souls.detail.date_problems.ack_error"), "error");
     } finally {
       setBusyRecordId(null);
     }

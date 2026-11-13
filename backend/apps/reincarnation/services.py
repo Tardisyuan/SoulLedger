@@ -6,6 +6,7 @@ import datetime
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
+from apps.core.problems import Problem
 from apps.disposition.models import Disposition
 from apps.ledger.services import LedgerService
 from apps.souls.models import Continent, Soul, SoulState
@@ -78,7 +79,7 @@ class SoupRefused(APIException):
         super().__init__({"code": code, "detail": detail})
 
 
-class RebirthBlocked(APIException):
+class RebirthBlocked(Problem):
     """转世被业务挡住(2026-10-27 用户决定),灵魂原地不动:
     `plan_in_progress` —— 受刑计划还没走完(计划完成才是转世的正门,`SentencePlanService._complete`);
     `eternal_sentence` —— 本世有未赦免的永久刑期(永久 = 不转生);
@@ -87,14 +88,9 @@ class RebirthBlocked(APIException):
     带 `term_end`,期满日那天(或之后)「期满释放」再办。
     `open_judgment` —— 还有未结案的审判(2026-11-01),带 `open_judgment_ids`。"""
 
-    status_code = 409
-    default_code = "rebirth_blocked"
-
     def __init__(self, code, detail, **extra):
-        super().__init__(detail)
-        # 原样保留:`APIException` 会把每个叶子转成字符串,`term_end` 的 `{year, month, day}` 就成了 "2029"。
-        # 与 `city_gods.NoCityGodError` 同一个做法。
-        self.detail = {"code": code, "error": detail, "detail": detail, **extra}
+        # `Problem` 原样保留扩展成员:`APIException` 会把每个叶子转成字符串,`term_end` 的 `{year, month, day}` 就成了 "2029"。
+        super().__init__(409, code, detail, **extra)
 
 
 class RebirthFormNotApplicable(APIException):

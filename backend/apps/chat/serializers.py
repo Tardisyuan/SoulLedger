@@ -8,6 +8,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from apps.chat.models import FEEDBACK_TAGS, Conversation, ConversationKind, InboxReplyTemplate
+from apps.core.problems import ProblemSerializer
 from apps.social.soul_serializers import SoulCardSerializer
 
 
@@ -287,9 +288,7 @@ class ChatLookupSerializer(serializers.Serializer):
     soul_code = serializers.CharField(max_length=32, help_text="完整的灵魂编号,大小写不论;不做前缀或模糊匹配。")
 
 
-class ChatErrorSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    code = serializers.CharField()
+class ChatErrorSerializer(ProblemSerializer):
     retry_at = serializers.DateTimeField(required=False, help_text="429 时:何时可以再试。")
     assignee_name = serializers.CharField(required=False, help_text="409 `assigned_to_other` 时:当前经办人的显示名。")
 

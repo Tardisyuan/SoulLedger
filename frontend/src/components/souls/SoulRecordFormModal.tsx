@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { problemErrors, responseStatus } from "@soulledger/core/api/client";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
 import { useAddSoulRecord, useUpdateSoulRecord } from "@soulledger/core/hooks/useSouls";
@@ -47,7 +48,7 @@ const FIELD_KEYS = [
 ] as const;
 type Errors = Partial<Record<FieldKey, string>> & { general?: string };
 
-/** 后端稳定的错误码 → 文案键。码在 400 体的 `error_codes`(与消息同序);不认识的码退回后端原文。 */
+/** 后端稳定的错误码 → 文案键。码在校验问题每条 `errors` 的 `code`;不认识的码退回后端原文。 */
 function messageKeyOf(field: string, code: string | undefined): string | null {
   if (code === "statute_other_civilization") return "ledger.book.form.err.statute_civ";
   if (code === "clause_count_pair") return "ledger.book.form.err.pair";
@@ -57,21 +58,16 @@ function messageKeyOf(field: string, code: string | undefined): string | null {
   return null;
 }
 
-/** DRF 的 400:`{字段: [消息], error_codes: {字段: [码]}}`。认得的码译成当前语言,否则用原文;
- *  认得的字段落到字段下,其余(non_field_errors / detail)落到表单顶上。 */
+/** 400 校验问题的 `errors`:认得的码译成当前语言,否则用原文;认得的字段落到字段下(每个字段第一条),
+ *  其余(整份的)落到表单顶上。 */
 export function recordFormErrorsOf(error: unknown, t: (key: string) => string): Errors {
-  const data = (error as { response?: { status?: number; data?: unknown } })?.response;
-  if (data?.status !== 400 || typeof data.data !== "object" || data.data === null) return {};
-  const body = data.data as Record<string, unknown>;
-  const codes = (typeof body.error_codes === "object" && body.error_codes ? body.error_codes : {}) as Record<string, string[]>;
+  if (responseStatus(error) !== 400) return {};
   const out: Errors = {};
-  for (const [key, value] of Object.entries(body)) {
-    if (key === "error_codes") continue;
-    const raw = Array.isArray(value) ? String(value[0] ?? "") : typeof value === "string" ? value : "";
-    if (!raw) continue;
-    const mapped = messageKeyOf(key, codes[key]?.[0]);
-    const message = mapped ? t(mapped) : raw;
-    if ((FIELD_KEYS as readonly string[]).includes(key)) out[key as FieldKey] = message;
+  for (const e of problemErrors(error)) {
+    const key = e.field ?? "non_field_errors";
+    const mapped = messageKeyOf(key, e.code);
+    const message = mapped ? t(mapped) : e.detail;
+    if ((FIELD_KEYS as readonly string[]).includes(key)) out[key as FieldKey] ??= message;
     else out.general = message;
   }
   return out;

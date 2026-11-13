@@ -69,10 +69,10 @@ def _unfiltered_manager(model):
 
 class RestoreRefusedError(Exception):
     """A registered restore check refused this cascade. `body` is the 400
-    response: `{"error", "code", ...}`."""
+    problem: `{"code", "detail", ...}` (the `problem()` arguments)."""
 
     def __init__(self, body):
-        super().__init__(body["error"])
+        super().__init__(body["detail"])
         self.body = body
 
 
@@ -149,7 +149,7 @@ def restore_cascade(cascade_id, tenant=None) -> int:
     if tenant is not None and _cascade_outside(cascade_id, tenant):
         return 0
     if _is_system_void(cascade_id):
-        raise RestoreRefusedError({"error": "The system voided these records; they cannot be restored",
+        raise RestoreRefusedError({"detail": "The system voided these records; they cannot be restored",
                                    "code": "system_void"})
     for check in _RESTORE_CHECKS:
         refusal = check(cascade_id)

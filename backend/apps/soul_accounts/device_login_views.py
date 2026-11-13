@@ -16,6 +16,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.problems import problem
 from apps.soul_accounts import device_login
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.me_views import (
@@ -92,8 +93,7 @@ class SoulDeviceLoginView(APIView):
         soul_code = body.validated_data["soul_code"]
         keys = _rate_keys(ip, soul_code, scope="face")
         if rate_limited(keys):
-            return Response({"detail": "登录尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
-                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return problem(status.HTTP_429_TOO_MANY_REQUESTS, "rate_limited", "登录尝试过于频繁,请 15 分钟后再试。")
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
         # all_objects:回收站里的灵魂也找得到(F-ACCT-06)。此前答 `device_login_invalid`,App 读成「面容有变动」
         # 删掉本机凭据,灵魂恢复后面容登录已没了,服务端那行却还有效。
@@ -105,8 +105,7 @@ class SoulDeviceLoginView(APIView):
                 and account.retired_at is None and account.user.is_active:
             LoginLog.objects.create(username=username, status="FAILED", ip_address=ip, user_agent=user_agent,
                                     failure_reason="soul_recycled")
-            return Response({"detail": "灵魂已移入回收站,账号暂停使用。", "code": "soul_recycled"},
-                            status=status.HTTP_401_UNAUTHORIZED)
+            return problem(status.HTTP_401_UNAUTHORIZED, "soul_recycled", "灵魂已移入回收站,账号暂停使用。")
         if soul is not None and soul.is_deleted:
             soul, row, account = None, None, None
         # 账号已停用而凭据没标(不该发生,转生时同事务标了):按转生答,而不是「不认识」。
@@ -115,14 +114,12 @@ class SoulDeviceLoginView(APIView):
         if reason:
             LoginLog.objects.create(username=username, status="FAILED", ip_address=ip, user_agent=user_agent,
                                     failure_reason=f"device_login_revoked:{reason}")
-            return Response({"detail": "这部手机的面容/指纹登录已失效。", "code": "device_login_revoked",
-                             "reason": reason}, status=status.HTTP_401_UNAUTHORIZED)
+            return problem(status.HTTP_401_UNAUTHORIZED, "device_login_revoked", "这部手机的面容/指纹登录已失效。", reason=reason)
         if account is None or not account.user.is_active:
             count_failure(keys)
             LoginLog.objects.create(username=username, status="FAILED", ip_address=ip, user_agent=user_agent,
                                     failure_reason="device_login_invalid")
-            return Response({"detail": "灵魂编号或凭据错误。", "code": "device_login_invalid"},
-                            status=status.HTTP_401_UNAUTHORIZED)
+            return problem(status.HTTP_401_UNAUTHORIZED, "device_login_invalid", "灵魂编号或凭据错误。")
         row.last_used_at = timezone.now()
         row.save(update_fields=["last_used_at"])
         return finish_first_step(account, soul_code, rate_keys=keys, ip=ip,

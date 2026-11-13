@@ -15,6 +15,7 @@ from rest_framework.response import Response
 
 from apps.authentication.models import User
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.tenant import request_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import city_gods
@@ -152,8 +153,8 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
 
         tenant = self.get_serializer_context()["tenant"]
         if tenant is None or tenant.known_civilization != Civilization.CHINESE:
-            return Response({"error": "City gods belong to 地府 (CN_DIYU) only.", "code": "city_gods_diyu_only"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return problem(status.HTTP_400_BAD_REQUEST, "city_gods_diyu_only",
+                           "City gods belong to 地府 (CN_DIYU) only.")
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -189,9 +190,10 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         god = self.get_object()
         open_cases = Judgment.objects.filter(city_god=god, city_god_status__in=AT_CITY_GOD).count()
         if open_cases:
-            return Response({"error": "This city god still has cases awaiting review; send them on or transfer "
-                                      "them first.", "code": "city_god_has_open_cases", "count": open_cases},
-                            status=status.HTTP_409_CONFLICT)
+            return problem(status.HTTP_409_CONFLICT, "city_god_has_open_cases",
+                           "This city god still has cases awaiting review; send them on or transfer "
+                                      "them first.",
+                           count=open_cases)
         god.soft_delete(user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -320,7 +322,7 @@ class CityGodCaseViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserV
         try:
             run(judgment.pk)
         except city_gods.CityGodRefusedError as exc:
-            return Response(exc.as_payload(), status=exc.status)
+            return problem(exc.status, **exc.as_payload())
         return Response(self.get_serializer(self.get_queryset().get(pk=judgment.pk)).data)
 
     @extend_schema(request=CityGodSendOnSerializer, responses={200: CityGodCaseSerializer, **_REFUSALS})

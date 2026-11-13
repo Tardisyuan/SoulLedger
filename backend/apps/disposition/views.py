@@ -15,6 +15,7 @@ from apps.core.exports import export_csv
 from apps.core.idempotency import idempotent
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.problems import problem
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.expiry import term_end_sort_key
 from apps.disposition.models import SECTION_FILTERS, Disposition, DispositionSection
@@ -249,19 +250,16 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                 .first()
             )
             if locked is None:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND)
             if locked.is_executed:
-                return Response(
-                    {"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                return problem(status.HTTP_400_BAD_REQUEST, None, "Already executed")
             disposition = locked
             # 原审的审批流程还没走完(或被驳回)就不执行(用户 2026-10-29;埃及是称心流程,docs/02 §5)。
             from apps.judgment.weighing import unfinished_flow
 
             waiting = unfinished_flow(disposition)
             if waiting is not None:
-                return Response({"error": "The approval flow has not completed", "code": waiting},
-                                status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, waiting, "The approval flow has not completed")
             from apps.sentence_plan.services import SentencePlanService
 
             # 挂在受刑计划节点上的处置:转生 / 终局由计划完成时的 `advance` 做
@@ -271,8 +269,8 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
 
             if not on_plan and plan_blocks_nodeless(disposition.soul):
                 # 手建的处置不越过进行中的受刑计划(F-DISP-03);服务层同一条,这里给出能读的码。
-                return Response({"error": "The soul's sentence plan is in progress; this disposition is not on it",
-                                 "code": "plan_in_progress"}, status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, "plan_in_progress",
+                               "The soul's sentence plan is in progress; this disposition is not on it")
             executed = DispositionService.execute(disposition)
             from apps.disposition.expiry import serving
 
@@ -303,17 +301,10 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             # unconditionally after having already saved `is_executed` -- the
             # record said "executed" while the soul had not moved, and this
             # view answered 200.
-            return Response(
-                {
-                    "error": "Soul is not in a state this disposition can act on",
-                    "detail": (
-                        f"当前状态 {disposition.soul.current_state} 不允许执行该处置；"
-                        f"处置未被标记为已执行"
-                    ),
-                    "soul_state": disposition.soul.current_state,
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, None,
+                           f"当前状态 {disposition.soul.current_state} 不允许执行该处置；"
+                        f"处置未被标记为已执行",
+                           soul_state=disposition.soul.current_state)
 
         return Response(DispositionSerializer(disposition, context=self.get_serializer_context()).data)
 
@@ -342,11 +333,10 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                 .select_related("soul", "destination_realm").filter(pk=disposition.pk).first()
             )
             if locked is None:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+                return problem(status.HTTP_404_NOT_FOUND)
             if not releasable(locked):
                 code = "term_not_ended" if serving(locked) else "not_serving"
-                return Response({"error": "This disposition cannot be released", "code": code},
-                                status=status.HTTP_409_CONFLICT)
+                return problem(status.HTTP_409_CONFLICT, code, "This disposition cannot be released")
             expire_one(locked, timezone.now(), actor=request.user.username)
         locked.refresh_from_db()
         return Response(DispositionSerializer(locked, context=self.get_serializer_context()).data)
@@ -361,10 +351,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         try:
             disposition.delete_or_raise(user=request.user, reason=reason)
         except DeletionNotAllowedError as exc:
-            return Response(
-                {"error": str(exc), "archivable": exc.archivable},
-                status=status.HTTP_409_CONFLICT,
-            )
+            return problem(status.HTTP_409_CONFLICT, None, str(exc), archivable=exc.archivable)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
@@ -393,10 +380,8 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         Disposition.can_delete."""
         disposition = self.get_object()
         if disposition.can_delete:
-            return Response(
-                {"error": "This disposition has no concluded verdict; delete it instead of archiving."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return problem(status.HTTP_400_BAD_REQUEST, None,
+                           "This disposition has no concluded verdict; delete it instead of archiving.")
         reason = request.data.get("reason", "")
         disposition.archive(user=request.user, reason=reason)
         return Response(DispositionSerializer(disposition, context=self.get_serializer_context()).data)
