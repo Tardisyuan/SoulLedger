@@ -368,6 +368,36 @@ async function recordAsks(rec, access, language) {
   }
 }
 
+// Business AI on the judging desk and the moderation queue (points 1, 2 and 4): for each open case this role may edit,
+// the statute suggestions and a verdict draft per verdict; for a moderator, the pre-screen of both queues. POSTs,
+// keyed like a GET (`frontend/demo/aiReplay.ts`). Asked once per language, so each recording holds the model's words
+// in its own language. With the assistant off for the hall these are the keyword / template / rule fallbacks.
+async function post(rec, access, path, body, language) {
+  const res = await fetch(`${rec.api}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${access}`, "Accept-Language": language, "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  const json = await res.json().catch(() => null);
+  return json === null ? null : { s: res.status, b: scrub(json, rec.origin) };
+}
+async function recordBusinessAi(rec, access, language) {
+  for (const row of rowsOf(rec, "/judgment/").filter((r) => r.verdict == null && r.can_edit !== false)) {
+    const suggest = await post(rec, access, `/judgment/${row.id}/statute-suggestions/`, {}, language);
+    if (suggest) rec.docs[`/judgment/${row.id}/statute-suggestions/`] = suggest;
+    if (!suggest || suggest.s !== 200) continue; // no editing rights here: no drafts either
+    for (const verdict of ["PASSED", "FAILED", "PURGATORY"]) {
+      const draft = await post(rec, access, `/judgment/${row.id}/verdict-draft/`, { verdict }, language);
+      if (draft) rec.docs[`/judgment/${row.id}/verdict-draft/?verdict=${verdict}`] = draft;
+    }
+  }
+  if (!Object.keys(rec.lists).some((k) => k.startsWith("/social-moderation/posts/"))) return;
+  for (const kind of ["posts", "comments"]) {
+    const screen = await post(rec, access, `/social-moderation/${kind}/ai-screen/`, {}, language);
+    if (screen) rec.docs[`/social-moderation/${kind}/ai-screen/`] = screen;
+  }
+}
+
 function finish(rec) {
   const lists = {};
   for (const [key, list] of Object.entries(rec.lists)) lists[key] = { rows: rowsOf(rec, key), extra: list.extra };
@@ -426,6 +456,8 @@ async function recordRole(browser, role, origin, paths) {
   // After the English pass above, which re-asks every key as a GET: these are POSTs, asked once per language.
   await recordAsks(rec, access, "zh-Hans");
   await recordAsks(recEn, access, "en");
+  await recordBusinessAi(rec, access, "zh-Hans");
+  await recordBusinessAi(recEn, access, "en");
   const recordedAt = new Date().toISOString();
   const out = { role, lang: "zh", recordedAt, login: translator("zh")(scrub(login, origin)), ...translator("zh")(historizeAll(finish(rec))) };
   const outEn = { role, lang: "en", recordedAt, login: translator("en")(scrub(login, origin)), ...translator("en")(historizeAll(finish(recEn))) };

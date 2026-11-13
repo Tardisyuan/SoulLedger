@@ -46,6 +46,7 @@ from apps.social.models import (
 )
 from apps.social.moderation_serializers import (
     EXCERPT,
+    AIScreenResponseSerializer,
     HandledContentSerializer,
     ModeratedCommentSerializer,
     ModeratedPostSerializer,
@@ -68,9 +69,27 @@ from apps.social.moderation_serializers import (
     officer_media,
 )
 from apps.social.soul_circle import SocialError
+from apps.soul_assist.views import OfficerAssistThrottle
 
 MODERATE = "social.moderate"
 ERRORS = {400: ModerationErrorSerializer, 403: ModerationErrorSerializer, 409: ModerationErrorSerializer}
+
+
+def ai_screen_annotations(kind):
+    """列表行带上已存的 AI 预筛分(`ModerationScore`):分、理由、来源、信号与打分时的正文指纹。
+    指纹对不上(作者改过正文)由序列化器当作没打过分。"""
+    from django.db.models import JSONField, OuterRef, Subquery
+
+    from apps.social.models import ModerationScore
+
+    row = ModerationScore.objects.filter(kind=kind, object_id=OuterRef("pk"))
+    return {
+        "ai_score": Subquery(row.values("score")[:1]),
+        "ai_reason": Subquery(row.values("reason")[:1]),
+        "ai_source": Subquery(row.values("source")[:1]),
+        "ai_signals": Subquery(row.values("signals")[:1], output_field=JSONField()),
+        "ai_hash": Subquery(row.values("content_hash")[:1]),
+    }
 
 
 def reason_fields(body):
@@ -155,15 +174,40 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
 
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["moderation_status"]
-    extra_permissions = {a.lower(): [MODERATE] for a in mod.CONTENT_ACTIONS}
+    extra_permissions = {**{a.lower(): [MODERATE] for a in mod.CONTENT_ACTIONS}, "ai_screen": [MODERATE]}
 
     default_list_filter = {"moderation_status": ModerationStatus.PENDING}
 
+    #: `ModerationScore.kind` 里的名字。
+    ai_kind = ""
+
     def get_queryset(self):
         qs = super().get_queryset().select_related("author")
-        return qs.annotate(
-            open_report_count=Count("reports", filter=Q(reports__status=ReportStatus.OPEN), distinct=True)
-        ).order_by("-create_time")
+        qs = qs.annotate(
+            open_report_count=Count("reports", filter=Q(reports__status=ReportStatus.OPEN), distinct=True),
+            **ai_screen_annotations(self.ai_kind),
+        )
+        # `?order=risk`:AI 预筛的分高的先看(没打过分的排最后)。只是排序,不筛掉任何一条。
+        if self.request.query_params.get("order") == "risk":
+            return qs.order_by(F("ai_score").desc(nulls_last=True), "-create_time")
+        return qs.order_by("-create_time")
+
+    @extend_schema(request=None, responses={200: AIScreenResponseSerializer, **ERRORS})
+    @action(detail=False, methods=["post"], url_path="ai-screen", throttle_classes=[OfficerAssistThrottle])
+    def ai_screen(self, request):
+        """AI 预筛(`apps/social/ai_screen.py`):给待审队列的前 30 条打风险分,只用于排序,不改任何内容的状态。"""
+        from apps.core.locale import locale_from_request
+        from apps.social import ai_screen
+
+        queue = self.get_queryset().filter(moderation_status=ModerationStatus.PENDING)
+        lang = "zh-Hans" if locale_from_request(request).lower().startswith("zh") else "en"
+        done, scores = ai_screen.screen(queue, self.ai_kind, request, lang=lang)
+        return Response({
+            "items": [{"id": s.object_id, "score": s.score, "reason": s.reason, "signals": s.signals,
+                       "source": s.source} for s in scores],
+            "model": done.model if done else "",
+            "fallback": done is None,
+        })
 
     def _act(self, request, verb):
         body = ModerationActionSerializer(data=request.data)
@@ -206,6 +250,7 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
 
 
 class ModeratedPostViewSet(ModeratedContentViewSet):
+    ai_kind = "post"
     queryset = Post.objects.prefetch_related(
         Prefetch("media", queryset=PostMedia.all_objects.all(), to_attr="all_media_rows"),
     )
@@ -224,6 +269,7 @@ class ModeratedPostViewSet(ModeratedContentViewSet):
 
 
 class ModeratedCommentViewSet(ModeratedContentViewSet):
+    ai_kind = "comment"
     queryset = Comment.objects.all()
     serializer_class = ModeratedCommentSerializer
 

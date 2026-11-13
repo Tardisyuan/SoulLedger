@@ -42,7 +42,13 @@ const OPERATIONS = Object.entries(SCHEMA_PATHS).flatMap(([p, methods]) =>
 
 // Agreed with the backend but not served yet. Each entry names the batch that will serve it; once the schema
 // has the operation, "pending operations are still unserved" goes red and the entry must be deleted here.
-const PENDING: Record<string, string> = {};
+const PENDING: Record<string, string> = {
+  // AI points 1, 2 and 4 (apps/judgment/ai_views.py, apps/social/moderation_views.py): served; schema.yml not yet
+  // regenerated on this branch. Delete these three once it is.
+  "post /api/v1/judgment/{id}/statute-suggestions/": "AI statute suggestions, schema regenerated after merge",
+  "post /api/v1/judgment/{id}/verdict-draft/": "AI verdict draft, schema regenerated after merge",
+  "post /api/v1/social-moderation/{kind}/ai-screen/": "AI pre-screen (posts / comments), schema regenerated after merge",
+};
 const PENDING_OPS = Object.keys(PENDING).map((k) => {
   const [method, p] = k.split(" ");
   return { key: k, method, path: p, re: new RegExp(`^${p.replace(/\{[^}]+\}/g, "[^/]+")}$`) };

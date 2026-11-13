@@ -654,3 +654,28 @@ class SocialInteraction(models.Model):
 #: The author's own delete (soul app, or the web social views) is not a
 #: moderation decision — it is not in「已处理」and not in the recycle bin.
 DELETED_BY_OFFICER = Q(deleted_by__isnull=False) & ~Q(deleted_by=F("author"))
+
+
+class ModerationScore(models.Model):
+    """AI 预筛的风险分(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 4;`apps/social/ai_screen.py`)。
+
+    **只用于排序。** 不改内容的状态、不隐藏、不删除;审核员的决定照旧走 `moderation.moderate_content`。
+    只在审核后台(`social.moderate`)可见,作者与别的灵魂看不到。`content_hash` 是打分时正文的指纹:
+    作者改了正文,分数就不再算数,下次预筛重打。"""
+
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="+")
+    kind = models.CharField(max_length=10, choices=[("post", "post"), ("comment", "comment")])
+    object_id = models.UUIDField()
+    score = models.PositiveSmallIntegerField()
+    #: 模型的一句理由(最多 200 字);只有规则分时为空,页面按 `signals` 用语言包的句子。
+    reason = models.CharField(max_length=200, blank=True, default="")
+    #: 规则看到的信号:sensitive_word / reported / injection_phrase / media(不靠模型,永远有)。
+    signals = models.JSONField(default=list, blank=True)
+    source = models.CharField(max_length=10, choices=[("model", "model"), ("rule", "rule")])
+    model = models.CharField(max_length=200, blank=True, default="")
+    content_hash = models.CharField(max_length=64)
+    scored_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["kind", "object_id"], name="social_moderation_score_one_per_row")]
+        indexes = [models.Index(fields=["tenant", "kind"])]

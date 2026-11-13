@@ -115,6 +115,8 @@ import { dossierWhere } from "@/src/components/dossier/dossierWhere";
 import { dossierTabHrefs } from "@/src/components/dossier/dossierTabHrefs";
 import { dossier } from "@/src/components/dossier/styles";
 import { rebirthFormNamespace, verdictNamespace, verdictText } from "@/src/lib/domainNames";
+import { StatuteSuggestions } from "@/src/components/ai/StatuteSuggestions";
+import { VerdictDraftPanel } from "@/src/components/ai/VerdictDraftPanel";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -880,6 +882,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <JudgmentGroundsPanel citations={citations} />
             </div>
           )}
+          {/* AI 建议援引(src/components/ai/StatuteSuggestions.tsx):判官勾选才经同一个 citeMutation 写入。 */}
+          {!isFinal && (
+            <StatuteSuggestions
+              judgmentId={judgment.id}
+              canCite={!!canEditGrounds}
+              cited={citedIds}
+              onCite={(statuteId) => citeMutation.mutateAsync(statuteId)}
+            />
+          )}
           {/* 据 · 检索:只在未结案时有事可做(引用一条律条)。 */}
           {!isFinal && (
             <div className="mt-6">
@@ -1288,6 +1299,19 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                       placeholder={t("judgment.detail.notes_placeholder")}
                       className="block w-full mt-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-(--field) px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-ink))] resize-y"
                     />
+                    {/* AI 判词草稿(src/components/ai/VerdictDraftPanel.tsx):先选裁决才能起草,放进来后照旧自动保存。 */}
+                    {canEditCase && (
+                      <VerdictDraftPanel
+                        judgmentId={judgment.id}
+                        verdict={selectedVerdict}
+                        currentText={notes}
+                        onInsert={(text) => {
+                          notesTouched.current = true;
+                          setNotes(text);
+                          draft.markEdited();
+                        }}
+                      />
+                    )}
                     {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
                     {!draft.conflict && <DraftStatusLine status={draft.status} saves={draft.saves} />}
                     {draft.conflict && (

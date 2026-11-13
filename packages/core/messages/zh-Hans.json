@@ -10201,5 +10201,50 @@
       "mortal": "人间"
     },
     "office_read_only": "殿司 · 窄屏只读"
+  },
+  "ai_assist": {
+    "statutes": {
+      "title": "AI 建议援引",
+      "ask": "建议援引",
+      "note": "只是建议:逐条读原文,勾选的才会引用。",
+      "why": "理由",
+      "keyword": "关键词匹配",
+      "fallback": "AI 不可用或本殿未开通,以下是关键词匹配的条文。",
+      "none": "没有找到适用的条文。",
+      "cite_selected": "引用所选({n})",
+      "discard": "都不用",
+      "dropped": "已丢掉无据的建议:{codes}",
+      "model": "模型 · {model}",
+      "error": "没取到建议,请直接检索条文。"
+    },
+    "verdict": {
+      "ask": "起草判词",
+      "need_verdict": "先选定裁决,再起草。",
+      "note": "AI 只按你选定的裁决起草;放进判词框后由你修改、保存。",
+      "insert": "放入判词框",
+      "replace": "替换判词框里的文字",
+      "discard": "不用",
+      "fallback": "AI 不可用或本殿未开通,这是模板句。",
+      "check_unknown": "不在已采纳引用里的条文:{codes}",
+      "check_contrary": "出现了与所选裁决相反的说法:{words}",
+      "check_name": "出现了灵魂的姓名或编号",
+      "model": "模型 · {model}",
+      "error": "没取到草稿,请直接书写判词。"
+    },
+    "screen": {
+      "run": "AI 预筛",
+      "sort": "按风险排序",
+      "note": "只排序,不隐藏也不删除;决定仍由你做。",
+      "score": "风险 {score}",
+      "fallback": "AI 不可用或本殿未开通,只用规则分。",
+      "model": "模型 · {model}",
+      "error": "预筛没成功,队列照常可用。",
+      "signals": {
+        "sensitive_word": "命中敏感词",
+        "reported": "被举报",
+        "injection_phrase": "含操纵评分的句子",
+        "media": "带图"
+      }
+    }
   }
 }
