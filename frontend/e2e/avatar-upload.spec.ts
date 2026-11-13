@@ -58,7 +58,8 @@ test.describe("Profile avatar upload", () => {
     // the exact 400 shape AvatarUploadSerializer.validate_avatar raises.
     api.on("POST", "/social/profiles/me/avatar/", () => ({
       status: 400,
-      body: { avatar: ["Upload a PNG, JPEG or WebP image."] },
+      // RFC 9457 problem body (backend/apps/core/problems.py): field errors are `errors[]`.
+      body: { type: "about:blank", title: "Bad Request", status: 400, code: "invalid", detail: "Upload a PNG, JPEG or WebP image.", errors: [{ field: "avatar", code: "invalid_image", detail: "Upload a PNG, JPEG or WebP image." }] },
     }));
 
     await page.goto(`/social/profile/${TEST_USER.id}`);

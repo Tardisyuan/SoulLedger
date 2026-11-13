@@ -85,13 +85,15 @@ test.describe("Critical path: the judgment triage queue", () => {
     // A queue, not a list: the next case is not on screen.
     await expect(page.getByText(SECOND.soul_name)).toHaveCount(0);
 
-    // ── Rule on it with the keyboard ──
+    // ── Rule on it with the keyboard: 1 selects, Ctrl/⌘+Enter seals (fast-track, 2026-11-14) ──
     await page.keyboard.press("1");
+    await page.keyboard.press("Control+Enter");
 
-    // Advances immediately, and the verdict is sent at once — no undo offered.
+    // Advances at once; the verdict is held for the 5 s undo strip, then sent.
     await expect(page.getByText(SECOND.soul_name)).toBeVisible();
     await expect(page.getByText("第 2 / 共 2 条")).toBeVisible();
-    await expect.poll(() => api.countOf("POST", "/judgment/:id/conclude/")).toBe(1);
+    await expect(page.getByTestId("undo-strip")).toBeVisible();
+    await expect.poll(() => api.countOf("POST", "/judgment/:id/conclude/"), { timeout: 10_000 }).toBe(1);
     expect(api.lastCall("POST", "/judgment/:id/conclude/")?.body).toEqual({
       verdict: "PASSED",
       notes: "",
@@ -101,9 +103,9 @@ test.describe("Critical path: the judgment triage queue", () => {
     expect(api.lastCall("POST", "/judgment/:id/conclude/")?.body).not.toHaveProperty("create_workflow");
     await expect(page.getByRole("button", { name: "撤销" })).toHaveCount(0);
 
-    // ── Leaving sends nothing more ──
+    // ── Esc does not leave the sitting (fast-track, 2026-11-14), and sends nothing more ──
     await page.keyboard.press("Escape");
-    await expect(page).toHaveURL(/\/judgment$/);
+    await expect(page).toHaveURL(/\/judgment\/queue/);
     expect(api.countOf("POST", "/judgment/:id/conclude/")).toBe(1);
   });
 
@@ -116,16 +118,18 @@ test.describe("Critical path: the judgment triage queue", () => {
     });
     api.on("POST", "/judgment/:id/conclude/", () => ({
       status: 409,
-      body: { error: "claimed", code: "claimed_by_other", claimed_by: 7, claimed_by_name: "崔判官" },
+      body: { type: "about:blank", title: "Conflict", status: 409, code: "claimed_by_other", claimed_by: 7, claimed_by_name: "崔判官" },
     }));
 
     await page.goto("/judgment/queue");
     await expect(page.getByText(FIRST.soul_name)).toBeVisible();
 
     await page.keyboard.press("1");
+    await page.keyboard.press("Control+Enter");
 
+    // The refusal arrives once the 5 s undo strip has run out and the verdict is sent.
     const banner = page.getByRole("alert").filter({ hasText: "该案已由「崔判官」认领" });
-    await expect(banner).toBeVisible();
+    await expect(banner).toBeVisible({ timeout: 10_000 });
     await expect(banner).toContainText("只有认领人或管理员可以结案。这次的判决没有提交；本次开庭已把这件案子放到一边。");
     await expect(page.getByText(SECOND.soul_name)).toBeVisible();
     await expect(page.getByText("已延后 1")).toBeVisible();

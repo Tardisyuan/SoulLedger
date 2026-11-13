@@ -81,7 +81,7 @@ test.describe("Scheduler page", () => {
 
   test("shows a 400 cron error beside the cron fields and keeps the dialog open", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
-    api.on("PATCH", "/scheduler/jobs/:id/", () => ({ status: 400, body: { cron: ["invalid crontab: Invalid end range: 61 > 59."] } }));
+    api.on("PATCH", "/scheduler/jobs/:id/", () => ({ status: 400, body: { type: "about:blank", title: "Bad Request", status: 400, code: "invalid", detail: "invalid crontab: Invalid end range: 61 > 59.", errors: [{ field: "cron", code: "invalid", detail: "invalid crontab: Invalid end range: 61 > 59." }] } }));
     await page.goto("/scheduler");
     await row(page, 2).getByRole("button", { name: "编辑调度" }).click();
     const dialog = page.getByRole("dialog");
