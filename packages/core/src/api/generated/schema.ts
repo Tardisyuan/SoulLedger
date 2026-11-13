@@ -3838,6 +3838,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/statute-suggestions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Judgment CRUD + conclude action.
+         *     Tenant-isolated via TenantPermission.
+         */
+        post: operations["v1_judgment_statute_suggestions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/{id}/unarchive/": {
         parameters: {
             query?: never;
@@ -3892,6 +3912,26 @@ export interface paths {
         get: operations["v1_judgment_verdict_document_pdf_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/verdict-draft/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Judgment CRUD + conclude action.
+         *     Tenant-isolated via TenantPermission.
+         */
+        post: operations["v1_judgment_verdict_draft_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7834,6 +7874,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/social-moderation/comments/ai-screen/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description AI 预筛(`apps/social/ai_screen.py`):给待审队列的前 30 条打风险分,只用于排序,不改任何内容的状态。 */
+        post: operations["v1_social_moderation_comments_ai_screen_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social-moderation/handled/": {
         parameters: {
             query?: never;
@@ -8066,6 +8123,23 @@ export interface paths {
          *     默认 `?moderation_status=PENDING`:队列的默认视图是「等着我看的」。
          */
         post: operations["v1_social_moderation_posts_restore_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social-moderation/posts/ai-screen/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description AI 预筛(`apps/social/ai_screen.py`):给待审队列的前 30 条打风险分,只用于排序,不改任何内容的状态。 */
+        post: operations["v1_social_moderation_posts_ai_screen_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10669,6 +10743,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AIScreenResponse: {
+            items: components["schemas"]["AIScreenScore"][];
+            model: string;
+            /** @description True: no model answered; rule scores only */
+            fallback: boolean;
+        };
+        AIScreenScore: {
+            /** Format: uuid */
+            id: string;
+            /** @description 0–100;只用于排序 */
+            score: number;
+            /** @description 模型的一句理由;只有规则分时为空 */
+            reason: string;
+            signals: components["schemas"]["SignalsEnum"][];
+            source: components["schemas"]["AIScreenScoreSourceEnum"];
+        };
+        /**
+         * @description * `model` - model
+         *     * `rule` - rule
+         * @enum {string}
+         */
+        AIScreenScoreSourceEnum: "model" | "rule";
         /**
          * @description * `CREATE` - 创建
          *     * `UPDATE` - 更新
@@ -14039,6 +14135,11 @@ export interface components {
             readonly archived_by_name: string | null;
             readonly archive_reason: string;
         };
+        JudgmentAIError: {
+            error: string;
+            /** @description concluded (409) */
+            code: string;
+        };
         /** @description `GET /judgment/annual/`:v4 冥界年报的数。每个数的定义见 `apps/judgment/annual.py`。 */
         JudgmentAnnual: {
             timezone: string;
@@ -15824,6 +15925,8 @@ export interface components {
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;
+            /** @description AI 预筛的风险分(只用于排序);没打过分、或打分后正文改过时为 null。 */
+            readonly ai_screen: components["schemas"]["AIScreenScore"] | null;
             /** Format: uuid */
             post: string;
         };
@@ -15838,6 +15941,8 @@ export interface components {
             readonly open_report_count: number;
             /** Format: date-time */
             create_time: string;
+            /** @description AI 预筛的风险分(只用于排序);没打过分、或打分后正文改过时为 null。 */
+            readonly ai_screen: components["schemas"]["AIScreenScore"] | null;
             visibility: string;
             /**
              * Format: date-time
@@ -20043,6 +20148,14 @@ export interface components {
             /** Format: date-time */
             trusted_until: string | null;
         };
+        /**
+         * @description * `sensitive_word` - sensitive_word
+         *     * `reported` - reported
+         *     * `injection_phrase` - injection_phrase
+         *     * `media` - media
+         * @enum {string}
+         */
+        SignalsEnum: "sensitive_word" | "reported" | "injection_phrase" | "media";
         SignerCandidate: {
             id: number;
             name: string;
@@ -21107,6 +21220,36 @@ export interface components {
             /** Format: date */
             readonly effective_from: string;
         };
+        StatuteSuggestion: {
+            /**
+             * Format: uuid
+             * @description POST citations/ {statute} when the judge ticks it
+             */
+            statute: string;
+            code: string;
+            title: string;
+            /** @description The article itself, so the judge reads it before citing */
+            text: string;
+            /** @description The model's reason; empty for keyword matches */
+            why: string;
+            source: components["schemas"]["StatuteSuggestionSourceEnum"];
+        };
+        /**
+         * @description * `model` - model
+         *     * `keyword` - keyword
+         * @enum {string}
+         */
+        StatuteSuggestionSourceEnum: "model" | "keyword";
+        StatuteSuggestionsResponse: {
+            suggestions: components["schemas"]["StatuteSuggestion"][];
+            /** @description Codes the model gave that it never saw, or already cited */
+            dropped: string[];
+            /** @description AIDraft; null when nothing came from a model */
+            draft_id: number | null;
+            model: string;
+            /** @description True: the model was not used; keyword matches only */
+            fallback: boolean;
+        };
         /**
          * @description * `GOVERNMENT` - Government Civil Registry
          *     * `HOSPITAL` - Hospital Death Certificate System
@@ -22052,6 +22195,30 @@ export interface components {
             readonly mfa_required: boolean;
             readonly password_change_required: boolean;
             readonly mfa_setup_required: boolean;
+        };
+        VerdictDraftChecks: {
+            unknown_codes: string[];
+            contrary_verdict_words: string[];
+            names_soul: boolean;
+        };
+        VerdictDraftRequest: {
+            /**
+             * @description The verdict the judge has chosen
+             *
+             *     * `PASSED` - Passed / Saved
+             *     * `FAILED` - Failed / Condemned
+             *     * `PURGATORY` - Purgatory / Intermediate
+             *     * `RETRY` - Retry / Appeal
+             */
+            verdict: components["schemas"]["VerdictEnum"];
+        };
+        VerdictDraftResponse: {
+            text: string;
+            draft_id: number | null;
+            model: string;
+            /** @description True: a template, not a model */
+            fallback: boolean;
+            checks: components["schemas"]["VerdictDraftChecks"];
         };
         /**
          * @description * `PASSED` - Passed / Saved
@@ -29497,6 +29664,36 @@ export interface operations {
             };
         };
     };
+    v1_judgment_statute_suggestions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatuteSuggestionsResponse"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentAIError"];
+                };
+            };
+        };
+    };
     v1_judgment_unarchive_create: {
         parameters: {
             query?: never;
@@ -29620,6 +29817,42 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    v1_judgment_verdict_draft_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerdictDraftRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VerdictDraftRequest"];
+                "multipart/form-data": components["schemas"]["VerdictDraftRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerdictDraftResponse"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentAIError"];
                 };
             };
         };
@@ -37224,6 +37457,49 @@ export interface operations {
             };
         };
     };
+    v1_social_moderation_comments_ai_screen_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIScreenResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
     v1_social_moderation_handled_list: {
         parameters: {
             query?: {
@@ -37664,6 +37940,49 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationError"];
+                };
+            };
+        };
+    };
+    v1_social_moderation_posts_ai_screen_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIScreenResponse"];
+                };
             };
             400: {
                 headers: {

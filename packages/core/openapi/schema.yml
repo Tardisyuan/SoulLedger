@@ -8917,6 +8917,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentRateLimited'
           description: ''
+  /api/v1/judgment/{id}/statute-suggestions/:
+    post:
+      operationId: v1_judgment_statute_suggestions_create
+      description: |-
+        Judgment CRUD + conclude action.
+        Tenant-isolated via TenantPermission.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatuteSuggestionsResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentAIError'
+          description: ''
   /api/v1/judgment/{id}/unarchive/:
     post:
       operationId: v1_judgment_unarchive_create
@@ -9060,6 +9091,49 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/v1/judgment/{id}/verdict-draft/:
+    post:
+      operationId: v1_judgment_verdict_draft_create
+      description: |-
+        Judgment CRUD + conclude action.
+        Tenant-isolated via TenantPermission.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerdictDraftRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerdictDraftRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerdictDraftRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerdictDraftResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentAIError'
           description: ''
   /api/v1/judgment/annual/:
     get:
@@ -17362,6 +17436,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/ModerationError'
           description: ''
+  /api/v1/social-moderation/comments/ai-screen/:
+    post:
+      operationId: v1_social_moderation_comments_ai_screen_create
+      description: AI 预筛(`apps/social/ai_screen.py`):给待审队列的前 30 条打风险分,只用于排序,不改任何内容的状态。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIScreenResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
   /api/v1/social-moderation/handled/:
     get:
       operationId: v1_social_moderation_handled_list
@@ -17907,6 +18014,39 @@ paths:
       responses:
         '200':
           description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationError'
+          description: ''
+  /api/v1/social-moderation/posts/ai-screen/:
+    post:
+      operationId: v1_social_moderation_posts_ai_screen_create
+      description: AI 预筛(`apps/social/ai_screen.py`):给待审队列的前 30 条打风险分,只用于排序,不改任何内容的状态。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIScreenResponse'
+          description: ''
         '400':
           content:
             application/json:
@@ -23791,6 +23931,54 @@ paths:
           description: ''
 components:
   schemas:
+    AIScreenResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIScreenScore'
+        model:
+          type: string
+        fallback:
+          type: boolean
+          description: 'True: no model answered; rule scores only'
+      required:
+      - fallback
+      - items
+      - model
+    AIScreenScore:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        score:
+          type: integer
+          description: 0–100;只用于排序
+        reason:
+          type: string
+          description: 模型的一句理由;只有规则分时为空
+        signals:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignalsEnum'
+        source:
+          $ref: '#/components/schemas/AIScreenScoreSourceEnum'
+      required:
+      - id
+      - reason
+      - score
+      - signals
+      - source
+    AIScreenScoreSourceEnum:
+      enum:
+      - model
+      - rule
+      type: string
+      description: |-
+        * `model` - model
+        * `rule` - rule
     ActionEnum:
       enum:
       - CREATE
@@ -31288,6 +31476,17 @@ components:
       - wangsi_held
       - weighing_result
       - workflow
+    JudgmentAIError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          description: concluded (409)
+      required:
+      - code
+      - error
     JudgmentAnnual:
       type: object
       description: '`GET /judgment/annual/`:v4 冥界年报的数。每个数的定义见 `apps/judgment/annual.py`。'
@@ -35736,10 +35935,17 @@ components:
         create_time:
           type: string
           format: date-time
+        ai_screen:
+          allOf:
+          - $ref: '#/components/schemas/AIScreenScore'
+          nullable: true
+          readOnly: true
+          description: AI 预筛的风险分(只用于排序);没打过分、或打分后正文改过时为 null。
         post:
           type: string
           format: uuid
       required:
+      - ai_screen
       - author
       - content
       - create_time
@@ -35769,6 +35975,12 @@ components:
         create_time:
           type: string
           format: date-time
+        ai_screen:
+          allOf:
+          - $ref: '#/components/schemas/AIScreenScore'
+          nullable: true
+          readOnly: true
+          description: AI 预筛的风险分(只用于排序);没打过分、或打分后正文改过时为 null。
         visibility:
           type: string
         edited_at:
@@ -35802,6 +36014,7 @@ components:
           type: integer
           readOnly: true
       required:
+      - ai_screen
       - author
       - comment_count
       - content
@@ -44315,6 +44528,18 @@ components:
       - last_seen_at
       - method
       - trusted_until
+    SignalsEnum:
+      enum:
+      - sensitive_word
+      - reported
+      - injection_phrase
+      - media
+      type: string
+      description: |-
+        * `sensitive_word` - sensitive_word
+        * `reported` - reported
+        * `injection_phrase` - injection_phrase
+        * `media` - media
     SignerCandidate:
       type: object
       properties:
@@ -46675,6 +46900,67 @@ components:
       - id
       - is_derived
       - revision
+    StatuteSuggestion:
+      type: object
+      properties:
+        statute:
+          type: string
+          format: uuid
+          description: POST citations/ {statute} when the judge ticks it
+        code:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+          description: The article itself, so the judge reads it before citing
+        why:
+          type: string
+          description: The model's reason; empty for keyword matches
+        source:
+          $ref: '#/components/schemas/StatuteSuggestionSourceEnum'
+      required:
+      - code
+      - source
+      - statute
+      - text
+      - title
+      - why
+    StatuteSuggestionSourceEnum:
+      enum:
+      - model
+      - keyword
+      type: string
+      description: |-
+        * `model` - model
+        * `keyword` - keyword
+    StatuteSuggestionsResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatuteSuggestion'
+        dropped:
+          type: array
+          items:
+            type: string
+          description: Codes the model gave that it never saw, or already cited
+        draft_id:
+          type: integer
+          nullable: true
+          description: AIDraft; null when nothing came from a model
+        model:
+          type: string
+        fallback:
+          type: boolean
+          description: 'True: the model was not used; keyword matches only'
+      required:
+      - draft_id
+      - dropped
+      - fallback
+      - model
+      - suggestions
     SystemTypeEnum:
       enum:
       - GOVERNMENT
@@ -48724,6 +49010,59 @@ components:
       - permissions
       - tenant
       - username
+    VerdictDraftChecks:
+      type: object
+      properties:
+        unknown_codes:
+          type: array
+          items:
+            type: string
+        contrary_verdict_words:
+          type: array
+          items:
+            type: string
+        names_soul:
+          type: boolean
+      required:
+      - contrary_verdict_words
+      - names_soul
+      - unknown_codes
+    VerdictDraftRequest:
+      type: object
+      properties:
+        verdict:
+          allOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          description: |-
+            The verdict the judge has chosen
+
+            * `PASSED` - Passed / Saved
+            * `FAILED` - Failed / Condemned
+            * `PURGATORY` - Purgatory / Intermediate
+            * `RETRY` - Retry / Appeal
+      required:
+      - verdict
+    VerdictDraftResponse:
+      type: object
+      properties:
+        text:
+          type: string
+        draft_id:
+          type: integer
+          nullable: true
+        model:
+          type: string
+        fallback:
+          type: boolean
+          description: 'True: a template, not a model'
+        checks:
+          $ref: '#/components/schemas/VerdictDraftChecks'
+      required:
+      - checks
+      - draft_id
+      - fallback
+      - model
+      - text
     VerdictEnum:
       enum:
       - PASSED

@@ -79,6 +79,10 @@ export const judgmentAiApi = {
 
 export const moderationAiApi = {
   /** Scores the first 30 PENDING rows of the queue (stored ones are reused). Changes no row's status. */
+  // Two literal paths, not `${kind}`: the schema serves exactly these two, and the endpoint contract test checks
+  // each path the client can ask for.
   screen: (kind: "posts" | "comments") =>
-    api.post<AIScreenResult>(`/social-moderation/${kind}/ai-screen/`, {}).then((r) => r.data),
+    api
+      .post<AIScreenResult>(kind === "posts" ? "/social-moderation/posts/ai-screen/" : "/social-moderation/comments/ai-screen/", {})
+      .then((r) => r.data),
 };
