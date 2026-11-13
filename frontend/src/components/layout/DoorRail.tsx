@@ -1,0 +1,225 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
+import { useHallCivilization } from "@/src/components/plaque/useHall";
+import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
+import { BrandMark } from "@/src/components/brand/BrandMark";
+import { menuGlossParts } from "@/src/lib/menuI18n";
+import { DOORS, doorFor, doorHref, doorsFor, doorTabs, pageOf, type DoorId, type DoorPage, type Viewer } from "@/src/lib/doors";
+import s from "./doors.module.css";
+
+/** 品牌字标。一直是字面量:它是标的一部分,不随界面语言换。 */
+export const BRAND_WORD = "灵魂簿";
+
+/** 「我」的几页:不属于任何门,门栏底部的头像(窄屏最后一格)点亮。 */
+const ME_PATHS = ["/profile", "/notifications", "/welcome", "/about"];
+
+/**
+ * 门上的字:一个汉字是 18 的题字;拉丁字(en 的 C / R / S / H / W / M 是一个字母,egy 是 Wedja、Sesh 这样最多 6 个字母的词)
+ * 多于一个字符时换成 12 的一行(`doorGlyphWord`),在 52 宽的门里不折行、不截断。导出给测试。
+ */
+export function doorGlyphClass(glyph: string): string {
+  return Array.from(glyph).length > 1 ? `${s.doorGlyph} ${s.doorGlyphWord}` : s.doorGlyph;
+}
+
+/** 这个人(门、门内的页由它决定):角色、读码、菜单里的页。 */
+export function useDoorViewer(): { viewer: Viewer; doors: DoorId[]; menus: SidebarMenu[] } {
+  const { user } = useTenant();
+  const { hasPermission, isAdmin } = usePermissions();
+  const { data: menus = [] } = useSidebarMenus();
+  const menuPaths = useMemo(() => {
+    const out = new Set<string>();
+    const walk = (items: readonly SidebarMenu[]) => {
+      for (const m of items) {
+        if (m.path) out.add(m.path);
+        if (m.children?.length) walk(m.children);
+      }
+    };
+    walk(menus);
+    return out;
+  }, [menus]);
+  const viewer: Viewer = { role: user?.role, extraRoles: user?.extra_roles, isAdmin, hasPermission, menuPaths };
+  return { viewer, doors: doorsFor(viewer), menus };
+}
+
+function findMenu(menus: readonly SidebarMenu[], path: string): SidebarMenu | null {
+  for (const m of menus) {
+    if (m.path === path) return m;
+    const hit = m.children?.length ? findMenu(m.children, path) : null;
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** 一页的标签:菜单项用菜单自己的名字(译名;与面包屑同一份对照),别的用表里的键。 */
+function usePageLabel(menus: readonly SidebarMenu[]) {
+  const { t, locale } = useI18n();
+  const civ = useHallCivilization();
+  return (page: DoorPage): string => {
+    const menu = findMenu(menus, page.path);
+    if (menu) return menuGlossParts(menu, locale, t, civ).primary;
+    return page.labelKey ? t(page.labelKey) : page.path;
+  };
+}
+
+/** 当前网址在这个人的门里落在哪一门;「我」的几页与表外的页是 null。 */
+function currentDoor(pathname: string, doors: readonly DoorId[]): DoorId | null {
+  const page = pageOf(pathname);
+  return page ? doorFor(page, doors) : null;
+}
+
+/**
+ * 门栏(全站唯一的导航,取代旧的侧栏与底栏):桌面 64 宽立在左边,自上而下 品牌标 · 这个人的门 · 底部头像「我」;
+ * ≤ 768 到底部,是门 +「我」—— 殿司在窄屏不放门,只读收进「我」的抽屉。
+ */
+export function DoorRail() {
+  const { t } = useI18n();
+  const pathname = usePathname();
+  const { user } = useTenant();
+  const { viewer, doors, menus } = useDoorViewer();
+  const label = usePageLabel(menus);
+  const here = currentDoor(pathname, doors);
+  const onMe = ME_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const name = user?.display_name || user?.username || "";
+
+  const [sheet, setSheet] = useState(false);
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
+    setSheet(false);
+  }
+  const close = () => setSheet(false);
+  const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({ open: sheet, onClose: close, label: t("caseDesk.rail.me") });
+  const officeTabs = doors.includes("office") ? doorTabs("office", viewer, doors) : [];
+
+  const doorLink = (d: DoorId) => {
+    const glyph = t(`caseDesk.rail.${DOORS[d].key}_glyph`);
+    const name = t(`caseDesk.rail.${DOORS[d].key}`);
+    return (
+      <Link
+        key={d}
+        href={doorHref(d, viewer, doors)}
+        className={`${s.door} ${d === "office" ? s.doorWide : ""}`}
+        aria-current={here === d ? "page" : undefined}
+        aria-label={name}
+        data-door={d}
+      >
+        <span className={doorGlyphClass(glyph)} aria-hidden="true" data-testid="desk-door-glyph">
+          {glyph}
+        </span>
+        <span className={s.doorLabel} aria-hidden="true">
+          {name}
+        </span>
+      </Link>
+    );
+  };
+
+  return (
+    <>
+      {sheet ? (
+        <>
+          <button type="button" aria-label={t("common.close")} className={s.scrim} onClick={close} />
+          <aside ref={drawerRef} {...drawerProps} className={s.sheet} data-testid="me-sheet">
+            <Link href="/profile" className={s.sheetLink} aria-current={pathname === "/profile" ? "page" : undefined}>
+              {t("profile.title")}
+            </Link>
+            <Link href="/notifications" className={s.sheetLink} aria-current={pathname === "/notifications" ? "page" : undefined}>
+              {t("notifications.title")}
+            </Link>
+            {officeTabs.length ? (
+              <section aria-labelledby="me-sheet-office">
+                <p id="me-sheet-office" className={s.sheetHead}>
+                  {t("doors.office_read_only")}
+                </p>
+                {officeTabs.map((p) => (
+                  <Link key={p.path} href={p.path} className={s.sheetLink} aria-current={pageOf(pathname)?.path === p.path ? "page" : undefined}>
+                    {label(p)}
+                  </Link>
+                ))}
+              </section>
+            ) : null}
+          </aside>
+        </>
+      ) : null}
+      <nav className={s.rail} aria-label={t("caseDesk.rail.label")} data-testid="door-rail">
+        <span className={s.railMark}>
+          <BrandMark size={28} tone="gold" label={BRAND_WORD} />
+        </span>
+        {doors.map(doorLink)}
+        {/* 窄屏最后一格:「我」(本人与设置;管理员的殿司只读也在这里)。宽屏是底部的头像。 */}
+        <button
+          type="button"
+          className={`${s.door} ${s.doorNarrow}`}
+          aria-label={t("caseDesk.rail.me")}
+          aria-expanded={sheet}
+          aria-current={onMe || (here === "office" && !sheet) ? "true" : undefined}
+          onClick={() => setSheet((o) => !o)}
+          data-testid="door-me"
+        >
+          <span className={doorGlyphClass(t("caseDesk.rail.me_glyph"))} aria-hidden="true" data-testid="desk-door-glyph">
+            {t("caseDesk.rail.me_glyph")}
+          </span>
+          <span className={s.doorLabel} aria-hidden="true">
+            {t("caseDesk.rail.me")}
+          </span>
+        </button>
+        <div className={s.railFoot}>
+          <Link href="/profile" className={s.me} title={name} aria-label={t("caseDesk.rail.me")} aria-current={onMe ? "page" : undefined}>
+            <span aria-hidden="true">{[...name][0] ?? "·"}</span>
+          </Link>
+        </div>
+      </nav>
+    </>
+  );
+}
+
+/**
+ * 门内的二级导航:当前门里、这个人看得见的页,一行,放不下横滑;门里不止一节时节前写节名。
+ * 只有一页的门不画(没得选)。画出来时把自己的高写进 `--door-tabs-h`,内容槽位与案卷台照它让出高度。
+ */
+export function DoorTabs() {
+  const { t } = useI18n();
+  const pathname = usePathname();
+  const { viewer, doors, menus } = useDoorViewer();
+  const label = usePageLabel(menus);
+  const door = currentDoor(pathname, doors);
+  const tabs = door ? doorTabs(door, viewer, doors) : [];
+  const show = tabs.length > 1;
+  const active = pageOf(pathname)?.path;
+
+  useEffect(() => {
+    if (!show) return;
+    document.documentElement.style.setProperty("--door-tabs-h", "45px");
+    return () => {
+      document.documentElement.style.removeProperty("--door-tabs-h");
+    };
+  }, [show]);
+
+  if (!show || !door) return null;
+  const sections = tabs.reduce<DoorPage[][]>((out, p) => {
+    const last = out[out.length - 1];
+    if (last && last[0].section === p.section) last.push(p);
+    else out.push([p]);
+    return out;
+  }, []);
+  return (
+    <nav className={s.tabs} aria-label={t(`caseDesk.rail.${DOORS[door].key}`)} data-testid="door-tabs" data-door={door}>
+      {sections.map((group) => (
+        <div key={group[0].section} className={s.section}>
+          {sections.length > 1 ? <span className={s.sectionName}>{t(`doors.section.${group[0].section}`)}</span> : null}
+          {group.map((p) => (
+            <Link key={p.path} href={p.path} className={s.tab} aria-current={active === p.path ? "page" : undefined}>
+              {label(p)}
+            </Link>
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
+}

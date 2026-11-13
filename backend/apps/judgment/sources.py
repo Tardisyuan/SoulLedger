@@ -20,7 +20,10 @@
 ``city_god_review`` 还在城隍处初审的案子          `CityGodCaseViewSet`,PENDING / RETURNED        /city-god-cases
 ``cross_judgment``  还没了结的跨殿联审            `CrossTenantJudgmentViewSet`,PROPOSED / ACTIVE /cross-judgments
 ``capture_due``     阳寿已到、待发勾魂牒的灵魂     `capture_views._souls` + `capture.due_souls`    /judgment/capture-due
+``rebirth_application`` 还没结论的转生申请     `OfficerRebirthApplicationViewSet`,审核中 / 申诉中 /rebirth-applications
 ==================  ========================  ==========================================  =================
+
+转生申请是第七个来源(用户 2026-11-13 决定):它要人批,所以进「审」,而不是册 · 卷宗「轮回」分页的筛选。
 """
 from django.db.models import Case, CharField, Exists, F, OuterRef, Q, Value, When
 
@@ -36,6 +39,7 @@ ELSEWHERE = {
     "city_god_review": "city_god.read",
     "cross_judgment": "cross_judgment.read",
     "capture_due": "capture.read",
+    "rebirth_application": "workflow.read",
 }
 
 
@@ -125,6 +129,8 @@ def elsewhere_counts(request) -> dict:
     from apps.judgment.appeal_views import JudgmentAppealViewSet
     from apps.judgment.city_god_views import CityGodCaseViewSet
     from apps.judgment.models import AT_CITY_GOD, OPEN_APPEAL_STATUSES
+    from apps.soul_accounts.models import OPEN_APPLICATION_STATUSES
+    from apps.soul_accounts.views import OfficerRebirthApplicationViewSet
 
     def scoped(viewset, action="list"):
         return viewset(request=request, action=action, kwargs={}, format_kwarg=None).get_queryset()
@@ -137,6 +143,8 @@ def elsewhere_counts(request) -> dict:
         "cross_judgment": lambda: scoped(CrossTenantJudgmentViewSet).filter(
             status__in=_open_cross_statuses()).count(),
         "capture_due": lambda: capture_service.due_souls(_souls(request)).count(),
+        "rebirth_application": lambda: scoped(OfficerRebirthApplicationViewSet).filter(
+            status__in=OPEN_APPLICATION_STATUSES).count(),
     }
     return {key: counters[key]() if user_has_permission(request.user, codename) else None
             for key, codename in ELSEWHERE.items()}

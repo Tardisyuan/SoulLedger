@@ -7,9 +7,11 @@ import pytest
 from apps.dispatch.models import CrossTenantJudgment, JudgmentStatus
 from apps.judgment import sources
 from apps.judgment.models import CityGod, Judgment, JudgmentAppeal
+from apps.soul_accounts.models import RebirthApplication, RebirthApplicationStatus
 from apps.souls.models import Soul, SoulState
+from apps.workflow.models import ApprovalWorkflow, CaseType
 from tests import sentence_plan_support as sp
-from tests.soul_account_support import officer_client
+from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
 
@@ -20,6 +22,14 @@ def _case(tenant, name, *, home=None, **fields):
     soul = Soul.objects.create(name=name, tenant=tenant, home_tenant=home or tenant, current_state=SoulState.JUDGING)
     return Judgment.objects.create(soul=soul, civilization=soul.civilization, court="第一殿", tenant=tenant,
                                    evidence_json={}, **fields)
+
+
+def _application(tenant, name, status):
+    account, _ = ready_soul(tenant, name=name, state=SoulState.REINCARNATING)
+    return RebirthApplication.objects.create(
+        soul=account.soul, account=account, cycle=account.cycle, desired_form="HUMAN", status=status,
+        workflow=ApprovalWorkflow.objects.create(soul=account.soul, workflow_name="x",
+                                                 case_type=CaseType.REBIRTH_APPLICATION))
 
 
 def _hall(tenant, away_home):
@@ -46,6 +56,10 @@ def _hall(tenant, away_home):
     rows["due"] = Soul.objects.create(
         name="阳寿尽", tenant=tenant, current_state=SoulState.ALIVE, fated_death_year=yesterday.year,
         fated_death_month=yesterday.month, fated_death_day=yesterday.day)
+    # 转生申请(第七个来源):审核中、申诉中各一件算;已驳回的不算。
+    rows["applying"] = _application(tenant, "申请转生", RebirthApplicationStatus.UNDER_REVIEW)
+    rows["appealing"] = _application(tenant, "申诉转生", RebirthApplicationStatus.APPEALING)
+    rows["refused"] = _application(tenant, "驳回转生", RebirthApplicationStatus.REJECTED)
     return rows
 
 
@@ -104,7 +118,8 @@ def test_counts_carry_the_sources_and_the_counts_elsewhere(world):
     assert counts["total"] == 4  # 初审中的不在十殿队列,已结的不是未结
     assert counts["sources"] == {"queue": 1, "city_god": 1, "cross": 2}
     assert sum(counts["sources"].values()) == counts["total"]
-    assert counts["elsewhere"] == {"appeal": 1, "city_god_review": 1, "cross_judgment": 1, "capture_due": 1}
+    assert counts["elsewhere"] == {"appeal": 1, "city_god_review": 1, "cross_judgment": 1, "capture_due": 1,
+                                   "rebirth_application": 2}
 
 
 def test_the_source_param_narrows_the_groups_but_not_the_sources(world):
@@ -123,6 +138,7 @@ def test_counts_are_each_halls_own(world):
         assert counts["elsewhere"]["appeal"] == 1
         assert counts["elsewhere"]["city_god_review"] == 1
         assert counts["elsewhere"]["cross_judgment"] == 1
+        assert counts["elsewhere"]["rebirth_application"] == 2  # 对方殿的两件不在里面
     assert cn["elsewhere"]["capture_due"] == 1
     assert eu["elsewhere"]["capture_due"] == 0
     assert _rows(world["eu_judge"].get(BASE, {"source": "cross"})).keys() == {
@@ -134,7 +150,8 @@ def test_a_count_elsewhere_is_null_without_its_read_codename(world, monkeypatch)
 
     real = permissions.user_has_permission
     monkeypatch.setattr(permissions, "user_has_permission",
-                        lambda user, codename: codename != "capture.read" and real(user, codename))
+                        lambda user, codename: codename not in {"capture.read", "workflow.read"} and real(user, codename))
     elsewhere = world["cn_judge"].get(f"{BASE}queue-counts/").data["elsewhere"]
     assert elsewhere["capture_due"] is None
+    assert elsewhere["rebirth_application"] is None
     assert elsewhere["appeal"] == 1

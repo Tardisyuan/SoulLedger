@@ -7,8 +7,8 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
 /**
  * 规范 v2 补足 C14:「用 egy 语言包里最长的 20 个键跑一遍截图测试,钉住这三条」——
  * 面包屑的当前段(第三十批「卷宗」起匾 / 标题行撤掉了,菜单名落在工具条的面包屑上:一行、放不下截断、全文在 title)
- * 与页头的 `<h1>`(长的就换行,不横向溢出);侧栏项(规范 v3 起:252 里一行、放不下截断、全文在 title)不溢出;窄屏底栏两行截断。
- * (第三条的 App 底栏在 mobile/,这里钉的是 Web 393 下的同形底栏。)
+ * 与页头的 `<h1>`(长的就换行,不横向溢出);门栏(第三十批第 4 步起取代侧栏与底栏)的门字一行、不溢出。
+ * (App 底栏在 mobile/。)
  *
  * 字串从 egy.json 现取,不抄进这里:以后谁加了更长的页题或菜单名,它自动进这 20 条。
  * 选的是能落到匾和侧栏上的两类 —— `breadcrumb.*`(菜单与路由段)与 Web 页面的 `*.title`;
@@ -17,7 +17,7 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
  * 代码里总是带参数调用,从不原样当页题 —— 原样塞进菜单名,匾上就画出一个生的 `{{soul}}`
  * (2026-10-02 截图里的那一条,它恰好是最长的一条)。所以不选。
  *
- * 怎么让一条任意字串当上面包屑末段与侧栏项:菜单名(Menu.name)没有登记译名的路径,在 egy 下
+ * 怎么让一条任意字串当上面包屑末段:菜单名(Menu.name)没有登记译名的路径,在 egy 下
  * 原样显示(`src/lib/menuI18n.ts`)。所以把 20 条字串做成 20 个菜单项,被测那条挂在 /about 上,打开 /about。
  *
  * 断言量的是布局(浏览器真排版),截图作为附件留档 —— 像素基线在三个引擎、两种系统上
@@ -90,42 +90,21 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
       // ── 页头的 <h1>:换行而不横向溢出。
       expect(await h1.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
 
-      // ── 侧栏(≥ 769,规范 v3 展开 252)或底栏(≤ 768)。
-      const wide = (page.viewportSize()?.width ?? 0) > 768;
-      if (wide) {
-        const nav = page.getByTestId("global-nav");
-        // 一行、放不下就截断;截断了的,全文在 title 里。只量 <nav> 里的菜单项:底部个人区的
-        // 角色(DomainEnum 自带 title)不是菜单标签,第一次跑时把它当成了一项。
-        const items = await nav.locator("nav a span[title], nav button span[title]").evaluateAll((els) =>
-          els.map((el) => {
-            const cs = getComputedStyle(el);
-            return {
-              text: el.textContent ?? "",
-              title: el.getAttribute("title") ?? "",
-              lines: Math.round(el.getBoundingClientRect().height / parseFloat(cs.lineHeight)),
-              clipped: el.scrollWidth - el.clientWidth > 1,
-              ellipsis: cs.textOverflow,
-            };
-          })
-        );
-        expect(items.length).toBeGreaterThan(0);
-        for (const item of items) {
-          expect(item.lines).toBeLessThanOrEqual(1);
-          expect(item.ellipsis).toBe("ellipsis");
-          if (item.clipped) expect(item.title.startsWith(item.text)).toBe(true);
-        }
-        const navOverflow = await nav.evaluate((el) => el.scrollWidth - el.clientWidth);
-        expect(navOverflow).toBeLessThanOrEqual(0);
-      } else {
-        const cells = await page
-          .getByTestId("bottom-bar")
-          .locator("span[title]")
-          .evaluateAll((els) =>
-            els.map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))
-          );
-        expect(cells).toHaveLength(4);
-        for (const lines of cells) expect(lines).toBeLessThanOrEqual(2);
+      // ── 门栏(第三十批第 4 步,取代侧栏与底栏):≥ 769 立在左边 64 宽,≤ 768 到底部。菜单名不再上门栏 ——
+      // 门上是固定的门字(egy 的 Wedja / Remetj 这样的词是 12px 一行),所以这里钉门字:一行、不折、门栏不横向溢出。
+      const rail = page.getByTestId("door-rail");
+      const glyphs = await rail.locator("[data-testid='desk-door-glyph']:visible").evaluateAll((els) =>
+        els.map((el) => ({
+          lines: Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
+          clipped: el.scrollWidth - el.clientWidth > 1,
+        }))
+      );
+      expect(glyphs.length).toBeGreaterThan(0);
+      for (const g of glyphs) {
+        expect(g.lines).toBeLessThanOrEqual(1);
+        expect(g.clipped).toBe(false);
       }
+      expect(await rail.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
 
       // 长标签不许把整页撑宽(撑宽之后弹层居中会落到可视区外,见 no-route-overflows-the-document)。
       const docOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

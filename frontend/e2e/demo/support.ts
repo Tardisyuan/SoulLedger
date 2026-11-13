@@ -82,7 +82,7 @@ export type HandOff = { frames: number; cover: Rect | null; real: Rect | null; l
 
 /**
  * Watched in the page from now on, every frame while the cover is up: the seal on the cover and the console's own mark
- * (the band's seal; with no underworld, the sidebar's brand mark). Read it with `handOff` once the cover is gone.
+ * (the door rail's brand mark). Read it with `handOff` once the cover is gone.
  */
 export async function watchHandOff(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -104,7 +104,8 @@ export async function watchHandOff(page: Page): Promise<void> {
       if (cover) {
         seen.frames++;
         const mine = cover.querySelector("[data-testid='seal'], [data-brand-mark]");
-        const css = mine?.matches("[data-brand-mark]") ? "[data-nav-brand] [data-brand-mark]" : ".nav-hall-card [data-testid='seal']";
+        // 第三十批第 4 步:the console's mark is the door rail's brand mark, whatever the cover carried.
+        const css = "[data-testid='door-rail'] [data-brand-mark]";
         seen.cover = rect(mine);
         seen.real = Array.from(document.querySelectorAll(css)).map(rect).find(Boolean) ?? null;
         seen.landing = !!document.querySelector("[data-testid='landing-civs']");

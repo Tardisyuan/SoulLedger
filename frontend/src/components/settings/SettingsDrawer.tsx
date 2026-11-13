@@ -23,8 +23,8 @@ interface SettingsDrawerProps {
 
 /*
  * 「导航模式 · 经典 / 紧凑」也撤掉了(规范 v2):v1 的 200px 侧栏与 56px 编号栏换成了立柱。
- * localStorage 里旧的 `soulledger_nav_mode`(下划线)从此没有代码读。规范 v3 的导航展开 / 收起
- * 不在设置里:它是工具条上的按钮与 `[`,存在 `soulledger-nav-mode`(连字符,见 GlobalNav.tsx)。
+ * localStorage 里旧的 `soulledger_nav_mode`(下划线)从此没有代码读。规范 v3 的侧栏展开 / 收起(`soulledger-nav-mode`)
+ * 随侧栏一起没有了:第三十批第 4 步起导航是 64 宽的门栏(`DoorRail.tsx`),没有可收的东西。
  */
 export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const { t } = useI18n();

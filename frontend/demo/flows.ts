@@ -90,6 +90,7 @@ const ELSEWHERE: [string, string, string, (row: Row) => boolean][] = [
   ["city_god_review", "city_god.read", "/judgment/city-god-cases/", (r) => r.city_god_status === "PENDING" || r.city_god_status === "RETURNED"],
   ["cross_judgment", "cross_judgment.read", "/dispatch/cross-tenant-judgments/", (r) => OPEN_CROSS.includes(String(r.status))],
   ["capture_due", "capture.read", "/dispatch/capture-warrants/due/", () => true],
+  ["rebirth_application", "workflow.read", "/soul-accounts/rebirth-applications/", (r) => r.status === "UNDER_REVIEW" || r.status === "APPEALING"],
 ];
 
 function elsewhereOf(rec: Recording): Record<string, number | null> {
