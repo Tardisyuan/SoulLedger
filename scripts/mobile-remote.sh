@@ -21,6 +21,7 @@
 #   ANDROID_SERIAL     adb device (default 88Y0219926008256, the Huawei TAS-AL00)
 #   FORCE=1            build even when the native fingerprint is unchanged
 #   MOBILE_REMOTE_CPUS / MOBILE_REMOTE_MEMORY / MOBILE_REMOTE_JOBS   build container limits (8 / 16g / 8)
+#   MOBILE_REMOTE_TIMEOUT  the build's total time limit, enforced on the box (default 30m; GNU timeout's syntax)
 #
 # The fingerprint rule is scripts/build-mobile-dev.sh's (@expo/fingerprint + react-native.config.js +
 # Sentry DSN state); the key of the last successful build lives in the synced tree on the box
@@ -28,6 +29,12 @@
 # Builds take their own lock ($RDIR/android/build.lock), not the gates' run.lock: the box has 20
 # cores, a gate container is held to 12 and a build to 8, so the two run side by side (user decision
 # 2026-10-29); the lock only keeps two builds apart. Metro takes no lock — it is light.
+# The lock and the time limit follow scripts/run-gates.sh (TIME LIMITS ON THE REMOTE MACHINE; 2026-11-13, test
+# review 3.5): the lock is held by a subshell on the box that removes the container before letting go, so a
+# dropped ssh no longer frees it under a build still running, and `timeout` is the container's own command.
+# 30 minutes: the longest build measured is 461 s (a warm tree; the others 124 s and 220 s). A cold tree also
+# runs `npm ci` and may download the SDK tools, which nobody has timed — so four times the warm figure, not
+# two. The time spent waiting for the lock does not count.
 set -euo pipefail
 APP="${1:-}"; case "$APP" in mobile) PORT=8081 SCHEME=soulledger DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_SOUL ;;
     mobile-officer) PORT=8082 SCHEME=soulledger-officer DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_OFFICER ;; *) sed -n '2,13p' "$0"; exit 2 ;; esac
@@ -48,6 +55,14 @@ P=mobile-remote
 cd "$ROOT"
 
 rsh() { ssh -o BatchMode=yes -o ConnectTimeout=5 "$H" "$@"; }
+
+# remote_flock <fd> <lock name> <container name prefix>… — the remote shell's words for "take this lock; when
+# it is taken, say who has it, then wait". A copy of scripts/run-gates.sh's, kept identical by its test.
+remote_flock() {
+    local fd="$1" lock="$2" filters="" n; shift 2
+    for n in "$@"; do filters="$filters --filter name=$n"; done
+    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
+}
 
 sync_tree() {
     rsh "mkdir -p $W $RDIR/android/sdk $RDIR/android/gradle"
@@ -88,17 +103,19 @@ case "${1:-}" in
 build)
     T0=$(date +%s)
     rsh "docker image inspect $IMG >/dev/null" || { echo "$P: $H unreachable or has no $IMG"; exit 1; }
+    BLIMIT="${MOBILE_REMOTE_TIMEOUT:-30m}"
+    [[ "$BLIMIT" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: MOBILE_REMOTE_TIMEOUT=$BLIMIT is not a time limit (e.g. 30m, 1800)"; exit 2; }
     sync_tree
-    echo "$P: synced to $H:$W ($(( $(date +%s) - T0 ))s); waiting for $RDIR/android/build.lock, then building $APP"
+    echo "$P: synced to $H:$W ($(( $(date +%s) - T0 ))s); building $APP under $RDIR/android/build.lock (limit $BLIMIT)"
     NAME="sl-android-$APP-$RID-$$"
     trap 'rsh "docker rm -f $NAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
     set +e
-    rsh "flock $RDIR/android/build.lock docker run --rm --init --name $NAME \
+    rsh "( $(remote_flock 9 android/build.lock sl-android-); docker run --rm --init --name $NAME \
         --cpus ${MOBILE_REMOTE_CPUS:-8} --memory ${MOBILE_REMOTE_MEMORY:-16g} \
         -v $W:/app -v $RDIR/android/sdk:/android/sdk -v $RDIR/android/gradle:/android/gradle -w /app \
         -e SL_DEPS=$DEPS -e FORCE=${FORCE:-0} -e JOBS=${MOBILE_REMOTE_JOBS:-8} -e EXPO_NO_TELEMETRY=1 -e EXPO_NO_GIT_STATUS=1 \
-        -e APP=$APP -e DSN='$DSN' -e $DSN_VAR='$DSN' $IMG bash -c '$REMOTE_DEPS
+        -e APP=$APP -e DSN='$DSN' -e $DSN_VAR='$DSN' $IMG timeout -k 60 $BLIMIT bash -c '$REMOTE_DEPS
       set -e
       if [ ! -x \$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager ]; then
         echo \"    (first run: Android command-line tools into the persistent SDK)\"
@@ -119,10 +136,14 @@ build)
       ./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures=arm64-v8a -Dorg.gradle.workers.max=\$JOBS \
         -Dorg.gradle.jvmargs=-Xmx6g >/app/.sl-gradle-\$APP.log 2>&1 || { tail -60 /app/.sl-gradle-\$APP.log; exit 1; }
       cp app/build/outputs/apk/debug/app-debug.apk /app/.sl-\$APP-debug.apk
-      echo \"\$KEY\" > /app/.sl-android-key-\$APP'"
+      echo \"\$KEY\" > /app/.sl-android-key-\$APP'; rc=\$?; docker rm -f $NAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/android/build.lock"
     RC=$?
     set -e
     trap - EXIT
+    case "$RC" in
+        124) echo "$P: TIMED OUT on $H after $BLIMIT (MOBILE_REMOTE_TIMEOUT overrides). The build was stopped there (its container removed with docker rm -f) and the lock released." ;;
+        137) echo "$P: killed on $H (exit 137): the time limit's KILL, 60 s after $BLIMIT, or the container's memory limit. The container is removed and the lock released." ;;
+    esac
     if [ "$RC" = 3 ]; then
         echo "$P: no build needed ($(( $(date +%s) - T0 ))s). JS changes only need Metro: scripts/mobile-remote.sh $APP metro start|sync. FORCE=1 to build anyway."
         exit 0

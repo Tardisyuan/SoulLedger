@@ -82,7 +82,7 @@ trap 'exit 130' INT TERM
 # a time: no frames, so no requestAnimationFrame, so Playwright's "stable" check and the entrance cover's closing never
 # finished. Trace 2026-11-08: frames stopped for 19 328 ms, exactly as long as three web fonts took, while a probe in
 # the same container curling that font every 0.2 s never waited. Two runs on disk: 10 and 15 failed; on tmpfs: none.
-# flock e2e.lock: the same lock as `run-gates.sh --e2e`, so two browser suites never share the machine (2026-11-10:
+# flock e2e.lock (the demo E2E and the recording): the same lock as `run-gates.sh --e2e`, so two browser suites never share the machine (2026-11-10:
 # gates + E2E + demo E2E at once = 28 cores asked of 20; one E2E and six demo tests went red, all green apart).
 # The gates' own run.lock is separate, so the gates may still run beside one browser suite (user 2026-11-11).
 # shellcheck disable=SC2029
@@ -92,19 +92,44 @@ trap 'exit 130' INT TERM
 # before letting go, so a dropped ssh no longer frees the lock under a container still running. Same scheme as
 # scripts/run-gates.sh (TIME LIMITS ON THE REMOTE MACHINE). The two servers (demo-serve-inner.sh,
 # demo-app-backend-inner.sh) are meant to stay up, so they get no limit unless DEMO_TIMEOUT is set.
+#
+# THE TWO SERVERS DO NOT HOLD e2e.lock (2026-11-13, test review 3.5). They stay up for hours with no limit, and
+# while one did, every `run-gates.sh --e2e` and demo E2E waited on that lock without a word. What a server
+# shares with the other runs, and so what must still keep them apart:
+#   - with `run-gates.sh --e2e`: nothing — that suite has its own tree (work/<id>-e2e), publishes no port and
+#     uses no database; a server idles, so the cores are not contested either. It no longer waits.
+#   - with the demo E2E and the recording: this tree's frontend/.next (demo-serve-inner.sh and demo-e2e-inner.sh
+#     both `next build` into it) and the database sl_demo_record (demo-app-backend-inner.sh and the recording
+#     both create it). Those must not overlap, so every demo run takes demo-serve.lock, and the servers take
+#     only that. A demo E2E started while a server is up still waits — and now says for what.
+# Order is always demo-serve.lock, then e2e.lock, so the two cannot deadlock.
+# ponytail: demo-serve.lock is one lock for every checkout and both servers; .next is per tree, so a lock per
+# tree would let two checkouts' servers coexist — add it when more than one checkout serves the demo.
+P=demo-remote
+# remote_flock — a copy of scripts/run-gates.sh's, kept identical by its test: take the lock; when it is
+# taken, say who has it, then wait (the wait used to be silent; this machine's gate-lock.sh reports every minute).
+remote_flock() {
+    local fd="$1" lock="$2" filters="" n; shift 2
+    for n in "$@"; do filters="$filters --filter name=$n"; done
+    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
+}
 case "$SCRIPT" in
-    *serve-inner.sh|*backend-inner.sh) LIMIT="${DEMO_TIMEOUT:-}" ;;
-    *) LIMIT="${DEMO_TIMEOUT:-25m}" ;;
+    *serve-inner.sh|*backend-inner.sh)
+        LIMIT="${DEMO_TIMEOUT:-}"
+        LOCKS="$(remote_flock 8 demo-serve.lock sl-demo-)"; LOCK_FILES="8>$RDIR/demo-serve.lock" ;;
+    *)  LIMIT="${DEMO_TIMEOUT:-25m}"
+        LOCKS="$(remote_flock 8 demo-serve.lock sl-demo-); $(remote_flock 9 e2e.lock sl-e2e- sl-demo-)"
+        LOCK_FILES="8>$RDIR/demo-serve.lock 9>$RDIR/e2e.lock" ;;
 esac
 TIMED=""
 if [ -n "$LIMIT" ]; then
     [[ "$LIMIT" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "demo-remote: DEMO_TIMEOUT=$LIMIT is not a time limit (e.g. 25m, 1500)"; exit 2; }
     TIMED="timeout -k 60 $LIMIT"
 fi
-ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
+ssh -o BatchMode=yes "$GATES_REMOTE" "( $LOCKS; docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
     --tmpfs /tmp:rw,exec,size=8g ${DEMO_PUBLISH:-} --cpus ${DEMO_CPUS:-8} --memory ${DEMO_MEMORY:-16g} --shm-size 2g -v $RWORK:/app -v $RDIR/tmp/demo:/sl-tmp -w /app \
     -e SL_PG_BASE='$BASE_URL' -e SL_DEMO_DB_URL='$BASE_URL/sl_demo_record' -e PW_WORKERS=${PW_WORKERS:-4} -e DEMO_PARALLEL=${DEMO_PARALLEL:-5} -e CI= \
-    $IMG $TIMED bash $ARGS; rc=\$?; docker rm -f $NAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/e2e.lock"
+    $IMG $TIMED bash $ARGS; rc=\$?; docker rm -f $NAME >/dev/null 2>&1; exit \$rc ) $LOCK_FILES"
 RC=$?
 trap - EXIT
 case "$RC" in

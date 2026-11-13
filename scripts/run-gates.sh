@@ -177,6 +177,18 @@ remote_sync() {
 #     with the old container still holding 12 cores. Now the subshell goes on to `docker rm -f`, so the lock
 #     is released only once the container is gone. (No SIGHUP reaches it: ssh without a tty sends none.)
 # The time spent waiting for the lock does not count: `timeout` starts inside the container.
+#
+# remote_flock <fd> <lock name> <container name prefix>… — the remote shell's words for "take this lock; when
+# it is taken, say who has it, then wait" (2026-11-13, test review 3.5). The wait used to be silent — a plain
+# `flock 9` — while this machine's gate-lock.sh reports every minute; a demo server left up held e2e.lock for
+# hours and `--e2e` simply sat there. Who has it is read from the containers' names (sl-gates-, sl-e2e-,
+# sl-demo-, sl-android-). scripts/demo-remote.sh and scripts/mobile-remote.sh carry copies, kept identical
+# by TestRemoteLocksSayWhenTheyWait.
+remote_flock() {
+    local fd="$1" lock="$2" filters="" n; shift 2
+    for n in "$@"; do filters="$filters --filter name=$n"; done
+    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
+}
 remote_limit() {  # <value> <variable name>: refuse anything `timeout` would not read as a duration
     [[ "$1" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: $2=$1 is not a time limit (e.g. 30m, 1800)"; exit 2; }
 }
@@ -348,7 +360,7 @@ if [ -n "$E2E" ]; then
     # /tmp in memory, as in scripts/demo-remote.sh: Chromium's profile and cache on the shared btrfs image stalled
     # frames for 5–19 s under load (2026-11-08 trace evidence there).
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, above.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $ENAME \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 e2e.lock sl-e2e- sl-demo-); docker run --rm --init --name $ENAME \
         --tmpfs /tmp:rw,exec,size=8g --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
         -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
         -e PROJECTS='$E2E' $EIMG timeout -k 60 $ELIMIT bash -c '$REMOTE_DEPS
@@ -892,7 +904,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # Workers: 6 for pytest + 6 for the JS runners = the container's 12 CPUs, because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $RNAME \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 run.lock sl-gates-); docker run --rm --init --name $RNAME \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6} \

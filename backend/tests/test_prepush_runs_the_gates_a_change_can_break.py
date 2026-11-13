@@ -1716,13 +1716,14 @@ class TestRemoteTimeLimits:
     e2e = TestEndToEndOnAnotherMachine()
 
     @staticmethod
-    def _locked_then_removed(remote: str, inner_end: str, lock: str, name: str):
-        # The fake ssh records "$*": its options and host come first.
-        assert " fake-host ( flock 9 || exit 1; docker run" in remote, remote
-        assert remote.rstrip().endswith(f") 9>/srv/appdata/sl-gates/{lock}"), remote
+    def _locked_then_removed(remote: str, inner_end: str, lock: str, name: str, first_fd: int = 9):
+        # The fake ssh records "$*": its options and host come first. The lock is tried first without waiting
+        # (so a wait can be announced), then waited for; either way nothing runs without it.
+        assert re.search(rf" fake-host \( flock -n {first_fd} \|\| \{{ echo .*; flock 9; \}} \|\| exit 1; docker run", remote), remote
+        assert remote.rstrip().endswith(f" 9>/srv/appdata/sl-gates/{lock}"), remote
         # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
         tail = remote.split(inner_end, 1)[1]
-        assert f"docker rm -f {name}" in tail and tail.index("docker rm -f") < tail.index(") 9>"), tail
+        assert f"docker rm -f {name}" in tail and tail.index("docker rm -f") < re.search(r"\) [89]>", tail).start(), tail
 
     def test_a_selective_gate_run_has_30_minutes(self, checkouts, tmp_path):
         main, _ = checkouts
@@ -1774,7 +1775,9 @@ class TestRemoteTimeLimits:
         proc = self._demo(main, tmp_path, "scripts/demo-e2e-inner.sh", status=124)
         remote = (tmp_path / "remote-run").read_text()
         assert "sl-gates-e2e:1 timeout -k 60 25m bash /app/scripts/demo-e2e-inner.sh" in remote, remote
-        self._locked_then_removed(remote, "demo-e2e-inner.sh;", "e2e.lock", "sl-demo-")
+        self._locked_then_removed(remote, "demo-e2e-inner.sh;", "e2e.lock", "sl-demo-", first_fd=8)
+        # demo-serve.lock first, then e2e.lock: what it shares with a demo server (.next, sl_demo_record).
+        assert remote.rstrip().endswith(") 8>/srv/appdata/sl-gates/demo-serve.lock 9>/srv/appdata/sl-gates/e2e.lock"), remote
         assert proc.returncode == 124 and "TIMED OUT" in proc.stdout and "DEMO_TIMEOUT" in proc.stdout, proc.stdout
 
     def test_the_demo_servers_stay_up_unless_told(self, checkouts, tmp_path):
@@ -1783,6 +1786,69 @@ class TestRemoteTimeLimits:
         assert "timeout" not in (tmp_path / "remote-run").read_text()
         self._demo(main, tmp_path, "scripts/demo-serve-inner.sh", DEMO_TIMEOUT="2h")
         assert "timeout -k 60 2h bash /app/scripts/demo-serve-inner.sh" in (tmp_path / "remote-run").read_text()
+
+    @pytest.mark.parametrize("server", ["scripts/demo-serve-inner.sh", "scripts/demo-app-backend-inner.sh"])
+    def test_a_demo_server_does_not_hold_the_browser_suites_lock(self, checkouts, tmp_path, server):
+        """2026-11-13: a server left up (no time limit) held e2e.lock, and every --e2e waited on it in silence.
+        It takes demo-serve.lock only, and is still removed inside the subshell that holds that lock."""
+        main, _ = checkouts
+        self._demo(main, tmp_path, server)
+        remote = (tmp_path / "remote-run").read_text()
+        assert "e2e.lock" not in remote, remote
+        assert " fake-host ( flock -n 8 || { echo " in remote and "; flock 8; } || exit 1; docker run" in remote, remote
+        assert remote.rstrip().endswith("docker rm -f sl-demo-%s >/dev/null 2>&1; exit $rc ) 8>/srv/appdata/sl-gates/demo-serve.lock"
+                                        % re.search(r"--name sl-demo-(\d+)", remote).group(1)), remote
+
+
+class TestRemoteLocksSayWhenTheyWait:
+    """2026-11-13 (test review 3.5): a remote `flock 9` waited without a word. Each lock is now tried without
+    waiting first; when it is taken the run prints who has it (the containers by name) and then waits."""
+
+    SCRIPTS = ("run-gates.sh", "demo-remote.sh", "mobile-remote.sh")
+
+    @staticmethod
+    def _definition(script: str) -> str:
+        m = re.search(r"^remote_flock\(\) \{\n.*?^\}\n", (GENERATOR.parent / script).read_text(encoding="utf-8"), re.M | re.S)
+        assert m, f"no remote_flock in {script}"
+        return m.group(0)
+
+    def test_the_three_scripts_carry_the_same_words(self):
+        assert len({self._definition(s) for s in self.SCRIPTS}) == 1
+
+    def _take(self, tmp_path, free: bool, waits: bool = True):
+        """Run the words the remote shell would get, with a flock that finds the lock free or taken."""
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "flock").write_text(
+            "#!/bin/bash\n"
+            f'echo "flock $*" >> "{tmp_path}/flock.log"\n'
+            f'[ "$1" = -n ] && exit {0 if free else 1}\n'
+            f"exit {0 if waits else 1}\n")
+        (b / "docker").write_text('#!/bin/bash\necho "docker $*" >> "%s/docker.log"\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n' % tmp_path)
+        for f in b.iterdir():
+            f.chmod(0o755)
+        script = (f"P=gates\n{self._definition('run-gates.sh')}"
+                  f'eval "( $(remote_flock 9 run.lock sl-gates-); echo RAN ) 9>{tmp_path}/lock"\n')
+        env = _clean_env()
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60)
+
+    def test_a_free_lock_is_taken_without_a_word(self, tmp_path):
+        proc = self._take(tmp_path, free=True)
+        assert proc.returncode == 0 and proc.stdout == "RAN\n", proc.stdout + proc.stderr
+        assert (tmp_path / "flock.log").read_text() == "flock -n 9\n"
+
+    def test_a_taken_lock_names_its_holder_and_is_then_waited_for(self, tmp_path):
+        proc = self._take(tmp_path, free=False)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert proc.stdout == ("gates: waiting for run.lock on that machine, held by: "
+                               "sl-gates-A-1 (Up 3 hours),sl-gates-B-2 (Up 1 minute)\nRAN\n"), proc.stdout
+        assert (tmp_path / "flock.log").read_text() == "flock -n 9\nflock 9\n"
+        assert "--filter name=sl-gates-" in (tmp_path / "docker.log").read_text()
+
+    def test_without_the_lock_nothing_runs(self, tmp_path):
+        proc = self._take(tmp_path, free=False, waits=False)
+        assert proc.returncode == 1 and "RAN" not in proc.stdout, proc.stdout
 
 
 class TestBrowserSuitesRecordAPass:
@@ -2147,7 +2213,7 @@ class TestMobileRemoteMetroFollowsTheDependencies:
         (repo / "mobile" / "package.json").write_text(
             json.dumps({"name": "m", "version": version, "scripts": {"t": script}, "dependencies": {"a": dep}}))
 
-    def _run(self, repo, tmp_path, *args):
+    def _run(self, repo, tmp_path, *args, build_status=0, **extra):
         b = tmp_path / "bin"
         b.mkdir(exist_ok=True)
         log = tmp_path / "ssh.log"
@@ -2155,6 +2221,7 @@ class TestMobileRemoteMetroFollowsTheDependencies:
 for a; do cmd="$a"; done
 printf '%s\\n' "$cmd" >> {log}
 case "$cmd" in *"docker inspect"*) [ -f {tmp_path}/metro-env ] && cat {tmp_path}/metro-env || exit 1 ;; esac
+case "$cmd" in *"docker run --rm"*) exit {build_status} ;; esac
 exit 0
 ''')
         (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
@@ -2163,7 +2230,7 @@ exit 0
             f.chmod(0o755)
         if log.exists():
             log.unlink()
-        env = _clean_env(MOBILE_REMOTE="box", MOBILE_REMOTE_IP="gates-host.lan")
+        env = _clean_env(MOBILE_REMOTE="box", MOBILE_REMOTE_IP="gates-host.lan", **extra)
         env["PATH"] = f"{b}:{env['PATH']}"
         proc = subprocess.run(["bash", str(repo / "scripts" / "mobile-remote.sh"), "mobile", *args], cwd=repo,
                               env=env, capture_output=True, text=True, timeout=60)
@@ -2212,6 +2279,32 @@ exit 0
         assert stop < start, calls
         assert "soulledger://expo-development-client/?url=http%3A%2F%2Fgates-host.lan%3A8081" in calls[start], calls
         assert not any("monkey" in c for c in calls), calls
+
+    def _build(self, tmp_path, **kw):
+        proc, log = self._run(self._repo(tmp_path), tmp_path, "build", **kw)
+        return proc, [line for line in log.split("\n( ") if "docker run --rm" in line]
+
+    def test_the_build_is_locked_and_limited_like_the_gates(self, tmp_path):
+        """2026-11-13: it was `flock <lock> docker run` — a dropped ssh released the lock under a build still
+        running — and had no time limit. Now the subshell holds the lock until the container is removed, and
+        `timeout` is the container's own command (30 minutes; MOBILE_REMOTE_TIMEOUT overrides)."""
+        proc, (build,) = self._build(tmp_path, build_status=124)
+        assert build.startswith("flock -n 9 || { echo ") and "; flock 9; } || exit 1; docker run --rm --init --name sl-android-mobile-" in build, build
+        assert "sl-mobile-android:1 timeout -k 60 30m bash -c '" in build, build
+        name = re.search(r"--name (sl-android-mobile-\S+)", build).group(1)
+        assert build.rstrip().endswith(f"; rc=$?; docker rm -f {name} >/dev/null 2>&1; exit $rc ) 9>/srv/appdata/sl-gates/android/build.lock"), build[-300:]
+        assert proc.returncode == 1 and "TIMED OUT" in proc.stdout and "MOBILE_REMOTE_TIMEOUT" in proc.stdout, proc.stdout
+
+    def test_the_build_limit_can_be_overridden_but_not_with_anything(self, tmp_path):
+        _, (build,) = self._build(tmp_path, build_status=124, MOBILE_REMOTE_TIMEOUT="45m")
+        assert "timeout -k 60 45m bash -c" in build
+        proc, builds = self._build(tmp_path / "second", MOBILE_REMOTE_TIMEOUT="5; reboot")
+        assert proc.returncode == 2 and "is not a time limit" in proc.stdout and not builds, proc.stdout
+
+    def test_an_unchanged_native_side_is_still_no_build(self, tmp_path):
+        """The container's `exit 3` must come back through `timeout` and the locked subshell."""
+        proc, _ = self._build(tmp_path, build_status=3)
+        assert proc.returncode == 0 and "no build needed" in proc.stdout, proc.stdout
 
     def test_a_current_metro_and_no_metro_are_left_alone(self, tmp_path):
         repo = self._repo(tmp_path)
