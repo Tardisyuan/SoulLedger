@@ -185,7 +185,7 @@ export function JudgmentActionBar({
               <ActionButton testID="judgment-release" kind="outline" disabled={offline} accessibilityHint={hint} title={t("officer_app.desk.release")} onPress={() => open("release")} />
               <ActionButton testID="judgment-judge" kind="primary" disabled={offline} accessibilityHint={hint} title={t("officer_app.seal.judge")} onPress={onJudge} style={{ flex: 1 }} />
             </>
-          ) : state === "desk" || state === "deferred" ? (
+          ) : state === "deferred" ? (
             <ActionButton testID="judgment-desk" kind="outline" title={t("officer_app.continue_on_desk")} onPress={onDesk} style={{ flex: 1 }} />
           ) : (
             <ActionButton testID="judgment-write" kind="primary" title={t("officer_app.comment.write")} onPress={onWrite} style={{ flex: 1 }} />

@@ -26,7 +26,7 @@ jest.mock("@soulledger/core/api/judgment", () => ({
   },
 }));
 
-const BASE = { id: "j-1", case_number: "C-2291", soul_name: "周阿满", is_final: true, claimed_by_name: "钟判官" } as never;
+const BASE = { id: "j-1", case_number: "C-2291", soul_name: "周阿满", is_final: false, claimed_by_name: "钟判官" } as never;
 const ME = 7;
 
 describe("judgmentActionState", () => {
@@ -34,7 +34,8 @@ describe("judgmentActionState", () => {
     [{}, "unclaimed"],
     [{ claimed_by: 9 }, "other"],
     [{ claimed_by: ME, is_final: true }, "mine"],
-    [{ claimed_by: ME, is_final: false }, "desk"],
+    // An open case is never is_final (the server writes it with concluded_at): claimed by me and open is the 判 drawer.
+    [{ claimed_by: ME, is_final: false }, "mine"],
     [{ claimed_by: ME, is_final: true, deferred_at: "2026-10-16T00:00:00Z" }, "deferred"],
     [{ claimed_by: ME, is_final: true, concluded_at: "2026-10-16T00:00:00Z" }, "closed"],
   ])("%j -> %s", (j, want) => {

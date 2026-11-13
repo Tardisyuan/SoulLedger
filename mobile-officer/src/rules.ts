@@ -512,18 +512,19 @@ export function hallLabel(
 // ── 审判详情的操作区(Design 第三十四批 O-09) ─────────────────────────────
 
 /**
- * 六种状态,主按钮一次只有一个。`closed`(已结案)不画操作区。
+ * 五种状态,主按钮一次只有一个。`closed`(已结案)不画操作区。
  * `reassignAsked`:已请求改派 —— 主要读服务端的 `reassign_requested_at`(认领人变了服务端就清);`reassignAsked` 只补撞到 429 而标记已清的那种情形。
- * 「待宣判」按此处原有的口径:案子还不是 `is_final`,手机上只能到电脑上继续。
+ * 我认领的未结案就是 `mine`(「判」抽屉):服务端结案只要求未结、认领人是我(`claimed_by_other` 才拒),其余拒绝由
+ * `conclude_refusal` 给出(操作区据它不放「判」)。此前这里还要 `is_final`,而 `is_final` 只在结案时与 `concluded_at`
+ * 一起写下 —— `mine` 永远到不了,手机上谁也落不了印(真机 2026-11-14)。
  */
-export type JudgmentActionState = "unclaimed" | "mine" | "deferred" | "reassign" | "other" | "desk" | "closed";
+export type JudgmentActionState = "unclaimed" | "mine" | "deferred" | "reassign" | "other" | "closed";
 
 export function judgmentActionState(
   j: {
     claimed_by?: number | null;
     deferred_at?: string | null;
     concluded_at?: string | null;
-    is_final?: boolean;
     reassign_requested_at?: string | null;
   },
   me: number | null,
@@ -534,12 +535,12 @@ export function judgmentActionState(
   if (j.claimed_by !== me) return "other";
   if (j.deferred_at) return "deferred";
   if (reassignAsked || j.reassign_requested_at) return "reassign";
-  return j.is_final ? "mine" : "desk";
+  return "mine";
 }
 
 /** ⋯ 里有什么,按顺序(放回永远最后)。 */
 export function judgmentMoreItems(state: JudgmentActionState): ("defer" | "request_reassign" | "release")[] {
-  if (state === "mine" || state === "desk") return ["defer", "request_reassign", "release"];
+  if (state === "mine") return ["defer", "request_reassign", "release"];
   if (state === "deferred" || state === "reassign") return ["release"];
   return [];
 }
