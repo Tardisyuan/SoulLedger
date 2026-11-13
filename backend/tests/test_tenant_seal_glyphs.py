@@ -2,6 +2,7 @@
 import pytest
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.tenants.models import Tenant
 from tests.conftest import sign_in
 from tests.soul_account_support import ready_soul
@@ -65,7 +66,7 @@ def test_invalid_glyphs_are_refused_and_nothing_is_saved(admin_user, tenants, ci
     tenant.save()
     resp = _patch(admin_user, tenant, glyphs)
     assert resp.status_code == 400, resp.data
-    assert "seal_glyphs" in resp.data
+    assert "seal_glyphs" in field_errors(resp)
     tenant.refresh_from_db()
     assert tenant.seal_glyphs == []  # 不截断、不部分写入
 

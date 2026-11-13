@@ -4,6 +4,7 @@ Tests for Reincarnation API endpoints.
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.core.problems import field_errors
 from apps.reincarnation.models import SIX_PATHS, RebirthForm, Reincarnation
 from apps.souls.models import Soul, SoulState
 
@@ -199,7 +200,7 @@ class TestRebirthFormIsValidated:
         )
 
         assert response.status_code == 400
-        assert "rebirth_form" in response.data
+        assert "rebirth_form" in field_errors(response)
         # Nothing written: no record, and the soul never left DISPOSED. A 400
         # that arrived after the state transition would leave the soul stuck
         # in REINCARNATING, which is the stranding SoulState.SETTLED exists
@@ -270,5 +271,5 @@ class TestRebirthFormIsValidated:
         )
 
         assert response.status_code == 400
-        assert "new_identity" in response.data
+        assert "new_identity" in field_errors(response)
         assert Reincarnation.all_objects.filter(soul=soul).count() == 0

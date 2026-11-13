@@ -19,6 +19,7 @@ from rest_framework.test import APIClient
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.events.models import EventType, SoulEvent
 from apps.judgment.models import Judgment
 from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul
@@ -109,7 +110,7 @@ def test_a_reason_is_required(cn, body):
         START, {"soul": str(cn["soul"].pk), "case_type": CaseType.ROUTINE, **body}, format="json",
     )
     assert response.status_code == 400
-    assert "reason" in response.data
+    assert "reason" in field_errors(response)
     assert not ApprovalWorkflow.objects.filter(soul=cn["soul"]).exists()
 
 

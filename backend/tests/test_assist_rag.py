@@ -12,6 +12,7 @@ from django.test.utils import CaptureQueriesContext
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.soul_assist import config, corpus, evals, service, usage, vectors
 from apps.soul_assist.models import AssistConfig, AssistEvalCase, AssistEvalRun, AssistUsage, HelpChunk
 from apps.soul_assist.providers import FakeProvider
@@ -548,7 +549,7 @@ def test_the_embedding_routes_refuse_non_admins(cn_tenant, ollama, role):
 def test_an_eval_case_names_only_entries_that_exist(api):
     base = {"side": "soul", "locale": "zh-Hans", "screen": "applications", "question": "q"}
     response = api.post(f"{BASE}eval/cases/", {**base, "expected_entries": ["no-such-entry"]}, format="json")
-    assert response.status_code == 400 and "expected_entries" in response.data
+    assert response.status_code == 400 and "expected_entries" in field_errors(response)
     officer_only = api.post(f"{BASE}eval/cases/", {**base, "expected_entries": ["officer-roles"]}, format="json")
     assert officer_only.status_code == 400
     ok = api.post(f"{BASE}eval/cases/", {**base, "expected_entries": ["rebirth-appeal"]}, format="json")

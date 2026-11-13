@@ -7,6 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, transaction
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.dispatch.services import DispatchService
 from apps.judgment.models import Judgment
@@ -156,7 +157,7 @@ def test_the_api_does_not_create_a_root_or_turn_a_unit_into_one(admin, cn_admin_
     root = tenant_root(hall)
     res = admin.post("/api/v1/organizations/", {"name": "新", "code": "B1_NEW", "category": "CHINESE"}, format="json")
     assert res.status_code == 400, res.data
-    assert "parent" in res.data
+    assert "parent" in field_errors(res)
     assert not Organization.objects.filter(code="B1_NEW").exists()
     res = admin.post(
         "/api/v1/organizations/", {"name": "新", "code": "B1_NEW", "category": "CHINESE", "parent": root.pk}, format="json",
@@ -199,7 +200,7 @@ def test_creating_an_officer_without_a_unit_puts_them_at_the_hall_root(admin, cn
     away = _unit(eg, "B1_AWAY")
     res = admin.post("/api/v1/users/", {**body, "username": "b1_cross", "organization": away.pk}, format="json")
     assert res.status_code == 400, res.data
-    assert "organization" in res.data
+    assert "organization" in field_errors(res)
     assert not User.objects.filter(username="b1_cross").exists()
 
 

@@ -19,6 +19,8 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
+
 VICTIM = "victim@example.com"
 CLAIMS = [VICTIM, "VICTIM@example.com", "Victim@Example.COM"]
 
@@ -69,7 +71,7 @@ class TestProfile:
     ):
         res = as_attacker.patch("/api/v1/auth/profile/", {"email": claim}, format="json")
         assert res.status_code == 400, res.data
-        assert "email" in res.data
+        assert "email" in field_errors(res)
         attacker.refresh_from_db()
         assert attacker.email == "attacker@example.com"
         assert _holders(django_user_model, VICTIM) == 1
@@ -132,7 +134,7 @@ class TestAdminPaths:
             f"/api/v1/users/{attacker.id}/", {"email": "Victim@Example.com"}, format="json"
         )
         assert res.status_code == 400, res.data
-        assert "email" in res.data
+        assert "email" in field_errors(res)
         assert _holders(django_user_model, VICTIM) == 1
 
     def test_update_may_keep_the_users_own_address(self, as_admin, attacker):
@@ -149,7 +151,7 @@ class TestAdminPaths:
             format="json",
         )
         assert res.status_code == 400, res.data
-        assert "email" in res.data
+        assert "email" in field_errors(res)
         assert not django_user_model.objects.filter(username="second").exists()
 
     def test_csv_import_refuses_a_taken_address(self, as_admin, victim, django_user_model):

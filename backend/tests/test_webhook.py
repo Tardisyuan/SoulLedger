@@ -6,6 +6,7 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.death_sync.models import ExternalApiKey, WebhookConfig
 
 
@@ -231,7 +232,7 @@ def test_the_self_service_door_refuses_private_addresses_like_the_admin_one(cn_t
     client = _api_key_client(raw)
     resp = client.post("/api/v1/death-sync/webhooks/", {"url": url, "events": []}, format="json")
     assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.content
-    assert "url" in resp.data
+    assert "url" in field_errors(resp)
     assert not WebhookConfig.objects.filter(url=url).exists()
     ok = client.post("/api/v1/death-sync/webhooks/", {"url": "https://8.8.8.8/ok", "events": []}, format="json")
     assert ok.status_code == status.HTTP_201_CREATED, ok.content

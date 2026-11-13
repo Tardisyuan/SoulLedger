@@ -5,6 +5,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
+from apps.core.problems import field_errors
 from apps.dispatch.models import DispatchRecord
 from apps.dispatch.services import DispatchService
 from apps.disposition.models import Disposition
@@ -396,7 +397,7 @@ def test_an_officer_cannot_write_a_compensation_record_by_hand(case, admin_user)
     response = officer_client(admin_user).post(
         f"/api/v1/souls/{case['soul'].pk}/add_record/",
         {"record_type": "MERIT", "category": "COMPENSATION", "description": "x", "weight": 5}, format="json")
-    assert response.status_code == 400 and "category" in response.data
+    assert response.status_code == 400 and "category" in field_errors(response)
 
 
 # ── 租户隔离 ─────────────────────────────────────────────────────────────

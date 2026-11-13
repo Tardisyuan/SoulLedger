@@ -14,6 +14,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from apps.core import recycle_bin
+from apps.core.problems import field_errors
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.dispatch.services import DispatchService
 from apps.events.models import SoulEvent
@@ -93,7 +94,7 @@ def test_a_draft_takes_a_short_reason_and_submit_refuses_it(w):
 
     resp = client.post(f"{URL}{record.pk}/submit/", {}, format="json")
     assert resp.status_code == 400
-    assert "reason" in resp.data
+    assert "reason" in field_errors(resp)
     record.refresh_from_db()
     assert record.status == DispatchStatus.DRAFT
 
@@ -194,7 +195,7 @@ def test_a_realm_of_another_tenant_is_refused_everywhere(w, which):
     client = sign_in(APIClient(), w["cn_mod"])
     # Draft save, when present.
     resp = client.post(f"{URL}drafts/", {"target_tenant": w["eu"].pk, "target_realm": foreign}, format="json")
-    assert resp.status_code == 400 and "target_realm" in resp.data
+    assert resp.status_code == 400 and "target_realm" in field_errors(resp)
     # A realm with no target civilization yet.
     resp = client.post(f"{URL}drafts/", {"target_realm": str(w["eu_ninth"].pk)}, format="json")
     assert resp.status_code == 400 and "target_realm" in resp.data

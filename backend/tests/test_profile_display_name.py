@@ -7,6 +7,7 @@ import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.tenants.models import Tenant
 
 PROFILE = "/api/v1/auth/profile/"
@@ -46,7 +47,7 @@ def test_blank_display_name_is_refused(api_client, officer, blank):
     response = as_user(api_client, officer).patch(PROFILE, {"display_name": blank}, format="json")
 
     assert response.status_code == 400
-    assert "display_name" in response.data
+    assert "display_name" in field_errors(response)
     officer.refresh_from_db()
     assert officer.display_name == "旧名"
 
@@ -56,7 +57,7 @@ def test_too_long_display_name_is_refused(api_client, officer):
     response = as_user(api_client, officer).patch(PROFILE, {"display_name": "名" * 101}, format="json")
 
     assert response.status_code == 400
-    assert "display_name" in response.data
+    assert "display_name" in field_errors(response)
 
 
 @pytest.mark.django_db

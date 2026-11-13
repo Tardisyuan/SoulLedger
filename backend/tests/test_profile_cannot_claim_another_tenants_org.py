@@ -20,6 +20,7 @@ import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.org.models import Organization
 from apps.tenants.models import Tenant
 
@@ -77,7 +78,7 @@ def test_an_organization_in_ones_own_tenant_is_refused_too(api_client, viewer, t
         PROFILE, {"organization": str(org_a2.pk)}, format="json"
     )
     assert response.status_code == 400, response.data
-    assert "organization" in response.data
+    assert "organization" in field_errors(response)
     viewer.refresh_from_db()
     assert viewer.organization_id == org_a.pk
 
@@ -88,7 +89,7 @@ def test_position_cannot_be_changed_by_oneself(api_client, viewer):
     viewer.save(update_fields=["position"])
     response = client_for(api_client, viewer).patch(PROFILE, {"position": "阎罗"}, format="json")
     assert response.status_code == 400, response.data
-    assert "position" in response.data
+    assert "position" in field_errors(response)
     viewer.refresh_from_db()
     assert viewer.position == "判官"
 
@@ -135,7 +136,7 @@ def test_an_admin_cannot_hang_a_user_under_another_tenants_organization(api_clie
         f"/api/v1/users/{viewer.pk}/", {"organization": str(org_b.pk)}, format="json"
     )
     assert response.status_code == 400, response.data
-    assert "organization" in response.data
+    assert "organization" in field_errors(response)
     viewer.refresh_from_db()
     assert viewer.organization_id == org_a.pk
 

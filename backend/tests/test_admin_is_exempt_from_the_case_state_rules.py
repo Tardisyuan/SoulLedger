@@ -16,6 +16,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
@@ -79,7 +80,7 @@ def test_a_judge_is_still_refused_on_both(bench):
 
     assert settled.status_code == 400, settled.data
     assert busy.status_code == 400, busy.data
-    assert "soul" in settled.data and "soul" in busy.data
+    assert "soul" in field_errors(settled) and "soul" in field_errors(busy)
     # And nothing was written by either refusal.
     assert Judgment.all_objects.filter(soul=bench["settled"]).count() == 0
     assert Judgment.all_objects.filter(soul=bench["busy"]).count() == 1

@@ -15,6 +15,7 @@ from unittest.mock import patch
 import pytest
 from django.utils import timezone
 
+from apps.core.problems import field_errors
 from apps.disposition.destination import allowed_realm_codes
 from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
@@ -285,7 +286,7 @@ def test_a_term_that_is_not_a_positive_integer_is_refused(cn_judge, cn_realms, c
     case = _case(cn_tenant)
     response = _conclude(cn_judge, case, term_years=term)
     assert response.status_code == 400
-    assert "term_years" in response.data
+    assert "term_years" in field_errors(response)
     _nothing_written(case)
 
 

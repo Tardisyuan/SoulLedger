@@ -16,6 +16,7 @@ import pytest
 import yaml
 from django.core.management import call_command
 
+from apps.core.problems import field_errors
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, Verdict
 from apps.realms.models import CommediaRegion, Realm, RealmFork, RealmKind, SoulPathEntry
@@ -589,7 +590,7 @@ def test_a_judgment_cannot_point_at_another_tenants_realm(seeded):
     resp = judge.post("/api/v1/judgment/", {"soul": str(soul.pk), "realm_id": str(_realm("EU_HELL_1ST").pk)},
                       format="json")
     assert resp.status_code == 400
-    assert "realm_id" in resp.data
+    assert "realm_id" in field_errors(resp)
     assert _path(soul) == []
 
 

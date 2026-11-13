@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from apps.core.problems import field_errors
 from apps.events.models import SoulEvent
 from apps.judgment import city_gods, claims
 from apps.judgment.claims import ClaimRefusedError
@@ -269,7 +270,7 @@ def test_city_gods_are_per_hall_and_only_in_diyu(hall, cn_tenant, eu_tenant):
     outsider = sp.officer("eu_judge", "JUDGE", eu_tenant)
     bad = officer_client(hall["lead"]).patch(f"{GODS}{hall['hangzhou'].pk}/", {"officer_ids": [outsider.pk]},
                                              format="json")
-    assert bad.status_code == 400 and "officer_ids" in bad.data
+    assert bad.status_code == 400 and "officer_ids" in field_errors(bad)
     assert not Judgment.objects.filter(city_god__tenant=eu_tenant).exists()
 
 

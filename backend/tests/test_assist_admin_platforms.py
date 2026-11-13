@@ -8,6 +8,7 @@ import requests
 from cryptography.fernet import Fernet
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.soul_assist import config, platforms
 from apps.soul_assist.providers import Answer, FakeProvider, ProviderError
 from tests.ai_feature_support import reset_fake_provider
@@ -114,7 +115,7 @@ def test_a_preset_fixes_the_adapter_and_address(api, net):
     assert calls[-1]["url"] == "https://api.deepseek.com/models"
     n = len(calls)
     refused = _models(api, platform="deepseek", base_url="https://attacker.example/v1", api_key="sk-draft")
-    assert refused.status_code == 400 and "base_url" in refused.data
+    assert refused.status_code == 400 and "base_url" in field_errors(refused)
     assert len(calls) == n
 
 

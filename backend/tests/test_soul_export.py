@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.perm.cache import invalidate_all_permissions
 from apps.perm.models import Permission, Role, RolePermission
 from apps.souls.models import Soul, SoulState
@@ -134,7 +135,7 @@ def test_without_soul_read_it_is_refused(world):
 def test_bad_ids_are_a_400_not_a_file(world, ids):
     response = world["reader"].get(URL, {"ids": ids})
     assert response.status_code == 400
-    assert "ids" in response.json()
+    assert "ids" in field_errors(response)
 
 
 # --- without `ids`: the list's own filters, search and ordering ---

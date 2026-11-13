@@ -4,6 +4,8 @@ Tests for User Management API endpoints.
 import pytest
 from django.contrib.auth import get_user_model
 
+from apps.core.problems import field_errors
+
 User = get_user_model()
 
 
@@ -146,7 +148,7 @@ class TestUserManagementAPI:
         user = User.objects.create_user(username="nopwpatch", password="oldpass123", role="VIEWER", tenant=self.cn_tenant)
         response = self.client.patch(f"/api/v1/users/{user.id}/", {"password": "newpass12345"}, format="json")
         assert response.status_code == 400
-        assert "password" in response.data
+        assert "password" in field_errors(response)
         user.refresh_from_db()
         assert user.check_password("oldpass123")
 

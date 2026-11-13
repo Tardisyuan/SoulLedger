@@ -31,6 +31,7 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.death_sync.models import ExternalApiKey, WebhookConfig
 from apps.events.models import EventType, EventWebhookDelivery, EventWebhookStatus
 from apps.tenants.models import Tenant
@@ -150,7 +151,7 @@ class TestCreate:
         eu_key, _ = _key(eu_tenant, "EU Key")
         resp = users["admin"].post(ADMIN_URL, {"api_key": str(eu_key.id), "url": PUBLIC_URL}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "api_key" in resp.data
+        assert "api_key" in field_errors(resp)
         assert WebhookConfig.objects.count() == 0
 
     @pytest.mark.parametrize(
@@ -166,7 +167,7 @@ class TestCreate:
     def test_unsafe_urls_are_refused_at_the_boundary(self, users, cn_key, url):
         resp = users["admin"].post(ADMIN_URL, {"api_key": str(cn_key[0].id), "url": url}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST, url
-        assert "url" in resp.data
+        assert "url" in field_errors(resp)
         assert WebhookConfig.objects.count() == 0
 
     def test_an_unknown_event_is_refused(self, users, cn_key):
@@ -175,7 +176,7 @@ class TestCreate:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "events" in resp.data
+        assert "events" in field_errors(resp)
 
     def test_event_types_is_the_enum_the_handler_filters_on(self, users):
         resp = users["admin"].get(f"{ADMIN_URL}event-types/")

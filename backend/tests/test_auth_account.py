@@ -19,6 +19,7 @@ from apps.audit.models import AuditLog
 from apps.authentication import tasks
 from apps.authentication.tokens import REMEMBER_CLAIM, RefreshToken
 from apps.authentication.views import PASSWORD_HELP_ACCEPTED
+from apps.core.problems import field_errors
 from apps.notifications.models import NotificationType, UserNotification
 from apps.tenants.models import Tenant
 from tests.soul_account_support import officer_client
@@ -543,7 +544,7 @@ class TestPreferences:
         api_client.force_authenticate(judge_user)
         response = api_client.patch(PREFS, {"onboarded": value}, format="json")
         assert response.status_code == 400
-        assert "onboarded" in response.data
+        assert "onboarded" in field_errors(response)
         judge_user.refresh_from_db()
         assert judge_user.preferences == {}
 

@@ -28,6 +28,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.dispatch.models import CrossTenantJudgment
 from apps.tenants.models import Tenant
 
@@ -118,7 +119,7 @@ def test_patch_cannot_re_point_an_honest_judgment_at_another_tenant(tenants, jud
         f"re-pointing initiating_tenant returned {resp.status_code}; a judgment "
         f"moved this way is lost to both tenants"
     )
-    assert "initiating_tenant" in resp.data
+    assert "initiating_tenant" in field_errors(resp)
 
     row = CrossTenantJudgment.objects.get(pk=pk)
     assert row.initiating_tenant_id == tenant_b.pk

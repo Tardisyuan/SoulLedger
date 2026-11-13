@@ -11,6 +11,7 @@ import pytest
 from django.utils import timezone
 
 from apps.audit.models import AuditLog
+from apps.core.problems import field_errors
 from apps.social import moderation as mod
 from apps.social.models import (
     Comment,
@@ -769,7 +770,7 @@ def test_handled_date_range_is_inclusive_on_both_ends_across_posts_and_comments(
 def test_handled_rejects_a_malformed_date_with_400(cn_tenant, cn_moderator, bad):
     res = officer_client(cn_moderator).get(f"{MODERATION}/handled/", {"date_from": bad})
     assert res.status_code == 400, res.content
-    assert "date_from" in res.json()
+    assert "date_from" in field_errors(res)
 
 
 def test_handled_does_not_leak_across_civilizations(cn_tenant, cn_moderator, eu_moderator, eu_tenant):

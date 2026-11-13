@@ -5,6 +5,7 @@ from datetime import UTC
 
 import pytest
 
+from apps.core.problems import field_errors
 from apps.events.models import EventType, SoulEvent
 from apps.souls.models import Soul
 
@@ -138,7 +139,7 @@ def test_a_bad_date_is_a_400_not_a_500(api_client, viewer_user, param):
     _auth(api_client, viewer_user)
     response = api_client.get(f"/api/v1/events/?{param}=2026-13-40")
     assert response.status_code == 400
-    assert param in response.data
+    assert param in field_errors(response)
 
 
 @pytest.mark.django_db

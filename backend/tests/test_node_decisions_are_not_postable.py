@@ -33,6 +33,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, WorkflowTemplate
@@ -202,7 +203,7 @@ def test_each_decision_field_is_refused_on_its_own(world):
         assert resp.status_code == 400, (
             f"POST with `{field}` alone returned {resp.status_code}"
         )
-        assert field in resp.data
+        assert field in field_errors(resp)
 
 
 @pytest.mark.django_db

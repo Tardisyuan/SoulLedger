@@ -5,6 +5,7 @@ from datetime import date
 
 import pytest
 
+from apps.core.problems import field_errors
 from apps.death_sync.models import DeathRegistrationRequest, TudiGod
 from apps.dispatch import capture
 from apps.dispatch.models import CaptureWarrant
@@ -136,7 +137,7 @@ def test_birth_continent_is_recorded_only_for_diyu(cn_tenant, eu_tenant):
     eu_lead = sp.officer("cont_eu", "ADMIN", eu_tenant)
     eu = Soul.objects.create(name="癸", tenant=eu_tenant)
     res = officer_client(eu_lead).patch(f"/api/v1/souls/{eu.pk}/", {"birth_continent": "BEIJULU"}, format="json")
-    assert res.status_code == 400 and "birth_continent" in res.data
+    assert res.status_code == 400 and "birth_continent" in field_errors(res)
     assert Soul.objects.get(pk=eu.pk).birth_continent == ""
 
 
@@ -313,7 +314,7 @@ def test_tudi_gods_are_diyu_only_and_their_city_god_must_be_of_the_hall(cn_tenan
     lead = sp.officer("tudi_lead", "ADMIN", cn_tenant)
     eu_god = CityGod.objects.create(tenant=eu_tenant, name="他殿城隍")
     res = officer_client(lead).post(TUDI, {"name": "石桥村土地", "city_god": str(eu_god.pk)}, format="json")
-    assert res.status_code == 400 and "city_god" in res.data
+    assert res.status_code == 400 and "city_god" in field_errors(res)
     own_god = CityGod.objects.create(tenant=cn_tenant, name="本殿城隍")
     res = officer_client(lead).post(TUDI, {"name": "石桥村土地", "city_god": str(own_god.pk),
                                            "regions": ["石桥村", "", "石桥村"]}, format="json")

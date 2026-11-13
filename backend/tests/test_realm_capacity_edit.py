@@ -12,6 +12,7 @@
 import pytest
 
 from apps.audit.models import AuditLog
+from apps.core.problems import field_errors
 from apps.realms.models import SoulPathEntry
 from apps.realms.serializers import RealmSerializer
 from tests.soul_account_support import officer_client
@@ -84,7 +85,7 @@ def test_every_other_field_is_refused(admin, hall, field):
     before = RealmSerializer(hall).data
     response = admin.patch(_url(hall), {field: before[field] if before[field] is not None else "x"}, format="json")
     assert response.status_code == 400
-    assert field in response.data
+    assert field in field_errors(response)
     hall.refresh_from_db()
     assert RealmSerializer(hall).data == before
 

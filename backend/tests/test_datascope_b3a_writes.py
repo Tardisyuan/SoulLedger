@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.judgment.models import Judgment
 from apps.org.models import Organization
 from apps.perm.models import RoleDataScope
@@ -103,7 +104,7 @@ def test_opening_a_case_with_an_owner_outside_the_scope_is_400(w):
     Judgment.objects.filter(pk=w.jA.pk).update(is_deleted=True)  # 让甲魂没有未结案件
     res = w.c.post("/api/v1/judgment/", {"soul": str(w.sA.pk), "court": "第一殿", "owner_org": w.B.pk}, format="json")
     assert res.status_code == 400, res.data
-    assert "owner_org" in res.data
+    assert "owner_org" in field_errors(res)
     # 开案的灵魂在范围外:同样 400(序列化器外键经 tenant_scoped 叠加范围)。
     Judgment.objects.filter(pk=w.jB.pk).update(is_deleted=True)
     res = w.c.post("/api/v1/judgment/", {"soul": str(w.sB.pk), "court": "第一殿"}, format="json")

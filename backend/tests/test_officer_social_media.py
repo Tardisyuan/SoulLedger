@@ -8,6 +8,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 
+from apps.core.problems import field_errors
 from apps.social import media as post_media
 from apps.social.models import Post, PostMedia, Visibility
 from apps.social.services import FollowService
@@ -166,21 +167,21 @@ class TestAttachAndSerialize:
         client = officer_client(cn_a)
         assert create_post(client, [uploaded(client)["id"]], content="").status_code == 201
         res = create_post(client, [], content="  ")
-        assert res.status_code == 400 and "content" in res.json()
+        assert res.status_code == 400 and "content" in field_errors(res)
 
     def test_more_than_the_limit_is_refused_and_no_post_is_created(self, cn_a, monkeypatch):
         monkeypatch.setattr(post_media, "MAX_PER_POST", 2)
         client = officer_client(cn_a)
         ids = [uploaded(client)["id"] for _ in range(3)]
         res = create_post(client, ids)
-        assert res.status_code == 400 and "media" in res.json()
+        assert res.status_code == 400 and "media" in field_errors(res)
         assert not Post.objects.filter(author=cn_a).exists()
         assert PostMedia.objects.filter(post__isnull=True).count() == 3
 
     def test_someone_elses_upload_cannot_be_attached(self, cn_a, cn_b):
         theirs = uploaded(officer_client(cn_b))["id"]
         res = create_post(officer_client(cn_a), [theirs])
-        assert res.status_code == 400 and "media" in res.json()
+        assert res.status_code == 400 and "media" in field_errors(res)
         assert not Post.objects.filter(author=cn_a).exists()
 
     def test_an_image_cannot_be_attached_twice(self, cn_a):

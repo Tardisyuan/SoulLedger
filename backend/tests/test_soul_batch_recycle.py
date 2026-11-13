@@ -22,6 +22,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User, UserRole
+from apps.core.problems import field_errors
 from apps.judgment.models import Judgment
 from apps.perm.cache import invalidate_all_permissions
 from apps.perm.models import Permission, Role, RolePermission
@@ -323,7 +324,7 @@ def test_over_the_cap_is_400_and_the_cap_itself_is_not(world):
     over = [str(uuid.uuid4()) for _ in range(SOUL_BATCH_RECYCLE_MAX + 1)]
     response = world["clerk"].post(URL, {"ids": over}, format="json")
     assert response.status_code == 400
-    assert "ids" in response.json()
+    assert "ids" in field_errors(response)
     # Exactly the cap passes validation and reaches the lookup (404: unknown ids).
     at_cap = over[:SOUL_BATCH_RECYCLE_MAX]
     assert world["clerk"].post(URL, {"ids": at_cap}, format="json").status_code == 404

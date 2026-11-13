@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.dispatch.services import DispatchService
 from apps.disposition.models import Disposition
@@ -786,7 +787,7 @@ def test_the_home_tenant_cannot_write_to_the_residing_soul_or_its_residence_rows
         assert response.status_code == 404, (method, url, response.status_code)
 
     opened = home.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json")
-    assert opened.status_code == 400 and "soul" in opened.data
+    assert opened.status_code == 400 and "soul" in field_errors(opened)
 
     soul.refresh_from_db()
     away["disposition"].refresh_from_db()

@@ -11,6 +11,7 @@
 import pytest
 
 from apps.audit.models import AuditLog
+from apps.core.problems import field_errors
 from apps.dispatch.models import DispatchRecord
 from apps.disposition.models import Disposition
 from apps.events.models import SoulEvent
@@ -459,7 +460,7 @@ def test_the_home_tenant_still_cannot_open_a_case_on_a_residing_soul_by_hand(cn,
     """写例外只在批准 REOPEN 那一处;`POST /judgment/` 不在里面(即使 body 写了 kind)。"""
     soul, p = _two_stops(cn, eg, eu)
     response = _c(judges["cn"]).post("/api/v1/judgment/", {"soul": str(soul.pk), "kind": "REOPEN"}, format="json")
-    assert response.status_code == 400 and "soul" in response.data
+    assert response.status_code == 400 and "soul" in field_errors(response)
     assert not Judgment.all_objects.filter(soul=soul, tenant=cn, verdict__isnull=True).exists()
 
 

@@ -5,6 +5,7 @@ import pytest
 from django.core import mail
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
@@ -138,7 +139,7 @@ class TestHalls:
         admin_client.raise_request_exception = False
         res = admin_client.post("/api/v1/souls/", {"name": "late", "civilization": "CHINESE"}, format="json")
         assert res.status_code == 400, res.status_code
-        assert "tenant" in res.data
+        assert "tenant" in field_errors(res)
 
     def test_overview_is_admin_only(self, global_admin_client, admin_client, judge_user):
         assert admin_client.get("/api/v1/tenants/overview/").status_code == 403  # a hall's ADMIN

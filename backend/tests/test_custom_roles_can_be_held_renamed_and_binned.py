@@ -20,6 +20,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User, UserRole
+from apps.core.problems import field_errors
 from apps.perm.cache import invalidate_all_permissions
 from apps.perm.checker import check_permission
 from apps.perm.models import Permission, Role, RolePermission
@@ -101,7 +102,7 @@ def test_creating_a_user_with_an_unknown_role_is_a_400(world):
         format="json",
     )
     assert response.status_code == 400, response.content
-    assert "role" in response.data
+    assert "role" in field_errors(response)
     assert not User.objects.filter(username="cr_bad").exists()
 
 

@@ -13,6 +13,7 @@ from django.urls import get_resolver
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.notifications.models import UserNotification
 from apps.soul_accounts.models import SoulAccount
 from apps.soul_assist import config, evals, service, usage
@@ -398,7 +399,7 @@ def test_the_drafted_eval_set_is_there():
 def test_eval_cases_are_validated_against_the_side(api):
     bad_tool = api.post(f"{BASE}eval/cases/", {"side": "soul", "screen": "life", "question": "q",
                                                "expected_tools": ["inbox_counts"]}, format="json")
-    assert bad_tool.status_code == 400 and "expected_tools" in bad_tool.data
+    assert bad_tool.status_code == 400 and "expected_tools" in field_errors(bad_tool)
     bad_screen = api.post(f"{BASE}eval/cases/", {"side": "officer", "screen": "life", "question": "q"},
                           format="json")
     assert bad_screen.status_code == 400 and "screen" in bad_screen.data

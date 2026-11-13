@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from apps.core.problems import field_errors
 from apps.disposition.services import DispositionService
 from apps.judgment import claims, wangsi
 from apps.judgment.claims import ClaimRefusedError
@@ -98,7 +99,7 @@ def test_an_officer_records_the_offence_and_it_cannot_change_after_conclusion(cn
     assert client.patch(url, {"offence": "NOT_AN_OFFENCE"}, format="json").status_code == 400
     Judgment.all_objects.filter(pk=judgment.pk).update(verdict=Verdict.FAILED, is_final=True)
     res = client.patch(url, {"offence": "MURDER"}, format="json")
-    assert res.status_code == 400 and "offence" in res.data
+    assert res.status_code == 400 and "offence" in field_errors(res)
 
 
 # ── B. 枉死城 ──────────────────────────────────────────────────────────
@@ -121,7 +122,7 @@ def test_cause_and_level_are_recorded_only_on_an_untimely_case(cn_tenant, cn_adm
     assert (res.data["wrongful_death_cause"], res.data["grievance_level"]) == ("VICTIM", "SEVERE")
     timely = die_and_send_on(_soul(cn_tenant), death_date=date.today())
     res = client.patch(f"/api/v1/judgment/{timely.pk}/", {"grievance_level": "MAJOR"}, format="json")
-    assert res.status_code == 400 and "grievance_level" in res.data
+    assert res.status_code == 400 and "grievance_level" in field_errors(res)
 
 
 @pytest.mark.django_db

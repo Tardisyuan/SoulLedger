@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.perm.models import Permission, Role, RolePermission
 from apps.tenants.models import Tenant
 
@@ -29,7 +30,7 @@ def world(db):
 
 def test_a_non_integer_user_id_is_a_400(world):
     r = world["client"].get(LIST, {"user_id": "abc"})
-    assert r.status_code == 400 and "user_id" in r.data
+    assert r.status_code == 400 and "user_id" in field_errors(r)
 
 
 def test_a_numeric_user_id_still_filters(world):

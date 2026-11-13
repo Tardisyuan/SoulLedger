@@ -16,6 +16,7 @@ from apps.authentication import mfa
 from apps.authentication.models import OfficerMfa, PasswordHistory
 from apps.authentication.passwords import PASSWORD_HISTORY_KEEP, set_officer_password
 from apps.authentication.views import MAX_RESET_CODE_ATTEMPTS
+from apps.core.problems import field_errors
 
 REQUEST = "/api/v1/auth/reset-password/"
 SET = "/api/v1/auth/set-new-password/"
@@ -356,4 +357,4 @@ class TestAdminMinimumLength:
     def test_creating_an_admin_with_a_short_password_is_refused(self, admin_user):
         res = _client(admin_user).post(USERS, {"username": "ad2", "email": "ad2@example.com", "password": "Xk9!mQ2zPw",
                                               "role": "ADMIN"}, format="json")
-        assert res.status_code == 400 and "password" in res.data
+        assert res.status_code == 400 and "password" in field_errors(res)

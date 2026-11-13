@@ -4,6 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from apps.core.problems import field_errors
 from apps.org.models import Organization
 
 User = get_user_model()
@@ -66,7 +67,7 @@ class TestOrganizationWrites:
         root, _child, leaf, _other = tree
         res = admin_client.patch(f"/api/v1/organizations/{root.id}/", {"parent": leaf.id}, format="json")
         assert res.status_code == 400
-        assert "parent" in res.data
+        assert "parent" in field_errors(res)
 
     def test_users_list_filters_by_organization(self, admin_client, cn_admin_user, tree):
         _root, _child, leaf, other = tree

@@ -41,6 +41,7 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.test import APIClient
 
 from apps.actors.models import Actor
+from apps.core.problems import field_errors
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment
 from apps.judgment.serializers import JudgmentCitationSerializer, JudgmentSerializer
@@ -95,7 +96,7 @@ def test_a_judge_cannot_open_a_case_on_another_tenants_soul(courts):
     assert resp.status_code == 400, resp.data
     # Not "wrong tenant" — the same "no such X" phrasing reads use, so a write
     # does not confirm that another tenant's row exists.
-    assert "soul" in resp.data
+    assert "soul" in field_errors(resp)
     eu_soul.refresh_from_db()
     assert eu_soul.current_state == SoulState.ALIVE, "the EU soul was moved by a refused request"
     assert not Judgment.all_objects.filter(soul=eu_soul).exists()
@@ -109,7 +110,7 @@ def test_a_judge_cannot_seat_another_tenants_judge(courts):
     )
 
     assert resp.status_code == 400, resp.data
-    assert "judge" in resp.data
+    assert "judge" in field_errors(resp)
     cn_soul.refresh_from_db()
     assert cn_soul.current_state == SoulState.ALIVE
     assert not Judgment.all_objects.filter(soul=cn_soul).exists()
@@ -271,7 +272,7 @@ def test_a_settled_soul_cannot_be_put_on_trial(courts):
     resp = courts["judge"].post(URL, {"soul": str(cn_soul.id), "civilization": "CHINESE"}, format="json")
 
     assert resp.status_code == 400, resp.data
-    assert "soul" in resp.data
+    assert "soul" in field_errors(resp)
     assert not Judgment.all_objects.filter(soul=cn_soul).exists()
     cn_soul.refresh_from_db()
     assert cn_soul.current_state == SoulState.SETTLED
@@ -282,7 +283,7 @@ def test_a_soul_with_an_open_case_does_not_get_a_second(courts, open_case):
     resp = courts["judge"].post(URL, {"soul": str(open_case.soul_id), "civilization": "CHINESE"}, format="json")
 
     assert resp.status_code == 400, resp.data
-    assert "soul" in resp.data
+    assert "soul" in field_errors(resp)
     assert Judgment.all_objects.filter(soul=open_case.soul).count() == 1
 
 

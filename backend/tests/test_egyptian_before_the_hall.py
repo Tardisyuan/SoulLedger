@@ -10,6 +10,7 @@ from datetime import date, timedelta
 import pytest
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.disposition.models import Disposition
 from apps.events.models import SoulEvent
 from apps.judgment import claims
@@ -97,7 +98,7 @@ def test_only_an_egyptian_soul_records_a_duat_passage(cn_tenant, eg_tenant, admi
     cn = Soul.objects.create(name="张三", tenant=cn_tenant, current_state=SoulState.ALIVE)
     eg = _soul(eg_tenant)
     res = client.patch(f"/api/v1/souls/{cn.pk}/", {"duat_passage": "NAMELESS"}, format="json")
-    assert res.status_code == 400 and "duat_passage" in res.data
+    assert res.status_code == 400 and "duat_passage" in field_errors(res)
     res = client.patch(f"/api/v1/souls/{eg.pk}/", {"duat_passage": "NAMELESS"}, format="json")
     assert res.status_code == 200 and res.data["duat_passage"] == "NAMELESS"
 
@@ -141,7 +142,7 @@ def test_early_death_cannot_be_recorded_once_the_case_has_opened(eg_tenant, admi
     dead = _soul(eg_tenant, "NAMELESS")
     case = dead.die(death_date=date.today())
     res = client.patch(f"/api/v1/souls/{dead.pk}/", {"duat_passage": "EARLY_DEATH"}, format="json")
-    assert res.status_code == 400 and "duat_passage" in res.data
+    assert res.status_code == 400 and "duat_passage" in field_errors(res)
     case.refresh_from_db()
     assert case.duat_stage == DuatStage.NAMELESS and not case.is_final
     alive = _soul(eg_tenant)
@@ -194,7 +195,7 @@ def test_a_passage_cannot_be_barred_once_an_officer_claimed_the_case(eg_tenant, 
     case = soul.die(death_date=date.today() - timedelta(days=200))
     claims.claim(case.pk, judge)
     res = _patch_passage(admin_user, soul, "NAMELESS")
-    assert res.status_code == 400 and "duat_passage" in res.data
+    assert res.status_code == 400 and "duat_passage" in field_errors(res)
     case.refresh_from_db()
     soul.refresh_from_db()
     assert soul.duat_passage == "" and case.duat_stage == DuatStage.EMBALMING

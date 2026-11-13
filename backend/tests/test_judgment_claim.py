@@ -19,6 +19,7 @@ from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul, SoulState
 from tests.conftest import sign_in
@@ -166,7 +167,7 @@ class TestClaim:
             f"{BASE}{case.pk}/", {"claimed_by": world.users["b"].pk}, format="json"
         )
         assert response.status_code == 400
-        assert "claimed_by" in response.data
+        assert "claimed_by" in field_errors(response)
         assert _fresh(case).claimed_by_id is None
 
     def test_each_claim_leaves_an_audit_row_with_before_and_after(self, world, django_capture_on_commit_callbacks):

@@ -103,7 +103,14 @@ def from_exception(exc, status: int, data) -> dict:
 
 
 def _code_of(exc):
-    codes = exc.get_codes() if isinstance(exc, exceptions.APIException) else None
+    if not isinstance(exc, exceptions.APIException):
+        return None
+    try:
+        codes = exc.get_codes()
+    except (AttributeError, TypeError):
+        # `detail` carries plain values next to the message (the login view adds `remaining_attempts: 3`), which
+        # DRF's get_codes cannot walk; the exception's own default code still names it.
+        return getattr(exc, "default_code", None)
     return codes if isinstance(codes, str) else None
 
 
@@ -216,3 +223,15 @@ def problem_responses(result, generator, request, public):
         if f"#/components/schemas/{name}'" not in text:
             del schemas[name]
     return result
+
+
+def field_errors(response_or_data) -> dict:
+    """`{field: [detail, …]}` from a problem body's `errors[]` — the shape DRF's 400 had before the envelope, for
+    the tests (and any caller) that ask which fields were refused. Object-level errors sit under `non_field_errors`."""
+    data = getattr(response_or_data, "data", response_or_data)
+    if data is None and hasattr(response_or_data, "json"):
+        data = response_or_data.json()
+    out: dict = {}
+    for e in (data or {}).get("errors", []) if isinstance(data, dict) else []:
+        out.setdefault(e.get("field", "non_field_errors"), []).append(e.get("detail", ""))
+    return out

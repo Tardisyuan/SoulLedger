@@ -6,6 +6,7 @@
 import pytest
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.soul_accounts.rebirth import cooldown_days
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING
 from tests.conftest import sign_in
@@ -62,7 +63,7 @@ def test_cooldown_of_a_full_year_is_the_most_allowed(admin_user, cn_tenant):
     assert cooldown_days(cn_tenant) == 365
     resp = _patch(admin_user, cn_tenant, {"soul_rebirth_cooldown_days": 366})
     assert resp.status_code == 400, resp.data
-    assert "soul_rebirth_cooldown_days" in resp.data
+    assert "soul_rebirth_cooldown_days" in field_errors(resp)
     cn_tenant.refresh_from_db()
     assert cooldown_days(cn_tenant) == 365
 
@@ -74,7 +75,7 @@ def test_cooldown_outside_the_range_is_refused_and_nothing_is_written(admin_user
     cn_tenant.save()
     resp = _patch(admin_user, cn_tenant, {"soul_rebirth_cooldown_days": bad, "description": "x"})
     assert resp.status_code == 400, resp.data
-    assert "soul_rebirth_cooldown_days" in resp.data
+    assert "soul_rebirth_cooldown_days" in field_errors(resp)
     cn_tenant.refresh_from_db()
     assert cn_tenant.settings == {"assistant_enabled": True}
     assert cn_tenant.description == ""
@@ -96,7 +97,7 @@ def test_unknown_keys_and_a_raw_settings_blob_are_ignored(admin_user, cn_tenant)
 def test_hall_name_longer_than_the_column_is_a_400_not_a_truncation(admin_user, cn_tenant):
     resp = _patch(admin_user, cn_tenant, {"hall_name": "殿" * 61})
     assert resp.status_code == 400
-    assert "hall_name" in resp.data
+    assert "hall_name" in field_errors(resp)
     cn_tenant.refresh_from_db()
     assert cn_tenant.hall_name == ""
 

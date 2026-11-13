@@ -19,6 +19,7 @@ from rest_framework_simplejwt.tokens import RefreshToken as StockRefreshToken
 
 from apps.audit.models import AuditLog
 from apps.authentication import tasks
+from apps.core.problems import field_errors
 
 LOGIN = "/api/v1/auth/login/"
 REFRESH = "/api/v1/auth/refresh/"
@@ -99,7 +100,7 @@ class TestChangePassword:
         a, b = _login(), _login()
         before = officer.session_version
         res = _change(a, old="wrong-old-password")
-        assert res.status_code == 400 and "old_password" in res.data
+        assert res.status_code == 400 and "old_password" in field_errors(res)
         weak = _change(a, new="12345678")
         assert weak.status_code == 400
         officer.refresh_from_db()
@@ -122,7 +123,7 @@ class TestChangePassword:
         c = APIClient()
         c.credentials(HTTP_AUTHORIZATION=f"Bearer {a['access']}")
         res = c.post(CHANGE, {"old_password": OLD, "new_password": NEW, "refresh": foreign}, format="json")
-        assert res.status_code == 400 and "refresh" in res.data
+        assert res.status_code == 400 and "refresh" in field_errors(res)
         officer.refresh_from_db()
         assert officer.check_password(OLD) and officer.session_version == 0
         assert _get(a["access"]) == 200

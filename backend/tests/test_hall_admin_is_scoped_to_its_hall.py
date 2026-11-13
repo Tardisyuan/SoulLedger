@@ -8,6 +8,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.core.tenant import is_tenant_exempt
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
@@ -87,7 +88,7 @@ def test_bound_admin_cannot_create_a_user_elsewhere_or_appoint_an_admin(world):
     pw = "a-long-enough-password-1"
     elsewhere = b.post("/api/v1/users/", {"username": "x1", "password": pw, "role": "JUDGE", "tenant": world["eg"].pk},
                        format="json")
-    assert elsewhere.status_code == 400 and "tenant" in elsewhere.json()
+    assert elsewhere.status_code == 400 and "tenant" in field_errors(elsewhere)
     admin = b.post("/api/v1/users/", {"username": "x2", "password": pw, "role": "ADMIN"}, format="json")
     assert admin.status_code == 400 and "role" in admin.json()
     assert not User.objects.filter(username__in=["x1", "x2"]).exists()

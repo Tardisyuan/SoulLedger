@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.perm.cache import invalidate_all_permissions
 from apps.perm.models import Permission, Role, RolePermission
 from apps.souls import importer
@@ -129,7 +130,7 @@ def test_header_only_and_empty_files_are_refused(world):
 
 def test_no_file_is_a_400(world):
     r = world["client"].post(PREVIEW, {}, format="multipart")
-    assert r.status_code == 400 and "file" in r.data
+    assert r.status_code == 400 and "file" in field_errors(r)
 
 
 def test_row_limit(world):
