@@ -31,6 +31,14 @@ to +75% (org 20 → 35); judgment 166 → 180. Applying all three rules to B ins
 selected 300–560 of 591 for most apps (nearly every test names `apps.authentication`
 or `apps.tenants`) — that is `--full`, not a selection, so B gets its directory only.
 
+CONTRACT TESTS (2026-11-13, test review #1):
+A backend-only push never ran the tests that compare the backend with the
+    frontend / the committed schema: they name no app and call no URL, they read
+    packages/core/openapi/schema.yml or frontend/e2e/fixtures.ts. A serializers.py change in each
+    of the 27 apps selected test_committed_schema_matches_the_backend.py 0 times of 27. Now any
+    non-test file under backend/apps/ also selects the lines of tests/reads-outside-backend.txt
+    labelled frontend / packages / mobile / mobile-officer (`contract_readers`).
+
 What it can still miss, accepted by the user: a test outside backend/apps/B/ that
 reaches A only through B, or a test that reaches A through two or more apps, with
 A's name and URL absent from its own source. `--full` still runs everything.
@@ -51,6 +59,8 @@ FULL_RULES = [
     (r"^backend/requirements", "backend dependencies changed"),
     (r"^backend/[^/]+$", "a top-level backend file changed"),
 ]
+# The lines of reads-outside-backend.txt that compare the backend with another area carry one of these.
+CONTRACT_TOPS = {"frontend", "packages", "mobile", "mobile-officer"}
 GATE_SCRIPTS = re.compile(r"^scripts/(run-gates|install-hooks|gate-lock|select-backend-tests)\.(sh|py)$")
 
 
@@ -96,6 +106,23 @@ def url_prefixes():
         for app in apps:
             pre.setdefault(app, set()).add(m.group(1))
     return pre
+
+
+def contract_readers():
+    """Test files that read frontend / packages / the apps: the backend-against-the-other-side contracts."""
+    out = []
+    try:
+        with open(os.path.join(BACKEND, "tests", "reads-outside-backend.txt"), encoding="utf-8") as f:
+            for line in f:
+                parts = line.split()
+                # ponytail: a line that also names `scripts` reads the gate / deploy scripts and quotes other
+                # areas' paths as data (test_prepush… alone is ~2000 lines of subprocesses); left to its own
+                # trigger. If one of them turns out to compare the backend with the frontend, drop this clause.
+                if parts and not parts[0].startswith("#") and CONTRACT_TOPS & set(parts[1:]) and "scripts" not in parts[1:]:
+                    out.append(parts[0])
+    except OSError:
+        pass
+    return out
 
 
 def importers():
@@ -160,6 +187,8 @@ def select(changed):
             if t.startswith(f"apps/{app}/") or name.search(text(t)) or any(u in text(t) for u in urls):
                 picked.add(t)
     picked.update(t for t in tests if t.split("/")[0] == "apps" and t.split("/")[1] in importing)
+    if any(p.startswith("backend/apps/") and not is_test_file(p) for p in changed):
+        picked.update(t for t in contract_readers() if t in tests)
     for path in changed:
         if not path.startswith("backend/"):
             continue

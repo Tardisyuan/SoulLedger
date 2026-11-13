@@ -32,9 +32,10 @@ def test_it_does_not_run_the_whole_suite_for_one_app():
     assert 0 < len(picked) < len(sel.all_test_files()) // 4
     # a prefix of another app's name is not that app; the apps that import soul_push bring their own dirs
     importers = sel.importers()["soul_push"]
+    contracts = sel.contract_readers()
     assert all("soul_push" in p or "soul_push" in (ROOT / "backend" / p).read_text() or
                "/api/v1/" in (ROOT / "backend" / p).read_text() or
-               (p.startswith("apps/") and p.split("/")[1] in importers) for p in picked)
+               (p.startswith("apps/") and p.split("/")[1] in importers) or p in contracts for p in picked)
 
 
 def test_a_url_prefix_owned_through_a_router_in_the_urlconf_counts():
@@ -47,6 +48,26 @@ def test_changes_it_cannot_trace_run_everything():
                  "backend/requirements.lock", "backend/manage.py"):
         picked, full = pick(path)
         assert picked is None and full, path
+
+
+CONTRACTS = ["tests/test_committed_schema_matches_the_backend.py", "tests/test_e2e_fixtures_match_the_serializers.py",
+             "tests/test_frontend_page_size.py"]
+
+
+def test_a_backend_app_change_runs_the_contracts_with_the_frontend_and_the_schema():
+    # 2026-11-13: none of the three names an app or calls a URL, so a new serializer field with a stale
+    # schema.yml pushed green. mutation: drop the `contract_readers()` update in select() -> red
+    for app in ("souls", "menus", "soul_push"):
+        picked, full = pick(f"backend/apps/{app}/serializers.py")
+        assert full is None and set(CONTRACTS) <= set(picked), app
+    # every one is a real file on the list, so the assertion above is about this tree
+    assert set(CONTRACTS) <= set(sel.contract_readers()) <= set(sel.all_test_files())
+    # the gate machinery's own test quotes frontend/ paths as data; it is not a contract with the backend.
+    # mutation: drop the `"scripts" not in` clause -> red
+    assert "tests/test_prepush_runs_the_gates_a_change_can_break.py" not in pick("backend/apps/menus/serializers.py")[0]
+    # a test-only change does not change what the backend serves. mutation: drop `not is_test_file(p)` -> red
+    assert not set(CONTRACTS) & set(pick("backend/apps/menus/tests.py")[0])
+    assert not set(CONTRACTS) & set(pick("backend/tests/test_hall_view.py")[0])
 
 
 def test_a_changed_test_and_a_changed_test_helper_select_their_readers():

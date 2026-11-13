@@ -1246,7 +1246,11 @@ PROBE_PY
     # that belong to, name, or call the URLs of the apps it touched — scripts/select-backend-tests.py,
     # which also says when a change cannot be traced (settings, a conftest, dependencies) and the
     # whole suite runs. --full / GATES_FULL=1 always run everything. The files that read other areas
-    # (reads-outside-backend.txt) are added as on a backend-less push.
+    # (reads-outside-backend.txt) are added as on a backend-less push: the lines naming a top-level
+    # entry this push changed. A push that changed only backend/ matches none of them by that rule, so
+    # the selection itself adds the frontend / packages / mobile lines — the contracts between the
+    # backend and the other side — for any non-test change under backend/apps/ (2026-11-13,
+    # `contract_readers` in select-backend-tests.py). The two sets are unioned below.
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
         echo "    (whole suite: no select-backend-tests.py next to this script)"
     elif [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ]; then
