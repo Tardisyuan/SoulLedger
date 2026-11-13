@@ -178,6 +178,7 @@ export type RowLine = string | { one: string };
  *
  * `value`: a short value at the right (a count, a time), one line; at ≥ 1.5× text (S4) "text left, value right"
  * becomes two lines -- the value moves under the title. `right` (a ›, a ✓, a button) stays where it is.
+ * `below`: content under the title and lines at the text column's full width (我的数's three numbers).
  */
 export function Row({
   title,
@@ -188,6 +189,7 @@ export function Row({
   strong,
   onPress,
   right,
+  below,
   highlight,
   minHeight = 72,
   testID,
@@ -204,6 +206,7 @@ export function Row({
   strong?: boolean;
   onPress?: () => void;
   right?: ReactNode;
+  below?: ReactNode;
   highlight?: boolean;
   minHeight?: 56 | 64 | 72 | 88;
   testID?: string;
@@ -254,6 +257,7 @@ export function Row({
           )
         )}
         {twoLine ? valueText : null}
+        {below}
       </View>
       {twoLine ? null : valueText}
       {right}
