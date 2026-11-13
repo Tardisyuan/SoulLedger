@@ -46,8 +46,8 @@ CREDENTIAL_TEXT = {
     ),
     "egy": (
         "Ren Hesb Ba-Ek: {soul_code}\nSekhem Tepy: {password}\n"
-        "Wenen Er {expires}. Khemen Sekhem Em Aq Tepy.\n"
-        "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
+        "Wenen Er {expires}. Semawy Sekhem Em Aq Tepy.\n"
+        "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem-N Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
     ),
 }
 CREDENTIAL_SUBJECT = {"zh-Hans": "SoulLedger 灵魂账号", "en": "SoulLedger Soul account", "egy": "SoulLedger Aq En Ba"}

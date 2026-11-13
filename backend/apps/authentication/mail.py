@@ -100,19 +100,19 @@ MESSAGES = {
             "soul_code_label": "Ren Hesb Ba",
             "password_label": "Sekhem Tepy",
             "expires_label": "Wenen Er",
-            "note_change": "Khemen Sekhem Em Aq Tepy.",
-            "note_once": "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.",
+            "note_change": "Semawy Sekhem Em Aq Tepy.",
+            "note_once": "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem-N Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.",
             "text": (
                 "Ren Hesb Ba-Ek: {{soul_code}}\nSekhem Tepy: {{password}}\n"
-                "Wenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy.\n"
-                "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
+                "Wenen Er {{expires_at}}. Semawy Sekhem Em Aq Tepy.\n"
+                "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem-N Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
             ),
         },
         "email_code": {"title": "Wat Sesh · Hesb Maa"},
         "email_changed": {
-            "title": "Wat Sesh Khemen Seth",
-            "note": "Hesb Maa Er Khet: Er {{email}}. Nen Djes: Iyi Er Wesekhet Em Khet Seth.",
-            "text": "Wat Sesh Khemen Seth. Hesb Maa Er Khet: Er {{email}}. Nen Djes: Iyi Er Wesekhet Em Khet Seth.",
+            "title": "Wat Sesh Semawy-N",
+            "note": "Hesb Maa Er Khet: Er {{email}}. Nen Djes: Iyi Er Wesekhet Em Khet-N.",
+            "text": "Wat Sesh Semawy-N. Hesb Maa Er Khet: Er {{email}}. Nen Djes: Iyi Er Wesekhet Em Khet-N.",
         },
     },
 }

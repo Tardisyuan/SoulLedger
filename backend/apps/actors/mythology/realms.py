@@ -839,7 +839,7 @@ EGYPTIAN_REALMS = [
      "individual keeper is seeded, because no transcription of their names has been "
      "obtained and the order of the series has no second witness.",
      "SPELL", False, None),
-    ("EG_HALL_TWO_TRUTHS", "两真之殿", "两真之殿", "Hall of Two Truths", "Weret Maaty", RealmType.PURGATORY, 3,
+    ("EG_HALL_TWO_TRUTHS", "两真之殿", "两真之殿", "Hall of Two Truths", "Wesekhet Maaty", RealmType.PURGATORY, 3,
      "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
     ("EG_TWENTYONE_SEBKHET", "二十一道门户", "二十一道门户",
      "The Twenty-One Portals of the Field of Reeds", "Sebkhet 21", RealmType.PURGATORY, 4,

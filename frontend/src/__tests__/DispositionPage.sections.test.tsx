@@ -276,7 +276,7 @@ describe("默认刑期的标注(2026-10-29 用户定:去掉「可改」)", () =>
     expect(en.disposition.term_default).toBe("Default {{n}} years");
     expect(egy.disposition.term_default).toBe("Tepy: Renpet {{n}}");
     for (const text of [zh.disposition.term_default, en.disposition.term_default, egy.disposition.term_default]) {
-      expect(text).not.toMatch(/可改|changed|Khemen/);
+      expect(text).not.toMatch(/可改|changed|Semawy/);
     }
   });
 });

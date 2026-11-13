@@ -116,7 +116,7 @@ const ENGLISH_RESIDUE = [
 const ABOLISHED_TEN_WORDS = [
   "Aashu", "Aba-Ef", "Amenti", "Ami", "Amset", "An", "Aper", "Awy", "Benet", "Bu", "Dema", "Diu", "Diyu",
   "Djam", "Djed-Tep", "Djeser", "Djew", "Eremitee", "Fedu", "Fekh-Es", "Hanacht", "Herep", "Hor", "Ier", "Ii", "Im",
-  "Ineb", "Ipen", "Iret", "Irtu", "Iwen", "Iyt", "Kefa", "Kemet-Shen", "Khefere", "Khemet", "Khemt", "Khemu", "Khen",
+  "Ineb", "Ipen", "Iret", "Irtu", "Iyt", "Kefa", "Kemet-Shen", "Khefere", "Khemet", "Khemt", "Khemu", "Khen",
   "Khenty", "Khered", "Khetaw", "Maat-Benet", "Maatheru", "Maau", "Makhat", "Mdu", "Medu-Ib", "Mehi", "Men", "Meng",
   "Mes", "Meseh", "Mesi", "Mesjet", "Metru", "Nau", "Neh", "Neken", "Nemu", "Neteru", "Pedjet", "Pepi", "Pepy", "Pesy",
   "Petep", "Po", "Pu", "Qed", "Qedi", "Redit", "Rekhet", "Ren-Es", "Sah", "Sebekhet", "Sedjem-Ash", "Sedjet", "Sefet",
@@ -135,6 +135,9 @@ const ABOLISHED_TEN_WORDS = [
   // Her 与 Ma 也在第十二节名单里;它们唯一的键 escalate_reason_placeholder 第十四节改写 Khet: Nen Iri Sekhet Pen
   // (第十二节给的 Khet: Seshem Sekhet Pen 撞了「Seshem 只表推进」),换净,从旧账挪来。
   "Her", "Ma",
+  // 第三十三批:废止的词根(见 ROOTS_BATCH33)。Senb 另有 THREE_HEALTH_KEYS 的专门检查;Weret 本身仍在 ROOTS_FIX(Maa Weret),
+  // 只有词组 Weret Maaty 废止(下面的 abolished 列表)。Wetep 只废整词,Wetep-Heka 早已在名单里。
+  "Seth", "Unemu", "Ahet", "Khemen", "Wetep", "Sehen", "Sesen", "Gerh",
 ];
 /** 整词匹配:连字符两侧也算词内,所以 Heri-Tep 里的 Tep、Kemet-Shen 里的 Kemet 都不会误中。 */
 const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")})(?![A-Za-z-])`);
@@ -162,6 +165,16 @@ const maatOutsideEvidence = (v: string) => /\bMaat\b/.test(prose(v).replace(/〔
  * 余额(Sepy)、称重(Dens)等 42 键已逐键改写;第十四节把最后一键 souls.balance_withheld 改写 Sepy Imen,放行清单随之删除。
  */
 const hasUnemu = (v: string) => /\bUnemu\b/.test(prose(v));
+/**
+ * 第三十三批:颜色改写 Iwen(jwn「颜色」;Unemu 即 wnmw「食物」,废止)。Iwen 在第十节被当成「列」的错词废止过 ——
+ * 现在重新放行,但只表「色」;「列」仍是 Iwn(第二十八批),两者只差一个字母,所以下面按同键中文查义项。
+ */
+const hasIwen = (v: string) => /\bIwen\b/.test(prose(v));
+/** 第三十三批:Senb 只剩「健康」义,三个键(医院 = 健康之所、账号安全 = 账号无恙、引用该设置名的提示);其余同步 / 连接一律 Demedj。 */
+const THREE_HEALTH_KEYS = [
+  "death_sync.api_keys.system_type.HOSPITAL", "soul_app.settings.group_security", "soul_app.bio.ask_note",
+];
+const hasSenb = (v: string) => /\bSenb\b/.test(prose(v));
 /**
  * 中文里作颜色讲的「色」。角色、色情里的「色」不算 —— 只查「色」字的话,balance_withheld 的「本角色不可见」
  * 就让它漏过去了(实测),任何角色类文案都能再用 Unemu。
@@ -323,7 +336,7 @@ const tokens = (k: string) => prose(EGY[k]).split(/\s+/).map(bare);
  */
 const WHOLE_PHRASES = [
   "Hru Ra", "Hru Iah", "Hru Heru Desher", "Hru Sebeg", "Hru Heru Wepesh", "Hru Sebau", "Hru Heru Ka Pet",
-  "Weret Maaty", "Wesekhet Maaty",
+  "Wesekhet Maaty",
 ];
 const PHRASE_RE = new RegExp(
   `(?<![A-Za-z-])(${[...WHOLE_PHRASES].sort((a, b) => b.length - a.length).join("|")})(?![A-Za-z-])`,
@@ -347,6 +360,12 @@ const words = (k: string) => {
     .flatMap((w) => {
       const m = /^(.+)(-Ef|-I|-Ek)$/.exec(w);
       return m ? [m[1], m[2]] : [w];
+    })
+    // 第三十三批:X-N 是已登记词 X 的完成式(Hab-N、Sesh-N-Ek、Hab-Ba-N),不是新词 —— 人称后缀在上一步已剥掉,
+    // 所以 Sesh-N-Ek 此时是 Sesh-N。-N 只剥一次,Hab-Ba-N 剥成 Hab-Ba 与 -N。
+    .flatMap((w) => {
+      const m = /^(.+)(-N)$/.exec(w);
+      return m ? [m[1], m[2]] : [w];
     });
   return [...phrases, ...rest];
 };
@@ -357,14 +376,14 @@ const words = (k: string) => {
  * 「Duat / Pet」「Er Hry」按空格拆成词;连字符写法(Djes-Ef、Neb-Medu、Hemet-Sesh……)照抄为一个词形。
  */
 const ROOTS = [
-  "Ba", "Ren", "Ankh", "Medjat", "Sesh", "Medu", "Sekhem", "Wedja", "Wetep", "Mesut",
+  "Ba", "Ren", "Ankh", "Medjat", "Sesh", "Medu", "Sekhem", "Wedja", "Mesut",
   "Dbh", "Nehet", "Khesef", "Hesy", "Hemes", "Taui", "Wesekhet", "Sab", "Nefer", "Isfet",
   "Shut", "Ib", "Wat", "Kheperu", "Kheper", "Sethet", "Gem", "Mut", "Khetem", "Djeret",
-  "Hab", "Aq", "Wenen", "Baku", "Ahet", "Was", "Renpi", "Qebeh", "Duat / Pet",
+  "Hab", "Aq", "Wenen", "Baku", "Was", "Renpi", "Qebeh", "Duat / Pet",
 ];
-/** 审核域(social_moderation)。Imen 隐藏 / Fekh 删除·解除;Menkh 审核通过 / Hesy 批准转生;Gerh 禁言 / Djeseru 敏感词。 */
+/** 审核域(social_moderation)。Imen 隐藏 / Fekh 删除·解除;Menkh 审核通过 / Hesy 批准转生;Djeseru 敏感词;禁言原写 Gerh,第三十三批换成 Ger。 */
 const ROOTS_MOD = [
-  "Sedjem", "Wesheb", "Djeseru", "Gerh", "Imen", "Fekh", "Per", "Aat", "Redi",
+  "Sedjem", "Wesheb", "Djeseru", "Imen", "Fekh", "Per", "Aat", "Redi",
   "Mehy", "Kher", "Hemet", "Betau", "Shemsu", "Neb-Medu", "Khet", "Menkh", "Ankh Wehem",
 ];
 /** 笔误 · 一词多写 · 英文残留。Wesir(神名)与 Wser(强)是两个词,不可互改;Maakheru 不是 Mekher 的异写。 */
@@ -378,8 +397,8 @@ const ROOTS_FIX = [
  * 其余是把已在用的词正式定为该义。「私密」第四节行里写作两词 Wa Ek,第五节确认为连字符合成词 Wa-Ek(同 Djes-Ef)。
  */
 const ROOTS_SPLIT = [
-  "Smen", "Was", "Aha", "Setep", "Ini", "Wen-Khetem", "Khemen", "Ta", "Wat", "Arrwt",
-  "Netjer", "Mesqet", "Sesen", "Wa-Ek",
+  "Smen", "Was", "Aha", "Setep", "Ini", "Wen-Khetem", "Ta", "Wat", "Arrwt",
+  "Netjer", "Mesqet", "Wa-Ek",
 ];
 /** 设置 / 加载 / Sethety 收口(第五节)。Pet-Sesh(模板,定式之书)为新词;其余四个是把已定的词派给 Sethety 的旧义项。 */
 const ROOTS_CLOSE = ["Pet-Sesh", "Setep", "Renu", "Nefer", "Isfet"];
@@ -388,7 +407,7 @@ const ROOTS_CLOSE = ["Pet-Sesh", "Setep", "Renu", "Nefer", "Isfet"];
  * Tut-Hesb(图表)为新词;其余是把已在用的词派给 Sethet / Seshem 散出去的义项。Seshem 收口后唯一义是推进。
  */
 const ROOTS_FINAL = [
-  "Iri", "Seshem", "Khedu", "Medew", "Sepdet", "Djedu", "Hetep", "Unemu", "Menkh", "Bek", "Wen", "Tut-Hesb",
+  "Iri", "Seshem", "Khedu", "Medew", "Sepdet", "Djedu", "Hetep", "Menkh", "Bek", "Wen", "Tut-Hesb",
 ];
 /**
  * 「失败」写法与零星收口(第七节)。Hab-Ba(调拨 / 遣魂)此前全库 17 次却失登,这里补登;Kheper 只表「成为、发生」;
@@ -401,7 +420,7 @@ const ROOTS_LATE = ["Hab-Ba", "Kheper", "Khetem", "Menmen"];
  */
 const ROOTS_APP = [
   "Shemes", "Hen", "Sedja", "Weshed", "Senb", "Ates",
-  "Shepet", "Sekhet-Shepet", "Ahau", "Nedj", "Wetep-Neb", "Khemen-Shepet",
+  "Shepet", "Sekhet-Shepet", "Ahau", "Nedj",
   "Sehed", "Hai", "Sekha", "Dua", "Iakeb", "Khabes", "Nehes", "Nehesu", "Wen-Neb",
   "Sau", "Nehem", "Khesbedj",
 ];
@@ -424,13 +443,12 @@ const ROOTS_TEN = [
   "Renpet", //      年
   "Abed", //        月
   "Sefekh", //      周
-  "Unut", //        小时(计时单位),与 Ahet(时间 / 调度)分开
+  "Unut", //        小时(计时单位),与 Tera(时间 / 调度)分开
   "At", //          分钟
   "Sepdet", //      时刻(第六节已登;Seped 换成它)
   "Djet", //        永久 —— 长明灯 Khabes Djet;问候语里的 Djet 已换掉
   "Hery", //        上 / 高位 —— 只用于 Sab Hery(管理员)与 Seshem Er Hery(越级)
   "Heri-Tep", //    首领 / 主持 —— 殿主 Heri-Tep Per Ahet
-  "Sehen", //       取消(驳回已归 Khesef)
   "Senn", //        复制
   "Netjeru", //     Netjer(角色)的复数
   "Tepyu", //       Tepy 的复数 · 前者 —— 前世 Ankh Tepyu
@@ -487,13 +505,12 @@ const ROOTS_TEN = [
  */
 const ROOTS_ELEVEN = [
   "Neheh", //       始终 / 恒常(权限锁定);与 Djet(永恒)分开,两者不互换
-  "Ren-Sesen", //   权限名
   "Sepu Hemsu", //  系统的队列(后台任务队列);Sepu Wedja 只给审判队列
   "Aat Pen", //     这一节(界面分区)
   "Per Hemsu", //   服务器(Per Aa 是「法老」,废止)
-  "Senb Mut", //    死亡同步(同步 Senb)
+  "Demedj Mut", //  死亡同步(同步 Demedj;第三十三批,原 Senb Mut)
   "Tepy Iri", //    发起
-  "Khet Senb", //   关联项
+  "Khet Demedj", // 关联项(第三十三批,原 Khet Senb)
   "Ta Ahau", //     中立界域类型(暂留之地)
 ];
 /**
@@ -601,7 +618,7 @@ const PROPER_NAMES = [
   "Ameles",
 ];
 const PARTICLES = [
-  "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
+  "Em", "Nen", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
   "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
   // 第十节:如 / 同(例如 Mi)、是(与 Nen 相对)、后置的「其 / 它的」(Iri-Ef;-Es 换成 -Ef,界面不分性别)。
   "Mi", "Iu", "-Ef",
@@ -611,6 +628,8 @@ const PARTICLES = [
   "In",
   // 第十五节(Design E 组):后置 -Ek(你的),接在词后(Hesb Maa-Ek)。
   "-Ek",
+  // 第三十三批:后置 -N(完成式 sḏm.n=f 的 n)。取代已废止的后置标记 Seth;见 words() 的拆分。
+  "-N",
 ];
 /** 第十五批(Design,2026-10-10):Hat 新词根,前面 / 在前;只用在 sentence_plan.errors.not_next。 */
 const ROOTS_BATCH15 = [
@@ -672,13 +691,26 @@ const ROOTS_BATCH67 = ["Shena"];
  */
 // 第二十九批:Asphodelos = 阿斯福得(专名,同 Tartaros / Lethe 的写法)。
 const ROOTS_BATCH29 = ["Asphodelos"];
+/**
+ * 第三十三批(Design,2026-11-13,egy 词根修正 · 第 1–8 条与第 11 条;依据 docs/lore-verification/egy-lexicon-roots.md):
+ * 废止 Seth(后置「已」,和塞特神同形)、Unemu(wnmw 是「食物」)、Ahet(ꜣḫt 是地平线)、Khemen、Wetep、Sehen(sḥn 是「命令」)、
+ * Sesen(ssn 是「呼吸」)、Gerh(grḥ 是「夜」)、Senb(snb 是「健康」)、Weret Maaty。完成义改写「动词 + -N」(sḏm.n=f)。
+ * 替换:Iwen 颜色(jwn)、Semawy 更新 / 修改(smꜣwj)、Sekher 处置 / 安排(sḫr)、Henen 应允 / 批准(hnn)、Ger 禁言(gr)、
+ * Demedj 同步 / 连接(dmḏ)、Wesekhet Maaty 两真之殿;取消并入已登记的 Fekh,时间用已登记的 Tera。
+ * Senb 只留三个「健康」义的键(THREE_HEALTH_KEYS)。
+ * 另有 Medu Ib(供词)、Khet(东西)、Baku Tera(按时的活儿)是已登记词的组合,记在这里备查。
+ */
+// Ren-Henen(权限名,原 Ren-Sesen)、Sekher-Neb(原 Wetep-Neb)、Semawy-Shepet(原 Khemen-Shepet)是三个旧复合词随词根一起换的新形。
+const ROOTS_BATCH33 = [
+  "Iwen", "Semawy", "Sekher", "Henen", "Ger", "Demedj", "Medu Ib", "Baku Tera", "Ren-Henen", "Sekher-Neb", "Semawy-Shepet",
+];
 const ROOTS_V4 = ["Wenmy", "Semehy", "Tephet", "Hems", "Gereh", "Tera"];
 /**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...ROOTS_V4, ...ROOTS_BATCH29, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...ROOTS_V4, ...ROOTS_BATCH33, ...ROOTS_BATCH29, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
@@ -772,6 +804,8 @@ describe("egy 词表规则", () => {
       PER_AA,
       // 第十四节:租户一律 Per(连字符的 Per-Hemsu 废止;服务器 Per Hemsu 是两词,不受影响)。
       /\bPer-Hemsu\b/,
+      // 第三十三批:词组 Weret Maaty(两真之殿)→ Wesekhet Maaty。
+      /\bWeret Maaty\b/,
     ];
     expect(offenders(KEYS, (v) => abolished.some((re) => re.test(v)))).toEqual([]);
   });
@@ -790,11 +824,15 @@ describe("egy 词表规则", () => {
     expect(merit.filter((k) => /\bMedu Maat\b/.test(EGY[k])).length).toBeGreaterThan(0);
   });
 
-  it("Unemu 只表「色」:中文不含「色」的键不出现 Unemu", () => {
-    expect(offenders(KEYS, (v, k) => hasUnemu(v) && !isColourZh(ZH[k] ?? ""))).toEqual([]);
+  it("Iwen 只表「色」、Unemu 已废止、Senb 只留三个「健康」键(第三十三批)", () => {
+    expect(offenders(KEYS, hasUnemu)).toEqual([]);
+    expect(offenders(KEYS, (v, k) => hasIwen(v) && !isColourZh(ZH[k] ?? ""))).toEqual([]);
+    expect(KEYS.filter((k) => hasSenb(EGY[k])).sort()).toEqual([...THREE_HEALTH_KEYS].sort());
+    // 「列」义的键(Iwn)里不出现 Iwen。
+    expect(offenders(KEYS.filter((k) => /列/.test(ZH[k] ?? "")), hasIwen)).toEqual([]);
     // 空扫保护:「色」义的 Unemu 仍在。规范 v2 撤掉了强调色(settings.accent_color 连同键一起删了),
     // 剩下的那一处是 App 暂居结束时的「配色」。
-    expect(hasUnemu(EGY["soul_app.homecoming.body"] ?? "")).toBe(true);
+    expect(hasIwen(EGY["soul_app.homecoming.body"] ?? "")).toBe(true);
   });
 
   it("Hemsu 只表系统:中文含「判官」的键不出现 Hemsu(判官 Sab Wedja)", () => {
