@@ -16,6 +16,23 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+def _souls_in_pk_pages(qs, size: int = 500):
+    """Yield `qs` page by page in primary-key order, one bounded query per page.
+
+    Not `.iterator()`: production runs with DISABLE_SERVER_SIDE_CURSORS (pgbouncer transaction pooling), and
+    without a server-side cursor `iterator()` only batches model construction -- the whole hall's result set
+    still lands in the worker's memory (be-scale 1.2, 2026-11-14).
+    """
+    last = None
+    while True:
+        page = qs.order_by("pk") if last is None else qs.filter(pk__gt=last).order_by("pk")
+        batch = list(page[:size])
+        if not batch:
+            return
+        yield from batch
+        last = batch[-1].pk
+
+
 @shared_task(name="ledger.recalculate_tenant")
 def recalculate_tenant_ledgers(tenant_id: str):
     """
@@ -37,7 +54,7 @@ def recalculate_tenant_ledgers(tenant_id: str):
     try:
         updated = 0
         failed = []
-        for soul in Soul.objects.filter(tenant_id=tenant_id).iterator(chunk_size=500):
+        for soul in _souls_in_pk_pages(Soul.objects.filter(tenant_id=tenant_id)):
             # A soul whose recalculation fails (today: its KARMA_RECALCULATED event could not be written, which
             # rolls that soul's new scores back) is logged with the original exception, counted and reported;
             # the other souls still run, and the next run retries it.

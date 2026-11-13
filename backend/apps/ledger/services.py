@@ -280,21 +280,33 @@ class LedgerService:
 
             soul.merit_score = round(merit)
             soul.demerit_score = round(demerit)
-            soul.needs_ledger_recalculation = False  # this run IS the recalculation a failed batch flush asked for
-            soul.save(update_fields=["merit_score", "demerit_score", "needs_ledger_recalculation"])
 
-            # The event row is part of the recalculation's record: same transaction, so a failed insert rolls
-            # the new scores back and reaches the caller.
-            from apps.events.services import EventService
-            EventService.log_karma_recalculated(
-                soul,
-                old_merit,
-                soul.merit_score,
-                old_demerit=old_demerit,
-                new_demerit=soul.demerit_score,
-            )
+            # Unchanged scores: no save, no event (user decision 2026-11-14, reversing the 2026-10-10 reading for
+            # this path). Decay is continuous and the scores are rounded, so on most days most souls do not move;
+            # one KARMA_RECALCULATED row per soul per day is ~365M rows/year at 1M souls (estimated) recording
+            # nothing. The daily run itself is recorded by TaskRun. A soul marked by a failed batch flush still
+            # gets its mark cleared, or every run would pick it again -- that write alone is not an event.
+            changed = (soul.merit_score, soul.demerit_score) != (old_merit, old_demerit)
+            if changed:
+                soul.needs_ledger_recalculation = False  # this run IS the recalculation a failed flush asked for
+                soul.save(update_fields=["merit_score", "demerit_score", "needs_ledger_recalculation"])
 
-        # Invalidate cache
+                # A change's event row is part of the recalculation's record: same transaction, so a failed
+                # insert rolls the new scores back and reaches the caller.
+                from apps.events.services import EventService
+                EventService.log_karma_recalculated(
+                    soul,
+                    old_merit,
+                    soul.merit_score,
+                    old_demerit=old_demerit,
+                    new_demerit=soul.demerit_score,
+                )
+            elif soul.needs_ledger_recalculation:
+                soul.needs_ledger_recalculation = False
+                soul.save(update_fields=["needs_ledger_recalculation"])
+
+        # Invalidate even when nothing changed: the cached summary lists the records, and a record insert
+        # whose decayed weight rounds to no change still has to appear in it.
         cls._invalidate_cache(soul)
 
         return {

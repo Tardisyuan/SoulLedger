@@ -1,6 +1,6 @@
 # ADR 0002: The event log is part of the business record and shares its transaction
 
-Status: accepted (decided 2026-10-10, unified entry points 2026-10-30).
+Status: accepted (decided 2026-10-10, unified entry points 2026-10-30, no event for an unchanged recalculation 2026-11-14).
 
 ## Context
 
@@ -25,6 +25,11 @@ on a line unrelated to the fault.
    `AuditHandler`. Nothing writes `SoulEvent.objects.create` directly, because such a row reaches no other handler.
 4. `AuditHandler` raises `SoulEventTargetError` when the soul cannot be found (soft-deleted, unknown tenant, wrong tenant)
    instead of skipping it quietly.
+5. Amended 2026-11-14 (user decision): a merit/demerit recalculation whose computed scores equal the stored ones is not a
+   business write. It saves nothing and writes no `KARMA_RECALCULATED` event; the daily run itself is recorded by `TaskRun`.
+   Without this the daily task wrote one row per soul per day, about 365 million rows a year at a million souls
+   (estimated), almost all of them saying nothing changed. A recalculation that does change the scores is unchanged:
+   the event is written in the same transaction and its failure rolls the scores back.
 
 ## Consequences
 
@@ -41,4 +46,5 @@ on a line unrelated to the fault.
 - `backend/apps/events/services.py` (file header states the rule and the two entry points)
 - `backend/apps/events/handlers/audit_handler.py` (`SoulEventTargetError`, no swallowed errors)
 - `backend/tests/test_event_log_inside_transactions.py` (failure injection in three transaction contexts)
+- `backend/apps/ledger/test_unchanged_recalculation.py` (an unchanged recalculation writes no soul row and no event)
 - `backend/tests/test_frontend_event_types_track_the_backend.py` (the guard that follows from adding an event type)

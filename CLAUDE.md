@@ -111,6 +111,8 @@ npx playwright test --project=chromium
 
 **事件日志是业务记录的一部分。** 写 `SoulEvent` 失败整笔业务回滚,所以 `EventService.log*` 必须写在它描述的那笔业务的
 事务里面,通知与推送放 `transaction.on_commit`(`tests/test_event_log_inside_transactions.py` 逐路径注入失败;新路径就加一格)。
+例外(2026-11-14 用户决定):功过重算算出的分数与库里相同时**不 save、不写事件** —— 没变就没有业务事实,这次运行由 `TaskRun` 记录;
+不然每日重算每魂每天一行,100 万灵魂约 3.65 亿行/年(估计)。分数变了照旧在同一事务里写 `KARMA_RECALCULATED`。
 只上灵魂时间线用 `EventService.log*`;还要实时推送、租户 webhook 或记在原属租户的用 `event_bus.publish_soul_event(...)`。
 **不要直接 `SoulEvent.objects.create`。** `AuditUserFields.save(update_fields=[…])` 会自动补写 `version` / `update_user` /
 `update_time`。新事件类型先登记进 `EventType`,随后前端与语言包的守卫会要词条;egy 暂无词的键写进
