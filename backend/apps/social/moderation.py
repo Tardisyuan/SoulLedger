@@ -1,7 +1,8 @@
 """灵魂朋友圈的审核:敏感词、举报、官员处置、禁言。每个官员动作都写一条 AuditLog。
 
-**处置只作用于灵魂的内容。** 官员侧的查询集都带 `author__role="SOUL"`(见 moderation_views),
-官员自己的社交帖子不进审核后台。
+**官员自己的帖子 / 评论与灵魂的走同一道词表、同一个队列**(2026-11-13 用户决定,取代 F-SOC-01 的
+「官员只吃 MASK」):REVIEW → 待审,HIDE → 已隐藏,别的官员在这里处置。**作者不能通过 / 恢复自己的内容**
+(`self_moderation`)。
 
 行锁:举报锁举报人的 SoulAccount 行(每日上限的计数与插入原子);处置锁被处置的那一行
 (同一条帖子被两个官员同时「恢复」与「删除」只有一个生效,另一个看到新状态后得 409)。
@@ -195,15 +196,6 @@ def screen_content(tenant, content):
         decisive_word=decisive,
         hit_ids=[pk for pk, _, _ in hits],
     )
-
-
-def screen_officer_content(tenant, content):
-    """官员自己的帖子 / 评论只吃 MASK。送审 / 隐藏要官员放行,而审核后台只看灵魂的内容
-    (`author__role="SOUL"`),官员内容进 PENDING / HIDDEN 就永远出不来(F-SOC-01)。"""
-    screening = screen_content(tenant, content)
-    if screening.status == ModerationStatus.PUBLISHED:
-        return screening
-    return replace(screening, status=ModerationStatus.PUBLISHED, decisive_word="")
 
 
 def record_hits(word_ids):
@@ -456,6 +448,8 @@ def moderate_content(obj, action, *, actor, request=None, reason="", reason_code
         if row is None:
             raise SocialError("内容已被删除。", "already_deleted", 409)
         before = row.moderation_status
+        if action in ("APPROVE", "RESTORE") and row.author_id == actor.pk:
+            raise SocialError("不能通过或恢复自己的内容。", "self_moderation", 403)
         if action == "DELETE":
             _soft_delete_with_media(row, actor, reason[:500] or "moderation")
             after = "DELETED"

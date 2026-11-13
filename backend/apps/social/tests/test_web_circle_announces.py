@@ -72,7 +72,7 @@ def test_a_private_post_is_never_broadcast_but_making_it_private_is(auth_client,
 
 
 def test_a_post_held_for_review_is_not_announced(auth_client, user, announced):
-    with announced() as publish, mock.patch("apps.social.views.screen_officer_content") as screen:
+    with announced() as publish, mock.patch("apps.social.views.screen_content") as screen:
         screen.return_value = mock.Mock(content="待审", status=ModerationStatus.PENDING, moderation_fields={},
                                         hit_ids=[], outcome="review")
         assert auth_client.post(POSTS, {"content": "待审", "visibility": Visibility.PUBLIC}, format="json").status_code == 201
