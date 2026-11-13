@@ -289,7 +289,10 @@ RLS 能解决的问题。若用户坚持「终点就是 (c)」,上表只是定�
   AST 扫 `apps/` 与 `config/` 非测试代码里的 `X.all_objects` / `._base_manager` / `._default_manager` / `Tenant.objects`。
   **实测 212 处使用,落在 192 个(文件, 函数, 表达式)键上**(「未量」到此为止;上面 `dispatch/services.py` 那类锁行只是其中一种)。
   每键一个标签加理由:PK 38、FANOUT 34、LOCK 33、FILTERED 28、CROSS 25、CLI 21、CODE 7、GLOBAL 6。
-  清单里没有的新用法红、清单里有而代码里没了的也红,次数变了也红。**不扫 `Model.objects`**:`TenantManager` 只滤软删,
+  清单里没有的新用法红、清单里有而代码里没了的也红,次数变了也红。
+  **2026-11-13 起键是(文件, 表达式, 标签),不含函数**(用户决定):函数改名、在文件内搬动不再红;同一文件里多一处 / 少一处、
+  表达式变了、搬到别的文件仍红。扫描器看不见标签,所以比的是同一(文件, 表达式)下各标签次数之和;合并后的行把原先各函数的理由
+  用 ` ‖ ` 连起来、各带函数名前缀(只是给读者的指针,不校验)。当天 347 处使用、237 行。**不扫 `Model.objects`**:`TenantManager` 只滤软删,
   它同样不按租户过滤,但那是整个代码库的每一条查询,归 `scope_to_tenant` 与视图契约测试管。
 - **G5 部分完成(单库内的部分)** —— `backend/tests/test_global_uniqueness_inventory.py`,清单 `tests/tenancy_global_uniqueness.py`。
   推导出全部 72 个唯一键:**20 个 GLOBAL_VALUE**(`soul_code`、`case_number`、`username`、邮箱、`Tenant.code`、`Realm.realm_code`、

@@ -9,9 +9,12 @@ routing decision, so a new one must be declared (with a reason) and a declared
 one that vanished must be deleted -- the list cannot rot in either direction.
 
 Mechanism: an AST walk of non-test, non-migration code under `apps/` and
-`config/`; a site is an `Attribute` node, keyed by (file, enclosing
-Class.function, expression text) with an occurrence count. Comments and strings
-never match. `Model.objects` is NOT scanned: it is unscoped by tenant too (the
+`config/`; a site is an `Attribute` node, keyed by (file, expression text) with
+an occurrence count. The enclosing function is NOT part of the key (2026-11-13):
+renaming or moving one inside its file changes nothing about tenancy and must not
+turn this red. A declaration is one row per (file, expression, tag); the scanner
+cannot see a tag, so it compares its count with the sum over that pair's tags.
+Comments and strings never match. `Model.objects` is NOT scanned: it is unscoped by tenant too (the
 manager filters soft deletes only), and scanning it would list every query in
 the codebase; the viewset contract and `scope_to_tenant` own that surface.
 """
@@ -35,22 +38,11 @@ def _is_test_or_migration(path: Path) -> bool:
 
 
 def _sites_in(tree, rel, found):
-    stack: list[str] = []
-
-    def visit(node):
-        pushed = isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-        if pushed:
-            stack.append(node.name)
+    for node in ast.walk(tree):
         if isinstance(node, ast.Attribute):
             base = ast.unparse(node.value)
             if node.attr in ATTRS or (node.attr == "objects" and base.split(".")[-1] == "Tenant"):
-                found[(rel, ".".join(stack) or "<module>", f"{base}.{node.attr}")] += 1
-        for child in ast.iter_child_nodes(node):
-            visit(child)
-        if pushed:
-            stack.pop()
-
-    visit(tree)
+                found[(rel, f"{base}.{node.attr}")] += 1
 
 
 def scan() -> collections.Counter:
@@ -64,8 +56,10 @@ def scan() -> collections.Counter:
 
 def test_every_unscoped_manager_use_is_declared_and_every_declaration_still_exists():
     found = scan()
-    declared = {(f, q, e): n for f, q, e, n, _tag, _why in SITES}
-    assert len(declared) == len(SITES), "duplicate rows in SITES"
+    assert len({(f, e, tag) for f, e, _n, tag, _why in SITES}) == len(SITES), "duplicate (file, expression, tag) rows in SITES"
+    declared = collections.Counter()
+    for f, e, n, _tag, _why in SITES:
+        declared[(f, e)] += n
 
     new = sorted(k for k in found if k not in declared)
     gone = sorted(k for k in declared if k not in found)
@@ -73,14 +67,29 @@ def test_every_unscoped_manager_use_is_declared_and_every_declaration_still_exis
     msg = []
     if new:
         msg.append("UNDECLARED unscoped-manager use (add a row to SITES in tests/tenancy_unscoped_sites.py "
-                   "saying why it cannot touch another tenant's rows):\n  " + "\n  ".join(f"{f}  {q}  {e}  x{found[(f, q, e)]}" for f, q, e in new))
+                   "saying why it cannot touch another tenant's rows):\n  " + "\n  ".join(f"{f}  {e}  x{found[(f, e)]}" for f, e in new))
     if gone:
         msg.append("DECLARED but no longer in the code (delete the row):\n  " + "\n  ".join(map(str, gone)))
     if recount:
-        msg.append("COUNT changed (another use appeared or went; re-read the function):\n  " + "\n  ".join(recount))
+        msg.append("COUNT changed (another use of that expression appeared in the file, or one went; read the new "
+                   "use and add it to the row of its tag -- or a new row -- with its reason):\n  " + "\n  ".join(recount))
     assert not msg, "\n".join(msg)
 
 
 def test_every_declaration_has_a_known_tag_and_a_reason():
-    bad = [(f, q, e) for f, q, e, _n, tag, why in SITES if tag not in TAGS or len(why.strip()) < 12]
+    bad = [(f, e) for f, e, n, tag, why in SITES if tag not in TAGS or len(why.strip()) < 12 or n < 1]
     assert not bad, f"bad tag or empty reason: {bad}"
+
+
+def test_the_key_ignores_the_enclosing_function_and_nothing_else():
+    """What the 2026-11-13 relaxation is: a rename is silent; one more use, or another expression, is not."""
+    def keys(src):
+        found = collections.Counter()
+        _sites_in(ast.parse(src), "x.py", found)
+        return found
+
+    before = keys("class A:\n    def f(self):\n        Soul.all_objects.get(pk=1)\n")
+    assert before == {("x.py", "Soul.all_objects"): 1}
+    assert keys("def renamed():\n    Soul.all_objects.get(pk=1)\n") == before
+    assert keys("def f():\n    Soul.all_objects.get(pk=1)\n    Soul.all_objects.count()\n") != before
+    assert keys("def f():\n    Soul._base_manager.get(pk=1)\n") != before
