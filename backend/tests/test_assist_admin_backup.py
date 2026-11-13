@@ -14,6 +14,7 @@ from apps.authentication.models import User
 from apps.soul_assist import config
 from apps.soul_assist.models import AssistConfig
 from apps.soul_assist.providers import FakeProvider
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client
 
 pytestmark = pytest.mark.django_db
@@ -35,10 +36,10 @@ def assistant_on(settings, monkeypatch):
     settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
     for name in config.PROVIDERS:
         monkeypatch.setitem(config.PROVIDERS, name, f"{__name__}.BackupFake")
+    reset_fake_provider()
     FakeProvider.script = [{"text": "OK"}]
-    FakeProvider.calls = []
     yield
-    FakeProvider.script = []
+    reset_fake_provider()
 
 
 @pytest.fixture
