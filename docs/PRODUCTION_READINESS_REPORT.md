@@ -9,7 +9,7 @@
 > running across every tenant with no tenant boundary — plus 4 HIGH and 15 MEDIUM findings.
 >
 > Kept for historical record only. **The project's current state is whatever `git log` says**
-> (see `README.md:339`); this document is not a status page.
+> (see the README's "Status" section); this document is not a status page.
 
 **Date**: 2026-05-30
 **Version**: v0.1.0
