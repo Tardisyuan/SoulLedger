@@ -675,6 +675,24 @@ class TestWhatPytestIsInvokedWith:
         text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
         assert 'XDIST="-n $PYTEST_WORKERS --dist worksteal"' in text
 
+    def test_the_cold_or_hot_template_line_is_shown(self, hook, checkouts, fake_backend):
+        """Telemetry (2026-11-13): the root conftest prints `test template: COLD|HOT <hash> <seconds>`; the
+        gate shows pytest's last four lines only, so it names that line itself."""
+        _, wt = checkouts
+        py = Path(fake_backend)
+        body = py.read_text()
+        marked = body.replace(
+            'echo "PYTEST TEMPLATE',
+            'echo "test template: HOT abcdef12 0.5s (probe)"; printf \'summary line %s\\n\' 1 2 3 4 5; echo "PYTEST TEMPLATE')
+        assert marked != body, "precondition: the stand-in pytest still prints its PYTEST line"
+        py.write_text(marked)
+        proc = _run(hook, wt, ["backend/x.py"], PYTHON_BIN=str(py), RUFF_BIN=shutil.which("true"),
+                    REDIS_URL=os.environ.get("REDIS_URL", ""))
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        # five lines below it: `tail -4` alone would not show it. mutation: drop the grep in pytest_finish -> red
+        assert proc.stdout.count("test template: HOT abcdef12 0.5s (probe)") == 1, proc.stdout
+        assert "summary line 1" not in proc.stdout and "summary line 5" in proc.stdout, proc.stdout
+
     def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts
         assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"

@@ -4,7 +4,7 @@ import sqlite3
 
 import pytest
 
-from config.sqlite_template import ENV_VAR, input_files, input_hash, mode, tables_that_differ
+from config.sqlite_template import ENV_VAR, input_files, input_hash, mode, report_line, tables_that_differ
 
 EXTRA = {"alias": "default", "django": "5.2"}
 
@@ -157,3 +157,65 @@ def test_autoincrement_sequence_counts(tmp_path):
     b.execute("INSERT INTO other (v) VALUES ('y')")
     b.execute("DELETE FROM other WHERE v = 'y'")  # same rows, sequence moved on
     assert tables_that_differ(a, b) == ["sqlite_sequence"]
+
+
+# --- telemetry: one line saying whether the run paid for a migrate (2026-11-13) ---
+
+def test_no_database_setup_prints_nothing():
+    assert report_line([]) is None
+
+
+def test_the_line_names_cold_or_hot_the_hash_and_the_seconds():
+    hot = report_line([("hot", "abcdef12", 0.4), ("hot", "abcdef12", 0.6)])
+    assert hot.startswith("test template: HOT abcdef12 0.6s ") and "COLD" not in hot
+    # one worker built it, the other waited on the lock and then cloned: the run was cold, and the
+    # seconds are the build's, not the waiter's. mutation: take the first record's kind -> red
+    cold = report_line([("hot", "abcdef12", 41.0), ("cold", "abcdef12", 38.5)])
+    assert cold.startswith("test template: COLD abcdef12 38.5s ") and "HOT" not in cold
+    assert report_line([("verify", "abcdef12", 40.0)]).startswith("test template: VERIFY abcdef12 40.0s ")
+    assert "2 database setup(s)" in cold
+
+
+def _child_pytest(tmp_path, *args):
+    """A child pytest under a copy of the root conftest (as tests/test_testdb_name.py does), with a probe
+    that records one setup and touches no database."""
+    import os
+    import shutil
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    shutil.copy(repo / "conftest.py", tmp_path / "conftest.py")
+    probe = tmp_path / "test_probe.py"
+    probe.write_text(
+        "def test_probe():\n"
+        "    from config import sqlite_template\n"
+        "    sqlite_template.record('hot', 'abcdef1234567890', 0.5)\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", str(probe), "-c", str(repo / "pytest.ini"),
+         "-q", "--no-header", "--no-cov", "-p", "no:cacheprovider", *args],
+        cwd=repo,
+        env={**os.environ, "PYTHONPATH": str(repo / "backend"), "DJANGO_SETTINGS_MODULE": "config.settings",
+             "DATABASE_URL": "sqlite:///:memory:"},
+        capture_output=True, text=True, timeout=120,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    return proc.stdout
+
+
+def test_the_root_conftest_prints_the_line_the_way_the_gates_run_pytest(tmp_path):
+    # -q --no-header is how scripts/run-gates.sh runs it: a report header would never be printed.
+    # mutation: delete pytest_terminal_summary from the root conftest -> red
+    out = _child_pytest(tmp_path, "-n", "0")
+    assert [line for line in out.splitlines() if line.startswith("test template: ")] == [
+        "test template: HOT abcdef12 0.5s (cloned the template, no migrate; 1 database setup(s))"], out
+
+
+def test_a_workers_setup_reaches_the_controllers_line(tmp_path):
+    pytest.importorskip("xdist")
+    # the database is set up in the worker; only the controller prints.
+    # mutation: stop writing workeroutput in pytest_sessionfinish, or drop pytest_testnodedown -> red
+    out = _child_pytest(tmp_path, "-n", "1")
+    assert out.count("test template: HOT abcdef12 0.5s ") == 1, out

@@ -986,6 +986,9 @@ pytest_finish() {
     wait "$PYTEST_PID"; PYTEST_STATUS=$?
     # The thirty slowest over 5 s, so a run that stalls says where (--durations=30 --durations-min=5 below).
     sed -n '/slowest [0-9]* *durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
+    # COLD (migrated) or HOT (cloned), the input hash, the seconds — the root conftest's summary line
+    # (backend/config/sqlite_template.py, telemetry 2026-11-13). Named here: `tail -4` may not reach it.
+    grep -m1 '^test template: ' "$PYTEST_LOG" | sed 's/^/    /'
     tail -4 "$PYTEST_LOG"
     if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
