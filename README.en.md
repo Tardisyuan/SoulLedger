@@ -185,6 +185,14 @@ the Chinese original when the locale differs
 icons are required to be unique within their parent, since the icon is the only
 identification channel available in a locale that can't read the Chinese label.
 
+**About `egy` (shown as Kemet).** It is an interface language assembled from
+simplified transliterations of Middle Egyptian roots in modern word order, for
+demonstration. **It is not real ancient Egyptian**: it has no Egyptian grammar,
+some of its words are real words stretched far from their meaning, and some are
+coinages. The root-by-root source check and the list of known problems are in
+[`docs/lore-verification/egy-lexicon-roots.md`](docs/lore-verification/egy-lexicon-roots.md)
+(written in Chinese).
+
 **Events and realtime.**
 
 ```

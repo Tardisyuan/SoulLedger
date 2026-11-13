@@ -19,3 +19,10 @@ it("LanguageSwitcher options carry lang (Kemet's text is English, so en)", () =>
   const lang = (name: string) => screen.getByRole("option", { name }).getAttribute("lang");
   expect([lang(LOCALE_LABELS["zh-Hans"]), lang(LOCALE_LABELS.en), lang(LOCALE_LABELS.egy)]).toEqual(["zh-Hans", "en", "en"]);
 });
+
+it("only the egy option says it is a demonstration language, not real ancient Egyptian", () => {
+  render(<LanguageSwitcher />);
+  const title = (name: string) => screen.getByRole("option", { name }).getAttribute("title");
+  expect([title(LOCALE_LABELS["zh-Hans"]), title(LOCALE_LABELS.en), title(LOCALE_LABELS.egy)]).toEqual([null, null, "nav.language_egy_note"]);
+  expect(screen.getByRole("combobox")).toHaveAttribute("title", "nav.language_egy_note");
+});
