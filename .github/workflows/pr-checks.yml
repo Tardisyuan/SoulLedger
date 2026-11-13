@@ -1,0 +1,96 @@
+name: PR checks
+
+# The cheap check a contributor sees on a pull request (user decision 2026-11-14: accept outside PRs).
+# The full suite (ci.yml) stays daily on main; it does not run on pull requests.
+# - Static checks for every workspace, plus a backend smoke test: about ten minutes on GitHub-hosted Linux,
+#   which bills no minutes for a public repository.
+# - `pull_request`, never `pull_request_target`: a fork's code runs with a read-only token and no secrets.
+#   Nothing here reads a secret.
+# - One run per PR. A new push cancels the run it supersedes.
+# tests/test_ci_runs_on_a_budget.py holds these rules.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SECRET_KEY: ci-test-key-not-for-production-32-bytes-min
+      DEBUG: 'true'
+      DATABASE_URL: 'sqlite:///:memory:'
+      REDIS_URL: redis://localhost:6379/0
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install --no-deps -r requirements.lock -r requirements-dev.txt
+      - name: Lint
+        run: |
+          cd backend
+          ruff check .
+      - name: Check migrations
+        run: |
+          cd backend
+          python manage.py makemigrations --check --dry-run
+      - name: Django system check
+        run: |
+          cd backend
+          python manage.py check
+      # A smoke test, not the suite: the app boots, migrates and answers, and every ViewSet is still scoped
+      # to its tenant (the one guarantee a wrong PR is most likely to break silently). The full suite on
+      # PostgreSQL runs daily in ci.yml.
+      - name: Smoke test
+        run: |
+          cd backend
+          python -m pytest --no-cov -q tests/test_health_answers_plain_http_probes.py tests/test_tenant_scoping_contract.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      # npm 11, as in ci.yml: npm 10's `npm ci` exits 0 with an incomplete tree. npm 11 skips install scripts.
+      - name: Install dependencies
+        run: |
+          npx -y npm@11 ci
+          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - name: '@soulledger/core: typecheck and lint'
+        run: |
+          npm run typecheck --workspace @soulledger/core
+          npm run lint --workspace @soulledger/core
+      - name: 'web: typecheck and lint'
+        run: |
+          cd frontend
+          npx tsc --noEmit
+          npm run lint
+      - name: 'soul app: typecheck and lint'
+        run: |
+          npm run typecheck --workspace @soulledger/mobile
+          npm run lint --workspace @soulledger/mobile
+      - name: 'officer app: typecheck and lint'
+        run: |
+          npm run typecheck --workspace @soulledger/officer
+          npm run lint --workspace @soulledger/officer

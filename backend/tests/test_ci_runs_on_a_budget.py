@@ -1,8 +1,11 @@
 """GitHub Actions 跑在额度上(上线前缺口 19,用户 2026-10-30 定)。
 
 额度曾经耗尽,而这里几乎每次推送都是推 main。所以 workflow 只许按钟点(最多每天一次)、
-按 tag、按手动触发;不许在分支推送或 PR 上自动跑。每个 job 必须有 `timeout-minutes`
+按 tag、按手动触发;不许在分支推送上自动跑。每个 job 必须有 `timeout-minutes`
 (默认 360 分钟,一条挂住的测试就能吃掉一个月额度的几分之一),同一 ref 的旧运行被取消。
+
+唯一的例外是 `pr-checks.yml`(用户 2026-11-14 定:接受外部 PR):只在 PR 上跑，只做静态检查和
+一组点名的冒烟测试，只读 token、不碰 secret,用 `pull_request` 而不是 `pull_request_target`。
 """
 from pathlib import Path
 
@@ -18,8 +21,11 @@ def _load(name):
     return data, data.get("on", data.get(True))
 
 
+PR_WORKFLOW = "pr-checks.yml"
+
+
 # Every workflow, not a named list: ios-sim-build.yml (2026-11-07) would otherwise be outside the guard.
-@pytest.mark.parametrize("name", sorted(p.name for p in WORKFLOWS.glob("*.yml")))
+@pytest.mark.parametrize("name", sorted(p.name for p in WORKFLOWS.glob("*.yml") if p.name != PR_WORKFLOW))
 def test_triggers_stay_on_the_budget(name):
     data, on = _load(name)
     assert set(on) <= {"workflow_dispatch", "schedule", "push"}, f"{name}: {sorted(on)}"
@@ -35,6 +41,36 @@ def test_triggers_stay_on_the_budget(name):
     assert data["concurrency"]["cancel-in-progress"] is True
     for job_name, job in data["jobs"].items():
         assert isinstance(job.get("timeout-minutes"), int), f"{name}: {job_name} has no timeout-minutes"
+
+
+def test_the_pr_workflow_is_cheap_and_cannot_touch_secrets():
+    """The one workflow a pull request starts. It must stay the cheap one (static checks and a named smoke set,
+    never the whole suite) and safe for a fork's code: `pull_request` gives a read-only token and no secrets,
+    `pull_request_target` would give the base repository's."""
+    text = (WORKFLOWS / PR_WORKFLOW).read_text()
+    data, on = _load(PR_WORKFLOW)
+    assert set(on) == {"pull_request"}, sorted(on)
+    assert data["permissions"] == {"contents": "read"}
+    assert data["concurrency"]["cancel-in-progress"] is True
+    assert "secrets." not in text and "pull_request_target" not in text.split("\non:")[1]
+    for job_name, job in data["jobs"].items():
+        assert isinstance(job.get("timeout-minutes"), int) and job["timeout-minutes"] <= 20, job_name
+        assert "permissions" not in job, f"{job_name} widens the token"
+        for step in job["steps"]:
+            run = step.get("run", "")
+            for line in run.splitlines():
+                if "pytest" in line:
+                    # A named smoke set: every argument after the options is a test file.
+                    files = [a for a in line.split() if a.endswith(".py")]
+                    assert files and len(files) <= 5, line
+            assert "playwright" not in run and "test:coverage" not in run, f"{job_name}: {run}"
+
+
+def test_the_full_suite_still_does_not_run_on_pull_requests():
+    """The other half: adding the PR workflow must not turn ci.yml into a per-PR run."""
+    for name in ("ci.yml", "security.yml"):
+        _, on = _load(name)
+        assert "pull_request" not in on and "pull_request_target" not in on, name
 
 
 def test_ci_does_run_on_its_own():

@@ -516,8 +516,8 @@ Things that trip people up:
 - **SQLite hides a whole class of defect** (aborted transactions, `varchar` length); run a
   change that touches transactions, constraints or column widths against real PostgreSQL too.
 
-The maintainer's measurements and the incidents behind these rules are kept with the maintainer's
-notes for AI coding agents (`CLAUDE.md`); you do not need them to contribute.
+The incidents and measurements behind these rules are in [`docs/engineering-notes/`](engineering-notes/README.md)
+(in Chinese); you do not need them to contribute.
 
 ---
 

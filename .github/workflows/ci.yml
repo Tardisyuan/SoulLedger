@@ -14,7 +14,7 @@ name: CI
 #     run). A manual or tag run always runs;
 #   - on a pushed tag `v*`: a release gets a full run before it ships;
 #   - by hand: Actions tab, or `gh workflow run ci.yml --ref <branch>`.
-# Not on push to branches and not on pull_request. `concurrency` cancels a
+# Not on push to branches and not on pull_request (a PR gets the cheap pr-checks.yml instead). `concurrency` cancels a
 # superseded run on the same ref, and every job has `timeout-minutes`, so one
 # hung test cannot hold a runner for the 360-minute default.
 # Run length (2026-10-30, estimated from the job list below, not measured on

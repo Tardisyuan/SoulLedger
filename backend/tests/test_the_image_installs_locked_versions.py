@@ -54,7 +54,7 @@ def test_the_dockerfile_and_ci_install_from_the_lock():
     dockerfile = (BACKEND / "Dockerfile").read_text()
     assert "-r requirements.lock" in dockerfile
     assert "-r requirements.txt" not in dockerfile
-    for workflow in ("ci.yml", "security.yml"):
+    for workflow in ("ci.yml", "security.yml", "pr-checks.yml"):
         text = (REPO_ROOT / ".github" / "workflows" / workflow).read_text()
         assert "pip install -r requirements.txt" not in text, workflow
         assert "-r requirements.lock" in text, workflow
