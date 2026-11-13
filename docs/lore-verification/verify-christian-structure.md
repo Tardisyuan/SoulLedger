@@ -494,3 +494,27 @@ Inf. IV」而言仍然对，但四个名字不是一类人：荷马、亚里士�
 `backend/apps/actors/mythology/statutes_inferno_entries.py` 的 EU-INF-C1 现已按两类
 分开陈述。本报告 §6 的 24 处地点计数与 INFERNO corpus 的 26 条之别，仍照
 `CORPUS_PROVENANCE["INFERNO"]` known_gap 的记载：两个数各数各的东西，互不改写。
+
+---
+
+## 2026-11-13 附记（不改上面的原文）
+
+依 `docs/lore-verification/civ-audit-2026-11-13.md` 欧洲一节及其复查结果。上面的原文保持原样；下列各处以本附记为准，
+文档 `docs/03_七宗罪与地狱惩罚.md` 与代码已照改。
+
+1. **「matta bestialitade 狂兽性 = 第九圈背叛」不是定论（EU-5）。** 本报告 §2 与 §3.1 的表把狂兽性指给了背叛。
+   Inf. XI 原文（Longfellow，Gutenberg #1001）：恶意「Either by force or fraud afflicteth others」；欺诈分两种，
+   破坏特殊信任的那种「Hence in the smallest circle … Whoe'er betrays for ever is consumed」（XI.52-66）——
+   背叛明文归在欺诈之下，不是第三类。「狂兽性」指哪一圈是注家争议点（多数读作暴力，另有异端说，无定论；
+   Leeds Discover Dante、Brown Lectura Dantis〔Forni〕、Triolo《Traditio》摘要）。处置：INFERNO 语料 EU-INF-C9 及四带的
+   `aristotle` 由 `matta bestialitade` 改为 `malizia — frode (tradimento)`（judgment 迁移 0052），C9 的 `conjecture` 改写；
+   狂兽性不指派给任何一圈；第六圈仍是 `None`。
+2. **格里高利那一句写反了（EU-6）。** 本报告 §4（来源链那一句）说格里高利「把 tristitia 并入 acedia、把 vanagloria 并入 superbia」，
+   与本报告自己引的 Moralia XXXI.xlv.87 原文相抵：他的七条含 inanis gloria 与 tristitia、没有 acedia，superbia 是七条之外的根。
+   应读作：格里高利把 acedia 并入 tristitia、新增 invidia、提 superbia 为根；后世才把 vana gloria 并回 superbia、以 acedia 取代 tristitia。
+3. **第三圈不是「黑雪」（EU-16）。** Inf. VI：「Huge hail, and water sombre-hued, and snow」——暗的是水。语料与文档改为
+   「冰雹、污水与雪」/「hail, foul water and snow」。
+4. **第七层淫欲的苦修（EU-23）。** 涤罪者在火中行走（Purg. XXV「spirits saw I walking through the flame」）；
+   「穿过火墙」是但丁本人离开这一层时的事（Purg. XXVII「'Twixt Beatrice and thee there is this wall」）。EU-DS-T7 与
+   `EU_PURGATORY_T7_LUST` 的描述改为「在烈火中行走」/「walking within the flames」。
+5. **狄斯城墙不是「唯一」的分层界线（EU-24）。** 城墙分上下层地狱；城墙之内 Virgil 还在第 7 / 8、8 / 9 圈之间再分。

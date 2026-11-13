@@ -21,8 +21,9 @@ check nobody has watched fail is a check nobody has evidence for.
 not layer Hell by how much wrong was done. Virgil says the basis outright at Inf.
 XI.79-84, citing the Ethics — 「Incontinence, and Malice, and insane Bestiality」
 (Longfellow 1867, Project Gutenberg #1001). Incontinenza is circles 2-5, malizia
-(violence, fraud) and matta bestialitade (treachery) are 6-9 inside the walls of
-Dis, and that wall is the poem's only real divider.
+(violence, fraud, and the fraud that betrays a trust — treachery, Inf. XI.52-66) is
+7-9 inside the walls of Dis; which circle matta bestialitade names is disputed and
+unassigned here, and the sixth, heresy, has no heading (audit EU-5, 2026-11-13).
 docs/lore-verification/verify-christian-structure.md §2, §3.1, §6.
 
 A magnitude ladder cannot express that, whatever number is fed into it. The

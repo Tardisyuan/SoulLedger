@@ -107,7 +107,8 @@ class DispositionService:
     EU_HELL_CULPA_BAND = 15
 
     #: Limbo and the sixth circle, the two circles that sort a soul by a fact about the person rather than by a
-    #: deed (`Soul.baptism`, `Soul.denied_immortality`; review E-2, 2026-10-27).
+    #: deed (`Soul.baptism`, `Soul.denied_immortality`; review E-2, 2026-10-27). The culpa ladder lands on
+    #: neither: its first band is Limbo only for the unbaptised, and it steps over the sixth (2026-11-13).
     EU_LIMBO_CIRCLE = 1
     EU_HERESY_CIRCLE = 6
 
@@ -483,9 +484,14 @@ class DispositionService:
         Dante does not layer Hell by how much wrong was done. He layers it by
         WHAT KIND, and says so outright — Virgil, Inf. XI.79-84, citing the
         Ethics: 「Incontinence, and Malice, and insane Bestiality」 (Longfellow
-        1867, Project Gutenberg #1001). Incontinenza fills circles 2-5, malizia
-        (violence and fraud) and matta bestialitade (treachery) fill 6-9 inside
-        the walls of Dis, and that wall is the only real divider in the poem.
+        1867, Project Gutenberg #1001). Incontinenza fills circles 2-5; malizia
+        works "by force or fraud" (Inf. XI.22-24) — violence in the seventh
+        circle, fraud in the eighth, and the fraud that breaks a special trust,
+        treachery, "in the smallest circle" (XI.52-66), the ninth. Which circle
+        「matta bestialitade」 names is disputed among the commentators (violence
+        is the usual reading) and this project assigns it to none; the sixth
+        circle, heresy, stands outside the three headings altogether. The wall
+        of Dis divides 2-5 from 6-9 (audit EU-5, 2026-11-13).
         docs/lore-verification/verify-christian-structure.md §2, §3.1, §6.
 
         So `culpa // 15` is the wrong SHAPE, not merely the wrong input. Under
@@ -568,6 +574,11 @@ class DispositionService:
             # and so is never negative — there is no magnitude to take and no
             # sign to lose, which is why there is no abs() here any more.
             circle = min(9, max(1, (culpa // cls.EU_HELL_CULPA_BAND) + 1))
+            # The ladder never lands on the sixth circle (user decision 2026-11-13, audit EU-7): heresy is a
+            # belief, reached only through `Soul.denied_immortality` above. The band that used to fall there
+            # goes one lower, to the seventh.
+            if circle == cls.EU_HERESY_CIRCLE:
+                circle += 1
             # The ladder's first band is "nothing heavier than Limbo": Limbo for the unbaptised, the second circle
             # for everyone else — Limbo is not where a light sinner goes (Inf. IV).
             if circle == cls.EU_LIMBO_CIRCLE:
@@ -621,6 +632,11 @@ class DispositionService:
           (venial sins "do not bring eternal death", a confessed mortal sin's eternal punishment is remitted):
           400 `no_mortal_sin`. An unclassified demerit, a denial of immortality (the sixth circle's belief) or
           a neutral life (the vestibule) leaves FAILED as it was — nothing here says what those weigh.
+        * PURGATORY is refused for a soul recorded unbaptised or born before Christ (user decision 2026-11-13,
+          audit EU-1): purgatory holds those who died in grace (docs/01 §1.2, CCC 1030), and Virgil's Limbo
+          does not climb the mountain (Purg. VII). 400 `unbaptised_no_purgatory`. Before this a PASSED verdict
+          sent such a soul to Limbo for ever while the harsher PURGATORY sent it, in time, to heaven.
+          `UNRECORDED` is not checked, and PASSED / FAILED are as they were.
         RETRY is not checked: an original RETRY hears the case again, and elsewhere it is refused already.
         Only European souls; the caller checks the civilization.
         """
@@ -635,6 +651,11 @@ class DispositionService:
             raise PlanChangeRefusedError(
                 "An admitted mortal sin unrepented at death excludes heaven and purgatory; the verdict is FAILED",
                 "mortal_sin_unrepented")
+        if verdict == Verdict.PURGATORY and soul.baptism in (Soul.Baptism.UNBAPTISED, Soul.Baptism.BEFORE_CHRIST):
+            raise PlanChangeRefusedError(
+                "Purgatory holds those who died in grace; a soul unbaptised or born before Christ is not sent "
+                "there — PASSED places it in Limbo, FAILED where its sins send it",
+                "unbaptised_no_purgatory")
         if (verdict == Verdict.FAILED and gravities and not mortal and "" not in gravities
                 and not soul.denied_immortality and not soul.neutral_in_life):
             raise PlanChangeRefusedError(

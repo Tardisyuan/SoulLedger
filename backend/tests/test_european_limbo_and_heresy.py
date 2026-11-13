@@ -82,6 +82,20 @@ def test_denying_immortality_is_the_sixth_circle_unless_a_cited_sin_lies_deeper(
     assert D._route_to_realm(_soul(denied=False), Verdict.FAILED) == LUST
 
 
+def test_the_ladder_steps_over_the_sixth_circle():
+    """Audit EU-7, user decision 2026-11-13: no quantity of culpa makes a heretic. The band that used to land in
+    the sixth circle lands in the seventh; the belief still reaches the sixth (the test above)."""
+    band = D.EU_HELL_CULPA_BAND
+    landed = {culpa: D._route_european(None, Verdict.FAILED, culpa) for culpa in range(0, band * 12)}
+    assert HERESY not in landed.values()
+    assert {landed[band * 5], landed[band * 6 - 1], landed[band * 6]} == {D.EU_HELL_CIRCLES[7]}
+    assert landed[band * 5 - 1] == D.EU_HELL_CIRCLES[5] and landed[band * 7] == D.EU_HELL_CIRCLES[8]
+    # Through the real router too, for a soul with an unclassified deed of that weight.
+    soul = _soul()
+    _demerit(soul, band * 5)
+    assert D._route_to_realm(soul, Verdict.FAILED) == D.EU_HELL_CIRCLES[7]
+
+
 def test_an_officer_may_pick_limbo_for_either_verdict():
     """The judge's own pick is checked against the router's image; Limbo is in it for both verdicts now."""
     for verdict in (Verdict.PASSED, Verdict.FAILED):

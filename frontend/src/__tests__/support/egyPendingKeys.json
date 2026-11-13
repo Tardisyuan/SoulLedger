@@ -65,5 +65,7 @@
   "demo.build.quality",
   "nav.language_egy_note",
   "soul_app.life.seal_title",
-  "soul_app.life.seal_pending"
+  "soul_app.life.seal_pending",
+  "sentence_plan.errors.unbaptised_no_purgatory",
+  "appeals.error.unbaptised_no_purgatory"
 ]

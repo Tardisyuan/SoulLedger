@@ -317,8 +317,8 @@ EUROPEAN_REALMS = [
      "NONE", False, None),
     ("EU_PURGATORY_T7_LUST", "炼狱第七层", "第七层 - 淫欲", "Seventh Terrace - Lust",
      "Ta Hesmen 7 · Luxuria", RealmType.PURGATORY, 7,
-     "Seventh and last terrace: lust. The penitent passes through a wall of "
-     "flame (Purg. XXV-XXVII). Love excessive. What lies above is not an "
+     "Seventh and last terrace: lust. The penitent walks within the flames "
+     "(Purg. XXV-XXVII). Love excessive. What lies above is not an "
      "eighth terrace but the summit itself — the Earthly Paradise, Lethe and "
      "Eunoè, and the ascent to the stars",
      "NONE", False, None),
@@ -455,11 +455,14 @@ EUROPEAN_REALMS = [
      "NONE", True, None),
     ("EU_ACHERON", "阿刻戎河渡口", "阿刻戎河渡口", "The Crossing of Acheron", "Acheron",
      RealmType.NEUTRAL, 0,
-     "The far bank of Acheron, where the dead are ferried in. Virgil, Aeneid "
-     "6.295-297 ('the way leads to that Tartarean stream of Acheron'); Dante "
-     "puts Charon here too, before the first circle (Inferno III), which is why "
-     "this is a threshold and not a circle. Euripides, Alcestis 252-256 has the "
-     "same crossing as a lake. Not a destination: nobody is sentenced here.",
+     "The near bank of Acheron, past the vestibule, where Charon takes the dead "
+     "on board. Virgil, Aeneid 6.295-297 ('the way leads to that Tartarean "
+     "stream of Acheron'); Dante puts Charon here too, before the first circle "
+     "(Inferno III), which is why this is a threshold and not a circle. "
+     "Euripides, Alcestis 252-256 has the same crossing as a lake. In the poem "
+     "only those bound for hell gather here; this system records every European "
+     "soul here at death, before any verdict, as its entry station. Not a "
+     "destination: nobody is sentenced here.",
      "NONE", False, None),
 ]
 

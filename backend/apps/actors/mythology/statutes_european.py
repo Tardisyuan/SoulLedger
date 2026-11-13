@@ -272,11 +272,11 @@ EUROPEAN_STATUTES = [
         "title_en": "Lust",
         "text_zh": (
             "淫欲（Luxuria）。炼狱山第七层，也是最后一层，《炼狱篇》XXV-XXVII。"
-            "属「爱之过度」。苦修：穿过巨大的火墙。"
+            "属「爱之过度」。苦修：在烈火中行走。"
         ),
         "text_en": (
             "Lust (Luxuria). The seventh and last terrace, Purg. XXV-XXVII. "
-            "Love excessive. The penitent passes through a wall of flame."
+            "Love excessive. The penitent walks within the flames."
         ),
         "notes": [
             NOT_A_CIRCLE_NOTE,
@@ -291,8 +291,8 @@ EUROPEAN_STATUTES = [
             "latin": "Luxuria",
             "opposing_virtue_zh": "贞洁",
             "opposing_virtue_en": "chastity",
-            "purgation_zh": "穿过巨大的火墙",
-            "purgation_en": "passing through a wall of flame",
+            "purgation_zh": "在烈火中行走",
+            "purgation_en": "walking within the flames",
             "cantos": "Purg. XXV-XXVII",
             "love_disorder": "excessive",
         },

@@ -58,7 +58,7 @@ def allowed_realm_codes(civilization, verdict, judgment_method=JudgmentMethod.ST
     if hears_again(civilization, verdict) or acquitted_to_rebirth(civilization, verdict):
         return frozenset()
     # soul=None:四个路由函数里只有欧洲的「引用过的最深一圈」读灵魂,None 时它不读,
-    # 而那条路能到的圈,严重度阶梯本来就全部能到。
+    # 而那条路能到的圈(第 2-5、7-9 圈),严重度阶梯本来就全部能到。
     routers = {
         Civilization.CHINESE: lambda s: D._route_chinese(None, verdict, s),
         Civilization.EUROPEAN: lambda s: D._route_european(None, verdict, s),
@@ -73,8 +73,9 @@ def allowed_realm_codes(civilization, verdict, judgment_method=JudgmentMethod.ST
         # 受洗与否是欧洲路由的另一个输入(Limbo,2026-10-27 E-2):两种都扫一遍。
         codes |= {D._route_european(None, verdict, s, unbaptised=True) for s in _SEVERITY_SWEEP}
         # 前庭与七层山也读灵魂(中立者、所犯罪种,2026-10-28),soul=None 的扫描走不到,这里补上它们能到的门。
+        # 第六圈只由「否认灵魂不灭」到达,罪量阶梯跳过它(2026-11-13,审计 EU-7),同样要补。
         if verdict == Verdict.FAILED:
-            codes |= {D.EU_ANTINFERNO}
+            codes |= {D.EU_ANTINFERNO, D.EU_HELL_CIRCLES[D.EU_HERESY_CIRCLE]}
         elif verdict == Verdict.PURGATORY:
             codes |= set(D.EU_PURGATORY_TERRACES.values())
     return codes - {""}

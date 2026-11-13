@@ -786,7 +786,7 @@
       "BAPTISED": "Baptised",
       "UNBAPTISED": "Unbaptised",
       "BEFORE_CHRIST": "Born before Christ",
-      "help": "Unbaptised or born before Christ, with no heavier sin: the first circle, Limbo (not a punishment). A heavier sin decides instead. A baptised soul never lands in Limbo."
+      "help": "Unbaptised or born before Christ, with no heavier sin: the first circle, Limbo (not a punishment). A heavier sin decides instead. Such a soul cannot be given Purgatory. A baptised soul never lands in Limbo."
     },
     "denied_immortality": {
       "label": "Denied the soul's immortality",
@@ -7312,6 +7312,7 @@
       "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: give a final verdict, or open a new judgment.",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Purgatory.",
+      "unbaptised_no_purgatory": "This soul is unbaptised or was born before Christ: not Purgatory, which holds those who died in grace. With no heavier sin give Passed (Limbo); otherwise Failed.",
       "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again.",
       "five_heinous_must_fail": "The offence is one of the five heinous crimes: the verdict cannot be passed."
     },
@@ -8759,6 +8760,7 @@
       "not_final_judge": "Only the final judge can decide",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",
+      "unbaptised_no_purgatory": "This soul is unbaptised or was born before Christ: the amended verdict can't be Purgatory, which holds those who died in grace.",
       "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed.",
       "five_heinous_must_fail": "The original offence is one of the five heinous crimes: the appeal cannot amend it to passed.",
       "plan_busy_by_civ": {

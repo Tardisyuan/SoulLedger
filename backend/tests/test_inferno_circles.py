@@ -58,7 +58,7 @@ INSIDE_DIS = (6, 7, 8, 9)
 #: circle -> everything about it that a reader could check against the poem.
 #: `mark` is a distinctive phrase that must appear in this article's `text_en`
 #: and in nobody else's. It is short on purpose: the wording of the prose is
-#: free to improve, the fact that the gluttons lie under black snow is not.
+#: free to improve, the fact that the gluttons lie under hail, foul water and snow is not.
 CIRCLES = {
     1: {
         "code": "EU-INF-C1", "ordinal": 1, "title_en": "Limbo",
@@ -76,7 +76,7 @@ CIRCLES = {
         "code": "EU-INF-C3", "ordinal": 3, "title_en": "Gluttony",
         "title_zh": "第三圈·暴食", "cantos": "Inf. VI",
         "aristotle": "incontinenza", "guardian": "Cerberus", "realm": "EU_HELL_3RD",
-        "mark": "black snow",
+        "mark": "hail, foul water and snow",
     },
     4: {
         "code": "EU-INF-C4", "ordinal": 4, "title_en": "Avarice and Prodigality",
@@ -111,7 +111,7 @@ CIRCLES = {
     9: {
         "code": "EU-INF-C9", "ordinal": 22, "title_en": "Treachery (Cocytus)",
         "title_zh": "第九圈·背叛（科奇土斯冰湖 Cocytus，四带）", "cantos": "Inf. XXXI-XXXIV",
-        "aristotle": "matta bestialitade", "guardian": "Giants",
+        "aristotle": "malizia — frode (tradimento)", "guardian": "Giants",
         "realm": "EU_HELL_9TH", "mark": "lake of Cocytus",
     },
 }
@@ -173,7 +173,7 @@ EXPECTED_CONJECTURES = {
     "EU-INF-C5": "accidiosi",       # is the fifth circle's sullenness acedia?
     "EU-INF-C6": "aristotle",       # heresy gets no heading at Inf. XI
     "EU-INF-C7-R1": "Alessandro",   # Alexander the Great, or of Pherae?
-    "EU-INF-C9": "bestialitade",    # is treachery what Inf. XI's third heading names?
+    "EU-INF-C9": "bestialitade",    # treachery is fraud (Inf. XI.52-66); the third heading is assigned nowhere
     "EU-INF-C9-Z1": "CONJECTURE",   # the four zones are named, not numbered
     "EU-INF-C9-Z2": "CONJECTURE",
     "EU-INF-C9-Z3": "CONJECTURE",
@@ -516,7 +516,7 @@ def test_the_aristotelian_headings_are_virgils_and_two_are_blank(seeded):
     assert not wrong, (
         f"Aristotelian headings (code -> (found, expected)): {wrong}. Virgil's "
         f"three are incontinenza / malizia / matta bestialitade, malizia "
-        f"dividing into violence and fraud; None means the speech gives this "
+        f"dividing into violence and fraud (treachery under fraud); None means the speech gives this "
         f"place no heading and is a finding, not a blank to fill."
     )
 

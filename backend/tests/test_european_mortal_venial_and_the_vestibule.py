@@ -90,6 +90,46 @@ def test_a_mortal_sin_the_case_did_not_admit_does_not_bar_purgatory():
     D.refuse_against_gravity(soul, Verdict.PURGATORY, excluded=[record.pk])
 
 
+# ── 未受洗者不入炼狱(用户 2026-11-13,审计 EU-1) ─────────────────────────────
+
+
+@pytest.mark.parametrize("baptism", [Soul.Baptism.UNBAPTISED, Soul.Baptism.BEFORE_CHRIST])
+def test_purgatory_is_refused_for_a_soul_outside_baptism(baptism):
+    """Before this, PASSED sent such a soul to Limbo for ever and the harsher PURGATORY sent it on to heaven."""
+    soul = _soul(baptism=baptism)
+    assert _refused(soul, Verdict.PURGATORY) == "unbaptised_no_purgatory"
+    # Absence: the other verdicts are untouched by the fact.
+    D.refuse_against_gravity(soul, Verdict.PASSED)
+    D.refuse_against_gravity(soul, Verdict.FAILED)
+    D.refuse_against_gravity(soul, Verdict.RETRY)
+
+
+@pytest.mark.parametrize("baptism", [Soul.Baptism.BAPTISED, Soul.Baptism.UNRECORDED])
+def test_purgatory_stands_for_a_soul_not_recorded_unbaptised(baptism):
+    soul = _soul(baptism=baptism)
+    _demerit(soul, SinGravity.VENIAL)
+    D.refuse_against_gravity(soul, Verdict.PURGATORY)
+
+
+def test_an_unrepented_mortal_sin_is_named_before_the_missing_baptism():
+    soul = _soul(baptism=Soul.Baptism.UNBAPTISED)
+    _demerit(soul, SinGravity.MORTAL)
+    assert _refused(soul, Verdict.PURGATORY) == "mortal_sin_unrepented"
+
+
+def test_conclude_refuses_purgatory_for_the_unbaptised_and_writes_nothing(admin_user):
+    """The one conclude endpoint serves the web bench and the officer app; the appeal path calls the same check."""
+    soul = _soul(baptism=Soul.Baptism.UNBAPTISED)
+    case = Judgment.objects.create(soul=soul, tenant=soul.tenant, civilization="EUROPEAN", court="—")
+    res = officer_client(admin_user).post(f"/api/v1/judgment/{case.pk}/conclude/",
+                                          {"verdict": "PURGATORY", "create_workflow": False}, format="json")
+    assert res.status_code == 400 and res.data["code"] == "unbaptised_no_purgatory", res.data
+    case.refresh_from_db()
+    assert case.verdict is None and not case.is_final
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.JUDGING
+
+
 def test_conclude_refuses_and_writes_nothing(admin_user):
     soul = _soul()
     _demerit(soul, SinGravity.MORTAL)

@@ -126,7 +126,8 @@ Soul fields added 2026-10-28 (`backend/apps/souls/models.py`, `serializers.py`):
 (an unburied soul dead a hundred years may cross, `apps/souls/acheron.py`).
 A ledger record (`SoulRecord`) carries `sin_gravity` (`MORTAL` / `MORTAL_ABSOLVED` / `VENIAL`; European DEMERIT
 only, else 400), checked against the verdict at conclusion (`DispositionService.refuse_against_gravity`:
-400 `mortal_sin_unrepented` / `no_mortal_sin`).
+400 `mortal_sin_unrepented` / `no_mortal_sin`; and 400 `unbaptised_no_purgatory` when the verdict is PURGATORY
+and the soul's `baptism` is `UNBAPTISED` / `BEFORE_CHRIST`, 2026-11-13).
 
 ### Judgment
 | Method | Endpoint | Description |

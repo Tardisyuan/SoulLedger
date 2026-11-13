@@ -41,6 +41,7 @@ ENTRY_REALM_CODES = {
     Civilization.CHINESE: "DY_00_PURGATORY",   # 待审所
     Civilization.EGYPTIAN: "EG_DUAT_ENTRY",    # 杜阿特入口
     Civilization.GREEK: "GR_ACHERON",          # 冥府:阿刻戎渡口
+    # 欧洲:系统自设的入口站,非出典 —— 诗里只有下地狱的人聚到渡口(docs/01「系统自设」,2026-11-13)。
     Civilization.EUROPEAN: "EU_ACHERON",       # 地狱篇:阿刻戎渡口
 }
 

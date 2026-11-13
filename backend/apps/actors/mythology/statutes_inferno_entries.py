@@ -142,10 +142,10 @@ INFERNO_ENTRIES = [
         "aristotle": "incontinenza",
         "sinners_zh": "饕餮者",
         "sinners_en": "The gluttonous.",
-        "contrapasso_zh": "俯卧于冰冷腥臭的烂泥中，头上是永不停歇的冷雨、冰雹与黑雪。",
+        "contrapasso_zh": "俯卧于冰冷腥臭的烂泥中，头上是永不停歇的冰雹、污水与雪。",
         "contrapasso_en": (
-            "Lying in cold and filthy sludge under a ceaseless fall of cold "
-            "rain, hail and black snow."
+            "Lying in cold and filthy sludge under a ceaseless fall of "
+            "hail, foul water and snow."
         ),
         "realm_code": "EU_HELL_3RD",
         "notes": (),
@@ -645,7 +645,7 @@ INFERNO_ENTRIES = [
         "title_en": "Treachery (Cocytus)",
         "cantos": "Inf. XXXI-XXXIV",
         "guardian": "the Giants at the rim; Antaeus lowers the travellers in",
-        "aristotle": "matta bestialitade",
+        "aristotle": "malizia — frode (tradimento)",
         "sinners_zh": "背叛者，按背叛的信任关系分作四带：血亲、国家、宾主、恩主",
         "sinners_en": (
             "Traitors, divided by the bond betrayed: kin, country, guest, "
@@ -666,14 +666,16 @@ INFERNO_ENTRIES = [
             "one.",
         ),
         "conjecture": (
-            "The assignment of 「matta bestialitade」 to treachery is a reading "
-            "of Inf. XI, recorded as such in "
-            "verify-christian-structure.md §2, and not a sentence in the poem. "
-            "Virgil separates fraud from treachery by whether a special bond "
-            "of trust existed (Inf. XI.52-66); he does not say in that speech "
-            "which of his three headings the ninth circle falls under. The "
-            "value is carried because the report carries it, and it is marked "
-            "here so that nobody re-derives it as settled."
+            "Virgil's speech puts treachery under fraud: fraud practised on "
+            "one who trusts breaks the special bond, and 'hence in the "
+            "smallest circle ... whoe'er betrays for ever is consumed' (Inf. "
+            "XI.52-66, Longfellow). The heading carried is therefore malizia "
+            "— frode, of the kind that betrays a trust. Until 2026-11-13 this "
+            "article carried 「matta bestialitade」, a reading taken from "
+            "verify-christian-structure.md §2. Which circle that third word "
+            "names is disputed among the commentators (violence is the usual "
+            "reading) and this corpus assigns it to none; it is marked here "
+            "so that nobody re-derives either as settled."
         ),
     },
     {
@@ -686,7 +688,7 @@ INFERNO_ENTRIES = [
         "title_en": "Caina — Treachery to Kin",
         "cantos": "Inf. XXXII",
         "guardian": None,
-        "aristotle": "matta bestialitade",
+        "aristotle": "malizia — frode (tradimento)",
         "sinners_zh": "背叛血亲者",
         "sinners_en": "Those who betrayed their own kin.",
         "contrapasso_zh": "冻在冰中，头露在冰面之上，面朝下。",
@@ -704,7 +706,7 @@ INFERNO_ENTRIES = [
         "title_en": "Antenora — Treachery to Country",
         "cantos": "Inf. XXXII-XXXIII",
         "guardian": None,
-        "aristotle": "matta bestialitade",
+        "aristotle": "malizia — frode (tradimento)",
         "sinners_zh": "背叛国家或党派者（Ugolino 与 Ruggieri 的一段在此）",
         "sinners_en": (
             "Those who betrayed country or party; Ugolino and Ruggieri are "
@@ -725,7 +727,7 @@ INFERNO_ENTRIES = [
         "title_en": "Tolomea — Treachery to Guests",
         "cantos": "Inf. XXXIII",
         "guardian": None,
-        "aristotle": "matta bestialitade",
+        "aristotle": "malizia — frode (tradimento)",
         "sinners_zh": "背叛宾主之谊者",
         "sinners_en": "Those who betrayed a guest or a host.",
         "contrapasso_zh": "仰面冻结，泪水在眼眶里结成冰，把眼睛封死，连哭也哭不出去。",
@@ -746,7 +748,7 @@ INFERNO_ENTRIES = [
         "title_en": "Giudecca — Treachery to Benefactors",
         "cantos": "Inf. XXXIV",
         "guardian": "Lucifer",
-        "aristotle": "matta bestialitade",
+        "aristotle": "malizia — frode (tradimento)",
         "sinners_zh": "背叛恩主者；Judas、Brutus、Cassius 在撒旦的三张嘴中",
         "sinners_en": (
             "Those who betrayed a benefactor; Judas, Brutus and Cassius are in "
