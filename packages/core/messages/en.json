@@ -4672,7 +4672,7 @@
       "dashboard": "Dashboard",
       "admin_stats": "Karma Statistics",
       "souls": "Soul Management",
-      "judgment": "Judgment Queue",
+      "judgment": "Judgment queue",
       "cross_judgments": "Cross-Realm Judgment",
       "disposition": "Reincarnation Disposition",
       "workflow": "Approval Workflow",
@@ -4718,7 +4718,7 @@
         "cn": "Sentence Plans"
       }
     },
-    "queue": "Triage queue",
+    "queue": "Triage",
     "about": "About",
     "notifications": "Notifications",
     "profile": "Personal Center",
@@ -8084,8 +8084,8 @@
       "empty_body_other": "Anything waiting on you will be pushed to this phone."
     },
     "queue": {
-      "desk_only": "Ready for verdict · conclude it in Swipe to judge",
-      "scope_note": "On the phone you can claim, read, comment, and conclude in Swipe to judge. Choosing a destination and citing articles are done at the desk.",
+      "desk_only": "Ready for verdict · conclude it with Judge or in Swipe to judge",
+      "scope_note": "On the phone you can claim, read, comment, and conclude with Judge or in Swipe to judge. Choosing a destination and citing articles are done at the desk.",
       "claim": "Claim",
       "claim_failed": "Couldn't claim",
       "claim_taken": "Someone else claimed it first",

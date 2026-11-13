@@ -4708,7 +4708,7 @@
         "cn": "Sekher"
       }
     },
-    "queue": "Sepu Wedja",
+    "queue": "Setep Sep",
     "about": "Khet Medjat Ba",
     "notifications": "Sedjem Sab",
     "profile": "Djes",
@@ -8074,11 +8074,11 @@
     },
     "queue": {
       "claim": "Shesep",
-      "desk_only": "Djed Wedja Djer · Khetem Em «Semawy Sesh · Wedja»",
-      "scope_note": "Em Medjat Ba: Shesep, Maa, Sesh Wesheb · Khetem Em «Semawy Sesh · Wedja». Setep Ta Hena Djed Hep: Em Medjat Sab.",
+      "desk_only": "Djed Wedja Djer · Khetem Em «Wedja» Er Em «Nehem Sesh · Wedja»",
+      "scope_note": "Em Medjat Ba: Shesep, Maa, Sesh Wesheb · Khetem Em «Wedja» Er Em «Nehem Sesh · Wedja». Setep Ta Hena Djed Hep: Em Medjat Sab.",
       "claim_failed": "Nen Shesep-Ek",
       "claim_taken": "Shesep Ky-N",
-      "open_swipe": "Semawy Sesh · Wedja"
+      "open_swipe": "Nehem Sesh · Wedja"
     },
     "search": {
       "souls": "Hehy Ba",
@@ -8308,7 +8308,7 @@
       "take": "Shesep",
       "handler": "Em Djeret · {{name}}",
       "handler_none": "Em Djeret · Nen Redi Djer",
-      "not_yours": "Sesh Pen Em Djeret {{name}}: Wesheb Wa. Dbh Redi Er Hat, Er Dbh Sab Hery.",
+      "not_yours": "Sesh Pen: {{name}} Iri. Wesheb: Sab Iri Wa. Shesep: Sab Iri Redi Er Hat, Er Sab Hery Hab.",
       "assign_to_me": "Redi Er-I",
       "earlier": "Sesh Tepyu",
       "earlier_failed": "Nen Ini Sesh Tepyu",
