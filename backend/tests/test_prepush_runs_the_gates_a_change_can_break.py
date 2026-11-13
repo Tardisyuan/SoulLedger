@@ -1997,8 +1997,7 @@ class TestRemoteTimeLimits:
         remote = (tmp_path / "remote-run").read_text()
         assert "e2e.lock" not in remote, remote
         assert " fake-host ( flock -n 8 || { echo " in remote and "; flock 8; } || exit 1; docker run" in remote, remote
-        assert remote.rstrip().endswith("docker rm -f sl-demo-%s >/dev/null 2>&1; exit $rc ) 8>/srv/appdata/sl-gates/demo-serve.lock"
-                                        % re.search(r"--name sl-demo-(\d+)", remote).group(1)), remote
+        assert remote.rstrip().endswith("docker rm -f sl-demo-{} >/dev/null 2>&1; exit $rc ) 8>/srv/appdata/sl-gates/demo-serve.lock".format(re.search(r"--name sl-demo-(\d+)", remote).group(1))), remote
 
 
 class TestRemoteLocksSayWhenTheyWait:
@@ -2025,7 +2024,7 @@ class TestRemoteLocksSayWhenTheyWait:
             f'echo "flock $*" >> "{tmp_path}/flock.log"\n'
             f'[ "$1" = -n ] && exit {0 if free else 1}\n'
             f"exit {0 if waits else 1}\n")
-        (b / "docker").write_text('#!/bin/bash\necho "docker $*" >> "%s/docker.log"\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n' % tmp_path)
+        (b / "docker").write_text(f'#!/bin/bash\necho "docker $*" >> "{tmp_path}/docker.log"\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n')
         for f in b.iterdir():
             f.chmod(0o755)
         script = (f"P=gates\n{self._definition('run-gates.sh')}"
