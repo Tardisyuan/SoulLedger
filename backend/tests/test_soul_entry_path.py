@@ -27,7 +27,6 @@ TENANTS = {
     "CN_DIYU": "DY_00_PURGATORY",
     "EG_DUAT": "EG_DUAT_ENTRY",
     "GR_HADES": "GR_ACHERON",
-    "EU_HEAVEN_HELL": "EU_ACHERON",
 }
 
 
@@ -43,7 +42,8 @@ def _path(soul):
 
 @pytest.mark.django_db
 def test_every_entry_realm_code_exists_in_the_seed_under_its_civilization(seeded):
-    assert set(ENTRY_REALM_CODES) == {c.value for c in Civilization}
+    # 欧洲没有入口站(用户 2026-11-14):死时还不知道去向,渡口只在地狱路上。
+    assert set(ENTRY_REALM_CODES) == {c.value for c in Civilization} - {Civilization.EUROPEAN}
     for civ, code in ENTRY_REALM_CODES.items():
         realm = Realm.all_objects.get(realm_code=code, is_deleted=False)
         assert realm.civilization == civ, code
@@ -64,6 +64,37 @@ def test_death_puts_the_soul_at_its_civilizations_entry_realm(seeded, tenant_cod
         assert [(e.realm.realm_code, e.left_at) for e in after] == [("EG_HALL_TWO_TRUTHS", None)]
     else:
         assert (entry.left_at, after) == (None, [])
+
+
+@pytest.mark.django_db
+def test_a_european_death_records_no_station(seeded):
+    soul = Soul.objects.create(name="亡欧", tenant=plan.tenant("EU_HEAVEN_HELL"), current_state=SoulState.ALIVE)
+    assert soul.die() is not None
+    assert _path(soul) == []
+
+
+def _european_route(*codes):
+    from apps.realms.path import SoulPathService
+
+    tenant = plan.tenant("EU_HEAVEN_HELL")
+    soul = Soul.objects.create(name="行路", tenant=tenant, current_state=SoulState.JUDGING)
+    for code in codes:
+        SoulPathService.enter(soul, Realm.all_objects.get(realm_code=code, tenant=tenant))
+    return [(e.realm.realm_code, e.left_at is None) for e in _path(soul)]
+
+
+@pytest.mark.django_db
+def test_the_hell_road_passes_the_vestibule_then_the_ferry_once(seeded):
+    # 死亡 → 地狱前庭 → 阿刻戎渡口 → 九圈(用户 2026-11-14);圈与圈之间改判不再过一次渡口。
+    assert _european_route("EU_HELL_4TH", "EU_HELL_7TH") == [
+        ("EU_ANTINFERNO", False), ("EU_ACHERON", False), ("EU_HELL_4TH", False), ("EU_HELL_7TH", True),
+    ]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("code", ["EU_PURGATORY_T3_WRATH", "EU_EARTHLY_PARADISE", "EU_HEAVEN", "EU_ANTINFERNO"])
+def test_purgatory_heaven_and_the_neutrals_do_not_pass_the_ferry(seeded, code):
+    assert _european_route(code) == [(code, True)]
 
 
 @pytest.mark.django_db

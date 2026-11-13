@@ -106,18 +106,20 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
   }
 
   if (civ === "eg") {
+    // The seven approaches are passed through on the way, not a stop (Design batch 34: the map draws them as an
+    // ornament on the road, `class="passage"`), so they are not a step either.
     const common = [
       step("EMBALMING", tr("map.egypt.embalming_70_days")),
       step("EG_DUAT_ENTRY", realm("EG_DUAT_ENTRY")),
-      step("EG_SEVEN_ARRWT", realm("EG_SEVEN_ARRWT")),
       step("WEIGHING", tr("map.egypt.weighing")),
     ];
+    const weighing = common.length - 1;
     const passed = [...common, step("EG_TWENTYONE_SEBKHET", realm("EG_TWENTYONE_SEBKHET")), step("EG_AARU", realm("EG_AARU"))];
-    if (judging) return { civ, steps: passed, at: 3, place: common[3].label, line: tr("soul.here.eg_weighing") };
+    if (judging) return { civ, steps: passed, at: weighing, place: common[weighing].label, line: tr("soul.here.eg_weighing") };
     const r = realmOf(plan);
     if (r?.code === "EG_ANNIHILATION") {
       const steps = [...common, step("EG_ANNIHILATION", realm("EG_ANNIHILATION"), { end: true })];
-      return { civ, steps, at: 4, place: steps[4].label, path: tr("judgment.verdicts.failed") };
+      return { civ, steps, at: weighing + 1, place: steps[weighing + 1].label, path: tr("judgment.verdicts.failed") };
     }
     const at = r ? passed.findIndex((s) => s.id === r.code) : -1;
     return at < 0 ? null : { civ, steps: passed, at, place: passed[at].label, path: tr("judgment.verdicts.passed") };
@@ -125,7 +127,9 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
 
   if (civ === "eu") {
     const death = step("DEATH", tr("souls.detail.death"));
-    const down = [death, step("EU_ACHERON", realm("EU_ACHERON")), step("EU_ANTINFERNO", realm("EU_ANTINFERNO")), step("CIRCLES", tr("map.europe.circles"))];
+    // The ferry is on the hell road only (user 2026-11-14; Design batch 34 map): the vestibule, then Acheron, then the
+    // circles (Inf. III). Purgatory's souls sail from the Tiber's mouth and heaven's go straight up — neither crosses it.
+    const down = [death, step("EU_ANTINFERNO", realm("EU_ANTINFERNO")), step("EU_ACHERON", realm("EU_ACHERON")), step("CIRCLES", tr("map.europe.circles"))];
     const up = [death, step("TERRACES", tr("map.europe.terraces")), step("EU_EARTHLY_PARADISE", realm("EU_EARTHLY_PARADISE")), step("EU_HEAVEN", realm("EU_HEAVEN"))];
     const here = (steps: RouteStep[], at: number, where: string, path: string): SoulRoute => ({
       civ,
@@ -146,7 +150,8 @@ export function soulRoute({ me, civ, plan, hall }: RouteInput, tr: Tr): SoulRout
     }
     if (r?.code === "EU_EARTHLY_PARADISE") return here(up, 2, up[2].label, tr("live.path.eu_up"));
     if (r?.code === "EU_HEAVEN") return here(up, 3, up[3].label, tr("live.path.eu_up"));
-    if (me.european_vestibule) return here(down, 2, down[2].label, tr("live.path.eu_down"));
+    // A neutral stays in the vestibule and never reaches the ferry: the road ends there.
+    if (me.european_vestibule) return here(down.slice(0, 2), 1, down[1].label, tr("live.path.eu_down"));
     return null;
   }
 
