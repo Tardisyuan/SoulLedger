@@ -1024,6 +1024,20 @@ describe("已处理 · E-08d", () => {
     expect(deleted.outerHTML).not.toContain("--color-danger");
   });
 
+  it("a hidden post the author later deleted stays in the history, says so, and offers no 恢复可见", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page([{ ...handled[0], author_deleted: true }]));
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const row = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "王五" }));
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText(tZh("social_moderation.handled.author_deleted"))).toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: tZh("social_moderation.handled.restore") })).toBeNull();
+    // The content is gone: the drawer does not ask for it.
+    expect(apiMock.item).not.toHaveBeenCalledWith("posts", "h1");
+  });
+
   it("rangeStart counts today as the first of N days, in UTC", () => {
     const now = Date.UTC(2026, 8, 25, 23, 30);
     expect(rangeStart("30d", now)).toBe("2026-08-27");

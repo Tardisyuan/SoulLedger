@@ -7095,6 +7095,7 @@
       "read_only": "只读：处理已生效。",
       "restore": "恢复可见",
       "in_recycle_bin": "在回收站",
+      "author_deleted": "作者之后自己删除了这条内容，不能再恢复可见。",
       "range": "时间",
       "range_30d": "近 30 天",
       "range_90d": "近 90 天",

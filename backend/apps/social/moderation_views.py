@@ -525,8 +525,10 @@ class SocialMuteViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.CreateM
 class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
     """「已处理」:被隐藏或被官员删除的帖子与评论,一张表,按处理时间倒序。
 
-    * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
+    * 隐藏:`moderation_status=HIDDEN`,未删除或**作者事后自删**。处理人 / 时间 / 理由读 `moderated_*`
       (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
+      作者自删的那条仍留在这里(`author_deleted`):这张表是处理记录,作者删帖不抹掉官员的隐藏
+      (此前 `is_deleted=False` 一条把它连同处理人、理由一起从历史里拿掉了)。它不能再恢复可见。
     * 删除:软删除且删除人不是作者本人 —— 作者删自己的东西不是审核处理。读 `deleted_*`。
       删除的行不在这里恢复:帖子与评论不在回收站的登记表里,本分支不另开恢复路径。
 
@@ -541,12 +543,13 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
 
     def _part(self, base, model, kind, handling, date_from=None, date_to=None):
         qs = base
-        hidden = Q(is_deleted=False, moderation_status=ModerationStatus.HIDDEN)
+        by_author = Q(is_deleted=True, deleted_by=F("author"))
         deleted = Q(is_deleted=True) & DELETED_BY_OFFICER
+        hidden = Q(moderation_status=ModerationStatus.HIDDEN) & (Q(is_deleted=False) | by_author)
         qs = qs.filter({"HIDDEN": hidden, "DELETED": deleted}.get(handling, hidden | deleted))
 
         def pick(if_deleted, if_hidden, field):
-            return Case(When(is_deleted=True, then=F(if_deleted)), default=F(if_hidden), output_field=field)
+            return Case(When(deleted, then=F(if_deleted)), default=F(if_hidden), output_field=field)
 
         qs = qs.annotate(
             row_type=Value(kind, output_field=models.CharField()),
@@ -556,8 +559,11 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
             author_name=F("author__display_name"),
             excerpt=Substr("content", 1, EXCERPT),
             handling=Case(
-                When(is_deleted=True, then=Value("DELETED")), default=Value("HIDDEN"),
+                When(deleted, then=Value("DELETED")), default=Value("HIDDEN"),
                 output_field=models.CharField(),
+            ),
+            author_deleted=Case(
+                When(by_author, then=Value(True)), default=Value(False), output_field=models.BooleanField(),
             ),
             handled_reason=pick("delete_reason", "moderation_reason", models.CharField()),
             handled_by_ref=pick("deleted_by_id", "moderated_by_id", models.IntegerField()),
@@ -574,7 +580,7 @@ class HandledContentViewSet(ModerationViewSet, mixins.ListModelMixin):
 
     COLUMNS = (
         "row_type", "row_id", "post_ref", "author_ref", "author_name", "excerpt",
-        "handling", "handled_reason", "handled_by_ref", "handled_by_name", "handled_at",
+        "handling", "handled_reason", "handled_by_ref", "handled_by_name", "handled_at", "author_deleted",
     )
 
     @staticmethod

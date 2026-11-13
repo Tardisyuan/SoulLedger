@@ -17475,8 +17475,10 @@ paths:
       description: |-
         「已处理」:被隐藏或被官员删除的帖子与评论,一张表,按处理时间倒序。
 
-        * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
+        * 隐藏:`moderation_status=HIDDEN`,未删除或**作者事后自删**。处理人 / 时间 / 理由读 `moderated_*`
           (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
+          作者自删的那条仍留在这里(`author_deleted`):这张表是处理记录,作者删帖不抹掉官员的隐藏
+          (此前 `is_deleted=False` 一条把它连同处理人、理由一起从历史里拿掉了)。它不能再恢复可见。
         * 删除:软删除且删除人不是作者本人 —— 作者删自己的东西不是审核处理。读 `deleted_*`。
           删除的行不在这里恢复:帖子与评论不在回收站的登记表里,本分支不另开恢复路径。
 
@@ -30543,8 +30545,12 @@ components:
         media_count:
           type: integer
           description: 帖子的图片张数(与举报队列同一条规则);评论为 0。
+        author_deleted:
+          type: boolean
+          description: HIDDEN 之后作者自己删了:处理记录照留,但已不能恢复可见。DELETED 行恒为 false。
       required:
       - author
+      - author_deleted
       - excerpt
       - handled_at
       - handled_by

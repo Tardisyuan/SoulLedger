@@ -1,3 +1,4 @@
 [
-  "social_moderation.errors.self_moderation"
+  "social_moderation.errors.self_moderation",
+  "social_moderation.handled.author_deleted"
 ]

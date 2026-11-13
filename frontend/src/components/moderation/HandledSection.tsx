@@ -86,7 +86,9 @@ export function HandledSection() {
   };
 
   const kind = open?.type === "COMMENT" ? "comments" : "posts";
-  const item = useModeratedItem(kind, open && open.handling === "HIDDEN" ? open.id : null);
+  // 隐藏后作者又自删了的那条(`author_deleted`):处理记录照留,但内容已不在,取不到也恢复不了。
+  const restorable = open?.handling === "HIDDEN" && !open.author_deleted;
+  const item = useModeratedItem(kind, open && restorable ? open.id : null);
 
   const all = t("filter.all");
   return (
@@ -238,7 +240,11 @@ export function HandledSection() {
             </dl>
             <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("social_moderation.handled.read_only")}</p>
             <div className="border-t border-[oklch(var(--color-block))] pt-3">
-              {open.handling === "HIDDEN" ? (
+              {open.author_deleted ? (
+                <p data-author-deleted="" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                  {t("social_moderation.handled.author_deleted")}
+                </p>
+              ) : open.handling === "HIDDEN" ? (
                 <Button
                   type="button"
                   variant="primary"

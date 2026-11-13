@@ -322,6 +322,8 @@ class HandledContentSerializer(serializers.Serializer):
     handled_by = serializers.SerializerMethodField()
     handled_at = serializers.DateTimeField(allow_null=True)
     media_count = serializers.IntegerField(help_text="帖子的图片张数(与举报队列同一条规则);评论为 0。")
+    author_deleted = serializers.BooleanField(
+        help_text="HIDDEN 之后作者自己删了:处理记录照留,但已不能恢复可见。DELETED 行恒为 false。")
 
     @extend_schema_field(ModerationAuthorSerializer)
     def get_author(self, row):

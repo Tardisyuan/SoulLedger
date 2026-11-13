@@ -684,6 +684,32 @@ def test_handled_lists_hidden_and_officer_deleted_content_only(cn_tenant, cn_mod
     assert _handled(officer_client(cn_moderator), handling="BOGUS") == []
 
 
+def test_a_hidden_post_the_author_then_deletes_stays_in_handled_and_cannot_be_restored(cn_tenant, cn_moderator):
+    """「已处理」是处理记录:作者事后自删不抹掉官员的隐藏(此前 1 → 0,处理人与理由一起消失)。"""
+    author, author_client = soul(cn_tenant, "作者")
+    hidden = post(author, "先被隐藏再被作者删", Visibility.PUBLIC)
+    other = post(author, "只被隐藏", Visibility.PUBLIC)
+    mod.moderate_content(hidden, "HIDE", actor=cn_moderator, reason="低俗")
+    mod.moderate_content(other, "HIDE", actor=cn_moderator, reason="低俗")
+    assert author_client.delete(f"{SOCIAL}/posts/{hidden.pk}/").status_code == 204
+    assert Post.all_objects.get(pk=hidden.pk).is_deleted
+
+    client = officer_client(cn_moderator)
+    rows = {r["id"]: r for r in _handled(client)}
+    assert set(rows) == {str(hidden.pk), str(other.pk)}
+    h = rows[str(hidden.pk)]
+    officer = {"user_id": cn_moderator.pk, "display_name": "地府审核官"}
+    assert (h["handling"], h["reason"], h["handled_by"], h["author_deleted"]) == ("HIDDEN", "低俗", officer, True)
+    assert h["handled_at"]
+    assert rows[str(other.pk)]["author_deleted"] is False
+    assert {r["id"] for r in _handled(client, handling="HIDDEN")} == {str(hidden.pk), str(other.pk)}
+    assert _handled(client, handling="DELETED") == []
+    # Gone, so not restorable: the restore path says so instead of resurrecting it.
+    res = client.post(f"{MODERATION}/posts/{hidden.pk}/restore/", {}, format="json")
+    assert res.status_code in (404, 409), res.content
+    assert Post.all_objects.get(pk=hidden.pk).is_deleted
+
+
 def test_handled_is_newest_first(cn_tenant, cn_moderator):
     author, _ = soul(cn_tenant, "作者")
     older, newer = post(author, "早", Visibility.PUBLIC), post(author, "晚", Visibility.PUBLIC)
