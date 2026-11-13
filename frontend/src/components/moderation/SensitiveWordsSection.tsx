@@ -133,12 +133,13 @@ export function SensitiveWordsSection() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!word.trim() || !category || add.isPending) return;
+    const added = word.trim();
     add.mutate(
-      { word: word.trim(), category, action },
+      { word: added, category, action },
       {
         onSuccess: () => {
           setWord("");
-          showToast(t("social_moderation.done"), "success");
+          showToast(t("social_moderation.words.added", { word: added }), "success");
         },
         onError: fail,
       }

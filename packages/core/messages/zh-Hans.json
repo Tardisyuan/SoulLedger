@@ -7037,6 +7037,7 @@
     },
     "words": {
       "add_row": "新增敏感词",
+      "added": "已添加敏感词「{{word}}」",
       "col_word": "词 / 规则",
       "col_category": "类别",
       "col_action": "命中后",

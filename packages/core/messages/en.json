@@ -7037,6 +7037,7 @@
     },
     "words": {
       "add_row": "Add a word",
+      "added": "Added “{{word}}” to the word list",
       "col_word": "Word / rule",
       "col_category": "Category",
       "col_action": "On hit",

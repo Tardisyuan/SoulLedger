@@ -652,6 +652,11 @@ describe("敏感词 · E-08b", () => {
     fireEvent.change(input, { target: { value: "门牌号" } });
     fireEvent.submit(input.closest("form") as HTMLFormElement);
     await waitFor(() => expect(apiMock.addWord).toHaveBeenCalledWith({ word: "门牌号", category: "PRIVACY", action: "MASK" }));
+    // The toast names the word, not a bare 「已处理」.
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.words.added", { word: "门牌号" }), "success")
+    );
+    expect(mockShowToast).not.toHaveBeenCalledWith(tZh("social_moderation.done"), "success");
   });
 
   it("requires a category: 添加 stays disabled and Enter sends nothing until one is chosen", async () => {
