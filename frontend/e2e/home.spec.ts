@@ -211,25 +211,33 @@ test.describe("Routing edge cases", () => {
 });
 
 test.describe("Authenticated shell", () => {
-  test("sidebar renders the menu tree returned by the API", async ({ page }) => {
+  test("the door rail shows the role's doors, and a door's tabs are the pages the API's menu grants", async ({ page }) => {
     await setupAuthenticatedPage(page);
-    await page.goto("/dashboard");
+    await page.goto("/permissions");
 
     // Not redirected — the seeded cookie satisfied middleware.
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/permissions/);
 
-    // 规范 v2:md+ 是立柱,< 768 是底栏,两者都是名为「导航菜单」的 <nav>,各在自己的宽度下
-    // 显示。取看得见的那一个。四个名字恰好是菜单顺序里的前四个 —— 底栏也放得下。
-    const sidebar = page.locator("nav[aria-label='导航菜单']:visible");
-    await expect(sidebar).toBeVisible();
+    // 第三十批第 4 步:门是固定的、按角色(管理员五门);≥ 769 立在左边,≤ 768 到底部(殿司不放门,收进「我」)。
+    const rail = page.getByTestId("door-rail");
+    await expect(rail).toBeVisible();
+    await expect(rail.getByRole("link", { name: "名册" })).toHaveAttribute("href", "/souls");
+    await expect(rail.getByRole("link", { name: "人间" })).toHaveAttribute("href", "/moderation");
+
+    // 门内的页来自菜单:/permissions 在「司」里,同门的是夹具菜单里的调度、回收站、定时任务、待交付初始密码。
+    const tabs = page.getByTestId("door-tabs");
+    await expect(tabs).toHaveAttribute("data-door", "office");
     for (const [name, href] of [
-      ["灵魂", "/souls"],
       ["调度管理", "/dispatch"],
       ["权限管理", "/permissions"],
       ["回收站", "/recycle-bin"],
+      ["定时任务", "/scheduler"],
     ]) {
-      await expect(sidebar.getByRole("link", { name })).toHaveAttribute("href", href);
+      await expect(tabs.getByRole("link", { name })).toHaveAttribute("href", href);
     }
+    await expect(tabs.getByRole("link", { name: "权限管理" })).toHaveAttribute("aria-current", "page");
+    // Absence: a page of another door is not a tab here.
+    await expect(tabs.getByRole("link", { name: "灵魂" })).toHaveCount(0);
   });
 
   test("跳到正文 (A1, 2026-10-30): the first Tab shows it, Enter puts focus on the page past nav and toolbar", async ({ page }) => {

@@ -32500,11 +32500,15 @@ components:
         capture_due:
           type: integer
           nullable: true
+        rebirth_application:
+          type: integer
+          nullable: true
       required:
       - appeal
       - capture_due
       - city_god_review
       - cross_judgment
+      - rebirth_application
     JudgmentFlowProgress:
       type: object
       description: 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。

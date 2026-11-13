@@ -453,8 +453,8 @@ describe("defaultViewRoute", () => {
     expect(await defaultViewRoute(judge)).toBe("/desk");
     expect(await defaultViewRoute(judge)).not.toBe("/dashboard");
     expect(await defaultViewRoute({ role: "ADMIN", permissions: [] })).toBe("/desk/overview");
-    // No judgment access: the queue would be a 403, so the dashboard it stays.
-    expect(await defaultViewRoute({ role: "VIEWER", permissions: ["soul.read"] })).toBe("/dashboard");
+    // A viewer has no 审 door (第三十批第 4 步): their own door, the register — not the dashboard nor a 403 desk.
+    expect(await defaultViewRoute({ role: "VIEWER", permissions: ["soul.read"] })).toBe("/souls");
     // A choice on the server still wins over the role.
     mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
     expect(await defaultViewRoute(judge)).toBe("/dashboard");

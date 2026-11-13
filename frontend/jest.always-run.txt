@@ -38,6 +38,7 @@ src/__tests__/dialogsAreNotHandRolled.test.ts frontend
 src/__tests__/domainDisplayContract.test.tsx packages
 src/__tests__/domainDisplayRendering.test.tsx packages
 src/__tests__/domainNamespaceContract.test.ts packages
+src/__tests__/doors.test.ts frontend
 src/__tests__/draftSavedFlash.test.tsx packages
 src/__tests__/egyLexiconRules.test.ts frontend
 src/__tests__/enumsMatchTheSchema.test.ts packages

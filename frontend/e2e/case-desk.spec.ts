@@ -34,7 +34,7 @@ test.describe("案卷台", () => {
     api.on("GET", "/judgment/queue-counts/", {
       mine: 1, unclaimed: 1, others: 0, deferred: 0, total: 2, overdue: 0,
       sources: { queue: 1, city_god: 1, cross: 0 },
-      elsewhere: { appeal: null, city_god_review: null, cross_judgment: null, capture_due: null },
+      elsewhere: { appeal: null, city_god_review: null, cross_judgment: null, capture_due: null, rebirth_application: null },
     });
 
     await page.goto("/login");

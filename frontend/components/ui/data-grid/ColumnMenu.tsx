@@ -32,7 +32,7 @@ function useIsWide(): boolean {
       mq.addEventListener('change', onChange)
       return () => mq.removeEventListener('change', onChange)
     },
-    // 没有 matchMedia(jsdom)按宽屏算,与 GlobalNav 的同一个退路。
+    // 没有 matchMedia(jsdom)按宽屏算,与 `useWideViewport` 的同一个退路。
     () => (typeof window.matchMedia === 'function' ? window.matchMedia(WIDE_QUERY).matches : true),
     () => true
   )

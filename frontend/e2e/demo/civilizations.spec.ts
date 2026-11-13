@@ -152,13 +152,16 @@ for (const role of ["judge_eu", "judge_eg"] as Role[]) {
       `/judgment/${pick("/judgment/", (j) => j.verdict != null)}`,
       `/souls/${pick("/souls/", (s) => s.current_state !== "ALIVE")}`,
     ];
-    test("the sidebar has no door to it", async ({ page }) => {
+    // 第三十批第 4 步:导航是门栏 + 门内页签。转生的两页一个在「审」的来源里、一个在「册」里 —— 两门都看。
+    test("no door's tabs lead to it", async ({ page }) => {
       await enter(page, role);
-      await page.goto("/dashboard");
-      await page.waitForLoadState("networkidle");
-      await expect(page.getByRole("button", { name: "灵魂业务" }).or(page.getByRole("link", { name: "灵魂管理" })).first()).toBeVisible();
-      await expect(page.locator('a[href="/rebirths"], a[href="/rebirth-applications"]')).toHaveCount(0);
-      expect((await page.locator("aside, nav").allInnerTexts()).join("\n")).not.toMatch(NO_REBIRTH);
+      for (const route of ["/souls", "/judgment"]) {
+        await page.goto(route);
+        await page.waitForLoadState("networkidle");
+        await expect(page.getByTestId("door-tabs")).toBeVisible();
+        await expect(page.locator('a[href="/rebirths"], a[href="/rebirth-applications"]')).toHaveCount(0);
+        expect((await page.locator("nav").allInnerTexts()).join("\n")).not.toMatch(NO_REBIRTH);
+      }
     });
     // v4 第八批第 7 条: the door is gone, and a direct link says so instead of showing the six paths.
     test("/rebirths opened directly: a page saying there is no rebirth here", async ({ page }) => {

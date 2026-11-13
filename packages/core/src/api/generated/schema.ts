@@ -14489,6 +14489,7 @@ export interface components {
             city_god_review: number | null;
             cross_judgment: number | null;
             capture_due: number | null;
+            rebirth_application: number | null;
         };
         /** @description 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。 */
         JudgmentFlowProgress: {

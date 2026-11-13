@@ -32,7 +32,6 @@ export function shellShortcutRows(mac: boolean): readonly ShortcutRow[] {
   const mod = mac ? "⌘" : "Ctrl ";
   return [
     { key: `${mod}K`, label: "nav.search_hint" },
-    { key: `[ · ${mod}\\`, label: "nav.collapse_sidebar" },
     { key: `${mod}J`, label: "officer_assist.title" },
   ];
 }

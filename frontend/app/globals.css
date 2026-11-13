@@ -835,8 +835,8 @@
      (2026-10-02),印的外形见下面 `.seal`;v2 的分节纹(public/v2/svg/section-*,与 `SectionTitle`
      一起)撤掉(2026-10-03)。页头的纹样是纯 CSS 渐变,见下面 `.page-head-pat`。 */
 
-  /* 宽度 ≤ 768 时没有侧栏,导航是固定在底部的 56px 底栏(GlobalNav.tsx 的 BottomBar;v3 四档,
-     侧栏从 769 起 —— 与 AppLayout 的 `min-[769px]:` 同一条线)。页面里吸底的操作条(审判队列的
+  /* 宽度 ≤ 768 时门栏到底部,高 64(`DoorRail.tsx`,第三十批第 4 步;门栏从 769 起立在左边 ——
+     与 AppLayout 的 `min-[769px]:` 同一条线)。页面里吸底的操作条(审判队列的
      裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
   html {
     --bottom-bar: 0px;
@@ -850,11 +850,11 @@
     --below-band: calc(var(--spacing) * 13 + var(--imp-h));
     /* AppLayout 内容槽位的最小高:视口减去吸顶的工具条,再减去窄屏的底栏(main 的
        `pb-14`)—— 内容短的页恰好一屏,不多出滚动。PageSpinner 填同一个槽位,用同一个值。 */
-    --content-min-h: calc(100vh - var(--below-band) - var(--bottom-bar));
+    --content-min-h: calc(100vh - var(--below-band) - var(--door-tabs-h, 0px) - var(--bottom-bar));
   }
   @media (max-width: 768px) {
     html {
-      --bottom-bar: 56px;
+      --bottom-bar: 64px;
     }
   }
 
@@ -1087,22 +1087,7 @@
       linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) bottom right / 14px 1px no-repeat,
       linear-gradient(oklch(var(--color-metal)), oklch(var(--color-metal))) bottom right / 1px 14px no-repeat;
   }
-  /* 侧栏当前项(v4 `.side2 .it.on`):深色 glow 20% 透出侧栏底;浅色是 card 底加卡片阴影。字仍是 ink。 */
-  .nav-current {
-    background: color-mix(in srgb, oklch(var(--color-glow)) 20%, transparent);
-  }
-  .light .nav-current {
-    background: oklch(var(--color-surface-1));
-    box-shadow: var(--shadow-card);
-  }
-  /* 殿司卡(v4 `.hallcard`):深色 glow 14% 混进 card,浅色 card + 卡片阴影。 */
-  .nav-hall-card {
-    background: color-mix(in srgb, oklch(var(--color-glow)) 14%, oklch(var(--color-surface-1)));
-  }
-  .light .nav-hall-card {
-    background: oklch(var(--color-surface-1));
-    box-shadow: var(--shadow-card);
-  }
+  /* 侧栏当前项 `.nav-current` 与殿司卡 `.nav-hall-card` 随侧栏一起撤掉(第三十批第 4 步:门栏,`doors.module.css`)。 */
 
   /* 精确指针的默认档(规范 v4,用户 2026-11-07):控件 36、表格行 46。md 是「控件」那一档(Button / Field 的默认),
      sm 是表头与行内动作,要放进 46 的行里,取 32;lg 40。触屏(hover: none 或 pointer: coarse)不进这里,仍是 @theme 的 44 / 48 / 56 / 64。 */

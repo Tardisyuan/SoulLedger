@@ -4,23 +4,13 @@
     "greeting_afternoon": "Dua · Hru Pen",
     "greeting_evening": "Dua · Pehwy Hru",
     "greeting_night": "Pehwy Hru Seth",
-    "collapse_locked": "Nen Er Hry 1200: Wat Khetem Smen",
     "settings": "Smen",
-    "welcome": "Tepy",
     "language": "Medew Seth",
     "theme_light": "Khemen Er Hedj",
     "theme_dark": "Khemen Er Kem",
-    "mobile_menu": "Wat Medu",
     "more": "Ky",
     "soul_events": "Medew Ba",
     "skip_to_main": "Sni Menu",
-    "collapse_sidebar": "Khetem Menu",
-    "expand_sidebar": "Wen Menu",
-    "group": {
-      "souls": "Ba",
-      "system": "Smen",
-      "work": "Iri"
-    },
     "search_hint": "Shesep · Shem · Wedja"
   },
   "auth": {
@@ -2132,7 +2122,6 @@
     },
     "queue": {
       "enter": "Aq Er Sepu Wedja",
-      "title": "Sepu Wedja",
       "progress": "{{position}} Em {{total}}",
       "loading": "Ini Sep Khery…",
       "leave": "Per Em Sepu Wedja",
@@ -7936,7 +7925,6 @@
   "plaque": {
     "realms": "Ta · {{root}}",
     "held": "Em Sekhet {{n}}",
-    "corpus": "Sesh Hep",
     "corpus_meta": "Sesh {{works}} · Djedu {{n}}",
     "workflow_editor": "Khemen Wat Wedja",
     "workflow_instance": "Wat Wedja Sep",
@@ -7948,8 +7936,6 @@
     "posts": "Medu {{n}}",
     "soul": "Ba",
     "desk": "Wedja",
-    "queue": "Sepu Wedja",
-    "permissions": "Was",
     "permissions_meta": "Netjeru {{roles}} · Was {{perms}}",
     "office": {
       "rules": "Wesekhet Hep",
@@ -9705,8 +9691,7 @@
     "density": {
       "comfortable": "Nefer",
       "compact": "Nedjes"
-    },
-    "hall_switch": "Khemen Wesekhet"
+    }
   },
   "soul": {
     "here": {
