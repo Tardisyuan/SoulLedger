@@ -126,7 +126,7 @@ class WorkflowService:
         written the same way twice and hoped over.
 
         **A node recorded as naming nobody is not probed at all**, whichever of
-        the two tables records it (see ``_designates_nobody``). 「四十二神官 ·
+        the two tables records it (see ``_designates_nobody``). 「四十二判官 ·
         否定告白」 is a forty-two-member bench and 「十殿联审」 is ten kings
         sitting jointly; ``approver_actor`` is a single FK, so resolving either
         would file a joint session as one being's decision — a quieter and worse

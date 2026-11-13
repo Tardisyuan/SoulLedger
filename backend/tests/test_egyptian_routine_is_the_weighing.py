@@ -60,7 +60,7 @@ def test_an_egyptian_routine_judgment_reaches_the_hall_of_two_truths():
     names = [n.get("node_name") or n["name"] for n in template["nodes"]]
     assert names == [
         "阿努比斯 · 引导与称量",
-        "四十二神官 · 否定告白",
+        "四十二判官 · 否定告白",
         "托特 · 记录并宣读",
         "神庭 · 确认",
         "荷鲁斯 · 引导",
@@ -68,7 +68,7 @@ def test_an_egyptian_routine_judgment_reaches_the_hall_of_two_truths():
         "阿米特 · 吞噬",
         "结束 · 称心毕",
     ], names
-    # 中间那个节点 `actor` 是 None,而那是**刻意的**:四十二神官是四十二个,
+    # 中间那个节点 `actor` 是 None,而那是**刻意的**:四十二判官是四十二个,
     # 一个 `approver_actor` 外键指不了一群人。它因此走审计过的 `escalate`,
     # 见 `TEMPLATE_NODES_WITHOUT_AN_APPROVER`。
     #

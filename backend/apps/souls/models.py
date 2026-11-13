@@ -236,7 +236,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
     origin_region = models.CharField(max_length=8, choices=OriginRegion.choices, blank=True, default="")
 
-    #: 埃及(2026-10-27,review P2-9):亡者未得审判的三种情形(docs/01 §4.2),官员登记,与阳寿同样是在死亡
+    #: 埃及(2026-10-27,review P2-9):亡者未得审判的三种情形(docs/01 §4.2 —— 系统自设,非出典,
+    #: 见 docs/02 文末「系统自设」),官员登记,与阳寿同样是在死亡
     #: 登记之前记下的事实。空 = 葬仪如常:木乃伊 70 天后启程入殿(02 §1.1)。葬仪不当包括 03 §六 的通关要素
     #: (身体完整、咒语、自我介绍、知神名)—— 它们都是葬仪备下的。只有埃及读它(`Soul.opening_fields`)。
     class DuatPassage(models.TextChoices):
@@ -1000,7 +1001,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             return judgment
 
     def _after_egyptian_death(self, judgment):
-        """docs/01 §4.2: 早夭者不受审,直入芦苇原 —— 不称心(`weighing.applies`)、不走称心流程,当场结案 PASSED,
+        """docs/01 §4.2(系统自设,非出典): 早夭者不受审,直入芦苇原 —— 不称心(`weighing.applies`)、不走称心流程,当场结案 PASSED,
         处置照常由官员执行;无名者与葬仪不当者到不了殿,案子留在杜阿特入口候着(`claims._assert_not_held`)。
         其余的(含木乃伊 70 天)照旧挂到两真之殿。"""
         from apps.judgment.models import DUAT_BARRED, DuatStage, Verdict

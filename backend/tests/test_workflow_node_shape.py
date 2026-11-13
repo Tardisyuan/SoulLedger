@@ -324,10 +324,10 @@ def test_an_excused_label_is_still_excused_in_the_canonical_spelling(seeded):
     """
     tenant = _tenant(Civilization.EGYPTIAN)
     bench = Actor.all_objects.create(
-        name="42审判者", civilization=Civilization.EGYPTIAN, role="JUDGE", tenant=tenant,
+        name="四十二判官", civilization=Civilization.EGYPTIAN, role="JUDGE", tenant=tenant,
     )
     got = WorkflowService._resolve_approver(
-        {"node_name": "42审判者 · 否定告白", "node_type": "TRIAL",
+        {"node_name": "四十二判官 · 否定告白", "node_type": "TRIAL",
          "court_code": "Hall of Two Truths", "node_order": 1},
         Civilization.EGYPTIAN, tenant.pk,
     )

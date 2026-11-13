@@ -390,7 +390,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // Truths, and no assessor approves or rejects on their own. A workflow
       // node is an approval step, so 42 of them would model 42 sequential
       // sign-offs that the rite does not have. apps/workflow/services.py holds
-      // the same shape server-side ("四十二神官 · 否定告白", one EVALUATION node),
+      // the same shape server-side ("四十二判官 · 否定告白", one EVALUATION node),
       // and this preset must stay in step with it — a preset the backend would
       // not accept is worse than an abstract one. Pick individual assessors in
       // the editor if a case genuinely needs a named one.
@@ -400,7 +400,8 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // 转写作「the 42 gods who are with you in this broad court」），发生在托特
       // 宣读判词之前。原来的「42审判者 · 初审」既排在托特之后，又用「初审」
       // 暗示这是一级审级——四十二判官不作审级裁断，故改称「否定告白」。
-      { id: "n2", name: "42审判者 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
+      // 2026-11-13：「42审判者」改「四十二判官」，与 docs/02 §2.2、语言包和后端节点同一个叫法。
+      { id: "n2", name: "四十二判官 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
       { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
       // 神庭确认与荷鲁斯引导（docs/02 §2.1、§5.1，2026-10-27 补）：通过者先经九神会确认托特的宣读，
       // 再由荷鲁斯牵手引到奥西里斯座前。只在通过分支上（见下 routes）。
@@ -467,7 +468,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     priority: 0,
     nodes: [
       { id: "n1", name: "Anubis · 引导与称量", court: "两真之殿", type: "灵魂引导", order: 1 },
-      { id: "n2", name: "42审判者 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
+      { id: "n2", name: "四十二判官 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
       { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
       { id: "n6", name: "神庭 · 确认", court: "两真之殿", type: "神庭确认", order: 4 },
       { id: "n7", name: "Horus · 引导", court: "两真之殿", type: "引见", order: 5 },
@@ -499,7 +500,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     priority: 1,
     nodes: [
       { id: "n1", name: "Anubis · 引导与称量", court: "两真之殿", type: "灵魂引导", order: 1 },
-      { id: "n2", name: "42审判者 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
+      { id: "n2", name: "四十二判官 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
       { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
       { id: "n6", name: "神庭 · 确认", court: "两真之殿", type: "神庭确认", order: 4 },
       { id: "n7", name: "Horus · 引导", court: "两真之殿", type: "引见", order: 5 },
@@ -581,5 +582,5 @@ export const NODES_THAT_NAME_NO_ACTOR: Record<string, string> = {
   "结束 · 各走其路": "终点，不是谁的裁断。",
   "神庭 · 确认": "九神会是一整席神（拉、舒、泰芙努特、盖布、努特、伊西斯、奈芙蒂斯……），一个外键装不下；名册里也只有其中四位。后端同一节点记的是同一条理由。",
   "结束 · 称心毕": "终点，不是谁的裁断。",
-  "42审判者 · 否定告白": "四十二判官确实是四十二行真实的 Actor（powers_json.assessor_index 1-42），但一个外键装不下一整席，而否定告白是向他们全体一次说完的（BD 125）。后端同一节点（「四十二神官 · 罪行核实」）记的是同一条理由。",
+  "四十二判官 · 否定告白": "四十二判官确实是四十二行真实的 Actor（powers_json.assessor_index 1-42），但一个外键装不下一整席，而否定告白是向他们全体一次说完的（BD 125）。后端同一节点（同名）记的是同一条理由。",
 };

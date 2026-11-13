@@ -34,7 +34,7 @@ class Command(BaseCommand):
                 "code": "EG_DUAT",
                 "display_name": "Egyptian Afterlife",
                 "hall_name": "两真之殿", "hall_name_en": "Hall of Two Truths", "hall_name_egy": "Weret Maaty",
-                "description": "Egyptian Duat — Field of Reeds (Aaru), Hall of Two Truths, Lake of Fire",
+                "description": "Egyptian Duat — Hall of Two Truths, Field of Reeds (Aaru)",
                 "dispatch_enabled": True,
             },
             {

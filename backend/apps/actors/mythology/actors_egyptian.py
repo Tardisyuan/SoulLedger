@@ -108,7 +108,7 @@ EGYPTIAN_ACTORS = [
      "prosecution story belongs to the Contendings of Horus and Seth (Papyrus "
      "Chester Beatty I), a different text about a dispute among the living gods"),
     ("Isis", "伊西斯", "Isis", "Aset", ActorRole.CONDUIT, "EG_HALL_TWO_TRUTHS",
-     "生命女神伊西斯", "生命女神伊西斯", "Isis - Goddess of Life and Magic", "Aset",
+     "魔法女神伊西斯", "魔法女神伊西斯", "Isis - Goddess of Life and Magic", "Aset",
      "Great mother goddess - stands behind Osiris' throne in the Hall with "
      "Nephthys as he receives the dead (Budge, Papyrus of Ani, Plate IV). She "
      "was seeded into the Field of Reeds, which is where the acquitted go after "
@@ -117,7 +117,7 @@ EGYPTIAN_ACTORS = [
      "丧葬女神奈芙蒂斯", "丧葬女神奈芙蒂斯", "Nephthys - Goddess of Mourning", "NebetHet",
      "Protects the dead - stands with Isis behind Osiris' throne in the Hall "
      "(Budge, Papyrus of Ani, Plate IV). Same relocation and same reason as Isis"),
-    ("Ra", "拉", "Ra (Atum)", "Re", ActorRole.OVERSEER, "EG_HALL_TWO_TRUTHS",
+    ("Ra", "拉", "Ra", "Re", ActorRole.OVERSEER, "EG_HALL_TWO_TRUTHS",
      "太阳神拉", "太阳神拉", "Ra - Sun God and Creator", "Re",
      "Supreme sun god - heads the row of twelve enthroned gods above the "
      "weighing scene as Harmachis, 'the great god within his boat' (Budge, "
@@ -185,7 +185,8 @@ EGYPTIAN_ACTORS = [
 #     the Greek rendering. So Set stays out, deliberately, and
 #     tests/test_seed_mythology.py::test_set_stays_out_of_the_judgment holds
 #     that rather than leaving his absence to be read as an oversight.
-#   * `Ra` / `Atum` — `name_en` is "Ra (Atum)". Atum is a distinct god who is
+#   * `Ra` / `Atum` — `name_en` was "Ra (Atum)" until actors/0020 (2026-11-13); it is "Ra"
+#     now, because that display name asserted the identification. Atum is a distinct god who is
 #     *identified with* Ra in some contexts, which is a theological claim and
 #     not a spelling. Recording it as an alias would assert the identification.
 #   * `Ma'at` / `Maat` — already recorded, in a column: `name_egy` is "Maat", and
