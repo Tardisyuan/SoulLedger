@@ -4570,7 +4570,7 @@
     "edit_media_locked": "图片不能修改",
     "screening": {
       "masked": "已发布。部分内容已被替换。",
-      "pending_review": "已发出,正在审核。审核通过前只有你看得到。",
+      "pending_review": "已发出,正在审核。审核通过前只有作者本人看得到。",
       "hidden": "这条内容没有通过筛查,已被隐藏。"
     },
     "no_posts": "暂无帖子",
@@ -6939,7 +6939,7 @@
     },
     "moderation_status": {
       "PUBLISHED": "已发布",
-      "PENDING": "待审",
+      "PENDING": "待审核",
       "HIDDEN": "已隐藏",
       "DELETED": "已删除"
     },

@@ -4570,7 +4570,7 @@
     "edit_media_locked": "Images cannot be changed",
     "screening": {
       "masked": "Published. Some of the text was replaced.",
-      "pending_review": "Sent, under review. Only you can see it until it is approved.",
+      "pending_review": "Sent, under review. Only the author can see it until it is approved.",
       "hidden": "This did not pass screening and has been hidden."
     },
     "no_posts": "No posts yet",

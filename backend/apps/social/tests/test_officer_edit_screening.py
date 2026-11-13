@@ -42,16 +42,16 @@ def _word(tenant, word, action):
     return SensitiveWord.objects.create(tenant=tenant, word=word, action=action)
 
 
-def test_officer_post_with_review_word_is_published_not_stuck_pending(world):
-    """F-SOC-01: the moderation back office only sees souls' content, so an officer's
-    post parked in PENDING could never be released. REVIEW / HIDE do not apply to officers."""
+def test_officer_post_with_review_word_goes_pending(world):
+    """2026-11-13: officer posts go through the same word list and queue as souls' (the
+    moderation back office no longer filters on role), so REVIEW holds them."""
     tenant, author, _ = world
     _word(tenant, "badword", SensitiveWordAction.REVIEW)
     r = _client(author, tenant).post(f"{BASE}/posts/", {"content": "a BadWord here"}, format="json")
     assert r.status_code == 201
     post = Post.objects.get(author=author)
-    assert post.moderation_status == ModerationStatus.PUBLISHED
-    assert post.moderation_reason == ""
+    assert post.moderation_status == ModerationStatus.PENDING
+    assert post.moderation_reason == "sensitive_word:badword"
     assert SensitiveWordDailyHit.objects.get().count == 1
 
 
@@ -80,7 +80,7 @@ def test_edit_clean_to_hit_is_hidden_and_stamps_edited_at(world):
     r = _client(author, tenant).patch(f"{BASE}/posts/{post.pk}/", {"content": "now badword"}, format="json")
     assert r.status_code == 200
     post.refresh_from_db()
-    assert post.moderation_status == ModerationStatus.PUBLISHED  # F-SOC-01: HIDDEN would be a dead end
+    assert post.moderation_status == ModerationStatus.HIDDEN
     assert post.edited_at is not None
     assert r.data["edited_at"] is not None
 
@@ -134,13 +134,13 @@ def test_edited_at_is_in_list_and_detail(world):
     assert c.get(f"{BASE}/posts/").data["results"][0]["edited_at"] is None
 
 
-def test_officer_comment_with_review_word_is_published(world):
+def test_officer_comment_with_review_word_goes_pending(world):
     tenant, author, other = world
     _word(tenant, "badword", SensitiveWordAction.REVIEW)
     post = Post.objects.create(author=author, content="p", tenant=tenant)
     r = _client(other, tenant).post(f"{BASE}/comments/", {"post": str(post.pk), "content": "badword"}, format="json")
     assert r.status_code == 201
-    assert Comment.objects.get().moderation_status == ModerationStatus.PUBLISHED
+    assert Comment.objects.get().moderation_status == ModerationStatus.PENDING
     assert SensitiveWordDailyHit.objects.get().count == 1
 
 
@@ -151,8 +151,8 @@ def test_officer_comment_with_review_word_is_published(world):
     "action,expected",
     [
         (SensitiveWordAction.MASK, "masked"),
-        (SensitiveWordAction.REVIEW, "masked"),  # officers: only MASK is enforced (F-SOC-01)
-        (SensitiveWordAction.HIDE, "masked"),
+        (SensitiveWordAction.REVIEW, "pending_review"),
+        (SensitiveWordAction.HIDE, "hidden"),
     ],
 )
 def test_post_comment_and_edit_responses_carry_the_outcome_and_never_the_word(world, action, expected):
