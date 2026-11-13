@@ -7,6 +7,7 @@
  * button is ink-filled; the tinted status tag (`Tag`) and the touch sizes (`touch`) are here too.
  */
 import { fetchFailureOf } from "@soulledger/core/api/client";
+import { officerDoors, type OfficerDoorKey, type OfficerPage } from "@soulledger/core/domain/doors";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -473,13 +474,17 @@ export function IdentityBand({ hall, name }: { hall: string; name: string }) {
  * 律 has no page in this app (the statutes are read on the desk) and is not drawn: a door the officer cannot open is
  * not drawn at all. The pages keep their keys: links, pushes and the assistant still name them.
  */
-export type TabKey = "todo" | "queue" | "search" | "notices" | "me";
-export const TABS: readonly { key: TabKey }[] = [{ key: "queue" }, { key: "todo" }, { key: "search" }, { key: "me" }, { key: "notices" }];
-
-export type DoorKey = "desk" | "roll" | "me";
-/** Each door's pages, the one it opens on first. */
-export const DOOR_PAGES: Readonly<Record<DoorKey, readonly TabKey[]>> = { desk: ["queue", "todo"], roll: ["search"], me: ["me", "notices"] };
-const DOORS = Object.keys(DOOR_PAGES) as DoorKey[];
+export type TabKey = OfficerPage;
+export type DoorKey = OfficerDoorKey;
+/**
+ * The doors and their pages are the shared definition (`@soulledger/core/domain/doors` `OFFICER_APP_DOORS`: the web's
+ * five doors, the ones with a page here, then 我) -- not a second table. Each door's pages, the one it opens on first.
+ */
+const DOOR_LIST = officerDoors();
+export const DOOR_PAGES = Object.fromEntries(DOOR_LIST.map((d) => [d.key, d.pages])) as Readonly<Record<DoorKey, readonly TabKey[]>>;
+const DOORS = DOOR_LIST.map((d) => d.key);
+/** Every page, door by door: the order `visibleTabs` answers in. */
+export const TABS: readonly { key: TabKey }[] = DOOR_LIST.flatMap((d) => d.pages.map((key) => ({ key })));
 export const doorOf = (page: TabKey): DoorKey => DOORS.find((d) => DOOR_PAGES[d].includes(page)) ?? "me";
 
 /**

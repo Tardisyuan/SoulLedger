@@ -8,7 +8,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AccessibilityInfo, AppState } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
-import { RefreshFailed, Row, visibleTabs } from "../kit";
+import { officerDoors } from "@soulledger/core/domain/doors";
+import { RefreshFailed, Row, TAB_CODES, doorOf, visibleTabs } from "../kit";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, overviewParts } from "../screens/queue";
@@ -495,6 +496,21 @@ describe("the shell", () => {
     expect(screen.queryByText("JUDGE")).toBeNull();
     expect(screen.getByTestId("tab-notices")).toBeTruthy();
     expect(screen.queryByTestId("mfa-banner")).toBeNull();
+  });
+
+  // The doors are the shared definition (@soulledger/core/domain/doors, user 2026-11-13 Q8), not a table of this app's own.
+  it("the bar draws the shared definition's doors, in its order, and each opens on that door's first page", async () => {
+    renderOfficer(<Shell />);
+    await screen.findByTestId("tab-queue-screen");
+    const doors = officerDoors();
+    expect(within(screen.getByTestId("tab-bar")).getAllByRole("tab").map((n) => n.props.testID)).toEqual(doors.map((d) => `door-${d.key}`));
+    for (const door of doors) {
+      fireEvent.press(screen.getByTestId(`door-${door.key}`));
+      expect(await screen.findByTestId(`tab-${door.pages[0]}-screen`)).toBeTruthy();
+      for (const page of door.pages) expect(doorOf(page)).toBe(door.key);
+    }
+    // Every page the definition names has its codes here, and none is left over.
+    expect(Object.keys(TAB_CODES).sort()).toEqual(doors.flatMap((d) => d.pages).sort());
   });
 
   // opt-apps2 N1 + N2: the to-do list asks again on a return from the background, in place; the face sheet's
