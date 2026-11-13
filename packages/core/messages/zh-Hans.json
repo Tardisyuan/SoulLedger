@@ -4506,7 +4506,7 @@
       },
       "eternal_sentence_by_civ": {
         "cn": {
-          "BLISS": "{{name}}按旧判决留在天界，没有下一世。"
+          "BLISS": "{{name}} 已位列仙班，不入轮回，没有下一世。"
         },
         "gr": {
           "BLISS": "{{name}}永居至福岛，没有下一世。"
@@ -5835,7 +5835,7 @@
       },
       "eternal_title_by_civ": {
         "cn": {
-          "BLISS": "旧判留在天界"
+          "BLISS": "位列仙班"
         },
         "eu": {
           "BLISS": "永在天国"
@@ -5849,7 +5849,7 @@
       },
       "eternal_no_rebirth_by_civ": {
         "cn": {
-          "BLISS": "按旧判决留在天界者不申请转生。"
+          "BLISS": "位列仙班者不再申请转生。"
         },
         "gr": {
           "BLISS": "永居至福岛者不申请转生。"
@@ -10164,19 +10164,19 @@
     "failed": "暂时查不到原因,请稍后再试。",
     "ai_label": "AI 措辞 · 原因由系统按权限规则算出",
     "needs": "所需权限:{name}",
-    "your_roles": "你的角色:{roles}",
+    "your_roles": "本账号的角色:{roles}",
     "who_can": "能做这件事的角色:{roles}",
-    "scope_kinds": "你的数据范围:{kinds}",
+    "scope_kinds": "本账号的数据范围:{kinds}",
     "reason": {
-      "allowed": "你可以做这件事。",
+      "allowed": "这件事可以做。",
       "soul_account": "灵魂账号不持有任何官员权限。",
       "global_admin_only": "这项改的是所有殿共用的配置,只给不属于任何殿的全局管理员。",
       "admin_only": "这项只给管理员,其他角色在权限表里勾上也不生效。",
-      "role_forbidden": "这项对你的角色是禁止的,权限表里勾上也不生效。",
-      "design_approve_conflict": "你的角色能设计流程;按规定,设计流程的人不能审批。",
-      "missing_permission": "你的角色没有这项权限。需要的话请找本殿管理员调整。",
-      "viewing_read_only": "你正在以他人身份只读查看,这段时间不能做写操作。",
-      "out_of_scope": "你有这项权限,但这条记录不在你能看到的范围内。"
+      "role_forbidden": "这项对本账号的角色是禁止的,权限表里勾上也不生效。",
+      "design_approve_conflict": "本账号的角色能设计流程;按规定,设计流程的人不能审批。",
+      "missing_permission": "本账号的角色没有这项权限。需要的话请找本殿管理员调整。",
+      "viewing_read_only": "正在以他人身份只读查看,这段时间不能做写操作。",
+      "out_of_scope": "有这项权限,但这条记录不在本账号能看到的范围内。"
     }
   },
   "audit_ask": {
@@ -10240,7 +10240,7 @@
     "verdict": {
       "ask": "起草判词",
       "need_verdict": "先选定裁决,再起草。",
-      "note": "AI 只按你选定的裁决起草;放进判词框后由你修改、保存。",
+      "note": "AI 只按选定的裁决起草;放进判词框后由判官修改、保存。",
       "insert": "放入判词框",
       "replace": "替换判词框里的文字",
       "discard": "不用",
@@ -10254,7 +10254,7 @@
     "screen": {
       "run": "AI 预筛",
       "sort": "按风险排序",
-      "note": "只排序,不隐藏也不删除;决定仍由你做。",
+      "note": "只排序,不隐藏也不删除;决定仍由审核员做。",
       "score": "风险 {score}",
       "fallback": "AI 不可用或本殿未开通,只用规则分。",
       "model": "模型 · {model}",

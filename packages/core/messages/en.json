@@ -4506,7 +4506,7 @@
       },
       "eternal_sentence_by_civ": {
         "cn": {
-          "BLISS": "{{name}} stays in the heavens under an old ruling; there is no next life."
+          "BLISS": "{{name}} has joined the immortals, outside the wheel of rebirth; there is no next life."
         },
         "gr": {
           "BLISS": "{{name}} dwells in the Isles of the Blessed forever; there is no next life."
@@ -5835,7 +5835,7 @@
       },
       "eternal_title_by_civ": {
         "cn": {
-          "BLISS": "In the heavens under an old ruling"
+          "BLISS": "Joined the immortals"
         },
         "eu": {
           "BLISS": "In Heaven forever"
@@ -5849,7 +5849,7 @@
       },
       "eternal_no_rebirth_by_civ": {
         "cn": {
-          "BLISS": "Those kept in the heavens under an old ruling do not apply for rebirth."
+          "BLISS": "Those who have joined the immortals do not apply for rebirth."
         },
         "gr": {
           "BLISS": "Those who dwell in the Isles of the Blessed forever do not apply for rebirth."
