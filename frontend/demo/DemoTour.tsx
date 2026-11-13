@@ -121,13 +121,15 @@ const firstInView = (css: string) => Array.from(document.querySelectorAll(css)).
 
 /**
  * The console's page head (第三十批: 顶线 + 卷宗头, which replaced the identity band), and the mark the seal lands on: the
- * door rail's brand mark (第三十批第 4 步: the sidebar and its hall seal are gone). The page head carries no seal of its own.
- * On a phone the rail is the bottom bar and draws no mark, so there is nothing to land on and the seal just fades.
+ * door rail's brand mark (第三十批第 4 步: the sidebar and its hall seal are gone). On a phone the rail is the bottom bar
+ * and draws no mark, so the seal settles into the page head's civilization watermark (`CivMark`, top right of the head)
+ * instead: the one emblem a phone's console always has in view under the toolbar. `e2e/demo/support.ts` reads the same two.
  */
+const HAND_OFF_MARKS = ["[data-testid='door-rail'] [data-brand-mark]", "[data-testid='page-head'] .page-head-wm"] as const;
 function handOffTargets(): { band: Element | null; mark: Element | null } {
   const band = firstInView("[data-testid='page-head']");
-  const mark = firstInView("[data-testid='door-rail'] [data-brand-mark]");
-  return { band, mark: inView(mark) ? mark : null };
+  const mark = HAND_OFF_MARKS.map(firstInView).find(Boolean) ?? null;
+  return { band, mark };
 }
 
 type Box = { x: number; y: number; w: number; h: number; r: number };

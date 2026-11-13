@@ -153,10 +153,11 @@ export async function watchHandOff(page: Page): Promise<void> {
       if (cover) {
         seen.frames++;
         const mine = cover.querySelector("[data-testid='seal'], [data-brand-mark]");
-        // 第三十批第 4 步:the console's mark is the door rail's brand mark, whatever the cover carried.
-        const css = "[data-testid='door-rail'] [data-brand-mark]";
+        // 第三十批第 4 步:the console's mark is the door rail's brand mark, whatever the cover carried; on a phone (the
+        // rail is the bottom bar, no mark) the page head's civilization watermark. Same two as DemoTour's HAND_OFF_MARKS.
+        const marks = ["[data-testid='door-rail'] [data-brand-mark]", "[data-testid='page-head'] .page-head-wm"];
         seen.cover = rect(mine);
-        seen.real = Array.from(document.querySelectorAll(css)).map(rect).find(Boolean) ?? null;
+        seen.real = marks.map((css) => Array.from(document.querySelectorAll(css)).map(rect).find(Boolean) ?? null).find(Boolean) ?? null;
         seen.landing = !!document.querySelector("[data-testid='landing-civs']");
         // Once the cover has started to close (smaller than the window), the court's name on it is already gone.
         const coverBox = cover.querySelector<HTMLElement>(".demo-cover")?.getBoundingClientRect();
