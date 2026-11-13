@@ -498,6 +498,7 @@ export function PageShell({
 }: PageShellProps) {
   const width = WIDTH_CLASS[variant];
   const filtersRef = useOverflowEnd<HTMLDivElement>();
+  const tabsRef = useOverflowEnd<HTMLDivElement>();
   const plaque = usePlaqueValue();
   useReportHeading(typeof title === "string" ? title : null);
 
@@ -546,7 +547,9 @@ export function PageShell({
           所有标签页而不是当前这个。 */}
       {tabs ? (
         <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-line))]">
-          <div className={cn(width, "px-4 md:px-8 flex items-center gap-1")}>{tabs}</div>
+          {/* 放不下就横滑(右缘渐隐),不折行、也不撑宽页面:393 英文的审计页「Online sessions」伸到 430,手机浏览器
+              于是把布局视口放宽到 430,底部门栏被推出屏幕。 */}
+          <div ref={tabsRef} className={cn(width, "px-4 md:px-8 flex items-center gap-1 overflow-x-auto [scrollbar-width:none] whitespace-nowrap [&>*]:shrink-0")}>{tabs}</div>
         </div>
       ) : null}
 
