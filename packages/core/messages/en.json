@@ -12,7 +12,33 @@
     "more": "More",
     "soul_events": "Soul events",
     "skip_to_main": "Skip to main content",
-    "search_hint": "Search, jump, or give a command"
+    "search_hint": "Search, jump, or give a command",
+    "doors": {
+      "desk": {
+        "label": "Cases",
+        "title": "Cases"
+      },
+      "roll": {
+        "label": "Roll",
+        "title": "Roll"
+      },
+      "statutes": {
+        "label": "Statutes",
+        "title": "Statutes"
+      },
+      "office": {
+        "label": "Office",
+        "title": "Hall office"
+      },
+      "mortal": {
+        "label": "Mortals",
+        "title": "Mortal world"
+      },
+      "me": {
+        "label": "Me",
+        "title": "Me"
+      }
+    }
   },
   "auth": {
     "login": "Sign in",
@@ -9989,17 +10015,11 @@
   "caseDesk": {
     "rail": {
       "label": "Doors",
-      "desk": "Cases",
       "desk_glyph": "C",
-      "souls": "Register",
       "souls_glyph": "R",
-      "corpus": "Statutes",
       "corpus_glyph": "S",
-      "hall": "Hall office",
       "hall_glyph": "H",
-      "moderation": "Mortal world",
       "moderation_glyph": "W",
-      "me": "Me",
       "me_glyph": "M"
     },
     "sources_label": "By source",

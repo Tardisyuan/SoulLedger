@@ -7,6 +7,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DOOR_ICON,
+  DOOR_NAV_KEY,
   DOOR_ORDER,
   DOOR_RAIL_KEY,
   OFFICER_APP_DOORS,
@@ -41,6 +43,18 @@ describe("表的形状", () => {
       }
     }
     expect(Object.keys(DOOR_RAIL_KEY).sort()).toEqual([...DOOR_ORDER].sort());
+  });
+
+  it("每一门(和「我」)有门名的键和一个图标;官员 App 的门键是同一套键", () => {
+    expect(Object.keys(DOOR_NAV_KEY).sort()).toEqual([...DOOR_ORDER].sort());
+    const navKeys = [...Object.values(DOOR_NAV_KEY), "me"];
+    expect(new Set(navKeys).size).toBe(navKeys.length);
+    expect(Object.keys(DOOR_ICON).sort()).toEqual([...navKeys].sort());
+    for (const paths of Object.values(DOOR_ICON)) {
+      expect(paths.length).toBeGreaterThan(0);
+      for (const d of paths) expect(d).toMatch(/^M[\d.\s,a-zA-Z-]+$/);
+    }
+    for (const d of officerDoors()) expect(navKeys).toContain(d.key);
   });
 
   it("一页只在表里出现一次;每一门至少有一页;不是菜单项的页自带标签键", () => {

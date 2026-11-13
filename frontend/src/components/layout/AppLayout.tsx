@@ -50,7 +50,7 @@ import { leaveGoodbye } from "@/src/lib/goodbye";
  * 是页面自己的 PageShell 页头(顶线 + 卷宗头,标题即 `<h1>`)。页面经 `usePlaque` 报的殿名 / 案号 / 概览
  * 由这里收下,经 `PlaqueValueProvider` 交给那个页头;面包屑在末段与 `<h1>` 相同时省掉末段。
  *
- * - ≤ 768 门栏到底部(门 +「我」;殿司只读收进「我」),内容让出 64(`--bottom-bar`)。
+ * - ≤ 768 门栏到底部(门 +「我」;殿司只读收进「我」),内容让出 56 + 安全区(`--bottom-bar`)。
  * - 工具条吸顶;PageShell 的筛选栏吸在它下沿(`--below-band` = 52 + 代看条)。页头不吸顶。
  * - 连接状态只在断开时出现(`ConnectionBanner`,v4 第八批第 4 条):桌面是工具条里面包屑后面的一个
  *   胶囊,加工具条下沿一条 2px 状态色线;≤ 768 浮在工具条下沿正中。工具条高度不变,内容不动、不被盖住。
@@ -164,7 +164,7 @@ export function AppLayout({ children, bare = false }: { children: React.ReactNod
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
       <DoorRail />
 
-      <div ref={mainBoxRef} className="min-w-0 max-[768px]:pb-16">
+      <div ref={mainBoxRef} className="min-w-0 max-[768px]:pb-(--bottom-bar)">
         {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。
             v4:工具条用 `.shell-glow`(globals.css)。
             右侧顺序照 v4:时辰 · 舒适 / 紧凑 · 问一问 · 搜索 · 通知 · 用户。 */}

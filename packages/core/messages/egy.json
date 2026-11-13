@@ -12,7 +12,33 @@
     "soul_events": "Medu Ba",
     "skip_to_main": "Sni Menu",
     "search_hint": "Shesep · Shem · Wedja",
-    "language_egy_note": "Kemet: Medu Iri-N Em Ren Tepy Kemet, Mi Medu Mawy. Maa Wa — Nen Medu Kemet Tepy. Ren Tepy Neb, Em Sesh: docs/lore-verification/egy-lexicon-roots.md."
+    "language_egy_note": "Kemet: Medu Iri-N Em Ren Tepy Kemet, Mi Medu Mawy. Maa Wa — Nen Medu Kemet Tepy. Ren Tepy Neb, Em Sesh: docs/lore-verification/egy-lexicon-roots.md.",
+    "doors": {
+      "desk": {
+        "label": "Sepu",
+        "title": "Sepu"
+      },
+      "roll": {
+        "label": "Sesh Ba",
+        "title": "Sesh Ba"
+      },
+      "statutes": {
+        "label": "Hep",
+        "title": "Sesh Hep"
+      },
+      "office": {
+        "label": "Per",
+        "title": "Per Wesekhet"
+      },
+      "mortal": {
+        "label": "Remetj",
+        "title": "Ta Remetj"
+      },
+      "me": {
+        "label": "Djes",
+        "title": "Djes"
+      }
+    }
   },
   "auth": {
     "login": "Aq",
@@ -9987,17 +10013,11 @@
   "caseDesk": {
     "rail": {
       "label": "Sebkhet",
-      "desk": "Sepu",
       "desk_glyph": "Wedja",
-      "souls": "Sesh Ba",
       "souls_glyph": "Sesh",
-      "corpus": "Sesh Hep",
       "corpus_glyph": "Hep",
-      "hall": "Per Wesekhet",
       "hall_glyph": "Per",
-      "moderation": "Ta Remetj",
       "moderation_glyph": "Remetj",
-      "me": "Djes",
       "me_glyph": "Djes"
     },
     "sources_label": "Maa Mi Tepy",

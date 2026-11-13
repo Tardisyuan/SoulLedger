@@ -23,13 +23,40 @@ export type DoorId = "desk" | "register" | "statutes" | "office" | "mortal";
 /** 门栏上的顺序。 */
 export const DOOR_ORDER: readonly DoorId[] = ["desk", "register", "statutes", "office", "mortal"];
 
-/** 门上的字:Web 门栏的键(`caseDesk.rail.<key>`,沿用第 2 步的键)。 */
+/** 中文门上的字:Web 门栏的键(`caseDesk.rail.<key>_glyph`,沿用第 2 步的键)。门名不在这里,在 `DOOR_NAV_KEY`。 */
 export const DOOR_RAIL_KEY: Readonly<Record<DoorId, string>> = {
   desk: "desk",
   register: "souls",
   statutes: "corpus",
   office: "hall",
   mortal: "moderation",
+};
+
+/**
+ * 门名的键(第三十八批):`nav.doors.<key>.label`(门格下的词、面包屑、正文里提到门)与 `.title`(悬停提示)。
+ * 「我」不是门,也有一格。册在这里叫 `roll`,与官员 App 的 `officer_app.doors.roll` 同名。
+ */
+export type DoorNavKey = "desk" | "roll" | "statutes" | "office" | "mortal" | "me";
+export const DOOR_NAV_KEY: Readonly<Record<DoorId, DoorNavKey>> = {
+  desk: "desk",
+  register: "roll",
+  statutes: "statutes",
+  office: "office",
+  mortal: "mortal",
+};
+
+/**
+ * 英文与 egy 门格上的图标(第三十八批;第三十批第 4 步那一套):viewBox 24,线条(`fill: none`、`stroke: currentColor`、
+ * 圆头圆角),描边由各端定(常态 1.6、选中 1.8;头像 1.7)。只看轮廓也分得开:两张叠起的卷宗、带书签的册、
+ * 两头卷起的律卷、带柱的殿、两个对话框、一个人。中文不画图标,写门上的字。每门一组 `<path d>`,Web 与 App 各自画。
+ */
+export const DOOR_ICON: Readonly<Record<DoorNavKey, readonly string[]>> = {
+  desk: ["M4 7h11l2 2v10H4z", "M7 4h11l2 2v10", "M7.5 12h6M7.5 15h4"],
+  roll: ["M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z", "M5 18a2 2 0 0 1 2-2h11", "M13 4v7l-2-1.5L9 11V4"],
+  statutes: ["M7 5h10v14H7z", "M7 5a2 2 0 1 0-4 0v1h4M17 19a2 2 0 1 0 4 0v-1h-4", "M10 9h4M10 12h4M10 15h2"],
+  office: ["M3 9l9-5 9 5", "M5 9h14M6 9v9M10 9v9M14 9v9M18 9v9M4 20h16"],
+  mortal: ["M4 6h12v8H9l-4 3v-3H4z", "M16 9h4v7h-1v3l-3-3h-4v-2"],
+  me: ["M15.5 9a3.5 3.5 0 1 1-7 0a3.5 3.5 0 1 1 7 0", "M5 20c1-4 4-6 7-6s6 2 7 6"],
 };
 
 export const ROLE_DOORS: Readonly<Record<string, readonly DoorId[]>> = {

@@ -7,10 +7,11 @@
  * button is ink-filled; the tinted status tag (`Tag`) and the touch sizes (`touch`) are here too.
  */
 import { fetchFailureOf } from "@soulledger/core/api/client";
-import { officerDoors, type OfficerDoorKey, type OfficerPage } from "@soulledger/core/domain/doors";
+import { DOOR_ICON, officerDoors, type OfficerDoorKey, type OfficerPage } from "@soulledger/core/domain/doors";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
 import { BandPattern, Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
@@ -520,13 +521,17 @@ export function roleName(enumLabel: ReturnType<typeof useI18n>["enumLabel"], rol
 }
 
 /**
- * 56 high, equal parts, surface-1 with a 1px top line: one cell per door that has a page this officer gets. Each cell
- * is the door's glyph in the serif (18; a glyph longer than one character, 12 -- 第三十批 七.2) over its name; the
- * current door in the civilization colour, 600. The unread dot sits on 我 (九.5).
+ * 56 high plus the safe area, equal parts (each at least 64 wide), surface-1 with a 1px top line: one cell per door that
+ * has a page this officer gets (第三十八批 四). In zh each cell is the door's glyph in the serif (18 / 22) over its name;
+ * in en / egy it is the shared 24px line icon (`DOOR_ICON`, the web's set) over its name (`officer_app.doors.*.label`,
+ * Geist 500 11 / 14) -- `.glyph` is drawn only in zh. The current door in ink (the icon's stroke 1.8), with a 14 x 2
+ * civilization-colour line 3 under the glyph box. The unread dot (8, `neg`, a 2px ring of the bar's ground) sits on
+ * 我's glyph box, 4 past its right edge and 1 above its top (九.5).
  */
 export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; onSelect: (tab: TabKey) => void; unread?: boolean; tabs?: readonly TabKey[] }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, locale } = useI18n();
+  const zh = locale === "zh-Hans";
   const { bottom } = useSafeAreaInsets();
   const on = doorOf(current);
   return (
@@ -535,8 +540,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
         const first = DOOR_PAGES[door].find((page) => !tabs || tabs.includes(page));
         if (!first) return null;
         const selected = door === on;
-        const colour = selected ? t.plaque : t.inkMuted;
-        const glyph = tr(`officer_app.doors.${door}.glyph`);
+        const colour = selected ? t.ink : t.inkMuted;
         const dot = door === "me" && unread;
         return (
           <Pressable
@@ -547,13 +551,22 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
             // The dot is drawn, not read: the unread state goes into the label (review 2026-11-01).
             accessibilityLabel={dot ? tr("officer_app.doors.me_unread") : tr(`officer_app.doors.${door}.label`)}
             onPress={() => onSelect(first)}
-            style={styles.tab}
+            style={[styles.tab, { gap: zh ? 2 : 3 }]}
           >
-            <View>
-              <Txt style={{ color: colour, fontFamily: family.title, fontSize: [...glyph].length > 1 ? 12 : 18, lineHeight: 24 }}>{glyph}</Txt>
-              {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.neg }]} /> : null}
+            <View style={styles.mark}>
+              {zh ? (
+                <Txt style={{ color: colour, fontFamily: family.title, fontSize: 18, lineHeight: 22 }}>{tr(`officer_app.doors.${door}.glyph`)}</Txt>
+              ) : (
+                <Svg testID={`door-${door}-icon`} width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={colour} strokeWidth={selected ? 1.8 : 1.6} strokeLinecap="round" strokeLinejoin="round">
+                  {DOOR_ICON[door].map((d) => (
+                    <Path key={d} d={d} />
+                  ))}
+                </Svg>
+              )}
+              {selected ? <View testID={`door-${door}-current`} style={[styles.currentLine, { backgroundColor: t.plaque }]} /> : null}
+              {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.neg, borderColor: t.s1 }]} /> : null}
             </View>
-            <Txt variant="caption" style={{ color: colour, fontFamily: selected ? family.ui[600] : family.ui[400] }}>
+            <Txt variant="caption" numberOfLines={1} style={{ color: colour, fontSize: 11, lineHeight: 14, fontFamily: family.ui[zh ? 400 : 500] }}>
               {tr(`officer_app.doors.${door}.label`)}
             </Txt>
           </Pressable>
@@ -664,8 +677,11 @@ const styles = StyleSheet.create({
   bandHall: { flexShrink: 1 },
   bandName: { flexShrink: 1 },
   tabBar: { flexDirection: "row", borderTopWidth: 1 },
-  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 2 },
-  dot: { position: "absolute", top: 2, right: -7, width: 6, height: 6, borderRadius: 3 },
+  tab: { flex: 1, minWidth: 64, height: 56, alignItems: "center", justifyContent: "center" },
+  // The glyph box: 24 high. The current line sits 3 under it; the dot (8 plus its 2px ring) 4 past its right edge, 1 above it.
+  mark: { height: 24, minWidth: 24, alignItems: "center", justifyContent: "center" },
+  currentLine: { position: "absolute", left: "50%", bottom: -5, width: 14, height: 2, marginLeft: -7, borderRadius: 1 },
+  dot: { position: "absolute", top: -3, right: -6, width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
   banner: { paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   bannerRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
 });

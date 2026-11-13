@@ -98,12 +98,12 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
 
   // 不是菜单项的门内页(案卷台、分诊、总簿)按门写:门 › 门的首页 › 这一页(Design 第三十六批 第一节第 2 条、
   // 第三十七批第 1 条:「审 › 案卷台 › 分诊」)。菜单树里它们只能借住到前缀的菜单项下(/judgment/queue 曾读作「审判队列 / 分诊队列」)。
-  // 门在中文里写门上的字(审),别的语言写门名(Cases):en 的门字是一个字母。
+  // 门在中文里写门上的字(审),别的语言写门名(Cases,`nav.doors.*.label`;第三十八批:文字里提到门写门名,不画图标)。
   const gated = pageOf(pathname);
   if (gated?.gate && gated.labelKey && gated.path === pathname) {
     const door = DOORS[gated.door];
     const home = PAGES.find((p) => p.path === door.home);
-    const doorCrumb: Crumb = { label: t(`caseDesk.rail.${door.key}${locale === "zh-Hans" ? "_glyph" : ""}`) };
+    const doorCrumb: Crumb = { label: t(locale === "zh-Hans" ? `caseDesk.rail.${door.key}_glyph` : `nav.doors.${door.nav}.label`) };
     const homeCrumb: Crumb[] = home?.labelKey && home.path !== pathname ? [{ label: t(home.labelKey), href: home.path }] : [];
     return [doorCrumb, ...homeCrumb, { label: t(gated.labelKey) }];
   }

@@ -120,7 +120,7 @@ describe("AppLayout's phone sheet (门栏「我」) has a keyboard way in, round
   });
 
   it("becomes a named dialog when 我 opens it", () => {
-    MESSAGES["caseDesk.rail.me"] = "本人";
+    MESSAGES["nav.doors.me.label"] = "本人";
     renderLayout();
     fireEvent.click(meCell());
 
