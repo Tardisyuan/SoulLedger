@@ -42677,8 +42677,10 @@ components:
       - duplicate_columns
       - duplicate_media
       - duplicate_word
+      - email_in_person
       - email_invalid
       - email_taken
+      - email_unchanged
       - embedding_unavailable
       - empty_changes
       - empty_file
@@ -42707,6 +42709,7 @@ components:
       - final_required
       - final_review_required
       - five_heinous_must_fail
+      - forbidden
       - foreign_node
       - foreign_realm
       - foreign_stops_choice_required
@@ -42726,6 +42729,10 @@ components:
       - idempotency_key_reused
       - image_not_found
       - images_unavailable
+      - impersonation_ended
+      - impersonation_expired
+      - impersonation_invalid
+      - impersonation_read_only
       - implausible_lifespan
       - import_rows_invalid
       - incurable_is_eternal_in_tartarus
@@ -42767,6 +42774,7 @@ components:
       - malformed_csv
       - media_not_found
       - method_not_allowed
+      - mfa_required
       - mfa_setup_required
       - missing_columns
       - missing_id_column
@@ -42846,6 +42854,7 @@ components:
       - not_the_approver
       - not_tudi_officer
       - not_uploader
+      - not_verified
       - not_weighed
       - note_required
       - nothing_to_change
@@ -42877,6 +42886,7 @@ components:
       - post_sealed
       - precondition_failed
       - private_address
+      - proof_required
       - rate_limited
       - realm_full
       - realm_not_allowed
@@ -42899,6 +42909,9 @@ components:
       - request_closed
       - request_pending
       - request_throttled
+      - reset_code_attempts_exceeded
+      - reset_code_expired
+      - reset_code_wrong
       - reset_link_invalid
       - retry_has_no_destination
       - retry_not_a_destination
@@ -43006,6 +43019,7 @@ components:
       - workflow_running
       - workflow_started
       - wrong
+      - wrong_password
       - wrong_status
       type: string
       description: |-
@@ -43112,8 +43126,10 @@ components:
         * `duplicate_columns` - duplicate_columns
         * `duplicate_media` - duplicate_media
         * `duplicate_word` - duplicate_word
+        * `email_in_person` - email_in_person
         * `email_invalid` - email_invalid
         * `email_taken` - email_taken
+        * `email_unchanged` - email_unchanged
         * `embedding_unavailable` - embedding_unavailable
         * `empty_changes` - empty_changes
         * `empty_file` - empty_file
@@ -43142,6 +43158,7 @@ components:
         * `final_required` - final_required
         * `final_review_required` - final_review_required
         * `five_heinous_must_fail` - five_heinous_must_fail
+        * `forbidden` - forbidden
         * `foreign_node` - foreign_node
         * `foreign_realm` - foreign_realm
         * `foreign_stops_choice_required` - foreign_stops_choice_required
@@ -43161,6 +43178,10 @@ components:
         * `idempotency_key_reused` - idempotency_key_reused
         * `image_not_found` - image_not_found
         * `images_unavailable` - images_unavailable
+        * `impersonation_ended` - impersonation_ended
+        * `impersonation_expired` - impersonation_expired
+        * `impersonation_invalid` - impersonation_invalid
+        * `impersonation_read_only` - impersonation_read_only
         * `implausible_lifespan` - implausible_lifespan
         * `import_rows_invalid` - import_rows_invalid
         * `incurable_is_eternal_in_tartarus` - incurable_is_eternal_in_tartarus
@@ -43202,6 +43223,7 @@ components:
         * `malformed_csv` - malformed_csv
         * `media_not_found` - media_not_found
         * `method_not_allowed` - method_not_allowed
+        * `mfa_required` - mfa_required
         * `mfa_setup_required` - mfa_setup_required
         * `missing_columns` - missing_columns
         * `missing_id_column` - missing_id_column
@@ -43281,6 +43303,7 @@ components:
         * `not_the_approver` - not_the_approver
         * `not_tudi_officer` - not_tudi_officer
         * `not_uploader` - not_uploader
+        * `not_verified` - not_verified
         * `not_weighed` - not_weighed
         * `note_required` - note_required
         * `nothing_to_change` - nothing_to_change
@@ -43312,6 +43335,7 @@ components:
         * `post_sealed` - post_sealed
         * `precondition_failed` - precondition_failed
         * `private_address` - private_address
+        * `proof_required` - proof_required
         * `rate_limited` - rate_limited
         * `realm_full` - realm_full
         * `realm_not_allowed` - realm_not_allowed
@@ -43334,6 +43358,9 @@ components:
         * `request_closed` - request_closed
         * `request_pending` - request_pending
         * `request_throttled` - request_throttled
+        * `reset_code_attempts_exceeded` - reset_code_attempts_exceeded
+        * `reset_code_expired` - reset_code_expired
+        * `reset_code_wrong` - reset_code_wrong
         * `reset_link_invalid` - reset_link_invalid
         * `retry_has_no_destination` - retry_has_no_destination
         * `retry_not_a_destination` - retry_not_a_destination
@@ -43441,6 +43468,7 @@ components:
         * `workflow_running` - workflow_running
         * `workflow_started` - workflow_started
         * `wrong` - wrong
+        * `wrong_password` - wrong_password
         * `wrong_status` - wrong_status
     ProblemFieldError:
       type: object

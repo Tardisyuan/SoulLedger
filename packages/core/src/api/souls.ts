@@ -321,7 +321,11 @@ export type SoulImportPreview = Schemas["SoulImportPreview"];
 export type SoulImportRow = Schemas["SoulImportRow"];
 export type SoulImportCommitResult = Schemas["SoulImportCommit"];
 /** 400 body: the file as a whole is unusable (`code`, plus `columns` / `max_rows` / `max_bytes` where they apply). */
-export type SoulImportFileError = Schemas["SoulImportFileError"];
+/**
+ * What the screens read off a refused file: its `code` and the code's own fields. Looser than the problem body in the
+ * schema on purpose — the screens also hold a local `{ code: "unknown" }` when the refusal is not one of these.
+ */
+export type SoulImportFileError = Omit<Partial<Schemas["SoulImportFileError"]>, "code"> & { code: string };
 
 /**
  * Most data rows one import or 出身地域补录 file may carry: `MAX_ROWS` in backend/apps/souls/importer.py

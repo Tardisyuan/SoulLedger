@@ -129,9 +129,8 @@ def test_a_hall_cannot_write_another_halls_rows(rls):
         cursor.execute(f"UPDATE {JUDGMENTS} SET tenant_id = %s WHERE id = %s", [a.pk, b_case.pk])  # noqa: S608
         assert cursor.rowcount == 0
     # Moving A's own row into B fails the WITH CHECK half of the policy.
-    with pytest.raises(DatabaseError, match="row-level security"):
-        with tenant_transaction(a.pk) as cursor:
-            cursor.execute(f"UPDATE {SOULS} SET tenant_id = %s WHERE id = %s", [b.pk, a_soul.pk])  # noqa: S608
+    with pytest.raises(DatabaseError, match="row-level security"), tenant_transaction(a.pk) as cursor:
+        cursor.execute(f"UPDATE {SOULS} SET tenant_id = %s WHERE id = %s", [b.pk, a_soul.pk])  # noqa: S608
     with tenant_transaction(b.pk) as cursor:
         cursor.execute(f"SELECT name, tenant_id FROM {SOULS} WHERE id = %s", [b_soul.pk])  # noqa: S608
         assert cursor.fetchone() == (b_soul.name, b.pk)
