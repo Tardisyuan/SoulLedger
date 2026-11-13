@@ -484,6 +484,9 @@ describe("丙 · 证据采信", () => {
     renderPage();
     await screen.findAllByTestId("evidence-row");
     expect(screen.getAllByTestId("evidence-row")).toHaveLength(3);
+    // 每一行带功过记号(第三十批第 3 步第 4 条),功与过各是各的形。
+    const marks = screen.getAllByTestId("evidence-row").map((r) => r.querySelector("[data-mark]")?.getAttribute("data-mark"));
+    expect(marks.every((m) => /-(merit|demerit)$/.test(m ?? ""))).toBe(true);
     expect(screen.queryByText("立户")).toBeNull();
     const section = screen.getByTestId("evidence-admission");
     expect(within(section).getByText("2 / 3")).toBeInTheDocument();
