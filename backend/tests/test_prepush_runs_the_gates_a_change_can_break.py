@@ -2032,7 +2032,9 @@ class TestTwoSidesAtOnce:
     def _repo(self, checkouts, tmp_path):
         main, _ = checkouts
         (main / "mobile" / "src").mkdir(parents=True)
-        (main / "mobile" / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('x');\n")
+        (main / "mobile" / "src" / "r.test.ts").write_text(
+            # reads what this push changes: a reader that stays inside its app no longer runs (2026-11-13)
+            "import fs from 'fs'; fs.readFileSync('../../backend/x.py');\n")
         _git(main, "add", "-A")
         _git(main, "commit", "-q", "-m", "mobile reader")
         b = tmp_path / "bin"
