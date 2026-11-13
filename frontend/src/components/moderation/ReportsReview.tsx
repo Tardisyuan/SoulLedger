@@ -20,6 +20,7 @@ import {
 } from "@soulledger/core/hooks/useSocialModeration";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
@@ -183,6 +184,7 @@ export function ReportsReview() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const fail = useFailureToast();
+  const { user } = useTenant();
   const wordList = useSensitiveWords(1);
   const listed: SensitiveWord[] = wordList.data?.results ?? [];
   /** The words a held row's text contains, the holding one first; null when no word held it. */
@@ -272,8 +274,12 @@ export function ReportsReview() {
     }
   };
 
+  // The server refuses to approve one's own held content (`self_moderation`, moderation.py::moderate_content).
+  const ownPending = Boolean(selected?.pending && user && selected.pending.row.author?.user_id === user.id);
+  const canApprove = Boolean(selected) && !ownPending;
+
   const approve = () => {
-    if (!selected || busy) return;
+    if (!selected || busy || !canApprove) return;
     const note = reason.trim() || undefined;
     const steps: (() => Promise<unknown>)[] = [];
     if (selected.report) steps.push(() => resolve.mutateAsync({ id: selected.report!.id, resolution: "DISMISS", note }));
@@ -366,11 +372,11 @@ export function ReportsReview() {
         }
       } else if (key === "a") {
         e.preventDefault();
-        if (selected && !busy) setConfirming("approve");
+        if (canApprove && !busy) setConfirming("approve");
       } else if (key === "h") {
         e.preventDefault();
         hide();
-      } else if (key === "w") {
+      } else if (key === "w" && selected?.report) {
         e.preventDefault();
         warn();
       }
@@ -613,7 +619,7 @@ export function ReportsReview() {
               </div>
             )}
             <label htmlFor="review-reason" className="block text-xs text-[oklch(var(--color-ink-muted))]">
-              {t("social_moderation.review.reason_label")}
+              {t(selected.report ? "social_moderation.review.reason_label" : "social_moderation.review.reason_label_plain")}
             </label>
             <textarea
               id="review-reason"
@@ -634,7 +640,15 @@ export function ReportsReview() {
               </p>
             )}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button type="button" variant="primary" size="sm" onClick={approve} disabled={busy} aria-keyshortcuts="A">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={approve}
+                disabled={busy || !canApprove}
+                aria-keyshortcuts={canApprove ? "A" : undefined}
+                aria-describedby={ownPending ? "review-own-hint" : undefined}
+              >
                 {t("social_moderation.review.approve")}
                 <kbd className="ml-2 font-mono text-2xs">A</kbd>
               </Button>
@@ -676,7 +690,22 @@ export function ReportsReview() {
                 </span>
               )}
             </div>
-            <p className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("social_moderation.review.shortcuts")}</p>
+            {ownPending && (
+              <p id="review-own-hint" className="mt-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                {t("social_moderation.errors.self_moderation")}
+              </p>
+            )}
+            {/* Only the keys this item answers to: W needs a report, H a target, A someone else's content. */}
+            <p data-shortcuts="" className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+              {[
+                t("social_moderation.review.shortcut_move"),
+                canApprove && `A ${t("social_moderation.review.approve")}`,
+                canHide && `H ${t("social_moderation.actions.hide")}`,
+                selected.report && `W ${t("social_moderation.review.warn")}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
           </div>
         </section>
       )}

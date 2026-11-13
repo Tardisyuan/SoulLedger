@@ -475,13 +475,51 @@ describe("举报 · the C-08 review layout", () => {
     renderPage();
     await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
     expect(screen.queryByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.warn")}`) })).toBeNull();
-    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "x" } });
+    // No W here, so neither the legend nor the note's label mentions 警告.
+    const legend = detail().querySelector("[data-shortcuts]")!;
+    expect(legend).toHaveTextContent(`A ${tZh("social_moderation.review.approve")}`);
+    expect(legend).toHaveTextContent(`H ${tZh("social_moderation.actions.hide")}`);
+    expect(legend.textContent).not.toContain("W ");
+    expect(screen.queryByLabelText(tZh("social_moderation.review.reason_label"))).toBeNull();
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label_plain")), { target: { value: "x" } });
     fireEvent.keyDown(document.body, { key: "w" });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 20));
     });
     expect(apiMock.resolveReport).not.toHaveBeenCalled();
     expect(apiMock.act).not.toHaveBeenCalled();
+  });
+
+  it("one's own held-back post cannot be let through: 放行 is disabled with the reason, A does nothing, the legend drops A", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) =>
+      page(kind === "posts" ? [post({ author: { user_id: 2, display_name: "op" } })] : [])
+    );
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
+    const approve = within(detail()).getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) });
+    expect(approve).toBeDisabled();
+    expect(approve).toHaveAccessibleDescription(tZh("social_moderation.errors.self_moderation"));
+    fireEvent.keyDown(document.body, { key: "a" });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(apiMock.act).not.toHaveBeenCalled();
+    const legend = detail().querySelector("[data-shortcuts]")!;
+    expect(legend.textContent).not.toContain("A ");
+    expect(legend).toHaveTextContent(`H ${tZh("social_moderation.actions.hide")}`);
+  });
+
+  it("someone else's held-back post: 放行 stays enabled and carries no own-content hint", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
+    expect(within(detail()).getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) })).toBeEnabled();
+    expect(within(detail()).queryByText(tZh("social_moderation.errors.self_moderation"))).toBeNull();
   });
 
   it("letters typed into the reason box are text, not verdicts", async () => {
