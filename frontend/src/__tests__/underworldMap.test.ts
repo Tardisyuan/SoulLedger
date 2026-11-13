@@ -16,8 +16,10 @@ import {
   diyuVisits,
   greekVisits,
   mapStates,
+  nodesOf,
   paintStates,
   parseMapSvg,
+  passagesOf,
   pathVisits,
   readPalette,
   stationNameKeys,
@@ -293,7 +295,7 @@ describe("states follow the soul", () => {
     expect(svg.classList.contains("map-hide-branches")).toBe(true);
   });
 
-  it("Greece at the meadow: death and the three judges are walked, the cycle back to death is not followed", () => {
+  it("Greece at the meadow: death and the ferry are walked, the cycle back to death is not followed", () => {
     const svg = map("gr");
     const s = mapStates(
       svg,
@@ -303,7 +305,10 @@ describe("states follow the soul", () => {
       ]),
     );
     expect(s.nodes.get("gr-death")).toBe("walked");
-    expect(s.nodes.get("gr-three-judges")).toBe("walked");
+    expect(s.nodes.get("GR_ACHERON")).toBe("walked");
+    // The three judges sit on the meadow, not at a station of their own (batch 34; Gorgias 524a).
+    expect(s.nodes.has("gr-three-judges")).toBe(false);
+    expect(svg.querySelector('[id="gr-three-judges"]')).toBeNull();
     expect(s.nodes.get("GR_PLATO_MEADOW")).toBe("current");
     expect(s.nodes.get("gr-millennium")).toBe("ahead");
     expect(s.nodes.get("gr-lethe")).toBe("ahead");
@@ -346,9 +351,11 @@ describe("states follow the soul", () => {
     const edge = (from: string, to: string) => svg.querySelector(`.edge[data-from="${from}"][data-to="${to}"]`)!;
     expect(edge("eu-death", "EU_PURGATORY").getAttribute("data-state")).toBe("walked");
     expect(edge("eu-death", "EU_PURGATORY").getAttribute("stroke")).toBe(palette.walked);
-    expect(edge("eu-death", "EU_ACHERON").getAttribute("data-state")).toBe("ahead");
-    expect(edge("eu-death", "EU_ACHERON").getAttribute("stroke-dasharray")).toBe("4 5");
+    expect(edge("eu-death", "EU_ANTINFERNO").getAttribute("data-state")).toBe("ahead");
+    expect(edge("eu-death", "EU_ANTINFERNO").getAttribute("stroke-dasharray")).toBe("4 5");
     expect(stateOf(svg, "eu-hell")).toBe("ahead");
+    // The ferry is on the hell road only (user 2026-11-14): a purgatory soul never lights it.
+    expect(stateOf(svg, "EU_ACHERON")).toBe("ahead");
     expect(svg.querySelector("#EU_PURGATORY_T3_WRATH")!.getAttribute("fill")).toBe(palette.current);
     // The sample's pulse is gone; with no getBBox in jsdom the new one sits on the cell.
     expect(svg.querySelectorAll(".pulse")).toHaveLength(1);
@@ -378,6 +385,64 @@ describe("states follow the soul", () => {
     paintStates(svg, mapStates(svg, pathVisits([{ realm_code: "EG_DUAT_ENTRY", left_at: null }])), palette);
     expect(band("EG_TWENTYONE_SEBKHET").getAttribute("stroke")).toBe(palette.ahead);
     expect(band("EG_TWENTYONE_SEBKHET").getAttribute("stroke-opacity")).toBe("0.55");
+  });
+});
+
+describe("Europe's roads (batch 34): death → vestibule → ferry → circles; heaven straight from death", () => {
+  const edge = (svg: Element, from: string, to: string) => svg.querySelector(`.edge[data-from="${from}"][data-to="${to}"]`);
+  it.each(["dark", "light"])("%s: the edges run in that order, and there is a direct line to heaven", (theme) => {
+    const svg = map("eu", theme);
+    for (const [from, to] of [["eu-death", "EU_ANTINFERNO"], ["EU_ANTINFERNO", "EU_ACHERON"], ["EU_ACHERON", "eu-hell"], ["eu-death", "EU_HEAVEN"]]) {
+      expect(edge(svg, from, to)).not.toBeNull();
+    }
+    expect(edge(svg, "eu-death", "EU_ACHERON")).toBeNull();
+    expect(edge(svg, "EU_ACHERON", "EU_ANTINFERNO")).toBeNull();
+  });
+  it("the hell road lights all three; heaven lights only its own line", () => {
+    const svg = map("eu");
+    const palette = readPalette(svg)!;
+    paintStates(svg, mapStates(svg, pathVisits([
+      { realm_code: "EU_ANTINFERNO", left_at: "2026-01-01" },
+      { realm_code: "EU_ACHERON", left_at: "2026-01-01" },
+      { realm_code: "EU_HELL_4TH", left_at: null },
+    ])), palette);
+    for (const [from, to] of [["eu-death", "EU_ANTINFERNO"], ["EU_ANTINFERNO", "EU_ACHERON"], ["EU_ACHERON", "eu-hell"]]) {
+      expect(edge(svg, from, to)!.getAttribute("data-state")).toBe("walked");
+    }
+    const heaven = map("eu");
+    paintStates(heaven, mapStates(heaven, pathVisits([{ realm_code: "EU_HEAVEN", left_at: null }])), palette);
+    expect(edge(heaven, "eu-death", "EU_HEAVEN")!.getAttribute("data-state")).toBe("walked");
+    expect(stateOf(heaven, "EU_ACHERON")).toBe("ahead");
+    expect(stateOf(heaven, "EU_PURGATORY")).toBe("ahead");
+  });
+});
+
+describe("Egypt's seven approaches are a passage, not a station (batch 34)", () => {
+  it.each(["dark", "light"])("%s: class passage, kept by id, not among the stations", (theme) => {
+    const svg = map("eg", theme);
+    expect(svg.querySelector("#EG_SEVEN_ARRWT")!.getAttribute("class")).toBe("passage");
+    expect(nodesOf(svg).map((n) => n.id)).not.toContain("EG_SEVEN_ARRWT");
+    expect(passagesOf(svg).map((n) => n.id)).toEqual(["EG_SEVEN_ARRWT"]);
+    // One edge from the Duat's entry to the hall, no longer two through the approaches.
+    expect(svg.querySelector('.edge[data-from="EG_DUAT_ENTRY"][data-to="EG_HALL_TWO_TRUTHS"]')).not.toBeNull();
+    expect(svg.querySelectorAll('.edge[data-from="EG_SEVEN_ARRWT"], .edge[data-to="EG_SEVEN_ARRWT"]')).toHaveLength(0);
+  });
+  it("lit once the hall after it is reached, with no record of its own; dark before", () => {
+    const svg = map("eg");
+    const palette = readPalette(svg)!;
+    const band = () => svg.querySelector("#EG_SEVEN_ARRWT .gates-ornament")!;
+    const reached = mapStates(svg, pathVisits([
+      { realm_code: "EG_DUAT_ENTRY", left_at: "2026-01-01" },
+      { realm_code: "EG_HALL_TWO_TRUTHS", left_at: null },
+    ]));
+    expect(reached.nodes.get("EG_SEVEN_ARRWT")).toBe("walked");
+    paintStates(svg, reached, palette);
+    expect(band().getAttribute("stroke")).toBe(palette.walked);
+    const before = mapStates(svg, pathVisits([{ realm_code: "EG_DUAT_ENTRY", left_at: null }]));
+    expect(before.nodes.get("EG_SEVEN_ARRWT")).toBe("ahead");
+    paintStates(svg, before, palette);
+    expect(band().getAttribute("stroke")).toBe(palette.ahead);
+    expect(band().getAttribute("stroke-opacity")).toBe("0.55");
   });
 });
 

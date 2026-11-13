@@ -19,6 +19,7 @@ import {
   mapUrl,
   markYouAreHere,
   nodesOf,
+  passagesOf,
   paintStates,
   parseMapSvg,
   readPalette,
@@ -91,11 +92,13 @@ const FREE_KEYS: Record<string, string> = {
   "向上 · 涤罪": "map.europe.upward",
   "向下 · 按罪下沉": "map.europe.downward",
   岸边百年: "map.greece.wait_on_bank",
+  直达天国: "map.europe.straight_to_heaven",
   通过: "judgment.verdicts.passed",
   不通过: "crossJudgments.end_fail",
 };
 /** 说明行不随进度的那几站。 */
-const STATIC_DETAIL: Record<string, string> = { EG_ANNIHILATION: "map.egypt.second_death_note" };
+// 三判官坐在岔路口的草地上,不是另一站(第三十四批,《高尔吉亚》524a):草地标签下一行小字。
+const STATIC_DETAIL: Record<string, string> = { EG_ANNIHILATION: "map.egypt.second_death_note", GR_PLATO_MEADOW: "map.greece.three_judges" };
 
 const STATE_KEY: Record<MapState, string> = {
   walked: "realms.topology.state_travelled",
@@ -273,7 +276,7 @@ export function UnderworldMap({
     addScanRing(svg);
     addGrid(svg);
     const fills = labelFills(template);
-    for (const node of nodesOf(svg)) {
+    for (const node of [...nodesOf(svg), ...passagesOf(svg)]) {
       const { name, details } = labelLines(svg, node.id);
       const shown = nameOf(node.id);
       if (name && shown) name.textContent = shown;

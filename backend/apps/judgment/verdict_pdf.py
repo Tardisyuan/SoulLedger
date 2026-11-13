@@ -30,9 +30,9 @@ from django.core.cache import cache
 #: 有文书的裁决与文明,与 `packages/core/src/domain/verdictDocument.ts` 的 `FINAL` / `CIV` 同一张表。
 DOCUMENT_VERDICTS = frozenset({"PASSED", "FAILED", "PURGATORY"})
 DOCUMENT_CIVILIZATIONS = frozenset({"CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"})
-#: 在上面两张表里、网页却不出文书的组合(`verdictDocument.ts` 开头两条 `return null`):地府的存疑不是终判;
-#: 希腊的「普通」去阿斯福得草原,文书还没有那句判语(审计 2026-11-13 GR-1)。
-NO_DOCUMENT = frozenset({("CHINESE", "PURGATORY"), ("GREEK", "PURGATORY")})
+#: 在上面两张表里、网页却不出文书的组合(`verdictDocument.ts` 开头的 `return null`):地府的存疑不是终判。
+#: 希腊的「普通」(阿斯福得草原)第三十四批有了判语,照出。
+NO_DOCUMENT = frozenset({("CHINESE", "PURGATORY")})
 #: 文书的三种语言;别的值按默认(中文)出。
 LOCALES = ("zh-Hans", "en", "egy")
 #: 与 `packages/core/src/config/locale.ts` 的 `LOCALE_COOKIE` 同名:前端的根布局按它定语言。

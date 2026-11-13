@@ -41,9 +41,13 @@ ENTRY_REALM_CODES = {
     Civilization.CHINESE: "DY_00_PURGATORY",   # 待审所
     Civilization.EGYPTIAN: "EG_DUAT_ENTRY",    # 杜阿特入口
     Civilization.GREEK: "GR_ACHERON",          # 冥府:阿刻戎渡口
-    # 欧洲:系统自设的入口站,非出典 —— 诗里只有下地狱的人聚到渡口(docs/01「系统自设」,2026-11-13)。
-    Civilization.EUROPEAN: "EU_ACHERON",       # 地狱篇:阿刻戎渡口
+    # 欧洲没有入口站(用户 2026-11-14):诗里只有下地狱的人过阿刻戎,去炼狱的从台伯河口坐天使的船走,去天国的直达。
+    # 死时还不知道去向,所以不记;下地狱时 `enter` 补上途经的前庭与渡口(EU_HELL_ROAD)。
 }
+
+#: 欧洲地狱路:进九圈任一圈之前途经的两站,按先后(死亡 → 地狱前庭 → 阿刻戎渡口 → 九圈;Inf. III)。
+EU_HELL_ROAD = ("EU_ANTINFERNO", "EU_ACHERON")
+EU_HELL_PREFIX = "EU_HELL_"
 
 
 def entry_realm_for(soul):
@@ -81,11 +85,17 @@ class SoulPathService:
             if current is not None:
                 current.left_at = at
                 current.save(update_fields=["left_at"])
-            last = SoulPathEntry.all_objects.filter(soul_id=soul.pk).aggregate(n=Max("sequence"))["n"]
+            last = SoulPathEntry.all_objects.filter(soul_id=soul.pk).aggregate(n=Max("sequence"))["n"] or 0
+            for passed in cls._hell_road(soul, realm):
+                last += 1
+                SoulPathEntry.all_objects.create(
+                    soul_id=soul.pk, realm=passed, sequence=last, entered_at=at, left_at=at,
+                    tenant_id=tenant_id if tenant_id is not None else passed.tenant_id,
+                )
             entry = SoulPathEntry.all_objects.create(
                 soul_id=soul.pk,
                 realm=realm,
-                sequence=(last or 0) + 1,
+                sequence=last + 1,
                 entered_at=at,
                 tenant_id=tenant_id if tenant_id is not None else realm.tenant_id,
             )
@@ -95,6 +105,20 @@ class SoulPathService:
 
                 stations.arrive(soul, Soul.DiyuStation.FENGDU_CITY, via="court")
             return entry
+
+    @staticmethod
+    def _hell_road(soul, realm):
+        """欧洲灵魂头一次进九圈时途经的前庭与渡口(该租户有的那几站);已经过了渡口的(圈与圈之间改判)不再补。
+        别的文明调拨进来的灵魂是官员挪的,不走但丁的路,不补。"""
+        if soul.civilization != Civilization.EUROPEAN or not realm.realm_code.startswith(EU_HELL_PREFIX):
+            return []
+        if SoulPathEntry.all_objects.filter(soul_id=soul.pk, realm__realm_code=EU_HELL_ROAD[-1]).exists():
+            return []
+        found = {
+            r.realm_code: r
+            for r in Realm.all_objects.filter(tenant_id=realm.tenant_id, realm_code__in=EU_HELL_ROAD, is_deleted=False)
+        }
+        return [found[code] for code in EU_HELL_ROAD if code in found]
 
     @classmethod
     def enter_on_death(cls, soul, *, at=None):

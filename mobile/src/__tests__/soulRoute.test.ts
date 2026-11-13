@@ -47,12 +47,28 @@ describe("soulRoute", () => {
     const gone = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "eg", plan: plan("EG_ANNIHILATION"), hall: "", now: NOW }, tr)!;
     expect(gone.steps[gone.at]).toMatchObject({ id: "EG_ANNIHILATION", end: true });
     expect(liveContent(gone, "Nebamun", tr).ended).toBe(true);
+    // The seven approaches are passed through, not a stop (Design batch 34): no step on either road.
+    expect(judging.steps.map((s) => s.id)).toEqual(["EMBALMING", "EG_DUAT_ENTRY", "WEIGHING", "EG_TWENTYONE_SEBKHET", "EG_AARU"]);
+    expect(gone.steps.map((s) => s.id)).not.toContain("EG_SEVEN_ARRWT");
   });
 
   it("欧洲: a hell station puts the soul in 地狱九圈 with the circle beneath, on the downward road", () => {
     const r = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "eu", plan: plan("EU_HELL_9TH"), hall: "", now: NOW }, tr)!;
     expect(r.steps[r.at]).toMatchObject({ id: "CIRCLES", sub: "第九圈 - 背叛" });
     expect([r.line, r.path]).toEqual(["你在第九圈 - 背叛。", "下行"]);
+    // The hell road: the vestibule, then the ferry, then the circles (user 2026-11-14).
+    expect(r.steps.map((s) => s.id)).toEqual(["DEATH", "EU_ANTINFERNO", "EU_ACHERON", "CIRCLES"]);
+  });
+
+  it("欧洲: purgatory and heaven do not pass the ferry; a neutral stays in the vestibule and never reaches it", () => {
+    for (const code of ["EU_PURGATORY_T3_WRATH", "EU_EARTHLY_PARADISE", "EU_HEAVEN"]) {
+      const r = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "eu", plan: plan(code), hall: "", now: NOW }, tr)!;
+      expect(r.steps.map((s) => s.id)).toEqual(["DEATH", "TERRACES", "EU_EARTHLY_PARADISE", "EU_HEAVEN"]);
+      expect(r.path).toBe("上行");
+    }
+    const neutral = soulRoute({ me: me({ current_state: "DISPOSED", european_vestibule: { entered_at: "2026-11-01" } } as never), civ: "eu", hall: "", now: NOW }, tr)!;
+    expect(neutral.steps.map((s) => s.id)).toEqual(["DEATH", "EU_ANTINFERNO"]);
+    expect(neutral.steps[neutral.at].id).toBe("EU_ANTINFERNO");
   });
 
   it("希腊: the (non-eternal) Tartarus is the thousand years, counted by the ledger's elapsed_years", () => {

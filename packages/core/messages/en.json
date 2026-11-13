@@ -4506,7 +4506,7 @@
       },
       "eternal_sentence_by_civ": {
         "cn": {
-          "BLISS": "{{name}} stays in the heavens under an old ruling; there is no next life."
+          "BLISS": "{{name}} has joined the immortals, outside the wheel of rebirth; there is no next life."
         },
         "gr": {
           "BLISS": "{{name}} dwells in the Isles of the Blessed forever; there is no next life."
@@ -5835,7 +5835,7 @@
       },
       "eternal_title_by_civ": {
         "cn": {
-          "BLISS": "In the heavens under an old ruling"
+          "BLISS": "Joined the immortals"
         },
         "eu": {
           "BLISS": "In Heaven forever"
@@ -5849,7 +5849,7 @@
       },
       "eternal_no_rebirth_by_civ": {
         "cn": {
-          "BLISS": "Those kept in the heavens under an old ruling do not apply for rebirth."
+          "BLISS": "Those who have joined the immortals do not apply for rebirth."
         },
         "gr": {
           "BLISS": "Those who dwell in the Isles of the Blessed forever do not apply for rebirth."
@@ -9728,12 +9728,13 @@
       "circles": "The nine circles",
       "downward": "Downward · by sin",
       "terraces": "Purgatory · seven terraces",
-      "upward": "Upward · cleansing"
+      "upward": "Upward · cleansing",
+      "straight_to_heaven": "Straight to heaven"
     },
     "fit": "Whole map",
     "greece": {
       "thousand_year_cycle": "The thousand-year cycle",
-      "three_judges": "The three judges",
+      "three_judges": "The three judges sit here",
       "wait_on_bank": "A hundred years on the bank",
       "year_n": "Year {{n}}"
     },
@@ -9958,7 +9959,8 @@
       "verdict": {
         "curable": "Marked: curable. Sent to Tartarus.",
         "incurable": "Marked: incurable. Sent to Tartarus.",
-        "isles": "A life of piety and of seeking the truth: sent to the Isles of the Blessed."
+        "isles": "A life of piety and of seeking the truth: sent to the Isles of the Blessed.",
+        "purgatory": "Judged ordinary: sent to the Asphodel Meadow. When the stay is over, the soul drinks from Lethe and is reborn."
       }
     },
     "gr_er": {
