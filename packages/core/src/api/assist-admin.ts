@@ -67,8 +67,8 @@ export const ASSIST_ADMIN_ERROR_CODES = [
   "embedding_unavailable",
   // 备用供应商 (§13.5): PATCH config/backup/ (and the primary's PATCH) with a monthly cap and an unpriced backup model.
   "unpriced_backup_model",
-  // Not a `code` in the body: DRF answers a PATCH carrying `eval_soul_account` /
-  // `eval_officer` with a field error (ConfigUpdateSerializer.validate). Mapped below.
+  // Not the problem's `code` (that is `invalid`): a PATCH carrying `eval_soul_account` / `eval_officer`
+  // is a field error in `errors` (ConfigUpdateSerializer.validate). Mapped below.
   "read_only_field",
 ] as const;
 export type AssistAdminErrorCode = (typeof ASSIST_ADMIN_ERROR_CODES)[number];
@@ -78,7 +78,8 @@ export function assistAdminErrorCode(error: unknown): AssistAdminErrorCode | nul
   const body = refusalBody(error);
   if (!body) return null;
   if ((ASSIST_ADMIN_ERROR_CODES as readonly unknown[]).includes(body.code)) return body.code as AssistAdminErrorCode;
-  if ("eval_soul_account" in body || "eval_officer" in body) return "read_only_field";
+  const fields = Array.isArray(body.errors) ? (body.errors as { field?: unknown }[]).map((e) => e.field) : [];
+  if (fields.includes("eval_soul_account") || fields.includes("eval_officer")) return "read_only_field";
   return null;
 }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
+import { problemErrors, responseStatus } from "@soulledger/core/api/client";
 import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
@@ -19,18 +20,12 @@ export function parseSealGlyphs(value: string): string[] {
   return Array.from(value).filter((c) => !/\s/.test(c));
 }
 
-/** DRF 的 400:`seal_glyphs` 可能是字符串数组,也可能是按下标的对象(子项出错时)。全部摊平成一句。 */
+/** 400 校验问题里 `seal_glyphs`(或它的某个下标 `seal_glyphs.0`)的消息,摊平成一句;没有就是整份的。 */
 export function sealGlyphsError(error: unknown): string | null {
-  const data = (error as { response?: { status?: number; data?: unknown } })?.response;
-  if (data?.status !== 400 || !data.data || typeof data.data !== "object") return null;
-  const out: string[] = [];
-  const walk = (node: unknown) => {
-    if (typeof node === "string") out.push(node);
-    else if (Array.isArray(node)) node.forEach(walk);
-    else if (node && typeof node === "object") Object.values(node).forEach(walk);
-  };
-  const body = data.data as Record<string, unknown>;
-  walk("seal_glyphs" in body ? body.seal_glyphs : body);
+  if (responseStatus(error) !== 400) return null;
+  const errors = problemErrors(error);
+  const mine = errors.filter((e) => e.field === "seal_glyphs" || e.field?.startsWith("seal_glyphs."));
+  const out = (mine.length ? mine : errors).map((e) => e.detail);
   return out.length ? out.join(" ") : null;
 }
 

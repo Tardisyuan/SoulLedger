@@ -22,7 +22,7 @@ it("refuses a concluded case with the server's 409, and writes nothing", () => {
   expect(done).toBeDefined();
   const before = JSON.stringify(getOverlay().patches) + JSON.stringify(getOverlay().added);
   const answer = conclude(done.id, done.verdict);
-  expect(answer).toEqual({ status: 409, data: { error: "This judgment has already been concluded.", code: "already_concluded" } });
+  expect(answer).toEqual({ status: 409, data: expect.objectContaining({ status: 409, detail: "This judgment has already been concluded.", code: "already_concluded" }) });
   expect(answer.data).toBe(ALREADY_CONCLUDED);
   expect(JSON.stringify(getOverlay().patches) + JSON.stringify(getOverlay().added)).toBe(before);
 });

@@ -192,7 +192,7 @@ describe("RecycleBinPage columns", () => {
   it("names the missing roles when a template's restore is refused (template_role_missing)", async () => {
     mockUser = { role: "JUDGE", permissions: READ_RESTORE };
     (recycleBinApi.restore as jest.Mock).mockRejectedValue({
-      response: { status: 400, data: { error: "x", code: "template_role_missing", missing_roles: ["AUDITOR", "SCRIBE"] } },
+      response: { status: 400, data: { detail: "x", code: "template_role_missing", missing_roles: ["AUDITOR", "SCRIBE"] } },
     });
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "recycle_bin.restore" }));

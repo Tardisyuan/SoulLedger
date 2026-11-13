@@ -66,7 +66,7 @@ class TestLedgerBalanceView:
     def test_balance_404_for_nonexistent_soul(self):
         resp = self.client.get(f"{BASE}/balance/{uuid.uuid4()}/")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
-        assert resp.data["error"] == "NOT_FOUND"
+        assert resp.data["code"] == "not_found"
 
     def test_balance_tenant_isolation(self):
         """Soul from tenant B should not be accessible by tenant A."""
@@ -331,7 +331,7 @@ class TestInheritanceCivilizationGate:
         # 409 rather than 404: the soul exists, the operation is what its
         # cosmology does not permit.
         assert resp.status_code == status.HTTP_409_CONFLICT
-        assert resp.data["code"] == "REBIRTH_NOT_APPLICABLE"
+        assert resp.data["code"] == "rebirth_not_applicable"
         assert resp.data["civilization"] == civ
         assert resp.data["detail"]
 
@@ -395,7 +395,7 @@ class TestLedgerOverviewStatsView:
         # 2026-10-29 (user item 33). Revoking the codename is covered in tests/test_rbac_codes_by_capability.py.
         resp = self.viewer_client.get(f"{BASE}/stats/overview/")
         assert resp.status_code == status.HTTP_200_OK
-        assert "error" not in resp.data
+        assert "code" not in resp.data
 
     def test_overview_tenant_scoping(self):
         """Admin with tenant sees only their tenant's souls."""

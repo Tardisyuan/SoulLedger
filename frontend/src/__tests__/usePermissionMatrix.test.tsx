@@ -170,8 +170,8 @@ describe("roleDeleteRefusal", () => {
   it("reads a 400 with a code, and nothing else", () => {
     const refusal = { error: "x", code: "role_referenced_by_workflow_templates", templates: [] };
     expect(roleDeleteRefusal({ response: { status: 400, data: refusal } })).toEqual(refusal);
-    expect(roleDeleteRefusal({ response: { status: 400, data: { name: ["bad"] } } })).toBeNull();
-    expect(roleDeleteRefusal({ response: { status: 404, data: { error: "Role not found" } } })).toBeNull();
+    expect(roleDeleteRefusal({ response: { status: 400, data: { code: "invalid", errors: [{ field: "name", code: "invalid", detail: "bad" }] } } })).toBeNull();
+    expect(roleDeleteRefusal({ response: { status: 404, data: { detail: "Role not found" } } })).toBeNull();
     expect(roleDeleteRefusal(new Error("network"))).toBeNull();
     expect(roleDeleteRefusal(null)).toBeNull();
   });

@@ -705,7 +705,7 @@ describe("丁 · 判词自动保存", () => {
     response: {
       status: 409,
       data: {
-        error: "draft conflict", code: "draft_conflict",
+        detail: "draft conflict", code: "draft_conflict",
         current: { notes: "他人的判词", draft_verdict: "PASSED", draft_version: 9, draft_saved_at: "2026-09-25T10:20:00Z" },
       },
     },
@@ -932,7 +932,7 @@ describe("戊 · 发落", () => {
   });
 
   it("realm_full:在这一节写「! 执行失败：目的地已满」,不弹通用 toast,并重取占用", async () => {
-    judgmentApi.conclude.mockRejectedValue({ response: { status: 409, data: { error: "R9 is full (10/10)", code: "realm_full" } } });
+    judgmentApi.conclude.mockRejectedValue({ response: { status: 409, data: { detail: "R9 is full (10/10)", code: "realm_full" } } });
     renderPage();
     await screen.findAllByRole("radio");
     fireEvent.keyDown(document.body, { key: "2" });
@@ -996,7 +996,7 @@ describe("戊 · 发落", () => {
       response: {
         status: 409,
         data: {
-          error: "draft conflict", code: "draft_conflict",
+          detail: "draft conflict", code: "draft_conflict",
           current: {
             notes: "他人的判词", draft_verdict: "FAILED", draft_destination_realm_id: "r-7", draft_term_years: 30,
             draft_eternal: false, draft_version: 9, draft_saved_at: "2026-09-25T10:20:00Z",
@@ -1356,7 +1356,7 @@ describe("v3 · 盖印确认层", () => {
 
 describe("卷宗 · 判词在台上", () => {
   it("判词框一直摊开在右栏(没有平板的草稿开关);realm_full 被拒时确认层收起,拒绝写在发落那一节", async () => {
-    judgmentApi.conclude.mockRejectedValue({ response: { status: 409, data: { error: "full", code: "realm_full" } } });
+    judgmentApi.conclude.mockRejectedValue({ response: { status: 409, data: { detail: "full", code: "realm_full" } } });
     renderPage();
     await screen.findAllByRole("radio");
     expect(screen.queryByTestId("draft-toggle")).toBeNull();
@@ -1528,7 +1528,7 @@ describe("v4 S10 · 「不过」的理由", () => {
   });
 
   it("服务端的理由拒绝码有译文,不回显后端英文", async () => {
-    judgmentApi.conclude.mockRejectedValue({ response: { status: 400, data: { error: "Choose a reason", code: "fail_reason_required" } } });
+    judgmentApi.conclude.mockRejectedValue({ response: { status: 400, data: { detail: "Choose a reason", code: "fail_reason_required" } } });
     renderPage();
     await screen.findAllByRole("radio");
     fireEvent.keyDown(document.body, { key: "2" });

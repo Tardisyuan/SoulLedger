@@ -267,7 +267,7 @@ describe("JudgmentQueueConsole", () => {
     mockConclude.mockRejectedValueOnce({
       response: {
         status: 409,
-        data: { error: "claimed", code: "claimed_by_other", claimed_by: 7, claimed_by_name: "崔判官" },
+        data: { detail: "claimed", code: "claimed_by_other", claimed_by: 7, claimed_by_name: "崔判官" },
       },
     });
     renderConsole();

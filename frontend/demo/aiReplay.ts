@@ -30,7 +30,7 @@ function keyOf(path: string, query: URLSearchParams): string {
 export function aiRead(rec: Recording, path: string, query: URLSearchParams): Answer | null {
   if (path !== EXPLAIN) return null;
   const doc = rec.docs[keyOf(path, query)];
-  return doc ? { status: doc.s, data: doc.b } : { status: 503, data: { detail: "not recorded", code: "demo_not_recorded" } };
+  return doc ? { status: doc.s, data: doc.b } : { status: 503, data: { type: "about:blank", title: "Service Unavailable", status: 503, code: "demo_not_recorded", detail: "not recorded" } };
 }
 
 /** The questions this recording can answer, in the order they were asked. */
@@ -45,12 +45,12 @@ export function aiWrite(rec: Recording, method: string, path: string, body: Reco
   if (path === ASK) {
     const doc = rec.docs[`${ASK}?question=${String(body.question ?? "").trim()}`];
     if (doc) return { status: doc.s, data: doc.b };
-    return { status: 503, data: { detail: "not recorded", code: "demo_not_recorded", examples: recordedQuestions(rec) } };
+    return { status: 503, data: { type: "about:blank", title: "Service Unavailable", status: 503, code: "demo_not_recorded", detail: "not recorded", examples: recordedQuestions(rec) } };
   }
   if (BUSINESS.some((re) => re.test(path))) {
     const key = path.endsWith("/verdict-draft/") ? `${path}?verdict=${String(body.verdict ?? "")}` : path;
     const doc = rec.docs[key];
-    return doc ? { status: doc.s, data: doc.b } : { status: 503, data: { detail: "not recorded", code: "demo_not_recorded" } };
+    return doc ? { status: doc.s, data: doc.b } : { status: 503, data: { type: "about:blank", title: "Service Unavailable", status: 503, code: "demo_not_recorded", detail: "not recorded" } };
   }
   if (/^\/assist\/ai-drafts\/\d+\/decide\/$/.test(path)) {
     return { status: 200, data: { id: Number(path.split("/")[3]), status: body.adopted ? "adopted" : "discarded", edit_ratio: null } };

@@ -133,8 +133,8 @@ class TestSoulResetDetails:
         cache.set("pwd_reset:soul.a@example.com", "424242", timeout=300)
         res = _set("soul.a@example.com", code="424242", password="password")
         assert res.status_code == 400 and res.data["code"] == "weak_password"
-        assert "[" not in res.data["error"] and "ValidationError" not in res.data["error"]
-        assert {r["code"] for r in res.data["new_password"]} >= {"password_too_common"}
+        assert "[" not in res.data["detail"] and "ValidationError" not in res.data["detail"]
+        assert {r["code"] for r in res.data["errors"] if r["field"] == "new_password"} >= {"password_too_common"}
 
 
 # ── A2 / A15: 官员两步验证 ─────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ class TestChangePassword:
         c = _client(_officer(django_user_model, cn_tenant))
         res = c.post(CHANGE, {"old_password": OLD, "new_password": OLD}, format="json")
         assert res.status_code == 400
-        assert [r["code"] for r in res.data["new_password"]] == ["password_reused"]
+        assert [r["code"] for r in res.data["errors"] if r.get("field") == "new_password"] == ["password_reused"]
 
 
 # ── 密码历史 ──────────────────────────────────────────────────────────────────
@@ -240,7 +240,7 @@ class TestPasswordHistory:
         for pw in pws[1:]:
             res = c.post(CHANGE, {"old_password": pws[-1], "new_password": pw}, format="json")
             assert res.status_code == 400, pw
-            assert res.data["new_password"][0]["code"] == "password_reused"
+            assert [r for r in res.data["errors"] if r.get("field") == "new_password"][0]["code"] == "password_reused"
         assert PasswordHistory.objects.filter(user=user).count() == PASSWORD_HISTORY_KEEP - 1
 
     def test_the_oldest_one_may_be_reused(self, django_user_model, cn_tenant):

@@ -397,7 +397,7 @@ class TestApprovalWorkflowAPI:
         )
 
         assert response.status_code == 400
-        assert "already processed" in response.data["error"]
+        assert "already processed" in response.data["detail"]
 
     def test_advance_workflow(self, authenticated_client, cn_tenant, soul):
         """POST /api/v1/workflows/{id}/advance/ advances to next node."""

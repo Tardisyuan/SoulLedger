@@ -200,7 +200,7 @@ class TestWholeMonth:
         _login(api_client, judge_user, "ledger.read")
         resp = api_client.get(URL, {"month": "2026-06", "all": "1"})
         assert resp.status_code == 400
-        assert (resp.json()["error"], resp.json()["field"]) == ("MONTH_TOO_LARGE", "all")
+        assert (resp.json()["code"], resp.json()["field"]) == ("month_too_large", "all")
         assert "results" not in resp.json()
         # 正好在上限上仍给全量。
         monkeypatch.setattr(journal, "WHOLE_MONTH_MAX", 6)

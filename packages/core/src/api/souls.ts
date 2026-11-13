@@ -386,7 +386,7 @@ export type SoulRegionUpdateCommitResult = Schemas["SoulRegionUpdateCommit"];
 export function soulImportFileErrorOf(error: unknown): SoulImportFileError | null {
   if (!axios.isAxiosError(error) || error.response?.status !== 400) return null;
   const data = error.response.data as Partial<SoulImportFileError> | undefined;
-  return data && typeof data.code === "string" ? (data as SoulImportFileError) : null;
+  return data && typeof data.code === "string" && data.code !== "invalid" ? (data as SoulImportFileError) : null;
 }
 
 /** The 422 body of a refused commit (rows with errors), or `null`. */

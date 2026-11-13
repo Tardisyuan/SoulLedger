@@ -150,7 +150,7 @@ def test_a_draft_does_not_hold_the_souls_active_dispatch_slot(w):
     draft = DispatchRecord.all_objects.get(status=DispatchStatus.DRAFT)
     resp = sign_in(APIClient(), w["cn_mod"]).post(f"{URL}{draft.pk}/submit/", {}, format="json")
     assert resp.status_code == 400
-    assert "active dispatch" in resp.data["error"]
+    assert "active dispatch" in resp.data["detail"]
 
 
 # ── visibility ─────────────────────────────────────────────────────────

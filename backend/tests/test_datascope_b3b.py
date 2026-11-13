@@ -53,7 +53,7 @@ def test_drink_soup_and_reborn_answer_404_outside_the_scope(cn_tenant, units, le
 
     reborn = "/api/v1/reincarnation/reborn/"
     outside = client.post(reborn, {"soul_id": str(theirs.pk), "new_identity": "x"}, format="json")
-    assert outside.status_code == 404 and outside.data["error"] == "NOT_FOUND"
+    assert outside.status_code == 404 and outside.data["code"] == "not_found"
     inside = client.post(reborn, {"soul_id": str(mine.pk), "new_identity": "x"}, format="json")
     assert inside.status_code != 404, inside.data
 

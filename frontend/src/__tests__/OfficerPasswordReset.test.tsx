@@ -174,7 +174,7 @@ describe("/reset-password", () => {
   });
 
   it("an expired link turns the page into the invalid-link state", async () => {
-    confirm.mockRejectedValue({ response: { status: 400, data: { code: "reset_link_invalid", error: "x" } } });
+    confirm.mockRejectedValue({ response: { status: 400, data: { code: "reset_link_invalid", detail: "x" } } });
     open("?uid=MQ&token=t");
     await screen.findByTestId("officer-reset-password-form");
     fill("N0t-Guessable!2026", "N0t-Guessable!2026");
@@ -187,8 +187,8 @@ describe("/reset-password", () => {
         status: 400,
         data: {
           code: "weak_password",
-          error: "This password is too common.",
-          new_password: [{ code: "password_too_common", message: "This password is too common." }],
+          detail: "This password is too common.",
+          errors: [{ field: "new_password", code: "password_too_common", detail: "This password is too common." }],
         },
       },
     });
@@ -214,7 +214,7 @@ describe("/reset-password", () => {
 
   it("a reused password says so, not 'too common' (2026-10-23)", async () => {
     confirm.mockRejectedValue({
-      response: { status: 400, data: { code: "weak_password", error: "x", new_password: [{ code: "password_reused", message: "x" }] } },
+      response: { status: 400, data: { code: "weak_password", detail: "x", errors: [{ field: "new_password", code: "password_reused", detail: "x" }] } },
     });
     open("?uid=MQ&token=t");
     await screen.findByTestId("officer-reset-password-form");

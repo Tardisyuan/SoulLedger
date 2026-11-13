@@ -139,7 +139,7 @@ describe("creating a soul", () => {
   });
 
   it("draws a 400's field error on the field, with no toast beside it", async () => {
-    mockedCreate.mockRejectedValue({ response: { status: 400, data: { origin_location: ["太长了"] } } });
+    mockedCreate.mockRejectedValue({ response: { status: 400, data: { code: "invalid", errors: [{ field: "origin_location", code: "invalid", detail: "太长了" }] } } });
     renderModal();
     submitWithName("孟婆");
     expect(await screen.findByText("太长了")).toBeInTheDocument();

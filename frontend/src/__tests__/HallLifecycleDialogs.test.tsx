@@ -25,13 +25,13 @@ beforeEach(() => jest.clearAllMocks());
 
 describe("hallCreateErrors", () => {
   it("文明配错挂在文明下,用翻译后的文明名", () => {
-    expect(hallCreateErrors(bad({ civilization: ["CN_DIYU is a CHINESE hall."] }), "CN_DIYU", t)).toEqual({
+    expect(hallCreateErrors(bad({ code: "invalid", errors: [{ field: "civilization", code: "invalid", detail: "CN_DIYU is a CHINESE hall." }] }), "CN_DIYU", t)).toEqual({
       civilization: "halls.civ_mismatch(CN_DIYU,tenant.civilizations.CHINESE)",
     });
   });
   it("代号已占用与格式不对是两句话;不是 400 返回 null", () => {
-    expect(hallCreateErrors(bad({ code: ["A hall with this code already exists."] }), "X", t)).toEqual({ code: "halls.code_taken" });
-    expect(hallCreateErrors(bad({ code: ["This value does not match the required pattern."] }), "x", t)).toEqual({ code: "halls.code_invalid" });
+    expect(hallCreateErrors(bad({ code: "invalid", errors: [{ field: "code", code: "invalid", detail: "A hall with this code already exists." }] }), "X", t)).toEqual({ code: "halls.code_taken" });
+    expect(hallCreateErrors(bad({ code: "invalid", errors: [{ field: "code", code: "invalid", detail: "This value does not match the required pattern." }] }), "x", t)).toEqual({ code: "halls.code_invalid" });
     expect(hallCreateErrors({ response: { status: 500, data: {} } }, "X", t)).toBeNull();
   });
 });

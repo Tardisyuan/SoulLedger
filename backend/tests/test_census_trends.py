@@ -167,7 +167,7 @@ class TestApi:
     def test_an_unknown_range_is_400_not_a_silent_default(self, world):
         _, _, admin, _ = world
         r = _client(admin).get(URL, {"range": "7d"})
-        assert r.status_code == 400 and r.json()["error"] == "INVALID_RANGE"
+        assert r.status_code == 400 and r.json()["code"] == "invalid_range"
 
     def test_no_snapshots_is_an_empty_list_not_zero_filled(self, world):
         _, _, admin, _ = world

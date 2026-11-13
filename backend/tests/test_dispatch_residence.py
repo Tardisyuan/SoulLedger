@@ -531,7 +531,7 @@ def test_manual_return_with_an_open_judgment_is_409_with_a_code(cn, eg):
     assert response.status_code == 409, response.data
     assert response.data["code"] == "open_judgment"
     assert response.data["open_judgment_ids"] == [str(case.pk)]
-    assert "open judgment" in response.data["error"]
+    assert "open judgment" in response.data["detail"]
     soul.refresh_from_db()
     record.refresh_from_db()
     assert soul.tenant_id == eg.pk and record.status == DispatchStatus.EXECUTED

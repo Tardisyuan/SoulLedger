@@ -50,7 +50,7 @@ def _not_returned(body, code):
 def _refusal(res, status, code):
     assert res.status_code == status, (res.status_code, res.data)
     assert res.data["code"] == code, res.data
-    assert res.data["error"], "the human sentence was dropped"
+    assert res.data["detail"], "the human sentence was dropped"
     return res.data
 
 

@@ -477,7 +477,7 @@ describe("roles table (E-11b)", () => {
   it("a row opens the drawer: code read-only, counts, ⋯ holds copy and recycle; a referenced role's delete lists the workflows", async () => {
     api.roles.delete.mockRejectedValue(
       Object.assign(new Error("400"), {
-        response: { status: 400, data: { error: "x", code: "role_referenced_by_workflow_templates",
+        response: { status: 400, data: { detail: "x", code: "role_referenced_by_workflow_templates",
           templates: [{ template_id: "t1", template_name: "跨文明移交 · 两级", tenant_id: 1, civilization: "CHINESE", is_active: true,
             steps: [{ step_order: 2, step_name: "殿司签收" }] }] } },
       })

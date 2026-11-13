@@ -183,7 +183,7 @@ describe("passwordFailure", () => {
   it("too many wrong old passwords is said by key, never the server's Chinese sentence", () => {
     const locked = passwordFailure(http(429, { code: "login_locked", error: "尝试次数过多" }));
     expect(locked).toEqual({ network: false, old: ["profile.password_locked"], next: [], other: [] });
-    expect(passwordFailure(http(400, { old_password: ["wrong"] })).old).toEqual(["profile.password_old_wrong"]);
+    expect(passwordFailure(http(400, { code: "invalid", errors: [{ field: "old_password", code: "invalid", detail: "wrong" }] })).old).toEqual(["profile.password_old_wrong"]);
   });
 });
 

@@ -98,7 +98,7 @@ describe("ending a residence", () => {
   });
 
   it("says why when an open judgment blocks the return", async () => {
-    mockedReturn.mockRejectedValueOnce({ response: { status: 409, data: { code: "open_judgment", error: "x" } } });
+    mockedReturn.mockRejectedValueOnce({ response: { status: 409, data: { code: "open_judgment", detail: "x" } } });
     renderPage("EXECUTED");
     fireEvent.click(await screen.findByRole("button", { name: "dispatch.return_home" }));
     fireEvent.change(screen.getByLabelText("dispatch.return_home_reason"), { target: { value: "送回" } });
@@ -110,7 +110,7 @@ describe("ending a residence", () => {
   });
 
   it("keeps the generic message for any other failure", async () => {
-    mockedReturn.mockRejectedValueOnce({ response: { status: 409, data: { error: "not ongoing" } } });
+    mockedReturn.mockRejectedValueOnce({ response: { status: 409, data: { detail: "not ongoing" } } });
     renderPage("EXECUTED");
     fireEvent.click(await screen.findByRole("button", { name: "dispatch.return_home" }));
     fireEvent.change(screen.getByLabelText("dispatch.return_home_reason"), { target: { value: "送回" } });

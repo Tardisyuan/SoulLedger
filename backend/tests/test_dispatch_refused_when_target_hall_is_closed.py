@@ -63,7 +63,7 @@ def test_create_toward_a_closed_hall_is_refused_with_a_code(w, enabled, expected
     if enabled:
         assert DispatchRecord.all_objects.filter(soul=w["soul"], status=DispatchStatus.PROPOSED).exists()
     else:
-        assert resp.data["code"] == CODE and "EU_HEAVEN_HELL" in resp.data["error"]
+        assert resp.data["code"] == CODE and "EU_HEAVEN_HELL" in resp.data["detail"]
         assert not DispatchRecord.all_objects.filter(soul=w["soul"]).exists()
 
 

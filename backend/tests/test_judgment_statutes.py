@@ -437,7 +437,7 @@ class TestCitationAPI:
             format="json",
         )
         assert response.status_code == 400
-        assert "No statute" in response.data["error"]
+        assert "No statute" in response.data["detail"]
 
     def test_cross_tenant_article_is_refused_by_reason_not_by_absence(
         self, admin_client, cn_judgment, eg_tenant
@@ -453,7 +453,7 @@ class TestCitationAPI:
             format="json",
         )
         assert response.status_code == 400
-        assert "another tenant" in response.data["error"]
+        assert "another tenant" in response.data["detail"]
 
     def test_citing_a_concluded_judgment_is_a_409(
         self, admin_client, cn_judgment, cn_statute

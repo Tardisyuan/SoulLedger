@@ -202,7 +202,11 @@ function startFlow(rec: Recording, judgment: Row): string | null {
  * (apps/judgment/services.py): under the row lock, a verdict already there is 409 `already_concluded`, nothing written.
  * Its message and code, word for word; the screens never send this for a concluded case, so nothing else meets it.
  */
-export const ALREADY_CONCLUDED = { error: "This judgment has already been concluded.", code: "already_concluded" };
+/** The backend's 409 problem (apps/core/problems.py), as the recorded API would answer it. */
+export const ALREADY_CONCLUDED = {
+  type: "about:blank", title: "Conflict", status: 409, code: "already_concluded",
+  detail: "This judgment has already been concluded.",
+};
 
 function conclude(rec: Recording, id: string, body: Row): Answer {
   const row = find(rec, "/judgment/", id);

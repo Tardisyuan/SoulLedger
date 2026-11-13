@@ -240,7 +240,7 @@ class TestRebirthGate:
         with pytest.raises(RebirthNotApplicable) as excinfo:
             ReincarnationService.complete_rebirth(soul=soul, new_identity="Should not happen")
         assert excinfo.value.status_code == 409
-        assert excinfo.value.detail["code"] == "REBIRTH_NOT_APPLICABLE"
+        assert excinfo.value.detail["code"] == "rebirth_not_applicable"
 
     def test_gate_fires_before_anything_is_written(self):
         """No Reincarnation row, no ledger change, no state change."""

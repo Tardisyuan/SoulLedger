@@ -234,7 +234,10 @@ def test_record_400s_carry_stable_error_codes(cn_soul, api_client, auth_headers)
     def codes(body, **kw):
         res = api_client.patch(url, body, format="json", **auth_headers)
         assert res.status_code == 400, res.content
-        return res.json()["error_codes"]
+        out = {}
+        for e in res.json()["errors"]:
+            out.setdefault(e.get("field", "non_field_errors"), []).append(e["code"])
+        return out
 
     assert codes({"occurrence_count": 0}) == {"occurrence_count": ["min_value"]}
     assert codes({"weight": 101}) == {"weight": ["max_value"]}
@@ -244,7 +247,7 @@ def test_record_400s_carry_stable_error_codes(cn_soul, api_client, auth_headers)
     assert codes({"statute": str(eu.pk)}) == {"statute": ["statute_other_civilization"]}
     # add_record answers the same way.
     added = api_client.post(f"/api/v1/souls/{cn_soul.pk}/add_record/", _payload(weight=0), format="json", **auth_headers)
-    assert added.status_code == 400 and added.json()["error_codes"] == {"weight": ["min_value"]}
+    assert added.status_code == 400 and [(e["field"], e["code"]) for e in added.json()["errors"]] == [("weight", "min_value")]
 
 
 def test_editing_runs_the_create_validation(cn_soul, api_client, auth_headers):

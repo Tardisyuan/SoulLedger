@@ -9,7 +9,7 @@ import {
   concludeRefusalOf,
 } from "../judgment";
 
-const refused = (code: unknown, status = 409) => ({ response: { status, data: { code, error: "English." } } });
+const refused = (code: unknown, status = 409) => ({ response: { status, data: { code, detail: "English." } } });
 
 /** 结案被拒的分类:页面(`app/judgment/[id]/page.tsx`)按 `kind` 分发,每一类做的事不同。 */
 describe("concludeRefusalOf", () => {

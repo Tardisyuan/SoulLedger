@@ -147,7 +147,7 @@ export interface UserImportFileError {
 export function userImportFileErrorOf(error: unknown): UserImportFileError | null {
   if (!axios.isAxiosError(error) || error.response?.status !== 400) return null;
   const data = error.response.data as Partial<UserImportFileError> | undefined;
-  return data && typeof data.code === "string" ? (data as UserImportFileError) : null;
+  return data && typeof data.code === "string" && data.code !== "invalid" ? (data as UserImportFileError) : null;
 }
 
 /** POST /users/invite/ body. `tenant` = hall code, only for the global admin; blank username falls back to the email's local part. */

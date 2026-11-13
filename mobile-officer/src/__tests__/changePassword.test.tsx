@@ -141,10 +141,7 @@ describe("the password checklist (Design 第二十三批)", () => {
   it("a refusal as too common is said above the list; the ticks stay, the other reasons stay as lines, the words stay", async () => {
     mockChange.mockRejectedValue(
       httpError(400, {
-        new_password: [
-          { code: "password_too_common", message: "This password is too common." },
-          { code: "password_too_similar", message: "too similar" },
-        ],
+        errors: [{ field: "new_password", code: "password_too_common", detail: "This password is too common." }, { field: "new_password", code: "password_too_similar", detail: "too similar" }],
       })
     );
     renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
@@ -165,11 +162,7 @@ describe("the password checklist (Design 第二十三批)", () => {
 it("shows the old-password reason under its field and the other new-password reasons as lines, by code (not the server's English), keeps the form, and never echoes a password", async () => {
   mockChange.mockRejectedValue(
     httpError(400, {
-      old_password: ["旧密码不正确"],
-      new_password: [
-        { code: "password_too_common", message: "This password is too common." },
-        { code: "password_entirely_numeric", message: "This password is entirely numeric." },
-      ],
+      errors: [{ field: "old_password", code: "invalid", detail: "旧密码不正确" }, { field: "new_password", code: "password_too_common", detail: "This password is too common." }, { field: "new_password", code: "password_entirely_numeric", detail: "This password is entirely numeric." }],
     })
   );
   const onBack = jest.fn();

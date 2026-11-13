@@ -86,7 +86,7 @@ function refusal(code: string, ids: string[]) {
     statusText: "",
     headers: {},
     config,
-    data: { code, error: "x", ids },
+    data: { code, detail: "x", ids },
   });
 }
 

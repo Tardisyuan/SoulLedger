@@ -5,6 +5,7 @@ import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, REBIRTH_COOLDOWN_SETTING, REBIRTH_QUOTA_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
+import { problemErrors, responseStatus } from "@soulledger/core/api/client";
 import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
@@ -22,18 +23,13 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
 type FieldName = keyof TenantSettingsPatch;
 const FIELDS: FieldName[] = ["display_name_en", "description_en", "hall_name", "hall_name_en", "hall_name_egy", "description", "dispatch_enabled", "soul_rebirth_cooldown_days", "mfa_required_roles", "visit_address", "visit_hours", "visit_phone", "rebirth_monthly_quota"];
 
-/** DRF 的 400 按字段给 `{field: [msg, …]}`;只认已知字段,每个摊平成一句。别的形状返回空表。 */
+/** 400 校验问题的 `errors`;只认已知字段,每个字段的消息摊平成一句(配额按道给,`rebirth_monthly_quota.HUMAN`,也归到它)。 */
 export function tenantSettingsErrors(error: unknown): Partial<Record<FieldName, string>> {
-  const r = (error as { response?: { status?: number; data?: unknown } })?.response;
-  if (r?.status !== 400 || !r.data || typeof r.data !== "object") return {};
-  const body = r.data as Record<string, unknown>;
+  if (responseStatus(error) !== 400) return {};
   const out: Partial<Record<FieldName, string>> = {};
-  for (const f of FIELDS) {
-    const v = body[f];
-    if (typeof v === "string") out[f] = v;
-    else if (Array.isArray(v) && v.length) out[f] = v.map(String).join(" ");
-    // 配额是按道的字典,错误也按道给:`{HUMAN: ["…"]}` —— 摊平成一句。
-    else if (v && typeof v === "object") out[f] = Object.values(v).flat().map(String).join(" ");
+  for (const e of problemErrors(error)) {
+    const f = e.field?.split(".")[0] as FieldName | undefined;
+    if (f && FIELDS.includes(f)) out[f] = out[f] ? `${out[f]} ${e.detail}` : e.detail;
   }
   return out;
 }

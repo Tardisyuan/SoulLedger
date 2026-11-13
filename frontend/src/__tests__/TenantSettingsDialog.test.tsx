@@ -57,7 +57,7 @@ describe("parseCooldownDays / tenantSettingsErrors", () => {
   it("keeps only the known fields of a DRF 400 and nothing of any other status", () => {
     expect(
       tenantSettingsErrors({
-        response: { status: 400, data: { hall_name: ["太长"], soul_rebirth_cooldown_days: ["不能小于 0"], settings: ["x"] } },
+        response: { status: 400, data: { code: "invalid", errors: [{ field: "hall_name", code: "invalid", detail: "太长" }, { field: "soul_rebirth_cooldown_days", code: "invalid", detail: "不能小于 0" }, { field: "settings", code: "invalid", detail: "x" }] } },
       })
     ).toEqual({ hall_name: "太长", soul_rebirth_cooldown_days: "不能小于 0" });
     expect(tenantSettingsErrors({ response: { status: 500, data: { hall_name: ["x"] } } })).toEqual({});
@@ -141,7 +141,7 @@ describe("TenantSettingsDialog", () => {
   });
 
   it("shows the backend's per-field 400 under the field, and a toast for anything else", async () => {
-    update.mockRejectedValueOnce({ response: { status: 400, data: { hall_name: ["Ensure this field has no more than 60 characters."] } } });
+    update.mockRejectedValueOnce({ response: { status: 400, data: { code: "invalid", errors: [{ field: "hall_name", code: "invalid", detail: "Ensure this field has no more than 60 characters." }] } } });
     const { onClose } = renderDialog(tenant());
     save();
     expect(await screen.findByRole("alert")).toHaveTextContent("Ensure this field has no more than 60 characters.");

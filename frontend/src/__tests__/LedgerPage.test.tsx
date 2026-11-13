@@ -233,14 +233,14 @@ describe("加载中 / 空 / 失败 是三屏", () => {
   });
 
   // Design E 组. The body is apps/ledger/views.py's, byte for byte in shape:
-  // test_ledger_journal.py pins ("MONTH_TOO_LARGE", "all").
+  // test_ledger_journal.py pins ("month_too_large", "all").
   const refused = (status: number, data: Record<string, string>) =>
     new AxiosError("refused", "ERR_BAD_REQUEST", undefined, undefined, {
       status, data, statusText: "", headers: {}, config: { headers: new AxiosHeaders() },
     } as never);
 
   it("over the whole-month cap: its own sentence, no retry, no half a ledger", async () => {
-    mockedJournal.mockRejectedValue(refused(400, { error: "MONTH_TOO_LARGE", field: "all" }));
+    mockedJournal.mockRejectedValue(refused(400, { code: "month_too_large", field: "all" }));
     renderPage();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("本月记录过多，请缩小筛选");
@@ -250,7 +250,7 @@ describe("加载中 / 空 / 失败 是三屏", () => {
   });
 
   it("any other 400 is still the plain failure, with its retry", async () => {
-    mockedJournal.mockRejectedValue(refused(400, { error: "INVALID_PARAMETER", field: "month" }));
+    mockedJournal.mockRejectedValue(refused(400, { code: "invalid_parameter", field: "month" }));
     renderPage();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("功过总账加载失败");

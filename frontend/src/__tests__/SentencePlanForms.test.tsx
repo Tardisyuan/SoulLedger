@@ -205,7 +205,7 @@ describe("计划面板:提出请求(情况 2.1 / 2.2)", () => {
 
   it("拒绝码翻成对应的话,对话框不关、填的还在", async () => {
     as("JUDGE", "EG_DUAT", ...JUDGE);
-    planApi.file.mockRejectedValue(http(400, { error: "Realm …", code: "foreign_realm" }));
+    planApi.file.mockRejectedValue(http(400, { detail: "Realm …", code: "foreign_realm" }));
     const dialog = await openForm();
     fireEvent.click(within(dialog).getAllByRole("checkbox")[0]);
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("sentence_plan.file.submit") }));
@@ -241,7 +241,7 @@ describe("原审判上开联审", () => {
 
   it("服务端的字段错误原样给出(这份审判已有联审)", async () => {
     as("JUDGE", "CN_DIYU", ...JUDGE);
-    cjApi.create.mockRejectedValue(http(400, { judgment: ["This judgment already has a cross-tenant judgment."] }));
+    cjApi.create.mockRejectedValue(http(400, { code: "invalid", errors: [{ field: "judgment", code: "invalid", detail: "This judgment already has a cross-tenant judgment." }] }));
     renderWith(<OpenCrossJudgment judgmentId="j1" soulName="张三" />);
     fireEvent.click(screen.getByRole("button", { name: tZh("sentence_plan.cross.open") }));
     const dialog = await screen.findByRole("dialog");
@@ -444,7 +444,7 @@ describe("联审详情:请文明入席", () => {
 
   it("服务端拒绝原样给出", async () => {
     as("JUDGE", "CN_DIYU", ...JUDGE);
-    cjApi.participate.mockRejectedValue(http(400, { error: "node_order 3 is already taken" }));
+    cjApi.participate.mockRejectedValue(http(400, { detail: "node_order 3 is already taken" }));
     renderWith(<CrossJudgmentSeatForm judgment={bench()} />);
     fireEvent.change(screen.getByLabelText(tZh("sentence_plan.cross.seat_tenant")), { target: { value: "GR_HADES" } });
     fireEvent.click(screen.getByRole("button", { name: SEAT() }));

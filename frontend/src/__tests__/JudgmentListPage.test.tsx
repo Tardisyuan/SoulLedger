@@ -330,7 +330,7 @@ describe("审判队列", () => {
   });
 
   it("批量被拒时按拒绝码说是什么,不回显服务端英文", async () => {
-    judgmentApi.batch.mockRejectedValue({ response: { status: 409, data: { error: "This judgment is already claimed", code: "already_claimed", id: "c" } } });
+    judgmentApi.batch.mockRejectedValue({ response: { status: 409, data: { detail: "This judgment is already claimed", code: "already_claimed", id: "c" } } });
     renderPage();
     await screen.findByText("陆晚晴");
     fireEvent.click(within(rowOf("陆晚晴")).getByRole("checkbox"));

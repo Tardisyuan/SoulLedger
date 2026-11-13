@@ -18,7 +18,8 @@ jest.mock("@soulledger/core/api", () => ({
     error?.response?.status === 409 ? (error.response.data?.problems ?? null) : null,
 }));
 jest.mock("@soulledger/core/api/auth", () => ({
-  passwordReasonKeys: (body: { new_password?: { code: string }[] }) => (body.new_password ?? []).map((r) => `reason.${r.code}`),
+  passwordReasonKeys: (body: { errors?: { field?: string; code: string }[] }) =>
+    (body.errors ?? []).filter((r) => r.field === "new_password").map((r) => `reason.${r.code}`),
   splitCommonReasons: jest.fn(),
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -59,7 +60,7 @@ describe("/accept-invite", () => {
 
   it("lists every reason a weak password is refused for", async () => {
     window.history.pushState({}, "", "/accept-invite?uid=abc&token=tok-12345678");
-    accept.mockRejectedValue({ response: { status: 400, data: { code: "weak_password", new_password: [{ code: "too_short" }, { code: "numeric" }] } } });
+    accept.mockRejectedValue({ response: { status: 400, data: { code: "weak_password", errors: [{ field: "new_password", code: "too_short", detail: "x" }, { field: "new_password", code: "numeric", detail: "x" }] } } });
     render(<AcceptInvitePage />);
     const pw = screen.getByLabelText(/acceptInvite\.new_password/);
     fireEvent.change(pw, { target: { value: "Str0ng-enough-pass!" } });

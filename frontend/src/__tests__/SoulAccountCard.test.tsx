@@ -132,7 +132,7 @@ describe("provision and reset", () => {
   it("a 400 on a contact lands next to that field and does not close the dialog", async () => {
     asRole("soul_account.read", "soul_account.manage");
     soulAccountsApi.accounts.mockResolvedValue(page([PAST_LIFE]));
-    soulAccountsApi.provision.mockRejectedValue(http(400, { contact_email: ["请输入合法的邮件地址。"] }));
+    soulAccountsApi.provision.mockRejectedValue(http(400, { code: "invalid", errors: [{ field: "contact_email", code: "invalid", detail: "请输入合法的邮件地址。" }] }));
     renderCard();
     fireEvent.click(await screen.findByRole("button", { name: tZh("soul_accounts.account.actions.provision") }));
     const dialog = await screen.findByRole("dialog");

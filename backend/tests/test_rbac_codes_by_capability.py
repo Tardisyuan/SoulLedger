@@ -110,7 +110,7 @@ def test_assign_refuses_design_and_approve_in_one_set(world):
     ]}, format="json")
     assert response.status_code == 400, response.content
     assert response.data["code"] == "role_forbidden_permission"
-    assert "workflow.approve" in response.data["error"] and "workflow.create" not in response.data["error"]
+    assert "workflow.approve" in response.data["detail"] and "workflow.create" not in response.data["detail"]
     assert not RolePermission.objects.filter(role__name="DESIGNER").exists()
 
 

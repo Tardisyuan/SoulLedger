@@ -44,7 +44,7 @@ describe("parseSealGlyphs / sealGlyphsError", () => {
 
   it("flattens DRF's per-index errors, and says nothing for a non-400", () => {
     expect(sealGlyphsError({ response: { status: 400, data: { seal_glyphs: { 0: ["不是汉字"] } } } })).toBe("不是汉字");
-    expect(sealGlyphsError({ response: { status: 400, data: { seal_glyphs: ["最多 1 个字。"] } } })).toBe("最多 1 个字。");
+    expect(sealGlyphsError({ response: { status: 400, data: { code: "invalid", errors: [{ field: "seal_glyphs", code: "invalid", detail: "最多 1 个字。" }] } } })).toBe("最多 1 个字。");
     expect(sealGlyphsError({ response: { status: 500, data: {} } })).toBeNull();
   });
 });
@@ -59,7 +59,7 @@ describe("SealGlyphsDialog", () => {
 
   it("shows the server's 400 under the field and keeps the dialog open", async () => {
     (tenantsApi.updateSealGlyphs as jest.Mock).mockRejectedValue({
-      response: { status: 400, data: { seal_glyphs: ["CN 最多 1 个字。"] } },
+      response: { status: 400, data: { code: "invalid", errors: [{ field: "seal_glyphs", code: "invalid", detail: "CN 最多 1 个字。" }] } },
     });
     const onClose = renderDialog(tenant());
     fireEvent.change(screen.getByLabelText("tenants.seal.column"), { target: { value: "五殿" } });

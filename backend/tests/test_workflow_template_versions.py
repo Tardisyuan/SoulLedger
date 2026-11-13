@@ -189,7 +189,7 @@ def test_publish_without_a_draft_is_refused(client):
     client.post(f"{TEMPLATES}/{template.id}/publish/")
     res = client.post(f"{TEMPLATES}/{template.id}/publish/")
     assert res.status_code == 400
-    assert res.data["error"] == "no_draft"
+    assert res.data["code"] == "no_draft"
 
 
 @pytest.mark.django_db
@@ -202,7 +202,7 @@ def test_an_invalid_draft_is_not_published_and_nothing_changes(client):
 
     res = client.post(f"{TEMPLATES}/{template.id}/publish/")
     assert res.status_code == 400
-    assert res.data["error"] == "invalid_draft"
+    assert res.data["code"] == "invalid_draft"
     assert {"node": "n2", "code": "self_route", "field": "on_pass"} in res.data["issues"]
 
     template.refresh_from_db()

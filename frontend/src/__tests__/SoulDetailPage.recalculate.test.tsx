@@ -108,7 +108,7 @@ describe("SoulDetailPage — 重算功过", () => {
   });
 
   it("失败:报失败,不报成功", async () => {
-    mockRecalculate.mockRejectedValue({ response: { status: 404, data: { error: "NOT_FOUND", message: "Soul not found" } } });
+    mockRecalculate.mockRejectedValue({ response: { status: 404, data: { code: "not_found", detail: "Soul not found" } } });
     renderPage();
     fireEvent.click(await findButton());
     fireEvent.click(await screen.findByRole("button", { name: "common.confirm" }));

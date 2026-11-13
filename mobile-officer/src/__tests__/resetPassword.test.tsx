@@ -167,7 +167,7 @@ describe("ResetPasswordScreen", () => {
 
   it("a refusal as too common is the block above the list; the ticks stay and the words stay", async () => {
     mockConfirm.mockRejectedValue(
-      httpError(400, { code: "weak_password", new_password: [{ code: "password_too_common", message: "m" }] })
+      httpError(400, { code: "weak_password", errors: [{ field: "new_password", code: "password_too_common", detail: "m" }] })
     );
     const { onDone } = mount();
     fill();
@@ -184,11 +184,8 @@ describe("ResetPasswordScreen", () => {
     mockConfirm.mockRejectedValue(
       httpError(400, {
         code: "weak_password",
-        error: "This password is too common.",
-        new_password: [
-          { code: "password_too_common", message: "This password is too common." },
-          { code: "password_entirely_numeric", message: "This password is entirely numeric." },
-        ],
+        detail: "This password is too common.",
+        errors: [{ field: "new_password", code: "password_too_common", detail: "This password is too common." }, { field: "new_password", code: "password_entirely_numeric", detail: "This password is entirely numeric." }],
       })
     );
     const { onDone } = mount();
@@ -256,7 +253,7 @@ describe("ResetPasswordScreen", () => {
       return [UID, TOKEN].filter((secret) => seen.includes(secret));
     };
     const failures = [
-      httpError(400, { code: "weak_password", new_password: [{ code: "password_too_common", message: "m" }] }),
+      httpError(400, { code: "weak_password", errors: [{ field: "new_password", code: "password_too_common", detail: "m" }] }),
       new Error("Network Error"),
       httpError(400, { code: "reset_link_invalid" }),
     ];

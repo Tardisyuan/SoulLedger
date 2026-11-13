@@ -210,7 +210,7 @@ describe("classifySchedulerError", () => {
   });
 
   it("keeps 400 field errors by field, list or bare string", () => {
-    expect(classifySchedulerError(http(400, { cron: ["invalid crontab: bad"] }))).toEqual({
+    expect(classifySchedulerError(http(400, { code: "invalid", errors: [{ field: "cron", code: "invalid", detail: "invalid crontab: bad" }] }))).toEqual({
       kind: "invalid",
       fields: { cron: ["invalid crontab: bad"] },
     });

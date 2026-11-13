@@ -577,7 +577,7 @@ class TestApproveNodeApproverIdentity:
         # Same message a SYSTEM node gets: `approver_type=ACTOR` with a NULL
         # actor is the same fact wearing a different label — the node names
         # nobody — and the fix is the same, configure an approver or escalate.
-        assert resp.data["error"] == "Node designates no approver"
+        assert resp.data["detail"] == "Node designates no approver"
 
         from apps.workflow.models import ApprovalNode, NodeStatus
 
@@ -622,7 +622,7 @@ class TestApproveNodeApproverIdentity:
 
         resp = self._approve(client, wf_pk, node_pk)
         assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
-        assert resp.data["error"] == "Node designates no approver"
+        assert resp.data["detail"] == "Node designates no approver"
 
         from apps.workflow.models import ApprovalNode, NodeStatus
 

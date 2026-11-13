@@ -26,15 +26,15 @@ describe("MatchedOrigin", () => {
 
 describe("refusals", () => {
   it("reads the field refusal the serializer writes and names the place and the city god", () => {
-    const err = { response: { status: 400, data: { regions: { code: "region_taken", region: "钱塘", regions: ["钱塘"], city_god: "杭州府城隍" } } } };
+    const err = { response: { status: 400, data: { code: "invalid", errors: [{ field: "regions", code: "region_taken", detail: "region_taken", region: "钱塘", regions: ["钱塘"], city_god: "杭州府城隍" }] } } };
     const refusal = cityGodFieldRefusal(err);
     expect(refusal?.code).toBe("region_taken");
     expect(cityGodFieldMessage(refusal!, tZh)).toBe("「钱塘」已归杭州府城隍管，一个地名只能属于一位城隍");
-    expect(cityGodFieldRefusal({ response: { data: { name: ["This field is required."] } } })).toBeNull();
+    expect(cityGodFieldRefusal({ response: { data: { code: "invalid", errors: [{ field: "name", code: "invalid", detail: "This field is required." }] } } })).toBeNull();
   });
 
   it("says why a city god with earth gods under it cannot leave the county rank (2026-10-28)", () => {
-    const err = { response: { status: 400, data: { rank: { code: "city_god_has_tudi_gods", city_god: "临安县城隍" } } } };
+    const err = { response: { status: 400, data: { code: "invalid", errors: [{ field: "rank", code: "city_god_has_tudi_gods", detail: "city_god_has_tudi_gods", city_god: "临安县城隍" }] } } };
     const refusal = cityGodFieldRefusal(err);
     expect(refusal?.code).toBe("city_god_has_tudi_gods");
     expect(cityGodFieldMessage(refusal!, tZh)).toBe("临安县城隍名下有土地公，而土地公的上级只能是县城隍；先把土地公改交别的城隍再改级别");

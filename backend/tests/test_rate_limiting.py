@@ -137,7 +137,7 @@ class TestLoginRateLimiting:
 
             resp = self._login("ratelimit_user", "Wrong!")
             assert resp.status_code == 429
-            assert "error" in resp.data
+            assert "detail" in resp.data
 
     def test_failed_login_reports_remaining_attempts(self, django_user_model):
         """Each 401 says how many tries are left: 4, 3, 2, 1, 0 — then 429."""

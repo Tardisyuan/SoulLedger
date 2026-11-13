@@ -155,7 +155,7 @@ describe("proposing a dispatch", () => {
     await fillValid();
     mockedPropose.mockRejectedValue({
       isAxiosError: true,
-      response: { data: { reason: ["理由不得为空白。"] } },
+      response: { data: { code: "invalid", errors: [{ field: "reason", code: "invalid", detail: "理由不得为空白。" }] } },
     });
 
     fireEvent.click(screen.getByText("dispatch.submit_proposal"));
@@ -172,7 +172,7 @@ describe("proposing a dispatch", () => {
     await fillValid();
     mockedPropose.mockRejectedValue({
       isAxiosError: true,
-      response: { data: { non_field_errors: ["不能调度到本租户。"] } },
+      response: { data: { code: "invalid", errors: [{ code: "invalid", detail: "不能调度到本租户。" }] } },
     });
 
     fireEvent.click(screen.getByText("dispatch.submit_proposal"));
@@ -469,7 +469,7 @@ describe("dispatch drafts and the target realm", () => {
     await fillValid();
     mockedPropose.mockRejectedValue({
       isAxiosError: true,
-      response: { status: 400, data: { error: "Hall GR_HADES is not receiving transfers", code: "target_dispatch_disabled" } },
+      response: { status: 400, data: { detail: "Hall GR_HADES is not receiving transfers", code: "target_dispatch_disabled" } },
     });
 
     fireEvent.click(screen.getByText("dispatch.submit_proposal"));
@@ -482,7 +482,7 @@ describe("dispatch drafts and the target realm", () => {
   it("a realm the server refuses is shown under the realm select", async () => {
     (dispatchApi.createDraft as jest.Mock).mockRejectedValue({
       isAxiosError: true,
-      response: { status: 400, data: { target_realm: ["Realm X is not a realm of GR_HADES"] } },
+      response: { status: 400, data: { code: "invalid", errors: [{ field: "target_realm", code: "invalid", detail: "Realm X is not a realm of GR_HADES" }] } },
     });
     renderPage();
     fireEvent.click(await screen.findByRole("radio", { name: /civilizations\.GREEK/ }));

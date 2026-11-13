@@ -822,7 +822,7 @@ describe("the password checklist on the change-password screen (Design 第二十
   });
 
   it("the server refusing it as too common is said above the list, the ticks stay, and the old 「强度不足」 sentence is not shown", async () => {
-    const calls = await openChange({ "POST /me/password/": { status: 400, data: { error: "x", code: "weak_password" } } });
+    const calls = await openChange({ "POST /me/password/": { status: 400, data: { detail: "x", code: "weak_password" } } });
     fireEvent.changeText(screen.getByTestId("old-password"), "old-secret");
     fireEvent.changeText(screen.getByTestId("new-password"), "password123");
     fireEvent.changeText(screen.getByTestId("confirm-password"), "password123");

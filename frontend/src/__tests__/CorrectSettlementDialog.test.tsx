@@ -30,7 +30,7 @@ const reasonField = () => screen.getByLabelText(/souls\.detail\.correct_settleme
 beforeEach(() => jest.clearAllMocks());
 
 it("correctSettlementError keeps the backend's 400 sentence and nothing else", () => {
-  expect(correctSettlementError({ response: { status: 400, data: { error: "Only a SETTLED soul can have its settlement corrected." } } }))
+  expect(correctSettlementError({ response: { status: 400, data: { detail: "Only a SETTLED soul can have its settlement corrected." } } }))
     .toBe("Only a SETTLED soul can have its settlement corrected.");
   expect(correctSettlementError({ response: { status: 403, data: { detail: "no" } } })).toBeNull();
   expect(correctSettlementError(new Error("network"))).toBeNull();
@@ -58,7 +58,7 @@ describe("CorrectSettlementDialog", () => {
   });
 
   it("shows the backend's 400 under the reason and keeps the dialog open; other failures toast", async () => {
-    correct.mockRejectedValueOnce({ response: { status: 400, data: { error: "Only a SETTLED soul can have its settlement corrected." } } });
+    correct.mockRejectedValueOnce({ response: { status: 400, data: { detail: "Only a SETTLED soul can have its settlement corrected." } } });
     const { onClose, onCorrected } = renderDialog();
     fireEvent.change(reasonField(), { target: { value: "x" } });
     confirm();

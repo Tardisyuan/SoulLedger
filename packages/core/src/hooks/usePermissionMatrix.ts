@@ -114,7 +114,7 @@ export function useCopyRole() {
 export function roleDeleteRefusal(error: unknown): RoleDeleteRefusal | null {
   const response = (error as { response?: { status?: number; data?: unknown } } | null)?.response;
   const data = response?.data as Partial<RoleDeleteRefusal> | undefined;
-  if (response?.status !== 400 || !data || typeof data.code !== "string") return null;
+  if (response?.status !== 400 || !data || typeof data.code !== "string" || data.code === "invalid") return null;
   return data as RoleDeleteRefusal;
 }
 

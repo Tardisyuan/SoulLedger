@@ -33,7 +33,7 @@ describe("soulErrorMessage / soulCodeMessage", () => {
     ["no response", offline(), { key: "soul_app.errors.network" }],
     ["a known code", http(400, { code: "rate_limited" }), { key: "soul_app.errors.rate_limited" }],
     ["an unknown code is carried", http(409, { code: "brand_new" }), { key: "soul_app.errors.unknown", params: { code: "brand_new" } }],
-    ["a 400 without a code", http(400, { field: ["bad"] }), { key: "soul_app.errors.validation" }],
+    ["a 400 without a code", http(400, { code: "invalid", errors: [{ field: "field", code: "invalid", detail: "bad" }] }), { key: "soul_app.errors.validation" }],
     ["other status is carried", http(502), { key: "soul_app.errors.unknown", params: { code: "502" } }],
   ])("%s", (_name, error, expected) => {
     expect(soulErrorMessage(error)).toEqual(expected);
@@ -68,8 +68,8 @@ describe("passwordResetErrorMessage and its numbers", () => {
   it.each([
     ["a refusal code", http(400, { code: "reset_code_expired" }), "soul_app.forgot_password.err_expired_title"],
     ["no account asks the hall", http(404, { code: "no_soul_account" }), "soul_app.forgot_password.ask_hall"],
-    ["DRF new_password errors", http(400, { new_password: ["short"] }), "soul_app.errors.weak_password"],
-    ["DRF code errors", http(400, { code: ["wrong"] }), "soul_app.forgot_password.err_wrong_title"],
+    ["DRF new_password errors", http(400, { code: "invalid", errors: [{ field: "new_password", code: "invalid", detail: "short" }] }), "soul_app.errors.weak_password"],
+    ["DRF code errors", http(400, { code: "invalid", errors: [{ field: "code", code: "invalid", detail: "wrong" }] }), "soul_app.forgot_password.err_wrong_title"],
     ["other 400", http(400, {}), "soul_app.errors.validation"],
     ["offline", offline(), "soul_app.errors.network"],
     ["falls back to the generic reader", http(500), "soul_app.errors.unknown"],

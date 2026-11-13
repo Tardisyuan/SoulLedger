@@ -385,7 +385,7 @@ export function read(rec: Recording, path: string, query: URLSearchParams): Answ
   if (doc || inParent || addedRow) {
     if (Array.isArray(doc?.b)) return { status: 200, data: [...((overlay.added[path] ?? []) as unknown[]), ...(overlaid(doc.b, path) as unknown[])] };
     const scope = parent?.collection;
-    if (parent && isDeleted({ id: parent.id }, scope)) return { status: 404, data: { detail: "Not found." } };
+    if (parent && isDeleted({ id: parent.id }, scope)) return { status: 404, data: { type: "about:blank", title: "Not Found", status: 404, code: "not_found", detail: "Not found." } };
     // A row's list form under its detail form: a detail recorded for the row wins, and the row fills what it lacks.
     return { status: 200, data: mergeScoped(overlaid(doc?.b ?? addedRow ?? inParent, scope), parent) };
   }
@@ -394,7 +394,7 @@ export function read(rec: Recording, path: string, query: URLSearchParams): Answ
   // ones), or one typed by hand — is a 404, as the server would say. An empty 200 here made detail pages crash on the
   // fields they expect (2026-11-08: /souls/<old id> → "Cannot read properties of undefined (reading 'map')").
   if (parent && /^(\d+|[0-9a-f]{8}-[0-9a-f-]{27})$/.test(parent.id) && Object.keys(rec.lists).some((k) => pathOfKey(k) === parent.collection)) {
-    return { status: 404, data: { detail: "Not found." } };
+    return { status: 404, data: { type: "about:blank", title: "Not Found", status: 404, code: "not_found", detail: "Not found." } };
   }
   console.info("[demo] nothing recorded for GET", key);
   return { status: 200, data: emptyLike() };

@@ -49,7 +49,7 @@ jest.mock("@soulledger/core/platform", () => ({
 function nonFieldValidationError(message: string) {
   return {
     isAxiosError: true,
-    response: { status: 400, data: { non_field_errors: [message] } },
+    response: { status: 400, data: { code: "invalid", errors: [{ code: "invalid", detail: message }] } },
   };
 }
 
@@ -287,7 +287,7 @@ describe("useUploadAvatar behavior", () => {
     // simply too big.
     (socialApi.uploadAvatar as jest.Mock).mockRejectedValueOnce({
       isAxiosError: true,
-      response: { status: 400, data: { avatar: ["Avatar must be at most 5 MB."] } },
+      response: { status: 400, data: { code: "invalid", errors: [{ field: "avatar", code: "invalid", detail: "Avatar must be at most 5 MB." }] } },
     });
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useUploadAvatar(), { wrapper });

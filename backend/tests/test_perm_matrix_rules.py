@@ -83,7 +83,7 @@ def test_the_whole_set_assign_refuses_removing_any_admin_row(world):
 
     res = world["client"].post(ASSIGN, {"role": "ADMIN", "permission_ids": [p["soul.read"].pk]}, format="json")
     assert res.status_code == 400, res.content
-    assert res.json()["code"] == "admin_always_all" and "soul.update" in res.json()["error"]
+    assert res.json()["code"] == "admin_always_all" and "soul.update" in res.json()["detail"]
     assert _held("ADMIN", "soul.read") and _held("ADMIN", "soul.update")
     assert Role.objects.get(name="ADMIN").version == version
 

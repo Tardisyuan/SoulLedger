@@ -72,6 +72,6 @@ describe("onMfaSetupRequired", () => {
 
 describe("passwordReasonKeys", () => {
   it("a reused password has its own line", () => {
-    expect(passwordReasonKeys({ new_password: [{ code: "password_reused", message: "x" }] })).toEqual(["profile.password_reason_reused"]);
+    expect(passwordReasonKeys({ errors: [{ field: "new_password", code: "password_reused", detail: "x" }] })).toEqual(["profile.password_reason_reused"]);
   });
 });

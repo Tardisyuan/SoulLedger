@@ -196,7 +196,7 @@ describe("SoulDetailPage — inheritance panel", () => {
     mockInheritance.mockRejectedValueOnce({
       response: {
         status: 409,
-        data: { code: "REBIRTH_NOT_APPLICABLE", civilization: "EGYPTIAN", detail: "no next life" },
+        data: { code: "rebirth_not_applicable", civilization: "EGYPTIAN", detail: "no next life" },
       },
     });
 
@@ -301,7 +301,7 @@ describe("SoulDetailPage — inheritance panel", () => {
 describe("SoulDetailPage — which life the ledger belongs to", () => {
   beforeEach(() => {
     mockInheritance.mockRejectedValue({
-      response: { status: 409, data: { code: "REBIRTH_NOT_APPLICABLE" } },
+      response: { status: 409, data: { code: "rebirth_not_applicable" } },
     });
   });
 

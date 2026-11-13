@@ -145,11 +145,11 @@ describe("新增", () => {
   const bad = (data: object) => ({ response: { status: 400, data } });
 
   it.each([
-    ["count below 1", { occurrence_count: ["Ensure this value is greater than or equal to 1."], error_codes: { occurrence_count: ["min_value"] } }, "ledger.book.form.err.count_min"],
-    ["weight out of range", { weight: ["Ensure this value is less than or equal to 100."], error_codes: { weight: ["max_value"] } }, "ledger.book.form.weight_range"],
-    ["unknown enum", { life_stage: ['"X" is not a valid choice.'], error_codes: { life_stage: ["invalid_choice"] } }, "ledger.book.form.err.unknown_enum"],
-    ["statute of another civilization", { statute: ["CN-1 belongs to EUROPEAN"], error_codes: { statute: ["statute_other_civilization"] } }, "ledger.book.form.err.statute_civ"],
-    ["unpaired clause and count", { non_field_errors: ["statute_clause and occurrence_count are the two halves"], error_codes: { non_field_errors: ["clause_count_pair"] } }, "ledger.book.form.err.pair"],
+    ["count below 1", { code: "invalid", errors: [{ field: "occurrence_count", code: "min_value", detail: "Ensure this value is greater than or equal to 1." }] }, "ledger.book.form.err.count_min"],
+    ["weight out of range", { code: "invalid", errors: [{ field: "weight", code: "max_value", detail: "Ensure this value is less than or equal to 100." }] }, "ledger.book.form.weight_range"],
+    ["unknown enum", { code: "invalid", errors: [{ field: "life_stage", code: "invalid_choice", detail: '"X" is not a valid choice.' }] }, "ledger.book.form.err.unknown_enum"],
+    ["statute of another civilization", { code: "invalid", errors: [{ field: "statute", code: "statute_other_civilization", detail: "CN-1 belongs to EUROPEAN" }] }, "ledger.book.form.err.statute_civ"],
+    ["unpaired clause and count", { code: "invalid", errors: [{ code: "clause_count_pair", detail: "statute_clause and occurrence_count are the two halves" }] }, "ledger.book.form.err.pair"],
   ])("translates the server's code for %s and raises no generic toast", async (_name, data, key) => {
     notify().mockClear();
     save(bad(data));
@@ -159,7 +159,7 @@ describe("新增", () => {
   });
 
   it("falls back to the server's text for a code it does not know, still under the field", async () => {
-    save(bad({ occurrence_count: ["Something new."], error_codes: { occurrence_count: ["brand_new"] } }));
+    save(bad({ code: "invalid", errors: [{ field: "occurrence_count", code: "brand_new", detail: "Something new." }] }));
     expect(await screen.findByText(/Something new\./)).toBeInTheDocument();
     expect(label("ledger.book.form.occurrence_count")).toHaveAttribute("aria-invalid", "true");
   });

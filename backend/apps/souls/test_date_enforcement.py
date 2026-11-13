@@ -239,12 +239,12 @@ class TestDieActionDateEnforcement:
         soul = Soul.objects.create(name="Bad Input", tenant=self.tenant, birth_year=1943)
         resp = self._die(soul, death_date={"year": 0})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert "error" in resp.data
+        assert "detail" in resp.data
 
     def test_a_refused_death_answers_in_that_same_shape(self):
         soul = Soul.objects.create(name="Backwards 2", tenant=self.tenant, birth_year=2019)
         resp = self._die(soul, death_date={"year": 1943})
-        assert "error" in resp.data
+        assert "detail" in resp.data
 
 
 @pytest.mark.django_db

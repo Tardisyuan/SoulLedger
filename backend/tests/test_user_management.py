@@ -403,7 +403,7 @@ class TestUserManagementAPI:
         """POST /api/v1/users/import_csv/ without file returns 400."""
         response = self.client.post("/api/v1/users/import_csv/", {}, format="multipart")
         assert response.status_code == 400
-        assert "error" in response.data
+        assert "detail" in response.data
 
     def test_import_csv_wrong_extension(self):
         """POST /api/v1/users/import_csv/ with non-CSV file returns 400."""
@@ -419,7 +419,7 @@ class TestUserManagementAPI:
             format="multipart"
         )
         assert response.status_code == 400
-        assert "csv" in response.data["error"].lower()
+        assert "csv" in response.data["detail"].lower()
 
 
 @pytest.mark.django_db
@@ -585,7 +585,7 @@ class TestPasswordReset:
             "new_password": "NewSecurePass123!",
         }, format="json")
         assert response.status_code == 400
-        assert "error" in response.data
+        assert "detail" in response.data
 
     def test_set_new_password_expired_code(self, api_client, admin_user):
         """POST /api/v1/auth/set-new-password/ without requesting code first returns 400."""

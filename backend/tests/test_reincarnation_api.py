@@ -78,7 +78,7 @@ class TestRebirthEndpointsRespectTheStateMachine:
         # The specific fact, not a generic state-machine refusal: the operator
         # needs to know this cosmology has no next life, not that some
         # transition was disallowed.
-        assert response.data["code"] == "REBIRTH_NOT_APPLICABLE"
+        assert response.data["code"] == "rebirth_not_applicable"
         assert response.data["civilization"] == "EUROPEAN"
         assert "no next life" in response.data["detail"]
 
@@ -102,7 +102,7 @@ class TestRebirthEndpointsRespectTheStateMachine:
         )
 
         assert response.status_code == 409
-        assert response.data["error"] == "INVALID_STATE_TRANSITION"
+        assert response.data["code"] == "invalid_state_transition"
         assert response.data["current_state"] == SoulState.SETTLED
         assert response.data["target_state"] == SoulState.REINCARNATING
         # No "code"/"civilization" — that shape belongs to the cosmology

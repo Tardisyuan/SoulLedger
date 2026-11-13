@@ -76,14 +76,7 @@ describe("changePassword", () => {
 describe("passwordReasonKeys", () => {
   it("maps each validator code to a key, once", () => {
     const body = {
-      new_password: [
-        { code: "password_too_short", message: "x" },
-        { code: "password_too_common", message: "x" },
-        { code: "password_entirely_numeric", message: "x" },
-        { code: "password_too_similar", message: "x" },
-        { code: "something_new", message: "x" },
-        "This field may not be blank.",
-      ],
+      errors: [{ field: "new_password", code: "password_too_short", detail: "x" }, { field: "new_password", code: "password_too_common", detail: "x" }, { field: "new_password", code: "password_entirely_numeric", detail: "x" }, { field: "new_password", code: "password_too_similar", detail: "x" }, { field: "new_password", code: "something_new", detail: "x" }, { field: "new_password", code: "invalid", detail: "This field may not be blank." }],
     };
     expect(passwordReasonKeys(body)).toEqual([
       "profile.password_too_short",
@@ -96,6 +89,6 @@ describe("passwordReasonKeys", () => {
 
   it("is empty for a body without reasons", () => {
     expect(passwordReasonKeys(undefined)).toEqual([]);
-    expect(passwordReasonKeys({ old_password: ["x"] })).toEqual([]);
+    expect(passwordReasonKeys({ errors: [{ field: "old_password", code: "invalid", detail: "x" }] })).toEqual([]);
   });
 });

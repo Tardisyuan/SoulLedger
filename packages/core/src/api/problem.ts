@@ -14,12 +14,13 @@ import type { components } from "./generated/schema";
 export type Problem = components["schemas"]["Problem"] & Record<string, unknown>;
 export type ProblemFieldError = components["schemas"]["ProblemFieldError"];
 
-/** The problem body of a failed request (any rejection shaped like an axios error), or `null`. */
+/** The body of a failed request (any rejection shaped like an axios error) when it is an object, or `null`. */
 export function problemOf(error: unknown): Problem | null {
   const data = (error as { response?: { data?: unknown } } | null)?.response?.data;
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const body = data as Partial<Problem>;
-  return typeof body.code === "string" && typeof body.status === "number" ? (body as Problem) : null;
+  // Not checked for `code` / `status`: a reader of one member (`detail`, `errors`) should not fail on a body
+  // that lacks another; each reader checks the member it reads.
+  return data as Problem;
 }
 
 /** The problem's one sentence for a person, when it has one. */

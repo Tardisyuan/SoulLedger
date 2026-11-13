@@ -382,7 +382,7 @@ describe("schedule editor", () => {
   });
 
   it("puts a 400 cron error beside the cron fields, opening them if they were closed", async () => {
-    schedulerApi.updateJob.mockRejectedValue(http(400, { cron: ["invalid crontab: Invalid end range: 60 > 59."] }));
+    schedulerApi.updateJob.mockRejectedValue(http(400, { code: "invalid", errors: [{ field: "cron", code: "invalid", detail: "invalid crontab: Invalid end range: 60 > 59." }] }));
     const dialog = await openEditor();
     fireEvent.change(within(dialog).getByLabelText(tZh("scheduler.editor.minute")), { target: { value: "45" } });
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.save") }));
@@ -395,7 +395,7 @@ describe("schedule editor", () => {
   });
 
   it("puts a 400 timezone error on the timezone field", async () => {
-    schedulerApi.updateJob.mockRejectedValue(http(400, { timezone: ["Unknown time zone"] }));
+    schedulerApi.updateJob.mockRejectedValue(http(400, { code: "invalid", errors: [{ field: "timezone", code: "invalid", detail: "Unknown time zone" }] }));
     const dialog = await openEditor();
     fireEvent.change(within(dialog).getByLabelText(tZh("scheduler.editor.timezone")), { target: { value: "Europe/Rome" } });
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.save") }));

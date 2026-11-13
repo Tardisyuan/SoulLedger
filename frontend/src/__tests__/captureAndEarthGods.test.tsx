@@ -273,7 +273,7 @@ describe("以土地公名义登记死亡(S-6)", () => {
   });
 
   it("同一把幂等键再发被 409(已有那条):按那条登记收尾,当成功,不写拒绝", async () => {
-    mockRegister.mockRejectedValue({ response: { status: 409, data: { id: "r1", status: "PROCESSED", error_code: "" } } });
+    mockRegister.mockRejectedValue({ response: { status: 409, data: { status: 409, code: "registration_exists", registration: { id: "r1", status: "PROCESSED", error_code: "" } } } });
     const onClose = jest.fn();
     wrap(<TudiRegisterDeathDialog soul={{ id: "s1", name: "钱谦益" }} tudi={TUDI as never} onClose={onClose} />);
     fireEvent.click(screen.getByTestId("tudi-register-submit"));

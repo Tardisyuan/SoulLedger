@@ -381,7 +381,7 @@ describe("the shared 「删除失败」 key still reaches single deletes", () =>
       statusText: "",
       headers: {},
       config: { headers: new AxiosHeaders() },
-      data: { error: "x", archivable: false, code: "soul_residing" },
+      data: { detail: "x", archivable: false, code: "soul_residing" },
     });
     (soulsApi.delete as jest.Mock).mockRejectedValueOnce(refusal);
     const { wrapper } = createWrapper();

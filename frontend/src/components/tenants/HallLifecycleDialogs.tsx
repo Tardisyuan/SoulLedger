@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant, type TenantCreateBody } from "@soulledger/core/api";
+import { problemFieldErrors, responseStatus } from "@soulledger/core/api/client";
 import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { tenantLabel } from "@/src/lib/domainNames";
@@ -23,17 +24,15 @@ type FieldErrors = Partial<Record<"code" | "civilization", string>>;
  * 挂在文明下面(第五十四批 K-2:要改的通常是文明)。认不出的返回 null,调用方给通用提示。
  */
 export function hallCreateErrors(error: unknown, code: string, t: Translate): FieldErrors | null {
-  const res = (error as { response?: { status?: number; data?: unknown } })?.response;
-  if (res?.status !== 400 || !res.data || typeof res.data !== "object") return null;
-  const body = res.data as Record<string, unknown>;
-  const first = (v: unknown) => (Array.isArray(v) ? String(v[0] ?? "") : typeof v === "string" ? v : "");
+  if (responseStatus(error) !== 400) return null;
+  const fields = problemFieldErrors(error);
   const out: FieldErrors = {};
-  if ("code" in body) {
-    out.code = /already exists/i.test(first(body.code)) ? t("halls.code_taken") : t("halls.code_invalid");
+  if ("code" in fields) {
+    out.code = /already exists/i.test(fields.code) ? t("halls.code_taken") : t("halls.code_invalid");
   }
-  if ("civilization" in body) {
-    const civ = /\bis an? ([A-Z]+) hall/.exec(first(body.civilization))?.[1];
-    out.civilization = civ ? t("halls.civ_mismatch", { code, civ: t(`tenant.civilizations.${civ}`) }) : first(body.civilization);
+  if ("civilization" in fields) {
+    const civ = /\bis an? ([A-Z]+) hall/.exec(fields.civilization)?.[1];
+    out.civilization = civ ? t("halls.civ_mismatch", { code, civ: t(`tenant.civilizations.${civ}`) }) : fields.civilization;
   }
   return Object.keys(out).length ? out : null;
 }

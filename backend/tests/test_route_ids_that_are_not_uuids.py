@@ -26,8 +26,8 @@ def test_a_citation_or_evidence_id_that_is_not_a_uuid_is_refused_like_an_unknown
     base = f"/api/v1/judgment/{case.pk}"
 
     uncited = client.delete(f"{base}/citations/{junk}/")
-    assert uncited.status_code == 400 and "No statute" in uncited.data["error"], uncited.data
+    assert uncited.status_code == 400 and "No statute" in uncited.data["detail"], uncited.data
     ruled = client.put(f"{base}/evidence/{junk}/", {"admitted": True}, format="json")
-    assert ruled.status_code == 400 and "not evidence in this case" in ruled.data["error"], ruled.data
+    assert ruled.status_code == 400 and "not evidence in this case" in ruled.data["detail"], ruled.data
     assert not JudgmentCitation.all_objects.filter(judgment=case).exists()
     assert not EvidenceAdmission.all_objects.filter(judgment=case).exists()

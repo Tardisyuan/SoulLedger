@@ -132,7 +132,7 @@ describe("rebirth application workflow", () => {
 
   it("the backend's 400 for a missing reason lands beside the field, not in a toast", async () => {
     workflowApi.approveNode.mockRejectedValue(
-      http(400, { error: "rejection_reason_for_soul is required", detail: "驳回转生申请必须填写给灵魂的驳回理由" })
+      http(400, { code: "reason_required", detail: "驳回转生申请必须填写给灵魂的驳回理由", errors: [{ field: "rejection_reason_for_soul", code: "required", detail: "驳回转生申请必须填写给灵魂的驳回理由" }] })
     );
     renderPage();
     await pick("failed");

@@ -467,7 +467,7 @@ def test_restoring_a_template_whose_role_is_gone_is_refused_naming_the_role(worl
     assert refused.status_code == 400, refused.content
     body = refused.json()
     assert (body["code"], body["missing_roles"]) == ("template_role_missing", ["AUDITOR"])
-    assert "AUDITOR" in body["error"] and "JUDGE" not in body["error"]
+    assert "AUDITOR" in body["detail"] and "JUDGE" not in body["detail"]
     assert WorkflowTemplate.all_objects.get(pk=tpl.pk).is_deleted is True  # nothing restored
 
     # Bring the role back from the bin, and the template follows.

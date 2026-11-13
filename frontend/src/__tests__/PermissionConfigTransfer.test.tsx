@@ -267,7 +267,7 @@ describe("import: the three steps", () => {
   });
 
   it("shows the backend's reason when the preview is refused, and stays on step 1", async () => {
-    importConfig.mockRejectedValue({ response: { data: { error: "Body must be a JSON object" } } });
+    importConfig.mockRejectedValue({ response: { data: { detail: "Body must be a JSON object" } } });
     setup();
     openImport();
     pick(JSON.stringify(DOC));
@@ -383,7 +383,7 @@ describe("import: overwrite", () => {
     setup();
     importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     await toSummary();
-    importConfig.mockRejectedValueOnce({ response: { data: { error: "nope" } } });
+    importConfig.mockRejectedValueOnce({ response: { data: { detail: "nope" } } });
     fireEvent.click(radio("overwrite"));
     expect((await screen.findByRole("alert")).textContent).toContain("nope");
     expect(radio("merge")).toBeChecked();
@@ -411,7 +411,7 @@ describe("import: the server's overwrite switch (overwrite_enabled)", () => {
     setup();
     importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     await toSummary();
-    importConfig.mockRejectedValueOnce({ response: { status: 403, data: { error: "Overwrite import is disabled.", code: "overwrite_disabled" } } });
+    importConfig.mockRejectedValueOnce({ response: { status: 403, data: { detail: "Overwrite import is disabled.", code: "overwrite_disabled" } } });
     fireEvent.click(radio("overwrite"));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("permissions.config.errors.overwrite_disabled");

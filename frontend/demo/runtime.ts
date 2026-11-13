@@ -133,7 +133,7 @@ async function recordedEval(path: string): Promise<Answer | null> {
   const id = EVAL_RUN.exec(path)?.[1];
   if (!id) return null;
   const run = runs.find((r) => r.id === Number(id));
-  return run ? { status: 200, data: run } : { status: 404, data: { detail: "Not found." } };
+  return run ? { status: 200, data: run } : { status: 404, data: { type: "about:blank", title: "Not Found", status: 404, code: "not_found", detail: "Not found." } };
 }
 
 export async function fetchAnswer(rawUrl: string, init?: RequestInit): Promise<Response> {

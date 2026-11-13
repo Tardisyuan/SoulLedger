@@ -48,7 +48,7 @@ it("a 'too common' refusal replaces the reasons and the old sentence with the ch
   (authApi.changePassword as jest.Mock).mockRejectedValue({
     response: {
       status: 400,
-      data: { new_password: [{ code: "password_too_common", message: "This password is too common." }] },
+      data: { errors: [{ field: "new_password", code: "password_too_common", detail: "This password is too common." }] },
     },
   });
   const { newInput } = await openForm("password-123");
@@ -66,7 +66,7 @@ it("a 'too common' refusal replaces the reasons and the old sentence with the ch
 
 it("a refusal that is not 'too common' says its own reason and leaves the checklist alone (2026-10-23)", async () => {
   (authApi.changePassword as jest.Mock).mockRejectedValue({
-    response: { status: 400, data: { new_password: [{ code: "password_reused", message: "You used this password recently." }] } },
+    response: { status: 400, data: { errors: [{ field: "new_password", code: "password_reused", detail: "You used this password recently." }] } },
   });
   await openForm();
   await waitFor(() => expect(mockToast).toHaveBeenCalledWith("profile.password_reason_reused", "error"));
@@ -109,7 +109,7 @@ it("a clean form sends the request", async () => {
 
 it("a wrong old password shows under the old-password field", async () => {
   (authApi.changePassword as jest.Mock).mockRejectedValue({
-    response: { status: 400, data: { old_password: ["旧密码不正确"] } },
+    response: { status: 400, data: { code: "invalid", errors: [{ field: "old_password", code: "invalid", detail: "旧密码不正确" }] } },
   });
   await openForm();
   expect(await screen.findByRole("alert")).toHaveTextContent("profile.password_old_wrong");

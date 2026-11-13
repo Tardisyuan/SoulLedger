@@ -157,7 +157,7 @@ describe("加减项审判结案带改动(情况 1)", () => {
 
   it("改动被拒(同一事务,什么都没写):拒绝码翻成对应的话", async () => {
     judgmentApi.conclude.mockRejectedValue(
-      Object.assign(new Error("409"), { response: { status: 409, data: { error: "…", code: "eternal_not_last" } } })
+      Object.assign(new Error("409"), { response: { status: 409, data: { detail: "…", code: "eternal_not_last" } } })
     );
     renderPage();
     await screen.findByTestId("amendment-plan-changes");
@@ -252,7 +252,7 @@ describe("结案的拒绝(客户端审查 2026-10-29 #1 / #7)", () => {
   });
 
   it("候审未到被拒:走认领的那句译文,不是通用句", async () => {
-    refuse({ error: "Charon ferries only the buried who can pay.", code: "unferried" });
+    refuse({ detail: "Charon ferries only the buried who can pay.", code: "unferried" });
     renderPage();
     await screen.findByTestId("amendment-plan-changes");
     await conclude();
@@ -260,7 +260,7 @@ describe("结案的拒绝(客户端审查 2026-10-29 #1 / #7)", () => {
   });
 
   it("原审要走流程(approval_flow_required / weighing_flow_required):各有一句译文", async () => {
-    refuse({ error: "An original judgment is concluded through its approval workflow", code: "approval_flow_required" });
+    refuse({ detail: "An original judgment is concluded through its approval workflow", code: "approval_flow_required" });
     renderPage();
     await screen.findByTestId("amendment-plan-changes");
     await conclude();
@@ -271,7 +271,7 @@ describe("结案的拒绝(客户端审查 2026-10-29 #1 / #7)", () => {
   });
 
   it("认不出的码:通用句,不回显后端英文", async () => {
-    refuse({ error: "Something went wrong in English", code: "no_such_code" });
+    refuse({ detail: "Something went wrong in English", code: "no_such_code" });
     renderPage();
     await screen.findByTestId("amendment-plan-changes");
     await conclude();

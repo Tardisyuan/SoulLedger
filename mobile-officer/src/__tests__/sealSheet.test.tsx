@@ -149,7 +149,7 @@ describe("按住落印", () => {
     const t = (key: string) => key;
     const refused = (data: object) => ({ response: { status: 400, data } });
     expect(verdictFailure(t, refused({ detail: "未受洗的灵魂不入炼狱。", code: "purgatory_unbaptized" }))).toBe("未受洗的灵魂不入炼狱。");
-    expect(verdictFailure(t, refused({ error: "Not allowed." }))).toBe("Not allowed.");
+    expect(verdictFailure(t, refused({ detail: "Not allowed." }))).toBe("Not allowed.");
     expect(verdictFailure(t, refused({ detail: "x", code: "fail_reason_required" }))).toBe("judgment.fail_reason_errors.fail_reason_required");
     expect(verdictFailure(t, new Error("network"))).toBe("officer_app.state.error_title");
   });

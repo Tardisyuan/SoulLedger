@@ -149,7 +149,7 @@ describe("step 1: the email", () => {
     const trees: string[] = [];
     for (const reply of [
       { status: 200, data: { detail: "验证码已发送到邮箱" } },
-      { status: 400, data: { email: ["该邮箱不存在"] } },
+      { status: 400, data: { code: "invalid", errors: [{ field: "email", code: "invalid", detail: "该邮箱不存在" }] } },
     ]) {
       const calls = await toCodeStep(reply);
       expect(calls.map((c) => [c.method, c.url, c.body])).toEqual([["POST", "/auth/reset-password/", { email: EMAIL }]]);
@@ -403,7 +403,7 @@ describe("step 2: the code and the new password", () => {
     ["tries used up (429: the code is gone)", { status: 429, data: refusal("reset_code_attempts_exceeded") }, "forgot-exhausted", "! 尝试次数已用完", "这个验证码已作废。请重新发送。"],
     ["an expired code", { status: 400, data: refusal("reset_code_expired") }, "forgot-expired", "! 验证码已过期", "5 分钟已过。重新发一个即可，已填的新密码会保留。"],
     // The sentence the App used to match for 「验证码错误」, under another code: the code wins.
-    ["an expired code worded like a wrong one", { status: 400, data: { error: "验证码错误", code: "reset_code_expired" } }, "forgot-expired", "! 验证码已过期", "5 分钟已过。重新发一个即可，已填的新密码会保留。"],
+    ["an expired code worded like a wrong one", { status: 400, data: { detail: "验证码错误", code: "reset_code_expired" } }, "forgot-expired", "! 验证码已过期", "5 分钟已过。重新发一个即可，已填的新密码会保留。"],
     ["a throttled confirm (429)", THROTTLED(30), "forgot-error", "! 请求太频繁", "请 30 秒后再试。倒计时结束后按钮自动恢复。"],
     ["no network", "offline", "forgot-error", "! 没有连接", "已填的内容不会丢。恢复连接后再点一次。"],
     ["no soul account on the address (404)", { status: 404, data: refusal("no_soul_account") }, "forgot-error", "! 这个邮箱无法重设密码，请向所属殿司申请重置密码", null],

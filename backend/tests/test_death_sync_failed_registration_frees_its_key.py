@@ -35,13 +35,13 @@ def test_resending_a_failed_registration_runs_it_again_on_the_same_row(cn_tenant
 
     first = client.post(URL, body, format="json")
     assert first.status_code == 400, first.content
-    assert first.json()["error"]["code"] == "NO_CITY_GOD"
-    row = first.json()["error"]["request_id"]
+    assert first.json()["code"] == "NO_CITY_GOD"
+    row = first.json()["request_id"]
 
     # Still no city god: the same answer, on the same row — not 409 duplicate.
     again = client.post(URL, body, format="json")
     assert again.status_code == 400, again.content
-    assert (again.json()["error"]["code"], again.json()["error"]["request_id"]) == ("NO_CITY_GOD", row)
+    assert (again.json()["code"], again.json()["request_id"]) == ("NO_CITY_GOD", row)
 
     default_city_god(cn_tenant)
     through = client.post(URL, body, format="json")
@@ -66,18 +66,18 @@ def test_a_resend_spends_a_retry_and_stops_at_the_limit_until_a_new_key(cn_tenan
     client = _client(cn_tenant)
     soul = Soul.objects.create(name="重发到头", tenant=cn_tenant)
     body = {"soul_lookup": {"soul_id": str(soul.id)}, "death_date": "2026-10-01"}
-    row = client.post(URL, body, format="json").json()["error"]["request_id"]
+    row = client.post(URL, body, format="json").json()["request_id"]
     assert DeathRegistrationRequest.objects.get(pk=row).retry_count == 0
 
     for spent in (1, 2, 3):
         again = client.post(URL, body, format="json")
-        assert (again.status_code, again.json()["error"]["code"]) == (400, "NO_CITY_GOD"), again.content
+        assert (again.status_code, again.json()["code"]) == (400, "NO_CITY_GOD"), again.content
         assert DeathRegistrationRequest.objects.get(pk=row).retry_count == spent
 
     # At the limit: the explicit code, nothing run, and the row keeps saying why it really failed.
     stopped = client.post(URL, body, format="json")
     assert stopped.status_code == 409, stopped.content
-    assert (stopped.json()["error"]["code"], stopped.json()["error"]["request_id"]) == ("MAX_RETRIES", row)
+    assert (stopped.json()["code"], stopped.json()["request_id"]) == ("MAX_RETRIES", row)
     record = DeathRegistrationRequest.objects.get(pk=row)
     assert (record.retry_count, record.error_code) == (3, "NO_CITY_GOD")
 
@@ -137,5 +137,5 @@ def test_a_tudi_resend_at_the_limit_answers_409_with_the_code(cn_tenant):
 
     res = client.post(url, body, format="json")
 
-    assert (res.status_code, res.data["id"], res.data["error_code"]) == (409, first.data["id"], "MAX_RETRIES"), res.data
+    assert (res.status_code, res.data["registration"]["id"], res.data["registration"]["error_code"]) == (409, first.data["id"], "MAX_RETRIES"), res.data
     assert DeathRegistrationRequest.objects.get(pk=first.data["id"]).error_code == "SOUL_NOT_FOUND"

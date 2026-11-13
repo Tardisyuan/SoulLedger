@@ -397,7 +397,7 @@ def test_conclude_refuses_an_unfilled_seat(bench, eg):
     _seat(bench, eg, 2)
     _convene(bench)
     resp = _conclude(bench)
-    assert resp.status_code == 400 and "not submitted" in resp.data["error"]
+    assert resp.status_code == 400 and "not submitted" in resp.data["detail"]
     bench["cj"].refresh_from_db()
     assert bench["cj"].status == JudgmentStatus.ACTIVE
 
@@ -409,7 +409,7 @@ def test_conclude_refuses_a_gap_in_the_order(bench, eg, eu):
     _submit(bench, eu, "EU_TEST_PURGE")
     _convene(bench)
     resp = _conclude(bench)
-    assert resp.status_code == 400 and "without gaps" in resp.data["error"]
+    assert resp.status_code == 400 and "without gaps" in resp.data["detail"]
 
 
 def test_conclude_refuses_an_eternal_node_that_is_not_last(bench, eg, eu):
@@ -420,7 +420,7 @@ def test_conclude_refuses_an_eternal_node_that_is_not_last(bench, eg, eu):
     _submit(bench, eg, "EG_TEST_HALL")
     _convene(bench)
     resp = _conclude(bench)
-    assert resp.status_code == 400 and "must be the last node" in resp.data["error"]
+    assert resp.status_code == 400 and "must be the last node" in resp.data["detail"]
     bench["cj"].refresh_from_db()
     assert bench["cj"].status == JudgmentStatus.ACTIVE and bench["cj"].conclusion_type is None
 
@@ -442,7 +442,7 @@ def test_a_realm_that_no_longer_matches_is_caught_at_conclude(bench, eg):
     Realm.all_objects.filter(realm_code="EG_TEST_HALL").update(civilization="EUROPEAN")
     _convene(bench)
     resp = _conclude(bench)
-    assert resp.status_code == 400 and "civilization" in resp.data["error"]
+    assert resp.status_code == 400 and "civilization" in resp.data["detail"]
 
 
 def test_an_unfinished_bench_now_refuses_the_conclusion(bench):

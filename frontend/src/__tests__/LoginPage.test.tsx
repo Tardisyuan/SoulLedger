@@ -117,7 +117,7 @@ describe("LoginPage · failure states (A9 §二「状态」)", () => {
   it("locked: warning border, ◐ title in ink, the time it opens, password and button disabled", async () => {
     const now = 1_700_000_000_000;
     const spy = jest.spyOn(Date, "now").mockReturnValue(now);
-    mockedLogin.mockRejectedValue({ response: { status: 429, data: { error: "x", code: "login_locked", retry_after: 601 } } });
+    mockedLogin.mockRejectedValue({ response: { status: 429, data: { detail: "x", code: "login_locked", retry_after: 601 } } });
     render(<LoginPage />);
     fillAndSubmit();
 

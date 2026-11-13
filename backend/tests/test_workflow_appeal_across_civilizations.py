@@ -193,7 +193,7 @@ def test_the_endpoint_still_refuses_a_case_type_the_civilization_has_not(seeded)
         format="json",
     )
     assert response.status_code == 400, response.data
-    assert "CANONIZATION" in response.data["error"], response.data
+    assert "CANONIZATION" in response.data["detail"], response.data
     assert ApprovalWorkflow.all_objects.filter(judgment=judgment).count() == 0
 
 

@@ -152,9 +152,9 @@ class TestStrength:
     def test_each_reason_comes_back_under_new_password_with_its_code(self, officer, password, codes):
         res = _change(_login(), new=password)
         assert res.status_code == 400
-        got = {r["code"] for r in res.data["new_password"]}
+        got = {r["code"] for r in res.data["errors"] if r.get("field") == "new_password"}
         assert codes <= got, got
-        assert all(r["message"] for r in res.data["new_password"])
+        assert all(r["detail"] for r in res.data["errors"] if r.get("field") == "new_password")
 
 
 class TestEmailReset:
@@ -186,7 +186,7 @@ class TestEmailReset:
         uid, token = self._link(officer)
         res = self._confirm(uid, token, "12345678")
         assert res.status_code == 400 and res.data["code"] == "weak_password"
-        assert {"password_too_common", "password_entirely_numeric"} <= {r["code"] for r in res.data["new_password"]}
+        assert {"password_too_common", "password_entirely_numeric"} <= {r["code"] for r in res.data["errors"] if r.get("field") == "new_password"}
         assert _get(a["access"]) == 200
         assert self._confirm(uid, token, NEW).status_code == 200
 
