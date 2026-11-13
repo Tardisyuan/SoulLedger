@@ -202,6 +202,58 @@ remote_verdict() {
     esac
 }
 
+# ── SYNCED TREES NOBODY USES ARE DELETED THERE (2026-11-13, test review 3.5) ─────────────────────
+# Each checkout leaves up to four trees on the remote machine — work/<id> (the gates), work/<id>-e2e,
+# work/demo-<hash> and android/work/<id> — each with its own node_modules (and venv), and nothing ever
+# removed them: a worktree that pushed once left its trees there for good. A delegated gate run now deletes
+# the trees under $RDIR/work and $RDIR/android/work that no run has used for GATES_REMOTE_PRUNE_DAYS days
+# (default 14; 0 turns it off; GATES_REMOTE_PRUNE_DRY=1 only says what it would delete).
+#   - "Used" is the tree's .sl-last-use, touched by every run that uses the tree (here, --e2e,
+#     scripts/demo-remote.sh, scripts/mobile-remote.sh) BEFORE it syncs. Not the directory's own mtime: rsync
+#     sets that from this machine's. A tree with no mark yet (older than this rule) is marked now, not
+#     deleted, so it goes after the full period.
+#   - Never this run's own tree, and never a tree some container mounts, running or stopped (a Metro left up
+#     for weeks takes no lock and syncs nothing). If docker cannot be asked, nothing is deleted.
+#   - It runs on that machine inside the subshell that holds run.lock, before the container starts, so only
+#     one prune runs at a time. It cannot fail the run.
+# remote_prune's text is sent as it stands (declare -f): it runs in the REMOTE host's shell, so it uses only
+# its arguments. ponytail: between reading a mark and `rm -rf`, another checkout's first run in two weeks
+# could touch that mark and start syncing — a window of milliseconds once per idle tree; that run would go
+# red on a half-deleted tree and pass on retry. A per-tree lock taken by every sync would close it.
+remote_prune() {  # <RDIR> <this run's tree> <days> <dry: 1 = only report>
+    local rdir="$1" keep="$2" days="$3" dry="$4" ids used="" t real mark kept=0
+    [ "$days" -gt 0 ] 2>/dev/null || return 0
+    case "$rdir" in /?*) ;; *) echo "    (prune: $rdir is not an absolute path — nothing deleted)"; return 0 ;; esac
+    ids=$(docker ps -aq) || { echo "    (prune: docker ps failed, so what is mounted is unknown — nothing deleted)"; return 0; }
+    if [ -n "$ids" ]; then
+        # shellcheck disable=SC2086
+        used=$(docker inspect -f '{{range .Mounts}}{{println .Source}}{{end}}' $ids) \
+            || { echo "    (prune: docker inspect failed, so what is mounted is unknown — nothing deleted)"; return 0; }
+    fi
+    for t in "$rdir"/work/* "$rdir"/android/work/*; do
+        [ -d "$t" ] && [ ! -L "$t" ] || continue
+        [ "$t" = "$keep" ] && continue
+        real=$(cd "$t" && pwd -P) || continue
+        if printf '%s\n' "$used" | grep -qxF -e "$t" -e "$real"; then
+            echo "    (prune: kept $t — a container mounts it)"; continue
+        fi
+        mark="$t/.sl-last-use"
+        if [ ! -e "$mark" ]; then
+            touch "$mark"; echo "    (prune: $t had no last-use mark — marked now; deleted after $days days without a run)"; continue
+        fi
+        if [ -z "$(find "$mark" -mmin +$((days * 1440)))" ]; then kept=$((kept + 1)); continue; fi
+        if [ "$dry" = 1 ]; then
+            echo "    (prune: would delete $t — no run for $days days; GATES_REMOTE_PRUNE_DRY=1, nothing deleted)"
+        else
+            rm -rf -- "$t" && echo "    (prune: deleted $t — no run for $days days)"
+        fi
+    done
+    echo "    (prune: $kept other synced trees used within $days days kept — GATES_REMOTE_PRUNE_DAYS)"
+}
+PRUNE_DAYS="${GATES_REMOTE_PRUNE_DAYS:-14}"
+[[ "$PRUNE_DAYS" =~ ^[0-9]+$ ]] || { echo "$P: GATES_REMOTE_PRUNE_DAYS=$PRUNE_DAYS is not a number of days (0 turns the pruning off)"; exit 2; }
+PRUNE_DRY=0; [ "${GATES_REMOTE_PRUNE_DRY:-}" = 1 ] && PRUNE_DRY=1
+
 # Installed in the synced tree by whichever container runs first, and only when its inputs change — two
 # hashes, decided apart (2026-10-30): a version bump in one package.json used to reinstall node_modules AND
 # rebuild the venv from nothing. JS: the dependency fields of every package.json (not "version", "scripts"
@@ -344,12 +396,13 @@ if [ -n "$E2E" ]; then
         fi
     fi
     EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
-    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1" 2>/dev/null \
-        || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
     # Its own synced tree and its own lock (2026-10-29): E2E builds .next and runs browsers in a tree of its
     # own, so it no longer waits for — or rsyncs under — a gate run on the same box. 8 CPUs here + 12 for a
     # gate run = the box's 20; the two used to queue on run.lock one after the other.
     RWORK="$RDIR/work/$RID-e2e"
+    # The tree is marked as in use before the sync (SYNCED TREES NOBODY USES, above).
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1 && { mkdir -p $RWORK && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
+        || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
     echo "$P: E2E on $GATES_REMOTE ($RWORK): ${E2E//,/ }"
     remote_sync || { echo "$P: could not rsync this tree to $GATES_REMOTE:$RWORK"; exit 1; }
     ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RDIR/tmp/$RID" || exit 1
@@ -880,7 +933,8 @@ fi
 # comment GATES_REMOTE out of .prepush.env; `SKIP_PREPUSH=1 git push` skips the hook.
 if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the gates on this machine."
-    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1" 2>/dev/null \
+    # ... and mark the tree as in use before anything is synced into it (SYNCED TREES NOBODY USES, above).
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1 && { mkdir -p $RWORK && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
         || fail "$GATES_REMOTE is unreachable, or has no $RIMG image. Not running the gates on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
     echo "$P: on $GATES_REMOTE ($RWORK) — this machine only syncs and waits"
     T_SYNC=$(date +%s)
@@ -904,7 +958,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # Workers: 6 for pytest + 6 for the JS runners = the container's 12 CPUs, because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 run.lock sl-gates-); docker run --rm --init --name $RNAME \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 run.lock sl-gates-); $(declare -f remote_prune); remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY; docker run --rm --init --name $RNAME \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6} \

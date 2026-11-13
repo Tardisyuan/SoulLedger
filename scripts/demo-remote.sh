@@ -58,7 +58,8 @@ if [ -n "$DEMO_TREE" ] && [ "${FORCE:-}" != 1 ] && [ -f "$DEMO_STAMP" ] && grep 
     exit 0
 fi
 
-ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RWORK $RDIR/tmp/demo" || exit 1
+# .sl-last-use: this tree is in use — run-gates.sh deletes synced trees no run has used for two weeks (remote_prune).
+ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RWORK $RDIR/tmp/demo && touch $RWORK/.sl-last-use" || exit 1
 # First run: borrow the gates' installed dependencies rather than installing them again.
 ssh -o BatchMode=yes "$GATES_REMOTE" "cd $RWORK && if [ ! -d node_modules ]; then S=\$(ls -d $RDIR/work/SoulLedger-*-e2e | head -1); cp -a \$S/node_modules . ; mkdir -p backend; cp -a \$S/backend/.venv backend/ ; for w in frontend packages/core mobile mobile-officer; do if [ -d \$S/\$w/node_modules ]; then mkdir -p \$w; cp -a \$S/\$w/node_modules \$w/; fi; done; fi" || exit 1
 # --delete does nothing under --files-from, and a stale spec would keep running.

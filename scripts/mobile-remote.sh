@@ -65,7 +65,9 @@ remote_flock() {
 }
 
 sync_tree() {
-    rsh "mkdir -p $W $RDIR/android/sdk $RDIR/android/gradle"
+    # .sl-last-use: this tree is in use — run-gates.sh deletes synced trees no run has used for two weeks
+    # (remote_prune; a tree a container mounts, such as a running Metro's, is never deleted).
+    rsh "mkdir -p $W $RDIR/android/sdk $RDIR/android/gradle && touch $W/.sl-last-use"
     # Same file list and protections as run-gates.sh's remote_sync, minus .git; plus the generated
     # android/ and Expo's cache, so prebuild output and the gradle build survive --delete.
     { git ls-files -z; git ls-files -z -o --exclude-standard -- packages mobile mobile-officer scripts; } \

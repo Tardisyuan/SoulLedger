@@ -86,6 +86,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -1719,7 +1720,9 @@ class TestRemoteTimeLimits:
     def _locked_then_removed(remote: str, inner_end: str, lock: str, name: str, first_fd: int = 9):
         # The fake ssh records "$*": its options and host come first. The lock is tried first without waiting
         # (so a wait can be announced), then waited for; either way nothing runs without it.
-        assert re.search(rf" fake-host \( flock -n {first_fd} \|\| \{{ echo .*; flock 9; \}} \|\| exit 1; docker run", remote), remote
+        # (The gates' run also prunes unused trees between taking the lock and starting: TestUnusedRemoteTreesAreDeleted.)
+        assert re.search(rf" fake-host \( flock -n {first_fd} \|\| \{{ echo .*; flock 9; \}} \|\| exit 1; "
+                         r"(remote_prune \(\).*\n\}; remote_prune \S+ \S+ \d+ [01]; )?docker run", remote, re.S), remote
         assert remote.rstrip().endswith(f" 9>/srv/appdata/sl-gates/{lock}"), remote
         # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
         tail = remote.split(inner_end, 1)[1]
@@ -1849,6 +1852,174 @@ class TestRemoteLocksSayWhenTheyWait:
     def test_without_the_lock_nothing_runs(self, tmp_path):
         proc = self._take(tmp_path, free=False, waits=False)
         assert proc.returncode == 1 and "RAN" not in proc.stdout, proc.stdout
+
+
+class TestUnusedRemoteTreesAreDeleted:
+    """2026-11-13 (test review 3.5): every checkout left up to four synced trees on the remote machine, each
+    with its own node_modules, and nothing removed them. A delegated gate run deletes those no run has used
+    for GATES_REMOTE_PRUNE_DAYS (14) days. remote_prune runs in the remote host's shell; here its text is run
+    against a directory of this machine, with a `docker` that reports what is mounted."""
+
+    DAY = 86400
+
+    @staticmethod
+    def _function() -> str:
+        m = re.search(r"^remote_prune\(\) \{.*?^\}\n", RUNNER.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, "no remote_prune in run-gates.sh"
+        return m.group(0)
+
+    def _tree(self, rdir: Path, rel: str, used_days_ago: float | None) -> Path:
+        t = rdir / rel
+        (t / "node_modules").mkdir(parents=True)
+        (t / "node_modules" / "x.js").write_text("x")
+        if used_days_ago is not None:
+            mark = t / ".sl-last-use"
+            mark.write_text("")
+            when = time.time() - used_days_ago * self.DAY
+            os.utime(mark, (when, when))
+        return t
+
+    def _prune(self, tmp_path, rdir, keep, days="14", dry="0", mounted=(), docker_ok=True):
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        (b / "docker").write_text(
+            "#!/bin/bash\n"
+            + ("" if docker_ok else "exit 1\n")
+            + 'case "$1" in ps) echo c1 ;; inspect) printf "%s\\n" /somewhere/else '
+            + " ".join(f"'{m}'" for m in mounted) + " ;; esac\n")
+        (b / "docker").chmod(0o755)
+        env = _clean_env()
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", "-c", f'{self._function()}remote_prune "$@"', "prune", str(rdir), str(keep), days, dry],
+                              env=env, capture_output=True, text=True, timeout=60)
+
+    def test_only_a_tree_no_run_has_used_for_the_period_is_deleted(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        old_e2e = self._tree(rdir, "work/Old-1-e2e", 30)
+        old_android = self._tree(rdir, "android/work/Old-1", 20)
+        recent = self._tree(rdir, "work/Recent-2", 13)
+        mine = self._tree(rdir, "work/Mine-3", 40)          # this run's own tree, however old its mark
+        mounted = self._tree(rdir, "android/work/Metro-4", 60)  # a Metro left up for two months
+        unmarked = self._tree(rdir, "work/Unmarked-5", None)    # from before the rule
+        (rdir / "tmp" / "Old-1").mkdir(parents=True)            # not a synced tree: never looked at
+        (rdir / "work" / "a-file").write_text("")
+        proc = self._prune(tmp_path, rdir, mine, mounted=[mounted])
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert not old.exists() and not old_e2e.exists() and not old_android.exists(), proc.stdout
+        for kept in (recent, mine, mounted, unmarked):
+            assert (kept / "node_modules" / "x.js").is_file(), f"{kept} was deleted\n{proc.stdout}"
+        assert (rdir / "tmp" / "Old-1").is_dir() and (rdir / "work" / "a-file").is_file()
+        # It says what it did, tree by tree.
+        for gone in (old, old_e2e, old_android):
+            assert f"(prune: deleted {gone} — no run for 14 days)" in proc.stdout, proc.stdout
+        assert f"(prune: kept {mounted} — a container mounts it)" in proc.stdout, proc.stdout
+        assert f"(prune: {unmarked} had no last-use mark — marked now" in proc.stdout, proc.stdout
+        assert "(prune: 1 other synced trees used within 14 days kept" in proc.stdout, proc.stdout
+        # The unmarked tree's period starts now.
+        assert time.time() - (unmarked / ".sl-last-use").stat().st_mtime < 60
+
+    def test_a_dry_run_deletes_nothing_and_says_what_it_would(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = self._prune(tmp_path, rdir, rdir / "work" / "Mine", dry="1")
+        assert old.is_dir() and f"(prune: would delete {old} " in proc.stdout and "deleted /" not in proc.stdout, proc.stdout
+
+    def test_zero_days_turns_it_off_and_another_period_is_honoured(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = self._prune(tmp_path, rdir, rdir / "work" / "Mine", days="0")
+        assert old.is_dir() and proc.stdout == "", proc.stdout
+        assert self._prune(tmp_path, rdir, rdir / "work" / "Mine", days="30").returncode == 0 and old.is_dir()
+        self._prune(tmp_path, rdir, rdir / "work" / "Mine", days="10")
+        assert not old.exists()
+
+    def test_when_docker_cannot_say_what_is_mounted_nothing_is_deleted(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = self._prune(tmp_path, rdir, rdir / "work" / "Mine", docker_ok=False)
+        assert old.is_dir() and "nothing deleted" in proc.stdout, proc.stdout
+
+    def test_a_symlink_is_not_followed_and_a_relative_root_is_refused(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        target = self._tree(tmp_path, "elsewhere", 100)
+        (rdir / "work").mkdir(parents=True)
+        (rdir / "work" / "Link-1").symlink_to(target)
+        self._prune(tmp_path, rdir, rdir / "work" / "Mine")
+        assert (target / "node_modules" / "x.js").is_file() and (rdir / "work" / "Link-1").is_symlink()
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = subprocess.run(["bash", "-c", f'{self._function()}cd "$1" && remote_prune . "$1/work/Mine" 14 0', "prune", str(rdir)],
+                              env=_clean_env(), capture_output=True, text=True, timeout=60)
+        assert old.is_dir() and "not an absolute path" in proc.stdout, proc.stdout
+
+    # ── the wiring: who marks a tree as used, and where the pruning runs ──
+
+    @staticmethod
+    def _remote_bin(tmp_path: Path) -> Path:
+        """ssh that records every command it is given, one per `<<<` block; rsync that does nothing."""
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        (b / "ssh").write_text(
+            f'#!/bin/bash\nprintf "<<<%s\\n" "$*" >> "{tmp_path}/ssh-calls"\n'
+            'case "$*" in *"cat > "*) cat >/dev/null ;; esac\nexit 0\n')
+        (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
+        (b / "adb").write_text("#!/bin/bash\nexit 0\n")
+        for f in b.iterdir():
+            f.chmod(0o755)
+        return b
+
+    def _gates(self, main: Path, tmp_path: Path, *args: str, **extra):
+        env = _clean_env(GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@sl-pg-test:5432/s",
+                         GATES_STAMP_FILE=str(tmp_path / "passed"), PREPUSH_CHANGED="backend/apps/souls/views.py", **extra)
+        env["PATH"] = f"{self._remote_bin(tmp_path)}:{env['PATH']}"
+        calls = tmp_path / "ssh-calls"
+        calls.unlink(missing_ok=True)
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), *args], cwd=main, env=env,
+                              capture_output=True, text=True, timeout=120)
+        return proc, (calls.read_text().split("<<<")[1:] if calls.exists() else [])
+
+    def test_a_gate_run_marks_its_tree_then_prunes_under_the_lock_before_it_starts(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc, calls = self._gates(main, tmp_path, "--prepush")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        tree = re.search(r"-v (/srv/appdata/sl-gates/work/\S+):/app", calls[-1]).group(1)
+        # Marked in the first call, before the rsync: a tree being synced into is never an old one.
+        assert f"mkdir -p {tree} && touch {tree}/.sl-last-use" in calls[0], calls[0]
+        run = calls[-1]
+        assert self._function().split("{", 1)[0].strip() == "remote_prune()" and "remote_prune () " in run, run
+        call = f"; remote_prune /srv/appdata/sl-gates {tree} 14 0; docker run"
+        assert call in run and run.index("flock 9; } || exit 1;") < run.index(call) < run.index(") 9>/srv/appdata/sl-gates/run.lock"), run
+        # What reached the remote shell is the function this file tests, and it parses.
+        sent = run[run.index("remote_prune () "):run.index(call)]
+        assert "docker ps -aq" in sent and ".sl-last-use" in sent and "rm -rf -- " in sent, sent
+        assert subprocess.run(["bash", "-n", "-c", sent], capture_output=True, text=True).returncode == 0
+
+    def test_the_period_and_the_dry_run_are_handed_over_and_a_bad_period_is_refused(self, checkouts, tmp_path):
+        main, _ = checkouts
+        _, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="0", GATES_REMOTE_PRUNE_DRY="1")
+        assert re.search(r"; remote_prune \S+ \S+ 0 1; docker run", calls[-1]), calls[-1]
+        proc, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="1; rm -rf /")
+        assert proc.returncode == 2 and "is not a number of days" in proc.stdout and not calls, proc.stdout
+
+    def test_e2e_the_demo_and_the_android_tree_are_marked_before_they_are_synced(self, checkouts, tmp_path):
+        main, _ = checkouts
+        _, calls = self._gates(main, tmp_path, "--e2e")
+        assert re.search(r"mkdir -p (/srv/appdata/sl-gates/work/\S+-e2e) && touch \1/\.sl-last-use", calls[0]), calls[0]
+        for name in ("demo-remote.sh", "mobile-remote.sh"):
+            (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
+        (main / ".prepush.env").write_text("GATES_REMOTE=fake-host\nGATES_REMOTE_DB_URL=postgres://sl:x@sl-pg-test:5432/s\n")
+        env = _clean_env()
+        env["PATH"] = f"{self._remote_bin(tmp_path)}:{env['PATH']}"
+        (tmp_path / "ssh-calls").unlink()
+        subprocess.run(["bash", str(main / "scripts" / "demo-remote.sh"), "scripts/demo-serve-inner.sh"], cwd=main, env=env,
+                       capture_output=True, text=True, timeout=120)
+        calls = (tmp_path / "ssh-calls").read_text().split("<<<")[1:]
+        assert re.search(r"mkdir -p (/srv/appdata/sl-gates/work/demo-\w+) \S+ && touch \1/\.sl-last-use", calls[0]), calls[0]
+        (tmp_path / "ssh-calls").unlink()
+        subprocess.run(["bash", str(main / "scripts" / "mobile-remote.sh"), "mobile", "metro", "sync"], cwd=main, env=env,
+                       capture_output=True, text=True, timeout=120)
+        calls = (tmp_path / "ssh-calls").read_text()
+        assert re.search(r"mkdir -p (/srv/appdata/sl-gates/android/work/\S+) .* && touch \1/\.sl-last-use", calls), calls
 
 
 class TestBrowserSuitesRecordAPass:
