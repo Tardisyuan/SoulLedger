@@ -8077,7 +8077,8 @@
         "appeal": "申诉",
         "city_god_review": "城隍初审中",
         "cross_judgment": "跨殿联审",
-        "capture_due": "待发勾魂牒"
+        "capture_due": "待发勾魂牒",
+        "rebirth_application": "转生申请"
       },
       "groups": {
         "mine": "我认领",
@@ -9994,5 +9995,21 @@
       "failed": "没能读到这一栏",
       "month_none": "本月已结:这个冥界本月没有案卷"
     }
+  },
+  "doors": {
+    "section": {
+      "desk": "案卷台",
+      "sources": "来源",
+      "register": "名册",
+      "statutes": "律令",
+      "ledger": "总簿",
+      "hall": "殿司",
+      "users": "用户",
+      "permissions": "权限",
+      "audit": "审计",
+      "system": "系统",
+      "mortal": "人间"
+    },
+    "office_read_only": "殿司 · 窄屏只读"
   }
 }

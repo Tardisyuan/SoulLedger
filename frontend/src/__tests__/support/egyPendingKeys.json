@@ -62,5 +62,18 @@
   "officer_app.rebirth.cross_civ_pick",
   "officer_app.rebirth.cross_option_none",
   "officer_app.rebirth.approve_cross",
-  "demo.build.quality"
+  "demo.build.quality",
+  "doors.section.desk",
+  "doors.section.sources",
+  "doors.section.register",
+  "doors.section.statutes",
+  "doors.section.ledger",
+  "doors.section.hall",
+  "doors.section.users",
+  "doors.section.permissions",
+  "doors.section.audit",
+  "doors.section.system",
+  "doors.section.mortal",
+  "doors.office_read_only",
+  "officer_app.desk.sources.rebirth_application"
 ]

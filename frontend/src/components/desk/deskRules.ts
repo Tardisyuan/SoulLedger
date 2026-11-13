@@ -117,6 +117,7 @@ const ELSEWHERE: { key: keyof JudgmentElsewhereCounts; href: string }[] = [
   { key: "city_god_review", href: "/city-god-cases" },
   { key: "cross_judgment", href: "/cross-judgments" },
   { key: "capture_due", href: "/judgment/capture-due" },
+  { key: "rebirth_application", href: "/rebirth-applications" },
 ];
 
 /**

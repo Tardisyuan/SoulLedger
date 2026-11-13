@@ -1006,6 +1006,7 @@ class JudgmentElsewhereCountsSerializer(serializers.Serializer):
     city_god_review = serializers.IntegerField(allow_null=True)
     cross_judgment = serializers.IntegerField(allow_null=True)
     capture_due = serializers.IntegerField(allow_null=True)
+    rebirth_application = serializers.IntegerField(allow_null=True)
 
 
 class JudgmentQueueCountsSerializer(serializers.Serializer):

@@ -8077,7 +8077,8 @@
         "appeal": "Appeals",
         "city_god_review": "With the city god",
         "cross_judgment": "Joint judgments",
-        "capture_due": "Warrants due"
+        "capture_due": "Warrants due",
+        "rebirth_application": "Rebirth applications"
       },
       "groups": {
         "mine": "Claimed by me",
@@ -9994,5 +9995,21 @@
       "failed": "Could not load this column",
       "month_none": "Done this month: no cases in this realm this month"
     }
+  },
+  "doors": {
+    "section": {
+      "desk": "Case desk",
+      "sources": "Sources",
+      "register": "Register",
+      "statutes": "Statutes",
+      "ledger": "Ledger",
+      "hall": "Halls",
+      "users": "Users",
+      "permissions": "Permissions",
+      "audit": "Audit",
+      "system": "System",
+      "mortal": "Mortal world"
+    },
+    "office_read_only": "Hall office · read-only on a phone"
   }
 }
