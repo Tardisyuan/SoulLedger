@@ -31,8 +31,8 @@ INITIAL_ORGANIZATIONS = [
     {"name": "崔珏（崔府君）", "code": "DIYU_PAN_GUAN_01", "category": "CHINESE", "parent_code": "DIYU"},
     {"name": "钟馗", "code": "DIYU_PAN_GUAN_02", "category": "CHINESE", "parent_code": "DIYU"},
     {"name": "魏征", "code": "DIYU_PAN_GUAN_03", "category": "CHINESE", "parent_code": "DIYU"},
-    {"name": "陆之道", "code": "DIYU_PAN_GUAN_04", "category": "CHINESE", "parent_code": "DIYU"},
-    # 六案功曹
+    {"name": "陆判", "code": "DIYU_PAN_GUAN_04", "category": "CHINESE", "parent_code": "DIYU"},
+    # 六案功曹(题为六案,docs/01、02 只列四曹,出处不明;不补造另外两个)
     {"name": "天曹", "code": "DIYU_LIU_AN_01", "category": "CHINESE", "parent_code": "DIYU"},
     {"name": "地曹", "code": "DIYU_LIU_AN_02", "category": "CHINESE", "parent_code": "DIYU"},
     {"name": "神曹", "code": "DIYU_LIU_AN_03", "category": "CHINESE", "parent_code": "DIYU"},
@@ -142,7 +142,7 @@ ORGANIZATION_NAME_EN = {
     "钟馗": "Zhong Kui",
     "门之书十二门": "Twelve Gates of the Book of Gates",
     "阴间之书阿佩普领域": "Realm of Apep, Book of the Underworld",
-    "陆之道": "Lu Zhidao",
+    "陆判": "Judge Lu",
     "鬼曹": "Bureau of Ghosts",
     "魏征": "Wei Zheng",
     "黑白无常": "The Impermanences",

@@ -118,7 +118,7 @@ CHINESE_ACTORS = [
     # what the source supports; moving the rows would assert a posting the text
     # does not give them either.
     ("牛头", "牛头", "Ox Head", "Niutou", ActorRole.GUARDIAN, "DY_00_PURGATORY",
-     "牛头马面", "牛头马面", "Ox Head and Horse Face", "Niuma",
+     "牛头", "牛头", "Ox Head", "Niutou",
      "Ox Head - one of the two guardians who escort the dead. 《玉历》 names the "
      "pair at the fifth court, 「牛头、马面，押赴高台」, marching the condemned up "
      "the 望乡台; the escort itself runs across all ten courts"),
@@ -237,10 +237,12 @@ CHINESE_ACTORS = [
     # again the least-wrong value.
     #
     # 五方鬼帝 ARE SIX ROWS. docs/02 §二 lists two eastern emperors (神荼 and 郁垒
-    # together hold 鬼门关 — 「特有配置」, docs/01 第二层). Where the docs give two
-    # candidates for one seat (赵文和/王真人, 张衡/杨云), the row takes the first
-    # and the description names the second; 中央鬼帝 is the docs' 周文, whose name
-    # the docs themselves call disputed.
+    # together hold 鬼门关, docs/01 第二层). 《元始上真众仙记》 seats TWO emperors
+    # side by side in the west (赵文和、王真人), the north (张衡、杨云) and the
+    # centre (周乞、嵇康) — a pair, not rival candidates. Each of those seats is
+    # one row under the first name, and the description names both. The centre
+    # row used to be 「周文」, a name the source does not have (audit 2026-11-13
+    # CN-1; actors/0020 renames rows already seeded).
     # ------------------------------------------------------------------
     ("后土", "后土", "Houtu", "Houtu", ActorRole.OVERSEER, "DY_COURT_01_QINGUANG",
      "后土皇地祇", "后土皇地祇", "Sovereign Earth Goddess", "Houtu",
@@ -281,7 +283,8 @@ CHINESE_ACTORS = [
     ("赵文和", "赵文和", "Zhao Wenhe", "Zhaowenhe", ActorRole.OVERSEER, "DY_00_PURGATORY",
      "西方鬼帝", "西方鬼帝", "Ghost Emperor of the West", "Zhaowenhe",
      "Ghost Emperor of the West - governs the western ghost domain from 嶓冢山 "
-     "(docs/02 §二). The seat has a second candidate, 王真人; the docs list both. "
+     "(docs/02 §二). 《元始上真众仙记》 seats two emperors here, 赵文和 and 王真人; "
+     "this row carries the first name. "
      "嶓冢山 is not modelled; filed at the holding pen"),
     ("杜子仁", "杜子仁", "Du Ziren", "Duziren", ActorRole.OVERSEER, "DY_00_PURGATORY",
      "南方鬼帝", "南方鬼帝", "Ghost Emperor of the South", "Duziren",
@@ -291,14 +294,15 @@ CHINESE_ACTORS = [
     ("张衡", "张衡", "Zhang Heng", "Zhangheng", ActorRole.OVERSEER, "DY_00_PURGATORY",
      "北方鬼帝", "北方鬼帝", "Ghost Emperor of the North", "Zhangheng",
      "Ghost Emperor of the North - sits at 罗酆山 in 酆都 and keeps the underworld's "
-     "punishments (docs/02 §二). The seat has a second candidate, 杨云; the docs "
-     "list both. 罗酆山 is not modelled; filed at the holding pen"),
-    ("周文", "周文", "Zhou Wen", "Zhouwen", ActorRole.OVERSEER, "DY_00_PURGATORY",
-     "中央鬼帝", "中央鬼帝", "Ghost Emperor of the Centre", "Zhouwen",
+     "punishments (docs/02 §二). 《元始上真众仙记》 seats two emperors here, 张衡 and "
+     "杨云; this row carries the first name. 罗酆山 is not modelled; filed at the "
+     "holding pen"),
+    ("周乞", "周乞", "Zhou Qi", "Zhouqi", ActorRole.OVERSEER, "DY_00_PURGATORY",
+     "中央鬼帝", "中央鬼帝", "Ghost Emperor of the Centre", "Zhouqi",
      "Ghost Emperor of the Centre - on 抱犊山, coordinates the other four quarters "
-     "and keeps the balance of yin and yang (docs/02 §二). The docs record few "
-     "sources for this seat and call its holder's name disputed. 抱犊山 is not "
-     "modelled; filed at the holding pen"),
+     "and keeps the balance of yin and yang (docs/02 §二). 《元始上真众仙记》 seats "
+     "two emperors here, 周乞 and 嵇康; this row carries the first name. 抱犊山 is "
+     "not modelled; filed at the holding pen"),
     # 陆判 — the fourth of the 「四大判官」, which docs/01 第四层 and docs/02 §四
     # call a modern folk compilation. The name is 陆判, not 陆之道: 《聊斋志异·陆判》
     # says only 「陆判」「陆公」, and 陆之道 is a later folk name (docs/02 §四). The

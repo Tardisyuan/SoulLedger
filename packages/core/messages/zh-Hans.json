@@ -4529,7 +4529,7 @@
       },
       "eternal_sentence_by_civ": {
         "cn": {
-          "BLISS": "{{name}}永居天界，没有下一世。"
+          "BLISS": "{{name}}按旧判决留在天界，没有下一世。"
         },
         "gr": {
           "BLISS": "{{name}}永居至福岛，没有下一世。"
@@ -5854,7 +5854,7 @@
       },
       "eternal_title_by_civ": {
         "cn": {
-          "BLISS": "永居天界"
+          "BLISS": "旧判留在天界"
         },
         "eu": {
           "BLISS": "永在天国"
@@ -5868,7 +5868,7 @@
       },
       "eternal_no_rebirth_by_civ": {
         "cn": {
-          "BLISS": "永居天界者不申请转生。"
+          "BLISS": "按旧判决留在天界者不申请转生。"
         },
         "gr": {
           "BLISS": "永居至福岛者不申请转生。"
@@ -8840,7 +8840,7 @@
       "COUNTY": "县城隍"
     },
     "rank_titles": {
-      "PROVINCE": "承天鉴国司民升福明灵王",
+      "PROVINCE": "明灵王",
       "PREFECTURE": "威灵公",
       "DEPARTMENT": "灵佑侯",
       "COUNTY": "显佑伯"
@@ -9174,7 +9174,7 @@
       "cn": {
         "name": "中国地府",
         "realm": "Diyu",
-        "line": "十殿轮审，判入六道；过奈何桥前，先喝一碗孟婆汤。"
+        "line": "十殿轮审，判入六道；过了六桥，喝一碗孟婆汤。"
       },
       "eu": {
         "name": "欧洲天堂与地狱",

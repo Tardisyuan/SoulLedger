@@ -176,7 +176,7 @@ CHINESE_REALMS = [
      "大热恼大地狱 - unfilial conduct: the parent left unkept in life and unburied in death", "MENGPO", False, 20),
     ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Wesekhet 9 · Pingdeng",
      RealmType.HELL, 9,
-     "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy",
+     "阿鼻大地狱 - the deepest hell; murder, arson, the crimes with no remedy",
      "MENGPO", False, 10),
     ("DY_COURT_10_ZHUANLUN", "第十殿", "第十殿转轮王", "Tenth Court Zhuanlun", "Wesekhet 10 · Zhuanlun",
      RealmType.HELL, 10,
