@@ -255,7 +255,8 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     <div className="text-[oklch(var(--color-ink))]">
       {/* 窄屏把题目放在自己那一行,进度和两个按钮排第二行(393 宽四样挤一行时题目折两行,56 高撑出 48 的定高)。 */}
       <div className="min-h-12 flex flex-wrap items-center px-6 gap-x-4 max-sm:pt-2 border-b border-[oklch(var(--color-line))]/50">
-        <h1 className="font-title text-lg text-[oklch(var(--color-accent-ink))] flex-1 max-sm:basis-full">
+        {/* 墨色:文明色只给顶线、印、卷宗脊、焦点四处,标题不在其中(第三十六批 第一节第 2 条)。 */}
+        <h1 className="font-title text-lg text-[oklch(var(--color-ink))] flex-1 max-sm:basis-full">
           {t("breadcrumb.menu.judgment")}
         </h1>
         <p

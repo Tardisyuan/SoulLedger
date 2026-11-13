@@ -108,6 +108,12 @@ describe("门内看到哪几页:菜单决定", () => {
     expect(doorTabs("desk", noInbox).map((p) => p.path)).not.toContain("/soul-inbox");
   });
 
+  it("/judgment/queue 的门内标签是「审判队列」,不是「分诊」(第三十六批 第一节第 2 条)", () => {
+    const page = pageOf("/judgment/queue");
+    expect(page?.labelKey).toBe("breadcrumb.menu.judgment");
+    expect(page?.labelKey).not.toBe("caseDesk.triage");
+  });
+
   it("菜单管理在 司 · 权限 下", () => {
     const admin = viewer({ role: "ADMIN", menu: ["/permissions", "/menus", "/users"] });
     const tabs = doorTabs("office", admin);

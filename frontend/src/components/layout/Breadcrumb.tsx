@@ -9,6 +9,7 @@ import { FROM_PARAM, sourceFrom } from "@/src/lib/backSource";
 import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { useHallCivilization } from "@/src/components/plaque/useHall";
+import { DOORS, PAGES, pageOf } from "@/src/lib/doors";
 
 /**
  * 页头里那一条面包屑。原先长在 AppLayout.tsx 里，随文件一起越过 500 行的上限
@@ -94,6 +95,18 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
       : PATH_LABELS[path]
         ? t(PATH_LABELS[path])
         : label(`breadcrumb.${segment}`, label(`breadcrumb.menu.${segment.replace(/-/g, "_")}`, segment));
+
+  // 不是菜单项的门内页(案卷台、审判队列、总簿)按门写:门 › 门的首页 › 这一页(Design 第三十六批 第一节第 2 条,
+  // 「审 › 案卷台 › 审判队列」)。菜单树里它们只能借住到前缀的菜单项下(/judgment/queue 曾读作「… / 分诊队列」)。
+  // 门在中文里写门上的字(审),别的语言写门名(Cases):en 的门字是一个字母。
+  const gated = pageOf(pathname);
+  if (gated?.gate && gated.labelKey && gated.path === pathname) {
+    const door = DOORS[gated.door];
+    const home = PAGES.find((p) => p.path === door.home);
+    const doorCrumb: Crumb = { label: t(`caseDesk.rail.${door.key}${locale === "zh-Hans" ? "_glyph" : ""}`) };
+    const homeCrumb: Crumb[] = home?.labelKey && home.path !== pathname ? [{ label: t(home.labelKey), href: home.path }] : [];
+    return [doorCrumb, ...homeCrumb, { label: t(gated.labelKey) }];
+  }
 
   const trail = matchTrail(menus, pathname);
   const crumbs: Crumb[] = [];
