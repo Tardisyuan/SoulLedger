@@ -252,6 +252,7 @@ def report(prices, month=None):
                     "fallback_reasons": {r: day_reasons.get(day, {}).get(r, 0) for r in FALLBACK_REASONS}}
                    for day, v in sorted(days.items())],
         "by_side": [{"side": side, **v} for side, v in sorted(_grouped(rows, "side", prices).items())],
+        "by_feature": [{"feature": f, **v} for f, v in sorted(_grouped(rows, "feature", prices).items())],
         "by_hall": [{"tenant_id": k, "code": codes.get(k), **v} for k, v in halls.items()],
         "phase4": {"corpus_tokens": prompt_tokens, "corpus_threshold": CORPUS_TOKEN_THRESHOLD,
                    "corpus_reached": prompt_tokens >= CORPUS_TOKEN_THRESHOLD,
