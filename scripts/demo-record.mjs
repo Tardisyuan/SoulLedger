@@ -320,6 +320,47 @@ async function sweepWithParams(rec, access, login) {
   }
 }
 
+// Business AI (docs/audit/2026-11-12-portfolio-ai-ideas.md part two, points 6 and 7). The demo never calls a model:
+// it replays what the backend answered here (frontend/demo/aiReplay.ts). With the assistant switched on for the
+// recording hall these are the real model's words; without it, the explainer's computed reason alone and a 503 for
+// the audit questions, which the page shows as 「not switched on」.
+//
+// 「为什么?」 sits on the 403 card, which names the page's codename; the codenames the web has readable names for are
+// those (`permission.names` in the lexicon). Only the ones this role lacks can show the card.
+const LEXICON = JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../packages/core/messages/zh-Hans.json"), "utf8"));
+const NAMED_CODENAMES = Object.entries(LEXICON.permission.names).flatMap(([family, actions]) => Object.keys(actions).map((a) => `${family}.${a}`));
+async function sweepExplanations(rec, access, login) {
+  const held = new Set(login.user?.permissions ?? []);
+  if (login.user?.role === "ADMIN") return;
+  for (const codename of NAMED_CODENAMES.filter((c) => !held.has(c))) {
+    await getAll(rec, access, `${rec.api}/perm/explain/?action=${encodeURIComponent(codename)}`);
+  }
+}
+
+// The audit page's 「用一句话找记录」: five questions per language, each answer kept under
+// `/audit-logs/nl-filter/?question=<q>` (a POST, keyed like a GET so the demo finds it), and the list those filters
+// select, asked the way the page asks it.
+const AUDIT_ASKS = {
+  "zh-Hans": ["所有删除操作", "最近 7 天的登录", "角色与权限的改动", "demo_judge 做过的事", "这个月导出过什么"],
+  en: ["all deletions", "sign-ins in the last 7 days", "changes to roles and permissions", "what demo_judge did", "exports this month"],
+};
+async function recordAsks(rec, access, language) {
+  if (!rec.lists["/audit-logs/"] && !Object.keys(rec.lists).some((k) => k.startsWith("/audit-logs/?"))) return;
+  for (const question of AUDIT_ASKS[language]) {
+    const res = await fetch(`${rec.api}/audit-logs/nl-filter/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${access}`, "Accept-Language": language, "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+    const body = await res.json().catch(() => null);
+    if (body === null) continue;
+    rec.docs[`/audit-logs/nl-filter/?question=${question}`] = { s: res.status, b: scrub(body, rec.origin) };
+    if (res.ok && body.filters && Object.keys(body.filters).length) {
+      await getAll(rec, access, `${rec.api}/audit-logs/?${new URLSearchParams({ page: "1", page_size: "20", ...body.filters })}`, language);
+    }
+  }
+}
+
 function finish(rec) {
   const lists = {};
   for (const [key, list] of Object.entries(rec.lists)) lists[key] = { rows: rowsOf(rec, key), extra: list.extra };
@@ -366,6 +407,7 @@ async function recordRole(browser, role, origin, paths) {
   await sweep(rec, access, paths);
   await sweepOpenCases(rec, access);
   await sweepWithParams(rec, access, login);
+  await sweepExplanations(rec, access, login);
   // English: the same questions again, asked in English. What the backend only has in one language stays until the
   // translations table above covers it; `scripts/demo-cjk-report.py` lists what is left.
   const recEn = { lists: {}, docs: {}, errors: new Set(), swept: {}, origin, api };
@@ -374,6 +416,9 @@ async function recordRole(browser, role, origin, paths) {
     if (doc && doc.s !== 200) recEn.docs[key] = doc;
     else await getAll(recEn, access, `${api}${key}`, "en");
   }
+  // After the English pass above, which re-asks every key as a GET: these are POSTs, asked once per language.
+  await recordAsks(rec, access, "zh-Hans");
+  await recordAsks(recEn, access, "en");
   const recordedAt = new Date().toISOString();
   const out = { role, lang: "zh", recordedAt, login: translator("zh")(scrub(login, origin)), ...translator("zh")(historizeAll(finish(rec))) };
   const outEn = { role, lang: "en", recordedAt, login: translator("en")(scrub(login, origin)), ...translator("en")(historizeAll(finish(recEn))) };

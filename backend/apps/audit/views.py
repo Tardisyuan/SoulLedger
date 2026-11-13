@@ -2,6 +2,7 @@
 Audit views - AuditLog ViewSet with filtering support.
 """
 import csv
+import json
 
 from django.db.models import Q
 from django.http import HttpResponse
@@ -19,6 +20,7 @@ from apps.core.exports import EXPORT_MAX_ROWS, record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, request_tenant, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
+from apps.soul_assist.views import OfficerAssistThrottle
 
 from .models import AuditAction, AuditLog
 from .serializers import (
@@ -26,6 +28,9 @@ from .serializers import (
     AuditLogDetailSerializer,
     AuditLogSerializer,
     AuditStatsSerializer,
+    NlFilterErrorSerializer,
+    NlFilterRequestSerializer,
+    NlFilterResponseSerializer,
 )
 
 
@@ -175,6 +180,8 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         'by_trace': ['audit.read'],
         'timeline': ['audit.read'],
         'export': ['audit.export'],
+        # 只把问题换成筛选参数(nl_query.py),不读日志;查询照旧走 list,所以与 list 同一个码。
+        'nl_filter': ['audit.read'],
     }
     serializer_class = AuditLogSerializer
     filterset_class = AuditLogFilter
@@ -420,3 +427,30 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         qs = qs.order_by('timestamp')
         serializer = AuditLogSerializer(qs, many=True)
         return Response(serializer.data)
+
+    @extend_schema(request=NlFilterRequestSerializer,
+                   responses={200: NlFilterResponseSerializer, 429: NlFilterErrorSerializer, 503: NlFilterErrorSerializer})
+    @action(detail=False, methods=["post"], url_path="nl-filter", pagination_class=None,
+            throttle_classes=[OfficerAssistThrottle])
+    def nl_filter(self, request):
+        """
+        POST /api/v1/audit-logs/nl-filter/ {"question": "..."}
+        把一句话换成一组筛选参数(不查询、不读日志;nl_query.py)。页面把参数填进筛选项,人确认后照旧 GET 本列表。
+        模型不可用答 503,页面退回手动筛选。
+        """
+        from apps.audit import nl_query
+        from apps.core.locale import locale_from_request
+        from apps.soul_assist import drafts, features
+
+        body = NlFilterRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        question = body.validated_data["question"]
+        lang = "zh-Hans" if locale_from_request(request).lower().startswith("zh") else "en"
+        try:
+            done, filters, dropped, understood = nl_query.propose(request, question, lang=lang)
+        except features.FeatureUnavailableError as exc:
+            return Response({"detail": exc.code, "code": exc.code}, status=exc.status)
+        draft = drafts.record("audit_query", request, done, system=nl_query.SYSTEM, input_text=question,
+                              output=json.dumps(filters, sort_keys=True, ensure_ascii=False), target_type="audit_log")
+        return Response({"filters": filters, "dropped": dropped, "understood": understood, "draft_id": draft.pk,
+                         "model": done.model})

@@ -25,6 +25,9 @@ OFFICER_SCREENS = (
     "sentence-plans", "sentence-requests", "social", "soul-credentials", "soul-inbox", "souls", "tenants", "users",
     "welcome", "workflow", "other",
 )
+#: 哪一个功能花的钱(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分 0 号「按功能计量」)。`assist` 是问一问;
+#: 其余是业务模块的接入点(`apps/soul_assist/features.py`)。还没做的几个先占名,接入时不必再迁移选项。
+FEATURES = ("assist", "perm_explain", "audit_query", "statute_suggest", "verdict_draft", "moderation", "letter_draft")
 
 
 class AssistConversation(SoftDeleteMixin, models.Model):
@@ -132,6 +135,7 @@ class AssistUsage(models.Model):
     fallback_reason = models.CharField(max_length=20, choices=FALLBACK_REASONS, blank=True, default="")
     #: 评测的请求:不计入用量与月度上限。
     is_eval = models.BooleanField(default=False)
+    feature = models.CharField(max_length=30, choices=[(f, f) for f in FEATURES], default="assist", db_index=True)
 
 
 class AssistEvalCase(models.Model):
@@ -224,3 +228,36 @@ class HelpChunk(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["locale", "entry_id"], name="help_chunk_one_per_entry")]
         indexes = [models.Index(fields=["locale", "audience", "model", "dims"])]
+
+
+class AIDraft(models.Model):
+    """AI 产出的出处(第二部分 0 号):哪个功能、对着什么、哪个模型、送了什么(指纹)、产出原文,以及人怎么处置的。
+
+    **AI 只产出,不写业务。** 人点「采纳」才走原来的写接口;这一行只记采纳状态与改动比例。审计日志里只有
+    「AI 起草 / 人工处置」与这一行的 id,不记原文(`apps/soul_assist/drafts.py`)。"""
+
+    STATUSES = [(s, s) for s in ("pending", "adopted", "adopted_edited", "discarded")]
+
+    feature = models.CharField(max_length=30, choices=[(f, f) for f in FEATURES])
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    created_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, related_name="+")
+    #: 对着哪个业务对象(如 `judgment` + id);没有对象的(审计查询)为空。
+    target_type = models.CharField(max_length=40, blank=True, default="")
+    target_id = models.CharField(max_length=64, blank=True, default="")
+    model = models.CharField(max_length=200, blank=True, default="")
+    provider_role = models.CharField(max_length=10, blank=True, default="")
+    #: 系统提示的 SHA-256(提示改了就看得出是哪一版写的)与输入的 HMAC(不存输入原文)。
+    prompt_fingerprint = models.CharField(max_length=64)
+    input_fingerprint = models.CharField(max_length=64)
+    output = models.TextField()
+    status = models.CharField(max_length=16, choices=STATUSES, default="pending")
+    #: 1 − 相似度(difflib):0 = 原样采纳,1 = 全部重写。只在采纳时有值。
+    edit_ratio = models.FloatField(null=True, blank=True)
+    decided_by = models.ForeignKey("authentication.User", on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["feature", "status"])]

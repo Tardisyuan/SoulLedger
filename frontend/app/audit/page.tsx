@@ -36,6 +36,7 @@ import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
+import { AuditAskBox } from "@/src/components/audit/AuditAskBox";
 import { auditResourceLabel, datePresetStart, type DatePreset } from "@/src/components/audit/auditLabels";
 
 /** 代看的两行摘要从 `changes` 按界面语言现拼(库里存的描述是 zh 固定句式)。其它动作返回 null。 */
@@ -206,6 +207,21 @@ export default function AuditPage() {
   if (dateFrom) filterParams.start_date = dateFrom;
   if (ordering) filterParams.ordering = ordering;
   if (traceFilter) filterParams.trace_id = traceFilter;
+  // 「用一句话找记录」采纳的、页面上没有对应控件的几项(日期区间、资源编号)。有日期时盖过 7 / 30 天档。
+  const [askExtra, setAskExtra] = useState<Record<string, string>>({});
+  Object.assign(filterParams, askExtra);
+  const applyAsk = (f: Record<string, string>) => {
+    const { action = "", resource = "", username = "", tenant = "", trace_id = "", search: words = "", ...rest } = f;
+    setActionFilter(action);
+    setResourceFilter(resource);
+    setOperator(username);
+    setHallFilter(isGlobalAdmin ? tenant : "");
+    setTraceFilter(trace_id);
+    setSearch(words);
+    if (rest.start_date || rest.end_date) setDatePreset("");
+    setAskExtra(rest);
+    setPage(1);
+  };
 
   const { showToast } = useToast();
   const [exporting, setExporting] = useState(false);
@@ -243,7 +259,7 @@ export default function AuditPage() {
   };
 
   const { data, isLoading, isError, error: listError, refetch } = useQuery({
-    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter, debouncedSearch, debouncedOperator],
+    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter, debouncedSearch, debouncedOperator, askExtra],
     queryFn: async () => {
       const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
       return res.data;
@@ -289,8 +305,9 @@ export default function AuditPage() {
     });
 
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
-  const isFiltered = Boolean(actionFilter || resourceFilter || hallFilter || datePreset || search || traceFilter || operator);
+  const isFiltered = Boolean(actionFilter || resourceFilter || hallFilter || datePreset || search || traceFilter || operator || Object.keys(askExtra).length);
   const clearFilters = () => {
+    setAskExtra({});
     setActionFilter("");
     setResourceFilter("");
     setHallFilter("");
@@ -436,6 +453,14 @@ export default function AuditPage() {
            这里原来是 data-grid 的 `FilterBar` —— 一块自带边框和底色的面板,
            里面的签是自绘的 listbox。 */
         <>
+          <AuditAskBox
+            onApply={applyAsk}
+            extra={askExtra}
+            onRemoveExtra={(key) => {
+              setAskExtra(({ [key]: _removed, ...rest }) => rest);
+              setPage(1);
+            }}
+          />
           <input
             type="text"
             value={search}

@@ -179,7 +179,15 @@ export type RoleMembersChangeResult = Schemas["RoleMembersChangeResult"];
 export type RoleMembersRefused = Schemas["RoleMembersRefused"];
 export type RoleCopyPayload = Pick<Role, "name" | "display_name">;
 
+/** `GET /perm/explain/`: why the caller may or may not do `action` (apps/perm/explain.py). The reason is computed by
+ *  code; `explanation` is the model's wording of it, or null — then show `perm_explain.reason.<reason>`. */
+export type PermissionExplanation = Schemas["Explanation"];
+
 export const permApi = {
+  /** `object` is `<judgment|soul|workflow>:<id>`; out of scope and missing answer the same. */
+  explain: (action: string, object?: string) =>
+    api.get<PermissionExplanation>("/perm/explain/", { params: { action, ...(object ? { object } : {}) } }),
+
   // Current user's own role permissions (self only — see backend docstring
   // on get_role_permissions for the enumeration guard). Used to refetch the
   // permission list after session rehydration, since it's deliberately not

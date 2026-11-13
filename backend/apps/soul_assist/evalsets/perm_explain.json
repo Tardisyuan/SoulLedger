@@ -1,0 +1,21 @@
+{
+  "about": "权限解释器的评测(docs/audit/2026-11-12-portfolio-ai-ideas.md 第二部分接入点 6):角色 × 动作 × 对象 → 代码算出的原因码。模型只措辞,不进这份评测。读者:backend/tests/test_ai_perm_explain.py。user.hall 为 null = 无殿;object 是相对调用者的位置(own 本殿本机构、other_hall 别殿、other_org 本殿别的机构、missing 不存在);grants 是在默认授予之外补的 [角色, 码];scope 是 [角色, 范围, 业务]。",
+  "cases": [
+    {"id": "judge-cannot-reassign", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "judgment.assign", "expect_reason": "missing_permission"},
+    {"id": "judge-rules", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "judgment.execute", "expect_reason": "allowed"},
+    {"id": "judge-reads-own-case", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "judgment.read", "object_type": "judgment", "object": "own", "expect_reason": "allowed"},
+    {"id": "judge-other-hall-case", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "judgment.read", "object_type": "judgment", "object": "other_hall", "expect_reason": "out_of_scope"},
+    {"id": "judge-missing-case", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "judgment.read", "object_type": "judgment", "object": "missing", "expect_reason": "out_of_scope"},
+    {"id": "judge-other-hall-soul", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "soul.read", "object_type": "soul", "object": "other_hall", "expect_reason": "out_of_scope"},
+    {"id": "judge-org-scope", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "scope": ["JUDGE", "ORG", "judgment"], "action": "judgment.read", "object_type": "judgment", "object": "other_org", "expect_reason": "out_of_scope", "expect_scope_kinds": ["ORG"]},
+    {"id": "judge-org-scope-own-org", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "scope": ["JUDGE", "ORG", "judgment"], "action": "judgment.read", "object_type": "judgment", "object": "own", "expect_reason": "allowed"},
+    {"id": "judge-restore-is-admin-only", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "grants": [["JUDGE", "recycle_bin.restore"]], "action": "recycle_bin.restore", "expect_reason": "admin_only"},
+    {"id": "hall-admin-menus-are-global", "user": {"role": "ADMIN", "hall": "CN_DIYU"}, "action": "menu.manage", "expect_reason": "global_admin_only"},
+    {"id": "global-admin-menus", "user": {"role": "ADMIN", "hall": null}, "action": "menu.manage", "expect_reason": "allowed"},
+    {"id": "global-admin-any-hall-case", "user": {"role": "ADMIN", "hall": null}, "action": "judgment.read", "object_type": "judgment", "object": "other_hall", "expect_reason": "allowed"},
+    {"id": "moderator-user-manage-forbidden", "user": {"role": "MODERATOR", "hall": "CN_DIYU"}, "grants": [["MODERATOR", "user.manage"]], "action": "user.manage", "expect_reason": "role_forbidden"},
+    {"id": "designer-cannot-approve", "user": {"role": "FLOWDESIGN", "hall": "CN_DIYU"}, "grants": [["FLOWDESIGN", "workflow.create"], ["FLOWDESIGN", "workflow.approve"]], "action": "workflow.approve", "expect_reason": "design_approve_conflict"},
+    {"id": "extra-role-grants-it", "user": {"role": "VIEWER", "hall": "CN_DIYU", "extra_roles": ["JUDGE"]}, "action": "judgment.execute", "expect_reason": "allowed"},
+    {"id": "judge-workflow-other-hall", "user": {"role": "JUDGE", "hall": "CN_DIYU"}, "action": "workflow.read", "object_type": "workflow", "object": "other_hall", "expect_reason": "out_of_scope"}
+  ]
+}

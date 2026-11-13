@@ -378,6 +378,10 @@ class UsageSideSerializer(UsageBucketSerializer):
     side = serializers.ChoiceField(choices=("soul", "officer"))
 
 
+class UsageFeatureSerializer(UsageBucketSerializer):
+    feature = serializers.CharField(help_text="assist = 问一问;其余是业务模块的接入点(AssistUsage.feature)")
+
+
 class UsageHallSerializer(UsageBucketSerializer):
     tenant_id = serializers.IntegerField(allow_null=True)
     code = serializers.CharField(allow_null=True)
@@ -454,6 +458,7 @@ class UsageSerializer(serializers.Serializer):
     by_retrieval = UsageRetrievalSerializer(help_text="已答的请求按帮助条目的来源分(§7.5)")
     by_day = UsageDaySerializer(many=True)
     by_side = UsageSideSerializer(many=True)
+    by_feature = UsageFeatureSerializer(many=True, help_text="按功能分(问一问、权限解释、审计查询…)")
     by_hall = UsageHallSerializer(many=True)
     phase4 = Phase4Serializer()
 
