@@ -10040,6 +10040,7 @@
       "tenant": "殿",
       "search": "关键词"
     },
-    "clear_field": "去掉「{name}」"
+    "clear_field": "去掉「{name}」",
+    "demo_not_recorded": "这是演示环境,只回放录好的问题。可以试:{examples}"
   }
 }

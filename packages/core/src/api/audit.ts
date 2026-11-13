@@ -55,7 +55,15 @@ export const auditApi = {
   timeline: (params?: AuditTimelineParams) => api.get<AuditLogEntry[]>("/audit-logs/timeline/", { params }),
   /** 不收参数:与列表同样按殿划界，不随列表的筛选变化。 */
   stats: () => api.get<AuditStats>("/audit-logs/stats/"),
+  /**
+   * 一句话 → 一组筛选参数(apps/audit/nl_query.py)。**不查询**:人确认后照旧调 `list`。503 时 `code` 是
+   * `assistant_not_configured` / `assistant_unavailable`,429 是 `assistant_busy` —— 页面退回手动筛选。
+   */
+  nlFilter: (question: string) => api.post<AuditNlFilter>("/audit-logs/nl-filter/", { question }),
 };
+
+export type AuditNlFilter = components["schemas"]["NlFilterResponse"];
+export type AuditNlFilterValues = components["schemas"]["NlFilterValues"];
 
 /** `GET /audit-logs/timeline/` 的查询参数。`limit` 默认 50,后端上限 500(`TIMELINE_MAX_LIMIT`)。 */
 export interface AuditTimelineParams {

@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { StatusCard } from "@/src/components/ui/PageError";
+import { PermissionWhy } from "./PermissionWhy";
 
 /**
  * 哪道门挡住了这一页:`RequirePermission` 把它的权限码、`RequireAdmin` 把「管理员」放进来,
@@ -56,9 +57,14 @@ export function PermissionDenied({ permission }: { permission?: string }) {
         </>
       }
       action={
-        <Button type="button" variant="secondary" size="sm" onClick={() => window.history.back()}>
-          {t("permission.go_back")}
-        </Button>
+        <>
+          <Button type="button" variant="secondary" size="sm" onClick={() => window.history.back()}>
+            {t("permission.go_back")}
+          </Button>
+          {/* 「为什么?」:原因由后端算(第二部分接入点 6)。有好几个码时问第一个 —— 任一个都能开这一页。
+              放在 action 里而不是 message:message 是 <p>,答案里有段落与列表。 */}
+          {codes?.length ? <PermissionWhy action={codes[0]} /> : null}
+        </>
       }
     />
   );

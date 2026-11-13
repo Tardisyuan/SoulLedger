@@ -101,5 +101,6 @@
   "audit_ask.fields.trace_id",
   "audit_ask.fields.tenant",
   "audit_ask.fields.search",
-  "audit_ask.clear_field"
+  "audit_ask.clear_field",
+  "audit_ask.demo_not_recorded"
 ]

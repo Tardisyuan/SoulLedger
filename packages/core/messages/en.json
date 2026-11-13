@@ -10040,6 +10040,7 @@
       "tenant": "Hall",
       "search": "Keyword"
     },
-    "clear_field": "Remove “{name}”"
+    "clear_field": "Remove “{name}”",
+    "demo_not_recorded": "This is the demo, so only recorded questions are answered. Try: {examples}"
   }
 }

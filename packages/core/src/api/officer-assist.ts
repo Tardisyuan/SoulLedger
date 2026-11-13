@@ -106,4 +106,12 @@ export const officerAssistApi = {
   conversations: () => api.get<OfficerAssistConversation[]>("/assist/conversations/").then((r) => r.data),
   /** 204; someone else's (or a gone one) is 404 `not_found`. */
   deleteConversation: (id: string) => api.delete(`/assist/conversations/${id}/`).then(() => undefined),
+  /**
+   * What a person did with an AI draft (`AIDraft`, apps/soul_assist/drafts.py). `finalText` is what was finally
+   * submitted through the ordinary write path; it only measures the edit and is not stored. 409 = already decided.
+   */
+  decideDraft: (id: number, adopted: boolean, finalText = "") =>
+    api.post<AIDraftDecision>(`/assist/ai-drafts/${id}/decide/`, { adopted, final_text: finalText }).then((r) => r.data),
 };
+
+export type AIDraftDecision = components["schemas"]["DraftDecisionResult"];
