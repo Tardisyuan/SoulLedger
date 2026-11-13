@@ -127,9 +127,7 @@ const mockUser: { id?: number; role: string; permissions: string[] } | null = {
   permissions: ["judgment.read", "judgment.execute"],
 };
 let currentUser: typeof mockUser = mockUser;
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: currentUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => currentUser }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),

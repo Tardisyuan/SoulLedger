@@ -39,9 +39,7 @@ jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMoc
 const mockTenant = {
   user: { id: 1, username: "admin", role: "ADMIN", tenant: null, permissions: [] },
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 jest.mock("@/src/components/charts/LifespanBarChart", () => ({
   LifespanBarChart: () => null,

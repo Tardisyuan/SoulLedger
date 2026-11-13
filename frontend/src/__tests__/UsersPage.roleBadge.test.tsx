@@ -41,9 +41,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 const mockTenant = {
   user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["user.manage"] },
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace: jest.fn() }),

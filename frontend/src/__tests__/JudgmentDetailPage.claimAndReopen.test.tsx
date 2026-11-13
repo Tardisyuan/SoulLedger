@@ -59,9 +59,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 const JUDGE = ["judgment.read", "judgment.execute"];
 const LEAD = [...JUDGE, "judgment.assign"];
 const mockTenant: { user: Record<string, unknown> } = { user: {} };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 const mockGet = judgmentApi.get as jest.Mock;
 const mockReopen = judgmentApi.reopenCancelled as jest.Mock;

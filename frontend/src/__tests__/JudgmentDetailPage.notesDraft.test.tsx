@@ -69,9 +69,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 const mockTenant = {
   user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: [] },
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 const mockGet = judgmentApi.get as jest.Mock;
 const mockSoulGet = soulsApi.get as jest.Mock;

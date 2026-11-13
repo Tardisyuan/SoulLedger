@@ -61,9 +61,7 @@ const mockShowToast = jest.fn();
 const mockT = jest.fn((key: string, _params?: Record<string, string>) => key);
 let mockUser: { role: string; permissions?: string[] } | null = { role: "ADMIN" };
 
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),

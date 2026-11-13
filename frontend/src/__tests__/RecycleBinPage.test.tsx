@@ -16,9 +16,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 let mockUser: { role: string; permissions: string[] } = { role: "JUDGE", permissions: [] };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

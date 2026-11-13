@@ -36,9 +36,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 const mockTenant = {
   user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["disposition.execute"] },
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 jest.mock("@/src/components/layout/MenuGloss", () => ({
   MenuGloss: () => null,

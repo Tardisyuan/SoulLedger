@@ -23,9 +23,7 @@ jest.mock("@soulledger/core/api", () => ({
   crossTenantJudgmentsApi: { list: jest.fn() },
 }));
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ zh: "per-call", locale: "zh-Hans", hydrated: true }));
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 // 缩略图本身(compact 模式)在 UnderworldMapLayout.test 里测;这里只看概览给它什么、包在哪里。
 jest.mock("@/src/components/realms/UnderworldMap", () => ({
   UnderworldMap: (p: { civilization: string; label: string; compact?: boolean }) => (

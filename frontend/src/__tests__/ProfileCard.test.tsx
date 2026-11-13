@@ -14,9 +14,7 @@ import type { UserProfile } from "@soulledger/core/api";
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "en", hydrated: true }));
 
 let mockUser: { id: string | number } | null = { id: "user-1" };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 const mockUpdateMutate = jest.fn();
 const mockUploadMutate = jest.fn();
