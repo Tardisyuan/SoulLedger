@@ -507,7 +507,8 @@ export function PageShell({
 
   // 等宽小字一行:页面报的殿名、案号在前,页面自己的 eyebrow 在后。标题下面一行:副标题,再接页面报的概览。
   const meta = joinDot([
-    plaque?.hall,
+    // 包一层:窄屏上这一行不折行,殿名这一段可以截短,案号与页面自己的小字不截(globals.css `.page-head-meta`)。
+    plaque?.hall ? <span key="hall" data-meta-hall="">{plaque.hall}</span> : null,
     plaque?.caseNumber || plaque?.caseRef ? <PlaqueCaseValue key="case" caseNumber={plaque.caseNumber} caseRef={plaque.caseRef} /> : null,
     eyebrow,
   ]);

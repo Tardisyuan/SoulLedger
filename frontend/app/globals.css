@@ -1015,6 +1015,28 @@
   .page-head-meta a {
     color: inherit;
   }
+  /* 窄屏:返回链接 · 殿 · 案号 · 小字 一行放不下时折成三行(393 英文的审判详情)。改成一行,只截殿名那一段。 */
+  @media (max-width: 768px) {
+    .page-head-meta {
+      display: flex;
+      align-items: baseline;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .page-head-meta > * {
+      flex-shrink: 0;
+    }
+    /* 「 · 」是 flex 项,项首尾的空格会被吃掉。 */
+    .page-head-meta > [aria-hidden] {
+      white-space: pre;
+    }
+    .page-head-meta > [data-meta-hall] {
+      flex-shrink: 1;
+      min-width: 2em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
   .page-head h1 {
     letter-spacing: 0.01em;
   }
