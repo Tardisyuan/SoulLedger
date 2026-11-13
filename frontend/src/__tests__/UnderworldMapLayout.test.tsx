@@ -6,7 +6,7 @@
  *     jsdom 里看不出「第一帧」,这里钉的是这个决定确实落到 viewBox 上。
  *   - 窄屏的小卡贴在视窗底部,和演示导览面板(z-toast)同一处:卡在抽屉那一档(z-drawer),在面板之上。
  */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { UnderworldMap } from "@/src/components/realms/UnderworldMap";
 import { CLOSE_SCALE } from "@/src/lib/underworldMapLayers";
 
@@ -62,6 +62,33 @@ it("puts the zoom buttons beside the drawing, never over it", async () => {
   expect(toolbar.className).toMatch(/(^|\s)max-md:flex-row(\s|$)/);
   expect(toolbar.className).toMatch(/(^|\s)max-md:order-first(\s|$)/);
   expect(toolbar.parentElement!.className).toMatch(/(^|\s)max-md:flex-col(\s|$)/);
+});
+
+it("says the toolbar's orientation as it is laid out: a column from md (768) up, a row below", async () => {
+  const realMatchMedia = window.matchMedia;
+  const listeners = new Set<() => void>();
+  let wide = true;
+  window.matchMedia = ((query: string) => ({
+    matches: query === "(min-width: 768px)" ? wide : false,
+    media: query,
+    addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+    removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
+  })) as unknown as typeof window.matchMedia;
+  try {
+    width = 900;
+    draw();
+    await screen.findByTestId("underworld-map");
+    const toolbar = screen.getByRole("toolbar");
+    expect(toolbar).toHaveAttribute("aria-orientation", "vertical");
+    wide = false;
+    act(() => listeners.forEach((fn) => fn()));
+    expect(toolbar).toHaveAttribute("aria-orientation", "horizontal");
+    // The keys are unchanged: + still zooms from the toolbar whichever way it lies.
+    fireEvent.keyDown(toolbar, { key: "+" });
+    expect(screen.getByRole("toolbar")).toHaveAttribute("aria-orientation", "horizontal");
+  } finally {
+    window.matchMedia = realMatchMedia;
+  }
 });
 
 it("opens close up at a narrow width: 1.25 px per unit, from the drawing's own width", async () => {

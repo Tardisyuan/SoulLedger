@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
+import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { cn } from "@/lib/utils";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import {
@@ -167,6 +168,8 @@ export function UnderworldMap({
   const live = useRef<SVGSVGElement | null>(null);
   const drag = useRef<{ x: number; y: number; view: MapView; camX: number | null; node: string | null } | null>(null);
   const [width, setWidth] = useState(0);
+  /** Tailwind 的 md(768):以上缩放钮竖排在画面右边,以下横排在画面上方 —— `aria-orientation` 跟着说。 */
+  const toolsVertical = useWideViewport(768);
   const [wholeMap, setWholeMap] = useState(false);
   /** 镜头被拖过 / 移到某站后的左边位置;null = 跟着当前站。 */
   const [camX, setCamX] = useState<number | null>(null);
@@ -513,7 +516,7 @@ export function UnderworldMap({
             (图框本身不可聚焦 —— 它只是一张图)。 */}
         <div
           role="toolbar"
-          aria-orientation="vertical"
+          aria-orientation={toolsVertical ? "vertical" : "horizontal"}
           aria-label={t("map.drag_hint")}
           onKeyDown={onKeyDown}
           className="m-2 max-md:mb-0 flex shrink-0 flex-col max-md:flex-row self-start max-md:self-end max-md:order-first border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
