@@ -8039,7 +8039,7 @@
   "officer_app": {
     "biometric": {
       "setting": "Check {{bio}} before approving or rejecting",
-      "hint": "Nobody else can decide with your phone in hand",
+      "hint": "Someone else holding this phone still cannot decide anything.",
       "unavailable": "This phone has no screen lock yet, so this can't be turned on. Set one in system settings first.",
       "failed": "{{bio}} not recognised. Not approved yet. Tap Confirm to try again.",
       "failed_reject": "{{bio}} not recognised. Not rejected yet. Tap Confirm to try again.",
@@ -8074,14 +8074,14 @@
         "wangsi": "Grievances from the City of Wrongful Death"
       },
       "empty_title": "Nothing waiting on you",
-      "empty_body": "New approvals, handovers and requests will be pushed to you.",
+      "empty_body": "New approvals, handovers and requests will be pushed to this phone.",
       "filter_summary": "{{kinds}} · {{n}} items",
       "filter_empty_title": "No \"{{kinds}}\" items",
       "filter_empty_body": "Try another type, or clear the filters.",
       "filter_clear": "Clear filters",
       "see_all": "All {{n}}",
       "on_desk_only": "Handle on computer",
-      "empty_body_other": "Anything that comes to you will be pushed to you."
+      "empty_body_other": "Anything waiting on you will be pushed to this phone."
     },
     "queue": {
       "desk_only": "Ready for verdict · conclude it in Swipe to judge",
@@ -8197,7 +8197,7 @@
       "approve_body": {
         "approval": "The flow moves to the next step.",
         "rebirth": "This rebirth application moves to the next step.",
-        "cooldown": "The cooling-off period is shortened to the days you enter.",
+        "cooldown": "The cooling-off period is shortened to the days entered.",
         "reassignment": "The handover goes ahead."
       },
       "remaining_days": "{{n}} days left",
@@ -8335,7 +8335,7 @@
       }
     },
     "cosign": {
-      "rules": "Only active officers of this hall who may approve are listed. The added signer approves first, then you can; if they reject, the whole step is rejected.",
+      "rules": "Only active officers of this hall who may approve are listed. The added signer approves first, then you; if the added signer rejects, the whole step is rejected.",
       "search": "Search name or username",
       "empty": "Nobody to choose",
       "confirm": "Add signer",
@@ -8366,7 +8366,7 @@
       "archive": "Archive",
       "unarchive": "Unarchive",
       "assign_title": "Hand to whom?",
-      "assign_hint": "Only officers who can reply to this letter are listed. Once handed over, it leaves your to-do.",
+      "assign_hint": "Only officers who can answer this letter are listed. Once handed over, it leaves your to-do list.",
       "assign_load": "{{n}} in hand",
       "assign_confirm": "Hand to {{name}}",
       "unassign_title": "Put this letter back?",
@@ -8381,7 +8381,7 @@
       "earlier_failed": "Couldn't load earlier letters",
       "handler": "Handled by {{name}}",
       "handler_none": "Handled by · unassigned",
-      "not_yours": "{{name}} is handling this letter, so only they can reply. To take it, ask them to put it back or ask an admin to hand it to you.",
+      "not_yours": "{{name}} is handling this letter, and only the handler can reply. To take it over, ask them to put it back, or ask an administrator to reassign it.",
       "assign_to_me": "Hand to me",
       "moved": "This soul has been moved elsewhere, so you can't reply for now."
     },
@@ -8398,16 +8398,16 @@
       "auto": "Sends automatically when online",
       "row": "Reply · {{name}}",
       "failed_title": "Reply · {{name}} was not sent",
-      "answered": "Another officer already replied. Your draft is kept.",
+      "answered": "Another officer has already answered this letter. What you wrote is kept.",
       "archived": "This letter has been archived.",
-      "left_hall": "You are no longer in this hall.",
+      "left_hall": "This account is no longer in this hall.",
       "assigned": "Another officer is handling this letter, so it did not go out. What you wrote is kept.",
       "retry": "Not sent. Try again later.",
       "view_existing": "See the existing reply",
       "discard": "Delete my draft",
       "discard_confirm": "Delete this draft? What you wrote can't be recovered.",
       "discard_ok": "Delete",
-      "moved": "This soul has been moved elsewhere, so you can't reply for now. What you wrote is kept."
+      "moved": "This soul has been moved elsewhere, so no reply can go out for now. What you wrote is kept."
     },
     "list": {
       "more": "Load more",
@@ -8418,12 +8418,12 @@
       "defer": "Move to Deferred",
       "request_reassign": "Ask to reassign",
       "release_title": "Release this case?",
-      "release_body": "It goes back to Unclaimed. Your comments stay.",
+      "release_body": "It goes back to Unclaimed; your review notes are kept.",
       "defer_title": "Defer this case",
-      "defer_body": "It stays with you. Tap Restore to put it back in the queue.",
+      "defer_body": "On hold, the case stays with you and no deadline runs. Tap Resume to put it back in the queue.",
       "defer_reason": "Reason · required, visible to officers in this hall",
       "defer_confirm": "Move to Deferred",
-      "reassign_body": "Until it's approved, the case stays with you.",
+      "reassign_body": "Until it is approved, the case stays with you.",
       "reassign_reason": "Reason · required, the approver will read it",
       "reassign_confirm": "Send request",
       "reason_required": "A reason is required",
@@ -8438,7 +8438,7 @@
       "evidence": "Evidence · {{n}}",
       "evidence_attachment": "Attachment {{n}}",
       "load_failed": "The case details didn't load",
-      "admin_context": "With {{name}} · you're an admin here",
+      "admin_context": "With {{name}} · you are this hall's administrator",
       "reassign_to": "Reassign to…",
       "release_for": "Release for {{name}}",
       "reassign_request": "{{name}} asked to reassign · {{time}}",
@@ -8530,7 +8530,7 @@
       "note_required": "Write the review note first",
       "level_saves": "Tap a level to save it",
       "reject_title": "Find {{name}}'s grievance not upheld?",
-      "reject_body": "The grievance is recorded as not upheld, with your review note.",
+      "reject_body": "The grievance is recorded as not upheld, with the review note.",
       "late_title": "Find {{name}}'s grievance upheld?",
       "final": "A finding can't be changed once recorded."
     },
@@ -10087,8 +10087,8 @@
         "cn": {
           "merit": "Merit",
           "demerit": "Demerit",
-          "merit_glyph": "功",
-          "demerit_glyph": "过"
+          "merit_glyph": "+",
+          "demerit_glyph": "−"
         },
         "eu": {
           "merit": "Virtue",

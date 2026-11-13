@@ -134,7 +134,7 @@ describe("the to-do type filter", () => {
     expect(screen.getByText("没有「缩短冷却申请」待办")).toBeTruthy();
     expect(screen.getByText("换个类型看看，或清除筛选。")).toBeTruthy();
     expect(screen.queryByText("这几类里没有待办")).toBeNull();
-    expect(screen.queryByText("此刻没有轮到你的事")).toBeNull();
+    expect(screen.queryByText("此刻没有待办")).toBeNull();
     expect(screen.queryByTestId("todo-group-approval")).toBeNull();
     // The chips stay, so the choice can be changed without clearing.
     expect(chip("cooldown").props.accessibilityState).toEqual({ selected: true });
@@ -149,7 +149,7 @@ describe("the to-do type filter", () => {
   it("a list with nothing waiting at all keeps the plain empty state and draws no chips", async () => {
     mockTodo.mockResolvedValue({ data: { approvals: group([]), reassignments: group([]), cooldowns: group([]), rebirths: group([]), letters: group([]) } });
     mount();
-    expect(await screen.findByText("此刻没有轮到你的事")).toBeTruthy();
+    expect(await screen.findByText("此刻没有待办")).toBeTruthy();
     expect(screen.queryByTestId("todo-filter")).toBeNull();
     expect(screen.queryByTestId("todo-filter-clear")).toBeNull();
     expect(screen.queryByTestId("todo-filter-summary")).toBeNull();

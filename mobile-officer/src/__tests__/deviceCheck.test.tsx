@@ -170,7 +170,7 @@ describe("the switch on 我的", () => {
     renderOfficer(<MeTab onOpen={() => {}} />);
     const row = await screen.findByTestId("me-confirm-bio");
     expect(screen.getAllByText("批准、驳回前验证面容").length).toBeTruthy();
-    expect(screen.getByText("别人拿到你的手机，也做不了决定")).toBeTruthy();
+    expect(screen.getByText("手机落到别人手里，也做不了决定")).toBeTruthy();
     expect(row.props.accessibilityState.disabled).toBeFalsy();
     expect(row).toHaveTextContent(/✓/);
     expect(platform().persistent.get(confirmKey())).toBeNull();
@@ -253,7 +253,7 @@ describe("the switch on 我的", () => {
     const row = await screen.findByTestId("me-confirm-bio");
     expect(row.props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText("这部手机还没设锁屏密码，开不了。先在系统设置里设一个。")).toBeTruthy();
-    expect(screen.queryByText("别人拿到你的手机，也做不了决定")).toBeNull();
+    expect(screen.queryByText("手机落到别人手里，也做不了决定")).toBeNull();
     await act(async () => {
       fireEvent.press(row);
     });

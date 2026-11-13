@@ -187,7 +187,7 @@ describe("add signer", () => {
     await open();
     fireEvent.press(screen.getByTestId("action-cosign"));
     expect(await screen.findByTestId("cosign-rules")).toBeTruthy();
-    expect(screen.getByText(/加签人先批，你才能批/)).toBeTruthy();
+    expect(screen.getByText(/加签人先批，本人才能批/)).toBeTruthy();
   });
 });
 
@@ -201,7 +201,7 @@ describe("waiting for an added signer", () => {
   it("lists the signer as owed, greys 批准 with the reason above and in its hint, and leaves 驳回 and 加签 alone", async () => {
     await open(WAITING);
     expect(screen.getByTestId("cosigner-2").props.children).toBe("◐ 孟判官 · 加签 · 待批");
-    const reason = "等孟判官先批，你才能批。孟判官驳回则这一节点驳回。";
+    const reason = "等孟判官先批，本人才能批。孟判官驳回则这一节点驳回。";
     expect(screen.getByTestId("detail-wait-cosigner").props.children).toBe(`◇ ${reason}`);
     const approve = screen.getByTestId("action-approve");
     expect(approve.props.accessibilityState.disabled).toBe(true);

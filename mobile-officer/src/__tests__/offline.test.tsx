@@ -410,10 +410,10 @@ describe("a reply written offline", () => {
   });
 
   const reasons: [string, () => void, string, string[]][] = [
-    ["answered by another officer (the thread has an officer message it did not have)", () => mockMessages.mockResolvedValue({ data: [msg("m1", false), msg("o9", true)] }), "这封书信已经由别的官员回过了。你写的内容还留着。", ["view", "discard"]],
+    ["answered by another officer (the thread has an officer message it did not have)", () => mockMessages.mockResolvedValue({ data: [msg("m1", false), msg("o9", true)] }), "这封书信已经由别的官员回过了。写好的内容还留着。", ["view", "discard"]],
     ["closed (409 closed)", () => mockReply.mockRejectedValue(httpError(409, { code: "closed" })), "这封书信已经归档。", ["view", "discard"]],
-    ["no longer this hall's (403)", () => mockReply.mockRejectedValue(httpError(403)), "你已不在这一殿。", ["discard"]],
-    ["no longer visible (404)", () => mockMessages.mockRejectedValue(httpError(404)), "你已不在这一殿。", ["discard"]],
+    ["no longer this hall's (403)", () => mockReply.mockRejectedValue(httpError(403)), "本账号已不在这一殿。", ["discard"]],
+    ["no longer visible (404)", () => mockMessages.mockRejectedValue(httpError(404)), "本账号已不在这一殿。", ["discard"]],
     ["anything else (500)", () => mockReply.mockRejectedValue(httpError(500)), "没有发出，稍后再试", ["retry", "discard"]],
   ];
   it.each(reasons)("%s", async (_name, arrange, words, actions) => {

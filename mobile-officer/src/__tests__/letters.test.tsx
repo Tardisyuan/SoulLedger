@@ -148,7 +148,7 @@ describe("the to-do group", () => {
     mockTodo.mockResolvedValue({ data: { ...NONE, letters: group([row("letter", "c-1")]) } });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     expect(await screen.findByText("待我回的书信 · 1")).toBeTruthy();
-    expect(screen.queryByText("此刻没有轮到你的事")).toBeNull();
+    expect(screen.queryByText("此刻没有待办")).toBeNull();
   });
 });
 
@@ -413,7 +413,7 @@ describe("who handles the letter", () => {
     expect(screen.getByTestId("letter-handler").props.children).toBe("经办 · 钟书吏");
     expect(screen.queryByTestId("letter-composer")).toBeNull();
     expect(screen.queryByTestId("letter-input")).toBeNull();
-    expect(screen.getByText("这封信由钟书吏经办，回信框只给经办人。要接过来，请他放回，或请管理员转给你。")).toBeTruthy();
+    expect(screen.getByText("这封信由钟书吏经办，回信框只给经办人。要接过来，请经办人放回，或请管理员转过来。")).toBeTruthy();
     fireEvent.press(screen.getByTestId("letter-assign-to-me"));
     await waitFor(() => expect(mockAssign).toHaveBeenCalledWith("c-1", 7));
   });
