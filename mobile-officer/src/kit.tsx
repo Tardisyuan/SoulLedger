@@ -178,6 +178,7 @@ export type RowLine = string | { one: string };
  *
  * `value`: a short value at the right (a count, a time), one line; at ≥ 1.5× text (S4) "text left, value right"
  * becomes two lines -- the value moves under the title. `right` (a ›, a ✓, a button) stays where it is.
+ * `below`: content under the title and lines at the text column's full width (我的数's three numbers).
  */
 export function Row({
   title,
@@ -188,6 +189,7 @@ export function Row({
   strong,
   onPress,
   right,
+  below,
   highlight,
   minHeight = 72,
   testID,
@@ -204,6 +206,7 @@ export function Row({
   strong?: boolean;
   onPress?: () => void;
   right?: ReactNode;
+  below?: ReactNode;
   highlight?: boolean;
   minHeight?: 56 | 64 | 72 | 88;
   testID?: string;
@@ -254,6 +257,7 @@ export function Row({
           )
         )}
         {twoLine ? valueText : null}
+        {below}
       </View>
       {twoLine ? null : valueText}
       {right}
@@ -363,8 +367,9 @@ export function Segmented<K extends string>({
             style={[styles.segment, { backgroundColor: on ? t.ink : "transparent" }]}
           >
             {/* One line, always: four segments on a 360dp phone left 「他人手上 · 0」 its count on a second
-                line (华为真机 10-29 第二轮). Four or more take 13pt, so the label fits, not cut. */}
-            <Txt variant="nav" numberOfLines={1} style={[{ color: on ? t.s0 : t.ink, letterSpacing: 0 }, options.length > 3 && styles.segmentTight]}>
+                line (华为真机 10-29 第二轮). Four or more take 13pt, so the label fits, not cut; a label still too wide for
+                its third (「Medu Kemet」, 华为真机 11-14) shrinks to fit rather than end in …. */}
+            <Txt variant="nav" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[{ color: on ? t.s0 : t.ink, letterSpacing: 0 }, options.length > 3 && styles.segmentTight]}>
               {label}
             </Txt>
           </Pressable>

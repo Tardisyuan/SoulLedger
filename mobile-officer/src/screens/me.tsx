@@ -294,15 +294,19 @@ function ConfirmBlock() {
   );
 }
 
-/** 我的数(S-1): the three numbers in motion; the whole card opens the stats screen. Loading shows a dash-free placeholder, an error says so (never zeros). */
+/** 我的数(S-1): the three numbers in motion; the whole card opens the stats screen. Loading shows a dash-free placeholder, an error says so (never zeros).
+ * The numbers sit on their own row under the title, in equal thirds: beside it, en's labels squeezed the title column to a
+ * letter's width and pushed the third number off a 360 dp screen (phone, 2026-11-14). */
 function StatsCard({ onOpen }: { onOpen: () => void }) {
   const { t } = useI18n();
   const load = useCallback(() => officerAppApi.stats().then((r) => r.data), []);
   const { data, error } = useRemote(load);
   const cell = (testID: string, label: string, n: number | undefined) => (
-    <View key={testID} style={{ alignItems: "center", minWidth: 56 }}>
+    <View key={testID} style={{ flex: 1, alignItems: "center" }}>
       <Txt testID={testID} variant="title">{n === undefined ? "…" : String(n)}</Txt>
-      <Txt variant="caption" tone="muted">{label}</Txt>
+      <Txt variant="caption" tone="muted" style={{ textAlign: "center" }}>
+        {label}
+      </Txt>
     </View>
   );
   const failed = !data && !!error;
@@ -313,11 +317,10 @@ function StatsCard({ onOpen }: { onOpen: () => void }) {
       title={t("officer_app.stats.title")}
       lines={[failed ? t("officer_app.stats.load_failed") : t("officer_app.stats.scope")]}
       onPress={onOpen}
-      right={
-        failed ? (
-          <Txt variant="nav">›</Txt>
-        ) : (
-          <View style={{ flexDirection: "row", gap: space[3] }}>
+      right={failed ? <Txt variant="nav">›</Txt> : undefined}
+      below={
+        failed ? undefined : (
+          <View style={{ flexDirection: "row", gap: space[2], marginTop: space[2] }}>
             {cell("me-stat-month", t("officer_app.stats.concluded_this_month"), data?.concluded_this_month)}
             {cell("me-stat-open", t("officer_app.stats.open_claims"), data?.open_claims)}
             {cell("me-stat-review", t("officer_app.stats.appeals_in_review"), data?.appeals_in_review)}
