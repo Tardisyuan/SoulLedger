@@ -85,6 +85,32 @@ function bar(over: object, handlers: Partial<{ onChanged: () => void; onAsked: (
 
 beforeEach(() => jest.clearAllMocks());
 
+describe("放回 / 判 (第三十批 八.6)", () => {
+  const withJudge = (over: object, onJudge = jest.fn()) => {
+    renderOfficer(
+      <JudgmentActionBar data={{ ...(BASE as object), ...over } as never} me={ME} reassignAsked={false} onAsked={() => {}} onChanged={() => {}} onWrite={() => {}} onDesk={() => {}} onJudge={onJudge} />
+    );
+    return onJudge;
+  };
+
+  it("my case, final: the two keys 放回 and 判; 判 opens the drawer, 放回 asks first", () => {
+    const onJudge = withJudge({ claimed_by: ME });
+    expect(screen.queryByTestId("judgment-write")).toBeNull();
+    fireEvent.press(screen.getByTestId("judgment-judge"));
+    expect(onJudge).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByTestId("judgment-release"));
+    expect(mockRelease).not.toHaveBeenCalled(); // the confirm sheet, not a release
+  });
+
+  it("no 判 on a case the server cannot conclude yet, nor on someone else's", () => {
+    withJudge({ claimed_by: ME, conclude_refusal: "at_city_god" });
+    expect(screen.queryByTestId("judgment-judge")).toBeNull();
+    screen.unmount();
+    withJudge({ claimed_by: 9 });
+    expect(screen.queryByTestId("judgment-judge")).toBeNull();
+  });
+});
+
 describe("JudgmentActionBar", () => {
   it("unclaimed: 认领 is the only button, and it claims", async () => {
     mockClaim.mockResolvedValue({});

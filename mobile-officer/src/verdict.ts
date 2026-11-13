@@ -82,10 +82,13 @@ export function passPayload(civ: string, account: "" | GreekAccount = ""): Concl
 }
 
 /**
- * 卷宗「判」抽屉(Design 第三十批 八.6)选的是哪一个判决;通过 / 不过之外的去处由服务端按规则选(同滑卡审判)。
- * `PASSED` 只等希腊的文书,`FAILED` 等理由选全(`rejectReady`)。
+ * 卷宗「判」抽屉(Design 第三十批 八.6)选的是哪一个判决 —— 与网页审判台同样四个(用户 2026-11-13;网页
+ * `app/judgment/[id]/page.tsx` 的 `VERDICTS`,后端 `ConcludeSerializer.verdict`),去处由服务端按规则选(同滑卡审判)。
+ * `PASSED` 只等希腊的文书,`FAILED` 等理由选全(`rejectReady`);`PURGATORY` / `RETRY` 不带文书与理由
+ * (后端 `fail_reasons.check`:文书只在希腊的通过 / 不过上必选,理由只随不过)。
  */
-export type SealVerdict = "PASSED" | "FAILED";
+export const SEAL_VERDICTS = ["PASSED", "FAILED", "PURGATORY", "RETRY"] as const;
+export type SealVerdict = (typeof SEAL_VERDICTS)[number];
 export interface SealChoice {
   verdict: SealVerdict | null;
   /** 希腊判通过时的文书。 */
@@ -101,12 +104,21 @@ export const NO_SEAL: SealChoice = { verdict: null, account: "", reject: NO_CHOI
 export function sealReady(civ: string, c: SealChoice): boolean {
   if (c.verdict === "PASSED") return civ !== "GREEK" || !!c.account;
   if (c.verdict === "FAILED") return rejectReady(civ, c.reject);
-  return false;
+  return c.verdict !== null;
 }
 
-/** 发给 `conclude/` 的:通过 / 不过各自的那一份,判词写了才带 `notes`。 */
+/**
+ * 「通过」为什么不能选(网页 `passedBarredBy` 的一半):罪目是五逆(400 `five_heinous_must_fail`)。另一半(埃及有「不实」
+ * 告白,400 `untruthful_confession`)手机上不预先置灰:服务端拒收,抽屉写出它回的那句。返回译文键或 null。
+ */
+export function passBarredBy(j: { offence?: string | null }): string | null {
+  return j.offence === "FIVE_HEINOUS" ? "judgment.detail.passed_barred_five_heinous" : null;
+}
+
+/** 发给 `conclude/` 的:各判决自己的那一份,判词写了才带 `notes`。 */
 export function sealPayload(civ: string, c: SealChoice): ConcludeJudgmentPayload {
-  const base = c.verdict === "FAILED" ? failPayload(civ, c.reject) : passPayload(civ, c.account);
+  const base =
+    c.verdict === "FAILED" ? failPayload(civ, c.reject) : c.verdict === "PASSED" ? passPayload(civ, c.account) : { verdict: c.verdict ?? "" };
   const notes = c.notes.trim();
   return notes ? { ...base, notes } : base;
 }

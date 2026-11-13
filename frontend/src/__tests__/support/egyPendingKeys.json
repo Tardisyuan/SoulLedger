@@ -65,5 +65,22 @@
   "demo.build.quality",
   "nav.language_egy_note",
   "soul_app.life.seal_title",
-  "soul_app.life.seal_pending"
+  "soul_app.life.seal_pending",
+  "officer_app.desk.sources.rebirth_application",
+  "officer_app.doors.desk.glyph",
+  "officer_app.doors.desk.label",
+  "officer_app.doors.roll.glyph",
+  "officer_app.doors.roll.label",
+  "officer_app.doors.me.glyph",
+  "officer_app.doors.me.label",
+  "officer_app.doors.me_unread",
+  "officer_app.seal.judge",
+  "officer_app.seal.title",
+  "officer_app.seal.auto_route",
+  "officer_app.seal.verdict_label",
+  "officer_app.seal.hold",
+  "officer_app.seal.hold_note",
+  "officer_app.seal.pending_a11y",
+  "officer_app.seal.a11y",
+  "officer_app.seal.done"
 ]

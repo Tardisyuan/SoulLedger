@@ -8080,7 +8080,8 @@
         "appeal": "Appeals",
         "city_god_review": "With the city god",
         "cross_judgment": "Joint judgments",
-        "capture_due": "Warrants due"
+        "capture_due": "Warrants due",
+        "rebirth_application": "Rebirth applications"
       },
       "groups": {
         "mine": "Claimed by me",
@@ -8507,6 +8508,32 @@
     "judgment": {
       "flow_progress": "Approval workflow · station {{n}} of {{total}}",
       "flow_not_here": "This approval flow is run by another hall and has no segment of yours, so its details are not shown here; its progress is on the previous page."
+    },
+    "doors": {
+      "desk": {
+        "glyph": "C",
+        "label": "Cases"
+      },
+      "roll": {
+        "glyph": "R",
+        "label": "Roll"
+      },
+      "me": {
+        "glyph": "M",
+        "label": "Me"
+      },
+      "me_unread": "Me · unread notices"
+    },
+    "seal": {
+      "judge": "Judge",
+      "title": "Judge · {{name}}",
+      "auto_route": "The destination follows the routing rules; to choose one or cite a statute, judge at the desk.",
+      "verdict_label": "Verdict",
+      "hold": "Hold to seal",
+      "hold_note": "Hold Seal for one second. A seal cannot be withdrawn; only an appeal can change the verdict.",
+      "pending_a11y": "Seal · not yet set",
+      "a11y": "Sealed",
+      "done": "Sealed"
     }
   },
   "print": {

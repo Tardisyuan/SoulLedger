@@ -8080,7 +8080,8 @@
         "appeal": "申诉",
         "city_god_review": "城隍初审中",
         "cross_judgment": "跨殿联审",
-        "capture_due": "待发勾魂牒"
+        "capture_due": "待发勾魂牒",
+        "rebirth_application": "转生申请"
       },
       "groups": {
         "mine": "我认领",
@@ -8507,6 +8508,32 @@
     "judgment": {
       "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站",
       "flow_not_here": "这条审批流程由别的殿主办，本殿在其中没有一段，这里看不到详情；进度见上一页。"
+    },
+    "doors": {
+      "desk": {
+        "glyph": "审",
+        "label": "案卷"
+      },
+      "roll": {
+        "glyph": "册",
+        "label": "名册"
+      },
+      "me": {
+        "glyph": "我",
+        "label": "本人"
+      },
+      "me_unread": "本人 · 有未读通知"
+    },
+    "seal": {
+      "judge": "判",
+      "title": "判 · {{name}}",
+      "auto_route": "去处按发落规则自动选定；要自选去处或引用条文，在官员台判。",
+      "verdict_label": "判词",
+      "hold": "按住落印",
+      "hold_note": "按住「落印」1 秒落下。落印后不能撤回；要改判只能走申诉。",
+      "pending_a11y": "印 · 待落印",
+      "a11y": "已落印",
+      "done": "已落印"
     }
   },
   "print": {

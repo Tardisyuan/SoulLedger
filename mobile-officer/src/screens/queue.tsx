@@ -103,9 +103,12 @@ export function QueueTab({
   version,
   onSwipe,
   onOpenCityGod,
+  onOpenRebirth,
 }: {
   /** The 城隍初审 chip: 待办, filtered to 城隍初审 (shell.tsx). Without it the chip is not drawn. */
   onOpenCityGod?: () => void;
+  /** The 转生申请 chip (第三十批 十二.2, the seventh source): 待办, filtered to 转生申请. Without it the chip is not drawn. */
+  onOpenRebirth?: () => void;
   onOpen: (id: string, position?: { n: number; total: number }) => void;
   /** 「滑卡审判」(v4 S09):打开我认领的卡堆。 */
   onSwipe?: () => void;
@@ -184,8 +187,11 @@ export function QueueTab({
   );
   // 全部 / 审判队列 / 跨域 from `sources` (which `?source=` does not change); the elsewhere chips that have a screen.
   const sources = c?.sources;
+  const rebirths = (c?.elsewhere as { rebirth_application?: number | null } | undefined)?.rebirth_application;
   const elsewhere = [
     ...(onOpenCityGod && c?.elsewhere?.city_god_review ? [{ key: "city_god_review" as const, count: c.elsewhere.city_god_review }] : []),
+    // `rebirth_application` is new on the server (queue-counts); read through a narrow type until core's type names it.
+    ...(onOpenRebirth && rebirths ? [{ key: "rebirth_application" as const, count: rebirths }] : []),
   ];
   const chips = sources
     ? [
@@ -212,7 +218,9 @@ export function QueueTab({
           size="lg"
           options={chips}
           selected={[source]}
-          onToggle={(key) => (key === "city_god_review" ? onOpenCityGod?.() : setSource(key === source ? "all" : key))}
+          onToggle={(key) =>
+            key === "city_god_review" ? onOpenCityGod?.() : key === "rebirth_application" ? onOpenRebirth?.() : setSource(key === source ? "all" : key)
+          }
         />
       ) : null}
       <RefreshFailed data={failed?.rows ?? null} error={failed?.error} onRetry={() => void refresh()} />

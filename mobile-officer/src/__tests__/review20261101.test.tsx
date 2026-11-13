@@ -192,12 +192,13 @@ describe("查询 keeps its search across a soul and back", () => {
 });
 
 describe("read aloud", () => {
-  it("通知 says it has unread in its label, not only with a drawn ●", () => {
+  it("我 says it has unread in its label, not only with a drawn dot", () => {
     const first = renderOfficer(<TabBar current="todo" onSelect={() => {}} unread />);
-    expect(screen.getByTestId("tab-notices").props.accessibilityLabel).toBe(zh("officer_app.tabs.notices_unread"));
+    expect(screen.getByTestId("door-me").props.accessibilityLabel).toBe(zh("officer_app.doors.me_unread"));
     first.unmount();
     renderOfficer(<TabBar current="todo" onSelect={() => {}} unread={false} />);
-    expect(screen.getByTestId("tab-notices").props.accessibilityLabel).toBe(zh("officer_app.tabs.notices"));
+    expect(screen.getByTestId("door-me").props.accessibilityLabel).toBe(zh("officer_app.doors.me.label"));
+    expect(screen.queryByTestId("door-me-unread")).toBeNull();
   });
 
   it("the judgment's ⋯ is read as words", async () => {

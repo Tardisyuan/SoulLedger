@@ -62,7 +62,9 @@ export {
   onForeground,
   setUnauthorizedHandler,
 } from "../../mobile/src/platform";
+export { DossierSeal as SealArt, MeritMark } from "../../mobile/src/dossierMarks";
 export {
+  civKeyOf,
   motion,
   radius,
   space,

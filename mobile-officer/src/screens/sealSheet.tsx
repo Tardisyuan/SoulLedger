@@ -2,12 +2,14 @@
  * 卷宗的「判」抽屉(Design 第三十批 第 3 步 八.6 / 十二.6):去处一行一个(行高 56,编号),判词,印的虚线预览,
  * 「按住落印」—— 按住 1 秒落印,防误触,代替网页的 ⌘↵;按住时印从虚线渐成实印,松手前可以取消。
  *
- * 去处:手机上能落的只有现有 `conclude/` 接受的两个判决 —— 通过 / 不过(不过要选理由,同滑卡审判,`RejectFields`);
- * 发落交给自动选殿,要自选去处或引用条文的案子在官员台做(同 swipe.tsx 的口径)。样张里的四个去处是演示用的(十二.8)。
- * 埃及天平已称出的,反方向那一行不可选(`blockedSide`)。
+ * 判决:与网页审判台同样四个(用户 2026-11-13)—— 通过 / 不过 / 存疑(按文明叫炼狱、天平摇摆、普通,`verdictText`)/ 重审;
+ * 不过要选理由(同滑卡审判,`RejectFields`),希腊通过要选文书。发落交给自动选殿,要自选去处或引用条文的案子在官员台做
+ * (同 swipe.tsx 的口径)。样张里的四个去处文字是演示用的(十二.8)。置灰同网页的 `barredBy`:五逆不能通过;埃及天平已称出的,
+ * 反方向那一行不可选(`blockedSide`)。别的拒绝(如欧洲未受洗不能判炼狱)由服务端回,抽屉照它回的那句写出(`verdictFailure`)。
  * 落印走 `confirmedDecision`(我的 › 批准前验证面容 / 指纹),发 `submitVerdict`,与滑卡审判同一个调用。
  */
 import type { GreekAccount, JudgmentDetail } from "@soulledger/core/api/judgment";
+import { verdictText } from "@soulledger/core/domain/verdictNames";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 
@@ -15,7 +17,7 @@ import { submitVerdict } from "../decisions";
 import { confirmedDecision } from "../deviceCheck";
 import { DossierSeal } from "../dossierSeal";
 import { Input, Sheet, Txt, family, radius, space, useI18n, useOnline, useReducedMotion, useTheme, useToast } from "../shared";
-import { GR_ACCOUNTS, NO_SEAL, blockedSide, sealPayload, sealReady, type SealChoice, type SealVerdict } from "../verdict";
+import { GR_ACCOUNTS, NO_SEAL, SEAL_VERDICTS, blockedSide, passBarredBy, sealPayload, sealReady, type SealChoice, type SealVerdict } from "../verdict";
 import { Choice, RejectFields } from "./rejectSheet";
 import { verdictFailure } from "./swipe";
 
@@ -46,10 +48,11 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
       .finally(() => setBusy(false));
   };
 
-  const options: { verdict: SealVerdict; label: string; off: boolean }[] = [
-    { verdict: "PASSED", label: t("judgment.verdicts.passed"), off: blocked === "right" },
-    { verdict: "FAILED", label: t("judgment.verdicts.failed"), off: blocked === "left" },
-  ];
+  // Barred as the web desk bars them (`barredBy`): 通过 by 五逆, and on a weighed 埃及 case the side the scale ruled out.
+  const passBarred = passBarredBy(judgment);
+  const why = (v: SealVerdict): string | null =>
+    v === "PASSED" && passBarred ? t(passBarred) : (v === "PASSED" && blocked === "right") || (v === "FAILED" && blocked === "left") ? t("reject_reason.eg.scale_decided") : null;
+  const options = SEAL_VERDICTS.map((verdict) => ({ verdict, label: verdictText(t, civ, verdict), why: why(verdict) }));
 
   return (
     <Sheet open={open} onClose={onClose} edge={theme.hair} closeLabel={t("reject.sheet.cancel")}>
@@ -62,10 +65,10 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
               key={o.verdict}
               testID={`seal-option-${o.verdict}`}
               accessibilityRole="radio"
-              accessibilityState={{ checked: on, disabled: o.off }}
-              disabled={o.off}
+              accessibilityState={{ checked: on, disabled: !!o.why }}
+              disabled={!!o.why}
               onPress={() => setC((prev) => ({ ...prev, verdict: o.verdict }))}
-              style={[styles.option, { borderColor: on ? theme.ink : theme.hair2, borderWidth: on ? 1.5 : 1, opacity: o.off ? 0.45 : 1 }]}
+              style={[styles.option, { borderColor: on ? theme.ink : theme.hair2, borderWidth: on ? 1.5 : 1, opacity: o.why ? 0.45 : 1 }]}
             >
               <Txt variant="caption" tone="muted" style={styles.ordinal}>
                 {String(i + 1)}
@@ -74,9 +77,9 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
                 <Txt variant="body" style={{ fontFamily: on ? family.ui[500] : family.ui[400] }}>
                   {o.label}
                 </Txt>
-                {o.off ? (
+                {o.why ? (
                   <Txt variant="caption" tone="muted">
-                    {t("reject_reason.eg.scale_decided")}
+                    {o.why}
                   </Txt>
                 ) : null}
               </View>
@@ -134,7 +137,7 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
   const { t } = useI18n();
   const theme = useTheme();
   const reduced = useReducedMotion();
-  const fill = useRef(new Animated.Value(0)).current;
+  const [fill] = useState(() => new Animated.Value(0));
   const fired = useRef(false);
   useEffect(() => {
     if (!busy) fill.setValue(0);
