@@ -51,6 +51,12 @@ GORGIAS_RANGE = (523, 526)
 REPUBLIC_RANGE = (614, 621)
 
 
+@pytest.fixture
+def seeded(seed_civilization):
+    """Only the greek civilization is seeded: nothing in this module reads another one."""
+    return seed_civilization("greek")
+
+
 def _greek(corpus):
     return Statute.all_objects.filter(corpus=corpus).order_by("ordinal")
 
