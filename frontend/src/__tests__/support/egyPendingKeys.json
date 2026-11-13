@@ -218,5 +218,7 @@
   "caseDesk.dossier.judge.sealed_note",
   "caseDesk.dossier.judge.seal_appears",
   "caseDesk.dossier.judge.full_text",
-  "caseDesk.dossier.judge.sealed_by"
+  "caseDesk.dossier.judge.sealed_by",
+  "caseDesk.dossier.where.station",
+  "caseDesk.dossier.where.circle"
 ]

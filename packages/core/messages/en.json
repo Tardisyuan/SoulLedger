@@ -10118,6 +10118,10 @@
         "seal_appears": "The seal will appear here once it is set.",
         "full_text": "Read the full verdict",
         "sealed_by": "{{date}} · {{judge}}"
+      },
+      "where": {
+        "station": "Stop {{n}}",
+        "circle": "Circle {{n}}"
       }
     }
   },

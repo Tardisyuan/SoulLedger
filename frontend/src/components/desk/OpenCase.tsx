@@ -16,6 +16,7 @@ import { deadlineText, deskTag, sourceLabel } from "./deskRules";
 import { DossierSpine } from "@/src/components/dossier/DossierSpine";
 import { MeritMark, SignedNumber } from "@/src/components/dossier/MeritMark";
 import { useSpineNow } from "@/src/components/dossier/useSpineNow";
+import { dossierWhere } from "@/src/components/dossier/dossierWhere";
 import s from "./desk.module.css";
 
 type Action = { busy: boolean; run: () => void } | null;
@@ -96,6 +97,8 @@ export function OpenCase({
     diyuStation: soul.data?.diyu_station,
     court: j.court,
   });
+  /* 标签旁的「在哪」:站 · 界域 · 殿(第 3 步样张),与脊同一份数据。 */
+  const where = dossierWhere(t, spine.now, { diyuStation: soul.data?.diyu_station, court: j.court, locale });
   const source = [sourceLabel(t, j), j.city_god_name].filter(Boolean).join(" · ");
 
   return (
@@ -113,9 +116,12 @@ export function OpenCase({
         meta={[j.case_number, court, entered ? t("caseDesk.meta.entered", { date: entered }) : ""].filter(Boolean).join(" · ")}
         title={<span data-testid="desk-case-name">{j.soul_name}</span>}
         subtitle={
-          <Badge tone={tag.tone} glyph={tag.glyph || undefined}>
-            {tag.text}
-          </Badge>
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <Badge tone={tag.tone} glyph={tag.glyph || undefined}>
+              {tag.text}
+            </Badge>
+            {where.length > 0 && <span data-testid="dossier-where">{where.join(" · ")}</span>}
+          </span>
         }
         actions={
           <>

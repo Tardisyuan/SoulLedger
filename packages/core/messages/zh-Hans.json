@@ -10118,6 +10118,10 @@
         "seal_appears": "落印后会在这里出现印",
         "full_text": "看判词全文",
         "sealed_by": "{{date}} · {{judge}}"
+      },
+      "where": {
+        "station": "第 {{n}} 站",
+        "circle": "第 {{n}} 圈"
       }
     }
   },
