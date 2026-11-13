@@ -352,6 +352,9 @@ const STATUS_MOVES: [RegExp, string, (body: Row, me: ReturnType<typeof meOf>) =>
 
 const CONTENT_MOVES: Record<string, string> = { approve: "PUBLISHED", restore: "PUBLISHED", hide: "HIDDEN" };
 
+/** What the server stores as the reason (moderation.py::stored_reason): the officer's own text, then 其他's sentence, then the code. */
+const storedReason = (body: Row, free: unknown) => String(free || body.reason_note || body.reason_code || "");
+
 function moderation(rec: Recording, path: string, body: Row): Answer | null {
   const me = meOf(rec);
   const report = /^\/social-moderation\/reports\/([^/]+)\/resolve\/$/.exec(path);
@@ -377,7 +380,7 @@ function moderation(rec: Recording, path: string, body: Row): Answer | null {
         author,
         excerpt: row.content_excerpt,
         handling: resolution === "DELETE" ? "DELETED" : "HIDDEN",
-        reason: String(body.note ?? ""),
+        reason: storedReason(body, body.note),
         handled_by: { user_id: me.id, display_name: me.name },
         handled_at: now(),
         media_count: row.media_count ?? 0,
@@ -392,7 +395,7 @@ function moderation(rec: Recording, path: string, body: Row): Answer | null {
     const [, kind, id, action] = content;
     const collection = `/social/${kind}/`;
     if (action === "delete") deleteRow(collection, id);
-    else patchRow(collection, id, { moderation_status: CONTENT_MOVES[action], moderation_reason: String(body.reason ?? ""), moderated_at: now() });
+    else patchRow(collection, id, { moderation_status: CONTENT_MOVES[action], moderation_reason: storedReason(body, body.reason), moderated_at: now() });
     return ok({ id, moderation_status: CONTENT_MOVES[action] ?? "DELETED" });
   }
   if (path === "/social-moderation/mutes/") {

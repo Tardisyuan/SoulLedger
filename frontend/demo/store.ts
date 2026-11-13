@@ -221,10 +221,14 @@ function idOf(v: unknown): string | null {
   return typeof id === "string" || typeof id === "number" ? String(id) : null;
 }
 
+/** Lists that record deletions: deleting a post by its uuid must not take its 「已处理 · 已删除」 row with it. */
+const RECORDS_DELETIONS = new Set(["/social-moderation/handled/"]);
+
 function isDeleted(v: unknown, scope?: string): boolean {
   const id = idOf(v);
   if (id === null) return false;
-  return overlay.deleted.includes(id) || (scope !== undefined && overlay.deleted.includes(`${scope}#${id}`));
+  if (scope !== undefined && overlay.deleted.includes(`${scope}#${id}`)) return true;
+  return !(scope !== undefined && RECORDS_DELETIONS.has(scope)) && overlay.deleted.includes(id);
 }
 
 function patchFor(row: Row, scope?: string): Row | undefined {
