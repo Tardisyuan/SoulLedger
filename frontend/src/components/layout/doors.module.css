@@ -1,0 +1,219 @@
+/*
+ * 门栏与门内二级导航(Design 第三十批 第 4 步)。门栏的样子从第 2 步的案卷台壳搬过来,没改:
+ * 桌面 64 宽(`--rail-w`)立在左边;≤ 768 到底部,高 64。颜色只读 globals.css 的令牌。
+ * 文明色只在当前门的 2px 线上(焦点用全站的环)。
+ */
+
+/* ── 门栏 ─────────────────────────────────────────────── */
+.rail {
+  position: sticky;
+  top: var(--imp-h, 0px);
+  height: calc(100vh - var(--imp-h, 0px));
+  width: var(--rail-w, 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 0;
+  border-right: 1px solid oklch(var(--color-line));
+  background: oklch(var(--color-side, var(--color-canvas)));
+  z-index: var(--z-index-sidebar);
+}
+.railMark {
+  width: 52px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: oklch(var(--color-metal));
+  margin-bottom: 8px;
+}
+.door {
+  width: 52px;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 4px;
+  color: oklch(var(--color-ink-muted));
+  text-decoration: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.door:hover {
+  background: oklch(var(--color-surface-2));
+  color: oklch(var(--color-ink));
+}
+.door[aria-current="page"],
+.door[aria-current="true"] {
+  background: oklch(var(--color-surface-2));
+  color: oklch(var(--color-ink));
+  box-shadow: inset 2px 0 0 oklch(var(--color-main-ink));
+}
+.doorGlyph {
+  font-family: var(--font-title);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+}
+/* 多于一个字符的门字(egy 的 Wedja / Sesh / Hep / Per / Remetj / Djes):12 一行,行高仍 24,门不跳高。 */
+.doorGlyphWord {
+  font-size: 12px;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+.doorLabel {
+  font-size: 11px;
+  line-height: 14px;
+}
+.railFoot {
+  margin-top: auto;
+}
+.doorNarrow {
+  display: none;
+}
+.me {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(var(--color-surface-2));
+  color: oklch(var(--color-ink));
+  font-size: 12px;
+  text-decoration: none;
+}
+.me[aria-current="page"] {
+  box-shadow: 0 0 0 2px oklch(var(--color-main-ink));
+}
+
+/* ── 门内二级导航:一行,放不下就横滑 ────────────────── */
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid oklch(var(--color-line));
+  background: oklch(var(--color-canvas));
+  white-space: nowrap;
+}
+.section {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.section + .section {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid oklch(var(--color-line));
+}
+.sectionName {
+  align-self: center;
+  margin-right: 6px;
+  font-size: 11px;
+  color: oklch(var(--color-ink-subtle));
+}
+.tab {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 13px;
+  color: oklch(var(--color-ink-muted));
+  text-decoration: none;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.tab:hover {
+  color: oklch(var(--color-ink));
+}
+.tab[aria-current="page"] {
+  color: oklch(var(--color-ink));
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 oklch(var(--color-main-ink));
+}
+
+/* ── 窄屏「我」的底部抽屉 ────────────────────────────── */
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 64px;
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: var(--z-index-sidebar);
+  border-top: 1px solid oklch(var(--color-line));
+  background: oklch(var(--color-surface-1));
+  padding: 8px;
+}
+.sheetHead {
+  padding: 12px 8px 4px;
+  font-size: 11px;
+  color: oklch(var(--color-ink-muted));
+}
+.sheetLink {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 8px;
+  font-size: 15px;
+  color: oklch(var(--color-ink));
+  text-decoration: none;
+}
+.sheetLink[aria-current="page"] {
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 oklch(var(--color-main-ink));
+}
+
+@media (max-width: 768px) {
+  .rail {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 64px;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 4px 8px;
+    border-right: 0;
+    border-top: 1px solid oklch(var(--color-line));
+  }
+  .railMark,
+  .railFoot,
+  .doorWide {
+    display: none;
+  }
+  .door,
+  .doorNarrow {
+    display: flex;
+    flex: 1;
+    min-height: 56px;
+  }
+  .doorWide {
+    display: none;
+  }
+  .door[aria-current="page"],
+  .door[aria-current="true"] {
+    box-shadow: inset 0 -2px 0 oklch(var(--color-main-ink));
+  }
+}
+@media (min-width: 769px) {
+  .sheet,
+  .scrim {
+    display: none;
+  }
+}
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-scrim);
+  background: oklch(var(--color-scrim) / var(--scrim-alpha));
+  border: 0;
+}

@@ -10,7 +10,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { BrandMark } from "@/src/components/brand/BrandMark";
-import { BRAND_WORD } from "@/src/components/layout/GlobalNav";
+import { BRAND_WORD } from "@/src/components/layout/DoorRail";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ROLE_OF_SKIN, SKINS, useEnter } from "./DemoEntrances";

@@ -22,7 +22,7 @@ import { OpenCase } from "./OpenCase";
 import s from "./desk.module.css";
 
 /**
- * 案卷台(Design 第三十批 第 2 步):门栏(`DeskShell`)右边,左是案卷摞(360),右是摊开的一份。
+ * 案卷台(Design 第三十批 第 2 步):门栏(AppLayout 的 `DoorRail`)右边,左是案卷摞(360),右是摊开的一份。
  * 摞:标题、概览行、来源 chip、搜索(`/`)、四组 —— 我认领 / 待定 / 待认领 / 他人手上(最后,只读)。
  * 键:J / K 上下一件、↵ 打开卷宗、C 认领、/ 搜索;打字时不接,单键总开关关掉时也不接(`lib/hotkeys.ts`)。
  * 393:一栏;点开一件是整屏,「‹ 案卷台」回来,「第 n / N 件」。

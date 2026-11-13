@@ -30,7 +30,6 @@ import {
 import { QueryError } from "@/src/components/ui/PageError";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
-import { useEditorNav } from "@/src/components/layout/GlobalNav";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import type {
   BackendTemplate,
@@ -152,8 +151,6 @@ function WorkflowPageContent() {
             .join(" · ")
         : undefined,
   });
-  // 编辑器里全局侧栏默认收成图标栏,展开是浮层(取舍 1)。
-  useEditorNav(tab === "editor");
 
   return (
     /* `page` (1200px), up from the `max-w-6xl` (1152) this page chose for

@@ -10,7 +10,7 @@ import pytest
 from apps.perm.models import DEFAULT_PERMISSIONS
 from apps.soul_assist import corpus, officer_tools
 from apps.soul_assist.models import OFFICER_SCREENS
-from tests.web_routes import is_outside_app_layout, top_segments
+from tests.web_routes import has_assist_entry, top_segments
 
 #: 官员语料里一个数字都不写:期限、上限、条数都在代码与工具里,写进语料就是第二份会漂的副本。
 ANY_DIGIT = re.compile(r"\d")
@@ -28,13 +28,14 @@ def _officer(locale):
 
 
 def _shell_segments():
-    """`frontend/app/<段>/**/page.tsx` 的顶层段里,至少有一页在 AppLayout 外壳里的那些。
+    """`frontend/app/<段>/**/page.tsx` 的顶层段里,至少有一页带外壳工具条(问一问入口在那里)的那些。
 
     `(auth)` 这类路由组不在页头里,不算。助手入口在外壳(AppLayout)里,所以整段都不在外壳里的段
     (`verdict-print`:只给无头 Chromium 渲染判决书 PDF;`goodbye`:退出登录之后的再会页)没有助手页面 id。
-    「在不在外壳里」读 `AppLayoutWrapper.tsx` 的两个数组(`tests/web_routes.py`),不在这里另写一份例外 ——
+    `desk`(案卷台、总簿)在外壳里但没有工具条(`DESK_PATHS`,第三十批第 4 步),同样没有助手页面 id。
+    「有没有工具条」读 `AppLayoutWrapper.tsx` 的三个数组(`tests/web_routes.py`),不在这里另写一份例外 ——
     2026-11-10 之前这里写着 `- {"verdict-print", "goodbye"}`,加一个无外壳页要来这里补。"""
-    return {seg for seg, routes in top_segments().items() if not all(map(is_outside_app_layout, routes))}
+    return {seg for seg, routes in top_segments().items() if any(map(has_assist_entry, routes))}
 
 
 def test_officer_screens_are_the_web_route_segments():

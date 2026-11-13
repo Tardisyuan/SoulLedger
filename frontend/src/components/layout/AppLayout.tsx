@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Popover } from "@base-ui/react/popover";
 import { LazyMotion } from "motion/react";
@@ -16,16 +16,15 @@ import { authApi } from "@soulledger/core/api";
 import { ConnectionBanner } from "@/src/components/connection-status";
 import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
-import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
+import { useSidebarMenus } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
-import { BottomBar, EditorNavProvider, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
+import { DoorRail, DoorTabs } from "@/src/components/layout/DoorRail";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
 import { PlaqueProvider, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { HeadingProvider, PlaqueValueProvider } from "@/src/components/plaque/pageHeadContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Bell } from "lucide-react";
-import { navItems } from "@/src/lib/navSections";
 import { DensityToggle, HoursChip } from "@/src/components/layout/ShellChrome";
 // 「问一问」的推开只在 ≥ 1024 px(canvas 1a),且主内容区让出 420 后仍有 720(Design E 组);否则它是覆盖层。
 import { useWideViewport } from "@/src/hooks/useWideViewport";
@@ -42,14 +41,16 @@ import { civSkinOf } from "@/src/lib/civSkin";
 import { leaveGoodbye } from "@/src/lib/goodbye";
 
 /**
- * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
- * 52px 中性工具条(`global-topbar`:导航开合、面包屑;右边问一问、通知、用户菜单)、页面。
+ * 全站唯一的壳(Design 第三十批 第 4 步「五门」):左侧门栏(`DoorRail`,64)+ 内容栏。内容栏自上而下:
+ * 52px 中性工具条(`global-topbar`:面包屑;右边问一问、通知、用户菜单)、门内二级导航(`DoorTabs`)、页面。
+ * 门栏取代了旧的侧栏与底栏;哪几门按角色,门内哪几页仍按后端菜单(`src/lib/doors.ts`)。
+ * `bare`(案卷台与总簿,`AppLayoutWrapper` 的 `DESK_PATHS`):页面铺满,没有工具条 —— 它们有自己的页头;
+ * 门栏、门内导航、代看条与过期、两步验证提示、改密码跳转、跳到正文照旧(第 2 步案卷台自己的壳的几样,并进这里)。
  * 第三十批「卷宗」第 1 步撤掉了工具条下面那条标题行(`Plaque`,v4 `.ph`)与它的第二个标题:页头只有一个,
  * 是页面自己的 PageShell 页头(顶线 + 卷宗头,标题即 `<h1>`)。页面经 `usePlaque` 报的殿名 / 案号 / 概览
  * 由这里收下,经 `PlaqueValueProvider` 交给那个页头;面包屑在末段与 `<h1>` 相同时省掉末段。
  *
- * - 四档宽度:≥ 1200 导航展开 / 收起由用户选;769–1199 强制收起;≤ 768 没有侧栏,
- *   是底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。规则在 `GlobalNav.tsx`。
+ * - ≤ 768 门栏到底部(门 +「我」;殿司只读收进「我」),内容让出 64(`--bottom-bar`)。
  * - 工具条吸顶;PageShell 的筛选栏吸在它下沿(`--below-band` = 52 + 代看条)。页头不吸顶。
  * - 连接状态只在断开时出现(`ConnectionBanner`,v4 第八批第 4 条):桌面是工具条里面包屑后面的一个
  *   胶囊,加工具条下沿一条 2px 状态色线;≤ 768 浮在工具条下沿正中。工具条高度不变,内容不动、不被盖住。
@@ -84,7 +85,7 @@ const LogoutConfirmDialog = dynamic(
 export const ASSIST_PANEL_WIDTH = 420;
 export const ASSIST_MIN_MAIN_WIDTH = 720;
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppLayout({ children, bare = false }: { children: React.ReactNode; bare?: boolean }) {
   const hallViewExpired = useHallViewExpired();
   const { t, formatDateTime } = useI18n();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -94,12 +95,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const pathname = usePathname();
-  // The main column (everything right of the nav) must keep 720 px beside the pushed
-  // 420 px panel — Design E 组. Measured, not a media query: the nav is 252 or 68 wide by
-  // the user's choice, so no single viewport width says how much room there is. (At 1440
-  // expanded the column is 1188 → pushed; at 1260 expanded it is 1008 → overlay, and
-  // collapsing the nav gives the push back.)
+  // The main column (everything right of the door rail) must keep 720 px beside the pushed
+  // 420 px panel — Design E 组. Measured, not a media query, so the rule does not have to
+  // know the rail's width.
   const mainBoxRef = useRef<HTMLDivElement>(null);
   const roomy = useRoomBeside(mainBoxRef, ASSIST_PANEL_WIDTH + ASSIST_MIN_MAIN_WIDTH);
   const wide = useWideViewport() && roomy;
@@ -125,53 +123,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const { data: menus = [] } = useSidebarMenus();
-
-  // Every non-empty menu path, flattened: `isMenuPathActive` lights an ancestor
-  // only when no more specific menu item also matches (/social vs /social/follows).
-  const allMenuPaths = useMemo(() => {
-    const out: string[] = [];
-    const walk = (items: readonly SidebarMenu[]) => {
-      for (const item of items) {
-        if (item.path) out.push(item.path);
-        if (item.children?.length) walk(item.children);
-      }
-    };
-    walk(menus);
-    return out;
-  }, [menus]);
-
-  // 手风琴:当前页所在的一级项默认打开;导航落进另一组时跟过去。点当前打开的那一项收起。
-  // 侧栏按 v4 三组画,「概览」「灵魂业务」两个目录已拆开(`navSections`),所以侧栏的「一级项」按拆开后的算;
-  // 底栏仍按后端的一级项(前 4 个 +「更多」)。
-  const currentGroup = useMemo(() => groupOfPath(menus, pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
-  const currentNav = useMemo(() => groupOfPath(navItems(menus), pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
-  const [openGroup, setOpenGroup] = useState<number | null>(null);
-  // 审批流编辑器挂着时为真(`useEditorNav`):侧栏收成图标栏,展开是浮层。
-  const [editorNav, setEditorNav] = useState(false);
-  const nav = useNavMode(editorNav);
-  const asideRef = useRef<HTMLElement>(null);
-  // 浮层展开时,点侧栏外面或按 Esc 收回去(它盖着画布)。
-  const { overlay: navOverlay, close: closeNav } = nav;
-  useEffect(() => {
-    if (!navOverlay) return;
-    const onDown = (e: PointerEvent) => {
-      if (!asideRef.current?.contains(e.target as Node)) closeNav();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeNav();
-    };
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [navOverlay, closeNav]);
-  const [openFor, setOpenFor] = useState<number | null>(null);
-  if (currentNav !== openFor) {
-    setOpenFor(currentNav);
-    setOpenGroup(currentNav);
-  }
   // 页面经 `usePlaque` 报的殿名 / 案号 / 概览,交给 PageShell 的页头;PageShell 报它的 `<h1>` 文字给面包屑。
   const [plaque, setPlaque] = useState<PlaqueText | null>(null);
   const [heading, setHeading] = useState<string | null>(null);
@@ -211,30 +162,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </a>
     <ImpersonationBanner />
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
-      {/* 编辑器里这一栏固定 68(图标栏);展开的 252 溢出到右边,压在画布上(z-sidebar 高过吸顶的工具条)。 */}
-      <aside
-        ref={asideRef}
-        data-nav-overlay={nav.overlay ? "" : undefined}
-        className={`sticky top-(--imp-h) hidden h-[calc(100vh-var(--imp-h))] min-[769px]:block ${
-          editorNav ? "z-sidebar w-17 data-nav-overlay:[&>#global-nav]:shadow-overlay" : ""
-        }`}
-      >
-        <GlobalNav
-          menus={menus}
-          allMenuPaths={allMenuPaths}
-          currentId={currentNav}
-          openId={openGroup}
-          onToggle={(id) => setOpenGroup((g) => (g === id ? null : id))}
-          collapsed={nav.collapsed}
-          user={user}
-          mode={nav}
-        />
-      </aside>
+      <DoorRail />
 
-      <div ref={mainBoxRef} className="min-w-0 max-[768px]:pb-14">
+      <div ref={mainBoxRef} className="min-w-0 max-[768px]:pb-16">
         {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。
-            v4:工具条与身份带同一片页头光(`.shell-glow`,globals.css);收起按钮挪进了侧栏(v4 S01)。
+            v4:工具条用 `.shell-glow`(globals.css)。
             右侧顺序照 v4:时辰 · 舒适 / 紧凑 · 问一问 · 搜索 · 通知 · 用户。 */}
+        {bare ? null : (
         <header
           data-testid="global-topbar"
           className={`shell-glow sticky top-(--imp-h) z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] pl-4 ${
@@ -370,6 +304,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </header>
+        )}
+        {/* 门内二级导航;问一问推开时同样让出面板的 420。 */}
+        <div className={assist.pushed ? "pr-[420px]" : undefined}>
+          <DoorTabs />
+        </div>
 
         {/* 被要求开启两步验证而未开启:常驻提示(A12),在文档流里,不盖工具条。 */}
         <MfaRequiredBanner />
@@ -387,23 +326,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           tabIndex={-1}
           data-testid="app-content"
           data-assist-pushed={assist.pushed ? "" : undefined}
-          className={`min-h-(--content-min-h) outline-none ${
+          className={`${bare ? "" : "min-h-(--content-min-h)"} outline-none ${
             assist.pushed ? "pr-[420px] max-xl:[&_[class~='md:px-8']]:px-6" : ""
           }`}
         >
           <PlaqueProvider value={setPlaque}>
             <PlaqueValueProvider value={plaque}>
               <HeadingProvider value={setHeading}>
-                <EditorNavProvider value={setEditorNav}>{hallViewExpired ? <HallViewExpired /> : children}</EditorNavProvider>
+                {hallViewExpired ? <HallViewExpired /> : children}
               </HeadingProvider>
             </PlaqueValueProvider>
           </PlaqueProvider>
         </main>
       </div>
 
-      <BottomBar menus={menus} allMenuPaths={allMenuPaths} currentId={currentGroup} />
-
-      <OfficerAssistPanel assist={assist} />
+      {bare ? null : <OfficerAssistPanel assist={assist} />}
       <ShortcutHelp />
 
 

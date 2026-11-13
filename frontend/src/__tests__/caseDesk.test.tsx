@@ -7,7 +7,7 @@ import type { Judgment } from "@soulledger/core/api/judgment";
 import { judgmentApi } from "@soulledger/core/api/judgment";
 import { CaseDesk } from "@/src/components/desk/CaseDesk";
 import { dedupeGroups, deskTag, matchesSearch, onDeskCount, overviewParts, sourceChips, sourceLabel, sourceOf, step, zongbuCivilizations } from "@/src/components/desk/deskRules";
-import { doorGlyphClass } from "@/src/components/desk/DeskShell";
+import { doorGlyphClass } from "@/src/components/layout/DoorRail";
 import egy from "@soulledger/core/messages/egy.json";
 import { renderWithProviders } from "./support/render";
 
@@ -114,7 +114,7 @@ describe("deskRules", () => {
     const chips = sourceChips(t, {
       total: 9,
       sources: { queue: 6, city_god: 3, cross: 0 },
-      elsewhere: { appeal: 2, city_god_review: 1, cross_judgment: null, capture_due: 0 },
+      elsewhere: { appeal: 2, city_god_review: 1, cross_judgment: null, capture_due: 0, rebirth_application: 4 },
     });
     expect(chips.map((c) => [c.kind, c.key, c.count])).toEqual([
       ["filter", "all", 9],
@@ -122,7 +122,10 @@ describe("deskRules", () => {
       ["filter", "city_god", 3],
       ["link", "appeal", 2],
       ["link", "city_god_review", 1],
+      ["link", "rebirth_application", 4],
     ]);
+    // The seventh source (user 2026-11-13): rebirth applications leave for their own page.
+    expect(chips.find((c) => c.key === "rebirth_application")).toMatchObject({ kind: "link", href: "/rebirth-applications" });
     // Two city-god chips (user 2026-11-13): 城隍送来 filters, 城隍初审中 leaves for /city-god-cases.
     expect(chips.find((c) => c.key === "city_god")?.label).toBe("officer_app.desk.chips.city_god");
     expect(chips.find((c) => c.key === "city_god_review")).toMatchObject({ kind: "link", href: "/city-god-cases" });
@@ -171,7 +174,7 @@ describe("CaseDesk", () => {
       others: [row("4", { soul_name: "窦娥", claimed_by_name: "崔判官" })],
     };
     mockList.mockImplementation((params: Record<string, string>) => Promise.resolve(page(groups[params.group] ?? [])));
-    mockCounts.mockResolvedValue({ data: { mine: 1, deferred: 0, unclaimed: 2, others: 1, total: 4, overdue: 0, sources: { queue: 2, city_god: 1, cross: 1 }, elsewhere: { appeal: 1, city_god_review: null, cross_judgment: 0, capture_due: null } } });
+    mockCounts.mockResolvedValue({ data: { mine: 1, deferred: 0, unclaimed: 2, others: 1, total: 4, overdue: 0, sources: { queue: 2, city_god: 1, cross: 1 }, elsewhere: { appeal: 1, city_god_review: null, cross_judgment: 0, capture_due: null, rebirth_application: null } } });
     (judgmentApi.hallStats as jest.Mock).mockResolvedValue({ data: { month_done_pct: 22 } });
     (judgmentApi.get as jest.Mock).mockImplementation((id: string) => Promise.resolve({ data: row(id) }));
   });

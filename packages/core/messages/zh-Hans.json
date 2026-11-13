@@ -1,26 +1,16 @@
 {
   "nav": {
-    "welcome": "欢迎页",
     "greeting_morning": "上午好",
     "greeting_afternoon": "下午好",
     "greeting_evening": "晚上好",
     "greeting_night": "夜深了",
-    "collapse_locked": "窗口宽度不足 1200 像素，导航固定收起",
     "settings": "设置",
     "language": "界面语言",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
-    "mobile_menu": "导航菜单",
     "more": "更多",
     "soul_events": "灵魂事件",
     "skip_to_main": "跳到正文",
-    "collapse_sidebar": "收起侧栏",
-    "expand_sidebar": "展开侧栏",
-    "group": {
-      "souls": "灵魂",
-      "system": "系统",
-      "work": "工作"
-    },
     "search_hint": "搜索、跳转、下指令"
   },
   "auth": {
@@ -2133,7 +2123,6 @@
     },
     "queue": {
       "enter": "进入分诊队列",
-      "title": "审判分诊队列",
       "progress": "第 {{position}} / 共 {{total}} 条",
       "loading": "正在取下一条待判…",
       "leave": "退出队列",
@@ -7971,7 +7960,6 @@
   "plaque": {
     "realms": "界域 · {{root}}",
     "held": "在押 {{n}}",
-    "corpus": "律条语料",
     "corpus_meta": "{{works}} 部 · {{n}} 条",
     "workflow_editor": "审批流编辑器",
     "workflow_instance": "审批实例",
@@ -7983,8 +7971,6 @@
     "posts": "发帖 {{n}}",
     "soul": "灵魂详情",
     "desk": "审判台",
-    "queue": "审判队列",
-    "permissions": "权限",
     "permissions_meta": "{{roles}} 角色 · {{perms}} 项权限",
     "office": {
       "rules": "规制司",
@@ -9800,8 +9786,7 @@
     "density": {
       "comfortable": "舒适",
       "compact": "紧凑"
-    },
-    "hall_switch": "切换殿司"
+    }
   },
   "soul": {
     "here": {

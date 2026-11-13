@@ -7,8 +7,9 @@ exceptions, so adding `/goodbye` meant editing both (docs/test-suite-review-2026
 §2.1). The decisions live in two frontend files and are read from there:
 
 * `frontend/proxy.ts` `PUBLIC_PATHS` — route -> why it needs no sign-in;
-* `frontend/src/components/layout/AppLayoutWrapper.tsx` `AUTH_PATHS` / `DESK_PATHS` (prefix) /
-  `PUBLIC_PATHS` (exact) — routes rendered without the AppLayout shell.
+* `frontend/src/components/layout/AppLayoutWrapper.tsx` `AUTH_PATHS` (prefix) / `PUBLIC_PATHS` (exact) —
+  routes rendered without the AppLayout shell; `DESK_PATHS` (prefix) — routes inside the shell but `bare`
+  (no toolbar, so no 问一问 entry).
 
 The frontend twin is `frontend/src/__tests__/support/appRoutes.ts`.
 """
@@ -61,11 +62,22 @@ def _string_array(name: str) -> list[str]:
     return re.findall(r'"([^"]+)"', m.group(1))
 
 
+def _prefixed(route: str, name: str) -> bool:
+    return any(route == p or route.startswith(p + "/") for p in _string_array(name))
+
+
 def is_outside_app_layout(route: str) -> bool:
-    """Whether `AppLayoutWrapper` renders this route bare (same test it applies to the pathname)."""
-    # DESK_PATHS (prefix, like AUTH_PATHS): signed in, but in `DeskShell` instead of AppLayout — so no 问一问 entry.
-    prefixed = _string_array("AUTH_PATHS") + _string_array("DESK_PATHS")
-    return any(route == p or route.startswith(p + "/") for p in prefixed) or route in _string_array("PUBLIC_PATHS")
+    """Whether `AppLayoutWrapper` renders this route without the shell (same test it applies to the pathname)."""
+    return _prefixed(route, "AUTH_PATHS") or route in _string_array("PUBLIC_PATHS")
+
+
+def has_assist_entry(route: str) -> bool:
+    """Whether the page carries the shell's toolbar, and with it the 问一问 entry.
+
+    Since 第三十批第 4 步 the 案卷台 / 总簿 (`DESK_PATHS`) are inside the one shell (door rail, door tabs) but
+    `bare`: no toolbar. Until then they had their own `DeskShell` and this read them as outside the shell —
+    the answer for the assistant is the same, the reason changed, so the question is asked by name now."""
+    return not is_outside_app_layout(route) and not _prefixed(route, "DESK_PATHS")
 
 
 def top_segments() -> dict[str, list[str]]:
