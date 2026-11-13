@@ -275,6 +275,15 @@ describe("CSP:脚本只认本次请求的 nonce", () => {
     expect(connect.filter((v) => ["*", "https:", "wss:", "ws:", "http:"].includes(v))).toEqual([]);
   });
 
+  it("任何指令都不放行 GitHub 的主机(api.github.com、github.com 的徽章图):系统状况页只链过去(用户 2026-11-14)", () => {
+    // 放行 connect-src 就能从页面调 GitHub API,放行 img-src 就能取工作流徽章;两样都定了不做,
+    // `/about/system` 用静态徽章加一条链接。这条断的是整份策略,不只 connect-src。
+    for (const res of [authed(), proxy(request("/about/system", {}))]) {
+      const hits = Object.entries(directives(cspOf(res))).filter(([, values]) => values.some((v) => /github/i.test(v)));
+      expect(hits).toEqual([]);
+    }
+  });
+
   it("nginx.conf 任何 script-src 都不带 'unsafe-inline',且只在上游没给 CSP 时才补", () => {
     const conf = readFileSync(path.join(__dirname, "..", "..", "..", "nginx.conf"), "utf8");
     const live = conf

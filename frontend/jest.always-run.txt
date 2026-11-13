@@ -9,6 +9,7 @@
 # `frontend`: only frontend/). When nothing under frontend/ or packages/
 # changed, run-gates.sh runs only the lines naming what the push changed, and
 # the `*` lines. Derived and checked by the same test.
+src/__tests__/AboutSystemPage.test.tsx .github docs
 src/__tests__/ActorsPage.test.tsx packages
 src/__tests__/AppLayout.test.tsx frontend
 src/__tests__/Button.test.tsx frontend

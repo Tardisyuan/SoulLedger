@@ -1,0 +1,37 @@
+name: Demo probe
+
+# Synthetic probe of the live demo (user decision 2026-11-14; design be-obs §3.5). Once a day and by hand:
+# tests/test_ci_runs_on_a_budget.py allows a clock trigger at most daily, so this is not the every-30-minutes the
+# design asked for. A red run is GitHub's own failure mail — the only alert there is.
+#
+# Nothing reads this run from the site: /about/system shows a static badge and links to this workflow's runs,
+# because the user decided the CSP does not allow api.github.com (nor github.com images). Nothing is committed
+# back either (a commit a day would also defeat ci.yml's "no new commit in 24 h, skip" rule).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+
+concurrency:
+  group: demo-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEMO: https://soulledger.tardisyuan.ltd
+    steps:
+      - name: The home page, sign-in page and status page answer 200
+        run: |
+          set -u
+          fail=0
+          for p in / /login /about/system; do
+            out=$(curl -sS -o /dev/null -w '%{http_code} %{time_total}' --max-time 20 "$DEMO$p") || out="000 -"
+            echo "$p -> $out"
+            [ "${out%% *}" = 200 ] || fail=1
+          done
+          exit $fail

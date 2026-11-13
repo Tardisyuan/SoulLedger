@@ -71,6 +71,7 @@ describe("旧页落到哪一门", () => {
     "/notifications": "「我」:通知",
     "/welcome": "「我」:欢迎页,新账号第一次进来看一次",
     "/about": "「我」:关于",
+    "/about/system": "「我」:关于 · 系统状况",
   };
   // `(auth)` 路由组:还没登录时走的账号页(受邀、找回与重置密码、验证邮箱),没有登录的人没有门。按文件位置认,不抄名单。
   const isAuthGroup = (file: string) => file.startsWith("app/(auth)/");

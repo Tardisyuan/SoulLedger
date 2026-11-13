@@ -81,6 +81,7 @@ export const PUBLIC_PATHS: Readonly<Record<string, string>> = {
   "/": "登录前的落地页。",
   "/welcome": "登录前的欢迎页。",
   "/about": "关于 / 致谢:字体、纹样、图像的授权清单,静态内容,不含任何租户数据(OFL / CC0 本就要求可见);落地页的页脚链到它。",
+  "/about/system": "系统状况(2026-11-14):本标签页的 Web Vitals、docs/SLO.md 的目标、探测工作流的链接;不请求任何数据,不含租户数据,演示里给面试官看。",
   "/login": "登录页本身。",
   "/login/verify": "两步验证第二步:持 5 分钟的 pending token 才能走下去,此时还没有任何会话。",
   "/forgot-password": "官员找回密码的申请页(2026-10-09),登录前可用;回应对任何账号都一样。",

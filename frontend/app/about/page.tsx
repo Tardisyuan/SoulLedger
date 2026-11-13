@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   DESIGN_CREDITS,
@@ -133,6 +134,11 @@ export default function AboutPage() {
   const { t } = useI18n();
   return (
     <PageShell title={t("about.title")} subtitle={t("about.intro")} variant="prose">
+      <p className="pt-4 text-sm">
+        <Link href="/about/system" className={LINK}>
+          {t("about.system_link")} <span aria-hidden="true">→</span>
+        </Link>
+      </p>
       <Section stem="甲" title={t("about.fonts")}>
         <Rows credits={FONT_CREDITS} />
       </Section>
