@@ -1,6 +1,8 @@
-import { test as base, type Locator, type Page, type Request } from "@playwright/test";
+import { expect as baseExpect, test as base, type Locator, type Page, type Request } from "@playwright/test";
 import type { AssistAdminBackup, AssistAdminConfig, AssistAdminEmbedding } from "@soulledger/core/api/assist-admin";
 import type { AssistStreamEvent } from "@soulledger/core/api/assist-stream";
+import type { JudgmentAnnual } from "@soulledger/core/api/judgment";
+import { SIGNED_OUT } from "./routes";
 
 /**
  * Shared E2E setup: authenticated browser state + a route-level mock of the
@@ -1183,12 +1185,23 @@ function paginated(results: unknown[]) {
  *
  * Deliberately short and deliberately explicit. Anything not here that falls
  * through fails the test — see `ApiMock.assertEverythingWasHandled`.
+ *
+ * Paths, not prefixes (2026-11-13). These were four whole prefixes (`/^\/social\//` …), so a new endpoint under any
+ * of them got the empty page and stayed green — the very thing this list exists to stop. What is written out here is
+ * every path the app calls under those four today (`packages/core/src/api/{notifications,menus,social,audit}.ts`,
+ * which is where all of them are) that has no handler of its own; `[^/]+` is an id. A new endpoint is a new line
+ * here, or a handler. `src/__tests__/e2eBackgroundPaths.test.ts` repeats that reading in jest and reads this array as
+ * text: keep one `/^…$/,` per line.
  */
 const BACKGROUND_PATHS: RegExp[] = [
-  /^\/notifications\//,
-  /^\/menus\//,
-  /^\/social\//,
-  /^\/audit-logs\//,
+  // /notifications/, its email status, the three bulk writes, and one notification's mark_read.
+  /^\/notifications\/((email-status|batch-delete|batch-read|mark_all_read)\/|[^/]+\/mark_read\/)?$/,
+  // /menus/ and /menus/buttons/, each with its detail.
+  /^\/menus\/(buttons\/)?([^/]+\/)?$/,
+  // The six social collections, each with one more segment: an id, or feed / following / followers / toggle / me.
+  /^\/social\/(posts|comments|follows|media|reactions|profiles)\/([^/]+\/)?$/,
+  // /audit-logs/ with its detail, export and nl-filter (actions / resources / timeline / stats have handlers).
+  /^\/audit-logs\/([^/]+\/)?$/,
 ];
 
 /**
@@ -1235,6 +1248,14 @@ const ASSIST_ADMIN_EMBEDDING = {
     last_error: null, last_error_at: null, rebuild_running: false,
   },
 } satisfies AssistAdminEmbedding;
+
+/** `GET /judgment/annual/` for a year in which nothing was heard (年度簿's empty state). Exported and annotated so
+ *  backend/tests/test_e2e_fixtures_match_the_serializers.py reads its keys against the schema. */
+export const JUDGMENT_ANNUAL_EMPTY: JudgmentAnnual = {
+  timezone: "Asia/Shanghai", year: 2026, received: 0, placed: 0, by_civ: [], concluded: 0, avg_days: null, longest: null,
+  most_cited: null, returned: 0, returned_pct: null, last_year_returned_pct: null,
+  monthly: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], last_year_monthly: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+};
 
 export class ApiMock {
   /** Every intercepted request, in order. Assert against this. */
@@ -2002,6 +2023,23 @@ export class ApiMock {
     this.on("DELETE", "/chat/inbox/:id/draft/", INBOX_STATE);
     this.on("GET", "/chat/inbox-templates/", INBOX_TEMPLATES);
 
+    // ── Pages the route tables reach since they are derived from app/ (routes.ts, 2026-11-13) ──
+    // Each is the endpoint's own empty answer. The two `/judgment/<word>/` lists were being answered by
+    // `/judgment/:id/` above with a whole judgment (no `results`); the rest fell to the unhandled default.
+    this.on("GET", "/judgment/city-gods/", paginated([]));
+    this.on("GET", "/judgment/city-gods/officer-choices/", []);
+    this.on("GET", "/judgment/city-god-cases/", paginated([]));
+    this.on("GET", "/judgment/annual/", JUDGMENT_ANNUAL_EMPTY);
+    this.on("GET", "/tenants/overview/", []);
+    this.on("GET", "/reincarnation/quota/", []);
+    this.on("GET", "/auth/login-logs/", paginated([]));
+    this.on("GET", "/auth/admin/sessions/", paginated([]));
+    this.on("GET", "/death-sync/api-keys/", paginated([]));
+    this.on("GET", "/death-sync/admin-webhooks/", paginated([]));
+    this.on("GET", "/death-sync/admin-webhooks/event-types/", []);
+    this.on("GET", "/death-sync/webhook-deliveries/", paginated([]));
+    this.on("GET", "/death-sync/tudi-gods/", paginated([]));
+
     return this;
   }
 }
@@ -2144,6 +2182,26 @@ export async function setupAuthenticatedPage(page: Page): Promise<ApiMock> {
   const api = await mockApi(page);
   await interceptWebSockets(page, api);
   await seedAuthState(page);
+  return api;
+}
+
+/**
+ * Open `route` the way the route-table specs do (routes.ts): signed in, or as a visitor for the `SIGNED_OUT` few, then
+ * wait until the network is quiet and the page has drawn something of its own.
+ *
+ * The floor is the point: `networkidle` and a non-empty `<body>` are both true of a blank shell and of a skeleton,
+ * and a width, or an axe run, taken then passes for the wrong reason. Inside AppLayout it is read off `<main>` (the
+ * shell's rail and toolbar are text too); six characters, because a Chinese page head alone can be that short.
+ */
+export async function openRoute(page: Page, route: string): Promise<ApiMock> {
+  const signedOut = SIGNED_OUT.has(route);
+  const api = signedOut ? await mockApi(page) : await setupAuthenticatedPage(page);
+  await page.goto(route);
+  await page.waitForLoadState("networkidle");
+  const content = signedOut ? page.locator("body") : page.locator("main").first();
+  await baseExpect
+    .poll(async () => (await content.innerText()).trim().length, { message: `${route}: 页面还是空壳,没有自己的内容` })
+    .toBeGreaterThan(5);
   return api;
 }
 

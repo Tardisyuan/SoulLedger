@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { BROKEN, clean, enter, recording, rows, watch, type Role } from "./support";
+import { BROKEN, clean, enter, enterOnce, recording, rows, watch, type Role } from "./support";
 
 const STATIC = `/dashboard /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins /audit/permissions
   /audit/sessions /audit/stats /city-god-cases /city-gods /corpus /cross-judgments /death-sync /death-sync/api-keys /death-sync/tudi-gods
@@ -31,7 +31,9 @@ for (const role of ROLES) {
     for (const route of routes) {
       test(route, async ({ page, context }) => {
         const seen = watch(context, page);
-        await enter(page, role);
+        // These only open a page and read it, so a reused role (`support.ts` REUSED: the administrator, on trial)
+        // signs in once per worker; every other role still signs in here, as before.
+        await enterOnce(page, role);
         await page.goto(route);
         await page.waitForLoadState("networkidle");
         await expect(page.getByTestId("demo-banner")).toBeVisible();

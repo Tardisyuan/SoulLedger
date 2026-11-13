@@ -40,6 +40,8 @@ src/__tests__/domainDisplayRendering.test.tsx packages
 src/__tests__/domainNamespaceContract.test.ts packages
 src/__tests__/doors.test.ts frontend
 src/__tests__/draftSavedFlash.test.tsx packages
+src/__tests__/e2eBackgroundPaths.test.ts packages
+src/__tests__/e2eRouteTables.test.ts frontend
 src/__tests__/egyLexiconRules.test.ts frontend
 src/__tests__/enumsMatchTheSchema.test.ts packages
 src/__tests__/errorIsNotAnEmptyState.test.ts frontend
