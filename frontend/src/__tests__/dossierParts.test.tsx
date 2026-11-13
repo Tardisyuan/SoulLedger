@@ -2,7 +2,7 @@
  * 卷宗页的三件(Design 第三十批 第 3 步):脊的「现在」、四种印(+ 虚线预览)、功过记号。
  * 脊上 metal 只有一处,而且就在数据说的那一站;印的地府四字随殿变;记号靠形状分功过,颜色只上数字。
  */
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { spineNow } from "@/src/components/dossier/spineModel";
 import { DossierSpine } from "@/src/components/dossier/DossierSpine";
@@ -113,6 +113,37 @@ describe("MeritMark", () => {
     expect(m.innerHTML + m.getAttribute("class")).not.toBe(d.innerHTML + d.getAttribute("class"));
     expect(m.getAttribute("data-mark")).toMatch(/-merit$/);
     expect(d.getAttribute("data-mark")).toMatch(/-demerit$/);
+  });
+
+  it.each(["en", "egy"] as const)("%s:地府记号框里是 + / −,不出汉字(第三十六批 第一节第 1 条),殿号写 1 … 10", async (locale) => {
+    const { container } = render(
+      <I18nProvider initialLocale={locale}>
+        <MeritMark civilization="CHINESE" kind="merit" />
+        <MeritMark civilization="CHINESE" kind="demerit" />
+        <DossierSpine civ="cn" now={{ civ: "cn", at: "hall", n: 3 }} />
+      </I18nProvider>
+    );
+    // en / egy 的语言包是懒加载的,等它到。
+    await waitFor(() => expect(container.querySelector('[data-mark="cn-merit"]')?.textContent).toBe("+"));
+    expect(container.querySelector('[data-mark="cn-demerit"]')?.textContent).toBe("−");
+    const svgText = Array.from(container.querySelectorAll("text")).map((n) => n.textContent);
+    expect(svgText).toEqual(expect.arrayContaining(["1", "3", "10"]));
+    expect(container.textContent).not.toMatch(/[一二三四五六七八九十功过]/);
+  });
+
+  it("zh-Hans:地府记号仍是 功 / 过,殿号仍是 一 … 十", () => {
+    const { container } = render(
+      <I18nProvider initialLocale="zh-Hans">
+        <MeritMark civilization="CHINESE" kind="merit" />
+        <MeritMark civilization="CHINESE" kind="demerit" />
+        <DossierSpine civ="cn" now={{ civ: "cn", at: "hall", n: 3 }} />
+      </I18nProvider>
+    );
+    expect(container.querySelector('[data-mark="cn-merit"]')?.textContent).toBe("功");
+    expect(container.querySelector('[data-mark="cn-demerit"]')?.textContent).toBe("过");
+    const svgText = Array.from(container.querySelectorAll("text")).map((n) => n.textContent);
+    expect(svgText).toEqual(expect.arrayContaining(["一", "三", "十"]));
+    expect(svgText).not.toContain("10");
   });
 
   it("颜色只上数字,数字一律带号;0 不上色", () => {

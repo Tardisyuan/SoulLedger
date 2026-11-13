@@ -108,6 +108,31 @@ describe("门内看到哪几页:菜单决定", () => {
     expect(doorTabs("desk", noInbox).map((p) => p.path)).not.toContain("/soul-inbox");
   });
 
+  it("/judgment/queue 的门内标签是「审判队列」,不是「分诊」(第三十六批 第一节第 2 条)", () => {
+    const page = pageOf("/judgment/queue");
+    expect(page?.labelKey).toBe("breadcrumb.menu.judgment");
+    expect(page?.labelKey).not.toBe("caseDesk.triage");
+  });
+
+  it("界域:管理员在 司 · 殿司;判官在「律」里只读,叫「冥界图」(第三十六批 第一节第 4 条)", () => {
+    const realms = pageOf("/realms")!;
+    const judge = viewer({ role: "JUDGE", menu: ["/realms", "/corpus"] });
+    const admin = viewer({ role: "ADMIN", menu: ["/realms", "/corpus", "/tenants"] });
+    expect(doorFor(realms, doorsFor(judge))).toBe("statutes");
+    expect(doorTabs("statutes", judge).map((p) => p.path)).toEqual(["/corpus", "/realms"]);
+    expect(realms.altLabelKey).toBe("overview.map.title");
+    expect(doorFor(realms, doorsFor(admin))).toBe("office");
+    expect(doorTabs("statutes", admin).map((p) => p.path)).not.toContain("/realms");
+    expect(doorTabs("office", admin).find((p) => p.path === "/realms")?.section).toBe("hall");
+  });
+
+  it("朋友圈归「人间」:判官哪一门都不亮", () => {
+    const judge = viewer({ role: "JUDGE", menu: ["/social", "/judgment"] });
+    expect(pageOf("/social")?.door).toBe("mortal");
+    expect(doorFor(pageOf("/social")!, doorsFor(judge))).toBeNull();
+    expect(doorFor(pageOf("/social")!, doorsFor(viewer({ role: "MODERATOR" })))).toBe("mortal");
+  });
+
   it("菜单管理在 司 · 权限 下", () => {
     const admin = viewer({ role: "ADMIN", menu: ["/permissions", "/menus", "/users"] });
     const tabs = doorTabs("office", admin);

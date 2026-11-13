@@ -8,7 +8,8 @@
  */
 import Svg, { Circle, G, Path, Rect, Text as SvgText } from "react-native-svg";
 
-import { quoteFamily } from "./fonts";
+import { family, quoteFamily } from "./fonts";
+import { useI18n } from "./i18n";
 import type { CivKey } from "./theme";
 
 /** 16 grid. 地府 draws the character itself (功 outlined, 过 filled); the others their own form. */
@@ -29,6 +30,7 @@ export function MeritMark({
   size?: number;
   testID?: string;
 }) {
+  const { t, locale } = useI18n();
   const hidden = { accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants" as const };
   const stroke = { fill: "none", stroke: ink } as const;
   let body;
@@ -66,11 +68,12 @@ export function MeritMark({
     );
   } else {
     // 地府 (and the neutral skin, which has no mark of its own): the 功过格's two columns, the character is the mark.
-    const ch = demerit ? "过" : "功";
+    // English and egy put + / − in the same box (Design batch 36 §1.1): to a reader without Han, 功 and 过 are two blots.
+    const ch = t(`caseDesk.dossier.mark.cn.${demerit ? "demerit" : "merit"}_glyph`);
     body = (
       <>
         {demerit ? <Rect x={0.5} y={0.5} width={15} height={15} rx={2} fill={ink} /> : <Rect x={1.1} y={1.1} width={13.8} height={13.8} rx={2} {...stroke} strokeWidth={1.2} />}
-        <SvgText x={8} y={12} textAnchor="middle" fontSize={11} fontWeight="600" fill={demerit ? ground : ink} fontFamily={quoteFamily(ch)}>
+        <SvgText x={8} y={12} textAnchor="middle" fontSize={11} fontWeight="600" fill={demerit ? ground : ink} fontFamily={locale === "zh-Hans" ? quoteFamily(ch) : family.ui[600]}>
           {ch}
         </SvgText>
       </>

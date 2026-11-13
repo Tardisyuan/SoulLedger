@@ -39,9 +39,12 @@ function Seg({ d, done, w = 1.4 }: { d: string; done: boolean; w?: number }) {
 }
 
 const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+/** 英文与 egy 不出汉字(Design 第三十六批 第一节第 1 条):殿号写 1 … 10。 */
+const ARABIC = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
 function CnSpine({ now }: { now: Extract<SpineNow, { civ: "cn" }> | null }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const numerals = locale === "zh-Hans" ? NUMERALS : ARABIC;
   // 进度:前九站 1–9,第 n 殿 9+n,地狱 = 所挂那殿之后,轮回最末。
   const at = !now ? null : now.at === "pre" ? now.n : now.at === "hall" ? 9 + now.n : now.at === "hell" ? 9 + now.n + 0.5 : 30;
   const hallX = (k: number) => 164 + (k - 1) * 79.1;
@@ -72,7 +75,7 @@ function CnSpine({ now }: { now: Extract<SpineNow, { civ: "cn" }> | null }) {
       <text x="520" y="42" fontSize="10" textAnchor="middle" className={`${s.label} ${s.faint}`}>
         {t("caseDesk.dossier.spine.cn.hells")}
       </text>
-      {NUMERALS.map((numeral, i) => {
+      {numerals.map((numeral, i) => {
         const st = stateOf(10 + i, at);
         const x = hallX(i + 1);
         return (

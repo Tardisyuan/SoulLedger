@@ -222,7 +222,7 @@ describe("an admin on a case someone else holds", () => {
 
   it("says whose it is and offers 改派给… · 替他放回 · 暂缓; no 改派给… button without a request", () => {
     bar({ claimed_by: 9 }, {}, ADMIN);
-    expect(screen.getByTestId("judgment-admin-context").props.children).toBe("○ 在钟判官手上 · 你是本殿管理员");
+    expect(screen.getByTestId("judgment-admin-context").props.children).toBe("○ 在钟判官手上 · 本账号是本殿管理员");
     expect(screen.queryByTestId("judgment-with-other")).toBeNull();
     expect(screen.queryByTestId("judgment-reassign-to")).toBeNull();
     fireEvent.press(screen.getByTestId("judgment-more"));

@@ -61,6 +61,8 @@ const mockMenus: SidebarMenu[] = [
   menu({ id: 1, name: "灵魂管理", path: "/souls" }),
   menu({ id: 2, name: "功德管理", path: "/ledger" }),
   menu({ id: 3, name: "语料条文", path: "/corpus" }),
+  menu({ id: 4, name: "领域管理", path: "/realms" }),
+  menu({ id: 5, name: "动态", path: "/social" }),
 ];
 jest.mock("@/src/hooks/useSidebarMenus", () => ({ useSidebarMenus: () => ({ data: mockMenus }) }));
 
@@ -100,5 +102,39 @@ describe("门内导航:当前页用 aria-current", () => {
     expect(within(tabs).getByRole("link", { name: "功德管理" })).toHaveAttribute("aria-current", "page");
     expect(within(tabs).getByRole("link", { name: "灵魂管理" })).not.toHaveAttribute("aria-current");
     mockPathname.mockReturnValue("/souls");
+  });
+});
+
+describe("门外与借住(第三十六批 第一节第 4 条)", () => {
+  afterEach(() => mockPathname.mockReturnValue("/souls"));
+
+  it("判官的界域在「律」里,门内标签叫「冥界图」,不叫菜单名", () => {
+    mockPathname.mockReturnValue("/realms");
+    render(<DoorRail />);
+    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.corpus" })).toHaveAttribute("aria-current", "page");
+    render(<DoorTabs />);
+    const tabs = screen.getByTestId("door-tabs");
+    expect(within(tabs).getByRole("link", { name: "overview.map.title" })).toHaveAttribute("aria-current", "page");
+    expect(within(tabs).queryByRole("link", { name: "领域管理" })).toBeNull();
+  });
+
+  it.each(["/social", "/profile"])("%s:一门都不亮,没有门内标签行", (path) => {
+    mockPathname.mockReturnValue(path);
+    render(<DoorRail />);
+    for (const link of within(rail()).getAllByRole("link")) {
+      if (link.getAttribute("data-door")) expect(link).not.toHaveAttribute("aria-current");
+    }
+    render(<DoorTabs />);
+    expect(screen.queryByTestId("door-tabs")).toBeNull();
+  });
+
+  it("「我」的页:底部头像挂 aria-current(样式给它 2px civT 的圈);朋友圈不挂", () => {
+    mockPathname.mockReturnValue("/profile");
+    const { unmount } = render(<DoorRail />);
+    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.me" })).toHaveAttribute("aria-current", "page");
+    unmount();
+    mockPathname.mockReturnValue("/social");
+    render(<DoorRail />);
+    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.me" })).not.toHaveAttribute("aria-current");
   });
 });

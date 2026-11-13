@@ -151,6 +151,10 @@
   border-radius: 2px;
   box-shadow: inset 0 0 0 1.2px currentColor;
 }
+/* 英文与 egy 的 + / −:sans,同大小。 */
+.markCnSign {
+  font: 600 11px/1 var(--font-sans);
+}
 .markCnSolid {
   background: oklch(var(--color-ink));
   color: oklch(var(--color-canvas));

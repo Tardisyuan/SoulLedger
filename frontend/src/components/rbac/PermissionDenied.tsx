@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { Button } from "@/src/components/ui/Button";
+import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { StatusCard } from "@/src/components/ui/PageError";
 import { PermissionWhy } from "./PermissionWhy";
 
@@ -25,7 +26,11 @@ export const MissingPermissionContext = createContext<MissingPermission | null>(
  * 按钮「返回上一页」用 `window.history.back()` 而不是 `useRouter`:这个 fallback 在几十份
  * 测试里渲染,它们没有挂 app router;history 返回在 Next 里同样走客户端导航(popstate)。
  */
-export function PermissionDenied({ permission }: { permission?: string }) {
+export function PermissionDenied({ permission, exitToDesk = false }: {
+  permission?: string;
+  /** 出口是「回案卷台」而不是「返回上一页」:这一页不在这个身份的门里(判官直接打开朋友圈,第三十六批 第一节第 4 条)。 */
+  exitToDesk?: boolean;
+}) {
   const { t } = useI18n();
   const gate = useContext(MissingPermissionContext);
   let needs: string | null = null;
@@ -58,9 +63,15 @@ export function PermissionDenied({ permission }: { permission?: string }) {
       }
       action={
         <>
-          <Button type="button" variant="secondary" size="sm" onClick={() => window.history.back()}>
-            {t("permission.go_back")}
-          </Button>
+          {exitToDesk ? (
+            <Link href="/desk" className={buttonVariants({ variant: "secondary", size: "sm" })} data-testid="permission-denied-to-desk">
+              {t("not_found.to_desk")}
+            </Link>
+          ) : (
+            <Button type="button" variant="secondary" size="sm" onClick={() => window.history.back()}>
+              {t("permission.go_back")}
+            </Button>
+          )}
           {/* 「为什么?」:原因由后端算(第二部分接入点 6)。有好几个码时问第一个 —— 任一个都能开这一页。
               放在 action 里而不是 message:message 是 <p>,答案里有段落与列表。 */}
           {codes?.length ? <PermissionWhy action={codes[0]} /> : null}

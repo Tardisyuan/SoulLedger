@@ -54,6 +54,8 @@ export type DoorPage = {
   gate?: Gate;
   /** 不是菜单项的页的标签键。菜单项的标签取菜单自己的(`menuGlossParts`)。 */
   labelKey?: string;
+  /** 借住在 `alt` 门里时的标签键(同一份数据的另一面,如律里只读的「冥界图」)。 */
+  altLabelKey?: string;
 };
 
 /**
@@ -68,7 +70,8 @@ export const PAGES: readonly DoorPage[] = [
   { path: "/dashboard", door: "desk", section: "desk" },
   // 审 · 来源(案卷台的 chip 也去这几页)。转生申请是第七个来源(用户决定)。
   { path: "/judgment", door: "desk", section: "sources" },
-  { path: "/judgment/queue", door: "desk", section: "sources", gate: { permission: "judgment.read" }, labelKey: "caseDesk.triage" },
+  // 这一页叫「审判队列」(第三十六批 第一节第 2 条:标题、面包屑、门内标签同一个名字);「分诊」是案卷台上另一个来源。
+  { path: "/judgment/queue", door: "desk", section: "sources", gate: { permission: "judgment.read" }, labelKey: "breadcrumb.menu.judgment" },
   { path: "/judgment/appeals", door: "desk", section: "sources" },
   { path: "/cross-judgments", door: "desk", section: "sources" },
   { path: "/city-god-cases", door: "desk", section: "sources" },
@@ -92,7 +95,9 @@ export const PAGES: readonly DoorPage[] = [
   { path: "/admin/stats", door: "office", section: "ledger" },
   // 司 · 殿司
   { path: "/tenants", door: "office", section: "hall" },
-  { path: "/realms", door: "office", section: "hall" },
+  // 界域:管理员在 司 · 殿司 里改;没有「司」的(判官、访客)在「律」里只读,叫「冥界图」(第三十六批 第一节第 4 条:
+  // 查一个冥界有哪些站、哪条路怎么走,和查一条律是同一类事)。
+  { path: "/realms", door: "office", section: "hall", alt: "statutes", altLabelKey: "overview.map.title" },
   { path: "/actors", door: "office", section: "hall" },
   { path: "/city-gods", door: "office", section: "hall" },
   { path: "/death-sync/tudi-gods", door: "office", section: "hall" },
@@ -110,7 +115,7 @@ export const PAGES: readonly DoorPage[] = [
   { path: "/death-sync", door: "office", section: "system" },
   { path: "/scheduler", door: "office", section: "system" },
   { path: "/admin/assistant", door: "office", section: "system" },
-  // 人间(朋友圈审核员)
+  // 人间(朋友圈审核员):只给审核员与管理员(第三十六批 第一节第 4 条);判官直接打开朋友圈,页面回 403(`app/social/layout.tsx`)。
   { path: "/moderation", door: "mortal", section: "mortal" },
   { path: "/social", door: "mortal", section: "mortal" },
   { path: "/social/follows", door: "mortal", section: "mortal" },

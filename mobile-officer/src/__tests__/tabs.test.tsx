@@ -111,8 +111,8 @@ describe("the to-do tab", () => {
   it("empty: a title and one sentence", async () => {
     mockTodo.mockResolvedValue({ data: EMPTY });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
-    expect(await screen.findByText("此刻没有轮到你的事")).toBeTruthy();
-    expect(screen.getByText("新的审批、移交和申请会推送给你。")).toBeTruthy();
+    expect(await screen.findByText("此刻没有待办")).toBeTruthy();
+    expect(screen.getByText("新的审批、移交和申请会推送到这部手机。")).toBeTruthy();
   });
 
   it("error: ! 没取到 and a retry that asks again", async () => {
@@ -128,7 +128,7 @@ describe("the to-do tab", () => {
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     expect(await screen.findByText("□ 没有权限")).toBeTruthy();
     // The role's name, not its code (decision 30).
-    expect(screen.getByText("你的角色「判官」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
+    expect(screen.getByText("本账号的角色「判官」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
     expect(screen.queryByText(/「JUDGE」/)).toBeNull();
     expect(screen.queryByTestId("state-retry")).toBeNull();
   });
@@ -467,15 +467,15 @@ describe("tabs by permission (decisions 30 / 31)", () => {
   it("the denied page names a role the bundles do not know by its code", async () => {
     mockTodo.mockRejectedValue(httpError(403));
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />, { user: { ...OFFICER, role: "CLERK_7" } });
-    expect(await screen.findByText("你的角色「CLERK_7」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
+    expect(await screen.findByText("本账号的角色「CLERK_7」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
   });
 
   it("an empty 待办 promises approvals only to someone who can be given one", async () => {
     mockTodo.mockResolvedValue({ data: EMPTY });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />, { user: { ...OFFICER, role: "CLERK_7", permissions: ["soul_inbox.reply"] } });
-    expect(await screen.findByText("此刻没有轮到你的事")).toBeTruthy();
-    expect(screen.getByText("有轮到你的事时会推送给你。")).toBeTruthy();
-    expect(screen.queryByText("新的审批、移交和申请会推送给你。")).toBeNull();
+    expect(await screen.findByText("此刻没有待办")).toBeTruthy();
+    expect(screen.getByText("有待办时会推送到这部手机。")).toBeTruthy();
+    expect(screen.queryByText("新的审批、移交和申请会推送到这部手机。")).toBeNull();
   });
 });
 
