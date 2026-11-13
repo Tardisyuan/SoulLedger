@@ -505,7 +505,7 @@ export default function DemoTour() {
 
   const outside = pathname === "/" || pathname.startsWith("/login");
   const panel =
-    "fixed z-toast border border-[oklch(var(--color-line-strong))] border-t-3 border-t-[oklch(var(--color-main))] bg-[oklch(var(--color-surface-1))] p-4 shadow-overlay max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[40vh] max-md:overflow-y-auto md:right-6 md:bottom-6 md:w-90";
+    "fixed z-toast border border-[oklch(var(--color-line-strong))] border-t-3 border-t-[oklch(var(--color-main))] bg-[oklch(var(--color-surface-1))] p-4 shadow-overlay max-md:inset-x-0 max-md:bottom-16 max-md:max-h-[40vh] max-md:overflow-y-auto md:right-6 md:bottom-6 md:w-90";
   let card = null;
   if (tour && step && !outside && !state.closed) {
     // 「系统怎么保护自己」 belongs to no underworld: its own title and ending, and the four seals all stay on offer.
