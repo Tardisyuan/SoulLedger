@@ -58,11 +58,12 @@ function findMenu(menus: readonly SidebarMenu[], path: string): SidebarMenu | nu
   return null;
 }
 
-/** 一页的标签:菜单项用菜单自己的名字(译名;与面包屑同一份对照),别的用表里的键。 */
-function usePageLabel(menus: readonly SidebarMenu[]) {
+/** 一页的标签:借住在别的门里、有借住名的用借住名;菜单项用菜单自己的名字(译名;与面包屑同一份对照),别的用表里的键。 */
+function usePageLabel(menus: readonly SidebarMenu[], door?: DoorId | null) {
   const { t, locale } = useI18n();
   const civ = useHallCivilization();
   return (page: DoorPage): string => {
+    if (door && door !== page.door && page.altLabelKey) return t(page.altLabelKey);
     const menu = findMenu(menus, page.path);
     if (menu) return menuGlossParts(menu, locale, t, civ).primary;
     return page.labelKey ? t(page.labelKey) : page.path;
@@ -188,8 +189,8 @@ export function DoorTabs() {
   const { t } = useI18n();
   const pathname = usePathname();
   const { viewer, doors, menus } = useDoorViewer();
-  const label = usePageLabel(menus);
   const door = currentDoor(pathname, doors);
+  const label = usePageLabel(menus, door);
   const tabs = door ? doorTabs(door, viewer, doors) : [];
   const show = tabs.length > 1;
   const active = pageOf(pathname)?.path;

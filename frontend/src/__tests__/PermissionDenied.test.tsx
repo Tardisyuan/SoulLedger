@@ -22,6 +22,15 @@ jest.mock("@/src/contexts/I18nContext", () =>
 );
 
 describe("PermissionDenied", () => {
+  it("a page outside this role's doors exits to the case desk, not back (batch 36 §1.4, a judge on /social)", () => {
+    const { rerender } = render(<PermissionDenied />);
+    expect(screen.queryByTestId("permission-denied-to-desk")).toBeNull();
+    rerender(<PermissionDenied exitToDesk />);
+    expect(screen.getByTestId("permission-denied-to-desk")).toHaveAttribute("href", "/desk");
+    expect(screen.getByTestId("permission-denied-to-desk")).toHaveTextContent("not_found.to_desk");
+    expect(screen.queryByText("permission.go_back")).toBeNull();
+  });
+
   it("draws no lock — C15 draws an in-page state, not an emoji", () => {
     render(<PermissionDenied />);
     expect(screen.queryByText("🔒")).toBeNull();
