@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 受刑站状态按「文明 × 去处类型」显示(v4 第十批第 3 条):`nodeStateNamespace` 只选命名空间,数据不动。
  * 站上没有 `realm_type`,core 的 `REALM_SHOWN_TYPE` 从种子表抄来;这里读那份 Python 逐条核对,
  * 第九批起与种子完全一致(`REALM_SHOWN_TYPE_OVERRIDES` 为空);两真之殿、欧洲阿刻戎、岔路口的草地另有按界域的词

@@ -158,7 +158,7 @@ describe("the notes draft survives a refetch", () => {
     // text did not land on top of it.
     expect(notesBox().value).toBe("my own reasoning");
     expect(notesBox().value).not.toContain("revised elsewhere");
-  }, 15000);
+  });
 
   it("still follows the server while the field is untouched", async () => {
     // The other half of the rule, so that "never overwrite" cannot be the
@@ -173,5 +173,5 @@ describe("the notes draft survives a refetch", () => {
       () => expect(notesBox().value).toBe("server draft, revised elsewhere"),
       { timeout: ASYNC_TIMEOUT }
     );
-  }, 15000);
+  });
 });

@@ -1,3 +1,6 @@
+/**
+ * @jest-environment node
+ */
 import {
   CIVILIZATION_SHORT_CODES,
   CIVILIZATION_OPTIONS,

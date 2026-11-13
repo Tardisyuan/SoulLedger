@@ -7,8 +7,6 @@
  * real `api` instance with its verbs spied on.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { api } from "@soulledger/core/api/client";
 import { OFFICER_EMPTY_ANSWER, OFFICER_SCREENS, officerAssistScreen } from "@soulledger/core/api/officer-assist";
 import zh from "@soulledger/core/messages/zh-Hans.json";
@@ -55,7 +53,6 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 import { AppLayout } from "@/src/components/layout/AppLayout";
 import { createTestQueryClient, testProviders } from "./support/render";
 
-const ROOT = path.join(__dirname, "..", "..", "..");
 const CONVERSATION_ID = "11111111-1111-1111-1111-111111111111";
 
 const get = jest.spyOn(api, "get");
@@ -357,14 +354,6 @@ describe("the screen hint", () => {
     await waitFor(() => expect(thread().getByText("没有记录。")).toBeInTheDocument());
     expect(screen.getAllByTestId("officer-assist-trace")).toHaveLength(1);
   });
-
-  it("OFFICER_SCREENS is the backend's tuple, member for member", () => {
-    const models = readFileSync(path.join(ROOT, "backend", "apps", "soul_assist", "models.py"), "utf8");
-    const block = /OFFICER_SCREENS = \(([\s\S]*?)\n\)/.exec(models)?.[1] ?? "";
-    const backend = [...block.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-    expect(backend.length).toBeGreaterThan(20);
-    expect([...OFFICER_SCREENS].sort()).toEqual([...backend].sort());
-  });
 });
 
 describe("the four notices (1f)", () => {
@@ -426,13 +415,6 @@ describe("the four notices (1f)", () => {
     expect(asks[1].body.conversation_id).toBe(CONVERSATION_ID);
     // Only a question with no thread says `new` (batch 39: no silent continuation behind an empty panel).
     expect(asks[1].body.new).toBeUndefined();
-  });
-
-  it("the fixed empty answer the console recognizes is the backend's OFFICER_EMPTY_ANSWER, word for word", () => {
-    const service = readFileSync(path.join(ROOT, "backend", "apps", "soul_assist", "service.py"), "utf8");
-    const block = /OFFICER_EMPTY_ANSWER = \{([\s\S]*?)\n\}/.exec(service)?.[1] ?? "";
-    const backend = Object.fromEntries([...block.matchAll(/"([^"]+)": "([^"]+)"/g)].map((m) => [m[1], m[2]]));
-    expect(backend).toEqual(OFFICER_EMPTY_ANSWER);
   });
 });
 

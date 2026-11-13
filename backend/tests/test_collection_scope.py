@@ -15,12 +15,15 @@ that is never collected cannot fail, the build stays green while the coverage
 number quietly slides. That is the exact failure mode these meta-tests exist to
 convert into a red test.
 
-The collection counts are floors with slack, not exact figures — the suite is
-expected to grow. Raise them when they get stale; never lower one to make a red
-build green, because "fewer tests than yesterday" is the thing being detected.
+There are no count floors here any more (2026-11-13). The three there were
+(300 / 900 / 1900 tests) had been written against 1974 tests and were still in
+place at several times that, so most of the suite could stop being collected and
+stay green. What is asserted instead does not go stale: every test file on disk
+— the same walk ``scripts/select-backend-tests.py`` selects from — shows up in
+pytest's collection.
 """
 import functools
-import re
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -28,16 +31,14 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND = REPO_ROOT / "backend"
 
-# Measured at the time of writing: 339 in apps/*/tests.py, 943 in backend/tests/,
-# 692 in apps/**/test_*.py, 1974 total. Floors sit below those with room for the
-# suite to shuffle, but far above what survives if a whole tree stops being
-# collected.
-MIN_APP_TESTS_PY = 300
-MIN_BACKEND_TESTS_TREE = 900
-MIN_TOTAL = 1900
-
-APP_TESTS_PY_NODE = re.compile(r"^backend/apps/[^/]+/tests\.py::")
-BACKEND_TESTS_NODE = re.compile(r"^backend/tests/")
+# The gate's own list of test files (apps/ and tests/, `test_*.py` and `tests.py`,
+# migrations excluded). Reused, not re-derived: a file the selector can pick and
+# pytest cannot collect is exactly the gap this file exists for.
+_spec = importlib.util.spec_from_file_location(
+    "select_backend_tests", REPO_ROOT / "scripts" / "select-backend-tests.py"
+)
+_selector = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_selector)
 
 
 @functools.lru_cache(maxsize=1)
@@ -103,28 +104,21 @@ def test_every_app_tests_py_module_is_collected():
     )
 
 
-def test_app_tests_py_tree_is_not_shrinking():
-    collected = _collected_node_ids()
-    count = sum(1 for node in collected if APP_TESTS_PY_NODE.match(node))
-    assert count >= MIN_APP_TESTS_PY, (
-        f"Only {count} tests collected from backend/apps/*/tests.py, expected "
-        f"at least {MIN_APP_TESTS_PY}."
-    )
+def test_every_test_file_on_disk_is_collected():
+    """A file that stops being collected does not fail; it stops existing.
 
+    Covers what the floors used to stand in for — a tree dropped from
+    ``testpaths``, a ``python_files`` pattern lost, a ``conftest`` ``collect_ignore``,
+    a module that no longer declares any test — and names the files.
+    """
+    on_disk = [f"backend/{rel}" for rel in _selector.all_test_files()]
+    # The walk found something: this file, and one of each kind of name.
+    assert "backend/tests/test_collection_scope.py" in on_disk
+    assert any(f.endswith("/tests.py") for f in on_disk)
 
-def test_backend_tests_tree_is_not_shrinking():
-    collected = _collected_node_ids()
-    count = sum(1 for node in collected if BACKEND_TESTS_NODE.match(node))
-    assert count >= MIN_BACKEND_TESTS_TREE, (
-        f"Only {count} tests collected from backend/tests/, expected at least "
-        f"{MIN_BACKEND_TESTS_TREE}."
-    )
-
-
-def test_total_collection_is_not_shrinking():
-    count = len(_collected_node_ids())
-    assert count >= MIN_TOTAL, (
-        f"Only {count} tests collected in total, expected at least {MIN_TOTAL}. "
-        "A large drop here usually means a whole tree stopped being collected "
-        "rather than that tests were deliberately deleted."
+    collected_files = {node.split("::", 1)[0] for node in _collected_node_ids()}
+    missing = [f for f in on_disk if f not in collected_files]
+    assert not missing, (
+        f"{len(missing)} of {len(on_disk)} test files exist on disk but pytest "
+        f"collected nothing from them: {missing}"
     )

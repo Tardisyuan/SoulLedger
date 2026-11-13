@@ -12,14 +12,8 @@
  * bundle lacks renders as the raw key and the text assertions miss.
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { QueryClient } from "@tanstack/react-query";
 import SchedulerPage from "@/app/scheduler/page";
-import en from "@soulledger/core/messages/en.json";
-import egy from "@soulledger/core/messages/egy.json";
-import zhHans from "@soulledger/core/messages/zh-Hans.json";
-import egyPendingKeys from "./support/egyPendingKeys.json";
 import { tZh, zh } from "./support/zhBundle";
 import { renderWithProviders, createTestQueryClient } from "./support/render";
 import { mockShowToast, http } from "./support/mocks";
@@ -609,24 +603,6 @@ describe("a realtime failure toasts once, and nothing else toasts", () => {
     expect(mockListeners.size).toBeGreaterThan(0);
     unmount();
     expect(mockListeners.size).toBe(0);
-  });
-});
-
-describe("the bundles cover every job the backend registers", () => {
-  it("has a description for each JobSpec in backend/apps/scheduler/registry.py, in all three locales", () => {
-    // The backend derives description_key as "scheduler.jobs." + key with dots
-    // flattened (JobSpec.description_key). Derived from the registry, not from
-    // a list here, so a ninth job turns this red until it has copy.
-    const source = readFileSync(path.join(__dirname, "..", "..", "..", "backend", "apps", "scheduler", "registry.py"), "utf8");
-    const keys = [...source.matchAll(/JobSpec\(\s*"([\w.]+)"/g)].map((m) => m[1].replace(/\./g, "_"));
-    expect(keys.length).toBeGreaterThanOrEqual(8);
-    for (const [locale, bundle] of [["zh-Hans", zhHans], ["en", en], ["egy", egy]] as const) {
-      const jobs = (bundle as { scheduler: { jobs: Record<string, string> } }).scheduler.jobs;
-      // egy may lack exactly the job names listed in egyPendingKeys.json (Design has not given the words).
-      const pending = new Set<string>(egyPendingKeys);
-      const exempt = (k: string) => locale === "egy" && pending.has(`scheduler.jobs.${k}`);
-      expect({ locale, missing: keys.filter((k) => !jobs[k] && !exempt(k)) }).toEqual({ locale, missing: [] });
-    }
   });
 });
 

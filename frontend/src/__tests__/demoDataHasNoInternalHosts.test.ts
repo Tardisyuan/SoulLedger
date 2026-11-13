@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The demo's recordings are published with the site, so no address of the machine that recorded them may be in one
  * (作品集建议 B4, 2026-11-13). `admin.*.json` once carried the embedding service's LAN address, recorded from
  * `/assist-admin/embedding/`. Kept out twice: the recording backend runs with placeholders (scripts/demo_settings.py)

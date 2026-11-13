@@ -1,3 +1,6 @@
+/**
+ * @jest-environment node
+ */
 /** A preset has no database row, so its English lives in `workflowPresetEnglish.ts`. Complete in both directions. */
 import { WORKFLOW_TEMPLATES } from "@soulledger/core/config/workflow-templates";
 import { PRESET_ENGLISH, presetEnglish, presetLabel } from "@soulledger/core/config/workflowPresetEnglish";
