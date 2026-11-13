@@ -107,7 +107,11 @@ function CommentItem({ comment, parent, depth, onReply, children }: {
             </button>
           )}
         </div>
-        {reacting ? <ReactionBar commentId={comment.id} mine={comment.my_reaction} /> : null}
+        {reacting ? <ReactionBar
+            commentId={comment.id}
+            mine={comment.my_reaction}
+            disabled={Boolean(comment.moderation_status) && comment.moderation_status !== "PUBLISHED"}
+          /> : null}
         {children}
       </div>
 
