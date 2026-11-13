@@ -64,10 +64,27 @@ ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RWORK $RDIR/tmp/demo && touch $R
 ssh -o BatchMode=yes "$GATES_REMOTE" "cd $RWORK && if [ ! -d node_modules ]; then S=\$(ls -d $RDIR/work/SoulLedger-*-e2e | head -1); cp -a \$S/node_modules . ; mkdir -p backend; cp -a \$S/backend/.venv backend/ ; for w in frontend packages/core mobile mobile-officer; do if [ -d \$S/\$w/node_modules ]; then mkdir -p \$w; cp -a \$S/\$w/node_modules \$w/; fi; done; fi" || exit 1
 # --delete does nothing under --files-from, and a stale spec would keep running.
 ssh -o BatchMode=yes "$GATES_REMOTE" "rm -rf $RWORK/frontend/e2e/demo" || exit 1
+# The file list, kept so the remote copy can drop what the tree no longer has: a file deleted here stayed there, and
+# a stale test (judgmentFullCaseMotion.test.ts, 2026-11-14) failed the recording's type check.
+SL_LIST="$(mktemp "${TMPDIR:-/tmp}/sl-demo-list.XXXXXX")"
+trap 'rm -f "$SL_LIST"' EXIT
 { git ls-files -z; git ls-files -z -o --exclude-standard; } \
   | python3 -c 'import os,sys; sys.stdout.write("".join(p+"\0" for p in sys.stdin.read().split("\0") if p and os.path.exists(p)))' \
-  | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P frontend/.next/' --filter='P .sl-*' \
-      --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" || exit 1
+  > "$SL_LIST"
+rsync -a --no-owner --no-group "$SL_LIST" "$GATES_REMOTE:$RWORK/.sl-files" || exit 1
+ssh -o BatchMode=yes "$GATES_REMOTE" "cd $RWORK && python3 -c '
+import os
+keep = set(p for p in open(\".sl-files\").read().split(\"\\0\") if p)
+skip = (\"node_modules\", \".venv\", \".next\", \".git\")
+for d, dirs, files in os.walk(\".\"):
+    dirs[:] = [x for x in dirs if x not in skip]
+    for f in files:
+        p = os.path.relpath(os.path.join(d, f))
+        if p not in keep and not p.startswith(\".sl-\") and not p.startswith(\"frontend/demo/data/\"):
+            os.remove(p)
+'" || exit 1
+rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P frontend/.next/' --filter='P .sl-*' \
+      --from0 --files-from="$SL_LIST" -r "$ROOT/" "$GATES_REMOTE:$RWORK/" || exit 1
 
 : "${1:?usage: scripts/demo-remote.sh <script under /app> [args...]}"
 # Every argument goes through, each %q-quoted once for the remote shell, so one with a space stays one.
