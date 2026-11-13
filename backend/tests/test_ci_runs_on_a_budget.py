@@ -140,19 +140,31 @@ def test_the_daily_e2e_still_runs_all_three_engines():
     assert projects == {"chromium", "firefox", "mobile-chrome"}, projects
 
 
-def test_a_green_main_run_leaves_its_suite_counts_as_an_artifact_and_commits_nothing():
-    """A10 (2026-11-13): the `stats` job turns the suites' own reports into landing-stats.json's shape and uploads it.
-    Writing back to the repository is deliberately not done (the job token is read-only), so it must stay that way
-    unless this test and the `permissions:` block are changed together."""
+def test_a_green_main_run_uploads_its_suite_counts_and_only_the_stats_job_may_write_them_back():
+    """A10 (2026-11-13): the `stats` job turns the suites' own reports into landing-stats.json's shape, uploads it,
+    and (user decision 2026-11-13) commits that one file to main. It is the only job with write access, it touches
+    only that file, never forces, and its commit must not count as a change for tomorrow's daily run."""
     data, _ = _load("ci.yml")
     assert data["permissions"] == {"contents": "read"}
+    writers = [n for n, j in data["jobs"].items() if "contents" in (j.get("permissions") or {}) and j["permissions"]["contents"] == "write"]
+    assert writers == ["stats"], writers
     stats = data["jobs"]["stats"]
+    assert stats["permissions"] == {"contents": "write"}
+    commit = " ".join(step.get("run", "") for step in stats["steps"])
+    assert "git add frontend/src/config/landing-stats.json" in commit and commit.count("git add") == 1
+    assert "[skip ci]" in commit and "github-actions[bot]" in commit
+    assert "--force" not in commit and "push -f" not in commit and "+HEAD" not in commit
+    assert commit.count("git push") == 1 and "git push origin HEAD:main" in commit
+    others = " ".join(step.get("run", "") for n, j in data["jobs"].items() if n != "stats" for step in j["steps"])
+    assert "git push" not in others and "git commit" not in others
+    # the bot commit is not "a commit in the last 24 h"
+    check = " ".join(step.get("run", "") for step in data["jobs"]["changes"]["steps"])
+    assert "--invert-grep" in check and "skip ci" in check
     assert {"backend", "frontend", "mobile", "officer"} <= set(stats["needs"])
     assert "refs/heads/main" in stats["if"]
     uses = [step.get("uses", "") for step in stats["steps"]]
     assert any(u.startswith("actions/download-artifact@") for u in uses)
     assert any(u.startswith("actions/upload-artifact@") for u in uses)
-    assert not any("git push" in step.get("run", "") or "git commit" in step.get("run", "") for step in stats["steps"])
     # every count the script reads is uploaded by the job that produces it
     artifacts = {(s.get("with") or {}).get("name") for j in data["jobs"].values() for s in j["steps"]}
     assert {"count-backend", "count-web", "count-soul_app", "count-officer_app"} <= artifacts
