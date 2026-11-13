@@ -41,11 +41,9 @@ every assertion becomes a tautology) is honoured where it applies: the counts,
 natures and markers below are written out by hand and compared against
 ``CORPUS_PROVENANCE``, never read from it.
 """
-import io
 import re
 
 import pytest
-from django.core.management import call_command
 
 from apps.actors import mythology
 from apps.judgment.models import Statute, StatuteCorpus
@@ -115,14 +113,6 @@ EXPECTED = {
 # titled 六條 and both give 5. The gaps are recorded on the rows and NOT filled,
 # because filling them is how the withdrawn corpus was built.
 GONGGUOGE_GAP_GATES = ("救濟門", "不軌門")
-
-
-@pytest.fixture
-def seeded(db):
-    """A database with seed_mythology applied once."""
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
 
 
 def _squash(text):

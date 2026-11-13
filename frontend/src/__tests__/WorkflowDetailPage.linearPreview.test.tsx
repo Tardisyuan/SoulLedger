@@ -27,9 +27,7 @@ jest.mock("next/navigation", () => ({
 }));
 const ADMIN = { id: 1, username: "admin", role: "ADMIN", permissions: [] as string[] };
 let mockUser = ADMIN;
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ actual: true, zh: "stable", tf: (_k: string, f: string) => f, formatDateTime: (v: string) => v, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 

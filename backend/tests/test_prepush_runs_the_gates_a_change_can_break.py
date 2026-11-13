@@ -86,6 +86,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -599,6 +600,62 @@ class TestSuiteAboutTheSuiteRunsOnlyWhenRelevant:
         """2026-10-24: a push to main is selective like any other."""
         assert _classify_meta(hook, ["backend/apps/souls/views.py"], PREPUSH_TO_MAIN="1") == 0
 
+    # ── test_collection_scope.py alone also runs when a test file changed (2026-11-13) ──
+
+    @staticmethod
+    def _scope(hook, changed: list[str], **extra) -> tuple[int, int]:
+        """→ (the collection-scope test runs, both suite-about-the-suite tests run)."""
+        env = {k: v for k, v in os.environ.items() if k not in ("SKIP_PREPUSH", "GATES_FULL")}
+        env.update(PREPUSH_CHANGED="\n".join(changed), PREPUSH_CLASSIFY_ONLY="1", **extra)
+        proc = subprocess.run(["bash", str(hook)], cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        scope = re.search(r"^classify-collection-scope: scope=(\d)$", proc.stdout, re.M)
+        meta = re.search(r"^classify-meta: meta=(\d)$", proc.stdout, re.M)
+        assert scope and meta, proc.stdout
+        return int(scope.group(1)), int(meta.group(1))
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["backend/tests/test_a_brand_new_file.py"],           # added: the path is all the hook is told
+            ["backend/tests/test_one_that_was_deleted.py"],       # deleted or renamed away: the same
+            ["backend/tests/test_auth_account.py"],               # edited — it may have lost its last test
+            ["backend/apps/souls/tests/test_new.py"],
+            ["backend/apps/souls/tests/api/test_deeper.py"],
+            ["backend/apps/souls/views.py", "backend/tests/test_new.py"],
+        ],
+    )
+    def test_a_changed_test_file_runs_the_collection_scope_test_alone(self, hook, changed):
+        """A test file pytest does not collect cannot fail; test_collection_scope.py is what would say so,
+        and it did not run when one was added. The nested-pytest test stays skipped."""
+        assert self._scope(hook, changed) == (1, 0)
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["backend/apps/souls/views.py"],
+            ["backend/tests/tenancy_unscoped_sites.py"],          # a helper under tests/, not a test file
+            ["backend/tests/reads-outside-backend.txt"],
+            ["backend/apps/souls/migrations/0099_test_data.py"],
+            ["frontend/src/__tests__/test_x.py"],                 # not the backend's
+            ["backend/scripts/test_tool.py"],                     # outside the two trees pytest is pointed at
+            ["README.md"],
+        ],
+    )
+    def test_a_change_that_is_no_test_file_leaves_it_skipped(self, hook, changed):
+        assert self._scope(hook, changed) == (0, 0)
+
+    def test_whatever_runs_both_runs_it(self, hook):
+        assert self._scope(hook, ["pytest.ini"]) == (1, 1)
+        assert self._scope(hook, ["backend/apps/souls/tests.py"]) == (1, 1)
+        assert self._scope(hook, ["backend/apps/souls/views.py"], GATES_FULL="1") == (1, 1)
+
+    def test_the_test_the_rule_names_is_one_of_the_two(self):
+        body = RUNNER.read_text(encoding="utf-8")
+        scope = re.search(r"^SCOPE_TEST='([^']*)'$", body, re.M).group(1)
+        assert scope in re.search(r"META_TESTS='([^']*)'", body).group(1).split()
+        assert scope == "backend/tests/test_collection_scope.py" and (REPO_ROOT / scope).is_file()
+
     def test_the_names_the_rule_skips_are_real_files(self):
         """A renamed test would be silently 'ignored' by a path that no longer exists,
         and run on every push again — or worse, the rule would name nothing."""
@@ -675,6 +732,24 @@ class TestWhatPytestIsInvokedWith:
         text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
         assert 'XDIST="-n $PYTEST_WORKERS --dist worksteal"' in text
 
+    def test_the_cold_or_hot_template_line_is_shown(self, hook, checkouts, fake_backend):
+        """Telemetry (2026-11-13): the root conftest prints `test template: COLD|HOT <hash> <seconds>`; the
+        gate shows pytest's last four lines only, so it names that line itself."""
+        _, wt = checkouts
+        py = Path(fake_backend)
+        body = py.read_text()
+        marked = body.replace(
+            'echo "PYTEST TEMPLATE',
+            'echo "test template: HOT abcdef12 0.5s (probe)"; printf \'summary line %s\\n\' 1 2 3 4 5; echo "PYTEST TEMPLATE')
+        assert marked != body, "precondition: the stand-in pytest still prints its PYTEST line"
+        py.write_text(marked)
+        proc = _run(hook, wt, ["backend/x.py"], PYTHON_BIN=str(py), RUFF_BIN=shutil.which("true"),
+                    REDIS_URL=os.environ.get("REDIS_URL", ""))
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        # five lines below it: `tail -4` alone would not show it. mutation: drop the grep in pytest_finish -> red
+        assert proc.stdout.count("test template: HOT abcdef12 0.5s (probe)") == 1, proc.stdout
+        assert "summary line 1" not in proc.stdout and "summary line 5" in proc.stdout, proc.stdout
+
     def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts
         assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"
@@ -711,6 +786,39 @@ class TestWhatPytestIsInvokedWith:
         args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
         assert "--ignore=tests/test_collection_scope.py" in args, args
         assert "--ignore=tests/test_audit_assertions_are_not_vacuous.py" in args, args
+
+    def test_a_changed_test_file_keeps_the_collection_scope_test_and_drops_the_other(
+        self, hook, checkouts, fake_backend
+    ):
+        """2026-11-13: a new test file is what test_collection_scope.py exists to look at. The throwaway
+        checkout has no select-backend-tests.py, so the whole suite runs: it is in unless ignored."""
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/tests/test_a_new_file.py"])
+        assert [a for a in args if a.startswith("--ignore=")] == ["--ignore=tests/test_audit_assertions_are_not_vacuous.py"], args
+
+    def test_with_the_selection_a_changed_test_file_still_reaches_the_collection_scope_test(
+        self, hook, checkouts, fake_backend
+    ):
+        """By app, the suite is a list of paths: the `*` readers are on it, and the skipped tests are taken
+        off — test_collection_scope.py must survive that, and the nested-pytest test must not."""
+        main, _ = checkouts
+        shutil.copy(REPO_ROOT / "scripts" / "select-backend-tests.py", main / "scripts" / "select-backend-tests.py")
+        (main / "backend" / "apps" / "souls").mkdir(parents=True)
+        (main / "backend" / "apps" / "souls" / "tests.py").write_text("def test_y():\n    pass\n")
+        (main / "backend" / "config").mkdir()
+        (main / "backend" / "config" / "urls.py").write_text("urlpatterns = []\n")
+        for name in ("test_collection_scope.py", "test_audit_assertions_are_not_vacuous.py", "test_souls_x.py"):
+            (main / "backend" / "tests" / name).write_text("def test_x():\n    pass\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "a selectable backend")
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/tests/test_souls_x.py"])
+        assert "tests/test_collection_scope.py" in args and "tests/test_souls_x.py" in args, args
+        assert "tests/test_audit_assertions_are_not_vacuous.py" not in args, args
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert "tests/test_collection_scope.py" not in args, args
+        # The same for the older rule: a changed apps/*/tests.py owes both, and the selection names neither.
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/tests.py"])
+        assert "tests/test_collection_scope.py" in args and "tests/test_audit_assertions_are_not_vacuous.py" in args, args
 
     def test_a_change_outside_backend_drops_them_from_the_readers_too(
         self, hook, checkouts, fake_backend
@@ -772,6 +880,9 @@ class TestJestSelection:
             ["frontend/src/__tests__/support/egyPendingKeys.json"],
             ["frontend/src/__tests__/support/egyVocabulary.json"],
             ["frontend/demo/data/judge.zh.json", "frontend/demo/data/home-preview.json"],
+            # 2026-11-13: no jest test imports the generated schema; its readers are always-run, vitest, pytest.
+            ["packages/core/openapi/schema.yml"],
+            ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml", "packages/core/src/api/generated/schema.ts"],
         ],
     )
     def test_an_ordinary_source_change_is_selective(self, hook, changed):
@@ -795,7 +906,7 @@ class TestJestSelection:
             ["frontend/src/components/NoSuchComponent.tsx"],
             ["tsconfig.base.json"],
             # One matching file among ordinary ones still counts.
-            ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"],
+            ["frontend/app/page.tsx", "frontend/src/config/landing-stats.json"],
         ],
     )
     def test_what_jest_cannot_trace_forces_a_full_run_and_says_why(self, hook, changed):
@@ -805,6 +916,16 @@ class TestJestSelection:
 
     def test_gates_full_forces_it(self, hook):
         assert _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="1")[0] == 1
+
+    def test_a_module_the_setup_file_runs_before_every_test_forces_it(self, hook):
+        """2026-11-13: jest.setup.js requires it, so every test runs it and no import edge says so."""
+        assert "require('./lib/platform/web')" in (REPO_ROOT / "frontend" / "jest.setup.js").read_text()
+        full, out = _classify_jest(hook, ["frontend/lib/platform/web.ts"])
+        assert full == 1 and re.search(r"full because: a module frontend/jest\.setup\.js runs .*: frontend/lib/platform/web\.ts$",
+                                       out, re.M), out
+        # its neighbour is ordinary code
+        assert (REPO_ROOT / "frontend/lib/platform").is_dir()
+        assert _classify_jest(hook, ["frontend/lib/platform/index.ts"])[1].count("jest.setup.js runs") == 0
 
     def test_gates_full_0_does_not_force_selective(self, hook):
         """There is no way to force a selective run. GATES_FULL=0 is not one."""
@@ -816,8 +937,26 @@ class TestJestSelection:
         assert full == 0  # 2026-10-24: main is selective too
 
     def test_the_runner_names_the_file_that_forced_it(self, hook):
-        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"])
-        assert "data file" in out and "packages/core/openapi/schema.yml" in out
+        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "frontend/src/config/landing-stats.json"])
+        assert "data file" in out and "frontend/src/config/landing-stats.json" in out
+
+    def test_a_schema_change_still_runs_everything_that_reads_the_schema(self, hook):
+        """What makes leaving the full jest out safe (2026-11-13): the area gates still run, and the tests
+        that read schema.yml are picked by something other than a full run."""
+        full, out = _classify_jest(hook, ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml"])
+        assert full == 0, out
+        # core (vitest: generatedSchemaIsCurrent) and the frontend (tsc, eslint, jest with its always-run list)
+        assert "classify: core=1 frontend=1 backend=1" in out, out
+        always = (REPO_ROOT / "frontend" / "jest.always-run.txt").read_text()
+        assert "src/__tests__/apiEndpointContract.test.ts" in always
+        assert "openapi/schema.yml" in (REPO_ROOT / "frontend/src/__tests__/apiEndpointContract.test.ts").read_text()
+        readers = _listed_readers()
+        for name in ("tests/test_committed_schema_matches_the_backend.py", "tests/test_e2e_fixtures_match_the_serializers.py"):
+            assert "packages" in readers[name], name
+        # The exemption is that one file, not its directory or every yml: a neighbour is still a data file
+        # (the path does not exist, so the reason is matched by name — the deleted-file rule fires as well).
+        _, out = _classify_jest(hook, ["packages/core/openapi/other.yml"])
+        assert re.search(r"full because: a data file .*: packages/core/openapi/other\.yml$", out, re.M), out
 
 
 def _classify_app_jest(hook, changed: list[str], **extra) -> tuple[int, str]:
@@ -860,6 +999,20 @@ class TestAppJestSelection:
     def test_what_the_app_graph_cannot_trace_forces_a_full_run(self, hook, changed):
         full, out = _classify_app_jest(hook, changed)
         assert full == 1, out
+
+    @pytest.mark.parametrize("changed, setup, needle", [
+        ("mobile/src/platform.ts", "mobile/jest.setup.js", 'require("./src/platform")'),
+        ("mobile/src/platform.ts", "mobile-officer/jest.setup.js", 'require("../mobile/src/platform")'),
+        ("mobile-officer/src/keptText.ts", "mobile-officer/jest.setup.js", 'require("./src/keptText")'),
+    ])
+    def test_a_module_the_apps_setup_file_loads_forces_a_full_run(self, hook, changed, setup, needle):
+        """2026-11-13: code under src/, so the rule above calls it traceable — but the setup file runs it
+        around every test."""
+        assert (REPO_ROOT / changed).is_file() and needle in (REPO_ROOT / setup).read_text()
+        full, out = _classify_app_jest(hook, [changed])
+        assert full == 1 and f"jest.setup.js loads for every test changed: {changed}" in out, out
+        # web jest is not forced by an app's module
+        assert "classify-jest: full=0" in out, out
         assert "app full because:" in out
 
     def test_gates_full_forces_it(self, hook):
@@ -954,6 +1107,48 @@ class TestWhatTheHookHandsTheRunner:
         proc = _push(hook, wt, "refs/heads/feature")
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "classify-jest: full=0" in proc.stdout, proc.stdout
+
+    def _push_lines(self, hook, cwd: Path, lines: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["bash", str(hook)], cwd=cwd, env=_clean_env(PREPUSH_CLASSIFY_ONLY="1"), input=lines,
+            capture_output=True, text=True, timeout=60,
+        )
+
+    def _rev(self, cwd: Path, rev: str) -> str:
+        return subprocess.run(
+            ["git", "rev-parse", rev], cwd=cwd, env=_clean_env(), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    def test_a_range_git_cannot_diff_refuses_the_push(self, hook, checkouts):
+        """2026-11-13: the remote's commit is not in this clone (someone pushed, nobody fetched). `git diff`
+        failed, its empty output was the change list, and run-gates.sh said "no file changes", exit 0."""
+        _, wt = checkouts
+        self._commit_a_frontend_file(wt)
+        missing = "1234567890123456789012345678901234567890"
+        proc = self._push_lines(hook, wt, f"refs/heads/wt {self._rev(wt, 'HEAD')} refs/heads/wt {missing}\n")
+        assert proc.returncode != 0, proc.stdout + proc.stderr
+        assert "push refused" in proc.stdout and missing in proc.stdout, proc.stdout
+        # absence too: the runner was never reached, with an empty list or any other
+        assert "no file changes" not in proc.stdout and "classify:" not in proc.stdout, proc.stdout
+
+    def test_every_pushed_ref_counts_not_only_the_last(self, hook, checkouts):
+        _, wt = checkouts
+        (wt / "backend" / "x.py").write_text("X = 1\n")
+        _git(wt, "add", "-A")
+        _git(wt, "commit", "-q", "-m", "backend")
+        self._commit_a_frontend_file(wt)
+        c0, c1, c2 = (self._rev(wt, r) for r in ("HEAD~2", "HEAD~1", "HEAD"))
+        # the last line alone is the backend commit; the first carries the frontend one
+        proc = self._push_lines(hook, wt, f"refs/heads/a {c2} refs/heads/a {c1}\nrefs/heads/b {c1} refs/heads/b {c0}\n")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "classify: core=0 frontend=1 backend=1" in proc.stdout, proc.stdout
+        # no `<base>..<pushed>` for the runner to take ONE pushed tree from: "this tree already passed"
+        # must not vouch for several refs
+        assert f"{c1} to {c2}, {c0} to {c1} " in proc.stdout and ".." not in proc.stdout.split(" — ")[0], proc.stdout
+        # and one of several refs failing to diff refuses the whole push
+        missing = "1234567890123456789012345678901234567890"
+        proc = self._push_lines(hook, wt, f"refs/heads/a {c2} refs/heads/a {missing}\nrefs/heads/b {c1} refs/heads/b {c0}\n")
+        assert proc.returncode != 0 and "push refused" in proc.stdout and "classify:" not in proc.stdout, proc.stdout
 
     def test_a_checkout_without_the_runner_uses_the_installed_copy(self, hook, checkouts):
         main, wt = checkouts
@@ -1077,6 +1272,89 @@ class TestReadersOfAnotherArea:
 # changed only mobile-officer/ printed `core:0 frontend:0 backend:0` and ran nothing (the same hole mobile/
 # once had, see run-gates.sh). The runner prints `classify-officer: officer=<0|1>`. mobile-officer/ also
 # imports mobile/src's leaf modules in place, so a change under mobile/ must run it too.
+
+
+class TestMobileReadersFollowWhatChanged:
+    """2026-11-13: with the mobile app not running, its file-reading tests ran on every push — all 14, whole
+    rendered screens among them. Now only those that read something the push changed (run-gates.sh,
+    reader_follows_change)."""
+
+    def _mobile_readers(self, changed):
+        _, _, out = _readers(changed)
+        m = re.search(r"^classify-mobile-readers: (\d+)$", out, re.M)
+        assert m, out
+        files = re.findall(r"^  mobile reader: (\S+)$", out, re.M)
+        assert len(files) == int(m.group(1)), out
+        return files
+
+    ASSIST = "mobile/src/__tests__/assist.test.tsx"     # reads backend/apps/soul_assist
+    THEME = "mobile/src/__tests__/theme.test.ts"        # reads frontend/app/globals.css
+    VISUAL = "mobile/src/__tests__/visual.test.tsx"     # reads the app's own fonts
+
+    def test_the_examples_read_what_this_class_says(self):
+        assert '"backend"' in (REPO_ROOT / self.ASSIST).read_text() or "/backend/" in (REPO_ROOT / self.ASSIST).read_text()
+        assert "frontend/" in (REPO_ROOT / self.THEME).read_text()
+        visual = (REPO_ROOT / self.VISUAL).read_text()
+        assert re.search(r"readFileSync|readdirSync|existsSync|statSync|['\"](node:)?fs['\"]", visual)
+        assert "backend" not in visual and "frontend" not in visual
+
+    def test_a_backend_change_runs_the_readers_of_backend_only(self):
+        files = self._mobile_readers(["backend/apps/soul_assist/prompts.py"])
+        # mutation: drop `&& reader_follows_change "$f"` -> THEME and VISUAL come back -> red
+        assert self.ASSIST in files and self.THEME not in files and self.VISUAL not in files, files
+
+    def test_a_frontend_change_runs_the_readers_of_frontend(self):
+        files = self._mobile_readers(["frontend/app/page.tsx"])
+        assert self.THEME in files and self.ASSIST not in files and self.VISUAL not in files, files
+
+    def test_a_docs_change_runs_no_test_that_stays_inside_the_app(self):
+        assert self.VISUAL not in self._mobile_readers(["docs/ARCHITECTURE.md"])
+
+    def test_a_reader_that_cannot_be_placed_runs(self, checkouts):
+        """Fail open: a subprocess, or a climb to the repository root that names nothing."""
+        main, _ = checkouts
+        tests = main / "mobile" / "src" / "__tests__"
+        tests.mkdir(parents=True)
+        (tests / "spawns.test.ts").write_text('import { execSync } from "child_process";\n')
+        (tests / "climbs.test.ts").write_text('import { readFileSync } from "fs";\nconst ROOT = "../../..";\n')
+        (tests / "own.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../theme.ts");\n')
+        (tests / "names.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../../../backend/x.py");\n')
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "readers")
+
+        def readers(changed):
+            proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main,
+                                  env=_clean_env(PREPUSH_CHANGED=changed, PREPUSH_CLASSIFY_ONLY="1"),
+                                  capture_output=True, text=True, timeout=60)
+            assert proc.returncode == 0, proc.stdout + proc.stderr
+            return sorted(Path(f).name for f in re.findall(r"^  mobile reader: (\S+)$", proc.stdout, re.M))
+
+        assert readers("docs/x.md") == ["climbs.test.ts", "spawns.test.ts"]
+        assert readers("backend/x.py") == ["climbs.test.ts", "names.test.ts", "spawns.test.ts"]
+
+    def test_a_red_reader_is_named(self, checkouts, tmp_path, fake_backend):
+        """`| tail -4` showed jest's totals and not which test (2026-11-13: as app_jest, to a log and grep)."""
+        main, _ = checkouts
+        tests = main / "mobile" / "src" / "__tests__"
+        tests.mkdir(parents=True)
+        (tests / "names.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../../../backend/x.py");\n')
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "reader")
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "npm").write_text(
+            "#!/bin/bash\n"
+            "echo 'FAIL src/__tests__/names.test.ts'; echo '  ● names › reads the backend file'\n"
+            "printf 'filler %s\\n' 1 2 3 4 5 6\nexit 1\n")
+        (b / "npm").chmod(0o755)
+        env = _clean_env(PREPUSH_CHANGED="backend/x.py", PYTHON_BIN=fake_backend, RUFF_BIN=shutil.which("true"),
+                         DATABASE_URL="sqlite:///:memory:", REDIS_URL=os.environ.get("REDIS_URL", ""))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main,
+                              env=env, capture_output=True, text=True, timeout=120)
+        assert proc.returncode == 1 and "mobile jest (file readers) failed" in proc.stdout, proc.stdout + proc.stderr
+        # six lines of output below them. mutation: drop the grep after MOBILE_STATUS -> red
+        assert "FAIL src/__tests__/names.test.ts" in proc.stdout and "● names › reads the backend file" in proc.stdout, proc.stdout
 
 
 def _classify_officer(hook, changed: list[str]) -> int:
@@ -1245,19 +1523,128 @@ class TestASelectivePassIsNotRunAgain:
 
 
 class TestStaticChecksRunBeforeAnyTests:
-    """2026-10-27: a ruff error used to surface only after the web and app jest had run."""
+    """2026-10-27: a ruff error used to surface only after the web and app jest had run.
 
-    def test_every_type_check_and_linter_comes_before_the_first_test_runner(self):
-        text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
-        static = ['echo "  → core tsc"', 'echo "  → core eslint"', 'echo "  → tsc"', 'echo "  → eslint"',
-                  'echo "  → mobile tsc"', 'echo "  → mobile eslint"', 'echo "  → officer tsc"',
-                  'echo "  → officer eslint"', 'echo "  → ruff"', 'echo "  → makemigrations --check"']
-        tests = ['echo "  → core vitest"', 'echo "  → jest"', 'echo "  → $dir jest"', 'echo "  → pytest"']
-        for s in static:
-            assert text.count(s) == 1, s
-        last_static = max(text.index(s) for s in static)
-        first_test = min(text.index(t) for t in tests)
-        assert last_static < first_test
+    This class used to compare where the `echo "  → …"` strings sit in run-gates.sh. The checks and the test
+    runners are functions now, so the order in the file is not the order of the run: calling a test function
+    ahead of the static checks left that comparison green (2026-11-13, test review 3.5). It runs the gates
+    instead, over stand-in tools that write down each invocation, and reads the order from that.
+
+    On this machine: every type check and linter of every area, then the tests. In the remote run the two
+    sides overlap, each beginning with its own static checks — the order holds inside a side, and a red
+    static check ends its side before that side's tests and fails the run."""
+
+    CHANGED = ["packages/core/src/a.ts", "frontend/app.tsx", "mobile/src/a.ts", "mobile-officer/src/b.ts", "backend/x.py"]
+    JS_STATIC = [
+        "npm run --workspace packages/core typecheck", "npm run --workspace packages/core lint",
+        "npx tsc --noEmit", "npm run lint",
+        "npm run --workspace mobile typecheck", "npm run --workspace mobile lint",
+        "npm run --workspace mobile-officer typecheck", "npm run --workspace mobile-officer lint",
+    ]
+    JS_TESTS = ["npm run --workspace packages/core test", "npx jest", "npm run --workspace mobile test",
+                "npm run --workspace mobile-officer test"]
+    BE_STATIC = ["ruff check .", "python manage.py makemigrations --check --dry-run"]
+    BE_TESTS = ["python -m pytest"]
+
+    def _gates(self, checkouts, tmp_path, remote: bool, fail_on: str = ""):
+        """→ (the finished run, every tool invocation in the order it happened)."""
+        main, _ = checkouts
+        for d in ("packages/core/src", "frontend", "mobile/src", "mobile-officer/src"):
+            (main / d).mkdir(parents=True, exist_ok=True)
+        (main / "frontend" / "jest.always-run.txt").write_text("")
+        for f in self.CHANGED:
+            (main / f).write_text("")
+        for app in ("mobile", "mobile-officer"):  # a test that reads files: each app's jest has something to run
+            (main / app / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('../../backend/x.py');\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "every area")
+        b = tmp_path / "bin"
+        b.mkdir()
+        log = tmp_path / "calls"
+        # FAIL_ON: the invocation that exits 1. One `echo >>` per call: the two sides append to the same file.
+        tool = ('#!/bin/bash\ncall="{name} $*"\necho "$call" >> "{log}"\n'
+                'if [ -n "$FAIL_ON" ] && [[ "$call " == "$FAIL_ON "* ]]; then exit 1; fi\nexit 0\n')
+        for name in ("npm", "npx", "ruff"):
+            (b / name).write_text(tool.format(name=name, log=log))
+        (b / "fake-python").write_text(
+            "#!/bin/bash\n"
+            f'if [ "$1" = manage.py ] || [ "$1 $2" = "-m pytest" ]; then call="python $1 $2 $3 $4"; call="${{call%% -q*}}"; '
+            f'call="$(echo $call)"; echo "$call" >> "{log}"; '
+            'if [ -n "$FAIL_ON" ] && [[ "$call " == "$FAIL_ON "* ]]; then exit 1; fi; exit 0; fi\n'
+            'exec python3 "$@"\n')
+        for f in b.iterdir():
+            f.chmod(0o755)
+        env = _clean_env(PREPUSH_CHANGED="\n".join(self.CHANGED), PYTHON_BIN=str(b / "fake-python"), RUFF_BIN=str(b / "ruff"),
+                         DATABASE_URL="sqlite:///:memory:", REDIS_URL=os.environ.get("REDIS_URL", ""), FAIL_ON=fail_on,
+                         **({"GATES_IN_REMOTE": "1"} if remote else {}))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main, env=env,
+                              capture_output=True, text=True, timeout=120)
+        return proc, log.read_text().splitlines()
+
+    @staticmethod
+    def _at(calls: list[str], wanted: list[str]) -> list[int]:
+        """Where each wanted invocation happened (`npm run lint` is not `npm run lint-something`)."""
+        return [i for i, c in enumerate(calls) if any(f"{c} ".startswith(f"{w} ") for w in wanted)]
+
+    def _every_check_ran_once(self, calls):
+        for check in self.JS_STATIC + self.BE_STATIC:
+            assert len(self._at(calls, [check])) == 1, f"{check!r} ran {len(self._at(calls, [check]))} times:\n" + "\n".join(calls)
+        for runner in self.JS_TESTS + self.BE_TESTS:
+            assert self._at(calls, [runner]), f"{runner!r} never ran:\n" + "\n".join(calls)
+
+    def test_here_every_type_check_and_linter_comes_before_the_first_test_runner(self, checkouts, tmp_path, fake_backend):
+        proc, calls = self._gates(checkouts, tmp_path, remote=False)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        self._every_check_ran_once(calls)
+        last_static = max(self._at(calls, self.JS_STATIC + self.BE_STATIC))
+        first_test = min(self._at(calls, self.JS_TESTS + self.BE_TESTS))
+        assert last_static < first_test, "\n".join(calls)
+        assert "side by side" not in proc.stdout
+
+    def test_in_the_remote_run_each_side_runs_its_static_checks_before_its_tests(self, checkouts, tmp_path, fake_backend):
+        proc, calls = self._gates(checkouts, tmp_path, remote=True)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        self._every_check_ran_once(calls)
+        assert max(self._at(calls, self.JS_STATIC)) < min(self._at(calls, self.JS_TESTS)), "\n".join(calls)
+        assert max(self._at(calls, self.BE_STATIC)) < min(self._at(calls, self.BE_TESTS)), "\n".join(calls)
+        # The checks are inside the sides (each side's output is printed under its own heading), not ahead of both.
+        head, rest = proc.stdout.split("  ── backend (exit 0) ──", 1)
+        backend, js = rest.split("  ── JS (exit 0) ──", 1)
+        assert "side by side" in head and "→ ruff" not in head and "→ core tsc" not in head, head
+        assert "→ ruff" in backend and "→ makemigrations --check" in backend and "→ pytest" in backend, backend
+        for line in ("→ core tsc", "→ core eslint", "→ tsc", "→ eslint", "→ mobile tsc", "→ officer eslint", "→ core vitest"):
+            assert line in js and line not in backend, (line, proc.stdout)
+
+    @pytest.mark.parametrize("failing, said", [
+        ("npm run --workspace packages/core typecheck", "@soulledger/core typecheck failed"),
+        ("npm run --workspace mobile-officer lint", "officer lint failed"),
+    ])
+    def test_a_red_js_check_there_ends_the_js_side_before_its_tests_and_fails_the_run(
+            self, checkouts, tmp_path, fake_backend, failing, said):
+        proc, calls = self._gates(checkouts, tmp_path, remote=True, fail_on=failing)
+        assert proc.returncode != 0, proc.stdout
+        assert not self._at(calls, self.JS_TESTS), "a JS test runner started after a red static check:\n" + "\n".join(calls)
+        assert self._at(calls, self.BE_TESTS), "the backend side did not run to its end"
+        assert said in proc.stdout and "backend exit 0, JS exit 1" in proc.stdout, proc.stdout
+
+    @pytest.mark.parametrize("failing, said", [
+        ("ruff check .", "ruff failed"),
+        ("python manage.py makemigrations", "makemigrations --check could not run"),
+    ])
+    def test_a_red_backend_check_there_ends_the_backend_side_before_pytest_and_fails_the_run(
+            self, checkouts, tmp_path, fake_backend, failing, said):
+        proc, calls = self._gates(checkouts, tmp_path, remote=True, fail_on=failing)
+        assert proc.returncode != 0, proc.stdout
+        assert not self._at(calls, self.BE_TESTS), "pytest started after a red static check:\n" + "\n".join(calls)
+        assert len(self._at(calls, self.JS_TESTS)) >= 4, "the JS side did not run to its end:\n" + "\n".join(calls)
+        assert said in proc.stdout and "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
+
+    def test_here_a_red_check_stops_the_run_before_any_test(self, checkouts, tmp_path, fake_backend):
+        proc, calls = self._gates(checkouts, tmp_path, remote=False, fail_on="ruff check .")
+        assert proc.returncode != 0 and "ruff failed" in proc.stdout, proc.stdout
+        assert len(self._at(calls, self.JS_STATIC)) == 8, "\n".join(calls)
+        assert not self._at(calls, self.JS_TESTS + self.BE_TESTS), "\n".join(calls)
 
 
 class TestJestReadersFollowWhatChanged:
@@ -1528,13 +1915,16 @@ class TestRemoteTimeLimits:
     e2e = TestEndToEndOnAnotherMachine()
 
     @staticmethod
-    def _locked_then_removed(remote: str, inner_end: str, lock: str, name: str):
-        # The fake ssh records "$*": its options and host come first.
-        assert " fake-host ( flock 9 || exit 1; docker run" in remote, remote
-        assert remote.rstrip().endswith(f") 9>/srv/appdata/sl-gates/{lock}"), remote
+    def _locked_then_removed(remote: str, inner_end: str, lock: str, name: str, first_fd: int = 9):
+        # The fake ssh records "$*": its options and host come first. The lock is tried first without waiting
+        # (so a wait can be announced), then waited for; either way nothing runs without it.
+        # (The gates' run also prunes unused trees between taking the lock and starting: TestUnusedRemoteTreesAreDeleted.)
+        assert re.search(rf" fake-host \( flock -n {first_fd} \|\| \{{ echo .*; flock 9; \}} \|\| exit 1; "
+                         r"(remote_prune \(\).*\n\}; remote_prune \S+ \S+ \d+ [01]; )?docker run", remote, re.S), remote
+        assert remote.rstrip().endswith(f" 9>/srv/appdata/sl-gates/{lock}"), remote
         # The container is removed INSIDE the locked subshell, after the run: the lock goes only with it.
         tail = remote.split(inner_end, 1)[1]
-        assert f"docker rm -f {name}" in tail and tail.index("docker rm -f") < tail.index(") 9>"), tail
+        assert f"docker rm -f {name}" in tail and tail.index("docker rm -f") < re.search(r"\) [89]>", tail).start(), tail
 
     def test_a_selective_gate_run_has_30_minutes(self, checkouts, tmp_path):
         main, _ = checkouts
@@ -1586,7 +1976,9 @@ class TestRemoteTimeLimits:
         proc = self._demo(main, tmp_path, "scripts/demo-e2e-inner.sh", status=124)
         remote = (tmp_path / "remote-run").read_text()
         assert "sl-gates-e2e:1 timeout -k 60 25m bash /app/scripts/demo-e2e-inner.sh" in remote, remote
-        self._locked_then_removed(remote, "demo-e2e-inner.sh;", "e2e.lock", "sl-demo-")
+        self._locked_then_removed(remote, "demo-e2e-inner.sh;", "e2e.lock", "sl-demo-", first_fd=8)
+        # demo-serve.lock first, then e2e.lock: what it shares with a demo server (.next, sl_demo_record).
+        assert remote.rstrip().endswith(") 8>/srv/appdata/sl-gates/demo-serve.lock 9>/srv/appdata/sl-gates/e2e.lock"), remote
         assert proc.returncode == 124 and "TIMED OUT" in proc.stdout and "DEMO_TIMEOUT" in proc.stdout, proc.stdout
 
     def test_the_demo_servers_stay_up_unless_told(self, checkouts, tmp_path):
@@ -1595,6 +1987,237 @@ class TestRemoteTimeLimits:
         assert "timeout" not in (tmp_path / "remote-run").read_text()
         self._demo(main, tmp_path, "scripts/demo-serve-inner.sh", DEMO_TIMEOUT="2h")
         assert "timeout -k 60 2h bash /app/scripts/demo-serve-inner.sh" in (tmp_path / "remote-run").read_text()
+
+    @pytest.mark.parametrize("server", ["scripts/demo-serve-inner.sh", "scripts/demo-app-backend-inner.sh"])
+    def test_a_demo_server_does_not_hold_the_browser_suites_lock(self, checkouts, tmp_path, server):
+        """2026-11-13: a server left up (no time limit) held e2e.lock, and every --e2e waited on it in silence.
+        It takes demo-serve.lock only, and is still removed inside the subshell that holds that lock."""
+        main, _ = checkouts
+        self._demo(main, tmp_path, server)
+        remote = (tmp_path / "remote-run").read_text()
+        assert "e2e.lock" not in remote, remote
+        assert " fake-host ( flock -n 8 || { echo " in remote and "; flock 8; } || exit 1; docker run" in remote, remote
+        assert remote.rstrip().endswith("docker rm -f sl-demo-%s >/dev/null 2>&1; exit $rc ) 8>/srv/appdata/sl-gates/demo-serve.lock"
+                                        % re.search(r"--name sl-demo-(\d+)", remote).group(1)), remote
+
+
+class TestRemoteLocksSayWhenTheyWait:
+    """2026-11-13 (test review 3.5): a remote `flock 9` waited without a word. Each lock is now tried without
+    waiting first; when it is taken the run prints who has it (the containers by name) and then waits."""
+
+    SCRIPTS = ("run-gates.sh", "demo-remote.sh", "mobile-remote.sh")
+
+    @staticmethod
+    def _definition(script: str) -> str:
+        m = re.search(r"^remote_flock\(\) \{\n.*?^\}\n", (GENERATOR.parent / script).read_text(encoding="utf-8"), re.M | re.S)
+        assert m, f"no remote_flock in {script}"
+        return m.group(0)
+
+    def test_the_three_scripts_carry_the_same_words(self):
+        assert len({self._definition(s) for s in self.SCRIPTS}) == 1
+
+    def _take(self, tmp_path, free: bool, waits: bool = True):
+        """Run the words the remote shell would get, with a flock that finds the lock free or taken."""
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "flock").write_text(
+            "#!/bin/bash\n"
+            f'echo "flock $*" >> "{tmp_path}/flock.log"\n'
+            f'[ "$1" = -n ] && exit {0 if free else 1}\n'
+            f"exit {0 if waits else 1}\n")
+        (b / "docker").write_text('#!/bin/bash\necho "docker $*" >> "%s/docker.log"\nprintf "sl-gates-A-1 (Up 3 hours)\\nsl-gates-B-2 (Up 1 minute)\\n"\n' % tmp_path)
+        for f in b.iterdir():
+            f.chmod(0o755)
+        script = (f"P=gates\n{self._definition('run-gates.sh')}"
+                  f'eval "( $(remote_flock 9 run.lock sl-gates-); echo RAN ) 9>{tmp_path}/lock"\n')
+        env = _clean_env()
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=60)
+
+    def test_a_free_lock_is_taken_without_a_word(self, tmp_path):
+        proc = self._take(tmp_path, free=True)
+        assert proc.returncode == 0 and proc.stdout == "RAN\n", proc.stdout + proc.stderr
+        assert (tmp_path / "flock.log").read_text() == "flock -n 9\n"
+
+    def test_a_taken_lock_names_its_holder_and_is_then_waited_for(self, tmp_path):
+        proc = self._take(tmp_path, free=False)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert proc.stdout == ("gates: waiting for run.lock on that machine, held by: "
+                               "sl-gates-A-1 (Up 3 hours),sl-gates-B-2 (Up 1 minute)\nRAN\n"), proc.stdout
+        assert (tmp_path / "flock.log").read_text() == "flock -n 9\nflock 9\n"
+        assert "--filter name=sl-gates-" in (tmp_path / "docker.log").read_text()
+
+    def test_without_the_lock_nothing_runs(self, tmp_path):
+        proc = self._take(tmp_path, free=False, waits=False)
+        assert proc.returncode == 1 and "RAN" not in proc.stdout, proc.stdout
+
+
+class TestUnusedRemoteTreesAreDeleted:
+    """2026-11-13 (test review 3.5): every checkout left up to four synced trees on the remote machine, each
+    with its own node_modules, and nothing removed them. A delegated gate run deletes those no run has used
+    for GATES_REMOTE_PRUNE_DAYS (14) days. remote_prune runs in the remote host's shell; here its text is run
+    against a directory of this machine, with a `docker` that reports what is mounted."""
+
+    DAY = 86400
+
+    @staticmethod
+    def _function() -> str:
+        m = re.search(r"^remote_prune\(\) \{.*?^\}\n", RUNNER.read_text(encoding="utf-8"), re.M | re.S)
+        assert m, "no remote_prune in run-gates.sh"
+        return m.group(0)
+
+    def _tree(self, rdir: Path, rel: str, used_days_ago: float | None) -> Path:
+        t = rdir / rel
+        (t / "node_modules").mkdir(parents=True)
+        (t / "node_modules" / "x.js").write_text("x")
+        if used_days_ago is not None:
+            mark = t / ".sl-last-use"
+            mark.write_text("")
+            when = time.time() - used_days_ago * self.DAY
+            os.utime(mark, (when, when))
+        return t
+
+    def _prune(self, tmp_path, rdir, keep, days="14", dry="0", mounted=(), docker_ok=True):
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        (b / "docker").write_text(
+            "#!/bin/bash\n"
+            + ("" if docker_ok else "exit 1\n")
+            + 'case "$1" in ps) echo c1 ;; inspect) printf "%s\\n" /somewhere/else '
+            + " ".join(f"'{m}'" for m in mounted) + " ;; esac\n")
+        (b / "docker").chmod(0o755)
+        env = _clean_env()
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", "-c", f'{self._function()}remote_prune "$@"', "prune", str(rdir), str(keep), days, dry],
+                              env=env, capture_output=True, text=True, timeout=60)
+
+    def test_only_a_tree_no_run_has_used_for_the_period_is_deleted(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        old_e2e = self._tree(rdir, "work/Old-1-e2e", 30)
+        old_android = self._tree(rdir, "android/work/Old-1", 20)
+        recent = self._tree(rdir, "work/Recent-2", 13)
+        mine = self._tree(rdir, "work/Mine-3", 40)          # this run's own tree, however old its mark
+        mounted = self._tree(rdir, "android/work/Metro-4", 60)  # a Metro left up for two months
+        unmarked = self._tree(rdir, "work/Unmarked-5", None)    # from before the rule
+        (rdir / "tmp" / "Old-1").mkdir(parents=True)            # not a synced tree: never looked at
+        (rdir / "work" / "a-file").write_text("")
+        proc = self._prune(tmp_path, rdir, mine, mounted=[mounted])
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert not old.exists() and not old_e2e.exists() and not old_android.exists(), proc.stdout
+        for kept in (recent, mine, mounted, unmarked):
+            assert (kept / "node_modules" / "x.js").is_file(), f"{kept} was deleted\n{proc.stdout}"
+        assert (rdir / "tmp" / "Old-1").is_dir() and (rdir / "work" / "a-file").is_file()
+        # It says what it did, tree by tree.
+        for gone in (old, old_e2e, old_android):
+            assert f"(prune: deleted {gone} — no run for 14 days)" in proc.stdout, proc.stdout
+        assert f"(prune: kept {mounted} — a container mounts it)" in proc.stdout, proc.stdout
+        assert f"(prune: {unmarked} had no last-use mark — marked now" in proc.stdout, proc.stdout
+        assert "(prune: 1 other synced trees used within 14 days kept" in proc.stdout, proc.stdout
+        # The unmarked tree's period starts now.
+        assert time.time() - (unmarked / ".sl-last-use").stat().st_mtime < 60
+
+    def test_a_dry_run_deletes_nothing_and_says_what_it_would(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = self._prune(tmp_path, rdir, rdir / "work" / "Mine", dry="1")
+        assert old.is_dir() and f"(prune: would delete {old} " in proc.stdout and "deleted /" not in proc.stdout, proc.stdout
+
+    def test_zero_days_turns_it_off_and_another_period_is_honoured(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = self._prune(tmp_path, rdir, rdir / "work" / "Mine", days="0")
+        assert old.is_dir() and proc.stdout == "", proc.stdout
+        assert self._prune(tmp_path, rdir, rdir / "work" / "Mine", days="30").returncode == 0 and old.is_dir()
+        self._prune(tmp_path, rdir, rdir / "work" / "Mine", days="10")
+        assert not old.exists()
+
+    def test_when_docker_cannot_say_what_is_mounted_nothing_is_deleted(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = self._prune(tmp_path, rdir, rdir / "work" / "Mine", docker_ok=False)
+        assert old.is_dir() and "nothing deleted" in proc.stdout, proc.stdout
+
+    def test_a_symlink_is_not_followed_and_a_relative_root_is_refused(self, tmp_path):
+        rdir = tmp_path / "sl-gates"
+        target = self._tree(tmp_path, "elsewhere", 100)
+        (rdir / "work").mkdir(parents=True)
+        (rdir / "work" / "Link-1").symlink_to(target)
+        self._prune(tmp_path, rdir, rdir / "work" / "Mine")
+        assert (target / "node_modules" / "x.js").is_file() and (rdir / "work" / "Link-1").is_symlink()
+        old = self._tree(rdir, "work/Old-1", 15)
+        proc = subprocess.run(["bash", "-c", f'{self._function()}cd "$1" && remote_prune . "$1/work/Mine" 14 0', "prune", str(rdir)],
+                              env=_clean_env(), capture_output=True, text=True, timeout=60)
+        assert old.is_dir() and "not an absolute path" in proc.stdout, proc.stdout
+
+    # ── the wiring: who marks a tree as used, and where the pruning runs ──
+
+    @staticmethod
+    def _remote_bin(tmp_path: Path) -> Path:
+        """ssh that records every command it is given, one per `<<<` block; rsync that does nothing."""
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        (b / "ssh").write_text(
+            f'#!/bin/bash\nprintf "<<<%s\\n" "$*" >> "{tmp_path}/ssh-calls"\n'
+            'case "$*" in *"cat > "*) cat >/dev/null ;; esac\nexit 0\n')
+        (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
+        (b / "adb").write_text("#!/bin/bash\nexit 0\n")
+        for f in b.iterdir():
+            f.chmod(0o755)
+        return b
+
+    def _gates(self, main: Path, tmp_path: Path, *args: str, **extra):
+        env = _clean_env(GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@sl-pg-test:5432/s",
+                         GATES_STAMP_FILE=str(tmp_path / "passed"), PREPUSH_CHANGED="backend/apps/souls/views.py", **extra)
+        env["PATH"] = f"{self._remote_bin(tmp_path)}:{env['PATH']}"
+        calls = tmp_path / "ssh-calls"
+        calls.unlink(missing_ok=True)
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), *args], cwd=main, env=env,
+                              capture_output=True, text=True, timeout=120)
+        return proc, (calls.read_text().split("<<<")[1:] if calls.exists() else [])
+
+    def test_a_gate_run_marks_its_tree_then_prunes_under_the_lock_before_it_starts(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc, calls = self._gates(main, tmp_path, "--prepush")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        tree = re.search(r"-v (/srv/appdata/sl-gates/work/\S+):/app", calls[-1]).group(1)
+        # Marked in the first call, before the rsync: a tree being synced into is never an old one.
+        assert f"mkdir -p {tree} && touch {tree}/.sl-last-use" in calls[0], calls[0]
+        run = calls[-1]
+        assert self._function().split("{", 1)[0].strip() == "remote_prune()" and "remote_prune () " in run, run
+        call = f"; remote_prune /srv/appdata/sl-gates {tree} 14 0; docker run"
+        assert call in run and run.index("flock 9; } || exit 1;") < run.index(call) < run.index(") 9>/srv/appdata/sl-gates/run.lock"), run
+        # What reached the remote shell is the function this file tests, and it parses.
+        sent = run[run.index("remote_prune () "):run.index(call)]
+        assert "docker ps -aq" in sent and ".sl-last-use" in sent and "rm -rf -- " in sent, sent
+        assert subprocess.run(["bash", "-n", "-c", sent], capture_output=True, text=True).returncode == 0
+
+    def test_the_period_and_the_dry_run_are_handed_over_and_a_bad_period_is_refused(self, checkouts, tmp_path):
+        main, _ = checkouts
+        _, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="0", GATES_REMOTE_PRUNE_DRY="1")
+        assert re.search(r"; remote_prune \S+ \S+ 0 1; docker run", calls[-1]), calls[-1]
+        proc, calls = self._gates(main, tmp_path, "--prepush", GATES_REMOTE_PRUNE_DAYS="1; rm -rf /")
+        assert proc.returncode == 2 and "is not a number of days" in proc.stdout and not calls, proc.stdout
+
+    def test_e2e_the_demo_and_the_android_tree_are_marked_before_they_are_synced(self, checkouts, tmp_path):
+        main, _ = checkouts
+        _, calls = self._gates(main, tmp_path, "--e2e")
+        assert re.search(r"mkdir -p (/srv/appdata/sl-gates/work/\S+-e2e) && touch \1/\.sl-last-use", calls[0]), calls[0]
+        for name in ("demo-remote.sh", "mobile-remote.sh"):
+            (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
+        (main / ".prepush.env").write_text("GATES_REMOTE=fake-host\nGATES_REMOTE_DB_URL=postgres://sl:x@sl-pg-test:5432/s\n")
+        env = _clean_env()
+        env["PATH"] = f"{self._remote_bin(tmp_path)}:{env['PATH']}"
+        (tmp_path / "ssh-calls").unlink()
+        subprocess.run(["bash", str(main / "scripts" / "demo-remote.sh"), "scripts/demo-serve-inner.sh"], cwd=main, env=env,
+                       capture_output=True, text=True, timeout=120)
+        calls = (tmp_path / "ssh-calls").read_text().split("<<<")[1:]
+        assert re.search(r"mkdir -p (/srv/appdata/sl-gates/work/demo-\w+) \S+ && touch \1/\.sl-last-use", calls[0]), calls[0]
+        (tmp_path / "ssh-calls").unlink()
+        subprocess.run(["bash", str(main / "scripts" / "mobile-remote.sh"), "mobile", "metro", "sync"], cwd=main, env=env,
+                       capture_output=True, text=True, timeout=120)
+        calls = (tmp_path / "ssh-calls").read_text()
+        assert re.search(r"mkdir -p (/srv/appdata/sl-gates/android/work/\S+) .* && touch \1/\.sl-last-use", calls), calls
 
 
 class TestBrowserSuitesRecordAPass:
@@ -1672,6 +2295,15 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
     @pytest.mark.parametrize("changed", [
         ["backend/apps/souls/views.py"], ["docs/ARCHITECTURE.md"], ["README.md"], ["mobile/src/navigation.tsx"],
         [".github/workflows/ci.yml", "backend/tests/test_x.py"], ["scripts/demo-record.sh"],
+        # 2026-11-13: under frontend/ or packages/core/, and still nothing a browser loads
+        ["frontend/src/__tests__/SoulPage.test.tsx", "frontend/src/__tests__/support/mocks.ts"],
+        ["frontend/app/souls/page.test.tsx"], ["packages/core/src/api/__tests__/client.test.ts"],
+        ["packages/core/src/validation.test.ts"], ["frontend/README.md", "packages/core/README.md"],
+        ["frontend/jest.config.js", "frontend/jest.setup.js", "frontend/jest.always-run.txt"],
+        ["frontend/eslint.config.mjs", "frontend/eslint.design-guard-baseline.json"],
+        ["packages/core/vitest.config.ts", "packages/core/eslint.config.mjs"],
+        # the demo's own specs and recordings: playwright.config.ts ignores **/demo/**, the demo E2E has them
+        ["frontend/e2e/demo/pages.spec.ts"], ["frontend/demo/data/judge.zh.json"],
     ])
     def test_a_change_the_browsers_cannot_see_runs_nothing(self, checkouts, tmp_path, changed):
         main, _ = checkouts
@@ -1681,8 +2313,12 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
 
     @pytest.mark.parametrize("changed", [
         ["frontend/app/page.tsx"], ["frontend/e2e/home.spec.ts"], ["frontend/playwright.config.ts"],
-        ["frontend/demo/data/judge.zh.json"], ["packages/core/src/index.ts"], ["package-lock.json"], [".nvmrc"],
+        ["packages/core/src/index.ts"], ["package-lock.json"], [".nvmrc"],
         ["scripts/e2e-report.py"], ["scripts/run-gates.sh"],
+        # 2026-11-13: the exclusions are those files, not their neighbours
+        ["frontend/src/__tests__/SoulPage.test.tsx", "frontend/e2e/fixtures.ts"], ["frontend/next.config.js"],
+        ["frontend/tsconfig.json"], ["frontend/demo/tour.ts"], ["frontend/src/testing.ts"],
+        ["packages/core/messages/en.json"], ["packages/core/package.json"],
         ["tsconfig.base.json"],  # a root-level file nobody listed: fail closed
         ["backend/apps/souls/views.py", "frontend/app/globals.css"],  # one is enough
     ])
@@ -1721,6 +2357,24 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
         proc = self._demo_auto(main, tmp_path, "frontend/demo/data/judge.zh.json")
         assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
         assert "bash /app/scripts/demo-e2e-inner.sh" in (tmp_path / "remote-run").read_text()
+
+    def test_the_demo_carries_the_same_list_of_files_no_browser_loads(self):
+        """demo-remote.sh cannot source run-gates.sh, so it copies the pattern; the copy must not drift."""
+        m = re.search(r"^E2E_BLIND_COMMON_RE='(.+)'$", RUNNER.read_text(encoding="utf-8"), re.M)
+        assert m, "run-gates.sh no longer defines E2E_BLIND_COMMON_RE on one line"
+        assert f"grep -vE '{m.group(1)}'" in (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8")
+
+    def test_the_demo_skips_a_unit_test(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/src/__tests__/SoulPage.test.tsx")
+        assert proc.returncode == 0 and "not running the demo E2E" in proc.stdout, proc.stdout
+        assert not (tmp_path / "remote-run").exists()
+
+    def test_the_demo_runs_for_its_own_specs(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/e2e/demo/pages.spec.ts")
+        assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
+        assert (tmp_path / "remote-run").exists()
 
     def test_auto_is_only_for_the_demo_e2e(self, checkouts, tmp_path):
         main, _ = checkouts
@@ -1813,7 +2467,9 @@ class TestTwoSidesAtOnce:
     def _repo(self, checkouts, tmp_path):
         main, _ = checkouts
         (main / "mobile" / "src").mkdir(parents=True)
-        (main / "mobile" / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('x');\n")
+        (main / "mobile" / "src" / "r.test.ts").write_text(
+            # reads what this push changes: a reader that stays inside its app no longer runs (2026-11-13)
+            "import fs from 'fs'; fs.readFileSync('../../backend/x.py');\n")
         _git(main, "add", "-A")
         _git(main, "commit", "-q", "-m", "mobile reader")
         b = tmp_path / "bin"
@@ -1926,7 +2582,7 @@ class TestMobileRemoteMetroFollowsTheDependencies:
         (repo / "mobile" / "package.json").write_text(
             json.dumps({"name": "m", "version": version, "scripts": {"t": script}, "dependencies": {"a": dep}}))
 
-    def _run(self, repo, tmp_path, *args):
+    def _run(self, repo, tmp_path, *args, build_status=0, **extra):
         b = tmp_path / "bin"
         b.mkdir(exist_ok=True)
         log = tmp_path / "ssh.log"
@@ -1934,6 +2590,7 @@ class TestMobileRemoteMetroFollowsTheDependencies:
 for a; do cmd="$a"; done
 printf '%s\\n' "$cmd" >> {log}
 case "$cmd" in *"docker inspect"*) [ -f {tmp_path}/metro-env ] && cat {tmp_path}/metro-env || exit 1 ;; esac
+case "$cmd" in *"docker run --rm"*) exit {build_status} ;; esac
 exit 0
 ''')
         (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
@@ -1942,7 +2599,7 @@ exit 0
             f.chmod(0o755)
         if log.exists():
             log.unlink()
-        env = _clean_env(MOBILE_REMOTE="box", MOBILE_REMOTE_IP="gates-host.lan")
+        env = _clean_env(MOBILE_REMOTE="box", MOBILE_REMOTE_IP="gates-host.lan", **extra)
         env["PATH"] = f"{b}:{env['PATH']}"
         proc = subprocess.run(["bash", str(repo / "scripts" / "mobile-remote.sh"), "mobile", *args], cwd=repo,
                               env=env, capture_output=True, text=True, timeout=60)
@@ -1991,6 +2648,32 @@ exit 0
         assert stop < start, calls
         assert "soulledger://expo-development-client/?url=http%3A%2F%2Fgates-host.lan%3A8081" in calls[start], calls
         assert not any("monkey" in c for c in calls), calls
+
+    def _build(self, tmp_path, **kw):
+        proc, log = self._run(self._repo(tmp_path), tmp_path, "build", **kw)
+        return proc, [line for line in log.split("\n( ") if "docker run --rm" in line]
+
+    def test_the_build_is_locked_and_limited_like_the_gates(self, tmp_path):
+        """2026-11-13: it was `flock <lock> docker run` — a dropped ssh released the lock under a build still
+        running — and had no time limit. Now the subshell holds the lock until the container is removed, and
+        `timeout` is the container's own command (30 minutes; MOBILE_REMOTE_TIMEOUT overrides)."""
+        proc, (build,) = self._build(tmp_path, build_status=124)
+        assert build.startswith("flock -n 9 || { echo ") and "; flock 9; } || exit 1; docker run --rm --init --name sl-android-mobile-" in build, build
+        assert "sl-mobile-android:1 timeout -k 60 30m bash -c '" in build, build
+        name = re.search(r"--name (sl-android-mobile-\S+)", build).group(1)
+        assert build.rstrip().endswith(f"; rc=$?; docker rm -f {name} >/dev/null 2>&1; exit $rc ) 9>/srv/appdata/sl-gates/android/build.lock"), build[-300:]
+        assert proc.returncode == 1 and "TIMED OUT" in proc.stdout and "MOBILE_REMOTE_TIMEOUT" in proc.stdout, proc.stdout
+
+    def test_the_build_limit_can_be_overridden_but_not_with_anything(self, tmp_path):
+        _, (build,) = self._build(tmp_path, build_status=124, MOBILE_REMOTE_TIMEOUT="45m")
+        assert "timeout -k 60 45m bash -c" in build
+        proc, builds = self._build(tmp_path / "second", MOBILE_REMOTE_TIMEOUT="5; reboot")
+        assert proc.returncode == 2 and "is not a time limit" in proc.stdout and not builds, proc.stdout
+
+    def test_an_unchanged_native_side_is_still_no_build(self, tmp_path):
+        """The container's `exit 3` must come back through `timeout` and the locked subshell."""
+        proc, _ = self._build(tmp_path, build_status=3)
+        assert proc.returncode == 0 and "no build needed" in proc.stdout, proc.stdout
 
     def test_a_current_metro_and_no_metro_are_left_alone(self, tmp_path):
         repo = self._repo(tmp_path)

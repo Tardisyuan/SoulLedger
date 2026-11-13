@@ -177,6 +177,18 @@ remote_sync() {
 #     with the old container still holding 12 cores. Now the subshell goes on to `docker rm -f`, so the lock
 #     is released only once the container is gone. (No SIGHUP reaches it: ssh without a tty sends none.)
 # The time spent waiting for the lock does not count: `timeout` starts inside the container.
+#
+# remote_flock <fd> <lock name> <container name prefix>… — the remote shell's words for "take this lock; when
+# it is taken, say who has it, then wait" (2026-11-13, test review 3.5). The wait used to be silent — a plain
+# `flock 9` — while this machine's gate-lock.sh reports every minute; a demo server left up held e2e.lock for
+# hours and `--e2e` simply sat there. Who has it is read from the containers' names (sl-gates-, sl-e2e-,
+# sl-demo-, sl-android-). scripts/demo-remote.sh and scripts/mobile-remote.sh carry copies, kept identical
+# by TestRemoteLocksSayWhenTheyWait.
+remote_flock() {
+    local fd="$1" lock="$2" filters="" n; shift 2
+    for n in "$@"; do filters="$filters --filter name=$n"; done
+    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
+}
 remote_limit() {  # <value> <variable name>: refuse anything `timeout` would not read as a duration
     [[ "$1" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "$P: $2=$1 is not a time limit (e.g. 30m, 1800)"; exit 2; }
 }
@@ -189,6 +201,58 @@ remote_verdict() {
                   "$3), or the container's memory limit. The container is removed and the lock released." ;;
     esac
 }
+
+# ── SYNCED TREES NOBODY USES ARE DELETED THERE (2026-11-13, test review 3.5) ─────────────────────
+# Each checkout leaves up to four trees on the remote machine — work/<id> (the gates), work/<id>-e2e,
+# work/demo-<hash> and android/work/<id> — each with its own node_modules (and venv), and nothing ever
+# removed them: a worktree that pushed once left its trees there for good. A delegated gate run now deletes
+# the trees under $RDIR/work and $RDIR/android/work that no run has used for GATES_REMOTE_PRUNE_DAYS days
+# (default 14; 0 turns it off; GATES_REMOTE_PRUNE_DRY=1 only says what it would delete).
+#   - "Used" is the tree's .sl-last-use, touched by every run that uses the tree (here, --e2e,
+#     scripts/demo-remote.sh, scripts/mobile-remote.sh) BEFORE it syncs. Not the directory's own mtime: rsync
+#     sets that from this machine's. A tree with no mark yet (older than this rule) is marked now, not
+#     deleted, so it goes after the full period.
+#   - Never this run's own tree, and never a tree some container mounts, running or stopped (a Metro left up
+#     for weeks takes no lock and syncs nothing). If docker cannot be asked, nothing is deleted.
+#   - It runs on that machine inside the subshell that holds run.lock, before the container starts, so only
+#     one prune runs at a time. It cannot fail the run.
+# remote_prune's text is sent as it stands (declare -f): it runs in the REMOTE host's shell, so it uses only
+# its arguments. ponytail: between reading a mark and `rm -rf`, another checkout's first run in two weeks
+# could touch that mark and start syncing — a window of milliseconds once per idle tree; that run would go
+# red on a half-deleted tree and pass on retry. A per-tree lock taken by every sync would close it.
+remote_prune() {  # <RDIR> <this run's tree> <days> <dry: 1 = only report>
+    local rdir="$1" keep="$2" days="$3" dry="$4" ids used="" t real mark kept=0
+    [ "$days" -gt 0 ] 2>/dev/null || return 0
+    case "$rdir" in /?*) ;; *) echo "    (prune: $rdir is not an absolute path — nothing deleted)"; return 0 ;; esac
+    ids=$(docker ps -aq) || { echo "    (prune: docker ps failed, so what is mounted is unknown — nothing deleted)"; return 0; }
+    if [ -n "$ids" ]; then
+        # shellcheck disable=SC2086
+        used=$(docker inspect -f '{{range .Mounts}}{{println .Source}}{{end}}' $ids) \
+            || { echo "    (prune: docker inspect failed, so what is mounted is unknown — nothing deleted)"; return 0; }
+    fi
+    for t in "$rdir"/work/* "$rdir"/android/work/*; do
+        [ -d "$t" ] && [ ! -L "$t" ] || continue
+        [ "$t" = "$keep" ] && continue
+        real=$(cd "$t" && pwd -P) || continue
+        if printf '%s\n' "$used" | grep -qxF -e "$t" -e "$real"; then
+            echo "    (prune: kept $t — a container mounts it)"; continue
+        fi
+        mark="$t/.sl-last-use"
+        if [ ! -e "$mark" ]; then
+            touch "$mark"; echo "    (prune: $t had no last-use mark — marked now; deleted after $days days without a run)"; continue
+        fi
+        if [ -z "$(find "$mark" -mmin +$((days * 1440)))" ]; then kept=$((kept + 1)); continue; fi
+        if [ "$dry" = 1 ]; then
+            echo "    (prune: would delete $t — no run for $days days; GATES_REMOTE_PRUNE_DRY=1, nothing deleted)"
+        else
+            rm -rf -- "$t" && echo "    (prune: deleted $t — no run for $days days)"
+        fi
+    done
+    echo "    (prune: $kept other synced trees used within $days days kept — GATES_REMOTE_PRUNE_DAYS)"
+}
+PRUNE_DAYS="${GATES_REMOTE_PRUNE_DAYS:-14}"
+[[ "$PRUNE_DAYS" =~ ^[0-9]+$ ]] || { echo "$P: GATES_REMOTE_PRUNE_DAYS=$PRUNE_DAYS is not a number of days (0 turns the pruning off)"; exit 2; }
+PRUNE_DRY=0; [ "${GATES_REMOTE_PRUNE_DRY:-}" = 1 ] && PRUNE_DRY=1
 
 # Installed in the synced tree by whichever container runs first, and only when its inputs change — two
 # hashes, decided apart (2026-10-30): a version bump in one package.json used to reinstall node_modules AND
@@ -291,12 +355,24 @@ INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gi
 # root-level file not on INERT_ROOT_RE. Nothing of that changed → print why and exit 0. Something did →
 # chromium + mobile-chrome, the set CLAUDE.md asks for before main. An explicit list always runs.
 E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(run-gates\.sh|e2e-report\.py)$)'
+# ... EXCEPT WHAT NO BROWSER LOADS (2026-11-13, test review #10a): of the last 300 commits, 181 matched the
+# rule above and 39 of those changed only files below. Unit tests and their support files
+# (frontend/src/__tests__/, *.test.ts(x), packages/core's __tests__), the jest / vitest / eslint
+# configuration (jest.config.js, jest.setup.js, jest.always-run.txt, eslint.config.mjs and its baseline,
+# vitest.config.ts), documentation, and — for these suites, not the demo's — the demo specs (playwright.config.ts
+# has `testIgnore: "**/demo/**"`) and the demo recordings (loaded only in a demo build; the demo E2E tests
+# them). `next build` does type-check the test files (frontend/tsconfig.json includes **/*.ts(x) and
+# next.config.js does not switch the check off), so a type error in one would fail the E2E build — and
+# fails `tsc --noEmit` first, which the ordinary gates run on every frontend change. This script itself
+# stays a trigger. demo-remote.sh --auto carries a copy of the common part.
+E2E_BLIND_COMMON_RE='(\.md$|^frontend/src/__tests__/|^frontend/.*\.test\.tsx?$|^packages/core/(.*/)?__tests__/|^packages/core/.*\.test\.tsx?$|^frontend/(jest|eslint)\.[^/]+$|^packages/core/(vitest|eslint)\.[^/]+$)'
+E2E_BLIND_RE="$E2E_BLIND_COMMON_RE|^frontend/e2e/demo/|^frontend/demo/data/"
 if [ "$E2E" = auto ]; then
     changed_since_base
-    HIT="$(echo "$CHANGED" | grep -E "$E2E_AUTO_RE" | head -1)"
+    HIT="$(echo "$CHANGED" | grep -vE "$E2E_BLIND_RE" | grep -E "$E2E_AUTO_RE" | head -1)"
     [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE "$INERT_ROOT_RE" | grep -v '^$' | head -1)"
     if [ -z "$HIT" ]; then
-        echo "$P: --e2e=auto: nothing in $RANGE reaches the browser suites (no frontend/, packages/core/, JS dependency, E2E runner or unknown root-level file changed) — not running E2E"
+        echo "$P: --e2e=auto: nothing in $RANGE reaches the browser suites (no frontend/ or packages/core/ file a browser loads, JS dependency, E2E runner or unknown root-level file changed) — not running E2E"
         exit 0
     fi
     echo "$P: --e2e=auto: $HIT changed — chromium + mobile-chrome"
@@ -320,12 +396,13 @@ if [ -n "$E2E" ]; then
         fi
     fi
     EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
-    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1" 2>/dev/null \
-        || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
     # Its own synced tree and its own lock (2026-10-29): E2E builds .next and runs browsers in a tree of its
     # own, so it no longer waits for — or rsyncs under — a gate run on the same box. 8 CPUs here + 12 for a
     # gate run = the box's 20; the two used to queue on run.lock one after the other.
     RWORK="$RDIR/work/$RID-e2e"
+    # The tree is marked as in use before the sync (SYNCED TREES NOBODY USES, above).
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1 && { mkdir -p $RWORK && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
+        || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
     echo "$P: E2E on $GATES_REMOTE ($RWORK): ${E2E//,/ }"
     remote_sync || { echo "$P: could not rsync this tree to $GATES_REMOTE:$RWORK"; exit 1; }
     ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RDIR/tmp/$RID" || exit 1
@@ -336,7 +413,7 @@ if [ -n "$E2E" ]; then
     # /tmp in memory, as in scripts/demo-remote.sh: Chromium's profile and cache on the shared btrfs image stalled
     # frames for 5–19 s under load (2026-11-08 trace evidence there).
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, above.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $ENAME \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 e2e.lock sl-e2e- sl-demo-); docker run --rm --init --name $ENAME \
         --tmpfs /tmp:rw,exec,size=8g --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
         -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
         -e PROJECTS='$E2E' $EIMG timeout -k 60 $ELIMIT bash -c '$REMOTE_DEPS
@@ -610,11 +687,42 @@ if [ "$RUN_JEST_READERS" = 1 ]; then
     # Empty means "nothing reads what changed", and must never reach jest as an empty path list.
     [ -z "$JEST_READERS" ] && RUN_JEST_READERS=0
 fi
+# A test that reads files: one pattern, used here and by app_jest (it was written out twice).
+READS_FILES_RE="readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]"
+# reader_follows_change <test file> — does an app's file-reading test read something this push changed?
+# (2026-11-13, test review #10b.) Until then all 14 mobile readers ran on every push that did not run
+# mobile — a backend or docs push rendered whole screens (visual.test.tsx: 48 tests, one font read) —
+# while the web and backend readers were already filtered by what changed. The rule is
+# jestAlwaysRunList.test.ts's `derivedLabel`, applied to the one file (these lists are grepped per file,
+# not through imports) and failing open:
+#   - it starts a subprocess or names git                     → yes (it can read anything);
+#   - it names top-level entries (`"backend"`, `/frontend/`)  → yes when one of them changed;
+#   - it names none but climbs to the repository root         → yes;
+#   - it names none and stays inside its own app              → no: its app did not change.
+# OFFICER: mobile-officer has 3 file-reading tests and no branch here. They read mobile-officer/, mobile/
+# and packages/core, and a change to any of those sets RUN_OFFICER=1 (app_jest runs them), so with
+# RUN_OFFICER=0 nothing they read changed. If one starts reading frontend/ or backend/, give the officer
+# app the same readers branch as mobile.
+TOP_ENTRIES=$(git -C "$ROOT" ls-tree --name-only HEAD 2>/dev/null)
+reader_follows_change() {
+    local f="$ROOT/$1" t q named=0
+    grep -qE 'execSync|execFileSync|spawnSync|child_process|(^|[^[:alnum:]_])git ' "$f" && return 0
+    while IFS= read -r t; do
+        [ -n "$t" ] || continue
+        q=$(printf '%s' "$t" | sed 's/[][\\.*^$+?(){}|]/\\&/g')
+        if grep -qE "['\"\`/]$q['\"\`/]" "$f"; then
+            named=1
+            echo "$TOPS" | grep -qxF -- "$t" && return 0
+        fi
+    done <<<"$TOP_ENTRIES"
+    [ "$named" = 1 ] && return 1
+    grep -qE 'REPO|repoRoot|ROOT([^[:alnum:]_]|$)|"\.\.", "\.\.", "\.\."|\.\./\.\./\.\.' "$f"
+}
 MOBILE_READERS=""
 if [ "$RUN_MOBILE" = 0 ]; then
     MOBILE_READERS=$(git ls-files 'mobile/*.test.ts' 'mobile/*.test.tsx' \
         | while IFS= read -r f; do
-            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$f" 2>/dev/null
+            grep -qE "$READS_FILES_RE" "$f" 2>/dev/null && reader_follows_change "$f" && echo "$f"
         done)
 fi
 
@@ -671,6 +779,27 @@ FULL_RUN=0
 TOUCHES_META=$((TOUCHES_META + FULL_RUN))
 RUN_META=0
 [ "$TOUCHES_META" -gt 0 ] && RUN_META=1
+# ... AND THE COLLECTION-SCOPE TEST ALSO RUNS WHEN A TEST FILE CHANGED (2026-11-13, test review).
+# test_collection_scope.py asserts that every test file on disk is collected. A new test file is the change
+# most likely to break that — a name or a place pytest does not collect, a file that declares no test — and
+# no rule above matched it, so the test first saw the file on someone's next full run. The rule is ANY changed
+# backend test file (test_*.py or tests.py under backend/apps or backend/tests — the walk the test itself
+# does), not "added or removed": the change list carries names only (`git diff --name-only`), and the remote
+# container gets that list with no base to diff against, so whether a file is new is not known here. It
+# also covers a file that lost its last test. Cost: one `pytest --collect-only` in a subprocess — the whole
+# file took 14 s on this Mac (2026-11-13, load 3.8) — on about 89% of backend pushes instead of 9% (of the
+# last 400 commits, 168 touched backend/: 15 matched META_PATH_RE, 135 more change a test file, 30 of those
+# add or delete one — per commit; a push of several commits matches more often still). Only this test: the nested-pytest one keeps to META_PATH_RE.
+SCOPE_TEST='backend/tests/test_collection_scope.py'
+SCOPE_PATH_RE='^backend/(apps|tests)/(.*/)?(test_[^/]*|tests)\.py$'
+RUN_SCOPE=$RUN_META
+[ "$(echo "$CHANGED" | grep -cE "$SCOPE_PATH_RE" || true)" -gt 0 ] && RUN_SCOPE=1
+# META_SKIP: which of the two this run leaves out (as META_TESTS: one path per line, from the repo root).
+META_SKIP=""
+if [ "$RUN_META" = 0 ]; then
+    META_SKIP="$META_TESTS"
+    [ "$RUN_SCOPE" = 1 ] && META_SKIP=$(echo "$META_TESTS" | grep -vxF "$SCOPE_TEST")
+fi
 
 # ── --real-pg: THE BACKEND SUITE ON REAL POSTGRESQL (2026-10-28, user decision) ─
 #
@@ -709,7 +838,8 @@ fi
 FULL_RULES='^scripts/(run-gates\.sh|install-hooks\.sh)$	the gate machinery itself changed
 ^(package\.json|package-lock\.json|\.nvmrc)$	the JS dependency tree changed
 ^(frontend|packages/core)/[^/]+$	top-level config of frontend/ or packages/core/ changed (jest, ts, next, eslint, package.json)
-^(frontend|packages/core)/.*\.(json|md|ya?ml)$	a data file under frontend/ or packages/core/ changed'
+^(frontend|packages/core)/.*\.(json|md|ya?ml)$	a data file under frontend/ or packages/core/ changed
+^frontend/lib/platform/web\.[^/]+$	a module frontend/jest.setup.js runs before every test changed'
 FULL_F=""
 full() { FULL_F="$FULL_F$1"$'\n'; }
 [ "$MODE" = full ] && full "--full"
@@ -728,7 +858,19 @@ unset PREPUSH_TO_MAIN
 #     E2E is what tests the recordings.
 # A test that reads one of them with fs is always-run by construction (jestAlwaysRunList.test.ts), and
 # every frontend change runs the whole always-run list.
-JEST_TRACED_DATA_RE='^(packages/core/messages/|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/[^/]+\.json$)'
+#
+# AND THE GENERATED SCHEMA (2026-11-13, test review #6b). packages/core/openapi/schema.yml alone sent 153
+# commits since 10-13 to a full jest — 55% of the full runs that had a single cause — and no jest test
+# imports it. What reads it runs without a full jest:
+#   - frontend/src/__tests__/apiEndpointContract.test.ts (and enumsMatchTheSchema.test.ts) read it with fs,
+#     so they are in jest.always-run.txt, and a packages/ change runs the frontend's whole always-run list;
+#   - packages/core's vitest (generatedSchemaIsCurrent.test.ts) runs on any packages/ change (RUN_CORE);
+#   - backend/tests/test_committed_schema_matches_the_backend.py and test_e2e_fixtures_match_the_serializers.py
+#     are `packages` lines of reads-outside-backend.txt, and since the same day a backend app change selects
+#     them too (select-backend-tests.py, contract_readers).
+# The types generated from it (packages/core/src/api/generated/schema.ts) are code: tsc checks them, and jest
+# follows their imports. Only the jest full run goes; tsc / eslint / vitest for the area are untouched.
+JEST_TRACED_DATA_RE='^(packages/core/messages/|packages/core/openapi/schema\.yml$|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/[^/]+\.json$)'
 while IFS=$'\t' read -r re name; do
     hit=$(echo "$CHANGED" | grep -vE "$JEST_TRACED_DATA_RE" | grep -E "$re" | head -1)
     [ -n "$hit" ] && full "$name: $hit"
@@ -752,6 +894,12 @@ done <<<"$CHANGED"
 APP_FULL_F="$FULL_F"
 hit=$(echo "$CHANGED" | grep -E '^(mobile|mobile-officer)/' | grep -vE '^(mobile|mobile-officer)/src/.*\.(ts|tsx|js|jsx)$' | head -1)
 [ -n "$hit" ] && APP_FULL_F="${APP_FULL_F}an app file outside src/, or not code: $hit"$'\n'
+# A MODULE THE SETUP FILE LOADS runs before or after every test, and no test imports it for that
+# (2026-11-13, test review 3.2): mobile/jest.setup.js and mobile-officer/jest.setup.js both require
+# mobile/src/platform, and the officer's also ./src/keptText. --findRelatedTests picks only their importers.
+# (frontend/lib/platform/web, which frontend/jest.setup.js requires, is in FULL_RULES above.)
+hit=$(echo "$CHANGED" | grep -E '^(mobile/src/platform|mobile-officer/src/keptText)([./]|$)' | head -1)
+[ -n "$hit" ] && APP_FULL_F="${APP_FULL_F}a module the app's jest.setup.js loads for every test changed: $hit"$'\n'
 while IFS= read -r f; do
     case "$f" in mobile/*|mobile-officer/*) [ ! -e "$ROOT/$f" ] && { APP_FULL_F="${APP_FULL_F}an app file was deleted or renamed: $f"$'\n'; break; } ;; esac
 done <<<"$CHANGED"
@@ -768,6 +916,7 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     printf '%s' "$APP_FULL_F" | sed 's/^/  app full because: /'
     echo "classify-migration: migration=$RUN_MIGRATION"
     echo "classify-meta: meta=$RUN_META"
+    echo "classify-collection-scope: scope=$RUN_SCOPE"
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ -f "$HERE/select-backend-tests.py" ]; then
         SEL=$(echo "$CHANGED" | python3 -I "$HERE/select-backend-tests.py")
         case "$SEL" in FULL*) echo "classify-backend-select: whole suite (${SEL#FULL	})" ;;
@@ -779,6 +928,8 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     printf '%s\n' "$JEST_READERS" | grep . | sed 's/^/  jest reader: /'
     echo "classify-readers: jest=$RUN_JEST_READERS mobile=$([ -n "$MOBILE_READERS" ] && echo 1 || echo 0) backend=$(echo "$BACKEND_READERS" | grep -c . || true)"
     printf '%s' "$BACKEND_READERS" | sed 's/^/  backend reader: /'; echo
+    echo "classify-mobile-readers: $(echo "$MOBILE_READERS" | grep -c . || true)"
+    printf '%s\n' "$MOBILE_READERS" | grep . | sed 's/^/  mobile reader: /'
     exit 0
 fi
 
@@ -804,7 +955,8 @@ fi
 # comment GATES_REMOTE out of .prepush.env; `SKIP_PREPUSH=1 git push` skips the hook.
 if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the gates on this machine."
-    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1" 2>/dev/null \
+    # ... and mark the tree as in use before anything is synced into it (SYNCED TREES NOBODY USES, above).
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1 && { mkdir -p $RWORK && touch $RWORK/.sl-last-use; :; }" 2>/dev/null \
         || fail "$GATES_REMOTE is unreachable, or has no $RIMG image. Not running the gates on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
     echo "$P: on $GATES_REMOTE ($RWORK) — this machine only syncs and waits"
     T_SYNC=$(date +%s)
@@ -828,7 +980,7 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # Workers: 6 for pytest + 6 for the JS runners = the container's 12 CPUs, because the two sides now
     # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
     # The lock and the time limit: TIME LIMITS ON THE REMOTE MACHINE, near the top.
-    ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $RNAME \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "( $(remote_flock 9 run.lock sl-gates-); $(declare -f remote_prune); remote_prune $RDIR $RWORK $PRUNE_DAYS $PRUNE_DRY; docker run --rm --init --name $RNAME \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} \
         -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6} \
@@ -861,6 +1013,16 @@ need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this chec
 # STATIC CHECKS FIRST (2026-10-27, user decision): every type check and linter, all areas, before
 # any test runner. They take seconds each and fail on the commonest mistakes; run after the web and
 # app jest, a ruff error surfaced only after several minutes of tests, at full CPU and memory.
+#
+# On this machine that is the order of the whole run: static_js, static_backend, then the tests. In the
+# remote run (2026-11-13, test review 3.5) each side starts with its own static checks — static_js before
+# the JS runners, static_backend before pytest — and the two sides overlap (TWO SIDES AT ONCE, near the end):
+# up to eight tsc / eslint runs and ruff + makemigrations used to run one after another, about one core each
+# of the container's twelve, before either side began. Within a side the rule is unchanged, and a red static
+# check still ends its side before that side's tests and fails the run; the other side runs to its end.
+# Functions, so the order is the order of the calls at the end of this file — which is what the test reads
+# (TestStaticChecksRunBeforeAnyTests runs them and compares what was invoked, per side).
+static_js() {
 if [ "$RUN_CORE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -896,6 +1058,10 @@ if [ "$RUN_OFFICER" = 1 ]; then
     echo "  → officer eslint"
     npm run --workspace mobile-officer lint --silent || fail "officer lint failed"
 fi
+}  # static_js
+
+# The interpreter and ruff are chosen here, in the run's own shell, before either side starts: both
+# static_backend and run_backend_tests use $PY.
 if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
     # THE INTERPRETER IS THE PROJECT VENV, `backend/.venv` — Python 3.11 with
@@ -934,6 +1100,12 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     fi
     command -v "$PY" >/dev/null 2>&1 || fail "\`$PY\` not found or not executable."
     command -v "$RUFF" >/dev/null 2>&1 || fail "\`$RUFF\` not found or not executable."
+    cd "$ROOT" || exit 1
+fi
+
+static_backend() {
+if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
+    cd "$ROOT/backend" || fail "backend/ missing"
     if [ "$RUN_BACKEND" = 1 ] && [ "$REAL_PG" = 0 ]; then
         echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
         # `makemigrations --check` BEFORE pytest, because it is the cheap one and
@@ -967,6 +1139,7 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     fi
     cd "$ROOT" || exit 1
 fi
+}  # static_backend
 
 # pytest_finish — progress every 30 s until pytest (here, or over ssh) exits, then its verdict.
 pytest_finish() {
@@ -986,6 +1159,9 @@ pytest_finish() {
     wait "$PYTEST_PID"; PYTEST_STATUS=$?
     # The thirty slowest over 5 s, so a run that stalls says where (--durations=30 --durations-min=5 below).
     sed -n '/slowest [0-9]* *durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
+    # COLD (migrated) or HOT (cloned), the input hash, the seconds — the root conftest's summary line
+    # (backend/config/sqlite_template.py, telemetry 2026-11-13). Named here: `tail -4` may not reach it.
+    grep -m1 '^test template: ' "$PYTEST_LOG" | sed 's/^/    /'
     tail -4 "$PYTEST_LOG"
     if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
@@ -1231,22 +1407,26 @@ PROBE_PY
     PYTEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-pytest.XXXXXX")
     PYTEST_PATHS=""
     META_IGNORE=""
-    if [ "$RUN_META" = 0 ]; then
-        META_IGNORE=$(echo "$META_TESTS" | sed 's|^backend/|--ignore=|' | tr '\n' ' ')
-        echo "    (without the 2 suite-about-the-suite tests: nothing they guard changed)"
+    if [ -n "$META_SKIP" ]; then
+        META_IGNORE=$(echo "$META_SKIP" | sed 's|^backend/|--ignore=|' | tr '\n' ' ')
+        echo "    (without $(echo "$META_SKIP" | grep -c .) of the 2 suite-about-the-suite tests: nothing they guard changed — $(echo "$META_SKIP" | sed 's|.*/||' | paste -sd' ' -))"
     fi
     if [ "$RUN_BACKEND" = 0 ]; then
         # Readers are listed relative to backend/; drop the meta tests here too, and
         # if nothing is left run nothing — an empty path list would mean "the whole suite".
         PYTEST_PATHS="$BACKEND_READERS"
-        [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+        [ -n "$META_SKIP" ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_SKIP" | sed 's|^backend/||')" || true)
         echo "    (only the $(echo "$PYTEST_PATHS" | grep -c . || true) test files that read what changed — backend/tests/reads-outside-backend.txt)"
     fi
     # BY APP, NOT THE WHOLE SUITE (2026-10-27, user decision): a backend change runs the test files
     # that belong to, name, or call the URLs of the apps it touched — scripts/select-backend-tests.py,
     # which also says when a change cannot be traced (settings, a conftest, dependencies) and the
     # whole suite runs. --full / GATES_FULL=1 always run everything. The files that read other areas
-    # (reads-outside-backend.txt) are added as on a backend-less push.
+    # (reads-outside-backend.txt) are added as on a backend-less push: the lines naming a top-level
+    # entry this push changed. A push that changed only backend/ matches none of them by that rule, so
+    # the selection itself adds the frontend / packages / mobile lines — the contracts between the
+    # backend and the other side — for any non-test change under backend/apps/ (2026-11-13,
+    # `contract_readers` in select-backend-tests.py). The two sets are unioned below.
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
         echo "    (whole suite: no select-backend-tests.py next to this script)"
     elif [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ]; then
@@ -1259,8 +1439,13 @@ PROBE_PY
                     /^[[:space:]]*(#|$)/ { next }
                     { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
                 ' "$READERS_LIST" 2>/dev/null)
-                PYTEST_PATHS=$(printf '%s\n%s\n' "$SELECTED" "$READERS" | grep -v '^$' | sort -u)
-                [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+                # The suite-about-the-suite tests this run owes (RUN_META / RUN_SCOPE) are named outright. The
+                # selection picks by app and the readers by top-level entry; neither knows those rules, so a
+                # rule that said "run it" only stopped ignoring a test nothing had selected: a changed
+                # apps/*/tests.py or a new test file ran without test_collection_scope.py (2026-11-13).
+                META_RUN=$(echo "$META_TESTS" | grep -vxF "${META_SKIP:-(none skipped)}" | sed 's|^backend/||' || true)
+                PYTEST_PATHS=$(printf '%s\n%s\n%s\n' "$SELECTED" "$READERS" "$META_RUN" | grep -v '^$' | sort -u)
+                [ -n "$META_SKIP" ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_SKIP" | sed 's|^backend/||')" || true)
                 if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
                     PG_ONLY=$(pg_only_tests) || fail "--real-pg: could not list the PostgreSQL-only tests"
                     [ -n "$PG_ONLY" ] || fail "--real-pg: the PostgreSQL-only test list came back empty — the scanner in tests/test_concurrency.py is broken, not the set"
@@ -1440,7 +1625,7 @@ app_jest() {
     fi
     if [ -z "$APP_FULL_F" ]; then
         readers=$(git ls-files "$dir/src/*.test.ts" "$dir/src/*.test.tsx" | while IFS= read -r f; do
-            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$ROOT/$f" 2>/dev/null
+            grep -lE "$READS_FILES_RE" "$ROOT/$f" 2>/dev/null
         done)
         paths=$(printf '%s\n%s\n' "$related" "$readers" | grep -v '^$' | sort -u)
         echo "    affected: $(echo "$paths" | grep -c . || true) test files ($(echo "$related" | grep -c . || true) related to the change, $(echo "$readers" | grep -c . || true) that read files)"
@@ -1485,9 +1670,18 @@ if [ -n "$MOBILE_READERS" ]; then
     need npm
     cd "$ROOT" || exit 1
     echo "  → mobile jest: the $(echo "$MOBILE_READERS" | wc -l | tr -d ' ') tests that read files"
+    # To a file, and the failing tests named, as app_jest does: `| tail -4` showed the totals only.
+    MOBILE_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-mobile-readers.XXXXXX")
     # shellcheck disable=SC2046
-    npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") 2>&1 | tail -4
-    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest (file readers) failed"
+    npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") >"$MOBILE_LOG" 2>&1
+    MOBILE_STATUS=$?
+    tail -4 "$MOBILE_LOG"
+    if [ "$MOBILE_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$MOBILE_LOG" | awk '!seen[$0]++' | head -20
+        echo "    full mobile jest log: $MOBILE_LOG"
+        fail "mobile jest (file readers) failed"
+    fi
+    rm -f "$MOBILE_LOG"
 fi
 }  # run_js_tests
 
@@ -1498,12 +1692,14 @@ fi
 # container's 12 CPUs (the docker run in DELEGATED RUNS). A side that fails does not stop the other: both
 # finish, then both logs are printed and both exit codes decide. On this Mac they stay serial — memory,
 # not CPU, is what runs out here (TWO WORKERS near the top).
+# Each side begins with its own static checks (STATIC CHECKS FIRST, above): `fail` there exits the side's
+# subshell, so its tests never start and its exit code is the run's.
 if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     BE_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-backend.XXXXXX"); JS_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-js.XXXXXX")
-    echo "  → backend pytest and JS tests side by side"
-    ( run_backend_tests ) >"$BE_LOG" 2>&1 &
+    echo "  → backend (ruff, makemigrations, pytest) and JS (tsc, eslint, tests) side by side"
+    ( static_backend; run_backend_tests ) >"$BE_LOG" 2>&1 &
     BE_PID=$!
-    ( run_js_tests ) >"$JS_LOG" 2>&1 &
+    ( static_js; run_js_tests ) >"$JS_LOG" 2>&1 &
     JS_PID=$!
     T0=$(date +%s); NEXT=60
     while kill -0 "$BE_PID" 2>/dev/null || kill -0 "$JS_PID" 2>/dev/null; do
@@ -1516,15 +1712,17 @@ if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     wait "$BE_PID"; BE_RC=$?
     wait "$JS_PID"; JS_RC=$?
     echo "  ── backend (exit $BE_RC) ──"; cat "$BE_LOG"
-    echo "  ── JS tests (exit $JS_RC) ──"; cat "$JS_LOG"
+    echo "  ── JS (exit $JS_RC) ──"; cat "$JS_LOG"
     if [ "$BE_RC" -ne 0 ] || [ "$JS_RC" -ne 0 ]; then
         echo ""
         [ "$BE_RC" -ne 0 ] && echo "  backend: $(grep -E "^$P: " "$BE_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
         [ "$JS_RC" -ne 0 ] && echo "  JS:      $(grep -E "^$P: " "$JS_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
-        fail "tests failed (backend exit $BE_RC, JS exit $JS_RC) — both sides ran to the end, logs above"
+        fail "checks or tests failed (backend exit $BE_RC, JS exit $JS_RC) — both sides ran to the end, logs above"
     fi
     rm -f "$BE_LOG" "$JS_LOG"
 else
+    static_js
+    static_backend
     run_backend_tests
     run_js_tests
 fi

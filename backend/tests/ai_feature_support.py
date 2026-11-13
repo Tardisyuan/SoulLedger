@@ -23,16 +23,22 @@ class StubProvider(FakeProvider):
         return Answer(text=type(self).reply(system, facts, history[-1].text), usage={"input": 3, "output": 2})
 
 
+def reset_fake_provider():
+    """把 `FakeProvider` / `StubProvider` 的类属性放回定义时的样子。它们是全进程共用的类属性,一条测试写了
+    不还,同一个 worker 上后面的测试就读到它的脚本和调用记录。各文件自己的复位 fixture 前后各调一次这个,
+    不要再逐个属性手写(漏掉 `scripts` / `pulled` 的正是手写的那几份)。"""
+    FakeProvider.script, FakeProvider.scripts, FakeProvider.calls, FakeProvider.pulled = [], {}, [], []
+    StubProvider.fail = None
+    StubProvider.reply = staticmethod(lambda system, facts, prompt: "")
+
+
 @pytest.fixture(name="stub")
 def stub_fixture(settings):
     settings.ASSISTANT_ENABLED = True
     settings.ASSISTANT_PROVIDER = PROVIDER
-    FakeProvider.calls = []
-    StubProvider.fail = None
-    StubProvider.reply = staticmethod(lambda system, facts, prompt: "")
+    reset_fake_provider()
     yield StubProvider
-    FakeProvider.calls = []
-    StubProvider.fail = None
+    reset_fake_provider()
 
 
 def enable(tenant, on=True):

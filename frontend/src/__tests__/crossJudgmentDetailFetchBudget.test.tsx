@@ -65,9 +65,7 @@ jest.mock("next/navigation", () => ({
 }));
 
 const mockTenantCtx = { user: { id: 1, username: "u", permissions: ["cross_judgment.read"] }, tenant: { slug: "t" } };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenantCtx,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenantCtx }));
 
 jest.mock("@soulledger/core/api", () => ({
   crossTenantJudgmentsApi: {

@@ -3,7 +3,7 @@
  *
  * WHY. Adding `/goodbye` (2026-11-10) meant editing four guards, each carrying its own
  * hand-written copy of "which pages exist and which are public / outside the shell"
- * (docs/test-suite-review-2026-11-10.md §2.1). The decisions themselves live in two
+ * (test-suite review 2026-11-10 §2.1). The decisions themselves live in two
  * source files — `proxy.ts` `PUBLIC_PATHS` (no sign-in needed) and `AppLayoutWrapper.tsx`
  * `AUTH_PATHS` / `PUBLIC_PATHS` (no AppLayout shell) — and everything else here is
  * derived from disk, so a new private page needs no test edit at all.

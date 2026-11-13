@@ -16,30 +16,11 @@
  */
 
 import { MOCK_ACCESS_TOKEN, OPENED_JUDGMENT, SOULS, expect, test, setupAuthenticatedPage } from "./fixtures";
+import { routesFor } from "./routes";
 
+/** `app/` 下每一条静态路由,减去 `routes.ts` 的 `EXCLUDE.apiMock`(各带理由);此前是一张手写的 22 条的表。 */
 const ROUTES = [
-  "/dashboard",
-  "/souls",
-  "/events",
-  "/judgment",
-  "/ledger",
-  "/workflow",
-  "/dispatch",
-  "/audit",
-  "/users",
-  "/permissions",
-  "/tenants",
-  "/realms",
-  "/actors",
-  "/corpus",
-  "/notifications",
-  "/social",
-  "/profile",
-  "/death-sync",
-  "/scheduler",
-  "/soul-credentials",
-  "/rebirth-applications",
-  "/sentence-plans",
+  ...routesFor("apiMock"),
   // Detail pages: the judgment page's 评议 list went unmodelled for a whole round because only list routes were here.
   `/judgment/${OPENED_JUDGMENT.id}`,
   `/souls/${SOULS[0].id}`,

@@ -9,7 +9,6 @@
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User, UserRole
 from apps.perm.cache import invalidate_all_permissions
@@ -18,20 +17,12 @@ from apps.perm.export import import_permissions
 from apps.perm.models import Permission, Role, RolePermission
 from apps.perm.services import RoleHolder
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 CHANGES = "/api/v1/perm/role-permissions/changes/"
 FORBIDDEN = ("workflow.approve", "workflow.advance", "user.manage")
 CODENAMES = ("soul.read", "soul.update", *FORBIDDEN)
 ASSIGN = "/api/v1/perm/role-permissions/assign/"
-
-
-def _client(user):
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:  # the hall-less ADMIN carries no hall
-        token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -51,7 +42,7 @@ def world(db):
     update = Permission.objects.get_or_create(codename="workflow.update", defaults={"name": "x", "category": "workflow"})[0]
     RolePermission.objects.get_or_create(role=Role.objects.get(name="MODERATOR"), permission=update)
     admin = User.objects.create_user(username="rules_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
-    yield {"tenant": tenant, "perms": perms, "admin": admin, "client": _client(admin)}
+    yield {"tenant": tenant, "perms": perms, "admin": admin, "client": sign_in(APIClient(), admin)}
     invalidate_all_permissions()
 
 

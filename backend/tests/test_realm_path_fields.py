@@ -28,13 +28,6 @@ from tests.soul_account_support import officer_client
 backfill = import_module("apps.judgment.migrations.0024_backfill_judgment_realm")
 
 
-@pytest.fixture
-def seeded(db):
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
-
-
 def _realm(code):
     return Realm.all_objects.get(realm_code=code)
 

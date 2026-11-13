@@ -20,9 +20,7 @@ jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMoc
 const mockTenant = {
   user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: [] },
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 

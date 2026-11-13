@@ -5,28 +5,20 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, Verdict
 from apps.realms.models import Realm
 from apps.reincarnation.models import Reincarnation
 from apps.souls.models import Soul, SoulState
+from tests.conftest import sign_in
 
 URL = "/api/v1/disposition/"
 
 
-def _client(api_client, user):
-    token = RefreshToken.for_user(user)
-    if user.tenant:
-        token["tenant_code"] = user.tenant.code
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return api_client
-
-
 @pytest.fixture
 def judge(api_client, judge_user):
-    return _client(api_client, judge_user)
+    return sign_in(api_client, judge_user)
 
 
 def _make(tenant, name, *, executed=False, expired=False, verdict=Verdict.FAILED, realm=None):

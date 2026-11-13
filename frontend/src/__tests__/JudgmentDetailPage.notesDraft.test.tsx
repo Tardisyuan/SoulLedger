@@ -69,9 +69,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 const mockTenant = {
   user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: [] },
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 const mockGet = judgmentApi.get as jest.Mock;
 const mockSoulGet = soulsApi.get as jest.Mock;
@@ -158,7 +156,7 @@ describe("the notes draft survives a refetch", () => {
     // text did not land on top of it.
     expect(notesBox().value).toBe("my own reasoning");
     expect(notesBox().value).not.toContain("revised elsewhere");
-  }, 15000);
+  });
 
   it("still follows the server while the field is untouched", async () => {
     // The other half of the rule, so that "never overwrite" cannot be the
@@ -173,5 +171,5 @@ describe("the notes draft survives a refetch", () => {
       () => expect(notesBox().value).toBe("server draft, revised elsewhere"),
       { timeout: ASYNC_TIMEOUT }
     );
-  }, 15000);
+  });
 });

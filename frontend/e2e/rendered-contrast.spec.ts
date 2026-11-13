@@ -11,7 +11,8 @@
  * (没存过选择时跟随系统)。租户是夹具的 CN_DIYU,即 cn;另三个文明由 inkOnSurfaceContract 算。
  */
 import { readFileSync } from "node:fs";
-import { test, expect, setupAuthenticatedPage, mockApi, OPENED_JUDGMENT, SOULS, PROPOSED_DISPATCH } from "./fixtures";
+import { test, expect, openRoute, OPENED_JUDGMENT, SOULS, PROPOSED_DISPATCH } from "./fixtures";
+import { routesFor } from "./routes";
 
 const AXE_SOURCE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
@@ -20,28 +21,24 @@ const AXE_SOURCE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
  * 「禁授」压斜纹)已按第六十三批回复改掉,白名单随之删除;任何违规都红。
  * axe 判不了的(压纹样 / 斜纹 / 渐变的字,记为 incomplete)由 inkOnSurfaceContract 按 token 算。
  */
-const ROUTES: [string, string, boolean][] = [
-  ["login", "/login", false],
-  ["dashboard", "/dashboard", true],
-  ["judgment-detail", `/judgment/${OPENED_JUDGMENT.id}`, true],
-  ["soul-detail", `/souls/${SOULS[0].id}`, true],
-  ["permissions", "/permissions", true],
-  ["users", "/users", true],
-  ["disposition", "/disposition", true],
-  ["dispatch-detail", `/dispatch/${PROPOSED_DISPATCH.id}`, true],
+/** `app/` 下每一条静态路由,减去 `routes.ts` 的 `EXCLUDE.contrast`(各带理由),加三条夹具里有 id 的详情页。
+ *  此前是一张手写的 8 条的表。未登录打开哪几条由 `routes.ts` 的 `SIGNED_OUT` 定(`openRoute`)。 */
+const ROUTES = [
+  ...routesFor("contrast"),
+  `/judgment/${OPENED_JUDGMENT.id}`,
+  `/souls/${SOULS[0].id}`,
+  `/dispatch/${PROPOSED_DISPATCH.id}`,
 ];
 
 type Finding = { target: string; text: string; message: string };
 
 for (const colorScheme of ["light", "dark"] as const) {
-  for (const [name, route, auth] of ROUTES) {
-    test(`${name} · ${colorScheme}: no text below WCAG AA contrast`, async ({ page }) => {
+  for (const route of ROUTES) {
+    test(`${route} · ${colorScheme}: no text below WCAG AA contrast`, async ({ page }) => {
       test.setTimeout(90_000);
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-      if (auth) await setupAuthenticatedPage(page);
-      else await mockApi(page);
-      await page.goto(route);
-      await page.waitForLoadState("networkidle");
+      // Not before the page has drawn its own content: axe finds nothing to fault on a blank shell or a skeleton.
+      await openRoute(page, route);
       await expect(page.locator("html")).toHaveClass(new RegExp(`\\b${colorScheme}\\b`));
       await page.evaluate(AXE_SOURCE);
 

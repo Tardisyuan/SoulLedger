@@ -8,9 +8,11 @@
 真的发一次改派,断言「改派收下的人」与「名单里的人」是同一个集合。
 """
 import pytest
+from rest_framework.test import APIClient
 
 from apps.authentication.models import User
-from tests.test_judgment_claim import _case, _client, _fresh, _post, world  # noqa: F401
+from tests.conftest import sign_in
+from tests.test_judgment_claim import _case, _fresh, _post, world  # noqa: F401
 
 URL = "/api/v1/judgment/assignable-officers/"
 
@@ -36,7 +38,7 @@ def crowd(world):  # noqa: F811
         deleted=user("assign_deleted_judge", "JUDGE", world.cn, is_deleted=True),
         global_admin=user("assign_global_admin", "ADMIN", None),
     )
-    world.clients["global_admin"] = _client(world.users["global_admin"])
+    world.clients["global_admin"] = sign_in(APIClient(), world.users["global_admin"])
     return world
 
 
@@ -50,7 +52,7 @@ class TestAssignableOfficers:
         listed = _ids(_officers(crowd.clients["mod"], case))
         assert listed == {u["a"].pk, u["b"].pk, u["mod"].pk}
         assert circle.pk not in listed  # 朋友圈审核员不办案,不在改派名单里
-        assert _officers(_client(circle), case).status_code == 403  # 也打不开名单
+        assert _officers(sign_in(APIClient(), circle), case).status_code == 403  # 也打不开名单
 
     def test_each_row_carries_exactly_five_fields(self, crowd):
         crowd.users["a"].display_name = "秦广王"

@@ -3,7 +3,7 @@
 One reader for the backend tests that check something per web page
 (`test_page_gates_match_the_backend.py`, `test_officer_assist_corpus.py`). Until
 2026-11-10 each carried its own walk of `frontend/app` and its own hand copy of the
-exceptions, so adding `/goodbye` meant editing both (docs/test-suite-review-2026-11-10.md
+exceptions, so adding `/goodbye` meant editing both (test-suite review 2026-11-10
 §2.1). The decisions live in two frontend files and are read from there:
 
 * `frontend/proxy.ts` `PUBLIC_PATHS` — route -> why it needs no sign-in;

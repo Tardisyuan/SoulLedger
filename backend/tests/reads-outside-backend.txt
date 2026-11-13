@@ -6,6 +6,7 @@
 # Derived, not curated: tests/test_reads_outside_backend_list.py fails on a
 # missing, stale or wrong line. Paths are relative to backend/.
 apps/ledger/test_readings.py                                     packages
+tests/test_ai_perm_explain.py                                    packages
 tests/test_annihilation_realm_code.py                            frontend packages
 tests/test_apps_round_idempotency.py                             config
 tests/test_audit_assertions_are_not_vacuous.py                   config pytest.ini
@@ -30,8 +31,8 @@ tests/test_chat_review_2026_11_02.py                             config
 tests/test_chat_secrets_are_separate.py                          config
 tests/test_chat_synapse_integration.py                           config
 tests/test_check_deploy_env_script.py                            scripts
-tests/test_ci_runs_on_a_budget.py                                .github config mobile mobile-officer package.json scripts
-tests/test_collection_scope.py                                   *
+tests/test_ci_runs_on_a_budget.py                                .github config frontend mobile mobile-officer package.json scripts
+tests/test_collection_scope.py                                   scripts
 tests/test_comments_do_not_give_moderator_revoked_codenames.py   frontend mobile mobile-officer packages
 tests/test_committed_schema_matches_the_backend.py               packages
 tests/test_credits_literature_quotes_the_corpus.py               config packages
@@ -70,6 +71,7 @@ tests/test_soul_csv_import.py                                    packages
 tests/test_soul_data_export.py                                   config
 tests/test_soul_feedback.py                                      config
 tests/test_soul_push_messages_match_the_language_packs.py        frontend packages
+tests/test_sqlite_template.py                                    README.md config conftest.py pytest.ini
 tests/test_system_mail_speaks_the_recipients_language.py         packages
 tests/test_testdb_name.py                                        conftest.py pytest.ini
 tests/test_the_image_installs_locked_versions.py                 .dockerignore .github

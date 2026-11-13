@@ -64,6 +64,55 @@ export async function enter(page: Page, role: Role): Promise<void> {
   await page.getByTestId("demo-entrance").waitFor({ state: "detached" });
 }
 
+/**
+ * The roles whose sign-in is done once per worker and then put back for each test, instead of once per test (a
+ * trial on the role with the most routes: docs/audit/2026-11-13-test-review.md §2 #7, Q5). `DEMO_LOGIN_REUSE=0`
+ * turns it off, to time one against the other.
+ */
+const REUSED: ReadonlySet<Role> = new Set<Role>(process.env.DEMO_LOGIN_REUSE === "0" ? [] : ["admin"]);
+
+/** What a sign-in leaves in the browser. The role and the access token are in sessionStorage (`demo/store.ts`,
+ *  `lib/platform/web.ts`), which Playwright's `storageState` does not carry, so both storages are kept by hand. */
+type SignedIn = { cookies: Awaited<ReturnType<BrowserContext["cookies"]>>; session: Record<string, string>; local: Record<string, string> };
+/** Per worker: Playwright loads this module once in each. */
+const signedIn: Partial<Record<Role, SignedIn>> = {};
+
+/**
+ * `enter`, for a test that only reads pages. The first test of a reused role in a worker signs in for real (so the
+ * sign-in itself is still walked, and watched, once per worker) and what it left is kept; every later one starts from
+ * a copy of that: cookies on the context, both storages written before the first document's scripts. That is the state
+ * the old flow's `page.goto(route)` (a full load right after `enter`) started from, minus the walk through /login.
+ *
+ * Not for a test that signs out or changes roles in the page (the copy is written once, into the tab's first document).
+ * A test that edits demo data is safe from the others either way: the overlay lives in its own tab's sessionStorage,
+ * and the copy is of the moment after sign-in, when the overlay is empty.
+ */
+export async function enterOnce(page: Page, role: Role): Promise<void> {
+  const saved = signedIn[role];
+  if (!REUSED.has(role) || !saved) {
+    await enter(page, role);
+    if (!REUSED.has(role)) return;
+    const stores = await page.evaluate(() => {
+      const dump = (s: Storage) => Object.fromEntries(Array.from({ length: s.length }, (_, i) => [s.key(i)!, s.getItem(s.key(i)!)!]));
+      return { session: dump(sessionStorage), local: dump(localStorage) };
+    });
+    signedIn[role] = { cookies: await page.context().cookies(), ...stores };
+    return;
+  }
+  await page.context().addCookies(saved.cookies);
+  await page.addInitScript(({ session, local }) => {
+    try {
+      // Once per tab: a reload or a second navigation keeps what the page has written since.
+      if (sessionStorage.getItem("e2e_signed_in")) return;
+      for (const [key, value] of Object.entries(session)) sessionStorage.setItem(key, value);
+      for (const [key, value] of Object.entries(local)) localStorage.setItem(key, value);
+      sessionStorage.setItem("e2e_signed_in", "1");
+    } catch {
+      // A document with no storage (about:blank, a sandboxed frame): nothing to seed.
+    }
+  }, { session: saved.session, local: saved.local });
+}
+
 /** The account menu's sign-out, by way of its confirmation and the farewell page (left by its 回到首页 rather than its six seconds). */
 export async function signOut(page: Page): Promise<void> {
   await page.getByTestId("user-menu").click();

@@ -16,6 +16,7 @@ from apps.dispatch.services import DispatchService, TargetHallClosedError
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 from tests import sentence_plan_support as plan
+from tests.conftest import sign_in
 
 User = get_user_model()
 URL = "/api/v1/dispatch/records/"
@@ -23,14 +24,6 @@ LONG_REASON = "此魂生前口业深重,须往他界受审,理由写足二十个
 CODE = "target_dispatch_disabled"
 
 pytestmark = pytest.mark.django_db
-
-
-def _client(user):
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -63,7 +56,7 @@ def _proposal(w, status=DispatchStatus.PROPOSED):
 def test_create_toward_a_closed_hall_is_refused_with_a_code(w, enabled, expected):
     """变异:`_check_proposable` 里去掉 `check_target_accepts` → 关着那条拿到 201,红。"""
     _set(w["eu"], enabled)
-    resp = _client(w["cn_mod"]).post(URL, {
+    resp = sign_in(APIClient(), w["cn_mod"]).post(URL, {
         "source_tenant": w["cn"].pk, "target_tenant": w["eu"].pk, "soul": str(w["soul"].pk), "reason": LONG_REASON,
     }, format="json")
     assert resp.status_code == expected, resp.data
@@ -79,7 +72,7 @@ def test_create_toward_a_closed_hall_is_refused_with_a_code(w, enabled, expected
 @pytest.mark.parametrize("enabled, expected", [(True, 200), (False, 400)])
 def test_submitting_a_draft_toward_a_closed_hall_is_refused_and_it_stays_a_draft(w, enabled, expected):
     _set(w["eu"], enabled)
-    client = _client(w["cn_mod"])
+    client = sign_in(APIClient(), w["cn_mod"])
     # Saving the draft is allowed either way: a draft goes nowhere.
     resp = client.post(f"{URL}drafts/", {"soul": str(w["soul"].pk), "target_tenant": w["eu"].pk}, format="json")
     assert resp.status_code == 201, resp.data
@@ -121,7 +114,7 @@ def test_approving_a_pending_proposal_after_the_hall_closed_is_refused(w, enable
     """变异:`approve` 里去掉 `check_target_accepts` → 关着那条 200,红。"""
     record = _proposal(w)
     _set(w["eu"], enabled)
-    resp = _client(w["eu_mod"]).post(f"{URL}{record.pk}/approve/", {}, format="json")
+    resp = sign_in(APIClient(), w["eu_mod"]).post(f"{URL}{record.pk}/approve/", {}, format="json")
     assert resp.status_code == expected, resp.data
     record.refresh_from_db()
     if enabled:
@@ -133,7 +126,7 @@ def test_approving_a_pending_proposal_after_the_hall_closed_is_refused(w, enable
 def test_a_closed_hall_can_still_reject_the_pending_proposal(w):
     record = _proposal(w)
     _set(w["eu"], False)
-    resp = _client(w["eu_mod"]).post(f"{URL}{record.pk}/reject/", {"reason": "本殿已闭"}, format="json")
+    resp = sign_in(APIClient(), w["eu_mod"]).post(f"{URL}{record.pk}/reject/", {"reason": "本殿已闭"}, format="json")
     assert resp.status_code == 200, resp.data
     record.refresh_from_db()
     assert record.status == DispatchStatus.REJECTED
@@ -146,7 +139,7 @@ def test_executing_an_approved_dispatch_after_the_hall_closed_is_refused_and_the
     """变异:`execute` 里去掉 `check_target_accepts` → 关着那条 200 且灵魂已进殿,红。"""
     record = _proposal(w, status=DispatchStatus.APPROVED)
     _set(w["eu"], enabled)
-    resp = _client(w["eu_mod"]).post(f"{URL}{record.pk}/execute/", {}, format="json")
+    resp = sign_in(APIClient(), w["eu_mod"]).post(f"{URL}{record.pk}/execute/", {}, format="json")
     assert resp.status_code == expected, resp.data
     record.refresh_from_db()
     w["soul"].refresh_from_db()
@@ -196,7 +189,7 @@ def test_a_newly_created_active_hall_is_a_target_and_a_deactivated_one_is_not(w,
 
     for target, expected in ((new, 201), (old, 400)):
         soul = Soul.objects.create(name=f"客{target.code}", current_state=SoulState.JUDGING, tenant=w["cn"])
-        resp = _client(w["cn_mod"]).post(URL, {
+        resp = sign_in(APIClient(), w["cn_mod"]).post(URL, {
             "source_tenant": w["cn"].pk, "target_tenant": target.pk, "soul": str(soul.pk), "reason": LONG_REASON,
         }, format="json")
         assert resp.status_code == expected, resp.data

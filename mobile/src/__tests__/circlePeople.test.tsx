@@ -5,16 +5,15 @@
  * otherwise pass.
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { FlatList, ScrollView, StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { family } from "../fonts";
-import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { SessionContext } from "../session";
 import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, SoulProfileScreen } from "../screens/circlePeople";
+import { renderSoul } from "./harness";
 import { PROFILE, heldReply, stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -32,14 +31,10 @@ jest.mock("../chat", () => ({
 
 function wrap(children: ReactNode) {
   const session = { state: { status: "signedIn", profile: PROFILE } } as never;
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <SessionContext.Provider value={session}>
-          <NavigationContainer>{children}</NavigationContainer>
-        </SessionContext.Provider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <SessionContext.Provider value={session}>
+      <NavigationContainer>{children}</NavigationContainer>
+    </SessionContext.Provider>
   );
 }
 

@@ -27,9 +27,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 let mockUser: Record<string, unknown> | null = null;
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 let mockMenus: SidebarMenu[] = [];
 jest.mock("@/src/hooks/useSidebarMenus", () => ({

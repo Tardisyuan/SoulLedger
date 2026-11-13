@@ -40,10 +40,8 @@ distrust:
      with the statute table empty and with it fully seeded, and require the
      same answer.
 """
-import io
 
 import pytest
-from django.core.management import call_command
 
 from apps.disposition.services import DispositionService
 from apps.judgment.models import Statute, StatuteCorpus, StatutePolarity
@@ -54,10 +52,9 @@ REPUBLIC_RANGE = (614, 621)
 
 
 @pytest.fixture
-def seeded(db):
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
+def seeded(seed_civilization):
+    """Only the greek civilization is seeded: nothing in this module reads another one."""
+    return seed_civilization("greek")
 
 
 def _greek(corpus):

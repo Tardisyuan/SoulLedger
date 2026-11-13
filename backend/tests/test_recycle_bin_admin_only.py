@@ -6,7 +6,6 @@ caller even when a grant exists in the table anyway.
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User, UserRole
 from apps.menus.models import Menu
@@ -14,21 +13,13 @@ from apps.perm.cache import invalidate_all_permissions
 from apps.perm.export import import_permissions
 from apps.perm.models import Permission, Role, RolePermission
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 ADMIN_ONLY = ("recycle_bin.restore", "recycle_bin.hard_delete")
 CODENAMES = (*ADMIN_ONLY, "recycle_bin.read")
 CHANGES = "/api/v1/perm/role-permissions/changes/"
 ASSIGN = "/api/v1/perm/role-permissions/assign/"
 BIN = "/api/v1/recycle-bin/"
-
-
-def _client(user):
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:  # the hall-less ADMIN carries no hall
-        token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -42,7 +33,7 @@ def world(db):
         for c in CODENAMES
     }
     admin = User.objects.create_user(username="bin_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
-    yield {"tenant": tenant, "perms": perms, "admin": admin, "client": _client(admin)}
+    yield {"tenant": tenant, "perms": perms, "admin": admin, "client": sign_in(APIClient(), admin)}
     invalidate_all_permissions()
 
 
@@ -122,7 +113,7 @@ def test_the_view_refuses_a_non_admin_even_with_the_grant_in_the_table(world):
     menu.soft_delete()
     menu.refresh_from_db()
     moderator = User.objects.create_user(username="bin_mod", password="x", role="MODERATOR", tenant=world["tenant"])
-    client = _client(moderator)
+    client = sign_in(APIClient(), moderator)
 
     assert client.get(BIN).status_code == 200  # read is not ADMIN-only
     res = client.post(f"{BIN}restore/", {"cascade_id": str(menu.delete_cascade_id)}, format="json")

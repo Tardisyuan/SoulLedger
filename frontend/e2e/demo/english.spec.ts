@@ -48,6 +48,9 @@ for (const [role, route] of PAGES) {
     await page.goto(route);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(300);
+    // Not an empty shell (pages.spec.ts has the same floor): a page that has drawn nothing has no Chinese on it either.
+    const main = page.locator("main").first();
+    await expect.poll(async () => (await main.innerText()).trim().length, { message: `an empty shell on ${route}` }).toBeGreaterThan(20);
     const text = brand(await page.locator("body").innerText());
     const hits = text.split("\n").filter((line) => CJK.test(line)).slice(0, 12);
     expect(hits).toEqual([]);

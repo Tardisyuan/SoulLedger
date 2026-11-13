@@ -31,7 +31,9 @@ if [ "${1:-}" = --auto ]; then
         && git rev-parse --verify -q "$BASE^{commit}" >/dev/null \
         || { echo "demo-remote: --auto needs a base: no merge-base with origin/main, and DEMO_BASE is not set"; exit 2; }
     CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
-    HIT="$(echo "$CHANGED" | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
+    # Not what no browser loads (run-gates.sh's E2E_BLIND_COMMON_RE, copied; 2026-11-13): unit tests, the
+    # jest / vitest / eslint configuration, documentation. The demo specs and recordings stay triggers here.
+    HIT="$(echo "$CHANGED" | grep -vE '(\.md$|^frontend/src/__tests__/|^frontend/.*\.test\.tsx?$|^packages/core/(.*/)?__tests__/|^packages/core/.*\.test\.tsx?$|^frontend/(jest|eslint)\.[^/]+$|^packages/core/(vitest|eslint)\.[^/]+$)' | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
     [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE '(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)' | grep -v '^$' | head -1)"
     if [ -z "$HIT" ]; then
         echo "demo-remote: --auto: nothing since $(git rev-parse --short "$BASE") reaches the demo (no frontend/, packages/core/, JS dependency, demo runner or unknown root-level file changed) — not running the demo E2E"
@@ -56,7 +58,8 @@ if [ -n "$DEMO_TREE" ] && [ "${FORCE:-}" != 1 ] && [ -f "$DEMO_STAMP" ] && grep 
     exit 0
 fi
 
-ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RWORK $RDIR/tmp/demo" || exit 1
+# .sl-last-use: this tree is in use — run-gates.sh deletes synced trees no run has used for two weeks (remote_prune).
+ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RWORK $RDIR/tmp/demo && touch $RWORK/.sl-last-use" || exit 1
 # First run: borrow the gates' installed dependencies rather than installing them again.
 ssh -o BatchMode=yes "$GATES_REMOTE" "cd $RWORK && if [ ! -d node_modules ]; then S=\$(ls -d $RDIR/work/SoulLedger-*-e2e | head -1); cp -a \$S/node_modules . ; mkdir -p backend; cp -a \$S/backend/.venv backend/ ; for w in frontend packages/core mobile mobile-officer; do if [ -d \$S/\$w/node_modules ]; then mkdir -p \$w; cp -a \$S/\$w/node_modules \$w/; fi; done; fi" || exit 1
 # --delete does nothing under --files-from, and a stale spec would keep running.
@@ -80,7 +83,7 @@ trap 'exit 130' INT TERM
 # a time: no frames, so no requestAnimationFrame, so Playwright's "stable" check and the entrance cover's closing never
 # finished. Trace 2026-11-08: frames stopped for 19 328 ms, exactly as long as three web fonts took, while a probe in
 # the same container curling that font every 0.2 s never waited. Two runs on disk: 10 and 15 failed; on tmpfs: none.
-# flock e2e.lock: the same lock as `run-gates.sh --e2e`, so two browser suites never share the machine (2026-11-10:
+# flock e2e.lock (the demo E2E and the recording): the same lock as `run-gates.sh --e2e`, so two browser suites never share the machine (2026-11-10:
 # gates + E2E + demo E2E at once = 28 cores asked of 20; one E2E and six demo tests went red, all green apart).
 # The gates' own run.lock is separate, so the gates may still run beside one browser suite (user 2026-11-11).
 # shellcheck disable=SC2029
@@ -90,19 +93,44 @@ trap 'exit 130' INT TERM
 # before letting go, so a dropped ssh no longer frees the lock under a container still running. Same scheme as
 # scripts/run-gates.sh (TIME LIMITS ON THE REMOTE MACHINE). The two servers (demo-serve-inner.sh,
 # demo-app-backend-inner.sh) are meant to stay up, so they get no limit unless DEMO_TIMEOUT is set.
+#
+# THE TWO SERVERS DO NOT HOLD e2e.lock (2026-11-13, test review 3.5). They stay up for hours with no limit, and
+# while one did, every `run-gates.sh --e2e` and demo E2E waited on that lock without a word. What a server
+# shares with the other runs, and so what must still keep them apart:
+#   - with `run-gates.sh --e2e`: nothing — that suite has its own tree (work/<id>-e2e), publishes no port and
+#     uses no database; a server idles, so the cores are not contested either. It no longer waits.
+#   - with the demo E2E and the recording: this tree's frontend/.next (demo-serve-inner.sh and demo-e2e-inner.sh
+#     both `next build` into it) and the database sl_demo_record (demo-app-backend-inner.sh and the recording
+#     both create it). Those must not overlap, so every demo run takes demo-serve.lock, and the servers take
+#     only that. A demo E2E started while a server is up still waits — and now says for what.
+# Order is always demo-serve.lock, then e2e.lock, so the two cannot deadlock.
+# ponytail: demo-serve.lock is one lock for every checkout and both servers; .next is per tree, so a lock per
+# tree would let two checkouts' servers coexist — add it when more than one checkout serves the demo.
+P=demo-remote
+# remote_flock — a copy of scripts/run-gates.sh's, kept identical by its test: take the lock; when it is
+# taken, say who has it, then wait (the wait used to be silent; this machine's gate-lock.sh reports every minute).
+remote_flock() {
+    local fd="$1" lock="$2" filters="" n; shift 2
+    for n in "$@"; do filters="$filters --filter name=$n"; done
+    printf '%s' "flock -n $fd || { echo \"$P: waiting for $lock on that machine, held by: \$(docker ps --format '{{.Names}} ({{.Status}})'$filters | paste -sd, -)\"; flock $fd; } || exit 1"
+}
 case "$SCRIPT" in
-    *serve-inner.sh|*backend-inner.sh) LIMIT="${DEMO_TIMEOUT:-}" ;;
-    *) LIMIT="${DEMO_TIMEOUT:-25m}" ;;
+    *serve-inner.sh|*backend-inner.sh)
+        LIMIT="${DEMO_TIMEOUT:-}"
+        LOCKS="$(remote_flock 8 demo-serve.lock sl-demo-)"; LOCK_FILES="8>$RDIR/demo-serve.lock" ;;
+    *)  LIMIT="${DEMO_TIMEOUT:-25m}"
+        LOCKS="$(remote_flock 8 demo-serve.lock sl-demo-); $(remote_flock 9 e2e.lock sl-e2e- sl-demo-)"
+        LOCK_FILES="8>$RDIR/demo-serve.lock 9>$RDIR/e2e.lock" ;;
 esac
 TIMED=""
 if [ -n "$LIMIT" ]; then
     [[ "$LIMIT" =~ ^[0-9]+(\.[0-9]+)?[smhd]?$ ]] || { echo "demo-remote: DEMO_TIMEOUT=$LIMIT is not a time limit (e.g. 25m, 1500)"; exit 2; }
     TIMED="timeout -k 60 $LIMIT"
 fi
-ssh -o BatchMode=yes "$GATES_REMOTE" "( flock 9 || exit 1; docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
+ssh -o BatchMode=yes "$GATES_REMOTE" "( $LOCKS; docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
     --tmpfs /tmp:rw,exec,size=8g ${DEMO_PUBLISH:-} --cpus ${DEMO_CPUS:-8} --memory ${DEMO_MEMORY:-16g} --shm-size 2g -v $RWORK:/app -v $RDIR/tmp/demo:/sl-tmp -w /app \
     -e SL_PG_BASE='$BASE_URL' -e SL_DEMO_DB_URL='$BASE_URL/sl_demo_record' -e PW_WORKERS=${PW_WORKERS:-4} -e DEMO_PARALLEL=${DEMO_PARALLEL:-5} -e CI= \
-    $IMG $TIMED bash $ARGS; rc=\$?; docker rm -f $NAME >/dev/null 2>&1; exit \$rc ) 9>$RDIR/e2e.lock"
+    $IMG $TIMED bash $ARGS; rc=\$?; docker rm -f $NAME >/dev/null 2>&1; exit \$rc ) $LOCK_FILES"
 RC=$?
 trap - EXIT
 case "$RC" in

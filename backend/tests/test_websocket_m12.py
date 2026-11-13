@@ -44,16 +44,6 @@ async def _connect_user(user, tenant_code=None):
 
 
 @pytest.fixture
-def cn_tenant(db):
-    from apps.tenants.models import Tenant
-    tenant, _ = Tenant.objects.get_or_create(
-        code="CN_DIYU",
-        defaults={"display_name": "Chinese Diyu"},
-    )
-    return tenant
-
-
-@pytest.fixture
 def eu_tenant(db):
     from apps.tenants.models import Tenant
     tenant, _ = Tenant.objects.get_or_create(

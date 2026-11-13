@@ -8,13 +8,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { Pressable, Text } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { soulLinks } from "../links";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider, useSession } from "../session";
+import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockPublish = jest.fn();
@@ -46,14 +46,10 @@ describe("the cooldown number", () => {
       "GET /me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" } },
       "/me/assist/conversations/": { status: 200, data: [] },
     });
-    render(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <SessionProvider>
-            <RootNavigator />
-          </SessionProvider>
-        </I18nProvider>
-      </SafeAreaProvider>
+    renderSoul(
+      <SessionProvider>
+        <RootNavigator />
+      </SessionProvider>
     );
     await screen.findByTestId("profile-card");
     await act(async () => soulLinks.push("soulledger://cooldown"));

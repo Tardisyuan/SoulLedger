@@ -12,6 +12,7 @@ from django.core.cache import cache
 from apps.soul_assist import config, failover, service
 from apps.soul_assist.models import AssistConfig, AssistConversation, AssistMessage, AssistUsage
 from apps.soul_assist.providers import FakeProvider
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -26,10 +27,10 @@ def assistant_on(settings):
     settings.ASSISTANT_ENABLED = True
     settings.ASSISTANT_PROVIDER = "apps.soul_assist.providers.FakeProvider"
     settings.ASSISTANT_MODEL = PRIMARY
+    reset_fake_provider()
     FakeProvider.script = [{"deltas": ["你", "好"]}]
-    FakeProvider.scripts, FakeProvider.calls, FakeProvider.pulled = {}, [], []
     yield
-    FakeProvider.script, FakeProvider.scripts, FakeProvider.calls, FakeProvider.pulled = [], {}, [], []
+    reset_fake_provider()
 
 
 @pytest.fixture

@@ -272,10 +272,41 @@ test("the seal goes once the console is under it, and Esc skips it", async ({ pa
   // Frames after the seal went in which the landing page, or a route still waiting, was what showed.
   expect(await page.evaluate(() => (window as unknown as { __seal: object }).__seal)).toEqual({ seal: true, landingAfter: 0, waitingAfter: 0, gone: true });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
-  await page.goto("/");
-  await page.getByTestId("landing-card-cn").click();
-  await page.keyboard.press("Escape");
-  await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 300 });
+  // Esc: the cover goes with the key, not when the sign-in lands. Counted in the page, in frames from the keydown —
+  // this was `toHaveCount(0, { timeout: 300 })`, a cap on the runner's clock, and a busy machine spends 300 ms between
+  // two commands without the page having done anything wrong. A try in which the runner was so slow that the cover had
+  // already gone by itself when the key arrived proves nothing either way, and is taken again.
+  type Esc = { up: boolean; frames: number };
+  let esc: Esc = { up: false, frames: -1 };
+  for (let attempt = 0; attempt < 3 && !esc.up; attempt++) {
+    await page.goto("/");
+    await page.evaluate(() => {
+      const up = () => !!document.querySelector("[data-testid='demo-entrance']");
+      const seen = { up: false, frames: -1 };
+      (window as unknown as { __esc: typeof seen }).__esc = seen;
+      window.addEventListener(
+        "keydown",
+        (e) => {
+          if (e.key !== "Escape") return;
+          seen.up = up();
+          let frames = 0;
+          const tick = () => {
+            if (!up()) seen.frames = frames;
+            else if (++frames < 600) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        },
+        { capture: true },
+      );
+    });
+    await page.getByTestId("landing-card-cn").click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 6000 });
+    await page.waitForFunction(() => (window as unknown as { __esc?: Esc }).__esc!.frames >= 0, null, { timeout: 6000 });
+    esc = await page.evaluate(() => (window as unknown as { __esc: Esc }).__esc);
+  }
+  expect(esc.up, "Esc arrived while the cover was up (three tries)").toBe(true);
+  expect(esc.frames, "frames the cover stayed up after Esc").toBeLessThanOrEqual(3);
 });
 
 test("from one underworld to another: the seal covers it, no cross-fade of the old page, no cut afterwards", async ({ page }) => {

@@ -14,7 +14,6 @@ changing a user's roles needs no invalidation: the next call re-reads the user.
 """
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.models import User, UserRole
@@ -24,18 +23,11 @@ from apps.perm.checker import ROLE_FORBIDDEN_CODENAMES, WORKFLOW_APPROVE_CODENAM
 from apps.perm.models import Permission, Role, RolePermission
 from apps.perm.services import get_role_permission_codenames
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 # JUDGE holds it (and judgment.create), VIEWER does not.
 JUDGE_ONLY = "judgment.create"
 APPROVE = "workflow.approve"  # JUDGE holds it; MODERATOR may never
-
-
-def _client(user):
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 @pytest.fixture
@@ -45,7 +37,7 @@ def world(db):
     for name in UserRole.values:
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
     admin = User.objects.create_user(username="mr_admin", password="x", role="ADMIN", tenant=tenant)
-    yield {"tenant": tenant, "admin": admin, "client": _client(admin)}
+    yield {"tenant": tenant, "admin": admin, "client": sign_in(APIClient(), admin)}
     invalidate_all_permissions()
 
 
@@ -106,7 +98,7 @@ def test_reported_codenames_follow_the_union(world):
     assert JUDGE_ONLY in held
     assert JUDGE_ONLY not in set(get_role_permission_codenames("VIEWER"))
     user = _user(world, "u_report", "VIEWER", extra=["JUDGE"])
-    res = _client(user).get("/api/v1/perm/role-permissions/")
+    res = sign_in(APIClient(), user).get("/api/v1/perm/role-permissions/")
     assert res.status_code == 200 and JUDGE_ONLY in res.json()["permissions"], res.content
     # rbac-web M-3:同一个应答带回此刻的身份 —— 网页聚焦重取时据此更新「本殿」与侧栏缓存键。
     body = res.json()
@@ -167,8 +159,8 @@ def test_a_soul_account_holds_nothing_whatever_it_lists(world):
 
 def test_admin_only_endpoints_stay_closed_to_a_user_with_many_roles(world):
     user = _user(world, "h_many", "MODERATOR", extra=["JUDGE", "GUARDIAN"])
-    assert _client(user).get("/api/v1/users/").status_code == 403  # IsAdminPermission: role == ADMIN
-    assert _client(user).post("/api/v1/users/batch_deactivate/", {"user_ids": [1]}, format="json").status_code == 403
+    assert sign_in(APIClient(), user).get("/api/v1/users/").status_code == 403  # IsAdminPermission: role == ADMIN
+    assert sign_in(APIClient(), user).post("/api/v1/users/batch_deactivate/", {"user_ids": [1]}, format="json").status_code == 403
 
 
 def test_recycle_bin_restore_stays_admin_only_even_with_a_stray_grant_on_an_extra_role(world):
@@ -182,7 +174,7 @@ def test_recycle_bin_restore_stays_admin_only_even_with_a_stray_grant_on_an_extr
     menu.soft_delete()
     menu.refresh_from_db()
     user = _user(world, "h_bin", "JUDGE", extra=["BINNER"])
-    res = _client(user).post("/api/v1/recycle-bin/restore/", {"cascade_id": str(menu.delete_cascade_id)}, format="json")
+    res = sign_in(APIClient(), user).post("/api/v1/recycle-bin/restore/", {"cascade_id": str(menu.delete_cascade_id)}, format="json")
     assert res.status_code == 403, res.content
     assert Menu.all_objects.get(pk=menu.pk).is_deleted
 
@@ -247,7 +239,7 @@ def test_assign_roles_refuses_unknown_empty_and_non_list_bodies(world):
 def test_assign_roles_is_admin_only(world):
     target = _user(world, "a_target2", "VIEWER")
     mod = _user(world, "a_mod", "MODERATOR")
-    res = _client(mod).post(f"/api/v1/users/{target.pk}/assign_roles/", {"extra_roles": ["JUDGE"]}, format="json")
+    res = sign_in(APIClient(), mod).post(f"/api/v1/users/{target.pk}/assign_roles/", {"extra_roles": ["JUDGE"]}, format="json")
     assert res.status_code == 403
     target.refresh_from_db()
     assert target.extra_roles == []
@@ -312,7 +304,7 @@ def test_the_profile_carries_the_union_and_follows_a_grant_change(world):
     the login payload's (`get_role_permission_codenames`), so a grant made since sign-in shows up."""
     role = _custom_role("PROFILED")
     user = _user(world, "p_profiled", "VIEWER", extra=["PROFILED"])
-    client = _client(user)
+    client = sign_in(APIClient(), user)
     before = client.get("/api/v1/auth/profile/").json()["permissions"]
     assert "ledger.manage" not in before
     assert before == get_role_permission_codenames(user.role, user.extra_roles)

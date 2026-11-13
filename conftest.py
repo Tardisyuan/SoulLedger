@@ -316,7 +316,14 @@ def pytest_sessionstart(session):
                 settings.DATABASES[alias].setdefault("TEST", {})["NAME"] = name
             config.stash[_templates_key] = fresh
             config.stash[_drop_key] = dict(fresh)
+            import time
+
+            from config import sqlite_template
+
+            started = time.monotonic()
             setup_databases(verbosity=0, interactive=False, aliases=set(fresh), serialized_aliases=set())
+            # a per-run template is always migrated: nothing is kept outside the remote gate box
+            sqlite_template.record("cold", "per-run", time.monotonic() - started)
             # CREATE DATABASE ... TEMPLATE refuses while anyone is connected to the template.
             connections.close_all()
     except BaseException:
@@ -353,6 +360,7 @@ def _kept_or_fresh_templates(config, fresh):
             cursor.execute("SHOW server_version_num")
             return cursor.fetchone()[0]
 
+    started = time.monotonic()
     backend_dir = Path(sqlite_template.__file__).resolve().parent.parent
     hashes = {
         alias: sqlite_template.input_hash(
@@ -415,6 +423,8 @@ def _kept_or_fresh_templates(config, fresh):
     connections.close_all()
     print(f"\nPostgreSQL test templates: {', '.join(f'{a}={n}' for a, n in sorted(use.items()))} "
           f"({'built' if build else 'kept, no migrate'})", file=sys.stderr)
+    sqlite_template.record(("verify" if verify and existing else "cold") if build else "hot",
+                           ",".join(sorted(set(hashes.values()))), time.monotonic() - started)
     return use
 
 
@@ -432,8 +442,31 @@ def pytest_configure_node(node):
 def pytest_sessionfinish(session):
     """Controller: drop the templates after xdist has shut the workers down
     (its sessionfinish is a plain impl, so `trylast` here runs after it)."""
+    from config import sqlite_template
+
     if not hasattr(session.config, "workerinput"):
         _drop_pg_templates(session.config)
+    else:
+        # xdist sends workeroutput to the controller after every sessionfinish impl has run
+        session.config.workeroutput[sqlite_template.WORKER_KEY] = list(sqlite_template.RECORDS)
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_testnodedown(node, error):
+    """xdist controller: collect what each worker's test-database setup cost (config/sqlite_template.py)."""
+    from config import sqlite_template
+
+    sqlite_template.RECORDS.extend(tuple(r) for r in getattr(node, "workeroutput", {}).get(sqlite_template.WORKER_KEY, []))
+
+
+def pytest_terminal_summary(terminalreporter, config):
+    """One line: was the test-database template COLD (migrated) or HOT (cloned), which hash, how long.
+    A summary line rather than a report header: the gates run pytest with -q --no-header."""
+    from config import sqlite_template
+
+    line = None if hasattr(config, "workerinput") else sqlite_template.report_line(sqlite_template.RECORDS)
+    if line:
+        terminalreporter.write_line(line)
 
 
 @pytest.fixture(scope="session")

@@ -1,6 +1,6 @@
 /**
  * Factories for the module doubles most suites declare by hand
- * (docs/test-suite-review-2026-11-10.md §3.1: I18nContext ×188,
+ * (test-suite review 2026-11-10 §3.1: I18nContext ×188,
  * TenantContext ×126, ToastContext ×93).
  *
  * `jest.mock` is hoisted and scoped to the test file, so a helper cannot call
@@ -97,9 +97,17 @@ export function setMockUser(user: unknown): void {
   tenantUser = user;
 }
 
-/** `useTenant: () => ({ user })` — the user only, exactly like the `{ user: mockUser }` copies. */
-export function tenantMock() {
-  return { useTenant: () => ({ user: tenantUser }) };
+/**
+ * `useTenant: () => ({ user })` — the user only, exactly like the `{ user: mockUser }` copies.
+ * `user: () => mockUser` reads the suite's own variable on every call instead of `setMockUser`'s;
+ * `ctx: () => mockTenant` is `useTenant` itself, for the copies that return a whole context object
+ * (the same object every call, as `useTenant: () => mockTenant` did). Both are thunks: the
+ * variable is still in its TDZ when the `jest.mock` factory runs.
+ */
+export function tenantMock({ user, ctx }: { user?: () => unknown; ctx?: () => unknown } = {}) {
+  if (ctx) return { useTenant: ctx };
+  const read = user ?? (() => tenantUser);
+  return { useTenant: () => ({ user: read() }) };
 }
 
 /** One spy per test file. `jest.clearAllMocks()` clears it like any other `jest.fn()`. */

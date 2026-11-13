@@ -2,13 +2,12 @@
  * What a crash report may carry. Every secret below is a distinctive string; the assertions look for
  * the STRING in the serialized event (absence), not for a field being missing.
  */
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { initCrashReporting, scrubBreadcrumb, scrubEvent, scrubString, setCrashUser } from "../crashReport";
 import { RootErrorBoundary } from "../errorBoundary";
-import { I18nProvider } from "../i18n";
+import { renderSoul } from "./harness";
 
 const mockSdk = { init: jest.fn(), setTag: jest.fn(), setUser: jest.fn(), captureException: jest.fn() };
 let mockLoaded = 0;
@@ -157,12 +156,8 @@ describe("RootErrorBoundary", () => {
     throw new Error("render exploded");
   }
   const mount = (child: React.ReactNode) =>
-    render(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <RootErrorBoundary>{child}</RootErrorBoundary>
-        </I18nProvider>
-      </SafeAreaProvider>
+    renderSoul(
+      <RootErrorBoundary>{child}</RootErrorBoundary>
     );
 
   test("a render error shows the error screen, not a blank, and retry remounts", () => {

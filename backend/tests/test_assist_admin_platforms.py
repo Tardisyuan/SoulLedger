@@ -10,6 +10,7 @@ from cryptography.fernet import Fernet
 from apps.authentication.models import User
 from apps.soul_assist import config, platforms
 from apps.soul_assist.providers import Answer, FakeProvider, ProviderError
+from tests.ai_feature_support import reset_fake_provider
 from tests.soul_account_support import officer_client
 
 pytestmark = pytest.mark.django_db
@@ -25,11 +26,10 @@ def assistant_on(settings):
     settings.ASSISTANT_MODEL = "env-model"
     settings.ASSISTANT_BASE_URL = ""
     settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
+    reset_fake_provider()
     FakeProvider.script = [{"text": "OK"}]
-    FakeProvider.calls = []
     yield
-    FakeProvider.script = []
-    FakeProvider.calls = []
+    reset_fake_provider()
 
 
 @pytest.fixture

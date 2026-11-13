@@ -23,9 +23,7 @@ jest.mock("@soulledger/core/api", () => ({
 
 let mockUser: { id: number; role: string } | null = { id: 1, role: "JUDGE" };
 
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 const mockedAll = menusApi.all as jest.Mock;
 const mockedList = menusApi.list as jest.Mock;

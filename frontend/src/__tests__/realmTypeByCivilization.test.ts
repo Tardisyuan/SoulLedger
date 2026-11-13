@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 界域类型按文明显示(v4 第八批第 7 条):数据与 RealmType 不动,`realmTypeNamespace` 只选命名空间。
  * 有 `realms.types_by_civ.<文明>.<类型>` 就用它,Design 标「不用」的组合与不认识的文明回落 `realms.types`。
  */

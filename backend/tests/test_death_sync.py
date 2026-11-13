@@ -47,11 +47,6 @@ def _api_key_client(raw_key):
 
 
 @pytest.fixture
-def cn_tenant(db):
-    return Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Chinese Diyu"})[0]
-
-
-@pytest.fixture
 def eu_tenant(db):
     return Tenant.objects.get_or_create(code="EU_HEAVEN_HELL", defaults={"display_name": "EU"})[0]
 

@@ -46,9 +46,7 @@ import { renderWithProviders, createTestQueryClient } from "./support/render";
 const mockShowToast = jest.fn();
 let mockUser: { id: number; username: string } | null = { id: 1, username: "yama" };
 
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),

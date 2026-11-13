@@ -464,7 +464,7 @@ export const isSystemActor = (actor: string | null | undefined): boolean => !act
  *
  * Not an exemption list: the authority for these is
  * `backend/apps/scheduler/realtime.py`'s module constants, and
- * `eventRegistry.test.ts` reads that file and requires this array to equal
+ * `eventRegistry.contract.test.ts` reads that file and requires this array to equal
  * them. Whether they should also become EventType members (the route
  * NOTIFICATION_CREATED took) is a backend decision, raised in the 2026-09-17
  * scheduler frontend report.

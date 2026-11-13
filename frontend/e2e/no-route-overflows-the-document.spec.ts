@@ -17,43 +17,15 @@
  * 每一个都有 overflow-x 祖先,而文档确实是宽的。
  */
 
-import { expect, test, setupAuthenticatedPage, SOULS } from "./fixtures";
+import { expect, test, openRoute, SOULS } from "./fixtures";
+import { routesFor } from "./routes";
 
-/** 共用 PageShell / 同一套布局的静态路由。动态路由([id])要另配 fixture,
- *  不在这个文件的范围内 —— 它们的容器是同一批,溢出会先在这里出现。 */
+/** `app/` 下每一条静态路由,减去 `routes.ts` 的 `EXCLUDE.overflow`(各带理由)。此前是一张手写的 30 条的表,
+ *  新页面不会自己进来(docs/audit/2026-11-13-test-review.md §2 #5);`e2eRouteTables.test.ts` 守着这张表仍从那里来。
+ *  致谢页的开源软件一节有长的许可证声明(gsap 的一整句),393 下要折行不撑宽 —— `/about` 因此一直在表里。 */
 const ROUTES = [
-  "/dashboard",
-  "/souls",
-  "/judgment",
-  "/judgment/queue",
-  "/disposition",
-  "/ledger",
-  "/workflow",
-  "/dispatch",
-  "/dispatch/propose",
-  "/cross-judgments",
-  "/audit",
-  "/menus",
-  "/menus/buttons",
-  "/users",
-  "/permissions",
-  "/tenants",
-  "/realms",
-  "/actors",
-  "/organizations",
-  "/corpus",
-  "/notifications",
-  "/social",
-  "/social/follows",
-  "/profile",
-  "/recycle-bin",
-  "/death-sync",
-  "/scheduler",
-  "/soul-credentials",
-  "/rebirth-applications",
-  // 致谢页的开源软件一节有长的许可证声明(gsap 的一整句),393 下要折行不撑宽。
-  "/about",
-  // 动态路由,fixture 现成(SOULS[0] 的详情、path、界域都在 ApiMock 里)。
+  ...routesFor("overflow"),
+  // 动态路由要夹具里有的 id(SOULS[0] 的详情、path、界域都在 ApiMock 里),所以仍然点名。
   // 2026-09-25 行程条换成共享拓扑组件时,393 下它的 sr-only 状态字(absolute)
   // 从没有 `relative` 的横向滚动框里逃出来,把文档撑到 705px;这张表当时没有
   // 这条路由,是 soul-accounts.spec 的弹窗按钮点不中才暴露的。
@@ -63,12 +35,9 @@ const ROUTES = [
 test.describe("文档不比视口宽", () => {
   for (const route of ROUTES) {
     test(`${route}`, async ({ page }) => {
-      await setupAuthenticatedPage(page);
-      await page.goto(route);
-      // 等外壳挂上再量。挂载之前 documentElement 只有一个空 body,
-      // 那时候量到的 393/393 是「什么都还没渲染」,不是「没有溢出」。
-      await expect(page.locator("body")).not.toBeEmpty();
-      await page.waitForLoadState("networkidle");
+      // 等页面自己的内容画出来再量(`openRoute`:网络静下来,且正文不再是空壳)。挂载之前 documentElement
+      // 只有一个空 body,骨架屏也没有会撑宽的东西:那时候量到的 393/393 是「什么都还没渲染」,不是「没有溢出」。
+      await openRoute(page, route);
 
       const { scrollWidth, clientWidth } = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,

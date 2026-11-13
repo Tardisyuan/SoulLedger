@@ -13,7 +13,6 @@ from types import SimpleNamespace
 
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.models import User, UserRole
@@ -26,20 +25,12 @@ from apps.perm.models import Permission, Role, RolePermission
 from apps.perm.services import RoleHolder
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 CHANGES = "/api/v1/perm/role-permissions/changes/"
 ASSIGN = "/api/v1/perm/role-permissions/assign/"
 ALL_GRANTS = "/api/v1/perm/role-permissions/all/"
 IMPORT = "/api/v1/perm/import/"
-
-
-def _client(user):
-    client = APIClient()
-    token = RefreshToken.for_user(user)
-    if user.tenant_id:
-        token["tenant_code"] = user.tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
 
 
 def _perm(codename):
@@ -69,7 +60,7 @@ def world(db):
     for name in UserRole.values:
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
     admin = User.objects.create_user(username="cap_admin", password="x", role="ADMIN", tenant=None)
-    yield SimpleNamespace(hall=hall, other=other, admin=admin, client=_client(admin))
+    yield SimpleNamespace(hall=hall, other=other, admin=admin, client=sign_in(APIClient(), admin))
     invalidate_all_permissions()
 
 
@@ -166,12 +157,12 @@ def test_permission_reads_follow_system_settings_and_writes_need_no_hall(world):
     lead = _user(world, "cap_lead", "MODERATOR")
     reader = _user(world, "cap_reader", "MODERATOR", extra=["SETTINGS_READER"])
     hall_admin = _user(world, "cap_hall_admin", "ADMIN")
-    assert _client(lead).get(ALL_GRANTS).status_code == 403
-    assert _client(reader).get(ALL_GRANTS).status_code == 200
-    assert _client(hall_admin).get(ALL_GRANTS).status_code == 200
+    assert sign_in(APIClient(), lead).get(ALL_GRANTS).status_code == 403
+    assert sign_in(APIClient(), reader).get(ALL_GRANTS).status_code == 200
+    assert sign_in(APIClient(), hall_admin).get(ALL_GRANTS).status_code == 200
     body = {"role": "VIEWER", "permission_ids": [_perm("soul.read").pk]}
-    assert _client(hall_admin).post(ASSIGN, body, format="json").status_code == 403
-    assert _client(reader).post(ASSIGN, body, format="json").status_code == 403
+    assert sign_in(APIClient(), hall_admin).post(ASSIGN, body, format="json").status_code == 403
+    assert sign_in(APIClient(), reader).post(ASSIGN, body, format="json").status_code == 403
     assert world.client.post(ASSIGN, body, format="json").status_code == 200
 
 
@@ -184,20 +175,20 @@ def test_a_granted_user_manage_lists_its_own_hall_without_admins(world):
     _user(world, "cap_hall_admin2", "ADMIN")
     _user(world, "cap_viewer", "VIEWER")
     _user(world, "cap_far", "VIEWER", tenant=world.other)
-    response = _client(clerk).get("/api/v1/users/?page_size=100")
+    response = sign_in(APIClient(), clerk).get("/api/v1/users/?page_size=100")
     assert response.status_code == 200, response.content
     rows = response.data["results"] if isinstance(response.data, dict) else response.data
     names = {u["username"] for u in rows}
     assert "cap_viewer" in names
     assert "cap_hall_admin2" not in names and "cap_far" not in names
-    assert _client(_user(world, "cap_judge", "JUDGE")).get("/api/v1/users/").status_code == 403
+    assert sign_in(APIClient(), _user(world, "cap_judge", "JUDGE")).get("/api/v1/users/").status_code == 403
 
 
 # ── 第 3 条:拆码后默认行为不变,收回新码旧码不够 ───────────────────────────
 
 
 def test_city_gods_need_city_god_read_not_judgment_read(world):
-    judge = _client(_user(world, "cap_j", "JUDGE"))
+    judge = sign_in(APIClient(), _user(world, "cap_j", "JUDGE"))
     assert judge.get("/api/v1/judgment/city-gods/").status_code == 200
     _revoke("JUDGE", "city_god.read")
     assert judge.get("/api/v1/judgment/city-gods/").status_code == 403
@@ -209,14 +200,14 @@ def test_recalculation_is_ledger_calculate_which_guardian_does_not_hold(world):
     guardian = _user(world, "cap_g", "GUARDIAN")
     lead = _user(world, "cap_m", "ADMIN")  # the hall's ADMIN; MODERATOR left ledger.* on 2026-11-07 (perm/0036)
     assert check_permission(guardian, "ledger.manage") is True
-    assert _client(guardian).post(f"/api/v1/ledger/calculate/{soul.pk}/").status_code == 403
-    assert _client(lead).post(f"/api/v1/ledger/calculate/{soul.pk}/").status_code == 200
+    assert sign_in(APIClient(), guardian).post(f"/api/v1/ledger/calculate/{soul.pk}/").status_code == 403
+    assert sign_in(APIClient(), lead).post(f"/api/v1/ledger/calculate/{soul.pk}/").status_code == 200
 
 
 def test_ledger_overview_is_ledger_read_and_the_exports_are_ledger_export(world):
     Soul.objects.create(name="本殿", tenant=world.hall)
     Soul.objects.create(name="别殿", tenant=world.other)
-    viewer = _client(_user(world, "cap_v", "VIEWER"))
+    viewer = sign_in(APIClient(), _user(world, "cap_v", "VIEWER"))
     overview = viewer.get("/api/v1/ledger/stats/overview/")
     assert overview.status_code == 200, overview.content
     assert overview.data["total_souls"] == 1  # own hall only
@@ -346,7 +337,7 @@ def test_a_hall_officer_with_recycle_bin_read_does_not_list_roles(world):
     binned.soft_delete()
     _role("BIN_READER", "recycle_bin.read")
     reader = _user(world, "cap_bin", "BIN_READER")
-    mine = _client(reader).get("/api/v1/recycle-bin/")
+    mine = sign_in(APIClient(), reader).get("/api/v1/recycle-bin/")
     assert mine.status_code == 200, mine.content
     assert "role" not in {e["entity_type"] for e in mine.data["results"]}
     everything = world.client.get("/api/v1/recycle-bin/")

@@ -8,9 +8,7 @@ import HomePage from "@/app/page";
 
 let mockUser: Record<string, unknown> | null = null;
 
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "zh-Hans", setLocale: () => {}, hydrated: true }));
 jest.mock("@/components/LanguageSwitcher", () => ({ LanguageSwitcher: () => null }));
 jest.mock("@/src/components/layout/ThemeToggle", () => ({ ThemeToggle: () => null }));
