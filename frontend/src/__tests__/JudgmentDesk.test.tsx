@@ -699,7 +699,7 @@ describe("丁 · 判词自动保存", () => {
     fireEvent.change(notesBox(), { target: { value: "功过相抵,暂入救济门" } });
     await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(2), WAIT);
     expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 5, notes: "功过相抵,暂入救济门", draft_verdict: "PURGATORY", ...NO_PLACEMENT });
-  }, 15000);
+  });
 
   const CONFLICT = {
     response: {
@@ -729,7 +729,7 @@ describe("丁 · 判词自动保存", () => {
     fireEvent.change(notesBox(), { target: { value: "我的判词,续写" } });
     await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
-  }, 15000);
+  });
 
   it("409 之后「保留我的」是一次看见对方之后的显式覆盖:以对方的版本号再存", async () => {
     judgmentApi.saveDraft.mockRejectedValueOnce(CONFLICT).mockResolvedValue({
@@ -744,7 +744,7 @@ describe("丁 · 判词自动保存", () => {
     // 草稿带上的是页面上的裁决 —— 预选的待定。
     expect(judgmentApi.saveDraft).toHaveBeenLastCalledWith(ID, { version: 9, notes: "我的判词", draft_verdict: "PURGATORY", ...NO_PLACEMENT });
     await waitFor(() => expect(screen.queryByTestId("draft-conflict")).toBeNull());
-  }, 15000);
+  });
 
   it("409 之后「改用对方的」:判词与裁决换成对方的,不再存", async () => {
     judgmentApi.saveDraft.mockRejectedValue(CONFLICT);
@@ -757,7 +757,7 @@ describe("丁 · 判词自动保存", () => {
     expect(radio("PASSED").checked).toBe(true);
     await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
-  }, 15000);
+  });
 
   it("存过的裁决草稿在打开时选中;已结案不存", async () => {
     judgmentApi.get.mockResolvedValue({ data: judgment({ draft_verdict: "RETRY", draft_version: 2 }) });
@@ -771,7 +771,7 @@ describe("丁 · 判词自动保存", () => {
     fireEvent.keyDown(document.body, { key: "2" });
     await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
-  }, 15000);
+  });
 });
 
 // ── 据 · 先例 与 D 暂缓 ────────────────────────────────────────────────────
@@ -969,7 +969,7 @@ describe("戊 · 发落", () => {
     expect(await within(screen.getByTestId("placement")).findByTestId("placement-saved")).toHaveTextContent(
       tZh("judgment.draft.saved_at", { time: "2026-09-25T14:02:00Z" })
     );
-  }, 15000);
+  });
 
   it("重开页面时还原存下的发落,挂「草稿」与保存时间", async () => {
     fakeClock();
@@ -987,7 +987,7 @@ describe("戊 · 发落", () => {
     // 还原不是编辑:不存。
     await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
-  }, 15000);
+  });
 
   it("发落的 409 与判词一样:停下、冲突条;「改用对方的」连发落一起换成对方的", async () => {
     fakeClock();
@@ -1016,7 +1016,7 @@ describe("戊 · 发落", () => {
     expect(destinationBox().value).toBe("r-7");
     await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
-  }, 15000);
+  });
 
   it("加减项审判与没有 judgment.execute 的人都没有这一节", async () => {
     judgmentApi.get.mockResolvedValue({ data: judgment({ kind: "AMENDMENT", amends_plan_id: null }) });
@@ -1234,7 +1234,7 @@ describe("卷宗 · 台:去处 1–4", () => {
     renderPage();
     await waitFor(() => expect(radio("RETRY").checked).toBe(true));
     expect(radio("PURGATORY").checked).toBe(false);
-  }, 15000);
+  });
 
   it("选定是 1.5px 墨色描框,不是颜色、不是墨底:只有选定的那一行有框;四行一样高(--opt-h),一行一个", async () => {
     renderPage();

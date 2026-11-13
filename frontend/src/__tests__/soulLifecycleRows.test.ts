@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Pure-function tests for the Stage 3 soul lifecycle spine's row builders
  * (src/components/souls/soulLifecycleRows.ts). Kept separate from the
  * component test so the row construction/sorting/grouping/filtering rules —

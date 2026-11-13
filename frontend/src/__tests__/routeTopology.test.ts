@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * src/lib/routeTopology.ts —— 四种形状、「示意」退化,以及规则 16(只有有记录的站
  * 画成已行)。夹具的拓扑列照 backend/apps/actors/mythology/realms.py
  * REALM_TOPOLOGY 取值:杜阿特是「称心二岔」(order + fork PASS / FAIL),hour 每一行都是 null。
