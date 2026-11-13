@@ -1,6 +1,6 @@
 /**
  * Factories for the module doubles most suites declare by hand
- * (docs/test-suite-review-2026-11-10.md §3.1: I18nContext ×188,
+ * (test-suite review 2026-11-10 §3.1: I18nContext ×188,
  * TenantContext ×126, ToastContext ×93).
  *
  * `jest.mock` is hoisted and scoped to the test file, so a helper cannot call

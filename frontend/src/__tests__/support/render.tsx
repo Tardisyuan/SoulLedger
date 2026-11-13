@@ -2,7 +2,7 @@
  * One QueryClient + provider wrapper for component and page tests.
  *
  * 147 suites each built their own `new QueryClient({ defaultOptions: … })` and
- * a five-line `renderPage()` around it (docs/test-suite-review-2026-11-10.md
+ * a five-line `renderPage()` around it (test-suite review 2026-11-10
  * §3.1). The copies agreed on `retry: false` for queries; about half also said
  * `mutations: { retry: false }`, which is TanStack Query v5's default already,
  * so the two spellings behaved the same. This file says it once.
