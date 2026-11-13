@@ -9965,6 +9965,86 @@
       "open": "打开卷宗",
       "claim": "认领",
       "search": "搜索"
+    },
+    "dossier": {
+      "spine": {
+        "cn": {
+          "aria": "地府 · 十殿一线",
+          "pre": "前九站",
+          "hells": "地狱 · 支线",
+          "rebirth": "轮回"
+        },
+        "eu": {
+          "aria": "欧洲 · 九圈漏斗",
+          "minos": "米诺斯"
+        },
+        "eg": {
+          "aria": "埃及 · 称心二分",
+          "death": "死亡",
+          "gate": "杜阿特之门",
+          "heart": "心",
+          "feather": "羽",
+          "aaru": "芦苇原",
+          "annihilation": "湮灭 · 不是地方"
+        },
+        "gr": {
+          "aria": "希腊 · 三岔分路",
+          "death": "死亡",
+          "ferry": "阿刻戎渡口",
+          "isles": "至福岛",
+          "asphodel": "阿斯福得草原",
+          "tartarus": "塔尔塔罗斯"
+        }
+      },
+      "seal": {
+        "aria": "{{seal}}",
+        "aria_pending": "{{seal}} · 待落印",
+        "cn": "地府 · 方印",
+        "eu": "欧洲 · 圆形蜡封",
+        "eg": "埃及 · 王名圈",
+        "gr": "希腊 · 陶片"
+      },
+      "mark": {
+        "cn": {
+          "merit": "功",
+          "demerit": "过",
+          "merit_glyph": "功",
+          "demerit_glyph": "过"
+        },
+        "eu": {
+          "merit": "德",
+          "demerit": "罪"
+        },
+        "eg": {
+          "merit": "羽",
+          "demerit": "心"
+        },
+        "gr": {
+          "merit": "白票",
+          "demerit": "黑票"
+        }
+      },
+      "tabs": {
+        "label": "卷宗分页",
+        "dossier": "卷宗",
+        "merits": "功过",
+        "events": "事件",
+        "lives": "轮回",
+        "sentence": "受刑"
+      },
+      "merits_all": "全部 {{n}} 条",
+      "judge": {
+        "head": "判 · 按 1–4 选",
+        "sealed_head": "判词 · 已落印",
+        "words": "判词",
+        "cited": "引律条",
+        "seal": "落印",
+        "hint": "选定去处、写好判词后落印。落印后不能撤回。",
+        "sealed_note": "落印后不能撤回；要改判只能走申诉。",
+        "seal_appears": "落印后会在这里出现印",
+        "full_text": "看判词全文",
+        "sealed_by": "{{date}} · {{judge}}"
+      }
     }
   },
   "zongbu": {
