@@ -2610,13 +2610,13 @@
         "9": "Pingdeng"
       },
       "hells": {
-        "2": "Reviving Hell",
-        "3": "Black Rope Hell",
-        "4": "Crushing Hell",
-        "5": "Wailing Hell",
-        "6": "Great Wailing Hell",
-        "7": "Scorching Hell",
-        "8": "Great Scorching Hell",
+        "2": "Great Reviving Hell",
+        "3": "Great Black Rope Hell",
+        "4": "Great Crushing Hell",
+        "5": "Howling Hell",
+        "6": "Great Howling Hell",
+        "7": "Burning Hell",
+        "8": "Great Burning Hell",
         "9": "Avici Hell"
       }
     },
@@ -3783,7 +3783,7 @@
         "read": "View figures"
       },
       "capture": {
-        "read": "View summons warrants"
+        "read": "View capture warrants"
       },
       "city_god": {
         "read": "View City Gods"
@@ -3840,7 +3840,7 @@
         "settings": "System settings"
       },
       "tudi": {
-        "read": "View Tudi Gong"
+        "read": "View Earth Gods"
       },
       "workflow": {
         "read": "View workflows"
@@ -4529,7 +4529,7 @@
       },
       "eternal_sentence_by_civ": {
         "cn": {
-          "BLISS": "{{name}} dwells in the heavens forever; there is no next life."
+          "BLISS": "{{name}} stays in the heavens under an old ruling; there is no next life."
         },
         "gr": {
           "BLISS": "{{name}} dwells in the Isles of the Blessed forever; there is no next life."
@@ -5858,7 +5858,7 @@
       },
       "eternal_title_by_civ": {
         "cn": {
-          "BLISS": "In the heavens forever"
+          "BLISS": "In the heavens under an old ruling"
         },
         "eu": {
           "BLISS": "In Heaven forever"
@@ -5872,7 +5872,7 @@
       },
       "eternal_no_rebirth_by_civ": {
         "cn": {
-          "BLISS": "Those who dwell in the heavens forever do not apply for rebirth."
+          "BLISS": "Those kept in the heavens under an old ruling do not apply for rebirth."
         },
         "gr": {
           "BLISS": "Those who dwell in the Isles of the Blessed forever do not apply for rebirth."
@@ -9087,7 +9087,7 @@
       "sort_todo": "Most to-do first",
       "col_hall": "Hall",
       "col_todo": "Hall to-do",
-      "col_judgments": "Open judgments · City God · Wangsi City · Claimed · Unclaimed",
+      "col_judgments": "Open judgments · City God · City of Wrongful Death · Claimed · Unclaimed",
       "col_rebirth": "Rebirths this month",
       "col_appeals": "Appeals to review",
       "col_enter": "Enter",
@@ -9095,9 +9095,9 @@
       "todo_dispatch": "Transfers in {{n}}",
       "todo_cooldowns": "Cool-downs {{n}}",
       "todo_letters": "Letters {{n}}",
-      "judgments_label": "Open judgments: at the City God {{at_city_god}} · in Wangsi City {{held}} · claimed {{claimed}} · unclaimed {{unclaimed}}",
+      "judgments_label": "Open judgments: at the City God {{at_city_god}} · in the City of Wrongful Death {{held}} · claimed {{claimed}} · unclaimed {{unclaimed}}",
       "note": "Hall to-do is the hall's count, not any one officer's \"waiting on me\".",
-      "legend": "Bar, light to dark: at the City God · in Wangsi City · claimed. The lightest gap is unclaimed.",
+      "legend": "Bar, light to dark: at the City God · in the City of Wrongful Death · claimed. The lightest gap is unclaimed.",
       "enter": "Enter →",
       "enter_label": "Enter {{name}} to view",
       "empty": "No halls yet",
@@ -9192,7 +9192,7 @@
       "cn": {
         "name": "Diyu",
         "realm": "Diyu",
-        "line": "Ten courts in turn, six paths of rebirth — and a bowl of Meng Po's soup before the bridge."
+        "line": "Ten courts in turn, six paths of rebirth — and a bowl of Meng Po's soup beyond the six bridges."
       },
       "eu": {
         "name": "Heaven and Hell",
@@ -9259,7 +9259,7 @@
         },
         "2": {
           "name": "Summons",
-          "body": "The City God issues a summons warrant; the escorts bring the soul in."
+          "body": "The City God issues a capture warrant; the escorts bring the soul in."
         },
         "3": {
           "name": "First review",

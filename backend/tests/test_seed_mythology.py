@@ -281,7 +281,7 @@ CHINESE_ATTENDANTS = {
     "赵文和": ("OVERSEER", "DY_00_PURGATORY"),
     "杜子仁": ("OVERSEER", "DY_00_PURGATORY"),
     "张衡": ("OVERSEER", "DY_00_PURGATORY"),
-    "周文": ("OVERSEER", "DY_00_PURGATORY"),
+    "周乞": ("OVERSEER", "DY_00_PURGATORY"),
     "枷锁将军": ("GUARDIAN", "DY_00_PURGATORY"),
     "日游神": ("CONDUIT", "DY_00_PURGATORY"),
     "夜游神": ("CONDUIT", "DY_00_PURGATORY"),
