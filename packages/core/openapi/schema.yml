@@ -6973,6 +6973,161 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: ''
+  /api/v1/dossiers/:
+    get:
+      operationId: v1_dossiers_list
+      description: |-
+        只挂 list / retrieve(`config/urls.py` 显式 `as_view`,不走路由器 —— 路由器会把父类的每个 @action 也挂上)。
+        动作名仍是 list / retrieve,所以码名(`judgment.read`)、暂居只读例外、筛选、分页、`source` 全与 `/judgment/` 相同。
+      parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+          enum:
+          - CHINESE
+          - EGYPTIAN
+          - EUROPEAN
+          - GREEK
+        description: |-
+          * `CHINESE` - Chinese Diyu
+          * `EUROPEAN` - European Heaven/Hell
+          * `EGYPTIAN` - Egyptian Duat
+          * `GREEK` - Greek Underworld
+      - in: query
+        name: court
+        schema:
+          type: string
+      - in: query
+        name: group
+        schema:
+          type: string
+          enum:
+          - deferred
+          - mine
+          - others
+          - unclaimed
+        description: |-
+          * `mine` - 我认领
+          * `unclaimed` - 待认领
+          * `others` - 他人认领
+          * `deferred` - 暂缓
+      - in: query
+        name: has_verdict
+        schema:
+          type: boolean
+      - in: query
+        name: is_final
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: overdue
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: returned
+        schema:
+          type: boolean
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - city_god
+          - cross
+          - queue
+        description: |-
+          * `queue` - 审判队列
+          * `city_god` - 城隍初审
+          * `cross` - 跨域
+      - in: query
+        name: stale
+        schema:
+          type: boolean
+      - in: query
+        name: statute
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: verdict
+        schema:
+          type: string
+          nullable: true
+          enum:
+          - FAILED
+          - PASSED
+          - PURGATORY
+          - RETRY
+        description: |-
+          * `PASSED` - Passed / Saved
+          * `FAILED` - Failed / Condemned
+          * `PURGATORY` - Purgatory / Intermediate
+          * `RETRY` - Retry / Appeal
+      - in: query
+        name: verdict_null
+        schema:
+          type: boolean
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDossierRowList'
+          description: ''
+  /api/v1/dossiers/{id}/:
+    get:
+      operationId: v1_dossiers_retrieve
+      description: |-
+        一份卷宗。`ETag` 是整份响应的摘要(灵魂、所在站、可做动作变了都会变,不只是案子的 version);
+        带 `If-None-Match` 且没变,回 304。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dossier'
+          description: ''
+        '304':
+          description: No response body
   /api/v1/events/:
     get:
       operationId: v1_events_list
@@ -25368,6 +25523,38 @@ components:
       - cache_read_tokens
       - input_tokens
       - output_tokens
+    AtEnum:
+      enum:
+      - pre
+      - hall
+      - hell
+      - rebirth
+      - gate
+      - circle
+      - scale
+      - aaru
+      - annihilation
+      - ferry
+      - fork
+      - isles
+      - asphodel
+      - tartarus
+      type: string
+      description: |-
+        * `pre` - pre
+        * `hall` - hall
+        * `hell` - hell
+        * `rebirth` - rebirth
+        * `gate` - gate
+        * `circle` - circle
+        * `scale` - scale
+        * `aaru` - aaru
+        * `annihilation` - annihilation
+        * `ferry` - ferry
+        * `fork` - fork
+        * `isles` - isles
+        * `asphodel` - asphodel
+        * `tartarus` - tartarus
     AuditActionCount:
       type: object
       description: One row of `stats.action_distribution` — a `values("action").annotate(count=…)`.
@@ -26726,6 +26913,18 @@ components:
           format: uuid
       required:
       - city_god
+    CivEnum:
+      enum:
+      - cn
+      - eu
+      - eg
+      - gr
+      type: string
+      description: |-
+        * `cn` - cn
+        * `eu` - eu
+        * `eg` - eg
+        * `gr` - gr
     CivilizationEnum:
       enum:
       - CHINESE
@@ -28594,6 +28793,250 @@ components:
         * `EIGHTEEN_HELLS` - 十八层地狱
         * `LOTUS_TERRACE` - 莲花台
         * `HUANHUN_CLIFF` - 还魂崖
+    Dossier:
+      type: object
+      description: |-
+        `soul` / `judgment` 在方法里带着请求的上下文实例化:FieldPermissionMixin 在 __init__ 时读上下文,
+        作为嵌套字段声明的话那一刻没有请求,字段规则就落空了。
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        phase:
+          allOf:
+          - $ref: '#/components/schemas/PhaseEnum'
+          readOnly: true
+        judgment:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentList'
+          readOnly: true
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DossierCitation'
+        soul:
+          allOf:
+          - $ref: '#/components/schemas/DossierSoul'
+          nullable: true
+          readOnly: true
+        soul_redacted:
+          type: boolean
+          readOnly: true
+        whereabouts:
+          allOf:
+          - $ref: '#/components/schemas/Whereabouts'
+          nullable: true
+          readOnly: true
+        actions:
+          allOf:
+          - $ref: '#/components/schemas/DossierActions'
+          readOnly: true
+      required:
+      - actions
+      - citations
+      - id
+      - judgment
+      - phase
+      - soul
+      - soul_redacted
+      - version
+      - whereabouts
+    DossierActions:
+      type: object
+      properties:
+        claim:
+          type: boolean
+        release:
+          type: boolean
+        conclude:
+          type: boolean
+        refusals:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - claim
+      - conclude
+      - refusals
+      - release
+    DossierCitation:
+      type: object
+      description: 引用行 + 法条标识;全文走 `GET /judgment/statutes/{id}/`。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        statute:
+          type: string
+          format: uuid
+        code:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          description: How this article applies to this case.
+      required:
+      - code
+      - id
+      - statute
+      - title
+    DossierRow:
+      type: object
+      description: 案台一行(be-scale 的 `DeskRowSerializer`):列表的字段规则,只带一行要显示的这些。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        case_number:
+          type: string
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+        soul_name:
+          type: string
+          readOnly: true
+        civilization:
+          allOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          readOnly: true
+        court:
+          type: string
+          description: Court name, e.g. 第一殿
+          maxLength: 255
+        source:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentQueueSourceEnum'
+          readOnly: true
+        deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        is_overdue:
+          type: boolean
+          description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
+          readOnly: true
+        claimed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        claimed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        deferred_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        stale_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - case_number
+      - civilization
+      - claimed_by
+      - claimed_by_name
+      - deadline_at
+      - deferred_at
+      - id
+      - is_overdue
+      - soul
+      - soul_name
+      - source
+      - stale_since
+    DossierSoul:
+      type: object
+      description: |-
+        卷宗里的灵魂:`SoulSerializer` 的子集,字段规则(VIEWER 底线、FieldPermission、记录权重遮蔽)原样继承。
+        `records` 只带最近三条,排序同案台(`OpenCase.tsx::recentRecords`:事件日期新的在前,没日期的最后)。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        civilization:
+          type: string
+        current_state:
+          allOf:
+          - $ref: '#/components/schemas/CurrentStateEnum'
+          readOnly: true
+        diyu_station:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/DiyuStationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        is_residing:
+          type: boolean
+          readOnly: true
+        birth_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+        death_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+        origin_location:
+          type: string
+          maxLength: 255
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulRecord'
+          readOnly: true
+      required:
+      - current_state
+      - diyu_station
+      - id
+      - is_residing
+      - name
+      - records
     DraftDecision:
       type: object
       properties:
@@ -37756,6 +38199,29 @@ components:
           - pending
           - executing
           - expired
+    PaginatedDossierRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DossierRow'
     PaginatedEventWebhookDeliveryList:
       type: object
       required:
@@ -41717,6 +42183,24 @@ components:
       - empty_reached
       - empty_share
       - empty_threshold
+    PhaseEnum:
+      enum:
+      - DRAFT
+      - HEARING
+      - DEFERRED
+      - AT_CITY_GOD
+      - BARRED
+      - AWAITING_REVIEW
+      - CLOSED
+      type: string
+      description: |-
+        * `DRAFT` - 未认领
+        * `HEARING` - 已认领
+        * `DEFERRED` - 暂缓
+        * `AT_CITY_GOD` - 在城隍
+        * `BARRED` - 到不了殿
+        * `AWAITING_REVIEW` - 已结案、审批未完
+        * `CLOSED` - 已结
     Platform:
       type: object
       properties:
@@ -48041,6 +48525,18 @@ components:
       - realm_code
       - realm_name
       - realm_type
+    Spine:
+      type: object
+      properties:
+        civ:
+          $ref: '#/components/schemas/CivEnum'
+        at:
+          $ref: '#/components/schemas/AtEnum'
+        n:
+          type: integer
+      required:
+      - at
+      - civ
     StageEnum:
       enum:
       - registered
@@ -50530,6 +51026,31 @@ components:
         * `LIGHTER` - 未重于羽
         * `HEAVIER` - 重于羽
         * `WAVERING` - 天平摇摆 · 再称
+    Whereabouts:
+      type: object
+      properties:
+        hall:
+          type: string
+          nullable: true
+        residing:
+          type: boolean
+        realm_code:
+          type: string
+          nullable: true
+        since:
+          type: string
+          format: date-time
+          nullable: true
+        spine:
+          allOf:
+          - $ref: '#/components/schemas/Spine'
+          nullable: true
+      required:
+      - hall
+      - realm_code
+      - residing
+      - since
+      - spine
     WorkflowAdjust:
       type: object
       description: '`POST /workflows/{id}/adjust/` (加减站): stations of ONE segment

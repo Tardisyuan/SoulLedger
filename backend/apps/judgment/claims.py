@@ -208,11 +208,13 @@ def lock_for_conclude(pk, user) -> Judgment:
     from apps.perm.checker import check_permission
 
     judgment = _lock(pk)
+    _assert_may_conclude(judgment, user, check_permission(user, CONCLUDE_OVERRIDE_CODENAME))
+    return judgment
+
+
+def _assert_may_conclude(judgment: Judgment, user, may_override: bool) -> None:
     assert_concludable(judgment)
-    if (
-        judgment.claimed_by_id not in (None, user.pk)
-        and not check_permission(user, CONCLUDE_OVERRIDE_CODENAME)
-    ):
+    if judgment.claimed_by_id not in (None, user.pk) and not may_override:
         holder = judgment.claimed_by
         raise ClaimRefusedError(
             "This judgment is claimed by another officer; only they can conclude it.",
@@ -220,7 +222,37 @@ def lock_for_conclude(pk, user) -> Judgment:
             claimed_by=judgment.claimed_by_id,
             claimed_by_name=holder.display_name or holder.username,
         )
-    return judgment
+
+
+def allowed_actions(judgment: Judgment, user) -> dict:
+    """卷宗的 `actions`:调用者此刻能不能认领 / 释放 / 结案,不能时给拒绝码 —— 与那三个动作同一组断言
+    (`_assert_claimable` / `_assert_releasable` / `_assert_may_conclude`),只是不加锁、不写。
+    码名不够是 `permission_denied`(视图那一层的 403)。自己已认领的再认领是幂等的,这里记作 `already_yours`。"""
+    from apps.perm.checker import check_permission
+
+    execute = check_permission(user, "judgment.execute")
+    override = execute and check_permission(user, CONCLUDE_OVERRIDE_CODENAME)
+
+    def claim():
+        _assert_claimable(judgment, user)
+        if judgment.claimed_by_id == user.pk:
+            raise ClaimRefusedError("Already claimed by you.", "already_yours")
+
+    def conclude():
+        _assert_pending(judgment)
+        _assert_may_conclude(judgment, user, override)
+
+    checks = {"claim": claim, "release": lambda: _assert_releasable(judgment, user, override), "conclude": conclude}
+    allowed, refusals = {}, {}
+    for name, check in checks.items():
+        try:
+            if not execute:
+                raise ClaimRefusedError("", "permission_denied")
+            check()
+        except ClaimRefusedError as exc:
+            refusals[name] = exc.code
+        allowed[name] = name not in refusals
+    return {**allowed, "refusals": refusals}
 
 
 # ---------------------------------------------------------------------------
@@ -236,25 +268,33 @@ def _clear_reassign_request(judgment: Judgment) -> list[str]:
     return ["reassign_requested_at", "reassign_requested_by", "reassign_reason"]
 
 
-def _apply_claim(judgment: Judgment, user) -> None:
+def _assert_claimable(judgment: Judgment, user) -> None:
     _assert_pending(judgment)
     _assert_not_held(judgment)
-    if judgment.claimed_by_id == user.pk:
-        return  # 幂等:重复认领自己的案子不写、不改 claimed_at
-    if judgment.claimed_by_id is not None:
+    if judgment.claimed_by_id not in (None, user.pk):
         raise ClaimRefusedError(
             "This judgment is already claimed by another officer.", "already_claimed", **_holder(judgment)
         )
+
+
+def _apply_claim(judgment: Judgment, user) -> None:
+    _assert_claimable(judgment, user)
+    if judgment.claimed_by_id == user.pk:
+        return  # 幂等:重复认领自己的案子不写、不改 claimed_at
     judgment.claimed_by = user
     judgment.claimed_at = timezone.now()
     _save(judgment, "claimed_by", "claimed_at", *_clear_reassign_request(judgment))
 
 
-def _apply_release(judgment: Judgment, user, may_override: bool) -> None:
+def _assert_releasable(judgment: Judgment, user, may_override: bool) -> None:
     _assert_pending(judgment)
     if judgment.claimed_by_id is None:
         raise ClaimRefusedError("This judgment is not claimed.", "not_claimed")
     _assert_may_act_on(judgment, user, may_override)
+
+
+def _apply_release(judgment: Judgment, user, may_override: bool) -> None:
+    _assert_releasable(judgment, user, may_override)
     judgment.claimed_by = None
     judgment.claimed_at = None
     _save(judgment, "claimed_by", "claimed_at", *_clear_reassign_request(judgment))

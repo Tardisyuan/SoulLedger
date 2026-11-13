@@ -3219,6 +3219,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dossiers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 只挂 list / retrieve(`config/urls.py` 显式 `as_view`,不走路由器 —— 路由器会把父类的每个 @action 也挂上)。
+         *     动作名仍是 list / retrieve,所以码名(`judgment.read`)、暂居只读例外、筛选、分页、`source` 全与 `/judgment/` 相同。
+         */
+        get: operations["v1_dossiers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dossiers/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 一份卷宗。`ETag` 是整份响应的摘要(灵魂、所在站、可做动作变了都会变,不只是案子的 version);
+         *     带 `If-None-Match` 且没变,回 304。
+         */
+        get: operations["v1_dossiers_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events/": {
         parameters: {
             query?: never;
@@ -11471,6 +11511,24 @@ export interface components {
             output_tokens: number;
             cache_read_tokens: number;
         };
+        /**
+         * @description * `pre` - pre
+         *     * `hall` - hall
+         *     * `hell` - hell
+         *     * `rebirth` - rebirth
+         *     * `gate` - gate
+         *     * `circle` - circle
+         *     * `scale` - scale
+         *     * `aaru` - aaru
+         *     * `annihilation` - annihilation
+         *     * `ferry` - ferry
+         *     * `fork` - fork
+         *     * `isles` - isles
+         *     * `asphodel` - asphodel
+         *     * `tartarus` - tartarus
+         * @enum {string}
+         */
+        AtEnum: "pre" | "hall" | "hell" | "rebirth" | "gate" | "circle" | "scale" | "aaru" | "annihilation" | "ferry" | "fork" | "isles" | "asphodel" | "tartarus";
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -12064,6 +12122,14 @@ export interface components {
             /** Format: uuid */
             city_god: string;
         };
+        /**
+         * @description * `cn` - cn
+         *     * `eu` - eu
+         *     * `eg` - eg
+         *     * `gr` - gr
+         * @enum {string}
+         */
+        CivEnum: "cn" | "eu" | "eg" | "gr";
         /**
          * @description * `CHINESE` - Chinese Diyu
          *     * `EUROPEAN` - European Heaven/Hell
@@ -12888,6 +12954,91 @@ export interface components {
          * @enum {string}
          */
         DiyuStationEnum: "TUDI_TEMPLE" | "YELLOW_SPRINGS_ROAD" | "WANGXIANG_TERRACE" | "EVIL_DOG_VILLAGE" | "GOLDEN_ROOSTER_HILL" | "WILD_GHOST_VILLAGE" | "MIHUN_HALL" | "OFFERING_PAVILION" | "GHOST_FORT" | "FENGDU_CITY" | "EIGHTEEN_HELLS" | "LOTUS_TERRACE" | "HUANHUN_CLIFF";
+        /**
+         * @description `soul` / `judgment` 在方法里带着请求的上下文实例化:FieldPermissionMixin 在 __init__ 时读上下文,
+         *     作为嵌套字段声明的话那一刻没有请求,字段规则就落空了。
+         */
+        Dossier: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            readonly phase: components["schemas"]["PhaseEnum"];
+            readonly judgment: components["schemas"]["JudgmentList"];
+            citations: components["schemas"]["DossierCitation"][];
+            readonly soul: components["schemas"]["DossierSoul"] | null;
+            readonly soul_redacted: boolean;
+            readonly whereabouts: components["schemas"]["Whereabouts"] | null;
+            readonly actions: components["schemas"]["DossierActions"];
+        };
+        DossierActions: {
+            claim: boolean;
+            release: boolean;
+            conclude: boolean;
+            refusals: {
+                [key: string]: string;
+            };
+        };
+        /** @description 引用行 + 法条标识;全文走 `GET /judgment/statutes/{id}/`。 */
+        DossierCitation: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            statute: string;
+            readonly code: string;
+            readonly title: string;
+            /** @description How this article applies to this case. */
+            note?: string;
+        };
+        /** @description 案台一行(be-scale 的 `DeskRowSerializer`):列表的字段规则,只带一行要显示的这些。 */
+        DossierRow: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly case_number: string;
+            /** Format: uuid */
+            soul: string;
+            readonly soul_name: string;
+            readonly civilization: components["schemas"]["CivilizationEnum"];
+            /** @description Court name, e.g. 第一殿 */
+            court?: string;
+            readonly source: components["schemas"]["JudgmentQueueSourceEnum"];
+            /** Format: date-time */
+            readonly deadline_at: string | null;
+            /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
+            readonly is_overdue: boolean;
+            readonly claimed_by: number | null;
+            readonly claimed_by_name: string | null;
+            /** Format: date-time */
+            readonly deferred_at: string | null;
+            /** Format: date-time */
+            readonly stale_since: string | null;
+        };
+        /**
+         * @description 卷宗里的灵魂:`SoulSerializer` 的子集,字段规则(VIEWER 底线、FieldPermission、记录权重遮蔽)原样继承。
+         *     `records` 只带最近三条,排序同案台(`OpenCase.tsx::recentRecords`:事件日期新的在前,没日期的最后)。
+         */
+        DossierSoul: {
+            /** Format: uuid */
+            readonly id: string;
+            name: string;
+            civilization?: string;
+            readonly current_state: components["schemas"]["CurrentStateEnum"];
+            readonly diyu_station: components["schemas"]["DiyuStationEnum"] | components["schemas"]["BlankEnum"];
+            readonly is_residing: boolean;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            birth_date?: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            death_date?: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            origin_location?: string;
+            readonly records: components["schemas"]["SoulRecord"][];
+        };
         DraftDecision: {
             adopted: boolean;
             /** @default  */
@@ -16845,6 +16996,21 @@ export interface components {
                 expired: number;
             };
         };
+        PaginatedDossierRowList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DossierRow"][];
+        };
         PaginatedEventWebhookDeliveryList: {
             /** @example 123 */
             count: number;
@@ -18879,6 +19045,17 @@ export interface components {
             empty_threshold: number;
             empty_reached: boolean;
         };
+        /**
+         * @description * `DRAFT` - 未认领
+         *     * `HEARING` - 已认领
+         *     * `DEFERRED` - 暂缓
+         *     * `AT_CITY_GOD` - 在城隍
+         *     * `BARRED` - 到不了殿
+         *     * `AWAITING_REVIEW` - 已结案、审批未完
+         *     * `CLOSED` - 已结
+         * @enum {string}
+         */
+        PhaseEnum: "DRAFT" | "HEARING" | "DEFERRED" | "AT_CITY_GOD" | "BARRED" | "AWAITING_REVIEW" | "CLOSED";
         Platform: {
             id: components["schemas"]["AssistPlatformEnum"];
             /**
@@ -21831,6 +22008,11 @@ export interface components {
             capacity: number | null;
             held: number;
         };
+        Spine: {
+            civ: components["schemas"]["CivEnum"];
+            at: components["schemas"]["AtEnum"];
+            n?: number;
+        };
         /**
          * @description * `registered` - registered
          *     * `at_city_god` - at_city_god
@@ -23015,6 +23197,14 @@ export interface components {
          * @enum {string}
          */
         WeighingResultEnum: "LIGHTER" | "HEAVIER" | "WAVERING";
+        Whereabouts: {
+            hall: string | null;
+            residing: boolean;
+            realm_code: string | null;
+            /** Format: date-time */
+            since: string | null;
+            spine: components["schemas"]["Spine"] | null;
+        };
         /** @description `POST /workflows/{id}/adjust/` (加减站): stations of ONE segment to restore / to skip. Reason required. */
         WorkflowAdjust: {
             restore_node_ids?: string[];
@@ -29054,6 +29244,96 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
+            };
+        };
+    };
+    v1_dossiers_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `CHINESE` - Chinese Diyu
+                 *     * `EUROPEAN` - European Heaven/Hell
+                 *     * `EGYPTIAN` - Egyptian Duat
+                 *     * `GREEK` - Greek Underworld
+                 */
+                civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                court?: string;
+                /**
+                 * @description * `mine` - 我认领
+                 *     * `unclaimed` - 待认领
+                 *     * `others` - 他人认领
+                 *     * `deferred` - 暂缓
+                 */
+                group?: "deferred" | "mine" | "others" | "unclaimed";
+                has_verdict?: boolean;
+                is_final?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                overdue?: boolean;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                returned?: boolean;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /**
+                 * @description * `queue` - 审判队列
+                 *     * `city_god` - 城隍初审
+                 *     * `cross` - 跨域
+                 */
+                source?: "city_god" | "cross" | "queue";
+                stale?: boolean;
+                statute?: string;
+                /**
+                 * @description * `PASSED` - Passed / Saved
+                 *     * `FAILED` - Failed / Condemned
+                 *     * `PURGATORY` - Purgatory / Intermediate
+                 *     * `RETRY` - Retry / Appeal
+                 */
+                verdict?: "FAILED" | "PASSED" | "PURGATORY" | "RETRY" | null;
+                verdict_null?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDossierRowList"];
+                };
+            };
+        };
+    };
+    v1_dossiers_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dossier"];
+                };
+            };
+            /** @description No response body */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

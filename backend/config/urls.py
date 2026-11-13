@@ -22,6 +22,7 @@ from apps.core.metrics import metrics_view
 from apps.core.permissions import IsAdminPermission
 from apps.core.recycle_bin_views import RecycleBinViewSet
 from apps.judgment.attachment_views import CaseAttachmentFileView
+from apps.judgment.dossier import DossierViewSet
 from apps.social import soul_urls as social_urls
 from apps.social.media_views import PostMediaFileView
 from apps.soul_accounts import urls as soul_account_urls
@@ -70,6 +71,9 @@ urlpatterns = [
     path("api/v1/tenants/", include("apps.tenants.urls")),
     path("api/v1/souls/", include("apps.souls.urls")),
     path("api/v1/judgment/", include("apps.judgment.urls")),
+    # 卷宗:一件案子的只读聚合(apps/judgment/dossier.py)。只挂 list / retrieve,不用路由器。
+    path("api/v1/dossiers/", DossierViewSet.as_view({"get": "list"}), name="dossier-list"),
+    path("api/v1/dossiers/<uuid:pk>/", DossierViewSet.as_view({"get": "retrieve"}), name="dossier-detail"),
     path("api/v1/disposition/", include("apps.disposition.urls")),
     path("api/v1/ledger/", include("apps.ledger.urls")),
     path("api/v1/reincarnation/", include("apps.reincarnation.urls")),

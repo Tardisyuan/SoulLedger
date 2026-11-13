@@ -144,6 +144,11 @@ RESIDENCE_READABLE: dict[str, tuple[tuple[str, ...], str]] = {
         "不含 `next_pending`:"
         "那是待办队列,原属租户对暂居地的案子什么都不能做,出现在它的队列里只会误导。",
     ),
+    "DossierViewSet": (
+        ("list", "retrieve"),
+        "卷宗是 JudgmentViewSet 的 list / retrieve 换了序列化器(apps/judgment/dossier.py),范围必须与它们相同;"
+        "嵌入的灵魂另经 SoulViewSet 的 retrieve 范围取,所站另经 path 的逐站划界。",
+    ),
     "DispositionViewSet": (
         ("list", "retrieve"),
         "暂居地的处置,即「处置进展」:执行了没有、是否永久刑期决定灵魂何时回归。",
