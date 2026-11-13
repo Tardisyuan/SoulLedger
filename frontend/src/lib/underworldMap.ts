@@ -13,12 +13,15 @@ import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations"
  *   - 埃及的七道通路、二十一道门户**没有子格**(第十二批第 4 条):逐门的 `EG_SEVEN_ARRWT-n` /
  *     `EG_TWENTYONE_SEBKHET-n` 删了,换成一条不分格、没有 id 的拱门装饰带(`path.gates-ornament`),
  *     随所在大站整体亮暗 —— 门不入行程,系统不逐门记录。当前时外框的脉动圈照整个节点画。
+ *   - **途经**(第三十四批):行程里列的才画成节点,途经的画成路上的纹饰 —— `<g class="passage" id=…>`(埃及
+ *     `EG_SEVEN_ARRWT`,id 不变)。它不是站(`nodesOf` 不含它:不进站名清单、读数、主角节点),但照样换色:
+ *     有记录时按记录,没有时看它后面那一站 —— 到了后面那站,就是走过了这段路(`passageStates`)。
  *   - 图里的颜色是一个样例进度;三种状态的颜色就是图里的颜色 —— 所以调色板**从图里读**(`readPalette`),不另写一份。
  *   - 支线 `class="branch"`;根元素加 `map-hide-branches` 收起。
  *   - 缩放只缩 `#terrain`;`#labels` 只跟着平移(字号不变)。
  *
  * **规则 16 照旧**(`routeTopology.ts`):界域码的站只从 path 来,没记录的是「没走」。没有码的小写节点
- * (死亡、三判官、鬼门关……)不会出现在 path 里,在一个走过的站的上游就算走过 —— 不这样,
+ * (死亡、鬼门关、千年循环……)不会出现在 path 里,在一个走过的站的上游就算走过 —— 不这样,
  * 每个灵魂的「死亡」都会是虚线。
  */
 
@@ -91,6 +94,8 @@ export const byId = (svg: Element, id: string): Element | null => svg.querySelec
 export const CSS_ESCAPE = (s: string) => s.replace(/["\\]/g, "\\$&");
 
 export const nodesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain g.node[id]"));
+/** 途经的纹饰(第三十四批):不是站,只随路亮暗。 */
+export const passagesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain g.passage[id]"));
 export const edgesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain .edge[data-from][data-to]"));
 /** 节点里带 id 的子格(十殿、九圈、七台、千年)。 */
 export const cellsOf = (node: Element): Element[] => Array.from(node.querySelectorAll("circle[id]"));
@@ -119,7 +124,7 @@ export function mapStates(svg: Element, visits: readonly MapVisit[]): MapStates 
   let current: MapStates["current"] = null;
   for (const visit of visits) {
     const el = byId(svg, visit.id);
-    const node = el?.closest("g.node[id]");
+    const node = el?.closest("g.node[id], g.passage[id]");
     if (!el || !node) continue;
     const nodeId = node.id;
     const cellId = el === node ? null : visit.id;
@@ -157,12 +162,24 @@ export function mapStates(svg: Element, visits: readonly MapVisit[]): MapStates 
     }
   }
   for (const node of all) if (!nodes.has(node.id)) nodes.set(node.id, "ahead");
+  passageStates(svg, nodes);
   return { nodes, cells, current };
+}
+
+/** 没有记录的途经纹饰:它后面那一站走过 / 当前,这段路就走过了;否则没走。 */
+function passageStates(svg: Element, nodes: Map<string, MapState>) {
+  for (const passage of passagesOf(svg)) {
+    if (nodes.has(passage.id)) continue;
+    let next = passage.nextElementSibling;
+    while (next && !next.matches("g.node[id]")) next = next.nextElementSibling;
+    const s = next ? nodes.get(next.id) : undefined;
+    nodes.set(passage.id, s === "walked" || s === "current" ? "walked" : "ahead");
+  }
 }
 
 /** 世界图(/realms,没有灵魂):全部点亮,没有当前站。 */
 export function worldStates(svg: Element): MapStates {
-  const nodes = new Map(nodesOf(svg).map((n) => [n.id, "walked" as MapState]));
+  const nodes = new Map([...nodesOf(svg), ...passagesOf(svg)].map((n) => [n.id, "walked" as MapState]));
   return { nodes, cells: new Map(), current: null };
 }
 
@@ -264,7 +281,7 @@ function recolor(el: Element, from: MapState | null, to: MapState, p: MapPalette
  */
 export function paintStates(svg: Element, states: MapStates, palette: MapPalette) {
   svg.querySelectorAll("#terrain .pulse").forEach((el) => el.remove());
-  for (const node of nodesOf(svg)) {
+  for (const node of [...nodesOf(svg), ...passagesOf(svg)]) {
     const from = (node.getAttribute("data-state") as MapState | null) ?? null;
     const to = states.nodes.get(node.id) ?? "ahead";
     node.setAttribute("data-state", to);
@@ -462,7 +479,6 @@ export const LOWER_KEYS: Record<string, string> = {
   EU_PURGATORY: "map.europe.terraces",
   EG_HALL_TWO_TRUTHS: "map.egypt.weighing",
   "gr-millennium": "map.greece.thousand_year_cycle",
-  "gr-three-judges": "map.greece.three_judges",
   "gr-lethe": "souls.detail.memory_mechanisms.LETHE",
 };
 

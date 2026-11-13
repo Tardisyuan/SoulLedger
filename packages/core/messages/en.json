@@ -9728,12 +9728,13 @@
       "circles": "The nine circles",
       "downward": "Downward · by sin",
       "terraces": "Purgatory · seven terraces",
-      "upward": "Upward · cleansing"
+      "upward": "Upward · cleansing",
+      "straight_to_heaven": "Straight to heaven"
     },
     "fit": "Whole map",
     "greece": {
       "thousand_year_cycle": "The thousand-year cycle",
-      "three_judges": "The three judges",
+      "three_judges": "The three judges sit here",
       "wait_on_bank": "A hundred years on the bank",
       "year_n": "Year {{n}}"
     },
