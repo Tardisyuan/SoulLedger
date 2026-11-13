@@ -1,0 +1,142 @@
+<article>
+<h2>第三十六批 · 四处设计判断 + 官员端剩余的「你」 + egy 对账<span class="tag new">待回 · 2026-11-14</span></h2>
+<p>第三十五批(364 键、词根表)已收到,代码这边在落地。这一批四件事。</p>
+
+<section>
+<h3>一、四处要你判断的(浏览器逐页核对时发现,代码没动)</h3>
+<ol>
+<li><strong>英文界面里的汉字字形。</strong>中国文明的站尺在英文下仍是「一 … 十」,功 / 过印字在英文下也是汉字(审判详情、灵魂详情、案卷台)。是有意保留的字形,还是英文下换成数字 / 字母?若换,请给每个文明英文下的写法。</li>
+<li><strong><code>/judgment/queue</code> 的标题与叫法。</strong>标题「审判队列」用了文明色(红),而面包屑写「分诊队列」、门内高亮的标签是「分诊」——三处叫法不一,标题颜色也超出「文明色只在四处」的规则。请定一个名字和标题颜色。</li>
+<li><strong>埃及工作流页的蓝色。</strong><code>/workflow</code> 埃及:模板列表的分组标题和选中底色是埃及蓝。是否算在「文明色只在四处」之内?不算的话改成什么。</li>
+<li><strong><code>/realms</code> 与 <code>/social</code> 归哪一门。</strong>这两页在判官的门里不属于任何一门,进去后门栏一门都不亮,也没有门内标签行。请指定各自归哪一门(或说明就是门外页,以及门外页的门栏该怎么显示)。</li>
+</ol>
+</section>
+
+<section>
+<h3>二、官员端剩下的「你」(25 条)</h3>
+<p>第三十四批第五节那张表只覆盖了 <code>perm_explain.*</code> 与 <code>ai_assist</code> 的说明;<code>officer_app.*</code> 里还有下面这些带「你」。请照同一规则给中文(英文若也要跟着改,一并给;egy 照你第三十五批「不用 -Ek」的写法)。</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>现在的中文</th></tr></thead><tbody>
+<tr><td><code>officer_app.biometric.hint</code></td><td>别人拿到你的手机，也做不了决定</td></tr>
+<tr><td><code>officer_app.biometric.prompt</code></td><td>批准或驳回前，确认是你本人。</td></tr>
+<tr><td><code>officer_app.biometric.prompt_off</code></td><td>关掉这项前，确认是你本人。</td></tr>
+<tr><td><code>officer_app.todo.empty_title</code></td><td>此刻没有轮到你的事</td></tr>
+<tr><td><code>officer_app.todo.empty_body</code></td><td>新的审批、移交和申请会推送给你。</td></tr>
+<tr><td><code>officer_app.todo.empty_body_other</code></td><td>有轮到你的事时会推送给你。</td></tr>
+<tr><td><code>officer_app.detail.your_step</code></td><td>轮到你的节点</td></tr>
+<tr><td><code>officer_app.detail.wait_cosigner</code></td><td>等{{name}}先批，你才能批。{{name}}驳回则这一节点驳回。</td></tr>
+<tr><td><code>officer_app.detail.history_yours</code></td><td>你 · 轮到你</td></tr>
+<tr><td><code>officer_app.confirm.approve_body.cooldown</code></td><td>批准后冷却缩短到你填的天数。</td></tr>
+<tr><td><code>officer_app.state.denied_body</code></td><td>你的角色「{{role}}」看不到{{area}}。需要时请找本殿管理员。</td></tr>
+<tr><td><code>officer_app.cosign.rules</code></td><td>只列本殿在职、有审批权限的官员。加签人先批，你才能批；加签人驳回，整个节点驳回。</td></tr>
+<tr><td><code>officer_app.cosign.added</code></td><td>已加签。对方签完后，你的批准才生效。</td></tr>
+<tr><td><code>officer_app.letter.assign_hint</code></td><td>只列能回这封信的官员。转出后，信从你的待办里移走。</td></tr>
+<tr><td><code>officer_app.letter.not_yours</code></td><td>这封信由{{name}}经办，回信框只给经办人。要接过来，请他放回，或请管理员转给你。</td></tr>
+<tr><td><code>officer_app.outbox.answered</code></td><td>这封书信已经由别的官员回过了。你写的内容还留着。</td></tr>
+<tr><td><code>officer_app.outbox.left_hall</code></td><td>你已不在这一殿。</td></tr>
+<tr><td><code>officer_app.outbox.assigned</code></td><td>这封信已由别的官员经办，没有发出。你写的内容还留着。</td></tr>
+<tr><td><code>officer_app.outbox.moved</code></td><td>灵魂已调往别处，暂不能回信。你写的内容还留着。</td></tr>
+<tr><td><code>officer_app.case.release_body</code></td><td>放回后回到「待认领」，你写的评议保留。</td></tr>
+<tr><td><code>officer_app.case.defer_body</code></td><td>放进待定后案子仍在你手上，不计期限。点「恢复」回到队列。</td></tr>
+<tr><td><code>officer_app.case.reassign_body</code></td><td>批下来之前，案子还在你手上。</td></tr>
+<tr><td><code>officer_app.case.admin_context</code></td><td>在{{name}}手上 · 你是本殿管理员</td></tr>
+<tr><td><code>officer_app.stats.scope</code></td><td>只数你自己的，所有殿合在一起</td></tr>
+<tr><td><code>officer_app.wangsi.reject_body</code></td><td>申诉将记为不属实，连同你的审核意见。</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h3>三、egy 对账:你第三十五批第五节要的 45 个键</h3>
+<p>你第三十五批第五节要的:代码改过、你词表里没有的 45 个键,值是代码里现在的 egy(其中 <code>audit.timeline.cap_reached</code>、<code>audit.timeline.empty</code> 已按第三十五批规则改成 Tera)。请补进词表;有不对的给改正值。</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>代码里的 egy</th></tr></thead><tbody>
+<tr><td><code>nav.soul_events</code></td><td>Medu Ba</td></tr>
+<tr><td><code>souls.detail.load_more</code></td><td>Ini Medu Ky</td></tr>
+<tr><td><code>souls.detail.load_more_failed</code></td><td>Medu Ky Nen Ini. Wehem Semawy.</td></tr>
+<tr><td><code>workflow.start.reason</code></td><td>Khet · Nen Shu; Em Medu Maa</td></tr>
+<tr><td><code>workflow.adjust.reason</code></td><td>Khet (Em Tepy, Sesh Em Medu Maa)</td></tr>
+<tr><td><code>workflow.adjust.saved</code></td><td>Sau-N · Sesh Em Medu Maa</td></tr>
+<tr><td><code>workflow.gate.use_default_confirm</code></td><td>Setep Sekhet Neb En {{realm}}, Shem. Khet Em Tepy, Sesh Em Medu Maa; Sedjem {{realm}}.</td></tr>
+<tr><td><code>dashboard.todo.reports</code></td><td>Nen Wedja Djer · Smi</td></tr>
+<tr><td><code>audit.tabs.permissions</code></td><td>Medu Was</td></tr>
+<tr><td><code>audit.tabs.stats</code></td><td>Hesb Medu</td></tr>
+<tr><td><code>audit.detail.not_found</code></td><td>Nen Gem Medu Pen</td></tr>
+<tr><td><code>audit.detail.trace_filter</code></td><td>Medu Neb En Dbh Pen</td></tr>
+<tr><td><code>audit.detail.no_changes</code></td><td>Nen Semawy Em Medu Pen</td></tr>
+<tr><td><code>audit.resources.role</code></td><td>Iaut</td></tr>
+<tr><td><code>audit.resources.rolepermission</code></td><td>Was Iaut</td></tr>
+<tr><td><code>audit.timeline.show_more</code></td><td>Ini Medu Ky</td></tr>
+<tr><td><code>audit.timeline.cap_reached</code></td><td>Medu 500 Pehwy Wa. Setep Tera Nedjes Er Maa Medu Tepy.</td></tr>
+<tr><td><code>audit.timeline.empty</code></td><td>Nen Medu Was Em Tera Pen</td></tr>
+<tr><td><code>audit.timeline.empty_all</code></td><td>Nen Medu Was Djer</td></tr>
+<tr><td><code>audit.timeline.failed</code></td><td>Nen Ini Medu Was. Wehem Iri.</td></tr>
+<tr><td><code>audit.stats.zero_actions</code></td><td>Aha-N Ky {{n}}: Nen Medu</td></tr>
+<tr><td><code>audit.stats.row_label</code></td><td>Maa Medu Maa «{{name}}»</td></tr>
+<tr><td><code>audit.stats.failed</code></td><td>Nen Ini Hesb Medu. Wehem Iri.</td></tr>
+<tr><td><code>profile.devices.audit_note</code></td><td>Sesh Aq Em Medu Maa.</td></tr>
+<tr><td><code>users.import.row_codes.role_invalid</code></td><td>Iaut Nen Rekh</td></tr>
+<tr><td><code>admin.impersonate.audit_note</code></td><td>Iri Neb: Sesh Em Medu Maa.</td></tr>
+<tr><td><code>death_sync.webhooks.test_event</code></td><td>Medu Sip</td></tr>
+<tr><td><code>death_sync.webhooks.test_sent</code></td><td>Medu Sip Em Smen. Maa Sesh Hab Em Khery.</td></tr>
+<tr><td><code>breadcrumb.menu.judgment_appeals</code></td><td>Sepret</td></tr>
+<tr><td><code>soul_app.assist.history_more</code></td><td>Medu Tepyu</td></tr>
+<tr><td><code>official_notify.impersonation_started.body</code></td><td>{{by}} Maa Em Ba-Ek (Maa Wa · At {{minutes}} Er Aa). Khet: {{reason}}. Iri Neb: Sesh Em Medu Maa.</td></tr>
+<tr><td><code>official_notify.rebirth_status_appealing.body</code></td><td>Dbh Wehem Mesut-Ek: Em Sepret.</td></tr>
+<tr><td><code>official_notify.rebirth_status_appeal_rejected.body</code></td><td>Dbh Wehem Mesut-Ek: Sepret Khesef-N.</td></tr>
+<tr><td><code>officer_app.assist.resumed</code></td><td>Medu {{date}} · Em {{page}}</td></tr>
+<tr><td><code>officer_app.assist.open_failed</code></td><td>Nen Wen Medu Pen. Wehem Iri.</td></tr>
+<tr><td><code>officer_app.soul.tabs.events</code></td><td>Medu</td></tr>
+<tr><td><code>records.archive.blocked_body</code></td><td>«{{name}}»: Wedja Hena-Ef. Fekh: Wedja Nen Khet. Nehem Er Per Sesh: Nen Maa Em Sepu; Medu Smen; Ini Em Per Sesh Er Tera Neb.</td></tr>
+<tr><td><code>records.archive.reason</code></td><td>Khet · Setep; Em Medu Maa</td></tr>
+<tr><td><code>events.col_event</code></td><td>Medu</td></tr>
+<tr><td><code>events.all_types</code></td><td>Medu Neb</td></tr>
+<tr><td><code>events.search_type</code></td><td>Hehy Medu…</td></tr>
+<tr><td><code>events.include_system</code></td><td>Hena Medu Hemsu</td></tr>
+<tr><td><code>events.empty</code></td><td>Nen Medu Em Setep Pen</td></tr>
+<tr><td><code>events.empty_all</code></td><td>Nen Medu Djer</td></tr>
+<tr><td><code>events.failed</code></td><td>Nen Ini Medu. Wehem Iri.</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h3>四、代码这边照你的规则多改的 35 个键(请确认)</h3>
+<p>第三十五批的 json 之外,包里还剩一些废止词根,我们照你同一张替换表改了(Emu→Min、Pet-Sesh→Senn、Pet Sep→Iru Sep、Sepdet→Tera、Shemes→Shat、Sethet→Tehi、Khabes→Teka、Menmen→Hau、Bek-N→Redi-N)。请逐条确认,并补进词表;不对的给改正值。待补 egy 现在是 0 个。</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>改前</th><th>改后</th></tr></thead><tbody>
+<tr><td><code>souls.form.origin_region_hint_greek</code></td><td>Haunebut: Sab Wedja Mi Ta En Mesut. Nen Rekh: Wedja Pehwy Emu.</td><td>Haunebut: Sab Wedja Mi Ta En Mesut. Nen Rekh: Wedja Pehwy Min.</td></tr>
+<tr><td><code>souls.region_backfill.id_hint</code></td><td>soul_id: Medu Ba Em Bek-N; Ba Neb. Mi Ren Hesb Ba (soul_code): Setep Wa Em Sesh.</td><td>soul_id: Medu Ba Em Redi-N; Ba Neb. Mi Ren Hesb Ba (soul_code): Setep Wa Em Sesh.</td></tr>
+<tr><td><code>souls.region_backfill.skipped_file_note</code></td><td>Mi Pet-Sesh, Hena Khet. Semawy, Ini Wehem.</td><td>Mi Senn, Hena Khet. Semawy, Ini Wehem.</td></tr>
+<tr><td><code>common.export_csv</code></td><td>Bek-N CSV</td><td>Redi-N CSV</td></tr>
+<tr><td><code>common.export_scope</code></td><td>Bek-N Mi Setep · {{n}}</td><td>Redi-N Mi Setep · {{n}}</td></tr>
+<tr><td><code>workflow.start.template_default</code></td><td>Tepy Pet Sep · {{name}}</td><td>Tepy Iru Sep · {{name}}</td></tr>
+<tr><td><code>workflow.start.template_only</code></td><td>Pet-Sesh Wa: {{name}}</td><td>Senn Wa: {{name}}</td></tr>
+<tr><td><code>workflow.start.priority_template</code></td><td>Mi Pet-Sesh</td><td>Mi Senn</td></tr>
+<tr><td><code>workflow.start.errors.duplicate</code></td><td>Ba Pen: Wat Hesy «{{type}}» Em Iri ({{id}}). Pet Sep Wa: Wat Wa.</td><td>Ba Pen: Wat Hesy «{{type}}» Em Iri ({{id}}). Iru Sep Wa: Wat Wa.</td></tr>
+<tr><td><code>workflow.start.errors.template_invalid</code></td><td>Pet-Sesh Pen Nen Maat: Wesekhet Ky, Nen Ankh, Ky Nen Taui Ba.</td><td>Senn Pen Nen Maat: Wesekhet Ky, Nen Ankh, Ky Nen Taui Ba.</td></tr>
+<tr><td><code>workflow.start.errors.case_type_civ</code></td><td>Taui «{{civ}}»: Nen Shesep Pet Sep Pen</td><td>Taui «{{civ}}»: Nen Shesep Iru Sep Pen</td></tr>
+<tr><td><code>workflow.pick.stale_body</code></td><td>{{by}} · {{time}}: Semawy Aat Pen. Maa Setep Emu, Er Khet Smen.</td><td>{{by}} · {{time}}: Semawy Aat Pen. Maa Setep Min, Er Khet Smen.</td></tr>
+<tr><td><code>workflow.pick.stale_view</code></td><td>Maa Setep Emu</td><td>Maa Setep Min</td></tr>
+<tr><td><code>audit.timeline.cap_reached</code></td><td>Medu 500 Pehwy Wa. Setep Sepdet Nedjes Er Maa Medu Tepy.</td><td>Medu 500 Pehwy Wa. Setep Tera Nedjes Er Maa Medu Tepy.</td></tr>
+<tr><td><code>audit.timeline.empty</code></td><td>Nen Medu Was Em Sepdet Pen</td><td>Nen Medu Was Em Tera Pen</td></tr>
+<tr><td><code>audit.stats.scope_hall</code></td><td>Sepdet Neb · Wesekhet Pen · Hesb Neb {{count}}</td><td>Tera Neb · Wesekhet Pen · Hesb Neb {{count}}</td></tr>
+<tr><td><code>audit.stats.scope_all</code></td><td>Sepdet Neb · Wesekhet Neb · Hesb Neb {{count}}</td><td>Tera Neb · Wesekhet Neb · Hesb Neb {{count}}</td></tr>
+<tr><td><code>audit.stats.scope_note</code></td><td>Hesb Pen: Nen Setep Sepdet, Nen Setep Wesekhet.</td><td>Hesb Pen: Nen Setep Tera, Nen Setep Wesekhet.</td></tr>
+<tr><td><code>profile.devices.in_use</code></td><td>Em Aq Emu</td><td>Em Aq Min</td></tr>
+<tr><td><code>profile.password_locked</code></td><td>Sep Menmen. Wehem Iri Er Khet.</td><td>Sep Hau. Wehem Iri Er Khet.</td></tr>
+<tr><td><code>crossJudgments.cancel_flow_body_in_realm</code></td><td>Aat {{realm}} Em Iri: Sekhet Tepy Hena Em Khet: Iri Tepy. Wat Hesy Khetem Emu. Shem-N: Nen Semawy.</td><td>Aat {{realm}} Em Iri: Sekhet Tepy Hena Em Khet: Iri Tepy. Wat Hesy Khetem Min. Shem-N: Nen Semawy.</td></tr>
+<tr><td><code>death_sync.error.INTERNAL_ERROR</code></td><td>Sethet</td><td>Tehi</td></tr>
+<tr><td><code>soul_app.common.alert</code></td><td>Sethet</td><td>Tehi</td></tr>
+<tr><td><code>soul_app.social.lamp_many</code></td><td>{{name}} · Ba {{n}}: Wen Khabes Djet · Medu-Ek</td><td>{{name}} · Ba {{n}}: Wen Teka Djet · Medu-Ek</td></tr>
+<tr><td><code>soul_app.social.lamp_one</code></td><td>{{name}}: Wen Khabes Djet · Medu-Ek</td><td>{{name}}: Wen Teka Djet · Medu-Ek</td></tr>
+<tr><td><code>soul_app.social.lamp_two</code></td><td>{{name}} · Ba {{n}}: Wen Khabes Djet · Medu-Ek</td><td>{{name}} · Ba {{n}}: Wen Teka Djet · Medu-Ek</td></tr>
+<tr><td><code>official_notify.workflow_assigned.title</code></td><td>Wat Hesy · Er-Ek Emu</td><td>Wat Hesy · Er-Ek Min</td></tr>
+<tr><td><code>official_notify.workflow_assigned.body</code></td><td>{{soul}} · Wat Hesy «{{workflow}}»: Er-Ek Emu.</td><td>{{soul}} · Wat Hesy «{{workflow}}»: Er-Ek Min.</td></tr>
+<tr><td><code>officer_app.detail.node</code></td><td>Sekhet Emu · {{n}} / {{total}}</td><td>Sekhet Min · {{n}} / {{total}}</td></tr>
+<tr><td><code>officer_app.detail.cooldown_now</code></td><td>Emu: Hru {{n}} Khery</td><td>Min: Hru {{n}} Khery</td></tr>
+<tr><td><code>officer_app.detail.history_yours</code></td><td>Er-Ek Emu</td><td>Er-Ek Min</td></tr>
+<tr><td><code>officer_app.rebirth.cross_civ_body</code></td><td>Taui Ky: Sab Tepy Wedja · Em Medjat Sab. Hesy Emu: «Nen», Nen Semawy.</td><td>Taui Ky: Sab Tepy Wedja · Em Medjat Sab. Hesy Min: «Nen», Nen Semawy.</td></tr>
+<tr><td><code>events.col_time</code></td><td>Sepdet</td><td>Tera</td></tr>
+<tr><td><code>hall_settings.visit.hint</code></td><td>Shemes Nen Wen: Maa Em Medjat Ba. Nen Sesh: Nen Maa.</td><td>Shat Nen Wen: Maa Em Medjat Ba. Nen Sesh: Nen Maa.</td></tr>
+<tr><td><code>hall_settings.visit.letters_on</code></td><td>Shemes Wen-N · Ba Nen Maa Emu.</td><td>Shat Wen-N · Ba Nen Maa Min.</td></tr>
+</tbody></table></div>
+</section>
+
+<p>交付照旧:<code>v4-batch36-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>(扁平键)+ 回复说明。</p>
+</article>
