@@ -104,5 +104,5 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("actors", "0019_dantes_rivers_and_the_acheron_ferryman")]
+    dependencies = [("actors", "0020_egypt_ra_is_not_atum_and_isis_of_magic")]
     operations = [migrations.RunPython(forwards, backwards)]

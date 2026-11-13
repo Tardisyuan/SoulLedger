@@ -28,5 +28,5 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("org", "0014_alter_organization_category")]
+    dependencies = [("org", "0015_egypt_org_names_follow_the_docs")]
     operations = [migrations.RunPython(forwards, backwards)]
