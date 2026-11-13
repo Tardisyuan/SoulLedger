@@ -10,23 +10,25 @@ import { notify } from "../platform/index";
  * The judgment triage queue's session state (BRIEF §4.2).
  *
  * ─────────────────────────────────────────────────────────────────────────
- * A verdict is POSTed the moment it is given. There is no undo window.
+ * The queue console seals with a five-second undo strip (2026-11-14, the
+ * user's decision on the expert review): `stageVerdict` holds the verdict
+ * client-side and sends it when the strip runs out, when another verdict is
+ * staged, when `at` moves to another case, or when the hook unmounts (the page
+ * is left). `undoStaged` inside the window sends nothing.
  * ─────────────────────────────────────────────────────────────────────────
  *
- * 2026-09-25, the user's decision: 「落判即提交,不可撤回」, the same rule the
- * desk (`app/judgment/[id]/page.tsx`) already follows. This hook used to hold a
- * verdict client-side for eight seconds before sending it, so U could take it
- * back; that window, its on-disk copy, the cross-tab lease, the terminal
- * `keepalive` delivery and the restore-on-launch path all existed only for it
- * and went with it. `POST /judgment/{id}/conclude/` creates the disposition in
- * the same transaction as the verdict (backend/apps/judgment/services.py), so a
- * verdict that has been sent is changed only through the ADMIN-only audited
- * correction — which is now true from the keystroke on.
+ * Why deferred and not "send, then reverse": `POST /judgment/{id}/conclude/`
+ * creates the disposition in the same transaction as the verdict
+ * (backend/apps/judgment/services.py) and there is no reversal endpoint — a
+ * sent verdict changes only through the ADMIN-only audited correction. So the
+ * only undo that can be honest is not having sent it yet. `submitVerdict`
+ * still sends at once (the hook's primitive; the strip calls it on commit).
  *
  * What stayed:
  *  - The operator advances at once. The case goes into `holding` (part of the
- *    `next/` skip list) while its request is in flight, so the next fetch does
- *    not hand it straight back; it leaves `holding` when the request settles.
+ *    `next/` skip list) while it is staged or its request is in flight, so the
+ *    next fetch does not hand it straight back; undo takes it out of `holding`,
+ *    and the cached cursor for the shorter skip list puts it back on screen.
  *  - A refusal is never silent. A failed POST puts the case back in the queue
  *    and says so (`commit_error`). A 409 `claimed_by_other` — somebody else
  *    has claimed the case, and only they or a holder of `judgment.assign` (by
@@ -36,8 +38,11 @@ import { notify } from "../platform/index";
  *    2.2), not a toast that is gone before it is read.
  *  - One verdict per case: a second press on the card still on screen (auto-
  *    repeat, a double click, the next case not yet arrived) is dropped while the
- *    first request for that case is in flight.
+ *    first is staged or in flight.
  */
+
+/** How long a staged verdict can be taken back before it is sent. */
+export const UNDO_MS = 5000;
 
 /** The four verdicts, as a value and not only as a type. */
 export const VERDICT_CODES = ["PASSED", "FAILED", "PURGATORY", "RETRY"] as const;
@@ -73,6 +78,13 @@ const EMPTY_CURSOR: JudgmentQueueCursor = {
 function claimedByOther(err: unknown): JudgmentClaimRefusal | null {
   const response = (err as { response?: { status?: number; data?: JudgmentClaimRefusal } })?.response;
   return response?.status === 409 && response.data?.code === "claimed_by_other" ? response.data : null;
+}
+
+export interface StagedVerdict {
+  id: string;
+  verdict: VerdictCode;
+  notes: string;
+  createWorkflow: boolean;
 }
 
 export function useJudgmentQueue(options?: { at?: string }) {
@@ -123,14 +135,12 @@ export function useJudgmentQueue(options?: { at?: string }) {
     if (sessionTotal === null && query.isSuccess) setSessionTotal(cursor.total);
   }, [sessionTotal, query.isSuccess, cursor.total]);
 
-  const submitVerdict = useCallback(
-    async (input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
-      const judgment = cursor.judgment;
-      if (!judgment || inFlight.current.has(judgment.id)) return;
-      const id = judgment.id;
+  const send = useCallback(
+    async (id: string, input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
+      if (inFlight.current.has(id)) return;
       setClaimRefusal(null); // a new verdict: the last refusal has been read
       inFlight.current.add(id);
-      setHolding((prev) => [...prev, id]);
+      setHolding((prev) => (prev.includes(id) ? prev : [...prev, id]));
       try {
         // W unticked = say nothing, never `false`: with a cross-realm judgment still open on the case the server
         // must generate the workflow (and merges the bench into it), and an explicit false is answered 400
@@ -158,8 +168,75 @@ export function useJudgmentQueue(options?: { at?: string }) {
         setHolding((prev) => prev.filter((held) => held !== id));
       }
     },
-    [cursor.judgment, qc]
+    [qc]
   );
+
+  const submitVerdict = useCallback(
+    async (input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
+      const judgment = cursor.judgment;
+      if (!judgment) return;
+      await send(judgment.id, input);
+    },
+    [cursor.judgment, send]
+  );
+
+  // ── The undo window ────────────────────────────────────────────────────
+  const [staged, setStaged] = useState<StagedVerdict | null>(null);
+  const stagedRef = useRef<StagedVerdict | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const takeStaged = useCallback(() => {
+    const s = stagedRef.current;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    stagedRef.current = null;
+    setStaged(null);
+    return s;
+  }, []);
+
+  /** Send the staged verdict now (the strip ran out, or the operator moved on). */
+  const commitStaged = useCallback(() => {
+    const s = takeStaged();
+    if (s) void send(s.id, s);
+  }, [takeStaged, send]);
+
+  /** Seal the case on screen: advance at once, send in `UNDO_MS` unless undone. */
+  const stageVerdict = useCallback(
+    (input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
+      const judgment = cursor.judgment;
+      if (!judgment || inFlight.current.has(judgment.id) || stagedRef.current?.id === judgment.id) return;
+      commitStaged(); // one window at a time: the previous seal goes out now
+      const s: StagedVerdict = {
+        id: judgment.id,
+        verdict: input.verdict,
+        notes: input.notes ?? "",
+        createWorkflow: !!input.createWorkflow,
+      };
+      stagedRef.current = s;
+      setStaged(s);
+      setClaimRefusal(null);
+      setHolding((prev) => (prev.includes(s.id) ? prev : [...prev, s.id]));
+      timer.current = setTimeout(commitStaged, UNDO_MS);
+    },
+    [cursor.judgment, commitStaged]
+  );
+
+  /** Take the staged verdict back: nothing is sent, the case returns to the screen. */
+  const undoStaged = useCallback(() => {
+    const s = takeStaged();
+    if (s) setHolding((prev) => prev.filter((held) => held !== s.id));
+    return s;
+  }, [takeStaged]);
+
+  // Leaving the page, or opening another case by `at`, commits what is staged.
+  const commitRef = useRef(commitStaged);
+  useEffect(() => {
+    commitRef.current = commitStaged;
+  });
+  useEffect(() => () => commitRef.current(), []);
+  useEffect(() => {
+    commitRef.current();
+  }, [at]);
 
   /**
    * Defer: hide for this sitting only. No request, no state change on the
@@ -220,6 +297,10 @@ export function useJudgmentQueue(options?: { at?: string }) {
     isError: query.isError,
     refetch: query.refetch,
     submitVerdict,
+    staged,
+    stageVerdict,
+    commitStaged,
+    undoStaged,
     defer,
     restoreDeferred,
     setAside,

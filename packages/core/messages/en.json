@@ -2206,7 +2206,6 @@
       "field_birth": "Born",
       "field_death": "Died",
       "field_origin": "Origin",
-      "key_verdicts": "Render that verdict and advance",
       "key_defer": "Defer this case for the rest of the sitting",
       "key_workflow": "Toggle “also open an approval workflow”",
       "key_restore": "Bring every deferred case back",
@@ -2219,7 +2218,15 @@
       "session_deferred": "{{n}} set aside this sitting",
       "restore_all": "Put all back in the queue",
       "key_claim": "Claim this case",
-      "reassigned": "Reassigned · {{name}} → {{to}}"
+      "reassigned": "Reassigned · {{name}} → {{to}}",
+      "key_select": "Select a verdict (does not submit)",
+      "key_seal": "Seal: submit the selected verdict, undoable for 5 s",
+      "key_undo": "Take back the seal just set (within 5 s)",
+      "key_hold": "Put on hold (with a reason)",
+      "seal": "Seal",
+      "undo": "Undo",
+      "sealed": "Sealed · undo within {n} s",
+      "sealed_note": "Sent when the time runs out; leaving this page or opening another case sends it now"
     },
     "detail": {
       "loading": "Loading judgment...",

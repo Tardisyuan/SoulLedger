@@ -4,14 +4,17 @@
  *
  * The keyboard map is the interface here, not a convenience layer over it
  * (§4.2 asks for it explicitly), so it is tested as such — including the guard
- * that typing "1" in the notes field must never file a verdict.
+ * that typing "1" in the notes field must never select a verdict.
  *
- * A verdict is POSTed the moment its key is pressed: the eight-second undo
- * window, the U key and the undo strip were removed on 2026-09-25
- * (「落判即提交,不可撤回」, as on the desk).
+ * One key, one meaning (2026-11-14, the user's decision on the expert review):
+ * `1`–`4` only select, `⌘⏎` / Ctrl⏎ is the only submit, and after it a
+ * five-second undo strip — the verdict is not sent until the strip runs out.
+ * Timers are faked (RTL's `waitFor` advances them for everything else),
+ * and `runOut()` is the five seconds.
  */
 import { renderHook, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
+import { UNDO_MS } from "@soulledger/core/hooks/useJudgmentQueue";
 import { judgmentApi } from "@soulledger/core/api";
 import { setSingleKeyShortcuts } from "@/src/lib/hotkeys";
 import { isMinePending } from "@/src/components/judgment/RowMark";
@@ -94,6 +97,7 @@ jest.mock("@soulledger/core/api", () => ({
   judgmentApi: {
     next: jest.fn(),
     conclude: jest.fn().mockResolvedValue({ data: {} }),
+    defer: jest.fn().mockResolvedValue({ data: {} }),
     // 「我认领的」分组(QueueMinePanel)读 `?group=mine`;认领与改派是 claims.py 的两个动作。
     list: jest.fn().mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } }),
     claim: jest.fn().mockResolvedValue({ data: {} }),
@@ -143,7 +147,25 @@ function renderConsole() {
   return renderWithProviders(<JudgmentQueueConsole />, { i18n: false });
 }
 
+const press = async (init: { key: string; ctrlKey?: boolean; metaKey?: boolean }, target: Window | Element = window) => {
+  await act(async () => {
+    fireEvent.keyDown(target, init);
+  });
+};
+/** Select with the digit, then the one submit chord. Nothing is sent yet. */
+async function seal(digit: string) {
+  await press({ key: digit });
+  await press({ key: "Enter", ctrlKey: true });
+}
+/** The undo window elapses. */
+async function runOut(ms = UNDO_MS) {
+  await act(async () => {
+    jest.advanceTimersByTime(ms);
+  });
+}
+
 afterEach(() => {
+  jest.useRealTimers();
   // Toasts are module-level DOM appended straight to `document.body`, and this
   // file never cleaned them up — a leftover from one test was still in the
   // document during the next. It went unnoticed while every toast carried
@@ -162,6 +184,7 @@ afterEach(() => {
 const concluded = new Set<string>();
 
 beforeEach(() => {
+  jest.useFakeTimers();
   jest.clearAllMocks();
   concluded.clear();
   currentUser = mockUser;
@@ -205,25 +228,121 @@ describe("JudgmentQueueConsole", () => {
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
   });
 
-  it("renders a verdict on a digit key: POSTs it at once and advances to the next case", async () => {
+  it("1 only selects: nothing is sent and the case stays on screen", async () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
 
+    await press({ key: "1" });
+    await runOut();
+
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(screen.getByText("第一位待判者")).toBeInTheDocument();
+    expect(document.querySelector('[data-verdict="PASSED"]')).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector('[data-verdict="RETRY"]')).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
+  });
+
+  it("⌘⏎ with nothing selected does nothing", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await press({ key: "Enter", metaKey: true });
+    await runOut();
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /judgment\.queue\.seal/ })).toBeDisabled();
+  });
+
+  it("⌘⏎ seals: advances at once, shows the undo strip, and sends only after 5 s", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+
+    await seal("1");
+
+    const strip = screen.getByTestId("undo-strip");
+    expect(within(strip).getByText("judgment.queue.sealed:5")).toBeInTheDocument();
+    // aria-live says it once, in a region that was already on the page.
+    expect(screen.getByTestId("undo-announce")).toHaveAttribute("role", "status");
+    expect(screen.getByTestId("undo-announce")).toHaveTextContent("judgment.queue.sealed:5");
+    expect(within(strip).getByText("judgment.queue.sealed_note")).toBeInTheDocument();
+    // Advanced at once: the sealed case is already out of `next/` (no waitFor here — it would advance the clock).
+    expect(mockNext).toHaveBeenLastCalledWith(expect.objectContaining({ skip: [JUDGMENT.id] }));
+    expect(mockConclude).not.toHaveBeenCalled();
+
+    await runOut(UNDO_MS - 1);
+    expect(mockConclude).not.toHaveBeenCalled();
+    await runOut(1);
+    await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
+
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, { verdict: "PASSED", notes: "" });
+    expect(mockConclude.mock.calls[0][1]).not.toHaveProperty("create_workflow");
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
+    expect(screen.getByTestId("undo-announce")).toHaveTextContent("");
+    // The next case arrives unselected: a selection belongs to the case it was made on.
+    expect(document.querySelector('[data-verdict="PASSED"]')).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("undo inside the 5 s sends nothing and brings the case back with what was chosen", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("judgment.queue.notes"), { target: { value: "再看看" } });
+
+    await seal("4");
+    await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
+    await runOut(UNDO_MS - 1000);
     await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
+      fireEvent.click(within(screen.getByTestId("undo-strip")).getByRole("button", { name: /judgment\.queue\.undo/ }));
     });
 
-    // Sent on the keystroke — no timer has run, and none needs to.
-    expect(mockConclude).toHaveBeenCalledTimes(1);
-    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, {
-      verdict: "PASSED",
-      notes: "",
-    });
-    expect(mockConclude.mock.calls[0][1]).not.toHaveProperty("create_workflow");
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("judgment.queue.notes")).toHaveValue("再看看");
+    expect(document.querySelector('[data-verdict="RETRY"]')).toHaveAttribute("aria-pressed", "true");
+    await runOut(UNDO_MS * 2);
+    expect(mockConclude).not.toHaveBeenCalled();
+  });
+
+  it("U is the undo key", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await seal("1");
+    await press({ key: "u" });
+    await runOut(UNDO_MS * 2);
+    expect(mockConclude).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+  });
+
+  it("sealing the next case inside the window sends the previous one at once", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await seal("1");
     await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
-    // Absence: nothing on screen offers to take it back.
-    expect(screen.queryByText("judgment.queue.undo")).not.toBeInTheDocument();
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await seal("3");
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, expect.objectContaining({ verdict: "PASSED" }));
+    await runOut();
+    expect(mockConclude).toHaveBeenCalledTimes(2);
+    expect(mockConclude).toHaveBeenLastCalledWith(NEXT_JUDGMENT.id, expect.objectContaining({ verdict: "PURGATORY" }));
+  });
+
+  it("leaving the page inside the window sends the staged verdict", async () => {
+    const { unmount } = renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await seal("1");
+    expect(mockConclude).not.toHaveBeenCalled();
+    unmount();
+    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, expect.objectContaining({ verdict: "PASSED" }));
+  });
+
+  it("a verdict that needs reasons (不过) is routed to the judgment page on ⌘⏎, not sent", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await press({ key: "2" });
+    expect(mockPush).not.toHaveBeenCalled();
+    await press({ key: "Enter", ctrlKey: true });
+    expect(mockPush).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^/judgment/${JUDGMENT.id}`)));
+    await runOut();
+    expect(mockConclude).not.toHaveBeenCalled();
   });
 
   it("自动重复不算第二次按键 —— 长按 `w` 不会把复选框来回翻", async () => {
@@ -246,23 +365,6 @@ describe("JudgmentQueueConsole", () => {
     expect(checkbox.checked).toBe(true);
   });
 
-  it("U is no longer a key: it neither takes a verdict back nor sends another", async () => {
-    renderConsole();
-    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
-
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
-    });
-    await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "u" });
-    });
-
-    expect(mockConclude).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("第二位待判者")).toBeInTheDocument();
-    expect(mockShowToast).not.toHaveBeenCalled();
-  });
-
   it("a case claimed by another officer: says who, sets it aside for the sitting", async () => {
     mockConclude.mockRejectedValueOnce({
       response: {
@@ -273,9 +375,8 @@ describe("JudgmentQueueConsole", () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
 
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
-    });
+    await seal("1");
+    await runOut();
 
     // A warning banner split into a title and one sentence (第三类 F 组 2.2) — not a toast.
     const banner = await screen.findByTestId("claim-refusal");
@@ -295,12 +396,13 @@ describe("JudgmentQueueConsole", () => {
   });
 
   it("R's bar says how many are set aside this sitting and puts them all back", async () => {
+    // Set aside this sitting = refused because someone else holds it (S is the persistent hold now).
+    mockConclude.mockRejectedValueOnce({ response: { status: 409, data: { code: "claimed_by_other", claimed_by_name: "崔判官" } } });
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
     expect(screen.queryByTestId("session-deferred")).toBeNull();
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "s" });
-    });
+    await seal("1");
+    await runOut();
     const bar = await screen.findByTestId("session-deferred");
     expect(within(bar).getByText("judgment.queue.session_deferred:1")).toBeInTheDocument();
     const button = within(bar).getByRole("button", { name: "judgment.queue.restore_all" });
@@ -323,17 +425,27 @@ describe("JudgmentQueueConsole", () => {
     expect(workflow.closest("label")?.querySelector("kbd")?.textContent).toBe("W");
   });
 
-  it("defers on S without sending anything", async () => {
+  it("S puts the case on hold with a reason (the persistent hold, as on the desk) and moves on", async () => {
+    const mockDefer = judgmentApi.defer as jest.Mock;
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
 
+    await press({ key: "s" });
+    const dialog = await screen.findByRole("dialog");
+    // The dialog owns the keys while it is open: a digit typed at it selects nothing.
+    await press({ key: "1" });
+    expect(document.querySelector('[data-verdict="PASSED"]')).toHaveAttribute("aria-pressed", "false");
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "等城隍回函" } });
     await act(async () => {
-      fireEvent.keyDown(window, { key: "s" });
+      fireEvent.click(within(dialog).getByRole("button", { name: "judgment.claim.defer" }));
     });
 
+    expect(mockDefer).toHaveBeenCalledWith(JUDGMENT.id, "等城隍回函");
     await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
     expect(mockConclude).not.toHaveBeenCalled();
-    expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ skip: [JUDGMENT.id] }));
+    expect(mockNext).toHaveBeenLastCalledWith(expect.objectContaining({ skip: [JUDGMENT.id] }));
+    // Not the session's set-aside: R does not bring a hold back.
+    expect(screen.queryByTestId("session-deferred")).toBeNull();
   });
 
   it("ignores verdict keys while the operator is typing a note", async () => {
@@ -341,32 +453,27 @@ describe("JudgmentQueueConsole", () => {
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
     const notes = screen.getByLabelText("judgment.queue.notes");
 
-    await act(async () => {
-      fireEvent.keyDown(notes, { key: "1" });
-    });
+    await press({ key: "1" }, notes);
 
-    // Still the same case, nothing sent: a "1" in a note is a note.
-    expect(screen.getByText("第一位待判者")).toBeInTheDocument();
+    // A "1" in a note is a note: nothing selected.
+    expect(document.querySelector('[data-verdict="PASSED"]')).toHaveAttribute("aria-pressed", "false");
     expect(mockConclude).not.toHaveBeenCalled();
   });
 
-  it("a focused checkbox is not typing: the digit still rules; with the single-key switch off it does not", async () => {
+  it("a focused checkbox is not typing: the digit still selects; with the single-key switch off it does not", async () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
     const checkbox = screen.getByRole("checkbox");
+    const passed = () => document.querySelector('[data-verdict="PASSED"]');
     setSingleKeyShortcuts(false);
     try {
-      await act(async () => {
-        fireEvent.keyDown(checkbox, { key: "1" });
-      });
-      expect(mockConclude).not.toHaveBeenCalled();
+      await press({ key: "1" }, checkbox);
+      expect(passed()).toHaveAttribute("aria-pressed", "false");
     } finally {
       setSingleKeyShortcuts(true);
     }
-    await act(async () => {
-      fireEvent.keyDown(checkbox, { key: "1" });
-    });
-    expect(mockConclude).toHaveBeenCalledTimes(1);
+    await press({ key: "1" }, checkbox);
+    expect(passed()).toHaveAttribute("aria-pressed", "true");
   });
 
   it("sends the note and the workflow flag along with the verdict", async () => {
@@ -376,12 +483,9 @@ describe("JudgmentQueueConsole", () => {
     fireEvent.change(screen.getByLabelText("judgment.queue.notes"), { target: { value: "证据不足" } });
     // Two separate acts: the W toggle must have re-rendered before the verdict
     // key is read, exactly as two real keystrokes would.
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "w" });
-    });
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "4" });
-    });
+    await press({ key: "w" });
+    await seal("4");
+    await runOut();
 
     expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, {
       verdict: "RETRY",
@@ -400,10 +504,10 @@ describe("JudgmentQueueConsole", () => {
     });
 
     expect(screen.getByText("judgment.queue.keyboard_map")).toBeInTheDocument();
-    expect(screen.getByText("judgment.queue.key_verdicts")).toBeInTheDocument();
-    // Design's six plus C (v2 claim, 2026-09-30), in order — no U (withdrawn with the undo window).
+    expect(screen.getByText("judgment.queue.key_select")).toBeInTheDocument();
+    // 2026-11-14: 1–4 select, ⌘⏎ the only submit, U back with the undo strip, S the persistent hold.
     const listed = Array.from(document.querySelectorAll("[data-shortcut]")).map((el) => el.getAttribute("data-shortcut"));
-    expect(listed).toEqual(["1–4", "C", "S", "W", "R", "N", "?"]);
+    expect(listed).toEqual(["1–4", "⌘⏎", "U", "C", "S", "W", "R", "N", "?"]);
   });
 
   it("says the queue is clear rather than showing an error", async () => {
@@ -444,7 +548,7 @@ describe("the decision bar", () => {
     // All four verdicts and Defer — the irreversible controls — are the bar's
     // whole contents. If one were left in the scroll it could be off-screen at
     // the moment it is needed.
-    for (const key of ["1", "2", "3", "4", "S"]) {
+    for (const key of ["1", "2", "3", "4", "⌘⏎", "S"]) {
       expect(bar!.textContent).toContain(key);
     }
   });
@@ -468,12 +572,14 @@ describe("the decision bar", () => {
     renderConsole();
     await screen.findByText("第一位待判者");
 
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
-    });
+    await seal("1");
+    // The strip stays up over the cleared queue, so the last seal can still be taken back.
+    await screen.findByText("judgment.queue.exhausted_title");
+    expect(screen.getByTestId("undo-strip")).toBeInTheDocument();
+    await runOut();
 
     expect(mockConclude).toHaveBeenCalledTimes(1);
-    await screen.findByText("judgment.queue.exhausted_title");
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
     expect(screen.queryByText("judgment.queue.defer")).not.toBeInTheDocument();
   });
 
@@ -517,23 +623,23 @@ describe("the decision bar", () => {
       await act(async () => {
         fireEvent.keyDown(window, { key: "1" });
         fireEvent.keyDown(window, { key: "w" });
+        fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });
       });
+      await runOut();
 
       expect(screen.getByText("第一位待判者")).toBeInTheDocument();
       expect(mockConclude).not.toHaveBeenCalled();
-      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
     });
 
-    it("跳过仍然可用 —— 它是会话内的,什么都不写", async () => {
+    it("S 也不在:放进待定是写操作", async () => {
       renderConsole();
       await screen.findByText("第一位待判者");
 
-      await act(async () => {
-        fireEvent.keyDown(window, { key: "s" });
-      });
+      await press({ key: "s" });
 
-      await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
-      expect(mockConclude).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByText("第一位待判者")).toBeInTheDocument();
     });
   });
 });
@@ -586,15 +692,14 @@ describe("控制台不抢别人已经处理过的按键", () => {
     expect(screen.getByText("第一位待判者")).toBeInTheDocument();
   });
 
-  it("图关掉之后,Escape 才是离开", async () => {
+  it("没有层时 Escape 什么也不做 —— 不再离开队列(fe-ia §3.4)", async () => {
     renderConsole();
     await screen.findByText("第一位待判者");
 
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "Escape" });
-    });
+    await press({ key: "Escape" });
 
-    expect(mockPush).toHaveBeenCalledWith("/judgment");
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(screen.getByText("第一位待判者")).toBeInTheDocument();
   });
 });
 
@@ -648,10 +753,8 @@ describe("审批流复选框不跨案子", () => {
     });
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
 
-    // 裁一个,前进到下一个。
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
-    });
+    // 落一个印,前进到下一个。
+    await seal("1");
     await screen.findByText("第二位待判者");
 
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
@@ -665,12 +768,9 @@ describe("审批流复选框不跨案子", () => {
     // 之间重渲染,于是 `rule` 的闭包看得到刚勾上的值。塞进同一个 act 里就
     // 没有那次重渲染,`rule` 拿到的是旧的 false —— 那样测到的是 React 的
     // 批处理,不是这段代码。
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "w" });
-    });
-    await act(async () => {
-      fireEvent.keyDown(window, { key: "1" });
-    });
+    await press({ key: "w" });
+    await seal("1");
+    await runOut();
 
     // 缺席断言的反面:重置不许把当前这次裁决的意图也一起吃掉。
     expect(mockConclude).toHaveBeenCalledWith(

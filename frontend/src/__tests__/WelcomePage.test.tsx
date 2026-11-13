@@ -522,7 +522,7 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     });
   });
 
-  it("重看首次设置 comes back from 接着做; 所有快捷键 opens the shortcuts step — exactly the queue's seven", async () => {
+  it("重看首次设置 comes back from 接着做; 所有快捷键 opens the shortcuts step — exactly the queue's table", async () => {
     signedInJudge();
     renderPage();
     await settled();
@@ -533,8 +533,9 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     fireEvent.click(within(nextPanel()).getByRole("button", { name: /welcome\.next_all_shortcuts/ }));
     expect(stepStates()).toEqual(["done", "done", "done", "current"]);
     const keys = Array.from(document.querySelectorAll("[data-shortcut] dt")).map((dt) => dt.textContent);
-    expect(keys).toEqual(["1–4", "C", "S", "W", "R", "N", "?"]);
-    for (const invented of ["⌘K", "Q", "⌘⏎", "⌘Z", "U"]) expect(keys).not.toContain(invented);
+    // 2026-11-14: ⌘⏎ (the one submit) and U (the undo strip) joined the queue's table.
+    expect(keys).toEqual(["1–4", "⌘⏎", "U", "C", "S", "W", "R", "N", "?"]);
+    for (const invented of ["⌘K", "Q", "⌘Z"]) expect(keys).not.toContain(invented);
   });
 
   it("step 1 shows the identity it asks you to confirm", async () => {

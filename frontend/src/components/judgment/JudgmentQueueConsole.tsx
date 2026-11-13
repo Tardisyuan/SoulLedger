@@ -1,7 +1,7 @@
 "use client";
 
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isTypingTarget, useHotkeys } from "@/src/lib/hotkeys";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -13,12 +13,12 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { EnumBadge } from "@/components/ui/data-grid";
 import { StaleBadge } from "@/src/components/ui/StatusBadge";
-import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
-import { useClaimJudgment, useReassignJudgment } from "@soulledger/core/hooks/useJudgments";
+import { UNDO_MS, useJudgmentQueue, type StagedVerdict, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
+import { useClaimJudgment, useDeferJudgment, useReassignJudgment } from "@soulledger/core/hooks/useJudgments";
 import type { Judgment } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { QueueMinePanel } from "@/src/components/judgment/QueueMinePanel";
 import { Seal } from "@/src/components/plaque/Seal";
 import { Button } from "@/src/components/ui/Button";
@@ -39,10 +39,15 @@ import {
  * The judgment triage queue (BRIEF §4.2, the one item in the brief marked
  * "Decided": a queue, not multi-select).
  *
- * One case on screen at a time, the whole decision surface with it, a verdict
- * is one keystroke, and giving one advances to the next without a navigation.
- * The verdict is sent the moment it is given — no undo window (removed
- * 2026-09-25: 「落判即提交,不可撤回」, as on the desk).
+ * One case on screen at a time, the whole decision surface with it, and sealing
+ * advances to the next without a navigation.
+ *
+ * One key, one meaning (2026-11-14, the user's decision on the expert review,
+ * fe-ia §1.1 / §3.4): `1`–`4` only SELECT a verdict, as on the desk; `⌘⏎`
+ * (Ctrl+Enter) is the only submit. No confirm layer — instead a five-second
+ * undo strip, and the verdict is not sent until it runs out (the hook's
+ * `stageVerdict`; there is no reversal endpoint for a concluded judgment).
+ * Leaving the page or opening another case inside the window sends it.
  * The list at /judgment still exists and is still the right tool for "find a
  * particular judgment"; this is the tool for "work through the pending ones",
  * which is what the operator does all day.
@@ -50,20 +55,22 @@ import {
  * Keyboard map — the queue is keyboard-first, so this is the interface, not a
  * shortcut layer over it:
  *
- *   1 / 2 / 3 / 4   render PASSED / FAILED / PURGATORY / RETRY, send it, advance
+ *   1 / 2 / 3 / 4   select PASSED / FAILED / PURGATORY / RETRY (never sends)
+ *   ⌘⏎ / Ctrl⏎      seal the selected verdict: advance, send after 5 s
+ *   U               take the seal back inside those 5 s
  *   C               claim the case on screen (2026-09-30, v2: one of the three
  *                   queue features the user decided on — with 改派 and the
  *                   「我认领的」group, `QueueMinePanel`)
- *   S               defer this case for the rest of this sitting
+ *   S               put it on hold, with a reason (persistent, as on the desk)
  *   W               toggle "also open an approval workflow"
- *   R               bring deferred cases back to the queue
+ *   R               bring the cases set aside this sitting back to the queue
  *   N               focus the notes field
  *   ?               show / hide this map
- *   Esc             leave the queue
+ *   Esc             close the map; otherwise nothing (it no longer leaves)
  *
  * Keys are ignored while focus is in the notes field (and any other text
- * input), so typing "1" in a note never files a verdict. Esc still works
- * there, and blurs first.
+ * input), so typing "1" in a note never selects a verdict. ⌘⏎ and Esc still
+ * work there; Esc blurs.
  */
 
 const VERDICTS: { code: VerdictCode; key: string }[] = [
@@ -81,8 +88,9 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const [notes, setNotes] = useState("");
   const [createWorkflow, setCreateWorkflow] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+  const [selected, setSelected] = useState<VerdictCode | null>(null);
 
-  const { cursor, progress, submitVerdict, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
+  const { cursor, progress, staged, stageVerdict, undoStaged, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
   /* 第四十三批:原审判挂着没结束的跨域审判时,不勾 W 服务端也会生成全站流程(请求里不带 create_workflow)。
      这里把 W 显示成勾上、点不动,下面一句为什么;要选站去整页。与整页同一把缓存键。 */
@@ -117,17 +125,24 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   // Deciding it is a per-sitting setting instead would be defensible, but
   // then it would have to say so on screen; a hidden sticky toggle that
   // creates a workflow per case is the one reading nobody chose.
+  //
+  // An undone seal brings its case back with what the operator had chosen.
+  const restoreDraft = useRef<StagedVerdict | null>(null);
   useEffect(() => {
-    setNotes("");
-    setCreateWorkflow(false);
+    const draft = restoreDraft.current?.id === judgment?.id ? restoreDraft.current : null;
+    restoreDraft.current = null;
+    setNotes(draft?.notes ?? "");
+    setCreateWorkflow(draft?.createWorkflow ?? false);
+    setSelected(draft?.verdict ?? null);
   }, [judgment?.id]);
 
   /** 每落一次判盖一次印(交互与动效第 2 轮 §三 1:点击或按键即盖印,不按住)。 */
   const [stamp, setStamp] = useState(0);
 
-  const rule = useCallback(
-    (verdict: VerdictCode) => {
-      if (!judgment) return;
+  const seal = useCallback(
+    () => {
+      const verdict = selected;
+      if (!judgment || !verdict) return;
       // v4 S10:原审判「不过」(希腊判「通过」也一样)要先选理由 / 文书,这一屏没有理由面板 —— 送到审判台,
       // 在那里的盖印确认层里选,而不是发一个必然被 400 `fail_reason_required` 拒的请求。
       if ((judgment.kind ?? "ORIGINAL") === "ORIGINAL" && reasonsShown(judgment.civilization, verdict)) {
@@ -135,10 +150,23 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         return;
       }
       setStamp((n) => n + 1);
-      void submitVerdict({ verdict, notes, createWorkflow });
+      stageVerdict({ verdict, notes, createWorkflow });
     },
-    [judgment, submitVerdict, notes, createWorkflow, router]
+    [judgment, selected, stageVerdict, notes, createWorkflow, router]
   );
+
+  const undo = useCallback(() => {
+    const back = undoStaged();
+    if (back) restoreDraft.current = back;
+  }, [undoStaged]);
+
+  // Closing the tab inside the window would drop the seal unsent: ask first (leaving in-app sends it).
+  useEffect(() => {
+    if (!staged) return;
+    const ask = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", ask);
+    return () => window.removeEventListener("beforeunload", ask);
+  }, [staged]);
 
   const leave = useCallback(() => {
     router.push("/judgment");
@@ -169,6 +197,8 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const { showToast } = useToast();
   const claim = useClaimJudgment();
   const reassign = useReassignJudgment();
+  const hold = useDeferJudgment();
+  const [holdAsking, setHoldAsking] = useState(false);
   const [recentClaims, setRecentClaims] = useState<string[]>([]);
   const [handedOff, setHandedOff] = useState<string[]>([]);
   const [reassignFor, setReassignFor] = useState<Pick<Judgment, "id" | "soul_name"> | null>(null);
@@ -185,6 +215,22 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
     });
   }, [judgment, canRule, claimedBy, claim, showToast, t]);
+
+  const confirmHold = (reason: string) => {
+    if (!judgment) return;
+    const id = judgment.id;
+    hold.mutate(
+      { id, reason },
+      {
+        onSuccess: () => {
+          setHoldAsking(false);
+          setAside(id);
+          showToast(t("desk.deferred_toast"), "success");
+        },
+        onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+      }
+    );
+  };
 
   const confirmReassign = (to: number, toName: string) => {
     if (!reassignFor) return;
@@ -207,25 +253,31 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   // 长按重复(repeat)、输入法组字、修饰键组合,以及焦点在文本框时不接单键 —— 这里不再自己写一份。
   // 单选 / 复选框不算打字,所以焦点落在「同时发起审批流程」那个复选框上时 1–4 仍然接。
   //
-  // 四个裁决键、`w`、`c`、`n` 都通向写操作,一起受 `canRule` 管;`s`(延后)只动本会话、`?` 是帮助,常开。
+  // 四个裁决键、`⌘⏎`、`u`、`w`、`c`、`n`、`s` 都通向写操作,一起受 `canRule` 管;`r` 只动本会话、`?` 是帮助,常开。
   // `h` 与 `?` 同义:多数非美式键盘上 `?` 要按 Shift,找不到的帮助键等于没有。
+  // 弹层(待定理由、改派)开着时整组不挂:层里的按键归层。
   const toggleKeys = () => setShowKeys((prev) => !prev);
-  useHotkeys({
-    ...(canRule ? Object.fromEntries(VERDICTS.map((v) => [v.key, () => rule(v.code)])) : {}),
-    ...(canRule
-      ? {
-          w: () => setCreateWorkflow((prev) => !prev),
-          c: claimCurrent,
-          n: () => document.getElementById("queue-notes")?.focus(),
-        }
-      : {}),
-    s: defer,
-    r: restoreDeferred,
-    "?": toggleKeys,
-    h: toggleKeys,
-    // 键盘映射开着时 Esc 先关它(此前 Esc 会直接离开整个队列)。
-    Escape: () => (showKeys ? setShowKeys(false) : leave()),
-  });
+  useHotkeys(
+    {
+      ...(canRule ? Object.fromEntries(VERDICTS.map((v) => [v.key, () => setSelected(v.code)])) : {}),
+      ...(canRule
+        ? {
+            "mod+Enter": seal,
+            u: undo,
+            w: () => setCreateWorkflow((prev) => !prev),
+            c: claimCurrent,
+            n: () => document.getElementById("queue-notes")?.focus(),
+            s: () => judgment && setHoldAsking(true),
+          }
+        : {}),
+      r: restoreDeferred,
+      "?": toggleKeys,
+      h: toggleKeys,
+      // Esc 只关最上面一层;没有层时什么也不做(此前没有层时离开整个队列 —— fe-ia §3.4 删掉了)。
+      Escape: () => setShowKeys(false),
+    },
+    !holdAsking && reassignFor === null
+  );
   // 文本框里按 Esc:先失焦(`useHotkeys` 在打字时不接任何键,所以这一条单独留着)。
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -253,6 +305,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
   return (
     <div className="text-[oklch(var(--color-ink))]">
+      {/* 撤回条的播报:区域常驻,内容随落印出现 —— 刚插进来就带字的区域,有的读屏不念。 */}
+      <p role="status" data-testid="undo-announce" className="sr-only">
+        {staged ? t("judgment.queue.sealed", { n: String(UNDO_MS / 1000) }) : ""}
+      </p>
       {/* 窄屏把题目放在自己那一行,进度和两个按钮排第二行(393 宽四样挤一行时题目折两行,56 高撑出 48 的定高)。 */}
       <div className="min-h-12 flex flex-wrap items-center px-6 gap-x-4 max-sm:pt-2 border-b border-[oklch(var(--color-line))]/50">
         {/* 墨色:文明色只给顶线、印、卷宗脊、焦点四处,标题不在其中(第三十六批 第一节第 2 条)。 */}
@@ -496,6 +552,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           long the confession or the ledger above them is. Notes and "create
           workflow" stay in the scroll: they are optional, and `N` reaches the
           notes field from anywhere. */}
+      <DeferDialog
+        isOpen={holdAsking}
+        count={1}
+        pending={hold.isPending}
+        onCancel={() => setHoldAsking(false)}
+        onConfirm={confirmHold}
+      />
       <ReassignDialog
         isOpen={reassignFor !== null}
         ids={reassignFor ? [reassignFor.id] : []}
@@ -505,8 +568,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
         onConfirm={confirmReassign}
       />
 
-      {judgment && cursor.soul && cursor.ledger && (
+      {((judgment && cursor.soul && cursor.ledger) || staged) && (
         <div className="sticky bottom-(--bottom-bar) border-t border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-canvas))]">
+          {staged && <UndoStrip onUndo={undo} />}
+          {judgment && cursor.soul && cursor.ledger && (
           <div className="max-w-6xl mx-auto px-6 py-3">
             {/* The verdict row stays hand-rolled, deliberately, while the four
                 plain buttons on this screen moved to `Button`. Each verdict
@@ -541,26 +606,39 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   type="button"
                   data-verdict={verdict.code}
                   aria-keyshortcuts={verdict.key}
-                  onClick={() => rule(verdict.code)}
-                  /* 按下只换底色(line),不位移、不回弹:落判时界面不该显得得意。 */
-                  className={VERDICT_KEY_CLASS}
+                  aria-pressed={selected === verdict.code}
+                  onClick={() => setSelected(verdict.code)}
+                  /* 按下只换底色(line),不位移、不回弹:落判时界面不该显得得意。选中与审判台同一道内框。 */
+                  className={`${VERDICT_KEY_CLASS} ${selected === verdict.code ? OPT_CHOSEN : ""}`}
                 >
                   <VerdictKeyContent code={verdict.code} keyHint={verdict.key} namespace={verdictNamespace(t, judgment?.civilization, verdict.code)} />
                 </button>
               ))}
               </div>
+              <Button
+                type="button"
+                variant="primary"
+                className="gap-2"
+                disabled={!selected}
+                onClick={seal}
+                aria-keyshortcuts="Meta+Enter Control+Enter"
+              >
+                {t("judgment.queue.seal")}
+                <Keycap>⌘⏎</Keycap>
+              </Button>
               <button
                 type="button"
-                onClick={defer}
+                onClick={() => setHoldAsking(true)}
                 aria-keyshortcuts="S"
                 className="flex rounded-control h-(--control-h-md) items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]"
               >
-                {t("judgment.claim.col_deferred")}
+                {t("judgment.claim.defer")}
                 <Keycap>S</Keycap>
               </button>
             </div>
             )}
           </div>
+          )}
         </div>
       )}
     </div>
@@ -620,6 +698,32 @@ function ConsoleNotice({ title, body, action }: { title: string; body: string; a
       <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{title}</p>
       {body && <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{body}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
+    </div>
+  );
+}
+
+/** 选中的裁决:与审判台(`app/judgment/[id]/page.tsx` 的 OPT_CHOSEN)同一道内框。 */
+const OPT_CHOSEN = "shadow-[inset_0_0_0_1.5px_oklch(var(--color-ink))] [&_kbd]:text-[oklch(var(--color-ink))]";
+
+/**
+ * 落印后的撤回条:裁决还没发出,`UNDO_MS` 到点才发;离开本页或打开别的案子即发。
+ * 播报在页首那个常驻的 `role="status"` 里念一次(不逐秒播);减少动态效果时入场动效由全局规则压平,条照样在。
+ */
+function UndoStrip({ onUndo }: { onUndo: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div
+      data-testid="undo-strip"
+      className="animate-content-in border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))]"
+    >
+      <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-x-4 gap-y-1 px-6 py-2 text-sm text-[oklch(var(--color-ink))]">
+        <span className="font-semibold">{t("judgment.queue.sealed", { n: String(UNDO_MS / 1000) })}</span>
+        <span className="flex-1 text-xs text-[oklch(var(--color-ink-muted))]">{t("judgment.queue.sealed_note")}</span>
+        <Button type="button" variant="secondary" size="sm" className="gap-2" onClick={onUndo} aria-keyshortcuts="U">
+          {t("judgment.queue.undo")}
+          <Keycap>U</Keycap>
+        </Button>
+      </div>
     </div>
   );
 }

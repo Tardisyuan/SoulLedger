@@ -1,4 +1,12 @@
 [
   "social_moderation.errors.self_moderation",
-  "social_moderation.handled.author_deleted"
+  "social_moderation.handled.author_deleted",
+  "judgment.queue.key_select",
+  "judgment.queue.key_seal",
+  "judgment.queue.key_undo",
+  "judgment.queue.key_hold",
+  "judgment.queue.seal",
+  "judgment.queue.undo",
+  "judgment.queue.sealed",
+  "judgment.queue.sealed_note"
 ]

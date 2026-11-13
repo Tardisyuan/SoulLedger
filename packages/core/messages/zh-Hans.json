@@ -2206,7 +2206,6 @@
       "field_birth": "生辰",
       "field_death": "卒年",
       "field_origin": "籍贯",
-      "key_verdicts": "宣判并前进到下一条",
       "key_defer": "延后本条（本次会话内不再出现）",
       "key_workflow": "切换「同时发起审批流程」",
       "key_restore": "恢复所有已延后的条目",
@@ -2219,7 +2218,15 @@
       "session_deferred": "本次延后 {{n}} 件",
       "restore_all": "全部放回队列",
       "key_claim": "认领当前这一件",
-      "reassigned": "已改派 · {{name}} → {{to}}"
+      "reassigned": "已改派 · {{name}} → {{to}}",
+      "key_select": "选中裁决（不提交）",
+      "key_seal": "落印：提交选中的裁决，5 秒内可撤回",
+      "key_undo": "撤回刚落的印（5 秒内）",
+      "key_hold": "放进待定（要写理由）",
+      "seal": "落印",
+      "undo": "撤回",
+      "sealed": "已落印 · 可撤回 {n} 秒",
+      "sealed_note": "到时才提交；离开本页或打开别的案子即提交"
     },
     "detail": {
       "loading": "加载审判中...",
