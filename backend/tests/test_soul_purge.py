@@ -4,7 +4,10 @@ The event log is never removed as a side effect of a cascade. A permanent delete
 purpose, in the same transaction as the soul, and writes one AuditLog row (inside that transaction) naming who
 purged which soul and how many events went with it.
 """
+from io import StringIO
+
 import pytest
+from django.core.management import CommandError, call_command
 from django.db import OperationalError, connection
 from django.db.models import ProtectedError
 
@@ -68,3 +71,61 @@ def test_when_the_audit_row_cannot_be_written_nothing_is_deleted(cn_tenant, admi
     assert Soul.all_objects.filter(pk=soul.pk).exists()
     assert SoulEvent.all_objects.filter(soul=soul).count() == 2
     assert not _purge_rows(soul.pk).exists()
+
+
+# --- manage.py purge_soul (user, 2026-11-14:「加管理命令」; no UI entry) -------------------------------------
+
+
+def _binned(tenant, n=2):
+    soul = _soul_with_events(tenant, n=n)
+    soul.soft_delete()
+    return soul
+
+
+def _purge(*args):
+    out = StringIO()
+    call_command("purge_soul", *args, stdout=out)
+    return out.getvalue()
+
+
+def _intact(soul, events):
+    return Soul.all_objects.filter(pk=soul.pk).exists() and SoulEvent.all_objects.filter(soul=soul).count() == events
+
+
+def test_the_command_without_yes_is_a_dry_run(cn_tenant, admin_user):
+    soul = _binned(cn_tenant, n=2)
+    out = _purge(str(soul.pk), "--tenant", "CN_DIYU", "--actor", "admin")
+    assert "预演" in out and "2 条事件" in out and "操作人 admin" in out
+    assert _intact(soul, 2)
+    assert not _purge_rows(soul.pk).exists()
+
+
+def test_the_command_with_yes_purges_and_audits_the_actor(cn_tenant, admin_user):
+    soul = _binned(cn_tenant, n=2)
+    _purge(str(soul.pk), "--tenant", "CN_DIYU", "--actor", "admin", "--yes")
+    assert not Soul.all_objects.filter(pk=soul.pk).exists()
+    assert not SoulEvent.all_objects.filter(soul_id=soul.pk).exists()
+    row = _purge_rows(soul.pk).get()
+    assert (row.user, row.changes) == (admin_user, {"soul_events": ["2", "0"]})
+
+
+def test_the_command_refuses_a_soul_of_another_hall(cn_tenant, eu_tenant, admin_user):
+    soul = _binned(eu_tenant)
+    with pytest.raises(CommandError):
+        _purge(str(soul.pk), "--tenant", "CN_DIYU", "--actor", "admin", "--yes")
+    assert _intact(soul, 2)
+
+
+def test_the_command_refuses_a_soul_that_is_not_in_the_bin(cn_tenant, admin_user):
+    soul = _soul_with_events(cn_tenant)
+    with pytest.raises(CommandError, match="回收站"):
+        _purge(str(soul.pk), "--tenant", "CN_DIYU", "--actor", "admin", "--yes")
+    assert _intact(soul, 2)
+
+
+def test_the_command_refuses_an_actor_who_cannot_manage_that_hall(cn_tenant, eu_tenant, judge_user, eu_admin_user):
+    soul = _binned(cn_tenant)
+    for actor in (judge_user.username, eu_admin_user.username, "nobody"):
+        with pytest.raises(CommandError, match="管理员"):
+            _purge(str(soul.pk), "--tenant", "CN_DIYU", "--actor", actor, "--yes")
+    assert _intact(soul, 2)
