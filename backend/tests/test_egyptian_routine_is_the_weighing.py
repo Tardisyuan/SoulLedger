@@ -59,7 +59,7 @@ def test_an_egyptian_routine_judgment_reaches_the_hall_of_two_truths():
     # 2026-10-27:托特、神庭、荷鲁斯、阿米特(只在不通过分支)与结束补上(docs/02 §2.1、§5.1–5.2)。
     names = [n.get("node_name") or n["name"] for n in template["nodes"]]
     assert names == [
-        "阿努比斯 · 引导与称量",
+        "阿努比斯 · 引导",
         "四十二判官 · 否定告白",
         "托特 · 记录并宣读",
         "神庭 · 确认",

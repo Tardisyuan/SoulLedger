@@ -34,7 +34,7 @@ from apps.actors.models import ActorRole
 # counterweight in the pan, so she is not on the bench, she is the test) and
 # Anubis (「他不是判官，他是执秤者」, user rule 2026-10-27: docs win). Anubis is
 # CONDUIT: he leads the dead into the Hall and to the balance (Papyrus of Ani,
-# plate III; the weighing flow's first station is 「阿努比斯 · 引导与称量」), and
+# plate III; the weighing flow's first station is 「阿努比斯 · 引导」), and
 # verify-egyptian §2.2 names CONDUIT as the fit for that half of his office.
 # Thoth stays JUDGE: §1.2 reads his "judge" as 书记／陪审 — a juror who records
 # and reads out, not the one who pronounces — the same seat the Chinese 判官

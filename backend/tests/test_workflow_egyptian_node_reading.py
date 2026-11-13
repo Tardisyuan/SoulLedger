@@ -159,7 +159,7 @@ def test_neither_name_still_carries_the_reading_the_type_no_longer_does():
         f"heart-weighing node labels still asserting what their type denies: "
         f"{offenders}"
     )
-    assert names == ["阿努比斯 · 引导与称量", "四十二判官 · 否定告白"], names
+    assert names == ["阿努比斯 · 引导", "四十二判官 · 否定告白"], names
 
 
 def test_the_renamed_bench_is_still_recorded_as_naming_nobody():
@@ -197,7 +197,7 @@ def test_a_heart_weighing_workflow_is_built_with_the_corrected_reading(seeded):
     ]
 
     assert built == [
-        ("阿努比斯 · 引导与称量", NodeType.EVALUATION),
+        ("阿努比斯 · 引导", NodeType.EVALUATION),
         ("四十二判官 · 否定告白", NodeType.EVALUATION),
         ("托特 · 记录并宣读", NodeType.EVALUATION),
         ("神庭 · 确认", NodeType.EVALUATION),
