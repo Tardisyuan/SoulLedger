@@ -1,8 +1,9 @@
 /**
  * 滑卡审判(v4 S09,Design 第三~六批):「我手上」的案子叠成三张卡,一次判一件。
  *
- * - 右滑过 35% 宽度(或点 72 的圆钮):通过,直接落印。希腊要先选文书(《高尔吉亚》/《理想国》),所以弹一个
- *   只有这一问的底页 —— 定稿没有画它,后端要(`greek_account_required`)。
+ * - 右滑过 35% 宽度(或点 72 的圆钮):通过。希腊要先选文书(《高尔吉亚》/《理想国》),所以弹一个
+ *   只有这一问的底页 —— 定稿没有画它,后端要(`greek_account_required`)。面容过后卡片飞出,顶部 3 秒「撤回」,
+ *   3 秒到了才发请求(用户 2026-11-14:判过的案子服务端撤不回);判下一张、离开这一页、切到后台都立即发。
  * - 左滑过线(或点左边圆钮):卡停在左边,底部弹出「不过」的理由(S10),选够了「不过 · 落印」才可点。
  * - 按住:只认中间圆钮(卡片本身不响应按住,免得和滚动、长按菜单冲突),0.5 秒外圈走满,卡片上浮 26 并浮出
  *   「待定」印;松手后写理由(用户 D5:待定仍必填理由),放进待定分组,换下一张,顶部 5 秒「撤回」。
@@ -15,7 +16,7 @@
 import { problemDetail } from "@soulledger/core/api/client";
 import { concludeRefusalOf, judgmentApi, type ConcludeJudgmentPayload, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
-import { Animated, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
+import { AccessibilityInfo, Animated, AppState, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Circle } from "react-native-svg";
 
@@ -33,10 +34,19 @@ type Overlay = "reject" | "pass" | "defer" | null;
 const HOLD_MS = 500;
 const HOLD_LIFT = 26;
 const UNDO_MS = 5000;
+/** 通过之后、发请求之前的撤回窗口。减少动态效果时同样 3 秒(只是没有动画)。 */
+export const PASS_UNDO_MS = 3000;
 const HINT_MS = 2000;
 const RING = 30; // 60 的圆钮,外圈半径
 const RING_C = 2 * Math.PI * (RING - 2);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/** 3 秒内点了「撤回」:什么都没发,卡片回来,不出提示。 */
+class Undone extends Error {}
+/** 前一件通过被拒、回到了顶上:这一张不判了(它没动过)。 */
+class Skipped extends Error {}
+/** 通过了、还没发:`commit` 立即发,`undo` 撤回;`settled` 在这一件有了结果时给出是否落印。 */
+type PendingPass = { id: string; commit: () => void; undo: () => void; settled: Promise<boolean> };
 
 /**
  * 落印被拒:面容没过、天平、受刑计划、理由各有自己译好的话;别的拒绝(如欧洲未受洗的灵魂不能判炼狱)照服务端
@@ -98,6 +108,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const [held, setHeld] = useState(false);
   const [hint, setHint] = useState(false);
   const [undo, setUndo] = useState<Judgment | null>(null);
+  const [pending, setPending] = useState<PendingPass | null>(null);
   // 每张卡一个 pan:飞出结束、下一张顶上来的那一帧,它的 pan 已经是 0。此前共用一个,要等 useEffect 才归零,
   // 下一张有一帧还在屏外(1.5 倍屏宽)。被拒弹回的那张从飞出去的位置起,在下面的 layout effect 里弹回。
   const pan = useMemo(() => new Animated.Value(back && back.id === topId ? back.x : 0), [topId, back]);
@@ -116,7 +127,23 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     return () => clearTimeout(id);
   }, [undo]);
 
-  const canAct = !!current && !busy && !offline && overlay === null;
+  // 3 秒到了、切到后台、离开这一页(卸载时的 cleanup)都立即发。`commit` / `undo` 是 promise 的 resolve / reject,
+  // 只认第一次:撤回之后 cleanup 里那次 `commit` 什么都不做。
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setTimeout(pending.commit, PASS_UNDO_MS);
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "background") pending.commit();
+    });
+    return () => {
+      clearTimeout(timer);
+      sub.remove();
+      pending.commit();
+    };
+  }, [pending]);
+
+  // 飞出去的那一张在飞完之前仍在顶上:等着撤回时不能再判它一次。
+  const canAct = !!current && !busy && !offline && overlay === null && pending?.id !== topId;
   const durations = useReducedMotionDurations();
 
   useEffect(() => {
@@ -151,27 +178,57 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     return submit();
   };
 
-  // 提交期间 `busy`:下一张卡能看,不能落印(`canAct`)。
+  // 通过:面容过后先等 3 秒撤回(不占 `busy`,下一张能判;判它就先把这一件发出去)。别的判决直接放行。
+  const undoWindow = (id: string, payload: ConcludeJudgmentPayload, settled: Promise<boolean>): Promise<void> => {
+    if (payload.verdict !== "PASSED") return Promise.resolve();
+    return new Promise<void>((commit, stop) => {
+      setPending({ id, commit, undo: () => stop(new Undone()), settled });
+      setBusy(false);
+      AccessibilityInfo.announceForAccessibility(t("swipe.pass_pending"));
+    }).finally(() => {
+      setPending(null);
+      setBusy(true);
+    });
+  };
+
+  // 提交期间 `busy`:下一张卡能看,不能落印(`canAct`)。还有一件通过在等撤回时,先把它发出去,它落印了才判这一张;
+  // 它被拒回到顶上,这一张就不判了(卡还在卡堆里)。
   const send = (payload: ConcludeJudgmentPayload) => {
     if (!top || busy) return;
     const id = top.id;
     const x = (payload.verdict === "PASSED" ? 1.5 : -1.5) * width;
+    const before = pending ? (pending.commit(), pending.settled) : Promise.resolve(true);
+    let landed: (ok: boolean) => void = () => {};
+    const settled = new Promise<boolean>((r) => (landed = r));
+    let ok = false;
     setBusy(true);
-    confirmedDecision(t("officer_app.biometric.prompt"), () => flyOut(id, x, () => submitVerdict(id, payload)))
+    before
+      .then((prev) => {
+        if (!prev) throw new Skipped();
+        setBusy(true);
+        return confirmedDecision(t("officer_app.biometric.prompt"), () => flyOut(id, x, () => undoWindow(id, payload, settled).then(() => submitVerdict(id, payload))));
+      })
       .then(() => {
         // A swipe that lands says nothing itself; the failure an earlier try left up must not outlive it.
         dismissToast(DECISION_TOAST);
         finish(id);
+        ok = true;
       })
       .catch((e: unknown) => {
-        // 面容没过、服务端拒绝、网络失败:都回到原位,写出原因。卡若已经飞走,从飞出去的那一侧回来。
-        toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST);
         setOverlay(null);
+        if (e instanceof Skipped) return;
+        // 撤回:什么都没发,不出提示,卡片从右边回来。
+        // 面容没过、服务端拒绝、网络失败:都回到原位,写出原因。卡若已经飞走,从飞出去的那一侧回来。
+        if (!(e instanceof Undone)) toast(verdictFailure(t, e), decisionFailureKind(e), DECISION_TOAST);
         setAway(null);
         if (notConfirmedKey(e)) snapBack();
         else setBack({ id, x });
       })
-      .finally(() => setBusy(false));
+      .finally(() => {
+        setBusy(false);
+        // 在 `setBusy(false)` 之后:等着它的下一张随后 `setBusy(true)`,不被这里盖掉。
+        landed(ok);
+      });
   };
 
   // 被拒的那张回到顶上时,它的 pan 从飞出去的位置起(上面的 useMemo),这里在绘制之前开始弹回。
@@ -190,6 +247,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const fail = () => {
     if (!current) return;
     if (blocked === "left") return flashBlocked();
+    pending?.commit(); // 判下一张:等着撤回的那一件立即发
     Animated.timing(pan, { toValue: -0.6 * width, duration: durations.sheetIn, useNativeDriver: false }).start();
     setOverlay("reject");
   };
@@ -222,6 +280,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   // 按住:0.5 秒走满一圈;不到就松手,退回原样。
   const holdIn = () => {
     if (!canAct) return;
+    pending?.commit();
     Animated.timing(hold, { toValue: 1, duration: reduced ? 0 : HOLD_MS, useNativeDriver: false }).start();
   };
   const holdOut = () => {
@@ -280,18 +339,8 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
           {t("swipe.count", { n: String(n), m: String(m) })}
         </Txt>
       </View>
-      {undo ? (
-        <View testID="swipe-undo" style={[styles.undo, { backgroundColor: theme.ink }]}>
-          <Txt variant="caption" style={{ color: theme.s0, flex: 1 }}>
-            {t("desk.deferred_toast")}
-          </Txt>
-          <Pressable testID="swipe-undo-button" accessibilityRole="button" onPress={() => undoDefer(undo)} hitSlop={8}>
-            <Txt variant="nav" style={{ color: theme.s0 }}>
-              {t("action.undo")}
-            </Txt>
-          </Pressable>
-        </View>
-      ) : null}
+      {pending ? <UndoBar testID="swipe-pass-undo" text={t("swipe.pass_pending")} onUndo={pending.undo} /> : null}
+      {undo ? <UndoBar testID="swipe-undo" text={t("desk.deferred_toast")} onUndo={() => undoDefer(undo)} /> : null}
 
       <View style={styles.deck}>
         {listError && !rows ? (
@@ -469,6 +518,24 @@ function CardBody({ j, detail }: { j: Judgment; detail?: JudgmentDetail | null }
   );
 }
 
+/** 顶部一条「… · 撤回」:待定(5 秒)与通过(3 秒)共用。撤回钮至少 44×44。 */
+function UndoBar({ testID, text, onUndo }: { testID: string; text: string; onUndo: () => void }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  return (
+    <View testID={testID} style={[styles.undo, { backgroundColor: theme.ink }]}>
+      <Txt variant="caption" style={{ color: theme.s0, flex: 1 }}>
+        {text}
+      </Txt>
+      <Pressable testID={`${testID}-button`} accessibilityRole="button" accessibilityLabel={t("action.undo")} onPress={onUndo} style={styles.undoButton}>
+        <Txt variant="nav" style={{ color: theme.s0 }}>
+          {t("action.undo")}
+        </Txt>
+      </Pressable>
+    </View>
+  );
+}
+
 function Stamp({ label, color, opacity, dashed, style }: { label: string; color: string; opacity: Animated.AnimatedInterpolation<number>; dashed?: boolean; style: ViewStyle }) {
   return (
     <Animated.View
@@ -525,6 +592,7 @@ const styles = StyleSheet.create({
   back: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: space[5], borderBottomWidth: 1 },
   head: { paddingHorizontal: space[5], paddingTop: space[4], gap: space[1] },
   undo: { flexDirection: "row", alignItems: "center", gap: space[3], marginHorizontal: space[5], marginTop: space[3], paddingHorizontal: space[4], minHeight: 44, borderRadius: radius.control },
+  undoButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   deck: { flex: 1, margin: space[5] },
   card: { ...StyleSheet.absoluteFill, borderWidth: 1, borderRadius: radius.dialog, padding: space[5] },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[3] },

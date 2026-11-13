@@ -8,5 +8,6 @@
   "judgment.queue.seal",
   "judgment.queue.undo",
   "judgment.queue.sealed",
-  "judgment.queue.sealed_note"
+  "judgment.queue.sealed_note",
+  "swipe.pass_pending"
 ]

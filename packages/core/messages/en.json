@@ -10006,6 +10006,7 @@
       "right": "Swipe right · pass"
     },
     "hold_release": "Let go: skip to the next · move to Deferred",
+    "pass_pending": "Passed · seals in 3 s. Judging the next case, leaving or switching away seals it now",
     "title": "Awaiting judgment",
     "waited": "{{case}} · waiting {{n}} days"
   },

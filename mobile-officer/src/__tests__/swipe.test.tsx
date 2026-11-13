@@ -3,9 +3,10 @@
  * 这里验的是按钮发出去的东西、被天平挡住的方向、「不过」没选理由时不能落印、待定要理由。
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { AccessibilityInfo, Animated } from "react-native";
+import { AccessibilityInfo, Animated, AppState, type AppStateStatus } from "react-native";
 
-import { SwipeScreen } from "../screens/swipe";
+import { PASS_UNDO_MS, SwipeScreen } from "../screens/swipe";
+import { ToastProvider } from "../shared";
 import { renderOfficer } from "./harness";
 
 const mockList = jest.fn();
@@ -60,15 +61,119 @@ async function settled() {
   await act(async () => {});
 }
 
-it("右边圆钮:通过,直接落印,只带裁决", async () => {
-  serve();
-  renderOfficer(<SwipeScreen onBack={() => {}} />);
-  expect(await screen.findByText("42/18")).toBeTruthy();
-  await waitFor(() => expect(mockGet).toHaveBeenCalledWith("j-1"));
-  await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
-  await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
-  await waitFor(() => expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" }));
-  await settled();
+const PENDING = "已通过 · 3 秒后落印。判下一件、离开或切到后台即刻落印";
+const tick = (ms: number) => act(async () => void jest.advanceTimersByTime(ms));
+const enabled = (id: string) => waitFor(() => expect(screen.getByTestId(id).props.accessibilityState.disabled).toBe(false));
+
+describe("通过:3 秒撤回,到点才发(用户 2026-11-14)", () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it.each([false, true])("3 秒内不发,到了才发,只带裁决;读屏念出撤回(减少动态效果 %s 时同样 3 秒)", async (reduced) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    serve();
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    expect(await screen.findByText("42/18")).toBeTruthy();
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    expect(await screen.findByTestId("swipe-pass-undo")).toHaveTextContent(PENDING, { exact: false });
+    expect(announce).toHaveBeenCalledWith(PENDING);
+    await tick(PASS_UNDO_MS - 100);
+    expect(mockConclude).not.toHaveBeenCalled();
+    await tick(100);
+    expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" });
+    await settled();
+    expect(screen.queryByTestId("swipe-pass-undo")).toBeNull();
+  });
+
+  it("3 秒内撤回:什么都没发,卡片回来,还能再判", async () => {
+    serve();
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await tick(1000);
+    const button = screen.getByTestId("swipe-pass-undo-button");
+    expect(button.props.accessibilityRole ?? button.props.role).toBe("button");
+    await act(async () => fireEvent.press(button));
+    await tick(PASS_UNDO_MS * 3);
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("swipe-pass-undo")).toBeNull();
+    expect(screen.getByTestId("swipe-card-j-1")).toBeTruthy();
+    await enabled("swipe-pass");
+  });
+
+  it("判下一张:等着撤回的那一件立即发,下一张再等它自己的 3 秒", async () => {
+    const second = { ...CASE, id: "j-2", case_number: "DY-2026-0413", soul_name: "王小二" };
+    mockList.mockResolvedValue({ data: { results: [CASE, second], count: 2 } });
+    mockCounts.mockResolvedValue({ data: { mine: 2, unclaimed: 0, others: 0, deferred: 0, total: 2 } });
+    mockGet.mockImplementation(async (id: string) => ({ data: id === "j-2" ? second : CASE }));
+    mockConclude.mockResolvedValue({ data: {} });
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await tick(500); // 飞完,下一张顶上来
+    expect(await screen.findByTestId("swipe-card-j-2")).toBeTruthy();
+    await enabled("swipe-pass");
+    expect(mockConclude).not.toHaveBeenCalled();
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" });
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    await tick(PASS_UNDO_MS);
+    expect(mockConclude).toHaveBeenLastCalledWith("j-2", { verdict: "PASSED" });
+    await tick(500);
+  });
+
+  it("离开这一页、切到后台:立即发", async () => {
+    serve();
+    const view = renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await tick(500);
+    view.unmount();
+    await act(async () => {});
+    expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" });
+
+    mockConclude.mockClear();
+    const listeners: ((s: AppStateStatus) => void)[] = [];
+    const real = AppState.addEventListener;
+    jest.spyOn(AppState, "addEventListener").mockImplementation((type, fn) => {
+      if (type === "change") listeners.push(fn as (s: AppStateStatus) => void);
+      return real.call(AppState, type, fn);
+    });
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await tick(500);
+    expect(mockConclude).not.toHaveBeenCalled();
+    await act(async () => listeners.forEach((fn) => fn("background")));
+    expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" });
+    await settled();
+  });
+
+  it("前一次被拒留下的提示,这一次落印时撤下(DECISION_TOAST)", async () => {
+    serve();
+    mockConclude.mockRejectedValueOnce(new Error("offline"));
+    renderOfficer(
+      <ToastProvider>
+        <SwipeScreen onBack={() => {}} />
+      </ToastProvider>
+    );
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await tick(PASS_UNDO_MS);
+    expect(await screen.findByTestId("toast")).toBeTruthy();
+    await tick(2000); // 弹回
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await tick(PASS_UNDO_MS);
+    expect(mockConclude).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.queryByTestId("toast")).toBeNull());
+    await settled();
+  });
 });
 
 it("左边圆钮:先选理由;没选时「不过 · 落印」是灰的,选了才发,带罪目", async () => {
@@ -153,6 +258,8 @@ describe("落印失败时卡片回原位", () => {
     renderOfficer(<SwipeScreen onBack={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
     await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    // 通过要等 3 秒撤回窗口才发。
+    await act(async () => void (await new Promise((r) => setTimeout(r, PASS_UNDO_MS))));
     await waitFor(() => expect(mockConclude).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId("swipe-pass").props.accessibilityState.disabled).toBe(false));
     // 拒绝早于飞出(200ms)结束:旧 pan 被 detach、飞出以 finished=false 收尾,不能再把弹回来的卡拿走
