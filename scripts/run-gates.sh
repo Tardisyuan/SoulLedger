@@ -91,6 +91,9 @@ done
 P="gates"; [ "$PREPUSH" = 1 ] && P="pre-push"
 
 ROOT="$(git rev-parse --show-toplevel)"
+# The tree this run tests, read now: record_pass at the end must not vouch for a HEAD that moved while the
+# tests ran (2026-11-14: a run that tested 4323bdd5f recorded a6ca4d74e, six files it never saw).
+START_TREE="$(git rev-parse HEAD^{tree} 2>/dev/null)"
 cd "$ROOT" || exit 1
 
 # Git runs hooks with GIT_DIR (and friends) in the environment. Every gate
@@ -563,6 +566,7 @@ record_pass() {
     cd "$ROOT" || return 0
     tree_is_clean || { echo "$P: not recording this pass — $CLEAN_WHY"; return 0; }
     local tree file; tree="$(git rev-parse HEAD^{tree})"
+    [ "$tree" = "$START_TREE" ] || { echo "$P: not recording this pass — HEAD moved during the run (tested ${START_TREE:0:10}, now ${tree:0:10})"; return 0; }
     if [ "$FULL_RUN" = 1 ]; then
         file="$STAMP"
         printf '%s\t%s, %s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$file"

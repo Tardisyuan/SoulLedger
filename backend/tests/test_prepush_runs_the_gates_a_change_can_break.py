@@ -2772,3 +2772,17 @@ exit 0
         proc, log = self._run(repo, tmp_path, "metro", "sync")
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "docker run" not in log and "restarting" not in proc.stdout, log
+
+
+class TestAPassVouchesOnlyForTheTreeItTested:
+    """2026-11-14: a run started on 4323bdd5f, a commit landed while it ran, and record_pass wrote the new HEAD's tree
+    into the ledger — six files no test had seen became "passed". The tree is read when the run starts and a pass is
+    recorded only if HEAD still has it."""
+
+    def test_record_pass_compares_against_the_tree_read_at_start(self):
+        script = (REPO_ROOT / "scripts" / "run-gates.sh").read_text()
+        start = script.index('START_TREE="$(git rev-parse HEAD^{tree}')
+        assert start < script.index("record_pass() {"), "the tree must be read before any test runs"
+        body = script[script.index("record_pass() {"):]
+        body = body[: body.index("\n}\n")]
+        assert '[ "$tree" = "$START_TREE" ]' in body
