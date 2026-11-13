@@ -485,6 +485,67 @@ if (ports.length === 0) {
   }));
 }
 console.log(`roles: ${Math.round((Date.now() - walkStarted) / 1000)} s (${ports.length || 1} at a time after the administrator)`);
+
+// 「工程视角」(frontend/demo/DemoInside.tsx, frontend/demo/inside.ts), once every role is written: two answers the walks
+// cannot have. GETs only; the sign-ins come after every role's recording, so no recording shows them.
+//   1. The probe: each judge asks for the other hall's first soul by id. A sweep that is refused records nothing
+//      (`getAll`), so this asks directly and writes the answer whatever its status.
+//   2. The case's audit rows, as the administrator, by resource id: the first cross-hall sentence plan in the CN judge's
+//      recording (key order, the rule `insideCase` reads it by), its joint judgment and that judgment's seat for the
+//      other hall. The walk's `/audit-logs/` stops at MAX_PAGES of the newest rows, which are the recorders' own.
+const LANGS = [["zh", "zh-Hans"], ["en", "en"]];
+const recordingPath = (role, lang) => `${OUT}/${role}.${lang}.json`;
+const readRecording = (role, lang) => JSON.parse(readFileSync(recordingPath(role, lang), "utf8"));
+async function apiSignIn(role) {
+  const res = await fetch(`${API}/auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: ROLES[role], password: PASSWORD, remember: false }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.access) throw new Error(`login refused for ${role}: ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
+  return body.access;
+}
+async function recordInside() {
+  for (const [role, other] of [["judge", "judge_eu"], ["judge_eu", "judge"]]) {
+    const access = await apiSignIn(role);
+    for (const [lang, language] of LANGS) {
+      const target = readRecording(other, lang).lists["/souls/"]?.rows?.[0];
+      if (!target) {
+        console.log(`inside: ${other} recorded no souls, no probe for ${role}`);
+        continue;
+      }
+      const path = `/souls/${target.id}/`;
+      const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${access}`, "Accept-Language": language } });
+      const body = await res.json().catch(() => null);
+      const rec = readRecording(role, lang);
+      rec.docs[path] = { s: res.status, b: translator(lang)(scrub(body)) };
+      writeFileSync(recordingPath(role, lang), JSON.stringify(rec));
+      console.log(`inside: ${role} GET ${path} (${other}'s) → ${res.status}`);
+    }
+  }
+  const cn = readRecording("judge", "zh");
+  const plan = Object.entries(cn.docs).find(([k, d]) => /^\/sentence-plans\/[^/?]+\/$/.test(k) && d.s === 200 && d.b?.cross_judgment_id && Array.isArray(d.b.nodes))?.[1].b;
+  if (!plan) {
+    console.log("inside: the CN judge reads no cross-hall sentence plan; no audit rows recorded");
+    return;
+  }
+  const away = plan.nodes.find((n) => n.tenant_code !== plan.tenant_code)?.tenant_code;
+  const cross = cn.docs[`/dispatch/cross-tenant-judgments/${plan.cross_judgment_id}/`]?.b;
+  const seat = cross?.participants?.find((p) => p.participant_tenant_code === away);
+  const ids = [plan.id, plan.cross_judgment_id, seat?.id].filter(Boolean);
+  const access = await apiSignIn("admin");
+  for (const [lang, language] of LANGS) {
+    const rec = { lists: {}, docs: {}, errors: new Set(), swept: {}, origin: API_ORIGIN, api: API };
+    for (const id of ids) await getAll(rec, access, `${API}/audit-logs/?resource_id=${id}`, language);
+    const { lists } = translator(lang)(historizeAll(finish(rec)));
+    const admin = readRecording("admin", lang);
+    Object.assign(admin.lists, lists);
+    writeFileSync(recordingPath("admin", lang), JSON.stringify(admin));
+    console.log(`inside: admin audit rows for ${ids.join(", ")} (${lang}): ${Object.entries(lists).map(([k, l]) => `${k.split("=")[1].slice(0, 8)} ${l.rows.length}`).join(" · ")}`);
+  }
+}
+await recordInside();
 await browser.close();
 
 // The soul entrance (frontend/demo/DemoSoul.tsx): one soul per underworld, signed in through the soul app's own
