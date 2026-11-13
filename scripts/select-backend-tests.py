@@ -31,13 +31,18 @@ to +75% (org 20 → 35); judgment 166 → 180. Applying all three rules to B ins
 selected 300–560 of 591 for most apps (nearly every test names `apps.authentication`
 or `apps.tenants`) — that is `--full`, not a selection, so B gets its directory only.
 
-CONTRACT TESTS (2026-11-13, test review #1):
-A backend-only push never ran the tests that compare the backend with the
+THREE HOLES CLOSED 2026-11-13 (test review #1, #3):
+  - CONTRACT TESTS. A backend-only push never ran the tests that compare the backend with the
     frontend / the committed schema: they name no app and call no URL, they read
     packages/core/openapi/schema.yml or frontend/e2e/fixtures.ts. A serializers.py change in each
     of the 27 apps selected test_committed_schema_matches_the_backend.py 0 times of 27. Now any
     non-test file under backend/apps/ also selects the lines of tests/reads-outside-backend.txt
     labelled frontend / packages / mobile / mobile-officer (`contract_readers`).
+  - `apps/core` is imported by 25 of the 27 apps and 575 of 622 test files live in backend/tests/,
+    which the reverse layer does not reach: a non-test change under it runs everything (FULL_RULES).
+  - An app mounted at the bare `api/v1/` (workflow) had no URL prefix; its prefixes are now the
+    first segments its own urls.py registers. And a changed test file selects the tests that
+    import from it, as a changed helper module always did.
 
 What it can still miss, accepted by the user: a test outside backend/apps/B/ that
 reaches A only through B, or a test that reaches A through two or more apps, with
@@ -58,6 +63,8 @@ FULL_RULES = [
     (r"^pytest\.ini$", "pytest.ini changed"),
     (r"^backend/requirements", "backend dependencies changed"),
     (r"^backend/[^/]+$", "a top-level backend file changed"),
+    # the hub app (2026-11-13, user decision); its own test files are still selective
+    (r"^backend/apps/core/(?!(.*/)?(test_[^/]*|tests)\.py$)", "apps/core changed, and nearly every app imports it"),
 ]
 # The lines of reads-outside-backend.txt that compare the backend with another area carry one of these.
 CONTRACT_TOPS = {"frontend", "packages", "mobile", "mobile-officer"}
@@ -105,6 +112,16 @@ def url_prefixes():
         apps.update(owner[w] for w in re.findall(r"\b(\w+)\b", m.group(2)) if w in owner)
         for app in apps:
             pre.setdefault(app, set()).add(m.group(1))
+    # An app mounted at the bare `api/v1/` has no prefix there (the pattern above needs one character):
+    # its prefixes are what its own urls.py registers — `router.register(r"workflows", …)`, `path("x/", …)`.
+    for app in re.findall(r"""path\(\s*["']api/v1/["']\s*,\s*include\(\s*["']apps\.(\w+)\.urls""", src):
+        try:
+            with open(os.path.join(BACKEND, "apps", app, "urls.py"), encoding="utf-8") as f:
+                own = f.read()
+        except OSError:
+            continue
+        for first in re.findall(r"""(?:\.register|\bpath)\(\s*r?["']([^"'<(]+?)/?["']""", own):
+            pre.setdefault(app, set()).add(first)
     return pre
 
 
@@ -196,6 +213,11 @@ def select(changed):
         if is_test_file(rel):
             if os.path.exists(os.path.join(BACKEND, rel)):
                 picked.add(rel)
+            # the tests that import a helper from it (`from tests.test_x import …`, `from .test_x import …`)
+            stem = os.path.splitext(os.path.basename(rel))[0]
+            if stem.startswith("test_"):
+                imp = re.compile(r"(?:from [\w.]*\.|import )" + re.escape(stem) + r"\b")
+                picked.update(t for t in tests if imp.search(text(t)))
         elif rel.startswith("tests/"):
             # A helper module or data file the tests read: select the tests that name it.
             stem = os.path.splitext(os.path.basename(rel))[0]
