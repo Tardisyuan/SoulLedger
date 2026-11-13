@@ -9452,7 +9452,7 @@
       "entering": "Entering {{civ}}",
       "skip": "Skip"
     },
-    "admin_hint": "An administrator sees all four underworlds. These are the overall numbers; audit, users and permissions, and the corpus are in the menu on the left.",
+    "admin_hint": "An administrator sees all four underworlds. These are the overall numbers; audit, users and permissions are behind the Hall office door, and the corpus behind Statutes.",
     "soul": {
       "entry_title": "Souls live in the app",
       "entry_body": "This demo can show a few app screens in the browser.",
