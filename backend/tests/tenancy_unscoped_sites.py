@@ -34,6 +34,7 @@ SITES = [
     ('apps/org/ownership.py', 'tenant_root', 'Organization.all_objects', 1, 'FILTERED', "revives the hall's own deleted root: filtered by tenant and the root code"),
     ('apps/authentication/views.py', 'UserViewSet.import_csv', 'User.all_objects', 1, 'GLOBAL', 'existence probe of a username, which is unique across the whole table; nothing is read back'),
     ('apps/authentication/views.py', 'UserViewSet.invite', 'Tenant.objects', 1, 'FANOUT', 'only the hall-less ADMIN (is_tenant_exempt) names a hall by its globally unique code; a hall-bound ADMIN never reaches this lookup and invites into its own hall only (2026-10-29)'),
+    ('apps/judgment/ai_statutes.py', 'pool', 'Statute.all_objects', 1, 'FILTERED', "the articles an AI may suggest for one case: filtered by judgment.tenant_id, its civilization and is_deleted=False (the same rule as StatuteCitationService.resolve)"),
     ('apps/judgment/confessions.py', 'clauses', 'Statute.all_objects', 1, 'FILTERED', "the 42 articles of the case's own hall: filtered by judgment.tenant_id"),
     ('apps/judgment/confessions.py', 'heard', 'NegativeConfession.all_objects', 1, 'PK', 'the rows of one case, by its FK'),
     ('apps/judgment/confessions.py', 'tally', 'Statute.all_objects', 1, 'FILTERED', "counts the articles of the case's own hall: filtered by judgment.tenant_id"),
