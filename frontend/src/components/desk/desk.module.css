@@ -193,6 +193,11 @@
   display: flex;
   flex-direction: column;
 }
+/* 页头(`.page-head`)是 overflow: hidden,作为 flex 项它的最小高度是 0:摊开的一份比栏高时被压到 68px,
+   名字与按钮被下面的站尺盖住。滚动交给 .case,子项一律不压缩。 */
+.case > * {
+  flex-shrink: 0;
+}
 .phoneBar {
   display: none;
 }
