@@ -1434,19 +1434,128 @@ class TestASelectivePassIsNotRunAgain:
 
 
 class TestStaticChecksRunBeforeAnyTests:
-    """2026-10-27: a ruff error used to surface only after the web and app jest had run."""
+    """2026-10-27: a ruff error used to surface only after the web and app jest had run.
 
-    def test_every_type_check_and_linter_comes_before_the_first_test_runner(self):
-        text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
-        static = ['echo "  → core tsc"', 'echo "  → core eslint"', 'echo "  → tsc"', 'echo "  → eslint"',
-                  'echo "  → mobile tsc"', 'echo "  → mobile eslint"', 'echo "  → officer tsc"',
-                  'echo "  → officer eslint"', 'echo "  → ruff"', 'echo "  → makemigrations --check"']
-        tests = ['echo "  → core vitest"', 'echo "  → jest"', 'echo "  → $dir jest"', 'echo "  → pytest"']
-        for s in static:
-            assert text.count(s) == 1, s
-        last_static = max(text.index(s) for s in static)
-        first_test = min(text.index(t) for t in tests)
-        assert last_static < first_test
+    This class used to compare where the `echo "  → …"` strings sit in run-gates.sh. The checks and the test
+    runners are functions now, so the order in the file is not the order of the run: calling a test function
+    ahead of the static checks left that comparison green (2026-11-13, test review 3.5). It runs the gates
+    instead, over stand-in tools that write down each invocation, and reads the order from that.
+
+    On this machine: every type check and linter of every area, then the tests. In the remote run the two
+    sides overlap, each beginning with its own static checks — the order holds inside a side, and a red
+    static check ends its side before that side's tests and fails the run."""
+
+    CHANGED = ["packages/core/src/a.ts", "frontend/app.tsx", "mobile/src/a.ts", "mobile-officer/src/b.ts", "backend/x.py"]
+    JS_STATIC = [
+        "npm run --workspace packages/core typecheck", "npm run --workspace packages/core lint",
+        "npx tsc --noEmit", "npm run lint",
+        "npm run --workspace mobile typecheck", "npm run --workspace mobile lint",
+        "npm run --workspace mobile-officer typecheck", "npm run --workspace mobile-officer lint",
+    ]
+    JS_TESTS = ["npm run --workspace packages/core test", "npx jest", "npm run --workspace mobile test",
+                "npm run --workspace mobile-officer test"]
+    BE_STATIC = ["ruff check .", "python manage.py makemigrations --check --dry-run"]
+    BE_TESTS = ["python -m pytest"]
+
+    def _gates(self, checkouts, tmp_path, remote: bool, fail_on: str = ""):
+        """→ (the finished run, every tool invocation in the order it happened)."""
+        main, _ = checkouts
+        for d in ("packages/core/src", "frontend", "mobile/src", "mobile-officer/src"):
+            (main / d).mkdir(parents=True, exist_ok=True)
+        (main / "frontend" / "jest.always-run.txt").write_text("")
+        for f in self.CHANGED:
+            (main / f).write_text("")
+        for app in ("mobile", "mobile-officer"):  # a test that reads files: each app's jest has something to run
+            (main / app / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('../../backend/x.py');\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "every area")
+        b = tmp_path / "bin"
+        b.mkdir()
+        log = tmp_path / "calls"
+        # FAIL_ON: the invocation that exits 1. One `echo >>` per call: the two sides append to the same file.
+        tool = ('#!/bin/bash\ncall="{name} $*"\necho "$call" >> "{log}"\n'
+                'if [ -n "$FAIL_ON" ] && [[ "$call " == "$FAIL_ON "* ]]; then exit 1; fi\nexit 0\n')
+        for name in ("npm", "npx", "ruff"):
+            (b / name).write_text(tool.format(name=name, log=log))
+        (b / "fake-python").write_text(
+            "#!/bin/bash\n"
+            f'if [ "$1" = manage.py ] || [ "$1 $2" = "-m pytest" ]; then call="python $1 $2 $3 $4"; call="${{call%% -q*}}"; '
+            f'call="$(echo $call)"; echo "$call" >> "{log}"; '
+            'if [ -n "$FAIL_ON" ] && [[ "$call " == "$FAIL_ON "* ]]; then exit 1; fi; exit 0; fi\n'
+            'exec python3 "$@"\n')
+        for f in b.iterdir():
+            f.chmod(0o755)
+        env = _clean_env(PREPUSH_CHANGED="\n".join(self.CHANGED), PYTHON_BIN=str(b / "fake-python"), RUFF_BIN=str(b / "ruff"),
+                         DATABASE_URL="sqlite:///:memory:", REDIS_URL=os.environ.get("REDIS_URL", ""), FAIL_ON=fail_on,
+                         **({"GATES_IN_REMOTE": "1"} if remote else {}))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main, env=env,
+                              capture_output=True, text=True, timeout=120)
+        return proc, log.read_text().splitlines()
+
+    @staticmethod
+    def _at(calls: list[str], wanted: list[str]) -> list[int]:
+        """Where each wanted invocation happened (`npm run lint` is not `npm run lint-something`)."""
+        return [i for i, c in enumerate(calls) if any(f"{c} ".startswith(f"{w} ") for w in wanted)]
+
+    def _every_check_ran_once(self, calls):
+        for check in self.JS_STATIC + self.BE_STATIC:
+            assert len(self._at(calls, [check])) == 1, f"{check!r} ran {len(self._at(calls, [check]))} times:\n" + "\n".join(calls)
+        for runner in self.JS_TESTS + self.BE_TESTS:
+            assert self._at(calls, [runner]), f"{runner!r} never ran:\n" + "\n".join(calls)
+
+    def test_here_every_type_check_and_linter_comes_before_the_first_test_runner(self, checkouts, tmp_path, fake_backend):
+        proc, calls = self._gates(checkouts, tmp_path, remote=False)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        self._every_check_ran_once(calls)
+        last_static = max(self._at(calls, self.JS_STATIC + self.BE_STATIC))
+        first_test = min(self._at(calls, self.JS_TESTS + self.BE_TESTS))
+        assert last_static < first_test, "\n".join(calls)
+        assert "side by side" not in proc.stdout
+
+    def test_in_the_remote_run_each_side_runs_its_static_checks_before_its_tests(self, checkouts, tmp_path, fake_backend):
+        proc, calls = self._gates(checkouts, tmp_path, remote=True)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        self._every_check_ran_once(calls)
+        assert max(self._at(calls, self.JS_STATIC)) < min(self._at(calls, self.JS_TESTS)), "\n".join(calls)
+        assert max(self._at(calls, self.BE_STATIC)) < min(self._at(calls, self.BE_TESTS)), "\n".join(calls)
+        # The checks are inside the sides (each side's output is printed under its own heading), not ahead of both.
+        head, rest = proc.stdout.split("  ── backend (exit 0) ──", 1)
+        backend, js = rest.split("  ── JS (exit 0) ──", 1)
+        assert "side by side" in head and "→ ruff" not in head and "→ core tsc" not in head, head
+        assert "→ ruff" in backend and "→ makemigrations --check" in backend and "→ pytest" in backend, backend
+        for line in ("→ core tsc", "→ core eslint", "→ tsc", "→ eslint", "→ mobile tsc", "→ officer eslint", "→ core vitest"):
+            assert line in js and line not in backend, (line, proc.stdout)
+
+    @pytest.mark.parametrize("failing, said", [
+        ("npm run --workspace packages/core typecheck", "@soulledger/core typecheck failed"),
+        ("npm run --workspace mobile-officer lint", "officer lint failed"),
+    ])
+    def test_a_red_js_check_there_ends_the_js_side_before_its_tests_and_fails_the_run(
+            self, checkouts, tmp_path, fake_backend, failing, said):
+        proc, calls = self._gates(checkouts, tmp_path, remote=True, fail_on=failing)
+        assert proc.returncode != 0, proc.stdout
+        assert not self._at(calls, self.JS_TESTS), "a JS test runner started after a red static check:\n" + "\n".join(calls)
+        assert self._at(calls, self.BE_TESTS), "the backend side did not run to its end"
+        assert said in proc.stdout and "backend exit 0, JS exit 1" in proc.stdout, proc.stdout
+
+    @pytest.mark.parametrize("failing, said", [
+        ("ruff check .", "ruff failed"),
+        ("python manage.py makemigrations", "makemigrations --check could not run"),
+    ])
+    def test_a_red_backend_check_there_ends_the_backend_side_before_pytest_and_fails_the_run(
+            self, checkouts, tmp_path, fake_backend, failing, said):
+        proc, calls = self._gates(checkouts, tmp_path, remote=True, fail_on=failing)
+        assert proc.returncode != 0, proc.stdout
+        assert not self._at(calls, self.BE_TESTS), "pytest started after a red static check:\n" + "\n".join(calls)
+        assert len(self._at(calls, self.JS_TESTS)) >= 4, "the JS side did not run to its end:\n" + "\n".join(calls)
+        assert said in proc.stdout and "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
+
+    def test_here_a_red_check_stops_the_run_before_any_test(self, checkouts, tmp_path, fake_backend):
+        proc, calls = self._gates(checkouts, tmp_path, remote=False, fail_on="ruff check .")
+        assert proc.returncode != 0 and "ruff failed" in proc.stdout, proc.stdout
+        assert len(self._at(calls, self.JS_STATIC)) == 8, "\n".join(calls)
+        assert not self._at(calls, self.JS_TESTS + self.BE_TESTS), "\n".join(calls)
 
 
 class TestJestReadersFollowWhatChanged:

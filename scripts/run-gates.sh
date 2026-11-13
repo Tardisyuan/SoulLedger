@@ -991,6 +991,16 @@ need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this chec
 # STATIC CHECKS FIRST (2026-10-27, user decision): every type check and linter, all areas, before
 # any test runner. They take seconds each and fail on the commonest mistakes; run after the web and
 # app jest, a ruff error surfaced only after several minutes of tests, at full CPU and memory.
+#
+# On this machine that is the order of the whole run: static_js, static_backend, then the tests. In the
+# remote run (2026-11-13, test review 3.5) each side starts with its own static checks — static_js before
+# the JS runners, static_backend before pytest — and the two sides overlap (TWO SIDES AT ONCE, near the end):
+# up to eight tsc / eslint runs and ruff + makemigrations used to run one after another, about one core each
+# of the container's twelve, before either side began. Within a side the rule is unchanged, and a red static
+# check still ends its side before that side's tests and fails the run; the other side runs to its end.
+# Functions, so the order is the order of the calls at the end of this file — which is what the test reads
+# (TestStaticChecksRunBeforeAnyTests runs them and compares what was invoked, per side).
+static_js() {
 if [ "$RUN_CORE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -1026,6 +1036,10 @@ if [ "$RUN_OFFICER" = 1 ]; then
     echo "  → officer eslint"
     npm run --workspace mobile-officer lint --silent || fail "officer lint failed"
 fi
+}  # static_js
+
+# The interpreter and ruff are chosen here, in the run's own shell, before either side starts: both
+# static_backend and run_backend_tests use $PY.
 if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
     # THE INTERPRETER IS THE PROJECT VENV, `backend/.venv` — Python 3.11 with
@@ -1064,6 +1078,12 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     fi
     command -v "$PY" >/dev/null 2>&1 || fail "\`$PY\` not found or not executable."
     command -v "$RUFF" >/dev/null 2>&1 || fail "\`$RUFF\` not found or not executable."
+    cd "$ROOT" || exit 1
+fi
+
+static_backend() {
+if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
+    cd "$ROOT/backend" || fail "backend/ missing"
     if [ "$RUN_BACKEND" = 1 ] && [ "$REAL_PG" = 0 ]; then
         echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
         # `makemigrations --check` BEFORE pytest, because it is the cheap one and
@@ -1097,6 +1117,7 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     fi
     cd "$ROOT" || exit 1
 fi
+}  # static_backend
 
 # pytest_finish — progress every 30 s until pytest (here, or over ssh) exits, then its verdict.
 pytest_finish() {
@@ -1644,12 +1665,14 @@ fi
 # container's 12 CPUs (the docker run in DELEGATED RUNS). A side that fails does not stop the other: both
 # finish, then both logs are printed and both exit codes decide. On this Mac they stay serial — memory,
 # not CPU, is what runs out here (TWO WORKERS near the top).
+# Each side begins with its own static checks (STATIC CHECKS FIRST, above): `fail` there exits the side's
+# subshell, so its tests never start and its exit code is the run's.
 if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     BE_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-backend.XXXXXX"); JS_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-js.XXXXXX")
-    echo "  → backend pytest and JS tests side by side"
-    ( run_backend_tests ) >"$BE_LOG" 2>&1 &
+    echo "  → backend (ruff, makemigrations, pytest) and JS (tsc, eslint, tests) side by side"
+    ( static_backend; run_backend_tests ) >"$BE_LOG" 2>&1 &
     BE_PID=$!
-    ( run_js_tests ) >"$JS_LOG" 2>&1 &
+    ( static_js; run_js_tests ) >"$JS_LOG" 2>&1 &
     JS_PID=$!
     T0=$(date +%s); NEXT=60
     while kill -0 "$BE_PID" 2>/dev/null || kill -0 "$JS_PID" 2>/dev/null; do
@@ -1662,15 +1685,17 @@ if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
     wait "$BE_PID"; BE_RC=$?
     wait "$JS_PID"; JS_RC=$?
     echo "  ── backend (exit $BE_RC) ──"; cat "$BE_LOG"
-    echo "  ── JS tests (exit $JS_RC) ──"; cat "$JS_LOG"
+    echo "  ── JS (exit $JS_RC) ──"; cat "$JS_LOG"
     if [ "$BE_RC" -ne 0 ] || [ "$JS_RC" -ne 0 ]; then
         echo ""
         [ "$BE_RC" -ne 0 ] && echo "  backend: $(grep -E "^$P: " "$BE_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
         [ "$JS_RC" -ne 0 ] && echo "  JS:      $(grep -E "^$P: " "$JS_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
-        fail "tests failed (backend exit $BE_RC, JS exit $JS_RC) — both sides ran to the end, logs above"
+        fail "checks or tests failed (backend exit $BE_RC, JS exit $JS_RC) — both sides ran to the end, logs above"
     fi
     rm -f "$BE_LOG" "$JS_LOG"
 else
+    static_js
+    static_backend
     run_backend_tests
     run_js_tests
 fi
