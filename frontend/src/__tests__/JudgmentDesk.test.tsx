@@ -786,7 +786,8 @@ describe("据 · 先例", () => {
     const first = await within(panel).findByRole("link", { name: "周慕云" });
     expect(first).toHaveAttribute("href", "/judgment/p-1");
     const items = within(panel).getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("◇");
+    expect(items[0]).toHaveTextContent("‖"); // 第三十批:待定的前缀是 ‖
+    expect(items[0]).not.toHaveTextContent("◇");
     expect(items[0]).toHaveTextContent(tZh("judgment.precedents.same_court"));
     expect(items[1]).toHaveTextContent("✓");
     expect(items[1]).not.toHaveTextContent(tZh("judgment.precedents.same_court"));
@@ -1198,12 +1199,13 @@ describe("插入审判台的落点(?cite=)", () => {
 // ── v3 版式:当前这一判 / 资料舱 / 全案 / 盖印确认层 ─────────────────────────────
 
 describe("v3 · 当前这一判", () => {
-  it("没选过、没存过草稿的案子预选「◇ 待定」(v3),以展示字号写在中轴;预选不算动过,不自动保存", async () => {
+  it("没选过、没存过草稿的案子预选「‖ 待定」(v3;第三十批改 ‖),以展示字号写在中轴;预选不算动过,不自动保存", async () => {
     renderPage();
     const ruling = await screen.findByTestId("current-ruling");
     expect(ruling).toHaveClass("text-display-lg");
     await waitFor(() => expect(radio("PURGATORY").checked).toBe(true));
-    expect(ruling).toHaveTextContent(`◇${tZh("judgment.verdicts.purgatory")}`);
+    expect(ruling).toHaveTextContent(`‖${tZh("judgment.verdicts.purgatory")}`); // 第三十批:待定的前缀是 ‖
+    expect(ruling).not.toHaveTextContent("◇");
     expect(ruling).not.toHaveTextContent(tZh("judgment.detail.select_verdict"));
     for (const v of ["PASSED", "FAILED", "RETRY"]) {
       expect(radio(v).checked).toBe(false);

@@ -174,7 +174,7 @@ export function OpenCase({
             </JuanRow>
           </dl>
 
-          <h2 className={s.juanTitle}>{t("caseDesk.juan.recent")}</h2>
+          <h2 data-h2-role="column" className={s.juanTitle}>{t("caseDesk.juan.recent")}</h2>
           {records.length ? (
             <dl className={s.juan} data-testid="desk-recent">
               {records.map((r) => {
@@ -192,7 +192,7 @@ export function OpenCase({
         </div>
 
         <aside className={s.side}>
-          <h2 className={s.juanTitle}>{t("caseDesk.side.this")}</h2>
+          <h2 data-h2-role="column" className={s.juanTitle}>{t("caseDesk.side.this")}</h2>
           <dl className={s.card}>
             <dt>{t("caseDesk.juan.source")}</dt>
             <dd>{sourceLabel(t, j)}</dd>
@@ -201,7 +201,7 @@ export function OpenCase({
             <dt>{t("caseDesk.side.claimed")}</dt>
             <dd>{j.claimed_by_name || t("caseDesk.juan.unclaimed")}</dd>
           </dl>
-          <h2 className={s.juanTitle}>{t("caseDesk.side.hall_today")}</h2>
+          <h2 data-h2-role="column" className={s.juanTitle}>{t("caseDesk.side.hall_today")}</h2>
           <dl className={s.card}>
             <dt>{t("officer_app.desk.groups.unclaimed")}</dt>
             <dd className={s.juanNum}>{counts ? counts.unclaimed : <MissingValue kind="unrecorded" />}</dd>

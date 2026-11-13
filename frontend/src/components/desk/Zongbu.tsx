@@ -127,7 +127,7 @@ export function Zongbu() {
           const rows = (tops[i].data?.results ?? []).slice(0, TOP);
           return (
             <section key={civ} className={s.col} data-civ={short || undefined} data-testid={`zongbu-col-${short}`} aria-labelledby={`zongbu-${short}`}>
-              <h2 id={`zongbu-${short}`} className={s.colName}>
+              <h2 id={`zongbu-${short}`} data-h2-role="column" className={s.colName}>
                 {t(`zongbu.civ.${short}`)}
               </h2>
               {c ? (
@@ -184,7 +184,7 @@ export function Zongbu() {
       </div>
 
       <section className={s.cross} aria-labelledby="zongbu-cross">
-        <h2 id="zongbu-cross" className={s.juanTitle}>
+        <h2 id="zongbu-cross" data-h2-role="column" className={s.juanTitle}>
           {t("zongbu.cross_title")}
         </h2>
         {crossRows.length ? (

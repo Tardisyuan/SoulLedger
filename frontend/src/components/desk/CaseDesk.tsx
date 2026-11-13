@@ -219,7 +219,7 @@ export function CaseDesk() {
           groups.map(({ group, rows }) =>
             rows.length === 0 ? null : (
               <section key={group} data-testid={`desk-group-${group}`} aria-labelledby={`desk-group-${group}`}>
-                <h2 id={`desk-group-${group}`} className={s.groupHead}>
+                <h2 id={`desk-group-${group}`} data-h2-role="column" className={s.groupHead}>
                   <span>{t(`officer_app.desk.groups.${group}`)}</span>
                   <span className={s.groupCount}>{String(query ? rows.length : (groupCounts?.[group] ?? rows.length))}</span>
                 </h2>

@@ -427,7 +427,8 @@ describe("tailwind-merge 认识七档字号", () => {
   it("字阶的来源确实读到了东西", () => {
     // 不是 `> 0`:空遍历会让下面每一条 it.each 悄悄不存在,而套件仍然是绿的。
     // 七档是规范 v2 A3 的形状(11/12/13/15/20/28/40),加一档要在这里改一次,那是刻意的。
-    expect(scale).toEqual(["2xs", "display", "lg", "md", "sm", "xl", "xs"]);
+    // 第三十批加了 head(24/32,门页标题)与 dossier(32/40,卷宗人名),共九档。
+    expect(scale).toEqual(["2xs", "display", "dossier", "head", "lg", "md", "sm", "xl", "xs"]);
   });
 
   it.each(scale)("text-%s 不与文字色互相吞掉", (step) => {

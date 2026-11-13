@@ -356,16 +356,7 @@ function lineAt(src: string, index: number): number {
  * 一旦被改好或改标签就会报红要求删除。一份不会陈旧的白名单才是这个仓库真正
  * 怕的东西。
  */
-const H2_ROLE_EXEMPTIONS = new Map<string, string>([
-  // 2026-11-13 第三十批「卷宗」第 2 步(案卷台与总簿):这几页的 `<h2>` 照稿是 12px 常规字重的淡色栏头
-  // (案卷摞的分组头、卷里与侧栏的「近事」「本案」一类小标)和总簿每栏 14px 的文明名,排版写在
-  // `src/components/desk/desk.module.css`,不是三个角色里的任何一档 —— 11px 大写的 eyebrow 不适用于中文栏头。
-  // 规则的依据(壳文件头第 4 条)没覆盖 Design 新画的这一种栏头;第 4 步重画全站时要么把它补成第四个角色,
-  // 要么这几处换回三档之一。
-  ["src/components/desk/CaseDesk.tsx", "className={s.groupHead}"],
-  ["src/components/desk/OpenCase.tsx", "className={s.juanTitle}"],
-  ["src/components/desk/Zongbu.tsx", "className={s."],
-]);
+const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
 
 /**
  * 同一张表,给 `<h3>`。键是相对 `frontend/` 的路径,值是当时量到的那段排版。
@@ -538,7 +529,7 @@ describe("PageShell density", () => {
    * 错的)—— 漏掉的 13 个全在 `src/components/`,而「漏掉」和「没有违例」在报告
    * 里长得一模一样。所以下面先断言扫描面本身。
    */
-  it("pins every <h2> to one of the three roles the shell declares", () => {
+  it("pins every <h2> to one of the four roles (three in the shell, the dossier column head in the desk)", () => {
     const files = ["app", path.join("src", "components")].flatMap((root) =>
       collectTsx(path.join(FRONTEND, root), () => true)
     );
@@ -574,7 +565,17 @@ describe("PageShell density", () => {
     for (const h of found) {
       const step = h.steps.length === 1 ? h.steps[0] : null;
       let why: string | null = null;
-      if (step === null) {
+      // 第四个角色(用户 2026-11-13 定,第三十批「卷宗」):卷宗栏头 —— 案卷摞的分组头、卷里与侧栏的小标、总簿每栏的
+      // 文明名。排版由 `src/components/desk/desk.module.css` 的类给(照稿 12/14px 常规字重的淡色栏头),所以标签上
+      // 不写任何 text-* 档;用 `data-h2-role="column"` 声明,而且只许出现在 `src/components/desk/` 里。
+      const columnRole = /\bdata-h2-role="column"/.test(h.tag);
+      if (columnRole) {
+        if (!h.file.startsWith("src/components/desk/")) {
+          why = `data-h2-role="column" outside src/components/desk/ — the dossier column head is the desk's role`;
+        } else if (h.steps.length > 0) {
+          why = `a dossier column head takes its type from desk.module.css, not ${h.steps.join(", ")}`;
+        }
+      } else if (step === null) {
         why =
           `pins ${h.steps.length} type steps (${h.steps.join(", ") || "none"}) — ` +
           `an <h2> declares exactly one`;

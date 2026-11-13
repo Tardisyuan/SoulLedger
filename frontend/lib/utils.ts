@@ -45,7 +45,8 @@ const twMerge = extendTailwindMerge({
       // 规范 v2 的七档里,tailwind-merge 自带表认得 xs / sm / md / lg / xl / 2xs(t-shirt 名),
       // 不认得 `display`;七个全登记,不依赖它的内置表恰好覆盖哪些。展示字号 display-lg / display-xl(v3 / v4)
       // 同样登记:不登记时 `cn("text-display-xl", "text-[oklch(…)]")` 会把其中一个当成文字色吞掉。
-      text: ["2xs", "xs", "sm", "md", "lg", "xl", "display", "display-lg", "display-xl"],
+      // 第三十批的两档标题(head 24/32 门页、dossier 32/40 卷宗人名)同样登记。
+      text: ["2xs", "xs", "sm", "md", "lg", "xl", "display", "display-lg", "display-xl", "head", "dossier"],
     },
   },
 })
