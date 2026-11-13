@@ -600,6 +600,62 @@ class TestSuiteAboutTheSuiteRunsOnlyWhenRelevant:
         """2026-10-24: a push to main is selective like any other."""
         assert _classify_meta(hook, ["backend/apps/souls/views.py"], PREPUSH_TO_MAIN="1") == 0
 
+    # ── test_collection_scope.py alone also runs when a test file changed (2026-11-13) ──
+
+    @staticmethod
+    def _scope(hook, changed: list[str], **extra) -> tuple[int, int]:
+        """→ (the collection-scope test runs, both suite-about-the-suite tests run)."""
+        env = {k: v for k, v in os.environ.items() if k not in ("SKIP_PREPUSH", "GATES_FULL")}
+        env.update(PREPUSH_CHANGED="\n".join(changed), PREPUSH_CLASSIFY_ONLY="1", **extra)
+        proc = subprocess.run(["bash", str(hook)], cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        scope = re.search(r"^classify-collection-scope: scope=(\d)$", proc.stdout, re.M)
+        meta = re.search(r"^classify-meta: meta=(\d)$", proc.stdout, re.M)
+        assert scope and meta, proc.stdout
+        return int(scope.group(1)), int(meta.group(1))
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["backend/tests/test_a_brand_new_file.py"],           # added: the path is all the hook is told
+            ["backend/tests/test_one_that_was_deleted.py"],       # deleted or renamed away: the same
+            ["backend/tests/test_auth_account.py"],               # edited — it may have lost its last test
+            ["backend/apps/souls/tests/test_new.py"],
+            ["backend/apps/souls/tests/api/test_deeper.py"],
+            ["backend/apps/souls/views.py", "backend/tests/test_new.py"],
+        ],
+    )
+    def test_a_changed_test_file_runs_the_collection_scope_test_alone(self, hook, changed):
+        """A test file pytest does not collect cannot fail; test_collection_scope.py is what would say so,
+        and it did not run when one was added. The nested-pytest test stays skipped."""
+        assert self._scope(hook, changed) == (1, 0)
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["backend/apps/souls/views.py"],
+            ["backend/tests/tenancy_unscoped_sites.py"],          # a helper under tests/, not a test file
+            ["backend/tests/reads-outside-backend.txt"],
+            ["backend/apps/souls/migrations/0099_test_data.py"],
+            ["frontend/src/__tests__/test_x.py"],                 # not the backend's
+            ["backend/scripts/test_tool.py"],                     # outside the two trees pytest is pointed at
+            ["README.md"],
+        ],
+    )
+    def test_a_change_that_is_no_test_file_leaves_it_skipped(self, hook, changed):
+        assert self._scope(hook, changed) == (0, 0)
+
+    def test_whatever_runs_both_runs_it(self, hook):
+        assert self._scope(hook, ["pytest.ini"]) == (1, 1)
+        assert self._scope(hook, ["backend/apps/souls/tests.py"]) == (1, 1)
+        assert self._scope(hook, ["backend/apps/souls/views.py"], GATES_FULL="1") == (1, 1)
+
+    def test_the_test_the_rule_names_is_one_of_the_two(self):
+        body = RUNNER.read_text(encoding="utf-8")
+        scope = re.search(r"^SCOPE_TEST='([^']*)'$", body, re.M).group(1)
+        assert scope in re.search(r"META_TESTS='([^']*)'", body).group(1).split()
+        assert scope == "backend/tests/test_collection_scope.py" and (REPO_ROOT / scope).is_file()
+
     def test_the_names_the_rule_skips_are_real_files(self):
         """A renamed test would be silently 'ignored' by a path that no longer exists,
         and run on every push again — or worse, the rule would name nothing."""
@@ -730,6 +786,39 @@ class TestWhatPytestIsInvokedWith:
         args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
         assert "--ignore=tests/test_collection_scope.py" in args, args
         assert "--ignore=tests/test_audit_assertions_are_not_vacuous.py" in args, args
+
+    def test_a_changed_test_file_keeps_the_collection_scope_test_and_drops_the_other(
+        self, hook, checkouts, fake_backend
+    ):
+        """2026-11-13: a new test file is what test_collection_scope.py exists to look at. The throwaway
+        checkout has no select-backend-tests.py, so the whole suite runs: it is in unless ignored."""
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/tests/test_a_new_file.py"])
+        assert [a for a in args if a.startswith("--ignore=")] == ["--ignore=tests/test_audit_assertions_are_not_vacuous.py"], args
+
+    def test_with_the_selection_a_changed_test_file_still_reaches_the_collection_scope_test(
+        self, hook, checkouts, fake_backend
+    ):
+        """By app, the suite is a list of paths: the `*` readers are on it, and the skipped tests are taken
+        off — test_collection_scope.py must survive that, and the nested-pytest test must not."""
+        main, _ = checkouts
+        shutil.copy(REPO_ROOT / "scripts" / "select-backend-tests.py", main / "scripts" / "select-backend-tests.py")
+        (main / "backend" / "apps" / "souls").mkdir(parents=True)
+        (main / "backend" / "apps" / "souls" / "tests.py").write_text("def test_y():\n    pass\n")
+        (main / "backend" / "config").mkdir()
+        (main / "backend" / "config" / "urls.py").write_text("urlpatterns = []\n")
+        for name in ("test_collection_scope.py", "test_audit_assertions_are_not_vacuous.py", "test_souls_x.py"):
+            (main / "backend" / "tests" / name).write_text("def test_x():\n    pass\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "a selectable backend")
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/tests/test_souls_x.py"])
+        assert "tests/test_collection_scope.py" in args and "tests/test_souls_x.py" in args, args
+        assert "tests/test_audit_assertions_are_not_vacuous.py" not in args, args
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert "tests/test_collection_scope.py" not in args, args
+        # The same for the older rule: a changed apps/*/tests.py owes both, and the selection names neither.
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/tests.py"])
+        assert "tests/test_collection_scope.py" in args and "tests/test_audit_assertions_are_not_vacuous.py" in args, args
 
     def test_a_change_outside_backend_drops_them_from_the_readers_too(
         self, hook, checkouts, fake_backend

@@ -779,6 +779,27 @@ FULL_RUN=0
 TOUCHES_META=$((TOUCHES_META + FULL_RUN))
 RUN_META=0
 [ "$TOUCHES_META" -gt 0 ] && RUN_META=1
+# ... AND THE COLLECTION-SCOPE TEST ALSO RUNS WHEN A TEST FILE CHANGED (2026-11-13, test review).
+# test_collection_scope.py asserts that every test file on disk is collected. A new test file is the change
+# most likely to break that — a name or a place pytest does not collect, a file that declares no test — and
+# no rule above matched it, so the test first saw the file on someone's next full run. The rule is ANY changed
+# backend test file (test_*.py or tests.py under backend/apps or backend/tests — the walk the test itself
+# does), not "added or removed": the change list carries names only (`git diff --name-only`), and the remote
+# container gets that list with no base to diff against, so whether a file is new is not known here. It
+# also covers a file that lost its last test. Cost: one `pytest --collect-only` in a subprocess — the whole
+# file took 14 s on this Mac (2026-11-13, load 3.8) — on about 89% of backend pushes instead of 9% (of the
+# last 400 commits, 168 touched backend/: 15 matched META_PATH_RE, 135 more change a test file, 30 of those
+# add or delete one — per commit; a push of several commits matches more often still). Only this test: the nested-pytest one keeps to META_PATH_RE.
+SCOPE_TEST='backend/tests/test_collection_scope.py'
+SCOPE_PATH_RE='^backend/(apps|tests)/(.*/)?(test_[^/]*|tests)\.py$'
+RUN_SCOPE=$RUN_META
+[ "$(echo "$CHANGED" | grep -cE "$SCOPE_PATH_RE" || true)" -gt 0 ] && RUN_SCOPE=1
+# META_SKIP: which of the two this run leaves out (as META_TESTS: one path per line, from the repo root).
+META_SKIP=""
+if [ "$RUN_META" = 0 ]; then
+    META_SKIP="$META_TESTS"
+    [ "$RUN_SCOPE" = 1 ] && META_SKIP=$(echo "$META_TESTS" | grep -vxF "$SCOPE_TEST")
+fi
 
 # ── --real-pg: THE BACKEND SUITE ON REAL POSTGRESQL (2026-10-28, user decision) ─
 #
@@ -895,6 +916,7 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     printf '%s' "$APP_FULL_F" | sed 's/^/  app full because: /'
     echo "classify-migration: migration=$RUN_MIGRATION"
     echo "classify-meta: meta=$RUN_META"
+    echo "classify-collection-scope: scope=$RUN_SCOPE"
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ -f "$HERE/select-backend-tests.py" ]; then
         SEL=$(echo "$CHANGED" | python3 -I "$HERE/select-backend-tests.py")
         case "$SEL" in FULL*) echo "classify-backend-select: whole suite (${SEL#FULL	})" ;;
@@ -1385,15 +1407,15 @@ PROBE_PY
     PYTEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-pytest.XXXXXX")
     PYTEST_PATHS=""
     META_IGNORE=""
-    if [ "$RUN_META" = 0 ]; then
-        META_IGNORE=$(echo "$META_TESTS" | sed 's|^backend/|--ignore=|' | tr '\n' ' ')
-        echo "    (without the 2 suite-about-the-suite tests: nothing they guard changed)"
+    if [ -n "$META_SKIP" ]; then
+        META_IGNORE=$(echo "$META_SKIP" | sed 's|^backend/|--ignore=|' | tr '\n' ' ')
+        echo "    (without $(echo "$META_SKIP" | grep -c .) of the 2 suite-about-the-suite tests: nothing they guard changed — $(echo "$META_SKIP" | sed 's|.*/||' | paste -sd' ' -))"
     fi
     if [ "$RUN_BACKEND" = 0 ]; then
         # Readers are listed relative to backend/; drop the meta tests here too, and
         # if nothing is left run nothing — an empty path list would mean "the whole suite".
         PYTEST_PATHS="$BACKEND_READERS"
-        [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+        [ -n "$META_SKIP" ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_SKIP" | sed 's|^backend/||')" || true)
         echo "    (only the $(echo "$PYTEST_PATHS" | grep -c . || true) test files that read what changed — backend/tests/reads-outside-backend.txt)"
     fi
     # BY APP, NOT THE WHOLE SUITE (2026-10-27, user decision): a backend change runs the test files
@@ -1417,8 +1439,13 @@ PROBE_PY
                     /^[[:space:]]*(#|$)/ { next }
                     { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
                 ' "$READERS_LIST" 2>/dev/null)
-                PYTEST_PATHS=$(printf '%s\n%s\n' "$SELECTED" "$READERS" | grep -v '^$' | sort -u)
-                [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+                # The suite-about-the-suite tests this run owes (RUN_META / RUN_SCOPE) are named outright. The
+                # selection picks by app and the readers by top-level entry; neither knows those rules, so a
+                # rule that said "run it" only stopped ignoring a test nothing had selected: a changed
+                # apps/*/tests.py or a new test file ran without test_collection_scope.py (2026-11-13).
+                META_RUN=$(echo "$META_TESTS" | grep -vxF "${META_SKIP:-(none skipped)}" | sed 's|^backend/||' || true)
+                PYTEST_PATHS=$(printf '%s\n%s\n%s\n' "$SELECTED" "$READERS" "$META_RUN" | grep -v '^$' | sort -u)
+                [ -n "$META_SKIP" ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_SKIP" | sed 's|^backend/||')" || true)
                 if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
                     PG_ONLY=$(pg_only_tests) || fail "--real-pg: could not list the PostgreSQL-only tests"
                     [ -n "$PG_ONLY" ] || fail "--real-pg: the PostgreSQL-only test list came back empty — the scanner in tests/test_concurrency.py is broken, not the set"
