@@ -158,13 +158,13 @@ describe("希腊:按所选文书", () => {
   });
 });
 
-describe("希腊的「普通」(PURGATORY,去阿斯福得草原)先不出文书(审计 2026-11-13 GR-1)", () => {
+describe("希腊的「普通」(PURGATORY,去阿斯福得草原)两套文书同一句(第三十四批;GR-1 时不出文书)", () => {
   const gr = { ...base, civilization: "GREEK", soulName: "Elpenor", judgeName: "艾亚哥斯", realmCode: "GR_ASPHODEL_MEADOW" };
-  it.each(["GORGIAS", "REPUBLIC", null])("文书选 %s:没有文书,也就没有「塔尔塔罗斯」", (greekAccount) => {
-    const doc = verdictDocument({ ...gr, verdict: "PURGATORY", greekAccount }, tz);
-    expect(doc).toBeNull();
+  it.each(["GORGIAS", "REPUBLIC", null])("文书选 %s:送往草原,不写「塔尔塔罗斯」", (greekAccount) => {
+    const doc = verdictDocument({ ...gr, verdict: "PURGATORY", greekAccount }, tz)!;
+    expect(doc.ruling).toBe("判为普通：送往阿斯福得草原。停留期满后，饮勒忒之水，再入轮回。");
     expect(JSON.stringify(doc)).not.toContain("塔尔塔罗斯");
-    expect(verdictDocument({ ...gr, verdict: "PURGATORY", greekAccount }, ten)).toBeNull();
+    expect(verdictDocument({ ...gr, verdict: "PURGATORY", greekAccount }, ten)!.ruling).toContain("Asphodel Meadow");
   });
   it("通过与不过照旧出", () => {
     expect(verdictDocument({ ...gr, verdict: "PASSED", greekAccount: "GORGIAS" }, tz)!.ruling).toBe(tz("verdict_doc.gr.verdict.isles"));

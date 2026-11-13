@@ -9958,7 +9958,8 @@
       "verdict": {
         "curable": "Marked: curable. Sent to Tartarus.",
         "incurable": "Marked: incurable. Sent to Tartarus.",
-        "isles": "A life of piety and of seeking the truth: sent to the Isles of the Blessed."
+        "isles": "A life of piety and of seeking the truth: sent to the Isles of the Blessed.",
+        "purgatory": "Judged ordinary: sent to the Asphodel Meadow. When the stay is over, the soul drinks from Lethe and is reborn."
       }
     },
     "gr_er": {
