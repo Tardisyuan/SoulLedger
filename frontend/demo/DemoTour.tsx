@@ -14,6 +14,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
 import { ENTERED, ENTRANCE, type EntranceDetail, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
 import { OverreachProbe } from "./OverreachProbe";
+import { AssistGuardCard } from "./AssistGuardCard";
 import { DEMO_USERNAMES } from "./store";
 import type { Tour } from "./tour";
 
@@ -572,6 +573,7 @@ export default function DemoTour() {
           <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{t(`demo.tour.${tour.skin}.${step.n}.body`)}</p>
           <p className="mt-2 mb-0 text-xs text-[oklch(var(--color-ink-subtle))]">{t("demo.tour.look_here", { target: t(`demo.tour.target.${step.target}`) })}</p>
           {step.probe && here ? <OverreachProbe key={step.n} /> : null}
+          {step.assist && here ? <AssistGuardCard key={step.n} /> : null}
           <div className="mt-3 flex items-center justify-between gap-2">
             {state.step > 0 ? (
               <Button type="button" variant="ghost" size="sm" onClick={() => go(state.step - 1)}>{t("demo.tour.prev")}</Button>
