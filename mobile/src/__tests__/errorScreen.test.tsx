@@ -5,12 +5,12 @@
  */
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { initCrashReporting } from "../crashReport";
 import { RootErrorBoundary } from "../errorBoundary";
 import { I18nProvider } from "../i18n";
 import { ScreenError } from "../ui";
+import { renderSoul } from "./harness";
 
 type Listener = (event: { event_id?: string }, response: unknown) => void;
 const mockListeners: Listener[] = [];
@@ -50,14 +50,10 @@ let fail = true;
 const Maybe = () => (fail ? <Boom /> : <Text testID="ok">ok</Text>);
 
 const mount = () =>
-  render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <RootErrorBoundary>
-          <Maybe />
-        </RootErrorBoundary>
-      </I18nProvider>
-    </SafeAreaProvider>
+  renderSoul(
+    <RootErrorBoundary>
+      <Maybe />
+    </RootErrorBoundary>
   );
 
 const REPORTED = "已自动报告。";

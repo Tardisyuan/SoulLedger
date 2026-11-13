@@ -6,17 +6,16 @@ import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import egy from "@soulledger/core/messages/egy.json";
 import { AppHeader, PlaqueHeader, TabBar, tabGlyphSize } from "../chrome";
-import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { FONT_ASSETS, HIEROGLYPH_FONT, family } from "../fonts";
 import { DEFAULT_GLYPHS, OutlineSeal, sealGlyphs } from "../seal";
 import { SessionContext, type SessionState } from "../session";
 import { themeFor, v4 } from "../theme";
 import { ThemeContext } from "../ui";
+import { renderSoul } from "./harness";
 import { PROFILE } from "./stubApi";
 
 // expo-font's registry, as the native side keeps it: a name is loaded once loadAsync for it
@@ -52,16 +51,12 @@ const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props
 const argb = (hex: string) => 0xff000000 + parseInt(hex.slice(1), 16);
 
 function wrap(children: ReactNode, session: SessionState, civilization: string | null = "CHINESE") {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <SessionContext.Provider value={{ state: session } as never}>
-          <ThemeContext.Provider value={themeFor(civilization, "light")}>
-            <NavigationContainer>{children}</NavigationContainer>
-          </ThemeContext.Provider>
-        </SessionContext.Provider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <SessionContext.Provider value={{ state: session } as never}>
+      <ThemeContext.Provider value={themeFor(civilization, "light")}>
+        <NavigationContainer>{children}</NavigationContainer>
+      </ThemeContext.Provider>
+    </SessionContext.Provider>
   );
 }
 

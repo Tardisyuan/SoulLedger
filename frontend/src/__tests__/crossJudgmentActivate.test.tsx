@@ -27,9 +27,7 @@ const HOLDS = ["cross_judgment.read", "cross_judgment.create"];
 const mockTenant: { user: { id: number; username: string; role?: string; permissions?: string[]; tenant: { code: string } | null } } = {
   user: { id: 1, username: "u", role: "JUDGE", permissions: HOLDS, tenant: { code: "CN_DIYU" } },
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 const showToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({

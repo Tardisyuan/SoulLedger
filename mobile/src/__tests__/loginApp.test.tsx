@@ -21,6 +21,7 @@ import { deviceTokenFor, rememberDevice } from "../mfa";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
+import { renderSoul } from "./harness";
 import { PROFILE, heldReply, life, resetLoginMemory, stubApi, type Reply } from "./stubApi";
 
 const CODE = "QU33Q9FW5F";
@@ -49,14 +50,10 @@ const HOME: Record<string, Reply> = {
 
 /** Rendered, and the one async read of the phone's face / finger (useBiometry) has landed. */
 async function renderApp() {
-  const view = render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <SessionProvider>
-          <RootNavigator />
-        </SessionProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  const view = renderSoul(
+    <SessionProvider>
+      <RootNavigator />
+    </SessionProvider>
   );
   await act(async () => {});
   return view;

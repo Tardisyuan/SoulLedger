@@ -1,15 +1,14 @@
 import { NavigationContainer } from "@react-navigation/native";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useState, type ReactNode } from "react";
 import { StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { clearGone } from "../gone";
-import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { ApplicationDetailScreen, ApplicationsScreen, NewApplicationScreen } from "../screens/applications";
 import { PastLivesSection } from "../screens/life";
 import { SessionContext } from "../session";
+import { renderSoul } from "./harness";
 import { application, life, PROFILE, stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -19,12 +18,8 @@ jest.mock("@react-navigation/native", () => ({
 }));
 
 function wrap(children: ReactNode) {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <NavigationContainer>{children}</NavigationContainer>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <NavigationContainer>{children}</NavigationContainer>
   );
 }
 

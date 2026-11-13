@@ -7,15 +7,13 @@
  * other four still work, or a screen that disables everything would pass.
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react-native";
+import { act, fireEvent, renderHook, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { FlatList, StyleSheet } from "react-native";
 import { State, type PanGesture } from "react-native-gesture-handler";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { clearGone } from "../gone";
-import { I18nProvider } from "../i18n";
 import { ToastProvider } from "../feedback";
 import { installMobilePlatform } from "../platform";
 import { CircleScreen, ComposePostScreen, MutedLock, PostScreen } from "../screens/circle";
@@ -23,6 +21,7 @@ import { mutedReasonOf } from "../socialStatus";
 import { usePaged } from "../paged";
 import { themeFor, type ColorScheme } from "../theme";
 import { ThemeContext } from "../ui";
+import { renderSoul } from "./harness";
 import { heldReply, stubApi } from "./stubApi";
 import * as Haptics from "expo-haptics";
 
@@ -43,14 +42,10 @@ jest.mock("@react-navigation/native", () => ({
 jest.mock("expo-haptics", () => ({ ...jest.requireActual("expo-haptics"), notificationAsync: jest.fn(async () => {}) }));
 
 function wrap(children: ReactNode) {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ToastProvider>
-          <NavigationContainer>{children}</NavigationContainer>
-        </ToastProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <ToastProvider>
+      <NavigationContainer>{children}</NavigationContainer>
+    </ToastProvider>
   );
 }
 

@@ -24,9 +24,7 @@ jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
 type MockUser = { id: number; role?: string; permissions?: string[] };
 let mockUser: MockUser | null = { id: 1, role: "VIEWER", permissions: ["ledger.read", "ledger.export"] };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 const mockedJournal = ledgerApi.journalMonth as jest.Mock;
 const mockedJournalPage = ledgerApi.journal as jest.Mock;

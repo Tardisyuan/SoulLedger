@@ -8,21 +8,20 @@
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { NODE } from "../emblems";
-import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { landingOf } from "../push";
 import { ApplicationsScreen } from "../screens/applications";
 import { SentenceScreen, SentenceSection, useSentencePlan, type SentenceLanding } from "../screens/sentence";
 import { SessionContext, SessionProvider, type Session } from "../session";
+import { renderSoul } from "./harness";
 import { PROFILE, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -69,12 +68,8 @@ const PLANS = {
 };
 
 function wrap(children: ReactNode) {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <NavigationContainer>{children}</NavigationContainer>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <NavigationContainer>{children}</NavigationContainer>
   );
 }
 
@@ -346,14 +341,10 @@ describe("a sentence push (1d)", () => {
   });
 
   function renderApp() {
-    return render(
-      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-        <I18nProvider>
-          <SessionProvider>
-            <RootNavigator />
-          </SessionProvider>
-        </I18nProvider>
-      </SafeAreaProvider>
+    return renderSoul(
+      <SessionProvider>
+        <RootNavigator />
+      </SessionProvider>
     );
   }
   let taps = 0;

@@ -10,9 +10,7 @@ import type { Post } from "@soulledger/core/api";
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDate: (v: string) => v, locale: "en", hydrated: true }));
 
 let mockUser: { id: string | number } | null = { id: "user-1" };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: mockUser }),
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ user: () => mockUser }));
 
 const mockDeleteMutate = jest.fn();
 const mockRefresh = jest.fn();

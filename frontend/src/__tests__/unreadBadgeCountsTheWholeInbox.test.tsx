@@ -32,9 +32,7 @@ const mockTenant = {
   tenantCode: "CN",
   logout: jest.fn(),
 };
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => mockTenant,
-}));
+jest.mock("@/src/contexts/TenantContext", () => require("./support/mocks").tenantMock({ ctx: () => mockTenant }));
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",

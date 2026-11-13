@@ -7,14 +7,13 @@
 import type { SoulConversation } from "@soulledger/core/api/soul-chat";
 import { matrixHttp } from "@soulledger/core/api/matrix";
 import { NavigationContainer } from "@react-navigation/native";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatProvider, OUTBOX_KEY } from "../chat";
-import { I18nProvider } from "../i18n";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { FEEDBACK_SHOT_MAX, FeedbackScreen } from "../screens/writeToHall";
+import { renderSoul } from "./harness";
 import { heldReply, stubApi, type Reply } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -98,16 +97,12 @@ const picked = (n: number) => ({
 
 let synapse: QuietSynapse;
 function renderForm() {
-  return render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <ChatProvider account="QU33Q9FW5F">
-          <NavigationContainer>
-            <FeedbackScreen />
-          </NavigationContainer>
-        </ChatProvider>
-      </I18nProvider>
-    </SafeAreaProvider>
+  return renderSoul(
+    <ChatProvider account="QU33Q9FW5F">
+      <NavigationContainer>
+        <FeedbackScreen />
+      </NavigationContainer>
+    </ChatProvider>
   );
 }
 

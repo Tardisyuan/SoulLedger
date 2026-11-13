@@ -2,12 +2,11 @@
  * The forced-upgrade screen appears only when the backend names a minimum above this build, and
  * never because the check failed. The screen sits above the session, so signed-out users see it too.
  */
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, screen } from "@testing-library/react-native";
 import { Linking, Text } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
 import { VersionGate } from "../versionGate";
+import { renderSoul } from "./harness";
 
 // jest.setup pins the app version to 0.1.0.
 const reply = (body: unknown, ok = true) =>
@@ -18,14 +17,10 @@ afterEach(() => {
 });
 
 async function mount() {
-  const view = render(
-    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
-      <I18nProvider>
-        <VersionGate app="soul">
-          <Text testID="app-body">the app</Text>
-        </VersionGate>
-      </I18nProvider>
-    </SafeAreaProvider>
+  const view = renderSoul(
+    <VersionGate app="soul">
+      <Text testID="app-body">the app</Text>
+    </VersionGate>
   );
   await act(async () => {});
   return view;
