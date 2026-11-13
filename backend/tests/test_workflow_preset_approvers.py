@@ -32,7 +32,7 @@ imports that file's own `_named_person` rather than restating it.
 What the fallback must NOT do
 -----------------------------
 `TEMPLATE_NODES_WITHOUT_AN_APPROVER` and the frontend's `NODES_THAT_NAME_NO_ACTOR`
-list the nodes that name *nobody on purpose* — benches (四十二神官, 十殿联审),
+list the nodes that name *nobody on purpose* — benches (四十二判官, 十殿联审),
 institutions (主教座堂), and actions (案件分类). Resolving one of those to a
 single `Actor` would record a joint session as one judge's decision, which is a
 worse failure than the stuck flow this file fixes. Both tables are consulted at
@@ -216,24 +216,24 @@ def test_a_label_naming_somebody_the_cast_lacks_stays_system(seeded):
 
 
 def test_an_excused_bench_is_not_resolved_to_one_of_its_members(seeded):
-    """「四十二神官 · 否定告白」 is forty-two assessors, not a judge.
+    """「四十二判官 · 否定告白」 is forty-two assessors, not a judge.
 
     The label is listed in `TEMPLATE_NODES_WITHOUT_AN_APPROVER`, and this test
     makes the exclusion do work rather than being true by accident: it puts a
-    row on the Egyptian bench that *answers to* 「四十二神官」, so a fallback
+    row on the Egyptian bench that *answers to* 「四十二判官」, so a fallback
     that ignored the table would designate it and record a forty-two-member
     confession as one being's decision.
     """
     tenant = _tenant(Civilization.EGYPTIAN)
     bench = Actor.all_objects.create(
-        name="四十二神官", civilization=Civilization.EGYPTIAN,
+        name="四十二判官", civilization=Civilization.EGYPTIAN,
         role="JUDGE", tenant=tenant,
     )
 
     workflow = _workflow_for(Civilization.EGYPTIAN, tenant)
     first, second, third = _by_order(workflow)[:3]
 
-    assert second.node_name == "四十二神官 · 否定告白"
+    assert second.node_name == "四十二判官 · 否定告白"
     # Not the bench row: the default role (docs-others X-3, 2026-10-27).
     assert (second.approver_type, second.approver_actor_id, second.approver_role) == ("ROLE", None, "JUDGE"), (
         f"the bench node was resolved to {bench.pk}"
@@ -246,21 +246,21 @@ def test_an_excused_bench_is_not_resolved_to_one_of_its_members(seeded):
 def test_a_node_excused_only_by_the_frontend_table_is_not_resolved_either(seeded):
     """The same bench, spelled the way the *preset* spells it.
 
-    「42审判者 · 否定告白」 appears only in `NODES_THAT_NAME_NO_ACTOR` — the
-    backend table has never heard of it, because the backend template spells the
-    same bench 「四十二神官 · 否定告白」. The fallback exists to serve preset-built
-    nodes, so it has to honour the preset's own record of which of them name
-    nobody; consulting only the backend table would leave every frontend-only
-    bench, institution and action name to be resolved on luck.
+    Until 2026-11-13 the preset spelled the bench 「42审判者 · 否定告白」 and the backend
+    template 「四十二神官 · 否定告白」, so the label here was in `NODES_THAT_NAME_NO_ACTOR`
+    only. Both are 「四十二判官 · 否定告白」 now (docs/02 §2.2 says 判官), so this label is in
+    both tables; what the test still holds is the preset-built path — a node that arrives as
+    `nodes_json` and not from `WORKFLOW_TEMPLATES`. The frontend-only labels (城隍申诉审理,
+    枉死城登记, …) take the same branch through `PRESET_NODES_THAT_NAME_NO_ACTOR`.
     """
     tenant = _tenant(Civilization.EGYPTIAN)
     Actor.all_objects.create(
-        name="42审判者", civilization=Civilization.EGYPTIAN,
+        name="四十二判官", civilization=Civilization.EGYPTIAN,
         role="JUDGE", tenant=tenant,
     )
 
     workflow = _workflow_from(
-        [{"name": "42审判者 · 否定告白", "court": "Hall of Two Truths",
+        [{"name": "四十二判官 · 否定告白", "court": "Hall of Two Truths",
           "type": "否定告白", "order": 1}],
         Civilization.EGYPTIAN,
         tenant,

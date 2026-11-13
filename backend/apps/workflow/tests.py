@@ -1354,7 +1354,12 @@ class TestTemplateApproverBasis:
         renames = import_module(
             "apps.workflow.migrations.0012_correct_the_egyptian_weighing_nodes"
         ).RENAMES
-        renamed_to = {old: new for old, new, _court, _order, _old, _new in renames}
+        # 0031 (2026-11-13) renamed the bench once more, 四十二神官 → 四十二判官; 0012 stays frozen on the
+        # name it wrote, so the bridge goes through both tables.
+        later = import_module(
+            "apps.workflow.migrations.0031_egypt_the_forty_two_are_assessors_panguan"
+        ).RENAMES
+        renamed_to = {old: later.get(new, new) for old, new, _court, _order, _old, _new in renames}
 
         from_templates = {
             (node["name"], node["court"], node["order"], node["actor"])
@@ -1408,8 +1413,11 @@ class TestTemplateApproverBasis:
                 f"next node that happens to be named this."
             )
 
+        for old, new in later.items():
+            assert new in current, f"0031 renames {old!r} to {new!r}, which no template carries"
+            assert old not in current, f"0031 renames {old!r}, which a template still carries"
         for old, new, _court, _order, _old_type, _new_type in renames:
-            assert new in current, (
+            assert later.get(new, new) in current, (
                 f"0012 renames a node to {new!r}, which no template carries. "
                 f"The migration would rewrite live rows into a name the "
                 f"service will never create again."

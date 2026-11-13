@@ -27,7 +27,7 @@ def hears_again(civilization, verdict) -> bool:
     """这个裁决不是一个去处,而是「这件案子再审一次」(用户 2026-10-29,四文明统一)。
 
     * RETRY,任何文明:原审结案另开一案(`weighing.open_retrial`),不建处置、不动计划与灵魂状态。
-    * PURGATORY,地府与埃及:地府的 `DY_00_PURGATORY` 是待审所,埃及的 Duat 入口是天平摇摆(02 §5.3)——
+    * PURGATORY,地府与埃及:地府的 `DY_00_PURGATORY` 是待审所,埃及的 Duat 入口是天平摇摆(系统自设,非出典,docs/02 文末「系统自设」)——
       两处都不是刑罚,只是没判完;docs/11 第八步「不服判决 → …… → 重新审理」是同一个动作。
     * 欧洲的 PURGATORY 是真正的去处:炼狱收确定得救者、按刑期涤罪后升天堂(docs/01_欧洲 §1.2),照旧发落。
     * 希腊的 PURGATORY 也是去处(2026-11-11 用户定,docs/04 §三 三分):普通亡灵去阿斯福得草原
@@ -67,7 +67,11 @@ class JudgmentMethod(models.TextChoices):
 
 
 class DuatStage(models.TextChoices):
-    """Where an Egyptian case stands before the hall (`Judgment.duat_stage`)."""
+    """Where an Egyptian case stands before the hall (`Judgment.duat_stage`).
+
+    EMBALMING is sourced (docs/02 §1.1, 70 days). The other three follow docs/01 §4.2, which is
+    系统自设,非出典 (docs/02 文末「系统自设」): no Egyptian source was found for them.
+    """
     EMBALMING = "EMBALMING", "木乃伊制作中"
     EARLY_DEATH = "EARLY_DEATH", "早夭 · 直入芦苇原"
     NAMELESS = "NAMELESS", "无名者 · 不入冥界"
@@ -85,8 +89,9 @@ class WeighingResult(models.TextChoices):
 
     LIGHTER  = not heavier than the feather (02 §5.1: 心脏重量 ≤ 羽毛重量) → PASSED
     HEAVIER  = heavier (02 §5.2) → FAILED, Ammit
-    WAVERING = 摇摆不定 (02 §5.3): Thoth records it, the case is weighed again —
-               no destination (user decision 2026-10-27).
+    WAVERING = 摇摆不定: the case is weighed again — no destination (user decision 2026-10-27).
+               系统自设,非出典 (docs/02 文末「系统自设」): the Ani verdict has only the two
+               endings above.
     """
     LIGHTER = "LIGHTER", "未重于羽"
     HEAVIER = "HEAVIER", "重于羽"
@@ -961,7 +966,7 @@ class Statute(AuditUserFields, models.Model):
     #: 施行日 = 入库那天(`create_time`)。
     #: 不是一张版本历史表:旧文本已经由结案时的引用快照(`JudgmentCitation.snapshot_*`)
     #: 保住了,需要的只是「现在读到的是第几版、从哪天起」。
-    #: 埃及四十二条的正文读自 `source_actor`,改那位陪审神的条文不会让这里升版。
+    #: 埃及四十二条的正文读自 `source_actor`,改那位判官的条文不会让这里升版。
     revision = models.PositiveIntegerField(default=1)
     effective_from = models.DateField(default=timezone.localdate)
 

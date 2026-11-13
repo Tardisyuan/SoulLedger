@@ -109,7 +109,7 @@ describe("Egyptian routine: Ammit is the failure branch, not a step before the v
     // rite and no assessor signs off alone (apps/workflow/services.py holds
     // the same shape). And it precedes the verdict — the soul speaks, then
     // Thoth records and reads out.
-    const assessors = routine.nodes.filter((node) => node.name.includes("42审判者"));
+    const assessors = routine.nodes.filter((node) => node.name.includes("四十二判官"));
     expect(assessors).toHaveLength(1);
     expect(assessors[0].court).toBe(HALL);
     expect(assessors[0].order).toBeLessThan(orderOf(routine, "Thoth") as number);

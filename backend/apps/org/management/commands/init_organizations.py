@@ -92,7 +92,7 @@ INITIAL_ORGANIZATIONS = [
         "parent": None,
         "level": 0,
     },
-    {"name": "真理大厅", "code": "DUAT_HALL", "category": "EGYPTIAN", "parent_code": "DUAT"},
+    {"name": "两真之殿", "code": "DUAT_HALL", "category": "EGYPTIAN", "parent_code": "DUAT"},
     # 「十二门」 named the Book of Gates' structure without saying so, which is
     # the confusion the realm side was just re-anchored away from: the Book of
     # Gates and the Amduat are two different books about Ra's night voyage, and
@@ -107,7 +107,7 @@ INITIAL_ORGANIZATIONS = [
     # dead person's. verify-egyptian.md §9.4 names only DUAT_GATES, so this one
     # is a reading of the same finding rather than a quotation of it — the name
     # says which book, and `code` is left alone for the same reason.
-    {"name": "阴间之书阿佩普领域", "code": "DUAT_APEP", "category": "EGYPTIAN", "parent_code": "DUAT"},
+    {"name": "阿姆杜阿特 · 阿佩普领域", "code": "DUAT_APEP", "category": "EGYPTIAN", "parent_code": "DUAT"},
 ]
 
 #: English for the names above. `org/0013` has its own frozen copy for rows that already exist.
@@ -127,7 +127,7 @@ ORGANIZATION_NAME_EN = {
     "崔珏（崔府君）": "Cui Jue",
     "希腊冥界": "Hades",
     "牛头马面": "Ox-Head and Horse-Face",
-    "真理大厅": "Hall of Ma'at",
+    "两真之殿": "Hall of Two Truths",
     "神曹": "Bureau of Spirits",
     "第一殿-秦广王": "First Court · King Qinguang",
     "第七殿-泰山王": "Seventh Court · King Taishan",
@@ -141,7 +141,7 @@ ORGANIZATION_NAME_EN = {
     "第四殿-五官王": "Fourth Court · King Wuguan",
     "钟馗": "Zhong Kui",
     "门之书十二门": "Twelve Gates of the Book of Gates",
-    "阴间之书阿佩普领域": "Realm of Apep, Book of the Underworld",
+    "阿姆杜阿特 · 阿佩普领域": "Realm of Apep, Amduat",
     "陆之道": "Lu Zhidao",
     "鬼曹": "Bureau of Ghosts",
     "魏征": "Wei Zheng",

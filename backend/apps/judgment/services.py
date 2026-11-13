@@ -462,7 +462,7 @@ class JudgmentConclusionService:
             # 引用条文当时的文字,与裁决同一事务落盘(apps/judgment/snapshot.py)。
             StatuteCitationService.snapshot(judgment, at=judgment.concluded_at)
 
-            # 天平摇摆(02 §5.3):托特记下,再称一次。不建处置、不动计划、不动灵魂状态 —— 灵魂留在审判中,
+            # 天平摇摆(系统自设,非出典,docs/02 文末「系统自设」):再称一次。不建处置、不动计划、不动灵魂状态 —— 灵魂留在审判中,
             # 新的一件案子回到队列(用户 2026-10-27:不自动发落,不能落成 SETTLED 而不在任何一站)。
             if wavering or retry:
                 if wavering:
