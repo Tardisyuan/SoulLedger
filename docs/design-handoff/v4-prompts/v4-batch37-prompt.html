@@ -1,0 +1,14 @@
+<article>
+<h2>第三十七批 · 第三十六批落地后剩下的五处<span class="tag new">待回 · 2026-11-14</span></h2>
+<p>第三十六批已全部落地(四处设计判断、25 条中文、egy 101 条)。落地时冒出下面五处,要你定。</p>
+<ol>
+<li><strong>「来源」里两个「审判队列」。</strong>门内「来源」一节现在有两个同名标签:<code>/judgment</code> 的菜单名本来就是「审判队列 / Judgment Queue」,<code>/judgment/queue</code> 按你上一批也叫「审判队列」。另外案卷台上那个「分诊 ›」链接仍指向 <code>/judgment/queue</code>。请给这两页各一个名字(中 / 英 / egy),并说「分诊 ›」该指向哪里、叫什么。</li>
+<li><strong><code>officer_app.letter.not_yours</code> 的 egy。</strong>你给的 egy 里 <code>{{name}}</code> 出现两次,新中文只出现一次(「这封信由{{name}}经办,回信框只给经办人。要接过来,请经办人放回,或请管理员转过来。」),占位符守卫要求三种语言次数一致,所以这条 egy 还是旧值:<code>Sesh Pen Em Djeret {{name}}: Wesheb Wa. Dbh Redi Er Hat, Er Dbh Sab Hery.</code> 请重给一条只用一次 <code>{{name}}</code> 的。</li>
+<li><strong>英文界面里还剩两处汉字。</strong>审判详情证据列表的编号(一、二、三…,<code>toHanNumeral</code>)和分节标记(甲、乙、丙)。按你上一批「汉字只在中文界面出现」的规则,英文 / egy 下写什么?</li>
+<li><strong>官员端「手机上可以……在『滑卡审判』里结案」已经不全。</strong>现在「判」抽屉(按住落印)在详情页也能结案。请改这两条中文(并给英文 / egy):
+<ul><li><code>officer_app.queue.desk_only</code>:「待宣判 · 可在「滑卡审判」里结案」</li><li><code>officer_app.queue.scope_note</code>:「手机上可以认领、查看、写评议,并在「滑卡审判」里结案。自选去处与引用条文请在官员台。」</li></ul>
+</li>
+<li><strong><code>official_notify.rebirth_status_*</code>。</strong>查过了:是发给灵魂本人的(灵魂账号的站内通知)。<code>official_notify</code> 实际上装着所有站内通知,里面另有几条也是给灵魂的,所以键不搬,这两条 egy 保留 <code>Mesut-Ek</code>。不用你改,只是告知。</li>
+</ol>
+<p>交付:<code>v4-batch37-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code> + 回复说明。</p>
+</article>
