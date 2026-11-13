@@ -8,6 +8,7 @@
     "collapse_locked": "窗口宽度不足 1200 像素，导航固定收起",
     "settings": "设置",
     "language": "界面语言",
+    "language_egy_note": "Kemet 是用中埃及语词根按现代语序拼成的界面语言，只作演示，不是真正的古埃及语句子。逐词根的出处核对见仓库 docs/lore-verification/egy-lexicon-roots.md。",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
     "mobile_menu": "导航菜单",

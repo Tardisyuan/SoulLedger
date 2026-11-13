@@ -32,10 +32,12 @@ export function LanguageSwitcher() {
       value={locale}
       onChange={(e) => setLocale(e.target.value as Locale)}
       aria-label={t("nav.language")}
+      // egy 是用中埃及语词根拼的演示语言,不是真的古埃及语 —— 说明挂在控件和 egy 这一项上(原生下拉不一定显示 option 的 title)。
+      title={t("nav.language_egy_note")}
       className={SELECT}
     >
       {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
-        <option key={loc} value={loc} lang={BCP47_FOR_LOCALE[loc]}>
+        <option key={loc} value={loc} lang={BCP47_FOR_LOCALE[loc]} title={loc === "egy" ? t("nav.language_egy_note") : undefined}>
           {LOCALE_LABELS[loc]}
         </option>
       ))}

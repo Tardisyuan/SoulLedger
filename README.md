@@ -163,6 +163,11 @@ Redis 7                        →  :6379   （Channel Layer + Celery broker）
 [`frontend/src/lib/menuI18n.ts`](frontend/src/lib/menuI18n.ts)），侧栏图标则要求
 在同一父级下互不重复，因为在读不懂中文标签的语言下，图标是唯一的辨认通道。
 
+**关于 `egy`（界面上叫 Kemet）**：它是用中埃及语词根的简化转写、按现代语序拼成的
+界面语言，只作演示，**不是真正的古埃及语句子**——没有古埃及语的语法，一部分词是意思
+被借远了的真词，还有一部分是生造的。逐词根的出处核对与问题清单见
+[`docs/lore-verification/egy-lexicon-roots.md`](docs/lore-verification/egy-lexicon-roots.md)。
+
 **事件与实时**：
 
 ```
