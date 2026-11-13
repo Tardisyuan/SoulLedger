@@ -955,6 +955,48 @@ class TestWhatTheHookHandsTheRunner:
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "classify-jest: full=0" in proc.stdout, proc.stdout
 
+    def _push_lines(self, hook, cwd: Path, lines: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["bash", str(hook)], cwd=cwd, env=_clean_env(PREPUSH_CLASSIFY_ONLY="1"), input=lines,
+            capture_output=True, text=True, timeout=60,
+        )
+
+    def _rev(self, cwd: Path, rev: str) -> str:
+        return subprocess.run(
+            ["git", "rev-parse", rev], cwd=cwd, env=_clean_env(), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    def test_a_range_git_cannot_diff_refuses_the_push(self, hook, checkouts):
+        """2026-11-13: the remote's commit is not in this clone (someone pushed, nobody fetched). `git diff`
+        failed, its empty output was the change list, and run-gates.sh said "no file changes", exit 0."""
+        _, wt = checkouts
+        self._commit_a_frontend_file(wt)
+        missing = "1234567890123456789012345678901234567890"
+        proc = self._push_lines(hook, wt, f"refs/heads/wt {self._rev(wt, 'HEAD')} refs/heads/wt {missing}\n")
+        assert proc.returncode != 0, proc.stdout + proc.stderr
+        assert "push refused" in proc.stdout and missing in proc.stdout, proc.stdout
+        # absence too: the runner was never reached, with an empty list or any other
+        assert "no file changes" not in proc.stdout and "classify:" not in proc.stdout, proc.stdout
+
+    def test_every_pushed_ref_counts_not_only_the_last(self, hook, checkouts):
+        _, wt = checkouts
+        (wt / "backend" / "x.py").write_text("X = 1\n")
+        _git(wt, "add", "-A")
+        _git(wt, "commit", "-q", "-m", "backend")
+        self._commit_a_frontend_file(wt)
+        c0, c1, c2 = (self._rev(wt, r) for r in ("HEAD~2", "HEAD~1", "HEAD"))
+        # the last line alone is the backend commit; the first carries the frontend one
+        proc = self._push_lines(hook, wt, f"refs/heads/a {c2} refs/heads/a {c1}\nrefs/heads/b {c1} refs/heads/b {c0}\n")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "classify: core=0 frontend=1 backend=1" in proc.stdout, proc.stdout
+        # no `<base>..<pushed>` for the runner to take ONE pushed tree from: "this tree already passed"
+        # must not vouch for several refs
+        assert f"{c1} to {c2}, {c0} to {c1} " in proc.stdout and ".." not in proc.stdout.split(" — ")[0], proc.stdout
+        # and one of several refs failing to diff refuses the whole push
+        missing = "1234567890123456789012345678901234567890"
+        proc = self._push_lines(hook, wt, f"refs/heads/a {c2} refs/heads/a {missing}\nrefs/heads/b {c1} refs/heads/b {c0}\n")
+        assert proc.returncode != 0 and "push refused" in proc.stdout and "classify:" not in proc.stdout, proc.stdout
+
     def test_a_checkout_without_the_runner_uses_the_installed_copy(self, hook, checkouts):
         main, wt = checkouts
         subprocess.run(
