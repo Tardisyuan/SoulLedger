@@ -1,5 +1,7 @@
 # SoulLedger — Agent 工作规范
 
+> **Human contributors**: read [`CONTRIBUTING.md`](CONTRIBUTING.md) instead; this file is written for AI coding agents.
+
 > 本文件定义了 SoulLedger 项目的所有技术规范和操作要求。
 > 任何修改代码的任务都必须严格遵守本文档。
 > 本文档也是 Claude Code 等 Agent 的系统提示词扩展。

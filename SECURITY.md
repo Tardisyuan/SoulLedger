@@ -5,14 +5,15 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. **Do NOT** open a public GitHub issue
-2. Email the maintainer directly or use GitHub's private vulnerability reporting
+2. Use GitHub's [private vulnerability reporting](https://github.com/Tardisyuan/SoulLedger/security/advisories/new), or email [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com)
 3. Include a description, steps to reproduce, and potential impact
 
 ## Supported Versions
 
 | Version | Supported |
 |---------|-----------|
-| 0.1.x   | Yes |
+| `main`  | Yes |
+| tagged releases | No — fixes land on `main` only |
 
 ## Security Measures
 

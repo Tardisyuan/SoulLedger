@@ -1,106 +1,125 @@
 # Contributing to SoulLedger
 
-## Quick Start
+Thanks for looking. This file is all a contributor needs; `CLAUDE.md` and `AGENTS.md` are the maintainer's
+instructions for AI coding agents, and you do not have to read them.
+
+## What is welcome
+
+- **Small pull requests**: documentation fixes, translations (`packages/core/messages/`), corrections to the
+  mythology research in `docs/`, bug fixes with a reproduction, and missing tests.
+- **Issues**: bugs, confusing docs, questions about a design decision. The ADRs in [`docs/adr/`](docs/adr/)
+  explain most of the big ones.
+- **Open an issue first** for anything over about 200 lines, anything that crosses several Django apps, and
+  anything that changes a model, a permission or the approval workflow. `main` moves fast, and a short
+  discussion saves a rewrite.
+
+The maintainer works alone. Expect a first reply within a week. If two weeks pass with no reply, mention
+`@Tardisyuan` in the issue or PR.
+
+## Setting up
+
+The short path needs Python 3.11 (with [`uv`](https://docs.astral.sh/uv/)) and Node.js ≥ 20.9 (`nvm use`
+reads `.nvmrc`). No Docker, PostgreSQL or Redis.
 
 ```bash
-# Backend — settings.py refuses to load without SECRET_KEY, so copy the
-# example env first. Its DATABASE_URL points at a local PostgreSQL; with none,
-# set DATABASE_URL=sqlite:///db.sqlite3 in .env (DEBUG=true allows SQLite)
-#
-# The interpreter is a project venv, backend/.venv: Python 3.11 and exactly
-# requirements.lock (what the image and CI install) plus requirements-dev.txt
-# (the pinned ruff). The pre-push hook uses it and refuses without it.
+# back end (SQLite fallback), http://localhost:8000/api/v1/
 cd backend && cp .env.example .env
-uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
-.venv/bin/python manage.py migrate && .venv/bin/python manage.py runserver
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_tenants && .venv/bin/python manage.py seed_mythology
+.venv/bin/python manage.py runserver
 
-# Frontend — install at the REPO ROOT, not in frontend/: this is an npm
-# workspaces repo and the only lockfile is the root package-lock.json.
-# npm 11, not nvm's npm 10 (exit 0, but no typescript and no .bin); npm 11 skips
-# install scripts, and `npm ci` strips the lockfile's libc fields — hence the
-# last two lines. Measurements: CLAUDE.md, Build & Test.
-nvm use
-npx -y npm@11 ci
-npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
-git checkout -- package-lock.json
+# web, from the repository root (not inside frontend/), http://localhost:3333
+npx -y npm@11 ci                      # npm 11: npm 10 exits 0 with an incomplete tree
+git checkout -- package-lock.json     # npm ci rewrites the lockfile; keep it unchanged
 npm run dev --workspace frontend
 ```
 
-Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
+**Signing in.** A new database has no account that can sign in. `manage.py seed_dev_users` *(being added)*
+creates one account for each of the six roles (ADMIN, MODERATOR, JUDGE, GUARDIAN, VIEWER, and a SOUL account
+for the soul app), runs only when `DEBUG=True`, and prints what it created. Until it lands, use
+`manage.py createsuperuser`.
 
-## Development Workflow
+The two mobile apps, Docker, PostgreSQL and Redis, and every seed command are in
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make changes and add tests
-4. Run tests: `cd backend && .venv/bin/python -m pytest` / `cd frontend && npm run test:coverage`
-   (the backend suite needs `DATABASE_URL` **and** `REDIS_URL` pointed at throwaway
-   services first — see `CLAUDE.md`, Build & Test, for the exact invocation)
-5. Commit as `type(scope): description` (format and type list: `CLAUDE.md`, section "Git")
-6. Run the push gates with `scripts/run-gates.sh` (what `pre-push` runs; see `CLAUDE.md`), then push and
-   create a Pull Request. CI (backend, frontend, mobile, officer and e2e jobs in `ci.yml`) does
-   not run on pushes or pull requests — only daily, on a `v*` tag, and by hand — so the
-   local gates are the per-push check
+## Making a change
 
-## Code Conventions
+1. Fork, then branch from the latest `main`: `git checkout -b fix/short-name`.
+2. Change the code and add or update a test. A bug fix needs a test that fails without the fix.
+3. Run the checks for the part you touched (below). Read the **exit code**, not the last line of output:
+   `cmd; echo "exit: $?"`. A pipe such as `cmd | tail` always exits 0.
+4. Commit as `type(scope): description`, for example `fix(judgment): reject a verdict on a closed case`.
+   Types are `feat fix docs style refactor test ci chore`, and the scope is optional. The authority is
+   the same list in `CLAUDE.md` § Git; if the two ever differ, that one wins.
+5. Open the PR and fill in the template, including the commands you ran and their exit codes.
 
-### Backend (Python/Django)
-- Follow PEP 8
-- Use type hints where possible
-- ViewSets use `CodenameViewSetMixin` for permission codenames
-- Services for cross-context orchestration
-- Models for domain logic (state machines, validation)
+### Checks to run
 
-### Frontend (TypeScript/React)
-- Use `useI18n()` for all user-facing strings — no hardcoded text
-- Use `RequirePermission` for CRUD button gating
-- Use `PageShell` for page layouts (41 of 53 `page.tsx` do, by grep on 2026-10-12 —
-  the twelve that don't are the `(auth)/*` pages, `/`, `welcome`, `judgment/queue`, `admin/stats`,
-  `admin/assistant` (+ `usage`) and `audit/logins`; `PageSection` is for
-  sub-blocks within a page. `TableSkeleton` has zero callers under `app/` —
-  table loading goes through `<DataTable isLoading>`)
-- Colours have exactly one spelling: `text-[oklch(var(--color-ink))]`. The bare
-  `text-ink` form silently renders the wrong value, and so does the pre-`022b8f8`
-  `hsl(var(...))` form (the tokens are OKLCH triples now; `hsl()` clamps the
-  lightness to 100% and paints white) — see `docs/CONVENTIONS-frontend.md` §2
-- Use TanStack Query for API calls with proper query keys
+| You changed | Run |
+|---|---|
+| `backend/` | `cd backend && .venv/bin/ruff check .` and `DATABASE_URL=sqlite:///:memory: .venv/bin/python manage.py makemigrations --check --dry-run`, then the tests below |
+| `frontend/` | `cd frontend && npx tsc --noEmit && npm run lint`, then `npx jest <path>` for the tests near your change |
+| `packages/core/` | `npm run --workspace packages/core typecheck`, `lint` and `test` |
+| `mobile/` or `mobile-officer/` | `npm run --workspace mobile typecheck`, `lint` and `test` (and the same for `@soulledger/officer`; it imports `mobile/src`) |
 
-### Git Commits
-See **`CLAUDE.md` → `## Git`** — that section is the single authority for the format
-and the type list. This file used to carry its own copy, which had drifted to a
-different set (it was missing `style`); `AGENTS.md` carried a third, which specified
-no scope at all while two thirds of commits have one. Nothing enforces the format —
-there is no commit-msg hook — so three copies drifted silently. Now there is one.
+Backend tests need a throwaway Redis, so they cannot write into a shared one:
 
-## Testing
+```bash
+redis-server --port 6399 --daemonize yes --save '' --appendonly no
+cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true \
+  DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 \
+  .venv/bin/python -m pytest --no-cov -q tests/test_something.py apps/judgment/
+```
 
-- Backend: `cd backend && .venv/bin/python -m pytest` (`pytest.ini` already adds `--cov=apps`;
-  the interpreter is `backend/.venv`, not `python` on PATH; isolate `DATABASE_URL` and `REDIS_URL` — see `CLAUDE.md`)
-- Frontend unit: `cd frontend && npm run test:coverage` — **not `npm test`**, which
-  is bare `jest`: `jest.config.js` sets `coverageThreshold` without
-  `collectCoverage`, so the threshold is only evaluated with `--coverage`
-  (measured: `npm test` prints "coverage" zero times)
-- `packages/core` (the platform-independent workspace) has three of its own,
-  and `pre-push` runs all three on any `^packages/` change:
-  `npm run --workspace packages/core typecheck | lint | test` (the last is vitest)
-- `mobile/` (the soul app, Expo) has three as well, run by `pre-push` on any `^mobile/`
-  or `frontend/app/globals.css` change and by CI's `mobile` job: `npm run --workspace mobile typecheck | lint | test`
-  (the last is jest + jest-expo)
-- `mobile-officer/` (the officer app, package `@soulledger/officer`) has the same three
-  (`npm run --workspace @soulledger/officer typecheck | lint | test`), run by CI's `officer` job. It imports
-  `mobile/src` leaf modules in place, so a change under `mobile/` can break it too
-- Frontend E2E: **`npm run build` first**, then
-  `npx playwright test --project=chromium|firefox|mobile-chrome` — three
-  projects, and CI's matrix runs all three. `webServer` serves the build
-  output, not `next dev`: a dev server compiles on demand, so
-  `waitForLoadState("networkidle")` was waiting on compilation. Same code, three
-  runs, 3/4/2 failures with a different route hit each time; against the build
-  output all three projects are deterministic and ~3× faster.
-- TypeScript: `cd frontend && npx tsc --noEmit`
+Some tests read other files instead of importing them. A frontend change can therefore break a backend
+test, and the reverse. Each side keeps a list of these tests: `backend/tests/reads-outside-backend.txt`
+and `frontend/jest.always-run.txt`. If a CI job goes red in a place you did not touch, those lists are
+the first place to look.
 
-## Architecture
+Two things that bite:
+- `packages/core/src/config/workflow-templates.ts` is read by backend tests by its *layout*. Do not run a
+  formatter over it.
+- SQLite hides aborted transactions and `varchar` lengths. The daily CI runs on PostgreSQL, so a change to
+  transactions or column widths can pass locally and fail there.
 
-See `AGENTS.md` (§6 has the current project tree) and `docs/ARCHITECTURE.md` for an
-architecture overview. `docs/TECHNICAL_DOCS.md` is an older short summary; its app list
-lags `INSTALLED_APPS` in `backend/config/settings.py`, which is the authority.
-See `docs/API.md` for API documentation.
+## What CI runs
+
+- **On your pull request**: [`pr-checks.yml`](.github/workflows/pr-checks.yml). It runs ruff,
+  `makemigrations --check`, `tsc` and eslint for each workspace, and a smoke test of the back end. It takes
+  about ten minutes, with a read-only token and no secrets.
+- **After merge, daily on `main`**: the full suite in [`ci.yml`](.github/workflows/ci.yml). It covers
+  PostgreSQL, coverage floors, the three E2E browsers and audits.
+
+Before merging, the maintainer runs the full local gate. Something it finds may come back to you as a
+review comment.
+
+## AI-assisted contributions
+
+Most of this repository was written by Claude Code under the maintainer's rules, so AI-assisted PRs are
+fine. The same rules apply to yours:
+
+- **Say which tool you used** in the PR description.
+- **You own every line.** You can explain it, you ran it, and the template lists the commands and exit
+  codes.
+- **Not accepted**, and closed without a long review:
+  - bulk-generated changes that were never run;
+  - formatting-only or wording-only churn;
+  - PRs whose author cannot answer review questions.
+- **Review**: the maintainer decides every merge. A first pass may be done with an AI tool; such comments
+  say so.
+
+## Licence
+
+By submitting a contribution you agree to license it under the [Apache License 2.0](LICENSE), the
+project's licence.
+
+## Code of conduct
+
+Be kind and specific. Criticise code, not people. Harassment gets a PR or issue closed and the account
+blocked. Report problems to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com).
+
+## Security
+
+Do not open a public issue for a vulnerability. See [`SECURITY.md`](SECURITY.md).

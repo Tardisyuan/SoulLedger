@@ -7,3 +7,5 @@
 
 - [ ] Commit messages follow `type(scope): description` / 提交信息符合格式
 - [ ] Migration included if a model changed / 改了模型就带上迁移
+- [ ] A test fails without this change (bug fixes) / 缺陷修复附带一条不修就红的测试
+- [ ] AI tools used, if any: / 用了哪些 AI 工具（如有）：
