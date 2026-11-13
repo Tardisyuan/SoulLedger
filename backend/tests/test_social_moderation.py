@@ -222,11 +222,16 @@ def test_an_officer_cannot_moderate_another_civilizations_content(cn_tenant, eu_
     assert row.moderation_status == ModerationStatus.PENDING, "另一个文明的官员改动了这条内容"
 
 
-def test_an_officers_own_social_post_never_enters_the_queue(cn_tenant, cn_admin_user, judge_user):
-    """官员在 `/api/v1/social/` 的帖子不是朋友圈内容。两个圈子在审核后台也不相交。"""
+def test_an_officers_held_social_post_enters_the_same_queue(cn_tenant, cn_admin_user, judge_user):
+    """2026-11-13 用户决定:官员在 `/api/v1/social/` 的帖子与灵魂的一样过词表,被挡下的进同一个待审队列
+    (此前 `author__role="SOUL"` 把它排除在外)。队列仍只列待审的:官员已发出可见的帖子不在里面。"""
     officer_post = Post.objects.create(
         author=judge_user, content="官员的帖子", visibility=Visibility.TENANT, tenant=cn_tenant,
         moderation_status=ModerationStatus.PENDING,
+    )
+    officer_visible = Post.objects.create(
+        author=judge_user, content="官员已发出的帖子", visibility=Visibility.TENANT, tenant=cn_tenant,
+        moderation_status=ModerationStatus.PUBLISHED,
     )
     soul_author, _ = soul(cn_tenant, "灵魂作者")
     soul_post = post(soul_author, "灵魂的帖子", Visibility.PUBLIC)
@@ -234,7 +239,8 @@ def test_an_officers_own_social_post_never_enters_the_queue(cn_tenant, cn_admin_
 
     ids = {r["id"] for r in officer_client(cn_admin_user).get(f"{MODERATION}/posts/").json()["results"]}
     assert str(soul_post.pk) in ids
-    assert str(officer_post.pk) not in ids
+    assert str(officer_post.pk) in ids
+    assert str(officer_visible.pk) not in ids
 
 
 # ── 禁言 ─────────────────────────────────────────────────────────────────
