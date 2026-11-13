@@ -31,7 +31,9 @@ if [ "${1:-}" = --auto ]; then
         && git rev-parse --verify -q "$BASE^{commit}" >/dev/null \
         || { echo "demo-remote: --auto needs a base: no merge-base with origin/main, and DEMO_BASE is not set"; exit 2; }
     CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
-    HIT="$(echo "$CHANGED" | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
+    # Not what no browser loads (run-gates.sh's E2E_BLIND_COMMON_RE, copied; 2026-11-13): unit tests, the
+    # jest / vitest / eslint configuration, documentation. The demo specs and recordings stay triggers here.
+    HIT="$(echo "$CHANGED" | grep -vE '(\.md$|^frontend/src/__tests__/|^frontend/.*\.test\.tsx?$|^packages/core/(.*/)?__tests__/|^packages/core/.*\.test\.tsx?$|^frontend/(jest|eslint)\.[^/]+$|^packages/core/(vitest|eslint)\.[^/]+$)' | grep -E '^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(demo-remote\.sh|demo-e2e-inner\.sh|demo-e2e-summary\.py|check-demo-bundle\.sh)$)' | head -1)"
     [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE '(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gitignore|\.claudeignore|\.env\.example)$)' | grep -v '^$' | head -1)"
     if [ -z "$HIT" ]; then
         echo "demo-remote: --auto: nothing since $(git rev-parse --short "$BASE") reaches the demo (no frontend/, packages/core/, JS dependency, demo runner or unknown root-level file changed) — not running the demo E2E"

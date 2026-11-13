@@ -827,6 +827,16 @@ class TestJestSelection:
     def test_gates_full_forces_it(self, hook):
         assert _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="1")[0] == 1
 
+    def test_a_module_the_setup_file_runs_before_every_test_forces_it(self, hook):
+        """2026-11-13: jest.setup.js requires it, so every test runs it and no import edge says so."""
+        assert "require('./lib/platform/web')" in (REPO_ROOT / "frontend" / "jest.setup.js").read_text()
+        full, out = _classify_jest(hook, ["frontend/lib/platform/web.ts"])
+        assert full == 1 and re.search(r"full because: a module frontend/jest\.setup\.js runs .*: frontend/lib/platform/web\.ts$",
+                                       out, re.M), out
+        # its neighbour is ordinary code
+        assert (REPO_ROOT / "frontend/lib/platform").is_dir()
+        assert _classify_jest(hook, ["frontend/lib/platform/index.ts"])[1].count("jest.setup.js runs") == 0
+
     def test_gates_full_0_does_not_force_selective(self, hook):
         """There is no way to force a selective run. GATES_FULL=0 is not one."""
         full, out = _classify_jest(
@@ -899,6 +909,20 @@ class TestAppJestSelection:
     def test_what_the_app_graph_cannot_trace_forces_a_full_run(self, hook, changed):
         full, out = _classify_app_jest(hook, changed)
         assert full == 1, out
+
+    @pytest.mark.parametrize("changed, setup, needle", [
+        ("mobile/src/platform.ts", "mobile/jest.setup.js", 'require("./src/platform")'),
+        ("mobile/src/platform.ts", "mobile-officer/jest.setup.js", 'require("../mobile/src/platform")'),
+        ("mobile-officer/src/keptText.ts", "mobile-officer/jest.setup.js", 'require("./src/keptText")'),
+    ])
+    def test_a_module_the_apps_setup_file_loads_forces_a_full_run(self, hook, changed, setup, needle):
+        """2026-11-13: code under src/, so the rule above calls it traceable — but the setup file runs it
+        around every test."""
+        assert (REPO_ROOT / changed).is_file() and needle in (REPO_ROOT / setup).read_text()
+        full, out = _classify_app_jest(hook, [changed])
+        assert full == 1 and f"jest.setup.js loads for every test changed: {changed}" in out, out
+        # web jest is not forced by an app's module
+        assert "classify-jest: full=0" in out, out
         assert "app full because:" in out
 
     def test_gates_full_forces_it(self, hook):
@@ -1158,6 +1182,89 @@ class TestReadersOfAnotherArea:
 # changed only mobile-officer/ printed `core:0 frontend:0 backend:0` and ran nothing (the same hole mobile/
 # once had, see run-gates.sh). The runner prints `classify-officer: officer=<0|1>`. mobile-officer/ also
 # imports mobile/src's leaf modules in place, so a change under mobile/ must run it too.
+
+
+class TestMobileReadersFollowWhatChanged:
+    """2026-11-13: with the mobile app not running, its file-reading tests ran on every push — all 14, whole
+    rendered screens among them. Now only those that read something the push changed (run-gates.sh,
+    reader_follows_change)."""
+
+    def _mobile_readers(self, changed):
+        _, _, out = _readers(changed)
+        m = re.search(r"^classify-mobile-readers: (\d+)$", out, re.M)
+        assert m, out
+        files = re.findall(r"^  mobile reader: (\S+)$", out, re.M)
+        assert len(files) == int(m.group(1)), out
+        return files
+
+    ASSIST = "mobile/src/__tests__/assist.test.tsx"     # reads backend/apps/soul_assist
+    THEME = "mobile/src/__tests__/theme.test.ts"        # reads frontend/app/globals.css
+    VISUAL = "mobile/src/__tests__/visual.test.tsx"     # reads the app's own fonts
+
+    def test_the_examples_read_what_this_class_says(self):
+        assert '"backend"' in (REPO_ROOT / self.ASSIST).read_text() or "/backend/" in (REPO_ROOT / self.ASSIST).read_text()
+        assert "frontend/" in (REPO_ROOT / self.THEME).read_text()
+        visual = (REPO_ROOT / self.VISUAL).read_text()
+        assert re.search(r"readFileSync|readdirSync|existsSync|statSync|['\"](node:)?fs['\"]", visual)
+        assert "backend" not in visual and "frontend" not in visual
+
+    def test_a_backend_change_runs_the_readers_of_backend_only(self):
+        files = self._mobile_readers(["backend/apps/soul_assist/prompts.py"])
+        # mutation: drop `&& reader_follows_change "$f"` -> THEME and VISUAL come back -> red
+        assert self.ASSIST in files and self.THEME not in files and self.VISUAL not in files, files
+
+    def test_a_frontend_change_runs_the_readers_of_frontend(self):
+        files = self._mobile_readers(["frontend/app/page.tsx"])
+        assert self.THEME in files and self.ASSIST not in files and self.VISUAL not in files, files
+
+    def test_a_docs_change_runs_no_test_that_stays_inside_the_app(self):
+        assert self.VISUAL not in self._mobile_readers(["docs/ARCHITECTURE.md"])
+
+    def test_a_reader_that_cannot_be_placed_runs(self, checkouts):
+        """Fail open: a subprocess, or a climb to the repository root that names nothing."""
+        main, _ = checkouts
+        tests = main / "mobile" / "src" / "__tests__"
+        tests.mkdir(parents=True)
+        (tests / "spawns.test.ts").write_text('import { execSync } from "child_process";\n')
+        (tests / "climbs.test.ts").write_text('import { readFileSync } from "fs";\nconst ROOT = "../../..";\n')
+        (tests / "own.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../theme.ts");\n')
+        (tests / "names.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../../../backend/x.py");\n')
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "readers")
+
+        def readers(changed):
+            proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main,
+                                  env=_clean_env(PREPUSH_CHANGED=changed, PREPUSH_CLASSIFY_ONLY="1"),
+                                  capture_output=True, text=True, timeout=60)
+            assert proc.returncode == 0, proc.stdout + proc.stderr
+            return sorted(Path(f).name for f in re.findall(r"^  mobile reader: (\S+)$", proc.stdout, re.M))
+
+        assert readers("docs/x.md") == ["climbs.test.ts", "spawns.test.ts"]
+        assert readers("backend/x.py") == ["climbs.test.ts", "names.test.ts", "spawns.test.ts"]
+
+    def test_a_red_reader_is_named(self, checkouts, tmp_path, fake_backend):
+        """`| tail -4` showed jest's totals and not which test (2026-11-13: as app_jest, to a log and grep)."""
+        main, _ = checkouts
+        tests = main / "mobile" / "src" / "__tests__"
+        tests.mkdir(parents=True)
+        (tests / "names.test.ts").write_text('import { readFileSync } from "fs";\nreadFileSync("../../../backend/x.py");\n')
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "reader")
+        b = tmp_path / "bin"
+        b.mkdir()
+        (b / "npm").write_text(
+            "#!/bin/bash\n"
+            "echo 'FAIL src/__tests__/names.test.ts'; echo '  ● names › reads the backend file'\n"
+            "printf 'filler %s\\n' 1 2 3 4 5 6\nexit 1\n")
+        (b / "npm").chmod(0o755)
+        env = _clean_env(PREPUSH_CHANGED="backend/x.py", PYTHON_BIN=fake_backend, RUFF_BIN=shutil.which("true"),
+                         DATABASE_URL="sqlite:///:memory:", REDIS_URL=os.environ.get("REDIS_URL", ""))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush"], cwd=main,
+                              env=env, capture_output=True, text=True, timeout=120)
+        assert proc.returncode == 1 and "mobile jest (file readers) failed" in proc.stdout, proc.stdout + proc.stderr
+        # six lines of output below them. mutation: drop the grep after MOBILE_STATUS -> red
+        assert "FAIL src/__tests__/names.test.ts" in proc.stdout and "● names › reads the backend file" in proc.stdout, proc.stdout
 
 
 def _classify_officer(hook, changed: list[str]) -> int:
@@ -1753,6 +1860,15 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
     @pytest.mark.parametrize("changed", [
         ["backend/apps/souls/views.py"], ["docs/ARCHITECTURE.md"], ["README.md"], ["mobile/src/navigation.tsx"],
         [".github/workflows/ci.yml", "backend/tests/test_x.py"], ["scripts/demo-record.sh"],
+        # 2026-11-13: under frontend/ or packages/core/, and still nothing a browser loads
+        ["frontend/src/__tests__/SoulPage.test.tsx", "frontend/src/__tests__/support/mocks.ts"],
+        ["frontend/app/souls/page.test.tsx"], ["packages/core/src/api/__tests__/client.test.ts"],
+        ["packages/core/src/validation.test.ts"], ["frontend/README.md", "packages/core/README.md"],
+        ["frontend/jest.config.js", "frontend/jest.setup.js", "frontend/jest.always-run.txt"],
+        ["frontend/eslint.config.mjs", "frontend/eslint.design-guard-baseline.json"],
+        ["packages/core/vitest.config.ts", "packages/core/eslint.config.mjs"],
+        # the demo's own specs and recordings: playwright.config.ts ignores **/demo/**, the demo E2E has them
+        ["frontend/e2e/demo/pages.spec.ts"], ["frontend/demo/data/judge.zh.json"],
     ])
     def test_a_change_the_browsers_cannot_see_runs_nothing(self, checkouts, tmp_path, changed):
         main, _ = checkouts
@@ -1762,8 +1878,12 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
 
     @pytest.mark.parametrize("changed", [
         ["frontend/app/page.tsx"], ["frontend/e2e/home.spec.ts"], ["frontend/playwright.config.ts"],
-        ["frontend/demo/data/judge.zh.json"], ["packages/core/src/index.ts"], ["package-lock.json"], [".nvmrc"],
+        ["packages/core/src/index.ts"], ["package-lock.json"], [".nvmrc"],
         ["scripts/e2e-report.py"], ["scripts/run-gates.sh"],
+        # 2026-11-13: the exclusions are those files, not their neighbours
+        ["frontend/src/__tests__/SoulPage.test.tsx", "frontend/e2e/fixtures.ts"], ["frontend/next.config.js"],
+        ["frontend/tsconfig.json"], ["frontend/demo/tour.ts"], ["frontend/src/testing.ts"],
+        ["packages/core/messages/en.json"], ["packages/core/package.json"],
         ["tsconfig.base.json"],  # a root-level file nobody listed: fail closed
         ["backend/apps/souls/views.py", "frontend/app/globals.css"],  # one is enough
     ])
@@ -1802,6 +1922,24 @@ class TestBrowserSuitesSkipAChangeTheyCannotSee:
         proc = self._demo_auto(main, tmp_path, "frontend/demo/data/judge.zh.json")
         assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
         assert "bash /app/scripts/demo-e2e-inner.sh" in (tmp_path / "remote-run").read_text()
+
+    def test_the_demo_carries_the_same_list_of_files_no_browser_loads(self):
+        """demo-remote.sh cannot source run-gates.sh, so it copies the pattern; the copy must not drift."""
+        m = re.search(r"^E2E_BLIND_COMMON_RE='(.+)'$", RUNNER.read_text(encoding="utf-8"), re.M)
+        assert m, "run-gates.sh no longer defines E2E_BLIND_COMMON_RE on one line"
+        assert f"grep -vE '{m.group(1)}'" in (GENERATOR.parent / "demo-remote.sh").read_text(encoding="utf-8")
+
+    def test_the_demo_skips_a_unit_test(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/src/__tests__/SoulPage.test.tsx")
+        assert proc.returncode == 0 and "not running the demo E2E" in proc.stdout, proc.stdout
+        assert not (tmp_path / "remote-run").exists()
+
+    def test_the_demo_runs_for_its_own_specs(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._demo_auto(main, tmp_path, "frontend/e2e/demo/pages.spec.ts")
+        assert proc.returncode == 0 and "running the demo E2E" in proc.stdout, proc.stdout
+        assert (tmp_path / "remote-run").exists()
 
     def test_auto_is_only_for_the_demo_e2e(self, checkouts, tmp_path):
         main, _ = checkouts

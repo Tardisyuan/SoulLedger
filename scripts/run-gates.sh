@@ -291,12 +291,24 @@ INERT_ROOT_RE='(\.md$|^(docker-compose[A-Za-z0-9._-]*\.ya?ml|\.dockerignore|\.gi
 # root-level file not on INERT_ROOT_RE. Nothing of that changed → print why and exit 0. Something did →
 # chromium + mobile-chrome, the set CLAUDE.md asks for before main. An explicit list always runs.
 E2E_AUTO_RE='^(frontend/|packages/core/|package\.json$|package-lock\.json$|\.nvmrc$|scripts/(run-gates\.sh|e2e-report\.py)$)'
+# ... EXCEPT WHAT NO BROWSER LOADS (2026-11-13, test review #10a): of the last 300 commits, 181 matched the
+# rule above and 39 of those changed only files below. Unit tests and their support files
+# (frontend/src/__tests__/, *.test.ts(x), packages/core's __tests__), the jest / vitest / eslint
+# configuration (jest.config.js, jest.setup.js, jest.always-run.txt, eslint.config.mjs and its baseline,
+# vitest.config.ts), documentation, and — for these suites, not the demo's — the demo specs (playwright.config.ts
+# has `testIgnore: "**/demo/**"`) and the demo recordings (loaded only in a demo build; the demo E2E tests
+# them). `next build` does type-check the test files (frontend/tsconfig.json includes **/*.ts(x) and
+# next.config.js does not switch the check off), so a type error in one would fail the E2E build — and
+# fails `tsc --noEmit` first, which the ordinary gates run on every frontend change. This script itself
+# stays a trigger. demo-remote.sh --auto carries a copy of the common part.
+E2E_BLIND_COMMON_RE='(\.md$|^frontend/src/__tests__/|^frontend/.*\.test\.tsx?$|^packages/core/(.*/)?__tests__/|^packages/core/.*\.test\.tsx?$|^frontend/(jest|eslint)\.[^/]+$|^packages/core/(vitest|eslint)\.[^/]+$)'
+E2E_BLIND_RE="$E2E_BLIND_COMMON_RE|^frontend/e2e/demo/|^frontend/demo/data/"
 if [ "$E2E" = auto ]; then
     changed_since_base
-    HIT="$(echo "$CHANGED" | grep -E "$E2E_AUTO_RE" | head -1)"
+    HIT="$(echo "$CHANGED" | grep -vE "$E2E_BLIND_RE" | grep -E "$E2E_AUTO_RE" | head -1)"
     [ -z "$HIT" ] && HIT="$(echo "$CHANGED" | grep -v '/' | grep -vE "$INERT_ROOT_RE" | grep -v '^$' | head -1)"
     if [ -z "$HIT" ]; then
-        echo "$P: --e2e=auto: nothing in $RANGE reaches the browser suites (no frontend/, packages/core/, JS dependency, E2E runner or unknown root-level file changed) — not running E2E"
+        echo "$P: --e2e=auto: nothing in $RANGE reaches the browser suites (no frontend/ or packages/core/ file a browser loads, JS dependency, E2E runner or unknown root-level file changed) — not running E2E"
         exit 0
     fi
     echo "$P: --e2e=auto: $HIT changed — chromium + mobile-chrome"
@@ -610,11 +622,42 @@ if [ "$RUN_JEST_READERS" = 1 ]; then
     # Empty means "nothing reads what changed", and must never reach jest as an empty path list.
     [ -z "$JEST_READERS" ] && RUN_JEST_READERS=0
 fi
+# A test that reads files: one pattern, used here and by app_jest (it was written out twice).
+READS_FILES_RE="readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]"
+# reader_follows_change <test file> — does an app's file-reading test read something this push changed?
+# (2026-11-13, test review #10b.) Until then all 14 mobile readers ran on every push that did not run
+# mobile — a backend or docs push rendered whole screens (visual.test.tsx: 48 tests, one font read) —
+# while the web and backend readers were already filtered by what changed. The rule is
+# jestAlwaysRunList.test.ts's `derivedLabel`, applied to the one file (these lists are grepped per file,
+# not through imports) and failing open:
+#   - it starts a subprocess or names git                     → yes (it can read anything);
+#   - it names top-level entries (`"backend"`, `/frontend/`)  → yes when one of them changed;
+#   - it names none but climbs to the repository root         → yes;
+#   - it names none and stays inside its own app              → no: its app did not change.
+# OFFICER: mobile-officer has 3 file-reading tests and no branch here. They read mobile-officer/, mobile/
+# and packages/core, and a change to any of those sets RUN_OFFICER=1 (app_jest runs them), so with
+# RUN_OFFICER=0 nothing they read changed. If one starts reading frontend/ or backend/, give the officer
+# app the same readers branch as mobile.
+TOP_ENTRIES=$(git -C "$ROOT" ls-tree --name-only HEAD 2>/dev/null)
+reader_follows_change() {
+    local f="$ROOT/$1" t q named=0
+    grep -qE 'execSync|execFileSync|spawnSync|child_process|(^|[^[:alnum:]_])git ' "$f" && return 0
+    while IFS= read -r t; do
+        [ -n "$t" ] || continue
+        q=$(printf '%s' "$t" | sed 's/[][\\.*^$+?(){}|]/\\&/g')
+        if grep -qE "['\"\`/]$q['\"\`/]" "$f"; then
+            named=1
+            echo "$TOPS" | grep -qxF -- "$t" && return 0
+        fi
+    done <<<"$TOP_ENTRIES"
+    [ "$named" = 1 ] && return 1
+    grep -qE 'REPO|repoRoot|ROOT([^[:alnum:]_]|$)|"\.\.", "\.\.", "\.\."|\.\./\.\./\.\.' "$f"
+}
 MOBILE_READERS=""
 if [ "$RUN_MOBILE" = 0 ]; then
     MOBILE_READERS=$(git ls-files 'mobile/*.test.ts' 'mobile/*.test.tsx' \
         | while IFS= read -r f; do
-            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$f" 2>/dev/null
+            grep -qE "$READS_FILES_RE" "$f" 2>/dev/null && reader_follows_change "$f" && echo "$f"
         done)
 fi
 
@@ -709,7 +752,8 @@ fi
 FULL_RULES='^scripts/(run-gates\.sh|install-hooks\.sh)$	the gate machinery itself changed
 ^(package\.json|package-lock\.json|\.nvmrc)$	the JS dependency tree changed
 ^(frontend|packages/core)/[^/]+$	top-level config of frontend/ or packages/core/ changed (jest, ts, next, eslint, package.json)
-^(frontend|packages/core)/.*\.(json|md|ya?ml)$	a data file under frontend/ or packages/core/ changed'
+^(frontend|packages/core)/.*\.(json|md|ya?ml)$	a data file under frontend/ or packages/core/ changed
+^frontend/lib/platform/web\.[^/]+$	a module frontend/jest.setup.js runs before every test changed'
 FULL_F=""
 full() { FULL_F="$FULL_F$1"$'\n'; }
 [ "$MODE" = full ] && full "--full"
@@ -764,6 +808,12 @@ done <<<"$CHANGED"
 APP_FULL_F="$FULL_F"
 hit=$(echo "$CHANGED" | grep -E '^(mobile|mobile-officer)/' | grep -vE '^(mobile|mobile-officer)/src/.*\.(ts|tsx|js|jsx)$' | head -1)
 [ -n "$hit" ] && APP_FULL_F="${APP_FULL_F}an app file outside src/, or not code: $hit"$'\n'
+# A MODULE THE SETUP FILE LOADS runs before or after every test, and no test imports it for that
+# (2026-11-13, test review 3.2): mobile/jest.setup.js and mobile-officer/jest.setup.js both require
+# mobile/src/platform, and the officer's also ./src/keptText. --findRelatedTests picks only their importers.
+# (frontend/lib/platform/web, which frontend/jest.setup.js requires, is in FULL_RULES above.)
+hit=$(echo "$CHANGED" | grep -E '^(mobile/src/platform|mobile-officer/src/keptText)([./]|$)' | head -1)
+[ -n "$hit" ] && APP_FULL_F="${APP_FULL_F}a module the app's jest.setup.js loads for every test changed: $hit"$'\n'
 while IFS= read -r f; do
     case "$f" in mobile/*|mobile-officer/*) [ ! -e "$ROOT/$f" ] && { APP_FULL_F="${APP_FULL_F}an app file was deleted or renamed: $f"$'\n'; break; } ;; esac
 done <<<"$CHANGED"
@@ -791,6 +841,8 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     printf '%s\n' "$JEST_READERS" | grep . | sed 's/^/  jest reader: /'
     echo "classify-readers: jest=$RUN_JEST_READERS mobile=$([ -n "$MOBILE_READERS" ] && echo 1 || echo 0) backend=$(echo "$BACKEND_READERS" | grep -c . || true)"
     printf '%s' "$BACKEND_READERS" | sed 's/^/  backend reader: /'; echo
+    echo "classify-mobile-readers: $(echo "$MOBILE_READERS" | grep -c . || true)"
+    printf '%s\n' "$MOBILE_READERS" | grep . | sed 's/^/  mobile reader: /'
     exit 0
 fi
 
@@ -1459,7 +1511,7 @@ app_jest() {
     fi
     if [ -z "$APP_FULL_F" ]; then
         readers=$(git ls-files "$dir/src/*.test.ts" "$dir/src/*.test.tsx" | while IFS= read -r f; do
-            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$ROOT/$f" 2>/dev/null
+            grep -lE "$READS_FILES_RE" "$ROOT/$f" 2>/dev/null
         done)
         paths=$(printf '%s\n%s\n' "$related" "$readers" | grep -v '^$' | sort -u)
         echo "    affected: $(echo "$paths" | grep -c . || true) test files ($(echo "$related" | grep -c . || true) related to the change, $(echo "$readers" | grep -c . || true) that read files)"
@@ -1504,9 +1556,18 @@ if [ -n "$MOBILE_READERS" ]; then
     need npm
     cd "$ROOT" || exit 1
     echo "  → mobile jest: the $(echo "$MOBILE_READERS" | wc -l | tr -d ' ') tests that read files"
+    # To a file, and the failing tests named, as app_jest does: `| tail -4` showed the totals only.
+    MOBILE_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-mobile-readers.XXXXXX")
     # shellcheck disable=SC2046
-    npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") 2>&1 | tail -4
-    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest (file readers) failed"
+    npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") >"$MOBILE_LOG" 2>&1
+    MOBILE_STATUS=$?
+    tail -4 "$MOBILE_LOG"
+    if [ "$MOBILE_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$MOBILE_LOG" | awk '!seen[$0]++' | head -20
+        echo "    full mobile jest log: $MOBILE_LOG"
+        fail "mobile jest (file readers) failed"
+    fi
+    rm -f "$MOBILE_LOG"
 fi
 }  # run_js_tests
 
