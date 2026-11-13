@@ -277,8 +277,8 @@ npm run --workspace @soulledger/officer android # officer app (`mobile-officer/`
 
 The officer app imports the soul app's leaf modules in place (`mobile-officer/src/shared.ts`), so a change
 under `mobile/src` can affect it. After changing `app.json` plugins (permission strings, a new native
-module) run `npx expo prebuild --platform ios|android --no-install` first. The device-only details (iOS
-builds, signing for a real phone, reaching Matrix on the shared test box) are in [`CLAUDE.md`](CLAUDE.md), Build & Test.
+module) run `npx expo prebuild --platform ios|android --no-install` first. The app build and rebuild rules
+are in [`CLAUDE.md`](CLAUDE.md), Build & Test; notes tied to one machine (phone signing, LAN test boxes) are not in the repo.
 
 #### Two things left undone on purpose (decided 2026-10-10; do them before a real device)
 
@@ -580,8 +580,7 @@ Things that trip people up:
 - **SQLite hides a whole class of defect** (aborted transactions, `varchar` length); run a
   change that touches transactions, constraints or column widths against real PostgreSQL too.
 
-The full recipes, measured numbers and the incidents behind them are in
-[`CLAUDE.md`](CLAUDE.md), Build & Test.
+The full recipes are in [`CLAUDE.md`](CLAUDE.md), Build & Test.
 
 ---
 

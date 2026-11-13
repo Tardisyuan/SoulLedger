@@ -247,7 +247,7 @@ npm run --workspace @soulledger/officer android # 官员端（`mobile-officer/`�
 
 官员端复用灵魂端的叶子模块（`mobile-officer/src/shared.ts`），所以改 `mobile/src` 可能连带影响它。
 改了 `app.json` 的 plugins（权限文案、新的原生模块）要先 `npx expo prebuild --platform ios|android --no-install`；
-iOS 构建、真机签名、连共享测试机的 Matrix 等只在设备上才现形的细节，见 [`CLAUDE.md`](CLAUDE.md) 的 Build & Test。
+App 的构建与重编规则见 [`CLAUDE.md`](CLAUDE.md) 的 Build & Test;真机签名、局域网测试机等与具体机器相关的笔记不在仓库里。
 
 改了原生依赖（如 `expo-image-picker`、`expo-image-manipulator`）之后要重新跑上面这条
 重建 dev client —— `expo start --clear` 只换 JS bundle，不会把新的原生模块装进已安装的 App。
@@ -538,7 +538,7 @@ cd frontend && npm run build && npx playwright test   # 三个 project；要先 
 - **SQLite 看不见一整类缺陷**（事务中止、`varchar` 长度），涉及事务、约束或列宽的改动要在
   真 PostgreSQL 上再跑一遍。
 
-完整跑法、各项的实测数字与背后的事故见 [`CLAUDE.md`](CLAUDE.md) 的 Build & Test。
+完整跑法见 [`CLAUDE.md`](CLAUDE.md) 的 Build & Test。
 
 ---
 
