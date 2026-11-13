@@ -52,6 +52,8 @@ import {
   panCamera,
   ROUTE_PAD,
   routeExtent,
+  anchorLabelsInside,
+  LABEL_EDGE,
 } from "@/src/lib/underworldMapLayers";
 
 const PUBLIC_V4 = path.join(__dirname, "..", "..", "public", "v4");
@@ -743,6 +745,26 @@ describe("narrow screens: close up on the current station", () => {
         expect(y).toBeLessThanOrEqual(e.y + e.h);
       }
     }
+  });
+
+  // 2026-11-14: Egypt's first station in English, 「Embalming · seventy days」, is centred on x=60 and starts left of the map,
+  // where no camera can reach. Close up, a line past either edge of the map is anchored inside it.
+  it("a line past the map's edge is anchored inside it; the others stay where Design put them", () => {
+    const svg = map("eg", "light");
+    const first = svg.querySelector('[data-for="eg-embalming"] text')!;
+    first.textContent = "Embalming · seventy days"; // about 161 units: -20..140
+    const last = svg.querySelector('[data-for="EG_AARU"] text')!;
+    last.textContent = "Field of Reeds (Aaru)"; // centred on 1064, ends past 1120
+    const hall = svg.querySelector('[data-for="EG_HALL_TWO_TRUTHS"] text')!;
+    const hallX = hall.getAttribute("x");
+    anchorLabelsInside(svg, 1120);
+    expect(first.getAttribute("text-anchor")).toBe("start");
+    expect(first.getAttribute("x")).toBe(String(LABEL_EDGE));
+    expect(last.getAttribute("text-anchor")).toBe("end");
+    expect(last.getAttribute("x")).toBe(String(1120 - LABEL_EDGE));
+    // Absence: a line well inside the map is not touched.
+    expect(hall.getAttribute("x")).toBe(hallX);
+    expect(hall.getAttribute("text-anchor")).toBe("middle");
   });
 
   it("reads the smallest label size from the map (the Diyu map has 10)", () => {

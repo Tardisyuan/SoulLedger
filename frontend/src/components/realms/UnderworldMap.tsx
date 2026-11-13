@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
+import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { cn } from "@/lib/utils";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import {
@@ -37,6 +38,7 @@ import {
   addGrid,
   addHeroes,
   addScanRing,
+  anchorLabelsInside,
   applyCamera,
   cameraCentre,
   heatByNode,
@@ -167,6 +169,8 @@ export function UnderworldMap({
   const live = useRef<SVGSVGElement | null>(null);
   const drag = useRef<{ x: number; y: number; view: MapView; camX: number | null; node: string | null } | null>(null);
   const [width, setWidth] = useState(0);
+  /** Tailwind 的 md(768):以上缩放钮竖排在画面右边,以下横排在画面上方 —— `aria-orientation` 跟着说。 */
+  const toolsVertical = useWideViewport(768);
   const [wholeMap, setWholeMap] = useState(false);
   /** 镜头被拖过 / 移到某站后的左边位置;null = 跟着当前站。 */
   const [camX, setCamX] = useState<number | null>(null);
@@ -246,6 +250,8 @@ export function UnderworldMap({
   const homeCamera = template ? narrowCamera(box, home, width, fontUnits, extent) : null;
   const localCamera = homeCamera && camX !== null ? panCamera(homeCamera, camX - homeCamera.x, box) : homeCamera;
   const camera = wholeMap || compact ? null : localCamera;
+  /** 近处开着:出了图边的字往里收(`anchorLabelsInside`);全景照 Design 画。 */
+  const closeUpOn = !!camera;
   const cameraKey = camera ? `${camera.x} ${camera.y} ${camera.w} ${camera.h}` : "";
 
   // 量宽要在第一次绘制之前(layout effect):用 useEffect 时第一帧按宽 0 画,窄屏先闪一下缩小的全景才换成近处。
@@ -299,6 +305,7 @@ export function UnderworldMap({
     }
     const badgeBoxes = stationLoads ? markLoads(svg, stationLoads) : new Map();
     moveGroupLabelsOffHeroes(svg, heroBoxes, badgeBoxes);
+    if (closeUpOn) anchorLabelsInside(svg, box.width);
     markYouAreHere(svg, states, visits ? t("map.soul.here") : null);
     setBranchInfo(applyBranches(svg, branchesHidden, states.current?.node ?? null));
     if (focused) svg.querySelector(`[id="${focused}"]`)?.setAttribute("data-focused", "");
@@ -306,7 +313,7 @@ export function UnderworldMap({
     applyCamera(svg, camera, box);
     // view / camera 不在依赖里:平移由下面两个 effect 单独处理。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary, currentDetail, replayAt, heat, stationLoads, heroes]);
+  }, [template, states, cur, branchesHidden, nameOf, known, zh, visits, t, focused, summary, currentDetail, replayAt, heat, stationLoads, heroes, closeUpOn]);
 
   useEffect(() => {
     if (live.current) applyView(live.current, view);
@@ -513,7 +520,7 @@ export function UnderworldMap({
             (图框本身不可聚焦 —— 它只是一张图)。 */}
         <div
           role="toolbar"
-          aria-orientation="vertical"
+          aria-orientation={toolsVertical ? "vertical" : "horizontal"}
           aria-label={t("map.drag_hint")}
           onKeyDown={onKeyDown}
           className="m-2 max-md:mb-0 flex shrink-0 flex-col max-md:flex-row self-start max-md:self-end max-md:order-first border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
