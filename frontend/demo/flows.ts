@@ -606,15 +606,18 @@ function cursor(rec: Recording, path: string, query: URLSearchParams): Answer {
   const before = path.endsWith("previous/");
   const anchor = queue.findIndex((row) => row.id === (at ?? after));
   let target: Row | undefined;
-  if (before) target = anchor > 0 ? queue[anchor - 1] : undefined;
+  if (before) target = anchor > 0 ? queue.slice(0, anchor).reverse().find((row) => !skips.has(String(row.id))) : undefined;
   else if (after) target = queue.slice(anchor + 1).find((row) => !skips.has(String(row.id)));
-  else if (at) target = rowsNow(rec, "/judgment/").find((row) => row.id === at);
-  else target = left[0];
+  // `at` is a preference, not a filter: a case that is not left in the queue falls through to the head, as on the server.
+  else target = (at && left.find((row) => row.id === at)) || left[0];
+  // Where the case handed out sits — not where the head sits: `?at=` / `previous/` / `?after=` all report the
+  // target's own place (`total - remaining + ahead + 1`), and the desk's QueueBar reads it as「第 N / 共 M」.
+  const ahead = target ? left.indexOf(target) : -1;
   const counts = {
     total: queue.length,
     remaining: left.length,
     skipped: queue.length - left.length,
-    position: left.length ? queue.length - left.length + 1 : null,
+    position: ahead >= 0 ? queue.length - left.length + ahead + 1 : null,
   };
   if (!target) return ok({ ...counts, judgment: null });
   const card = read(rec, "/judgment/next/", new URLSearchParams({ at: String(target.id) })).data as Row;

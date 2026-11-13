@@ -377,8 +377,10 @@ function RealmTree({
           )}
           {cap === null && <span className="sr-only"> · {t("realms.table.capacity_unrecorded")}</span>}
         </span>
+        {/* min-w,不是 w:11 是给「◐ 将满」留齐的位;英文「◐ nearly full」约 79px,定宽时字溢出框外,393 宽的界域卡片
+            把整页撑到 399(手机的布局视口跟着变宽,底栏落到屏外,2026-11-14)。 */}
         {load && (
-          <span data-load={load} className="inline-block w-11 ml-2 text-left font-sans font-semibold">
+          <span data-load={load} className="inline-block min-w-11 ml-2 text-left font-sans font-semibold">
             <span aria-hidden="true">{load === "full" ? "■ " : "◐ "}</span>
             {t(load === "full" ? "realms.table.full" : "realms.table.near")}
           </span>

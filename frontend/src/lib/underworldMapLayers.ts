@@ -436,26 +436,71 @@ export interface MapCamera {
   h: number;
 }
 
+/** 路线上下留的边(viewBox 单位):主角节点 56 高、以站为中心,读数胶囊在站上方 20 —— 线上下各 36 都装得下。 */
+export const ROUTE_PAD = 36;
+
+/**
+ * 一条路径 `d` 里经过的 y(端点与控制点)。
+ * ponytail: 只认绝对命令(M L C S Q T V;H 没有 y)—— Design 的四张图的 `.edge` 全是绝对坐标;哪天出现相对命令,这里就漏算那一段。
+ */
+function pathYs(d: string): number[] {
+  const ys: number[] = [];
+  for (const [, cmd, args] of d.matchAll(/([A-Za-z])([^A-Za-z]*)/g)) {
+    const n = (args.match(/-?(?:\d+\.?\d*|\.\d+)/g) ?? []).map(Number);
+    if (cmd === "V") ys.push(...n);
+    else if ("MLCSQT".includes(cmd)) ys.push(...n.filter((_, i) => i % 2 === 1));
+  }
+  return ys;
+}
+
+/**
+ * 图上真正画了东西的竖向范围(viewBox 单位):路线(`.edge`)上下各留 `ROUTE_PAD`,站名与组名的字整行算进去。读不到就 null(镜头取整图)。
+ * 中国两段路(赴冥在上、回程在下)都在路线里,所以两段都在框内;埃及的路只占中间一条,镜头就不再带着上下两大片空网格。
+ */
+export function routeExtent(svg: Element, box: { width: number; height: number } = viewBoxOf(svg)): { y: number; h: number } | null {
+  const top: number[] = [];
+  const bottom: number[] = [];
+  for (const edge of edgesOf(svg)) {
+    const ys = pathYs(edge.getAttribute("d") ?? "");
+    if (!ys.length) continue;
+    top.push(Math.min(...ys) - ROUTE_PAD);
+    bottom.push(Math.max(...ys) + ROUTE_PAD);
+  }
+  if (!top.length) return null;
+  for (const text of Array.from(svg.querySelectorAll("#labels text[y]"))) {
+    const y = Number(text.getAttribute("y"));
+    const size = Number(text.getAttribute("font-size")) || 12;
+    if (!Number.isFinite(y)) continue;
+    top.push(y - size - 4);
+    bottom.push(y + size / 2);
+  }
+  const y0 = Math.max(0, Math.floor(Math.min(...top)));
+  const y1 = Math.min(box.height, Math.ceil(Math.max(...bottom)));
+  return y1 > y0 ? { y: y0, h: y1 - y0 } : null;
+}
+
 /**
  * 窄屏镜头:容器窄于 `CLOSE_UP_BELOW_PX`、且整图时最小的字在屏上小于 `MIN_LABEL_PX` 才要镜头(否则 null)。镜头按 `CLOSE_SCALE` 取宽(393 宽约 290 单位,
- * 10 号字约 12.5px)、高取整图(第十六批 393 合成图上下两段路都在);`focus` 落在横向 `FOCUS_AT` 处,不出图。
+ * 10 号字约 12.5px);高取 `extent`(`routeExtent`:画出来的路线与字的竖向范围,没给就是整图);`focus` 落在横向 `FOCUS_AT` 处,不出图。
+ * 2026-11-14 前高总是整图:埃及的路只在中间一条,393 宽的近处是一大片空网格。
  */
 export function narrowCamera(
   box: { width: number; height: number },
   focus: { x: number; y: number } | null,
   containerPx: number,
   fontUnits: number,
+  extent: { y: number; h: number } | null = null,
 ): MapCamera | null {
   if (!(containerPx > 0) || containerPx >= CLOSE_UP_BELOW_PX) return null;
   if ((fontUnits * containerPx) / box.width >= MIN_LABEL_PX) return null;
   const w = Math.min(box.width, Math.round(containerPx / CLOSE_SCALE));
-  const h = box.height;
+  const { y, h } = extent ?? { y: 0, h: box.height };
   const fx = focus?.x ?? 0;
   const x = Math.min(box.width - w, Math.max(0, Math.round(fx - w * FOCUS_AT)));
-  return { x, y: 0, w, h };
+  return { x, y, w, h };
 }
 
-/** 平移镜头:横向移 dx 并夹在图内(高是整图,竖向不动)。 */
+/** 平移镜头:横向移 dx 并夹在图内(竖向不动)。 */
 export function panCamera(c: MapCamera, dx: number, box: { width: number; height: number }): MapCamera {
   return { ...c, x: Math.min(box.width - c.w, Math.max(0, Math.round(c.x + dx))) };
 }

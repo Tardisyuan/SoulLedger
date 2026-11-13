@@ -49,6 +49,7 @@ import {
   nodeLoads,
   paintLight,
   panCamera,
+  routeExtent,
   stationPoint,
   type StationLoad,
 } from "@/src/lib/underworldMapLayers";
@@ -240,7 +241,9 @@ export function UnderworldMap({
   const firstNode = template ? nodesOf(template)[0]?.id ?? null : null;
   const home = template ? stationPoint(template, cur ? cur.cell ?? cur.node : firstNode ?? "") : null;
   const fontUnits = template ? minLabelFont(template) : 12;
-  const homeCamera = template ? narrowCamera(box, home, width, fontUnits) : null;
+  // 镜头的高:画出来的路线与字的竖向范围(埃及的路只在中间一条,整图高的镜头是一大片空网格)。
+  const extent = useMemo(() => (template ? routeExtent(template) : null), [template]);
+  const homeCamera = template ? narrowCamera(box, home, width, fontUnits, extent) : null;
   const localCamera = homeCamera && camX !== null ? panCamera(homeCamera, camX - homeCamera.x, box) : homeCamera;
   const camera = wholeMap || compact ? null : localCamera;
   const cameraKey = camera ? `${camera.x} ${camera.y} ${camera.w} ${camera.h}` : "";
@@ -417,7 +420,7 @@ export function UnderworldMap({
     openCard(id);
     if (camera) {
       const p = template ? stationPoint(template, id) : null;
-      const aim = p ? narrowCamera(box, { x: view.x + p.x * view.k, y: view.y + p.y * view.k }, width, fontUnits) : null;
+      const aim = p ? narrowCamera(box, { x: view.x + p.x * view.k, y: view.y + p.y * view.k }, width, fontUnits, extent) : null;
       if (aim) setCamX(aim.x);
       return;
     }
@@ -493,8 +496,9 @@ export function UnderworldMap({
         <span className="max-md:hidden text-xs text-[oklch(var(--color-ink-muted))]">{t("map.drag_hint")}</span>
       </div>
 
-      {/* 图框:画面(host)与缩放钮各占一列,钮不压在画面上;框高取两者较高的,全景的矮图在框里竖直居中。 */}
-      <div className="relative flex overflow-hidden rounded-panel border border-[oklch(var(--color-line))]">
+      {/* 图框:画面(host)与缩放钮各占一列,钮不压在画面上;框高取两者较高的,全景的矮图在框里竖直居中。
+          窄于 md 时钮横排在画面上方(2026-11-14):竖排那一列吃掉 393 宽画面的六分之一,近处的站名(埃及「杜阿特入口」)就切在钮边上。 */}
+      <div className="relative flex max-md:flex-col overflow-hidden rounded-panel border border-[oklch(var(--color-line))]">
         <div
           ref={host}
           onPointerDown={onPointerDown}
@@ -505,14 +509,14 @@ export function UnderworldMap({
           onDoubleClick={onDoubleClick}
           className="v4-map-viewport flex min-w-0 flex-1 flex-col justify-center"
         />
-        {/* 缩放钮(第十六批 §1.4):44 见方,竖排在图框右上,画面右边自成一列(不叠在画面上)。键盘:焦点在这一组钮上时,方向键平移、+ / − 缩放、0 全景
+        {/* 缩放钮(第十六批 §1.4):44 见方,竖排在图框右上,画面右边自成一列(不叠在画面上);窄屏横排在画面上方右侧。键盘:焦点在这一组钮上时,方向键平移、+ / − 缩放、0 全景
             (图框本身不可聚焦 —— 它只是一张图)。 */}
         <div
           role="toolbar"
           aria-orientation="vertical"
           aria-label={t("map.drag_hint")}
           onKeyDown={onKeyDown}
-          className="m-2 flex shrink-0 flex-col self-start border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
+          className="m-2 max-md:mb-0 flex shrink-0 flex-col max-md:flex-row self-start max-md:self-end max-md:order-first border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]"
         >
           <button type="button" aria-label={t("workflow.editor.zoom.in")} onClick={() => zoomBy(ZOOM_STEP)} className={BUTTON}>＋</button>
           <button type="button" aria-label={t("workflow.editor.zoom.out")} onClick={() => zoomBy(1 / ZOOM_STEP)} className={BUTTON}>−</button>
