@@ -1,4 +1,5 @@
-"""`/me/sentence-plan/` stations carry `elapsed_years` for a curable soul in Tartarus (user 2026-11-07).
+"""`/me/sentence-plan/` stations carry `elapsed_years` for a soul on either thousand-year road: the Isles of the
+Blessed, or Tartarus for the curable (user 2026-11-07; both roads: audit 2026-11-13 GR-2, docs/02 §4.3).
 
 The soul App's route lights the thousand-year step and writes 「第 n 年」 from it; the officer's map reads the same
 figure from the ledger's SENTENCE reading. One number, so this pins the station to that reading
@@ -42,10 +43,19 @@ def test_a_curable_soul_in_tartarus_gets_the_ledgers_years():
     assert thousand_years_run(soul, _node(), "waiting") == years
 
 
+def test_the_isles_are_the_same_thousand_years():
+    """Rep. 615a: the just journey a thousand years too; `default_terms.py` gives both realms 1000."""
+    soul = _soul()
+    years = thousand_years_run(soul, _node("GR_ISLES_OF_THE_BLESSED"), "active")
+    assert years is not None and years == thousand_years_run(soul, _node(), "active")
+
+
 @pytest.mark.parametrize("node, status", [
     (_node(eternal=True), "eternal"),   # incurable: the eternal example of Gorgias 525c, no count
     (_node(eternal=True), "active"),
-    (_node("GR_ISLES_OF_THE_BLESSED"), "active"),
+    (_node("GR_ASPHODEL_MEADOW"), "active"),   # the middle road has no term (docs/04 §四)
+    (_node("GR_PLATO_MEADOW"), "active"),
+    (_node("GR_ISLES_OF_THE_BLESSED"), "done"),
     (_node(), "done"),
     (_node(), "pending"),
 ])

@@ -546,7 +546,8 @@ EUROPEAN_REALMS = [
 #     Republic X has the same act at the river Ameles on the plain of Lethe
 #     (621a-b) — so both halves of the basis agree, and Greek souls in this
 #     system *are* rebirth-capable. That is recorded on the realms instead:
-#     the two destinations, GR_ISLES_OF_THE_BLESSED and GR_TARTARUS, carry
+#     the destinations — GR_ISLES_OF_THE_BLESSED, GR_TARTARUS and, since
+#     2026-11-11, GR_ASPHODEL_MEADOW — carry
 #     `memory_reset_mechanism="LETHE"`, while GR_PLATO_MEADOW and GR_ACHERON
 #     carry "NONE" because nobody is sentenced to either (see the comment
 #     above GR_ISLES_OF_THE_BLESSED). An earlier version of this note said
@@ -582,9 +583,11 @@ GREEK_REALMS = [
      "Tartarus. This is a sorting point that stands BEFORE any punishment, "
      "which is the whole reason the three judges cannot be housed in a circle "
      "of Dante's hell. Both roads out of it are seeded, because the same "
-     "sentence names them, and GR_ACHERON is the crossing a soul reaches it "
-     "by — the one piece of the map that comes from Aeneid 6 rather than "
-     "from this passage. See the basis note at the top of GREEK_REALMS.",
+     "sentence names them; a third, to GR_ASPHODEL_MEADOW for ordinary souls, "
+     "is the owner's decision of 2026-11-11 and not in 524a. GR_ACHERON is the "
+     "crossing a soul reaches it by — the one piece of the map that comes from "
+     "Aeneid 6 rather than from this passage. See the basis note at the top "
+     "of GREEK_REALMS.",
      "NONE", False, None),
     # `is_eternal` IS STILL FALSE ON BOTH ROADS, AND IT NOW MEANS SOMETHING.
     # It was written as a recorded limitation: Gorgias 524a says where the roads

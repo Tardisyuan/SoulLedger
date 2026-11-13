@@ -157,6 +157,9 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
   if (!civ || !input.verdict || !FINAL.has(input.verdict)) return null;
   // 地府的「存疑」不是终判:灵魂发回待审所候再审(`_route_chinese`),没有解送哪一殿,不出文书。
   if (civ === "cn" && input.verdict === "PURGATORY") return null;
+  // 希腊的「普通」去阿斯福得草原(docs/04 §四),而两套文书都只有至福岛 / 塔尔塔罗斯的判语:词到位之前不出文书
+  // (审计 2026-11-13 GR-1,用户决定)。此前落到「可医。送往塔尔塔罗斯。」。后端 `verdict_pdf.NO_DOCUMENT` 同一张表。
+  if (civ === "gr" && input.verdict === "PURGATORY") return null;
   const passed = input.verdict === "PASSED";
   const unrecorded = t("common.value.unrecorded");
   const han = input.han && civ === "cn";

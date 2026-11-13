@@ -67,5 +67,21 @@
   "soul_app.life.seal_title",
   "soul_app.life.seal_pending",
   "sentence_plan.errors.unbaptised_no_purgatory",
-  "appeals.error.unbaptised_no_purgatory"
+  "appeals.error.unbaptised_no_purgatory",
+  "soul_app.sentence.section_title_by_civ.gr.NEUTRAL",
+  "soul_app.sentence.term_by_civ.gr.NEUTRAL",
+  "soul_app.sentence.all_done_title_by_civ.gr.NEUTRAL",
+  "soul_app.sentence.blocked_title_by_civ.gr.NEUTRAL",
+  "soul_app.sentence.blocked_link_by_civ.gr.NEUTRAL",
+  "soul_app.life.sentence_by_civ.gr.NEUTRAL",
+  "soul_app.life.sentence_years_by_civ.gr.NEUTRAL",
+  "sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.WAITING",
+  "soul_app.sentence.push.completed.title_by_civ.gr.NEUTRAL",
+  "soul_push.sentence_completed.title_by_civ.gr.NEUTRAL",
+  "soul_app.sentence.push.completed.body_by_civ.gr.NEUTRAL",
+  "soul_push.sentence_completed.body_by_civ.gr.NEUTRAL",
+  "soul_app.sentence.push.waiting.title_by_civ.gr.NEUTRAL",
+  "soul_push.sentence_waiting.title_by_civ.gr.NEUTRAL",
+  "soul_app.sentence.push.waiting.body_by_civ.gr.NEUTRAL",
+  "soul_push.sentence_waiting.body_by_civ.gr.NEUTRAL"
 ]

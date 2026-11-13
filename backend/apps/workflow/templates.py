@@ -483,7 +483,8 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
         CaseType.HEART_WEIGHING, CaseType.DIVINE_TRIAL, CaseType.ROUTINE,
         CaseType.APPEAL,
     },
-    # GREEK, AND WHY IT IS TWO MEMBERS RATHER THAN A COPY OF EUROPEAN'S SET.
+    # GREEK, AND WHY IT IS ONE MEMBER RATHER THAN A COPY OF EUROPEAN'S SET.
+    # (It was two — ROUTINE and APPEAL — until 2026-10-27; see NO APPEAL below.)
     #
     # This entry is not optional decoration on the GREEK split; without it the
     # civilization is validated against `.get(civilization, set())`, i.e. the

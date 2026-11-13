@@ -61,11 +61,25 @@ describe("soulRoute", () => {
     expect(r.line).toBe("你在千年的路上，已经走了 299 年。");
     // The station's start (1726, 300 years before NOW) is not the term start: no elapsed_years, no number.
     const unknown = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_TARTARUS", { elapsed_years: null }), hall: "", now: NOW }, tr)!;
-    expect(unknown.steps[unknown.at]).toMatchObject({ id: "CYCLE" });
-    expect(unknown.steps[unknown.at].sub).toBeUndefined();
+    // No figure: the soul stands at Tartarus itself and the cycle ahead carries no year (as on the officer's map).
+    expect(unknown.steps[unknown.at]).toMatchObject({ id: "GR_TARTARUS" });
+    expect(unknown.steps.find((s) => s.id === "CYCLE")!.sub).toBeUndefined();
     expect(unknown.line).toBeUndefined();
+    // Tartarus is named on the road, before the cycle (audit 2026-11-13 GR-2).
+    expect(r.steps.map((s) => s.id)).toEqual(["DEATH", "GR_ACHERON", "GR_PLATO_MEADOW", "GR_TARTARUS", "CYCLE", "LETHE"]);
+    expect(r.path).toBe("千年循环");
     const eternal = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_TARTARUS", { is_eternal: true, status: "eternal" }), hall: "", now: NOW }, tr)!;
     expect(eternal.steps[eternal.at]).toMatchObject({ id: "GR_TARTARUS", end: true });
+  });
+
+  it("希腊: the Isles of the Blessed are the same thousand years, with the same count (audit 2026-11-13 GR-2)", () => {
+    const r = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_ISLES_OF_THE_BLESSED", { elapsed_years: 299 }), hall: "", now: NOW }, tr)!;
+    expect(r.steps.map((s) => s.id)).toEqual(["DEATH", "GR_ACHERON", "GR_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "CYCLE", "LETHE"]);
+    expect(r.steps[r.at]).toMatchObject({ id: "CYCLE", sub: "第 299 年" });
+    expect([r.line, r.path]).toEqual(["你在千年的路上，已经走了 299 年。", "经至福岛"]);
+    const unknown = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_ISLES_OF_THE_BLESSED", { elapsed_years: null }), hall: "", now: NOW }, tr)!;
+    expect(unknown.steps[unknown.at]).toMatchObject({ id: "GR_ISLES_OF_THE_BLESSED", label: "至福岛" });
+    expect(unknown.line).toBeUndefined();
   });
 
   it("希腊: an ordinary soul on the Asphodel Meadow is on the middle road, not the thousand years (2026-11-11)", () => {

@@ -36,6 +36,15 @@ describe("nodeStateNamespace", () => {
     expect(word("GR_HADES", "GR_ISLES_OF_THE_BLESSED", "ACTIVE")).toBe("居于至福岛");
     // 阿斯福得草原(2026-11-11):NEUTRAL,但不读希腊 NEUTRAL 的「岸边等候」—— 那是渡口的词。
     expect(word("GR_HADES", "GR_ASPHODEL_MEADOW", "ACTIVE")).toBe("居于阿斯福得草原");
+    // 暂留(WAITING)同理:草原自己的词,不是希腊 NEUTRAL 的「等候渡河」(审计 2026-11-13 GR-4c)。
+    expect(word("GR_HADES", "GR_ASPHODEL_MEADOW", "WAITING")).toBe("停留期满，暂留草原");
+    expect(word("GR_HADES", "GR_ASPHODEL_MEADOW", "WAITING")).not.toBe(t("sentence_plan.node_states_by_civ.gr.NEUTRAL.WAITING"));
+    // 草原不是刑罚(docs/04 §四):灵魂端按去处类型取的词是「居所 / 停留期」,不是底键的「受刑 / 刑期」(GR-4b)。
+    expect(t(civKey(t, "soul_app.sentence.section_title", "GR_HADES", "NEUTRAL"))).toBe("我的居所");
+    expect(t(civKey(t, "soul_app.sentence.term", "GR_HADES", "NEUTRAL", "REPUBLIC"))).toBe("停留期");
+    for (const key of ["section_title", "term", "all_done_title", "blocked_title", "blocked_link"]) {
+      expect(civKey(t, `soul_app.sentence.${key}`, "GR_HADES", "NEUTRAL")).toBe(`soul_app.sentence.${key}_by_civ.gr.NEUTRAL`);
+    }
     // Absence: 炼狱 no longer reads 「受刑中」.
     expect(word("EU_HEAVEN_HELL", "EU_PURGATORY", "ACTIVE")).not.toBe(t("sentence_plan.node_states.ACTIVE"));
   });

@@ -28,6 +28,7 @@ import { JourneyMap } from "@/src/components/journey/JourneyMap";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { latest, stepStatuses } from "./soulProgress";
 import { hasRebirth } from "@/src/lib/hasRebirth";
+import { GREEK_THOUSAND_YEARS_REALMS } from "@/src/lib/underworldMap";
 import { SoulUnderworldMap } from "./SoulUnderworldMap";
 
 /**
@@ -176,7 +177,7 @@ export function JourneyBlock({
   const stay = here ? stayHere(ready!.path, here) : null;
   const stayLine = stay ? stayText(t, stay) : null;
   const term =
-    here?.code === "GR_TARTARUS" && reading?.kind === "SENTENCE" && reading.elapsed_years != null
+    here?.code != null && GREEK_THOUSAND_YEARS_REALMS.has(here.code) && reading?.kind === "SENTENCE" && reading.elapsed_years != null
       ? { years: Math.max(0, reading.elapsed_years), total: reading.circuit_years }
       : null;
   const judging = judgingLine(soul.current_state, soul.civilization, judgments);

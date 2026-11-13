@@ -329,9 +329,13 @@ describe("states follow the soul", () => {
     expect(incurable.current).toEqual({ node: "GR_TARTARUS", cell: null });
     expect(incurable.nodes.get("gr-millennium")).toBe("ahead");
     expect(incurable.cells.size).toBe(0);
-    // Not in Tartarus now (the Isles): the years do not light the cells.
-    expect(greekVisits([{ realm_code: "GR_ISLES_OF_THE_BLESSED", left_at: null }], 299)).toEqual([
-      { id: "GR_ISLES_OF_THE_BLESSED", current: true },
+    // The Isles are the same thousand years (Rep. 615a; docs/02 §4.3 — audit 2026-11-13 GR-2): the cells light there too.
+    const isles = mapStates(svg, greekVisits([{ realm_code: "GR_ISLES_OF_THE_BLESSED", left_at: null }], 299));
+    expect(isles.current).toEqual({ node: "gr-millennium", cell: "gr-millennium-3" });
+    expect(isles.nodes.get("GR_ISLES_OF_THE_BLESSED")).toBe("walked");
+    // The Asphodel Meadow carries no term (docs/04 §四): never the cells, whatever figure is passed.
+    expect(greekVisits([{ realm_code: "GR_ASPHODEL_MEADOW", left_at: null }], 299)).toEqual([
+      { id: "GR_ASPHODEL_MEADOW", current: true },
     ]);
   });
 

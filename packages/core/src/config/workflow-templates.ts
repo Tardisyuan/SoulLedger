@@ -235,7 +235,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   GREEK_ROUTINE: {
     civilization: "GREEK",
     // SPECIAL → ROUTINE。`SPECIAL` 不在希腊的 `VALID_CASE_TYPES_BY_CIVILIZATION`
-    //（{ROUTINE, APPEAL}）里，也不在改判之前所属的欧洲集合里，所以这套预设存得
+    //（只有 {ROUTINE}；2026-10-27 起不设申诉，此前还有 APPEAL）里，也不在改判之前所属的欧洲集合里，所以这套预设存得
     // 进去（POST 只过 `CaseType.choices` 这个 ChoiceField），
     // `create_from_judgment` 却会抛 ValueError——存了也永远路由不到。与
     // EGYPTIAN_TRIALS 修掉的是同一种缺陷。
@@ -247,8 +247,8 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     // 那个问题现在由 civilization 回答，这正是它该回答的。
     //
     // 按**内容**判：《高尔吉亚篇》524a 里所有亡魂都到岔路口草地受审，判完分往
-    // 至福岛或塔尔塔罗斯——这是希腊一侧对一个普通亡魂的完整常规程序，不是申诉
-    //（APPEAL），而 APPEAL 是希腊集合里仅有的另一个成员。`ROUTINE`（常规审判）
+    // 至福岛或塔尔塔罗斯——这是希腊一侧对一个普通亡魂的完整常规程序。希腊集合里
+    // 只有这一个成员（米诺斯终裁之上没有申诉，用户 2026-10-27，docs/02 §5.2）。`ROUTINE`（常规审判）
     // 指的就是「本文明对一个普通案子的标准程序」，也是各文明共同的兜底档，理由
     // 写在 backend/tests/test_workflow_preset_case_types.py 顶部。
     caseType: "ROUTINE",
