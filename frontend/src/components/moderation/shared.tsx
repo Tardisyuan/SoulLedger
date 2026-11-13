@@ -37,13 +37,17 @@ export const MODERATION_REASONS: ModerationReason[] = ["SPAM", "ABUSE", "SEXUAL"
 /** 服务端 `reason_note` 的上限(moderation_serializers.ModerationReasonFields)。 */
 export const REASON_NOTE_MAX = 200;
 
-/** A server refusal in words: `{detail, code}` → `social_moderation.errors.<code>`. */
+/** A server refusal in words: `{detail, code}` → `social_moderation.errors.<code>`, else `social_moderation.failed`. */
 export function useFailureToast() {
   const { t } = useI18n();
   const { showToast } = useToast();
   return (error: unknown) => {
     const code = moderationErrorCode(error);
-    showToast(code ? t(`social_moderation.errors.${code}`) : t("social_moderation.failed"), "error");
+    const key = code ? `social_moderation.errors.${code}` : "";
+    // A code no bundle knows yet (`t` answers with the key itself) falls back to the generic copy:
+    // a raw key must never reach the operator.
+    const words = key ? t(key) : key;
+    showToast(words && words !== key ? words : t("social_moderation.failed"), "error");
   };
 }
 

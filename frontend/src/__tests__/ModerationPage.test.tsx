@@ -584,6 +584,16 @@ describe("举报 · the C-08 review layout", () => {
       expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.errors.already_resolved"), "error")
     );
   });
+
+  it("a code no bundle knows falls back to the generic failure, never the raw key", async () => {
+    asRole("social.moderate");
+    apiMock.resolveReport.mockRejectedValue(http(409, { detail: "x", code: "no_such_code_yet" }));
+    renderPage();
+    await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${tZh("social_moderation.review.approve")}`) }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("social_moderation.failed"), "error"));
+    expect(mockShowToast).not.toHaveBeenCalledWith(expect.stringContaining("social_moderation.errors"), "error");
+  });
 });
 
 describe("敏感词 · E-08b", () => {
