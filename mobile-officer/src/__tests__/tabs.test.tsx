@@ -431,10 +431,13 @@ describe("the pushed row's highlight (spec §五)", () => {
 describe("tabs by permission (decisions 30 / 31)", () => {
   const VIEWER = { ...OFFICER, role: "VIEWER", permissions: ["soul.read", "reincarnation.read", "ledger.read"] };
 
-  it("a 访客 / 牛头马面 gets 查询, 通知 and 我的 only, and starts on 查询", async () => {
+  it("a 访客 / 牛头马面 gets 册 and 我 (我的 · 通知) only, and starts on 查询", async () => {
     renderOfficer(<Shell />, { user: VIEWER });
     expect(await screen.findByTestId("tab-search-screen")).toBeTruthy();
-    for (const tab of ["search", "notices", "me"]) expect(screen.getByTestId(`tab-${tab}`)).toBeTruthy();
+    expect(screen.getByTestId("door-roll")).toBeTruthy();
+    expect(screen.queryByTestId("door-desk")).toBeNull(); // not greyed: not drawn (第三十批 九.3)
+    fireEvent.press(screen.getByTestId("door-me"));
+    for (const tab of ["notices", "me"]) expect(await screen.findByTestId(`tab-${tab}`)).toBeTruthy();
     expect(screen.queryByTestId("tab-todo")).toBeNull();
     expect(screen.queryByTestId("tab-queue")).toBeNull();
     // Nothing behind the hidden tabs was asked for.
@@ -442,20 +445,22 @@ describe("tabs by permission (decisions 30 / 31)", () => {
     expect(mockList).not.toHaveBeenCalled();
   });
 
-  it("a role with judgment.read but none of the to-do codes gets 审判, not 待办", async () => {
+  it("a role with judgment.read but none of the to-do codes gets 审 with 案卷台 only, no 待办 page and no 册", async () => {
     renderOfficer(<Shell />, { user: { ...OFFICER, role: "AUDITOR", permissions: ["judgment.read"] } });
     expect(await screen.findByTestId("tab-queue-screen")).toBeTruthy();
-    expect(screen.getByTestId("tab-queue")).toBeTruthy();
+    expect(screen.getByTestId("door-desk").props.accessibilityState.selected).toBe(true);
+    // One page behind 审: no switch under the top bar.
+    expect(screen.queryByTestId("tab-queue")).toBeNull();
     expect(screen.queryByTestId("tab-todo")).toBeNull();
-    expect(screen.queryByTestId("tab-search")).toBeNull();
+    expect(screen.queryByTestId("door-roll")).toBeNull();
   });
 
   it("visibleTabs: 待办 for any one of its groups' codes; 通知 / 我的 for everyone", () => {
-    expect(visibleTabs([])).toEqual(["notices", "me"]);
-    expect(visibleTabs(undefined)).toEqual(["notices", "me"]);
+    expect(visibleTabs([])).toEqual(["me", "notices"]);
+    expect(visibleTabs(undefined)).toEqual(["me", "notices"]);
     for (const code of ["workflow.approve", "dispatch.approve", "soul_inbox.reply", "judgment.execute", "city_god.execute", "wangsi.execute"]) expect(visibleTabs([code])).toContain("todo");
     expect(visibleTabs(["dispatch.read", "workflow.read"])).not.toContain("todo");
-    expect(visibleTabs(OFFICER.permissions)).toEqual(["todo", "queue", "search", "notices", "me"]);
+    expect(visibleTabs(OFFICER.permissions)).toEqual(["queue", "todo", "search", "me", "notices"]);
   });
 
   it("the denied page names a role the bundles do not know by its code", async () => {
@@ -474,16 +479,21 @@ describe("tabs by permission (decisions 30 / 31)", () => {
 });
 
 describe("the shell", () => {
-  it("shows the officer's hall in the identity band and five tabs", async () => {
+  it("shows the officer's hall in the identity band and the doors 审 / 册 / 我 (no 律: no page for it here)", async () => {
     renderOfficer(<Shell />);
     // The civilization's underworld name, not the tenant's English display_name (seen on the emulator).
     expect(await screen.findByText("酆都")).toBeTruthy();
     expect(screen.queryByText("Chinese Afterlife")).toBeNull();
     // Me reads the role through the bundles, not the raw code.
-    fireEvent.press(screen.getByTestId("tab-me"));
+    // A judge starts on 案卷台 (九.3), with 待办 the second page of 审.
+    expect(screen.getByTestId("tab-queue").props.accessibilityState.selected).toBe(true);
+    expect(screen.getByTestId("tab-todo")).toBeTruthy();
+    expect(screen.getAllByTestId(/^door-(desk|roll|me)$/).map((n) => n.props.testID)).toEqual(["door-desk", "door-roll", "door-me"]);
+    expect(within(screen.getByTestId("door-desk")).getByText("审")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("door-me"));
     expect(await screen.findByText("判官")).toBeTruthy();
     expect(screen.queryByText("JUDGE")).toBeNull();
-    for (const tab of ["todo", "queue", "search", "notices", "me"]) expect(screen.getByTestId(`tab-${tab}`)).toBeTruthy();
+    expect(screen.getByTestId("tab-notices")).toBeTruthy();
     expect(screen.queryByTestId("mfa-banner")).toBeNull();
   });
 
@@ -500,6 +510,7 @@ describe("the shell", () => {
     }) as unknown as typeof AppState.addEventListener;
     const turn = (s: string) => act(async () => void listeners.forEach((l) => l(s)));
     renderOfficer(<Shell />);
+    fireEvent.press(await screen.findByTestId("tab-todo"));
     const before = await screen.findByTestId("tab-todo-screen");
     await waitFor(() => expect(mockTodo).toHaveBeenCalledTimes(1));
     await turn("inactive");
@@ -516,23 +527,25 @@ describe("the shell", () => {
   it("keeps the banner on screen for a role that must use two-step verification and has not set it up", async () => {
     renderOfficer(<Shell />, { user: { ...OFFICER, mfa_enabled: false, mfa_required: true } });
     expect(await screen.findByTestId("mfa-banner")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("tab-me"));
+    fireEvent.press(screen.getByTestId("door-me"));
     await act(async () => {}); // let the Me tab's own loads land before the test ends
     expect(screen.getByTestId("mfa-banner")).toBeTruthy();
   });
 
-  it("marks 通知 ● from the server's unread count, without the tab ever being opened", async () => {
+  it("marks 我 with the unread dot from the server's unread count, without 通知 ever being opened (九.5)", async () => {
     mockNotices.mockImplementation(async (params?: { is_read?: string }) =>
       params?.is_read === "false" ? { data: { count: 3, results: [] } } : { data: { results: [] } }
     );
     renderOfficer(<Shell />);
-    await waitFor(() => expect(within(screen.getByTestId("tab-notices")).getByText("●")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("door-me-unread")).toBeTruthy());
+    expect(screen.getByTestId("door-me").props.accessibilityLabel).toBe("本人 · 有未读通知");
     expect(mockNotices).toHaveBeenCalledWith({ is_read: "false" });
   });
 
   it("a push that arrives while the app is open asks the lists and the unread count again", async () => {
     const { __state } = jest.requireMock("expo-notifications") as { __state: { receivedListeners: Set<() => void> } };
     renderOfficer(<Shell />);
+    fireEvent.press(await screen.findByTestId("tab-todo"));
     await screen.findByText("转生配额审批");
     const todoCalls = mockTodo.mock.calls.length;
     const countCalls = mockNotices.mock.calls.length;
@@ -629,6 +642,34 @@ describe("the 案卷台", () => {
     expect(screen.queryByTestId("desk-sources-city_god_review")).toBeNull();
   });
 
+  it("转生申请 (the seventh source) opens 待办 on 转生申请; 0, missing, or no way there: no chip", async () => {
+    mockCounts.mockResolvedValue({ data: { ...SOURCED, elsewhere: { ...SOURCED.elsewhere, rebirth_application: 4 } } });
+    const onOpenRebirth = jest.fn();
+    const { unmount } = renderOfficer(<QueueTab onOpen={() => {}} onOpenRebirth={onOpenRebirth} />);
+    const chip = await screen.findByTestId("desk-sources-rebirth_application");
+    expect(chip).toHaveTextContent(/转生申请/);
+    fireEvent.press(chip);
+    expect(onOpenRebirth).toHaveBeenCalledTimes(1);
+    unmount();
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    await screen.findByTestId("desk-sources-city_god");
+    expect(screen.queryByTestId("desk-sources-rebirth_application")).toBeNull();
+    screen.unmount();
+    mockCounts.mockResolvedValue({ data: SOURCED }); // a server without the field
+    renderOfficer(<QueueTab onOpen={() => {}} onOpenRebirth={onOpenRebirth} />);
+    await screen.findByTestId("desk-sources-city_god");
+    expect(screen.queryByTestId("desk-sources-rebirth_application")).toBeNull();
+  });
+
+  it("in the shell, 转生申请 lands on 待办 filtered to 转生申请 for that visit", async () => {
+    mockCounts.mockResolvedValue({ data: { ...SOURCED, elsewhere: { ...SOURCED.elsewhere, rebirth_application: 4 } } });
+    renderOfficer(<Shell />);
+    fireEvent.press(await screen.findByTestId("desk-sources-rebirth_application"));
+    expect(await screen.findByTestId("tab-todo-screen")).toBeTruthy();
+    expect(screen.getByTestId("tab-todo").props.accessibilityState.selected).toBe(true);
+    await act(async () => {});
+  });
+
   it("opening a case reports where it sits among the rows shown", async () => {
     const row = (id: string) => ({ id, case_number: `CN-${id}`, soul_name: id, court: "一殿", is_final: true });
     mockList.mockImplementation(async (p: { group: string }) => ({ data: { results: p.group === "mine" ? [row("a"), row("b")] : p.group === "unclaimed" ? [row("c")] : [] } }));
@@ -644,7 +685,7 @@ describe("the 案卷台", () => {
     }));
     renderOfficer(<Shell />);
     fireEvent.press(await screen.findByTestId("tab-queue"));
-    expect(await screen.findByText("案卷台")).toBeTruthy();
+    expect(await screen.findByTestId("tab-queue-screen")).toBeTruthy();
     fireEvent.press(await screen.findByTestId("queue-row-j9"));
     expect(screen.getByTestId("detail-back").props.accessibilityLabel).toBe("案卷台");
     expect(screen.getByTestId("detail-position")).toHaveTextContent("第 1 / 1 件");

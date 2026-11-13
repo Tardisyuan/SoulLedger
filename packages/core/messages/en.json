@@ -4,24 +4,14 @@
     "greeting_afternoon": "Good Afternoon",
     "greeting_evening": "Good Evening",
     "greeting_night": "Good Night",
-    "collapse_locked": "Navigation stays collapsed below a 1200 px window width",
     "settings": "Settings",
-    "welcome": "Welcome",
     "language": "Interface language",
     "language_egy_note": "Kemet is an interface language assembled from Middle Egyptian roots in modern word order, for demonstration. It is not real ancient Egyptian. The root-by-root source check is in the repository at docs/lore-verification/egy-lexicon-roots.md.",
     "theme_light": "Switch to light mode",
     "theme_dark": "Switch to dark mode",
-    "mobile_menu": "Navigation menu",
     "more": "More",
     "soul_events": "Soul events",
     "skip_to_main": "Skip to main content",
-    "collapse_sidebar": "Collapse sidebar",
-    "expand_sidebar": "Expand sidebar",
-    "group": {
-      "souls": "Souls",
-      "system": "System",
-      "work": "Work"
-    },
     "search_hint": "Search, jump, or give a command"
   },
   "auth": {
@@ -2134,7 +2124,6 @@
     },
     "queue": {
       "enter": "Enter triage queue",
-      "title": "Judgment triage queue",
       "progress": "{{position}} of {{total}}",
       "loading": "Fetching the next pending case…",
       "leave": "Leave queue",
@@ -2211,7 +2200,6 @@
       "not_found": "Judgment not found",
       "back_to_list": "Back to judgments",
       "final": "Final",
-      "soul_info": "Soul Information",
       "civilization": "Civilization",
       "court": "Court",
       "evidence": "Evidence",
@@ -2319,7 +2307,6 @@
       "deferred_note": "Deferred: {{reason}}",
       "previous": "Previous",
       "next": "Next",
-      "concluded_on": "Concluded · {{date}}",
       "balance_at_conclusion": "Balance at conclusion",
       "balance_now": "Now",
       "balance_single": "Balance",
@@ -2327,26 +2314,17 @@
       "cite_from_corpus_title": "Cite an article",
       "cite_from_corpus_confirm": "Cite {{cite}} in the judgment of {{soul}}?",
       "cite_from_corpus_closed": "This case is concluded; no article can be cited now.",
-      "current_ruling": "Current ruling",
-      "ruling_hint": "Press 1–4 to choose a verdict, then go on to the seal.",
-      "to_confirm": "Go to the seal",
       "irreversible": "A ruling cannot be withdrawn",
       "materials": "Case materials",
       "tab_evidence": "Merit and demerit",
       "tab_law": "Cited articles",
-      "full_case": "Full case",
-      "back_to_focus": "Back to focus",
-      "case_nav": "Case navigation",
-      "nav_draft": "Draft and notes",
       "confirm_title": "Confirm the ruling",
       "confirm_body": "You chose “{{verdict}}”. Once ruled it goes on the record and cannot be withdrawn.",
       "signing_court": "Signed by",
       "stamp": "Seal and conclude",
       "back_to_check": "Back to review",
       "recorded": "The ruling is on the record.",
-      "done": "Done",
-      "draft_unsaved": "Unsaved changes",
-      "draft_conflict": "Draft conflict to resolve"
+      "done": "Done"
     },
     "stale": {
       "label": "Stale",
@@ -3946,7 +3924,6 @@
     "select_row": "Select / unselect the current row",
     "pick_verdict": "Choose a verdict",
     "conclude": "Conclude (first press confirms, second submits)",
-    "toggle_case": "Expand / collapse the whole case",
     "next_prev_case": "Next / previous case"
   },
   "filter": {
@@ -7620,7 +7597,28 @@
     "interrupted": "Answer interrupted",
     "answering_aria": "Answering",
     "jump_latest": "↓ Latest",
-    "stop_hint": "Esc to stop"
+    "stop_hint": "Esc to stop",
+    "trace": {
+      "title": "How this was answered",
+      "tools": "Tools called",
+      "no_tools": "No tool called",
+      "entries": "Help entries",
+      "retrieval": {
+        "vector": "Vector search; these entries went into the context",
+        "fallback": "Search unavailable; the whole help text was sent",
+        "fallback_low_similarity": "Nothing close enough; the whole help text was sent"
+      },
+      "tokens": "Tokens",
+      "tokens_value": "in {{input}} · out {{output}} · cache read {{cached}}",
+      "latency": "Time",
+      "latency_value": "{{ms}} ms",
+      "latency_first": "{{ms}} ms · first word at {{first}} ms",
+      "answered_by": "Answered by",
+      "role": {
+        "primary": "Primary",
+        "backup": "Backup"
+      }
+    }
   },
   "assist_admin": {
     "title": "Assistant admin",
@@ -7841,7 +7839,11 @@
       "expected_entries": "Entries expected",
       "retrieved_top": "Top {{k}} actually retrieved",
       "entry_hit": "Hit",
-      "entry_missed": "Not retrieved"
+      "entry_missed": "Not retrieved",
+      "pass_rate": "Passed",
+      "errors": "{{n}} errored",
+      "max_latency": "Slowest",
+      "forbidden": "contains “{{phrases}}”, which it must not"
     },
     "try": {
       "as_soul": "Asking as the Ask eval soul",
@@ -7952,7 +7954,20 @@
       },
       "legend_primary": "Primary",
       "legend_backup": "Backup",
-      "day_detail": "primary {{a}} · backup {{b}} · switched to backup {{n}} times"
+      "day_detail": "primary {{a}} · backup {{b}} · switched to backup {{n}} times",
+      "latency": "Latency · this month",
+      "latency_none": "No answered question this month has a recorded time yet.",
+      "latency_p50": "Latency p50",
+      "latency_p95": "Latency p95",
+      "first_token_p50": "First word p50",
+      "first_token_p95": "First word p95",
+      "latency_source": "Help entries from",
+      "latency_by": {
+        "vector": "Vector search",
+        "fallback": "Whole help text (search unavailable)",
+        "fallback_low_similarity": "Whole help text (nothing close enough)"
+      },
+      "latency_note": "Over {{count}} answered questions this month, from arrival to the last word; first word counts streamed questions only."
     },
     "embedding": {
       "url": "Address",
@@ -7991,7 +8006,6 @@
   "plaque": {
     "realms": "Realm · {{root}}",
     "held": "Held {{n}}",
-    "corpus": "Statute corpus",
     "corpus_meta": "{{works}} rulebooks · {{n}} articles",
     "workflow_editor": "Workflow editor",
     "workflow_instance": "Workflow instance",
@@ -8003,8 +8017,6 @@
     "posts": "{{n}} posts",
     "soul": "Soul",
     "desk": "Judgment desk",
-    "queue": "Judgment queue",
-    "permissions": "Permissions",
     "permissions_meta": "{{roles}} roles · {{perms}} permissions",
     "office": {
       "rules": "Office of Rules",
@@ -8097,7 +8109,8 @@
         "appeal": "Appeals",
         "city_god_review": "With the city god",
         "cross_judgment": "Joint judgments",
-        "capture_due": "Warrants due"
+        "capture_due": "Warrants due",
+        "rebirth_application": "Rebirth applications"
       },
       "groups": {
         "mine": "Claimed by me",
@@ -8524,6 +8537,32 @@
     "judgment": {
       "flow_progress": "Approval workflow · station {{n}} of {{total}}",
       "flow_not_here": "This approval flow is run by another hall and has no segment of yours, so its details are not shown here; its progress is on the previous page."
+    },
+    "doors": {
+      "desk": {
+        "glyph": "C",
+        "label": "Cases"
+      },
+      "roll": {
+        "glyph": "R",
+        "label": "Roll"
+      },
+      "me": {
+        "glyph": "M",
+        "label": "Me"
+      },
+      "me_unread": "Me · unread notices"
+    },
+    "seal": {
+      "judge": "Judge",
+      "title": "Judge · {{name}}",
+      "auto_route": "The destination follows the routing rules; to choose one or cite a statute, judge at the desk.",
+      "verdict_label": "Verdict",
+      "hold": "Hold to seal",
+      "hold_note": "Hold Seal for one second. A seal cannot be withdrawn; only an appeal can change the verdict.",
+      "pending_a11y": "Seal · not yet set",
+      "a11y": "Sealed",
+      "done": "Sealed"
     }
   },
   "print": {
@@ -9370,7 +9409,8 @@
         "overreach": "the overreach test",
         "data_scope": "the roles",
         "audit": "the audit records",
-        "recycle": "the recycle bin"
+        "recycle": "the recycle bin",
+        "assist_guard": "Assistant admin"
       },
       "skipped_title": "Tour skipped",
       "skipped_body": "Look around on your own, or try another underworld.",
@@ -9401,7 +9441,11 @@
         },
         "title": "How the system protects itself",
         "done_title": "That is the safeguards tour",
-        "done_body": "Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul's life as its judge."
+        "done_body": "Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul's life as its judge.",
+        "7": {
+          "name": "Why Ask cannot overreach",
+          "body": "The assistant calls tools to read data, so it is one more way someone could try to overreach. The defence is not in the prompt: the tools take only the asker, so the model can choose which to call but not whose data to read. Below are the code and tests that hold this, and the real answers to a few injection attempts."
+        }
       }
     },
     "enter": {
@@ -9517,6 +9561,20 @@
       "try": "Send B's conclusion",
       "no_case": "No case here is concluded yet. Conclude one on the bench, then come back.",
       "result_note": "The demo has no backend: this answer comes from a rule the demo layer copies from the server (demo/flows.ts), with the code and message word for word as in services.py, and nothing was written. On the real API, a second request sent after the first is stopped earlier, by the view's already-concluded check, with 400; only two requests that both pass that check reach the 409 under the lock. The wait on the lock can only be tested on PostgreSQL, since SQLite has no row locks, so the concurrency test above runs on PostgreSQL only."
+    },
+    "assist_guard": {
+      "how_title": "How it is held",
+      "guard": {
+        "no_ids": "Every tool takes only the asker and no id: the model can choose which tool to call, not whose data it reads.",
+        "offered_and_rechecked": "Only tools the asker may use are offered, and each is checked again when it runs: an invented or coaxed call is refused.",
+        "counts_only": "The officer tools return counts only, never names, numbers, statements or verdicts, scoped by each page's own query.",
+        "whitelist": "On the soul side, the fields sent to the model are a whitelist; the page serializers are not reused.",
+        "data_not_instructions": "Facts and tool results are marked as data, not instructions; the assistant is read-only and has no tool that writes."
+      },
+      "cases_title": "Injection attempts",
+      "expect": "Expected:",
+      "recorded": "A recorded answer: asked for real as the eval officer in the test environment ({{at}}), replayed as it was.",
+      "not_recorded": "No real answer has been recorded for this one yet, and none is made up here."
     }
   },
   "action": {
@@ -9820,8 +9878,7 @@
     "density": {
       "comfortable": "Comfortable",
       "compact": "Compact"
-    },
-    "hall_switch": "Switch hall"
+    }
   },
   "soul": {
     "here": {
@@ -9961,7 +10018,6 @@
       "died": "Died {{date}}",
       "source": "Source",
       "merits": "Merit and demerit",
-      "merits_value": "Merit {{merit}} · Demerit {{demerit}}",
       "net": "Net",
       "confession": "Confession",
       "confession_none": "None.",
@@ -9986,6 +10042,90 @@
       "open": "Open file",
       "claim": "Claim",
       "search": "Search"
+    },
+    "dossier": {
+      "spine": {
+        "cn": {
+          "aria": "Diyu · the ten courts in a line",
+          "pre": "First nine stops",
+          "hells": "Hells · branch",
+          "rebirth": "Rebirth"
+        },
+        "eu": {
+          "aria": "Europe · the nine-circle funnel",
+          "minos": "Minos"
+        },
+        "eg": {
+          "aria": "Egypt · the weighing divides",
+          "death": "Death",
+          "gate": "Gate of the Duat",
+          "heart": "Heart",
+          "feather": "Feather",
+          "aaru": "Field of Reeds",
+          "annihilation": "Annihilation · not a place"
+        },
+        "gr": {
+          "aria": "Greece · the three-way fork",
+          "death": "Death",
+          "ferry": "Acheron crossing",
+          "isles": "Isles of the Blessed",
+          "asphodel": "Asphodel Meadows",
+          "tartarus": "Tartarus"
+        }
+      },
+      "seal": {
+        "aria": "{{seal}}",
+        "aria_pending": "{{seal}} · not yet sealed",
+        "cn": "Diyu · square seal",
+        "eu": "Europe · wax seal",
+        "eg": "Egypt · cartouche",
+        "gr": "Greece · ostracon"
+      },
+      "mark": {
+        "cn": {
+          "merit": "Merit",
+          "demerit": "Demerit",
+          "merit_glyph": "功",
+          "demerit_glyph": "过"
+        },
+        "eu": {
+          "merit": "Virtue",
+          "demerit": "Sin"
+        },
+        "eg": {
+          "merit": "Feather",
+          "demerit": "Heart"
+        },
+        "gr": {
+          "merit": "White ballot",
+          "demerit": "Black ballot"
+        }
+      },
+      "tabs": {
+        "label": "Dossier sections",
+        "dossier": "Dossier",
+        "merits": "Merits",
+        "events": "Events",
+        "lives": "Lives",
+        "sentence": "Sentence"
+      },
+      "merits_all": "All {{n}}",
+      "judge": {
+        "head": "Judge · press 1–4",
+        "sealed_head": "Verdict · sealed",
+        "words": "Verdict",
+        "cited": "Cited statutes",
+        "seal": "Seal",
+        "hint": "Choose a destination and write the verdict, then seal it. A seal cannot be withdrawn.",
+        "sealed_note": "A seal cannot be withdrawn; only an appeal can change the verdict.",
+        "seal_appears": "The seal will appear here once it is set.",
+        "full_text": "Read the full verdict",
+        "sealed_by": "{{date}} · {{judge}}"
+      },
+      "where": {
+        "station": "Stop {{n}}",
+        "circle": "Circle {{n}}"
+      }
     }
   },
   "zongbu": {
@@ -10015,5 +10155,69 @@
       "failed": "Could not load this column",
       "month_none": "Done this month: no cases in this realm this month"
     }
+  },
+  "perm_explain": {
+    "why": "Why?",
+    "loading": "Finding the reason…",
+    "failed": "The reason could not be looked up just now. Try again later.",
+    "ai_label": "Worded by AI · the reason itself is computed from the permission rules",
+    "needs": "Permission needed: {name}",
+    "your_roles": "Your roles: {roles}",
+    "who_can": "Roles that can do this: {roles}",
+    "scope_kinds": "Your data scope: {kinds}",
+    "reason": {
+      "allowed": "You can do this.",
+      "soul_account": "A soul account holds no officer permissions.",
+      "global_admin_only": "This changes configuration shared by every hall, so only the administrator with no hall holds it.",
+      "admin_only": "Only the administrator role holds this; ticking it for another role has no effect.",
+      "role_forbidden": "This is forbidden for your role; ticking it in the permission table has no effect.",
+      "design_approve_conflict": "Your role designs workflows, and whoever designs workflows may not approve them.",
+      "missing_permission": "None of your roles has this permission. Ask your hall's administrator if you need it.",
+      "viewing_read_only": "You are viewing as someone else, read-only, so nothing can be changed meanwhile.",
+      "out_of_scope": "You hold this permission, but this record is outside what you can see."
+    }
+  },
+  "audit_ask": {
+    "label": "Find records in a sentence",
+    "placeholder": "e.g. what did demo_judge delete in the last 7 days",
+    "submit": "Turn into filters",
+    "proposed": "Filters suggested by AI; nothing is queried until you confirm",
+    "apply": "Search with these",
+    "discard": "Discard",
+    "dropped": "Dropped conditions that were unknown or not yours to use: {keys}",
+    "not_understood": "That sentence was not understood. Use the filters below instead.",
+    "unavailable": "AI is unavailable just now. Use the filters below instead.",
+    "not_configured": "AI is not switched on for this hall. Use the filters below instead.",
+    "busy": "AI is busy. Try again shortly, or use the filters below.",
+    "model": "Model · {model}",
+    "fields": {
+      "action": "Action",
+      "resource": "Resource",
+      "resource_id": "Resource ID",
+      "username": "Operator",
+      "start_date": "From",
+      "end_date": "To",
+      "trace_id": "Trace ID",
+      "tenant": "Hall",
+      "search": "Keyword"
+    },
+    "clear_field": "Remove “{name}”",
+    "demo_not_recorded": "This is the demo, so only recorded questions are answered. Try: {examples}"
+  },
+  "doors": {
+    "section": {
+      "desk": "Case desk",
+      "sources": "Sources",
+      "register": "Register",
+      "statutes": "Statutes",
+      "ledger": "Ledger",
+      "hall": "Halls",
+      "users": "Users",
+      "permissions": "Permissions",
+      "audit": "Audit",
+      "system": "System",
+      "mortal": "Mortal world"
+    },
+    "office_read_only": "Hall office · read-only on a phone"
   }
 }

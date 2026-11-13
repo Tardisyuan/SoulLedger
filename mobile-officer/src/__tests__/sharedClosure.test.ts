@@ -58,6 +58,7 @@ const EXPECTED = [
   "coldStartView.tsx",
   "crashReport.ts",
   "deepLink.ts",
+  "dossierMarks.tsx",
   "emblems.tsx",
   "errorBoundary.tsx",
   "feedback.tsx",

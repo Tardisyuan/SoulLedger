@@ -79,7 +79,16 @@ const USAGE: AssistAdminUsage = {
   by_day: [{ date: "2026-09-01", requests: 500, answered: 480, input_tokens: 1000, output_tokens: 200, cache_read_tokens: 0, cost: 6.1,
     primary_cost: 6.1, backup_cost: 0, fallbacks: 0, fallback_reasons: NO_REASONS }],
   by_side: [{ side: "soul", requests: 12000, answered: 11000, input_tokens: 9, output_tokens: 1, cache_read_tokens: 0, cost: 120 }],
+  by_feature: [{ feature: "assist", requests: 12000, answered: 11000, input_tokens: 9, output_tokens: 1, cache_read_tokens: 0, cost: 120 }],
   by_hall: [{ tenant_id: 3, code: "CN_DIYU", requests: 9000, answered: 8800, input_tokens: 5, output_tokens: 5, cache_read_tokens: 0, cost: 99 }],
+  latency: {
+    count: 16500, p50_ms: 1840, p95_ms: 6210, first_token: { count: 15000, p50_ms: 620, p95_ms: 1900 },
+    by_retrieval: {
+      vector: { count: 14000, p50_ms: 1800, p95_ms: 5900 },
+      fallback: { count: 0, p50_ms: null, p95_ms: null },
+      fallback_low_similarity: { count: 400, p50_ms: 2600, p95_ms: 7100 },
+    },
+  },
   phase4: { corpus_tokens: 61480, corpus_threshold: 80000, corpus_reached: false, empty_share: 0.118, empty_threshold: 0.15, empty_reached: false },
 };
 
@@ -466,6 +475,27 @@ describe("usage page", () => {
     expect(screen.queryByTestId("aa-alert-line")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
+
+  it("shows p50 / p95 of latency and first word, split by where the help came from (B5)", async () => {
+    renderRoute(UsageRoute);
+    const latency = await screen.findByTestId("aa-latency");
+    expect(latency).toHaveTextContent("耗时 p501,840 ms");
+    expect(latency).toHaveTextContent("耗时 p956,210 ms");
+    expect(latency).toHaveTextContent("首字 p50620 ms");
+    const section = screen.getByRole("region", { name: "耗时 · 本月" });
+    expect(within(section).getByText("向量检索")).toBeInTheDocument();
+    expect(within(section).getByText("7,100 ms")).toBeInTheDocument();
+    // A source nothing came from is left out, not shown as a row of dashes.
+    expect(within(section).queryByText("整份帮助（检索不可用）")).toBeNull();
+  });
+
+  it("a month with no timed answer (or an older recording without the field) says so instead of zeros", async () => {
+    const { latency: _latency, ...old } = USAGE;
+    get.mockImplementation(async () => ({ data: old }));
+    renderRoute(UsageRoute);
+    expect(await screen.findByTestId("aa-latency-none")).toHaveTextContent("本月还没有记了耗时的已答提问。");
+    expect(screen.queryByTestId("aa-latency")).toBeNull();
+  });
 });
 
 describe("试问 (plan §3.3), streamed", () => {
@@ -835,7 +865,7 @@ describe("eval: retrieval (canvas 1b eval results)", () => {
     id: 7, created_at: "2026-09-29T06:30:00Z", status: "done", total: 6, done: 6, finished_at: "2026-09-29T06:35:00Z",
     candidates: [{ provider: "openai_compatible", base_url: "https://llm.example/v1", model: "assist-medium", effort: "", fallbacks: false }],
     summary: [{ candidate: 0, provider: "openai_compatible", model: "assist-medium", cases: 3, passed: 2, errors: 0, tool_accuracy: 0.875,
-      phrase_hit_rate: 0.792, retrieval_hit_rate: 0.913, retrieval_fallbacks: 0, mean_latency_ms: 2900, cost: 0.21, input_tokens: 1, output_tokens: 1 }],
+      phrase_hit_rate: 0.792, retrieval_hit_rate: 0.913, retrieval_fallbacks: 0, mean_latency_ms: 2900, max_latency_ms: 4100, cost: 0.21, input_tokens: 1, output_tokens: 1 }],
   };
   const result = (id: number, c: number, q: string, retrieved: string[], hit: boolean | null) => ({
     id, candidate: 0, case: c, side: "soul", question: q, tools_called: ["rebirth"], answer: "答", passed: true, included: {},
@@ -849,7 +879,7 @@ describe("eval: retrieval (canvas 1b eval results)", () => {
   const DETAIL = {
     ...RUN,
     results: [
-      result(1, 1, "被驳回了还能申诉吗？", ["rebirth.appeal", "rebirth.cooldown", "rebirth.apply"], true),
+      { ...result(1, 1, "被驳回了还能申诉吗？", ["rebirth.appeal", "rebirth.cooldown", "rebirth.apply"], true), excluded: { 保证通过: true, 一定: false } },
       result(2, 2, "下一站什么时候开始？", ["sentence.plan", "dispatch.flow", "sentence.amend"], false),
       result(3, 3, "朋友圈谁能看到？", ["social.visibility"], null),
     ],
@@ -880,6 +910,27 @@ describe("eval: retrieval (canvas 1b eval results)", () => {
     expect(detail).toHaveTextContent("实际检索到的前 3 条");
     expect(detail).toHaveTextContent("2 dispatch.flow");
     expect(detail).not.toHaveTextContent("sentence.station 命中");
+  });
+
+  it("states passed / cases and the slowest case; an opened row names a forbidden phrase that appeared (B2)", async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === "/assist-admin/config/") return { data: config };
+      if (url === "/assist-admin/embedding/") return { data: embedding };
+      if (url === "/assist-admin/corpus/") return { data: CORPUS };
+      if (url === "/assist-admin/eval/runs/") return { data: [RUN] };
+      if (url === "/assist-admin/eval/runs/7/") return { data: DETAIL };
+      if (url === "/assist-admin/eval/cases/") return { data: CASES };
+      return { data: [] };
+    });
+    await renderConfig();
+    fireEvent.click(await within(region("评测")).findByRole("button", { name: /assist-medium/ }));
+    expect(await screen.findByTestId("aa-pass-rate")).toHaveTextContent("2/3");
+    expect(screen.getByTestId("aa-pass-rate")).not.toHaveTextContent("出错");
+    expect(screen.getByTestId("aa-max-latency")).toHaveTextContent("4,100 ms");
+    fireEvent.click(await screen.findByRole("button", { name: "被驳回了还能申诉吗？" }));
+    const opened = await screen.findByText(/出现了不该有的/);
+    expect(opened).toHaveTextContent("出现了不该有的「保证通过」");
+    expect(opened).not.toHaveTextContent("一定");
   });
 });
 

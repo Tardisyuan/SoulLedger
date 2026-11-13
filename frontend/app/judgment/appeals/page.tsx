@@ -17,7 +17,7 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { DataTable, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
-import { APPEAL_STATUS_TONES } from "@/src/components/judgment/appealDisplay";
+import { APPEAL_STATUS_GLYPHS, APPEAL_STATUS_TONES } from "@/src/components/judgment/appealDisplay";
 import { EscalatedTag, ladderCurrentText } from "@/src/components/judgment/AppealLadder";
 
 /*
@@ -138,7 +138,7 @@ function AppealQueueContent() {
               {tab === "IN_REVIEW" && <td className="px-3 py-2 text-sm whitespace-nowrap">{a.reviewer_name ?? <MissingValue kind="unrecorded" />}</td>}
               {tab === "CLOSED" && (
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <StatusBadge namespace="appeals.status" value={a.status} tone={APPEAL_STATUS_TONES[a.status]} />
+                  <StatusBadge namespace="appeals.status" value={a.status} tone={APPEAL_STATUS_TONES[a.status]} glyph={APPEAL_STATUS_GLYPHS[a.status]} />
                 </td>
               )}
             </>

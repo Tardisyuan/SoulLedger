@@ -285,13 +285,15 @@ export type JudgmentQueueSource = "queue" | "city_god" | "cross";
 /**
  * 别处等着办的(不是队列的行,不随筛选走);null = 调用者不持对应读码。去处:
  * `appeal` → /judgment/appeals,`city_god_review` → /city-god-cases,
- * `cross_judgment` → /cross-judgments,`capture_due` → /judgment/capture-due。
+ * `cross_judgment` → /cross-judgments,`capture_due` → /judgment/capture-due,
+ * `rebirth_application` → /rebirth-applications(第七个来源,用户 2026-11-13)。
  */
 export interface JudgmentElsewhereCounts {
   appeal: number | null;
   city_god_review: number | null;
   cross_judgment: number | null;
   capture_due: number | null;
+  rebirth_application: number | null;
 }
 
 /** `GET /judgment/queue-counts/`. The four add up to `total`. */

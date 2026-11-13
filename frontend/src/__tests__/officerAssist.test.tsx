@@ -336,6 +336,28 @@ describe("the screen hint", () => {
     expect(officerAssistScreen("/no-such-page/1")).toBe("other");
   });
 
+  it("「这次怎么答的」 shows under an answer that carries a trace, and under no other", async () => {
+    // Only the demo's recorded answers carry one (AssistTrace); a live answer has none and shows nothing.
+    const traced = done("有 3 件。");
+    (traced.answer as Record<string, unknown>).trace = {
+      tools_called: ["judgment_queue"], retrieval: "vector", retrieved_entries: ["officer-judgment-queue"],
+      latency_ms: 2140, first_token_ms: 830, tokens: { input: 1200, output: 80, cache_read: 900 },
+      model: "demo-model", provider_role: "backup", fallback_reason: "timeout",
+    };
+    scripts.push((ask: Ask) => ask.send({ event: "meta", conversation_id: CONVERSATION_ID }, { event: "delta", text: "有 3 件。" }, traced), reply("没有记录。"));
+    await openAndAsk();
+    const trace = await screen.findByTestId("officer-assist-trace");
+    expect(within(trace).getByText("这次怎么答的")).toBeInTheDocument();
+    expect(within(trace).getByTestId("officer-assist-trace-tools")).toHaveTextContent("judgment_queue");
+    expect(within(trace).getByTestId("officer-assist-trace-entries")).toHaveTextContent("officer-judgment-queue");
+    expect(within(trace).getByTestId("officer-assist-trace-latency")).toHaveTextContent("2,140 ms · 首字 830 ms");
+    expect(trace).toHaveTextContent("备用 · demo-model · 超时");
+    fireEvent.change(input(), { target: { value: "再问一次" } });
+    fireEvent.keyDown(input(), { key: "Enter" });
+    await waitFor(() => expect(thread().getByText("没有记录。")).toBeInTheDocument());
+    expect(screen.getAllByTestId("officer-assist-trace")).toHaveLength(1);
+  });
+
   it("OFFICER_SCREENS is the backend's tuple, member for member", () => {
     const models = readFileSync(path.join(ROOT, "backend", "apps", "soul_assist", "models.py"), "utf8");
     const block = /OFFICER_SCREENS = \(([\s\S]*?)\n\)/.exec(models)?.[1] ?? "";

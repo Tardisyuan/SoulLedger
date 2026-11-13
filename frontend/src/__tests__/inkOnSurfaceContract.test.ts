@@ -237,7 +237,6 @@ const MAIN_RAW_FILL_ALLOWED: Record<string, string> = {};
 const METAL_MARKS = [
   "app/workflow/[id]/page.tsx",
   "src/components/judgment/RowMark.tsx",
-  "src/components/layout/GlobalNav.tsx",
   "src/components/realms/RouteTopology.tsx",
 ];
 

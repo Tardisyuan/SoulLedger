@@ -133,6 +133,8 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
           <p className={SUBTLE}>{t("assist_admin.usage.fallback_note")}</p>
         </Section>
 
+        <LatencySection latency={usage.latency} />
+
         <Section
           title={t("assist_admin.usage.by_day")}
           id="aa-by-day"
@@ -264,6 +266,55 @@ function DayBars({ days }: { days: Day[] }) {
         {day && dayDetail(t, day)}
       </p>
     </div>
+  );
+}
+
+const ms = (v: number | null | undefined) => (v == null ? "—" : `${count(v)} ms`);
+const RETRIEVALS = ["vector", "fallback", "fallback_low_similarity"] as const;
+
+/**
+ * 耗时 (作品集建议 B5): p50 / p95 of answered asks, from the door to the end, and of the first token (streamed asks
+ * only), then the same split by where the help entries came from. A recording made before the backend had these
+ * fields has no `latency`: the section says so instead of showing zeros.
+ */
+function LatencySection({ latency }: { latency: AssistAdminUsage["latency"] | undefined }) {
+  const { t } = useI18n();
+  return (
+    <Section title={t("assist_admin.usage.latency")} id="aa-latency">
+      {!latency?.count ? (
+        <p className={SUBTLE} data-testid="aa-latency-none">{t("assist_admin.usage.latency_none")}</p>
+      ) : (
+        <>
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4" data-testid="aa-latency">
+            {(
+              [
+                ["latency_p50", latency.p50_ms],
+                ["latency_p95", latency.p95_ms],
+                ["first_token_p50", latency.first_token.p50_ms],
+                ["first_token_p95", latency.first_token.p95_ms],
+              ] as const
+            ).map(([k, v]) => (
+              <div key={k}>
+                <dt className={MUTED}>{t(`assist_admin.usage.${k}`)}</dt>
+                <dd className={`text-md ${MONO}`}>{ms(v)}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-3">
+            <Table
+              head={[t("assist_admin.usage.latency_source"), t("assist_admin.usage.answered"), t("assist_admin.usage.latency_p50"), t("assist_admin.usage.latency_p95")]}
+              rows={RETRIEVALS.filter((r) => latency.by_retrieval[r].count > 0).map((r) => [
+                t(`assist_admin.usage.latency_by.${r}`),
+                count(latency.by_retrieval[r].count),
+                ms(latency.by_retrieval[r].p50_ms),
+                ms(latency.by_retrieval[r].p95_ms),
+              ])}
+            />
+          </div>
+          <p className={`mt-2 ${SUBTLE}`}>{t("assist_admin.usage.latency_note", { count: count(latency.count) })}</p>
+        </>
+      )}
+    </Section>
   );
 }
 

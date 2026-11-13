@@ -1,27 +1,17 @@
 {
   "nav": {
-    "welcome": "欢迎页",
     "greeting_morning": "上午好",
     "greeting_afternoon": "下午好",
     "greeting_evening": "晚上好",
     "greeting_night": "夜深了",
-    "collapse_locked": "窗口宽度不足 1200 像素，导航固定收起",
     "settings": "设置",
     "language": "界面语言",
     "language_egy_note": "Kemet 是用中埃及语词根按现代语序拼成的界面语言，只作演示，不是真正的古埃及语句子。逐词根的出处核对见仓库 docs/lore-verification/egy-lexicon-roots.md。",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
-    "mobile_menu": "导航菜单",
     "more": "更多",
     "soul_events": "灵魂事件",
     "skip_to_main": "跳到正文",
-    "collapse_sidebar": "收起侧栏",
-    "expand_sidebar": "展开侧栏",
-    "group": {
-      "souls": "灵魂",
-      "system": "系统",
-      "work": "工作"
-    },
     "search_hint": "搜索、跳转、下指令"
   },
   "auth": {
@@ -2134,7 +2124,6 @@
     },
     "queue": {
       "enter": "进入分诊队列",
-      "title": "审判分诊队列",
       "progress": "第 {{position}} / 共 {{total}} 条",
       "loading": "正在取下一条待判…",
       "leave": "退出队列",
@@ -2211,7 +2200,6 @@
       "not_found": "审判未找到",
       "back_to_list": "← 返回审判列表",
       "final": "终审",
-      "soul_info": "灵魂信息",
       "civilization": "文明",
       "court": "法庭",
       "evidence": "证据",
@@ -2319,7 +2307,6 @@
       "deferred_note": "已放进待定：{{reason}}",
       "previous": "上一件",
       "next": "下一件",
-      "concluded_on": "已结案 · {{date}}",
       "balance_at_conclusion": "结案时余额",
       "balance_now": "现值",
       "balance_single": "余额",
@@ -2327,26 +2314,17 @@
       "cite_from_corpus_title": "引用律条",
       "cite_from_corpus_confirm": "引用{{cite}}到 {{soul}} 的审判？",
       "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。",
-      "current_ruling": "当前这一判",
-      "ruling_hint": "按数字键 1–4 选择判决，检查完毕后进入盖印确认。",
-      "to_confirm": "进入落印确认",
       "irreversible": "落印不可撤回",
       "materials": "资料舱",
       "tab_evidence": "功过记录",
       "tab_law": "律条引用",
-      "full_case": "展开全案",
-      "back_to_focus": "返回聚焦",
-      "case_nav": "案卷导航",
-      "nav_draft": "草稿与批注",
       "confirm_title": "确认落印",
       "confirm_body": "你选择了「{{verdict}}」。落判后写入审判记录，不可撤回。",
       "signing_court": "签署殿司",
       "stamp": "落印并结案",
       "back_to_check": "返回检查",
       "recorded": "判决已写入记录。",
-      "done": "完成",
-      "draft_unsaved": "有未保存的改动",
-      "draft_conflict": "草稿冲突待处理"
+      "done": "完成"
     },
     "stale": {
       "label": "滞留",
@@ -3946,7 +3924,6 @@
     "select_row": "选中 / 取消选中当前行",
     "pick_verdict": "选择裁决",
     "conclude": "落判（第一下确认，第二下提交）",
-    "toggle_case": "展开 / 收起全案",
     "next_prev_case": "下一件 / 上一件"
   },
   "filter": {
@@ -7620,7 +7597,28 @@
     "interrupted": "回答中断",
     "answering_aria": "正在回答",
     "jump_latest": "↓ 最新",
-    "stop_hint": "Esc 停止"
+    "stop_hint": "Esc 停止",
+    "trace": {
+      "title": "这次怎么答的",
+      "tools": "调用的工具",
+      "no_tools": "没有调用工具",
+      "entries": "帮助条目",
+      "retrieval": {
+        "vector": "向量检索，下列条目进了上下文",
+        "fallback": "检索不可用，送了整份帮助",
+        "fallback_low_similarity": "没有足够相近的条目，送了整份帮助"
+      },
+      "tokens": "token",
+      "tokens_value": "输入 {{input}} · 输出 {{output}} · 缓存读 {{cached}}",
+      "latency": "耗时",
+      "latency_value": "{{ms}} ms",
+      "latency_first": "{{ms}} ms · 首字 {{first}} ms",
+      "answered_by": "作答",
+      "role": {
+        "primary": "主用",
+        "backup": "备用"
+      }
+    }
   },
   "assist_admin": {
     "title": "助手管理",
@@ -7841,7 +7839,11 @@
       "expected_entries": "期望命中的条目",
       "retrieved_top": "实际检索到的前 {{k}} 条",
       "entry_hit": "命中",
-      "entry_missed": "未检索到"
+      "entry_missed": "未检索到",
+      "pass_rate": "通过",
+      "errors": "{{n}} 条出错",
+      "max_latency": "最慢",
+      "forbidden": "出现了不该有的「{{phrases}}」"
     },
     "try": {
       "as_soul": "以 问一问评测灵魂 身份提问",
@@ -7952,7 +7954,20 @@
       },
       "legend_primary": "主供应商",
       "legend_backup": "备用",
-      "day_detail": "主 {{a}} · 备 {{b}} · 改用备用 {{n}} 次"
+      "day_detail": "主 {{a}} · 备 {{b}} · 改用备用 {{n}} 次",
+      "latency": "耗时 · 本月",
+      "latency_none": "本月还没有记了耗时的已答提问。",
+      "latency_p50": "耗时 p50",
+      "latency_p95": "耗时 p95",
+      "first_token_p50": "首字 p50",
+      "first_token_p95": "首字 p95",
+      "latency_source": "帮助条目来源",
+      "latency_by": {
+        "vector": "向量检索",
+        "fallback": "整份帮助（检索不可用）",
+        "fallback_low_similarity": "整份帮助（不够相近）"
+      },
+      "latency_note": "按本月 {{count}} 次已答提问计，从收到问题到答完；首字只算逐字显示的提问。"
     },
     "embedding": {
       "url": "地址",
@@ -7991,7 +8006,6 @@
   "plaque": {
     "realms": "界域 · {{root}}",
     "held": "在押 {{n}}",
-    "corpus": "律条语料",
     "corpus_meta": "{{works}} 部 · {{n}} 条",
     "workflow_editor": "审批流编辑器",
     "workflow_instance": "审批实例",
@@ -8003,8 +8017,6 @@
     "posts": "发帖 {{n}}",
     "soul": "灵魂详情",
     "desk": "审判台",
-    "queue": "审判队列",
-    "permissions": "权限",
     "permissions_meta": "{{roles}} 角色 · {{perms}} 项权限",
     "office": {
       "rules": "规制司",
@@ -8097,7 +8109,8 @@
         "appeal": "申诉",
         "city_god_review": "城隍初审中",
         "cross_judgment": "跨殿联审",
-        "capture_due": "待发勾魂牒"
+        "capture_due": "待发勾魂牒",
+        "rebirth_application": "转生申请"
       },
       "groups": {
         "mine": "我认领",
@@ -8524,6 +8537,32 @@
     "judgment": {
       "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站",
       "flow_not_here": "这条审批流程由别的殿主办，本殿在其中没有一段，这里看不到详情；进度见上一页。"
+    },
+    "doors": {
+      "desk": {
+        "glyph": "审",
+        "label": "案卷"
+      },
+      "roll": {
+        "glyph": "册",
+        "label": "名册"
+      },
+      "me": {
+        "glyph": "我",
+        "label": "本人"
+      },
+      "me_unread": "本人 · 有未读通知"
+    },
+    "seal": {
+      "judge": "判",
+      "title": "判 · {{name}}",
+      "auto_route": "去处按发落规则自动选定；要自选去处或引用条文，在官员台判。",
+      "verdict_label": "判词",
+      "hold": "按住落印",
+      "hold_note": "按住「落印」1 秒落下。落印后不能撤回；要改判只能走申诉。",
+      "pending_a11y": "印 · 待落印",
+      "a11y": "已落印",
+      "done": "已落印"
     }
   },
   "print": {
@@ -9370,7 +9409,8 @@
         "overreach": "越权试验",
         "data_scope": "角色列表",
         "audit": "审计记录",
-        "recycle": "回收站"
+        "recycle": "回收站",
+        "assist_guard": "助手管理"
       },
       "skipped_title": "导览已跳过",
       "skipped_body": "可以留在这里自己看，也可以换一个冥界。",
@@ -9401,7 +9441,11 @@
         },
         "title": "系统怎么保护自己",
         "done_title": "防护导览走完了",
-        "done_body": "这些规则都在后端执行，前端只是把它们画出来。换一个冥界，以判官身份走一个灵魂的一生。"
+        "done_body": "这些规则都在后端执行，前端只是把它们画出来。换一个冥界，以判官身份走一个灵魂的一生。",
+        "7": {
+          "name": "问一问为什么越不了权",
+          "body": "助手会调工具查数据，所以它也是一条可能越权的路。防线不在提示词里：工具只收提问者本人，模型选得了调哪个，选不了读谁。下面是守着它的代码与测试，以及几条注入试验的真实回答。"
+        }
       }
     },
     "enter": {
@@ -9517,6 +9561,20 @@
       "try": "发出乙的结案请求",
       "no_case": "这里还没有已结的案子。先在审判台结一件，再回来试。",
       "result_note": "演示没有后端：这个回答来自演示层照服务端规则写的一条规则(demo/flows.ts),错误码与提示和 services.py 逐字一致，什么都没写进去。真接口里，先后发出的第二笔会先被视图的已结案检查以 400 拦下；两笔同时越过那道检查时，才走到锁内重读的 409。真正的等锁只能在 PostgreSQL 上测，SQLite 没有行锁，所以上面那条并发测试只在 PostgreSQL 上跑。"
+    },
+    "assist_guard": {
+      "how_title": "怎么守的",
+      "guard": {
+        "no_ids": "每个工具只收提问者本人，不收任何编号：模型能选调哪个工具，选不了读谁。",
+        "offered_and_rechecked": "只提供提问者有权用的工具；执行时再查一次，编出来的或被诱导调用的工具一律拒绝。",
+        "counts_only": "官员端的工具只出计数，不出姓名、编号、陈述、判词；范围取自各页面自己的查询。",
+        "whitelist": "灵魂端送给模型的字段是白名单，不复用页面的序列化器。",
+        "data_not_instructions": "事实与工具结果都标明是数据，不是指令；助手只读，没有会写入的工具。"
+      },
+      "cases_title": "注入试验",
+      "expect": "应当：",
+      "recorded": "录制的回答：在测试环境以评测官员身份真实问过一次（{{at}}）,原样回放。",
+      "not_recorded": "这一条还没有录下真实回答，这里不替它编一个。"
     }
   },
   "action": {
@@ -9820,8 +9878,7 @@
     "density": {
       "comfortable": "舒适",
       "compact": "紧凑"
-    },
-    "hall_switch": "切换殿司"
+    }
   },
   "soul": {
     "here": {
@@ -9961,7 +10018,6 @@
       "died": "{{date}} 卒",
       "source": "来源",
       "merits": "功过",
-      "merits_value": "功 {{merit}} · 过 {{demerit}}",
       "net": "净",
       "confession": "供词",
       "confession_none": "无。",
@@ -9986,6 +10042,90 @@
       "open": "打开卷宗",
       "claim": "认领",
       "search": "搜索"
+    },
+    "dossier": {
+      "spine": {
+        "cn": {
+          "aria": "地府 · 十殿一线",
+          "pre": "前九站",
+          "hells": "地狱 · 支线",
+          "rebirth": "轮回"
+        },
+        "eu": {
+          "aria": "欧洲 · 九圈漏斗",
+          "minos": "米诺斯"
+        },
+        "eg": {
+          "aria": "埃及 · 称心二分",
+          "death": "死亡",
+          "gate": "杜阿特之门",
+          "heart": "心",
+          "feather": "羽",
+          "aaru": "芦苇原",
+          "annihilation": "湮灭 · 不是地方"
+        },
+        "gr": {
+          "aria": "希腊 · 三岔分路",
+          "death": "死亡",
+          "ferry": "阿刻戎渡口",
+          "isles": "至福岛",
+          "asphodel": "阿斯福得草原",
+          "tartarus": "塔尔塔罗斯"
+        }
+      },
+      "seal": {
+        "aria": "{{seal}}",
+        "aria_pending": "{{seal}} · 待落印",
+        "cn": "地府 · 方印",
+        "eu": "欧洲 · 圆形蜡封",
+        "eg": "埃及 · 王名圈",
+        "gr": "希腊 · 陶片"
+      },
+      "mark": {
+        "cn": {
+          "merit": "功",
+          "demerit": "过",
+          "merit_glyph": "功",
+          "demerit_glyph": "过"
+        },
+        "eu": {
+          "merit": "德",
+          "demerit": "罪"
+        },
+        "eg": {
+          "merit": "羽",
+          "demerit": "心"
+        },
+        "gr": {
+          "merit": "白票",
+          "demerit": "黑票"
+        }
+      },
+      "tabs": {
+        "label": "卷宗分页",
+        "dossier": "卷宗",
+        "merits": "功过",
+        "events": "事件",
+        "lives": "轮回",
+        "sentence": "受刑"
+      },
+      "merits_all": "全部 {{n}} 条",
+      "judge": {
+        "head": "判 · 按 1–4 选",
+        "sealed_head": "判词 · 已落印",
+        "words": "判词",
+        "cited": "引律条",
+        "seal": "落印",
+        "hint": "选定去处、写好判词后落印。落印后不能撤回。",
+        "sealed_note": "落印后不能撤回；要改判只能走申诉。",
+        "seal_appears": "落印后会在这里出现印",
+        "full_text": "看判词全文",
+        "sealed_by": "{{date}} · {{judge}}"
+      },
+      "where": {
+        "station": "第 {{n}} 站",
+        "circle": "第 {{n}} 圈"
+      }
     }
   },
   "zongbu": {
@@ -10015,5 +10155,69 @@
       "failed": "没能读到这一栏",
       "month_none": "本月已结:这个冥界本月没有案卷"
     }
+  },
+  "perm_explain": {
+    "why": "为什么?",
+    "loading": "正在查原因…",
+    "failed": "暂时查不到原因,请稍后再试。",
+    "ai_label": "AI 措辞 · 原因由系统按权限规则算出",
+    "needs": "所需权限:{name}",
+    "your_roles": "你的角色:{roles}",
+    "who_can": "能做这件事的角色:{roles}",
+    "scope_kinds": "你的数据范围:{kinds}",
+    "reason": {
+      "allowed": "你可以做这件事。",
+      "soul_account": "灵魂账号不持有任何官员权限。",
+      "global_admin_only": "这项改的是所有殿共用的配置,只给不属于任何殿的全局管理员。",
+      "admin_only": "这项只给管理员,其他角色在权限表里勾上也不生效。",
+      "role_forbidden": "这项对你的角色是禁止的,权限表里勾上也不生效。",
+      "design_approve_conflict": "你的角色能设计流程;按规定,设计流程的人不能审批。",
+      "missing_permission": "你的角色没有这项权限。需要的话请找本殿管理员调整。",
+      "viewing_read_only": "你正在以他人身份只读查看,这段时间不能做写操作。",
+      "out_of_scope": "你有这项权限,但这条记录不在你能看到的范围内。"
+    }
+  },
+  "audit_ask": {
+    "label": "用一句话找记录",
+    "placeholder": "例如:demo_judge 最近 7 天删了什么",
+    "submit": "转成筛选",
+    "proposed": "AI 建议的筛选,确认后才查询",
+    "apply": "按这些条件查",
+    "discard": "不用",
+    "dropped": "已丢掉不认识或越权的条件:{keys}",
+    "not_understood": "没听懂这句话,请直接用下面的筛选。",
+    "unavailable": "AI 暂时不可用,请直接用下面的筛选。",
+    "not_configured": "本殿没有开通 AI,请直接用下面的筛选。",
+    "busy": "AI 正忙,请稍后再试,或直接用下面的筛选。",
+    "model": "模型 · {model}",
+    "fields": {
+      "action": "动作",
+      "resource": "资源",
+      "resource_id": "资源编号",
+      "username": "操作人",
+      "start_date": "起始日",
+      "end_date": "截止日",
+      "trace_id": "请求追踪号",
+      "tenant": "殿",
+      "search": "关键词"
+    },
+    "clear_field": "去掉「{name}」",
+    "demo_not_recorded": "这是演示环境,只回放录好的问题。可以试:{examples}"
+  },
+  "doors": {
+    "section": {
+      "desk": "案卷台",
+      "sources": "来源",
+      "register": "名册",
+      "statutes": "律令",
+      "ledger": "总簿",
+      "hall": "殿司",
+      "users": "用户",
+      "permissions": "权限",
+      "audit": "审计",
+      "system": "系统",
+      "mortal": "人间"
+    },
+    "office_read_only": "殿司 · 窄屏只读"
   }
 }

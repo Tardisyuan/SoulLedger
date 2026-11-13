@@ -267,7 +267,7 @@ def _run(asker, question, screen, lang, conversation_id, new, request, conn, bac
             _release_db()
 
     # 截止时刻从这里算:取问题向量(至多 3 秒)也在预算里(§7.5)。
-    start = time.monotonic()
+    out.start = start = time.monotonic()
     total = start + (settings.ASSISTANT_STREAM_TOTAL_SECONDS if stream else settings.ASSISTANT_TIMEOUT_SECONDS)
     try:
         yield {"event": "meta", "conversation_id": conversation.pk if conversation else new_id}
@@ -293,6 +293,7 @@ def _run(asker, question, screen, lang, conversation_id, new, request, conn, bac
                     with closing(provider.stream(**params, deadline=total, first_token_deadline=first_deadline,
                                                  result=out.result)) as pieces:
                         for piece in pieces:
+                            out.first_token = out.first_token or time.monotonic()
                             out.sent = True
                             yield {"event": "delta", "text": piece}
                 else:
@@ -323,7 +324,7 @@ def _run(asker, question, screen, lang, conversation_id, new, request, conn, bac
             return
         usage.record(asker.side, asker.tenant, "unavailable", out.model, error.usage or out.result.usage,
                      is_eval=is_eval, retrieval=out.found.mode if out.found else "", provider_role=out.role,
-                     fallback_reason=out.reason)
+                     fallback_reason=out.reason, **out.times())
         if not stream:
             raise AssistError(UNAVAILABLE_DETAIL, "assistant_unavailable", 503) from error
         yield {"event": "error", "kind": "unavailable", "text_sent": False, "detail": UNAVAILABLE_DETAIL}
@@ -352,6 +353,13 @@ class _Outcome:
         self.found = None
         self.role = self.model = self.reason = self.provider = ""
         self.sent = self.empty = False
+        self.start, self.first_token = time.monotonic(), None
+
+    def times(self):
+        """耗时与首字时间(毫秒,B5);非流式没有首字。"""
+        now = time.monotonic()
+        return {"latency_ms": int((now - self.start) * 1000),
+                "first_token_ms": None if self.first_token is None else int((self.first_token - self.start) * 1000)}
 
     def finish(self, interruption, tokens=None):
         """`interruption`:"" 答完 / stopped / interrupted。没答完又一个字都没有 → 不落消息,只记用量。"""
@@ -365,15 +373,17 @@ class _Outcome:
             # 在事件循环的线程里跑,那里不能碰数据库。
             return None
         reply = None
+        times = self.times()
         with transaction.atomic():
             if text:
                 reply = self._store(text, tokens, interruption, retrieval)
             usage.record(asker.side, asker.tenant, status, self.model, tokens, is_eval=self.is_eval,
-                         retrieval=retrieval, provider_role=self.role, fallback_reason=self.reason)
+                         retrieval=retrieval, provider_role=self.role, fallback_reason=self.reason, **times)
         if reply is not None:
-            #: 不落库,只给评测与试问看:检索方式与进了上下文的条目、哪一家答的。
+            #: 不落库,只给评测与试问看:检索方式与进了上下文的条目、哪一家答的、耗时与首字时间。
             reply.retrieval, reply.provider_role, reply.fallback_reason = self.found, self.role, self.reason
             reply.answered_by = (self.provider, self.model)
+            reply.times = times
         if not self.is_eval:
             # 回答已经落库:上限检查坏了也不能让提问的人拿到 500(他会重问,再花一次钱)。只记异常,不记原文。
             try:

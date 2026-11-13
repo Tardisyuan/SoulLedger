@@ -93,7 +93,7 @@ async function conclude(button = "judgment.desk.stamp") {
   const passed = (await screen.findAllByRole("radio")).find((r) => (r as HTMLInputElement).value === "PASSED")!;
   fireEvent.click(passed);
   // v3:主按钮进盖印确认层,层里那一键才发 conclude/。
-  fireEvent.click(screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") }));
+  fireEvent.click(screen.getByRole("button", { name: tZh("caseDesk.dossier.judge.seal") }));
   fireEvent.click(await screen.findByRole("button", { name: tZh(button) }));
   await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
   return judgmentApi.conclude.mock.calls[0];
@@ -147,7 +147,7 @@ describe("加减项审判结案带改动(情况 1)", () => {
     // 计划是异步取来的,「再加一站」要等它到;此前靠渲染的先后碰巧已经到了。
     fireEvent.click(await within(section).findByRole("button", { name: tZh("sentence_plan.file.add_stop") }));
     fireEvent.click((await screen.findAllByRole("radio")).find((r) => (r as HTMLInputElement).value === "PASSED")!);
-    fireEvent.click(screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") }));
+    fireEvent.click(screen.getByRole("button", { name: tZh("caseDesk.dossier.judge.seal") }));
     await waitFor(() =>
       expect(mockShowToast).toHaveBeenCalledWith(tZh("sentence_plan.errors.invalid_changes"), "error")
     );
@@ -186,13 +186,13 @@ describe("原审判", () => {
   it("别的文明、没有 cross_judgment.create、已结案:都没有「开联审」", async () => {
     as("EG_DUAT", ...JUDGE);
     const a = renderPage();
-    await screen.findByRole("button", { name: tZh("judgment.desk.to_confirm") });
+    await screen.findByRole("button", { name: tZh("caseDesk.dossier.judge.seal") });
     expect(screen.queryByRole("button", { name: tZh("sentence_plan.cross.open") })).toBeNull();
     a.unmount();
 
     as("CN_DIYU", "judgment.read", "judgment.execute");
     const b = renderPage();
-    await screen.findByRole("button", { name: tZh("judgment.desk.to_confirm") });
+    await screen.findByRole("button", { name: tZh("caseDesk.dossier.judge.seal") });
     expect(screen.queryByRole("button", { name: tZh("sentence_plan.cross.open") })).toBeNull();
     b.unmount();
 
@@ -240,7 +240,7 @@ describe("结案的拒绝(客户端审查 2026-10-29 #1 / #7)", () => {
   it("服务端说还不能结案(conclude_refusal):「落判」置灰并写出原因;能结案时没有这句", async () => {
     judgmentApi.get.mockResolvedValue({ data: judgment({ ...AMENDMENT, conclude_refusal: "duat_unfinished" }) });
     const a = renderPage();
-    const toConfirm = await screen.findByRole("button", { name: tZh("judgment.desk.to_confirm") });
+    const toConfirm = await screen.findByRole("button", { name: tZh("caseDesk.dossier.judge.seal") });
     expect(toConfirm).toBeDisabled();
     expect(screen.getByTestId("desk-held-reason")).toHaveTextContent(tZh("judgment.claim.duat_unfinished"));
     a.unmount();

@@ -7,8 +7,8 @@ import {
   isOfficerEmptyAnswer,
   officerAssistApi,
   type OfficerAssistConversation,
-  type OfficerAssistMessage,
   type OfficerAssistScreen,
+  type OfficerAssistTracedMessage,
 } from "@soulledger/core/api/officer-assist";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
@@ -16,6 +16,7 @@ import { officerAssistSuggestions } from "@soulledger/core/config/officerAssistS
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { StreamingText, WaitingDots } from "./StreamingText";
+import { AnswerTrace } from "./AnswerTrace";
 import type { OfficerAssist } from "./useOfficerAssist";
 
 /**
@@ -354,7 +355,7 @@ function Question({ text, meta }: { text: string; meta: string }) {
 }
 
 /** A6 已停止: small ink3, not a failure. A7 回答中断: warning colour, and 「重试」 on the latest answer only (A9). */
-function Answer({ message, onRetry }: { message: OfficerAssistMessage; onRetry?: () => void }) {
+function Answer({ message, onRetry }: { message: OfficerAssistTracedMessage; onRetry?: () => void }) {
   const { t } = useI18n();
   const { hm } = useClock();
   return (
@@ -386,6 +387,7 @@ function Answer({ message, onRetry }: { message: OfficerAssistMessage; onRetry?:
           <Notice>{t("officer_assist.cannot_answer")}</Notice>
         </div>
       ) : null}
+      {message.trace ? <AnswerTrace trace={message.trace} /> : null}
       <p className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("officer_assist.footnote")}</p>
     </div>
   );

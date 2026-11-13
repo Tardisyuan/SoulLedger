@@ -466,14 +466,21 @@ export function IdentityBand({ hall, name }: { hall: string; name: string }) {
   );
 }
 
+/**
+ * The pages a signed-in officer moves between. Since 第三十批 第 4 步 (九.5) they sit behind doors in the bar --
+ * 审 (案卷台 + 待办: 待办 is the desk's 「我认领」 and the rest of what waits for this officer), 册 (查询) and 我 (我的 +
+ * 通知, the unread dot on 我) -- and a door with two pages switches between them under the top bar (`PageSwitch`).
+ * 律 has no page in this app (the statutes are read on the desk) and is not drawn: a door the officer cannot open is
+ * not drawn at all. The pages keep their keys: links, pushes and the assistant still name them.
+ */
 export type TabKey = "todo" | "queue" | "search" | "notices" | "me";
-export const TABS: readonly { key: TabKey; glyph: string }[] = [
-  { key: "todo", glyph: "◐" },
-  { key: "queue", glyph: "§" },
-  { key: "search", glyph: "⌕" },
-  { key: "notices", glyph: "○" },
-  { key: "me", glyph: "□" },
-];
+export const TABS: readonly { key: TabKey }[] = [{ key: "queue" }, { key: "todo" }, { key: "search" }, { key: "me" }, { key: "notices" }];
+
+export type DoorKey = "desk" | "roll" | "me";
+/** Each door's pages, the one it opens on first. */
+export const DOOR_PAGES: Readonly<Record<DoorKey, readonly TabKey[]>> = { desk: ["queue", "todo"], roll: ["search"], me: ["me", "notices"] };
+const DOORS = Object.keys(DOOR_PAGES) as DoorKey[];
+export const doorOf = (page: TabKey): DoorKey => DOORS.find((d) => DOOR_PAGES[d].includes(page)) ?? "me";
 
 /**
  * Which tabs this officer gets (RBAC decisions 30 / 31): a tab is drawn when the officer holds ANY of the codes its
@@ -502,37 +509,62 @@ export function roleName(enumLabel: ReturnType<typeof useI18n>["enumLabel"], rol
   return d.state === "known" ? d.label : (role ?? "");
 }
 
-/** 56 high, equal parts, surface-1 with a 1px top line. The current tab: civilization colour, 600. `tabs`: the ones this officer gets. */
+/**
+ * 56 high, equal parts, surface-1 with a 1px top line: one cell per door that has a page this officer gets. Each cell
+ * is the door's glyph in the serif (18; a glyph longer than one character, 12 -- 第三十批 七.2) over its name; the
+ * current door in the civilization colour, 600. The unread dot sits on 我 (九.5).
+ */
 export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; onSelect: (tab: TabKey) => void; unread?: boolean; tabs?: readonly TabKey[] }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { bottom } = useSafeAreaInsets();
+  const on = doorOf(current);
   return (
     <View testID="tab-bar" accessibilityRole="tablist" style={[styles.tabBar, { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: bottom }]}>
-      {TABS.filter(({ key }) => !tabs || tabs.includes(key)).map(({ key, glyph }) => {
-        const on = key === current;
-        const colour = on ? t.plaque : t.inkMuted;
+      {DOORS.map((door) => {
+        const first = DOOR_PAGES[door].find((page) => !tabs || tabs.includes(page));
+        if (!first) return null;
+        const selected = door === on;
+        const colour = selected ? t.plaque : t.inkMuted;
+        const glyph = tr(`officer_app.doors.${door}.glyph`);
+        const dot = door === "me" && unread;
         return (
           <Pressable
-            key={key}
-            testID={`tab-${key}`}
+            key={door}
+            testID={`door-${door}`}
             accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
-            // The ● is drawn, not read: the unread state goes into the label (review 2026-11-01).
-            accessibilityLabel={key === "notices" && unread ? tr("officer_app.tabs.notices_unread") : tr(`officer_app.tabs.${key}`)}
-            onPress={() => onSelect(key)}
+            accessibilityState={{ selected }}
+            // The dot is drawn, not read: the unread state goes into the label (review 2026-11-01).
+            accessibilityLabel={dot ? tr("officer_app.doors.me_unread") : tr(`officer_app.doors.${door}.label`)}
+            onPress={() => onSelect(first)}
             style={styles.tab}
           >
-            <Txt variant="bodyLg" style={{ color: colour, fontFamily: family.glyph }}>
-              {key === "notices" && unread ? "●" : glyph}
-            </Txt>
-            <Txt variant="caption" style={{ color: colour, fontFamily: on ? family.ui[600] : family.ui[400] }}>
-              {tr(`officer_app.tabs.${key}`)}
+            <View>
+              <Txt style={{ color: colour, fontFamily: family.title, fontSize: [...glyph].length > 1 ? 12 : 18, lineHeight: 24 }}>{glyph}</Txt>
+              {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.neg }]} /> : null}
+            </View>
+            <Txt variant="caption" style={{ color: colour, fontFamily: selected ? family.ui[600] : family.ui[400] }}>
+              {tr(`officer_app.doors.${door}.label`)}
             </Txt>
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+/** Under the top bar of a door with two pages this officer gets (审: 案卷台 · 待办; 我: 我的 · 通知): which one is open. */
+export function PageSwitch({ current, tabs, unread, onSelect }: { current: TabKey; tabs: readonly TabKey[]; unread?: boolean; onSelect: (tab: TabKey) => void }) {
+  const { t: tr } = useI18n();
+  const pages = DOOR_PAGES[doorOf(current)].filter((page) => tabs.includes(page));
+  if (pages.length < 2) return null;
+  return (
+    <Segmented
+      testID="tab"
+      options={pages.map((key) => ({ key, label: tr(key === "notices" && unread ? "officer_app.tabs.notices_unread" : key === "queue" ? "officer_app.desk.title" : `officer_app.tabs.${key}`) }))}
+      value={current}
+      onChange={onSelect}
+    />
   );
 }
 
@@ -622,7 +654,8 @@ const styles = StyleSheet.create({
   bandHall: { flexShrink: 1 },
   bandName: { flexShrink: 1 },
   tabBar: { flexDirection: "row", borderTopWidth: 1 },
-  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: space[1] },
+  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 2 },
+  dot: { position: "absolute", top: 2, right: -7, width: 6, height: 6, borderRadius: 3 },
   banner: { paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   bannerRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
 });

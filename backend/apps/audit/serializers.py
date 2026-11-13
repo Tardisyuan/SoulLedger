@@ -118,3 +118,34 @@ class AuditStatsSerializer(serializers.Serializer):
     action_distribution = AuditActionCountSerializer(many=True)
     top_resources = AuditResourceCountSerializer(many=True)
     total_logs = serializers.IntegerField()
+
+
+class NlFilterRequestSerializer(serializers.Serializer):
+    question = serializers.CharField(max_length=500, trim_whitespace=True)
+
+
+class NlFilterValuesSerializer(serializers.Serializer):
+    """The parameters `GET /audit-logs/` takes, as `nl_query.FIELDS` lets them through. Every key optional."""
+
+    action = serializers.CharField(required=False)
+    resource = serializers.CharField(required=False)
+    resource_id = serializers.CharField(required=False)
+    username = serializers.CharField(required=False)
+    start_date = serializers.DateField(required=False)
+    end_date = serializers.DateField(required=False)
+    trace_id = serializers.CharField(required=False)
+    tenant = serializers.CharField(required=False)
+    search = serializers.CharField(required=False)
+
+
+class NlFilterResponseSerializer(serializers.Serializer):
+    filters = NlFilterValuesSerializer()
+    dropped = serializers.ListField(child=serializers.CharField(), help_text="Keys the model gave that did not pass")
+    understood = serializers.BooleanField(help_text="False when the model's answer was not a JSON object")
+    draft_id = serializers.IntegerField(help_text="The AIDraft row; POST /assist/ai-drafts/<id>/decide/ when applied")
+    model = serializers.CharField()
+
+
+class NlFilterErrorSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    code = serializers.ChoiceField(choices=("assistant_not_configured", "assistant_unavailable", "assistant_busy"))

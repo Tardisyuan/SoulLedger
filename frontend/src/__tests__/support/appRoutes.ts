@@ -58,7 +58,8 @@ export function readStringArray(file: string, name: string): string[] {
 const APP_LAYOUT_WRAPPER = path.join(FRONTEND_DIR, "src/components/layout/AppLayoutWrapper.tsx");
 
 /** AppLayoutWrapper's two arrays: AUTH_PATHS match by prefix, PUBLIC_PATHS exactly
- *  (the same test `AppLayoutWrapper` applies to `usePathname()`). */
+ *  (the same test `AppLayoutWrapper` applies to `usePathname()`). Its third, DESK_PATHS, is not read here:
+ *  since 第三十批第 4 步 those pages are inside AppLayout (door rail, door tabs), only `bare` — no toolbar. */
 export function shellFreeLists(): { auth: string[]; publik: string[] } {
   return {
     auth: readStringArray(APP_LAYOUT_WRAPPER, "AUTH_PATHS"),

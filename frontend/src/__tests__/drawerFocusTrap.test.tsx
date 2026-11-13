@@ -1,5 +1,5 @@
 /**
- * The two off-canvas drawers, from the keyboard.
+ * The two off-canvas drawers, from the keyboard (the phone one is the door rail's 「我」 sheet since 第三十批第 4 步).
  *
  * WHY THIS EXISTS. `AppLayout.tsx` matched `Escape|onKeyDown|keydown|tabIndex|
  * role=` zero times across 722 lines, and `SettingsDrawer.tsx` never called
@@ -73,12 +73,8 @@ jest.mock("@/src/components/connection-status", () => ({
 
 jest.mock("@/src/hooks/useSidebarMenus", () => ({
   ...jest.requireActual("@/src/hooks/useSidebarMenus"),
-  // One page on purpose: it pins the focusable set inside the drawer to exactly
-  // two — the wordmark link and that page's link (the drawer has no collapse
-  // button since 规范 v1; the rail is a viewport state) — so "first" and "last"
-  // below mean something fixed rather than whatever a menu fixture rendered.
-  // 六个一级项:底栏放前 4 个,「更多」抽屉里是其余 2 个 —— 抽屉里至少要有两个可聚焦的
-  // 东西(关闭 + 链接),Tab 圈的断言才不是一站式的平凡成立。
+  // The 我 sheet does not list menu pages (only 个人资料 / 通知, and 殿司 for an administrator; this user is
+  // nobody), so its focusable set is exactly those two links — "first" and "last" below mean something fixed.
   useSidebarMenus: () => ({
     data: ["概览", "灵魂", "审判", "总账", "界域", "审计"].map((name, i) => ({
       id: i + 1,
@@ -100,59 +96,43 @@ import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 import { focusablesWithin } from "@/src/components/layout/useDrawerA11y";
 import { renderWithProviders } from "./support/render";
 
-// ── AppLayout's phone drawer ─────────────────────────────────────────
+// ── AppLayout's phone sheet (门栏「我」) ─────────────────────────────
 
 function renderLayout() {
   return renderWithProviders(<AppLayout>page body</AppLayout>, { i18n: false });
 }
 
-/** 底栏的「更多」—— 规范 v2 里它取代了 v1 的 ☰,打开的是同一种模态抽屉。按它报告的状态找,不按文案。 */
-function hamburger(): HTMLElement {
-  const bar = screen.getByTestId("bottom-bar");
-  const found = Array.from(bar.querySelectorAll<HTMLElement>("button[aria-expanded]")).pop();
-  if (!found) throw new Error("no 更多 button rendered");
-  return found;
+/** 窄屏门栏的最后一格「我」(第三十批第 4 步,取代旧底栏的「更多」),打开的是同一种模态抽屉。按 test id 找,不按文案。 */
+function meCell(): HTMLElement {
+  return screen.getByTestId("door-me");
 }
 
 beforeEach(() => {
   for (const key of Object.keys(MESSAGES)) delete MESSAGES[key];
 });
 
-describe("AppLayout's phone sheet (底栏「更多」) has a keyboard way in, round and out", () => {
-  it("is not a dialog while it is the desktop sidebar", () => {
-    // Absence, asserted. The same <aside> is the permanent md+ sidebar; a
-    // sidebar that is always on screen claiming aria-modal would tell a screen
-    // reader the rest of the page is inert when it is not.
+describe("AppLayout's phone sheet (门栏「我」) has a keyboard way in, round and out", () => {
+  it("is not a dialog until it is opened", () => {
+    // Absence, asserted: the door rail is always on screen; claiming aria-modal for it
+    // would tell a screen reader the rest of the page is inert when it is not.
     renderLayout();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("becomes a named dialog when 更多 opens it", () => {
-    MESSAGES["nav.mobile_menu"] = "导航菜单";
+  it("becomes a named dialog when 我 opens it", () => {
+    MESSAGES["caseDesk.rail.me"] = "本人";
     renderLayout();
-    fireEvent.click(hamburger());
+    fireEvent.click(meCell());
 
-    const drawer = screen.getByRole("dialog", { name: "导航菜单" });
+    const drawer = screen.getByRole("dialog", { name: "本人" });
     expect(drawer).toHaveAttribute("aria-modal", "true");
     expect(drawer.tagName).toBe("ASIDE");
-  });
-
-  it("still has a real name when the messages bundles have no key for it yet", () => {
-    // `nav.mobile_menu` is being requested, not smuggled in. Until it lands
-    // t() hands back the key, and a dialog named "nav.mobile_menu" would be
-    // worse than the silence it replaced.
-    renderLayout();
-    fireEvent.click(hamburger());
-
-    expect(screen.getByRole("dialog", { name: "导航菜单" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "nav.mobile_menu" })).not.toBeInTheDocument();
+    expect(meCell()).toHaveAttribute("aria-expanded", "true");
   });
 
   it("moves focus into the drawer when it opens", () => {
-    // The defect this replaces: the drawer slid over the page and focus stayed
-    // underneath it, so the next Tab walked content the overlay had covered.
     renderLayout();
-    fireEvent.click(hamburger());
+    fireEvent.click(meCell());
 
     const drawer = screen.getByRole("dialog");
     expect(document.activeElement).not.toBe(document.body);
@@ -161,29 +141,29 @@ describe("AppLayout's phone sheet (底栏「更多」) has a keyboard way in, ro
 
   it("closes on Escape", () => {
     renderLayout();
-    fireEvent.click(hamburger());
+    fireEvent.click(meCell());
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(hamburger()).toHaveAttribute("aria-expanded", "false");
+    expect(meCell()).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("hands focus back to the 更多 cell that opened it", () => {
+  it("hands focus back to the 我 cell that opened it", () => {
     renderLayout();
-    const trigger = hamburger();
+    const trigger = meCell();
     trigger.focus();
     fireEvent.click(trigger);
 
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
 
-    expect(document.activeElement).toBe(hamburger());
+    expect(document.activeElement).toBe(meCell());
   });
 
   it("wraps Tab from the last control back to the first, and Shift+Tab the other way", () => {
     renderLayout();
-    fireEvent.click(hamburger());
+    fireEvent.click(meCell());
     const drawer = screen.getByRole("dialog");
 
     const items = focusablesWithin(drawer);
@@ -203,9 +183,9 @@ describe("AppLayout's phone sheet (底栏「更多」) has a keyboard way in, ro
 
   it("gives the scrim a role instead of a bare click handler", () => {
     renderLayout();
-    fireEvent.click(hamburger());
+    fireEvent.click(meCell());
 
-    const scrim = document.querySelector(".fixed.inset-0.z-scrim");
+    const scrim = document.querySelector(".scrim");
     expect(scrim).toBeTruthy();
     expect(scrim!.tagName).toBe("BUTTON");
 

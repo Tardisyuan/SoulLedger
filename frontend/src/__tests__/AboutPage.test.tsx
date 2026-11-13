@@ -81,7 +81,7 @@ describe("AboutPage", () => {
   it("keeps proper names as written in egy", async () => {
     renderIn("egy");
     // egy 是懒加载的包:先等它到,否则量到的是 zh 回退。
-    expect(await screen.findByRole("heading", { level: 1, name: "Tepy Hena Sesen" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Tepy Hena Henen" })).toBeInTheDocument();
     expect(screen.getByText("Noto Sans Egyptian Hieroglyphs")).toBeInTheDocument();
     expect(screen.getByText("Geist").closest("li")).toHaveTextContent("SIL Open Font License 1.1");
   });

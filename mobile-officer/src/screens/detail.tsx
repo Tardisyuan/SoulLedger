@@ -25,6 +25,8 @@ import { useCan, useSession } from "../session";
 import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
+import { SealSheet } from "./sealSheet";
+import { DossierSeal } from "../dossierSeal";
 import { EvidenceText, JudgmentCase } from "./judgmentCase";
 import { SoulDetail, SoulLink } from "./soulDetail";
 import { TodoFactsView } from "./todoFacts";
@@ -382,6 +384,11 @@ function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul
   const [asked, setAsked] = useState(false);
   const [record, setRecord] = useState<SoulRecordEntry | null>(null);
   const canAssign = useCan("judgment.assign");
+  // 「判」抽屉(第三十批 八.6);落印成功后收起,卷宗头下的小印 40 播一次落印动效(`sealed`)。
+  const [judging, setJudging] = useState(false);
+  // Each opening is a new key: the drawer starts blank, like the action bar's sheets.
+  const [openings, setOpenings] = useState(0);
+  const [sealed, setSealed] = useState(false);
   const view = detailStateOf({ data, error });
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
   if (record) return <EvidenceText record={record} onBack={() => setRecord(null)} />;
@@ -390,8 +397,13 @@ function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul
       <Screen testID="judgment-detail" edges={["left", "right"]} scrollRef={scroll}>
         <RefreshFailed data={data} error={error} onRetry={reload} />
         <View style={{ padding: space[5], gap: space[4] }}>
-          <SectionLabel>{data.case_number}</SectionLabel>
-          {data.soul ? <SoulLink testID="judgment-soul-link" variant="title" name={data.soul_name} onOpen={() => onOpenSoul(data.soul)} /> : <Txt variant="title">{data.soul_name}</Txt>}
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space[3] }}>
+            <View style={{ flex: 1, gap: space[4] }}>
+              <SectionLabel>{data.case_number}</SectionLabel>
+              {data.soul ? <SoulLink testID="judgment-soul-link" variant="title" name={data.soul_name} onOpen={() => onOpenSoul(data.soul)} /> : <Txt variant="title">{data.soul_name}</Txt>}
+            </View>
+            {data.concluded_at ? <DossierSeal testID="judgment-seal" civilization={data.civilization} court={data.court} size={40} stamp={sealed} label={t("officer_app.seal.a11y")} /> : null}
+          </View>
           <Txt variant="caption" tone="muted">{[courtLabel(t, data.court, locale), data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
           {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
           {/* 滞留(`stale_since`,定时任务盖章,不结案):与队列行同一句「◐ 滞留 · 30 天无进展」。 */}
@@ -421,6 +433,21 @@ function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul
         onChanged={() => void reload()}
         onWrite={() => scroll.current?.scrollToEnd({ animated: true })}
         onDesk={() => void Share.share({ message: deskUrl({ kind: "judgment", id }) }).catch(() => {})}
+        onJudge={() => {
+          setOpenings((n) => n + 1);
+          setJudging(true);
+        }}
+      />
+      <SealSheet
+        key={`seal-${openings}`}
+        open={judging}
+        judgment={data}
+        onClose={() => setJudging(false)}
+        onSealed={() => {
+          setJudging(false);
+          setSealed(true);
+          void reload();
+        }}
       />
     </View>
   );

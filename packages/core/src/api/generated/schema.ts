@@ -431,6 +431,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assist/ai-drafts/{id}/decide/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        post: operations["assist_ai_draft_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist/conversations/": {
         parameters: {
             query?: never;
@@ -559,6 +576,27 @@ export interface paths {
         get: operations["v1_audit_logs_export_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit-logs/nl-filter/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/audit-logs/nl-filter/ {"question": "..."}
+         *     把一句话换成一组筛选参数(不查询、不读日志;nl_query.py)。页面把参数填进筛选项,人确认后照旧 GET 本列表。
+         *     模型不可用答 503,页面退回手动筛选。
+         */
+        post: operations["v1_audit_logs_nl_filter_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6674,6 +6712,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perm/explain/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["perm_explain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perm/export/": {
         parameters: {
             query?: never;
@@ -7788,7 +7842,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+         * @description 「已处理」:被隐藏或被官员删除的帖子与评论,一张表,按处理时间倒序。
          *
          *     * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
          *       (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
@@ -12725,6 +12779,25 @@ export interface components {
          * @enum {string}
          */
         DiyuStationEnum: "TUDI_TEMPLE" | "YELLOW_SPRINGS_ROAD" | "WANGXIANG_TERRACE" | "EVIL_DOG_VILLAGE" | "GOLDEN_ROOSTER_HILL" | "WILD_GHOST_VILLAGE" | "MIHUN_HALL" | "OFFERING_PAVILION" | "GHOST_FORT" | "FENGDU_CITY" | "EIGHTEEN_HELLS" | "LOTUS_TERRACE" | "HUANHUN_CLIFF";
+        DraftDecision: {
+            adopted: boolean;
+            /** @default  */
+            final_text: string;
+        };
+        DraftDecisionResult: {
+            id: number;
+            status: components["schemas"]["DraftDecisionResultStatusEnum"];
+            /** Format: double */
+            edit_ratio: number | null;
+        };
+        /**
+         * @description * `pending` - pending
+         *     * `adopted` - adopted
+         *     * `adopted_edited` - adopted_edited
+         *     * `discarded` - discarded
+         * @enum {string}
+         */
+        DraftDecisionResultStatusEnum: "pending" | "adopted" | "adopted_edited" | "discarded";
         DrinkSoup: {
             /** Format: uuid */
             soul_id: string;
@@ -13084,6 +13157,8 @@ export interface components {
             retrieval_fallbacks: number | null;
             /** Format: double */
             mean_latency_ms: number | null;
+            /** @description 已答用例里最慢的一条;早于这一项的运行没有 */
+            max_latency_ms?: number | null;
             /** Format: double */
             cost: number | null;
             input_tokens: number;
@@ -13240,6 +13315,33 @@ export interface components {
          * @enum {string}
          */
         EvidenceSourceEnum: "REGISTRY" | "WITNESS" | "SELF_ACCOUNT" | "OTHER";
+        Explanation: {
+            action: string;
+            permission_name: string;
+            allowed: boolean;
+            reason: components["schemas"]["ExplanationReasonEnum"];
+            role: string;
+            extra_roles: string[];
+            roles_that_can: string[];
+            object_type: string | null;
+            /** @description 只在 out_of_scope 时有:调用者自己的范围 */
+            scope_kinds: string[];
+            /** @description 模型的措辞;null = 用语言包按 reason 的句子 */
+            explanation: string | null;
+        };
+        /**
+         * @description * `allowed` - allowed
+         *     * `soul_account` - soul_account
+         *     * `global_admin_only` - global_admin_only
+         *     * `admin_only` - admin_only
+         *     * `role_forbidden` - role_forbidden
+         *     * `design_approve_conflict` - design_approve_conflict
+         *     * `missing_permission` - missing_permission
+         *     * `viewing_read_only` - viewing_read_only
+         *     * `out_of_scope` - out_of_scope
+         * @enum {string}
+         */
+        ExplanationReasonEnum: "allowed" | "soul_account" | "global_admin_only" | "admin_only" | "role_forbidden" | "design_approve_conflict" | "missing_permission" | "viewing_read_only" | "out_of_scope";
         ExportedFieldPermission: {
             role: string;
             model_name: string;
@@ -14387,6 +14489,7 @@ export interface components {
             city_god_review: number | null;
             cross_judgment: number | null;
             capture_due: number | null;
+            rebirth_application: number | null;
         };
         /** @description 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。 */
         JudgmentFlowProgress: {
@@ -14718,6 +14821,12 @@ export interface components {
          * @enum {string}
          */
         LastFromEnum: "soul" | "hall";
+        LatencySpread: {
+            /** @description 记了时间的已答提问数 */
+            count: number;
+            p50_ms: number | null;
+            p95_ms: number | null;
+        };
         /**
          * @description 200 body of `LedgerEffectiveView`. Same three numbers as the summary's
          *     merit/demerit/balance, under names that say they are decay-applied.
@@ -15824,6 +15933,44 @@ export interface components {
         NegativeConfessionWrite: {
             truthful: boolean | null;
             note?: string;
+        };
+        NlFilterError: {
+            detail: string;
+            code: components["schemas"]["NlFilterErrorCodeEnum"];
+        };
+        /**
+         * @description * `assistant_not_configured` - assistant_not_configured
+         *     * `assistant_unavailable` - assistant_unavailable
+         *     * `assistant_busy` - assistant_busy
+         * @enum {string}
+         */
+        NlFilterErrorCodeEnum: "assistant_not_configured" | "assistant_unavailable" | "assistant_busy";
+        NlFilterRequest: {
+            question: string;
+        };
+        NlFilterResponse: {
+            filters: components["schemas"]["NlFilterValues"];
+            /** @description Keys the model gave that did not pass */
+            dropped: string[];
+            /** @description False when the model's answer was not a JSON object */
+            understood: boolean;
+            /** @description The AIDraft row; POST /assist/ai-drafts/<id>/decide/ when applied */
+            draft_id: number;
+            model: string;
+        };
+        /** @description The parameters `GET /audit-logs/` takes, as `nl_query.FIELDS` lets them through. Every key optional. */
+        NlFilterValues: {
+            action?: string;
+            resource?: string;
+            resource_id?: string;
+            username?: string;
+            /** Format: date */
+            start_date?: string;
+            /** Format: date */
+            end_date?: string;
+            trace_id?: string;
+            tenant?: string;
+            search?: string;
         };
         /**
          * @description * `PASSED` - PASSED
@@ -20318,6 +20465,8 @@ export interface components {
             payload?: unknown;
             /** @description User or system */
             actor?: string;
+            readonly actor_display_name: string;
+            readonly actor_role: string;
             /** Format: date-time */
             readonly create_time: string;
         };
@@ -21311,6 +21460,8 @@ export interface components {
             /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
             retrieved_entries: string[];
             latency_ms: number;
+            /** @description 首字出来时的毫秒数;非流式为 null */
+            first_token_ms: number | null;
             tokens: {
                 [key: string]: number;
             };
@@ -21339,6 +21490,8 @@ export interface components {
             /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
             retrieved_entries: string[];
             latency_ms: number;
+            /** @description 首字出来时的毫秒数;非流式为 null */
+            first_token_ms: number | null;
             tokens: {
                 [key: string]: number;
             };
@@ -21444,7 +21597,11 @@ export interface components {
             by_retrieval: components["schemas"]["UsageRetrieval"];
             by_day: components["schemas"]["UsageDay"][];
             by_side: components["schemas"]["UsageSide"][];
+            /** @description 按功能分(问一问、权限解释、审计查询…) */
+            by_feature: components["schemas"]["UsageFeature"][];
             by_hall: components["schemas"]["UsageHall"][];
+            /** @description 已答提问的耗时 p50 / p95(从进门到收尾)与首字时间(B5) */
+            latency: components["schemas"]["UsageLatency"];
             phase4: components["schemas"]["Phase4"];
         };
         UsageDay: {
@@ -21490,6 +21647,20 @@ export interface components {
             count: number;
             by_reason: components["schemas"]["UsageFallbackReasons"];
         };
+        UsageFeature: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            /** @description assist = 问一问;其余是业务模块的接入点(AssistUsage.feature) */
+            feature: string;
+        };
         UsageHall: {
             requests: number;
             answered: number;
@@ -21503,6 +21674,21 @@ export interface components {
             cost: number;
             tenant_id: number | null;
             code: string | null;
+        };
+        UsageLatency: {
+            /** @description 记了时间的已答提问数 */
+            count: number;
+            p50_ms: number | null;
+            p95_ms: number | null;
+            /** @description 首字时间;只有流式提问才有 */
+            first_token: components["schemas"]["LatencySpread"];
+            /** @description 耗时按帮助条目的来源分 */
+            by_retrieval: components["schemas"]["UsageLatencyRetrieval"];
+        };
+        UsageLatencyRetrieval: {
+            vector: components["schemas"]["LatencySpread"];
+            fallback: components["schemas"]["LatencySpread"];
+            fallback_low_similarity: components["schemas"]["LatencySpread"];
         };
         UsageProvider: {
             requests: number;
@@ -23248,6 +23434,49 @@ export interface operations {
             };
         };
     };
+    assist_ai_draft_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftDecision"];
+                "application/x-www-form-urlencoded": components["schemas"]["DraftDecision"];
+                "multipart/form-data": components["schemas"]["DraftDecision"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftDecisionResult"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
     officer_assist_conversations_list: {
         parameters: {
             query?: never;
@@ -23457,6 +23686,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    v1_audit_logs_nl_filter_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NlFilterRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NlFilterRequest"];
+                "multipart/form-data": components["schemas"]["NlFilterRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NlFilterResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NlFilterError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NlFilterError"];
+                };
             };
         };
     };
@@ -35126,6 +35396,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataScopeResource"][];
+                };
+            };
+        };
+    };
+    perm_explain: {
+        parameters: {
+            query: {
+                /** @description 权限码,如 judgment.assign */
+                action: string;
+                /** @description 可选,<类型>:<id>,类型为 judgment / soul / workflow */
+                object?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Explanation"];
                 };
             };
         };

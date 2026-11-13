@@ -5,7 +5,7 @@ import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { JourneyBlock } from "@/src/components/souls/detail/SoulLedgerProgress";
 import { useI18n } from "@/src/contexts/I18nContext";
 import extract from "./data/home-preview.json";
-import { PREVIEW_ORDER, TURN_MS, nextCiv, previewMode, previewOf, type PreviewExtract } from "./homePreview";
+import { PREVIEW_ORDER, TURN_MS, nextCiv, previewMode, previewOf, type PreviewExtract } from "./homePreviewFrames";
 import { langOf } from "./store";
 
 const REDUCED = "(prefers-reduced-motion: reduce)";

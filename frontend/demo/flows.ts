@@ -6,6 +6,7 @@
  * happens here; nothing a visitor can do in a demo should end in an error. One exception, asked for on purpose: a second
  * conclusion of a concluded case (`ALREADY_CONCLUDED`).
  */
+import { aiRead, aiWrite } from "./aiReplay";
 import { inboxRead, inboxWrite, letterCounts } from "./inbox";
 import { tourOf } from "./tour";
 import {
@@ -89,6 +90,7 @@ const ELSEWHERE: [string, string, string, (row: Row) => boolean][] = [
   ["city_god_review", "city_god.read", "/judgment/city-god-cases/", (r) => r.city_god_status === "PENDING" || r.city_god_status === "RETURNED"],
   ["cross_judgment", "cross_judgment.read", "/dispatch/cross-tenant-judgments/", (r) => OPEN_CROSS.includes(String(r.status))],
   ["capture_due", "capture.read", "/dispatch/capture-warrants/due/", () => true],
+  ["rebirth_application", "workflow.read", "/soul-accounts/rebirth-applications/", (r) => r.status === "UNDER_REVIEW" || r.status === "APPEALING"],
 ];
 
 function elsewhereOf(rec: Recording): Record<string, number | null> {
@@ -662,6 +664,8 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
   const edited = roleEdit(rec, method, path, body) ?? confession(rec, method, path, body);
   if (edited) return edited;
   if (method !== "POST") return null;
+  const ai = aiWrite(rec, method, path, body);
+  if (ai) return ai;
   // A warrant issued takes its soul off 「阳寿已到」, which `elsewhere.capture_due` counts; the warrant row itself is generic.
   if (path === "/dispatch/capture-warrants/" && body.soul) dropFromList("/dispatch/capture-warrants/due/", String(body.soul));
   const approve = /^\/workflows\/([^/]+)\/approve_node\/$/.exec(path);
@@ -716,6 +720,8 @@ function recordedLike(rec: Recording, pattern: RegExp, query: URLSearchParams, n
 /** The reads the server computes from the current state, which a recording of them could not follow. */
 export function derived(rec: Recording, path: string, query: URLSearchParams): Answer | null {
   if (path === "/demo/tour/") return ok(tourOf(rec));
+  const ai = aiRead(rec, path, query);
+  if (ai) return ai;
   // The case types depend only on the soul's civilization (`VALID_CASE_TYPES_BY_CIVILIZATION`), recorded per civilization.
   if (path === "/workflows/case-types/" && query.has("soul")) {
     const civilization = find(rec, "/souls/", query.get("soul"))?.civilization;

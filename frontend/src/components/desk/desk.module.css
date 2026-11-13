@@ -6,103 +6,12 @@
  * 按钮是 `Button`(主按钮墨色实底),这里不再画。
  */
 
-.shell {
-  display: grid;
-  grid-template-columns: var(--rail-w, 64px) minmax(0, 1fr);
-  min-height: 100vh;
-  background: oklch(var(--color-canvas));
-  color: oklch(var(--color-ink));
-}
-
-/* ── 门栏 ─────────────────────────────────────────────── */
-.rail {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 0;
-  border-right: 1px solid oklch(var(--color-line));
-  background: oklch(var(--color-side, var(--color-canvas)));
-}
-.railMark {
-  width: 52px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-title);
-  color: oklch(var(--color-metal));
-  margin-bottom: 8px;
-}
-.door {
-  width: 52px;
-  min-height: 56px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border-radius: 4px;
-  color: oklch(var(--color-ink-muted));
-  text-decoration: none;
-}
-.door:hover {
-  background: oklch(var(--color-surface-2));
-  color: oklch(var(--color-ink));
-}
-.door[aria-current="page"] {
-  background: oklch(var(--color-surface-2));
-  color: oklch(var(--color-ink));
-  box-shadow: inset 2px 0 0 oklch(var(--color-main-ink));
-}
-.doorGlyph {
-  font-family: var(--font-title);
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 600;
-}
-/* 多于一个字符的门字(egy 的 Wedja / Sesh / Hep / Per / Remetj / Djes):12 一行,行高仍 24,门不跳高。 */
-.doorGlyphWord {
-  font-size: 12px;
-  white-space: nowrap;
-  letter-spacing: 0;
-}
-.doorLabel {
-  font-size: 11px;
-  line-height: 14px;
-}
-.railFoot {
-  margin-top: auto;
-}
-.doorNarrow {
-  display: none;
-}
-.me {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: oklch(var(--color-surface-2));
-  color: oklch(var(--color-ink));
-  font-size: 12px;
-  text-decoration: none;
-}
-
-.main {
-  min-width: 0;
-  outline: none;
-}
-
 /* ── 台:案卷摞 + 摊开的一份 ─────────────────────────── */
 .desk {
   display: grid;
   grid-template-columns: var(--stack-w, 360px) minmax(0, 1fr);
-  height: 100vh;
+  /* 壳(AppLayout 的门栏)里没有工具条;上面只有代看条与门内的二级导航(`DoorTabs`)。 */
+  height: calc(100vh - var(--imp-h, 0px) - var(--door-tabs-h, 0px));
 }
 .stack {
   min-width: 0;
@@ -301,12 +210,6 @@
   grid-column: 2;
   grid-row: 1 / span 3;
 }
-.spine {
-  height: var(--spine-h, 44px);
-  margin: 0 28px;
-  border-top: 1px dashed oklch(var(--color-line-strong));
-  border-bottom: 1px solid oklch(var(--color-line));
-}
 .body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
@@ -339,9 +242,6 @@
 .juanNum {
   font-family: var(--font-mono);
   font-size: 13px;
-}
-.pos {
-  color: oklch(var(--color-success));
 }
 .juanTitle {
   font-size: 12px;
@@ -394,7 +294,7 @@
 /* ── 总簿 ──────────────────────────────────────────── */
 .zongbu {
   /* 中性皮:元素上的 data-skin="neutral"(globals.css)。 */
-  min-height: 100vh;
+  min-height: calc(100vh - var(--imp-h, 0px) - var(--door-tabs-h, 0px));
   display: flex;
   flex-direction: column;
 }
@@ -516,41 +416,6 @@
 
 /* ── 393:一栏;门栏到底部;点开一件是整屏 ───────────── */
 @media (max-width: 768px) {
-  .shell {
-    grid-template-columns: minmax(0, 1fr);
-    padding-bottom: 64px;
-  }
-  .rail {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
-    height: 64px;
-    flex-direction: row;
-    justify-content: space-around;
-    padding: 4px 8px;
-    border-right: 0;
-    border-top: 1px solid oklch(var(--color-line));
-  }
-  .railMark,
-  .railFoot,
-  .doorWide {
-    display: none;
-  }
-  .door,
-  .doorNarrow {
-    display: flex;
-    flex: 1;
-    min-height: 56px;
-  }
-  .doorWide {
-    display: none;
-  }
-  .door[aria-current="page"] {
-    box-shadow: inset 0 -2px 0 oklch(var(--color-main-ink));
-  }
   .desk {
     grid-template-columns: minmax(0, 1fr);
     height: auto;

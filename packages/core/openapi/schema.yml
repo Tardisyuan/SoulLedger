@@ -971,6 +971,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistError'
           description: ''
+  /api/v1/assist/ai-drafts/{id}/decide/:
+    post:
+      operationId: assist_ai_draft_decide
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DraftDecision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DraftDecision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DraftDecision'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftDecisionResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
   /api/v1/assist/conversations/:
     get:
       operationId: officer_assist_conversations_list
@@ -1285,6 +1331,48 @@ paths:
             IP, Trace ID.'
         '400':
           description: A filter is malformed, or more than 10000 rows match.
+  /api/v1/audit-logs/nl-filter/:
+    post:
+      operationId: v1_audit_logs_nl_filter_create
+      description: |-
+        POST /api/v1/audit-logs/nl-filter/ {"question": "..."}
+        把一句话换成一组筛选参数(不查询、不读日志;nl_query.py)。页面把参数填进筛选项,人确认后照旧 GET 本列表。
+        模型不可用答 503,页面退回手动筛选。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NlFilterRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NlFilterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NlFilterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NlFilterResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NlFilterError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NlFilterError'
+          description: ''
   /api/v1/audit-logs/resources/:
     get:
       operationId: v1_audit_logs_resources_retrieve
@@ -15046,6 +15134,32 @@ paths:
                 items:
                   $ref: '#/components/schemas/DataScopeResource'
           description: ''
+  /api/v1/perm/explain/:
+    get:
+      operationId: perm_explain
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+        description: 权限码,如 judgment.assign
+        required: true
+      - in: query
+        name: object
+        schema:
+          type: string
+        description: 可选,<类型>:<id>,类型为 judgment / soul / workflow
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Explanation'
+          description: ''
   /api/v1/perm/export/:
     get:
       operationId: v1_perm_export_retrieve
@@ -17252,7 +17366,7 @@ paths:
     get:
       operationId: v1_social_moderation_handled_list
       description: |-
-        「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+        「已处理」:被隐藏或被官员删除的帖子与评论,一张表,按处理时间倒序。
 
         * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
           (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
@@ -28343,6 +28457,44 @@ components:
         * `EIGHTEEN_HELLS` - 十八层地狱
         * `LOTUS_TERRACE` - 莲花台
         * `HUANHUN_CLIFF` - 还魂崖
+    DraftDecision:
+      type: object
+      properties:
+        adopted:
+          type: boolean
+        final_text:
+          type: string
+          default: ''
+          maxLength: 20000
+      required:
+      - adopted
+    DraftDecisionResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/DraftDecisionResultStatusEnum'
+        edit_ratio:
+          type: number
+          format: double
+          nullable: true
+      required:
+      - edit_ratio
+      - id
+      - status
+    DraftDecisionResultStatusEnum:
+      enum:
+      - pending
+      - adopted
+      - adopted_edited
+      - discarded
+      type: string
+      description: |-
+        * `pending` - pending
+        * `adopted` - adopted
+        * `adopted_edited` - adopted_edited
+        * `discarded` - discarded
     DrinkSoup:
       type: object
       properties:
@@ -29114,6 +29266,10 @@ components:
           type: number
           format: double
           nullable: true
+        max_latency_ms:
+          type: integer
+          nullable: true
+          description: 已答用例里最慢的一条;早于这一项的运行没有
         cost:
           type: number
           format: double
@@ -29429,6 +29585,72 @@ components:
         * `WITNESS` - Witness
         * `SELF_ACCOUNT` - Self account
         * `OTHER` - Other
+    Explanation:
+      type: object
+      properties:
+        action:
+          type: string
+        permission_name:
+          type: string
+        allowed:
+          type: boolean
+        reason:
+          $ref: '#/components/schemas/ExplanationReasonEnum'
+        role:
+          type: string
+        extra_roles:
+          type: array
+          items:
+            type: string
+        roles_that_can:
+          type: array
+          items:
+            type: string
+        object_type:
+          type: string
+          nullable: true
+        scope_kinds:
+          type: array
+          items:
+            type: string
+          description: 只在 out_of_scope 时有:调用者自己的范围
+        explanation:
+          type: string
+          nullable: true
+          description: 模型的措辞;null = 用语言包按 reason 的句子
+      required:
+      - action
+      - allowed
+      - explanation
+      - extra_roles
+      - object_type
+      - permission_name
+      - reason
+      - role
+      - roles_that_can
+      - scope_kinds
+    ExplanationReasonEnum:
+      enum:
+      - allowed
+      - soul_account
+      - global_admin_only
+      - admin_only
+      - role_forbidden
+      - design_approve_conflict
+      - missing_permission
+      - viewing_read_only
+      - out_of_scope
+      type: string
+      description: |-
+        * `allowed` - allowed
+        * `soul_account` - soul_account
+        * `global_admin_only` - global_admin_only
+        * `admin_only` - admin_only
+        * `role_forbidden` - role_forbidden
+        * `design_approve_conflict` - design_approve_conflict
+        * `missing_permission` - missing_permission
+        * `viewing_read_only` - viewing_read_only
+        * `out_of_scope` - out_of_scope
     ExportedFieldPermission:
       type: object
       properties:
@@ -32278,11 +32500,15 @@ components:
         capture_due:
           type: integer
           nullable: true
+        rebirth_application:
+          type: integer
+          nullable: true
       required:
       - appeal
       - capture_due
       - city_god_review
       - cross_judgment
+      - rebirth_application
     JudgmentFlowProgress:
       type: object
       description: 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。
@@ -33093,6 +33319,22 @@ components:
       description: |-
         * `soul` - soul
         * `hall` - hall
+    LatencySpread:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 记了时间的已答提问数
+        p50_ms:
+          type: integer
+          nullable: true
+        p95_ms:
+          type: integer
+          nullable: true
+      required:
+      - count
+      - p50_ms
+      - p95_ms
     LedgerEffective:
       type: object
       description: |-
@@ -35761,6 +36003,83 @@ components:
           maxLength: 2000
       required:
       - truthful
+    NlFilterError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          $ref: '#/components/schemas/NlFilterErrorCodeEnum'
+      required:
+      - code
+      - detail
+    NlFilterErrorCodeEnum:
+      enum:
+      - assistant_not_configured
+      - assistant_unavailable
+      - assistant_busy
+      type: string
+      description: |-
+        * `assistant_not_configured` - assistant_not_configured
+        * `assistant_unavailable` - assistant_unavailable
+        * `assistant_busy` - assistant_busy
+    NlFilterRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          maxLength: 500
+      required:
+      - question
+    NlFilterResponse:
+      type: object
+      properties:
+        filters:
+          $ref: '#/components/schemas/NlFilterValues'
+        dropped:
+          type: array
+          items:
+            type: string
+          description: Keys the model gave that did not pass
+        understood:
+          type: boolean
+          description: False when the model's answer was not a JSON object
+        draft_id:
+          type: integer
+          description: The AIDraft row; POST /assist/ai-drafts/<id>/decide/ when applied
+        model:
+          type: string
+      required:
+      - draft_id
+      - dropped
+      - filters
+      - model
+      - understood
+    NlFilterValues:
+      type: object
+      description: The parameters `GET /audit-logs/` takes, as `nl_query.FIELDS` lets
+        them through. Every key optional.
+      properties:
+        action:
+          type: string
+        resource:
+          type: string
+        resource_id:
+          type: string
+        username:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        trace_id:
+          type: string
+        tenant:
+          type: string
+        search:
+          type: string
     NodeDecisionVerdictEnum:
       enum:
       - PASSED
@@ -44950,11 +45269,19 @@ components:
           type: string
           description: User or system
           maxLength: 255
+        actor_display_name:
+          type: string
+          readOnly: true
+        actor_role:
+          type: string
+          readOnly: true
         create_time:
           type: string
           format: date-time
           readOnly: true
       required:
+      - actor_display_name
+      - actor_role
       - create_time
       - event_type
       - id
@@ -47120,6 +47447,10 @@ components:
           description: 检索进上下文的条目 id,近的在前;退回整份语料时为空
         latency_ms:
           type: integer
+        first_token_ms:
+          type: integer
+          nullable: true
+          description: 首字出来时的毫秒数;非流式为 null
         tokens:
           type: object
           additionalProperties:
@@ -47148,6 +47479,7 @@ components:
       required:
       - answer
       - fallback_reason
+      - first_token_ms
       - latency_ms
       - model
       - provider
@@ -47178,6 +47510,10 @@ components:
           description: 检索进上下文的条目 id,近的在前;退回整份语料时为空
         latency_ms:
           type: integer
+        first_token_ms:
+          type: integer
+          nullable: true
+          description: 首字出来时的毫秒数;非流式为 null
         tokens:
           type: object
           additionalProperties:
@@ -47210,6 +47546,7 @@ components:
       - answer
       - event
       - fallback_reason
+      - first_token_ms
       - latency_ms
       - model
       - provider
@@ -47394,14 +47731,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UsageSide'
+        by_feature:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageFeature'
+          description: 按功能分(问一问、权限解释、审计查询…)
         by_hall:
           type: array
           items:
             $ref: '#/components/schemas/UsageHall'
+        latency:
+          allOf:
+          - $ref: '#/components/schemas/UsageLatency'
+          description: 已答提问的耗时 p50 / p95(从进门到收尾)与首字时间(B5)
         phase4:
           $ref: '#/components/schemas/Phase4'
       required:
       - by_day
+      - by_feature
       - by_hall
       - by_provider
       - by_retrieval
@@ -47410,6 +47757,7 @@ components:
       - cap
       - failure_rates
       - fallbacks
+      - latency
       - month
       - phase4
       - requests
@@ -47496,6 +47844,34 @@ components:
       required:
       - by_reason
       - count
+    UsageFeature:
+      type: object
+      properties:
+        requests:
+          type: integer
+        answered:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cache_read_tokens:
+          type: integer
+        cost:
+          type: number
+          format: double
+          description: 只含已定价模型
+        feature:
+          type: string
+          description: assist = 问一问;其余是业务模块的接入点(AssistUsage.feature)
+      required:
+      - answered
+      - cache_read_tokens
+      - cost
+      - feature
+      - input_tokens
+      - output_tokens
+      - requests
     UsageHall:
       type: object
       properties:
@@ -47528,6 +47904,45 @@ components:
       - output_tokens
       - requests
       - tenant_id
+    UsageLatency:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 记了时间的已答提问数
+        p50_ms:
+          type: integer
+          nullable: true
+        p95_ms:
+          type: integer
+          nullable: true
+        first_token:
+          allOf:
+          - $ref: '#/components/schemas/LatencySpread'
+          description: 首字时间;只有流式提问才有
+        by_retrieval:
+          allOf:
+          - $ref: '#/components/schemas/UsageLatencyRetrieval'
+          description: 耗时按帮助条目的来源分
+      required:
+      - by_retrieval
+      - count
+      - first_token
+      - p50_ms
+      - p95_ms
+    UsageLatencyRetrieval:
+      type: object
+      properties:
+        vector:
+          $ref: '#/components/schemas/LatencySpread'
+        fallback:
+          $ref: '#/components/schemas/LatencySpread'
+        fallback_low_similarity:
+          $ref: '#/components/schemas/LatencySpread'
+      required:
+      - fallback
+      - fallback_low_similarity
+      - vector
     UsageProvider:
       type: object
       properties:

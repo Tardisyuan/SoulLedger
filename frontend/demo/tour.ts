@@ -19,6 +19,8 @@ export interface TourStep {
   tab?: string;
   /** The card carries 「试一下越权」 (`OverreachProbe`). */
   probe?: boolean;
+  /** The card carries 「为什么越不了权」 for 问一问 (`AssistGuardCard`). */
+  assist?: boolean;
 }
 export interface Tour {
   skin: string;
@@ -61,6 +63,7 @@ export const GUARD_STEPS: TourStep[] = [
   { n: 4, target: "data_scope", route: "/permissions", tab: "permissions.segments.roles", css: table },
   { n: 5, target: "audit", route: "/audit", css: table },
   { n: 6, target: "recycle", route: "/recycle-bin", css: `${table}, main ul` },
+  { n: 7, target: "assist_guard", route: "/admin/assistant", css: "main section", assist: true },
 ];
 
 export function tourOf(rec: Recording): Tour | null {

@@ -6,10 +6,12 @@
  * `aria-selected`,也没有 `aria-pressed`,也没有 `aria-current`。读屏用户听到的是
  * 两个一模一样的按钮,分不出当前在看哪一个视图。
  *
- * 同一类问题在侧栏是更重的一版:侧栏项(当时的 `SidebarMenuItem`)把可见文字整个放在
+ * 同一类问题在导航是更重的一版:旧侧栏的项(当时的 `SidebarMenuItem`)把可见文字整个放在
  * `{!collapsed && …}` 里而**不给替代**,所以紧凑/轨道模式下整条主导航是一列
- * 没有可访问名称的 `<svg>`。改动之前这个文件里
- * `aria-label|title=|aria-current` 的计数是 **0**。
+ * 没有可访问名称的 `<svg>`。
+ *
+ * 第三十批第 4 步起导航是门栏(`DoorRail`):门上的字与小字都 `aria-hidden`(一个「审」字读出来没有意义),
+ * 名字在 `aria-label` 上 —— 正是旧侧栏那个缺陷会复发的地方。门内二级导航(`DoorTabs`)同理。
  *
  * ─────────────────────────────────────────────────────────────────────────
  * 为什么是 `aria-pressed` 而不是 `role="tab"`
@@ -18,21 +20,15 @@
  * 它们不是真的 tablist:没有 `tabpanel`,方向键也不在它们之间移动。声明了
  * `role` 却不兑现对应的键盘契约,正是这个仓库已经有三个实例的那个缺陷 ——
  * 见 `verification-mechanisms-fail-silently-here`。它们**是**一组「恰好一个
- * 打开」的开关,而 `aria-pressed` 说的正是这句真话。
- * `components/ui/data-grid/FilterBar.tsx:181` 早就是这么写的。
+ * 打开」的开关,而 `aria-pressed` 说的正是这句真话。门内导航是链接,当前页用 `aria-current="page"`。
  *
  * 这个套件用渲染而不是扫文本:选中态是运行时算出来的,一条正则只能看到属性
- * 存在,看不到它跟着选中项走 —— 而 `aria-pressed={false}` 写死在四个按钮上
- * 会让正则满意,同时什么都没修好。
+ * 存在,看不到它跟着选中项走。
  *
- * 这里只放**侧栏**。四条 tab 条的断言写在它们各自已有的页面套件里
- * (`NotificationsPage.test.tsx` / `DashboardPage.test.tsx`),因为在那里断言的
- * 是真页面;`app/social` 与 `app/social/follows` 目前没有页面套件,所以那两条
- * **没有覆盖** —— 写在这里,而不是拿一个我自己写对的合成 tab 条冒充覆盖。
+ * 这里只放**导航**。四条 tab 条的断言写在它们各自已有的页面套件里
+ * (`NotificationsPage.test.tsx` / `DashboardPage.test.tsx`)。
  */
-import { render, screen, fireEvent } from "@testing-library/react";
-import { useState } from "react";
-import { GlobalNav } from "@/src/components/layout/GlobalNav";
+import { render, screen, within } from "@testing-library/react";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 
 const mockPathname = jest.fn(() => "/souls");
@@ -40,7 +36,7 @@ jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "en", hydrated: true }));
+jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -51,93 +47,58 @@ jest.mock("next/link", () => ({
   ),
 }));
 
-/**
- * 从真类型建,不手写一个「够用」的对象字面量。
- *
- * 第一版把每个 fixture 写成 `{ id, name, path, icon, children }` —— jest 绿而
- * `tsc` 红:`SidebarMenu` 还要 `order` / `component` / `roles` / `is_active` /
- * `parent`。一个少了五个字段的替身,是在拿一个真实数据里不存在的形状喂组件。
- */
-function menu(over: Partial<SidebarMenu> & Pick<SidebarMenu, "id" | "name" | "path">): SidebarMenu {
-  return {
-    icon: null,
-    order: 0,
-    component: null,
-    roles: [],
-    is_active: true,
-    parent: null,
-    children: [],
-    ...over,
-  };
-}
+const mockUser = { role: "JUDGE", username: "cui", display_name: "崔珏", extra_roles: [] as string[] };
+jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
+jest.mock("@/src/hooks/usePermissions", () => ({
+  usePermissions: () => ({ isAdmin: false, hasPermission: (c: string) => c === "judgment.read" }),
+}));
+jest.mock("@/src/components/plaque/useHall", () => ({ useHallCivilization: () => "CHINESE" }));
 
-const LEAF = menu({ id: 1, name: "灵魂", path: "/souls", icon: "Users" });
-const OTHER = menu({ id: 2, name: "审判", path: "/judgment", icon: "Scale" });
-const PARENT = menu({
-  id: 3,
-  name: "设置",
-  path: "/settings",
-  icon: "Settings",
-  children: [menu({ id: 4, name: "菜单", path: "/menus", icon: "List" })],
+function menu(over: Partial<SidebarMenu> & Pick<SidebarMenu, "id" | "name" | "path">): SidebarMenu {
+  return { icon: null, order: 0, component: null, roles: [], is_active: true, parent: null, children: [], ...over };
+}
+const mockMenus: SidebarMenu[] = [
+  menu({ id: 1, name: "灵魂管理", path: "/souls" }),
+  menu({ id: 2, name: "功德管理", path: "/ledger" }),
+  menu({ id: 3, name: "语料条文", path: "/corpus" }),
+];
+jest.mock("@/src/hooks/useSidebarMenus", () => ({ useSidebarMenus: () => ({ data: mockMenus }) }));
+
+import { DoorRail, DoorTabs } from "@/src/components/layout/DoorRail";
+
+const rail = () => screen.getByTestId("door-rail");
+
+describe("门栏:当前门不只靠文明色", () => {
+  it("每一门都有名字,哪怕看得见的字被藏起来", () => {
+    render(<DoorRail />);
+    for (const name of ["caseDesk.rail.desk", "caseDesk.rail.souls", "caseDesk.rail.corpus"]) {
+      expect(within(rail()).getByRole("link", { name })).toBeInTheDocument();
+    }
+    // Absence: the glyph is not the name (a lone 「审」 says nothing to a screen reader).
+    expect(within(rail()).queryByRole("link", { name: "caseDesk.rail.desk_glyph" })).not.toBeInTheDocument();
+  });
+
+  it("当前门用 aria-current 说出来;别的门不挂", () => {
+    render(<DoorRail />);
+    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.souls" })).toHaveAttribute("aria-current", "page");
+    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.desk" })).not.toHaveAttribute("aria-current");
+    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.corpus" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("子页面(灵魂卷宗)点亮它所在的门", () => {
+    mockPathname.mockReturnValueOnce("/souls/42");
+    render(<DoorRail />);
+    expect(within(rail()).getByRole("link", { name: "caseDesk.rail.souls" })).toHaveAttribute("aria-current", "page");
+  });
 });
 
-/** 手风琴的开合在 AppLayout 里;这个外壳替它持有一组。 */
-function Harness({
-  menus,
-  currentId = null,
-  collapsed = false,
-}: {
-  menus: SidebarMenu[];
-  currentId?: number | null;
-  collapsed?: boolean;
-}) {
-  const [openId, setOpenId] = useState<number | null>(null);
-  return (
-    <GlobalNav
-      menus={menus}
-      allMenuPaths={["/souls", "/judgment", "/menus"]}
-      currentId={currentId}
-      openId={openId}
-      onToggle={(id) => setOpenId((o) => (o === id ? null : id))}
-      collapsed={collapsed}
-    />
-  );
-}
-
-describe("导航:当前项不只靠文明色", () => {
-  it("每一项以文字为名", () => {
-    render(<Harness menus={[LEAF, OTHER]} />);
-    expect(screen.getByRole("link", { name: "灵魂" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "审判" })).toBeInTheDocument();
-  });
-
-  it("收起成 68px 图标轨时,每一项仍有名字(可见文字没了,名字不能跟着没)", () => {
-    render(<Harness menus={[LEAF, PARENT]} collapsed />);
-    expect(screen.getByRole("link", { name: "灵魂" })).toHaveAttribute("title", "灵魂");
-    expect(screen.getByRole("button", { name: "设置" })).toHaveAttribute("title", "设置");
-    // Absence: the visible label really is gone, so the name is not coming from it.
-    expect(screen.queryByText("灵魂")).not.toBeInTheDocument();
-  });
-
-  it("当前页用 aria-current 说出来,不只靠底色", () => {
-    render(<Harness menus={[LEAF, OTHER]} currentId={LEAF.id} />);
-    expect(screen.getByRole("link", { name: "灵魂" })).toHaveAttribute("aria-current", "page");
-  });
-
-  it("不是当前页的就不许挂 aria-current", () => {
-    render(<Harness menus={[LEAF, OTHER]} currentId={LEAF.id} />);
-    expect(screen.getByRole("link", { name: "审判" })).not.toHaveAttribute("aria-current");
-  });
-
-  it("有子项的一级项是按钮,报告手风琴的开合,打开后二级页面可达", () => {
-    render(<Harness menus={[LEAF, PARENT]} />);
-
-    const toggle = screen.getByRole("button", { name: "设置" });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("link", { name: "菜单" })).not.toBeInTheDocument();
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("link", { name: "菜单" })).toHaveAttribute("href", "/menus");
+describe("门内导航:当前页用 aria-current", () => {
+  it("当前页挂 aria-current=page,同门的另一页不挂", () => {
+    mockPathname.mockReturnValue("/ledger");
+    render(<DoorTabs />);
+    const tabs = screen.getByTestId("door-tabs");
+    expect(within(tabs).getByRole("link", { name: "功德管理" })).toHaveAttribute("aria-current", "page");
+    expect(within(tabs).getByRole("link", { name: "灵魂管理" })).not.toHaveAttribute("aria-current");
+    mockPathname.mockReturnValue("/souls");
   });
 });

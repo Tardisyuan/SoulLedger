@@ -23,5 +23,5 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("tenants", "0020_hall_names_follow_the_docs")]
+    dependencies = [("tenants", "0021_hall_name_egy_wesekhet_maaty")]
     operations = [migrations.RunPython(forwards, backwards)]

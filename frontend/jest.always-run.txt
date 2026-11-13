@@ -29,6 +29,8 @@ src/__tests__/creditsOssDrift.test.ts backend config frontend mobile-officer mob
 src/__tests__/cssTokenReferenceContract.test.ts packages
 src/__tests__/dangerButtonPlacement.test.ts frontend
 src/__tests__/dataGridToneContract.test.ts packages
+src/__tests__/demoAssistRecordings.test.ts backend docs
+src/__tests__/demoDataHasNoInternalHosts.test.ts frontend
 src/__tests__/demoHomePreview.test.ts *
 src/__tests__/demoStaysOutOfTheNormalBuild.test.ts frontend
 src/__tests__/designGuardContract.test.ts *
@@ -36,6 +38,7 @@ src/__tests__/dialogsAreNotHandRolled.test.ts frontend
 src/__tests__/domainDisplayContract.test.tsx packages
 src/__tests__/domainDisplayRendering.test.tsx packages
 src/__tests__/domainNamespaceContract.test.ts packages
+src/__tests__/doors.test.ts frontend
 src/__tests__/draftSavedFlash.test.tsx packages
 src/__tests__/egyLexiconRules.test.ts frontend
 src/__tests__/enumsMatchTheSchema.test.ts packages

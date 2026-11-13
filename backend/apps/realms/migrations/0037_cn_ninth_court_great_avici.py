@@ -28,5 +28,5 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("realms", "0035_european_acheron_and_seventh_terrace_descriptions")]
+    dependencies = [("realms", "0036_european_acheron_and_seventh_terrace_descriptions")]
     operations = [migrations.RunPython(forwards, backwards)]

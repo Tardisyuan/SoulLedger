@@ -7,6 +7,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { StatusCard } from "@/src/components/ui/PageError";
 import { routeForView } from "@/src/lib/defaultView";
+import { landingFor } from "@/src/lib/doors";
 import { usePermissions } from "@/src/hooks/usePermissions";
 
 /**
@@ -28,7 +29,7 @@ export default function NotFound() {
       message={t("not_found.description")}
       detail={pathname}
       action={
-        <Link href={hasPermission("judgment.read") ? "/desk" : routeForView(null, user)} className={buttonVariants({ variant: "primary", size: "md" })}>
+        <Link href={hasPermission("judgment.read") && !landingFor(user?.role) ? "/desk" : routeForView(null, user)} className={buttonVariants({ variant: "primary", size: "md" })}>
           {t("not_found.to_desk")}
         </Link>
       }

@@ -464,7 +464,7 @@ describe("the standing banner", () => {
     await press("mfa-confirm");
     await screen.findByTestId("mfa-recovery-codes");
     // held: the tab bar does not leave the codes
-    await press("tab-todo");
+    await press("door-desk");
     expect(screen.getByTestId("mfa-recovery-codes")).toBeTruthy();
     expect(mockApi.cancelSetup).not.toHaveBeenCalled();
     expect(screen.getByTestId("mfa-banner")).toBeTruthy();
@@ -473,7 +473,7 @@ describe("the standing banner", () => {
     await screen.findByTestId("mfa-done");
     await waitFor(() => expect(screen.queryByTestId("mfa-banner")).toBeNull());
     // and now the tab bar works again
-    await press("tab-todo");
+    await press("door-desk");
     expect(screen.queryByTestId("mfa-screen")).toBeNull();
   });
 

@@ -1,6 +1,6 @@
 """Settings for recording the demo (scripts/demo-backend-up.sh). The demo's administrator signs in with one click, so
 recording it must not stop at the two-step setup screen; and a sweep of every GET would otherwise be throttled into
-recording almost nothing. Nothing else differs from config.settings."""
+recording almost nothing; and the assistant's addresses are placeholders (below). Nothing else differs from config.settings."""
 from config.settings import *  # noqa: F403
 
 MFA_SETUP_ENFORCED = False
@@ -8,6 +8,12 @@ REST_FRAMEWORK = {  # noqa: F405
     **REST_FRAMEWORK,  # noqa: F405
     "DEFAULT_THROTTLE_RATES": {k: "1000000/minute" for k in REST_FRAMEWORK.get("DEFAULT_THROTTLE_RATES", {})},  # noqa: F405
 }
+
+# The recording is published, and the admin's assistant pages show these addresses (B4, 2026-11-13): the machine that
+# records must not lend them its own. The demo calls no model, so a placeholder that answers nothing is the truth here.
+# `frontend/src/__tests__/demoDataHasNoInternalHosts.test.ts` scans what was recorded; demo-record.mjs scrubs the rest.
+ASSISTANT_EMBEDDING_URL = "http://embeddings.example:11434"
+ASSISTANT_BASE_URL = ""
 
 
 def _no_decay(**_):

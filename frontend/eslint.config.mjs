@@ -143,8 +143,6 @@ const ROUND_ALLOW = new Set([
   // 审判队列的认领标:一位官员的头像(首字),规范 v1 第三类 A·02 画成圆形,属头像例外。
   // 单独成文件,好让例外只覆盖这一个元素,而不是整张队列表。
   "src/components/judgment/ClaimAvatar.tsx",
-  // 规范 v3 导航底部的个人区:30px 圆形头像(首字),头像例外。
-  "src/components/layout/GlobalNav.tsx",
   // 演示里的灵魂端 App 画面(2026-11-07 起 demo/ 进守卫):照 App 自己的形状 —— 胶囊页签、路线站点圆点、
   // 实时活动的进度条,App 里都是 borderRadius 999(mobile/src/screens/life.tsx 的 routeDot 等)。
   "demo/DemoSoul.tsx",

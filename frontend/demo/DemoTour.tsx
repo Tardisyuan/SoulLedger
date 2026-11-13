@@ -7,13 +7,14 @@ import { api } from "@soulledger/core/api/client";
 import { MOTION_DURATIONS, MOTION_EASINGS, prefersReducedMotion } from "@/lib/motion";
 import { Button } from "@/src/components/ui/Button";
 import { BrandMark } from "@/src/components/brand/BrandMark";
-import { BRAND_WORD } from "@/src/components/layout/GlobalNav";
+import { BRAND_WORD } from "@/src/components/layout/DoorRail";
 import { Seal } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import stats from "@/src/config/landing-stats.json";
 import { ENTERED, ENTRANCE, type EntranceDetail, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
 import { OverreachProbe } from "./OverreachProbe";
+import { AssistGuardCard } from "./AssistGuardCard";
 import { DEMO_USERNAMES } from "./store";
 import type { Tour } from "./tour";
 
@@ -120,11 +121,12 @@ const firstInView = (css: string) => Array.from(document.querySelectorAll(css)).
 
 /**
  * The console's page head (第三十批: 顶线 + 卷宗头, which replaced the identity band), and the mark the seal lands on: the
- * sidebar's hall seal, or with no underworld the sidebar's brand mark. The page head carries no seal of its own any more.
+ * door rail's brand mark (第三十批第 4 步: the sidebar and its hall seal are gone). The page head carries no seal of its own.
+ * On a phone the rail is the bottom bar and draws no mark, so there is nothing to land on and the seal just fades.
  */
-function handOffTargets(sealed: boolean): { band: Element | null; mark: Element | null } {
+function handOffTargets(): { band: Element | null; mark: Element | null } {
   const band = firstInView("[data-testid='page-head']");
-  const mark = sealed ? firstInView(".nav-hall-card [data-testid='seal']") : firstInView("[data-nav-brand] [data-brand-mark]");
+  const mark = firstInView("[data-testid='door-rail'] [data-brand-mark]");
   return { band, mark: inView(mark) ? mark : null };
 }
 
@@ -229,7 +231,7 @@ function EntranceOverlay() {
       // The route `enter` pushed, not merely another one: from one hall to the next the path may not change at all.
       const arrived = target.current !== null && window.location.pathname === target.current && !document.querySelector(WAITING);
       // And its band at rest: one that is still collapsing or opening (44 ↔ 76 on a phone) is not where the seal goes.
-      const b = handOffTargets(run.skin !== null).band?.getBoundingClientRect();
+      const b = handOffTargets().band?.getBoundingClientRect();
       const band = b ? `${Math.round(b.top)}/${Math.round(b.height)}` : "";
       const still = band === lastBand;
       lastBand = band;
@@ -282,7 +284,7 @@ function EntranceOverlay() {
     let resized: ResizeObserver | null = null;
     const place = () => {
       if (!reduced) {
-        const { band, mark: real } = handOffTargets(run.skin !== null);
+        const { band, mark: real } = handOffTargets();
         if (band !== watched && resized) {
           resized.disconnect();
           if (band) resized.observe(band);
@@ -572,6 +574,7 @@ export default function DemoTour() {
           <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{t(`demo.tour.${tour.skin}.${step.n}.body`)}</p>
           <p className="mt-2 mb-0 text-xs text-[oklch(var(--color-ink-subtle))]">{t("demo.tour.look_here", { target: t(`demo.tour.target.${step.target}`) })}</p>
           {step.probe && here ? <OverreachProbe key={step.n} /> : null}
+          {step.assist && here ? <AssistGuardCard key={step.n} /> : null}
           <div className="mt-3 flex items-center justify-between gap-2">
             {state.step > 0 ? (
               <Button type="button" variant="ghost" size="sm" onClick={() => go(state.step - 1)}>{t("demo.tour.prev")}</Button>

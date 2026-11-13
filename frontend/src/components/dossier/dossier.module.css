@@ -1,0 +1,301 @@
+/*
+ * 卷宗页(Design 第三十批 第 3 步):脊、印、功过记号、左「卷」右「台」。颜色只读 globals.css 的令牌;文明色只在
+ * 顶线、印(--seal)、脊(civT 已行 + 唯一的 metal「现在」)、焦点四处。
+ */
+
+/* ── 脊 ─────────────────────────────────────────── */
+.spine {
+  height: var(--spine-h, 44px);
+  margin: 0 32px;
+}
+.spineSvg {
+  display: block;
+  width: 100%;
+  height: var(--spine-h, 44px);
+  overflow: visible;
+}
+.done {
+  color: oklch(var(--color-main-ink));
+}
+.todo {
+  color: oklch(var(--color-ink-subtle));
+}
+.now {
+  color: oklch(var(--color-metal));
+}
+.solid {
+  color: oklch(var(--color-main-ink));
+  fill: currentColor;
+}
+.hollow {
+  fill: oklch(var(--color-canvas));
+}
+.hollowTodo {
+  color: oklch(var(--color-ink-subtle));
+  fill: oklch(var(--color-canvas));
+}
+.hollowCiv {
+  color: oklch(var(--color-main-ink));
+  fill: oklch(var(--color-canvas));
+}
+.funnel {
+  color: oklch(var(--color-line));
+}
+.label {
+  fill: oklch(var(--color-ink-muted));
+  font-family: var(--font-sans);
+}
+.faint {
+  fill: oklch(var(--color-ink-subtle));
+}
+.serif {
+  font-family: var(--font-title);
+}
+.nowText {
+  fill: oklch(var(--color-metal));
+  font-weight: 600;
+}
+.keep {
+  display: inline;
+}
+.breath {
+  animation: spine-now var(--now-breath, 3.2s) ease-in-out infinite;
+}
+@keyframes spine-now {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+/* 窄屏只留节点,不写站名;地府只标当前殿和首尾(`.keep`)。 */
+@media (max-width: 639px) {
+  .spine {
+    margin: 0 16px;
+  }
+  .label:not(.keep) {
+    display: none;
+  }
+  /* 940×44 的图按宽缩到 361 时只剩约 17px 高;窄屏保持 44 高、至少 560 宽,在脊这一条里横滑(页面本身不横滚)。
+     ponytail: 不是 Design 的 361 专用版式(只留节点、重新排距),要更像就另画一套窄几何。 */
+  .spine {
+    overflow-x: auto;
+  }
+  .spineSvg {
+    min-width: 560px;
+  }
+  .juanRow {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .ledgerRow {
+    grid-template-columns: 76px 16px minmax(0, 1fr) 44px;
+    gap: 8px;
+  }
+}
+
+/* ── 印 ─────────────────────────────────────────── */
+.seal {
+  flex: none;
+  display: block;
+}
+.sealFill {
+  fill: var(--seal, oklch(var(--color-seal)));
+}
+.sealStroke {
+  stroke: var(--seal, oklch(var(--color-seal)));
+}
+.onSeal {
+  fill: oklch(var(--color-canvas));
+}
+.onSealStroke {
+  stroke: oklch(var(--color-canvas));
+}
+.stampIn {
+  animation: seal-stamp var(--stamp, 240ms) var(--stamp-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
+}
+@keyframes seal-stamp {
+  0% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .breath,
+  .stampIn {
+    animation: none;
+  }
+}
+
+/* ── 功过记号 ─────────────────────────────────────── */
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: var(--mark, 16px);
+  height: var(--mark, 16px);
+  flex: none;
+  color: oklch(var(--color-ink));
+  vertical-align: -3px;
+}
+.markCn {
+  font: 600 11px/1 var(--font-title);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1.2px currentColor;
+}
+.markCnSolid {
+  background: oklch(var(--color-ink));
+  color: oklch(var(--color-canvas));
+  box-shadow: none;
+}
+.onInk {
+  fill: oklch(var(--color-canvas));
+}
+.num {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.pos {
+  color: oklch(var(--color-success));
+}
+.neg {
+  color: oklch(var(--color-danger));
+}
+
+/* ── 卷宗页:页签 + 卷 | 台 ──────────────────────── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  font: var(--tai, 400 14px/22px var(--font-sans));
+  color: oklch(var(--color-ink-muted));
+  text-decoration: none;
+  white-space: nowrap;
+}
+.tab:hover {
+  color: oklch(var(--color-ink));
+}
+.tab[aria-current="page"] {
+  color: oklch(var(--color-ink));
+  font-weight: 500;
+  box-shadow: inset 0 -2px 0 oklch(var(--color-main-ink));
+}
+.tabCount {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: oklch(var(--color-ink-subtle));
+}
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--judge-w, 380px);
+  gap: 32px;
+  align-items: start;
+}
+@media (max-width: 1023px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.juan {
+  margin: 0;
+  border-top: 1px solid oklch(var(--color-line));
+}
+.juanRow {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid oklch(var(--color-line));
+  align-items: baseline;
+}
+.juanKey {
+  font-size: 13px;
+  line-height: 20px;
+  color: oklch(var(--color-ink-muted));
+  margin: 0;
+}
+.juanVal {
+  font: var(--juan, 400 16px/28px var(--font-title));
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.juanHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  line-height: 16px;
+  color: oklch(var(--color-ink-muted));
+  margin: 24px 0 8px;
+  font-weight: 400;
+}
+.juanHead a {
+  margin-left: auto;
+  color: oklch(var(--color-ink-muted));
+}
+.ledgerRow {
+  display: grid;
+  grid-template-columns: 112px 20px minmax(0, 1fr) 56px;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid oklch(var(--color-line));
+  align-items: baseline;
+}
+.ledgerRow > :last-child {
+  text-align: right;
+}
+.judge {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 18px;
+  border-radius: 10px;
+  background: oklch(var(--color-surface-1));
+  box-shadow: inset 0 0 0 1px oklch(var(--color-line));
+  min-width: 0;
+}
+.judgeHead {
+  margin: 0;
+  font: 500 12px/16px var(--font-sans);
+  letter-spacing: 0.08em;
+  color: oklch(var(--color-ink-subtle));
+}
+.sealBox {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid oklch(var(--color-line));
+}
+.sealBox p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: oklch(var(--color-ink-muted));
+}
+.verdictWords {
+  margin: 0;
+  font: var(--juan, 400 16px/28px var(--font-title));
+  white-space: pre-wrap;
+}

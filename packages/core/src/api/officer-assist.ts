@@ -25,6 +25,18 @@ export type OfficerAssistConversation = Schemas["OfficerAssistConversation"];
 export type OfficerAssistAnswer = Schemas["AssistAnswer"];
 export type OfficerAssistMessage = Schemas["AssistMessage"];
 
+/**
+ * 「这次怎么答的」 (作品集建议 B1): one answer's tools (names only, never their results), where the help entries came
+ * from, tokens, timings and who answered. Only the administrator's try endpoint (`/assist-admin/try/`) reports it;
+ * the officer and soul endpoints never do. The demo replays traces recorded through that endpoint under each answer
+ * (`scripts/demo-record-assist.py`), so in production this is always absent.
+ */
+export type AssistTrace = Pick<
+  Schemas["TryResult"],
+  "tools_called" | "retrieval" | "retrieved_entries" | "latency_ms" | "first_token_ms" | "tokens" | "model" | "provider_role" | "fallback_reason"
+>;
+export type OfficerAssistTracedMessage = OfficerAssistMessage & { trace?: AssistTrace };
+
 /** Canvas 1d: past this the console stops waiting and offers a retry with the question kept. */
 export const ASSIST_TIMEOUT_MS = 25_000;
 
@@ -106,4 +118,12 @@ export const officerAssistApi = {
   conversations: () => api.get<OfficerAssistConversation[]>("/assist/conversations/").then((r) => r.data),
   /** 204; someone else's (or a gone one) is 404 `not_found`. */
   deleteConversation: (id: string) => api.delete(`/assist/conversations/${id}/`).then(() => undefined),
+  /**
+   * What a person did with an AI draft (`AIDraft`, apps/soul_assist/drafts.py). `finalText` is what was finally
+   * submitted through the ordinary write path; it only measures the edit and is not stored. 409 = already decided.
+   */
+  decideDraft: (id: number, adopted: boolean, finalText = "") =>
+    api.post<AIDraftDecision>(`/assist/ai-drafts/${id}/decide/`, { adopted, final_text: finalText }).then((r) => r.data),
 };
+
+export type AIDraftDecision = components["schemas"]["DraftDecisionResult"];

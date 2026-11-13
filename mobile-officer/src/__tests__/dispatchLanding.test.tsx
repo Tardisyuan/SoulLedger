@@ -22,6 +22,8 @@ jest.mock("@soulledger/core/api/officer-app", () => ({
     item: (...a: unknown[]) => mockItem(...a),
     registerPush: jest.fn(),
     unregisterPush: jest.fn(),
+    // 通知 is under 我 now (第三十批 九.5): 我的 opens first and asks for its numbers.
+    stats: jest.fn(async () => ({ data: {} })),
   },
 }));
 jest.mock("@soulledger/core/api/dispatch", () => ({
@@ -58,6 +60,7 @@ const notice = (type: string) => ({
 async function openNotice(type: string) {
   mockNotices.mockResolvedValue({ data: { results: [notice(type)] } });
   renderOfficer(<Shell />, { user: DISPATCHER });
+  fireEvent.press(await screen.findByTestId("door-me"));
   fireEvent.press(await screen.findByTestId("tab-notices"));
   fireEvent.press(await screen.findByTestId("notice-1"));
   // 点开会标已读,壳层随即重问未读数;等它落定,不让那次 setState 落在测试之后。

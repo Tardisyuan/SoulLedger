@@ -58,6 +58,6 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("realms", "0034_asphodel_meadow_egy_name")]
+    dependencies = [("realms", "0035_hall_of_two_truths_egy_name")]
 
     operations = [migrations.RunPython(forwards, backwards)]

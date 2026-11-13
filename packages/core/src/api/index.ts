@@ -183,6 +183,7 @@ export { eventsApi, type SoulEvent } from "./events";
 export {
   permApi,
   type Permission,
+  type PermissionExplanation,
   type Role,
   type RolePermissions,
   type PermissionAssignResult,
@@ -211,7 +212,7 @@ export { dataScopeApi, DATA_SCOPES, type DataScope, type DataScopeRule, type Dat
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton, type MenuButtonConfig } from "./menus";
 
 // Audit
-export { adminSessionsApi, type AdminSession, type AdminSessionKind, auditApi, loginLogsApi, type AuditActionOption, type AuditLogDetail, type AuditLogEntry, type AuditStats, type AuditTimelineParams, type LoginLogEntry, type LoginLogStatus } from "./audit";
+export { adminSessionsApi, type AdminSession, type AdminSessionKind, auditApi, loginLogsApi, type AuditActionOption, type AuditLogDetail, type AuditLogEntry, type AuditNlFilter, type AuditNlFilterValues, type AuditStats, type AuditTimelineParams, type LoginLogEntry, type LoginLogStatus } from "./audit";
 
 // Tenants
 export { tenantsApi, REBIRTH_COOLDOWN_SETTING, REBIRTH_QUOTA_SETTING, MFA_REQUIRED_ROLES_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantSettingsPatch, type TenantMfaRoleRow, type TenantCreateBody, type HallOverviewRow, type HallQuotaRow } from "./tenants";

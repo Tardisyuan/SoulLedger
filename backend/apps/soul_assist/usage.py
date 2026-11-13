@@ -4,6 +4,7 @@
 花费 = token × 管理员填的价目表;不在价目表里的模型算不出花费,**报出来,不当 0**。
 """
 import logging
+import math
 from datetime import datetime, timedelta
 
 from django.db import transaction
@@ -21,12 +22,13 @@ _TOKENS = {"input_tokens": Sum("input_tokens"), "output_tokens": Sum("output_tok
 
 
 def record(side, tenant, status, model="", tokens=None, *, is_eval=False, retrieval="", provider_role="",
-           fallback_reason=""):
+           fallback_reason="", latency_ms=None, first_token_ms=None):
     from apps.soul_assist.models import AssistUsage
 
     tokens = tokens or {}
     AssistUsage.objects.create(side=side, tenant=tenant, status=status, model=model or "", is_eval=is_eval,
                                retrieval=retrieval, provider_role=provider_role, fallback_reason=fallback_reason,
+                               latency_ms=latency_ms, first_token_ms=first_token_ms,
                                input_tokens=tokens.get("input", 0), output_tokens=tokens.get("output", 0),
                                cache_read_tokens=tokens.get("cache_read", 0))
 
@@ -252,11 +254,41 @@ def report(prices, month=None):
                     "fallback_reasons": {r: day_reasons.get(day, {}).get(r, 0) for r in FALLBACK_REASONS}}
                    for day, v in sorted(days.items())],
         "by_side": [{"side": side, **v} for side, v in sorted(_grouped(rows, "side", prices).items())],
+        "by_feature": [{"feature": f, **v} for f, v in sorted(_grouped(rows, "feature", prices).items())],
         "by_hall": [{"tenant_id": k, "code": codes.get(k), **v} for k, v in halls.items()],
+        "latency": latency(rows),
         "phase4": {"corpus_tokens": prompt_tokens, "corpus_threshold": CORPUS_TOKEN_THRESHOLD,
                    "corpus_reached": prompt_tokens >= CORPUS_TOKEN_THRESHOLD,
                    "empty_share": empty_share, "empty_threshold": EMPTY_SHARE_THRESHOLD,
                    "empty_reached": answered > 0 and empty_share >= EMPTY_SHARE_THRESHOLD},
+    }
+
+
+def _percentile(values, share):
+    """最近秩:排好序的第 ceil(share × n) 个。没有数为 None。"""
+    if not values:
+        return None
+    return values[max(math.ceil(share * len(values)) - 1, 0)]
+
+
+def _spread(values):
+    values = sorted(values)
+    return {"count": len(values), "p50_ms": _percentile(values, 0.5), "p95_ms": _percentile(values, 0.95)}
+
+
+def latency(rows):
+    """答出的提问(ok / empty)的耗时与首字时间的 p50 / p95,以及按检索方式分开的耗时(B5)。
+    只算记了时间的行(加列之前的旧行为空);首字只有流式才有。
+
+    ponytail: 把这个月的耗时全取回来在 Python 里排序 —— 一个月几千行没问题;到几十万行再换 PG 的
+    `percentile_cont`(SQLite 没有它,测试库跑不了)。"""
+    answered = rows.filter(_ANSWERED, latency_ms__isnull=False).order_by()
+    triples = list(answered.values_list("latency_ms", "first_token_ms", "retrieval"))
+    return {
+        **_spread([t[0] for t in triples]),
+        "first_token": _spread([t[1] for t in triples if t[1] is not None]),
+        "by_retrieval": {r: _spread([t[0] for t in triples if t[2] == r])
+                         for r in ("vector", "fallback", "fallback_low_similarity")},
     }
 
 

@@ -12,6 +12,7 @@
  * Nothing writes the key any more.
  */
 import { authApi, type DefaultView } from "@soulledger/core/api";
+import { landingFor } from "@/src/lib/doors";
 
 export type { DefaultView };
 
@@ -83,8 +84,13 @@ export function defaultViewFor(user: ViewUser): DefaultView {
   return user.permissions?.includes("judgment.read") ? "operator" : "admin";
 }
 
-/** Unset falls back to the role's view; with no user at all, /dashboard. */
+/**
+ * Unset falls back to the role's view; with no user at all, /dashboard.
+ * 守卫 / 观察员 / 版主没有「审」这一门(`src/lib/doors.ts`,第三十批第 4 步):不管选了哪个视图,都去自己那一门。
+ */
 export function routeForView(view: DefaultView | null, user?: ViewUser): string {
+  const own = landingFor(user?.role);
+  if (own) return own;
   const chosen = view ?? defaultViewFor(user);
   return chosen === "admin" && user?.role === "ADMIN" ? ADMIN_LEDGER : ROUTES[chosen];
 }

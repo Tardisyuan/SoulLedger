@@ -88,6 +88,11 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { DOMAIN_BADGE, soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
+import { DossierSpine } from "@/src/components/dossier/DossierSpine";
+import { DossierTabs } from "@/src/components/dossier/DossierTabs";
+import { dossierTabHrefs } from "@/src/components/dossier/dossierTabHrefs";
+import { useSpineNow } from "@/src/components/dossier/useSpineNow";
+import { dossierWhere } from "@/src/components/dossier/dossierWhere";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 /* D1:世数不是状态,更不给「轮回中」的色 —— 与状态徽章同一副 ink 字 / ink3 框。 */
@@ -587,6 +592,17 @@ export default function SoulDetailPage() {
           }
         : undefined;
   usePlaque({ title: t("plaque.soul"), hall, caseRef });
+  /* 卷宗脊与页签(第三十批第 3 步):与审判页同一份页头。脊的「现在」:地府读十三站与最相关那一场的殿,其余读行程。
+     页签的后四节是本页的锚点;卷宗 = 这一页。 */
+  const spine = useSpineNow({
+    soulId: id,
+    civilization: soul?.civilization,
+    currentState: soul?.current_state,
+    diyuStation: soul?.diyu_station,
+    court: shownJudgment?.court,
+  });
+  const where = dossierWhere(t, spine.now, { diyuStation: soul?.diyu_station, locale });
+  const tabHrefs = dossierTabHrefs(id, `/souls/${encodeURIComponent(id)}`);
   // 菜单按钮配置(第四十批 W-b):编辑与删除另要配置允许。在下面的提前返回之前取(hook 顺序)。
   const buttonOn = useMenuButtonConfig();
   // 本月转世配额(第五十一批 Q-3):只在真有转世可办时才问。
@@ -699,6 +715,8 @@ export default function SoulDetailPage() {
   ) : (
     <span className="flex items-center gap-2 flex-wrap">
       {stateBadge}
+      {/* 「在哪」:站 · 界域(第三十批第 3 步),与脊同一份 `spineNow`;殿已在这一行后面(最近一份判决),不重复。 */}
+      {where.length > 0 && <span data-testid="dossier-where">{where.join(" · ")}</span>}
       {generation !== null && (
         <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`} title={soul?.civilization ?? undefined}>
           {thisLifeLabel(t, soul?.civilization, generation) ?? tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
@@ -846,8 +864,17 @@ export default function SoulDetailPage() {
     <PrintFrame hall={hall} reference={printRef} referenceLabel={currentAccount ? t("print.soul_no") : ""}>
     <PageShell
       variant="page"
+      kind="dossier"
       backLink={backLink}
       eyebrow={eyebrow}
+      spine={<DossierSpine civ={spine.civ} now={spine.now} />}
+      tabs={
+        <DossierTabs
+          current="dossier"
+          hrefs={tabHrefs}
+          counts={{ merits: ledger ? ledger.record_count : null, events: eventsQuery.data?.count ?? null, lives: reincarnationsQuery.data?.count ?? null }}
+        />
+      }
       leading={loading ? <Skeleton className="h-13 w-13 md:h-16 md:w-16" /> : <SoulMonogram name={soul?.name} />}
       title={headerTitle}
       subtitle={headerSubtitle}
@@ -947,29 +974,33 @@ export default function SoulDetailPage() {
         </div>
 
         <div className="order-3 min-w-0 space-y-4 md:col-span-full lg:col-span-1 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <SoulLedgerTabs
-            judgmentCount={judgments.length}
-            recordCount={ledger ? ledger.record_count : null}
-            judgments={judgmentsPanel}
-            records={recordsPanel}
-          />
+          <div id="dossier-merits" className="scroll-mt-28">
+            <SoulLedgerTabs
+              judgmentCount={judgments.length}
+              recordCount={ledger ? ledger.record_count : null}
+              judgments={judgmentsPanel}
+              records={recordsPanel}
+            />
+          </div>
 
-          <SoulTimelineColumn
-            soul={soul}
-            loading={loading}
-            ledger={ledger}
-            judgments={judgments}
-            dispositions={dispositions}
-            reincarnations={reincarnations}
-            events={events}
-            hasMore={!loadedAll}
-            loadingMore={loadingMore}
-            loadMoreFailed={loadMoreFailed}
-            onLoadMore={() => setExtraPages((n) => n + 1)}
-            birthDisplay={birthDisplay}
-            deathDisplay={deathDisplay}
-            onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
-          />
+          <div id="dossier-events" className="scroll-mt-28">
+            <SoulTimelineColumn
+              soul={soul}
+              loading={loading}
+              ledger={ledger}
+              judgments={judgments}
+              dispositions={dispositions}
+              reincarnations={reincarnations}
+              events={events}
+              hasMore={!loadedAll}
+              loadingMore={loadingMore}
+              loadMoreFailed={loadMoreFailed}
+              onLoadMore={() => setExtraPages((n) => n + 1)}
+              birthDisplay={birthDisplay}
+              deathDisplay={deathDisplay}
+              onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
+            />
+          </div>
 
           {/* 灵魂账号 — docs/ARCHITECTURE-soul-app-and-domain-split.md 2026-09-17「链式账号」. */}
           {soul && (
@@ -982,7 +1013,9 @@ export default function SoulDetailPage() {
               原属仍是这份计划的主人,撤销与决定请求都在原属。 */}
           {soul && (
             <RequirePermission permissions="judgment.read">
-              <SentencePlanCard soulId={soul.id} civilization={soul.home_civilization ?? soul.civilization} />
+              <div id="dossier-sentence" className="scroll-mt-28">
+                <SentencePlanCard soulId={soul.id} civilization={soul.home_civilization ?? soul.civilization} />
+              </div>
             </RequirePermission>
           )}
         </div>
