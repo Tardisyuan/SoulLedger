@@ -54,7 +54,7 @@ CREDENTIAL_SUBJECT = {"zh-Hans": "SoulLedger 灵魂账号", "en": "SoulLedger So
 FOOTER = {
     "zh-Hans": "这封信由系统发出，不接收回复。",
     "en": "This message was sent by the system; replies are not received.",
-    "egy": "Shemes Pen Hab In Hemsu. Nen Shesep Wesheb.",
+    "egy": "Shat Pen Hab In Hemsu. Nen Shesep Wesheb.",
 }
 
 

@@ -122,7 +122,7 @@ const ABOLISHED_TEN_WORDS = [
   "Ineb", "Ipen", "Iret", "Irtu", "Iyt", "Kefa", "Kemet-Shen", "Khefere", "Khemet", "Khemt", "Khemu", "Khen",
   "Khenty", "Khered", "Khetaw", "Maat-Benet", "Maatheru", "Maau", "Makhat", "Mdu", "Medu-Ib", "Mehi", "Men", "Meng",
   "Mes", "Meseh", "Mesi", "Mesjet", "Metru", "Nau", "Neh", "Neken", "Nemu", "Neteru", "Pedjet", "Pepi", "Pepy", "Pesy",
-  "Petep", "Po", "Pu", "Qed", "Qedi", "Redit", "Rekhet", "Ren-Es", "Sah", "Sebekhet", "Sedjem-Ash", "Sedjet", "Sefet",
+  "Petep", "Po", "Pu", "Qedi", "Redit", "Rekhet", "Ren-Es", "Sah", "Sebekhet", "Sedjem-Ash", "Sedjet", "Sefet",
   "Sekht", "Sema", "Semau", "Seneb", "Sepedu", "Sesep", "Sesh-Set", "Seshen", "Sesheshet", "Seshet", "Sesheta", "Seshu",
   "Sethen", "Shabu", "Sheemtet", "Sheemtet-Set", "Shems", "Sheseb", "Shesed", "Smedj", "Ta-Hemet", "Ta-U",
   "Tem", "Ten", "Twt", "Wahet", "Wedja-Medu", "Wedjen", "Wep", "Wepwy-Em-Senu", "Wetep-Heka", "Wetjes", "Wets", "Wetu",
@@ -145,6 +145,12 @@ const ABOLISHED_TEN_WORDS = [
   // 申诉 Nehet(nḥt 是「祈祷」)→ Sepret;层 Hesep(ḥzp 是「园圃」)→ Redu;Medew、Hems 与 Medu、Hemes 是同一个词,并掉。
   // Redu 不废:它从「份额」(→ Pesesh)改回本义「台阶、层」。Sedjem、Netjer 不废,只按义项收窄(见下面两条)。
   "Shepet", "Maakheru", "Nehet", "Hesep", "Medew", "Hems",
+  // 第三十五批(见 ROOTS_BATCH35):错误 Sethet → Tehi、书信 Shemes → Shat、太频繁 Menmen → Hau、现在 Emu → Min、灯 Khabes → Teka、
+  // 支出 Bek → Redi、活动 Khedu → Baku、条文 Djedu(布西里斯)→ Hep、时戳 Sepdet(天狼星)→ Tera、权限矩阵 Mesqet → Sesh Was、
+  // 模板 Pet-Sesh → Senn、紧急 Hetep-N → Wer;Ates 只在「Ates Hru」(一天一封),改 Hru Neb。
+  // Hetep 不废(Em Hetep 再会、Ta Hetep 福地,见「Hetep 只在」那条);Pet 不废(天),只废「类别」义的词组 Pet Sep(→ Iru Sep)。
+  // Qed 第十节废止过,第三十五批复用为「主题」(qd「形貌」),从上面那行划掉。
+  "Sethet", "Shemes", "Menmen", "Emu", "Khabes", "Bek", "Khedu", "Djedu", "Sepdet", "Mesqet", "Pet-Sesh", "Hetep-N", "Ates",
 ];
 /** 整词匹配:连字符两侧也算词内,所以 Heri-Tep 里的 Tep、Kemet-Shen 里的 Kemet 都不会误中。 */
 const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")})(?![A-Za-z-])`);
@@ -198,7 +204,8 @@ const hasHemsu = (v: string) => /\bHemsu\b/.test(prose(v));
  * 「连接」是 soul_app.forgot_password.err_offline_title(中文只写「没有连接」,egy 写「连不上 Per Hemsu」)。
  * Design 给的「后台」没有收:2026-09-26 实测没有任何含 Hemsu 的键中文写「后台」,放进去是一条没人用过的放行。
  */
-const isSystemZh = (zh: string) => /系统|服务器|后端|队列|连接/.test(zh);
+// 第三十五批(第三十四批积压的演示导览):「服务端」「接口」也是服务器义,写 Per Hemsu。
+const isSystemZh = (zh: string) => /系统|服务器|服务端|后端|接口|队列|连接/.test(zh);
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
@@ -342,6 +349,15 @@ const TECHNICAL: Record<string, string[]> = {
   "assist_admin.usage.first_token_p50": ["p50"],
   "assist_admin.usage.first_token_p95": ["p95"],
   "audit_ask.placeholder": ["demo_judge"],
+  // 第三十五批(第三十四批积压的演示导览):代码字面照原样 —— 函数名、错误码、文件路径、数据库名;甲乙两位判官写 A / B。
+  "demo.tour.guard.1.body": ["scope_to_tenant"],
+  "demo.txn.step1": ["A", "B"],
+  "demo.txn.step2": ["A", "select_for_update"],
+  "demo.txn.step3": ["A", "B"],
+  "demo.txn.step4": ["B", "already_concluded"],
+  "demo.txn.result_note": ["services.py", "PostgreSQL", "SQLite"],
+  "demo.txn.try_body": ["B"],
+  "demo.txn.try": ["B"],
   "perm_explain.needs": ["{name}"],
   "perm_explain.your_roles": ["{roles}"],
   "perm_explain.who_can": ["{roles}"],
@@ -411,7 +427,7 @@ const words = (k: string) => {
 const ROOTS = [
   "Ba", "Ren", "Ankh", "Medjat", "Sesh", "Medu", "Sekhem", "Wedja", "Mesut",
   "Dbh", "Khesef", "Hesy", "Hemes", "Taui", "Wesekhet", "Sab", "Nefer", "Isfet",
-  "Shut", "Ib", "Wat", "Kheperu", "Kheper", "Sethet", "Gem", "Mut", "Khetem", "Djeret",
+  "Shut", "Ib", "Wat", "Kheperu", "Kheper", "Gem", "Mut", "Khetem", "Djeret",
   "Hab", "Aq", "Wenen", "Baku", "Was", "Renpi", "Qebeh", "Duat / Pet",
 ];
 /** 审核域(social_moderation)。Imen 隐藏 / Fekh 删除·解除;Menkh 审核通过 / Hesy 批准转生;Djeseru 敏感词;禁言原写 Gerh,第三十三批换成 Ger。 */
@@ -431,30 +447,30 @@ const ROOTS_FIX = [
  */
 const ROOTS_SPLIT = [
   "Smen", "Was", "Aha", "Setep", "Ini", "Wen-Khetem", "Ta", "Wat", "Arrwt",
-  "Netjer", "Mesqet", "Wa-Ek",
+  "Netjer", "Wa-Ek", // Mesqet 第三十五批废止(权限矩阵写 Sesh Was)
 ];
 /** 设置 / 加载 / Sethety 收口(第五节)。Pet-Sesh(模板,定式之书)为新词;其余四个是把已定的词派给 Sethety 的旧义项。 */
-const ROOTS_CLOSE = ["Pet-Sesh", "Setep", "Renu", "Nefer", "Isfet"];
+const ROOTS_CLOSE = [/* Pet-Sesh 第三十五批改 Senn */ "Setep", "Renu", "Nefer", "Isfet"];
 /**
  * Sethet / Seshem / Pert 收口(第六节,末轮)。Khedu(活动)、Sepdet(时戳)、Djedu(条文)、Bek(导出,与 Ini 成对)、
  * Tut-Hesb(图表)为新词;其余是把已在用的词派给 Sethet / Seshem 散出去的义项。Seshem 收口后唯一义是推进。
  */
 const ROOTS_FINAL = [
-  "Iri", "Seshem", "Khedu", "Sepdet", "Djedu", "Hetep", "Menkh", "Bek", "Wen", "Tut-Hesb",
+  "Iri", "Seshem", "Hetep", "Menkh", "Wen", "Tut-Hesb", // Khedu、Sepdet、Djedu、Bek 第三十五批废止
 ];
 /**
  * 「失败」写法与零星收口(第七节)。Hab-Ba(调拨 / 遣魂)此前全库 17 次却失登,这里补登;Kheper 只表「成为、发生」;
  * Khetem 结案与失败无关;Menmen(连续)为新词,与 Wehem(再一次)分开。
  */
-const ROOTS_LATE = ["Hab-Ba", "Kheper", "Khetem", "Menmen"];
+const ROOTS_LATE = ["Hab-Ba", "Kheper", "Khetem"]; // Menmen 第三十五批改 Hau
 /**
  * 灵魂端 App 新增词根(一之八,24 个):书信 6、受刑 6、朋友圈 9,补登 3(Sau 保存、Nehem 移入、Khesbedj 墨蓝)。并表时与已定词根冲突的 8 处已按定稿改写
  * (关注 Mehy → Nehes、念 Ib-Aa → Sekha、表态 Ib-Djed → Sehed、互关复用 Senb、可见范围 Aat Maa 不新造……)。
  */
 const ROOTS_APP = [
-  "Shemes", "Hen", "Sedja", "Weshed", "Senb", "Ates",
+  "Hen", "Sedja", "Weshed", "Senb", // Shemes、Ates 第三十五批废止(Shat、Hru Neb)
   "Ahau", "Nedj", // 受刑 Shepet / Sekhet-Shepet 第三十三批改 Idryt / Sekhet-Idryt
-  "Sehed", "Hai", "Sekha", "Dua", "Iakeb", "Khabes", "Nehes", "Nehesu", "Wen-Neb",
+  "Sehed", "Hai", "Sekha", "Dua", "Iakeb", "Nehes", "Nehesu", "Wen-Neb",
   "Sau", "Nehem", "Khesbedj",
 ];
 /**
@@ -478,7 +494,6 @@ const ROOTS_TEN = [
   "Sefekh", //      周
   "Unut", //        小时(计时单位),与 Tera(时间 / 调度)分开
   "At", //          分钟
-  "Sepdet", //      时刻(第六节已登;Seped 换成它)
   "Djet", //        永久 —— 长明灯 Khabes Djet;问候语里的 Djet 已换掉
   "Hery", //        上 / 高位 —— 只用于 Sab Hery(管理员)与 Seshem Er Hery(越级)
   "Heri-Tep", //    首领 / 主持 —— 殿主 Heri-Tep Per Ahet
@@ -652,7 +667,7 @@ const PROPER_NAMES = [
 ];
 const PARTICLES = [
   "Em", "Nen", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
-  "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
+  "Er", "Hena", "Djer", "Dy", "Djes-Ef", "Er Hry",
   // 第十节:如 / 同(例如 Mi)、是(与 Nen 相对)、后置的「其 / 它的」(Iri-Ef;-Es 换成 -Ef,界面不分性别)。
   "Mi", "Iu", "-Ef",
   // 第十一节:属格 En(只用在两个名词之间,Sesh En Ba;形容词尾的「的」不写);后置 -I(我的,Sedjem-I)。
@@ -751,11 +766,18 @@ const ROOTS_BATCH33B = ["Idryt", "Sekhet-Idryt", "Semawy-Idryt", "Sepret", "Pese
  */
 const ROOTS_BATCH34 = ["Shenu", "Psephos", "Ostrakon"];
 /**
+ * 第三十五批(Design,2026-11-14):Tehi 错误(thj「走偏、违犯」)、Shat 书信(šꜥt,第二十八批已登作「邮件」)、Hau 过度(ḥꜣw)、
+ * Min 现在(mjn「今天、此刻」)、Teka 灯(tkꜣ)、Qed 主题(qd「形貌」)、Shaa 开始(šꜣꜥ)。其余是已登记的词派给废止词的义项:
+ * 支出 Redi、活动 Baku、条文 Hep、时戳 Tera、模板 Senn、类别 Iru、紧急 Wer、权限矩阵 Sesh Was、柱 Iwn、每天 Hru Neb;
+ * 第三十四批积压的组合:Sesh Wer 太史令、Shena 行锁、Iri Wa 事务、Neb Er Nen 整笔回滚。造词 Hemsu / Menf / Sherer 保留(Design 词根表标「造词」)。
+ */
+const ROOTS_BATCH35 = ["Tehi", "Hau", "Min", "Teka", "Qed", "Shaa"];
+/**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...ROOTS_V4, ...ROOTS_BATCH33, ...ROOTS_BATCH33B, ...ROOTS_BATCH34, ...ROOTS_BATCH29, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...ROOTS_V4, ...ROOTS_BATCH33, ...ROOTS_BATCH33B, ...ROOTS_BATCH34, ...ROOTS_BATCH35, ...ROOTS_BATCH29, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
@@ -900,7 +922,8 @@ describe("egy 词表规则", () => {
   });
 
   it("Hemsu 只表系统:中文含「判官」的键不出现 Hemsu(判官 Sab Wedja)", () => {
-    const judgeKeys = KEYS.filter((k) => (ZH[k] ?? "").includes("判官"));
+    // 同一句里也说了后端 / 服务端 / 接口的键(演示导览:「判官请求接口时服务端怎么回答」),Hemsu 是那个服务器,不是判官。
+    const judgeKeys = KEYS.filter((k) => (ZH[k] ?? "").includes("判官") && !isSystemZh(ZH[k] ?? ""));
     expect(judgeKeys.length).toBeGreaterThan(5);
     expect(offenders(judgeKeys, hasHemsu)).toEqual([]);
   });
@@ -913,15 +936,15 @@ describe("egy 词表规则", () => {
     expect(hasHemsu(EGY["scheduler.run.enqueue_failed"] ?? "")).toBe(true);
   });
 
-  it("废止名单按整词匹配:废止的 Shems 不误拦 Shemes(书信)、Shemsu(随从)(第十五节门禁提醒)", () => {
+  it("废止名单按整词匹配:废止的 Shems 不误拦 Shat(书信)、Shemsu(随从)(第十五节门禁提醒)", () => {
     // 两个合规词与废止词只差一个字母 / 一个后缀;子串匹配会把它们一起拦下。
     expect(ABOLISHED_TEN.test("Shems")).toBe(true);
     expect(ABOLISHED_TEN.test("Shems Pen")).toBe(true);
-    expect(ABOLISHED_TEN.test("Shemes Pen Hab In Hemsu.")).toBe(false);
+    expect(ABOLISHED_TEN.test("Shat Pen Hab In Hemsu.")).toBe(false); // 书信第三十五批由 Shemes 改 Shat
     expect(ABOLISHED_TEN.test("Nen Ini Shemsu.")).toBe(false);
     // 空扫保护:两个合规词确实在包里,名单里也确实还有 Shems。
     expect(ABOLISHED_TEN_WORDS).toContain("Shems");
-    expect(KEYS.some((k) => /\bShemes\b/.test(EGY[k]))).toBe(true);
+    expect(KEYS.some((k) => /\bShat\b/.test(EGY[k]))).toBe(true);
     expect(KEYS.some((k) => /\bShemsu\b/.test(EGY[k]))).toBe(true);
   });
 
@@ -961,10 +984,20 @@ describe("egy 词表规则", () => {
     expect(offenders(KEYS, (v, k) => !isDispatchKey(k) && /\bPert\b/.test(prose(v)))).toEqual([]);
   });
 
-  it("Sethet 只表技术错误:中文不含「错误 / 出错 / 故障 / 异常」的键不出现 Sethet", () => {
+  it("Tehi 只表技术错误:中文不含「错误 / 出错 / 故障 / 异常」的键不出现 Tehi(第三十五批 Sethet → Tehi)", () => {
     // 第六节把它曾担的通过 / 活动 / 审计 / 证据 / 条文 / 时戳 / 顺序 / 资源……五十处散回各自的词,
     // settings 的冗余 Sethet 直接删。目前没有例外,所以不设白名单;真出现一个再加,并照 Sekhem 那条补陈旧检查。
-    expect(offenders(KEYS, (v, k) => /\bSethet\b/.test(prose(v)) && !/错误|出错|故障|异常/.test(ZH[k] ?? ""))).toEqual([]);
+    expect(offenders(KEYS, (v, k) => /\bTehi\b/.test(prose(v)) && !/错误|出错|故障|异常/.test(ZH[k] ?? ""))).toEqual([]);
+    expect(KEYS.some((k) => /\bTehi\b/.test(EGY[k]))).toBe(true);
+  });
+
+  it("Hetep 只在 Em Hetep(再会)与 Ta Hetep(福地);Pet 不作「类别」(Pet Sep → Iru Sep)(第三十五批)", () => {
+    expect(offenders(KEYS, (v) => /(?<![A-Za-z-])Hetep(?![A-Za-z-])/.test(prose(v).replace(/\b(Em|Ta) Hetep\b/g, "")))).toEqual([]);
+    expect(offenders(KEYS, (v) => /\bPet Sep\b/.test(prose(v)))).toEqual([]);
+    // 空扫保护:两个本义各至少一处仍在,Iru Sep 确实在。
+    expect(EGY["auth.goodbye.title"]).toBe("Em Hetep");
+    expect(EGY["realms.types.BLISS"]).toBe("Ta Hetep");
+    expect(KEYS.some((k) => /\bIru Sep\b/.test(EGY[k]))).toBe(true);
   });
 
   it("Seshem 只表推进:中文不含「推进 / 越级 / 升级 / 上诉」的键不出现 Seshem", () => {

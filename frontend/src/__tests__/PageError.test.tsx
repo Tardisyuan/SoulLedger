@@ -167,15 +167,15 @@ describe("StatusCard · 403 / 404 与 500 同一块卡", () => {
 });
 
 describe("500 的文案是规范 v3 的(2026-10-01)", () => {
-  // egy:标题沿用已审的 Sethet(只表技术错误,中文仍含「错误」);按钮从 Wehem Iri(再做)
+  // egy:标题是 Tehi(第三十五批由 Sethet 改,thj「走偏」);按钮从 Wehem Iri(再做)
   // 换成包里已有的「重新加载」= Wehem Ini(permissions.matrix.conflict_reload_button 等)——
   // egyLexiconRules「加载一律 Ini」要求中文含「载入」的键必含 Ini。
-  it("系统发生错误 / 重新载入;egy Sethet / Wehem Ini", () => {
+  it("系统发生错误 / 重新载入;egy Tehi / Wehem Ini", () => {
     expect(zh.error.title).toBe("系统发生错误");
     expect(zh.error.retry).toBe("重新载入");
     expect(en.error.title).toBe("A system error occurred");
     expect(en.error.retry).toBe("Reload");
-    expect(egy.error.title).toBe("Sethet");
+    expect(egy.error.title).toBe("Tehi");
     expect(egy.error.retry).toBe("Wehem Ini");
   });
 });
