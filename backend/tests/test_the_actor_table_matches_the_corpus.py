@@ -11,10 +11,8 @@
 
 这个文件把那个决定写成可执行的:差集里出现一个没被列名的新名字,这里报红。
 """
-import io
 
 import pytest
-from django.core.management import call_command
 
 from apps.actors.models import Actor
 from apps.actors.mythology import (
@@ -44,13 +42,6 @@ def _seeded_names():
     for rows in CIVILIZATION_ASSESSORS.values():
         names |= {row["name"] for row in rows}
     return names
-
-
-@pytest.fixture
-def seeded(db):
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
 
 
 @pytest.mark.django_db

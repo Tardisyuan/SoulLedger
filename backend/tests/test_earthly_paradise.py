@@ -76,14 +76,6 @@ RIVERS = {
 }
 
 
-@pytest.fixture
-def seeded(db):
-    """A database with seed_mythology applied once."""
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
-
-
 # --------------------------------------------------------------------------
 # 1. There is no Lethe in hell, and none in heaven
 # --------------------------------------------------------------------------

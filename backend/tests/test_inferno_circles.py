@@ -184,14 +184,6 @@ EXPECTED_CONJECTURES = {
 GAP_CODE = "EU-INF-C1"
 
 
-@pytest.fixture
-def seeded(db):
-    """A database with seed_mythology applied once."""
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
-
-
 def _articles():
     return {
         statute.code: statute

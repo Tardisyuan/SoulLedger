@@ -123,14 +123,6 @@ MOUNTAIN_CODE = "EU_PURGATORY"
 WITHDRAWN_CODES = [f"EU-DS-{index:02d}" for index in range(1, 8)]
 
 
-@pytest.fixture
-def seeded(db):
-    """A database with seed_mythology applied once."""
-    out = io.StringIO()
-    call_command("seed_mythology", stdout=out, stderr=out)
-    return out.getvalue()
-
-
 def _missing(expected, actual, what):
     absent = [item for item in expected if item not in actual]
     return absent, (
