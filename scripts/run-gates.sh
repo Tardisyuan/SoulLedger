@@ -728,7 +728,19 @@ unset PREPUSH_TO_MAIN
 #     E2E is what tests the recordings.
 # A test that reads one of them with fs is always-run by construction (jestAlwaysRunList.test.ts), and
 # every frontend change runs the whole always-run list.
-JEST_TRACED_DATA_RE='^(packages/core/messages/|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/[^/]+\.json$)'
+#
+# AND THE GENERATED SCHEMA (2026-11-13, test review #6b). packages/core/openapi/schema.yml alone sent 153
+# commits since 10-13 to a full jest — 55% of the full runs that had a single cause — and no jest test
+# imports it. What reads it runs without a full jest:
+#   - frontend/src/__tests__/apiEndpointContract.test.ts (and enumsMatchTheSchema.test.ts) read it with fs,
+#     so they are in jest.always-run.txt, and a packages/ change runs the frontend's whole always-run list;
+#   - packages/core's vitest (generatedSchemaIsCurrent.test.ts) runs on any packages/ change (RUN_CORE);
+#   - backend/tests/test_committed_schema_matches_the_backend.py and test_e2e_fixtures_match_the_serializers.py
+#     are `packages` lines of reads-outside-backend.txt, and since the same day a backend app change selects
+#     them too (select-backend-tests.py, contract_readers).
+# The types generated from it (packages/core/src/api/generated/schema.ts) are code: tsc checks them, and jest
+# follows their imports. Only the jest full run goes; tsc / eslint / vitest for the area are untouched.
+JEST_TRACED_DATA_RE='^(packages/core/messages/|packages/core/openapi/schema\.yml$|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/[^/]+\.json$)'
 while IFS=$'\t' read -r re name; do
     hit=$(echo "$CHANGED" | grep -vE "$JEST_TRACED_DATA_RE" | grep -E "$re" | head -1)
     [ -n "$hit" ] && full "$name: $hit"

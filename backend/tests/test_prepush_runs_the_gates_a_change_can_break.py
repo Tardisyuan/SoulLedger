@@ -790,6 +790,9 @@ class TestJestSelection:
             ["frontend/src/__tests__/support/egyPendingKeys.json"],
             ["frontend/src/__tests__/support/egyVocabulary.json"],
             ["frontend/demo/data/judge.zh.json", "frontend/demo/data/home-preview.json"],
+            # 2026-11-13: no jest test imports the generated schema; its readers are always-run, vitest, pytest.
+            ["packages/core/openapi/schema.yml"],
+            ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml", "packages/core/src/api/generated/schema.ts"],
         ],
     )
     def test_an_ordinary_source_change_is_selective(self, hook, changed):
@@ -813,7 +816,7 @@ class TestJestSelection:
             ["frontend/src/components/NoSuchComponent.tsx"],
             ["tsconfig.base.json"],
             # One matching file among ordinary ones still counts.
-            ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"],
+            ["frontend/app/page.tsx", "frontend/src/config/landing-stats.json"],
         ],
     )
     def test_what_jest_cannot_trace_forces_a_full_run_and_says_why(self, hook, changed):
@@ -834,8 +837,26 @@ class TestJestSelection:
         assert full == 0  # 2026-10-24: main is selective too
 
     def test_the_runner_names_the_file_that_forced_it(self, hook):
-        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"])
-        assert "data file" in out and "packages/core/openapi/schema.yml" in out
+        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "frontend/src/config/landing-stats.json"])
+        assert "data file" in out and "frontend/src/config/landing-stats.json" in out
+
+    def test_a_schema_change_still_runs_everything_that_reads_the_schema(self, hook):
+        """What makes leaving the full jest out safe (2026-11-13): the area gates still run, and the tests
+        that read schema.yml are picked by something other than a full run."""
+        full, out = _classify_jest(hook, ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml"])
+        assert full == 0, out
+        # core (vitest: generatedSchemaIsCurrent) and the frontend (tsc, eslint, jest with its always-run list)
+        assert "classify: core=1 frontend=1 backend=1" in out, out
+        always = (REPO_ROOT / "frontend" / "jest.always-run.txt").read_text()
+        assert "src/__tests__/apiEndpointContract.test.ts" in always
+        assert "openapi/schema.yml" in (REPO_ROOT / "frontend/src/__tests__/apiEndpointContract.test.ts").read_text()
+        readers = _listed_readers()
+        for name in ("tests/test_committed_schema_matches_the_backend.py", "tests/test_e2e_fixtures_match_the_serializers.py"):
+            assert "packages" in readers[name], name
+        # The exemption is that one file, not its directory or every yml: a neighbour is still a data file
+        # (the path does not exist, so the reason is matched by name — the deleted-file rule fires as well).
+        _, out = _classify_jest(hook, ["packages/core/openapi/other.yml"])
+        assert re.search(r"full because: a data file .*: packages/core/openapi/other\.yml$", out, re.M), out
 
 
 def _classify_app_jest(hook, changed: list[str], **extra) -> tuple[int, str]:
