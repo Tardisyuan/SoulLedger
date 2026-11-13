@@ -138,17 +138,15 @@ describe("通过:3 秒撤回,到点才发(用户 2026-11-14)", () => {
     expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" });
 
     mockConclude.mockClear();
-    const listeners: ((s: AppStateStatus) => void)[] = [];
-    const real = AppState.addEventListener;
-    jest.spyOn(AppState, "addEventListener").mockImplementation((type, fn) => {
-      if (type === "change") listeners.push(fn as (s: AppStateStatus) => void);
-      return real.call(AppState, type, fn);
-    });
+    // 只记下调用,照常订阅(不换实现:它若本身是 jest.fn,换掉的实现会留到后面的测试)。
+    const subscribe = jest.spyOn(AppState, "addEventListener");
     renderOfficer(<SwipeScreen onBack={() => {}} />);
     await enabled("swipe-pass");
     await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
     await tick(500);
     expect(mockConclude).not.toHaveBeenCalled();
+    const listeners = subscribe.mock.calls.filter(([type]) => type === "change").map(([, fn]) => fn as (s: AppStateStatus) => void);
+    expect(listeners.length).toBeGreaterThan(0);
     await act(async () => listeners.forEach((fn) => fn("background")));
     expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" });
     await settled();
