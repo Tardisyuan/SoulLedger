@@ -78,6 +78,22 @@
   .label:not(.keep) {
     display: none;
   }
+  /* 940×44 的图按宽缩到 361 时只剩约 17px 高;窄屏保持 44 高、至少 560 宽,在脊这一条里横滑(页面本身不横滚)。
+     ponytail: 不是 Design 的 361 专用版式(只留节点、重新排距),要更像就另画一套窄几何。 */
+  .spine {
+    overflow-x: auto;
+  }
+  .spineSvg {
+    min-width: 560px;
+  }
+  .juanRow {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .ledgerRow {
+    grid-template-columns: 76px 16px minmax(0, 1fr) 44px;
+    gap: 8px;
+  }
 }
 
 /* ── 印 ─────────────────────────────────────────── */

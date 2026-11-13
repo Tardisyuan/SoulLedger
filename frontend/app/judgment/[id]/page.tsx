@@ -111,6 +111,7 @@ import { DossierTabs } from "@/src/components/dossier/DossierTabs";
 import { DossierLedger } from "@/src/components/dossier/DossierLedger";
 import { hallOf } from "@/src/components/dossier/spineModel";
 import { useSpineNow } from "@/src/components/dossier/useSpineNow";
+import { dossierWhere } from "@/src/components/dossier/dossierWhere";
 import { dossierTabHrefs } from "@/src/components/dossier/dossierTabHrefs";
 import { dossier } from "@/src/components/dossier/styles";
 import { rebirthFormNamespace, verdictNamespace, verdictText } from "@/src/lib/domainNames";
@@ -748,8 +749,16 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     : null;
   const sourceLine = [sourceLabel(t, judgment), judgment.city_god_name].filter(Boolean).join(" · ");
 
+  /* 人名下面那一行的「在哪」:站 · 界域 · 殿(第三十批第 3 步样张),与脊同一份 `spineNow`。 */
+  const where = dossierWhere(t, spine.now, { diyuStation: soulData?.diyu_station, court: judgment.court, locale });
   const subtitle = (
     <span className="inline-flex flex-wrap items-center gap-2">
+      {where.length > 0 && (
+        <>
+          <span data-testid="dossier-where">{where.join(" · ")}</span>
+          <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">·</span>
+        </>
+      )}
       {civilisation}
       <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">·</span>
       <span className="font-mono tabular-nums">{formatDate(judgment.created_at)}</span>

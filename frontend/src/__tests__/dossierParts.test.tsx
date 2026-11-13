@@ -8,6 +8,8 @@ import { spineNow } from "@/src/components/dossier/spineModel";
 import { DossierSpine } from "@/src/components/dossier/DossierSpine";
 import { DossierSeal } from "@/src/components/dossier/DossierSeal";
 import { MeritMark, SignedNumber } from "@/src/components/dossier/MeritMark";
+import { dossierWhere } from "@/src/components/dossier/dossierWhere";
+import { tZh } from "./support/zhBundle";
 
 const wrap = (ui: React.ReactElement) => render(<I18nProvider>{ui}</I18nProvider>);
 
@@ -126,5 +128,16 @@ describe("MeritMark", () => {
     expect(spans[0].className).toMatch(/pos/);
     expect(spans[1].className).toMatch(/neg/);
     expect(spans[2].className).not.toMatch(/pos|neg/);
+  });
+});
+
+describe("dossierWhere:人名下面的「站 · 界域 · 殿」", () => {
+  it.each([
+    [{ civ: "cn", at: "hall", n: 1 } as const, { diyuStation: "FENGDU_CITY", court: "第一殿" }, ["第 10 站", "酆都城", "第一殿"]],
+    [{ civ: "eu", at: "circle", n: 7 } as const, {}, ["第 7 圈"]],
+    [{ civ: "gr", at: "tartarus" } as const, {}, ["塔尔塔罗斯"]],
+    [null, {}, []],
+  ])("%o → %o", (now, extra, parts) => {
+    expect(dossierWhere(tZh, now, { locale: "zh-Hans", ...extra })).toEqual(parts);
   });
 });

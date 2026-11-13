@@ -92,6 +92,7 @@ import { DossierSpine } from "@/src/components/dossier/DossierSpine";
 import { DossierTabs } from "@/src/components/dossier/DossierTabs";
 import { dossierTabHrefs } from "@/src/components/dossier/dossierTabHrefs";
 import { useSpineNow } from "@/src/components/dossier/useSpineNow";
+import { dossierWhere } from "@/src/components/dossier/dossierWhere";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 /* D1:世数不是状态,更不给「轮回中」的色 —— 与状态徽章同一副 ink 字 / ink3 框。 */
@@ -600,6 +601,7 @@ export default function SoulDetailPage() {
     diyuStation: soul?.diyu_station,
     court: shownJudgment?.court,
   });
+  const where = dossierWhere(t, spine.now, { diyuStation: soul?.diyu_station, locale });
   const tabHrefs = dossierTabHrefs(id, `/souls/${encodeURIComponent(id)}`);
   // 菜单按钮配置(第四十批 W-b):编辑与删除另要配置允许。在下面的提前返回之前取(hook 顺序)。
   const buttonOn = useMenuButtonConfig();
@@ -713,6 +715,8 @@ export default function SoulDetailPage() {
   ) : (
     <span className="flex items-center gap-2 flex-wrap">
       {stateBadge}
+      {/* 「在哪」:站 · 界域(第三十批第 3 步),与脊同一份 `spineNow`;殿已在这一行后面(最近一份判决),不重复。 */}
+      {where.length > 0 && <span data-testid="dossier-where">{where.join(" · ")}</span>}
       {generation !== null && (
         <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`} title={soul?.civilization ?? undefined}>
           {thisLifeLabel(t, soul?.civilization, generation) ?? tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}

@@ -67,7 +67,6 @@
   "soul_app.life.seal_title",
   "soul_app.life.seal_pending",
   "perm_explain.why",
-  "perm_explain.title",
   "perm_explain.loading",
   "perm_explain.failed",
   "perm_explain.ai_label",
@@ -230,5 +229,7 @@
   "doors.section.audit",
   "doors.section.system",
   "doors.section.mortal",
-  "doors.office_read_only"
+  "doors.office_read_only",
+  "caseDesk.dossier.where.station",
+  "caseDesk.dossier.where.circle"
 ]
