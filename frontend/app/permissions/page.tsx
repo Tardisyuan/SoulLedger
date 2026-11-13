@@ -108,7 +108,7 @@ function PermissionsPageContent() {
   // 身份带(A6):题「权限」,右栏「N 角色 · N 项权限」,两个数都等两张表载入后才写。
   const hall = useHall(t("plaque.office.rules"));
   usePlaque({
-    title: t("plaque.permissions"),
+    title: t("breadcrumb.menu.permissions"),
     hall,
     meta:
       rolesQuery.data && permsQuery.data
@@ -350,7 +350,7 @@ function PermissionsPageContent() {
       variant="full"
       title={
         <>
-          {t("permissions.title")}
+          {t("breadcrumb.menu.permissions")}
           <MenuGloss path="/permissions" />
         </>
       }

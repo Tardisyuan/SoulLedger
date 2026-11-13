@@ -236,13 +236,13 @@ function Roles({ onLook, entering, enter }: { onLook: (civ: SealCiv) => void; en
     const as = role === "admin" ? "admin" : "moderator";
     return (
       <button type="button" data-testid={`demo-enter-${as}`} disabled={entering} title={t(`demo.role_${as}_desc`)} onClick={(e) => enter(as, e.currentTarget)} className={`${link} min-h-8`}>
-        {t(`demo.home.role.${role}_go`)} <span aria-hidden="true">↗</span>
+        {t(`demo.home.role.${role}_go`)} <span aria-hidden="true">→</span>
       </button>
     );
   };
   return (
     <section aria-labelledby="demo-home-roles" className="pb-12">
-      <h2 id="demo-home-roles" className="m-0 text-sm font-normal text-[oklch(var(--color-ink-subtle))]">{t("demo.home.roles_title")}</h2>
+      <h2 id="demo-home-roles" className="m-0 font-title text-xl text-[oklch(var(--color-ink))]">{t("demo.home.roles_title")}</h2>
       <ul className="demo-home-roles m-0 mt-3 grid list-none grid-cols-1 p-0 md:grid-cols-4">
         {ROLES.map((role) => (
           <li key={role} className="flex min-w-0 flex-col gap-1 p-4 max-md:px-0">

@@ -119,7 +119,17 @@ export function LandingHeader({ children }: { children: ReactNode }) {
 /** The cover title (`PageShell.test.tsx` H1_COVER: the one literal cover `<h1>` lives here). The demo's home page uses it too. */
 export function LandingTitle() {
   const { t } = useI18n();
-  return <h1 className="m-0 font-title text-xl text-[oklch(var(--color-ink))] md:text-display-lg">{t("landing.title")}</h1>;
+  // 窄屏在逗号后断行(浏览器不认词,会断在词中);md 以上仍是一行。
+  const parts = t("landing.title").split(/(?<=[，,：:])/);
+  return (
+    <h1 className="m-0 font-title text-xl text-[oklch(var(--color-ink))] md:text-display-lg">
+      {parts.map((part, i) => (
+        <span key={i} className="max-md:block">
+          {part}
+        </span>
+      ))}
+    </h1>
+  );
 }
 
 function CivCard({

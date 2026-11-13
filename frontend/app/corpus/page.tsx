@@ -197,7 +197,7 @@ function CorpusRoute({ linkedArticle, linkedQuery }: { linkedArticle: string; li
   // 身份带(A3):题「律条语料」,右栏「N 部 · N 条」—— 都从已载入的条文数出来,没载入就不写。
   const hall = useHall(t("plaque.office.records"));
   usePlaque({
-    title: t("plaque.corpus"),
+    title: t("breadcrumb.menu.corpus"),
     hall,
     meta: data?.length
       ? t("plaque.corpus_meta", { works: String(new Set(data.map((s) => s.corpus)).size), n: String(data.length) })
@@ -494,7 +494,7 @@ function CorpusRoute({ linkedArticle, linkedQuery }: { linkedArticle: string; li
       /* `document`: this is the long-reading page — the one route whose body is
          prose to be read rather than rows to be scanned. */
       density="document"
-      title={t("judgment.corpus.title")}
+      title={t("breadcrumb.menu.corpus")}
       subtitle={t("judgment.corpus.subtitle", { n: String(articles.length) })}
       filters={searchBar}
     >
