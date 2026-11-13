@@ -7,7 +7,6 @@ from rest_framework import serializers
 
 from apps.events.models import SoulEvent
 
-
 _ACTOR_RE = re.compile(r"^(.+) \(([^()]+)\)$")
 
 
