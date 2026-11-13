@@ -82,7 +82,7 @@ src/__tests__/toastColourContract.test.ts packages
 src/__tests__/truncatedValuesAreRecoverable.test.ts frontend
 src/__tests__/underworldMap.test.ts frontend
 src/__tests__/v3DataDisplayContract.test.tsx packages
-src/__tests__/viewportHeightContract.test.ts *
+src/__tests__/viewportHeightContract.test.ts frontend
 src/__tests__/workflowAutoLayoutMotion.test.tsx frontend
 src/__tests__/workflowEdgeArrowSingleSource.test.ts packages
 src/__tests__/zIndexOrderContract.test.ts packages
