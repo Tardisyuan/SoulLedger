@@ -289,6 +289,7 @@ class TryResultSerializer(serializers.Serializer):
     retrieved_entries = serializers.ListField(child=serializers.CharField(),
                                               help_text="检索进上下文的条目 id,近的在前;退回整份语料时为空")
     latency_ms = serializers.IntegerField()
+    first_token_ms = serializers.IntegerField(allow_null=True, help_text="首字出来时的毫秒数;非流式为 null")
     tokens = serializers.DictField(child=serializers.IntegerField())
     provider = serializers.CharField(help_text="实际作答的那一家")
     model = serializers.CharField()
@@ -319,6 +320,8 @@ class EvalSummarySerializer(serializers.Serializer):
     retrieval_fallbacks = serializers.IntegerField(allow_null=True,
                                                    help_text="已答用例里退回整份语料的条数;早于检索的运行为 null")
     mean_latency_ms = serializers.FloatField(allow_null=True)
+    max_latency_ms = serializers.IntegerField(allow_null=True, required=False,
+                                              help_text="已答用例里最慢的一条;早于这一项的运行没有")
     cost = serializers.FloatField(allow_null=True)
     input_tokens = serializers.IntegerField()
     output_tokens = serializers.IntegerField()
@@ -445,6 +448,23 @@ class UsageRetrievalSerializer(serializers.Serializer):
     fallback_low_similarity = serializers.IntegerField(help_text="最近一条也低于相似度下限")
 
 
+class LatencySpreadSerializer(serializers.Serializer):
+    count = serializers.IntegerField(help_text="记了时间的已答提问数")
+    p50_ms = serializers.IntegerField(allow_null=True)
+    p95_ms = serializers.IntegerField(allow_null=True)
+
+
+class UsageLatencyRetrievalSerializer(serializers.Serializer):
+    vector = LatencySpreadSerializer()
+    fallback = LatencySpreadSerializer()
+    fallback_low_similarity = LatencySpreadSerializer()
+
+
+class UsageLatencySerializer(LatencySpreadSerializer):
+    first_token = LatencySpreadSerializer(help_text="首字时间;只有流式提问才有")
+    by_retrieval = UsageLatencyRetrievalSerializer(help_text="耗时按帮助条目的来源分")
+
+
 class UsageSerializer(serializers.Serializer):
     month = serializers.CharField()
     spent = serializers.FloatField()
@@ -460,6 +480,7 @@ class UsageSerializer(serializers.Serializer):
     by_side = UsageSideSerializer(many=True)
     by_feature = UsageFeatureSerializer(many=True, help_text="按功能分(问一问、权限解释、审计查询…)")
     by_hall = UsageHallSerializer(many=True)
+    latency = UsageLatencySerializer(help_text="已答提问的耗时 p50 / p95(从进门到收尾)与首字时间(B5)")
     phase4 = Phase4Serializer()
 
 

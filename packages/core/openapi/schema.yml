@@ -17366,7 +17366,7 @@ paths:
     get:
       operationId: v1_social_moderation_handled_list
       description: |-
-        「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+        「已处理」:被隐藏或被官员删除的帖子与评论,一张表,按处理时间倒序。
 
         * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
           (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
@@ -29266,6 +29266,10 @@ components:
           type: number
           format: double
           nullable: true
+        max_latency_ms:
+          type: integer
+          nullable: true
+          description: 已答用例里最慢的一条;早于这一项的运行没有
         cost:
           type: number
           format: double
@@ -33311,6 +33315,22 @@ components:
       description: |-
         * `soul` - soul
         * `hall` - hall
+    LatencySpread:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 记了时间的已答提问数
+        p50_ms:
+          type: integer
+          nullable: true
+        p95_ms:
+          type: integer
+          nullable: true
+      required:
+      - count
+      - p50_ms
+      - p95_ms
     LedgerEffective:
       type: object
       description: |-
@@ -45245,11 +45265,19 @@ components:
           type: string
           description: User or system
           maxLength: 255
+        actor_display_name:
+          type: string
+          readOnly: true
+        actor_role:
+          type: string
+          readOnly: true
         create_time:
           type: string
           format: date-time
           readOnly: true
       required:
+      - actor_display_name
+      - actor_role
       - create_time
       - event_type
       - id
@@ -47415,6 +47443,10 @@ components:
           description: 检索进上下文的条目 id,近的在前;退回整份语料时为空
         latency_ms:
           type: integer
+        first_token_ms:
+          type: integer
+          nullable: true
+          description: 首字出来时的毫秒数;非流式为 null
         tokens:
           type: object
           additionalProperties:
@@ -47443,6 +47475,7 @@ components:
       required:
       - answer
       - fallback_reason
+      - first_token_ms
       - latency_ms
       - model
       - provider
@@ -47473,6 +47506,10 @@ components:
           description: 检索进上下文的条目 id,近的在前;退回整份语料时为空
         latency_ms:
           type: integer
+        first_token_ms:
+          type: integer
+          nullable: true
+          description: 首字出来时的毫秒数;非流式为 null
         tokens:
           type: object
           additionalProperties:
@@ -47505,6 +47542,7 @@ components:
       - answer
       - event
       - fallback_reason
+      - first_token_ms
       - latency_ms
       - model
       - provider
@@ -47698,6 +47736,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UsageHall'
+        latency:
+          allOf:
+          - $ref: '#/components/schemas/UsageLatency'
+          description: 已答提问的耗时 p50 / p95(从进门到收尾)与首字时间(B5)
         phase4:
           $ref: '#/components/schemas/Phase4'
       required:
@@ -47711,6 +47753,7 @@ components:
       - cap
       - failure_rates
       - fallbacks
+      - latency
       - month
       - phase4
       - requests
@@ -47857,6 +47900,45 @@ components:
       - output_tokens
       - requests
       - tenant_id
+    UsageLatency:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 记了时间的已答提问数
+        p50_ms:
+          type: integer
+          nullable: true
+        p95_ms:
+          type: integer
+          nullable: true
+        first_token:
+          allOf:
+          - $ref: '#/components/schemas/LatencySpread'
+          description: 首字时间;只有流式提问才有
+        by_retrieval:
+          allOf:
+          - $ref: '#/components/schemas/UsageLatencyRetrieval'
+          description: 耗时按帮助条目的来源分
+      required:
+      - by_retrieval
+      - count
+      - first_token
+      - p50_ms
+      - p95_ms
+    UsageLatencyRetrieval:
+      type: object
+      properties:
+        vector:
+          $ref: '#/components/schemas/LatencySpread'
+        fallback:
+          $ref: '#/components/schemas/LatencySpread'
+        fallback_low_similarity:
+          $ref: '#/components/schemas/LatencySpread'
+      required:
+      - fallback
+      - fallback_low_similarity
+      - vector
     UsageProvider:
       type: object
       properties:

@@ -451,3 +451,67 @@ def test_a_continued_conversation_is_announced_in_meta(soul):
     again = _events(_stream(client))
     assert again[0][1]["conversation_id"] == first == again[-1][1]["conversation_id"]
     assert AssistConversation.objects.count() == 1
+
+
+# ── 延迟与首字时间(作品集建议 B5)──────────────────────────────────────────
+
+
+def _clock(monkeypatch, step=0.25):
+    """`time.monotonic` 每读一次走 `step` 秒:耗时是读了几次的函数,不靠真的等。"""
+    ticks = iter(range(100_000))
+    monkeypatch.setattr(service.time, "monotonic", lambda: 1000 + next(ticks) * step)
+
+
+def test_a_streamed_answer_records_its_latency_and_first_token(soul, monkeypatch):
+    """变异:流式循环里不记 `first_token` → first_token_ms 为空,红;`finish` 不把时间传给 `usage.record` → 两列都空,红。"""
+    _, client = soul
+    _clock(monkeypatch)
+    _events(_stream(client))
+    row = AssistUsage.objects.get()
+    assert row.status == "ok"
+    assert row.first_token_ms is not None and row.latency_ms is not None
+    assert 0 < row.first_token_ms < row.latency_ms
+
+
+def test_a_non_streamed_answer_has_a_latency_and_no_first_token(soul, monkeypatch):
+    _, client = soul
+    _clock(monkeypatch)
+    client.post(ASK, {"question": "q", "screen": "applications"}, format="json")
+    row = AssistUsage.objects.get()
+    assert row.latency_ms > 0 and row.first_token_ms is None
+
+
+def test_an_unavailable_answer_records_how_long_it_took(soul, monkeypatch):
+    _, client = soul
+    _clock(monkeypatch)
+    FakeProvider.script = [{"raise": "x", "kind": "connection"}]
+    _events(_stream(client))
+    row = AssistUsage.objects.get()
+    assert row.status == "unavailable" and row.latency_ms > 0 and row.first_token_ms is None
+
+
+def test_failures_before_the_provider_record_no_time(soul, settings):
+    """忙:没走到供应商,没有可量的耗时。"""
+    _, client = soul
+    settings.ASSISTANT_MAX_CONCURRENT = 0
+    client.post(ASK, {"question": "q", "screen": "applications"}, format="json")
+    row = AssistUsage.objects.get()
+    assert row.status == "busy" and row.latency_ms is None and row.first_token_ms is None
+
+
+def test_the_usage_report_gives_p50_and_p95_over_answered_asks_only(db):
+    """最近秩:1..20 → p50 = 10,p95 = 19。失败、评测与没有时间的旧行不计。
+    变异:不过滤 `_ANSWERED` → 那条 99999 的 unavailable 进来,p95 变,红;不排序 → 红。"""
+    from apps.soul_assist import usage
+
+    for ms in reversed(range(1, 21)):
+        usage.record("soul", None, "ok", PRIMARY, {"input": 1}, retrieval="vector", latency_ms=ms * 100,
+                     first_token_ms=ms * 10)
+    usage.record("soul", None, "unavailable", PRIMARY, latency_ms=99_999)
+    usage.record("soul", None, "ok", PRIMARY, latency_ms=99_999, is_eval=True)
+    usage.record("soul", None, "ok", PRIMARY)  # 加列之前的行:没有时间
+    latency = usage.report(usage.Prices({}))["latency"]
+    assert (latency["count"], latency["p50_ms"], latency["p95_ms"]) == (20, 1000, 1900)
+    assert (latency["first_token"]["p50_ms"], latency["first_token"]["p95_ms"]) == (100, 190)
+    assert latency["by_retrieval"]["vector"]["count"] == 20
+    assert latency["by_retrieval"]["fallback"] == {"count": 0, "p50_ms": None, "p95_ms": None}

@@ -7603,7 +7603,28 @@
     "interrupted": "回答中断",
     "answering_aria": "正在回答",
     "jump_latest": "↓ 最新",
-    "stop_hint": "Esc 停止"
+    "stop_hint": "Esc 停止",
+    "trace": {
+      "title": "这次怎么答的",
+      "tools": "调用的工具",
+      "no_tools": "没有调用工具",
+      "entries": "帮助条目",
+      "retrieval": {
+        "vector": "向量检索，下列条目进了上下文",
+        "fallback": "检索不可用，送了整份帮助",
+        "fallback_low_similarity": "没有足够相近的条目，送了整份帮助"
+      },
+      "tokens": "token",
+      "tokens_value": "输入 {{input}} · 输出 {{output}} · 缓存读 {{cached}}",
+      "latency": "耗时",
+      "latency_value": "{{ms}} ms",
+      "latency_first": "{{ms}} ms · 首字 {{first}} ms",
+      "answered_by": "作答",
+      "role": {
+        "primary": "主用",
+        "backup": "备用"
+      }
+    }
   },
   "assist_admin": {
     "title": "助手管理",
@@ -7824,7 +7845,11 @@
       "expected_entries": "期望命中的条目",
       "retrieved_top": "实际检索到的前 {{k}} 条",
       "entry_hit": "命中",
-      "entry_missed": "未检索到"
+      "entry_missed": "未检索到",
+      "pass_rate": "通过",
+      "errors": "{{n}} 条出错",
+      "max_latency": "最慢",
+      "forbidden": "出现了不该有的「{{phrases}}」"
     },
     "try": {
       "as_soul": "以 问一问评测灵魂 身份提问",
@@ -7935,7 +7960,20 @@
       },
       "legend_primary": "主供应商",
       "legend_backup": "备用",
-      "day_detail": "主 {{a}} · 备 {{b}} · 改用备用 {{n}} 次"
+      "day_detail": "主 {{a}} · 备 {{b}} · 改用备用 {{n}} 次",
+      "latency": "耗时 · 本月",
+      "latency_none": "本月还没有记了耗时的已答提问。",
+      "latency_p50": "耗时 p50",
+      "latency_p95": "耗时 p95",
+      "first_token_p50": "首字 p50",
+      "first_token_p95": "首字 p95",
+      "latency_source": "帮助条目来源",
+      "latency_by": {
+        "vector": "向量检索",
+        "fallback": "整份帮助（检索不可用）",
+        "fallback_low_similarity": "整份帮助（不够相近）"
+      },
+      "latency_note": "按本月 {{count}} 次已答提问计，从收到问题到答完；首字只算逐字显示的提问。"
     },
     "embedding": {
       "url": "地址",
@@ -9352,7 +9390,8 @@
         "overreach": "越权试验",
         "data_scope": "角色列表",
         "audit": "审计记录",
-        "recycle": "回收站"
+        "recycle": "回收站",
+        "assist_guard": "助手管理"
       },
       "skipped_title": "导览已跳过",
       "skipped_body": "可以留在这里自己看，也可以换一个冥界。",
@@ -9383,7 +9422,11 @@
         },
         "title": "系统怎么保护自己",
         "done_title": "防护导览走完了",
-        "done_body": "这些规则都在后端执行，前端只是把它们画出来。换一个冥界，以判官身份走一个灵魂的一生。"
+        "done_body": "这些规则都在后端执行，前端只是把它们画出来。换一个冥界，以判官身份走一个灵魂的一生。",
+        "7": {
+          "name": "问一问为什么越不了权",
+          "body": "助手会调工具查数据，所以它也是一条可能越权的路。防线不在提示词里：工具只收提问者本人，模型选得了调哪个，选不了读谁。下面是守着它的代码与测试，以及几条注入试验的真实回答。"
+        }
       }
     },
     "enter": {
@@ -9499,6 +9542,20 @@
       "try": "发出乙的结案请求",
       "no_case": "这里还没有已结的案子。先在审判台结一件，再回来试。",
       "result_note": "演示没有后端：这个回答来自演示层照服务端规则写的一条规则(demo/flows.ts),错误码与提示和 services.py 逐字一致，什么都没写进去。真接口里，先后发出的第二笔会先被视图的已结案检查以 400 拦下；两笔同时越过那道检查时，才走到锁内重读的 409。真正的等锁只能在 PostgreSQL 上测，SQLite 没有行锁，所以上面那条并发测试只在 PostgreSQL 上跑。"
+    },
+    "assist_guard": {
+      "how_title": "怎么守的",
+      "guard": {
+        "no_ids": "每个工具只收提问者本人，不收任何编号：模型能选调哪个工具，选不了读谁。",
+        "offered_and_rechecked": "只提供提问者有权用的工具；执行时再查一次，编出来的或被诱导调用的工具一律拒绝。",
+        "counts_only": "官员端的工具只出计数，不出姓名、编号、陈述、判词；范围取自各页面自己的查询。",
+        "whitelist": "灵魂端送给模型的字段是白名单，不复用页面的序列化器。",
+        "data_not_instructions": "事实与工具结果都标明是数据，不是指令；助手只读，没有会写入的工具。"
+      },
+      "cases_title": "注入试验",
+      "expect": "应当：",
+      "recorded": "录制的回答：在测试环境以评测官员身份真实问过一次（{{at}}）,原样回放。",
+      "not_recorded": "这一条还没有录下真实回答，这里不替它编一个。"
     }
   },
   "action": {

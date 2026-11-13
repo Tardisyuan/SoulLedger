@@ -131,6 +131,13 @@ function historizeAll({ lists, docs }) {
   };
 }
 
+// An address on a private network names the machine that recorded, and the recording is published (B4, 2026-11-13):
+// the embedding service, a model server, the Ollama preset's localhost. The host goes, the port and path stay, so a
+// page still reads as an address. The demo backend already runs with placeholders (scripts/demo_settings.py); this is
+// for whatever else carries one. `frontend/src/__tests__/demoDataHasNoInternalHosts.test.ts` scans the result.
+const INTERNAL_HOST =
+  /\b(https?:\/\/)(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|[\w-]+(?:\.[\w-]+)*\.(?:lan|local|internal|home\.arpa))(?=[:/?#"\s]|$)/gi;
+
 // The recorder's own sign-in writes a login-log row, and auditing that writes another: neither happened in the story.
 const recordersOwn = (row) => row?.resource === "loginlog";
 const scrub = (v, origin = API_ORIGIN) => {
@@ -139,7 +146,7 @@ const scrub = (v, origin = API_ORIGIN) => {
     return Object.fromEntries(Object.entries(v).filter(([k]) => !SECRET_KEYS.test(k)).map(([k, x]) => [k, NO_TWO_STEP.test(k) ? false : scrub(x, origin)]));
   }
   if (typeof v === "string") {
-    return v.replaceAll(`${origin}/api/v1`, "/api/v1").replaceAll(API, "/api/v1").replaceAll(origin, "").replaceAll(API_ORIGIN, "").replaceAll("HeadlessChrome", "Chrome");
+    return v.replaceAll(`${origin}/api/v1`, "/api/v1").replaceAll(API, "/api/v1").replaceAll(origin, "").replaceAll(API_ORIGIN, "").replaceAll("HeadlessChrome", "Chrome").replace(INTERNAL_HOST, "$1internal.example");
   }
   return v;
 };

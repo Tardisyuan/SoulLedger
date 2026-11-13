@@ -585,19 +585,49 @@ def test_eval_runs_report_the_retrieval_hit_rate(cn_tenant, ollama, api):
                                            expected_entries=["letters"]),
              AssistEvalCase.objects.create(side="soul", screen="applications", question="申诉",
                                            expected_entries=["codes"]),  # PINNED:总在上下文里
-             AssistEvalCase.objects.create(side="soul", screen="applications", question="申诉")]
-    FakeProvider.script = [{"text": "好的。"}] * 4
+             AssistEvalCase.objects.create(side="soul", screen="applications", question="申诉"),
+             # 只给埃及、欧洲的条目:中国的评测灵魂检索不到,不计(F-AST-04),不是「未命中」
+             AssistEvalCase.objects.create(side="soul", screen="applications", question="申诉",
+                                           expected_entries=["no-rebirth"])]
+    FakeProvider.script = [{"text": "好的。"}] * 5
     stored = evals._stored(config.effective().connection)
-    run = AssistEvalRun.objects.create(candidates=[stored], case_ids=[c.pk for c in cases], total=4)
+    run = AssistEvalRun.objects.create(candidates=[stored], case_ids=[c.pk for c in cases], total=5)
     assert evals.execute(run.pk) == "done"
     hits = {r.case_id: (r.retrieval, r.retrieval_hit) for r in run.results.all()}
     assert hits == {cases[0].pk: ("vector", True), cases[1].pk: ("vector", False),
-                    cases[2].pk: ("vector", True), cases[3].pk: ("vector", None)}
+                    cases[2].pk: ("vector", True), cases[3].pk: ("vector", None), cases[4].pk: ("vector", None)}
     summary = AssistEvalRun.objects.get(pk=run.pk).summary[0]
     assert summary["retrieval_hit_rate"] == pytest.approx(2 / 3) and summary["retrieval_fallbacks"] == 0
     detail = api.get(f"{BASE}eval/runs/{run.pk}/").data
     assert detail["summary"][0]["retrieval_hit_rate"] == pytest.approx(2 / 3)
     assert {r["retrieval_hit"] for r in detail["results"]} == {True, False, None}
+    assert detail["summary"][0]["max_latency_ms"] == max(r["latency_ms"] for r in detail["results"])
+
+
+def test_an_expected_entry_the_asker_cannot_retrieve_is_not_counted():
+    """F-AST-04:检索按提问者的文明过滤,不可达的期望条目不计;一条都不可达 = None,换成可达的文明照常计。
+    变异:`retrieval_hit` 不看文明 → 中国灵魂那条判 False,红。"""
+    case = AssistEvalCase(side="soul", locale="zh-Hans", screen="applications", question="q",
+                          expected_entries=["no-rebirth"])
+    assert evals.retrieval_hit(case, (), "CHINESE") is None
+    assert evals.retrieval_hit(case, (), "EGYPTIAN") is False
+    assert evals.retrieval_hit(case, ("no-rebirth",), "EGYPTIAN") is True
+    both = AssistEvalCase(side="soul", locale="zh-Hans", screen="applications", question="q",
+                          expected_entries=["no-rebirth", "rebirth-apply"])
+    assert evals.retrieval_hit(both, ("rebirth-apply",), "CHINESE") is True  # 只算可达的那一条
+    assert evals.retrieval_hit(both, (), None) is False  # 官员不按文明过滤:都算
+
+
+def test_every_seeded_soul_case_is_reachable_by_some_civilization_and_most_by_the_eval_soul():
+    """起草的灵魂用例,期望条目至少对一个文明可达;对中国评测灵魂(`eval_identities` 默认 CN_DIYU)不可达的,
+    只能是写明了文明的条目(如今 2 条:`no-rebirth` 的中英文)。新增一条中国灵魂永远测不到的用例 → 这里点名。"""
+    unreachable = []
+    for case in AssistEvalCase.objects.filter(side="soul"):
+        if evals.retrieval_hit(case, tuple(case.expected_entries), "CHINESE") is None:
+            unreachable.append((case.locale, case.question))
+        assert any(evals.retrieval_hit(case, tuple(case.expected_entries), civ) for civ in
+                   ("CHINESE", "EGYPTIAN", "EUROPEAN", "GREEK")), case.question
+    assert sorted(unreachable) == [("en", "Why is there no rebirth for me?"), ("zh-Hans", "我为什么没有转生？")]
 
 
 # ── 只在 PostgreSQL 上:真 pgvector ─────────────────────────────────────────

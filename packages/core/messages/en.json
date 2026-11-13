@@ -7603,7 +7603,28 @@
     "interrupted": "Answer interrupted",
     "answering_aria": "Answering",
     "jump_latest": "↓ Latest",
-    "stop_hint": "Esc to stop"
+    "stop_hint": "Esc to stop",
+    "trace": {
+      "title": "How this was answered",
+      "tools": "Tools called",
+      "no_tools": "No tool called",
+      "entries": "Help entries",
+      "retrieval": {
+        "vector": "Vector search; these entries went into the context",
+        "fallback": "Search unavailable; the whole help text was sent",
+        "fallback_low_similarity": "Nothing close enough; the whole help text was sent"
+      },
+      "tokens": "Tokens",
+      "tokens_value": "in {{input}} · out {{output}} · cache read {{cached}}",
+      "latency": "Time",
+      "latency_value": "{{ms}} ms",
+      "latency_first": "{{ms}} ms · first word at {{first}} ms",
+      "answered_by": "Answered by",
+      "role": {
+        "primary": "Primary",
+        "backup": "Backup"
+      }
+    }
   },
   "assist_admin": {
     "title": "Assistant admin",
@@ -7824,7 +7845,11 @@
       "expected_entries": "Entries expected",
       "retrieved_top": "Top {{k}} actually retrieved",
       "entry_hit": "Hit",
-      "entry_missed": "Not retrieved"
+      "entry_missed": "Not retrieved",
+      "pass_rate": "Passed",
+      "errors": "{{n}} errored",
+      "max_latency": "Slowest",
+      "forbidden": "contains “{{phrases}}”, which it must not"
     },
     "try": {
       "as_soul": "Asking as the Ask eval soul",
@@ -7935,7 +7960,20 @@
       },
       "legend_primary": "Primary",
       "legend_backup": "Backup",
-      "day_detail": "primary {{a}} · backup {{b}} · switched to backup {{n}} times"
+      "day_detail": "primary {{a}} · backup {{b}} · switched to backup {{n}} times",
+      "latency": "Latency · this month",
+      "latency_none": "No answered question this month has a recorded time yet.",
+      "latency_p50": "Latency p50",
+      "latency_p95": "Latency p95",
+      "first_token_p50": "First word p50",
+      "first_token_p95": "First word p95",
+      "latency_source": "Help entries from",
+      "latency_by": {
+        "vector": "Vector search",
+        "fallback": "Whole help text (search unavailable)",
+        "fallback_low_similarity": "Whole help text (nothing close enough)"
+      },
+      "latency_note": "Over {{count}} answered questions this month, from arrival to the last word; first word counts streamed questions only."
     },
     "embedding": {
       "url": "Address",
@@ -9352,7 +9390,8 @@
         "overreach": "the overreach test",
         "data_scope": "the roles",
         "audit": "the audit records",
-        "recycle": "the recycle bin"
+        "recycle": "the recycle bin",
+        "assist_guard": "Assistant admin"
       },
       "skipped_title": "Tour skipped",
       "skipped_body": "Look around on your own, or try another underworld.",
@@ -9383,7 +9422,11 @@
         },
         "title": "How the system protects itself",
         "done_title": "That is the safeguards tour",
-        "done_body": "Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul's life as its judge."
+        "done_body": "Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul's life as its judge.",
+        "7": {
+          "name": "Why Ask cannot overreach",
+          "body": "The assistant calls tools to read data, so it is one more way someone could try to overreach. The defence is not in the prompt: the tools take only the asker, so the model can choose which to call but not whose data to read. Below are the code and tests that hold this, and the real answers to a few injection attempts."
+        }
       }
     },
     "enter": {
@@ -9499,6 +9542,20 @@
       "try": "Send B's conclusion",
       "no_case": "No case here is concluded yet. Conclude one on the bench, then come back.",
       "result_note": "The demo has no backend: this answer comes from a rule the demo layer copies from the server (demo/flows.ts), with the code and message word for word as in services.py, and nothing was written. On the real API, a second request sent after the first is stopped earlier, by the view's already-concluded check, with 400; only two requests that both pass that check reach the 409 under the lock. The wait on the lock can only be tested on PostgreSQL, since SQLite has no row locks, so the concurrency test above runs on PostgreSQL only."
+    },
+    "assist_guard": {
+      "how_title": "How it is held",
+      "guard": {
+        "no_ids": "Every tool takes only the asker and no id: the model can choose which tool to call, not whose data it reads.",
+        "offered_and_rechecked": "Only tools the asker may use are offered, and each is checked again when it runs: an invented or coaxed call is refused.",
+        "counts_only": "The officer tools return counts only, never names, numbers, statements or verdicts, scoped by each page's own query.",
+        "whitelist": "On the soul side, the fields sent to the model are a whitelist; the page serializers are not reused.",
+        "data_not_instructions": "Facts and tool results are marked as data, not instructions; the assistant is read-only and has no tool that writes."
+      },
+      "cases_title": "Injection attempts",
+      "expect": "Expected:",
+      "recorded": "A recorded answer: asked for real as the eval officer in the test environment ({{at}}), replayed as it was.",
+      "not_recorded": "No real answer has been recorded for this one yet, and none is made up here."
     }
   },
   "action": {

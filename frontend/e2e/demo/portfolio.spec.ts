@@ -14,7 +14,7 @@ test("the home page shows how it was built: architecture, test counts, the two a
 });
 
 // A3:第二条导览,以管理员身份,每一步点亮界面上真实的东西。
-test("the safeguards tour enters as the administrator and lights up something on each of its six steps", async ({ page, context }) => {
+test("the safeguards tour enters as the administrator and lights up something on each of its seven steps", async ({ page, context }) => {
   test.setTimeout(90000);
   const seen = watch(context, page);
   await page.goto("/");
@@ -22,10 +22,10 @@ test("the safeguards tour enters as the administrator and lights up something on
   await page.waitForURL((u) => u.pathname === "/tenants");
   const card = page.locator('[data-testid="demo-tour"][data-tour="guard"]');
   await expect(card).toBeVisible();
-  const routes = ["/tenants", "/permissions", "/permissions", "/permissions", "/audit", "/recycle-bin"];
+  const routes = ["/tenants", "/permissions", "/permissions", "/permissions", "/audit", "/recycle-bin", "/admin/assistant"];
   const dark: string[] = [];
   for (const [i, route] of routes.entries()) {
-    await expect(page.getByTestId("demo-tour-progress")).toContainText(`${i + 1} / 6`);
+    await expect(page.getByTestId("demo-tour-progress")).toContainText(`${i + 1} / 7`);
     await expect(page.getByTestId("demo-tour-next")).toBeVisible({ timeout: 10000 });
     expect(new URL(page.url()).pathname).toBe(route);
     const lit = await page.locator(".demo-tour-target").first().waitFor({ timeout: 6000 }).then(() => true, () => false);
@@ -46,7 +46,7 @@ test("the overreach step replays the judge's recorded 403, with the reason and w
   await page.waitForURL((u) => u.pathname === "/tenants");
   await page.getByTestId("demo-tour-next").click();
   await page.getByTestId("demo-tour-next").click();
-  await expect(page.getByTestId("demo-tour-progress")).toContainText("3 / 6");
+  await expect(page.getByTestId("demo-tour-progress")).toContainText("3 / 7");
   await page.getByTestId("demo-overreach-try").click();
   const answer = page.getByTestId("demo-overreach-answer");
   await expect(page.getByTestId("demo-overreach-status")).toHaveText("403");

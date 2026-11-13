@@ -7842,7 +7842,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 「已处理」:被隐藏或被官员删除的灵魂帖子与评论,一张表,按处理时间倒序。
+         * @description 「已处理」:被隐藏或被官员删除的帖子与评论,一张表,按处理时间倒序。
          *
          *     * 隐藏:`moderation_status=HIDDEN` 且未删除。处理人 / 时间 / 理由读 `moderated_*`
          *       (0007 之前隐藏的行这三项为空)。恢复可见是既有的 `POST {posts|comments}/{id}/restore/`。
@@ -13157,6 +13157,8 @@ export interface components {
             retrieval_fallbacks: number | null;
             /** Format: double */
             mean_latency_ms: number | null;
+            /** @description 已答用例里最慢的一条;早于这一项的运行没有 */
+            max_latency_ms?: number | null;
             /** Format: double */
             cost: number | null;
             input_tokens: number;
@@ -14818,6 +14820,12 @@ export interface components {
          * @enum {string}
          */
         LastFromEnum: "soul" | "hall";
+        LatencySpread: {
+            /** @description 记了时间的已答提问数 */
+            count: number;
+            p50_ms: number | null;
+            p95_ms: number | null;
+        };
         /**
          * @description 200 body of `LedgerEffectiveView`. Same three numbers as the summary's
          *     merit/demerit/balance, under names that say they are decay-applied.
@@ -20456,6 +20464,8 @@ export interface components {
             payload?: unknown;
             /** @description User or system */
             actor?: string;
+            readonly actor_display_name: string;
+            readonly actor_role: string;
             /** Format: date-time */
             readonly create_time: string;
         };
@@ -21449,6 +21459,8 @@ export interface components {
             /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
             retrieved_entries: string[];
             latency_ms: number;
+            /** @description 首字出来时的毫秒数;非流式为 null */
+            first_token_ms: number | null;
             tokens: {
                 [key: string]: number;
             };
@@ -21477,6 +21489,8 @@ export interface components {
             /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
             retrieved_entries: string[];
             latency_ms: number;
+            /** @description 首字出来时的毫秒数;非流式为 null */
+            first_token_ms: number | null;
             tokens: {
                 [key: string]: number;
             };
@@ -21585,6 +21599,8 @@ export interface components {
             /** @description 按功能分(问一问、权限解释、审计查询…) */
             by_feature: components["schemas"]["UsageFeature"][];
             by_hall: components["schemas"]["UsageHall"][];
+            /** @description 已答提问的耗时 p50 / p95(从进门到收尾)与首字时间(B5) */
+            latency: components["schemas"]["UsageLatency"];
             phase4: components["schemas"]["Phase4"];
         };
         UsageDay: {
@@ -21657,6 +21673,21 @@ export interface components {
             cost: number;
             tenant_id: number | null;
             code: string | null;
+        };
+        UsageLatency: {
+            /** @description 记了时间的已答提问数 */
+            count: number;
+            p50_ms: number | null;
+            p95_ms: number | null;
+            /** @description 首字时间;只有流式提问才有 */
+            first_token: components["schemas"]["LatencySpread"];
+            /** @description 耗时按帮助条目的来源分 */
+            by_retrieval: components["schemas"]["UsageLatencyRetrieval"];
+        };
+        UsageLatencyRetrieval: {
+            vector: components["schemas"]["LatencySpread"];
+            fallback: components["schemas"]["LatencySpread"];
+            fallback_low_similarity: components["schemas"]["LatencySpread"];
         };
         UsageProvider: {
             requests: number;

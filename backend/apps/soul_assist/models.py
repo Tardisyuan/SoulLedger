@@ -136,6 +136,10 @@ class AssistUsage(models.Model):
     #: 评测的请求:不计入用量与月度上限。
     is_eval = models.BooleanField(default=False)
     feature = models.CharField(max_length=30, choices=[(f, f) for f in FEATURES], default="assist", db_index=True)
+    #: 从进门(检索之前)到收尾的毫秒数,与首字出来时的毫秒数(B5,2026-11-13)。只记走到供应商的那几种
+    #: (答完、空回答、停止、中断、不可用);非流式没有「首字」,为空。只是时间,不含任何原文。
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    first_token_ms = models.PositiveIntegerField(null=True, blank=True)
 
 
 class AssistEvalCase(models.Model):

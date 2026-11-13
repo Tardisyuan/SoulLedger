@@ -17,13 +17,14 @@ const rec = (role: Recording["role"]): Recording => ({
 
 afterEach(() => sessionStorage.clear());
 
-it("is off for the administrator unless asked for, and then walks the six safeguards", () => {
+it("is off for the administrator unless asked for, and then walks the seven safeguards", () => {
   expect(tourOf(rec("admin"))).toBeNull();
   requestGuard(true);
   const tour = tourOf(rec("admin"));
   expect(tour?.skin).toBe("guard");
-  expect(tour?.steps.map((s) => s.route)).toEqual(["/tenants", "/permissions", "/permissions", "/permissions", "/audit", "/recycle-bin"]);
+  expect(tour?.steps.map((s) => s.route)).toEqual(["/tenants", "/permissions", "/permissions", "/permissions", "/audit", "/recycle-bin", "/admin/assistant"]);
   expect(tour?.steps.filter((s) => s.probe).map((s) => s.n)).toEqual([3]);
+  expect(tour?.steps.filter((s) => s.assist).map((s) => s.n)).toEqual([7]);
   requestGuard(false);
   expect(tourOf(rec("admin"))).toBeNull();
 });
@@ -40,6 +41,6 @@ it("survives the sign-in's clearing of visitor state", () => {
   expect(guardRequested()).toBe(true);
 });
 
-it("numbers its steps 1..6, the keys its copy is read under", () => {
-  expect(GUARD_STEPS.map((s) => s.n)).toEqual([1, 2, 3, 4, 5, 6]);
+it("numbers its steps 1..7, the keys its copy is read under", () => {
+  expect(GUARD_STEPS.map((s) => s.n)).toEqual([1, 2, 3, 4, 5, 6, 7]);
 });

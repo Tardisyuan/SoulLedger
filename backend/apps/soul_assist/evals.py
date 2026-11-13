@@ -209,12 +209,20 @@ def judge(case, text, tools_called):
     return tools_ok, included, excluded, tools_ok and all(included.values()) and not any(excluded.values())
 
 
-def retrieval_hit(case, retrieved):
+def retrieval_hit(case, retrieved, civilization=None):
     """用例写了期望条目:它们**都**进了上下文才算命中(`PINNED` 总在上下文里);没写 = None,不计。
-    退回整份语料(`fallback*`)时 `retrieved` 为空,算未命中 —— 检索没有找到它。"""
-    if not case.expected_entries:
+    退回整份语料(`fallback*`)时 `retrieved` 为空,算未命中 —— 检索没有找到它。
+
+    **只算这位提问者检索得到的条目**(F-AST-04,2026-11-13):检索按提问者的文明过滤(`vectors.retrieve`),
+    评测灵魂在 CN_DIYU 时,只给埃及、欧洲的 `no-rebirth` 不可能进上下文 —— 那条用例原来永远判「未命中」,
+    把命中率固定拉低。现在不可达的期望条目不计;一条都不可达 = None(这位评测身份测不了这条),换一位
+    埃及或欧洲的评测灵魂,同一条用例照常计入。"""
+    reachable = {e["id"] for e in corpus.entries(case.locale, case.side)
+                 if civilization is None or not e["civilizations"] or civilization in e["civilizations"]}
+    expected = [e for e in case.expected_entries if e in reachable or e in corpus.PINNED]
+    if not expected:
         return None
-    return all(e in retrieved or e in corpus.PINNED for e in case.expected_entries)
+    return all(e in retrieved or e in corpus.PINNED for e in expected)
 
 
 def run_case(run, index, conn, case, eff):
@@ -240,7 +248,7 @@ def run_case(run, index, conn, case, eff):
                                                                                  reply.tool_calls)
         found = reply.retrieval
         result.retrieval, result.retrieved = found.mode, list(found.entries)
-        result.retrieval_hit = retrieval_hit(case, found.entries)
+        result.retrieval_hit = retrieval_hit(case, found.entries, asker.civilization)
         result.cost = config.cost(eff.prices, conn.model, reply.tokens.get("input", 0),
                                   reply.tokens.get("output", 0), reply.tokens.get("cache_read", 0))
     result.latency_ms = _ms(begin)
@@ -331,7 +339,7 @@ def try_result(side, reply, begin):
     provider, model = reply.answered_by
     return {"side": side, "answer": reply.content, "tools_called": list(reply.tool_calls),
             "retrieval": reply.retrieval.mode, "retrieved_entries": list(reply.retrieval.entries),
-            "latency_ms": _ms(begin), "tokens": reply.tokens, "provider": config.provider_name(provider),
+            "latency_ms": _ms(begin), "first_token_ms": reply.times["first_token_ms"], "tokens": reply.tokens, "provider": config.provider_name(provider),
             "model": model, "provider_role": reply.provider_role, "fallback_reason": reply.fallback_reason or None}
 
 
@@ -362,6 +370,7 @@ def summarize(run):
             "retrieval_hit_rate": sum(labelled) / len(labelled) if labelled else None,
             "retrieval_fallbacks": sum(r.retrieval != "vector" for r in answered),
             "mean_latency_ms": sum(r.latency_ms for r in answered) / len(answered) if answered else None,
+            "max_latency_ms": max((r.latency_ms for r in answered), default=None),
             "cost": None if any(c is None for c in costs) else round(sum(costs), 6),
             "input_tokens": sum(r.tokens.get("input", 0) for r in answered),
             "output_tokens": sum(r.tokens.get("output", 0) for r in answered),
