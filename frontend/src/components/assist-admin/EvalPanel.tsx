@@ -253,6 +253,11 @@ function RunDetail({ id }: { id: number }) {
             <dt className="col-span-2 text-sm">
               {LABELS[s.candidate]} · <span className={MONO}>{s.model}</span>
             </dt>
+            <dt className={MUTED}>{t("assist_admin.eval.pass_rate")}</dt>
+            <dd className={MONO} data-testid="aa-pass-rate">
+              {s.passed}/{s.cases}
+              {s.errors ? ` · ${t("assist_admin.eval.errors", { n: String(s.errors) })}` : ""}
+            </dd>
             <dt className={MUTED}>{t("assist_admin.eval.tool_accuracy")}</dt>
             <dd className={MONO}>{s.tool_accuracy == null ? <MissingValue kind="unrecorded" /> : pct(s.tool_accuracy)}</dd>
             <dt className={MUTED}>{t("assist_admin.eval.hit_rate")}</dt>
@@ -263,6 +268,8 @@ function RunDetail({ id }: { id: number }) {
             </dd>
             <dt className={MUTED}>{t("assist_admin.eval.latency")}</dt>
             <dd className={MONO}>{s.mean_latency_ms == null ? <MissingValue kind="unrecorded" /> : `${count(Math.round(s.mean_latency_ms))} ms`}</dd>
+            <dt className={MUTED}>{t("assist_admin.eval.max_latency")}</dt>
+            <dd className={MONO} data-testid="aa-max-latency">{s.max_latency_ms == null ? <MissingValue kind="unrecorded" /> : `${count(s.max_latency_ms)} ms`}</dd>
             <dt className={MUTED}>{t("assist_admin.eval.cost")}</dt>
             <dd className={MONO}>{s.cost == null ? <MissingValue kind="unrecorded" /> : money(s.cost)}</dd>
           </dl>
@@ -344,6 +351,7 @@ function RunDetail({ id }: { id: number }) {
                               <div key={i} className="border border-[oklch(var(--color-line))] p-2">
                                 <p className={SUBTLE}>
                                   {LABELS[i]} · {missingOf(r).length ? t("assist_admin.eval.missing", { phrases: missingOf(r).join("、") }) : t("assist_admin.eval.all_hit")}
+                                  {forbiddenOf(r).length > 0 && ` · ${t("assist_admin.eval.forbidden", { phrases: forbiddenOf(r).join("、") })}`}
                                 </p>
                                 <p className="whitespace-pre-wrap text-sm">{r.answer || r.error}</p>
                               </div>
@@ -435,6 +443,9 @@ const tokenTotal = (r: AssistAdminEvalResult) =>
   Object.values((r.tokens ?? {}) as Record<string, number>).reduce((a, b) => a + (Number(b) || 0), 0);
 const missingOf = (r: AssistAdminEvalResult) =>
   Object.entries((r.included ?? {}) as Record<string, boolean>).filter(([, hit]) => !hit).map(([p]) => p);
+/** must_not_include phrases the answer did contain: the other half of why a case failed. */
+const forbiddenOf = (r: AssistAdminEvalResult) =>
+  Object.entries((r.excluded ?? {}) as Record<string, boolean>).filter(([, seen]) => seen).map(([p]) => p);
 
 function groupByCase(run: AssistAdminEvalRunDetail | undefined) {
   const rows = new Map<string, { key: string; caseId: number | null; question: string; byCandidate: (AssistAdminEvalResult | undefined)[] }>();
