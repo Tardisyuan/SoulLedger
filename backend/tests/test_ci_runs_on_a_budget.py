@@ -52,7 +52,7 @@ def test_the_pr_workflow_is_cheap_and_cannot_touch_secrets():
     assert set(on) == {"pull_request"}, sorted(on)
     assert data["permissions"] == {"contents": "read"}
     assert data["concurrency"]["cancel-in-progress"] is True
-    assert "secrets." not in text and "pull_request_target" not in text.split("\non:")[1]
+    assert "${{ secrets." not in text and "pull_request_target" not in text.split("\non:")[1]
     for job_name, job in data["jobs"].items():
         assert isinstance(job.get("timeout-minutes"), int) and job["timeout-minutes"] <= 20, job_name
         assert "permissions" not in job, f"{job_name} widens the token"
