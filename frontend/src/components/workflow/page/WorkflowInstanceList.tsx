@@ -284,7 +284,7 @@ export function WorkflowInstanceList({
                     wf.status === "COMPLETED"
                       ? "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))]"
                       : wf.status === "IN_PROGRESS"
-                      ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
+                      ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-ink))]"
                       : "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]"
                   }
                 >

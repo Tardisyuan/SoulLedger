@@ -169,7 +169,7 @@ export function TemplatePreview({
             <div key={idx} className="flex items-center gap-3 p-2 bg-[oklch(var(--color-surface-2))]">
               {/* `` survives the corner purge: a round mark is an
                   identity token, which an ordinal step number is. */}
-              <span className="w-6 h-6 bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))] flex items-center justify-center text-xs font-medium shrink-0">
+              <span className="w-6 h-6 bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-ink))] flex items-center justify-center text-xs font-medium shrink-0">
                 {idx + 1}
               </span>
               <span className="text-sm text-[oklch(var(--color-ink))]">{node.name}</span>
