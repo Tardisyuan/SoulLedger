@@ -1432,6 +1432,13 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 不再发。串行版 tests/test_a_failed_webhook_is_remembered.py::test_a_delivered_one_is_not_sent_twice 每个引擎都跑。
         "tests/test_webhook_delivery_is_not_sent_twice.py::"
         "test_two_workers_given_the_same_delivery_post_it_once",
+        # 2026-11-14 行级安全验证(ADR 0006,只验证不铺开):souls_soul / judgment_judgment 上的策略、
+        # SET LOCAL 随事务结束、表主绕过。SQLite 没有 RLS,没有对应的串行版本 —— 它守的东西在 SQLite 上不存在。
+        "tests/test_row_level_security_probe.py::test_a_hall_reads_only_its_own_rows_even_through_raw_sql",
+        "tests/test_row_level_security_probe.py::test_a_hall_cannot_write_another_halls_rows",
+        "tests/test_row_level_security_probe.py::"
+        "test_no_setting_means_no_rows_and_the_setting_ends_with_its_transaction",
+        "tests/test_row_level_security_probe.py::test_the_owner_bypasses_rls_unless_forced",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
