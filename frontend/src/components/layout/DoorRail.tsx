@@ -212,16 +212,20 @@ export function DoorTabs() {
   }, []);
   return (
     <nav ref={tabsRef} className={s.tabs} aria-label={t(`caseDesk.rail.${DOORS[door].key}`)} data-testid="door-tabs" data-door={door}>
-      {sections.map((group) => (
+      {sections.map((group) => {
+        const name = t(`doors.section.${group[0].section}`);
+        return (
         <div key={group[0].section} className={s.section}>
-          {sections.length > 1 ? <span className={s.sectionName}>{t(`doors.section.${group[0].section}`)}</span> : null}
+          {/* 节名与它的第一页同名(「案卷台 · 案卷台」)时不写:读起来是重复,分节靠节间的竖线已经看得出。 */}
+          {sections.length > 1 && name !== label(group[0]) ? <span className={s.sectionName}>{name}</span> : null}
           {group.map((p) => (
             <Link key={p.path} href={p.path} className={s.tab} aria-current={active === p.path ? "page" : undefined}>
               {label(p)}
             </Link>
           ))}
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }
