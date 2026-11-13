@@ -13084,6 +13084,8 @@ export interface components {
             retrieval_fallbacks: number | null;
             /** Format: double */
             mean_latency_ms: number | null;
+            /** @description 已答用例里最慢的一条;早于这一项的运行没有 */
+            max_latency_ms?: number | null;
             /** Format: double */
             cost: number | null;
             input_tokens: number;
@@ -14718,6 +14720,12 @@ export interface components {
          * @enum {string}
          */
         LastFromEnum: "soul" | "hall";
+        LatencySpread: {
+            /** @description 记了时间的已答提问数 */
+            count: number;
+            p50_ms: number | null;
+            p95_ms: number | null;
+        };
         /**
          * @description 200 body of `LedgerEffectiveView`. Same three numbers as the summary's
          *     merit/demerit/balance, under names that say they are decay-applied.
@@ -21311,6 +21319,8 @@ export interface components {
             /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
             retrieved_entries: string[];
             latency_ms: number;
+            /** @description 首字出来时的毫秒数;非流式为 null */
+            first_token_ms: number | null;
             tokens: {
                 [key: string]: number;
             };
@@ -21339,6 +21349,8 @@ export interface components {
             /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
             retrieved_entries: string[];
             latency_ms: number;
+            /** @description 首字出来时的毫秒数;非流式为 null */
+            first_token_ms: number | null;
             tokens: {
                 [key: string]: number;
             };
@@ -21445,6 +21457,8 @@ export interface components {
             by_day: components["schemas"]["UsageDay"][];
             by_side: components["schemas"]["UsageSide"][];
             by_hall: components["schemas"]["UsageHall"][];
+            /** @description 已答提问的耗时 p50 / p95(从进门到收尾)与首字时间(B5) */
+            latency: components["schemas"]["UsageLatency"];
             phase4: components["schemas"]["Phase4"];
         };
         UsageDay: {
@@ -21503,6 +21517,21 @@ export interface components {
             cost: number;
             tenant_id: number | null;
             code: string | null;
+        };
+        UsageLatency: {
+            /** @description 记了时间的已答提问数 */
+            count: number;
+            p50_ms: number | null;
+            p95_ms: number | null;
+            /** @description 首字时间;只有流式提问才有 */
+            first_token: components["schemas"]["LatencySpread"];
+            /** @description 耗时按帮助条目的来源分 */
+            by_retrieval: components["schemas"]["UsageLatencyRetrieval"];
+        };
+        UsageLatencyRetrieval: {
+            vector: components["schemas"]["LatencySpread"];
+            fallback: components["schemas"]["LatencySpread"];
+            fallback_low_similarity: components["schemas"]["LatencySpread"];
         };
         UsageProvider: {
             requests: number;
