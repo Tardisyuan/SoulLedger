@@ -37,6 +37,11 @@ import type {
   TemplatePreviewData,
 } from "@/src/components/workflow/page/types";
 
+/* 模板列表的行(第三十六批 第一节第 3 条,四个文明同一写法):文明色只给顶线、印、卷宗脊、焦点四处 ——
+   选中是 card2 底加 2px civT 竖线(焦点),别处不上文明色。分组标题与案卷台的分组同一写法(12 · 500 · faint · .06em)。 */
+const ROW_SELECTED = "bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-line))] shadow-[inset_2px_0_0_oklch(var(--color-main-ink))] text-[oklch(var(--color-ink))]";
+const ROW_IDLE = "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]";
+
 export default function WorkflowPage() {
   // `useSearchParams` 要在 Suspense 里(静态预渲染时它会挂起)。
   // 页级门(rbac-web L-1):模板与实例接口都要 workflow.read。
@@ -247,8 +252,8 @@ function WorkflowPageContent() {
                         }}
                         className={`w-full text-left px-3 py-2 border transition-colors ${
                           editingTemplateId === String(tmpl.id)
-                            ? "bg-[oklch(var(--color-accent))]/10 border-[oklch(var(--color-accent))] text-[oklch(var(--color-ink))]"
-                            : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
+                            ? ROW_SELECTED
+                            : ROW_IDLE
                         }`}
                       >
                         <div title={localName(tmpl, locale)} className="text-sm font-medium truncate">{localName(tmpl, locale)}</div>
@@ -265,7 +270,7 @@ function WorkflowPageContent() {
                   <div className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates")}</div>
                   {Object.entries(templatesByCiv).map(([civ, civTemplates]) => (
                     <div key={civ} className="space-y-1">
-                      <div className="text-xs text-[oklch(var(--color-accent-ink))] px-2 py-1 font-medium">
+                      <div className="text-xs font-medium tracking-[.06em] text-[oklch(var(--color-faint-text))] px-2 py-1">
                         {t(`workflow.civilizations.${civ}`)}
                       </div>
                       {civTemplates.map((tmpl) => (
@@ -278,8 +283,8 @@ function WorkflowPageContent() {
                           }}
                           className={`w-full text-left px-3 py-2 border transition-colors text-sm ${
                             selectedTemplate === tmpl.key && !editingTemplateId
-                              ? "bg-[oklch(var(--color-accent))]/10 border-[oklch(var(--color-accent))] text-[oklch(var(--color-ink))]"
-                              : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
+                              ? ROW_SELECTED
+                              : ROW_IDLE
                           }`}
                         >
                           {presetLabel(tmpl.name, locale)}

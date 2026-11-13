@@ -44,6 +44,19 @@ describe("WorkflowPage template list", () => {
     expect(screen.getByText("workflow.nodes_count(10)")).toBeInTheDocument();
   });
 
+  it("no civilization colour in the list: the selected row is card2 plus the 2px focus line, headings faint (batch 36 §1.3)", async () => {
+    renderPage();
+    await screen.findByText("workflow.predefined_templates");
+    const heading = screen.getByText("workflow.civilizations.EGYPTIAN");
+    expect(heading.className).toMatch(/color-faint-text/);
+    expect(heading.className).toMatch(/tracking-\[\.06em\]/);
+    const rows = screen.getAllByRole("button").filter((b) => /surface-[12]/.test(b.className) && b.closest(".space-y-1"));
+    const selected = rows.filter((b) => b.className.includes("color-main-ink"));
+    expect(selected).toHaveLength(1);
+    expect(selected[0].className).toMatch(/surface-2/);
+    for (const el of [heading, ...rows]) expect(el.className).not.toMatch(/accent/);
+  });
+
   it("omits the custom-templates heading when the backend has none", async () => {
     renderPage();
 
