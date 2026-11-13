@@ -921,7 +921,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       backLink={backLink}
       eyebrow={eyebrow}
       spine={<DossierSpine civ={spineCiv} now={spine.now} />}
-      tabs={<DossierTabs current="dossier" hrefs={soulTabHref} counts={{ merits: ledgerData?.record_count ?? null, lives: priorLives.length }} />}
+      tabs={<DossierTabs current="dossier" civilization={judgment?.civilization} hrefs={soulTabHref} counts={{ merits: ledgerData?.record_count ?? null, lives: priorLives.length }} />}
       /* Clause 4: the id never substitutes for a name — a judgment with no
          recorded soul name reads as unrecorded, not as its primary key. */
       title={<DomainText value={soulName} />}

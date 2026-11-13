@@ -54,6 +54,8 @@ for (const [role, route] of PAGES) {
     // Not an empty shell (pages.spec.ts has the same floor): a page that has drawn nothing has no Chinese on it either.
     const main = page.locator("main").first();
     await expect.poll(async () => (await main.innerText()).trim().length, { message: `an empty shell on ${route}` }).toBeGreaterThan(20);
+    // The dossier seal's face (第 N 殿印) is a seal, not copy: it is not translated (DossierSeal.tsx, Design batch 30).
+    await page.addStyleTag({ content: "[data-testid^='dossier-seal'] { display: none !important; }" });
     const text = brand(await page.locator("body").innerText());
     const hits = text.split("\n").filter((line) => CJK.test(line)).slice(0, 12);
     expect(hits).toEqual([]);

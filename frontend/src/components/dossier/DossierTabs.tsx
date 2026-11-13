@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 import s from "./dossier.module.css";
 
 export type DossierTabKey = "dossier" | "merits" | "events" | "lives" | "sentence";
@@ -15,15 +16,18 @@ export function DossierTabs({
   current,
   hrefs,
   counts = {},
+  civilization,
 }: {
   current: DossierTabKey;
   hrefs: Record<DossierTabKey, string>;
   counts?: Partial<Record<DossierTabKey, number | null>>;
+  /** Europe and Egypt have no wheel: no 轮回 tab (`hasRebirth`; demo civilizations.spec 「has no wheel」). */
+  civilization?: string | null;
 }) {
   const { t } = useI18n();
   return (
     <nav aria-label={t("caseDesk.dossier.tabs.label")} className={s.tabs} data-testid="dossier-tabs">
-      {DOSSIER_TABS.map((key) => (
+      {DOSSIER_TABS.filter((key) => key !== "lives" || hasRebirth(civilization)).map((key) => (
         <Link key={key} href={hrefs[key]} className={s.tab} aria-current={key === current ? "page" : undefined} data-tab={key}>
           {t(`caseDesk.dossier.tabs.${key}`)}
           {key !== "dossier" && <span className={s.tabCount}>{counts[key] ?? "–"}</span>}

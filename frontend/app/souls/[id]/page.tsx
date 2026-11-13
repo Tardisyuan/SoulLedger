@@ -872,6 +872,7 @@ export default function SoulDetailPage() {
         <DossierTabs
           current="dossier"
           hrefs={tabHrefs}
+          civilization={soul?.civilization}
           counts={{ merits: ledger ? ledger.record_count : null, events: eventsQuery.data?.count ?? null, lives: reincarnationsQuery.data?.count ?? null }}
         />
       }

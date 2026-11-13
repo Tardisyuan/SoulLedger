@@ -157,7 +157,8 @@ test("a proposed dispatch can be approved, and it leaves the waiting list", asyn
 
 test("a post and a comment can be written, and stay after a reload", async ({ page, context }) => {
   const seen = watch(context, page);
-  await enter(page, "judge");
+  // /social is moderators' and admins' only since Design batch 36 (a judge gets the 403 page).
+  await enter(page, "moderator");
   await page.goto("/social");
   await page.getByPlaceholder("今天想说点什么").filter({ visible: true }).fill("第五殿今日无事,奈何桥水位如常。");
   await page.getByRole("button", { name: "发布" }).click();

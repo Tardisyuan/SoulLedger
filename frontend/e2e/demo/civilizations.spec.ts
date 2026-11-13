@@ -385,7 +385,8 @@ for (const [role, civ] of [["admin", null], ["moderator", "cn"]] as const) {
     }
     await expect(cover).toHaveCount(0, { timeout: 8000 });
     await expect(page).not.toHaveURL(/\/$/);
-    await expect(page.getByTestId("user-menu")).toBeVisible();
+    // The door rail, not the account menu: admin lands on /desk/overview, which draws no top bar (support.ts enter()).
+    await expect(page.getByTestId("door-rail")).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { __entry: object }).__entry)).toEqual({ seal: true, bare: 0 });
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
   });
