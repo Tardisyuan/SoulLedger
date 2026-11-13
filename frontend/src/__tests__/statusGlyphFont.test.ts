@@ -20,6 +20,7 @@ import path from "node:path";
 
 import { SOUL_STATE_GLYPH } from "@/src/lib/soulStateBadge";
 import { VERDICT_GLYPH } from "@/src/lib/verdictGlyph";
+import { APPEAL_STATUS_GLYPHS } from "@/src/components/judgment/appealDisplay";
 
 const REPO = path.join(__dirname, "..", "..", "..");
 const WEB_FONT = path.join(REPO, "frontend/public/fonts/SoulLedgerGlyphs.ttf");
@@ -79,12 +80,18 @@ const SQUARE_SOURCES = [
 ].map((f) => readFileSync(path.join(REPO, f), "utf8"));
 const SQUARES = ["■", "□"].filter((g) => SQUARE_SOURCES.some((src) => src.includes(g)));
 /** Every glyph a web status / verdict badge draws, plus the squares. */
-const WEB_GLYPHS = cps([...Object.values(SOUL_STATE_GLYPH), ...Object.values(VERDICT_GLYPH), ...SQUARES]);
+const WEB_GLYPHS = cps([
+  ...Object.values(SOUL_STATE_GLYPH),
+  ...Object.values(VERDICT_GLYPH),
+  ...Object.values(APPEAL_STATUS_GLYPHS),
+  ...SQUARES,
+]);
 /** Every glyph an App badge draws, read from mobile/src/rules.ts and layout.ts (they import React Native's theme). */
 const APP_GLYPHS = cps([...APP_RULES.matchAll(/glyph: "([^"]+)"/g)].map((m) => m[1]));
 
 describe("status glyphs come from one bundled font (Design E 组)", () => {
-  it("the subject sets are the ones we think: ◌ and ✓✕◇↺ are in both", () => {
+  it("the subject sets are the ones we think: ◌ and ✓✕◇↺ are in both; ⊘ (申诉被驳回) on the web", () => {
+    expect(WEB_GLYPHS).toContain("⊘".codePointAt(0));
     for (const g of ["◌", "✓", "✕", "◇", "↺"]) {
       expect(WEB_GLYPHS).toContain(g.codePointAt(0));
       expect(APP_GLYPHS).toContain(g.codePointAt(0));

@@ -10052,6 +10052,86 @@
       "open": "Open file",
       "claim": "Claim",
       "search": "Search"
+    },
+    "dossier": {
+      "spine": {
+        "cn": {
+          "aria": "Diyu · the ten courts in a line",
+          "pre": "First nine stops",
+          "hells": "Hells · branch",
+          "rebirth": "Rebirth"
+        },
+        "eu": {
+          "aria": "Europe · the nine-circle funnel",
+          "minos": "Minos"
+        },
+        "eg": {
+          "aria": "Egypt · the weighing divides",
+          "death": "Death",
+          "gate": "Gate of the Duat",
+          "heart": "Heart",
+          "feather": "Feather",
+          "aaru": "Field of Reeds",
+          "annihilation": "Annihilation · not a place"
+        },
+        "gr": {
+          "aria": "Greece · the three-way fork",
+          "death": "Death",
+          "ferry": "Acheron crossing",
+          "isles": "Isles of the Blessed",
+          "asphodel": "Asphodel Meadows",
+          "tartarus": "Tartarus"
+        }
+      },
+      "seal": {
+        "aria": "{{seal}}",
+        "aria_pending": "{{seal}} · not yet sealed",
+        "cn": "Diyu · square seal",
+        "eu": "Europe · wax seal",
+        "eg": "Egypt · cartouche",
+        "gr": "Greece · ostracon"
+      },
+      "mark": {
+        "cn": {
+          "merit": "Merit",
+          "demerit": "Demerit",
+          "merit_glyph": "功",
+          "demerit_glyph": "过"
+        },
+        "eu": {
+          "merit": "Virtue",
+          "demerit": "Sin"
+        },
+        "eg": {
+          "merit": "Feather",
+          "demerit": "Heart"
+        },
+        "gr": {
+          "merit": "White ballot",
+          "demerit": "Black ballot"
+        }
+      },
+      "tabs": {
+        "label": "Dossier sections",
+        "dossier": "Dossier",
+        "merits": "Merits",
+        "events": "Events",
+        "lives": "Lives",
+        "sentence": "Sentence"
+      },
+      "merits_all": "All {{n}}",
+      "judge": {
+        "head": "Judge · press 1–4",
+        "sealed_head": "Verdict · sealed",
+        "words": "Verdict",
+        "cited": "Cited statutes",
+        "seal": "Seal",
+        "hint": "Choose a destination and write the verdict, then seal it. A seal cannot be withdrawn.",
+        "sealed_note": "A seal cannot be withdrawn; only an appeal can change the verdict.",
+        "seal_appears": "The seal will appear here once it is set.",
+        "full_text": "Read the full verdict",
+        "sealed_by": "{{date}} · {{judge}}"
+      }
     }
   },
   "zongbu": {

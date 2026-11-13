@@ -23,7 +23,7 @@ import { Button } from "@/src/components/ui/Button";
 import { StatusBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { AppealDecideDialog } from "@/src/components/judgment/AppealDecideDialog";
-import { APPEAL_STATUS_TONES, appealRefusalMessage } from "@/src/components/judgment/appealDisplay";
+import { APPEAL_STATUS_GLYPHS, APPEAL_STATUS_TONES, appealRefusalMessage } from "@/src/components/judgment/appealDisplay";
 import { AppealLadderView, EscalatedTag, awaitingFinal, ladderAnchor, ladderOver } from "@/src/components/judgment/AppealLadder";
 
 /*
@@ -194,7 +194,7 @@ function AppealReviewContent({ id }: { id: string }) {
       }
     >
       <p className="flex flex-wrap items-center gap-2 text-sm mb-4">
-        <StatusBadge namespace="appeals.status" value={appeal.status} tone={APPEAL_STATUS_TONES[appeal.status]} />
+        <StatusBadge namespace="appeals.status" value={appeal.status} tone={APPEAL_STATUS_TONES[appeal.status]} glyph={APPEAL_STATUS_GLYPHS[appeal.status]} />
         {appeal.workflow && <EscalatedTag />}
         <span>{t("appeals.round", { round: String(appeal.round) })}</span>
         <span className={LABEL}>·</span>

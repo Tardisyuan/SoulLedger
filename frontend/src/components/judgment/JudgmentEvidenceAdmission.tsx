@@ -9,6 +9,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { JudgmentSectionHead } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
+import { MeritMark } from "@/src/components/dossier/MeritMark";
 import { ReasonDialog } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { ClauseLink, clauseCode, hasRecordFacts, RecordFacts, SinGravityMark } from "@/src/components/souls/SoulLedgerBook";
 import { formatHistoricalDate } from "@/lib/utils";
@@ -137,7 +138,9 @@ export function JudgmentEvidenceAdmission({
                 )}
                 <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))] max-md:hidden">{when}</span>
                 <span className="min-w-0">
-                  <span className="flex min-w-0 items-center">
+                  <span className="flex min-w-0 items-center gap-2">
+                    {/* 功过记号(第三十批第 3 步第 4 条):形状答「功还是过」,颜色只在右边的数上。 */}
+                    <MeritMark civilization={record.civilization} kind={record.type === "MERIT" ? "merit" : "demerit"} />
                     <span className={`min-w-0 text-sm text-[oklch(var(--color-ink))] truncate ${admitted ? "" : "line-through"}`} title={label}>
                       {label || <MissingValue kind="unrecorded" />}
                     </span>

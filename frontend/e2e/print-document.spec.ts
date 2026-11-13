@@ -27,7 +27,7 @@ test.describe("print media", () => {
 
     // On screen the keys, the hint and the back link are all there -- so the hiding below is the print rules' doing.
     await expect(page.getByTestId("verdict-bar")).toBeVisible();
-    await expect(page.getByText("按数字键 1–4 选择判决")).toBeVisible();
+    await expect(page.getByText("选定去处、写好判词后落印。落印后不能撤回。")).toBeVisible();
     await expect(page.getByRole("link", { name: /返回审判列表/ })).toBeVisible();
     await expect(page.getByTestId("comment-1")).toHaveCount(0); // only the latest three
 
@@ -39,15 +39,15 @@ test.describe("print media", () => {
     await expect(page.getByTestId("comments-show-rest")).toHaveCount(0);
 
     await expect(page.getByTestId("verdict-bar")).toBeHidden();
-    await expect(page.getByText("按数字键 1–4 选择判决")).toBeHidden();
+    await expect(page.getByText("选定去处、写好判词后落印。落印后不能撤回。")).toBeHidden();
     await expect(page.getByText("落印不可撤回")).toBeHidden();
     await expect(page.getByText("发起审批流程")).toBeHidden();
     await expect(page.getByText("写评议")).toBeHidden(); // the label of the (hidden) input
     await expect(page.getByRole("link", { name: /返回审判列表/ })).toBeHidden();
-    await expect(page.getByTestId("civ-motif")).toBeHidden();
+    await expect(page.getByTestId("dossier-seal-pending")).toBeHidden(); // the dashed seal is a preview, not a fact
 
-    // The document itself stays: ruling, the soul's facts, header and footer.
-    await expect(page.getByTestId("current-ruling")).toBeVisible();
+    // The document itself stays: the judging column (verdict words), the soul's facts, header and footer.
+    await expect(page.getByTestId("current-decision")).toBeVisible();
     await expect(page.locator("[data-print-reference]")).toHaveText("案号 CN-2026-0001");
     await expect(page.locator("[data-print-hall]")).not.toBeEmpty();
 

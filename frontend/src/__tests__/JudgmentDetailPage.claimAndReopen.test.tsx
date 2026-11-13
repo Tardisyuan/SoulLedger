@@ -101,7 +101,7 @@ describe("someone else's claimed case", () => {
     expect(screen.queryByLabelText("judgment.detail.notes")).toBeNull();
     expect(screen.getAllByText("草稿判词").length).toBeGreaterThan(0); // 读得到草稿,只是不能改
     for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
-    for (const b of screen.getAllByRole("button", { name: /judgment\.desk\.to_confirm/ })) expect(b).toBeDisabled();
+    for (const b of screen.getAllByRole("button", { name: /caseDesk\.dossier\.judge\.seal/ })) expect(b).toBeDisabled();
     expect(screen.queryByTestId("desk-claim-override")).toBeNull();
   });
 

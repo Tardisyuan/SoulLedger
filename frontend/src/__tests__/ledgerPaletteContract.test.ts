@@ -218,7 +218,7 @@ const CIV_SLOTS: Record<string, string> = {
   "--color-glow": "-glow",
   "--color-metal": "-metal",
   "--color-side": "-side",
-  // 第三十批「卷宗」的印(`--seal`):第六个槽。地府朱色,其余暂取 civT。
+  // 第三十批「卷宗」的印(`--seal`):第六个槽。地府朱色,欧洲 civT,埃及、希腊取各自的 metal(第 3 步)。
   "--color-seal": "-seal",
 };
 

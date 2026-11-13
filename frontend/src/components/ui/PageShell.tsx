@@ -218,6 +218,10 @@ export interface PageShellProps {
    */
   backLink?: React.ReactNode;
   /**
+   * 卷宗脊(第三十批第 3 步,`DossierSpine`):卷宗页头的正下方、页签之上,高 `--spine-h`。只给 `kind="dossier"` 的页。
+   */
+  spine?: React.ReactNode;
+  /**
    * 标签页条。在页头之下、筛选栏之上，**不 sticky**——切换标签改变的是这一页
    * 在看什么，属于页头；钉在视口上会让页面身份跟着滚动条走。
    */
@@ -476,6 +480,7 @@ export function PageShell({
   density = "table",
   eyebrow,
   backLink,
+  spine,
   tabs,
   subtitle,
   actions,
@@ -524,6 +529,8 @@ export function PageShell({
         widthClassName={width}
         loading={showingSkeleton}
       />
+
+      {spine ? <div className={width}>{spine}</div> : null}
 
       {/* 标签页条：在页头之下、筛选栏之上，且**不 sticky**。
           五个页面有这一条（judgment:72、workflow:155、dashboard:168、

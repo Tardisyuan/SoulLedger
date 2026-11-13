@@ -15,7 +15,7 @@
   font-family: 'SoulLedger Glyphs';
   src: url('/fonts/SoulLedgerGlyphs.ttf') format('truetype');
   font-display: block;
-  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1, U+2016;
+  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261, U+25A0, U+25A1, U+2016, U+2298;
 }
 
 @theme {
@@ -599,12 +599,13 @@
     --color-civ-neutral-glow: 0.662027 0.014518 262.3609; /* #8E939C */
     --color-civ-neutral-metal: 0.782429 0.142657 75.8527; /* #ECAA3D */
     --color-civ-neutral-side: 0.168171 0.004477 264.4473; /* #0E0F11 */
-    /* 印(第三十批 `--seal`):地府朱色,其余暂取 civT。var() 在 <html> 上求值,所以浅色下 civT 自动是浅色那一档。 */
+    /* 印(第三十批 `--seal`,第 3 步补全四家):地府朱色,欧洲 civT,埃及、希腊各自的 metal。var() 在 <html> 上求值,
+       所以浅色下 civT / metal 自动是浅色那一档。 */
     --color-civ-neutral-seal: var(--color-civ-neutral-ink);
     --color-civ-cn-seal: 0.645074 0.173464 34.1221; /* #E35D3F */
     --color-civ-eu-seal: var(--color-civ-eu-ink);
-    --color-civ-eg-seal: var(--color-civ-eg-ink);
-    --color-civ-gr-seal: var(--color-civ-gr-ink);
+    --color-civ-eg-seal: var(--color-civ-eg-metal);
+    --color-civ-gr-seal: var(--color-civ-gr-metal);
     --color-civ-cn: 0.428514 0.102617 30.6112; /* #7E362B */
     --color-civ-cn-ink: 0.710969 0.100324 32.0926; /* #D98A7A */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
@@ -791,8 +792,22 @@
        --juan / --juan-strong   「卷」语域正文与卷里的人名(font 简写)
        --tai / --tai-touch      「台」语域:桌面可点的部分 / 触屏
        --glowA       页头光晕强度(深 .30 / 浅 .22)。--glow-alpha(深 .30 / 浅 .24)仍给侧栏与工具条,值不动
-       --field       输入框底 */
+       --field       输入框底
+     第 3 步(第十节):
+       --seal-size   96 卷宗页 / 72 灵魂端 / 40 列表(这里是 96;小印由组件的 size 给)
+       --mark        功过记号 16px,墨色(`MeritMark`)
+       --stamp / --stamp-ease   落印 240ms,从 1.18 倍落到 1,只播一次
+       --now-breath  脊上「现在」的呼吸周期
+       --judge-w     卷宗页右栏(台)宽
+       --opt-h       去处 1–4 的行高:桌面 44、触屏 56 */
   :root {
+    --seal-size: 96px;
+    --mark: 16px;
+    --stamp: 240ms;
+    --stamp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --now-breath: 3.2s;
+    --judge-w: 380px;
+    --opt-h: 44px;
     --topline: 2px;
     --rail-w: 64px;
     --stack-w: 360px;
@@ -808,6 +823,11 @@
   .light {
     --glowA: 0.22;
     --field: rgba(0, 0, 0, 0.035);
+  }
+  @media (hover: none), (pointer: coarse) {
+    html {
+      --opt-h: 56px;
+    }
   }
 
   /* (v3 时这里写「文明皮只有上面这一条匾色」;v4 起是上面五个值加强调 / 焦点。)v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
