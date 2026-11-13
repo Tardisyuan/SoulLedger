@@ -9,6 +9,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
+import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { DOORS, doorFor, doorHref, doorsFor, doorTabs, pageOf, type DoorId, type DoorPage, type Viewer } from "@/src/lib/doors";
@@ -192,6 +193,7 @@ export function DoorTabs() {
   const tabs = door ? doorTabs(door, viewer, doors) : [];
   const show = tabs.length > 1;
   const active = pageOf(pathname)?.path;
+  const tabsRef = useOverflowEnd<HTMLElement>();
 
   useEffect(() => {
     if (!show) return;
@@ -209,17 +211,21 @@ export function DoorTabs() {
     return out;
   }, []);
   return (
-    <nav className={s.tabs} aria-label={t(`caseDesk.rail.${DOORS[door].key}`)} data-testid="door-tabs" data-door={door}>
-      {sections.map((group) => (
+    <nav ref={tabsRef} className={s.tabs} aria-label={t(`caseDesk.rail.${DOORS[door].key}`)} data-testid="door-tabs" data-door={door}>
+      {sections.map((group) => {
+        const name = t(`doors.section.${group[0].section}`);
+        return (
         <div key={group[0].section} className={s.section}>
-          {sections.length > 1 ? <span className={s.sectionName}>{t(`doors.section.${group[0].section}`)}</span> : null}
+          {/* 节名与它的第一页同名(「案卷台 · 案卷台」)时不写:读起来是重复,分节靠节间的竖线已经看得出。 */}
+          {sections.length > 1 && name !== label(group[0]) ? <span className={s.sectionName}>{name}</span> : null}
           {group.map((p) => (
             <Link key={p.path} href={p.path} className={s.tab} aria-current={active === p.path ? "page" : undefined}>
               {label(p)}
             </Link>
           ))}
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }

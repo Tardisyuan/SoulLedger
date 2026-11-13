@@ -333,7 +333,9 @@ function UsersRoute() {
       {/* `compact` (~36px rows) because this page is scan-and-find: the operator
           is looking for a row, not deciding on each one. Decision surfaces
           (the judgment list) stay `comfortable`. */}
-      <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
+      {/* 机构树放在表格左边只从 1440 起:1280 时两栏留给表格 869px,而八列要 1067(中文),「机构·职务」被压成一字一行、
+          「两步验证」截在右边。更窄时树在表格上面,表格拿到整行。 */}
+      <div className="grid gap-4 min-[1440px]:grid-cols-[240px_minmax(0,1fr)]">
       <aside aria-label={t("users.org_filter.label")}>
         <UserOrgFilter
           value={organization ? Number(organization) : null}

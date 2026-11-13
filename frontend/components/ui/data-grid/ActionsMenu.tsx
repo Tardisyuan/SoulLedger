@@ -114,7 +114,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
           type="button"
           onClick={primary.onSelect}
           disabled={primary.disabled}
-          className="inline-flex h-(--control-h-sm) items-center px-3 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-line-strong))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex h-(--control-h-sm) shrink-0 items-center whitespace-nowrap px-3 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-line-strong))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {primary.label}
         </button>

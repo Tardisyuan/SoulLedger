@@ -184,7 +184,7 @@ function CivCard({ skin, civilization, enter, warm }: { skin: SealCiv; civilizat
           <LandingEmblem civ={skin} size={76} className="md:size-[190px]" />
         </span>
         <span className="relative flex min-w-0 flex-1 flex-col gap-2 md:mt-4">
-          <span className="flex min-w-0 items-center gap-2">
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <Seal size={16} civ={skin} glyphs={null} decorative className="max-md:hidden" />
             <span className="truncate font-title text-lg" title={name}>{name}</span>
             <span className="demo-home-feat ml-auto shrink-0 text-xs font-semibold max-md:ml-0">{t(`demo.home.feat.${skin}`)}</span>

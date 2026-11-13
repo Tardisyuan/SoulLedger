@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { CivMark } from "@/src/components/brand/CivEmblem";
@@ -496,6 +497,8 @@ export function PageShell({
   className,
 }: PageShellProps) {
   const width = WIDTH_CLASS[variant];
+  const filtersRef = useOverflowEnd<HTMLDivElement>();
+  const tabsRef = useOverflowEnd<HTMLDivElement>();
   const plaque = usePlaqueValue();
   useReportHeading(typeof title === "string" ? title : null);
 
@@ -505,7 +508,8 @@ export function PageShell({
 
   // 等宽小字一行:页面报的殿名、案号在前,页面自己的 eyebrow 在后。标题下面一行:副标题,再接页面报的概览。
   const meta = joinDot([
-    plaque?.hall,
+    // 包一层:窄屏上这一行不折行,殿名这一段可以截短,案号与页面自己的小字不截(globals.css `.page-head-meta`)。
+    plaque?.hall ? <span key="hall" data-meta-hall="">{plaque.hall}</span> : null,
     plaque?.caseNumber || plaque?.caseRef ? <PlaqueCaseValue key="case" caseNumber={plaque.caseNumber} caseRef={plaque.caseRef} /> : null,
     eyebrow,
   ]);
@@ -543,7 +547,9 @@ export function PageShell({
           所有标签页而不是当前这个。 */}
       {tabs ? (
         <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-line))]">
-          <div className={cn(width, "px-4 md:px-8 flex items-center gap-1")}>{tabs}</div>
+          {/* 放不下就横滑(右缘渐隐),不折行、也不撑宽页面:393 英文的审计页「Online sessions」伸到 430,手机浏览器
+              于是把布局视口放宽到 430,底部门栏被推出屏幕。 */}
+          <div ref={tabsRef} className={cn(width, "px-4 md:px-8 flex items-center gap-1 overflow-x-auto [scrollbar-width:none] whitespace-nowrap [&>*]:shrink-0")}>{tabs}</div>
         </div>
       ) : null}
 
@@ -570,6 +576,7 @@ export function PageShell({
               2026-10-01 控件换到 v3 之前这里是 `h-14 py-3`(32 内容)—— 48 的输入放进去会被
               这个 overflow 容器从上下两头裁掉。 */}
           <div
+            ref={filtersRef}
             className={cn(
               width,
               "px-4 md:px-8 h-16 py-2 flex items-center gap-3 overflow-x-auto"

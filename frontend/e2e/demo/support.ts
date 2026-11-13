@@ -58,7 +58,9 @@ export async function enter(page: Page, role: Role): Promise<void> {
   // reveal script while the client has already drawn its own, so for a moment there are two (trace, 2026-11-08).
   await page.getByTestId(`demo-enter-${role}`).filter({ visible: true }).click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
-  await page.getByTestId("user-menu").waitFor();
+  // The door rail, not the account menu: the desk pages (/desk, admin's /desk/overview) draw no top bar, so no
+  // `user-menu`; the rail is on every signed-in page.
+  await page.getByTestId("door-rail").waitFor();
   await page.waitForLoadState("networkidle");
   // Every way in is behind the cover now, the login page's list too: it goes once the console is drawn.
   await page.getByTestId("demo-entrance").waitFor({ state: "detached" });
