@@ -17,9 +17,11 @@ test.describe("Home page", () => {
   test("renders hero title and all four civilizations (A10)", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator("h1")).toHaveText("同一个问题：这个灵魂过得了关吗？");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "选一个冥界" })).toBeVisible();
+    // The visible one: while the server's stream is still landing, React keeps a second copy of the subtree in a
+    // `<div hidden>` (playwright.config.ts), and a strict locator that matches both throws instead of retrying.
+    await expect(page.locator("h1").filter({ visible: true })).toHaveText("同一个问题：这个灵魂过得了关吗？");
+    await expect(page.getByRole("heading", { level: 1 }).filter({ visible: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "选一个冥界" }).filter({ visible: true })).toBeVisible();
 
     // One column per civilization — the row is the page's whole point. Each name follows its
     // ink glyph (■●▲◆, aria-hidden), so match inside the list rather than by exact text.
@@ -33,8 +35,9 @@ test.describe("Home page", () => {
   test("language switcher re-renders the page in the chosen locale", async ({ page }) => {
     await page.goto("/");
 
-    // A10 draws the language and theme controls twice — in the top row at ≥ 768, above the
-    // footer below it — and hides the other with CSS. Act on the one this viewport shows.
+    // The landing page draws the language switcher twice — in the top row at ≥ 768, above the footer
+    // below it (`Landing.tsx`: `max-md:hidden` / `md:hidden`) — and hides the other with CSS. Act on the
+    // one this viewport shows. (Only the language switcher: this used to say the theme control was doubled too.)
     const switcher = page.getByLabel("界面语言").filter({ visible: true });
     await expect(switcher).toBeVisible();
     await expect(page.getByText("万古轮回皆有录")).toBeVisible();

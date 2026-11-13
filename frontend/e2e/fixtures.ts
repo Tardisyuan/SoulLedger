@@ -1185,12 +1185,23 @@ function paginated(results: unknown[]) {
  *
  * Deliberately short and deliberately explicit. Anything not here that falls
  * through fails the test — see `ApiMock.assertEverythingWasHandled`.
+ *
+ * Paths, not prefixes (2026-11-13). These were four whole prefixes (`/^\/social\//` …), so a new endpoint under any
+ * of them got the empty page and stayed green — the very thing this list exists to stop. What is written out here is
+ * every path the app calls under those four today (`packages/core/src/api/{notifications,menus,social,audit}.ts`,
+ * which is where all of them are) that has no handler of its own; `[^/]+` is an id. A new endpoint is a new line
+ * here, or a handler. `src/__tests__/e2eBackgroundPaths.test.ts` repeats that reading in jest and reads this array as
+ * text: keep one `/^…$/,` per line.
  */
 const BACKGROUND_PATHS: RegExp[] = [
-  /^\/notifications\//,
-  /^\/menus\//,
-  /^\/social\//,
-  /^\/audit-logs\//,
+  // /notifications/, its email status, the three bulk writes, and one notification's mark_read.
+  /^\/notifications\/((email-status|batch-delete|batch-read|mark_all_read)\/|[^/]+\/mark_read\/)?$/,
+  // /menus/ and /menus/buttons/, each with its detail.
+  /^\/menus\/(buttons\/)?([^/]+\/)?$/,
+  // The six social collections, each with one more segment: an id, or feed / following / followers / toggle / me.
+  /^\/social\/(posts|comments|follows|media|reactions|profiles)\/([^/]+\/)?$/,
+  // /audit-logs/ with its detail, export and nl-filter (actions / resources / timeline / stats have handlers).
+  /^\/audit-logs\/([^/]+\/)?$/,
 ];
 
 /**
