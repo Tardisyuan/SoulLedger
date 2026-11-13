@@ -116,7 +116,7 @@ export function JudgmentPlacement({
     body = <p className="py-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("judgment.placement.none")}</p>;
   } else {
     body = (
-      <div className="grid gap-3 pt-3 md:grid-cols-[minmax(0,1fr)_10rem]">
+      <div className={`grid gap-3 pt-3 ${noTerm ? "" : "md:grid-cols-[minmax(0,1fr)_10rem]"}`}>
         <SelectField
           label={t("judgment.placement.destination")}
           description={t("judgment.placement.filtered_by", { verdict: verdictName })}
