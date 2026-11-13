@@ -145,7 +145,7 @@
 | `setup_scheduled_tasks` | 启动命令已自动跑(`production.yml:65`) | 安全、幂等;保留运维改过的启停/cron。`--reset` 会丢弃运维改动,**不要在生产随手加** |
 | `sync_permissions`(先 `--dry-run`) | 每次部署后 | 安全:只补缺失的权限码名,不碰已有行(`perm/management/commands/sync_permissions.py`) |
 | `snapshot_balances` | 带 `ledger` 0002 的那次部署,跑一次 | 安全,覆盖当月一行,不补更早月份(`DEPLOYMENT.md` 部署后一节) |
-| 创建第一个管理员 | 首次 | `createsuperuser` 创建的用户 `role` 是否自动为 `ADMIN`:**未核实**(`UserManager` 来自 Django,`apps/authentication/models.py:14-19`;`role` 默认值我没核)。上线前在 staging 上走一遍,公开注册 `/auth/register/` 已于 2026-10-27 删除 |
+| 创建第一个管理员 | 首次 | `createsuperuser` 创建的用户 `role` **不是** `ADMIN`,是默认的 `VIEWER`、不绑殿(`role` 默认值 `apps/authentication/models.py` 的 `UserRole.VIEWER`;代码里没有任何地方读 `is_superuser`)。建完要把它的 `role` 改成 `ADMIN`(不绑殿即全局管理员)。公开注册 `/auth/register/` 已于 2026-10-27 删除。`seed_dev_users` 只在 `DEBUG=True` 下可用,**不是**生产建号的办法 |
 | `setup_matrix`(开聊天后) | 见 §1.4 | 幂等 |
 | `create_api_key <名称> --tenant CN_DIYU`(死亡同步外部系统) | 按需 | 正常运维命令,密钥只显示一次(**输出格式:未核实**) |
 

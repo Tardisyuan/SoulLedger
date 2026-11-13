@@ -333,6 +333,14 @@ cd backend   # 解释器是 backend/.venv,不是 PATH 上的 python
                                                       # 加了新码名的部署之后要跑(--dry-run 只列不写)
 ```
 
+本地登录账号(只在 `DEBUG=True` 时可用,否则直接报错):
+
+```bash
+.venv/bin/python manage.py seed_dev_users [--tenant CN_DIYU]   # 管理员 / 判官 / 牛头马面 / 审核员 / 访客 / 灵魂各一个
+```
+
+每次运行给六个账号重新生成随机密码,只打印这一次;重跑不新增账号。灵魂用打印出的灵魂编号在灵魂端登录。
+
 维护类命令(也可手动运行):
 
 ```bash

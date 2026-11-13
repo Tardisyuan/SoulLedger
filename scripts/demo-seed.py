@@ -30,6 +30,7 @@ from django.utils import timezone  # noqa: E402
 
 from apps.audit.models import AuditAction, AuditLog  # noqa: E402
 from apps.authentication.models import User  # noqa: E402
+from apps.authentication.seeding import ensure_officer  # noqa: E402
 from apps.death_sync.models import DeathRegistrationRequest, ExternalApiKey, TudiGod, WebhookConfig  # noqa: E402
 from apps.dispatch.models import ParticipantRole  # noqa: E402
 from apps.disposition.models import Disposition  # noqa: E402
@@ -181,17 +182,7 @@ NOTE_OF = {"屈原": "其志可悯,其功可录;唯自沉汨罗,列枉死之例,
 
 
 def officer(username, display, role, tenant, password="demo-only-not-a-secret"):
-    user, created = User.objects.get_or_create(username=username, defaults=dict(
-        role=role, tenant=tenant, display_name=display, email=f"{username}@underworld.example"))
-    if created:
-        user.set_password(password)
-        user.must_change_password = False
-        user.save()
-    elif (user.role, user.display_name) != (role, display):
-        # A database seeded before the 2026-11-07 roles keeps the old name / role otherwise (get_or_create).
-        user.role, user.display_name = role, display
-        user.save(update_fields=["role", "display_name"])
-    return user
+    return ensure_officer(username, display, role, tenant, password)
 
 
 def walk(case, stop_before_last=False):
