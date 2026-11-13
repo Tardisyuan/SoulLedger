@@ -16,6 +16,8 @@ test("a browser in English gets English, from the first paint", async ({ page })
   expect(await res?.text()).toContain('lang="en');
   await expect(page.locator("html")).toHaveAttribute("lang", /^en/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("One question: will this soul pass?");
+  // The tab title follows the language too (app/layout.tsx generateMetadata); it was a fixed Chinese string.
+  await expect(page).toHaveTitle("SoulLedger · Four underworlds, one ledger");
 });
 
 test("a visitor's choice of language sticks", async ({ page }) => {
@@ -25,6 +27,7 @@ test("a visitor's choice of language sticks", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("同一个问题：这个灵魂过得了关吗？");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", /^zh/);
+  await expect(page).toHaveTitle("SoulLedger · 四种冥界，一本账");
 });
 
 const PAGES: [Role, string][] = [
