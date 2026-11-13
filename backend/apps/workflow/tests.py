@@ -1359,6 +1359,12 @@ class TestTemplateApproverBasis:
         later = import_module(
             "apps.workflow.migrations.0031_egypt_the_forty_two_are_assessors_panguan"
         ).RENAMES
+        # 0032 (2026-11-13, EG-23) renamed 0012's other node, 阿努比斯 · 引导与称量 → 阿努比斯 · 引导. Its table also
+        # carries the preset's spelling of that node, which only the English table knows on this side.
+        latest = import_module(
+            "apps.workflow.migrations.0032_anubis_leads_and_canonization_steps"
+        ).RENAMES
+        bench, later = later, {**later, **latest}
         renamed_to = {old: later.get(new, new) for old, new, _court, _order, _old, _new in renames}
 
         from_templates = {
@@ -1413,9 +1419,16 @@ class TestTemplateApproverBasis:
                 f"next node that happens to be named this."
             )
 
-        for old, new in later.items():
+        from apps.workflow.english import NAME_EN
+
+        for old, new in bench.items():
             assert new in current, f"0031 renames {old!r} to {new!r}, which no template carries"
             assert old not in current, f"0031 renames {old!r}, which a template still carries"
+        # 0032 also renames the preset's spelling (「Anubis · …」), which no backend template carries; the English
+        # table is what this side knows of the preset's names.
+        for old, new in latest.items():
+            assert new in current or new in NAME_EN, f"0032 renames {old!r} to {new!r}, which no template carries"
+            assert old not in current and old not in NAME_EN, f"0032 renames {old!r}, which a template still carries"
         for old, new, _court, _order, _old_type, _new_type in renames:
             assert later.get(new, new) in current, (
                 f"0012 renames a node to {new!r}, which no template carries. "

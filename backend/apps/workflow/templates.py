@@ -100,13 +100,16 @@ WORKFLOW_TEMPLATES = {
             {"name": "酆都大帝 · 终审", "court": "酆都", "type": NodeType.FINAL, "order": 4, "actor": "酆都大帝"},
         ],
     },
-    # European canonization
+    # European canonization. Station names are the steps of the procedure in force (*Divinus Perfectionis
+    # Magister*, 1983; docs/01「系统自设」, audit EU-10, user 2026-11-13): 教区主教调查 → 列圣部审查 → 教宗裁定.
+    # Until then: 教区初审 → 教省复审 → 罗马教廷终审, a province-level review the procedure does not have. Rows
+    # already stored: workflow/0032. The court column was not part of that decision and is unchanged.
     (Civilization.EUROPEAN, CaseType.CANONIZATION): {
         "name": "封圣审查流程",
         "nodes": [
-            {"name": "教区初审", "court": "Diocese", "type": NodeType.TRIAL, "order": 1},
-            {"name": "教省复审", "court": "Archdiocese", "type": NodeType.TRIAL, "order": 2},
-            {"name": "罗马教廷终审", "court": "Vatican", "type": NodeType.FINAL, "order": 3},
+            {"name": "教区主教调查", "court": "Diocese", "type": NodeType.TRIAL, "order": 1},
+            {"name": "列圣部审查", "court": "Archdiocese", "type": NodeType.TRIAL, "order": 2},
+            {"name": "教宗裁定", "court": "Vatican", "type": NodeType.FINAL, "order": 3},
         ],
     },
     # European purgatory review
@@ -230,6 +233,9 @@ WORKFLOW_TEMPLATES = {
             #   not contain. Recording a step is a measurement, not a hearing,
             #   so it is EVALUATION too.
             #
+            # 2026-11-13 (audit EG-23, user decision): n1 is 「阿努比斯 · 引导」, without 「与称量」 — the name put the
+            # weighing before the confession the next station records. Order unchanged; stored rows: workflow/0032.
+            #
             # The frontend had already corrected its own copies of these two —
             # `Anubis · 引导与称量` and `42审判者 · 否定告白` (the bench is 「四十二判官」 on both sides
             # since 2026-11-13, docs/02 §2.2; rows already stored: workflow/0031), both mapped to
@@ -252,7 +258,7 @@ WORKFLOW_TEMPLATES = {
             # selects — FAILED → Ammit, otherwise the tribunal. An automatic node cannot be unticked, so the
             # fork cannot be skipped. Osiris receives in the Hall of Two Truths (02 L88–91), not 「Duat」.
             # Both ends meet at 结束. Execution waits for this flow (DispositionService.execute).
-            {"id": "n1", "name": "阿努比斯 · 引导与称量", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 1, "actor": "Anubis", "on_pass": "n2"},
+            {"id": "n1", "name": "阿努比斯 · 引导", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 1, "actor": "Anubis", "on_pass": "n2"},
             {"id": "n2", "name": "四十二判官 · 否定告白", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 2, "on_pass": "n3"},
             {"id": "n3", "name": "托特 · 记录并宣读", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 3,
              "actor": "Thoth", "kind": "NOTIFY", "on_pass": "n4",
@@ -331,10 +337,9 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
              "living (Dan 8:16, 9:21; Lk 1:11-38) and does not receive the "
              "dead's cases — see the European section of "
              "packages/core/src/config/workflow-templates.ts.",
-    "教区初审": "An institution (Diocese, 教区 — not 主教座堂, the cathedral). EUROPEAN_ACTORS has no bishop.",
-    "教省复审": "An institution (Archdiocese).",
-    "罗马教廷终审": "An institution (the Curia). Naming a pope would be inventing "
-               "one.",
+    "教区主教调查": "An office (the bishop of the diocese — 教区, not 主教座堂, the cathedral). EUROPEAN_ACTORS has no bishop.",
+    "列圣部审查": "An institution (the Congregation for the Causes of Saints).",
+    "教宗裁定": "An office, not a person. Naming a pope would be inventing one.",
     "生前告解核对": "A check of the record (was the sin confessed in life), not a person.",
     "炼狱净化评估": "Names the process. Purgatorio's terraces have no seated "
                "judge — see realms/0014, which deliberately added no actor.",

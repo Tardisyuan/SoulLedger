@@ -9,7 +9,7 @@ export const PRESET_ENGLISH: Readonly<Record<string, string>> = {
   "四十二判官 · 否定告白": "The forty-two assessors · negative confession",
   "Aeacus · 分区审判（欧洲亡魂）": "Aeacus · judges the souls of Europe",
   "Ammit · 吞噬（未通过分支）": "Ammit · devours (failed branch)",
-  "Anubis · 引导与称量": "Anubis · guides and weighs",
+  "Anubis · 引导": "Anubis · guides",
   "Christ · 公审判": "Christ · the Last Judgment",
   "Christ · 私审判": "Christ · the Particular Judgment",
   "Christ · 紧急审判": "Christ · urgent judgment",
