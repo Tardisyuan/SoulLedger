@@ -105,6 +105,21 @@ class ResolveReportSerializer(ModerationReasonFields):
     mute_days = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=365)
 
 
+class AIScreenScoreSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    score = serializers.IntegerField(help_text="0–100;只用于排序")
+    reason = serializers.CharField(allow_blank=True, help_text="模型的一句理由;只有规则分时为空")
+    signals = serializers.ListField(child=serializers.ChoiceField(
+        choices=["sensitive_word", "reported", "injection_phrase", "media"]))
+    source = serializers.ChoiceField(choices=["model", "rule"])
+
+
+class AIScreenResponseSerializer(serializers.Serializer):
+    items = AIScreenScoreSerializer(many=True)
+    model = serializers.CharField(allow_blank=True)
+    fallback = serializers.BooleanField(help_text="True: no model answered; rule scores only")
+
+
 class ModeratedContentSerializer(serializers.Serializer):
     """帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。"""
 
@@ -118,9 +133,21 @@ class ModeratedContentSerializer(serializers.Serializer):
     moderation_reason = serializers.CharField()
     open_report_count = serializers.SerializerMethodField()
     create_time = serializers.DateTimeField()
+    ai_screen = serializers.SerializerMethodField(
+        help_text="AI 预筛的风险分(只用于排序);没打过分、或打分后正文改过时为 null。")
 
     def get_open_report_count(self, row) -> int:
         return getattr(row, "open_report_count", 0) or 0
+
+    @extend_schema_field(AIScreenScoreSerializer(allow_null=True))
+    def get_ai_screen(self, row):
+        from apps.social.ai_screen import fingerprint
+
+        score = getattr(row, "ai_score", None)
+        if score is None or getattr(row, "ai_hash", None) != fingerprint(row.content):
+            return None
+        return {"id": row.pk, "score": score, "reason": row.ai_reason or "", "signals": row.ai_signals or [],
+                "source": row.ai_source}
 
 
 def _comments_in(post, status) -> int:
