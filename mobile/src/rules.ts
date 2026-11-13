@@ -35,7 +35,7 @@ export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
   UNDER_REVIEW: { glyph: "◇", border: "solid", pending: true, tone: "warn" },
   REJECTED: { glyph: "✕", border: "solid" },
   APPEALING: { glyph: "↺", border: "solid", pending: true, tone: "warn" },
-  APPEAL_REJECTED: { glyph: "✕", border: "dashed" },
+  APPEAL_REJECTED: { glyph: "⊘", border: "dashed" },
   APPROVED: { glyph: "✓", border: "solid", tone: "pos" },
 };
 
