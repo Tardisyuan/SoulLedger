@@ -115,10 +115,28 @@ class Turn:
 
 @dataclass(frozen=True)
 class ToolSpec:
-    """工具都不收参数:数据范围由服务端的 `account` 决定,模型无从指定(§4.1)。"""
+    """助手的工具都不收参数:数据范围由服务端的 `account` 决定,模型无从指定(§4.1)。
+
+    `parameters`(JSON Schema)只给业务接入点里**本身就是检索**的工具(律条建议的 `search_statutes(query)`):
+    参数只是检索词,范围仍由服务端定(本案的殿与文明),模型改不了。给了它,`call_tool` 收 `(name, args)`;
+    没给的工具照旧只收 `name`。"""
 
     name: str
     description: str
+    parameters: dict | None = None
+
+
+def _invoke(call_tool, tools, name, args):
+    """按工具声明调 `call_tool`:声明了参数的传一个 dict(解析不了就是空 dict),没声明的只传名字。"""
+    spec = next((t for t in tools if t.name == name), None)
+    if spec is None or spec.parameters is None:
+        return call_tool(name)
+    if isinstance(args, str):
+        try:
+            args = json.loads(args or "{}")
+        except ValueError:
+            args = {}
+    return call_tool(name, args if isinstance(args, dict) else {})
 
 
 @dataclass
@@ -225,7 +243,7 @@ class OpenAICompatibleProvider:
         messages = [{"role": "system", "content": system}, {"role": "system", "content": facts}]
         messages += [{"role": t.role, "content": t.text} for t in history]
         specs = [{"type": "function", "function": {"name": t.name, "description": t.description,
-                                                   "parameters": _EMPTY_OBJECT}} for t in tools]
+                                                   "parameters": t.parameters or _EMPTY_OBJECT}} for t in tools]
         return messages, specs
 
     @staticmethod
@@ -268,7 +286,8 @@ class OpenAICompatibleProvider:
                                                           "arguments": c.function.arguments}} for c in calls]})
             for call in calls:
                 result.tool_calls.append(call.function.name)
-                messages.append({"role": "tool", "tool_call_id": call.id, "content": call_tool(call.function.name)})
+                messages.append({"role": "tool", "tool_call_id": call.id,
+                                 "content": _invoke(call_tool, tools, call.function.name, call.function.arguments)})
         return result
 
     def stream(self, *, system, facts, history, tools, call_tool, max_rounds, deadline, first_token_deadline,
@@ -328,7 +347,8 @@ class OpenAICompatibleProvider:
                                             for c in ordered]})
             for call in ordered:
                 result.tool_calls.append(call["name"])
-                messages.append({"role": "tool", "tool_call_id": call["id"], "content": call_tool(call["name"])})
+                messages.append({"role": "tool", "tool_call_id": call["id"],
+                                 "content": _invoke(call_tool, tools, call["name"], call["arguments"])})
 
 
 class AnthropicProvider:
@@ -372,7 +392,7 @@ class AnthropicProvider:
         blocks = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}},
                   {"type": "text", "text": facts}]
         messages = [{"role": t.role, "content": t.text} for t in history]
-        specs = [{"name": t.name, "description": t.description, "input_schema": _EMPTY_OBJECT} for t in tools]
+        specs = [{"name": t.name, "description": t.description, "input_schema": t.parameters or _EMPTY_OBJECT} for t in tools]
         return blocks, messages, specs
 
     def _params(self, conn, blocks, messages, specs, last):
@@ -384,7 +404,7 @@ class AnthropicProvider:
         _add_usage(result.usage, input=usage.input_tokens, output=usage.output_tokens,
                    cache_read=getattr(usage, "cache_read_input_tokens", 0))
 
-    def _next(self, result, response, messages, call_tool, last):
+    def _next(self, result, response, messages, call_tool, last, tools=()):
         """一轮的回应 → 还要不要下一轮。工具轮把 assistant 内容与工具结果接进 `messages`。"""
         uses = [b for b in response.content if b.type == "tool_use"]
         if response.stop_reason != "tool_use" or not uses or last:
@@ -393,7 +413,8 @@ class AnthropicProvider:
         results = []
         for use in uses:
             result.tool_calls.append(use.name)
-            results.append({"type": "tool_result", "tool_use_id": use.id, "content": call_tool(use.name)})
+            results.append({"type": "tool_result", "tool_use_id": use.id,
+                            "content": _invoke(call_tool, tools, use.name, getattr(use, "input", None) or {})})
         messages.append({"role": "user", "content": results})
         return True
 
@@ -416,7 +437,7 @@ class AnthropicProvider:
             except Exception as exc:
                 raise _unexpected(exc, conn, result) from exc
             self._usage(result, response.usage)
-            if not self._next(result, response, messages, call_tool, last):
+            if not self._next(result, response, messages, call_tool, last, tools):
                 # refusal / max_tokens / end_turn:取文本块;拒答时可能为空,服务层给固定的「答不了」。
                 result.text = "".join(b.text for b in response.content if b.type == "text")
                 return result
@@ -462,7 +483,7 @@ class AnthropicProvider:
                     else:
                         _estimate_round(result, params, text)
             self._usage(result, message.usage)
-            if not self._next(result, message, messages, call_tool, last):
+            if not self._next(result, message, messages, call_tool, last, tools):
                 return
 
 
@@ -508,8 +529,9 @@ class FakeProvider:
             if "tools" in step and rounds < max_rounds:
                 rounds += 1
                 for name in step["tools"]:
+                    name, args = (name, None) if isinstance(name, str) else name  # [名字, 参数] 给带参数的工具
                     result.tool_calls.append(name)
-                    step.setdefault("results", []).append(json.loads(call_tool(name)))
+                    step.setdefault("results", []).append(json.loads(_invoke(call_tool, tools, name, args)))
                 continue
             if "text" in step or "deltas" in step:
                 result.text = step.get("text", "".join(step.get("deltas", [])))
