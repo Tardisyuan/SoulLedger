@@ -88,7 +88,7 @@ MESSAGES = {
         },
     },
     "egy": {
-        "footer": "Shemes Pen Hab In Hemsu. Nen Shesep Wesheb.",
+        "footer": "Shat Pen Hab In Hemsu. Nen Shesep Wesheb.",
         "reset_code": {
             "title": "Wehem Sekhem · Hesb Maa",
             "code_label": "Hesb Maa",

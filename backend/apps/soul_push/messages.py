@@ -210,7 +210,7 @@ MESSAGES = {
         "residence_approved": {"title": "Hemes Taui Ky Hesy", "body": "Hemes-Ek Em Taui Ky Hesy-N. Wen Medjat Ba Er Maa."},
         "residence_started": {"title": "Hemes Tepy", "body": "Hemes-Ek Em Taui Ky Tepy-N. Wen Medjat Ba Er Maa."},
         "residence_returned": {"title": "Hemes Khetem", "body": "Iyi-N-Ek Er Nut-Ek. Wen Medjat Ba Er Maa."},
-        "chat_message": {"title": "Shemes Mawy", "body": "{{name}}: Shemes Mawy Er-Ek. Wen Medjat Ba Er Maa."},
+        "chat_message": {"title": "Shat Mawy", "body": "{{name}}: Shat Mawy Er-Ek. Wen Medjat Ba Er Maa."},
         "social_warned_post": {"title": "Sebayt Er Medu", "body": "Sebayt Er Medu-Ek: {{reason}}"},
         "social_warned_comment": {"title": "Sebayt Er Wesheb", "body": "Sebayt Er Wesheb-Ek: {{reason}}"},
         "social_warned_user": {"title": "Sebayt Er Aq", "body": "Sebayt Er Aq-Ek: {{reason}}"},
@@ -234,9 +234,9 @@ MESSAGES = {
         "wangsi_upheld_late": {"body": "Sepret-Ek Maat. Wen Medjat Ba Er Maa Wesheb.", "title": "Sepret Maat"},
         "wangsi_delivered": {"body": "Sepret-Ek Maat: Seshem-N Em Nut Mut Nen Maat. Wen Medjat Ba Er Maa.", "title": "Sepret Maat · Seshem-N"},
         "wangsi_rejected": {"body": "Sepret-Ek Nen Maat. Wen Medjat Ba Er Maa Wesheb.", "title": "Sepret Nen Maat"},
-        "social_muted": {"title": "Ger Er-Ek", "body": "Ger Hru {{days}}: Shemsu Maa Wa; Nen Shemes Ba."},
+        "social_muted": {"body": "Ger Hru {{days}}: Shemsu Maa Wa; Nen Shat Ba.", "title": "Ger Er-Ek"},
         "social_muted_reason": {"title": "Ger Er-Ek", "body": "Ger Hru {{days}}: {{reason}}"},
-        "push_device_claimed": {"title": "Medjat Sedjem: Aq Ky Sesh-N", "body": "Medjat Sedjem-Ek: Aq Ky Sesh-N. Medjat Pen: Nen Sedjem-Ek Emu. Nen Semawy-Ek Medjat? Hab Er Wesekhet."},
+        "push_device_claimed": {"title": "Medjat Sedjem: Aq Ky Sesh-N", "body": "Medjat Sedjem-Ek: Aq Ky Sesh-N. Medjat Pen: Nen Sedjem-Ek Min. Nen Semawy-Ek Medjat? Hab Er Wesekhet."},
     },
 }
 
