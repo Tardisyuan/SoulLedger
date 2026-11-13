@@ -3,7 +3,7 @@ Permission URL routing
 """
 from django.urls import path
 
-from . import data_scope_api, members, views
+from . import data_scope_api, explain, members, views
 
 app_name = "perm"
 
@@ -39,6 +39,7 @@ urlpatterns = [
     # deleted every role's grants before rebuilding them from the dict.
     # Seeding missing codenames is `manage.py sync_permissions` now. See
     # tests/test_perm_init_does_not_revoke.py.
+    path("explain/", explain.explain_view, name="explain"),
     path("export/", views.export_permissions, name="export"),
     path("import/", views.import_permissions, name="import"),
 ]

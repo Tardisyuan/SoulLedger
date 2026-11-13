@@ -971,6 +971,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistError'
           description: ''
+  /api/v1/assist/ai-drafts/{id}/decide/:
+    post:
+      operationId: assist_ai_draft_decide
+      description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
+        429 体没有 code)。'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DraftDecision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DraftDecision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DraftDecision'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftDecisionResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
   /api/v1/assist/conversations/:
     get:
       operationId: officer_assist_conversations_list
@@ -1285,6 +1331,48 @@ paths:
             IP, Trace ID.'
         '400':
           description: A filter is malformed, or more than 10000 rows match.
+  /api/v1/audit-logs/nl-filter/:
+    post:
+      operationId: v1_audit_logs_nl_filter_create
+      description: |-
+        POST /api/v1/audit-logs/nl-filter/ {"question": "..."}
+        把一句话换成一组筛选参数(不查询、不读日志;nl_query.py)。页面把参数填进筛选项,人确认后照旧 GET 本列表。
+        模型不可用答 503,页面退回手动筛选。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NlFilterRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NlFilterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NlFilterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NlFilterResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NlFilterError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NlFilterError'
+          description: ''
   /api/v1/audit-logs/resources/:
     get:
       operationId: v1_audit_logs_resources_retrieve
@@ -15046,6 +15134,32 @@ paths:
                 items:
                   $ref: '#/components/schemas/DataScopeResource'
           description: ''
+  /api/v1/perm/explain/:
+    get:
+      operationId: perm_explain
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+        description: 权限码,如 judgment.assign
+        required: true
+      - in: query
+        name: object
+        schema:
+          type: string
+        description: 可选,<类型>:<id>,类型为 judgment / soul / workflow
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Explanation'
+          description: ''
   /api/v1/perm/export/:
     get:
       operationId: v1_perm_export_retrieve
@@ -28343,6 +28457,44 @@ components:
         * `EIGHTEEN_HELLS` - 十八层地狱
         * `LOTUS_TERRACE` - 莲花台
         * `HUANHUN_CLIFF` - 还魂崖
+    DraftDecision:
+      type: object
+      properties:
+        adopted:
+          type: boolean
+        final_text:
+          type: string
+          default: ''
+          maxLength: 20000
+      required:
+      - adopted
+    DraftDecisionResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/DraftDecisionResultStatusEnum'
+        edit_ratio:
+          type: number
+          format: double
+          nullable: true
+      required:
+      - edit_ratio
+      - id
+      - status
+    DraftDecisionResultStatusEnum:
+      enum:
+      - pending
+      - adopted
+      - adopted_edited
+      - discarded
+      type: string
+      description: |-
+        * `pending` - pending
+        * `adopted` - adopted
+        * `adopted_edited` - adopted_edited
+        * `discarded` - discarded
     DrinkSoup:
       type: object
       properties:
@@ -29429,6 +29581,72 @@ components:
         * `WITNESS` - Witness
         * `SELF_ACCOUNT` - Self account
         * `OTHER` - Other
+    Explanation:
+      type: object
+      properties:
+        action:
+          type: string
+        permission_name:
+          type: string
+        allowed:
+          type: boolean
+        reason:
+          $ref: '#/components/schemas/ExplanationReasonEnum'
+        role:
+          type: string
+        extra_roles:
+          type: array
+          items:
+            type: string
+        roles_that_can:
+          type: array
+          items:
+            type: string
+        object_type:
+          type: string
+          nullable: true
+        scope_kinds:
+          type: array
+          items:
+            type: string
+          description: 只在 out_of_scope 时有:调用者自己的范围
+        explanation:
+          type: string
+          nullable: true
+          description: 模型的措辞;null = 用语言包按 reason 的句子
+      required:
+      - action
+      - allowed
+      - explanation
+      - extra_roles
+      - object_type
+      - permission_name
+      - reason
+      - role
+      - roles_that_can
+      - scope_kinds
+    ExplanationReasonEnum:
+      enum:
+      - allowed
+      - soul_account
+      - global_admin_only
+      - admin_only
+      - role_forbidden
+      - design_approve_conflict
+      - missing_permission
+      - viewing_read_only
+      - out_of_scope
+      type: string
+      description: |-
+        * `allowed` - allowed
+        * `soul_account` - soul_account
+        * `global_admin_only` - global_admin_only
+        * `admin_only` - admin_only
+        * `role_forbidden` - role_forbidden
+        * `design_approve_conflict` - design_approve_conflict
+        * `missing_permission` - missing_permission
+        * `viewing_read_only` - viewing_read_only
+        * `out_of_scope` - out_of_scope
     ExportedFieldPermission:
       type: object
       properties:
@@ -35761,6 +35979,83 @@ components:
           maxLength: 2000
       required:
       - truthful
+    NlFilterError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          $ref: '#/components/schemas/NlFilterErrorCodeEnum'
+      required:
+      - code
+      - detail
+    NlFilterErrorCodeEnum:
+      enum:
+      - assistant_not_configured
+      - assistant_unavailable
+      - assistant_busy
+      type: string
+      description: |-
+        * `assistant_not_configured` - assistant_not_configured
+        * `assistant_unavailable` - assistant_unavailable
+        * `assistant_busy` - assistant_busy
+    NlFilterRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          maxLength: 500
+      required:
+      - question
+    NlFilterResponse:
+      type: object
+      properties:
+        filters:
+          $ref: '#/components/schemas/NlFilterValues'
+        dropped:
+          type: array
+          items:
+            type: string
+          description: Keys the model gave that did not pass
+        understood:
+          type: boolean
+          description: False when the model's answer was not a JSON object
+        draft_id:
+          type: integer
+          description: The AIDraft row; POST /assist/ai-drafts/<id>/decide/ when applied
+        model:
+          type: string
+      required:
+      - draft_id
+      - dropped
+      - filters
+      - model
+      - understood
+    NlFilterValues:
+      type: object
+      description: The parameters `GET /audit-logs/` takes, as `nl_query.FIELDS` lets
+        them through. Every key optional.
+      properties:
+        action:
+          type: string
+        resource:
+          type: string
+        resource_id:
+          type: string
+        username:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        trace_id:
+          type: string
+        tenant:
+          type: string
+        search:
+          type: string
     NodeDecisionVerdictEnum:
       enum:
       - PASSED
@@ -47394,6 +47689,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UsageSide'
+        by_feature:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageFeature'
+          description: 按功能分(问一问、权限解释、审计查询…)
         by_hall:
           type: array
           items:
@@ -47402,6 +47702,7 @@ components:
           $ref: '#/components/schemas/Phase4'
       required:
       - by_day
+      - by_feature
       - by_hall
       - by_provider
       - by_retrieval
@@ -47496,6 +47797,34 @@ components:
       required:
       - by_reason
       - count
+    UsageFeature:
+      type: object
+      properties:
+        requests:
+          type: integer
+        answered:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cache_read_tokens:
+          type: integer
+        cost:
+          type: number
+          format: double
+          description: 只含已定价模型
+        feature:
+          type: string
+          description: assist = 问一问;其余是业务模块的接入点(AssistUsage.feature)
+      required:
+      - answered
+      - cache_read_tokens
+      - cost
+      - feature
+      - input_tokens
+      - output_tokens
+      - requests
     UsageHall:
       type: object
       properties:

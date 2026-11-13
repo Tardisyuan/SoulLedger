@@ -9993,5 +9993,53 @@
       "failed": "Could not load this column",
       "month_none": "Done this month: no cases in this realm this month"
     }
+  },
+  "perm_explain": {
+    "why": "Why?",
+    "title": "Why",
+    "loading": "Finding the reason…",
+    "failed": "The reason could not be looked up just now. Try again later.",
+    "ai_label": "Worded by AI · the reason itself is computed from the permission rules",
+    "needs": "Permission needed: {name}",
+    "your_roles": "Your roles: {roles}",
+    "who_can": "Roles that can do this: {roles}",
+    "scope_kinds": "Your data scope: {kinds}",
+    "reason": {
+      "allowed": "You can do this.",
+      "soul_account": "A soul account holds no officer permissions.",
+      "global_admin_only": "This changes configuration shared by every hall, so only the administrator with no hall holds it.",
+      "admin_only": "Only the administrator role holds this; ticking it for another role has no effect.",
+      "role_forbidden": "This is forbidden for your role; ticking it in the permission table has no effect.",
+      "design_approve_conflict": "Your role designs workflows, and whoever designs workflows may not approve them.",
+      "missing_permission": "None of your roles has this permission. Ask your hall's administrator if you need it.",
+      "viewing_read_only": "You are viewing as someone else, read-only, so nothing can be changed meanwhile.",
+      "out_of_scope": "You hold this permission, but this record is outside what you can see."
+    }
+  },
+  "audit_ask": {
+    "label": "Find records in a sentence",
+    "placeholder": "e.g. what did demo_judge delete in the last 7 days",
+    "submit": "Turn into filters",
+    "proposed": "Filters suggested by AI; nothing is queried until you confirm",
+    "apply": "Search with these",
+    "discard": "Discard",
+    "dropped": "Dropped conditions that were unknown or not yours to use: {keys}",
+    "not_understood": "That sentence was not understood. Use the filters below instead.",
+    "unavailable": "AI is unavailable just now. Use the filters below instead.",
+    "not_configured": "AI is not switched on for this hall. Use the filters below instead.",
+    "busy": "AI is busy. Try again shortly, or use the filters below.",
+    "model": "Model · {model}",
+    "fields": {
+      "action": "Action",
+      "resource": "Resource",
+      "resource_id": "Resource ID",
+      "username": "Operator",
+      "start_date": "From",
+      "end_date": "To",
+      "trace_id": "Trace ID",
+      "tenant": "Hall",
+      "search": "Keyword"
+    },
+    "clear_field": "Remove “{name}”"
   }
 }

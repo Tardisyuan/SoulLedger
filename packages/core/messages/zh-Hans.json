@@ -9993,5 +9993,53 @@
       "failed": "没能读到这一栏",
       "month_none": "本月已结:这个冥界本月没有案卷"
     }
+  },
+  "perm_explain": {
+    "why": "为什么?",
+    "title": "为什么",
+    "loading": "正在查原因…",
+    "failed": "暂时查不到原因,请稍后再试。",
+    "ai_label": "AI 措辞 · 原因由系统按权限规则算出",
+    "needs": "所需权限:{name}",
+    "your_roles": "你的角色:{roles}",
+    "who_can": "能做这件事的角色:{roles}",
+    "scope_kinds": "你的数据范围:{kinds}",
+    "reason": {
+      "allowed": "你可以做这件事。",
+      "soul_account": "灵魂账号不持有任何官员权限。",
+      "global_admin_only": "这项改的是所有殿共用的配置,只给不属于任何殿的全局管理员。",
+      "admin_only": "这项只给管理员,其他角色在权限表里勾上也不生效。",
+      "role_forbidden": "这项对你的角色是禁止的,权限表里勾上也不生效。",
+      "design_approve_conflict": "你的角色能设计流程;按规定,设计流程的人不能审批。",
+      "missing_permission": "你的角色没有这项权限。需要的话请找本殿管理员调整。",
+      "viewing_read_only": "你正在以他人身份只读查看,这段时间不能做写操作。",
+      "out_of_scope": "你有这项权限,但这条记录不在你能看到的范围内。"
+    }
+  },
+  "audit_ask": {
+    "label": "用一句话找记录",
+    "placeholder": "例如:demo_judge 最近 7 天删了什么",
+    "submit": "转成筛选",
+    "proposed": "AI 建议的筛选,确认后才查询",
+    "apply": "按这些条件查",
+    "discard": "不用",
+    "dropped": "已丢掉不认识或越权的条件:{keys}",
+    "not_understood": "没听懂这句话,请直接用下面的筛选。",
+    "unavailable": "AI 暂时不可用,请直接用下面的筛选。",
+    "not_configured": "本殿没有开通 AI,请直接用下面的筛选。",
+    "busy": "AI 正忙,请稍后再试,或直接用下面的筛选。",
+    "model": "模型 · {model}",
+    "fields": {
+      "action": "动作",
+      "resource": "资源",
+      "resource_id": "资源编号",
+      "username": "操作人",
+      "start_date": "起始日",
+      "end_date": "截止日",
+      "trace_id": "请求追踪号",
+      "tenant": "殿",
+      "search": "关键词"
+    },
+    "clear_field": "去掉「{name}」"
   }
 }
