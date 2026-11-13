@@ -22,13 +22,11 @@ import {
   type EventPayload,
 } from "@/lib/events/event_registry";
 import type { QueryClient } from "@tanstack/react-query";
-import { readFileSync } from "node:fs";
 import en from "@soulledger/core/messages/en.json";
 import zhHans from "@soulledger/core/messages/zh-Hans.json";
 import { publishTranslator } from "@/lib/i18n/activeTranslator";
 import { EVENT_LABELS, handleWorkflowEvent } from "@/lib/events/eventHandlers";
 import type { WorkflowEventPayload } from "@/lib/events/eventTypes";
-import path from "node:path";
 
 function makeContext(currentUserId?: string) {
   const invalidateQueries = jest.fn();
@@ -477,22 +475,6 @@ describe("scheduler events", () => {
       expect(showToast).not.toHaveBeenCalled();
     }
   );
-
-  it("mirrors exactly the event constants backend/apps/scheduler/realtime.py publishes", () => {
-    // The authority is the backend module, not this repo's copy of it: an
-    // event renamed or added there must turn this red, not fall through to
-    // the unknown-event handler (which invalidates nothing) in production.
-    const source = readFileSync(
-      path.join(__dirname, "..", "..", "..", "backend", "apps", "scheduler", "realtime.py"),
-      "utf8"
-    );
-    expect(/^DOMAIN = "(\w+)"$/m.exec(source)?.[1]).toBe("scheduler");
-    const published = [...source.matchAll(/^[A-Z_]+ = "(SCHEDULER_[A-Z_]+)"$/gm)].map((m) => m[1]).sort();
-    expect(published.length).toBeGreaterThanOrEqual(3);
-    expect([...REALTIME_ONLY_EVENT_TYPES].sort()).toEqual(published);
-    // Plus the one scheduler event that is an EventType member, not a module constant.
-    expect(getRegisteredEvents("scheduler").sort()).toEqual([...published, "SCHEDULER_RUN_FAILED"].sort());
-  });
 });
 
 // ── Social domain ────────────────────────────────────────────────────

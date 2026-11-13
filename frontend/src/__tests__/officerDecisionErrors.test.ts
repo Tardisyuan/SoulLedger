@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The officer app's readers of a refused decision / co-sign, in packages/core/src/api/officer-app.ts.
  * Each result picks the sentence the confirm sheet shows; a misread code shows the wrong one.
  */

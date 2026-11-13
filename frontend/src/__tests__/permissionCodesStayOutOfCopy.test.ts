@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * A permission code is an identifier, not a word: 「realms.manage · 容量可就地编辑」 showed one on the realms page. Copy names
  * the permission by `permission.names.<code>`. Input placeholders are the exception: there the code is what you type.
  */

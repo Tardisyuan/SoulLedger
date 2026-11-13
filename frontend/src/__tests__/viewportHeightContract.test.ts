@@ -27,8 +27,10 @@ import path from "node:path";
 
 import { isOutsideAppLayout, pageRoutes, shellFreeLists } from "./support/appRoutes";
 
-const ROOT = path.resolve(__dirname, "../..");
-const APP = path.join(ROOT, "app");
+// 叫 FRONTEND 不叫 ROOT:jestAlwaysRunList 把名字里带 ROOT 的句柄当成「摸到仓库根」,
+// 标成 `*`,于是只改文档的推送也跑它。这份测试只读 frontend/。
+const FRONTEND = path.resolve(__dirname, "../..");
+const APP = path.join(FRONTEND, "app");
 
 /**
  * 另一类合法,与上面那张表**不是同一件事**,所以分开放。
@@ -63,7 +65,7 @@ function outsideAppLayout(): Record<string, string[]> {
     // 管着这一页的每一层 layout.tsx(到 app/ 为止,不含根)。
     for (let dir = path.posix.dirname(file); dir !== "app"; dir = path.posix.dirname(dir)) {
       const layout = `${dir}/layout.tsx`;
-      if (fs.existsSync(path.join(ROOT, layout))) out[layout] = [...(out[layout] ?? []), route];
+      if (fs.existsSync(path.join(FRONTEND, layout))) out[layout] = [...(out[layout] ?? []), route];
     }
   }
   return out;
@@ -85,13 +87,13 @@ const FILES = walk(APP);
 describe("min-h-screen 只出现在 AppLayout 之外", () => {
   it("扫描器确实扫到了 app/ 下的文件(否则下面那条是空遍历、恒绿)", () => {
     expect(FILES.length).toBeGreaterThan(60);
-    expect(FILES.map((f) => path.relative(ROOT, f))).toContain("app/page.tsx");
+    expect(FILES.map((f) => path.relative(FRONTEND, f))).toContain("app/page.tsx");
   });
 
   it("AppLayout 槽位里的文件一个都没有写 min-h-screen", () => {
     const offenders: string[] = [];
     for (const file of FILES) {
-      const rel = path.relative(ROOT, file);
+      const rel = path.relative(FRONTEND, file);
       if (rel in OUTSIDE_APP_LAYOUT || rel in CONTAINS_APP_LAYOUT) continue;
       // 注释里提到这个类名是允许的 —— 这一轮有四个文件的注释在解释为什么**不**
       // 写它,把那些判成违规会教人删掉解释,而解释正是下一个读者需要的东西。
@@ -101,20 +103,14 @@ describe("min-h-screen 只出现在 AppLayout 之外", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("豁免与 AppLayoutWrapper 的两个数组双向对得上", () => {
+  it("AppLayoutWrapper 两个数组里的每一条都豁免着一个真页面", () => {
     const { auth, publik } = shellFreeLists();
     // 读不到数组(改成了别的写法)时两边都是空,豁免也是空 —— 下面那条会对着空集合绿。
     expect(auth.length + publik.length).toBeGreaterThan(0);
 
-    // 正向:每个豁免文件都因为一条真在这两个数组里的路由而豁免(推导保证,这里钉住推导本身)。
-    for (const [file, routes] of Object.entries(OUTSIDE_APP_LAYOUT)) {
-      for (const route of routes) {
-        expect({ file, route, outside: isOutsideAppLayout(route, { auth, publik }) }).toMatchObject({
-          outside: true,
-        });
-      }
-    }
-
+    // 只有反向。正向那半条(每个豁免文件的路由都被 isOutsideAppLayout 判成外壳外)2026-11-13 删掉了:
+    // 那张表就是用同一个函数筛出来的,断言它等于断言函数等于它自己,永远绿。
+    // 「外壳里的文件没有写」在上一条,「推导没有把全体页面都判成外壳外」在下一条。
     // 反向:两个数组里的每一条都必须落在磁盘上一个真页面上。指着不存在页面的一条
     // 不豁免任何文件,读起来却像在豁免(`/register` 就是这样)。
     const pages = pageRoutes();

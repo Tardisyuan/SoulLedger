@@ -38,7 +38,7 @@ import { globsToMatcher } from "jest-util";
  */
 
 // Which files jest collects is DERIVED, not pinned by name (2026-11-10,
-// docs/test-suite-review-2026-11-10.md §2.2). The name list this replaced had to
+// test-suite review 2026-11-10 §2.2). The name list this replaced had to
 // gain a line for every new test file, so the commonest way to see this file red
 // was adding a test, which has nothing to do with the incident it guards: a file
 // that LOOKS like a test and is not collected. That incident is checked directly
@@ -74,14 +74,27 @@ const isHelper = (file: string) =>
 
 const LOOKS_LIKE_A_TEST = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
-/** Floor under the derived set (363 files on 2026-11-10). Lower it on purpose,
- *  with the reason, if a block of test files is genuinely retired. */
-const MIN_FILES = 300;
+/** Floors at about 90% of the measured values (2026-11-13: 378 files,
+ *  4 349 declarations). They were 300 / 900 against 377 / ~4 300, so four
+ *  fifths of the suite could go and stay green. A floor is only a guard while it
+ *  sits near the number: when the suite has grown by a tenth, raise them. Lower
+ *  one on purpose, with the reason, if a block of tests is genuinely retired. */
+const MIN_FILES = 340;
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves
- *  whenever a table grows. Lower it deliberately, with the reason, if a block of
- *  tests is genuinely retired. */
-const MIN_DECLARATIONS = 900;
+ *  whenever a table grows. */
+const MIN_DECLARATIONS = 3900;
+
+/** Everything that makes jest run less than the file says without failing:
+ *  `.only` / `.skip` / `.todo` / `.failing` on it / test / describe (also behind
+ *  `.concurrent`, and whatever follows: `(`, `.each(`, a template table), and the
+ *  jasmine aliases (f-it, x-it, x-test, f-describe, x-describe). The lookbehind
+ *  keeps `benefit(`, `obj.fit(` and `submit.only(` out. */
+const RUNS_LESS_THAN_WRITTEN =
+  /(?<![.\w$])(?:(?:it|test|describe)(?:\.concurrent)?\.(?:only|skip|todo|failing)\b|(?:fit|xit|xtest|fdescribe|xdescribe)(?=\s*[.(`]))/g;
+
+const runsLessThanWritten = (source: string) =>
+  [...source.matchAll(RUNS_LESS_THAN_WRITTEN)].map((match) => match[0]);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -161,7 +174,7 @@ describe("the suite is the suite we think it is", () => {
     expect(declarations).toBeGreaterThanOrEqual(MIN_DECLARATIONS);
   });
 
-  it("runs the whole of every file — no .only, no .skip", () => {
+  it("runs the whole of every file — no .only, no .skip, no alias of either", () => {
     // `.only` is the dangerous one. It does not fail: jest runs the one test,
     // reports the rest as skipped, and exits green. A summary reading
     // "1 passed, 40 skipped" is the same colour as one reading "41 passed", and
@@ -169,12 +182,55 @@ describe("the suite is the suite we think it is", () => {
     // what you write while debugging.
     const offenders: string[] = [];
     for (const file of COLLECTED) {
-      const source = readFileSync(file, "utf8");
-      for (const match of source.matchAll(/\b(?:it|test|describe)\.(only|skip)\s*\(/g)) {
-        offenders.push(`${rel(file)}: .${match[1]}`);
+      for (const hit of runsLessThanWritten(readFileSync(file, "utf8"))) {
+        offenders.push(`${rel(file)}: ${hit}`);
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it("recognises every spelling of only / skip, and nothing that merely looks like one", () => {
+    // The scan above is clean when its pattern matches nothing, so the pattern
+    // is tested on its own. Until 2026-11-13 it knew `.only(` and `.skip(` and
+    // let the jasmine aliases, `.only.each` and `.todo` through.
+    // `@` stands for nothing: it keeps these samples from being offenders in
+    // this file, which the scan above reads like any other.
+    const sample = (text: string) => text.replace(/@/g, "");
+    const caught = [
+      'it@.only("a", () => {})',
+      'test@.skip("a", () => {})',
+      "describe@.only('a', () => {})",
+      "describe@.skip('a', () => {})",
+      "it@.only.each([1, 2])('a %s', () => {})",
+      "it@.skip.each([1, 2])('a %s', () => {})",
+      "describe@.only.each([1])('a', () => {})",
+      "test@.only.each`\n a | b\n`('x', () => {})",
+      'it@.todo("write this")',
+      'test@.failing("a", () => {})',
+      'it@.concurrent.only("a", async () => {})',
+      '  f@it("a", () => {})',
+      '  x@it("a", () => {})',
+      'x@test("a", () => {})',
+      'f@describe("a", () => {})',
+      'x@describe("a", () => {})',
+      "f@it.each([1])('a', () => {})",
+      "x@it  ('a', () => {})",
+    ].map(sample);
+    for (const line of caught) expect([line, runsLessThanWritten(line).length]).toEqual([line, 1]);
+
+    const clean = [
+      'it("a", () => {})',
+      "it.each([1, 2])('a %s', () => {})",
+      "describe.each([1])('a', () => {})",
+      'test.concurrent("a", async () => {})',
+      "benefit(1)",
+      "exit(0)",
+      "chart.fit()",
+      "form.submit.only()",
+      "const fit = 1",
+      "// no .only, no .skip",
+    ];
+    for (const line of clean) expect([line, runsLessThanWritten(line)]).toEqual([line, []]);
   });
 
   it("never stubs the permission gate itself", () => {

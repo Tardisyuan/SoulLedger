@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 今日律条 is a fixed list (the login page has no session to read statutes
  * with). What keeps it from becoming invented copy is this: every quote must
  * appear VERBATIM in the corpus source the seeder writes, beside its code.
