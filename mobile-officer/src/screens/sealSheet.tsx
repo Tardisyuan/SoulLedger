@@ -12,7 +12,7 @@ import type { GreekAccount, JudgmentDetail } from "@soulledger/core/api/judgment
 import { verdictText } from "@soulledger/core/domain/verdictNames";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
 
 import { submitVerdict } from "../decisions";
 import { DECISION_TOAST, confirmedDecision, decisionFailureKind } from "../deviceCheck";
@@ -142,12 +142,18 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
  * gives way to the solid one); letting go before it is full puts it back. The seal is set by `onLongPress` with
  * `delayLongPress` = 1 s, a Pressable's own timer (CLAUDE.md: long presses here are `delayLongPress`, not gestures).
  * Under reduce-motion there is no fill; the hold is still 1 s.
+ * Landing is a stamp, not a fade (官员端真机 2026-11-14): while held the solid seal hangs lifted at 1.25×, and when it
+ * lands it springs down to 1× with a little overshoot (about 250 ms) while a copy of it spreads out and fades, the
+ * ink taking to the paper. Under reduce-motion the solid seal just appears at 1×. Transforms and opacity only (native driver).
  */
+export const SEAL_LIFT = 1.25;
 function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: JudgmentDetail; disabled: boolean; busy: boolean; hint: string; onSeal: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
   const reduced = useReducedMotion();
   const [fill] = useState(() => new Animated.Value(0));
+  const [drop] = useState(() => new Animated.Value(1));
+  const [ink] = useState(() => new Animated.Value(0));
   const fired = useRef(false);
   useEffect(() => {
     if (!busy) fill.setValue(0);
@@ -155,7 +161,17 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
   const pressIn = () => {
     fired.current = false;
     buzz(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
-    if (!reduced) Animated.timing(fill, { toValue: 1, duration: HOLD_TO_SEAL_MS, useNativeDriver: true }).start();
+    if (reduced) return;
+    drop.setValue(SEAL_LIFT);
+    Animated.timing(fill, { toValue: 1, duration: HOLD_TO_SEAL_MS, useNativeDriver: true }).start();
+  };
+  const land = () => {
+    if (reduced) return drop.setValue(1);
+    ink.setValue(0);
+    Animated.parallel([
+      Animated.spring(drop, { toValue: 1, tension: 260, friction: 9, useNativeDriver: true }),
+      Animated.timing(ink, { toValue: 1, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
   };
   const pressOut = () => {
     if (fired.current) return;
@@ -171,7 +187,14 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
           <Animated.View style={[StyleSheet.absoluteFill, { opacity: pending }]}>
             <DossierSeal testID="seal-pending" civilization={judgment.civilization} court={judgment.court} pending label={t("officer_app.seal.pending_a11y")} />
           </Animated.View>
-          <Animated.View style={[StyleSheet.absoluteFill, { opacity: fill }]} importantForAccessibility="no-hide-descendants">
+          <Animated.View
+            testID="seal-ink"
+            style={[StyleSheet.absoluteFill, { opacity: ink.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.35, 0] }), transform: [{ scale: ink.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] }) }] }]}
+            importantForAccessibility="no-hide-descendants"
+          >
+            <DossierSeal civilization={judgment.civilization} court={judgment.court} label="" />
+          </Animated.View>
+          <Animated.View testID="seal-solid" style={[StyleSheet.absoluteFill, { opacity: fill, transform: [{ scale: drop }] }]} importantForAccessibility="no-hide-descendants">
             <DossierSeal civilization={judgment.civilization} court={judgment.court} label={t("officer_app.seal.a11y")} />
           </Animated.View>
         </View>
@@ -195,6 +218,7 @@ function HoldToSeal({ judgment, disabled, busy, hint, onSeal }: { judgment: Judg
           fired.current = true;
           buzz(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy));
           fill.setValue(1);
+          land();
           onSeal();
         }}
         style={[styles.hold, { backgroundColor: disabled ? theme.s2 : theme.ink, opacity: busy ? 0.7 : 1 }]}

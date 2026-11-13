@@ -4,7 +4,9 @@
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
-import { HOLD_TO_SEAL_MS, SealSheet } from "../screens/sealSheet";
+import { Animated, StyleSheet } from "react-native";
+
+import { HOLD_TO_SEAL_MS, SEAL_LIFT, SealSheet } from "../screens/sealSheet";
 import { verdictFailure } from "../screens/swipe";
 import { NO_SEAL, passBarredBy, sealPayload, sealReady } from "../verdict";
 import { renderOfficer } from "./harness";
@@ -104,6 +106,23 @@ describe("按住落印", () => {
     expect(Haptics.impactAsync).toHaveBeenLastCalledWith(Haptics.ImpactFeedbackStyle.Heavy);
     await waitFor(() => expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success));
     expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
+  });
+
+  it("stamps: the solid seal hangs lifted while held and drops to 1× when it lands", async () => {
+    mockConclude.mockResolvedValue({ data: {} });
+    open();
+    const scale = () => (StyleSheet.flatten(screen.getByTestId("seal-solid", { includeHiddenElements: true }).props.style).transform as { scale: number }[])[0].scale;
+    expect(scale()).toBe(1);
+    fireEvent.press(screen.getByTestId("seal-option-RETRY"));
+    fireEvent(screen.getByTestId("seal-hold"), "pressIn");
+    expect(scale()).toBe(SEAL_LIFT);
+    expect(SEAL_LIFT).toBeGreaterThan(1);
+    const spring = jest.spyOn(Animated, "spring");
+    fireEvent(screen.getByTestId("seal-hold"), "longPress");
+    // The drop is a spring to 1× on the native driver (jest does not run the frames, so ask what was started).
+    expect(spring).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, useNativeDriver: true }));
+    spring.mockRestore();
+    await act(async () => {});
   });
 
   it("a refusal buzzes as an error", async () => {
