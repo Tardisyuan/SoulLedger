@@ -81,6 +81,8 @@ jest.mock("expo-camera", () => {
   const settle = (status) => ({ status, granted: status === "granted", canAskAgain: status === "undetermined" });
   return {
     __state: state,
+    // 「从相册选」 (S4): what the picture holds; a test says so with mockResolvedValueOnce.
+    scanFromURLAsync: jest.fn(async () => []),
     CameraView: (props) => {
       state.last = props;
       return React.createElement(View, { testID: props.testID });

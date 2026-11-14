@@ -42,6 +42,15 @@ const cameraMod = Camera as unknown as {
   __state: { permission: { status: string; granted: boolean; canAskAgain: boolean }; last: { onBarcodeScanned: (r: { data: string }) => void; barcodeScannerSettings: unknown } | null };
 };
 
+/** 「从相册选」 (S4): the system picker is the OS's, not ours; `scanImage` is expo-camera's `scanFromURLAsync`. */
+const mockLaunch = jest.fn();
+jest.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: (...args: unknown[]) => mockLaunch(...args),
+  UIImagePickerPreferredAssetRepresentationMode: { Compatible: "compatible" },
+}));
+const scanImage = Camera.scanFromURLAsync as jest.Mock;
+const SLIP = "file:///photos/slip.jpg";
+
 const TOKENS = { access: "A", refresh: "R", soul_code: CODE, account: PROFILE.account };
 const PENDING = { mfa_required: true, pending_token: "pending-opaque-abc", soul_code: CODE, home_tenant: PROFILE.home_tenant };
 const HOME: Record<string, Reply> = {
@@ -69,6 +78,8 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   cameraMod.__state.permission = { status: "granted", granted: true, canAskAgain: true };
   cameraMod.__state.last = null;
+  mockLaunch.mockReset();
+  scanImage.mockClear();
 });
 
 const typeCode = (text: string) => fireEvent.changeText(screen.getByTestId("login-soul-code"), text);
@@ -299,6 +310,70 @@ describe("A · the scanner", () => {
   });
 });
 
+describe("S4 · 「从相册选」 on the scanner", () => {
+  async function openScanner() {
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-scan"));
+  }
+
+  it("a photo of the slip is read as QR and fills the number, ours picked out of several codes", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([{ type: "qr", data: "https://example.com/x" }, { type: "qr", data: `SL1:${CODE}` }]);
+    await openScanner();
+    await screen.findByTestId("scan");
+    expect(within(screen.getByTestId("scan-album")).getByText("从相册选")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("scan-album"));
+    await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("Login"));
+    expect(scanImage).toHaveBeenCalledWith(SLIP, ["qr"]);
+    expect(screen.getByTestId("login-soul-code").props.value).toBe(CODE);
+    expect(screen.getByTestId("login-scanned")).toHaveTextContent("✓ 已从二维码填入");
+  });
+
+  it("a picture with no code says so, not that the code is someone else's; the scanner stays", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([]);
+    await openScanner();
+    await screen.findByTestId("scan");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    expect(await screen.findByText("! 这张图里没有找到二维码")).toBeTruthy();
+    expect(screen.getByText("换一张拍得清楚些的交付单照片，或手动输入编号。")).toBeTruthy();
+    expect(screen.queryByText("! 这不是灵魂簿交付单上的码")).toBeNull();
+    expect(navigationRef.getCurrentRoute()?.name).toBe("ScanCode");
+  });
+
+  it("a code in the picture that is not ours is the same red bar as a live one", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([{ type: "qr", data: "https://example.com/x" }]);
+    await openScanner();
+    await screen.findByTestId("scan");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    expect(await screen.findByText("! 这不是灵魂簿交付单上的码")).toBeTruthy();
+    expect(navigationRef.getCurrentRoute()?.name).toBe("ScanCode");
+  });
+
+  it("walking away from the picker reads nothing and says nothing", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: true, assets: null });
+    await openScanner();
+    await screen.findByTestId("scan");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    await waitFor(() => expect(mockLaunch).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(scanImage).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("scan-invalid")).toBeNull();
+  });
+
+  it("with the camera refused, the album is still a way on", async () => {
+    cameraMod.__state.permission = { status: "denied", granted: false, canAskAgain: false };
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([{ type: "qr", data: `SL1:${CODE}` }]);
+    await openScanner();
+    await screen.findByTestId("scan-denied");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("Login"));
+    expect(screen.getByTestId("login-soul-code").props.value).toBe(CODE);
+  });
+});
+
 it("D · two keystrokes before the parent re-renders are still two keystrokes, not a paste", () => {
   // The field is driven directly with a parent that never re-renders: `value` stays "" while the box accepts.
   const onChange = jest.fn();
@@ -504,7 +579,7 @@ describe("B2 · 面容 / 指纹 after the first sign-in", () => {
     return calls;
   }
 
-  it("asks once, with the risk written; 「以后再说」 is the last time for this number", async () => {
+  it("asks, with the risk written; the first 「以后再说」 leaves one more ask for this number", async () => {
     bioMod.__state.enrolled = true;
     const calls = await firstSignIn();
     expect(await screen.findByText("下次用面容登录？")).toBeTruthy();
@@ -516,13 +591,23 @@ describe("B2 · 面容 / 指纹 after the first sign-in", () => {
     expect(persistentStore.get(BIO_KEY)).toBeNull();
   });
 
-  it("does not ask again once answered, even at the next sign-in", async () => {
+  it("S3: answered 「以后再说」 once (an older build's \"1\"), it asks once more at a later password sign-in, and that is the last", async () => {
     bioMod.__state.enrolled = true;
     persistentStore.set(`${ASKED_PREFIX}${CODE}`, "1");
+    await firstSignIn();
+    fireEvent.press(await screen.findByTestId("bio-ask-later"));
+    await waitFor(() => expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBe("2"));
+    await waitFor(() => expect(screen.queryByTestId("bio-ask")).toBeNull());
+  });
+
+  it("S3: answered twice, it does not ask again, even at the next sign-in", async () => {
+    bioMod.__state.enrolled = true;
+    persistentStore.set(`${ASKED_PREFIX}${CODE}`, "2");
     await firstSignIn();
     await screen.findByTestId("profile-card");
     await act(async () => {});
     expect(screen.queryByText("下次用面容登录？")).toBeNull();
+    expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBe("2"); // not asked is not answered
   });
 
   it("does not ask a phone with no face or finger enrolled", async () => {
@@ -720,6 +805,18 @@ describe("B2 · the row under 设置 › 账号安全", () => {
     expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")?.body).toEqual({ credential: CRED });
     expect(persistentStore.get(BIO_KEY)).toBeNull();
     expect(secureMod.__guarded.size).toBe(0);
+  });
+
+  it("S3: an explicit off means 「下次用面容登录？」 is not asked of this number again", async () => {
+    bioMod.__state.enrolled = true;
+    persistentStore.set(BIO_KEY, "face");
+    persistentStore.set(BIO_OWNER_KEY, CODE);
+    secureMod.__guarded.set("soulledger_device_login", CRED);
+    await openSettings({ "/soul-auth/device-login/revoke/": { status: 204 } });
+    expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBeNull();
+    fireEvent.press(screen.getByTestId("bio-row"));
+    await waitFor(() => expect(screen.getByTestId("bio-row-state")).toHaveTextContent("关"));
+    expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBe("2");
   });
 });
 
