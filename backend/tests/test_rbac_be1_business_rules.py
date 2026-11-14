@@ -12,6 +12,7 @@ from django.utils import timezone
 from apps.actors.models import Actor
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.disposition.models import Disposition
 from apps.judgment.models import EvidenceAdmission, Judgment
 from apps.perm.cache import invalidate_all_permissions
@@ -175,7 +176,7 @@ def test_a_judgments_soul_is_fixed(cn, mod):
     other = Soul.objects.create(name="别的魂", tenant=cn, current_state=SoulState.JUDGING)
     client = officer_client(mod)
     response = client.patch(f"/api/v1/judgment/{case.pk}/", {"soul": str(other.pk)}, format="json")
-    assert response.status_code == 400 and response.data["soul"][0].code == "soul_fixed", response.data
+    assert response.status_code == 400 and ("soul", "soul_fixed") in {(e.get("field"), e["code"]) for e in response.data["errors"]}, response.data
     case.refresh_from_db()
     assert case.soul_id == soul.pk
     assert client.patch(f"/api/v1/judgment/{case.pk}/", {"soul": str(soul.pk), "summary": "同一魂"},
@@ -215,7 +216,7 @@ def test_a_dispositions_soul_and_judgment_are_fixed_and_its_destination_once_exe
     elsewhere = _realm("BE1_ELSEWHERE", cn)
     Disposition.all_objects.filter(pk=disposition.pk).update(is_executed=True, executed_at=timezone.now())
     refused = client.patch(url, {"destination_realm": str(elsewhere.pk)}, format="json")
-    assert refused.status_code == 400 and "destination_realm" in refused.data, refused.data
+    assert refused.status_code == 400 and "destination_realm" in field_errors(refused), refused.data
     assert client.patch(url, {"notes": "执行后备注"}, format="json").status_code == 200
 
 
@@ -224,7 +225,7 @@ def test_a_new_disposition_carries_out_its_own_souls_judgment(cn, mod):
     other = Soul.objects.create(name="别的魂", tenant=cn, current_state=SoulState.DISPOSED)
     response = officer_client(mod).post("/api/v1/disposition/", {"soul": str(other.pk), "judgment": str(case.pk)},
                                         format="json")
-    assert response.status_code == 400 and "judgment" in response.data, response.data
+    assert response.status_code == 400 and "judgment" in field_errors(response), response.data
 
 
 # ── M4 a hall-less ADMIN files the case / disposition in the soul's hall ─────

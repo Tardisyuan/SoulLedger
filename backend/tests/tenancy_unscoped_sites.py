@@ -80,6 +80,8 @@ SITES = [
     ('apps/audit/retention.py', 'LoginLog.all_objects', 2, 'FILTERED', 'retention sweep: LoginLog has no tenant column, so it filters by user__tenant (or, for tenant=None, by no user / tenant-less user)'),
     ('apps/authentication/mfa.py', 'type(mfa)._default_manager', 1, 'LOCK', 're-reads under SELECT FOR UPDATE the one OfficerMfa / SoulMfa row the caller passed in, by its pk; the caller reached it through the signed-in user or soul account'),
     ('apps/authentication/tasks.py', 'LoginLog.all_objects', 1, 'FILTERED', 'retention sweep of soul sign-in records only: filtered to username starting "soul:" and older than 90 days; LoginLog has no tenant column and soul accounts are not officers'),
+    ('apps/authentication/management/commands/seed_dev_users.py', 'Tenant.objects', 2, 'FANOUT', 'DEBUG-only dev seeding: resolves the one tenant named by --tenant (globally unique code), or the first by code'),
+    ('apps/authentication/management/commands/seed_dev_users.py', 'Soul.all_objects', 1, 'FILTERED', 'DEBUG-only dev seeding: filtered to the tenant just resolved and the fixed dev soul name'),
     ('apps/audit/tasks.py', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant'),
     ('apps/core/retention.py', 'EventWebhookDelivery.all_objects', 1, 'GLOBAL', 'retention sweep over every hall by age and finished status (PENDING kept); all_objects only includes soft-deleted rows'),
     ('apps/core/retention.py', 'UserNotification.all_objects', 1, 'GLOBAL', 'retention sweep over every hall: READ notifications older than the window only; all_objects only includes soft-deleted rows'),

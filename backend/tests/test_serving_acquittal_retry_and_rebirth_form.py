@@ -59,8 +59,8 @@ def test_executing_a_termed_disposition_starts_serving_and_holds_the_plan(cn):
     assert (plan.status, soul.current_state) == ("ACTIVE", SoulState.DISPOSED)
     with pytest.raises(RebirthBlocked) as blocked:
         assert_may_be_reborn(soul)
-    assert blocked.value.detail["code"] == "term_not_served"
-    assert blocked.value.detail["term_end"]["year"] == timezone.localdate().year + 3
+    assert blocked.value.problem_code == "term_not_served"
+    assert blocked.value.extra["term_end"]["year"] == timezone.localdate().year + 3
 
 
 def test_a_disposition_without_a_term_is_served_on_execution_as_before(cn):
@@ -472,7 +472,7 @@ def test_a_plan_stops_term_is_not_patched_on_the_disposition(cn):
     for body in ({"sentence_years": None}, {"is_eternal": True}, {"sentence_years": 9}):
         refused = client.patch(url, body, format="json")
         assert refused.status_code == 400, (body, refused.data)
-        assert str(refused.data[next(iter(body))][0].code) == "on_sentence_plan"
+        assert [(e.get("field"), e["code"]) for e in refused.data["errors"]] == [(next(iter(body)), "on_sentence_plan")]
     row = Disposition.all_objects.get(pk=disposition.pk)
     assert (row.sentence_years, row.is_eternal) == (3, False)
     assert client.patch(url, {"sentence_years": 3, "notes": "核对过"}, format="json").status_code == 200

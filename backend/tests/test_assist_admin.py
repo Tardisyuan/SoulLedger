@@ -402,7 +402,7 @@ def test_eval_cases_are_validated_against_the_side(api):
     assert bad_tool.status_code == 400 and "expected_tools" in field_errors(bad_tool)
     bad_screen = api.post(f"{BASE}eval/cases/", {"side": "officer", "screen": "life", "question": "q"},
                           format="json")
-    assert bad_screen.status_code == 400 and "screen" in bad_screen.data
+    assert bad_screen.status_code == 400 and "screen" in field_errors(bad_screen)
     ok = api.post(f"{BASE}eval/cases/", {"side": "officer", "screen": "judgment", "question": "q",
                                          "expected_tools": ["judgment_queue_counts"]}, format="json")
     assert ok.status_code == 201
@@ -927,7 +927,7 @@ def test_patch_cannot_set_the_eval_identities(api, judge_user):
     """变异:序列化器里的 `validate` 删掉 → 200 且被忽略,红。"""
     for body in ({"eval_officer": judge_user.pk}, {"eval_soul_account": None}):
         res = api.patch(f"{BASE}config/", body, format="json")
-        assert res.status_code == 400 and set(res.data) == set(body)
+        assert res.status_code == 400 and set(field_errors(res)) == set(body)
     assert AssistConfig.objects.filter(pk=1, eval_officer__isnull=False).count() == 0
 
 

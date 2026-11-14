@@ -11,6 +11,7 @@ import io
 import pytest
 from django.core.management import call_command
 
+from apps.core.problems import field_errors
 from apps.disposition.destination import allowed_realm_codes
 from apps.disposition.services import DispositionService
 from apps.judgment.models import Verdict
@@ -115,7 +116,7 @@ def test_the_officer_records_both_facts_on_a_european_soul_only(admin_user):
     chinese = _soul(code="CN_DIYU")
     for field, value in (("baptism", "BAPTISED"), ("denied_immortality", False)):
         res = client.patch(f"/api/v1/souls/{chinese.pk}/", {field: value}, format="json")
-        assert res.status_code == 400 and field in res.data, res.data
+        assert res.status_code == 400 and field in field_errors(res), res.data
     # The defaults round-trip for any civilization (a client may send the whole form back).
     res = client.patch(f"/api/v1/souls/{chinese.pk}/", {"baptism": "UNRECORDED", "denied_immortality": None},
                        format="json")

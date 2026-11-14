@@ -24,6 +24,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.perm.models import Permission, Role, RolePermission
 from apps.tenants.models import Tenant
 
@@ -84,7 +85,7 @@ def test_a_string_overwrite_is_rejected_and_deletes_nothing(seeded):
     response = client.post(IMPORT, {"overwrite": "false", "roles": []}, format="json")
 
     assert response.status_code == 400, response.content
-    assert "overwrite" in response.data, response.data
+    assert "overwrite" in field_errors(response), response.data
     # 断言「错的东西不在」:授权一条都没少 —— 修之前这条请求答 200 并清空全表。
     assert _grants_of(seeded["role"]) == before
     assert RolePermission.objects.count() == total_before
@@ -102,7 +103,7 @@ def test_a_malformed_entry_is_rejected_before_anything_is_deleted(seeded):
     )
 
     assert response.status_code == 400, response.content
-    assert "permissions" in response.data, response.data
+    assert "permissions" in {f.split(".")[0] for f in field_errors(response)}, response.data
     assert _grants_of(seeded["role"]) == before, (
         "修之前:KeyError 500,而 overwrite 的三条 delete 已经执行"
     )

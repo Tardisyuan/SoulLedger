@@ -10,6 +10,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.test import APIClient, APIRequestFactory
 
+from apps.core.problems import without_instance
 from apps.social.models import (
     Comment,
     Follow,
@@ -836,7 +837,7 @@ class TestFollowCrossTenantRefused:
             f"{BASE}/follows/toggle/", {"following": 999999}, format="json",
         )
         assert real_but_foreign.status_code == nonexistent.status_code
-        assert real_but_foreign.data == nonexistent.data
+        assert without_instance(real_but_foreign) == without_instance(nonexistent)
 
     def test_toggle_refuses_cross_tenant_even_for_admin(self):
         """No ADMIN carve-out on the write side — an ADMIN bypass here would

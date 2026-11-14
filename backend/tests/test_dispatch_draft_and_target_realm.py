@@ -127,18 +127,18 @@ def test_submit_needs_a_soul_and_a_target(w):
     record = _draft(w, reason=LONG_REASON)
     resp = sign_in(APIClient(), w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {}, format="json")
     assert resp.status_code == 400
-    assert {"soul", "target_tenant"} <= set(resp.data)
+    assert {"soul", "target_tenant"} <= set(field_errors(resp))
 
 
 def test_a_direct_proposal_still_needs_a_soul_and_a_target(w):
     """The columns became nullable for drafts; the direct proposal path did not."""
     resp = sign_in(APIClient(), w["cn_mod"]).post(URL, {"source_tenant": w["cn"].pk, "reason": LONG_REASON}, format="json")
     assert resp.status_code == 400
-    assert {"soul", "target_tenant"} <= set(resp.data)
+    assert {"soul", "target_tenant"} <= set(field_errors(resp))
     resp = sign_in(APIClient(), w["cn_mod"]).post(URL, {
         "source_tenant": w["cn"].pk, "target_tenant": w["eu"].pk, "soul": str(w["soul"].pk),
     }, format="json")
-    assert resp.status_code == 400 and "reason" in resp.data
+    assert resp.status_code == 400 and "reason" in field_errors(resp)
     assert not DispatchRecord.all_objects.exists()
 
 
@@ -198,22 +198,22 @@ def test_a_realm_of_another_tenant_is_refused_everywhere(w, which):
     assert resp.status_code == 400 and "target_realm" in field_errors(resp)
     # A realm with no target civilization yet.
     resp = client.post(f"{URL}drafts/", {"target_realm": str(w["eu_ninth"].pk)}, format="json")
-    assert resp.status_code == 400 and "target_realm" in resp.data
+    assert resp.status_code == 400 and "target_realm" in field_errors(resp)
     # A soft-deleted realm of the right tenant.
     resp = client.post(f"{URL}drafts/", {"target_tenant": w["eu"].pk, "target_realm": str(w["eu_gone"].pk)},
                        format="json")
-    assert resp.status_code == 400 and "target_realm" in resp.data
+    assert resp.status_code == 400 and "target_realm" in field_errors(resp)
     # Direct proposal.
     resp = client.post(URL, {
         "source_tenant": w["cn"].pk, "target_tenant": w["eu"].pk, "soul": str(w["soul"].pk),
         "target_realm": foreign, "reason": LONG_REASON,
     }, format="json")
-    assert resp.status_code == 400 and "target_realm" in resp.data
+    assert resp.status_code == 400 and "target_realm" in field_errors(resp)
     # Changing only the target on a draft cannot leave the old target's realm behind.
     record = _draft(w, soul=str(w["soul"].pk), target_tenant=w["eu"].pk, target_realm=str(w["eu_ninth"].pk))
     resp = client.post(f"{URL}{record.pk}/submit/", {"target_tenant": w["cn"].pk, "reason": LONG_REASON},
                        format="json")
-    assert resp.status_code == 400 and "target_realm" in resp.data
+    assert resp.status_code == 400 and "target_realm" in field_errors(resp)
     assert not DispatchRecord.all_objects.exclude(status=DispatchStatus.DRAFT).exists()
 
 

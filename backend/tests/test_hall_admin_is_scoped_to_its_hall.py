@@ -90,7 +90,7 @@ def test_bound_admin_cannot_create_a_user_elsewhere_or_appoint_an_admin(world):
                        format="json")
     assert elsewhere.status_code == 400 and "tenant" in field_errors(elsewhere)
     admin = b.post("/api/v1/users/", {"username": "x2", "password": pw, "role": "ADMIN"}, format="json")
-    assert admin.status_code == 400 and "role" in admin.json()
+    assert admin.status_code == 400 and "role" in field_errors(admin)
     assert not User.objects.filter(username__in=["x1", "x2"]).exists()
     # 本殿的普通官员照建,落在本殿
     ok = b.post("/api/v1/users/", {"username": "x3", "password": pw, "role": "JUDGE"}, format="json")

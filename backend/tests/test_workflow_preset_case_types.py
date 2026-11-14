@@ -83,6 +83,7 @@ import re
 import pytest
 from rest_framework.test import APIClient
 
+from apps.core.problems import field_errors
 from apps.souls.models import Civilization
 from apps.workflow.models import ApprovalWorkflow, CaseType, WorkflowTemplate
 from apps.workflow.services import VALID_CASE_TYPES_BY_CIVILIZATION
@@ -380,7 +381,7 @@ def test_the_unknown_case_type_is_still_refused(seeded):  # noqa: F811  (importe
         format="json",
     )
     assert response.status_code == 400, response.data
-    assert "case_type" in response.data, response.data
+    assert "case_type" in field_errors(response), response.data
 
 
 # ── the copy, and the picker ──────────────────────────────────────────

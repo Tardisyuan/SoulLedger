@@ -103,7 +103,9 @@ def test_five_wrong_codes_void_the_code(cn_tenant):
     wrong = "000000" if right != "000000" else "111111"
     for left in (4, 3, 2, 1, 0):
         res = client.post(f"{URL}confirm/", {"code": wrong}, format="json")
-        assert res.json() == {"detail": "验证码错误", "code": "reset_code_wrong", "attempts_left": left}
+        body = {k: v for k, v in res.json().items() if k != "instance"}
+        assert body == {"type": "about:blank", "title": "Bad Request", "status": 400,
+                        "code": "reset_code_wrong", "detail": "验证码错误", "attempts_left": left}
     assert client.post(f"{URL}confirm/", {"code": right}, format="json").json()["code"] == "reset_code_attempts_exceeded"
 
 

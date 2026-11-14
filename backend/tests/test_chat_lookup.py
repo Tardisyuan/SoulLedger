@@ -9,6 +9,7 @@ import pytest
 from django.utils import timezone
 
 from apps.authentication.models import User
+from apps.core.problems import without_instance
 from apps.social.models import SocialMute
 from tests.chat_support import matrix  # noqa: F401
 from tests.soul_account_support import officer_client, ready_soul
@@ -105,9 +106,11 @@ def test_every_kind_of_not_found_is_the_same_bytes(cn_tenant, eu_tenant):
     }
     statuses = {name: r.status_code for name, r in responses.items()}
     assert set(statuses.values()) == {404}, statuses
-    bodies = {r.content for r in responses.values()}
+    bodies = {without_instance(r) for r in responses.values()}
     assert len(bodies) == 1, bodies
-    assert responses["missing"].json() == {"detail": "找不到这个灵魂。", "code": "not_found"}
+    missing = {k: v for k, v in responses["missing"].json().items() if k != "instance"}
+    assert missing == {"type": "about:blank", "title": "Not Found", "status": 404,
+                       "code": "not_found", "detail": "找不到这个灵魂。"}
 
 
 def test_lookups_are_limited_per_soul_account(cn_tenant, eu_tenant, settings):

@@ -55,7 +55,7 @@ def test_resending_a_failed_registration_runs_it_again_on_the_same_row(cn_tenant
     # Succeeded once: a further resend is the duplicate it always was, and opens nothing.
     dup = client.post(URL, body, format="json")
     assert dup.status_code == 409, dup.content
-    assert (dup.json()["status"], dup.json()["registration_id"]) == ("duplicate", row)
+    assert (dup.json()["code"], dup.json()["registration_id"]) == ("duplicate", row)
     assert DeathRegistrationRequest.objects.filter(tenant=cn_tenant).count() == 1
     assert Judgment.objects.filter(soul=soul).count() == 1
 

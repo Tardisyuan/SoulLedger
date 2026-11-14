@@ -111,7 +111,7 @@ def test_cancelling_needs_the_same_permission_as_proposing(world):
 def test_once_it_is_no_longer_proposed_the_sender_cannot_cancel_it(world, state):
     DispatchRecord.all_objects.filter(pk=world["record"].pk).update(status=state)
     res = _cancel(world["client_a"], world["record"])
-    assert res.status_code == 409 and res.data["code"] == "not_cancellable" and res.data["status"] == state
+    assert res.status_code == 409 and res.data["code"] == "not_cancellable" and res.data["dispatch_status"] == state
     _untouched(world, status=state)
 
 

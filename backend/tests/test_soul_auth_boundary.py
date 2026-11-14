@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.authentication.models import User, is_assignable_role
+from apps.core.problems import without_instance
 from apps.perm.checker import check_permission
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
@@ -240,7 +241,7 @@ def test_a_wrong_password_and_an_unknown_code_answer_identically(cn_tenant):
     b = APIClient().post("/api/v1/soul-auth/login/", {"soul_code": "ZZZZZZZZZZ", "password": "nope-nope"},
                          format="json")
     assert a.status_code == b.status_code == 401
-    assert a.data == b.data
+    assert without_instance(a) == without_instance(b)
 
 
 def test_soul_login_is_limited_to_5_failures_per_soul_code_from_one_ip(cn_tenant):

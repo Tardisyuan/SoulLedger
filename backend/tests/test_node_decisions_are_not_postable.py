@@ -180,7 +180,7 @@ def test_a_decision_cannot_be_minted_by_posting_a_node(world):
         f"can tell it from one complete_node() wrote."
     )
     for field in ("status", "verdict", "approver", "decided_at"):
-        assert field in resp.data, f"the 400 does not name `{field}`"
+        assert field in field_errors(resp), f"the 400 does not name `{field}`"
     assert not ApprovalNode.objects.filter(node_name="forged").exists()
 
 

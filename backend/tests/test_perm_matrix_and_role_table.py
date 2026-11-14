@@ -385,7 +385,7 @@ def test_a_roles_code_cannot_change_but_its_other_fields_can(world):
     scribe = world["scribe"]
     refused = world["client"].put(f"{ROLES}{scribe.pk}/", {"name": "ARCHIVIST"}, format="json")
     assert refused.status_code == 400, refused.content
-    assert refused.data["name"][0].code == "immutable", refused.data
+    assert [(e.get("field"), e["code"]) for e in refused.data["errors"]] == [("name", "immutable")], refused.data
     same = world["client"].put(f"{ROLES}{scribe.pk}/", {"name": "scribe", "display_name": "书记官"}, format="json")
     assert same.status_code == 200, same.content
     scribe.refresh_from_db()
