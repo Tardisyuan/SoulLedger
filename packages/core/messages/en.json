@@ -2940,6 +2940,7 @@
     },
     "filter_hall": "By hall",
     "all_halls": "All halls",
+    "civilization_halls": "This civilization’s halls",
     "resources": {
       "soul": "Soul",
       "user": "User",
@@ -2975,6 +2976,7 @@
     "stats": {
       "scope_hall": "All history for this hall · {{count}} entries",
       "scope_all": "All halls, all history · {{count}} entries",
+      "scope_civilization": "This civilization’s halls, all history · {{count}} entries",
       "scope_note": "These numbers don’t follow date or hall filters.",
       "by_action": "By action",
       "zero_actions": "{{n}} other actions have no entries",
@@ -3656,6 +3658,7 @@
     "first_name_placeholder": "First Name",
     "last_name_placeholder": "Last Name",
     "roles": {
+      "SYSTEM_ADMIN": "System administrator",
       "ADMIN": "Administrator",
       "SYSTEM_ADMIN": "System Administrator",
       "MODERATOR": "Circle Moderator",
@@ -7134,6 +7137,7 @@
     },
     "scope_label": "Civilization",
     "scope_all": "All civilizations",
+    "scope_civilization": "This civilization’s halls",
     "review": {
       "list_label": "Review queue",
       "detail_label": "Review detail",
@@ -9319,12 +9323,12 @@
       "expired_body": "Each visit lasts 30 minutes and isn’t extended. Go back to all halls and open it again."
     },
     "viewing": {
-      "banner": "Viewing {{name}} as global admin",
+      "banner": "Viewing {{name}} as administrator",
       "back": "Back to all halls"
     },
     "audit": {
-      "view_start": "Viewed {{hall}} as global admin",
-      "view_end": "Viewed {{hall}} as global admin · {{minutes}} min · {{pages}} pages"
+      "view_start": "Viewed {{hall}} as administrator",
+      "view_end": "Viewed {{hall}} as administrator · {{minutes}} min · {{pages}} pages"
     }
   },
   "earthGods": {

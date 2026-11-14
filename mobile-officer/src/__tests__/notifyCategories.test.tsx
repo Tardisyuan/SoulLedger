@@ -27,6 +27,7 @@ describe("rules", () => {
   it("shows 密码求助 to admins only", () => {
     expect(visibleNotificationCategories("JUDGE")).not.toContain("password_help");
     expect(visibleNotificationCategories("ADMIN")).toContain("password_help");
+    expect(visibleNotificationCategories("SYSTEM_ADMIN")).toContain("password_help");
   });
 });
 

@@ -2,8 +2,8 @@
  * /audit/stats (第三十七批 W-9b), through the real route file with the real
  * zh-Hans bundle.
  *
- * Pinned: the scope line names the global admin's 「全部殿」 and everyone
- * else's 「本殿」; action bars run from most to fewest and a zero-count action
+ * Pinned: the scope line names the system admin's 「全部殿」, a hall-less
+ * ADMIN's 「本文明各殿」 and everyone else's 「本殿」; action bars run from most to fewest and a zero-count action
  * draws no bar but is counted in `zero_actions` (against all `AuditAction`
  * members from `/audit-logs/actions/`); top resources sort by count, ties by
  * name, and each row links to the list pre-filtered by that resource.
@@ -78,16 +78,24 @@ it("a hall-bound reader (moderator here) sees 「本殿」 with the total, and t
   expect(auditApi.stats).toHaveBeenCalledWith();
 });
 
-it("the global admin (ADMIN, no hall) sees 「全部殿」; a hall-bound ADMIN does not", async () => {
-  mockUser = { id: 3, username: "root", role: "ADMIN", permissions: [] };
+it("SYSTEM_ADMIN sees 「全部殿」; a hall-less ADMIN (own civilization) 「本文明各殿」; a hall-bound ADMIN 「本殿」", async () => {
+  const count = { count: "12,408" };
+  mockUser = { id: 3, username: "sysadmin", role: "SYSTEM_ADMIN", permissions: [] };
   mockTenantCode = null;
-  const { unmount } = renderRoute();
-  expect(await screen.findByTestId("stats-scope")).toHaveTextContent(tZh("audit.stats.scope_all", { count: "12,408" }));
-  unmount();
+  let view = renderRoute();
+  expect(await screen.findByTestId("stats-scope")).toHaveTextContent(tZh("audit.stats.scope_all", count));
+  expect(screen.getByTestId("stats-scope")).not.toHaveTextContent(tZh("audit.stats.scope_civilization", count));
+  view.unmount();
+
+  mockUser = { id: 4, username: "root", role: "ADMIN", permissions: [] };
+  view = renderRoute();
+  expect(await screen.findByTestId("stats-scope")).toHaveTextContent(tZh("audit.stats.scope_civilization", count));
+  expect(screen.getByTestId("stats-scope")).not.toHaveTextContent(tZh("audit.stats.scope_all", count));
+  view.unmount();
 
   mockTenantCode = "CN_DIYU";
   renderRoute();
-  expect(await screen.findByTestId("stats-scope")).toHaveTextContent(tZh("audit.stats.scope_hall", { count: "12,408" }));
+  expect(await screen.findByTestId("stats-scope")).toHaveTextContent(tZh("audit.stats.scope_hall", count));
 });
 
 it("action bars run most → fewest; zero-count actions draw no bar and are counted in zero_actions", async () => {

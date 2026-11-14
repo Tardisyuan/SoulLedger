@@ -299,17 +299,27 @@ describe("AuditPage request parameters", () => {
     await waitFor(() => expect(lastParams()).toMatchObject({ resource: "tenant", tenant: "EG_DUAT" }));
   });
 
-  it("a global admin picks one hall and the list is asked for that hall only", async () => {
+  it("a hall-less admin picks one hall and the list is asked for that hall only", async () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
     expect(lastParams().tenant).toBeUndefined();
 
     const select = await screen.findByRole("combobox", { name: "audit.filter_hall" });
-    // Options are the halls the admin can see, named by realm, plus "all".
-    expect(within(select).getByText("audit.all_halls")).toBeInTheDocument();
+    // Options are the halls the admin can see, named by realm, plus "all". 分殿 1A:无殿 ADMIN 只管本文明,
+    // 「不限」读「本文明各殿」,不是「全部殿」。
+    expect(within(select).getByText("audit.civilization_halls")).toBeInTheDocument();
+    expect(within(select).queryByText("audit.all_halls")).toBeNull();
     pickChip("audit.filter_hall", "plaque.realm.eg");
 
     await waitFor(() => expect(lastParams().tenant).toBe("EG_DUAT"));
+  });
+
+  it("the system administrator's 「不限」 reads 「全部殿」, not 「本文明各殿」", async () => {
+    mockRole = "SYSTEM_ADMIN";
+    renderPage();
+    const select = await screen.findByRole("combobox", { name: "audit.filter_hall" });
+    expect(within(select).getByText("audit.all_halls")).toBeInTheDocument();
+    expect(within(select).queryByText("audit.civilization_halls")).toBeNull();
   });
 
   it("the hall filter is cleared by 'clear filters'", async () => {

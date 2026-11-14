@@ -13,6 +13,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { showToast } from "@/src/components/ui/Toast";
+import { isAdminRole } from "@soulledger/core/api/perm";
 
 /**
  * 「邀请官员」(第五十四批 V-1):邮箱 + 角色(官员角色,不含灵魂与全局管理员)+ 选填的用户名与显示名。
@@ -39,7 +40,7 @@ export function OfficerInviteDialog({ isOpen, onClose }: { isOpen: boolean; onCl
   const rolesQuery = useRoles({ enabled: isOpen });
   const tenantsQuery = useTenantNames({ enabled: isOpen });
   const roleOptions = (rolesQuery.data ?? [])
-    .filter((r) => r.name !== "SOUL" && r.name !== "ADMIN")
+    .filter((r) => r.name !== "SOUL" && !isAdminRole(r.name))
     .map((r) => ({ value: r.name, label: r.is_builtin ? t(`users.roles.${r.name}`) : r.display_name || r.name }));
   const tenantChoices = tenantsQuery.data ?? [];
   const needsTenant = tenantChoices.length > 1;

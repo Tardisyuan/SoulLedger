@@ -18,11 +18,12 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { auditResourceLabel } from "@/src/components/audit/auditLabels";
+import { isAdminRole, isSystemAdminRole } from "@soulledger/core/domain/roles";
 
 /**
  * /audit/stats(第三十七批 W-9b)。单独一个页签，不放在列表上方:列表一筛选，上面的数字却不动，
  * 会被当成筛选结果。`GET /audit-logs/stats/` 不收参数，范围与列表一样按殿划界 ——
- * 只有全局管理员(ADMIN 且不属于任何殿)数的是全部殿。
+ * 无殿的管理员数的是不止一殿:系统管理员(SYSTEM_ADMIN)是全部殿,无殿 ADMIN 是本文明各殿(分殿 1A)。
  */
 export default function AuditStatsPage() {
   const { t, locale } = useI18n();
@@ -30,7 +31,8 @@ export default function AuditStatsPage() {
   const { hasPermission, permissionsReady } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
   const { user, tenantCode } = useTenant();
-  const isGlobalAdmin = user?.role === "ADMIN" && tenantCode === null;
+  const isGlobalAdmin = isAdminRole(user?.role) && tenantCode === null;
+  const allScope = isSystemAdminRole(user?.role) ? "audit.stats.scope_all" : "audit.stats.scope_civilization";
 
   const { data, isPending, isError, error: listError, refetch } = useQuery({
     queryKey: ["audit-stats"],
@@ -86,7 +88,7 @@ export default function AuditStatsPage() {
     body = (
       <div className="max-w-3xl">
         <p data-testid="stats-scope" className="text-md font-semibold text-[oklch(var(--color-ink))]">
-          {t(isGlobalAdmin ? "audit.stats.scope_all" : "audit.stats.scope_hall", { count: number(data.total_logs) })}
+          {t(isGlobalAdmin ? allScope : "audit.stats.scope_hall", { count: number(data.total_logs) })}
         </p>
         <p className="mt-1 text-xs text-[oklch(var(--color-ink-muted))]">{t("audit.stats.scope_note")}</p>
 

@@ -13,6 +13,7 @@
  */
 import { authApi, type DefaultView } from "@soulledger/core/api";
 import { landingFor } from "@/src/lib/doors";
+import { isAdminRole } from "@soulledger/core/api/perm";
 
 export type { DefaultView };
 
@@ -80,7 +81,7 @@ export type ViewUser = { role?: string; permissions?: string[] } | null | undefi
  * no judgment access — keeps /dashboard rather than being sent to a 403.
  */
 export function defaultViewFor(user: ViewUser): DefaultView {
-  if (!user || user.role === "ADMIN") return "admin";
+  if (!user || isAdminRole(user.role)) return "admin";
   return user.permissions?.includes("judgment.read") ? "operator" : "admin";
 }
 
@@ -92,7 +93,7 @@ export function routeForView(view: DefaultView | null, user?: ViewUser): string 
   const own = landingFor(user?.role);
   if (own) return own;
   const chosen = view ?? defaultViewFor(user);
-  return chosen === "admin" && user?.role === "ADMIN" ? ADMIN_LEDGER : ROUTES[chosen];
+  return chosen === "admin" && isAdminRole(user?.role) ? ADMIN_LEDGER : ROUTES[chosen];
 }
 
 /**

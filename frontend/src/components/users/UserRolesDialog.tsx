@@ -9,6 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
+import { SYSTEM_ADMIN_ROLE_NAME, isAdminRole } from "@soulledger/core/api/perm";
 
 /**
  * 设置一个人的主角色与兼任角色。权限是它们的并集,并集在服务端算
@@ -36,14 +37,15 @@ export function UserRolesDialog({ user, onClose }: { user: User | null; onClose:
   const rolesQuery = useRoles({ enabled: isOpen });
   const labelOf = (name: string, displayName?: string, builtin?: boolean) =>
     builtin ? t(`users.roles.${name}`) : displayName || name;
-  const roles = (rolesQuery.data ?? []).filter((r) => r.name !== "SOUL");
+  // SYSTEM_ADMIN 由系统建,不在这里分配;正是系统管理员本人时留着,免得保存时悄悄换掉。
+  const roles = (rolesQuery.data ?? []).filter((r) => r.name !== "SOUL" && (r.name !== SYSTEM_ADMIN_ROLE_NAME || r.name === primary));
   // While the table loads, the current primary stays the only option, so a save never changes it silently.
   const primaryOptions =
     roles.length > 0
       ? roles.map((r) => ({ value: r.name, label: labelOf(r.name, r.display_name, r.is_builtin) }))
       : [{ value: primary, label: primary }];
-  const extraCandidates = roles.filter((r) => r.name !== "ADMIN" && r.name !== primary);
-  const adminLocked = primary === "ADMIN";
+  const extraCandidates = roles.filter((r) => !isAdminRole(r.name) && r.name !== primary);
+  const adminLocked = isAdminRole(primary);
 
   const toggle = (name: string, on: boolean) =>
     setExtras((cur) => (on ? [...cur.filter((r) => r !== name), name] : cur.filter((r) => r !== name)));

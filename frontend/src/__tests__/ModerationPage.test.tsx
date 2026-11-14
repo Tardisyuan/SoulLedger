@@ -140,6 +140,20 @@ describe("page header", () => {
     expect(segment("reports")).toHaveAttribute("aria-checked", "true");
   });
 
+  // 分殿 1A:无殿 ADMIN 只管本文明,系统管理员才是全部文明。
+  it("a hall-less ADMIN's scope reads 「本文明各殿」; the system administrator's 「全部文明」", () => {
+    mockUser = { id: 1, username: "g", role: "ADMIN", permissions: [], tenant: null };
+    const { unmount } = renderPage();
+    expect(screen.getByText(tZh("social_moderation.scope_civilization"))).toBeInTheDocument();
+    expect(screen.queryByText(tZh("social_moderation.scope_all"))).toBeNull();
+    unmount();
+
+    mockUser = { id: 9, username: "sysadmin", role: "SYSTEM_ADMIN", permissions: [], tenant: null };
+    renderPage();
+    expect(screen.getByText(tZh("social_moderation.scope_all"))).toBeInTheDocument();
+    expect(screen.queryByText(tZh("social_moderation.scope_civilization"))).toBeNull();
+  });
+
   // review-2026-11-01 Web 7:分段进地址栏;计数读屏也读得到。
   it("keeps the segment in ?segment= and opens on it; the count is in the button's name", async () => {
     asRole("social.moderate");

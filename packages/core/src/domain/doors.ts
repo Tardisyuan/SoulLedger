@@ -60,6 +60,7 @@ export const DOOR_ICON: Readonly<Record<DoorNavKey, readonly string[]>> = {
 };
 
 export const ROLE_DOORS: Readonly<Record<string, readonly DoorId[]>> = {
+  SYSTEM_ADMIN: ["desk", "register", "statutes", "office", "mortal"],
   ADMIN: ["desk", "register", "statutes", "office", "mortal"],
   JUDGE: ["desk", "register", "statutes"],
   GUARDIAN: ["register"],

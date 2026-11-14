@@ -23,6 +23,7 @@ import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 import { APP_VERSION } from "@/src/lib/appVersion";
 import { cn } from "@/lib/utils";
+import { isAdminRole } from "@soulledger/core/api/perm";
 
 /**
  * 欢迎页(A9 §三,Design 2026-10-03)。问候并入身份带(题字「晚上好，崔判官」,右栏日期);
@@ -155,7 +156,7 @@ function NextPanel({
   const { t } = useI18n();
   const { data: menus = [] } = useSidebarMenus();
   const paths = useMemo(() => flattenPaths(menus), [menus]);
-  const admin = user?.role === "ADMIN";
+  const admin = isAdminRole(user?.role);
   const primary = admin
     ? { href: "/dashboard", label: t("welcome.next_dashboard") }
     : {

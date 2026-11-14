@@ -2,12 +2,13 @@
 
 import { useTenant } from "@/src/contexts/TenantContext";
 import { READ_ONLY_CODENAME, useImpersonation } from "@/src/components/impersonation/useImpersonation";
+import { isAdminRole } from "@soulledger/core/domain/roles";
 
 type ViewingOpt = { evenWhileViewing?: boolean };
 
 /**
  * 后端 `perm/checker.py` 的 `GLOBAL_ONLY_CODENAMES` 镜像:全站共用的配置(菜单是所有殿共用的一棵树),
- * 只有无殿 ADMIN 持有,任何角色都授不到 —— 绑殿 ADMIN 也不行。此前前端对 ADMIN 一律放行,
+ * 只有无殿 ADMIN / SYSTEM_ADMIN 持有,任何角色都授不到 —— 绑殿 ADMIN 也不行。此前前端对 ADMIN 一律放行,
  * 绑殿 ADMIN 看得到菜单的增改删,点下去 403(P-07)。后端加一个码,这里跟着加。
  */
 export const GLOBAL_ONLY_CODENAMES: ReadonlySet<string> = new Set(["menu.manage"]);
@@ -30,7 +31,8 @@ export function usePermissions() {
   // administrator" had two definitions inside a single 34-line file. They could
   // not disagree, which is exactly why nothing would have reported it if they
   // started to.
-  const roleIsAdmin = user?.role === "ADMIN";
+  // SYSTEM_ADMIN 过每一道 ADMIN 的门(分殿 1A)。
+  const roleIsAdmin = isAdminRole(user?.role);
 
   const hasPermission = (permission: string, opts?: ViewingOpt): boolean => {
     if (viewing && !opts?.evenWhileViewing && !READ_ONLY_CODENAME.test(permission)) return false;
@@ -57,8 +59,10 @@ export function usePermissions() {
     // passing the string "ADMIN" to a codename check and relying on the
     // short-circuit above. See RequireAdmin. 代看 / 进殿查看时为假(后端 is_tenant_exempt 同样为假)。
     isAdmin: roleIsAdmin && !viewing,
-    // 无殿 ADMIN = 后端 `is_tenant_exempt`:任一殿都算「本殿」。代看 / 进殿查看时为假 —— 那时看的是别的殿,
+    // 无殿 ADMIN / SYSTEM_ADMIN:任一殿都算「本殿」。代看 / 进殿查看时为假 —— 那时看的是别的殿,
     // 自己不是任何一边(移交详情把自己当成目标 / 原属殿就是这里少了这一条)。所有「无殿 ADMIN」判断都读它。
+    // 分殿 1A:后端 `is_tenant_exempt` 只认 SYSTEM_ADMIN,无殿 ADMIN 的各处由后端逐一定性(只管本文明的殿,列表已由服务端收窄);
+    // 这里仍放行无殿 ADMIN,被后端改成只给 SYSTEM_ADMIN 的那几处会答 403。
     isTenantExempt: roleIsAdmin && !viewing && !user?.tenant,
     permissions: user?.permissions ?? [],
     /** 刷新后权限还没从服务端回来(见 TenantContext)。`hasPermission` 不看它;画拒绝页之前看。 */

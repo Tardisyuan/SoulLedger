@@ -24,7 +24,9 @@ import type { OfficerAssistScreen } from "../api/officer-assist";
  */
 type Page = "judgment" | "workflow" | "dispatch" | "scheduler" | "soul-inbox" | "sentence-requests" | "other";
 type Pair = readonly [string, string];
-type Table = Record<BuiltinUserRole, Partial<Record<Page, Pair>> & { other: Pair }>;
+/** SYSTEM_ADMIN 问的和 ADMIN 一样,没有自己的一行(分殿 1A)。 */
+type TableRole = Exclude<BuiltinUserRole, "SYSTEM_ADMIN">;
+type Table = Record<TableRole, Partial<Record<Page, Pair>> & { other: Pair }>;
 
 const VIEWER_ZH: Pair = ["这一页是做什么的？", "这些状态是什么意思？"];
 const VIEWER_EN: Pair = ["What is this page for?", "What do these states mean?"];
@@ -96,7 +98,8 @@ const PAGES: readonly Page[] = ["judgment", "workflow", "dispatch", "scheduler",
 
 export function officerAssistSuggestions(role: string, screen: OfficerAssistScreen, locale: Locale): readonly string[] {
   const table = locale === "zh-Hans" ? ZH : EN;
-  const row = table[(role in table ? role : "VIEWER") as BuiltinUserRole];
+  const key = role === "SYSTEM_ADMIN" ? "ADMIN" : role;
+  const row = table[(key in table ? key : "VIEWER") as TableRole];
   const page = (PAGES as readonly string[]).includes(screen) ? (screen as Page) : "other";
   return row[page] ?? row.other;
 }
