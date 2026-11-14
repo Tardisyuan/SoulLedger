@@ -71,6 +71,7 @@ SITES = [
     ('apps/ledger/views.py', 'Tenant.objects', 1, 'FANOUT', 'lists active halls with no souls yet (ADMIN only); narrowed to the request hall when there is one, same scope as soul_qs'),
     ('apps/actors/management/commands/consolidate_eu_pantheon.py', 'Actor.all_objects', 1, 'CLI', 'operator cleanup command, filtered by the two tenant codes it merges'),
     ('apps/actors/management/commands/fix_actor_civilization.py', 'Actor.all_objects', 1, 'CLI', 'operator repair command; probes for a soft-deleted twin by name+civilization'),
+    ('apps/judgment/management/commands/count_open_case_overlaps.py', 'Judgment.all_objects', 1, 'CLI', 'operator report across every hall (the one-open-case rule is not per hall): prints soul ids and counts only, writes nothing'),
     ('apps/actors/mythology/seeding.py', 'Realm.all_objects', 3, 'CLI', 'mythology seed command: idempotent upsert by civilization/code; tenant passed explicitly on create'),
     ('apps/actors/mythology/seeding.py', 'Actor.all_objects', 1, 'CLI', 'mythology seed command: idempotent upsert by civilization/code; tenant passed explicitly on create'),
     ('apps/actors/mythology/seeding.py', 'Tenant.objects', 2, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),

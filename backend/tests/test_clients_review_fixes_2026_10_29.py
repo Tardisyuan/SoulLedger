@@ -50,7 +50,8 @@ def test_a_timely_case_is_not_held_and_the_refusal_names_each_rule(cn_tenant, ad
     data = _read(admin_user, case)
     assert (data["wangsi_held"], data["conclude_refusal"]) == (False, "")
 
-    Judgment.all_objects.filter(pk=case.pk).update(duat_stage=DuatStage.NAMELESS)
+    # duat_stage 只在埃及的案子上(约束 judgment_duat_stage_only_egyptian):这件地府的案子改盖埃及。
+    Judgment.all_objects.filter(pk=case.pk).update(duat_stage=DuatStage.NAMELESS, civilization="EGYPTIAN")
     assert _read(admin_user, case)["conclude_refusal"] == "duat_unfinished"
     Judgment.all_objects.filter(pk=case.pk).update(
         duat_stage=DuatStage.EMBALMING, held_until=date.today() + timedelta(days=30))

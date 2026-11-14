@@ -109,6 +109,14 @@ class Reincarnation(AuditUserFields, models.Model):
         related_name='reincarnations',
         null=True,
     )
+    #: 来源殿与目标殿(be-domain 1.6,2026-11-14):这一世在哪个殿结束、下一世生在哪个殿。同殿转世两者相等。
+    #: 只由 `ReincarnationService.complete_rebirth` 写(`tenant` 照旧是来源殿,转世记录留在那里)。
+    #: 空 = 回填时推不出来(`reincarnation/0017`:行没有殿,或事件里记的目标殿已不存在)。
+    #: 上一世的身份快照(`ended_life`)本轮不加:哪些键能带、目标殿能不能看,等用户定(架构审查决定 5)。
+    from_tenant = models.ForeignKey("tenants.Tenant", on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="+")
+    to_tenant = models.ForeignKey("tenants.Tenant", on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="+")
 
     class Meta:
         ordering = ["-reincarnated_at"]
@@ -125,6 +133,9 @@ class Reincarnation(AuditUserFields, models.Model):
                 condition=models.Q(cycle_count__gte=1),
                 name="reincarnation_cycle_count_at_least_one",
             ),
+            # 一世一条转世记录(be-domain 3.7)。`cycle_count` 在灵魂行锁下取 `life_index + 1`;
+            # 加锁之前两次并发转世拿到过同一个号,`reincarnation/0017` 把那样的灵魂按时间重新编号。
+            models.UniqueConstraint(fields=["soul", "cycle_count"], name="reincarnation_one_per_soul_cycle"),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
