@@ -106,7 +106,8 @@ function CityGodCasesContent() {
         </>
       }
       filters={
-        <div className="flex flex-wrap items-center gap-3">
+        /* 不换行(同 rebirth-applications):定高 64 的筛选栏里折下去的一排会被裁掉;放不下就在栏里横滚。 */
+        <div className="flex shrink-0 items-center gap-3 [&>*]:shrink-0">
           <FilterChipSelect
             label={t("cityGods.title")}
             value={cityGod}

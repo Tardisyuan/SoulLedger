@@ -12,6 +12,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Spinner } from "@/src/components/ui/Spinner";
 import { RUN_STATUSES, TaskRunItem } from "./TaskRunsDrawer";
+import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 
 /** What the tab opens on (user decision 2026-09-20): the runs someone has to look at. */
 export const DEFAULT_HISTORY_STATUSES: TaskRunStatus[] = ["FAILURE", "LOST"];
@@ -44,6 +45,7 @@ function toIso(local: string): string | undefined {
  */
 export function RunHistoryPanel({ jobs, jobName, showTenant, realtimeConnected }: Props) {
   const { t, formatDateTime } = useI18n();
+  const statusRowRef = useOverflowEnd<HTMLDivElement>();
   const [statuses, setStatuses] = useState<TaskRunStatus[]>(DEFAULT_HISTORY_STATUSES);
   const [taskName, setTaskName] = useState("");
   const [tenant, setTenant] = useState("");
@@ -116,7 +118,13 @@ export function RunHistoryPanel({ jobs, jobName, showTenant, realtimeConnected }
 
   return (
     <div className="space-y-4" data-testid="run-history">
-      <div role="group" aria-label={t("scheduler.runs.status_filter")} className="flex flex-wrap gap-2">
+      {/* 七个状态在 393 折成两排:一行横滑,右缘有没露出来的才渐隐;py-1 留给焦点框。 */}
+      <div
+        ref={statusRowRef}
+        role="group"
+        aria-label={t("scheduler.runs.status_filter")}
+        className="flex gap-2 overflow-x-auto py-1 [scrollbar-width:none] [&>*]:shrink-0"
+      >
         {RUN_STATUSES.map((s) => (
           <FilterChipToggle key={s} pressed={statuses.includes(s)} onPressedChange={() => toggleStatus(s)}>
             {t(`scheduler.status.${s}`)}
