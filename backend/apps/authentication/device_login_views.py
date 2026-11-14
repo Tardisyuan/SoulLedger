@@ -30,7 +30,7 @@ from .serializers import (
     MfaRequiredResponseSerializer,
     OfficerTokenObtainPairSerializer,
 )
-from .views import LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, OfficerLoginView, _get_client_ip
+from .views import LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, OfficerLoginView, _count, _get_client_ip
 
 
 class OfficerDeviceLoginEnableRequestSerializer(serializers.Serializer):
@@ -119,7 +119,7 @@ class DeviceLoginEnableView(APIView):
             return problem(status.HTTP_429_TOO_MANY_REQUESTS, "login_locked", "密码尝试过于频繁,请稍后再试",
                            retry_after=retry_after, headers={"Retry-After": str(retry_after)})
         if not user.check_password(body.validated_data["password"]):
-            cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            _count(cache, rate_key, LOGIN_WINDOW_SECONDS)  # atomic, as change-password (views.py)
             cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
             return problem(status.HTTP_400_BAD_REQUEST, "wrong_password", "当前密码不对。",
                            remaining_attempts=max(0, LOGIN_MAX_ATTEMPTS - attempts - 1))

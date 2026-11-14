@@ -285,7 +285,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (soulCode: string, typed: string): Promise<MfaChallenge | null> => {
-      const sent = deviceTokenFor(soulCode);
+      // An email sign-in (2026-11-15) has no code yet: 「30 天不再询问」 is kept per code, so try the remembered
+      // account's. If the email belongs to someone else the server just ignores it and asks; nothing is forgotten,
+      // since `forgetDevice` below is keyed by what was typed.
+      const sent = deviceTokenFor(soulCode) ?? (soulCode.includes("@") ? deviceTokenFor(rememberedAccount()?.code ?? "") : undefined);
       const response = await soulApi.login(soulCode, typed, sent);
       // Held before the profile lands: the question on the home page reads it as the page appears.
       password.current = typed;
