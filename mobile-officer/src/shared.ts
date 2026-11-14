@@ -65,6 +65,14 @@ export {
 } from "../../mobile/src/platform";
 export { DossierSeal as SealArt, MeritMark } from "../../mobile/src/dossierMarks";
 export {
+  CredentialStoreError,
+  deviceCredential,
+  readBiometry,
+  resetBiometryCache,
+  type Biometry,
+  type CredentialRead,
+} from "../../mobile/src/deviceCredential";
+export {
   civKeyOf,
   motion,
   radius,

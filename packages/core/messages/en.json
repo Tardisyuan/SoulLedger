@@ -8148,6 +8148,27 @@
     }
   },
   "officer_app": {
+    "bio_login": {
+      "row": "Sign in with {{bio}}",
+      "row_sub": "This phone only. While on, coming back after 5 minutes away asks for your {{bio}} first.",
+      "row_unavailable": "No face or fingerprint set up on this phone",
+      "enable_body": "Enter your current password, then confirm your {{bio}}.",
+      "enable_ok": "Turn on",
+      "wrong_password": "Wrong current password",
+      "toggle_failed": "Couldn't turn it on. Try again later.",
+      "button": "Sign in with {{bio}}",
+      "failed": "Your {{bio}} wasn't recognised. Enter your password.",
+      "locked": "Too many {{bio}} tries; the phone has locked it for now. Enter your password, or try again later.",
+      "expired": "Sign-in with {{bio}} on this phone has ended. Enter your password.",
+      "ask_title": "Use {{bio}} next time?",
+      "ask_body": "This phone only: no password when you open the app; approving or rejecting still asks. Any {{bio}} saved on the phone can sign in, so skip this on a shared phone.",
+      "ask_note": "You can turn it off later under Me.",
+      "ask_later": "Not now",
+      "prompt_login": "Sign in without a password.",
+      "prompt_unlock": "Unlock the app.",
+      "lock_title": "Locked",
+      "use_password": "Enter password"
+    },
     "biometric": {
       "setting": "Check {{bio}} before approving or rejecting",
       "hint": "Someone else holding this phone still cannot decide anything.",

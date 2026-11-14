@@ -15,7 +15,9 @@
 import { authApi, isMfaRequired, mfaApi, type LoginResponse, type LoginUser } from "@soulledger/core/api/auth";
 import { onMfaSetupRequired, onPasswordChangeRequired } from "@soulledger/core/api/client";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+
+import { officerDevice, spendAutoPrompt } from "./deviceLogin";
 
 import { DRAFTS_KEY, clearDrafts, flushDraft } from "./drafts";
 import { OUTBOX_KEY, clearOutbox, outboxEntries } from "./outbox";
@@ -24,7 +26,7 @@ import { USER_KEY, dropUnowned } from "./owner";
 import { clearReadCache } from "./readCache";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { hallChoiceOf } from "./rules";
-import { clearVoiceNumbers, onForeground, setUnauthorizedHandler } from "./shared";
+import { clearVoiceNumbers, onForeground, readBiometry, setUnauthorizedHandler } from "./shared";
 
 export { USER_KEY };
 
@@ -47,6 +49,11 @@ export type SignInResult =
 export interface Session {
   state: SessionState;
   signIn: (username: string, password: string, tenantCode?: string) => Promise<SignInResult>;
+  /** 指纹登录: the credential the phone handed over after the fingerprint, in place of the password. `hall` never comes back. */
+  signInWithCredential: (username: string, credential: string) => Promise<SignInResult>;
+  /** The password typed at this sign-in, in memory only, for 「下次用指纹登录？」 (`bioLogin.tsx`); null once dropped. */
+  heldPassword: () => string | null;
+  dropPassword: () => void;
   verifyMfa: (input: { pendingToken: string; code?: string; recoveryCode?: string; remember?: boolean }) => Promise<void>;
   /** `keepUnsent`: the outbox and the drafts stay, as when the server ends the session (a reset password did). */
   signOut: (options?: { keepUnsent?: boolean }) => void;
@@ -59,6 +66,15 @@ export interface Session {
 }
 
 export const SessionContext = createContext<Session | null>(null);
+
+// The stored session was resumed at start (no sign-in page passed): the app lock asks first (appLock.tsx).
+let restored = false;
+/** True once, for the session resumed at start. */
+export function takeRestoredSession(): boolean {
+  const was = restored;
+  restored = false;
+  return was;
+}
 
 function readStoredUser(): LoginUser | null {
   try {
@@ -118,6 +134,7 @@ function endedByServer(): void {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>(() => {
     const user = getRefreshToken() ? readStoredUser() : null;
+    restored = !!user;
     if (user) return { status: "signedIn", user };
     // No session to resume (the refresh token is gone or unreadable): the same as a session the server ended
     // (below). Idempotent, so a second initializer run (StrictMode) is harmless.
@@ -125,7 +142,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return { status: "signedOut" };
   });
 
+  const held = useRef<string | null>(null);
+
   const land = useCallback((response: LoginResponse) => {
+    // The fingerprint credential is the remembered officer's: another officer signing in here takes it off this phone.
+    if (officerDevice.bioEnabled() && readLastLogin()?.username !== response.user.username) officerDevice.clearCredential();
+    restored = false;
+    spendAutoPrompt();
     setAccessToken(response.access);
     setRefreshToken(response.refresh);
     platform().persistent.set(USER_KEY, JSON.stringify(response.user));
@@ -192,9 +215,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [signedIn, refreshProfile]);
 
   const signIn = useCallback(
-    async (username: string, password: string, tenantCode?: string): Promise<SignInResult> => {
+    async (username: string, typed: string, tenantCode?: string): Promise<SignInResult> => {
       try {
-        const { data } = await authApi.officerLogin({ username, password, ...(tenantCode ? { tenant_code: tenantCode } : {}) });
+        const { data } = await authApi.officerLogin({ username, password: typed, ...(tenantCode ? { tenant_code: tenantCode } : {}) });
+        held.current = typed;
+        // For 「下次用指纹登录？」 (bioLogin.tsx): known on the first frame after landing.
+        await readBiometry();
         if (isMfaRequired(data)) return { kind: "mfa", pendingToken: data.pending_token };
         land(data);
         return { kind: "done" };
@@ -203,6 +229,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (choice && !tenantCode) return { kind: "hall", halls: choice.halls };
         throw error;
       }
+    },
+    [land]
+  );
+
+  const signInWithCredential = useCallback(
+    async (username: string, credential: string): Promise<SignInResult> => {
+      held.current = null;
+      const { data } = await authApi.officerDeviceLogin({ username, credential });
+      if (isMfaRequired(data)) return { kind: "mfa", pendingToken: data.pending_token };
+      land(data);
+      return { kind: "done" };
     },
     [land]
   );
@@ -226,6 +263,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    */
   const signOut = useCallback((options?: { keepUnsent?: boolean }) => {
     const refresh = getRefreshToken();
+    held.current = null;
     setState({ status: "signedOut" });
     if (options?.keepUnsent) {
       // The password reset ended every session, this one included: kept for the same officer, as after a 401
@@ -267,6 +305,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const setPasswordChangeRequired = useCallback((required: boolean) => {
     setState((prev) => {
+      // The password typed at this sign-in is about to be replaced: 「下次用指纹登录？」 must not offer it.
+      if (required) held.current = null;
       if (prev.status !== "signedIn" || !!prev.user.password_change_required === required) return prev;
       const user = { ...prev.user, password_change_required: required };
       platform().persistent.set(USER_KEY, JSON.stringify(user));
@@ -304,8 +344,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Session>(
-    () => ({ state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired, setDisplayName }),
-    [state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired, setDisplayName]
+    () => ({
+      state,
+      signIn,
+      signInWithCredential,
+      heldPassword: () => held.current,
+      dropPassword: () => void (held.current = null),
+      verifyMfa,
+      signOut,
+      setMfaEnabled,
+      setPasswordChangeRequired,
+      setDisplayName,
+    }),
+    [state, signIn, signInWithCredential, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired, setDisplayName]
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

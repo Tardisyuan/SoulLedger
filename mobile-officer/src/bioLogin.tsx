@@ -1,0 +1,207 @@
+/**
+ * 指纹登录, the signed-in half (2026-11-15 便捷度研究 O5; the soul app's `screens/bio.tsx`): the switch on 我的 (with
+ * the current password before it turns on), and 「下次用指纹登录？」, asked once per officer after a password sign-in
+ * while the typed password is still in memory. The store is `deviceLogin.ts`; the sign-in page's half is in
+ * `screens/login.tsx`; the foreground lock is `appLock.tsx`.
+ */
+import { platform } from "@soulledger/core/platform";
+import { useEffect, useState } from "react";
+import { View } from "react-native";
+
+import { BIO_ASKED_PREFIX, officerDevice } from "./deviceLogin";
+import { Row } from "./kit";
+import { useSession } from "./session";
+import {
+  Button,
+  CredentialStoreError,
+  Input,
+  Notice,
+  SectionLabel,
+  Sheet,
+  Txt,
+  readBiometry,
+  space,
+  useI18n,
+  useTheme,
+  useToast,
+  type Biometry,
+} from "./shared";
+
+/**
+ * What the phone has enrolled and `{{bio}}` (lower-case inside an English sentence). `read`: ask the phone when the
+ * screen appears; without it, only what is already known -- this process's last read (a password sign-in reads it,
+ * session.tsx) or, while 指纹登录 is on, what the phone said when it was turned on. No late state update then, which
+ * is what the sign-in page, the lock and the question want.
+ */
+export function useBio(read = true): { ready: boolean; enrolled: boolean; word: string } {
+  const { t, locale } = useI18n();
+  const [bio, setBio] = useState<Biometry | null>(officerDevice.knownBiometry);
+  useEffect(() => {
+    if (!read) return;
+    let live = true;
+    void readBiometry().then((b) => live && setBio(b));
+    return () => {
+      live = false;
+    };
+  }, [read]);
+  const known = bio ?? { enrolled: false, wordKey: "soul_app.bio.finger" as const };
+  const word = t(known.wordKey);
+  return { ready: bio !== null, enrolled: known.enrolled, word: locale === "en" ? word.toLowerCase() : word };
+}
+
+/** Why 「开启」 was refused, as a key. */
+export function enableFailureKey(error: unknown): string {
+  const response = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
+  if (!response) return "officer_app.login.reasons.network";
+  if (response.status === 429) return "officer_app.login.reasons.locked";
+  if (response.data?.code === "wrong_password") return "officer_app.bio_login.wrong_password";
+  return "officer_app.login.reasons.other";
+}
+
+/** 我的 › 指纹登录: a switch for this phone only. On asks for the current password, then the system; off asks nothing. */
+export function BioLoginBlock() {
+  const { t } = useI18n();
+  const toast = useToast();
+  const bio = useBio();
+  const [on, setOn] = useState(officerDevice.bioEnabled);
+  const [asking, setAsking] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const unavailable = !on && bio.ready && !bio.enrolled;
+
+  const close = () => {
+    setAsking(false);
+    setPassword("");
+    setError(null);
+  };
+  const press = async () => {
+    if (busy || unavailable) return;
+    if (!on) return asking ? close() : setAsking(true);
+    setBusy(true);
+    await officerDevice.revokeCredential();
+    setOn(false);
+    setBusy(false);
+  };
+  const enable = async () => {
+    if (!password || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await officerDevice.enableWithPassword(password);
+      close();
+      setOn(true);
+    } catch (e) {
+      if (e instanceof CredentialStoreError) {
+        // Walked away from the system prompt (nothing to say), or the phone refused (say so).
+        close();
+        if (e.failure !== "cancelled") toast(t("officer_app.bio_login.toggle_failed"), "failure");
+      } else {
+        setError(t(enableFailureKey(e)));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const title = t("officer_app.bio_login.row", { bio: bio.word });
+  return (
+    <View style={{ gap: space[3] }}>
+      <SectionLabel>{title}</SectionLabel>
+      <View style={{ opacity: unavailable ? 0.45 : 1 }}>
+        <Row
+          testID="me-bio-login"
+          minHeight={56}
+          title={title}
+          lines={[unavailable ? t("officer_app.bio_login.row_unavailable") : t("officer_app.bio_login.row_sub", { bio: bio.word })]}
+          onPress={unavailable ? undefined : () => void press()}
+          right={<Txt variant="nav">{on ? "✓" : "○"}</Txt>}
+        />
+      </View>
+      {asking && !on ? (
+        <View testID="me-bio-enable" style={{ gap: space[3] }}>
+          <Txt variant="body" tone="muted">
+            {t("officer_app.bio_login.enable_body", { bio: bio.word })}
+          </Txt>
+          <Input
+            testID="me-bio-password"
+            label={t("officer_app.login.password")}
+            value={password}
+            onChangeText={setPassword}
+            editable={!busy}
+            secureTextEntry
+            textContentType="password"
+            autoComplete="current-password"
+            secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+            onSubmitEditing={() => void enable()}
+          />
+          {error ? (
+            <Notice tone="neg" testID="me-bio-error">
+              {error}
+            </Notice>
+          ) : null}
+          <Button testID="me-bio-enable-ok" title={t("officer_app.bio_login.enable_ok")} busy={busy} disabled={!password} onPress={() => void enable()} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+export const wasAsked = (username: string) => platform().persistent.get(BIO_ASKED_PREFIX + username) === "1";
+
+/**
+ * 「下次用指纹登录？」, once per officer on this phone: at the first page after a password sign-in, while the session
+ * still holds the password just typed -- that is what 「开启」 uses. Either answer drops the password.
+ */
+export function BioAsk({ username }: { username: string }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const toast = useToast();
+  const { heldPassword, dropPassword } = useSession();
+  // The password sign-in read the phone before landing (session.tsx), so this is known on the first frame.
+  const bio = useBio(false);
+  const [answered, setAnswered] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const due = !answered && heldPassword() !== null && bio.enrolled && !officerDevice.bioEnabled() && !wasAsked(username);
+  // A password that is not going to be used is dropped at once.
+  useEffect(() => {
+    if (!due) dropPassword();
+  }, [due, dropPassword]);
+
+  const finish = () => {
+    platform().persistent.set(BIO_ASKED_PREFIX + username, "1");
+    dropPassword();
+    setAnswered(true);
+  };
+  const turnOn = async () => {
+    const password = heldPassword();
+    if (busy) return;
+    if (!password) return finish();
+    setBusy(true);
+    try {
+      await officerDevice.enableWithPassword(password);
+    } catch (e) {
+      if (!(e instanceof CredentialStoreError)) toast(t(enableFailureKey(e)), "failure");
+      else if (e.failure !== "cancelled") toast(t("officer_app.bio_login.toggle_failed"), "failure");
+    }
+    setBusy(false);
+    finish();
+  };
+  return (
+    <Sheet open={due} onClose={finish} edge={theme.hair} closeLabel={t("officer_app.bio_login.ask_later")}>
+      <View testID="bio-ask" style={{ gap: space[4], padding: space[5] }}>
+        <Txt variant="title" accessibilityRole="header">
+          {t("officer_app.bio_login.ask_title", { bio: bio.word })}
+        </Txt>
+        <Txt variant="bodyLg">{t("officer_app.bio_login.ask_body", { bio: bio.word })}</Txt>
+        <Txt variant="body" tone="muted">
+          {t("officer_app.bio_login.ask_note")}
+        </Txt>
+        <View style={{ flexDirection: "row", gap: space[3] }}>
+          <Button testID="bio-ask-later" kind="secondary" title={t("officer_app.bio_login.ask_later")} onPress={finish} disabled={busy} style={{ flex: 1 }} />
+          <Button testID="bio-ask-ok" title={t("officer_app.bio_login.enable_ok")} onPress={() => void turnOn()} busy={busy} style={{ flex: 1 }} />
+        </View>
+      </View>
+    </Sheet>
+  );
+}

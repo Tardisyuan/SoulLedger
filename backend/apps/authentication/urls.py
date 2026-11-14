@@ -4,7 +4,7 @@ Auth URL routes.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import admin_session_views, impersonation_views, mfa_views, officer_reset_views, session_views
+from . import admin_session_views, device_login_views, impersonation_views, mfa_views, officer_reset_views, session_views
 from .views import (
     LoginLogViewSet,
     LoginView,
@@ -26,6 +26,10 @@ router.register(r"login-logs", LoginLogViewSet, basename="login-logs")
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("officer-login/", OfficerLoginView.as_view(), name="officer-login"),
+    # 官员 App 的指纹登录(2026-11-15 便捷度研究 O5)。见 device_login_views.py。
+    path("officer-device-login/", device_login_views.OfficerDeviceLoginView.as_view(), name="officer-device-login"),
+    path("device-login/enable/", device_login_views.DeviceLoginEnableView.as_view(), name="device-login-enable"),
+    path("device-login/revoke/", device_login_views.DeviceLoginRevokeView.as_view(), name="device-login-revoke"),
     path("refresh/", RefreshView.as_view(), name="token_refresh"),
     path("logout/", logout_view, name="logout"),
     path("profile/", profile_view, name="profile"),

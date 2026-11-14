@@ -6,6 +6,7 @@ import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { type ScrollView, View } from "react-native";
 
+import { BioLoginBlock } from "../bioLogin";
 import { canCheck, confirmWished, deviceCheck, setConfirmWished, useBioWord, type CheckResult } from "../deviceCheck";
 import { Row, Segmented } from "../kit";
 import { type ThemeChoice, sealReadbackWished, setSealReadbackWished, usePrefs } from "../prefs";
@@ -90,6 +91,8 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
         <Block label={t("profile.devices.title")}>
           <Row testID="me-devices" minHeight={56} title={t("profile.devices.title")} onPress={() => onOpen("devices")} right={<Txt variant="nav">›</Txt>} />
         </Block>
+
+        <BioLoginBlock />
 
         <Block label={t("officer_app.me.language")}>
           <Segmented

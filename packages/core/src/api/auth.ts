@@ -289,6 +289,19 @@ export const sessionsApi = {
 
 export const authApi = {
   officerLogin: (data: OfficerLoginRequest) => api.post<LoginResponse>("/auth/officer-login/", data),
+  /**
+   * Officer-app fingerprint sign-in (backend `device_login_views.py`): 「用户名 + 这部手机的凭据」 in place of the
+   * password. The answer is `officerLogin`'s (tokens, or `mfa_required` + `pending_token`). Refused 401 with
+   * `code` `device_login_revoked` (+ `reason`) or `device_login_invalid`; 429 `login_locked` as the password login.
+   */
+  officerDeviceLogin: (data: { username: string; credential: string }) =>
+    api.post<LoginResponse>("/auth/officer-device-login/", data),
+  /** Signed in. The current password; 201 `{credential}` is shown ONCE. A new credential every call: revoke the old one first. */
+  enableDeviceLogin: (password: string) =>
+    api.post<{ credential: string }>("/auth/device-login/enable/", { password }).then((r) => r.data.credential),
+  /** No sign-in needed (the credential is the proof). 204 whatever the credential's state. */
+  revokeDeviceLogin: (credential: string) =>
+    api.post("/auth/device-login/revoke/", { credential }).then(() => undefined),
   login: (usernameOrData: string | LoginRequest, password?: string) => {
     const data = typeof usernameOrData === "string"
       ? { username: usernameOrData, password: password! }

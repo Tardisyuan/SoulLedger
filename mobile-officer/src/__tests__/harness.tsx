@@ -29,6 +29,9 @@ export function sessionOf(user: LoginUser | null, over: Partial<Session> = {}): 
   return {
     state: user ? { status: "signedIn", user } : { status: "signedOut" },
     signIn: jest.fn(async () => ({ kind: "done" as const })),
+    signInWithCredential: jest.fn(async () => ({ kind: "done" as const })),
+    heldPassword: () => null,
+    dropPassword: jest.fn(),
     verifyMfa: jest.fn(async () => {}),
     signOut: jest.fn(),
     setMfaEnabled: jest.fn(),

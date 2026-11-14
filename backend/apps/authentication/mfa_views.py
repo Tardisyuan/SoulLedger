@@ -154,8 +154,13 @@ def verify_view(request):
     LoginLog.objects.create(user=user, username=user.username, status="SUCCESS", ip_address=ip_address, user_agent=user_agent)
     device = mfa.remember_device(user) if data.get("remember_device") else ""
     session = signin_sessions.start(
-        user, request, method="recovery" if data.get("recovery_code") else "password",
+        user, request,
+        method="recovery" if data.get("recovery_code") else "face" if pending.get("device_login") else "password",
         officer_app=bool(pending.get("officer_app")), trust_hash=mfa._hash_device(device) if device else "")
+    if pending.get("device_login"):
+        from .device_login import bind_pending
+
+        bind_pending(pending["device_login"], user, session)  # 指纹登录的第二步:凭据记到这次的会话上
     response = Response(issue_tokens(user, remember=bool(pending.get("remember")),
                                      officer_app=bool(pending.get("officer_app")), session=session))
     if device:
