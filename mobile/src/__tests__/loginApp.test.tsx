@@ -42,6 +42,15 @@ const cameraMod = Camera as unknown as {
   __state: { permission: { status: string; granted: boolean; canAskAgain: boolean }; last: { onBarcodeScanned: (r: { data: string }) => void; barcodeScannerSettings: unknown } | null };
 };
 
+/** 「从相册选」 (S4): the system picker is the OS's, not ours; `scanImage` is expo-camera's `scanFromURLAsync`. */
+const mockLaunch = jest.fn();
+jest.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: (...args: unknown[]) => mockLaunch(...args),
+  UIImagePickerPreferredAssetRepresentationMode: { Compatible: "compatible" },
+}));
+const scanImage = Camera.scanFromURLAsync as jest.Mock;
+const SLIP = "file:///photos/slip.jpg";
+
 const TOKENS = { access: "A", refresh: "R", soul_code: CODE, account: PROFILE.account };
 const PENDING = { mfa_required: true, pending_token: "pending-opaque-abc", soul_code: CODE, home_tenant: PROFILE.home_tenant };
 const HOME: Record<string, Reply> = {
@@ -69,6 +78,8 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   cameraMod.__state.permission = { status: "granted", granted: true, canAskAgain: true };
   cameraMod.__state.last = null;
+  mockLaunch.mockReset();
+  scanImage.mockClear();
 });
 
 const typeCode = (text: string) => fireEvent.changeText(screen.getByTestId("login-soul-code"), text);
@@ -296,6 +307,70 @@ describe("A · the scanner", () => {
     await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("Login"));
     expect(screen.getByTestId("login-soul-code").props.value).toBe("");
     open.mockRestore();
+  });
+});
+
+describe("S4 · 「从相册选」 on the scanner", () => {
+  async function openScanner() {
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-scan"));
+  }
+
+  it("a photo of the slip is read as QR and fills the number, ours picked out of several codes", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([{ type: "qr", data: "https://example.com/x" }, { type: "qr", data: `SL1:${CODE}` }]);
+    await openScanner();
+    await screen.findByTestId("scan");
+    expect(within(screen.getByTestId("scan-album")).getByText("从相册选")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("scan-album"));
+    await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("Login"));
+    expect(scanImage).toHaveBeenCalledWith(SLIP, ["qr"]);
+    expect(screen.getByTestId("login-soul-code").props.value).toBe(CODE);
+    expect(screen.getByTestId("login-scanned")).toHaveTextContent("✓ 已从二维码填入");
+  });
+
+  it("a picture with no code says so, not that the code is someone else's; the scanner stays", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([]);
+    await openScanner();
+    await screen.findByTestId("scan");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    expect(await screen.findByText("! 这张图里没有找到二维码")).toBeTruthy();
+    expect(screen.getByText("换一张拍得清楚些的交付单照片，或手动输入编号。")).toBeTruthy();
+    expect(screen.queryByText("! 这不是灵魂簿交付单上的码")).toBeNull();
+    expect(navigationRef.getCurrentRoute()?.name).toBe("ScanCode");
+  });
+
+  it("a code in the picture that is not ours is the same red bar as a live one", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([{ type: "qr", data: "https://example.com/x" }]);
+    await openScanner();
+    await screen.findByTestId("scan");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    expect(await screen.findByText("! 这不是灵魂簿交付单上的码")).toBeTruthy();
+    expect(navigationRef.getCurrentRoute()?.name).toBe("ScanCode");
+  });
+
+  it("walking away from the picker reads nothing and says nothing", async () => {
+    mockLaunch.mockResolvedValueOnce({ canceled: true, assets: null });
+    await openScanner();
+    await screen.findByTestId("scan");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    await waitFor(() => expect(mockLaunch).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(scanImage).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("scan-invalid")).toBeNull();
+  });
+
+  it("with the camera refused, the album is still a way on", async () => {
+    cameraMod.__state.permission = { status: "denied", granted: false, canAskAgain: false };
+    mockLaunch.mockResolvedValueOnce({ canceled: false, assets: [{ uri: SLIP, type: "image" }] });
+    scanImage.mockResolvedValueOnce([{ type: "qr", data: `SL1:${CODE}` }]);
+    await openScanner();
+    await screen.findByTestId("scan-denied");
+    fireEvent.press(screen.getByTestId("scan-album"));
+    await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("Login"));
+    expect(screen.getByTestId("login-soul-code").props.value).toBe(CODE);
   });
 });
 
