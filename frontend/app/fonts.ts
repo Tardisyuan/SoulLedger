@@ -19,6 +19,12 @@
  * 拿不到中文分片;`next/font/local` 的 `src` 数组又不接受逐条 unicode-range。所以照旧 import 包自带的
  * index.css,浏览器只取页面真正用到的那几片。
  *
+ * 2026-11-14(fe-perf P1/P3):分片的 index.css 不再在 layout.tsx 里同步 import —— 202 条 @font-face 挡着每个
+ * 路由的首帧,而「导航」69 个字就命中 11 片 / 648 KB。现在外壳字(导航、落地页、案卷台、门名)各一个子集文件
+ * ('SoulLedger Shell Sans' / 'SoulLedger Title Serif',app/fonts-shell.css,由 scripts/gen-font-subsets.mjs 生成),
+ * 分片由 app/FontShards.tsx 在首帧之后挂上,只给数据里的字。拉丁衬线另有 'Juan Latin'(同一脚本切出的 EB Garamond,
+ * 只圈拉丁,带 size-adjust),排在下面 `serif` 之前;下面这支只剩它不覆盖的码位。
+ *
  * 代价:拿不到 next/font 的 `size-adjust`,中西文 x-height 对齐靠字族本身。Geist 与 Noto Sans SC
  * 在 v4 稿里本来就是这样并排的(`font: 14px/22px Geist, "Noto Sans SC"`),稿子就是按这个效果画的。
  *

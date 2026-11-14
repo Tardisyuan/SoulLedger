@@ -241,27 +241,26 @@
    * 减少动态效果:上面那条 1ms + 只播一次 —— 播完回到原位,留一段不动的条,仍看得出「在搜」。 */
   --animate-search-progress: search-progress 1200ms var(--ease-standard) infinite; /* @kind other */
 
+  /* 'SoulLedger Shell Sans' / 'SoulLedger Title Serif' / 'Juan Latin':app/fonts-shell.css(生成,
+     scripts/gen-font-subsets.mjs)。外壳字从一个子集文件出,其余汉字落到首帧后才挂上的分片(app/FontShards.tsx)。 */
   --font-sans:
-    'SoulLedger Glyphs', var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
+    'SoulLedger Glyphs', var(--font-sans-latin), 'SoulLedger Shell Sans', 'Noto Sans SC Variable', ui-sans-serif, system-ui,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
   /* 规范 v4(用户 2026-11-06):拉丁 Geist / Geist Mono,引文与文书拉丁 EB Garamond、希腊 GFS Didot
      (希腊那一支只含 greek / greek-ext 子集,拉丁字仍由 EB Garamond 出)。见 app/fonts.ts。 */
+  /* 「卷」体一套栈(fe-visual §3.1,2026-11-14):拉丁先走 'Juan Latin'(EB Garamond 的别名,只圈拉丁,
+     带 size-adjust),标题与引文同一支;--font-title / --font-juan 是它的别名,调用点不用动。 */
   --font-serif:
-    'SoulLedger Glyphs', var(--font-serif-latin), var(--font-serif-greek), 'Noto Serif SC Variable',
-    ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-  /* 规范 v4 沿用 v3:标题与展示数字用 Noto Serif SC 600(稿子的 `.serif`)。v3 只给身份带题字、页面 <h1>、
-     当前这一判等几处;v4 把衬线标题放开到分节标题与卡片标题(用户 2026-11-06 决定,撤销「衬线只给人说的话」),
-     这一行的字体栈不变,变的是调用点。以下是 v3 的原注:
-     规范 v3:标题与展示数字用 Noto Serif SC 600 —— 身份带题字、页面 <h1>、当前这一判、
-     本世余额、语料条号。中西文都由它出(v3 的拉丁标题也是这一款),所以栈里没有拉丁那一支。
-     用的是 layout.tsx 已经全站加载的 @fontsource-variable 那一份(200–900 可变,101 个
-     unicode-range 分片),**没有新增字体文件**:再用 next/font 拉一份静态 600,同一批汉字
-     会下载两遍(见 app/fonts.ts 顶部为何 CJK 不走 next/font)。 */
-  --font-title:
-    'SoulLedger Glyphs', 'Noto Serif SC Variable', ui-serif, Georgia, serif;
+    'SoulLedger Glyphs', 'Juan Latin', var(--font-serif-latin), var(--font-serif-greek),
+    'SoulLedger Title Serif', 'Noto Serif SC Variable', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-juan: var(--font-serif);
+  /* 标题与展示数字用 600(v4 沿用 v3,用户 2026-11-06 把衬线标题放开到分节与卡片标题)。2026-11-14 起与
+     --font-serif 同一套栈:汉字先取外壳标题子集('SoulLedger Title Serif',可变,所以 400 的「卷」正文也能用),
+     其余落到 Noto Serif SC 分片;拉丁由 'Juan Latin' 出(此前标题的拉丁也是 Noto Serif SC)。 */
+  --font-title: var(--font-serif);
   --font-mono:
-    'SoulLedger Glyphs', var(--font-mono-latin), 'Noto Sans SC Variable', ui-monospace,
+    'SoulLedger Glyphs', var(--font-mono-latin), 'SoulLedger Shell Sans', 'Noto Sans SC Variable', ui-monospace,
     SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
 
@@ -880,6 +879,9 @@
      与 AppLayout 的 `min-[769px]:` 同一条线)。页面里吸底的操作条(审判队列的
      裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
   html {
+    /* 不合成粗体(fe-visual §3.1):GFS Didot 只有 400,合成的假粗体直接消失,漏掉的地方显出细体。
+       斜体照旧合成 —— Geist 没有斜体,`font-synthesis: none` 会让界面里的 italic 变成正体。 */
+    font-synthesis: style;
     --bottom-bar: 0px;
     /* 状态标签的高(第三十批第 1 步第 2 条):触屏 28,精确指针 22(下面「精确指针的默认档」里覆盖)。 */
     --tag-h: 28px;

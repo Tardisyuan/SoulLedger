@@ -85,9 +85,10 @@ describe("页头标题始终是大号文字,且是 Noto Serif SC 600", () => {
     expect(isLargeText(13.9, 700)).toBe(false);
   });
 
-  it("font-title 是 Noto Serif SC,且只有它这一支(中西文都由它出)", () => {
-    const decl = /--font-title:\s*([^;]+);/.exec(CSS)?.[1].replace(/\s+/g, " ");
-    expect(decl).toBe("'SoulLedger Glyphs', 'Noto Serif SC Variable', ui-serif, Georgia, serif");
+  it("font-title 的汉字是 Noto Serif SC(外壳标题子集在前,分片兜底),拉丁是 Juan Latin(2026-11-14)", () => {
+    expect(/--font-title:\s*([^;]+);/.exec(CSS)?.[1].trim()).toBe("var(--font-serif)");
+    const decl = /--font-serif:\s*([^;]+);/.exec(CSS)?.[1].replace(/\s+/g, " ");
+    expect(decl).toMatch(/^'SoulLedger Glyphs', 'Juan Latin', .*'SoulLedger Title Serif', 'Noto Serif SC Variable', /);
   });
 });
 
