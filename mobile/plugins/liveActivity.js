@@ -25,7 +25,9 @@ const widgetBundleId = (appBundleId) => {
  * The lock screen and the Dynamic Island (V4Batch07 05 App「锁屏 · 实时活动」「灵动岛三种状态」): the title and the
  * road's name, the headline and the count, the progress, and start · here · end under it. Compact: the mark and
  * 「10/11」; minimal: the mark; expanded: the place over the soul and the step. A road that ends (湮灭, 永罚) draws
- * its progress in v4's pale red (dark --neg #F2849B), never in the civilization's colour.
+ * its progress in v4's pale red (dark --neg #F2849B), never in the civilization's colour. Design 第四十九批 B1: the
+ * mark is a seal (the civilization's glow), the bar is the spine (civT, or ink where civT is under 3:1 on that
+ * scheme's lock screen), the tag's ground is the system's fill, untinted.
  */
 const widgetSwift = () => `import ActivityKit
 import SwiftUI
@@ -46,6 +48,20 @@ private extension Color {
   static let ended = Color(red: 0xF2 / 255, green: 0x84 / 255, blue: 0x9B / 255)
 }
 
+/// The app's tint, "mark;barLight;barDark" (liveProgress.ts liveTint): the mark keeps the civilization's colour; the
+/// bar is civT where it holds 3:1 on that scheme's lock screen, else the ink. An older single colour serves all three.
+private struct Tints {
+  let mark: Color
+  let barLight: Color
+  let barDark: Color
+  init(_ tint: String) {
+    let parts = tint.split(separator: ";").map { Color(hex: String($0)) }
+    mark = parts.first ?? Color(hex: tint)
+    barLight = parts.count > 1 ? parts[1] : mark
+    barDark = parts.count > 2 ? parts[2] : mark
+  }
+}
+
 private struct Mark: View {
   let tint: Color
   var body: some View { Image(systemName: "mappin.and.ellipse").foregroundStyle(tint) }
@@ -53,18 +69,19 @@ private struct Mark: View {
 
 private struct LockScreenLive: View {
   let title: String
-  let tint: Color
+  let tints: Tints
   let state: SoulLedgerLiveAttributes.ContentState
+  @Environment(\\.colorScheme) private var scheme
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 6) {
-        Mark(tint: tint)
+        Mark(tint: tints.mark)
         Text(title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
         Spacer(minLength: 4)
         if !state.tag.isEmpty {
           Text(state.tag).font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
-            .background(tint.opacity(0.18)).clipShape(Capsule())
+            .background(Color(uiColor: .tertiarySystemFill)).clipShape(Capsule())
         }
       }
       HStack(alignment: .firstTextBaseline) {
@@ -72,7 +89,7 @@ private struct LockScreenLive: View {
         Spacer(minLength: 8)
         Text(state.count).font(.subheadline.monospacedDigit())
       }
-      ProgressView(value: min(max(state.progress, 0), 1)).tint(state.ended ? Color.ended : tint)
+      ProgressView(value: min(max(state.progress, 0), 1)).tint(state.ended ? Color.ended : (scheme == .dark ? tints.barDark : tints.barLight))
       HStack {
         Text(state.first)
         Spacer(minLength: 4)
@@ -89,9 +106,9 @@ private struct LockScreenLive: View {
 struct SoulLedgerLiveWidget: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: SoulLedgerLiveAttributes.self) { context in
-      LockScreenLive(title: context.attributes.title, tint: Color(hex: context.attributes.tint), state: context.state)
+      LockScreenLive(title: context.attributes.title, tints: Tints(context.attributes.tint), state: context.state)
     } dynamicIsland: { context in
-      let tint = Color(hex: context.attributes.tint)
+      let tint = Tints(context.attributes.tint).mark
       return DynamicIsland {
         DynamicIslandExpandedRegion(.leading) { Mark(tint: tint) }
         DynamicIslandExpandedRegion(.trailing) { Text(context.state.compact).font(.body.monospacedDigit()) }

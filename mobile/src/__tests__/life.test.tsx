@@ -391,6 +391,13 @@ describe("地府十三站与出身部洲 (docs/06, 07; Design 第五十七批 S-
     expect(screen.getByTestId("route-TUDI_TEMPLE")).toBeTruthy();
     expect(screen.getByTestId("route-WANGXIANG_TERRACE")).toHaveTextContent(/你现在在这里/);
     expect(screen.getByTestId("route-ahead")).toHaveTextContent("后面还有 8 处");
+    // 第四十九批 B3: the two eyebrows are bold ink, as the web route's current station; the metal is the here dot's alone.
+    const theme = themeFor("CHINESE", "light");
+    for (const text of ["你现在在哪", "你现在在这里"]) {
+      expect(flat(screen.getByText(text)).color).toBe(theme.ink);
+      expect(flat(screen.getByText(text)).color).not.toBe(theme.metal);
+    }
+    expect(flat(screen.getByTestId("route-WANGXIANG_TERRACE-mark")).borderColor).toBe(theme.metal);
     // The thirteen-glyph card is the road now; it is not drawn twice.
     expect(screen.queryByTestId("life-stations")).toBeNull();
     expect(screen.getByTestId("soul-continent")).toHaveTextContent(/南瞻部洲/);
