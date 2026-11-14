@@ -613,22 +613,22 @@
     --color-civ-cn-ink: 0.710969 0.100324 32.0926; /* #D98A7A */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
     --color-civ-cn-metal: 0.735339 0.098358 81.1769; /* #C9A35E */
-    --color-civ-cn-side: 0.155755 0.026149 30.8308; /* #160806 */
+    --color-civ-cn-side: 0.213366 0.023945 32.5207; /* #231512 */
     --color-civ-eu: 0.402590 0.077427 318.6416; /* #5A3A63 */
     --color-civ-eu-ink: 0.659740 0.075298 321.6693; /* #A883AE */
     --color-civ-eu-glow: 0.610358 0.089013 327.2939; /* #A0709F */
     --color-civ-eu-metal: 0.811059 0.020830 257.4811; /* #B9C2CF */
-    --color-civ-eu-side: 0.152695 0.037888 307.3255; /* #100718 */
+    --color-civ-eu-side: 0.214612 0.022693 319.4646; /* #1E1620 */
     --color-civ-eg: 0.418933 0.082983 254.5438; /* #2B4E79 */
     --color-civ-eg-ink: 0.779300 0.093304 250.0374; /* #89BCF1 */
     --color-civ-eg-glow: 0.648635 0.097389 249.9778; /* #5F93C8 */
     --color-civ-eg-metal: 0.778385 0.111230 86.4987; /* #D6B25E */
-    --color-civ-eg-side: 0.157951 0.035710 265.5927; /* #060C1C */
+    --color-civ-eg-side: 0.214015 0.023887 251.5668; /* #111A24 */
     --color-civ-gr: 0.412855 0.049685 185.8153; /* #28544F */
-    --color-civ-gr-ink: 0.880378 0.049995 178.8645; /* #B5E3D8 */
+    --color-civ-gr-ink: 0.839483 0.085071 177.7434; /* #8BDDCA */
     --color-civ-gr-glow: 0.648865 0.064720 185.1646; /* #5F9C94 */
     --color-civ-gr-metal: 0.689412 0.094212 53.9962; /* #C98B62 */
-    --color-civ-gr-side: 0.166432 0.023937 180.0758; /* #03120F */
+    --color-civ-gr-side: 0.214288 0.024370 176.9590; /* #0C1D19 */
     --color-main: var(--color-civ-neutral);
     --color-main-ink: var(--color-civ-neutral-ink);
     --color-glow: var(--color-civ-neutral-glow);
@@ -713,19 +713,19 @@
     --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
     --color-civ-cn-ink: 0.508662 0.123408 31.8759; /* #A04636 */
     --color-civ-cn-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
-    --color-civ-cn-side: 0.965855 0.017160 35.3449; /* #FFF0EC */
+    --color-civ-cn-side: 0.939480 0.030589 30.1804; /* #FFE4DF */
     --color-civ-eu: 0.496494 0.097231 319.2785; /* #7A4F85 */
     --color-civ-eu-ink: 0.539412 0.102357 319.1561; /* #885A94 */
     --color-civ-eu-metal: 0.513029 0.029377 255.6539; /* #5C6878 */
-    --color-civ-eu-side: 0.956480 0.015971 328.7762; /* #F7EDF6 */
+    --color-civ-eu-side: 0.940161 0.030471 320.8736; /* #F5E5F8 */
     --color-civ-eg: 0.515592 0.103715 255.1595; /* #3C69A2 */
     --color-civ-eg-ink: 0.411225 0.116441 255.6633; /* #174A88 */
     --color-civ-eg-metal: 0.531513 0.096178 84.5574; /* #86671E */
-    --color-civ-eg-side: 0.957740 0.014822 251.1570; /* #EAF2FB */
+    --color-civ-eg-side: 0.939633 0.029802 251.2804; /* #DDEDFF */
     --color-civ-gr: 0.507348 0.062072 185.1700; /* #37716A */
-    --color-civ-gr-ink: 0.479365 0.062143 178.9771; /* #31695E */
+    --color-civ-gr-ink: 0.469974 0.084710 178.2756; /* #066A5B */
     --color-civ-gr-metal: 0.520618 0.085848 55.0206; /* #8F5B36 */
-    --color-civ-gr-side: 0.971025 0.019277 184.9251; /* #E8FAF7 */
+    --color-civ-gr-side: 0.939565 0.029759 178.3271; /* #D7F2EB */
     /* 浅色从暗到亮。 */
     --color-chart-1: 0.259075 0.045425 251.0858;
     --color-chart-2: 0.360350 0.044648 250.3338;
@@ -973,11 +973,12 @@
 
   /* 页头 =「顶线 + 卷宗头」(第三十批「卷宗」第 1 步,Design v4 第三十批回复第一节第 1 条;`PageHead`,
      src/components/ui/PageShell.tsx)。取代 v3 的 156px 身份带与 v4 的 96px 标题行(`Plaque`):不再有第二个标题,
-     页头的标题就是 `<h1>`。自上而下:2px 文明色顶线(`--topline`,civT);标题上方一行等宽小字(mono 12/18);
+     页头的标题就是 `<h1>`。自上而下:文明色顶线(civT;中性皮 2px 实线 `--topline`,文明皮 3px、四家四种形状,第四十五批);标题上方一行等宽小字(mono 12/18);
      标题(门页 `text-head` 24/32,卷宗页 `text-dossier` 32/40,宋体 600);标题下面一行 text-sm。右侧是操作。
-     背后三层,都 aria-hidden、不吃指针、随文明换:
+     背后几层,都 aria-hidden、不吃指针、随文明换:
        .page-head-glow   光晕(v4 `.glowtop`):glow 按 `--glowA` 混进透明,从左上 24% 处向下 180px 淡尽
-       .page-head-pat    纹样(v4 `.pat`):civT 细线,整层 5%,自上而下淡出
+       .page-head-pat    纸纹(第四十五批):四家四种,只用墨(深 6% / 浅 5%),上 40% 实、往下淡出
+       .page-head-mark   文明记号(第四十五批,`HeadMark`):右上,墨 34% / 30%
        .page-head-wm     G 天体仪水印(v4 `.wm`,`CivMark`):civT,深 7% / 浅 9%,压出右上角
      不吸顶:卷宗的封面不跟着滚。 */
   .page-head {
@@ -991,6 +992,27 @@
     inset: 0 0 auto 0;
     height: var(--topline);
     background: oklch(var(--color-main-ink));
+  }
+  /* 顶线的形状(第四十五批第一节):文明皮一律 3px,四家四种形状,去色以后近看也分得清;中性皮(上面那条)2px 实线不变。
+     地府 实线 · 欧洲 1 + 间 1 + 1 · 埃及 每 48px 一个 6px 缺口 · 希腊 1px 底线 + 2px 方齿(齿宽 4、周期 8)。
+     写在加载态前面:选择器一样重,加载中的底(line)照旧盖过形状。 */
+  [data-civ="cn"] .page-head-topline,
+  [data-civ="eu"] .page-head-topline,
+  [data-civ="eg"] .page-head-topline,
+  [data-civ="gr"] .page-head-topline {
+    --tl: oklch(var(--color-main-ink));
+    height: 3px;
+  }
+  [data-civ="eu"] .page-head-topline {
+    background: linear-gradient(var(--tl) 0 1px, transparent 1px 2px, var(--tl) 2px 3px);
+  }
+  [data-civ="eg"] .page-head-topline {
+    background: repeating-linear-gradient(90deg, var(--tl) 0 42px, transparent 42px 48px);
+  }
+  [data-civ="gr"] .page-head-topline {
+    background:
+      linear-gradient(var(--tl), var(--tl)) left bottom / 100% 1px no-repeat,
+      repeating-linear-gradient(90deg, var(--tl) 0 4px, transparent 4px 8px) left top / 100% 2px no-repeat;
   }
   /* 加载中:顶线变成一根进度线 —— 底是 line,一段 32% 的 civT 来回走。减少动态效果时停在左边。 */
   .page-head-topline[data-loading] {
@@ -1018,31 +1040,67 @@
     pointer-events: none;
     background: radial-gradient(60% 100% at 24% 0%, color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glowA) * 100%), transparent), transparent 72%);
   }
+  /* 纸纹(第四十五批第五节):取代四家共用的 civT 竖线,只铺页头带。只用墨 —— 浓度上限深 6% / 浅 5%(`--head-tex`),
+     去色以后照样分得清;上 40% 实,往下淡出。中性皮(没有文明)不铺。 */
+  .page-head {
+    --head-tex: color-mix(in srgb, oklch(var(--color-ink)) 6%, transparent);
+    --head-mark: color-mix(in srgb, oklch(var(--color-ink)) 34%, transparent);
+  }
+  .light .page-head {
+    --head-tex: color-mix(in srgb, oklch(var(--color-ink)) 5%, transparent);
+    --head-mark: color-mix(in srgb, oklch(var(--color-ink)) 30%, transparent);
+  }
   .page-head-pat {
     position: absolute;
     inset: 0;
     z-index: -1;
-    opacity: 0.05;
     pointer-events: none;
-    background-image: repeating-linear-gradient(90deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 24px);
-    mask-image: linear-gradient(#000, transparent 85%);
+    mask-image: linear-gradient(#000 40%, transparent);
   }
-  /* 每个文明一种纹样(沿用 v4 标题行的四种走向),线一律 civT,透明度在整层的 5% 上。 */
+  /* 地府 竖格 1/24(稿纸)· 欧洲 45° 斜线 1/6(铜版排线)· 埃及 横格 1/22(纸草分栏)· 希腊 点阵 r1.3/8(陶片颗粒)。 */
   [data-civ="cn"] .page-head-pat {
-    background-image:
-      repeating-linear-gradient(0deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 12px),
-      repeating-linear-gradient(90deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 72px);
+    background: repeating-linear-gradient(90deg, var(--head-tex) 0 1px, transparent 1px 24px);
   }
   [data-civ="eu"] .page-head-pat {
-    background-image: repeating-radial-gradient(circle at 85% -40%, transparent 0 22px, oklch(var(--color-main-ink)) 22px 23px);
+    background: repeating-linear-gradient(45deg, var(--head-tex) 0 1px, transparent 1px 6px);
   }
   [data-civ="eg"] .page-head-pat {
-    background-image:
-      repeating-linear-gradient(90deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 8px),
-      repeating-linear-gradient(0deg, oklch(var(--color-main-ink)) 0 2px, transparent 2px 48px);
+    background: repeating-linear-gradient(180deg, transparent 0 21px, var(--head-tex) 21px 22px);
   }
   [data-civ="gr"] .page-head-pat {
-    background-image: repeating-linear-gradient(45deg, oklch(var(--color-main-ink)) 0 1px, transparent 1px 14px);
+    background: radial-gradient(circle, var(--head-tex) 0 1.3px, transparent 1.6px) 0 0 / 8px 8px;
+  }
+  /* 页头记号(第四十五批第四节,`HeadMark`):右上,离右缘 20、顶上 16–22,墨 34% / 30%。装饰,压在内容下面。 */
+  .page-head-mark {
+    position: absolute;
+    right: 20px;
+    top: 16px;
+    z-index: -1;
+    color: var(--head-mark);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+  /* 地府:竖排殿名(用户 2026-11-14「殿名随殿变」)。汉字照稿子地府记号的 26/30;英文 / egy 小号衬线大写,字距 .3em。 */
+  .page-head-mark[data-head-mark="cn"] {
+    top: 12px;
+    writing-mode: vertical-rl;
+    font: 600 26px/30px var(--font-title);
+  }
+  .page-head-mark[data-head-mark="cn"][data-head-script="latin"] {
+    font: 600 12px/16px var(--font-title);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  .page-head-mark[data-head-mark="eu"],
+  .page-head-mark[data-head-mark="gr"] {
+    top: 22px;
+    font: 600 17px/20px var(--font-title);
+    letter-spacing: 0.38em;
+  }
+  .page-head-mark[data-head-mark="eg"] {
+    top: 18px;
+    line-height: 0;
   }
   .page-head-wm {
     position: absolute;

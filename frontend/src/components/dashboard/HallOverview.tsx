@@ -36,7 +36,7 @@ import { mapSkinOf } from "@/src/lib/underworldMap";
  * 1280×860 时右栏最下那一格在首屏底边、又正好在演示导览面板(右下角)底下;主卡那一段原本是空的。
  * 整个概览底下让出导览面板的高度(`--demo-tour-h`,`demo/DemoTour.tsx` 写在 :root;演示之外是 0),窄一些的宽度上滚得开。
  *
- * 大数字是 88(`text-display-xl`,v4 加的一档,只给这里与年报);进页时它从 0 滚上来、「本月已结」环从 0 扫到实际值
+ * 大数字是 88(`text-display-xl`,v4 加的一档,只给这里与年报),墨色(第四十五批第七节:这么大的文明色会把一屏染成文明色);进页时它从 0 滚上来、「本月已结」环从 0 扫到实际值
  * (`.v4-roll` / `.v4-ring-sweep`,globals.css,减少动态效果时直接是终态)。「其中 n 件已过期限」的 n 是金属色。
  */
 
@@ -170,7 +170,7 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
               {t("overview.zero.pending")}
             </span>
           ) : (
-            <span data-overview-pending="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-main-ink))]">
+            <span data-overview-pending="" className="font-title text-display-xl tabular-nums text-[oklch(var(--color-ink))]">
               {loading ? <Skeleton as="span" className="inline-block h-23 w-20" /> : stats ? <RollingCount n={stats.pending} /> : <MissingValue kind="unrecorded" />}
             </span>
           )}

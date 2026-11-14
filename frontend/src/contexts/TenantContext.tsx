@@ -40,6 +40,8 @@ export interface TenantInfo {
    *  可选:24 小时内缓存的旧用户信封里没有这两项。 */
   civilization?: string;
   seal_glyphs?: string[];
+  /** 殿名,按界面语言(`Tenant.hall_names`,第四十五批页头的地府记号读它)。旧的缓存信封里没有。 */
+  hall_names?: Record<string, string>;
 }
 
 // Permissions stored separately in memory only (not localStorage) for security

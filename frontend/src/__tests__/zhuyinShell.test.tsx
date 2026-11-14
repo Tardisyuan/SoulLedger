@@ -9,14 +9,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
 
-const mockTenant: { code: string; display_name: string; seal_glyphs?: string[] } = { code: "CN_DIYU", display_name: "第五殿" };
+const mockTenant: { code: string; display_name: string; seal_glyphs?: string[]; hall_names?: Record<string, string> } = { code: "CN_DIYU", display_name: "第五殿" };
+const mockI18n = { locale: "zh-Hans" };
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, tenant: mockTenant } }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
     t: (key: string, p?: Record<string, string>) => (key === "seal.aria" ? `${p?.court}之印` : key),
-    locale: "zh-Hans",
+    locale: mockI18n.locale,
   }),
 }));
 
@@ -29,6 +30,8 @@ const FRONTEND = path.join(__dirname, "..", "..");
 beforeEach(() => {
   mockTenant.code = "CN_DIYU";
   delete mockTenant.seal_glyphs;
+  delete mockTenant.hall_names;
+  mockI18n.locale = "zh-Hans";
 });
 
 describe("印", () => {
@@ -123,10 +126,38 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     expect(head.querySelector(".page-head-wm")).toHaveAttribute("data-civ-mark", "cn");
   });
 
-  it("中性皮(不认得的租户)的水印只画环,不放任何一个文明的中心物", () => {
+  // 第四十五批第四节:页头右上的文明记号,墨色、装饰(aria-hidden),记号说的是「哪一家」。
+  it("页头记号是此刻所在文明的那一个,读屏跳过", () => {
+    render(<PageShell title="名册">body</PageShell>);
+    const mark = screen.getByTestId("page-head").querySelector(".page-head-mark");
+    expect(mark).toHaveAttribute("data-head-mark", "cn");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+  });
+
+  // 用户 2026-11-14:地府的记号是此刻所在殿的殿名(`Tenant.hall_names`),按界面语言;egy 没有退英文;拿不到退回地府 / DIYU。
+  it.each([
+    ["zh-Hans", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "第五殿", "han"],
+    ["en", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "The Fifth Court", "latin"],
+    ["egy", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "Yanluo Qedi", "latin"],
+    // 后端 egy 空着时退回 zh(`Tenant.hall_names`);egy 界面不露汉字殿名,改退英文。
+    ["egy", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "第五殿" }, "The Fifth Court", "latin"],
+    ["zh-Hans", undefined, "地府", "han"],
+    ["en", undefined, "DIYU", "latin"],
+    ["egy", undefined, "DIYU", "latin"],
+  ])("地府记号 · %s 界面 · 殿名 %j → %s", (locale, names, shown, script) => {
+    mockI18n.locale = locale;
+    if (names) mockTenant.hall_names = names;
+    render(<PageShell title="名册">body</PageShell>);
+    const mark = screen.getByTestId("page-head").querySelector(".page-head-mark");
+    expect(mark).toHaveTextContent(new RegExp(`^${shown}$`));
+    expect(mark).toHaveAttribute("data-head-script", script);
+  });
+
+  it("中性皮(不认得的租户)的水印只画环,不放任何一个文明的中心物,也没有页头记号", () => {
     mockTenant.code = "UNKNOWN";
     render(<PageShell title="名册">body</PageShell>);
     expect(screen.getByTestId("page-head").querySelector(".page-head-wm")).toHaveAttribute("data-civ-mark", "neutral");
+    expect(screen.getByTestId("page-head").querySelector(".page-head-mark")).toBeNull();
   });
 
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
@@ -137,6 +168,20 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     expect(/\.page-head \{[^}]*\}/.exec(css)?.[0] ?? "").not.toMatch(/sticky/);
   });
 
+  it("纸纹只用墨(深 6% / 浅 5%),不用文明色;记号墨 34% / 30%", () => {
+    const pat = [...css.matchAll(/\n {2}([^\n{}]*\.page-head-pat) \{([^}]*)\}/g)];
+    expect(pat.map((m) => m[1].trim())).toEqual([
+      ".page-head-pat",
+      '[data-civ="cn"] .page-head-pat',
+      '[data-civ="eu"] .page-head-pat',
+      '[data-civ="eg"] .page-head-pat',
+      '[data-civ="gr"] .page-head-pat',
+    ]);
+    for (const m of pat) expect(m[2]).not.toMatch(/main-ink|opacity/);
+    expect(css).toMatch(/\n {2}\.page-head \{\s*--head-tex: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 6%, transparent\);\s*--head-mark: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 34%, transparent\);/);
+    expect(css).toMatch(/\n {2}\.light \.page-head \{\s*--head-tex: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 5%, transparent\);\s*--head-mark: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 30%, transparent\);/);
+  });
+
   it("顶线是 --topline 粗的文明字色;加载中变成进度线,不放转圈", () => {
     const topline = /\n {2}\.page-head-topline \{([^}]*)\}/.exec(css)?.[1] ?? "";
     expect(topline).toMatch(/height: var\(--topline\);/);
@@ -144,6 +189,19 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     render(<PageShell title="名册" isLoading skeleton={<div data-testid="sk" />}>body</PageShell>);
     expect(screen.getByTestId("page-head").querySelector(".page-head-topline")).toHaveAttribute("data-loading", "");
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  // 第四十五批第一节:文明皮的顶线 3px、四家四种形状(CSS 背景),中性皮仍是上面那条 2px 实线。
+  it("文明皮的顶线 3px,欧洲双线、埃及缺口、希腊方齿,地府实线", () => {
+    const rule = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[[\]"().]/g, "\\$&")} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+    expect(css).toMatch(/\[data-civ="gr"\] \.page-head-topline \{\s*--tl: oklch\(var\(--color-main-ink\)\);\s*height: 3px;/);
+    expect(rule('[data-civ="eu"] .page-head-topline')).toContain("linear-gradient(var(--tl) 0 1px, transparent 1px 2px, var(--tl) 2px 3px)");
+    expect(rule('[data-civ="eg"] .page-head-topline')).toContain("repeating-linear-gradient(90deg, var(--tl) 0 42px, transparent 42px 48px)");
+    expect(rule('[data-civ="gr"] .page-head-topline')).toContain("repeating-linear-gradient(90deg, var(--tl) 0 4px, transparent 4px 8px) left top / 100% 2px no-repeat");
+    // 地府没有自己的背景规则:实线就是基础那条的 main-ink。
+    expect(rule('[data-civ="cn"] .page-head-topline')).toBe("");
+    // 加载态写在形状后面,同样重的选择器,底(line)盖过形状。
+    expect(css.indexOf('[data-civ="gr"] .page-head-topline {')).toBeLessThan(css.indexOf(".page-head-topline[data-loading] {"));
   });
 });
 

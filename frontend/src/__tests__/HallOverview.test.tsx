@@ -105,6 +105,9 @@ describe("主卡", () => {
     });
     const pending = hero.querySelector("[data-overview-pending]") as HTMLElement;
     expect(pending).toHaveClass("text-display-xl");
+    // 第四十五批第七节:88 的主角数字是墨,不是文明色(文明色只在顶线、印、行程脊、焦点环)。
+    expect(pending).toHaveClass("text-[oklch(var(--color-ink))]");
+    expect(pending.className).not.toMatch(/main-ink/);
     // 滚动的那层不给读屏;终值在 sr-only 里,所以整格的文字仍是 24,不是 0 或某个中间值。
     const roll = pending.querySelector(".v4-roll") as HTMLElement;
     expect(roll).toHaveAttribute("aria-hidden", "true");

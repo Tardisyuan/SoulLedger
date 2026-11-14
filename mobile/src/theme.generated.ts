@@ -40,8 +40,8 @@ export const v4 = {
       "sD": "#7E362B",
       "mD": "#C9A35E",
       "mL": "#8A6A24",
-      "sideD": "#160806",
-      "sideL": "#FFF0EC"
+      "sideD": "#231512",
+      "sideL": "#FFE4DF"
     },
     "eu": {
       "glow": "#A0709F",
@@ -51,8 +51,8 @@ export const v4 = {
       "sD": "#5A3A63",
       "mD": "#B9C2CF",
       "mL": "#5C6878",
-      "sideD": "#100718",
-      "sideL": "#F7EDF6"
+      "sideD": "#1E1620",
+      "sideL": "#F5E5F8"
     },
     "eg": {
       "glow": "#5F93C8",
@@ -62,19 +62,19 @@ export const v4 = {
       "sD": "#2B4E79",
       "mD": "#D6B25E",
       "mL": "#86671E",
-      "sideD": "#060C1C",
-      "sideL": "#EAF2FB"
+      "sideD": "#111A24",
+      "sideL": "#DDEDFF"
     },
     "gr": {
       "glow": "#5F9C94",
-      "tD": "#B5E3D8",
-      "tL": "#31695E",
+      "tD": "#8BDDCA",
+      "tL": "#066A5B",
       "sL": "#37716A",
       "sD": "#28544F",
       "mD": "#C98B62",
       "mL": "#8F5B36",
-      "sideD": "#03120F",
-      "sideL": "#E8FAF7"
+      "sideD": "#0C1D19",
+      "sideL": "#D7F2EB"
     }
   }
 } as const;

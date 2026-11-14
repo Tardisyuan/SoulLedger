@@ -162,13 +162,16 @@ class LoginTenantRefSerializer(serializers.Serializer):
     (no `id`, unlike `UserTenantRefSerializer`).
 
     `civilization` picks the Web's 匾 skin; `seal_glyphs` are the 1–2 admin-set
-    seal characters, empty meaning "use the civilization default"."""
+    seal characters, empty meaning "use the civilization default". `hall_names` is
+    the hall's own name per UI language (the Web's 地府 head mark, Design batch 45)."""
 
     code = serializers.CharField()
     display_name = serializers.CharField()
     display_name_en = serializers.CharField(required=False, allow_blank=True)
     civilization = serializers.CharField()
     seal_glyphs = serializers.ListField(child=serializers.CharField())
+    # `Tenant.hall_names` (blank egy falls back to zh there; the Web's head mark shows English instead).
+    hall_names = serializers.DictField(child=serializers.CharField(), read_only=True)
 
 
 def user_tenant_ref(user):

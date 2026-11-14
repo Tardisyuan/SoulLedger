@@ -34805,7 +34805,8 @@ components:
         (no `id`, unlike `UserTenantRefSerializer`).
 
         `civilization` picks the Web's 匾 skin; `seal_glyphs` are the 1–2 admin-set
-        seal characters, empty meaning "use the civilization default".
+        seal characters, empty meaning "use the civilization default". `hall_names` is
+        the hall's own name per UI language (the Web's 地府 head mark, Design batch 45).
       properties:
         code:
           type: string
@@ -34819,10 +34820,16 @@ components:
           type: array
           items:
             type: string
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
       required:
       - civilization
       - code
       - display_name
+      - hall_names
       - seal_glyphs
     LogoutRequest:
       type: object

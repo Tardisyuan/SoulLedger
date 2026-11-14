@@ -125,15 +125,18 @@ def test_tenant_api_reports_civilization_and_glyphs(judge_user, tenants):
 
 
 def test_login_and_profile_carry_civilization_and_glyphs(api_client, django_user_model, tenants):
-    """变异:`LoginTenantRefSerializer` 去掉 civilization → 登录体少这个键,红。"""
+    """变异:`LoginTenantRefSerializer` 去掉 civilization(或 hall_names)→ 登录体少这个键,红。
+    hall_names 是页头地府记号读的殿名(Design 第四十五批);egy 空着时随 `Tenant.hall_names` 退回 zh。"""
     gr = tenants["GR"]
     gr.seal_glyphs = ["Ω"]
+    gr.hall_name, gr.hall_name_en, gr.hall_name_egy = "三判官之庭", "Court of the Three Judges", ""
     gr.save()
     django_user_model.objects.create_user(username="gr_judge", password="pw-123456", role="JUDGE", tenant=gr)
     resp = api_client.post("/api/v1/auth/login/", {"username": "gr_judge", "password": "pw-123456"}, format="json")
     assert resp.status_code == 200, resp.content
     expected = {"code": "GR_HADES", "display_name": "Hades", "display_name_en": "", "civilization": "GREEK",
-                "seal_glyphs": ["Ω"]}
+                "seal_glyphs": ["Ω"],
+                "hall_names": {"zh-Hans": "三判官之庭", "en": "Court of the Three Judges", "egy": "三判官之庭"}}
     assert resp.json()["user"]["tenant"] == expected
 
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.json()['access']}")
