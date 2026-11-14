@@ -37,6 +37,7 @@ from apps.disposition.models import Disposition  # noqa: E402
 from apps.events.models import SoulEvent  # noqa: E402
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService  # noqa: E402
 from apps.judgment import appeals, claims, confessions  # noqa: E402
+from apps.judgment.weighing import origin_flow_open  # noqa: E402
 from apps.actors.models import Actor  # noqa: E402
 from apps.judgment.models import (  # noqa: E402
     CityGod,
@@ -728,6 +729,11 @@ def seed_appeals():
         if account is None or made.get(case.tenant_id, 0) >= 2:
             continue
         try:
+            if origin_flow_open(judgment=case):
+                # A "flow" soul's approval stops one node short; an appeal waits for it (`appeals.appeal_refusal`,
+                # origin_flow_open). Walk it to the end through `complete_node`, as the approvers would (user 2026-11-14).
+                walk(case)
+                mark(case.soul_id, case.soul.name, "flow")
             appeals.file(account, case.pk, reason="证据未全,请求复审。", evidence="邻里证言三份")
             made[case.tenant_id] = made.get(case.tenant_id, 0) + 1
         except Exception as exc:
