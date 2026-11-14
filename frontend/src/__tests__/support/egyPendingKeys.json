@@ -65,5 +65,16 @@
   "cmdk.verdict.pass_hint_flow",
   "caseDesk.dossier.judge.hint_flow",
   "caseDesk.dossier.judge.sealed_note_flow",
-  "officer_app.seal.hold_note_flow"
+  "officer_app.seal.hold_note_flow",
+  "souls.events.JUDGMENT_CONCLUSION_WITHDRAWN",
+  "judgment.withdraw_conclusion.button",
+  "judgment.withdraw_conclusion.hint",
+  "judgment.withdraw_conclusion.confirm",
+  "judgment.withdraw_conclusion.done",
+  "judgment.withdraw_conclusion.refusal.not_withdrawable",
+  "judgment.withdraw_conclusion.refusal.not_your_seal",
+  "judgment.withdraw_conclusion.refusal.no_pending_flow",
+  "judgment.withdraw_conclusion.refusal.cross_judgment_merged",
+  "judgment.withdraw_conclusion.refusal.approval_started",
+  "judgment.withdraw_conclusion.refusal.cannot_withdraw"
 ]

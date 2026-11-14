@@ -71,6 +71,7 @@ import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { AmendmentPlanChanges } from "@/src/components/sentence-plan/AmendmentPlanChanges";
 import { NegativeConfessionPanel } from "@/src/components/judgment/NegativeConfessionPanel";
 import { ReopenCancelledButton } from "@/src/components/judgment/ReopenCancelledButton";
+import { WithdrawConclusionButton } from "@/src/components/judgment/WithdrawConclusionButton";
 import {
   EMPTY_DRAFT,
   draftIsEmpty,
@@ -947,6 +948,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             )}
             {/* 原审流程被联审撤销、发落卡住:殿主「重开一案」(fix-be1 遗留)。 */}
             {judgment.flow_cancelled && hasPermission("judgment.assign") && <ReopenCancelledButton judgmentId={judgment.id} />}
+            {/* 落印后、审批人动手前:落印的判官「撤回落印」(服务端定窗口,`can_withdraw`)。 */}
+            {judgment.can_withdraw && <WithdrawConclusionButton judgmentId={judgment.id} />}
             {/* 判词(结案后的文书)可以打印;未结案的草稿不是文书,不给入口。 */}
             {isFinal && (
               <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>

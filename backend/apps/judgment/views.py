@@ -30,7 +30,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
 from apps.judgment import attachments as _attachments  # noqa: F401  (注册 post_delete 收文件的接收器)
-from apps.judgment import claims, sources, verdict_pdf
+from apps.judgment import claims, sources, verdict_pdf, weighing
 from apps.judgment.ai_views import JudgmentAIActionsMixin
 from apps.judgment.attachment_views import CaseAttachmentActionsMixin
 from apps.judgment.claims import ClaimRefusedError
@@ -325,6 +325,8 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         'reassign': ['judgment.assign'],
         # 跨域取消让原审流程中止、处置被永久扣住时,持改派码的人(默认殿管理员)重开一案(rbac-be1,2026-10-29)。
         'reopen_cancelled': ['judgment.assign'],
+        # 落印的判官撤回自己这一印(第一位审批人动手之前,2026-11-14):与结案同一码名;是不是他落的印在动作体里查。
+        'withdraw_conclusion': ['judgment.execute'],
         # 改派弹层的名单:谁能被改派到这些案子上。问的人就是能改派的人。
         'assignable_officers': ['judgment.assign'],
         # 「请管理员改派」:名单空了时请 ADMIN 来改派。能办这件案子的人就能为它求助。
@@ -1524,7 +1526,6 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         """
         from django.db import transaction
 
-        from apps.judgment import weighing
         from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
         judgment = self.get_object()
@@ -1540,6 +1541,26 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
             if retrial is None:
                 return problem(status.HTTP_409_CONFLICT, "cannot_reopen",
                                "The soul has already been placed; reopen or appeal instead.")
+        return Response(JudgmentSerializer(retrial, context=self.get_serializer_context()).data,
+                        status=status.HTTP_201_CREATED)
+
+    @extend_schema(request=None, responses={201: JudgmentSerializer, 403: JudgmentClaimRefusalSerializer,
+                                            409: JudgmentClaimRefusalSerializer})
+    @action(detail=True, methods=["post"], url_path="withdraw-conclusion")
+    def withdraw_conclusion(self, request, pk=None):
+        """The officer who sealed an original case takes the seal back before any approver acted (2026-11-14).
+
+        `weighing.withdraw_conclusion`: the approval flow ends CANCELLED, the disposition and plan are voided, the soul
+        is back in JUDGING and a new case is opened, claimed by the caller; 201 answers that case. The window and the
+        refusals are `weighing.withdrawal_refusal`'s: 403 `not_your_seal`; 409 `not_withdrawable`, `no_pending_flow`,
+        `cross_judgment_merged`, `approval_started`, `cannot_withdraw`. The case is reached through `get_object()`, so
+        another hall's case is a 404 like any other.
+        """
+        judgment = self.get_object()
+        try:
+            retrial = weighing.withdraw_conclusion(judgment, request.user)
+        except WeighingRefusedError as exc:
+            return problem(exc.status, exc.code, str(exc), **exc.extra)
         return Response(JudgmentSerializer(retrial, context=self.get_serializer_context()).data,
                         status=status.HTTP_201_CREATED)
 

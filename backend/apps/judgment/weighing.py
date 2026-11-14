@@ -154,7 +154,8 @@ def reweigh_after_rejection(flow, because: str = "REJECTED") -> Judgment | None:
     # A system void, not a deletion: out of the recycle bin and never restorable (user 2026-10-27).
     plan_ids = list(SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
                     .values_list("pk", flat=True))
-    why = f"weighing_rejected:{judgment.pk}" if because == "REJECTED" else f"approval_cancelled:{judgment.pk}"
+    why = {"REJECTED": "weighing_rejected", "WITHDRAWN": "seal_withdrawn"}.get(because, "approval_cancelled")
+    why = f"{why}:{judgment.pk}"
     void = system_void(SentenceNode.all_objects.filter(plan_id__in=plan_ids, is_deleted=False), why)
     system_void(SentencePlan.all_objects.filter(pk__in=plan_ids), why, void)
     system_void(dispositions, why, void)
@@ -165,6 +166,101 @@ def reweigh_after_rejection(flow, because: str = "REJECTED") -> Judgment | None:
         raise WeighingRefusedError(f"Soul {soul.pk} could not go back to JUDGING after its approval flow was "
                                    f"rejected", "soul_cannot_reopen", status=409)
     return open_retrial(judgment, reason=because, method=judgment.judgment_method)
+
+
+def withdrawal_refusal(judgment, user=None) -> str | None:
+    """Why the judge `user` may not withdraw this seal now (`withdraw_conclusion`), or None. No lock, no write:
+    the serializer's `can_withdraw` asks the same question. `user=None` is an in-process caller (no seal-holder check).
+
+    The window (user 2026-11-14): an ORIGINAL case concluded with its own approval flow, from the seal until the first
+    approver acts. The disposition cannot execute before that flow completes (`unfinished_flow`), so nothing has
+    happened to the soul yet. "Acted" is anything a person did on the flow after the seal: a decision, a 会签 signature,
+    a 加签, a return (退回), a station skipped mid-way (`SkipKind.LATER`) — or an escalation, even a timer's.
+    Not withdrawable, and why: a case concluded without a flow (a wavering scale / RETRY opens a new case at once and
+    places nobody; early death and 枉死城超度 are not an officer's seal; REOPEN / AMENDMENT change a plan through their
+    own request), and a flow that merged a cross-realm judgment (other halls sit on it; cancel that bench instead).
+    """
+    from apps.workflow.models import ApprovalWorkflowStatus, NodeStatus, SkipKind
+
+    if judgment.kind != JudgmentKind.ORIGINAL or not judgment.is_final:
+        return "not_withdrawable"
+    if user is not None and judgment.concluded_by_id != user.pk:
+        return "not_your_seal"
+    flow = getattr(judgment, "approval_workflow", None)
+    if (flow is None or not flow.decides_judgment or flow.is_deleted
+            or flow.status not in (ApprovalWorkflowStatus.PENDING, ApprovalWorkflowStatus.IN_PROGRESS)):
+        return "no_pending_flow"
+    from apps.workflow import segments
+
+    if segments.cross_of(flow) is not None:
+        return "cross_judgment_merged"
+    decided = (NodeStatus.APPROVED, NodeStatus.REJECTED, NodeStatus.ESCALATED)
+    if flow.return_count or any(
+            n.status in decided or n.approver_id is not None or n.signatures_json or n.cosigners_json
+            or n.decision_history or n.skip_kind == SkipKind.LATER
+            for n in flow.nodes.all()):
+        return "approval_started"
+    return None
+
+
+_WITHDRAWAL_STATUS = {"not_your_seal": 403}
+_WITHDRAWAL_MESSAGES = {
+    "not_withdrawable": "Only a concluded original case can have its seal withdrawn.",
+    "not_your_seal": "Only the officer who sealed this case can withdraw the seal.",
+    "no_pending_flow": "This case has no approval flow still waiting; the seal cannot be withdrawn.",
+    "cross_judgment_merged": "A cross-realm judgment sits on this case's flow; cancel that bench instead.",
+    "approval_started": "An approver has already acted on this case's flow; the seal can no longer be withdrawn.",
+    "cannot_withdraw": "The soul has already left the place the seal put it in; the seal cannot be withdrawn.",
+}
+
+
+def _refuse_withdrawal(code):
+    raise WeighingRefusedError(_WITHDRAWAL_MESSAGES[code], code, status=_WITHDRAWAL_STATUS.get(code, 409))
+
+
+def withdraw_conclusion(judgment, by=None) -> Judgment:
+    """The judge takes back their seal on an original case before any approver acted (user 2026-11-14).
+
+    The same withdrawal a refused flow makes (`reweigh_after_rejection`): the flow ends CANCELLED
+    (`END_REASON_WITHDRAWN`, its waiting stations skipped), the disposition and plan are voided, the soul goes back to
+    JUDGING, and a new case (`retrial_of`) is opened — claimed by the judge who withdrew, so the case is back on their
+    desk. The sealed judgment stays as it was: its verdict, citations and JUDGMENT_CONCLUDED event are the record of
+    what was sealed and then withdrawn (JUDGMENT_CONCLUSION_WITHDRAWN), not rewritten.
+
+    One transaction, the event inside it. The judgment row and then the flow row are locked and the window re-checked
+    under the locks, so a withdrawal racing an approver's decision either lands first (the decision then finds the flow
+    CANCELLED) or is refused 409 `approval_started`. Refusals: `WeighingRefusedError` with the codes of
+    `withdrawal_refusal` (403 `not_your_seal`, the rest 409), plus 409 `cannot_withdraw` when the soul moved on.
+    """
+    from django.db import transaction
+    from django.utils import timezone
+
+    from apps.events.models import EventType
+    from apps.events.services import EventService
+    from apps.judgment.claims import _lock
+    from apps.workflow.models import END_REASON_WITHDRAWN
+
+    with transaction.atomic():
+        locked = _lock(judgment.pk)
+        flow = getattr(locked, "approval_workflow", None)
+        if flow is not None:
+            flow._lock_and_reload()
+        code = withdrawal_refusal(locked, by)
+        if code is not None:
+            _refuse_withdrawal(code)
+        flow.terminate(user=by, reason="seal withdrawn", end_reason=END_REASON_WITHDRAWN)
+        retrial = reweigh_after_rejection(flow, because="WITHDRAWN")
+        if retrial is None:
+            _refuse_withdrawal("cannot_withdraw")
+        if by is not None:
+            retrial.claimed_by = by
+            retrial.claimed_at = timezone.now()
+            retrial.save(update_fields=["claimed_by", "claimed_at"])
+        EventService.log(locked.soul, EventType.JUDGMENT_CONCLUSION_WITHDRAWN, {
+            "judgment_id": str(locked.pk), "verdict": locked.verdict, "workflow_id": str(flow.pk),
+            "retrial_id": str(retrial.pk),
+        }, getattr(by, "username", None) or "system")
+    return retrial
 
 
 def origin_flow_open(*, judgment=None, soul=None) -> bool:
