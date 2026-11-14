@@ -19239,14 +19239,18 @@ export interface components {
          *     * `MAX_RETRIES` - MAX_RETRIES
          *     * `NOT_FAILED` - NOT_FAILED
          *     * `NOT_RETRYABLE` - NOT_RETRYABLE
+         *     * `NO_CITY_GOD` - NO_CITY_GOD
          *     * `SENTENCE_NODE_REFUSED` - SENTENCE_NODE_REFUSED
          *     * `TOO_MANY_REQUESTS` - TOO_MANY_REQUESTS
          *     * `account_devoured` - account_devoured
          *     * `account_retired` - account_retired
+         *     * `admin_always_all` - admin_always_all
          *     * `admin_only` - admin_only
+         *     * `admin_only_permission` - admin_only_permission
          *     * `admin_role` - admin_role
          *     * `admin_target_global_only` - admin_target_global_only
          *     * `admitted_in_concluded_case` - admitted_in_concluded_case
+         *     * `alive` - alive
          *     * `already_claimed` - already_claimed
          *     * `already_concluded` - already_concluded
          *     * `already_decided` - already_decided
@@ -19256,6 +19260,7 @@ export interface components {
          *     * `already_handled` - already_handled
          *     * `already_lifted` - already_lifted
          *     * `already_resolved` - already_resolved
+         *     * `api_key_required` - api_key_required
          *     * `appeal_closed` - appeal_closed
          *     * `appeal_not_from_judgment` - appeal_not_from_judgment
          *     * `appeal_open` - appeal_open
@@ -19264,6 +19269,7 @@ export interface components {
          *     * `appeal_window_closed` - appeal_window_closed
          *     * `application_open` - application_open
          *     * `approval_flow_required` - approval_flow_required
+         *     * `approval_in_progress` - approval_in_progress
          *     * `assigned_to_other` - assigned_to_other
          *     * `assignee_out_of_scope` - assignee_out_of_scope
          *     * `assistant_busy` - assistant_busy
@@ -19271,6 +19277,7 @@ export interface components {
          *     * `assistant_unavailable` - assistant_unavailable
          *     * `at_city_god` - at_city_god
          *     * `authentication_failed` - authentication_failed
+         *     * `backup_incomplete` - backup_incomplete
          *     * `bad_before` - bad_before
          *     * `bad_encoding` - bad_encoding
          *     * `bad_encoding_gbk` - bad_encoding_gbk
@@ -19281,12 +19288,17 @@ export interface components {
          *     * `bad_type` - bad_type
          *     * `birth_in_future` - birth_in_future
          *     * `builtin_role` - builtin_role
+         *     * `cannot_deactivate_self` - cannot_deactivate_self
+         *     * `cannot_delete_self` - cannot_delete_self
          *     * `cannot_enter_judgment` - cannot_enter_judgment
          *     * `cannot_reopen` - cannot_reopen
          *     * `capture_refused` - capture_refused
          *     * `case_full` - case_full
+         *     * `case_type_not_for_civilization` - case_type_not_for_civilization
          *     * `case_type_required` - case_type_required
+         *     * `catalogue_permission` - catalogue_permission
          *     * `chat_not_configured` - chat_not_configured
+         *     * `chat_unavailable` - chat_unavailable
          *     * `city_god_has_open_cases` - city_god_has_open_cases
          *     * `city_gods_diyu_only` - city_gods_diyu_only
          *     * `civilization_mismatch` - civilization_mismatch
@@ -19298,7 +19310,9 @@ export interface components {
          *     * `condition_invalid` - condition_invalid
          *     * `condition_overlap` - condition_overlap
          *     * `conflict` - conflict
+         *     * `conflict_unacknowledged` - conflict_unacknowledged
          *     * `conflicting_change` - conflicting_change
+         *     * `cooldown` - cooldown
          *     * `cooldown_over` - cooldown_over
          *     * `cosigners_pending` - cosigners_pending
          *     * `countersign_no_signers` - countersign_no_signers
@@ -19316,7 +19330,9 @@ export interface components {
          *     * `cross_judgment_invalid` - cross_judgment_invalid
          *     * `cross_judgment_open` - cross_judgment_open
          *     * `curability_required` - curability_required
+         *     * `current_session` - current_session
          *     * `dangling_route` - dangling_route
+         *     * `deadline_passed` - deadline_passed
          *     * `death_before_birth` - death_before_birth
          *     * `declined` - declined
          *     * `defer_reason_required` - defer_reason_required
@@ -19389,6 +19405,9 @@ export interface components {
          *     * `idempotency_key_reused` - idempotency_key_reused
          *     * `image_not_found` - image_not_found
          *     * `images_unavailable` - images_unavailable
+         *     * `impersonate_admin` - impersonate_admin
+         *     * `impersonate_self` - impersonate_self
+         *     * `impersonate_unavailable` - impersonate_unavailable
          *     * `impersonation_ended` - impersonation_ended
          *     * `impersonation_expired` - impersonation_expired
          *     * `impersonation_invalid` - impersonation_invalid
@@ -19404,15 +19423,18 @@ export interface components {
          *     * `invalid_changes` - invalid_changes
          *     * `invalid_city_god` - invalid_city_god
          *     * `invalid_civilization` - invalid_civilization
+         *     * `invalid_confirm_token` - invalid_confirm_token
          *     * `invalid_credentials` - invalid_credentials
          *     * `invalid_days` - invalid_days
          *     * `invalid_death_date` - invalid_death_date
          *     * `invalid_draft` - invalid_draft
          *     * `invalid_escort` - invalid_escort
          *     * `invalid_kind` - invalid_kind
+         *     * `invalid_month` - invalid_month
          *     * `invalid_officer` - invalid_officer
          *     * `invalid_old_password` - invalid_old_password
          *     * `invalid_outcome` - invalid_outcome
+         *     * `invalid_parameter` - invalid_parameter
          *     * `invalid_range` - invalid_range
          *     * `invalid_record_id` - invalid_record_id
          *     * `invalid_resolution` - invalid_resolution
@@ -19441,6 +19463,7 @@ export interface components {
          *     * `missing_permission` - missing_permission
          *     * `mixed_id_columns` - mixed_id_columns
          *     * `model_not_found` - model_not_found
+         *     * `month_too_large` - month_too_large
          *     * `mortal_sin_unrepented` - mortal_sin_unrepented
          *     * `muted` - muted
          *     * `name_empty` - name_empty
@@ -19451,7 +19474,10 @@ export interface components {
          *     * `no_chat_identity` - no_chat_identity
          *     * `no_city_god` - no_city_god
          *     * `no_draft` - no_draft
+         *     * `no_email` - no_email
          *     * `no_end` - no_end
+         *     * `no_eval_officer` - no_eval_officer
+         *     * `no_eval_soul` - no_eval_soul
          *     * `no_exit` - no_exit
          *     * `no_grievance_filed` - no_grievance_filed
          *     * `no_mortal_sin` - no_mortal_sin
@@ -19489,6 +19515,7 @@ export interface components {
          *     * `not_deferred` - not_deferred
          *     * `not_deletable` - not_deletable
          *     * `not_diyu` - not_diyu
+         *     * `not_eligible` - not_eligible
          *     * `not_empty` - not_empty
          *     * `not_enabled` - not_enabled
          *     * `not_escalatable` - not_escalatable
@@ -19497,6 +19524,7 @@ export interface components {
          *     * `not_found` - not_found
          *     * `not_home` - not_home
          *     * `not_home_hall` - not_home_hall
+         *     * `not_in_cooldown` - not_in_cooldown
          *     * `not_in_initial_review` - not_in_initial_review
          *     * `not_in_tenant` - not_in_tenant
          *     * `not_in_wangsi` - not_in_wangsi
@@ -19510,6 +19538,7 @@ export interface components {
          *     * `not_reincarnating` - not_reincarnating
          *     * `not_requester` - not_requester
          *     * `not_reviewer` - not_reviewer
+         *     * `not_serving` - not_serving
          *     * `not_started` - not_started
          *     * `not_the_approver` - not_the_approver
          *     * `not_tudi_officer` - not_tudi_officer
@@ -19524,6 +19553,7 @@ export interface components {
          *     * `open_judgment` - open_judgment
          *     * `order_locked` - order_locked
          *     * `origin_flow_open` - origin_flow_open
+         *     * `origin_refused` - origin_refused
          *     * `original_judge` - original_judge
          *     * `overwrite_disabled` - overwrite_disabled
          *     * `parent_not_found` - parent_not_found
@@ -19536,6 +19566,7 @@ export interface components {
          *     * `peer_blocked` - peer_blocked
          *     * `peer_retired` - peer_retired
          *     * `pending_invalid` - pending_invalid
+         *     * `permission_changed` - permission_changed
          *     * `permission_denied` - permission_denied
          *     * `plan_busy` - plan_busy
          *     * `plan_closed` - plan_closed
@@ -19553,6 +19584,7 @@ export interface components {
          *     * `realm_not_found` - realm_not_found
          *     * `reason_locked` - reason_locked
          *     * `reason_required` - reason_required
+         *     * `rebirth_blocked` - rebirth_blocked
          *     * `rebirth_continent_not_applicable` - rebirth_continent_not_applicable
          *     * `rebirth_form_not_applicable` - rebirth_form_not_applicable
          *     * `rebirth_form_reason_required` - rebirth_form_reason_required
@@ -19560,6 +19592,7 @@ export interface components {
          *     * `rebirth_not_approved` - rebirth_not_approved
          *     * `rebirth_quota_full` - rebirth_quota_full
          *     * `rebirth_target_unavailable` - rebirth_target_unavailable
+         *     * `rebuild_running` - rebuild_running
          *     * `refused` - refused
          *     * `registration_exists` - registration_exists
          *     * `reject_and_fail_route` - reject_and_fail_route
@@ -19577,6 +19610,7 @@ export interface components {
          *     * `retry_not_a_destination` - retry_not_a_destination
          *     * `retry_with_open_cross` - retry_with_open_cross
          *     * `role_forbidden` - role_forbidden
+         *     * `role_forbidden_permission` - role_forbidden_permission
          *     * `role_in_use` - role_in_use
          *     * `role_invalid` - role_invalid
          *     * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
@@ -19589,14 +19623,18 @@ export interface components {
          *     * `segment_done` - segment_done
          *     * `segment_not_found` - segment_not_found
          *     * `segment_started` - segment_started
+         *     * `self` - self
          *     * `self_conversation` - self_conversation
          *     * `self_moderation` - self_moderation
          *     * `self_report` - self_report
          *     * `self_route` - self_route
+         *     * `sentence_in_progress` - sentence_in_progress
          *     * `sentence_plan_active` - sentence_plan_active
          *     * `session_revoked` - session_revoked
+         *     * `session_unknown` - session_unknown
          *     * `shared_source_only` - shared_source_only
          *     * `shortening_pending` - shortening_pending
+         *     * `shortening_used` - shortening_used
          *     * `skipped_not_a_verdict` - skipped_not_a_verdict
          *     * `soul_alive` - soul_alive
          *     * `soul_away` - soul_away
@@ -19624,11 +19662,15 @@ export interface components {
          *     * `tenant_not_found` - tenant_not_found
          *     * `term_conflict` - term_conflict
          *     * `term_not_applicable` - term_not_applicable
+         *     * `term_not_ended` - term_not_ended
          *     * `term_not_served` - term_not_served
          *     * `term_start_before_death` - term_start_before_death
          *     * `term_start_on_a_living_soul` - term_start_on_a_living_soul
+         *     * `terminal_cosmology` - terminal_cosmology
          *     * `threshold_out_of_range` - threshold_out_of_range
          *     * `throttled` - throttled
+         *     * `ticket_expired` - ticket_expired
+         *     * `ticket_invalid` - ticket_invalid
          *     * `timeout_incomplete` - timeout_incomplete
          *     * `timeout_role_missing` - timeout_role_missing
          *     * `token_not_valid` - token_not_valid
@@ -19652,11 +19694,17 @@ export interface components {
          *     * `unknown_columns` - unknown_columns
          *     * `unknown_node` - unknown_node
          *     * `unknown_print_key` - unknown_print_key
+         *     * `unpriced_backup_model` - unpriced_backup_model
+         *     * `unpriced_model` - unpriced_model
          *     * `unprocessable` - unprocessable
          *     * `unreachable` - unreachable
          *     * `unsupported_media_type` - unsupported_media_type
+         *     * `untested_connection` - untested_connection
+         *     * `untested_embedding` - untested_embedding
          *     * `untruthful_confession` - untruthful_confession
          *     * `use_draft_endpoint` - use_draft_endpoint
+         *     * `user_inactive` - user_inactive
+         *     * `user_not_found` - user_not_found
          *     * `username_taken` - username_taken
          *     * `verdict_contradicts_weighing` - verdict_contradicts_weighing
          *     * `verdict_not_accepted` - verdict_not_accepted
@@ -19683,7 +19731,7 @@ export interface components {
          *     * `wrong_status` - wrong_status
          * @enum {string}
          */
-        ProblemCodeEnum: "BATCH_TOO_LARGE" | "KEY_NO_DEATH_PERMISSION" | "MAX_RETRIES" | "NOT_FAILED" | "NOT_RETRYABLE" | "SENTENCE_NODE_REFUSED" | "TOO_MANY_REQUESTS" | "account_devoured" | "account_retired" | "admin_only" | "admin_role" | "admin_target_global_only" | "admitted_in_concluded_case" | "already_claimed" | "already_concluded" | "already_decided" | "already_deferred" | "already_deleted" | "already_enabled" | "already_handled" | "already_lifted" | "already_resolved" | "appeal_closed" | "appeal_not_from_judgment" | "appeal_open" | "appeal_rounds_used" | "appeal_used" | "appeal_window_closed" | "application_open" | "approval_flow_required" | "assigned_to_other" | "assignee_out_of_scope" | "assistant_busy" | "assistant_not_configured" | "assistant_unavailable" | "at_city_god" | "authentication_failed" | "bad_before" | "bad_encoding" | "bad_encoding_gbk" | "bad_gateway" | "bad_request" | "bad_response" | "bad_signature" | "bad_type" | "birth_in_future" | "builtin_role" | "cannot_enter_judgment" | "cannot_reopen" | "capture_refused" | "case_full" | "case_type_required" | "chat_not_configured" | "city_god_has_open_cases" | "city_gods_diyu_only" | "civilization_mismatch" | "civilization_or_soul" | "claimed_by_other" | "closed" | "concluded" | "condition_empty" | "condition_invalid" | "condition_overlap" | "conflict" | "conflicting_change" | "cooldown_over" | "cosigners_pending" | "countersign_no_signers" | "credential_expired" | "credential_not_pending" | "credential_not_printable" | "credential_not_revealable" | "credential_not_revealed" | "credential_void" | "cross_civilization_target_required" | "cross_civilization_target_same" | "cross_civilization_target_terminal" | "cross_civilization_target_unknown" | "cross_judgment_incomplete" | "cross_judgment_invalid" | "cross_judgment_open" | "curability_required" | "dangling_route" | "death_before_birth" | "declined" | "defer_reason_required" | "deliver_needs_upheld" | "desired_form_required" | "destination_not_applicable" | "device_login_invalid" | "device_login_revoked" | "dims_mismatch" | "dispatch_not_started" | "display_name_length" | "display_name_sensitive" | "display_name_taken" | "disposition_not_executed" | "draft_conflict" | "duat_unfinished" | "duplicate" | "duplicate_columns" | "duplicate_media" | "duplicate_word" | "email_in_person" | "email_invalid" | "email_taken" | "email_unchanged" | "embedding_unavailable" | "empty_changes" | "empty_file" | "empty_post" | "end_has_exit" | "error" | "escalate_past_final" | "eternal_light_locked" | "eternal_not_allowed" | "eternal_not_last" | "eternal_sentence" | "event_after_death" | "event_before_birth" | "expired" | "export_in_progress" | "fail_reason_contradicts_record" | "fail_reason_invalid" | "fail_reason_not_failed" | "fail_reason_not_selectable" | "fail_reason_note_required" | "fail_reason_note_too_long" | "fail_reason_required" | "feedback_to_hall_only" | "file_required" | "file_too_large" | "final_required" | "final_review_required" | "five_heinous_must_fail" | "forbidden" | "foreign_node" | "foreign_realm" | "foreign_stops_choice_required" | "gateway_timeout" | "gone" | "greek_account_required" | "greek_mark_not_applicable" | "grievance_not_major" | "grievance_open" | "hall_inactive" | "hall_required" | "handover_blocked" | "has_children" | "held_until_fated_date" | "idempotency_in_progress" | "idempotency_key_invalid" | "idempotency_key_reused" | "image_not_found" | "images_unavailable" | "impersonation_ended" | "impersonation_expired" | "impersonation_invalid" | "impersonation_read_only" | "implausible_lifespan" | "import_rows_invalid" | "incurable_is_eternal_in_tartarus" | "initial_password_expired" | "invalid" | "invalid_assignee" | "invalid_batch" | "invalid_case_type" | "invalid_changes" | "invalid_city_god" | "invalid_civilization" | "invalid_credentials" | "invalid_days" | "invalid_death_date" | "invalid_draft" | "invalid_escort" | "invalid_kind" | "invalid_officer" | "invalid_old_password" | "invalid_outcome" | "invalid_range" | "invalid_record_id" | "invalid_resolution" | "invalid_state_transition" | "invalid_station" | "invalid_target" | "invalid_transition" | "invalid_verdict" | "invalid_word" | "invite_link_invalid" | "judgment_has_workflow" | "judgment_not_concluded" | "judgment_not_found" | "jump_target_required" | "ladder_running" | "lifespan_not_ended" | "locked" | "login_locked" | "malformed_csv" | "media_not_found" | "method_not_allowed" | "mfa_required" | "mfa_setup_required" | "missing_columns" | "missing_id_column" | "missing_permission" | "mixed_id_columns" | "model_not_found" | "mortal_sin_unrepented" | "muted" | "name_empty" | "name_taken" | "no_active_account" | "no_appeal_above_minos" | "no_approver" | "no_chat_identity" | "no_city_god" | "no_draft" | "no_end" | "no_exit" | "no_grievance_filed" | "no_mortal_sin" | "no_nodes" | "no_pending_node" | "no_realm" | "no_rows" | "no_successor" | "no_tenant" | "no_verdict_document" | "node_changed" | "node_locked" | "node_not_found" | "node_not_pending" | "node_not_retryable" | "not_a_draft" | "not_a_request" | "not_acceptable" | "not_alive" | "not_allowed" | "not_an_image" | "not_appealable" | "not_at_city_god" | "not_authenticated" | "not_author" | "not_awaiting" | "not_cancellable" | "not_cancelled" | "not_city_god_officer" | "not_claimant" | "not_claimed" | "not_concluded" | "not_current" | "not_current_hall" | "not_deferred" | "not_deletable" | "not_diyu" | "not_empty" | "not_enabled" | "not_escalatable" | "not_finished" | "not_foreign" | "not_found" | "not_home" | "not_home_hall" | "not_in_initial_review" | "not_in_tenant" | "not_in_wangsi" | "not_inbox" | "not_initiator" | "not_next" | "not_original_judge" | "not_pending" | "not_picked" | "not_refused" | "not_reincarnating" | "not_requester" | "not_reviewer" | "not_started" | "not_the_approver" | "not_tudi_officer" | "not_uploader" | "not_verified" | "not_weighed" | "note_required" | "nothing_to_change" | "officer_has_open_work" | "one_segment" | "open_case" | "open_judgment" | "order_locked" | "origin_flow_open" | "original_judge" | "overwrite_disabled" | "parent_not_found" | "parse_error" | "passed_has_no_destination" | "password_change_required" | "password_unchanged" | "past_life_read_only" | "payload_too_large" | "peer_blocked" | "peer_retired" | "pending_invalid" | "permission_denied" | "plan_busy" | "plan_closed" | "plan_held" | "plan_in_progress" | "plan_in_retrial" | "plan_in_transit" | "post_sealed" | "precondition_failed" | "private_address" | "proof_required" | "rate_limited" | "realm_full" | "realm_not_allowed" | "realm_not_found" | "reason_locked" | "reason_required" | "rebirth_continent_not_applicable" | "rebirth_form_not_applicable" | "rebirth_form_reason_required" | "rebirth_not_applicable" | "rebirth_not_approved" | "rebirth_quota_full" | "rebirth_target_unavailable" | "refused" | "registration_exists" | "reject_and_fail_route" | "reject_not_earlier" | "remind_too_soon" | "report_limit" | "request_closed" | "request_pending" | "request_throttled" | "reset_code_attempts_exceeded" | "reset_code_expired" | "reset_code_wrong" | "reset_link_invalid" | "retry_has_no_destination" | "retry_not_a_destination" | "retry_with_open_cross" | "role_forbidden" | "role_in_use" | "role_invalid" | "role_referenced_by_workflow_templates" | "same_officer" | "same_tenant" | "second_factor_required" | "second_factor_unavailable" | "segment_changed" | "segment_closed" | "segment_done" | "segment_not_found" | "segment_started" | "self_conversation" | "self_moderation" | "self_report" | "self_route" | "sentence_plan_active" | "session_revoked" | "shared_source_only" | "shortening_pending" | "skipped_not_a_verdict" | "soul_alive" | "soul_away" | "soul_cannot_reincarnate" | "soul_cannot_reopen" | "soul_devoured" | "soul_has_pending_judgment" | "soul_is_here" | "soul_not_found" | "soul_not_in_underworld" | "soul_or_judgment" | "soul_recycled" | "soul_residing" | "soul_state" | "soup_already_taken" | "soup_not_taken" | "soup_refused" | "statute_retired" | "system_void" | "target_dispatch_disabled" | "target_outranks_caller" | "template_not_found" | "template_role_missing" | "tenant_forbidden" | "tenant_not_found" | "term_conflict" | "term_not_applicable" | "term_not_served" | "term_start_before_death" | "term_start_on_a_living_soul" | "threshold_out_of_range" | "throttled" | "timeout_incomplete" | "timeout_role_missing" | "token_not_valid" | "too_early" | "too_large" | "too_many" | "too_many_media" | "too_many_pending" | "too_many_pixels" | "too_many_rows" | "totp_required" | "transition_not_manual" | "tudi_city_god_not_county" | "tudi_gods_diyu_only" | "unavailable" | "unbaptised_no_purgatory" | "undeliverable" | "unferried" | "unknown_civilization" | "unknown_clause" | "unknown_columns" | "unknown_node" | "unknown_print_key" | "unprocessable" | "unreachable" | "unsupported_media_type" | "untruthful_confession" | "use_draft_endpoint" | "username_taken" | "verdict_contradicts_weighing" | "verdict_not_accepted" | "verdict_pdf_not_configured" | "verdict_pdf_unavailable" | "verdict_required" | "verdict_unchanged" | "verify_link_invalid" | "warrant_open" | "wavering_has_no_destination" | "wavering_with_open_cross" | "weak_password" | "webhook_inactive" | "weighing_flow_required" | "workflow_closed" | "workflow_finished" | "workflow_in_progress" | "workflow_in_use" | "workflow_required" | "workflow_running" | "workflow_started" | "wrong" | "wrong_password" | "wrong_status";
+        ProblemCodeEnum: "BATCH_TOO_LARGE" | "KEY_NO_DEATH_PERMISSION" | "MAX_RETRIES" | "NOT_FAILED" | "NOT_RETRYABLE" | "NO_CITY_GOD" | "SENTENCE_NODE_REFUSED" | "TOO_MANY_REQUESTS" | "account_devoured" | "account_retired" | "admin_always_all" | "admin_only" | "admin_only_permission" | "admin_role" | "admin_target_global_only" | "admitted_in_concluded_case" | "alive" | "already_claimed" | "already_concluded" | "already_decided" | "already_deferred" | "already_deleted" | "already_enabled" | "already_handled" | "already_lifted" | "already_resolved" | "api_key_required" | "appeal_closed" | "appeal_not_from_judgment" | "appeal_open" | "appeal_rounds_used" | "appeal_used" | "appeal_window_closed" | "application_open" | "approval_flow_required" | "approval_in_progress" | "assigned_to_other" | "assignee_out_of_scope" | "assistant_busy" | "assistant_not_configured" | "assistant_unavailable" | "at_city_god" | "authentication_failed" | "backup_incomplete" | "bad_before" | "bad_encoding" | "bad_encoding_gbk" | "bad_gateway" | "bad_request" | "bad_response" | "bad_signature" | "bad_type" | "birth_in_future" | "builtin_role" | "cannot_deactivate_self" | "cannot_delete_self" | "cannot_enter_judgment" | "cannot_reopen" | "capture_refused" | "case_full" | "case_type_not_for_civilization" | "case_type_required" | "catalogue_permission" | "chat_not_configured" | "chat_unavailable" | "city_god_has_open_cases" | "city_gods_diyu_only" | "civilization_mismatch" | "civilization_or_soul" | "claimed_by_other" | "closed" | "concluded" | "condition_empty" | "condition_invalid" | "condition_overlap" | "conflict" | "conflict_unacknowledged" | "conflicting_change" | "cooldown" | "cooldown_over" | "cosigners_pending" | "countersign_no_signers" | "credential_expired" | "credential_not_pending" | "credential_not_printable" | "credential_not_revealable" | "credential_not_revealed" | "credential_void" | "cross_civilization_target_required" | "cross_civilization_target_same" | "cross_civilization_target_terminal" | "cross_civilization_target_unknown" | "cross_judgment_incomplete" | "cross_judgment_invalid" | "cross_judgment_open" | "curability_required" | "current_session" | "dangling_route" | "deadline_passed" | "death_before_birth" | "declined" | "defer_reason_required" | "deliver_needs_upheld" | "desired_form_required" | "destination_not_applicable" | "device_login_invalid" | "device_login_revoked" | "dims_mismatch" | "dispatch_not_started" | "display_name_length" | "display_name_sensitive" | "display_name_taken" | "disposition_not_executed" | "draft_conflict" | "duat_unfinished" | "duplicate" | "duplicate_columns" | "duplicate_media" | "duplicate_word" | "email_in_person" | "email_invalid" | "email_taken" | "email_unchanged" | "embedding_unavailable" | "empty_changes" | "empty_file" | "empty_post" | "end_has_exit" | "error" | "escalate_past_final" | "eternal_light_locked" | "eternal_not_allowed" | "eternal_not_last" | "eternal_sentence" | "event_after_death" | "event_before_birth" | "expired" | "export_in_progress" | "fail_reason_contradicts_record" | "fail_reason_invalid" | "fail_reason_not_failed" | "fail_reason_not_selectable" | "fail_reason_note_required" | "fail_reason_note_too_long" | "fail_reason_required" | "feedback_to_hall_only" | "file_required" | "file_too_large" | "final_required" | "final_review_required" | "five_heinous_must_fail" | "forbidden" | "foreign_node" | "foreign_realm" | "foreign_stops_choice_required" | "gateway_timeout" | "gone" | "greek_account_required" | "greek_mark_not_applicable" | "grievance_not_major" | "grievance_open" | "hall_inactive" | "hall_required" | "handover_blocked" | "has_children" | "held_until_fated_date" | "idempotency_in_progress" | "idempotency_key_invalid" | "idempotency_key_reused" | "image_not_found" | "images_unavailable" | "impersonate_admin" | "impersonate_self" | "impersonate_unavailable" | "impersonation_ended" | "impersonation_expired" | "impersonation_invalid" | "impersonation_read_only" | "implausible_lifespan" | "import_rows_invalid" | "incurable_is_eternal_in_tartarus" | "initial_password_expired" | "invalid" | "invalid_assignee" | "invalid_batch" | "invalid_case_type" | "invalid_changes" | "invalid_city_god" | "invalid_civilization" | "invalid_confirm_token" | "invalid_credentials" | "invalid_days" | "invalid_death_date" | "invalid_draft" | "invalid_escort" | "invalid_kind" | "invalid_month" | "invalid_officer" | "invalid_old_password" | "invalid_outcome" | "invalid_parameter" | "invalid_range" | "invalid_record_id" | "invalid_resolution" | "invalid_state_transition" | "invalid_station" | "invalid_target" | "invalid_transition" | "invalid_verdict" | "invalid_word" | "invite_link_invalid" | "judgment_has_workflow" | "judgment_not_concluded" | "judgment_not_found" | "jump_target_required" | "ladder_running" | "lifespan_not_ended" | "locked" | "login_locked" | "malformed_csv" | "media_not_found" | "method_not_allowed" | "mfa_required" | "mfa_setup_required" | "missing_columns" | "missing_id_column" | "missing_permission" | "mixed_id_columns" | "model_not_found" | "month_too_large" | "mortal_sin_unrepented" | "muted" | "name_empty" | "name_taken" | "no_active_account" | "no_appeal_above_minos" | "no_approver" | "no_chat_identity" | "no_city_god" | "no_draft" | "no_email" | "no_end" | "no_eval_officer" | "no_eval_soul" | "no_exit" | "no_grievance_filed" | "no_mortal_sin" | "no_nodes" | "no_pending_node" | "no_realm" | "no_rows" | "no_successor" | "no_tenant" | "no_verdict_document" | "node_changed" | "node_locked" | "node_not_found" | "node_not_pending" | "node_not_retryable" | "not_a_draft" | "not_a_request" | "not_acceptable" | "not_alive" | "not_allowed" | "not_an_image" | "not_appealable" | "not_at_city_god" | "not_authenticated" | "not_author" | "not_awaiting" | "not_cancellable" | "not_cancelled" | "not_city_god_officer" | "not_claimant" | "not_claimed" | "not_concluded" | "not_current" | "not_current_hall" | "not_deferred" | "not_deletable" | "not_diyu" | "not_eligible" | "not_empty" | "not_enabled" | "not_escalatable" | "not_finished" | "not_foreign" | "not_found" | "not_home" | "not_home_hall" | "not_in_cooldown" | "not_in_initial_review" | "not_in_tenant" | "not_in_wangsi" | "not_inbox" | "not_initiator" | "not_next" | "not_original_judge" | "not_pending" | "not_picked" | "not_refused" | "not_reincarnating" | "not_requester" | "not_reviewer" | "not_serving" | "not_started" | "not_the_approver" | "not_tudi_officer" | "not_uploader" | "not_verified" | "not_weighed" | "note_required" | "nothing_to_change" | "officer_has_open_work" | "one_segment" | "open_case" | "open_judgment" | "order_locked" | "origin_flow_open" | "origin_refused" | "original_judge" | "overwrite_disabled" | "parent_not_found" | "parse_error" | "passed_has_no_destination" | "password_change_required" | "password_unchanged" | "past_life_read_only" | "payload_too_large" | "peer_blocked" | "peer_retired" | "pending_invalid" | "permission_changed" | "permission_denied" | "plan_busy" | "plan_closed" | "plan_held" | "plan_in_progress" | "plan_in_retrial" | "plan_in_transit" | "post_sealed" | "precondition_failed" | "private_address" | "proof_required" | "rate_limited" | "realm_full" | "realm_not_allowed" | "realm_not_found" | "reason_locked" | "reason_required" | "rebirth_blocked" | "rebirth_continent_not_applicable" | "rebirth_form_not_applicable" | "rebirth_form_reason_required" | "rebirth_not_applicable" | "rebirth_not_approved" | "rebirth_quota_full" | "rebirth_target_unavailable" | "rebuild_running" | "refused" | "registration_exists" | "reject_and_fail_route" | "reject_not_earlier" | "remind_too_soon" | "report_limit" | "request_closed" | "request_pending" | "request_throttled" | "reset_code_attempts_exceeded" | "reset_code_expired" | "reset_code_wrong" | "reset_link_invalid" | "retry_has_no_destination" | "retry_not_a_destination" | "retry_with_open_cross" | "role_forbidden" | "role_forbidden_permission" | "role_in_use" | "role_invalid" | "role_referenced_by_workflow_templates" | "same_officer" | "same_tenant" | "second_factor_required" | "second_factor_unavailable" | "segment_changed" | "segment_closed" | "segment_done" | "segment_not_found" | "segment_started" | "self" | "self_conversation" | "self_moderation" | "self_report" | "self_route" | "sentence_in_progress" | "sentence_plan_active" | "session_revoked" | "session_unknown" | "shared_source_only" | "shortening_pending" | "shortening_used" | "skipped_not_a_verdict" | "soul_alive" | "soul_away" | "soul_cannot_reincarnate" | "soul_cannot_reopen" | "soul_devoured" | "soul_has_pending_judgment" | "soul_is_here" | "soul_not_found" | "soul_not_in_underworld" | "soul_or_judgment" | "soul_recycled" | "soul_residing" | "soul_state" | "soup_already_taken" | "soup_not_taken" | "soup_refused" | "statute_retired" | "system_void" | "target_dispatch_disabled" | "target_outranks_caller" | "template_not_found" | "template_role_missing" | "tenant_forbidden" | "tenant_not_found" | "term_conflict" | "term_not_applicable" | "term_not_ended" | "term_not_served" | "term_start_before_death" | "term_start_on_a_living_soul" | "terminal_cosmology" | "threshold_out_of_range" | "throttled" | "ticket_expired" | "ticket_invalid" | "timeout_incomplete" | "timeout_role_missing" | "token_not_valid" | "too_early" | "too_large" | "too_many" | "too_many_media" | "too_many_pending" | "too_many_pixels" | "too_many_rows" | "totp_required" | "transition_not_manual" | "tudi_city_god_not_county" | "tudi_gods_diyu_only" | "unavailable" | "unbaptised_no_purgatory" | "undeliverable" | "unferried" | "unknown_civilization" | "unknown_clause" | "unknown_columns" | "unknown_node" | "unknown_print_key" | "unpriced_backup_model" | "unpriced_model" | "unprocessable" | "unreachable" | "unsupported_media_type" | "untested_connection" | "untested_embedding" | "untruthful_confession" | "use_draft_endpoint" | "user_inactive" | "user_not_found" | "username_taken" | "verdict_contradicts_weighing" | "verdict_not_accepted" | "verdict_pdf_not_configured" | "verdict_pdf_unavailable" | "verdict_required" | "verdict_unchanged" | "verify_link_invalid" | "warrant_open" | "wavering_has_no_destination" | "wavering_with_open_cross" | "weak_password" | "webhook_inactive" | "weighing_flow_required" | "workflow_closed" | "workflow_finished" | "workflow_in_progress" | "workflow_in_use" | "workflow_required" | "workflow_running" | "workflow_started" | "wrong" | "wrong_password" | "wrong_status";
         /** @description One validation error. A coded field refusal adds its facts as further members (`region`, `city_god` …). */
         ProblemFieldError: {
             /** @description Dotted path (`items.0.name`); absent = the whole request. */

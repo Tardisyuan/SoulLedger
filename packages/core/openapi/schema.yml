@@ -42579,14 +42579,18 @@ components:
       - MAX_RETRIES
       - NOT_FAILED
       - NOT_RETRYABLE
+      - NO_CITY_GOD
       - SENTENCE_NODE_REFUSED
       - TOO_MANY_REQUESTS
       - account_devoured
       - account_retired
+      - admin_always_all
       - admin_only
+      - admin_only_permission
       - admin_role
       - admin_target_global_only
       - admitted_in_concluded_case
+      - alive
       - already_claimed
       - already_concluded
       - already_decided
@@ -42596,6 +42600,7 @@ components:
       - already_handled
       - already_lifted
       - already_resolved
+      - api_key_required
       - appeal_closed
       - appeal_not_from_judgment
       - appeal_open
@@ -42604,6 +42609,7 @@ components:
       - appeal_window_closed
       - application_open
       - approval_flow_required
+      - approval_in_progress
       - assigned_to_other
       - assignee_out_of_scope
       - assistant_busy
@@ -42611,6 +42617,7 @@ components:
       - assistant_unavailable
       - at_city_god
       - authentication_failed
+      - backup_incomplete
       - bad_before
       - bad_encoding
       - bad_encoding_gbk
@@ -42621,12 +42628,17 @@ components:
       - bad_type
       - birth_in_future
       - builtin_role
+      - cannot_deactivate_self
+      - cannot_delete_self
       - cannot_enter_judgment
       - cannot_reopen
       - capture_refused
       - case_full
+      - case_type_not_for_civilization
       - case_type_required
+      - catalogue_permission
       - chat_not_configured
+      - chat_unavailable
       - city_god_has_open_cases
       - city_gods_diyu_only
       - civilization_mismatch
@@ -42638,7 +42650,9 @@ components:
       - condition_invalid
       - condition_overlap
       - conflict
+      - conflict_unacknowledged
       - conflicting_change
+      - cooldown
       - cooldown_over
       - cosigners_pending
       - countersign_no_signers
@@ -42656,7 +42670,9 @@ components:
       - cross_judgment_invalid
       - cross_judgment_open
       - curability_required
+      - current_session
       - dangling_route
+      - deadline_passed
       - death_before_birth
       - declined
       - defer_reason_required
@@ -42729,6 +42745,9 @@ components:
       - idempotency_key_reused
       - image_not_found
       - images_unavailable
+      - impersonate_admin
+      - impersonate_self
+      - impersonate_unavailable
       - impersonation_ended
       - impersonation_expired
       - impersonation_invalid
@@ -42744,15 +42763,18 @@ components:
       - invalid_changes
       - invalid_city_god
       - invalid_civilization
+      - invalid_confirm_token
       - invalid_credentials
       - invalid_days
       - invalid_death_date
       - invalid_draft
       - invalid_escort
       - invalid_kind
+      - invalid_month
       - invalid_officer
       - invalid_old_password
       - invalid_outcome
+      - invalid_parameter
       - invalid_range
       - invalid_record_id
       - invalid_resolution
@@ -42781,6 +42803,7 @@ components:
       - missing_permission
       - mixed_id_columns
       - model_not_found
+      - month_too_large
       - mortal_sin_unrepented
       - muted
       - name_empty
@@ -42791,7 +42814,10 @@ components:
       - no_chat_identity
       - no_city_god
       - no_draft
+      - no_email
       - no_end
+      - no_eval_officer
+      - no_eval_soul
       - no_exit
       - no_grievance_filed
       - no_mortal_sin
@@ -42829,6 +42855,7 @@ components:
       - not_deferred
       - not_deletable
       - not_diyu
+      - not_eligible
       - not_empty
       - not_enabled
       - not_escalatable
@@ -42837,6 +42864,7 @@ components:
       - not_found
       - not_home
       - not_home_hall
+      - not_in_cooldown
       - not_in_initial_review
       - not_in_tenant
       - not_in_wangsi
@@ -42850,6 +42878,7 @@ components:
       - not_reincarnating
       - not_requester
       - not_reviewer
+      - not_serving
       - not_started
       - not_the_approver
       - not_tudi_officer
@@ -42864,6 +42893,7 @@ components:
       - open_judgment
       - order_locked
       - origin_flow_open
+      - origin_refused
       - original_judge
       - overwrite_disabled
       - parent_not_found
@@ -42876,6 +42906,7 @@ components:
       - peer_blocked
       - peer_retired
       - pending_invalid
+      - permission_changed
       - permission_denied
       - plan_busy
       - plan_closed
@@ -42893,6 +42924,7 @@ components:
       - realm_not_found
       - reason_locked
       - reason_required
+      - rebirth_blocked
       - rebirth_continent_not_applicable
       - rebirth_form_not_applicable
       - rebirth_form_reason_required
@@ -42900,6 +42932,7 @@ components:
       - rebirth_not_approved
       - rebirth_quota_full
       - rebirth_target_unavailable
+      - rebuild_running
       - refused
       - registration_exists
       - reject_and_fail_route
@@ -42917,6 +42950,7 @@ components:
       - retry_not_a_destination
       - retry_with_open_cross
       - role_forbidden
+      - role_forbidden_permission
       - role_in_use
       - role_invalid
       - role_referenced_by_workflow_templates
@@ -42929,14 +42963,18 @@ components:
       - segment_done
       - segment_not_found
       - segment_started
+      - self
       - self_conversation
       - self_moderation
       - self_report
       - self_route
+      - sentence_in_progress
       - sentence_plan_active
       - session_revoked
+      - session_unknown
       - shared_source_only
       - shortening_pending
+      - shortening_used
       - skipped_not_a_verdict
       - soul_alive
       - soul_away
@@ -42964,11 +43002,15 @@ components:
       - tenant_not_found
       - term_conflict
       - term_not_applicable
+      - term_not_ended
       - term_not_served
       - term_start_before_death
       - term_start_on_a_living_soul
+      - terminal_cosmology
       - threshold_out_of_range
       - throttled
+      - ticket_expired
+      - ticket_invalid
       - timeout_incomplete
       - timeout_role_missing
       - token_not_valid
@@ -42992,11 +43034,17 @@ components:
       - unknown_columns
       - unknown_node
       - unknown_print_key
+      - unpriced_backup_model
+      - unpriced_model
       - unprocessable
       - unreachable
       - unsupported_media_type
+      - untested_connection
+      - untested_embedding
       - untruthful_confession
       - use_draft_endpoint
+      - user_inactive
+      - user_not_found
       - username_taken
       - verdict_contradicts_weighing
       - verdict_not_accepted
@@ -43028,14 +43076,18 @@ components:
         * `MAX_RETRIES` - MAX_RETRIES
         * `NOT_FAILED` - NOT_FAILED
         * `NOT_RETRYABLE` - NOT_RETRYABLE
+        * `NO_CITY_GOD` - NO_CITY_GOD
         * `SENTENCE_NODE_REFUSED` - SENTENCE_NODE_REFUSED
         * `TOO_MANY_REQUESTS` - TOO_MANY_REQUESTS
         * `account_devoured` - account_devoured
         * `account_retired` - account_retired
+        * `admin_always_all` - admin_always_all
         * `admin_only` - admin_only
+        * `admin_only_permission` - admin_only_permission
         * `admin_role` - admin_role
         * `admin_target_global_only` - admin_target_global_only
         * `admitted_in_concluded_case` - admitted_in_concluded_case
+        * `alive` - alive
         * `already_claimed` - already_claimed
         * `already_concluded` - already_concluded
         * `already_decided` - already_decided
@@ -43045,6 +43097,7 @@ components:
         * `already_handled` - already_handled
         * `already_lifted` - already_lifted
         * `already_resolved` - already_resolved
+        * `api_key_required` - api_key_required
         * `appeal_closed` - appeal_closed
         * `appeal_not_from_judgment` - appeal_not_from_judgment
         * `appeal_open` - appeal_open
@@ -43053,6 +43106,7 @@ components:
         * `appeal_window_closed` - appeal_window_closed
         * `application_open` - application_open
         * `approval_flow_required` - approval_flow_required
+        * `approval_in_progress` - approval_in_progress
         * `assigned_to_other` - assigned_to_other
         * `assignee_out_of_scope` - assignee_out_of_scope
         * `assistant_busy` - assistant_busy
@@ -43060,6 +43114,7 @@ components:
         * `assistant_unavailable` - assistant_unavailable
         * `at_city_god` - at_city_god
         * `authentication_failed` - authentication_failed
+        * `backup_incomplete` - backup_incomplete
         * `bad_before` - bad_before
         * `bad_encoding` - bad_encoding
         * `bad_encoding_gbk` - bad_encoding_gbk
@@ -43070,12 +43125,17 @@ components:
         * `bad_type` - bad_type
         * `birth_in_future` - birth_in_future
         * `builtin_role` - builtin_role
+        * `cannot_deactivate_self` - cannot_deactivate_self
+        * `cannot_delete_self` - cannot_delete_self
         * `cannot_enter_judgment` - cannot_enter_judgment
         * `cannot_reopen` - cannot_reopen
         * `capture_refused` - capture_refused
         * `case_full` - case_full
+        * `case_type_not_for_civilization` - case_type_not_for_civilization
         * `case_type_required` - case_type_required
+        * `catalogue_permission` - catalogue_permission
         * `chat_not_configured` - chat_not_configured
+        * `chat_unavailable` - chat_unavailable
         * `city_god_has_open_cases` - city_god_has_open_cases
         * `city_gods_diyu_only` - city_gods_diyu_only
         * `civilization_mismatch` - civilization_mismatch
@@ -43087,7 +43147,9 @@ components:
         * `condition_invalid` - condition_invalid
         * `condition_overlap` - condition_overlap
         * `conflict` - conflict
+        * `conflict_unacknowledged` - conflict_unacknowledged
         * `conflicting_change` - conflicting_change
+        * `cooldown` - cooldown
         * `cooldown_over` - cooldown_over
         * `cosigners_pending` - cosigners_pending
         * `countersign_no_signers` - countersign_no_signers
@@ -43105,7 +43167,9 @@ components:
         * `cross_judgment_invalid` - cross_judgment_invalid
         * `cross_judgment_open` - cross_judgment_open
         * `curability_required` - curability_required
+        * `current_session` - current_session
         * `dangling_route` - dangling_route
+        * `deadline_passed` - deadline_passed
         * `death_before_birth` - death_before_birth
         * `declined` - declined
         * `defer_reason_required` - defer_reason_required
@@ -43178,6 +43242,9 @@ components:
         * `idempotency_key_reused` - idempotency_key_reused
         * `image_not_found` - image_not_found
         * `images_unavailable` - images_unavailable
+        * `impersonate_admin` - impersonate_admin
+        * `impersonate_self` - impersonate_self
+        * `impersonate_unavailable` - impersonate_unavailable
         * `impersonation_ended` - impersonation_ended
         * `impersonation_expired` - impersonation_expired
         * `impersonation_invalid` - impersonation_invalid
@@ -43193,15 +43260,18 @@ components:
         * `invalid_changes` - invalid_changes
         * `invalid_city_god` - invalid_city_god
         * `invalid_civilization` - invalid_civilization
+        * `invalid_confirm_token` - invalid_confirm_token
         * `invalid_credentials` - invalid_credentials
         * `invalid_days` - invalid_days
         * `invalid_death_date` - invalid_death_date
         * `invalid_draft` - invalid_draft
         * `invalid_escort` - invalid_escort
         * `invalid_kind` - invalid_kind
+        * `invalid_month` - invalid_month
         * `invalid_officer` - invalid_officer
         * `invalid_old_password` - invalid_old_password
         * `invalid_outcome` - invalid_outcome
+        * `invalid_parameter` - invalid_parameter
         * `invalid_range` - invalid_range
         * `invalid_record_id` - invalid_record_id
         * `invalid_resolution` - invalid_resolution
@@ -43230,6 +43300,7 @@ components:
         * `missing_permission` - missing_permission
         * `mixed_id_columns` - mixed_id_columns
         * `model_not_found` - model_not_found
+        * `month_too_large` - month_too_large
         * `mortal_sin_unrepented` - mortal_sin_unrepented
         * `muted` - muted
         * `name_empty` - name_empty
@@ -43240,7 +43311,10 @@ components:
         * `no_chat_identity` - no_chat_identity
         * `no_city_god` - no_city_god
         * `no_draft` - no_draft
+        * `no_email` - no_email
         * `no_end` - no_end
+        * `no_eval_officer` - no_eval_officer
+        * `no_eval_soul` - no_eval_soul
         * `no_exit` - no_exit
         * `no_grievance_filed` - no_grievance_filed
         * `no_mortal_sin` - no_mortal_sin
@@ -43278,6 +43352,7 @@ components:
         * `not_deferred` - not_deferred
         * `not_deletable` - not_deletable
         * `not_diyu` - not_diyu
+        * `not_eligible` - not_eligible
         * `not_empty` - not_empty
         * `not_enabled` - not_enabled
         * `not_escalatable` - not_escalatable
@@ -43286,6 +43361,7 @@ components:
         * `not_found` - not_found
         * `not_home` - not_home
         * `not_home_hall` - not_home_hall
+        * `not_in_cooldown` - not_in_cooldown
         * `not_in_initial_review` - not_in_initial_review
         * `not_in_tenant` - not_in_tenant
         * `not_in_wangsi` - not_in_wangsi
@@ -43299,6 +43375,7 @@ components:
         * `not_reincarnating` - not_reincarnating
         * `not_requester` - not_requester
         * `not_reviewer` - not_reviewer
+        * `not_serving` - not_serving
         * `not_started` - not_started
         * `not_the_approver` - not_the_approver
         * `not_tudi_officer` - not_tudi_officer
@@ -43313,6 +43390,7 @@ components:
         * `open_judgment` - open_judgment
         * `order_locked` - order_locked
         * `origin_flow_open` - origin_flow_open
+        * `origin_refused` - origin_refused
         * `original_judge` - original_judge
         * `overwrite_disabled` - overwrite_disabled
         * `parent_not_found` - parent_not_found
@@ -43325,6 +43403,7 @@ components:
         * `peer_blocked` - peer_blocked
         * `peer_retired` - peer_retired
         * `pending_invalid` - pending_invalid
+        * `permission_changed` - permission_changed
         * `permission_denied` - permission_denied
         * `plan_busy` - plan_busy
         * `plan_closed` - plan_closed
@@ -43342,6 +43421,7 @@ components:
         * `realm_not_found` - realm_not_found
         * `reason_locked` - reason_locked
         * `reason_required` - reason_required
+        * `rebirth_blocked` - rebirth_blocked
         * `rebirth_continent_not_applicable` - rebirth_continent_not_applicable
         * `rebirth_form_not_applicable` - rebirth_form_not_applicable
         * `rebirth_form_reason_required` - rebirth_form_reason_required
@@ -43349,6 +43429,7 @@ components:
         * `rebirth_not_approved` - rebirth_not_approved
         * `rebirth_quota_full` - rebirth_quota_full
         * `rebirth_target_unavailable` - rebirth_target_unavailable
+        * `rebuild_running` - rebuild_running
         * `refused` - refused
         * `registration_exists` - registration_exists
         * `reject_and_fail_route` - reject_and_fail_route
@@ -43366,6 +43447,7 @@ components:
         * `retry_not_a_destination` - retry_not_a_destination
         * `retry_with_open_cross` - retry_with_open_cross
         * `role_forbidden` - role_forbidden
+        * `role_forbidden_permission` - role_forbidden_permission
         * `role_in_use` - role_in_use
         * `role_invalid` - role_invalid
         * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
@@ -43378,14 +43460,18 @@ components:
         * `segment_done` - segment_done
         * `segment_not_found` - segment_not_found
         * `segment_started` - segment_started
+        * `self` - self
         * `self_conversation` - self_conversation
         * `self_moderation` - self_moderation
         * `self_report` - self_report
         * `self_route` - self_route
+        * `sentence_in_progress` - sentence_in_progress
         * `sentence_plan_active` - sentence_plan_active
         * `session_revoked` - session_revoked
+        * `session_unknown` - session_unknown
         * `shared_source_only` - shared_source_only
         * `shortening_pending` - shortening_pending
+        * `shortening_used` - shortening_used
         * `skipped_not_a_verdict` - skipped_not_a_verdict
         * `soul_alive` - soul_alive
         * `soul_away` - soul_away
@@ -43413,11 +43499,15 @@ components:
         * `tenant_not_found` - tenant_not_found
         * `term_conflict` - term_conflict
         * `term_not_applicable` - term_not_applicable
+        * `term_not_ended` - term_not_ended
         * `term_not_served` - term_not_served
         * `term_start_before_death` - term_start_before_death
         * `term_start_on_a_living_soul` - term_start_on_a_living_soul
+        * `terminal_cosmology` - terminal_cosmology
         * `threshold_out_of_range` - threshold_out_of_range
         * `throttled` - throttled
+        * `ticket_expired` - ticket_expired
+        * `ticket_invalid` - ticket_invalid
         * `timeout_incomplete` - timeout_incomplete
         * `timeout_role_missing` - timeout_role_missing
         * `token_not_valid` - token_not_valid
@@ -43441,11 +43531,17 @@ components:
         * `unknown_columns` - unknown_columns
         * `unknown_node` - unknown_node
         * `unknown_print_key` - unknown_print_key
+        * `unpriced_backup_model` - unpriced_backup_model
+        * `unpriced_model` - unpriced_model
         * `unprocessable` - unprocessable
         * `unreachable` - unreachable
         * `unsupported_media_type` - unsupported_media_type
+        * `untested_connection` - untested_connection
+        * `untested_embedding` - untested_embedding
         * `untruthful_confession` - untruthful_confession
         * `use_draft_endpoint` - use_draft_endpoint
+        * `user_inactive` - user_inactive
+        * `user_not_found` - user_not_found
         * `username_taken` - username_taken
         * `verdict_contradicts_weighing` - verdict_contradicts_weighing
         * `verdict_not_accepted` - verdict_not_accepted
