@@ -90,7 +90,7 @@ export function useUrlFilters<K extends string>({
   /** Query parameter name -> rule. The same names are the keys of `values`. */
   fields: Record<K, UrlFieldRule>;
   /** The fields also remembered in this browser. Search text and ids brought from elsewhere stay out. */
-  remember: readonly K[];
+  remember: readonly NoInfer<K>[];
   values: Record<K, string>;
   page: number;
   /** Set the page's state. Called on mount and whenever the address changes from outside (a link, back). */

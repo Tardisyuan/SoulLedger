@@ -4,7 +4,14 @@ Auth URL routes.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import admin_session_views, device_login_views, impersonation_views, mfa_views, officer_reset_views, session_views
+from . import (
+    admin_session_views,
+    device_login_views,
+    impersonation_views,
+    mfa_views,
+    officer_reset_views,
+    session_views,
+)
 from .views import (
     LoginLogViewSet,
     LoginView,

@@ -10,7 +10,8 @@ import secrets
 from django.utils import timezone
 
 from .mfa import _hash_device
-from .models import OfficerDeviceLogin, OfficerDeviceLoginRevokeReason as Reason
+from .models import OfficerDeviceLogin
+from .models import OfficerDeviceLoginRevokeReason as Reason
 
 
 def _audit(user, description, *, request=None, changes=None):
