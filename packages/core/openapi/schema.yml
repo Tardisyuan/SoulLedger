@@ -22415,7 +22415,9 @@ paths:
   /api/v1/tenants/overview/:
     get:
       operationId: v1_tenants_overview_list
-      description: 跨殿总览(ADMIN):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。
+      description: |-
+        跨殿总览(无殿管理员):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。
+        系统管理员每一殿,文明管理员本文明各殿(`get_queryset`)。
       parameters:
       - name: ordering
         required: false
@@ -42007,6 +42009,12 @@ components:
           - $ref: '#/components/schemas/LoginTenantRef'
           nullable: true
           readOnly: true
+        civilization:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          - $ref: '#/components/schemas/NullEnum'
         first_name:
           type: string
           maxLength: 150
@@ -50652,6 +50660,12 @@ components:
           - $ref: '#/components/schemas/LoginTenantRef'
           nullable: true
           readOnly: true
+        civilization:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          - $ref: '#/components/schemas/NullEnum'
         first_name:
           type: string
           maxLength: 150
@@ -50695,6 +50709,7 @@ components:
             type: string
           readOnly: true
       required:
+      - civilization
       - email_verified
       - id
       - is_active
@@ -50783,6 +50798,12 @@ components:
         tenant:
           type: integer
           nullable: true
+        civilization:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
         organization:
           type: integer
           nullable: true
@@ -50882,6 +50903,12 @@ components:
           - $ref: '#/components/schemas/UserTenantRef'
           nullable: true
           readOnly: true
+        civilization:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          - $ref: '#/components/schemas/NullEnum'
         organization:
           allOf:
           - $ref: '#/components/schemas/UserOrganizationRef'
@@ -50917,6 +50944,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - civilization
       - create_time
       - extra_roles
       - id
@@ -51259,6 +51287,12 @@ components:
           - $ref: '#/components/schemas/LoginTenantRef'
           nullable: true
           readOnly: true
+        civilization:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          - $ref: '#/components/schemas/NullEnum'
         display_name:
           type: string
           description: Display name shown in the navbar (e.g. 系统管理员)
@@ -51281,6 +51315,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - civilization
       - id
       - mfa_enabled
       - mfa_required

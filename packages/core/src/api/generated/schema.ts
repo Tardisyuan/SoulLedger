@@ -10149,7 +10149,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 跨殿总览(ADMIN):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。 */
+        /**
+         * @description 跨殿总览(无殿管理员):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。
+         *     系统管理员每一殿,文明管理员本文明各殿(`get_queryset`)。
+         */
         get: operations["v1_tenants_overview_list"];
         put?: never;
         post?: never;
@@ -18952,6 +18955,7 @@ export interface components {
             readonly email_verified?: boolean;
             readonly role?: string;
             readonly tenant?: components["schemas"]["LoginTenantRef"] | null;
+            readonly civilization?: (components["schemas"]["CivilizationEnum"] | components["schemas"]["NullEnum"]) | null;
             first_name?: string;
             last_name?: string;
             /**
@@ -23019,6 +23023,7 @@ export interface components {
             readonly email_verified: boolean;
             readonly role: string;
             readonly tenant: components["schemas"]["LoginTenantRef"] | null;
+            readonly civilization: (components["schemas"]["CivilizationEnum"] | components["schemas"]["NullEnum"]) | null;
             first_name?: string;
             last_name?: string;
             /**
@@ -23079,6 +23084,7 @@ export interface components {
             last_name?: string;
             role?: string;
             tenant?: number | null;
+            civilization?: (components["schemas"]["CivilizationEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @description 所属组织：如 第一殿、冥王厅 */
             organization?: number | null;
             /** @description 职位：如 第一殿殿主 */
@@ -23132,6 +23138,7 @@ export interface components {
             last_name?: string;
             role?: string;
             readonly tenant: components["schemas"]["UserTenantRef"] | null;
+            readonly civilization: (components["schemas"]["CivilizationEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly organization: components["schemas"]["UserOrganizationRef"] | null;
             /** @description 职位：如 第一殿殿主 */
             position?: string;
@@ -23304,6 +23311,7 @@ export interface components {
             email?: string;
             role?: string;
             readonly tenant: components["schemas"]["LoginTenantRef"] | null;
+            readonly civilization: (components["schemas"]["CivilizationEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @description Display name shown in the navbar (e.g. 系统管理员) */
             display_name?: string;
             readonly permissions: string[];
