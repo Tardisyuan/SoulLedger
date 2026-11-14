@@ -11,11 +11,14 @@
  *
  * Design 第五十批 C2: the box stays on top (outside the scroll) and is focused on arrival. Empty: 「最近打开」 (the name
  * in the dossier face, a case number in mono, when at the right) with 「清除」. Typed: 「案件 · n」 first (CASES_SHOWN
- * rows; 「看全部 n 件 ›」 shows the rest of what the server answered, in place) and 「人物 · n」 under it (PEOPLE_SHOWN
+ * rows; 「看全部 n 件 ›」 shows the rest of what the server answered, in place) and the souls under it (PEOPLE_SHOWN
  * rows, 「灵魂 · 殿名」). Where the typed text matches it is bold and underlined, never coloured. Nothing at all:
  * 「没有找到「…」」 and how to search, with this hall's case-number prefix for this year (`caseNumberExample`).
  *
- * 人物 is souls only: the officer app has no officer search to ask (the web's search has none either).
+ * 第五十二批 C2: the souls group is titled with the web's `search.group_souls` (灵魂): it holds souls only -- the officer
+ * app has no officer search to ask -- and 「人物」 sent people looking for officers. When an officer search exists it
+ * goes back to 「人物 · n」. 「看全部」 expanded leaves no row behind; when the server holds more than the page it
+ * answered, a plain line 「只显示前 n 件」 says so (not a button: pressing it would change nothing).
  */
 import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { soulsApi, type SoulListItem } from "@soulledger/core/api/souls";
@@ -148,7 +151,6 @@ function SoulLookup({
 
   const { query } = result;
   const people = result.first?.results ?? [];
-  const peopleCount = result.first?.count ?? people.length;
   const shownCases = allCases ? cases.rows : cases.rows.slice(0, CASES_SHOWN);
   const nothing = result.status === "done" && people.length === 0 && cases.rows.length === 0;
   const failed = result.status === "error" || result.status === "denied";
@@ -213,16 +215,20 @@ function SoulLookup({
             ))}
             {!allCases && cases.count > CASES_SHOWN ? (
               // ponytail: shows the rest of the first page the server answered; a hall with more than a page of matches
-              // for one term gets that page, not every match.
+              // for one term gets that page, not every match -- and says so below.
               <Pressable testID="search-see-all" accessibilityRole="button" onPress={() => setAllCases(true)} style={{ minHeight: 48, justifyContent: "center", paddingHorizontal: space[5] }}>
                 <Txt variant="bodyLg">{t("officer_app.search.see_all", { n: String(cases.count) })}</Txt>
               </Pressable>
+            ) : allCases && cases.count > cases.rows.length ? (
+              <Txt testID="search-first-only" variant="caption" tone="muted" style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
+                {t("officer_app.search.first_only", { n: String(cases.rows.length) })}
+              </Txt>
             ) : null}
           </View>
         ) : null}
         {people.length > 0 ? (
           <View testID="search-people">
-            <GroupHead title={t("officer_app.search.group_people", { n: String(peopleCount) })} />
+            <GroupHead title={t("search.group_souls")} />
             {people.slice(0, PEOPLE_SHOWN).map((soul) => (
               <HitRow
                 key={soul.id}

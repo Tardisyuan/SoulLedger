@@ -96,7 +96,9 @@ describe("C2 · 查询", () => {
     renderOfficer(<SearchTab onOpenSoul={() => {}} onOpenJudgment={() => {}} />);
     search("王");
     expect(await screen.findByText("案件 · 7")).toBeTruthy();
-    expect(await screen.findByText("人物 · 4")).toBeTruthy();
+    // 第五十二批 C2: the group holds souls only, so it is titled 「灵魂」 (the web's search.group_souls), not 「人物」.
+    expect(await screen.findByText("灵魂")).toBeTruthy();
+    expect(screen.queryByText(/人物/)).toBeNull();
     expect(screen.getAllByTestId(/^case-row-j-\d+$/)).toHaveLength(CASES_SHOWN);
     expect(screen.getByTestId("case-row-j-0")).toHaveTextContent("已结");
     expect(screen.getByTestId("case-row-j-1")).toHaveTextContent("待认领");
@@ -104,6 +106,8 @@ describe("C2 · 查询", () => {
     fireEvent.press(screen.getByTestId("search-see-all"));
     expect(screen.getAllByTestId(/^case-row-j-\d+$/)).toHaveLength(7);
     expect(screen.queryByTestId("search-see-all")).toBeNull();
+    // The server answered every match: no 「只显示前」 line.
+    expect(screen.queryByTestId("search-first-only")).toBeNull();
     expect(screen.getAllByTestId(/^soul-row-s-\d+$/)).toHaveLength(PEOPLE_SHOWN);
     expect(screen.getByTestId("soul-row-s-1")).toHaveTextContent("灵魂 · 酆都");
     // The typed 「王」 is the marked part of the name: bold and underlined, no colour of its own.
@@ -112,6 +116,22 @@ describe("C2 · 查询", () => {
     expect(hit).toHaveStyle({ textDecorationLine: "underline" });
     expect(StyleSheet.flatten(hit.props.style).fontFamily).toBe(family.title);
     expect(screen.queryByTestId("search-no-results")).toBeNull();
+  });
+
+  it("第五十二批 C2: 「看全部」 opened over a server with more pages leaves a plain 「只显示前 n 件」, not a button", async () => {
+    mockList.mockResolvedValue({ data: { results: Array.from({ length: 7 }, (_, i) => judgment(i)), count: 30 } });
+    mockSouls.mockResolvedValue({ data: { results: [], count: 0, next: null } });
+    renderOfficer(<SearchTab onOpenSoul={() => {}} onOpenJudgment={() => {}} />);
+    search("王");
+    expect(await screen.findByText("案件 · 30")).toBeTruthy();
+    expect(screen.queryByTestId("search-first-only")).toBeNull();
+    fireEvent.press(screen.getByTestId("search-see-all"));
+    expect(screen.getAllByTestId(/^case-row-j-\d+$/)).toHaveLength(7);
+    expect(screen.queryByTestId("search-see-all")).toBeNull();
+    const note = screen.getByTestId("search-first-only");
+    expect(note).toHaveTextContent("只显示前 7 件");
+    expect(note.props.accessibilityRole).toBeUndefined();
+    expect(note.props.onPress).toBeUndefined();
   });
 
   it("nothing found: the title with the term and the hint with this hall's prefix for this year", async () => {

@@ -8291,11 +8291,11 @@
       "clear_recent": "Clear",
       "recent_empty": "No cases opened yet.",
       "group_cases": "Cases · {{n}}",
-      "group_people": "People · {{n}}",
       "see_all": "See all {{n}} ›",
       "kind_soul": "Soul",
       "kind_officer": "Officer",
-      "no_results_hint": "Search by name, or type the start of a case number, e.g. {{example}}."
+      "no_results_hint": "Search by name, or type the start of a case number, e.g. {{example}}.",
+      "first_only": "Showing the first {{n}} only"
     },
     "assist": {
       "entry": "Ask",

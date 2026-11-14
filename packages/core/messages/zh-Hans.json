@@ -8291,11 +8291,11 @@
       "clear_recent": "清除",
       "recent_empty": "还没有打开过案件。",
       "group_cases": "案件 · {{n}}",
-      "group_people": "人物 · {{n}}",
       "see_all": "看全部 {{n}} 件 ›",
       "kind_soul": "灵魂",
       "kind_officer": "官员",
-      "no_results_hint": "可以按姓名搜，或输入案号的开头，如 {{example}}。"
+      "no_results_hint": "可以按姓名搜，或输入案号的开头，如 {{example}}。",
+      "first_only": "只显示前 {{n}} 件"
     },
     "assist": {
       "entry": "问一问",
