@@ -38,7 +38,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
-import { useRememberedFilters } from "@/src/lib/rememberedFilters";
+import { useInitialUrlFilters, useUrlFilters, type UrlFieldRule } from "@/src/lib/useUrlFilters";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -50,11 +50,23 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  */
 const LOCATED_BG = "bg-[oklch(var(--color-surface-2))]";
 
-/** 角色、MFA 两个下拉和排序记在本浏览器;搜索框的字和 `?username=` 带来的账号属于一次到访,不记。 */
+/**
+ * 筛选、排序与页码都在地址里(`useUrlFilters`,2026-11-15)。角色、MFA、状态三个下拉和排序另记在本浏览器,
+ * 地址里一项都没写时才用;搜索框的字、机构和 `?username=` 带来的账号不记。
+ */
 const USERS_FILTERS_KEY = "soulledger.users.filters";
 /** 列菜单的偏好,一个列表一份。 */
 const USERS_COLUMNS_KEY = "soulledger.users.columns";
-const USERS_FILTER_FIELDS = ["role", "mfa", "status", "ordering"] as const;
+const USERS_URL_FIELDS = {
+  q: "text",
+  role: /^[A-Z_]{1,40}$/,
+  mfa: ["enabled", "disabled", "missing"],
+  status: ["true", "false"],
+  organization: /^\d{1,10}$/,
+  ordering: /^-?(username|email|role)$/,
+  // 只为「地址带了它就不读本浏览器记住的筛选」:它的值仍由 `located` 直接读。
+  username: "text",
+} satisfies Record<string, UrlFieldRule>;
 
 export default function UsersPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/death-sync/page.tsx).
@@ -80,15 +92,16 @@ function UsersRoute() {
   const searchParams = useSearchParams();
   const located = searchParams.get("username") ?? "";
   // `?organization=<id>`: 机构页「查看人员」落在这里;左侧机构树也改它。服务端含下级机构(2026-10-29)。
-  const [organization, setOrganization] = useState(searchParams.get("organization") ?? "");
+  const { values: fromUrl, page: urlPage } = useInitialUrlFilters(USERS_URL_FIELDS);
+  const [organization, setOrganization] = useState(fromUrl.organization);
   /** 账号状态:"" 全部 / "true" 启用 / "false" 已停用(服务端 `is_active`)。 */
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(fromUrl.status);
   const queryClient = useQueryClient();
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [ordering, setOrdering] = useState("");
+  const [page, setPage] = useState(urlPage);
+  const [search, setSearch] = useState(fromUrl.q);
+  const [roleFilter, setRoleFilter] = useState(fromUrl.role);
+  const [ordering, setOrdering] = useState(fromUrl.ordering);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -104,19 +117,23 @@ function UsersRoute() {
   const canManage = hasPermission("user.manage");
   const myId = useTenant().user?.id;
   const [impersonateUser, setImpersonateUser] = useState<User | null>(null);
-  const [mfaFilter, setMfaFilter] = useState("");
-  useRememberedFilters(
-    USERS_FILTERS_KEY,
-    USERS_FILTER_FIELDS,
-    { role: roleFilter, mfa: mfaFilter, status: statusFilter, ordering },
-    (saved) => {
-      if (saved.role) setRoleFilter(saved.role);
-      if (saved.mfa) setMfaFilter(saved.mfa);
-      if (saved.status) setStatusFilter(saved.status);
-      if (saved.ordering) setOrdering(saved.ordering);
+  const [mfaFilter, setMfaFilter] = useState(fromUrl.mfa);
+  useUrlFilters({
+    storageKey: USERS_FILTERS_KEY,
+    fields: USERS_URL_FIELDS,
+    remember: ["role", "mfa", "status", "ordering"],
+    values: { q: search, role: roleFilter, mfa: mfaFilter, status: statusFilter, organization, ordering, username: located },
+    page,
+    restore: (v, p) => {
+      setSearch(v.q);
+      setRoleFilter(v.role);
+      setMfaFilter(v.mfa);
+      setStatusFilter(v.status);
+      setOrganization(v.organization);
+      setOrdering(v.ordering);
+      setPage(p);
     },
-    Boolean(located)
-  );
+  });
   const [resetMfaUser, setResetMfaUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
 
