@@ -259,7 +259,7 @@ class TestJudgmentAPI:
         assert judgment.verdict == Verdict.RETRY
 
     def test_conclude_judgment_already_concluded(self, authenticated_client, soul, cn_tenant):
-        """POST /api/v1/judgment/{id}/conclude/ returns 400 if already final."""
+        """POST /api/v1/judgment/{id}/conclude/ returns 409 `already_concluded` if already final."""
         judgment = Judgment.objects.create(
             soul=soul,
             civilization=soul.civilization,
@@ -277,8 +277,11 @@ class TestJudgmentAPI:
             format="json"
         )
 
-        assert response.status_code == 400
-        assert "already concluded" in str(response.data)
+        assert response.status_code == 409, response.data
+        assert response.data["code"] == "already_concluded"
+        assert response["Content-Type"].startswith("application/problem+json")
+        judgment.refresh_from_db()
+        assert judgment.verdict == Verdict.PASSED  # nothing was rewritten
 
     def test_conclude_judgment_creates_workflow(self, authenticated_client, soul, cn_tenant):
         """POST /api/v1/judgment/{id}/conclude/ with create_workflow=true creates workflow."""
