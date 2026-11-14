@@ -8,7 +8,7 @@ import { platform } from "@soulledger/core/platform";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { APP_LOCK_KEY, CredentialStoreError, appLockOn, bioEnabled, enableWithPassword, markAsked, revokeCredential, wasAsked } from "../deviceLogin";
+import { APP_LOCK_KEY, CredentialStoreError, appLockOn, bioEnabled, bioOwner, enableWithPassword, markAsked, markAskedForGood, rememberedAccount, revokeCredential, wasAsked } from "../deviceLogin";
 import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
@@ -178,7 +178,10 @@ export function BioRow() {
     if (busy || unavailable) return;
     if (!on) return setAsking(true);
     setBusy(true);
+    // An explicit off: 「下次用面容登录？」 is not asked of this number again (S3).
+    const code = bioOwner() ?? rememberedAccount()?.code;
     await revokeCredential();
+    if (code) markAskedForGood(code);
     setOn(false);
     setBusy(false);
   };
@@ -210,9 +213,10 @@ export function BioRow() {
 }
 
 /**
- * 「下次用面容登录？」, once: at the first home page after a sign-in (or the password change that follows a first
- * sign-in) the session still holds the password that was just typed, and that is what 「开启」 uses. Saying 「以后再说」
- * ends the question for this soul code. The password is dropped here either way.
+ * 「下次用面容登录？」: at the first home page after a sign-in (or the password change that follows a first
+ * sign-in) the session still holds the password that was just typed, and that is what 「开启」 uses. 「以后再说」 the first
+ * time leaves it to be asked once more at a later password sign-in; the second ends it (S3, `BIO_ASKS`). The password
+ * is dropped here either way.
  */
 export function BioAsk({ soulCode, welcomePending, onSettled }: { soulCode: string; welcomePending: boolean; onSettled?: (settled: boolean) => void }) {
   const { t } = useI18n();

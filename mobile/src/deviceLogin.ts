@@ -2,7 +2,7 @@
  * What this phone keeps so the sign-in page need not be typed (第二十批), and the only door to it.
  *
  *   persistent (not secret)   the last account -- its soul code and name --, whether 面容 / 指纹 login is on,
- *                             and, per soul code, that 「下次用面容登录？」 has been asked
+ *                             and, per soul code, how many times 「下次用面容登录？」 has been answered
  *   secure store, by biometry the device-login credential. `requireAuthentication` makes the system verify the
  *                             face / finger to hand it over, and the key dies when the enrolled set changes
  *                             (iOS `biometryCurrentSet`, Android invalidated-by-enrolment) -- that is E4.
@@ -103,8 +103,16 @@ export async function forgetNumber(code: string): Promise<void> {
 
 // ── 「下次用面容登录？」 ──────────────────────────────────────────────────
 
-export const wasAsked = (code: string) => platform().persistent.get(ASKED_PREFIX + code) === "1";
-export const markAsked = (code: string) => platform().persistent.set(ASKED_PREFIX + code, "1");
+/**
+ * Asked at most twice per number (S3, 2026-11-15): the value is how many times it has been answered (an older build's
+ * `"1"` reads as once). 「以后再说」 the first time leaves one more ask, at a later password sign-in; turning 面容 / 指纹
+ * login off in 设置 ends it at once (`markAskedForGood`).
+ */
+export const BIO_ASKS = 2;
+const askCount = (code: string) => Number(platform().persistent.get(ASKED_PREFIX + code) ?? 0) || 0;
+export const wasAsked = (code: string) => askCount(code) >= BIO_ASKS;
+export const markAsked = (code: string) => platform().persistent.set(ASKED_PREFIX + code, String(Math.min(askCount(code) + 1, BIO_ASKS)));
+export const markAskedForGood = (code: string) => platform().persistent.set(ASKED_PREFIX + code, String(BIO_ASKS));
 
 // ── the credential (`deviceCredential.ts`, shared with the officer app's 指纹登录) ──────────────────────
 

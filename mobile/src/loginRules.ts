@@ -97,7 +97,7 @@ export function shouldAutoPrompt(o: { enabled: boolean; coldStart: boolean; canc
 
 /**
  * The 「下次用面容登录？」 sheet: only when there is a password to turn it on with (this very sign-in or password
- * change), the phone has a face or finger enrolled, it is not on already, and the soul has not said 「以后再说」.
+ * change), the phone has a face or finger enrolled, it is not on already, and it has not been answered for this number its last time (`asked`: twice, or 面容 / 指纹 turned off in 设置; `deviceLogin.ts` BIO_ASKS).
  * Never over the welcome (the first scene of entering a civilization): it waits, and waiting is not answering.
  */
 export function shouldAskBio(o: { hasPassword: boolean; enrolled: boolean; enabled: boolean; asked: boolean; welcomePending: boolean }): boolean {

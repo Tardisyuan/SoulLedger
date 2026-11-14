@@ -504,7 +504,7 @@ describe("B2 · 面容 / 指纹 after the first sign-in", () => {
     return calls;
   }
 
-  it("asks once, with the risk written; 「以后再说」 is the last time for this number", async () => {
+  it("asks, with the risk written; the first 「以后再说」 leaves one more ask for this number", async () => {
     bioMod.__state.enrolled = true;
     const calls = await firstSignIn();
     expect(await screen.findByText("下次用面容登录？")).toBeTruthy();
@@ -516,13 +516,23 @@ describe("B2 · 面容 / 指纹 after the first sign-in", () => {
     expect(persistentStore.get(BIO_KEY)).toBeNull();
   });
 
-  it("does not ask again once answered, even at the next sign-in", async () => {
+  it("S3: answered 「以后再说」 once (an older build's \"1\"), it asks once more at a later password sign-in, and that is the last", async () => {
     bioMod.__state.enrolled = true;
     persistentStore.set(`${ASKED_PREFIX}${CODE}`, "1");
+    await firstSignIn();
+    fireEvent.press(await screen.findByTestId("bio-ask-later"));
+    await waitFor(() => expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBe("2"));
+    await waitFor(() => expect(screen.queryByTestId("bio-ask")).toBeNull());
+  });
+
+  it("S3: answered twice, it does not ask again, even at the next sign-in", async () => {
+    bioMod.__state.enrolled = true;
+    persistentStore.set(`${ASKED_PREFIX}${CODE}`, "2");
     await firstSignIn();
     await screen.findByTestId("profile-card");
     await act(async () => {});
     expect(screen.queryByText("下次用面容登录？")).toBeNull();
+    expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBe("2"); // not asked is not answered
   });
 
   it("does not ask a phone with no face or finger enrolled", async () => {
@@ -720,6 +730,18 @@ describe("B2 · the row under 设置 › 账号安全", () => {
     expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")?.body).toEqual({ credential: CRED });
     expect(persistentStore.get(BIO_KEY)).toBeNull();
     expect(secureMod.__guarded.size).toBe(0);
+  });
+
+  it("S3: an explicit off means 「下次用面容登录？」 is not asked of this number again", async () => {
+    bioMod.__state.enrolled = true;
+    persistentStore.set(BIO_KEY, "face");
+    persistentStore.set(BIO_OWNER_KEY, CODE);
+    secureMod.__guarded.set("soulledger_device_login", CRED);
+    await openSettings({ "/soul-auth/device-login/revoke/": { status: 204 } });
+    expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBeNull();
+    fireEvent.press(screen.getByTestId("bio-row"));
+    await waitFor(() => expect(screen.getByTestId("bio-row-state")).toHaveTextContent("关"));
+    expect(persistentStore.get(`${ASKED_PREFIX}${CODE}`)).toBe("2");
   });
 });
 
