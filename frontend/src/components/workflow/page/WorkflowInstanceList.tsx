@@ -9,7 +9,7 @@ import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { cn } from "@/lib/utils";
 import { fieldControl } from "@/src/components/ui/Field";
-import { FilterChipSelect, filterChipClass } from "@/src/components/ui/FilterChip";
+import { FilterBar } from "@/src/components/ui/FilterChip";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { Button } from "@/src/components/ui/Button";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -93,113 +93,142 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
     <>
       {/* 待我选站(W-2):审批页最上面一组,有才显示。 */}
       <PickNodesGroup />
-      <div className="flex flex-wrap items-center gap-3 pb-3">
-        <input
-          type="text"
-          data-testid="workflow-search"
-          placeholder={t("workflow.filter.search")}
-          aria-label={t("workflow.filter.search")}
-          value={search}
-          onChange={(e) => changeFilter(() => setSearch(e.target.value))}
-          className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
-        />
-        <FilterChipSelect
-          label={t("workflow.detail.status")}
-          value={status}
-          options={option("workflow.status", STATUSES)}
-          clearLabel={t("filter.clear_one", { name: t("workflow.detail.status") })}
-          onChange={(v) => changeFilter(() => setStatus(v))}
-        />
-        <FilterChipSelect
-          label={t("workflow.detail.case_type")}
-          value={caseType}
-          options={option("workflow.case_types", CASE_TYPES)}
-          clearLabel={t("filter.clear_one", { name: t("workflow.detail.case_type") })}
-          onChange={(v) => changeFilter(() => setCaseType(v))}
-        />
-        <FilterChipSelect
-          label={t("workflow.filter.civilization")}
-          value={civilization}
-          options={option("souls.civilizations", CIVILIZATIONS)}
-          clearLabel={t("filter.clear_one", { name: t("workflow.filter.civilization") })}
-          onChange={(v) => changeFilter(() => setCivilization(v))}
-        />
-        <FilterChipSelect
-          label={t("workflow.detail.priority")}
-          value={priority}
-          options={[
-            { value: "", label: t("workflow.filter.all") },
-            ...PRIORITIES.map(([v, k]) => ({ value: v, label: t(`workflow.detail.${k}`) })),
-          ]}
-          clearLabel={t("filter.clear_one", { name: t("workflow.detail.priority") })}
-          onChange={(v) => changeFilter(() => setPriority(v))}
-        />
-        <input
-          type="date"
-          data-testid="workflow-from"
-          aria-label={t("workflow.filter.from")}
-          title={t("workflow.filter.from")}
-          value={from}
-          max={to || undefined}
-          onChange={(e) => changeFilter(() => setFrom(e.target.value))}
-          className={fieldControl({ size: "md" })}
-        />
-        <input
-          type="date"
-          data-testid="workflow-to"
-          aria-label={t("workflow.filter.to")}
-          title={t("workflow.filter.to")}
-          value={to}
-          min={from || undefined}
-          onChange={(e) => changeFilter(() => setTo(e.target.value))}
-          className={fieldControl({ size: "md" })}
-        />
-        <button
-          type="button"
-          aria-pressed={overdueOnly}
-          onClick={() => changeFilter(() => setOverdueOnly((v) => !v))}
-          className={filterChipClass(overdueOnly)}
-        >
-          {overdueOnly && <span aria-hidden="true">✓</span>}
-          {t("workflow.filter_overdue")}
-        </button>
-        {isFiltered ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              changeFilter(() => {
-                setSearch("");
-                setStatus("");
-                setCaseType("");
-                setCivilization("");
-                setPriority("");
-                setFrom("");
-                setTo("");
-              })
-            }
-          >
-            {t("workflow.filter.clear")}
-          </Button>
-        ) : null}
-        <div className="ml-auto flex items-center justify-end gap-3">
-          <RequirePermission permissions="workflow.export">
-            <ExportCsvButton
-              size="sm"
-              fetchCsv={() => workflowApi.exportCsv(filterParams)}
-              page={t("workflow.title")}
-              hall={hall}
-              count={data?.count}
+      {/* 共享的 `FilterBar`(用户 2026-11-14):桌面一行(放不下横滑);393 是 搜索 +「筛选 · N」、「只看已超时」的快捷 chip,
+          四个下拉与日期起止进底部抽屉。抽屉里那一份日期带 `-narrow` 的 testid:窄屏上桌面那一份仍在 DOM 里(CSS 藏),同名会撞。 */}
+      <FilterBar
+        testId="workflow-filters"
+        search={(where) => (
+          <input
+            type="text"
+            data-testid={where === "wide" ? "workflow-search" : "workflow-search-narrow"}
+            placeholder={t("workflow.filter.search")}
+            aria-label={t("workflow.filter.search")}
+            value={search}
+            onChange={(e) => changeFilter(() => setSearch(e.target.value))}
+            className={cn(fieldControl({ size: "md" }), where === "wide" ? "flex-1 min-w-[200px]" : "w-full min-w-0")}
+          />
+        )}
+        selects={[
+          {
+            label: t("workflow.detail.status"),
+            value: status,
+            options: option("workflow.status", STATUSES),
+            clearLabel: t("filter.clear_one", { name: t("workflow.detail.status") }),
+            onChange: (v) => changeFilter(() => setStatus(v)),
+          },
+          {
+            label: t("workflow.detail.case_type"),
+            value: caseType,
+            options: option("workflow.case_types", CASE_TYPES),
+            clearLabel: t("filter.clear_one", { name: t("workflow.detail.case_type") }),
+            onChange: (v) => changeFilter(() => setCaseType(v)),
+          },
+          {
+            label: t("workflow.filter.civilization"),
+            value: civilization,
+            options: option("souls.civilizations", CIVILIZATIONS),
+            clearLabel: t("filter.clear_one", { name: t("workflow.filter.civilization") }),
+            onChange: (v) => changeFilter(() => setCivilization(v)),
+          },
+          {
+            label: t("workflow.detail.priority"),
+            value: priority,
+            options: [
+              { value: "", label: t("workflow.filter.all") },
+              ...PRIORITIES.map(([v, k]) => ({ value: v, label: t(`workflow.detail.${k}`) })),
+            ],
+            clearLabel: t("filter.clear_one", { name: t("workflow.detail.priority") }),
+            onChange: (v) => changeFilter(() => setPriority(v)),
+          },
+        ]}
+        toggles={[
+          {
+            label: t("workflow.filter_overdue"),
+            active: overdueOnly,
+            onToggle: () => changeFilter(() => setOverdueOnly((v) => !v)),
+          },
+        ]}
+        fields={(where) => {
+          const suffix = where === "wide" ? "" : "-narrow";
+          const fromInput = (
+            <input
+              type="date"
+              data-testid={`workflow-from${suffix}`}
+              aria-label={t("workflow.filter.from")}
+              title={t("workflow.filter.from")}
+              value={from}
+              max={to || undefined}
+              onChange={(e) => changeFilter(() => setFrom(e.target.value))}
+              className={cn(fieldControl({ size: "md" }), where === "wide" ? "shrink-0" : "ml-auto min-w-0")}
             />
-          </RequirePermission>
-          <RequirePermission permissions="workflow.create">
-            <Button type="button" variant="primary" size="sm" onClick={() => setStartOpen(true)}>
-              {t("workflow.start.action")}
-            </Button>
-          </RequirePermission>
-        </div>
-      </div>
+          );
+          const toInput = (
+            <input
+              type="date"
+              data-testid={`workflow-to${suffix}`}
+              aria-label={t("workflow.filter.to")}
+              title={t("workflow.filter.to")}
+              value={to}
+              min={from || undefined}
+              onChange={(e) => changeFilter(() => setTo(e.target.value))}
+              className={cn(fieldControl({ size: "md" }), where === "wide" ? "shrink-0" : "ml-auto min-w-0")}
+            />
+          );
+          if (where === "wide") return <>{fromInput}{toInput}</>;
+          const row = "flex min-h-(--control-h-md) items-center gap-3 border-b border-[oklch(var(--color-line))] text-md";
+          return (
+            <>
+              <div className={row}>
+                <span aria-hidden="true" className="text-[oklch(var(--color-ink))]">{t("workflow.filter.from")}</span>
+                {fromInput}
+              </div>
+              <div className={row}>
+                <span aria-hidden="true" className="text-[oklch(var(--color-ink))]">{t("workflow.filter.to")}</span>
+                {toInput}
+              </div>
+            </>
+          );
+        }}
+        fieldsActive={(from ? 1 : 0) + (to ? 1 : 0)}
+        trailing={
+          <>
+            {isFiltered ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  changeFilter(() => {
+                    setSearch("");
+                    setStatus("");
+                    setCaseType("");
+                    setCivilization("");
+                    setPriority("");
+                    setFrom("");
+                    setTo("");
+                  })
+                }
+              >
+                {t("workflow.filter.clear")}
+              </Button>
+            ) : null}
+            <RequirePermission permissions="workflow.export">
+              <ExportCsvButton
+                size="sm"
+                fetchCsv={() => workflowApi.exportCsv(filterParams)}
+                page={t("workflow.title")}
+                hall={hall}
+                count={data?.count}
+              />
+            </RequirePermission>
+            <RequirePermission permissions="workflow.create">
+              <Button type="button" variant="primary" size="sm" onClick={() => setStartOpen(true)}>
+                {t("workflow.start.action")}
+              </Button>
+            </RequirePermission>
+          </>
+        }
+      />
       <WorkflowInstanceList workflows={data?.results ?? []} isLoading={isLoading} />
       {count > PAGE_SIZE && (
         <div className="pt-3">
