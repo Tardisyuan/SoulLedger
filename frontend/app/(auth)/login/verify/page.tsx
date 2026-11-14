@@ -93,7 +93,7 @@ export default function LoginVerifyPage() {
       setRefreshToken(res.data.refresh, pending.remember);
       setUser(res.data.user);
       // The account name is kept only if 「保持登录」 was ticked on the first step (W3); other tabs follow (W4).
-      settleLastUsername(res.data.user?.username ?? pending.username, pending.remember);
+      settleLastUsername(res.data.user?.username ?? pending.username, pending.remember, res.data.user?.display_name);
       announceSession("signed-in");
       showToast(t("auth.login_success"), "success");
       goTo(takeReturnTo() ?? (await defaultViewRoute(res.data.user)));

@@ -20,7 +20,6 @@ import {
 } from "@soulledger/core/platform";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { clearReturnTo } from "@/src/lib/returnTo";
-import { forgetLastUsername } from "@/src/lib/lastUsername";
 import { onSessionMessage } from "@/src/lib/sessionChannel";
 import { prefersReducedMotion } from "@/lib/motion";
 
@@ -328,8 +327,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     host.secure.remove(REFRESH_TOKEN_KEY);
     // A page remembered for "back after sign-in" is this operator's, not the next one's (W1).
     clearReturnTo();
-    // So is the account name the sign-in form would have filled in (W3).
-    forgetLastUsername();
+    // The remembered account (W3) stays: after sign-out the sign-in page still shows its card and asks only for the
+    // password; 「换一个账号」 there is what forgets it (Design 第五十二批 F4).
   }, [setUser]);
 
   /**

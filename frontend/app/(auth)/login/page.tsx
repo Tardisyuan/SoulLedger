@@ -14,11 +14,13 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { LoginShell } from "@/src/components/auth/LoginShell";
+import { Avatar } from "@/src/components/social/Avatar";
 import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 import { storeMfaPending } from "@/src/lib/mfaPending";
 import { rememberReturnTo, takeReturnTo } from "@/src/lib/returnTo";
-import { forgetLastUsername, readLastUsername, settleLastUsername } from "@/src/lib/lastUsername";
+import { forgetLastUsername, readLastAccount, settleLastUsername, type LastAccount } from "@/src/lib/lastUsername";
+import { maskUsername } from "@soulledger/core/domain/maskUsername";
 import { announceSession } from "@/src/lib/sessionChannel";
 import { cn } from "@/lib/utils";
 import { responseCode, responseData, responseStatus, fetchFailureOf } from "@soulledger/core/api/client";
@@ -49,8 +51,10 @@ import { responseCode, responseData, responseStatus, fetchFailureOf } from "@sou
  *   `sessionStorage` (`src/lib/mfaPending.ts`) and the page hands over to `/login/verify`, which
  *   wears the same shell (`src/components/auth/LoginShell.tsx` — the two-column skeleton, the
  *   statute and the four civilizations moved there verbatim so both steps share them).
- * - 记住账号名(W3,`src/lib/lastUsername.ts`):勾了「保持登录」的上一次登录留下账号名,这一页预填它、勾上
- *   「保持登录」、焦点落在密码框,账号框下出「换个账号」。登录成功告诉同一浏览器的其他标签页(W4)。
+ * - 记住的账号(W3,`src/lib/lastUsername.ts`;Design 第五十二批 F4):勾了「保持登录」的上一次登录留下账号名与显示名。
+ *   这一页不再预填账号框,而是画两个 App 的同一张卡片(头像 44 取名字首字、姓名 16 / 500、脱敏账号等宽 13,脱敏同官员端
+ *   `maskUsername`)代替账号框,勾上「保持登录」(仍在密码框下)、焦点落在密码框,卡片右侧「换一个账号」清掉它、回到空表单。
+ *   退出登录不清它:卡片仍在,只要再输密码。登录成功告诉同一浏览器的其他标签页(W4)。
  */
 
 /** The tenant code this device last signed in to — only ever used to mark a row. */
@@ -188,20 +192,20 @@ function PasswordLogin() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [remember, setRemember] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  /** The username came from this device's memory (W3): 「换个账号」 is offered. */
-  const [prefilled, setPrefilled] = useState(false);
+  /** The account this device remembers (W3, F4): its card stands in for the username box. */
+  const [known, setKnown] = useState<LastAccount | null>(null);
   useEffect(() => {
-    const last = readLastUsername();
+    const last = readLastAccount();
     if (!last) return;
-    setForm((f) => ({ ...f, username: last }));
+    setForm((f) => ({ ...f, username: last.username }));
     // It was only kept because 「保持登录」 was ticked; tick it again, or the next sign-in would forget it.
     setRemember(true);
-    setPrefilled(true);
+    setKnown(last);
     requestAnimationFrame(() => document.getElementById("login-password")?.focus());
   }, []);
   const switchAccount = () => {
     forgetLastUsername();
-    setPrefilled(false);
+    setKnown(null);
     setRemember(false);
     setForm({ username: "", password: "" });
     requestAnimationFrame(() => document.getElementById("login-username")?.focus());
@@ -285,7 +289,7 @@ function PasswordLogin() {
         setUser(tokens.user);
         writeLastTenant(tokens.user.tenant?.code);
       }
-      settleLastUsername(tokens.user?.username ?? form.username, remember);
+      settleLastUsername(tokens.user?.username ?? form.username, remember, tokens.user?.display_name ?? known?.display_name);
       announceSession("signed-in");
 
       showToast(t("auth.login_success"), "success");
@@ -382,7 +386,7 @@ function PasswordLogin() {
           <div>
             {/* 这一页唯一的 <h1>。 */}
             <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("auth.login")}</h1>
-            <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("auth.subtitle")}</p>
+            <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t(known ? "auth.remembered.welcome" : "auth.subtitle")}</p>
           </div>
 
           {notice}
@@ -417,35 +421,55 @@ function PasswordLogin() {
             </section>
           )}
 
-          <TextField
-            id="login-username"
-            name="username"
-            autoComplete="username"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            type="text"
-            label={t("auth.account_or_email")}
-            description={t("auth.account_or_email_hint")}
-            value={form.username}
-            onChange={(e) => {
-              clearFieldError("username");
-              setForm({ ...form, username: e.target.value });
-            }}
-            error={getError("username")}
-            disabled={loading}
-            required
-          />
-          {prefilled ? (
-            <button
-              type="button"
-              onClick={switchAccount}
-              data-testid="login-switch-account"
-              className="-mt-2 inline-flex min-h-11 items-center self-start text-xs text-[oklch(var(--color-ink))] underline underline-offset-2"
+          {known ? (
+            // The apps' card (Design 第五十批 C3), at their size in the 440 form: not a filled box one would edit. On the
+            // web's scales: the panel radius (6) for the apps' 12, the name at text-md (15) for 16, the account at text-sm (13).
+            <div
+              data-testid="login-remembered"
+              className="flex min-h-16 items-center gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] py-2 pr-1 pl-4"
             >
-              {t("auth.switch_account")}
-            </button>
-          ) : null}
+              <Avatar name={known.display_name || known.username} size={44} />
+              <div className="min-w-0 flex-1">
+                {known.display_name ? (
+                  <p data-testid="login-remembered-name" className="truncate text-md font-medium text-[oklch(var(--color-ink))]">
+                    {known.display_name}
+                  </p>
+                ) : null}
+                <p data-testid="login-remembered-account" className="font-mono text-sm text-[oklch(var(--color-ink-muted))]">
+                  {maskUsername(known.username)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={switchAccount}
+                data-testid="login-switch-account"
+                disabled={loading}
+                className="inline-flex min-h-11 shrink-0 items-center px-2 text-sm text-[oklch(var(--color-ink-muted))] underline decoration-[oklch(var(--color-line-strong))] underline-offset-2"
+              >
+                {t("auth.remembered.switch")}
+              </button>
+            </div>
+          ) : (
+            <TextField
+              id="login-username"
+              name="username"
+              autoComplete="username"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              type="text"
+              label={t("auth.account_or_email")}
+              description={t("auth.account_or_email_hint")}
+              value={form.username}
+              onChange={(e) => {
+                clearFieldError("username");
+                setForm({ ...form, username: e.target.value });
+              }}
+              error={getError("username")}
+              disabled={loading}
+              required
+            />
+          )}
           <div className="relative">
             <TextField
               id="login-password"

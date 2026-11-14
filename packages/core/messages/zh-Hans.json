@@ -64,7 +64,6 @@
     "account": "账号",
     "account_or_email": "用户名或邮箱",
     "account_or_email_hint": "邮箱要先在「个人中心」验证过才能用来登录",
-    "switch_account": "换个账号",
     "console": "SoulLedger · 官员台",
     "statute_eyebrow": "今日律条",
     "statute_rotates": "每次进入换一条",
@@ -117,7 +116,8 @@
       }
     },
     "remembered": {
-      "welcome": "欢迎回来"
+      "welcome": "欢迎回来",
+      "switch": "换一个账号"
     }
   },
   "mfa": {

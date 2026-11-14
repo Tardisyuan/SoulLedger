@@ -476,26 +476,30 @@ describe("defaultViewRoute", () => {
   });
 });
 
-describe("LoginPage · 记住账号名 (W3)", () => {
-  const SIGNED_IN = { data: { access: "A", refresh: "R", user: { id: 1, username: "yama", tenant: null } } };
+describe("LoginPage · 记住的账号 (W3; Design 第五十二批 F4)", () => {
+  const SIGNED_IN = { data: { access: "A", refresh: "R", user: { id: 1, username: "yama", display_name: "阎罗", tenant: null } } };
+  const KEPT = JSON.stringify({ username: "yama", display_name: "阎罗" });
   const rememberBox = () => screen.getByRole("checkbox", { name: "auth.remember_me(30)" }) as HTMLInputElement;
+  const kept = () => JSON.parse(localStorage.getItem("soulledger_last_username") ?? "null");
 
-  it("keeps the account name after a sign-in with 保持登录 ticked", async () => {
+  it("keeps the account name and the display name after a sign-in with 保持登录 ticked", async () => {
     mockedLogin.mockResolvedValue(SIGNED_IN);
     render(<LoginPage />);
     fireEvent.click(rememberBox());
     fillAndSubmit();
-    await waitFor(() => expect(localStorage.getItem("soulledger_last_username")).toBe("yama"));
+    await waitFor(() => expect(kept()).toEqual({ username: "yama", display_name: "阎罗" }));
   });
 
   it("does not keep it — and forgets an old one — when 保持登录 is not ticked", async () => {
-    localStorage.setItem("soulledger_last_username", "yama");
+    localStorage.setItem("soulledger_last_username", KEPT);
     mockedLogin.mockResolvedValue(SIGNED_IN);
     render(<LoginPage />);
     await waitFor(() => expect(rememberBox().checked).toBe(true));
-    fireEvent.click(rememberBox()); // the prefill ticked it; untick
-    fillAndSubmit();
-    await waitFor(() => expect(mockedLogin).toHaveBeenCalledWith(expect.objectContaining({ remember: false })));
+    fireEvent.click(rememberBox()); // the card ticked it; untick
+    fireEvent.change(password(), { target: { value: "pw" } });
+    fireEvent.click(submitButton());
+    // The card's account is the one sent: there is no username box to type into.
+    await waitFor(() => expect(mockedLogin).toHaveBeenCalledWith({ username: "yama", password: "pw", remember: false }));
     await waitFor(() => expect(localStorage.getItem("soulledger_last_username")).toBeNull());
   });
 
@@ -508,25 +512,48 @@ describe("LoginPage · 记住账号名 (W3)", () => {
     expect(localStorage.getItem("soulledger_last_username")).toBeNull();
   });
 
-  it("prefills a kept name, ticks 保持登录, focuses the password, and offers 换个账号", async () => {
-    localStorage.setItem("soulledger_last_username", "yama");
+  it("shows the apps' card instead of the username box: initial, name, masked account; 保持登录 ticked under the password, the password focused", async () => {
+    localStorage.setItem("soulledger_last_username", KEPT);
     render(<LoginPage />);
-    await waitFor(() => expect(account().value).toBe("yama"));
+    const card = await screen.findByTestId("login-remembered");
+    expect(screen.getByTestId("login-remembered-name")).toHaveTextContent("阎罗");
+    expect(screen.getByTestId("login-remembered-account")).toHaveTextContent(/^ya\*\*\*a$/);
+    expect(card).toHaveTextContent(/^阎/);
+    // Not a prefilled box one would edit: no username box at all, and the full name is nowhere on the page.
+    expect(screen.queryByLabelText(/auth\.account/)).toBeNull();
+    expect(screen.queryByDisplayValue("yama")).toBeNull();
+    expect(screen.getByText("auth.remembered.welcome")).toBeTruthy();
     expect(rememberBox().checked).toBe(true);
+    expect(password().compareDocumentPosition(rememberBox()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(password()));
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "auth.switch_account" }));
+  it("「换一个账号」 forgets it and brings back the empty username box, focused", async () => {
+    localStorage.setItem("soulledger_last_username", KEPT);
+    render(<LoginPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "auth.remembered.switch" }));
+    expect(screen.queryByTestId("login-remembered")).toBeNull();
     expect(account().value).toBe("");
     expect(rememberBox().checked).toBe(false);
     expect(localStorage.getItem("soulledger_last_username")).toBeNull();
-    expect(screen.queryByRole("button", { name: "auth.switch_account" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "auth.remembered.switch" })).toBeNull();
+    expect(screen.queryByText("auth.switch_account")).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(account()));
   });
 
-  it("offers no 换个账号 when nothing is kept", () => {
+  it("an older device's plain name is moved to the new shape: the card shows the masked account without a name", async () => {
+    localStorage.setItem("soulledger_last_username", "yama");
+    render(<LoginPage />);
+    expect(await screen.findByTestId("login-remembered-account")).toHaveTextContent("ya***a");
+    expect(screen.queryByTestId("login-remembered-name")).toBeNull();
+    expect(kept()).toEqual({ username: "yama", display_name: "" });
+  });
+
+  it("offers no card when nothing is kept", () => {
     render(<LoginPage />);
     expect(account().value).toBe("");
     expect(rememberBox().checked).toBe(false);
-    expect(screen.queryByRole("button", { name: "auth.switch_account" })).toBeNull();
+    expect(screen.queryByTestId("login-remembered")).toBeNull();
+    expect(screen.queryByRole("button", { name: "auth.remembered.switch" })).toBeNull();
   });
 });

@@ -7,6 +7,7 @@
  * by itself on the first sign-in page of the process); the password stays below it. A credential the server no longer
  * takes (password changed, device signed out, turned off elsewhere) is dropped here and the page says so.
  */
+import { maskUsername } from "@soulledger/core/domain/maskUsername";
 import { mfaDigits } from "@soulledger/core/domain/mfa";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
@@ -25,12 +26,6 @@ type Step = { name: "credentials" } | { name: "forgot" } | { name: "hall"; halls
 /** Why the sign-in page opens as it does after a reset link: `reset_done` says so; `forgot` starts at 忘记密码 (the link was dead). */
 export type LoginHint = "reset_done" | "forgot";
 
-/** 「zh***g」: enough to recognise one's own account, not enough to read it off someone else's phone. */
-export function maskUsername(name: string): string {
-  const head = name.length >= 5 ? 2 : 1;
-  const tail = name.length >= 3 ? 1 : 0;
-  return `${name.slice(0, head)}***${tail ? name.slice(-tail) : ""}`;
-}
 
 export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
   const { t } = useI18n();

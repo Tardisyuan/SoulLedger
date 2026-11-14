@@ -169,6 +169,31 @@ test.describe("Login page", () => {
     await expect(page).toHaveURL(/\/login/);
     expect(api.countOf("POST", "/auth/login/")).toBe(1);
   });
+
+  test("a remembered account is the apps' card, not a filled box; 换一个账号 brings the box back (Design 第五十二批 F4)", async ({ page }) => {
+    await mockApi(page);
+    await page.addInitScript(() => {
+      // Once, before the first load: 换一个账号 below must not be undone by this script on a later navigation.
+      if (!sessionStorage.getItem("e2e-seeded")) {
+        sessionStorage.setItem("e2e-seeded", "1");
+        localStorage.setItem("soulledger_last_username", JSON.stringify({ username: "cuijue", display_name: "崔珏" }));
+      }
+    });
+    await page.goto("/login");
+
+    const card = page.getByTestId("login-remembered");
+    await expect(card).toBeVisible();
+    await expect(card).toContainText("崔珏");
+    await expect(card).toContainText("cu***e");
+    await expect(page.getByLabel("用户名或邮箱")).toHaveCount(0);
+    await expect(page.getByLabel("密码")).toBeFocused();
+    await expect(page.getByRole("checkbox", { name: /保持登录/ })).toBeChecked();
+
+    await card.getByRole("button", { name: "换一个账号" }).click();
+    await expect(card).toHaveCount(0);
+    await expect(page.getByLabel("用户名或邮箱")).toHaveValue("");
+    expect(await page.evaluate(() => localStorage.getItem("soulledger_last_username"))).toBeNull();
+  });
 });
 
 test.describe("Protected routes (unauthenticated)", () => {

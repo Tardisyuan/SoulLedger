@@ -11,7 +11,7 @@ import { permApi } from "@soulledger/core/api";
 import { getAccessToken, setAccessToken } from "@soulledger/core/platform";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
 import { SESSION_CHANNEL, announceSession, onSessionMessage } from "@/src/lib/sessionChannel";
-import { LAST_USERNAME_KEY, readLastUsername, settleLastUsername } from "@/src/lib/lastUsername";
+import { LAST_USERNAME_KEY, readLastAccount, settleLastUsername } from "@/src/lib/lastUsername";
 
 jest.mock("@soulledger/core/api", () => ({ permApi: { myRolePermissions: jest.fn() } }));
 
@@ -122,22 +122,35 @@ describe("sessionChannel", () => {
   });
 });
 
-describe("lastUsername (W3)", () => {
-  it("keeps the name only with 保持登录, and an unticked sign-in forgets it", () => {
+describe("lastUsername (W3; Design 第五十二批 F4)", () => {
+  it("keeps the name and the display name only with 保持登录, and an unticked sign-in forgets it", () => {
+    settleLastUsername("yama", false, "阎罗");
+    expect(readLastAccount()).toBeNull();
+    settleLastUsername("yama", true, "阎罗");
+    expect(JSON.parse(localStorage.getItem(LAST_USERNAME_KEY)!)).toEqual({ username: "yama", display_name: "阎罗" });
+    expect(readLastAccount()).toEqual({ username: "yama", display_name: "阎罗" });
     settleLastUsername("yama", false);
-    expect(readLastUsername()).toBeNull();
-    settleLastUsername("yama", true);
-    expect(localStorage.getItem(LAST_USERNAME_KEY)).toBe("yama");
-    settleLastUsername("yama", false);
-    expect(readLastUsername()).toBeNull();
+    expect(readLastAccount()).toBeNull();
   });
 
-  it("explicit sign-out forgets it", async () => {
-    settleLastUsername("yama", true);
+  it("reads W3's plain string and stores it in the new shape; a blank or nameless entry is nothing", () => {
+    localStorage.setItem(LAST_USERNAME_KEY, "yama");
+    expect(readLastAccount()).toEqual({ username: "yama", display_name: "" });
+    expect(JSON.parse(localStorage.getItem(LAST_USERNAME_KEY)!)).toEqual({ username: "yama", display_name: "" });
+    localStorage.setItem(LAST_USERNAME_KEY, "12345");
+    expect(readLastAccount()).toEqual({ username: "12345", display_name: "" });
+    localStorage.setItem(LAST_USERNAME_KEY, JSON.stringify({ display_name: "x" }));
+    expect(readLastAccount()).toBeNull();
+    localStorage.setItem(LAST_USERNAME_KEY, "  ");
+    expect(readLastAccount()).toBeNull();
+  });
+
+  it("explicit sign-out keeps it: the sign-in page still shows the card (F4)", async () => {
+    settleLastUsername("yama", true, "阎罗");
     const wrapper = ({ children }: { children: React.ReactNode }) => createElement(TenantProvider, null, children);
     (permApi.myRolePermissions as jest.Mock).mockResolvedValue({ data: { role: "JUDGE", permissions: [] } });
     const { result } = renderHook(() => useTenant(), { wrapper });
     act(() => result.current.logout());
-    expect(readLastUsername()).toBeNull();
+    expect(readLastAccount()).toEqual({ username: "yama", display_name: "阎罗" });
   });
 });
