@@ -427,6 +427,25 @@ def test_the_preview_names_what_blocks_a_run(api):
     assert "over_spend_cap" in body["problems"]
 
 
+def _cases(side, n):
+    AssistEvalCase.objects.all().delete()
+    screen = "applications" if side == "soul" else "judgment"
+    AssistEvalCase.objects.bulk_create(AssistEvalCase(side=side, screen=screen, question=f"Q{i}") for i in range(n))
+
+
+def test_the_ask_cap_is_per_candidate_so_two_candidates_can_be_compared(api):
+    """80 条官员用例比两个候选(160 条请求)不被 `too_many_asks` 拦;上限看的是每个候选的条数(2026-11-14)。"""
+    _cases("officer", 80)
+    body = api.post(f"{BASE}eval/preview/", {"side": "officer", "candidates": [{}, {"model": "cand-b"}]},
+                    format="json").data
+    assert body["asks"] == 160 and body["max_asks"] == evals.MAX_ASKS == 100
+    assert [c["asks"] for c in body["candidates"]] == [80, 80]
+    assert "too_many_asks" not in body["problems"]
+    _cases("officer", evals.MAX_ASKS + 1)
+    body = api.post(f"{BASE}eval/preview/", {"side": "officer", "candidates": [{}]}, format="json").data
+    assert body["asks"] == 101 and "too_many_asks" in body["problems"] and body["confirm_token"] is None
+
+
 def _eval_ready(api, cn_tenant, judge_user):
     ids = api.post(f"{BASE}eval/identities/").data
     _patch(api, prices={"env-model": {"input": 1, "output": 1}, "cand-b": {"input": 2, "output": 2}})

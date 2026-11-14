@@ -13346,7 +13346,9 @@ export interface components {
             description: string;
         };
         EvalPreview: {
+            /** @description 所有候选合计的请求条数(候选数 × 用例数) */
             asks: number;
+            /** @description 每个候选的上限;用例数超过它即 too_many_asks。总花费另由 spend_cap 限制 */
             max_asks: number;
             /** Format: double */
             estimated_cost: number;

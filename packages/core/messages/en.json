@@ -7875,13 +7875,13 @@
       "confirm": "Run",
       "scope": "Scope",
       "requests": "Requests",
-      "requests_value": "About {{count}} (at most {{max}} per run)",
+      "requests_value": "About {{count}} (at most {{max}} per candidate)",
       "estimate": "Estimated spend / cap",
       "not_counted": "Not counted in this month's usage or cap, nor in any account's hourly limit.",
       "problem": {
         "unpriced_model": "A model has no price, so spend can't be estimated.",
         "no_cases": "No active eval cases for this side.",
-        "too_many_asks": "Too many requests for one run.",
+        "too_many_asks": "Too many cases for one candidate in one run.",
         "over_spend_cap": "The estimate is over the per-run spend cap.",
         "no_eval_soul": "The eval soul is missing: create eval identities first.",
         "no_eval_officer": "The eval officer is missing: create eval identities first."

@@ -5,9 +5,10 @@ import { clean, enter, recording, rows, watch } from "./support";
 test("the home page shows how it was built: architecture, test counts, the two app recordings", async ({ page, context }) => {
   const seen = watch(context, page);
   await page.goto("/");
-  // The section was found and then replaced before the scroll (detached, twice in one run, 2026-11-14; cause not found:
-  // nothing in DemoHome keys or swaps it). Once the lazy chunks are in, the page holds still; and if it is replaced
-  // anyway, the failure says what the console said, which is where a hydration mismatch would show.
+  // The section was found and then replaced before the scroll (detached, twice in one run, 2026-11-14): the server's
+  // page was thrown away when a provider's context changed before its lazy chunk had hydrated. app/page.tsx now draws
+  // it in the browser only (`ssr: false`; demoHomeMountsOnce.test.tsx). If it is replaced anyway, the failure says what
+  // the console said.
   await page.waitForLoadState("networkidle");
   const section = page.locator("#how-built");
   await section.scrollIntoViewIfNeeded().catch((e: Error) => {
