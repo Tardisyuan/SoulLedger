@@ -14,7 +14,7 @@ import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { ON_PLAQUE, motion, v4 } from "../theme";
+import { ON_PLAQUE, motion, themeFor, v4 } from "../theme";
 import { renderSoul } from "./harness";
 import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
@@ -197,21 +197,58 @@ describe("v3 civilization marks on 本世", () => {
   const svg = (testID: string) => screen.UNSAFE_getAllByType(Svg).find((el) => el.props.testID === testID)!;
   const settle = () => act(async () => new Promise((r) => setTimeout(r, motion.bandCompact + 200)));
 
-  it("the header carries 中国's grid at 15% in its glow, fading out by 72% of the width, under v4's header light", async () => {
+  it("第四十六批: the header carries the paper texture in ink at 5% (light), solid over the top 40%, under v4's header light", async () => {
     await open();
     await settle();
-    expect(svg("band-pattern").props.opacity).toBe(0.15);
+    const ink = themeFor("CHINESE", "light").ink;
     const stops = (id: string) => svg(id).findAllByType(Stop).map((s) => [s.props.offset, s.props.stopOpacity, s.props.stopColor]);
-    expect(stops("band-pattern")).toEqual([
-      [0, 1, v4.civ.cn.glow],
-      [0.72, 0, v4.civ.cn.glow],
+    expect(stops("band-texture")).toEqual([
+      [0, 0.05, ink],
+      [0.4, 0.05, ink],
+      [1, 0, ink],
     ]);
+    // 地府's texture is the 稿纸 verticals, 24 apart.
+    expect(svg("band-texture").findByType(Path).props.d).toMatch(/^M0\.5 0V\d+M24\.5 0V/);
     // .glowtop: the glow at v4's light-scheme 0.24, gone by 70% (jest reports light).
     expect(stops("band-glow")).toEqual([
       [0, 0.24, v4.civ.cn.glow],
       [0.7, 0, v4.civ.cn.glow],
     ]);
-    expect(stops("band-pattern").map((s) => s[2])).not.toContain(ON_PLAQUE);
+    // Never the civilization's colour, never the band's white: the civilization-coloured pattern is gone.
+    expect(stops("band-texture").map((s) => s[2])).not.toContain(v4.civ.cn.glow);
+    expect(stops("band-texture").map((s) => s[2])).not.toContain(ON_PLAQUE);
+    expect(screen.UNSAFE_getAllByType(Svg).filter((el) => el.props.testID === "band-pattern")).toEqual([]);
+  });
+
+  it("第四十六批: the head mark is the hall's name, vertical, ink at 30%, hidden from screen readers, and only where it clears the text by 24", async () => {
+    await open();
+    await settle();
+    // Ornament: not in the accessibility tree at all.
+    expect(screen.queryByTestId("head-mark-cn")).toBeNull();
+    const mark = () => screen.getByTestId("head-mark-cn", { includeHiddenElements: true });
+    expect(mark().props.importantForAccessibility).toBe("no-hide-descendants");
+    const glyphs = mark()
+      .findAll((n) => n.type === "Text")
+      .map((n) => n.props.children);
+    expect(glyphs).toEqual(["第", "五", "殿"]);
+    const style = () => StyleSheet.flatten(mark().props.style) as Record<string, unknown>;
+    // Right of the text, left of the account icon: 16 + 44 + 16.
+    expect(style().right).toBe(76);
+    // Laid out but not shown until measured.
+    expect(style().opacity).toBe(0);
+    await act(async () => {
+      fireEvent(screen.getByTestId("identity-meta"), "textLayout", { nativeEvent: { lines: [{ width: 120 }] } });
+      fireEvent(screen.getByTestId("band-text"), "layout", { nativeEvent: { layout: { x: 76, y: 0, width: 200, height: 58 } } });
+      fireEvent(screen.getByTestId("name-row"), "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 90, height: 38 } } });
+      mark().props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 20, height: 69 } } });
+    });
+    // The name ends at 16 + 76 + 90 = 182; the mark starts at 390 − 76 − 20 = 294: clear by more than 24.
+    expect(style().opacity).toBe(0.3);
+    // A name that reaches within 24 of the mark: the mark is not drawn at all (第四十六批第三节).
+    await act(async () => {
+      fireEvent(screen.getByTestId("name-row"), "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 180, height: 38 } } });
+    });
+    expect(style().opacity).toBe(0);
   });
 
   it("「你现在在哪」 has the stage motif behind it, in the civilization's colour under 10%", async () => {

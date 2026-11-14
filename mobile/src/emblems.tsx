@@ -10,7 +10,7 @@
  * `full` / `compact` drawings are picked by size.
  */
 import type { ReactNode } from "react";
-import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 
 import type { CivKey } from "./theme";
 
@@ -205,56 +205,6 @@ export function Hero({
       strokeLinecap="square"
     >
       <Path d={compact ? HERO[civ].c : HERO[civ].f} />
-    </Svg>
-  );
-}
-
-/**
- * v3 `.life-pattern` (and the web's `.identity-pattern`, frontend/app/globals.css): one pattern per
- * civilization in the band's white at 15%, strong on the left and gone by `fade` of the width —
- * the CSS `mask-image` is a stroke gradient here. Each is that CSS gradient's geometry, drawn:
- *   cn  a grid: 1pt lines every 18                               (fades out by 72%)
- *   eu  1pt rings every 24 from r 23, centred at (16%, 110%)     (76%)
- *   eg  1pt verticals every 17                                    (66%)
- *   gr  `linear-gradient(135deg, … 43% 46% …) 0 0 / 34px 34px`: in each 34pt tile one 1.44pt
- *       stroke on x + y = 30.26 — so the diagonals break 3.7pt short of each tile's corner, as on the web (74%)
- * The neutral skin has none (as on the web). Drawn for a `width` × `height` box from the top-left;
- * the band clips it, so its height can be the tallest the band gets.
- */
-export const BAND_PATTERN_FADE: Record<Exclude<CivKey, "neutral">, number> = { cn: 0.72, eu: 0.76, eg: 0.66, gr: 0.74 };
-
-export function bandPatternShapes(civ: Exclude<CivKey, "neutral">, width: number, height: number, ringBase: number): { d: string; strokeWidth: number } {
-  const range = (step: number, to: number, from = 0) => Array.from({ length: Math.max(0, Math.floor((to - from) / step) + 1) }, (_, i) => from + i * step);
-  if (civ === "cn") {
-    return { strokeWidth: 1, d: [...range(18, width).map((x) => `M${x + 0.5} 0V${height}`), ...range(18, height).map((y) => `M0 ${y + 0.5}H${width}`)].join("") };
-  }
-  if (civ === "eg") return { strokeWidth: 1, d: range(17, width).map((x) => `M${x + 0.5} 0V${height}`).join("") };
-  if (civ === "eu") {
-    const cx = width * 0.16;
-    const cy = ringBase * 1.1;
-    const far = Math.hypot(Math.max(cx, width - cx), cy);
-    const arc = (r: number) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
-    return { strokeWidth: 1, d: range(24, far, 23.5).map(arc).join("") };
-  }
-  const k = 34 * 0.89;
-  const tiles: string[] = [];
-  for (const x of range(34, width)) for (const y of range(34, height)) tiles.push(`M${x} ${y + k}L${x + k} ${y}`);
-  return { strokeWidth: 34 * Math.SQRT2 * 0.03, d: tiles.join("") };
-}
-
-export function BandPattern({ civ, color, width, height, ringBase, testID }: { civ: CivKey; color: string; width: number; height: number; ringBase: number; testID?: string }) {
-  if (civ === "neutral") return null;
-  const { d, strokeWidth } = bandPatternShapes(civ, width, height, ringBase);
-  const fade = BAND_PATTERN_FADE[civ];
-  return (
-    <Svg testID={testID} pointerEvents="none" width={width} height={height} style={patternStyle} opacity={0.15}>
-      <Defs>
-        <LinearGradient id="band-fade" x1={0} y1={0} x2={width} y2={0} gradientUnits="userSpaceOnUse">
-          <Stop offset={0} stopColor={color} stopOpacity={1} />
-          <Stop offset={fade} stopColor={color} stopOpacity={0} />
-        </LinearGradient>
-      </Defs>
-      <Path d={d} fill="none" stroke="url(#band-fade)" strokeWidth={strokeWidth} />
     </Svg>
   );
 }

@@ -47,7 +47,15 @@ export interface LoginUser {
   role: UserRole;
   /** `civilization` picks the 匾 skin; `seal_glyphs` empty = civilization default. Optional: a
    *  user rehydrated from a pre-v2 stored session (24h TTL) has neither — fall back to defaults. */
-  tenant: { code: string; display_name: string; display_name_en?: string; civilization?: string; seal_glyphs?: string[] } | null;
+  tenant: {
+    code: string;
+    display_name: string;
+    display_name_en?: string;
+    civilization?: string;
+    seal_glyphs?: string[];
+    /** The hall's own name per UI language (`Tenant.hall_names`; the officer app's 地府 head mark). A cached profile from before it has none. */
+    hall_names?: Record<string, string>;
+  } | null;
   display_name: string;
   permissions: string[];
   /** 两步验证(A12)。`mfa_required`: the role is made to use it (ADMIN always); login is NOT blocked,

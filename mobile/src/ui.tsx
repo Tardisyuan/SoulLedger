@@ -779,15 +779,6 @@ export function PageEmptyArt() {
   );
 }
 
-/**
- * 第三十批 页头: the 2px line in the civilization's colour (`--topline`, v4 --civT; the neutral skin's --sub)
- * across the very top of the page. Drawn over the frame, holds no touch.
- */
-export function Topline() {
-  const t = useTheme();
-  return <View testID="topline" pointerEvents="none" style={[styles.topline, { backgroundColor: t.plaque }]} />;
-}
-
 export function Hairline({ style }: { style?: StyleProp<ViewStyle> }) {
   const t = useTheme();
   return <View style={[{ height: 1, backgroundColor: t.hair }, style]} />;
@@ -1675,7 +1666,6 @@ export const styles = StyleSheet.create({
   emptyArt: { alignSelf: "center", marginBottom: space[2] },
   // 第三十批 空态: the G mark at 12%.
   emptyMark: { opacity: 0.12 },
-  topline: { position: "absolute", top: 0, left: 0, right: 0, height: touch.topline },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },

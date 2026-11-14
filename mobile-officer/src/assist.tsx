@@ -26,7 +26,7 @@ import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDi
 
 import { ActionButton, type TabKey } from "./kit";
 import { useSession } from "./session";
-import { Button, Icon, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, radius, space, useI18n, useTheme } from "./shared";
+import { Button, HeadMark, HeadTexture, Icon, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, markFits, radius, space, useI18n, useTheme } from "./shared";
 
 /**
  * Each tab as a page the backend knows (`OFFICER_SCREENS`). 待办 → `workflow`: its first and main
@@ -134,29 +134,59 @@ export type OfficerAssist = ReturnType<typeof useOfficerAssist>;
 export function TabHead({ tab, onAsk, onSearch }: { tab: TabKey; onAsk: () => void; onSearch?: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
+  const { state } = useSession();
+  const { width } = useWindowDimensions();
   const name = t(`officer_app.tabs.${tab}`);
+  // Every tab is a first-level page: its head has the paper texture (第四十六批第四节). 案卷台 is the big-title head and
+  // alone has the head mark, left of the buttons (24 + their width + 16), only while the title ends 24 short of it.
+  const desk = tab === "queue";
+  const [box, setBox] = useState({ width: 0, height: 0 });
+  const [fit, setFit] = useState<Record<"title" | "end" | "mark", number | undefined>>({ title: undefined, end: undefined, mark: undefined });
+  const measure = (key: keyof typeof fit) => (value: number) => setFit((p) => (p[key] === value ? p : { ...p, [key]: value }));
+  const markRight = HEAD_GUTTER + (fit.end ?? 0) + 16;
+  const markShown = fit.title !== undefined && fit.end !== undefined && fit.mark !== undefined && markFits(HEAD_GUTTER + fit.title, width - markRight - fit.mark);
   return (
-    <View style={[styles.head, { borderBottomColor: theme.hair }]}>
-      <Txt variant="title" numberOfLines={1} style={styles.grow}>
-        {tab === "queue" ? t("officer_app.desk.title") : name}
-      </Txt>
-      {onSearch ? (
-        <Pressable testID="desk-search" accessibilityRole="button" accessibilityLabel={t("officer_app.desk.search")} onPress={onSearch} style={styles.headButton}>
-          <Icon name="search" size={18} color={theme.ink} />
-        </Pressable>
+    <View
+      testID="tab-head"
+      onLayout={(e) => setBox({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+      style={[styles.head, desk && styles.deskHead, { borderBottomColor: theme.hair }]}
+    >
+      <HeadTexture testID="tab-head-texture" width={box.width} height={box.height} />
+      {desk ? (
+        <HeadMark
+          names={state.status === "signedIn" ? state.user.tenant?.hall_names : undefined}
+          right={markRight}
+          hidden={!markShown}
+          onLayout={(e) => measure("mark")(e.nativeEvent.layout.width)}
+        />
       ) : null}
-      <Pressable
-        testID="assist-entry"
-        accessibilityRole="button"
-        accessibilityLabel={t("officer_app.assist.entry_label", { page: name })}
-        onPress={onAsk}
-        style={({ pressed }) => [styles.entry, { borderColor: theme.inkSubtle, backgroundColor: pressed ? theme.hair : "transparent" }]}
+      <Txt
+        variant={desk ? "display" : "title"}
+        numberOfLines={1}
+        onTextLayout={(e) => measure("title")(Math.max(0, ...e.nativeEvent.lines.map((l) => l.width)))}
+        style={styles.grow}
       >
-        <Txt variant="nav" accessibilityElementsHidden importantForAccessibility="no">
-          ?
-        </Txt>
-        <Txt variant="nav">{t("officer_app.assist.entry")}</Txt>
-      </Pressable>
+        {desk ? t("officer_app.desk.title") : name}
+      </Txt>
+      <View testID="tab-head-end" onLayout={(e) => measure("end")(e.nativeEvent.layout.width)} style={styles.headEnd}>
+        {onSearch ? (
+          <Pressable testID="desk-search" accessibilityRole="button" accessibilityLabel={t("officer_app.desk.search")} onPress={onSearch} style={styles.headButton}>
+            <Icon name="search" size={18} color={theme.ink} />
+          </Pressable>
+        ) : null}
+        <Pressable
+          testID="assist-entry"
+          accessibilityRole="button"
+          accessibilityLabel={t("officer_app.assist.entry_label", { page: name })}
+          onPress={onAsk}
+          style={({ pressed }) => [styles.entry, { borderColor: theme.inkSubtle, backgroundColor: pressed ? theme.hair : "transparent" }]}
+        >
+          <Txt variant="nav" accessibilityElementsHidden importantForAccessibility="no">
+            ?
+          </Txt>
+          <Txt variant="nav">{t("officer_app.assist.entry")}</Txt>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -482,9 +512,15 @@ function History({ assist }: { assist: OfficerAssist }) {
   );
 }
 
+/** The head row's side padding (`space[5]`); the head mark's right is measured from it. */
+const HEAD_GUTTER = space[5];
+
 const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
-  head: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: space[5], paddingVertical: space[2], borderBottomWidth: 1 },
+  head: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: HEAD_GUTTER, paddingVertical: space[2], borderBottomWidth: 1 },
+  // 案卷台's big-title head (Design 第四十六批第六节): 96 high, the title and the buttons on its foot, the mark above them.
+  deskHead: { minHeight: 96, alignItems: "flex-end", overflow: "hidden" },
+  headEnd: { flexDirection: "row", alignItems: "center", gap: space[3] },
   entry: { flexDirection: "row", alignItems: "center", gap: space[1], minHeight: 44, paddingHorizontal: space[3], borderWidth: 1, borderRadius: radius.control },
   sheetHead: { flexDirection: "row", alignItems: "center", gap: space[1], paddingHorizontal: space[3], minHeight: 52, borderBottomWidth: 1 },
   headButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: space[2] },

@@ -4,7 +4,7 @@
  * it. A tab's root wears the big title: the outline seal (38) in the civilization's colour, the title in the
  * serif at 30/38 and its sub line (civilization · life · hall) in --sub. Every other bar is one row, title 20.
  * Before sign-in, or for a civilization the app does not know, the light is grey and there is no seal.
- * 第三十批: every page's top is a 2px line in the civilization's colour (`Topline`); the tab bar is four single
+ * 第三十批: every page's top is the civilization's line (`Topline`, civHead.tsx: four shapes since 第四十六批); the tab bar is four single
  * characters, each over its small label.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -17,14 +17,15 @@ import type { AssistScreen } from "@soulledger/core/api/soul-assist";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 import { AssistEntry, useAssist } from "./assist";
-import { BandPattern, GlowTop, Icon, type IconName } from "./emblems";
+import { HeadTexture, Topline } from "./civHead";
+import { GlowTop, Icon, type IconName } from "./emblems";
 import { family, quoteFamily, titleFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./useCurrentHall";
 import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
 import { radius, type Theme } from "./theme";
-import { MAX_FONT_SCALE, Topline, Txt, enumText, useLayout, useTheme } from "./ui";
+import { MAX_FONT_SCALE, Txt, enumText, useLayout, useTheme } from "./ui";
 
 /**
  * The page's theme, for what a bar's control opens away from the bar. Since v4 the bar is on the page's own
@@ -39,11 +40,12 @@ export function usePageTheme(): Theme {
 
 /**
  * The top of a page, from the status bar down, with whatever row the caller puts on it. v4 (V4Batch07 05 App)
- * draws no band: the page's own ground with the header light (`GlowTop`, the civilization's glow) and its pattern
- * behind the title, so what sits here is read in the page's own inks. (v3's solid `band` under onPlaque, gone
- * 2026-11-06.) The neutral skin's glow is a grey and it has no pattern.
+ * draws no band: the page's own ground with the header light (`GlowTop`, the civilization's glow), so what sits
+ * here is read in the page's own inks. (v3's solid `band` under onPlaque, gone 2026-11-06.) The neutral skin's glow
+ * is a grey. `texture`: a tab's root (a first-level page) has the paper texture behind it in ink (第四十六批第四节,
+ * `HeadTexture`); every other bar has none — the civilization-coloured pattern every bar carried until then is gone.
  */
-export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNode; testID?: string }) {
+export function PlaqueFrame({ children, testID = "plaque", texture }: { children: ReactNode; testID?: string; texture?: boolean }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -53,7 +55,7 @@ export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNo
       {height ? (
         <>
           <GlowTop testID={`${testID}-glow`} color={t.glow} scheme={t.scheme} width={width} height={height} />
-          <BandPattern civ={t.civ} color={t.glow} width={width} height={height} ringBase={height} />
+          {texture ? <HeadTexture testID={`${testID}-texture`} width={width} height={height} /> : null}
         </>
       ) : null}
       <Topline />
@@ -230,7 +232,7 @@ export function PlaqueHeader({
     .filter(Boolean)
     .join(" · ");
   return (
-    <PlaqueFrame>
+    <PlaqueFrame texture>
       <View style={styles.plaque}>
         <View style={styles.plaqueRow}>
           <OutlineSeal civ={t.civ} size={38} color={t.plaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
