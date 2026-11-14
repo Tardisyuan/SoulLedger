@@ -143,11 +143,42 @@ function actionEnumValue(action: string, t: (key: string) => string): EnumValue 
 }
 
 export default function AuditPage() {
+  // The gate stays in the default export, outside the Suspense boundary
+  // (`tests/test_page_gates_match_the_backend.py` reads it from here).
+  const { hasPermission } = usePermissions();
+  const canReadAudit = hasPermission("audit.read");
+  if (!canReadAudit) return <AuditRefusal />;
   // useSearchParams (in `useUrlFilters`) needs a Suspense boundary under the App Router build.
   return (
     <Suspense fallback={null}>
       <AuditPageContent />
     </Suspense>
+  );
+}
+
+/** Access denied. A refusal is a note in the file, not a poster, so it goes through EmptyState
+    (left-aligned, civ-marked) instead of a centred box — and the page keeps its header, so the
+    operator can still see *which* page refused them. */
+function AuditRefusal() {
+  const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
+  const { permissionsReady } = usePermissions();
+  return (
+    <PageShell
+      variant="full"
+      title={
+        <>
+          {t("audit.title")}
+          <MenuGloss path="/audit" />
+        </>
+      }
+    >
+      {permissionsReady === false ? (
+        <PermissionsPending />
+      ) : (
+        <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+      )}
+    </PageShell>
   );
 }
 
@@ -165,7 +196,7 @@ function AuditPageContent() {
   // gate at all; it had one, pointed at the wrong question. Both are in the
   // same ledger (M47 and M65), which is why this comment names the codename
   // rather than the role.
-  const { hasPermission, permissionsReady } = usePermissions();
+  const { hasPermission } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
   // 「殿」下拉只给全局管理员(`ADMIN` 且不属于任何殿,后端审计列表与导出唯一跨殿的人)。绑了殿的人
   // (含绑了殿的 ADMIN)只看得到自己殿的行,后端对他们点别的殿的名答 403 —— 所以这里不是权限闸,
@@ -431,22 +462,6 @@ function AuditPageContent() {
       <MenuGloss path="/audit" />
     </>
   );
-
-  // Access denied. A refusal is a note in the file, not a poster,
-  // so it goes through EmptyState (left-aligned, civ-marked) instead of the
-  // centred `h-64` box — and the page keeps its header, so the operator can
-  // still see *which* page refused them.
-  if (!canReadAudit) {
-    return (
-      <PageShell variant="full" title={title}>
-        {permissionsReady === false ? (
-          <PermissionsPending />
-        ) : (
-          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
-        )}
-      </PageShell>
-    );
-  }
 
   return (
     /* `full`, not `page`. This is the audit trail: its column count grows with
