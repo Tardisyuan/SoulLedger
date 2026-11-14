@@ -243,6 +243,8 @@ export type SetNewPasswordRequest = components["schemas"]["SetNewPassword"];
  * account too, so nothing may branch on its text.
  */
 export type PasswordResetAccepted = components["schemas"]["DetailResponse"];
+/** 200 of `/auth/set-new-password/`: plus the account's `soul_code` (S2), only after a live code matched. */
+export type PasswordResetDone = components["schemas"]["PasswordResetDone"];
 /**
  * The body both answer a refusal with: a problem `{code, detail}`, plus `retry_after`
  * (seconds) when `code` is `rate_limited`. Branch on `code`; `error` is a

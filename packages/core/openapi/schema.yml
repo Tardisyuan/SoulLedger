@@ -2820,7 +2820,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetailResponse'
+                $ref: '#/components/schemas/PasswordResetDone'
           description: ''
         '400':
           content:
@@ -39381,6 +39381,16 @@ components:
           maxLength: 150
       required:
       - username
+    PasswordResetDone:
+      type: object
+      description: Body of a successful email reset.
+      properties:
+        detail:
+          type: string
+        soul_code:
+          type: string
+      required:
+      - detail
     PasswordResetRefusal:
       type: object
       description: |-

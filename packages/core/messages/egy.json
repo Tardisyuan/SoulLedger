@@ -7620,7 +7620,8 @@
       "title": "Wehem Sekhem · Hesb Maa",
       "code_label": "Hesb Maa",
       "note": "Wenen At 5. Nen Djes: Nen Iri Khet.",
-      "text": "Hesb Maa-Ek: {{code}}\nWenen At 5. Nen Djes: Nen Iri Khet."
+      "text": "Hesb Maa-Ek: {{code}}\nWenen At 5. Nen Djes: Nen Iri Khet.",
+      "soul_code_line": "Ren Hesb Ba-Ek: {{soul_code}}"
     },
     "credential": {
       "title": "Aq En Ba",

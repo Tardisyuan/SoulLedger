@@ -17704,6 +17704,11 @@ export interface components {
         PasswordHelpRequest: {
             username: string;
         };
+        /** @description Body of a successful email reset. */
+        PasswordResetDone: {
+            detail: string;
+            soul_code?: string;
+        };
         /**
          * @description Doc-only: every refusal of the two email-reset endpoints.
          *
@@ -26265,7 +26270,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/json": components["schemas"]["PasswordResetDone"];
                 };
             };
             400: {

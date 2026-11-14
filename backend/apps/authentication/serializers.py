@@ -910,6 +910,17 @@ class SetNewPasswordSerializer(serializers.Serializer):
         return value
 
 
+class PasswordResetDoneSerializer(serializers.Serializer):
+    """Body of a successful email reset."""
+
+    detail = serializers.CharField()
+    #: The soul code of the account whose password was just set (S2, 2026-11-15): the App fills it into the
+    #: sign-in page, so a soul that forgot the number as well as the password still gets in. Only ever on this
+    #: 200 -- after a live code for this address matched -- so it tells nothing to anyone who could not already
+    #: reset the password. Absent for a SOUL-role user with no soul account.
+    soul_code = serializers.CharField(required=False)
+
+
 #: Every `code` a refusal of `/auth/reset-password/` or `/auth/set-new-password/`
 #: carries. Clients branch on these, never on the `error` sentence beside them.
 PASSWORD_RESET_REFUSAL_CODES = [

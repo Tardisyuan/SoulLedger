@@ -73,6 +73,7 @@ from .serializers import (
     OfficerInviteSerializer,
     OfficerTokenObtainPairSerializer,
     PasswordHelpRequestSerializer,
+    PasswordResetDoneSerializer,
     PasswordResetRefusalSerializer,
     PasswordResetResultSerializer,
     PublicCivilizationSerializer,
@@ -1420,7 +1421,7 @@ def reset_password_request(request):
 @extend_schema(
     request=SetNewPasswordSerializer,
     responses={
-        200: DetailResponseSerializer,
+        200: PasswordResetDoneSerializer,
         400: PasswordResetRefusalSerializer,
         404: PasswordResetRefusalSerializer,
         409: PasswordResetRefusalSerializer,
@@ -1542,7 +1543,7 @@ def set_new_password(request):
     from apps.soul_accounts.models import SoulAccount
     from apps.soul_accounts.services import set_password_chosen_by_soul
 
-    account = SoulAccount.objects.filter(user=user).first()
+    account = SoulAccount.objects.select_related("soul").filter(user=user).first()
     if account is not None:
         account.user = user
         set_password_chosen_by_soul(account, new_password)
@@ -1554,7 +1555,11 @@ def set_new_password(request):
     # Invalidate the code
     cache.delete(f"pwd_reset:{email}")
 
-    return Response({"detail": "密码重置成功"})
+    # S2: the number goes back with the success; the App fills the sign-in page (`PasswordResetDoneSerializer`).
+    body = {"detail": "密码重置成功"}
+    if account is not None:
+        body["soul_code"] = account.soul.soul_code
+    return Response(body)
 
 
 #: The one body `password_help_request` ever answers 200 with. A module

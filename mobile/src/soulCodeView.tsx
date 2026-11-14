@@ -54,8 +54,8 @@ export function SoulCodeField({
   onComplete: () => void;
   onScan: () => void;
   editable: boolean;
-  /** 「✓ 已从二维码填入」 under the box. */
-  scanned: boolean;
+  /** 「✓ 已从二维码填入」 under the box; "reset": the number 「忘记密码」 brought back (S2). */
+  scanned: boolean | "reset";
   inputRef?: Ref<TextInput>;
 }) {
   const theme = useTheme();
@@ -172,7 +172,7 @@ export function SoulCodeField({
         </View>
       ) : scanned ? (
         <Txt testID="login-scanned" variant="caption" style={styles.problem}>
-          {t("soul_app.login.scanned")}
+          {t(scanned === "reset" ? "soul_app.login.reset_filled" : "soul_app.login.scanned")}
         </Txt>
       ) : (
         <Txt testID="login-soul-code-hint" variant="caption" tone="muted">

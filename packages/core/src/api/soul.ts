@@ -43,6 +43,7 @@ import { responseCode } from "./client";
 import { problemFieldErrors } from "./problem";
 import type {
   PasswordResetAccepted,
+  PasswordResetDone,
   PasswordResetRefusal,
   PasswordResetRefusalCode,
   PasswordResetRequest,
@@ -350,9 +351,9 @@ export const soulApi = {
     soulHttp
       .post<PasswordResetAccepted>("/auth/reset-password/", { email } satisfies PasswordResetRequest)
       .then((r) => r.data),
-  /** Step 2. Does NOT sign in: 200 is `{detail}` only, no tokens. */
+  /** Step 2. Does NOT sign in: 200 is `{detail, soul_code?}`, no tokens; the App fills the code into sign-in (S2). */
   setNewPassword: (body: SetNewPasswordRequest) =>
-    soulHttp.post<PasswordResetAccepted>("/auth/set-new-password/", body).then((r) => r.data),
+    soulHttp.post<PasswordResetDone>("/auth/set-new-password/", body).then((r) => r.data),
   me: () => soulHttp.get<MeProfile>("/me/").then((r) => r.data),
   life: () => soulHttp.get<MeLife>("/me/life/").then((r) => r.data),
   pastLives: () => soulHttp.get<MeLife[]>("/me/past-lives/").then((r) => r.data),

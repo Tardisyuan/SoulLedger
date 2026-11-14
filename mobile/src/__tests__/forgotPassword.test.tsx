@@ -524,6 +524,29 @@ describe("success", () => {
     expect(screen.getByTestId("login-submit")).toBeTruthy();
   });
 
+  it("S2: the soul code the reset answers is filled into sign-in, said as brought back (not as scanned)", async () => {
+    await toCodeStep();
+    stubApi({ [CONFIRM]: { status: 200, data: { detail: "密码重置成功", soul_code: "QU33Q9FW5F" } } });
+    fillCode("123456", "new-password-1");
+    await submitCode();
+    expect(await screen.findByTestId("login-reset-notice")).toBeTruthy();
+    expect(screen.getByTestId("login-soul-code").props.value).toBe("QU33Q9FW5F");
+    expect(text("login-scanned")).toBe("✓ 已填入你找回的编号");
+    expect(screen.queryByText("✓ 已从二维码填入")).toBeNull();
+    // Filled, not signed in.
+    expect(secure.get(REFRESH_TOKEN_KEY)).toBeUndefined();
+  });
+
+  it("S2: a reset that answers no soul code leaves the number box as it was, with no fill note", async () => {
+    await toCodeStep();
+    stubApi({ [CONFIRM]: { status: 200, data: { detail: "密码重置成功" } } });
+    fillCode("123456", "new-password-1");
+    await submitCode();
+    expect(await screen.findByTestId("login-reset-notice")).toBeTruthy();
+    expect(screen.getByTestId("login-soul-code").props.value).toBe("");
+    expect(screen.queryByTestId("login-scanned")).toBeNull();
+  });
+
   it("an earlier failed sign-in does not hide the notice: its error and the old password are cleared", async () => {
     stubApi({ "POST /soul-auth/login/": { status: 401, data: { detail: "x", code: "invalid_credentials" } } });
     renderApp();

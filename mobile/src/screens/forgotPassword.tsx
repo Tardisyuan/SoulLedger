@@ -10,8 +10,9 @@
  *      others receive no code and go the no-email way (ask the hall).
  *   2. The six-digit code + a new password → `POST /auth/set-new-password/`.
  *
- * Then back to sign-in with a notice. Never signed in from here: the reset
- * answers `{detail}` and no tokens, and a soul that has just proved it holds a
+ * Then back to sign-in with a notice and the soul code filled in (S2, 2026-11-15: the 200 carries the
+ * account's `soul_code`, so a soul that lost the number too still gets in). Never signed in from here: the reset
+ * answers `{detail, soul_code}` and no tokens, and a soul that has just proved it holds a
  * mailbox signs in with the password it just chose, like everyone else.
  *
  * STEP 1 MUST NOT SAY WHETHER THE ADDRESS HAS AN ACCOUNT. The backend answers
@@ -85,7 +86,7 @@ function useClock(): number {
 type Sent = { email: string; at: number };
 type Stage = { kind: "email" } | { kind: "noEmail" } | { kind: "code"; sent: Sent };
 
-export function ForgotPasswordScreen({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+export function ForgotPasswordScreen({ onDone, onCancel }: { onDone: (soulCode?: string) => void; onCancel: () => void }) {
   const [stage, setStage] = useState<Stage>({ kind: "email" });
   if (stage.kind === "noEmail") return <NoEmail onBack={onCancel} />;
   if (stage.kind === "code") {
@@ -374,7 +375,7 @@ function CodeCells({
   );
 }
 
-function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sent) => void; onDone: () => void }) {
+function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sent) => void; onDone: (soulCode?: string) => void }) {
   const theme = useTheme();
   const { t } = useI18n();
   const now = useClock();
@@ -420,8 +421,9 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
     // The checklist says what is missing; nothing is sent until it is all met.
     if (!check()) return;
     setBusy(true);
+    let soulCode: string | undefined;
     try {
-      await soulApi.setNewPassword({ email: sent.email, code, new_password: newPassword });
+      soulCode = (await soulApi.setNewPassword({ email: sent.email, code, new_password: newPassword })).soul_code;
     } catch (e) {
       setBusy(false);
       const { key } = passwordResetErrorMessage(e);
@@ -446,7 +448,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
       }
       return;
     }
-    onDone();
+    onDone(soulCode);
   };
 
   const resend = async () => {

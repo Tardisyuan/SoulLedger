@@ -36,6 +36,7 @@ MESSAGES = {
             "code_label": "验证码",
             "note": "5 分钟内有效。如非本人操作，请忽略本邮件。",
             "text": "你的验证码：{{code}}\n5 分钟内有效。如非本人操作，请忽略本邮件。",
+            "soul_code_line": "你的灵魂编号：{{soul_code}}",
         },
         # 第四十批 S-b:改联系邮箱。验证码那封借用 reset_code 的标签、说明与正文,只换标题。
         "email_code": {"title": "联系邮箱验证码"},
@@ -64,6 +65,7 @@ MESSAGES = {
             "code_label": "Code",
             "note": "Valid for 5 minutes. If you did not ask for this, ignore this email.",
             "text": "Your code: {{code}}\nValid for 5 minutes. If you did not ask for this, ignore this email.",
+            "soul_code_line": "Your soul code: {{soul_code}}",
         },
         "email_code": {"title": "Contact email code"},
         "email_changed": {
@@ -94,6 +96,7 @@ MESSAGES = {
             "code_label": "Hesb Maa",
             "note": "Wenen At 5. Nen Djes: Nen Iri Khet.",
             "text": "Hesb Maa-Ek: {{code}}\nWenen At 5. Nen Djes: Nen Iri Khet.",
+            "soul_code_line": "Ren Hesb Ba-Ek: {{soul_code}}",
         },
         "credential": {
             "title": "Aq En Ba",
