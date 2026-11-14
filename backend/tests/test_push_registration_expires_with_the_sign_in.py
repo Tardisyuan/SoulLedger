@@ -151,7 +151,9 @@ def test_soul_revoke_deactivates_the_registration_of_that_session(cn_tenant, pus
 def test_soul_device_expires_on_its_own_session(cn_tenant, push_on):  # noqa: F811
     account, _client = ready_soul(cn_tenant, name="亡魂戊")
     old = _session(account.user)
-    SignInSession.objects.filter(pk=old.pk).update(last_seen_at=timezone.now() - timedelta(days=8))
+    # 灵魂自己的有效期(`soul_lifetime()`,30 天)再过一小时 —— 不写死天数:曾是 `days=8`,对着 7 天的旧有效期。
+    SignInSession.objects.filter(pk=old.pk).update(
+        last_seen_at=timezone.now() - signin_sessions.soul_lifetime() - timedelta(hours=1))
     _session(account.user)
     services.register_device(account, TOKEN_A, "IOS", session=old)
     assert services._record(account, "JUDGMENT_CONCLUDED", "judgment", "judgment_result", "k-3", {}) == []

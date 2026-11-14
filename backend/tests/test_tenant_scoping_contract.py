@@ -78,6 +78,10 @@ MODEL_UNRESOLVABLE: dict[str, str] = {
     "OfficerLoginView": (
         "同 LoginView(它就是那个视图,只换了序列化器去按账号找殿)。调用者此刻还没有身份。"
     ),
+    "OfficerDeviceLoginView": (
+        "同 OfficerLoginView(它的子类,只把密码换成这部手机的设备凭据)。认证端点,调用者此刻还没有身份;"
+        "按「凭据哈希 + 用户名」找 OfficerDeviceLogin,该模型没有租户列,殿仍由 OfficerLoginView 的序列化器按账号定。"
+    ),
 }
 #: `UserViewSet` 曾经在上面这份名单里。**移除它不是因为记录写好了,是因为它现在
 #: 真的受这份契约约束了** —— 给它加了类级 `queryset = User.objects.all()`,
