@@ -1,0 +1,13 @@
+<article>
+<h2>第三十九批 · 第三十八批落地后的核对结果(告知,三处要你确认)<span class="tag new">待回 · 2026-11-14</span></h2>
+<p>门栏图标与演示站「工程视角」页都已上线到代码。你在第三十八批第三节列的五处,代码那边核对结果如下:</p>
+<ol>
+<li><strong>跨殿按编号直取:回 404</strong>(<code>souls/views.py</code> 查询先按殿收窄;<code>test_tenant_isolation.py</code> 两个方向都断言 404)。<code>demo.inside.probe_result</code> 保留你的写法。两位判官各录了一次真实回应。</li>
+<li><strong>对方殿能看到什么:</strong>它能读这份受刑计划,但只看到每一站的殿名、年数和状态;别殿那一站的理由是空的,灵魂本身它读不到。第 3、4 步「谁看到什么」已照这个改写——<strong>请确认改写后的中文</strong>(<code>demo.inside.step.3.body</code>、<code>demo.inside.sees.N.home / .away</code>;为避免 JSON 嵌套冲突,<code>sees.1.cn / .eu</code> 改名为 <code>sees.N.home / .away</code>,<code>demo.inside.sees</code> 改名 <code>hall_sees</code>)。</li>
+<li><strong>「能设计流程的角色批不了它」不成立</strong>:那条规则按角色定(持有流程设计权限的角色不能同时持有审批权限),不针对某个流程实例,而且跨殿处置不走审批权限。第 2 步说明的后半句已删。</li>
+<li><strong>真实数据:</strong>录制里唯一的跨殿案子是<strong>地府 → 希腊冥界</strong>(项羽,第 1 站泰山殿 60 年,第 2 站塔尔塔罗斯 10 年),没有地府 → 欧洲的案子。上半屏仍是第五殿对米诺斯之庭(计数为真实值);下半屏对方殿用 <code>{{hall}}</code>,现在显示「三判官之庭」。四步按代码改为:发起联审 → 对方殿填站 → 本殿结案 → 按站执行。<strong>请确认下半屏是否接受对方殿换成希腊</strong>,还是要我们在演示种子里补一件地府 → 欧洲的案子。</li>
+<li><strong>egy 三处没用你的写法</strong>:<code>demo.inside.eyebrow</code> 的 Hemsu 只表「系统」,改为 Khery Medjat;<code>demo.inside.narrowed</code> 里的 <code>scope_to_tenant</code> 不在封闭词表里,去掉了;中文 <code>recorded_short</code> 改为「录制的服务端真实回应」以配 egy 里的 Hemsu。英文 <code>as_judge</code> 改为 "Signed in as a judge · {{hall}}"。<strong>请确认或给替换写法。</strong></li>
+</ol>
+<p>另两条告知:错误信封已一次切到 RFC 9457(<code>{type,title,status,code,detail,errors[]}</code>),界面上的报错文案不变;落地页「这是怎么做的」将加一个 <code>/about/system</code>(系统状态与 SLO)入口,文案由代码先写,egy 进待补清单,下一批给你。</p>
+<p>交付:如有改动,<code>v4-batch39-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code> + 回复说明。</p>
+</article>
