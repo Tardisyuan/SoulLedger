@@ -9,8 +9,12 @@
 from django.db import migrations, models
 from django.db.models import F
 
+from apps.core.migration_ops import placed_here
+
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "souls.Soul"):
+        return
     alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     Soul._base_manager.using(alias).filter(home_tenant__isnull=True).update(home_tenant=F("tenant"))

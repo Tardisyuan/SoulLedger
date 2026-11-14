@@ -47,6 +47,8 @@ Organization already pointed at a tenant is none of the rollback's business.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 CIV_TO_TENANT = {
     "CHINESE": "CN_DIYU",
     "EUROPEAN": "EU_HEAVEN_HELL",
@@ -61,6 +63,8 @@ TENANT_DISPLAY_NAMES = {
 
 
 def backfill_tenant(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization", "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     Tenant = apps.get_model("tenants", "Tenant")
@@ -114,6 +118,8 @@ def clear_tenant(apps, schema_editor):
     reaches much further than an Organization FK; and leaving it costs nothing,
     because the forward get_or_creates rather than creates.
     """
+    if not placed_here(schema_editor, apps, "org.Organization", "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     Tenant = apps.get_model("tenants", "Tenant")

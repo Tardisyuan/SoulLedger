@@ -125,6 +125,8 @@ over an untouched table.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 SUMMIT_CODE = "EU_EARTHLY_PARADISE"
 MOUNTAIN_CODE = "EU_PURGATORY"
 
@@ -198,6 +200,8 @@ def _set_memory_reset(apps, alias, before, after):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
 
@@ -239,6 +243,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
 

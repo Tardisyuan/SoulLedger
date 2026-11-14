@@ -10,8 +10,12 @@ Backward:列与表加回来,内容为空(``scope`` 回到默认 ``ORG``、``cond
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def refuse_if_row_scopes_exist(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.RowLevelDataScope"):
+        return
     alias = schema_editor.connection.alias
     count = apps.get_model('perm', 'RowLevelDataScope')._base_manager.using(alias).count()
     if count:

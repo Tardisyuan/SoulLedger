@@ -1,5 +1,7 @@
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 BATCH = 500
 
 #: What `DispatchService.reject` / `cancel_proposed` used to append to `reason`: a blank line, the English
@@ -30,6 +32,8 @@ def split_forward(apps, schema_editor):
     text may mention the words). Anything else is left exactly as it is. A row whose tail is empty gets an
     empty `decision_reason` and its dangling marker removed.
     """
+    if not placed_here(schema_editor, apps, "dispatch.DispatchRecord"):
+        return
     alias = schema_editor.connection.alias
     manager = apps.get_model("dispatch", "DispatchRecord")._base_manager.using(alias)
     for status, marker in MARKERS.items():
@@ -43,6 +47,8 @@ def split_reverse(apps, schema_editor):
     """Append each decision reason back to `reason` in the old format. A row with no decision reason is not
     touched: the old code appended the marker even to an empty reason, but a bare marker carries nothing, and
     rows that never had one (system cancellations, rows written by other paths) must not gain one."""
+    if not placed_here(schema_editor, apps, "dispatch.DispatchRecord"):
+        return
     alias = schema_editor.connection.alias
     manager = apps.get_model("dispatch", "DispatchRecord")._base_manager.using(alias)
     for status, marker in MARKERS.items():

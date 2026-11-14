@@ -4,11 +4,15 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def _delete_officer_conversations(apps, schema_editor):
     """Reverse only. Before 0002 every conversation had an account; reversing sets `account` back to
     NOT NULL, which fails on PostgreSQL once any officer row (account NULL) exists. Those rows cannot
     be represented before 0002, so they are deleted. Listed last, so it runs first on the way back."""
+    if not placed_here(schema_editor, apps, "soul_assist.AssistConversation"):
+        return
     alias = schema_editor.connection.alias
     apps.get_model("soul_assist", "AssistConversation")._base_manager.using(alias).filter(account__isnull=True).delete()
     # The delete cascades to messages through deferred FK constraints; on PostgreSQL their trigger

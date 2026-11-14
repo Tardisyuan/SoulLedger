@@ -9,6 +9,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: code -> {field: (old, new)}
 RENAMES = {
     "DUAT_HALL": {"name": ("真理大厅", "两真之殿"), "name_en": ("Hall of Ma'at", "Hall of Two Truths")},
@@ -28,10 +30,14 @@ def _apply(apps, schema_editor, forward):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization"):
+        return
     _apply(apps, schema_editor, True)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization"):
+        return
     _apply(apps, schema_editor, False)
 
 

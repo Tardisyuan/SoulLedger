@@ -8,6 +8,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 CODE = "DY_COURT_09_PINGDENG"
 OLD = "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy"
 NEW = "阿鼻大地狱 - the deepest hell; murder, arson, the crimes with no remedy"
@@ -20,10 +22,14 @@ def _apply(apps, schema_editor, src, dst):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _apply(apps, schema_editor, OLD, NEW)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _apply(apps, schema_editor, NEW, OLD)
 
 

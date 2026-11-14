@@ -11,6 +11,8 @@ roles 同 /disposition。分组的 roles 取两页的并集。icon:分组沿用 
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 GROUP = {"name": "轮回", "icon": "RefreshCw", "order": 25, "roles": ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"]}
 DISPOSITION = {"path": "/disposition", "name": "处置", "order": 10}
 REGISTER = {
@@ -29,6 +31,8 @@ def _live(menu_model, alias):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     group, _ = Menu.all_objects.using(alias).get_or_create(
@@ -48,6 +52,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     old_parent = _live(Menu, alias).filter(name=OLD_PARENT, menu_type="DIRECTORY").first()

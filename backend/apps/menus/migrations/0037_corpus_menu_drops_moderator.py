@@ -10,6 +10,8 @@ MODERATOR 的 `judgment.read`,这一格再留着就是一扇打不开的门(`/st
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 PATH = "/corpus"
 ROLE = "MODERATOR"
 
@@ -20,6 +22,8 @@ def _rows(apps, schema_editor):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     for menu in _rows(apps, schema_editor):
         if ROLE in (menu.roles or []):
             menu.roles = [r for r in menu.roles if r != ROLE]
@@ -27,6 +31,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     for menu in _rows(apps, schema_editor):
         if ROLE not in (menu.roles or []):
             menu.roles = [*(menu.roles or []), ROLE]

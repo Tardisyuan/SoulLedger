@@ -12,6 +12,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 NEW = "四十二判官 · 否定告白"
 NEW_EN = "The forty-two assessors · negative confession"
 #: old -> new, and the English the old name carried.
@@ -57,10 +59,14 @@ def _apply(apps, schema_editor, names, english):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     _apply(apps, schema_editor, RENAMES, OLD_EN)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     _apply(apps, schema_editor, {NEW: "四十二神官 · 否定告白"}, {})
 
 

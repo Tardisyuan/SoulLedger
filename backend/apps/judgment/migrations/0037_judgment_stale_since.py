@@ -17,6 +17,8 @@ from django.db import migrations, models
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from apps.core.migration_ops import placed_here
+
 # 与 apps/judgment/tasks.py 的 STALE_MARKER 同一字面量;迁移不 import 应用代码。
 MARKER = "[SYSTEM] Flagged as stale"
 LINE = re.compile(r"\n?" + re.escape(MARKER) + r"(?: on (\S+))?[^\n]*")
@@ -29,6 +31,8 @@ def strip_marker(notes: str):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Judgment"):
+        return
     alias = schema_editor.connection.alias
     judgment_model = apps.get_model("judgment", "Judgment")
     manager = judgment_model._base_manager.using(alias)

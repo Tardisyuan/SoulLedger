@@ -27,6 +27,8 @@ finds its schedules where it left them.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 RENAMES = {
     "karma.recalculate_all": "ledger.recalculate_all",
     "karma.recalculate_single": "ledger.recalculate_single",
@@ -50,10 +52,14 @@ def _remap(apps, schema_editor, mapping):
 
 
 def rename_to_ledger(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "django_celery_beat.PeriodicTask"):
+        return
     _remap(apps, schema_editor, RENAMES)
 
 
 def rename_back_to_karma(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "django_celery_beat.PeriodicTask"):
+        return
     _remap(apps, schema_editor, {new: old for old, new in RENAMES.items()})
 
 

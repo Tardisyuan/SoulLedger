@@ -5,6 +5,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 OLD, NEW = "转世配额在哪里设置？", "转生配额在哪里设置？"
 
 
@@ -14,10 +16,14 @@ def _rename(apps, schema_editor, before, after):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     _rename(apps, schema_editor, OLD, NEW)
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     _rename(apps, schema_editor, NEW, OLD)
 
 

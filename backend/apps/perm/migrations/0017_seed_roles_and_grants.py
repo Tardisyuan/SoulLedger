@@ -56,6 +56,8 @@ Data migration: 把角色、权限、授权三者一次性播成一致状态。
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # —— 以下数据为本迁移的冻结快照，请勿改为 import ——
 
 ROLES = [
@@ -168,6 +170,8 @@ def _invalidate_cache():
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
@@ -208,6 +212,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     RolePermission = apps.get_model("perm", "RolePermission")

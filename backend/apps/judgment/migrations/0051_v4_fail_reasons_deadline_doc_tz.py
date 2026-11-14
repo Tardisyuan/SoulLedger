@@ -10,12 +10,16 @@ import datetime
 
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 BATCH = 2000
 AT_CITY_GOD = ("PENDING", "RETURNED")
 DUAT_BARRED = ("NAMELESS", "IMPROPER_BURIAL")
 
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Judgment"):
+        return
     alias = schema_editor.connection.alias
     Judgment = apps.get_model("judgment", "Judgment")
     rows = (

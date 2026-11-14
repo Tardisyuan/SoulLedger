@@ -12,6 +12,8 @@ perm/0035 收回了 `judgment.execute` / `judgment.assign`;这里收回其余一
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 ROLE = "MODERATOR"
 CODENAMES = [
     "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.escalate", "workflow.export",
@@ -36,6 +38,8 @@ CODENAMES = [
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     RolePermission = apps.get_model("perm", "RolePermission")
     RolePermission.all_objects.using(alias).filter(
@@ -44,6 +48,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")

@@ -12,6 +12,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: old name -> new name.
 RENAMES = {
     "阿努比斯 · 引导与称量": "阿努比斯 · 引导",
@@ -70,10 +72,14 @@ def _apply(apps, schema_editor, table):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     _apply(apps, schema_editor, FORWARD)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     _apply(apps, schema_editor, BACKWARD)
 
 

@@ -12,10 +12,13 @@
 from django.db import migrations
 from django.utils import timezone
 
+from apps.core.migration_ops import placed_here
 from apps.judgment import snapshot
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCitation"):
+        return
     alias = schema_editor.connection.alias
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
     at = timezone.now()
@@ -30,6 +33,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCitation"):
+        return
     alias = schema_editor.connection.alias
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
     JudgmentCitation._base_manager.using(alias).filter(snapshot_kind="BACKFILLED").update(

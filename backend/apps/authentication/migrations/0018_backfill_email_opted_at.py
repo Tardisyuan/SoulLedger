@@ -11,8 +11,12 @@
 from django.db import migrations
 from django.utils import timezone
 
+from apps.core.migration_ops import placed_here
+
 
 def stamp(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "authentication.User"):
+        return
     alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
     now = timezone.now().isoformat()
@@ -25,6 +29,8 @@ def stamp(apps, schema_editor):
 
 
 def unstamp(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "authentication.User"):
+        return
     alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
     for user in User._base_manager.using(alias).filter(preferences__email_opted_backfilled=True):

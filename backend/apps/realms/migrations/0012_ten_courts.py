@@ -86,6 +86,8 @@ still has to read back on reverse.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # old realm_code -> new realm_code. Renames in place; FKs follow the row.
 RENAMES = {
     "DY_03_QISHI": "DY_COURT_01_QINGUANG",
@@ -186,6 +188,8 @@ def _move_actors(apps, alias, mapping):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "realms.Realm", "reincarnation.Reincarnation"):
+        return
     alias = schema_editor.connection.alias
     from django.utils import timezone
 
@@ -259,6 +263,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "realms.Realm", "reincarnation.Reincarnation"):
+        return
     alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
     reincarnation = apps.get_model("reincarnation", "Reincarnation")

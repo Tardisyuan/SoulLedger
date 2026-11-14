@@ -5,7 +5,20 @@
 `add_index(..., concurrently=True)`,SQLite 的 schema editor 不收这个参数。
 """
 from django.contrib.postgres import operations as pg
+from django.db import router
 from django.db.migrations.operations import AddIndex
+
+
+def placed_here(schema_editor, apps, *labels):
+    """True when every model (`"app.Model"`) is migrated on the database `schema_editor` is migrating.
+
+    A data migration starts with `if not placed_here(schema_editor, apps, ...): return` naming every
+    model it reads or writes, so a seed of a control-only table (menus, roles, permissions) is skipped
+    on a shard. `router.allow_migrate_model` is Django's own test; while the router allows everything
+    this is always True. Guarded by `tests/test_migrations_use_the_migrated_alias.py`.
+    """
+    alias = schema_editor.connection.alias
+    return all(router.allow_migrate_model(alias, apps.get_model(label)) for label in labels)
 
 
 class AddIndexConcurrently(pg.AddIndexConcurrently):

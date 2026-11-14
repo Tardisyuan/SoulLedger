@@ -50,6 +50,8 @@ backward 恢复六行、重新启用那六个账号并改指回去,并把 `Maat`
 from django.db import migrations
 from django.utils import timezone
 
+from apps.core.migration_ops import placed_here
+
 MERGE = ("Maat", "Ma'at")
 
 RETIRE = [
@@ -69,6 +71,8 @@ def _actor(actor_model, name, alias):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "authentication.User"):
+        return
     alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")
@@ -97,6 +101,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "authentication.User"):
+        return
     alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")

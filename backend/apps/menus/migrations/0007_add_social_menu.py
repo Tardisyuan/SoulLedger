@@ -11,8 +11,12 @@ Icon: Users (Lucide) — consistent with social/follow features.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def add_social_menu(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 
@@ -51,6 +55,8 @@ def add_social_menu(apps, schema_editor):
 
 
 def remove_social_menu(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     Menu.objects.using(alias).filter(name="Social", path="/social").delete()

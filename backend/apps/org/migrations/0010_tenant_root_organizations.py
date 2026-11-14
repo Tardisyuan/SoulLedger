@@ -9,6 +9,8 @@ backward:根的子机构放回顶层、硬删根、再重算 —— 根是本迁
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # 冻结在这里:数据迁移不跟着模型漂移(org/0004 同一理由)。新建的殿读 `declared_civilization`。
 _TENANT_CIVILIZATION = {
     "CN_DIYU": "CHINESE", "EU_HEAVEN_HELL": "EUROPEAN", "EG_DUAT": "EGYPTIAN", "GR_HADES": "GREEK",
@@ -34,6 +36,8 @@ def _recompute_levels(org_model, alias):
 
 
 def create_roots(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization", "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     Tenant = apps.get_model("tenants", "Tenant")
@@ -63,6 +67,8 @@ def create_roots(apps, schema_editor):
 
 
 def drop_roots(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization", "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     Tenant = apps.get_model("tenants", "Tenant")

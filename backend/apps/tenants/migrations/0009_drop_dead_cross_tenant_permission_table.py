@@ -18,6 +18,8 @@ table in full, and there is no pattern anywhere in this file, because a
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 DEAD_TABLE = "permissions_cross_tenant"
 DEAD_APP_LABEL = "permissions"
 
@@ -31,6 +33,8 @@ def drop_dead_table(apps, schema_editor):
     content type with no model is the kind of debris that makes the next
     person's audit query lie.
     """
+    if not placed_here(schema_editor, apps, "contenttypes.ContentType"):
+        return
     alias = schema_editor.connection.alias
     connection = schema_editor.connection
     quoted = connection.ops.quote_name(DEAD_TABLE)

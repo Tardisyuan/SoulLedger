@@ -7,8 +7,12 @@ on ANNIHILATION. Row access through ``_base_manager`` on the migrated alias (see
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     Realm = apps.get_model("realms", "Realm")
     Realm._base_manager.using(schema_editor.connection.alias).filter(
         civilization="EGYPTIAN", realm_code="EG_ANNIHILATION", realm_type="HELL",
@@ -16,6 +20,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     Realm = apps.get_model("realms", "Realm")
     Realm._base_manager.using(schema_editor.connection.alias).filter(
         civilization="EGYPTIAN", realm_code="EG_ANNIHILATION", realm_type="ANNIHILATION",

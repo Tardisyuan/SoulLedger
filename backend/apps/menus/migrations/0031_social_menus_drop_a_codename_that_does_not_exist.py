@@ -9,16 +9,22 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 PATHS = ("/social", "/social/follows")
 
 
 def clear(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     Menu.all_objects.using(alias).filter(path__in=PATHS, permission="social.read").update(permission="")
 
 
 def restore(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for row in Menu.all_objects.using(alias).filter(path__in=PATHS, permission=""):

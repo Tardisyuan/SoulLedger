@@ -3,6 +3,8 @@
 import django.db.models.deletion
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def _drop_drafts(apps, schema_editor):
     """Reverse only. Before this migration a dispatch cannot be a draft: the
@@ -13,6 +15,8 @@ def _drop_drafts(apps, schema_editor):
     made and withdrawn, which it never was. Drafts (discarded ones in the
     recycle bin included) are removed; every other row is untouched.
     """
+    if not placed_here(schema_editor, apps, "dispatch.DispatchRecord"):
+        return
     alias = schema_editor.connection.alias
     record = apps.get_model("dispatch", "DispatchRecord")
     record._base_manager.using(alias).filter(status="DRAFT").delete()

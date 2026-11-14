@@ -9,6 +9,8 @@ egy 名(Weret Maaty、Wat Wedja)不变。
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: code -> {field: (old, new)}
 RENAMES = {
     "EG_DUAT": {"hall_name": ("真理殿堂", "两真之殿")},
@@ -29,10 +31,14 @@ def _apply(apps, schema_editor, forward):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     _apply(apps, schema_editor, True)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     _apply(apps, schema_editor, False)
 
 

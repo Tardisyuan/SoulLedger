@@ -7,15 +7,21 @@ set by hand is not overwritten. ``_base_manager`` for the same reason as ``realm
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 CODE, NAME = "GR_ASPHODEL_MEADOW", "Leimon Asphodelos"
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     Realm = apps.get_model("realms", "Realm")
     Realm._base_manager.using(schema_editor.connection.alias).filter(realm_code=CODE, name_egy="").update(name_egy=NAME)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     Realm = apps.get_model("realms", "Realm")
     Realm._base_manager.using(schema_editor.connection.alias).filter(realm_code=CODE, name_egy=NAME).update(name_egy="")
 

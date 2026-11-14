@@ -2,6 +2,8 @@
 English already, so they need none. Only blank columns are filled. Reverse: `0017` drops the columns."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 DISPLAY_NAME_EN = {
     "中国地府": "Diyu",
     "埃及冥界": "The Duat",
@@ -14,6 +16,8 @@ DESCRIPTION_EN = {
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     db = schema_editor.connection.alias
     Tenant = apps.get_model("tenants", "Tenant")
     for name, english in DISPLAY_NAME_EN.items():

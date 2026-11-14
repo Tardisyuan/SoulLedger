@@ -17,6 +17,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 TENANT_CIVILIZATION = {
     "CN_DIYU": "CHINESE",
     "EU_HEAVEN_HELL": "EUROPEAN",
@@ -26,6 +28,8 @@ TENANT_CIVILIZATION = {
 
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "souls.SoulRecord"):
+        return
     alias = schema_editor.connection.alias
     SoulRecord = apps.get_model("souls", "SoulRecord")
     for code, civ in TENANT_CIVILIZATION.items():

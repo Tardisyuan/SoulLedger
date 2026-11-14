@@ -16,6 +16,8 @@ en / egy 与 zh 并列存,App 与官员后台按界面语言取(`Tenant.hall_nam
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 DEFAULTS = {
     "CN_DIYU": ("第五殿", "The Fifth Court", "Yanluo Qedi"),
     "EU_HEAVEN_HELL": ("炼狱", "Purgatory", "Ta Hesmen"),
@@ -25,6 +27,8 @@ DEFAULTS = {
 
 
 def fill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Tenant = apps.get_model("tenants", "Tenant")
     for code, (zh, en, egy) in DEFAULTS.items():

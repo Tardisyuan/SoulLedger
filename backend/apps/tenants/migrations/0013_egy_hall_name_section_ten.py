@@ -5,16 +5,22 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 OLD, NEW = "Yanluo Qedi", "Yanluo Wesekhet"
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Tenant = apps.get_model("tenants", "Tenant")
     Tenant._base_manager.using(alias).filter(code="CN_DIYU", hall_name_egy=OLD).update(hall_name_egy=NEW)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Tenant = apps.get_model("tenants", "Tenant")
     Tenant._base_manager.using(alias).filter(code="CN_DIYU", hall_name_egy=NEW).update(hall_name_egy=OLD)

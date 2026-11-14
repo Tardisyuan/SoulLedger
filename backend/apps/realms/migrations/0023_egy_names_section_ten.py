@@ -14,6 +14,8 @@ egy 词表第十节「旧词审定」改了 29 个界域的 egy 名(语言包 `r
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 RENAMES = {
     "DY_02_YANGLIU": ("Yanglju Anpu", "Yangliu"),
     "DY_COURT_01_QINGUANG": ("Qedi 1 - Qinguang", "Wesekhet 1 · Qinguang"),
@@ -48,6 +50,8 @@ RENAMES = {
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for code, (old, new) in RENAMES.items():
@@ -55,6 +59,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for code, (old, new) in RENAMES.items():

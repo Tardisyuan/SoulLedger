@@ -53,6 +53,8 @@ already hold a cosmology.
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 CORPUS = "GONGGUOGE"
 CIVILIZATION = "CHINESE"
 
@@ -94,6 +96,8 @@ def _skeleton():
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
 
@@ -127,6 +131,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCitation", "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")

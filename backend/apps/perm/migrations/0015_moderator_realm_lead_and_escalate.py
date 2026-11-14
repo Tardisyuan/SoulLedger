@@ -45,6 +45,8 @@ workflow.escalate（越级推进）。
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 ESCALATE = ("workflow.escalate", "越级推进工作流", "workflow")
 
 # 0014 已经授过的四条 workflow 权限不在这里重复，get_or_create 会跳过。
@@ -121,6 +123,8 @@ def _grant(permission_model, role_model, role_permission_model, role_name, coden
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
@@ -139,6 +143,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")

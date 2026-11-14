@@ -57,6 +57,8 @@ backward 把 `is_deleted` 复位，并把 User.actor 指回旧行——两步都
 from django.db import migrations
 from django.utils import timezone
 
+from apps.core.migration_ops import placed_here
+
 TENANT_CODE = "CN_DIYU"
 
 #: 错放到中国租户的外国神。按 name 匹配，仅限 CN_DIYU。
@@ -86,6 +88,8 @@ def _inbound_refs(actor_model, row, alias):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "authentication.User", "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")
@@ -150,6 +154,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "authentication.User", "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")

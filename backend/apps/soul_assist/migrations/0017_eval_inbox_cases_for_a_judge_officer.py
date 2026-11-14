@@ -9,6 +9,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 CASES = {
     "收件箱里有几封信待回复？": ["权限"],
     "How many letters await a reply?": ["permission"],
@@ -22,6 +24,8 @@ def _cases(apps, schema_editor, question):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     for question, include in CASES.items():
         for case in _cases(apps, schema_editor, question):
             if case.expected_tools == OLD_TOOLS and not case.must_include:
@@ -30,6 +34,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     for question, include in CASES.items():
         for case in _cases(apps, schema_editor, question):
             if case.expected_tools == [] and case.must_include == include:

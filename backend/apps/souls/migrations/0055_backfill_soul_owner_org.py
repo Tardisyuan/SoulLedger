@@ -7,10 +7,14 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 BATCH = 2000
 
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "authentication.User", "org.Organization", "souls.Soul"):
+        return
     alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     Organization = apps.get_model("org", "Organization")

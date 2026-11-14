@@ -17,12 +17,15 @@ import json
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
 from apps.death_sync.encrypted_json import EncryptedJSONTextField
 
 
-def _encrypted_columns(apps):
-    """Every column of this field type, whichever model carries it."""
+def _encrypted_columns(apps, schema_editor):
+    """Every column of this field type, whichever model carries it, on models migrated here."""
     for model in apps.get_models():
+        if not placed_here(schema_editor, apps, model._meta.label):
+            continue
         for field in model._meta.concrete_fields:
             if isinstance(field, EncryptedJSONTextField):
                 yield model._meta.db_table, model._meta.pk.column, field.column
@@ -31,7 +34,7 @@ def _encrypted_columns(apps):
 def _rewrite(apps, schema_editor, convert):
     db = schema_editor.connection
     q = db.ops.quote_name
-    for table, pk, column in _encrypted_columns(apps):
+    for table, pk, column in _encrypted_columns(apps, schema_editor):
         with db.cursor() as cursor:
             cursor.execute(f"SELECT {q(pk)}, {q(column)} FROM {q(table)} WHERE {q(column)} IS NOT NULL")
             rows = cursor.fetchall()

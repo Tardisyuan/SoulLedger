@@ -10,6 +10,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (lookup, ((field, old, new), ...)) on Chinese rows
 CHANGES = (
     ({"name": "赵文和"}, (
@@ -96,10 +98,14 @@ def _apply(apps, schema_editor, forward):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _apply(apps, schema_editor, True)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _apply(apps, schema_editor, False)
 
 

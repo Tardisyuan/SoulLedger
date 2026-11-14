@@ -21,6 +21,8 @@ Data migration: 把平铺的一级菜单收成 6 组 DIRECTORY，并收编 5 个
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # ---------------------------------------------------------------------------
 # 6 个一级分组（DIRECTORY，无 path）
 # roles 取各自子项 roles 的并集，保证按角色过滤时不会把整组藏掉。
@@ -180,6 +182,8 @@ def _live(menu_model, alias):
 
 
 def regroup(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 
@@ -243,6 +247,8 @@ def regroup(apps, schema_editor):
 
 
 def restore_flat(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 

@@ -9,6 +9,8 @@ Reverse: `0029` drops the columns; the only thing left to undo is the `name_en` 
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 NAME_EN = {
     "42审判者 · 否定告白": "The 42 assessors · negative confession",
     "Aeacus · 分区审判（欧洲亡魂）": "Aeacus · judges the souls of Europe",
@@ -166,6 +168,8 @@ def _rewrite_nodes(model, rewrite, db):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode", "workflow.ApprovalWorkflow", "workflow.WorkflowSegment", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     db = schema_editor.connection.alias
     Template = apps.get_model("workflow", "WorkflowTemplate")
     Version = apps.get_model("workflow", "WorkflowTemplateVersion")
@@ -187,6 +191,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     db = schema_editor.connection.alias
     _rewrite_nodes(apps.get_model("workflow", "WorkflowTemplate"), without_english_nodes, db)
     _rewrite_nodes(apps.get_model("workflow", "WorkflowTemplateVersion"), without_english_nodes, db)

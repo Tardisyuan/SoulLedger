@@ -20,6 +20,8 @@ Data migration: /admin/stats 已并入 /dashboard 的「karma」标签页。
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 TARGET_PATH = "/admin/stats"
 
 
@@ -29,12 +31,16 @@ def _live(menu_model, alias):
 
 
 def hide_from_sidebar(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path=TARGET_PATH).update(visible=False)
 
 
 def restore_to_sidebar(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path=TARGET_PATH).update(visible=True)

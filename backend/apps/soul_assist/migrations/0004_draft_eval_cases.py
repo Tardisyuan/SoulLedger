@@ -9,6 +9,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # (screen, question, expected_tools, must_include, must_not_include, locale)
 SOUL = [
     ("applications", "我为什么不能申请？", ["rebirth"], [], [], "zh-Hans"),
@@ -59,6 +61,8 @@ OFFICER = [
 
 
 def draft(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     Case.objects.using(alias).bulk_create([
@@ -70,6 +74,8 @@ def draft(apps, schema_editor):
 
 
 def undraft(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     Case.objects.using(alias).filter(question__in=[r[1] for r in SOUL + OFFICER]).delete()

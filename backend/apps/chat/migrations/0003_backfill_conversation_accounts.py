@@ -13,6 +13,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def _account_at(accounts, soul_id, moment, alias):
     if soul_id is None:
@@ -22,6 +24,8 @@ def _account_at(accounts, soul_id, moment, alias):
 
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "chat.Conversation", "soul_accounts.SoulAccount"):
+        return
     alias = schema_editor.connection.alias
     Conversation = apps.get_model("chat", "Conversation")
     SoulAccount = apps.get_model("soul_accounts", "SoulAccount")

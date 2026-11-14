@@ -35,6 +35,8 @@ target 已存在时的处理（正常流程不会发生，反复 forward/backwar
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # (旧 codename, 新 codename, 新 name, 新 category)
 RENAMES = [
     ("karma.read", "ledger.read", "查看功德", "ledger"),
@@ -99,6 +101,8 @@ def _rename(permission_model, role_permission_model, pairs, alias):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.RolePermission"):
+        return
     Permission = apps.get_model("perm", "Permission")
     RolePermission = apps.get_model("perm", "RolePermission")
     _rename(Permission, RolePermission, RENAMES, schema_editor.connection.alias)
@@ -106,6 +110,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.RolePermission"):
+        return
     Permission = apps.get_model("perm", "Permission")
     RolePermission = apps.get_model("perm", "RolePermission")
     reverse_pairs = [

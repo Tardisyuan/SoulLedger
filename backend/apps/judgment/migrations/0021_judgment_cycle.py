@@ -2,6 +2,8 @@
 from django.conf import settings
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def stamp_rows_with_their_life(apps, schema_editor):
     """存量 Judgment 按「创建时该灵魂已经转世几次」回填 cycle。
@@ -10,6 +12,8 @@ def stamp_rows_with_their_life(apps, schema_editor):
     创建时恰有 N 条早于它的 Reincarnation。只遍历转过世的灵魂:其余的 cycle 本来
     就该是默认的 0。
     """
+    if not placed_here(schema_editor, apps, "judgment.Judgment", "reincarnation.Reincarnation"):
+        return
     alias = schema_editor.connection.alias
     Row = apps.get_model("judgment", "Judgment")
     Reincarnation = apps.get_model("reincarnation", "Reincarnation")

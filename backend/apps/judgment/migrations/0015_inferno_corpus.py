@@ -58,6 +58,8 @@ tests/test_purgatorio_terraces.py 仍然对全部语料断言这一点。
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 CORPUS = "INFERNO"
 CIVILIZATION = "EUROPEAN"
 
@@ -123,6 +125,8 @@ def _skeleton():
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
 
@@ -159,6 +163,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCitation", "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")

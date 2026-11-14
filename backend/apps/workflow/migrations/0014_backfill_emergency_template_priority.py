@@ -50,6 +50,8 @@ POST 上来）。realms/0014、judgment/0013、workflow/0011、workflow/0012 都
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (name, civilization, case_type) —— 三套「紧急审判流程」预设各自的签名。
 #:
 #: 冻结在这里而不是从前端预设或 `services.WORKFLOW_TEMPLATES` 导入，理由与
@@ -77,6 +79,8 @@ def _matching(template_model, name, civilization, case_type, priority, alias):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.WorkflowTemplate"):
+        return
     alias = schema_editor.connection.alias
     WorkflowTemplate = apps.get_model("workflow", "WorkflowTemplate")
 
@@ -91,6 +95,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.WorkflowTemplate"):
+        return
     alias = schema_editor.connection.alias
     WorkflowTemplate = apps.get_model("workflow", "WorkflowTemplate")
 

@@ -20,6 +20,8 @@
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 # code -> {field: (old, new)}
 CHANGES = {
     "EG_DUAT_ENTRY": {"order": (None, 1)},
@@ -42,11 +44,15 @@ def _apply(apps, alias, frm, to):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     _apply(apps, alias, 0, 1)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     _apply(apps, alias, 1, 0)
     refuse_if_any_row_takes_pass_or_fail(apps, schema_editor)

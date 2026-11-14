@@ -11,10 +11,14 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 MARKER = "0003_sync_contact_email_to_login_email"
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "audit.AuditLog", "authentication.User", "soul_accounts.SoulAccount"):
+        return
     alias = schema_editor.connection.alias
     SoulAccount = apps.get_model("soul_accounts", "SoulAccount")
     User = apps.get_model("authentication", "User")
@@ -40,6 +44,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "audit.AuditLog", "soul_accounts.SoulAccount"):
+        return
     alias = schema_editor.connection.alias
     SoulAccount = apps.get_model("soul_accounts", "SoulAccount")
     AuditLog = apps.get_model("audit", "AuditLog")

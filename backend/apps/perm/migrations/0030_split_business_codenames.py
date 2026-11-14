@@ -14,6 +14,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (新码, 名称, 族, 旧码)。
 SPLITS = [
     ("city_god.read", "查看城隍", "city_god", "judgment.read"),
@@ -76,6 +78,8 @@ def _holders(alias, models, codename):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
@@ -102,6 +106,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Permission.all_objects.using(alias).filter(codename__in=[c for c, _, _, _ in SPLITS]).delete()

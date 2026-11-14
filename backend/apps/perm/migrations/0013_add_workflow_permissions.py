@@ -43,6 +43,8 @@ Data migration: 补上缺失的 workflow.* 权限。
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 WORKFLOW_PERMISSIONS = [
     ("workflow.read", "查看工作流", "workflow"),
     ("workflow.create", "创建工作流", "workflow"),
@@ -97,6 +99,8 @@ def _invalidate_cache(role_names):
 
 
 def create_workflow_permissions(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
@@ -153,6 +157,8 @@ def remove_workflow_permissions(apps, schema_editor):
 
     真删除而非软删除，仍然是为了保证反复 forward/backward 不撞 codename 唯一约束。
     """
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")

@@ -1,5 +1,7 @@
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: 第五十七批(2026-10-28/29)新帮助条目的评测用例(每个条目两种语言各至少一条,tests/test_assist_rag.py 钉住)。
 #: (side, screen, question, locale, expected_entries)
 CASES = [
@@ -27,6 +29,8 @@ CASES = [
 
 
 def add_cases(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     Case.objects.using(alias).bulk_create([
@@ -37,6 +41,8 @@ def add_cases(apps, schema_editor):
 
 
 def remove_cases(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     for side, _, q, _, _ in CASES:

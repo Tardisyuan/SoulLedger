@@ -18,6 +18,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 HOLDERS = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"]
 
 #: path -> (种子 roles, 之前的码, 新 roles, 新码)
@@ -42,10 +44,14 @@ def _move(apps, schema_editor, forward):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     _move(apps, schema_editor, True)
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     _move(apps, schema_editor, False)
 
 
