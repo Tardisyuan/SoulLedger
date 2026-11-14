@@ -341,7 +341,25 @@ export function SelectField({
 
 export type TextAreaFieldProps = FieldShellOwnProps &
   ControlSizeProp &
-  Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "className">;
+  Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "className"> & {
+    /** ⌘/Ctrl+Enter 提交所在的表单(默认开)。破坏性的理由框(撤销、注销、登记死亡、重置两步验证…)传 false:
+     *  那一下该是伸手去点的。 */
+    modEnterSubmits?: boolean;
+  };
+
+/**
+ * ⌘/Ctrl+Enter:提交 textarea 所在的表单(设计参照 2026-11-15 §9)。只在表单有一个**可用的**提交钮时提交 ——
+ * `requestSubmit()` 不看按钮是否禁用,所以先找按钮;输入法组字中(`isComposing`)不接;调用方自己的 onKeyDown
+ * 先跑,它 `preventDefault()` 了就不再提交。
+ */
+export function submitOnModEnter(e: React.KeyboardEvent<HTMLTextAreaElement>): void {
+  if (e.defaultPrevented || e.key !== "Enter" || !(e.metaKey || e.ctrlKey) || e.nativeEvent.isComposing) return;
+  const form = e.currentTarget.form;
+  const submit = form?.querySelector<HTMLButtonElement | HTMLInputElement>('button[type="submit"], input[type="submit"]');
+  if (!form || !submit || submit.disabled) return;
+  e.preventDefault();
+  form.requestSubmit(submit);
+}
 
 export function TextAreaField({
   label,
@@ -350,6 +368,7 @@ export function TextAreaField({
   required,
   className,
   size = "md",
+  modEnterSubmits = true,
   ...textarea
 }: TextAreaFieldProps) {
   return (
@@ -365,6 +384,10 @@ export function TextAreaField({
         <textarea
           {...control}
           {...textarea}
+          onKeyDown={(e) => {
+            textarea.onKeyDown?.(e);
+            if (modEnterSubmits) submitOnModEnter(e);
+          }}
           className={cn(fieldControl({ size, invalid: Boolean(error) }), "resize-y")}
         />
       )}

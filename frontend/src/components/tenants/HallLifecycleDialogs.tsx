@@ -134,8 +134,8 @@ export function CreateHallDialog({ onClose }: { onClose: () => void }) {
             />
           </div>
         </fieldset>
-        <TextAreaField label={t("halls.description_optional")} value={form.description ?? ""} onChange={set("description")} rows={2} />
-        <TextAreaField label={t("common.description_en")} value={form.description_en ?? ""} onChange={set("description_en")} rows={2} />
+        <TextAreaField modEnterSubmits={false} label={t("halls.description_optional")} value={form.description ?? ""} onChange={set("description")} rows={2} />
+        <TextAreaField modEnterSubmits={false} label={t("common.description_en")} value={form.description_en ?? ""} onChange={set("description_en")} rows={2} />
       </form>
     </BaseModal>
   );

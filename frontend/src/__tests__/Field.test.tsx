@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import {
   Field,
   TextField,
@@ -297,5 +297,46 @@ describe("heights line up with Button (规范 v3 44 / 48 / 56)", () => {
       expect(fieldControl({ size })).toContain("disabled:bg-[oklch(var(--color-disabled-surface))]");
       expect(fieldControl({ size })).not.toContain("disabled:opacity-50");
     }
+  });
+});
+
+/* ⌘/Ctrl+Enter 提交 textarea 所在的表单(设计参照 2026-11-15 §9)。
+ * 变异:删掉 `submitOnModEnter` 里的 `submit.disabled` 判断 → 「提交钮禁用时不提交」红;把默认 `modEnterSubmits = true`
+ * 改成 false → 第一条红。 */
+describe("TextAreaField ⌘/Ctrl+Enter", () => {
+  function Form({ disabled = false, modEnterSubmits }: { disabled?: boolean; modEnterSubmits?: boolean }) {
+    return (
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+        <TextAreaField label="Reason" modEnterSubmits={modEnterSubmits} />
+        <button type="submit" disabled={disabled}>Send</button>
+      </form>
+    );
+  }
+  const onSubmit = jest.fn();
+  beforeEach(() => onSubmit.mockClear());
+  const box = () => screen.getByRole("textbox", { name: "Reason" });
+
+  it.each([{ metaKey: true }, { ctrlKey: true }])("submits the form on %o + Enter", (mod) => {
+    render(<Form />);
+    fireEvent.keyDown(box(), { key: "Enter", ...mod });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("plain Enter is a new line, not a submit", () => {
+    render(<Form />);
+    fireEvent.keyDown(box(), { key: "Enter" });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does not submit past a disabled submit button", () => {
+    render(<Form disabled />);
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("a destructive reason box opts out", () => {
+    render(<Form modEnterSubmits={false} />);
+    fireEvent.keyDown(box(), { key: "Enter", ctrlKey: true });
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

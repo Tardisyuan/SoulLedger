@@ -216,7 +216,7 @@ function Chat({ assist }: { assist: OfficerAssist }) {
 
   if (failure?.kind === "not_configured") {
     return (
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4">
         <Notice role="alert">
           <p className="mb-1 text-sm text-[oklch(var(--color-ink))]">{t("officer_assist.not_configured_title")}</p>
           <p>{t("officer_assist.not_configured_body")}</p>
@@ -237,7 +237,7 @@ function Chat({ assist }: { assist: OfficerAssist }) {
           const n = e.currentTarget;
           setFollow(n.scrollHeight - n.scrollTop - n.clientHeight <= 8);
         }}
-        className="relative min-h-0 flex-1 overflow-y-auto px-4 py-4"
+        className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
       >
         {empty ? (
           <div>
@@ -495,7 +495,7 @@ function History({ assist }: { assist: OfficerAssist }) {
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <p className="border-b border-[oklch(var(--color-line))] px-4 py-2 text-xs text-[oklch(var(--color-ink-subtle))]">
         {t("officer_assist.retention")}
       </p>
