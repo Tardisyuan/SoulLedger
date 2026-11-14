@@ -10,6 +10,8 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddConstraint(
             model_name="reincarnation",
-            constraint=models.UniqueConstraint(fields=("soul", "cycle_count"), name="reincarnation_one_per_soul_cycle"),
+            constraint=models.UniqueConstraint(
+                fields=("soul", "cycle_count"), condition=models.Q(is_deleted=False), name="reincarnation_one_per_soul_cycle"
+            ),
         ),
     ]

@@ -135,7 +135,9 @@ class Reincarnation(AuditUserFields, models.Model):
             ),
             # 一世一条转世记录(be-domain 3.7)。`cycle_count` 在灵魂行锁下取 `life_index + 1`;
             # 加锁之前两次并发转世拿到过同一个号,`reincarnation/0017` 把那样的灵魂按时间重新编号。
-            models.UniqueConstraint(fields=["soul", "cycle_count"], name="reincarnation_one_per_soul_cycle"),
+            models.UniqueConstraint(
+                fields=["soul", "cycle_count"], condition=models.Q(is_deleted=False), name="reincarnation_one_per_soul_cycle"
+            ),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager

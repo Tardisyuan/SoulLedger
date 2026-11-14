@@ -149,7 +149,7 @@ def test_a_finished_task_is_counted_by_name_and_state():
 
 
 def test_a_swallowed_handler_failure_is_counted():
-    from apps.events.handlers.registry import HandlerRegistry
+    from apps.events.handlers.registry import DomainEventHandlerRegistry
 
     class Boom:
         propagate_errors = False
@@ -157,7 +157,7 @@ def test_a_swallowed_handler_failure_is_counted():
         def handle(self, envelope):
             raise RuntimeError("x")
 
-    HandlerRegistry._safe_call(Boom(), SimpleNamespace(domain="d", event_type="e"))
+    DomainEventHandlerRegistry._safe_call(Boom(), SimpleNamespace(domain="d", event_type="e"))
     assert obs.pending()["handler_failure|Boom"] == 1
 
 

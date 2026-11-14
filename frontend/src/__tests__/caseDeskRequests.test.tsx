@@ -8,7 +8,11 @@ import { api } from "@soulledger/core/api/client";
 import { CaseDesk } from "@/src/components/desk/CaseDesk";
 import { renderWithProviders } from "./support/render";
 
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }), usePathname: () => "/desk" }));
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => "/desk",
+  useSearchParams: () => new URLSearchParams(),
+}));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "soul.read"] } }),
 }));

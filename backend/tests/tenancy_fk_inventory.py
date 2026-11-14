@@ -207,6 +207,8 @@ EDGES = {
     'realms.Realm.tenant->tenants.Tenant': ('tenantcol', 'ownership column: the row belongs to this tenant'),
     'realms.SoulPathEntry.tenant->tenants.Tenant': ('tenantcol', 'ownership column: the row belongs to this tenant'),
     'reincarnation.Reincarnation.tenant->tenants.Tenant': ('tenantcol', 'ownership column: the row belongs to this tenant'),
+    'reincarnation.Reincarnation.from_tenant->tenants.Tenant': ('tenantcol', 'the hall the soul is reborn from; a record, not ownership (may differ from tenant)'),
+    'reincarnation.Reincarnation.to_tenant->tenants.Tenant': ('tenantcol', 'the hall the soul is reborn into; a record, not ownership (may differ from tenant)'),
     'scheduler.ScheduledJob.tenant->tenants.Tenant': ('tenantcol', 'per-hall schedule'),
     'scheduler.TaskRun.tenant->tenants.Tenant': ('tenantcol', 'ownership column: the row belongs to this tenant'),
     'sentence_plan.SentencePlan.tenant->tenants.Tenant': ('tenantcol', "the soul's home hall (the plan belongs to the origin, not to the residence)"),

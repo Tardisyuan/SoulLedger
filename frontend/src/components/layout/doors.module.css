@@ -237,7 +237,7 @@ button.sheetLink {
   background: none;
   border: 0;
   font: inherit;
-  font-size: 15px;
+  font-size: var(--tai-touch-size);
   text-align: left;
   cursor: pointer;
 }
@@ -251,7 +251,7 @@ button.sheetLink {
   gap: 12px;
   min-height: 48px;
   padding: 0 8px;
-  font-size: 15px;
+  font-size: var(--tai-touch-size);
   color: oklch(var(--color-ink));
 }
 
@@ -266,7 +266,7 @@ button.sheetLink {
   background: none;
   border: 0;
   font: inherit;
-  font-size: 15px;
+  font-size: var(--tai-touch-size);
   font-weight: 600;
   color: oklch(var(--color-ink));
   cursor: pointer;
@@ -292,7 +292,7 @@ button.sheetLink {
     flex-direction: row;
     justify-content: space-around;
     gap: 0;
-    padding: 0 8px var(--safe-b, 0px);
+    padding: 0 8px var(--safe-b);
     border-right: 0;
     border-top: 1px solid oklch(var(--color-line));
   }
@@ -321,13 +321,11 @@ button.sheetLink {
      `--door-mark-h` 是图形盒的高,选中短线按它定位。 */
   .door {
     --door-mark-h: 22px;
+    --door-glyph-leading: 22px;
   }
   .door:has(.doorIcon) {
     --door-gap: 3px;
     --door-mark-h: 24px;
-  }
-  .doorGlyph {
-    line-height: 22px;
   }
   .doorWide,
   .tip {

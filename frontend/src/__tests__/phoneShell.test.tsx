@@ -228,15 +228,20 @@ describe("tokens, safe area and the coarse-pointer rule", () => {
     expect(narrow).toContain("min-width: 64px;");
     expect(narrow).toMatch(/\.door\s*\{\s*--door-mark-h:\s*22px;/);
     expect(narrow).toMatch(/\.door:has\(\.doorIcon\)\s*\{\s*--door-gap:\s*3px;\s*--door-mark-h:\s*24px;/);
-    expect(narrow).toMatch(/\.doorGlyph\s*\{\s*line-height:\s*22px;/);
+    // The Chinese glyph's 22 px leading on a phone is the register token, overridden on the cell (no hand-written px).
+    expect(narrow).toMatch(/\.door\s*\{\s*--door-mark-h:\s*22px;\s*--door-glyph-leading:\s*22px;/);
     expect(narrow).toContain("top: calc(50% - (var(--door-mark-h) + var(--door-gap) + 14px) / 2 + var(--door-mark-h) + 3px);");
     // civT is --color-main-ink (globals.css).
     expect(narrow).toContain("background: oklch(var(--color-main-ink));");
     // Outside the media block: the Chinese gap 2, glyph 18, icon 24, word 11/14 and the word's weight 500.
     expect(doors).toContain("--door-gap: 2px;");
-    expect(doors).toMatch(/\.doorGlyph\s*\{[^}]*font-size:\s*18px;/);
+    const tokens = read("app/globals.css");
+    expect(doors).toMatch(/\.doorGlyph\s*\{[^}]*font-size:\s*var\(--door-glyph-size\);/);
+    expect(tokens).toContain("--door-glyph-size: 18px;");
     expect(doors).toMatch(/\.doorIcon\s*\{[^}]*width:\s*24px;\s*height:\s*24px;/);
-    expect(doors).toMatch(/\.doorLabel\s*\{\s*font-size:\s*11px;\s*line-height:\s*14px;/);
+    expect(doors).toMatch(/\.doorLabel\s*\{\s*font-size:\s*var\(--door-label-size\);\s*line-height:\s*var\(--door-label-leading\);/);
+    expect(tokens).toContain("--door-label-size: 11px;");
+    expect(tokens).toContain("--door-label-leading: 14px;");
     expect(doors).toMatch(/\.doorLabelWord\s*\{\s*font-weight:\s*500;/);
     // Absence: the old fixed 24 px box in the line's position (wrong for the 22 px Chinese mark).
     expect(narrow).not.toContain("(24px + var(--door-gap)");

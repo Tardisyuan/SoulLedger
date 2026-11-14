@@ -834,6 +834,8 @@ class JudgmentService:
                 fields.update(soul.opening_fields(timezone.now().date()))
             elif fields.get("kind", JudgmentKind.ORIGINAL) == JudgmentKind.ORIGINAL:
                 fields.update(_withdrawn_case_stations(soul))
+            # Callers name the civilization; one that does not gets the soul's (a blank one fails judgment/0054's CHECKs).
+            fields.setdefault("civilization", soul.civilization)
             judgment = Judgment.objects.create(soul=soul, tenant=tenant or soul.tenant, **fields)
             if was_alive:
                 from apps.judgment import city_gods
