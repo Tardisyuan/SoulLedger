@@ -385,4 +385,38 @@ describe("CaseDesk", () => {
     // 本世 and 最近 both say so — the server decided (`soul_redacted`), the page no longer guesses from permissions.
     expect(await screen.findAllByText("没有读名册的权限")).toHaveLength(2);
   });
+
+  describe("switching cases animates the dossier", () => {
+    const realAnimate = (Element.prototype as { animate?: unknown }).animate;
+    const realMatchMedia = window.matchMedia;
+    let animate: jest.Mock;
+    beforeEach(() => {
+      animate = jest.fn();
+      (Element.prototype as { animate?: unknown }).animate = animate;
+    });
+    afterEach(() => {
+      (Element.prototype as { animate?: unknown }).animate = realAnimate;
+      window.matchMedia = realMatchMedia;
+    });
+
+    it("fades the dossier in on J, not on the first paint", async () => {
+      window.matchMedia = ((q: string) => ({ matches: false, media: q })) as unknown as typeof window.matchMedia;
+      renderWithProviders(<CaseDesk />);
+      await screen.findByTestId("desk-row-2");
+      expect(animate).not.toHaveBeenCalled();
+      fireEvent.keyDown(window, { key: "j" });
+      await waitFor(() => expect(animate).toHaveBeenCalledTimes(1));
+      expect(animate.mock.instances[0]).toBe(screen.getByTestId("desk-case"));
+      expect(animate.mock.calls[0][0][0]).toEqual({ opacity: 0, transform: "translateY(8px)" });
+    });
+
+    it("does not animate when the system asks for reduced motion", async () => {
+      window.matchMedia = ((q: string) => ({ matches: q.includes("reduce"), media: q })) as unknown as typeof window.matchMedia;
+      renderWithProviders(<CaseDesk />);
+      await screen.findByTestId("desk-row-2");
+      fireEvent.keyDown(window, { key: "j" });
+      await waitFor(() => expect(screen.getByTestId("desk-case")).toBeInTheDocument());
+      expect(animate).not.toHaveBeenCalled();
+    });
+  });
 });

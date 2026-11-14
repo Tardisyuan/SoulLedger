@@ -86,6 +86,29 @@ export function CaseDesk() {
   const loading = desk.isPending;
   const failed = desk.isError;
 
+  // 换一件时卷宗淡入并上移 8px(与换页同一条「page-enter」:240ms 进场曲线)。不重新挂载 OpenCase,
+  // 所以页签与滚动之外的本地状态不丢;减少动态效果时不播(全站的 1ms 规则管不到 Web Animations)。
+  const caseRef = useRef<HTMLElement>(null);
+  const shownId = current?.row.id ?? null;
+  const firstShown = useRef(true);
+  useEffect(() => {
+    if (!shownId) return;
+    if (firstShown.current) {
+      firstShown.current = false;
+      return;
+    }
+    const el = caseRef.current;
+    if (!el?.animate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    el.scrollTop = 0;
+    el.animate(
+      [
+        { opacity: 0, transform: "translateY(8px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 240, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+    );
+  }, [shownId]);
+
   const caseHref = (id: string) => `${pathname}?case=${encodeURIComponent(id)}`;
   const select = (id: string | null) => {
     if (!id) return;
@@ -296,7 +319,7 @@ export function CaseDesk() {
         )}
       </section>
 
-      <section className={s.case} aria-label={t("caseDesk.open_case")} data-testid="desk-case">
+      <section ref={caseRef} className={s.case} aria-label={t("caseDesk.open_case")} data-testid="desk-case">
         {current && position ? (
           <OpenCase
             row={current.row}
