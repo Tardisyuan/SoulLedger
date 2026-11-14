@@ -693,7 +693,7 @@ describe("the 案卷台", () => {
     const onOpen = jest.fn();
     renderOfficer(<QueueTab onOpen={onOpen} />);
     fireEvent.press(await screen.findByTestId("queue-row-c"));
-    expect(onOpen).toHaveBeenCalledWith("c", ["a", "b", "c"]);
+    expect(onOpen).toHaveBeenCalledWith("c", ["a", "b", "c"], ["a", "b", "c"]); // with each row's soul name (第五十批 C1)
   });
 
   it("in the shell: the case is full-screen under 「‹ 案卷台」 and 「第 1 / 1 件」; back lands on the desk", async () => {
