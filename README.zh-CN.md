@@ -189,9 +189,11 @@ npm run dev --workspace frontend
 - 代码、测试和文档用 [Claude Code](https://claude.com/claude-code) 协作完成，界面用 Claude Design 设计。
 - 字体、开源软件、文献与服务的完整清单在 App 的「关于」页，数据在 [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)。
 
+## 联系
+
 维护者：[@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
 
-需要做这类系统，或者想聊上面任何一个决定，写一句话来就行。
+在找全栈岗位，也接多租户 / 审批流系统的咨询。需要做这类系统，或者想聊上面任何一个决定，写一句话来就行。
 
 ## 许可证
 

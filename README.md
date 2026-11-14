@@ -218,9 +218,12 @@ tests and docs were written with [Claude Code](https://claude.com/claude-code), 
 designed with Claude Design. Fonts, libraries, literature and services are listed on the app's About page
 (data in [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)).
 
+## Contact
+
 Maintainer: [@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
 
-If you need this kind of system built, or want to talk about any decision above, write one line.
+Open to full-stack roles, and to consulting on multi-tenant / approval-workflow systems. If you need this
+kind of system built, or want to talk about any decision above, write one line.
 
 ## License
 
