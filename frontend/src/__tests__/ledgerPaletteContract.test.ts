@@ -42,7 +42,7 @@ import {
  *   faint → line-strong 与 disabled-ink;line(8%)压在 card 上合成 → line;pos/neg → success/danger。
  * 文明(用户 2026-11-06 决定照 v4 的范围):solid → `--color-civ-*`(=匾色 / 主按钮底),civT →
  * `-ink`,metal → `-metal`,side → `-side`,glow 两主题同值不在这张表(只有一个值,没有对错之分可量)。
- * 中性皮是第八批第 5 条给的值(与 App 一致);--color-warn / --color-faint-text 是第八批第 4、6 条新增的。v4 没定义的 tint / warning / 长明灯沿用 v3;danger-strong 与 on-danger 是 v4 的 neg / onNeg(用户 2026-11-06,与 App 一致)。 */
+ * 中性皮是第八批第 5 条给的值(与 App 一致);--color-amber(第八批的 `--warn`,第四十批改名)/ --color-faint-text 是第八批第 4、6 条新增的。warning 与 success-tint 第四十批取 App 那组值;v4 没定义的其余 tint / 长明灯沿用 v3;danger-strong 与 on-danger 是 v4 的 neg / onNeg(用户 2026-11-06,与 App 一致)。 */
 const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-canvas": { light: "#f8f8f6", dark: "#111113" },
   "--color-surface-1": { light: "#ffffff", dark: "#1a1b1e" },
@@ -62,8 +62,8 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-on-danger": { light: "#ffffff", dark: "#16171a" },
   "--color-danger-tint": { light: "#FFECEF", dark: "#33101A" },
   "--color-danger-on-tint": { light: "#8A0C33", dark: "#FFD3DC" },
-  "--color-warning": { light: "#a65000", dark: "#e07a23" },
-  "--color-success-tint": { light: "#E4FBE7", dark: "#102515" },
+  "--color-warning": { light: "#9f4a00", dark: "#ff9a3c" },
+  "--color-success-tint": { light: "#EAF6EE", dark: "#16261C" },
   "--color-warning-tint": { light: "#FFF1E2", dark: "#301904" },
   "--color-lamp": { light: "#6A3E00", dark: "#F2CC7A" },
   "--color-lamp-bg": { light: "#FBF1DC", dark: "#241B0C" },
@@ -76,7 +76,7 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-civ-neutral-metal": { light: "#8a6a24", dark: "#ecaa3d" },
   "--color-civ-neutral-side": { light: "#f1f1ef", dark: "#0e0f11" },
   // 第八批新增:琥珀(连接状态的点与线,不当字)、比 sub 更淡的字。
-  "--color-warn": { light: "#9a6400", dark: "#e8b45a" },
+  "--color-amber": { light: "#9a6400", dark: "#e8b45a" },
   "--color-faint-text": { light: "#686b70", dark: "#8e9197" },
   // 不是 Design 给的值:sub 与 faint-text 的 sRGB 中点,给「未记录」(用户 2026-11-08,见 globals.css)。
   "--color-ink-mid": { light: "#5e6166", dark: "#a1a4a8" },
@@ -151,8 +151,8 @@ describe("palette (规范 v4)", () => {
     }
   );
 
-  it.each(THEMES)("%s --color-warn (a dot and a 2px line, never text) is ≥ 3:1 on canvas", (theme) => {
-    expect(contrastRatio(rgbOf(theme, "--color-warn"), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(3);
+  it.each(THEMES)("%s --color-amber (a dot and a 2px line, never text) is ≥ 3:1 on canvas", (theme) => {
+    expect(contrastRatio(rgbOf(theme, "--color-amber"), rgbOf(theme, "--color-canvas"))).toBeGreaterThanOrEqual(3);
   });
 
   it.each(THEMES)("%s: the five soul states are five different colours", (theme) => {

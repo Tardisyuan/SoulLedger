@@ -565,15 +565,15 @@
     --color-danger-tint: 0.233082 0.057680 4.8370; /* #33101A */
     --color-danger-on-tint: 0.906877 0.050597 4.3604; /* #FFD3DC */
     --color-success: 0.805320 0.101985 153.6633; /* #8AD3A1 */
-    /* 提示条底色 · Design D2:成功底 浅 #E4FBE7 / 深 #102515,警示底 浅 #FFF1E2 / 深 #301904,
-       明度与失败底对齐;底上的字用 success / warning 本色(inkOnSurfaceContract 钉 ≥ 4.5)。 */
-    --color-success-tint: 0.241388 0.040904 150.1078;
-    --color-warning: 0.681246 0.156180 54.9021;
+    /* 提示条底色 · Design D2:警示底 浅 #FFF1E2 / 深 #301904,明度与失败底对齐;成功底第四十批改取 App 的 posBg
+       (浅 #EAF6EE / 深 #16261C),警示字同批取 App 的 warn。底上的字用 success / warning 本色(inkOnSurfaceContract 钉 ≥ 4.5)。 */
+    --color-success-tint: 0.250677 0.028848 156.2221; /* #16261C */
+    --color-warning: 0.776001 0.158964 59.2368; /* #FF9A3C */
     --color-warning-tint: 0.240511 0.049375 60.4681; /* #301904 */
-    /* 琥珀(v4 第八批 `--warn`):只给连接状态的点和顶栏下沿那条 2px 线,**不当字色**。不复用 --color-warning:
-       那一档是警示框里的字(对 canvas / warning-tint ≥ 4.5,inkOnSurfaceContract 钉着),色相偏橙(深 #E07A23),
-       审判中、炼狱去向都指着它;琥珀改它会连带改这几处。 */
-    --color-warn: 0.799963 0.123133 79.1550; /* #E8B45A */
+    /* 琥珀(v4 第八批 `--warn`,第四十批改名 amber):只给连接状态的点和顶栏下沿那条 2px 线,**不当字色**
+       (浅色对 canvas 只有 4.71)。不复用 --color-warning:那一档是警示框里的字(对 canvas / warning-tint ≥ 4.5,
+       inkOnSurfaceContract 钉着),色相偏橙(深 #FF9A3C),审判中、炼狱去向都指着它。warn / warning 只指警示字色。 */
+    --color-amber: 0.799963 0.123133 79.1550; /* #E8B45A */
     /* 比 sub 更淡的字(v4 第八批 `--faint-text`):角标计数、分组标题、地图站号、「官员挪站」。--color-line-strong
        (v4 faint)当字不达标,只给装饰线、禁用态;这一档在 canvas / surface-1 / surface-2 上都 ≥ 4.5。 */
     --color-faint-text: 0.656067 0.009530 264.5008; /* #8E9197 */
@@ -688,10 +688,10 @@
     --color-danger-tint: 0.959029 0.020979 6.6063; /* #FFECEF */
     --color-danger-on-tint: 0.409460 0.155831 12.0157; /* #8A0C33 */
     --color-success: 0.469880 0.102419 153.8115; /* #1F6B3F */
-    --color-success-tint: 0.965876 0.035762 149.1233;
-    --color-warning: 0.529090 0.135424 52.3541;
+    --color-success-tint: 0.961969 0.016497 156.9125; /* #EAF6EE */
+    --color-warning: 0.508784 0.132855 50.8763; /* #9F4A00 */
     --color-warning-tint: 0.965162 0.024981 69.4434; /* #FFF1E2 */
-    --color-warn: 0.548270 0.117080 72.5076; /* #9A6400 */
+    --color-amber: 0.548270 0.117080 72.5076; /* #9A6400 */
     --color-faint-text: 0.526852 0.008647 260.7291; /* #686B70 */
     --color-ink-mid: 0.491657 0.008800 260.7282; /* #5E6166 */
     --color-lamp: 0.407751 0.090608 66.2502; /* #6A3E00 */

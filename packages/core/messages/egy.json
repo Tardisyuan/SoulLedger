@@ -9612,54 +9612,54 @@
       "title": "Sesh Wa · Maa Wesekhet Neb",
       "lede": "Wesekhet Neb: Per Hemes Wa. Sab Wedja 2 Dbh Wa; Neb Ini Ba Wesekhet-Ef Wa. Em Khery: Wat Henen Wesekhet Er Wesekhet — Wesekhet Neb Maa Sekhet-Ef.",
       "same_request": "Dbh Wa",
-      "as_judge": "Mi Sab Wedja {{hall}}",
+      "as_judge": "Aq Mi Sab Wedja · {{hall}}",
       "count": "Ba {{n}} Em Wesekhet Pen · Ba {{total}} Em Wesekhet 4",
-      "narrowed": "Hehy Iri Pen: Hehy Neb Redu Er Wesekhet Sab. Medjat Nen Setep.",
+      "narrowed": "Hehy Iri Pen: Hehy Neb Redu Er Wesekhet Sab Tepy. Medjat Nen Setep.",
       "probe_title": "Dbh Ba Wesekhet Ky Em Ren Hesb",
       "probe_result": "{{status}} · Nen Gem Em Wesekhet Pen",
       "probe_pending": "Weshed Nen Sesh-N Djer.",
       "recorded_short": "Weshed Maat Per Hemsu",
-      "flow_title": "Wat Henen Wesekhet Er Wesekhet · Wa Er Wa",
-      "flow_sub": "Ba Wesekhet 5: Sekhet 2. Sekhet 1 Em Wesekhet Pen; Sekhet 2 Em {{hall}}. Wesekhet Neb Sesh Sekhet-Ef.",
+      "flow_title": "Wedja Taui Ky Wa · Wa Er Wa",
+      "flow_sub": "Duat Sherer Redi Sekhet Pehwy Ba Wa Er {{hall}}. Wesekhet Neb Sesh Sekhet-Ef Wa; Wesekhet Ky Nen Maa Ba.",
       "step": {
         "1": {
-          "name": "Hab Sekher",
-          "who": "Wesekhet 5 · Sab Wedja",
-          "body": "Sab Wedja Wesekhet 5 Hab Sekher Er {{hall}}: Sekhet 1 Em Wesekhet Pen; Sekhet 2 Er Sesh In Taui Ky."
+          "name": "Shaa Wedja Taui Ky",
+          "who": "Wesekhet Pen · Sab Wedja",
+          "body": "Sab Wedja Wesekhet Pen Shaa Wedja Taui Ky: Sekhet 1 Em Wesekhet Pen; Sekhet 2 Er Sesh In Wesekhet Ky."
         },
         "2": {
           "name": "Wesekhet Ky Sesh Sekhet-Ef",
-          "who": "{{hall}} · Sab Wedja",
-          "body": "Sab Wedja {{hall}} Sesh Sekhet-Ef: Ta, Renpet. Wesekhet Ky Nen Sesh — 403."
+          "who": "Wesekhet Ky · Sab Wedja",
+          "body": "Sab Wedja Wesekhet Ky Sesh Sekhet-Ef Wa. Em Sekher Neb: Maa Ren Wesekhet, Renpet Hena Kheperu Sekhet Neb; Khet Sekhet Ky Shut; Nen Maa Ba."
         },
         "3": {
-          "name": "Henen Wesekhet Pen",
-          "who": "Wesekhet 5 · Sab Wedja",
-          "body": "Sekhet 2 Sesh-N; Wesekhet 5 Henen. Sekher Iri-N: Sekhet Neb Em Sesh."
+          "name": "Wesekhet Pen Khetem",
+          "who": "Wesekhet Pen · Sab Wedja",
+          "body": "Sekhet 2 Sesh-N; Sab Wedja Wesekhet Pen Khetem. Sekher Smen-N."
         },
         "4": {
-          "name": "Iri-N",
+          "name": "Iri Sekhet Er Sekhet",
           "who": "Hemsu",
-          "body": "Ba Em Sekhet 1 Em Wesekhet Pen; Hemsu Redi Ba Er Sekhet 2."
+          "body": "Sekher Iri Sekhet Er Sekhet: Sekhet 1 Em Wesekhet Pen, Sekhet 2 Em Wesekhet Ky. Wat Neb: Khet Wa Em Medu Maa Wesekhet-Ef."
         }
       },
       "hall_sees": "{{hall}} Maa",
       "sees": {
         "1": {
-          "home": "Sekher Hena Sesh Neb",
-          "away": "Sekher Hena Sekhet-Ef"
+          "home": "Sesh Neb Hena Sekher; Sekhet 2 Shut, Er Sesh In Wesekhet Ky",
+          "away": "Tepy «Taui Ky»: Khet Wa · Ren Wesekhet Hena Kheperu Sekhet Neb; Sekhet-Ef Nen Sesh"
         },
         "2": {
-          "home": "Sekhet 2 Sesh-N In Taui Ky",
-          "away": "Sekhet-Ef Wa"
+          "home": "Sekhet 2: Ren Wesekhet, Renpet, Kheperu; Khet Shut",
+          "away": "Sekhet-Ef Neb; Sekhet 1: Ren Wesekhet, Renpet, Kheperu Wa. Nen Maa Ba"
         },
         "3": {
-          "home": "Sesh «Idryt»: Sekhet 2",
-          "away": "Sesh «Idryt»: Sekhet Neb Maa"
+          "home": "Sekher Smen-N; Sesh «Idryt»: Sekhet 2",
+          "away": "Sekher Smen-N; Sekhet-Ef: Nen Iri Djer"
         },
         "4": {
-          "home": "Ba Em Sesh Ba Wesekhet Pen",
-          "away": "Ba Nen Iyi-N: Nen Em Sesh Ba Wesekhet Pen"
+          "home": "Sekhet 1 Em Iri",
+          "away": "Sekhet 2 Nen Iri Djer; Ren Wesekhet, Renpet, Kheperu Wa"
         }
       },
       "audit_title": "Medu Maa · Khet Wat Pen",

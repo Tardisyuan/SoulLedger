@@ -101,10 +101,10 @@ export function useConnectionBannerShown(): boolean {
 const FADE_MS = 240;
 
 type Tone = "warn" | "neg" | "offline";
-/** The dot and the 2px rule: amber while it retries, red when it gave up, grey offline. `--color-warn` is
+/** The dot and the 2px rule: amber while it retries, red when it gave up, grey offline. `--color-amber` is
  *  for marks only, never text — the pill's words are ink. */
 const TONE_COLOUR: Record<Tone, string> = {
-  warn: "bg-[oklch(var(--color-warn))]",
+  warn: "bg-[oklch(var(--color-amber))]",
   neg: "bg-[oklch(var(--color-danger))]",
   offline: "bg-[oklch(var(--color-faint-text))]",
 };
@@ -166,7 +166,7 @@ export function ConnectionBanner() {
       >
         <span aria-hidden="true" className={`relative size-2 shrink-0 rounded-[50%] ${TONE_COLOUR[view.tone]}`}>
           {view.tone === "warn" ? (
-            <span className="absolute -inset-[3px] animate-ping rounded-[50%] border-2 border-[oklch(var(--color-warn))] opacity-60 motion-reduce:animate-none" />
+            <span className="absolute -inset-[3px] animate-ping rounded-[50%] border-2 border-[oklch(var(--color-amber))] opacity-60 motion-reduce:animate-none" />
           ) : null}
         </span>
         {/* A long egy / en reason is cut, and readable in full on hover. */}
