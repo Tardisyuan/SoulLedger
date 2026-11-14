@@ -130,4 +130,35 @@ describe("FilterBar", () => {
     expect(done.className).toContain("bg-(--main-fill)");
     expect(done.className).toMatch(/\bh-\(--control-h-lg\)/);
   });
+
+  // 用户 2026-11-14:受刑计划与审批实例的筛选条搬上来。桌面一行不折行;开关在桌面画成 FilterChipToggle,
+  // 窄屏画成快捷 chip;`fields` 桌面在行里、窄屏在抽屉里;开关与 fields 都算进「筛选 · N」。
+  it("桌面一行不折行;toggles 两种画法都有、算进 N;fields 桌面在行里、窄屏只在抽屉里", async () => {
+    const onToggle = jest.fn();
+    render(
+      <I18nProvider>
+        <FilterBar
+          selects={[{ label: "状态", value: "JUDGING", options, onChange: jest.fn(), clearLabel: "清除状态" }]}
+          toggles={[{ label: "只看已超时", active: true, onToggle }]}
+          fields={(where) => <input aria-label={`日期-${where}`} />}
+          fieldsActive={1}
+        />
+      </I18nProvider>
+    );
+    expect(wide().className).toMatch(/\bflex-nowrap\b/);
+    expect(wide().className).not.toMatch(/\bflex-wrap\b/);
+    const wideToggle = within(wide()).getByRole("button", { name: "只看已超时", pressed: true });
+    expect(wideToggle).toHaveAttribute("data-filter-chip");
+    fireEvent.click(wideToggle);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(within(wide()).getByLabelText("日期-wide")).toBeInTheDocument();
+
+    const chip = within(narrow()).getByRole("button", { name: "只看已超时", pressed: true });
+    expect(chip.parentElement).toHaveAttribute("data-filter-bar-quick");
+    expect(within(narrow()).queryByLabelText(/日期/)).toBeNull();
+    // 状态 1 + 开关 1 + fields 1 = 3
+    fireEvent.click(within(narrow()).getByRole("button", { name: tZh("filter.bar.open_n", { n: "3" }) }));
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).getByLabelText("日期-sheet")).toBeInTheDocument();
+  });
 });

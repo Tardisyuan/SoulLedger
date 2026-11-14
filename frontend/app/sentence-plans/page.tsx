@@ -23,7 +23,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { fieldControl } from "@/src/components/ui/Field";
-import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { FilterBar } from "@/src/components/ui/FilterChip";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { CURRENT_NODE_STATUSES, NODE_TONES, PLAN_TONES, TenantName, endsForever } from "@/src/components/sentence-plan/sentencePlanDisplay";
 
@@ -78,50 +78,64 @@ function SentencePlansContent() {
       }
       subtitle={t(civKey(t, "sentence_plan.list_subtitle", hallCiv))}
     >
-      <div className="flex flex-wrap items-center gap-3 pb-3">
-        <input
-          type="text"
-          data-testid="sentence-plan-search"
-          placeholder={t("sentence_plan.filter.search")}
-          aria-label={t("sentence_plan.filter.search")}
-          value={search}
-          onChange={(e) => change(() => setSearch(e.target.value))}
-          className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
-        />
-        <FilterChipSelect
-          label={t("sentence_plan.filter.status")}
-          value={status}
-          options={[
-            { value: "", label: t("filter.all") },
-            ...STATUSES.map((s) => ({ value: s, label: t(`sentence_plan.plan_states.${s}`) })),
-          ]}
-          clearLabel={t("filter.clear_one", { name: t("sentence_plan.filter.status") })}
-          onChange={(v) => change(() => setStatus(v))}
-        />
-        <FilterChipToggle pressed={awaitingRedispatch} onPressedChange={(v) => change(() => setAwaitingRedispatch(v))}>
-          {t("sentence_plan.filter.awaiting_redispatch")}
-        </FilterChipToggle>
-        <FilterChipToggle pressed={pendingRequest} onPressedChange={(v) => change(() => setPendingRequest(v))}>
-          {t("sentence_plan.filter.pending_request")}
-        </FilterChipToggle>
-        {isFiltered && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              change(() => {
-                setSearch("");
-                setStatus("");
-                setAwaitingRedispatch(false);
-                setPendingRequest(false);
-              })
-            }
-          >
-            {t("filter.clear_all")}
-          </Button>
+      {/* 共享的 `FilterBar`(用户 2026-11-14):桌面一行;393 是 搜索 +「筛选 · N」、两个开关的快捷 chip、状态进底部抽屉。 */}
+      <FilterBar
+        testId="sentence-plan-filters"
+        search={(where) => (
+          <input
+            type="text"
+            data-testid={where === "wide" ? "sentence-plan-search" : "sentence-plan-search-narrow"}
+            placeholder={t("sentence_plan.filter.search")}
+            aria-label={t("sentence_plan.filter.search")}
+            value={search}
+            onChange={(e) => change(() => setSearch(e.target.value))}
+            className={cn(fieldControl({ size: "md" }), where === "wide" ? "flex-1 min-w-[200px]" : "w-full min-w-0")}
+          />
         )}
-      </div>
+        selects={[
+          {
+            label: t("sentence_plan.filter.status"),
+            value: status,
+            options: [
+              { value: "", label: t("filter.all") },
+              ...STATUSES.map((s) => ({ value: s, label: t(`sentence_plan.plan_states.${s}`) })),
+            ],
+            clearLabel: t("filter.clear_one", { name: t("sentence_plan.filter.status") }),
+            onChange: (v) => change(() => setStatus(v)),
+          },
+        ]}
+        toggles={[
+          {
+            label: t("sentence_plan.filter.awaiting_redispatch"),
+            active: awaitingRedispatch,
+            onToggle: () => change(() => setAwaitingRedispatch(!awaitingRedispatch)),
+          },
+          {
+            label: t("sentence_plan.filter.pending_request"),
+            active: pendingRequest,
+            onToggle: () => change(() => setPendingRequest(!pendingRequest)),
+          },
+        ]}
+        trailing={
+          isFiltered ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                change(() => {
+                  setSearch("");
+                  setStatus("");
+                  setAwaitingRedispatch(false);
+                  setPendingRequest(false);
+                })
+              }
+            >
+              {t("filter.clear_all")}
+            </Button>
+          ) : null
+        }
+      />
       {list.isLoading ? (
         <ListSkeleton count={3} />
       ) : list.isError && !list.data ? (

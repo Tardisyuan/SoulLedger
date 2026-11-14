@@ -33,6 +33,10 @@ installWorkflowPageHarness();
 
 // ── Instances tab ────────────────────────────────────────────────────
 
+// jsdom 不跑媒体查询:FilterBar 的桌面一行与窄屏一行都在 DOM 里,开关各画一份。按容器查。
+const wide = () => document.querySelector("[data-filter-bar-wide]") as HTMLElement;
+const narrow = () => document.querySelector("[data-filter-bar-narrow]") as HTMLElement;
+
 describe("WorkflowPage instances tab", () => {
   async function openInstances() {
     renderPage();
@@ -78,6 +82,8 @@ describe("WorkflowPage instances tab", () => {
     mockSession.user = { role: "JUDGE", permissions: ["workflow.read", "workflow.create"] };
     await openInstances();
     const start = await screen.findByRole("button", { name: "workflow.start.action" });
+    // 不在 FilterBar 里:FilterBar 在窄屏把 `trailing` 收进抽屉,主动作要一直看得见(用户 2026-11-14)。
+    expect(start.closest("[data-filter-bar]")).toBeNull();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(start);
     expect(await screen.findByRole("dialog")).toHaveTextContent("workflow.start.title");
@@ -183,11 +189,11 @@ describe("WorkflowPage instances tab", () => {
     expect(screen.getAllByText("workflow.overdue_badge")).toHaveLength(1);
     expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1" });
 
-    const chip = screen.getByRole("button", { name: "workflow.filter_overdue" });
+    const chip = within(wide()).getByRole("button", { name: "workflow.filter_overdue" });
     expect(chip).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(chip);
     await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1", overdue: "true" }));
-    expect(screen.getByRole("button", { name: "workflow.filter_overdue" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(wide()).getByRole("button", { name: "workflow.filter_overdue" })).toHaveAttribute("aria-pressed", "true");
   });
 
   // 审计 1017 #2:此前只取第一页、只有「已超时」一枚签。筛选参数名必须是 `WorkflowFilter` 认的那几个。
@@ -201,8 +207,13 @@ describe("WorkflowPage instances tab", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.case_type" }), { target: { value: "APPEAL" } });
     fireEvent.change(screen.getByRole("combobox", { name: "workflow.filter.civilization" }), { target: { value: "GREEK" } });
     fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.priority" }), { target: { value: "2" } });
-    fireEvent.change(screen.getByTestId("workflow-from"), { target: { value: "2026-10-01" } });
+    // 桌面的日期起止在「创建日期 ▾」签的弹层里(用户 2026-11-14:1280 一行放得下)。
+    fireEvent.click(screen.getByTestId("workflow-dates"));
+    fireEvent.change(await screen.findByTestId("workflow-from"), { target: { value: "2026-10-01" } });
     fireEvent.change(screen.getByTestId("workflow-to"), { target: { value: "2026-10-17" } });
+    // 签上写出生效的区间。
+    expect(screen.getByTestId("workflow-dates")).toHaveTextContent("10-01 – 10-17");
+    expect(screen.getByTestId("workflow-dates")).toHaveAttribute("data-active", "true");
 
     const expected = {
       search: "孟",
@@ -223,6 +234,49 @@ describe("WorkflowPage instances tab", () => {
     fireEvent.click(screen.getByRole("button", { name: "workflow.filter.clear" }));
     await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1" }));
     expect(screen.queryByRole("button", { name: "workflow.filter.clear" })).not.toBeInTheDocument();
+  });
+
+  // 用户 2026-11-14:筛选走共享的 FilterBar。桌面一行不折行(此前 1280 两行、393 五行);
+  // 393 是「筛选 · N」+「只看已超时」的快捷 chip,四个下拉与日期起止都在抽屉里,日期带 `-narrow` 的 testid。
+  it("draws the filters as one unwrapped row on desktop, and on a phone puts them in the drawer behind 筛选 · N", async () => {
+    await openInstances();
+    await screen.findByText("workflow.no_instances");
+    expect(wide().className).not.toMatch(/\bflex-wrap\b/);
+    expect(wide().className).toMatch(/\bflex-nowrap\b/);
+    expect(within(wide()).getByTestId("workflow-search")).toBeInTheDocument();
+    expect(within(wide()).getAllByRole("combobox")).toHaveLength(4);
+    // 日期起止不在行里:一枚「创建日期 · 全部 ▾」签,点开才有两个输入框。
+    const dates = within(wide()).getByTestId("workflow-dates");
+    expect(dates).toHaveTextContent("workflow.filter.created");
+    expect(dates).toHaveTextContent("workflow.filter.all");
+    expect(dates).not.toHaveAttribute("data-active");
+    expect(screen.queryByTestId("workflow-from")).toBeNull();
+
+    expect(within(narrow()).queryByRole("combobox")).toBeNull();
+    expect(within(narrow()).queryByTestId("workflow-from")).toBeNull();
+    expect(within(narrow()).getByRole("button", { name: "workflow.filter_overdue", pressed: false })).toBeInTheDocument();
+
+    fireEvent.change(within(wide()).getByRole("combobox", { name: "workflow.detail.status" }), { target: { value: "PENDING" } });
+    fireEvent.click(dates);
+    fireEvent.change(await screen.findByTestId("workflow-from"), { target: { value: "2026-10-01" } });
+    expect(dates).toHaveTextContent("10-01 –");
+    fireEvent.click(within(narrow()).getByRole("button", { name: "workflow.filter_overdue" }));
+    // 状态 + 起始日 + 已超时 = 3(搜索框就在旁边,不算)。
+    const open = within(narrow()).getByRole("button", { name: "filter.bar.open_n(3)" });
+    fireEvent.click(open);
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).getAllByRole("combobox")).toHaveLength(4);
+    expect(within(sheet).getByTestId("workflow-from-narrow")).toHaveValue("2026-10-01");
+    fireEvent.change(within(sheet).getByTestId("workflow-to-narrow"), { target: { value: "2026-10-17" } });
+    await waitFor(() =>
+      expect(mockedWorkflows).toHaveBeenLastCalledWith({
+        page: "1",
+        overdue: "true",
+        status: "PENDING",
+        created_after: "2026-10-01",
+        created_before: "2026-10-17 23:59:59",
+      })
+    );
   });
 
   it("pages past the first 20, and a filter change goes back to page 1", async () => {

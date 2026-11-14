@@ -1814,6 +1814,7 @@
       "civilization": "Civilization",
       "from": "Created from",
       "to": "Created to",
+      "created": "Created",
       "clear": "Clear filters"
     },
     "pick": {

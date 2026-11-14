@@ -135,9 +135,11 @@ export interface FilterBarQuick {
 /**
  * 列表页的筛选条(第三十批「卷宗」第 1 步第 4 条,Design v4 第三十批第一节)。一份声明,两种画法:
  *
- * - **≥ 769(桌面)**:照旧一行 —— 搜索框、每个维度一个 `FilterChipSelect`、右端 `trailing`(导出、列)。
+ * - **≥ 769(桌面)**:一行,不折行 —— 搜索框、每个维度一个 `FilterChipSelect`、`toggles` 各一个 `FilterChipToggle`、
+ *   `fields`(日期之类)、右端 `trailing`(导出、列)。不折行(用户 2026-11-14);条件多的页把次要的收进一枚签的弹层(审批实例的日期起止)。
  * - **≤ 768(393 窄屏)**:第一行 搜索框 48 +「筛选 · N」48(N = 已生效的条件数);第二行快捷 chip,高 44、
- *   圆角 22,一行横滑、右缘 40px 渐隐(`.chip-scroll`),chip 不压缩、不截字;其余条件都进底部抽屉 —— 选项行 48,
+ *   圆角 22,一行横滑、右缘 40px 渐隐(`.chip-scroll`),chip 不压缩、不截字(`toggles` 排在 `quick` 前面);
+ *   其余条件(维度下拉、`fields("sheet")`)都进底部抽屉 —— 选项行 48,
  *   主按钮 56、墨色实底。`trailing` 在窄屏收进抽屉底部。
  *
  * 两种画法都在 DOM 里,按宽度用 CSS 藏一种(`max-[768px]:hidden` / `min-[769px]:hidden`),不靠 JS 量宽:
@@ -147,6 +149,9 @@ export function FilterBar({
   search,
   selects,
   quick,
+  toggles,
+  fields,
+  fieldsActive = 0,
   trailing,
   testId,
 }: {
@@ -155,22 +160,37 @@ export function FilterBar({
   selects: FilterBarSelect[];
   /** 窄屏第二行的快捷 chip。不给就没有那一行。 */
   quick?: FilterBarQuick[];
+  /** 开 / 关的条件(「只看已超时」)。桌面画成 `FilterChipToggle`,窄屏画成快捷 chip;都算进「筛选 · N」。 */
+  toggles?: FilterBarQuick[];
+  /** 下拉以外的条件(日期起止)。桌面画在那一行里(`"wide"`),窄屏画在抽屉里(`"sheet"`)。 */
+  fields?: (where: "wide" | "sheet") => ReactNode;
+  /** `fields` 里已生效的条件数,算进「筛选 · N」。 */
+  fieldsActive?: number;
   /** 桌面一行的右端(导出、列设置)。窄屏收进抽屉底部。 */
   trailing?: ReactNode;
   testId?: string;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const active = selects.filter((f) => f.value !== "").length;
+  const active =
+    selects.filter((f) => f.value !== "").length + (toggles ?? []).filter((q) => q.active).length + fieldsActive;
+  const chips = [...(toggles ?? []), ...(quick ?? [])];
   return (
     <div data-testid={testId} data-filter-bar="">
       {/* 桌面 */}
-      <div data-filter-bar-wide="" className="max-[768px]:hidden flex flex-wrap items-center gap-3 py-3">
+      {/* 不折行;769–1279 之间放不下时横滑,不折成两行。 */}
+      <div data-filter-bar-wide="" className="max-[768px]:hidden flex flex-nowrap items-center gap-3 overflow-x-auto py-3">
         {search?.("wide")}
         {selects.map((f) => (
           <FilterChipSelect key={f.label} label={f.label} value={f.value} options={f.options} onChange={f.onChange} clearLabel={f.clearLabel} />
         ))}
-        {trailing ? <div className="ml-auto flex items-center justify-end gap-3">{trailing}</div> : null}
+        {toggles?.map((q, i) => (
+          <FilterChipToggle key={i} pressed={q.active} onPressedChange={() => q.onToggle()}>
+            {q.label}
+          </FilterChipToggle>
+        ))}
+        {fields?.("wide")}
+        {trailing ? <div className="ml-auto flex shrink-0 items-center justify-end gap-3">{trailing}</div> : null}
       </div>
 
       {/* 393 窄屏 */}
@@ -187,9 +207,9 @@ export function FilterBar({
             {active > 0 ? t("filter.bar.open_n", { n: String(active) }) : t("filter.bar.open")}
           </button>
         </div>
-        {quick && quick.length > 0 ? (
+        {chips.length > 0 ? (
           <div role="group" aria-label={t("filter.bar.quick")} data-filter-bar-quick="" className="chip-scroll flex gap-2 overflow-x-auto pr-8">
-            {quick.map((q, i) => (
+            {chips.map((q, i) => (
               <button key={i} type="button" aria-pressed={q.active} onClick={q.onToggle} className={cn(QUICK_CHIP, q.active ? QUICK_ON : QUICK_IDLE)}>
                 {q.label}
               </button>
@@ -228,6 +248,7 @@ export function FilterBar({
               </select>
             </label>
           ))}
+          {fields?.("sheet")}
         </div>
       </Drawer>
     </div>
