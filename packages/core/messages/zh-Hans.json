@@ -62,6 +62,8 @@
     "forgot_sent_body": "如果这个账号存在，管理员会核对身份后联系你重设密码。",
     "subtitle": "用本殿发给你的账号登录。",
     "account": "账号",
+    "account_or_email": "账号或邮箱",
+    "account_or_email_hint": "邮箱要先在「个人中心」验证过才能用来登录",
     "console": "SoulLedger · 官员台",
     "statute_eyebrow": "今日律条",
     "statute_rotates": "每次进入换一条",
@@ -5067,6 +5069,10 @@
       "password": "密码",
       "submit": "登录",
       "soul_code_hint": "10 位字母数字 · 交付单上有，也可以扫码",
+      "email": "联系邮箱",
+      "email_hint": "验证过的联系邮箱 · 全家共用一个邮箱的，请用编号登录",
+      "use_email": "改用邮箱登录",
+      "use_code": "改用灵魂编号登录",
       "scan": "扫码",
       "scanned": "✓ 已从二维码填入",
       "reset_filled": "✓ 已填入你找回的编号",
@@ -8402,7 +8408,6 @@
       "empty_body": "新的通知会出现在这里。"
     },
     "login": {
-      "username": "用户名",
       "password": "密码",
       "submit": "登录",
       "hall_title": "选择殿",

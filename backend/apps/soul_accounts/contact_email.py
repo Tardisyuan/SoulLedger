@@ -256,6 +256,7 @@ class MeContactEmailConfirmView(SoulAPIView):
             return _refuse("email_taken", status.HTTP_409_CONFLICT, "这个邮箱已被其他账号使用。")
         old = account.soul.contact_email
         svc.apply_contacts(account.soul, contact_email=new)
+        svc.mark_login_email_verified(account.user, new)  # 验证码证明收得到:可以用它登录了(邮箱登录)
         svc.audit("UPDATE", account.soul, "灵魂自己改了联系邮箱", request=request, resource_id=account.pk,
                   changes={"contact_email_changed_by_soul": True})
         cache.delete_many(list(keys.values()))

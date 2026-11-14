@@ -43,8 +43,40 @@ SOUL_CODE_LENGTH = 10
 
 def normalize_soul_code(raw):
     """用户手输的编号 → 库里的样子:去首尾空白、转大写。登录与聊天查找共用这一条,
-    两处规则不能各写一份(一处放宽、一处没放宽,就是「登得进却查不到」)。"""
-    return (raw or "").strip().upper()
+    两处规则不能各写一份(一处放宽、一处没放宽,就是「登得进却查不到」)。
+    含 `@` 的是邮箱(邮箱登录,2026-11-15):转小写 —— 登录限流的键与登录记录都按它,同一个地址只算一份。"""
+    raw = (raw or "").strip()
+    return raw.lower() if "@" in raw else raw.upper()
+
+
+def soul_code_for_email(email):
+    """邮箱登录(2026-11-15 用户决定):已验证邮箱 → 那个灵魂的编号;认不出就 None。
+
+    规则(None 时调用方照旧把原文当编号去找,找不到、跑一次哈希、答「编号或密码错误」——
+    与输错编号**逐字相同、耗时相当**,不泄露这个邮箱有没有账号、是不是共用的):
+    - 只认本世、可登录账号的登录邮箱(`User.email`,在未删除的行里唯一),而且**已验证**
+      (`User.email_verified`:灵魂自己改联系邮箱、或用邮箱重置过密码时,收到了验证码才算);
+      官员代填的联系邮箱没人证明收得到,不能拿来登录。
+    - **一家人共用一个联系邮箱时谁都不能用它登录**,只能用编号:哪个灵魂占着登录邮箱取决于谁先同步,
+      让邮箱指向其中一个就是让家人登进「随机」的那个。判断看所有未删除灵魂的 `contact_email`,
+      不只看有账号的 —— 否则家里另一个人开号那天,这个人的邮箱登录会无声地失效又无从解释。
+      App 的输入提示写「共用邮箱请用编号登录」,服务端不说。
+    - 限流:编号与邮箱各算各的(键由 `normalize_soul_code` 的结果哈希)。知道某人邮箱的人错 20 次
+      只锁住邮箱这条路,编号照常能登 —— 邮箱好猜,这正是不把两者并成一个计数的理由。
+    """
+    from apps.soul_accounts.models import SoulAccount
+    from apps.souls.models import Soul
+
+    email = normalize_soul_code(email)
+    account = (
+        SoulAccount.objects.select_related("user", "soul")
+        .filter(retired_at__isnull=True, user__is_active=True, user__email__iexact=email).first()
+    )
+    if account is None or not account.user.email_verified or not account.soul.soul_code:
+        return None
+    if Soul.objects.filter(contact_email__iexact=email).exclude(pk=account.soul_id).exists():
+        return None
+    return account.soul.soul_code
 
 
 class SoulAccountError(Exception):
@@ -407,6 +439,15 @@ def issue_tokens(account, session=None):
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
 
 
+def mark_login_email_verified(user, address):
+    """收到发往 `address` 的验证码的人证明了这个邮箱是他的:登录邮箱正是它时记为已验证
+    (`User.email_verified`),邮箱登录从此认它。登录邮箱没同步成它(被别的账号占着)就什么也不做。"""
+    if address and user.email and user.email.lower() == address.lower() and not user.email_verified:
+        user.email_verified_address = user.email
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified_address", "email_verified_at"])
+
+
 def authenticate(soul_code, password):
     """第一步:编号 + 密码 → 账号(尚未发令牌);失败抛 SoulAccountError(status 401)。
 
@@ -416,6 +457,8 @@ def authenticate(soul_code, password):
     from apps.souls.models import Soul
 
     bad = SoulAccountError("灵魂编号或密码错误。", "invalid_credentials", 401)
+    if "@" in (soul_code or ""):  # 邮箱登录:认出来就换成编号,认不出就原样往下走到同一句「编号或密码错误」
+        soul_code = soul_code_for_email(soul_code) or soul_code
     # all_objects:回收站里的灵魂也要找得到(F-ACCT-06)。此前默认管理器滤掉它,答「编号或密码错误」并计失败,
     # 灵魂以为密码错了去走邮箱重置,改完照样登不进。**只有密码对时**才说出原因,与被吞噬同一条规矩。
     soul = Soul.all_objects.filter(soul_code=normalize_soul_code(soul_code)).first()

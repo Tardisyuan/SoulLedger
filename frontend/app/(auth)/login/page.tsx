@@ -401,7 +401,8 @@ function PasswordLogin() {
             autoCorrect="off"
             spellCheck={false}
             type="text"
-            label={t("auth.account")}
+            label={t("auth.account_or_email")}
+            description={t("auth.account_or_email_hint")}
             value={form.username}
             onChange={(e) => {
               clearFieldError("username");

@@ -115,7 +115,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
                 }
               />
             ) : (
-              <Input testID="login-username" label={t("officer_app.login.username")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
+              <Input testID="login-username" label={t("auth.account_or_email")} hint={t("auth.account_or_email_hint")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
             )}
             <Input
               testID="login-password"

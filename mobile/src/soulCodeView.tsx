@@ -3,7 +3,10 @@
  * character at a time with a pause between groups. What is copied or sent is still the ten characters.
  *
  *   SoulCodeText   a code inside a sentence or a row (one space between groups, aria spelled out)
- *   SoulCodeField  the sign-in box: a hidden TextInput holds the raw characters, the groups are drawn over it
+ *   SoulCodeField  the sign-in box: a hidden TextInput holds the raw characters, the groups are drawn over it.
+ *                  Or an email (邮箱登录, 2026-11-15): 「改用邮箱登录」 under the box, or anything with an `@` pasted or
+ *                  autofilled into it, turns it into a plain one-line address field. Typing one by hand needs the
+ *                  link: the code box refuses o / l / 1 / . before the `@` ever arrives.
  */
 import { SOUL_CODE_LENGTH, formatSoulCode, groupSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 import { useRef, useState, type Ref } from "react";
@@ -12,7 +15,7 @@ import Svg, { Path } from "react-native-svg";
 
 import { family } from "./fonts";
 import { useI18n } from "./i18n";
-import { SOUL_CODE_PROBLEM_KEY, soulCodeStep } from "./loginRules";
+import { SOUL_CODE_PROBLEM_KEY, isEmailEntry, soulCodeStep } from "./loginRules";
 import { FocusRing, LATIN_KEYBOARD, Txt, useTheme } from "./ui";
 import type { SoulCodeProblem } from "@soulledger/core/domain/soulCode";
 
@@ -67,10 +70,20 @@ export function SoulCodeField({
   // A code that came from the scanner replaces whatever was refused before it. Adjusted during render
   // (react.dev "storing information from previous renders"), not in an effect.
   const [sawScan, setSawScan] = useState(scanned);
+  const [emailChosen, setEmailChosen] = useState(false);
   if (sawScan !== scanned) {
     setSawScan(scanned);
-    if (scanned) setProblem(null);
+    if (scanned) {
+      setProblem(null);
+      setEmailChosen(false);
+    }
   }
+  const email = emailChosen || isEmailEntry(value);
+  const switchTo = (toEmail: boolean) => {
+    setEmailChosen(toEmail);
+    setProblem(null);
+    onChange("");
+  };
   const off = !editable;
   // What this box last accepted, and the `value` it was accepted under. The parent can also set the value (a scan,
   // 换一个账号): a prop that moved since then wins.
@@ -86,6 +99,7 @@ export function SoulCodeField({
     if (text.toUpperCase() === before) return;
     const step = soulCodeStep(before, text);
     latest.current.accepted = step.value;
+    if (isEmailEntry(step.value)) setEmailChosen(true); // pasted or autofilled: stays an address while it is edited
     setProblem(step.problem);
     if (step.value !== before) onChange(step.value);
     if (step.value.length === SOUL_CODE_LENGTH && before.length < SOUL_CODE_LENGTH) onComplete();
@@ -95,55 +109,77 @@ export function SoulCodeField({
   return (
     <View style={styles.field}>
       <Txt variant="label" tone="muted">
-        {t("soul_app.login.soul_code")}
+        {t(email ? "soul_app.login.email" : "soul_app.login.soul_code")}
       </Txt>
       <FocusRing focused={focused && !off}>
         <View
           testID="login-soul-code-box"
           style={[styles.box, off ? { backgroundColor: theme.s2, borderColor: theme.hair } : { backgroundColor: theme.s1, borderColor, borderWidth: problem ? 2 : 1 }]}
         >
-          <View style={styles.entry}>
-            <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.groupRow}>
-              {groups.length === 0 ? (
-                <View testID="login-soul-code-placeholder" style={styles.groupRow}>
-                  {["···", "····", "···"].map((dots, i) => (
-                    <Txt key={i} style={[styles.digits, { color: theme.inkSubtle }]}>
-                      {dots}
-                    </Txt>
-                  ))}
-                </View>
-              ) : (
-                groups.map((g, i) => (
-                  <Txt key={i} testID={`login-soul-code-group-${i}`} style={[styles.digits, { color: off ? theme.inkSubtle : theme.ink }]}>
-                    {g}
-                  </Txt>
-                ))
-              )}
-              {focused && value.length < SOUL_CODE_LENGTH ? <View style={[styles.caret, { backgroundColor: theme.ink }]} /> : null}
-            </View>
+          {email ? (
             <TextInput
               ref={inputRef}
-              testID="login-soul-code"
+              testID="login-email"
               value={value}
-              onChangeText={change}
+              onChangeText={(text) => onChange(text.trim())}
               editable={editable}
-              accessibilityLabel={value ? spelled(value) : t("soul_app.login.soul_code")}
+              accessibilityLabel={t("soul_app.login.email")}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              // Soul codes are ASCII. With a Chinese (pinyin) keyboard active, letters otherwise go into an
-              // uncommitted composition that is dropped when focus moves to the password field.
-              // Android has no "ascii-capable"; "visible-password" is its keyboard without the suggestion strip, which
-              // otherwise offers words ("QUEEN") for a code that is not one.
-              keyboardType={LATIN_KEYBOARD}
-              autoCapitalize="characters"
+              onSubmitEditing={onComplete}
+              returnKeyType="next"
+              keyboardType="email-address"
+              autoCapitalize="none"
               autoCorrect={false}
               spellCheck={false}
-              autoComplete="username"
+              autoComplete="email"
               textContentType="username"
-              caretHidden
-              style={styles.hidden}
+              style={[styles.email, { color: off ? theme.inkSubtle : theme.ink }]}
             />
-          </View>
+          ) : (
+            <View style={styles.entry}>
+              <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.groupRow}>
+                {groups.length === 0 ? (
+                  <View testID="login-soul-code-placeholder" style={styles.groupRow}>
+                    {["···", "····", "···"].map((dots, i) => (
+                      <Txt key={i} style={[styles.digits, { color: theme.inkSubtle }]}>
+                        {dots}
+                      </Txt>
+                    ))}
+                  </View>
+                ) : (
+                  groups.map((g, i) => (
+                    <Txt key={i} testID={`login-soul-code-group-${i}`} style={[styles.digits, { color: off ? theme.inkSubtle : theme.ink }]}>
+                      {g}
+                    </Txt>
+                  ))
+                )}
+                {focused && value.length < SOUL_CODE_LENGTH ? <View style={[styles.caret, { backgroundColor: theme.ink }]} /> : null}
+              </View>
+              <TextInput
+                ref={inputRef}
+                testID="login-soul-code"
+                value={value}
+                onChangeText={change}
+                editable={editable}
+                accessibilityLabel={value ? spelled(value) : t("soul_app.login.soul_code")}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                // Soul codes are ASCII. With a Chinese (pinyin) keyboard active, letters otherwise go into an
+                // uncommitted composition that is dropped when focus moves to the password field.
+                // Android has no "ascii-capable"; "visible-password" is its keyboard without the suggestion strip, which
+                // otherwise offers words ("QUEEN") for a code that is not one.
+                keyboardType={LATIN_KEYBOARD}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                spellCheck={false}
+                autoComplete="username"
+                textContentType="username"
+                caretHidden
+                style={styles.hidden}
+              />
+            </View>
+          )}
           <Pressable
             testID="login-scan"
             accessibilityRole="button"
@@ -176,9 +212,14 @@ export function SoulCodeField({
         </Txt>
       ) : (
         <Txt testID="login-soul-code-hint" variant="caption" tone="muted">
-          {t("soul_app.login.soul_code_hint")}
+          {t(email ? "soul_app.login.email_hint" : "soul_app.login.soul_code_hint")}
         </Txt>
       )}
+      <Pressable testID="login-switch-entry" accessibilityRole="button" disabled={off} onPress={() => switchTo(!email)} style={styles.switch}>
+        <Txt variant="caption" tone="ink" style={styles.switchText}>
+          {t(email ? "soul_app.login.use_code" : "soul_app.login.use_email")}
+        </Txt>
+      </Pressable>
     </View>
   );
 }
@@ -196,6 +237,9 @@ const styles = StyleSheet.create({
   // Android is the other way round: it does hit-test an alpha-0 view, and it drew the "transparent" text anyway,
   // on top of the groups (Medium_Phone emulator, 2026-10-11). So: transparent text on iOS, alpha 0 on Android.
   hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, color: "transparent", fontSize: 22, opacity: Platform.OS === "android" ? 0 : 1 },
+  email: { flex: 1, height: 56, fontFamily: family.ui[500], fontSize: 17 },
+  switch: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center" },
+  switchText: { textDecorationLine: "underline" },
   scan: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderLeftWidth: 1 },
   scanText: { letterSpacing: 0 },
   problem: { fontFamily: family.ui[600] },

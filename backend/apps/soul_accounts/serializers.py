@@ -31,7 +31,8 @@ from apps.tenants.models import VISIT_SETTINGS
 
 
 class SoulLoginRequestSerializer(serializers.Serializer):
-    soul_code = serializers.CharField(max_length=32)
+    #: 编号,或已验证的邮箱(含 `@`,2026-11-15;规则见 `services.soul_code_for_email`)。254 = 邮箱的上限。
+    soul_code = serializers.CharField(max_length=254)
     password = serializers.CharField(max_length=128, trim_whitespace=False)
     #: 开着两步验证的账号,App 带上上次「这部手机 30 天内不再询问」时拿到的设备令牌;有效就跳过第二步。
     device_token = serializers.CharField(max_length=128, required=False, allow_blank=True)

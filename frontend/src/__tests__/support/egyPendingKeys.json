@@ -1,8 +1,14 @@
 [
+  "auth.account_or_email",
+  "auth.account_or_email_hint",
   "auth.error_attempts_body",
   "auth.error_locked_body",
   "auth.error_locked_title",
   "officer_app.detail.next",
   "officer_app.search.recent",
-  "soul_app.login.reset_filled"
+  "soul_app.login.email",
+  "soul_app.login.email_hint",
+  "soul_app.login.reset_filled",
+  "soul_app.login.use_code",
+  "soul_app.login.use_email"
 ]

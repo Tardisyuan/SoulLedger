@@ -8343,7 +8343,6 @@
       "logout_pending_drafts": "Sesh Tepy {{drafts}}: Em Medjat Pen. Per Aq: Fekh."
     },
     "login": {
-      "username": "Ren Aq",
       "password": "Sekhem",
       "submit": "Aq",
       "forgot_password": "Nen Rekh Sekhem",

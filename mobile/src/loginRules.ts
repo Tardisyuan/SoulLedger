@@ -13,6 +13,9 @@ import { SOUL_CODE_LENGTH, acceptSoulCodeInput, type SoulCodeInputResult, type S
  * else (a paste over a selection, a replace) is read as a paste into an empty box.
  */
 export function soulCodeStep(prev: string, next: string): SoulCodeInputResult {
+  // An `@` is an email, not a code (邮箱登录, 2026-11-15): a pasted or autofilled address is taken as it is, no
+  // upper-casing, no refused characters. The box then shows it as one line (`SoulCodeField`'s email mode).
+  if (next.includes("@")) return { value: next.trim(), problem: null };
   // Compared without case: the box holds capitals, but a hardware keyboard (or a keyboard that ignores
   // autoCapitalize) sends the field's own lower-case text back, and one wrong letter then read as a paste.
   const [was, now] = [prev.toUpperCase(), next.toUpperCase()];
@@ -32,9 +35,15 @@ export const SOUL_CODE_PROBLEM_KEY: Record<SoulCodeProblem, string> = {
 
 export const soulCodeComplete = (code: string) => code.length === SOUL_CODE_LENGTH;
 
-/** 「登录」 is pressable with a full code and a password, and not while a request is out. */
+/** What the box holds is an email rather than a code: it has an `@`. The server decides whether it signs anyone in. */
+export const isEmailEntry = (text: string) => text.includes("@");
+
+/** Shaped like an address (something@something.something), enough to send. */
+export const emailComplete = (text: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim());
+
+/** 「登录」 is pressable with a full code (or an address) and a password, and not while a request is out. */
 export const canSubmitLogin = (code: string, password: string, busy: boolean) =>
-  soulCodeComplete(code) && password.length > 0 && !busy;
+  (soulCodeComplete(code) || emailComplete(code)) && password.length > 0 && !busy;
 
 /** How long 「这不是灵魂簿交付单上的码」 stays up after the last bad scan. */
 export const INVALID_BANNER_MS = 4000;
