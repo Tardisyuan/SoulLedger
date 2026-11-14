@@ -81,6 +81,7 @@ export function useRegisteredShortcuts(): readonly ShortcutRow[] {
  *   单选 / 复选框不算 —— 它们不收字,裁决单选框获焦时按 3 仍应选中「补过」。
  * - `mod+Enter`(⌘⏎ / Ctrl⏎)例外,在文本框里也接:它不输入任何字符,而判词框里
  *   写完即落判正是它的用处。
+ * - `mod+z`(⌘Z / Ctrl Z,案卷台撤回条,第四十六批)只在不打字时接:文本框里的 ⌘Z 是撤销输入,归浏览器。
  *
  * 其余修饰键组合一律放过(⌘1 是浏览器切标签页)。
  */
@@ -98,6 +99,7 @@ export function hotkeyOf(event: KeyboardEvent): string | null {
   if (event.defaultPrevented || event.repeat || event.isComposing) return null;
   const mod = event.metaKey || event.ctrlKey;
   if (mod && !event.altKey && !event.shiftKey && event.key === "Enter") return "mod+Enter";
+  if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "z") return isTypingTarget(event.target) ? null : "mod+z";
   if (mod || event.altKey) return null;
   if (isTypingTarget(event.target)) return null;
   if (event.key.length !== 1) return event.key;

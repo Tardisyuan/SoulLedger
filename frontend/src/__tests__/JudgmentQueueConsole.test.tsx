@@ -1081,22 +1081,34 @@ describe("落印前先确认", () => {
     expect(screen.getByTestId("seal-readback-case")).toHaveTextContent("CN-2026-0042");
     // The raw member rides on the label's title (DomainEnum), whatever this test's echo `t` makes of the words.
     expect(within(screen.getByTestId("seal-readback-verdict")).getByTitle("PASSED")).toBeInTheDocument();
-    // No timer, and a second ⌘⏎ is not a confirmation.
-    await press({ key: "Enter", ctrlKey: true });
+    // No timer; the ⌘⏎ that opened the layer did not seal; focus waits on 返回 (第四十六批第 8 条).
     await runOut(UNDO_MS * 3);
     expect(mockConclude).not.toHaveBeenCalled();
     expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
-    expect(document.activeElement).not.toBe(screen.getByTestId("seal-readback-confirm"));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId("seal-readback-cancel")));
+    expect(screen.getByTestId("seal-readback-cancel")).toHaveTextContent("judgment.seal_readback.back");
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("seal-readback-confirm"));
-    });
+    // Inside the layer ⌘⏎ is the one key that seals.
+    await press({ key: "Enter", ctrlKey: true });
+    expect(mockConclude).toHaveBeenCalledTimes(1);
     expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, { verdict: "PASSED", notes: "" });
     expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
   });
 
-  it("on: 取消 sends nothing and the case stays", async () => {
+  it("on: 落印 in the layer sends at once too", async () => {
+    setSealReadback(true);
+    renderConsole();
+    await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0));
+    await seal("1");
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("seal-readback-confirm"));
+    });
+    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, { verdict: "PASSED", notes: "" });
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
+  });
+
+  it("on: 返回 sends nothing and the case stays", async () => {
     setSealReadback(true);
     renderConsole();
     await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0));

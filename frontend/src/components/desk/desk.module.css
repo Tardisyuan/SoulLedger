@@ -6,14 +6,18 @@
  * 按钮是 `Button`(主按钮墨色实底),这里不再画。
  */
 
-/* ── 台:案卷摞 + 摊开的一份 ─────────────────────────── */
+/* ── 台:案卷摞 + 摊开的一份 + 判栏 ───────────────────── */
+/* 第四十六批第一节第 6 条:门栏 64 | 摞 340 | 卷宗正文 | 判栏 288(≥1440 宽 320,令牌 `--verdict-rail-w` 自己换档);
+   <1280 判栏收进卷宗下面,成一条判决条(下面的 @media),正文不再变窄。 */
 .desk {
   display: grid;
-  grid-template-columns: var(--stack-w, 360px) minmax(0, 1fr);
+  grid-template-columns: var(--stack-w) minmax(0, 1fr) var(--verdict-rail-w);
+  grid-template-areas: "stack case side";
   /* 壳(AppLayout 的门栏)里没有工具条;上面只有代看条与门内的二级导航(`DoorTabs`)。 */
   height: calc(100vh - var(--imp-h, 0px) - var(--door-tabs-h, 0px));
 }
 .stack {
+  grid-area: stack;
   min-width: 0;
   overflow-y: auto;
   border-right: 1px solid oklch(var(--color-line));
@@ -175,18 +179,83 @@
   background: color-mix(in oklch, oklch(var(--color-ink)) 7%, transparent);
   box-shadow: inset 3px 0 0 oklch(var(--color-ink));
 }
-/* 落了印的一行:印落下(320ms)之后划线、向左滑出(CaseDesk 的 SEAL_LEAVE_MS = 600 到点后移出摞)。
-   减少动态效果时全站规则把动画压到 1ms,CaseDesk 也不等。 */
+/* 落了印的一行(第四十六批第一节第 3 条),与判栏里的印同一刻开始,三段共 440ms(CaseDesk 的 SEAL_LEAVE_MS,到点移出摞):
+     0–80     名字上划一道 1px 墨线(从左往右画出来)
+     80–280   左移 24px,同时淡到 0,ease-out
+     280–440  行高收起(li 的一行网格 1fr → 0fr),ease-in-out
+   改这里的时长要同改 SEAL_LEAVE_MS。 */
+.rowName {
+  position: relative;
+  justify-self: start;
+  max-width: 100%;
+}
+.row[data-leaving] .rowName::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: oklch(var(--color-ink));
+  transform-origin: left;
+  animation: desk-row-strike 80ms linear both;
+}
 .row[data-leaving] {
-  animation: desk-row-leave 280ms var(--ease-exit) 320ms both;
+  overflow: hidden;
+  animation:
+    desk-row-out 200ms ease-out 80ms both,
+    desk-row-collapse 160ms ease-in-out 280ms both;
 }
-.row[data-leaving] .rowName {
-  text-decoration: line-through;
+.rows li:has(> .row[data-leaving]) {
+  display: grid;
+  animation: desk-li-collapse 160ms ease-in-out 280ms both;
 }
-@keyframes desk-row-leave {
+@keyframes desk-row-strike {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes desk-row-out {
   to {
     opacity: 0;
     transform: translateX(-24px);
+  }
+}
+@keyframes desk-row-collapse {
+  to {
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+}
+@keyframes desk-li-collapse {
+  from {
+    grid-template-rows: 1fr;
+  }
+  to {
+    grid-template-rows: 0fr;
+  }
+}
+/* 减少动态:不移动,划线即在,120ms 淡出(CaseDesk 的 SEAL_LEAVE_REDUCED_MS),行高立即收起。
+   全站规则把动画压到 1ms(globals.css,`*` 上的 !important);这里的选择器更具体,所以这一下淡出留得住。 */
+@media (prefers-reduced-motion: reduce) {
+  .row[data-leaving] {
+    animation: desk-row-fade 120ms linear both !important;
+  }
+  .row[data-leaving] .rowName::after {
+    animation: none !important;
+  }
+  .rows li:has(> .row[data-leaving]) {
+    animation: none !important;
+  }
+}
+@keyframes desk-row-fade {
+  to {
+    opacity: 0;
   }
 }
 .rowName {
@@ -229,6 +298,7 @@
 
 /* ── 摊开的一份 ─────────────────────────────────────── */
 .case {
+  grid-area: case;
   min-width: 0;
   overflow-y: auto;
   display: flex;
@@ -258,10 +328,6 @@
   grid-row: 1 / span 3;
 }
 .body {
-  display: grid;
-  /* 右栏是判栏(fe-ia §3.5:320)。宽度令牌 `--verdict-rail-w`(component.tokens.json)。 */
-  grid-template-columns: minmax(0, 1fr) var(--verdict-rail-w);
-  gap: 32px;
   padding: 20px 28px 32px;
   flex: 1;
 }
@@ -276,13 +342,6 @@
   padding: 10px 0;
   border-bottom: 1px solid oklch(var(--color-line));
   align-items: baseline;
-}
-/* 摊开的一份窄于 760 时(1024 宽的屏:门栏 + 360 的摞之后只剩约 590),右边 280 的侧栏落到卷下面。
-   此前卷只剩约 210,值列挤到 42px,「1957 年 · 7 月 14 日生于 Ravenna」一字一行(2026-11-14,桌面 769–1180 宽都是)。 */
-@container (max-width: 760px) {
-  .body {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .juanKey {
   font-size: var(--juan-key-size);
@@ -305,18 +364,65 @@
   margin: 24px 0 8px;
   font-weight: 400;
 }
+/* ── 判栏(第四十六批第一节)───────────────────────────
+   第 1 条:底 surface-1(稿子的 --card),左边一条 1px 线通到底,不加阴影 —— 卷宗正文在 canvas 上,两种底色加一条线就分得开。 */
 .side {
+  grid-area: side;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-left: 1px solid oklch(var(--color-line));
+  background: oklch(var(--color-surface-1));
 }
-/* 判栏:贴着 .case 的滚动顶,卷再长,裁决键与落印也在屏上。 */
+/* 栏头:「判栏」12 / 500 / faint、字距 .06em;右侧键位。 */
+.railHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  padding: 14px 16px 6px;
+  font: var(--tai-head);
+  letter-spacing: 0.06em;
+  color: oklch(var(--color-faint-text));
+}
+.railKeys {
+  font-family: var(--font-mono);
+  font-size: var(--tai-micro-size);
+  letter-spacing: 0;
+}
 .rail {
-  position: sticky;
-  top: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  padding: 0 12px;
+  min-height: 0;
+}
+.railOpts {
+  display: grid;
+  gap: 6px;
+}
+/* 第 7 条:要写理由的判决,选项右侧一行小字。 */
+.optHint {
+  margin-left: auto;
+  font-size: var(--tai-caption-size);
+  line-height: var(--tai-caption-leading);
+  font-weight: 400;
+  color: oklch(var(--color-faint-text));
+}
+.railWords {
+  width: 100%;
+  min-height: 84px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in oklch, oklch(var(--color-ink)) 16%, transparent);
+  border-radius: var(--radius-panel);
+  background: var(--field);
+  color: oklch(var(--color-ink));
+  font: var(--juan);
+  resize: vertical;
 }
 .railNote {
   margin: 0;
@@ -324,31 +430,63 @@
   line-height: var(--tai-label-leading);
   color: oklch(var(--color-ink-muted));
 }
-.railLabel {
+.rail > .railNote {
+  padding-top: 4px;
+}
+/* 栏底:印在落印键正上方,左印右说明(第 5 条:64,不用 96)。贴栏底,上面一条线。 */
+.railFoot {
+  margin: auto -12px 0;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid oklch(var(--color-line));
+}
+.railSeal {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+.railSeal p {
+  margin: 0;
   font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
   color: oklch(var(--color-ink-muted));
 }
-/* 撤回条:贴在右栏底边,全宽 40 高;下沿一条细线在 UNDO_MS 内走完。 */
+/* 撤回条(第 4 条):判栏底部,盖住落印区。底 surface-2,墨 16% 的描边,圆角 8;两行字 + 描边的「撤回 ⌘Z」;
+   底边一条 2px、墨 60% 的线在 UNDO_MS 内线性缩到 0 —— 不用文明色也不用警示色,这不是警告。悬停不暂停。 */
 .undo {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
-  display: flex;
-  flex-wrap: wrap;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
   align-items: center;
-  gap: 4px 16px;
-  min-height: 40px;
-  padding: 6px 28px;
-  border-top: 1px solid oklch(var(--color-line));
+  padding: 10px 12px 12px;
+  overflow: hidden;
+  border-radius: var(--undo-radius);
+  border: 1px solid color-mix(in oklch, oklch(var(--color-ink)) 16%, transparent);
   background: oklch(var(--color-surface-2));
-  font-size: var(--tai-label-size);
 }
 .undoWhat {
-  font-weight: 600;
+  grid-column: 1;
+  font-size: var(--tai-size);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .undoNote {
-  flex: 1;
+  grid-column: 1;
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
   color: oklch(var(--color-ink-muted));
+}
+.undoButton {
+  grid-column: 2;
+  grid-row: 1 / span 2;
 }
 .undoClock {
   position: absolute;
@@ -356,7 +494,7 @@
   bottom: 0;
   height: 2px;
   width: 100%;
-  background: oklch(var(--color-ink));
+  background: color-mix(in oklch, oklch(var(--color-ink)) 60%, transparent);
   transform-origin: left;
   animation-name: desk-undo-clock;
   animation-timing-function: linear;
@@ -368,6 +506,55 @@
   }
   to {
     transform: scaleX(0);
+  }
+}
+/* 页头的「认领」只在 393 画:那里没有判栏(第 2 条:桌面一屏只留一个主按钮,认领只在判栏里)。 */
+.phoneOnly {
+  display: none;
+}
+
+/* <1280:判栏收进卷宗下面,成一条判决条 —— 1–4 与落印并在一行,栏头、印、说明不画(第 6 条)。 */
+@media (min-width: 769px) and (max-width: 1279px) {
+  .desk {
+    grid-template-columns: var(--stack-w) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "stack case"
+      "stack side";
+  }
+  .side {
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid oklch(var(--color-line));
+  }
+  .railHead,
+  .railSeal,
+  .optHint {
+    display: none;
+  }
+  .rail {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+  }
+  .railOpts {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    flex: 2;
+  }
+  .railWords {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 52px;
+    resize: none;
+  }
+  .railFoot {
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+    flex: none;
+    min-width: 160px;
   }
 }
 .card {
@@ -541,7 +728,13 @@
 @media (max-width: 768px) {
   .desk {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "stack"
+      "case";
     height: auto;
+  }
+  .phoneOnly {
+    display: inline-flex;
   }
   .stack {
     border-right: 0;

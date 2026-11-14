@@ -2,12 +2,15 @@
  * 案台冷加载一件卷宗的请求数(be-api §1.1:此前 9 个 —— 四个分组列表、queue-counts、hall-stats、案子、灵魂、灵魂的 path)。
  * 现在是两个:`GET /dossiers/desk/` 与 `GET /dossiers/{id}/`。在 HTTP 客户端这一层数,所以哪个 hook 偷偷多发一个都会红;
  * 外壳(AppLayout 的未读数、菜单)不在这棵树里,不计。
+ * 判栏(第四十六批起是案卷台最右一栏,与卷宗同时挂上)读同一把缓存键:它在场时也还是两个。
  */
 import { screen, waitFor } from "@testing-library/react";
 import { api } from "@soulledger/core/api/client";
 import { CaseDesk } from "@/src/components/desk/CaseDesk";
 import { renderWithProviders } from "./support/render";
 
+// next/dynamic never resolves its loader under jest; hand back the real rail so it is counted too.
+jest.mock("next/dynamic", () => () => require("@/src/components/desk/VerdictRail").default);
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
   usePathname: () => "/desk",
@@ -46,6 +49,8 @@ it("a cold open of one dossier costs two requests: the desk and the dossier", as
   renderWithProviders(<CaseDesk />);
   await screen.findByTestId("desk-row-j-1");
   await waitFor(() => expect(screen.getByTestId("desk-spine")).toHaveAttribute("data-now", JSON.stringify({ civ: "eu", at: "circle", n: 2 })));
+  // The rail is on screen (unclaimed: 认领 C) and asked for nothing of its own.
+  expect(screen.getByTestId("desk-rail")).toHaveAttribute("data-state", "claim");
   const urls = get.mock.calls.map(([url]) => url);
   expect(urls.filter((u) => u === "/dossiers/desk/")).toHaveLength(1);
   expect(urls.filter((u) => u === "/dossiers/j-1/")).toHaveLength(1);

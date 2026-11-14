@@ -2820,7 +2820,8 @@
       "soul": "灵魂",
       "case": "案号",
       "verdict": "判决",
-      "note": "按「落印」当场提交。"
+      "note": "按「落印」当场提交。",
+      "back": "返回"
     }
   },
   "audit": {
@@ -10324,7 +10325,8 @@
       "undone": "已撤回 · {{name}} 回到台上",
       "commit_error": "{{name}} 的判决没有提交，已放回案卷台。",
       "needs_reason": "「{{verdict}}」要选理由，在卷宗整页落印。",
-      "to_dossier": "去卷宗整页写理由 →"
+      "to_dossier": "去卷宗整页写理由 →",
+      "reason_hint": "要写理由 ↗"
     }
   },
   "zongbu": {

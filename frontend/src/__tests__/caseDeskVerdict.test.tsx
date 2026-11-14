@@ -2,13 +2,15 @@
  * 案卷台就地判(用户 2026-11-14,fe-ia §3.5):右栏的判栏。按界面测 —— 1–4 只选中、⌘⏎ 落印、这一行滑出、选中到下一件、
  * 5 秒到点才发 `conclude/`、U 收回;未认领的先认领;要理由的裁决送去卷宗整页;393 宽不接键;选中后预取下一件;
  * 偏好「落印前先确认」打开时走回读层、当场发、没有撤回条。
+ * 第四十六批第一节:判栏是最右一栏(栏头「判栏」),页头只有幽灵的「打开卷宗 ↗」、认领只在判栏;行滑出 440ms(减少动态 120ms);
+ * 撤回条在判栏里、⌘Z 撤回;要写理由的判决在选项上说、选中后落印键换成「去卷宗整页写理由 →」;回读层焦点在「返回」、⌘⏎ 落印。
  */
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Judgment } from "@soulledger/core/api/judgment";
 import { judgmentApi } from "@soulledger/core/api/judgment";
 import { dossiersApi } from "@soulledger/core/api/dossiers";
 import { UNDO_MS } from "@soulledger/core/hooks/useJudgmentQueue";
-import { CaseDesk, PREFETCH_DELAY_MS, SEAL_LEAVE_MS } from "@/src/components/desk/CaseDesk";
+import { CaseDesk, PREFETCH_DELAY_MS, SEAL_LEAVE_MS, SEAL_LEAVE_REDUCED_MS } from "@/src/components/desk/CaseDesk";
 import { SEAL_READBACK_STORAGE_KEY } from "@/src/components/judgment/SealReadback";
 import { renderWithProviders } from "./support/render";
 
@@ -147,6 +149,54 @@ describe("案卷台就地判", () => {
     expect(screen.queryByTestId("desk-undo")).not.toBeInTheDocument();
   });
 
+  it("the row leaves in 440 ms (strike, slide, collapse), not the old 600", async () => {
+    expect(SEAL_LEAVE_MS).toBe(440);
+    await judging();
+    await press({ key: "1" });
+    await press({ key: "Enter", metaKey: true });
+    await run(SEAL_LEAVE_MS - 1);
+    expect(screen.getByTestId("desk-row-1")).toHaveAttribute("data-leaving");
+    expect(current()).toBe("desk-row-1");
+    await run(1);
+    expect(screen.queryByTestId("desk-row-1")).not.toBeInTheDocument();
+    expect(current()).toBe("desk-row-2");
+  });
+
+  it("the rail is its own column with a 判栏 head, and the undo strip sits inside it", async () => {
+    await judging();
+    const side = screen.getByTestId("desk-side");
+    expect(side).toContainElement(screen.getByTestId("desk-rail"));
+    expect(within(side).getByRole("heading", { name: /判栏/ })).toHaveTextContent("1–4 · ⌘⏎");
+    // Not inside the dossier column any more.
+    expect(screen.getByTestId("desk-case")).not.toContainElement(screen.getByTestId("desk-rail"));
+    await press({ key: "1" });
+    await press({ key: "Enter", metaKey: true });
+    expect(side).toContainElement(screen.getByTestId("desk-undo"));
+    expect(screen.getByTestId("desk-case")).not.toContainElement(screen.getByTestId("desk-undo"));
+    expect(screen.getByTestId("desk-undo-button")).toHaveTextContent("⌘Z");
+  });
+
+  it("the page head keeps one ghost 打开卷宗 ↗; 认领 lives in the rail (the head's copy is drawn only at 393)", async () => {
+    renderWithProviders(<CaseDesk />);
+    await screen.findByTestId("desk-row-3");
+    fireEvent.click(screen.getByTestId("desk-row-3"));
+    await waitFor(() => expect(screen.getByTestId("desk-rail")).toHaveAttribute("data-state", "claim"));
+    expect(screen.getByTestId("desk-open")).toHaveTextContent("↗");
+    expect(screen.getByTestId("desk-claim")).toHaveClass("phoneOnly");
+    expect(screen.getByTestId("desk-rail-claim")).not.toHaveClass("phoneOnly");
+  });
+
+  it("⌘Z inside the window takes it back, like U", async () => {
+    await judging();
+    await press({ key: "1" });
+    await press({ key: "Enter", metaKey: true });
+    await press({ key: "z", metaKey: true });
+    await run(UNDO_MS * 2);
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(current()).toBe("desk-row-1");
+    expect(screen.queryByTestId("desk-undo")).not.toBeInTheDocument();
+  });
+
   it("U inside the window takes it back: nothing is sent, the row returns selected with its verdict", async () => {
     await judging();
     await press({ key: "3" });
@@ -189,7 +239,16 @@ describe("案卷台就地判", () => {
 
   it("a verdict that needs a reason (原审「不过」) goes to the dossier page instead of sending a refused request", async () => {
     await judging();
+    // Said on the option before it is chosen, and only on that one.
+    expect(screen.getByTestId("desk-rail-reason-FAILED")).toHaveTextContent("要写理由");
+    expect(screen.queryByTestId("desk-rail-reason-PASSED")).not.toBeInTheDocument();
+    expect(screen.getByTestId("desk-rail-seal")).toBeInTheDocument();
     await press({ key: "2" });
+    // Chosen: the seal key turns into the outlined 去卷宗整页写理由 →, with the reason above it.
+    expect(screen.queryByTestId("desk-rail-seal")).not.toBeInTheDocument();
+    expect(screen.getByTestId("desk-rail-to-dossier")).toHaveTextContent("去卷宗整页写理由");
+    expect(screen.getByTestId("desk-rail-needs-reason")).toHaveTextContent("要选理由");
+    expect(mockPush).not.toHaveBeenCalled();
     await press({ key: "Enter", metaKey: true });
     await run(UNDO_MS);
     expect(mockPush).toHaveBeenCalledWith("/judgment/1");
@@ -221,10 +280,28 @@ describe("案卷台就地判", () => {
     });
   });
 
+  describe("reduced motion", () => {
+    const realMatchMedia = window.matchMedia;
+    afterEach(() => {
+      window.matchMedia = realMatchMedia;
+    });
+    it("the row fades out in 120 ms and leaves at once after that", async () => {
+      window.matchMedia = ((q: string) => ({ matches: q === "(prefers-reduced-motion: reduce)", media: q })) as unknown as typeof window.matchMedia;
+      await judging();
+      await press({ key: "1" });
+      await press({ key: "Enter", metaKey: true });
+      await run(SEAL_LEAVE_REDUCED_MS - 1);
+      expect(screen.getByTestId("desk-row-1")).toHaveAttribute("data-leaving");
+      await run(1);
+      expect(screen.queryByTestId("desk-row-1")).not.toBeInTheDocument();
+      expect(current()).toBe("desk-row-2");
+    });
+  });
+
   describe("偏好「落印前先确认」", () => {
     beforeEach(() => localStorage.setItem(SEAL_READBACK_STORAGE_KEY, "on"));
 
-    it("⌘⏎ opens a read-back of name, case number and verdict; focus is not on 落印; a second ⌘⏎ does not seal", async () => {
+    it("⌘⏎ opens a read-back of name, case number and verdict; focus is on 返回; no timer; the opening ⌘⏎ does not seal", async () => {
       await judging();
       await press({ key: "1" });
       await press({ key: "Enter", metaKey: true });
@@ -233,12 +310,38 @@ describe("案卷台就地判", () => {
       expect(screen.getByTestId("seal-readback-case")).toHaveTextContent("CN-2026-1");
       expect(screen.getByTestId("seal-readback-verdict")).toHaveTextContent("通过");
       expect(back).toBeInTheDocument();
-      await waitFor(() => expect(document.activeElement).not.toBe(screen.getByTestId("seal-readback-confirm")));
-      // No timer, and the chord does not go through the layer.
-      await press({ key: "Enter", metaKey: true });
+      expect(screen.getByTestId("seal-readback-cancel")).toHaveTextContent("返回");
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId("seal-readback-cancel")));
       await run(UNDO_MS * 2);
       expect(mockConclude).not.toHaveBeenCalled();
+      expect(screen.getByTestId("seal-readback")).toBeInTheDocument();
       expect(screen.getByTestId("desk-row-1")).not.toHaveAttribute("data-leaving");
+    });
+
+    it("inside the layer ⌘⏎ seals at once (the one key that does), with no undo strip", async () => {
+      await judging();
+      await press({ key: "1" });
+      await press({ key: "Enter", metaKey: true });
+      await screen.findByTestId("seal-readback");
+      expect(mockConclude).not.toHaveBeenCalled();
+      await press({ key: "Enter", metaKey: true });
+      await waitFor(() => expect(mockConclude).toHaveBeenCalledWith("1", { verdict: "PASSED", notes: "" }));
+      expect(mockConclude).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId("desk-undo")).not.toBeInTheDocument();
+    });
+
+    it("Esc returns: nothing sent, the case stays", async () => {
+      await judging();
+      await press({ key: "1" });
+      await press({ key: "Enter", metaKey: true });
+      await screen.findByTestId("seal-readback");
+      await act(async () => {
+        fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      });
+      await waitFor(() => expect(screen.queryByTestId("seal-readback")).not.toBeInTheDocument());
+      await run(UNDO_MS * 2);
+      expect(mockConclude).not.toHaveBeenCalled();
+      expect(current()).toBe("desk-row-1");
     });
 
     it("落印 in the layer sends at once, with no undo strip", async () => {

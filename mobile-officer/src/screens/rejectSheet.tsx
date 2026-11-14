@@ -10,7 +10,7 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ActionButton } from "../kit";
-import { Icon, Input, Sheet, Txt, family, radius, space, useI18n, useRemote, useTheme } from "../shared";
+import { Icon, Input, Sheet, Txt, family, radius, space, titleFamily, useI18n, useRemote, useTheme } from "../shared";
 import {
   CN_TOP,
   DENIED_IMMORTALITY_CIRCLE,
@@ -330,8 +330,10 @@ export function AccountSheet({ open, busy, onCancel, onConfirm }: { open: boolea
 }
 
 /**
- * 回读底页(偏好「落印前先确认」打开时,`prefs.tsx`):落印之前念一遍人名、案号、判决,没有计时;按「落印」才发。
- * 「取消」排在前面,读屏从标题读起,不先落在「落印」上。
+ * 回读底页(偏好「落印前先确认」打开时,`prefs.tsx`):落印之前念一遍人名、案号、判决,没有计时,不自动关闭;按「落印」才发。
+ * 第四十六批第一节第 8 条:三行同网页(人名 18 衬线、案号 16 等宽、判决 20 衬线,最大);「返回 / 落印」并排,
+ * 落印在右、宽是返回的 1.4 倍、高 52。下滑底页等于返回(`Sheet` 的拖拽关闭走 `onClose`,即 `onCancel`)。
+ * 「返回」排在前面,读屏从标题读起,不先落在「落印」上。
  */
 export function SealReadbackSheet({
   open,
@@ -350,34 +352,50 @@ export function SealReadbackSheet({
 }) {
   const { t } = useI18n();
   const theme = useTheme();
-  const line = (label: string, value: string, testID: string) => (
-    <View style={{ flexDirection: "row", gap: space[3] }}>
-      <Txt variant="body" tone="muted" style={{ minWidth: 56 }}>
+  const name = judgment.soul_name ?? "";
+  const verdictLabel = verdict ? verdictText(t, judgment.civilization, verdict) : "";
+  const line = (label: string, value: string, testID: string, face: object) => (
+    <View style={[readback.line, { borderTopColor: theme.hair }]}>
+      <Txt variant="body" tone="muted" style={readback.label}>
         {label}
       </Txt>
-      <Txt variant="bodyLg" testID={testID} style={{ flexShrink: 1 }}>
+      <Txt testID={testID} style={[face, readback.value, { color: theme.ink }]}>
         {value}
       </Txt>
     </View>
   );
   return (
-    <Sheet open={open} onClose={onCancel} edge={theme.hair} closeLabel={t("common.cancel")}>
+    <Sheet open={open} onClose={onCancel} edge={theme.hair} closeLabel={t("judgment.seal_readback.back")}>
       <View testID="swipe-readback-sheet" style={{ padding: space[5], gap: space[3] }}>
         <Txt variant="title">{t("judgment.seal_readback.title")}</Txt>
-        {line(t("judgment.seal_readback.soul"), judgment.soul_name ?? "", "readback-name")}
-        {line(t("judgment.seal_readback.case"), judgment.case_number ?? "", "readback-case")}
-        {line(t("judgment.seal_readback.verdict"), verdict ? verdictText(t, judgment.civilization, verdict) : "", "readback-verdict")}
+        <View>
+          {line(t("judgment.seal_readback.soul"), name, "readback-name", { fontFamily: titleFamily(name), fontSize: 18, lineHeight: 26 })}
+          {line(t("judgment.seal_readback.case"), judgment.case_number ?? "", "readback-case", { fontFamily: family.mono[400], fontSize: 16, lineHeight: 26 })}
+          {line(t("judgment.seal_readback.verdict"), verdictLabel, "readback-verdict", { fontFamily: titleFamily(verdictLabel), fontSize: 20, lineHeight: 28 })}
+        </View>
         <Txt variant="caption" tone="muted">
           {t("judgment.seal_readback.note")}
         </Txt>
-        <View style={{ flexDirection: "row", gap: space[3] }}>
-          <ActionButton testID="readback-cancel" kind="outline" title={t("common.cancel")} onPress={onCancel} />
-          <ActionButton testID="readback-confirm" kind="primary" busy={busy} title={t("caseDesk.dossier.judge.seal")} onPress={onConfirm} style={{ flex: 1 }} />
+        <View style={readback.buttons}>
+          <ActionButton testID="readback-cancel" kind="outline" title={t("judgment.seal_readback.back")} onPress={onCancel} style={readback.back} />
+          <ActionButton testID="readback-confirm" kind="primary" busy={busy} title={t("caseDesk.dossier.judge.seal")} onPress={onConfirm} style={readback.seal} />
         </View>
       </View>
     </Sheet>
   );
 }
+
+/** 第四十六批第一节第 8 条的尺寸:落印宽 1.4 倍(flex 1 : 1.4)、两键高 52。 */
+export const READBACK_SEAL_FLEX = 1.4;
+export const READBACK_BUTTON_H = 52;
+const readback = StyleSheet.create({
+  line: { flexDirection: "row", alignItems: "baseline", gap: space[3], paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  label: { minWidth: 56 },
+  value: { flexShrink: 1 },
+  buttons: { flexDirection: "row", gap: 10 },
+  back: { flex: 1, minHeight: READBACK_BUTTON_H },
+  seal: { flex: READBACK_SEAL_FLEX, minHeight: READBACK_BUTTON_H },
+});
 
 const styles = StyleSheet.create({
   choice: { flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 48, paddingHorizontal: space[4], paddingVertical: space[2], borderWidth: 1, borderRadius: radius.control },
