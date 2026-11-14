@@ -288,7 +288,9 @@ test("the triage queue counts down as cases are ruled on", async ({ page, contex
   await page.goto("/judgment/queue");
   await expect(page.locator("main")).toContainText(`第 1 / 共 ${total} 条`);
   await expect(page.locator("main")).toContainText(`剩余 ${total}`);
+  // 1 selects, Ctrl/⌘+Enter seals (fast-track, 2026-11-14).
   await page.keyboard.press("1");
+  await page.keyboard.press("Control+Enter");
   await expect(page.locator("main")).toContainText(`剩余 ${total - 1}`, { timeout: 15000 });
   await expect(page.locator("main")).toContainText("已裁决 1");
   await expect(page.locator("main")).toContainText(`第 2 / 共 ${total} 条`);
