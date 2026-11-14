@@ -65,6 +65,8 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
               </View>
             }
           />
+          {/* O1: what to type at sign-in, read-only (the name above may be a display name). */}
+          <Fact testID="me-username" label={t("officer_app.me.username")} value={user.username} />
           <Fact label={t("officer_app.me.role")} value={role.state === "known" ? role.label : user.role} />
           <Fact label={t("officer_app.me.hall")} value={hallLabel(t, user.tenant) ?? ""} />
           {profile.data?.email ? (
@@ -153,9 +155,9 @@ function Block({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value, testID }: { label: string; value: string; testID?: string }) {
   return (
-    <View style={{ gap: space[1] }}>
+    <View testID={testID} style={{ gap: space[1] }}>
       <Txt variant="caption" tone="muted">
         {label}
       </Txt>

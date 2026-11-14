@@ -8344,6 +8344,7 @@
       "reject_body": "驳回后流程退回{{name}}，不能撤回。",
       "reject_ok": "确认驳回",
       "reason_label": "驳回理由 · 必填，发起人会读到",
+      "recent_reasons": "最近用过的理由 · 点一条填入",
       "reason_required": "驳回必须写理由",
       "failed": "没能提交 · {{reason}}",
       "reasons": {
@@ -8405,6 +8406,7 @@
       "name_empty": "姓名不能为空",
       "role": "角色",
       "hall": "所属殿",
+      "username": "登录用户名",
       "mfa": "两步验证",
       "mfa_on": "已开启",
       "mfa_off": "未开启",

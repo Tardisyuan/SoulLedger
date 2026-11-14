@@ -13,6 +13,8 @@
   "officer_app.bio_login.row_unavailable",
   "officer_app.bio_login.toggle_failed",
   "officer_app.bio_login.wrong_password",
+  "officer_app.confirm.recent_reasons",
+  "officer_app.me.username",
   "soul_app.login.email",
   "soul_app.login.email_hint",
   "soul_app.login.reset_filled",

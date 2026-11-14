@@ -20,6 +20,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { FilterChips, RefreshFailed, StateView, Tag, TAG_SHAPE, touch, type TagTone, type ViewState } from "../kit";
+import { readQueueSource, writeQueueSource } from "../memory";
 import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote, useOnBump } from "../readCache";
 import { goneKey, isDenied } from "../rules";
@@ -126,15 +127,6 @@ export function QueueTab({
   // 认领 / 放回 need `judgment.execute`; a judgment.read role sees the desk without the swipe.
   const canClaim = useCan("judgment.execute");
   const [busy, setBusy] = useState<string | null>(null);
-  const [source, setSource] = useState<FilterSource | "all">("all");
-
-  const mine = useGroupRows("mine", source);
-  const deferred = useGroupRows("deferred", source);
-  const unclaimed = useGroupRows("unclaimed", source);
-  // 他人手上 last: read-only on the phone, no swipe.
-  const others = useGroupRows("others", source);
-  const groups = [mine, deferred, unclaimed, others];
-
   // Counts (the overview and the group headings) and the hall's month: not in the read cache, asked again on reconnect.
   // Unfiltered: the overview, the chips and (under 全部) the group headings are the whole desk.
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
@@ -144,6 +136,23 @@ export function QueueTab({
   // async: a test double without `hallStats` rejects instead of throwing out of the loader.
   const loadStats = useCallback(async () => (await judgmentApi.hallStats()).data, []);
   const stats = useRemote(loadStats);
+
+  // Kept across launches for this officer (D8, memory.ts). The chip of a source with nothing in it now is not drawn, so
+  // nothing could take it off: the desk shows 全部 then, and the kept choice stays for when it fills again.
+  const [kept, setKept] = useState<FilterSource | "all">(() => readQueueSource(["all", ...FILTER_SOURCES]) ?? "all");
+  const sources = counts.data?.sources;
+  const source = kept !== "all" && sources && !(sources[kept] > 0) ? "all" : kept;
+  const setSource = (next: FilterSource | "all") => {
+    setKept(next);
+    writeQueueSource(next);
+  };
+
+  const mine = useGroupRows("mine", source);
+  const deferred = useGroupRows("deferred", source);
+  const unclaimed = useGroupRows("unclaimed", source);
+  // 他人手上 last: read-only on the phone, no swipe.
+  const others = useGroupRows("others", source);
+  const groups = [mine, deferred, unclaimed, others];
 
   const refresh = () => Promise.all([mine.reload(), deferred.reload(), unclaimed.reload(), others.reload(), counts.reload(), stats.reload()]);
   useOnBump(version, refresh);
@@ -188,7 +197,6 @@ export function QueueTab({
     stats.data?.month_done_pct ?? null
   );
   // 全部 / 审判队列 / 跨域 from `sources` (which `?source=` does not change); the elsewhere chips that have a screen.
-  const sources = c?.sources;
   const rebirths = (c?.elsewhere as { rebirth_application?: number | null } | undefined)?.rebirth_application;
   const elsewhere = [
     ...(onOpenCityGod && c?.elsewhere?.city_god_review ? [{ key: "city_god_review" as const, count: c.elsewhere.city_god_review }] : []),

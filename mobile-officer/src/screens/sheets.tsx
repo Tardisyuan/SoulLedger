@@ -10,7 +10,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Share, View } from "react-native";
 
 import { NotConfirmed, confirmedDecision, useBioWord } from "../deviceCheck";
-import { ActionButton, Row, Segmented } from "../kit";
+import { ActionButton, Chip, Row, Segmented } from "../kit";
+import { recentReasons, rememberReason } from "../memory";
 import {
   decisionFailure,
   deskUrl,
@@ -93,6 +94,9 @@ export function DecisionSheet({
   const parsedDays = /^\d+$/.test(days.trim()) ? Number(days.trim()) : null;
   const daysInvalid = needsDays && (parsedDays === null || (cooldown !== null && parsedDays >= cooldown.remainingDays));
   const missingReason = reasonMissing(verdict, reason);
+  const maxReason = reasonMaxLength(detail.kind);
+  // Read once per opening (the caller gives the sheet a new `key` each time).
+  const [recent] = useState(recentReasons);
 
   const hall = (h: { code: string; display_name: string } | null | undefined) => hallLabel(t, h) ?? "";
   const effect = effectLine(detail, verdict, hall, parsedDays ?? cooldown?.desiredDays ?? null, locale);
@@ -119,6 +123,7 @@ export function DecisionSheet({
       .then(() => {
         // O-f: an approved dispatch has not moved the soul yet -- the receiving hall executes it on the desk.
         if (detail.kind === "reassignment" && verdict === "approve") toast(t("officer_app.dispatch.approved_next"), "success");
+        if (verdict === "reject") rememberReason(reason);
         dropReason();
         onDone();
         onClose();
@@ -193,12 +198,25 @@ export function DecisionSheet({
             error={flagged && daysInvalid ? t("officer_app.confirm.days_invalid") : null}
           />
         ) : null}
+        {verdict === "reject" && recent.length > 0 ? (
+          // D8: the last three reasons this officer sent; a tap puts one in the box (cut to this box's length).
+          <View testID="decision-recent" style={{ gap: space[2] }}>
+            <Txt variant="caption" tone="muted">{t("officer_app.confirm.recent_reasons")}</Txt>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space[2] }}>
+              {recent.map((r, i) => (
+                <View key={r} style={{ maxWidth: "100%" }}>
+                  <Chip testID={`decision-recent-${i}`} label={r} on={reason === r.slice(0, maxReason)} onPress={() => setReason(r.slice(0, maxReason))} />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
         {verdict === "reject" ? (
           <Input
             testID="decision-reason"
             label={t("officer_app.confirm.reason_label")}
             multiline
-            maxLength={reasonMaxLength(detail.kind)}
+            maxLength={maxReason}
             value={reason}
             onChangeText={setReason}
             error={flagged && missingReason ? t("officer_app.confirm.reason_required") : null}

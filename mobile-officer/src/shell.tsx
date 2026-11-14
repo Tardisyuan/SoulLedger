@@ -131,6 +131,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
     // A link held while signed out (or before this mounted) arrives here first. Same landing as a push.
     () =>
       officerLinks.subscribe((link) => {
+        // 案件 / 灵魂 (D6): the same landing as a notice naming one.
+        if (link.judgment || link.soul) return land({ tab: "todo", judgment: link.judgment, soul: link.soul });
         setSwipe(false);
         setVersion((v) => v + 1);
         setTodoOnce(null);
@@ -144,7 +146,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           setTab(link.tab);
         }
       }),
-    []
+    [land]
   );
 
   useEffect(
