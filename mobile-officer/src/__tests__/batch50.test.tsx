@@ -5,7 +5,7 @@
  */
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import { platform } from "@soulledger/core/platform";
-import { Pressable, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
 import { USER_KEY } from "../owner";
 import { RECENT_KEY, noteOpened, readRecent } from "../recentOpened";
