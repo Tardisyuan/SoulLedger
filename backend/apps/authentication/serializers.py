@@ -311,6 +311,28 @@ class HallChoiceResponseSerializer(ProblemSerializer):
     halls = LoginHallSerializer(many=True)
 
 
+def login_username(identifier):
+    """The login identifier → the username to authenticate (O4, 2026-11-15 user decision).
+
+    Contains `@` and no account is literally named that → the username of the one live, active
+    officer whose **verified** email it is. Otherwise the identifier unchanged — so an unknown,
+    unverified or soul address goes on to `authenticate()` as a username that does not exist,
+    and the backend runs its usual dummy hash and answers the same `no_active_account` as a wrong
+    password: no account-existence leak, comparable timing. Live-row emails are unique
+    (`unique_user_email_among_live_rows`), so at most one row matches; `[:2]` is belt and braces.
+    The throttle in `LoginView` keys on the raw identifier lower-cased — for an email, the address.
+    """
+    if "@" not in identifier or User.objects.filter(username=identifier).exists():
+        return identifier
+    email = identifier.strip()
+    found = list(
+        User.objects.filter(email__iexact=email, email_verified_address__iexact=email,
+                            is_active=True, is_deleted=False)
+        .exclude(role="SOUL").values_list("username", flat=True)[:2]
+    )
+    return found[0] if len(found) == 1 else identifier
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Add tenant info to JWT + response.
 
@@ -353,6 +375,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # TokenObtainPairSerializer.validate, restated so the token can be
         # marked *before* it is serialised: `super().validate` would hand back
         # strings already carrying the default expiry.
+        attrs[self.username_field] = login_username(attrs[self.username_field])
         super(TokenObtainPairSerializer, self).validate(attrs)
         return self._finish(attrs)
 
@@ -443,6 +466,7 @@ class OfficerTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
 
         refused = AuthenticationFailed(self.default_error_messages["no_active_account"], "no_active_account")
         hint = (attrs.get("tenant_code") or "").strip()
+        attrs["username"] = login_username(attrs["username"])
         accounts = self.accounts_named(attrs["username"])
         if len(accounts) > 1:
             matches = [u for u in accounts

@@ -1540,8 +1540,9 @@ def set_new_password(request):
     # (`ACCESS_TOKEN_LIFETIME`, 30 minutes by default) and cannot be renewed.
     from apps.authentication.passwords import end_sessions
     from apps.soul_accounts.models import SoulAccount
-    from apps.soul_accounts.services import set_password_chosen_by_soul
+    from apps.soul_accounts.services import mark_login_email_verified, set_password_chosen_by_soul
 
+    mark_login_email_verified(user, email)  # the code reached this address: it may now sign in with it
     account = SoulAccount.objects.filter(user=user).first()
     if account is not None:
         account.user = user

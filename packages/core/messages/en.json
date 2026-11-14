@@ -62,6 +62,8 @@
     "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password.",
     "subtitle": "Sign in with the account your hall issued.",
     "account": "Account",
+    "account_or_email": "Account or email",
+    "account_or_email_hint": "An email works once it is verified on your profile",
     "console": "SoulLedger · Officer console",
     "statute_eyebrow": "Today's statute",
     "statute_rotates": "A new one each visit",
@@ -5067,6 +5069,10 @@
       "password": "Password",
       "submit": "Sign in",
       "soul_code_hint": "10 letters and digits · on your slip, or scan it",
+      "email": "Contact email",
+      "email_hint": "Your verified contact email · if your family shares one, use your soul number",
+      "use_email": "Use my email instead",
+      "use_code": "Use my soul number instead",
       "scan": "Scan",
       "scanned": "✓ Filled in from the code",
       "bad_char": "! A soul number doesn't use \"{{c}}\"",
@@ -8398,7 +8404,6 @@
       "empty_body": "New notices will appear here."
     },
     "login": {
-      "username": "Username",
       "password": "Password",
       "submit": "Sign in",
       "hall_title": "Choose a hall",

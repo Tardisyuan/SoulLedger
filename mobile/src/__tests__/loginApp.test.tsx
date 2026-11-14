@@ -166,6 +166,31 @@ describe("D · the number box", () => {
     expect(calls.find((c) => c.url === "/soul-auth/login/")?.body).toEqual({ soul_code: CODE, password: "initial-pass" });
   });
 
+  it("「改用邮箱登录」 turns the box into a plain address field that sends the address as typed (邮箱登录)", async () => {
+    const calls = stubApi({ "/soul-auth/login/": { status: 200, data: TOKENS }, ...HOME });
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-switch-entry"));
+    expect(screen.queryByTestId("login-soul-code")).toBeNull();
+    expect(screen.getByText("全家共用一个邮箱的，请用编号登录", { exact: false })).toBeTruthy();
+    // o, l, 1 and the dot are refused in a code; an address takes them, lower case kept
+    fireEvent.changeText(screen.getByTestId("login-email"), "lo1.il@family.example");
+    expect(screen.getByTestId("login-email").props.value).toBe("lo1.il@family.example");
+    expect(screen.queryByTestId("login-soul-code-problem")).toBeNull();
+    typePassword("pw");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await screen.findByTestId("profile-card");
+    expect(calls.find((c) => c.url === "/soul-auth/login/")?.body).toEqual({ soul_code: "lo1.il@family.example", password: "pw" });
+  });
+
+  it("an address pasted into the number box is kept whole; 「改用灵魂编号登录」 goes back to an empty number box", async () => {
+    await renderApp();
+    typeCode("Lone@Soul.example");
+    expect(screen.getByTestId("login-email").props.value).toBe("Lone@Soul.example");
+    fireEvent.press(screen.getByTestId("login-switch-entry"));
+    expect(screen.queryByTestId("login-email")).toBeNull();
+    expect(screen.getByTestId("login-soul-code").props.value).toBe("");
+  });
+
   it("while it is being sent the boxes grey, the button says 登录中… and cannot be pressed again", async () => {
     const held = heldReply();
     const calls = stubApi({ "/soul-auth/login/": held.reply, ...HOME });

@@ -33,6 +33,13 @@ describe("soulCodeStep: the box holds the raw characters; the step says what was
   it("never more than ten", () => {
     expect(soulCodeStep("QU33Q9FW5", "QU33Q9FW5FF").value).toBe("QU33Q9FW5F");
   });
+
+  it("an `@` makes it an email: taken as it is, not upper-cased, nothing refused (邮箱登录)", () => {
+    expect(soulCodeStep("", " lo1.il@Family.example ")).toEqual({ value: "lo1.il@Family.example", problem: null });
+    expect(soulCodeStep("QU3", "QU3@x.io")).toEqual({ value: "QU3@x.io", problem: null });
+    // without one, the same text is still a refused paste
+    expect(soulCodeStep("", "lo1.il").problem?.kind).toBe("bad_paste");
+  });
 });
 
 describe("canSubmitLogin", () => {
@@ -41,6 +48,12 @@ describe("canSubmitLogin", () => {
     expect(canSubmitLogin("QU33Q9FW5", "p", false)).toBe(false);
     expect(canSubmitLogin("QU33Q9FW5F", "", false)).toBe(false);
     expect(canSubmitLogin("QU33Q9FW5F", "p", true)).toBe(false);
+  });
+
+  it("or an address shaped like one", () => {
+    expect(canSubmitLogin("a@b.example", "p", false)).toBe(true);
+    expect(canSubmitLogin("a@b", "p", false)).toBe(false);
+    expect(canSubmitLogin("a@b.example", "", false)).toBe(false);
   });
 });
 

@@ -1,1 +1,8 @@
-[]
+[
+  "auth.account_or_email",
+  "auth.account_or_email_hint",
+  "soul_app.login.email",
+  "soul_app.login.email_hint",
+  "soul_app.login.use_email",
+  "soul_app.login.use_code"
+]

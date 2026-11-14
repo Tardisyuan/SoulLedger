@@ -47821,7 +47821,7 @@ components:
       properties:
         soul_code:
           type: string
-          maxLength: 32
+          maxLength: 254
         password:
           type: string
           maxLength: 128

@@ -167,7 +167,8 @@ class SoulLoginView(APIView):
             LoginLog.objects.create(username=sign_in_username(soul_code), status="FAILED", ip_address=ip,
                                     user_agent=user_agent, failure_reason=exc.code)
             return _error(exc)
-        return finish_first_step(account, soul_code, rate_keys=keys, ip=ip,
+        # 邮箱登录(含 `@`)成功时,登录记录照样记编号:「登录记录」页按 `soul:<编号>` 找这个灵魂。
+        return finish_first_step(account, account.soul.soul_code, rate_keys=keys, ip=ip,
                                  user_agent=user_agent, device_token=body.validated_data.get("device_token"),
                                  request=request)
 
