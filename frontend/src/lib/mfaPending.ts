@@ -8,6 +8,8 @@ export const MFA_PENDING_KEY = "soulledger_mfa_pending";
 export interface MfaPending {
   pending_token: string;
   username: string;
+  /** 第一步勾了「保持登录」没有:决定登录标记 cookie 是否随浏览器关闭而失效(W2)。 */
+  remember: boolean;
 }
 
 export function storeMfaPending(p: MfaPending): void {
@@ -24,7 +26,7 @@ export function readMfaPending(): MfaPending | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<MfaPending>;
     return typeof parsed.pending_token === "string" && typeof parsed.username === "string"
-      ? { pending_token: parsed.pending_token, username: parsed.username }
+      ? { pending_token: parsed.pending_token, username: parsed.username, remember: parsed.remember === true }
       : null;
   } catch {
     return null;

@@ -11,6 +11,7 @@ import { mfaApi } from "@soulledger/core/api";
 import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { goTo, replaceWith } from "@/src/lib/navigate";
 import { MFA_PENDING_KEY, readMfaPending, storeMfaPending } from "@/src/lib/mfaPending";
+import { RETURN_TO_KEY } from "@/src/lib/returnTo";
 
 jest.mock("@soulledger/core/api", () => ({
   mfaApi: { verify: jest.fn() },
@@ -37,7 +38,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 const verify = mfaApi.verify as jest.Mock;
-const PENDING = { pending_token: "pending.jwt", username: "yama" };
+const PENDING = { pending_token: "pending.jwt", username: "yama", remember: false };
 const TOKENS = { access: "a", refresh: "r", user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: [], mfa_enabled: true, mfa_required: true } };
 
 beforeEach(() => {
@@ -73,11 +74,38 @@ describe("LoginVerifyPage", () => {
     await waitFor(() => expect(verify).toHaveBeenCalledTimes(1));
     expect(verify).toHaveBeenCalledWith({ pending_token: "pending.jwt", code: "123456", remember_device: false });
     await waitFor(() => expect(setAccessToken).toHaveBeenCalledWith("a"));
-    expect(setRefreshToken).toHaveBeenCalledWith("r");
+    expect(setRefreshToken).toHaveBeenCalledWith("r", false); // 「保持登录」 from the first step (W2)
     expect(mockSetUser).toHaveBeenCalledWith(TOKENS.user);
     expect(readMfaPending()).toBeNull();
     expect(sessionStorage.getItem(MFA_PENDING_KEY)).toBeNull();
     await waitFor(() => expect(goTo).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("carries 「保持登录」 from the first step into the marker's lifetime (W2)", async () => {
+    storeMfaPending({ ...PENDING, remember: true });
+    verify.mockResolvedValueOnce({ data: TOKENS });
+    render(<LoginVerifyPage />);
+    fireEvent.change(codeInput(), { target: { value: "123456" } });
+    await waitFor(() => expect(setRefreshToken).toHaveBeenCalledWith("r", true));
+  });
+
+  it("lands on the page the session expired on, once, instead of the default view (W1)", async () => {
+    sessionStorage.setItem(RETURN_TO_KEY, "/souls/42?tab=events");
+    verify.mockResolvedValueOnce({ data: TOKENS });
+    render(<LoginVerifyPage />);
+    fireEvent.change(codeInput(), { target: { value: "123456" } });
+    await waitFor(() => expect(goTo).toHaveBeenCalledWith("/souls/42?tab=events"));
+    expect(goTo).not.toHaveBeenCalledWith("/dashboard");
+    expect(sessionStorage.getItem(RETURN_TO_KEY)).toBeNull();
+  });
+
+  it("ignores a stored return path that leaves the origin (W1)", async () => {
+    sessionStorage.setItem(RETURN_TO_KEY, "//evil.example/phish");
+    verify.mockResolvedValueOnce({ data: TOKENS });
+    render(<LoginVerifyPage />);
+    fireEvent.change(codeInput(), { target: { value: "123456" } });
+    await waitFor(() => expect(goTo).toHaveBeenCalledWith("/dashboard"));
+    expect(goTo).not.toHaveBeenCalledWith("//evil.example/phish");
   });
 
   it("sends remember_device when the 30-day box is ticked", async () => {
