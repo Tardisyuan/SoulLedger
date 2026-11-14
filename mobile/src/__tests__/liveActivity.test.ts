@@ -8,10 +8,10 @@ import path from "path";
 
 import * as Notifications from "expo-notifications";
 
-import { LIVE_ASKED_KEY, LIVE_CHANNEL, LIVE_NOTIFICATION, LOCK_GROUND, androidContent, endLiveProgress, liveChannel, liveTint, nativeState, showLiveProgress } from "../liveProgress";
+import { LIVE_ASKED_KEY, LIVE_CHANNEL, LIVE_NOTIFICATION, LOCK_GROUND, androidContent, endLiveProgress, liveAccent, liveChannel, liveTint, nativeState, showLiveProgress } from "../liveProgress";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { PRIMER_SEEN_KEY } from "../push";
-import { contrastRatio, themeOf, type CivKey } from "../theme";
+import { contrastRatio, seal, themeOf } from "../theme";
 import type { LiveContent } from "@soulledger/core/domain/soulRoute";
 
 // The local module: absent (null) unless a test installs one, as in jest and Expo Go.
@@ -58,25 +58,62 @@ describe("the Live Activity's two halves", () => {
     expect(live.widgetInfoPlist()).toContain("<string>com.apple.widgetkit-extension</string>");
   });
 
-  it("Design 第四十九批 B1: the mark is the seal's glow, the bar is the spine's civT per scheme, the tag's ground the system's", () => {
+  it("Design 第五十一批: one neutral card per scheme — the ground tinted, fixed text colours, a drawn track; the bar and mark per scheme", () => {
     const swift: string = live.widgetSwift();
-    expect(swift).toContain("Mark(tint: tints.mark)");
-    expect(swift).toContain(".tint(state.ended ? Color.ended : (scheme == .dark ? tints.barDark : tints.barLight))");
-    expect(swift).toContain(".background(Color(uiColor: .tertiarySystemFill))");
-    // The tag no longer takes the civilization's colour.
+    const lock = swift.slice(swift.indexOf("private struct LockScreenLive"), swift.indexOf("struct SoulLedgerLiveWidget"));
+    expect(lock.length).toBeGreaterThan(500);
+    expect(lock).toContain(".activityBackgroundTint(card.ground)");
+    expect(lock).toContain("let card = Card.of(scheme)");
+    expect(lock).toContain("Mark(tint: tints.mark(scheme))");
+    expect(lock).toContain("Bar(progress: state.progress, fill: state.ended ? Color.ended : tints.bar(scheme), track: card.track)");
+    expect(lock).toContain(".background(card.tag)");
+    expect(lock).toContain(".font(.system(size: 15, weight: .semibold))");
+    expect(lock).toContain(".font(.system(size: 13, weight: .medium).monospacedDigit())");
+    // The system's vibrant colours, fill and progress view are gone: they follow the wallpaper, not our ground.
+    // A bare `.primary` / `.secondary` (not `card.secondary`): the system's semantic style.
+    expect(lock.match(/(?<![\w)])\.(primary|secondary)\b/g)).toBeNull();
+    for (const gone of ["tertiarySystemFill", "ProgressView"]) expect(lock).not.toContain(gone);
+    expect(swift.match(/(?<![\w)])\.(primary|secondary)\b/g)).toBeNull();
+    // The two grounds and every neutral are generated from CARD, and the widget's ground is the one liveTint checks.
+    for (const scheme of ["light", "dark"] as const) {
+      for (const hex of Object.values(live.CARD[scheme] as Record<string, string>)) expect(swift).toContain(`Color(hex: "${hex}")`);
+      expect(live.CARD[scheme].ground).toBe(LOCK_GROUND[scheme]);
+    }
+    // The island's ground is the system's black: the dark column.
+    expect(swift).toContain("Tints(context.attributes.tint).mark(.dark)");
+    expect(swift).toContain("let card = Card.dark");
+    // The tag does not take the civilization's colour.
     expect(swift).not.toMatch(/tint\.opacity|tints\.\w+\.opacity/);
   });
 
-  it("liveTint: mark;barLight;barDark — glow, then civT where it holds 3:1 on that scheme's lock screen", () => {
+  it("the widget still reads the older tints: 第四十九批's mark;barLight;barDark and a single colour", () => {
+    const swift: string = live.widgetSwift();
+    const tints = swift.slice(swift.indexOf("private struct Tints"), swift.indexOf("private struct Mark"));
+    expect(tints).toContain("markDark = four ? parts[1] : first");
+    expect(tints).toContain("barLight = four ? parts[2] : parts.count == 3 ? parts[1] : first");
+    expect(tints).toContain("barDark = four ? parts[3] : parts.count == 3 ? parts[2] : first");
+  });
+
+  const CIVS = ["cn", "eu", "eg", "gr"] as const;
+
+  it("liveTint: markLight;markDark;barLight;barDark — the seal and civT of each scheme", () => {
     expect(contrastRatio("#000000", "#FFFFFF")).toBeCloseTo(21);
-    for (const civ of ["neutral", "cn", "eu", "eg", "gr"] as CivKey[]) {
-      const [mark, light, dark] = liveTint(civ).split(";");
-      expect(mark).toBe(themeOf(civ, "dark").glow);
-      // Today every civT clears 3:1 on both grounds, so the bar keeps the civilization's colour.
-      expect(light).toBe(themeOf(civ, "light").plaque);
-      expect(dark).toBe(themeOf(civ, "dark").plaque);
-      expect(contrastRatio(light, LOCK_GROUND.light)).toBeGreaterThanOrEqual(3);
-      expect(contrastRatio(dark, LOCK_GROUND.dark)).toBeGreaterThanOrEqual(3);
+    for (const civ of CIVS) {
+      const [markL, markD, barL, barD] = liveTint(civ).split(";");
+      expect([markL, markD]).toEqual([seal[civ].light, seal[civ].dark]);
+      // Design 第五十一批: every civT clears 3:1 on both card grounds, so the bar keeps the civilization's colour.
+      expect([barL, barD]).toEqual([themeOf(civ, "light").plaque, themeOf(civ, "dark").plaque]);
+    }
+    // neutral has no seal: its mark is its bar.
+    const [markL, markD, barL, barD] = liveTint("neutral").split(";");
+    expect([markL, markD]).toEqual([barL, barD]);
+  });
+
+  it("Design 第五十一批: every civilization's bar and mark hold 3:1 on both card grounds", () => {
+    for (const civ of CIVS) {
+      const [markL, markD, barL, barD] = liveTint(civ).split(";");
+      for (const [colour, scheme] of [[markL, "light"], [barL, "light"], [markD, "dark"], [barD, "dark"]] as const)
+        expect([civ, scheme, colour, contrastRatio(colour, LOCK_GROUND[scheme]) >= 3]).toEqual([civ, scheme, colour, true]);
     }
   });
 
@@ -84,14 +121,22 @@ describe("the Live Activity's two halves", () => {
     const saved = LOCK_GROUND.light;
     LOCK_GROUND.light = themeOf("cn", "light").plaque; // 1:1
     try {
-      const [mark, light, dark] = liveTint("cn").split(";");
-      expect(mark).toBe(themeOf("cn", "dark").glow);
+      const [markL, , light, dark] = liveTint("cn").split(";");
+      expect(markL).toBe(seal.cn.light);
       expect(light).toBe(themeOf("cn", "light").ink);
       expect(light).not.toBe(themeOf("cn", "light").plaque);
       expect(dark).toBe(themeOf("cn", "dark").plaque);
     } finally {
       LOCK_GROUND.light = saved;
     }
+  });
+
+  it("liveAccent: Android's accent is the walked bar of the system's scheme; older tints read as the widget reads them", () => {
+    const tint = liveTint("eg");
+    expect(liveAccent(tint, "light")).toBe(themeOf("eg", "light").plaque);
+    expect(liveAccent(tint, "dark")).toBe(themeOf("eg", "dark").plaque);
+    expect(liveAccent("#111111;#222222;#333333", "dark")).toBe("#333333");
+    expect(liveAccent("#111111", "dark")).toBe("#111111");
   });
 
   it("the extension's bundle id hangs off the app's, its versions are the app's, and the app opts in to Live Activities", () => {
@@ -216,7 +261,8 @@ describe("Android: the native module posts the live progress", () => {
     const scheduled = jest.spyOn(Notifications, "scheduleNotificationAsync");
     await showLiveProgress(CONTENT, "#C8604F");
     const n = androidContent(CONTENT);
-    expect(mockNative!.notify).toHaveBeenCalledWith(CONTENT.title, n.title, n.body, 1);
+    // A single-colour tint is its own accent in either scheme.
+    expect(mockNative!.notify).toHaveBeenCalledWith(CONTENT.title, n.title, n.body, 1, "#C8604F");
     expect(mockNative!.show).not.toHaveBeenCalled();
     expect(scheduled).not.toHaveBeenCalled();
     scheduled.mockRestore();
@@ -242,6 +288,9 @@ describe("Android: the native module posts the live progress", () => {
     // Tapping opens 本世 through the app's own link.
     expect(kotlin).toContain('"soulledger://life"');
     expect(kotlin).toContain("cancel(TAG, ID)");
+    // Design 第五十一批: the accent the app sends wins over the manifest's colour; it is optional for older callers.
+    expect(kotlin).toContain("progress: Double, accent: String? ->");
+    expect(kotlin).toContain("(parse(accent) ?: color(ctx))?.let { setColor(it) }");
     const config = JSON.parse(fs.readFileSync(path.join(ROOT_MODULE, "expo-module.config.json"), "utf8"));
     expect(config.platforms).toEqual(expect.arrayContaining(["apple", "android"]));
     expect(config.android.modules).toEqual(["expo.modules.soulledgerlive.SoulLedgerLiveModule"]);

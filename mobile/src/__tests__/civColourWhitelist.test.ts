@@ -20,13 +20,20 @@
  * 把 emblems.tsx 的 GLOW_ALPHA.light 改回 0.24 → 「不超过网页」那条红。
  * 第四十九批:把 life.tsx「你现在在这里」小字的 `t.ink` 改回 `t.metal` → 「恰好是名单上的这些」(life.tsx :: metal 变 2)与
  * 「metal 只在当前点」两条红;把 ui.tsx Loading 的 `<Hero … stroke={t.inkSubtle}` 改成 `t.plaque` → 「全色徽记只在欢迎层」红;
- * 把 liveProgress.ts liveTint 的 `>= 3` 改成 `>= 30` → liveActivity.test 的「liveTint: mark;barLight;barDark」那条红(进度条全变墨)。
+ * 把 liveProgress.ts liveTint 的 `>= 3` 改成 `>= 30` → liveActivity.test 的「liveTint: markLight;markDark;barLight;barDark」那条红(进度条全变墨)。
+ * 第五十一批:锁屏卡片换成四家共用的中性卡(底 / 字 / 未走段 / 标签底随系统深浅),只有记号(seal)与已走段(civT)带文明色。
+ * 把 plugins/liveActivity.js CARD.light.tag 改成 `#885A94`(欧洲 civT)→ 「锁屏卡片的中性常量」那条红。
  */
 import { readFileSync, readdirSync } from "fs";
 import path from "path";
 
 import { TEXTURE_ALPHA } from "../civHead";
 import { GLOW_ALPHA, STAGE_MOTIF_OPACITY } from "../emblems";
+import { seal, themeOf } from "../theme";
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const LIVE_CARD: Record<"light" | "dark", Record<string, string>> = require("../../plugins/liveActivity").CARD;
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 const REPO = path.join(__dirname, "..", "..", "..");
 const DIRS = [path.join("mobile", "src"), path.join("mobile-officer", "src")];
@@ -48,9 +55,9 @@ const ALLOWED: Record<string, Kind[]> = {
   // 官员端:页头晕光;页头顶线位置的加载线。
   "mobile-officer/src/kit.tsx :: glow": ["GLOW_TOP_HEAD"],
   "mobile-officer/src/kit.tsx :: plaque": ["TOPLINE_LOADER"],
-  // 锁屏实时活动(第四十九批 B1,liveTint):记号算印(glow);进度条算行程脊(civT,深 / 浅系统底上不足 3:1 退墨);
-  // 标签底用系统自己的底色，不从这里取色。
-  "mobile/src/liveProgress.ts :: glow": ["SEAL"],
+  // 锁屏实时进度卡(第五十一批,liveTint):只放行两样 —— 记号是印，取各家 `seal`(theme.ts 的导出，不是槽，扫描不数它);
+  // 进度条已走段是行程脊,civT(卡片底上不足 3:1 退墨)。卡片底、字、未走段、标签底是中性常量(plugins/liveActivity.js 的 CARD),
+  // 下面「锁屏卡片的中性常量不是任何一家的文明色」核对它们。
   "mobile/src/liveProgress.ts :: plaque": ["SPINE"],
   // 欢迎层大徽记(96,第四十九批 B2):算印 —— 仅欢迎层;别处的徽记仍按空态规则用墨(下面「全色徽记只在欢迎层」)。
   "mobile/src/welcome.tsx :: plaque": ["SEAL"],
@@ -138,6 +145,24 @@ describe("App 的文明色只在名单上(Design 第四十八批第三节)", () 
 
   it("「此生」当前段的纹样(A7)与纸纹同浓度", () => {
     expect(STAGE_MOTIF_OPACITY).toEqual(TEXTURE_ALPHA);
+  });
+
+  it("锁屏卡片的中性常量不是任何一家的文明色(第五十一批:卡片底、字、未走段、标签底四家共用)", () => {
+    // 四家各自的文明色:四个槽 + 印，深浅两套。neutral 不是文明(它的 civT 就是次字 #54575C / #B4B6BA),不算。
+    const civColours = new Set<string>();
+    for (const civ of ["cn", "eu", "eg", "gr"] as const)
+      for (const scheme of ["light", "dark"] as const) {
+        const t = themeOf(civ, scheme);
+        for (const slot of SLOTS) civColours.add(String(t[slot]).toUpperCase());
+        civColours.add(seal[civ][scheme].toUpperCase());
+      }
+    expect(civColours.size).toBeGreaterThan(20);
+    // CARD.*.ground 与 liveProgress.ts 的 LOCK_GROUND 相等,由 liveActivity.test 核对。
+    const neutrals = (["light", "dark"] as const).flatMap((scheme) =>
+      Object.entries(LIVE_CARD[scheme]).map(([k, hex]) => `CARD.${scheme}.${k} ${hex.toUpperCase()}`)
+    );
+    expect(neutrals).toHaveLength(10);
+    expect(neutrals.filter((n) => civColours.has(n.split(" ")[1]))).toEqual([]);
   });
 });
 
