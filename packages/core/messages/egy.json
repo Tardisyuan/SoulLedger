@@ -6455,7 +6455,8 @@
       "more": "Smen {{name}}",
       "forget": "Nen Rekh Ren Hesb Ba Pen",
       "forget_body": "Medjat Pen Nen Rekh Ren Hesb Ba Pen Djer; Aq Wenen. Aq Em {{bio}}: Khetem.",
-      "forgotten": "Nen Rekh {{id}}-N"
+      "forgotten": "Nen Rekh {{id}}-N",
+      "bio_here": "Aq Em {{bio}}: Wen"
     }
   },
   "soul_push": {

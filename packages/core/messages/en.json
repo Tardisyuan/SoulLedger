@@ -6478,7 +6478,8 @@
       "more": "More for {{name}}",
       "forget": "Forget this number",
       "forget_body": "Only this phone stops remembering the number; the account itself is not affected. {{bio}} sign-in for it is turned off too.",
-      "forgotten": "Forgot {{id}}"
+      "forgotten": "Forgot {{id}}",
+      "bio_here": "{{bio}} sign-in is on for this number"
     }
   },
   "soul_push": {

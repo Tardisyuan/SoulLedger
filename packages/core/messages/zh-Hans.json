@@ -6478,7 +6478,8 @@
       "more": "{{name}} 的更多操作",
       "forget": "忘掉这个编号",
       "forget_body": "只是这台手机不再记住这个编号，账号本身不受影响。这个编号的{{bio}}登录也会关掉。",
-      "forgotten": "已忘掉 {{id}}"
+      "forgotten": "已忘掉 {{id}}",
+      "bio_here": "这个编号开了{{bio}}登录"
     }
   },
   "soul_push": {

@@ -548,6 +548,29 @@ describe("B1 · the phone remembers the account", () => {
     expect(persistentStore.get(BIO_KEY)).toBe("face");
   });
 
+  it("第五十二批 C4: the row that owns the credential carries the fingerprint after its number, read out; the other row has none", async () => {
+    rememberAccount(CODE, "张三");
+    persistentStore.set(BIO_KEY, "face");
+    secureMod.__guarded.set("soulledger_device_login", CRED);
+    rememberAccount(CODE2, "李四");
+    spendAutoPrompt();
+    await renderApp();
+    expect(await screen.findByTestId("login-accounts")).toBeTruthy();
+    const mark = screen.getByTestId(`account-bio-${CODE}`);
+    expect(mark.props.accessibilityLabel).toBe("这个编号开了面容登录");
+    expect(mark.props.width).toBe(16);
+    expect(screen.queryByTestId(`account-bio-${CODE2}`)).toBeNull();
+  });
+
+  it("第五十二批 C4: no credential on the phone, no fingerprint on any row", async () => {
+    rememberAccount(CODE, "张三");
+    rememberAccount(CODE2, "李四");
+    spendAutoPrompt();
+    await renderApp();
+    expect(await screen.findByTestId("login-accounts")).toBeTruthy();
+    expect(screen.queryByTestId(/^account-bio-/)).toBeNull();
+  });
+
   it("第五十批 C4: an older phone's single remembered account reads as a list of one; five are kept, the oldest goes", () => {
     persistentStore.set(ACCOUNT_KEY, JSON.stringify({ code: CODE, name: "张三" }));
     expect(rememberedAccounts()).toEqual([{ code: CODE, name: "张三" }]);

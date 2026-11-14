@@ -5,6 +5,7 @@
  * (officer `zh***g`, soul `QU3-•••-W5F`) and in the link's words.
  *
  * Also the row of C4's list (`trailing` in place of the link: the soul app's 「⋯」, 40 avatar, 15 / 500 name).
+ * `afterCode` sits right after the masked account (第五十二批 C4: the fingerprint on the row that owns the credential).
  * A leaf: ui / fonts only, so the officer app can import it (mobile-officer/src/shared.ts, sharedClosure.test.ts).
  */
 import type { ReactNode } from "react";
@@ -18,6 +19,7 @@ export function RememberedCard({
   masked,
   link,
   trailing,
+  afterCode,
   onPress,
   compact,
   disabled,
@@ -29,6 +31,8 @@ export function RememberedCard({
   link?: { label: string; onPress: () => void; testID?: string };
   /** In place of the link (a list row's 「⋯」). */
   trailing?: ReactNode;
+  /** Right after the masked account, on its line. */
+  afterCode?: ReactNode;
   /** The whole card (a list row: pick this number). */
   onPress?: () => void;
   /** A list row: avatar 40, name 15, no own border (the list draws one). */
@@ -51,9 +55,12 @@ export function RememberedCard({
             {name}
           </Txt>
         ) : null}
-        <Txt testID={testID ? `${testID}-code` : undefined} tone="muted" style={styles.masked}>
-          {masked}
-        </Txt>
+        <View style={styles.codeLine}>
+          <Txt testID={testID ? `${testID}-code` : undefined} tone="muted" style={styles.masked}>
+            {masked}
+          </Txt>
+          {afterCode}
+        </View>
       </View>
       {link ? (
         <Pressable testID={link.testID} accessibilityRole="button" disabled={disabled} onPress={link.onPress} style={styles.link}>
@@ -85,6 +92,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: family.ui[500], fontSize: 16, lineHeight: 22 },
   nameCompact: { fontSize: 15, lineHeight: 21 },
   masked: { fontFamily: family.mono[400], fontSize: 13, lineHeight: 18 },
+  codeLine: { flexDirection: "row", alignItems: "center", gap: 6 },
   link: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 10 },
   linkText: { textDecorationLine: "underline", fontSize: 14, lineHeight: 20 },
 });
