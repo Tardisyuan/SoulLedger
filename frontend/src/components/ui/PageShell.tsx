@@ -7,6 +7,7 @@ import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { CivMark } from "@/src/components/brand/CivEmblem";
+import { HeadMark } from "@/src/components/brand/HeadMark";
 import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { usePlaqueValue, useReportHeading } from "@/src/components/plaque/pageHeadContext";
 import type { PlaqueCase } from "@/src/components/plaque/Plaque";
@@ -155,8 +156,9 @@ export type PageShellVariant = "prose" | "page" | "full";
  * 页头的两种(第三十批「卷宗」第 1 步,Design v4 第三十批回复第一节第 1 条):
  *   gate     门页(名册、律令、殿司 …):标题是门名,宋体 24/32(`text-head`)
  *   dossier  卷宗页:标题是人名,宋体 32/40(`text-dossier`);上面那行等宽小字写案号、殿、入册日期
- * 两种都是「顶线 + 卷宗头」:页顶一条 2px 文明色线(`--topline`),背后铺光晕(`.glowtop`)、纹样(`.pat`,5%)
- * 与 G 天体仪水印(`.wm`,深 7% / 浅 9%),右侧是操作,主按钮是墨色实底(Button 的 `primary`)。
+ * 两种都是「顶线 + 卷宗头」:页顶一条 2px 文明色线(`--topline`),背后铺光晕(`.glowtop`)、纸纹(第四十五批:
+ * 四家四种、只用墨,深 6% / 浅 5%)与 G 天体仪水印(`.wm`,深 7% / 浅 9%),右上角是文明记号(`HeadMark`,
+ * 墨 34% / 30%),右侧是操作,主按钮是墨色实底(Button 的 `primary`)。
  */
 export type PageHeadKind = "gate" | "dossier";
 
@@ -376,7 +378,7 @@ export interface PageHeadProps {
 
 /**
  * 「顶线 + 卷宗头」(第三十批「卷宗」第 1 步)。PageShell 用它画页头;案卷台右侧摊开的那一份(第 2 步)直接用它。
- * 文明由 <html data-civ> 选(顶线 civT、光晕 glow × `--glowA`、纹样、水印都随文明换);水印的中心物读此刻所在的殿。
+ * 文明由 <html data-civ> 选(顶线 civT、光晕 glow × `--glowA`、纸纹、水印都随文明换);水印的中心物与记号读此刻所在的殿。
  * 不吸顶:卷宗的封面不跟着滚,滚动时还需要的只有筛选栏。
  */
 export function PageHead({
@@ -470,6 +472,7 @@ export function PageHead({
       <div aria-hidden="true" className="page-head-glow" />
       <div aria-hidden="true" className="page-head-pat" />
       <CivMark civ={civ} size={180} className="page-head-wm" />
+      <HeadMark civ={civ} />
     </header>
   );
 }

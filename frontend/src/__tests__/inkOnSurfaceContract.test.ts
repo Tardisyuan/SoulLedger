@@ -275,12 +275,13 @@ describe("main 的用法与文字透明度(源码扫描)", () => {
     expect(kbds.filter((k) => /\bopacity-/.test(k))).toEqual([]);
   });
 
-  // 第三十批「卷宗」的页头(`.page-head*`,取代身份带 `.identity-*`):纹样(`.page-head-pat`,5%)与水印
-  // (`.page-head-wm`,深 .07 / 浅 .09)是装饰、aria-hidden,不是要读的字,它们的淡就是 opacity。标题、小字行仍不许。
-  it("规定 3:页头上的字(标题 / 殿名 / 案号 / 日期)不带 opacity;纹样层与水印不是字,可以", () => {
+  // 第三十批「卷宗」的页头(`.page-head*`,取代身份带 `.identity-*`):水印(`.page-head-wm`,深 .07 / 浅 .09)
+  // 是装饰、aria-hidden,不是要读的字,它的淡就是 opacity。标题、小字行仍不许。纸纹与记号(第四十五批)的淡
+  // 写在颜色里(color-mix 墨 6% / 34%),不靠 opacity。
+  it("规定 3:页头上的字(标题 / 殿名 / 案号 / 日期)不带 opacity;水印不是字,可以", () => {
     const rules = [...stripCode(CSS).matchAll(/([^{}]*\.page-head[^{}]*)\{([^}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
     expect(rules.length).toBeGreaterThan(8);
     const withOpacity = rules.filter((r) => /(?<![-\w])opacity\s*:/.test(r.body)).map((r) => r.sel);
-    expect(withOpacity).toEqual([".page-head-pat", ".page-head-wm", ".light .page-head-wm"]);
+    expect(withOpacity).toEqual([".page-head-wm", ".light .page-head-wm"]);
   });
 });

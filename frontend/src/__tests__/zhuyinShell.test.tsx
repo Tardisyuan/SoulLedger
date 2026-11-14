@@ -123,10 +123,19 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     expect(head.querySelector(".page-head-wm")).toHaveAttribute("data-civ-mark", "cn");
   });
 
-  it("中性皮(不认得的租户)的水印只画环,不放任何一个文明的中心物", () => {
+  // 第四十五批第四节:页头右上的文明记号,墨色、装饰(aria-hidden),记号说的是「哪一家」。
+  it("页头记号是此刻所在文明的那一个,读屏跳过", () => {
+    render(<PageShell title="名册">body</PageShell>);
+    const mark = screen.getByTestId("page-head").querySelector(".page-head-mark");
+    expect(mark).toHaveAttribute("data-head-mark", "cn");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("中性皮(不认得的租户)的水印只画环,不放任何一个文明的中心物,也没有页头记号", () => {
     mockTenant.code = "UNKNOWN";
     render(<PageShell title="名册">body</PageShell>);
     expect(screen.getByTestId("page-head").querySelector(".page-head-wm")).toHaveAttribute("data-civ-mark", "neutral");
+    expect(screen.getByTestId("page-head").querySelector(".page-head-mark")).toBeNull();
   });
 
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
@@ -135,6 +144,20 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     expect(css).not.toContain("--identity-band");
     expect(css).toMatch(/--below-band: calc\(var\(--spacing\) \* 13 \+ var\(--imp-h\)\);/);
     expect(/\.page-head \{[^}]*\}/.exec(css)?.[0] ?? "").not.toMatch(/sticky/);
+  });
+
+  it("纸纹只用墨(深 6% / 浅 5%),不用文明色;记号墨 34% / 30%", () => {
+    const pat = [...css.matchAll(/\n {2}([^\n{}]*\.page-head-pat) \{([^}]*)\}/g)];
+    expect(pat.map((m) => m[1].trim())).toEqual([
+      ".page-head-pat",
+      '[data-civ="cn"] .page-head-pat',
+      '[data-civ="eu"] .page-head-pat',
+      '[data-civ="eg"] .page-head-pat',
+      '[data-civ="gr"] .page-head-pat',
+    ]);
+    for (const m of pat) expect(m[2]).not.toMatch(/main-ink|opacity/);
+    expect(css).toMatch(/\n {2}\.page-head \{\s*--head-tex: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 6%, transparent\);\s*--head-mark: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 34%, transparent\);/);
+    expect(css).toMatch(/\n {2}\.light \.page-head \{\s*--head-tex: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 5%, transparent\);\s*--head-mark: color-mix\(in srgb, oklch\(var\(--color-ink\)\) 30%, transparent\);/);
   });
 
   it("顶线是 --topline 粗的文明字色;加载中变成进度线,不放转圈", () => {
