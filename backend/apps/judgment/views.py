@@ -353,9 +353,10 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
     )
     serializer_class = JudgmentSerializer
     filterset_class = JudgmentFilter
-    # 按灵魂名(包含)或 id(灵魂的或案子的,精确)搜。`=` 是 iexact,对 UUID 列
-    # 不经 `get_prep_value`,所以一个不是 UUID 的词只是匹配不到,不会 500。
-    search_fields = ["soul__name", "=soul__id", "=id", "=case_number"]
+    # 按灵魂名(包含)、id(灵魂的或案子的,精确)或案号(前缀)搜。`=` 是 iexact,对 UUID 列
+    # 不经 `get_prep_value`,所以一个不是 UUID 的词只是匹配不到,不会 500。`^` 是 istartswith:
+    # 案号打一半也找得到(官员端查询边打边搜,2026-11-15 便利审计 D4)。
+    search_fields = ["soul__name", "=soul__id", "=id", "^case_number"]
     # 暂居只读例外(apps/core/tenant.py)。不含 `next_pending`:那是待办队列,
     # 原属租户对暂居地的案子什么都做不了。
     residence_read_actions = ("list", "retrieve", "citations", "verdict_document_pdf")
