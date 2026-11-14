@@ -222,6 +222,9 @@ for (const route of ["queue", "open"]) {
       return !!top?.closest("[data-testid='demo-tour']");
     });
     expect(covered).toBe(false);
+    // The card measured itself as a bar at the page's foot and climbed past the top of the screen (2026-11-14).
+    const card = await page.getByTestId("demo-tour").boundingBox();
+    expect(card?.y ?? -1).toBeGreaterThanOrEqual(0);
   });
 }
 
