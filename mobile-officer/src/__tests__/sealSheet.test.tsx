@@ -4,6 +4,7 @@
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
+import zh from "@soulledger/core/messages/zh-Hans.json";
 import { Animated, StyleSheet } from "react-native";
 
 import { HOLD_TO_SEAL_MS, SEAL_LIFT, SealSheet } from "../screens/sealSheet";
@@ -157,5 +158,37 @@ describe("按住落印", () => {
   it("shows the dashed seal before it is set", () => {
     open();
     expect(screen.getByTestId("seal-pending")).toBeTruthy();
+  });
+});
+
+describe("what the seal note promises (用户 2026-11-14)", () => {
+  const flow = zh.officer_app.seal.hold_note_flow;
+  const final = zh.officer_app.seal.hold_note;
+
+  it("an original case goes to approval after the seal; it does not claim the seal cannot be undone", () => {
+    open({ kind: "ORIGINAL" });
+    fireEvent.press(screen.getByTestId("seal-option-FAILED"));
+    expect(screen.getByText(flow)).toBeTruthy();
+    expect(screen.queryByText(final)).toBeNull();
+  });
+
+  it("a rehearing verdict (重审 anywhere, 存疑 in 地府) and a reopened case are final at once", () => {
+    open({ kind: "ORIGINAL" });
+    fireEvent.press(screen.getByTestId("seal-option-RETRY"));
+    expect(screen.getByText(final)).toBeTruthy();
+    expect(screen.queryByText(flow)).toBeNull();
+    fireEvent.press(screen.getByTestId("seal-option-PURGATORY"));
+    expect(screen.getByText(final)).toBeTruthy();
+    screen.unmount();
+    open({ kind: "REOPEN" });
+    fireEvent.press(screen.getByTestId("seal-option-FAILED"));
+    expect(screen.getByText(final)).toBeTruthy();
+    expect(screen.queryByText(flow)).toBeNull();
+  });
+
+  it("欧洲的炼狱 is a destination, so it goes to approval like any other", () => {
+    open({ kind: "ORIGINAL", civilization: "EUROPEAN" });
+    fireEvent.press(screen.getByTestId("seal-option-PURGATORY"));
+    expect(screen.getByText(flow)).toBeTruthy();
   });
 });

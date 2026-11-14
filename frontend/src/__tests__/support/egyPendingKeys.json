@@ -58,5 +58,12 @@
   "demo.probe.door.why",
   "demo.probe.anon.try",
   "demo.probe.anon.who",
-  "demo.probe.anon.why"
+  "demo.probe.anon.why",
+  "demo.tour.replay",
+  "judgment.desk.to_approval",
+  "judgment.desk.confirm_body_flow",
+  "cmdk.verdict.pass_hint_flow",
+  "caseDesk.dossier.judge.hint_flow",
+  "caseDesk.dossier.judge.sealed_note_flow",
+  "officer_app.seal.hold_note_flow"
 ]

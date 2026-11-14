@@ -1318,7 +1318,7 @@ describe("卷宗 · 一种版式", () => {
 });
 
 describe("v3 · 盖印确认层", () => {
-  it("写明所选裁决、签署殿司、不可撤回;Esc 关层、什么都不发,裁决还在", async () => {
+  it("写明所选裁决、签署殿司、落印后进入审批;Esc 关层、什么都不发,裁决还在", async () => {
     renderPage();
     await screen.findAllByRole("radio");
     fireEvent.keyDown(document.body, { key: "2" });
@@ -1326,18 +1326,58 @@ describe("v3 · 盖印确认层", () => {
     const layer = await screen.findByTestId("confirm-layer");
     expect(layer).toHaveTextContent(tZh("judgment.desk.confirm_title"));
     // 句子里是译名,不是枚举键(第一版把 `judgment.verdicts.FAILED` 原样印了出来)。
-    expect(layer).toHaveTextContent(tZh("judgment.desk.confirm_body", { verdict: tZh("judgment.verdicts.failed") }));
+    // 原审落印后进入审批,驳回会重开一案(用户 2026-11-14):不再说「不可撤回」。
+    expect(layer).toHaveTextContent(tZh("judgment.desk.confirm_body_flow", { verdict: tZh("judgment.verdicts.failed") }));
+    expect(layer).not.toHaveTextContent(tZh("judgment.desk.confirm_body", { verdict: tZh("judgment.verdicts.failed") }));
     expect(layer).not.toHaveTextContent("FAILED");
     expect(layer).toHaveTextContent(`✕${tZh("judgment.verdicts.failed")}`);
     expect(layer).not.toHaveTextContent(tZh("judgment.verdicts.passed"));
     expect(layer).toHaveTextContent(tZh("judgment.desk.signing_court"));
     expect(layer).toHaveTextContent("第五殿");
-    expect(layer).toHaveTextContent(tZh("judgment.desk.irreversible"));
+    expect(layer).toHaveTextContent(tZh("judgment.desk.to_approval"));
+    expect(layer).not.toHaveTextContent(tZh("judgment.desk.irreversible"));
 
     fireEvent.keyDown(await within(layer).findByRole("button", { name: tZh("reject.sheet.confirm") }), { key: "Escape" });
     await waitFor(() => expect(screen.queryByTestId("confirm-layer")).toBeNull());
     expect(judgmentApi.conclude).not.toHaveBeenCalled();
     expect(radio("FAILED").checked).toBe(true);
+  });
+
+  it("再审裁决(地府的存疑)和不要流程的加减项落印即定:写「不可撤回」,不写进入审批", async () => {
+    const a = renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "3" });
+    expect(screen.getByText(tZh("caseDesk.dossier.judge.hint"))).toBeInTheDocument();
+    fireEvent.click(toConfirm());
+    let layer = await screen.findByTestId("confirm-layer");
+    expect(layer).toHaveTextContent(tZh("judgment.desk.irreversible"));
+    expect(layer).not.toHaveTextContent(tZh("judgment.desk.to_approval"));
+    a.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: judgment({ kind: "AMENDMENT", amends_plan_id: null }) });
+    renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "2" });
+    expect(screen.queryByText(tZh("caseDesk.dossier.judge.hint_flow"))).toBeNull();
+    fireEvent.click(toConfirm());
+    layer = await screen.findByTestId("confirm-layer");
+    expect(layer).toHaveTextContent(tZh("judgment.desk.irreversible"));
+    expect(layer).not.toHaveTextContent(tZh("judgment.desk.to_approval"));
+  });
+
+  it("原审选定「不过」:落印提示写进入审批;已落印且挂着审批的,说驳回会重开一案", async () => {
+    const a = renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "2" });
+    expect(screen.getByText(tZh("caseDesk.dossier.judge.hint_flow"))).toBeInTheDocument();
+    expect(screen.queryByText(tZh("caseDesk.dossier.judge.hint"))).toBeNull();
+    a.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: judgment({ is_final: true, verdict: "FAILED", notes: "所犯属实", concluded_at: "2026-06-01T08:00:00Z", workflow: "wf-1" }) });
+    renderPage();
+    const decision = await screen.findByTestId("current-decision");
+    expect(await within(decision).findByText(tZh("caseDesk.dossier.judge.sealed_note_flow"))).toBeInTheDocument();
+    expect(within(decision).queryByText(tZh("caseDesk.dossier.judge.sealed_note"))).toBeNull();
   });
 
   it("落印并结案 → 同一层翻成「已写入记录」并落印;「完成」关层", async () => {

@@ -9,7 +9,7 @@
  * 落印走 `confirmedDecision`(我的 › 批准前验证面容 / 指纹),发 `submitVerdict`,与滑卡审判同一个调用。
  */
 import type { GreekAccount, JudgmentDetail } from "@soulledger/core/api/judgment";
-import { verdictText } from "@soulledger/core/domain/verdictNames";
+import { sealGoesToApproval, verdictText } from "@soulledger/core/domain/verdictNames";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
@@ -41,6 +41,8 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
   const [busy, setBusy] = useState(false);
   const blocked = blockedSide(judgment);
   const ready = sealReady(civ, c) && !offline && !busy;
+  // 原审不带 create_workflow 也走审批(服务端强制);再审裁决(重审、地府与埃及的存疑)即定 —— 说法跟着它,不一律「不能撤回」。
+  const toApproval = sealGoesToApproval((judgment.kind ?? "ORIGINAL") === "ORIGINAL", civ, c.verdict);
 
   const seal = () => {
     if (!ready) return;
@@ -129,7 +131,7 @@ export function SealSheet({ open, judgment, onClose, onSealed }: { open: boolean
           judgment={judgment}
           disabled={!ready}
           busy={busy}
-          hint={offline ? t("officer_app.offline.no_decide") : t("officer_app.seal.hold_note")}
+          hint={offline ? t("officer_app.offline.no_decide") : t(toApproval ? "officer_app.seal.hold_note_flow" : "officer_app.seal.hold_note")}
           onSeal={seal}
         />
       </View>

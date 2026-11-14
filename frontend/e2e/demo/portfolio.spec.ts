@@ -106,6 +106,8 @@ test("the finished tour's 「这是怎么做的」 lands on that section, not on
   const seen = watch(context, page);
   await enter(page, "judge_eu");
   await page.getByTestId("demo-tour-skip").click();
+  await expect(page.getByTestId("demo-tour")).toHaveCount(0);
+  await page.getByTestId("demo-tour-badge").click();
   await page.getByTestId("demo-tour-how-built").click();
   await page.waitForURL((u) => u.pathname === "/" && u.hash === "#how-built");
   await expect(page.locator("#how-built")).toBeInViewport();
