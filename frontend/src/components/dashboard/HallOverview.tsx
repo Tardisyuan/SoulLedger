@@ -17,7 +17,7 @@ import { useShellCommands, type ShellCommand } from "@/src/lib/shellCommands";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CHART_STROKE, TREND_TOKENS } from "@/lib/chart-colors";
+import { CHART_STROKE, TREND_STROKE, TREND_TOKENS } from "@/lib/chart-colors";
 import { CivEmblem } from "@/src/components/brand/CivEmblem";
 import { civSkinOf } from "@/src/lib/civSkin";
 import type { SealCiv } from "@/src/components/plaque/Seal";
@@ -219,7 +219,7 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
 const W = 300;
 const H = 80;
 
-/** 近 12 周结案:本季实线(文明字色)、上季虚线(金属色),线宽与虚线照 `CHART_STROKE`;十字线停在指着的那一周,默认本周。 */
+/** 近 12 周结案:本季墨色 2px 实线、上季 faint 1.5px 虚线(`TREND_TOKENS` / `TREND_STROKE`,第四十七批);十字线停在指着的那一周,默认本周。 */
 function TrendCard({ stats, loading }: { stats?: JudgmentHallStats; loading: boolean }) {
   const { t } = useI18n();
   const weeks = stats?.weeks ?? [];
@@ -288,7 +288,7 @@ function TrendCard({ stats, loading }: { stats?: JudgmentHallStats; loading: boo
                 data-series="previous"
                 points={line((w) => w.previous_quarter)}
                 fill="none"
-                strokeWidth={CHART_STROKE.line}
+                strokeWidth={TREND_STROKE.previous}
                 strokeDasharray={CHART_STROKE.dash}
                 vectorEffect="non-scaling-stroke"
                 style={{ stroke: `oklch(var(${TREND_TOKENS.previous}))` }}
@@ -297,7 +297,7 @@ function TrendCard({ stats, loading }: { stats?: JudgmentHallStats; loading: boo
                 data-series="current"
                 points={line((w) => w.concluded)}
                 fill="none"
-                strokeWidth={CHART_STROKE.line}
+                strokeWidth={TREND_STROKE.current}
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
                 style={{ stroke: `oklch(var(${TREND_TOKENS.current}))` }}

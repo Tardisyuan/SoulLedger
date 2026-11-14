@@ -331,13 +331,13 @@ export function HowBuilt() {
         </a>
       </p>
       {/* 联系方式只在 README(站上不放姓名与地址,用户 2026-11-08);中文环境链中文 README。 */}
-      <p className="mt-4 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">
+      <p className="mt-4 mb-0">
         <a
           data-testid="how-built-contact"
           href={locale.startsWith("zh") ? `${stats.github}/blob/main/README.zh-CN.md#联系` : `${stats.github}#contact`}
           target="_blank"
           rel="noreferrer"
-          className="underline underline-offset-2"
+          className="how-built-contact"
         >
           {t("demo.build.contact")} <span aria-hidden="true">↗</span>
         </a>

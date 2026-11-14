@@ -18,6 +18,7 @@ import {
   KARMA_PATTERNS,
   REALM_PATTERNS,
   STATE_PATTERNS,
+  TREND_STROKE,
   TREND_TOKENS,
   type ChartColors,
 } from "@/lib/chart-colors";
@@ -126,23 +127,23 @@ describe("charts are a gray-blue ramp plus patterns (规范 v2 A5)", () => {
 });
 
 /**
- * 规范 v4(第七批 S04,用户 2026-11-06 D11 撤销「文明色不进图表」):**只有**概览的「近 12 周结案」用文明色 ——
- * 它比的是本殿自己的本季与上季,不是按文明分的系列。本季 = civT(`--color-main-ink`)实线,上季 = metal 虚线。
- * 这两个令牌随 `<html data-civ>` 变,没有字面量镜像,所以不进 CHART_TOKENS(上面那组逐值核对的表)。
+ * 趋势线(Design 第四十七批 12):概览「近 12 周」与年报「每月」比的是本殿自己的两段时间,不是按文明分的系列,
+ * 所以本季 = 墨(`--color-ink`)实线 2、上季 = `--color-faint-text` 虚线 1.5。`civ`(civT)是色板里「本文明」那一色,
+ * 只留给「一条系列代表一个文明」的图(civInkWhitelist 的 CIV_SERIES_CHART)。
+ * 这些令牌随 `<html data-civ>` 变,没有字面量镜像,所以不进 CHART_TOKENS(上面那组逐值核对的表)。
  */
 describe("v4 trend lines and stroke geometry", () => {
-  it("the 12-week trend reads the civ ink and the metal, nothing else", () => {
-    expect(TREND_TOKENS).toEqual({ current: "--color-main-ink", previous: "--color-metal" });
-    // 系列表里仍没有文明色:按文明 / 状态 / 界域分的线照旧是灰蓝梯度。
-    for (const table of TABLES) {
-      expect(Object.values(CHART_TOKENS[table])).not.toContain(TREND_TOKENS.current);
-      expect(Object.values(CHART_TOKENS[table])).not.toContain(TREND_TOKENS.previous);
-    }
+  it("the 12-week trend reads ink and faint, and keeps civT only as the per-civ series colour", () => {
+    expect(TREND_TOKENS).toEqual({ current: "--color-ink", previous: "--color-faint-text", civ: "--color-main-ink" });
+    expect(TREND_STROKE).toEqual({ current: 2, previous: 1.5 });
+    // 系列表里仍没有文明色:按状态 / 界域分的线照旧是灰蓝梯度。
+    for (const table of TABLES) expect(Object.values(CHART_TOKENS[table])).not.toContain(TREND_TOKENS.civ);
   });
 
   it.each(THEMES)("%s: both trend tokens are declared in globals.css", (theme) => {
     expect(() => resolveTriple(TOKENS_BY_THEME[theme], TREND_TOKENS.current)).not.toThrow();
     expect(() => resolveTriple(TOKENS_BY_THEME[theme], TREND_TOKENS.previous)).not.toThrow();
+    expect(() => resolveTriple(TOKENS_BY_THEME[theme], TREND_TOKENS.civ)).not.toThrow();
   });
 
   it("one stroke geometry for every line chart (v4: data 2.5, dash 4 4, crosshair and axis 1)", () => {

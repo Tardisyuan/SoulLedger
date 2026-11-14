@@ -663,15 +663,9 @@
   color: oklch(var(--color-ink-muted));
   margin: 0;
 }
+/* 进度条画成 Meter(globals.css `.meter`,墨 70% 在 --line2 上;第四十七批 3):这里只给高度。 */
 .bar {
   height: 3px;
-  border-radius: 2px;
-  background: oklch(var(--color-surface-3));
-  overflow: hidden;
-}
-.barFill {
-  height: 100%;
-  background: oklch(var(--color-main-ink));
 }
 .top {
   list-style: none;

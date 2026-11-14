@@ -73,6 +73,11 @@ test("the walked tour ends on 「试着打开别的殿的案卷」, which replay
   await page.goto("/");
   await expect(page.getByTestId("landing-start-here")).toHaveCount(1);
   await expect(page.getByTestId("landing-card-cn").getByTestId("landing-start-here")).toBeVisible();
+  // 第四十七批:小签在名字上方单独一行,不换行。
+  const tag = (await page.getByTestId("landing-start-here").boundingBox())!;
+  const title = (await page.getByTestId("landing-card-cn").locator(".font-title.text-lg").first().boundingBox())!;
+  expect(tag.y + tag.height).toBeLessThanOrEqual(title.y + 1);
+  expect(tag.height).toBeLessThan(24);
   await page.getByTestId("landing-card-eg").click();
   await expect(page.getByTestId("demo-tour")).toBeVisible();
   for (let step = 1; step <= 5; step += 1) {
@@ -82,9 +87,17 @@ test("the walked tour ends on 「试着打开别的殿的案卷」, which replay
   }
   const end = page.locator('[data-testid="demo-tour"][data-finished]');
   await expect(end).toBeVisible();
+  // 第四十七批:卡底不动,结果插在按钮行上面,卡向上长。
+  const before = (await end.boundingBox())!;
   await end.getByTestId("demo-tour-try-overreach").click();
   const status = end.getByTestId("demo-overreach-status-lateral");
   await expect(status).toHaveText("404");
+  const after = (await end.boundingBox())!;
+  expect(Math.abs(after.y + after.height - (before.y + before.height))).toBeLessThanOrEqual(1);
+  expect(after.y).toBeLessThan(before.y);
+  const result = (await end.getByTestId("demo-tour-result").boundingBox())!;
+  const actions = (await end.getByTestId("demo-tour-actions").boundingBox())!;
+  expect(result.y + result.height).toBeLessThanOrEqual(actions.y + 1);
   await expect(status).toHaveAttribute("data-tone", "muted");
   await expect(end.getByTestId("demo-overreach-answer-lateral")).toContainText(`/souls/${rows(recording("judge_eu"), "/souls/")[0].id}/`);
   await expect(end.getByTestId("demo-tour-try-overreach")).toHaveCount(0);

@@ -222,7 +222,7 @@ describe("tokens, safe area and the coarse-pointer rule", () => {
     expect(narrow).not.toContain("height: 64px");
   });
 
-  it("matches batch 38's size table: cells ≥ 64 wide; icon 24 + gap 3, Chinese glyph 18/22 + gap 2; word 11/14 (500 for en / egy); line 3 under the mark in civT", () => {
+  it("matches batch 38's size table: cells ≥ 64 wide; icon 24 + gap 3, Chinese glyph 18/22 + gap 2; word 11/14 (500 for en / egy); line 3 under the mark in ink (batch 47)", () => {
     const doors = read("src/components/layout/doors.module.css");
     const narrow = doors.slice(doors.indexOf("@media (max-width: 768px)"), doors.indexOf("@media (min-width: 769px)"));
     expect(narrow).toContain("min-width: 64px;");
@@ -231,8 +231,9 @@ describe("tokens, safe area and the coarse-pointer rule", () => {
     // The Chinese glyph's 22 px leading on a phone is the register token, overridden on the cell (no hand-written px).
     expect(narrow).toMatch(/\.door\s*\{\s*--door-mark-h:\s*22px;\s*--door-glyph-leading:\s*22px;/);
     expect(narrow).toContain("top: calc(50% - (var(--door-mark-h) + var(--door-gap) + 14px) / 2 + var(--door-mark-h) + 3px);");
-    // civT is --color-main-ink (globals.css).
-    expect(narrow).toContain("background: oklch(var(--color-main-ink));");
+    // Batch 47 (5–9): the current-door line is ink, not civT.
+    expect(narrow).toContain("background: oklch(var(--color-ink));");
+    expect(doors).not.toContain("main-ink");
     // Outside the media block: the Chinese gap 2, glyph 18, icon 24, word 11/14 and the word's weight 500.
     expect(doors).toContain("--door-gap: 2px;");
     const tokens = read("app/globals.css");

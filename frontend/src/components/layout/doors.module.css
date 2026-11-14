@@ -1,7 +1,7 @@
 /*
  * 门栏与门内二级导航(Design 第三十批 第 4 步)。门栏的样子从第 2 步的案卷台壳搬过来,没改:
  * 桌面 64 宽(`--rail-w`)立在左边;≤ 768 到底部,高 64。颜色只读 globals.css 的令牌。
- * 文明色只在当前门的 2px 线上(焦点用全站的环)。
+ * 当前门:字墨色,2px 墨色指示条(第四十七批 5–9,当前 / 选中一律用墨);这里不读文明色,焦点用全站的环。
  */
 
 /* ── 门栏 ─────────────────────────────────────────────── */
@@ -53,7 +53,7 @@
 .door[aria-current="true"] {
   background: oklch(var(--color-surface-2));
   color: oklch(var(--color-ink));
-  box-shadow: inset 2px 0 0 oklch(var(--color-main-ink));
+  box-shadow: inset 2px 0 0 oklch(var(--color-ink));
 }
 .doorGlyph {
   font-family: var(--font-title);
@@ -150,7 +150,7 @@
   stroke-linejoin: round;
 }
 .me[aria-current="page"] {
-  box-shadow: 0 0 0 2px oklch(var(--color-main-ink));
+  box-shadow: 0 0 0 2px oklch(var(--color-ink));
 }
 
 /* ── 门内二级导航:一行,放不下就横滑 ────────────────── */
@@ -197,7 +197,7 @@
 .tab[aria-current="page"] {
   color: oklch(var(--color-ink));
   font-weight: 600;
-  box-shadow: inset 0 -2px 0 oklch(var(--color-main-ink));
+  box-shadow: inset 0 -2px 0 oklch(var(--color-ink));
 }
 
 /* ── 窄屏「我」的底部抽屉 ────────────────────────────── */
@@ -229,7 +229,7 @@
 }
 .sheetLink[aria-current="page"] {
   font-weight: 600;
-  box-shadow: inset 2px 0 0 oklch(var(--color-main-ink));
+  box-shadow: inset 2px 0 0 oklch(var(--color-ink));
 }
 /* 抽屉里的按钮(设置、退出)与链接同一个样子。 */
 button.sheetLink {
@@ -331,7 +331,7 @@ button.sheetLink {
   .tip {
     display: none;
   }
-  /* 窄屏选中:不铺底,图形墨色,图形盒下 3 处一条 14 × 2 的文明色短线(中文同一位置)。 */
+  /* 窄屏选中:不铺底,图形墨色,图形盒下 3 处一条 14 × 2 的墨色短线(中文同一位置)。 */
   .door[aria-current="page"],
   .door[aria-current="true"],
   .door:hover {
@@ -347,7 +347,7 @@ button.sheetLink {
     height: 2px;
     margin-left: -7px;
     border-radius: 1px;
-    background: oklch(var(--color-main-ink));
+    background: oklch(var(--color-ink));
     /* 图形盒(`--door-mark-h`:图标 24、中文字 22)在格里居中排在词(14)上面:
        盒底 = 格中线 - (盒高 + gap + 14)/2 + 盒高,短线再往下 3。 */
     top: calc(50% - (var(--door-mark-h) + var(--door-gap) + 14px) / 2 + var(--door-mark-h) + 3px);

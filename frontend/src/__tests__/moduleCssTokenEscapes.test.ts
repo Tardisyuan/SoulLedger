@@ -25,7 +25,7 @@ const WEB = path.join(__dirname, "..", "..");
 const SKIP = new Set(["node_modules", ".next", "coverage", "e2e", "public"]);
 
 const BASELINE: Record<string, { type: number; hex: number; radius: number; fallback: number }> = {
-  "src/components/desk/desk.module.css": { type: 0, hex: 0, radius: 7, fallback: 8 },
+  "src/components/desk/desk.module.css": { type: 0, hex: 0, radius: 6, fallback: 8 },
   "src/components/dossier/dossier.module.css": { type: 0, hex: 0, radius: 2, fallback: 10 },
   "src/components/layout/doors.module.css": { type: 0, hex: 0, radius: 3, fallback: 5 },
 };

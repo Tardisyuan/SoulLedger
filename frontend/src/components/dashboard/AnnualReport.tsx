@@ -9,11 +9,12 @@ import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations"
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { Button } from "@/src/components/ui/Button";
+import { Meter } from "@/src/components/ui/Meter";
 import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CivEmblem } from "@/src/components/brand/CivEmblem";
 import type { SealCiv } from "@/src/components/plaque/Seal";
-import { CHART_STROKE, TREND_TOKENS } from "@/lib/chart-colors";
+import { CHART_STROKE, TREND_STROKE, TREND_TOKENS } from "@/lib/chart-colors";
 
 /**
  * 冥界年报(规范 v4 第八批 S14,`annual.*`):一页往下读 —— 这一年收了多少灵魂、几个有了去处;四本账各收多少;
@@ -52,12 +53,8 @@ function Civs({ data }: { data: JudgmentAnnual }) {
           <li key={civilization} data-civ={skin} data-annual-civ={civilization} className="grid grid-cols-[28px_8rem_1fr_4rem] items-center gap-3">
             {skin ? <CivEmblem civ={skin} size={28} /> : <span />}
             <span className="text-md font-normal text-[oklch(var(--color-ink))]">{t(`souls.civilizations.${civilization}`)}</span>
-            <span aria-hidden="true" className="relative h-2 rounded-control bg-[oklch(var(--color-line))]">
-              <span
-                className="absolute inset-y-0 left-0 rounded-control bg-[oklch(var(--color-main-ink))]"
-                style={{ width: `${(received / max) * 100}%` }}
-              />
-            </span>
+            {/* 占比条是 Meter(墨 70% 在 --line2 上,第四十七批 11):条说的是多少,哪一家由左边的徽记与名字说。 */}
+            <Meter aria-hidden="true" className="h-2" ratio={received / max} />
             <span className="text-right font-mono text-lg font-normal tabular-nums text-[oklch(var(--color-ink))]">{received}</span>
           </li>
         );
@@ -85,7 +82,7 @@ function returnedNote(t: (k: string, p?: Record<string, string>) => string, now:
 const W = 600;
 const H = 120;
 
-/** 每月结案:本年实线(文明字色)、上一年虚线(金属色),与概览「近 12 周」同一套笔画(`CHART_STROKE` / `TREND_TOKENS`)。 */
+/** 每月结案:本年墨色 2px 实线、上一年 faint 1.5px 虚线,与概览「近 12 周」同一套笔画(`TREND_TOKENS` / `TREND_STROKE`)。 */
 function Monthly({ data }: { data: JudgmentAnnual }) {
   const { t } = useI18n();
   const max = Math.max(1, ...data.monthly, ...data.last_year_monthly);
@@ -100,7 +97,7 @@ function Monthly({ data }: { data: JudgmentAnnual }) {
           data-series="previous"
           points={line(data.last_year_monthly)}
           fill="none"
-          strokeWidth={CHART_STROKE.line}
+          strokeWidth={TREND_STROKE.previous}
           strokeDasharray={CHART_STROKE.dash}
           vectorEffect="non-scaling-stroke"
           style={{ stroke: `oklch(var(${TREND_TOKENS.previous}))` }}
@@ -109,7 +106,7 @@ function Monthly({ data }: { data: JudgmentAnnual }) {
           data-series="current"
           points={line(data.monthly)}
           fill="none"
-          strokeWidth={CHART_STROKE.line}
+          strokeWidth={TREND_STROKE.current}
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
           style={{ stroke: `oklch(var(${TREND_TOKENS.current}))` }}

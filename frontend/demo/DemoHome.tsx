@@ -225,15 +225,16 @@ function CivCard({ skin, civilization, enter, warm, first }: { skin: SealCiv; ci
           <LandingEmblem civ={skin} size={76} className="md:size-[190px]" />
         </span>
         <span className="relative flex min-w-0 flex-1 flex-col gap-2 md:mt-4">
+          {/* 第一次来不知道点哪张(2026-11-14 用户定):第一张标「从这里开始」。Design 第四十七批:名字上方单独一行的小签,
+              12px / 500,中性皮的 metal(不随这张卡的文明),不换行;卡宽 < 220 不画(globals.css `.demo-home-start`)。 */}
+          {first && (
+            <span data-testid="landing-start-here" className="demo-home-start self-start whitespace-nowrap px-1 text-xs font-medium">
+              {t("demo.home.start_here")}
+            </span>
+          )}
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <Seal size={16} civ={skin} glyphs={null} decorative className="max-md:hidden" />
             <span className="truncate font-title text-lg" title={name}>{name}</span>
-            {/* 第一次来不知道点哪张(2026-11-14 用户定):第一张标「从这里开始」。 */}
-            {first && (
-              <span data-testid="landing-start-here" className="shrink-0 border border-[oklch(var(--color-main))] px-1 text-2xs font-semibold text-[oklch(var(--color-main))]">
-                {t("demo.home.start_here")}
-              </span>
-            )}
             <span className="demo-home-feat ml-auto shrink-0 text-xs font-semibold max-md:ml-0">{t(`demo.home.feat.${skin}`)}</span>
           </span>
           <RouteShape shape={CIVILIZATION_SHAPE[civilization]} className="max-md:hidden" />

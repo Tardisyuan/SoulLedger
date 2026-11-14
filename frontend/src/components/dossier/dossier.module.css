@@ -200,7 +200,8 @@
 .tab[aria-current="page"] {
   color: oklch(var(--color-ink));
   font-weight: 500;
-  box-shadow: inset 0 -2px 0 oklch(var(--color-main-ink));
+  /* 当前页签:2px 墨线(第四十七批 4,当前 / 选中一律用墨)。 */
+  box-shadow: inset 0 -2px 0 oklch(var(--color-ink));
 }
 .tabCount {
   font-family: var(--font-mono);

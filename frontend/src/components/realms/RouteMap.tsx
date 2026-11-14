@@ -1,8 +1,9 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MissingValue } from "@/src/components/ui/DomainValue";
+import { Meter, METER_WARN_AT } from "@/src/components/ui/Meter";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
 import type { Station, Topology } from "@/src/lib/routeTopology";
 import { toRomanNumeral } from "@soulledger/core/config/civilizationSigil";
@@ -19,13 +20,14 @@ import { toRomanNumeral } from "@soulledger/core/config/civilizationSigil";
  *
  * `occupancy` 缺(在押加载失败)时数字写「—」,不写 0。
  *
- * 第二十五批 §五.1:每站右边一根在押 / 容量条(`occupancyBar`;文明墨色,越满越实)。
- * ≥ 78% 方块放大并加 `--color-glow` 光圈;≥ 90% 条的右端一道 `--color-danger` 竖线。这页没有「现在」,不用 metal。
+ * 第二十五批 §五.1:每站右边一根在押 / 容量条(`occupancyBar`,画成 `Meter`:墨 70%,第四十七批起不用文明色)。
+ * ≥ 78% 方块放大并加 `--color-glow` 光圈;≥ 90% 填充改 amber、条的右端一道 `--color-danger` 竖线;> 100% 填充改 danger。
+ * 这页没有「现在」,不用 metal。
  * 容量来自界域行自己的 `capacity`(`PATCH /realms/{id}/` 写的那一列)。**容量为 null(未记录)的站只写在押数、不画条** ——
  * 未记录不是无限也不是 0,画不出比例;后端没有别的容量来源,这里不编。在押加载失败时同样只写「—」。
  */
 export const OCC_HOT = 0.78;
-export const OCC_DANGER = 0.9;
+export const OCC_DANGER = METER_WARN_AT;
 
 /** held / capacity → the bar's reading; null when capacity is unrecorded (no bar). Capacity 0 with someone held is full. */
 export function occupancyBar(held: number, capacity: number | null | undefined): { ratio: number; hot: boolean; danger: boolean } | null {
@@ -61,14 +63,13 @@ export function RouteMap({
     return (
       <>
         {b && (
-          <span
+          <Meter
             aria-hidden="true"
             data-occupancy-bar={b.danger ? "danger" : b.hot ? "hot" : "ok"}
             className="realm-occ"
-            style={{ "--occ": Math.min(b.ratio, 1) } as CSSProperties}
-          >
-            <span className="realm-occ-fill" />
-          </span>
+            ratio={b.ratio}
+            alarm
+          />
         )}
         <span className={`shrink-0 font-mono text-xs ${on ? "" : MUTED}`}>
           {count(s)}

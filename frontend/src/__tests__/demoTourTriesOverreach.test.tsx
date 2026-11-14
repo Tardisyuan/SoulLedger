@@ -67,6 +67,30 @@ it.each(["cn", "eu", "eg", "gr", "guard"])("%s: the end card's button asks the l
   expect([...document.querySelectorAll("[data-probe]")].map((el) => el.getAttribute("data-probe"))).toEqual(["lateral"]);
 });
 
+it("Design 第四十七批:按钮行在卡底,描边的次要按钮在左、主按钮在右;404 结果插在正文与按钮行之间,手机上只有结果区滚", async () => {
+  await finished("cn");
+  const card = screen.getByTestId("demo-tour");
+  const actions = screen.getByTestId("demo-tour-actions");
+  expect(card.lastElementChild).toBe(actions);
+  const buttons = [...actions.querySelectorAll("button")];
+  expect(buttons[0]).toBe(screen.getByTestId("demo-tour-try-overreach"));
+  expect(buttons.at(-1)).toBe(screen.getByTestId("demo-tour-try-another"));
+  expect(buttons.at(-1)!.className).toContain("--main-fill");
+  expect(buttons[0].className).not.toContain("--main-fill");
+  // 整张卡不滚(底边钉住,向上长)。
+  expect(card.className).not.toMatch(/max-h-|overflow-y-auto/);
+
+  await click("demo-tour-try-overreach");
+  const result = screen.getByTestId("demo-tour-result");
+  expect(result.className).toContain("max-md:max-h-[32dvh]");
+  expect(result.className).toContain("max-md:overflow-y-auto");
+  expect(result.contains(screen.getByTestId("demo-overreach"))).toBe(true);
+  // 正文之后、按钮行之前。
+  expect(result.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(card.querySelectorAll("p")[1].compareDocumentPosition(result) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(card.lastElementChild).toBe(actions);
+});
+
 it("重看导览 brings the button back", async () => {
   await finished("cn");
   await click("demo-tour-try-overreach");
@@ -92,6 +116,9 @@ it.each([
   render(<I18nProvider initialLocale={locale}><HowBuilt /></I18nProvider>);
   const link = screen.getByTestId("how-built-contact");
   expect(link).toHaveAttribute("href", href);
+  // 第四十七批:文字链接(不是带框按钮),14px / --sub / 下划线 --line2,样式在 globals.css 的 .how-built-contact。
+  expect(link).toHaveClass("how-built-contact");
+  expect(link.className).not.toMatch(/border|text-\[/);
   // A non-Chinese pack loads after the first render.
   await waitFor(() => expect(link).toHaveTextContent(text));
 });

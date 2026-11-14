@@ -6,6 +6,7 @@ import { useTheme } from "@/src/contexts/ThemeContext";
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { cn } from "@/lib/utils";
 import { MissingValue } from "@/src/components/ui/DomainValue";
+import { Meter } from "@/src/components/ui/Meter";
 import {
   applyBranches,
   applyView,
@@ -615,9 +616,8 @@ export function UnderworldMap({
             </span>
             <span className="mt-2 flex items-center gap-3 text-xs text-[oklch(var(--color-ink-muted))]">
               <span className="font-mono">{t("soulmap.replay_progress", { n: String(replayAt! + 1), total: String(arrivals.length) })}</span>
-              <span className="relative h-1 w-16 bg-[oklch(var(--color-line))]">
-                <span className="absolute inset-y-0 left-0 bg-[oklch(var(--color-main-ink))]" style={{ width: `${((replayAt! + 1) / arrivals.length) * 100}%` }} />
-              </span>
+              {/* 回放条是播放控件:进度墨 70%(Meter,第四十七批 10)。图上「已走过」那段行程线仍是文明色(行程脊)。 */}
+              <Meter className="h-1 w-16" ratio={(replayAt! + 1) / arrivals.length} />
               <span>{t("map.replay.skip")}</span>
             </span>
           </button>

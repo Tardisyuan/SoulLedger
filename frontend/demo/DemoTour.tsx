@@ -511,8 +511,10 @@ export default function DemoTour() {
   };
 
   const outside = pathname === "/" || pathname.startsWith("/login");
-  const panel =
-    "fixed z-toast border border-[oklch(var(--color-line-strong))] border-t-3 border-t-[oklch(var(--color-main))] bg-[oklch(var(--color-surface-1))] p-4 shadow-overlay max-md:inset-x-0 max-md:bottom-(--bottom-bar) max-md:max-h-[32dvh] max-md:overflow-y-auto md:right-6 md:bottom-6 md:w-90";
+  // 卡的底边钉住(bottom),内容多了向上长。步骤卡在手机上整张最高 32dvh、整张滚;结束卡不整张滚,只有 404 结果区滚(下面)。
+  const panelBase =
+    "fixed z-toast border border-[oklch(var(--color-line-strong))] border-t-3 border-t-[oklch(var(--color-main))] bg-[oklch(var(--color-surface-1))] p-4 shadow-overlay max-md:inset-x-0 max-md:bottom-(--bottom-bar) md:right-6 md:bottom-6 md:w-90";
+  const panel = `${panelBase} max-md:max-h-[32dvh] max-md:overflow-y-auto`;
   let card = null;
   if (tour && step && !outside && !state.closed) {
     // 「系统怎么保护自己」 belongs to no underworld: its own title and ending, and the four seals all stay on offer.
@@ -538,17 +540,16 @@ export default function DemoTour() {
     } else if (state.finished) {
       const done = guard ? ["demo.tour.guard.done_title", t("demo.tour.guard.done_body")] : ["demo.tour.done_title", t("demo.tour.done_body", { civ })];
       card = (
-        <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={panel}>
+        <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={panelBase}>
           <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t(state.skipped ? "demo.tour.skipped_title" : done[0])}</p>
           <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{state.skipped ? t("demo.tour.skipped_body") : done[1]}</p>
           {/* 叙事传输(2026-11-14 用户定):走完一生,访客自己撞一次租户隔离。现成的横向探针 —— 中国殿的判官要欧洲殿的灵魂,
-              录下的 404 —— 不另写越权逻辑;它只读录音,与当前登录的是哪一殿无关,所以四殿与「系统怎么保护自己」都能用。 */}
-          {tried ? (
-            <OverreachProbe only="lateral" ask />
-          ) : (
-            <Button type="button" variant="secondary" size="sm" data-testid="demo-tour-try-overreach" className="mt-3" onClick={() => setTried(true)}>
-              {t("demo.tour.try_overreach")} →
-            </Button>
+              录下的 404 —— 不另写越权逻辑;它只读录音,与当前登录的是哪一殿无关,所以四殿与「系统怎么保护自己」都能用。
+              Design 第四十七批:结果区插在正文与按钮行之间,卡向上长、底边不动;手机上最高 32dvh,超出在区内滚。 */}
+          {tried && (
+            <div data-testid="demo-tour-result" className="max-md:max-h-[32dvh] max-md:overflow-y-auto">
+              <OverreachProbe only="lateral" ask />
+            </div>
           )}
           <ul className="m-0 mt-3 flex list-none gap-2 p-0">
             {SKINS.filter((skin) => skin !== tour.skin).map((skin) => (
@@ -570,10 +571,18 @@ export default function DemoTour() {
             <a data-testid="demo-tour-how-built" href="/#how-built" className="underline underline-offset-2">{t("demo.build.title")}</a>
             <a href={stats.github} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{t("demo.build.github")}</a>
           </p>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => router.push("/")}>{t("demo.tour.try_another")}</Button>
-            <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-replay" onClick={replay}>{t("demo.tour.replay")}</Button>
-            <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-stay" onClick={() => update({ collapsed: true })}>{t("demo.tour.stay")}</Button>
+          {/* 按钮行在卡底:描边的「试着打开别的殿的案卷」在左(按下后让位给结果区),主按钮「换一个冥界」在右,按钮不从手指下跑开。 */}
+          <div data-testid="demo-tour-actions" className="mt-3 flex flex-wrap items-center gap-2">
+            {!tried && (
+              <Button type="button" variant="secondary" size="sm" data-testid="demo-tour-try-overreach" onClick={() => setTried(true)}>
+                {t("demo.tour.try_overreach")} →
+              </Button>
+            )}
+            <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-replay" onClick={replay}>{t("demo.tour.replay")}</Button>
+              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-stay" onClick={() => update({ collapsed: true })}>{t("demo.tour.stay")}</Button>
+              <Button type="button" variant="primary" size="sm" data-testid="demo-tour-try-another" onClick={() => router.push("/")}>{t("demo.tour.try_another")}</Button>
+            </span>
           </div>
         </aside>
       );

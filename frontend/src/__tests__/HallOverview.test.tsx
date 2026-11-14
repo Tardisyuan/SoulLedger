@@ -199,7 +199,7 @@ describe("近 12 周结案", () => {
     expect(tip).toHaveTextContent("本季 30");
   });
 
-  it("本季实线、上季虚线,线宽一样", async () => {
+  it("本季墨 2px 实线、上季 faint 1.5px 虚线,都不读文明色(第四十七批 12)", async () => {
     renderIt();
     const current = await waitFor(() => {
       const el = document.querySelector('[data-series="current"]');
@@ -209,7 +209,11 @@ describe("近 12 周结案", () => {
     const previous = document.querySelector('[data-series="previous"]') as SVGElement;
     expect(current.getAttribute("stroke-dasharray")).toBeNull();
     expect(previous.getAttribute("stroke-dasharray")).toBe("4 4");
-    expect(current.getAttribute("stroke-width")).toBe(previous.getAttribute("stroke-width"));
+    expect(current.getAttribute("stroke-width")).toBe("2");
+    expect(previous.getAttribute("stroke-width")).toBe("1.5");
+    expect(current.getAttribute("style")).toContain("--color-ink)");
+    expect(previous.getAttribute("style")).toContain("--color-faint-text)");
+    for (const el of [current, previous]) expect(el.getAttribute("style")).not.toMatch(/main-ink|metal/);
   });
 });
 

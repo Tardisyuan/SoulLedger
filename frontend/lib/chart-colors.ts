@@ -115,12 +115,18 @@ export const KARMA_PATTERNS: Record<"merit" | "demerit", ChartPattern> = {
 export const CHART_STROKE = { line: 2.5, dash: "4 4", crosshair: 1, axis: 1 } as const;
 
 /**
- * 「近 12 周结案」的两条线(v4 S04):本季 = 文明字色(civT),上季 = 金属色(metal)。
- * 用户 2026-11-06 撤销「文明色不进图表」(D11,文明色范围照 v4),**只这一张图**:它比的是本殿自己的两段时间,
- * 不是按文明分的系列 —— 按文明 / 状态 / 界域分的系列仍是上面的灰蓝梯度,`CIVILIZATION_COLORS` 仍不许有。
- * 这两个令牌随 `<html data-civ>` 变,没有字面量镜像:只能写成 `oklch(var(--…))` 交给 CSS。
+ * 「近 12 周结案」与年报「每月结案」的两条线(Design 第四十七批 12):本季 = 墨(`--ink`)2px 实线,
+ * 上季 = `--faint`(这里的 `--color-faint-text`)1.5px 虚线。这张图比的是本殿自己的两段时间,不是按文明分的系列,
+ * 所以不用文明色(此前本季是 civT、上季是 metal,用户 2026-11-06 D11)。
+ *
+ * `civ` 是色板里「本文明」那一色(civT,`--color-main-ink`):Design 第四十七批说先不删,只留给例外
+ * 「图表里一条系列代表一个文明时,用那个文明的颜色」(比如总簿里四殿并列的趋势;civInkWhitelist 的 `CIV_SERIES_CHART`)。
+ * 今天没有图读它。这些令牌随 `<html data-civ>` 变,没有字面量镜像:只能写成 `oklch(var(--…))` 交给 CSS。
  */
-export const TREND_TOKENS = { current: "--color-main-ink", previous: "--color-metal" } as const;
+export const TREND_TOKENS = { current: "--color-ink", previous: "--color-faint-text", civ: "--color-main-ink" } as const;
+
+/** 两条趋势线的线宽(第四十七批 12):本季 2、上季 1.5。虚线仍是 `CHART_STROKE.dash`。 */
+export const TREND_STROKE = { current: 2, previous: 1.5 } as const;
 
 /** 斜线图案的几何:45°,线宽 1.5,间距 5(A5 的 `repeating-linear-gradient(45deg, c 0 1.5px, transparent 1.5px 5px)`)。 */
 export const HATCH = { angle: 45, stroke: 1.5, gap: 5 } as const;

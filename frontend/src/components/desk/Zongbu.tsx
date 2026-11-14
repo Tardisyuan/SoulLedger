@@ -10,6 +10,7 @@ import { formatListDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { buttonVariants } from "@/src/components/ui/Button";
+import { Meter } from "@/src/components/ui/Meter";
 import { deadlineText, overviewParts, zongbuCivilizations } from "./deskRules";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -151,16 +152,15 @@ export function Zongbu() {
                 month.month_done_pct != null ? (
                   <>
                     <p className={s.colLine}>{t("overview.month_done_pct", { pct: String(month.month_done_pct) })}</p>
-                    <div
+                    <Meter
                       className={s.bar}
+                      ratio={month.month_done_pct / 100}
                       role="progressbar"
                       aria-label={t("overview.month_done_pct", { pct: String(month.month_done_pct) })}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-valuenow={month.month_done_pct}
-                    >
-                      <div className={s.barFill} style={{ width: `${month.month_done_pct}%` }} />
-                    </div>
+                    />
                   </>
                 ) : (
                   <p className={s.colLine}>{t("zongbu.col.month_none")}</p>

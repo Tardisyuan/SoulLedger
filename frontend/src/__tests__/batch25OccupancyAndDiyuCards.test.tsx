@@ -47,11 +47,11 @@ describe("RouteMap · 在押 / 容量条", () => {
   const topology: Topology = {
     kind: "line",
     schematic: false,
-    stations: [station("LOW", 40), station("HOT", 40), station("FULL", 10), station("NOCAP", null)],
+    stations: [station("LOW", 40), station("HOT", 40), station("FULL", 10), station("OVER", 10), station("NOCAP", null)],
     branches: [],
     offShape: [],
   };
-  const held = new Map([["LOW", 4], ["HOT", 32], ["FULL", 9], ["NOCAP", 7]]);
+  const held = new Map([["LOW", 4], ["HOT", 32], ["FULL", 9], ["OVER", 12], ["NOCAP", 7]]);
   const at = (id: string) => document.querySelector(`[data-station="${id}"]`)!;
 
   it("draws a bar per station with capacity, marks hot and danger, and none without capacity", () => {
@@ -67,6 +67,19 @@ describe("RouteMap · 在押 / 容量条", () => {
     expect(at("NOCAP")).toHaveTextContent("7");
     expect(at("NOCAP").textContent).not.toContain("/");
     expect(document.querySelector('[data-testid="map-legend-bar"]')).not.toBeNull();
+  });
+
+  it("第四十七批:条是 Meter —— 墨填充;≥ 90% 改 warn,> 100% 改 over(neg),宽度封顶 100%", () => {
+    render(<RouteMap topology={topology} civilizationName="地府" occupancy={held} />);
+    const meter = (id: string) => at(id).querySelector("[data-occupancy-bar]") as HTMLElement;
+    expect(meter("LOW")).toHaveClass("meter");
+    expect(meter("LOW")).not.toHaveAttribute("data-meter");
+    expect(meter("HOT")).not.toHaveAttribute("data-meter");
+    expect(meter("FULL")).toHaveAttribute("data-meter", "warn");
+    expect(meter("OVER")).toHaveAttribute("data-meter", "over");
+    expect(meter("LOW").style.getPropertyValue("--meter")).toBe("0.1");
+    expect(meter("OVER").style.getPropertyValue("--meter")).toBe("1");
+    expect(meter("LOW").querySelector(".meter-fill")).not.toBeNull();
   });
 
   it("occupancy failed → no bars at all, no capacity written", () => {
