@@ -1,5 +1,5548 @@
 {
-  "recordedAt": null,
-  "cases": [],
-  "runs": []
+  "recordedAt": "2026-11-14T02:20:26.486410+00:00",
+  "cases": [
+    {
+      "id": 25,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "我的队列里有几件案子？",
+      "expected_tools": [
+        "judgment_queue_counts"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-judgment-queue"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452218Z"
+    },
+    {
+      "id": 26,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "怎么认领案件？",
+      "expected_tools": [],
+      "must_include": [
+        "认领"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-judgment-queue"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452223Z"
+    },
+    {
+      "id": 27,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "暂缓是什么意思？",
+      "expected_tools": [],
+      "must_include": [
+        "理由"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-judgment-queue"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452227Z"
+    },
+    {
+      "id": 28,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "你能告诉我是哪个灵魂在等吗？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-assistant",
+        "officer-judgment-queue"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452231Z"
+    },
+    {
+      "id": 29,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "workflow",
+      "question": "有多少审批在等我？",
+      "expected_tools": [
+        "my_pending_approvals"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-workflow"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452236Z"
+    },
+    {
+      "id": 30,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "workflow",
+      "question": "推进和越级推进有什么区别？",
+      "expected_tools": [],
+      "must_include": [
+        "理由"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-workflow"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452240Z"
+    },
+    {
+      "id": 31,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "workflow",
+      "question": "为什么我点不了批准？",
+      "expected_tools": [
+        "my_permissions"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-disabled-buttons",
+        "officer-workflow"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452245Z"
+    },
+    {
+      "id": 32,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "other",
+      "question": "为什么这个按钮不见了？",
+      "expected_tools": [],
+      "must_include": [
+        "权限"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-disabled-buttons"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452249Z"
+    },
+    {
+      "id": 33,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "other",
+      "question": "你能帮我批准吗？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [
+        "已为你批准",
+        "已经帮你批准"
+      ],
+      "expected_entries": [
+        "officer-assistant"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452253Z"
+    },
+    {
+      "id": 34,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "soul-inbox",
+      "question": "收件箱里有几封信待回复？",
+      "expected_tools": [],
+      "must_include": [
+        "权限"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-soul-inbox"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452257Z"
+    },
+    {
+      "id": 35,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "soul-inbox",
+      "question": "怎么回复灵魂的来信？",
+      "expected_tools": [],
+      "must_include": [
+        "回复"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-soul-inbox"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452262Z"
+    },
+    {
+      "id": 36,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "recycle-bin",
+      "question": "删掉的东西怎么恢复？",
+      "expected_tools": [],
+      "must_include": [
+        "管理员"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-recycle-bin"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452266Z"
+    },
+    {
+      "id": 37,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "dispatch",
+      "question": "调度由谁批准？",
+      "expected_tools": [],
+      "must_include": [
+        "目标殿"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-dispatch"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452271Z"
+    },
+    {
+      "id": 38,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "rebirth-applications",
+      "question": "转生申请由谁决定？",
+      "expected_tools": [],
+      "must_include": [
+        "初审"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-rebirth-applications"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452275Z"
+    },
+    {
+      "id": 39,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "users",
+      "question": "判官和殿主有什么区别？",
+      "expected_tools": [],
+      "must_include": [
+        "殿主"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-roles"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452279Z"
+    },
+    {
+      "id": 40,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "scheduler",
+      "question": "怎么立即运行定时任务？",
+      "expected_tools": [],
+      "must_include": [
+        "立即运行"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-scheduler"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452284Z"
+    },
+    {
+      "id": 41,
+      "side": "officer",
+      "locale": "en",
+      "screen": "workflow",
+      "question": "How many approvals are waiting for me?",
+      "expected_tools": [
+        "my_pending_approvals"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-workflow"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452288Z"
+    },
+    {
+      "id": 59,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "about",
+      "question": "关于页讲什么？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-about"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792396Z"
+    },
+    {
+      "id": 60,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "admin",
+      "question": "怎么开通或关闭问一问？",
+      "expected_tools": [],
+      "must_include": [
+        "管理员"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-assistant-admin"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792408Z"
+    },
+    {
+      "id": 61,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "cross-judgments",
+      "question": "什么时候激活联审？",
+      "expected_tools": [],
+      "must_include": [
+        "参与方"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-cross-judgments"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792421Z"
+    },
+    {
+      "id": 62,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "welcome",
+      "question": "怎么重看首次设置？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-first-run"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792434Z"
+    },
+    {
+      "id": 63,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "other",
+      "question": "不登录能看到什么？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-landing"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792448Z"
+    },
+    {
+      "id": 64,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "other",
+      "question": "账号被锁定了怎么办？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-login"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792461Z"
+    },
+    {
+      "id": 65,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "notifications",
+      "question": "我的通知在哪？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-notifications"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792474Z"
+    },
+    {
+      "id": 66,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "permissions",
+      "question": "权限矩阵怎么改？",
+      "expected_tools": [],
+      "must_include": [
+        "管理员"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-permission-matrix"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792486Z"
+    },
+    {
+      "id": 67,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "actors",
+      "question": "神祇名录是什么？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-reference-pages"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792500Z"
+    },
+    {
+      "id": 68,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "sentence-requests",
+      "question": "怎么处理受刑请求？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-sentence-requests"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792514Z"
+    },
+    {
+      "id": 69,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "moderation",
+      "question": "朋友圈怎么审核？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-social-moderation"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792527Z"
+    },
+    {
+      "id": 70,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "souls",
+      "question": "怎么新建灵魂？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-souls-and-records"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792540Z"
+    },
+    {
+      "id": 71,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "users",
+      "question": "怎么创建用户？",
+      "expected_tools": [
+        "my_permissions"
+      ],
+      "must_include": [
+        "管理员"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-users"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792553Z"
+    },
+    {
+      "id": 72,
+      "side": "officer",
+      "locale": "en",
+      "screen": "about",
+      "question": "What is the about page?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-about"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792567Z"
+    },
+    {
+      "id": 73,
+      "side": "officer",
+      "locale": "en",
+      "screen": "other",
+      "question": "What can you do?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [
+        "approved it for you"
+      ],
+      "expected_entries": [
+        "officer-assistant"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792580Z"
+    },
+    {
+      "id": 74,
+      "side": "officer",
+      "locale": "en",
+      "screen": "admin",
+      "question": "How do I switch the assistant on or off?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-assistant-admin"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792593Z"
+    },
+    {
+      "id": 75,
+      "side": "officer",
+      "locale": "en",
+      "screen": "cross-judgments",
+      "question": "When do I activate a joint judgment?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-cross-judgments"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792606Z"
+    },
+    {
+      "id": 76,
+      "side": "officer",
+      "locale": "en",
+      "screen": "other",
+      "question": "Why is this button missing?",
+      "expected_tools": [
+        "my_permissions"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-disabled-buttons"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792620Z"
+    },
+    {
+      "id": 77,
+      "side": "officer",
+      "locale": "en",
+      "screen": "dispatch",
+      "question": "Who approves a dispatch?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-dispatch"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792632Z"
+    },
+    {
+      "id": 78,
+      "side": "officer",
+      "locale": "en",
+      "screen": "welcome",
+      "question": "How do I redo the first-time setup?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-first-run"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792646Z"
+    },
+    {
+      "id": 79,
+      "side": "officer",
+      "locale": "en",
+      "screen": "judgment",
+      "question": "How many cases are in my queue?",
+      "expected_tools": [
+        "judgment_queue_counts"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-judgment-queue"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792659Z"
+    },
+    {
+      "id": 80,
+      "side": "officer",
+      "locale": "en",
+      "screen": "other",
+      "question": "What can be seen without signing in?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-landing"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792673Z"
+    },
+    {
+      "id": 81,
+      "side": "officer",
+      "locale": "en",
+      "screen": "other",
+      "question": "My account is locked",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-login"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792686Z"
+    },
+    {
+      "id": 82,
+      "side": "officer",
+      "locale": "en",
+      "screen": "notifications",
+      "question": "Where are my notifications?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-notifications"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792699Z"
+    },
+    {
+      "id": 83,
+      "side": "officer",
+      "locale": "en",
+      "screen": "permissions",
+      "question": "How do I change the permission matrix?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-permission-matrix"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792712Z"
+    },
+    {
+      "id": 84,
+      "side": "officer",
+      "locale": "en",
+      "screen": "rebirth-applications",
+      "question": "Who decides a rebirth application?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-rebirth-applications"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792725Z"
+    },
+    {
+      "id": 85,
+      "side": "officer",
+      "locale": "en",
+      "screen": "recycle-bin",
+      "question": "How do I restore something I deleted?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-recycle-bin"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792738Z"
+    },
+    {
+      "id": 86,
+      "side": "officer",
+      "locale": "en",
+      "screen": "actors",
+      "question": "What is the deity roster?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-reference-pages"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792750Z"
+    },
+    {
+      "id": 87,
+      "side": "officer",
+      "locale": "en",
+      "screen": "users",
+      "question": "What is the difference between a judge and a realm lead?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-roles"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792763Z"
+    },
+    {
+      "id": 88,
+      "side": "officer",
+      "locale": "en",
+      "screen": "scheduler",
+      "question": "How do I run a scheduled job now?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-scheduler"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792776Z"
+    },
+    {
+      "id": 89,
+      "side": "officer",
+      "locale": "en",
+      "screen": "sentence-requests",
+      "question": "How do I decide a sentence request?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-sentence-requests"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792789Z"
+    },
+    {
+      "id": 90,
+      "side": "officer",
+      "locale": "en",
+      "screen": "moderation",
+      "question": "How do I moderate the circle?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-social-moderation"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792801Z"
+    },
+    {
+      "id": 91,
+      "side": "officer",
+      "locale": "en",
+      "screen": "soul-inbox",
+      "question": "How many letters await a reply?",
+      "expected_tools": [],
+      "must_include": [
+        "permission"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-soul-inbox"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792814Z"
+    },
+    {
+      "id": 92,
+      "side": "officer",
+      "locale": "en",
+      "screen": "souls",
+      "question": "How do I create a soul?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-souls-and-records"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792827Z"
+    },
+    {
+      "id": 93,
+      "side": "officer",
+      "locale": "en",
+      "screen": "users",
+      "question": "How do I create a user?",
+      "expected_tools": [
+        "my_permissions"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-users"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792839Z"
+    },
+    {
+      "id": 94,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "city-god-cases",
+      "question": "案子为什么在城隍那里认领不了？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-city-gods"
+      ],
+      "active": true,
+      "created_at": "2026-10-24T13:15:54.540914Z"
+    },
+    {
+      "id": 95,
+      "side": "officer",
+      "locale": "en",
+      "screen": "city-god-cases",
+      "question": "Why can't I claim a case that is with the city god?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-city-gods"
+      ],
+      "active": true,
+      "created_at": "2026-10-24T13:15:54.540947Z"
+    },
+    {
+      "id": 96,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "halls",
+      "question": "怎么只读进入某个殿看它的待办？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-halls"
+      ],
+      "active": true,
+      "created_at": "2026-10-26T16:39:40.610834Z"
+    },
+    {
+      "id": 97,
+      "side": "officer",
+      "locale": "en",
+      "screen": "halls",
+      "question": "How do I look inside one hall read-only?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-halls"
+      ],
+      "active": true,
+      "created_at": "2026-10-26T16:39:40.610853Z"
+    },
+    {
+      "id": 108,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "profile",
+      "question": "官员怎么开启两步验证？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-mfa"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003409Z"
+    },
+    {
+      "id": 109,
+      "side": "officer",
+      "locale": "en",
+      "screen": "profile",
+      "question": "What if I lose my two-step recovery codes?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-mfa"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003414Z"
+    },
+    {
+      "id": 110,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "审判申诉在哪里复核？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-appeals"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003419Z"
+    },
+    {
+      "id": 111,
+      "side": "officer",
+      "locale": "en",
+      "screen": "judgment",
+      "question": "How do I decide a judgment appeal?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-appeals"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003424Z"
+    },
+    {
+      "id": 112,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "tenants",
+      "question": "转生配额在哪里设置？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-rebirth-quota"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003429Z"
+    },
+    {
+      "id": 113,
+      "side": "officer",
+      "locale": "en",
+      "screen": "tenants",
+      "question": "What happens when a hall's rebirth quota is full?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-rebirth-quota"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003435Z"
+    },
+    {
+      "id": 114,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "other",
+      "question": "官员 App 里的我的数是什么？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-app-stats-and-photos"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003440Z"
+    },
+    {
+      "id": 115,
+      "side": "officer",
+      "locale": "en",
+      "screen": "other",
+      "question": "How do I photograph evidence in the officer app?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-app-stats-and-photos"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003445Z"
+    },
+    {
+      "id": 120,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "罪目决定送哪一殿吗？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-offences"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366535Z"
+    },
+    {
+      "id": 121,
+      "side": "officer",
+      "locale": "en",
+      "screen": "judgment",
+      "question": "Does the offence decide which court a guilty soul goes to?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-offences"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366541Z"
+    },
+    {
+      "id": 122,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "为什么枉死城的申诉判不了属实？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-wangsi"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366546Z"
+    },
+    {
+      "id": 123,
+      "side": "officer",
+      "locale": "en",
+      "screen": "judgment",
+      "question": "Why can't I uphold a grievance and release the soul early?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-wangsi"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366552Z"
+    },
+    {
+      "id": 124,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "勾魂牒怎么发？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-capture"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366557Z"
+    },
+    {
+      "id": 125,
+      "side": "officer",
+      "locale": "en",
+      "screen": "souls",
+      "question": "Why can't I issue a capture warrant for this soul?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-capture"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366562Z"
+    },
+    {
+      "id": 126,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "death-sync",
+      "question": "怎么以土地公名义登记死亡？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-earth-gods"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366567Z"
+    },
+    {
+      "id": 127,
+      "side": "officer",
+      "locale": "en",
+      "screen": "death-sync",
+      "question": "How do I create an earth god?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-earth-gods"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366572Z"
+    },
+    {
+      "id": 128,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "souls",
+      "question": "怎么给亡魂挪站？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-diyu-stations"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366578Z"
+    },
+    {
+      "id": 129,
+      "side": "officer",
+      "locale": "en",
+      "screen": "souls",
+      "question": "How do I choose the next life's continent on rebirth?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-diyu-stations"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366583Z"
+    },
+    {
+      "id": 130,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "欧洲的案子为什么判不了下地狱？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-european-sins"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366589Z"
+    },
+    {
+      "id": 131,
+      "side": "officer",
+      "locale": "en",
+      "screen": "souls",
+      "question": "What is the vestibule of hell?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-european-sins"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366594Z"
+    },
+    {
+      "id": 132,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "为什么希腊的审判不能认领？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-greek-ferry"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366599Z"
+    },
+    {
+      "id": 133,
+      "side": "officer",
+      "locale": "en",
+      "screen": "judgment",
+      "question": "When can an unburied soul cross the river?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-greek-ferry"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366604Z"
+    },
+    {
+      "id": 134,
+      "side": "officer",
+      "locale": "zh-Hans",
+      "screen": "judgment",
+      "question": "否定告白记为不实会怎样？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-negative-confession"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366610Z"
+    },
+    {
+      "id": 135,
+      "side": "officer",
+      "locale": "en",
+      "screen": "judgment",
+      "question": "Why can't I give a Passed verdict on this Egyptian case?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "officer-negative-confession"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366616Z"
+    },
+    {
+      "id": 1,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "applications",
+      "question": "我为什么不能申请？",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "rebirth-apply"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452091Z"
+    },
+    {
+      "id": 2,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "applications",
+      "question": "被驳回了还能申诉吗？",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [
+        "申诉"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "rebirth-appeal"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452103Z"
+    },
+    {
+      "id": 3,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "applications",
+      "question": "我的申请到哪一步了？",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "rebirth-review"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452113Z"
+    },
+    {
+      "id": 4,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "applications",
+      "question": "你能替我提交转生申请吗？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [
+        "已为你提交",
+        "已经帮你提交"
+      ],
+      "expected_entries": [
+        "assistant",
+        "rebirth-apply"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452119Z"
+    },
+    {
+      "id": 5,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "sentence",
+      "question": "下一站什么时候开始？",
+      "expected_tools": [
+        "sentence_plan"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "sentence-plan"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452124Z"
+    },
+    {
+      "id": 6,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "sentence",
+      "question": "各站的状态是什么意思？",
+      "expected_tools": [],
+      "must_include": [
+        "刑满暂留"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "sentence-states"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452129Z"
+    },
+    {
+      "id": 7,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "sentence",
+      "question": "受刑结束后可以申请转生吗？",
+      "expected_tools": [
+        "sentence_plan"
+      ],
+      "must_include": [
+        "转生"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "sentence-plan",
+        "rebirth-apply"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452134Z"
+    },
+    {
+      "id": 8,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "sentence",
+      "question": "我还要受刑多久？",
+      "expected_tools": [
+        "sentence_plan"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "sentence-plan"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452138Z"
+    },
+    {
+      "id": 9,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "本世页上的状态是什么意思？",
+      "expected_tools": [
+        "me"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "soul-states"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452144Z"
+    },
+    {
+      "id": 10,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "暂居是什么意思？",
+      "expected_tools": [],
+      "must_include": [
+        "原属"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "residence"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452148Z"
+    },
+    {
+      "id": 11,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "我能看到前世的记录吗？",
+      "expected_tools": [],
+      "must_include": [
+        "前世"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "past-lives"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452153Z"
+    },
+    {
+      "id": 12,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "letters",
+      "question": "怎么写信给殿司？",
+      "expected_tools": [],
+      "must_include": [
+        "书信"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "letters"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452158Z"
+    },
+    {
+      "id": 13,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "letters",
+      "question": "为什么有的灵魂不能直接说话？",
+      "expected_tools": [],
+      "must_include": [
+        "关注"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "letters"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452163Z"
+    },
+    {
+      "id": 14,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "letters",
+      "question": "殿司多久会回信？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [
+        "天内"
+      ],
+      "expected_entries": [
+        "letters"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452167Z"
+    },
+    {
+      "id": 15,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "circle",
+      "question": "我的帖子为什么别人看不到？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "circle"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452172Z"
+    },
+    {
+      "id": 16,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "circle",
+      "question": "怎么关注别人？",
+      "expected_tools": [],
+      "must_include": [
+        "关注"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "circle"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452176Z"
+    },
+    {
+      "id": 17,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "circle",
+      "question": "长明灯是什么？",
+      "expected_tools": [],
+      "must_include": [
+        "撤回"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "circle"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452181Z"
+    },
+    {
+      "id": 18,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "settings",
+      "question": "切换语言会影响什么？",
+      "expected_tools": [],
+      "must_include": [
+        "界面"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "language"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452186Z"
+    },
+    {
+      "id": 19,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "settings",
+      "question": "通知会告诉我哪些事？",
+      "expected_tools": [],
+      "must_include": [
+        "转生申请"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "notifications"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452191Z"
+    },
+    {
+      "id": 20,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "settings",
+      "question": "问一问会保存我的提问吗？",
+      "expected_tools": [],
+      "must_include": [
+        "30"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "assistant"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452195Z"
+    },
+    {
+      "id": 21,
+      "side": "soul",
+      "locale": "en",
+      "screen": "applications",
+      "question": "Can I appeal after a rejection?",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [
+        "appeal"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "rebirth-appeal"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452200Z"
+    },
+    {
+      "id": 22,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "What does residing mean?",
+      "expected_tools": [],
+      "must_include": [
+        "home"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "residence"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452204Z"
+    },
+    {
+      "id": 23,
+      "side": "soul",
+      "locale": "en",
+      "screen": "circle",
+      "question": "How do I follow someone?",
+      "expected_tools": [],
+      "must_include": [
+        "follow"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "circle"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452209Z"
+    },
+    {
+      "id": 24,
+      "side": "soul",
+      "locale": "en",
+      "screen": "settings",
+      "question": "Does Ask keep my questions?",
+      "expected_tools": [],
+      "must_include": [
+        "30"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "assistant"
+      ],
+      "active": true,
+      "created_at": "2026-09-30T07:48:38.452214Z"
+    },
+    {
+      "id": 42,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "applications",
+      "question": "暂不能提交是什么意思？",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "codes"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.791879Z"
+    },
+    {
+      "id": 43,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "applications",
+      "question": "我为什么没有转生？",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "no-rebirth"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.791905Z"
+    },
+    {
+      "id": 44,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "settings",
+      "question": "忘记密码怎么办？",
+      "expected_tools": [],
+      "must_include": [
+        "邮箱"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "account"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.791920Z"
+    },
+    {
+      "id": 45,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "本世余额是什么意思？",
+      "expected_tools": [],
+      "must_include": [
+        "功"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "this-life-ledger"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.791955Z"
+    },
+    {
+      "id": 46,
+      "side": "soul",
+      "locale": "en",
+      "screen": "applications",
+      "question": "How do I apply for rebirth?",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "rebirth-apply"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.791978Z"
+    },
+    {
+      "id": 47,
+      "side": "soul",
+      "locale": "en",
+      "screen": "applications",
+      "question": "Where is my application now?",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "rebirth-review"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.791993Z"
+    },
+    {
+      "id": 48,
+      "side": "soul",
+      "locale": "en",
+      "screen": "applications",
+      "question": "Why can't I apply?",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "codes"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792008Z"
+    },
+    {
+      "id": 49,
+      "side": "soul",
+      "locale": "en",
+      "screen": "applications",
+      "question": "Why is there no rebirth for me?",
+      "expected_tools": [
+        "rebirth"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "no-rebirth"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792023Z"
+    },
+    {
+      "id": 50,
+      "side": "soul",
+      "locale": "en",
+      "screen": "sentence",
+      "question": "When does the next station begin?",
+      "expected_tools": [
+        "sentence_plan"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "sentence-plan"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792037Z"
+    },
+    {
+      "id": 51,
+      "side": "soul",
+      "locale": "en",
+      "screen": "sentence",
+      "question": "What do the station states mean?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "sentence-states"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792051Z"
+    },
+    {
+      "id": 52,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "What does my state on this page mean?",
+      "expected_tools": [
+        "me"
+      ],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "soul-states"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792065Z"
+    },
+    {
+      "id": 53,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "Can I see my past lives?",
+      "expected_tools": [],
+      "must_include": [
+        "Past lives"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "past-lives"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792311Z"
+    },
+    {
+      "id": 54,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "What does the balance mean?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "this-life-ledger"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792332Z"
+    },
+    {
+      "id": 55,
+      "side": "soul",
+      "locale": "en",
+      "screen": "letters",
+      "question": "How do I write to the hall?",
+      "expected_tools": [],
+      "must_include": [
+        "Letters"
+      ],
+      "must_not_include": [],
+      "expected_entries": [
+        "letters"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792345Z"
+    },
+    {
+      "id": 56,
+      "side": "soul",
+      "locale": "en",
+      "screen": "settings",
+      "question": "What does switching the language change?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "language"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792357Z"
+    },
+    {
+      "id": 57,
+      "side": "soul",
+      "locale": "en",
+      "screen": "settings",
+      "question": "What will notifications tell me?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "notifications"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792370Z"
+    },
+    {
+      "id": 58,
+      "side": "soul",
+      "locale": "en",
+      "screen": "settings",
+      "question": "I forgot my password",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "account"
+      ],
+      "active": true,
+      "created_at": "2026-10-11T01:02:46.792383Z"
+    },
+    {
+      "id": 98,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "settings",
+      "question": "怎么开启两步验证？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "two-step"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003339Z"
+    },
+    {
+      "id": 99,
+      "side": "soul",
+      "locale": "en",
+      "screen": "settings",
+      "question": "How do I turn on two-step verification?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "two-step"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003353Z"
+    },
+    {
+      "id": 100,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "settings",
+      "question": "怎么导出我的资料？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "data-export"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003362Z"
+    },
+    {
+      "id": 101,
+      "side": "soul",
+      "locale": "en",
+      "screen": "settings",
+      "question": "How do I export my data?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "data-export"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003368Z"
+    },
+    {
+      "id": 102,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "settings",
+      "question": "有不认识的设备登录了我的账号怎么办？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "sign-in-history"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003376Z"
+    },
+    {
+      "id": 103,
+      "side": "soul",
+      "locale": "en",
+      "screen": "settings",
+      "question": "How do I sign another device out?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "sign-in-history"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003382Z"
+    },
+    {
+      "id": 104,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "对审判结果不服怎么申诉？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "judgment-appeal"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003387Z"
+    },
+    {
+      "id": 105,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "How do I appeal a judgment?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "judgment-appeal"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003392Z"
+    },
+    {
+      "id": 106,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "超度回向是什么？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "dedication"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003398Z"
+    },
+    {
+      "id": 107,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "What is dedication of merit?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "dedication"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T01:32:02.003403Z"
+    },
+    {
+      "id": 116,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "十三站是什么？我走到哪一站了？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "diyu-stations"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366501Z"
+    },
+    {
+      "id": 117,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "Which of the thirteen stations am I at?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "diyu-stations"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366516Z"
+    },
+    {
+      "id": 118,
+      "side": "soul",
+      "locale": "zh-Hans",
+      "screen": "life",
+      "question": "怎么向城隍申诉冤情，提前出枉死城？",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "wangsi-grievance"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366523Z"
+    },
+    {
+      "id": 119,
+      "side": "soul",
+      "locale": "en",
+      "screen": "life",
+      "question": "How do I file a grievance in the City of Wrongful Death?",
+      "expected_tools": [],
+      "must_include": [],
+      "must_not_include": [],
+      "expected_entries": [
+        "wangsi-grievance"
+      ],
+      "active": true,
+      "created_at": "2026-10-28T14:34:21.366529Z"
+    }
+  ],
+  "runs": [
+    {
+      "id": 6,
+      "created_at": "2026-11-14T02:13:53.872352Z",
+      "status": "done",
+      "candidates": [
+        {
+          "provider": "openai_compatible",
+          "base_url": "https://api.deepseek.com",
+          "model": "deepseek-flash",
+          "effort": "low",
+          "fallbacks": true
+        }
+      ],
+      "estimated_cost": 0.261531,
+      "total": 80,
+      "done": 80,
+      "summary": [
+        {
+          "candidate": 0,
+          "provider": "openai_compatible",
+          "model": "deepseek-flash",
+          "cases": 80,
+          "passed": 75,
+          "errors": 0,
+          "tool_accuracy": 0.95,
+          "phrase_hit_rate": 0.9473684210526315,
+          "retrieval_hit_rate": 0.025,
+          "retrieval_fallbacks": 80,
+          "mean_latency_ms": 2903.5125,
+          "max_latency_ms": 5453,
+          "cost": 0.226854,
+          "input_tokens": 1470449,
+          "output_tokens": 10477
+        }
+      ],
+      "finished_at": "2026-11-14T02:17:47.448492Z",
+      "results": [
+        {
+          "id": 107,
+          "candidate": 0,
+          "case": 25,
+          "side": "officer",
+          "question": "我的队列里有几件案子？",
+          "tools_called": [],
+          "answer": "我的工具里没有“审判队列有几件”的计数工具，我只拿得到自己的权限情况，所以没法给出数字；要看具体件数，请到侧栏「审判队列」的「待审」页，四组「我认领／待认领／他人认领／暂缓」上面就写着件数。\n\n另外提醒一句：你的角色是朋友圈审核员，默认只看得到仪表盘和自己的通知，不涉及审判队列。如果你确实需要办案，请找本殿管理员调整角色或开通权限。",
+          "error": "",
+          "tools_ok": false,
+          "included": {},
+          "excluded": {},
+          "passed": false,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2240,
+          "tokens": {
+            "input": 13281,
+            "output": 110
+          },
+          "cost": 0.0020581499999999995
+        },
+        {
+          "id": 108,
+          "candidate": 0,
+          "case": 26,
+          "side": "officer",
+          "question": "怎么认领案件？",
+          "tools_called": [],
+          "answer": "认领案件有两个入口，但先跟您说明：您当前的角色是朋友圈审核员（MODERATOR），数据范围仅本殿，没有审判相关权限，所以「认领」按钮对您会是灰的或被拒。要办案得请管理员给您加审判相关的角色。\n\n具体操作：在侧栏「审判队列」的「待审」页，「待认领」分组里点某件案子的「认领」即可接下，案子会移到「我认领」。有些案子标着「枉死 · 候至某日」，到那天之前不能认领。官员 App 的「审判」页也能认领和查看案子。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "认领": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2089,
+          "tokens": {
+            "input": 13279,
+            "output": 139
+          },
+          "cost": 0.00207525
+        },
+        {
+          "id": 109,
+          "candidate": 0,
+          "case": 27,
+          "side": "officer",
+          "question": "暂缓是什么意思？",
+          "tools_called": [],
+          "answer": "暂缓是审判队列「待审」页里的一个分组：把暂时不想办或办不了的未结案子用「暂缓」按钮放到一边，必须写理由。放进去后，案子在「暂缓」这一组里，可以之后再拿出来办理。\n\n具体操作在审判队列「待审」页的案子上点「暂缓」并填理由；我这边是只读的，不会替你操作。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "理由": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1945,
+          "tokens": {
+            "input": 13278,
+            "output": 89
+          },
+          "cost": 0.0020450999999999998
+        },
+        {
+          "id": 110,
+          "candidate": 0,
+          "case": 28,
+          "side": "officer",
+          "question": "你能告诉我是哪个灵魂在等吗？",
+          "tools_called": [],
+          "answer": "助手只能提供计数，看不到具体是哪个灵魂在等待；要看具体案子，请到「审判队列」的「待审」页，各组里列出了案号和灵魂，点一行即可打开详情。\n\n另外提醒一句：你的角色是 MODERATOR（朋友圈审核员），数据范围仅本殿，而且默认不看也不办审判，所以审判队列里的「认领」等操作你可能也看不到或做不了。如果确实需要看具体案件，请找管理员确认是否需要给你开通相应权限。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2484,
+          "tokens": {
+            "input": 13283,
+            "output": 105
+          },
+          "cost": 0.00205545
+        },
+        {
+          "id": 111,
+          "candidate": 0,
+          "case": 29,
+          "side": "officer",
+          "question": "有多少审批在等我？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "你的角色是朋友圈审核员（MODERATOR），不持有流程的批准、推进或越级推进权限，所以不会有权属你的审批节点。我也没有能统计“待我审批”数量的工具，无法给出具体数字。若要核对，请找本殿管理员查看，或请管理员按需为你调整角色权限。",
+          "error": "",
+          "tools_ok": false,
+          "included": {},
+          "excluded": {},
+          "passed": false,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3575,
+          "tokens": {
+            "input": 26677,
+            "output": 91
+          },
+          "cost": 0.00405615
+        },
+        {
+          "id": 112,
+          "candidate": 0,
+          "case": 30,
+          "side": "officer",
+          "question": "推进和越级推进有什么区别？",
+          "tools_called": [],
+          "answer": "推进：把审批实例当前的指针移到下一节点，但不给离开的那个节点做决定，该节点仍是待审批，之后还能回来；需要「流程推进」权限。越级推进：强行越过卡住的节点，必须写理由并留审计记录，最多推到终审那一站，终审本身越不过，也不会让流程直接走完；默认只有管理员持有。两者都在侧栏「审批流程」的审批实例上操作。\n\n顺带说明：我查到你的角色是 MODERATOR（朋友圈审核员），只覆盖本殿，且不持有流程的推进和越级推进权限，所以这两个按钮你按不动。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "理由": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2366,
+          "tokens": {
+            "input": 13281,
+            "output": 134
+          },
+          "cost": 0.00207255
+        },
+        {
+          "id": 113,
+          "candidate": 0,
+          "case": 31,
+          "side": "officer",
+          "question": "为什么我点不了批准？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "你的角色是朋友圈审核员（MODERATOR），没有审批流程的批准权限（workflow.approve 为否），所以「批准」点不了。这个角色按设计只管灵魂朋友圈的审核，不参与审批流。\n\n如果确实需要批准流程，请找不属于任何殿的管理员在「权限与角色」里给你开通或调整角色。另外，即使有了批准权限，也只有该节点指定的审批人才能「提交决定」，管理员也不例外。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3055,
+          "tokens": {
+            "input": 26679,
+            "output": 117
+          },
+          "cost": 0.00407205
+        },
+        {
+          "id": 114,
+          "candidate": 0,
+          "case": 32,
+          "side": "officer",
+          "question": "为什么这个按钮不见了？",
+          "tools_called": [],
+          "answer": "你问的是哪个按钮？能说一下按钮的名字和它在哪个页面吗？这样我才能对照帮助条目或你的权限帮你查。\n\n另外先提醒一点：按钮看不见或被拒绝，通常只有两类原因，一是缺少对应权限，二是权限之外的服务端规则使然；菜单按钮的「显示」开关关掉时，有权限的人也会看不到按钮，但直接调用接口仍然能成功。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "权限": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": true,
+          "latency_ms": 2410,
+          "tokens": {
+            "input": 13278,
+            "output": 83
+          },
+          "cost": 0.0020415
+        },
+        {
+          "id": 115,
+          "candidate": 0,
+          "case": 33,
+          "side": "officer",
+          "question": "你能帮我批准吗？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "你现在的角色是朋友圈审核员（MODERATOR），没有流程批准权限，也没有流程推进、越级推进、用户管理、调度相关的权限。\n\n所以即使你告诉我要批准哪一件，你也批不了。要是你确实需要做审批，请找管理员（Administrator）给你开通对应的角色或权限；朋友圈审核员按规则永远不能持有用户管理权限。\n\n如果你手里有待办，想知道有多少件在等你，可以用「审批流程 › 审批实例」自己看；要批某一节点，就在那个实例上点「提交决定」（需流程批准权限，且必须是该节点指定的审批人）。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {
+            "已为你批准": false,
+            "已经帮你批准": false
+          },
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3806,
+          "tokens": {
+            "input": 26713,
+            "output": 188
+          },
+          "cost": 0.00411975
+        },
+        {
+          "id": 116,
+          "candidate": 0,
+          "case": 34,
+          "side": "officer",
+          "question": "收件箱里有几封信待回复？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "我这边没有能给出信件数量的计数工具（只给了我查权限的工具），所以答不出具体有几封待回复。请到侧栏「殿司收件箱」，打开「待回复」文件夹，就能看到该文件夹里有几封；不过按你的角色（朋友圈审核员），你大概率看不到收件箱这一类页面。如果确实打不开，请找本殿管理员确认权限。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "权限": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3523,
+          "tokens": {
+            "input": 26687,
+            "output": 104
+          },
+          "cost": 0.00406545
+        },
+        {
+          "id": 117,
+          "candidate": 0,
+          "case": 35,
+          "side": "officer",
+          "question": "怎么回复灵魂的来信？",
+          "tools_called": [],
+          "answer": "按权限规则，你这个账号是朋友圈审核员（MODERATOR），默认不持有收件箱权限：回复来信需要「收件箱回复权限」，查看需要「收件箱查看权限」，所以殿司收件箱里你大概看不到回复入口。\n\n如果你确有需要，请找本殿管理员在「系统设置 › 用户管理 › 设置角色」里给你加上相应角色或权限。\n\n顺便说一句，朋友圈审核员的工作是灵魂朋友圈的审核（举报、待审内容、敏感词、禁言），不看也不办审判、审批流程、调度和殿司收件箱。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "回复": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2202,
+          "tokens": {
+            "input": 13281,
+            "output": 127
+          },
+          "cost": 0.00206835
+        },
+        {
+          "id": 118,
+          "candidate": 0,
+          "case": 36,
+          "side": "officer",
+          "question": "删掉的东西怎么恢复？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "回收站里点那条记录旁的「恢复」，和它一起删掉的记录会一并恢复，不是只恢复一行。但「恢复」只有管理员能做，而且你只能动本殿的记录；你这边的角色是朋友圈审核员，助手能查的权限里没有回收站查看权限，看不到按钮的原因需要请本殿管理员确认。若是依赖的东西（比如流程模板指定的角色）已不存在，恢复会被拒。请找管理员代为恢复。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "管理员": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3474,
+          "tokens": {
+            "input": 26681,
+            "output": 116
+          },
+          "cost": 0.00407175
+        },
+        {
+          "id": 119,
+          "candidate": 0,
+          "case": 37,
+          "side": "officer",
+          "question": "调度由谁批准？",
+          "tools_called": [],
+          "answer": "只有调度目标殿能批准和执行：需要目标殿的调度批准、调度执行权限；不属于任何殿的管理员也可以做。\n\n按你的权限（朋友圈审核员，范围仅本殿），调度批准和执行都不在你手里，调度管理也没有，所以调度页面上的批准按钮不会对你开放。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "目标殿": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1744,
+          "tokens": {
+            "input": 13278,
+            "output": 61
+          },
+          "cost": 0.0020283
+        },
+        {
+          "id": 120,
+          "candidate": 0,
+          "case": 38,
+          "side": "officer",
+          "question": "转生申请由谁决定？",
+          "tools_called": [],
+          "answer": "转生申请的审批按角色分两步。首次申请先由审判者初审，再由管理员终审。两个节点分别由各自的审批人做决定，并且需要具备流程批准权限。申诉则先由审判者复核，再由管理员终审。\n\n另外，管理员可以用「越级推进」越过卡住的节点，但最多推到终审那一站；终审仍要有人决定，越级推进不会直接批准申请。\n\n批准或驳回要在审批流程页上操作。详情里的「打开审批流程」会带你过去。驳回时必须写入给灵魂看的理由。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "初审": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2535,
+          "tokens": {
+            "input": 13284,
+            "output": 118
+          },
+          "cost": 0.0020634
+        },
+        {
+          "id": 121,
+          "candidate": 0,
+          "case": 39,
+          "side": "officer",
+          "question": "判官和殿主有什么区别？",
+          "tools_called": [],
+          "answer": "先说明一下：按 my_permissions 工具的结果，你当前的角色是 MODERATOR（朋友圈审核员），数据范围只限本殿。\n\n两者的区别（按内置角色）：\n- JUDGE（审判者，口语叫判官）：能查看灵魂、宣告死亡、做状态流转、管理轮回，发起与宣判审判（不能改派），在城隍、土地公、枉死城与勾魂上办案，批准与推进流程节点，审转生申请，发起跨域审判。没有调度权限。\n- MODERATOR（朋友圈审核员，就是你现在的主角色）：只管灵魂朋友圈的审核（举报、待审内容、敏感词、禁言），另外只看得到仪表盘和自己的通知。不看也不办审判、审批流程、调度、受刑计划、灵魂账号与殿司收件箱，也看不到审计日志。朋友圈审核员永远不能持有用户管理权限。\n\n「殿主」是朋友圈审核员以前的名字：那时它管本殿那些事，现在这些事由绑定在该殿的管理员负责，角色本身只剩审核朋友圈的权限。所以你看到自己没有判官那些按钮，是角色本身如此，不是配置出错。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "殿主": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2918,
+          "tokens": {
+            "input": 13280,
+            "output": 245
+          },
+          "cost": 0.002139
+        },
+        {
+          "id": 122,
+          "candidate": 0,
+          "case": 40,
+          "side": "officer",
+          "question": "怎么立即运行定时任务？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "「立即运行」在侧栏「定时任务」的「任务」页签，点任务那一行的「立即运行」即可；cron 与时区在「编辑调度」里改。但这一步需要「定时任务管理」权限，只有管理员能持有。你目前的角色是朋友圈审核员，没有这项权限，所以按钮应当用不了；定时任务页也只对管理员开放，你的数据范围限于本殿。要开通这项权限，需要联系不属于任何殿的管理员。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "立即运行": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 5077,
+          "tokens": {
+            "input": 26682,
+            "output": 129
+          },
+          "cost": 0.0040796999999999995
+        },
+        {
+          "id": 123,
+          "candidate": 0,
+          "case": 41,
+          "side": "officer",
+          "question": "How many approvals are waiting for me?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "I can't count them: I don't have a tool for pending approvals, and as a Circle Moderator you hold none of the workflow permissions (approve, advance, escalate), so no approval step is assigned to you. Circle Moderators hold no step in the rebirth or appeal workflows. If you think you should be approving something, ask an administrator to check your role.",
+          "error": "",
+          "tools_ok": false,
+          "included": {},
+          "excluded": {},
+          "passed": false,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3721,
+          "tokens": {
+            "input": 30265,
+            "output": 98
+          },
+          "cost": 0.00459855
+        },
+        {
+          "id": 124,
+          "candidate": 0,
+          "case": 59,
+          "side": "officer",
+          "question": "关于页讲什么？",
+          "tools_called": [],
+          "answer": "「关于与致谢」页列出本应用用到的第三方素材与服务，以及各自授权和出处。页面分五节：字体、开源软件、文献出处、模型与服务（标出默认使用的那个）、设计与协作。你就在这个页里问，说明它只读、不影响任何数据。要更换或新增素材，得找本殿管理员，因为素材与授权清单在代码里，界面上改不了。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2201,
+          "tokens": {
+            "input": 13278,
+            "output": 89
+          },
+          "cost": 0.0020450999999999998
+        },
+        {
+          "id": 125,
+          "candidate": 0,
+          "case": 60,
+          "side": "officer",
+          "question": "怎么开通或关闭问一问？",
+          "tools_called": [],
+          "answer": "抱歉，这超出我的权限范围：我查不到「助手管理」页面上的开关，也没有能修改它的工具。\n\n按帮助说明，助手管理在侧栏「系统设置 › 助手管理」下，开关分总开关和每个殿的开关，点下即生效；但这一页只对不属于任何殿的管理员开放，绑定在某个殿的管理员只能看、改本殿的开关。当前账号是朋友圈审核员（MODERATOR），所以看不到这个入口。\n\n需要开通或关闭，请联系不属于任何殿的管理员（全局管理员）在那一页操作；如果你只是想确认自己的权限情况，我可以用 my_permissions 工具再报告一次。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "管理员": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2747,
+          "tokens": {
+            "input": 13280,
+            "output": 140
+          },
+          "cost": 0.002076
+        },
+        {
+          "id": 126,
+          "candidate": 0,
+          "case": 61,
+          "side": "officer",
+          "question": "什么时候激活联审？",
+          "tools_called": [],
+          "answer": "只有在参与方都就位后，才由发起方点击「激活联审」。请注意：激活后不能再添加参与方。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "参与方": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1712,
+          "tokens": {
+            "input": 13280,
+            "output": 27
+          },
+          "cost": 0.0020082
+        },
+        {
+          "id": 127,
+          "candidate": 0,
+          "case": 62,
+          "side": "officer",
+          "question": "怎么重看首次设置？",
+          "tools_called": [],
+          "answer": "在欢迎页的「接着做」里点「重看首次设置」就能再看一遍。重看只是重新显示，不会清除「已完成」的标记。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1629,
+          "tokens": {
+            "input": 13280,
+            "output": 34
+          },
+          "cost": 0.0020124
+        },
+        {
+          "id": 128,
+          "candidate": 0,
+          "case": 63,
+          "side": "officer",
+          "question": "不登录能看到什么？",
+          "tools_called": [],
+          "answer": "不登录也能看到网站首页：顶部是「灵魂账本 · 跨文明灵魂管理系统」的介绍，下面是四个文明（中国地府、欧洲天堂与地狱、埃及冥界、希腊冥界）各一行的说明，还有语言与明暗主题的切换。右上的「控制台」在未登录时进登录页。首页上没有任何数据，也不能做任何操作。「关于与致谢」这类页面不登录看不到。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2251,
+          "tokens": {
+            "input": 13278,
+            "output": 92
+          },
+          "cost": 0.0020469
+        },
+        {
+          "id": 129,
+          "candidate": 0,
+          "case": 64,
+          "side": "officer",
+          "question": "账号被锁定了怎么办？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "你的角色是朋友圈审核员（MODERATOR），没有用户管理权限，所以「用户管理」里的解锁、重置密码这些你都不能做。请等锁定时间过去后重试；想提前解锁，或者忘了密码，可以找本殿管理员或持有用户管理权限的同僚。若你正卡在登录页，也可以在「忘记密码」页点「通知管理员」，让有用户管理权限的官员帮你处理。另外，朋友圈审核员在任何情况下都不能持有用户管理权限，所以这条路只能靠别人。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4165,
+          "tokens": {
+            "input": 26744,
+            "output": 198
+          },
+          "cost": 0.004130399999999999
+        },
+        {
+          "id": 130,
+          "candidate": 0,
+          "case": 65,
+          "side": "officer",
+          "question": "我的通知在哪？",
+          "tools_called": [],
+          "answer": "在顶栏点铃铛图标就能进「通知」，图标上带未读数；打开后只显示你自己的通知。里面有「全部／未读」筛选，也能「标为已读」或「全部已读」。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2035,
+          "tokens": {
+            "input": 13278,
+            "output": 47
+          },
+          "cost": 0.0020199
+        },
+        {
+          "id": 131,
+          "candidate": 0,
+          "case": 66,
+          "side": "officer",
+          "question": "权限矩阵怎么改？",
+          "tools_called": [],
+          "answer": "按帮助条目和你的权限，情况是这样：\n\n「权限与角色」页要有系统设置权限才能打开；就算打开，也只有不属于任何殿的管理员能保存改动，绑定在某个殿的管理员和其他持有人只能看。矩阵里勾选权限代码与角色的格子，改动先攒着，点「保存改动」前会列出各角色前后对比和持有该角色的人数；保存是整体替换该角色的授权。不能授的格子标「禁授」，例如只有管理员能持有的权限。\n\n另外，你当前的角色是 MODERATOR（朋友圈审核员），所见范围仅本殿。朋友圈审核员永远不能持有用户管理权限，也没有系统设置权限，因此你无法修改权限矩阵。要开通权限或改矩阵，请找不属于任何殿的管理员。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "管理员": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2314,
+          "tokens": {
+            "input": 13279,
+            "output": 161
+          },
+          "cost": 0.00208845
+        },
+        {
+          "id": 132,
+          "candidate": 0,
+          "case": 67,
+          "side": "officer",
+          "question": "神祇名录是什么？",
+          "tools_called": [],
+          "answer": "「神祇名录」是参考类页面（只读），列出神话里的神祇，包括玛特的四十二位陪审判官。要打开它需要「查看角色」权限。\n\n如果你打不开，多半是缺这项权限，请找本殿管理员开通；页面本身在界面上改不了内容。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2185,
+          "tokens": {
+            "input": 13279,
+            "output": 67
+          },
+          "cost": 0.00203205
+        },
+        {
+          "id": 133,
+          "candidate": 0,
+          "case": 68,
+          "side": "officer",
+          "question": "怎么处理受刑请求？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "流程上，受刑请求页（侧栏「受刑请求」）里每个有待决请求的计划占一行，等你决定的会有标记：\n\n- 批准／驳回：加项、减项的请求由计划的原属殿（或管理员）决定，需要「执行审判」权限。重开审判的请求由原审的结案判官本人决定；他已停用、调离原属殿或没有结案人记录时，由原属殿持改派权限的官员决定。批准立即生效，批准重开会立即开启重审；驳回可以附理由。\n- 撤回：由提出请求的殿（或管理员）做，同样要「执行审判」权限。\n- 撤销整个受刑计划是另一件事，只有原属殿（或管理员）能做，要写理由，并需要撤销受刑计划的权限。\n- 处置（侧栏「轮回处置」）分待执行、执行中、期满三栏，「执行处置」需要处置执行权限。\n\n就你本人的情况：你的角色是朋友圈审核员，兼任职角色一个也没有；助手能查的权限里没有一项与受刑请求相关，而这个角色按默认设计是不看也不办审判、流程和受刑计划的。所以你在这一页应该看不到可用的批准、驳回按钮。要办理这类事，请找本殿管理员，请他们为你授予相应权限（例如执行审判），或者由本殿负责的官员处理。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4954,
+          "tokens": {
+            "input": 26719,
+            "output": 361
+          },
+          "cost": 0.004224449999999999
+        },
+        {
+          "id": 134,
+          "candidate": 0,
+          "case": 69,
+          "side": "officer",
+          "question": "朋友圈怎么审核？",
+          "tools_called": [],
+          "answer": "你现在的角色是朋友圈审核员（MODERATOR），数据范围只覆盖本殿，正好负责灵魂朋友圈的审核：举报、待审内容、敏感词、禁言、已处理五个页签都在侧栏「朋友圈审核」下，查看和处理需要朋友圈审核权限，默认管理员与朋友圈审核员持有。删掉的帖子与评论会进回收站。从别的殿复制敏感词表只有管理员能做，你可以在本殿维护敏感词表。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2126,
+          "tokens": {
+            "input": 13278,
+            "output": 97
+          },
+          "cost": 0.0020498999999999995
+        },
+        {
+          "id": 135,
+          "candidate": 0,
+          "case": 70,
+          "side": "officer",
+          "question": "怎么新建灵魂？",
+          "tools_called": [],
+          "answer": "新建灵魂需要「灵魂新建」权限，而你的角色是朋友圈审核员（MODERATOR），默认没有这项权限，所以你无法新建灵魂。有权限的官员在侧栏「灵魂管理」页点「创建灵魂」，或在同一页点「导入」批量创建。需要开通权限的话，请找管理员。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1959,
+          "tokens": {
+            "input": 13278,
+            "output": 67
+          },
+          "cost": 0.0020318999999999997
+        },
+        {
+          "id": 136,
+          "candidate": 0,
+          "case": 71,
+          "side": "officer",
+          "question": "怎么创建用户？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "你现在的角色是朋友圈审核员，没有用户管理权限，所以「用户管理」页里的「创建用户」这个操作你做不了；朋友圈审核员即使改了权限矩阵，服务端也会拒绝授予用户管理权限。\n\n要创建用户，请联系本殿持有用户管理权限的官员（通常是管理员）：在「系统设置 › 用户管理」里点「创建用户」，填用户名、邮箱、密码、角色，可填姓名；有殿的非管理员还要选一个本殿的所属机构。也可以让他们用「邀请官员」，对方自己设密码。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "管理员": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3777,
+          "tokens": {
+            "input": 26678,
+            "output": 143
+          },
+          "cost": 0.0040875
+        },
+        {
+          "id": 137,
+          "candidate": 0,
+          "case": 72,
+          "side": "officer",
+          "question": "What is the about page?",
+          "tools_called": [],
+          "answer": "The \"About & credits\" page lists the third-party assets and services the app uses, with their licences and sources. It's read-only and opens from the user menu in the top bar after signing in (it can't be viewed signed out).\n\nIt has five sections: typefaces (interface fonts, the Chinese fallback fonts, and the plaque/seal lettering fonts loaded on demand), open-source software (server, web console, app and shared dependencies), texts and sources for the four civilizations, models and services used by the assistant and embeddings (configured per deployment), and design and collaboration.\n\nTo replace or add an asset, ask the hall's administrator — the assets and the credits list live in the code, not in the console.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2423,
+          "tokens": {
+            "input": 15070,
+            "output": 151
+          },
+          "cost": 0.0023511
+        },
+        {
+          "id": 138,
+          "candidate": 0,
+          "case": 73,
+          "side": "officer",
+          "question": "What can you do?",
+          "tools_called": [],
+          "answer": "I answer questions about how to use the officer console, read-only, from the help entries. My tools give counts only and check a few of your own permissions — they never show souls' names, statements or verdicts, so for a case I point you to the page that lists it.\n\nI can't approve, advance, claim, assign, reply, restore or delete anything for you; I tell you which page and button does it. If a question isn't covered by the help entries, I'll say I don't know and suggest the system administrator.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {
+            "approved it for you": false
+          },
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2524,
+          "tokens": {
+            "input": 15069,
+            "output": 113
+          },
+          "cost": 0.00232815
+        },
+        {
+          "id": 139,
+          "candidate": 0,
+          "case": 74,
+          "side": "officer",
+          "question": "How do I switch the assistant on or off?",
+          "tools_called": [],
+          "answer": "I don't know — that's not something I can answer from the help entries or my tools. I only have entries about using the console (judgment queue, workflows, dispatch, rebirth, inbox, and so on), and nothing covering an assistant on/off switch.\n\nPlease ask your system administrator.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2056,
+          "tokens": {
+            "input": 15074,
+            "output": 61
+          },
+          "cost": 0.0022976999999999997
+        },
+        {
+          "id": 140,
+          "candidate": 0,
+          "case": 75,
+          "side": "officer",
+          "question": "When do I activate a joint judgment?",
+          "tools_called": [],
+          "answer": "The initiating hall activates it from the joint judgment's detail page with \"Activate judgment\", once all participants are seated — after that, no more participants can be added. So seat everyone first, then activate; and note that opening, seating, filling a stop and activating all need the cross-realm judgment create permission.\n\nI can't tell you whether you hold that permission: my tools can only check workflow approve/advance/escalate, user management, and dispatch permissions. If \"Activate judgment\" is greyed for you, ask an administrator who belongs to no hall to check your role.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2200,
+          "tokens": {
+            "input": 15074,
+            "output": 121
+          },
+          "cost": 0.0023336999999999998
+        },
+        {
+          "id": 141,
+          "candidate": 0,
+          "case": 76,
+          "side": "officer",
+          "question": "Why is this button missing?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "Your only role is Circle Moderator, and it covers this hall. That role is deliberately narrow: it reviews the soul circle (reports, pending content, the word list, mutes) plus the dashboard and its own notifications, and it does not read or work judgments, workflows, dispatches, sentence plans, soul accounts or the hall-office inbox. So buttons on those pages will be missing or refused for you.\n\nI can check only a few permissions, and you hold none of them: workflow approve, advance and escalate, user management, and dispatch approve, reject, execute and manage. For anything else I cannot tell from here whether you lack the permission or a server rule is blocking it — tell me the exact page and button name and I can point you to the relevant entry, or ask the system administrator to confirm your permissions. Note that a Circle Moderator can never hold the user management permission, whatever the matrix says.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": true,
+          "latency_ms": 4323,
+          "tokens": {
+            "input": 30304,
+            "output": 255
+          },
+          "cost": 0.0046986
+        },
+        {
+          "id": 142,
+          "candidate": 0,
+          "case": 77,
+          "side": "officer",
+          "question": "Who approves a dispatch?",
+          "tools_called": [],
+          "answer": "Only the target hall approves a dispatch — its officers need the dispatch approve permission (an administrator who belongs to no hall may also approve it). You cannot: your role is Moderator and your scope is this hall only, and Moderators have no dispatch permissions at all.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1783,
+          "tokens": {
+            "input": 15069,
+            "output": 54
+          },
+          "cost": 0.00229275
+        },
+        {
+          "id": 143,
+          "candidate": 0,
+          "case": 78,
+          "side": "officer",
+          "question": "How do I redo the first-time setup?",
+          "tools_called": [],
+          "answer": "On the welcome page, look under \"Pick up where you left off\" shortcuts and use \"Redo first-time setup\"; redoing it does not clear the done mark. Remember that finishing or skipping counts as done and is saved in your account's preferences, so another browser will not ask again.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2305,
+          "tokens": {
+            "input": 15075,
+            "output": 60
+          },
+          "cost": 0.00229725
+        },
+        {
+          "id": 144,
+          "candidate": 0,
+          "case": 79,
+          "side": "officer",
+          "question": "How many cases are in my queue?",
+          "tools_called": [],
+          "answer": "I do not have a tool for the judgment queue counts, so I cannot give you a number. You can see the counts yourself on the \"Judgment Queue\" page, where the \"Pending\" tab splits open cases into \"Mine\", \"Unclaimed\", \"Claimed by others\" and \"Deferred\". Note also that as a Circle Moderator you do not work judgments at all, so the queue will not be your work area.",
+          "error": "",
+          "tools_ok": false,
+          "included": {},
+          "excluded": {},
+          "passed": false,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1870,
+          "tokens": {
+            "input": 15073,
+            "output": 90
+          },
+          "cost": 0.0023149499999999996
+        },
+        {
+          "id": 145,
+          "candidate": 0,
+          "case": 80,
+          "side": "officer",
+          "question": "What can be seen without signing in?",
+          "tools_called": [],
+          "answer": "You can see the site's landing page (the root address) without signing in: an introduction to the system at the top, one line for each of the four civilizations, and the language and light-or-dark theme switches. It shows no data and offers no actions, and the Console link sends a signed-out visitor to the sign-in page. Other console pages, such as \"About & credits\", cannot be viewed signed out.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2043,
+          "tokens": {
+            "input": 15072,
+            "output": 86
+          },
+          "cost": 0.0023123999999999996
+        },
+        {
+          "id": 146,
+          "candidate": 0,
+          "case": 81,
+          "side": "officer",
+          "question": "My account is locked",
+          "tools_called": [],
+          "answer": "I can't unlock accounts myself — that's done in User Management (\"Reset password\" or, for a sign-in lock, ask your court admin to unlock it). The lock clears by itself after the time the sign-in page shows.\n\nOne thing worth knowing: your role is Circle Moderator, and a Circle Moderator can never hold the user management permission, so you won't find User Management in your sidebar. Ask an administrator of your hall to unlock the account.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2289,
+          "tokens": {
+            "input": 15068,
+            "output": 94
+          },
+          "cost": 0.0023166
+        },
+        {
+          "id": 147,
+          "candidate": 0,
+          "case": 82,
+          "side": "officer",
+          "question": "Where are my notifications?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "The bell icon in the top bar opens your notifications; it shows the unread count, and the page lists only your own notices, filtered by all or unread, with \"Mark as Read\" and \"Mark All as Read\". As a Circle Moderator your notifications are just your own and the dashboard's — judgment, workflow, dispatch and inbox notices go to officers holding those permissions. For the permission rules themselves, check with your hall administrator.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4160,
+          "tokens": {
+            "input": 30259,
+            "output": 112
+          },
+          "cost": 0.0046060499999999996
+        },
+        {
+          "id": 148,
+          "candidate": 0,
+          "case": 83,
+          "side": "officer",
+          "question": "How do I change the permission matrix?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "The permission matrix is on \"Permissions & Roles\"; only an administrator who belongs to no hall can save changes there, and anyone else who opens it can only read. You are a Circle Moderator, so you cannot change it — and a Circle Moderator may never hold the user management permission anyway.\n\nIf a grant looks wrong to you, ask a global administrator (管理员 / Administrator); they are the only ones who can change the matrix.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4753,
+          "tokens": {
+            "input": 30265,
+            "output": 110
+          },
+          "cost": 0.00460575
+        },
+        {
+          "id": 149,
+          "candidate": 0,
+          "case": 84,
+          "side": "officer",
+          "question": "Who decides a rebirth application?",
+          "tools_called": [],
+          "answer": "Rebirth review steps are assigned by role, not to individuals: a first application goes to a Judge's first review and then to the final review by an Administrator; an appeal goes to a Judge's appeal review and then an Administrator's final appeal review. Circle Moderators hold no step, so your role (MODERATOR) never decides one. The deciding itself is done on the approval workflow page, reached with \"Open the approval workflow\" from the application's detail dialog.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2101,
+          "tokens": {
+            "input": 15074,
+            "output": 96
+          },
+          "cost": 0.0023187
+        },
+        {
+          "id": 150,
+          "candidate": 0,
+          "case": 85,
+          "side": "officer",
+          "question": "How do I restore something I deleted?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "You can't do it yourself. In the recycle bin, \"Restore\" (like \"Delete permanently\") is for administrators only; a hall-bound administrator can act only on that hall's records. So ask an administrator of your hall to open the recycle bin and use \"Restore\" on the item — that brings back everything deleted together with it.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3508,
+          "tokens": {
+            "input": 30267,
+            "output": 93
+          },
+          "cost": 0.00459585
+        },
+        {
+          "id": 151,
+          "candidate": 0,
+          "case": 86,
+          "side": "officer",
+          "question": "What is the deity roster?",
+          "tools_called": [],
+          "answer": "The deity roster is a read-only reference page listing the mythological deities, including the forty-two assessors of Ma'at. Opening it needs the \"actors read\" permission.\n\nI can only check a few permissions (workflow approve/advance/escalate, user management, dispatch), not the actors read permission, so I can't tell whether you hold it — try opening the page, and if it's refused, ask your administrator.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2124,
+          "tokens": {
+            "input": 15070,
+            "output": 89
+          },
+          "cost": 0.0023139000000000002
+        },
+        {
+          "id": 152,
+          "candidate": 0,
+          "case": 87,
+          "side": "officer",
+          "question": "What is the difference between a judge and a realm lead?",
+          "tools_called": [],
+          "answer": "The console has no \"realm lead\" role today. The five built-in roles are Administrator, Circle Moderator, Judge, Guardian and Viewer; what used to be called the realm lead is now the Circle Moderator, and running a hall is the job of the administrator bound to that hall.\n\nIn short: a Judge reads souls, declares death, moves souls between states, manages reincarnation, opens and rules on judgments (but cannot reassign), works City God, Earth God, City of Wrongful Death and capture cases, approves and advances workflow steps, reviews rebirth applications and creates cross-realm judgments. A Circle Moderator only reviews the soul circle, i.e. reports, pending content, the word list and mutes, plus the dashboard and its own notifications; it does not read or work judgments, workflows, dispatches, sentence plans, soul accounts or the hall inbox, and cannot read the audit log.\n\nOne note for you: your account's primary role is MODERATOR, so the judgement, workflow and dispatch pages are not part of your work. If you believe you should hold a Judge role, ask an administrator who belongs to no hall to change it.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3386,
+          "tokens": {
+            "input": 15076,
+            "output": 239
+          },
+          "cost": 0.0024048000000000003
+        },
+        {
+          "id": 153,
+          "candidate": 0,
+          "case": 88,
+          "side": "officer",
+          "question": "How do I run a scheduled job now?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "You can't: \"Run now\" (and editing or enabling a schedule) needs the scheduler manage permission, which only administrators may hold, and your role is Circle Moderator. Also, anyone bound to a hall sees only their own hall's jobs on \"Scheduled Tasks\". If you should have this, ask an administrator who belongs to no hall to grant it in Permissions & Roles.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 5392,
+          "tokens": {
+            "input": 30265,
+            "output": 101
+          },
+          "cost": 0.0046003500000000004
+        },
+        {
+          "id": 154,
+          "candidate": 0,
+          "case": 89,
+          "side": "officer",
+          "question": "How do I decide a sentence request?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "Deciding happens on the sentence requests page: an amend request is accepted or rejected by the plan's home hall (or an administrator) and needs the judgment execute permission; a reopen request is decided by the judge who concluded the original case, or, if that judge is gone, by an officer of the home hall holding the reassign permission. Accepting applies at once; a rejection may carry a reason.\n\nNote your account is a Circle Moderator, which by default reads and works no judgments or sentence plans at all, and my tool cannot verify the sentence-request permissions. If the page refuses you, ask an administrator who belongs to no hall about your role.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4870,
+          "tokens": {
+            "input": 30310,
+            "output": 199
+          },
+          "cost": 0.0046659
+        },
+        {
+          "id": 155,
+          "candidate": 0,
+          "case": 90,
+          "side": "officer",
+          "question": "How do I moderate the circle?",
+          "tools_called": [],
+          "answer": "The circle moderation page handles what souls post in the soul app, with tabs for \"Reports\", \"Pending content\", \"Word list\", \"Mutes\" and \"Handled\"; it needs the social moderate permission, which Circle Moderators hold by default.\n\nNote that the console's \"Feed\" is a separate thing: it's the officer newsfeed where you post and follow colleagues, so use the moderation page for souls' content, not the Feed.\n\nOne thing I can't check for you: my tools only report the workflow, user management and dispatch permissions, so they can't confirm your social moderate permission. If the page is refused, ask an administrator who belongs to no hall to check your role in the permission matrix.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2568,
+          "tokens": {
+            "input": 15072,
+            "output": 146
+          },
+          "cost": 0.0023483999999999996
+        },
+        {
+          "id": 156,
+          "candidate": 0,
+          "case": 91,
+          "side": "officer",
+          "question": "How many letters await a reply?",
+          "tools_called": [],
+          "answer": "I don't have a tool that returns inbox counts — the assistant's inbox count tool isn't available to me, so I can't give you a number.\n\nTo see it, open the hall inbox and use the \"Awaiting reply\" folder, which lists the letters in that state.",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "permission": false
+          },
+          "excluded": {},
+          "passed": false,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2258,
+          "tokens": {
+            "input": 15073,
+            "output": 59
+          },
+          "cost": 0.00229635
+        },
+        {
+          "id": 157,
+          "candidate": 0,
+          "case": 92,
+          "side": "officer",
+          "question": "How do I create a soul?",
+          "tools_called": [],
+          "answer": "Creating a soul isn't something your role can do: \"Create soul\" on the Souls page needs the soul create permission, and the Circle Moderator role (yours) covers circle moderation only — it doesn't read or work judgments, souls or dispatches. The my_permissions tool can't check that permission, so I can't confirm what else you hold either; a colleague with the soul create permission (a Judge or an Administrator, by default) can create it from \"Soul Management › Create soul\", or import souls from a file there. If you believe you should have this permission, ask an administrator who belongs to no hall.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2661,
+          "tokens": {
+            "input": 15072,
+            "output": 130
+          },
+          "cost": 0.0023388
+        },
+        {
+          "id": 158,
+          "candidate": 0,
+          "case": 93,
+          "side": "officer",
+          "question": "How do I create a user?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "You don't hold the user management permission, and as a Circle Moderator you cannot be granted it — the server refuses it whatever the permission matrix says. So you cannot create a user; ask an administrator of your hall to do it in User Management with \"Create User\" (username, email, password and role, plus a unit for a non-administrator). Only an administrator who belongs to no hall can change the permission matrix.\n\nThe rest of your work is not affected: your moderator permissions (circle reports, pending content, word list, mutes) are separate from user management.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4031,
+          "tokens": {
+            "input": 30300,
+            "output": 180
+          },
+          "cost": 0.004653
+        },
+        {
+          "id": 159,
+          "candidate": 0,
+          "case": 94,
+          "side": "officer",
+          "question": "案子为什么在城隍那里认领不了？",
+          "tools_called": [],
+          "answer": "案子还在城隍处时，十殿本来就不能认领、改派、暂缓或结案；要等城隍「解送」之后，案子才会进入十殿的审判队列，那时才能认领。如果你是城隍名下的官员，可以去「城隍初审」页点「解送」（批语可空）；不在这位城隍名下的官员只能看。\n\n另外，你的角色是朋友圈审核员（MODERATOR），数据范围只限本殿，按角色默认权限不看也不办审判，所以即便案子解送了，认领按钮也不会给你用。如果你确实需要办这类案子，请找管理员为你调整角色。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2434,
+          "tokens": {
+            "input": 13288,
+            "output": 143
+          },
+          "cost": 0.002079
+        },
+        {
+          "id": 160,
+          "candidate": 0,
+          "case": 95,
+          "side": "officer",
+          "question": "Why can't I claim a case that is with the city god?",
+          "tools_called": [],
+          "answer": "A case sitting with the city god is simply not open for claiming: while it is with the city god, the ten courts cannot claim, reassign, defer or conclude it. That is a rule in the City god review workflow, not a permission you are missing — it becomes claimable only once an officer under that city god sends the case on.\n\nThat said, the City god review page itself is worth checking: officers under that city god can send a case on or return it, while other officers can only read. If you are not one of that city god's officers, someone who is has to act on it first.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2137,
+          "tokens": {
+            "input": 15082,
+            "output": 127
+          },
+          "cost": 0.0023384999999999994
+        },
+        {
+          "id": 161,
+          "candidate": 0,
+          "case": 96,
+          "side": "officer",
+          "question": "怎么只读进入某个殿看它的待办？",
+          "tools_called": [],
+          "answer": "这个操作只有全局管理员能做。「各殿概况」页里每个殿一行，点那一行的「进入」，就是只读查看那个殿：页顶横条会写着殿名、「只读」和有效到几点，所有写操作都置灰；进入有有效期、不续期，过期后回到各殿概况再进入一次即可。\n\n你的账号是朋友圈审核员，不在全局管理员之列，所以看不到「各殿概况」这个入口（我的工具也只能报告流程、用户管理、调度那几项权限，其他权限查不了）。需要看别的殿的待办，可以请不属于任何殿的管理员帮你看，或请他给你相应的查看权限。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2643,
+          "tokens": {
+            "input": 13284,
+            "output": 141
+          },
+          "cost": 0.0020772
+        },
+        {
+          "id": 162,
+          "candidate": 0,
+          "case": 97,
+          "side": "officer",
+          "question": "How do I look inside one hall read-only?",
+          "tools_called": [],
+          "answer": "I don't know — the read-only \"Enter\" view on the all-halls overview is for the global administrator (an administrator who belongs to no hall), and your account is a Circle Moderator scoped to this hall. I can't confirm whether anything else lets you do it, so please ask the system administrator.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2175,
+          "tokens": {
+            "input": 15074,
+            "output": 65
+          },
+          "cost": 0.0023001
+        },
+        {
+          "id": 163,
+          "candidate": 0,
+          "case": 108,
+          "side": "officer",
+          "question": "官员怎么开启两步验证？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "开启两步验证不需要额外权限，它是账号设置，人人都能做，你的朋友圈审核员角色也能开。入口在官员台顶栏「个人中心」里的「两步验证」一块（官员 App 的「我的」里也有同名入口）。点「开启两步验证」，先输当前密码，然后在手机上装任意一款基于时间的验证器 App，扫二维码（扫不了就手动输入密钥），输入验证器上此刻的六位数字，最后保存恢复码并勾选「我已妥善保存这些恢复码」才算完成；中途退出不会开启。数字对不上时先检查手机时间是否准确。另外提醒一句：管理员始终被要求开启，其他角色是否被要求由全局管理员按殿设置；如果本殿要求而你没开，登录后会被直接带到设置页。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4553,
+          "tokens": {
+            "input": 26691,
+            "output": 201
+          },
+          "cost": 0.00412425
+        },
+        {
+          "id": 164,
+          "candidate": 0,
+          "case": 109,
+          "side": "officer",
+          "question": "What if I lose my two-step recovery codes?",
+          "tools_called": [],
+          "answer": "Ask an administrator who holds the user management permission to tap \"Reset two-step verification\" in User Management; you give a reason, which goes to the audit log. Afterwards your authenticator and old recovery codes stop working, your next sign-in needs only your password, and you can turn two-step verification on again.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2342,
+          "tokens": {
+            "input": 15074,
+            "output": 63
+          },
+          "cost": 0.0022989
+        },
+        {
+          "id": 165,
+          "candidate": 0,
+          "case": 110,
+          "side": "officer",
+          "question": "审判申诉在哪里复核？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "申诉复核在「审判队列」下的「申诉复核」页，分待复核、复核中、已结案、已撤回四个页签；打开详情后由复核人「认领复核」并「作出结论」。注意这一页需要审判查看权限，而你是朋友圈审核员（MODERATOR），默认不看也不办审判和申诉，所以现在进去可能看不到或按钮置灰。要参与复核，得请本殿管理员给你开通相应权限。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4513,
+          "tokens": {
+            "input": 26677,
+            "output": 119
+          },
+          "cost": 0.00407295
+        },
+        {
+          "id": 166,
+          "candidate": 0,
+          "case": 111,
+          "side": "officer",
+          "question": "How do I decide a judgment appeal?",
+          "tools_called": [],
+          "answer": "You cannot decide appeal reviews with your current role. Your role is Circle Moderator, which reviews the soul circle and nothing else: it does not read or work judgments, workflows, dispatches or sentence plans. Deciding an appeal also needs the judgment execute permission (you claim the appeal with \"Claim for review\", then \"Decide\" and pick \"Uphold the verdict\" or \"Change the verdict\"), so the \"Appeal reviews\" page under Judgment Queue is not available to you.\n\nIf you should hold this permission, ask an administrator; only an administrator who belongs to no hall can change the permission matrix. If you want to confirm exactly what your account holds, say so and I will check.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1899,
+          "tokens": {
+            "input": 15073,
+            "output": 143
+          },
+          "cost": 0.00234675
+        },
+        {
+          "id": 167,
+          "candidate": 0,
+          "case": 112,
+          "side": "officer",
+          "question": "转生配额在哪里设置？",
+          "tools_called": [],
+          "answer": "转生配额在「租户管理」里设置：只有管理员能进；点那个殿一行的「改设置」，对话框里有「转生配额」一块，每道一行，另有一行「未归类」。不过你现在是朋友圈审核员（MODERATOR），不在管理员之列，所以进不了租户管理页，也就看不到和修改这块设置；要调整配额，请找本殿的管理员办理。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2391,
+          "tokens": {
+            "input": 13280,
+            "output": 89
+          },
+          "cost": 0.0020454
+        },
+        {
+          "id": 168,
+          "candidate": 0,
+          "case": 113,
+          "side": "officer",
+          "question": "What happens when a hall's rebirth quota is full?",
+          "tools_called": [],
+          "answer": "When a path's monthly rebirth quota is full, souls awaiting rebirth on that path simply wait their turn until next month or until the limit is raised; nothing is lost. Note that the quota block lives in \"Tenant Management\" › \"Edit settings\" on the hall's row, which is for administrators only, and Egyptian halls have no such block.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2376,
+          "tokens": {
+            "input": 15076,
+            "output": 71
+          },
+          "cost": 0.002304
+        },
+        {
+          "id": 169,
+          "candidate": 0,
+          "case": 114,
+          "side": "officer",
+          "question": "官员 App 里的我的数是什么？",
+          "tools_called": [],
+          "answer": "「我的数」在官员 App 的「我的」页顶部卡片里，点开是详情。它分成两组：\n\n审判组：「本月结案」，卡片下面会注明从哪天开始算，避免月初的零被误认为出错；「累计结案」；「认领未结」，点它会转到审判队列的「我的」那一组。\n\n申诉复核组：「已有结论」和「复核中」。\n\n这些数只统计你自己的案件，并且把所有殿的案件合在一起计算。在你认领并结掉第一件案子之前，这里会显示「还没有数」；如果取数失败，页面只显示一行提示和「重试」，不会保留旧数。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2689,
+          "tokens": {
+            "input": 13281,
+            "output": 141
+          },
+          "cost": 0.00207675
+        },
+        {
+          "id": 170,
+          "candidate": 0,
+          "case": 115,
+          "side": "officer",
+          "question": "How do I photograph evidence in the officer app?",
+          "tools_called": [],
+          "answer": "In a case's attachments you'll see three entries: \"Take a photo\", \"Choose from photos\" and \"Choose a PDF\". You can pick several at once, each file shows its own upload progress and can be cancelled, and location and device details are stripped from photos on upload. Only images and PDFs are accepted, with a per-file and per-case total limit; the page's message gives the exact figures.\n\nTwo things to know: you must have claimed the case first (otherwise it says to claim it), and a concluded case's attachments are read-only — offline the three entries are greyed with the reason. If an upload fails on the network, tap \"Retry\"; if the server refused the file outright (wrong type, too large), you can only remove it.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2192,
+          "tokens": {
+            "input": 15074,
+            "output": 159
+          },
+          "cost": 0.0023565
+        },
+        {
+          "id": 171,
+          "candidate": 0,
+          "case": 120,
+          "side": "officer",
+          "question": "罪目决定送哪一殿吗？",
+          "tools_called": [],
+          "answer": "罪目只在地府的案子上：审判台「戊 · 发落」最上面的「罪目」可搜索，下拉按殿分组，选中后写「判有罪时送某殿」。\n\n- 判不通过时，自动选殿按罪目走，送掌这一类罪的殿，与功过多少无关。\n- 能送的是二殿至九殿；一殿与十殿不掌刑，没有罪目；五逆落在九殿。\n- 没填罪目时，判有罪按严重度选殿（这是罪目出现之前的读法）。\n- 谁都能改的条件：案子未结案、持执行审判权限；别人认领中的案子只有认领人能改。结案后罪目不能再改，因为它已决定了去哪一殿。别的文明的案子填罪目会被拒绝。\n\n另外，我是只读的助手，不会替你选或改罪目；要看具体案子请去审判队列页。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2691,
+          "tokens": {
+            "input": 13283,
+            "output": 202
+          },
+          "cost": 0.0021136499999999995
+        },
+        {
+          "id": 172,
+          "candidate": 0,
+          "case": 121,
+          "side": "officer",
+          "question": "Does the offence decide which court a guilty soul goes to?",
+          "tools_called": [],
+          "answer": "Yes. In Chinese underworld cases, a Failed verdict sends the soul to the court that tries that kind of wrong, whatever its merit and demerit totals. Only courts two to nine can be chosen (the first and tenth don't punish and have no offences, and the five heinous crimes go to the ninth); with no offence recorded, the court is chosen by severity as before. The offence field is in the \"Placement\" section of the judgment desk and needs the judgment execute permission to change while the case is open — note that your role is MODERATOR, which by default does not work judgments, so you may not be able to edit it. Ask an administrator if you should hold that permission.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2644,
+          "tokens": {
+            "input": 15077,
+            "output": 145
+          },
+          "cost": 0.0023485499999999996
+        },
+        {
+          "id": 173,
+          "candidate": 0,
+          "case": 122,
+          "side": "officer",
+          "question": "为什么枉死城的申诉判不了属实？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "「属实 · 提前释放…」置灰或判不了，常见是这几个原因：案子不是枉死，填不了也审不了；冤情等级不是「重」或「极重」；或者到了阳寿日、已经释放、已结案，提出与审核都会被拒绝。另外审核需要执行审判权限，并且要是这件案子城隍名下的官员（案子没交城隍的，只有持改派审判权限的殿管理员能审）。\n\n您的账号是朋友圈审核员，按角色说明它不看也不办审判、审批流程等，所以审判台和枉死城的这些操作您本来就无法进行。要办这类案子，请联系本殿管理员给您相应的角色或权限。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4256,
+          "tokens": {
+            "input": 26689,
+            "output": 175
+          },
+          "cost": 0.00410835
+        },
+        {
+          "id": 174,
+          "candidate": 0,
+          "case": 123,
+          "side": "officer",
+          "question": "Why can't I uphold a grievance and release the soul early?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "Two things are likely at play.\n\nFirst, \"Upheld · release early…\" is only available when the grievance level is major or severe; otherwise it is greyed out with the reason. Check the \"City of Wrongful Death\" block under the case's identity group on the judgment desk.\n\nSecond, upholding or reviewing a grievance needs the execute judgment permission (and you must be one of the case's city god's officers). Your account is a Circle Moderator — that role reviews the soul circle only and does not work judgments, so the desk will not offer you that action at all. My permission tool cannot check the judgment permissions, so if you believe you should have it, ask an administrator who belongs to no hall to review the permission matrix.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4258,
+          "tokens": {
+            "input": 30275,
+            "output": 174
+          },
+          "cost": 0.004645649999999999
+        },
+        {
+          "id": 175,
+          "candidate": 0,
+          "case": 124,
+          "side": "officer",
+          "question": "勾魂牒怎么发？",
+          "tools_called": [],
+          "answer": "发勾魂牒：侧栏「待发勾魂牒」会列出本殿阳寿已到、还在世、还没有未了结勾魂牒的地府灵魂，你可以直接在那里点「发牒」；也可以在灵魂详情页的「勾魂」一块发。系统不会自动发牒，要官员来发。发牒需要「发勾魂牒」权限；发完还要拘到、交接城隍。\n\n不过你这是朋友圈审核员（MODERATOR）角色，默认只管朋友圈审核，不办审判、勾魂这类事，我查不了你的「发勾魂牒」权限。真要点这个按钮而点不了，请找本殿管理员开通对应权限。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2416,
+          "tokens": {
+            "input": 13281,
+            "output": 154
+          },
+          "cost": 0.0020845499999999997
+        },
+        {
+          "id": 176,
+          "candidate": 0,
+          "case": 125,
+          "side": "officer",
+          "question": "Why can't I issue a capture warrant for this soul?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "Two things can explain it.\n\nYour role: you are a Circle Moderator, and that role reviews the soul circle only. It does not work judgments, souls, capture, city god or earth god cases, so capture actions are not open to you. The permission check I can run cannot inspect the capture permission, but nothing in the moderator role grants it by default. If you believe your role should include it, ask an administrator (only an administrator who belongs to no hall can change the permission matrix).\n\nThe server's own rules, which apply even to officers who hold the issue capture warrant permission: issuing is refused when the soul is not of the Chinese underworld, is no longer alive, its fated date has not come or is not recorded, or it already has an open warrant.\n\nOpen the soul's page and check the \"Capture\" block; if it shows one of those reasons, that is the cause.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 5453,
+          "tokens": {
+            "input": 30273,
+            "output": 207
+          },
+          "cost": 0.00466515
+        },
+        {
+          "id": 177,
+          "candidate": 0,
+          "case": 126,
+          "side": "officer",
+          "question": "怎么以土地公名义登记死亡？",
+          "tools_called": [],
+          "answer": "以土地公名义登记死亡在「系统设置 › 土地公」页操作。不过你的角色是朋友圈审核员（MODERATOR），不具备宣告死亡权限，这一步你点不了：登记需要「宣告死亡」权限，并且要是这位土地公的名下官员或殿管理员。\n\n流程上，在该页选中土地公后使用「以土地公名义登记死亡」：登记走死亡同步的同一条处理，灵魂进入审判、到十三站的土地庙，案子交他的上级城隍初审（没设上级城隍时按出身地配城隍）；登记失败也会留下一条失败的登记。要做这件事，请联系本殿管理员，或请管理员为你调整角色。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2136,
+          "tokens": {
+            "input": 13283,
+            "output": 144
+          },
+          "cost": 0.0020788499999999997
+        },
+        {
+          "id": 178,
+          "candidate": 0,
+          "case": 127,
+          "side": "officer",
+          "question": "How do I create an earth god?",
+          "tools_called": [],
+          "answer": "I don't know — that isn't covered by what I can see, and it's not something you'd be able to do with your role anyway. Creating Earth Gods needs the reassign judgment permission, and \"Settings › Earth Gods\" also needs the view judgment permission to see it; you hold neither.\n\nYou're a Circle Moderator, which reviews the soul circle and nothing else, so Earth God settings are outside your role. If you need an earth god set up, ask a Judge or an administrator of your hall.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2120,
+          "tokens": {
+            "input": 15074,
+            "output": 106
+          },
+          "cost": 0.0023247
+        },
+        {
+          "id": 179,
+          "candidate": 0,
+          "case": 128,
+          "side": "officer",
+          "question": "怎么给亡魂挪站？",
+          "tools_called": [],
+          "answer": "挪站只在灵魂详情页操作：找到那位亡魂，点「挪站…」，选一站确认即可。\n\n不过要先说明：你现在的角色是朋友圈审核员（MODERATOR），数据范围只限本殿。挪站需要「状态流转权限」，而我查不到你是否持有这项权限；从默认角色配置看，朋友圈审核员不管审判事务。如果按钮看不到或点了被拒，请找本殿管理员开通该权限。\n\n另外，挪站仅对地府的灵魂有效：灵魂还在世、或不是地府的灵魂会被拒绝。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2406,
+          "tokens": {
+            "input": 13281,
+            "output": 116
+          },
+          "cost": 0.00206175
+        },
+        {
+          "id": 180,
+          "candidate": 0,
+          "case": 129,
+          "side": "officer",
+          "question": "How do I choose the next life's continent on rebirth?",
+          "tools_called": [],
+          "answer": "On the soul's page, when you choose a rebirth into the human path, an extra field \"Continent of the next life · optional\" appears. Leave it empty to keep this life's continent; naming a continent for any other path, or for another civilization, is refused. The soul's continent of birth itself is set under \"Edit\" on the soul (soul update permission).\n\nNote that recording a rebirth needs the reincarnation reborn permission — if the action isn't available on your account, that is a permission matter, and only an administrator can change it.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2530,
+          "tokens": {
+            "input": 15077,
+            "output": 117
+          },
+          "cost": 0.0023317499999999996
+        },
+        {
+          "id": 181,
+          "candidate": 0,
+          "case": 130,
+          "side": "officer",
+          "question": "欧洲的案子为什么判不了下地狱？",
+          "tools_called": [],
+          "answer": "可能的原因有几类，请逐项核对：\n\n1. 欧洲的殿有一条硬规则：结案时只看已采信的证据，如果其中有「大罪 · 未悔」，就只能判不通过（下地狱）；但反过来，如果已采信的过全都分了类、而且都是小罪或已告解的大罪，就**不能**判不通过，只能判炼狱。请先在审判台上确认这几条过的分类。\n\n2. 灵魂登记了「否认灵魂不朽」、身份是「中立者」，或者还有「未分」的过（大罪／小罪没选）时，不做上面那项核对。也就是说，出现这些情况时，系统不会因为「全都是小罪或已告解」而阻止判不通过；如果仍然被拒绝，原因多半在别处。\n\n3. 地府的案子还要看罪目：罪目是「五逆」时不能判通过（这条与下地狱无关，但常被混淆）。欧洲的案子不填罪目。\n\n4. 如果按钮是置灰或有提示文字，也可能是权限或认领状态的原因。你在这台账号上的角色是朋友圈审核员（只覆盖本殿），审批流程不归这个角色管，审判类权限助手查不到；具体能不能办这件案子，请找本殿管理员核实。\n\n可以先看案件详情页「戊 · 发落」处的提示文字，那通常会写明拒绝的具体原因；如果页面没有写明，建议问系统管理员。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3221,
+          "tokens": {
+            "input": 13283,
+            "output": 311
+          },
+          "cost": 0.0021790499999999997
+        },
+        {
+          "id": 182,
+          "candidate": 0,
+          "case": 131,
+          "side": "officer",
+          "question": "What is the vestibule of hell?",
+          "tools_called": [],
+          "answer": "The English help entry \"officer-european-sins\" says: the vestibule of hell is where a soul goes when it is recorded as \"Neutral in life\", meaning one who lived neither for good nor for evil and took no side. That field is set when you edit the soul (European halls only). When such a soul is condemned and no cited deed points to a deeper circle, it goes to the vestibule, outside the nine circles; a deed citing a circle sends it to that circle instead.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1600,
+          "tokens": {
+            "input": 15074,
+            "output": 108
+          },
+          "cost": 0.0023259
+        },
+        {
+          "id": 183,
+          "candidate": 0,
+          "case": 132,
+          "side": "officer",
+          "question": "为什么希腊的审判不能认领？",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "工具确认：你的角色是朋友圈审核员，没有兼任其他角色，而且你只能看到本殿的数据；流程批准、推进、越级推进、用户管理、调度相关权限都没有。审判类的“执行审判”权限，助手无法查询；但按角色说明，朋友圈审核员默认不看也不办审判，“认领”按钮不会出现。\n\n第二类是你说的希腊的殿特有的规则：希腊的案子里，卡戎只渡“已葬且付了渡资”的亡魂。未葬或无渡资的亡魂滞留在阿刻戎岸边；原审不能认领，队列里不显示“认领”，而会写“未葬，不得过河”或“无渡资，不得过河”。补记为“已葬，有渡资”后就能认领；未葬者死后满一百年也可渡。这些规则只拦原审，不拦上诉和重开。\n\n所以请先到审判队列对应那件案子看一眼：如果写的是“未葬／无渡资”，是这类规则在拦，去灵魂详情的“编辑”里改“过河”一栏（需要灵魂编辑权限）；如果那条你对它没有“认领”按钮，那就是权限问题，需要由本殿管理员在“用户管理 › 设置角色”里给你加上能办案的角色。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 4993,
+          "tokens": {
+            "input": 26743,
+            "output": 362
+          },
+          "cost": 0.00422865
+        },
+        {
+          "id": 184,
+          "candidate": 0,
+          "case": 133,
+          "side": "officer",
+          "question": "When can an unburied soul cross the river?",
+          "tools_called": [],
+          "answer": "In Greek halls, a soul that is unburied waits on the bank of Acheron and cannot have its original judgment claimed. It crosses once a hundred years have passed since death — the soul page then says \"A hundred years on the bank: may cross\". If the death date is missing its month or day, the count runs from the latest date it could be; a soul with no recorded year of death stays held. Recording \"Buried, fare paid\" on the soul (via \"Edit\") also lets the case be claimed right away.\n\nNote a soul with no fare never crosses by waiting; only \"Buried, fare paid\" unblocks it.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2353,
+          "tokens": {
+            "input": 15076,
+            "output": 135
+          },
+          "cost": 0.0023424
+        },
+        {
+          "id": 185,
+          "candidate": 0,
+          "case": 134,
+          "side": "officer",
+          "question": "否定告白记为不实会怎样？",
+          "tools_called": [],
+          "answer": "否定告白里只要有一条记为「不实」，判「通过」就会被拒绝，并会提示是哪几位判官前的告白；结案、重开后结案、申诉改判为通过都一样。它不会因此把案子变成不通过：要往下走可判「天平摇摆」，另开一次称量。全部如实或未记的不做这项核对。这功能只在埃及称心的案子上有，记告白需要执行审判权限，结案后不能再改。\n\n不过你当前的角色是朋友圈审核员（MODERATOR），权限和可见范围限本殿，通常不涉及审判台的操作；若在审判台上看不到或点不了这些，具体请找本殿管理员核对权限。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2868,
+          "tokens": {
+            "input": 13282,
+            "output": 146
+          },
+          "cost": 0.0020799
+        },
+        {
+          "id": 186,
+          "candidate": 0,
+          "case": 135,
+          "side": "officer",
+          "question": "Why can't I give a Passed verdict on this Egyptian case?",
+          "tools_called": [
+            "my_permissions"
+          ],
+          "answer": "Your account is a Circle Moderator (no additional roles), and the Circle Moderator role does not work judgments at all — it only reviews the soul circle (reports, pending content, word list, mutes). Giving any verdict, Passed included, needs the judgment execute permission, which you do not hold, so the desk greys it for you.\n\nIf you think you should hold it, ask an administrator; only an administrator who belongs to no hall can change the permission matrix. If an officer with judgment permission reports Passed greyed on an Egyptian case, that is a case rule, not a permission: for a weighed Egyptian case, if any of the forty-two denials is recorded as False, Passed is refused (the case then continues by letting the scale waver), and the desk shows the reason when you hover or open the verdict area.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 5145,
+          "tokens": {
+            "input": 30277,
+            "output": 197
+          },
+          "cost": 0.00465975
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "created_at": "2026-11-14T02:17:55.606614Z",
+      "status": "done",
+      "candidates": [
+        {
+          "provider": "openai_compatible",
+          "base_url": "https://api.deepseek.com",
+          "model": "deepseek-flash",
+          "effort": "low",
+          "fallbacks": true
+        }
+      ],
+      "estimated_cost": 0.099088,
+      "total": 55,
+      "done": 55,
+      "summary": [
+        {
+          "candidate": 0,
+          "provider": "openai_compatible",
+          "model": "deepseek-flash",
+          "cases": 55,
+          "passed": 55,
+          "errors": 0,
+          "tool_accuracy": 1.0,
+          "phrase_hit_rate": 1.0,
+          "retrieval_hit_rate": 0.03773584905660377,
+          "retrieval_fallbacks": 55,
+          "mean_latency_ms": 2554.6181818181817,
+          "max_latency_ms": 5117,
+          "cost": 0.082066,
+          "input_tokens": 518675,
+          "output_tokens": 7108
+        }
+      ],
+      "finished_at": "2026-11-14T02:20:17.247961Z",
+      "results": [
+        {
+          "id": 187,
+          "candidate": 0,
+          "case": 1,
+          "side": "soul",
+          "question": "我为什么不能申请？",
+          "tools_called": [
+            "me",
+            "rebirth"
+          ],
+          "answer": "我查到的情况是：你原属中国文明，目前状态为「轮回中」，系统显示你现在**可以**申请转生，并没有给出禁止申请的原因；你在本世也还没有提交过任何转生申请。\n\n所以，如果你在「转生申请」页看到按钮是灰的、或写着「暂不能提交新申请」，那不是因为你的资格问题。请把那一页上方写的原因告诉我，或重新打开该页看看是否会刷新；如果仍不行，可以写信给殿司（书信 · 殿司 inbox）说明。\n\n申请入口在「转生申请」页点「提交转生申请」，中国文明要选一道转生形态；这一步请你自己操作，我不能替你提交。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3573,
+          "tokens": {
+            "input": 11857,
+            "output": 188
+          },
+          "cost": 0.00189135
+        },
+        {
+          "id": 188,
+          "candidate": 0,
+          "case": 2,
+          "side": "soul",
+          "question": "被驳回了还能申诉吗？",
+          "tools_called": [
+            "rebirth"
+          ],
+          "answer": "你的名下目前没有任何转生申请，所以现在没有被驳回的申请，也就没有可申诉的东西。\n\n规则是这样的：只有本世、状态为「已驳回」、且还没申诉过的申请能申诉，每份申请只能申诉一次。在「转生申请」页打开那份申请，点「申诉」，可以写一段申诉陈述（可选），然后自己提交。申诉由你原属的文明复核；提出申诉后冷却期作废，申诉获批就没有冷却期，申诉被驳回则从驳回那天起重新算完整的冷却期。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "申诉": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3014,
+          "tokens": {
+            "input": 11797,
+            "output": 135
+          },
+          "cost": 0.0018505499999999999
+        },
+        {
+          "id": 189,
+          "candidate": 0,
+          "case": 3,
+          "side": "soul",
+          "question": "我的申请到哪一步了？",
+          "tools_called": [
+            "rebirth"
+          ],
+          "answer": "我查了一下：你这一世目前没有转生申请记录，所以谈不上到哪一步了。而且系统显示你现在可以提交新的申请。\n\n想申请的话，在「转生申请」页点「提交转生申请」，选好期望的转生形态（中国文明要在六道中选一道），可以写一段陈述，然后自己提交。提交后先由判官初审，再到终审；详情里会写明当前在哪一步。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3157,
+          "tokens": {
+            "input": 11797,
+            "output": 115
+          },
+          "cost": 0.00183855
+        },
+        {
+          "id": 190,
+          "candidate": 0,
+          "case": 4,
+          "side": "soul",
+          "question": "你能替我提交转生申请吗？",
+          "tools_called": [],
+          "answer": "我不能替你提交，这个助手只能查看信息并做说明，不能代为提交。\n\n你可以到「转生申请」页面，自己点击「提交转生申请」，然后选择期望的转生形态并填写陈述，再提交。是否需要我先帮你查一下你现在的状态能不能申请？",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {
+            "已为你提交": false,
+            "已经帮你提交": false
+          },
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1477,
+          "tokens": {
+            "input": 5870,
+            "output": 59
+          },
+          "cost": 0.0009159
+        },
+        {
+          "id": 191,
+          "candidate": 0,
+          "case": 5,
+          "side": "soul",
+          "question": "下一站什么时候开始？",
+          "tools_called": [
+            "sentence_plan"
+          ],
+          "answer": "你的受刑计划显示各站均已完成，目前没有下一站要开始，计划整体状态是已完成。按规矩，全部站完成后若原属文明有转生去处，就可以去「转生申请」页申请转生；能否提交以该页显示为准。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3908,
+          "tokens": {
+            "input": 11784,
+            "output": 81
+          },
+          "cost": 0.0018161999999999998
+        },
+        {
+          "id": 192,
+          "candidate": 0,
+          "case": 6,
+          "side": "soul",
+          "question": "各站的状态是什么意思？",
+          "tools_called": [
+            "sentence_plan",
+            "me"
+          ],
+          "answer": "你这一世的受刑计划已经全部服完（状态：已完成），各站没有剩下在执行的，转生已经开放，你可以到「转生申请」页去提交申请。\n\n各站状态的意思：\n- 未开始：还没轮到这一站。\n- 受刑中：正在这一站服刑，页面会显示到期日。\n- 刑满暂留：这一站刑期已满，但原属地还有审判未结，结案后才去下一站；你无须做什么。\n- 已完成：这一站服完了，页面显示结束日。\n- 永久：这一站没有尽期，此后不再有下一站，也就不会有转生申请。\n- 已赦免：剩余刑期被赦免，余下的站不再执行，视同服完。\n- 新：计划新增了一站。\n\n具体日期都以「本世」页「我的受刑」里写的为准。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "刑满暂留": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3797,
+          "tokens": {
+            "input": 11840,
+            "output": 225
+          },
+          "cost": 0.001911
+        },
+        {
+          "id": 193,
+          "candidate": 0,
+          "case": 7,
+          "side": "soul",
+          "question": "受刑结束后可以申请转生吗？",
+          "tools_called": [
+            "sentence_plan",
+            "rebirth"
+          ],
+          "answer": "可以。你的受刑计划显示已全部服完，系统也查到你此刻可以申请转生，没有冷却或待决申请挡着；本世目前还没有转生申请记录。\n\n按规则，受刑计划全部站完成（或剩余刑期被赦免）后，原属文明有转生的，就可以去申请。你是中国文明，在「转生申请」页点「提交转生申请」，选希望在六道中的哪一道，可以写一段陈述（可选），然后自己提交；最终去向由判官裁定。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "转生": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2942,
+          "tokens": {
+            "input": 11838,
+            "output": 150
+          },
+          "cost": 0.0018657
+        },
+        {
+          "id": 194,
+          "candidate": 0,
+          "case": 8,
+          "side": "soul",
+          "question": "我还要受刑多久？",
+          "tools_called": [
+            "sentence_plan"
+          ],
+          "answer": "你的受刑计划整体显示为「已完成」，其中没有任何待执行的站，所以已经没有刑期需要继续服了。\n\n按规则，全部站完成（或剩余刑期被赦免）后，你原属的文明有转生的，就可以去「转生申请」页申请转生。具体每站的日期以「本世」页「我的受刑」里显示的为准。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3223,
+          "tokens": {
+            "input": 11784,
+            "output": 105
+          },
+          "cost": 0.0018306
+        },
+        {
+          "id": 195,
+          "candidate": 0,
+          "case": 9,
+          "side": "soul",
+          "question": "本世页上的状态是什么意思？",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "你现在的状态是「轮回中」：受刑已经服完，进入轮回；原属文明（中国文明）有转生这一去处，能不能申请转生，以「转生申请」页查到的为准。\n\n本世页名字下方那个标签表示你此刻在簿册里的状态，常见的有：在世、审判中、已处置（审判已结，正在受刑或等待执行）、轮回中、已结算（这一世已了结，没有下一步）、失踪（押送途中走失，需写信给殿司）。状态由审判与受刑推进，你自己不能改，以页面为准。\n\n要不要我帮你查一下现在能不能提交转生申请？",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3117,
+          "tokens": {
+            "input": 11805,
+            "output": 162
+          },
+          "cost": 0.00186795
+        },
+        {
+          "id": 196,
+          "candidate": 0,
+          "case": 10,
+          "side": "soul",
+          "question": "暂居是什么意思？",
+          "tools_called": [],
+          "answer": "暂居就是把灵魂调拨到另一个文明受刑或停留一段时间，它不改变你原属哪个文明。页头会显示「暂居 X · 原属 Y」。暂居期间，转生申请和申诉仍由原属文明受理；朋友圈看到的是暂居地；这一站在暂居地服完后回归原属。簿册仍按原属文明的词例显示。\n\n你现在没有暂居，就在原属文明（中国文明）。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "原属": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1621,
+          "tokens": {
+            "input": 5865,
+            "output": 96
+          },
+          "cost": 0.00093735
+        },
+        {
+          "id": 197,
+          "candidate": 0,
+          "case": 11,
+          "side": "soul",
+          "question": "我能看到前世的记录吗？",
+          "tools_called": [],
+          "answer": "可以。在「前世」页能看到你以前每一世的卷宗：功过、审判、处置、转生申请，以及那一世转生为什么、何时转生。不过这些记录是只读的，已封存的卷宗不能在那里再申请或申诉。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "前世": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1857,
+          "tokens": {
+            "input": 5868,
+            "output": 57
+          },
+          "cost": 0.0009144
+        },
+        {
+          "id": 198,
+          "candidate": 0,
+          "case": 12,
+          "side": "soul",
+          "question": "怎么写信给殿司？",
+          "tools_called": [],
+          "answer": "在「书信」里选「殿司」这一类，写给你当前所在殿的殿司就行。官员会以殿司名义回复，不是即时的，也没有固定的回信时间；回信到了会在书信里看到，开了通知也会提醒你。有疑问或需要人工处理的事都可以写这里。被禁言期间也能写给殿司。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "书信": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1725,
+          "tokens": {
+            "input": 5867,
+            "output": 74
+          },
+          "cost": 0.00092445
+        },
+        {
+          "id": 199,
+          "candidate": 0,
+          "case": 13,
+          "side": "soul",
+          "question": "为什么有的灵魂不能直接说话？",
+          "tools_called": [],
+          "answer": "你问的应该是书信里的情况。关于这一点，你能再说明一下具体是哪种情况吗？\n\n按帮助里的说明，书信有两类：\n\n- 给殿司：任何灵魂都能写，被禁言期间也照样能写。殿司回信不是即时的，没有固定时间。\n- 给灵魂：只有互相关注的灵魂能随时写信；还没互关时，先发一封，对方回话或回关之前要隔一段时间才能再发，App 上会显示下次可发的时间。\n\n被禁言期间不能与灵魂通信，但仍可以写信给殿司。如果页面显示「此地尚未通书信」，那是书信功能在整个服务上还没开通，不是本殿的设置。\n\n如果你说的是别的情况，比如某位灵魂的主页没有写信按钮，那可能是那一世已转生、主页只读。方便的话告诉我你看到的具体提示，我再帮你看。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "关注": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2394,
+          "tokens": {
+            "input": 5868,
+            "output": 187
+          },
+          "cost": 0.0009924
+        },
+        {
+          "id": 200,
+          "candidate": 0,
+          "case": 14,
+          "side": "soul",
+          "question": "殿司多久会回信？",
+          "tools_called": [],
+          "answer": "这没有固定的回信时间；殿司不是即时回复的。回信到了会在「书信」里看到，开了通知也会提醒你。如果问题需要人处理，就写给殿司就行。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {
+            "天内": false
+          },
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1624,
+          "tokens": {
+            "input": 5868,
+            "output": 42
+          },
+          "cost": 0.0009054
+        },
+        {
+          "id": 201,
+          "candidate": 0,
+          "case": 15,
+          "side": "soul",
+          "question": "我的帖子为什么别人看不到？",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "帖子别人看不到，常见有这几种原因：\n\n一是含有需要人工确认的词，帖子会先审核，通过前只有你自己看得到，通过后按你选的范围显示，并推一条「审核结果」通知。\n\n二是含了被标记的词，会被自动隐藏，也只有你看得到；有些词会被换成「***」，帖子照常发出。\n\n三是被殿司隐藏的帖子，同样只有你还看得到。\n\n另外，如果你发帖时选的范围是「仅自己」，别人本来也看不到。想确认具体是哪一种，可以看「设置 · 通知记录」里与朋友圈「审核结果」相关的通知；仍然不清楚的话，可以写信给殿司（书信 → 殿司）询问。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3333,
+          "tokens": {
+            "input": 11803,
+            "output": 168
+          },
+          "cost": 0.00187125
+        },
+        {
+          "id": 202,
+          "candidate": 0,
+          "case": 16,
+          "side": "soul",
+          "question": "怎么关注别人？",
+          "tools_called": [],
+          "answer": "在对方的主页点「关注」就可以了。对方也关注你的话，就是互相关注，互关的灵魂之间可以直接写信。被禁言期间主页不能关注；已转生的灵魂主页只读，也不能再关注。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "关注": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1375,
+          "tokens": {
+            "input": 5865,
+            "output": 48
+          },
+          "cost": 0.0009085499999999999
+        },
+        {
+          "id": 203,
+          "candidate": 0,
+          "case": 17,
+          "side": "soul",
+          "question": "长明灯是什么？",
+          "tools_called": [],
+          "answer": "长明灯是朋友圈里的一种表态：为一位灵魂点一盏长明灯，点后不可撤回，也不能再换成别的表态。其他表态是喜、念、敬、悲。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "撤回": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1372,
+          "tokens": {
+            "input": 5866,
+            "output": 40
+          },
+          "cost": 0.0009039
+        },
+        {
+          "id": 204,
+          "candidate": 0,
+          "case": 18,
+          "side": "soul",
+          "question": "切换语言会影响什么？",
+          "tools_called": [],
+          "answer": "切换语言只改变界面与提示的语言，立即生效，不用重新登录，而且会记在你的账上；在别的设备上登录后也会用你账号的语言。卷宗内容（判词、陈述、理由）保持原文，不会被翻译。入口在「设置 · 语言」。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "界面": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1480,
+          "tokens": {
+            "input": 5866,
+            "output": 60
+          },
+          "cost": 0.0009159
+        },
+        {
+          "id": 205,
+          "candidate": 0,
+          "case": 19,
+          "side": "soul",
+          "question": "通知会告诉我哪些事？",
+          "tools_called": [],
+          "answer": "通知可在「设置 · 通知」里分别开关的项目有：转生申请结果、审判结果、暂居与回归、书信；「朋友圈」组里还有评论和回复、审核结果。「殿司警告」固定开启，不能关闭。\n\n通知大多只告诉你有了结果：转生申请只说明批准还是驳回，不带理由原文；审判结果不带证据与功过明细；暂居通知不说明调往哪里。但帖子、评论或账号被举报并以警告处理时，推送里会带殿司写的理由原文，这条开关取消不了。\n\n另外，在「设置 › 通知记录」可以看到给你发过的每一条通知（包括当时关掉、未送达的）。关于你自己的状态和申请，如果你需要，我可以帮你查。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "转生申请": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2288,
+          "tokens": {
+            "input": 5867,
+            "output": 158
+          },
+          "cost": 0.0009748499999999999
+        },
+        {
+          "id": 206,
+          "candidate": 0,
+          "case": 20,
+          "side": "soul",
+          "question": "问一问会保存我的提问吗？",
+          "tools_called": [],
+          "answer": "会。你的提问与回答会保存 30 天，之后删除；你也可以在历史会话里自己删除。另外，每个账号每小时能问的次数有上限，到了会提示你暂时不能再问，并写明什么时候可以再问。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "30": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1171,
+          "tokens": {
+            "input": 5869,
+            "output": 50
+          },
+          "cost": 0.00091035
+        },
+        {
+          "id": 207,
+          "candidate": 0,
+          "case": 21,
+          "side": "soul",
+          "question": "Can I appeal after a rejection?",
+          "tools_called": [
+            "me",
+            "rebirth"
+          ],
+          "answer": "You currently have no rebirth applications in this life, so there is nothing rejected to appeal right now.\n\nFor the rule: in the Chinese civilization a rejected rebirth application can be appealed once per application. Open it on the \"Rebirth applications\" page, tap \"Appeal\", optionally write a statement, and submit. Only this life's applications that are \"Rejected\" and not yet appealed qualify. Appealing cancels the cooldown that a rejection starts; if the appeal is rejected, a fresh full cooldown begins on that day, and if it is approved there is none.",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "appeal": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3150,
+          "tokens": {
+            "input": 13482,
+            "output": 158
+          },
+          "cost": 0.0021171
+        },
+        {
+          "id": 208,
+          "candidate": 0,
+          "case": 22,
+          "side": "soul",
+          "question": "What does residing mean?",
+          "tools_called": [],
+          "answer": "Residing means you were transferred to another civilization to serve or stay there; it does not change which civilization you belong to. The header would then show \"Residing in X · belongs to Y\".\n\nWhile residing, rebirth and appeals are still handled by your home civilization, the circle shows the civilization you are residing in, and after the station there is served you return home. According to the register you are not residing anywhere at the moment — you are at home.",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "home": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1583,
+          "tokens": {
+            "input": 6677,
+            "output": 93
+          },
+          "cost": 0.0010573499999999999
+        },
+        {
+          "id": 209,
+          "candidate": 0,
+          "case": 23,
+          "side": "soul",
+          "question": "How do I follow someone?",
+          "tools_called": [],
+          "answer": "On a soul's profile, tap \"Follow\". If they follow you back you become mutual followers, and then you can write letters to each other directly.\n\nYou can find souls to follow with \"Find people\", which searches only your current civilization — names match loosely, but a soul code must be typed in full.",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "follow": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1609,
+          "tokens": {
+            "input": 6678,
+            "output": 63
+          },
+          "cost": 0.0010395
+        },
+        {
+          "id": 210,
+          "candidate": 0,
+          "case": 24,
+          "side": "soul",
+          "question": "Does Ask keep my questions?",
+          "tools_called": [],
+          "answer": "Yes. Your questions and answers are kept for 30 days, then deleted; you can also delete a conversation yourself from the history.\n\nFor the full picture, the \"assistant\" help entry says this is a read-only assistant: it explains the app and can look up your own status, rebirth applications and sentence plan, but it never submits, appeals, sends or posts anything for you.",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "30": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1343,
+          "tokens": {
+            "input": 6678,
+            "output": 79
+          },
+          "cost": 0.0010490999999999999
+        },
+        {
+          "id": 211,
+          "candidate": 0,
+          "case": 42,
+          "side": "soul",
+          "question": "暂不能提交是什么意思？",
+          "tools_called": [
+            "rebirth",
+            "sentence_plan"
+          ],
+          "answer": "我查了一下你的情况：你现在其实是可以提交转生申请的（受刑计划已全部完成，也没有审理中或冷却中的申请，本世还没有任何转生申请记录）。所以如果你在页面上看到按钮是灰的或写着「暂不能提交新申请」，可能是页面没有刷新，可以先退出那一页再进来看看；仍然不显示的话，按键下方或旁边会写明具体原因。\n\n一般来说，按钮变灰的常见原因有：已经有一份审理中或申诉中的申请（同一时间只能有一份）、本世申请已获批准、上一份被驳回后还在冷却期（可再申请的日期以「转生申请」页显示的为准）、受刑计划还没全部服完，或者你的状态还不能申请（要服完刑、进入轮回之后才开放）。\n\n如果页面既不显示可提交、也没写原因，就写信给殿司（书信 → 殿司），请官员核实。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": true,
+          "latency_ms": 3309,
+          "tokens": {
+            "input": 11832,
+            "output": 227
+          },
+          "cost": 0.001911
+        },
+        {
+          "id": 212,
+          "candidate": 0,
+          "case": 43,
+          "side": "soul",
+          "question": "我为什么没有转生？",
+          "tools_called": [
+            "me",
+            "rebirth",
+            "sentence_plan"
+          ],
+          "answer": "你现在并不是「不能转生」，而是还没有提交过申请：系统查到你现在可以申请转生，受刑计划已全部服完，你现在处于轮回中的状态，本世也没有任何转生申请记录。\n\n想转生的话，请到「转生申请」页点「提交转生申请」，选择期望的转生形态（中国文明须在六道中选一道），可以写一段陈述，然后自己提交。申请提交后先由判官初审，再到终审，结果会按你的通知设置推送。\n\n如果你本来以为已经提交过，请写一封信给殿司核对。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": null,
+          "latency_ms": 3365,
+          "tokens": {
+            "input": 11896,
+            "output": 179
+          },
+          "cost": 0.0018918
+        },
+        {
+          "id": 213,
+          "candidate": 0,
+          "case": 44,
+          "side": "soul",
+          "question": "忘记密码怎么办？",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "忘记密码有两条路：\n\n在登录页点「忘记密码」。如果你的灵魂账号绑定了邮箱，就填邮箱收验证码，再设置新密码；验证码有有效期，输错次数用完要重新发送。重设成功后，其他设备上的登录会全部退出。注意，多个灵魂共用一个邮箱时，只有最先绑定的那个能收到验证码，其余按「没有邮箱」处理。\n\n没有绑定邮箱的灵魂不能在 App 里自己重设：写信给你所在殿的殿司，说明姓名和灵魂编号，殿司核对身份后为你重设并告诉你临时密码。登录不上就没法在 App 里写信，可以托同殿的灵魂转达，或在殿前登记处当面说明。\n\n另外，如果你开了两步验证却忘了带手机，可以在登录时点「改用恢复码」；恢复码也没有的话，就到本殿找官员核对身份后替你关闭。\n\n如果想确认自己的联系邮箱有没有绑定，等能登录后在「设置」里的「联系邮箱」一行查看。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "邮箱": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3387,
+          "tokens": {
+            "input": 11799,
+            "output": 230
+          },
+          "cost": 0.00190785
+        },
+        {
+          "id": 214,
+          "candidate": 0,
+          "case": 45,
+          "side": "soul",
+          "question": "本世余额是什么意思？",
+          "tools_called": [],
+          "answer": "「本世余额」是「本世」页上「本世账目」的汇总，表示你这一世功德与过失相抵后的结果。账目里每一笔功或过都可以展开看明细，但你本人不能在自己的账目上增加或减少，功过由殿里登记；账目怎么分类、用什么词例，按你原属文明的规例显示。",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "功": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1191,
+          "tokens": {
+            "input": 5866,
+            "output": 82
+          },
+          "cost": 0.0009291
+        },
+        {
+          "id": 215,
+          "candidate": 0,
+          "case": 46,
+          "side": "soul",
+          "question": "How do I apply for rebirth?",
+          "tools_called": [
+            "me",
+            "rebirth"
+          ],
+          "answer": "You can apply now: your state is Reincarnating and nothing blocks you.\n\nGo to the \"Rebirth applications\" page and tap \"Apply for rebirth\". Choose the form you hope for (Chinese souls pick one of the six paths), optionally write a statement — it goes to the judge word for word — and submit. The destination is the judge's decision, not yours; the app will notify you when there is an outcome.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3184,
+          "tokens": {
+            "input": 13475,
+            "output": 120
+          },
+          "cost": 0.00209325
+        },
+        {
+          "id": 216,
+          "candidate": 0,
+          "case": 47,
+          "side": "soul",
+          "question": "Where is my application now?",
+          "tools_called": [
+            "rebirth"
+          ],
+          "answer": "You have no rebirth application in this life yet — the register shows none, so there is nowhere for it to be. On the \"Rebirth applications\" page you can tap \"Apply for rebirth\" whenever you wish; nothing is blocking you now.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3206,
+          "tokens": {
+            "input": 13417,
+            "output": 71
+          },
+          "cost": 0.00205515
+        },
+        {
+          "id": 217,
+          "candidate": 0,
+          "case": 48,
+          "side": "soul",
+          "question": "Why can't I apply?",
+          "tools_called": [
+            "me",
+            "rebirth"
+          ],
+          "answer": "Good news: according to the register you *can* apply right now. Your state is Reincarnating, your home civilization (Chinese) does have rebirth, you have no cooldown running, and you have no application under review — so nothing is blocking you.\n\nIf the button still looks unavailable on your screen, try the \"Rebirth applications\" page again and check what text it shows next to it; the page states the reason. If it still refuses, write to your hall office (Letters -> hall office inbox) with your name and soul code so an officer can look into it.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": true,
+          "latency_ms": 3270,
+          "tokens": {
+            "input": 13482,
+            "output": 162
+          },
+          "cost": 0.0021195
+        },
+        {
+          "id": 218,
+          "candidate": 0,
+          "case": 49,
+          "side": "soul",
+          "question": "Why is there no rebirth for me?",
+          "tools_called": [
+            "me",
+            "rebirth"
+          ],
+          "answer": "Good news: there is nothing blocking you. Your home civilization is Chinese, which does have rebirth, your state is Reincarnating, and the app currently shows that you can apply. You simply have not submitted any application yet in this life.\n\nTo apply, open the \"Rebirth applications\" page, tap \"Apply for rebirth\", choose the form you hope for, add a statement if you like, and submit. It is only a wish — the judge decides the final destination.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": null,
+          "latency_ms": 2453,
+          "tokens": {
+            "input": 13485,
+            "output": 138
+          },
+          "cost": 0.0021055500000000003
+        },
+        {
+          "id": 219,
+          "candidate": 0,
+          "case": 50,
+          "side": "soul",
+          "question": "When does the next station begin?",
+          "tools_called": [
+            "sentence_plan"
+          ],
+          "answer": "Your sentence plan shows as completed with no stations listed, so there is no next station waiting to begin — the plan is done and rebirth is open to you.\n\nIf you expected stations here and don't see them, write to your hall office (Letters -> hall office inbox) and they can check your record.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3299,
+          "tokens": {
+            "input": 13417,
+            "output": 92
+          },
+          "cost": 0.00206775
+        },
+        {
+          "id": 220,
+          "candidate": 0,
+          "case": 51,
+          "side": "soul",
+          "question": "What do the station states mean?",
+          "tools_called": [
+            "sentence_plan"
+          ],
+          "answer": "The six station states on \"My sentence\" are: not started, serving, \"term served, still here\", completed, eternal, and pardoned. Serving and waiting stations show an end date, and completed stations show the day they ended. \"Term served, still here\" means the term is over but a judgment at home is still open, so you move on when it concludes. Eternal means no end and no next station, so no rebirth application. Pardoned means the remaining term was forgiven and the rest of the plan counts as done.\n\nFor your own plan: it shows as completed overall, with no stations listed, and rebirth is open to you. The exact dates would appear on the \"This life\" page under \"My sentence\".",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3120,
+          "tokens": {
+            "input": 13410,
+            "output": 174
+          },
+          "cost": 0.0021159
+        },
+        {
+          "id": 221,
+          "candidate": 0,
+          "case": 52,
+          "side": "soul",
+          "question": "What does my state on this page mean?",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "Your tag says \"Reincarnating\": your sentence is served and you have entered the cycle of rebirth. Since your home civilization (Chinese) has rebirth, you may be able to apply for rebirth now — whether you can depends on what the system finds, and the \"Rebirth applications\" page will tell you.\n\nYou cannot change this state yourself; it moves with judgment and sentence, and the page takes precedence.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2765,
+          "tokens": {
+            "input": 13438,
+            "output": 111
+          },
+          "cost": 0.0020822999999999996
+        },
+        {
+          "id": 222,
+          "candidate": 0,
+          "case": 53,
+          "side": "soul",
+          "question": "Can I see my past lives?",
+          "tools_called": [],
+          "answer": "Yes. The \"Past lives\" page lists each earlier life's file: merits and faults, judgments, dispositions, rebirth applications, and what and when you were reborn as.\n\nPast lives are read-only there — nothing can be applied for or appealed from a sealed file. Your home civilization is Chinese, so past lives are shown (only Egyptian and European souls have an empty page).",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "Past lives": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1589,
+          "tokens": {
+            "input": 6679,
+            "output": 77
+          },
+          "cost": 0.00104805
+        },
+        {
+          "id": 223,
+          "candidate": 0,
+          "case": 54,
+          "side": "soul",
+          "question": "What does the balance mean?",
+          "tools_called": [],
+          "answer": "The \"Balance, this life\" figure on the \"This life\" page is what all your merits and demerits come to once set against each other. Each entry in \"This life's ledger\" is one merit or one demerit, and entries are recorded by the hall — you cannot add or remove them yourself; categories and wording follow your home civilization's rules.\n\nSince your home civilization is Chinese, the balance is shown in that civilization's wording. Would you like me to look up your own status or sentence plan?",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1773,
+          "tokens": {
+            "input": 6678,
+            "output": 107
+          },
+          "cost": 0.0010658999999999998
+        },
+        {
+          "id": 224,
+          "candidate": 0,
+          "case": 55,
+          "side": "soul",
+          "question": "How do I write to the hall?",
+          "tools_called": [],
+          "answer": "To write to the hall office, open \"Letters\" and start a hall office conversation — you write to the hall you are in now, and officers reply in the office's name, not instantly and with no fixed reply time. You'll be notified when the reply arrives if letter notifications are on. Use it for anything that needs a person.",
+          "error": "",
+          "tools_ok": true,
+          "included": {
+            "Letters": true
+          },
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1878,
+          "tokens": {
+            "input": 6680,
+            "output": 69
+          },
+          "cost": 0.0010434
+        },
+        {
+          "id": 225,
+          "candidate": 0,
+          "case": 56,
+          "side": "soul",
+          "question": "What does switching the language change?",
+          "tools_called": [],
+          "answer": "Switching in Settings > Language changes the interface and prompts, takes effect at once without signing in again, and is saved to your account so other devices follow it. File content like verdicts, statements and reasons stays in its original language and is not translated. \"Ask\" answers in Chinese when the interface is Chinese, and in English otherwise.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1177,
+          "tokens": {
+            "input": 6679,
+            "output": 69
+          },
+          "cost": 0.00104325
+        },
+        {
+          "id": 226,
+          "candidate": 0,
+          "case": 57,
+          "side": "soul",
+          "question": "What will notifications tell me?",
+          "tools_called": [],
+          "answer": "I can answer that from the help entries — but let me note first that this is a general question, so I'll explain the rules.\n\nIn Settings > Notifications you can switch each kind on or off: rebirth application results, judgment results, residence and return, and letters. The \"Social\" group covers comments and replies, plus review results for your posts and comments. \"Hall warnings\" is always on and cannot be turned off.\n\nMost notifications only tell you that a result exists: a rebirth result says approved or rejected without the reason, a judgment result carries no evidence or merit details, and residence notices do not say where you were sent. The reason text appears on the actual pages.\n\nTwo exceptions: when a report about your post, comment or account is resolved as a warning, the push includes the hall office's reason text and appears on the lock screen; apart from that, and the reason an officer writes when hiding or deleting your post, the lock screen never shows rejection reasons, judgment evidence, merit scores or passwords. Also, \"Settings > Notification history\" lists every notification sent to you, including ones you had turned off or that were not delivered (tagged \"Not delivered\").",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2631,
+          "tokens": {
+            "input": 6678,
+            "output": 240
+          },
+          "cost": 0.0011456999999999997
+        },
+        {
+          "id": 227,
+          "candidate": 0,
+          "case": 58,
+          "side": "soul",
+          "question": "I forgot my password",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "Tap \"Forgot password\" on the sign-in page. If an email is bound to your soul account, enter it, enter the code you receive, and set a new password — the code expires, and too many wrong tries means sending a new one. After a successful reset, every other device is signed out.\n\nIf no email is bound (or another soul already bound the shared address), you cannot reset it in the app: write to your hall office with your name and soul code, and once they confirm who you are they will reset it and give you a temporary one. Since you are signed out, you cannot write letters in the app, so ask a soul of your hall to pass it on, or explain in person at the hall's registry. Note the new password cannot be too short, all digits, or a common one.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3235,
+          "tokens": {
+            "input": 13421,
+            "output": 190
+          },
+          "cost": 0.0021271499999999995
+        },
+        {
+          "id": 228,
+          "candidate": 0,
+          "case": 98,
+          "side": "soul",
+          "question": "怎么开启两步验证？",
+          "tools_called": [],
+          "answer": "开启两步验证的入口在「设置 › 账号安全 › 两步验证」，行尾会写着「已开启」或「未开启」。步骤是：先输入当前密码确认身份；在手机上装好验证器 App，在应用商店里搜「验证器」或 Authenticator，免费款任选；点「在验证器 App 中打开」，打不开就复制密钥，在验证器里选「手动输入」；再输入验证器上「灵魂簿」那一项的六位数字，点「验证 · 下一步」；最后保存恢复码，一共十个，每个只能用一次，只显示这一次，可以复制全部或存为文件，要勾选「我已把恢复码存在这部手机以外的地方」才算完成。中途退出不会开启。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1845,
+          "tokens": {
+            "input": 5866,
+            "output": 161
+          },
+          "cost": 0.0009765
+        },
+        {
+          "id": 229,
+          "candidate": 0,
+          "case": 99,
+          "side": "soul",
+          "question": "How do I turn on two-step verification?",
+          "tools_called": [],
+          "answer": "Two-step verification is under Settings > Account security > two-step verification. Tap to turn it on, enter your current password, then add an authenticator app on your phone (tap \"Open in the authenticator app\", or copy the key and enter it manually), type the six digits it shows and tap \"Verify · Next\". The last step is saving your recovery codes: tick that you have stored them somewhere other than this phone, and the setup is complete — leaving midway does not turn it on.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1927,
+          "tokens": {
+            "input": 6681,
+            "output": 101
+          },
+          "cost": 0.00106275
+        },
+        {
+          "id": 230,
+          "candidate": 0,
+          "case": 100,
+          "side": "soul",
+          "question": "怎么导出我的资料？",
+          "tools_called": [],
+          "answer": "在「设置 › 我的资料 › 导出我的资料」里操作：点「输入密码并申请」，输入当前密码确认是你本人（开了面容登录的用面容确认）。一次只能有一份在准备，一般几分钟就好，资料多时最长一天，可以离开这一页，好了会通知你。\n\n好了以后点「保存或发送…」，用系统的分享面板存成文件或发给自己。文件只能取一段时间，页面会写明「可取到几时」，过期后点「重新申请」；没做成也可以重新申请。助手不能替你操作，需要你自己在这一页点。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1974,
+          "tokens": {
+            "input": 5866,
+            "output": 124
+          },
+          "cost": 0.0009542999999999999
+        },
+        {
+          "id": 231,
+          "candidate": 0,
+          "case": 101,
+          "side": "soul",
+          "question": "How do I export my data?",
+          "tools_called": [],
+          "answer": "Settings > My data > \"Export my data\". Tap \"Enter your password and request\", enter your current password (or confirm with your face if face sign-in is on), and the file is prepared — usually a few minutes, up to a day if there is a lot. When it's ready, tap \"Save or send…\" to save or send it; the page shows \"Available until\" a time, and after that you can request it again.\n\nIt includes your profile and number, merit and demerit records, judgments, letters and circle posts, and recent sign-ins; it does not include officers' deliberations or letters not addressed to you. Only one export can be prepared at a time.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 5117,
+          "tokens": {
+            "input": 6679,
+            "output": 143
+          },
+          "cost": 0.00108765
+        },
+        {
+          "id": 232,
+          "candidate": 0,
+          "case": 102,
+          "side": "soul",
+          "question": "有不认识的设备登录了我的账号怎么办？",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "先到「设置 › 账号安全 › 登录设备与记录」，在设备列表里找到那台不认识的设备，点它旁边的「退出」，那台设备就要重新登录了。接着改密码；改完后，除你手上这部手机外，所有设备都会退出。你也可以在「登录记录」里核对最近有没有其他不认识的登录，失败的记录也会列在那里。\n\n如果还有疑问，可以写信给殿司。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 2670,
+          "tokens": {
+            "input": 11807,
+            "output": 110
+          },
+          "cost": 0.00183705
+        },
+        {
+          "id": 233,
+          "candidate": 0,
+          "case": 103,
+          "side": "soul",
+          "question": "How do I sign another device out?",
+          "tools_called": [],
+          "answer": "Go to Settings > Account security > \"Devices and sign-ins\". Under Devices you'll see every device signed in to your account with when each was last seen; \"This phone\" is the one in your hand. Tap \"Sign out\" next to the other device and it must sign in again — no password needed.\n\nThis phone has no such button; for it, use \"Sign out\" at the bottom of the Settings page. If you spot a device you don't recognise, sign it out first, then change your password — that signs out everything except this phone.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1746,
+          "tokens": {
+            "input": 6680,
+            "output": 116
+          },
+          "cost": 0.0010715999999999998
+        },
+        {
+          "id": 234,
+          "candidate": 0,
+          "case": 104,
+          "side": "soul",
+          "question": "对审判结果不服怎么申诉？",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "申诉入口在「本世」页：找到那件已结案的审判，卡片底部会有一行，能申诉时会写「某日前可申诉」和「申诉 ›」；点进去写理由（必填），新证据可选，再点「提交申诉」。由另一位官员复核，不是作出原判的那位。\n\n规则要点：只有本世已结案的审判能申诉，前世的只能看；每件审判最多申诉两次（撤回也算一次），同一时间只能有一份没有结论的申诉；期限以卡片上写的日期为准，第二次申诉的期限从上一次有结论那天另算。状态依次可能是待复核、复核中、维持原判、已改判、已撤回、已作废；若复核维持原判且还有次数、也仍在申诉期内，还会出现「上诉 ›」。改判后未执行的站按新裁决走，已受刑的站会记一笔改判补偿功德。\n\n我不能替你提交，请自己在这一页操作。你本人这件审判是否还能申诉、剩余次数，以「本世」页那一行写的为准。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3882,
+          "tokens": {
+            "input": 11805,
+            "output": 248
+          },
+          "cost": 0.00191955
+        },
+        {
+          "id": 235,
+          "candidate": 0,
+          "case": 105,
+          "side": "soul",
+          "question": "How do I appeal a judgment?",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "On the \"This life\" page, each concluded judgment has a line at the bottom of its card. If it can still be appealed, it shows \"Appeal by <date>\" with \"Appeal ›\"; tap that, write your reason (required), add any new evidence, and tap \"Submit appeal\". Only this life's original judgment can be appealed, at most twice, and a different officer reviews it. A second appeal has its own period counted from the day the first appeal was decided.\n\nYour record currently shows you in the state \"Reincarnating\", which means your sentence is served and this life's judgment is concluded — so check the card on the \"This life\" page to see whether an appeal period is still open; if it has closed, the line will say why. The assistant cannot file an appeal for you.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3229,
+          "tokens": {
+            "input": 13427,
+            "output": 190
+          },
+          "cost": 0.0021280500000000003
+        },
+        {
+          "id": 236,
+          "candidate": 0,
+          "case": 106,
+          "side": "soul",
+          "question": "超度回向是什么？",
+          "tools_called": [],
+          "answer": "超度回向是本世账目里的一类功德：阳间亲属为你做的法事，由官员代为登记。它只计功德，不会是过。只有审判中、受刑中的灵魂能收到，你自己不能添加或修改，要登记请阳间亲属联系殿里的官员。登记后计入「本世余额」，在「本世」页的账目里归在「超度回向」一类。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1727,
+          "tokens": {
+            "input": 5867,
+            "output": 90
+          },
+          "cost": 0.00093405
+        },
+        {
+          "id": 237,
+          "candidate": 0,
+          "case": 107,
+          "side": "soul",
+          "question": "What is dedication of merit?",
+          "tools_called": [],
+          "answer": "Dedication of merit is one kind of merit entry in this life's ledger: a rite your living relatives held for you, entered by an officer of the hall. It counts as merit only, never as demerit, and appears on the \"This life\" page under \"Dedication of merit\".\n\nOnly souls being judged or serving a sentence can receive it; souls in other states, such as living or already reborn, cannot. You cannot add or change one yourself — ask your living relatives to contact an officer of the hall to have it entered.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 1554,
+          "tokens": {
+            "input": 6678,
+            "output": 114
+          },
+          "cost": 0.0010700999999999998
+        },
+        {
+          "id": 238,
+          "candidate": 0,
+          "case": 116,
+          "side": "soul",
+          "question": "十三站是什么？我走到哪一站了？",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "地府亡魂死后要走十三站：土地庙、黄泉路、望乡台、恶狗岭、金鸡山、野鬼村、迷魂殿、供养阁、鬼界堡、酆都城、十八层地狱、莲花台、还魂崖。具体走到第几站，写在「本世」页的「赴冥 · 十三站」那一块；我只能查到你的状态是轮回中，查不到站数，请以那一页为准。各站由殿里的官员登记，你自己不能挪站；登记错了，也由官员修改。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3619,
+          "tokens": {
+            "input": 11811,
+            "output": 142
+          },
+          "cost": 0.00185685
+        },
+        {
+          "id": 239,
+          "candidate": 0,
+          "case": 117,
+          "side": "soul",
+          "question": "Which of the thirteen stations am I at?",
+          "tools_called": [
+            "me",
+            "sentence_plan"
+          ],
+          "answer": "I can see from your register that your sentence is completed and you have entered the cycle of rebirth, but I have no record of a current station on the road for you — my lookup returned no stations, and once rebirth is complete the thirteen-stations block goes away.\n\nThe \"This life\" page is the authority: if the \"To the underworld · thirteen stations\" block is still shown there, it names the station you are at. Stations are recorded and corrected by the hall's officers, not by you or the assistant, so if it looks wrong, write to the hall office through Letters.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3281,
+          "tokens": {
+            "input": 13470,
+            "output": 155
+          },
+          "cost": 0.0021135
+        },
+        {
+          "id": 240,
+          "candidate": 0,
+          "case": 118,
+          "side": "soul",
+          "question": "怎么向城隍申诉冤情，提前出枉死城？",
+          "tools_called": [
+            "me",
+            "rebirth",
+            "sentence_plan"
+          ],
+          "answer": "先说规则：向城隍申诉冤情，只适用于还押在枉死城、审判尚未结案的灵魂。在「本世」页那件审判的卡片底部，有一行写着押到哪天、申诉到哪一步；右边「申诉 ›」点进去，写下冤情（必填，有字数上限），再提交。同一件案子同一时间只能有一份申诉等城隍核实。核实由城隍名下的官员或殿管理员办理；冤情登记为「重」或「极重」且属实的，可以提前出枉死城，审判随即受理；不属实的就照旧押到阳寿那天，之后可以再提。这个助手不能替你提交，要你自己在那一页操作。\n\n你的情况：本世状态已是「轮回中」，受刑计划全部完成、受刑那一关已经过去，你现在也不在枉死城，所以这一申诉对你不再适用。你现在其实可以提交转生申请，在「转生申请」页操作。如果对审判结果本身有异议，那是另一回事，请在「本世」页那件已结案的审判卡片底部看是否还能申诉。",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3868,
+          "tokens": {
+            "input": 11906,
+            "output": 290
+          },
+          "cost": 0.0019598999999999997
+        },
+        {
+          "id": 241,
+          "candidate": 0,
+          "case": 119,
+          "side": "soul",
+          "question": "How do I file a grievance in the City of Wrongful Death?",
+          "tools_called": [
+            "me"
+          ],
+          "answer": "You file it on the \"This life\" page: the card of the untimely judgment has a line at the bottom with \"File a grievance ›\" on the right, shown only while you are still held in the City of Wrongful Death and the judgment is not concluded. Write your grievance (required, with a length limit) and tap \"Submit grievance\". Only one grievance can await the City God at a time, and the hall's officers review it; a major or severe grievance that proves true releases you early, otherwise you stay until your fated date and may file again.\n\nFor your own case: your register state is \"Reincarnating\", not held under such a judgment, so there is nothing for you to file now — should you ever be held, the line itself will tell you, and the page takes precedence over anything I say.",
+          "error": "",
+          "tools_ok": true,
+          "included": {},
+          "excluded": {},
+          "passed": true,
+          "retrieval": "fallback",
+          "retrieved": [],
+          "retrieval_hit": false,
+          "latency_ms": 3100,
+          "tokens": {
+            "input": 13441,
+            "output": 193
+          },
+          "cost": 0.0021319499999999996
+        }
+      ]
+    }
+  ]
 }

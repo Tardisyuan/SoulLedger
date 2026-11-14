@@ -8,7 +8,7 @@ The demo site calls no model (user decision); it replays what this writes into f
   tools called (names only), retrieval and the entries it brought in, tokens, latency, first token, who answered.
 - `assist-security.json` (B3): the injection cases already in the file, asked the same way; their `expect` is ours
   and is not touched. Read the answers before publishing: one that does not refuse is a finding, not a recording.
-- `assist-eval-run.json` (B2): one eval run per side over every active case for the two candidates in
+- `assist-eval-run.json` (B2): one eval run per side over every active case for the one or two candidates in
   DEMO_ASSIST_CANDIDATES, with the case list it was judged against. Needs a Celery worker (or eager tasks) on the backend.
 
 The try endpoint is the only one that reports a trace, and only to an ADMIN: the officer and soul endpoints never do.
@@ -22,7 +22,7 @@ Environment (nothing else is read; no .env):
   DEMO_ASSIST_TOTP_SECRET  its TOTP secret, so the script can answer the second step)
   DEMO_ASSIST_PASSWORD
   DEMO_ASSIST_ONLY       optional, comma-separated subset of: replies,security,eval
-  DEMO_ASSIST_CANDIDATES for eval: a JSON list of two candidates as the eval page sends them,
+  DEMO_ASSIST_CANDIDATES for eval: a JSON list of one or two candidates as the eval page sends them,
                          e.g. [{"platform":"deepseek","model":"deepseek-chat"},{"platform":"anthropic","model":"..."}]
   DEMO_ASSIST_EVAL_SIDES for eval: default "officer,soul" (one run per side; each must fit the 100-ask cap)
 
@@ -152,8 +152,8 @@ def ask_all(api, name, items):
 
 def eval_runs(api):
     candidates = json.loads(os.environ.get("DEMO_ASSIST_CANDIDATES") or "[]")
-    if len(candidates) != 2:
-        sys.exit("DEMO_ASSIST_CANDIDATES must list two candidates")
+    if len(candidates) not in (1, 2):
+        sys.exit("DEMO_ASSIST_CANDIDATES must list one or two candidates")
     runs = []
     for side in os.environ.get("DEMO_ASSIST_EVAL_SIDES", "officer,soul").split(","):
         quote = api.call("POST", "/assist-admin/eval/preview/", {"side": side, "candidates": candidates})
