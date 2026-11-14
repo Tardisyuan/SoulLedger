@@ -212,7 +212,7 @@ describe("tokens, safe area and the coarse-pointer rule", () => {
   it("on a phone the door cells are 56 tall over the safe area, the current one marked by a short line under the glyph (batch 38)", () => {
     const doors = read("src/components/layout/doors.module.css");
     const narrow = doors.slice(doors.indexOf("@media (max-width: 768px)"), doors.indexOf("@media (min-width: 769px)"));
-    expect(narrow).toContain("padding: 0 8px var(--safe-b, 0px);");
+    expect(narrow).toContain("padding: 0 8px var(--safe-b);");
     expect(narrow).toMatch(/min-height:\s*56px;\s*height:\s*56px;/);
     // The 14 × 2 line under the glyph box, not a full-width edge line.
     expect(narrow).toMatch(/\.door\[aria-current="page"\]::after,\s*\.door\[aria-current="true"\]::after\s*\{[^}]*width:\s*14px;[^}]*height:\s*2px;/);

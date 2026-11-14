@@ -20431,11 +20431,8 @@ export interface components {
             target_realm: string;
             rebirth_form?: components["schemas"]["RebirthFormEnum"];
             rebirth_continent?: components["schemas"]["ContinentEnum"] | components["schemas"]["BlankEnum"];
-            /**
-             * @description Which turn of the wheel this is; the first rebirth is 1.
-             * @default 1
-             */
-            cycle_count: number;
+            /** @description Which turn of the wheel this is; the first rebirth is 1. */
+            cycle_count?: number;
             previous_realm?: string;
             /** @description Name in new life */
             new_identity?: string;

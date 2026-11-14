@@ -879,7 +879,7 @@ class TestJestSelection:
             # 2026-11-12: imported by their jest readers, or read by always-run tests, or reached by none.
             ["frontend/src/__tests__/support/egyPendingKeys.json"],
             ["frontend/src/__tests__/support/egyVocabulary.json"],
-            ["frontend/demo/data/judge.zh.json", "frontend/demo/data/home-preview.json"],
+            ["frontend/demo/data/judge.zh/boot.json", "frontend/demo/data/home-preview.json"],
             # 2026-11-13: no jest test imports the generated schema; its readers are always-run, vitest, pytest.
             ["packages/core/openapi/schema.yml"],
             ["backend/apps/souls/serializers.py", "packages/core/openapi/schema.yml", "packages/core/src/api/generated/schema.ts"],

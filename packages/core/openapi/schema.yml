@@ -44917,7 +44917,6 @@ components:
         cycle_count:
           type: integer
           minimum: 1
-          default: 1
           description: Which turn of the wheel this is; the first rebirth is 1.
         previous_realm:
           type: string
