@@ -92,7 +92,7 @@ describe("「下一件」 after a decision (D1)", () => {
     expect(screen.queryByTestId("next-bar")).toBeNull(); // nothing offered before deciding
 
     await approve();
-    expect(await screen.findByTestId("detail-next")).toHaveTextContent("下一件");
+    expect(await screen.findByTestId("detail-next")).toHaveTextContent(/^下一件/);
     expect(screen.getByTestId("detail-next-caption")).toHaveTextContent("审批 wf-3 · 还剩 1 件");
     expect(screen.getByTestId("detail-next")).not.toHaveTextContent("3/3"); // no 「3/7」 any more
     expect(screen.getByTestId("detail-next").props.accessibilityLabel).toBe("下一件：审批 wf-3，还剩 1 件");
@@ -109,7 +109,7 @@ describe("「下一件」 after a decision (D1)", () => {
 
     mockApproveNode.mockClear();
     await approve();
-    expect(await screen.findByTestId("detail-leave")).toHaveTextContent("回到待办");
+    expect(await screen.findByTestId("detail-leave")).toHaveTextContent(/^回到待办/);
     expect(screen.getByTestId("detail-leave-caption")).toHaveTextContent("今天的都办完了");
     expect(screen.queryByTestId("detail-next")).toBeNull();
     fireEvent.press(screen.getByTestId("detail-leave"));

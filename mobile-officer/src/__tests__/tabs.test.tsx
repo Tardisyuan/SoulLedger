@@ -880,7 +880,7 @@ describe("the door bar's marks follow the interface language", () => {
 
   it("第四十八批 A1: the current-door line is ink, not the hall's colour", () => {
     renderOfficer(<TabBar current="queue" onSelect={() => {}} />);
-    const t = themeFor("CHINESE_UNDERWORLD", "light");
+    const t = themeFor("CHINESE", "light");
     const line = StyleSheet.flatten(screen.getByTestId("door-desk-current").props.style);
     expect(line.backgroundColor).toBe(t.ink);
     expect(line.backgroundColor).not.toBe(t.plaque);

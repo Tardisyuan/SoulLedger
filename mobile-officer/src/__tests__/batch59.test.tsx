@@ -91,7 +91,7 @@ describe("枉死申诉 in 待我处理", () => {
     expect(screen.getByText("常熟县城隍 · 冤情 重")).toBeTruthy();
     expect(screen.getByText("已申诉 · 待审 · 10-27")).toBeTruthy();
     fireEvent.press(screen.getByTestId("todo-row-wangsi-j-1"));
-    expect(open).toHaveBeenCalledWith({ kind: "wangsi", id: "j-1" });
+    expect(open.mock.calls[0][0]).toEqual({ kind: "wangsi", id: "j-1" });
   });
 });
 

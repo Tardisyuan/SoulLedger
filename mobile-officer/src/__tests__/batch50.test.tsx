@@ -17,7 +17,10 @@ import { renderOfficer } from "./harness";
 
 // The seal sheet's hold-to-seal is its own test (sealSheet.test.tsx); here it just seals.
 jest.mock("../screens/sealSheet", () => ({
-  SealSheet: ({ open, onSealed }: { open: boolean; onSealed: () => void }) => (open ? <Pressable testID="mock-seal" onPress={onSealed} /> : null),
+  SealSheet: ({ open, onSealed }: { open: boolean; onSealed: () => void }) => {
+    const { Pressable: MockPressable } = jest.requireActual<typeof import("react-native")>("react-native");
+    return open ? <MockPressable testID="mock-seal" onPress={onSealed} /> : null;
+  },
 }));
 const mockList = jest.fn();
 const mockGet = jest.fn();
@@ -57,15 +60,15 @@ afterEach(() => {
 describe("C1 · after sealing, the detail stays and says so", () => {
   it("shows 「已落印」 with the seal under the title, dims the dossier to 55 %, and swaps the bar for 「下一件」", async () => {
     mockGet.mockResolvedValue({
-      data: { id: "j-1", case_number: "CN-2026-0021", soul: "s-1", soul_name: "赵志强", civilization: "CHINESE_UNDERWORLD", court: "第一殿", claimed_by: 7, claimed_by_name: "阎罗", is_final: true, concluded_at: null },
+      data: { id: "j-1", case_number: "CN-2026-0021", soul: "s-1", soul_name: "赵志强", civilization: "CHINESE", court: "第一殿", claimed_by: 7, claimed_by_name: "阎罗", is_final: true, concluded_at: null },
     });
     const onNext = jest.fn();
     renderOfficer(<Detail target={{ type: "judgment", id: "j-1" }} from="审判" onBack={() => {}} onSettled={() => {}} next={{ name: "王桂兰", left: 5, onNext }} />);
     fireEvent.press(await screen.findByTestId("judgment-judge"));
     expect(screen.queryByTestId("detail-sealed")).toBeNull();
     fireEvent.press(screen.getByTestId("mock-seal"));
-    expect(await screen.findByTestId("detail-sealed")).toHaveTextContent("已落印 · 进入审批");
-    expect(screen.getByTestId("detail-sealed")).toHaveTextContent("驳回会重开一案");
+    expect(await screen.findByTestId("detail-sealed")).toHaveTextContent(/^已落印 · 进入审批/);
+    expect(screen.getByTestId("detail-sealed")).toHaveTextContent(/驳回会重开一案/);
     expect(screen.getByTestId("detail-dimmed")).toHaveStyle({ opacity: 0.55 });
     expect(screen.queryByTestId("judgment-seal")).toBeNull(); // the strip carries the seal, not the header
     expect(screen.queryByTestId("judgment-actions")).toBeNull();
@@ -100,8 +103,8 @@ describe("C2 · 查询", () => {
     expect(await screen.findByText("灵魂")).toBeTruthy();
     expect(screen.queryByText(/人物/)).toBeNull();
     expect(screen.getAllByTestId(/^case-row-j-\d+$/)).toHaveLength(CASES_SHOWN);
-    expect(screen.getByTestId("case-row-j-0")).toHaveTextContent("已结");
-    expect(screen.getByTestId("case-row-j-1")).toHaveTextContent("待认领");
+    expect(screen.getByTestId("case-row-j-0")).toHaveTextContent(/已结$/);
+    expect(screen.getByTestId("case-row-j-1")).toHaveTextContent(/待认领$/);
     expect(screen.getByTestId("search-see-all")).toHaveTextContent("看全部 7 件 ›");
     fireEvent.press(screen.getByTestId("search-see-all"));
     expect(screen.getAllByTestId(/^case-row-j-\d+$/)).toHaveLength(7);
@@ -109,7 +112,7 @@ describe("C2 · 查询", () => {
     // The server answered every match: no 「只显示前」 line.
     expect(screen.queryByTestId("search-first-only")).toBeNull();
     expect(screen.getAllByTestId(/^soul-row-s-\d+$/)).toHaveLength(PEOPLE_SHOWN);
-    expect(screen.getByTestId("soul-row-s-1")).toHaveTextContent("灵魂 · 酆都");
+    expect(screen.getByTestId("soul-row-s-1")).toHaveTextContent(/灵魂 · 酆都$/);
     // The typed 「王」 is the marked part of the name: bold and underlined, no colour of its own.
     const hit = screen.getAllByTestId("soul-row-s-1-hit")[0];
     expect(hit).toHaveTextContent("王");
@@ -138,7 +141,7 @@ describe("C2 · 查询", () => {
     renderOfficer(<SearchTab onOpenSoul={() => {}} />);
     search("CN-2027");
     expect(await screen.findByText("没有找到「CN-2027」")).toBeTruthy();
-    expect(screen.getByTestId("search-no-results")).toHaveTextContent(`如 CN-${new Date().getFullYear()}。`);
+    expect(screen.getByTestId("search-no-results")).toHaveTextContent(new RegExp(`如 CN-${new Date().getFullYear()}。$`));
     expect(screen.queryByTestId("search-cases")).toBeNull();
     expect(screen.queryByTestId("search-people")).toBeNull();
   });

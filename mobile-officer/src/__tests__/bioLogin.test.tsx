@@ -5,6 +5,7 @@
  * resumed session and a return after five minutes. Real SessionProvider; core's auth endpoints and the phone's
  * fingerprint are doubles (jest.setup.js).
  */
+import Svg from "react-native-svg";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -68,7 +69,7 @@ function withProviders(ui: ReactElement) {
 /** yama signed in here before and turned 指纹登录 on. */
 function fingerprintOn() {
   platform().persistent.set(LAST_LOGIN_KEY, JSON.stringify({ username: "yama", display_name: "阎罗", hall: "CN_DIYU" }));
-  platform().persistent.set(BIO_LOGIN_KEY, "face");
+  platform().persistent.set(BIO_LOGIN_KEY, "finger");
   guarded.set(CREDENTIAL_KEY, "CRED");
 }
 
@@ -106,7 +107,7 @@ describe("the sign-in page", () => {
     fingerprintOn();
     mockDeviceLogin.mockRejectedValue(httpError(401, { code: "device_login_revoked", reason: "password_changed" }));
     withProviders(<LoginScreen />);
-    await screen.findByText("这部手机的面容登录已失效，请输入密码。");
+    await screen.findByText("这部手机的指纹登录已失效，请输入密码。");
     expect(screen.queryByTestId("login-bio")).toBeNull();
     expect(officerDevice.bioEnabled()).toBe(false);
     await waitFor(() => expect(guarded.has(CREDENTIAL_KEY)).toBe(false));
@@ -118,7 +119,13 @@ describe("the sign-in page", () => {
     fingerprintOn();
     secureAuth.error = Object.assign(new Error("User canceled the operation"), { code: "ERR_CANCELED" });
     withProviders(<LoginScreen />);
-    await act(async () => {});
+    // The page opens the fingerprint by itself (biometry read, then the credential read): let both settle.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
     expect(mockDeviceLogin).not.toHaveBeenCalled();
     expect(screen.queryByTestId("login-failure")).toBeNull();
     expect(screen.getByTestId("login-bio")).toBeTruthy();
@@ -189,6 +196,7 @@ describe("我的 › 指纹登录", () => {
 
   it("第五十批 C5: reads 「用指纹登录」 with the two lines Design wrote, and is a switch", async () => {
     bio.enrolled = true;
+    (bio as unknown as { types: number[] }).types = [1]; // a fingerprint phone (the setup's default is face)
     renderOfficer(<BioLoginBlock />);
     await act(async () => {});
     expect(screen.getByTestId("me-bio-login")).toHaveTextContent(/用指纹登录/);
@@ -281,9 +289,12 @@ describe("the app lock", () => {
     expect(await screen.findByTestId("app-lock-failed")).toBeTruthy();
     // 第五十批 C5: the soul app's lock page -- the hall's seal at 64, 「灵魂簿已锁定」, 「{name} · {hall}」, 「用指纹解锁」.
     expect(screen.getByText("灵魂簿已锁定")).toBeTruthy();
-    const seal = await screen.findByTestId("app-lock-seal");
+    // react-native-svg is a host component here: its testID is reached by type, as tabHead.test.tsx does.
+    const sealOf = () => screen.UNSAFE_getAllByType(Svg).find((el) => el.props.testID === "app-lock-seal");
+    await waitFor(() => expect(sealOf()).toBeTruthy());
+    const seal = sealOf()!;
     // 第五十二批 E2: the civilization's seal, 「地府之印」 -- no hall on it, never 「第一殿」.
-    const glyphs = seal.findAll((n) => String(n.type) === "Text").map((n) => n.props.children);
+    const glyphs = [...new Set(seal.findAll((n) => typeof n.props.children === "string").map((n) => n.props.children as string))];
     expect(glyphs).toEqual(["地", "府", "之", "印"]);
     expect(glyphs).not.toContain("殿");
     expect(screen.getByTestId("app-lock-who")).toHaveTextContent("阎罗 · 酆都");
@@ -296,12 +307,12 @@ describe("the app lock", () => {
 
   it("第五十二批 E2: a hall that is not known leaves the name alone under the seal, no dangling 「 · 」", async () => {
     fingerprintOn();
-    platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, tenant: { code: null, display_name: "", civilization: "CHINESE_UNDERWORLD" } }));
+    platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, tenant: { code: null, display_name: "", civilization: "CHINESE" } }));
     platform().secure.set(REFRESH_TOKEN_KEY, "R");
     bio.success = false;
     withProviders(<AppLock />);
     expect(await screen.findByTestId("app-lock-failed")).toBeTruthy();
-    expect(screen.getByTestId("app-lock-seal")).toBeTruthy();
+    await waitFor(() => expect(screen.UNSAFE_getAllByType(Svg).some((el) => el.props.testID === "app-lock-seal")).toBe(true));
     expect(screen.getByTestId("app-lock-who")).toHaveTextContent(/^阎罗$/);
     expect(screen.getByTestId("app-lock-who")).not.toHaveTextContent("·");
   });

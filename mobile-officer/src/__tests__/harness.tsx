@@ -20,7 +20,7 @@ export const OFFICER: LoginUser = {
   // city_god.execute / wangsi.execute: a JUDGE's 城隍初审 and 枉死申诉 codes (split from judgment.execute, 2026-10-29).
   permissions: ["workflow.approve", "judgment.execute", "judgment.read", "soul.read", "city_god.execute", "wangsi.execute"],
   // What the API really sends: the code and the database's English display name.
-  tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife", civilization: "CHINESE_UNDERWORLD" },
+  tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife", civilization: "CHINESE" },
   mfa_enabled: true,
   mfa_required: true,
 };

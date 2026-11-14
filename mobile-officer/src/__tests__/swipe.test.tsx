@@ -358,7 +358,7 @@ describe("第四十八批 A2:「通过」圆键是墨色实底", () => {
     serve();
     renderOfficer(<SwipeScreen onBack={() => {}} />);
     await enabled("swipe-pass");
-    const t = themeFor("CHINESE_UNDERWORLD", "light");
+    const t = themeFor("CHINESE", "light");
     const style = StyleSheet.flatten(screen.getByTestId("swipe-pass").props.style);
     expect(style).toMatchObject({ backgroundColor: t.ink, borderColor: t.ink });
     expect([t.plaque, t.plaqueFill]).not.toContain(style.backgroundColor);
