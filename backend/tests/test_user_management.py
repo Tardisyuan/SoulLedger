@@ -714,7 +714,10 @@ class TestProfileAPI:
         assert response.status_code == 200
         # Read-only fields should be unchanged
         assert response.data["username"] == "admin"
-        assert response.data["role"] == "ADMIN"
+        # `admin_user` is SYSTEM_ADMIN (conftest, 2026-11-15): the "ADMIN" sent above would be a change, and is ignored.
+        assert response.data["role"] == "SYSTEM_ADMIN"
+        self.admin_user.refresh_from_db()
+        assert self.admin_user.role == "SYSTEM_ADMIN"
         assert response.data["is_active"]
 
     def test_change_password_success(self):

@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from celery import shared_task
+from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
@@ -440,25 +441,32 @@ def test_ops_alert_unset_says_so_and_a_failing_post_never_raises(settings, monke
 
 @pytest.mark.django_db
 def test_alert_recipients_are_admins_plus_tenant_holders_of_manage(db, admin_user, judge_user, viewer_user, eu_admin_user, cn_tenant):
+    from django.contrib.auth import get_user_model
+
     from apps.perm.models import RolePermission
     from tests.perm_support import seeded_permission, seeded_role
 
+    User = get_user_model()
     job = _job("tests.scheduler_ok", tenant=cn_tenant)
-    # The hall-less ADMIN, not another hall's ADMIN (2026-10-29).
-    assert set(services.alert_recipients(job)) == {admin_user}
+    # SYSTEM_ADMIN (`admin_user`, and the migration-seeded settings.SYSTEM_ADMIN_USERNAME that every test database
+    # holds), not another hall's ADMIN (2026-10-29). Since 2026-11-15 (§7.5) also the civilization ADMIN of the job's
+    # hall's civilization (CN_DIYU -> CHINESE), never another civilization's.
+    seeded = User.objects.get(username=settings.SYSTEM_ADMIN_USERNAME)
+    cn_civ = User.objects.create_user(username="cn_civ_admin", password="x", role="ADMIN", civilization="CHINESE")
+    User.objects.create_user(username="eu_civ_admin", password="x", role="ADMIN", civilization="EUROPEAN")
+    told = {admin_user, seeded, cn_civ}  # the global and civilization admins every assertion below includes
+    assert set(services.alert_recipients(job)) == told
 
     # scheduler.manage is ADMIN-only since 2026-10-29 (user item 2): a stray grant to JUDGE adds nobody.
     RolePermission.objects.create(
         role=seeded_role("JUDGE"), permission=seeded_permission("scheduler.manage")
     )
-    assert set(services.alert_recipients(job)) == {admin_user}
+    assert set(services.alert_recipients(job)) == told
     assert judge_user not in set(services.alert_recipients(job))
 
     # The job's own hall's ADMIN is told (through check_permission's ADMIN answer, not a separate role test).
-    from django.contrib.auth import get_user_model
-
-    cn_admin = get_user_model().objects.create_user(username="cn_hall_admin", password="x", role="ADMIN", tenant=cn_tenant)
-    assert set(services.alert_recipients(job)) == {admin_user, cn_admin}
+    cn_admin = User.objects.create_user(username="cn_hall_admin", password="x", role="ADMIN", tenant=cn_tenant)
+    assert set(services.alert_recipients(job)) == told | {cn_admin}
 
 
 # ---------------------------------------------------------------------------

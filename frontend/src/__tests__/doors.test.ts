@@ -9,13 +9,15 @@
  */
 import { DOORS, DOOR_ORDER, PAGES, ROLE_DOORS, doorFor, doorHref, doorTabs, doorsFor, landingFor, pageOf, type Viewer } from "@/src/lib/doors";
 import { routeForView } from "@/src/lib/defaultView";
+import { isAdminRole } from "@soulledger/core/api/perm";
 import { isOutsideAppLayout, pageRoutes } from "./support/appRoutes";
 
 const viewer = (over: Partial<Viewer> & { menu?: string[]; perms?: string[] } = {}): Viewer => ({
   role: over.role,
   extraRoles: over.extraRoles,
-  isAdmin: over.isAdmin ?? over.role === "ADMIN",
-  hasPermission: (c) => over.role === "ADMIN" || (over.perms ?? []).includes(c),
+  // SYSTEM_ADMIN passes every ADMIN gate (2026-11-15, §7.5), as `usePermissions` answers.
+  isAdmin: over.isAdmin ?? isAdminRole(over.role),
+  hasPermission: (c) => isAdminRole(over.role) || (over.perms ?? []).includes(c),
   menuPaths: new Set(over.menu ?? []),
 });
 
@@ -24,6 +26,7 @@ describe("角色看到哪几门", () => {
 
   it("管理员五门都有;判官没有「司」「人间」;守卫只有「册」(用户决定);版主只有「人间」;灵魂一门都没有", () => {
     expect(as("ADMIN")).toEqual(DOOR_ORDER);
+    expect(as("SYSTEM_ADMIN")).toEqual(DOOR_ORDER);
     expect(as("JUDGE")).toEqual(expect.arrayContaining(["desk", "register", "statutes"]));
     for (const door of ["office", "mortal"]) expect(as("JUDGE")).not.toContain(door);
     expect(as("GUARDIAN")).toEqual(["register"]);
@@ -33,10 +36,10 @@ describe("角色看到哪几门", () => {
     expect(as("SOUL")).toEqual([]);
   });
 
-  it("每一门都有角色能进,且只有管理员能进「司」", () => {
+  it("每一门都有角色能进,且只有管理员(ADMIN 与 SYSTEM_ADMIN)能进「司」", () => {
     const roles = Object.keys(ROLE_DOORS);
     for (const door of DOOR_ORDER) expect(roles.filter((r) => as(r).includes(door))).not.toEqual([]);
-    expect(roles.filter((r) => as(r).includes("office"))).toEqual(["ADMIN"]);
+    expect(roles.filter((r) => as(r).includes("office")).sort()).toEqual(["ADMIN", "SYSTEM_ADMIN"]);
   });
 
   it("每一门的首页是表里这一门自己的页", () => {

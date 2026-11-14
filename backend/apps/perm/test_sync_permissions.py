@@ -76,7 +76,8 @@ def test_a_subset_database_gets_exactly_the_missing_ones(only):
 
     out = _sync()
 
-    assert "created judgment.assign -> ADMIN\n" in out + "\n"
+    # SYSTEM_ADMIN 持有 ADMIN 的全部授予(perm/0038),新码名两者都得。
+    assert "created judgment.assign -> ADMIN, SYSTEM_ADMIN\n" in out + "\n"
     after = set(Permission.objects.values_list("pk", "codename"))
     assert before <= after, "an existing Permission row was replaced"
     assert {c for _, c in after - before} == {"judgment.assign", "dispatch.return"}
@@ -98,7 +99,7 @@ def test_a_revoked_default_on_an_existing_codename_stays_revoked(only):
 
     assert ("JUDGE", "judgment.execute") not in _grants()
     assert ("VIEWER", "judgment.read") in _grants()
-    assert _grants() - before == {("ADMIN", "judgment.assign")}
+    assert _grants() - before == {("ADMIN", "judgment.assign"), ("SYSTEM_ADMIN", "judgment.assign")}
     assert before <= _grants()
 
 
@@ -120,7 +121,7 @@ def test_dry_run_writes_nothing(only):
     only(ALL_CODENAMES - {"judgment.assign"})
     before = (Permission.objects.count(), RolePermission.objects.count())
     out = _sync("--dry-run")
-    assert "[dry-run] would create judgment.assign -> ADMIN\n" in out + "\n"
+    assert "[dry-run] would create judgment.assign -> ADMIN, SYSTEM_ADMIN\n" in out + "\n"
     assert (Permission.objects.count(), RolePermission.objects.count()) == before
 
 

@@ -36,9 +36,12 @@ def crowd(world):  # noqa: F811
         soul=user("assign_soul", "SOUL", world.cn),
         inactive=user("assign_inactive_judge", "JUDGE", world.cn, is_active=False),
         deleted=user("assign_deleted_judge", "JUDGE", world.cn, is_deleted=True),
-        global_admin=user("assign_global_admin", "ADMIN", None),
+        # 全局管理员是 SYSTEM_ADMIN;无殿 ADMIN 只管本文明(2026-11-15,§7.5)。
+        global_admin=user("assign_global_admin", "SYSTEM_ADMIN", None),
+        civ_admin=user("assign_cn_civ_admin", "ADMIN", None, civilization="CHINESE"),
     )
     world.clients["global_admin"] = sign_in(APIClient(), world.users["global_admin"])
+    world.clients["civ_admin"] = sign_in(APIClient(), world.users["civ_admin"])
     return world
 
 
@@ -91,7 +94,7 @@ class TestAssignableOfficers:
 
     def test_souls_inactive_and_deleted_users_are_never_listed(self, crowd):
         ids = _ids(_officers(crowd.clients["mod"], _case(crowd.cn)))
-        for key in ("soul", "inactive", "deleted", "guardian", "viewer", "global_admin"):
+        for key in ("soul", "inactive", "deleted", "guardian", "viewer", "global_admin", "civ_admin"):
             assert crowd.users[key].pk not in ids, key
 
     def test_another_tenants_case_is_404_not_its_officers(self, crowd):
@@ -105,6 +108,12 @@ class TestAssignableOfficers:
         admin = crowd.clients["global_admin"]
         assert _ids(_officers(admin, _case(crowd.eu))) == {u["eu_judge"].pk, u["eu_mod"].pk}
         assert _ids(_officers(admin, _case(crowd.cn))) == {u["a"].pk, u["b"].pk, u["mod"].pk}
+
+    def test_a_civilization_admin_gets_its_own_civilizations_officers_and_not_anothers(self, crowd):
+        u = crowd.users
+        civ = crowd.clients["civ_admin"]
+        assert _ids(_officers(civ, _case(crowd.cn))) == {u["a"].pk, u["b"].pk, u["mod"].pk}
+        assert _officers(civ, _case(crowd.eu)).status_code == 404
 
     def test_a_batch_across_tenants_has_nobody_who_can_take_all_of_it(self, crowd):
         response = _officers(crowd.clients["global_admin"], _case(crowd.cn), _case(crowd.eu))

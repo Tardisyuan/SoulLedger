@@ -10,6 +10,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
@@ -219,10 +220,19 @@ def cast(django_user_model, cn_tenant, eu_tenant):
         "cn_admin_off": _user(django_user_model, "cn_admin_off", role="ADMIN", tenant=cn_tenant, is_active=False),
         "cn_moderator": _user(django_user_model, "cn_mod", role="MODERATOR", tenant=cn_tenant),
         "eu_admin": _user(django_user_model, "eu_admin", role="ADMIN", tenant=eu_tenant),
-        "global_admin": _user(django_user_model, "root", role="ADMIN", tenant=None),
+        # The global administrator is SYSTEM_ADMIN; a hall-less ADMIN administers one civilization (2026-11-15, §7.5).
+        "global_admin": _user(django_user_model, "root", role="SYSTEM_ADMIN", tenant=None),
+        "cn_civ_admin": _user(django_user_model, "cn_civ", role="ADMIN", tenant=None, civilization="CHINESE"),
+        "eu_civ_admin": _user(django_user_model, "eu_civ", role="ADMIN", tenant=None, civilization="EUROPEAN"),
         "inactive": _user(django_user_model, "cn_gone", tenant=cn_tenant, is_active=False),
         "soul": _user(django_user_model, "soul_x", role="SOUL", tenant=cn_tenant),
     }
+
+
+# auth 迁移在每个库里播种一个 SYSTEM_ADMIN(`settings.SYSTEM_ADMIN_USERNAME`,默认 sysadmin):无可用密码,
+# 但是活跃账号、也是全局管理员,所以全局兜底的收件人里总有它。
+SEEDED_SYSTEM_ADMIN = settings.SYSTEM_ADMIN_USERNAME
+GLOBAL = {"root", SEEDED_SYSTEM_ADMIN}
 
 
 def _ask(api_client, username, ip="10.0.0.1"):
@@ -322,10 +332,11 @@ class TestPasswordHelpReachesTheRightAdministrators:
         # (cn_mod): since 2026-11-07 recipients are chosen by user.manage, which it never holds.
         assert _recipients(cast["judge"]) == {"cn_admin", "cn_admin_2"}
 
-    def test_a_hall_admins_own_request_goes_to_the_hall_less_admin_only(self, api_client, cast, eager):
-        """F-ADM-04: the hall's other ADMINs cannot reset an ADMIN (403 admin_target_global_only)."""
+    def test_a_hall_admins_own_request_goes_to_the_hall_less_admins_only(self, api_client, cast, eager):
+        """F-ADM-04: the hall's other ADMINs cannot reset an ADMIN (403 admin_target_global_only). Who can:
+        SYSTEM_ADMIN, and the ADMIN of the hall's civilization (CN_DIYU -> CHINESE) - not another civilization's."""
         _ask(api_client, "cn_admin")
-        assert _recipients(cast["cn_admin"]) == {"root"}
+        assert _recipients(cast["cn_admin"]) == GLOBAL | {"cn_civ"}
 
     def test_a_role_granted_user_manage_is_told_with_the_admin_text(self, api_client, django_user_model, cast, eager):
         """By codename, not role name: a hall role given user.manage in the matrix can reset the
@@ -383,7 +394,8 @@ class TestPasswordHelpReachesTheRightAdministrators:
         _user(django_user_model, "gr_mod", role="MODERATOR", tenant=hades)
         asker = _user(django_user_model, "gr_judge", tenant=hades)
         tasks.notify_password_help.run("gr_judge")
-        assert _recipients(asker) == {"root"}
+        # GR_HADES is GREEK: no Greek civilization ADMIN in the cast, so SYSTEM_ADMIN only - not cn_civ / eu_civ.
+        assert _recipients(asker) == GLOBAL
 
     def test_a_moderator_asking_is_not_their_own_recipient(self, api_client, cast):
         tasks.notify_password_help.run("cn_mod")
@@ -466,18 +478,30 @@ class TestPasswordHelpReachesTheRightAdministrators:
     def test_a_tenant_without_admins_falls_back_to_the_global_admins(self, api_client, django_user_model, cast):
         lonely = _user(django_user_model, "gr_judge", tenant=_tenant("GR_HADES"))
         tasks.notify_password_help.run("gr_judge")
-        assert _recipients(lonely) == {"root"}
+        assert _recipients(lonely) == GLOBAL
+
+    def test_a_tenant_without_admins_falls_back_to_its_civilization_admin_too(self, django_user_model, cast):
+        """The fallback for a hall reaches that hall's civilization ADMIN (`hall_less_admins_q`), never another's."""
+        _user(django_user_model, "gr_civ", role="ADMIN", tenant=None, civilization="GREEK")
+        lonely = _user(django_user_model, "gr_judge", tenant=_tenant("GR_HADES"))
+        tasks.notify_password_help.run("gr_judge")
+        assert _recipients(lonely) == GLOBAL | {"gr_civ"}
 
     def test_an_admin_asking_is_not_their_own_recipient(self, api_client, cast):
-        # Only the hall-less ADMIN may act on another administrator (audit P-01, flow-walk F-ADM-04), so a hall
-        # ADMIN's request reaches the hall-less one — not the other ADMIN of the same hall.
+        # Only SYSTEM_ADMIN and the civilization ADMIN may act on another administrator (audit P-01, flow-walk
+        # F-ADM-04, §7.5), so a hall ADMIN's request reaches them — not the other ADMIN of the same hall.
         tasks.notify_password_help.run("cn_admin")
-        assert _recipients(cast["cn_admin"]) == {"root"}
+        assert _recipients(cast["cn_admin"]) == GLOBAL | {"cn_civ"}
 
     def test_a_global_admin_asking_reaches_the_other_global_admins(self, django_user_model, cast):
-        _user(django_user_model, "root_2", role="ADMIN", tenant=None)
+        _user(django_user_model, "root_2", role="SYSTEM_ADMIN", tenant=None)
         tasks.notify_password_help.run("root")
-        assert _recipients(cast["global_admin"]) == {"root_2"}
+        assert _recipients(cast["global_admin"]) == {"root_2", SEEDED_SYSTEM_ADMIN}
+
+    def test_a_civilization_admin_asking_reaches_the_system_admins_only(self, cast):
+        """A civilization ADMIN has no hall: only SYSTEM_ADMIN may reset it - not another civilization's ADMIN."""
+        tasks.notify_password_help.run("cn_civ")
+        assert _recipients(cast["cn_civ_admin"]) == GLOBAL
 
 
 # ---------------------------------------------------------------------------
