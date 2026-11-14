@@ -92,13 +92,12 @@ it("remembers the username across sign-out; 换一个账号 forgets it; the prof
   expect(screen.getByTestId("login-switch")).toHaveTextContent("换一个账号");
   expect(screen.getByTestId("login-welcome")).toHaveTextContent("欢迎回来");
   expect(screen.queryByText(/yama/)).toBeNull();
-  fill_password_only: {
-    fireEvent.changeText(screen.getByTestId("login-password"), "pw");
-    fireEvent.press(screen.getByTestId("login-submit"));
-    await waitFor(() => expect(session().state.status).toBe("signedIn"));
-    expect(mockOfficerLogin).toHaveBeenLastCalledWith({ username: "yama", password: "pw" });
-    act(() => session().signOut());
-  }
+  // The known card needs only the password: the remembered username is sent with it.
+  fireEvent.changeText(screen.getByTestId("login-password"), "pw");
+  fireEvent.press(screen.getByTestId("login-submit"));
+  await waitFor(() => expect(session().state.status).toBe("signedIn"));
+  expect(mockOfficerLogin).toHaveBeenLastCalledWith({ username: "yama", password: "pw" });
+  act(() => session().signOut());
   fireEvent.press(screen.getByTestId("login-switch"));
   expect(platform().persistent.get(LAST_LOGIN_KEY)).toBeNull();
   expect(screen.queryByTestId("login-known")).toBeNull();
