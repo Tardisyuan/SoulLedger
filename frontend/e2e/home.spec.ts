@@ -98,7 +98,7 @@ test.describe("Login page", () => {
     await page.goto("/login");
 
     await expect(page.getByRole("heading", { name: "登录", level: 1 })).toBeVisible();
-    await expect(page.getByLabel("账号")).toBeVisible();
+    await expect(page.getByLabel("用户名或邮箱")).toBeVisible();
     await expect(page.getByLabel("密码")).toBeVisible();
     await expect(page.getByRole("button", { name: "登录" })).toBeEnabled();
   });
@@ -135,7 +135,7 @@ test.describe("Login page", () => {
     // why, in the app's own locale and its own markup.
     await expect(page.getByRole("alert").filter({ hasText: "请输入用户名" })).toBeVisible();
     await expect(page.getByRole("alert").filter({ hasText: "请输入密码" })).toBeVisible();
-    await expect(page.getByLabel("账号")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByLabel("用户名或邮箱")).toHaveAttribute("aria-invalid", "true");
   });
 
   test("a window shorter than the form: the form column scrolls inside, its background never ends", async ({ page, isMobile }) => {
@@ -160,7 +160,7 @@ test.describe("Login page", () => {
     const api = await mockApi(page);
     await page.goto("/login");
 
-    await page.getByLabel("账号").fill("nobody");
+    await page.getByLabel("用户名或邮箱").fill("nobody");
     await page.getByLabel("密码").fill("wrong-password");
     await page.getByRole("button", { name: "登录" }).click();
 

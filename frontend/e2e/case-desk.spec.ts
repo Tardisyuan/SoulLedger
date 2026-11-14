@@ -31,7 +31,7 @@ async function signInAsJudge(page: Page) {
   api.on("GET", "/dossiers/desk/", deskOf({ mine: [MINE], unclaimed: [UNCLAIMED] }));
 
   await page.goto("/login");
-  await page.getByLabel("账号").fill(JUDGE.username);
+  await page.getByLabel("用户名或邮箱").fill(JUDGE.username);
   await page.getByLabel("密码").fill("correct-horse-battery");
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/desk$/);

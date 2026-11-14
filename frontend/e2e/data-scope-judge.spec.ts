@@ -153,7 +153,7 @@ test.describe("Data scope: a judge set to 本机构 sees only that organization"
     await mockApi(judge, api);
 
     await judge.goto("/login");
-    await judge.getByLabel("账号").fill(JUDGE_USER.username);
+    await judge.getByLabel("用户名或邮箱").fill(JUDGE_USER.username);
     await judge.getByLabel("密码").fill("correct-horse-battery");
     await judge.getByRole("button", { name: "登录" }).click();
     // A judge with judgment.read lands on the 案卷台 when no default view is set (review 2026-11-01; 第三十批 第 2 步).
