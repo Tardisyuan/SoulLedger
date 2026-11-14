@@ -34,8 +34,8 @@ function TenantsPageContent() {
   const [creating, setCreating] = useState(false);
   const [deactivating, setDeactivating] = useState<Tenant | null>(null);
   const activate = useHallActiveMutation();
-  // 建殿 / 停用 / 启用是 `IsGlobalAdminPermission`(tenants/views.py):绑殿 ADMIN 点下去 403,所以只给无殿 ADMIN 画(P-07)。
-  const { isTenantExempt } = usePermissions();
+  // 建殿 / 停用 / 启用是 `IsGlobalAdminPermission`(tenants/views.py):绑殿 ADMIN 点下去 403,所以只给 SYSTEM_ADMIN 画(P-07;分殿 1A 起文明 ADMIN 也不行)。
+  const { isSystemAdmin } = usePermissions();
 
   const { data, isLoading, isError, error: listError, refetch } = useQuery({
     queryKey: tenantKeys.page(page),
@@ -58,7 +58,7 @@ function TenantsPageContent() {
       }
       subtitle={t("tenants.subtitle") || "Tenant management"}
       actions={
-        isTenantExempt ? (
+        isSystemAdmin ? (
           <Button type="button" variant="primary" size="sm" data-testid="hall-create-open" onClick={() => setCreating(true)}>
             {t("halls.create")}
           </Button>
@@ -104,7 +104,7 @@ function TenantsPageContent() {
               <SealGlyphsCell tenant={tenant} />
             </td>
             <td className="px-4 py-3 text-right">
-              {!isTenantExempt ? null : tenant.is_active === false ? (
+              {!isSystemAdmin ? null : tenant.is_active === false ? (
                 <Button
                   type="button"
                   variant="secondary"

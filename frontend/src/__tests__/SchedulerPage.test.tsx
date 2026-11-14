@@ -26,7 +26,7 @@ const { schedulerApi } = jest.requireMock("@soulledger/core/api") as {
   schedulerApi: Record<"jobs" | "runs" | "updateJob" | "runJob" | "rebuild", jest.Mock>;
 };
 
-let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant?: { code: string } | null } | null = null;
+let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant?: { code: string } | null; civilization?: string } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
 const mockI18n = {
@@ -98,7 +98,8 @@ function renderPage() {
   return renderWithProviders(<SchedulerPage />, { i18n: false });
 }
 
-const asAdmin = () => (mockUser = { id: 1, username: "admin", role: "ADMIN", permissions: [] });
+// SYSTEM_ADMIN:无殿、看全部殿(分殿 1A 起无殿 ADMIN 是文明管理员,不再是全局)。
+const asAdmin = () => (mockUser = { id: 1, username: "admin", role: "SYSTEM_ADMIN", permissions: [], tenant: null });
 const asRole = (...permissions: string[]) => (mockUser = { id: 2, username: "op", role: "GUARDIAN", permissions });
 
 beforeEach(() => {
@@ -148,7 +149,15 @@ describe("access", () => {
     expect(screen.queryByRole("button", { name: tZh("scheduler.rebuild") })).toBeNull();
   });
 
-  it("ADMIN gets rebuild, behind a confirmation", async () => {
+  it("a civilization ADMIN gets no rebuild either: it re-syncs every hall (SYSTEM_ONLY, stage 1A)", async () => {
+    mockUser = { id: 1, username: "civ_admin", role: "ADMIN", civilization: "CHINESE", permissions: [], tenant: null };
+    renderPage();
+    await screen.findAllByText(tZh("scheduler.jobs.ledger_recalculate_tenant"));
+    expect(screen.getAllByRole("button", { name: tZh("scheduler.actions.run_now") }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: tZh("scheduler.rebuild") })).toBeNull();
+  });
+
+  it("SYSTEM_ADMIN gets rebuild, behind a confirmation", async () => {
     asAdmin();
     schedulerApi.rebuild.mockResolvedValue({ data: { created: 2, updated: 1, removed: 0, legacy_removed: 3 } });
     renderPage();

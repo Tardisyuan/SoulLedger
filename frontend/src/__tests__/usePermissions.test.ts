@@ -64,7 +64,7 @@ describe("usePermissions", () => {
     expect(result.current.hasPermission("user.delete")).toBe(true);
     expect(result.current.hasPermission("menu.manage")).toBe(true);
     expect(result.current.isAdmin).toBe(true);
-    expect(result.current.isTenantExempt).toBe(true);
+    expect(result.current.isSystemAdmin).toBe(true);
   });
 
   it("JUDGE has specific permissions", () => {
@@ -140,32 +140,61 @@ describe("usePermissions while viewing", () => {
   });
 });
 
-describe("isTenantExempt (无殿 ADMIN = 后端 is_tenant_exempt)", () => {
+// 分殿 1A:后端 tests/tenancy_exempt_sites.py 的两种标签。SYSTEM_ONLY 问 isSystemAdmin;CIVILIZATION 问 ownsHall。
+describe("isSystemAdmin / isCivilizationAdmin / ownsHall (后端 is_tenant_exempt / is_civilization_admin / reaches_hall)", () => {
   const impersonation = jest.requireMock("@/src/components/impersonation/useImpersonation") as { useImpersonation: jest.Mock };
   afterEach(() => impersonation.useImpersonation.mockReturnValue(null));
-  const withHall = (role: UserRole, hall: { code: string } | null) => ({
-    ...mockContext(role),
-    user: { ...mockUser(role), tenant: hall },
+  const as = (role: UserRole, hall: { code: string } | null, civilization: string | null = null) => {
+    mockUseTenant.mockReturnValue({ ...mockContext(role), user: { ...mockUser(role), tenant: hall, civilization } } as never);
+    return renderHook(() => usePermissions()).result.current;
+  };
+
+  it("SYSTEM_ADMIN with no hall is the system administrator and owns every hall", () => {
+    const p = as("SYSTEM_ADMIN", null);
+    expect(p.isSystemAdmin).toBe(true);
+    expect(p.isCivilizationAdmin).toBe(false);
+    expect(p.ownsHall("GR_HADES")).toBe(true);
+    expect(p.ownsHall(null)).toBe(true);
   });
 
-  it("an ADMIN with no hall, not viewing, is exempt", () => {
-    mockUseTenant.mockReturnValue(withHall("ADMIN", null) as never);
-    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(true);
+  it("an ADMIN with no hall is a civilization ADMIN, not the system administrator: its civilization's halls only", () => {
+    const p = as("ADMIN", null, "EGYPTIAN");
+    expect(p.isSystemAdmin).toBe(false);
+    expect(p.isCivilizationAdmin).toBe(true);
+    expect(p.ownsHall("EG_DUAT")).toBe(true);
+    expect(p.ownsHall("CN_DIYU")).toBe(false);
+    expect(p.ownsHall(null)).toBe(false);
+    // a hall this build does not know the civilization of: fail closed
+    expect(p.ownsHall("EG_NEW_HALL")).toBe(false);
   });
 
-  it("a hall-bound ADMIN and a no-hall non-ADMIN are not", () => {
-    mockUseTenant.mockReturnValue(withHall("ADMIN", { code: "CN_DIYU" }) as never);
-    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
-    mockUseTenant.mockReturnValue(withHall("JUDGE", null) as never);
-    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
+  it("a civilization ADMIN with no civilization recorded (an old cached session) owns nothing", () => {
+    const p = as("ADMIN", null, null);
+    expect(p.isCivilizationAdmin).toBe(true);
+    expect(p.ownsHall("EG_DUAT")).toBe(false);
   });
 
-  it("the no-hall ADMIN viewing a hall (or a person) is not", () => {
-    mockUseTenant.mockReturnValue(withHall("ADMIN", null) as never);
+  it("a hall-bound ADMIN and a no-hall non-ADMIN are neither; the bound one owns its own hall", () => {
+    const bound = as("ADMIN", { code: "CN_DIYU" });
+    expect(bound.isSystemAdmin).toBe(false);
+    expect(bound.isCivilizationAdmin).toBe(false);
+    expect(bound.ownsHall("CN_DIYU")).toBe(true);
+    expect(bound.ownsHall("EU_HEAVEN_HELL")).toBe(false);
+    const judge = as("JUDGE", null, "CHINESE");
+    expect(judge.isSystemAdmin).toBe(false);
+    expect(judge.isCivilizationAdmin).toBe(false);
+    expect(judge.ownsHall("CN_DIYU")).toBe(false);
+  });
+
+  it("viewing a hall (or a person), neither admin helper holds and only one's own hall counts", () => {
     impersonation.useImpersonation.mockReturnValue({ id: 1, target: { id: 0, name: "", role: "ADMIN", hall: {} }, hallView: { code: "EG_DUAT" } });
-    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
+    const sys = as("SYSTEM_ADMIN", null);
+    expect(sys.isSystemAdmin).toBe(false);
+    expect(sys.ownsHall("EG_DUAT")).toBe(false);
     impersonation.useImpersonation.mockReturnValue({ id: 1, target: { id: 2, name: "x", role: "JUDGE", hall: null } });
-    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
+    const civ = as("ADMIN", null, "EGYPTIAN");
+    expect(civ.isCivilizationAdmin).toBe(false);
+    expect(civ.ownsHall("EG_DUAT")).toBe(false);
   });
 });
 
@@ -184,9 +213,15 @@ describe("global-only codenames (后端 GLOBAL_ONLY_CODENAMES,P-07)", () => {
     expect(result.current.hasPermission("soul.create")).toBe(true);
   });
 
-  it("the no-hall ADMIN does; no other role does, whatever it was granted", () => {
-    mockUseTenant.mockReturnValue(withHall("ADMIN", null) as never);
+  it("SYSTEM_ADMIN does; a civilization ADMIN does not (stage 1A); no other role does, whatever it was granted", () => {
+    mockUseTenant.mockReturnValue(withHall("SYSTEM_ADMIN", null) as never);
     expect(renderHook(() => usePermissions()).result.current.hasPermission("menu.manage")).toBe(true);
+    expect(renderHook(() => usePermissions()).result.current.hasPermission("system.cross_civilization")).toBe(true);
+    mockUseTenant.mockReturnValue(withHall("ADMIN", null) as never);
+    expect(renderHook(() => usePermissions()).result.current.hasPermission("menu.manage")).toBe(false);
+    expect(renderHook(() => usePermissions()).result.current.hasPermission("system.cross_civilization")).toBe(false);
+    // the ADMIN short-circuit still answers everything else
+    expect(renderHook(() => usePermissions()).result.current.hasPermission("soul.create")).toBe(true);
     mockUseTenant.mockReturnValue(withHall("JUDGE", null, ["menu.manage"]) as never);
     expect(renderHook(() => usePermissions()).result.current.hasPermission("menu.manage")).toBe(false);
   });

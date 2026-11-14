@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { DispatchRecord } from "@soulledger/core/api/dispatch";
 import { useCancelDispatch, useWithdrawDispatchApproval } from "@soulledger/core/hooks/useDispatchDrafts";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
@@ -40,17 +39,16 @@ export function CancelDispatchButton({
 }) {
   const { t } = useI18n();
   const { showToast } = useToast();
-  const { user } = useTenant();
-  const { hasPermission, isTenantExempt } = usePermissions();
+  const { hasPermission, ownsHall } = usePermissions();
   const cancelProposal = useCancelDispatch();
   const withdraw = useWithdrawDispatchApproval();
   const cancel = withdrawApproval ? withdraw : cancelProposal;
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
 
-  // 无殿 ADMIN 才算任一殿(后端 `cancel` 看 `is_tenant_exempt`);绑殿 ADMIN 只在本殿发起的提案上有按钮。
+  // SYSTEM_ADMIN 算任一殿,文明 ADMIN 算本文明的殿(后端 `cancel` 看 `reaches_hall`);绑殿 ADMIN 只在本殿发起的提案上有按钮。
   const hallCode = withdrawApproval ? dispatch.target_tenant_code : dispatch.source_tenant_code;
-  const ownHall = isTenantExempt || (!!user?.tenant?.code && user.tenant.code === hallCode);
+  const ownHall = ownsHall(hallCode);
   const [wanted, codename] = withdrawApproval ? ["APPROVED", "dispatch.reject"] : ["PROPOSED", "dispatch.manage"];
   if (dispatch.status !== wanted || !ownHall || !hasPermission(codename)) return null;
 

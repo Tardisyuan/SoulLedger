@@ -64,6 +64,8 @@ export interface AuthUser {
    */
   role: UserRole;
   tenant: TenantInfo | null;
+  /** 文明 ADMIN(无殿 ADMIN)管的文明;别人为 null。登录应答带回(只读)。旧的缓存信封里没有 —— 那时 `ownsHall` 只认自己那一殿。 */
+  civilization?: string | null;
   permissions: string[];
   /** 两步验证(A12)。Both optional: a pre-A12 cached envelope has neither, and absent reads as "no banner". */
   mfa_enabled?: boolean;

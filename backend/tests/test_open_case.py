@@ -99,3 +99,49 @@ def test_post_judgment_goes_through_open_case(eu_tenant):
     again = client.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json")
     assert again.status_code == 400
     assert field_errors(again)["soul"] == ["This soul already has an open case. Conclude it before opening another."]
+
+
+# ── 分殿 1A 后续:文明 ADMIN 不点名殿,锁下复查它够不够得着灵魂此刻的殿 ─────────────────────
+
+
+def _civ_admin(civilization):
+    return User.objects.create_user(username=f"oc_civ_{civilization}", password="x", role="ADMIN", tenant=None,
+                                    civilization=civilization)
+
+
+@pytest.mark.django_db
+def test_reach_of_is_checked_against_the_locked_soul(eu_tenant, cn_tenant):
+    eu_admin = _civ_admin("EUROPEAN")
+    with pytest.raises(OpenCaseRefusedError) as exc:
+        _open(_soul(cn_tenant), reach_of=eu_admin)
+    assert exc.value.code == "not_in_tenant"
+    assert _open(_soul(eu_tenant), reach_of=eu_admin).tenant_id == eu_tenant.pk
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("moved", [False, True])
+def test_a_civilization_admin_is_refused_when_the_soul_leaves_its_civilization_before_the_lock(
+        eu_tenant, cn_tenant, moved):
+    """The serializer checks the reach without the lock; the soul moves to another civilization's hall between that
+    check and `open_case` (the seam: `perform_create`'s entry), and only the check under the lock can refuse."""
+    from apps.judgment.views import JudgmentViewSet
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(_civ_admin('EUROPEAN')).access_token}")
+    soul = _soul(eu_tenant)
+    original = JudgmentViewSet.perform_create
+
+    def move_then_create(view, serializer):
+        if moved:
+            Soul.objects.filter(pk=soul.pk).update(tenant=cn_tenant)
+        return original(view, serializer)
+
+    with mock.patch.object(JudgmentViewSet, "perform_create", move_then_create):
+        response = client.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json")
+    if not moved:
+        assert response.status_code == 201, response.data
+        assert Judgment.objects.get(soul=soul).tenant_id == eu_tenant.pk
+        return
+    assert response.status_code == 400, response.data
+    assert field_errors(response)["soul"] == ["No such soul in this tenant."]
+    assert not Judgment.objects.filter(soul=soul).exists()

@@ -20,7 +20,9 @@ describe("RequireButton", () => {
       hasAnyPermission: () => true,
       hasAllPermissions: () => true,
       isAdmin: false,
-      isTenantExempt: false,
+      isSystemAdmin: false,
+      isCivilizationAdmin: false,
+      ownsHall: () => false,
       permissionsReady: true,
       permissions: ["soul.create"],
     });
@@ -38,7 +40,9 @@ describe("RequireButton", () => {
       hasAnyPermission: () => false,
       hasAllPermissions: () => false,
       isAdmin: false,
-      isTenantExempt: false,
+      isSystemAdmin: false,
+      isCivilizationAdmin: false,
+      ownsHall: () => false,
       permissionsReady: true,
       permissions: [],
     });
@@ -56,7 +60,9 @@ describe("RequireButton", () => {
       hasAnyPermission: () => false,
       hasAllPermissions: () => false,
       isAdmin: false,
-      isTenantExempt: false,
+      isSystemAdmin: false,
+      isCivilizationAdmin: false,
+      ownsHall: () => false,
       permissionsReady: true,
       permissions: [],
     });
@@ -75,7 +81,9 @@ describe("RequireButton", () => {
       hasAnyPermission: () => false,
       hasAllPermissions: () => false,
       isAdmin: false,
-      isTenantExempt: false,
+      isSystemAdmin: false,
+      isCivilizationAdmin: false,
+      ownsHall: () => false,
       permissionsReady: true,
       permissions: [],
     });

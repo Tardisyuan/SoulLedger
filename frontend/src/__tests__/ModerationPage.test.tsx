@@ -760,8 +760,23 @@ describe("敏感词 · E-08b", () => {
     expect(tenantsMock.list).not.toHaveBeenCalled();
   });
 
-  it("the hall-less ADMIN names the target hall; the source list leaves the target out; both go to the server", async () => {
-    mockUser = { id: 1, username: "g", role: "ADMIN", permissions: [], tenant: null };
+  // 分殿 1A:跨殿复制是 SYSTEM_ONLY(后端 tests/tenancy_exempt_sites.py)—— 文明 ADMIN 不给入口,系统管理员给。
+  it("a civilization ADMIN is not offered the copy; the system administrator is", async () => {
+    mockUser = { id: 1, username: "g", role: "ADMIN", civilization: "CHINESE", permissions: [], tenant: null };
+    const { unmount } = renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText(tZh("social_moderation.empty.words"));
+    expect(screen.queryByRole("button", { name: tZh("social_moderation.words.copy_from") })).toBeNull();
+    unmount();
+
+    mockUser = { id: 9, username: "sysadmin", role: "SYSTEM_ADMIN", permissions: [], tenant: null };
+    renderPage();
+    fireEvent.click(segment("words"));
+    expect(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") })).toBeInTheDocument();
+  });
+
+  it("the system administrator names the target hall; the source list leaves the target out; both go to the server", async () => {
+    mockUser = { id: 9, username: "sysadmin", role: "SYSTEM_ADMIN", permissions: [], tenant: null };
     tenantsMock.list.mockResolvedValue(
       page([
         { id: 1, code: "CN_DIYU", display_name: "中国地府" },

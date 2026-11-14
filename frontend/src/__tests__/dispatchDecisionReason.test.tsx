@@ -34,7 +34,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: 
 jest.mock("@/src/hooks/usePermissions", () => ({
   usePermissions: () => {
     const has = () => false;
-    return { hasPermission: has, hasAnyPermission: has, hasAllPermissions: has };
+    return { hasPermission: has, hasAnyPermission: has, hasAllPermissions: has, ownsHall: has };
   },
 }));
 

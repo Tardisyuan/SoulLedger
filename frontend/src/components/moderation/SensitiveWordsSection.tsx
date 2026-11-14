@@ -76,11 +76,11 @@ export function SensitiveWordsSection() {
   const [editing, setEditing] = useState<WordDraft | null>(null);
   const [batchAction, setBatchAction] = useState<SensitiveWordAction | null>(null);
 
-  const { isTenantExempt } = usePermissions();
+  const { isSystemAdmin } = usePermissions();
   const { tenantCode } = useTenant();
   // 只有没绑殿的全局 ADMIN 能复制,它要点名复制进哪个殿(服务端 `target_tenant`,impl-sec 2026-10-29)。
-  const canCopy = isTenantExempt;
-  const pickTarget = isTenantExempt;
+  const canCopy = isSystemAdmin;
+  const pickTarget = isSystemAdmin;
   const copy = useCopySensitiveWords();
   const [copying, setCopying] = useState(false);
   const [source, setSource] = useState("");

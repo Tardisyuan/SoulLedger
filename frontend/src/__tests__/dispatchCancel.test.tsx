@@ -15,14 +15,15 @@ const { dispatchApi } = jest.requireMock("@soulledger/core/api") as {
   dispatchApi: { cancel: jest.Mock; withdrawApproval: jest.Mock };
 };
 
+// The real usePermissions (its `ownsHall` is what decides here), fed by the user below.
 let mockTenant: string | null = "CN_DIYU";
-jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, tenant: mockTenant ? { code: mockTenant } : null } }),
-}));
 let mockHeld = new Set(["dispatch.manage"]);
-let mockAdmin = false;
-jest.mock("@/src/hooks/usePermissions", () => ({
-  usePermissions: () => ({ hasPermission: (p: string) => mockHeld.has(p), isAdmin: mockAdmin, isTenantExempt: mockAdmin && !mockTenant }),
+let mockRole = "MODERATOR";
+let mockCiv: string | null = null;
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({
+    user: { id: 1, role: mockRole, civilization: mockCiv, permissions: [...mockHeld], tenant: mockTenant ? { code: mockTenant } : null },
+  }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ useI18n: () => ({ t: (key: string) => tZh(key), formatDateTime: (v: string) => v, locale: "zh-Hans", hydrated: true }) }));
 jest.mock("@/src/contexts/ToastContext", () => require("./support/mocks").toastMock());
@@ -40,7 +41,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockTenant = "CN_DIYU";
   mockHeld = new Set(["dispatch.manage"]);
-  mockAdmin = false;
+  mockRole = "MODERATOR";
+  mockCiv = null;
   dispatchApi.cancel.mockResolvedValue({ data: {} });
   dispatchApi.withdrawApproval.mockResolvedValue({ data: {} });
 });
@@ -100,20 +102,35 @@ describe("取消移交", () => {
     expect(trigger()).toBeNull();
   });
 
-  it("执行地(对方)看不到,对方殿的绑殿 ADMIN 也看不到;无殿 ADMIN 看得到", () => {
+  it("执行地(对方)看不到,对方殿的绑殿 ADMIN 也看不到;系统管理员看得到", () => {
     mockTenant = "EG_DUAT";
     const away = renderButton();
     expect(trigger()).toBeNull();
     away.unmount();
 
-    mockAdmin = true;
+    mockRole = "ADMIN";
     const boundAdmin = renderButton();
     expect(trigger()).toBeNull();
     boundAdmin.unmount();
 
+    mockRole = "SYSTEM_ADMIN";
     mockTenant = null;
     renderButton();
     expect(trigger()).not.toBeNull();
+  });
+
+  // 分殿 1A:文明 ADMIN 把本文明的殿当自己的(后端 `reaches_hall`),别的文明不算。
+  it("文明 ADMIN:发起殿在本文明才看得到", () => {
+    mockRole = "ADMIN";
+    mockTenant = null;
+    mockCiv = "CHINESE";
+    const own = renderButton(record({ source_tenant_code: "CN_DIYU" }));
+    expect(trigger()).not.toBeNull();
+    own.unmount();
+
+    mockCiv = "EGYPTIAN";
+    renderButton(record({ source_tenant_code: "CN_DIYU" }));
+    expect(trigger()).toBeNull();
   });
 
   it("没有 dispatch.manage:不渲染,也没有禁用的按钮", () => {

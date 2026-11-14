@@ -2,16 +2,17 @@
 
 import { useTenant } from "@/src/contexts/TenantContext";
 import { READ_ONLY_CODENAME, useImpersonation } from "@/src/components/impersonation/useImpersonation";
-import { isAdminRole } from "@soulledger/core/domain/roles";
+import { isAdminRole, isSystemAdminRole } from "@soulledger/core/domain/roles";
+import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 
 type ViewingOpt = { evenWhileViewing?: boolean };
 
 /**
  * 后端 `perm/checker.py` 的 `GLOBAL_ONLY_CODENAMES` 镜像:全站共用的配置(菜单是所有殿共用的一棵树),
- * 只有无殿 ADMIN / SYSTEM_ADMIN 持有,任何角色都授不到 —— 绑殿 ADMIN 也不行。此前前端对 ADMIN 一律放行,
- * 绑殿 ADMIN 看得到菜单的增改删,点下去 403(P-07)。后端加一个码,这里跟着加。
+ * 只有 SYSTEM_ADMIN 持有(后端 `is_tenant_exempt`,分殿 1A 起不含无殿 ADMIN),任何角色都授不到 —— 绑殿 ADMIN、
+ * 文明 ADMIN 都不行。此前前端对 ADMIN 一律放行,绑殿 ADMIN 看得到菜单的增改删,点下去 403(P-07)。后端加一个码,这里跟着加。
  */
-export const GLOBAL_ONLY_CODENAMES: ReadonlySet<string> = new Set(["menu.manage"]);
+export const GLOBAL_ONLY_CODENAMES: ReadonlySet<string> = new Set(["menu.manage", "system.cross_civilization"]);
 
 /**
  * Hook for checking user permissions
@@ -33,12 +34,14 @@ export function usePermissions() {
   // started to.
   // SYSTEM_ADMIN 过每一道 ADMIN 的门(分殿 1A)。
   const roleIsAdmin = isAdminRole(user?.role);
+  // 后端 `is_tenant_exempt`:无殿的 SYSTEM_ADMIN。
+  const hallLessSystem = isSystemAdminRole(user?.role) && !user?.tenant;
 
   const hasPermission = (permission: string, opts?: ViewingOpt): boolean => {
     if (viewing && !opts?.evenWhileViewing && !READ_ONLY_CODENAME.test(permission)) return false;
     // 不读上报的清单(双保险):后端上报曾对绑殿 ADMIN 也含这个码(RoleHolder 没有殿),2026-11-11 起按用户的殿报。
     // 与后端集合一致由 roleForbiddenCodenamesMatchBackend.test.ts 守着。
-    if (GLOBAL_ONLY_CODENAMES.has(permission)) return roleIsAdmin && !user?.tenant;
+    if (GLOBAL_ONLY_CODENAMES.has(permission)) return hallLessSystem;
     if (roleIsAdmin) return true;
     return user?.permissions?.includes(permission) ?? false;
   };
@@ -51,6 +54,17 @@ export function usePermissions() {
     return permissions.every((p) => hasPermission(p, opts));
   };
 
+  const isSystemAdmin = hallLessSystem && !viewing;
+  const isCivilizationAdmin = user?.role === "ADMIN" && !user?.tenant && !viewing;
+  const ownsHall = (hallCode: string | null | undefined): boolean => {
+    if (isSystemAdmin) return true;
+    if (!hallCode) return false;
+    if (user?.tenant?.code === hallCode) return true;
+    // ponytail: 只认得四个种子殿的文明(`TENANT_CODE_TO_CIVILIZATION`);别的殿在这里答假(按钮不出,不会误开),
+    // 记录要是带上殿的文明再改读它。
+    return isCivilizationAdmin && !!user?.civilization && TENANT_CODE_TO_CIVILIZATION[hallCode] === user.civilization;
+  };
+
   return {
     hasPermission,
     hasAnyPermission,
@@ -59,11 +73,13 @@ export function usePermissions() {
     // passing the string "ADMIN" to a codename check and relying on the
     // short-circuit above. See RequireAdmin. 代看 / 进殿查看时为假(后端 is_tenant_exempt 同样为假)。
     isAdmin: roleIsAdmin && !viewing,
-    // 无殿 ADMIN / SYSTEM_ADMIN:任一殿都算「本殿」。代看 / 进殿查看时为假 —— 那时看的是别的殿,
-    // 自己不是任何一边(移交详情把自己当成目标 / 原属殿就是这里少了这一条)。所有「无殿 ADMIN」判断都读它。
-    // 分殿 1A:后端 `is_tenant_exempt` 只认 SYSTEM_ADMIN,无殿 ADMIN 的各处由后端逐一定性(只管本文明的殿,列表已由服务端收窄);
-    // 这里仍放行无殿 ADMIN,被后端改成只给 SYSTEM_ADMIN 的那几处会答 403。
-    isTenantExempt: roleIsAdmin && !viewing && !user?.tenant,
+    // 两个 helper 对应后端 tests/tenancy_exempt_sites.py 的两种标签,代看 / 进殿查看时都为假(那时看的是别的殿)。
+    // SYSTEM_ONLY(菜单、权限配置导入与数据范围、开殿与建殿、调度重建、跨殿复制敏感词、助手供应商):只问 `isSystemAdmin`。
+    isSystemAdmin,
+    // 无殿 ADMIN = 文明管理员(后端 `is_civilization_admin`):本文明各殿算自己的,别的文明与无殿的行不算。
+    isCivilizationAdmin,
+    // CIVILIZATION(移交详情 / 撤回、联审「发起方」……):这一殿算不算「本殿」。后端 `reaches_hall` 加上绑殿者自己那一殿。
+    ownsHall,
     permissions: user?.permissions ?? [],
     /** 刷新后权限还没从服务端回来(见 TenantContext)。`hasPermission` 不看它;画拒绝页之前看。 */
     permissionsReady,

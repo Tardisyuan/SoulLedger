@@ -43,13 +43,15 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }))
 // Which hall the viewer sits in (rbac-web M-1): the buttons follow the same side the backend checks.
 let mockHall: string | null = "CN_DIYU";
 let mockRole = "MODERATOR";
+// The civilization a hall-less ADMIN administers (stage 1A); null for everyone else.
+let mockCiv: string | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({
-    user: { id: 1, username: "cn_mod", role: mockRole, tenant: mockHall ? { code: mockHall } : null, permissions: [...mockHeld] },
+    user: { id: 1, username: "cn_mod", role: mockRole, civilization: mockCiv, tenant: mockHall ? { code: mockHall } : null, permissions: [...mockHeld] },
     isAdmin: mockRole === "ADMIN",
   }),
 }));
-// 进殿查看(只读):非空时 usePermissions 的 isTenantExempt 为假,写类控件被 ViewingLock 置灰。
+// 进殿查看(只读):非空时 usePermissions 的 ownsHall 只认自己那一殿,写类控件被 ViewingLock 置灰。
 let mockViewing: { hallView: boolean } | null = null;
 jest.mock("@/src/components/impersonation/useImpersonation", () => ({
   ...jest.requireActual("@/src/components/impersonation/useImpersonation"),
@@ -78,6 +80,7 @@ beforeEach(() => {
   mockHeld = new Set(["dispatch.return", "dispatch.execute"]);
   mockHall = "CN_DIYU";
   mockRole = "MODERATOR";
+  mockCiv = null;
   mockViewing = null;
 });
 
@@ -148,21 +151,26 @@ describe("executing a dispatch", () => {
   });
 });
 
-// 批准 / 驳回 / 执行只给目标殿,送回只给原属殿(= 发起殿),无殿 ADMIN 两边都有,绑殿 ADMIN 与殿内其他角色一样。
+// 批准 / 驳回 / 执行只给目标殿,送回只给原属殿(= 发起殿);SYSTEM_ADMIN 两边都有,文明 ADMIN 有本文明那一边,
+// 绑殿 ADMIN 与殿内其他角色一样。
 describe("which hall sees which button", () => {
   const ALL = ["dispatch.approve", "dispatch.reject", "dispatch.execute", "dispatch.return", "dispatch.manage"];
   const name = (n: string) => screen.queryByRole("button", { name: n });
 
   it.each([
-    ["the target hall", "EG_DUAT", "MODERATOR", true],
-    ["the sending hall", "CN_DIYU", "MODERATOR", false],
-    ["a hall-bound ADMIN of the sending hall", "CN_DIYU", "ADMIN", false],
-    ["a third hall's ADMIN", "GR_HADES", "ADMIN", false],
-    ["an ADMIN with no hall", null, "ADMIN", true],
-  ])("PROPOSED, %s: approve / reject %s", async (_who, hall, role, shown) => {
+    ["the target hall", "EG_DUAT", "MODERATOR", true, null],
+    ["the sending hall", "CN_DIYU", "MODERATOR", false, null],
+    ["a hall-bound ADMIN of the sending hall", "CN_DIYU", "ADMIN", false, null],
+    ["a third hall's ADMIN", "GR_HADES", "ADMIN", false, null],
+    ["SYSTEM_ADMIN", null, "SYSTEM_ADMIN", true, null],
+    ["the target civilization's ADMIN", null, "ADMIN", true, "EGYPTIAN"],
+    ["the sending civilization's ADMIN", null, "ADMIN", false, "CHINESE"],
+    ["a third civilization's ADMIN", null, "ADMIN", false, "GREEK"],
+  ])("PROPOSED, %s: approve / reject %s", async (_who, hall, role, shown, civ) => {
     mockHeld = new Set(ALL);
     mockHall = hall;
     mockRole = role;
+    mockCiv = civ;
     renderPage("PROPOSED", { executed_at: null });
     await screen.findByText("孟婆");
     expect(!!name("dispatch.approve")).toBe(shown);
@@ -173,7 +181,7 @@ describe("which hall sees which button", () => {
     ["EG_DUAT", "MODERATOR", true],
     ["CN_DIYU", "MODERATOR", false],
     ["CN_DIYU", "ADMIN", false],
-    [null, "ADMIN", true],
+    [null, "SYSTEM_ADMIN", true],
   ])("APPROVED in %s as %s: execute shown = %s", async (hall, role, shown) => {
     mockHeld = new Set(ALL);
     mockHall = hall;
@@ -187,7 +195,7 @@ describe("which hall sees which button", () => {
     ["CN_DIYU", "MODERATOR", true],
     ["EG_DUAT", "MODERATOR", false],
     ["EG_DUAT", "ADMIN", false],
-    [null, "ADMIN", true],
+    [null, "SYSTEM_ADMIN", true],
   ])("EXECUTED in %s as %s: return home shown = %s", async (hall, role, shown) => {
     mockHeld = new Set(ALL);
     mockHall = hall;
@@ -197,26 +205,26 @@ describe("which hall sees which button", () => {
     expect(!!name("dispatch.return_home")).toBe(shown);
   });
 
-  // 代看 / 进殿查看时无殿 ADMIN 不再是「任一殿」(usePermissions.isTenantExempt 为假):既不是目标殿也不是原属殿,
+  // 代看 / 进殿查看时系统管理员不再是「任一殿」(usePermissions.ownsHall 只认自己那一殿):既不是目标殿也不是原属殿,
   // 按钮连置灰的都不画。按文本找而不是按 role —— 置灰的控件在 inert 里,role 查询可能看不见它,那样漏画与置灰分不出来。
   it.each([
     ["PROPOSED", ["dispatch.approve", "dispatch.reject"]],
     ["APPROVED", ["dispatch.execute"]],
     ["EXECUTED", ["dispatch.return_home"]],
-  ])("an ADMIN with no hall, viewing a hall: %s offers none of %j", async (status, buttons) => {
+  ])("SYSTEM_ADMIN, viewing a hall: %s offers none of %j", async (status, buttons) => {
     mockHeld = new Set(ALL);
     mockHall = null;
-    mockRole = "ADMIN";
+    mockRole = "SYSTEM_ADMIN";
     mockViewing = { hallView: true };
     renderPage(status, status === "EXECUTED" ? {} : { executed_at: null });
     await screen.findByText("孟婆");
     for (const b of buttons) expect(screen.queryByText(b)).toBeNull();
   });
 
-  it("the same ADMIN, not viewing, is offered them (the control for the case above)", async () => {
+  it("the same SYSTEM_ADMIN, not viewing, is offered them (the control for the case above)", async () => {
     mockHeld = new Set(ALL);
     mockHall = null;
-    mockRole = "ADMIN";
+    mockRole = "SYSTEM_ADMIN";
     renderPage("PROPOSED", { executed_at: null });
     await screen.findByText("孟婆");
     expect(screen.queryByText("dispatch.approve")).not.toBeNull();

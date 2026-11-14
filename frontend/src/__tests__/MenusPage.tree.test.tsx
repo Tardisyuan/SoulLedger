@@ -16,7 +16,7 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ locale: "zh-Hans", hydrated: true }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, username: "a", role: "ADMIN", tenant: null, permissions: [] } }),
+  useTenant: () => ({ user: { id: 1, username: "a", role: "SYSTEM_ADMIN", tenant: null, permissions: [] } }),
 }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 
