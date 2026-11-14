@@ -428,6 +428,18 @@ function PasswordLogin() {
               data-testid="login-remembered"
               className="flex min-h-16 items-center gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] py-2 pr-1 pl-4"
             >
+              {/* No visible username box here, so password managers get a hidden one to pair the password with (as /login/verify). */}
+              <input
+                type="text"
+                name="username"
+                autoComplete="username"
+                value={known.username}
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+                className="sr-only"
+                data-testid="login-remembered-username"
+              />
               <Avatar name={known.display_name || known.username} size={44} />
               <div className="min-w-0 flex-1">
                 {known.display_name ? (
