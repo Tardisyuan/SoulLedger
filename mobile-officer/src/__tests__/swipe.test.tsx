@@ -6,6 +6,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { AccessibilityInfo, Animated, AppState, type AppStateStatus } from "react-native";
 
 import { PASS_UNDO_MS, SwipeScreen } from "../screens/swipe";
+import { sealReadbackWished, setSealReadbackWished } from "../prefs";
 import { ToastProvider } from "../shared";
 import { renderOfficer } from "./harness";
 
@@ -274,5 +275,55 @@ describe("落印失败时卡片回原位", () => {
   });
   it("减少动态效果:直接回原位，不弹 —— spring 没有 duration,`ms()` 管不到它", async () => {
     expect(await failOnce(true)).not.toHaveBeenCalled();
+  });
+});
+
+describe("落印前先确认(用户 2026-11-14,WCAG 2.2.1 的「可关」):通过先回读,不计时", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    setSealReadbackWished(true);
+  });
+  afterEach(() => {
+    setSealReadbackWished(false);
+    jest.useRealTimers();
+  });
+
+  it("默认关:开关是设备上的一个值,关着时不在 persistent 里留东西", () => {
+    setSealReadbackWished(false);
+    expect(sealReadbackWished()).toBe(false);
+    setSealReadbackWished(true);
+    expect(sealReadbackWished()).toBe(true);
+  });
+
+  it("回读人名、案号、判决;没按「落印」什么都不发,也没有 3 秒撤回条;按了当场发", async () => {
+    serve();
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    expect(await screen.findByTestId("swipe-readback-sheet")).toBeTruthy();
+    expect(screen.getByTestId("readback-name")).toHaveTextContent("李青竹");
+    expect(screen.getByTestId("readback-case")).toHaveTextContent("DY-2026-0412");
+    expect(screen.getByTestId("readback-verdict")).toHaveTextContent("通过");
+    // 没有计时:等多久都不发,撤回条不出现。
+    await tick(PASS_UNDO_MS * 3);
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("swipe-pass-undo")).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId("readback-confirm")));
+    await waitFor(() => expect(mockConclude).toHaveBeenCalledWith("j-1", { verdict: "PASSED" }));
+    // Absence: 落印之后也没有 3 秒窗口。
+    expect(screen.queryByTestId("swipe-pass-undo")).toBeNull();
+    await settled();
+  });
+
+  it("回读层上取消:不发,卡片回原位,还能再判", async () => {
+    serve();
+    renderOfficer(<SwipeScreen onBack={() => {}} />);
+    await enabled("swipe-pass");
+    await act(async () => fireEvent.press(screen.getByTestId("swipe-pass")));
+    await act(async () => fireEvent.press(await screen.findByTestId("readback-cancel")));
+    await tick(PASS_UNDO_MS * 3);
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(screen.getByTestId("swipe-card-j-1")).toBeTruthy();
+    await enabled("swipe-pass");
   });
 });

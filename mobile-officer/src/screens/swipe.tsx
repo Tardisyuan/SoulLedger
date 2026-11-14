@@ -4,6 +4,7 @@
  * - 右滑过 35% 宽度(或点 72 的圆钮):通过。希腊要先选文书(《高尔吉亚》/《理想国》),所以弹一个
  *   只有这一问的底页 —— 定稿没有画它,后端要(`greek_account_required`)。面容过后卡片飞出,顶部 3 秒「撤回」,
  *   3 秒到了才发请求(用户 2026-11-14:判过的案子服务端撤不回);判下一张、离开这一页、切到后台都立即发。
+ *   「我的 › 落印前先确认」打开时(`prefs.tsx`)没有这 3 秒:先弹回读底页(人名 · 案号 · 判决),按「落印」当场发,不计时。
  * - 左滑过线(或点左边圆钮):卡停在左边,底部弹出「不过」的理由(S10),选够了「不过 · 落印」才可点。
  * - 按住:只认中间圆钮(卡片本身不响应按住,免得和滚动、长按菜单冲突),0.5 秒外圈走满,卡片上浮 26 并浮出
  *   「待定」印;松手后写理由(用户 D5:待定仍必填理由),放进待定分组,换下一张,顶部 5 秒「撤回」。
@@ -26,10 +27,11 @@ import { ActionButton } from "../kit";
 import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast, useDismissToast } from "../shared";
 import { BLOCKED_DRAG, SWIPE_FRACTION, blockedSide, deadlineText, passPayload, waitedDays, type Side } from "../verdict";
 import { ReasonSheet } from "./judgmentActions";
-import { AccountSheet, RejectSheet } from "./rejectSheet";
+import { AccountSheet, RejectSheet, SealReadbackSheet } from "./rejectSheet";
+import { sealReadbackWished } from "../prefs";
 
 type T = (key: string, vars?: Record<string, string>) => string;
-type Overlay = "reject" | "pass" | "defer" | null;
+type Overlay = "reject" | "pass" | "defer" | "readback" | null;
 
 const HOLD_MS = 500;
 const HOLD_LIFT = 26;
@@ -109,6 +111,8 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const [hint, setHint] = useState(false);
   const [undo, setUndo] = useState<Judgment | null>(null);
   const [pending, setPending] = useState<PendingPass | null>(null);
+  /** 偏好「落印前先确认」打开时,等回读底页答复的那一印(`prefs.tsx`)。 */
+  const [ask, setAsk] = useState<ConcludeJudgmentPayload | null>(null);
   // 每张卡一个 pan:飞出结束、下一张顶上来的那一帧,它的 pan 已经是 0。此前共用一个,要等 useEffect 才归零,
   // 下一张有一帧还在屏外(1.5 倍屏宽)。被拒弹回的那张从飞出去的位置起,在下面的 layout effect 里弹回。
   const pan = useMemo(() => new Animated.Value(back && back.id === topId ? back.x : 0), [topId, back]);
@@ -179,8 +183,9 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   };
 
   // 通过:面容过后先等 3 秒撤回(不占 `busy`,下一张能判;判它就先把这一件发出去)。别的判决直接放行。
+  // 「落印前先确认」打开时没有这个窗口:回读底页上按了「落印」就是决定,当场发(WCAG 2.2.1 的「可关」)。
   const undoWindow = (id: string, payload: ConcludeJudgmentPayload, settled: Promise<boolean>): Promise<void> => {
-    if (payload.verdict !== "PASSED") return Promise.resolve();
+    if (payload.verdict !== "PASSED" || sealReadbackWished()) return Promise.resolve();
     return new Promise<void>((commit, stop) => {
       setPending({ id, commit, undo: () => stop(new Undone()), settled });
       setBusy(false);
@@ -236,13 +241,20 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     if (backX !== 0) snapBack();
   }, [pan, backX, snapBack]);
 
+  /** 通过:偏好「落印前先确认」关着就直接发(3 秒撤回);开着先停在线上、弹回读底页。 */
+  const sealOrAsk = (payload: ConcludeJudgmentPayload) => {
+    if (!sealReadbackWished()) return send(payload);
+    Animated.timing(pan, { toValue: threshold, duration: durations.sheetIn, useNativeDriver: false }).start();
+    setAsk(payload);
+    setOverlay("readback");
+  };
   const pass = () => {
     if (!current) return;
     if (blocked === "right") return flashBlocked();
     if (current.civilization === "GREEK") {
       Animated.timing(pan, { toValue: threshold, duration: durations.sheetIn, useNativeDriver: false }).start();
       setOverlay("pass");
-    } else send(passPayload(current.civilization));
+    } else sealOrAsk(passPayload(current.civilization));
   };
   const fail = () => {
     if (!current) return;
@@ -466,7 +478,22 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
       {current ? (
         <>
           <RejectSheet key={`reject-${current.id}`} open={overlay === "reject"} judgment={current} busy={busy} onCancel={putBack} onConfirm={send} />
-          <AccountSheet key={`pass-${current.id}`} open={overlay === "pass"} busy={busy} onCancel={putBack} onConfirm={(account) => send(passPayload("GREEK", account))} />
+          <AccountSheet key={`pass-${current.id}`} open={overlay === "pass"} busy={busy} onCancel={putBack} onConfirm={(account) => sealOrAsk(passPayload("GREEK", account))} />
+          <SealReadbackSheet
+            key={`readback-${current.id}`}
+            open={overlay === "readback"}
+            judgment={current}
+            verdict={ask?.verdict ?? null}
+            busy={busy}
+            onCancel={() => {
+              setAsk(null);
+              putBack();
+            }}
+            onConfirm={() => {
+              if (ask) send(ask);
+              setAsk(null);
+            }}
+          />
         </>
       ) : null}
       {top ? (
