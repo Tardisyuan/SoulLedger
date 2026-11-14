@@ -1,1 +1,5 @@
-[]
+[
+  "auth.error_attempts_body",
+  "auth.error_locked_title",
+  "auth.error_locked_body"
+]

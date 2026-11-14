@@ -187,7 +187,7 @@ def setup_view(request):
         return Response({"detail": "setup discarded"})
     from django.core.cache import cache
 
-    from .views import LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, _get_client_ip
+    from .views import LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, _count, _get_client_ip
 
     body = MfaSetupRequestSerializer(data=request.data)
     body.is_valid(raise_exception=True)
@@ -205,9 +205,9 @@ def setup_view(request):
     if not password or not request.user.check_password(password):
         import time
 
-        cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+        tries = _count(cache, rate_key, LOGIN_WINDOW_SECONDS)
         cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
-        return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST, remaining_attempts=max(0, LOGIN_MAX_ATTEMPTS - attempts - 1))
+        return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST, remaining_attempts=max(0, LOGIN_MAX_ATTEMPTS - tries))
     if mfa.is_enabled(request.user):
         return _refuse("already_enabled", status.HTTP_409_CONFLICT)
     row = mfa.begin_setup(request.user)

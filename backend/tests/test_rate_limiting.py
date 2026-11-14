@@ -3,6 +3,7 @@ Tests for rate limiting on authentication endpoints.
 
 Covers:
 - Login rate limiting: cache-based, 5 attempts per 15 min per IP
+- Per username across IPs: 20 failures, then a 1 / 5 / 15 minute delay; a trusted MFA device skips it
 """
 from unittest.mock import patch
 
@@ -23,6 +24,27 @@ class _MockCache:
 
     def delete(self, key):
         self._store.pop(key, None)
+
+    def delete_many(self, keys):
+        for key in keys:
+            self.delete(key)
+
+    # Django's contract, not a counter of our own: `add` only when absent, `incr` raises
+    # ValueError on a missing key. No TTLs: a test "expires" a key by deleting it.
+    def add(self, key, value, timeout=None):
+        if key in self._store:
+            return False
+        self._store[key] = value
+        return True
+
+    def incr(self, key, delta=1):
+        if key not in self._store:
+            raise ValueError(key)
+        self._store[key] += delta
+        return self._store[key]
+
+    def touch(self, key, timeout=None):
+        return key in self._store
 
 
 # ---------------------------------------------------------------------------
@@ -178,7 +200,7 @@ class TestLoginRateLimiting:
             assert resp.status_code == 200
             assert "remaining_attempts" not in resp.data
 
-    def test_one_username_locks_after_20_failures_across_ips(self, django_user_model):
+    def test_one_username_waits_a_minute_after_20_failures_across_ips(self, django_user_model):
         """Rotating addresses does not buy unlimited guesses at one officer's password."""
         self._create_user(django_user_model)
         self._create_user(django_user_model, username="bystander")
@@ -187,15 +209,140 @@ class TestLoginRateLimiting:
             for i in range(20):
                 resp = self._login("RateLimit_User ", "Wrong!", ip=f"10.1.0.{i + 1}")
                 assert resp.status_code == 401, (i, resp.status_code)
-            # A fresh IP, the right password: the username itself is locked.
+            # A fresh IP, the right password: the username itself waits. The key is case-folded,
+            # so "RateLimit_User " above and "ratelimit_user" here are one counter.
             resp = self._login("ratelimit_user", "Correct123!", ip="10.1.1.1")
             assert resp.status_code == 429
             assert resp.data["code"] == "login_locked"
+            assert resp.data["retry_after"] == 60
+            assert resp["Retry-After"] == "60"
             # Another account from that same fresh IP is unaffected.
             resp = self._login("bystander", "Correct123!", ip="10.1.1.1")
             assert resp.status_code == 200
             # The username never sits in a cache key in clear.
             assert not any("ratelimit_user" in k.lower() for k in self.mock_cache._store)
+
+    # -- username layer: 1 / 5 / 15 minutes (user 2026-11-15) ---------------
+
+    def _trip_username(self, name, start):
+        """20 failures for `name`, each from its own address so only the username layer trips,
+        then the right password from one more address. Returns that last response."""
+        for i in range(20):
+            resp = self._login(name, "Wrong!", ip=f"10.{start}.0.{i + 1}")
+            assert resp.status_code == 401, (i, resp.status_code, resp.data)
+        return self._login(name, "Correct123!", ip=f"10.{start}.9.9")
+
+    def _expire_delay(self, name):
+        from apps.authentication.views import _username_rate_key
+
+        self.mock_cache.delete(f"{_username_rate_key(name)}:until")
+
+    def test_username_delay_grows_1_5_15_then_stays_at_15(self, django_user_model):
+        self._create_user(django_user_model)
+        with patch("django.core.cache.cache", self.mock_cache):
+            seen = []
+            for round_ in range(4):
+                resp = self._trip_username("ratelimit_user", 20 + round_)
+                assert resp.status_code == 429
+                assert resp.data["code"] == "login_locked"
+                seen.append(resp.data["retry_after"])
+                self._expire_delay("ratelimit_user")
+            assert seen == [60, 300, 900, 900]
+            # The delay over, the right password goes through and the ladder is forgotten.
+            assert self._login("ratelimit_user", "Correct123!", ip="10.30.0.1").status_code == 200
+            assert self._trip_username("ratelimit_user", 31).data["retry_after"] == 60
+
+    def test_during_the_delay_tries_are_refused_without_counting(self, django_user_model):
+        from apps.authentication.views import _username_rate_key
+
+        self._create_user(django_user_model)
+        with patch("django.core.cache.cache", self.mock_cache):
+            self._trip_username("ratelimit_user", 40)
+            for i in range(30):
+                assert self._login("ratelimit_user", "Wrong!", ip=f"10.41.0.{i + 1}").status_code == 429
+            assert self.mock_cache.get(_username_rate_key("ratelimit_user")) is None
+            assert self.mock_cache.get(f"{_username_rate_key('ratelimit_user')}:strikes") == 1
+
+    def test_a_trusted_device_skips_the_username_layer(self, django_user_model):
+        """The MFA 「不再询问」 cookie of THIS account lets its owner in while the name waits."""
+        from apps.authentication import mfa
+
+        user = self._create_user(django_user_model)
+        other = self._create_user(django_user_model, username="other_officer")
+        with patch("django.core.cache.cache", self.mock_cache):
+            assert self._trip_username("ratelimit_user", 50).status_code == 429
+            # Another account's token buys nothing.
+            self.client.cookies[mfa.DEVICE_COOKIE] = mfa.remember_device(other)
+            assert self._login("ratelimit_user", "Correct123!", ip="10.51.0.1").status_code == 429
+            # Its own token does; the case of the name does not matter, as for the key.
+            self.client.cookies[mfa.DEVICE_COOKIE] = mfa.remember_device(user)
+            assert self._login("RATELIMIT_USER", "Wrong!", ip="10.51.0.2").status_code == 401
+            assert self._login("ratelimit_user", "Correct123!", ip="10.51.0.3").status_code == 200
+
+    def test_a_trusted_device_still_meets_the_ip_layer(self, django_user_model):
+        from apps.authentication import mfa
+
+        user = self._create_user(django_user_model)
+        with patch("django.core.cache.cache", self.mock_cache):
+            self.client.cookies[mfa.DEVICE_COOKIE] = mfa.remember_device(user)
+            seen = [self._login("ratelimit_user", "Wrong!").data["remaining_attempts"] for _ in range(5)]
+            assert seen == [4, 3, 2, 1, 0]
+            resp = self._login("ratelimit_user", "Correct123!")
+            assert resp.status_code == 429
+            assert resp.data["code"] == "login_locked"
+
+    def test_an_expired_trusted_device_is_not_trusted(self, django_user_model):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.authentication import mfa
+        from apps.authentication.models import MfaRememberedDevice
+
+        user = self._create_user(django_user_model)
+        with patch("django.core.cache.cache", self.mock_cache):
+            self.client.cookies[mfa.DEVICE_COOKIE] = mfa.remember_device(user)
+            MfaRememberedDevice.objects.filter(user=user).update(expires_at=timezone.now() - timedelta(seconds=1))
+            assert self._trip_username("ratelimit_user", 60).status_code == 429
+
+    def test_counters_are_incremented_not_overwritten(self, django_user_model):
+        """A failure that lands while this one is checking the password is not lost.
+
+        The old code read the counters at the top and wrote `read + 1` at the end, so two
+        parallel failures counted once. The parallel one is simulated inside the password check.
+        """
+        from rest_framework.exceptions import AuthenticationFailed
+
+        from apps.authentication.views import _username_rate_key
+
+        ip_key, user_key = "login_rate:127.0.0.1", _username_rate_key("ratelimit_user")
+
+        def parallel_failure(*args, **kwargs):
+            for key in (ip_key, user_key):
+                self.mock_cache._store[key] = self.mock_cache._store.get(key, 0) + 1
+            raise AuthenticationFailed("No active account found with the given credentials")
+
+        with patch("django.core.cache.cache", self.mock_cache), patch(
+            "apps.authentication.views.TokenObtainPairView.post", side_effect=parallel_failure
+        ):
+            resp = self._login("ratelimit_user", "Wrong!")
+        assert resp.status_code == 401
+        assert self.mock_cache.get(ip_key) == 2
+        assert self.mock_cache.get(user_key) == 2
+        assert resp.data["remaining_attempts"] == 3
+
+    def test_a_name_with_no_account_answers_exactly_as_one_with(self, django_user_model):
+        """Same 401s, same counts, same 429 after the same number: nothing says which name exists."""
+        self._create_user(django_user_model)
+
+        def run(name, start):
+            with patch("django.core.cache.cache", _MockCache()):
+                bodies = [self._login(name, "Wrong!", ip=f"10.{start}.0.{i + 1}") for i in range(20)]
+                locked = self._login(name, "Wrong!", ip=f"10.{start}.9.9")
+            return ([(r.status_code, dict(r.data)) for r in bodies],
+                    (locked.status_code, locked.data["code"], str(locked.data["detail"]), locked.data["retry_after"]))
+
+        assert run("ratelimit_user", 70) == run("no_such_officer", 71)
 
     def test_unexpected_exception_logs_only_its_class_name(self, django_user_model):
         from apps.authentication.models import LoginLog

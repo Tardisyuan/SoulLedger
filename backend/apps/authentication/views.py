@@ -921,14 +921,68 @@ LOGIN_WINDOW_SECONDS = 900
 #: many addresses guess one officer's password at 5 tries each; the soul login
 #: (`soul_accounts/me_views.py`) has had both layers since 2026-09-17.
 LOGIN_MAX_ATTEMPTS_PER_USERNAME = 20
+#: What reaching that count costs: a delay, not a 15-minute lock (user 2026-11-15). The
+#: first trip waits 1 minute, the second 5, every later one 15. A lock on the username
+#: let anyone who knew an officer's name keep them out of their own account; a delay
+#: still caps guessing (20 tries, then 1 + 5 + 15 + 15 ... minutes) while the officer
+#: is out at most a minute the first time. Trips are remembered for
+#: `LOGIN_USERNAME_STRIKE_SECONDS` after the last one, then the ladder starts over.
+#: A browser holding the account's MFA 「不再询问」 token skips this layer (`_trusted_device`).
+LOGIN_USERNAME_DELAYS = (60, 300, 900)
+LOGIN_USERNAME_STRIKE_SECONDS = 3600
 
 
 def _username_rate_key(username):
-    """Hashed, as in `soul_accounts.me_views._rate_keys`: key names show up in Redis MONITOR / backups."""
+    """Hashed, as in `soul_accounts.me_views._rate_keys`: key names show up in Redis MONITOR / backups.
+
+    Lower-cased ON PURPOSE, although the login lookup (`username=`) is case-sensitive:
+    "Alice" and "alice" share one counter, so changing case buys an attacker no fresh
+    tries. The cost is only ever over-counting (a differently cased name never
+    authenticates), and an e-mail identifier, lower-cased by the serializer, keys the same way.
+    """
     import hashlib
 
     digest = hashlib.sha256(str(username).strip().lower().encode()).hexdigest()[:32]
     return f"login_rate:user:{digest}"
+
+
+def _count(cache, key, timeout):
+    """`cache.add` + `cache.incr`, atomic in Redis, as `pwd_reset_tries` below. A read, then
+    `set(n + 1)`, let parallel failures all read the same n and spend one try between them."""
+    cache.add(key, 0, timeout=timeout)
+    try:
+        n = cache.incr(key)
+    except ValueError:  # expired between the two calls
+        cache.add(key, 1, timeout=timeout)
+        n = 1
+    # Sliding window, as before the counter went atomic: each failure pushes the end back.
+    cache.touch(key, timeout)
+    return n
+
+
+def _trusted_device(request, username) -> bool:
+    """The browser holds a live MFA 「30 天内不再询问」 token for the account this name points at.
+
+    Such a device is exempt from the username layer, not the IP layer: the token was
+    issued after a password AND a second factor, so it is the owner, not someone
+    borrowing the name. Matching is case-insensitive like `_username_rate_key`, and on
+    the e-mail too, the other identifier. Nothing here reaches the response, so it says
+    nothing about whether the account exists.
+    """
+    from django.db.models import Q
+    from django.utils import timezone
+
+    from . import mfa
+    from .models import MfaRememberedDevice
+
+    raw = request.COOKIES.get(mfa.DEVICE_COOKIE)
+    name = str(username).strip()
+    if not raw or not name:
+        return False
+    return MfaRememberedDevice.objects.filter(
+        Q(user__username__iexact=name) | Q(user__email__iexact=name),
+        token_hash=mfa._hash_device(raw), expires_at__gt=timezone.now(),
+    ).exists()
 
 
 def _get_client_ip(request):
@@ -984,9 +1038,15 @@ class LoginView(TokenObtainPairView):
         username = request.data.get('username', '')
         user_key = _username_rate_key(username)
         user_until_key = f"{user_key}:until"
-        user_attempts = cache.get(user_key, 0)
-        if user_attempts >= LOGIN_MAX_ATTEMPTS_PER_USERNAME:
-            attempts, until_key = LOGIN_MAX_ATTEMPTS, user_until_key
+        strike_key = f"{user_key}:strikes"
+        trusted = _trusted_device(request, username)
+        if attempts < LOGIN_MAX_ATTEMPTS and not trusted:
+            # The username layer: refused while its delay runs. Same 429 and code as the IP
+            # layer, and keyed on the name whether or not an account has it, so the answer
+            # never says which names exist.
+            until = cache.get(user_until_key)
+            if until and until > time.time():
+                attempts, until_key = LOGIN_MAX_ATTEMPTS, user_until_key
         if attempts >= LOGIN_MAX_ATTEMPTS:
             until = cache.get(until_key)
             retry_after = max(1, math.ceil(until - time.time())) if until else LOGIN_WINDOW_SECONDS
@@ -994,12 +1054,19 @@ class LoginView(TokenObtainPairView):
                            retry_after=retry_after, headers={"Retry-After": str(retry_after)})
 
         def _count_failure():
-            cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            ip_n = _count(cache, rate_key, LOGIN_WINDOW_SECONDS)
             cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
-            cache.set(user_key, user_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-            cache.set(user_until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
-            return max(0, min(LOGIN_MAX_ATTEMPTS - (attempts + 1),
-                              LOGIN_MAX_ATTEMPTS_PER_USERNAME - (user_attempts + 1)))
+            remaining = LOGIN_MAX_ATTEMPTS - ip_n
+            if not trusted:
+                user_n = _count(cache, user_key, LOGIN_WINDOW_SECONDS)
+                if user_n == LOGIN_MAX_ATTEMPTS_PER_USERNAME:
+                    # One trip: this rung's delay starts, and the count starts over behind it.
+                    strikes = _count(cache, strike_key, LOGIN_USERNAME_STRIKE_SECONDS)
+                    delay = LOGIN_USERNAME_DELAYS[min(strikes, len(LOGIN_USERNAME_DELAYS)) - 1]
+                    cache.set(user_until_key, time.time() + delay, timeout=delay)
+                    cache.delete(user_key)
+                remaining = min(remaining, LOGIN_MAX_ATTEMPTS_PER_USERNAME - user_n)
+            return max(0, remaining)
 
         # Capture request metadata before authentication
         user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
@@ -1010,11 +1077,11 @@ class LoginView(TokenObtainPairView):
             if response.status_code == 200 and response.data.get("mfa_required"):
                 # 密码对了,还要验码:计数清掉(第二步有自己的锁),登录日志等验码通过再写。
                 cache.delete(rate_key)
-                cache.delete(user_key)
+                cache.delete_many([user_key, strike_key])
             elif response.status_code == 200:
                 # Login success - clear rate limit counter
                 cache.delete(rate_key)
-                cache.delete(user_key)
+                cache.delete_many([user_key, strike_key])
                 user = response.data.get('user', {})
                 user_id = user.get('id')
                 LoginLog.objects.create(
@@ -1221,7 +1288,7 @@ def change_password(request):
         serializer.is_valid(raise_exception=True)
     except DRFValidationError as exc:
         if "old_password" in exc.detail:
-            cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            _count(cache, rate_key, LOGIN_WINDOW_SECONDS)
             cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
         raise
 
