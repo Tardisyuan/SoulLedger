@@ -110,7 +110,8 @@ export function QueueTab({
   onOpenCityGod?: () => void;
   /** The 转生申请 chip (第三十批 十二.2, the seventh source): 待办, filtered to 转生申请. Without it the chip is not drawn. */
   onOpenRebirth?: () => void;
-  onOpen: (id: string, ids: string[]) => void;
+  /** `names`: the soul name each of those rows shows, for 「下一件」's 「{name} · 还剩 {n} 件」 (第五十批 C1). */
+  onOpen: (id: string, ids: string[], names?: string[]) => void;
   /** 「滑卡审判」(v4 S09):打开我认领的卡堆。 */
   onSwipe?: () => void;
   gone?: ReadonlySet<string>;
@@ -263,7 +264,7 @@ export function QueueTab({
                     lineTwo={[t(`officer_app.desk.sources.${row.source ?? "queue"}`), courtLabel(t, row.court, locale), ...rowNotes(t, row, group, tag.deadline, locale)].join(" · ")}
                     tag={tag}
                     gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
-                    onPress={() => onOpen(row.id, flat.map((r) => r.id))}
+                    onPress={() => onOpen(row.id, flat.map((r) => r.id), flat.map((r) => r.soul_name ?? ""))}
                     action={
                       action
                         ? {

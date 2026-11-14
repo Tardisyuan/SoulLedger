@@ -6,7 +6,7 @@
  */
 import { platform } from "@soulledger/core/platform";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { BIO_ASKED_PREFIX, officerDevice } from "./deviceLogin";
 import { Row } from "./kit";
@@ -16,8 +16,8 @@ import {
   CredentialStoreError,
   Input,
   Notice,
-  SectionLabel,
   Sheet,
+  SwitchMark,
   Txt,
   readBiometry,
   space,
@@ -58,7 +58,10 @@ export function enableFailureKey(error: unknown): string {
   return "officer_app.login.reasons.other";
 }
 
-/** 我的 › 指纹登录: a switch for this phone only. On asks for the current password, then the system; off asks nothing. */
+/**
+ * 我 › 账号安全 › 用指纹登录 (第五十批 C5): a switch for this phone only, two lines under it. On asks for the current
+ * password, then the system; off asks nothing. The section's heading is the caller's (me.tsx).
+ */
 export function BioLoginBlock() {
   const { t } = useI18n();
   const toast = useToast();
@@ -107,7 +110,6 @@ export function BioLoginBlock() {
   const title = t("officer_app.bio_login.row", { bio: bio.word });
   return (
     <View style={{ gap: space[3] }}>
-      <SectionLabel>{title}</SectionLabel>
       <View style={{ opacity: unavailable ? 0.45 : 1 }}>
         <Row
           testID="me-bio-login"
@@ -115,7 +117,7 @@ export function BioLoginBlock() {
           title={title}
           lines={[unavailable ? t("officer_app.bio_login.row_unavailable") : t("officer_app.bio_login.row_sub", { bio: bio.word })]}
           onPress={unavailable ? undefined : () => void press()}
-          right={<Txt variant="nav">{on ? "✓" : "○"}</Txt>}
+          right={<SwitchMark on={on} />}
         />
       </View>
       {asking && !on ? (
@@ -197,10 +199,13 @@ export function BioAsk({ username }: { username: string }) {
         <Txt variant="body" tone="muted">
           {t("officer_app.bio_login.ask_note")}
         </Txt>
-        <View style={{ flexDirection: "row", gap: space[3] }}>
-          <Button testID="bio-ask-later" kind="secondary" title={t("officer_app.bio_login.ask_later")} onPress={finish} disabled={busy} style={{ flex: 1 }} />
-          <Button testID="bio-ask-ok" title={t("officer_app.bio_login.enable_ok")} onPress={() => void turnOn()} busy={busy} style={{ flex: 1 }} />
-        </View>
+        {/* 第五十批 C5: 「开启」 in ink, 「以后再说」 a ghost button under it. */}
+        <Button testID="bio-ask-ok" title={t("officer_app.bio_login.enable_ok")} onPress={() => void turnOn()} busy={busy} />
+        <Pressable testID="bio-ask-later" accessibilityRole="button" disabled={busy} onPress={finish} style={{ minHeight: 48, alignItems: "center", justifyContent: "center" }}>
+          <Txt variant="bodyLg" tone="muted">
+            {t("officer_app.bio_login.ask_later")}
+          </Txt>
+        </Pressable>
       </View>
     </Sheet>
   );

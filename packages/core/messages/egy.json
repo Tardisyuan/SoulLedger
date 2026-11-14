@@ -109,7 +109,11 @@
         "eg": "Fai Em Hetep.",
         "gr": "Per Em Hena Itru-N."
       }
-    }
+    },
+    "remembered": {
+      "welcome": "Iyi Wehem"
+    },
+    "account_or_email": "Ren Aq Er Djeret"
   },
   "mfa": {
     "title": "Aq Sep Sen",
@@ -6443,6 +6447,15 @@
         "not_in_wangsi": "Nen Em Nut Mut Nen Maat · Nen Sepret",
         "grievance_open": "Sepret Em Smen Chenghuang"
       }
+    },
+    "accounts": {
+      "title": "Setep Ren Hesb Ba",
+      "hint": "Ren Hesb Ba Em Medjat Pen. Setep Wa: Sesh Sekhem Er Aq Em {{bio}}.",
+      "other": "Ren Hesb Ba Ky",
+      "more": "Smen {{name}}",
+      "forget": "Nen Rekh Ren Hesb Ba Pen",
+      "forget_body": "Medjat Pen Nen Rekh Ren Hesb Ba Pen Djer; Aq Wenen. Aq Em {{bio}}: Khetem.",
+      "forgotten": "Nen Rekh {{id}}-N"
     }
   },
   "soul_push": {
@@ -8184,11 +8197,15 @@
     "search": {
       "souls": "Hehy Ba",
       "read_only": "Maa Wa. Semawy: Em Medjat Sab.",
-      "no_souls_title": "Nen Gem Ba",
-      "no_souls_body": "Semawy Ren, Er Sesh Ren Ta Neb.",
-      "group_case": "Sep",
       "placeholder": "Ren, Ren Hesb Ba Er Ren Sep",
-      "no_soul": "Nen Gem Ba · Ren Er Ren Hesb Ba"
+      "clear_recent": "Fekh",
+      "recent_empty": "Nen Wen Sep Djer.",
+      "group_cases": "Sepu · {{n}}",
+      "group_people": "Remetj · {{n}}",
+      "see_all": "Maa Neb · {{n}} ›",
+      "kind_soul": "Ba",
+      "kind_officer": "Sab",
+      "no_results_hint": "Ba: Ren. Sep: Ren Sep Tepy, Mi {{example}}."
     },
     "assist": {
       "entry": "Hehy Medu",
@@ -8222,7 +8239,14 @@
       "attachments": "Djama Hena · {{n}}",
       "open_system": "Wen Em Smen Ta",
       "attachment_offline": "Em Demedj: Wen",
-      "attachment_failed": "Nen Wen Djama Pen"
+      "attachment_failed": "Nen Wen Djama Pen",
+      "sealed": "Khetem-N · Er Wat Hesy",
+      "sealed_meta": "{{time}} · Khesef: Wedja Wehem",
+      "next": "Sep Ky",
+      "next_meta": "{{name}} · {{n}} Khery",
+      "back_to_todo": "Iyi Er Nen Iri Djer",
+      "all_done": "Hru Pen: Iri-N Neb",
+      "next_aria": "Sep Ky: {{name}} · {{n}} Khery"
     },
     "cosign": {
       "search": "Hehy Ren Er Ren Aq",
@@ -8340,7 +8364,8 @@
       "logout_retry": "Wehem Hab Tepy",
       "logout_anyway": "Per Aq Min",
       "logout_pending_unsent": "Wesheb Nen Hab {{unsent}}: Em Medjat Pen. Per Aq: Fekh.",
-      "logout_pending_drafts": "Sesh Tepy {{drafts}}: Em Medjat Pen. Per Aq: Fekh."
+      "logout_pending_drafts": "Sesh Tepy {{drafts}}: Em Medjat Pen. Per Aq: Fekh.",
+      "security": "Senb Ren Aq"
     },
     "login": {
       "password": "Sekhem",
@@ -8353,7 +8378,8 @@
         "locked": "Sep Hau. Wehem Iri Er Khet.",
         "network": "Nen Em Demedj",
         "other": "Nen Aq-Ek. Wehem Iri Er Khet."
-      }
+      },
+      "switch": "Aq Em Ky Ren Aq"
     },
     "mfa": {
       "title": "Aq Sep Sen",
@@ -8654,6 +8680,19 @@
       "a11y": "Khetem-N",
       "done": "Khetem-N",
       "hold_note_flow": "Smen «Khetem» Sep 1. Khetem Er Wat Hesy; Khesef: Wedja Wehem."
+    },
+    "bio_login": {
+      "row": "Aq Em {{bio}}",
+      "row_sub": "Em Medjat Pen Wa. Iyi Er Medjat Ba: {{bio}}, Nen Sesh Sekhem; Er Tepy Hesy Er Khesef Hena.",
+      "ask_title": "Aq Em {{bio}} Er Khet?",
+      "ask_body": "Em Medjat Pen Wa: Nen Sesh Sekhem. {{bio}}, Djes Ky Neb Em Medjat: Aq. Medjat En Per: Nen Wen.",
+      "ask_note": "Khetem Er Khet Em «Djes › Senb Ren Aq».",
+      "enable_ok": "Wen",
+      "ask_later": "Er Khet",
+      "lock_title": "Medjat Ba: Khetem-N",
+      "lock_who": "{{name}} · {{hall}}",
+      "unlock": "Wen Em {{bio}}",
+      "use_password": "Aq Em Sekhem"
     }
   },
   "print": {

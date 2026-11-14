@@ -62,7 +62,7 @@
     "forgot_sent_body": "如果这个账号存在，管理员会核对身份后联系你重设密码。",
     "subtitle": "用本殿发给你的账号登录。",
     "account": "账号",
-    "account_or_email": "账号或邮箱",
+    "account_or_email": "用户名或邮箱",
     "account_or_email_hint": "邮箱要先在「个人中心」验证过才能用来登录",
     "console": "SoulLedger · 官员台",
     "statute_eyebrow": "今日律条",
@@ -114,6 +114,9 @@
         "eg": "天平归于平静。",
         "gr": "渡船已经离岸。"
       }
+    },
+    "remembered": {
+      "welcome": "欢迎回来"
     }
   },
   "mfa": {
@@ -6463,6 +6466,15 @@
         "not_in_wangsi": "你已不在枉死城，不用申诉",
         "grievance_open": "这件案子已经申诉过，等城隍核实"
       }
+    },
+    "accounts": {
+      "title": "选一个编号",
+      "hint": "这台手机记住的编号。点一个，输入密码或验{{bio}}登录。",
+      "other": "用别的编号",
+      "more": "{{name}} 的更多操作",
+      "forget": "忘掉这个编号",
+      "forget_body": "只是这台手机不再记住这个编号，账号本身不受影响。这个编号的{{bio}}登录也会关掉。",
+      "forgotten": "已忘掉 {{id}}"
     }
   },
   "soul_push": {
@@ -8149,8 +8161,8 @@
   },
   "officer_app": {
     "bio_login": {
-      "row": "{{bio}}登录",
-      "row_sub": "只在这部手机上。开着时，离开 App 超过 5 分钟再回来，要先认一次{{bio}}。",
+      "row": "用{{bio}}登录",
+      "row_sub": "只在这部手机上。回到 App 时验{{bio}}，不用再输密码；批准或驳回前也要验。",
       "row_unavailable": "这部手机没有录入面容或指纹",
       "enable_body": "先输入当前密码，再验证{{bio}}。",
       "enable_ok": "开启",
@@ -8161,13 +8173,15 @@
       "locked": "{{bio}}试错太多次，系统暂时锁住了。请输入密码，或过一会儿再试。",
       "expired": "这部手机的{{bio}}登录已失效，请输入密码。",
       "ask_title": "下次用{{bio}}登录？",
-      "ask_body": "只在这部手机上，再打开时不用输密码；批准、驳回前照旧要认一次。手机里录入的{{bio}}都能用来登录，和别人共用这部手机就别开。",
-      "ask_note": "以后可以在「我的」里关掉。",
+      "ask_body": "只在这部手机上。回到 App 时验一下{{bio}}就行，不用再输密码。这部手机上录入的任何一个都能登录，共用的手机请不要开。",
+      "ask_note": "之后可以在「我 › 账号安全」里关掉。",
       "ask_later": "以后再说",
       "prompt_login": "用来登录，不用输密码。",
       "prompt_unlock": "用来解锁。",
-      "lock_title": "已锁定",
-      "use_password": "输入密码"
+      "lock_title": "灵魂簿已锁定",
+      "use_password": "用密码登录",
+      "lock_who": "{{name}} · {{hall}}",
+      "unlock": "用{{bio}}解锁"
     },
     "biometric": {
       "setting": "批准、驳回前验证{{bio}}",
@@ -8270,11 +8284,14 @@
       "souls": "查灵魂",
       "placeholder": "姓名、编号或案号",
       "read_only": "只读。改动请在官员台进行。",
-      "no_souls_title": "没有找到",
-      "no_souls_body": "换个名字或编号再试。",
-      "group_case": "案件",
-      "no_soul": "没有编号或姓名对得上的灵魂",
-      "recent": "最近打开"
+      "clear_recent": "清除",
+      "recent_empty": "还没有打开过案件。",
+      "group_cases": "案件 · {{n}}",
+      "group_people": "人物 · {{n}}",
+      "see_all": "看全部 {{n}} 件 ›",
+      "kind_soul": "灵魂",
+      "kind_officer": "官员",
+      "no_results_hint": "可以按姓名搜，或输入案号的开头，如 {{example}}。"
     },
     "assist": {
       "entry": "问一问",
@@ -8287,7 +8304,7 @@
     },
     "detail": {
       "your_step": "本人这一步",
-      "next": "下一件({{n}}/{{total}})",
+      "next": "下一件",
       "cosign": "加签",
       "reject": "驳回",
       "approve": "批准",
@@ -8309,7 +8326,13 @@
       "attachments": "附件 · {{n}}",
       "open_system": "用系统打开",
       "attachment_offline": "联网后才能打开",
-      "attachment_failed": "打不开这个附件"
+      "attachment_failed": "打不开这个附件",
+      "sealed": "已落印 · 进入审批",
+      "sealed_meta": "{{time}} · 驳回会重开一案",
+      "next_meta": "{{name}} · 还剩 {{n}} 件",
+      "back_to_todo": "回到待办",
+      "all_done": "今天的都办完了",
+      "next_aria": "下一件：{{name}}，还剩 {{n}} 件"
     },
     "confirm": {
       "approve_title": "批准这一签？",
@@ -8407,7 +8430,8 @@
       "logout_pending_unsent": "还有 {{unsent}} 封回信没发出。退出后会从这台设备上清除。",
       "logout_pending_drafts": "还有 {{drafts}} 份回信草稿。退出后会从这台设备上清除。",
       "logout_retry": "先重试发送",
-      "logout_anyway": "仍然退出"
+      "logout_anyway": "仍然退出",
+      "security": "账号安全"
     },
     "back": "返回",
     "areas": {
@@ -8439,7 +8463,8 @@
         "network": "网络错误",
         "other": "没能登录，请稍后再试"
       },
-      "forgot_password": "忘记密码"
+      "forgot_password": "忘记密码",
+      "switch": "换一个账号"
     },
     "mfa": {
       "title": "两步验证",

@@ -86,7 +86,11 @@ it("remembers the username across sign-out; 换一个账号 forgets it; the prof
   expect(JSON.parse(platform().persistent.get(LAST_LOGIN_KEY)!)).toEqual({ username: "yama", display_name: "阎罗", hall: "CN_DIYU" });
   screen.unmount();
   session = renderLogin();
-  expect(screen.getByText("阎罗 · ya***a")).toBeTruthy();
+  // 第五十批 C3: the shared card -- name, masked username, 「换一个账号」, 「欢迎回来」 under the app name.
+  expect(screen.getByTestId("login-known-name")).toHaveTextContent("阎罗");
+  expect(screen.getByTestId("login-known-code")).toHaveTextContent("ya***a");
+  expect(screen.getByTestId("login-switch")).toHaveTextContent("换一个账号");
+  expect(screen.getByTestId("login-welcome")).toHaveTextContent("欢迎回来");
   expect(screen.queryByText(/yama/)).toBeNull();
   fill_password_only: {
     fireEvent.changeText(screen.getByTestId("login-password"), "pw");
@@ -98,6 +102,7 @@ it("remembers the username across sign-out; 换一个账号 forgets it; the prof
   fireEvent.press(screen.getByTestId("login-switch"));
   expect(platform().persistent.get(LAST_LOGIN_KEY)).toBeNull();
   expect(screen.queryByTestId("login-known")).toBeNull();
+  expect(screen.queryByTestId("login-welcome")).toBeNull();
   expect(screen.getByTestId("login-username").props.value).toBe("");
 });
 

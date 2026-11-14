@@ -14,7 +14,7 @@ import * as SecureStore from "expo-secure-store";
 import { Linking, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { ACCOUNT_KEY, ASKED_PREFIX, BIO_KEY, rememberAccount, rememberedAccount, spendAutoPrompt } from "../deviceLogin";
+import { ACCOUNTS_KEPT, ACCOUNT_KEY, ASKED_PREFIX, BIO_KEY, BIO_OWNER_KEY, rememberAccount, rememberedAccount, rememberedAccounts, spendAutoPrompt } from "../deviceLogin";
 import { I18nProvider } from "../i18n";
 import { SoulCodeField } from "../soulCodeView";
 import { deviceTokenFor, rememberDevice } from "../mfa";
@@ -26,6 +26,8 @@ import { PROFILE, heldReply, life, resetLoginMemory, stubApi, type Reply } from 
 
 const CODE = "QU33Q9FW5F";
 const GROUPED = "QU3 3Q9F W5F";
+const MASKED = "QU3 ••• W5F";
+const CODE2 = "AB23CD45EF";
 const CRED = "device-credential-1";
 const SETTINGS = { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" };
 const SYSTEM_REASON = "用来登录灵魂簿，不用输密码。";
@@ -316,13 +318,15 @@ it("D · two keystrokes before the parent re-renders are still two keystrokes, n
 });
 
 describe("B1 · the phone remembers the account", () => {
-  it("a known soul sees a card (name, grouped number) and the password, with the cursor already there; no subtitle", async () => {
+  it("a known soul sees a card (name, masked number, 「欢迎回来」) and the password, with the cursor already there; no subtitle", async () => {
     remembered();
     await renderApp();
     expect(screen.queryByTestId("login-soul-code")).toBeNull();
     expect(text("login-known-name")).toBe("张三");
-    expect(screen.getByTestId("login-known-code")).toHaveTextContent(GROUPED);
-    expect(screen.getByTestId("login-known-code").props.accessibilityLabel).toBe("灵魂编号 Q U 3，3 Q 9 F，W 5 F");
+    // 第五十批 C3: masked on the card, the middle group hidden.
+    expect(screen.getByTestId("login-known-code")).toHaveTextContent(MASKED);
+    expect(screen.getByTestId("login-known-code")).not.toHaveTextContent("3Q9F");
+    expect(screen.getByTestId("login-lead")).toHaveTextContent("欢迎回来");
     expect(screen.getByTestId("login-password").props.autoFocus).toBe(true);
     expect(screen.queryByText("使用随初始密码一起发给你的灵魂编号登录")).toBeNull();
     expect(screen.getByText("换一个账号")).toBeTruthy();
@@ -338,7 +342,7 @@ describe("B1 · the phone remembers the account", () => {
     fireEvent.press(await screen.findByTestId("logout"));
     fireEvent.press(await screen.findByTestId("logout-confirm"));
     await screen.findByTestId("login-known");
-    expect(screen.getByTestId("login-known-code")).toHaveTextContent(GROUPED);
+    expect(screen.getByTestId("login-known-code")).toHaveTextContent(MASKED);
     expect(rememberedAccount()).toEqual({ code: CODE, name: "张三" });
   });
 
@@ -413,13 +417,80 @@ describe("B1 · the phone remembers the account", () => {
     expect(rememberedAccount()).toEqual({ code: CODE, name: "张三" });
   });
 
+  it("第五十批 C4: two or more numbers are a list; picking one is its card, 「换一个账号」 goes back to the list and forgets nothing", async () => {
+    rememberAccount(CODE, "张三");
+    rememberAccount(CODE2, "李四");
+    spendAutoPrompt();
+    await renderApp();
+    expect(screen.getByTestId("login-lead")).toHaveTextContent("选一个编号");
+    expect(screen.getAllByTestId(/^account-[A-Z0-9]+$/).map((r) => r.props.testID)).toEqual([`account-${CODE2}`, `account-${CODE}`]);
+    expect(screen.getByTestId(`account-more-${CODE}`).props.accessibilityLabel).toBe("张三 的更多操作");
+    expect(screen.getByTestId("accounts-other")).toHaveTextContent("用别的编号");
+    expect(screen.queryByTestId("login-password")).toBeNull();
+    fireEvent.press(screen.getByTestId(`account-${CODE}`));
+    expect(text("login-known-name")).toBe("张三");
+    expect(screen.getByTestId("login-password")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("login-switch"));
+    expect(screen.queryByTestId("switch-sheet")).toBeNull(); // no 「换一个账号？」: nothing is forgotten
+    expect(await screen.findByTestId("login-accounts")).toBeTruthy();
+    expect(rememberedAccounts()).toHaveLength(2);
+    fireEvent.press(screen.getByTestId("accounts-other"));
+    expect(screen.getByTestId("login-soul-code")).toBeTruthy();
+  });
+
+  it("第五十批 C4: 「忘掉这个编号」 forgets it and its 面容 login when the credential is that number's; one left is its card", async () => {
+    rememberAccount(CODE, "张三");
+    persistentStore.set(BIO_KEY, "face");
+    secureMod.__guarded.set("soulledger_device_login", CRED);
+    rememberAccount(CODE2, "李四"); // the credential predates the list: it is pinned to 张三 now
+    expect(persistentStore.get(BIO_OWNER_KEY)).toBe(CODE);
+    spendAutoPrompt();
+    const calls = stubApi({ "/soul-auth/device-login/revoke/": { status: 204 } });
+    await renderApp();
+    fireEvent.press(screen.getByTestId(`account-more-${CODE}`));
+    expect(await screen.findByText(`张三 · ${MASKED}`)).toBeTruthy();
+    expect(screen.getByText("只是这台手机不再记住这个编号，账号本身不受影响。这个编号的面容登录也会关掉。")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("forget-confirm"));
+    expect(await screen.findByText(`已忘掉 ${MASKED}`)).toBeTruthy();
+    await waitFor(() => expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")?.body).toEqual({ credential: CRED }));
+    expect(persistentStore.get(BIO_KEY)).toBeNull();
+    expect(rememberedAccounts()).toEqual([{ code: CODE2, name: "李四" }]);
+    expect(text("login-known-name")).toBe("李四");
+  });
+
+  it("第五十批 C4: forgetting a number that does not own the credential leaves 面容 login on for the one that does", async () => {
+    rememberAccount(CODE, "张三");
+    persistentStore.set(BIO_KEY, "face");
+    secureMod.__guarded.set("soulledger_device_login", CRED);
+    rememberAccount(CODE2, "李四");
+    spendAutoPrompt();
+    const calls = stubApi({ "/soul-auth/device-login/revoke/": { status: 204 } });
+    await renderApp();
+    fireEvent.press(screen.getByTestId(`account-more-${CODE2}`));
+    fireEvent.press(await screen.findByTestId("forget-confirm"));
+    expect(await screen.findByTestId("login-bio")).toBeTruthy(); // 张三's card, 面容 still on
+    expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")).toBeUndefined();
+    expect(persistentStore.get(BIO_KEY)).toBe("face");
+  });
+
+  it("第五十批 C4: an older phone's single remembered account reads as a list of one; five are kept, the oldest goes", () => {
+    persistentStore.set(ACCOUNT_KEY, JSON.stringify({ code: CODE, name: "张三" }));
+    expect(rememberedAccounts()).toEqual([{ code: CODE, name: "张三" }]);
+    const codes = ["AB23CD45EF", "GH23JK45MN", "PQ23RS45TU", "VW23XY45ZA", "BC23DE45FG"];
+    for (const c of codes) rememberAccount(c, c);
+    expect(rememberedAccounts().map((a) => a.code)).toEqual([...codes].reverse());
+    expect(rememberedAccounts()).toHaveLength(ACCOUNTS_KEPT);
+    rememberAccount(codes[1], ""); // used again: first, its name kept
+    expect(rememberedAccounts()[0]).toEqual({ code: codes[1], name: codes[1] });
+  });
+
   it("S1: a number remembered without a name shows the card with the number only", async () => {
     rememberAccount(CODE, "");
     spendAutoPrompt();
     await renderApp();
     expect(screen.getByTestId("login-known")).toBeTruthy();
     expect(screen.queryByTestId("login-known-name")).toBeNull();
-    expect(screen.getByTestId("login-known-code")).toHaveTextContent(GROUPED);
+    expect(screen.getByTestId("login-known-code")).toHaveTextContent(MASKED);
   });
 });
 
@@ -1019,6 +1090,7 @@ describe("the number is shown grouped wherever it is shown", () => {
 
   it("a stored remembered account is the same ten characters that were signed in with", async () => {
     rememberAccount(CODE, "张三");
-    expect(JSON.parse(persistentStore.get(ACCOUNT_KEY) ?? "{}")).toEqual({ code: CODE, name: "张三" });
+    // A list since 第五十批 C4, used-last first.
+    expect(JSON.parse(persistentStore.get(ACCOUNT_KEY) ?? "[]")).toEqual([{ code: CODE, name: "张三" }]);
   });
 });

@@ -42,6 +42,31 @@ export function SwitchAccountSheet({ open, id, bio, onCancel, onConfirm }: { ope
   );
 }
 
+/**
+ * 「⋯」 on a remembered number (Design 第五十批 C4): 「{name} · {number}」, what forgetting does, an outline
+ * 「忘掉这个编号」 in the negative ink and 「取消」. Not a button on the row itself, so it is not hit by mistake.
+ */
+export function ForgetNumberSheet({ open, title, bio, onCancel, onConfirm }: { open: boolean; title: string; bio: string; onCancel: () => void; onConfirm: () => void }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  return (
+    <MfaSheet testID="forget-sheet" open={open} onClose={onCancel} closeLabel={t("soul_app.common.cancel")}>
+      <SheetTitle>{title}</SheetTitle>
+      <Txt variant="bodyLg">{t("soul_app.accounts.forget_body", { bio })}</Txt>
+      <Pressable testID="forget-confirm" accessibilityRole="button" onPress={onConfirm} style={[styles.forget, { borderColor: theme.hair2 }]}>
+        <Txt variant="bodyLg" style={{ color: theme.negInk }}>
+          {t("soul_app.accounts.forget")}
+        </Txt>
+      </Pressable>
+      <Pressable testID="forget-cancel" accessibilityRole="button" onPress={onCancel} style={styles.forgetCancel}>
+        <Txt variant="bodyLg" tone="muted">
+          {t("soul_app.common.cancel")}
+        </Txt>
+      </Pressable>
+    </MfaSheet>
+  );
+}
+
 /** 设置里「开启面容登录」: the current password first (being signed in is not being the owner), then the system verifies. */
 export function EnableBioSheet({ open, word, onClose, onEnabled }: { open: boolean; word: string; onClose: () => void; onEnabled: () => void }) {
   const { t } = useI18n();
@@ -245,6 +270,8 @@ export function BioAsk({ soulCode, welcomePending, onSettled }: { soulCode: stri
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  forget: { minHeight: 48, borderWidth: 1, borderRadius: 4, alignItems: "center", justifyContent: "center", marginTop: 8 },
+  forgetCancel: { minHeight: 48, alignItems: "center", justifyContent: "center" },
   sheetTitle: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
   row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   dim: { opacity: 0.6 },

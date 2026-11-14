@@ -11,22 +11,23 @@
 import { onSessionResume, onSessionSuspend } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Pressable, StyleSheet, View } from "react-native";
+import { BackHandler } from "react-native";
 
 import { OFFICER_BRAND } from "./brand";
 import { useBio } from "./bioLogin";
+import { DossierSeal, civOf } from "./dossierSeal";
 import { officerDevice } from "./deviceLogin";
+import { hallLabel } from "./rules";
 import { takeRestoredSession, useSession } from "./session";
-import { BrandMark, Button, Txt, useI18n, useTheme } from "./shared";
+import { BrandMark, LockView, useI18n } from "./shared";
 
 export const LOCK_AFTER_MS = 5 * 60 * 1000;
 
 type Phase = "off" | "cover" | "locked";
 
 export function AppLock() {
-  const theme = useTheme();
   const { t } = useI18n();
-  const { signOut } = useSession();
+  const { state, signOut } = useSession();
   const bio = useBio(false);
   const [coldStart] = useState(() => takeRestoredSession() && officerDevice.appLockOn());
   const [phase, setPhase] = useState<Phase>(coldStart ? "locked" : "off");
@@ -84,35 +85,22 @@ export function AppLock() {
   }, [phase]);
 
   if (phase === "off") return null;
+  const user = state.status === "signedIn" ? state.user : null;
+  // 第五十批 C5: the soul app's lock page (lockView.tsx) with the hall's seal at 64 -- a seal, one of the four places
+  // a civilization's colour goes. A hall whose civilization is not known has no seal: the brand mark then.
+  const seal = <DossierSeal testID="app-lock-seal" civilization={user?.tenant?.civilization} size={64} label={t("officer_app.seal.a11y")} />;
   return (
-    <View testID={phase === "locked" ? "app-lock" : "app-lock-cover"} accessibilityViewIsModal style={[styles.cover, { backgroundColor: theme.s0 }]}>
-      <BrandMark size={66} color={OFFICER_BRAND.mark} />
-      {phase === "locked" ? (
-        <View style={styles.body}>
-          <Txt variant="title" accessibilityRole="header" style={styles.center}>
-            {t("officer_app.bio_login.lock_title")}
-          </Txt>
-          {failed ? (
-            <Txt testID="app-lock-failed" accessibilityRole="alert" style={styles.center}>
-              {t("officer_app.bio_login.failed", { bio: bio.word })}
-            </Txt>
-          ) : null}
-          <Button testID="app-lock-bio" title={t("officer_app.bio_login.button", { bio: bio.word })} onPress={() => void unlock()} busy={busy} />
-          <Pressable testID="app-lock-use-password" accessibilityRole="link" disabled={busy} onPress={() => signOut({ keepUnsent: true })} style={styles.link}>
-            <Txt variant="bodyLg" style={styles.underline}>
-              {t("officer_app.bio_login.use_password")}
-            </Txt>
-          </Pressable>
-        </View>
-      ) : null}
-    </View>
+    <LockView
+      locked={phase === "locked"}
+      mark={civOf(user?.tenant?.civilization) ? seal : <BrandMark size={66} color={OFFICER_BRAND.mark} />}
+      title={t("officer_app.bio_login.lock_title")}
+      who={user ? t("officer_app.bio_login.lock_who", { name: user.display_name || user.username, hall: hallLabel(t, user.tenant) ?? "" }) : undefined}
+      failed={failed ? t("officer_app.bio_login.failed", { bio: bio.word }) : null}
+      unlockLabel={t("officer_app.bio_login.unlock", { bio: bio.word })}
+      onUnlock={() => void unlock()}
+      passwordLabel={t("officer_app.bio_login.use_password")}
+      onPassword={() => signOut({ keepUnsent: true })}
+      busy={busy}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  cover: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, elevation: 1000, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, gap: 24 },
-  body: { alignSelf: "stretch", alignItems: "stretch", gap: 16 },
-  center: { textAlign: "center" },
-  link: { minHeight: 44, alignItems: "center", justifyContent: "center" },
-  underline: { textDecorationLine: "underline" },
-});

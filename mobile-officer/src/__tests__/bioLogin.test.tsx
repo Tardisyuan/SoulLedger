@@ -187,6 +187,15 @@ describe("我的 › 指纹登录", () => {
     expect(officerDevice.bioEnabled()).toBe(false);
   });
 
+  it("第五十批 C5: reads 「用指纹登录」 with the two lines Design wrote, and is a switch", async () => {
+    bio.enrolled = true;
+    renderOfficer(<BioLoginBlock />);
+    await act(async () => {});
+    expect(screen.getByTestId("me-bio-login")).toHaveTextContent(/用指纹登录/);
+    expect(screen.getByTestId("me-bio-login")).toHaveTextContent(/只在这部手机上。回到 App 时验指纹，不用再输密码；批准或驳回前也要验。/);
+    expect(screen.getByTestId("me-bio-login")).not.toHaveTextContent(/[✓○]/);
+  });
+
   it("is greyed and does nothing on a phone with no finger or face enrolled", async () => {
     renderOfficer(<BioLoginBlock />);
     await act(async () => {});
@@ -270,6 +279,12 @@ describe("the app lock", () => {
     withProviders(<AppLock />);
     expect(screen.getByTestId("app-lock")).toBeTruthy();
     expect(await screen.findByTestId("app-lock-failed")).toBeTruthy();
+    // 第五十批 C5: the soul app's lock page -- the hall's seal at 64, 「灵魂簿已锁定」, 「{name} · {hall}」, 「用指纹解锁」.
+    expect(screen.getByText("灵魂簿已锁定")).toBeTruthy();
+    expect(await screen.findByTestId("app-lock-seal")).toBeTruthy();
+    expect(screen.getByTestId("app-lock-who")).toHaveTextContent("阎罗 · 酆都");
+    expect(screen.getByTestId("app-lock-bio")).toHaveTextContent("用指纹解锁");
+    expect(screen.getByTestId("app-lock-use-password")).toHaveTextContent("用密码登录");
     bio.success = true;
     fireEvent.press(screen.getByTestId("app-lock-bio"));
     await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());

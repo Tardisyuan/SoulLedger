@@ -512,6 +512,16 @@ export function hallLabel(
   return realmLabel(t, tenant?.code, tenant?.display_name ?? "") || undefined;
 }
 
+/**
+ * This hall's case numbers for a year begin with this (`CN-2026`): 查询's 「如 CN-2026」 (第五十批 C2). The same rule
+ * as the server's `case_number_prefix` (backend/apps/judgment/models.py): the tenant code's first segment, upper case,
+ * letters and digits only, at most 8; no hall is `SL`.
+ */
+export function caseNumberExample(tenantCode: string | null | undefined, year: number): string {
+  const head = (tenantCode ?? "").split("_")[0].toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  return `${head || "SL"}-${year}`;
+}
+
 // ── 审判详情的操作区(Design 第三十四批 O-09) ─────────────────────────────
 
 /**

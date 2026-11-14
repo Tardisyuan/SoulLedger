@@ -18,7 +18,7 @@ import { ActionButton, Row } from "../kit";
 import { MFA_TIMED_OUT, loginFailureKey } from "../rules";
 import { ForgotPassword } from "./account";
 import { forgetLastLogin, readLastLogin, useSession, type Hall } from "../session";
-import { BrandMark, Button, Input, Notice, Screen, SmallButton, Txt, space, useI18n } from "../shared";
+import { BrandMark, Button, Input, Notice, RememberedCard, Screen, Txt, space, useI18n } from "../shared";
 
 type Step = { name: "credentials" } | { name: "forgot" } | { name: "hall"; halls: Hall[] } | { name: "mfa"; pendingToken: string; recovery: boolean };
 
@@ -137,6 +137,11 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
         <View style={{ alignItems: "center", gap: space[3], paddingTop: space[5] }}>
           <BrandMark testID="login-mark" size={64} color={OFFICER_BRAND.mark} />
           <Txt variant="display">{t("officer_app.name")}</Txt>
+          {known && step.name === "credentials" ? (
+            <Txt testID="login-welcome" variant="body" tone="muted">
+              {t("auth.remembered.welcome")}
+            </Txt>
+          ) : null}
         </View>
 
         {failure ? (
@@ -149,26 +154,26 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
               <Notice tone="neutral" testID="login-reset-done">{`${t("auth.reset_done")}\n${t("auth.reset_done_body")}`}</Notice>
             ) : null}
             {known ? (
-              <Row
+              // 第五十批 C3: the card both apps share; the officer's account is masked as 「zh***g」.
+              <RememberedCard
                 testID="login-known"
-                minHeight={56}
-                title={known.display_name ? `${known.display_name} · ${maskUsername(known.username)}` : maskUsername(known.username)}
-                right={
-                  <SmallButton
-                    testID="login-switch"
-                    title={t("soul_app.login.switch")}
-                    onPress={() => {
-                      forgetLastLogin();
-                      // 「换一个账号」 takes the fingerprint sign-in with it, on the server too (audit §1 principle 2).
-                      if (bioOn) void officerDevice.revokeCredential();
-                      setBioOn(false);
-                      setKnown(null);
-                      setUsername("");
-                      setPassword("");
-                      setFailure(null);
-                    }}
-                  />
-                }
+                name={known.display_name || ""}
+                masked={maskUsername(known.username)}
+                disabled={busy}
+                link={{
+                  testID: "login-switch",
+                  label: t("officer_app.login.switch"),
+                  onPress: () => {
+                    forgetLastLogin();
+                    // 「换一个账号」 takes the fingerprint sign-in with it, on the server too (audit §1 principle 2).
+                    if (bioOn) void officerDevice.revokeCredential();
+                    setBioOn(false);
+                    setKnown(null);
+                    setUsername("");
+                    setPassword("");
+                    setFailure(null);
+                  },
+                }}
               />
             ) : (
               <Input testID="login-username" label={t("auth.account_or_email")} hint={t("auth.account_or_email_hint")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />

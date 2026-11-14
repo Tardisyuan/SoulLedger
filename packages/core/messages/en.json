@@ -62,7 +62,7 @@
     "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password.",
     "subtitle": "Sign in with the account your hall issued.",
     "account": "Account",
-    "account_or_email": "Account or email",
+    "account_or_email": "Username or email",
     "account_or_email_hint": "An email works once it is verified on your profile",
     "console": "SoulLedger · Officer console",
     "statute_eyebrow": "Today's statute",
@@ -114,6 +114,9 @@
         "eg": "The scales are at rest.",
         "gr": "The ferry has left the shore."
       }
+    },
+    "remembered": {
+      "welcome": "Welcome back"
     }
   },
   "mfa": {
@@ -6463,6 +6466,15 @@
         "not_in_wangsi": "You are no longer held in the City of Wrongful Death",
         "grievance_open": "A grievance on this case is already awaiting the City God"
       }
+    },
+    "accounts": {
+      "title": "Choose a number",
+      "hint": "Numbers this phone remembers. Tap one, then enter the password or use {{bio}}.",
+      "other": "Use another number",
+      "more": "More for {{name}}",
+      "forget": "Forget this number",
+      "forget_body": "Only this phone stops remembering the number; the account itself is not affected. {{bio}} sign-in for it is turned off too.",
+      "forgotten": "Forgot {{id}}"
     }
   },
   "soul_push": {
@@ -8150,7 +8162,7 @@
   "officer_app": {
     "bio_login": {
       "row": "Sign in with {{bio}}",
-      "row_sub": "This phone only. While on, coming back after 5 minutes away asks for your {{bio}} first.",
+      "row_sub": "This phone only. Use {{bio}} instead of the password when coming back to the app; it is also asked before approving or rejecting.",
       "row_unavailable": "No face or fingerprint set up on this phone",
       "enable_body": "Enter your current password, then confirm your {{bio}}.",
       "enable_ok": "Turn on",
@@ -8161,13 +8173,15 @@
       "locked": "Too many {{bio}} tries; the phone has locked it for now. Enter your password, or try again later.",
       "expired": "Sign-in with {{bio}} on this phone has ended. Enter your password.",
       "ask_title": "Use {{bio}} next time?",
-      "ask_body": "This phone only: no password when you open the app; approving or rejecting still asks. Any {{bio}} saved on the phone can sign in, so skip this on a shared phone.",
-      "ask_note": "You can turn it off later under Me.",
+      "ask_body": "This phone only — no password when coming back to Soul Ledger. Any {{bio}} saved on the phone can sign in, so skip this on a shared phone.",
+      "ask_note": "You can turn it off later in Me › Account security.",
       "ask_later": "Not now",
       "prompt_login": "Sign in without a password.",
       "prompt_unlock": "Unlock the app.",
-      "lock_title": "Locked",
-      "use_password": "Enter password"
+      "lock_title": "Soul Ledger is locked",
+      "use_password": "Sign in with password",
+      "lock_who": "{{name}} · {{hall}}",
+      "unlock": "Unlock with {{bio}}"
     },
     "biometric": {
       "setting": "Check {{bio}} before approving or rejecting",
@@ -8270,11 +8284,14 @@
       "souls": "Souls",
       "placeholder": "Name, number or case number",
       "read_only": "Read-only. Make changes at the desk.",
-      "no_souls_title": "Nothing found",
-      "no_souls_body": "Try another name or ID.",
-      "group_case": "Cases",
-      "no_soul": "No soul matches this name or number",
-      "recent": "Recently opened"
+      "clear_recent": "Clear",
+      "recent_empty": "No cases opened yet.",
+      "group_cases": "Cases · {{n}}",
+      "group_people": "People · {{n}}",
+      "see_all": "See all {{n}} ›",
+      "kind_soul": "Soul",
+      "kind_officer": "Officer",
+      "no_results_hint": "Search by name, or type the start of a case number, e.g. {{example}}."
     },
     "assist": {
       "entry": "Ask",
@@ -8287,7 +8304,7 @@
     },
     "detail": {
       "your_step": "Your step",
-      "next": "Next ({{n}}/{{total}})",
+      "next": "Next case",
       "cosign": "Add signer",
       "reject": "Reject",
       "approve": "Approve",
@@ -8309,7 +8326,13 @@
       "attachments": "Attachments · {{n}}",
       "open_system": "Opens in system viewer",
       "attachment_offline": "Connect to open",
-      "attachment_failed": "Couldn't open this attachment"
+      "attachment_failed": "Couldn't open this attachment",
+      "sealed": "Sealed · sent for approval",
+      "sealed_meta": "{{time}} · if rejected, the case reopens as a new one",
+      "next_meta": "{{name}} · {{n}} left",
+      "back_to_todo": "Back to To do",
+      "all_done": "That’s everything for today",
+      "next_aria": "Next case: {{name}}, {{n}} left"
     },
     "confirm": {
       "approve_title": "Approve this step?",
@@ -8407,7 +8430,8 @@
       "logout_pending_unsent": "Unsent replies on this device: {{unsent}}. Signing out removes them.",
       "logout_pending_drafts": "Reply drafts on this device: {{drafts}}. Signing out removes them.",
       "logout_retry": "Try sending first",
-      "logout_anyway": "Sign out anyway"
+      "logout_anyway": "Sign out anyway",
+      "security": "Account security"
     },
     "back": "Back",
     "areas": {
@@ -8439,7 +8463,8 @@
         "network": "Network error",
         "other": "Couldn't sign in. Try again later"
       },
-      "forgot_password": "Forgot password"
+      "forgot_password": "Forgot password",
+      "switch": "Use another account"
     },
     "mfa": {
       "title": "Two-step verification",

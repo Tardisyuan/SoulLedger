@@ -13,13 +13,14 @@
 import { onSessionResume, onSessionSuspend } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Pressable, StyleSheet, View } from "react-native";
+import { BackHandler } from "react-native";
 
 import { BrandMark } from "./brandMarkView";
 import { appLockOn } from "./deviceLogin";
 import { useI18n } from "./i18n";
+import { LockView } from "./lockView";
 import { takeRestoredSession, useSession } from "./session";
-import { Button, Txt, useTheme } from "./ui";
+import { useTheme } from "./ui";
 import { useBiometry } from "./useBiometry";
 
 export const LOCK_AFTER_MS = 5 * 60 * 1000;
@@ -89,43 +90,18 @@ export function AppLock() {
   }, [phase]);
 
   if (phase === "off") return null;
+  // 第五十批 C5: the page is the officer app's too (lockView.tsx); the words and the mark are this app's.
   return (
-    <View testID={phase === "locked" ? "app-lock" : "app-lock-cover"} accessibilityViewIsModal style={[styles.cover, { backgroundColor: theme.s0 }]}>
-      <BrandMark size={66} color={theme.ink} />
-      {phase === "locked" ? (
-        <View style={styles.body}>
-          <Txt variant="title" accessibilityRole="header" style={styles.center}>
-            {t("soul_app.lock.title")}
-          </Txt>
-          {failed ? (
-            <Txt testID="app-lock-failed" accessibilityRole="alert" style={styles.failed}>
-              {t("soul_app.bio.failed", { bio: bio.word })}
-            </Txt>
-          ) : null}
-          <Button
-            testID="app-lock-bio"
-            title={t(failed ? "soul_app.bio.retry" : "soul_app.bio.button", { bio: bio.word })}
-            onPress={() => void unlock()}
-            busy={busy}
-            style={styles.button}
-          />
-          <Pressable testID="app-lock-use-password" accessibilityRole="link" disabled={busy} onPress={signOut} style={styles.link}>
-            <Txt variant="bodyLg" style={styles.underline}>
-              {t("soul_app.login.use_password")}
-            </Txt>
-          </Pressable>
-        </View>
-      ) : null}
-    </View>
+    <LockView
+      locked={phase === "locked"}
+      mark={<BrandMark size={66} color={theme.ink} />}
+      title={t("soul_app.lock.title")}
+      failed={failed ? t("soul_app.bio.failed", { bio: bio.word }) : null}
+      unlockLabel={t(failed ? "soul_app.bio.retry" : "soul_app.bio.button", { bio: bio.word })}
+      onUnlock={() => void unlock()}
+      passwordLabel={t("soul_app.login.use_password")}
+      onPassword={signOut}
+      busy={busy}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  cover: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, elevation: 1000, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, gap: 24 },
-  body: { alignSelf: "stretch", alignItems: "stretch", gap: 16 },
-  center: { textAlign: "center" },
-  failed: { textAlign: "center" },
-  button: { alignSelf: "stretch" },
-  link: { minHeight: 44, alignItems: "center", justifyContent: "center" },
-  underline: { textDecorationLine: "underline" },
-});
