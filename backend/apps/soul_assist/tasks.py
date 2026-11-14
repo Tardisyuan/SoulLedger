@@ -1,7 +1,9 @@
 from celery import shared_task
 
+from apps.scheduler.registry import time_limits
 
-@shared_task(name="soul_assist.purge_history")
+
+@shared_task(name="soul_assist.purge_history", **time_limits("soul_assist.purge_history"))
 def purge_history():
     """超过留存期的助手会话真删。登记在 apps/scheduler/registry.py。"""
     from apps.soul_assist import service

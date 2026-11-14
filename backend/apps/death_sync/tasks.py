@@ -4,8 +4,10 @@ Celery tasks for death sync housekeeping.
 from celery import shared_task
 from django.utils import timezone
 
+from apps.scheduler.registry import time_limits
 
-@shared_task(name="death_sync.cleanup_old_requests_for_tenant")
+
+@shared_task(name="death_sync.cleanup_old_requests_for_tenant", **time_limits("death_sync.cleanup_old_requests_for_tenant"))
 def cleanup_old_requests_for_tenant(tenant_id: str, days=None, batch_size=1000):
     """
     Delete DeathRegistrationRequest records older than N days, for exactly

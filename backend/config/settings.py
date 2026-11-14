@@ -498,8 +498,9 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 # Global task time limits (be-obs 8, 2026-11-14). Without them a wedged task holds one of the worker's two
 # slots (docker-compose.yml `--concurrency=2`) forever. Soft raises SoftTimeLimitExceeded inside the task
-# so it can clean up; hard kills the child 60 s later. A task that legitimately runs longer sets its own
-# `soft_time_limit` / `time_limit` on the decorator.
+# so it can clean up; hard kills the child 60 s later. Every scheduled job overrides both from its registry
+# max_runtime (`apps/scheduler/registry.py::time_limits`); other long tasks set their own on the decorator
+# (listed in backend/tests/test_task_time_limits.py).
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "300"))
 CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "360"))
 

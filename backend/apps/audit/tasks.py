@@ -1,7 +1,9 @@
 from celery import shared_task
 
+from apps.scheduler.registry import time_limits
 
-@shared_task(name="audit.prune_logs_for_tenant")
+
+@shared_task(name="audit.prune_logs_for_tenant", **time_limits("audit.prune_logs_for_tenant"))
 def prune_logs_for_tenant(tenant_id: str):
     """One tenant's audit and login rows past their retention window. Registered in apps/scheduler/registry.py."""
     from apps.audit.retention import prune_logs
@@ -16,7 +18,7 @@ def prune_logs_for_tenant(tenant_id: str):
         clear_current_tenant()
 
 
-@shared_task(name="audit.prune_untenanted_logs")
+@shared_task(name="audit.prune_untenanted_logs", **time_limits("audit.prune_untenanted_logs"))
 def prune_untenanted_logs():
     """The rows no tenant owns (audit `tenant=NULL`; login rows with no user or a tenant-less one)."""
     from apps.audit.retention import prune_logs
@@ -24,7 +26,7 @@ def prune_untenanted_logs():
     return prune_logs(None)
 
 
-@shared_task(name="audit.prune_retained_data")
+@shared_task(name="audit.prune_retained_data", **time_limits("audit.prune_retained_data"))
 def prune_retained_data():
     """Operational tables past their retention window (apps/core/retention.py). Registered in apps/scheduler/registry.py."""
     from apps.core.retention import prune_retained_data as run

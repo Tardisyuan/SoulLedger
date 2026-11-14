@@ -6,6 +6,8 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
+from apps.scheduler.registry import time_limits
+
 # 旧的标记方式:往 `notes` 末尾追加这一行。现在只有 judgment/0037 读它(把存量行迁到
 # `stale_since` 并删掉这一行);留在这里是为了那份迁移与测试有同一个字面量。
 STALE_MARKER = "[SYSTEM] Flagged as stale"
@@ -25,7 +27,7 @@ def _flush_stale(chunk):
     return len(chunk)
 
 
-@shared_task(name="judgment.auto_conclude_stale_for_tenant")
+@shared_task(name="judgment.auto_conclude_stale_for_tenant", **time_limits("judgment.auto_conclude_stale_for_tenant"))
 def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int = 30):
     """
     Flag stale pending judgments for exactly one tenant.

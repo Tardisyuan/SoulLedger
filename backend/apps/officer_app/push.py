@@ -23,6 +23,7 @@ from django.utils import timezone
 from apps.authentication import signin_sessions
 from apps.officer_app import todo
 from apps.officer_app.models import OfficerPushDelivery, OfficerPushDevice
+from apps.scheduler.registry import time_limits
 from apps.soul_push.expo import RECEIPT_BATCH, PushRequestError, PushTransientError, get_sender
 from apps.soul_push.models import PushStatus
 from apps.soul_push.services import DEVICE_NOT_REGISTERED, RECEIPT_DELAY, RECEIPT_EXPIRY, enabled
@@ -208,7 +209,7 @@ def check_receipts(now=None, sender=None, limit=RECEIPT_BATCH):
     return len(rows)
 
 
-@shared_task(name="officer_app.check_receipts")
+@shared_task(name="officer_app.check_receipts", **time_limits("officer_app.check_receipts"))
 def check_receipts_task():
     """登记在 apps/scheduler/registry.py,与 `soul_push.sweep` 同一节奏。"""
     return check_receipts()

@@ -5,8 +5,10 @@ from celery import shared_task
 from django.core.management import call_command
 from django.utils import timezone
 
+from apps.scheduler.registry import time_limits
 
-@shared_task(name="authentication.flush_expired_tokens")
+
+@shared_task(name="authentication.flush_expired_tokens", **time_limits("authentication.flush_expired_tokens"))
 def flush_expired_tokens():
     """Delete expired refresh-token rows (IS-18).
 
@@ -22,7 +24,7 @@ def flush_expired_tokens():
 SOUL_SIGN_IN_KEEP_DAYS = 90
 
 
-@shared_task(name="authentication.prune_soul_sign_ins")
+@shared_task(name="authentication.prune_soul_sign_ins", **time_limits("authentication.prune_soul_sign_ins"))
 def prune_soul_sign_ins():
     """删 90 天前的灵魂登录记录(`LoginLog` 里 `soul:` 开头的行)和早已不活动的登录设备行。
 
@@ -39,7 +41,7 @@ def prune_soul_sign_ins():
     return {"sign_in_logs": logs, "sessions": sessions}
 
 
-@shared_task(name="authentication.prune_expired_push_registrations")
+@shared_task(name="authentication.prune_expired_push_registrations", **time_limits("authentication.prune_expired_push_registrations"))
 def prune_expired_push_registrations():
     """登录已到期、又没人在那台手机上重新登录的推送登记:停用,锁屏不再收到。
 

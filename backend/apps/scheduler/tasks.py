@@ -8,22 +8,24 @@ covers the other case, a job that beat fires but nothing runs.
 """
 from celery import shared_task
 
+from apps.scheduler.registry import time_limits
 
-@shared_task(name="scheduler.reap_stale_runs")
+
+@shared_task(name="scheduler.reap_stale_runs", **time_limits("scheduler.reap_stale_runs"))
 def reap_stale_runs():
     from apps.scheduler.services import reap_stale_runs as _reap
 
     return _reap()
 
 
-@shared_task(name="scheduler.check_overdue")
+@shared_task(name="scheduler.check_overdue", **time_limits("scheduler.check_overdue"))
 def check_overdue():
     from apps.scheduler.services import alert_overdue
 
     return {"alerted": alert_overdue()}
 
 
-@shared_task(name="scheduler.prune_runs")
+@shared_task(name="scheduler.prune_runs", **time_limits("scheduler.prune_runs"))
 def prune_runs():
     from apps.scheduler.services import prune_runs as _prune
 

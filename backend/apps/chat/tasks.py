@@ -1,12 +1,14 @@
 """书信的定时任务。登记在 apps/scheduler/registry.py,由调度基类记 TaskRun、加锁、告警。"""
 from celery import shared_task
 
+from apps.scheduler.registry import time_limits
+
 
 class InboxReconcileError(Exception):
     """有房间读不到 —— 让这次运行记 FAILURE 并告警。"""
 
 
-@shared_task(name="chat.reconcile_inbox")
+@shared_task(name="chat.reconcile_inbox", **time_limits("chat.reconcile_inbox"))
 def reconcile_inbox():
     """每天把殿司收件箱的「谁最后说话」按 Synapse 对一遍(`services.reconcile_all_inboxes`)。
 
@@ -27,7 +29,7 @@ def reconcile_inbox():
     return {"reconciled": done}
 
 
-@shared_task(name="chat.cleanup_unsent_images")
+@shared_task(name="chat.cleanup_unsent_images", **time_limits("chat.cleanup_unsent_images"))
 def cleanup_unsent_images():
     """上传超过 24 小时仍未发出的书信图片,行与文件真删(`images.purge_all_stale`)。
     GLOBAL:`ChatImage` 没有租户列(经会话),这里本来就是要扫全部。已发出的不动。"""
@@ -40,7 +42,7 @@ class RoomSyncError(Exception):
     """有房间写不成 —— 让这次运行记 FAILURE 并告警。"""
 
 
-@shared_task(name="chat.sync_all_rooms")
+@shared_task(name="chat.sync_all_rooms", **time_limits("chat.sync_all_rooms"))
 def sync_all_rooms():
     """每天把所有房间的发言权对一遍(`services.sync_all_rooms`):入队失败的同步、到期的禁言在这里补上。
     没变的房间只有一次 GET,不写。聊天没配置同 `reconcile_inbox`:记 SUCCESS,不告警。"""

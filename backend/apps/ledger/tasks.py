@@ -13,6 +13,8 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 
+from apps.scheduler.registry import time_limits
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +35,7 @@ def _souls_in_pk_pages(qs, size: int = 500):
         last = batch[-1].pk
 
 
-@shared_task(name="ledger.recalculate_tenant")
+@shared_task(name="ledger.recalculate_tenant", **time_limits("ledger.recalculate_tenant"))
 def recalculate_tenant_ledgers(tenant_id: str):
     """
     Recalculate the ledger for every soul belonging to exactly one tenant.
@@ -80,7 +82,7 @@ def recalculate_tenant_ledgers(tenant_id: str):
 # above calls per soul.
 
 
-@shared_task(name="ledger.snapshot_balance_for_tenant")
+@shared_task(name="ledger.snapshot_balance_for_tenant", **time_limits("ledger.snapshot_balance_for_tenant"))
 def snapshot_balance_for_tenant(tenant_id: str):
     """Write (overwrite) this month's balance snapshot for exactly one tenant.
 
@@ -101,7 +103,7 @@ def snapshot_balance_for_tenant(tenant_id: str):
     }
 
 
-@shared_task(name="ledger.snapshot_census_for_tenant")
+@shared_task(name="ledger.snapshot_census_for_tenant", **time_limits("ledger.snapshot_census_for_tenant"))
 def snapshot_census_for_tenant(tenant_id: str):
     """Write (overwrite) today's soul census for exactly one tenant — idempotent per day.
 
