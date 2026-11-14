@@ -137,6 +137,16 @@ def test_the_run_leaves_a_trace(world, cn_tenant, settings):
     assert trace.changes["audit_cutoff"]
 
 
+def test_a_purge_record_outlives_any_retention_window(cn_tenant, settings):
+    """`Soul.purge()`'s manifest row is kept forever (user, 2026-11-14); a plain row of the same age goes."""
+    from apps.audit.retention import SOUL_PURGE_RESOURCE
+
+    settings.AUDIT_LOG_RETENTION_DAYS = 1
+    purge, plain = _audit(cn_tenant, OLD, tag=SOUL_PURGE_RESOURCE), _audit(cn_tenant, OLD)
+    prune_logs(cn_tenant)
+    assert _alive(AuditLog, [purge, plain]) == {purge}
+
+
 def test_the_jobs_are_in_the_schedule_registry():
     from apps.scheduler import registry
 
