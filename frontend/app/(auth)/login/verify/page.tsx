@@ -14,6 +14,8 @@ import { defaultViewRoute } from "@/src/lib/defaultView";
 import { goTo, replaceWith } from "@/src/lib/navigate";
 import { clearMfaPending, readMfaPending, type MfaPending } from "@/src/lib/mfaPending";
 import { takeReturnTo } from "@/src/lib/returnTo";
+import { settleLastUsername } from "@/src/lib/lastUsername";
+import { announceSession } from "@/src/lib/sessionChannel";
 import { cn } from "@/lib/utils";
 import { responseCode, responseData, responseStatus, fetchFailureOf } from "@soulledger/core/api/client";
 
@@ -90,6 +92,9 @@ export default function LoginVerifyPage() {
       // 「保持登录」 was ticked (or not) on the first step; it rides along in the hand-over (W2).
       setRefreshToken(res.data.refresh, pending.remember);
       setUser(res.data.user);
+      // The account name is kept only if 「保持登录」 was ticked on the first step (W3); other tabs follow (W4).
+      settleLastUsername(res.data.user?.username ?? pending.username, pending.remember);
+      announceSession("signed-in");
       showToast(t("auth.login_success"), "success");
       goTo(takeReturnTo() ?? (await defaultViewRoute(res.data.user)));
       return;
@@ -220,6 +225,20 @@ export default function LoginVerifyPage() {
         </div>
 
         {notice}
+
+        {/* For password managers (W5): the username beside the code field is what lets them match the account's
+            stored TOTP entry. Read-only, out of sight and out of the tab order; not type="hidden", which they skip. */}
+        <input
+          type="text"
+          name="username"
+          autoComplete="username"
+          value={pending.username}
+          readOnly
+          tabIndex={-1}
+          aria-hidden="true"
+          className="sr-only"
+          data-testid="mfa-username"
+        />
 
         <CodeInput
           ref={inputRef}

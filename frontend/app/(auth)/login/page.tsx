@@ -18,6 +18,8 @@ import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 import { storeMfaPending } from "@/src/lib/mfaPending";
 import { rememberReturnTo, takeReturnTo } from "@/src/lib/returnTo";
+import { forgetLastUsername, readLastUsername, settleLastUsername } from "@/src/lib/lastUsername";
+import { announceSession } from "@/src/lib/sessionChannel";
 import { cn } from "@/lib/utils";
 import { responseCode, responseData, responseStatus, fetchFailureOf } from "@soulledger/core/api/client";
 
@@ -47,6 +49,8 @@ import { responseCode, responseData, responseStatus, fetchFailureOf } from "@sou
  *   `sessionStorage` (`src/lib/mfaPending.ts`) and the page hands over to `/login/verify`, which
  *   wears the same shell (`src/components/auth/LoginShell.tsx` — the two-column skeleton, the
  *   statute and the four civilizations moved there verbatim so both steps share them).
+ * - 记住账号名(W3,`src/lib/lastUsername.ts`):勾了「保持登录」的上一次登录留下账号名,这一页预填它、勾上
+ *   「保持登录」、焦点落在密码框,账号框下出「换个账号」。登录成功告诉同一浏览器的其他标签页(W4)。
  */
 
 /** The tenant code this device last signed in to — only ever used to mark a row. */
@@ -184,6 +188,24 @@ function PasswordLogin() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [remember, setRemember] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  /** The username came from this device's memory (W3): 「换个账号」 is offered. */
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    const last = readLastUsername();
+    if (!last) return;
+    setForm((f) => ({ ...f, username: last }));
+    // It was only kept because 「保持登录」 was ticked; tick it again, or the next sign-in would forget it.
+    setRemember(true);
+    setPrefilled(true);
+    requestAnimationFrame(() => document.getElementById("login-password")?.focus());
+  }, []);
+  const switchAccount = () => {
+    forgetLastUsername();
+    setPrefilled(false);
+    setRemember(false);
+    setForm({ username: "", password: "" });
+    requestAnimationFrame(() => document.getElementById("login-username")?.focus());
+  };
   // `/login?help=1` (from the 忘记密码 page's "notify an administrator") opens the older help form.
   // Read after mount, not via useSearchParams: that hook would force this whole page behind Suspense.
   useEffect(() => {
@@ -263,6 +285,8 @@ function PasswordLogin() {
         setUser(tokens.user);
         writeLastTenant(tokens.user.tenant?.code);
       }
+      settleLastUsername(tokens.user?.username ?? form.username, remember);
+      announceSession("signed-in");
 
       showToast(t("auth.login_success"), "success");
       // The operator's saved 默认视图, asked of the server with the token just
@@ -412,6 +436,16 @@ function PasswordLogin() {
             disabled={loading}
             required
           />
+          {prefilled ? (
+            <button
+              type="button"
+              onClick={switchAccount}
+              data-testid="login-switch-account"
+              className="-mt-2 inline-flex min-h-11 items-center self-start text-xs text-[oklch(var(--color-ink))] underline underline-offset-2"
+            >
+              {t("auth.switch_account")}
+            </button>
+          ) : null}
           <div className="relative">
             <TextField
               id="login-password"

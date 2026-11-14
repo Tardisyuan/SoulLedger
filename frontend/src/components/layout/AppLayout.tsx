@@ -39,6 +39,7 @@ import { useHallViewExpired } from "@/src/components/impersonation/hallViewExpir
 import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { leaveGoodbye } from "@/src/lib/goodbye";
+import { announceSession } from "@/src/lib/sessionChannel";
 
 /**
  * 全站唯一的壳(Design 第三十批 第 4 步「五门」):左侧门栏(`DoorRail`,64)+ 内容栏。内容栏自上而下:
@@ -122,6 +123,8 @@ export function AppLayout({ children, bare = false }: { children: React.ReactNod
     // 先给「再会」页留下名字与文明(退出之后就读不到了),再退出、去 /goodbye(2026-11-10)。
     leaveGoodbye({ name: user?.display_name || user?.username, civ: civSkinOf(user?.tenant?.code ?? null) });
     logout();
+    // The other tabs of this browser follow (W4): they drop their copy and go to /login.
+    announceSession("signed-out");
     router.push("/goodbye");
   };
 

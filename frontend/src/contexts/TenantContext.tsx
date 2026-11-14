@@ -20,6 +20,8 @@ import {
 } from "@soulledger/core/platform";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { clearReturnTo } from "@/src/lib/returnTo";
+import { forgetLastUsername } from "@/src/lib/lastUsername";
+import { onSessionMessage } from "@/src/lib/sessionChannel";
 import { prefersReducedMotion } from "@/lib/motion";
 
 export { civSkinOf };
@@ -326,7 +328,32 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     host.secure.remove(REFRESH_TOKEN_KEY);
     // A page remembered for "back after sign-in" is this operator's, not the next one's (W1).
     clearReturnTo();
+    // So is the account name the sign-in form would have filled in (W3).
+    forgetLastUsername();
   }, [setUser]);
+
+  /**
+   * Another tab of this browser signed out or in (W4, `src/lib/sessionChannel.ts`). Signed out: this tab's
+   * own copy of the session (the access token is per tab) goes too, and it leaves for /login unless it is
+   * already on the way in or on the farewell page. Signed in: this tab's old access token would keep the
+   * previous session alive here for up to 30 minutes, so it is dropped and the page reloads — the refresh
+   * cookie, which the other tab just replaced, brings in the new one. The sender never hears its own message.
+   */
+  useEffect(
+    () =>
+      onSessionMessage((message) => {
+        const path = window.location.pathname;
+        if (message === "signed-in") {
+          platform().session.remove(ACCESS_TOKEN_KEY);
+          window.location.reload();
+          return;
+        }
+        logout();
+        if (path === "/login" || path.startsWith("/login/") || path === "/goodbye") return;
+        window.location.assign("/login");
+      }),
+    [logout]
+  );
 
   const value = useMemo(
     () => ({
