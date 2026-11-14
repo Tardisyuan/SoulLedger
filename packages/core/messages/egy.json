@@ -2820,7 +2820,8 @@
       "soul": "Ba",
       "case": "Ren Sep",
       "verdict": "Wedja",
-      "note": "«Khetem»: Hab Min."
+      "note": "«Khetem»: Hab Min.",
+      "back": "Iyi"
     }
   },
   "audit": {
@@ -9378,7 +9379,8 @@
       "tests_caption": "Hesb {{date}} · 3: Chromium, Firefox, Mobile Chrome",
       "lede": "Django Wa, Medjat 3 (Medjat Wesekhet, Medjat Ba, Medjat Sab). Hep Duat 4: Em Per Hemsu. packages/core: Menf, hooks, Smen Ta Hena Medu · Medjat 3 Neb.",
       "quality": "Iri Maa: Sesh Menkh (Medu Haunebut)",
-      "system": "Kheperu Hemsu Hena Hep (SLO)"
+      "system": "Kheperu Hemsu Hena Hep (SLO)",
+      "contact": "Medu? Wat Er Sab: Em README"
     },
     "tour": {
       "title": "Ankh Ba Wa",
@@ -9550,7 +9552,8 @@
           "body": "Fekh: Er Per Wehem, Wehem Iyi Wenen. Wehem Iyi Hena Fekh Neb: Sab Hery Wa. Sesh Was: Nen Redi Ren 2 Pen Er Iaut Ky; Per Hemsu: Khesef Sep Sen."
         }
       },
-      "replay": "Wehem Maa Shem"
+      "replay": "Wehem Maa Shem",
+      "try_overreach": "Wen Sep Wesekhet Ky"
     },
     "enter": {
       "entering": "Aq Er {{civ}}",
@@ -9640,7 +9643,8 @@
       "guard_body": "Wat 6 Mi Sesh Wer (Sab Hery): Wesekhet Er Wesekhet, Ren Was, Khesef Er Hery Was, Tash, Medu Maa, Per Wehem.",
       "guard_cta": "Maa Sau",
       "inside_cta": "Maa Per Hemes Er Per Hemes · Wat Henen",
-      "inside_sub": "Wesekhet 2 Maa Sesh Wa · Wat Henen Wa · At 2"
+      "inside_sub": "Wesekhet 2 Maa Sesh Wa · Wat Henen Wa · At 2",
+      "start_here": "Shaa Em Dy"
     },
     "role_judge_desc": "Hru Sab: Shesep Sep, Khetem Wedja Hena Sekher, Hesy.",
     "assist_guard": {
@@ -10321,7 +10325,8 @@
       "undone": "Fekh-N · {{name}} Em Medjat Sepu Wehem",
       "commit_error": "Wedja {{name}} Nen Hab; Sep Em Medjat Sepu Wehem.",
       "needs_reason": "«{{verdict}}»: Setep Khet; Khetem Em Sesh Neb.",
-      "to_dossier": "Sesh Khet Em Sesh Neb →"
+      "to_dossier": "Sesh Khet Em Sesh Neb →",
+      "reason_hint": "Sesh Khet ↗"
     }
   },
   "zongbu": {
