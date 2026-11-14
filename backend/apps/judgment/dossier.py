@@ -9,26 +9,32 @@
   同一个 `judgment.read`);嵌入的灵魂走 `SoulViewSet` 的 queryset 与 `soul.read`,和 `GET /souls/{id}/` 同一个答案,
   看不到就是 `soul: null, soul_redacted: true`。
 - `actions` 读 `claims.allowed_actions`,与认领 / 释放 / 结案同一组断言。
-- `whereabouts.spine` 是前端 `frontend/src/components/dossier/spineModel.ts::spineNow` 的移植,形状逐字段相同;
-  前端那份暂时还在(案台还没换到这个端点),两份改一份要改两处。
+- `whereabouts.spine` 是脊上的点的唯一算法(此前前端 `spineModel.ts::spineNow` 用正则从 `court` 里抠殿号,
+  2026-11-14 删了,案台与卷宗页都读这里)。
+- `GET /dossiers/desk/`(`desk`):案台一屏 —— 四组头几件 + 计数 + 本月已结,一个请求替掉此前的六个。
 """
 import hashlib
 import json
 
 from django.db.models import TextChoices
 from django.utils.cache import get_conditional_response, patch_vary_headers
-from drf_spectacular.utils import extend_schema, extend_schema_field
+from django_filters.utils import translate_validation
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import serializers
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.tenant import scope_to_tenant
-from apps.judgment import claims
+from apps.judgment import claims, hall_stats, sources
 from apps.judgment.claims import ferry_barred
 from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED, JudgmentCitation
-from apps.judgment.serializers import JudgmentListSerializer, _locale_from
-from apps.judgment.views import JudgmentViewSet
+from apps.judgment.serializers import JudgmentListSerializer, JudgmentQueueCountsSerializer, QueueGroup, _locale_from
+from apps.judgment.views import PENDING, JudgmentFilter, JudgmentViewSet, group_q, queue_counts_of
 from apps.souls.models import Soul
 from apps.souls.serializers import SoulRecordSerializer, SoulSerializer
+
+#: 案台每组带几件(与 `/judgment/` 的一页同长,`REST_FRAMEWORK.PAGE_SIZE`)。
+DESK_ROWS = 20
 
 # ---------------------------------------------------------------------------
 # 脊上的「现在」(spineModel.ts 的移植)
@@ -253,10 +259,29 @@ class DossierRowSerializer(JudgmentListSerializer):
     """案台一行(be-scale 的 `DeskRowSerializer`):列表的字段规则,只带一行要显示的这些。"""
 
     class Meta(JudgmentListSerializer.Meta):
+        # 后七个是行上的标签与第二行要的(`frontend/src/components/desk/deskRules.ts` 的 deskTag / rowNotes /
+        # heldBeforeClaim):期限、退回重审、待宣判、杜阿特、候至、结案拦阻、枉死。
         fields = [
             "id", "case_number", "soul", "soul_name", "civilization", "court", "source",
             "deadline_at", "is_overdue", "claimed_by", "claimed_by_name", "deferred_at", "stale_since",
+            "deadline_remaining_seconds", "retrial_of", "is_final", "duat_stage", "held_until",
+            "conclude_refusal", "untimely",
         ]
+
+
+class DeskGroupSerializer(serializers.Serializer):
+    group = serializers.ChoiceField(choices=QueueGroup.CHOICES)
+    #: 这一组在当前 `source` 下的件数(与 `queue-counts?source=` 的组数同一条查询);`rows` 只是头 `DESK_ROWS` 件。
+    total = serializers.IntegerField()
+    rows = DossierRowSerializer(many=True)
+
+
+class DossierDeskSerializer(serializers.Serializer):
+    """`GET /dossiers/desk/`:案台一屏 —— 四组各头几件 + 不筛的计数(概览、来源 chip)+ 本月已结的百分比。"""
+
+    groups = DeskGroupSerializer(many=True)
+    counts = JudgmentQueueCountsSerializer()
+    month_done_pct = serializers.IntegerField(allow_null=True)
 
 
 # ---------------------------------------------------------------------------
@@ -270,13 +295,20 @@ class DossierViewSet(JudgmentViewSet):
 
     http_method_names = ["get", "head", "options"]
     # 父类的四个里只有这两个挂在这里(暂居地对灵魂的审判进展,同 `/judgment/` 的 list / retrieve)。
+    # `desk` 不在里面:它是待办队列,与 `next_pending`、`queue-counts` 同一个范围 —— 原属租户对暂居地的案子
+    # 什么都做不了。此前四个 `?group=` 列表走 list 的范围而组数走 queue-counts 的,两者在暂居的案子上对不上。
     residence_read_actions = ("list", "retrieve")
+    # `desk` 读的就是 list + queue-counts + hall-stats,三者都是 `judgment.read`。
+    extra_permissions = {**JudgmentViewSet.extra_permissions, "desk": ["judgment.read"]}
 
     def get_queryset(self):
         qs = super().get_queryset()
         if self.action == "list":
             return qs.select_related(None).select_related("soul", "claimed_by", "tenant")
-        return qs.prefetch_related(None).prefetch_related("citations__statute")
+        if self.action == "retrieve":
+            return qs.prefetch_related(None).prefetch_related("citations__statute")
+        # desk:父类的 select_related 原样留着 —— 行上的 `conclude_refusal` 读城隍 / 流程 / 灵魂,与 `/judgment/` 列表同一份。
+        return qs
 
     def get_serializer_class(self):
         return DossierRowSerializer if self.action == "list" else DossierSerializer
@@ -308,3 +340,47 @@ class DossierViewSet(JudgmentViewSet):
         response["Cache-Control"] = "private, no-cache"
         patch_vary_headers(response, ("Authorization", "Accept-Language"))
         return response
+
+    @extend_schema(
+        responses=DossierDeskSerializer,
+        parameters=[OpenApiParameter(
+            "source", str, enum=sources.VALUES,
+            description="只摞这一个来源的案子;组数跟着收窄,`counts` 不随它变(概览与来源 chip 用不筛的数)。",
+        )],
+    )
+    # 挂在 `config/urls.py` 的 `dossiers/desk/`(不经路由器);`@action` 让暂居只读契约看得见它只接 GET。
+    @action(detail=False, methods=["get"], url_path="desk", pagination_class=None, filter_backends=[])
+    def desk(self, request):
+        """案台一屏,一个请求:此前是四个 `GET /judgment/?group=…`、`queue-counts`(筛与不筛各一)和 `hall-stats`。
+        范围、筛选、计数都调 `/judgment/` 的同一组函数(`JudgmentFilter`、`group_q`、`queue_counts_of`、
+        `hall_stats.overview`),所以三处的数不会对不上;四组出自同一个快照,服务端互斥,不用前端再去重。"""
+        base = self.get_queryset()
+
+        def pending(params):
+            filterset = JudgmentFilter(params, queryset=base.filter(PENDING), request=request)
+            if not filterset.is_valid():
+                raise translate_validation(filterset.errors)
+            return filterset.qs
+
+        source = request.query_params.get("source")
+        everything = pending({})
+        counts = queue_counts_of(everything, request.user)
+        counts["elsewhere"] = sources.elsewhere_counts(request)
+        narrowed = pending({"source": source}) if source else everything
+        totals = queue_counts_of(narrowed, request.user) if source else counts
+
+        # ponytail: 每组头 DESK_ROWS 件(与此前每组取第一页同长);一组上百件时加游标。
+        rows = {
+            group: list(narrowed.filter(group_q(group, request.user)).order_by("created_at", "pk")[:DESK_ROWS])
+            for group, _label in QueueGroup.CHOICES
+        }
+        sources.attach([j for page in rows.values() for j in page])
+        context = self.get_serializer_context()
+        return Response({
+            "groups": [
+                {"group": group, "total": totals[group], "rows": DossierRowSerializer(page, many=True, context=context).data}
+                for group, page in rows.items()
+            ],
+            "counts": counts,
+            "month_done_pct": hall_stats.overview(base, PENDING, getattr(request, "tenant", None))["month_done_pct"],
+        })
