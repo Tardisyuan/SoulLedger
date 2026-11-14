@@ -517,11 +517,13 @@ describe("LoginPage · 记住的账号 (W3; Design 第五十二批 F4)", () => {
     render(<LoginPage />);
     const card = await screen.findByTestId("login-remembered");
     expect(screen.getByTestId("login-remembered-name")).toHaveTextContent("阎罗");
-    expect(screen.getByTestId("login-remembered-account")).toHaveTextContent(/^ya\*\*\*a$/);
+    expect(screen.getByTestId("login-remembered-account")).toHaveTextContent(/^y\*\*\*a$/);
     expect(card).toHaveTextContent(/^阎/);
     // Not a prefilled box one would edit: no username box at all, and the full name is nowhere on the page.
     expect(screen.queryByLabelText(/auth\.account/)).toBeNull();
-    expect(screen.queryByDisplayValue("yama")).toBeNull();
+    // The full name exists only in the hidden field password managers pair with (it is in localStorage anyway).
+    expect(screen.getByDisplayValue("yama")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByDisplayValue("yama")).toHaveAttribute("autocomplete", "username");
     expect(screen.getByText("auth.remembered.welcome")).toBeTruthy();
     expect(rememberBox().checked).toBe(true);
     expect(password().compareDocumentPosition(rememberBox()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -544,7 +546,7 @@ describe("LoginPage · 记住的账号 (W3; Design 第五十二批 F4)", () => {
   it("an older device's plain name is moved to the new shape: the card shows the masked account without a name", async () => {
     localStorage.setItem("soulledger_last_username", "yama");
     render(<LoginPage />);
-    expect(await screen.findByTestId("login-remembered-account")).toHaveTextContent("ya***a");
+    expect(await screen.findByTestId("login-remembered-account")).toHaveTextContent("y***a");
     expect(screen.queryByTestId("login-remembered-name")).toBeNull();
     expect(kept()).toEqual({ username: "yama", display_name: "" });
   });

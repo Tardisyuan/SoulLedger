@@ -443,7 +443,7 @@ function PasswordLogin() {
               <Avatar name={known.display_name || known.username} size={44} />
               <div className="min-w-0 flex-1">
                 {known.display_name ? (
-                  <p data-testid="login-remembered-name" className="truncate text-md font-medium text-[oklch(var(--color-ink))]">
+                  <p data-testid="login-remembered-name" title={known.display_name} className="truncate text-md font-medium text-[oklch(var(--color-ink))]">
                     {known.display_name}
                   </p>
                 ) : null}

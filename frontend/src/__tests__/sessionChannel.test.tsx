@@ -10,7 +10,7 @@ import { createElement } from "react";
 import { permApi } from "@soulledger/core/api";
 import { getAccessToken, setAccessToken } from "@soulledger/core/platform";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
-import { SESSION_CHANNEL, announceSession, onSessionMessage } from "@/src/lib/sessionChannel";
+import { SESSION_CHANNEL, announceSession, onSessionMessage, resetSessionChannelForTests } from "@/src/lib/sessionChannel";
 import { LAST_USERNAME_KEY, readLastAccount, settleLastUsername } from "@/src/lib/lastUsername";
 
 jest.mock("@soulledger/core/api", () => ({ permApi: { myRolePermissions: jest.fn() } }));
@@ -19,6 +19,7 @@ class FakeChannel {
   static open: FakeChannel[] = [];
   static posted: unknown[] = [];
   onmessage: ((_event: MessageEvent) => void) | null = null;
+  listeners = new Set<(_event: MessageEvent) => void>();
   closed = false;
   name: string;
   constructor(channelName: string) {
@@ -28,8 +29,17 @@ class FakeChannel {
   postMessage(data: unknown) {
     FakeChannel.posted.push(data);
     for (const other of FakeChannel.open) {
-      if (other !== this && !other.closed && other.name === this.name) other.onmessage?.({ data } as MessageEvent);
+      if (other !== this && !other.closed && other.name === this.name) {
+        other.onmessage?.({ data } as MessageEvent);
+        for (const l of other.listeners) l({ data } as MessageEvent);
+      }
     }
+  }
+  addEventListener(_type: "message", l: (_event: MessageEvent) => void) {
+    this.listeners.add(l);
+  }
+  removeEventListener(_type: "message", l: (_event: MessageEvent) => void) {
+    this.listeners.delete(l);
   }
   close() {
     this.closed = true;
@@ -45,6 +55,7 @@ describe("sessionChannel without BroadcastChannel (jsdom, old browsers)", () => 
     const g = globalThis as { BroadcastChannel?: unknown };
     const saved = g.BroadcastChannel;
     delete g.BroadcastChannel;
+    resetSessionChannelForTests();
     try {
       expect(() => announceSession("signed-out")).not.toThrow();
       const off = onSessionMessage(() => {});
@@ -59,6 +70,7 @@ describe("sessionChannel", () => {
   const g = globalThis as { BroadcastChannel?: unknown };
   const saved = g.BroadcastChannel;
   beforeEach(() => {
+    resetSessionChannelForTests();
     FakeChannel.open = [];
     FakeChannel.posted = [];
     g.BroadcastChannel = FakeChannel;
@@ -68,15 +80,28 @@ describe("sessionChannel", () => {
     else g.BroadcastChannel = saved;
   });
 
-  it("sends only the bare word on the soulledger_session channel, and closes what it opened", () => {
-    const heard: string[] = [];
-    const off = onSessionMessage((m) => heard.push(m));
+  it("sends only the bare word, to the other tabs and never back to this page", () => {
+    // 2026-11-15 E2E: with a channel object per call, this page's own listener heard the login page's
+    // 「signed-in」 and dropped the token it had just received. One object per page is what keeps it out.
+    const here: string[] = [];
+    const elsewhere: string[] = [];
+    onSessionMessage((m) => here.push(m));
+    const otherTab = new FakeChannel(SESSION_CHANNEL);
+    otherTab.onmessage = (e) => elsewhere.push(e.data as string);
     announceSession("signed-in");
     announceSession("signed-out");
-    expect(heard).toEqual(["signed-in", "signed-out"]);
+    expect(elsewhere).toEqual(["signed-in", "signed-out"]);
+    expect(here).toEqual([]);
     expect(FakeChannel.posted).toEqual(["signed-in", "signed-out"]); // no token, no user: strings only
+  });
+
+  it("hears other tabs, and stops hearing them once unsubscribed", () => {
+    const heard: string[] = [];
+    const off = onSessionMessage((m) => heard.push(m));
+    fromAnotherTab("signed-out");
     off();
-    expect(FakeChannel.open).toEqual([]);
+    fromAnotherTab("signed-in");
+    expect(heard).toEqual(["signed-out"]);
   });
 
   it("ignores anything that is not one of the two words", () => {
@@ -117,7 +142,7 @@ describe("sessionChannel", () => {
       const { unmount } = renderHook(() => useTenant(), { wrapper });
       expect(FakeChannel.open).toHaveLength(1);
       unmount();
-      expect(FakeChannel.open).toEqual([]);
+      expect(FakeChannel.open[0]?.listeners.size ?? 0).toBe(0);
     });
   });
 });
