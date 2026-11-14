@@ -90,7 +90,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const [showKeys, setShowKeys] = useState(false);
   const [selected, setSelected] = useState<VerdictCode | null>(null);
 
-  const { cursor, progress, staged, stageVerdict, undoStaged, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
+  const { cursor, progress, staged, stageVerdict, undoStaged, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
   /* 第四十三批:原审判挂着没结束的跨域审判时,不勾 W 服务端也会生成全站流程(请求里不带 create_workflow)。
      这里把 W 显示成勾上、点不动,下面一句为什么;要选站去整页。与整页同一把缓存键。 */
@@ -254,6 +254,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   // 单选 / 复选框不算打字,所以焦点落在「同时发起审批流程」那个复选框上时 1–4 仍然接。
   //
   // 四个裁决键、`⌘⏎`、`u`、`w`、`c`、`n`、`s` 都通向写操作,一起受 `canRule` 管;`r` 只动本会话、`?` 是帮助,常开。
+  // 只读的人按 `s` 只是看下一件:本会话跳过(`defer`,不发请求,R 放回),不是待定(用户 2026-11-14)。
   // `h` 与 `?` 同义:多数非美式键盘上 `?` 要按 Shift,找不到的帮助键等于没有。
   // 弹层(待定理由、改派)开着时整组不挂:层里的按键归层。
   const toggleKeys = () => setShowKeys((prev) => !prev);
@@ -269,7 +270,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             n: () => document.getElementById("queue-notes")?.focus(),
             s: () => judgment && setHoldAsking(true),
           }
-        : {}),
+        : { s: defer }),
       r: restoreDeferred,
       "?": toggleKeys,
       h: toggleKeys,
