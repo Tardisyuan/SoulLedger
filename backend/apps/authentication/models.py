@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from apps.core.models import AuditUserFields
 from apps.death_sync.fields import EncryptedCharField
+from apps.souls.models import Civilization
 
 
 class SoftDeleteUserManager(UserManager):
@@ -58,6 +59,10 @@ class UserRole(models.TextChoices):
     """
 
     ADMIN = "ADMIN", "Administrator (阎罗王)"
+    # 系统管理员(2026-11-15,docs/ARCHITECTURE-tenant-sharding.md §7.5):唯一跨文明、跨殿的角色
+    # (`apps/core/tenant.py::is_tenant_exempt`)。住在控制库,由 authentication/0030 建出 `sysadmin`;
+    # 凭证由 `manage.py bootstrap_system_admin` 设。过一切 ADMIN 门。不可分配(`is_assignable_role`)。
+    SYSTEM_ADMIN = "SYSTEM_ADMIN", "System Administrator (系统管理员)"
     MODERATOR = "MODERATOR", "Circle Moderator (朋友圈审核员)"
     JUDGE = "JUDGE", "Judge (判官)"
     GUARDIAN = "GUARDIAN", "Guardian (牛头马面)"
@@ -84,7 +89,7 @@ def is_assignable_role(name) -> bool:
     table is seeded, and every fixture in this repo creates ADMIN/JUDGE users
     long before any Role row exists.
     """
-    if not name or name == UserRole.SOUL:
+    if not name or name in (UserRole.SOUL, UserRole.SYSTEM_ADMIN):
         return False
     if name in UserRole.values:
         return True
@@ -160,6 +165,14 @@ class User(AuditUserFields, AbstractUser):
         blank=True,
         related_name="users",
         help_text="所属组织：如 第一殿、冥王厅",
+    )
+    #: 无殿 ADMIN 管哪个文明(§7.5,2026-11-15):它看、管这个文明的每一殿,别的不看。只对无殿 ADMIN 有意义;
+    #: 别的角色留空。空 / 不认识的值 = 一殿都管不到(`apps/core/tenant.py::request_civilization`)。
+    civilization = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=Civilization.choices,
     )
     position = models.CharField(
         max_length=100,

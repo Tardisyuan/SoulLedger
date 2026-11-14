@@ -207,6 +207,9 @@ SHARD_READ_CIVS = [c.strip() for c in os.getenv("SHARD_READ_CIVS", "").split(","
 SHARD_WRITE_CIVS = [c.strip() for c in os.getenv("SHARD_WRITE_CIVS", "").split(",") if c.strip()]
 
 AUTH_USER_MODEL = "authentication.User"
+# 系统管理员(§7.5):控制库自带,authentication/0030 建出这个用户名(无可用密码);凭证由
+# `manage.py bootstrap_system_admin` 从 SYSTEM_ADMIN_PASSWORD_FILE / SYSTEM_ADMIN_PASSWORD 设。
+SYSTEM_ADMIN_USERNAME = os.getenv("SYSTEM_ADMIN_USERNAME", "").strip() or "sysadmin"
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
