@@ -19046,7 +19046,7 @@ export interface components {
             empty_reached: boolean;
         };
         /**
-         * @description * `DRAFT` - 未认领
+         * @description * `UNCLAIMED` - 未认领
          *     * `HEARING` - 已认领
          *     * `DEFERRED` - 暂缓
          *     * `AT_CITY_GOD` - 在城隍
@@ -19055,7 +19055,7 @@ export interface components {
          *     * `CLOSED` - 已结
          * @enum {string}
          */
-        PhaseEnum: "DRAFT" | "HEARING" | "DEFERRED" | "AT_CITY_GOD" | "BARRED" | "AWAITING_REVIEW" | "CLOSED";
+        PhaseEnum: "UNCLAIMED" | "HEARING" | "DEFERRED" | "AT_CITY_GOD" | "BARRED" | "AWAITING_REVIEW" | "CLOSED";
         Platform: {
             id: components["schemas"]["AssistPlatformEnum"];
             /**
