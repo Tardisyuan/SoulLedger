@@ -15,7 +15,19 @@ import { api } from "@soulledger/core/api/client";
 
 const runtime = () => import("./runtime");
 
-const adapter: AxiosAdapter = async (config) => (await runtime()).axiosAnswer(config);
+/**
+ * The answer comes a frame after the question, as a server's would (fe-perf.md P7): without this the whole read ran in
+ * the click's own task — the "server time" counted into INP, and the loading states were never seen.
+ */
+const nextFrame = (): Promise<void> => {
+  const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  return scheduler?.yield ? scheduler.yield() : new Promise((resolve) => setTimeout(resolve, 0));
+};
+
+const adapter: AxiosAdapter = async (config) => {
+  await nextFrame();
+  return (await runtime()).axiosAnswer(config);
+};
 
 api.defaults.adapter = adapter;
 axios.defaults.adapter = adapter;
@@ -60,6 +72,8 @@ if (typeof window !== "undefined") {
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    return url.includes("/api/v1/") ? (await runtime()).fetchAnswer(url, init) : realFetch(input, init);
+    if (!url.includes("/api/v1/")) return realFetch(input, init);
+    await nextFrame();
+    return (await runtime()).fetchAnswer(url, init);
   };
 }

@@ -793,9 +793,12 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
  * finds the one that answers a row the visitor made, or a parameter the screen adds that the recording did not.
  */
 function recordedLike(rec: Recording, pattern: RegExp, query: URLSearchParams, names: string[]): Answer | null {
-  for (const [key, doc] of Object.entries(rec.docs)) {
+  // Keys first: reading every doc would move the stamps of all of them (`store.ts` moves an answer when it is read).
+  for (const key of Object.keys(rec.docs)) {
     const [path, q = ""] = key.split("?");
-    if (doc.s !== 200 || !pattern.test(path)) continue;
+    if (!pattern.test(path)) continue;
+    const doc = rec.docs[key];
+    if (doc.s !== 200) continue;
     const recorded = new URLSearchParams(q);
     if (names.every((n) => recorded.get(n) === query.get(n))) return ok(doc.b);
   }

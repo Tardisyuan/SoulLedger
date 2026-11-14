@@ -4,7 +4,23 @@
  */
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { api } from "@soulledger/core/api/client";
-import { type Answer, type DemoLang, type DemoRole, DEMO_USERNAMES, allRows, clearVisitorState, currentRole, langOf, read, recording, resetOverlay, setRole } from "./store";
+import {
+  type Answer,
+  type DemoLang,
+  type DemoRole,
+  DEMO_USERNAMES,
+  allRows,
+  bootRecording,
+  clearVisitorState,
+  currentRole,
+  langOf,
+  prefetch,
+  read,
+  recording,
+  resetOverlay,
+  setRole,
+  settle,
+} from "./store";
 import { derived } from "./flows";
 import { write } from "./writes";
 import type { AssistTrace } from "@soulledger/core/api/officer-assist";
@@ -34,7 +50,9 @@ async function auth(path: string, body: Record<string, unknown>, lang: DemoLang)
     const role = (Object.keys(DEMO_USERNAMES) as DemoRole[]).find((r) => DEMO_USERNAMES[r] === body.username) ?? "judge";
     freshSession();
     setRole(role);
-    const rec = await recording(role, lang);
+    // The sign-in waits for the boot bucket only; the rest come in while the console draws (fe-perf.md P5).
+    const rec = await bootRecording(role, lang);
+    prefetch(role, lang);
     return { status: 200, data: { ...rec.login, access: "demo-access", refresh: "demo-refresh" } };
   }
   if (path === "/auth/logout/") {
@@ -50,8 +68,9 @@ async function answer(method: string, path: string, query: URLSearchParams, body
   if (signed) return signed;
   const evalRun = method === "GET" && path.startsWith("/assist-admin/eval/") ? await recordedEval(path) : null;
   if (evalRun) return evalRun;
-  const rec = await recording(currentRole(), lang);
-  return method === "GET" ? (derived(rec, path, query) ?? read(rec, path, query)) : write(rec, method, path, query, body);
+  // A read waits for the buckets it reaches; a write, which changes the overlay and cannot be asked twice, for all of them.
+  if (method === "GET") return settle(currentRole(), lang, (rec) => derived(rec, path, query) ?? read(rec, path, query), [path]);
+  return write(await recording(currentRole(), lang), method, path, query, body);
 }
 
 function csv(rows: Record<string, unknown>[]): string {
@@ -62,9 +81,9 @@ function csv(rows: Record<string, unknown>[]): string {
 
 /** Every export is the list next to it, as CSV. The server's own column choices are not reproduced. */
 async function download(path: string, lang: DemoLang): Promise<Blob> {
-  const rec = await recording(currentRole(), lang);
   const list = path.replace(/[^/]+\/$/, "");
-  return new Blob([`﻿${csv(allRows(rec, list))}`], { type: "text/csv;charset=utf-8" });
+  const text = await settle(currentRole(), lang, (rec) => csv(allRows(rec, list)), [list]);
+  return new Blob([`﻿${text}`], { type: "text/csv;charset=utf-8" });
 }
 
 export async function axiosAnswer(config: InternalAxiosRequestConfig): Promise<AxiosResponse> {

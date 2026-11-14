@@ -9,6 +9,8 @@
 //
 // Output shape (read by frontend/demo/store.ts):
 //   { recordedAt, login, lists: { "/souls/?state=X": { rows, extra } }, docs: { "/souls/<id>/": { s, b } } }
+// written whole to <role>.<lang>.json while recording, then split into <role>.<lang>/ (a boot bucket and one per
+// domain, deduplicated) at the very end: scripts/demo-recording-io.mjs. The souls' few KB stay single files.
 // `lists` holds paginated answers with their pages flattened; the key leaves out page and page_size.
 //
 // Order (2026-11-08). The administrator goes first and alone: it reads everyone's sign-ins, sessions, last logins and
@@ -25,6 +27,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeHomePreview } from "./demo-home-preview.mjs";
+import { writeBucketed } from "./demo-recording-io.mjs";
 
 const FRONT = process.env.DEMO_FRONT || "http://localhost:3333";
 const API_ORIGIN = process.env.DEMO_API_ORIGIN || "http://localhost:8000";
@@ -587,3 +590,12 @@ for (const [civ, { soul_code, name }] of Object.entries(SOUL_LOGINS)) {
 
 // The home page's journey preview reads a few KB of the judges' recordings, not the recordings (scripts/demo-home-preview.mjs).
 writeHomePreview();
+
+// Last: each role's whole file → its buckets (the sign-in waits for boot only; fe-perf.md P5/P6).
+for (const role of Object.keys(ROLES)) {
+  for (const [lang] of LANGS) {
+    const sizes = writeBucketed(OUT, readRecording(role, lang));
+    const kb = (n) => `${Math.round(n / 1024)} KB`;
+    console.log(`${role}.${lang}: boot ${kb(sizes.boot)} gzip; ${Object.entries(sizes.buckets).map(([n, s]) => `${n} ${kb(s)}`).join(", ")}`);
+  }
+}

@@ -933,7 +933,7 @@ unset PREPUSH_TO_MAIN
 # always-run; the outputs it writes are what the tests read: globals.css through the always-run contract
 # tests, theme.generated.ts as code that jest follows. Other JSON under packages/core (creditsOss.json …)
 # still forces a full run.
-JEST_TRACED_DATA_RE='^(packages/core/messages/|packages/core/tokens/[^/]+\.tokens\.json$|packages/core/openapi/schema\.yml$|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/[^/]+\.json$)'
+JEST_TRACED_DATA_RE='^(packages/core/messages/|packages/core/tokens/[^/]+\.tokens\.json$|packages/core/openapi/schema\.yml$|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/.+\.json$)'
 while IFS=$'\t' read -r re name; do
     hit=$(echo "$CHANGED" | grep -vE "$JEST_TRACED_DATA_RE" | grep -E "$re" | head -1)
     [ -n "$hit" ] && full "$name: $hit"
