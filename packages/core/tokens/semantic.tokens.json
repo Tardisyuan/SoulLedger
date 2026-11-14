@@ -381,15 +381,17 @@
     "success-tint": {
       "$value": {
         "colorSpace": "oklch",
-        "components": [0.241388, 0.040904, 150.1078]
+        "components": [0.250677, 0.028848, 156.2221],
+        "hex": "#16261C"
       },
+      "$description": "Success ground, shared with the app's posBg ({app.pos-bg}); the app's pair, chosen by Design batch 40.",
       "$extensions": {
         "org.soulledger": {
-          "pendingDesign": "Fork with the app: web #102515 / #E4FBE7, the app's `posBg` #16261C / #EAF6EE ({app.pos-bg}). Design picks one pair (fe-tokens §1.2, item 3). Not resolved here.",
           "modes": {
             ".light": {
               "colorSpace": "oklch",
-              "components": [0.965876, 0.035762, 149.1233]
+              "components": [0.961969, 0.016497, 156.9125],
+              "hex": "#EAF6EE"
             }
           }
         }
@@ -398,15 +400,17 @@
     "warning": {
       "$value": {
         "colorSpace": "oklch",
-        "components": [0.681246, 0.15618, 54.9021]
+        "components": [0.776001, 0.158964, 59.2368],
+        "hex": "#FF9A3C"
       },
+      "$description": "Warning text, shared with the app's warn ({app.warn}); the app's pair, chosen by Design batch 40. `warn` / `warning` mean only this; the amber dot is {color.amber}.",
       "$extensions": {
         "org.soulledger": {
-          "pendingDesign": "Fork with the app: web warning ink #E07A23 / #A65000, the app's `warn` #FF9A3C / #9F4A00 ({app.warn}). Design picks one pair (fe-tokens §1.2, item 3). Not resolved here.",
           "modes": {
             ".light": {
               "colorSpace": "oklch",
-              "components": [0.52909, 0.135424, 52.3541]
+              "components": [0.508784, 0.132855, 50.8763],
+              "hex": "#9F4A00"
             }
           }
         }
@@ -430,15 +434,15 @@
         }
       }
     },
-    "warn": {
+    "amber": {
       "$value": {
         "colorSpace": "oklch",
         "components": [0.799963, 0.123133, 79.155],
         "hex": "#E8B45A"
       },
+      "$description": "The amber of the connection dot and the topbar's 2px rule (renamed from warn, Design batch 40). Never a text colour: in light mode it is only 4.71 against the canvas. Warning text is {color.warning}.",
       "$extensions": {
         "org.soulledger": {
-          "pendingDesign": "Same name, different meaning: this is the amber of the connection dot and the topbar's 2px rule (#E8B45A / #9A6400), never text; the app's `warn` is warning TEXT ({app.warn}). Proposed rename to amber waits for Design (fe-tokens §1.2, item 4).",
           "modes": {
             ".light": {
               "colorSpace": "oklch",
@@ -948,7 +952,7 @@
     }
   },
   "app": {
-    "$description": "Values only the apps draw: v4's translucent hairlines (the web composites them into --color-line / surface-3), the app's scrim, and the app side of the two forks. Never emitted to CSS.",
+    "$description": "Values only the apps draw: v4's translucent hairlines (the web composites them into --color-line / surface-3), the app's scrim, and the app names warn / pos-bg (aliases of the web's color.warning / color.success-tint since Design batch 40). Never emitted to CSS.",
     "$type": "color",
     "$extensions": {
       "org.soulledger": {
@@ -1016,42 +1020,10 @@
       }
     },
     "pos-bg": {
-      "$value": {
-        "colorSpace": "srgb",
-        "components": [0.086275, 0.14902, 0.109804],
-        "hex": "#16261C"
-      },
-      "$extensions": {
-        "org.soulledger": {
-          "modes": {
-            ".light": {
-              "colorSpace": "srgb",
-              "components": [0.917647, 0.964706, 0.933333],
-              "hex": "#EAF6EE"
-            }
-          },
-          "pendingDesign": "Fork: the web's {color.success-tint} is #102515 / #E4FBE7. Waits for Design."
-        }
-      }
+      "$value": "{color.success-tint}"
     },
     "warn": {
-      "$value": {
-        "colorSpace": "srgb",
-        "components": [1, 0.603922, 0.235294],
-        "hex": "#FF9A3C"
-      },
-      "$extensions": {
-        "org.soulledger": {
-          "modes": {
-            ".light": {
-              "colorSpace": "srgb",
-              "components": [0.623529, 0.290196, 0],
-              "hex": "#9F4A00"
-            }
-          },
-          "pendingDesign": "Fork: the web's warning ink {color.warning} is #E07A23 / #A65000, and the web's {color.warn} is a different thing (amber dot). Waits for Design."
-        }
-      }
+      "$value": "{color.warning}"
     }
   }
 }

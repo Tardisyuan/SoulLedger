@@ -133,11 +133,11 @@ describe("the connection pill (v4 第八批第 4 条: in the toolbar, a 2px rule
     mockStatus = "reconnecting";
     render(<ConnectionBanner />);
     const rule = screen.getByTestId("connection-rule");
-    expect(classes(rule)).toEqual(expect.arrayContaining(["absolute", "inset-x-0", "h-0.5", "max-[768px]:hidden", "bg-[oklch(var(--color-warn))]"]));
+    expect(classes(rule)).toEqual(expect.arrayContaining(["absolute", "inset-x-0", "h-0.5", "max-[768px]:hidden", "bg-[oklch(var(--color-amber))]"]));
   });
 
   it.each([
-    ["reconnecting", "warn", "--color-warn", false],
+    ["reconnecting", "warn", "--color-amber", false],
     ["failed", "neg", "--color-danger", true],
     ["disconnected", "neg", "--color-danger", true],
   ] as const)("%s: tone %s, dot and rule in %s, retry %s", (status, tone, token, retry) => {
