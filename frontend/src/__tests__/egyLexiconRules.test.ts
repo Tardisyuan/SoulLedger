@@ -183,9 +183,13 @@ const hasUnemu = (v: string) => /\bUnemu\b/.test(prose(v));
  * 现在重新放行,但只表「色」;「列」仍是 Iwn(第二十八批),两者只差一个字母,所以下面按同键中文查义项。
  */
 const hasIwen = (v: string) => /\bIwen\b/.test(prose(v));
-/** 第三十三批:Senb 只剩「健康」义,三个键(医院 = 健康之所、账号安全 = 账号无恙、引用该设置名的提示);其余同步 / 连接一律 Demedj。 */
+/**
+ * 第三十三批:Senb 只剩「健康」义 —— 医院 = 健康之所、账号安全 = 账号无恙、引用该设置名的提示;其余同步 / 连接一律 Demedj。
+ * 第五十批(2026-11-15):官员端「我 › 账号安全」与它的邀请小字照搬灵魂端这两句(Design:「Senb Ren Aq」),同义,故放行。
+ */
 const THREE_HEALTH_KEYS = [
   "death_sync.api_keys.system_type.HOSPITAL", "soul_app.settings.group_security", "soul_app.bio.ask_note",
+  "officer_app.me.security", "officer_app.bio_login.ask_note",
 ];
 const hasSenb = (v: string) => /\bSenb\b/.test(prose(v));
 /** 中文含「举报」、但其中的 Sedjem 是「通知」义的键(「处理结果不单独通知你」,Design 第三十三批第二次交付第 4 条)。 */
