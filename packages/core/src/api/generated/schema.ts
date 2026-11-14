@@ -788,6 +788,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/device-login/enable/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 开启。错的当前密码 400 `wrong_password`;与改密码同一份按 IP 的计数,满了 429 `login_locked`。
+         *     灵魂账号 403(它们有自己的 `/me/device-login/`)。每调一次发一条新凭据:App 先吊销旧的。
+         */
+        post: operations["v1_auth_device_login_enable_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/device-login/revoke/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 关闭这部手机的指纹登录。**不要求登录**:凭据本身就是证明(256 位随机数,只有这部手机有)。 */
+        post: operations["v1_auth_device_login_revoke_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/email/send-verification/": {
         parameters: {
             query?: never;
@@ -1085,6 +1122,23 @@ export interface paths {
          *     `remember_device` 为真时再下发 30 天的 httpOnly 设备 cookie。
          */
         post: operations["v1_auth_mfa_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/officer-device-login/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/v1/auth/officer-device-login/ —— `OfficerLoginView` 本身,只换了序列化器。 */
+        post: operations["v1_auth_officer_device_login_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16570,6 +16624,44 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        OfficerDeviceLoginCredential: {
+            credential: string;
+        };
+        OfficerDeviceLoginEnableRequest: {
+            password: string;
+        };
+        OfficerDeviceLoginIssued: {
+            /** @description 不透明凭据,只此一次;App 放进要验证生物特征才能取出的安全存储。 */
+            credential: string;
+        };
+        /**
+         * @description `code`:device_login_revoked(401,带 `reason`:password_changed / signed_out / turned_off)、
+         *     device_login_invalid(401)、login_locked(429,见 `LoginLockedResponseSerializer`)。
+         */
+        OfficerDeviceLoginRefusal: {
+            /** @description Always `about:blank`: `code` is the discriminator. */
+            type: string;
+            /** @description The HTTP status phrase. */
+            title: string;
+            status: number;
+            code: components["schemas"]["ProblemCodeEnum"];
+            detail?: string;
+            /** @description The request id (`X-Request-ID`). */
+            instance?: string;
+            /** @description Validation problems only. */
+            errors?: components["schemas"]["ProblemFieldError"][];
+            reason?: string;
+        };
+        /**
+         * @description `OfficerTokenObtainPairSerializer` 的第一步换成凭据:用户名 + 凭据 → 同一个 `_finish`(两步验证照常)。
+         *     别人的凭据配这个用户名、停用的账号、灵魂账号 → 与「不认识」同一句 `device_login_invalid`。
+         */
+        OfficerDeviceToken: {
+            /** @default false */
+            remember: boolean;
+            credential: string;
+            username: string;
+        };
         /** @description 409 of a single deactivation. `open_work` is keyed by user id (one key). */
         OfficerHasOpenWork: {
             /** @description Always `about:blank`: `code` is the discriminator. */
@@ -25233,6 +25325,79 @@ export interface operations {
             };
         };
     };
+    v1_auth_device_login_enable_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerDeviceLoginEnableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerDeviceLoginEnableRequest"];
+                "multipart/form-data": components["schemas"]["OfficerDeviceLoginEnableRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerDeviceLoginIssued"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["LoginFailedResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["LoginLockedResponse"];
+                };
+            };
+        };
+    };
+    v1_auth_device_login_revoke_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerDeviceLoginCredential"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerDeviceLoginCredential"];
+                "multipart/form-data": components["schemas"]["OfficerDeviceLoginCredential"];
+            };
+        };
+        responses: {
+            /** @description 已关闭(不认识或早已关闭也是 204) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     v1_auth_email_send_verification_create: {
         parameters: {
             query?: never;
@@ -25792,6 +25957,47 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["MfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_officer_device_login_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerDeviceToken"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerDeviceToken"];
+                "multipart/form-data": components["schemas"]["OfficerDeviceToken"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginOutcome"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OfficerDeviceLoginRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["LoginLockedResponse"];
                 };
             };
         };

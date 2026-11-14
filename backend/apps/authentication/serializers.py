@@ -356,21 +356,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         super(TokenObtainPairSerializer, self).validate(attrs)
         return self._finish(attrs)
 
-    def _finish(self, attrs):
-        """Password settled for `self.user`: a second step if they have 2FA, else tokens."""
+    def _finish(self, attrs, *, device_login=None):
+        """Password settled for `self.user`: a second step if they have 2FA, else tokens.
+        `device_login`: the officer app's fingerprint credential stood in for the password (`device_login.py`);
+        the session this sign-in opens is recorded on it, also across the second step."""
+        from apps.authentication import device_login as device_logins
         from apps.authentication import mfa
 
         request = self.context.get("request")
         remembered = mfa.is_enabled(self.user) and mfa.device_remembered(request, self.user)
         if mfa.is_enabled(self.user) and not remembered:
             # 第二步:密码对了,令牌还不发。`remember` 随待验证令牌走,验码后照样生效。
+            # 指纹只代替密码,两步验证照常(与灵魂端 `finish_first_step` 同一条)。
             pending = mfa.PendingToken.for_user(self.user)
             pending["remember"] = bool(attrs.get("remember"))
             pending["officer_app"] = self.officer_app
+            if device_login is not None:
+                pending["device_login"] = device_login.pk
             return {"mfa_required": True, "pending_token": str(pending), "username": self.user.username}
         # 靠「30 天内不再询问」cookie 跳过了第二步:会话记着那枚设备令牌,退出这台时一并作废。
         trust = mfa._hash_device(request.COOKIES[mfa.DEVICE_COOKIE]) if remembered else ""
-        session = signin_sessions.start(self.user, request, officer_app=self.officer_app, trust_hash=trust)
+        session = signin_sessions.start(self.user, request, officer_app=self.officer_app, trust_hash=trust,
+                                        method="face" if device_login is not None else "password")
+        if device_login is not None:
+            device_logins.bind(device_login, session)
         return issue_tokens(self.user, remember=bool(attrs.get("remember")), officer_app=self.officer_app,
                             session=session)
 

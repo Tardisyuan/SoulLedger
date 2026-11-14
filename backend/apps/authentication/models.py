@@ -359,4 +359,31 @@ class SignInSession(models.Model):
 
     def __str__(self):
         return f"{self.user_id} {self.label} {self.id}"
+
+
+class OfficerDeviceLoginRevokeReason(models.TextChoices):
+    PASSWORD_CHANGED = "password_changed", "密码已修改或被重置"
+    SIGNED_OUT = "signed_out", "这台设备被退出"
+    TURNED_OFF = "turned_off", "在这部手机上关闭"
+
+
+class OfficerDeviceLogin(models.Model):
+    """官员 App 的「指纹登录」服务端一半(2026-11-15 便捷度研究 O5;灵魂端 `SoulDeviceLogin` 的同形)。
+    不存密码:开启时发这部手机一个不透明的随机凭据,App 放进要验证生物特征才能取出的安全存储,以后用
+    「用户名 + 凭据」代替「用户名 + 密码」。这里只存 sha256。吊销是软的(`revoked_at` + 原因):登录页要说为什么失效。
+
+    **何时失效**(`device_login.py`):改密码 / 邮箱重置 / 管理员重置 / 停用 / 强退这个人 → 全部经
+    `passwords.end_sessions` → `signin_sessions.revoke_all`(改密码的这台保留);退出某一台(本人或管理员)→
+    `signin_sessions.revoke`;这部手机自己关 → `turned_off`。没有租户列:挂在 `User` 上,按凭据哈希找。"""
+
+    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="officer_device_logins")
+    credential_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_reason = models.CharField(max_length=30, choices=OfficerDeviceLoginRevokeReason.choices, blank=True, default="")
+    #: 开启、或最近一次用它登录时这部手机的登录会话;退出那台时凭据一并失效。会话行被清理后为空。
+    session = models.ForeignKey(SignInSession, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+
 from apps.authentication.impersonation_models import Impersonation  # noqa: E402,F401  (Django 只从 models 模块发现模型)

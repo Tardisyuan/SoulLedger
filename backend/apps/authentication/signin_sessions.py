@@ -183,7 +183,10 @@ def _end_push(sessions) -> None:
 
 def revoke(session) -> None:
     """退出一台:标记、拉黑当前刷新令牌、作废它的免两步验证、停用它的推送登记。幂等。"""
+    from .device_login import revoke_for_session
+
     _end_push([session.pk])
+    revoke_for_session(session)  # 被退出的那台手机上的指纹登录一并失效
     if session.revoked_at is None:
         session.revoked_at = timezone.now()
         session.save(update_fields=["revoked_at"])
@@ -206,7 +209,7 @@ def sign_out(token) -> None:
 
 def revoke_others(user, keep) -> int:
     """除 `keep`(当前这台)外全部退出,含没有 `sid` 的老令牌。返回刚标记的行数。"""
-    count = revoke_all(user, keep=keep)
+    count = revoke_all(user, keep=keep, device_login_reason="signed_out")
     _blacklist_jtis(user, keep_jti=keep.refresh_jti if keep else None)
     _close_sockets(user.pk)
     return count
@@ -220,9 +223,13 @@ def _close_sockets(user_id) -> None:
     close_user_sockets(user_id)
 
 
-def revoke_all(user, *, keep=None) -> int:
-    """`end_sessions` 用:该用户所有未退出的会话标记退出,`keep` 除外;它们的免两步验证作废。
+def revoke_all(user, *, keep=None, device_login_reason="password_changed") -> int:
+    """`end_sessions` 用:该用户所有未退出的会话标记退出,`keep` 除外;它们的免两步验证作废;
+    官员 App 的指纹登录凭据除 `keep` 上的那条外全部失效(改密码 / 重置 / 停用 / 强退都经过这里)。
     刷新令牌的拉黑由调用方做(`end_sessions` 拉黑全部)。"""
+    from .device_login import revoke_for_user
+
+    revoke_for_user(user, keep_session=keep, reason=device_login_reason)
     rows = SignInSession.objects.filter(user=user, revoked_at__isnull=True)
     if keep is not None:
         rows = rows.exclude(pk=keep.pk)
