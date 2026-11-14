@@ -33,7 +33,9 @@ const SHELL_NAMESPACES = ["nav", "common", "landing", "demo", "desk", "shell", "
 const FIXED_TEXT = "冥功过一二三四五六七八九十审册律司人间我";
 const TITLE_KEY = /(^|_)(title|heading|head|name)$|Title$/;
 const BUDGET_KB = 360; // shell + title; the landing target is ≤ 400 KB with Geist on top
-const SIZE_ADJUST = "108%"; // estimate (fe-visual §3.1): tune on screen against 「赵 Anna」
+// Tuned on screen 2026-11-14 (16px, 「生于Ravenna」): Han 「生」 spans -0.57..13.38, so its visual centre is ~6.4 above the
+// baseline; at 100% the x-height is 6.5 (level with it) and the cap height 10.5 (75% of the Han glyph). 108% gave 7.0 / 81%.
+const SIZE_ADJUST = "100%";
 
 const CJK = /[　-〿㐀-䶿一-鿿＀-￯]/u;
 function* strings(node, key = "") {
