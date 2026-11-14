@@ -25,7 +25,8 @@ function internalHostsIn(text: string): string[] {
 }
 
 describe("the demo recordings name no internal host", () => {
-  const files = readdirSync(DATA).filter((f) => f.endsWith(".json"));
+  // Recursive: a role's recording is a directory of buckets (`<role>.<lang>/*.json`, scripts/demo-recording-io.mjs).
+  const files = (readdirSync(DATA, { recursive: true }) as string[]).filter((f) => f.endsWith(".json"));
 
   it("has recordings to scan", () => {
     expect(files.length).toBeGreaterThan(10);

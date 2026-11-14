@@ -926,7 +926,7 @@ unset PREPUSH_TO_MAIN
 #     them too (select-backend-tests.py, contract_readers).
 # The types generated from it (packages/core/src/api/generated/schema.ts) are code: tsc checks them, and jest
 # follows their imports. Only the jest full run goes; tsc / eslint / vitest for the area are untouched.
-JEST_TRACED_DATA_RE='^(packages/core/messages/|packages/core/openapi/schema\.yml$|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/[^/]+\.json$)'
+JEST_TRACED_DATA_RE='^(packages/core/messages/|packages/core/openapi/schema\.yml$|frontend/src/__tests__/support/(egyPendingKeys|egyVocabulary)\.json$|frontend/demo/data/.+\.json$)'
 while IFS=$'\t' read -r re name; do
     hit=$(echo "$CHANGED" | grep -vE "$JEST_TRACED_DATA_RE" | grep -E "$re" | head -1)
     [ -n "$hit" ] && full "$name: $hit"

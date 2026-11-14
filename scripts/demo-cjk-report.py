@@ -23,7 +23,8 @@ def walk(v, field):
         sample.setdefault(field, v[:70])
 
 
-for path in glob.glob(sys.argv[1] if len(sys.argv) > 1 else "frontend/demo/data/*.en.json"):
+# Single files (soul_*, and roles not yet re-recorded) and the role buckets (frontend/demo/data/<role>.en/*.json).
+for path in glob.glob(sys.argv[1]) if len(sys.argv) > 1 else glob.glob("frontend/demo/data/*.en.json") + glob.glob("frontend/demo/data/*.en/*.json"):
     data = json.load(open(path, encoding="utf-8"))
     walk(data["lists"], "?")
     walk(data["docs"], "?")

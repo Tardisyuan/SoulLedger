@@ -1,6 +1,7 @@
 /**
- * What the demo answers GETs with: the recording (`data/<role>.json`, scripts/demo-record.mjs) under an overlay of what
- * this browser session changed. The recording is never edited. The overlay is what sessionStorage keeps, so a reload
+ * What the demo answers GETs with: the recording (`data/<role>.<lang>/`, a boot bucket and one per domain, loaded as
+ * reads reach them: `settle`; or the older single `data/<role>.<lang>.json`, read the same way until the main session
+ * re-records — scripts/demo-record.mjs, scripts/demo-recording-io.mjs) under an overlay of what this browser session changed. The recording is never edited. The overlay is what sessionStorage keeps, so a reload
  * keeps your changes, a new tab or another visitor starts clean, and signing in or out drops it (`resetOverlay`).
  *
  * Changes spread by id: a row patched by its UUID reads patched wherever that object appears, in any list, detail or
@@ -46,7 +47,6 @@ const OVERLAY_KEY = "soulledger_demo_overlay";
 const ROLE_KEY = "soulledger_demo_role";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STAMP = /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)/g;
-const BARE_DATE = /"(\d{4}-\d\d-\d\d)"/g;
 const PAGING = new Set(["page", "page_size"]);
 const NO_FILTER = new Set(["page", "page_size", "ordering", "search", "q", "format"]);
 
@@ -118,30 +118,57 @@ export function setRole(role: DemoRole): void {
   }
 }
 
-const loaded: Record<string, Promise<Recording>> = {};
 export type DemoLang = "zh" | "en";
 /** A language the recording has for the one the app asks in. Kemet reads the English recording. */
 export const langOf = (acceptLanguage: unknown): DemoLang => (String(acceptLanguage ?? "").startsWith("zh") ? "zh" : "en");
 
 /** Timestamps move with the calendar: a case recorded as "two hours ago" reads that way whenever the demo is opened. */
 function shifted(raw: Recording): Recording {
-  return shiftAnnual(shiftStamps(raw, raw.recordedAt), new Date(Date.now()).getUTCFullYear() - new Date(raw.recordedAt).getUTCFullYear());
+  return shiftAnnual(shiftStamps(raw, raw.recordedAt), yearsSince(raw.recordedAt));
 }
 
-/** Every stamp in `value` moved as `shifted` moves a recording made at `recordedAt` (the home page's preview extract too). */
-export function shiftStamps<T>(value: T, recordedAt: string): T {
+const yearsSince = (recordedAt: string) => new Date(Date.now()).getUTCFullYear() - new Date(recordedAt).getUTCFullYear();
+const WHOLE_DATE = /^\d{4}-\d\d-\d\d$/;
+
+/**
+ * The stamp mover for a recording made at `recordedAt`: a copy of a value with every stamp in it moved. It walks the
+ * value (keys too) instead of the old `JSON.stringify` → regex → `JSON.parse` of the whole recording, which was one
+ * 490 ms long task for the administrator on an M3 (fe-perf.md P4); the recording is now moved one answer at a time,
+ * the first time it is read (`entry`).
+ */
+function stampMover(recordedAt: string): <T>(value: T) => T {
   const delta = Date.now() - Date.parse(recordedAt);
   // Every stamp moves by the same amount, so the spread between them is kept. Whole days for a bare date (the census's
   // `day`), and only dates near the recording: 1283-05-01 is someone's birthday, not a stamp.
   const days = Math.round(delta / 86400000) * 86400000;
   const recent = new Date(recordedAt).getUTCFullYear() - 2;
-  const text = JSON.stringify(value)
+  const text = (s: string): string => {
     // A stamp from long ago is a life's history, not "two hours ago": it stays put.
-    .replace(STAMP, (s) => (Number(s.slice(0, 4)) < recent ? s : new Date(Date.parse(s) + delta).toISOString()))
-    .replace(BARE_DATE, (whole, date: string) =>
-      Number(date.slice(0, 4)) < recent ? whole : `"${new Date(Date.parse(date) + days).toISOString().slice(0, 10)}"`,
-    );
-  return JSON.parse(text) as T;
+    const out = s.includes("T") ? s.replace(STAMP, (t) => (Number(t.slice(0, 4)) < recent ? t : new Date(Date.parse(t) + delta).toISOString())) : s;
+    if (out.length !== 10 || !WHOLE_DATE.test(out) || Number(out.slice(0, 4)) < recent) return out;
+    return new Date(Date.parse(out) + days).toISOString().slice(0, 10);
+  };
+  const walk = (v: unknown): unknown => {
+    if (typeof v === "string") return text(v);
+    if (Array.isArray(v)) return v.map(walk);
+    if (!v || typeof v !== "object") return v;
+    const out: Row = {};
+    for (const [k, x] of Object.entries(v as Row)) out[text(k)] = walk(x);
+    return out;
+  };
+  return walk as <T>(value: T) => T;
+}
+
+/** Every stamp in `value` moved as `shifted` moves a recording made at `recordedAt` (the home page's preview extract too). */
+export function shiftStamps<T>(value: T, recordedAt: string): T {
+  return stampMover(recordedAt)(value);
+}
+
+const ANNUAL = "/judgment/annual/";
+const annualKey = (key: string, years: number) => key.replace(/([?&]year=)(\d+)/, (_, p: string, y: string) => `${p}${Number(y) + years}`);
+function annualDoc(doc: { s: number; b: unknown }, years: number) {
+  const b = doc.b as Row | null;
+  return b && typeof b.year === "number" ? { ...doc, b: { ...b, year: b.year + years } } : doc;
 }
 
 /** The annual report names its year as a number, not a stamp: it moves with the calendar too, and so do the `?year=` it was asked with. */
@@ -149,19 +176,285 @@ function shiftAnnual(rec: Recording, years: number): Recording {
   if (!years) return rec;
   const docs: Recording["docs"] = {};
   for (const [key, doc] of Object.entries(rec.docs)) {
-    if (pathOfKey(key) !== "/judgment/annual/") {
-      docs[key] = doc;
-      continue;
-    }
-    const b = doc.b as Row | null;
-    const moved = b && typeof b.year === "number" ? { ...doc, b: { ...b, year: b.year + years } } : doc;
-    docs[key.replace(/([?&]year=)(\d+)/, (_, p: string, y: string) => `${p}${Number(y) + years}`)] = moved;
+    if (pathOfKey(key) !== ANNUAL) docs[key] = doc;
+    else docs[annualKey(key, years)] = annualDoc(doc, years);
   }
   return { ...rec, docs };
 }
 
-export function recording(role: DemoRole, lang: DemoLang): Promise<Recording> {
-  return (loaded[`${role}.${lang}`] ??= import(`./data/${role}.${lang}.json`).then((m) => shifted(m.default as Recording)));
+// ── The recording on disk: one file (old) or a directory of buckets (scripts/demo-recording-io.mjs) ─────────────────
+
+/** Which bucket holds a path, as `boot.json` says. The same rule as scripts/demo-recording-io.mjs's `bucketOf`. */
+export interface Manifest {
+  prefixes: Record<string, string>;
+  fallback: string;
+  shards?: Record<string, number>;
+  /** Every bucket but boot, in the order they are prefetched. */
+  buckets: string[];
+}
+type Ref = { "=": string };
+interface Bucket {
+  lists?: Record<string, ListRecord | Ref>;
+  docs?: Record<string, { s: number; b: unknown } | Ref>;
+  /** Rows two or more lists of one path carry identically, by `<path>#<id>`; a list says `{ "&": key }` in their place. */
+  rows?: Record<string, Row>;
+  /** Where each key (in the bucket's order) stood in the whole recording, so all the keys read in the recorded order. */
+  at?: Record<"lists" | "docs", number[]>;
+}
+interface Boot extends Bucket {
+  role: DemoRole;
+  lang: DemoLang;
+  recordedAt: string;
+  login: { user: Row };
+  /** Absent in the old single-file format: everything is already here. */
+  manifest?: Manifest;
+}
+
+const ID_SEGMENT = /^(?:\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/** FNV-1a, 32 bit; the recorder's `fnv1a`. */
+export function fnv1a(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+/** The bucket a path (no query) is in: the longest prefix the manifest names, then the row id's shard if it has shards. */
+export function bucketOf(manifest: Manifest, path: string): string {
+  let best = "";
+  for (const prefix of Object.keys(manifest.prefixes)) if (path.startsWith(prefix) && prefix.length > best.length) best = prefix;
+  const name = best ? manifest.prefixes[best] : manifest.fallback;
+  const shards = manifest.shards?.[name];
+  if (!shards) return name;
+  const base = best || `/${path.split("/")[1] ?? ""}/`;
+  const id = path.slice(base.length).split("/")[0];
+  return ID_SEGMENT.test(id) ? `${name}.${fnv1a(id) % shards}` : name;
+}
+
+type Table = "lists" | "docs";
+/**
+ * One role's recording as far as it has loaded. `rec.lists` / `rec.docs` are proxies over the buckets that have arrived:
+ * an answer is resolved (references) and moved (stamps) the first time it is read and cached, and a read of a key whose
+ * bucket has not arrived — or a listing of all the keys while some have not — notes the bucket in `wanted`, which
+ * `settle` loads before it asks again. Reads are pure, so asking again is safe; writes wait for every bucket.
+ */
+interface Loaded {
+  role: DemoRole;
+  lang: DemoLang;
+  rec: Recording;
+  manifest: Manifest | null;
+  raw: Record<Table, Record<string, unknown>>;
+  pool: Record<string, Row>;
+  cache: Record<Table, Map<string, unknown>>;
+  poolCache: Map<string, unknown>;
+  index: Record<Table, Map<string, string[]>>;
+  /** Each key's place in the whole recording; `sorted` is the keys in that order, until the next bucket arrives. */
+  place: Record<Table, Map<string, number>>;
+  sorted: Record<Table, string[] | null>;
+  have: Set<string>;
+  loading: Map<string, Promise<void>>;
+  wanted: Set<string>;
+  move: <T>(value: T) => T;
+  years: number;
+}
+const byRec = new WeakMap<Recording, Loaded>();
+const roles: Record<string, Promise<Loaded>> = {};
+
+const file = (role: DemoRole, lang: DemoLang, name: string) => import(`./data/${role}.${lang}/${name}.json`).then((m) => m.default as Bucket);
+
+const isRef = (v: unknown): v is Ref => !!v && typeof (v as Ref)["="] === "string";
+
+function touch(u: Loaded, path: string): void {
+  // Only an API path names a bucket: `toJSON`, `then` and the like are someone probing the object.
+  if (!u.manifest || !path.startsWith("/")) return;
+  const name = bucketOf(u.manifest, path);
+  if (!u.have.has(name)) u.wanted.add(name);
+}
+
+function wantAll(u: Loaded): void {
+  for (const name of u.manifest?.buckets ?? []) if (!u.have.has(name)) u.wanted.add(name);
+}
+
+function entry(u: Loaded, table: Table, key: string): unknown {
+  const raw = u.raw[table];
+  if (!(key in raw)) {
+    touch(u, pathOfKey(key));
+    return undefined;
+  }
+  const cached = u.cache[table].get(key);
+  if (cached !== undefined) return cached;
+  const stored = raw[key];
+  let value: unknown;
+  if (isRef(stored)) value = entry(u, table, stored["="]);
+  else if (table === "lists") {
+    const list = stored as ListRecord;
+    value = { ...u.move({ ...list, rows: [] }), rows: list.rows.map((row) => poolRow(u, row)) };
+  } else {
+    value = u.move(stored);
+    if (u.years && pathOfKey(key) === ANNUAL) value = annualDoc(value as { s: number; b: unknown }, u.years);
+  }
+  u.cache[table].set(key, value);
+  return value;
+}
+
+function poolRow(u: Loaded, row: Row): unknown {
+  const key = row && typeof row === "object" ? row["&"] : undefined;
+  if (typeof key !== "string") return u.move(row);
+  if (!u.poolCache.has(key)) u.poolCache.set(key, u.move(u.pool[key]));
+  return u.poolCache.get(key);
+}
+
+function tableProxy(u: Loaded, table: Table): Record<string, never> {
+  return new Proxy(u.raw[table], {
+    get: (target, key) => (typeof key === "string" ? entry(u, table, key) : Reflect.get(target, key)),
+    has: (target, key) => {
+      if (typeof key === "string" && !(key in target)) touch(u, pathOfKey(key));
+      return Reflect.has(target, key);
+    },
+    ownKeys: () => {
+      wantAll(u);
+      return (u.sorted[table] ??= Object.keys(u.raw[table]).sort((a, b) => u.place[table].get(a)! - u.place[table].get(b)!));
+    },
+  }) as Record<string, never>;
+}
+
+function merge(u: Loaded, bucket: Bucket): void {
+  for (const table of ["lists", "docs"] as const) {
+    const rename = (key: string) => (table === "docs" && u.years && pathOfKey(key) === ANNUAL ? annualKey(key, u.years) : key);
+    Object.entries(bucket[table] ?? {}).forEach(([k, v], i) => {
+      const key = rename(k);
+      u.place[table].set(key, bucket.at?.[table][i] ?? u.place[table].size);
+      if (!(key in u.raw[table])) {
+        const path = pathOfKey(key);
+        const keys = u.index[table].get(path);
+        if (keys) keys.push(key);
+        else u.index[table].set(path, [key]);
+      }
+      u.raw[table][key] = isRef(v) ? { "=": rename(v["="]) } : v;
+    });
+    u.sorted[table] = null;
+  }
+  Object.assign(u.pool, bucket.rows);
+}
+
+function start(role: DemoRole, lang: DemoLang, boot: Boot): Loaded {
+  const blankTable = () => Object.create(null) as Record<string, unknown>;
+  const move = stampMover(boot.recordedAt);
+  const u: Loaded = {
+    role,
+    lang,
+    rec: undefined as unknown as Recording,
+    manifest: boot.manifest ?? null,
+    raw: { lists: blankTable(), docs: blankTable() },
+    pool: {},
+    cache: { lists: new Map(), docs: new Map() },
+    poolCache: new Map(),
+    index: { lists: new Map(), docs: new Map() },
+    place: { lists: new Map(), docs: new Map() },
+    sorted: { lists: null, docs: null },
+    have: new Set(["boot"]),
+    loading: new Map(),
+    wanted: new Set(),
+    move,
+    years: yearsSince(boot.recordedAt),
+  };
+  merge(u, boot);
+  u.rec = {
+    role: boot.role ?? role,
+    lang: boot.lang ?? lang,
+    recordedAt: move(boot.recordedAt),
+    login: move(boot.login),
+    lists: tableProxy(u, "lists") as unknown as Recording["lists"],
+    docs: tableProxy(u, "docs") as unknown as Recording["docs"],
+  };
+  byRec.set(u.rec, u);
+  return u;
+}
+
+/** Boot first; a role without a `<role>.<lang>/` directory still has its single recording (until it is re-recorded). */
+function loadRole(role: DemoRole, lang: DemoLang): Promise<Loaded> {
+  return (roles[`${role}.${lang}`] ??= file(role, lang, "boot").then(
+    (boot) => start(role, lang, boot as Boot),
+    () => import(`./data/${role}.${lang}.json`).then((m) => start(role, lang, m.default as Boot)),
+  ));
+}
+
+function loadBucket(u: Loaded, name: string): Promise<void> {
+  if (u.have.has(name)) return Promise.resolve();
+  let pending = u.loading.get(name);
+  if (!pending) {
+    const done = () => {
+      u.have.add(name);
+      u.loading.delete(name);
+    };
+    pending = file(u.role, u.lang, name).then(
+      (bucket) => {
+        merge(u, bucket);
+        done();
+      },
+      () => {
+        // ponytail: a bucket the manifest names but the build lacks reads as nothing recorded, rather than failing every read.
+        console.warn("[demo] no recording bucket", `${u.role}.${u.lang}/${name}`);
+        done();
+      },
+    );
+    u.loading.set(name, pending);
+  }
+  return pending;
+}
+
+const loadAll = (u: Loaded) => Promise.all((u.manifest?.buckets ?? []).map((name) => loadBucket(u, name)));
+
+/** The whole recording: every bucket loaded. What writes and the pages that read across recordings use. */
+export async function recording(role: DemoRole, lang: DemoLang): Promise<Recording> {
+  const u = await loadRole(role, lang);
+  await loadAll(u);
+  return u.rec;
+}
+
+/** Only `boot`: what the sign-in answers from (login, menus, permissions, tenants). */
+export const bootRecording = async (role: DemoRole, lang: DemoLang): Promise<Recording> => (await loadRole(role, lang)).rec;
+
+/**
+ * `compute` (a pure read) on the buckets it needs: the ones `paths` are in up front, then whatever it reached for that
+ * had not arrived, and again, until it reaches for nothing new. Each round loads at least one more bucket, so it ends.
+ */
+export async function settle<T>(role: DemoRole, lang: DemoLang, compute: (rec: Recording) => T, paths: string[] = []): Promise<T> {
+  const u = await loadRole(role, lang);
+  if (u.manifest) {
+    const first = new Set(paths.flatMap((p) => [p, collectionOf(p)?.collection].filter((x): x is string => !!x)).map((p) => bucketOf(u.manifest!, p)));
+    await Promise.all([...first].map((name) => loadBucket(u, name)));
+  }
+  for (;;) {
+    u.wanted.clear();
+    const out = compute(u.rec);
+    const more = [...u.wanted].filter((name) => !u.have.has(name));
+    if (more.length === 0) return out;
+    await Promise.all(more.map((name) => loadBucket(u, name)));
+  }
+}
+
+/** After the sign-in: the other buckets one at a time, each when the page is idle, in the manifest's order. */
+export function prefetch(role: DemoRole, lang: DemoLang): void {
+  const idle = (): Promise<void> =>
+    new Promise((resolve) => (typeof requestIdleCallback === "function" ? requestIdleCallback(() => resolve(), { timeout: 2000 }) : setTimeout(resolve, 200)));
+  void loadRole(role, lang).then(async (u) => {
+    for (const name of u.manifest?.buckets ?? []) {
+      await idle();
+      await loadBucket(u, name);
+    }
+  });
+}
+
+/** The keys a table has for one path: by the index on a loaded recording (noting the path's bucket), else by scanning. */
+function keysOf(rec: Recording, table: Table, path: string): string[] {
+  const u = byRec.get(rec);
+  if (!u) return Object.keys(rec[table]).filter((k) => pathOfKey(k) === path);
+  touch(u, path);
+  return u.index[table].get(path) ?? [];
 }
 
 /**
@@ -170,7 +463,7 @@ export function recording(role: DemoRole, lang: DemoLang): Promise<Recording> {
  */
 export function soulRecording(civ: string, lang: DemoLang): Promise<Recording | null> {
   const name = `soul_${civ}`;
-  // The same template as `recording`'s, so the bundler's context is the same set of files, recorded or not.
+  // The same template as the single-file recordings' (`loadRole`), so the bundler's context is the same set of files, recorded or not.
   return (soulLoaded[`${name}.${lang}`] ??= import(`./data/${name}.${lang}.json`).then(
     (m) => (soulReady[`${name}.${lang}`] = shifted(m.default as Recording)),
     () => (soulReady[`${name}.${lang}`] = null),
@@ -250,11 +543,12 @@ const pathOfKey = (key: string) => key.split("?")[0];
 /** Every row the recording has for a list path, across all the query strings it was asked with. */
 export function allRows(rec: Recording, path: string): Row[] {
   const seen = new Map<string, Row>();
-  const bare = rec.lists[path];
+  const keys = keysOf(rec, "lists", path);
+  const bare = keys.includes(path) ? rec.lists[path] : undefined;
   for (const row of bare?.rows ?? []) seen.set(idOf(row) ?? JSON.stringify(row), row);
-  for (const [key, list] of Object.entries(rec.lists)) {
-    if (key === path || pathOfKey(key) !== path) continue;
-    for (const row of list.rows) {
+  for (const key of keys) {
+    if (key === path) continue;
+    for (const row of rec.lists[key].rows) {
       const id = idOf(row) ?? JSON.stringify(row);
       if (!seen.has(id)) seen.set(id, row);
     }
@@ -353,7 +647,7 @@ function collectionOf(path: string): { collection: string; id: string } | null {
 
 function listAnswer(rec: Recording, path: string, query: URLSearchParams, q: string): Answer | null {
   const key = q ? `${path}?${q}` : path;
-  const known = Object.keys(rec.lists).some((k) => pathOfKey(k) === path);
+  const known = keysOf(rec, "lists", path).length > 0;
   const added = overlay.added[path] ?? [];
   if (!known && added.length === 0) return null;
   const exact = rec.lists[key];
@@ -380,7 +674,8 @@ export function read(rec: Recording, path: string, query: URLSearchParams): Answ
   const parent = collectionOf(path);
   const inParent = parent ? allRows(rec, parent.collection).find((r) => idOf(r) === parent.id) : undefined;
   const addedRow = parent ? overlay.added[parent.collection]?.find((r) => idOf(r) === parent.id) : undefined;
-  const doc = rec.docs[key] ?? rec.docs[path] ?? Object.entries(rec.docs).find(([k]) => pathOfKey(k) === path)?.[1];
+  const anyKey = keysOf(rec, "docs", path)[0];
+  const doc = rec.docs[key] ?? rec.docs[path] ?? (anyKey === undefined ? undefined : rec.docs[anyKey]);
   if (doc && doc.s !== 200) return { status: doc.s, data: doc.b };
   if (doc || inParent || addedRow) {
     if (Array.isArray(doc?.b)) return { status: 200, data: [...((overlay.added[path] ?? []) as unknown[]), ...(overlaid(doc.b, path) as unknown[])] };
@@ -393,7 +688,7 @@ export function read(rec: Recording, path: string, query: URLSearchParams): Answ
   // A row of a recorded list that the list does not have — an id from an older recording (every re-seed mints new
   // ones), or one typed by hand — is a 404, as the server would say. An empty 200 here made detail pages crash on the
   // fields they expect (2026-11-08: /souls/<old id> → "Cannot read properties of undefined (reading 'map')").
-  if (parent && /^(\d+|[0-9a-f]{8}-[0-9a-f-]{27})$/.test(parent.id) && Object.keys(rec.lists).some((k) => pathOfKey(k) === parent.collection)) {
+  if (parent && /^(\d+|[0-9a-f]{8}-[0-9a-f-]{27})$/.test(parent.id) && keysOf(rec, "lists", parent.collection).length > 0) {
     return { status: 404, data: { type: "about:blank", title: "Not Found", status: 404, code: "not_found", detail: "Not found." } };
   }
   console.info("[demo] nothing recorded for GET", key);

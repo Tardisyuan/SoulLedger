@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { type Answer, DEMO_USERNAMES, langOf, read, recording } from "./store";
+import { type Answer, DEMO_USERNAMES, langOf, read, settle } from "./store";
 
 /** The request a judge's console never makes: the permissions page is hidden from them, so this is the bypass. */
 const PATH = "/perm/permissions/";
@@ -15,7 +15,7 @@ const PATH = "/perm/permissions/";
 export function OverreachProbe() {
   const { t, locale } = useI18n();
   const [answer, setAnswer] = useState<Answer | null>(null);
-  const ask = () => void recording("judge", langOf(locale)).then((rec) => setAnswer(read(rec, PATH, new URLSearchParams())));
+  const ask = () => void settle("judge", langOf(locale), (rec) => read(rec, PATH, new URLSearchParams()), [PATH]).then(setAnswer);
   const refused = !!answer && answer.status >= 400;
   return (
     <div data-testid="demo-overreach" className="mt-3 border-t border-[oklch(var(--color-line))] pt-3">

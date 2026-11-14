@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readRecording } from "./demo-recording-io.mjs";
 
 const DATA = new URL("../frontend/demo/data/", import.meta.url);
 const OUT = new URL("home-preview.json", DATA);
@@ -79,7 +80,7 @@ function build() {
   const out = { realms: {}, zh: {}, en: {} };
   for (const skin of Object.keys(ROLE)) {
     for (const lang of ["zh", "en"]) {
-      const shown = pick(read(`${ROLE[skin]}.${lang}.json`), skin);
+      const shown = pick(readRecording(fileURLToPath(DATA).replace(/\/$/, ""), ROLE[skin], lang), skin);
       if (!shown) {
         out[lang][skin] = null;
         continue;

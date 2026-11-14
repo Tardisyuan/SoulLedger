@@ -10,7 +10,7 @@ import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { defaultViewRoute } from "@/src/lib/defaultView";
-import { DEMO_USERNAMES, type DemoRole, langOf, recording } from "./store";
+import { DEMO_USERNAMES, type DemoRole, langOf, settle } from "./store";
 import { type Tour, requestGuard, tourOf } from "./tour";
 
 export const ROLE_OF_SKIN: Record<SealCiv, DemoRole> = { cn: "judge", eu: "judge_eu", eg: "judge_eg", gr: "judge_gr" };
@@ -54,20 +54,21 @@ async function firstPage(role: DemoRole, user: Parameters<typeof defaultViewRout
 }
 
 /**
- * Ahead of the click (hover, focus, press): the role's recording (1–5 MB; the sign-in waits on it) and, once signed in
+ * Ahead of the click (hover, focus, press): the role's boot bucket (the sign-in waits on it) and the buckets the tour's
+ * first step reads, and, once signed in
  * (the finished tour's other seals), the page it opens on. Without it the seal played out over a landing page still
  * waiting for both. Only a head start: `enter` still asks `/demo/tour/` where to go.
  */
 export function useWarm() {
   const router = useRouter();
   return (role: DemoRole) => {
-    void recording(role, langOf(getLocale())).then(async (rec) => {
+    void settle(role, langOf(getLocale()), (rec) => ({ user: rec.login.user, first: tourOf(rec)?.steps[0]?.route })).then(async ({ user: who, first }) => {
       // Not before the sign-in: with no marker cookie `proxy.ts` answers the route's prefetch with a redirect to
       // /login?redirect=…, the router keeps that answer, and the next push to the route lands on the login page (seen
       // in E2E traces: the tour's step on /souls/… opened /login, and the cover waited its full 6 s for a route that never came).
       if (!getRefreshToken()) return;
-      const user = rec.login.user as unknown as Parameters<typeof defaultViewRoute>[0];
-      router.prefetch(role === "moderator" ? "/moderation" : (tourOf(rec)?.steps[0]?.route ?? (await defaultViewRoute(user))));
+      const user = who as unknown as Parameters<typeof defaultViewRoute>[0];
+      router.prefetch(role === "moderator" ? "/moderation" : (first ?? (await defaultViewRoute(user))));
     });
   };
 }
