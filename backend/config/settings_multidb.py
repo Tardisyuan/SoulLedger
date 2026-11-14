@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .multidb import SHADOW_ALIAS
 from .settings import *  # noqa: F401,F403
+from .settings import DATABASE_ROUTERS as _PRODUCTION_ROUTERS
 from .settings import DATABASES
 from .testdb import run_suffix
 
@@ -24,4 +25,8 @@ else:
     # (config/testdb.py), as it does for `default`.
     _shadow["NAME"] = f"{_shadow['NAME']}_shadow"
 DATABASES[SHADOW_ALIAS] = _shadow
-DATABASE_ROUTERS = ["config.multidb.ShadowTenantRouter"]
+# The shadow router first: it answers None for everything it does not claim, so the production
+# ShardRouter behind it still decides the rest. In stage 0 ShardRouter answers None too and the order
+# is moot; from stage 3 it answers with an alias, and in front it would take every call the shadow
+# router needs to see.
+DATABASE_ROUTERS = ["config.multidb.ShadowTenantRouter", *_PRODUCTION_ROUTERS]
