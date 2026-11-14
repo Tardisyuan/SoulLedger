@@ -48,7 +48,8 @@ def test_the_empty_address_is_not_a_duplicate():
     User.objects.create_user(username="a", password="x", email="")
     User.objects.create_user(username="b", password="x", email="")
     User.objects.create_user(username="c", password="x")
-    assert User.objects.filter(email="").count() == 3
+    # 迁移播种的 sysadmin(SYSTEM_ADMIN_USERNAME)也没有邮箱,在每个测试库里;这里只数本测试建的三个。
+    assert User.objects.filter(email="", username__in=["a", "b", "c"]).count() == 3
 
 
 @pytest.mark.django_db

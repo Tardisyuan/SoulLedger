@@ -65,6 +65,7 @@ PERMISSION_NAME_EN = {
     "soul_inbox.read": "View the hall's inbox",
     "soul_inbox.reply": "Reply from the hall's inbox",
     "souls.mfa_reset": "Turn off a soul's two-step",
+    "system.cross_civilization": "Manage across civilizations",
     "system.settings": "System settings",
     "tudi.manage": "Manage Earth Gods",
     "tudi.read": "View Earth Gods",

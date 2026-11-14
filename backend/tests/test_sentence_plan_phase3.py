@@ -655,7 +655,11 @@ def test_a_finished_plan_cannot_be_cancelled(cn, judges):
 
 def test_the_global_admin_can_cancel(cn, eg, eu, judges):
     soul, p = _two_stops(cn, eg, eu)
-    admin = plan.officer("g_admin", "ADMIN", None)  # only the hall-less ADMIN crosses halls (2026-10-29)
+    # Only the global admin crosses every hall (2026-10-29); since 2026-11-15 (§7.5) that is SYSTEM_ADMIN, and a
+    # hall-less ADMIN of a civilization with no stop on the plan does not see it.
+    greek = plan.officer("gr_civ", "ADMIN", None, civilization="GREEK")
+    assert _c(greek).post(f"{PLANS}{p.pk}/cancel/", {"reason": "修数据"}, format="json").status_code == 404
+    admin = plan.officer("g_admin", "SYSTEM_ADMIN", None)
     assert _c(admin).post(f"{PLANS}{p.pk}/cancel/", {"reason": "修数据"}, format="json").status_code == 200
 
 

@@ -70,10 +70,11 @@ def _object(kind, place, user, cn):
 
 def _user(spec, cn):
     tenant = _tenant(spec["hall"]) if spec["hall"] else None
-    if spec["role"] not in ("ADMIN",):
+    if spec["role"] not in ("ADMIN", "SYSTEM_ADMIN"):
         Role.objects.get_or_create(name=spec["role"], defaults={"display_name": spec["role"]})
     user = User.objects.create_user(username=f"u-{spec['role'].lower()}", password="x", role=spec["role"],
-                                    tenant=tenant, extra_roles=spec.get("extra_roles", []))
+                                    tenant=tenant, extra_roles=spec.get("extra_roles", []),
+                                    civilization=spec.get("civilization"))
     if tenant is not None:
         user.organization = org(cn, "home")
         user.save(update_fields=["organization"])

@@ -50,8 +50,8 @@ def eu():
     return _tenant("EU_HEAVEN_HELL")
 
 
-def _officer(username, role, tenant):
-    return User.objects.create_user(username=username, password="x", role=role, tenant=tenant)
+def _officer(username, role, tenant, **extra):
+    return User.objects.create_user(username=username, password="x", role=role, tenant=tenant, **extra)
 
 
 def _residing(home, away, *, state=SoulState.DISPOSED, name="客魂"):
@@ -444,9 +444,11 @@ def test_a_home_officer_without_the_codename_is_refused(cn, eg):
 
 def test_the_global_admin_can_end_the_residence_and_another_halls_admin_cannot(cn, eg, eu):
     soul, record = _residing(cn, eg)
-    # 2026-10-29: another hall's ADMIN does not see the record; the hall-less ADMIN may act on it.
+    # 2026-10-29: another hall's ADMIN does not see the record; the global admin may act on it. 2026-11-15 (§7.5):
+    # the global admin is SYSTEM_ADMIN; a hall-less ADMIN of a third civilization (neither home nor away) is 404 too.
     assert _return(_officer("eu_admin", "ADMIN", eu), record).status_code == 404
-    assert _return(_officer("g_admin", "ADMIN", None), record).status_code == 200
+    assert _return(_officer("eu_civ", "ADMIN", None, civilization="EUROPEAN"), record).status_code == 404
+    assert _return(_officer("g_admin", "SYSTEM_ADMIN", None), record).status_code == 200
     soul.refresh_from_db()
     assert soul.tenant_id == cn.pk
 
@@ -542,7 +544,7 @@ def test_manual_return_with_an_open_judgment_is_409_with_a_code(cn, eg):
 def test_admin_manual_return_is_blocked_too(cn, eg, eu):
     soul, record = _residing(cn, eg)
     _open_judgment(soul, eg)
-    assert _return(_officer("g_admin", "ADMIN", None), record).data["code"] == "open_judgment"
+    assert _return(_officer("g_admin", "SYSTEM_ADMIN", None), record).data["code"] == "open_judgment"
 
 
 def test_without_a_plan_withdrawing_the_blocking_judgment_no_longer_returns_the_soul(cn, eg):

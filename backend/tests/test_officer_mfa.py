@@ -8,6 +8,7 @@ from datetime import timedelta
 from unittest import mock
 
 import pytest
+from django.conf import settings
 from django.contrib.auth.hashers import PBKDF2PasswordHasher, get_hasher
 from django.test import override_settings
 from django.utils import timezone
@@ -578,12 +579,18 @@ class TestRequiredRolesAndListing:
         assert by_name["judge"]["enabled"] is True and by_name["judge"]["confirmed_at"] is not None
         assert by_name["admin"] == {"enabled": False, "required": True, "confirmed_at": None, "last_used_at": None}
         assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "enabled"}).data["results"]} == {"judge"}
-        assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "disabled"}).data["results"]} == {"admin"}
-        assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "missing"}).data["results"]} == {"admin"}
+        # The migration-seeded SYSTEM_ADMIN (settings.SYSTEM_ADMIN_USERNAME) is in every test database and, like
+        # `admin`, has not set up two-step verification while its role requires it.
+        seeded = settings.SYSTEM_ADMIN_USERNAME
+        assert by_name[seeded]["required"] is True
+        assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "disabled"}).data["results"]} == {
+            "admin", seeded}
+        assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "missing"}).data["results"]} == {
+            "admin", seeded}
         cn_tenant.settings = {"mfa_required_roles": ["JUDGE"]}
         cn_tenant.save(update_fields=["settings"])
         mfa.disable(judge_user)
-        assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "missing"}).data["results"]} == {"admin", "judge"}
+        assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "missing"}).data["results"]} == {"admin", "judge", seeded}
 
 
 @pytest.mark.django_db

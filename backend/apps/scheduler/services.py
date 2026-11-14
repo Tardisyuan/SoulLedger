@@ -344,7 +344,8 @@ def overdue_jobs(now=None) -> list[ScheduledJob]:
 # ---------------------------------------------------------------------------
 
 def alert_recipients(job: ScheduledJob):
-    """Every active hall-less ADMIN, plus the job's tenant's ADMINs and users who hold scheduler.manage.
+    """Every active SYSTEM_ADMIN (and, for a hall's job, that hall's civilization ADMINs), plus the job's tenant's
+    ADMINs and users who hold scheduler.manage.
     An ADMIN bound to another hall is not told about this hall's jobs (2026-10-29)."""
     from apps.authentication.models import User
     from apps.core.tenant import hall_less_admins_q

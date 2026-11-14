@@ -230,11 +230,12 @@ class TestUpdateAndDisable:
 # ── Tenant scoping ───────────────────────────────────────────────────
 
 
-def _queryset_for(view_cls, role, tenant):
+def _queryset_for(view_cls, role, tenant, **user_attrs):
     from types import SimpleNamespace
 
     view = view_cls()
-    view.request = SimpleNamespace(user=SimpleNamespace(role=role, is_authenticated=True), tenant=tenant)
+    user = SimpleNamespace(role=role, is_authenticated=True, **user_attrs)
+    view.request = SimpleNamespace(user=user, tenant=tenant)
     return view.get_queryset()
 
 
@@ -261,13 +262,17 @@ class TestTenantScoping:
         assert list(_queryset_for(AdminWebhookDeliveryViewSet, "VIEWER", cn_tenant)) == [self.cn_delivery]
 
     def test_admin_bypass_matches_the_api_key_viewset(self, cn_tenant):
-        """One global role, the same way on all three admin doors of this app."""
+        """One global role (SYSTEM_ADMIN since 2026-11-15, §7.5), the same way on all three admin doors of this
+        app; a hall-less ADMIN is confined to its civilization's halls on both."""
         from apps.death_sync.views import AdminWebhookViewSet, ExternalApiKeyViewSet
 
-        keys = set(_queryset_for(ExternalApiKeyViewSet, "ADMIN", cn_tenant))
-        hooks = set(_queryset_for(AdminWebhookViewSet, "ADMIN", cn_tenant))
+        keys = set(_queryset_for(ExternalApiKeyViewSet, "SYSTEM_ADMIN", cn_tenant))
+        hooks = set(_queryset_for(AdminWebhookViewSet, "SYSTEM_ADMIN", cn_tenant))
         assert keys == {self.cn_key, self.eu_key}
         assert hooks == {self.cn_hook, self.eu_hook}
+        civ = {"tenant_id": None, "civilization": "CHINESE"}
+        assert set(_queryset_for(ExternalApiKeyViewSet, "ADMIN", None, **civ)) == {self.cn_key}
+        assert set(_queryset_for(AdminWebhookViewSet, "ADMIN", None, **civ)) == {self.cn_hook}
 
 
 # ── Deliveries ───────────────────────────────────────────────────────

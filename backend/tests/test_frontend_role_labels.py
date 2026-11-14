@@ -40,12 +40,23 @@ def _roles_in(bundle):
     return data.get("users", {}).get("roles", {})
 
 
+def _egy_pending_roles():
+    """egy wording comes from Design only; a key it has not approved yet is listed in the shared pending
+    file (the jest parity guards read the same file) and renders as zh-Hans. A role waiting there is not
+    missing -- the same exemption `test_frontend_event_types_track_the_backend.py` gives event types."""
+    path = FRONTEND / "src" / "__tests__" / "support" / "egyPendingKeys.json"
+    assert path.exists(), f"{path} not found"
+    prefix = "users.roles."
+    return {k[len(prefix):] for k in json.loads(path.read_text(encoding="utf-8")) if k.startswith(prefix)}
+
+
 @pytest.mark.parametrize("bundle", BUNDLES)
 def test_every_role_has_a_label(bundle):
     labels = _roles_in(bundle)
     assert labels, f"users.roles is empty in {bundle}.json"
 
-    missing = [r for r in UserRole.values if r not in labels]
+    waiting = _egy_pending_roles() if bundle == "egy" else set()
+    missing = [r for r in UserRole.values if r not in labels and r not in waiting]
     assert not missing, (
         f"{bundle}.json has no label for {missing}. The UI renders an unknown "
         f"role as an unrecognised value, and users holding it cannot be "
@@ -53,8 +64,13 @@ def test_every_role_has_a_label(bundle):
         f"-- they were all missing MODERATOR together."
     )
 
-    blank = [r for r in UserRole.values if not str(labels.get(r, "")).strip()]
+    blank = [r for r in UserRole.values if r not in waiting and not str(labels.get(r, "")).strip()]
     assert not blank, f"{bundle}.json has empty labels for {blank}"
+
+
+def test_a_pending_role_is_still_a_role():
+    """The pending exemption cannot hide a stale entry: every `users.roles.*` waiting for egy is a role."""
+    assert _egy_pending_roles() <= set(UserRole.values)
 
 
 @pytest.mark.parametrize("bundle", BUNDLES)

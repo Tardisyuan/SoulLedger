@@ -1,6 +1,7 @@
 """管理员的在线会话列表与强退(2026-10-29 用户决定):`/auth/admin/sessions/`。
 
-钉住:码门 `session.manage`(无码 403);范围 —— 绑殿管理员只看本殿的人,无殿管理员看全部,范围外的 id 404;
+钉住:码门 `session.manage`(无码 403);范围 —— 绑殿管理员只看本殿的人,SYSTEM_ADMIN 看全部,无殿的文明
+管理员只看本文明各殿(2026-11-15,§7.5),范围外的 id 404;
 官员 / 灵魂两个页签互不混;按用户筛;强退一台后它的 access 与刷新都失效、别的会话照常、实时连接被关;
 强退一个人的全部;不能在这里退自己正在用的这台、也不能强退自己;都写审计;登录记下 IP。
 """
@@ -32,8 +33,8 @@ def _clean():
     cache.clear()
 
 
-def _user(username, role, tenant):
-    return User.objects.create_user(username=username, password=PASSWORD, role=role, tenant=tenant)
+def _user(username, role, tenant, **extra):
+    return User.objects.create_user(username=username, password=PASSWORD, role=role, tenant=tenant, **extra)
 
 
 def _login(username):
@@ -70,7 +71,8 @@ def world(cn_tenant, eu_tenant):
     }
     return {
         "cn_judge": cn_judge, "eu_judge": eu_judge, "cn_soul": cn_soul, "sessions": sessions,
-        "root": _user("root_admin", "ADMIN", None),
+        "root": _user("root_admin", "SYSTEM_ADMIN", None),
+        "civ_admin": _user("cn_civ_admin", "ADMIN", None, civilization="CHINESE"),
         "cn_admin": _user("cn_admin", "ADMIN", cn_tenant),
     }
 
@@ -81,9 +83,10 @@ def _ids(res):
 
 
 class TestListing:
-    def test_a_hall_less_admin_sees_every_hall_and_a_bound_admin_only_its_own(self, world):
+    def test_the_system_admin_sees_every_hall_a_civilization_admin_its_own_and_a_bound_admin_its_hall(self, world):
         s = world["sessions"]
         assert _ids(officer_client(world["root"]).get(LIST)) == {str(s["cn_judge"].pk), str(s["eu_judge"].pk)}
+        assert _ids(officer_client(world["civ_admin"]).get(LIST)) == {str(s["cn_judge"].pk)}
         assert _ids(officer_client(world["cn_admin"]).get(LIST)) == {str(s["cn_judge"].pk)}
 
     def test_souls_have_their_own_tab_and_never_appear_among_officers(self, world):
