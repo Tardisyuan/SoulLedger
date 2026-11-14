@@ -6,14 +6,14 @@
  * 软导航:登出到 /goodbye 不换文档,`seedAuthState` 的 init script 不会把令牌写回去 —— 下面断「令牌没了」
  * 量的是 logout() 本身。刷新会重跑 init script,所以令牌的断言都放在刷新之前。
  */
-import { expect, test, setupAuthenticatedPage, TEST_USER } from "./fixtures";
+import { expect, test, openUserMenu, setupAuthenticatedPage, TEST_USER } from "./fixtures";
 
 test("登出:确认 → 再会页叫出名字与地府那一句,便条与令牌都不在了,刷新是中性的,六秒后回首页", async ({ page, context }) => {
   const api = await setupAuthenticatedPage(page);
   api.on("POST", "/auth/logout/", { detail: "ok" });
   await page.goto("/dashboard");
 
-  await page.getByTestId("user-menu").click();
+  await openUserMenu(page);
   await page.getByRole("button", { name: "登出", exact: true }).click();
   await page.getByRole("button", { name: "确认退出", exact: true }).click();
 

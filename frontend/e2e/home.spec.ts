@@ -228,7 +228,13 @@ test.describe("Authenticated shell", () => {
     await expect(rail.getByRole("link", { name: "人间" })).toHaveAttribute("href", "/moderation");
 
     // 门内的页来自菜单:/permissions 在「司」里,同门的是夹具菜单里的调度、回收站、定时任务、待交付初始密码。
-    const tabs = page.getByTestId("door-tabs");
+    // ≤ 768 没有页签条(fe-mobile 3.1):同一组页在顶栏「页名 ▾」升起的抽屉里。
+    const narrow = (page.viewportSize()?.width ?? 1280) <= 768;
+    if (narrow) {
+      await expect(page.getByTestId("door-tabs")).toBeHidden();
+      await page.getByTestId("door-page-picker").click();
+    }
+    const tabs = page.getByTestId(narrow ? "door-page-sheet" : "door-tabs");
     await expect(tabs).toHaveAttribute("data-door", "office");
     for (const [name, href] of [
       ["调度管理", "/dispatch"],

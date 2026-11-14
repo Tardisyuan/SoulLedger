@@ -24,7 +24,7 @@
  * 前半程几乎不动、后半程猛冲,一枪打在中点会正好错过。
  */
 
-import { expect, test, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, openUserMenu, setupAuthenticatedPage } from "./fixtures";
 
 /**
  * 在这次动画的时间轴上逐点测文档宽度与视口宽度,返回最宽的一点。
@@ -118,7 +118,7 @@ test.describe("屏外动效不撑宽文档", () => {
     await page.waitForLoadState("networkidle");
 
     // Settings lives in the user menu since 规范 v1; open the menu, then the drawer.
-    await page.getByTestId("user-menu").click();
+    await openUserMenu(page);
     const gear = page.getByRole("button", { name: /settings|设置/i }).first();
     await expect(gear).toBeVisible();
 

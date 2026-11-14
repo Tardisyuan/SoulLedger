@@ -11,6 +11,7 @@ import { BRAND_WORD } from "@/src/components/layout/DoorRail";
 import { Seal } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { useWideViewport } from "@/src/hooks/useWideViewport";
 import stats from "@/src/config/landing-stats.json";
 import { ENTERED, ENTRANCE, type EntranceDetail, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
 import { OverreachProbe } from "./OverreachProbe";
@@ -373,6 +374,10 @@ export default function DemoTour() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [state, setState] = useState<State>(START);
   const [lift, setLift] = useState(0);
+  // 窄屏(< 768,与面板的 `max-md:` 同一条线)默认只是一行「2 / 6 · 步名 ▴  下一步 →」,点开才是全文(fe-mobile 3.1):
+  // 全文 225 px 高时正文只剩一半。不存进 sessionStorage:这是看的方式,不是导览走到哪儿。
+  const narrow = !useWideViewport(768);
+  const [open, setOpen] = useState(false);
   const username = user?.username ?? null;
 
   // Every entrance, not only a change of user: re-entering as the same role from the home page (the administrator,
@@ -505,7 +510,7 @@ export default function DemoTour() {
 
   const outside = pathname === "/" || pathname.startsWith("/login");
   const panel =
-    "fixed z-toast border border-[oklch(var(--color-line-strong))] border-t-3 border-t-[oklch(var(--color-main))] bg-[oklch(var(--color-surface-1))] p-4 shadow-overlay max-md:inset-x-0 max-md:bottom-16 max-md:max-h-[40vh] max-md:overflow-y-auto md:right-6 md:bottom-6 md:w-90";
+    "fixed z-toast border border-[oklch(var(--color-line-strong))] border-t-3 border-t-[oklch(var(--color-main))] bg-[oklch(var(--color-surface-1))] p-4 shadow-overlay max-md:inset-x-0 max-md:bottom-(--bottom-bar) max-md:max-h-[32dvh] max-md:overflow-y-auto md:right-6 md:bottom-6 md:w-90";
   let card = null;
   if (tour && step && !outside && !state.closed) {
     // 「系统怎么保护自己」 belongs to no underworld: its own title and ending, and the four seals all stay on offer.
@@ -551,20 +556,48 @@ export default function DemoTour() {
           ref={panelRef as RefObject<HTMLButtonElement | null>}
           data-testid="demo-tour-badge"
           onClick={() => update({ collapsed: false })}
-          className="fixed right-3 bottom-3 z-toast h-11 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-xs text-[oklch(var(--color-ink))] max-md:bottom-20 md:right-6 md:bottom-6"
+          className="fixed right-3 bottom-3 z-toast h-11 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-xs text-[oklch(var(--color-ink))] max-md:bottom-[calc(var(--bottom-bar)+12px)] md:right-6 md:bottom-6"
         >
           {t("demo.tour.chip", { n: String(state.step + 1), total: String(total) })} <span aria-hidden="true">▴</span>
         </button>
       );
     } else {
       const last = state.step === total - 1;
-      card = (
+      // 试一试越权、问一问那两步的卡片本身就是要点的东西,不收成一行。
+      const foldable = narrow && !step.probe && !step.assist;
+      const nextButton = here ? (
+        <button type="button" data-testid="demo-tour-next" className="band-colour h-9 shrink-0 px-3 text-sm font-semibold" onClick={() => (last ? update({ finished: true }) : go(state.step + 1))}>
+          {t("demo.tour.next")} →
+        </button>
+      ) : (
+        <button type="button" data-testid="demo-tour-back" className="band-colour h-9 min-w-0 truncate px-3 text-sm font-semibold" onClick={() => go(state.step)}>
+          {t("demo.tour.look_here", { target: t(`demo.tour.target.${step.target}`) })} →
+        </button>
+      );
+      card = foldable && !open ? (
+        <aside ref={panelRef} data-testid="demo-tour" data-folded="" data-civ={guard ? undefined : tour.skin} data-tour={tour.skin} className={`${panel} max-md:py-0`} style={lift ? { bottom: lift } : undefined}>
+          <div className="flex h-11 items-center gap-2">
+            <button
+              type="button"
+              data-testid="demo-tour-unfold"
+              aria-expanded={false}
+              onClick={() => setOpen(true)}
+              className="flex h-11 min-w-0 flex-1 items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))]"
+            >
+              <span data-testid="demo-tour-progress" className="shrink-0 font-mono text-xs">{state.step + 1} / {total}</span>
+              <span className="min-w-0 truncate">{t(`demo.tour.${tour.skin}.${step.n}.name`)}</span>
+              <span aria-hidden="true" className="shrink-0 text-[oklch(var(--color-ink-muted))]">▴</span>
+            </button>
+            {nextButton}
+          </div>
+        </aside>
+      ) : (
         <aside ref={panelRef} data-testid="demo-tour" data-civ={guard ? undefined : tour.skin} data-tour={tour.skin} className={panel} style={lift ? { bottom: lift } : undefined}>
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-xs text-[oklch(var(--color-ink-muted))]">{guard ? t("demo.tour.guard.title") : t("demo.tour.title_civ", { civ })}</span>
             <span className="flex shrink-0 items-center gap-2">
               <span data-testid="demo-tour-progress" className="font-mono text-xs text-[oklch(var(--color-ink))]">{state.step + 1} / {total}</span>
-              <button type="button" data-testid="demo-tour-collapse" aria-label={t("demo.tour.collapse")} onClick={() => update({ collapsed: true })} className="h-6 min-w-6 text-sm text-[oklch(var(--color-ink-muted))]">—</button>
+              <button type="button" data-testid="demo-tour-collapse" aria-label={t("demo.tour.collapse")} onClick={() => (foldable ? setOpen(false) : update({ collapsed: true }))} className="h-6 min-w-6 text-sm text-[oklch(var(--color-ink-muted))]">—</button>
             </span>
           </div>
           <div aria-hidden="true" className="mt-2 flex gap-1">
@@ -583,15 +616,7 @@ export default function DemoTour() {
             ) : (
               <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-skip" onClick={() => update({ finished: true, skipped: true })}>{t("demo.tour.skip")}</Button>
             )}
-            {here ? (
-              <button type="button" data-testid="demo-tour-next" className="band-colour h-9 px-3 text-sm font-semibold" onClick={() => (last ? update({ finished: true }) : go(state.step + 1))}>
-                {t("demo.tour.next")} →
-              </button>
-            ) : (
-              <button type="button" data-testid="demo-tour-back" className="band-colour h-9 px-3 text-sm font-semibold" onClick={() => go(state.step)}>
-                {t("demo.tour.look_here", { target: t(`demo.tour.target.${step.target}`) })} →
-              </button>
-            )}
+            {nextButton}
           </div>
         </aside>
       );

@@ -10,11 +10,16 @@ import { dedupeGroups, deskTag, matchesSearch, onDeskCount, overviewParts, sourc
 import { renderWithProviders } from "./support/render";
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+const mockBack = jest.fn();
 const mockShowToast = jest.fn();
+/** The address bar's query: `?case=<id>` is the phone's 「打开一件」 (fe-mobile 3.2). */
+let mockSearch = "";
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack }),
   usePathname: () => "/desk",
+  useSearchParams: () => new URLSearchParams(mockSearch),
 }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { role: "JUDGE", permissions: ["judgment.read", "judgment.execute"] } }),
@@ -165,6 +170,7 @@ function page(results: Judgment[]) {
 describe("CaseDesk", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearch = "";
     const groups: Record<string, Judgment[]> = {
       mine: [row("1", { soul_name: "赵志强" })],
       deferred: [],
@@ -238,6 +244,70 @@ describe("CaseDesk", () => {
       fireEvent.keyDown(window, { key: "c" });
     });
     expect(judgmentApi.claim).toHaveBeenCalledWith("2");
+  });
+
+  describe("on a phone, opening a case is a navigation (?case=)", () => {
+    const realMatchMedia = window.matchMedia;
+    const phone = (matches: boolean) => {
+      window.matchMedia = ((q: string) => ({ matches: matches && q === "(max-width: 768px)", media: q })) as unknown as typeof window.matchMedia;
+    };
+    afterEach(() => {
+      window.matchMedia = realMatchMedia;
+    });
+    const desk = () => screen.getByTestId("case-desk");
+
+    it("pushes ?case=<id> when a row is tapped at 393, so system back returns to the stack", async () => {
+      phone(true);
+      renderWithProviders(<CaseDesk />);
+      fireEvent.click(await screen.findByTestId("desk-row-3"));
+      expect(mockPush).toHaveBeenCalledWith("/desk?case=3");
+      // Absence: not a replace (that would leave nothing for back to return to), and the open state is not local —
+      // with the address unchanged (the mock did not navigate) the desk is still the stack.
+      expect(mockReplace).not.toHaveBeenCalled();
+      expect(desk()).not.toHaveAttribute("data-open");
+    });
+
+    it("leaves the address alone on a desktop click", async () => {
+      phone(false);
+      renderWithProviders(<CaseDesk />);
+      fireEvent.click(await screen.findByTestId("desk-row-3"));
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
+      expect(current()).toBe("desk-row-3");
+    });
+
+    it("derives the open case from the address, and ‹ 案卷台 goes back the step it pushed", async () => {
+      phone(true);
+      const view = renderWithProviders(<CaseDesk />);
+      fireEvent.click(await screen.findByTestId("desk-row-2"));
+      mockSearch = "case=2";
+      view.rerender(<CaseDesk />);
+      expect(desk()).toHaveAttribute("data-open");
+      expect(current()).toBe("desk-row-2");
+      fireEvent.click(screen.getByTestId("desk-back"));
+      expect(mockBack).toHaveBeenCalledTimes(1);
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("a deep link to ?case= opens that case; ‹ 案卷台 replaces instead of leaving the desk", async () => {
+      mockSearch = "case=3";
+      renderWithProviders(<CaseDesk />);
+      await screen.findByTestId("desk-row-3");
+      expect(desk()).toHaveAttribute("data-open");
+      expect(current()).toBe("desk-row-3");
+      fireEvent.click(screen.getByTestId("desk-back"));
+      expect(mockBack).not.toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith("/desk", { scroll: false });
+    });
+
+    it("moving to the next case while one is open swaps the address, without another history entry", async () => {
+      mockSearch = "case=2";
+      renderWithProviders(<CaseDesk />);
+      await screen.findByTestId("desk-row-2");
+      fireEvent.keyDown(window, { key: "j" });
+      expect(mockReplace).toHaveBeenCalledWith("/desk?case=3", { scroll: false });
+      expect(mockPush).not.toHaveBeenCalled();
+    });
   });
 
   it("filters the stack by source through the API", async () => {

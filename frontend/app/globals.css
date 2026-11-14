@@ -883,6 +883,10 @@
        斜体照旧合成 —— Geist 没有斜体,`font-synthesis: none` 会让界面里的 italic 变成正体。 */
     font-synthesis: style;
     --bottom-bar: 0px;
+    /* 屏底的安全区(iPhone 的 Home 指示条、安卓手势条)。只有 viewport 写了 `viewport-fit=cover`(app/layout.tsx)才非零。 */
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    /* 门内页签条(`DoorTabs`)的高:画出来时它把 45px 写进 `--door-tabs-on`;≤ 768 不画那一条,下面归 0。 */
+    --door-tabs-h: var(--door-tabs-on, 0px);
     /* 状态标签的高(第三十批第 1 步第 2 条):触屏 28,精确指针 22(下面「精确指针的默认档」里覆盖)。 */
     --tag-h: 28px;
     /* 「以此人身份查看」固定条的高度(代看时 AppLayout 写成 2.5rem;平时 0)。它在工具条之上,
@@ -895,9 +899,21 @@
        `pb-14`)—— 内容短的页恰好一屏,不多出滚动。PageSpinner 填同一个槽位,用同一个值。 */
     --content-min-h: calc(100vh - var(--below-band) - var(--door-tabs-h, 0px) - var(--bottom-bar));
   }
+  /* ≤ 768 的壳是两层(fe-mobile 3.1):48 的顶栏 + 56 的门栏(加安全区;门栏尺寸照第三十八批,用户 2026-11-14)。门内页签条不画,换页是顶栏「页名 ▾」的抽屉。 */
   @media (max-width: 768px) {
     html {
-      --bottom-bar: calc(56px + env(safe-area-inset-bottom, 0px));
+      --bottom-bar: calc(56px + var(--safe-b));
+      --door-tabs-h: 0px;
+      --below-band: calc(48px + var(--imp-h));
+    }
+  }
+
+  /* 键盘提示按**输入方式**藏,不按宽度(fe-mobile 3.2):触屏上没有键盘可按,`[S] 放进待定` 这类提示只占地方。
+     这一条管审判页四个组件里的 `<kbd>`;案卷台的提示是 CSS module 的 `.kbd` / `.keys`(类名带哈希,这里够不到),
+     由 `desk.module.css` 里同一条 `(pointer: coarse)` 管。 */
+  @media (pointer: coarse) {
+    kbd {
+      display: none;
     }
   }
 

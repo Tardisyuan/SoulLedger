@@ -18,7 +18,7 @@ import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
 import { useSidebarMenus } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
-import { DoorRail, DoorTabs } from "@/src/components/layout/DoorRail";
+import { DoorPagePicker, DoorRail, DoorTabs, useDoorPages } from "@/src/components/layout/DoorRail";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
 import { PlaqueProvider, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { HeadingProvider, PlaqueValueProvider } from "@/src/components/plaque/pageHeadContext";
@@ -50,7 +50,10 @@ import { leaveGoodbye } from "@/src/lib/goodbye";
  * 是页面自己的 PageShell 页头(顶线 + 卷宗头,标题即 `<h1>`)。页面经 `usePlaque` 报的殿名 / 案号 / 概览
  * 由这里收下,经 `PlaqueValueProvider` 交给那个页头;面包屑在末段与 `<h1>` 相同时省掉末段。
  *
- * - ≤ 768 门栏到底部(门 +「我」;殿司只读收进「我」),内容让出 56 + 安全区(`--bottom-bar`)。
+ * - ≤ 768 壳只有两层(fe-mobile 3.1):48 的顶栏 + 门栏到底部(门 +「我」;殿司只读收进「我」;56 高,第三十八批),内容让出 56 + 安全区
+ *   (`--bottom-bar`)。顶栏左边是面包屑的返回键(有上一层时;门里不止一页时面包屑的各段不画)、中间是「当前页名 ▾」(`DoorPagePicker`,
+ *   门内换页的抽屉;门内页签条在窄屏不画)、右边搜索与通知;不画用户菜单 ——「我」在底栏,用户菜单的几样也收在那里。
+ *   `bare` 的页(案卷台)在窄屏同样有这条顶栏:没有页签条,门内换页只能靠它。
  * - 工具条吸顶;PageShell 的筛选栏吸在它下沿(`--below-band` = 52 + 代看条)。页头不吸顶。
  * - 连接状态只在断开时出现(`ConnectionBanner`,v4 第八批第 4 条):桌面是工具条里面包屑后面的一个
  *   胶囊,加工具条下沿一条 2px 状态色线;≤ 768 浮在工具条下沿正中。工具条高度不变,内容不动、不被盖住。
@@ -123,6 +126,8 @@ export function AppLayout({ children, bare = false }: { children: React.ReactNod
   };
 
   const { data: menus = [] } = useSidebarMenus();
+  // 窄屏顶栏:门里不止一页就画「页名 ▾」,面包屑只留它的返回键(有上一层时才有)。
+  const doorPages = useDoorPages();
   // 页面经 `usePlaque` 报的殿名 / 案号 / 概览,交给 PageShell 的页头;PageShell 报它的 `<h1>` 文字给面包屑。
   const [plaque, setPlaque] = useState<PlaqueText | null>(null);
   const [heading, setHeading] = useState<string | null>(null);
@@ -162,21 +167,30 @@ export function AppLayout({ children, bare = false }: { children: React.ReactNod
     </a>
     <ImpersonationBanner />
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
-      <DoorRail />
+      <DoorRail
+        onSettings={user ? () => setSettingsOpen(true) : undefined}
+        onLogout={user ? () => setLogoutConfirmOpen(true) : undefined}
+      />
 
       <div ref={mainBoxRef} className="min-w-0 max-[768px]:pb-(--bottom-bar)">
         {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。
             v4:工具条用 `.shell-glow`(globals.css)。
             右侧顺序照 v4:时辰 · 舒适 / 紧凑 · 问一问 · 搜索 · 通知 · 用户。 */}
-        {bare ? null : (
+        {/* `bare` 的页在宽屏没有工具条(有自己的页头);窄屏照样画,因为那里门内换页只在这条顶栏上。 */}
         <header
           data-testid="global-topbar"
-          className={`shell-glow sticky top-(--imp-h) z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] pl-4 ${
-            assist.pushed ? "pr-[436px]" : "pr-4"
-          }`}
+          className={`shell-glow sticky top-(--imp-h) z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] pl-4 max-[768px]:h-12 max-[768px]:gap-1 max-[768px]:pl-2 ${
+            assist.pushed ? "pr-[436px]" : "pr-4 max-[768px]:pr-2"
+          } ${bare ? "min-[769px]:hidden" : ""}`}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <Breadcrumb menus={menus} heading={heading} />
+          <div className="flex min-w-0 flex-1 items-center gap-3 max-[768px]:gap-1">
+            <div
+              data-testid="topbar-crumbs"
+              className={`flex min-w-0 flex-1 items-center ${doorPages.show ? "max-[768px]:flex-none max-[768px]:[&_ol]:hidden" : ""}`}
+            >
+              <Breadcrumb menus={menus} heading={heading} />
+            </div>
+            <DoorPagePicker />
             <ConnectionBanner />
             {user ? <HoursChip /> : null}
           </div>
@@ -234,7 +248,7 @@ export function AppLayout({ children, bare = false }: { children: React.ReactNod
               <Popover.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
                 <Popover.Trigger
                   data-testid="user-menu"
-                  className={`gap-1 px-2 ${onBar}`}
+                  className={`gap-1 px-2 max-[768px]:hidden ${onBar}`}
                   title={user.display_name || user.username}
                 >
                   <span className="max-w-40 truncate max-sm:max-w-20" title={user.display_name || user.username}>{user.display_name || user.username}</span>
@@ -304,7 +318,6 @@ export function AppLayout({ children, bare = false }: { children: React.ReactNod
             )}
           </div>
         </header>
-        )}
         {/* 门内二级导航;问一问推开时同样让出面板的 420。 */}
         <div className={assist.pushed ? "pr-[420px]" : undefined}>
           <DoorTabs />

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { CaseDesk } from "@/src/components/desk/CaseDesk";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -11,7 +12,10 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 export default function DeskPage() {
   return (
     <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
-      <CaseDesk />
+      {/* `CaseDesk` 读 `?case=`(useSearchParams),要一个 Suspense 边界,否则这一页的静态渲染整个退出。 */}
+      <Suspense fallback={null}>
+        <CaseDesk />
+      </Suspense>
     </RequirePermission>
   );
 }

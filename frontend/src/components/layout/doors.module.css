@@ -231,6 +231,52 @@
   font-weight: 600;
   box-shadow: inset 2px 0 0 oklch(var(--color-main-ink));
 }
+/* 抽屉里的按钮(设置、退出)与链接同一个样子。 */
+button.sheetLink {
+  width: 100%;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.sheetDanger {
+  color: oklch(var(--color-danger));
+}
+.sheetRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 8px;
+  font-size: 15px;
+  color: oklch(var(--color-ink));
+}
+
+/* ── 窄屏顶栏中间的「当前页名 ▾」(`DoorPagePicker`) ──────── */
+.picker {
+  display: none;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: oklch(var(--color-ink));
+  cursor: pointer;
+}
+.pickerName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 @media (max-width: 768px) {
   .rail {
@@ -240,12 +286,13 @@
     left: 0;
     right: 0;
     width: auto;
-    /* 高 56 + 安全区(第三十八批):`--bottom-bar` 在 globals.css 里是同一个值,内容按它让出。 */
+    /* 高 56 + 安全区(第三十八批;用户 2026-11-14 定:不用 fe-mobile 3.1 的 64 与顶边线):`--bottom-bar` 在 globals.css 里
+       是同一个值,内容按它让出。安全区(`--safe-b`)只是垫在门格下面的空白,门格本身是 56。 */
     height: var(--bottom-bar);
     flex-direction: row;
     justify-content: space-around;
     gap: 0;
-    padding: 0 8px env(safe-area-inset-bottom, 0px);
+    padding: 0 8px var(--safe-b, 0px);
     border-right: 0;
     border-top: 1px solid oklch(var(--color-line));
   }
@@ -263,8 +310,24 @@
     height: 56px;
     border-radius: 0;
   }
+  /* 门内页签条在窄屏不画(`--door-tabs-h` 在 globals.css 里同时归 0);换页走顶栏的「页名 ▾」抽屉。 */
+  .tabs {
+    display: none;
+  }
+  .picker {
+    display: flex;
+  }
+  /* 第三十八批尺寸表(窄屏底栏):en / egy 图标 24 + 间距 3 + 词 11/14 500;中文字 18/22 + 间距 2 + 词 11。
+     `--door-mark-h` 是图形盒的高,选中短线按它定位。 */
+  .door {
+    --door-mark-h: 22px;
+  }
   .door:has(.doorIcon) {
     --door-gap: 3px;
+    --door-mark-h: 24px;
+  }
+  .doorGlyph {
+    line-height: 22px;
   }
   .doorWide,
   .tip {
@@ -287,8 +350,9 @@
     margin-left: -7px;
     border-radius: 1px;
     background: oklch(var(--color-main-ink));
-    /* 图形盒(24 高)在格里居中排在词(14)上面:盒底 = 格中线 - (24 + gap + 14)/2 + 24,短线再往下 3。 */
-    top: calc(50% - (24px + var(--door-gap) + 14px) / 2 + 24px + 3px);
+    /* 图形盒(`--door-mark-h`:图标 24、中文字 22)在格里居中排在词(14)上面:
+       盒底 = 格中线 - (盒高 + gap + 14)/2 + 盒高,短线再往下 3。 */
+    top: calc(50% - (var(--door-mark-h) + var(--door-gap) + 14px) / 2 + var(--door-mark-h) + 3px);
   }
 }
 @media (min-width: 769px) {

@@ -74,11 +74,15 @@ test.describe("弹层圆角 · 6px", () => {
     expect(await notif.evaluate((el) => getComputedStyle(el).borderRadius)).toBe("6px");
     await page.keyboard.press("Escape");
 
-    await page.getByTestId("user-menu").click();
-    const menu = page.locator('[role="dialog"]').filter({ has: page.locator('a[href="/profile"]') }).first();
-    await expect(menu).toBeVisible();
-    expect(await menu.evaluate((el) => getComputedStyle(el).borderRadius)).toBe("6px");
-    await page.keyboard.press("Escape");
+    // ≤ 768 the toolbar has no user menu (fe-mobile 3.1): its items are in the door bar's 「我」 sheet, which is a bottom
+    // sheet with square corners, not a popover.
+    if (!isMobile) {
+      await page.getByTestId("user-menu").click();
+      const menu = page.locator('[role="dialog"]').filter({ has: page.locator('a[href="/profile"]') }).first();
+      await expect(menu).toBeVisible();
+      expect(await menu.evaluate((el) => getComputedStyle(el).borderRadius)).toBe("6px");
+      await page.keyboard.press("Escape");
+    }
 
     if (!isMobile) {
       // ≤ 768 搜索是全屏,不圆。

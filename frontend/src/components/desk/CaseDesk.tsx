@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, type JudgmentQueueGroup, type JudgmentQueueSource } from "@soulledger/core/api/judgment";
 import { judgmentKeys } from "@soulledger/core/query_keys";
@@ -25,7 +25,7 @@ import s from "./desk.module.css";
  * 案卷台(Design 第三十批 第 2 步):门栏(AppLayout 的 `DoorRail`)右边,左是案卷摞(360),右是摊开的一份。
  * 摞:标题、概览行、来源 chip、搜索(`/`)、四组 —— 我认领 / 待定 / 待认领 / 他人手上(最后,只读)。
  * 键:J / K 上下一件、↵ 打开卷宗、C 认领、/ 搜索;打字时不接,单键总开关关掉时也不接(`lib/hotkeys.ts`)。
- * 393:一栏;点开一件是整屏,「‹ 案卷台」回来,「第 n / N 件」。
+ * 393:一栏;点开一件是整屏(一次导航,`?case=<id>`,系统返回回到摞),「‹ 案卷台」回来,「第 n / N 件」。
  *
  * 与官员端 `mobile-officer/src/screens/queue.tsx` 同一套规矩;来源读服务端的 `source`(`deskRules.sourceOf`)。
  */
@@ -52,7 +52,13 @@ export function CaseDesk() {
   const [source, setSource] = useState<JudgmentQueueSource | "all">("all");
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
-  const [phoneOpen, setPhoneOpen] = useState(false);
+  // 窄屏「点开一件」是一次导航(fe-mobile 3.2):`?case=<id>` 进历史,系统返回 / 边缘右滑回到摞,滚动位置由浏览器还原。
+  // 所以「开着」由网址推出,不是 state;桌面不写网址(选中不进历史),带着 `?case=` 打开时照它选中。
+  const pathname = usePathname();
+  const caseParam = useSearchParams()?.get("case") ?? null;
+  const phoneOpen = caseParam !== null;
+  /** 这一件是本页 push 进历史的:「‹ 案卷台」就退一步,与系统返回同一个结果;直接打开的链接没有这一步,换成 replace。 */
+  const pushedCase = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef(new Map<string, HTMLButtonElement>());
 
@@ -80,16 +86,20 @@ export function CaseDesk() {
   }));
   const flat = groups.flatMap((g) => g.rows.map((row) => ({ row, group: g.group })));
   const ids = flat.map((f) => f.row.id);
-  const currentId = picked && ids.includes(picked) ? picked : (ids[0] ?? null);
+  const chosen = caseParam ?? picked;
+  const currentId = chosen && ids.includes(chosen) ? chosen : (ids[0] ?? null);
   const current = flat.find((f) => f.row.id === currentId) ?? null;
   const position = current ? { n: ids.indexOf(current.row.id) + 1, total: ids.length } : null;
 
   const loading = lists.some((l) => l.isPending);
   const failed = lists.find((l) => l.isError);
 
+  const caseHref = (id: string) => `${pathname}?case=${encodeURIComponent(id)}`;
   const select = (id: string | null) => {
     if (!id) return;
     setPicked(id);
+    // 开着的一件换成下一件:换掉网址里的那一件,不多压一层历史。
+    if (caseParam !== null) router.replace(caseHref(id), { scroll: false });
     rowRefs.current.get(id)?.scrollIntoView?.({ block: "nearest" });
   };
   const open = (id: string | null) => {
@@ -241,7 +251,10 @@ export function CaseDesk() {
                           data-testid={`desk-row-${row.id}`}
                           onClick={() => {
                             select(row.id);
-                            setPhoneOpen(true);
+                            if (window.matchMedia?.("(max-width: 768px)")?.matches) {
+                              pushedCase.current = true;
+                              router.push(caseHref(row.id));
+                            }
                           }}
                         >
                           <span className={s.rowName}>{row.soul_name}</span>
@@ -275,7 +288,12 @@ export function CaseDesk() {
             position={position}
             counts={allCounts.data ?? null}
             monthPct={stats.data?.month_done_pct ?? null}
-            onBack={() => setPhoneOpen(false)}
+            onBack={() => {
+              if (pushedCase.current) {
+                pushedCase.current = false;
+                router.back();
+              } else router.replace(pathname, { scroll: false });
+            }}
             onNext={() => select(step(ids, currentId, 1))}
             onOpen={() => open(current.row.id)}
             claim={claimable ? { busy: move.isPending, run: () => move.mutate({ id: current.row.id, kind: "claim" }) } : null}

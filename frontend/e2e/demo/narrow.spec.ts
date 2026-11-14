@@ -116,8 +116,18 @@ test("393px: the tour fits above the fold and reaches its second step", async ({
   const box = await card.boundingBox();
   expect(box?.width).toBeLessThanOrEqual(393);
   expect(box?.height).toBeLessThanOrEqual(page.viewportSize()!.height * 0.42);
+  // fe-mobile 3.1: one line by default, standing on the door bar, not over it.
+  await expect(card).toHaveAttribute("data-folded", "");
+  expect(box!.height).toBeLessThanOrEqual(50);
+  const rail = (await page.getByTestId("door-rail").boundingBox())!;
+  expect(box!.y + box!.height).toBeLessThanOrEqual(rail.y + 1);
   await page.getByTestId("demo-tour-next").click();
   await expect(page.getByTestId("demo-tour-progress")).toContainText("2 / 6");
+  // Unfolded, it is the full card, still above the door bar.
+  await page.getByTestId("demo-tour-unfold").click();
+  await expect(card).not.toHaveAttribute("data-folded", "");
+  const full = (await card.boundingBox())!;
+  expect(full.y + full.height).toBeLessThanOrEqual(rail.y + 1);
   clean(seen, "393 tour");
 });
 
