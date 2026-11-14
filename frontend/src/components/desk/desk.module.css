@@ -144,9 +144,10 @@
 .row:hover {
   background: oklch(var(--color-surface-1));
 }
+/* 选中行是墨,不是文明色(用户 2026-11-14:文明色只上顶线、印、脊、焦点环四个记号)。 */
 .row[aria-current="true"] {
-  background: color-mix(in oklch, oklch(var(--color-glow)) 12%, transparent);
-  box-shadow: inset 2px 0 0 oklch(var(--color-main-ink));
+  background: color-mix(in oklch, oklch(var(--color-ink)) 7%, transparent);
+  box-shadow: inset 3px 0 0 oklch(var(--color-ink));
 }
 .rowName {
   font-family: var(--font-serif);

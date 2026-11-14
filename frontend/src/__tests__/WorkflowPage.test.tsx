@@ -44,17 +44,18 @@ describe("WorkflowPage template list", () => {
     expect(screen.getByText("workflow.nodes_count(10)")).toBeInTheDocument();
   });
 
-  it("no civilization colour in the list: the selected row is card2 plus the 2px focus line, headings faint (batch 36 §1.3)", async () => {
+  it("no civilization colour in the list: the selected row is ink 7% plus a 3px ink line, headings faint (batch 36 §1.3; user 2026-11-14)", async () => {
     renderPage();
     await screen.findByText("workflow.predefined_templates");
     const heading = screen.getByText("workflow.civilizations.EGYPTIAN");
     expect(heading.className).toMatch(/color-faint-text/);
     expect(heading.className).toMatch(/tracking-\[\.06em\]/);
-    const rows = screen.getAllByRole("button").filter((b) => /surface-[12]/.test(b.className) && b.closest(".space-y-1"));
-    const selected = rows.filter((b) => b.className.includes("color-main-ink"));
+    const rows = screen.getAllByRole("button").filter((b) => b.className.includes("border-[oklch(var(--color-line))]") && b.closest(".space-y-1"));
+    expect(rows.length).toBeGreaterThan(1);
+    const selected = rows.filter((b) => b.className.includes("shadow-[inset_3px_0_0_oklch(var(--color-ink))]"));
     expect(selected).toHaveLength(1);
-    expect(selected[0].className).toMatch(/surface-2/);
-    for (const el of [heading, ...rows]) expect(el.className).not.toMatch(/accent/);
+    expect(selected[0].className).toContain("bg-[color-mix(in_oklch,oklch(var(--color-ink))_7%,transparent)]");
+    for (const el of [heading, ...rows]) expect(el.className).not.toMatch(/accent|main-ink|glow/);
   });
 
   it("omits the custom-templates heading when the backend has none", async () => {

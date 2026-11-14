@@ -247,16 +247,18 @@ describe("civilization colour enters through [data-civ] only (规范 v4,用户 2
     }
   });
 
-  it("accent, accent-ink and focus follow the civilization's text colour, and only under [data-civ]", () => {
-    // `[data-civ]` 单独成块的有两处:这一块,和 base 层 `:root, [data-civ]` 的 `--main-fill`。取声明了 accent 的那一块。
-    const generic = [...CSS.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/(?<![\w.\]-])\[data-civ\]\s*\{([^}]*)\}/g)].filter((b) => /--color-accent\s*:/.test(b[1]));
+  // 用户 2026-11-14:文明色只上四个记号(页顶 2px 线、印、行程脊、焦点环)和两处氛围(门栏底、卷宗页头的光晕与水印)。
+  // 强调与链接在任何殿下都是墨 —— 只有焦点环跟 civT。旧 CSS 的 `[data-civ] { --color-accent: var(--color-main-ink); … }`
+  // 在第一条 toEqual 上多出两个键而红,第二条也红(那一块就声明了 accent)。
+  it("only focus follows the civilization's text colour; accent and accent-ink stay ink under every [data-civ]", () => {
+    const civRules = [...CSS.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/((?:[^{}]*?)\[data-civ(?:="\w+")?\][^{}]*)\{([^}]*)\}/g)];
+    // `[data-civ]` 单独成块的有三处:焦点环这一块、base 层 `:root, [data-civ]` 的 `--main-fill`、以及印色。取声明了 focus 的那一块。
+    const generic = civRules.filter((b) => /(?<![\w.\]-])\[data-civ\]\s*$/.test(b[1]) && /--color-focus\s*:/.test(b[2]));
     expect(generic).toHaveLength(1);
-    const decls = Object.fromEntries([...generic[0][1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((d) => [d[1], d[2].trim()]));
-    expect(decls).toEqual({
-      "--color-accent": "var(--color-main-ink)",
-      "--color-accent-ink": "var(--color-main-ink)",
-      "--color-focus": "var(--color-main-ink)",
-    });
+    const decls = Object.fromEntries([...generic[0][2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((d) => [d[1], d[2].trim()]));
+    expect(decls).toEqual({ "--color-focus": "var(--color-main-ink)" });
+    const accentUnderCiv = civRules.filter((b) => /--color-accent(?:-ink)?\s*:/.test(b[2])).map((b) => b[1].trim());
+    expect(accentUnderCiv).toEqual([]);
   });
 
   it("no source file reads a civ token directly — they go through the five slots", () => {
