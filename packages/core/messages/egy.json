@@ -6257,7 +6257,10 @@
       "denied_title": "Nen Was Maa Tut",
       "denied_body": "Maa Tut Medu: Was Er Medjat. Wen Em Djeret Medjat, Mi Sesh Ren Hesb Ba.",
       "open_settings": "Wen Djeret Medjat ↗",
-      "privacy": "Maa Tut Medu Wa. Nen Smen Tut."
+      "from_photos": "Setep Tut",
+      "photo_none": "Nen Gem Tut Medu Em Tut Pen",
+      "photo_none_body": "Setep Tut Ky: Tut Medu Em Djama Redi. Mi Sesh Ren Hesb Ba.",
+      "privacy_both": "Maa Tut Medu Wa. Nen Smen Tut, Nen Hab Tut."
     },
     "bio": {
       "face": "Djes-Ek",

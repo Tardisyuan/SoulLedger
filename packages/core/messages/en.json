@@ -6272,15 +6272,15 @@
       "torch": "Flashlight",
       "torch_on": "Flashlight · on",
       "manual": "Type the number instead",
-      "album": "Choose from photos",
-      "album_none": "! No QR code found in this picture",
-      "album_none_body": "Try a clearer photo of your slip, or type the number.",
       "invalid": "! This isn't a Soul Ledger slip code",
       "invalid_body": "Scan the one on the right of your slip, or close this and type the number.",
       "denied_title": "No camera access",
       "denied_body": "Scanning needs the camera. Turn it on in system settings, or type the number.",
       "open_settings": "Open system settings ↗",
-      "privacy": "The camera only reads the code. Nothing is photographed or saved."
+      "from_photos": "Choose from photos",
+      "photo_none": "No soul code in this picture",
+      "photo_none_body": "Try another picture showing the code on the right of your slip, or type the number.",
+      "privacy_both": "The camera and photos are only used to read the code. Nothing is taken or uploaded."
     },
     "bio": {
       "face": "Face",

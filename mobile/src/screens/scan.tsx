@@ -4,8 +4,11 @@
  * red bar up for 4 seconds (restarted by every further bad scan) and the camera never stops. A refused camera
  * permission is a page of its own with two ways on.
  * 「从相册选」 (S4, 2026-11-15): a photo of the slip, read by expo-camera's `scanFromURLAsync` -- the same answer as a
- * live scan; a picture with no QR code in it says so in the same red bar. Needs no camera permission, so the refused
- * page offers it too.
+ * live scan. Needs no camera permission, so the refused page offers it too.
+ * Design 第五十二批 F3: 「从相册选」 and 「手电筒」 side by side under the frame, the same outlined capsule (44 high);
+ * 「手动输入编号」 a text link under them; one privacy line for both camera and album (`privacy_both`). A picture with
+ * no code in it is a light two-line notice at the bottom, in place of the link and that line -- the page and the
+ * camera stay; a code in the picture that is not ours is the same red bar as a live one.
  */
 import { parseSoulCodeQr } from "@soulledger/core/domain/soulCode";
 import { useNavigation } from "@react-navigation/native";
@@ -32,13 +35,16 @@ function Corner({ style }: { style: object }) {
   return <View style={[styles.corner, style]} />;
 }
 
-function TorchGlyph({ color }: { color: string }) {
+function PhotoGlyph({ color }: { color: string }) {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round">
-      <Path d="M8 3h8l-1.5 5h-5L8 3ZM9.5 8v3.5L12 14l2.5-2.5V8M12 14v7" />
+    <Svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth={1.4} strokeLinejoin="round">
+      <Path d="M2 3h12v10H2ZM2 11l3.5-3.5L8 10l2-2 4 4" />
     </Svg>
   );
 }
+
+/** The no-code notice: a light card on the camera's dark (v4 light --card2 / --ink / --sub), not themed. */
+const NOTICE = { ground: "#F3F3F1", ink: "#16171A", sub: "#54575C" };
 
 export function ScanScreen() {
   const theme = useTheme();
@@ -47,8 +53,8 @@ export function ScanScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<{ Login: ScannedParams | undefined; ScanCode: undefined }>>();
   const [permission, request] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
-  // The red bar: a code that is not ours, or (from the album) a picture with no code in it.
-  const [invalid, setInvalid] = useState<"invalid" | "album_none" | null>(null);
+  // The red bar: a code that is not ours (live or from a picture). A picture with no code: the bottom notice.
+  const [invalid, setInvalid] = useState<"invalid" | "photo_none" | null>(null);
   const [reading, setReading] = useState(false);
   const done = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,7 +66,7 @@ export function ScanScreen() {
 
   const close = useCallback(() => navigation.goBack(), [navigation]);
 
-  const warn = (which: "invalid" | "album_none") => {
+  const warn = (which: "invalid" | "photo_none") => {
     setInvalid(which);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setInvalid(null), INVALID_BANNER_MS);
@@ -87,31 +93,42 @@ export function ScanScreen() {
       const uri = res.canceled ? null : res.assets?.[0]?.uri;
       if (!uri) return;
       const found = await scanFromURLAsync(uri, ["qr"]);
-      if (!found.length) return warn("album_none");
+      if (!found.length) return warn("photo_none");
       // Several codes in one picture: ours, if any is.
       scanned(found.find((r) => parseSoulCodeQr(r.data)) ?? found[0]);
     } catch {
-      warn("album_none");
+      warn("photo_none");
     } finally {
       setReading(false);
     }
   };
-  const album = (style: object) => (
-    <Pressable testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={styles.manual}>
-      <Txt variant="bodyLg" style={style}>
-        {t("soul_app.scan.album")}
+  // The capsule: outlined, 44 high; white on the camera, the ink on the refused page's paper.
+  const album = (ink: string) => (
+    <Pressable testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={[styles.capsule, { borderColor: ink }]}>
+      <PhotoGlyph color={ink} />
+      <Txt variant="bodyLg" style={{ color: ink }}>
+        {t("soul_app.scan.from_photos")}
       </Txt>
     </Pressable>
   );
   const banner = (top: number) =>
-    invalid ? (
+    invalid === "invalid" ? (
       <View testID="scan-invalid" accessibilityRole="alert" accessibilityLiveRegion="assertive" style={[styles.invalid, { top, backgroundColor: theme.s1, borderColor: theme.neg }]}>
-        <Txt style={[styles.invalidTitle, { color: theme.negInk }]}>{t(invalid === "invalid" ? "soul_app.scan.invalid" : "soul_app.scan.album_none")}</Txt>
+        <Txt style={[styles.invalidTitle, { color: theme.negInk }]}>{t("soul_app.scan.invalid")}</Txt>
         <Txt variant="caption" tone="muted">
-          {t(invalid === "invalid" ? "soul_app.scan.invalid_body" : "soul_app.scan.album_none_body")}
+          {t("soul_app.scan.invalid_body")}
         </Txt>
       </View>
     ) : null;
+  // In place of the link and the privacy line while it is up.
+  const photoNone = (
+    <View testID="scan-photo-none" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.notice}>
+      <Txt style={[styles.noticeTitle, { color: NOTICE.ink }]}>{t("soul_app.scan.photo_none")}</Txt>
+      <Txt variant="caption" style={{ color: NOTICE.sub }}>
+        {t("soul_app.scan.photo_none_body")}
+      </Txt>
+    </View>
+  );
 
   if (!permission) return <View testID="scan-loading" style={styles.dark} />;
 
@@ -130,10 +147,14 @@ export function ScanScreen() {
           <Txt variant="bodyLg">{t("soul_app.scan.denied_body")}</Txt>
           <Button testID="scan-open-settings" title={t("soul_app.scan.open_settings")} onPress={() => void Linking.openSettings()} />
           <Button testID="scan-manual" kind="secondary" title={t("soul_app.scan.manual")} onPress={close} />
-          {album(styles.albumOnPaper)}
-          <Txt variant="caption" tone="muted">
-            {t("soul_app.scan.privacy")}
-          </Txt>
+          {album(theme.ink)}
+          {invalid === "photo_none" ? (
+            photoNone
+          ) : (
+            <Txt testID="scan-privacy" variant="caption" tone="muted">
+              {t("soul_app.scan.privacy_both")}
+            </Txt>
+          )}
         </View>
         {banner(insets.top + 64)}
       </Screen>
@@ -176,27 +197,35 @@ export function ScanScreen() {
         </View>
       </View>
       <View style={[styles.bottom, { bottom: 32 + insets.bottom }]}>
-        <Pressable
-          testID="scan-torch"
-          accessibilityRole="switch"
-          accessibilityState={{ checked: torch }}
-          accessibilityLabel={t("soul_app.scan.torch")}
-          onPress={() => setTorch((v) => !v)}
-          style={styles.torch}
-        >
-          <View style={[styles.torchDisc, torch ? { backgroundColor: WHITE } : { borderColor: WHITE, borderWidth: 1.5 }]}>
-            <TorchGlyph color={torch ? "#1A1A18" : WHITE} />
-          </View>
-          <Txt testID="scan-torch-label" variant="body" style={[styles.torchLabel, torch && { fontFamily: family.ui[600] }]}>
-            {t(torch ? "soul_app.scan.torch_on" : "soul_app.scan.torch")}
-          </Txt>
-        </Pressable>
-        {album(styles.manualText)}
-        <Pressable testID="scan-manual" accessibilityRole="link" onPress={close} style={styles.manual}>
-          <Txt variant="bodyLg" style={styles.manualText}>
-            {t("soul_app.scan.manual")}
-          </Txt>
-        </Pressable>
+        <View testID="scan-capsules" style={styles.capsules}>
+          {album(WHITE)}
+          <Pressable
+            testID="scan-torch"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: torch }}
+            accessibilityLabel={t("soul_app.scan.torch")}
+            onPress={() => setTorch((v) => !v)}
+            style={[styles.capsule, { borderColor: WHITE }, torch && { backgroundColor: WHITE }]}
+          >
+            <Txt testID="scan-torch-label" variant="bodyLg" style={[{ color: torch ? "#1A1A18" : WHITE }, torch && { fontFamily: family.ui[600] }]}>
+              {t(torch ? "soul_app.scan.torch_on" : "soul_app.scan.torch")}
+            </Txt>
+          </Pressable>
+        </View>
+        {invalid === "photo_none" ? (
+          photoNone
+        ) : (
+          <>
+            <Pressable testID="scan-manual" accessibilityRole="link" onPress={close} style={styles.manual}>
+              <Txt variant="bodyLg" style={styles.manualText}>
+                {t("soul_app.scan.manual")}
+              </Txt>
+            </Pressable>
+            <Txt testID="scan-privacy" variant="caption" style={styles.privacy}>
+              {t("soul_app.scan.privacy_both")}
+            </Txt>
+          </>
+        )}
       </View>
     </View>
   );
@@ -217,13 +246,14 @@ const styles = StyleSheet.create({
   hint: { alignItems: "center", gap: 4 },
   hintTitle: { color: WHITE, fontFamily: family.ui[500], fontSize: 15, lineHeight: 24, textAlign: "center" },
   hintSub: { color: "#D8D8D2", textAlign: "center" },
-  bottom: { position: "absolute", left: 0, right: 0, alignItems: "center", gap: 16 },
-  torch: { alignItems: "center", gap: 8, minWidth: 80 },
-  torchDisc: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
-  torchLabel: { color: WHITE },
+  bottom: { position: "absolute", left: 16, right: 16, alignItems: "center", gap: 16 },
+  capsules: { flexDirection: "row", justifyContent: "center", gap: 12 },
+  capsule: { height: 44, borderWidth: 1, borderRadius: 22, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, alignSelf: "center" },
   manual: { minHeight: 44, justifyContent: "center" },
   manualText: { color: WHITE, textDecorationLine: "underline" },
-  albumOnPaper: { textDecorationLine: "underline" },
+  privacy: { color: "#D8D8D2", textAlign: "center" },
+  notice: { alignSelf: "stretch", backgroundColor: NOTICE.ground, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
+  noticeTitle: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 22 },
   denied: { padding: 24, gap: 16 },
   deniedTitle: { fontFamily: family.ui[600], fontSize: 24, lineHeight: 32 },
 });

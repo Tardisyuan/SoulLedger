@@ -19,8 +19,5 @@
   "soul_app.login.email_hint",
   "soul_app.login.reset_filled",
   "soul_app.login.use_code",
-  "soul_app.login.use_email",
-  "soul_app.scan.album",
-  "soul_app.scan.album_none",
-  "soul_app.scan.album_none_body"
+  "soul_app.login.use_email"
 ]
