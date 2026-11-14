@@ -433,6 +433,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             models.Index(fields=["tenant", "-create_time"], name="souls_soul_tenant_created_idx"),
             models.Index(fields=["tenant", "name"], name="souls_soul_tenant_name_idx"),
             models.Index(fields=["tenant", "owner_org"], name="souls_soul_tenant_owner_idx"),
+            # 待重算的灵魂(`record_models.py` 打标、重算清标);常态只有极少数行。
+            models.Index(
+                fields=["tenant"], name="soul_needs_recalc_idx",
+                condition=models.Q(needs_ledger_recalculation=True),
+            ),
         ]
         constraints = [
             # 参与算术或路由决策的字段,过去一个约束都没有。`full_clean()` 实跑:

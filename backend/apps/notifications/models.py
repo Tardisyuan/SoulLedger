@@ -103,6 +103,8 @@ class UserNotification(AuditUserFields, models.Model):
         indexes = [
             models.Index(fields=["user", "is_read"]),
             models.Index(fields=["user", "created_at"]),
+            # 铃铛与收件箱「未读」页(`?is_read=false`,按 `-created_at`)。
+            models.Index(fields=["user", "created_at"], name="notif_unread_idx", condition=models.Q(is_read=False)),
         ]
 
     def __str__(self):

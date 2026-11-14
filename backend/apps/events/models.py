@@ -196,6 +196,8 @@ class SoulEvent(AuditUserFields, models.Model):
             models.Index(fields=["soul", "create_time"]),
             models.Index(fields=["event_type"]),
             models.Index(fields=["tenant", "create_time"]),
+            # 事件页按类型筛 + 日期区间(`date_range_q`,半开区间才走得上它)。
+            models.Index(fields=["tenant", "event_type", "create_time"], name="soulevent_tenant_type_time_idx"),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
