@@ -7,7 +7,7 @@ import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { CivMark } from "@/src/components/brand/CivEmblem";
-import { HeadMark } from "@/src/components/brand/HeadMark";
+import { HeadMark, useHeadMarkAvoidance } from "@/src/components/brand/HeadMark";
 import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { usePlaqueValue, useReportHeading } from "@/src/components/plaque/pageHeadContext";
 import type { PlaqueCase } from "@/src/components/plaque/Plaque";
@@ -395,6 +395,8 @@ export function PageHead({
   className,
 }: PageHeadProps) {
   const civ = (useHallCivilization() ?? null) as SealCiv | null;
+  const headRef = React.useRef<HTMLElement>(null);
+  useHeadMarkAvoidance(headRef);
   const body = (
     <>
       {/* 返回链接与等宽小字共用标题上方那一行,但它们不是一回事:小字说**这一页是什么**(案号、殿、日期),
@@ -444,7 +446,7 @@ export function PageHead({
   );
 
   return (
-    <header data-page-shell-header="" data-testid="page-head" data-kind={kind} className={cn("page-head", className)}>
+    <header ref={headRef} data-page-shell-header="" data-testid="page-head" data-kind={kind} className={cn("page-head", className)}>
       {/* 列宽盒是第一个孩子(PageShell.test 的 widthBox 按它读);顶线与三层装饰是绝对定位的,写在它后面。
           `pt-6`:24 = 顶线 2 + 稿子 `.phead` 的上边距 20(取节奏里最近的一档)。 */}
       <div className={cn(widthClassName, "relative px-4 md:px-8 pt-6 pb-4")}>

@@ -1081,15 +1081,20 @@
     user-select: none;
     white-space: nowrap;
   }
-  /* 地府:竖排殿名(用户 2026-11-14「殿名随殿变」)。汉字照稿子地府记号的 26/30;英文 / egy 小号衬线大写,字距 .3em。 */
+  /* 地府:竖排殿名(用户 2026-11-14「殿名随殿变」;字号第四十六批第三节)。汉字一字一行:3 字以内 22/26,
+     4–5 字 20/23(`data-head-size="s"`);英文 / egy 整串竖排(拉丁字转 90°)大写 12/14、600、字距 .28em。
+     超长退回地府 / DIYU 在 `diyuMarkText`;有按钮时往左让、标题太长时不画在 `useHeadMarkAvoidance`(HeadMark.tsx)。 */
   .page-head-mark[data-head-mark="cn"] {
     top: 12px;
     writing-mode: vertical-rl;
-    font: 600 26px/30px var(--font-title);
+    font: 600 22px/26px var(--font-title);
+  }
+  .page-head-mark[data-head-mark="cn"][data-head-size="s"] {
+    font: 600 20px/23px var(--font-title);
   }
   .page-head-mark[data-head-mark="cn"][data-head-script="latin"] {
-    font: 600 12px/16px var(--font-title);
-    letter-spacing: 0.3em;
+    font: 600 12px/14px var(--font-title);
+    letter-spacing: 0.28em;
     text-transform: uppercase;
   }
   .page-head-mark[data-head-mark="eu"],

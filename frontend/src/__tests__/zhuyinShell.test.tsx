@@ -135,22 +135,42 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
   });
 
   // 用户 2026-11-14:地府的记号是此刻所在殿的殿名(`Tenant.hall_names`),按界面语言;egy 没有退英文;拿不到退回地府 / DIYU。
+  // 第四十六批第三节:中文超过 5 字退「地府」,拉丁超过 14 个字符退「DIYU」;4–5 个汉字用小一档(data-head-size="s")。
+  const NAMES = { "zh-Hans": "第五殿", en: "Fifth Court", egy: "Yanluo Qedi" };
   it.each([
-    ["zh-Hans", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "第五殿", "han"],
-    ["en", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "The Fifth Court", "latin"],
-    ["egy", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Qedi" }, "Yanluo Qedi", "latin"],
+    ["zh-Hans", NAMES, "第五殿", "han", null],
+    ["en", NAMES, "Fifth Court", "latin", null],
+    ["egy", NAMES, "Yanluo Qedi", "latin", null],
     // 后端 egy 空着时退回 zh(`Tenant.hall_names`);egy 界面不露汉字殿名,改退英文。
-    ["egy", { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "第五殿" }, "The Fifth Court", "latin"],
-    ["zh-Hans", undefined, "地府", "han"],
-    ["en", undefined, "DIYU", "latin"],
-    ["egy", undefined, "DIYU", "latin"],
-  ])("地府记号 · %s 界面 · 殿名 %j → %s", (locale, names, shown, script) => {
+    ["egy", { ...NAMES, egy: "第五殿" }, "Fifth Court", "latin", null],
+    ["zh-Hans", { ...NAMES, "zh-Hans": "轉輪王殿" }, "轉輪王殿", "han", "s"],
+    ["zh-Hans", { ...NAMES, "zh-Hans": "第五殿閻羅王" }, "地府", "han", null],
+    // 14 个字符放得下,15 个不行:0012 迁移的种子英文名「The Fifth Court」正好是 15 个。
+    ["en", { ...NAMES, en: "WESEKHET 12345" }, "WESEKHET 12345", "latin", null],
+    ["en", { ...NAMES, en: "The Fifth Court" }, "DIYU", "latin", null],
+    ["zh-Hans", undefined, "地府", "han", null],
+    ["en", undefined, "DIYU", "latin", null],
+    ["egy", undefined, "DIYU", "latin", null],
+  ])("地府记号 · %s 界面 · 殿名 %j → %s", (locale, names, shown, script, size) => {
     mockI18n.locale = locale;
     if (names) mockTenant.hall_names = names;
     render(<PageShell title="名册">body</PageShell>);
     const mark = screen.getByTestId("page-head").querySelector(".page-head-mark");
     expect(mark).toHaveTextContent(new RegExp(`^${shown}$`));
     expect(mark).toHaveAttribute("data-head-script", script);
+    if (size) expect(mark).toHaveAttribute("data-head-size", size);
+    else expect(mark).not.toHaveAttribute("data-head-size");
+  });
+
+  it("地府记号的字号:3 字 22/26,4–5 字 20/23,拉丁 12/14、字距 .28em(第四十六批第三节)", () => {
+    const body = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[[\]"().]/g, "\\$&")} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+    expect(body('.page-head-mark[data-head-mark="cn"]')).toContain("font: 600 22px/26px var(--font-title);");
+    expect(body('.page-head-mark[data-head-mark="cn"][data-head-size="s"]')).toContain("font: 600 20px/23px var(--font-title);");
+    const latin = body('.page-head-mark[data-head-mark="cn"][data-head-script="latin"]');
+    expect(latin).toContain("font: 600 12px/14px var(--font-title);");
+    expect(latin).toContain("letter-spacing: 0.28em;");
+    expect(latin).toContain("text-transform: uppercase;");
+    expect(css).not.toContain("font: 600 26px/30px var(--font-title);");
   });
 
   it("中性皮(不认得的租户)的水印只画环,不放任何一个文明的中心物,也没有页头记号", () => {
