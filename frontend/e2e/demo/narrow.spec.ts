@@ -154,7 +154,8 @@ test.describe("in English", () => {
   test("393px: the Egyptian realms page does not widen the page", async ({ page }) => {
     await enter(page, "judge_eg");
     await page.goto("/realms");
-    await expect(page.locator('[data-realm-card="EG_AARU"] [data-load="near"]')).toBeVisible();
+    // Near-full or full, whichever the recording holds (2026-11-14: the re-record has Aaru at 11 / 11, so 「■ full」).
+    await expect(page.locator('[data-realm-card="EG_AARU"] [data-load]')).toBeVisible();
     await page.getByTestId("underworld-map").locator("svg").first().waitFor();
     const { inner, scroll } = await page.evaluate(() => ({ inner: window.innerWidth, scroll: document.documentElement.scrollWidth }));
     expect(inner).toBe(393);
