@@ -143,7 +143,7 @@ describe("门内换页 on a phone: 「页名 ▾」 and its sheet", () => {
     // DoorTabs publishes its height under another name; globals.css derives --door-tabs-h and zeroes it on a phone.
     const globals = read("app/globals.css");
     expect(globals).toContain("--door-tabs-h: var(--door-tabs-on, 0px);");
-    const phone = globals.slice(globals.indexOf("--bottom-bar: calc(64px + var(--safe-b));") - 200);
+    const phone = globals.slice(globals.indexOf("--bottom-bar: calc(56px + var(--safe-b));") - 200);
     expect(phone).toMatch(/@media \(max-width: 768px\)\s*\{\s*html\s*\{[^}]*--door-tabs-h:\s*0px;/);
   });
 });
@@ -191,11 +191,12 @@ describe("a bare page (案卷台) still has the top bar on a phone", () => {
 describe("tokens, safe area and the coarse-pointer rule", () => {
   const globals = read("app/globals.css");
 
-  it("declares --safe-b from the safe-area inset, and the door bar is 64 plus it", () => {
+  it("declares --safe-b from the safe-area inset, and the door bar is 56 plus it (batch 38, user 2026-11-14)", () => {
     expect(globals).toContain("--safe-b: env(safe-area-inset-bottom, 0px);");
-    expect(globals).toContain("--bottom-bar: calc(64px + var(--safe-b));");
-    // Absence: the old 56 is gone.
-    expect(globals).not.toContain("--bottom-bar: calc(56px");
+    expect(globals).toContain("--bottom-bar: calc(56px + var(--safe-b));");
+    // Absence: neither fe-mobile's 64 nor the inset read directly (the padding must follow the same token).
+    expect(globals).not.toContain("--bottom-bar: calc(64px");
+    expect(globals).not.toContain("--bottom-bar: calc(56px + env(");
   });
 
   it("hides keyboard hints by input method, not by width", () => {
@@ -208,11 +209,16 @@ describe("tokens, safe area and the coarse-pointer rule", () => {
     expect(read("app/layout.tsx")).toMatch(/viewportFit:\s*"cover"/);
   });
 
-  it("the current door's line is on the door bar's top edge on a phone, not the bottom", () => {
+  it("on a phone the door cells are 56 tall over the safe area, the current one marked by a short line under the glyph (batch 38)", () => {
     const doors = read("src/components/layout/doors.module.css");
     const narrow = doors.slice(doors.indexOf("@media (max-width: 768px)"), doors.indexOf("@media (min-width: 769px)"));
-    expect(narrow).toContain("box-shadow: inset 0 2px 0 oklch(var(--color-main-ink));");
+    expect(narrow).toContain("padding: 0 8px var(--safe-b, 0px);");
+    expect(narrow).toMatch(/min-height:\s*56px;\s*height:\s*56px;/);
+    // The 14 × 2 line under the glyph box, not a full-width edge line.
+    expect(narrow).toMatch(/\.door\[aria-current="page"\]::after,\s*\.door\[aria-current="true"\]::after\s*\{[^}]*width:\s*14px;[^}]*height:\s*2px;/);
+    // Absence: no edge line along the top or bottom of the cell.
+    expect(narrow).not.toContain("inset 0 2px 0");
     expect(narrow).not.toContain("inset 0 -2px 0");
-    expect(narrow).toMatch(/\.doorLabel\s*\{\s*font-size:\s*12px;/);
+    expect(narrow).not.toContain("height: 64px");
   });
 });

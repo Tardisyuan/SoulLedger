@@ -856,10 +856,10 @@
        `pb-14`)—— 内容短的页恰好一屏,不多出滚动。PageSpinner 填同一个槽位,用同一个值。 */
     --content-min-h: calc(100vh - var(--below-band) - var(--door-tabs-h, 0px) - var(--bottom-bar));
   }
-  /* ≤ 768 的壳是两层(fe-mobile 3.1):48 的顶栏 + 64 的门栏(加安全区)。门内页签条不画,换页是顶栏「页名 ▾」的抽屉。 */
+  /* ≤ 768 的壳是两层(fe-mobile 3.1):48 的顶栏 + 56 的门栏(加安全区;门栏尺寸照第三十八批,用户 2026-11-14)。门内页签条不画,换页是顶栏「页名 ▾」的抽屉。 */
   @media (max-width: 768px) {
     html {
-      --bottom-bar: calc(64px + var(--safe-b));
+      --bottom-bar: calc(56px + var(--safe-b));
       --door-tabs-h: 0px;
       --below-band: calc(48px + var(--imp-h));
     }
