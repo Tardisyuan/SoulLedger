@@ -10,7 +10,7 @@ instructions for AI coding agents, and you do not have to read them.
 - **Issues**: bugs, confusing docs, questions about a design decision. The ADRs in [`docs/adr/`](docs/adr/)
   explain most of the big ones.
 - **A first contribution**: issues labelled
-  [good first issue](https://github.com/Tardisyuan/SoulLedger/labels/good%20first%20issue) are small, say
+  [good first issue](https://github.com/Tardisyuan/SoulLedger/labels/good%20first%20issue) are small and say
   which files to touch and how to check the result.
 - **Open an issue first** for anything over about 200 lines, anything that crosses several Django apps, and
   anything that changes a model, a permission or the approval workflow. `main` moves fast, and a short

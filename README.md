@@ -38,28 +38,32 @@ Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger).
 
 **About AI.** Most of the code in this repository was written by Claude Code, not typed by me line by
 line: about four in five commits carry a `Co-Authored-By: Claude` line (`git log` gives the exact count).
-So the code alone proves little about me. What follows is what I decided, and each item links to a record
-that was written at the time, so you can check it without taking my word for it:
+So the code alone says little about what I did. What follows is what I decided, and each item points to a
+record in this repository, so you can check it without taking my word for it:
 
-1. **I dropped my own first idea when the cost was worked out.** I wanted one database per tenant: four
-   civilizations as four separate worlds. Costed on the code, it meant sagas for every cross-tenant
-   judgment, no cross-tenant foreign keys and routing on every query, for a workload that did not exist.
-   The decision is to split by business domain and defer sharding until a measured trigger
-   ([ADR 0004](docs/adr/0004-split-by-domain-not-by-tenant.md)).
+1. **I postponed my own first choice once the cost was worked out.** I wanted one database per tenant:
+   four civilizations as four separate worlds. Costed on the code, it meant sagas with compensation for
+   every cross-tenant judgment, giving up foreign keys across tenants, and routing on every query, for a
+   workload that did not exist yet. So the system splits by business domain first. I still want the
+   per-tenant split; it waits for a measured trigger, and new code is already written to its constraints
+   ([ADR 0004](docs/adr/0004-split-by-domain-not-by-tenant.md),
+   [the design notes](docs/ARCHITECTURE-soul-app-and-domain-split.md)).
 2. **I did not trust "done".** On 2026-05-30 a report in this repository declared the code "Production
    Ready". On 2026-08-07 an audit of the same code found four critical tenant-isolation gaps. The report
    is still here, marked superseded ([`PRODUCTION_READINESS_REPORT.md`](docs/PRODUCTION_READINESS_REPORT.md)).
    I started that audit: instead of taking the report's word for it, I had the AI check every view, tenant
    by tenant.
 3. **I turned each lesson into a check that goes red.** Tenant scoping was consolidated behind one
-   function with a contract test over every ViewSet (2026-08-14, ADR 0001). The suite runs on real
-   PostgreSQL as well as SQLite (ADR 0003). The rule "no claim of *fixed* without the command, its exit
+   function with a contract test over every ViewSet (2026-08-14,
+   [ADR 0001](docs/adr/0001-tenant-isolation-in-the-view-layer.md)). The suite runs on real PostgreSQL as
+   well as SQLite ([ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md)). The rule "no claim of *fixed* without the command, its exit
    code and the passed count" is written into the agents' instructions.
 
 Three questions I'd like to be asked:
 
 - Why does a merit recalculation that changes nothing write no event, and what would it cost if it did?
-- A judge seals a case and regrets it. When can the seal still be withdrawn, and why is there no timer?
+- A judge seals a case and regrets it. When can the seal still be withdrawn, and why does the window
+  close on an event, not on a clock?
 - What did SQLite let through that PostgreSQL caught on the first run?
 
 ## Three things worth a look
@@ -155,7 +159,7 @@ uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
 .venv/bin/python manage.py migrate
 .venv/bin/python manage.py seed_tenants && .venv/bin/python manage.py seed_mythology  # the four halls
-.venv/bin/python manage.py seed_dev_users   # one sign-in per role, printed; refuses unless DEBUG=True
+DEBUG=true .venv/bin/python manage.py seed_dev_users   # one sign-in per role, printed; refuses unless DEBUG
 .venv/bin/python manage.py runserver
 
 # web, from the repository root: http://localhost:3333
@@ -163,7 +167,8 @@ npx -y npm@11 ci && git checkout -- package-lock.json
 npm run dev --workspace frontend
 ```
 
-Open <http://localhost:3333> and sign in with any account `seed_dev_users` printed. The two apps, Docker
+Open <http://localhost:3333> and sign in with any of the five officer accounts `seed_dev_users` printed
+(the sixth is for the soul app). The two apps, Docker
 and the full test commands are in the [development guide](docs/DEVELOPMENT.md).
 
 ## Tests and CI
