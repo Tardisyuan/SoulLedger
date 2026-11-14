@@ -55,14 +55,40 @@ beforeEach(() => {
 });
 afterEach(() => platform().persistent.remove(USER_KEY));
 
-describe("O1: 我 shows the sign-in username", () => {
-  it("read-only, beside the display name", async () => {
+describe("O1 / 第五十二批 F2: 我 › 账号安全 shows the sign-in username first", () => {
+  it("read-only, whole, in mono, the first row of 账号安全 (not under 个人信息), selectable for a long-press copy", async () => {
     renderOfficer(<MeTab onOpen={() => {}} />);
     const row = await screen.findByTestId("me-username");
-    expect(row).toHaveTextContent(/登录用户名\s*yama/);
+    expect(row).toHaveTextContent(/^用户名\s*yama$/);
     // Not a button: nothing to press there.
     expect(screen.root.findAll((n) => n.props.testID === "me-username" && typeof n.props.onPress === "function")).toEqual([]);
+    const value = screen.getByTestId("me-username-value");
+    expect(value.props.selectable).toBe(true);
+    expect(StyleSheet.flatten(value.props.style)).toMatchObject({ fontSize: 14 });
+    expect(String(StyleSheet.flatten(value.props.style).fontFamily)).toMatch(/Mono/i);
     expect(screen.getByTestId("me-name-value")).toHaveTextContent("阎罗");
+    // Order on the page: 账号安全's heading, then the username, then 用指纹登录's block.
+    const ids = screen.root.findAll((n) => typeof n.props.testID === "string" && typeof n.type === "string").map((n) => n.props.testID as string);
+    expect(ids.indexOf("me-username")).toBeGreaterThan(ids.indexOf("me-name"));
+    expect(ids.indexOf("me-username")).toBeLessThan(ids.indexOf("me-password"));
+    expect(ids.indexOf("me-username")).toBeGreaterThan(ids.indexOf("me-mfa"));
+    // No verified email: no hint.
+    expect(screen.queryByTestId("me-username-hint")).toBeNull();
+  });
+
+  it("the hint that a verified email also signs in shows only with a verified email", async () => {
+    const { authApi } = jest.requireMock("@soulledger/core/api/auth") as { authApi: { profile: jest.Mock } };
+    authApi.profile.mockResolvedValueOnce({ data: { email: "yama@example.com", email_verified: true } });
+    renderOfficer(<MeTab onOpen={() => {}} />);
+    expect(await screen.findByTestId("me-username-hint")).toHaveTextContent("登录时也可以用已验证的邮箱。");
+  });
+
+  it("an unverified email gives no hint", async () => {
+    const { authApi } = jest.requireMock("@soulledger/core/api/auth") as { authApi: { profile: jest.Mock } };
+    authApi.profile.mockResolvedValueOnce({ data: { email: "yama@example.com", email_verified: false } });
+    renderOfficer(<MeTab onOpen={() => {}} />);
+    expect(await screen.findByTestId("me-email")).toBeTruthy();
+    expect(screen.queryByTestId("me-username-hint")).toBeNull();
   });
 });
 

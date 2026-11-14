@@ -8409,7 +8409,7 @@
       "name_empty": "姓名不能为空",
       "role": "角色",
       "hall": "所属殿",
-      "username": "登录用户名",
+      "username": "用户名",
       "mfa": "两步验证",
       "mfa_on": "已开启",
       "mfa_off": "未开启",
@@ -8439,7 +8439,8 @@
       "logout_pending_drafts": "还有 {{drafts}} 份回信草稿。退出后会从这台设备上清除。",
       "logout_retry": "先重试发送",
       "logout_anyway": "仍然退出",
-      "security": "账号安全"
+      "security": "账号安全",
+      "username_hint": "登录时也可以用已验证的邮箱。"
     },
     "back": "返回",
     "areas": {

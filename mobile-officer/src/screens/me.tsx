@@ -14,7 +14,7 @@ import { permission, registerDevice, requestPermission, unregisterDevice, hasReg
 import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { SignOutButton } from "./signOut";
-import { Notice, OneLine, Screen, SectionLabel, SmallButton, SwitchMark, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
+import { Notice, OneLine, Screen, SectionLabel, SmallButton, SwitchMark, Txt, family, space, translate, useI18n, useRemote, useTheme, useToast } from "../shared";
 
 export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name" | "stats";
 
@@ -65,8 +65,6 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
               </View>
             }
           />
-          {/* O1: what to type at sign-in, read-only (the name above may be a display name). */}
-          <Fact testID="me-username" label={t("officer_app.me.username")} value={user.username} />
           <Fact label={t("officer_app.me.role")} value={role.state === "known" ? role.label : user.role} />
           <Fact label={t("officer_app.me.hall")} value={hallLabel(t, user.tenant) ?? ""} />
           {profile.data?.email ? (
@@ -86,8 +84,9 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
           <Row testID="me-mfa" minHeight={56} title={mfaLine} onPress={() => onOpen("mfa")} right={<Txt variant="nav">›</Txt>} />
         </Block>
 
-        {/* 第五十批 C5: 我 › 账号安全 -- 用指纹登录, 落印前先确认, 密码. */}
+        {/* 第五十批 C5: 我 › 账号安全 -- 用户名 (第五十二批 F2), 用指纹登录, 落印前先确认, 密码. */}
         <Block label={t("officer_app.me.security")}>
+          <UsernameRow username={user.username} emailWorks={!!profile.data?.email && !!profile.data?.email_verified} />
           <BioLoginBlock />
           <SealReadbackRow />
           <Row testID="me-password" minHeight={56} title={t("profile.change_password")} onPress={() => onOpen("password")} right={<Txt variant="nav">›</Txt>} />
@@ -151,6 +150,32 @@ function Block({ label, children }: { label: string; children: ReactNode }) {
     <View style={{ gap: space[3] }}>
       <SectionLabel>{label}</SectionLabel>
       {children}
+    </View>
+  );
+}
+
+/**
+ * 第五十二批 F2 (O1 moved here): what to type at sign-in, the whole username in mono 14 / sub -- the officer's own,
+ * not masked. No arrow, nothing on a tap; a long press copies it (the system's own text selection: the officer app
+ * has no clipboard module, and a native one would need a rebuild). The hint that a verified email also signs in shows
+ * only when there is one.
+ */
+function UsernameRow({ username, emailWorks }: { username: string; emailWorks: boolean }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  return (
+    <View testID="me-username" style={{ flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 56 }}>
+      <View style={{ flex: 1, gap: space[1] }}>
+        <Txt variant="bodyLg">{t("officer_app.me.username")}</Txt>
+        {emailWorks ? (
+          <Txt testID="me-username-hint" variant="caption" tone="muted">
+            {t("officer_app.me.username_hint")}
+          </Txt>
+        ) : null}
+      </View>
+      <Txt testID="me-username-value" selectable style={{ fontFamily: family.mono[400], fontSize: 14, lineHeight: 20, color: theme.inkMuted, flexShrink: 1 }}>
+        {username}
+      </Txt>
     </View>
   );
 }

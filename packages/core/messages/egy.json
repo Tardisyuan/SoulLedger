@@ -8367,7 +8367,9 @@
       "logout_anyway": "Per Aq Min",
       "logout_pending_unsent": "Wesheb Nen Hab {{unsent}}: Em Medjat Pen. Per Aq: Fekh.",
       "logout_pending_drafts": "Sesh Tepy {{drafts}}: Em Medjat Pen. Per Aq: Fekh.",
-      "security": "Senb Ren Aq"
+      "security": "Senb Ren Aq",
+      "username": "Ren Aq",
+      "username_hint": "Djeret Smen-N: Aq Hena."
     },
     "login": {
       "password": "Sekhem",
