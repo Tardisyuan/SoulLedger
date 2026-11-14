@@ -4,8 +4,6 @@
 
 **English** | [中文](README.zh-CN.md)
 
-[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
-[![Designed with Claude Design](https://img.shields.io/badge/Designed_with-Claude_Design-D97757?logo=claude&logoColor=white)](https://www.anthropic.com/)
 [![Live demo](https://img.shields.io/badge/Live_demo-soulledger.tardisyuan.ltd-000000?logo=vercel&logoColor=white)](https://soulledger.tardisyuan.ltd)
 [![CI](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
@@ -13,6 +11,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
 
 **A multi-tenant case-management and approval-workflow system**: Django 5 + DRF + Channels back end,
 Next.js 16 web console, and two Expo (React Native) apps. It has tenant isolation, role-based access,
@@ -33,6 +32,26 @@ Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com).
   &nbsp;
   <a href="frontend/public/demo-videos/app-officer.mp4"><img src="frontend/public/demo-videos/app-officer.jpg" width="260" alt="Officer app: a judge working the case queue"></a>
 </p>
+
+**About AI.** Most of the code in this repository was written by Claude Code, not typed by me line by
+line: 3,826 of its 4,630 commits carry a `Co-Authored-By: Claude` line, and 62 more are authored by Claude.
+What I did is the part this project is meant to show:
+
+1. **I set the model.** The four civilizations are not flattened into one karma number
+   ([`ledger/readings.py`](backend/apps/ledger/readings.py)). I don't remember the first draft's details; what I know is
+   that one shared score could not carry four doctrines that measure different things, so the model keeps
+   them apart and the code refuses to merge them.
+2. **I did not trust "done".** On 2026-05-30 a report in this repository declared the code "Production
+   Ready". On 2026-08-07 an audit of the same code found four critical tenant-isolation gaps. The report
+   is still here, marked superseded ([`PRODUCTION_READINESS_REPORT.md`](docs/PRODUCTION_READINESS_REPORT.md)).
+   I started that audit: instead of taking the report's word for it, I had the AI check every view, tenant
+   by tenant.
+3. **I turned each lesson into a check that goes red.** Tenant scoping was consolidated behind one
+   function with a contract test over every ViewSet (2026-08-14, ADR 0001). The suite runs on real
+   PostgreSQL as well as SQLite (ADR 0003). The rule "no claim of *fixed* without the command, its exit
+   code and the passed count" is written into the agents' instructions.
+
+If you want to test me, ask about the details of any of these three.
 
 ## Three things worth a look
 

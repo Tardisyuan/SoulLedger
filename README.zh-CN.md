@@ -4,8 +4,6 @@
 
 [English](README.md) | **中文**
 
-[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
-[![Designed with Claude Design](https://img.shields.io/badge/Designed_with-Claude_Design-D97757?logo=claude&logoColor=white)](https://www.anthropic.com/)
 [![Live demo](https://img.shields.io/badge/Live_demo-soulledger.tardisyuan.ltd-000000?logo=vercel&logoColor=white)](https://soulledger.tardisyuan.ltd)
 [![CI](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
@@ -13,6 +11,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
 
 **一套多租户案件管理与审批流系统。**技术栈是 Django 5 + DRF + Channels 后端、Next.js 16 网页后台和两个 Expo（React Native）App。系统做了这些：
 - 租户隔离、角色权限
@@ -31,6 +30,21 @@
   &nbsp;
   <a href="frontend/public/demo-videos/app-officer.mp4"><img src="frontend/public/demo-videos/app-officer.jpg" width="260" alt="官员端 App：判官处理案件队列"></a>
 </p>
+
+**关于 AI。**这个仓库的大部分代码是 Claude Code 写的，不是我逐行手写的。4,630 个提交里，3,826 个带
+`Co-Authored-By: Claude`，另有 62 个的作者就是 Claude。我做的部分，正是这个项目想展示的：
+
+1. **定模型。**四种文明不抹平成一个功过数（[`ledger/readings.py`](backend/apps/ledger/readings.py)）。
+   第一版方案的细节我记不清了；能确定的是，一个统一的分数装不下四种量法不同的教义，所以模型把它们分开，
+   代码也拒绝把它们合并。
+2. **不信「已完成」。**2026-05-30，仓库里一份报告宣称「Production Ready」。2026-08-07，对同一份代码的审计
+   找出 4 个严重的租户隔离缺口。那份报告还留着，标了「已作废」。那次审计是我发起的：我没有采信那份报告，而是让 AI 按租户逐个视图去查。
+3. **把教训变成会变红的检查。**
+   - 2026-08-14，租户过滤收口成一个函数，并用契约测试逐个检查 ViewSet（ADR 0001）。
+   - 测试同时跑真 PostgreSQL 和 SQLite（ADR 0003）。
+   - 「没有命令、退出码、通过数，就不许说已修复」写进了给 AI 的规则。
+
+想考我，就问这三件事里任何一件的细节。
 
 ## 三个值得看的地方
 
