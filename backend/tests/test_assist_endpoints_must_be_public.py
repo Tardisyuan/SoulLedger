@@ -9,6 +9,7 @@ import pytest
 from cryptography.fernet import Fernet
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from tests.soul_account_support import officer_client
 
 pytestmark = pytest.mark.django_db
@@ -31,12 +32,12 @@ def api(settings, cn_tenant):
 def test_a_private_base_url_is_refused(api, url):
     res = api.post(f"{BASE}config/test/", {"platform": "custom", "provider": "openai_compatible", "base_url": url},
                    format="json")
-    assert res.status_code == 400 and "base_url" in res.data, res.data
+    assert res.status_code == 400 and "base_url" in field_errors(res), res.data
 
 
 def test_a_private_embedding_url_is_refused(api):
     res = api.post(f"{BASE}embedding/test/", {"embedding_url": "http://10.0.0.5:11434"}, format="json")
-    assert res.status_code == 400 and "embedding_url" in res.data, res.data
+    assert res.status_code == 400 and "embedding_url" in field_errors(res), res.data
 
 
 def test_the_allowlist_and_the_env_hosts_are_let_through(api, settings):

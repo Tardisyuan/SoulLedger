@@ -26,7 +26,8 @@ def test_a_bad_token_is_a_400(signed_in, refresh):
     client, _ = signed_in
     response = client.post(LOGOUT, {"refresh": refresh}, format="json")
     assert response.status_code == 400
-    assert response.data == {"detail": "Invalid token"}
+    assert {k: v for k, v in response.data.items() if k != "instance"} == {
+        "type": "about:blank", "title": "Bad Request", "status": 400, "code": "bad_request", "detail": "Invalid token"}
 
 
 @pytest.mark.django_db

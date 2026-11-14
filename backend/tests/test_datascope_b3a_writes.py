@@ -109,7 +109,7 @@ def test_opening_a_case_with_an_owner_outside_the_scope_is_400(w):
     Judgment.objects.filter(pk=w.jB.pk).update(is_deleted=True)
     res = w.c.post("/api/v1/judgment/", {"soul": str(w.sB.pk), "court": "第一殿"}, format="json")
     assert res.status_code == 400, res.data
-    assert "soul" in res.data
+    assert "soul" in field_errors(res)
 
 
 # ── 建后改 owner_org ────────────────────────────────────────────────────

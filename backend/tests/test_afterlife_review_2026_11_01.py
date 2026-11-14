@@ -44,7 +44,7 @@ def _code(soul):
     try:
         assert_may_be_reborn(Soul.all_objects.get(pk=soul.pk))
     except RebirthBlocked as blocked:
-        return blocked.detail["code"]
+        return blocked.problem_code
     return None
 
 
@@ -222,8 +222,8 @@ def test_a_soul_with_an_open_judgment_is_not_reborn(cn):
     with pytest.raises(RebirthBlocked) as refused:
         assert_may_be_reborn(Soul.all_objects.get(pk=soul.pk))
 
-    assert refused.value.detail["code"] == "open_judgment"
-    assert refused.value.detail["open_judgment_ids"] == [str(case.pk)]
+    assert refused.value.problem_code == "open_judgment"
+    assert refused.value.extra["open_judgment_ids"] == [str(case.pk)]
     case.soft_delete(reason="撤案")
     assert _code(soul) is None
 

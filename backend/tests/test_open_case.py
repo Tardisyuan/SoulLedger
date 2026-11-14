@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.core.problems import field_errors
 from apps.judgment.models import Judgment, JudgmentKind
 from apps.judgment.services import JudgmentService, OpenCaseRefusedError
 from apps.souls.models import Soul, SoulState
@@ -97,4 +98,4 @@ def test_post_judgment_goes_through_open_case(eu_tenant):
     # The second is a 400 with the same words (the serializer asks first; open_case again under the lock).
     again = client.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json")
     assert again.status_code == 400
-    assert again.data["soul"] == ["This soul already has an open case. Conclude it before opening another."]
+    assert field_errors(again)["soul"] == ["This soul already has an open case. Conclude it before opening another."]

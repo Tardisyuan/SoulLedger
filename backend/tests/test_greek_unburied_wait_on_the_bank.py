@@ -9,6 +9,7 @@ from datetime import date
 import pytest
 
 from apps.authentication.models import User
+from apps.core.problems import field_errors
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import JudgmentKind
@@ -73,7 +74,7 @@ def test_only_a_greek_soul_waits_on_that_bank(gr_tenant, admin_user):
     cn = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN_DIYU"})[0]
     chinese = Soul.objects.create(name="c", tenant=cn)
     res = client.patch(f"/api/v1/souls/{chinese.pk}/", {"ferry_passage": "UNBURIED"}, format="json")
-    assert res.status_code == 400 and "ferry_passage" in res.data, res.data
+    assert res.status_code == 400 and "ferry_passage" in field_errors(res), res.data
     greek = Soul.objects.create(name="g", tenant=gr_tenant)
     res = client.patch(f"/api/v1/souls/{greek.pk}/", {"ferry_passage": "NO_FARE"}, format="json")
     assert res.status_code == 200 and res.data["ferry_passage"] == "NO_FARE", res.data
