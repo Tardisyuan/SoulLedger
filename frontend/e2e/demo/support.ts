@@ -1,5 +1,5 @@
 import { expect, type BrowserContext, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export type Role = "admin" | "judge" | "judge_eu" | "judge_eg" | "judge_gr" | "moderator";
@@ -11,8 +11,41 @@ interface Recording {
   login: { user: { id: number } };
 }
 
-export const recording = (role: Role, lang: "zh" | "en" = "zh"): Recording =>
-  JSON.parse(readFileSync(join(__dirname, "..", "..", "demo", "data", `${role}.${lang}.json`), "utf8")) as Recording;
+const DATA = join(__dirname, "..", "..", "demo", "data");
+type Table = Record<string, unknown>;
+type Bucket = { lists: Table; docs: Table; rows?: Table; at: { lists: number[]; docs: number[] } };
+
+/** A bucket's references back to what they stand for (scripts/demo-recording-io.mjs `resolve`). */
+function resolve(table: Table, pool: Table = {}): Table {
+  const out: Table = {};
+  for (const [key, value] of Object.entries(table)) {
+    const ref = value as { "="?: string } | null;
+    const entry = (ref && typeof ref["="] === "string" ? table[ref["="]] : value) as { rows?: unknown[] } | null;
+    out[key] = entry && Array.isArray(entry.rows)
+      ? { ...entry, rows: entry.rows.map((r) => (r && typeof (r as { "&"?: string })["&"] === "string" ? pool[(r as { "&": string })["&"]] : r)) }
+      : entry;
+  }
+  return out;
+}
+
+/**
+ * One role's whole recording, references resolved, from either format: the single `<role>.<lang>.json` or the
+ * bucketed `<role>.<lang>/` (boot + domain buckets). Mirrors `readRecording` in scripts/demo-recording-io.mjs.
+ */
+export const recording = (role: Role, lang: "zh" | "en" = "zh"): Recording => {
+  const single = join(DATA, `${role}.${lang}.json`);
+  if (existsSync(single)) return JSON.parse(readFileSync(single, "utf8")) as Recording;
+  const read = (name: string) => JSON.parse(readFileSync(join(DATA, `${role}.${lang}`, `${name}.json`), "utf8"));
+  const { manifest, ...boot } = read("boot") as Bucket & { manifest: { buckets: string[] } } & Record<string, unknown>;
+  const { rows: _rows, at: _at, lists: _lists, docs: _docs, ...head } = boot;
+  const placed: Record<"lists" | "docs", [number, string, unknown][]> = { lists: [], docs: [] };
+  for (const bucket of [boot as Bucket, ...manifest.buckets.map((n) => read(n) as Bucket)]) {
+    const resolved = { lists: resolve(bucket.lists, bucket.rows), docs: resolve(bucket.docs) };
+    for (const t of ["lists", "docs"] as const) Object.entries(resolved[t]).forEach(([k, v], i) => placed[t].push([bucket.at[t][i], k, v]));
+  }
+  const inOrder = (entries: [number, string, unknown][]) => Object.fromEntries(entries.sort((a, b) => a[0] - b[0]).map(([, k, v]) => [k, v]));
+  return { ...head, lists: inOrder(placed.lists), docs: inOrder(placed.docs) } as unknown as Recording;
+};
 
 /** The rows of a list as recorded with no filter. */
 export const rows = (rec: Recording, path: string): Row[] => rec.lists[path]?.rows ?? [];

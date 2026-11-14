@@ -34,8 +34,10 @@ test("the connection banner takes no layout space: content starts right under th
   expect(content, "no content box").not.toBeNull();
   expect(head, "no page head box").not.toBeNull();
   expect(Math.round(header!.y), `the toolbar starts at y=${header!.y}, under the banner's height`).toBe(0);
-  // The toolbar keeps its 52px with the pill in it, and the pill is inside it (desktop project).
-  expect(Math.round(header!.height)).toBe(52);
+  // The toolbar keeps its height with the pill in it: 52px on a desktop, 48px on a phone (the two-layer phone shell,
+  // 2026-11-14); the pill is inside it (desktop project).
+  const wide = (page.viewportSize()?.width ?? 0) > 768;
+  expect(Math.round(header!.height)).toBe(wide ? 52 : 48);
   const pill = await banner.boundingBox();
   if ((page.viewportSize()?.width ?? 0) > 768) {
     expect(pill!.y).toBeGreaterThanOrEqual(header!.y);
