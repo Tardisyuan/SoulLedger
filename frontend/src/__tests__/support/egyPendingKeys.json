@@ -95,5 +95,8 @@
   "judgment.seal_readback.soul",
   "judgment.seal_readback.case",
   "judgment.seal_readback.verdict",
-  "judgment.seal_readback.note"
+  "judgment.seal_readback.note",
+  "demo.tour.try_overreach",
+  "demo.build.contact",
+  "demo.home.start_here"
 ]

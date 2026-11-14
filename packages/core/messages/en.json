@@ -9379,6 +9379,7 @@
       "video_officer": "Officer app, recorded",
       "github": "Read the source on GitHub",
       "quality": "How it is tested: quality evidence",
+      "contact": "Want to talk? Contact details are in the README",
       "system": "System status and SLOs"
     },
     "tour": {
@@ -9394,6 +9395,7 @@
       "done_title": "That was one life",
       "done_body": "That is how {{civ}} does it. Change underworld and the rules change with it.",
       "try_another": "Try another underworld",
+      "try_overreach": "Try opening another hall's case",
       "stay": "Stay here",
       "replay": "Watch the tour again",
       "cn": {
@@ -9594,6 +9596,7 @@
       "civ_title": "Four underworlds, four roads",
       "civ_sub": "Pick a hall and enter as its officer",
       "enter_officer": "Enter as officer",
+      "start_here": "Start here",
       "hall": {
         "cn": "Fifth Court · Yanluo",
         "eu": "Court of Minos",
