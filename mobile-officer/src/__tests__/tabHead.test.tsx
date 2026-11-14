@@ -18,8 +18,10 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
   default: () => mockWindow,
 }));
 
-// The harness's tenant reads as the neutral skin (its `civilization` is no short code); 地府's is CHINESE.
+// The harness officer is 地府's (CHINESE, the value the server sends); the neutral skin is an officer whose hall has
+// no civilization the app knows.
 const DIYU = { ...OFFICER, tenant: { ...OFFICER.tenant!, civilization: "CHINESE" } };
+const NEUTRAL = { ...OFFICER, tenant: { ...OFFICER.tenant!, civilization: "" } };
 const WITH_HALL = { ...DIYU, tenant: { ...DIYU.tenant, hall_names: { "zh-Hans": "秦廣殿", en: "First Court", egy: "Wesekhet 1" } } };
 const mark = () => screen.getByTestId("head-mark-cn", { includeHiddenElements: true });
 const opacity = () => StyleSheet.flatten(mark().props.style).opacity;
@@ -66,9 +68,10 @@ describe("案卷台's head", () => {
 
 describe("the other tabs' heads", () => {
   it("the neutral skin: no texture, no mark", async () => {
-    renderOfficer(<TabHead tab="queue" onAsk={jest.fn()} />);
+    renderOfficer(<TabHead tab="queue" onAsk={jest.fn()} />, { user: NEUTRAL });
     await act(async () => layout("tab-head", 393, 96));
-    expect(screen.UNSAFE_queryAllByType(Svg)).toEqual([]);
+    // A count, not the elements: a failing toEqual([]) prints every Svg's fiber and kills the jest worker.
+    expect(screen.UNSAFE_queryAllByType(Svg)).toHaveLength(0);
     expect(screen.queryByTestId(/^head-mark-/, { includeHiddenElements: true })).toBeNull();
   });
 
