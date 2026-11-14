@@ -138,6 +138,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             password_change_required: profile.password_change_required ?? prev.user.password_change_required,
             mfa_setup_required: profile.mfa_setup_required ?? prev.user.mfa_setup_required,
             permissions: Array.isArray(profile.permissions) ? profile.permissions : prev.user.permissions,
+            // The hall (names, civilization, seal glyphs) can change too, and a session signed in before the
+            // server sent a field (hall_names, 2026-11-14) would keep the old shape until the next sign-in.
+            tenant: profile.tenant ?? prev.user.tenant,
           };
           // Nothing changed: the same state object, so the shell and its tabs do not redraw (opt-apps2 R1).
           const stored = JSON.stringify(user);

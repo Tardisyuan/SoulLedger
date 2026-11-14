@@ -169,6 +169,8 @@ export interface AuthProfile {
   mfa_setup_required?: boolean;
   /** Same list as the login payload's `user.permissions`. Optional: older payloads lack it. */
   permissions?: string[];
+  /** Same shape as the login payload's `user.tenant` (UserSerializer.get_tenant). Optional: older payloads lack it. */
+  tenant?: LoginUser["tenant"];
 }
 
 /**

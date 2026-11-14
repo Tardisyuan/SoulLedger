@@ -130,3 +130,19 @@ it("an unchanged profile keeps the session state and the stored copy as they wer
   expect(rendered.mock.calls.length).toBe(before);
   expect(write.mock.calls.filter(([key]) => key === USER_KEY)).toEqual([]);
 });
+
+// 2026-11-14 on the Huawei: a session signed in before the server sent `hall_names` kept the 地府 fallback
+// head mark for good, because the refresh copied role / permissions but not the tenant.
+it("the start-up profile also refreshes the hall (a cached session without hall_names gains them)", async () => {
+  const hall = { "zh-Hans": "第五殿", en: "The Fifth Court" };
+  mockProfile.mockResolvedValue({ data: { ...OFFICER, tenant: { ...OFFICER.tenant, hall_names: hall } } });
+  await boot();
+  expect(JSON.parse(platform().persistent.get(USER_KEY)!).tenant.hall_names).toEqual(hall);
+});
+
+it("a profile without a tenant keeps the cached one", async () => {
+  const { tenant: _omit, ...withoutTenant } = OFFICER as typeof OFFICER & { tenant: unknown };
+  mockProfile.mockResolvedValue({ data: { ...withoutTenant, permissions: ["judgment.assign"] } });
+  await boot();
+  expect(JSON.parse(platform().persistent.get(USER_KEY)!).tenant).toEqual(OFFICER.tenant);
+});
