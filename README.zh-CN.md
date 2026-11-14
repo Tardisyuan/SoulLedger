@@ -13,6 +13,9 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 [![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
 
+<p align="center"><a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-zh.mp4"><img src="docs/portfolio/video/demo-zh.jpg" width="760" alt="两分钟演示视频：网页控制台、两个 App 和一次真实的越权尝试"></a><br>
+<sub>▶ <a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-zh.mp4">看两分钟演示视频</a>(1:51,只有字幕和背景音乐):网页控制台、两个 App,以及判官越过本殿去取数据时真实的 404 / 403。</sub></p>
+
 **一套多租户案件管理与审批流系统。**技术栈是 Django 5 + DRF + Channels 后端、Next.js 16 网页后台和两个 Expo（React Native）App。系统做了这些：
 - 租户隔离、角色权限
 - 可配置的多级审批

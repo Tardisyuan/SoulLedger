@@ -13,6 +13,9 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 [![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
 
+<p align="center"><a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-en.mp4"><img src="docs/portfolio/video/demo-en.jpg" width="760" alt="Two-minute walkthrough: the web console, both apps and a real overreach attempt"></a><br>
+<sub>▶ <a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-en.mp4">Watch the two-minute walkthrough</a> (1:51, captions, no voice-over): the web console, both apps, and a real 404 / 403 when a judge reaches past their hall.</sub></p>
+
 **A multi-tenant case-management and approval-workflow system**: Django 5 + DRF + Channels back end,
 Next.js 16 web console, and two Expo (React Native) apps. It has tenant isolation, role-based access,
 configurable multi-step approvals, real-time events and an audit trail.
