@@ -12,6 +12,8 @@ import { Loader, Notice, SmallButton, space, useI18n } from "./shared";
 export interface Page<T> {
   results: T[];
   next?: string | null;
+  /** DRF's total across pages, when the endpoint paginates (查询's 「人物 · n」 reads it). */
+  count?: number;
 }
 
 export type MoreState = "busy" | "failed" | null;
