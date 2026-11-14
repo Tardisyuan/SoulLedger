@@ -7,11 +7,8 @@
 [![Live demo](https://img.shields.io/badge/Live_demo-soulledger.tardisyuan.ltd-000000?logo=vercel&logoColor=white)](https://soulledger.tardisyuan.ltd)
 [![CI](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
-![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
-![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+
+<sub>Django 5.2 · DRF · Channels · Next.js 16 · Expo 57 · PostgreSQL 16 · Redis · built with Claude Code</sub>
 
 <p align="center"><a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-en.mp4"><img src="docs/portfolio/video/demo-en.jpg" width="760" alt="Two-minute walkthrough: the web console, both apps and a real overreach attempt"></a><br>
 <sub>▶ <a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-en.mp4">Watch the two-minute walkthrough</a> (1:51, captions, no voice-over): the web console, both apps, and a real 404 / 403 when a judge reaches past their hall.</sub></p>
@@ -24,8 +21,8 @@ The demo domain is afterlife judgment in four mythologies: Chinese, European, Eg
 chosen because their four rule sets cannot share one data model, so the system has to model real
 differences instead of reskinning one schema.
 
-**[▶ Live demo](https://soulledger.tardisyuan.ltd)**: no sign-up, one click per role. It is the front end
-on recorded data, and every sign-in starts over. · **[API reference](https://soulledger.tardisyuan.ltd/api-docs)**
+Then try it yourself: **[live demo](https://soulledger.tardisyuan.ltd)**, no sign-up, one click per role. It is
+the front end on recorded data, and every sign-in starts over.
 
 **Contact**: open to full-stack roles, and to consulting on multi-tenant / approval-workflow systems.
 Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger). One line is enough.
@@ -84,6 +81,7 @@ Three questions I'd like to be asked:
    a number. The code refuses to flatten them ([`ledger/readings.py`](backend/apps/ledger/readings.py)).
 
 **Go deeper**: [How I built this](docs/portfolio/HOW-I-BUILT.md) ·
+[API reference](https://soulledger.tardisyuan.ltd/api-docs) ·
 [quality evidence](docs/portfolio/QUALITY-EVIDENCE.md) ·
 [architecture decision records](docs/adr/README.md) ·
 [development guide](docs/DEVELOPMENT.md) · [demo deployment](docs/DEPLOYMENT-demo.md)
@@ -198,7 +196,11 @@ enforced. The list and how to report a problem are in [`SECURITY.md`](SECURITY.m
 ## Status
 
 A personal project. It has never been deployed for real users and makes no uptime or compatibility
-promise. The production compose file, health checks and CI exist because doing them properly was part of
+promise. It is not a drop-in library either: the approval engine is tied to the demo domain.
+`ApprovalWorkflow` has a foreign key to `souls.Soul` and a one-to-one link to `judgment.Judgment`
+([`workflow/models.py`](backend/apps/workflow/models.py)), and case types are an enum of the four
+mythologies. Reusing the engine for your own cases means replacing those two links with your own case
+model and rewriting the case-type enum. The production compose file, health checks and CI exist because doing them properly was part of
 the exercise. `git log` is the accurate history; [`docs/MILESTONES.md`](docs/MILESTONES.md) lags it.
 
 ## Contributing
@@ -217,6 +219,8 @@ designed with Claude Design. Fonts, libraries, literature and services are liste
 (data in [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)).
 
 Maintainer: [@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
+
+If you need this kind of system built, or want to talk about any decision above, write one line.
 
 ## License
 

@@ -7,11 +7,8 @@
 [![Live demo](https://img.shields.io/badge/Live_demo-soulledger.tardisyuan.ltd-000000?logo=vercel&logoColor=white)](https://soulledger.tardisyuan.ltd)
 [![CI](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
-![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
-![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+
+<sub>Django 5.2 · DRF · Channels · Next.js 16 · Expo 57 · PostgreSQL 16 · Redis · 用 Claude Code 构建</sub>
 
 <p align="center"><a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-zh.mp4"><img src="docs/portfolio/video/demo-zh.jpg" width="760" alt="两分钟演示视频：网页控制台、两个 App 和一次真实的越权尝试"></a><br>
 <sub>▶ <a href="https://github.com/Tardisyuan/SoulLedger/releases/download/v1.0.0/SoulLedger-demo-zh.mp4">看两分钟演示视频</a>(1:51,只有字幕和背景音乐):网页控制台、两个 App,以及判官越过本殿去取数据时真实的 404 / 403。</sub></p>
@@ -24,7 +21,7 @@
 
 演示用的业务是四种神话的「死后审判」：中国、欧洲、埃及、希腊。选它是因为四套规则在结构上互不兼容，没法用同一个数据模型换皮，系统只能把差异真正建模出来。
 
-**[▶ 在线演示](https://soulledger.tardisyuan.ltd)**：不用注册，每个角色一键进入。这是纯前端版本，数据是录好的，每次登录回到原样。· **[API 参考](https://soulledger.tardisyuan.ltd/api-docs)**
+看完再自己试：**[在线演示](https://soulledger.tardisyuan.ltd)**，不用注册，每个角色一键进入。这是纯前端版本，数据是录好的，每次登录回到原样。
 
 **联系**：在找全栈岗位，也接多租户 / 审批流系统的咨询。邮箱 [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)，一句话就够。
 
@@ -66,7 +63,7 @@
    - 新检查必须先证明会变红，才信它的绿。见 [ADR 0003](docs/adr/0003-gates-select-tests-and-run-remotely.md) 和[质量证据](docs/portfolio/QUALITY-EVIDENCE.md)。
 3. **四套规则，四个模型。**中国是带符号的累积账户，埃及是对羽毛的阈值检验，欧洲是两个互不削减的量，希腊是一段程序而不是一个数。代码拒绝把它们抹平，见 [`ledger/readings.py`](backend/apps/ledger/readings.py)。
 
-**想深入**：[我怎么做的这个项目](docs/portfolio/HOW-I-BUILT.md) · [质量证据（英文）](docs/portfolio/QUALITY-EVIDENCE.md) ·
+**想深入**：[我怎么做的这个项目](docs/portfolio/HOW-I-BUILT.md) · [API 参考](https://soulledger.tardisyuan.ltd/api-docs) · [质量证据（英文）](docs/portfolio/QUALITY-EVIDENCE.md) ·
 [架构决策记录（英文）](docs/adr/README.md) · [开发指南（英文）](docs/DEVELOPMENT.md) · [演示站部署](docs/DEPLOYMENT-demo.md)
 
 ## 题材词对照
@@ -174,7 +171,7 @@ npm run dev --workspace frontend
 
 ## 状态
 
-这是个人项目，从未给真实用户部署过，不承诺可用性和向后兼容。生产用的 compose 文件、健康检查和 CI 存在，是因为把它们做对本来就是练习的一部分。准确的历史以 `git log` 为准，[`docs/MILESTONES.md`](docs/MILESTONES.md) 落后于它。
+这是个人项目，从未给真实用户部署过，不承诺可用性和向后兼容。它也不是拿来直接用的库：审批引擎和演示题材绑在一起，`ApprovalWorkflow` 有一个外键指向 `souls.Soul`、一个一对一指向 `judgment.Judgment`（[`workflow/models.py`](backend/apps/workflow/models.py)），案件类型是四种神话的枚举。要把引擎用在自己的案件上，得把这两处换成你自己的案件模型，并重写案件类型枚举。生产用的 compose 文件、健康检查和 CI 存在，是因为把它们做对本来就是练习的一部分。准确的历史以 `git log` 为准，[`docs/MILESTONES.md`](docs/MILESTONES.md) 落后于它。
 
 ## 参与
 
@@ -193,6 +190,8 @@ npm run dev --workspace frontend
 - 字体、开源软件、文献与服务的完整清单在 App 的「关于」页，数据在 [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)。
 
 维护者：[@Tardisyuan](https://github.com/Tardisyuan) · [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger)
+
+需要做这类系统，或者想聊上面任何一个决定，写一句话来就行。
 
 ## 许可证
 
