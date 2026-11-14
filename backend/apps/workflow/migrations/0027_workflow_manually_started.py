@@ -8,8 +8,12 @@ import uuid
 
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "audit.AuditLog", "workflow.ApprovalWorkflow"):
+        return
     AuditLog = apps.get_model("audit", "AuditLog")
     ApprovalWorkflow = apps.get_model("workflow", "ApprovalWorkflow")
     db = schema_editor.connection.alias

@@ -10,8 +10,12 @@
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_accounts.RebirthApplication"):
+        return
     alias = schema_editor.connection.alias
     RebirthApplication = apps.get_model("soul_accounts", "RebirthApplication")
     rows = RebirthApplication.objects.using(alias).filter(appeal_workflow__isnull=False, first_decided_at__isnull=True)

@@ -8,11 +8,15 @@ MODERATOR 的授予与 `ROLE_PERMISSIONS` 一致(apps/perm/test_codename_coverag
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 PERMISSIONS = [("social.moderate", "审核灵魂朋友圈", "social")]
 GRANTED_TO = ["ADMIN", "MODERATOR"]
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
@@ -30,6 +34,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Permission.all_objects.using(alias).filter(codename__in=[c for c, _, _ in PERMISSIONS]).delete()

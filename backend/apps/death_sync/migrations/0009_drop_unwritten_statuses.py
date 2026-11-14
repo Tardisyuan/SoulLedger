@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 #: ACCEPTED and PARTIAL had no writer, ever (user decision 2026-10-29 to drop them). Should a row on a shared box carry
 #: one anyway (written by hand or by a script), it is moved to the nearest status that still exists:
 #:   ACCEPTED  "accepted, processing": not processed yet          -> PENDING (in flight; the same thing)
@@ -12,6 +14,8 @@ MOVED = {"ACCEPTED": "PENDING", "PARTIAL": "FAILED"}
 
 
 def move_rows(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "death_sync.DeathRegistrationRequest"):
+        return
     Registration = apps.get_model("death_sync", "DeathRegistrationRequest")
     alias = schema_editor.connection.alias
     for old, new in MOVED.items():

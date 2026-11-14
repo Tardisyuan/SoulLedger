@@ -3,9 +3,13 @@
 import django.db.models.deletion
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def drop_deviceless_rows(apps, schema_editor):
     """反向时 `device` 要变回非空:没有设备的历史行(NO_DEVICE)先删,它们本来就从未发送过。"""
+    if not placed_here(schema_editor, apps, "soul_push.PushDelivery"):
+        return
     alias = schema_editor.connection.alias
     apps.get_model("soul_push", "PushDelivery").objects.using(alias).filter(device__isnull=True).delete()
 

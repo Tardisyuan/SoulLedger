@@ -55,8 +55,12 @@ PostgreSQL (reasoned; there is no PostgreSQL in the environment this was written
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     WorkflowTemplate = apps.get_model("workflow", "WorkflowTemplate")
     Version = apps.get_model("workflow", "WorkflowTemplateVersion")
     db = schema_editor.connection.alias
@@ -78,6 +82,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalWorkflow", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     WorkflowTemplate = apps.get_model("workflow", "WorkflowTemplate")
     ApprovalWorkflow = apps.get_model("workflow", "ApprovalWorkflow")
     Version = apps.get_model("workflow", "WorkflowTemplateVersion")

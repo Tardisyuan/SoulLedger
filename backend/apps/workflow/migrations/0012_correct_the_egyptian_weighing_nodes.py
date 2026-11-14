@@ -74,6 +74,8 @@ court_code + node_order)匹配，不按状态过滤，并且明确只写 `node_n
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (old_name, new_name, court_code, node_order, old_node_type, new_node_type)
 #:
 #: 冻结在这里而不是从 `services.WORKFLOW_TEMPLATES` 导入，理由与 `0011.ROWS`
@@ -116,6 +118,8 @@ def _matching(node_model, node_name, court_code, node_order, node_type, alias):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode"):
+        return
     alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
 
@@ -130,6 +134,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode"):
+        return
     alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
 

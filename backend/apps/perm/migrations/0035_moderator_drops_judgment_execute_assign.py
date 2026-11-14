@@ -8,11 +8,15 @@ RolePermission,别的角色(含自建角色、兼任)不动。码名写死:迁�
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 ROLE = "MODERATOR"
 CODENAMES = ["judgment.execute", "judgment.assign"]
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     RolePermission = apps.get_model("perm", "RolePermission")
     RolePermission.all_objects.using(alias).filter(
@@ -21,6 +25,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")

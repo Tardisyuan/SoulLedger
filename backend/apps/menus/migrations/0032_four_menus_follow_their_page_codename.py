@@ -22,6 +22,8 @@ roles 与码给出同一个答案(`test_the_seeded_rows_are_unchanged_by_the_new
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 ALL4 = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"]
 SEED3 = ["ADMIN", "JUDGE", "GUARDIAN"]
 
@@ -39,6 +41,8 @@ def _rows(menu_model, alias, path):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for path, (seed_roles, before, roles, codename) in CHANGES.items():
@@ -49,6 +53,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for path, (seed_roles, before, roles, codename) in CHANGES.items():

@@ -8,6 +8,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 PERMISSIONS = [
     ("soul_account.read", "查看灵魂账号", "soul_account"),
     ("soul_account.manage", "管理灵魂账号", "soul_account"),
@@ -16,6 +18,8 @@ GRANTED_TO = ["ADMIN", "MODERATOR"]
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
@@ -33,6 +37,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Permission.all_objects.using(alias).filter(codename__in=[c for c, _, _ in PERMISSIONS]).delete()

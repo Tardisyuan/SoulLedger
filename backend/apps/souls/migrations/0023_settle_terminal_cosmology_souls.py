@@ -22,6 +22,8 @@ the mapping it was derived from moves.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # Tenant codes whose cosmology ends at a final destination — Heaven/Hell/
 # Purgatory-then-Heaven for the European tenant, Aaru or Ammit for the
 # Egyptian one. Correct as of this migration; see the module docstring for why
@@ -30,6 +32,8 @@ TERMINAL_TENANT_CODES = ("EU_HEAVEN_HELL", "EG_DUAT")
 
 
 def settle_terminal_souls(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "souls.Soul"):
+        return
     alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     # all_objects, not objects: Soul's default manager is tenant-scoped
@@ -50,6 +54,8 @@ def unsettle_terminal_souls(apps, schema_editor):
     old code would have parked in REINCARNATING, so sending them back there on
     a rollback restores the state the rolled-back code expects to find.
     """
+    if not placed_here(schema_editor, apps, "souls.Soul"):
+        return
     alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     # all_objects, not objects: Soul's default manager is tenant-scoped

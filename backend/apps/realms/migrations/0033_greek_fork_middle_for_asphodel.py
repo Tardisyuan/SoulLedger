@@ -6,8 +6,12 @@
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def clear_middle(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     Realm = apps.get_model("realms", "Realm")
     Realm._base_manager.using(schema_editor.connection.alias).filter(fork="MIDDLE").update(fork=None)
 

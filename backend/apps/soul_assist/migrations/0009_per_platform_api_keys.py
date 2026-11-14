@@ -10,6 +10,7 @@ from django.db import migrations
 from django.utils.dateparse import parse_datetime
 
 import apps.death_sync.fields
+from apps.core.migration_ops import placed_here
 
 
 def _slot(values):
@@ -23,6 +24,8 @@ def _slot(values):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistConfig"):
+        return
     alias = schema_editor.connection.alias
     AssistConfig = apps.get_model("soul_assist", "AssistConfig")
     for row in AssistConfig.objects.using(alias).exclude(api_key_set_at=None):
@@ -32,6 +35,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistConfig"):
+        return
     alias = schema_editor.connection.alias
     AssistConfig = apps.get_model("soul_assist", "AssistConfig")
     for row in AssistConfig.objects.using(alias).exclude(api_keys=""):

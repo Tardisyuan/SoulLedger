@@ -12,6 +12,8 @@ begin with, so there is nothing to migrate backward.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def _migrate_forward(manager, source_field, prefix, batch_size=1000):
     year_field, month_field, day_field = f"{prefix}_year", f"{prefix}_month", f"{prefix}_day"
@@ -64,6 +66,8 @@ def _migrate_backward(manager, source_field, prefix, batch_size=1000):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "souls.Soul", "souls.SoulRecord"):
+        return
     alias = schema_editor.connection.alias
     Soul = apps.get_model('souls', 'Soul')
     SoulRecord = apps.get_model('souls', 'SoulRecord')
@@ -78,6 +82,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "souls.Soul", "souls.SoulRecord"):
+        return
     alias = schema_editor.connection.alias
     Soul = apps.get_model('souls', 'Soul')
     SoulRecord = apps.get_model('souls', 'SoulRecord')

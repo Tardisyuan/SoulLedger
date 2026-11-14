@@ -7,6 +7,8 @@ Reverse is the same the other way.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (name, field, old, new) on European rows
 TITLES = (
     ("Charon", "title", "冥河渡神卡戎", "阿刻戎河的摆渡人卡戎"),
@@ -27,10 +29,14 @@ def _apply(apps, schema_editor, rows):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _apply(apps, schema_editor, TITLES)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _apply(apps, schema_editor, tuple((name, field, new, old) for name, field, old, new in TITLES))
 
 

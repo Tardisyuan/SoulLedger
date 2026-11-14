@@ -9,6 +9,8 @@ PostgreSQL 的 ADD CONSTRAINT 本来也会失败,但只说「被某些行违反�
 
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 RULES = (
     ("judgment_duat_stage_only_egyptian", "duat_stage is set on a non-EGYPTIAN case",
      lambda q: q.exclude(duat_stage="").exclude(civilization="EGYPTIAN")),
@@ -31,6 +33,8 @@ def violations(rows):
 
 
 def precheck(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Judgment"):
+        return
     rows = apps.get_model("judgment", "Judgment")._base_manager.using(schema_editor.connection.alias)
     found = violations(rows)
     if found:

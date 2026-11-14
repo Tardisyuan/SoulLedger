@@ -2,6 +2,8 @@
 Reverse: `0032` drops the column."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 PERMISSION_NAME_EN = {
     "actors.read": "View figures",
     "audit.export": "Export audit log",
@@ -86,6 +88,8 @@ PERMISSION_NAME_EN = {
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission"):
+        return
     db = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     for codename, english in PERMISSION_NAME_EN.items():

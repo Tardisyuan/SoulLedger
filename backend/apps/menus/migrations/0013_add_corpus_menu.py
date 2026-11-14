@@ -54,6 +54,8 @@ roles = ["ADMIN", "JUDGE", "MODERATOR"]
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 MENU_PATH = "/corpus"
 MENU_NAME = "语料条文"
 PARENT_DIRECTORY = "灵魂业务"
@@ -79,6 +81,8 @@ def _live(menu_model, alias):
 
 
 def add_corpus_menu(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 
@@ -107,6 +111,8 @@ def remove_corpus_menu(apps, schema_editor):
     迁移链无法回退到 0012 之前。按 path 且排除 DIRECTORY 删除，不碰
     「灵魂业务」目录本身（它是 0009 建的，由 0009 负责回收）。
     """
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").delete()

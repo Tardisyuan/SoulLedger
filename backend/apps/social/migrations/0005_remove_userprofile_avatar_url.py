@@ -18,8 +18,12 @@ Reverse re-adds the column empty; the links do not come back.
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def report_discarded_links(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "social.UserProfile"):
+        return
     alias = schema_editor.connection.alias
     UserProfile = apps.get_model("social", "UserProfile")
     n = UserProfile.objects.using(alias).exclude(avatar_url="").count()

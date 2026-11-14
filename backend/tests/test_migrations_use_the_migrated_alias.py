@@ -15,7 +15,18 @@ The rule, per module with a `RunPython`:
 * in every function of that module, a model manager (`objects`, `all_objects`,
   `_base_manager`, `_default_manager`) is followed by `.using(` / `.db_manager(`;
 * `.save(` carries `using=`; an instance `.delete()` carries `using=`;
-* `connection` / `connections` are not imported from `django.db`.
+* `connection` / `connections` are not imported from `django.db`;
+* each function handed to `RunPython` skips the models not migrated on that alias
+  (tenant sharding, stage 0): its body holds `if not placed_here(<schema_editor>, <apps>, "app.Model", ...): return`
+  (`apps/core/migration_ops.py`, i.e. `router.allow_migrate_model`) naming every model it, or a module
+  helper it calls, gets with a literal `apps.get_model(...)`. Where the model is chosen at run time
+  (`apps.get_models()`, a loop over names) the reached code must call `placed_here` itself, per model.
+  A target that gets no model at all must be in `NO_ORM_TARGETS`. Today the router allows every
+  model everywhere, so the check is always true; later stages put control-only seeds (menus, roles,
+  perm) on the control database only, and this is what keeps them off the shards.
+  Proven red once (2026-11-15): deleting the `placed_here` line from `seed` in
+  `menus/0021_seed_the_first_sixteen_menus.py` fails that file with
+  "seed: touches menus.Menu without placed_here(...)".
 
 `ALLOW` lists the few places where the rule does not apply, each with the reason.
 """
@@ -100,11 +111,72 @@ def _delete_is_unrouted(func, call):
     )
 
 
+def _reached(funcs, name, seen):
+    """(literal "app.Model" labels, chosen-at-run-time?, calls placed_here?) over `name` and the module helpers it calls."""
+    if name in seen:
+        return set(), False, False
+    seen.add(name)
+    labels, dynamic, gated = set(), False, False
+    for n in ast.walk(funcs[name]):
+        if not isinstance(n, ast.Call):
+            continue
+        attr = getattr(n.func, "attr", getattr(n.func, "id", ""))
+        if attr == "placed_here":
+            gated = True
+        elif attr == "get_models":
+            dynamic = True
+        elif attr == "get_model":
+            values = [a.value for a in n.args if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+            if not n.args or len(values) != len(n.args):
+                dynamic = True
+            else:
+                labels.add(".".join(values))
+        if isinstance(n.func, ast.Name) and n.func.id in funcs:
+            sub, d, g = _reached(funcs, n.func.id, seen)
+            labels, dynamic, gated = labels | sub, dynamic or d, gated or g
+    return labels, dynamic, gated
+
+
+def _gated_labels(func):
+    """Labels named by `if not placed_here(...): return` statements directly in the function body."""
+    out = set()
+    for stmt in func.body:
+        test = getattr(stmt, "test", None)
+        if (
+            isinstance(stmt, ast.If)
+            and isinstance(test, ast.UnaryOp)
+            and isinstance(test.op, ast.Not)
+            and isinstance(test.operand, ast.Call)
+            and getattr(test.operand.func, "id", "") == "placed_here"
+            and isinstance(stmt.body[0], ast.Return)
+        ):
+            out |= {a.value for a in test.operand.args[2:] if isinstance(a, ast.Constant)}
+    return out
+
+
+def _placement_violations(path, funcs, targets):
+    found = []
+    for name in targets:
+        if (path.name, name) in NO_ORM_TARGETS:
+            continue
+        labels, dynamic, gated = _reached(funcs, name, set())
+        line = funcs[name].lineno
+        if dynamic:
+            if not gated:
+                found.append((name, "picks models at run time without calling placed_here(...) per model", line))
+        elif not labels:
+            found.append((name, "gets no model: list it in NO_ORM_TARGETS with its reason", line))
+        else:
+            for label in sorted(labels - _gated_labels(funcs[name])):
+                found.append((name, f"touches {label} without placed_here(...)", line))
+    return found
+
+
 def violations(path):
     """(function, kind, line) for every breach in one migration file."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     funcs, targets = _targets(tree)
-    found = []
+    found = _placement_violations(path, funcs, targets)
     for name in targets:
         if not _reads_alias(funcs[name]) and (path.name, name) not in NO_ORM_TARGETS:
             found.append((name, "does not read schema_editor.connection.alias", funcs[name].lineno))

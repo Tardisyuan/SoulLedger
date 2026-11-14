@@ -2,6 +2,8 @@
 Reverse: `0012` drops the column."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 NAME_EN = {
     "中国地府": "Diyu",
     "冥界": "The Underworld",
@@ -45,6 +47,8 @@ NAME_EN = {
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization"):
+        return
     db = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     for name, english in NAME_EN.items():

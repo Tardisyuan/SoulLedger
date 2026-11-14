@@ -11,6 +11,8 @@ icon = "Sparkles"(frontend/src/lib/icons.ts 在册)。order = 47:紧跟定时任
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 MENUS = [
     {
         "path": "/admin/assistant",
@@ -29,6 +31,8 @@ def _live(menu_model, alias):
 
 
 def add_menus(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for item in MENUS:
@@ -42,6 +46,8 @@ def add_menus(apps, schema_editor):
 
 
 def remove_menus(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path__in=[m["path"] for m in MENUS]).exclude(menu_type="DIRECTORY").delete()

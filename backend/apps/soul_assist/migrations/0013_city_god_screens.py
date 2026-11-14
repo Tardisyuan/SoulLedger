@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 #: 新条目 officer-city-gods 的评测用例(每个条目两种语言各至少一条，tests/test_assist_rag.py 钉住)。
 CASES = [
     ("city-god-cases", "案子为什么在城隍那里认领不了？", "zh-Hans"),
@@ -10,6 +12,8 @@ CASES = [
 
 
 def add_cases(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     Case.objects.using(alias).bulk_create([
@@ -20,6 +24,8 @@ def add_cases(apps, schema_editor):
 
 
 def remove_cases(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     Case.objects.using(alias).filter(side="officer", question__in=[q for _, q, _ in CASES]).delete()

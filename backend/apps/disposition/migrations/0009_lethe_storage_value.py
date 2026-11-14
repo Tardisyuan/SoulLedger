@@ -19,6 +19,8 @@ leaves the database consistent with the pre-change code instead of dirty.
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 OLD = "LETIES"
 NEW = "LETHE"
 
@@ -37,10 +39,14 @@ def _rewrite(apps, schema_editor, old, new):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "disposition.Disposition", "realms.Realm"):
+        return
     _rewrite(apps, schema_editor, OLD, NEW)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "disposition.Disposition", "realms.Realm"):
+        return
     _rewrite(apps, schema_editor, NEW, OLD)
 
 

@@ -11,6 +11,8 @@ way.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (realm_code, field, old, new)
 NAMES = (
     ("DY_00_PURGATORY", "name_en", "Purgatory Holding", "Holding Hall"),
@@ -73,10 +75,14 @@ def _apply(apps, schema_editor, rows):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _apply(apps, schema_editor, NAMES)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _apply(apps, schema_editor, tuple((code, field, new, old) for code, field, old, new in NAMES))
 
 

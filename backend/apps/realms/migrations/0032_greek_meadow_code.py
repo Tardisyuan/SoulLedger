@@ -25,6 +25,8 @@ import json
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 OLD_CODE = "EU_PLATO_MEADOW"
 NEW_CODE = "GR_PLATO_MEADOW"
 
@@ -44,12 +46,17 @@ JSON_COLUMNS = [
 ]
 
 
-def _rename(apps, alias, old, new):
+def _rename(apps, schema_editor, old, new):
+    alias = schema_editor.connection.alias
     for app, model, field in TEXT_COLUMNS:
+        if not placed_here(schema_editor, apps, f"{app}.{model}"):
+            continue
         manager = apps.get_model(app, model)._base_manager.using(alias)
         manager.filter(**{field: old}).update(**{field: new})
 
     for app, model, field in JSON_COLUMNS:
+        if not placed_here(schema_editor, apps, f"{app}.{model}"):
+            continue
         cls = apps.get_model(app, model)
         manager = cls._base_manager.using(alias)
         # ponytail: whole-table scan in Python; the string is a unique realm code,
@@ -61,11 +68,11 @@ def _rename(apps, alias, old, new):
 
 
 def forwards(apps, schema_editor):
-    _rename(apps, schema_editor.connection.alias, OLD_CODE, NEW_CODE)
+    _rename(apps, schema_editor, OLD_CODE, NEW_CODE)
 
 
 def backwards(apps, schema_editor):
-    _rename(apps, schema_editor.connection.alias, NEW_CODE, OLD_CODE)
+    _rename(apps, schema_editor, NEW_CODE, OLD_CODE)
 
 
 class Migration(migrations.Migration):

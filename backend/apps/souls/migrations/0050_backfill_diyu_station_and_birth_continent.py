@@ -20,6 +20,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 CHINESE_TENANT_CODES = ("CN_DIYU",)
 KNOWN_TENANT_CODES = ("CN_DIYU", "EU_HEAVEN_HELL", "EG_DUAT", "GR_HADES")
 COURT_PREFIX = "DY_COURT_"
@@ -36,6 +38,8 @@ def _diyu_souls(apps, alias):
 
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.SoulPathEntry", "souls.Soul"):
+        return
     alias = schema_editor.connection.alias
     SoulPathEntry = apps.get_model("realms", "SoulPathEntry")
     souls = _diyu_souls(apps, alias)

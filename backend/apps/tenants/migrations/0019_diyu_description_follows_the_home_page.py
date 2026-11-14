@@ -4,6 +4,8 @@ Jade Records reject (docs/06), and the first heaven, retired 2026-10-29. Only a 
 changes. Reverse is the same the other way."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (field, old, new)
 DESCRIPTION = (
     ("description", "中国地府 — 十殿阎王、十八层地狱、第一层天界", "中国地府 — 十殿阎王、孟婆汤、六道轮回"),
@@ -20,10 +22,14 @@ def _apply(apps, schema_editor, rows):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     _apply(apps, schema_editor, DESCRIPTION)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     _apply(apps, schema_editor, tuple((field, new, old) for field, old, new in DESCRIPTION))
 
 

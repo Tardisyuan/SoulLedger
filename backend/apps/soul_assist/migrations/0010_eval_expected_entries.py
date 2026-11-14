@@ -8,6 +8,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # 0004 的用例 → 期望条目。`codes` 与 `officer-disabled-buttons` 是 PINNED,总在上下文里,命中是必然的;
 # 仍写上,评测页上才看得出这条题考的是哪一条。
 FILL = {
@@ -119,6 +121,8 @@ OFFICER = [
 
 
 def fill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     for side, rows in FILL.items():
@@ -136,6 +140,8 @@ def fill(apps, schema_editor):
 
 
 def unfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "soul_assist.AssistEvalCase"):
+        return
     alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     for side, rows in FILL.items():

@@ -1,5 +1,7 @@
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 #: DUPLICATE had no writer, ever (review 2026-11-01 P3): a replayed key is answered 409 with the row that owns it
 #: (or, since the same review, a FAILED row is run again) and never writes a row of its own. Should a row on a shared
 #: box carry it anyway, it registered nothing itself -> FAILED (the status a human is shown), its error_code
@@ -7,6 +9,8 @@ from django.db import migrations, models
 
 
 def move_rows(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "death_sync.DeathRegistrationRequest"):
+        return
     Registration = apps.get_model("death_sync", "DeathRegistrationRequest")
     rows = Registration._base_manager.using(schema_editor.connection.alias).filter(status="DUPLICATE")
     rows.filter(error_code="").update(error_code="DUPLICATE")

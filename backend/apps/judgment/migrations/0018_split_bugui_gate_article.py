@@ -45,6 +45,8 @@ segments, with no candidate split point that either transcription supports.
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: (old code, new code), descending so a rename never lands on a live code.
 RENAMES = [
     ("CN-GGG-G-BG-05", "CN-GGG-G-BG-06"),
@@ -78,6 +80,8 @@ def _shift(statute_model, pairs, ordinal_delta, alias):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     # Empty database: nothing seeded yet, so there is nothing to renumber and
@@ -88,6 +92,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCitation", "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")

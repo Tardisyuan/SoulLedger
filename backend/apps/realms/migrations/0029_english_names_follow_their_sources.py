@@ -1,6 +1,8 @@
 """The realms' side of actors/0018: the hot hells' English, corrected. Reverse is the same the other way."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: In this order: "Great Burning" has to become "Burning" before "Greater Burning" becomes "Great Burning".
 REPLACEMENTS = (
     ("Great Burning", "Burning"),
@@ -28,10 +30,14 @@ def _apply(apps, schema_editor, pairs):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _apply(apps, schema_editor, REPLACEMENTS)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _apply(apps, schema_editor, tuple((new, old) for old, new in reversed(REPLACEMENTS)))
 
 

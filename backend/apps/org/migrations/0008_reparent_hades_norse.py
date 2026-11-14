@@ -20,6 +20,8 @@ backward 把 parent 放回 `HADES`,两步都是机械的。
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def _org(apps, code, alias):
     Organization = apps.get_model("org", "Organization")
@@ -30,6 +32,8 @@ def _org(apps, code, alias):
 
 
 def reparent(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization"):
+        return
     alias = schema_editor.connection.alias
     norse = _org(apps, "HADES_NORSE", alias)
     if norse is None:
@@ -45,6 +49,8 @@ def reparent(apps, schema_editor):
 
 
 def restore(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization"):
+        return
     alias = schema_editor.connection.alias
     norse = _org(apps, "HADES_NORSE", alias)
     hades = _org(apps, "HADES", alias)

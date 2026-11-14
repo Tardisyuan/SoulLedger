@@ -36,6 +36,8 @@ import uuid
 from django.db import migrations
 from django.utils import timezone
 
+from apps.core.migration_ops import placed_here
+
 #: The two corpora withdrawn. NEGATIVE_CONFESSION is deliberately absent.
 WITHDRAWN_CORPORA = ("HELL_LAW", "DEADLY_SIN")
 
@@ -55,6 +57,8 @@ CASCADE_ID = uuid.UUID("f0bb1e5e-0000-4d00-9a00-5741746854dc")
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCitation", "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
@@ -102,6 +106,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     Statute._base_manager.using(alias).filter(

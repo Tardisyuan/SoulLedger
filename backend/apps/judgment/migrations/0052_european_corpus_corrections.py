@@ -13,6 +13,8 @@
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 ARISTOTLE = ("matta bestialitade", "malizia — frode (tradimento)")
 TREACHERY_CONJECTURE = (
     (
@@ -70,10 +72,14 @@ def _apply(apps, schema_editor, old_index, new_index):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Statute"):
+        return
     _apply(apps, schema_editor, 0, 1)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Statute"):
+        return
     _apply(apps, schema_editor, 1, 0)
 
 

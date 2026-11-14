@@ -5,6 +5,8 @@ permission 留空、roles 只 ADMIN,与 /tenants 同。按 path / 分组名取�
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 GROUP = {"name": "全局", "icon": "Globe", "order": 70, "roles": ["ADMIN"]}
 HALLS = {
     "path": "/halls",
@@ -20,6 +22,8 @@ def _live(menu_model, alias):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     group, _ = Menu.all_objects.using(alias).get_or_create(
@@ -33,6 +37,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path=HALLS["path"]).exclude(menu_type="DIRECTORY").delete()

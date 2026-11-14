@@ -8,6 +8,8 @@ hand is not overwritten. ``_base_manager`` for the same reason as ``realms/0021`
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 CODE, OLD, NEW = "EG_HALL_TWO_TRUTHS", "Weret Maaty", "Wesekhet Maaty"
 
 
@@ -17,10 +19,14 @@ def _swap(apps, schema_editor, src, dst):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _swap(apps, schema_editor, OLD, NEW)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     _swap(apps, schema_editor, NEW, OLD)
 
 

@@ -5,6 +5,8 @@ administrator renamed still gets its English. Only blank columns are filled. Rev
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 BY_PATH = {
     "/welcome": "Welcome",
     "/social": "Feed",
@@ -63,6 +65,8 @@ BY_GROUP_NAME = {
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     db = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for path, english in BY_PATH.items():

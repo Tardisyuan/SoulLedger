@@ -56,6 +56,8 @@ reasoning, unchanged.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 EUROPEAN = "EUROPEAN"
 GREEK = "GREEK"
 
@@ -99,6 +101,8 @@ def _move(apps, alias, *, from_category, to_category, from_tenant_code, to_tenan
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization", "tenants.Tenant"):
+        return
     _move(
         apps,
         schema_editor.connection.alias,
@@ -111,6 +115,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization", "tenants.Tenant"):
+        return
     _move(
         apps,
         schema_editor.connection.alias,

@@ -11,6 +11,8 @@
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 DESCRIPTIONS = {
     "EU_PURGATORY_T7_LUST": (
         (
@@ -44,6 +46,8 @@ DESCRIPTIONS = {
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for code, (old, new) in DESCRIPTIONS.items():
@@ -51,6 +55,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for code, (old, new) in DESCRIPTIONS.items():

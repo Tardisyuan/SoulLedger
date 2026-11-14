@@ -89,6 +89,8 @@ actor 键恰好写作 `Osiris`、而查找同时匹配 `name` 与 `name_zh`。�
 from django.db import migrations
 from django.db.models import Q
 
+from apps.core.migration_ops import placed_here
+
 #: (node_name, court_code, node_order, civilization, actor_name)
 #:
 #: 冻结在这里而不是从 `services.WORKFLOW_TEMPLATES` 导入：迁移记录的是**当时**
@@ -192,6 +194,8 @@ def _candidates(node_model, node_name, court_code, node_order, alias):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "workflow.ApprovalNode"):
+        return
     alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
     Actor = apps.get_model("actors", "Actor")
@@ -225,6 +229,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "workflow.ApprovalNode"):
+        return
     alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
     Actor = apps.get_model("actors", "Actor")

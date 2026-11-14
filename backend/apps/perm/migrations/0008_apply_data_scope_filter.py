@@ -37,6 +37,8 @@ import uuid
 
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # What seed_sample_data_scopes() writes, restated as data so reverse_seed() can
 # delete by description instead of by role name alone. Kept as a separate
 # constant rather than driving the forward from it: this migration is applied
@@ -113,6 +115,8 @@ def seed_sample_data_scopes(apps, schema_editor):
         Role = apps.get_model('perm', 'Role')
         RowLevelDataScope = apps.get_model('perm', 'RowLevelDataScope')
     except LookupError:
+        return
+    if not placed_here(schema_editor, apps, "perm.Role", "perm.RowLevelDataScope"):
         return
 
     # Only seed if tables exist and are empty
@@ -210,6 +214,8 @@ def reverse_seed(apps, schema_editor):
         RowLevelDataScope = apps.get_model('perm', 'RowLevelDataScope')
         apps.get_model('perm', 'Role')
     except LookupError:
+        return
+    if not placed_here(schema_editor, apps, "perm.Role", "perm.RowLevelDataScope"):
         return
 
     seeded = {

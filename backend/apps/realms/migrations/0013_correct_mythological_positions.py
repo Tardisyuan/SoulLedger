@@ -126,6 +126,8 @@ migration must still find on reverse.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # (realm_code, civilization, realm_type, tier, name_local, name_zh, name_en,
 #  name_egy, memory_reset_mechanism). Identifying columns only — the seeder owns
 # the descriptions.
@@ -209,6 +211,8 @@ def _set_roles(apps, alias, direction):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     from django.utils import timezone
 
@@ -268,6 +272,8 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor", "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
 

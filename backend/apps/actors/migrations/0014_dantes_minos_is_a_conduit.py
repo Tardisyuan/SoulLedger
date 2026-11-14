@@ -8,14 +8,20 @@ are left as they are (same as 0013).
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     Actor.all_objects.using(alias).filter(civilization="EUROPEAN", name="Minos", role="JUDGE").update(role="CONDUIT")
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     Actor.all_objects.using(alias).filter(civilization="EUROPEAN", name="Minos", role="CONDUIT").update(role="JUDGE")

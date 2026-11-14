@@ -26,6 +26,8 @@ roles = ["ADMIN"]
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 MENU_PATH = "/scheduler"
 PARENT_DIRECTORY = "系统设置"
 
@@ -47,6 +49,8 @@ def _live(menu_model, alias):
 
 
 def add_scheduler_menu(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     parent = _live(Menu, alias).filter(name=PARENT_DIRECTORY, menu_type="DIRECTORY").first()
@@ -59,6 +63,8 @@ def add_scheduler_menu(apps, schema_editor):
 
 
 def remove_scheduler_menu(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").delete()

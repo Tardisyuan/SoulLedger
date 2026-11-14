@@ -22,6 +22,8 @@ Data migration: 功德管理 的路由 /karma 跟随后端改名迁到 /ledger�
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 OLD_PATH = "/karma"
 NEW_PATH = "/ledger"
 
@@ -32,12 +34,16 @@ def _live(menu_model, alias):
 
 
 def move_to_ledger(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path=OLD_PATH).update(path=NEW_PATH)
 
 
 def move_back_to_karma(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     _live(Menu, alias).filter(path=NEW_PATH).update(path=OLD_PATH)

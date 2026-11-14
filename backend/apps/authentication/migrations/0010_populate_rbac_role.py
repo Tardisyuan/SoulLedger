@@ -3,6 +3,8 @@ Data migration: populate User.rbac_role from User.role TextChoices.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # Hoisted out of populate_rbac_role() unchanged so reverse_populate() can undo
 # exactly the pairs the forward writes. The dict's contents and iteration order
 # are identical to the literal that used to sit inside the function, so what
@@ -42,6 +44,8 @@ def populate_rbac_role(apps, schema_editor):
     ``.filter(...).first()`` so the ``Role.DoesNotExist`` branch below is
     reached exactly as before.
     """
+    if not placed_here(schema_editor, apps, "authentication.User", "perm.Role"):
+        return
     alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
     Role = apps.get_model("perm", "Role")
@@ -94,6 +98,8 @@ def reverse_populate(apps, schema_editor):
     test_auth_0010_forward_runs_with_perm_already_past_0012`` runs it through a
     real ``migrate`` with perm left at 0018, which is where it used to raise.
     """
+    if not placed_here(schema_editor, apps, "authentication.User", "perm.Role"):
+        return
     alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
     Role = apps.get_model("perm", "Role")

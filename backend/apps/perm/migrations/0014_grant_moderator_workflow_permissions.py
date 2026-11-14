@@ -42,6 +42,8 @@ Data migration: 让 MODERATOR 成为"地域领导"角色。
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 ROLE_NAME = "MODERATOR"
 
 GRANTS = [
@@ -90,6 +92,8 @@ def _invalidate_cache():
 
 
 def grant(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
@@ -119,6 +123,8 @@ def grant(apps, schema_editor):
 
 
 def revoke(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")

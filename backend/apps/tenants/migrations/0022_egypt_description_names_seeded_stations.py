@@ -5,6 +5,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 OLD = "Egyptian Duat — Field of Reeds (Aaru), Hall of Two Truths, Lake of Fire"
 NEW = "Egyptian Duat — Hall of Two Truths, Field of Reeds (Aaru)"
 
@@ -15,10 +17,14 @@ def _apply(apps, schema_editor, was, now):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     _apply(apps, schema_editor, OLD, NEW)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "tenants.Tenant"):
+        return
     _apply(apps, schema_editor, NEW, OLD)
 
 

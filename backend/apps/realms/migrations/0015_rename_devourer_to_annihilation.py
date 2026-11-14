@@ -71,6 +71,8 @@ a migration, so it would report a silent success over an untouched table.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 OLD_CODE = "EG_DEVOURER"
 NEW_CODE = "EG_ANNIHILATION"
 
@@ -89,11 +91,15 @@ def _rename(apps, alias, old, new):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm", "reincarnation.Reincarnation"):
+        return
     alias = schema_editor.connection.alias
     _rename(apps, alias, OLD_CODE, NEW_CODE)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm", "reincarnation.Reincarnation"):
+        return
     alias = schema_editor.connection.alias
     _rename(apps, alias, NEW_CODE, OLD_CODE)
 

@@ -23,6 +23,8 @@ contextvar 影响。反向不动数据(`noop`):改之前的 SETTLED 正是被纠
 from django.db import migrations
 from django.db.models import OuterRef, Q, Subquery
 
+from apps.core.migration_ops import placed_here
+
 CHINESE_TENANT_CODES = ("CN_DIYU",)
 KNOWN_TENANT_CODES = ("CN_DIYU", "EU_HEAVEN_HELL", "EG_DUAT", "GR_HADES")
 HEAVEN = "DY_01_HEAVEN"
@@ -37,6 +39,8 @@ def _diyu_souls(apps, alias):
 
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "disposition.Disposition", "sentence_plan.SentenceNode", "souls.Soul"):
+        return
     alias = schema_editor.connection.alias
     Disposition = apps.get_model("disposition", "Disposition")
     SentenceNode = apps.get_model("sentence_plan", "SentenceNode")

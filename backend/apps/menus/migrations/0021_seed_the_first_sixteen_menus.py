@@ -20,6 +20,8 @@ Menu 没有租户字段,所以这是全局的(与 0009 以来的每一条一样)
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 ALL = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"]
 
 # path, name, icon, order, 分组(None = 一级、不在侧边栏), roles, visible, component
@@ -61,6 +63,8 @@ MENUS = [
 
 
 def seed(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     objects = Menu.all_objects.using(alias)
@@ -78,6 +82,8 @@ def seed(apps, schema_editor):
 
 
 def unseed(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for item in MENUS:

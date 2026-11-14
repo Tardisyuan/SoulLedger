@@ -32,8 +32,12 @@ import django.core.validators
 from django.db import migrations, models
 from django.db.models import Count
 
+from apps.core.migration_ops import placed_here
+
 
 def stamp_existing_records_with_the_current_life(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "souls.Soul", "souls.SoulRecord"):
+        return
     alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     SoulRecord = apps.get_model("souls", "SoulRecord")

@@ -27,6 +27,8 @@ that every other write path already uses ('RolePermission' → 'rolepermission',
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 # (CamelCase spelling written by the old _invalidate_permission_cache path,
 #  lowercase canonical spelling written by every other path)
 FOLDS = [
@@ -36,6 +38,8 @@ FOLDS = [
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "audit.AuditLog"):
+        return
     alias = schema_editor.connection.alias
     AuditLog = apps.get_model("audit", "AuditLog")
     # 0008_alter_auditlog_managers renamed the default manager to
@@ -45,6 +49,8 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "audit.AuditLog"):
+        return
     alias = schema_editor.connection.alias
     AuditLog = apps.get_model("audit", "AuditLog")
     for camel, lower in FOLDS:

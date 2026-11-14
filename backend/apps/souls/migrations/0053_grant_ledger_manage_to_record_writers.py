@@ -11,11 +11,15 @@ would be worse than leaving the extra grant.
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: The default role that writes records through soul.update (ROLE_PERMISSIONS, frozen here).
 WRITERS_BY_NAME = ["GUARDIAN"]
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "perm.Permission", "perm.Role", "perm.RolePermission"):
+        return
     alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     RolePermission = apps.get_model("perm", "RolePermission")

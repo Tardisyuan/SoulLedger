@@ -3,6 +3,8 @@ Scripture on the Ten Kings, the usual English for the eight hot hells). 判官 a
 changes only where it still reads the old way, so a name somebody edited stays. Reverse is the same the other way."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: In this order: "Great Burning" has to become "Burning" before "Greater Burning" becomes "Great Burning".
 REPLACEMENTS = (
     ("Great Burning", "Burning"),
@@ -36,10 +38,14 @@ def _apply(apps, schema_editor, pairs, panguan):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _apply(apps, schema_editor, REPLACEMENTS, ("Registrar", "Judge"))
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _apply(apps, schema_editor, tuple((new, old) for old, new in reversed(REPLACEMENTS)), ("Judge", "Registrar"))
 
 

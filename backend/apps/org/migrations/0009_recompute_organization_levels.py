@@ -14,8 +14,12 @@ level 这一列**,算出来的值每次都被丢掉。共享库 2026-08-29 实�
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 
 def recompute(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "org.Organization"):
+        return
     alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     rows = list(Organization.all_objects.using(alias).all())

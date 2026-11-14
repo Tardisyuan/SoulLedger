@@ -18,6 +18,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 STATION = "列圣部审查"
 OLD_COURT, NEW_COURT = "Archdiocese", "Vatican"
 
@@ -68,10 +70,14 @@ def _apply(apps, schema_editor, court_from, court_to, rename):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     _apply(apps, schema_editor, OLD_COURT, NEW_COURT, rename=True)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "workflow.ApprovalNode", "workflow.WorkflowTemplate", "workflow.WorkflowTemplateVersion"):
+        return
     # The court goes back; the name does not (see the file header).
     _apply(apps, schema_editor, NEW_COURT, OLD_COURT, rename=False)
 

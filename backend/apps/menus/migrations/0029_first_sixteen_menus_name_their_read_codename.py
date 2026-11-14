@@ -23,6 +23,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 CODENAMES = {
     "/dashboard": "dashboard.read",
     "/souls": "soul.read",
@@ -48,6 +50,8 @@ def _seed_roles():
 
 
 def fill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     roles = _seed_roles()
@@ -59,6 +63,8 @@ def fill(apps, schema_editor):
 
 
 def unfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "menus.Menu"):
+        return
     alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     roles = _seed_roles()

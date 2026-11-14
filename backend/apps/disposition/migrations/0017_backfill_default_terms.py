@@ -13,6 +13,8 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 DEFAULT_TERM_YEARS = {
     "GR_TARTARUS": 1000,
     "GR_ISLES_OF_THE_BLESSED": 1000,
@@ -36,6 +38,8 @@ DEFAULT_TERM_YEARS = {
 
 
 def backfill(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "disposition.Disposition", "sentence_plan.SentenceNode"):
+        return
     alias = schema_editor.connection.alias
     Disposition = apps.get_model("disposition", "Disposition")
     SentenceNode = apps.get_model("sentence_plan", "SentenceNode")

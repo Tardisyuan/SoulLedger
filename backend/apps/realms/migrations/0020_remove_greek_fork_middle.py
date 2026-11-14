@@ -11,8 +11,12 @@ them holding a value the model no longer accepts.
 """
 from django.db import migrations, models
 
+from apps.core.migration_ops import placed_here
+
 
 def refuse_if_any_row_takes_middle(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     codes = list(Realm._base_manager.using(alias).filter(fork="MIDDLE").values_list("realm_code", flat=True))

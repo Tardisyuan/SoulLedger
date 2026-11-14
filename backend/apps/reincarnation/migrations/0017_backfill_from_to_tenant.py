@@ -19,8 +19,12 @@
 from django.db import migrations
 from django.db.models import Count, F
 
+from apps.core.migration_ops import placed_here
+
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "events.SoulEvent", "reincarnation.Reincarnation", "tenants.Tenant"):
+        return
     alias = schema_editor.connection.alias
     Reincarnation = apps.get_model("reincarnation", "Reincarnation")
     SoulEvent = apps.get_model("events", "SoulEvent")

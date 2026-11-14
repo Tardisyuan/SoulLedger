@@ -2,6 +2,8 @@
 filled, and a description since rewritten has no match and stays blank. Reverse: `0027` drops the column."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 DESCRIPTION_EN = {
     "Intake court - the Ledger of Life and Death is read and the soul's case opened at the 孽镜台 (Mirror of Retribution); no punishment is administered here": "Intake court - the Ledger of Life and Death is read and the soul's case opened at the Mirror of Retribution; no punishment is administered here",
     "Souls awaiting reunion with loved ones. SOURCE UNKNOWN: no underworld place by this name appears in 《玉历宝钞》 or 《十王经》; treat as this project's own element until a source is produced": "Souls awaiting reunion with loved ones. SOURCE UNKNOWN: no underworld place by this name appears in the Jade Records or the Scripture of the Ten Kings; treat as this project's own element until a source is produced",
@@ -17,6 +19,8 @@ DESCRIPTION_EN = {
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "realms.Realm"):
+        return
     db = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for description, english in DESCRIPTION_EN.items():

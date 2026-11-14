@@ -14,6 +14,8 @@ from collections import defaultdict
 from django.db import migrations
 from django.utils import timezone
 
+from apps.core.migration_ops import placed_here
+
 
 def _prefix(tenant_code):
     if tenant_code is None:
@@ -23,6 +25,8 @@ def _prefix(tenant_code):
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Judgment", "judgment.JudgmentCaseCounter", "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     Judgment = apps.get_model("judgment", "Judgment")
     Counter = apps.get_model("judgment", "JudgmentCaseCounter")
@@ -49,6 +53,8 @@ def forward(apps, schema_editor):
 
 
 def reverse(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.Judgment", "judgment.JudgmentCaseCounter", "judgment.Statute"):
+        return
     alias = schema_editor.connection.alias
     apps.get_model("judgment", "Judgment")._base_manager.using(alias).update(case_number=None)
     apps.get_model("judgment", "JudgmentCaseCounter").objects.using(alias).all().delete()

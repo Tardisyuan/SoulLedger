@@ -3,6 +3,8 @@ sits at read the same. A row changes only if it still holds the old seeded value
 Reverse is the same in the other direction."""
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 #: Actor.name: (old seeded name_en, new name_en)
 KINGS = {
     "阎罗王": ("Yanluo King", "King Yanluo"),
@@ -27,10 +29,14 @@ def _rename(apps, schema_editor, old_at, new_at):
 
 
 def forwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _rename(apps, schema_editor, 0, 1)
 
 
 def backwards(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "actors.Actor"):
+        return
     _rename(apps, schema_editor, 1, 0)
 
 

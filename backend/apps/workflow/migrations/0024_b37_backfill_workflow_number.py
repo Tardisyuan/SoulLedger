@@ -7,10 +7,14 @@
 """
 from django.db import migrations
 
+from apps.core.migration_ops import placed_here
+
 KEY = "WF"
 
 
 def forward(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCaseCounter", "workflow.ApprovalWorkflow"):
+        return
     alias = schema_editor.connection.alias
     Workflow = apps.get_model("workflow", "ApprovalWorkflow")
     Counter = apps.get_model("judgment", "JudgmentCaseCounter")
@@ -26,6 +30,8 @@ def forward(apps, schema_editor):
 
 
 def reverse(apps, schema_editor):
+    if not placed_here(schema_editor, apps, "judgment.JudgmentCaseCounter", "workflow.ApprovalWorkflow"):
+        return
     alias = schema_editor.connection.alias
     apps.get_model("workflow", "ApprovalWorkflow")._base_manager.using(alias).update(number=None)
     apps.get_model("judgment", "JudgmentCaseCounter").objects.using(alias).filter(key=KEY).delete()
