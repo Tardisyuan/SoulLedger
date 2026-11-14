@@ -178,7 +178,7 @@
 /* 落了印的一行:印落下(320ms)之后划线、向左滑出(CaseDesk 的 SEAL_LEAVE_MS = 600 到点后移出摞)。
    减少动态效果时全站规则把动画压到 1ms,CaseDesk 也不等。 */
 .row[data-leaving] {
-  animation: desk-row-leave 280ms var(--ease-exit, ease-in) 320ms both;
+  animation: desk-row-leave 280ms var(--ease-exit) 320ms both;
 }
 .row[data-leaving] .rowName {
   text-decoration: line-through;
@@ -259,8 +259,8 @@
 }
 .body {
   display: grid;
-  /* 右栏是判栏(fe-ia §3.5:320)。`--verdict-rail-w` 待进 globals.css 的布局令牌,这里带回退值。 */
-  grid-template-columns: minmax(0, 1fr) var(--verdict-rail-w, 320px);
+  /* 右栏是判栏(fe-ia §3.5:320)。宽度令牌 `--verdict-rail-w`(component.tokens.json)。 */
+  grid-template-columns: minmax(0, 1fr) var(--verdict-rail-w);
   gap: 32px;
   padding: 20px 28px 32px;
   flex: 1;

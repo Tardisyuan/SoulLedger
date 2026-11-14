@@ -7219,6 +7219,7 @@ paths:
           - JUDGMENT_APPEAL_FILED
           - JUDGMENT_APPEAL_WITHDRAWN
           - JUDGMENT_CONCLUDED
+          - JUDGMENT_CONCLUSION_WITHDRAWN
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
@@ -7273,6 +7274,7 @@ paths:
           * `RECORD_ADDED` - Record Added
           * `JUDGMENT_INITIATED` - Judgment Initiated
           * `JUDGMENT_CONCLUDED` - Judgment Concluded
+          * `JUDGMENT_CONCLUSION_WITHDRAWN` - Judgment Conclusion Withdrawn
           * `DISPOSITION_CREATED` - Disposition Created
           * `DISPOSITION_EXPIRED` - Disposition Expired
           * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
@@ -7469,6 +7471,7 @@ paths:
           - JUDGMENT_APPEAL_FILED
           - JUDGMENT_APPEAL_WITHDRAWN
           - JUDGMENT_CONCLUDED
+          - JUDGMENT_CONCLUSION_WITHDRAWN
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
@@ -7523,6 +7526,7 @@ paths:
           * `RECORD_ADDED` - Record Added
           * `JUDGMENT_INITIATED` - Judgment Initiated
           * `JUDGMENT_CONCLUDED` - Judgment Concluded
+          * `JUDGMENT_CONCLUSION_WITHDRAWN` - Judgment Conclusion Withdrawn
           * `DISPOSITION_CREATED` - Disposition Created
           * `DISPOSITION_EXPIRED` - Disposition Expired
           * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
@@ -9303,6 +9307,48 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+          description: ''
+  /api/v1/judgment/{id}/withdraw-conclusion/:
+    post:
+      operationId: v1_judgment_withdraw_conclusion_create
+      description: |-
+        The officer who sealed an original case takes the seal back before any approver acted (2026-11-14).
+
+        `weighing.withdraw_conclusion`: the approval flow ends CANCELLED, the disposition and plan are voided, the soul
+        is back in JUDGING and a new case is opened, claimed by the caller; 201 answers that case. The window and the
+        refusals are `weighing.withdrawal_refusal`'s: 403 `not_your_seal`; 409 `not_withdrawable`, `no_pending_flow`,
+        `cross_judgment_merged`, `approval_started`, `cannot_withdraw`. The case is reached through `get_object()`, so
+        another hall's case is a 404 like any other.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
   /api/v1/judgment/annual/:
     get:
@@ -29988,6 +30034,7 @@ components:
       - RECORD_ADDED
       - JUDGMENT_INITIATED
       - JUDGMENT_CONCLUDED
+      - JUDGMENT_CONCLUSION_WITHDRAWN
       - DISPOSITION_CREATED
       - DISPOSITION_EXPIRED
       - REINCARNATION_TRIGGERED
@@ -30061,6 +30108,7 @@ components:
         * `RECORD_ADDED` - Record Added
         * `JUDGMENT_INITIATED` - Judgment Initiated
         * `JUDGMENT_CONCLUDED` - Judgment Concluded
+        * `JUDGMENT_CONCLUSION_WITHDRAWN` - Judgment Conclusion Withdrawn
         * `DISPOSITION_CREATED` - Disposition Created
         * `DISPOSITION_EXPIRED` - Disposition Expired
         * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
@@ -31671,6 +31719,9 @@ components:
         flow_cancelled:
           type: boolean
           readOnly: true
+        can_withdraw:
+          type: boolean
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -31937,6 +31988,7 @@ components:
       - archived_at
       - archived_by_name
       - can_edit
+      - can_withdraw
       - case_number
       - citations
       - city_god
@@ -32782,6 +32834,9 @@ components:
         flow_cancelled:
           type: boolean
           readOnly: true
+        can_withdraw:
+          type: boolean
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -33078,6 +33133,7 @@ components:
       - archived_at
       - archived_by_name
       - can_edit
+      - can_withdraw
       - case_number
       - citations
       - cited_deadly_sins
@@ -33357,7 +33413,8 @@ components:
 
         The nested grounds cost the list three prefetches per page, and a concluded case renders and hashes each
         cited article's snapshot. No list screen reads them: the desk reads them from `GET /judgment/{id}/`, and the
-        grounds panel from `/judgment/{id}/citations/`.
+        grounds panel from `/judgment/{id}/citations/`. Nor `can_withdraw` (2026-11-14): it reads the flow's nodes,
+        and only the desk's detail read offers the button.
       properties:
         id:
           type: string
@@ -40634,6 +40691,9 @@ components:
           type: boolean
           readOnly: true
         flow_cancelled:
+          type: boolean
+          readOnly: true
+        can_withdraw:
           type: boolean
           readOnly: true
         kind:

@@ -77,6 +77,7 @@ function concludeFailure(t: T, e: unknown): string {
   return claimRefusalMessage(e, t);
 }
 
+const orEmpty = (s: string | null | undefined) => s ?? "";
 const reducedMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
 export function CaseDesk() {
@@ -114,7 +115,9 @@ export function CaseDesk() {
   const [leaving, setLeaving] = useState<string | null>(null);
   const groups = DESK_GROUPS.map((group) => {
     const g = desk.data?.groups.find((x) => x.group === group);
-    return { group, total: g?.total ?? 0, rows: (g?.rows ?? []).filter((r) => matchesSearch(r, query) && (!gone.includes(r.id) || r.id === leaving)) };
+    const rows = g?.rows ?? [];
+    const onDesk = (r: (typeof rows)[number]) => matchesSearch(r, query) && (!gone.includes(r.id) || r.id === leaving);
+    return { group, total: g?.total ?? 0, rows: rows.filter(onDesk) };
   });
   const flat = groups.flatMap((g) => g.rows.map((row) => ({ row, group: g.group })));
   const ids = flat.map((f) => f.row.id);
@@ -214,7 +217,8 @@ export function CaseDesk() {
 
   const seal = (d: DeskVerdictDraft) => {
     if (!current || gone.includes(current.row.id)) return;
-    const v: DeskSeal = { ...d, id: current.row.id, name: current.row.soul_name ?? "", caseNumber: current.row.case_number ?? "", civilization: current.row.civilization ?? "" };
+    const { row } = current;
+    const v: DeskSeal = { ...d, id: row.id, name: orEmpty(row.soul_name), caseNumber: orEmpty(row.case_number), civilization: orEmpty(row.civilization) };
     setRestored(null);
     if (sealReadbackEnabled()) {
       setAsking(v);

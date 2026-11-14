@@ -8,7 +8,7 @@ import pytest
 from apps.disposition.models import Disposition
 from apps.events.models import SoulEvent
 from apps.judgment.models import Judgment
-from apps.souls.models import Soul, SoulState
+from apps.souls.models import SoulState
 from apps.workflow.models import END_REASON_WITHDRAWN, ApprovalWorkflow, ApprovalWorkflowStatus
 from tests import sentence_plan_support as plan
 from tests.soul_account_support import officer_client

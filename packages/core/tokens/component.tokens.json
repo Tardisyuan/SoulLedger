@@ -39,6 +39,13 @@
       "unit": "px"
     }
   },
+  "verdict-rail-w": {
+    "$type": "dimension",
+    "$value": {
+      "value": 320,
+      "unit": "px"
+    }
+  },
   "opt-h": {
     "$type": "dimension",
     "$value": {

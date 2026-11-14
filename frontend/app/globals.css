@@ -858,6 +858,7 @@
     --mark-glyph: 600 11px/1 var(--font-title);
     --glowA: 0.3;
     --field: rgba(255, 255, 255, 0.05);
+    --verdict-rail-w: 320px;
   }
   .light {
     --glowA: 0.22;

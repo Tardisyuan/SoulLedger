@@ -1060,7 +1060,7 @@ describe("落印前先确认", () => {
 
   it("off: ⌘⏎ stages as before (no read-back layer)", async () => {
     renderConsole();
-    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0));
     await seal("1");
     expect(screen.getByTestId("undo-strip")).toBeInTheDocument();
     expect(screen.queryByTestId("seal-readback")).not.toBeInTheDocument();
@@ -1074,7 +1074,7 @@ describe("落印前先确认", () => {
       return cursor((queue[0] as typeof JUDGMENT) ?? null, queue.length);
     });
     renderConsole();
-    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0));
     await seal("1");
     expect(await screen.findByTestId("seal-readback")).toBeInTheDocument();
     expect(screen.getByTestId("seal-readback-name")).toHaveTextContent("第一位待判者");
@@ -1099,11 +1099,11 @@ describe("落印前先确认", () => {
   it("on: 取消 sends nothing and the case stays", async () => {
     setSealReadback(true);
     renderConsole();
-    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0));
     await seal("1");
     fireEvent.click(await screen.findByTestId("seal-readback-cancel"));
     await runOut(UNDO_MS * 2);
     expect(mockConclude).not.toHaveBeenCalled();
-    expect(screen.getByText("第一位待判者")).toBeInTheDocument();
+    expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0);
   });
 });
