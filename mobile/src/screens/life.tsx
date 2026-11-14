@@ -573,7 +573,7 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
   const total = lifePath(lex).length;
   return (
     <View testID="life-now" style={[styles.now, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <StageMotif testID="stage-motif" civ={t.civ} color={t.plaque} />
+      <StageMotif testID="stage-motif" civ={t.civ} color={t.ink} scheme={t.scheme} />
       <Txt variant="caption" tone="muted">
         {tr("soul_app.life.here")}
       </Txt>
@@ -858,7 +858,7 @@ function LifePath({ at, lex }: { at: number; lex: CivKey }) {
   );
 }
 
-/** v3 「问一问」: a 48pt circle in the civilization's colour (the page's primary action), over its foot. */
+/** v3 「问一问」: a 48pt circle, solid ink as the primary button (第四十八批第三节 A5; it was the civilization's colour), over its foot. */
 function AskButton() {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -870,9 +870,9 @@ function AskButton() {
       accessibilityRole="button"
       accessibilityLabel={tr("soul_app.assist.entry_label")}
       onPress={() => assist.open("life")}
-      style={({ pressed }) => [styles.ask, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
+      style={({ pressed }) => [styles.ask, { backgroundColor: pressed ? shade(t.ink) : t.ink }]}
     >
-      <AskGlyph color={t.onPlaque} />
+      <AskGlyph color={t.s0} />
     </Pressable>
   );
 }

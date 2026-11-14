@@ -271,8 +271,8 @@ const STACKED_TAB_LABEL_SCALE = 1.5;
 
 /**
  * 第三十批 底栏 (step 1 灵魂端): the four items as one character in the title serif (18/22) over an 11 label, on
- * the page's ground under a hairline. The current item is ink with a 14×2 rule in the civilization's colour under
- * its character (the focus is one of the four places that colour may go); the rest are --faint-text. The
+ * the page's ground under a hairline. The current item is ink with a 14×2 ink rule under its character (第四十八批
+ * 第三节 A1, as the web's door rail; it was the civilization's colour until then); the rest are --faint-text. The
  * character is hidden from screen readers: the tab is named by its label. C14: when any label is too long for one
  * line (`pillarIsWide`, the web's pillar rule) all of them may take two lines; a label that still does not fit is
  * cut and read whole by its accessibility label. At >= 1.7x text (handoff 2d) the items become rows, as before.
@@ -314,7 +314,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 <Txt testID={`tab-${route.name}-glyph`} maxFontSizeMultiplier={STACKED_TAB_LABEL_SCALE} style={[styles.tabGlyph, { fontSize: tabGlyphSize(glyph), color, fontFamily: titleFamily(glyph) }]}>
                   {glyph}
                 </Txt>
-                {selected ? <View testID="tab-current-mark" style={[styles.tabCurrent, { backgroundColor: t.plaque }]} /> : null}
+                {selected ? <View testID="tab-current-mark" style={[styles.tabCurrent, { backgroundColor: t.ink }]} /> : null}
                 {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
               </View>
               <Txt

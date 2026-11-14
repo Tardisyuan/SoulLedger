@@ -341,14 +341,17 @@ describe("a part that failed, and one still loading (补足 C15)", () => {
     expect(retry).toHaveBeenCalled();
   });
 
-  it("loading: a 2px line in the civilization's colour on top (第三十批, no spinner), over static s2 bars", () => {
+  it("loading: a 2px line in ink at 60% on top (第三十批, no spinner; 第四十八批 A9: not the civilization's colour), over static s2 bars", () => {
     wrap(<Skeleton testID="sk" lines={3} />);
     const t = themeFor("CHINESE", "light");
     // Host views only: `.children` of a host view also lists the composite <View> wrappers, one level per element.
     const bars = screen.getByTestId("sk-bars").findAll((n) => typeof n.type === "string" && flat(n).height === 12);
     expect(bars.map((b) => flat(b).backgroundColor)).toEqual(Array(3).fill(t.s2));
     expect(flat(screen.getByTestId("sk-line")).height).toBe(2);
-    expect(screen.getByTestId("sk-line").findAll((n) => !!n.props.style && flat(n).backgroundColor === t.plaque).length).toBeGreaterThan(0);
+    const run = screen.getByTestId("sk-line").findAll((n) => !!n.props.style && flat(n).backgroundColor === t.ink);
+    expect(run.length).toBeGreaterThan(0);
+    expect(flat(run[0]).opacity).toBe(0.6);
+    expect(screen.getByTestId("sk-line").findAll((n) => !!n.props.style && flat(n).backgroundColor === t.plaque)).toEqual([]);
   });
 });
 

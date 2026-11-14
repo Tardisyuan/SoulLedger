@@ -90,7 +90,8 @@ export function LoadingRows() {
   const { t: tr } = useI18n();
   return (
     <View testID="state-loading" accessible accessibilityLabel={tr("soul_app.common.loading")} accessibilityState={{ busy: true }}>
-      {/* 第三十批 一.5: a 2px line in the civilization's colour at the top, never a spinner. */}
+      {/* 第三十批 一.5: a 2px line in the civilization's colour at the top, never a spinner. It takes the head's top line,
+          so it counts as the top line (第四十八批第三节 A9) and keeps the colour. */}
       <View testID="state-loading-line" style={{ height: touch.topline, width: "30%", backgroundColor: t.plaque }} />
       {[0, 1, 2, 3, 4].map((i) => (
         <View key={i} style={[styles.skeletonRow, { borderBottomColor: t.hair }]}>
@@ -521,7 +522,7 @@ export function roleName(enumLabel: ReturnType<typeof useI18n>["enumLabel"], rol
  * has a page this officer gets (第三十八批 四). In zh each cell is the door's glyph in the serif (18 / 22) over its name;
  * in en / egy it is the shared 24px line icon (`DOOR_ICON`, the web's set) over its name (`officer_app.doors.*.label`,
  * Geist 500 11 / 14) -- `.glyph` is drawn only in zh. The current door in ink (the icon's stroke 1.8), with a 14 x 2
- * civilization-colour line 3 under the glyph box. The unread dot (8, `neg`, a 2px ring of the bar's ground) sits on
+ * ink line 3 under the glyph box (第四十八批第三节 A1; it was the civilization's colour). The unread dot (8, `neg`, a 2px ring of the bar's ground) sits on
  * 我's glyph box, 4 past its right edge and 1 above its top (九.5).
  */
 export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; onSelect: (tab: TabKey) => void; unread?: boolean; tabs?: readonly TabKey[] }) {
@@ -559,7 +560,7 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
                   ))}
                 </Svg>
               )}
-              {selected ? <View testID={`door-${door}-current`} style={[styles.currentLine, { backgroundColor: t.plaque }]} /> : null}
+              {selected ? <View testID={`door-${door}-current`} style={[styles.currentLine, { backgroundColor: t.ink }]} /> : null}
               {dot ? <View testID="door-me-unread" style={[styles.dot, { backgroundColor: t.neg, borderColor: t.s1 }]} /> : null}
             </View>
             <Txt variant="caption" numberOfLines={1} style={{ color: colour, fontSize: 11, lineHeight: 14, fontFamily: family.ui[zh ? 400 : 500] }}>

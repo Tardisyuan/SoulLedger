@@ -206,7 +206,7 @@ function Head({ view, setView, assist }: { view: "chat" | "history"; setView: (v
         </Pressable>
       ) : (
         <View style={styles.seal}>
-          <AskGlyph color={t.plaque} />
+          <AskGlyph color={t.ink} />
         </View>
       )}
       <View style={styles.headText}>

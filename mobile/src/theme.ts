@@ -182,7 +182,10 @@ export interface Theme {
   plaque: string;
   /** The civilization's colour under white text — the title bars and the identity band: v4 `--solid`. */
   band: string;
-  /** A filled control's ground (the primary button, send, follow …): v4 `--solid`, as `band`. */
+  /**
+   * v4 `--solid`, as `band`. No control reads it since 第四十八批第三节: every solid button (send, follow, 问一问, 通过 …)
+   * is ink under `s0`, as the primary button; civColourWhitelist.test.ts holds it at zero uses.
+   */
   plaqueFill: string;
   onPlaque: string;
   /** v4 `--glow`: the header glow and the tinted grounds (`color-mix` of it). Never text. */

@@ -10,7 +10,7 @@ import { AccessibilityInfo, AppState, StyleSheet } from "react-native";
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
 import { RefreshFailed, Row, TAB_CODES, TabBar, doorOf, visibleTabs } from "../kit";
-import { useI18n } from "../shared";
+import { themeFor, useI18n } from "../shared";
 import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, overviewParts } from "../screens/queue";
@@ -872,5 +872,13 @@ describe("the door bar's marks follow the interface language", () => {
     expect(line.left).toBeUndefined();
     expect(line.marginLeft).toBeUndefined();
     expect(line.position).toBe("absolute");
+  });
+
+  it("第四十八批 A1: the current-door line is ink, not the hall's colour", () => {
+    renderOfficer(<TabBar current="queue" onSelect={() => {}} />);
+    const t = themeFor("CHINESE_UNDERWORLD", "light");
+    const line = StyleSheet.flatten(screen.getByTestId("door-desk-current").props.style);
+    expect(line.backgroundColor).toBe(t.ink);
+    expect(line.backgroundColor).not.toBe(t.plaque);
   });
 });

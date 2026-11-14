@@ -461,10 +461,10 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
               size={72}
               label={t("judgment.verdicts.passed")}
               disabled={!canAct || blocked === "right"}
-              fill={theme.plaqueFill}
+              fill={theme.ink}
               onPress={pass}
             >
-              <Icon name="check" size={26} color={theme.onPlaque} strokeWidth={1.6} />
+              <Icon name="check" size={26} color={theme.s0} strokeWidth={1.6} />
             </RoundButton>
           </View>
           <View style={styles.labels}>

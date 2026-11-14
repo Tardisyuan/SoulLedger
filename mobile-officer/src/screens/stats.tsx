@@ -93,9 +93,9 @@ function HallStats({ s }: { s: JudgmentHallStats }) {
               accessibilityLabel={`${t("overview.trend.week", { n: String(i + 1), date: w.week_start })} · ${t("overview.trend.this_quarter")} ${w.concluded} · ${t("overview.trend.last_quarter_same")} ${w.previous_quarter}`}
               style={{ flex: 1, height: "100%", justifyContent: "flex-end" }}
             >
-              {/* 上季同期:一道细线;本季:实心柱。 */}
+              {/* 上季同期:一道细线;本季:实心墨柱(本殿自己两段时间比,不是「一条系列一个文明」,不用文明色 —— 网页第四十七批的本季线同理)。 */}
               <View style={{ position: "absolute", left: 0, right: 0, bottom: `${(100 * w.previous_quarter) / top}%`, height: 1, backgroundColor: theme.inkMuted }} />
-              <View style={{ height: `${(100 * w.concluded) / top}%`, minHeight: w.concluded ? 2 : 0, backgroundColor: theme.plaque }} />
+              <View style={{ height: `${(100 * w.concluded) / top}%`, minHeight: w.concluded ? 2 : 0, backgroundColor: theme.ink }} />
             </View>
           ))}
         </View>
