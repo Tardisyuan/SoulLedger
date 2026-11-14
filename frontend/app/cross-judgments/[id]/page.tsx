@@ -71,7 +71,7 @@ function CrossJudgmentDetail() {
   // 题字自己报:壳的默认是面包屑末段,在详情页上那是原始 id。
   usePlaque({ title: t("crossJudgments.title"), hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
-  const { hasPermission, isTenantExempt } = usePermissions();
+  const { hasPermission, ownsHall } = usePermissions();
   const params = useParams();
   const router = useRouter();
   const id = params.id;
@@ -155,11 +155,11 @@ function CrossJudgmentDetail() {
   /* 原审判与灵魂(审计 1017 #10):联审挂着一份原属审判(`judgment`),它在发起方租户里 ——
      外地入席的人读不到它,所以只给发起方(与 ADMIN)取、只给他们画。灵魂的 id 与名字取自那份审判,
      与审判详情页同一把缓存键。 */
-  // 无殿 ADMIN 才是跨殿的(后端 `is_tenant_exempt`);绑殿 ADMIN 在别殿召集的联审上和别的参与方一样读不到原审判(rbac-web L-7)。
+  // SYSTEM_ADMIN 是跨殿的,文明 ADMIN 在本文明的殿发起的联审上算发起方(后端 `reaches_hall`);绑殿 ADMIN 在别殿召集的联审上和别的参与方一样读不到原审判(rbac-web L-7)。
   // 结束 / 取消不在这里判:`CrossJudgmentEndControls` 看服务端算的 `can_end`。
   const isHome =
     !!judgment &&
-    (isTenantExempt || (!!user?.tenant?.code && user.tenant.code === judgment.initiating_tenant_code));
+    ownsHall(judgment.initiating_tenant_code);
   const originId = isHome ? judgment?.judgment ?? null : null;
   const { data: origin } = useQuery({
     queryKey: judgmentKeys.detail(originId ?? ""),

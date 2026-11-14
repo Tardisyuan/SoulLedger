@@ -29,10 +29,10 @@ const FOLLOW = "";
 export function RoleDataScopeSection({ role }: { role: Role }) {
   const { t, locale } = useI18n();
   const { showToast } = useToast();
-  const { isTenantExempt } = usePermissions();
+  const { isSystemAdmin } = usePermissions();
   const headingId = useId();
   const fixed = isAdminRole(role.name);
-  const canEdit = !fixed && isTenantExempt;
+  const canEdit = !fixed && isSystemAdmin;
 
   const config = useRoleDataScope(role.id, !fixed);
   const resources = useDataScopeResources(!fixed);

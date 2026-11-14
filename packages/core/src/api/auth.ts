@@ -58,6 +58,8 @@ export interface LoginUser {
     hall_names?: Record<string, string>;
   } | null;
   display_name: string;
+  /** The civilization a hall-less ADMIN administers (`User.civilization`, read-only); null for everyone else. */
+  civilization?: string | null;
   permissions: string[];
   /** 两步验证(A12)。`mfa_required`: the role is made to use it (ADMIN always); login is NOT blocked,
    *  the shell shows a standing banner until `mfa_enabled`. Optional: a pre-A12 cached session has neither. */

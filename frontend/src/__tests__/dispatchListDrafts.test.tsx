@@ -41,6 +41,7 @@ jest.mock("@/src/hooks/usePermissions", () => {
       hasPermission: has,
       hasAnyPermission: (l: string[]) => l.some(has),
       hasAllPermissions: (l: string[]) => l.every(has),
+      ownsHall: (code: string | null) => code === "CN_DIYU",
     }),
   };
 });

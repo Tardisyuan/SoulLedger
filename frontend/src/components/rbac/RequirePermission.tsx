@@ -56,12 +56,15 @@ export function RequirePermission({
 export function RequireAdmin({
   children,
   fallback = null,
+  system = false,
 }: {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  /** SYSTEM_ADMIN only (backend `is_tenant_exempt`): not a hall-bound ADMIN, not a civilization ADMIN. */
+  system?: boolean;
 }) {
-  const { isAdmin, permissionsReady } = usePermissions();
-  if (!isAdmin) {
+  const { isAdmin, isSystemAdmin, permissionsReady } = usePermissions();
+  if (!(system ? isSystemAdmin : isAdmin)) {
     if (permissionsReady === false && fallback !== null) return <PermissionsPending />;
     return <MissingPermissionContext.Provider value={{ admin: true }}>{fallback}</MissingPermissionContext.Provider>;
   }

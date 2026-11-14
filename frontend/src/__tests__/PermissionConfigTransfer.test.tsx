@@ -26,12 +26,12 @@ jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ params: "colon", locale: "en", hydrated: true }));
 const showToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast }) }));
-let mockRole = "ADMIN";
+let mockRole = "SYSTEM_ADMIN";
 let mockPermissions: string[] = [];
-// Import writes configuration every hall shares: only the hall-less ADMIN (2026-10-29). Default: that admin.
+// Import writes configuration every hall shares: only SYSTEM_ADMIN (2026-10-29; a civilization ADMIN neither, stage 1A). Default: that admin.
 let mockTenant: { code: string; display_name: string } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, role: mockRole, tenant: mockTenant, permissions: mockPermissions } }),
+  useTenant: () => ({ user: { id: 1, role: mockRole, tenant: mockTenant, civilization: mockRole === "ADMIN" && !mockTenant ? "CHINESE" : null, permissions: mockPermissions } }),
 }));
 
 const exportConfig = permApi.exportConfig as jest.Mock;
@@ -105,7 +105,7 @@ async function toSummary() {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockRole = "ADMIN";
+  mockRole = "SYSTEM_ADMIN";
   mockPermissions = [];
   mockTenant = null;
 });
@@ -126,7 +126,22 @@ describe("entry points", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("a civilization ADMIN exports but gets no import (SYSTEM_ONLY, stage 1A)", () => {
+    mockRole = "ADMIN";
+    setup();
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: "permissions.config.export" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "permissions.config.import" })).toBeNull();
+  });
+
+  it("SYSTEM_ADMIN gets the import", () => {
+    setup();
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: "permissions.config.import" })).toBeInTheDocument();
+  });
+
   it("a hall's ADMIN, or a role granted system.settings, exports but gets no import (the server answers 403)", () => {
+    mockRole = "ADMIN";
     mockTenant = { code: "CN_DIYU", display_name: "x" };
     setup();
     openMenu();

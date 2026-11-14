@@ -82,7 +82,7 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, username: "yama", role: "ADMIN" }, isAdmin: true }),
+  useTenant: () => ({ user: { id: 1, username: "yama", role: "SYSTEM_ADMIN" }, isAdmin: true }),
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMock({ formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }));
@@ -110,8 +110,8 @@ jest.mock("@/src/hooks/usePermissions", () => {
       hasPermission: has,
       hasAnyPermission: (list: string[]) => list.some(has),
       hasAllPermissions: (list: string[]) => list.every(has),
-      // The no-hall ADMIN above is tenant-exempt, so both sides of a dispatch are its own.
-      isTenantExempt: true,
+      // The no-hall operator above stands for SYSTEM_ADMIN: both sides of a dispatch are its own.
+      ownsHall: () => true,
     }),
   };
 });

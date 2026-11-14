@@ -93,7 +93,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   usePlaque({ title: t("dispatch.detail_title"), hall: useHall(useCourtOffice()) });
   const buttonOn = useMenuButtonConfig();
   const { user } = useTenant();
-  const { isTenantExempt } = usePermissions();
+  const { ownsHall } = usePermissions();
   const { showToast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -240,13 +240,11 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   // it to roles that never could.
   const isResiding = dispatch.status === "EXECUTED";
   // 哪一方(rbac-web M-1):批准 / 驳回 / 执行只给目标殿,送回只给原属殿 —— 与 `dispatch/views.py` 的
-  // `_not_target_or_403`、`return_home` 同一判定;无殿 ADMIN 两边都算(后端 `is_tenant_exempt`),绑殿 ADMIN 不算。
+  // `_not_target_or_403`、`return_home` 同一判定;SYSTEM_ADMIN 两边都算,文明 ADMIN 算本文明的殿(后端 `reaches_hall`),绑殿 ADMIN 只算本殿。
   // 原属殿用 `source_tenant_code`:暂居中的灵魂不能再被移交(`DispatchService.propose` 拒 `is_residing`),
   // 所以执行中的那一条的发起殿就是灵魂的原属殿。
-  const anyHall = isTenantExempt;
-  const hall = user?.tenant?.code;
-  const isTargetHall = anyHall || (!!hall && hall === dispatch.target_tenant_code);
-  const isHomeHall = anyHall || (!!hall && hall === dispatch.source_tenant_code);
+  const isTargetHall = ownsHall(dispatch.target_tenant_code);
+  const isHomeHall = ownsHall(dispatch.source_tenant_code);
   // STATUS_LABELS is real copy and beats the convention's generic
   // "unrecognized" wording, but the raw member is never the fallback (§4.6).
   const statusResolved = resolveEnumDisplay(t, "dispatch.states", dispatch.status);

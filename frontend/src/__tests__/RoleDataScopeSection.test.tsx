@@ -29,7 +29,7 @@ jest.mock("@/src/contexts/I18nContext", () => require("./support/mocks").i18nMoc
 const mockToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockToast }) }));
 
-let mockUser: { role: string; tenant: { code: string; display_name: string } | null; permissions: string[] };
+let mockUser: { role: string; tenant: { code: string; display_name: string } | null; civilization?: string; permissions: string[] };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
 const api = dataScopeApi as unknown as Record<string, jest.Mock>;
@@ -45,7 +45,7 @@ const saveButton = () => screen.getByRole("button", { name: "permissions.datasco
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUser = { role: "ADMIN", tenant: null, permissions: [] };
+  mockUser = { role: "SYSTEM_ADMIN", tenant: null, permissions: [] };
   api.getDataScopeResources.mockResolvedValue({ data: [{ key: "soul", label: "灵魂" }, { key: "judgment", label: "审判" }] });
   api.getRoleDataScope.mockResolvedValue({ data: { default: { scope: "ALL", orgs: [] }, overrides: [] } });
   api.putRoleDataScope.mockImplementation((_id, body) => Promise.resolve({ data: body }));
@@ -115,6 +115,8 @@ it("an override set to DEFINE with no unit blocks the save", async () => {
 
 it.each([
   ["an admin bound to a hall", { role: "ADMIN", tenant: { code: "CN", display_name: "中国地府" }, permissions: [] }],
+  // 分殿 1A:数据范围是所有殿共用的配置(SYSTEM_ONLY),文明 ADMIN 也只读。
+  ["a civilization ADMIN", { role: "ADMIN", tenant: null, civilization: "CHINESE", permissions: [] }],
   ["a non-admin outside any hall", { role: "JUDGE", tenant: null, permissions: ["perm.manage"] }],
 ])("%s sees the scope read-only", async (_label, who) => {
   mockUser = who;

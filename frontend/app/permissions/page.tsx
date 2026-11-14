@@ -67,10 +67,10 @@ export default function PermissionsPage() {
 
 function PermissionsPageContent() {
   const { t, locale } = useI18n();
-  const { hasPermission, isTenantExempt } = usePermissions();
+  const { hasPermission, isSystemAdmin } = usePermissions();
   // 写(建 / 改 / 删码与角色、矩阵保存、导入)只给没绑殿的 ADMIN 且持 system.settings —— 与后端
   // `CanWriteGlobalSettings` 同一条件:角色与授权是所有殿共用的配置。别的持码者只读。
-  const canManagePermissions = hasPermission("system.settings") && isTenantExempt;
+  const canManagePermissions = hasPermission("system.settings") && isSystemAdmin;
 
   // ── Permission CRUD state (unchanged from the previous per-role picker) ──
   const [isCreateOpen, setIsCreateOpen] = useState(false);

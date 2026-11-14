@@ -16,7 +16,8 @@ jest.mock("@/src/contexts/ThemeContext", () => ({
   useTheme: () => ({ theme: "dark", toggleTheme: jest.fn() }),
 }));
 
-const mockTenant = { user: { id: 1, username: "yanluo", role: "ADMIN", permissions: [] as string[] } };
+// 供应商与密钥是全站的(后端 `IsAdminRole` = SYSTEM_ADMIN,分殿 1A):默认是系统管理员。
+const mockTenant = { user: { id: 1, username: "yanluo", role: "SYSTEM_ADMIN", civilization: null as string | null, permissions: [] as string[] } };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => mockTenant }));
 
 let mockPath = "/admin/assistant";
@@ -163,7 +164,8 @@ const draftCount = () => screen.getByTestId("aa-draft-count").textContent;
 const calls = (spy: jest.SpyInstance, url: string) => spy.mock.calls.filter(([u]) => u === url);
 
 beforeEach(() => {
-  mockTenant.user.role = "ADMIN";
+  mockTenant.user.role = "SYSTEM_ADMIN";
+  mockTenant.user.civilization = null;
   mockPath = "/admin/assistant";
   config = makeConfig();
   embedding = makeEmbedding();
@@ -182,9 +184,11 @@ beforeEach(() => {
   del.mockReset();
 });
 
-describe("ADMIN only", () => {
-  it.each([["MODERATOR"], ["JUDGE"]])("%s gets the no-permission page, no request and no config value", async (role) => {
+describe("SYSTEM_ADMIN only", () => {
+  // ADMIN here has no hall: a civilization ADMIN, whose halls are not the provider's (SYSTEM_ONLY).
+  it.each([["ADMIN"], ["MODERATOR"], ["JUDGE"]])("%s gets the no-permission page, no request and no config value", async (role) => {
     mockTenant.user.role = role;
+    if (role === "ADMIN") mockTenant.user.civilization = "CHINESE";
     const { container } = renderRoute(ConfigRoute);
     expect(await screen.findByText("您没有权限访问此页面或执行此操作。")).toBeInTheDocument();
     expect(get).not.toHaveBeenCalled();
