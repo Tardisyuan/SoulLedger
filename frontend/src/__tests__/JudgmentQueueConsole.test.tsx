@@ -549,9 +549,11 @@ describe("the decision bar", () => {
     // All four verdicts and Defer — the irreversible controls — are the bar's
     // whole contents. If one were left in the scroll it could be off-screen at
     // the moment it is needed.
-    for (const key of ["1", "2", "3", "4", "⌘⏎", "S"]) {
+    for (const key of ["1", "2", "3", "4", "S"]) {
       expect(bar!.textContent).toContain(key);
     }
+    // The seal key is written per platform (jsdom is not a Mac: Ctrl), see platformKeys.test.ts.
+    expect(bar!.textContent).toMatch(/(⌘|Ctrl )⏎/);
   });
 
   it("leaves the notes field OUT of the bar, where it does not double its height", async () => {

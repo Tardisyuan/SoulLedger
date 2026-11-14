@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useKeyLabel } from "@/src/lib/platformKeys";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { judgmentApi, type Judgment, type JudgmentCitation, type Statute } from "@soulledger/core/api";
@@ -23,14 +24,16 @@ import { verdictGlyph } from "@/src/lib/verdictGlyph";
  * 裁决键组留在页面里 —— 它和页面的单选状态、`firstClauseRef` 绑在一起,拆出来只会多一层传参。
  */
 
-/** 键帽 Kbd:只有常态、不可交互。边与字取所在处的 currentColor(主按钮墨底上也看得见)。`aria-hidden`:它是视觉提示,不能混进按钮的可访问名。 */
+/** 键帽 Kbd:只有常态、不可交互。边与字取所在处的 currentColor(主按钮墨底上也看得见)。`aria-hidden`:它是视觉提示,不能混进按钮的可访问名。
+ *  字串里的 ⌘ 按平台写(非 Mac 写 Ctrl,`platformKeys.ts`)。 */
 export function Kbd({ children }: { children: ReactNode }) {
+  const k = useKeyLabel();
   return (
     <kbd
       aria-hidden="true"
       className="font-mono text-2xs border border-current px-2"
     >
-      {children}
+      {typeof children === "string" ? k(children) : children}
     </kbd>
   );
 }

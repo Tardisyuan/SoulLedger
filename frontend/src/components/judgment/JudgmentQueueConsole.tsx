@@ -1,6 +1,7 @@
 "use client";
 
 import { courtLabel } from "@soulledger/core/domain/courts";
+import { useUnsavedGuard } from "@/src/hooks/useUnsavedGuard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isTypingTarget, useHotkeys } from "@/src/lib/hotkeys";
 import { useRouter } from "next/navigation";
@@ -35,6 +36,7 @@ import {
   RealmOptionsPanel,
   SoulIdentityPanel,
 } from "./JudgmentQueueContext";
+import { useKeyLabel } from "@/src/lib/platformKeys";
 
 /**
  * The judgment triage queue (BRIEF §4.2, the one item in the brief marked
@@ -178,12 +180,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   }, [undoStaged]);
 
   // Closing the tab inside the window would drop the seal unsent: ask first (leaving in-app sends it).
-  useEffect(() => {
-    if (!staged) return;
-    const ask = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", ask);
-    return () => window.removeEventListener("beforeunload", ask);
-  }, [staged]);
+  useUnsavedGuard(Boolean(staged));
 
   const leave = useCallback(() => {
     router.push("/judgment");
@@ -749,15 +746,17 @@ function UndoStrip({ onUndo }: { onUndo: () => void }) {
 
 /** 键帽:等宽、1px 当前色边。视觉提示,不进按钮的可访问名。 */
 function Keycap({ children }: { children: React.ReactNode }) {
+  const k = useKeyLabel();
   return (
     <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-2">
-      {children}
+      {typeof children === "string" ? k(children) : children}
     </kbd>
   );
 }
 
 function KeyboardMap() {
   const { t } = useI18n();
+  const k = useKeyLabel();
   // Design's six (`src/lib/queueShortcuts.ts`). `h` and Esc still work — see the keydown above.
   const rows = QUEUE_SHORTCUTS.map(({ key, label }) => [key, t(label)] as const);
   return (
@@ -768,7 +767,7 @@ function KeyboardMap() {
       <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
         {rows.map(([keys, label]) => (
           <div key={keys} data-shortcut={keys} className="flex items-baseline gap-3 text-sm">
-            <dt className="font-mono text-xs text-[oklch(var(--color-ink))] min-w-[7ch]">{keys}</dt>
+            <dt className="font-mono text-xs text-[oklch(var(--color-ink))] min-w-[7ch]">{k(keys)}</dt>
             <dd className="text-[oklch(var(--color-ink-muted))]">{label}</dd>
           </div>
         ))}
