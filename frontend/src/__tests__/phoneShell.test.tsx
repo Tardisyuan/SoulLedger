@@ -221,4 +221,24 @@ describe("tokens, safe area and the coarse-pointer rule", () => {
     expect(narrow).not.toContain("inset 0 -2px 0");
     expect(narrow).not.toContain("height: 64px");
   });
+
+  it("matches batch 38's size table: cells ≥ 64 wide; icon 24 + gap 3, Chinese glyph 18/22 + gap 2; word 11/14 (500 for en / egy); line 3 under the mark in civT", () => {
+    const doors = read("src/components/layout/doors.module.css");
+    const narrow = doors.slice(doors.indexOf("@media (max-width: 768px)"), doors.indexOf("@media (min-width: 769px)"));
+    expect(narrow).toContain("min-width: 64px;");
+    expect(narrow).toMatch(/\.door\s*\{\s*--door-mark-h:\s*22px;/);
+    expect(narrow).toMatch(/\.door:has\(\.doorIcon\)\s*\{\s*--door-gap:\s*3px;\s*--door-mark-h:\s*24px;/);
+    expect(narrow).toMatch(/\.doorGlyph\s*\{\s*line-height:\s*22px;/);
+    expect(narrow).toContain("top: calc(50% - (var(--door-mark-h) + var(--door-gap) + 14px) / 2 + var(--door-mark-h) + 3px);");
+    // civT is --color-main-ink (globals.css).
+    expect(narrow).toContain("background: oklch(var(--color-main-ink));");
+    // Outside the media block: the Chinese gap 2, glyph 18, icon 24, word 11/14 and the word's weight 500.
+    expect(doors).toContain("--door-gap: 2px;");
+    expect(doors).toMatch(/\.doorGlyph\s*\{[^}]*font-size:\s*18px;/);
+    expect(doors).toMatch(/\.doorIcon\s*\{[^}]*width:\s*24px;\s*height:\s*24px;/);
+    expect(doors).toMatch(/\.doorLabel\s*\{\s*font-size:\s*11px;\s*line-height:\s*14px;/);
+    expect(doors).toMatch(/\.doorLabelWord\s*\{\s*font-weight:\s*500;/);
+    // Absence: the old fixed 24 px box in the line's position (wrong for the 22 px Chinese mark).
+    expect(narrow).not.toContain("(24px + var(--door-gap)");
+  });
 });

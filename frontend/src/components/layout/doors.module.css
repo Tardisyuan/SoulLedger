@@ -317,8 +317,17 @@ button.sheetLink {
   .picker {
     display: flex;
   }
+  /* 第三十八批尺寸表(窄屏底栏):en / egy 图标 24 + 间距 3 + 词 11/14 500;中文字 18/22 + 间距 2 + 词 11。
+     `--door-mark-h` 是图形盒的高,选中短线按它定位。 */
+  .door {
+    --door-mark-h: 22px;
+  }
   .door:has(.doorIcon) {
     --door-gap: 3px;
+    --door-mark-h: 24px;
+  }
+  .doorGlyph {
+    line-height: 22px;
   }
   .doorWide,
   .tip {
@@ -341,8 +350,9 @@ button.sheetLink {
     margin-left: -7px;
     border-radius: 1px;
     background: oklch(var(--color-main-ink));
-    /* 图形盒(24 高)在格里居中排在词(14)上面:盒底 = 格中线 - (24 + gap + 14)/2 + 24,短线再往下 3。 */
-    top: calc(50% - (24px + var(--door-gap) + 14px) / 2 + 24px + 3px);
+    /* 图形盒(`--door-mark-h`:图标 24、中文字 22)在格里居中排在词(14)上面:
+       盒底 = 格中线 - (盒高 + gap + 14)/2 + 盒高,短线再往下 3。 */
+    top: calc(50% - (var(--door-mark-h) + var(--door-gap) + 14px) / 2 + var(--door-mark-h) + 3px);
   }
 }
 @media (min-width: 769px) {
