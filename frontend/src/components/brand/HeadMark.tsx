@@ -35,10 +35,15 @@ const MARKS: Record<Exclude<SealCiv, "cn">, ReactNode> = {
   gr: "ΚΡΙΣΙΣ",
 };
 
-/** 地府记号上写的字:殿名放得下就写殿名,放不下(中文 > 5 字、拉丁 > 14 个字符)或没有就退回地府 / DIYU。 */
+/**
+ * 地府记号上写的字:殿名放得下就写殿名,放不下(中文 > 5 字、拉丁 > 14 个字符)或没有就退回地府 / DIYU。
+ * 拉丁殿名先去掉开头的冠词「The 」(不分大小写)再量(用户 2026-11-14:种子名「The Fifth Court」记作 FIFTH COURT);
+ * 只在记号这一处,别处照旧写全名。
+ */
 export function diyuMarkText(hallName: string | undefined, han: boolean): string {
   if (han) return hallName && Array.from(hallName).length <= 5 ? hallName : "地府";
-  return hallName && hallName.length <= 14 ? hallName : "DIYU";
+  const latin = hallName?.replace(/^the\s+/i, "");
+  return latin && latin.length <= 14 ? latin : "DIYU";
 }
 
 /** 记号与按钮组、标题之间的距离(第四十六批第三节)。 */

@@ -145,9 +145,12 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     ["egy", { ...NAMES, egy: "第五殿" }, "Fifth Court", "latin", null],
     ["zh-Hans", { ...NAMES, "zh-Hans": "轉輪王殿" }, "轉輪王殿", "han", "s"],
     ["zh-Hans", { ...NAMES, "zh-Hans": "第五殿閻羅王" }, "地府", "han", null],
-    // 14 个字符放得下,15 个不行:0012 迁移的种子英文名「The Fifth Court」正好是 15 个。
+    // 14 个字符放得下,15 个不行;开头的「The 」不分大小写先去掉再量(0012 迁移的种子名「The Fifth Court」)。
     ["en", { ...NAMES, en: "WESEKHET 12345" }, "WESEKHET 12345", "latin", null],
-    ["en", { ...NAMES, en: "The Fifth Court" }, "DIYU", "latin", null],
+    ["en", { ...NAMES, en: "WESEKHET 123456" }, "DIYU", "latin", null],
+    ["en", { ...NAMES, en: "The Fifth Court" }, "Fifth Court", "latin", null],
+    ["egy", { ...NAMES, egy: "the Weret Maaty" }, "Weret Maaty", "latin", null],
+    ["en", { ...NAMES, en: "Theban Court" }, "Theban Court", "latin", null],
     ["zh-Hans", undefined, "地府", "han", null],
     ["en", undefined, "DIYU", "latin", null],
     ["egy", undefined, "DIYU", "latin", null],
