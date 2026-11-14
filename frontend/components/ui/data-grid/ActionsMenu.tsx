@@ -20,6 +20,11 @@ export interface ActionsMenuProps {
   items: OverflowMenuItem[]
   /** Accessible name for the "⋯" trigger. */
   menuLabel: string
+  /**
+   * A worded trigger in place of the "⋯" (案卷台的「更多来源 ▾」): visible text and its own class. The keyboard
+   * contract is the same one; `menuLabel` stays the accessible name, so make it match the words.
+   */
+  trigger?: { label: React.ReactNode; className?: string; testId?: string }
 }
 
 /**
@@ -53,7 +58,7 @@ export interface ActionsMenuProps {
  *   - Tab closes and lets the browser move on, rather than tabbing through a
  *     portal that sits nowhere near the trigger in DOM order.
  */
-export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
+export function ActionsMenu({ primary, items, menuLabel, trigger }: ActionsMenuProps) {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const { open, setOpen, close } = usePopupOpenState(triggerRef)
@@ -135,9 +140,13 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
             aria-expanded={open}
             onClick={toggle}
             onKeyDown={onTriggerKeyDown}
-            className="inline-flex size-(--control-h-sm) items-center justify-center font-mono text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
+            data-testid={trigger?.testId}
+            className={
+              trigger?.className ??
+              "inline-flex size-(--control-h-sm) items-center justify-center font-mono text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
+            }
           >
-            ⋯
+            {trigger ? trigger.label : '⋯'}
           </button>
           {open &&
             pos &&

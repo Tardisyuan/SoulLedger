@@ -200,7 +200,8 @@ function CredentialsPageContent() {
   );
 
   const filters = (
-    <div role="group" aria-label={t("soul_accounts.credentials.filters.label")} className="flex flex-wrap gap-2">
+    // 不换行(同 rebirth-applications):筛选栏是定高 64 的一行(`PageShell` 的 `h-16` + 横滚),393 下五枚签折成两排、第二排被裁掉。
+    <div role="group" aria-label={t("soul_accounts.credentials.filters.label")} className="flex shrink-0 gap-2 [&>*]:shrink-0">
       {CREDENTIAL_FILTERS.map((value) => (
         /* 筛选签(规范 v1 §2),仍是 aria-pressed 的单选:再按一下已按下的签不改变筛选 ——
            「全部」本身就是其中一枚签,不是「什么都不按」。 */

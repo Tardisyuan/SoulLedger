@@ -17,6 +17,8 @@ import { Button } from "@/src/components/ui/Button";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { isTypingTarget, useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
+import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
+import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { DESK_GROUPS, deskTag, heldBeforeClaim, matchesSearch, onDeskCount, overviewParts, rowNotes, sourceChips, sourceLabel, step } from "./deskRules";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { OpenCase } from "./OpenCase";
@@ -59,6 +61,7 @@ export function CaseDesk() {
   const pushedCase = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef(new Map<string, HTMLButtonElement>());
+  const chipsRef = useOverflowEnd<HTMLDivElement>();
 
   // 换来源时留着上一屏(`keepPreviousData`):概览与 chip 用的是不筛的数,不该在重取时闪空。
   const desk = useQuery({
@@ -130,6 +133,7 @@ export function CaseDesk() {
 
   const overview = overviewParts(t, onDeskCount(counts), counts?.overdue ?? null, monthPct);
   const chips = sourceChips(t, counts);
+  const elsewhere = chips.flatMap((c) => (c.kind === "link" ? [c] : []));
   const day = (iso: string) => formatIsoDay(iso, locale);
   const announce = current && position ? `${t("officer_app.desk.position", { n: String(position.n), total: String(position.total) })} · ${current.row.soul_name}` : "";
 
@@ -150,29 +154,52 @@ export function CaseDesk() {
               ))}
             </p>
           ) : null}
+          {/* 来源一行,不折行(用户 2026-11-14:七个 chip 在 360 栏里折成三行)。就地筛的 chip(全部、本台各来源)一行横滑;
+              带 › 的去别的页,桌面收进「更多来源 ▾」(同一份数与网址),393 照旧排在同一行横滑里 —— 两种都在 DOM 里,CSS 按宽度藏一种。 */}
           {chips.length > 1 ? (
-            <div className={s.chips} data-testid="desk-sources" role="group" aria-label={t("caseDesk.sources_label")}>
-              {chips.map((c) =>
-                c.kind === "filter" ? (
-                  <button
-                    key={c.key}
-                    type="button"
-                    className={s.chip}
-                    aria-pressed={source === c.key}
-                    onClick={() => setSource(c.key === source ? "all" : c.key)}
-                    data-testid={`desk-source-${c.key}`}
-                  >
-                    {c.label}
-                    <span className={s.chipCount}>{c.count}</span>
-                  </button>
-                ) : (
-                  <Link key={c.key} href={c.href} className={s.chip} data-testid={`desk-source-${c.key}`}>
-                    {c.label}
-                    <span className={s.chipCount}>{c.count}</span>
-                    <span aria-hidden="true">›</span>
-                  </Link>
-                ),
-              )}
+            <div className={s.sources}>
+              <div ref={chipsRef} className={s.chips} data-testid="desk-sources" role="group" aria-label={t("caseDesk.sources_label")}>
+                {chips.map((c) =>
+                  c.kind === "filter" ? (
+                    <button
+                      key={c.key}
+                      type="button"
+                      className={s.chip}
+                      aria-pressed={source === c.key}
+                      onClick={() => setSource(c.key === source ? "all" : c.key)}
+                      data-testid={`desk-source-${c.key}`}
+                    >
+                      {c.label}
+                      <span className={s.chipCount}>{c.count}</span>
+                    </button>
+                  ) : (
+                    <Link key={c.key} href={c.href} className={`${s.chip} ${s.linkChip}`} data-testid={`desk-source-${c.key}`}>
+                      {c.label}
+                      <span className={s.chipCount}>{c.count}</span>
+                      <span aria-hidden="true">›</span>
+                    </Link>
+                  ),
+                )}
+              </div>
+              {elsewhere.length ? (
+                <div className={s.more}>
+                  <ActionsMenu
+                    menuLabel={t("caseDesk.more_sources")}
+                    trigger={{ label: `${t("caseDesk.more_sources")} ▾`, className: s.chip, testId: "desk-sources-more" }}
+                    items={elsewhere.map((c) => ({
+                      key: c.key,
+                      label: (
+                        <>
+                          <span>{c.label}</span>
+                          <span className={`${s.chipCount} ml-auto pl-4`}>{c.count}</span>
+                          <span aria-hidden="true" className="pl-2">›</span>
+                        </>
+                      ),
+                      onSelect: () => router.push(c.href),
+                    }))}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div className={s.searchRow}>

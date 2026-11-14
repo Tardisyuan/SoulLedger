@@ -185,7 +185,7 @@ function SchedulerPageContent() {
   );
 
   const filters = (
-    <div role="group" aria-label={t("scheduler.filters.label")} className="flex flex-wrap gap-2">
+    <div role="group" aria-label={t("scheduler.filters.label")} className="flex shrink-0 gap-2 [&>*]:shrink-0">
       {/* 筛选签(规范 v1 §2)。单选:按下一枚即换成它,再按一下回到「全部」。 */}
       {JOB_FILTERS.map((value) => (
         <FilterChipToggle
