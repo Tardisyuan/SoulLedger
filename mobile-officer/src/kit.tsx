@@ -382,6 +382,34 @@ export function Segmented<K extends string>({
 }
 
 /**
+ * One chip of `FilterChips`, alone: also the recent-reason chips above the reject box (D8), which have no count and
+ * wrap instead of scrolling. A long label is cut to one line once a parent bounds the width.
+ */
+export function Chip({ label, count, on = false, size = "md", onPress, testID }: { label: string; count?: number; on?: boolean; size?: "md" | "lg"; onPress: () => void; testID?: string }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={count == null ? label : `${label} · ${count}`}
+      accessibilityState={{ selected: on }}
+      hitSlop={{ top: 4, bottom: 4 }}
+      onPress={onPress}
+      style={[styles.chip, size === "lg" && styles.chipLg, { borderColor: on ? t.ink : t.hair2, backgroundColor: on ? t.ink : "transparent" }]}
+    >
+      <Txt variant="caption" numberOfLines={1} style={{ flexShrink: 1, color: on ? t.s0 : t.ink, fontFamily: on ? family.ui[500] : family.ui[400] }}>
+        {label}
+      </Txt>
+      {count == null ? null : (
+        <Txt variant="value" style={{ color: on ? t.s0 : t.inkMuted }}>
+          {count}
+        </Txt>
+      )}
+    </Pressable>
+  );
+}
+
+/**
  * 多选标签 + 数量角标 (Design batch 28 O2): the filter bar of the web's Social / CooldownDesk, on
  * the phone -- ONE row that scrolls sideways (never wraps), a hairline under it. Chips are 36 high
  * with a 44 touch target (padding and `hitSlop`); a count of 0 is still shown and the chip stays on.
@@ -404,28 +432,9 @@ export function FilterChips<K extends string>({
   return (
     <View style={{ borderBottomWidth: 1, borderBottomColor: t.hair }}>
       <ScrollView testID={testID} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-        {options.map(({ key, label, count }) => {
-          const on = selected.includes(key);
-          return (
-            <Pressable
-              key={key}
-              testID={testID ? `${testID}-${key}` : undefined}
-              accessibilityRole="button"
-              accessibilityLabel={`${label} · ${count}`}
-              accessibilityState={{ selected: on }}
-              hitSlop={{ top: 4, bottom: 4 }}
-              onPress={() => onToggle(key)}
-              style={[styles.chip, size === "lg" && styles.chipLg, { borderColor: on ? t.ink : t.hair2, backgroundColor: on ? t.ink : "transparent" }]}
-            >
-              <Txt variant="caption" style={{ color: on ? t.s0 : t.ink, fontFamily: on ? family.ui[500] : family.ui[400] }}>
-                {label}
-              </Txt>
-              <Txt variant="value" style={{ color: on ? t.s0 : t.inkMuted }}>
-                {count}
-              </Txt>
-            </Pressable>
-          );
-        })}
+        {options.map(({ key, label, count }) => (
+          <Chip key={key} testID={testID ? `${testID}-${key}` : undefined} label={label} count={count} on={selected.includes(key)} size={size} onPress={() => onToggle(key)} />
+        ))}
       </ScrollView>
     </View>
   );

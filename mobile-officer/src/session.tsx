@@ -22,6 +22,7 @@ import { officerDevice, spendAutoPrompt } from "./deviceLogin";
 import { DRAFTS_KEY, clearDrafts, flushDraft } from "./drafts";
 import { OUTBOX_KEY, clearOutbox, outboxEntries } from "./outbox";
 import { clearKeptText } from "./keptText";
+import { MEMORY_KEYS, clearMemory } from "./memory";
 import { USER_KEY, dropUnowned } from "./owner";
 import { clearReadCache } from "./readCache";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
@@ -156,7 +157,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     platform().persistent.set(LAST_LOGIN_KEY, JSON.stringify(last));
     // Unsent replies and drafts kept from a session the server ended: the same officer gets them back, anyone else
     // finds them gone (A7).
-    dropUnowned([DRAFTS_KEY, OUTBOX_KEY]);
+    dropUnowned([DRAFTS_KEY, OUTBOX_KEY, ...MEMORY_KEYS]);
     // The outbox keeps a snapshot per owner: read it now under this officer, so none of another one's outlives the removal.
     outboxEntries();
     setState({ status: "signedIn", user: response.user });
@@ -276,6 +277,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       clearOutbox();
       clearReadCache();
       clearKeptText();
+      clearMemory();
     }
     // `authApi.logout` reads the stored refresh token, so the tokens go only after it has been sent
     // -- and only if no quick sign-in in between has replaced them.

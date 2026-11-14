@@ -1,6 +1,8 @@
 /**
  * The officer app's links: `soulledger-officer://todo|queue|search|notices|me` opens that tab;
- * `soulledger-officer://item/<kind>/<id>` opens that item's detail, the way a tapped push does.
+ * `soulledger-officer://item/<kind>/<id>` opens that item's detail, the way a tapped push does;
+ * `soulledger-officer://judgment/<id>` and `.../soul/<id>` open that case's or soul's read-only detail, the way a
+ * tapped notice naming one does (convenience audit D6).
  * A link only opens a page -- nothing here decides, approves or submits.
  */
 import type { TabKey } from "./kit";
@@ -8,7 +10,7 @@ import { isItemKind, type Landing } from "./rules";
 import { createLinkInbox, pathOf, queryOf } from "./shared";
 
 export const OFFICER_SCHEME = "soulledger-officer";
-export type OfficerLink = { tab: TabKey; item?: Landing["item"] };
+export type OfficerLink = { tab: TabKey; item?: Landing["item"]; judgment?: string; soul?: string };
 const TABS: readonly TabKey[] = ["todo", "queue", "search", "notices", "me"];
 
 /**
@@ -23,7 +25,10 @@ export function parseOfficerLink(url: unknown): OfficerLink | null {
   if (!path) return null;
   const head = path[0]?.toLowerCase();
   if (path.length === 1 && (TABS as readonly string[]).includes(head)) return { tab: head as TabKey };
-  if (path.length === 3 && head === "item" && isItemKind(path[1]) && path[2].length <= 64 && !UNSAFE_ID.test(path[2])) return { tab: "todo", item: { kind: path[1], id: path[2] } };
+  const safe = (id: string | undefined): id is string => !!id && id.length <= 64 && !UNSAFE_ID.test(id);
+  if (path.length === 3 && head === "item" && isItemKind(path[1]) && safe(path[2])) return { tab: "todo", item: { kind: path[1], id: path[2] } };
+  if (path.length === 2 && head === "judgment" && safe(path[1])) return { tab: "queue", judgment: path[1] };
+  if (path.length === 2 && head === "soul" && safe(path[1])) return { tab: "search", soul: path[1] };
   return null;
 }
 

@@ -1,5 +1,5 @@
 /**
- * Deep links (soulledger-officer://todo|queue|search|notices|me and .../item/<kind>/<id>): the
+ * Deep links (soulledger-officer://todo|queue|search|notices|me, .../item/<kind>/<id>, .../judgment/<id>, .../soul/<id>): the
  * parser, the inbox that holds a link while signed out, and the shell landing on the page the
  * way a tapped push does. A link only opens a page.
  */
@@ -24,7 +24,20 @@ jest.mock("@soulledger/core/api/auth", () => ({
   ...jest.requireActual("@soulledger/core/api/auth"),
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: true, required: true } })) },
 }));
-jest.mock("@soulledger/core/api/judgment", () => ({ judgmentApi: { list: jest.fn(async () => ({ data: { results: [] } })), claim: jest.fn(), queueCounts: jest.fn(async () => ({ data: { mine: 0, unclaimed: 0, others: 0, deferred: 0 } })) } }));
+const mockJudgmentGet = jest.fn();
+const mockSoulGet = jest.fn();
+jest.mock("@soulledger/core/api/judgment", () => ({
+  judgmentApi: {
+    list: jest.fn(async () => ({ data: { results: [] } })),
+    claim: jest.fn(),
+    queueCounts: jest.fn(async () => ({ data: { mine: 0, unclaimed: 0, others: 0, deferred: 0 } })),
+    get: (...a: unknown[]) => mockJudgmentGet(...a),
+  },
+}));
+jest.mock("@soulledger/core/api/souls", () => ({
+  ...jest.requireActual("@soulledger/core/api/souls"),
+  soulsApi: { get: (...a: unknown[]) => mockSoulGet(...a), list: jest.fn(() => new Promise(() => {})) },
+}));
 jest.mock("@soulledger/core/api/notifications", () => ({
   notificationsApi: { list: jest.fn(async () => ({ data: { results: [] } })), markRead: jest.fn(), markAllRead: jest.fn() },
 }));
@@ -36,6 +49,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockTodo.mockResolvedValue({ data: EMPTY });
   mockItem.mockReturnValue(new Promise(() => {}));
+  mockJudgmentGet.mockReturnValue(new Promise(() => {}));
+  mockSoulGet.mockReturnValue(new Promise(() => {}));
 });
 
 describe("parseOfficerLink", () => {
@@ -48,8 +63,21 @@ describe("parseOfficerLink", () => {
     expect(parseOfficerLink("soulledger-officer://item/rebirth/a%20b")).toEqual({ tab: "todo", item: { kind: "rebirth", id: "a b" } });
   });
 
+  it("judgment/<id> and soul/<id> open that case's / soul's read-only detail (D6)", () => {
+    expect(parseOfficerLink("soulledger-officer://judgment/j-1")).toEqual({ tab: "queue", judgment: "j-1" });
+    expect(parseOfficerLink("soulledger-officer://soul/s-1")).toEqual({ tab: "search", soul: "s-1" });
+    expect(parseOfficerLink("soulledger-officer://Judgment/j-1")).toEqual({ tab: "queue", judgment: "j-1" });
+  });
+
   it.each([
     "soulledger-officer://",
+    "soulledger-officer://judgment",
+    "soulledger-officer://judgment/j-1/x",
+    "soulledger-officer://judgment/%2e%2e%2fusers",
+    "soulledger-officer://judgment/..",
+    "soulledger-officer://soul/a%3Fb",
+    `soulledger-officer://soul/${"x".repeat(65)}`,
+    "soulledger-officer://souls/s-1",
     "soulledger-officer://decide",
     "soulledger-officer://todo/extra",
     "soulledger-officer://item",
@@ -112,6 +140,23 @@ describe("landing in the shell", () => {
     await act(async () => officerLinks.push(`soulledger-officer://${tab}`));
     await waitFor(() => expect(screen.getByTestId(`door-${door}`).props.accessibilityState?.selected).toBe(true));
     expect(await screen.findByTestId(`tab-${tab}-screen`)).toBeTruthy();
+  });
+
+  it("a judgment link opens that case's detail, a soul link that soul's -- the same landing as a notice (D6)", async () => {
+    renderOfficer(<Shell />);
+    await screen.findByTestId("tab-bar");
+    await act(async () => officerLinks.push("soulledger-officer://judgment/j-1"));
+    await waitFor(() => expect(mockJudgmentGet).toHaveBeenCalledWith("j-1"));
+    expect(mockSoulGet).not.toHaveBeenCalled();
+    expect(mockItem).not.toHaveBeenCalled();
+  });
+
+  it("a soul link opens that soul's detail (D6)", async () => {
+    renderOfficer(<Shell />);
+    await screen.findByTestId("tab-bar");
+    await act(async () => officerLinks.push("soulledger-officer://soul/s-1"));
+    await waitFor(() => expect(mockSoulGet).toHaveBeenCalledWith("s-1"));
+    expect(mockJudgmentGet).not.toHaveBeenCalled();
   });
 
   it("an unknown link changes nothing", async () => {
