@@ -18,7 +18,8 @@ about 80 asks, so this waits out a 429 and carries on (about an hour and a half 
 
 Environment (nothing else is read; no .env):
   DEMO_ASSIST_API        e.g. http://127.0.0.1:8000/api/v1 (a test environment, never production)
-  DEMO_ASSIST_USER       an ADMIN without two-step verification on that backend
+  DEMO_ASSIST_USER       an ADMIN on that backend (admins always have two-step verification:
+  DEMO_ASSIST_TOTP_SECRET  its TOTP secret, so the script can answer the second step)
   DEMO_ASSIST_PASSWORD
   DEMO_ASSIST_ONLY       optional, comma-separated subset of: replies,security,eval
   DEMO_ASSIST_CANDIDATES for eval: a JSON list of two candidates as the eval page sends them,
@@ -47,7 +48,7 @@ TRACE_KEYS = ("tools_called", "retrieval", "retrieved_entries", "latency_ms", "f
 INTERNAL_HOST = re.compile(
     r"\b(https?://)(?:localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}"
     r"|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|[\w-]+(?:\.[\w-]+)*\.(?:lan|local|internal|home\.arpa))"
-    r"(?=[:/?#\"\s]|$)", re.I)
+    r"(?=[:/?#\"\s]|$)", re.IGNORECASE)
 THROTTLE_WAIT = 65
 THROTTLE_TRIES = 70
 
@@ -62,12 +63,28 @@ def scrub(value):
     return value
 
 
+def totp_now(secret: str) -> str:
+    """RFC 6238 SHA-1, 6 digits, 30 s — the same as apps/authentication/mfa.py `totp_at`."""
+    import base64
+    import hashlib
+    import hmac
+    import struct
+    key = base64.b32decode(secret + "=" * (-len(secret) % 8), casefold=True)
+    digest = hmac.new(key, struct.pack(">Q", int(time.time()) // 30), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    return f"{(struct.unpack('>I', digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 10**6:06d}"
+
+
 class Api:
     def __init__(self, base, user, password):
         self.base = base.rstrip("/")
         body = self.call("POST", "/auth/login/", {"username": user, "password": password})
+        if body.get("mfa_required") and os.environ.get("DEMO_ASSIST_TOTP_SECRET"):
+            # Every ADMIN must have two-step verification on (2026-10-29), so the recording admin has it: the code is
+            # computed from DEMO_ASSIST_TOTP_SECRET (RFC 6238, as apps/authentication/mfa.py), never printed.
+            body = self.call("POST", "/auth/mfa/verify/", {"pending_token": body["pending_token"], "code": totp_now(os.environ["DEMO_ASSIST_TOTP_SECRET"])})
         if "access" not in body:
-            sys.exit(f"sign-in did not return a token (two-step verification on?): {sorted(body)}")
+            sys.exit(f"sign-in did not return a token (set DEMO_ASSIST_TOTP_SECRET for an admin with two-step verification): {sorted(body)}")
         self.token = body["access"]
 
     def call(self, method, path, body=None, lang="zh-Hans", raw=False):
