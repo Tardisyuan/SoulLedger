@@ -127,7 +127,7 @@ def officer_app_lifetime() -> timedelta:
 def soul_lifetime() -> timedelta:
     from django.conf import settings
 
-    return settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+    return timedelta(days=settings.SOUL_REFRESH_LIFETIME_DAYS)
 
 
 def expired_devices(devices, *, user_field: str, lifetime: timedelta):

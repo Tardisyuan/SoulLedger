@@ -31,6 +31,15 @@ class SoulRefreshToken(RefreshToken):
     token_type = "soul_refresh"
     access_token_class = SoulAccessToken
 
+    @property
+    def lifetime(self):
+        # 签发(含写 OutstandingToken 的 expires_at)与轮换都经 `self.lifetime` 算 exp;按调用时的设置读,不在 import 时定死。
+        from datetime import timedelta
+
+        from django.conf import settings
+
+        return timedelta(days=settings.SOUL_REFRESH_LIFETIME_DAYS)
+
 
 def session_is_current(token, user) -> bool:
     """官员令牌的 `sv` 声明还等于用户当前的 `session_version`(缺省都按 0)。"""

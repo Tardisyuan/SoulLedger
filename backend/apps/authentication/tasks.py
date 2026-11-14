@@ -45,7 +45,7 @@ def prune_soul_sign_ins():
 def prune_expired_push_registrations():
     """登录已到期、又没人在那台手机上重新登录的推送登记:停用,锁屏不再收到。
 
-    官员端(24 小时刷新令牌)与灵魂端(`JWT_REFRESH_LIFETIME`)各按自己的有效期判;判定见
+    官员端(24 小时刷新令牌)与灵魂端(`SOUL_REFRESH_LIFETIME_DAYS`,默认 30 天)各按自己的有效期判;判定见
     `signin_sessions.expired_devices`。发送路径同样跳过它们,所以这个任务只是把行收拾干净。"""
     from apps.officer_app.models import OfficerPushDevice
     from apps.soul_push.models import DeviceInvalidReason, PushDevice

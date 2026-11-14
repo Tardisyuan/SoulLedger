@@ -617,13 +617,14 @@ backend、celery、celery-beat 三个容器读同一组变量,一起重建。
 
 ### SECRET_KEY
 
-签的东西:会话与 CSRF、官员重置密码 / 邮箱验证链接(1 小时)、JWT(access 30 分钟、refresh 7 天)。
+签的东西:会话与 CSRF、官员重置密码 / 邮箱验证链接(1 小时)、JWT(access 30 分钟;refresh 官员台 7 天、勾「保持登录」30 天,灵魂端 App 30 天)。
 
 1. 生成新 key(≥ 32 字节):`python -c "import secrets; print(secrets.token_urlsafe(48))"`。
 2. `SECRET_KEY=<新>`,`SECRET_KEY_FALLBACKS=<旧>`(多把用逗号分隔),重建三个容器。
    新签的一律用新 key;旧 key 签的会话、链接与 JWT 照常认(JWT 由 `backend/apps/core/jwt_fallback.py` 补上,
    SimpleJWT 自己不认 fallback),过期的照样按过期拒。
-3. 等 `JWT_REFRESH_LIFETIME`(默认 7 天)过去 —— 那之后旧 key 签的刷新令牌都已过期或已被轮换掉。
+3. 等最长的刷新令牌有效期过去(默认 30 天:灵魂端 `JWT_SOUL_REFRESH_LIFETIME_DAYS`,与官员台「保持登录」)——
+   那之后旧 key 签的刷新令牌都已过期或已被轮换掉。
 4. 删掉 `SECRET_KEY_FALLBACKS`,再重建。
 
 不受影响:`MATRIX_USER_SALT`(**不可轮换**,见上文聊天一节)与 `MATRIX_JWT_SECRET` / `MATRIX_GRANT_SECRET` / `MATRIX_HOOK_SECRET` 是各自的密钥。

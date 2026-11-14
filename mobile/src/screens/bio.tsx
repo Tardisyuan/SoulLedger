@@ -8,7 +8,7 @@ import { platform } from "@soulledger/core/platform";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { APP_LOCK_KEY, CredentialStoreError, bioEnabled, enableWithPassword, markAsked, revokeCredential, wasAsked } from "../deviceLogin";
+import { APP_LOCK_KEY, CredentialStoreError, appLockOn, bioEnabled, enableWithPassword, markAsked, revokeCredential, wasAsked } from "../deviceLogin";
 import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
@@ -103,20 +103,20 @@ export function EnableBioSheet({ open, word, onClose, onEnabled }: { open: boole
 }
 
 /**
- * 切回 App 时也要验证 (S2): the second switch of the 面容 / 指纹 login. Usable only while that is on; turning that off
- * turns this off (`clearCredential` drops the key). Default off. The lock itself is `appLock.tsx`.
+ * 切回 App 时也要验证 (S2): the second switch of the 面容 / 指纹 login. Usable only while that is on, and shown off while
+ * that is off. Default on (2026-11-15); a press stores the choice either way, so an explicit off is kept
+ * (`APP_LOCK_KEY`). The lock itself is `appLock.tsx`.
  */
 function AppLockRow({ enabled, word }: { enabled: boolean; word: string }) {
   const theme = useTheme();
   const { t } = useI18n();
   const { gutter } = useLayout();
-  // The phone's own record is the truth (turning 面容 login off removes the key); this only repaints after a press.
+  // The phone's own record is the truth (`appLockOn`); this only repaints after a press.
   const [, repaint] = useState(0);
-  const on = enabled && platform().persistent.get(APP_LOCK_KEY) === "1";
+  const on = enabled && appLockOn();
   const press = () => {
     if (!enabled) return;
-    if (on) platform().persistent.remove(APP_LOCK_KEY);
-    else platform().persistent.set(APP_LOCK_KEY, "1");
+    platform().persistent.set(APP_LOCK_KEY, on ? "0" : "1");
     repaint((n) => n + 1);
   };
   return (

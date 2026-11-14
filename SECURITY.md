@@ -45,7 +45,8 @@ If you discover a security vulnerability, please report it responsibly:
   - `SECRET_KEY`: put the old key in `SECRET_KEY_FALLBACKS`. Django verifies sessions and password-reset
     links signed with it; JWTs signed with it also still verify until they expire
     (`backend/apps/core/jwt_fallback.py` — SimpleJWT itself has no fallback support). New signatures use
-    `SECRET_KEY` only. Drop the fallback after `JWT_REFRESH_LIFETIME` (7 days by default).
+    `SECRET_KEY` only. Drop the fallback after the longest refresh lifetime: 30 days by default
+    (`JWT_SOUL_REFRESH_LIFETIME_DAYS` for the soul App, and the officer desk's 「保持登录」; plain desk sign-ins are 7).
   - `ENCRYPTION_KEY`: put the old key in `ENCRYPTION_KEY_FALLBACKS` (reads try every key, writes use
     `ENCRYPTION_KEY`; an invalid key refuses startup), run `manage.py rotate_encryption_key`, and drop the
     fallback only after it exits 0 — it exits non-zero, touching nothing, for a value no configured key reads.
