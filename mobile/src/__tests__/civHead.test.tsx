@@ -122,7 +122,7 @@ describe("the head mark", () => {
   const style = (civ: CivKey) => StyleSheet.flatten(mark(civ).props.style) as Record<string, unknown>;
   const texts = (civ: CivKey) =>
     mark(civ)
-      .findAll((n) => n.type === "Text")
+      .findAll((n) => String(n.type) === "Text")
       .map((n) => n.props.children);
 
   it("地府 in Chinese: the hall's name one character a line at 20/23, ink at 34% (dark), hidden from screen readers", () => {
@@ -131,7 +131,7 @@ describe("the head mark", () => {
     expect(mark("cn").props.importantForAccessibility).toBe("no-hide-descendants");
     expect(mark("cn").props.accessibilityElementsHidden).toBe(true);
     expect(texts("cn")).toEqual(["秦", "廣", "殿"]);
-    const glyph = StyleSheet.flatten(mark("cn").findAll((n) => n.type === "Text")[0].props.style);
+    const glyph = StyleSheet.flatten(mark("cn").findAll((n) => String(n.type) === "Text")[0].props.style);
     expect([glyph.fontSize, glyph.lineHeight, glyph.color]).toEqual([20, 23, themeFor("CHINESE", "dark").ink]);
     expect(style("cn")).toMatchObject({ right: 20, top: 12, opacity: 0.34 });
   });
@@ -153,7 +153,7 @@ describe("the head mark", () => {
     platform().persistent.set(LOCALE_COOKIE, "en");
     draw("eu", <HeadMark names={NAMES} right={80} />);
     expect(texts("eu")).toEqual(["IVSTITIA"]);
-    expect(StyleSheet.flatten(mark("eu").findAll((n) => n.type === "Text")[0].props.style).fontSize).toBe(14);
+    expect(StyleSheet.flatten(mark("eu").findAll((n) => String(n.type) === "Text")[0].props.style).fontSize).toBe(14);
     expect(style("eu").right).toBe(80);
     screen.unmount();
     draw("gr", <HeadMark names={NAMES} />);

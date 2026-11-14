@@ -228,7 +228,7 @@ describe("v3 civilization marks on 本世", () => {
     const mark = () => screen.getByTestId("head-mark-cn", { includeHiddenElements: true });
     expect(mark().props.importantForAccessibility).toBe("no-hide-descendants");
     const glyphs = mark()
-      .findAll((n) => n.type === "Text")
+      .findAll((n) => String(n.type) === "Text")
       .map((n) => n.props.children);
     expect(glyphs).toEqual(["第", "五", "殿"]);
     const style = () => StyleSheet.flatten(mark().props.style) as Record<string, unknown>;
