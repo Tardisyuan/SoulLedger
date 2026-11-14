@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { BandPattern, Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
+import { Button, Emblem, GUTTER, GlowTop, GoneState, Notice, OneLine, Topline, Txt, family, radius, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
 
 /**
  * Touch sizes (Design 第三十批 三 / 四), the web's values (`frontend/app/globals.css` `--control-h-*`, `--topline`):
@@ -437,10 +437,11 @@ export function FilterChips<K extends string>({
  * soul -- and the officer's name. A soul from another civilization is marked inside rows and
  * details in words, not here.
  *
- * v4 (V4Batch07 05 App) draws no band: the page's own ground with the header light (`GlowTop`, the hall's glow) and
- * the civilization's pattern behind it, in the page's inks -- the soul app's `PlaqueFrame` (mobile/src/chrome.tsx).
- * Not imported from there: chrome.tsx pulls the soul's session and assist into this bundle (sharedClosure.test.ts);
- * the two pieces it draws with live in emblems.tsx, which is shared already. (v3's solid band under onPlaque, gone 2026-11-06.)
+ * v4 (V4Batch07 05 App) draws no band: the page's own ground with the header light (`GlowTop`, the hall's glow), in the
+ * page's inks -- the soul app's `PlaqueFrame` (mobile/src/chrome.tsx). Not imported from there: chrome.tsx pulls the
+ * soul's session and assist into this bundle (sharedClosure.test.ts); the pieces it draws with live in emblems.tsx and
+ * civHead.tsx, which are shared. (v3's solid band under onPlaque, gone 2026-11-06.) No texture here since 第四十六批第四节:
+ * the paper texture is a first-level page's head only (`TabHead`), and this band is on every page.
  */
 export function IdentityBand({ hall, name }: { hall: string; name: string }) {
   const t = useTheme();
@@ -453,14 +454,9 @@ export function IdentityBand({ hall, name }: { hall: string; name: string }) {
       onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
       style={{ backgroundColor: t.s0, paddingTop: top, overflow: "hidden", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.hair }}
     >
-      {height ? (
-        <>
-          <GlowTop testID="identity-band-glow" color={t.glow} scheme={t.scheme} width={width} height={height} />
-          <BandPattern civ={t.civ} color={t.glow} width={width} height={height} ringBase={height} />
-        </>
-      ) : null}
-      {/* 第三十批 一.1: the 2px line in the civilization's colour at the top of every page. */}
-      <View testID="topline" style={[styles.topline, { backgroundColor: t.plaque }]} />
+      {height ? <GlowTop testID="identity-band-glow" color={t.glow} scheme={t.scheme} width={width} height={height} /> : null}
+      {/* 第三十批 一.1: the civilization's line at the top of every page — four shapes since 第四十六批 (civHead.tsx). */}
+      <Topline />
       <View style={styles.band}>
         <Txt variant="nav" numberOfLines={1} style={[styles.bandHall, { color: t.ink, fontFamily: family.title }]}>
           {hall}
@@ -659,7 +655,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", paddingTop: space[7] },
   emptyMark: { opacity: 0.12 },
   tag: { minHeight: touch.tag, borderRadius: radius.control, paddingHorizontal: space[2], justifyContent: "center", alignSelf: "flex-end" },
-  topline: { position: "absolute", top: 0, left: 0, right: 0, height: touch.topline },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },
   rowText: { flex: 1, gap: space[1] },

@@ -64,9 +64,13 @@ describe("every other title bar (v4: no band)", () => {
     expect(StyleSheet.flatten(screen.getByRole("header").props.style)).toMatchObject({ fontSize: 20, fontFamily: "NotoSerifSC_600", color: theme.ink });
     // v1's 6pt band is gone, not doubled under the plaque's; v2's dark-scheme top highlight too.
     expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
-    // 第三十批: the frame holds the 2px top line in the civilization's colour and the bar — nothing else.
+    // 第三十批: the frame holds the top line in the civilization's colour and the bar — nothing else; since 第四十六批 the
+    // line is inset 30 each side and 3 high in a civilization's shape (the neutral skin's 2), and a sub-page has no texture.
     expect(screen.getByTestId("header").children).toHaveLength(2);
-    expect(StyleSheet.flatten(screen.getByTestId("topline").props.style)).toMatchObject({ height: 2, backgroundColor: theme.plaque });
+    expect(StyleSheet.flatten(screen.getByTestId("topline").props.style)).toMatchObject({ top: 0, left: 30, right: 30, height: civ === "neutral" ? 2 : 3 });
+    const bars = screen.getAllByTestId("topline-bar").map((b) => StyleSheet.flatten(b.props.style));
+    expect(new Set(bars.map((b) => b.backgroundColor))).toEqual(new Set([theme.plaque]));
+    expect(screen.queryByTestId("plaque-texture")).toBeNull();
     await act(async () => {});
   });
 });

@@ -12,7 +12,8 @@ import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist } from "../assist";
-import { BandPattern, Emblem, GlowTop, Icon, StageMotif } from "../emblems";
+import { HeadMark, HeadTexture, Topline, markFits } from "../civHead";
+import { Emblem, GlowTop, Icon, StageMotif } from "../emblems";
 import { DossierSeal, MeritMark } from "../dossierMarks";
 import { family, titleFamily } from "../fonts";
 import { useToast } from "../feedback";
@@ -56,7 +57,6 @@ import {
   SectionError,
   Skeleton,
   ThemeContext,
-  Topline,
   Txt,
   enumText,
   shade,
@@ -405,6 +405,8 @@ const BAND_OPEN_AT = 20;
 /** pt below the status bar, at 1× text: full (12 + meta 16 + 12 + 64pt seal + 12 — the seal is the row's tallest) and compact (one row, 30pt seal). */
 const BAND_FULL = 116;
 const BAND_SMALL = 48;
+/** The head mark's right: the band's 16, the account icon's 44, then 16 (第四十六批第三节: 20 + the buttons + 16). */
+const MARK_RIGHT = 16 + 44 + 16;
 /** The soul code's line (`codeText`) and what its copy target adds to reach 44: 28pt of padding. */
 const CODE_LINE = 16;
 const CODE_REACH = 44 - CODE_LINE;
@@ -439,6 +441,12 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
   const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), thisLifeLabel(tr, me.civilization, me.account.cycle + 1) ?? tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
     .filter(Boolean)
     .join(" · ");
+  // 第四十六批 页头记号: right of the text, left of the account icon (20 → this band's 16, + 44 + 16), and only while
+  // the meta line and the name end 24 short of it (`markFits`). Measured: until then it is laid out but not shown.
+  const [fit, setFit] = useState<Record<"meta" | "textX" | "name" | "mark", number | undefined>>({ meta: undefined, textX: undefined, name: undefined, mark: undefined });
+  const measure = (key: keyof typeof fit) => (value: number) => setFit((p) => (p[key] === value ? p : { ...p, [key]: value }));
+  const markShown =
+    fit.meta !== undefined && fit.textX !== undefined && fit.name !== undefined && fit.mark !== undefined && markFits(Math.max(16 + fit.meta, 16 + fit.textX + fit.name), width - MARK_RIGHT - fit.mark);
   const copy = () =>
     Clipboard.setStringAsync(me.soul_code).then(
       () => toast(tr("soul_app.life.code_copied")),
@@ -450,16 +458,25 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
       <Topline />
       <Animated.View testID="identity" style={[styles.band, stack ? null : { height }, small && styles.bandSmall]}>
         {/* Drawn for the band at its tallest (large text stacks it), clipped by the band as it compacts. */}
-        <BandPattern testID="band-pattern" civ={t.civ} color={t.glow} width={width} height={BAND_FULL * Math.max(k, 3)} ringBase={BAND_FULL * k} />
+        {/* 第四十六批: the paper texture in ink, in place of the civilization-coloured pattern; this is a first-level page. */}
+        <HeadTexture testID="band-texture" width={width} height={BAND_FULL * Math.max(k, 3)} />
         {small ? null : (
-          <Txt testID="identity-meta" numberOfLines={stack ? undefined : 1} style={[styles.bandMeta, { color: t.inkMuted }]}>
+          <HeadMark names={me.tenant.hall_names} right={MARK_RIGHT} hidden={!markShown} onLayout={(e) => measure("mark")(e.nativeEvent.layout.width)} />
+        )}
+        {small ? null : (
+          <Txt
+            testID="identity-meta"
+            numberOfLines={stack ? undefined : 1}
+            onTextLayout={(e) => measure("meta")(Math.max(0, ...e.nativeEvent.lines.map((l) => l.width)))}
+            style={[styles.bandMeta, { color: t.inkMuted }]}
+          >
             {meta}
           </Txt>
         )}
         <View style={styles.bandRow}>
           <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={t.plaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
-          <View testID="band-text" style={styles.bandText}>
-            <View style={styles.nameRow}>
+          <View testID="band-text" onLayout={(e) => measure("textX")(e.nativeEvent.layout.x)} style={styles.bandText}>
+            <View testID="name-row" onLayout={(e) => measure("name")(e.nativeEvent.layout.width)} style={styles.nameRow}>
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on, fontFamily: titleFamily(me.name) }]}>
                 {me.name}
               </Txt>
@@ -1297,7 +1314,8 @@ const styles = StyleSheet.create({
   bandMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, letterSpacing: 0.6 },
   bandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   bandText: { flex: 1, minWidth: 0, gap: 4 },
-  nameRow: { flexDirection: "row", alignItems: "baseline", columnGap: 8 },
+  // Sized to its words (not stretched), so its width is where the name ends: the head mark's clearance reads it.
+  nameRow: { flexDirection: "row", alignItems: "baseline", columnGap: 8, alignSelf: "flex-start", maxWidth: "100%" },
   bandFrame: { overflow: "hidden" },
   // The soul's name: the title serif (Noto Serif SC 600) via `titleFamily(me.name)`, v4's big title 30/38
   // (the text column, 38 + 4 + the code's 16, still fits beside the 64pt seal).
