@@ -9712,7 +9712,7 @@
       "sees": {
         "1": {
           "home": "The whole dossier and the plan; stop 2 is empty, waiting for the other hall",
-          "away": "One new item under Cross-realm: each stop’s hall and status, its own stop still to fill in"
+          "away": "One new item under Joint judgments: each stop’s hall and status, its own stop still to fill in"
         },
         "2": {
           "home": "Stop 2’s hall, years and status; the reason for that stop is blank",
@@ -9720,11 +9720,11 @@
         },
         "3": {
           "home": "The plan is fixed; the dossier’s Sentence tab lists both stops",
-          "away": "The plan is fixed; its own stop is now waiting to be served"
+          "away": "The plan is fixed; its own stop shows Not started"
         },
         "4": {
-          "home": "Stop 1 being served",
-          "away": "Stop 2 waiting; still only the hall, years and status"
+          "home": "Stop 1: Serving",
+          "away": "Stop 2: Not started; still only the hall, years and status"
         }
       },
       "audit_title": "Audit log · rows this step wrote",

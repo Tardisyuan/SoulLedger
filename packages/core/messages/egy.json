@@ -7818,13 +7818,13 @@
       "confirm": "Tepy",
       "scope": "Neb",
       "requests": "Hehy",
-      "requests_value": "{{count}} · {{max}}",
+      "requests_value": "Hehy {{count}} · Sia Neb: Er Pehwy {{max}}",
       "estimate": "Hesb Tepy / Er Pehwy",
       "not_counted": "Nen Hesb Em Abed, Nen Em Aq Neb.",
       "problem": {
         "unpriced_model": "Nen Hesb Em Sia.",
         "no_cases": "Nen Hehy.",
-        "too_many_asks": "Hehy Hau.",
+        "too_many_asks": "Hehy Hau Er Sia Wa.",
         "over_spend_cap": "Hesb Hau.",
         "no_eval_soul": "Ba Sip Nen Gem. Iri Er Tepy.",
         "no_eval_officer": "Sab Sip Nen Gem. Iri Er Tepy."
@@ -9647,7 +9647,7 @@
       "sees": {
         "1": {
           "home": "Sesh Neb Hena Sekher; Sekhet 2 Shut, Er Sesh In Wesekhet Ky",
-          "away": "Tepy «Taui Ky»: Khet Wa · Ren Wesekhet Hena Kheperu Sekhet Neb; Sekhet-Ef Nen Sesh"
+          "away": "«Wedja Hena Wesekhet Ky»: Khet Wa · Ren Wesekhet Hena Kheperu Sekhet Neb; Sekhet-Ef Nen Sesh"
         },
         "2": {
           "home": "Sekhet 2: Ren Wesekhet, Renpet, Kheperu; Khet Shut",
@@ -9655,11 +9655,11 @@
         },
         "3": {
           "home": "Sekher Smen-N; Sesh «Idryt»: Sekhet 2",
-          "away": "Sekher Smen-N; Sekhet-Ef: Nen Iri Djer"
+          "away": "Sekher Smen-N; Sekhet-Ef: «Nen Shaa Djer»"
         },
         "4": {
-          "home": "Sekhet 1 Em Iri",
-          "away": "Sekhet 2 Nen Iri Djer; Ren Wesekhet, Renpet, Kheperu Wa"
+          "home": "Sekhet 1: «Em Idryt»",
+          "away": "Sekhet 2: «Nen Shaa Djer»; Ren Wesekhet, Renpet, Kheperu Wa"
         }
       },
       "audit_title": "Medu Maa · Khet Wat Pen",
