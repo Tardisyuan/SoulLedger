@@ -789,11 +789,14 @@ def _withdrawn_case_stations(soul) -> dict:
 
 class JudgmentService:
     @staticmethod
-    def open_case(soul, *, actor=None, in_tenant=None, tenant=None, **fields):
+    def open_case(soul, *, actor=None, in_tenant=None, reach_of=None, tenant=None, **fields):
         """Open one case for `soul` under its row lock; the rules every case-opening door shares
         (cq-backend 第 8 条, 2026-10-30; used by `POST /judgment/` and a sentence plan's REOPEN).
 
         * `in_tenant`: refuse unless the soul is in that hall *now*, under the lock (G7, sentence-plan §8).
+        * `reach_of`: the same for a hall-less admin, who names no hall — refuse unless the soul's hall *now* is one
+          it reaches (`reaches_hall`: SYSTEM_ADMIN any, a civilization ADMIN its civilization's). The serializer
+          checked the reach before the lock; a move between the two is caught here (stage 1A follow-up).
         * One open case per soul, asked under the same lock; ADMIN is exempt (2026-09-12: it repairs a stuck case).
         * `tenant` (default: the soul's hall at lock time) is where the case is filed.
         * No `kind` given and the soul serves a sentence plan: an AMENDMENT of that plan (§4.1), decided here, not
@@ -813,6 +816,11 @@ class JudgmentService:
             soul = Soul.lock(soul.pk)
             if in_tenant is not None and soul.tenant_id != in_tenant.pk:
                 raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
+            if reach_of is not None:
+                from apps.core.tenant import reaches_hall
+
+                if not reaches_hall(reach_of, soul.tenant_id):
+                    raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
             if getattr(actor, "role", None) not in ("ADMIN", "SYSTEM_ADMIN"):
                 open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
                 if open_ids:

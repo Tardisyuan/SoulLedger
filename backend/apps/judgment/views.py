@@ -415,17 +415,20 @@ class JudgmentViewSet(JudgmentAIActionsMixin, NegativeConfessionActionsMixin, Ca
         from apps.core.tenant import is_hall_less_admin
 
         user = self.request.user
-        in_tenant = None
+        in_tenant = reach_of = None
         # A hall-less admin names no hall: SYSTEM_ADMIN any soul, a civilization ADMIN one of its civilization's
-        # (`validate_soul = tenant_scoped("soul")` checked the reach).
-        if not is_hall_less_admin(user):
+        # (`validate_soul = tenant_scoped("soul")` checked the reach; `open_case` checks it again under the lock).
+        if is_hall_less_admin(user):
+            reach_of = user
+        else:
             in_tenant = request_tenant(self.request)
             if in_tenant is None:
                 raise ValidationError({"soul": ["No such soul in this tenant."]})
         fields = {k: v for k, v in serializer.validated_data.items() if k != "soul"}
         try:
             serializer.instance = JudgmentService.open_case(
-                serializer.validated_data["soul"], actor=user, in_tenant=in_tenant, create_user=user, **fields,
+                serializer.validated_data["soul"], actor=user, in_tenant=in_tenant, reach_of=reach_of, create_user=user,
+                **fields,
             )
         except OpenCaseRefusedError as exc:
             raise ValidationError({"soul": [str(exc)]}) from None
