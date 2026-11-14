@@ -9,7 +9,9 @@ def purge_history():
     return service.purge_history()
 
 
-@shared_task(name="soul_assist.run_eval")
+# 全局限时 300 s(config/settings.py CELERY_TASK_SOFT_TIME_LIMIT)对它太短:每一问最多 ASSISTANT_TIMEOUT_SECONDS,
+# 一次运行是「候选 × 用例」问。一小时是上限,不是估计。
+@shared_task(name="soul_assist.run_eval", soft_time_limit=3600, time_limit=3660)
 def run_eval(run_id):
     """管理页的一次评测运行(docs/ARCHITECTURE-assist-admin.md §3.2)。按需触发,不上定时表。"""
     from apps.soul_assist import evals

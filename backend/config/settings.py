@@ -496,6 +496,12 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+# Global task time limits (be-obs 8, 2026-11-14). Without them a wedged task holds one of the worker's two
+# slots (docker-compose.yml `--concurrency=2`) forever. Soft raises SoftTimeLimitExceeded inside the task
+# so it can clean up; hard kills the child 60 s later. A task that legitimately runs longer sets its own
+# `soft_time_limit` / `time_limit` on the decorator.
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "300"))
+CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "360"))
 
 # apps.audit retention (apps/audit/retention.py). Days to keep AuditLog / LoginLog rows;
 # Defaults (2026-10-10, owner's decision): 365 days of audit log, 180 days of login log.
@@ -690,7 +696,9 @@ if not DEBUG:
     # grant secret inside a 5-minute window (apps/chat/hook.py) — so plain http leaks nothing.
     # `/metrics/` is Prometheus scraping backend:8000 over the compose network (apps/core/metrics.py); it is
     # gated by METRICS_TOKEN / METRICS_ALLOWED_IPS and nginx does not route it, so a 301 would only break the scrape.
-    SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^metrics/$", r"^api/v1/chat/hooks/new-message/$"]
+    # `/health/ready/` is the readiness probe (apps/core/health.py): same reasoning as `/health/`, and it answers
+    # only {"status": "ok" | "degraded"}.
+    SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^health/ready/$", r"^metrics/$", r"^api/v1/chat/hooks/new-message/$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
