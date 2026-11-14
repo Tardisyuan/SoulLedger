@@ -3,7 +3,7 @@
 import { localName } from "@soulledger/core/domain/localName";
 import { memo, useId } from "react";
 import { Permission, Role } from "@soulledger/core/api";
-import { ADMIN_ONLY_CODENAMES, ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids } from "@soulledger/core/api/perm";
+import { ADMIN_ONLY_CODENAMES, ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids, isAdminRole } from "@soulledger/core/api/perm";
 import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { roleLabel } from "@/src/lib/domainNames";
@@ -36,14 +36,14 @@ export type CellState = "on" | "off" | "grant" | "revoke" | "failed" | "conflict
 /** A cell the server decides by rule, whatever is ticked: 「始终」 for ADMIN, 「! 禁授」 for a forbidden grant.
  *  `held` = the role's codenames as ticked now (unsaved included), for the design-vs-approve rule. */
 export function ruleState(role: string, codename: string, held: ReadonlySet<string> = new Set()): "lock" | "deny" | null {
-  if (role === ADMIN_ROLE_NAME) return "lock";
+  if (isAdminRole(role)) return "lock";
   return denyReason(role, codename, held) ? "deny" : null;
 }
 
 /** Why the server refuses this grant — each reason has its own hint and refusal code. ADMIN is never refused. */
 export type DenyReason = "admin_only" | "role" | "capability";
 export function denyReason(role: string, codename: string, held: ReadonlySet<string> = new Set()): DenyReason | null {
-  if (role === ADMIN_ROLE_NAME) return null;
+  if (isAdminRole(role)) return null;
   if (ADMIN_ONLY_CODENAMES.includes(codename)) return "admin_only";
   if (ROLE_FORBIDDEN_CODENAMES[role]?.includes(codename)) return "role";
   return capabilityForbids(role, codename, held) ? "capability" : null;
@@ -458,7 +458,7 @@ function MatrixGroup({
             key={role}
             className="sticky top-14 z-20 border-l border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] px-2 text-center font-mono text-2xs text-[oklch(var(--color-ink-muted))]"
           >
-            {role === ADMIN_ROLE_NAME ? (
+            {isAdminRole(role) ? (
               t("filter.all")
             ) : (
               <>

@@ -42,6 +42,7 @@ import { useInitialUrlFilters, useUrlFilters, type UrlFieldRule } from "@/src/li
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { isAdminRole } from "@soulledger/core/api/perm";
 
 /**
  * The row `?username=` located: s2 底(选中行),**不加行首色标** —— 规范 v2 B12 把行首色标
@@ -437,8 +438,8 @@ function UsersRoute() {
                 primary={canManage ? { label: t("common.edit"), onSelect: () => setEditingUser(user) } : undefined}
                 items={[
                   ...(canManage && user.mfa?.enabled ? [{ key: "mfa", label: t("mfa.admin.reset"), onSelect: () => setResetMfaUser(user) }] : []),
-                  // 以此人身份查看(W6):只给系统管理员(ADMIN);另一位管理员、自己、停用与灵魂账号的行不出现。
-                  ...(isAdmin && user.role !== "ADMIN" && user.role !== "SOUL" && user.is_active && user.id !== myId
+                  // 以此人身份查看(W6):只给管理员(ADMIN / SYSTEM_ADMIN);另一位管理员、自己、停用与灵魂账号的行不出现。
+                  ...(isAdmin && !isAdminRole(user.role) && user.role !== "SOUL" && user.is_active && user.id !== myId
                     ? [{ key: "impersonate", label: t("admin.users.impersonate"), onSelect: () => setImpersonateUser(user) }]
                     : []),
                   // 自己的密码走「修改密码」:重置会把自己也退出去。

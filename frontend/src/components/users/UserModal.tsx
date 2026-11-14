@@ -16,6 +16,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
+import { SYSTEM_ADMIN_ROLE_NAME, isAdminRole } from "@soulledger/core/api/perm";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -139,7 +140,10 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const rolesQuery = useRoles({ enabled: isOpen });
   const roleOptions =
     rolesQuery.data && rolesQuery.data.length > 0
-      ? rolesQuery.data.map((r) => ({ value: r.name, label: roleLabel(t, r.name, r) }))
+      ? rolesQuery.data
+          // SYSTEM_ADMIN 由系统建,不给分配;编辑的正是系统管理员时留着当前值。
+          .filter((r) => r.name !== SYSTEM_ADMIN_ROLE_NAME || r.name === formData.role)
+          .map((r) => ({ value: r.name, label: roleLabel(t, r.name, r) }))
       : [{ value: formData.role ?? "VIEWER", label: roleLabel(t, formData.role ?? "VIEWER") }];
 
   /**
@@ -166,7 +170,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
    * 有殿的非管理员必须属于一个机构(数据范围按机构算)。缺省是殿根:`ROOT_` 开头的顶层机构;
    * 还没有根机构的殿(数据范围迁移之前)取排序最前的顶层机构。
    */
-  const orgRequired = userTenant != null && formData.role !== "ADMIN";
+  const orgRequired = userTenant != null && !isAdminRole(formData.role);
   const defaultOrg = useMemo(() => {
     const tops = tenantOrgs.filter((o) => o.parent == null).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
     return (tops.find((o) => o.code.startsWith("ROOT_")) ?? tops[0])?.id;

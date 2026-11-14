@@ -1,4 +1,5 @@
 import { Permission } from "@soulledger/core/api";
+import { isAdminRole } from "@soulledger/core/api/perm";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Pure helpers — no React/DOM dependency, re-exported from
@@ -88,7 +89,7 @@ export function findNonSubsetPair(
   grants: GrantMap,
   roleNames: string[]
 ): { a: string; b: string; aOnly: number[]; bOnly: number[] } | null {
-  const names = roleNames.filter((r) => r !== "ADMIN");
+  const names = roleNames.filter((r) => !isAdminRole(r));
   for (let i = 0; i < names.length; i++) {
     for (let j = i + 1; j < names.length; j++) {
       const a = names[i];
@@ -116,7 +117,7 @@ export function findCountParadox(
   grants: GrantMap,
   roleNames: string[]
 ): { higher: string; higherCount: number; lower: string; lowerCount: number; exclusiveToLower: number[] } | null {
-  const names = roleNames.filter((r) => r !== "ADMIN");
+  const names = roleNames.filter((r) => !isAdminRole(r));
   let best: { higher: string; higherCount: number; lower: string; lowerCount: number; exclusiveToLower: number[] } | null = null;
   for (const higher of names) {
     for (const lower of names) {

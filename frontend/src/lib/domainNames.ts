@@ -3,7 +3,7 @@ import { localName } from "@soulledger/core/domain/localName";
 
 type T = (key: string) => string;
 
-const BUILTIN_ROLES = new Set(["ADMIN", "MODERATOR", "JUDGE", "GUARDIAN", "VIEWER", "SOUL"]);
+const BUILTIN_ROLES = new Set(["SYSTEM_ADMIN", "ADMIN", "MODERATOR", "JUDGE", "GUARDIAN", "VIEWER", "SOUL"]);
 
 /**
  * 角色的名字。内置角色只读语言包(`users.roles.*`):库里的 `display_name` 是种子写的英文(「Moderator」),

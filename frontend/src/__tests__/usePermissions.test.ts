@@ -58,6 +58,15 @@ describe("usePermissions", () => {
     expect(result.current.hasPermission("any.permission")).toBe(true);
   });
 
+  it("SYSTEM_ADMIN passes every ADMIN gate: all codenames, isAdmin, and (no hall) exempt + global-only", () => {
+    mockUseTenant.mockReturnValue({ ...mockContext("SYSTEM_ADMIN"), tenantCode: null });
+    const { result } = renderHook(() => usePermissions());
+    expect(result.current.hasPermission("user.delete")).toBe(true);
+    expect(result.current.hasPermission("menu.manage")).toBe(true);
+    expect(result.current.isAdmin).toBe(true);
+    expect(result.current.isTenantExempt).toBe(true);
+  });
+
   it("JUDGE has specific permissions", () => {
     mockUseTenant.mockReturnValue(mockContext("JUDGE", ["soul.read", "judgment.execute"]));
     const { result } = renderHook(() => usePermissions());

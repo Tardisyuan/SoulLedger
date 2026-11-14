@@ -38,6 +38,7 @@ import { useInitialUrlFilters, useUrlFilters, type UrlFieldRule } from "@/src/li
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { AuditAskBox } from "@/src/components/audit/AuditAskBox";
 import { auditResourceLabel, datePresetStart, type DatePreset } from "@/src/components/audit/auditLabels";
+import { isAdminRole, isSystemAdminRole } from "@soulledger/core/domain/roles";
 
 /** 代看的两行摘要从 `changes` 按界面语言现拼(库里存的描述是 zh 固定句式)。其它动作返回 null。 */
 function impersonationSummary(g: AuditGroup, t: (key: string, params?: Record<string, string>) => string): string | null {
@@ -202,7 +203,8 @@ function AuditPageContent() {
   // (含绑了殿的 ADMIN)只看得到自己殿的行,后端对他们点别的殿的名答 403 —— 所以这里不是权限闸,
   // 只是不画一个选了也没用的控件。
   const { user, tenantCode } = useTenant();
-  const isGlobalAdmin = user?.role === "ADMIN" && tenantCode === null;
+  // 分殿 1A:无殿 ADMIN 收到的殿只有本文明各殿(服务端收窄),「不限」那一项说「本文明各殿」;系统管理员说「全部殿」。
+  const isGlobalAdmin = isAdminRole(user?.role) && tenantCode === null;
 
   const { values: fromUrl, page: urlPage } = useInitialUrlFilters(AUDIT_URL_FIELDS);
   const [page, setPage] = useState(urlPage);
@@ -542,7 +544,7 @@ function AuditPageContent() {
               label={t("audit.filter_hall")}
               value={hallFilter}
               options={[
-                { value: "", label: t("audit.all_halls") },
+                { value: "", label: t(isSystemAdminRole(user?.role) ? "audit.all_halls" : "audit.civilization_halls") },
                 ...halls.map((hall) => ({ value: hall.code, label: hallLabel(hall) })),
               ]}
               clearLabel={t("filter.clear_one", { name: t("audit.filter_hall") })}

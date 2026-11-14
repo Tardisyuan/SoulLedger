@@ -12,6 +12,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isAdminRole } from "@soulledger/core/api/perm";
 
 export const NOTIFICATION_PREFS_ANCHOR = "notifications";
 
@@ -56,7 +57,7 @@ export function NotificationPreferences({ hasAddress }: { hasAddress: boolean })
     onError: () => showToast(t("profile.profile_update_failed"), "error"),
   });
   const failure = status.data?.last_failure ?? null;
-  const categories = NOTIFICATION_CATEGORIES.filter((c) => c !== "password_help" || user?.role === "ADMIN");
+  const categories = NOTIFICATION_CATEGORIES.filter((c) => c !== "password_help" || isAdminRole(user?.role));
 
   return (
     <div

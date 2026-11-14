@@ -21,6 +21,7 @@ import { SensitiveWordsSection } from "@/src/components/moderation/SensitiveWord
 import { MutesSection } from "@/src/components/moderation/MutesSection";
 import { HandledSection } from "@/src/components/moderation/HandledSection";
 import { Segmented } from "@/src/components/ui/Segmented";
+import { ADMIN_ROLE_NAME } from "@soulledger/core/domain/roles";
 
 /*
  * 官员审核后台 /moderation:四区共用一个页头 —— 文明范围加分段切换
@@ -83,7 +84,10 @@ function ModerationPageContent() {
     handled: useHandledContent({}).data?.count,
   };
 
-  const scope = tenantLabel(t, user?.tenant, locale) || t("social_moderation.scope_all");
+  // 无殿的 ADMIN 分殿 1A 起只管本文明(服务端已收窄),不说「全部文明」;那只是系统管理员。
+  const scope =
+    tenantLabel(t, user?.tenant, locale) ||
+    t(user?.role === ADMIN_ROLE_NAME ? "social_moderation.scope_civilization" : "social_moderation.scope_all");
 
   return (
     <PageShell

@@ -8,7 +8,7 @@ import {
   type Role,
   type RoleDataScopeConfig,
 } from "@soulledger/core/api";
-import { ADMIN_ROLE_NAME } from "@soulledger/core/api/perm";
+import { isAdminRole } from "@soulledger/core/api/perm";
 import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useDataScopeResources, useRoleDataScope, useSaveRoleDataScope } from "@soulledger/core/hooks/useRoleDataScope";
@@ -31,7 +31,7 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
   const { showToast } = useToast();
   const { isTenantExempt } = usePermissions();
   const headingId = useId();
-  const fixed = role.name === ADMIN_ROLE_NAME;
+  const fixed = isAdminRole(role.name);
   const canEdit = !fixed && isTenantExempt;
 
   const config = useRoleDataScope(role.id, !fixed);

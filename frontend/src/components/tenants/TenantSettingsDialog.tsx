@@ -452,4 +452,4 @@ function MfaRoleRow({ row, checked, disabled, onChange }: { row: TenantMfaRoleRo
   );
 }
 
-const BUILTIN_ROLE_KEYS: Record<string, true> = { ADMIN: true, MODERATOR: true, JUDGE: true, GUARDIAN: true, VIEWER: true };
+const BUILTIN_ROLE_KEYS: Record<string, true> = { SYSTEM_ADMIN: true, ADMIN: true, MODERATOR: true, JUDGE: true, GUARDIAN: true, VIEWER: true };
