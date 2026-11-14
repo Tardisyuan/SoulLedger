@@ -61,6 +61,8 @@ const ROOTS = ["app", "src", "components"];
 /** Overlays that are not hand-rolled dialogs. Adding one needs a reason. */
 const ALLOWED: Record<string, string> = {
   "src/components/ui/Modal.tsx": "the primitive; `fixed inset-0` belongs here",
+  "src/components/judgment/SealReadback.tsx":
+    "落印前回读层(第四十六批第一节 8):遮罩是 Base UI Dialog.Backdrop、视口是 Dialog.Viewport —— 焦点圈、Esc、焦点归还来自原语",
   "src/components/ui/Drawer.tsx":
     "the right-drawer primitive (规范 v1 抽屉), on the same Base UI Dialog as Modal — focus trap, Escape and focus return come from the primitive",
   "src/components/settings/SettingsDrawer.tsx": "settings drawer scrim, keyboard handled by useDrawerA11y",

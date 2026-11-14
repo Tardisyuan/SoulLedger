@@ -118,6 +118,7 @@ export function CaseDesk() {
   // 落了印的(撤回窗口里、请求在路上、已结而摞还没重取):不在摞上;正在滑出的那一行还画着(`leaving`)。
   const [gone, setGone] = useState<readonly string[]>([]);
   const [leaving, setLeaving] = useState<string | null>(null);
+  const leaveTimer = useRef<number | undefined>(undefined);
   const groups = DESK_GROUPS.map((group) => {
     const g = desk.data?.groups.find((x) => x.group === group);
     const rows = g?.rows ?? [];
@@ -211,7 +212,8 @@ export function CaseDesk() {
     setGone((prev) => (prev.includes(v.id) ? prev : [...prev, v.id]));
     setLeaving(v.id);
     setSealNote(next ? t("caseDesk.verdict.announce", { name: v.name, next: nextName }) : t("caseDesk.verdict.announce_last", { name: v.name }));
-    window.setTimeout(
+    window.clearTimeout(leaveTimer.current);
+    leaveTimer.current = window.setTimeout(
       () => {
         setLeaving((x) => (x === v.id ? null : x));
         if (currentRef.current === v.id && next) select(next);
@@ -243,6 +245,8 @@ export function CaseDesk() {
   const undo = () => {
     const v = sealWindow.undo();
     if (!v) return;
+    // Undone mid-slide: the slide must not finish by moving the selection on to the next case.
+    window.clearTimeout(leaveTimer.current);
     setGone((prev) => prev.filter((x) => x !== v.id));
     setLeaving(null);
     setRestored(v);
