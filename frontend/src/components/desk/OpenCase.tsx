@@ -1,13 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { judgmentApi, type Judgment, type JudgmentQueueCounts, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
-import { soulsApi, type SoulRecordEntry } from "@soulledger/core/api/souls";
-import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
+import { dossiersApi, type DeskRow } from "@soulledger/core/api/dossiers";
+import type { JudgmentQueueCounts, JudgmentQueueGroup } from "@soulledger/core/api/judgment";
+import { judgmentKeys } from "@soulledger/core/query_keys";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatHistoricalDate, formatListDate, type HistoricalDate } from "@soulledger/core/domain/dates";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { usePermissions } from "@/src/hooks/usePermissions";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { PageHead } from "@/src/components/ui/PageShell";
@@ -15,25 +14,18 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
 import { deadlineText, deskTag, sourceLabel } from "./deskRules";
 import { DossierSpine } from "@/src/components/dossier/DossierSpine";
 import { MeritMark, SignedNumber } from "@/src/components/dossier/MeritMark";
-import { useSpineNow } from "@/src/components/dossier/useSpineNow";
+import { spineCivOf, type SpineNow } from "@/src/components/dossier/spineModel";
 import { dossierWhere } from "@/src/components/dossier/dossierWhere";
 import s from "./desk.module.css";
 
 type Action = { busy: boolean; run: () => void } | null;
 
-/** Newest first: the event date when there is one (BCE years are negative), else when it was recorded. */
-function recentRecords(records: readonly SoulRecordEntry[] | undefined, n = 3): SoulRecordEntry[] {
-  const key = (r: SoulRecordEntry) => {
-    const d = r.event_date;
-    return d ? d.year * 10_000 + (d.month ?? 0) * 100 + (d.day ?? 0) : Number.NEGATIVE_INFINITY;
-  };
-  return [...(records ?? [])].sort((a, b) => key(b) - key(a) || b.recorded_at.localeCompare(a.recorded_at)).slice(0, n);
-}
-
 /**
  * 摊开的一份(Design 第三十批 第 2 步 · 右):顶线 + 卷宗头(人名 h1 宋体 32/40,上面一行 mono 12 的案号 · 殿 · 入册日期),
  * 三个按钮,脊(第 3 步之前是占位,只定位置与高度 `--spine-h`),卷(本世 · 来源 · 功过 · 供词 · 期限 · 经手 + 最近三条记录,
- * 只读),右栏两张小卡,底下键位提示。读的是已有的详情:`GET /judgment/{id}/` 与 `GET /souls/{id}/`(与卷宗页同一把缓存键)。
+ * 只读),右栏两张小卡,底下键位提示。读一个请求:`GET /dossiers/{id}/` —— 案子、灵魂(连最近三条记录,服务端排好)、
+ * 灵魂此刻在脊上的哪一点(`whereabouts.spine`,服务端算;此前前端从 `court` 的自由文本里抠殿号,再另取 `/souls/{id}/path/`)。
+ * 看不到灵魂由服务端说(`soul_redacted`),不再由前端按权限猜。
  */
 export function OpenCase({
   row,
@@ -47,7 +39,7 @@ export function OpenCase({
   claim,
   release,
 }: {
-  row: Judgment;
+  row: DeskRow;
   group: JudgmentQueueGroup;
   position: { n: number; total: number };
   counts: JudgmentQueueCounts | null;
@@ -60,22 +52,17 @@ export function OpenCase({
 }) {
   const { t, locale } = useI18n();
   const day = (v: string | null | undefined) => formatListDate(v, locale, { time: false });
-  const { hasPermission } = usePermissions();
-  const detail = useQuery({ queryKey: judgmentKeys.detail(row.id), queryFn: async () => (await judgmentApi.get(row.id)).data });
-  const soul = useQuery({
-    queryKey: soulKeys.detail(row.soul),
-    queryFn: async () => (await soulsApi.get(row.soul)).data,
-    enabled: !!row.soul && hasPermission("soul.read"),
-  });
-  // The list row until the detail lands: the stack never shows a blank sheet while J is held down.
-  const j: Judgment = detail.data ?? row;
+  const dossier = useQuery({ queryKey: judgmentKeys.dossier(row.id), queryFn: async () => (await dossiersApi.get(row.id)).data });
+  const full = dossier.data?.judgment;
+  const so = dossier.data?.soul ?? null;
+  // The list row until the dossier lands: the stack never shows a blank sheet while J is held down.
+  const j = full ?? row;
   const tag = deskTag(t, j, group);
-  const entered = day(j.created_at);
+  const entered = day(full?.created_at);
   const court = courtLabel(t, j.court, locale);
   const hist = (d: HistoricalDate | null | undefined) => (d ? (formatHistoricalDate(d, locale) ?? "") : "");
 
   const life = (() => {
-    const so = soul.data;
     if (!so) return null;
     const born = so.birth_date
       ? so.origin_location
@@ -85,21 +72,15 @@ export function OpenCase({
     const died = so.death_date ? t("caseDesk.juan.died", { date: hist(so.death_date) }) : "";
     return [born, died].filter(Boolean).join(" · ") || null;
   })();
-  const soulUnread = soul.isError || !hasPermission("soul.read");
-  const merit = j.merit_score;
-  const demerit = j.demerit_score;
-  const net = j.karmic_balance ?? (merit != null && demerit != null ? merit - demerit : null);
-  const records = recentRecords(soul.data?.records);
-  const spine = useSpineNow({
-    soulId: soul.data ? row.soul : null,
-    civilization: j.civilization,
-    currentState: soul.data?.current_state,
-    diyuStation: soul.data?.diyu_station,
-    court: j.court,
-  });
+  const soulUnread = dossier.isError || !!dossier.data?.soul_redacted;
+  const merit = full?.merit_score;
+  const demerit = full?.demerit_score;
+  const net = full?.karmic_balance ?? (merit != null && demerit != null ? merit - demerit : null);
+  const records = so?.records ?? [];
+  const spine = { civ: spineCivOf(j.civilization), now: (dossier.data?.whereabouts?.spine ?? null) as SpineNow | null };
   /* 标签旁的「在哪」:站 · 界域 · 殿(第 3 步样张),与脊同一份数据。 */
-  const where = dossierWhere(t, spine.now, { diyuStation: soul.data?.diyu_station, court: j.court, locale });
-  const source = [sourceLabel(t, j), j.city_god_name].filter(Boolean).join(" · ");
+  const where = dossierWhere(t, spine.now, { diyuStation: so?.diyu_station, court: j.court, locale });
+  const source = [sourceLabel(t, j), full?.city_god_name].filter(Boolean).join(" · ");
 
   return (
     <>
@@ -112,7 +93,7 @@ export function OpenCase({
 
       <PageHead
         kind="dossier"
-        loading={detail.isPending}
+        loading={dossier.isPending}
         meta={[j.case_number, court, entered ? t("caseDesk.meta.entered", { date: entered }) : ""].filter(Boolean).join(" · ")}
         title={<span data-testid="desk-case-name">{j.soul_name}</span>}
         subtitle={
@@ -161,7 +142,7 @@ export function OpenCase({
         <div>
           <dl className={s.juan}>
             <JuanRow label={t("caseDesk.juan.life")}>
-              {life ?? (soulUnread ? t("caseDesk.juan.unreadable") : soul.isPending ? t("common.loading") : <MissingValue kind="unrecorded" />)}
+              {life ?? (soulUnread ? t("caseDesk.juan.unreadable") : dossier.isPending ? t("common.loading") : <MissingValue kind="unrecorded" />)}
             </JuanRow>
             <JuanRow label={t("caseDesk.juan.source")}>{source}</JuanRow>
             <JuanRow label={t("caseDesk.juan.merits")}>
@@ -182,12 +163,12 @@ export function OpenCase({
                 <MissingValue kind="unrecorded" />
               )}
             </JuanRow>
-            <JuanRow label={t("caseDesk.juan.confession")}>{j.confession?.trim() || t("caseDesk.juan.confession_none")}</JuanRow>
+            <JuanRow label={t("caseDesk.juan.confession")}>{full?.confession?.trim() || t("caseDesk.juan.confession_none")}</JuanRow>
             <JuanRow label={t("caseDesk.juan.deadline")}>{deadlineText(t, j)}</JuanRow>
             <JuanRow label={t("caseDesk.juan.handler")}>
               {j.claimed_by_name
-                ? j.claimed_at
-                  ? t("caseDesk.juan.claimed", { name: j.claimed_by_name, date: day(j.claimed_at) ?? "" })
+                ? full?.claimed_at
+                  ? t("caseDesk.juan.claimed", { name: j.claimed_by_name, date: day(full.claimed_at) ?? "" })
                   : j.claimed_by_name
                 : t("caseDesk.juan.unclaimed")}
             </JuanRow>
@@ -199,14 +180,14 @@ export function OpenCase({
               {records.map((r) => {
                 const merit = r.record_type === "MERIT";
                 return (
-                  <JuanRow key={r.id} label={r.event_date ? hist(r.event_date) : (day(r.recorded_at) ?? "")} num={<SignedNumber value={r.weight} sign={merit ? 1 : -1} />}>
+                  <JuanRow key={r.id} label={r.event_date ? hist(r.event_date) : (day(r.recorded_at) ?? "")} num={<SignedNumber value={r.weight ?? 0} sign={merit ? 1 : -1} />}>
                     <MeritMark civilization={j.civilization} kind={merit ? "merit" : "demerit"} /> {r.description}
                   </JuanRow>
                 );
               })}
             </dl>
           ) : (
-            <p className={s.juanKey}>{soulUnread ? t("caseDesk.juan.unreadable") : soul.data ? t("caseDesk.juan.recent_none") : t("common.loading")}</p>
+            <p className={s.juanKey}>{soulUnread ? t("caseDesk.juan.unreadable") : so ? t("caseDesk.juan.recent_none") : t("common.loading")}</p>
           )}
         </div>
 

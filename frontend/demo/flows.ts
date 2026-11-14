@@ -9,6 +9,7 @@
 import { aiRead, aiWrite } from "./aiReplay";
 import { inboxRead, inboxWrite, letterCounts } from "./inbox";
 import { tourOf } from "./tour";
+import { spineNow } from "@/src/components/dossier/spineModel";
 import {
   type Answer,
   type Recording,
@@ -125,6 +126,79 @@ function queueCounts(rec: Recording, query: URLSearchParams): Answer {
     returned: narrowed.filter((row) => returned.has(String(row.id))).length,
     sources,
     elsewhere: elsewhereOf(rec),
+  });
+}
+
+// ── Dossiers (backend/apps/judgment/dossier.py) ─────────────────────────────────────────────────────
+// Computed from what the recording already has (the judgment rows, their details, the soul and its path), so no
+// re-recording is needed. ponytail: `citations` is empty and `actions` is the desk's own rule — the desk reads neither.
+
+const DESK_ROWS = 20;
+
+/** `GET /dossiers/desk/`: the four groups' heads, the unfiltered counts, the month — the same numbers as the three
+ * endpoints it replaces, because it reads them through `queueCounts` and the recorded hall-stats. */
+function desk(rec: Recording, query: URLSearchParams): Answer {
+  const me = meOf(rec).id;
+  const source = query.get("source");
+  const counts = queueCounts(rec, qs()).data as Row;
+  const totals = source ? (queueCounts(rec, query).data as Row) : counts;
+  const open = judgmentsNow(rec)
+    .filter((row) => inQueue(row) && (!source || row.source === source))
+    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+  const groups = ["mine", "unclaimed", "others", "deferred"].map((group) => ({
+    group,
+    total: totals[group],
+    rows: open.filter((row) => groupOf(row, me) === group).slice(0, DESK_ROWS),
+  }));
+  const hall = read(rec, "/judgment/hall-stats/", qs()).data as Row | null;
+  return ok({ groups, counts, month_done_pct: (hall && !Array.isArray(hall) ? hall.month_done_pct : null) ?? null });
+}
+
+const eventKey = (r: Row) => {
+  const d = r.event_date as { year: number; month: number | null; day: number | null } | null | undefined;
+  return d ? d.year * 10_000 + (d.month ?? 0) * 100 + (d.day ?? 0) : Number.NEGATIVE_INFINITY;
+};
+
+/** `GET /dossiers/{id}/`: the case's recorded detail, its soul's (three newest records) and where the soul stands. */
+function dossier(rec: Recording, id: string): Answer {
+  const answer = detail(rec, "/judgment/", id);
+  if (answer.status !== 200) return answer;
+  const judgment = answer.data as Row;
+  const read1 = (path: string) => {
+    const data = read(rec, path, qs()).data;
+    return data && !Array.isArray(data) && (data as Row).id ? (data as Row) : null;
+  };
+  const soul = judgment.soul ? read1(`/souls/${judgment.soul}/`) : null;
+  const path = soul ? read(rec, `/souls/${soul.id}/path/`, qs()).data : null;
+  const stop = (Array.isArray(path) ? (path as Row[]) : []).find((s) => s.left_at === null);
+  const realmCode = (stop?.realm_code as string | undefined) ?? null;
+  const records = ([...((soul?.records as Row[] | undefined) ?? [])])
+    .sort((a, b) => eventKey(b) - eventKey(a) || String(b.recorded_at ?? "").localeCompare(String(a.recorded_at ?? "")))
+    .slice(0, 3);
+  const group = groupOf(judgment, meOf(rec).id);
+  const closed = judgment.verdict != null || !!judgment.is_final;
+  return ok({
+    id,
+    version: judgment.version ?? 0,
+    phase: closed ? "CLOSED" : judgment.deferred_at ? "DEFERRED" : judgment.claimed_by != null ? "HEARING" : "UNCLAIMED",
+    judgment,
+    citations: [],
+    soul: soul && { ...soul, records },
+    soul_redacted: !soul,
+    whereabouts: soul && {
+      hall: soul.tenant_code ?? null,
+      residing: !!soul.is_residing,
+      realm_code: realmCode,
+      since: stop?.entered_at ?? null,
+      spine: spineNow({
+        civilization: String(judgment.civilization ?? ""),
+        currentState: soul.current_state as string | undefined,
+        diyuStation: soul.diyu_station as string | undefined,
+        court: judgment.court as string | undefined,
+        realmCode,
+      }),
+    },
+    actions: { claim: !closed && group === "unclaimed", release: !closed && group === "mine", conclude: !closed && group === "mine", refusals: {} },
   });
 }
 
@@ -750,6 +824,9 @@ export function derived(rec: Recording, path: string, query: URLSearchParams): A
     if (answer) return answer;
   }
   if (path === "/judgment/next/" || path === "/judgment/previous/") return cursor(rec, path, query);
+  if (path === "/dossiers/desk/") return desk(rec, query);
+  const dossierOf = /^\/dossiers\/([^/]+)\/$/.exec(path);
+  if (dossierOf) return dossier(rec, dossierOf[1]);
   const inbox = inboxRead(rec, path, query);
   if (inbox) return inbox;
   // 待办的件数跟着这个世界走:录制时的数字是「这个账号本人待办」,而演示里这些事都归他。

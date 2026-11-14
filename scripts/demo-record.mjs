@@ -284,9 +284,19 @@ async function sweepWithParams(rec, access, login) {
   // 案卷台 (/desk) and 总簿 (/desk/overview): the counts by source and by civilization, and each group by source. The demo
   // derives these from the rows (`queueCounts` in flows.ts); recorded, they are what that derivation is checked against.
   // `hall-stats/?civilization=` is asked ahead of the server having it: until then it answers the whole hall.
+  // Since 2026-11-14 the desk itself reads `GET /dossiers/desk/` (and `/dossiers/{id}/`), which the demo also derives
+  // (`desk` / `dossier` in flows.ts) from the rows below — so the unfiltered lists, counts and hall-stats the desk no
+  // longer asks for are asked here, and the dossier answers are recorded to check the derivation against.
   const SOURCES = ["queue", "city_god", "cross"];
+  await getAll(rec, access, `${rec.api}/judgment/queue-counts/`);
+  await getAll(rec, access, `${rec.api}/judgment/hall-stats/`);
+  await getAll(rec, access, `${rec.api}/dossiers/desk/`);
+  for (const group of ["mine", "unclaimed", "others", "deferred"]) {
+    await getAll(rec, access, `${rec.api}/judgment/?group=${group}&ordering=created_at`);
+  }
   for (const source of SOURCES) {
     await getAll(rec, access, `${rec.api}/judgment/queue-counts/?source=${source}`);
+    await getAll(rec, access, `${rec.api}/dossiers/desk/?source=${source}`);
     for (const group of ["mine", "unclaimed", "others", "deferred"]) {
       await getAll(rec, access, `${rec.api}/judgment/?group=${group}&ordering=created_at&source=${source}`);
     }

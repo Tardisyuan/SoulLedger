@@ -1,10 +1,11 @@
 /**
- * 案卷台(Design 第三十批 第 2 步)的纯规则:来源、分组去重、行上的标签与第二行、概览行、来源 chip、
+ * 案卷台(Design 第三十批 第 2 步)的纯规则:来源、行上的标签与第二行、概览行、来源 chip、
  * 哪些按键算数。页面(`CaseDesk.tsx`)与测试(`caseDeskRules.test.ts`)都读这一份。
  *
  * 与官员端 `mobile-officer/src/screens/queue.tsx` 同一套规矩(那边是 393 的同一张台)。`deadlineText` /
  * `heldBeforeClaim` 是 `mobile-officer/src/verdict.ts` 的同名函数在网页的一份 —— 两个 App 不互相 import。
  */
+import type { DeskRow } from "@soulledger/core/api/dossiers";
 import type { Judgment, JudgmentElsewhereCounts, JudgmentQueueCounts, JudgmentQueueGroup, JudgmentQueueSource } from "@soulledger/core/api/judgment";
 import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import type { BadgeTone } from "@/src/components/ui/Badge";
@@ -50,7 +51,7 @@ export function deadlineText(t: T, j: Pick<Judgment, "deadline_remaining_seconds
  * 行的那一个标签:超期 > 退回重审 > 组自己的(待定;候审 / 到不了殿;他人认领;审判中 / 待宣判);否则写期限。
  * 字形与色调取第 1 步的 `DOSSIER_TAG`。`deadline`:标签已经写了期限,第二行不再重复。
  */
-export function deskTag(t: T, row: Judgment, group: JudgmentQueueGroup): { tone: BadgeTone; glyph: string; text: string; deadline: boolean } {
+export function deskTag(t: T, row: DeskRow, group: JudgmentQueueGroup): { tone: BadgeTone; glyph: string; text: string; deadline: boolean } {
   const s = row.deadline_remaining_seconds;
   if (group !== "deferred" && row.is_overdue && s != null && s < 0) {
     return { ...DOSSIER_TAG.overdue, text: t("officer_app.desk.tag.overdue", { n: String(Math.ceil(-s / DAY)) }), deadline: true };
@@ -65,7 +66,7 @@ export function deskTag(t: T, row: Judgment, group: JudgmentQueueGroup): { tone:
 }
 
 /** 第二行「来源 · 殿」之后的:期限(待定与标签已写时不写)、他人手上的持有人、滞留、枉死 / 入殿前与候至。 */
-export function rowNotes(t: T, row: Judgment, group: JudgmentQueueGroup, tagHasDeadline: boolean, day: (iso: string) => string): string[] {
+export function rowNotes(t: T, row: DeskRow, group: JudgmentQueueGroup, tagHasDeadline: boolean, day: (iso: string) => string): string[] {
   const held = isHeldUntilFatedDate(row) && row.held_until ? [t("judgment.held_until", { date: day(row.held_until) })] : [];
   return [
     ...(group === "deferred" || tagHasDeadline ? [] : [`${t("queue.col.deadline")} ${deadlineText(t, row)}`]),
@@ -90,15 +91,6 @@ export function overviewParts(t: T, onDesk: number | null, overdue: number | nul
 /** 今日 N 件 = 我认领 + 待定 + 待认领(他人手上的不在我台上)。 */
 export function onDeskCount(c: Pick<JudgmentQueueCounts, "mine" | "deferred" | "unclaimed"> | null | undefined): number | null {
   return c ? (c.mine ?? 0) + (c.deferred ?? 0) + (c.unclaimed ?? 0) : null;
-}
-
-/** 一件案子只在一组:重取时的竞态可能让它出现两次,先到的组留下。 */
-export function dedupeGroups<R extends { id: string }>(groups: { group: JudgmentQueueGroup; rows: R[] }[]): { group: JudgmentQueueGroup; rows: R[] }[] {
-  const seen = new Set<string>();
-  return groups.map(({ group, rows }) => ({
-    group,
-    rows: rows.filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true))),
-  }));
 }
 
 /** 搜索:姓名或案号里有这几个字(不分大小写)。 */

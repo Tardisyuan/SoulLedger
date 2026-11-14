@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { judgmentApi, type JudgmentQueueGroup, type JudgmentQueueSource } from "@soulledger/core/api/judgment";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { dossiersApi } from "@soulledger/core/api/dossiers";
+import { judgmentApi, type JudgmentQueueSource } from "@soulledger/core/api/judgment";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay } from "@soulledger/core/domain/dates";
@@ -16,7 +17,7 @@ import { Button } from "@/src/components/ui/Button";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { isTypingTarget, useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
-import { DESK_GROUPS, dedupeGroups, deskTag, heldBeforeClaim, matchesSearch, onDeskCount, overviewParts, rowNotes, sourceChips, sourceLabel, step } from "./deskRules";
+import { DESK_GROUPS, deskTag, heldBeforeClaim, matchesSearch, onDeskCount, overviewParts, rowNotes, sourceChips, sourceLabel, step } from "./deskRules";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { OpenCase } from "./OpenCase";
 import s from "./desk.module.css";
@@ -28,6 +29,9 @@ import s from "./desk.module.css";
  * 393:一栏;点开一件是整屏,「‹ 案卷台」回来,「第 n / N 件」。
  *
  * 与官员端 `mobile-officer/src/screens/queue.tsx` 同一套规矩;来源读服务端的 `source`(`deskRules.sourceOf`)。
+ *
+ * 摞读一个请求:`GET /dossiers/desk/`(四组头几件 + 计数 + 本月已结;此前是四个分组列表、两次 queue-counts 与 hall-stats)。
+ * 四组由服务端出自同一个快照、互斥,不再在前端去重。
  */
 const SHORTCUTS = [
   { key: "J · K", label: "caseDesk.keys.move" },
@@ -35,12 +39,6 @@ const SHORTCUTS = [
   { key: "C", label: "caseDesk.keys.claim" },
   { key: "/", label: "caseDesk.keys.search" },
 ] as const;
-
-const listParams = (group: JudgmentQueueGroup, source: JudgmentQueueSource | "all"): Record<string, string> => ({
-  group,
-  ordering: "created_at",
-  ...(source === "all" ? {} : { source }),
-});
 
 export function CaseDesk() {
   const { t, locale } = useI18n();
@@ -56,36 +54,27 @@ export function CaseDesk() {
   const searchRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef(new Map<string, HTMLButtonElement>());
 
-  // ponytail: 每组只取第一页(与审判队列同一页长);一组上百件时加「加载更多」。
-  const lists = useQueries({
-    queries: DESK_GROUPS.map((group) => ({
-      queryKey: judgmentKeys.list(listParams(group, source)),
-      queryFn: async () => (await judgmentApi.list(listParams(group, source))).data,
-    })),
+  // 换来源时留着上一屏(`keepPreviousData`):概览与 chip 用的是不筛的数,不该在重取时闪空。
+  const desk = useQuery({
+    queryKey: judgmentKeys.desk(source === "all" ? undefined : source),
+    queryFn: async () => (await dossiersApi.desk(source === "all" ? undefined : source)).data,
+    placeholderData: keepPreviousData,
   });
-  // 概览与 chip 用不筛的数(`sources` 本来就不随 `source` 变);组标题上的数跟着筛选走。
-  const allCounts = useQuery({ queryKey: judgmentKeys.queueCounts(), queryFn: async () => (await judgmentApi.queueCounts()).data });
-  const filteredCounts = useQuery({
-    queryKey: judgmentKeys.queueCounts({ source: source === "all" ? undefined : source }),
-    queryFn: async () => (await judgmentApi.queueCounts(source === "all" ? undefined : { source })).data,
-    enabled: source !== "all",
-  });
-  const groupCounts = source === "all" ? allCounts.data : filteredCounts.data;
-  // 与概览页(HallOverview)同一把键:本月已结的百分比是殿的数。
-  const stats = useQuery({ queryKey: [...judgmentKeys.all, "hall-stats"], queryFn: async () => (await judgmentApi.hallStats()).data });
+  const counts = desk.data?.counts ?? null;
+  const monthPct = desk.data?.month_done_pct ?? null;
 
-  const groups = dedupeGroups(DESK_GROUPS.map((group, i) => ({ group, rows: lists[i].data?.results ?? [] }))).map((g) => ({
-    ...g,
-    rows: g.rows.filter((r) => matchesSearch(r, query)),
-  }));
+  const groups = DESK_GROUPS.map((group) => {
+    const g = desk.data?.groups.find((x) => x.group === group);
+    return { group, total: g?.total ?? 0, rows: (g?.rows ?? []).filter((r) => matchesSearch(r, query)) };
+  });
   const flat = groups.flatMap((g) => g.rows.map((row) => ({ row, group: g.group })));
   const ids = flat.map((f) => f.row.id);
   const currentId = picked && ids.includes(picked) ? picked : (ids[0] ?? null);
   const current = flat.find((f) => f.row.id === currentId) ?? null;
   const position = current ? { n: ids.indexOf(current.row.id) + 1, total: ids.length } : null;
 
-  const loading = lists.some((l) => l.isPending);
-  const failed = lists.find((l) => l.isError);
+  const loading = desk.isPending;
+  const failed = desk.isError;
 
   const select = (id: string | null) => {
     if (!id) return;
@@ -129,8 +118,8 @@ export function CaseDesk() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const overview = overviewParts(t, onDeskCount(allCounts.data), allCounts.data?.overdue ?? null, stats.data?.month_done_pct ?? null);
-  const chips = sourceChips(t, allCounts.data);
+  const overview = overviewParts(t, onDeskCount(counts), counts?.overdue ?? null, monthPct);
+  const chips = sourceChips(t, counts);
   const day = (iso: string) => formatIsoDay(iso, locale);
   const announce = current && position ? `${t("officer_app.desk.position", { n: String(position.n), total: String(position.total) })} · ${current.row.soul_name}` : "";
 
@@ -198,10 +187,10 @@ export function CaseDesk() {
           </div>
         </div>
 
-        {failed && !lists.some((l) => l.data) ? (
+        {failed && !desk.data ? (
           <p className={s.note} role="alert">
             {t("caseDesk.load_failed")}{" "}
-            <Button size="sm" onClick={() => lists.forEach((l) => void l.refetch())}>
+            <Button size="sm" onClick={() => void desk.refetch()}>
               {t("common.retry")}
             </Button>
           </p>
@@ -216,12 +205,12 @@ export function CaseDesk() {
             )}
           </div>
         ) : (
-          groups.map(({ group, rows }) =>
+          groups.map(({ group, total, rows }) =>
             rows.length === 0 ? null : (
               <section key={group} data-testid={`desk-group-${group}`} aria-labelledby={`desk-group-${group}`}>
                 <h2 id={`desk-group-${group}`} data-h2-role="column" className={s.groupHead}>
                   <span>{t(`officer_app.desk.groups.${group}`)}</span>
-                  <span className={s.groupCount}>{String(query ? rows.length : (groupCounts?.[group] ?? rows.length))}</span>
+                  <span className={s.groupCount}>{String(query ? rows.length : total)}</span>
                 </h2>
                 <ul className={s.rows}>
                   {rows.map((row) => {
@@ -273,8 +262,8 @@ export function CaseDesk() {
             row={current.row}
             group={current.group}
             position={position}
-            counts={allCounts.data ?? null}
-            monthPct={stats.data?.month_done_pct ?? null}
+            counts={counts}
+            monthPct={monthPct}
             onBack={() => setPhoneOpen(false)}
             onNext={() => select(step(ids, currentId, 1))}
             onOpen={() => open(current.row.id)}

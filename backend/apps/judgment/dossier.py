@@ -9,8 +9,9 @@
   同一个 `judgment.read`);嵌入的灵魂走 `SoulViewSet` 的 queryset 与 `soul.read`,和 `GET /souls/{id}/` 同一个答案,
   看不到就是 `soul: null, soul_redacted: true`。
 - `actions` 读 `claims.allowed_actions`,与认领 / 释放 / 结案同一组断言。
-- `whereabouts.spine` 是脊上的点的唯一算法(此前前端 `spineModel.ts::spineNow` 用正则从 `court` 里抠殿号,
-  2026-11-14 删了,案台与卷宗页都读这里)。
+- `whereabouts.spine` 是前端 `frontend/src/components/dossier/spineModel.ts::spineNow` 的移植,形状逐字段相同。
+  案台(2026-11-14 起)读这里;审判台、灵魂页与演示的替身(`frontend/demo/flows.ts::dossier`)仍用前端那份,
+  两份改一份要改两处。
 - `GET /dossiers/desk/`(`desk`):案台一屏 —— 四组头几件 + 计数 + 本月已结,一个请求替掉此前的六个。
 """
 import hashlib
