@@ -75,13 +75,14 @@
 .linkChip {
   display: none;
 }
+/* 筛选签(设计参照 §6,用户 2026-11-15 采纳):方签圆角 4(此前 14 的胶囊),选中墨底、纸色字。 */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 14px;
+  border-radius: var(--radius-control);
   border: 1px solid oklch(var(--color-line));
   background: transparent;
   color: oklch(var(--color-ink-muted));
@@ -95,7 +96,11 @@
 }
 .chip[aria-pressed="true"] {
   border-color: oklch(var(--color-ink));
-  color: oklch(var(--color-ink));
+  background: oklch(var(--color-ink));
+  color: oklch(var(--color-canvas));
+}
+.chip[aria-pressed="true"] .chipCount {
+  color: inherit;
 }
 .chipCount {
   font-family: var(--font-mono);
