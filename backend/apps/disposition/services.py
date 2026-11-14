@@ -5,7 +5,8 @@ Routes to the correct realm based on civilization and verdict.
 from apps.disposition.models import Disposition, MemoryResetMechanism
 from apps.judgment.models import OFFENCE_COURT, GreekCurability, Judgment, JudgmentMethod, Verdict, case_civilization
 from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
-from apps.souls.models import Civilization, Soul
+from apps.realms.cosmology import COSMOLOGY
+from apps.souls.models import Soul
 
 
 class _TransitionRefusedError(Exception):
@@ -274,47 +275,10 @@ class DispositionService:
             )
         karma = admitted["karma"] if admitted else soul.karmic_balance
 
-        if civilization == Civilization.CHINESE:
-            # 「功過有不可折者」 reaches the router here, and only here.
-            #
-            # `karma` is merit minus demerit over one undifferentiated pool, so
-            # a hundred hundred-cash alms cancel a killing in it exactly. That
-            # arithmetic is still what `karmic_balance` means everywhere else in
-            # this system (it is a column expression that querysets sort and
-            # filter on — see apps/souls/querysets.py), so it is not redefined;
-            # what changes is which number sentences a Chinese soul.
-            #
-            # Computed only for FAILED, because that is the only branch that
-            # consumes a severity figure and computing one walks the soul's
-            # whole record set. A PASSED soul goes to heaven regardless and a
-            # PURGATORY/RETRY soul waits regardless; neither should pay for a
-            # ledger read to be told so.
-            if verdict != Verdict.FAILED:
-                unoffset_demerit = None
-            elif admitted:
-                unoffset_demerit = admitted["unoffset_demerit"]
-            else:
-                unoffset_demerit = LedgerService.get_unoffset_demerit(soul)
-            return cls._route_chinese(soul, verdict, karma, unoffset_demerit,
-                                      offence=judgment.offence if judgment is not None else "")
-        elif civilization == Civilization.EUROPEAN:
-            # `karma` is deliberately not passed. European culpa is the demerit
-            # total alone (apps/ledger/readings.py::_european_reading), so the
-            # net balance is not merely unused here — handing it over is what
-            # let a hundred alms buy a killing down to circle 1.
-            if admitted:
-                return cls._route_european(soul, verdict, admitted["demerit"], excluded=admitted["excluded"])
-            return cls._route_european(soul, verdict, soul.demerit_score)
-        elif civilization == Civilization.EGYPTIAN:
-            return cls._route_egyptian(soul, verdict, judgment_method, karma)
-        elif civilization == Civilization.GREEK:
-            # No ledger figure is passed, and the omission is the argument. The
-            # other three branches each hand their router a number because each
-            # of those cosmologies grades an outcome once the verdict has fixed
-            # it — a court, a circle, a threshold. Plato's fork has nothing to
-            # grade: two roads, no depth. See `_route_greek`.
-            return cls._route_greek(soul, verdict)
-        else:
+        # Which router a cosmology uses is registered in `apps.realms.cosmology.COSMOLOGY` (`route`);
+        # the four `_route_case_*` below prepare each one's ledger inputs, as the if/elif chain here did.
+        policy = COSMOLOGY.get(civilization)
+        if policy is None:
             # No cosmology, so no realm. This branch is reached when the
             # soul's tenant code is not in TENANT_CIVILIZATION — see
             # UNKNOWN_CIVILIZATION in apps/souls/models.py.
@@ -333,6 +297,55 @@ class DispositionService:
             # where the soul goes is not answerable until someone configures
             # the tenant.
             return ""
+        return policy.route(soul, verdict, judgment_method, judgment, admitted, karma)
+
+    @classmethod
+    def _route_case_chinese(cls, soul, verdict, judgment_method, judgment, admitted, karma) -> str:
+        # 「功過有不可折者」 reaches the router here, and only here.
+        #
+        # `karma` is merit minus demerit over one undifferentiated pool, so
+        # a hundred hundred-cash alms cancel a killing in it exactly. That
+        # arithmetic is still what `karmic_balance` means everywhere else in
+        # this system (it is a column expression that querysets sort and
+        # filter on — see apps/souls/querysets.py), so it is not redefined;
+        # what changes is which number sentences a Chinese soul.
+        #
+        # Computed only for FAILED, because that is the only branch that
+        # consumes a severity figure and computing one walks the soul's
+        # whole record set. A PASSED soul goes to heaven regardless and a
+        # PURGATORY/RETRY soul waits regardless; neither should pay for a
+        # ledger read to be told so.
+        if verdict != Verdict.FAILED:
+            unoffset_demerit = None
+        elif admitted:
+            unoffset_demerit = admitted["unoffset_demerit"]
+        else:
+            unoffset_demerit = LedgerService.get_unoffset_demerit(soul)
+        return cls._route_chinese(soul, verdict, karma, unoffset_demerit,
+                                  offence=judgment.offence if judgment is not None else "")
+
+    @classmethod
+    def _route_case_european(cls, soul, verdict, judgment_method, judgment, admitted, karma) -> str:
+        # `karma` is deliberately not passed. European culpa is the demerit
+        # total alone (apps/ledger/readings.py::_european_reading), so the
+        # net balance is not merely unused here — handing it over is what
+        # let a hundred alms buy a killing down to circle 1.
+        if admitted:
+            return cls._route_european(soul, verdict, admitted["demerit"], excluded=admitted["excluded"])
+        return cls._route_european(soul, verdict, soul.demerit_score)
+
+    @classmethod
+    def _route_case_egyptian(cls, soul, verdict, judgment_method, judgment, admitted, karma) -> str:
+        return cls._route_egyptian(soul, verdict, judgment_method, karma)
+
+    @classmethod
+    def _route_case_greek(cls, soul, verdict, judgment_method, judgment, admitted, karma) -> str:
+        # No ledger figure is passed, and the omission is the argument. The
+        # other three routers are each handed a number because each of
+        # those cosmologies grades an outcome once the verdict has fixed
+        # it — a court, a circle, a threshold. Plato's fork has nothing to
+        # grade: two roads, no depth. See `_route_greek`.
+        return cls._route_greek(soul, verdict)
 
     @classmethod
     def _route_chinese(

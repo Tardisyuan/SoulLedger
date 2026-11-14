@@ -12,6 +12,7 @@ from django.utils import timezone
 from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
 from apps.judgment import snapshot
+from apps.realms.cosmology import ACQUIT_TO_REBIRTH, REHEAR, outcome_of
 from apps.souls.models import Civilization, Soul
 from apps.tenants.managers import TenantManager
 
@@ -33,10 +34,10 @@ def hears_again(civilization, verdict) -> bool:
     * 希腊的 PURGATORY 也是去处(2026-11-11 用户定,docs/04 §三 三分):普通亡灵去阿斯福得草原
       (`DispositionService._route_greek`)。此前它与 RETRY 一样留在草地上重审。
 
-    重开审判与申诉改判本身就是「再审」,所以在那里这些裁决被拒绝(`sentence_plan.requests._refuse_undecided`)。"""
-    if verdict == Verdict.RETRY:
-        return True
-    return verdict == Verdict.PURGATORY and civilization not in ("EUROPEAN", "GREEK")
+    重开审判与申诉改判本身就是「再审」,所以在那里这些裁决被拒绝(`sentence_plan.requests._refuse_undecided`)。
+
+    哪个文明的 PURGATORY 是再审,登记在 `apps.realms.cosmology.COSMOLOGY` 的 `outcome`。"""
+    return outcome_of(civilization, verdict) == REHEAR
 
 
 def acquitted_to_rebirth(civilization, verdict) -> bool:
@@ -44,8 +45,10 @@ def acquitted_to_rebirth(civilization, verdict) -> bool:
 
     docs/11 §3.1 第六步「无罪 → 直接投胎」;docs/05 §2.1「第一殿初判 · 善人 → 直接批准投胎」;
     §3.3「善人径投」(《玉历》一殿)。此前 PASSED 去 `DY_01_HEAVEN`,种子把它标成永久(`is_eternal=True`),
-    执行后灵魂成了 SETTLED,永不转世 —— 与这三处都相反。souls/0051 回填了那批灵魂。"""
-    return verdict == Verdict.PASSED and civilization == "CHINESE"
+    执行后灵魂成了 SETTLED,永不转世 —— 与这三处都相反。souls/0051 回填了那批灵魂。
+
+    哪个文明判无罪即候转世,登记在 `apps.realms.cosmology.COSMOLOGY` 的 `outcome`。"""
+    return outcome_of(civilization, verdict) == ACQUIT_TO_REBIRTH
 
 
 def case_civilization(judgment) -> str:
