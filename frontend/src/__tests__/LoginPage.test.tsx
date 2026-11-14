@@ -57,8 +57,12 @@ const CIV_ROWS = [
 
 /** The server's limiter, read from where it is defined — the page's sentences must say these numbers. */
 const VIEWS = readFileSync(path.join(__dirname, "../../../backend/apps/authentication/views.py"), "utf8");
-const MAX_ATTEMPTS = Number(/^LOGIN_MAX_ATTEMPTS = (\d+)$/m.exec(VIEWS)?.[1]);
 const WINDOW_MINUTES = Number(/^LOGIN_WINDOW_SECONDS = (\d+)$/m.exec(VIEWS)?.[1]) / 60;
+/** The per-username delays (seconds). 「最长 m 分钟」 is only true while none of them is longer than the IP window. */
+const USERNAME_DELAYS = (/^LOGIN_USERNAME_DELAYS = \(([\d, ]+)\)$/m.exec(VIEWS)?.[1] ?? "")
+  .split(",")
+  .map((s) => Number(s.trim()))
+  .filter((n) => n > 0);
 
 const account = () => screen.getByLabelText(/auth\.account/) as HTMLInputElement;
 const password = () => screen.getByLabelText(/auth\.password/) as HTMLInputElement;
@@ -80,8 +84,9 @@ beforeEach(() => {
 
 describe("LoginPage · failure states (A9 §二「状态」)", () => {
   it("credentials: one line in danger, tries left in muted, password cleared, account kept, fields not red", async () => {
-    expect(MAX_ATTEMPTS).toBeGreaterThan(0);
     expect(WINDOW_MINUTES).toBeGreaterThan(0);
+    expect(USERNAME_DELAYS).toEqual([60, 300, 900]);
+    expect(Math.max(...USERNAME_DELAYS) / 60).toBeLessThanOrEqual(WINDOW_MINUTES);
     mockedLogin.mockRejectedValue({
       response: { status: 401, data: { detail: "No active account found with the given credentials", remaining_attempts: 3 } },
     });
@@ -127,7 +132,8 @@ describe("LoginPage · failure states (A9 §二「状态」)", () => {
     const [title, body] = Array.from(alert.querySelectorAll("p"));
     expect(title).toHaveTextContent("◐ auth.error_locked_title");
     expect(title.className).not.toContain("--color-danger");
-    expect(body).toHaveTextContent(`auth.error_locked_body(${MAX_ATTEMPTS},T${now + 601_000})`);
+    // Only the time: no count of tries (which layer tripped is not the page's to say) and no unlock to ask for.
+    expect(body).toHaveTextContent(`auth.error_locked_body(T${now + 601_000})`);
     expect(password()).toBeDisabled();
     expect(submitButton()).toBeDisabled();
     spy.mockRestore();

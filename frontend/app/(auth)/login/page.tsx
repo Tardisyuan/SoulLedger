@@ -40,9 +40,9 @@ import { responseCode, responseData, responseStatus, fetchFailureOf } from "@sou
  *   address is verified. The older "notify the administrator" form (`PasswordHelp`, below) is still
  *   here for everyone else, reached from that page as `/login?help=1`.
  * - The three failure states (A9 §二「状态」): `LoginView` counts failures per IP
- *   (`LOGIN_MAX_ATTEMPTS` / `LOGIN_WINDOW_SECONDS` in backend/apps/authentication/views.py) and
- *   returns `remaining_attempts` on a 401; a lockout is a 429 with `code: "login_locked"` and
- *   `retry_after`; no response at all (or a 5xx) is 「连不上服务器」 with a retry.
+ *   (`LOGIN_MAX_ATTEMPTS` / `LOGIN_WINDOW_SECONDS` in backend/apps/authentication/views.py) and per
+ *   username (`LOGIN_USERNAME_DELAYS`), and returns `remaining_attempts` on a 401; a wait from either
+ *   layer is a 429 with `code: "login_locked"` and `retry_after`; no response at all (or a 5xx) is 「连不上服务器」 with a retry.
  * - 两步验证(A12):a 200 with `mfa_required` carries no tokens. The pending token goes to
  *   `sessionStorage` (`src/lib/mfaPending.ts`) and the page hands over to `/login/verify`, which
  *   wears the same shell (`src/components/auth/LoginShell.tsx` — the two-column skeleton, the
@@ -55,11 +55,13 @@ const LAST_TENANT_KEY = "soulledger_last_tenant";
 const REMEMBER_DAYS = 30;
 
 /**
- * The server's limiter, for the two sentences that name it (「还可以再试 n 次,之后账号锁定 m 分钟」,
- * 「连续输错 n 次」). The API does not send them; LoginPage.test.tsx reads views.py and holds the rendered numbers
- * to it, so a change there goes red here instead of leaving the page saying the old numbers.
+ * The server's limiter, for the sentence that names it (「还可以再试 n 次,之后要等一会儿才能再试,最长 m 分钟」).
+ * m is the longest wait either layer sets: the per-IP window, which the per-username delay (1 / 5 / 15 minutes)
+ * never exceeds. The API does not send it; LoginPage.test.tsx reads views.py and holds the rendered number
+ * to it, so a change there goes red here instead of leaving the page saying the old number.
+ * There is no unlock: the locked notice says only when to try again (2026-11-15).
  */
-const LOGIN_LIMIT = { attempts: 5, windowMinutes: 15 } as const;
+const LOGIN_LIMIT = { windowMinutes: 15 } as const;
 
 type LoginFailure =
   | { kind: "credentials"; remaining: number | null }
@@ -325,7 +327,6 @@ function PasswordLogin() {
             </p>
             <p className="mt-1 text-xs text-[oklch(var(--color-ink-muted))]">
               {t("auth.error_locked_body", {
-                n: String(LOGIN_LIMIT.attempts),
                 time: formatDate(failure.until, { hour: "2-digit", minute: "2-digit" }),
               })}
             </p>
