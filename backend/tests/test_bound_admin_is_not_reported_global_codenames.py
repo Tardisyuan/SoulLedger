@@ -22,7 +22,7 @@ pytestmark = pytest.mark.django_db
 def admins():
     tenant = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})[0]
     bound = User.objects.create_user(username="ga_bound", password="x", role="ADMIN", tenant=tenant)
-    hallless = User.objects.create_user(username="ga_global", password="x", role="ADMIN", tenant=None)
+    hallless = User.objects.create_user(username="ga_global", password="x", role="SYSTEM_ADMIN", tenant=None)
     return bound, hallless
 
 

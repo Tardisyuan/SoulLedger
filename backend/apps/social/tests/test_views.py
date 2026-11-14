@@ -649,7 +649,7 @@ class TestUserProfileTenantIsolation:
             username="upiforeign", password="test123", role="VIEWER", tenant=self.tenant_b,
         )
         self.admin = User.objects.create_user(
-            username="upiadmin", password="test123", role="ADMIN", tenant=None,
+            username="upiadmin", password="test123", role="SYSTEM_ADMIN", tenant=None,
         )
         self.profile = UserProfile.objects.create(user=self.user, bio="Home bio")
         self.foreign_profile = UserProfile.objects.create(user=self.foreign, bio="Foreign bio")

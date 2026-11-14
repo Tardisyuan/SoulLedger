@@ -30,7 +30,7 @@ def role():
 
 
 def test_a_partial_save_writes_the_three_bookkeeping_fields(role):
-    editor = User.objects.create_user(username="ps_editor", password="x", role="ADMIN")
+    editor = User.objects.create_user(username="ps_editor", password="x", role="SYSTEM_ADMIN")
     before = _row(role)
     role.description = "new"
     set_current_user(editor)

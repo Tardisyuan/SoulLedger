@@ -26,7 +26,7 @@ class TestTenantAPI:
         """Tenant list returns all 3 tenants."""
         client = APIClient()
         user = django_user_model.objects.create_user(
-            username="admin", password="test", role="ADMIN"
+            username="admin", password="test", role="SYSTEM_ADMIN"
         )
         client.force_authenticate(user=user)
         resp = client.get("/api/v1/tenants/")
@@ -38,7 +38,7 @@ class TestTenantAPI:
         """GET /tenants/CN_DIYU/ returns single tenant."""
         client = APIClient()
         user = django_user_model.objects.create_user(
-            username="admin2", password="test", role="ADMIN"
+            username="admin2", password="test", role="SYSTEM_ADMIN"
         )
         client.force_authenticate(user=user)
         resp = client.get("/api/v1/tenants/CN_DIYU/")

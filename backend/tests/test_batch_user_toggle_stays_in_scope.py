@@ -31,8 +31,8 @@ def _client_for(user):
 
 @pytest.fixture
 def people(db, cn_tenant):
-    caller = User.objects.create_user(username="bp17_caller", password="x", role="ADMIN", tenant=None)
-    other_admin = User.objects.create_user(username="bp17_other_admin", password="x", role="ADMIN", tenant=None)
+    caller = User.objects.create_user(username="bp17_caller", password="x", role="SYSTEM_ADMIN", tenant=None)
+    other_admin = User.objects.create_user(username="bp17_other_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     member = User.objects.create_user(username="bp17_member", password="x", role="VIEWER", tenant=cn_tenant)
     return caller, other_admin, member
 

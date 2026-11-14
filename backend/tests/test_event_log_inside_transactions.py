@@ -364,7 +364,7 @@ def _duat_passage(old, new):
                 "civilization": "EGYPTIAN", "name_local": code, "realm_type": "HEAVEN"})
         soul = Soul.objects.create(name="Ka", tenant=tenant, current_state=SoulState.ALIVE, duat_passage=old)
         case = soul.die(death_date=datetime.date.today() - datetime.timedelta(days=10))
-        admin = User.objects.get_or_create(username="evlog_admin", defaults={"role": "ADMIN", "is_staff": True,
+        admin = User.objects.get_or_create(username="evlog_admin", defaults={"role": "SYSTEM_ADMIN", "is_staff": True,
                                                                              "is_superuser": True})[0]
 
         def run():

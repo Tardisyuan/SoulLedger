@@ -30,7 +30,7 @@ def global_admin_client(db, django_user_model):
 
     client = APIClient()
     client.force_authenticate(user=django_user_model.objects.create_user(
-        username="audit_global", password="admin123", role="ADMIN", tenant=None))
+        username="audit_global", password="admin123", role="SYSTEM_ADMIN", tenant=None))
     return client
 
 

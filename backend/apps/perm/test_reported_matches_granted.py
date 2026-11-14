@@ -343,7 +343,7 @@ class ReportedPermissionsStayFreshTest(TestCase):
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
         seeded_grants()  # roles and their grants: a transactional test before this one truncated them
-        self.admin = User.objects.create_user(username="fresh_admin", password="x", role="ADMIN")
+        self.admin = User.objects.create_user(username="fresh_admin", password="x", role="SYSTEM_ADMIN")
         self.viewer = User.objects.create_user(username="fresh_viewer", password="x", role="VIEWER")
 
     def test_a_grant_assigned_to_a_role_with_no_grants_is_visible_immediately(self):

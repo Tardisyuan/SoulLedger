@@ -49,7 +49,7 @@ def assistant_on(settings):
 
 @pytest.fixture
 def admin(cn_tenant):
-    return User.objects.create_user(username="yama", password="x", role="ADMIN", tenant=None)
+    return User.objects.create_user(username="yama", password="x", role="SYSTEM_ADMIN", tenant=None)
 
 
 @pytest.fixture
@@ -458,7 +458,7 @@ def test_a_run_needs_the_previews_token_once_and_from_the_same_admin(api, cn_ten
     preview = api.post(f"{BASE}eval/preview/", {"side": "soul", "candidates": [{}, {"model": "cand-b"}]},
                        format="json").data
     assert preview["problems"] == [] and preview["asks"] == 2 and preview["estimated_cost"] > 0
-    other = officer_client(User.objects.create_user(username="yama2", password="x", role="ADMIN"))
+    other = officer_client(User.objects.create_user(username="yama2", password="x", role="SYSTEM_ADMIN"))
     assert other.post(f"{BASE}eval/runs/", {"confirm_token": preview["confirm_token"]},
                       format="json").data["code"] == "invalid_confirm_token"
     started = api.post(f"{BASE}eval/runs/", {"confirm_token": preview["confirm_token"]}, format="json")

@@ -232,7 +232,7 @@ def test_a_new_disposition_carries_out_its_own_souls_judgment(cn, mod):
 
 
 def test_a_hall_less_admin_files_in_the_souls_hall(eu):
-    admin = User.objects.create_user(username="be1_global", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="be1_global", password="x", role="SYSTEM_ADMIN", tenant=None)
     soul = Soul.objects.create(name="Anima", tenant=eu, current_state=SoulState.JUDGING)
     client = officer_client(admin)
     created = client.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json")

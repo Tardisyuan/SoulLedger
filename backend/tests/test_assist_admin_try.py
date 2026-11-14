@@ -46,7 +46,7 @@ def assistant_on(settings, monkeypatch):
 
 @pytest.fixture
 def admin(cn_tenant):
-    return User.objects.create_user(username="yama", password="x", role="ADMIN", tenant=None)
+    return User.objects.create_user(username="yama", password="x", role="SYSTEM_ADMIN", tenant=None)
 
 
 @pytest.fixture

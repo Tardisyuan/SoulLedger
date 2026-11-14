@@ -357,7 +357,7 @@ class TestExternalApiKeyPermissions:
         """RBAC 严查 2026-10-29 L3:无殿 ADMIN 没进殿时建 key 是 IntegrityError 500;现在 400 `no_tenant`。"""
         from rest_framework_simplejwt.tokens import RefreshToken
 
-        root = User.objects.create_user(username="eakroot", password="test123", role="ADMIN", tenant=None)
+        root = User.objects.create_user(username="eakroot", password="test123", role="SYSTEM_ADMIN", tenant=None)
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(root).access_token}")
         resp = client.post("/api/v1/death-sync/api-keys/",
@@ -426,7 +426,7 @@ class TestExternalApiKeyQuerysetScoping:
         assert list(qs) == [self.cn_key]
 
     def test_admin_queryset_sees_every_tenant(self):
-        qs = self._queryset_for("ADMIN", self.cn_tenant)
+        qs = self._queryset_for("SYSTEM_ADMIN", self.cn_tenant)
         assert set(qs) == {self.cn_key, self.eu_key}
 
 

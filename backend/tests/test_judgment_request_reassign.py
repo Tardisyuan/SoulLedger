@@ -7,6 +7,7 @@
 import time
 
 import pytest
+from django.conf import settings
 from rest_framework.test import APIClient
 
 from apps.authentication.models import User
@@ -68,11 +69,12 @@ class TestRecipients:
         assert too_long.status_code == 400
 
     def test_no_admin_in_the_tenant_falls_back_to_the_global_admins(self, world):  # noqa: F811
-        User.objects.create_user(username="rr_only_global", password="x", role="ADMIN", tenant=None)
+        User.objects.create_user(username="rr_only_global", password="x", role="SYSTEM_ADMIN", tenant=None)
         User.objects.create_user(username="rr_eu_only", password="x", role="ADMIN", tenant=world.eu)
         response = _ask(world.clients["mod"], _case(world.cn))
-        assert response.data == {"notified": 1}
-        assert _notified() == ["rr_only_global"]
+        # The control database's own system administrator (authentication/0030) is a global admin too.
+        assert response.data == {"notified": 2}
+        assert _notified() == sorted(["rr_only_global", settings.SYSTEM_ADMIN_USERNAME])
 
     def test_an_admin_asking_is_not_their_own_recipient(self, admins):
         me = admins.users["cn_admin"]

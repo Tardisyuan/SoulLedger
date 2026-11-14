@@ -62,7 +62,7 @@ class TestTenantPermissionCrossCheck:
         """ADMIN is the codebase's one intentionally global-scope role
         (see apps/authentication/views.py's UserViewSet.get_queryset
         docstring) — a mismatched or absent tenant must not block it."""
-        admin = User.objects.create_user(username="tpx_admin", password="x", role="ADMIN", tenant=None)
+        admin = User.objects.create_user(username="tpx_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
         request = self._request(admin, self.tenant_b)
         assert self.permission.has_permission(request, None) is True
 
@@ -144,7 +144,7 @@ class TestTenantPermissionCrossCheck:
         obj.tenant = self.tenant_b
 
         admin = User.objects.create_user(
-            username="tpx_obj_admin", password="x", role="ADMIN", tenant=None  # the hall-less ADMIN: only it is global (2026-10-29)
+            username="tpx_obj_admin", password="x", role="SYSTEM_ADMIN", tenant=None  # the hall-less ADMIN: only it is global (2026-10-29)
         )
         request = self._request(admin, self.tenant_a)
         assert self.permission.has_object_permission(request, None, obj) is True
@@ -171,9 +171,12 @@ class TestTenantPermissionCrossCheck:
         bound_admin = User.objects.create_user(username="tpx_count_bound", password="x", role="ADMIN",
                                                tenant=self.tenant_a)
         assert not self.permission.has_permission(self._request(bound_admin, self.tenant_b), None)
-        assert bypassing == [UserRole.ADMIN], (
-            f"roles bypassing the tenant cross-check: {bypassing}. "
-            f"Exactly one role is meant to be globally scoped."
+        # 2026-11-15 (§7.5): SYSTEM_ADMIN is global; a hall-less ADMIN is a civilization administrator, which
+        # passes this class-level check because it has no hall to cross-check -- its rows are narrowed to its
+        # civilization by scope_to_tenant and by has_object_permission (tests/test_admin_is_civilization_scoped.py).
+        assert bypassing == [UserRole.ADMIN, UserRole.SYSTEM_ADMIN], (
+            f"roles passing the tenant cross-check without a hall: {bypassing}. "
+            f"Only SYSTEM_ADMIN is global, and only the civilization ADMIN is scoped another way."
         )
 
 

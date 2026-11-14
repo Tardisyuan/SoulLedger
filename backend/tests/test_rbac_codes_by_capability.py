@@ -59,7 +59,7 @@ def world(db):
     other, _ = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "杜阿特"})
     for name in UserRole.values:
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
-    admin = User.objects.create_user(username="cap_admin", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="cap_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     yield SimpleNamespace(hall=hall, other=other, admin=admin, client=sign_in(APIClient(), admin))
     invalidate_all_permissions()
 
@@ -146,7 +146,8 @@ def test_admin_only_codenames_are_refused_by_the_matrix_and_denied_by_the_checke
     assert response.data["results"][0]["code"] == "admin_only_permission"
     _role("STRAY", codename)  # a row written before the rule (or by hand)
     assert check_permission(RoleHolder("STRAY"), codename) is False
-    assert check_permission(RoleHolder("ADMIN"), codename) is True
+    # menu.manage is global-only (GLOBAL_ONLY_CODENAMES): SYSTEM_ADMIN's, not a civilization ADMIN's (§7.5).
+    assert check_permission(RoleHolder("SYSTEM_ADMIN"), codename) is True
 
 
 # ── 第 2 条:权限页按 system.settings,写还要无殿 ─────────────────────────

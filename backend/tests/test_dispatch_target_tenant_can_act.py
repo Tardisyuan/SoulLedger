@@ -333,7 +333,7 @@ def test_the_reason_is_locked_once_the_target_has_decided(both_sides, decided):
 def _global_admin_client(username="tt_global_admin"):
     from rest_framework_simplejwt.tokens import RefreshToken
 
-    admin = User.objects.create_user(username=username, password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username=username, password="x", role="SYSTEM_ADMIN", tenant=None)
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(admin).access_token}")
     return client

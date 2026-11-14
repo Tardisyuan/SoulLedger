@@ -44,7 +44,7 @@ def w(db):
     cn_mod = User.objects.create_user(username="dr_cn_mod", password="x", role="ADMIN", tenant=cn)
     cn_mod2 = User.objects.create_user(username="dr_cn_mod2", password="x", role="ADMIN", tenant=cn)
     eu_mod = User.objects.create_user(username="dr_eu_mod", password="x", role="ADMIN", tenant=eu)
-    admin = User.objects.create_user(username="dr_admin", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="dr_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     return {
         "cn": cn, "eu": eu, "cn_mod": cn_mod, "cn_mod2": cn_mod2, "eu_mod": eu_mod, "admin": admin,
         "soul": Soul.objects.create(name="沈青梧", current_state=SoulState.JUDGING, tenant=cn),

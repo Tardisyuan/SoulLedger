@@ -23,7 +23,7 @@ def world(db):
     judge = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})[0]
     admin = Role.objects.get_or_create(name="ADMIN", defaults={"display_name": "Admin"})[0]
     bound = User.objects.create_user(username="cn_admin", password="x", role="ADMIN", tenant=cn)
-    glob = User.objects.create_user(username="g_admin", password="x", role="ADMIN", tenant=None)
+    glob = User.objects.create_user(username="g_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     cn_judge = User.objects.create_user(username="cn_judge", password="x", role="JUDGE", tenant=cn)
     cn_viewer = User.objects.create_user(username="cn_viewer", password="x", role="VIEWER", tenant=cn,
                                          extra_roles=["JUDGE"])

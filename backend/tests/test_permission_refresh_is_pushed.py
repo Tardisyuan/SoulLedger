@@ -31,7 +31,7 @@ def _world():
     tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})
     judge = User.objects.create_user(username="ws_push_judge", password="x", role="JUDGE", tenant=tenant)
     viewer = User.objects.create_user(username="ws_push_viewer", password="x", role="VIEWER", tenant=tenant)
-    admin = User.objects.create_user(username="ws_push_admin", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="ws_push_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     return tenant, judge, viewer, admin
 
 

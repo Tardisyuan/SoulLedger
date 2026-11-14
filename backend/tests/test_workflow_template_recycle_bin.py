@@ -30,7 +30,7 @@ def world(db):
     tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})
     for name in UserRole.values:
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
-    admin = User.objects.create_user(username="tplbin_admin", password="x", role="ADMIN", tenant=None)
+    admin = User.objects.create_user(username="tplbin_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     yield {"tenant": tenant, "client": sign_in(APIClient(), admin)}
     invalidate_all_permissions()
 

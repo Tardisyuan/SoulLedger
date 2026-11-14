@@ -557,7 +557,7 @@ class TestCrossTenantJudgmentCRUD:
             code="CJ_T5", defaults={"display_name": "Jug Tenant C (uninvolved)"}
         )[0]
         admin = User.objects.create_user(
-            username="cjadmin1", password="test123", role="ADMIN", tenant=None,
+            username="cjadmin1", password="test123", role="SYSTEM_ADMIN", tenant=None,
         )
         admin_client = _jwt_client(admin, self.tenant_a)
         self._create_judgment(tenant_c)  # neither initiating tenant nor a participant is tenant_a
@@ -791,7 +791,7 @@ class TestDispatchRecordTenantIsolation:
             username="dtiguardianb", password="test123", role="GUARDIAN", tenant=self.tenant_b,
         )
         self.admin_a = User.objects.create_user(
-            username="dtiadmina", password="test123", role="ADMIN", tenant=None,
+            username="dtiadmina", password="test123", role="SYSTEM_ADMIN", tenant=None,
         )
 
         self.soul_a = Soul.objects.create(name="DTI Soul A", current_state=SoulState.JUDGING, tenant=self.tenant_a)

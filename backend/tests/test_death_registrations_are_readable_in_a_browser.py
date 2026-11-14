@@ -108,7 +108,7 @@ def test_the_hall_less_admin_reads_every_halls_registrations(registrations):
     绑了殿的 ADMIN 仍只看本殿(上一条测试)。"""
     from rest_framework_simplejwt.tokens import RefreshToken
 
-    root = User.objects.create_user(username="dr_root", password="x", role="ADMIN", tenant=None)
+    root = User.objects.create_user(username="dr_root", password="x", role="SYSTEM_ADMIN", tenant=None)
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(root).access_token}")
     resp = client.get("/api/v1/death-sync/registrations/")

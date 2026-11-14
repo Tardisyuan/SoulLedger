@@ -44,7 +44,7 @@ def assistant_on(settings, monkeypatch):
 
 @pytest.fixture
 def api():
-    return officer_client(User.objects.create_user(username="yama", password="x", role="ADMIN", tenant=None))
+    return officer_client(User.objects.create_user(username="yama", password="x", role="SYSTEM_ADMIN", tenant=None))
 
 
 def _save(api, body=None, *, test=True):

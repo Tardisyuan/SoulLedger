@@ -27,7 +27,7 @@ def test_django_never_sets_request_view(django_user_model):
     seen: list[bool] = []
 
     user = django_user_model.objects.create_user(
-        username="ctx_probe", password="x", role="ADMIN"
+        username="ctx_probe", password="x", role="SYSTEM_ADMIN"
     )
     client = APIClient()
     client.force_authenticate(user)
@@ -74,7 +74,7 @@ def test_a_read_request_leaves_no_user_behind(django_user_model):
     from apps.core.request_local import get_current_user
 
     user = django_user_model.objects.create_user(
-        username="ctx_user", password="x", role="ADMIN"
+        username="ctx_user", password="x", role="SYSTEM_ADMIN"
     )
     client = APIClient()
     client.force_authenticate(user)

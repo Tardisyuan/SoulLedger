@@ -78,7 +78,7 @@ class JudgmentAPITest(TestCase):
         self.admin_user = User.objects.create_user(
             username="judge_admin",
             password="admin123",
-            role="ADMIN",
+            role="SYSTEM_ADMIN",
             tenant=None,
         )
         self.judge_user = User.objects.create_user(

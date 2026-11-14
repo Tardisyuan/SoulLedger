@@ -22,7 +22,7 @@ def world(db):
     cn = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})[0]
     eg = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "埃及杜阿特"})[0]
     bound = User.objects.create_user(username="cn_admin", password="x", role="ADMIN", tenant=cn)
-    glob = User.objects.create_user(username="g_admin", password="x", role="ADMIN", tenant=None)
+    glob = User.objects.create_user(username="g_admin", password="x", role="SYSTEM_ADMIN", tenant=None)
     eg_judge = User.objects.create_user(username="eg_judge", password="x", role="JUDGE", tenant=eg)
     cn_judge = User.objects.create_user(username="cn_judge", password="x", role="JUDGE", tenant=cn)
     own = Soul.objects.create(name="本殿", tenant=cn, current_state="ALIVE", birth_date="1990-01-15")
@@ -130,7 +130,7 @@ def test_bound_admin_never_reaches_the_hall_less_admin(world):
         res = getattr(b, method)(url, body, format="json") if body is not None else getattr(b, method)(url)
         assert res.status_code == 404, (url, res.status_code)
     world["glob"].refresh_from_db()
-    assert world["glob"].is_active and world["glob"].role == "ADMIN"
+    assert world["glob"].is_active and world["glob"].role == "SYSTEM_ADMIN"
 
 
 def test_bound_admin_edits_its_own_halls_settings_only(world):

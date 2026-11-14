@@ -109,7 +109,7 @@ async def test_deactivating_closes_every_open_socket():
         from rest_framework.test import APIClient
 
         admin = User.objects.create_user(
-            username="ws_kick_admin", password="x", role="ADMIN", is_staff=True, is_superuser=True
+            username="ws_kick_admin", password="x", role="SYSTEM_ADMIN", is_staff=True, is_superuser=True
         )
         c = APIClient()
         c.force_authenticate(admin)

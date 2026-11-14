@@ -21,7 +21,7 @@ def _tenantless_admin_client(django_user_model):
     """An ADMIN with no tenant, session-authenticated -- the caller the
     ``apps/perm/tests.py`` twins used. ``admin_user`` always has CN_DIYU."""
     user = django_user_model.objects.create_user(
-        username="tenantless_admin", password="x", role="ADMIN"
+        username="tenantless_admin", password="x", role="SYSTEM_ADMIN"
     )
     client = APIClient()
     client.force_authenticate(user=user)

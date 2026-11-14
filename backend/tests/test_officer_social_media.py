@@ -282,7 +282,7 @@ class TestTheFileIsJudgedInTheListRequestsTenant:
 
     @pytest.fixture
     def admin(self, django_user_model):
-        return django_user_model.objects.create(username="global_admin", role="ADMIN", tenant=None)
+        return django_user_model.objects.create(username="global_admin", role="SYSTEM_ADMIN", tenant=None)
 
     def test_an_admin_in_another_tenant_opens_that_tenants_tenant_visible_images(self, admin, cn_a, cn_tenant):
         post_id, ids = post_with_images(officer_client(cn_a), 1, visibility=Visibility.TENANT)

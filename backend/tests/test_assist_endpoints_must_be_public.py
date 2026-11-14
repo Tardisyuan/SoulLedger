@@ -25,7 +25,7 @@ def api(settings, cn_tenant):
     settings.ASSISTANT_BASE_URL = ""
     settings.ASSISTANT_EMBEDDING_URL = "http://127.0.0.2:9"  # nothing listens: a probe fails fast
     settings.ASSISTANT_PRIVATE_HOSTS_ALLOWED = []
-    return officer_client(User.objects.create_user(username="ep_admin", password="x", role="ADMIN", tenant=None))
+    return officer_client(User.objects.create_user(username="ep_admin", password="x", role="SYSTEM_ADMIN", tenant=None))
 
 
 @pytest.mark.parametrize("url", ["http://127.0.0.1:11434/v1", "http://169.254.169.254/latest", "http://[::1]:8000/v1"])

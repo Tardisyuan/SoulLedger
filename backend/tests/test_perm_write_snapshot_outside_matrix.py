@@ -1094,7 +1094,7 @@ def test_organization_cross_tenant_isolation(role_clients, snapshot_tenants):
     from apps.authentication.models import User
     from tests.conftest import sign_in
 
-    global_admin = User.objects.create_user(username="wsnap_global", password="x", role="ADMIN", tenant=None)
+    global_admin = User.objects.create_user(username="wsnap_global", password="x", role="SYSTEM_ADMIN", tenant=None)
     assert sign_in(APIClient(), global_admin).get(f"/api/v1/organizations/{org.id}/").status_code == 200
 
 
@@ -1250,14 +1250,15 @@ def test_recorded_holders_match_role_permissions():
     moves, those docstrings become misleading, and this is what says so.
     """
     # MODERATOR left every one of these on 2026-11-07 (perm/0036).
-    assert _holders("reincarnation.manage") == {"ADMIN", "JUDGE", "GUARDIAN"}
-    assert _holders("reincarnation.reborn") == {"ADMIN"}
-    assert _holders("dispatch.manage") == {"ADMIN", "GUARDIAN"}
-    assert _holders("dispatch.approve") == {"ADMIN"}
-    assert _holders("dispatch.reject") == {"ADMIN"}
-    assert _holders("dispatch.execute") == {"ADMIN"}
-    assert _holders("org.read") == set(ROLES) - {"MODERATOR"}
-    assert _holders("org.manage") == {"ADMIN"}
+    # SYSTEM_ADMIN holds everything ADMIN holds (perm/0038, 2026-11-15).
+    assert _holders("reincarnation.manage") == {"ADMIN", "SYSTEM_ADMIN", "JUDGE", "GUARDIAN"}
+    assert _holders("reincarnation.reborn") == {"ADMIN", "SYSTEM_ADMIN"}
+    assert _holders("dispatch.manage") == {"ADMIN", "SYSTEM_ADMIN", "GUARDIAN"}
+    assert _holders("dispatch.approve") == {"ADMIN", "SYSTEM_ADMIN"}
+    assert _holders("dispatch.reject") == {"ADMIN", "SYSTEM_ADMIN"}
+    assert _holders("dispatch.execute") == {"ADMIN", "SYSTEM_ADMIN"}
+    assert _holders("org.read") == set(ROLES) - {"MODERATOR"} | {"SYSTEM_ADMIN"}
+    assert _holders("org.manage") == {"ADMIN", "SYSTEM_ADMIN"}
 
 
 @pytest.mark.django_db
@@ -1276,7 +1277,7 @@ def test_notification_read_is_held_by_every_role():
     grant notification.read to roles that already hold it. This is what says
     so when they check.
     """
-    assert _holders("notification.read") == set(ROLES)
+    assert _holders("notification.read") == set(ROLES) | {"SYSTEM_ADMIN"}
 
 
 @pytest.mark.django_db
@@ -1663,6 +1664,8 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         "workflow.escalate",
         "workflow.read",
         "workflow.terminate",
+        # perm/0038 (2026-11-15, 系统管理员). Same reasoning as the scheduler pair.
+        "system.cross_civilization",
         "workflow.update",
     }, sorted(seeded)
 

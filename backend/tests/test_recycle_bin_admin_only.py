@@ -32,7 +32,7 @@ def world(db):
         c: Permission.objects.get_or_create(codename=c, defaults={"name": c, "category": "system"})[0]
         for c in CODENAMES
     }
-    admin = User.objects.create_user(username="bin_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
+    admin = User.objects.create_user(username="bin_admin", password="x", role="SYSTEM_ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     yield {"tenant": tenant, "perms": perms, "admin": admin, "client": sign_in(APIClient(), admin)}
     invalidate_all_permissions()
 

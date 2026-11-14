@@ -66,7 +66,7 @@ def world(transactional_db):
     # 「设计流程的人不审批」按能力(2026-10-29 第 13 条):MODERATOR 持设计码,所以 workflow.approve 才是禁授。
     RolePermission.objects.get_or_create(role=Role.objects.get(name="MODERATOR"),
                                          permission=Permission.objects.get(codename="workflow.update"))
-    admin = User.objects.create_user(username="dry_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
+    admin = User.objects.create_user(username="dry_admin", password="x", role="SYSTEM_ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     token = RefreshToken.for_user(admin)
     token["tenant_code"] = tenant.code
     client = APIClient()
