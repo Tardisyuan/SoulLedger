@@ -58,9 +58,13 @@
   `jestAlwaysRunList.test.ts` 推导核对);后端 pytest 按 app 选(`scripts/select-backend-tests.py`),加
   `backend/tests/reads-outside-backend.txt` 里命中的测试。新写了读文件的测试要登记进对应清单,守卫会点名。
 - 配置、依赖、删改名、门禁脚本本身等改动会强制全量,输出里写明是哪条规则。没有强制选择性运行的开关。
-- 在干净工作区跑通后,树哈希会被记账,推送同一棵树时钩子直接放行。所以先提交、再跑 `scripts/run-gates.sh`、再推送。
-- 不带 `--base` 时,基准是 HEAD 最近 300 个提交里最新的、树记过账的那个(全量通过;或选择性通过且覆盖了它相对 merge-base 的全部改动),
-  找不到才退回与 origin/main 的 merge-base;输出第一行 `base: …` 写明取了哪个、为什么(2026-11-14 用户决定)。`--full`、`--real-pg`、`--e2e` 与推送不用这条。
+- 记账按**两侧**分开(2026-11-15 用户决定):后端(ruff / makemigrations / pytest)与 JS(core / web / 两个 App 的 tsc、eslint、测试)
+  各自在干净工作区跑绿就各记一份(`soulledger-gates-passed-backend` / `-js`),另一侧红也照记。推送时两侧账本各自担保了这棵树就放行,
+  可以来自不同的运行。所以先提交、再跑 `scripts/run-gates.sh`、再推送。
+- 不带 `--base` 时,**每一侧**各取自己最近一次跑绿的树做基准(HEAD 最近 300 个提交内、覆盖了它相对 merge-base 的全部改动),
+  找不到才退回与 origin/main 的 merge-base;输出开头 `backend base: …` / `js base: …` 写明各取了哪个、为什么。读别区文件的测试照旧跟着另一侧的改动跑。
+  `--full`、`--real-pg`、`--e2e` 不用这条。
+- 静态检查红了不再中断：该侧照样跑完测试，最后一并列出所有红的步骤;缺工具仍会停。后端判定为全量时远端时限自动用 90 分钟，进度行逐条打印新失败的测试名。
 - 静态检查(tsc / eslint / ruff / makemigrations)排在测试之前;测试运行器默认 2 个 worker
   (`JEST_WORKERS` / `PYTEST_WORKERS` / `VITEST_WORKERS` 覆盖)。重门禁拿 `scripts/gate-lock.sh` 的锁。
 
