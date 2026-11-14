@@ -3,9 +3,12 @@ Audit views - AuditLog ViewSet with filtering support.
 """
 import csv
 import json
+from datetime import date, datetime, time, timedelta
+from datetime import timezone as dt_timezone
 
 from django.db.models import Q
 from django.http import HttpResponse
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django_filters import rest_framework as filters
 from drf_spectacular.types import OpenApiTypes
@@ -115,6 +118,32 @@ def parse_date_param(params, name):
     return value
 
 
+def _midnight(day, tz):
+    """`day` 0 点(`tz`)的 aware datetime;落在 datetime 能表示的范围外(0001-01-01 在东区)时是 None ——
+    那一端不设界,与 `__date` 在那一天的结果相同。"""
+    try:
+        return datetime.combine(day, time.min, tzinfo=tz).astimezone(dt_timezone.utc)
+    except OverflowError:
+        return None
+
+
+def date_range_q(params, field) -> Q:
+    """`?start_date=` / `?end_date=`(两端都含)在 `field` 上的半开区间:
+    `field >= start 0 点` 且 `field < end 次日 0 点`。
+
+    此前是 `field__date__gte/lte`:先把列换时区再取日期,列上的索引用不上(be-scale 4.4)。
+    切日的时区与 `__date` 相同(当前时区,即 `settings.TIME_ZONE`,UTC),所以选出的行与此前一样
+    (`tests/test_date_range_filter.py`)。改按殿的时区(`Tenant.hall_timezone`)切日会改变非 UTC 殿的结果,
+    待用户决定;那时只改这里的 `tz`。"""
+    tz = timezone.get_current_timezone()
+    q = Q()
+    start = parse_date_param(params, "start_date")
+    if start and (lower := _midnight(start, tz)) is not None:
+        q &= Q(**{f"{field}__gte": lower})
+    end = parse_date_param(params, "end_date")
+    if end and end < date.max and (upper := _midnight(end + timedelta(days=1), tz)) is not None:
+        q &= Q(**{f"{field}__lt": upper})
+    return q
 
 
 def _parse_limit(params):
@@ -220,13 +249,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if resource_id:
             qs = qs.filter(resource_id=resource_id)
 
-        start_date = parse_date_param(self.request.query_params, 'start_date')
-        if start_date:
-            qs = qs.filter(timestamp__date__gte=start_date)
-
-        end_date = parse_date_param(self.request.query_params, 'end_date')
-        if end_date:
-            qs = qs.filter(timestamp__date__lte=end_date)
+        qs = qs.filter(date_range_q(self.request.query_params, 'timestamp'))
 
         return qs
 
@@ -397,13 +420,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if action_filter:
             qs = qs.filter(action=action_filter.upper())
 
-        start_date = parse_date_param(request.query_params, 'start_date')
-        if start_date:
-            qs = qs.filter(timestamp__date__gte=start_date)
-
-        end_date = parse_date_param(request.query_params, 'end_date')
-        if end_date:
-            qs = qs.filter(timestamp__date__lte=end_date)
+        qs = qs.filter(date_range_q(request.query_params, 'timestamp'))
 
         limit = _parse_limit(request.query_params)
         qs = qs.order_by('-timestamp')[:limit]

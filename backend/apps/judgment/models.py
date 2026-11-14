@@ -564,6 +564,13 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
             models.Index(fields=["soul", "cycle"]),
             models.Index(fields=["tenant", "deferred_at", "claimed_by"]),
             models.Index(fields=["tenant", "owner_org"], name="judgment_tenant_owner_idx"),
+            # 案卷台与 queue-counts(`views.PENDING` / `group_q`,按 `created_at` 排)。部分索引:只收未结案件,
+            # 大小随待办数而不随历年案件数 —— 结案**不清** `claimed_by`(见上),全表索引里「我的」会扫到本人
+            # 历年全部案件。`city_god_status` 不进条件:城隍处的件数少,在索引上再筛即可。
+            models.Index(
+                fields=["tenant", "claimed_by", "created_at"], name="judgment_pending_idx",
+                condition=models.Q(verdict__isnull=True, is_final=False, is_archived=False, is_deleted=False),
+            ),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager

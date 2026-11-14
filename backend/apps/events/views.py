@@ -8,7 +8,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.audit.views import parse_date_param
+from apps.audit.views import date_range_q
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.events.models import SoulEvent
@@ -96,13 +96,8 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     def get_queryset(self):
         qs = super().get_queryset()
         params = self.request.query_params
-        # 与审计日志同一个解析:坏日期是 400,不是 500;两端都含。
-        start_date = parse_date_param(params, "start_date")
-        if start_date:
-            qs = qs.filter(create_time__date__gte=start_date)
-        end_date = parse_date_param(params, "end_date")
-        if end_date:
-            qs = qs.filter(create_time__date__lte=end_date)
+        # 与审计日志同一个解析:坏日期是 400,不是 500;两端都含;半开区间,走得上索引。
+        qs = qs.filter(date_range_q(params, "create_time"))
         # 「含系统事件」不勾时页面带 exclude_system=1。系统 = actor 为空或 "system"
         # (`EventService.log*` 的默认 actor),与前端 `isSystemActor` 同一个定义。
         if params.get("exclude_system") in ("1", "true"):
