@@ -5,7 +5,7 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { AccessibilityInfo, AppState } from "react-native";
+import { AccessibilityInfo, AppState, StyleSheet } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { officerDoors } from "@soulledger/core/domain/doors";
@@ -862,5 +862,15 @@ describe("the door bar's marks follow the interface language", () => {
     expect(within(screen.getByTestId("door-desk")).getByText("审")).toBeTruthy();
     expect(screen.queryByTestId("door-desk-icon")).toBeNull();
     expect(screen.getByTestId("door-desk-current")).toBeTruthy();
+  });
+
+  // TAS-AL00 2026-11-14: a percentage `left` put the line ~50 dp right of its glyph on Android. It is centred by
+  // its parent's alignItems instead, so it carries no horizontal offset of its own.
+  it("the current-door line is centred by its parent, not by a percentage offset", () => {
+    renderOfficer(<TabBar current="queue" onSelect={() => {}} />);
+    const line = StyleSheet.flatten(screen.getByTestId("door-desk-current").props.style);
+    expect(line.left).toBeUndefined();
+    expect(line.marginLeft).toBeUndefined();
+    expect(line.position).toBe("absolute");
   });
 });

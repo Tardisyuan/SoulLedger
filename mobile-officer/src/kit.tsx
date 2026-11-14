@@ -675,7 +675,9 @@ const styles = StyleSheet.create({
   tab: { flex: 1, minWidth: 64, height: 56, alignItems: "center", justifyContent: "center" },
   // The glyph box: 24 high. The current line sits 3 under it; the dot (8 plus its 2px ring) 4 past its right edge, 1 above it.
   mark: { height: 24, minWidth: 24, alignItems: "center", justifyContent: "center" },
-  currentLine: { position: "absolute", left: "50%", bottom: -5, width: 14, height: 2, marginLeft: -7, borderRadius: 1 },
+  // No percentage `left`: on Android it resolved against the wrong box and the line sat ~50 dp right of its glyph
+  // (TAS-AL00, 2026-11-14). An absolute child with no left/right is centred by `mark`'s alignItems instead.
+  currentLine: { position: "absolute", bottom: -1, width: 14, height: 2, borderRadius: 1 },
   dot: { position: "absolute", top: -3, right: -6, width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
   banner: { paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   bannerRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
