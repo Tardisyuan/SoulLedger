@@ -18,6 +18,7 @@ import {
 import { INBOX_REPLY_MAX, renderTemplate } from "@soulledger/core/api/soul-inbox";
 import { TENANT_CODE_TO_CIVILIZATION, realmLabel } from "@soulledger/core/config/civilizations";
 import { pickHall } from "@soulledger/core/domain/workflowSegments";
+import { isAdminRole } from "@soulledger/core/domain/roles";
 
 export const TODO_KINDS: readonly TodoKind[] = ["wangsi", "city_god", "pick", "approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
 
@@ -599,7 +600,7 @@ export function reasonBlank(reason: string): boolean {
 
 /** 这个角色看得到的类别(密码求助只有管理员收),顺序同网页。 */
 export function visibleNotificationCategories(role: string | undefined): readonly NotificationCategory[] {
-  return NOTIFICATION_CATEGORIES.filter((c) => c !== "password_help" || role === "ADMIN");
+  return NOTIFICATION_CATEGORIES.filter((c) => c !== "password_help" || isAdminRole(role));
 }
 
 /** 手机上的开关 = 网页的「站内」一列;「静音 N 类」数的是站内关着的类别。必收的永远不算。 */
