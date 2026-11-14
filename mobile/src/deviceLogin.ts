@@ -11,23 +11,18 @@
  * one per call, so turning it on again revokes the old one first.
  */
 import { soulApi } from "@soulledger/core/api/soul";
-import { captureCrash } from "./crashReport";
 import { BIO_KEY } from "./loginRules";
+import { deviceCredential, resetBiometryCache } from "./deviceCredential";
 import { storedLocale, translate } from "./i18n";
 import { platform } from "@soulledger/core/platform";
-import * as LocalAuthentication from "expo-local-authentication";
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 
-import { classifyCredentialError, credentialReadFailure, type CredentialFailure } from "./loginRules";
+export { CredentialStoreError, readBiometry, type Biometry, type CredentialRead } from "./deviceCredential";
 
 export const ACCOUNT_KEY = "soulledger.login.account";
 export { BIO_KEY };
 /** 切回 App 时也要验证 (第二十八批 S2): on this phone only, and only while 面容 / 指纹 login is on. */
 export const APP_LOCK_KEY = "soulledger.login.app_lock";
 export const ASKED_PREFIX = "soulledger.login.bio_asked.";
-const CREDENTIAL_KEY = "soulledger_device_login";
-const SERVICE = "soulledger.devicelogin";
 
 // ── the remembered account ───────────────────────────────────────────────
 
@@ -58,132 +53,37 @@ export const forgetAccount = () => platform().persistent.remove(ACCOUNT_KEY);
 export const wasAsked = (code: string) => platform().persistent.get(ASKED_PREFIX + code) === "1";
 export const markAsked = (code: string) => platform().persistent.set(ASKED_PREFIX + code, "1");
 
-// ── the phone's face / finger ────────────────────────────────────────────
+// ── the credential (`deviceCredential.ts`, shared with the officer app's 指纹登录) ──────────────────────
 
-export interface Biometry {
-  /** Hardware present AND at least one face or finger enrolled. */
-  enrolled: boolean;
-  /** The word: face when the phone does face recognition, else finger. */
-  wordKey: "soul_app.bio.face" | "soul_app.bio.finger";
-}
+const soul = deviceCredential({
+  credentialKey: "soulledger_device_login",
+  service: "soulledger.devicelogin",
+  bioKey: BIO_KEY,
+  // The reason the system shows with its face / finger check, in the app's language (review 2026-11-01).
+  promptKey: "soul_app.biometric.prompt_login",
+  /** 切回 App 时也要验证 (第二十八批 S2): its own switch, on this phone only, and only while 面容 / 指纹 login is on. */
+  appLockKey: APP_LOCK_KEY,
+  // Late-bound, so a test that replaces `soulApi`'s methods is the one called.
+  enable: (password) => soulApi.enableDeviceLogin(password),
+  revoke: (credential) => soulApi.revokeDeviceLogin(credential),
+});
 
-let cached: Biometry | null = null;
+export const {
+  /** On when the flag holds anything: `face` or `finger` (what the phone said when it was turned on). */
+  bioEnabled,
+  /** What was read last in this process, or what the phone said when 面容 / 指纹 was turned on. Sync. */
+  knownBiometry,
+  readCredential,
+  storeCredential,
+  /** The app locks on return from the background: the switch is on AND 面容 / 指纹 login still is. */
+  appLockOn,
+  clearCredential,
+  revokeCredential,
+  enableWithPassword,
+} = soul;
 
-/** What was read last in this process, or -- when 面容 / 指纹 is on -- what the phone said when it was turned on. Sync, so a page can say the right word on its first frame. */
-export function knownBiometry(): Biometry | null {
-  if (cached) return cached;
-  const kind = platform().persistent.get(BIO_KEY);
-  return kind === "face" || kind === "finger"
-    ? { enrolled: true, wordKey: kind === "face" ? "soul_app.bio.face" : "soul_app.bio.finger" }
-    : null;
-}
-
-export async function readBiometry(): Promise<Biometry> {
-  try {
-    const [hardware, enrolled, types] = await Promise.all([
-      LocalAuthentication.hasHardwareAsync(),
-      LocalAuthentication.isEnrolledAsync(),
-      LocalAuthentication.supportedAuthenticationTypesAsync(),
-    ]);
-    return (cached = {
-      enrolled: hardware && enrolled,
-      wordKey: types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ? "soul_app.bio.face" : "soul_app.bio.finger",
-    });
-  } catch {
-    return { enrolled: false, wordKey: "soul_app.bio.finger" };
-  }
-}
-
-// ── the credential ───────────────────────────────────────────────────────
-
-/** On when the flag holds anything: `face` or `finger` (what the phone said when it was turned on). */
-export const bioEnabled = () => !!platform().persistent.get(BIO_KEY);
-
-/**
- * The reason the system shows with its face / finger check. In the app's language (review 2026-11-01: it was fixed
- * Chinese, so an English or Kemet soul read Chinese over its face check); read at the moment of asking.
- */
-const prompt = () => translate(storedLocale(), "soul_app.biometric.prompt_login");
-/** Same kind of string, for 「导出我的资料」: the face / finger check stands in for the password there. */
+/** Same kind of string as the sign-in prompt, for 「导出我的资料」: the face / finger check stands in for the password there. */
 export const exportPrompt = () => translate(storedLocale(), "soul_app.biometric.prompt_export");
-
-export type CredentialRead = { status: "ok"; credential: string } | { status: "cancelled" } | { status: "invalidated" } | { status: "locked" } | { status: "failed" };
-
-/**
- * Hands the credential over -- the system verifies the face / finger first. A key that is gone while the flag says
- * on (the phone's enrolled set changed) reads as `invalidated`.
- */
-export async function readCredential(reason: string = prompt()): Promise<CredentialRead> {
-  const started = Date.now();
-  try {
-    const credential = await SecureStore.getItemAsync(CREDENTIAL_KEY, {
-      keychainService: SERVICE,
-      requireAuthentication: true,
-      authenticationPrompt: reason,
-    });
-    return credential ? { status: "ok", credential } : { status: "invalidated" };
-  } catch (e) {
-    return { status: credentialReadFailure(e, Date.now() - started, Platform.OS) };
-  }
-}
-
-/** The system would not keep the credential (the soul declined the prompt, or the phone said no). Not a network error. */
-export class CredentialStoreError extends Error {
-  constructor(readonly failure: CredentialFailure) {
-    super(`credential not stored: ${failure}`);
-  }
-}
-
-/** Keeps the credential behind the face / finger, and only then marks 面容 / 指纹 login on. Throws `CredentialStoreError` if the system refuses. */
-export async function storeCredential(credential: string): Promise<void> {
-  try {
-    await SecureStore.setItemAsync(CREDENTIAL_KEY, credential, {
-      keychainService: SERVICE,
-      requireAuthentication: true,
-      authenticationPrompt: prompt(),
-    });
-  } catch (e) {
-    throw new CredentialStoreError(classifyCredentialError(e));
-  }
-  platform().persistent.set(BIO_KEY, (await readBiometry()).wordKey === "soul_app.bio.face" ? "face" : "finger");
-}
-
-/** The app locks on return from the background: the switch is on AND 面容 / 指纹 login still is (turning that off takes this down with it). */
-export const appLockOn = () => bioEnabled() && platform().persistent.get(APP_LOCK_KEY) === "1";
-
-/** Forget the credential and the flag on this phone. The server still holds its row until `revokeCredential`. */
-export function clearCredential(): void {
-  platform().persistent.remove(BIO_KEY);
-  platform().persistent.remove(APP_LOCK_KEY);
-  SecureStore.deleteItemAsync(CREDENTIAL_KEY, { keychainService: SERVICE }).catch(captureCrash);
-}
-
-/**
- * 「关闭」: tell the server, then forget. The server call needs the credential in the clear, which the system
- * hands over only after verification; a soul who walks away from that prompt still gets the phone forgotten
- * (the credential is then unreachable anyway). Best effort on the network: the row is soft-revoked or harmless.
- */
-export async function revokeCredential(): Promise<void> {
-  const read = await readCredential();
-  clearCredential();
-  if (read.status === "ok") await soulApi.revokeDeviceLogin(read.credential).catch(() => {});
-}
-
-/**
- * 「开启」: the credential is issued against the current password, so a wrong password throws the axios error for
- * the caller to show. An older credential on this phone is revoked first (the server keeps one row per call).
- */
-export async function enableWithPassword(password: string): Promise<void> {
-  const previous = bioEnabled() ? await readCredential() : null;
-  const credential = await soulApi.enableDeviceLogin(password);
-  try {
-    await storeCredential(credential);
-  } catch (e) {
-    await soulApi.revokeDeviceLogin(credential).catch(() => {});
-    throw e;
-  }
-  if (previous?.status === "ok") await soulApi.revokeDeviceLogin(previous.credential).catch(() => {});
-}
 
 // ── the first sign-in page of the process ────────────────────────────────
 
@@ -194,5 +94,5 @@ export const spendAutoPrompt = () => void (autoPromptSpent = true);
 /** For tests: a fresh process. */
 export const resetColdStart = () => {
   autoPromptSpent = false;
-  cached = null;
+  resetBiometryCache();
 };

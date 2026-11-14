@@ -2,12 +2,18 @@
  * Sign-in: username + password, no hall. If the server cannot tell which hall (409 `hall_required`)
  * a 「选殿」 step follows and the sign-in is sent again with the chosen `tenant_code`; if the account
  * has two-step verification, a code step follows (`mfa_required` + `pending_token`).
+ *
+ * 指纹登录 (2026-11-15 O5): when the remembered officer turned it on on this phone, 「用指纹登录」 comes first (and opens
+ * by itself on the first sign-in page of the process); the password stays below it. A credential the server no longer
+ * takes (password changed, device signed out, turned off elsewhere) is dropped here and the page says so.
  */
 import { mfaDigits } from "@soulledger/core/domain/mfa";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 
+import { useBio } from "../bioLogin";
 import { OFFICER_BRAND } from "../brand";
+import { autoPromptDue, officerDevice, spendAutoPrompt } from "../deviceLogin";
 import { ActionButton, Row } from "../kit";
 import { MFA_TIMED_OUT, loginFailureKey } from "../rules";
 import { ForgotPassword } from "./account";
@@ -28,7 +34,9 @@ export function maskUsername(name: string): string {
 
 export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
   const { t } = useI18n();
-  const { signIn, verifyMfa } = useSession();
+  const { signIn, signInWithCredential, verifyMfa } = useSession();
+  // What the phone said when 指纹登录 was turned on: no read here, so the page has no late update.
+  const bio = useBio(false);
   const [step, setStep] = useState<Step>(hint === "forgot" ? { name: "forgot" } : { name: "credentials" });
   // The last officer on this phone (survives sign-out, 401, cold start): their username, password box focused.
   const [known, setKnown] = useState(readLastLogin);
@@ -38,6 +46,51 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
   const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  // 指纹登录 is on for the remembered officer (the credential belongs to them; session.tsx `land`).
+  const [bioOn, setBioOn] = useState(() => !!known && officerDevice.bioEnabled());
+
+  const bioSignIn = async () => {
+    if (!known || busy) return;
+    setBusy(true);
+    setFailure(null);
+    const read = await officerDevice.readCredential();
+    if (read.status !== "ok") {
+      setBusy(false);
+      if (read.status === "cancelled") return;
+      // The phone's enrolled fingers changed: the key is gone for good.
+      if (read.status === "invalidated") {
+        officerDevice.clearCredential();
+        setBioOn(false);
+      }
+      const key = { invalidated: "officer_app.bio_login.expired", locked: "officer_app.bio_login.locked", failed: "officer_app.bio_login.failed" }[read.status];
+      setFailure(t(key, { bio: bio.word }));
+      return;
+    }
+    try {
+      const result = await signInWithCredential(known.username, read.credential);
+      if (result.kind === "mfa") setStep({ name: "mfa", pendingToken: result.pendingToken, recovery: false });
+    } catch (e) {
+      const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      if (code === "device_login_revoked" || code === "device_login_invalid") {
+        officerDevice.clearCredential();
+        setBioOn(false);
+        setFailure(t("officer_app.bio_login.expired", { bio: bio.word }));
+      } else {
+        setFailure(t(loginFailureKey(e, "login")));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // The first sign-in page of the process asks by itself (a timer: `bioSignIn` sets state before its first await).
+  useEffect(() => {
+    if (!bioOn || !autoPromptDue() || hint) return;
+    spendAutoPrompt();
+    const id = setTimeout(() => void bioSignIn(), 0);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, []);
 
   const run = (work: Promise<unknown>, kind: "login" | "mfa", recovery = false) => {
     setBusy(true);
@@ -106,6 +159,9 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
                     title={t("soul_app.login.switch")}
                     onPress={() => {
                       forgetLastLogin();
+                      // 「换一个账号」 takes the fingerprint sign-in with it, on the server too (audit §1 principle 2).
+                      if (bioOn) void officerDevice.revokeCredential();
+                      setBioOn(false);
                       setKnown(null);
                       setUsername("");
                       setPassword("");
@@ -117,6 +173,9 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
             ) : (
               <Input testID="login-username" label={t("officer_app.login.username")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
             )}
+            {bioOn ? (
+              <Button testID="login-bio" title={t("officer_app.bio_login.button", { bio: bio.word })} busy={busy} onPress={() => void bioSignIn()} />
+            ) : null}
             <Input
               testID="login-password"
               label={t("officer_app.login.password")}
@@ -125,10 +184,10 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
               secureTextEntry
               textContentType="password"
               autoComplete="current-password"
-              autoFocus={!!known}
+              autoFocus={!!known && !bioOn}
               secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
             />
-            <Button testID="login-submit" title={t("officer_app.login.submit")} busy={busy} disabled={!username.trim() || !password} onPress={() => void submit()} />
+            <Button testID="login-submit" kind={bioOn ? "secondary" : "primary"} title={t("officer_app.login.submit")} busy={busy} disabled={!username.trim() || !password} onPress={() => void submit()} />
             <ActionButton
               testID="login-forgot"
               kind="outline"

@@ -8140,6 +8140,27 @@
     }
   },
   "officer_app": {
+    "bio_login": {
+      "row": "{{bio}}登录",
+      "row_sub": "只在这部手机上。开着时，离开 App 超过 5 分钟再回来，要先认一次{{bio}}。",
+      "row_unavailable": "这部手机没有录入面容或指纹",
+      "enable_body": "先输入当前密码，再验证{{bio}}。",
+      "enable_ok": "开启",
+      "wrong_password": "当前密码不对",
+      "toggle_failed": "没能开启，请稍后再试。",
+      "button": "用{{bio}}登录",
+      "failed": "没有认出{{bio}}，请输入密码。",
+      "locked": "{{bio}}试错太多次，系统暂时锁住了。请输入密码，或过一会儿再试。",
+      "expired": "这部手机的{{bio}}登录已失效，请输入密码。",
+      "ask_title": "下次用{{bio}}登录？",
+      "ask_body": "只在这部手机上，再打开时不用输密码；批准、驳回前照旧要认一次。手机里录入的{{bio}}都能用来登录，和别人共用这部手机就别开。",
+      "ask_note": "以后可以在「我的」里关掉。",
+      "ask_later": "以后再说",
+      "prompt_login": "用来登录，不用输密码。",
+      "prompt_unlock": "用来解锁。",
+      "lock_title": "已锁定",
+      "use_password": "输入密码"
+    },
     "biometric": {
       "setting": "批准、驳回前验证{{bio}}",
       "hint": "手机落到别人手里，也做不了决定",

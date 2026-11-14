@@ -9,6 +9,7 @@
  */
 import { useEffect, useState } from "react";
 
+import { AppLock } from "./appLock";
 import { isRetiredResetLink, resetLinks, type ResetLink } from "./links";
 import { LoginScreen, type LoginHint } from "./screens/login";
 import { ResetPasswordScreen } from "./screens/reset";
@@ -31,7 +32,13 @@ export function Gate() {
   if (signedIn) {
     // A sign-in ends the hint; the one the shell sets on its way out (onResetDone) is set after this render.
     if (hint) setHint(null);
-    return <Shell onResetDone={() => setHint("reset_done")} />;
+    return (
+      <>
+        <Shell onResetDone={() => setHint("reset_done")} />
+        {/* Over everything while 指纹登录 is on and the app was away (appLock.tsx). */}
+        <AppLock />
+      </>
+    );
   }
   if (reset) {
     return (

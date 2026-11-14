@@ -12,6 +12,7 @@ import { notificationsApi } from "@soulledger/core/api/notifications";
 import { BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
+import { BioAsk } from "./bioLogin";
 import { IdentityBand, PageSwitch, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
@@ -298,6 +299,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         onSelect={go}
       />
       <AssistSheet assist={assist} tab={current} />
+      <BioAsk username={user.username} />
       {resetLink && !locked ? (
         <View testID="reset-overlay" style={StyleSheet.absoluteFill}>
           <ResetPasswordScreen
