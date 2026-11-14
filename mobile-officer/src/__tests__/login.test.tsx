@@ -9,7 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LoginScreen } from "../screens/login";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
-import { SessionProvider, USER_KEY, useSession } from "../session";
+import { LAST_LOGIN_KEY, SessionProvider, USER_KEY, useSession } from "../session";
 import { I18nProvider, ThemeContext, themeFor } from "../shared";
 import { OFFICER, httpError } from "./harness";
 
@@ -60,6 +60,7 @@ function fill(user = "yama", password = "pw") {
 beforeEach(() => {
   jest.clearAllMocks();
   platform().persistent.remove(USER_KEY);
+  platform().persistent.remove(LAST_LOGIN_KEY);
   platform().session.remove(ACCESS_TOKEN_KEY);
   platform().secure.remove(REFRESH_TOKEN_KEY);
 });
@@ -71,6 +72,33 @@ it("signs in with a username and password and no hall", async () => {
   fireEvent.press(screen.getByTestId("login-submit"));
   await waitFor(() => expect(session().state.status).toBe("signedIn"));
   expect(mockOfficerLogin).toHaveBeenCalledWith({ username: "yama", password: "pw" });
+});
+
+it("remembers the username across sign-out; 换一个账号 forgets it; the profile still goes", async () => {
+  mockOfficerLogin.mockResolvedValue({ data: TOKENS });
+  let session = renderLogin();
+  fill();
+  fireEvent.press(screen.getByTestId("login-submit"));
+  await waitFor(() => expect(session().state.status).toBe("signedIn"));
+  act(() => session().signOut());
+  // who is signed in goes (owner.ts); who signed in last stays
+  expect(platform().persistent.get(USER_KEY)).toBeNull();
+  expect(JSON.parse(platform().persistent.get(LAST_LOGIN_KEY)!)).toEqual({ username: "yama", display_name: "阎罗", hall: "CN_DIYU" });
+  screen.unmount();
+  session = renderLogin();
+  expect(screen.getByText("阎罗 · ya***a")).toBeTruthy();
+  expect(screen.queryByText(/yama/)).toBeNull();
+  fill_password_only: {
+    fireEvent.changeText(screen.getByTestId("login-password"), "pw");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await waitFor(() => expect(session().state.status).toBe("signedIn"));
+    expect(mockOfficerLogin).toHaveBeenLastCalledWith({ username: "yama", password: "pw" });
+    act(() => session().signOut());
+  }
+  fireEvent.press(screen.getByTestId("login-switch"));
+  expect(platform().persistent.get(LAST_LOGIN_KEY)).toBeNull();
+  expect(screen.queryByTestId("login-known")).toBeNull();
+  expect(screen.getByTestId("login-username").props.value).toBe("");
 });
 
 it("asks which hall after 409 hall_required, then signs in again with that tenant_code", async () => {

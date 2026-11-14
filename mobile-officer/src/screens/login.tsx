@@ -11,19 +11,28 @@ import { OFFICER_BRAND } from "../brand";
 import { ActionButton, Row } from "../kit";
 import { MFA_TIMED_OUT, loginFailureKey } from "../rules";
 import { ForgotPassword } from "./account";
-import { useSession, type Hall } from "../session";
-import { BrandMark, Button, Input, Notice, Screen, Txt, space, useI18n } from "../shared";
+import { forgetLastLogin, readLastLogin, useSession, type Hall } from "../session";
+import { BrandMark, Button, Input, Notice, Screen, SmallButton, Txt, space, useI18n } from "../shared";
 
 type Step = { name: "credentials" } | { name: "forgot" } | { name: "hall"; halls: Hall[] } | { name: "mfa"; pendingToken: string; recovery: boolean };
 
 /** Why the sign-in page opens as it does after a reset link: `reset_done` says so; `forgot` starts at 忘记密码 (the link was dead). */
 export type LoginHint = "reset_done" | "forgot";
 
+/** 「zh***g」: enough to recognise one's own account, not enough to read it off someone else's phone. */
+export function maskUsername(name: string): string {
+  const head = name.length >= 5 ? 2 : 1;
+  const tail = name.length >= 3 ? 1 : 0;
+  return `${name.slice(0, head)}***${tail ? name.slice(-tail) : ""}`;
+}
+
 export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
   const { t } = useI18n();
   const { signIn, verifyMfa } = useSession();
   const [step, setStep] = useState<Step>(hint === "forgot" ? { name: "forgot" } : { name: "credentials" });
-  const [username, setUsername] = useState("");
+  // The last officer on this phone (survives sign-out, 401, cold start): their username, password box focused.
+  const [known, setKnown] = useState(readLastLogin);
+  const [username, setUsername] = useState(() => known?.username ?? "");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [remember, setRemember] = useState(false);
@@ -86,7 +95,28 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
             {hint === "reset_done" && !failure ? (
               <Notice tone="neutral" testID="login-reset-done">{`${t("auth.reset_done")}\n${t("auth.reset_done_body")}`}</Notice>
             ) : null}
-            <Input testID="login-username" label={t("officer_app.login.username")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
+            {known ? (
+              <Row
+                testID="login-known"
+                minHeight={56}
+                title={known.display_name ? `${known.display_name} · ${maskUsername(known.username)}` : maskUsername(known.username)}
+                right={
+                  <SmallButton
+                    testID="login-switch"
+                    title={t("soul_app.login.switch")}
+                    onPress={() => {
+                      forgetLastLogin();
+                      setKnown(null);
+                      setUsername("");
+                      setPassword("");
+                      setFailure(null);
+                    }}
+                  />
+                }
+              />
+            ) : (
+              <Input testID="login-username" label={t("officer_app.login.username")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
+            )}
             <Input
               testID="login-password"
               label={t("officer_app.login.password")}
@@ -95,6 +125,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
               secureTextEntry
               textContentType="password"
               autoComplete="current-password"
+              autoFocus={!!known}
               secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
             />
             <Button testID="login-submit" title={t("officer_app.login.submit")} busy={busy} disabled={!username.trim() || !password} onPress={() => void submit()} />

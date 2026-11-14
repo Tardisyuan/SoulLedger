@@ -70,6 +70,32 @@ function readStoredUser(): LoginUser | null {
   }
 }
 
+/**
+ * The last officer who signed in on this phone, for the sign-in page (audit 2026-11-15 §2.2 A1). Not `USER_KEY`:
+ * that one says who is signed in NOW (owner.ts) and must go on sign-out. This one survives sign-out, a 401 and a
+ * cold start; only 「换一个账号」 or another officer's sign-in replaces it. Nothing secret: name, username, hall.
+ */
+export const LAST_LOGIN_KEY = "officer_last_login";
+
+export interface LastLogin {
+  username: string;
+  display_name: string;
+  hall: string;
+}
+
+export function readLastLogin(): LastLogin | null {
+  try {
+    const v = JSON.parse(platform().persistent.get(LAST_LOGIN_KEY) ?? "null") as Partial<LastLogin> | null;
+    return v && typeof v.username === "string" && v.username
+      ? { username: v.username, display_name: typeof v.display_name === "string" ? v.display_name : "", hall: typeof v.hall === "string" ? v.hall : "" }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export const forgetLastLogin = () => platform().persistent.remove(LAST_LOGIN_KEY);
+
 /** Two-step verification is mandatory for this role and not yet on: the standing banner. */
 export function needsMfaSetup(user: Pick<LoginUser, "mfa_required" | "mfa_enabled">): boolean {
   return !!user.mfa_required && !user.mfa_enabled;
@@ -103,6 +129,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAccessToken(response.access);
     setRefreshToken(response.refresh);
     platform().persistent.set(USER_KEY, JSON.stringify(response.user));
+    const last: LastLogin = { username: response.user.username, display_name: response.user.display_name, hall: response.user.tenant?.code ?? "" };
+    platform().persistent.set(LAST_LOGIN_KEY, JSON.stringify(last));
     // Unsent replies and drafts kept from a session the server ended: the same officer gets them back, anyone else
     // finds them gone (A7).
     dropUnowned([DRAFTS_KEY, OUTBOX_KEY]);
