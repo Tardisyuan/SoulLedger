@@ -24,13 +24,14 @@ import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
 import { formatHistoricalDate, type HistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { DeedMark, civOf } from "../dossierSeal";
 import { formatWhen } from "../format";
 import { ActionButton, LoadingRows, RefreshFailed, Row, StateView, detailStateOf } from "../kit";
 import { MoreRow, useMoreRows, type Page } from "../paged";
+import { noteOpened } from "../recentOpened";
 import { hallLabel } from "../rules";
 import { useSession } from "../session";
 import { GUTTER, Notice, OneLine, SectionLabel, Txt, family, radius, space, useI18n, useRemote, useTheme } from "../shared";
@@ -85,6 +86,11 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
   }, [id]);
   const { data, error, reload } = useRemote(load);
   const tabs = soulTabs(permissions);
+  // 查询's 「最近打开」 (D2): every soul opened, from any list or link, once it has loaded.
+  const soulName = data?.soul.name;
+  useEffect(() => {
+    if (soulName) noteOpened({ type: "soul", id, title: soulName });
+  }, [id, soulName]);
   const [tab, setTab] = useState<SoulTab>("identity");
   const [opened, setOpened] = useState<SoulTab[]>(["identity"]);
   const view = detailStateOf({ data, error });

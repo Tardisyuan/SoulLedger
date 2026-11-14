@@ -19,6 +19,7 @@ import { BackHandler, Pressable, type ScrollView, Share, View } from "react-nati
 import { formatWhen } from "../format";
 import { useKeptText } from "../keptText";
 import { useCachedRemote } from "../readCache";
+import { noteOpened } from "../recentOpened";
 import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
@@ -56,8 +57,14 @@ export function Detail({
   onGone,
   backLabel,
   position,
+  next,
 }: {
   target: DetailTarget;
+  /**
+   * The next row of the list it was opened from (D1): after a decision the bar offers 「下一件(3/7)」 beside
+   * 「回到{from}」. Never followed for the officer. Absent (the last row, a push landing): only 「回到{from}」.
+   */
+  next?: { label: string; onNext: () => void };
   /** The back row's words when opened from a list that names itself (「‹ 案卷台」); 「返回」 otherwise and over a layer. */
   backLabel?: string;
   /** Where the case sits in that list (「第 1 / 7 件」), at the right of the back row. */
@@ -98,6 +105,9 @@ export function Detail({
   const openFlow = (id: string) => push({ type: "flow", id });
   // A pick made from over the detail: back to it, which loads its segments again (a new key), and the list behind reloads.
   const [picked, setPicked] = useState(0);
+  // The base item was decided here (approved / rejected / sealed): its action bar gives way to NextBar.
+  const [decided, setDecided] = useState(false);
+  const onDecided = () => setDecided(true);
   return (
     <View testID="detail" style={{ flex: 1, backgroundColor: theme.s0 }}>
       <Pressable
@@ -125,10 +135,11 @@ export function Detail({
         {target.type === "todo" && target.kind === "city_god" ? <CityGodCase key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
         {target.type === "todo" && target.kind === "wangsi" ? <WangsiReview key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
         {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" && target.kind !== "city_god" && target.kind !== "wangsi" ? (
-          <TodoDetail key={picked} kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} />
+          <TodoDetail key={picked} kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} onDecided={onDecided} />
         ) : null}
-        {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} onOpenFlow={openFlow} /> : null}
+        {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} onOpenFlow={openFlow} onDecided={onDecided} /> : null}
         {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
+        {decided ? <NextBar next={next} from={from} onLeave={leave} /> : null}
       </View>
       </GoneContext.Provider>
       <GoneContext.Provider value={over}>
@@ -159,6 +170,18 @@ export function Detail({
         />
       ) : null}
       </GoneContext.Provider>
+    </View>
+  );
+}
+
+/** After a decision (D1): 「回到{from}」 and, when the list had a row after this one, 「下一件(3/7)」. Ink, like every action. */
+function NextBar({ next, from, onLeave }: { next?: { label: string; onNext: () => void }; from?: string; onLeave: () => void }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  return (
+    <View testID="next-bar" style={{ flexDirection: "row", gap: space[3], padding: space[4], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
+      <ActionButton testID="detail-leave" kind="ink-outline" title={from ? t("state.gone_back", { from }) : t("officer_app.back")} onPress={onLeave} />
+      {next ? <ActionButton testID="detail-next" kind="ink" title={next.label} onPress={next.onNext} /> : null}
     </View>
   );
 }
@@ -220,8 +243,11 @@ function TodoDetail({
   onOpenSoul,
   onOpenPick,
   whenGone,
+  onDecided,
 }: {
   kind: TodoKind;
+  /** Approved or rejected here: the action bar goes and the detail offers 「下一件」 (D1). */
+  onDecided?: () => void;
   id: string;
   onSettled: () => void;
   onOpenSoul?: (id: string) => void;
@@ -264,12 +290,15 @@ function TodoDetail({
     setSheet(next);
   };
   const view = detailStateOf({ data, error });
+  const [decided, setDecided] = useState(false);
 
   const settled = () => {
     // The list behind this screen reloads; this item is asked again, and it answers "already handled".
     // (The cooldown facts ride along in the same load.)
     void reload();
     onSettled();
+    setDecided(true);
+    onDecided?.();
   };
 
   if (view === "gone" && whenGone) return <View style={{ padding: space[5] }}>{whenGone}</View>;
@@ -338,7 +367,7 @@ function TodoDetail({
           <ContinueOnDesk target={{ kind, id }} />
         </View>
       </Screen>
-      {data.actionable ? <ActionBar kind={kind} onPick={pick} waitingOn={data.waiting_on_cosigner?.name ?? null} offline={offline} /> : null}
+      {data.actionable && !(decided && onDecided) ? <ActionBar kind={kind} onPick={pick} waitingOn={data.waiting_on_cosigner?.name ?? null} offline={offline} /> : null}
       <DecisionSheet key={`decision-${opened}`} open={sheet === "approve" || sheet === "reject"} verdict={sheet === "reject" ? "reject" : "approve"} detail={data as TodoItemDetail} cooldown={cooldown.data} onClose={() => setSheet(null)} onDone={settled} />
       <CosignSheet key={`cosign-${opened}`} open={sheet === "cosign"} kind={kind} id={id} onClose={() => setSheet(null)} onDone={() => void reload()} />
     </View>
@@ -373,7 +402,18 @@ function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPic
   );
 }
 
-function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul: (id: string) => void; onOpenFlow?: (workflowId: string) => void }) {
+function JudgmentDetail({
+  id,
+  onOpenSoul,
+  onOpenFlow,
+  onDecided,
+}: {
+  id: string;
+  onOpenSoul: (id: string) => void;
+  onOpenFlow?: (workflowId: string) => void;
+  /** Sealed here: the action bar goes and the detail offers 「下一件」 (D1). */
+  onDecided?: () => void;
+}) {
   const { t, locale } = useI18n();
   const { state } = useSession();
   const me = state.status === "signedIn" ? state.user.id : null;
@@ -390,6 +430,12 @@ function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul
   const [openings, setOpenings] = useState(0);
   const [sealed, setSealed] = useState(false);
   const view = detailStateOf({ data, error });
+  // 查询's 「最近打开」 (D2): every case opened, from any list or link, once it has loaded.
+  const caseNumber = data?.case_number;
+  const soulName = data?.soul_name;
+  useEffect(() => {
+    if (caseNumber) noteOpened({ type: "judgment", id, title: caseNumber, line: soulName });
+  }, [id, caseNumber, soulName]);
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
   if (record) return <EvidenceText record={record} onBack={() => setRecord(null)} />;
   return (
@@ -425,7 +471,7 @@ function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul
           <ContinueOnDesk target={{ kind: "judgment", id }} />
         </View>
       </Screen>
-      <JudgmentActionBar
+      {sealed && onDecided ? null : <JudgmentActionBar
         data={data}
         me={me}
         reassignAsked={asked}
@@ -437,7 +483,7 @@ function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul
           setOpenings((n) => n + 1);
           setJudging(true);
         }}
-      />
+      />}
       <SealSheet
         key={`seal-${openings}`}
         open={judging}
@@ -447,6 +493,7 @@ function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul
           setJudging(false);
           setSealed(true);
           void reload();
+          onDecided?.();
         }}
       />
     </View>

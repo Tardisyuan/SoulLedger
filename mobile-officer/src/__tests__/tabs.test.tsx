@@ -99,14 +99,14 @@ describe("the to-do tab", () => {
     const onOpen = jest.fn();
     renderOfficer(<TodoTab highlight={null} onOpen={onOpen} />);
     fireEvent.press(await screen.findByTestId("todo-row-reassignment-d1"));
-    expect(onOpen).toHaveBeenCalledWith({ kind: "reassignment", id: "d1" });
+    expect(onOpen.mock.calls.map((c) => c[0])).toContainEqual({ kind: "reassignment", id: "d1" }); // the 2nd argument is the rows of its group (D1)
   });
 
   it("opens the item's detail", async () => {
     const onOpen = jest.fn();
     renderOfficer(<TodoTab highlight={null} onOpen={onOpen} />);
     fireEvent.press(await screen.findByTestId("todo-row-approval-wf-1"));
-    expect(onOpen).toHaveBeenCalledWith({ kind: "approval", id: "wf-1" });
+    expect(onOpen.mock.calls.map((c) => c[0])).toContainEqual({ kind: "approval", id: "wf-1" }); // the 2nd argument is the rows of its group (D1)
   });
 
   it("empty: a title and one sentence", async () => {
@@ -693,7 +693,7 @@ describe("the 案卷台", () => {
     const onOpen = jest.fn();
     renderOfficer(<QueueTab onOpen={onOpen} />);
     fireEvent.press(await screen.findByTestId("queue-row-c"));
-    expect(onOpen).toHaveBeenCalledWith("c", { n: 3, total: 3 });
+    expect(onOpen).toHaveBeenCalledWith("c", ["a", "b", "c"]);
   });
 
   it("in the shell: the case is full-screen under 「‹ 案卷台」 and 「第 1 / 1 件」; back lands on the desk", async () => {
@@ -738,14 +738,15 @@ describe("查询 finds a case by its number too (O-d)", () => {
     await act(async () => {}); // 打开时取的「最近」等落定
   });
 
-  it("a whole case number pins a 案件 group above the souls, and does not jump to it", async () => {
+  it("a case number pins a 案件 group of what the server answers above the souls, and does not jump to it", async () => {
     mockSouls.mockResolvedValue({ data: { results: [], count: 0, next: null } });
     mockList.mockResolvedValue({ data: { results: [CASE, { ...CASE, id: "j-43", case_number: "CN-2026-00421" }] } });
     const onOpenJudgment = jest.fn();
     renderOfficer(<SearchTab onOpenSoul={() => {}} onOpenJudgment={onOpenJudgment} />);
     search("cn-2026-0042");
     expect(await screen.findByTestId("case-row-j-42")).toBeTruthy();
-    expect(screen.queryByTestId("case-row-j-43")).toBeNull(); // only the exact match
+    // The server matches a case number's beginning (D4), so both are its answer; the app no longer filters to an exact one.
+    expect(screen.getByTestId("case-row-j-43")).toBeTruthy();
     expect(screen.getByText("案件")).toBeTruthy();
     expect(await screen.findByTestId("search-no-soul")).toBeTruthy();
     expect(screen.getByText("没有编号或姓名对得上的灵魂")).toBeTruthy();
@@ -755,12 +756,12 @@ describe("查询 finds a case by its number too (O-d)", () => {
     expect(onOpenJudgment).toHaveBeenCalledWith("j-42");
   });
 
-  it("a name does not ask the judgments at all", async () => {
+  it("a name asks the judgments too (D2); with no case found there is no 案件 group", async () => {
     mockSouls.mockResolvedValue({ data: { results: [], count: 0, next: null } });
     renderOfficer(<SearchTab onOpenSoul={() => {}} />);
     search("王守仁");
     expect(await screen.findByText("没有找到")).toBeTruthy();
-    expect(mockList).not.toHaveBeenCalled();
+    expect(mockList).toHaveBeenCalledWith({ search: "王守仁" });
     expect(screen.queryByTestId("search-cases")).toBeNull();
   });
 });

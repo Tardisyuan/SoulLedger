@@ -580,14 +580,6 @@ export function reassignCandidates<T extends { id: number; display_name: string;
   return { rows, counts: officers.length > 0 && officers.every((o) => typeof o.in_hand === "number") };
 }
 
-/**
- * 查询框里像一个完整案号(`CN-2026-0042`:前缀 1–8 位字母数字、年份、至少四位序号,同 `format_case_number`)时,
- * 结果顶上多一组「案件」(Design 第四十批 O-d)。不自动跳转。
- */
-export function looksLikeCaseNumber(q: string): boolean {
-  return /^[A-Za-z0-9]{1,8}-\d{4}-\d{4,}$/.test(q.trim());
-}
-
 /** 理由必填:只有空白也算没写。 */
 export function reasonBlank(reason: string): boolean {
   return reason.trim() === "";

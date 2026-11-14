@@ -66,6 +66,7 @@ const APPROVAL = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockComments.mockResolvedValue({ data: [] });
+  mockList.mockResolvedValue({ data: { results: [] } }); // 查询 asks the judgments with every search (D2)
 });
 
 describe("words survive leaving the detail (a tab switch unmounts it)", () => {

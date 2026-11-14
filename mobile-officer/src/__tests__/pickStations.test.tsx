@@ -135,7 +135,7 @@ describe("O-1 · 待我选站 in the to-do list", () => {
     expect(within(ahead).queryByText(/门口/)).toBeNull();
 
     fireEvent.press(gated);
-    expect(onOpen).toHaveBeenCalledWith({ kind: "pick", id: "wf-1" });
+    expect(onOpen.mock.calls.map((c) => c[0])).toContainEqual({ kind: "pick", id: "wf-1" }); // the 2nd argument is the rows of its group (D1)
   });
 
   it("an older server without the group draws nothing for it", async () => {

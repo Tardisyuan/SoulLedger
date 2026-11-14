@@ -94,7 +94,8 @@ function useGroupRows(group: DeskGroup, source: FilterSource | "all") {
 }
 
 /**
- * `onOpen(id, position)`: the case and where it sits among the rows shown (「第 1 / 7 件」 in the detail's bar).
+ * `onOpen(id, ids)`: the case and the ids of the rows shown, in order -- the shell keeps them for 「第 1 / 7 件」 in the
+ * detail's bar and 「下一件」 after a decision (convenience audit 2026-11-15 D1).
  * `gone`: cases whose detail turned out to be gone (O-c), greyed and not pressable. `version`: the shell's bump.
  */
 export function QueueTab({
@@ -109,7 +110,7 @@ export function QueueTab({
   onOpenCityGod?: () => void;
   /** The 转生申请 chip (第三十批 十二.2, the seventh source): 待办, filtered to 转生申请. Without it the chip is not drawn. */
   onOpenRebirth?: () => void;
-  onOpen: (id: string, position?: { n: number; total: number }) => void;
+  onOpen: (id: string, ids: string[]) => void;
   /** 「滑卡审判」(v4 S09):打开我认领的卡堆。 */
   onSwipe?: () => void;
   gone?: ReadonlySet<string>;
@@ -253,7 +254,6 @@ export function QueueTab({
                 </View>
               </View>
               {rows.map((row) => {
-                const position = { n: flat.indexOf(row) + 1, total: flat.length };
                 const tag = deskTag(t, row, group);
                 const action = !canClaim ? null : group === "unclaimed" && !heldBeforeClaim(row) ? "claim" : group === "mine" ? "release" : null;
                 return (
@@ -263,7 +263,7 @@ export function QueueTab({
                     lineTwo={[t(`officer_app.desk.sources.${row.source ?? "queue"}`), courtLabel(t, row.court, locale), ...rowNotes(t, row, group, tag.deadline, locale)].join(" · ")}
                     tag={tag}
                     gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
-                    onPress={() => onOpen(row.id, position)}
+                    onPress={() => onOpen(row.id, flat.map((r) => r.id))}
                     action={
                       action
                         ? {

@@ -174,7 +174,7 @@ describe("受刑计划变更 (O-f) and the page head (第四节 5)", () => {
     expect(screen.getByTestId("todo-desk-sentence_change")).toBeTruthy();
     // The other groups still open.
     fireEvent.press(screen.getByTestId("todo-row-approval-a1"));
-    expect(onOpen).toHaveBeenCalledWith({ kind: "approval", id: "a1" });
+    expect(onOpen.mock.calls.map((c) => c[0])).toContainEqual({ kind: "approval", id: "a1" }); // the 2nd argument is the rows of its group (D1)
   });
 
   it.each([
@@ -210,6 +210,6 @@ describe("受刑计划变更 (O-f) and the page head (第四节 5)", () => {
     expect(onOpen).not.toHaveBeenCalled();
     expect(screen.getByTestId("todo-row-approval-a1").props.accessibilityState).toMatchObject({ disabled: true });
     fireEvent.press(screen.getByTestId("todo-row-approval-a2"));
-    expect(onOpen).toHaveBeenCalledWith({ kind: "approval", id: "a2" });
+    expect(onOpen.mock.calls.map((c) => c[0])).toContainEqual({ kind: "approval", id: "a2" }); // the 2nd argument is the rows of its group (D1)
   });
 });

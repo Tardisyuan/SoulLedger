@@ -112,7 +112,7 @@ describe("the to-do group", () => {
     const drawn = screen.root.findAll((n) => typeof n.props.testID === "string" && /^todo-group-/.test(n.props.testID)).map((n) => n.props.testID);
     expect([...new Set(drawn)]).toEqual(["todo-group-approval", "todo-group-letter"]);
     fireEvent.press(screen.getByTestId("todo-row-letter-c-1"));
-    expect(onOpen).toHaveBeenCalledWith({ kind: "letter", id: "c-1" });
+    expect(onOpen.mock.calls.map((c) => c[0])).toContainEqual({ kind: "letter", id: "c-1" }); // the 2nd argument is the rows of its group (D1)
   });
   it("is not drawn when it is empty, or when an older server never sent it", async () => {
     mockTodo.mockResolvedValue({ data: { ...NONE, approvals: group([row("approval", "a1")]) } });

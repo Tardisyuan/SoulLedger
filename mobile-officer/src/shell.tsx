@@ -16,7 +16,7 @@ import { IdentityBand, PageSwitch, StandingBanner, TabBar, visibleTabs, type Tab
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
 import { listenForArrivals, listenForLandings, registerDevice } from "./push";
-import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
+import { HIGHLIGHT_MS, goneKey, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
 import { ChangePasswordScreen, DisplayNameScreen } from "./screens/account";
 import { DevicesScreen } from "./screens/devices";
@@ -63,8 +63,9 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [landed, setLanded] = useState<ItemRef | null>(null);
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
   const [unread, setUnread] = useState(false);
-  // 案卷台: where the opened case sits among the rows shown, for 「第 1 / 7 件」 in the detail's bar (第三十批 二.6).
-  const [deskPosition, setDeskPosition] = useState<{ n: number; total: number } | null>(null);
+  // The rows shown in the list the detail was opened from, in order (案卷台: all of them; 待办: the item's group).
+  // 「第 1 / 7 件」 in the detail's bar on 案卷台 (第三十批 二.6), and 「下一件」 after a decision (convenience audit D1).
+  const [sequence, setSequence] = useState<DetailTarget[] | null>(null);
   // 查询's last search, kept above the tab for the same reason.
   const [searchQuery, setSearchQuery] = useState("");
   const assist = useOfficerAssist();
@@ -76,7 +77,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
 
   const land = useCallback((landing: Landing, from?: TabKey) => {
     setSwipe(false);
-    setDeskPosition(null);
+    setSequence(null);
     setOrigin(from ?? (landing.judgment ? "queue" : landing.soul ? "search" : "todo"));
     if (landing.judgment || landing.soul) {
       setTab(landing.judgment ? "queue" : "search");
@@ -151,7 +152,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
 
   const close = useCallback(() => {
     setDetail(null);
-    setDeskPosition(null);
+    setSequence(null);
     setVersion((v) => v + 1);
     if (landed) {
       setHighlight(landed);
@@ -204,6 +205,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   // starting 待办 of a 访客, a link, a landing) shows the first one there is -- 通知 and 我的 are always there.
   const tabs = visibleTabs(user.permissions);
   const current = tabs.includes(tab) ? tab : tabs[0];
+  const at = detail && sequence ? sequence.findIndex((s) => goneKey(s) === goneKey(detail)) : -1;
+  const next = at >= 0 && at + 1 < sequence!.length ? sequence![at + 1] : null;
   // A one-visit filter only applies while 待办 is the current tab; every other way into 待办 clears it (above).
   const todoFilterOnce = current === "todo" ? todoOnce : null;
   // A door in the bar or a page in the switch under the top bar: either way the officer moves to that page.
@@ -253,11 +256,15 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <NotifyScreen onBack={() => setAccount(null)} />
         ) : detail ? (
           <Detail
+            // A new target is a new screen: 「下一件」 must not carry the last one's stack, sheets or decision.
+            key={goneKey(detail)}
             target={detail}
             from={t(`officer_app.tabs.${origin}`)}
-            {...(origin === "queue" && deskPosition
-              ? { backLabel: t("officer_app.desk.title"), position: t("officer_app.desk.position", { n: String(deskPosition.n), total: String(deskPosition.total) }) }
+            {...(origin === "queue" && at >= 0
+              ? { backLabel: t("officer_app.desk.title"), position: t("officer_app.desk.position", { n: String(at + 1), total: String(sequence!.length) }) }
               : {})}
+            // Offered after a decision, never taken for the officer (D1: a link opens a page, it does not decide).
+            next={next ? { label: t("officer_app.detail.next", { n: String(at + 2), total: String(sequence!.length) }), onNext: () => { setDetail(next); setVersion((v) => v + 1); } } : undefined}
             onBack={close}
             onLeave={() => {
               close();
@@ -267,7 +274,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             onGone={markGone}
           />
         ) : current === "todo" ? (
-          <TodoTab key={todoFilterOnce ? "once" : "saved"} initialFilter={todoFilterOnce ?? undefined} version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
+          <TodoTab key={todoFilterOnce ? "once" : "saved"} initialFilter={todoFilterOnce ?? undefined} version={version} highlight={highlight} gone={gone} onOpen={(item, rows) => { setOrigin("todo"); setSequence(rows?.map((r) => ({ type: "todo" as const, ...r })) ?? null); setDetail({ type: "todo", ...item }); }} />
         ) : current === "queue" ? (
           <QueueTab
             version={version}
@@ -277,7 +284,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             onOpenCityGod={tabs.includes("todo") ? () => { setTodoOnce(["city_god"]); setTab("todo"); } : undefined}
             // 转生申请 (第三十批 十二.2, the seventh source): 待办 filtered to 转生申请, the same one-visit way.
             onOpenRebirth={tabs.includes("todo") ? () => { setTodoOnce(["rebirth"]); setTab("todo"); } : undefined}
-            onOpen={(id, position) => { setOrigin("queue"); setDeskPosition(position ?? null); setDetail({ type: "judgment", id }); }} />
+            onOpen={(id, ids) => { setOrigin("queue"); setSequence(ids.map((i) => ({ type: "judgment" as const, id: i }))); setDetail({ type: "judgment", id }); }} />
         ) : current === "search" ? (
           <SearchTab
             initialQuery={searchQuery}

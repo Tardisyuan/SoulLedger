@@ -103,6 +103,11 @@ def test_the_api_shows_the_number_and_never_takes_one(cn_tenant):
 
     found = client.get("/api/v1/judgment/", {"search": number.lower()})
     assert [row["id"] for row in found.data["results"]] == [str(case.pk)]
+    # 案号是前缀匹配(D4):打一半也找得到;中间的一段不算。
+    half = client.get("/api/v1/judgment/", {"search": number[:-2].lower()})
+    assert [row["id"] for row in half.data["results"]] == [str(case.pk)]
+    middle = client.get("/api/v1/judgment/", {"search": number[3:]})
+    assert middle.data["results"] == []
 
 
 @pytest.mark.django_db
