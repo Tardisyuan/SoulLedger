@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { auditApi, PAGE_SIZE, type Tenant } from "@soulledger/core/api";
@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 import { civSkinOf } from "@/src/lib/civSkin";
-import { useRememberedFilters } from "@/src/lib/rememberedFilters";
+import { useInitialUrlFilters, useUrlFilters, type UrlFieldRule } from "@/src/lib/useUrlFilters";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 import { AuditAskBox } from "@/src/components/audit/AuditAskBox";
 import { auditResourceLabel, datePresetStart, type DatePreset } from "@/src/components/audit/auditLabels";
@@ -110,7 +110,16 @@ function describeAudit(description: string, t: (key: string, params?: Record<str
 /** 常驻的筛选记在本浏览器。搜索框的字不记(属于一次到访);「殿」不记:它只在全局管理员有清单时才画,
     记下来会变成一个看不见却在生效的筛选。 */
 const AUDIT_FILTERS_KEY = "soulledger.audit.filters";
-const AUDIT_FILTER_FIELDS = ["action", "resource", "datePreset", "ordering"] as const;
+/** 筛选、排序与页码在地址里的样子(`useUrlFilters`,2026-11-15)。动作与资源的取值来自后端,这里只验形状。 */
+const AUDIT_URL_FIELDS = {
+  q: "text",
+  action: /^[A-Z_]{1,40}$/,
+  resource: /^[\w.-]{1,60}$/,
+  operator: "text",
+  datePreset: ["7d", "30d"],
+  ordering: /^-?timestamp$/,
+  trace: /^[\w-]{1,64}$/,
+} satisfies Record<string, UrlFieldRule>;
 /** 列菜单的偏好,一个列表一份。 */
 const AUDIT_COLUMNS_KEY = "soulledger.audit.columns";
 
@@ -134,6 +143,15 @@ function actionEnumValue(action: string, t: (key: string) => string): EnumValue 
 }
 
 export default function AuditPage() {
+  // useSearchParams (in `useUrlFilters`) needs a Suspense boundary under the App Router build.
+  return (
+    <Suspense fallback={null}>
+      <AuditPageContent />
+    </Suspense>
+  );
+}
+
+function AuditPageContent() {
   const { t, formatDate, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
   // `hasPermission("audit.read")`, not `isAdmin`.
@@ -155,40 +173,39 @@ export default function AuditPage() {
   const { user, tenantCode } = useTenant();
   const isGlobalAdmin = user?.role === "ADMIN" && tenantCode === null;
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [actionFilter, setActionFilter] = useState("");
-  const [resourceFilter, setResourceFilter] = useState("");
+  const { values: fromUrl, page: urlPage } = useInitialUrlFilters(AUDIT_URL_FIELDS);
+  const [page, setPage] = useState(urlPage);
+  const [search, setSearch] = useState(fromUrl.q);
+  const [actionFilter, setActionFilter] = useState(fromUrl.action);
+  const [resourceFilter, setResourceFilter] = useState(fromUrl.resource);
   const [hallFilter, setHallFilter] = useState("");
   // 操作人(review-2026-11-01 Web 6):按用户名精确筛(后端 `?username=`)。候选取本页出现过的名字(datalist),
   // 也可以照样输入别的名字。
-  const [operator, setOperator] = useState("");
+  const [operator, setOperator] = useState(fromUrl.operator);
   const debouncedOperator = useDebouncedValue(operator.trim());
-  const [datePreset, setDatePreset] = useState<DatePreset>("");
-  const [ordering, setOrdering] = useState("");
-  // 详情页的「本次请求的全部记录」链接带 `?trace=`。不记进本浏览器(属于一次到访),也不用 useSearchParams
-  // (它要求 Suspense 边界):挂载后读一次地址栏。
-  // 统计页「最常变动的资源」一行带 `?resource=`:同理挂载后读一次，并且这次不读本浏览器记住的筛选
-  // (否则记住的资源会盖掉它)。
-  const [traceFilter, setTraceFilter] = useState("");
-  const urlResource = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("resource") ?? "";
-  useEffect(() => {
-    const query = new URLSearchParams(window.location.search);
-    setTraceFilter(query.get("trace") ?? "");
-    if (query.get("resource")) setResourceFilter(query.get("resource") ?? "");
-  }, []);
-  useRememberedFilters(
-    AUDIT_FILTERS_KEY,
-    AUDIT_FILTER_FIELDS,
-    { action: actionFilter, resource: resourceFilter, datePreset, ordering },
-    (saved) => {
-      if (saved.action) setActionFilter(saved.action);
-      if (saved.resource) setResourceFilter(saved.resource);
-      if (saved.datePreset === "7d" || saved.datePreset === "30d") setDatePreset(saved.datePreset);
-      if (saved.ordering) setOrdering(saved.ordering);
+  const [datePreset, setDatePreset] = useState<DatePreset>(fromUrl.datePreset === "7d" || fromUrl.datePreset === "30d" ? fromUrl.datePreset : "");
+  const [ordering, setOrdering] = useState(fromUrl.ordering);
+  // 详情页的「本次请求的全部记录」链接带 `?trace=`,统计页「最常变动的资源」一行带 `?resource=`。
+  // 2026-11-15 起筛选、排序与页码都在地址里(`useUrlFilters`):地址写了任何一项,就不读本浏览器记住的筛选
+  // (否则记住的资源会盖掉它)。追踪号、搜索词与操作人不记进本浏览器(属于一次到访)。
+  const [traceFilter, setTraceFilter] = useState(fromUrl.trace);
+  useUrlFilters({
+    storageKey: AUDIT_FILTERS_KEY,
+    fields: AUDIT_URL_FIELDS,
+    remember: ["action", "resource", "datePreset", "ordering"],
+    values: { q: search, action: actionFilter, resource: resourceFilter, operator, datePreset, ordering, trace: traceFilter },
+    page,
+    restore: (v, p) => {
+      setSearch(v.q);
+      setActionFilter(v.action);
+      setResourceFilter(v.resource);
+      setOperator(v.operator);
+      setDatePreset(v.datePreset === "7d" || v.datePreset === "30d" ? v.datePreset : "");
+      setOrdering(v.ordering);
+      setTraceFilter(v.trace);
+      setPage(p);
     },
-    Boolean(urlResource)
-  );
+  });
 
   // Presets are always "N days ago through now" — there is no end bound to
   // compute, so this only ever produces `dateFrom` (`end_date` was dead: the

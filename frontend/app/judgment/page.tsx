@@ -32,6 +32,7 @@ import { useHotkeys } from "@/src/lib/hotkeys";
 import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { verdictNamespace } from "@/src/lib/domainNames";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
+import { useInitialUrlFilters, useUrlFilters, type UrlFieldRule } from "@/src/lib/useUrlFilters";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue";
 
@@ -59,6 +60,16 @@ const JUDGMENT_COLUMNS_KEY = "soulledger.judgment.columns";
 const VERDICT_OPTIONS = ["PASSED", "FAILED", "PURGATORY", "RETRY"] as const;
 
 const SOUL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** 筛选在地址里的样子(`useUrlFilters`);`?q=` 与全局搜索带来的是同一个参数。 */
+const JUDGMENT_FILTERS_KEY = "soulledger.judgment.filters";
+const JUDGMENT_URL_FIELDS = {
+  tab: ["concluded"],
+  q: "text",
+  verdict: VERDICT_OPTIONS,
+  civilization: CIVILIZATION_OPTIONS,
+  ordering: /^-?created_at$/,
+} satisfies Record<string, UrlFieldRule>;
 
 /** 「灵魂：某某 ×」。名字取不到时显示编号(`IdentifierChip`),不把裸 id 当名字印。× 是单独的按钮,不嵌在别的按钮里。 */
 function SoulFilterChip({ soulId, onClear }: { soulId: string; onClear: () => void }) {
@@ -98,15 +109,33 @@ function JudgmentQueuePageContent() {
     setPage(1);
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   };
-  const [tab, setTab] = useState<Tab>("pending");
-  const [page, setPage] = useState(1);
-  const [ordering, setOrdering] = useState("");
+  const { values: fromUrl, page: urlPage } = useInitialUrlFilters(JUDGMENT_URL_FIELDS);
+  const [tab, setTab] = useState<Tab>(fromUrl.tab === "concluded" ? "concluded" : "pending");
+  const [page, setPage] = useState(urlPage);
+  const [ordering, setOrdering] = useState(fromUrl.ordering);
   // 「已结案」一面的筛选(review-2026-11-01 Web 6):此前一条都没有,只能翻页找。
-  // 搜索框从 `?q=` 起步;裁决、文明是后端 `JudgmentFilter` 已有的两个字段。只属于这次到访,不进 URL。
+  // 搜索框从 `?q=` 起步;裁决、文明是后端 `JudgmentFilter` 已有的两个字段。
+  // 2026-11-15(用户决定,推翻此前「只属于这次到访,不进 URL」):分段、搜索、裁决、文明、排序和页码都进地址
+  // (`useUrlFilters`),链接与刷新回到同一页;裁决、文明、排序另记在本浏览器,地址里一项都没写时才用。
   const [search, setSearch] = useState(q);
-  const [verdict, setVerdict] = useState("");
-  const [civilization, setCivilization] = useState("");
+  const [verdict, setVerdict] = useState(fromUrl.verdict);
+  const [civilization, setCivilization] = useState(fromUrl.civilization);
   const debouncedSearch = useDebouncedValue(search.trim());
+  useUrlFilters({
+    storageKey: JUDGMENT_FILTERS_KEY,
+    fields: JUDGMENT_URL_FIELDS,
+    remember: ["verdict", "civilization", "ordering"],
+    values: { tab: tab === "concluded" ? "concluded" : "", q: search, verdict, civilization, ordering },
+    page,
+    restore: (v, p) => {
+      setTab(v.tab === "concluded" ? "concluded" : "pending");
+      setSearch(v.q);
+      setVerdict(v.verdict);
+      setCivilization(v.civilization);
+      setOrdering(v.ordering);
+      setPage(p);
+    },
+  });
 
   const listParams = (which: Tab) => {
     const params: Record<string, string> = { has_verdict: which === "pending" ? "false" : "true" };
@@ -121,7 +150,7 @@ function JudgmentQueuePageContent() {
   };
   const exportParams = listParams("concluded");
   const listQuery = (which: Tab, p: number) => ({
-    queryKey: ["judgments", which, p, ordering, q, soul, ...(which === "concluded" ? [debouncedSearch, verdict, civilization] : [])],
+    queryKey: ["judgments", which, p, ordering, soul, ...(which === "concluded" ? [debouncedSearch, verdict, civilization] : [q])],
     queryFn: async () => {
       const res = await judgmentApi.list({ page: String(p), ...listParams(which) });
       return res.data;

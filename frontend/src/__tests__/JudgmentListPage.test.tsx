@@ -1100,4 +1100,38 @@ describe("已结案的筛选", () => {
     const pendingCalls = judgmentApi.list.mock.calls.filter(([p]) => p.has_verdict === "false");
     expect(pendingCalls.every(([p]) => p.verdict === undefined && p.civilization === undefined)).toBe(true);
   });
+
+  // 2026-11-15(用户决定):筛选与页码进地址,推翻此前「只属于这次到访」。
+  describe("筛选与页码在地址里", () => {
+    afterEach(() => window.history.replaceState(null, "", "/"));
+
+    it("地址里的分段、裁决与页码打开同一页;不认识的文明不用", async () => {
+      mockSearch = "tab=concluded&verdict=PASSED&civilization=ATLANTIS&page=2";
+      renderPage();
+      await screen.findByTestId("concluded-filters");
+      expect(screen.getByRole("button", { name: /已结案/ })).toHaveAttribute("aria-pressed", "true");
+      await waitFor(() => expect(judgmentApi.list).toHaveBeenCalledWith({ page: "2", has_verdict: "true", verdict: "PASSED" }));
+      // 反面:没有一个请求带上地址里那个不认识的文明。
+      for (const [params] of judgmentApi.list.mock.calls) expect(params.civilization).toBeUndefined();
+    });
+
+    it("选了裁决就写回地址(替换当前一条,不新增历史),原有的 ?soul= 留着", async () => {
+      const SOUL = "3f2b8c1e-9a4d-4e57-8b6a-1c2d3e4f5a6b";
+      mockSearch = `soul=${SOUL}`;
+      window.history.replaceState(null, "", `/judgment?${mockSearch}`);
+      soulsApi.get.mockResolvedValue({ data: { id: SOUL, name: "沈青梧" } });
+      const before = window.history.length;
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: /已结案/ }));
+      const bar = await screen.findByTestId("concluded-filters");
+      fireEvent.change(within(bar).getByLabelText(tZh("judgment.verdict")), { target: { value: "FAILED" } });
+      await waitFor(() => expect(new URLSearchParams(window.location.search).get("verdict")).toBe("FAILED"));
+      const query = new URLSearchParams(window.location.search);
+      expect(query.get("tab")).toBe("concluded");
+      expect(query.get("soul")).toBe(SOUL);
+      expect(query.has("page")).toBe(false);
+      expect(window.history.length).toBe(before);
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+  });
 });

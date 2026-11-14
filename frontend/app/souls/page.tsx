@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 import { useSouls } from "@soulledger/core/hooks/useSouls";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
@@ -11,7 +10,7 @@ import { SoulBatchBar, useSoulSelection } from "@/src/components/souls/SoulBatch
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { balanceApplies } from "@soulledger/core/domain/karmicBalance";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { readFilters, writeFilters } from "@/src/lib/rememberedFilters";
+import { useInitialUrlFilters, useUrlFilters, type UrlFieldRule } from "@/src/lib/useUrlFilters";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { SoulCreateModal } from "@/src/components/souls/SoulCreateModal";
@@ -64,11 +63,25 @@ function dateProblemMarker(soul: SoulListItem): { glyph: string; className: stri
   return null;
 }
 
-/** `?q=` 是全局搜索「查看全部 N 个灵魂 →」带来的词,进页即填进搜索框。换词时整页重挂(key),筛选回到初始。 */
+/**
+ * 筛选、排序与页码都在地址里(`useUrlFilters`,2026-11-15):`?q=` 是全局搜索「查看全部 N 个灵魂 →」带来的词,
+ * `?state=` 是 /welcome 的「本殿灵魂」格子,`?import_batch=` 是导入框的「查看这一批」。
+ * 下拉、余额区间和排序另记在本浏览器,地址里一项都没写时才用;搜索词、导入批次和两个开关不记。
+ */
 const SOULS_FILTERS_KEY = "soulledger.souls.filters";
 /** 列菜单的偏好,记在本浏览器(`ColumnMenu`)。 */
 const SOULS_COLUMNS_KEY = "soulledger.souls.columns";
-const SOULS_FILTER_FIELDS = ["state", "civilization", "balanceMin", "balanceMax", "ordering"] as const;
+const SOULS_URL_FIELDS = {
+  q: "text",
+  state: ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"],
+  civilization: CIVILIZATION_OPTIONS,
+  balanceMin: /^-?\d{1,9}$/,
+  balanceMax: /^-?\d{1,9}$/,
+  ordering: /^-?(name|karmic_balance)$/,
+  import_batch: /^[\w-]{1,64}$/,
+  problems: ["1"],
+  archived: ["1"],
+} satisfies Record<string, UrlFieldRule>;
 
 export default function SoulsPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/corpus/page.tsx).
@@ -83,62 +96,59 @@ export default function SoulsPage() {
 }
 
 function SoulsRoute() {
-  const params = useSearchParams();
-  const q = params?.get("q")?.trim() ?? "";
-  // `?state=` is how /welcome's 本殿灵魂 cells land on a filtered list.
-  const state = params?.get("state")?.trim() ?? "";
-  // `?import_batch=` is where the import dialog's 「查看这一批」 lands: the list narrowed to one CSV import.
-  const batch = params?.get("import_batch")?.trim() ?? "";
-  return <SoulsList key={`${q}|${state}|${batch}`} initialQuery={q} initialState={state} initialBatch={batch} />;
+  return <SoulsList />;
 }
 
-function SoulsList({
-  initialQuery,
-  initialState,
-  initialBatch,
-}: {
-  initialQuery: string;
-  initialState: string;
-  initialBatch: string;
-}) {
+function SoulsList() {
   const { t, locale } = useI18n();
   const hall = useHall(t("plaque.office.records"));
   usePlaque({ hall });
-  const [page, setPage] = useState(1);
-  const [stateFilter, setStateFilter] = useState(initialState);
-  const [civilizationFilter, setCivilizationFilter] = useState("");
-  const [searchInput, setSearchInput] = useState(initialQuery);
-  const [search, setSearch] = useState(initialQuery);
-  const [balanceMin, setBalanceMin] = useState("");
-  const [balanceMax, setBalanceMax] = useState("");
-  const [ordering, setOrdering] = useState("");
-  // The dropdown filters, the balance range and the sort are remembered in this browser. They come back on
-  // mount only when the address asked for nothing itself (`?q=` / `?state=` / `?import_batch=` win), and are
-  // written only after that first read, so the defaults never overwrite what was stored. Search text and the
-  // import batch are not remembered: they belong to one visit.
-  const restored = useRef(false);
-  useEffect(() => {
-    if (!initialQuery && !initialState && !initialBatch) {
-      const saved = readFilters(SOULS_FILTERS_KEY, SOULS_FILTER_FIELDS);
-      if (saved.state) setStateFilter(saved.state);
-      if (saved.civilization) setCivilizationFilter(saved.civilization);
-      if (saved.balanceMin) setBalanceMin(saved.balanceMin);
-      if (saved.balanceMax) setBalanceMax(saved.balanceMax);
-      if (saved.ordering) setOrdering(saved.ordering);
-    }
-    restored.current = true;
-  }, [initialQuery, initialState, initialBatch]);
-  useEffect(() => {
-    if (!restored.current) return;
-    writeFilters(SOULS_FILTERS_KEY, { state: stateFilter, civilization: civilizationFilter, balanceMin, balanceMax, ordering });
-  }, [stateFilter, civilizationFilter, balanceMin, balanceMax, ordering]);
+  const { values: fromUrl, page: urlPage } = useInitialUrlFilters(SOULS_URL_FIELDS);
+  const [page, setPage] = useState(urlPage);
+  const [stateFilter, setStateFilter] = useState(fromUrl.state);
+  const [civilizationFilter, setCivilizationFilter] = useState(fromUrl.civilization);
+  const [searchInput, setSearchInput] = useState(fromUrl.q);
+  const [search, setSearch] = useState(fromUrl.q);
+  const [balanceMin, setBalanceMin] = useState(fromUrl.balanceMin);
+  const [balanceMax, setBalanceMax] = useState(fromUrl.balanceMax);
+  const [ordering, setOrdering] = useState(fromUrl.ordering);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isRegionOpen, setIsRegionOpen] = useState(false);
-  const [batch, setBatch] = useState(initialBatch);
-  const [problemsOnly, setProblemsOnly] = useState(false);
+  const [batch, setBatch] = useState(fromUrl.import_batch);
+  const [problemsOnly, setProblemsOnly] = useState(fromUrl.problems === "1");
   // 「显示已归档」:同处置页的开关(后端 `show_archived`)。不记在浏览器里 —— 归档的灵魂只在要找它时才看。
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState(fromUrl.archived === "1");
+  useUrlFilters({
+    storageKey: SOULS_FILTERS_KEY,
+    fields: SOULS_URL_FIELDS,
+    remember: ["state", "civilization", "balanceMin", "balanceMax", "ordering"],
+    values: {
+      q: searchInput.trim(),
+      state: stateFilter,
+      civilization: civilizationFilter,
+      balanceMin,
+      balanceMax,
+      ordering,
+      import_batch: batch,
+      problems: problemsOnly ? "1" : "",
+      archived: showArchived ? "1" : "",
+    },
+    page,
+    restore: (v, p) => {
+      setSearchInput(v.q);
+      setSearch(v.q);
+      setStateFilter(v.state);
+      setCivilizationFilter(v.civilization);
+      setBalanceMin(v.balanceMin);
+      setBalanceMax(v.balanceMax);
+      setOrdering(v.ordering);
+      setBatch(v.import_batch);
+      setProblemsOnly(v.problems === "1");
+      setShowArchived(v.archived === "1");
+      setPage(p);
+    },
+  });
   // The previewed row's id, not its index: a background refetch can reorder
   // the page, and the drawer must keep showing the soul it was opened on.
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -151,14 +161,16 @@ function SoulsList({
     setPreviewId(id);
   };
 
-  // Debounce the search box so typing doesn't fire a request per keystroke.
+  // Debounce the search box so typing doesn't fire a request per keystroke. Nothing to do when the box
+  // already matches the search (mount, or a restore from the address): that would reset the page to 1.
   useEffect(() => {
+    if (searchInput === search) return;
     const timer = setTimeout(() => {
       setSearch(searchInput);
       setPage(1);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
 
   // Build query params from filter state
   const params: Record<string, string | number | undefined> = { page };
