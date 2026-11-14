@@ -6,6 +6,10 @@ import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
  * 输入全是已有字段 —— 地府读 `Soul.diyu_station`(十三站)与审判的 `court`(第几殿);其余三家读
  * `GET /souls/{id}/path/` 里没离开的那一站(`left_at` 为 null)的 `realm_code`,没有就按 `current_state` 推。
  * 认不出就是 null:脊照画,没有 metal 点 —— 不猜一个位置。
+ *
+ * 服务端有同一份(`backend/apps/judgment/dossier.py::spine_now`,卷宗的 `whereabouts.spine`)。案台读服务端那份;
+ * 这里还剩的读者:审判台(`app/judgment/[id]/page.tsx`)、灵魂页(`app/souls/[id]/page.tsx`)、演示的卷宗替身(`demo/flows.ts`)。
+ * 前两个换到 `whereabouts` 之后,`hallOf` 的殿号解析就只剩审判台的印(`DossierSeal`)一处。
  */
 export type SpineCiv = "cn" | "eu" | "eg" | "gr";
 

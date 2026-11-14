@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { test, expect, mockApi, OPENED_JUDGMENT, TEST_USER } from "./fixtures";
+import { test, expect, deskOf, dossierOf, mockApi, OPENED_JUDGMENT, TEST_USER } from "./fixtures";
 
 /**
  * 案卷台(Design 第三十批 第 2 步):判官登录就到 `/desk`;J 挪到下一件,↵ 打开卷宗(`/judgment/<id>`)。
@@ -18,8 +18,6 @@ const CODENAMES = ["soul.read", "judgment.read", "judgment.execute"];
 const MINE = { ...OPENED_JUDGMENT, soul_name: "赵志强", court: "第一殿", source: "queue", claimed_by_name: "崔判官" };
 const UNCLAIMED = { ...OPENED_JUDGMENT, id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", case_number: "CN-2026-0002", soul_name: "哪吒", court: "第一殿", source: "city_god" };
 
-const page1 = (results: unknown[]) => ({ count: results.length, next: null, previous: null, results });
-
 async function signInAsJudge(page: Page) {
   const api = await mockApi(page);
   api.on("POST", "/auth/login/", (call) => {
@@ -27,14 +25,10 @@ async function signInAsJudge(page: Page) {
     return { body: { access: "e2e.judge.access", refresh: "e2e.judge.refresh", user: { ...JUDGE, permissions: CODENAMES } } };
   });
   api.on("GET", "/perm/role-permissions/", { role: "JUDGE", permissions: CODENAMES, details: [] });
-  api.on("GET", "/judgment/", (call) => ({ body: page1(call.query.group === "mine" ? [MINE] : call.query.group === "unclaimed" ? [UNCLAIMED] : []) }));
-  api.on("GET", "/judgment/:id/", (call) => ({ body: call.path.includes(UNCLAIMED.id) ? UNCLAIMED : MINE }));
-  // After `:id/`: routes are unshifted (the last registered wins), and `:id` matches `queue-counts` too.
-  api.on("GET", "/judgment/queue-counts/", {
-    mine: 1, unclaimed: 1, others: 0, deferred: 0, total: 2, overdue: 0,
-    sources: { queue: 1, city_god: 1, cross: 0 },
-    elsewhere: { appeal: null, city_god_review: null, cross_judgment: null, capture_due: null, rebirth_application: null },
-  });
+  // Two requests: the stack (`/dossiers/desk/`) and the open case (`/dossiers/:id/`). `desk/` after `:id/`: routes are
+  // unshifted (the last registered wins), and `:id` matches `desk` too.
+  api.on("GET", "/dossiers/:id/", (call) => ({ body: dossierOf(call.path.includes(UNCLAIMED.id) ? UNCLAIMED : MINE) }));
+  api.on("GET", "/dossiers/desk/", deskOf({ mine: [MINE], unclaimed: [UNCLAIMED] }));
 
   await page.goto("/login");
   await page.getByLabel("账号").fill(JUDGE.username);
@@ -56,6 +50,9 @@ test.describe("案卷台", () => {
     await page.keyboard.press("j");
     await expect(desk.getByTestId(`desk-row-${UNCLAIMED.id}`)).toHaveAttribute("aria-current", "true");
     await expect(page.getByRole("heading", { level: 1, name: "哪吒" })).toBeVisible();
+
+    // Absence: the desk no longer sends the four group lists or the soul's path it used to.
+    expect(api.calls.filter((c) => c.method === "GET" && ((c.path === "/judgment/" && "group" in c.query) || /^\/souls\/[^/]+\/path\/$/.test(c.path)))).toEqual([]);
 
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`/judgment/${UNCLAIMED.id}$`));

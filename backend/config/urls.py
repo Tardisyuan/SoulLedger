@@ -74,8 +74,9 @@ urlpatterns = [
     path("api/v1/tenants/", include("apps.tenants.urls")),
     path("api/v1/souls/", include("apps.souls.urls")),
     path("api/v1/judgment/", include("apps.judgment.urls")),
-    # 卷宗:一件案子的只读聚合(apps/judgment/dossier.py)。只挂 list / retrieve,不用路由器。
+    # 卷宗:一件案子的只读聚合(apps/judgment/dossier.py)。只挂 list / retrieve / desk,不用路由器。
     path("api/v1/dossiers/", DossierViewSet.as_view({"get": "list"}), name="dossier-list"),
+    path("api/v1/dossiers/desk/", DossierViewSet.as_view({"get": "desk"}, **DossierViewSet.desk.kwargs), name="dossier-desk"),
     path("api/v1/dossiers/<uuid:pk>/", DossierViewSet.as_view({"get": "retrieve"}), name="dossier-detail"),
     path("api/v1/disposition/", include("apps.disposition.urls")),
     path("api/v1/ledger/", include("apps.ledger.urls")),

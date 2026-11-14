@@ -1483,6 +1483,9 @@ export class ApiMock {
       })),
     });
     this.on("GET", "/judgment/appeals/", paginated([]));
+    // 案卷台读两个端点(2026-11-14):摞是 `/dossiers/desk/`,摊开的一份是 `/dossiers/:id/`。`desk/` 在 `:id/` 之后,理由同上。
+    this.on("GET", "/dossiers/:id/", (call) => ({ body: dossierOf({ ...OPENED_JUDGMENT, id: call.path.split("/")[2] }) }));
+    this.on("GET", "/dossiers/desk/", deskOf({}));
     // 首页待办条的五格(审计 1017 #7):一次 `/officer-app/todo/`,每组 {count, items}。
     const emptyGroup = { count: 0, items: [] };
     this.on("GET", "/officer-app/todo/", {
@@ -2090,6 +2093,33 @@ export async function interceptWebSockets(page: Page, mock: ApiMock): Promise<vo
     if (ws.url().includes("/_next/")) return;
     mock.socketUrls.push(ws.url());
   });
+}
+
+/** `GET /dossiers/desk/` (DossierDeskSerializer): the four groups from `{ group: rows }`, counts that agree with them. */
+export function deskOf(groups: Partial<Record<"mine" | "unclaimed" | "others" | "deferred", Record<string, unknown>[]>>, monthDonePct: number | null = null) {
+  const names = ["mine", "unclaimed", "others", "deferred"] as const;
+  const n = (g: (typeof names)[number]) => groups[g]?.length ?? 0;
+  const all = names.flatMap((g) => groups[g] ?? []);
+  const bySource = (v: string) => all.filter((r) => (r.source ?? "queue") === v).length;
+  return {
+    groups: names.map((group) => ({ group, total: n(group), rows: groups[group] ?? [] })),
+    counts: {
+      mine: n("mine"), unclaimed: n("unclaimed"), others: n("others"), deferred: n("deferred"), total: all.length, overdue: 0, returned: 0,
+      sources: { queue: bySource("queue"), city_god: bySource("city_god"), cross: bySource("cross") },
+      elsewhere: { appeal: null, city_god_review: null, cross_judgment: null, capture_due: null, rebirth_application: null },
+    },
+    month_done_pct: monthDonePct,
+  };
+}
+
+/** `GET /dossiers/{id}/` (DossierSerializer) around a judgment; no soul unless one is given. */
+export function dossierOf(judgment: Record<string, unknown>, soul: Record<string, unknown> | null = null, spine: Record<string, unknown> | null = null) {
+  return {
+    id: judgment.id, version: 1, phase: judgment.claimed_by ? "HEARING" : "UNCLAIMED", judgment, citations: [],
+    soul: soul && { records: [], ...soul }, soul_redacted: soul === null,
+    whereabouts: soul && { hall: null, residing: false, realm_code: null, since: null, spine },
+    actions: { claim: false, release: false, conclude: false, refusals: {} },
+  };
 }
 
 /** Installs the interceptor for every `/api/v1/**` request on this page. */

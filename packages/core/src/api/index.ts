@@ -278,7 +278,7 @@ export {
 } from "./soul-accounts";
 
 // Dossiers (read model over one judgment)
-export { dossiersApi, type Dossier, type DossierPhase, type DossierRow, type DossierWhereabouts } from "./dossiers";
+export { dossiersApi, type DeskRow, type Dossier, type DossierDesk, type DossierPhase, type DossierRow, type DossierWhereabouts } from "./dossiers";
 
 // Death sync (browser read side)
 export {

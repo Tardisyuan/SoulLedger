@@ -5,8 +5,9 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Judgment } from "@soulledger/core/api/judgment";
 import { judgmentApi } from "@soulledger/core/api/judgment";
+import { dossiersApi } from "@soulledger/core/api/dossiers";
 import { CaseDesk } from "@/src/components/desk/CaseDesk";
-import { dedupeGroups, deskTag, matchesSearch, onDeskCount, overviewParts, sourceChips, sourceLabel, sourceOf, step, zongbuCivilizations } from "@/src/components/desk/deskRules";
+import { deskTag, matchesSearch, onDeskCount, overviewParts, sourceChips, sourceLabel, sourceOf, step, zongbuCivilizations } from "@/src/components/desk/deskRules";
 import { renderWithProviders } from "./support/render";
 
 const mockPush = jest.fn();
@@ -30,22 +31,15 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 jest.mock("@soulledger/core/api/judgment", () => ({
   ...jest.requireActual("@soulledger/core/api/judgment"),
   judgmentApi: {
-    list: jest.fn(),
-    queueCounts: jest.fn(),
-    hallStats: jest.fn(),
-    get: jest.fn(),
     claim: jest.fn().mockResolvedValue({ data: {} }),
     release: jest.fn().mockResolvedValue({ data: {} }),
   },
 }));
 
-jest.mock("@soulledger/core/api/souls", () => ({
-  ...jest.requireActual("@soulledger/core/api/souls"),
-  soulsApi: {
-    get: jest.fn().mockResolvedValue({
-      data: { id: "s-1", name: "赵志强", birth_date: { year: 1982, month: 8, day: 7 }, death_date: { year: 2026, month: 10, day: 22 }, origin_location: "洛阳", records: [] },
-    }),
-  },
+// 案台读两个端点:摞是 `GET /dossiers/desk/`,摊开的一份是 `GET /dossiers/{id}/`(此前 9 个请求,见 caseDeskRequests.test.tsx)。
+jest.mock("@soulledger/core/api/dossiers", () => ({
+  ...jest.requireActual("@soulledger/core/api/dossiers"),
+  dossiersApi: { desk: jest.fn(), get: jest.fn(), list: jest.fn() },
 }));
 
 /** An echo `t`: the key, then `k=v` for each variable — enough to tell which branch a rule took. */
@@ -105,14 +99,6 @@ describe("deskRules", () => {
     expect(zongbuCivilizations({ code: "XX_NOWHERE" })).toHaveLength(4);
   });
 
-  it("keeps a case in the first group it appears in", () => {
-    const out = dedupeGroups([
-      { group: "mine", rows: [row("1")] },
-      { group: "unclaimed", rows: [row("1"), row("2")] },
-    ]);
-    expect(out.map((g) => g.rows.map((r) => r.id))).toEqual([["1"], ["2"]]);
-  });
-
   it("draws a chip only for a source with cases, and sends the elsewhere ones away", () => {
     const chips = sourceChips(t, {
       total: 9,
@@ -160,12 +146,10 @@ describe("deskRules", () => {
   });
 });
 
-const mockList = judgmentApi.list as jest.Mock;
-const mockCounts = judgmentApi.queueCounts as jest.Mock;
+const mockDesk = dossiersApi.desk as jest.Mock;
+const mockDossier = dossiersApi.get as jest.Mock;
 
-function page(results: Judgment[]) {
-  return { data: { count: results.length, next: null, previous: null, results } };
-}
+const COUNTS = { mine: 1, deferred: 0, unclaimed: 2, others: 1, total: 4, overdue: 0, returned: 0, sources: { queue: 2, city_god: 1, cross: 1 }, elsewhere: { appeal: 1, city_god_review: null, cross_judgment: 0, capture_due: null, rebirth_application: null } };
 
 describe("CaseDesk", () => {
   beforeEach(() => {
@@ -177,10 +161,32 @@ describe("CaseDesk", () => {
       unclaimed: [row("2", { soul_name: "哪吒", source: "city_god" }), row("3", { soul_name: "沉香", source: "cross" })],
       others: [row("4", { soul_name: "窦娥", claimed_by_name: "崔判官" })],
     };
-    mockList.mockImplementation((params: Record<string, string>) => Promise.resolve(page(groups[params.group] ?? [])));
-    mockCounts.mockResolvedValue({ data: { mine: 1, deferred: 0, unclaimed: 2, others: 1, total: 4, overdue: 0, sources: { queue: 2, city_god: 1, cross: 1 }, elsewhere: { appeal: 1, city_god_review: null, cross_judgment: 0, capture_due: null, rebirth_application: null } } });
-    (judgmentApi.hallStats as jest.Mock).mockResolvedValue({ data: { month_done_pct: 22 } });
-    (judgmentApi.get as jest.Mock).mockImplementation((id: string) => Promise.resolve({ data: row(id) }));
+    // The server's order (QueueGroup.CHOICES), not the desk's: the desk orders the groups itself.
+    mockDesk.mockImplementation((source?: string) => {
+      const pick = (rows: Judgment[]) => rows.filter((r) => !source || (r.source ?? "queue") === source);
+      return Promise.resolve({
+        data: {
+          groups: ["mine", "unclaimed", "others", "deferred"].map((group) => ({ group, total: pick(groups[group]).length, rows: pick(groups[group]) })),
+          counts: COUNTS,
+          month_done_pct: 22,
+        },
+      });
+    });
+    mockDossier.mockImplementation((id: string) =>
+      Promise.resolve({
+        data: {
+          id,
+          version: 1,
+          phase: "UNCLAIMED",
+          judgment: row(id),
+          citations: [],
+          soul: { id: `s-${id}`, name: "赵志强", current_state: "JUDGING", diyu_station: "", is_residing: false, birth_date: { year: 1982, month: 8, day: 7 }, death_date: { year: 2026, month: 10, day: 22 }, origin_location: "洛阳", records: [] },
+          soul_redacted: false,
+          whereabouts: { hall: "CN_DIYU", residing: false, realm_code: null, since: null, spine: { civ: "cn", at: "hall", n: 1 } },
+          actions: { claim: true, release: false, conclude: false, refusals: {} },
+        },
+      }),
+    );
   });
 
   const current = () => document.querySelector('[data-desk-row][aria-current="true"]')?.getAttribute("data-testid");
@@ -310,10 +316,46 @@ describe("CaseDesk", () => {
     });
   });
 
-  it("filters the stack by source through the API", async () => {
+  it("filters the stack by source through the API, and keeps the unfiltered chips", async () => {
     renderWithProviders(<CaseDesk />);
     fireEvent.click(await screen.findByTestId("desk-source-cross"));
-    await waitFor(() => expect(mockList).toHaveBeenCalledWith(expect.objectContaining({ group: "unclaimed", source: "cross" })));
-    expect(mockCounts).toHaveBeenCalledWith({ source: "cross" });
+    await waitFor(() => expect(mockDesk).toHaveBeenCalledWith("cross"));
+    await waitFor(() => expect(screen.queryByTestId("desk-row-1")).not.toBeInTheDocument());
+    expect(screen.getByTestId("desk-row-3")).toBeInTheDocument();
+    // The group heading counts the filtered group; the chips still count every source.
+    expect(screen.getByTestId("desk-source-queue")).toHaveTextContent("2");
+  });
+
+  it("draws the spine's 「now」 from the dossier's whereabouts, not from the court's text", async () => {
+    mockDossier.mockImplementation((id: string) =>
+      Promise.resolve({
+        data: {
+          id, version: 1, phase: "HEARING", citations: [], soul_redacted: false, actions: { claim: false, release: false, conclude: false, refusals: {} },
+          // The court says 第一殿; the server says the soul stands in the fifth hall. The server wins.
+          judgment: row(id, { court: "第一殿" }),
+          soul: { id: `s-${id}`, name: "赵志强", current_state: "JUDGING", diyu_station: "", is_residing: false, records: [] },
+          whereabouts: { hall: "CN_DIYU", residing: false, realm_code: null, since: null, spine: { civ: "cn", at: "hall", n: 5 } },
+        },
+      }),
+    );
+    renderWithProviders(<CaseDesk />);
+    await waitFor(() => expect(screen.getByTestId("desk-spine")).toHaveAttribute("data-now", JSON.stringify({ civ: "cn", at: "hall", n: 5 })));
+    // Absence: not the first hall the court's text names.
+    expect(screen.getByTestId("desk-spine").getAttribute("data-now")).not.toContain('"n":1');
+  });
+
+  it("says the soul is unreadable when the server withholds it", async () => {
+    mockDossier.mockImplementation((id: string) =>
+      Promise.resolve({
+        data: {
+          id, version: 1, phase: "UNCLAIMED", citations: [], judgment: row(id), soul: null, soul_redacted: true, whereabouts: null,
+          actions: { claim: false, release: false, conclude: false, refusals: { claim: "permission_denied" } },
+        },
+      }),
+    );
+    renderWithProviders(<CaseDesk />);
+    await screen.findByTestId("desk-row-1");
+    // 本世 and 最近 both say so — the server decided (`soul_redacted`), the page no longer guesses from permissions.
+    expect(await screen.findAllByText("没有读名册的权限")).toHaveLength(2);
   });
 });

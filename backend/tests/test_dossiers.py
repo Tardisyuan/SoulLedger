@@ -136,7 +136,52 @@ class TestDossier:
         assert set(row) == {
             "id", "case_number", "soul", "soul_name", "civilization", "court", "source",
             "deadline_at", "is_overdue", "claimed_by", "claimed_by_name", "deferred_at", "stale_since",
+            "deadline_remaining_seconds", "retrial_of", "is_final", "duat_stage", "held_until",
+            "conclude_refusal", "untimely",
         }
+
+
+@pytest.mark.django_db
+class TestDesk:
+    """`GET /dossiers/desk/`:案台一屏一个请求(四组 + 计数 + 本月已结),数与 `/judgment/` 的三个端点相同。"""
+
+    def test_one_request_carries_the_four_groups_their_counts_and_the_month(self, world):
+        mine, theirs, free = _case(world.cn), _case(world.cn), _case(world.cn)
+        assert world.clients["a"].post(f"/api/v1/judgment/{mine.pk}/claim/").status_code == 200
+        assert world.clients["b"].post(f"/api/v1/judgment/{theirs.pk}/claim/").status_code == 200
+        r = world.clients["a"].get(f"{BASE}desk/")
+        assert r.status_code == 200, r.content
+        d = r.json()
+        groups = {g["group"]: g for g in d["groups"]}
+        assert set(groups) == {"mine", "unclaimed", "others", "deferred"}
+        ids = {k: {row["id"] for row in g["rows"]} for k, g in groups.items()}
+        assert ids["mine"] == {str(mine.pk)} and ids["others"] == {str(theirs.pk)} and ids["unclaimed"] == {str(free.pk)}
+        assert ids["deferred"] == set()
+        # 组数、计数与 `/judgment/queue-counts/`、本月百分比与 `/judgment/hall-stats/` 逐字相同。
+        assert {k: g["total"] for k, g in groups.items()} == {"mine": 1, "unclaimed": 1, "others": 1, "deferred": 0}
+        assert d["counts"] == world.clients["a"].get("/api/v1/judgment/queue-counts/").json()
+        assert d["month_done_pct"] == world.clients["a"].get("/api/v1/judgment/hall-stats/").json()["month_done_pct"]
+        assert set(groups["unclaimed"]["rows"][0]) == set(
+            world.clients["a"].get(BASE, {"group": "unclaimed"}).json()["results"][0])
+
+    def test_another_halls_cases_are_not_on_my_desk(self, world):
+        case = _case(world.cn)
+        d = world.clients["eu"].get(f"{BASE}desk/").json()
+        assert str(case.pk) not in {row["id"] for g in d["groups"] for row in g["rows"]}
+        assert d["counts"]["total"] == 0
+
+    def test_a_source_narrows_the_groups_but_not_the_counts(self, world):
+        _case(world.cn)
+        d = world.clients["a"].get(f"{BASE}desk/", {"source": "city_god"}).json()
+        assert all(g["rows"] == [] and g["total"] == 0 for g in d["groups"])
+        assert d["counts"]["unclaimed"] == 1 and d["counts"]["sources"]["queue"] == 1
+
+    def test_an_unknown_source_is_400_not_an_empty_desk(self, world):
+        assert world.clients["a"].get(f"{BASE}desk/", {"source": "nowhere"}).status_code == 400
+
+    def test_without_judgment_read_the_desk_is_refused(self, world, cn_tenant):
+        guardian = User.objects.create_user(username="dossier_g", password="x", role="GUARDIAN", tenant=cn_tenant)
+        assert sign_in(APIClient(), guardian).get(f"{BASE}desk/").status_code == 403
 
 
 def test_the_spine_reads_the_same_as_the_frontends_spine_now():

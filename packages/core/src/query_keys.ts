@@ -131,6 +131,10 @@ export const judgmentKeys = {
   /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */
   queueCounts: (params?: { court?: string; search?: string; soul?: string; source?: string; civilization?: string }) =>
     [...judgmentKeys.all, "queue-counts", params ?? null] as const,
+  /** 案台一屏(`GET /dossiers/desk/`)。Under `all`: a claim, release or conclusion's invalidate reaches it. */
+  desk: (source?: string) => [...judgmentKeys.all, "desk", source ?? null] as const,
+  /** 一份卷宗(`GET /dossiers/{id}/`)。Under `all` for the same reason. */
+  dossier: (id: string) => [...judgmentKeys.all, "dossier", id] as const,
   /** The court filter's options. Under `all`: a new case in a new court should show up. */
   courts: () => [...judgmentKeys.all, "courts"] as const,
   /** Who the given cases may be reassigned to. Keyed by the ids: the tenant comes from the cases. */
