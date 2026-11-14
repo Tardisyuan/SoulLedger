@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { test, expect, mockApi, OPENED_JUDGMENT, TEST_USER } from "./fixtures";
 
 /**
@@ -19,29 +20,33 @@ const UNCLAIMED = { ...OPENED_JUDGMENT, id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee
 
 const page1 = (results: unknown[]) => ({ count: results.length, next: null, previous: null, results });
 
+async function signInAsJudge(page: Page) {
+  const api = await mockApi(page);
+  api.on("POST", "/auth/login/", (call) => {
+    if (call.body?.username !== JUDGE.username) return { status: 401, body: { detail: "No active account found with the given credentials" } };
+    return { body: { access: "e2e.judge.access", refresh: "e2e.judge.refresh", user: { ...JUDGE, permissions: CODENAMES } } };
+  });
+  api.on("GET", "/perm/role-permissions/", { role: "JUDGE", permissions: CODENAMES, details: [] });
+  api.on("GET", "/judgment/", (call) => ({ body: page1(call.query.group === "mine" ? [MINE] : call.query.group === "unclaimed" ? [UNCLAIMED] : []) }));
+  api.on("GET", "/judgment/:id/", (call) => ({ body: call.path.includes(UNCLAIMED.id) ? UNCLAIMED : MINE }));
+  // After `:id/`: routes are unshifted (the last registered wins), and `:id` matches `queue-counts` too.
+  api.on("GET", "/judgment/queue-counts/", {
+    mine: 1, unclaimed: 1, others: 0, deferred: 0, total: 2, overdue: 0,
+    sources: { queue: 1, city_god: 1, cross: 0 },
+    elsewhere: { appeal: null, city_god_review: null, cross_judgment: null, capture_due: null, rebirth_application: null },
+  });
+
+  await page.goto("/login");
+  await page.getByLabel("账号").fill(JUDGE.username);
+  await page.getByLabel("密码").fill("correct-horse-battery");
+  await page.getByRole("button", { name: "登录" }).click();
+  await expect(page).toHaveURL(/\/desk$/);
+}
+
 test.describe("案卷台", () => {
   test("a judge lands on the desk, J moves to the next case, Enter opens it", async ({ page, isMobile }) => {
     test.skip(isMobile, "393 opens a case full-screen on tap; the keys are the desktop desk's");
-    const api = await mockApi(page);
-    api.on("POST", "/auth/login/", (call) => {
-      if (call.body?.username !== JUDGE.username) return { status: 401, body: { detail: "No active account found with the given credentials" } };
-      return { body: { access: "e2e.judge.access", refresh: "e2e.judge.refresh", user: { ...JUDGE, permissions: CODENAMES } } };
-    });
-    api.on("GET", "/perm/role-permissions/", { role: "JUDGE", permissions: CODENAMES, details: [] });
-    api.on("GET", "/judgment/", (call) => ({ body: page1(call.query.group === "mine" ? [MINE] : call.query.group === "unclaimed" ? [UNCLAIMED] : []) }));
-    api.on("GET", "/judgment/:id/", (call) => ({ body: call.path.includes(UNCLAIMED.id) ? UNCLAIMED : MINE }));
-    // After `:id/`: routes are unshifted (the last registered wins), and `:id` matches `queue-counts` too.
-    api.on("GET", "/judgment/queue-counts/", {
-      mine: 1, unclaimed: 1, others: 0, deferred: 0, total: 2, overdue: 0,
-      sources: { queue: 1, city_god: 1, cross: 0 },
-      elsewhere: { appeal: null, city_god_review: null, cross_judgment: null, capture_due: null, rebirth_application: null },
-    });
-
-    await page.goto("/login");
-    await page.getByLabel("账号").fill(JUDGE.username);
-    await page.getByLabel("密码").fill("correct-horse-battery");
-    await page.getByRole("button", { name: "登录" }).click();
-    await expect(page).toHaveURL(/\/desk$/);
+    await signInAsJudge(page);
 
     const desk = page.getByTestId("case-desk");
     await expect(desk.getByTestId(`desk-row-${MINE.id}`)).toHaveAttribute("aria-current", "true");
@@ -54,5 +59,21 @@ test.describe("案卷台", () => {
 
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`/judgment/${UNCLAIMED.id}$`));
+  });
+
+  // fe-mobile 3.2: at 393 a tap on a row is a navigation, so the phone's back gesture returns to the stack instead of
+  // leaving the desk.
+  test("393: tapping a case pushes ?case=, and back returns to the stack", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "the desktop desk selects in place and keeps the address");
+    await signInAsJudge(page);
+    const desk = page.getByTestId("case-desk");
+    await desk.getByTestId(`desk-row-${UNCLAIMED.id}`).click();
+    await expect(page).toHaveURL(new RegExp(`/desk\\?case=${UNCLAIMED.id}$`));
+    await expect(desk).toHaveAttribute("data-open", "");
+    await expect(page.getByRole("heading", { level: 1, name: "哪吒" })).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/desk$/);
+    await expect(desk).not.toHaveAttribute("data-open", "");
+    await expect(desk.getByTestId(`desk-row-${UNCLAIMED.id}`)).toBeVisible();
   });
 });
