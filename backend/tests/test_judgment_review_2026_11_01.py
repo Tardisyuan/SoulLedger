@@ -28,7 +28,8 @@ HALL = "/api/v1/judgment/appeals/"
 
 def _case(tenant, state=SoulState.JUDGING, **fields):
     soul = Soul.objects.create(name="复查", tenant=tenant, current_state=state)
-    return Judgment.objects.create(soul=soul, civilization=soul.civilization, court="第一殿", tenant=tenant, **fields)
+    return Judgment.objects.create(**{"soul": soul, "civilization": soul.civilization, "court": "第一殿", "tenant": tenant,
+                                      **fields})
 
 
 # ── P0 #1:结案在锁内复查 ──────────────────────────────────────────────────────
@@ -138,7 +139,8 @@ def test_the_stale_flag_skips_cases_held_by_rule(cn_tenant):
     old = timezone.now() - timedelta(days=60)
     plain = _case(cn_tenant)
     held = _case(cn_tenant, held_until=timezone.localdate() + timedelta(days=30))
-    barred = _case(cn_tenant, duat_stage=DuatStage.NAMELESS)
+    # duat_stage 只在埃及的案子上(约束 judgment_duat_stage_only_egyptian)。
+    barred = _case(cn_tenant, duat_stage=DuatStage.NAMELESS, civilization="EGYPTIAN")
     released = _case(cn_tenant, held_until=timezone.localdate() - timedelta(days=1))
     Judgment.all_objects.filter(pk__in=[plain.pk, held.pk, barred.pk, released.pk]).update(
         created_at=old, update_time=old)

@@ -12,6 +12,7 @@
 import pytest
 
 from apps.events.models import SoulEvent
+from apps.reincarnation.models import Reincarnation
 from apps.soul_accounts import rebirth
 from apps.soul_accounts.models import RebirthApplication
 from apps.souls.models import Soul, SoulState
@@ -120,6 +121,9 @@ def test_a_cross_civilization_rebirth_lands_in_the_target_hall(cn_tenant, halls,
     assert soul.is_residing is False
     payload = SoulEvent.objects.get(soul=soul, event_type="REINCARNATION_COMPLETED").payload
     assert (payload["from_tenant"], payload["to_tenant"]) == ("CN_DIYU", "GR_HADES")
+    # 转世记录上也有(be-domain 1.6):行留在来源殿,from / to 记两头。
+    row = Reincarnation.all_objects.select_related("tenant", "from_tenant", "to_tenant").get(soul=soul)
+    assert (row.tenant.code, row.from_tenant.code, row.to_tenant.code) == ("CN_DIYU", "CN_DIYU", "GR_HADES")
 
 
 @pytest.mark.parametrize("cross", [False, None])
@@ -130,6 +134,8 @@ def test_without_a_cross_decision_the_soul_stays_where_it_was(cn_tenant, halls, 
     assert (soul.tenant.code, soul.home_tenant.code) == ("CN_DIYU", "CN_DIYU")
     payload = SoulEvent.objects.get(soul=soul, event_type="REINCARNATION_COMPLETED").payload
     assert payload["to_tenant"] is None
+    row = Reincarnation.all_objects.get(soul=soul)
+    assert row.from_tenant_id == row.to_tenant_id == row.tenant_id == cn_tenant.pk
 
 
 def test_a_target_hall_closed_after_the_decision_refuses_the_rebirth(cn_tenant, halls, admin_user):

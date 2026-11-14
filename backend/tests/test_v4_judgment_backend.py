@@ -416,7 +416,7 @@ def test_0051_backfills_claimable_since_and_goes_back(migration_round_trip):
     rows.create(soul=soul, tenant=tenant, case_number="M-2", city_god_status="SENT_ON", sent_on_at=sent)
     rows.create(soul=soul, tenant=tenant, case_number="M-3", held_until=held)
     rows.create(soul=soul, tenant=tenant, case_number="M-4", city_god_status="RETURNED")
-    rows.create(soul=soul, tenant=tenant, case_number="M-5", duat_stage="NAMELESS")
+    rows.create(soul=soul, tenant=tenant, case_number="M-5", duat_stage="NAMELESS", civilization="EGYPTIAN")
 
     state = migrate_to(after)
     manager = state.get_model("judgment", "Judgment")._base_manager

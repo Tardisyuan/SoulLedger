@@ -511,6 +511,9 @@ class ReincarnationService:
                 notes=notes,
                 rebirth_continent=rebirth_continent,
                 tenant=soul.tenant,
+                # 来源殿 / 目标殿(be-domain 1.6):迁籍在下面才写,此刻 `soul.tenant` 仍是来源殿。
+                from_tenant=soul.tenant,
+                to_tenant=target_hall or soul.tenant,
             )
 
             # Memory reset
