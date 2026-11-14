@@ -9349,7 +9349,8 @@
       "video_soul": "Soul app, recorded",
       "video_officer": "Officer app, recorded",
       "github": "Read the source on GitHub",
-      "quality": "How it is tested: quality evidence"
+      "quality": "How it is tested: quality evidence",
+      "system": "System status and SLOs"
     },
     "tour": {
       "title": "A soul's life",

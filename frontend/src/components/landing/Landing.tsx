@@ -326,6 +326,9 @@ export function HowBuilt() {
         <a href={`${stats.github}/blob/main/docs/portfolio/QUALITY-EVIDENCE.md`} target="_blank" rel="noreferrer" className="ml-3 inline-flex h-11 items-center border border-[oklch(var(--color-ink))] px-4 text-[oklch(var(--color-ink))]">
           {t("demo.build.quality")} <span aria-hidden="true">&nbsp;↗</span>
         </a>
+        <a href="/about/system" className="ml-3 inline-flex h-11 items-center border border-[oklch(var(--color-ink))] px-4 text-[oklch(var(--color-ink))]">
+          {t("demo.build.system")} <span aria-hidden="true">&nbsp;→</span>
+        </a>
       </p>
     </section>
   );
