@@ -17,7 +17,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
  *   不可医 = 塔尔塔罗斯、永罚,页面据此不再带去处与年数(`incurable_is_eternal_in_tartarus`)。
  * - 埃及不能选:理由由天平与否定告白列出(`reject.sheet.eg_auto`),只读列出记为「不实」的告白。
  *
- * 没选够时页面把「不过 · 落印」置灰(`reasonsReady`)。落印不可撤回。
+ * 没选够时页面把「不过 · 落印」置灰(`reasonsReady`)。
  */
 
 export interface ReasonDraft {

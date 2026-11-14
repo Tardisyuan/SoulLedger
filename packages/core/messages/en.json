@@ -2386,11 +2386,13 @@
       "cite_from_corpus_confirm": "Cite {{cite}} in the judgment of {{soul}}?",
       "cite_from_corpus_closed": "This case is concluded; no article can be cited now.",
       "irreversible": "A ruling cannot be withdrawn",
+      "to_approval": "A seal goes to approval",
       "materials": "Case materials",
       "tab_evidence": "Merit and demerit",
       "tab_law": "Cited articles",
       "confirm_title": "Confirm the ruling",
       "confirm_body": "You chose “{{verdict}}”. Once ruled it goes on the record and cannot be withdrawn.",
+      "confirm_body_flow": "You chose “{{verdict}}”. Once sealed it goes on the record and to approval: it is carried out when the approval completes, and a rejection reopens the case.",
       "signing_court": "Signed by",
       "stamp": "Seal and conclude",
       "back_to_check": "Back to review",
@@ -8635,6 +8637,7 @@
       "verdict_label": "Verdict",
       "hold": "Hold to seal",
       "hold_note": "Hold Seal for one second. A seal cannot be withdrawn; only an appeal can change the verdict.",
+      "hold_note_flow": "Hold Seal for one second. A seal goes to approval; a rejection reopens the case.",
       "pending_a11y": "Seal · not yet set",
       "a11y": "Sealed",
       "done": "Sealed"
@@ -9774,7 +9777,8 @@
       "fail": "Fail · {{soul}}",
       "fail_hint": "Choose a reason first",
       "pass": "Pass · {{soul}}",
-      "pass_hint": "{{case}} · sealing is final"
+      "pass_hint": "{{case}} · sealing is final",
+      "pass_hint_flow": "{{case}} · sealing goes to approval"
     },
     "verdict_scope": "Verdicts apply to the current case only"
   },
@@ -10275,7 +10279,9 @@
         "cited": "Cited statutes",
         "seal": "Seal",
         "hint": "Choose a destination and write the verdict, then seal it. A seal cannot be withdrawn.",
+        "hint_flow": "Choose a destination and write the verdict, then seal it. A seal goes to approval.",
         "sealed_note": "A seal cannot be withdrawn; only an appeal can change the verdict.",
+        "sealed_note_flow": "The seal went to approval: a rejection reopens the case; once approved, only an appeal can change the verdict.",
         "seal_appears": "The seal will appear here once it is set.",
         "full_text": "Read the full verdict",
         "sealed_by": "{{date}} · {{judge}}"

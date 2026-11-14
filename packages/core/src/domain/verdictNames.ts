@@ -33,3 +33,16 @@ export function verdictText(
   const ns = verdictNamespace(t, civilization, verdict);
   return ns === "judgment.verdicts" ? t(fallbackKey) : t(`${ns}.${verdict.toLowerCase()}`);
 }
+
+/**
+ * 落印之后是「进入审批」还是「即定」(用户 2026-11-14):原审一律走审批流程,处置等流程走完才执行,驳回则撤回处置、重开一案
+ * (backend `apps/judgment/services.py` 的 `conclude`「原审一律走审批流程」那段),所以说它「不可撤回」说过头了。
+ * 即定的是再审裁决 —— RETRY 在哪都是,PURGATORY 在地府(待审所)和埃及(天平摇摆)也是(`apps.realms.cosmology._outcome`):
+ * 结案另开一案、直接返回,不建流程。非原审(重开、加减项)只有调用方要了流程才有,`withWorkflow` 就是这一问。
+ * 早夭与枉死城超度不在审判台上落印,不在这里判。
+ */
+export function sealGoesToApproval(withWorkflow: boolean, civilization: string | null | undefined, verdict: string | null | undefined): boolean {
+  if (!withWorkflow) return false;
+  const civ = civilization ? (CIVILIZATION_SHORT_CODES[civilization] ?? civilization) : "";
+  return !(verdict === "RETRY" || (verdict === "PURGATORY" && (civ === "cn" || civ === "eg")));
+}

@@ -153,7 +153,7 @@ export function MaterialDock({
 }
 
 /**
- * 盖印确认层(原型 `ConfirmationView`):全屏一层,落判前最后看一眼「你选了什么、谁签、不可撤回」。
+ * 盖印确认层(原型 `ConfirmationView`):全屏一层,落判前最后看一眼「你选了什么、谁签、落印后进入审批 / 不可撤回」。
  *
  * 原型这一层整幅铺文明主色;这里是中性面 + 印 + 主按钮 —— 文明色只走五处,印与主按钮正是其中两处。
  * 落判成功后同一层翻成「已写入记录」,印按 `stampKey` 落下(320ms、ease-drop;减少动态时直接是
@@ -165,6 +165,7 @@ export function JudgmentConfirmLayer({
   verdict,
   court,
   withWorkflow,
+  toApproval,
   pending,
   done,
   stampKey,
@@ -183,6 +184,8 @@ export function JudgmentConfirmLayer({
   verdict: string;
   court: string | null | undefined;
   withWorkflow: boolean;
+  /** 落印后进入审批(`sealGoesToApproval`):是就写「落印后进入审批」,不是(再审裁决、非原审不要流程)才写「不可撤回」。 */
+  toApproval: boolean;
   pending: boolean;
   done: boolean;
   stampKey: number;
@@ -198,7 +201,7 @@ export function JudgmentConfirmLayer({
   onStep?: (step: 1 | 2) => void;
   /**
    * 规范 v4 S10:「不过」的理由面板(希腊「通过」只选文书),画在第 1 步里。没选够(`reasonsReady` 为假)时
-   * 主键置灰;不过而又不用选站时主键写「不过 · 落印」,旁边「放回」关层。落印不可撤回。
+   * 主键置灰;不过而又不用选站时主键写「不过 · 落印」,旁边「放回」关层。
    */
   reasons?: ReactNode;
   reasonsReady?: boolean;
@@ -279,7 +282,7 @@ export function JudgmentConfirmLayer({
                     <Kbd>⌘⏎</Kbd>
                   </Button>
                 </div>
-                <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
+                <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t(toApproval ? "judgment.desk.to_approval" : "judgment.desk.irreversible")}</p>
               </>
             ) : choosing ? (
               <>
@@ -302,7 +305,7 @@ export function JudgmentConfirmLayer({
                 )}
                 <Dialog.Title className="text-lg text-[oklch(var(--color-ink))]">{t("judgment.desk.confirm_title")}</Dialog.Title>
                 <Dialog.Description className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">
-                  {t("judgment.desk.confirm_body", { verdict: verdictLabel })}
+                  {t(toApproval ? "judgment.desk.confirm_body_flow" : "judgment.desk.confirm_body", { verdict: verdictLabel })}
                 </Dialog.Description>
                 <div className="my-8">{choice}</div>
                 <div className="flex items-center gap-4 border-t border-[oklch(var(--color-line))] pt-4 text-left">
@@ -346,7 +349,7 @@ export function JudgmentConfirmLayer({
                     <Kbd>⌘⏎</Kbd>
                   </Button>
                 </div>
-                <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
+                <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t(toApproval ? "judgment.desk.to_approval" : "judgment.desk.irreversible")}</p>
               </>
             )}
           </div>

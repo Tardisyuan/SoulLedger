@@ -2386,11 +2386,13 @@
       "cite_from_corpus_confirm": "引用{{cite}}到 {{soul}} 的审判？",
       "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。",
       "irreversible": "落印不可撤回",
+      "to_approval": "落印后进入审批",
       "materials": "资料舱",
       "tab_evidence": "功过记录",
       "tab_law": "律条引用",
       "confirm_title": "确认落印",
       "confirm_body": "你选择了「{{verdict}}」。落判后写入审判记录，不可撤回。",
+      "confirm_body_flow": "你选择了「{{verdict}}」。落印后写入审判记录并进入审批：审批走完才执行，驳回则重开一案。",
       "signing_court": "签署殿司",
       "stamp": "落印并结案",
       "back_to_check": "返回检查",
@@ -8635,6 +8637,7 @@
       "verdict_label": "判词",
       "hold": "按住落印",
       "hold_note": "按住「落印」1 秒落下。落印后不能撤回；要改判只能走申诉。",
+      "hold_note_flow": "按住「落印」1 秒落下。落印后进入审批；驳回会重开一案。",
       "pending_a11y": "印 · 待落印",
       "a11y": "已落印",
       "done": "已落印"
@@ -9774,7 +9777,8 @@
       "fail": "不过 · {{soul}}",
       "fail_hint": "先选一个理由",
       "pass": "通过 · {{soul}}",
-      "pass_hint": "{{case}} · 落印即定，不能撤回"
+      "pass_hint": "{{case}} · 落印即定，不能撤回",
+      "pass_hint_flow": "{{case}} · 落印后进入审批"
     },
     "verdict_scope": "判决类指令只对当前这一件生效"
   },
@@ -10275,7 +10279,9 @@
         "cited": "引律条",
         "seal": "落印",
         "hint": "选定去处、写好判词后落印。落印后不能撤回。",
+        "hint_flow": "选定去处、写好判词后落印。落印后进入审批。",
         "sealed_note": "落印后不能撤回；要改判只能走申诉。",
+        "sealed_note_flow": "落印后进入了审批：驳回会重开一案；审批走完后，要改判只能走申诉。",
         "seal_appears": "落印后会在这里出现印",
         "full_text": "看判词全文",
         "sealed_by": "{{date}} · {{judge}}"

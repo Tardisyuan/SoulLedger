@@ -17,7 +17,7 @@ import { useEffect, useSyncExternalStore } from "react";
 export interface ShellCommand {
   id: string;
   label: string;
-  /** 右侧小字:「{case} · 落印即定，不能撤回」「先选一个理由」。 */
+  /** 右侧小字:「{case} · 落印后进入审批」「先选一个理由」。 */
   hint?: string;
   /** 判决类(排在最上,选中时图标块是实色)。 */
   verdict?: boolean;

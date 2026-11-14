@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { sealGoesToApproval } from "@soulledger/core/domain/verdictNames";
 import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { use, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
@@ -307,6 +308,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
      (400 `approval_flow_required`)。重开、申诉改判、加减项不是原审,照旧可选。 */
   const originalForced = (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
   const withWorkflow = createWorkflow || crossForced || weighingForced || originalForced;
+  // 落印后进入审批,还是即定(再审裁决不建流程):确认层、落印提示照它说话,不一律说「不可撤回」。
+  const sealFlows = sealGoesToApproval(withWorkflow, judgment?.civilization, selectedVerdict);
   /** W-1a 选站:确认层第 2 步里取消勾选的站(站序)。确认层的步数也在这里(⌘⏎ 按步走)。 */
   const [skipOrders, setSkipOrders] = useState<Set<string>>(new Set());
   const [confirmStep, setConfirmStep] = useState<1 | 2>(1);
@@ -618,7 +621,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         ? [{
             id: "desk-pass",
             label: t("cmdk.verdict.pass", { soul: commandSoul }),
-            hint: t("cmdk.verdict.pass_hint", { case: commandCase }),
+            hint: t(withWorkflow ? "cmdk.verdict.pass_hint_flow" : "cmdk.verdict.pass_hint", { case: commandCase }),
             verdict: true,
             run: () => commandRun.current.verdict("PASSED"),
           }]
@@ -634,7 +637,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         : []),
       ...(canDefer ? [{ id: "desk-defer", label: t("cmdk.defer"), run: () => commandRun.current.defer() }] : []),
     ],
-    [t, commandSoul, commandCase, verdictCommandsOn, passBarred, failBarred, canDefer],
+    [t, commandSoul, commandCase, verdictCommandsOn, passBarred, failBarred, canDefer, withWorkflow],
   );
   useShellCommands(shellCommands);
 
@@ -1188,7 +1191,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                     <DomainText value={localName(judgment, locale, "judge_name")} />
                   </p>
                   <Badge tone="neutral">{t("judgment.detail.final")}</Badge>
-                  <p>{t("caseDesk.dossier.judge.sealed_note")}</p>
+                  <p>{t(judgment.workflow ? "caseDesk.dossier.judge.sealed_note_flow" : "caseDesk.dossier.judge.sealed_note")}</p>
                   <a href="#desk-doc-card" data-print-hide="" className="text-sm text-[oklch(var(--color-ink))] underline underline-offset-2">
                     {t("caseDesk.dossier.judge.full_text")}
                   </a>
@@ -1385,7 +1388,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               {/* ── 印与落印:落印前是虚线预览;主按钮进盖印确认层,落判在层里。 ─────── */}
               <div data-print-hide="" className={dossier.sealBox}>
                 <DossierSeal civ={spineCiv} hall={hallOf(judgment.court)} pending />
-                <p>{t("caseDesk.dossier.judge.hint")}</p>
+                <p>{t(sealFlows ? "caseDesk.dossier.judge.hint_flow" : "caseDesk.dossier.judge.hint")}</p>
               </div>
               <div data-print-hide="" className="flex flex-col gap-2">
                 {crossBlocked && crossId && <CrossJudgmentBlockedNotice crossId={crossId} cross={cross} />}
@@ -1469,6 +1472,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         chooseFirst={isOriginal && judgment.civilization === "GREEK" && selectedVerdict === "PASSED"}
         court={judgment.court}
         withWorkflow={withWorkflow}
+        toApproval={sealFlows}
         step={confirmStep}
         onStep={setConfirmStep}
         stations={

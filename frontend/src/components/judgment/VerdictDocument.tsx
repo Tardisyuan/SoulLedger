@@ -17,8 +17,8 @@ import { CaseNumber } from "@/src/components/ui/DomainValue";
  * 字由 `@soulledger/core/domain/verdictDocument` 给,这里只管版式:地府竖排牒文加朱印,欧洲判词带花体首字母与火漆,
  * 埃及纸草带圣书字边,希腊石刻配回纹(定稿 S15 的说明)。纸、墨与尺寸都在 `app/verdict-doc.css`,按 `data-civ`。
  *
- * 只给已结的案子(`is_final`,且裁决是通过 / 不过 / 炼狱)渲染;别的返回 null —— 落印不可撤回
- * (`judgment.desk.irreversible`),文书上没有任何改判或撤回的入口。
+ * 只给已结的案子(`is_final`,且裁决是通过 / 不过 / 炼狱)渲染;别的返回 null。文书上没有任何改判或撤回的入口:
+ * 原审落印后进入审批,驳回由流程重开一案;要改判走申诉(`sealGoesToApproval`)。
  *
  * 「打印」走浏览器打印(定稿:「浏览器里『打印』走同一份 @page A4 样式」):
  * 点了之后把一份文书挂到 body 下(`data-print-verdict-doc`),`print.css` 在打印时只留它、一页 A4;
