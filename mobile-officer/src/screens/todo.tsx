@@ -20,6 +20,8 @@ import { formatWhen } from "../format";
 export interface ItemRef {
   kind: ItemKind;
   id: string;
+  /** The name the row shows (in a `sequence`, for 「下一件」's 「{name} · 还剩 {n} 件」, 第五十批 C1). */
+  name?: string;
 }
 
 /** 类型筛选 (Design batch 28 O2): the chosen kinds, on this phone. Nothing chosen = all. */
@@ -291,7 +293,7 @@ const FEEDBACK_TAGS: Record<string, string> = {
 
 /** The rows a group shows, as what opens them (only the kinds a detail can open). */
 function refsOf(rows: readonly TodoItem[]): ItemRef[] {
-  return rows.flatMap((r) => (isTodoKind(r.target.kind) ? [{ kind: r.target.kind, id: r.target.id }] : []));
+  return rows.flatMap((r) => (isTodoKind(r.target.kind) ? [{ kind: r.target.kind, id: r.target.id, name: r.title }] : []));
 }
 
 /** `onOpen` absent: a view-only row (no ›, nothing to press). */

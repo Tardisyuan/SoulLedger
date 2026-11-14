@@ -23,7 +23,7 @@ import { noteOpened } from "../recentOpened";
 import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
-import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
+import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, family, radius, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
 import { SealSheet } from "./sealSheet";
@@ -58,13 +58,16 @@ export function Detail({
   backLabel,
   position,
   next,
+  last,
 }: {
   target: DetailTarget;
   /**
-   * The next row of the list it was opened from (D1): after a decision the bar offers 「下一件(3/7)」 beside
-   * 「回到{from}」. Never followed for the officer. Absent (the last row, a push landing): only 「回到{from}」.
+   * The next row of the list it was opened from (D1; Design 第五十批 C1): after a decision the bar offers 「下一件」 with
+   * 「{name} · 还剩 {n} 件」 under it, beside 「回到待办」. Never followed for the officer. Absent: only 「回到待办」.
    */
-  next?: { label: string; onNext: () => void };
+  next?: NextItem;
+  /** It was the list's last row: the lone 「回到待办」 says 「今天的都办完了」 under it. */
+  last?: boolean;
   /** The back row's words when opened from a list that names itself (「‹ 案卷台」); 「返回」 otherwise and over a layer. */
   backLabel?: string;
   /** Where the case sits in that list (「第 1 / 7 件」), at the right of the back row. */
@@ -139,7 +142,7 @@ export function Detail({
         ) : null}
         {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} onOpenFlow={openFlow} onDecided={onDecided} /> : null}
         {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
-        {decided ? <NextBar next={next} from={from} onLeave={leave} /> : null}
+        {decided ? <NextBar next={next} last={last} from={from} onLeave={leave} /> : null}
       </View>
       </GoneContext.Provider>
       <GoneContext.Provider value={over}>
@@ -174,14 +177,94 @@ export function Detail({
   );
 }
 
-/** After a decision (D1): 「回到{from}」 and, when the list had a row after this one, 「下一件(3/7)」. Ink, like every action. */
-function NextBar({ next, from, onLeave }: { next?: { label: string; onNext: () => void }; from?: string; onLeave: () => void }) {
+/** 第五十批 C1: a decided item stays on screen at this strength, for looking back at only. */
+const DONE_OPACITY = 0.55;
+
+/** The row after this one in the list it was opened from: who it is and how many rows are left after this one. */
+export type NextItem = { name: string; left: number; onNext: () => void };
+
+/**
+ * After a decision (D1; Design 第五十批 C1): outline 「回到待办」 and ink 「下一件」, 1.6 × as wide and 56 high, with
+ * 「{name} · 还剩 {n} 件」 under it -- who comes next, not 「3/7」. No next row: one full-width ink 「回到待办」, and
+ * 「今天的都办完了」 under it when this was the list's last row. Opened from another list (案卷台, 通知): 「回到{from}」.
+ */
+function NextBar({ next, last, from, onLeave }: { next?: NextItem; last?: boolean; from?: string; onLeave: () => void }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const leaveTitle = !from ? t("officer_app.back") : from === t("officer_app.tabs.todo") ? t("officer_app.detail.back_to_todo") : t("state.gone_back", { from });
+  return (
+    <View testID="next-bar" style={{ flexDirection: "row", gap: space[3], padding: space[4], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s0 }}>
+      {next ? (
+        <>
+          <BarButton testID="detail-leave" ink={false} grow={1} title={leaveTitle} onPress={onLeave} />
+          <BarButton
+            testID="detail-next"
+            ink
+            grow={1.6}
+            title={t("officer_app.detail.next")}
+            caption={t("officer_app.detail.next_meta", { name: next.name, n: String(next.left) })}
+            label={t("officer_app.detail.next_aria", { name: next.name, n: String(next.left) })}
+            onPress={next.onNext}
+          />
+        </>
+      ) : (
+        <BarButton testID="detail-leave" ink grow={1} title={leaveTitle} caption={last ? t("officer_app.detail.all_done") : undefined} onPress={onLeave} />
+      )}
+    </View>
+  );
+}
+
+/** The bar's two buttons: 56 high, a second line in small type under the title when there is one. */
+function BarButton({ testID, ink, grow, title, caption, label, onPress }: { testID: string; ink: boolean; grow: number; title: string; caption?: string; label?: string; onPress: () => void }) {
+  const theme = useTheme();
+  const fg = ink ? theme.s0 : theme.ink;
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label ?? (caption ? `${title}, ${caption}` : title)}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flex: grow,
+        minHeight: 56,
+        borderWidth: 1,
+        borderRadius: radius.control,
+        borderColor: ink ? theme.ink : theme.hair2,
+        backgroundColor: ink ? theme.ink : "transparent",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: space[3],
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Txt variant="nav" style={{ color: fg, letterSpacing: 0 }}>
+        {title}
+      </Txt>
+      {caption ? (
+        <OneLine testID={`${testID}-caption`} variant="caption" style={{ color: fg, opacity: 0.8 }}>
+          {caption}
+        </OneLine>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/**
+ * 「已落印」 (第五十批 C1): under the title, on card2, radius 10 -- the hall's seal at 44 (one of the four places a
+ * civilization's colour goes), 「已落印 · 进入审批」 and the time with 「驳回会重开一案」.
+ */
+function SealedStrip({ civilization, court, at }: { civilization: string | null | undefined; court?: string | null; at?: string | null }) {
   const { t } = useI18n();
   const theme = useTheme();
   return (
-    <View testID="next-bar" style={{ flexDirection: "row", gap: space[3], padding: space[4], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
-      <ActionButton testID="detail-leave" kind="ink-outline" title={from ? t("state.gone_back", { from }) : t("officer_app.back")} onPress={onLeave} />
-      {next ? <ActionButton testID="detail-next" kind="ink" title={next.label} onPress={next.onNext} /> : null}
+    <View testID="detail-sealed" style={{ flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: 10, backgroundColor: theme.s2 }}>
+      <DossierSeal testID="detail-sealed-seal" civilization={civilization} court={court} size={44} stamp label={t("officer_app.seal.a11y")} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Txt style={{ fontFamily: family.ui[600], fontSize: 15, lineHeight: 21 }}>{t("officer_app.detail.sealed")}</Txt>
+        <Txt variant="caption" tone="muted">
+          {t("officer_app.detail.sealed_meta", { time: formatWhen(at) })}
+        </Txt>
+      </View>
     </View>
   );
 }
@@ -304,10 +387,13 @@ function TodoDetail({
   if (view === "gone" && whenGone) return <View style={{ padding: space[5] }}>{whenGone}</View>;
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
   const note = handledNotice(data);
+  // Decided here (第五十批 C1): what stays on screen is for looking back at, at 55 %.
+  const done = decided && !!onDecided;
   return (
     <View style={{ flex: 1 }}>
       <Screen testID="todo-detail" edges={["left", "right"]}>
         <RefreshFailed data={data} error={error} onRetry={reload} />
+        <View testID={done ? "detail-dimmed" : undefined} style={{ opacity: done ? DONE_OPACITY : 1 }}>
         <View style={{ padding: space[5], gap: space[4] }}>
           {note ? (
             <Notice tone="neutral" testID="detail-handled">
@@ -366,8 +452,9 @@ function TodoDetail({
         <View style={{ padding: space[5] }}>
           <ContinueOnDesk target={{ kind, id }} />
         </View>
+        </View>
       </Screen>
-      {data.actionable && !(decided && onDecided) ? <ActionBar kind={kind} onPick={pick} waitingOn={data.waiting_on_cosigner?.name ?? null} offline={offline} /> : null}
+      {data.actionable && !done ? <ActionBar kind={kind} onPick={pick} waitingOn={data.waiting_on_cosigner?.name ?? null} offline={offline} /> : null}
       <DecisionSheet key={`decision-${opened}`} open={sheet === "approve" || sheet === "reject"} verdict={sheet === "reject" ? "reject" : "approve"} detail={data as TodoItemDetail} cooldown={cooldown.data} onClose={() => setSheet(null)} onDone={settled} />
       <CosignSheet key={`cosign-${opened}`} open={sheet === "cosign"} kind={kind} id={id} onClose={() => setSheet(null)} onDone={() => void reload()} />
     </View>
@@ -438,6 +525,8 @@ function JudgmentDetail({
   }, [id, caseNumber, soulName]);
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
   if (record) return <EvidenceText record={record} onBack={() => setRecord(null)} />;
+  // Sealed here (第五十批 C1): the 「已落印」 strip under the title takes the seal; the rest is for looking back at.
+  const done = sealed && !!onDecided;
   return (
     <View style={{ flex: 1 }}>
       <Screen testID="judgment-detail" edges={["left", "right"]} scrollRef={scroll}>
@@ -448,8 +537,10 @@ function JudgmentDetail({
               <SectionLabel>{data.case_number}</SectionLabel>
               {data.soul ? <SoulLink testID="judgment-soul-link" variant="title" name={data.soul_name} onOpen={() => onOpenSoul(data.soul)} /> : <Txt variant="title">{data.soul_name}</Txt>}
             </View>
-            {data.concluded_at ? <DossierSeal testID="judgment-seal" civilization={data.civilization} court={data.court} size={40} stamp={sealed} label={t("officer_app.seal.a11y")} /> : null}
+            {data.concluded_at && !done ? <DossierSeal testID="judgment-seal" civilization={data.civilization} court={data.court} size={40} stamp={sealed} label={t("officer_app.seal.a11y")} /> : null}
           </View>
+          {done ? <SealedStrip civilization={data.civilization} court={data.court} at={data.concluded_at} /> : null}
+          <View testID={done ? "detail-dimmed" : undefined} style={{ gap: space[4], opacity: done ? DONE_OPACITY : 1 }}>
           <Txt variant="caption" tone="muted">{[courtLabel(t, data.court, locale), data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
           {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
           {/* 滞留(`stale_since`,定时任务盖章,不结案):与队列行同一句「◐ 滞留 · 30 天无进展」。 */}
@@ -469,9 +560,10 @@ function JudgmentDetail({
           <JudgmentComments id={id} concludedAt={data.concluded_at} readOnly={!!data.deferred_at && data.claimed_by === me} />
           <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>
           <ContinueOnDesk target={{ kind: "judgment", id }} />
+          </View>
         </View>
       </Screen>
-      {sealed && onDecided ? null : <JudgmentActionBar
+      {done ? null : <JudgmentActionBar
         data={data}
         me={me}
         reassignAsked={asked}
