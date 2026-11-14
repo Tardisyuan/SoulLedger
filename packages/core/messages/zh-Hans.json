@@ -9379,6 +9379,7 @@
       "video_officer": "官员端 App 录屏",
       "github": "在 GitHub 上看源码",
       "quality": "怎么测的：质量证据（英文）",
+      "contact": "想聊聊？联系方式在 README 里",
       "system": "系统状态与服务目标（SLO）"
     },
     "tour": {
@@ -9394,6 +9395,7 @@
       "done_title": "这一生走完了",
       "done_body": "这是{{civ}}的走法。换一个冥界，走的是另一套规矩。",
       "try_another": "换一个冥界",
+      "try_overreach": "试着打开别的殿的案卷",
       "stay": "留在这里",
       "replay": "重看导览",
       "cn": {
@@ -9594,6 +9596,7 @@
       "civ_title": "四种冥界，四种走法",
       "civ_sub": "选一殿，以那一殿的判官身份进入",
       "enter_officer": "以判官身份进入",
+      "start_here": "从这里开始",
       "hall": {
         "cn": "第五殿 · 阎罗",
         "eu": "米诺斯之庭",

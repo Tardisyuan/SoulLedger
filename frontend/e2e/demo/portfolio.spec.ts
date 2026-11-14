@@ -65,6 +65,33 @@ test("the overreach step replays the judge's recorded 403, with the reason and w
   clean(seen, "overreach");
 });
 
+// 2026-11-14 用户定(叙事传输):走完一生,访客自己撞一次租户隔离 —— 结束卡上的按钮问的是录下的横向越权,答 404。
+// 埃及殿走,而探针是中国殿判官要欧洲殿的灵魂:它只读录音,与当前是哪一殿无关。首页第一张卡标「从这里开始」,只此一张。
+test("the walked tour ends on 「试着打开别的殿的案卷」, which replays the recorded 404 from another hall", async ({ page, context }) => {
+  test.setTimeout(90000);
+  const seen = watch(context, page);
+  await page.goto("/");
+  await expect(page.getByTestId("landing-start-here")).toHaveCount(1);
+  await expect(page.getByTestId("landing-card-cn").getByTestId("landing-start-here")).toBeVisible();
+  await page.getByTestId("landing-card-eg").click();
+  await expect(page.getByTestId("demo-tour")).toBeVisible();
+  for (let step = 1; step <= 5; step += 1) {
+    await expect(page.getByTestId("demo-tour-progress")).toContainText(`${step} / 5`);
+    await expect(page.getByTestId("demo-tour-next")).toBeVisible({ timeout: 10000 });
+    await page.getByTestId("demo-tour-next").click();
+  }
+  const end = page.locator('[data-testid="demo-tour"][data-finished]');
+  await expect(end).toBeVisible();
+  await end.getByTestId("demo-tour-try-overreach").click();
+  const status = end.getByTestId("demo-overreach-status-lateral");
+  await expect(status).toHaveText("404");
+  await expect(status).toHaveAttribute("data-tone", "muted");
+  await expect(end.getByTestId("demo-overreach-answer-lateral")).toContainText(`/souls/${rows(recording("judge_eu"), "/souls/")[0].id}/`);
+  await expect(end.getByTestId("demo-tour-try-overreach")).toHaveCount(0);
+  await expect(end.locator("[data-probe]")).toHaveCount(1);
+  clean(seen, "tour try overreach");
+});
+
 // A5:案子页上的「并发与事务」,试一下得到的是 409 already_concluded,不是第二份裁决。
 test("a case's 「并发与事务」 explains the lock and replays the second conclusion as a 409", async ({ page, context }) => {
   const seen = watch(context, page);

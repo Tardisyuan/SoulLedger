@@ -278,7 +278,7 @@ function ConsolePreview() {
 const TESTS = ["backend", "web", "soul_app", "officer_app", "e2e"] as const;
 
 export function HowBuilt() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const box = "border border-[oklch(var(--color-line-strong))] p-3 text-sm text-[oklch(var(--color-ink))]";
   return (
     <section id="how-built" className="mt-8 scroll-mt-20 border-t border-[oklch(var(--color-line-strong))] pt-8 pb-8" aria-labelledby="how-built-title">
@@ -328,6 +328,18 @@ export function HowBuilt() {
         </a>
         <a href="/about/system" className="ml-3 inline-flex h-11 items-center border border-[oklch(var(--color-ink))] px-4 text-[oklch(var(--color-ink))]">
           {t("demo.build.system")} <span aria-hidden="true">&nbsp;→</span>
+        </a>
+      </p>
+      {/* 联系方式只在 README(站上不放姓名与地址,用户 2026-11-08);中文环境链中文 README。 */}
+      <p className="mt-4 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">
+        <a
+          data-testid="how-built-contact"
+          href={locale.startsWith("zh") ? `${stats.github}/blob/main/README.zh-CN.md#联系` : `${stats.github}#contact`}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2"
+        >
+          {t("demo.build.contact")} <span aria-hidden="true">↗</span>
         </a>
       </p>
     </section>

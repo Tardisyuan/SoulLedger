@@ -190,15 +190,15 @@ function CivCards({ enter, warm }: { enter: (skin: SealCiv, card: HTMLElement) =
         <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("demo.home.civ_sub")}</span>
       </div>
       <ul data-testid="landing-civs" className="m-0 mt-4 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-4">
-        {CIVILIZATION_OPTIONS.map((civ) => (
-          <CivCard key={civ} skin={CARD_SKIN[civ]} civilization={civ} enter={enter} warm={warm} />
+        {CIVILIZATION_OPTIONS.map((civ, i) => (
+          <CivCard key={civ} skin={CARD_SKIN[civ]} civilization={civ} enter={enter} warm={warm} first={i === 0} />
         ))}
       </ul>
     </section>
   );
 }
 
-function CivCard({ skin, civilization, enter, warm }: { skin: SealCiv; civilization: string; enter: (skin: SealCiv, card: HTMLElement) => void; warm: (skin: SealCiv) => void }) {
+function CivCard({ skin, civilization, enter, warm, first }: { skin: SealCiv; civilization: string; enter: (skin: SealCiv, card: HTMLElement) => void; warm: (skin: SealCiv) => void; first?: boolean }) {
   const { t } = useI18n();
   const tilt = useCardTilt();
   const name = t(`demo.civ.${skin}.name`);
@@ -207,7 +207,7 @@ function CivCard({ skin, civilization, enter, warm }: { skin: SealCiv; civilizat
       <button
         type="button"
         data-testid={`landing-card-${skin}`}
-        aria-label={t("demo.landing.card_label", { civ: name })}
+        aria-label={first ? `${t("demo.landing.card_label", { civ: name })} · ${t("demo.home.start_here")}` : t("demo.landing.card_label", { civ: name })}
         onClick={(e) => enter(skin, e.currentTarget)}
         {...tilt}
         onPointerEnter={(e) => {
@@ -228,6 +228,12 @@ function CivCard({ skin, civilization, enter, warm }: { skin: SealCiv; civilizat
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <Seal size={16} civ={skin} glyphs={null} decorative className="max-md:hidden" />
             <span className="truncate font-title text-lg" title={name}>{name}</span>
+            {/* 第一次来不知道点哪张(2026-11-14 用户定):第一张标「从这里开始」。 */}
+            {first && (
+              <span data-testid="landing-start-here" className="shrink-0 border border-[oklch(var(--color-main))] px-1 text-2xs font-semibold text-[oklch(var(--color-main))]">
+                {t("demo.home.start_here")}
+              </span>
+            )}
             <span className="demo-home-feat ml-auto shrink-0 text-xs font-semibold max-md:ml-0">{t(`demo.home.feat.${skin}`)}</span>
           </span>
           <RouteShape shape={CIVILIZATION_SHAPE[civilization]} className="max-md:hidden" />

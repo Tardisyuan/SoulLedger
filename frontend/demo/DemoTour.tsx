@@ -367,6 +367,8 @@ export default function DemoTour() {
   // 全文 225 px 高时正文只剩一半。不存进 sessionStorage:这是看的方式,不是导览走到哪儿。
   const narrow = !useWideViewport(768);
   const [open, setOpen] = useState(false);
+  // The end card's 「试着打开别的殿的案卷」 pressed: the lateral probe replaces the button. Not saved; a reload offers it again.
+  const [tried, setTried] = useState(false);
   const username = user?.username ?? null;
 
   // Every entrance, not only a change of user: re-entering as the same role from the home page (the administrator,
@@ -503,6 +505,7 @@ export default function DemoTour() {
     if (tour) router.push(tour.steps[index].route);
   };
   const replay = () => {
+    setTried(false);
     update(START);
     if (tour) router.push(tour.steps[0].route);
   };
@@ -538,6 +541,15 @@ export default function DemoTour() {
         <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={panel}>
           <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t(state.skipped ? "demo.tour.skipped_title" : done[0])}</p>
           <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{state.skipped ? t("demo.tour.skipped_body") : done[1]}</p>
+          {/* 叙事传输(2026-11-14 用户定):走完一生,访客自己撞一次租户隔离。现成的横向探针 —— 中国殿的判官要欧洲殿的灵魂,
+              录下的 404 —— 不另写越权逻辑;它只读录音,与当前登录的是哪一殿无关,所以四殿与「系统怎么保护自己」都能用。 */}
+          {tried ? (
+            <OverreachProbe only="lateral" ask />
+          ) : (
+            <Button type="button" variant="secondary" size="sm" data-testid="demo-tour-try-overreach" className="mt-3" onClick={() => setTried(true)}>
+              {t("demo.tour.try_overreach")} →
+            </Button>
+          )}
           <ul className="m-0 mt-3 flex list-none gap-2 p-0">
             {SKINS.filter((skin) => skin !== tour.skin).map((skin) => (
               <li key={skin} data-civ={skin}>

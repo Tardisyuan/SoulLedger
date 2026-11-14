@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { hallOf } from "./inside";
 import { type Answer, type DemoLang, DEMO_USERNAMES, langOf, overreachRecording, read, recording } from "./store";
@@ -15,7 +15,7 @@ import { type Answer, type DemoLang, DEMO_USERNAMES, langOf, overreachRecording,
  * - vertical: the same judge asks the permission catalogue, a page hidden from their menu.
  * - door: a soul's own token at an officer endpoint; anon: no token at all (both in `data/overreach.<lang>.json`).
  */
-type Kind = "lateral" | "vertical" | "door" | "anon";
+export type Kind = "lateral" | "vertical" | "door" | "anon";
 interface Probe {
   kind: Kind;
   path: string;
@@ -44,21 +44,28 @@ async function answerOf(kind: Kind, lang: DemoLang): Promise<(Answer & { path: s
   return doc ? { status: doc.s, data: doc.b, path: doc.path } : null;
 }
 
-export function OverreachProbe() {
+/**
+ * `only`: one card, not four. `ask`: asked on mount, as if pressed — the finished tour's 「试着打开别的殿的案卷」 is the press
+ * (`DemoTour.tsx`), so the visitor sees the refusal rather than another button.
+ */
+export function OverreachProbe({ only, ask }: { only?: Kind; ask?: boolean } = {}) {
   return (
     <div data-testid="demo-overreach" className="mt-3 flex flex-col gap-3 border-t border-[oklch(var(--color-line))] pt-3">
-      {PROBES.map((p) => (
-        <ProbeCard key={p.kind} probe={p} />
+      {PROBES.filter((p) => !only || p.kind === only).map((p) => (
+        <ProbeCard key={p.kind} probe={p} asked={ask} />
       ))}
     </div>
   );
 }
 
-function ProbeCard({ probe }: { probe: Probe }) {
+function ProbeCard({ probe, asked }: { probe: Probe; asked?: boolean }) {
   const { t, locale } = useI18n();
   const [answer, setAnswer] = useState<(Answer & { path: string }) | null | undefined>(undefined);
   const { kind } = probe;
   const ask = () => void answerOf(kind, langOf(locale)).then(setAnswer);
+  // Once, on mount: a later change of language re-asks only when pressed, as for any card.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => void (asked && ask()), []);
   const who = kind === "lateral" ? `${DEMO_USERNAMES.judge} (CN)` : kind === "vertical" ? DEMO_USERNAMES.judge : t(`demo.probe.${kind}.who`);
   const shown = kind === "lateral" ? `${SOULS}${t("demo.probe.lateral.target")}/` : probe.path;
   const muted = probe.expect === 404;
