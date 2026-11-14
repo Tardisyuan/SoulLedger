@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { test, expect, deskOf, dossierOf, mockApi, OPENED_JUDGMENT, TEST_USER } from "./fixtures";
+import { test, expect, deskOf, dossierOf, mockApi, OPENED_JUDGMENT, TEST_USER, zh } from "./fixtures";
 
 /**
  * 案卷台(Design 第三十批 第 2 步):判官登录就到 `/desk`;J 挪到下一件,↵ 打开卷宗(`/judgment/<id>`)。
@@ -31,9 +31,9 @@ async function signInAsJudge(page: Page) {
   api.on("GET", "/dossiers/desk/", deskOf({ mine: [MINE], unclaimed: [UNCLAIMED] }));
 
   await page.goto("/login");
-  await page.getByLabel("用户名或邮箱").fill(JUDGE.username);
-  await page.getByLabel("密码").fill("correct-horse-battery");
-  await page.getByRole("button", { name: "登录" }).click();
+  await page.getByLabel(zh("auth.account_or_email")).fill(JUDGE.username);
+  await page.getByLabel(zh("auth.password")).fill("correct-horse-battery");
+  await page.getByRole("button", { name: zh("auth.login") }).click();
   await expect(page).toHaveURL(/\/desk$/);
   return api;
 }

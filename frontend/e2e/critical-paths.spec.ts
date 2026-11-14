@@ -1,4 +1,4 @@
-import { test, expect, domainEnum, mockApi, seedAuthState, setupAuthenticatedPage, OPENED_JUDGMENT, PROPOSED_DISPATCH, PROPOSED_DISPATCH_DETAIL_ONLY, ROLES, SOULS, TEST_USER, type ApiMock } from "./fixtures";
+import { test, expect, domainEnum, mockApi, seedAuthState, setupAuthenticatedPage, OPENED_JUDGMENT, PROPOSED_DISPATCH, PROPOSED_DISPATCH_DETAIL_ONLY, ROLES, SOULS, TEST_USER, type ApiMock, zh } from "./fixtures";
 
 /**
  * Three end-to-end journeys through the app's highest-stakes screens.
@@ -22,9 +22,9 @@ test.describe("Critical path: login and create a soul", () => {
     const api = await mockApi(page);
 
     await page.goto("/login");
-    await page.getByLabel("用户名或邮箱").fill(TEST_USER.username);
-    await page.getByLabel("密码").fill("correct-horse-battery");
-    await page.getByRole("button", { name: "登录" }).click();
+    await page.getByLabel(zh("auth.account_or_email")).fill(TEST_USER.username);
+    await page.getByLabel(zh("auth.password")).fill("correct-horse-battery");
+    await page.getByRole("button", { name: zh("auth.login") }).click();
 
     // ── The login actually took ── (an ADMIN with no default view lands on the 总簿, 第三十批 第 2 步)
     await expect(page).toHaveURL(/\/desk\/overview/);

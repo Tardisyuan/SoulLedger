@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { test, expect, mockApi, setupAuthenticatedPage } from "./fixtures";
+import { test, expect, mockApi, setupAuthenticatedPage, zh } from "./fixtures";
 
 /**
  * The page CSP (frontend/proxy.ts) has no 'unsafe-inline' in script-src: every
@@ -30,10 +30,10 @@ test.describe("Content-Security-Policy", () => {
     await mockApi(page);
     const violations = await recordViolations(page);
     await page.goto("/login");
-    await expect(page.getByRole("button", { name: "登录" })).toBeVisible();
+    await expect(page.getByRole("button", { name: zh("auth.login") })).toBeVisible();
     // Hydrated: the controlled input takes typing only once React is running.
-    await page.getByLabel("用户名或邮箱").fill("probe");
-    await expect(page.getByLabel("用户名或邮箱")).toHaveValue("probe");
+    await page.getByLabel(zh("auth.account_or_email")).fill("probe");
+    await expect(page.getByLabel(zh("auth.account_or_email"))).toHaveValue("probe");
     // The theme bootstrap ran (it is the one inline script this repo writes).
     await expect(page.locator("html")).toHaveClass(/\b(dark|light)\b/);
     expect(await violations()).toEqual([]);

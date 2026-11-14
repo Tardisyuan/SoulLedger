@@ -1,4 +1,4 @@
-import { test, expect, mockApi, setupAuthenticatedPage } from "./fixtures";
+import { test, expect, mockApi, setupAuthenticatedPage, zh } from "./fixtures";
 
 /**
  * Public-surface and routing checks.
@@ -88,7 +88,7 @@ test.describe("Home page", () => {
     await consoleLink.click();
 
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByRole("button", { name: "登录" })).toBeVisible();
+    await expect(page.getByRole("button", { name: zh("auth.login") })).toBeVisible();
   });
 });
 
@@ -97,17 +97,17 @@ test.describe("Login page", () => {
     await mockApi(page);
     await page.goto("/login");
 
-    await expect(page.getByRole("heading", { name: "登录", level: 1 })).toBeVisible();
-    await expect(page.getByLabel("用户名或邮箱")).toBeVisible();
-    await expect(page.getByLabel("密码")).toBeVisible();
-    await expect(page.getByRole("button", { name: "登录" })).toBeEnabled();
+    await expect(page.getByRole("heading", { name: zh("auth.login"), level: 1 })).toBeVisible();
+    await expect(page.getByLabel(zh("auth.account_or_email"))).toBeVisible();
+    await expect(page.getByLabel(zh("auth.password"))).toBeVisible();
+    await expect(page.getByRole("button", { name: zh("auth.login") })).toBeEnabled();
   });
 
   test("empty submit is blocked before any request leaves the browser", async ({ page }) => {
     const api = await mockApi(page);
     await page.goto("/login");
 
-    await page.getByRole("button", { name: "登录" }).click();
+    await page.getByRole("button", { name: zh("auth.login") }).click();
 
     // WHAT ACTUALLY BLOCKS THIS — and why the comment that used to sit here
     // was describing a mechanism that does not exist.
@@ -135,7 +135,7 @@ test.describe("Login page", () => {
     // why, in the app's own locale and its own markup.
     await expect(page.getByRole("alert").filter({ hasText: "请输入用户名" })).toBeVisible();
     await expect(page.getByRole("alert").filter({ hasText: "请输入密码" })).toBeVisible();
-    await expect(page.getByLabel("用户名或邮箱")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByLabel(zh("auth.account_or_email"))).toHaveAttribute("aria-invalid", "true");
   });
 
   test("a window shorter than the form: the form column scrolls inside, its background never ends", async ({ page, isMobile }) => {
@@ -160,9 +160,9 @@ test.describe("Login page", () => {
     const api = await mockApi(page);
     await page.goto("/login");
 
-    await page.getByLabel("用户名或邮箱").fill("nobody");
-    await page.getByLabel("密码").fill("wrong-password");
-    await page.getByRole("button", { name: "登录" }).click();
+    await page.getByLabel(zh("auth.account_or_email")).fill("nobody");
+    await page.getByLabel(zh("auth.password")).fill("wrong-password");
+    await page.getByRole("button", { name: zh("auth.login") }).click();
 
     await expect(page.getByText("账号或密码不对")).toBeVisible();
     await expect(page.getByText("还可以再试 4 次，之后要等一会儿才能再试，最长 15 分钟。")).toBeVisible();
@@ -185,13 +185,13 @@ test.describe("Login page", () => {
     await expect(card).toBeVisible();
     await expect(card).toContainText("崔珏");
     await expect(card).toContainText("cu***e");
-    await expect(page.getByLabel("用户名或邮箱")).toHaveCount(0);
-    await expect(page.getByLabel("密码")).toBeFocused();
+    await expect(page.getByLabel(zh("auth.account_or_email"))).toHaveCount(0);
+    await expect(page.getByLabel(zh("auth.password"))).toBeFocused();
     await expect(page.getByRole("checkbox", { name: /保持登录/ })).toBeChecked();
 
     await card.getByRole("button", { name: "换一个账号" }).click();
     await expect(card).toHaveCount(0);
-    await expect(page.getByLabel("用户名或邮箱")).toHaveValue("");
+    await expect(page.getByLabel(zh("auth.account_or_email"))).toHaveValue("");
     expect(await page.evaluate(() => localStorage.getItem("soulledger_last_username"))).toBeNull();
   });
 });
@@ -207,7 +207,7 @@ test.describe("Protected routes (unauthenticated)", () => {
       // proxy.ts stashes the original path as ?redirect= — asserting
       // it means a redirect to a *generic* login page would fail.
       await expect(page).toHaveURL(`/login?redirect=${encodeURIComponent(route)}`);
-      await expect(page.getByRole("heading", { name: "登录", level: 1 })).toBeVisible();
+      await expect(page.getByRole("heading", { name: zh("auth.login"), level: 1 })).toBeVisible();
     });
   }
 });
