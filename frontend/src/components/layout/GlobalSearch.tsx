@@ -17,6 +17,7 @@ import { shortIdentifier } from "@/src/lib/domainDisplay";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { SoulStateBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { useRegisteredCommands } from "@/src/lib/shellCommands";
+import { pushRecent, readRecent, type RecentItem } from "@/src/lib/recentOpened";
 import { GlobalSearchEntries, isSearchShortcut, onSearchOpenRequest, takePendingOpen } from "./GlobalSearchEntry";
 import { openShortcutHelp } from "./ShortcutHelp";
 
@@ -37,7 +38,6 @@ import { openShortcutHelp } from "./ShortcutHelp";
 
 export const SEARCH_DEBOUNCE_MS = 200;
 export const GROUP_LIMIT = 5;
-export const RECENT_LIMIT = 5;
 /** 说明与提示里的案号示例(Design 的原文)。放在代码里而不是语言包:它是一个编号,不是一句话。 */
 const CASE_NUMBER_EXAMPLE = "CN-2026-0042";
 
@@ -56,15 +56,6 @@ const VIEW_ALL: Partial<Record<Kind, string>> = {
   statute: "search.view_all_statutes",
 };
 
-/** 存进本地的一条「最近打开」:只存画这一行要的字,不存整条记录。 */
-export interface RecentItem {
-  kind: Kind;
-  id: string;
-  href: string;
-  title: string;
-  sub?: string;
-}
-
 interface Option {
   key: string;
   href: string;
@@ -76,26 +67,6 @@ interface Option {
   /** 律条两行,行高 64;其余 48。 */
   tall?: boolean;
   viewAll?: boolean;
-}
-
-const recentKey = (userId: number | string | undefined) => `soulledger.search.recent.${userId ?? "anon"}`;
-
-export function readRecent(userId: number | string | undefined): RecentItem[] {
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(recentKey(userId)) ?? "[]");
-    return Array.isArray(parsed) ? parsed.slice(0, RECENT_LIMIT) : [];
-  } catch {
-    return [];
-  }
-}
-
-function pushRecent(userId: number | string | undefined, item: RecentItem): void {
-  try {
-    const next = [item, ...readRecent(userId).filter((r) => !(r.kind === item.kind && r.id === item.id))].slice(0, RECENT_LIMIT);
-    window.localStorage.setItem(recentKey(userId), JSON.stringify(next));
-  } catch {
-    /* 隐私模式等:这一次不记,搜索照常。 */
-  }
 }
 
 /** 命中字:600 + 下划线,**不用颜色**(Design §3)。大小写不敏感。 */

@@ -475,3 +475,58 @@ describe("defaultViewRoute", () => {
     expect(await defaultViewRoute()).toBe("/desk");
   });
 });
+
+describe("LoginPage · 记住账号名 (W3)", () => {
+  const SIGNED_IN = { data: { access: "A", refresh: "R", user: { id: 1, username: "yama", tenant: null } } };
+  const rememberBox = () => screen.getByRole("checkbox", { name: "auth.remember_me(30)" }) as HTMLInputElement;
+
+  it("keeps the account name after a sign-in with 保持登录 ticked", async () => {
+    mockedLogin.mockResolvedValue(SIGNED_IN);
+    render(<LoginPage />);
+    fireEvent.click(rememberBox());
+    fillAndSubmit();
+    await waitFor(() => expect(localStorage.getItem("soulledger_last_username")).toBe("yama"));
+  });
+
+  it("does not keep it — and forgets an old one — when 保持登录 is not ticked", async () => {
+    localStorage.setItem("soulledger_last_username", "yama");
+    mockedLogin.mockResolvedValue(SIGNED_IN);
+    render(<LoginPage />);
+    await waitFor(() => expect(rememberBox().checked).toBe(true));
+    fireEvent.click(rememberBox()); // the prefill ticked it; untick
+    fillAndSubmit();
+    await waitFor(() => expect(mockedLogin).toHaveBeenCalledWith(expect.objectContaining({ remember: false })));
+    await waitFor(() => expect(localStorage.getItem("soulledger_last_username")).toBeNull());
+  });
+
+  it("does not keep it when the sign-in fails", async () => {
+    mockedLogin.mockRejectedValue({ response: { status: 401, data: {} } });
+    render(<LoginPage />);
+    fireEvent.click(rememberBox());
+    fillAndSubmit();
+    await screen.findByTestId("login-error");
+    expect(localStorage.getItem("soulledger_last_username")).toBeNull();
+  });
+
+  it("prefills a kept name, ticks 保持登录, focuses the password, and offers 换个账号", async () => {
+    localStorage.setItem("soulledger_last_username", "yama");
+    render(<LoginPage />);
+    await waitFor(() => expect(account().value).toBe("yama"));
+    expect(rememberBox().checked).toBe(true);
+    await waitFor(() => expect(document.activeElement).toBe(password()));
+
+    fireEvent.click(screen.getByRole("button", { name: "auth.switch_account" }));
+    expect(account().value).toBe("");
+    expect(rememberBox().checked).toBe(false);
+    expect(localStorage.getItem("soulledger_last_username")).toBeNull();
+    expect(screen.queryByRole("button", { name: "auth.switch_account" })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(account()));
+  });
+
+  it("offers no 换个账号 when nothing is kept", () => {
+    render(<LoginPage />);
+    expect(account().value).toBe("");
+    expect(rememberBox().checked).toBe(false);
+    expect(screen.queryByRole("button", { name: "auth.switch_account" })).toBeNull();
+  });
+});

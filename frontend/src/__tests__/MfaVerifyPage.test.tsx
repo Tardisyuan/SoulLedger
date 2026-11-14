@@ -199,3 +199,44 @@ describe("LoginVerifyPage", () => {
     expect(screen.getByRole("button", { name: "mfa.verify.use_totp" })).toBeTruthy();
   });
 });
+
+describe("LoginVerifyPage · password managers and the kept account name (W3, W5)", () => {
+  it("carries the username in a hidden, read-only autocomplete=username field", () => {
+    render(<LoginVerifyPage />);
+    const field = screen.getByTestId("mfa-username") as HTMLInputElement;
+    expect(field.type).toBe("text"); // not type="hidden": password managers skip those
+    expect(field.name).toBe("username");
+    expect(field.getAttribute("autocomplete")).toBe("username");
+    expect(field.value).toBe("yama");
+    expect(field.readOnly).toBe(true);
+    expect(field.tabIndex).toBe(-1);
+    expect(field.getAttribute("aria-hidden")).toBe("true");
+    expect(field.className).toContain("sr-only");
+  });
+
+  it("keeps the account name only when 保持登录 was ticked on the first step", async () => {
+    verify.mockResolvedValueOnce({ data: TOKENS });
+    storeMfaPending({ ...PENDING, remember: true });
+    render(<LoginVerifyPage />);
+    fireEvent.change(codeInput(), { target: { value: "123456" } });
+    await waitFor(() => expect(localStorage.getItem("soulledger_last_username")).toBe("yama"));
+  });
+
+  it("forgets a kept name when 保持登录 was not ticked", async () => {
+    localStorage.setItem("soulledger_last_username", "someone-else");
+    verify.mockResolvedValueOnce({ data: TOKENS });
+    render(<LoginVerifyPage />);
+    fireEvent.change(codeInput(), { target: { value: "123456" } });
+    await waitFor(() => expect(goTo).toHaveBeenCalled());
+    expect(localStorage.getItem("soulledger_last_username")).toBeNull();
+  });
+
+  it("keeps nothing when the code is wrong", async () => {
+    verify.mockImplementationOnce(() => refusal(400, { code: "wrong", remaining_attempts: 3, lock_minutes: 15 }));
+    storeMfaPending({ ...PENDING, remember: true });
+    render(<LoginVerifyPage />);
+    fireEvent.change(codeInput(), { target: { value: "123456" } });
+    await screen.findByRole("alert");
+    expect(localStorage.getItem("soulledger_last_username")).toBeNull();
+  });
+});
