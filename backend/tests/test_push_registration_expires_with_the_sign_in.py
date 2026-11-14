@@ -1,6 +1,6 @@
 """手机上的登录到期、又没人重新登录:推送登记不再留着(发送路径跳过 + 每日清理停用)。
 
-官员端刷新令牌 24 小时,灵魂端 `JWT_REFRESH_LIFETIME`;登记之后超过这么久没再登记,**且**用户没有任何
+官员端刷新令牌 24 小时,灵魂端 `SOUL_REFRESH_LIFETIME_DAYS`(30 天);登记之后超过这么久没再登记,**且**用户没有任何
 未退出、在有效期内活动过的登录,才算到期。
 """
 from datetime import timedelta
@@ -8,6 +8,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
+from apps.authentication import signin_sessions
 from apps.authentication.models import SignInSession, User
 from apps.authentication.tasks import prune_expired_push_registrations
 from apps.officer_app import push, todo
@@ -74,7 +75,7 @@ def test_a_fresh_registration_is_pushed_without_any_session_row(officer, monkeyp
 def test_soul_registration_past_the_refresh_lifetime_is_not_recorded_and_is_pruned(cn_tenant, push_on, settings):  # noqa: F811
     account, _client = ready_soul(cn_tenant, name="亡魂乙")
     device, _ = services.register_device(account, TOKEN_A, "IOS")
-    lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+    lifetime = signin_sessions.soul_lifetime()
     PushDevice.objects.filter(pk=device.pk).update(last_seen_at=timezone.now() - lifetime - timedelta(hours=1))
     assert services._record(account, "JUDGMENT_CONCLUDED", "judgment", "judgment_result", "k-1", {}) == []
     assert prune_expired_push_registrations()["soul"] == 1
@@ -85,7 +86,7 @@ def test_soul_registration_past_the_refresh_lifetime_is_not_recorded_and_is_prun
 def test_soul_registration_is_kept_while_the_sign_in_is_alive(cn_tenant, push_on, settings):  # noqa: F811
     account, _client = ready_soul(cn_tenant, name="亡魂丙")
     device, _ = services.register_device(account, TOKEN_A, "IOS")
-    lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+    lifetime = signin_sessions.soul_lifetime()
     PushDevice.objects.filter(pk=device.pk).update(last_seen_at=timezone.now() - lifetime - timedelta(hours=1))
     SignInSession.objects.create(user=account.user)
     assert len(services._record(account, "JUDGMENT_CONCLUDED", "judgment", "judgment_result", "k-2", {})) == 1

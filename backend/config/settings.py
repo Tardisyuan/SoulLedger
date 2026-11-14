@@ -353,8 +353,12 @@ APP_VERSION_POLICY = {
 # JWT Settings
 # 官员端 App 的刷新令牌有效期(小时):A13 规格「会话更短」。默认 24 小时 —— 滑动的:App 每次刷新
 # 都从当下重新计 24 小时,所以每天用的人不会被踢,闲置一天就要重新登录(带两步验证)。
-# 官员台(Web)与灵魂端不受影响,仍是下面的 JWT_REFRESH_LIFETIME(默认 7 天)。
+# 官员台(Web)不受影响,仍是下面的 JWT_REFRESH_LIFETIME(默认 7 天)。
 OFFICER_APP_REFRESH_LIFETIME_HOURS = int(os.getenv("JWT_OFFICER_APP_REFRESH_LIFETIME_HOURS", "24"))
+# 灵魂端刷新令牌有效期(天):2026-11-15 用户决定 7 → 30(便利性审计 O6),同样是滑动的 —— 每次刷新从当下重计。
+# 开了指纹登录的手机默认开 App 锁(mobile/src/appLock.tsx),抵消长会话。
+# 改这个值只影响此后签发与轮换出的令牌:改动前签发的 7 天令牌照原 exp 到期,下次轮换才拿到 30 天的。
+SOUL_REFRESH_LIFETIME_DAYS = int(os.getenv("JWT_SOUL_REFRESH_LIFETIME_DAYS", "30"))
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_LIFETIME", "30"))),

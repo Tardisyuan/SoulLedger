@@ -54,10 +54,10 @@ function signedIn() {
   });
 }
 
-/** 面容登录 on for this phone, the lock switch as given. */
-function phone({ lock }: { lock: boolean }) {
+/** 面容登录 on for this phone, the lock switch as the soul set it; `undefined` = never touched (on by default since 2026-11-15). */
+function phone({ lock }: { lock?: boolean }) {
   persistentStore.set(BIO_KEY, "face");
-  if (lock) persistentStore.set(APP_LOCK_KEY, "1");
+  if (lock !== undefined) persistentStore.set(APP_LOCK_KEY, lock ? "1" : "0");
 }
 
 beforeEach(async () => {
@@ -89,13 +89,16 @@ describe("the switch under 面容登录", () => {
     await act(async () => {});
   }
 
-  it("is off by default, with its hint worded for the phone's face / finger", async () => {
-    phone({ lock: false });
+  // 2026-11-15 (soul refresh tokens 7 -> 30 days): a phone with 面容登录 on locks unless the soul turned it off,
+  // including a phone that had 面容登录 on before this default (it holds no record of the switch).
+  it("is on by default once 面容登录 is on, with its hint worded for the phone's face / finger", async () => {
+    phone({});
     await openSettings();
-    expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: false, disabled: false });
+    expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: true, disabled: false });
     expect(screen.getByText("切回 App 时也要验证")).toBeTruthy();
     expect(screen.getByTestId("app-lock-sub").props.children).toBe("离开超过 5 分钟再回来，要先认一次面容");
-    expect(appLockOn()).toBe(false);
+    expect(persistentStore.get(APP_LOCK_KEY)).toBeFalsy();
+    expect(appLockOn()).toBe(true);
   });
 
   it("cannot be used while 面容登录 is off, and a press changes nothing", async () => {
@@ -107,28 +110,39 @@ describe("the switch under 面容登录", () => {
     expect(appLockOn()).toBe(false);
   });
 
-  it("turns on and off, and what it holds is on this phone (it is read back from the phone's record)", async () => {
-    phone({ lock: false });
+  it("turns off and on, and what it holds is on this phone (it is read back from the phone's record)", async () => {
+    phone({});
     await openSettings();
+    fireEvent.press(screen.getByTestId("app-lock-row"));
+    expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: false, disabled: false });
+    expect(persistentStore.get(APP_LOCK_KEY)).toBe("0");
+    expect(appLockOn()).toBe(false);
     fireEvent.press(screen.getByTestId("app-lock-row"));
     expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: true, disabled: false });
     expect(persistentStore.get(APP_LOCK_KEY)).toBe("1");
     expect(appLockOn()).toBe(true);
-    fireEvent.press(screen.getByTestId("app-lock-row"));
-    expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: false, disabled: false });
-    expect(persistentStore.get(APP_LOCK_KEY)).toBeFalsy();
   });
 
-  it("turning 面容登录 off turns it off too, and it stays off when 面容登录 comes back", async () => {
-    phone({ lock: true });
+  it("turning 面容登录 off takes the lock down with it; when 面容登录 comes back the lock is on again by default", async () => {
+    phone({});
     (SecureStore as unknown as { __guarded: Map<string, string> }).__guarded.set("soulledger_device_login", "cred");
     await openSettings();
     expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: true, disabled: false });
     fireEvent.press(screen.getByTestId("bio-row"));
     await waitFor(() => expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: false, disabled: true }));
-    expect(persistentStore.get(APP_LOCK_KEY)).toBeFalsy();
     expect(appLockOn()).toBe(false);
-    // the record is gone, so a later 面容登录 does not bring the lock back by itself
+    persistentStore.set(BIO_KEY, "face");
+    expect(appLockOn()).toBe(true);
+  });
+
+  it("an explicit off is kept: through turning 面容登录 off and on again", async () => {
+    phone({ lock: false });
+    (SecureStore as unknown as { __guarded: Map<string, string> }).__guarded.set("soulledger_device_login", "cred");
+    await openSettings();
+    expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: false, disabled: false });
+    fireEvent.press(screen.getByTestId("bio-row"));
+    await waitFor(() => expect(screen.getByTestId("app-lock-row").props.accessibilityState).toEqual({ checked: false, disabled: true }));
+    expect(persistentStore.get(APP_LOCK_KEY)).toBe("0");
     persistentStore.set(BIO_KEY, "face");
     expect(appLockOn()).toBe(false);
   });
@@ -248,6 +262,18 @@ describe("the lock", () => {
     // a return that was never preceded by a departure is not a return
     await foreground(60);
     expect(screen.queryByTestId("app-lock")).toBeNull();
+  });
+
+  it("locks a cold start on a phone that had 面容登录 on before the lock became the default (no record of the switch)", async () => {
+    phone({});
+    let recognise!: () => void;
+    bioMod.__state.gate = new Promise<void>((resolve) => (recognise = resolve));
+    signedIn();
+    renderApp();
+    await screen.findByTestId("app-lock");
+    expect(bioMod.__state.prompts).toEqual(["用来解锁灵魂簿。"]);
+    await act(async () => recognise());
+    await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
   });
 
   it("does not lock a session the soul has just signed into with the password", async () => {

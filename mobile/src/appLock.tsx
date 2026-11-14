@@ -1,6 +1,6 @@
 /**
- * 切回 App 时也要验证 (Design 第二十八批 S2). When the switch is on (`appLockOn`: set under 设置 › 账号安全 › 面容登录, only
- * while that is on) and the app comes back after at least five minutes in the background, a screen written like the
+ * 切回 App 时也要验证 (Design 第二十八批 S2). When the switch is on (`appLockOn`: under 设置 › 账号安全 › 面容登录, only
+ * while that is on; on by default since 2026-11-15, off only when the soul turned it off) and the app comes back after at least five minutes in the background, a screen written like the
  * 面容 sign-in page -- title 「已锁定」 -- covers everything until the system recognises the face / finger. If it does
  * not, the way out is the sign-in page's own: 「输入密码」 signs out, and the sign-in page asks for the password.
  *
