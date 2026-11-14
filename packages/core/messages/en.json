@@ -9679,52 +9679,52 @@
       "same_request": "The same request",
       "as_judge": "Signed in as a judge · {{hall}}",
       "count": "{{n}} souls in this hall · {{total}} across all four halls",
-      "narrowed": "The difference is made in the query: every endpoint’s query goes through scope_to_tenant and is narrowed to the signed-in officer’s hall. The screen does no filtering.",
+      "narrowed": "The difference is made in the query: every endpoint’s query is first narrowed to the signed-in officer’s hall. The screen does no filtering.",
       "probe_title": "Ask for the other hall’s soul by its number",
       "probe_result": "{{status}} · this hall cannot find the record",
       "probe_pending": "This request has not been recorded yet. After the next recording, the server’s real answer shows here.",
       "recorded_short": "Recorded server answer",
-      "flow_title": "One cross-hall case, step by step",
-      "flow_sub": "A soul judged by the Fifth Court serves its term in two stops: stop 1 here, stop 2 at {{hall}}. Each hall decides its own stop.",
+      "flow_title": "One joint cross-hall judgment, step by step",
+      "flow_sub": "Diyu hands the later part of a soul’s term to {{hall}}. Each hall fills in only its own stop, and the other hall never reads the soul itself.",
       "step": {
         "1": {
           "name": "Joint judgment opened",
-          "who": "Fifth Court · judge",
-          "body": "The Fifth Court’s judge opens a joint judgment on the case and seats {{hall}} as co-judge, leaving stop 2 to it. Stop 1 is always the home hall."
+          "who": "This hall · judge",
+          "body": "This hall’s judge opens the case as a joint cross-hall judgment: stop 1 stays here, stop 2 is left for the other hall to fill in."
         },
         "2": {
           "name": "The other hall fills in its stop",
-          "who": "{{hall}} · judge",
-          "body": "The judge of {{hall}} fills in its own stop: the realm and the years. Only that hall can fill it (another hall gets a 403), and only with a realm of its own civilization."
+          "who": "Other hall · judge",
+          "body": "The other hall’s judge fills in only its own stop. Of the whole plan it sees each stop’s hall, years and status; the reason for the other hall’s stop is blank, and the soul itself cannot be read."
         },
         "3": {
           "name": "This hall concludes",
-          "who": "Fifth Court · judge",
-          "body": "With both stops set, the Fifth Court ends the joint judgment and concludes the original case. Concluding it writes the sentence plan, stop by stop."
+          "who": "This hall · judge",
+          "body": "With both stops filled in, this hall’s judge concludes the case and the plan is fixed."
         },
         "4": {
           "name": "Served stop by stop",
           "who": "System",
-          "body": "The soul serves stop 1 in this hall first; when that term ends, the system starts the transfer to stop 2 on its own."
+          "body": "The plan is served stop by stop: stop 1 here first, then stop 2 in the other hall. Every step leaves a row in that hall’s audit log."
         }
       },
       "hall_sees": "What {{hall}} sees",
       "sees": {
         "1": {
-          "home": "The joint judgment and the soul’s whole dossier",
-          "away": "The joint judgment and its own seat"
+          "home": "The whole dossier and the plan; stop 2 is empty, waiting for the other hall",
+          "away": "One new item under Cross-realm: each stop’s hall and status, its own stop still to fill in"
         },
         "2": {
-          "home": "Stop 2, filled in by the other hall",
-          "away": "The stop it filled in"
+          "home": "Stop 2’s hall, years and status; the reason for that stop is blank",
+          "away": "All of its own stop; for stop 1 only the hall, years and status. The soul itself cannot be read"
         },
         "3": {
-          "home": "The sentence plan, listing both stops",
-          "away": "The same plan: every stop’s hall, years and status, but not the other hall’s reasons"
+          "home": "The plan is fixed; the dossier’s Sentence tab lists both stops",
+          "away": "The plan is fixed; its own stop is now waiting to be served"
         },
         "4": {
-          "home": "The soul is still in this hall’s roll; its dossier opens as usual",
-          "away": "Until the soul arrives it is not in this hall’s roll, and its dossier does not open"
+          "home": "Stop 1 being served",
+          "away": "Stop 2 waiting; still only the hall, years and status"
         }
       },
       "audit_title": "Audit log · rows this step wrote",
