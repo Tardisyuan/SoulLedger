@@ -32,10 +32,10 @@ test("393px: the safeguards tour's overreach answer fits the card and the page d
   await page.waitForURL((u) => u.pathname === "/tenants");
   await page.getByTestId("demo-tour-next").click();
   await page.getByTestId("demo-tour-next").click();
-  await page.getByTestId("demo-overreach-try").click();
-  const answer = page.getByTestId("demo-overreach-answer");
+  await page.getByTestId("demo-overreach-try-vertical").click();
+  const answer = page.getByTestId("demo-overreach-answer-vertical");
   await answer.scrollIntoViewIfNeeded();
-  await expect(page.getByTestId("demo-overreach-status")).toHaveText("403");
+  await expect(page.getByTestId("demo-overreach-status-vertical")).toHaveText("403");
   const box = await page.getByTestId("demo-tour").boundingBox();
   expect(box && box.x + box.width).toBeLessThanOrEqual(393);
   const width = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

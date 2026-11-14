@@ -9499,7 +9499,7 @@
         },
         "3": {
           "name": "Try an overreach",
-          "body": "A judge never sees this page, but a hidden button is not a safeguard. Press the button below to see what the server answers when a judge asks this page's endpoint directly."
+          "body": "A judge never sees this page, but a hidden button is not a safeguard. Each button below sends one request the screens never would: another hall's soul, a hidden page, an officer endpoint with a soul's token, and no token at all. Open each to see what the server answered, which line stopped it, and which test guards it."
         },
         "4": {
           "name": "Data scopes",
@@ -9620,7 +9620,24 @@
       "why_back": "The backend is what stops it: the endpoint carries its own permission class, which lets through only holders of \"System settings\" or \"Menu management\". A judge holds neither, so the answer is 403 before the view itself runs.",
       "code": "Code",
       "test": "Guarded by",
-      "not_recorded": "The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise."
+      "not_recorded": "The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise.",
+      "pending": "The recording has no answer to this request yet: it appears after the next re-recording.",
+      "lateral": {
+        "try": "Ask for an EU hall soul by its id, as the Chinese judge",
+        "target": "‹an EU hall soul's id›",
+        "quiet": "correctly saying nothing",
+        "why": "Lateral overreach: the id is real and the soul exists, in another hall. The query is filtered by hall before anything else, so for this hall the id does not exist: 404, not 403. A refusal would say there is such a soul; not finding one says nothing."
+      },
+      "door": {
+        "try": "Ask an officer endpoint with the soul app's token",
+        "who": "a soul (soul token)",
+        "why": "Wrong door: the token is genuine, but it is a soul's. The officer endpoints' authentication accepts officer tokens only, and answers a soul token with 403, not 401: 401 would send the app to refresh and sign in again, and this is not an expired session, it is out of bounds."
+      },
+      "anon": {
+        "try": "Ask the same endpoint with no token at all",
+        "who": "a visitor who has not signed in",
+        "why": "Anonymous: no token, so no identity to judge. The permission class refuses before the view runs, with 401, which sends the client to sign in."
+      }
     },
     "txn": {
       "open": "Concurrency",

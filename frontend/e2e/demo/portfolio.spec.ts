@@ -47,9 +47,9 @@ test("the overreach step replays the judge's recorded 403, with the reason and w
   await page.getByTestId("demo-tour-next").click();
   await page.getByTestId("demo-tour-next").click();
   await expect(page.getByTestId("demo-tour-progress")).toContainText("3 / 7");
-  await page.getByTestId("demo-overreach-try").click();
-  const answer = page.getByTestId("demo-overreach-answer");
-  await expect(page.getByTestId("demo-overreach-status")).toHaveText("403");
+  await page.getByTestId("demo-overreach-try-vertical").click();
+  const answer = page.getByTestId("demo-overreach-answer-vertical");
+  await expect(page.getByTestId("demo-overreach-status-vertical")).toHaveText("403");
   await expect(answer).toContainText("You do not have permission to perform this action.");
   await expect(answer).toContainText("demo_judge");
   await expect(answer).toContainText("CanReadPermissionCatalogue");
