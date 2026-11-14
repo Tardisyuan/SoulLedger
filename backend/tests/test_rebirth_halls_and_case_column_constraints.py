@@ -138,16 +138,16 @@ def test_0017_backfills_the_halls_and_renumbers_duplicate_cycles(migration_round
     assert {"from_tenant", "to_tenant"} <= names  # 0017 的反向是 noop;两列由 0016 的反向删
 
 
-# ── 迁移 judgment/0053:存量违反时拒绝迁移 ───────────────────────────────────────
+# ── 迁移 judgment/0054:存量违反时拒绝迁移 ───────────────────────────────────────
 
 
-def test_0053_refuses_to_migrate_over_violating_rows_and_names_them(migration_round_trip):
+def test_0054_refuses_to_migrate_over_violating_rows_and_names_them(migration_round_trip):
     """变异:预检里不 raise → 加约束那一步自己失败(SQLite 重建表、PG 的 ADD CONSTRAINT),报的是不点名的
     IntegrityError 而不是 RuntimeError,`pytest.raises` 那一段红。"""
     from tests.migration_roundtrip import migrate_to
 
-    before = [("judgment", "0052_european_corpus_corrections")]
-    after = [("judgment", "0053_civilization_specific_columns")]
+    before = [("judgment", "0053_judgment_pending_idx")]
+    after = [("judgment", "0054_civilization_specific_columns")]
     state = migrate_to(before)
     tenant = state.get_model("tenants", "Tenant")._base_manager.create(code="CN_DIYU", display_name="地府")
     soul = state.get_model("souls", "Soul")._base_manager.create(name="预检", tenant=tenant, home_tenant=tenant)

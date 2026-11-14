@@ -44,7 +44,7 @@ def precheck(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("judgment", "0052_european_corpus_corrections"),
+        ("judgment", "0053_judgment_pending_idx"),
     ]
 
     operations = [
