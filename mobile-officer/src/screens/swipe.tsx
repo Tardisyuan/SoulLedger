@@ -24,7 +24,7 @@ import Svg, { Circle } from "react-native-svg";
 import { submitVerdict } from "../decisions";
 import { DECISION_TOAST, confirmedDecision, decisionFailureKind, notConfirmedKey } from "../deviceCheck";
 import { ActionButton } from "../kit";
-import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast, useDismissToast } from "../shared";
+import { Icon, Txt, radius, space, useI18n, useOnline, useReducedMotion, useReducedMotionDurations, useRemote, useTheme, useToast, useDismissToast, Press } from "../shared";
 import { BLOCKED_DRAG, SWIPE_FRACTION, blockedSide, deadlineText, passPayload, waitedDays, type Side } from "../verdict";
 import { ReasonSheet } from "./judgmentActions";
 import { AccountSheet, RejectSheet, SealReadbackSheet } from "./rejectSheet";
@@ -335,7 +335,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <View testID="swipe-screen" style={{ flex: 1, backgroundColor: theme.s0 }}>
-      <Pressable
+      <Press
         testID="swipe-screen-back"
         accessibilityRole="button"
         accessibilityLabel={t("officer_app.back")}
@@ -344,7 +344,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
       >
         <Icon name="back" size={16} color={theme.ink} />
         <Txt variant="nav">{t("officer_app.back")}</Txt>
-      </Pressable>
+      </Press>
       <View style={styles.head}>
         <Txt variant="title">{t("swipe.title")}</Txt>
         <Txt variant="caption" tone="muted" testID="swipe-count">
@@ -554,11 +554,11 @@ function UndoBar({ testID, text, onUndo }: { testID: string; text: string; onUnd
       <Txt variant="caption" style={{ color: theme.s0, flex: 1 }}>
         {text}
       </Txt>
-      <Pressable testID={`${testID}-button`} accessibilityRole="button" accessibilityLabel={t("action.undo")} onPress={onUndo} style={styles.undoButton}>
+      <Press testID={`${testID}-button`} accessibilityRole="button" accessibilityLabel={t("action.undo")} onPress={onUndo} style={styles.undoButton}>
         <Txt variant="nav" style={{ color: theme.s0 }}>
           {t("action.undo")}
         </Txt>
-      </Pressable>
+      </Press>
     </View>
   );
 }

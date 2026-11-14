@@ -3,7 +3,7 @@ import { soulDeviceLoginFailure, soulErrorCode, soulErrorMessage, type SoulError
 import { SOUL_CODE_LENGTH, formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 import Svg, { G, Path } from "react-native-svg";
 
 import { BrandMark } from "../brandMarkView";
@@ -18,7 +18,7 @@ import { forgetDevice } from "../mfa";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
 import { RememberedCard } from "../rememberedCard";
 import { SoulCodeField } from "../soulCodeView";
-import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
+import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme, Press } from "../ui";
 import { useBiometry } from "../useBiometry";
 import { useNow } from "../useNow";
 import { ForgetNumberSheet, SwitchAccountSheet } from "./bio";
@@ -37,7 +37,7 @@ export function LanguageSwitch() {
       {SUPPORTED_LOCALES.map((l) => {
         const on = l === locale;
         return (
-          <Pressable
+          <Press
             key={l}
             testID={`locale-${l}`}
             accessibilityRole="button"
@@ -48,7 +48,7 @@ export function LanguageSwitch() {
             <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.languageText}>
               {LOCALE_LABELS[l]}
             </Txt>
-          </Pressable>
+          </Press>
         );
       })}
     </View>
@@ -351,11 +351,11 @@ export function LoginScreen() {
   const network = error?.key === "soul_app.errors.network";
   const canSubmit = canSubmitLogin(code, password, busy);
   const forgot = (
-    <Pressable testID="login-forgot" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgot}>
+    <Press testID="login-forgot" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgot}>
       <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
         {t("soul_app.forgot_password.link")}
       </Txt>
-    </Pressable>
+    </Press>
   );
   return (
     <Screen edges={["top", "left", "right", "bottom"]}>
@@ -426,7 +426,7 @@ export function LoginScreen() {
                       setAccount(a);
                     }}
                     trailing={
-                      <Pressable
+                      <Press
                         testID={`account-more-${a.code}`}
                         accessibilityRole="button"
                         accessibilityLabel={t("soul_app.accounts.more", { name: a.name || maskSoulCode(a.code) })}
@@ -436,17 +436,17 @@ export function LoginScreen() {
                         <Txt variant="bodyLg" tone="muted">
                           ⋯
                         </Txt>
-                      </Pressable>
+                      </Press>
                     }
                   />
                 </View>
               ))}
-              <Pressable testID="accounts-other" accessibilityRole="button" onPress={() => setTyping(true)} style={styles.other}>
+              <Press testID="accounts-other" accessibilityRole="button" onPress={() => setTyping(true)} style={styles.other}>
                 <View style={[styles.plus, { borderColor: theme.hair2 }]}>
                   <Txt tone="muted">＋</Txt>
                 </View>
                 <Txt variant="bodyLg">{t("soul_app.accounts.other")}</Txt>
-              </Pressable>
+              </Press>
             </View>
             <Txt variant="caption" tone="muted">
               {t("soul_app.accounts.hint", { bio: bio.word })}
@@ -523,11 +523,11 @@ export function LoginScreen() {
           <Button testID="login-bio-retry" kind="secondary" style={styles.retry} title={t("soul_app.bio.retry", { bio: bio.word })} onPress={() => void signInWithBio()} disabled={busy} />
         ) : null}
         {bioScreen ? (
-          <Pressable testID="login-use-password" accessibilityRole="link" disabled={busy} onPress={() => setWantPassword(true)} style={styles.forgot}>
+          <Press testID="login-use-password" accessibilityRole="link" disabled={busy} onPress={() => setWantPassword(true)} style={styles.forgot}>
             <Txt variant="bodyLg" style={styles.underline}>
               {t("soul_app.login.use_password")}
             </Txt>
-          </Pressable>
+          </Press>
         ) : null}
         {known ? <View style={styles.leftLink}>{forgot}</View> : null}
         </>
@@ -537,11 +537,11 @@ export function LoginScreen() {
       <View style={[styles.footer, { borderTopColor: theme.hair }]}>
         {/* 第二十八批 S5: the sign-in group of the help page, reachable signed out. */}
         {final ? <View /> : (
-          <Pressable testID="login-trouble" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("Help", { only: "login" })} style={styles.trouble}>
+          <Press testID="login-trouble" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("Help", { only: "login" })} style={styles.trouble}>
             <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
               {t("soul_app.help.login_trouble")}
             </Txt>
-          </Pressable>
+          </Press>
         )}
         <LanguageSwitch />
       </View>

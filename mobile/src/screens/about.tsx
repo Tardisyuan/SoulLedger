@@ -17,19 +17,19 @@ import {
   type OssGroup,
 } from "@soulledger/core/config/credits";
 import { useState, type ReactNode } from "react";
-import { Linking, Pressable, StyleSheet, View } from "react-native";
+import { Linking, StyleSheet, View } from "react-native";
 
 import { useI18n } from "../i18n";
-import { Screen, Section, SectionLabel, Txt, useLayout, useTheme } from "../ui";
+import { Screen, Section, SectionLabel, Txt, useLayout, useTheme, Press } from "../ui";
 
 /** 18 高的字 + 上下各 13 的 hitSlop = 44,App 点击区下限(补足 A1)。 */
 function Link({ label, url, testID }: { label: string; url: string; testID?: string }) {
   return (
-    <Pressable testID={testID} accessibilityRole="link" onPress={() => void Linking.openURL(url)} hitSlop={13}>
+    <Press testID={testID} accessibilityRole="link" onPress={() => void Linking.openURL(url)} hitSlop={13}>
       <Txt variant="caption" tone="muted" style={styles.link}>
         {label} {"↗\uFE0E"}
       </Txt>
-    </Pressable>
+    </Press>
   );
 }
 

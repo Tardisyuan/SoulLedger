@@ -4,7 +4,7 @@ import { officerAppApi, type Todo, type TodoGroup, type TodoItem, type TodoItemE
 import { platform } from "@soulledger/core/platform";
 import { civKey } from "@soulledger/core/domain/sentenceNodeStates";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Share, StyleSheet, View } from "react-native";
+import { Share, StyleSheet, View } from "react-native";
 
 import { discardReply, retryReply, useOutbox, type OutboxEntry } from "../outbox";
 import { MoreRow, useMoreRows } from "../paged";
@@ -14,7 +14,7 @@ import { useCachedRemote, useOnBump } from "../readCache";
 import { ActionButton, FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, onlySoul, pickRowLines, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
-import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, radius, space, useI18n, useTheme } from "../shared";
+import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, radius, space, useI18n, useTheme, Press } from "../shared";
 import { formatWhen } from "../format";
 
 export interface ItemRef {
@@ -122,9 +122,9 @@ export function TodoTab({
               <Txt testID="todo-filter-summary" variant="body" tone="muted" style={styles.summaryText}>
                 {t("officer_app.todo.filter_summary", { kinds, n: String(rowsShown) })}
               </Txt>
-              <Pressable testID="todo-filter-clear" accessibilityRole="button" accessibilityLabel={t("officer_app.todo.filter_clear")} hitSlop={{ left: 8, right: 8 }} onPress={clear} style={styles.summaryClear}>
+              <Press testID="todo-filter-clear" accessibilityRole="button" accessibilityLabel={t("officer_app.todo.filter_clear")} hitSlop={{ left: 8, right: 8 }} onPress={clear} style={styles.summaryClear}>
                 <Txt variant="body">{t("officer_app.todo.filter_clear")}</Txt>
-              </Pressable>
+              </Press>
             </View>
           ) : null}
           {rowsShown === 0 ? (

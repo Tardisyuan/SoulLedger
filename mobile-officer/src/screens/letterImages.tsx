@@ -13,7 +13,7 @@ import { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Txt, space, useI18n, useOnline, useTheme } from "../shared";
+import { Txt, space, useI18n, useOnline, useTheme, Press } from "../shared";
 
 export interface LetterImageRef {
   id: string;
@@ -50,7 +50,7 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
   }
   if (broken) {
     return (
-      <Pressable testID="letter-image-broken" accessibilityRole="button" disabled={!onReload} onPress={onReload} style={styles.broken}>
+      <Press testID="letter-image-broken" accessibilityRole="button" disabled={!onReload} onPress={onReload} style={styles.broken}>
         <Txt variant="caption" tone="muted">
           {t("soul_app.circle.media.load_failed")}
         </Txt>
@@ -59,11 +59,12 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
             {t("common.retry")}
           </Txt>
         ) : null}
-      </Pressable>
+      </Press>
     );
   }
   return (
-    <Pressable
+    <Press
+      dim
       testID="letter-image"
       accessibilityRole="imagebutton"
       accessibilityLabel={label}
@@ -71,7 +72,7 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
       style={{ width, aspectRatio: image.width / image.height, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.hair, backgroundColor: theme.s2 }}
     >
       <Image source={{ uri: mediaUrl(image.url) }} style={styles.fill} resizeMode="cover" accessibilityLabel={label} onError={() => setBroken(true)} />
-    </Pressable>
+    </Press>
   );
 }
 

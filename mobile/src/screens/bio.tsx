@@ -6,7 +6,7 @@
 import { soulErrorMessage, soulMfaFailure } from "@soulledger/core/api/soul";
 import { platform } from "@soulledger/core/platform";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 
 import { APP_LOCK_KEY, CredentialStoreError, appLockOn, bioEnabled, bioOwner, enableWithPassword, markAsked, markAskedForGood, rememberedAccount, revokeCredential, wasAsked } from "../deviceLogin";
 import { useToast } from "../feedback";
@@ -16,7 +16,7 @@ import { shouldAskBio } from "../loginRules";
 import { stateOfFailure, type StepState } from "../mfa";
 import { useSession } from "../session";
 import { useBiometry } from "../useBiometry";
-import { Button, Input, SwitchMark, Txt, useLayout, useTheme } from "../ui";
+import { Button, Input, SwitchMark, Txt, useLayout, useTheme, Press } from "../ui";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
 export function SheetTitle({ children }: { children: string }) {
@@ -53,16 +53,16 @@ export function ForgetNumberSheet({ open, title, bio, onCancel, onConfirm }: { o
     <MfaSheet testID="forget-sheet" open={open} onClose={onCancel} closeLabel={t("soul_app.common.cancel")}>
       <SheetTitle>{title}</SheetTitle>
       <Txt variant="bodyLg">{t("soul_app.accounts.forget_body", { bio })}</Txt>
-      <Pressable testID="forget-confirm" accessibilityRole="button" onPress={onConfirm} style={[styles.forget, { borderColor: theme.hair2 }]}>
+      <Press testID="forget-confirm" accessibilityRole="button" onPress={onConfirm} style={[styles.forget, { borderColor: theme.hair2 }]}>
         <Txt variant="bodyLg" style={{ color: theme.negInk }}>
           {t("soul_app.accounts.forget")}
         </Txt>
-      </Pressable>
-      <Pressable testID="forget-cancel" accessibilityRole="button" onPress={onCancel} style={styles.forgetCancel}>
+      </Press>
+      <Press testID="forget-cancel" accessibilityRole="button" onPress={onCancel} style={styles.forgetCancel}>
         <Txt variant="bodyLg" tone="muted">
           {t("soul_app.common.cancel")}
         </Txt>
-      </Pressable>
+      </Press>
     </MfaSheet>
   );
 }
@@ -145,7 +145,7 @@ function AppLockRow({ enabled, word }: { enabled: boolean; word: string }) {
     repaint((n) => n + 1);
   };
   return (
-    <Pressable
+    <Press
       testID="app-lock-row"
       accessibilityRole="switch"
       accessibilityState={{ checked: on, disabled: !enabled }}
@@ -160,7 +160,7 @@ function AppLockRow({ enabled, word }: { enabled: boolean; word: string }) {
         </Txt>
       </View>
       <SwitchMark on={on} large />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -187,7 +187,7 @@ export function BioRow() {
   };
   return (
     <>
-      <Pressable
+      <Press
         testID="bio-row"
         accessibilityRole="switch"
         accessibilityState={{ checked: on, disabled: unavailable }}
@@ -205,7 +205,7 @@ export function BioRow() {
           {t(on ? "soul_app.bio.on" : "soul_app.bio.off")}
         </Txt>
         <SwitchMark on={on} large />
-      </Pressable>
+      </Press>
       <AppLockRow enabled={on} word={bio.word} />
       <EnableBioSheet open={asking} word={bio.word} onClose={() => setAsking(false)} onEnabled={() => setOn(true)} />
     </>

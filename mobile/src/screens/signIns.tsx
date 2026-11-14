@@ -7,13 +7,13 @@
 import { soulApi, type SoulSignInRecord, type SoulSignInSession } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Modal, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
-import { Button, Empty, OneLine, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, OneLine, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme, Press } from "../ui";
 import { useBiometry } from "../useBiometry";
 import type { AppStackParams } from "../navTypes";
 
@@ -41,7 +41,7 @@ function DeviceRow({ session, busy, onSignOut }: { session: SoulSignInSession; b
         </Txt>
       </View>
       {session.current ? null : (
-        <Pressable
+        <Press
           testID={`device-signout-${session.id}`}
           accessibilityRole="button"
           disabled={busy}
@@ -51,7 +51,7 @@ function DeviceRow({ session, busy, onSignOut }: { session: SoulSignInSession; b
           <Txt variant="bodyLg" style={styles.underline}>
             {t("soul_app.security.sign_out")}
           </Txt>
-        </Pressable>
+        </Press>
       )}
     </View>
   );

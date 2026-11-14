@@ -31,6 +31,7 @@ export {
   Txt,
   ThemeContext,
   OneLine,
+  Press,
   useLayout,
   GUTTER,
   GoneState,

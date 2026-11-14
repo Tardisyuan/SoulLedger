@@ -13,7 +13,7 @@ import { BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
 import { BioAsk } from "./bioLogin";
-import { IdentityBand, PageSwitch, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
+import { EdgeBack, IdentityBand, PageSwitch, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
 import { listenForArrivals, listenForLandings, registerDevice } from "./push";
@@ -250,8 +250,13 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       {account || detail || swipe ? null : <PageSwitch current={current} tabs={tabs} unread={unread} onSelect={go} />}
       <View style={{ flex: 1 }}>
         {swipe ? (
+          // No edge swipe here: the cards themselves are dragged sideways.
           <SwipeScreen onBack={closeSwipe} />
-        ) : account === "mfa" ? (
+        ) : account ? (
+          // 我的's sub-screens take the iOS back swipe like a detail (kit.tsx `EdgeBack`; a detail has its own, which
+          // pops its layers first). Not while the recovery codes wait to be confirmed saved.
+          <EdgeBack onBack={locked ? undefined : () => setAccount(null)}>
+          {account === "mfa" ? (
           <MfaScreen onBack={() => setAccount(null)} onLocked={setLocked} />
         ) : account === "password" ? (
           <ChangePasswordScreen onBack={() => setAccount(null)} />
@@ -263,6 +268,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <StatsScreen onBack={() => setAccount(null)} onOpenQueue={() => { setAccount(null); setTab("queue"); }} />
         ) : account === "notify" ? (
           <NotifyScreen onBack={() => setAccount(null)} />
+        ) : null}
+          </EdgeBack>
         ) : detail ? (
           <Detail
             // A new target is a new screen: 「下一件」 must not carry the last one's stack, sheets or decision.

@@ -49,7 +49,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
-import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useReducedMotion, useTheme } from "../ui";
+import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useReducedMotion, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
@@ -429,11 +429,11 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
           <Txt variant="caption" tone="muted" style={styles.fill}>
             {tr("soul_app.chat.unavailable.banner")}
           </Txt>
-          <Pressable testID="chat-reconnect" accessibilityRole="button" onPress={chat.reconnect} style={[styles.smallButton, { borderColor: t.hair2 }]}>
+          <Press testID="chat-reconnect" accessibilityRole="button" onPress={chat.reconnect} style={[styles.smallButton, { borderColor: t.hair2 }]}>
             <Txt variant="label" style={styles.noSpacing}>
               {tr("soul_app.chat.unavailable.retry")}
             </Txt>
-          </Pressable>
+          </Press>
         </View>
       ) : null}
       <Band
@@ -516,10 +516,10 @@ function BackButton({ onBack }: { onBack: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   return (
-    <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
+    <Press testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
       {/* 1e: Android's back is an arrow, iOS's the chevron. */}
       <Icon name={Platform.OS === "android" ? "arrow" : "back"} size={Platform.OS === "android" ? 20 : 17} color={t.inkMuted} strokeWidth={1.4} />
-    </Pressable>
+    </Press>
   );
 }
 
@@ -561,18 +561,18 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
   };
   return (
     <>
-      <Pressable testID="chat-menu" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.post.more")} onPress={() => setOpen(true)} hitSlop={6} style={styles.icon}>
+      <Press testID="chat-menu" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.post.more")} onPress={() => setOpen(true)} hitSlop={6} style={styles.icon}>
         <Icon name="more" size={18} color={t.inkMuted} />
-      </Pressable>
+      </Press>
       <ThemeContext.Provider value={page}>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={[styles.fill, { backgroundColor: page.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setOpen(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
           <View testID="chat-menu-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: page.s1, borderTopColor: page.hair2, paddingBottom: 20 + insets.bottom }]}>
-            <Pressable testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
+            <Press testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
               <Txt variant="bodyLg">{tr("soul_app.chat.menu.profile")}</Txt>
-            </Pressable>
-            <Pressable
+            </Press>
+            <Press
               testID="chat-menu-report"
               accessibilityRole="button"
               onPress={go(() => navigation.navigate("CircleReport", { target: "USER", id: String(userId), preview: name }))}
@@ -581,19 +581,19 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.chat.menu.report")}
               </Txt>
-            </Pressable>
+            </Press>
             {onBlock ? (
-              <Pressable testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
+              <Press testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
                 <Txt variant="bodyLg" tone="neg">
                   {tr("soul_app.chat.menu.block")}
                 </Txt>
-              </Pressable>
+              </Press>
             ) : null}
-            <Pressable testID="chat-menu-cancel" accessibilityRole="button" onPress={() => setOpen(false)} style={styles.menuCancel}>
+            <Press testID="chat-menu-cancel" accessibilityRole="button" onPress={() => setOpen(false)} style={styles.menuCancel}>
               <Txt variant="body" tone="muted">
                 {tr("soul_app.common.cancel")}
               </Txt>
-            </Pressable>
+            </Press>
           </View>
         </View>
       </Modal>
@@ -827,18 +827,18 @@ function PendingBubble({ o, onResend, onDismiss, now }: { o: Outgoing; onResend:
             {tr(receipt)}
           </Txt>
           {resendable ? (
-            <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
+            <Press testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
               <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                 {tr("soul_app.chat.receipt.retry")}
               </Txt>
-            </Pressable>
+            </Press>
           ) : null}
           {failed ? (
-            <Pressable testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
+            <Press testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
               <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                 {tr("soul_app.chat.receipt.delete")}
               </Txt>
-            </Pressable>
+            </Press>
           ) : null}
         </View>
       </View>
@@ -988,7 +988,7 @@ function Dock({
             placeholderTextColor={t.inkSubtle}
             multiline
             maxLength={4000}
-            style={[styles.input, { minHeight: size, backgroundColor: t.s1, borderColor: t.hair, color: t.ink, fontFamily: quoteFamily(draft || tr(placeholder)) }]}
+            style={[styles.input, { minHeight: size, backgroundColor: t.s1, borderColor: t.inkSubtle, color: t.ink, fontFamily: quoteFamily(draft || tr(placeholder)) }]}
           />
           <Pressable
             testID="send"

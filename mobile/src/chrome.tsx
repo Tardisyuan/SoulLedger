@@ -25,7 +25,7 @@ import { useCurrentHall } from "./useCurrentHall";
 import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
 import { radius, type Theme } from "./theme";
-import { MAX_FONT_SCALE, Txt, enumText, useLayout, useTheme } from "./ui";
+import { MAX_FONT_SCALE, Txt, enumText, useLayout, useTheme, Press } from "./ui";
 
 /**
  * The page's theme, for what a bar's control opens away from the bar. Since v4 the bar is on the page's own
@@ -169,9 +169,9 @@ function Bar({ title, serif, onBack, action, onAccount, assist }: BarProps) {
   return (
     <View testID="header-bar" style={[styles.bar, compact && styles.barCompact]}>
       {onBack ? (
-        <Pressable testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
+        <Press testID="header-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={onBack} hitSlop={6} style={styles.icon}>
           <Icon name={android ? "arrow" : "back"} size={android ? 20 : 17} color={t.inkMuted} strokeWidth={1.4} />
-        </Pressable>
+        </Press>
       ) : android ? null : (
         // iOS centres the title: as wide on the left as the actions are on the right.
         <View style={[styles.icon, { width: 44 * rightCount }]} />

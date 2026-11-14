@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { clockOf, digitsOf, type StepState } from "../mfa";
-import { Interp, Input, Txt, useReducedMotion, useTheme } from "../ui";
+import { Interp, Input, Txt, useReducedMotion, useTheme, Press } from "../ui";
 
 /** A plain hairline at the top of every screen in this flow (第四十八批 A10; it was 3px in the civilization's colour). */
 export function CoverRule() {
@@ -30,7 +30,7 @@ export function Heading({ children, size = 24 }: { children: ReactNode; size?: 2
 export function CheckRow({ testID, on, onToggle, children }: { testID?: string; on: boolean; onToggle: () => void; children: ReactNode }) {
   const t = useTheme();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: on }}
@@ -47,18 +47,18 @@ export function CheckRow({ testID, on, onToggle, children }: { testID?: string; 
       <Txt variant="bodyLg" style={styles.fill}>
         {children}
       </Txt>
-    </Pressable>
+    </Press>
   );
 }
 
 /** An underlined line of text that is a button: 44 high, left-aligned. */
 export function TextLink({ testID, title, onPress, disabled }: { testID?: string; title: string; onPress: () => void; disabled?: boolean }) {
   return (
-    <Pressable testID={testID} accessibilityRole="link" disabled={disabled} onPress={onPress} style={styles.link}>
+    <Press testID={testID} accessibilityRole="link" disabled={disabled} onPress={onPress} style={styles.link}>
       <Txt variant="bodyLg" style={styles.underline}>
         {title}
       </Txt>
-    </Pressable>
+    </Press>
   );
 }
 

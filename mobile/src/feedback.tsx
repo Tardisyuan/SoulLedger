@@ -16,14 +16,14 @@ import {
   useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { Animated, BackHandler, Dimensions, Keyboard, Pressable, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
+import { Animated, BackHandler, Dimensions, Keyboard, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
 import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
 import { useI18n } from "./i18n";
 import { radius, touch } from "./theme";
-import { InSheetContext, SheetRevealContext, Txt, useReducedMotionDurations, useTheme } from "./ui";
+import { InSheetContext, SheetRevealContext, Txt, useReducedMotionDurations, useTheme, Press } from "./ui";
 
 type ToastKind = "success" | "info" | "failure";
 /**
@@ -103,7 +103,7 @@ function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: 
         {item.message}
       </Txt>
       {failure ? (
-        <Pressable
+        <Press
           testID={newest ? "toast-close" : undefined}
           accessibilityRole="button"
           accessibilityLabel={tr("common.close")}
@@ -111,7 +111,7 @@ function Toast({ item, newest, onGone }: { item: Item; newest: boolean; onGone: 
           style={styles.toastClose}
         >
           <Icon name="close" size={14} color={t.faintText} strokeWidth={1.4} />
-        </Pressable>
+        </Press>
       ) : null}
     </Animated.View>
   );

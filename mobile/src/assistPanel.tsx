@@ -31,7 +31,7 @@ import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./useCurrentHall";
-import { Button, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
+import { Button, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme, Press } from "./ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */
 const PAGE_PEEK = 56;
@@ -201,9 +201,9 @@ function Head({ view, setView, assist }: { view: "chat" | "history"; setView: (v
   return (
     <View style={[styles.head, { borderBottomColor: t.ink }]}>
       {back ? (
-        <Pressable testID="assist-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={back} style={styles.icon}>
+        <Press testID="assist-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={back} style={styles.icon}>
           <Icon name="back" size={17} color={t.inkMuted} strokeWidth={1.4} />
-        </Pressable>
+        </Press>
       ) : (
         <View style={styles.seal}>
           <AskGlyph color={t.ink} />
@@ -238,9 +238,9 @@ function Head({ view, setView, assist }: { view: "chat" | "history"; setView: (v
           }}
         />
       )}
-      <Pressable testID="assist-close" accessibilityRole="button" accessibilityLabel={tr("soul_app.assist.close")} onPress={assist.close} style={styles.icon}>
+      <Press testID="assist-close" accessibilityRole="button" accessibilityLabel={tr("soul_app.assist.close")} onPress={assist.close} style={styles.icon}>
         <Icon name="close" size={16} color={t.inkSubtle} strokeWidth={1.3} />
-      </Pressable>
+      </Press>
     </View>
   );
 }
@@ -320,7 +320,7 @@ function Conversation({ assist }: { assist: Assist }) {
         {failure?.kind === "limited" ? <Limited retryAt={failure.retryAt} /> : null}
       </ScrollView>
       {!follow && pending ? (
-        <Pressable
+        <Press
           testID="assist-jump"
           accessibilityRole="button"
           onPress={() => {
@@ -332,7 +332,7 @@ function Conversation({ assist }: { assist: Assist }) {
           <Txt variant="label" tone="muted">
             {tr("soul_app.assist.jump_latest")}
           </Txt>
-        </Pressable>
+        </Press>
       ) : null}
       {assist.historyOnly ? null : <Composer assist={assist} />}
     </>
@@ -625,7 +625,7 @@ function Composer({ assist }: { assist: Assist }) {
           maxLength={MAX_QUESTION}
           multiline
           cursorColor={t.ink}
-          style={[styles.input, { color: t.ink, backgroundColor: t.s1, borderColor: t.hair, fontFamily: quoteFamily(assist.draft) }]}
+          style={[styles.input, { color: t.ink, backgroundColor: t.s1, borderColor: t.inkSubtle, fontFamily: quoteFamily(assist.draft) }]}
         />
         {busy ? (
           <Pressable
@@ -638,7 +638,7 @@ function Composer({ assist }: { assist: Assist }) {
             <Txt variant="label">{`■ ${tr("soul_app.assist.stop")}`}</Txt>
           </Pressable>
         ) : (
-          <Pressable
+          <Press
             testID="assist-send"
             accessibilityRole="button"
             accessibilityLabel={tr("soul_app.assist.send")}
@@ -648,7 +648,7 @@ function Composer({ assist }: { assist: Assist }) {
             style={[styles.send, { borderColor: ready ? t.ink : t.hair }]}
           >
             <Icon name="send" size={18} color={ready ? t.ink : t.inkSubtle} strokeWidth={1.4} />
-          </Pressable>
+          </Press>
         )}
       </View>
     </View>
@@ -697,7 +697,7 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
           };
           return (
             <View key={c.id} testID={`assist-row-${c.id}`} style={[styles.historyRow, { borderBottomColor: t.hair }]}>
-              <Pressable
+              <Press
                 accessibilityRole="button"
                 onPress={open}
                 style={styles.fill}
@@ -715,8 +715,8 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
                 <Txt numberOfLines={2} style={{ fontFamily: quoteFamily(c.first_question) }}>
                   {c.first_question}
                 </Txt>
-              </Pressable>
-              <Pressable
+              </Press>
+              <Press
                 testID={`assist-delete-${c.id}`}
                 accessibilityRole="button"
                 accessibilityLabel={tr("soul_app.assist.delete_label")}
@@ -724,7 +724,7 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
                 style={styles.icon}
               >
                 <Icon name="close" size={14} color={t.inkSubtle} strokeWidth={1.3} />
-              </Pressable>
+              </Press>
             </View>
           );
         })}

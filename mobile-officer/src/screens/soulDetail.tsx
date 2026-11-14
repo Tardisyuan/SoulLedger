@@ -25,7 +25,7 @@ import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
 import { formatHistoricalDate, type HistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 
 import { DeedMark, civOf } from "../dossierSeal";
 import { formatWhen } from "../format";
@@ -34,7 +34,7 @@ import { MoreRow, useMoreRows, type Page } from "../paged";
 import { noteOpened } from "../recentOpened";
 import { hallLabel } from "../rules";
 import { useSession } from "../session";
-import { GUTTER, Notice, OneLine, SectionLabel, Txt, family, radius, space, useI18n, useRemote, useTheme } from "../shared";
+import { GUTTER, Notice, OneLine, SectionLabel, Txt, family, radius, space, useI18n, useRemote, useTheme, Press } from "../shared";
 import { SOUL_PAGE, deedScore, eventDetail, karmaView, planStops, signed, soulTabs, type SoulTab } from "../soulView";
 import { ServingFact } from "./servingFact";
 
@@ -57,7 +57,7 @@ export function dateText(d: HistoricalDate | null | undefined, locale: Locale): 
 export function SoulLink({ name, onOpen, variant = "bodyLg", testID }: { name: string; onOpen: () => void; variant?: "bodyLg" | "title" | "body"; testID?: string }) {
   const { t } = useI18n();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="link"
       accessibilityLabel={t("officer_app.soul.open_label", { name })}
@@ -70,7 +70,7 @@ export function SoulLink({ name, onOpen, variant = "bodyLg", testID }: { name: s
         </Txt>
         {" ›"}
       </Txt>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -112,7 +112,7 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
         <View style={{ backgroundColor: theme.s1 }}>
         <View testID="soul-tabs" accessibilityRole="tablist" style={{ minHeight: 44, flexDirection: "row", borderBottomWidth: 1, borderBottomColor: theme.hair, backgroundColor: theme.s1 }}>
           {tabs.map((k) => (
-            <Pressable
+            <Press
               key={k}
               testID={`soul-tab-${k}`}
               accessibilityRole="tab"
@@ -123,7 +123,7 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
               <Txt variant="body" tone={k === tab ? "ink" : "muted"} style={k === tab ? { fontFamily: family.ui[600] } : undefined}>
                 {t(`officer_app.soul.tabs.${k}`)}
               </Txt>
-            </Pressable>
+            </Press>
           ))}
         </View>
         </View>

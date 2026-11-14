@@ -31,7 +31,7 @@ import { type Page } from "../paged";
 import { clearRecent, readRecent, type RecentOpened } from "../recentOpened";
 import { caseNumberExample, hallLabel, isDenied } from "../rules";
 import { useSession } from "../session";
-import { Input, Screen, SectionLabel, Txt, family, space, useI18n, useTheme } from "../shared";
+import { Input, Screen, SectionLabel, Txt, family, space, useI18n, useTheme, Press } from "../shared";
 
 /**
  * `initialQuery` / `onSearch`: the last search, kept by the shell. Opening a soul unmounts this tab, and 返回 used to
@@ -216,9 +216,9 @@ function SoulLookup({
             {!allCases && cases.count > CASES_SHOWN ? (
               // ponytail: shows the rest of the first page the server answered; a hall with more than a page of matches
               // for one term gets that page, not every match -- and says so below.
-              <Pressable testID="search-see-all" accessibilityRole="button" onPress={() => setAllCases(true)} style={{ minHeight: 48, justifyContent: "center", paddingHorizontal: space[5] }}>
+              <Press testID="search-see-all" accessibilityRole="button" onPress={() => setAllCases(true)} style={{ minHeight: 48, justifyContent: "center", paddingHorizontal: space[5] }}>
                 <Txt variant="bodyLg">{t("officer_app.search.see_all", { n: String(cases.count) })}</Txt>
-              </Pressable>
+              </Press>
             ) : allCases && cases.count > cases.rows.length ? (
               <Txt testID="search-first-only" variant="caption" tone="muted" style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
                 {t("officer_app.search.first_only", { n: String(cases.rows.length) })}
@@ -268,11 +268,11 @@ function GroupHead({ title, action }: { title: string; action?: { testID: string
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space[5], paddingTop: space[4], paddingBottom: space[2], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
       <SectionLabel style={{ color: theme.faintText }}>{title}</SectionLabel>
       {action ? (
-        <Pressable testID={action.testID} accessibilityRole="button" onPress={action.onPress} hitSlop={12}>
+        <Press testID={action.testID} accessibilityRole="button" onPress={action.onPress} hitSlop={12}>
           <Txt variant="caption" tone="muted">
             {action.label}
           </Txt>
-        </Pressable>
+        </Press>
       ) : null}
     </View>
   );

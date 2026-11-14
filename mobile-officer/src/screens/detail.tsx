@@ -20,10 +20,10 @@ import { formatWhen } from "../format";
 import { useKeptText } from "../keptText";
 import { useCachedRemote } from "../readCache";
 import { noteOpened } from "../recentOpened";
-import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
+import { ActionButton, EdgeBack, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
-import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, family, radius, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
+import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, family, radius, space, useI18n, useOnline, useRemote, useTheme, Press } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
 import { SealSheet } from "./sealSheet";
@@ -112,68 +112,71 @@ export function Detail({
   const [decided, setDecided] = useState(false);
   const onDecided = () => setDecided(true);
   return (
-    <View testID="detail" style={{ flex: 1, backgroundColor: theme.s0 }}>
-      <Pressable
-        testID="detail-back"
-        accessibilityRole="button"
-        accessibilityLabel={(!top && backLabel) || t("officer_app.back")}
-        onPress={back}
-        style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: space[5], borderBottomWidth: 1, borderBottomColor: theme.hair }}
-      >
-        <Icon name="back" size={16} color={theme.ink} />
-        <Txt variant="nav" style={{ flex: 1 }}>
-          {(!top && backLabel) || t("officer_app.back")}
-        </Txt>
-        {!top && position ? (
-          <Txt testID="detail-position" variant="caption" tone="muted">
-            {position}
+    // The iOS back swipe goes where the back row goes: a layer opened over the item first, then the list.
+    <EdgeBack onBack={back}>
+      <View testID="detail" style={{ flex: 1, backgroundColor: theme.s0 }}>
+        <Press
+          testID="detail-back"
+          accessibilityRole="button"
+          accessibilityLabel={(!top && backLabel) || t("officer_app.back")}
+          onPress={back}
+          style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: space[5], borderBottomWidth: 1, borderBottomColor: theme.hair }}
+        >
+          <Icon name="back" size={16} color={theme.ink} />
+          <Txt variant="nav" style={{ flex: 1 }}>
+            {(!top && backLabel) || t("officer_app.back")}
           </Txt>
+          {!top && position ? (
+            <Txt testID="detail-position" variant="caption" tone="muted">
+              {position}
+            </Txt>
+          ) : null}
+        </Press>
+        <GoneContext.Provider value={base}>
+        <View style={top ? { display: "none" } : { flex: 1 }}>
+          {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
+          {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
+          {target.type === "todo" && target.kind === "pick" ? <PickStations id={target.id} onDone={() => { onSettled(); onBack(); }} /> : null}
+          {target.type === "todo" && target.kind === "city_god" ? <CityGodCase key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
+          {target.type === "todo" && target.kind === "wangsi" ? <WangsiReview key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
+          {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" && target.kind !== "city_god" && target.kind !== "wangsi" ? (
+            <TodoDetail key={picked} kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} onDecided={onDecided} />
+          ) : null}
+          {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} onOpenFlow={openFlow} onDecided={onDecided} /> : null}
+          {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
+          {decided ? <NextBar next={next} last={last} from={from} onLeave={leave} /> : null}
+        </View>
+        </GoneContext.Provider>
+        <GoneContext.Provider value={over}>
+        {top?.type === "soul" ? <SoulDetail key={`over-${stack.length}`} id={top.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: top.id }} />} /> : null}
+        {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} onOpenFlow={openFlow} /> : null}
+        {top?.type === "flow" ? (
+          // 官员 7(2026-10-29):审判看得到而流程不在本殿范围(跨域、本殿没有自己那一段;后端 todo 模块的 _workflows)时
+          // 服务端答 404。流程并没有不在 —— 不说「已不在」,说清为什么这里看不到。
+          <TodoDetail
+            key={`over-${stack.length}`}
+            kind="approval"
+            id={top.id}
+            onSettled={onSettled}
+            onOpenSoul={openSoul}
+            onOpenPick={openPick}
+            whenGone={<Notice tone="neutral" testID="flow-not-here">{t("officer_app.judgment.flow_not_here")}</Notice>}
+          />
         ) : null}
-      </Pressable>
-      <GoneContext.Provider value={base}>
-      <View style={top ? { display: "none" } : { flex: 1 }}>
-        {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
-        {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
-        {target.type === "todo" && target.kind === "pick" ? <PickStations id={target.id} onDone={() => { onSettled(); onBack(); }} /> : null}
-        {target.type === "todo" && target.kind === "city_god" ? <CityGodCase key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
-        {target.type === "todo" && target.kind === "wangsi" ? <WangsiReview key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
-        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" && target.kind !== "city_god" && target.kind !== "wangsi" ? (
-          <TodoDetail key={picked} kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} onDecided={onDecided} />
+        {top?.type === "pick" ? (
+          <PickStations
+            key={`over-${stack.length}`}
+            id={top.id}
+            onDone={() => {
+              setStack((s) => s.slice(0, -1));
+              setPicked((n) => n + 1);
+              onSettled();
+            }}
+          />
         ) : null}
-        {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} onOpenFlow={openFlow} onDecided={onDecided} /> : null}
-        {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
-        {decided ? <NextBar next={next} last={last} from={from} onLeave={leave} /> : null}
+        </GoneContext.Provider>
       </View>
-      </GoneContext.Provider>
-      <GoneContext.Provider value={over}>
-      {top?.type === "soul" ? <SoulDetail key={`over-${stack.length}`} id={top.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: top.id }} />} /> : null}
-      {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} onOpenFlow={openFlow} /> : null}
-      {top?.type === "flow" ? (
-        // 官员 7(2026-10-29):审判看得到而流程不在本殿范围(跨域、本殿没有自己那一段;后端 todo 模块的 _workflows)时
-        // 服务端答 404。流程并没有不在 —— 不说「已不在」,说清为什么这里看不到。
-        <TodoDetail
-          key={`over-${stack.length}`}
-          kind="approval"
-          id={top.id}
-          onSettled={onSettled}
-          onOpenSoul={openSoul}
-          onOpenPick={openPick}
-          whenGone={<Notice tone="neutral" testID="flow-not-here">{t("officer_app.judgment.flow_not_here")}</Notice>}
-        />
-      ) : null}
-      {top?.type === "pick" ? (
-        <PickStations
-          key={`over-${stack.length}`}
-          id={top.id}
-          onDone={() => {
-            setStack((s) => s.slice(0, -1));
-            setPicked((n) => n + 1);
-            onSettled();
-          }}
-        />
-      ) : null}
-      </GoneContext.Provider>
-    </View>
+    </EdgeBack>
   );
 }
 

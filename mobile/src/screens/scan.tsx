@@ -17,14 +17,14 @@ import { CameraView, scanFromURLAsync, useCameraPermissions } from "expo-camera"
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Linking, Pressable, StyleSheet, View } from "react-native";
+import { Linking, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { INVALID_BANNER_MS } from "../loginRules";
-import { Button, Screen, Txt, useTheme } from "../ui";
+import { Button, Screen, Txt, useTheme, Press } from "../ui";
 
 /** What the sign-in page receives: a fresh `at` per scan, so the same code twice still lands. */
 export type ScannedParams = { scanned: string; at: number };
@@ -104,12 +104,12 @@ export function ScanScreen() {
   };
   // The capsule: outlined, 44 high; white on the camera, the ink on the refused page's paper.
   const album = (ink: string) => (
-    <Pressable testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={[styles.capsule, { borderColor: ink }]}>
+    <Press testID="scan-album" accessibilityRole="button" accessibilityState={{ busy: reading }} onPress={() => void fromAlbum()} style={[styles.capsule, { borderColor: ink }]}>
       <PhotoGlyph color={ink} />
       <Txt variant="bodyLg" style={{ color: ink }}>
         {t("soul_app.scan.from_photos")}
       </Txt>
-    </Pressable>
+    </Press>
   );
   const banner = (top: number) =>
     invalid === "invalid" ? (
@@ -136,9 +136,9 @@ export function ScanScreen() {
     return (
       <Screen testID="scan-denied" edges={["top", "left", "right", "bottom"]}>
         <View style={styles.barFlow}>
-          <Pressable testID="scan-close" accessibilityRole="button" accessibilityLabel={t("soul_app.scan.close")} onPress={close} style={styles.close}>
+          <Press testID="scan-close" accessibilityRole="button" accessibilityLabel={t("soul_app.scan.close")} onPress={close} style={styles.close}>
             <Txt style={styles.closeGlyph}>×</Txt>
-          </Pressable>
+          </Press>
         </View>
         <View style={styles.denied}>
           <Txt accessibilityRole="header" style={styles.deniedTitle}>
@@ -174,9 +174,9 @@ export function ScanScreen() {
         />
       ) : null}
       <View style={[styles.bar, { top: insets.top }]}>
-        <Pressable testID="scan-close" accessibilityRole="button" accessibilityLabel={t("soul_app.scan.close")} onPress={close} style={styles.close}>
+        <Press testID="scan-close" accessibilityRole="button" accessibilityLabel={t("soul_app.scan.close")} onPress={close} style={styles.close}>
           <Txt style={[styles.closeGlyph, { color: WHITE }]}>×</Txt>
-        </Pressable>
+        </Press>
         <Txt accessibilityRole="header" style={styles.title}>
           {t("soul_app.scan.title")}
         </Txt>
@@ -199,7 +199,7 @@ export function ScanScreen() {
       <View style={[styles.bottom, { bottom: 32 + insets.bottom }]}>
         <View testID="scan-capsules" style={styles.capsules}>
           {album(WHITE)}
-          <Pressable
+          <Press
             testID="scan-torch"
             accessibilityRole="switch"
             accessibilityState={{ checked: torch }}
@@ -210,17 +210,17 @@ export function ScanScreen() {
             <Txt testID="scan-torch-label" variant="bodyLg" style={[{ color: torch ? "#1A1A18" : WHITE }, torch && { fontFamily: family.ui[600] }]}>
               {t(torch ? "soul_app.scan.torch_on" : "soul_app.scan.torch")}
             </Txt>
-          </Pressable>
+          </Press>
         </View>
         {invalid === "photo_none" ? (
           photoNone
         ) : (
           <>
-            <Pressable testID="scan-manual" accessibilityRole="link" onPress={close} style={styles.manual}>
+            <Press testID="scan-manual" accessibilityRole="link" onPress={close} style={styles.manual}>
               <Txt variant="bodyLg" style={styles.manualText}>
                 {t("soul_app.scan.manual")}
               </Txt>
-            </Pressable>
+            </Press>
             <Txt testID="scan-privacy" variant="caption" style={styles.privacy}>
               {t("soul_app.scan.privacy_both")}
             </Txt>

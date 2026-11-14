@@ -430,7 +430,7 @@ export function FindSoulScreen() {
     <Screen edges={["left", "right", "bottom"]} testID="find-soul">
       <View style={[styles.findBlock, { borderBottomColor: t.hair }]}>
         <SectionLabel>{tr("soul_app.chat.find.by_code")}</SectionLabel>
-        <View style={[styles.codeBox, { backgroundColor: t.s1, borderColor: lookup.state === "error" ? t.negStrong : t.hair }]}>
+        <View style={[styles.codeBox, { backgroundColor: t.s1, borderColor: lookup.state === "error" ? t.negStrong : t.inkSubtle }]}>
           <TextInput
             testID="find-code"
             accessibilityLabel={tr("soul_app.chat.find.by_code")}

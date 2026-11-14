@@ -16,7 +16,7 @@ import {
   type InboxMessage,
 } from "@soulledger/core/api/soul-inbox";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 
 import { clearDraft, flushDraft, mergeServerDraft, readDraft, scheduleDraft, settleDraft } from "../drafts";
 import { enqueueReply, newReplyTxn, removeFromOutbox, useOutbox } from "../outbox";
@@ -50,6 +50,7 @@ import {
   useRemote,
   useTheme,
   useToast,
+  Press,
 } from "../shared";
 
 /** What `GET …/messages/` sends at most per page (`officer_messages`' limit): a full page means there may be more. */
@@ -329,7 +330,7 @@ export function LetterThread({
               {conversation.assignee ? t("officer_app.letter.handler", { name: conversation.assignee.display_name }) : t("officer_app.letter.handler_none")}
             </Txt>
           </View>
-          <Pressable
+          <Press
             testID="letter-more"
             accessibilityRole="button"
             accessibilityLabel={t("officer_app.letter.more")}
@@ -341,7 +342,7 @@ export function LetterThread({
             style={{ width: 48, minHeight: 48, alignItems: "center", justifyContent: "center", opacity: offline ? 0.4 : 1 }}
           >
             <Txt variant="title">⋯</Txt>
-          </Pressable>
+          </Press>
         </View>
         {conversation.archived ? (
           <View style={{ padding: space[4], gap: space[2] }}>

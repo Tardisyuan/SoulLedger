@@ -17,7 +17,7 @@
 import { soulApi, soulErrorMessage, soulMfaFailure, type SoulMfaStatus } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Linking, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import { CLEAR_AFTER_MS, copySecret } from "../copySecret";
 import { Icon } from "../emblems";
@@ -30,7 +30,7 @@ import { shareRecoveryFile, sweepRecoveryFiles } from "../recoveryFile";
 import { secretLines, stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { useSession } from "../session";
-import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme } from "../ui";
+import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme, Press } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
@@ -71,7 +71,7 @@ function WizardHeader({ step, onClose }: { step: 1 | 2 | 3; onClose?: () => void
       <CoverRule />
       <View style={[styles.bar, { backgroundColor: t.s1, borderBottomColor: t.hair }]}>
         {onClose ? (
-          <Pressable
+          <Press
             testID="wizard-close"
             accessibilityRole="button"
             accessibilityLabel={tr("soul_app.mfa.setup.exit_note")}
@@ -79,7 +79,7 @@ function WizardHeader({ step, onClose }: { step: 1 | 2 | 3; onClose?: () => void
             style={styles.closeHit}
           >
             <Icon name="close" size={16} color={t.ink} strokeWidth={1.4} />
-          </Pressable>
+          </Press>
         ) : (
           <View style={styles.closeGap} />
         )}
@@ -364,11 +364,11 @@ function Wizard({ onExit, onEnabled, onAlreadyOn }: { onExit: () => void; onEnab
                       <Txt testID="secret-key" selectable style={styles.key}>
                         {secretLines(setup.secret).join("\n")}
                       </Txt>
-                      <Pressable testID="copy-key" accessibilityRole="button" onPress={copyKey} style={styles.copyHit}>
+                      <Press testID="copy-key" accessibilityRole="button" onPress={copyKey} style={styles.copyHit}>
                         <Txt variant="bodyLg" style={styles.bold}>
                           {tr("soul_app.mfa.bind.copy")}
                         </Txt>
-                      </Pressable>
+                      </Press>
                     </View>
                     <Txt variant="caption" tone="muted">
                       {tr("soul_app.mfa.bind.select_hint")}

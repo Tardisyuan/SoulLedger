@@ -5,9 +5,9 @@
  * and what unlocking does stay in each app's `appLock.tsx`. A leaf: ui only, so the officer app can import it.
  */
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { Button, Txt, useTheme } from "./ui";
+import { Button, Txt, useTheme, Press } from "./ui";
 
 export function LockView({
   locked,
@@ -56,11 +56,11 @@ export function LockView({
             </Txt>
           ) : null}
           <Button testID="app-lock-bio" title={unlockLabel} onPress={onUnlock} busy={busy} style={styles.button} />
-          <Pressable testID="app-lock-use-password" accessibilityRole="link" disabled={busy} onPress={onPassword} style={styles.link}>
+          <Press testID="app-lock-use-password" accessibilityRole="link" disabled={busy} onPress={onPassword} style={styles.link}>
             <Txt variant="bodyLg" style={styles.underline}>
               {passwordLabel}
             </Txt>
-          </Pressable>
+          </Press>
         </View>
       ) : null}
     </View>

@@ -10,7 +10,7 @@
 import { judgmentApi, type AssignableOfficer, type Judgment } from "@soulledger/core/api/judgment";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 
 import { formatWhen } from "../format";
 import { ActionButton, Row } from "../kit";
@@ -25,7 +25,7 @@ import {
 } from "../rules";
 import { useKeptText } from "../keptText";
 import { useCan } from "../session";
-import { Input, Notice, Sheet, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
+import { Input, Notice, Sheet, Txt, radius, space, useI18n, useOnline, useRemote, useTheme, useToast, Press } from "../shared";
 import { PeoplePickerSheet, type PickPerson } from "./letterActions";
 
 type Overlay = "menu" | "release" | "defer" | "request_reassign" | "reassign_to" | "release_for" | "defer_for" | "undefer_for" | null;
@@ -119,7 +119,7 @@ export function JudgmentActionBar({
   if (state === "closed") return null;
   const hint = offline ? t("officer_app.offline.no_decide") : undefined;
   const moreButton = (
-    <Pressable
+    <Press
       testID="judgment-more"
       accessibilityRole="button"
       // Read out as words, not "horizontal ellipsis" (review 2026-11-01); the letter's ⋯ says the same.
@@ -128,7 +128,7 @@ export function JudgmentActionBar({
       style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: radius.control, borderColor: theme.inkSubtle }}
     >
       <Txt variant="nav">⋯</Txt>
-    </Pressable>
+    </Press>
   );
   const adminLabel = (item: AdminAction) =>
     item === "reassign_to"

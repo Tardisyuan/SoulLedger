@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { family } from "./fonts";
-import { Txt, useTheme } from "./ui";
+import { Txt, useTheme, Press } from "./ui";
 
 export function RememberedCard({
   name,
@@ -63,11 +63,11 @@ export function RememberedCard({
         </View>
       </View>
       {link ? (
-        <Pressable testID={link.testID} accessibilityRole="button" disabled={disabled} onPress={link.onPress} style={styles.link}>
+        <Press testID={link.testID} accessibilityRole="button" disabled={disabled} onPress={link.onPress} style={styles.link}>
           <Txt tone="muted" style={[styles.linkText, { textDecorationColor: t.hair2 }]}>
             {link.label}
           </Txt>
-        </Pressable>
+        </Press>
       ) : null}
       {trailing}
     </>
