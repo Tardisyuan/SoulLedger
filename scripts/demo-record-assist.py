@@ -78,6 +78,14 @@ def totp_now(secret: str) -> str:
 class Api:
     def __init__(self, base, user, password):
         self.base = base.rstrip("/")
+        self.user, self.password = user, password
+        self.login()
+
+    def login(self):
+        # The run takes over an hour (the try endpoint is throttled) and an access token lives far less,
+        # so call() signs in again on a 401 instead of the recording dying with everything unwritten.
+        self.token = None
+        user, password = self.user, self.password
         body = self.call("POST", "/auth/login/", {"username": user, "password": password})
         if body.get("mfa_required") and os.environ.get("DEMO_ASSIST_TOTP_SECRET"):
             # Every ADMIN must have two-step verification on (2026-10-29), so the recording admin has it: the code is
@@ -92,6 +100,7 @@ class Api:
         if getattr(self, "token", None):
             headers["Authorization"] = f"Bearer {self.token}"
         data = None if body is None else json.dumps(body).encode()
+        signed_in_again = False
         for _ in range(THROTTLE_TRIES):
             request = urllib.request.Request(self.base + path, data=data, headers=headers, method=method)
             try:
@@ -99,6 +108,12 @@ class Api:
                     text = response.read().decode()
                     return text if raw else json.loads(text or "{}")
             except urllib.error.HTTPError as exc:
+                if exc.code == 401 and self.token and not signed_in_again:
+                    signed_in_again = True
+                    print(f"  401 on {path}; signing in again", flush=True)
+                    self.login()
+                    headers["Authorization"] = f"Bearer {self.token}"
+                    continue
                 if exc.code != 429:
                     sys.exit(f"{method} {path} → {exc.code}: {exc.read().decode()[:300]}")
                 print(f"  429 on {path}; waiting {THROTTLE_WAIT} s", flush=True)
