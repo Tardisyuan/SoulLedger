@@ -30,6 +30,7 @@ import {
   contrastRatio,
   oklchTripleToRgb,
   resolveTriple,
+  tokenOver,
   type Rgb,
   type ThemeName,
 } from "./support/globalsCssTokens";
@@ -47,7 +48,6 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-canvas": { light: "#f8f8f6", dark: "#111113" },
   "--color-surface-1": { light: "#ffffff", dark: "#1a1b1e" },
   "--color-surface-2": { light: "#f1f1ee", dark: "#222327" },
-  "--color-line": { light: "#ebebeb", dark: "#2c2d30" },
   "--color-line-strong": { light: "#8a8d92", dark: "#7c7f85" },
   "--color-block": { light: "#16171a", dark: "#f3f3f1" },
   "--color-ink": { light: "#16171a", dark: "#f3f3f1" },
@@ -81,34 +81,38 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   // 不是 Design 给的值:sub 与 faint-text 的 sRGB 中点,给「未记录」(用户 2026-11-08,见 globals.css)。
   "--color-ink-mid": { light: "#5e6166", dark: "#a1a4a8" },
   "--color-civ-cn": { light: "#a64a3b", dark: "#7e362b" },
-  "--color-civ-cn-ink": { light: "#a04636", dark: "#d98a7a" },
-  "--color-civ-cn-metal": { light: "#8a6a24", dark: "#c9a35e" },
-  "--color-civ-cn-side": { light: "#ffe4df", dark: "#231512" },
+  // civT / metal / side:设计参照 2026-11-15 §3.1(用户采纳「颜色按建议改」):civT 等明度(深 L .78 / 浅 L .46),
+  // 门栏底彩度深 .045 / 浅 .050,埃及与希腊的印(= metal)拉开。solid 与 glow 不动。
+  "--color-civ-cn-ink": { light: "#883f2c", dark: "#eba38f" },
+  "--color-civ-cn-metal": { light: "#886116", dark: "#d7a85b" },
+  "--color-civ-cn-side": { light: "#ffdcce", dark: "#270e06" },
   "--color-civ-eu": { light: "#7a4f85", dark: "#5a3a63" },
-  "--color-civ-eu-ink": { light: "#885a94", dark: "#a883ae" },
+  "--color-civ-eu-ink": { light: "#6d4286", dark: "#cca6e4" },
   "--color-civ-eu-metal": { light: "#5c6878", dark: "#b9c2cf" },
-  "--color-civ-eu-side": { light: "#f5e5f8", dark: "#1e1620" },
+  "--color-civ-eu-side": { light: "#f2ddff", dark: "#1d0f25" },
   "--color-civ-eg": { light: "#3c69a2", dark: "#2b4e79" },
-  "--color-civ-eg-ink": { light: "#174a88", dark: "#89bcf1" },
-  "--color-civ-eg-metal": { light: "#86671e", dark: "#d6b25e" },
-  "--color-civ-eg-side": { light: "#ddedff", dark: "#111a24" },
+  "--color-civ-eg-ink": { light: "#175a96", dark: "#89bcf1" },
+  "--color-civ-eg-metal": { light: "#716400", dark: "#e3cb53" },
+  "--color-civ-eg-side": { light: "#ceeaff", dark: "#051729" },
   "--color-civ-gr": { light: "#37716a", dark: "#28544f" },
-  "--color-civ-gr-ink": { light: "#066a5b", dark: "#8bddca" },
-  "--color-civ-gr-metal": { light: "#8f5b36", dark: "#c98b62" },
-  "--color-civ-gr-side": { light: "#d7f2eb", dark: "#0c1d19" },
+  "--color-civ-gr-ink": { light: "#0e6753", dark: "#73cbb0" },
+  "--color-civ-gr-metal": { light: "#86422a", dark: "#cb7a5b" },
+  "--color-civ-gr-side": { light: "#c6f2e2", dark: "#001c14" },
 };
 
 const CIVS = ["neutral", "cn", "eu", "eg", "gr"] as const;
 
 const hexRgb = (hex: string): Rgb => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as unknown as Rgb;
 const rgbOf = (theme: ThemeName, name: string): Rgb => oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], name));
+/** `--color-line` 是 `L C H / α`:叠在给定底上之后的颜色(浏览器画出来的那一个)。不带 alpha 就当不透明。 */
+const lineOn = (theme: ThemeName, bg: string): Rgb => tokenOver(TOKENS_BY_THEME[theme]["--color-line"], rgbOf(theme, bg));
 const CSS = readFileSync(path.join(FRONTEND_ROOT, "app", "globals.css"), "utf8");
 
 describe("palette (规范 v4)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 49);
+    expect(rows).toHaveLength(2 * 48);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {
@@ -207,7 +211,59 @@ describe("the paired texts the spec measures", () => {
 
   it.each(THEMES)("%s input border (faint) on s1 ≥ 3:1 — the line token would not be", (theme) => {
     expect(contrastRatio(rgbOf(theme, "--color-line-strong"), rgbOf(theme, "--color-surface-1"))).toBeGreaterThanOrEqual(3);
-    expect(contrastRatio(rgbOf(theme, "--color-line"), rgbOf(theme, "--color-surface-1"))).toBeLessThan(3);
+    expect(contrastRatio(lineOn(theme, "--color-surface-1"), rgbOf(theme, "--color-surface-1"))).toBeLessThan(3);
+  });
+});
+
+/* theme-color(设计参照 2026-11-15 §9):layout.tsx 的 viewport.themeColor 是 meta,读不到 CSS 变量,只能写真值 —— 这里对账。
+ * 变异:把 layout.tsx 浅色那条改成 rgb(255, 255, 255) → 红。 */
+it.each(THEMES)("%s theme-color meta is the canvas", (theme) => {
+  const layout = readFileSync(path.join(FRONTEND_ROOT, "app", "layout.tsx"), "utf8");
+  const m = new RegExp(`prefers-color-scheme: ${theme}\\)", color: "rgb\\((\\d+), (\\d+), (\\d+)\\)"`).exec(layout);
+  expect(m).not.toBeNull();
+  const want = rgbOf(theme, "--color-canvas");
+  m!.slice(1).map(Number).forEach((v, i) => expect(Math.abs(v - want[i])).toBeLessThanOrEqual(1));
+});
+
+/* 发丝线(设计参照 2026-11-15 §5,用户采纳):`--color-line` 是半透明的墨(浅 黑 12% / 深 白 12%),不再与 surface-3 同值。
+ * 不透明的灰画在文明门栏底上只有 1.00–1.01:1(浅色)—— 那条线不存在。半透明的叠在什么底上都看得见。
+ * 变异:把 .light 的 line 改回 `0.940070 0 0`(#EBEBEB)→ 第一条(不是三元组带 alpha)与第三条(门栏上 1.00:1)都红。 */
+describe("the hairline is translucent ink (设计参照 2026-11-15 §5)", () => {
+  it.each(THEMES)("%s --color-line is ink at 12%", (theme) => {
+    expect(TOKENS_BY_THEME[theme]["--color-line"]).toBe(theme === "light" ? "0 0 0 / 0.12" : "1 0 0 / 0.12");
+  });
+
+  it.each(THEMES)("%s line over canvas lands on the measured colour", (theme) => {
+    const want = hexRgb(theme === "light" ? "#dadad8" : "#2e2e2f");
+    lineOn(theme, "--color-canvas").forEach((v, i) => expect(Math.abs(v - want[i])).toBeLessThanOrEqual(1));
+  });
+
+  it.each(THEMES.flatMap((theme) => [...CIVS.map((c) => `--color-civ-${c}-side`), "--color-canvas", "--color-surface-1", "--color-surface-3"].map((bg) => [theme, bg] as const)))(
+    "%s line is visible on %s (≥ 1.25:1)",
+    (theme, bg) => {
+      expect(contrastRatio(lineOn(theme, bg), rgbOf(theme, bg))).toBeGreaterThanOrEqual(1.25);
+    }
+  );
+});
+
+/* 文明色等明度、印分开(设计参照 2026-11-15 §3.1)。上面的 SPEC 钉 hex;这里钉 hex 背后的理由,改值时理由不能悄悄丢掉。
+ * 变异:把深色 eu civT 改回 #A883AE(L .66)→ 等明度那条红;把浅色 gr metal 改回 #8F5B36 → 印分开那条红(ΔE 4.9)。 */
+describe("civilization text colours share one lightness, and the Egyptian and Greek seals stay apart", () => {
+  const CIV4 = ["cn", "eu", "eg", "gr"] as const;
+  const L = (theme: ThemeName, name: string) => Number(resolveTriple(TOKENS_BY_THEME[theme], name).split(/\s+/)[0]);
+  const lab = (theme: ThemeName, name: string): [number, number, number] => {
+    const [l, c, h] = resolveTriple(TOKENS_BY_THEME[theme], name).split(/\s+/).map(Number);
+    return [l, c * Math.cos((h * Math.PI) / 180), c * Math.sin((h * Math.PI) / 180)];
+  };
+
+  it.each(THEMES)("%s civT lightness is one value (深 .78 / 浅 .46, ±.01)", (theme) => {
+    const target = theme === "dark" ? 0.78 : 0.46;
+    for (const civ of CIV4) expect({ civ, L: Math.abs(L(theme, `--color-civ-${civ}-ink`) - target) <= 0.01 }).toEqual({ civ, L: true });
+  });
+
+  it.each(THEMES)("%s eg seal and gr seal differ by ΔE(OKLab×100) ≥ 10", (theme) => {
+    const [a, b] = [lab(theme, "--color-civ-eg-seal"), lab(theme, "--color-civ-gr-seal")];
+    expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) * 100).toBeGreaterThanOrEqual(10);
   });
 });
 

@@ -94,10 +94,10 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     expect(v4.light).toEqual({ main: "#F8F8F6", card: "#FFFFFF", card2: "#F1F1EE", ink: "#16171A", sub: "#54575C", faint: "#8A8D92", line: "rgba(0,0,0,0.08)", line2: "rgba(0,0,0,0.16)", field: "rgba(0,0,0,0.035)", onSolid: "#FFFFFF", pos: "#1F6B3F", neg: "#A81E3C", onNeg: "#FFFFFF" });
     const nine = (c: (typeof CIVS)[number]) => [v4.civ[c].glow, v4.civ[c].tD, v4.civ[c].tL, v4.civ[c].sL, v4.civ[c].sD, v4.civ[c].mD, v4.civ[c].mL, v4.civ[c].sideD, v4.civ[c].sideL].join(" ");
     expect(CIVS.map((c) => [c, nine(c)])).toEqual([
-      ["cn", "#C8604F #D98A7A #A04636 #A64A3B #7E362B #C9A35E #8A6A24 #231512 #FFE4DF"],
-      ["eu", "#A0709F #A883AE #885A94 #7A4F85 #5A3A63 #B9C2CF #5C6878 #1E1620 #F5E5F8"],
-      ["eg", "#5F93C8 #89BCF1 #174A88 #3C69A2 #2B4E79 #D6B25E #86671E #111A24 #DDEDFF"],
-      ["gr", "#5F9C94 #8BDDCA #066A5B #37716A #28544F #C98B62 #8F5B36 #0C1D19 #D7F2EB"],
+      ["cn", "#C8604F #EBA38F #883F2C #A64A3B #7E362B #D7A85B #886116 #270E06 #FFDCCE"],
+      ["eu", "#A0709F #CCA6E4 #6D4286 #7A4F85 #5A3A63 #B9C2CF #5C6878 #1D0F25 #F2DDFF"],
+      ["eg", "#5F93C8 #89BCF1 #175A96 #3C69A2 #2B4E79 #E3CB53 #716400 #051729 #CEEAFF"],
+      ["gr", "#5F9C94 #73CBB0 #0E6753 #37716A #28544F #CB7A5B #86422A #001C14 #C6F2E2"],
     ]);
     expect(ON_PLAQUE).toBe(v4.dark.onSolid);
     expect(ON_PLAQUE).toBe(v4.light.onSolid);
@@ -154,8 +154,8 @@ describe("v4 is the palette (user decision 2026-11-06: 一律按 v4)", () => {
     const civColours = new Set<string>(CIVS.flatMap((c) => Object.values(v4.civ[c])));
     expect([skin("neutral", scheme).plaque, skin("neutral", scheme).plaqueFill].filter((x) => civColours.has(x))).toEqual([]);
     // The metal is the brand gold (Design 第八批第 5 条), not a civilization's: dark is the mark's own gold. Light
-    // #8A6A24 happens to equal 地府's light metal — Design gave it as the brand gold's light value, so it is not
-    // held to "no civilization colour" here.
+    // #8A6A24 equalled 地府's light metal until the 2026-11-15 civ colour pass moved 地府 to #886116; it is the
+    // brand gold's light value and is not held to "no civilization colour" here.
     expect(NEUTRAL_CIV.mD).toBe(brand.mark);
   });
 

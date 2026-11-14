@@ -34,47 +34,47 @@ export const v4 = {
   "civ": {
     "cn": {
       "glow": "#C8604F",
-      "tD": "#D98A7A",
-      "tL": "#A04636",
+      "tD": "#EBA38F",
+      "tL": "#883F2C",
       "sL": "#A64A3B",
       "sD": "#7E362B",
-      "mD": "#C9A35E",
-      "mL": "#8A6A24",
-      "sideD": "#231512",
-      "sideL": "#FFE4DF"
+      "mD": "#D7A85B",
+      "mL": "#886116",
+      "sideD": "#270E06",
+      "sideL": "#FFDCCE"
     },
     "eu": {
       "glow": "#A0709F",
-      "tD": "#A883AE",
-      "tL": "#885A94",
+      "tD": "#CCA6E4",
+      "tL": "#6D4286",
       "sL": "#7A4F85",
       "sD": "#5A3A63",
       "mD": "#B9C2CF",
       "mL": "#5C6878",
-      "sideD": "#1E1620",
-      "sideL": "#F5E5F8"
+      "sideD": "#1D0F25",
+      "sideL": "#F2DDFF"
     },
     "eg": {
       "glow": "#5F93C8",
       "tD": "#89BCF1",
-      "tL": "#174A88",
+      "tL": "#175A96",
       "sL": "#3C69A2",
       "sD": "#2B4E79",
-      "mD": "#D6B25E",
-      "mL": "#86671E",
-      "sideD": "#111A24",
-      "sideL": "#DDEDFF"
+      "mD": "#E3CB53",
+      "mL": "#716400",
+      "sideD": "#051729",
+      "sideL": "#CEEAFF"
     },
     "gr": {
       "glow": "#5F9C94",
-      "tD": "#8BDDCA",
-      "tL": "#066A5B",
+      "tD": "#73CBB0",
+      "tL": "#0E6753",
       "sL": "#37716A",
       "sD": "#28544F",
-      "mD": "#C98B62",
-      "mL": "#8F5B36",
-      "sideD": "#0C1D19",
-      "sideL": "#D7F2EB"
+      "mD": "#CB7A5B",
+      "mL": "#86422A",
+      "sideD": "#001C14",
+      "sideL": "#C6F2E2"
     }
   }
 } as const;
@@ -129,15 +129,15 @@ export const seal = {
     "light": "#B8321C"
   },
   "eu": {
-    "dark": "#A883AE",
-    "light": "#885A94"
+    "dark": "#CCA6E4",
+    "light": "#6D4286"
   },
   "eg": {
-    "dark": "#D6B25E",
-    "light": "#86671E"
+    "dark": "#E3CB53",
+    "light": "#716400"
   },
   "gr": {
-    "dark": "#C98B62",
-    "light": "#8F5B36"
+    "dark": "#CB7A5B",
+    "light": "#86422A"
   }
 } as const;

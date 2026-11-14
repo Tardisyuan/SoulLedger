@@ -166,10 +166,11 @@ describe("页头(canvas 上的文明光)上的字", () => {
  * 最紧的一格是浅色欧洲在 canvas 上的 5.02。
  */
 const SEAL_MEASURED: Record<string, number> = {
-  "dark:--color-canvas:cn": 7.07, "dark:--color-canvas:eu": 5.86, "dark:--color-canvas:eg": 9.45, "dark:--color-canvas:gr": 11.94,
-  "dark:--color-surface-1:cn": 6.45, "dark:--color-surface-1:eu": 5.35, "dark:--color-surface-1:eg": 8.63, "dark:--color-surface-1:gr": 10.9,
-  "light:--color-canvas:cn": 5.77, "light:--color-canvas:eu": 5.02, "light:--color-canvas:eg": 8.33, "light:--color-canvas:gr": 6.13,
-  "light:--color-surface-1:cn": 6.13, "light:--color-surface-1:eu": 5.33, "light:--color-surface-1:eg": 8.86, "light:--color-surface-1:gr": 6.52,
+  // 2026-11-15 civT 等明度之后重量(设计参照 §3.1;深 L .78 / 浅 L .46 —— 深色 9.1–9.8、浅色 6.4–7.6,此前 5.0–11.9)。
+  "dark:--color-canvas:cn": 9.13, "dark:--color-canvas:eu": 9.11, "dark:--color-canvas:eg": 9.45, "dark:--color-canvas:gr": 9.79,
+  "dark:--color-surface-1:cn": 8.34, "dark:--color-surface-1:eu": 8.32, "dark:--color-surface-1:eg": 8.63, "dark:--color-surface-1:gr": 8.94,
+  "light:--color-canvas:cn": 7.07, "light:--color-canvas:eu": 7.12, "light:--color-canvas:eg": 6.72, "light:--color-canvas:gr": 6.4,
+  "light:--color-surface-1:cn": 7.52, "light:--color-surface-1:eu": 7.57, "light:--color-surface-1:eg": 7.14, "light:--color-surface-1:gr": 6.81,
 };
 
 describe("印的描边与印文 ≥ 3:1(图形)", () => {

@@ -367,8 +367,10 @@
        raised   资料舱、批量操作条 —— 贴在页面上、但要读出「浮起一层」
        overlay  弹窗、抽屉 —— 盖住页面
      1px 墨框不撤,阴影是加在它之上的第二层线索。同样等基础组件阶段才有调用点。 */
-  --shadow-raised: 0 8px 24px rgba(20, 22, 18, 0.1);
-  --shadow-overlay: 0 24px 72px rgba(10, 11, 9, 0.28);
+  /* 2026-11-15(设计参照 §4,用户采纳):两层阴影,随主题。值在令牌块的 `--elevation-*`(:root 深 / .light 浅);
+     Tailwind 把 @theme 的阴影值内联进工具类,所以这里写 var() —— 写死的值切主题时不会跟着变。 */
+  --shadow-raised: var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
 
   /* 顺序在 2026-09-01 换过一次,而且是被一个具体需要逼出来的,不是顺手调的。
      命名这三档时照抄了当时的现状 —— drawer(99998)压在 dialog(9999)之上 ——
@@ -545,8 +547,8 @@
     --color-surface-1: 0.222322 0.006013 271.1393; /* #1A1B1E */
     --color-surface-2: 0.256756 0.007618 274.6528; /* #222327 */
     --color-surface-3: 0.297319 0.005579 271.2268; /* #2C2D30 */
-    --color-rule: 0.297319 0.005579 271.2268;
-    --color-line: 0.297319 0.005579 271.2268;
+    --color-rule: 1 0 0 / 0.12;
+    --color-line: 1 0 0 / 0.12;
     --color-line-strong: 0.595896 0.009766 264.4932; /* #7C7F85 */
     --color-block: 0.963595 0.002651 106.4490; /* #F3F3F1 */
     --color-ink: 0.963595 0.002651 106.4490; /* #F3F3F1 */
@@ -618,25 +620,25 @@
     --color-civ-eg-seal: var(--color-civ-eg-metal);
     --color-civ-gr-seal: var(--color-civ-gr-metal);
     --color-civ-cn: 0.428514 0.102617 30.6112; /* #7E362B */
-    --color-civ-cn-ink: 0.710969 0.100324 32.0926; /* #D98A7A */
+    --color-civ-cn-ink: 0.780211 0.090787 36.1736; /* #EBA38F */
     --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
-    --color-civ-cn-metal: 0.735339 0.098358 81.1769; /* #C9A35E */
-    --color-civ-cn-side: 0.213366 0.023945 32.5207; /* #231512 */
+    --color-civ-cn-metal: 0.759187 0.109953 78.2056; /* #D7A85B */
+    --color-civ-cn-side: 0.201116 0.045136 39.3472; /* #270E06 */
     --color-civ-eu: 0.402590 0.077427 318.6416; /* #5A3A63 */
-    --color-civ-eu-ink: 0.659740 0.075298 321.6693; /* #A883AE */
+    --color-civ-eu-ink: 0.780171 0.095377 311.9891; /* #CCA6E4 */
     --color-civ-eu-glow: 0.610358 0.089013 327.2939; /* #A0709F */
     --color-civ-eu-metal: 0.811059 0.020830 257.4811; /* #B9C2CF */
-    --color-civ-eu-side: 0.214612 0.022693 319.4646; /* #1E1620 */
+    --color-civ-eu-side: 0.199771 0.046522 312.1737; /* #1D0F25 */
     --color-civ-eg: 0.418933 0.082983 254.5438; /* #2B4E79 */
     --color-civ-eg-ink: 0.779300 0.093304 250.0374; /* #89BCF1 */
     --color-civ-eg-glow: 0.648635 0.097389 249.9778; /* #5F93C8 */
-    --color-civ-eg-metal: 0.778385 0.111230 86.4987; /* #D6B25E */
-    --color-civ-eg-side: 0.214015 0.023887 251.5668; /* #111A24 */
+    --color-civ-eg-metal: 0.840099 0.140332 97.9493; /* #E3CB53 */
+    --color-civ-eg-side: 0.200146 0.043841 249.9110; /* #051729 */
     --color-civ-gr: 0.412855 0.049685 185.8153; /* #28544F */
-    --color-civ-gr-ink: 0.839483 0.085071 177.7434; /* #8BDDCA */
+    --color-civ-gr-ink: 0.779070 0.094463 171.8769; /* #73CBB0 */
     --color-civ-gr-glow: 0.648865 0.064720 185.1646; /* #5F9C94 */
-    --color-civ-gr-metal: 0.689412 0.094212 53.9962; /* #C98B62 */
-    --color-civ-gr-side: 0.214288 0.024370 176.9590; /* #0C1D19 */
+    --color-civ-gr-metal: 0.659981 0.110769 41.5329; /* #CB7A5B */
+    --color-civ-gr-side: 0.201596 0.039412 171.1871; /* #001C14 */
     --color-main: var(--color-civ-neutral);
     --color-main-ink: var(--color-civ-neutral-ink);
     --color-glow: var(--color-civ-neutral-glow);
@@ -677,8 +679,8 @@
     --color-surface-1: 1 0 0; /* #FFFFFF */
     --color-surface-2: 0.957310 0.003982 106.4744; /* #F1F1EE */
     --color-surface-3: 0.940070 0 0; /* #EBEBEB */
-    --color-rule: 0.940070 0 0;
-    --color-line: 0.940070 0 0;
+    --color-rule: 0 0 0 / 0.12;
+    --color-line: 0 0 0 / 0.12;
     --color-line-strong: 0.642492 0.008222 260.7308; /* #8A8D92 */
     --color-block: 0.204832 0.006141 271.1072; /* #16171A */
     --color-ink: 0.204832 0.006141 271.1072; /* #16171A */
@@ -719,21 +721,21 @@
     --color-civ-neutral-side: 0.957588 0.002656 106.4494; /* #F1F1EF */
     --color-civ-cn-seal: 0.520861 0.174215 31.9795; /* #B8321C */
     --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
-    --color-civ-cn-ink: 0.508662 0.123408 31.8759; /* #A04636 */
-    --color-civ-cn-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
-    --color-civ-cn-side: 0.939480 0.030589 30.1804; /* #FFE4DF */
+    --color-civ-cn-ink: 0.458890 0.104876 35.6528; /* #883F2C */
+    --color-civ-cn-metal: 0.520586 0.099805 78.4603; /* #886116 */
+    --color-civ-cn-side: 0.919968 0.043456 43.0308; /* #FFDCCE */
     --color-civ-eu: 0.496494 0.097231 319.2785; /* #7A4F85 */
-    --color-civ-eu-ink: 0.539412 0.102357 319.1561; /* #885A94 */
+    --color-civ-eu-ink: 0.459079 0.115783 311.8177; /* #6D4286 */
     --color-civ-eu-metal: 0.513029 0.029377 255.6539; /* #5C6878 */
-    --color-civ-eu-side: 0.940161 0.030471 320.8736; /* #F5E5F8 */
+    --color-civ-eu-side: 0.924792 0.050605 312.6535; /* #F2DDFF */
     --color-civ-eg: 0.515592 0.103715 255.1595; /* #3C69A2 */
-    --color-civ-eg-ink: 0.411225 0.116441 255.6633; /* #174A88 */
-    --color-civ-eg-metal: 0.531513 0.096178 84.5574; /* #86671E */
-    --color-civ-eg-side: 0.939633 0.029802 251.2804; /* #DDEDFF */
+    --color-civ-eg-ink: 0.459325 0.117055 250.3637; /* #175A96 */
+    --color-civ-eg-metal: 0.500161 0.104135 100.4376; /* #716400 */
+    --color-civ-eg-side: 0.923207 0.041190 240.3821; /* #CEEAFF */
     --color-civ-gr: 0.507348 0.062072 185.1700; /* #37716A */
-    --color-civ-gr-ink: 0.469974 0.084710 178.2756; /* #066A5B */
-    --color-civ-gr-metal: 0.520618 0.085848 55.0206; /* #8F5B36 */
-    --color-civ-gr-side: 0.939565 0.029759 178.3271; /* #D7F2EB */
+    --color-civ-gr-ink: 0.459924 0.084498 172.5200; /* #0E6753 */
+    --color-civ-gr-metal: 0.460510 0.100199 39.7875; /* #86422A */
+    --color-civ-gr-side: 0.925795 0.050240 171.0762; /* #C6F2E2 */
     /* 浅色从暗到亮。 */
     --color-chart-1: 0.259075 0.045425 251.0858;
     --color-chart-2: 0.360350 0.044648 250.3338;
@@ -872,10 +874,14 @@
     --readback-name: 600 18px/26px var(--font-title);
     --readback-case: 400 16px/26px var(--font-mono);
     --readback-verdict: 600 20px/26px var(--font-title);
+    --elevation-overlay: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 72px -12px rgba(0, 0, 0, 0.6);
+    --elevation-raised: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.5);
   }
   .light {
     --glowA: 0.22;
     --field: rgba(0, 0, 0, 0.035);
+    --elevation-overlay: 0 0 0 1px rgba(20, 22, 18, 0.06), 0 2px 6px rgba(10, 11, 9, 0.08), 0 24px 72px -12px rgba(10, 11, 9, 0.28);
+    --elevation-raised: 0 1px 2px rgba(20, 22, 18, 0.06), 0 8px 24px -4px rgba(20, 22, 18, 0.12);
   }
   @media (hover: none), (pointer: coarse) {
     html {

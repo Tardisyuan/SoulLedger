@@ -80,7 +80,8 @@ function cssValue(e, v, part) {
     case "color": {
       if (v.colorSpace === "oklch") {
         const [L, C, H] = v.components;
-        return { text: `${fixed(L, 6)} ${fixed(C, 6)} ${fixed(H, 4)}`, note: v.hex };
+        const a = v.alpha === undefined ? "" : ` / ${v.alpha}`;
+        return { text: `${fixed(L, 6)} ${fixed(C, 6)} ${fixed(H, 4)}${a}`, note: v.hex };
       }
       if (v.colorSpace === "srgb" && v.alpha !== undefined) return { text: `rgba(${rgb(v).join(", ")}, ${v.alpha})` };
       throw new Error(`${e.path}: no CSS form for ${JSON.stringify(v)}`);

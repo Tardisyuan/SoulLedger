@@ -194,7 +194,7 @@ function AttachmentRow({
   const code = item.status === "failed" ? uploadErrorCode(item.error) : undefined;
   return (
     <li data-attachment={item.status} className="flex min-h-14 items-center gap-3">
-      <span className="size-12 shrink-0 overflow-hidden bg-[oklch(var(--color-surface-2))] bg-[repeating-linear-gradient(135deg,oklch(var(--color-line)/0.6)_0_1px,transparent_1px_8px)]">
+      <span className="size-12 shrink-0 overflow-hidden bg-[oklch(var(--color-surface-2))] bg-[repeating-linear-gradient(135deg,oklch(var(--color-line))_0_1px,transparent_1px_8px)]">
         {item.media ? (
           // 裸 <img>:签名地址按请求鉴权,不经 next/image 的优化代理(同 PostMedia)。
           <img src={mediaUrl(item.media.url)} alt="" className="h-full w-full object-cover" />

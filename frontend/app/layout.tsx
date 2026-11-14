@@ -44,6 +44,12 @@ export const viewport: Viewport = {
   initialScale: 1,
   // 让页面画到屏幕边缘,`env(safe-area-inset-bottom)` 才非零(WebKit);门栏用 `--safe-b` 垫开 Home 指示条(globals.css)。
   viewportFit: "cover",
+  // 浏览器 UI(地址栏、状态栏)取画布色,两主题各一条(设计参照 2026-11-15 §9)。meta 里读不到 CSS 变量,所以写真值:
+  // = --color-canvas 的深 / 浅两档(ledgerPaletteContract 对账)。按系统偏好选;站内手动切主题不改它(meta 只认 media query)。
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "rgb(17, 17, 19)" },
+    { media: "(prefers-color-scheme: light)", color: "rgb(248, 248, 246)" },
+  ],
 };
 
 /** One neutral English title and description, for the tab and for link previews alike (user decision 2026-11-14):
