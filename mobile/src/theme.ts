@@ -235,7 +235,11 @@ export function civKeyOf(civilization: string | null | undefined): CivKey {
  * another civilization's colours.
  */
 export function themeFor(civilization: string | null | undefined, scheme: ColorScheme): Theme {
-  const key = civKeyOf(civilization);
+  return themeOf(civKeyOf(civilization), scheme);
+}
+
+/** `themeFor` by the theme's own key (`Theme.civ`): the other scheme of the theme in hand. */
+export function themeOf(key: CivKey, scheme: ColorScheme): Theme {
   // One frozen object per (civ, scheme). A new one on every call changed ThemeContext's value on each
   // foreground / profile answer and redrew every consumer in the app (opt-apps2 R1, 2026-10-30).
   const id = `${key}:${scheme}`;
@@ -292,6 +296,17 @@ export function preLoginTheme(scheme: ColorScheme): Theme {
  */
 export function sealedTheme(t: Theme): Theme {
   return { ...t, ink: t.inkMuted, inkMuted: t.inkSubtle };
+}
+
+/** WCAG 2 contrast ratio of two `#rrggbb` colours (1–21). */
+export function contrastRatio(a: string, b: string): number {
+  const lum = (hex: string) =>
+    [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+      .reduce((acc, c, i) => acc + c * [0.2126, 0.7152, 0.0722][i], 0);
+  const [hi, lo] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (hi + 0.05) / (lo + 0.05);
 }
 
 /** OKLCH (Björn Ottosson's matrices) → sRGB hex, clamped to gamut. Used by the token test. */

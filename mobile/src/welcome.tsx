@@ -124,6 +124,7 @@ export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; sc
         style={[StyleSheet.absoluteFill, { backgroundColor: v4[scheme].card }]}
       >
         <Animated.View testID={`welcome-${shown.from}-${to.civ}`} style={[styles.top, { backgroundColor: to.s1, opacity: top }]}>
+          {/* 第四十九批 B2: the emblem is a seal here, in full civT — on the welcome layer only; elsewhere it is ink (empty-state rule). */}
           <Hero civ={to.civ} stroke={to.plaque} size={96} strokeWidth={0.9} />
           <View style={styles.text}>
             <Txt variant="title" style={[styles.center, { color: to.ink }]}>

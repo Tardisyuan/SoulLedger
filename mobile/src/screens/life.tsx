@@ -605,7 +605,8 @@ const ROUTE_AHEAD = 3;
 /**
  * v4 「你现在在哪」 (V4Batch07 05 App, 灵魂端 · 本世; S12 soul.here.* · map.soul.*): the place in the serif at
  * 30/38, v4's sentence for it, then the road drawn top to bottom — walked in a solid line in the civilization's
- * colour, "here" in the metal with 「你现在在这里」, ahead dashed in --sub. Only the trunk (「支线不画」). A road
+ * colour, "here" a ring in the metal (the spine's one metal mark) under 「你现在在这里」 in bold ink (Design 第四十九批 B3,
+ * as the web route's current station), ahead dashed in --sub. Only the trunk (「支线不画」). A road
  * that ends (湮灭, 永罚) ends in `neg`. Nothing moves; there is nothing to still under reduce motion.
  */
 function HereRoute({ route }: { route: SoulRoute }) {
@@ -619,7 +620,7 @@ function HereRoute({ route }: { route: SoulRoute }) {
   const here = route.steps[route.at];
   return (
     <View testID="life-now" style={[styles.here, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Txt variant="label" style={[styles.hereEyebrow, { color: t.metal }]}>
+      <Txt variant="label" style={[styles.hereEyebrow, { color: t.ink }]}>
         {tr("soul_app.life.here")}
       </Txt>
       <Txt testID="life-here-place" accessibilityRole="header" variant="display" style={{ fontFamily: titleFamily(route.place) }}>
@@ -678,7 +679,7 @@ function RouteRow({
       <View style={styles.routeText}>
         {kind === "here" ? (
           <>
-            <Txt variant="label" style={[styles.hereEyebrow, { color: end ? t.neg : t.metal }]}>
+            <Txt variant="label" style={[styles.hereEyebrow, { color: end ? t.neg : t.ink }]}>
               {tr("map.soul.here")}
             </Txt>
             <Txt variant="title" style={{ fontFamily: titleFamily(step?.label ?? "") }}>
@@ -1337,7 +1338,7 @@ const styles = StyleSheet.create({
   nowGlyph: { fontSize: 56, lineHeight: 64 },
   nowWord: { fontFamily: family.title, fontSize: 56, lineHeight: 64, textAlign: "center" },
   small: { fontSize: 11, lineHeight: 16 },
-  /** v4 「你现在在哪」: 12 / 600 in the metal, the place at 30/38, its sentence 15/24, then the road. */
+  /** v4 「你现在在哪」: 12 / 600 in ink (第四十九批 B3; the metal is the dot's alone), the place at 30/38, its sentence 15/24, then the road. */
   here: { paddingTop: 24, paddingBottom: 24, borderBottomWidth: 1 },
   hereEyebrow: { fontFamily: family.ui[600], letterSpacing: 0 },
   // v4 draws 6 and 22; the App's spacing scale (补足 A2) has 8 and 24.

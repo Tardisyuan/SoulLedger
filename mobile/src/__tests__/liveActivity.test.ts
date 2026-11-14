@@ -8,9 +8,10 @@ import path from "path";
 
 import * as Notifications from "expo-notifications";
 
-import { LIVE_ASKED_KEY, LIVE_CHANNEL, LIVE_NOTIFICATION, androidContent, endLiveProgress, liveChannel, nativeState, showLiveProgress } from "../liveProgress";
+import { LIVE_ASKED_KEY, LIVE_CHANNEL, LIVE_NOTIFICATION, LOCK_GROUND, androidContent, endLiveProgress, liveChannel, liveTint, nativeState, showLiveProgress } from "../liveProgress";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { PRIMER_SEEN_KEY } from "../push";
+import { contrastRatio, themeOf, type CivKey } from "../theme";
 import type { LiveContent } from "@soulledger/core/domain/soulRoute";
 
 // The local module: absent (null) unless a test installs one, as in jest and Expo Go.
@@ -55,6 +56,42 @@ describe("the Live Activity's two halves", () => {
     for (const part of ["compactLeading", "compactTrailing", "minimal", "DynamicIslandExpandedRegion(.bottom)"]) expect(swift).toContain(part);
     expect(swift).not.toMatch(/import (ExpoModulesCore|React)/);
     expect(live.widgetInfoPlist()).toContain("<string>com.apple.widgetkit-extension</string>");
+  });
+
+  it("Design 第四十九批 B1: the mark is the seal's glow, the bar is the spine's civT per scheme, the tag's ground the system's", () => {
+    const swift: string = live.widgetSwift();
+    expect(swift).toContain("Mark(tint: tints.mark)");
+    expect(swift).toContain(".tint(state.ended ? Color.ended : (scheme == .dark ? tints.barDark : tints.barLight))");
+    expect(swift).toContain(".background(Color(uiColor: .tertiarySystemFill))");
+    // The tag no longer takes the civilization's colour.
+    expect(swift).not.toMatch(/tint\.opacity|tints\.\w+\.opacity/);
+  });
+
+  it("liveTint: mark;barLight;barDark — glow, then civT where it holds 3:1 on that scheme's lock screen", () => {
+    expect(contrastRatio("#000000", "#FFFFFF")).toBeCloseTo(21);
+    for (const civ of ["neutral", "cn", "eu", "eg", "gr"] as CivKey[]) {
+      const [mark, light, dark] = liveTint(civ).split(";");
+      expect(mark).toBe(themeOf(civ, "dark").glow);
+      // Today every civT clears 3:1 on both grounds, so the bar keeps the civilization's colour.
+      expect(light).toBe(themeOf(civ, "light").plaque);
+      expect(dark).toBe(themeOf(civ, "dark").plaque);
+      expect(contrastRatio(light, LOCK_GROUND.light)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(dark, LOCK_GROUND.dark)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("liveTint: a scheme where civT falls under 3:1 draws the bar in that scheme's ink, the other keeps civT", () => {
+    const saved = LOCK_GROUND.light;
+    LOCK_GROUND.light = themeOf("cn", "light").plaque; // 1:1
+    try {
+      const [mark, light, dark] = liveTint("cn").split(";");
+      expect(mark).toBe(themeOf("cn", "dark").glow);
+      expect(light).toBe(themeOf("cn", "light").ink);
+      expect(light).not.toBe(themeOf("cn", "light").plaque);
+      expect(dark).toBe(themeOf("cn", "dark").plaque);
+    } finally {
+      LOCK_GROUND.light = saved;
+    }
   });
 
   it("the extension's bundle id hangs off the app's, its versions are the app's, and the app opts in to Live Activities", () => {

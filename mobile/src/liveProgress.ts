@@ -29,10 +29,14 @@ import { Platform } from "react-native";
 import { useI18n } from "./i18n";
 import { PRIMER_SEEN_KEY, permission, registerDevice, requestPermission, type Permission } from "./push";
 import { liveContent, type LiveContent, type SoulRoute } from "@soulledger/core/domain/soulRoute";
+import { contrastRatio, themeOf, type CivKey, type ColorScheme } from "./theme";
 import { useTheme } from "./ui";
 
 interface LiveNative {
-  /** Starts the activity, or updates the running one (restarting it if the title or tint changed). false: not allowed. */
+  /**
+   * Starts the activity, or updates the running one (restarting it if the title or tint changed). false: not allowed.
+   * `tint` is `liveTint`'s `mark;barLight;barDark`.
+   */
   show(title: string, tint: string, state: string): Promise<boolean>;
   end(): Promise<void>;
 }
@@ -155,6 +159,27 @@ async function mayNotify(): Promise<boolean> {
   return request;
 }
 
+/**
+ * The lock screen's own grounds, which follow the system's light / dark, not the app's: iOS `secondarySystemBackground`
+ * (#F2F2F7 / #1C1C1E), a shade nearer the bar than plain white / black, so the check errs strict.
+ */
+export const LOCK_GROUND: Record<ColorScheme, string> = { light: "#F2F2F7", dark: "#1C1C1E" };
+
+/**
+ * The tint the Live Activity gets (Design 第四十九批 B1), three colours `mark;barLight;barDark`, read by the widget
+ * (plugins/liveActivity.js): the mark is a seal and keeps the civilization's glow; the progress bar is the road's spine,
+ * civT (`plaque`) of that scheme where it holds 3:1 on that scheme's lock-screen ground, else the ink. The tag's ground
+ * is the system's own fill, so it takes no colour from here.
+ */
+export function liveTint(civ: CivKey): string {
+  const bar = (scheme: ColorScheme) => {
+    const t = themeOf(civ, scheme);
+    const civT = t.plaque;
+    return contrastRatio(civT, LOCK_GROUND[scheme]) >= 3 ? civT : t.ink;
+  };
+  return [themeOf(civ, "dark").glow, bar("light"), bar("dark")].join(";");
+}
+
 /** Starts or updates the lock screen's live progress (iOS: the Live Activity, which needs no permission). */
 export async function showLiveProgress(c: LiveContent, tint: string): Promise<void> {
   if (Platform.OS === "ios") {
@@ -185,19 +210,19 @@ export async function endLiveProgress(): Promise<void> {
 /** Keeps the lock screen in step with `route` (null: none) for the soul named `soul`. */
 export function useLiveProgress(route: SoulRoute | null, soul: string): void {
   const { t } = useI18n();
-  const { glow } = useTheme();
+  const tint = liveTint(useTheme().civ);
   const content = route ? liveContent(route, soul, t) : null;
   // One key per distinct content: a re-render with the same place does not touch the native side.
-  const key = content ? `${glow}|${nativeState(content)}` : "";
-  const latest = useRef({ content, glow });
+  const key = content ? `${tint}|${nativeState(content)}` : "";
+  const latest = useRef({ content, tint });
   // Runs before the effect below in the same commit, so that one reads this render's content.
   useEffect(() => {
-    latest.current = { content, glow };
+    latest.current = { content, tint };
   });
   useEffect(() => {
-    const { content: now, glow: tint } = latest.current;
+    const { content: now, tint: civTint } = latest.current;
     if (!now) void endLiveProgress().catch(() => {});
-    else void showLiveProgress(now, tint).catch(() => {});
+    else void showLiveProgress(now, civTint).catch(() => {});
   }, [key]);
   // Leaving the signed-in tree (sign-out): the lock screen forgets the soul too.
   useEffect(() => () => void endLiveProgress().catch(() => {}), []);
