@@ -40,6 +40,7 @@ test("the safeguards tour enters as the administrator and lights up something on
     await page.getByTestId("demo-tour-next").click();
   }
   expect(dark, "steps with nothing highlighted").toEqual([]);
+  await page.locator('[data-testid="demo-tour-badge"][data-finished]').click();
   await expect(page.locator('[data-testid="demo-tour"][data-finished]')).toBeVisible();
   await expect(page.locator('[data-testid^="demo-tour-other-"]')).toHaveCount(4);
   clean(seen, "guard tour");
@@ -106,6 +107,8 @@ test("the finished tour's 「这是怎么做的」 lands on that section, not on
   const seen = watch(context, page);
   await enter(page, "judge_eu");
   await page.getByTestId("demo-tour-skip").click();
+  await expect(page.getByTestId("demo-tour")).toHaveCount(0);
+  await page.getByTestId("demo-tour-badge").click();
   await page.getByTestId("demo-tour-how-built").click();
   await page.waitForURL((u) => u.pathname === "/" && u.hash === "#how-built");
   await expect(page.locator("#how-built")).toBeInViewport();

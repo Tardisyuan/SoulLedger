@@ -502,6 +502,10 @@ export default function DemoTour() {
     update({ step: index });
     if (tour) router.push(tour.steps[index].route);
   };
+  const replay = () => {
+    update(START);
+    if (tour) router.push(tour.steps[0].route);
+  };
 
   const outside = pathname === "/" || pathname.startsWith("/login");
   const panel =
@@ -512,7 +516,23 @@ export default function DemoTour() {
     const guard = tour.skin === "guard";
     const civ = guard ? "" : t(`demo.civ.${tour.skin}.name`);
     const total = tour.steps.length;
-    if (state.finished) {
+    if (state.finished && state.collapsed) {
+      // Skipped or walked to the end, the card folds to a chip at once: left open, the 「导览已跳过」 card sat over the
+      // lower half of the dossier for the rest of the visit (review r2, 2026-11-14). The chip opens it again.
+      const doneTitle = state.skipped ? "demo.tour.skipped_title" : guard ? "demo.tour.guard.done_title" : "demo.tour.done_title";
+      card = (
+        <button
+          type="button"
+          ref={panelRef as RefObject<HTMLButtonElement | null>}
+          data-testid="demo-tour-badge"
+          data-finished=""
+          onClick={() => update({ collapsed: false })}
+          className="fixed right-3 bottom-3 z-toast h-11 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-xs text-[oklch(var(--color-ink))] max-md:bottom-[calc(var(--bottom-bar)+12px)] md:right-6 md:bottom-6"
+        >
+          {t(doneTitle)} <span aria-hidden="true">▴</span>
+        </button>
+      );
+    } else if (state.finished) {
       const done = guard ? ["demo.tour.guard.done_title", t("demo.tour.guard.done_body")] : ["demo.tour.done_title", t("demo.tour.done_body", { civ })];
       card = (
         <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={panel}>
@@ -538,9 +558,10 @@ export default function DemoTour() {
             <a data-testid="demo-tour-how-built" href="/#how-built" className="underline underline-offset-2">{t("demo.build.title")}</a>
             <a href={stats.github} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{t("demo.build.github")}</a>
           </p>
-          <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => router.push("/")}>{t("demo.tour.try_another")}</Button>
-            <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-stay" onClick={() => update({ closed: true })}>{t("demo.tour.stay")}</Button>
+            <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-replay" onClick={replay}>{t("demo.tour.replay")}</Button>
+            <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-stay" onClick={() => update({ collapsed: true })}>{t("demo.tour.stay")}</Button>
           </div>
         </aside>
       );
@@ -561,7 +582,7 @@ export default function DemoTour() {
       // 试一试越权、问一问那两步的卡片本身就是要点的东西,不收成一行。
       const foldable = narrow && !step.probe && !step.assist;
       const nextButton = here ? (
-        <button type="button" data-testid="demo-tour-next" className="band-colour h-9 shrink-0 px-3 text-sm font-semibold" onClick={() => (last ? update({ finished: true }) : go(state.step + 1))}>
+        <button type="button" data-testid="demo-tour-next" className="band-colour h-9 shrink-0 px-3 text-sm font-semibold" onClick={() => (last ? update({ finished: true, collapsed: true }) : go(state.step + 1))}>
           {t("demo.tour.next")} →
         </button>
       ) : (
@@ -609,7 +630,7 @@ export default function DemoTour() {
             {state.step > 0 ? (
               <Button type="button" variant="ghost" size="sm" onClick={() => go(state.step - 1)}>{t("demo.tour.prev")}</Button>
             ) : (
-              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-skip" onClick={() => update({ finished: true, skipped: true })}>{t("demo.tour.skip")}</Button>
+              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-skip" onClick={() => update({ finished: true, skipped: true, collapsed: true })}>{t("demo.tour.skip")}</Button>
             )}
             {nextButton}
           </div>
