@@ -190,6 +190,19 @@ describe("页头:顶线 + 卷宗头,只有一个标题", () => {
     expect(screen.getByTestId("page-head").querySelector(".page-head-topline")).toHaveAttribute("data-loading", "");
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  // 第四十五批第一节:文明皮的顶线 3px、四家四种形状(CSS 背景),中性皮仍是上面那条 2px 实线。
+  it("文明皮的顶线 3px,欧洲双线、埃及缺口、希腊方齿,地府实线", () => {
+    const rule = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[[\]"().]/g, "\\$&")} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+    expect(css).toMatch(/\[data-civ="gr"\] \.page-head-topline \{\s*--tl: oklch\(var\(--color-main-ink\)\);\s*height: 3px;/);
+    expect(rule('[data-civ="eu"] .page-head-topline')).toContain("linear-gradient(var(--tl) 0 1px, transparent 1px 2px, var(--tl) 2px 3px)");
+    expect(rule('[data-civ="eg"] .page-head-topline')).toContain("repeating-linear-gradient(90deg, var(--tl) 0 42px, transparent 42px 48px)");
+    expect(rule('[data-civ="gr"] .page-head-topline')).toContain("repeating-linear-gradient(90deg, var(--tl) 0 4px, transparent 4px 8px) left top / 100% 2px no-repeat");
+    // 地府没有自己的背景规则:实线就是基础那条的 main-ink。
+    expect(rule('[data-civ="cn"] .page-head-topline')).toBe("");
+    // 加载态写在形状后面,同样重的选择器,底(line)盖过形状。
+    expect(css.indexOf('[data-civ="gr"] .page-head-topline {')).toBeLessThan(css.indexOf(".page-head-topline[data-loading] {"));
+  });
 });
 
 describe("立柱横排阈值(C14)", () => {
