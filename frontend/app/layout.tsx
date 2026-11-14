@@ -42,6 +42,8 @@ const DemoBanner = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => imp
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // 让页面画到屏幕边缘,`env(safe-area-inset-bottom)` 才非零(WebKit);门栏用 `--safe-b` 垫开 Home 指示条(globals.css)。
+  viewportFit: "cover",
 };
 
 /** One neutral English title and description, for the tab and for link previews alike (user decision 2026-11-14):

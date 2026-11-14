@@ -56,6 +56,7 @@ src/__tests__/ledgerPaletteContract.test.ts packages
 src/__tests__/loginStatutes.test.ts backend config
 src/__tests__/permissionCodesStayOutOfCopy.test.ts packages
 src/__tests__/printLayout.test.tsx frontend
+src/__tests__/phoneShell.test.tsx frontend
 src/__tests__/menuButtonGates.test.ts frontend
 src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts frontend
 src/__tests__/menuIconTable.test.ts backend

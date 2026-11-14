@@ -1,22 +1,49 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { useI18n } from "@/src/contexts/I18nContext";
 import stats from "@/src/config/landing-stats.json";
 import { CASE_PAGE, TransactionCard } from "./TransactionCard";
 
 /** Sits in the flow above everything, and tells the sticky bars through `--imp-h` (the variable the impersonation strip uses). */
-const ROOM = `:root{--imp-h:1.75rem}.min-h-screen{min-height:calc(100vh - 1.75rem)}.min-h-dvh{min-height:calc(100dvh - 1.75rem)}@media (min-width:48rem){.md\\:h-dvh{height:calc(100dvh - 1.75rem)}}`;
+const room = (h: string) =>
+  `:root{--imp-h:${h}}.min-h-screen{min-height:calc(100vh - ${h})}.min-h-dvh{min-height:calc(100dvh - ${h})}@media (min-width:48rem){.md\\:h-dvh{height:calc(100dvh - ${h})}}`;
+
+/**
+ * ≤ 768, past the first 48 px of scroll, the strip folds to a 4 px band in the civilization's colour (fe-mobile 3.1):
+ * on a phone it was the first of four layers of chrome. It opens again at the top of the page — not on the way
+ * back past 48: folding moves the page up 24 px, and scroll anchoring would carry it back under the line and flap.
+ */
+function useFolded(): boolean {
+  const narrow = !useWideViewport(769);
+  const [folded, setFolded] = useState(false);
+  useEffect(() => {
+    if (!narrow) return;
+    const onScroll = () => setFolded((was) => (was ? window.scrollY > 1 : window.scrollY > 48));
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [narrow]);
+  return narrow && folded;
+}
 
 export default function DemoBanner() {
   const { t } = useI18n();
   const pathname = usePathname() ?? "";
+  const folded = useFolded();
   return (
     <>
-      <style>{ROOM}</style>
+      <style>{room(folded ? "4px" : "1.75rem")}</style>
       <div
         data-testid="demo-banner"
-        className="sticky top-0 z-toast flex h-7 items-center justify-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-3 text-xs text-[oklch(var(--color-ink-muted))]"
+        data-folded={folded ? "" : undefined}
+        className={
+          folded
+            ? "sticky top-0 z-toast h-1 overflow-hidden bg-[oklch(var(--color-main))] [&>*]:sr-only"
+            : "sticky top-0 z-toast flex h-7 items-center justify-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-3 text-xs text-[oklch(var(--color-ink-muted))]"
+        }
       >
         <span className="min-w-0 truncate">{t("demo.banner")}</span>
         {/* 「并发与事务」 on a case's own page (作品集建议 A5): up here it never sits on the verdict bar or the tour card. */}

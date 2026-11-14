@@ -10,6 +10,7 @@ import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { useHallCivilization } from "@/src/components/plaque/useHall";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { DOOR_ICON, type DoorNavKey } from "@soulledger/core/domain/doors";
@@ -98,8 +99,10 @@ function currentDoor(pathname: string, doors: readonly DoorId[]): DoorId | null 
 /**
  * 门栏(全站唯一的导航,取代旧的侧栏与底栏):桌面 64 宽立在左边,自上而下 品牌标 · 这个人的门 · 底部头像「我」;
  * ≤ 768 到底部,是门 +「我」—— 殿司在窄屏不放门,只读收进「我」的抽屉。
+ * 窄屏顶栏不画用户菜单(fe-mobile 3.1:「我」只留一处),所以用户菜单的几样 —— 语言、设置、关于、退出 —— 也在「我」的抽屉里;
+ * 设置与退出的状态在 AppLayout,经 `onSettings` / `onLogout` 交进来(没登录时不给,抽屉里也就没有这几行)。
  */
-export function DoorRail() {
+export function DoorRail({ onSettings, onLogout }: { onSettings?: () => void; onLogout?: () => void } = {}) {
   const { t, locale } = useI18n();
   const zh = locale === "zh-Hans";
   const pathname = usePathname();
@@ -156,6 +159,20 @@ export function DoorRail() {
             <Link href="/notifications" className={s.sheetLink} aria-current={pathname === "/notifications" ? "page" : undefined}>
               {t("notifications.title")}
             </Link>
+            {onSettings && onLogout ? (
+              <>
+                <div className={s.sheetRow}>
+                  <span>{t("nav.language")}</span>
+                  <LanguageSwitcher />
+                </div>
+                <button type="button" className={s.sheetLink} onClick={() => { close(); onSettings(); }}>
+                  {t("nav.settings")}
+                </button>
+                <Link href="/about" className={s.sheetLink} aria-current={pathname === "/about" ? "page" : undefined}>
+                  {t("about.title")}
+                </Link>
+              </>
+            ) : null}
             {officeTabs.length ? (
               <section aria-labelledby="me-sheet-office">
                 <p id="me-sheet-office" className={s.sheetHead}>
@@ -167,6 +184,11 @@ export function DoorRail() {
                   </Link>
                 ))}
               </section>
+            ) : null}
+            {onLogout ? (
+              <button type="button" className={`${s.sheetLink} ${s.sheetDanger}`} onClick={() => { close(); onLogout(); }} data-testid="me-sheet-logout">
+                {t("auth.logout")}
+              </button>
             ) : null}
           </aside>
         </>
@@ -202,36 +224,43 @@ export function DoorRail() {
   );
 }
 
-/**
- * 门内的二级导航:当前门里、这个人看得见的页,一行,放不下横滑;门里不止一节时节前写节名。
- * 只有一页的门不画(没得选)。画出来时把自己的高写进 `--door-tabs-h`,内容槽位与案卷台照它让出高度。
- */
-export function DoorTabs() {
-  const { t } = useI18n();
+/** 当前门里、这个人看得见的页,按节分好;门栏下的页签条与窄屏顶栏的「页名 ▾」读同一份。 */
+export function useDoorPages() {
   const pathname = usePathname();
   const { viewer, doors, menus } = useDoorViewer();
   const door = currentDoor(pathname, doors);
   const label = usePageLabel(menus, door);
   const tabs = door ? doorTabs(door, viewer, doors) : [];
-  const show = tabs.length > 1;
-  const active = pageOf(pathname)?.path;
-  const tabsRef = useOverflowEnd<HTMLElement>();
-
-  useEffect(() => {
-    if (!show) return;
-    document.documentElement.style.setProperty("--door-tabs-h", "45px");
-    return () => {
-      document.documentElement.style.removeProperty("--door-tabs-h");
-    };
-  }, [show]);
-
-  if (!show || !door) return null;
   const sections = tabs.reduce<DoorPage[][]>((out, p) => {
     const last = out[out.length - 1];
     if (last && last[0].section === p.section) last.push(p);
     else out.push([p]);
     return out;
   }, []);
+  /** 只有一页的门不画(没得选)。 */
+  const show = !!door && tabs.length > 1;
+  return { door, show, sections, label, active: pageOf(pathname)?.path };
+}
+
+/**
+ * 门内的二级导航:当前门里、这个人看得见的页,一行,放不下横滑;门里不止一节时节前写节名。
+ * 只有一页的门不画(没得选)。画出来时把自己的高写进 `--door-tabs-on`;globals.css 由它算 `--door-tabs-h`
+ * (≤ 768 归 0:那里不画这一条,门内换页是顶栏的「页名 ▾」抽屉,`DoorPagePicker`)。内容槽位与案卷台照它让出高度。
+ */
+export function DoorTabs() {
+  const { t } = useI18n();
+  const { door, show, sections, label, active } = useDoorPages();
+  const tabsRef = useOverflowEnd<HTMLElement>();
+
+  useEffect(() => {
+    if (!show) return;
+    document.documentElement.style.setProperty("--door-tabs-on", "45px");
+    return () => {
+      document.documentElement.style.removeProperty("--door-tabs-on");
+    };
+  }, [show]);
+
+  if (!show || !door) return null;
   return (
     <nav ref={tabsRef} className={s.tabs} aria-label={t(`nav.doors.${DOORS[door].nav}.label`)} data-testid="door-tabs" data-door={door}>
       {sections.map((group) => {
@@ -249,5 +278,61 @@ export function DoorTabs() {
         );
       })}
     </nav>
+  );
+}
+
+/**
+ * 窄屏(≤ 768)顶栏中间的「当前页名 ▾」(fe-mobile 3.1):点开从底部升起一张抽屉,按节分组列出门里的页,
+ * 每行 48 高、15 px,当前页左侧 2 px 文明色线 —— 与「我」的抽屉同一个样子、同一个 `useDrawerA11y`。
+ * 「审」门 10 页一屏列完,不用横滑。只有一页的门、不在门里的页不画(AppLayout 那时照旧画面包屑)。
+ */
+export function DoorPagePicker() {
+  const { t } = useI18n();
+  const pathname = usePathname();
+  const { door, show, sections, label, active } = useDoorPages();
+  const [open, setOpen] = useState(false);
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
+    setOpen(false);
+  }
+  const close = () => setOpen(false);
+  const doorName = door ? t(`nav.doors.${DOORS[door].nav}.label`) : "";
+  const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({ open, onClose: close, label: doorName });
+  if (!show || !door) return null;
+  const current = sections.flat().find((p) => p.path === active);
+  return (
+    <>
+      <button
+        type="button"
+        className={s.picker}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((o) => !o)}
+        data-testid="door-page-picker"
+      >
+        <span className={s.pickerName}>{current ? label(current) : doorName}</span>
+        <span aria-hidden="true">▾</span>
+      </button>
+      {open ? (
+        <>
+          <button type="button" aria-label={t("common.close")} className={s.scrim} onClick={close} />
+          <aside ref={drawerRef} {...drawerProps} className={s.sheet} data-testid="door-page-sheet" data-door={door}>
+            {sections.map((group) => (
+              <section key={group[0].section} aria-labelledby={`door-sheet-${group[0].section}`}>
+                <p id={`door-sheet-${group[0].section}`} className={s.sheetHead}>
+                  {t(`doors.section.${group[0].section}`)}
+                </p>
+                {group.map((p) => (
+                  <Link key={p.path} href={p.path} className={s.sheetLink} aria-current={active === p.path ? "page" : undefined}>
+                    {label(p)}
+                  </Link>
+                ))}
+              </section>
+            ))}
+          </aside>
+        </>
+      ) : null}
+    </>
   );
 }

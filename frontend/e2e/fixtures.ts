@@ -77,6 +77,15 @@ export function domainEnum(scope: Page | Locator, rawMember: string) {
  * role ADMIN, which is what opens every <RequirePermission> gate on the
  * screens under test.
  */
+/**
+ * The account menu (语言、设置、关于、登出). From 769 up it is the toolbar's `user-menu`; at ≤ 768 the toolbar has no
+ * user menu (fe-mobile 3.1: one 「我」) and the same items are in the door bar's 「我」 sheet.
+ */
+export async function openUserMenu(page: Page): Promise<void> {
+  const narrow = (page.viewportSize()?.width ?? 1280) <= 768;
+  await page.getByTestId(narrow ? "door-me" : "user-menu").click();
+}
+
 export const TEST_USER = {
   id: 1,
   username: "test_admin",

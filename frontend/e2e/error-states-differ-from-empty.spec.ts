@@ -78,7 +78,8 @@ async function bodyTextWith(
   // the test "passed" for /tenants while telling me nothing. Wait for a
   // control the shell always renders, then read.
   // (规范 v1 moved sign-out into the user menu; its trigger is the control now.)
-  await page.getByTestId("user-menu").waitFor({
+  // (≤ 768 the toolbar has no user menu since fe-mobile 3.1; the door rail is there at every width.)
+  await page.getByTestId("door-rail").waitFor({
     state: "visible",
     timeout: 15_000,
   });

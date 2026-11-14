@@ -419,6 +419,14 @@
   color: oklch(var(--color-ink-muted));
 }
 
+/* 键盘提示按输入方式藏(fe-mobile 3.2):触屏平板宽过 768 也不画;与 globals.css 里 `kbd` 那条同一个条件。 */
+@media (pointer: coarse) {
+  .kbd,
+  .keys {
+    display: none;
+  }
+}
+
 /* ── 393:一栏;门栏到底部;点开一件是整屏 ───────────── */
 @media (max-width: 768px) {
   .desk {
