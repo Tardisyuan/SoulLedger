@@ -10,7 +10,7 @@ import Svg, { Circle, G, Path, Rect, Text as SvgText } from "react-native-svg";
 
 import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import type { CivKey } from "./theme";
+import { FAINT_TEXT, seal, v4, type CivKey } from "./theme";
 
 /** 16 grid. 地府 draws the character itself (功 outlined, 过 filled); the others their own form. */
 export function MeritMark({
@@ -93,14 +93,10 @@ const WAX =
 /** 方印 reads right to left: 第N殿印, N one Han numeral. */
 const NUM = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 
-/** The seal's fill per scheme: 地府 vermilion (only the seal wears it), 欧洲 civT, 埃及 / 希腊 their metal. */
-const SEAL_FILL = {
-  cn: { dark: "#E35D3F", light: "#B8321C" },
-  eu: { dark: "#A883AE", light: "#885A94" },
-  eg: { dark: "#D6B25E", light: "#86671E" },
-  gr: { dark: "#C98B62", light: "#8F5B36" },
-} as const;
-const CUT = { dark: "#111113", light: "#F8F8F6" } as const;
+/** The seal's fill per scheme: 地府 vermilion (only the seal wears it), 欧洲 civT, 埃及 / 希腊 their metal (theme's `seal`). */
+const SEAL_FILL = seal;
+/** What a cut-out shows: the page ground (v4 `--main`). */
+const CUT = { dark: v4.dark.main, light: v4.light.main } as const;
 const ROTATE = { cn: -3, eu: 4, eg: 0, gr: -6 } as const;
 
 /**
@@ -201,7 +197,7 @@ export function DossierSeal({
       <G rotation={ROTATE[civ]} origin="48, 48" opacity={pending ? 0.22 : 0.94}>
         {body}
       </G>
-      {pending ? <Rect x={4} y={4} width={88} height={88} rx={8} fill="none" stroke={scheme === "dark" ? "#8E9197" : "#686B70"} strokeDasharray="4 4" /> : null}
+      {pending ? <Rect x={4} y={4} width={88} height={88} rx={8} fill="none" stroke={FAINT_TEXT[scheme]} strokeDasharray="4 4" /> : null}
     </Svg>
   );
 }

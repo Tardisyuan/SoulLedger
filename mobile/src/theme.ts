@@ -16,6 +16,8 @@
  */
 import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
+import * as generated from "./theme.generated";
+
 export type ColorScheme = "dark" | "light";
 export type CivKey = "neutral" | "cn" | "eu" | "eg" | "gr";
 
@@ -32,17 +34,12 @@ export interface CivPalette {
   sideL: string;
 }
 
-/** v4, verbatim (`line` / `line2` / `field` are v4's rgba, not composited). */
-export const v4 = {
-  dark: { main: "#111113", card: "#1A1B1E", card2: "#222327", ink: "#F3F3F1", sub: "#B4B6BA", faint: "#7C7F85", line: "rgba(255,255,255,0.08)", line2: "rgba(255,255,255,0.16)", field: "rgba(255,255,255,0.05)", onSolid: "#FFFFFF", pos: "#8AD3A1", neg: "#F2849B", onNeg: "#16171A" },
-  light: { main: "#F8F8F6", card: "#FFFFFF", card2: "#F1F1EE", ink: "#16171A", sub: "#54575C", faint: "#8A8D92", line: "rgba(0,0,0,0.08)", line2: "rgba(0,0,0,0.16)", field: "rgba(0,0,0,0.035)", onSolid: "#FFFFFF", pos: "#1F6B3F", neg: "#A81E3C", onNeg: "#FFFFFF" },
-  civ: {
-    cn: { glow: "#C8604F", tD: "#D98A7A", tL: "#A04636", sL: "#A64A3B", sD: "#7E362B", mD: "#C9A35E", mL: "#8A6A24", sideD: "#160806", sideL: "#FFF0EC" },
-    eu: { glow: "#A0709F", tD: "#A883AE", tL: "#885A94", sL: "#7A4F85", sD: "#5A3A63", mD: "#B9C2CF", mL: "#5C6878", sideD: "#100718", sideL: "#F7EDF6" },
-    eg: { glow: "#5F93C8", tD: "#89BCF1", tL: "#174A88", sL: "#3C69A2", sD: "#2B4E79", mD: "#D6B25E", mL: "#86671E", sideD: "#060C1C", sideL: "#EAF2FB" },
-    gr: { glow: "#5F9C94", tD: "#B5E3D8", tL: "#31695E", sL: "#37716A", sD: "#28544F", mD: "#C98B62", mL: "#8F5B36", sideD: "#03120F", sideL: "#E8FAF7" },
-  },
-} as const;
+/**
+ * v4, verbatim (`line` / `line2` / `field` are v4's rgba, not composited). The values live in
+ * `packages/core/tokens/*.tokens.json`, the same source as the web's globals.css; `theme.generated.ts`
+ * is written from it by `scripts/build-tokens.mjs`. Edit the JSON, not the generated file.
+ */
+export const v4 = generated.v4;
 
 /**
  * Before sign-in, and a civilization the app does not know: v4 drew none until Design 第八批第 5 条
@@ -52,17 +49,7 @@ export const v4 = {
  * Design's choice, see theme.test), side #0E0F11 / #F1F1EF. The web's `--color-civ-neutral*` carry the
  * same values (theme.test reads the text colour; ledgerPaletteContract holds the rest). 印 = the brand balance.
  */
-export const NEUTRAL_CIV: CivPalette = {
-  glow: "#8E939C",
-  tD: v4.dark.sub,
-  tL: v4.light.sub,
-  sL: "#5A606B",
-  sD: "#55575E",
-  mD: "#ECAA3D",
-  mL: "#8A6A24",
-  sideD: "#0E0F11",
-  sideL: "#F1F1EF",
-};
+export const NEUTRAL_CIV: CivPalette = generated.NEUTRAL_CIV;
 
 /** The neutral's mark colour; Android's notification tint (app.json) is its light value. */
 export const NEUTRAL_PLAQUE = { light: NEUTRAL_CIV.tL, dark: NEUTRAL_CIV.tD } as const;
@@ -76,7 +63,7 @@ export const ON_PLAQUE = "#FFFFFF";
  * 5.97 / 5.45 / 4.97, light 5.03 / 5.35 / 4.73). `--faint` stays for what is not read (a rule, disabled).
  * The web's `--color-faint-text` is the same pair.
  */
-export const FAINT_TEXT = { dark: "#8E9197", light: "#686B70" } as const;
+export const FAINT_TEXT = generated.FAINT_TEXT;
 
 /**
  * `lamp` / `lampBg`: the eternal light's warm gold (朋友圈 handoff 1e), used by that
@@ -89,14 +76,17 @@ export const FAINT_TEXT = { dark: "#8E9197", light: "#686B70" } as const;
  * rule) is `neg` itself, and the text on that fill is `onNeg` — dark ink on dark's pink, white on
  * light's crimson. neg is always drawn with ✕ and words, never by colour alone.
  */
-export const semantic = {
-  dark: { pos: v4.dark.pos, posBg: "#16261C", neg: v4.dark.neg, negStrong: v4.dark.neg, onNeg: v4.dark.onNeg, negInk: "#FFD3DC", negBg: "#33101A", warn: "#FF9A3C", warnBg: "#301904", lamp: "#F2CC7A", lampBg: "#241B0C", scrim: "rgba(0,0,0,0.62)" },
-  light: { pos: v4.light.pos, posBg: "#EAF6EE", neg: v4.light.neg, negStrong: v4.light.neg, onNeg: v4.light.onNeg, negInk: "#8A0C33", negBg: "#FFECEF", warn: "#9F4A00", warnBg: "#FFF1E2", lamp: "#6A3E00", lampBg: "#FBF1DC", scrim: "rgba(21,19,18,0.42)" },
-} as const;
+export const semantic = generated.semantic;
 // `posBg`: 第三十批 the pos tag's tint (`--pos-tint`); a neg / warn tag sits on `negBg` / `warnBg`.
 // `warnBg` (补足 D 组 警示底): the ground of a warning box; the text on it is `warn` itself.
 // `scrim` rides along here because it is global too (补足 A2 阴影与遮罩): one use —
 // under a dialog or a sheet — and one value per scheme, 0.42 light / 0.62 dark.
+
+/**
+ * The seal's fill per scheme (第三十批 `--seal`): 地府 vermilion, 欧洲 civT, 埃及 / 希腊 their metal — the web's
+ * `--color-civ-*-seal`, from the same JSON. `dossierMarks.tsx` reads it.
+ */
+export const seal = generated.seal;
 
 /**
  * pt. v2 补足 A2: multiples of 4. The v1 steps merged to the nearest — 7→8,

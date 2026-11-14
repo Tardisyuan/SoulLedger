@@ -57,8 +57,8 @@
 }
 .doorGlyph {
   font-family: var(--font-title);
-  font-size: 18px;
-  line-height: 24px;
+  font-size: var(--door-glyph-size);
+  line-height: var(--door-glyph-leading);
   font-weight: 600;
 }
 /* 英文与 egy 的门:24 的线条图标(第三十八批尺寸表),描边 1.6,选中 1.8。 */
@@ -76,8 +76,8 @@
   stroke-width: 1.8;
 }
 .doorLabel {
-  font-size: 11px;
-  line-height: 14px;
+  font-size: var(--door-label-size);
+  line-height: var(--door-label-leading);
 }
 /* 门名(Statutes、Sesh Ba 最宽,实测 43.5 / 42.5,可用宽 48):Geist 500,不换行、不省略。 */
 .doorLabelWord {
@@ -95,8 +95,8 @@
   border-radius: 5px;
   background: oklch(var(--color-ink));
   color: oklch(var(--color-canvas));
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--tai-caption-size);
+  line-height: var(--tai-caption-leading);
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
@@ -137,7 +137,7 @@
   justify-content: center;
   background: oklch(var(--color-surface-2));
   color: oklch(var(--color-ink));
-  font-size: 12px;
+  font-size: var(--tai-caption-size);
   text-decoration: none;
 }
 .meIcon {
@@ -179,14 +179,14 @@
 .sectionName {
   align-self: center;
   margin-right: 6px;
-  font-size: 11px;
+  font-size: var(--tai-micro-size);
   color: oklch(var(--color-ink-subtle));
 }
 .tab {
   display: flex;
   align-items: center;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--tai-label-size);
   color: oklch(var(--color-ink-muted));
   text-decoration: none;
   box-shadow: inset 0 -2px 0 transparent;
@@ -215,7 +215,7 @@
 }
 .sheetHead {
   padding: 12px 8px 4px;
-  font-size: 11px;
+  font-size: var(--tai-micro-size);
   color: oklch(var(--color-ink-muted));
 }
 .sheetLink {
@@ -223,7 +223,7 @@
   align-items: center;
   min-height: 48px;
   padding: 0 8px;
-  font-size: 15px;
+  font-size: var(--tai-touch-size);
   color: oklch(var(--color-ink));
   text-decoration: none;
 }

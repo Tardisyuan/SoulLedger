@@ -1,0 +1,1057 @@
+{
+  "$description": "L1. The ground, ink, line, status and brand-slot tokens every component reads, plus the register (type.juan.* = records, serif; type.tai.* = controls, sans). Modes are CSS selectors, in $extensions.org.soulledger.modes: `.light`, `[data-civ=\"cn\"]` … `[data-civ]`, `[data-skin=\"neutral\"]`; $value is `:root` (dark). Source of truth for the token block of frontend/app/globals.css (between the @tokens markers) and for mobile/src/theme.generated.ts: edit here, then `node scripts/build-tokens.mjs` (`--check` fails when the outputs are stale). Values were exported mechanically from globals.css on 2026-11-14, unchanged. DTCG 2025.10 format; $extensions.org.soulledger: modes, emit (\"value\": an alias written out as its value, not var()), bare (group name not part of the CSS name), css (false: app only), pendingDesign.",
+  "color": {
+    "$type": "color",
+    "canvas": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.178529, 0.004066, 285.9807],
+        "hex": "#111113"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.978573, 0.002641, 106.4481],
+              "hex": "#F8F8F6"
+            }
+          }
+        }
+      }
+    },
+    "surface-1": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.222322, 0.006013, 271.1393],
+        "hex": "#1A1B1E"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [1, 0, 0],
+              "hex": "#FFFFFF"
+            }
+          }
+        }
+      }
+    },
+    "surface-2": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.256756, 0.007618, 274.6528],
+        "hex": "#222327"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.95731, 0.003982, 106.4744],
+              "hex": "#F1F1EE"
+            }
+          }
+        }
+      }
+    },
+    "surface-3": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.297319, 0.005579, 271.2268],
+        "hex": "#2C2D30"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.94007, 0, 0],
+              "hex": "#EBEBEB"
+            }
+          }
+        }
+      }
+    },
+    "rule": {
+      "$value": "{color.line}",
+      "$deprecated": "Same value as {color.line} in every mode; kept so existing callers do not move. globals.css still emits both names.",
+      "$extensions": {
+        "org.soulledger": {
+          "emit": "value"
+        }
+      }
+    },
+    "line": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.297319, 0.005579, 271.2268]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.94007, 0, 0]
+            }
+          }
+        }
+      }
+    },
+    "line-strong": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.595896, 0.009766, 264.4932],
+        "hex": "#7C7F85"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.642492, 0.008222, 260.7308],
+              "hex": "#8A8D92"
+            }
+          }
+        }
+      }
+    },
+    "block": {
+      "$value": "{color.ink}",
+      "$deprecated": "Same value as {color.ink} in every mode; kept so existing callers do not move. globals.css still emits both names.",
+      "$extensions": {
+        "org.soulledger": {
+          "emit": "value"
+        }
+      }
+    },
+    "ink": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.963595, 0.002651, 106.449],
+        "hex": "#F3F3F1"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.204832, 0.006141, 271.1072],
+              "hex": "#16171A"
+            }
+          }
+        }
+      }
+    },
+    "ink-muted": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.775874, 0.006082, 264.5259],
+        "hex": "#B4B6BA"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.455822, 0.008971, 260.7269],
+              "hex": "#54575C"
+            }
+          }
+        }
+      }
+    },
+    "ink-subtle": {
+      "$value": "{color.ink-muted}",
+      "$deprecated": "Same value as {color.ink-muted} in every mode; kept so existing callers do not move. globals.css still emits both names.",
+      "$extensions": {
+        "org.soulledger": {
+          "emit": "value"
+        }
+      }
+    },
+    "pillar": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.15527, 0.004214, 285.8987],
+        "hex": "#0C0C0E"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.95731, 0.003982, 106.4744],
+              "hex": "#F1F1EE"
+            }
+          }
+        }
+      }
+    },
+    "on-main": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [1, 0, 0],
+        "hex": "#FFFFFF"
+      }
+    },
+    "accent": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.963595, 0.002651, 106.449]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.204832, 0.006141, 271.1072]
+            },
+            "[data-civ]": "{color.main-ink}"
+          }
+        }
+      }
+    },
+    "accent-contrast": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.178529, 0.004066, 285.9807]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.978573, 0.002641, 106.4481]
+            }
+          }
+        }
+      }
+    },
+    "accent-ink": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.963595, 0.002651, 106.449]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.204832, 0.006141, 271.1072]
+            },
+            "[data-civ]": "{color.main-ink}"
+          }
+        }
+      }
+    },
+    "accent-hover": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.775874, 0.006082, 264.5259]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.455822, 0.008971, 260.7269]
+            }
+          }
+        }
+      }
+    },
+    "focus": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.963595, 0.002651, 106.449]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.204832, 0.006141, 271.1072]
+            },
+            "[data-civ]": "{color.main-ink}"
+          }
+        }
+      }
+    },
+    "danger": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.739946, 0.135852, 7.6091],
+        "hex": "#F2849B"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.479318, 0.171592, 15.4317],
+              "hex": "#A81E3C"
+            }
+          }
+        }
+      }
+    },
+    "danger-strong": {
+      "$value": "{color.danger}",
+      "$deprecated": "Same value as {color.danger} in every mode; kept so existing callers do not move. globals.css still emits both names.",
+      "$extensions": {
+        "org.soulledger": {
+          "emit": "value"
+        }
+      }
+    },
+    "on-danger": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.204832, 0.006141, 271.1072],
+        "hex": "#16171A"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [1, 0, 0],
+              "hex": "#FFFFFF"
+            }
+          }
+        }
+      }
+    },
+    "danger-tint": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.233082, 0.05768, 4.837],
+        "hex": "#33101A"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.959029, 0.020979, 6.6063],
+              "hex": "#FFECEF"
+            }
+          }
+        }
+      }
+    },
+    "danger-on-tint": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.906877, 0.050597, 4.3604],
+        "hex": "#FFD3DC"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.40946, 0.155831, 12.0157],
+              "hex": "#8A0C33"
+            }
+          }
+        }
+      }
+    },
+    "success": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.80532, 0.101985, 153.6633],
+        "hex": "#8AD3A1"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.46988, 0.102419, 153.8115],
+              "hex": "#1F6B3F"
+            }
+          }
+        }
+      }
+    },
+    "success-tint": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.241388, 0.040904, 150.1078]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "pendingDesign": "Fork with the app: web #102515 / #E4FBE7, the app's `posBg` #16261C / #EAF6EE ({app.pos-bg}). Design picks one pair (fe-tokens §1.2, item 3). Not resolved here.",
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.965876, 0.035762, 149.1233]
+            }
+          }
+        }
+      }
+    },
+    "warning": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.681246, 0.15618, 54.9021]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "pendingDesign": "Fork with the app: web warning ink #E07A23 / #A65000, the app's `warn` #FF9A3C / #9F4A00 ({app.warn}). Design picks one pair (fe-tokens §1.2, item 3). Not resolved here.",
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.52909, 0.135424, 52.3541]
+            }
+          }
+        }
+      }
+    },
+    "warning-tint": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.240511, 0.049375, 60.4681],
+        "hex": "#301904"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.965162, 0.024981, 69.4434],
+              "hex": "#FFF1E2"
+            }
+          }
+        }
+      }
+    },
+    "warn": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.799963, 0.123133, 79.155],
+        "hex": "#E8B45A"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "pendingDesign": "Same name, different meaning: this is the amber of the connection dot and the topbar's 2px rule (#E8B45A / #9A6400), never text; the app's `warn` is warning TEXT ({app.warn}). Proposed rename to amber waits for Design (fe-tokens §1.2, item 4).",
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.54827, 0.11708, 72.5076],
+              "hex": "#9A6400"
+            }
+          }
+        }
+      }
+    },
+    "faint-text": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.656067, 0.00953, 264.5008],
+        "hex": "#8E9197"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.526852, 0.008647, 260.7291],
+              "hex": "#686B70"
+            }
+          }
+        }
+      }
+    },
+    "ink-mid": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.717491, 0.006726, 255.4889],
+        "hex": "#A1A4A8"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.491657, 0.0088, 260.7282],
+              "hex": "#5E6166"
+            }
+          }
+        }
+      }
+    },
+    "lamp": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.860675, 0.109733, 85.2786],
+        "hex": "#F2CC7A"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.407751, 0.090608, 66.2502],
+              "hex": "#6A3E00"
+            }
+          }
+        }
+      }
+    },
+    "lamp-bg": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.228754, 0.029413, 79.2504],
+        "hex": "#241B0C"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.96043, 0.02966, 85.5642],
+              "hex": "#FBF1DC"
+            }
+          }
+        }
+      }
+    },
+    "disabled-ink": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.595896, 0.009766, 264.4932]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.642492, 0.008222, 260.7308]
+            }
+          }
+        }
+      }
+    },
+    "disabled-surface": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.256756, 0.007618, 274.6528]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.95731, 0.003982, 106.4744]
+            }
+          }
+        }
+      }
+    },
+    "scrim": {
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0, 0, 0]
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "oklch",
+              "components": [0.204832, 0.006141, 271.1072]
+            }
+          }
+        }
+      }
+    },
+    "main": {
+      "$value": "{color.civ.neutral.$root}",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            "[data-civ=\"cn\"]": "{color.civ.cn.$root}",
+            "[data-civ=\"eu\"]": "{color.civ.eu.$root}",
+            "[data-civ=\"eg\"]": "{color.civ.eg.$root}",
+            "[data-civ=\"gr\"]": "{color.civ.gr.$root}"
+          }
+        }
+      }
+    },
+    "main-ink": {
+      "$value": "{color.civ.neutral.ink}",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            "[data-civ=\"cn\"]": "{color.civ.cn.ink}",
+            "[data-civ=\"eu\"]": "{color.civ.eu.ink}",
+            "[data-civ=\"eg\"]": "{color.civ.eg.ink}",
+            "[data-civ=\"gr\"]": "{color.civ.gr.ink}",
+            "[data-skin=\"neutral\"]": "{color.civ.neutral.ink}"
+          }
+        }
+      }
+    },
+    "glow": {
+      "$value": "{color.civ.neutral.glow}",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            "[data-civ=\"cn\"]": "{color.civ.cn.glow}",
+            "[data-civ=\"eu\"]": "{color.civ.eu.glow}",
+            "[data-civ=\"eg\"]": "{color.civ.eg.glow}",
+            "[data-civ=\"gr\"]": "{color.civ.gr.glow}",
+            "[data-skin=\"neutral\"]": "{color.civ.neutral.glow}"
+          }
+        }
+      }
+    },
+    "metal": {
+      "$value": "{color.civ.neutral.metal}",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            "[data-civ=\"cn\"]": "{color.civ.cn.metal}",
+            "[data-civ=\"eu\"]": "{color.civ.eu.metal}",
+            "[data-civ=\"eg\"]": "{color.civ.eg.metal}",
+            "[data-civ=\"gr\"]": "{color.civ.gr.metal}",
+            "[data-skin=\"neutral\"]": "{color.civ.neutral.metal}"
+          }
+        }
+      }
+    },
+    "side": {
+      "$value": "{color.civ.neutral.side}",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            "[data-civ=\"cn\"]": "{color.civ.cn.side}",
+            "[data-civ=\"eu\"]": "{color.civ.eu.side}",
+            "[data-civ=\"eg\"]": "{color.civ.eg.side}",
+            "[data-civ=\"gr\"]": "{color.civ.gr.side}"
+          }
+        }
+      }
+    },
+    "seal": {
+      "$value": "{color.civ.neutral.seal}",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            "[data-civ=\"cn\"]": "{color.civ.cn.seal}",
+            "[data-civ=\"eu\"]": "{color.civ.eu.seal}",
+            "[data-civ=\"eg\"]": "{color.civ.eg.seal}",
+            "[data-civ=\"gr\"]": "{color.civ.gr.seal}"
+          }
+        }
+      }
+    },
+    "status": {
+      "alive": {
+        "$value": "{color.success}"
+      },
+      "judging": {
+        "$value": "{color.warning}"
+      },
+      "disposed": {
+        "$value": "{color.ink}"
+      },
+      "reincarnating": {
+        "$value": "{color.chart.4}"
+      },
+      "lost": {
+        "$value": "{color.ink-subtle}"
+      },
+      "settled": {
+        "$value": "{color.ink-muted}"
+      },
+      "success": {
+        "$value": "{color.success}"
+      },
+      "error": {
+        "$value": "{color.danger}"
+      },
+      "warning": {
+        "$value": "{color.warning}"
+      },
+      "info": {
+        "$value": "{color.accent}"
+      }
+    },
+    "verdict": {
+      "passed": {
+        "$value": "{color.success}"
+      },
+      "failed": {
+        "$value": "{color.danger}"
+      },
+      "purgatory": {
+        "$value": "{color.warning}"
+      },
+      "retry": {
+        "$value": "{color.accent}"
+      }
+    }
+  },
+  "danger-shade": {
+    "$type": "string",
+    "$value": "white",
+    "$extensions": {
+      "org.soulledger": {
+        "modes": {
+          ".light": "black"
+        }
+      }
+    }
+  },
+  "scrim-alpha": {
+    "$type": "number",
+    "$value": 0.62,
+    "$extensions": {
+      "org.soulledger": {
+        "modes": {
+          ".light": 0.42
+        }
+      }
+    }
+  },
+  "glow-alpha": {
+    "$type": "number",
+    "$value": 0.3,
+    "$extensions": {
+      "org.soulledger": {
+        "modes": {
+          ".light": 0.24
+        }
+      }
+    }
+  },
+  "shadow-card": {
+    "$type": "string",
+    "$value": "none",
+    "$extensions": {
+      "org.soulledger": {
+        "modes": {
+          ".light": "0 1px 2px rgba(20, 20, 24, 0.05), 0 6px 20px -10px rgba(20, 20, 24, 0.16)"
+        }
+      }
+    }
+  },
+  "type": {
+    "$extensions": {
+      "org.soulledger": {
+        "bare": true
+      }
+    },
+    "juan": {
+      "$root": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-title)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 16,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 28,
+            "unit": "px"
+          }
+        }
+      },
+      "strong": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-title)",
+          "fontWeight": 600,
+          "fontSize": {
+            "value": 16,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 28,
+            "unit": "px"
+          }
+        }
+      },
+      "key": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 13,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 20,
+            "unit": "px"
+          }
+        }
+      },
+      "head": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 12,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 16,
+            "unit": "px"
+          }
+        }
+      },
+      "num": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-mono)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 13,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 20,
+            "unit": "px"
+          }
+        }
+      },
+      "title": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-title)",
+          "fontWeight": 600,
+          "fontSize": {
+            "value": 32,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 40,
+            "unit": "px"
+          }
+        }
+      },
+      "name": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-title)",
+          "fontWeight": 600,
+          "fontSize": {
+            "value": 16,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 24,
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "tai": {
+      "$root": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 14,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 22,
+            "unit": "px"
+          }
+        }
+      },
+      "touch": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 15,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 24,
+            "unit": "px"
+          }
+        }
+      },
+      "label": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 13,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 20,
+            "unit": "px"
+          }
+        }
+      },
+      "caption": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 12,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 16,
+            "unit": "px"
+          }
+        }
+      },
+      "micro": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 11,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 16,
+            "unit": "px"
+          }
+        }
+      },
+      "head": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 500,
+          "fontSize": {
+            "value": 12,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 16,
+            "unit": "px"
+          }
+        }
+      }
+    }
+  },
+  "app": {
+    "$description": "Values only the apps draw: v4's translucent hairlines (the web composites them into --color-line / surface-3), the app's scrim, and the app side of the two forks. Never emitted to CSS.",
+    "$type": "color",
+    "$extensions": {
+      "org.soulledger": {
+        "css": false
+      }
+    },
+    "hair": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1],
+        "alpha": 0.08,
+        "hex": "#FFFFFF"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "srgb",
+              "components": [0, 0, 0],
+              "alpha": 0.08,
+              "hex": "#000000"
+            }
+          }
+        }
+      }
+    },
+    "hair2": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1],
+        "alpha": 0.16,
+        "hex": "#FFFFFF"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "srgb",
+              "components": [0, 0, 0],
+              "alpha": 0.16,
+              "hex": "#000000"
+            }
+          }
+        }
+      }
+    },
+    "scrim": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0, 0, 0],
+        "alpha": 0.62,
+        "hex": "#000000"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "srgb",
+              "components": [0.082353, 0.07451, 0.070588],
+              "alpha": 0.42,
+              "hex": "#151312"
+            }
+          }
+        }
+      }
+    },
+    "pos-bg": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.086275, 0.14902, 0.109804],
+        "hex": "#16261C"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "srgb",
+              "components": [0.917647, 0.964706, 0.933333],
+              "hex": "#EAF6EE"
+            }
+          },
+          "pendingDesign": "Fork: the web's {color.success-tint} is #102515 / #E4FBE7. Waits for Design."
+        }
+      }
+    },
+    "warn": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 0.603922, 0.235294],
+        "hex": "#FF9A3C"
+      },
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": {
+              "colorSpace": "srgb",
+              "components": [0.623529, 0.290196, 0],
+              "hex": "#9F4A00"
+            }
+          },
+          "pendingDesign": "Fork: the web's warning ink {color.warning} is #E07A23 / #A65000, and the web's {color.warn} is a different thing (amber dot). Waits for Design."
+        }
+      }
+    }
+  }
+}

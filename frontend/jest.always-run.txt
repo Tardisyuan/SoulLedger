@@ -35,6 +35,7 @@ src/__tests__/demoDataHasNoInternalHosts.test.ts frontend
 src/__tests__/demoHomePreview.test.ts *
 src/__tests__/demoStaysOutOfTheNormalBuild.test.ts frontend
 src/__tests__/designGuardContract.test.ts *
+src/__tests__/designTokensAreGenerated.test.ts *
 src/__tests__/dialogsAreNotHandRolled.test.ts frontend
 src/__tests__/domainDisplayContract.test.tsx packages
 src/__tests__/domainDisplayRendering.test.tsx packages
@@ -60,6 +61,7 @@ src/__tests__/menuButtonGates.test.ts frontend
 src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts frontend
 src/__tests__/menuIconTable.test.ts backend
 src/__tests__/messageKeysAreReferenced.test.ts backend config frontend mobile-officer mobile packages
+src/__tests__/moduleCssTokenEscapes.test.ts frontend
 src/__tests__/motionTokens.test.ts packages
 src/__tests__/notificationTarget.test.tsx backend
 src/__tests__/notifyKeysExistInTheBundles.test.ts frontend packages

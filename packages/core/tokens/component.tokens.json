@@ -1,0 +1,179 @@
+{
+  "$description": "L2. Sizes, motion and faces owned by one component family (dossier seal, spine, desk, doors, toasts). Source of truth for the token block of frontend/app/globals.css (between the @tokens markers) and for mobile/src/theme.generated.ts: edit here, then `node scripts/build-tokens.mjs` (`--check` fails when the outputs are stale). Values were exported mechanically from globals.css on 2026-11-14, unchanged. DTCG 2025.10 format; $extensions.org.soulledger: modes, emit (\"value\": an alias written out as its value, not var()), bare (group name not part of the CSS name), css (false: app only), pendingDesign.",
+  "seal-size": {
+    "$type": "dimension",
+    "$value": {
+      "value": 96,
+      "unit": "px"
+    }
+  },
+  "mark": {
+    "$type": "dimension",
+    "$value": {
+      "value": 16,
+      "unit": "px"
+    }
+  },
+  "stamp": {
+    "$type": "duration",
+    "$value": {
+      "value": 240,
+      "unit": "ms"
+    }
+  },
+  "stamp-ease": {
+    "$type": "cubicBezier",
+    "$value": [0.2, 0.8, 0.2, 1]
+  },
+  "now-breath": {
+    "$type": "duration",
+    "$value": {
+      "value": 3.2,
+      "unit": "s"
+    }
+  },
+  "judge-w": {
+    "$type": "dimension",
+    "$value": {
+      "value": 380,
+      "unit": "px"
+    }
+  },
+  "opt-h": {
+    "$type": "dimension",
+    "$value": {
+      "value": 44,
+      "unit": "px"
+    },
+    "$extensions": {
+      "org.soulledger": {
+        "modes": {
+          "@media (hover: none), (pointer: coarse) html": {
+            "value": 56,
+            "unit": "px"
+          }
+        }
+      }
+    }
+  },
+  "topline": {
+    "$type": "dimension",
+    "$value": {
+      "value": 2,
+      "unit": "px"
+    }
+  },
+  "rail-w": {
+    "$type": "dimension",
+    "$value": {
+      "value": 64,
+      "unit": "px"
+    }
+  },
+  "stack-w": {
+    "$type": "dimension",
+    "$value": {
+      "value": 360,
+      "unit": "px"
+    }
+  },
+  "spine-h": {
+    "$type": "dimension",
+    "$value": {
+      "value": 44,
+      "unit": "px"
+    }
+  },
+  "toast-bar": {
+    "$type": "dimension",
+    "$value": {
+      "value": 3,
+      "unit": "px"
+    }
+  },
+  "glowA": {
+    "$type": "number",
+    "$value": 0.3,
+    "$extensions": {
+      "org.soulledger": {
+        "modes": {
+          ".light": 0.22
+        }
+      }
+    }
+  },
+  "field": {
+    "$type": "color",
+    "$value": {
+      "colorSpace": "srgb",
+      "components": [1, 1, 1],
+      "alpha": 0.05,
+      "hex": "#FFFFFF"
+    },
+    "$extensions": {
+      "org.soulledger": {
+        "modes": {
+          ".light": {
+            "colorSpace": "srgb",
+            "components": [0, 0, 0],
+            "alpha": 0.035,
+            "hex": "#000000"
+          }
+        }
+      }
+    }
+  },
+  "type": {
+    "$extensions": {
+      "org.soulledger": {
+        "bare": true
+      }
+    },
+    "door": {
+      "glyph": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-title)",
+          "fontWeight": 600,
+          "fontSize": {
+            "value": 18,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 24,
+            "unit": "px"
+          }
+        }
+      },
+      "label": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-sans)",
+          "fontWeight": 400,
+          "fontSize": {
+            "value": 11,
+            "unit": "px"
+          },
+          "lineHeight": {
+            "value": 14,
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "mark": {
+      "glyph": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "var(--font-title)",
+          "fontWeight": 600,
+          "fontSize": {
+            "value": 11,
+            "unit": "px"
+          },
+          "lineHeight": 1
+        }
+      }
+    }
+  }
+}

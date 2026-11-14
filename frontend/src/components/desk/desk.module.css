@@ -27,15 +27,15 @@
 }
 .stackTitle {
   font-family: var(--font-title);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: var(--juan-name-size);
+  line-height: var(--juan-name-leading);
   font-weight: 600;
   margin: 0;
 }
 .overview {
-  font: var(--tai, 400 14px/22px var(--font-sans));
-  font-size: 13px;
-  line-height: 20px;
+  font: var(--tai);
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
   color: oklch(var(--color-ink-muted));
   margin: 0;
 }
@@ -57,8 +57,8 @@
   border: 1px solid oklch(var(--color-line));
   background: transparent;
   color: oklch(var(--color-ink-muted));
-  font-size: 13px;
-  line-height: 20px;
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
@@ -69,7 +69,7 @@
 }
 .chipCount {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--tai-caption-size);
   color: oklch(var(--color-faint-text));
 }
 .searchRow {
@@ -86,12 +86,12 @@
   border: 1px solid oklch(var(--color-line));
   background: var(--field, oklch(var(--color-surface-1)));
   color: oklch(var(--color-ink));
-  font-size: 14px;
+  font-size: var(--tai-size);
 }
 .kbd {
   font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 16px;
+  font-size: var(--tai-micro-size);
+  line-height: var(--tai-micro-leading);
   padding: 0 4px;
   /* 跟着所在的字色走:在墨色实底的主按钮里也看得见。 */
   border: 1px solid currentColor;
@@ -100,7 +100,7 @@
   opacity: 0.72;
 }
 .triage {
-  font-size: 13px;
+  font-size: var(--tai-label-size);
   color: oklch(var(--color-ink-muted));
   text-decoration: none;
   white-space: nowrap;
@@ -113,8 +113,8 @@
   display: flex;
   justify-content: space-between;
   padding: 16px 20px 6px;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--tai-caption-size);
+  line-height: var(--tai-caption-leading);
   color: oklch(var(--color-faint-text));
   margin: 0;
   font-weight: 400;
@@ -150,16 +150,16 @@
 }
 .rowName {
   font-family: var(--font-serif);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: var(--juan-name-size);
+  line-height: var(--juan-name-leading);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .rowLine {
-  font-size: 13px;
-  line-height: 20px;
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
   color: oklch(var(--color-ink-muted));
   overflow: hidden;
   text-overflow: ellipsis;
@@ -176,13 +176,13 @@
 }
 .caseNo {
   font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--tai-caption-size);
+  line-height: var(--tai-caption-leading);
   color: oklch(var(--color-ink-muted));
 }
 .note {
   padding: 16px 20px;
-  font-size: 13px;
+  font-size: var(--tai-label-size);
   color: oklch(var(--color-ink-muted));
 }
 
@@ -203,8 +203,8 @@
 }
 .meta {
   font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--tai-caption-size);
+  line-height: var(--tai-caption-leading);
   color: oklch(var(--color-ink-muted));
   margin: 0;
 }
@@ -235,22 +235,22 @@
   align-items: baseline;
 }
 .juanKey {
-  font-size: 13px;
-  line-height: 20px;
+  font-size: var(--juan-key-size);
+  line-height: var(--juan-key-leading);
   color: oklch(var(--color-ink-muted));
 }
 .juanVal {
-  font: var(--juan, 400 16px/28px var(--font-serif));
+  font: var(--juan);
   margin: 0;
   overflow-wrap: anywhere;
 }
 .juanNum {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--juan-num-size);
 }
 .juanTitle {
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--juan-head-size);
+  line-height: var(--juan-head-leading);
   color: oklch(var(--color-faint-text));
   margin: 24px 0 8px;
   font-weight: 400;
@@ -269,8 +269,8 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 6px 12px;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
 }
 .card dt {
   color: oklch(var(--color-ink-muted));
@@ -284,7 +284,7 @@
   gap: 16px;
   padding: 12px 28px;
   border-top: 1px solid oklch(var(--color-line));
-  font-size: 12px;
+  font-size: var(--tai-caption-size);
   color: oklch(var(--color-ink-muted));
   margin: 0;
 }
@@ -293,7 +293,7 @@
   padding: 48px 24px;
   text-align: center;
   color: oklch(var(--color-ink-muted));
-  font-size: 14px;
+  font-size: var(--tai-size);
 }
 
 /* ── 总簿 ──────────────────────────────────────────── */
@@ -348,21 +348,21 @@
   margin: 0;
 }
 .colName {
-  font-size: 14px;
+  font-size: var(--tai-size);
   color: oklch(var(--color-main-ink));
   margin: 0;
   font-weight: 600;
 }
 .colBig {
   font-family: var(--font-title);
-  font-size: 32px;
-  line-height: 40px;
+  font-size: var(--juan-title-size);
+  line-height: var(--juan-title-leading);
   font-weight: 600;
   margin: 0;
 }
 .colLine {
-  font-size: 13px;
-  line-height: 20px;
+  font-size: var(--tai-label-size);
+  line-height: var(--tai-label-leading);
   color: oklch(var(--color-ink-muted));
   margin: 0;
 }
@@ -387,7 +387,7 @@
   gap: 8px;
   padding: 8px 0;
   border-top: 1px solid oklch(var(--color-line));
-  font-size: 13px;
+  font-size: var(--tai-label-size);
   color: inherit;
   text-decoration: none;
 }
@@ -415,7 +415,7 @@
   margin-top: auto;
   padding: 12px 28px;
   border-top: 1px solid oklch(var(--color-line));
-  font-size: 12px;
+  font-size: var(--tai-caption-size);
   color: oklch(var(--color-ink-muted));
 }
 
@@ -443,7 +443,7 @@
   }
   .search {
     height: 48px;
-    font-size: 15px;
+    font-size: var(--tai-touch-size);
   }
   .chips {
     flex-wrap: nowrap;
@@ -454,7 +454,7 @@
     min-height: 44px;
     border-radius: 22px;
     padding: 0 14px;
-    font-size: 15px;
+    font-size: var(--tai-touch-size);
   }
   .kbd,
   .keys,
@@ -467,13 +467,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 16px;
-    font-size: 14px;
+    font-size: var(--tai-size);
   }
   .phoneBar button {
     background: transparent;
     border: 0;
     color: inherit;
-    font-size: 14px;
+    font-size: var(--tai-size);
     min-height: 44px;
     padding: 0;
     cursor: pointer;
