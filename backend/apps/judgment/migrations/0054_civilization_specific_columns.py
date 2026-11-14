@@ -37,7 +37,7 @@ def precheck(apps, schema_editor):
         lines = [f"  {name}: {count} row(s) — {what}; first ids: {', '.join(ids)}"
                  for name, (what, count, ids) in found.items()]
         raise RuntimeError(
-            "judgment/0053: existing judgments violate the civilization-specific column rules. Nothing was changed; "
+            "judgment/0054: existing judgments violate the civilization-specific column rules. Nothing was changed; "
             "fix these rows (the column or the civilization) and migrate again:\n" + "\n".join(lines))
 
 

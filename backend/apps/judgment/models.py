@@ -577,7 +577,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         # `Soul.opening_fields` / `_duat_fields` / `follow_duat_passage`(只在埃及)、`weighing.applies`(称心)。
         # 没有收 `offence` 与希腊两列:它们由 `fail_reasons.apply` 按 `case_civilization`(案子所在殿)写,
         # 而那与本列在「暂居时在原属殿开的案」上不同(`case_civilization` 的文档),约束会把合法的写入拒成 500。
-        # 存量违反的行由 judgment/0053 的预检点名后拒绝迁移,不悄悄改。
+        # 存量违反的行由 judgment/0054 的预检点名后拒绝迁移,不悄悄改。
         constraints = [
             models.CheckConstraint(condition=models.Q(duat_stage="") | models.Q(civilization="EGYPTIAN"),
                                    name="judgment_duat_stage_only_egyptian"),
