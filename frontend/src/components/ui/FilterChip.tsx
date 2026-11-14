@@ -106,14 +106,15 @@ export function FilterChipToggle({ pressed, onPressedChange, children, disabled 
 }
 
 /**
- * 快捷 chip(第三十批「卷宗」第 1 步第 4 条,393 窄屏):高 44(`--control-h-sm`,触屏档)、圆角 22(胶囊)、
- * 不压缩、不截字;选中 = 1.5px 墨色内描边 + ink 字 500,常态 line 描边 + ink-muted 字(稿子 `.chip` / `.chip.on`)。
+ * 快捷 chip(第三十批「卷宗」第 1 步第 4 条,393 窄屏):高 44(`--control-h-sm`,触屏档)、不压缩、不截字。
+ * 2026-11-15(设计参照 §6,用户采纳):胶囊改方签,圆角 4(`rounded-control`,与上面的筛选签同一档);
+ * 选中 = 墨底纸色字,与 `FilterChipSelect` 的选中同一个样子;常态 line-strong 描边 + ink-muted 字。
  * 只在 `FilterBar` 的那一行横滑里用。
  */
 const QUICK_CHIP =
-  "inline-flex h-(--control-h-sm) shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm transition-colors duration-fast ease-standard";
+  "inline-flex h-(--control-h-sm) shrink-0 items-center gap-2 whitespace-nowrap rounded-control px-4 text-sm transition-colors duration-fast ease-standard";
 const QUICK_IDLE = "shadow-[inset_0_0_0_1px_oklch(var(--color-line-strong))] text-[oklch(var(--color-ink-muted))]";
-const QUICK_ON = "shadow-[inset_0_0_0_1.5px_oklch(var(--color-ink))] text-[oklch(var(--color-ink))] font-medium";
+const QUICK_ON = "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] font-medium";
 
 export interface FilterBarSelect {
   /** 维度名(「裁决」),也是读屏名。 */

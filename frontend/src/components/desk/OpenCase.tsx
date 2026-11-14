@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useKeyLabel } from "@/src/lib/platformKeys";
 import { dossiersApi, type DeskRow } from "@soulledger/core/api/dossiers";
 import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { judgmentKeys } from "@soulledger/core/query_keys";
@@ -49,6 +50,7 @@ export function OpenCase({
   release: Action;
 }) {
   const { t, locale } = useI18n();
+  const k = useKeyLabel();
   const day = (v: string | null | undefined) => formatListDate(v, locale, { time: false });
   const dossier = useQuery({ queryKey: judgmentKeys.dossier(row.id), queryFn: async () => (await dossiersApi.get(row.id)).data });
   const full = dossier.data?.judgment;
@@ -195,7 +197,7 @@ export function OpenCase({
           <span className={s.kbd}>C</span> {t("caseDesk.keys.claim")}
         </span>
         <span>
-          <span className={s.kbd}>1–4</span> · <span className={s.kbd}>⌘⏎</span> {t("caseDesk.dossier.judge.seal")}
+          <span className={s.kbd}>1–4</span> · <span className={s.kbd}>{k("⌘⏎")}</span> {t("caseDesk.dossier.judge.seal")}
         </span>
         <span>
           <span className={s.kbd}>/</span> {t("caseDesk.keys.search")}

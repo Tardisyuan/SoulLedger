@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useUnsavedGuard } from "@/src/hooks/useUnsavedGuard";
 import { useQuery } from "@tanstack/react-query";
 import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -256,6 +257,7 @@ function PermissionsPageContent() {
   }
 
   const cells = useMatrixCells({ checked, setChecked, baseline, roleNames, permsById, roleMeta });
+  useUnsavedGuard(cells.changes.length > 0); // 关标签页前先问(设计参照 2026-11-15 §9)
   const isSaving = cells.isSaving;
 
   // Stable across renders (R2): every matrix cell is memoised on it.

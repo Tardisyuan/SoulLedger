@@ -104,12 +104,15 @@ describe("FilterBar", () => {
     expect(within(narrow()).getByRole("button", { name: tZh("filter.bar.open_n", { n: "1" }) })).toBeInTheDocument();
   });
 
-  it("快捷 chip:44 高的胶囊,不压缩不截字,aria-pressed 说状态,点一下交给调用方", () => {
+  it("快捷 chip:44 高的方签(圆角 4、选中墨底纸色字),不压缩不截字,aria-pressed 说状态,点一下交给调用方", () => {
     const onToggle = jest.fn();
     render(<Bar value="JUDGING" onToggle={onToggle} />);
     const chip = within(narrow()).getByRole("button", { name: "审判中", pressed: true });
     expect(chip.className).toMatch(/\bh-\(--control-h-sm\)/);
-    expect(chip.className).toMatch(/\brounded-full\b/);
+    expect(chip.className).toMatch(/\brounded-control\b/);
+    expect(chip.className).not.toMatch(/\brounded-full\b/);
+    expect(chip.className).toContain("bg-[oklch(var(--color-ink))]");
+    expect(chip.className).toContain("text-[oklch(var(--color-canvas))]");
     expect(chip.className).toMatch(/\bshrink-0\b/);
     expect(chip.className).toMatch(/\bwhitespace-nowrap\b/);
     expect(chip.className).not.toMatch(/\btruncate\b/);

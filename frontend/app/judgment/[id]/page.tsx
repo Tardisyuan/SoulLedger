@@ -222,7 +222,7 @@ interface PageProps {
 
 const DESK_SHORTCUTS = [
   { key: "1–4", label: "shortcuts.pick_verdict" },
-  { key: "⌘/Ctrl ⏎", label: "shortcuts.conclude" },
+  { key: "⌘⏎", label: "shortcuts.conclude" },
   { key: "J / K", label: "shortcuts.next_prev_case" },
   { key: "S", label: "judgment.claim.defer" },
 ] as const;

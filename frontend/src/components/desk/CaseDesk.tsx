@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useUnsavedGuard } from "@/src/hooks/useUnsavedGuard";
+import { useKeyLabel } from "@/src/lib/platformKeys";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -87,6 +89,7 @@ const reducedMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: redu
 
 export function CaseDesk() {
   const { t, locale } = useI18n();
+  const k = useKeyLabel();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -255,12 +258,7 @@ export function CaseDesk() {
   };
 
   // 窗口里关标签页,这一印就没发出去:先问(站内离开会把它发出去,见 `useStagedCommit`)。与快审同一条。
-  useEffect(() => {
-    if (!sealWindow.staged) return;
-    const ask = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", ask);
-    return () => window.removeEventListener("beforeunload", ask);
-  }, [sealWindow.staged]);
+  useUnsavedGuard(Boolean(sealWindow.staged));
 
   // 选中一件 150ms 后预取下一件的卷宗(判栏与 OpenCase 读同一把键);已在缓存里且新鲜的不再发。
   const nextId = step(ids, currentId, 1);
@@ -491,7 +489,7 @@ export function CaseDesk() {
         <h2 id="desk-rail-head" data-h2-role="column" className={s.railHead}>
           <span>{t("caseDesk.verdict.rail")}</span>
           <span className={s.railKeys} aria-hidden="true">
-            1–4 · ⌘⏎
+            {`1–4 · ${k("⌘⏎")}`}
           </span>
         </h2>
         {current ? (
@@ -520,7 +518,7 @@ export function CaseDesk() {
             <Button size="sm" variant="secondary" className={s.undoButton} onClick={undo} aria-keyshortcuts="Meta+Z Control+Z U" data-testid="desk-undo-button">
               {t("judgment.queue.undo")}
               <span className={s.kbd} aria-hidden="true">
-                ⌘Z
+                {k("⌘Z")}
               </span>
             </Button>
             <span key={sealWindow.staged.id} className={s.undoClock} style={{ animationDuration: `${UNDO_MS}ms` }} aria-hidden="true" />

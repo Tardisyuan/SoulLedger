@@ -25,7 +25,7 @@ const WEB = path.join(__dirname, "..", "..");
 const SKIP = new Set(["node_modules", ".next", "coverage", "e2e", "public"]);
 
 const BASELINE: Record<string, { type: number; hex: number; radius: number; fallback: number }> = {
-  "src/components/desk/desk.module.css": { type: 0, hex: 0, radius: 6, fallback: 8 },
+  "src/components/desk/desk.module.css": { type: 0, hex: 0, radius: 5, fallback: 8 },
   "src/components/dossier/dossier.module.css": { type: 0, hex: 0, radius: 2, fallback: 10 },
   "src/components/layout/doors.module.css": { type: 0, hex: 0, radius: 3, fallback: 5 },
 };
@@ -69,6 +69,76 @@ describe(".module.css files read the tokens", () => {
     // More than the baseline: use a token (globals.css `--juan-*` / `--tai-*`, or add one in
     // packages/core/tokens/ and run scripts/build-tokens.mjs). Fewer: lower the baseline above.
     expect(off).toEqual([]);
+  });
+});
+
+/* app/*.css 自己(设计参照 2026-11-15 §9,主会话确认 1):令牌块(`@tokens:start` … `@tokens:end`)之外,globals.css 与
+ * 打印样式里也写着档外的值 —— 演示首页的 10 / 12 / 14px 圆角、10.5px 字号、`cubic-bezier(0.4, 0, 0.2, 1)`。此前没有守卫看这里。
+ * 规则同上:数等于基线,只许变小(改成 `var(--radius-control)` / `var(--radius-panel)`、`var(--text-2xs)`、`var(--ease-*)` 后把基线降下来)。
+ * 只数普通声明:`--radius-control: 4px` / `--ease-enter: cubic-bezier(…)` 这类令牌定义本身不算(`(?<![\w-])` 与 `(?!--)`)。
+ * 打印样式按纸面排(pt / mm),字号不在屏幕的档上,不数 type。 */
+const APP_BASELINE: Record<string, { type: number; radius: number; easing: number }> = {
+  // 2026-11-15 实数。type 里有 4 处是触屏输入框的 16 / 24(那两条规则是有意的字面值)。
+  "app/globals.css": { type: 21, radius: 23, easing: 8 },
+};
+
+const APP_DETECTORS = {
+  type: /(?<![\w-])(?:font-size|line-height)\s*:[^;{}]*\d(?:px|rem|em)\b|(?<![\w-])font\s*:[^;{}]*\d(?:px|rem)\b/g,
+  radius: /(?<![\w-])border(?:-[a-z]+)*-radius\s*:[^;{}]*\d+px/g,
+  easing: /(?<![\w-])(?!--)[a-z-]+\s*:[^;{}]*cubic-bezier\(/g,
+};
+
+function appEscapesIn(css: string, kinds: (keyof typeof APP_DETECTORS)[] = ["type", "radius", "easing"]) {
+  const start = css.indexOf("/* @tokens:start");
+  const end = css.indexOf("/* @tokens:end");
+  const outside = start >= 0 && end > start ? css.slice(0, start) + css.slice(end) : css;
+  const code = outside.replace(/\/\*[\s\S]*?\*\//g, "");
+  return Object.fromEntries(
+    (Object.keys(APP_DETECTORS) as (keyof typeof APP_DETECTORS)[]).map((k) => [k, kinds.includes(k) ? (code.match(APP_DETECTORS[k]) ?? []).length : 0]),
+  ) as Record<keyof typeof APP_DETECTORS, number>;
+}
+
+const PRINT = new Set(["app/print.css", "app/print-slip-ink.css", "app/verdict-doc.css"]);
+const APP_FILES = readdirSync(path.join(WEB, "app"))
+  .filter((f) => f.endsWith(".css"))
+  .map((f) => `app/${f}`)
+  .sort();
+
+describe("app/*.css outside the token block reads the tokens too", () => {
+  it("finds globals.css and its token block (non-vacuity)", () => {
+    expect(APP_FILES).toContain("app/globals.css");
+    expect(readFileSync(path.join(WEB, "app/globals.css"), "utf8")).toContain("/* @tokens:end");
+  });
+
+  it("each holds exactly its baseline of hand-written radius / size / easing", () => {
+    const off = APP_FILES.map((f) => {
+      const have = appEscapesIn(readFileSync(path.join(WEB, f), "utf8"), PRINT.has(f) ? ["radius", "easing"] : undefined);
+      const want = APP_BASELINE[f] ?? { type: 0, radius: 0, easing: 0 };
+      return JSON.stringify(have) === JSON.stringify(want) ? null : `${f}: ${JSON.stringify(have)} (baseline ${JSON.stringify(want)})`;
+    }).filter(Boolean);
+    expect(off).toEqual([]);
+  });
+
+  it.each([
+    ["font-size: 10.5px;", "type"],
+    ["border-radius: 14px;", "radius"],
+    ["transition: opacity 160ms cubic-bezier(0.4, 0, 0.2, 1);", "easing"],
+  ] as const)("%s → %s", (css, kind) => {
+    expect(appEscapesIn(`.x { ${css} }`)[kind]).toBe(1);
+  });
+
+  it.each([
+    "--text-2xs--line-height: 16px;",
+    "--radius-control: 4px;",
+    "--ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);",
+    "border-radius: var(--radius-panel);",
+    "transition: opacity var(--transition-duration-fast) var(--ease-standard);",
+  ])("passes %s", (css) => {
+    expect(appEscapesIn(`.x { ${css} }`)).toEqual({ type: 0, radius: 0, easing: 0 });
+  });
+
+  it("does not count inside the token block", () => {
+    expect(appEscapesIn("/* @tokens:start */ .x { border-radius: 9px; } /* @tokens:end */")).toEqual({ type: 0, radius: 0, easing: 0 });
   });
 });
 

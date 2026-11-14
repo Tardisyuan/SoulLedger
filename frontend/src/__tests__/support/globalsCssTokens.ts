@@ -480,6 +480,18 @@ export function compositeOver(fg: Rgb, bg: Rgb, alpha: number): Rgb {
 }
 
 /**
+ * A token value that may carry its own alpha — `L C H` or `L C H / α` (`--color-line` since 2026-11-15) — as the
+ * colour it paints over `bg`. `oklchTripleToRgb` keeps refusing the alpha form, so a test that forgets the ground
+ * throws instead of measuring the ink as if it were opaque.
+ */
+export function tokenOver(value: string, bg: Rgb): Rgb {
+  const [triple, alpha = "1"] = value.split("/").map((x) => x.trim());
+  const a = Number(alpha);
+  if (!(a >= 0 && a <= 1)) throw new Error(`Not an alpha: ${JSON.stringify(value)}`);
+  return compositeOver(oklchTripleToRgb(triple), bg, a);
+}
+
+/**
  * `color-mix(in oklab, A p%, B)` of two bare OKLCH triples, as an OKLCH triple —
  * the ground of a v3 hovered / selected row (`ink 4% / 7%` into surface-1).
  * OKLab is the space the browser mixes in for that spelling, so mixing here in

@@ -523,7 +523,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
                 {busy && <div data-testid="search-progress" className="h-full w-[38%] animate-search-progress bg-[oklch(var(--color-ink))]" />}
               </div>
 
-              <div role="listbox" id={listboxId} aria-label={t("search.dialog_label")} className="min-h-0 flex-1 overflow-y-auto py-2">
+              <div role="listbox" id={listboxId} aria-label={t("search.dialog_label")} className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
                 {searching ? (
                   GROUP_ORDER.map((kind) => sections.find((s) => s.kind === kind)).map((s) => s && renderSection(s))
                 ) : recentOptions.length > 0 ? (

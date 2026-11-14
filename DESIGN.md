@@ -27,10 +27,10 @@ recoverable from the code, and it points at the code for everything else.
 | What | Where | Notes |
 |---|---|---|
 | Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v4 (Design batch 07, `V4Batch07.dc.html`, 2026-11-06; token names unchanged since v1, only values); `ledgerPaletteContract` holds each token to the spec's hex. |
-| Type scale | `frontend/app/globals.css` `@theme` | Eleven steps — `text-2xs` 11 · `xs` 12 · `sm` 13 · `md` 15 · `lg` 20 · `head` 24 · `xl` 28 · `dossier` 32 · `display` 40 · `display-lg` 56 · `display-xl` 88 (px); `head` and `dossier` are the page head's two title sizes (batch 30 「卷宗」) and nothing else, each with its line-height attached. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
-| Font families | `frontend/app/fonts.ts`, `--font-title` in `globals.css` | Four roles, each with one stated job — see "Four faces, one job each" below. |
-| Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | Spec v4 (user decision 2026-11-06: the v4 range, replacing v3's "five uses only"). Each civilization has five values per theme — `--color-civ-cn` (the solid fill, white text on it), `-ink` (civ-coloured text), `-glow`, `-metal`, `-side` — and each `[data-civ]` rule points five generic names at them: `--color-main`, `--color-main-ink`, `--color-glow`, `--color-metal`, `--color-side`. A second `[data-civ]` rule points `--color-accent`, `--color-accent-ink` and `--color-focus` at `--color-main-ink`, so links, selection and the focus ring take the civilization's text colour; with no `data-civ` (before login) they stay ink. `--color-main` is a fill only: the dark v4 solids are about 2:1 on surface-1, so the 3px marks read `--color-metal` and the seal reads `--color-main-ink`. Nothing outside `globals.css` reads a civ token — `ledgerPaletteContract` asserts it. The seal is an outline in `currentColor` whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon); the page header has no solid fill: it is the canvas under the civilization's glow (see "The page header" below). |
-| Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:663-671`. These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
+| Type scale | `frontend/app/globals.css` `@theme` | Ten sizes since 2026-11-15 (design refs §3, user decision) on eleven names — `text-2xs` 11 · `xs` 12 · `sm` 14 · `md` 16 · `lg` 20 · `head` 24 · `xl` 32 · `dossier` 32 · `display` 40 · `display-lg` 56 · `display-xl` 88 (px); body text is `sm` 14 (was 13), every line-height sits on the 4px grid, 13 / 15 / 18 / 28 are gone. `display-lg` and `display-xl` are `clamp()`s that grow from 40 / 56 at a 360px viewport to the size listed at 1240px. 11 is for uppercase labels only: its 0.1em tracking is attached to `.text-2xs.uppercase`, not to the size. `head` and `dossier` are the page head's two title sizes (batch 30 「卷宗」) and nothing else, each with its line-height attached. The register tokens `--juan` (record text, 16/28 serif) and `--tai` (desk controls, 14/20 sans) are the same sizes read by CSS modules. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
+| Font families | `frontend/app/fonts.ts`, `--font-title` in `globals.css` | Each face has one stated job — see "Seven faces" below. |
+| Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | Spec v4 (user decision 2026-11-06: the v4 range, replacing v3's "five uses only"). Each civilization has five values per theme — `--color-civ-cn` (the solid fill, white text on it), `-ink` (civ-coloured text), `-glow`, `-metal`, `-side` — and each `[data-civ]` rule points five generic names at them: `--color-main`, `--color-main-ink`, `--color-glow`, `--color-metal`, `--color-side`. A second `[data-civ]` rule points only `--color-focus` at `--color-main-ink`, so the focus ring takes the civilization's text colour; links, selection and `--color-accent` stay ink under every civilization (user decision 2026-11-14: civilization colour is on four marks — the 2px top line, the seal, the journey spine, the focus ring — and two ambiences, the door rail and the dossier head's glow); with no `data-civ` (before login) the focus ring is ink too. The civT values share one lightness per theme (dark L .78, light L .46; design refs 2026-11-15 §3.1), and `ledgerPaletteContract` holds that. `--color-main` is a fill only: the dark v4 solids are about 2:1 on surface-1, so the 3px marks read `--color-metal` and the seal reads `--color-main-ink`. Nothing outside `globals.css` reads a civ token — `ledgerPaletteContract` asserts it. The seal is an outline in `currentColor` whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon); the page header has no solid fill: it is the canvas under the civilization's glow (see "The page header" below). |
+| Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:732-738`, and `moduleCssTokenEscapes` (hand-written sizes, radii and easings in `.module.css` and in `app/*.css` outside the token block, counted against a baseline that may only fall). These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
 
 If a number here would ever contradict one of those files, the file wins and
 this document is the bug.
@@ -65,16 +65,16 @@ every row below and checks the step, size, line-height and weight against
 | 页面标题 · 门页(壳的页头 `PageHead`,第三十批「卷宗」) | `<h1>`,每页一个 | `font-title text-head` | 24 / 32 | 600 | Noto Serif SC | `PageShell.test`「页面标题」、`plaqueTitleStaysLargeText` |
 | 页面标题 · 卷宗页(人名;上面一行等宽小字写案号 · 殿 · 入册日期) | `<h1>`,每页一个 | `font-title text-dossier` | 32 / 40 | 600 | Noto Serif SC | 同上 |
 | 页面标题 · 壳外(403 / 404 卡、语料、审判台等自己画页头的页) | `<h1>`,每页一个 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC | `PageShell.test`「页面标题」 |
-| 封面标题(只在首页;md 起 28 / 36) | `<h1>` | `font-title text-lg md:text-xl` | 20 / 28 | 600 | Noto Serif SC | 同上 |
+| 封面标题(只在首页;md 起 `text-display-lg` 600,随视口 40 → 56) | `<h1>` | `font-title text-xl md:text-display-lg` | 32 / 40 | 400 | Noto Serif SC | 同上 |
 | 面板标题(区块、卡片的题) | `<h2>` 或 `<h3>` | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC(规范 v4,用户 2026-11-07) | `PageShell.test` h2 / h3 |
-| 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 13 / 20 | 500 | 界面字体 | 同上 |
+| 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 14 / 20 | 500 | 界面字体 | 同上 |
 | 区块标签 | `<h2>` 或 `<h3>` | `text-2xs uppercase`,不带 `font-mono` | 11 / 16 | 400 | 界面字体 | 同上 |
-| 页头小字行 | 壳的 `eyebrow`(加上页面报的殿名、案号),不是标题;`.page-head-meta` | `text-xs` | 12 / 18 | 400 | Geist Mono | `PageShell.test` |
-| 正文 | `<p>` | `text-sm` | 13 / 20 | 400 | 界面字体 | — |
-| 展示数字 | 当前这一判(审判台、盖印层) | `font-title text-display-lg` | 56 / 62 | 600 | Noto Serif SC | — |
+| 页头小字行 | 壳的 `eyebrow`(加上页面报的殿名、案号),不是标题;`.page-head-meta` | `text-xs` | 12 / 20 | 400 | Geist Mono | `PageShell.test` |
+| 正文 | `<p>` | `text-sm` | 14 / 20 | 400 | 界面字体 | — |
+| 展示数字 | 当前这一判(审判台、盖印层) | `font-title text-display-lg` | 56 / 64 | 600 | Noto Serif SC | — |
 | 展示数字 · 主角 | 概览主卡的今日待审、冥界年报的总数(v4;一张卡里只有这一个数)。lint `type-scale` 只为 `HallOverview.tsx`、`AnnualReport.tsx` 两个文件放行(`DISPLAY_XL_ALLOW`) | `font-title text-display-xl` | 88 / 92 | 600 | Noto Serif SC | `designGuardContract` |
-| 展示数字 · 二档 | 灵魂详情的功 / 过余额、首字方块 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | — |
-| 条号 · 展示数字 | 语料阅读区的条号(`corpus-sigil`,`<p>`;篇名才是那一页的 `<h1>`)与被引用数,lg 起(Design A3;窄屏 28,即上面「二档」)。用户 2026-10-02 定;lint `type-scale` 只为 `app/corpus/page.tsx` 一个文件放行 `text-display`(`DISPLAY_NUMERAL_ALLOW`) | `font-title lg:text-display` | 40 / 54 | 600 | Noto Serif SC | `CorpusPage.test`、`designGuardContract` |
+| 展示数字 · 二档 | 灵魂详情的功 / 过余额、首字方块 | `font-title text-xl font-semibold` | 32 / 40 | 600 | Noto Serif SC | — |
+| 条号 · 展示数字 | 语料阅读区的条号(`corpus-sigil`,`<p>`;篇名才是那一页的 `<h1>`)与被引用数,lg 起(Design A3;窄屏 32,即上面「二档」)。用户 2026-10-02 定;lint `type-scale` 只为 `app/corpus/page.tsx` 一个文件放行 `text-display`(`DISPLAY_NUMERAL_ALLOW`) | `font-title lg:text-display` | 40 / 52 | 600 | Noto Serif SC | `CorpusPage.test`、`designGuardContract` |
 
 Three things this table does on purpose:
 
@@ -88,13 +88,11 @@ Three things this table does on purpose:
   a title competing with it. Spec v3 names the 11px step "micro-label".
   Its weight is 400: `--text-2xs` has carried no weight since `bb010544` (spec v1
   §1.4); the 600 that `PageShell.tsx` used to cite belonged to the old `--text-01`.
-- **The page-header title is the one heading that changes step at runtime.** It
-  measures its own width and steps down 28 → 20 → 20 on two lines (from 20 at ≤ 768);
-  Egyptian page titles run to 28 characters. Spec v4 draws the header title at 26/34;
-  28/36 is the nearest step of the seven-step scale, so the first step is `text-xl`.
-  Every step stays WCAG large text. Since v4 the title is ink on the canvas under the
-  civilization's glow (no solid band), and `plaqueTitleStaysLargeText` measures it
-  against the glow's brightest point.
+- **The page-header title does not change step at runtime.** The width-fitted 28 → 20
+  tiers went with v4's title row (batch 30, see "The page header" below): gate pages are
+  `text-head` 24/32 and dossier pages `text-dossier` 32/40, both WCAG large text. The title
+  is ink on the canvas under the civilization's glow (no solid band), and
+  `plaqueTitleStaysLargeText` measures it against the glow's brightest point.
 
 The v2 plaque's per-civilization display faces (Ma Shan Zheng, UnifrakturMaguntia,
 Josefin Slab, Cinzel) and its fret band were removed with spec v3 (2026-10-01).
@@ -111,7 +109,7 @@ the 52px toolbar above stays neutral canvas. Top to bottom: a 2px line in the
 civilization's text colour (`--topline`); a 12px mono line (case number · hall · date
 on a dossier page, civilization · hall on a gate page — `usePlaque`'s hall and case
 number lead it); the title, which is the `<h1>` (gate pages 24/32 `text-head`, dossier
-pages a person's name at 32/40 `text-dossier`); a 13px line under it. Actions sit on
+pages a person's name at 32/40 `text-dossier`); a `text-sm` line under it. Actions sit on
 the right; the primary button is an ink fill with canvas text. Behind it, all
 `aria-hidden`: the glow (`--glowA`, dark .30 / light .22, from 24% across the top,
 fading by 180px), the civilization's pattern in civT at 5%, and the G armillary mark
@@ -131,14 +129,18 @@ instead; there is no spinner.
 - **Section labels are set in the interface face.** It was 24 interface / 11 mono;
   the 11 dropped `font-mono`, and the guard now rejects it on a label. Monospace
   stays with the shell's eyebrow, which is not a heading.
-- **The home hero keeps 28px** and is a named role, "cover title", that may appear
-  only in `app/page.tsx` — not an exemption waiting for a decision.
+- **The home hero is a named role**, "cover title": `text-xl` (32) on a phone and
+  `text-display-lg` from md (40 → 56 with the viewport), only in `Landing.tsx` —
+  not an exemption waiting for a decision (`PageShell.test` holds the classes).
 
 **Depth comes from hairlines, not from the surface ladder.** Measured
 2026-09-02: adjacent steps of `--color-surface-1..4` differ by 1.02–1.05:1, and
 the whole ramp spans 1.14:1 (dark) / 1.22:1 (light), while the hairline against
 surface-1 is 1.37:1. The ladder is a near-neutral floor; the 1px rule does the
-layering. This is currently a limitation rather than a stance — separating the
+layering. Since 2026-11-15 (design refs §5) `--color-line` is translucent ink — white 12%
+on dark, black 12% on light, written `L C H / 0.12` — so it no longer equals surface-3 and
+reads on every ground it crosses, the tinted door rail included (light: 1.32:1 on canvas,
+1.31:1 on the 地府 rail, where the old opaque grey was 1.01:1). This is currently a limitation rather than a stance — separating the
 ramp was tried and broke 23 pinned ink-on-surface combinations, because the ink
 ramp is tuned tightly against the flat surfaces. Making the ladder real means
 re-deriving both ramps together, not editing four numbers.

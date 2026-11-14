@@ -40,7 +40,7 @@ Tailwind 4 把 `@theme` 变量提进 theme 层并从中生成 `.text-ink`，而 
 `rounded-full`（9999px）与正圆 `rounded-circle`（50%），且只准出现在
 `eslint.config.mjs` 的 `ROUND_ALLOW` 文件里。所以 `rounded` / `rounded-sm` / `-md` / `-lg` / `-xl` / `-2xl` / `-3xl`
 **全是死类名**：不产生视觉差异，但会让读代码的人以为那里有圆角。
-规范 v3 另给了两个非零档 `--radius-control`（4px，输入框与小控件）与 `--radius-panel`（8px，弹层、抽屉、资料舱），
+规范 v3 另给了两个非零档 `--radius-control`（4px，输入框、按钮、筛选签）与 `--radius-panel`（6px，规范 v4 起；弹层、抽屉、资料舱），
 按用途取名；表格、身份带、案卷仍是 0。新写代码圆角的取舍以 `globals.css` 里那段注释和
 `docs/CONVENTIONS-frontend.md` 为准。
 执法：eslint `design-system/dead-radius`（error）。
@@ -53,15 +53,18 @@ token，浅色模式下失效或过淡。执法：eslint `design-system/no-raw-p
 
 ### 1.4 另外几条
 
-- **字号只有七档** `text-2xs` / `xs` / `sm` / `md` / `lg` / `xl` / `display`
-  （11/12/13/15/20/28/40px，自带行高，`globals.css` 的 `@theme`；规范 v2 A3）。`text-quote` 已并入
-  `font-serif text-md font-normal`。旧八档 `text-01`…`text-08`、`text-base`/`text-2xl` 之类与 `text-[11px]` 之类
-  都是 error（`design-system/type-scale`）。`display` 只给匾题字、登录页与律条语料页的展示数字（`DISPLAY_ALLOW` 守着）。
+- **字号十档**（2026-11-15 设计参照 §3，用户采纳）：`text-2xs` 11（只给大写小标签）/ `xs` 12 / `sm` 14（正文）/ `md` 16 /
+  `lg` 20 / `head` 24 / `xl` 与 `dossier` 32 / `display` 40 / `display-lg` 56 / `display-xl` 88（px，自带行高，落 4px 格；
+  `globals.css` 的 `@theme`，DESIGN.md 的 Type scale 一行由 `designGuardContract` 重算）。`display-lg` / `display-xl` 是随视口的 clamp。
+  `text-base`/`text-2xl` 之类与 `text-[11px]` 之类都是 error（`design-system/type-scale`）。`display` 只给登录页与律条语料页的展示数字
+  （`DISPLAY_ALLOW` / `DISPLAY_NUMERAL_ALLOW`），`display-xl` 只给概览主卡与年报（`DISPLAY_XL_ALLOW`）。
 - **间距只有** 0.5/1/2/3/4/6/8/12 + 0/px/auto（`RHYTHM_OK`，`design-system/spacing-rhythm`）。
   v1 的 1.5 / 10 / 14 在遗留页面里记进了基线，逐页改版时还。豁免表 `RHYTHM_EXEMPT` 为空。
-- **页面内零阴影**：浮层用 `shadow-overlay`（`design-system/no-page-shadow`）。
-- **文明只进匾色**：`--color-civ-*` 存在，但只被 `--color-main`（由 `<html data-civ>` 选）一处读取，
-  给匾、立柱当前项、印、行首色标、主按钮五处用；其余一切四文明共用。
+- **阴影只有两档**：`shadow-raised`（资料舱、批量操作条）与 `shadow-overlay`（弹窗、抽屉），都是两层、随主题（深色第一层是半透明白线），
+  值在令牌 `--elevation-*`（`design-system/no-page-shadow`）。
+- **文明色只上四个记号和两处氛围**（用户 2026-11-14）：页顶 2px 线、印、行程脊、焦点环，加门栏底与卷宗页头的光晕。
+  `--color-civ-*` 只经 `[data-civ]` 指到六个通用名（`--color-main` / `-main-ink` / `-glow` / `-metal` / `-side` / `-seal`）；
+  主按钮、链接、选中行一律墨色。
   `src/__tests__/ledgerPaletteContract.test.ts` 逐值对账并守这条边界。
 - **类名合并只用 `cn()`**（`lib/utils.ts`，它扩展了 tailwind-merge 认识七档字号）。
 

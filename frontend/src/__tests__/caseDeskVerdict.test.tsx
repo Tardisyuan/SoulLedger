@@ -166,14 +166,14 @@ describe("案卷台就地判", () => {
     await judging();
     const side = screen.getByTestId("desk-side");
     expect(side).toContainElement(screen.getByTestId("desk-rail"));
-    expect(within(side).getByRole("heading", { name: /判栏/ })).toHaveTextContent("1–4 · ⌘⏎");
+    expect(within(side).getByRole("heading", { name: /判栏/ })).toHaveTextContent(/1–4 · (⌘|Ctrl )⏎/); // per platform: platformKeys.test.ts
     // Not inside the dossier column any more.
     expect(screen.getByTestId("desk-case")).not.toContainElement(screen.getByTestId("desk-rail"));
     await press({ key: "1" });
     await press({ key: "Enter", metaKey: true });
     expect(side).toContainElement(screen.getByTestId("desk-undo"));
     expect(screen.getByTestId("desk-case")).not.toContainElement(screen.getByTestId("desk-undo"));
-    expect(screen.getByTestId("desk-undo-button")).toHaveTextContent("⌘Z");
+    expect(screen.getByTestId("desk-undo-button")).toHaveTextContent(/(⌘|Ctrl )Z/);
   });
 
   it("the page head keeps one ghost 打开卷宗 ↗; 认领 lives in the rail (the head's copy is drawn only at 393)", async () => {

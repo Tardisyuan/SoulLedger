@@ -84,16 +84,19 @@
       }
     },
     "line": {
+      "$description": "Translucent hairline (design refs 2026-11-15 §5): white 12% on dark, black 12% on light, so it reads on every ground it crosses, including the tinted door rail. No longer the same value as surface-3. Emitted as `L C H / alpha`, so callers write oklch(var(--color-line)) with no further `/ alpha`.",
       "$value": {
         "colorSpace": "oklch",
-        "components": [0.297319, 0.005579, 271.2268]
+        "components": [1, 0, 0],
+        "alpha": 0.12
       },
       "$extensions": {
         "org.soulledger": {
           "modes": {
             ".light": {
               "colorSpace": "oklch",
-              "components": [0.94007, 0, 0]
+              "components": [0, 0, 0],
+              "alpha": 0.12
             }
           }
         }
@@ -739,6 +742,30 @@
       "org.soulledger": {
         "modes": {
           ".light": "0 1px 2px rgba(20, 20, 24, 0.05), 0 6px 20px -10px rgba(20, 20, 24, 0.16)"
+        }
+      }
+    }
+  },
+  "elevation": {
+    "$description": "Two-layer shadows (design refs 2026-11-15 §4). The @theme names --shadow-raised / --shadow-overlay point here, so Tailwind inlines var(--elevation-*) and the theme switch reaches the utility. Dark: a translucent white hairline as the first layer, so a surface reads on any ground.",
+    "$type": "string",
+    "raised": {
+      "$value": "0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.5)",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": "0 1px 2px rgba(20, 22, 18, 0.06), 0 8px 24px -4px rgba(20, 22, 18, 0.12)"
+          }
+        }
+      }
+    },
+    "overlay": {
+      "$value": "0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 72px -12px rgba(0, 0, 0, 0.6)",
+      "$extensions": {
+        "org.soulledger": {
+          "modes": {
+            ".light": "0 0 0 1px rgba(20, 22, 18, 0.06), 0 2px 6px rgba(10, 11, 9, 0.08), 0 24px 72px -12px rgba(10, 11, 9, 0.28)"
+          }
         }
       }
     }

@@ -22,7 +22,7 @@
  * 「metal 只在当前点」两条红;把 ui.tsx Loading 的 `<Hero … stroke={t.inkSubtle}` 改成 `t.plaque` → 「全色徽记只在欢迎层」红;
  * 把 liveProgress.ts liveTint 的 `>= 3` 改成 `>= 30` → liveActivity.test 的「liveTint: markLight;markDark;barLight;barDark」那条红(进度条全变墨)。
  * 第五十一批:锁屏卡片换成四家共用的中性卡(底 / 字 / 未走段 / 标签底随系统深浅),只有记号(seal)与已走段(civT)带文明色。
- * 把 plugins/liveActivity.js CARD.light.tag 改成 `#885A94`(欧洲 civT)→ 「锁屏卡片的中性常量」那条红。
+ * 把 plugins/liveActivity.js CARD.light.tag 改成 `#6D4286`(欧洲 civT,2026-11-15 前是 #885A94)→ 「锁屏卡片的中性常量」那条红。
  * 第五十二批 E1:路走完时进度条整条 civT(不再画淡红 #F2849B);坏结局只有标签的字用 CARD.neg(浅 #A81E3C / 深 #F2849B)。
  */
 import { readFileSync, readdirSync } from "fs";

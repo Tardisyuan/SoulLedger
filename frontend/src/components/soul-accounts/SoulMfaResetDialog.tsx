@@ -84,7 +84,7 @@ export function SoulMfaResetDialog({ account, soulName, onClose }: { account: So
             </li>
           ))}
         </ul>
-        <TextAreaField
+        <TextAreaField modEnterSubmits={false} modEnterSubmits={false}
           label={t("soul_accounts.account.mfa_reset.reason")}
           rows={2}
           value={reason}

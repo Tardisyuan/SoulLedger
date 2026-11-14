@@ -62,7 +62,7 @@ function Expired({ onRefetch }: { onRefetch?: () => void }) {
 }
 
 const LOADING_BG =
-  "bg-[oklch(var(--color-surface-2))] bg-[repeating-linear-gradient(135deg,oklch(var(--color-line)/0.6)_0_1px,transparent_1px_8px)]";
+  "bg-[oklch(var(--color-surface-2))] bg-[repeating-linear-gradient(135deg,oklch(var(--color-line))_0_1px,transparent_1px_8px)]";
 
 function Img({ media, alt, fit, onBroken }: { media: PostMedia; alt: string; fit: "cover" | "contain"; onBroken: () => void }) {
   const [loaded, setLoaded] = useState(false);

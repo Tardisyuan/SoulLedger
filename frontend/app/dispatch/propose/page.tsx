@@ -1,5 +1,6 @@
 "use client";
 import { Suspense, useRef, useState } from "react";
+import { useUnsavedGuard } from "@/src/hooks/useUnsavedGuard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
@@ -214,6 +215,8 @@ function ProposeDispatchForm() {
   const sourceTenantRow = tenants.find((tn) => tn.tenant_code === sourceCode);
   const targetTenantRow = tenants.find((tn) => tn.tenant_code === form.target_tenant_code);
   const dirty = Boolean(form.reason.trim() || form.target_tenant_code || (!soulId && form.soul_id));
+  // 关标签页前先问(设计参照 2026-11-15 §9);站内返回走下面的「放弃?」确认框。
+  useUnsavedGuard(dirty);
 
   /** The form as a draft body. Empty controls go as null: a draft may be incomplete. */
   const draftBody = (): DispatchDraftInput => ({

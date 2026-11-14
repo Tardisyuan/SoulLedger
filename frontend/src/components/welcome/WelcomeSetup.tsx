@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useKeyLabel } from "@/src/lib/platformKeys";
 import { useI18n, LOCALE_LABELS, type Locale } from "@/src/contexts/I18nContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import type { AuthUser } from "@/src/contexts/TenantContext";
@@ -88,6 +89,7 @@ export function WelcomeSetup({
   onDone: () => void;
 }) {
   const { t, locale, setLocale, hydrated } = useI18n();
+  const k = useKeyLabel();
   // 租户展示名是库里的英文;文明名走语言包(2026-10-03 演示账号上露出「Chinese Afterlife」)。
   const civ = user.tenant?.code ? TENANT_CODE_TO_CIVILIZATION[user.tenant.code] : undefined;
   const civName = civ ? t(`tenant.civilizations.${civ}`) : undefined;
@@ -225,7 +227,7 @@ export function WelcomeSetup({
         <dl className="m-0 border-t border-[oklch(var(--color-line))] text-sm">
           {QUEUE_SHORTCUTS.map(({ key, label }) => (
             <div key={key} data-shortcut={key} className="flex min-h-11 items-center gap-3 border-b border-[oklch(var(--color-line))]">
-              <dt className="min-w-8 rounded-control border border-[oklch(var(--color-line-strong))] px-2 text-center font-mono text-xs">{key}</dt>
+              <dt className="min-w-8 rounded-control border border-[oklch(var(--color-line-strong))] px-2 text-center font-mono text-xs">{k(key)}</dt>
               <dd className="m-0 text-[oklch(var(--color-ink-muted))]">{t(label)}</dd>
             </div>
           ))}

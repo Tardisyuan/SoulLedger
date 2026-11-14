@@ -1,6 +1,7 @@
 "use client";
 
 import { localName, localNodeName } from "@soulledger/core/domain/localName";
+import { useKeyLabel } from "@/src/lib/platformKeys";
 import { useEffect } from "react";
 import type { MatrixConflict, MatrixWorkflowConflict, Permission, Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -164,6 +165,7 @@ export function UnsavedBar({
   onSave: () => void;
 }) {
   const { t } = useI18n();
+  const k = useKeyLabel();
 
   useEffect(() => {
     if (count === 0) return;
@@ -233,7 +235,7 @@ export function UnsavedBar({
         aria-keyshortcuts="Meta+S Control+S"
       >
         {t("permissions.matrix.save_button")}
-        <kbd aria-hidden="true" className="ml-2 font-mono text-2xs">⌘S</kbd>
+        <kbd aria-hidden="true" className="ml-2 font-mono text-2xs">{k("⌘S")}</kbd>
       </Button>
     </div>
   );

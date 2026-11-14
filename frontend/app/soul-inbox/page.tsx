@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { useKeyLabel } from "@/src/lib/platformKeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -390,6 +391,7 @@ function useDraft(conversationId: string, enabled: boolean) {
 
 function Thread({ conversation }: { conversation: InboxConversation }) {
   const { t, locale, formatDateTime } = useI18n();
+  const k = useKeyLabel();
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();
   const messages = useInboxMessages(conversation.id);
@@ -648,7 +650,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
             <Button type="submit" variant="primary" loading={reply.isPending} disabled={!draft.body.trim()}>
               {t("soul_inbox.send")}
               <kbd aria-hidden="true" className="ml-2 font-mono text-2xs">
-                ⌘⏎
+                {k("⌘⏎")}
               </kbd>
             </Button>
           </div>

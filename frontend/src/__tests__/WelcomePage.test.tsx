@@ -532,7 +532,8 @@ describe("first-time setup: its own screen until `onboarded`", () => {
 
     fireEvent.click(within(nextPanel()).getByRole("button", { name: /welcome\.next_all_shortcuts/ }));
     expect(stepStates()).toEqual(["done", "done", "done", "current"]);
-    const keys = Array.from(document.querySelectorAll("[data-shortcut] dt")).map((dt) => dt.textContent);
+    // dt 按平台写(jsdom 不是 Mac:Ctrl,platformKeys.test.tsx);这里比 Mac 的拼法。
+    const keys = Array.from(document.querySelectorAll("[data-shortcut] dt")).map((dt) => dt.textContent?.replace(/Ctrl /g, "⌘"));
     // 2026-11-14: ⌘⏎ (the one submit) and U (the undo strip) joined the queue's table.
     expect(keys).toEqual(["1–4", "⌘⏎", "U", "C", "S", "W", "R", "N", "?"]);
     for (const invented of ["⌘K", "Q", "⌘Z"]) expect(keys).not.toContain(invented);

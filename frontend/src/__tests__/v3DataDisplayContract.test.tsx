@@ -29,6 +29,7 @@ import {
   mixOklab,
   oklchTripleToRgb,
   resolveTriple,
+  tokenOver,
   type ThemeName,
 } from "./support/globalsCssTokens";
 
@@ -212,8 +213,9 @@ describe("domain status badges (第三十批: tinted, no frame, 4 px corner)", (
   // The line token is still every table's row rule; the measurement stays as a record of it.
   it.each(THEMES)("%s: the line rule is decorative (glyph + text carry the meaning) — measured, not required", (theme) => {
     // WCAG 1.4.11 does not apply to a border the text already identifies. Recorded so a change is visible.
-    const r = ratio(tok(theme, "--color-line"), tok(theme, "--color-surface-1"));
-    // v4(2026-11-06)的 line 是 8% 白 / 黑压在 card 上:深 1.25、浅 1.19(v3 时 >1.3)。
+    const card = rgb(tok(theme, "--color-surface-1"));
+    const r = contrastRatio(tokenOver(tok(theme, "--color-line"), card), card);
+    // 2026-11-15 起 line 是半透明墨(白 / 黑 12%,设计参照 §5),压在 card 上:深 1.43、浅 1.32(v4 不透明时 1.25 / 1.19)。
     expect(r).toBeGreaterThan(1.15);
     expect(r).toBeLessThan(NON_TEXT);
   });
