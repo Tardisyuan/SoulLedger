@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   hintSub: { color: "#D8D8D2", textAlign: "center" },
   bottom: { position: "absolute", left: 16, right: 16, alignItems: "center", gap: 16 },
   capsules: { flexDirection: "row", justifyContent: "center", gap: 12 },
-  capsule: { height: 44, borderWidth: 1, borderRadius: 22, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, alignSelf: "center" },
+  capsule: { height: 44, borderWidth: 1, borderRadius: 22, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, alignSelf: "center" },
   manual: { minHeight: 44, justifyContent: "center" },
   manualText: { color: WHITE, textDecorationLine: "underline" },
   privacy: { color: "#D8D8D2", textAlign: "center" },

@@ -8473,7 +8473,8 @@
         "other": "Couldn't sign in. Try again later"
       },
       "forgot_password": "Forgot password",
-      "switch": "Use another account"
+      "switch": "Use another account",
+      "email_hint": "An email works once it is verified on the web profile page"
     },
     "mfa": {
       "title": "Two-step verification",

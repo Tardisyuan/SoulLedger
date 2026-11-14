@@ -755,7 +755,7 @@ const styles = StyleSheet.create({
   list: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
   listRow: { borderBottomWidth: 1 },
   more: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
-  other: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingHorizontal: 14 },
+  other: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingHorizontal: 16 },
   plus: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   retry: { marginTop: 12 },
   leftLink: { alignItems: "flex-start" },

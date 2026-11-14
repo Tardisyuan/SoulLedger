@@ -60,7 +60,11 @@ describe("login", () => {
     renderApp();
     await signIn(true);
     expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R");
-    expect(await AsyncStorage.getAllKeys()).toEqual([]);
+    // Only the remembered number lands in AsyncStorage (S1, 2026-11-15: kept at the first step) — never a token.
+    expect(await AsyncStorage.getAllKeys()).toEqual(["soulledger.login.account"]);
+    const kept = (await AsyncStorage.getItem("soulledger.login.account")) ?? "";
+    expect(kept).toContain("QU33Q9FW5F");
+    expect(kept).not.toMatch(/"A"|"R"|access|refresh/);
   });
 
   it("must_change_password mounts ONLY the change-password screen", async () => {

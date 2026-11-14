@@ -353,8 +353,8 @@ describe("S4 · 「从相册选」 on the scanner", () => {
     fireEvent.press(screen.getByTestId("scan-album"));
     // 第五十二批 F3: a light two-line notice at the bottom in place of the link and the privacy line, not the red bar.
     const notice = await screen.findByTestId("scan-photo-none");
-    expect(notice).toHaveTextContent("这张图里没有找到编号码");
-    expect(notice).toHaveTextContent("换一张，拍清楚编号单右侧的码，或改为输入编号。");
+    expect(notice).toHaveTextContent(/这张图里没有找到编号码/);
+    expect(notice).toHaveTextContent(/换一张，拍清楚编号单右侧的码，或改为输入编号。/);
     expect(screen.queryByTestId("scan-invalid")).toBeNull();
     expect(screen.queryByText("! 这不是灵魂簿交付单上的码")).toBeNull();
     expect(screen.queryByTestId("scan-privacy")).toBeNull();
@@ -521,7 +521,7 @@ describe("B1 · the phone remembers the account", () => {
     expect(screen.getByTestId("login-lead")).toHaveTextContent("选一个编号");
     expect(screen.getAllByTestId(/^account-[A-Z0-9]+$/).map((r) => r.props.testID)).toEqual([`account-${CODE2}`, `account-${CODE}`]);
     expect(screen.getByTestId(`account-more-${CODE}`).props.accessibilityLabel).toBe("张三 的更多操作");
-    expect(screen.getByTestId("accounts-other")).toHaveTextContent("用别的编号");
+    expect(screen.getByTestId("accounts-other")).toHaveTextContent(/用别的编号$/);
     expect(screen.queryByTestId("login-password")).toBeNull();
     fireEvent.press(screen.getByTestId(`account-${CODE}`));
     expect(text("login-known-name")).toBe("张三");

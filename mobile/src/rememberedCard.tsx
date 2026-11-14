@@ -85,14 +85,14 @@ export function RememberedCard({
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 10, paddingLeft: 14, paddingRight: 4 },
+  card: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 12, paddingLeft: 16, paddingRight: 4 },
   avatar: { alignItems: "center", justifyContent: "center" },
   initial: { fontFamily: family.serifHan, fontSize: 18, lineHeight: 24 },
   fill: { flex: 1, gap: 2 },
   name: { fontFamily: family.ui[500], fontSize: 16, lineHeight: 22 },
   nameCompact: { fontSize: 15, lineHeight: 21 },
   masked: { fontFamily: family.mono[400], fontSize: 13, lineHeight: 18 },
-  codeLine: { flexDirection: "row", alignItems: "center", gap: 6 },
-  link: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 10 },
+  codeLine: { flexDirection: "row", alignItems: "center", gap: 8 },
+  link: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 12 },
   linkText: { textDecorationLine: "underline", fontSize: 14, lineHeight: 20 },
 });

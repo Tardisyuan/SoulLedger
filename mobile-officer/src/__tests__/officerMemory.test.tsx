@@ -161,14 +161,14 @@ describe("D8b: the last three reject reasons", () => {
     await openReject();
     expect(screen.getByTestId("decision-recent")).toHaveTextContent(/^最近用过/);
     expect(screen.getByTestId("decision-recent")).not.toHaveTextContent(/点一条填入/);
-    expect(screen.getByTestId("decision-recent-0")).toHaveTextContent("材料不全");
-    expect(screen.getByTestId("decision-recent-1")).toHaveTextContent("先退回");
+    expect(screen.getByTestId("decision-recent-0")).toHaveTextContent(/↺材料不全$/);
+    expect(screen.getByTestId("decision-recent-1")).toHaveTextContent(/↺先退回$/);
     expect(screen.queryByTestId("decision-recent-2")).toBeNull();
     // 第五十二批 F1: an outlined full-width row, 40 high, ↺ in --faint, one line; read as 「填入：…」.
     const row = screen.getByTestId("decision-recent-1");
     expect(row.props.accessibilityLabel).toBe("填入：先退回");
     expect(StyleSheet.flatten(row.props.style)).toMatchObject({ height: 40, borderWidth: 1, borderRadius: 8 });
-    expect(screen.getByTestId("decision-recent-1-icon")).toHaveTextContent("↺");
+    expect(screen.getByTestId("decision-recent-1-icon", { includeHiddenElements: true })).toHaveTextContent("↺");
     fireEvent.press(screen.getByTestId("decision-recent-1"));
     expect(screen.getByTestId("decision-reason").props.value).toBe("先退回");
     // A second tap adds on a new line, never over what is there; the row is still there.
@@ -196,7 +196,7 @@ describe("D8b: the last three reject reasons", () => {
     platform().persistent.set(REJECT_REASONS_KEY, JSON.stringify({ owner: "id:7", reasons: ["长".repeat(2001), "短"] }));
     expect(recentReasons()).toEqual(["短"]);
     await openReject();
-    expect(screen.getByTestId("decision-recent-0")).toHaveTextContent("短");
+    expect(screen.getByTestId("decision-recent-0")).toHaveTextContent(/↺短$/);
     expect(screen.queryByTestId("decision-recent-1")).toBeNull();
     expect(screen.getByTestId("decision-reason").props.maxLength).toBe(2000);
   });

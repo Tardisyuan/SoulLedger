@@ -13,6 +13,7 @@
   "officer_app.bio_login.row_unavailable",
   "officer_app.bio_login.toggle_failed",
   "officer_app.bio_login.wrong_password",
+  "officer_app.login.email_hint",
   "officer_app.search.first_only",
   "soul_app.login.email",
   "soul_app.login.email_hint",

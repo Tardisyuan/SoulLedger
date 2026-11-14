@@ -14,7 +14,7 @@ import { permission, registerDevice, requestPermission, unregisterDevice, hasReg
 import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { SignOutButton } from "./signOut";
-import { Notice, OneLine, Screen, SectionLabel, SmallButton, SwitchMark, Txt, family, space, translate, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { GUTTER, Notice, OneLine, Screen, SectionLabel, SmallButton, SwitchMark, Txt, family, space, translate, useI18n, useRemote, useTheme, useToast } from "../shared";
 
 export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name" | "stats";
 
@@ -164,7 +164,8 @@ function UsernameRow({ username, emailWorks }: { username: string; emailWorks: b
   const { t } = useI18n();
   const theme = useTheme();
   return (
-    <View testID="me-username" style={{ flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 56 }}>
+    // Same frame as the kit's Row below it (gutter, padding, hairline), so 用户名 lines up with the switches.
+    <View testID="me-username" style={{ flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 56, paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
       <View style={{ flex: 1, gap: space[1] }}>
         <Txt variant="bodyLg">{t("officer_app.me.username")}</Txt>
         {emailWorks ? (

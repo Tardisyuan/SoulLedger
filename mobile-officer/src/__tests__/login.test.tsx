@@ -88,7 +88,7 @@ it("remembers the username across sign-out; 换一个账号 forgets it; the prof
   session = renderLogin();
   // 第五十批 C3: the shared card -- name, masked username, 「换一个账号」, 「欢迎回来」 under the app name.
   expect(screen.getByTestId("login-known-name")).toHaveTextContent("阎罗");
-  expect(screen.getByTestId("login-known-code")).toHaveTextContent("ya***a");
+  expect(screen.getByTestId("login-known-code")).toHaveTextContent("y***a");
   expect(screen.getByTestId("login-switch")).toHaveTextContent("换一个账号");
   expect(screen.getByTestId("login-welcome")).toHaveTextContent("欢迎回来");
   expect(screen.queryByText(/yama/)).toBeNull();

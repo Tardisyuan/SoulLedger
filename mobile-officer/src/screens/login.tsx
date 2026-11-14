@@ -171,7 +171,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
                 }}
               />
             ) : (
-              <Input testID="login-username" label={t("auth.account_or_email")} hint={t("auth.account_or_email_hint")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
+              <Input testID="login-username" label={t("auth.account_or_email")} hint={t("officer_app.login.email_hint")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
             )}
             {bioOn ? (
               <Button testID="login-bio" title={t("officer_app.bio_login.button", { bio: bio.word })} busy={busy} onPress={() => void bioSignIn()} />
