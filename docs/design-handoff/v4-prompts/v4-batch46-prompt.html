@@ -1,0 +1,1783 @@
+<title>Design 收件箱</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: one reading column; newest batch first, answered batches folded below. */
+:root{
+  --bg:#f6f4f1; --surface:#fffdfa; --ink:#23201d; --sub:#6b645c; --line:#ddd6cc; --accent:#8e3b2f; --ok:#3f6b4a;
+  --display:"Noto Serif SC","Songti SC",serif; --body:"Noto Sans SC","PingFang SC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#181614;--surface:#211e1b;--ink:#ece6de;--sub:#a59c91;--line:#3a3530;--accent:#d97a68;--ok:#8fbf9a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#181614;--surface:#211e1b;--ink:#ece6de;--sub:#a59c91;--line:#3a3530;--accent:#d97a68;--ok:#8fbf9a;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.75 var(--body)}
+main{max-width:46rem;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1{font:700 1.6rem/1.3 var(--display);margin:0;text-wrap:balance}
+h2{font:700 1.25rem/1.4 var(--display);margin:0;text-wrap:balance}
+h3{font:700 1.05rem/1.4 var(--display);margin:0 0 6px;text-wrap:balance}
+.meta{color:var(--sub);font-size:.85rem;letter-spacing:.04em;margin:6px 0 0}
+p,li{margin:0}
+article,section{display:flex;flex-direction:column;gap:12px}
+article{border-top:2px solid var(--accent);padding-top:16px}
+ul,ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+code{font:.85em var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px;overflow-wrap:anywhere}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.9rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--sub);font-weight:500;font-size:.8rem;letter-spacing:.04em}
+tr:last-child td{border-bottom:0}
+.ask{border-left:3px solid var(--accent);padding-left:12px}
+.fyi{color:var(--sub)}
+.tag{display:inline-block;font:500 .75rem var(--body);letter-spacing:.06em;padding:1px 8px;border-radius:999px;border:1px solid currentColor;margin-left:8px;vertical-align:middle}
+.new{color:var(--accent)} .done{color:var(--ok)}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font:700 1.05rem var(--display)}
+details[open] summary{margin-bottom:12px}
+</style>
+<main>
+<header>
+<h1>SoulLedger · Design v4 收件箱</h1>
+<p class="meta">最新一批在最上面。回复和文件照旧写到设计系统 <code>soulledger-v4-pages/v4-batchNN-*</code>。</p>
+</header>
+
+<article>
+<h2>第四十六批 · 案卷台就地判的视觉 + 文明色余下八处 + 97 个 egy 键<span class="tag new">待回 · 2026-11-14</span></h2>
+<p>第四十五批已全部落地(页头记号、纸纹、顶线四形、希腊色、门栏底、概览数字与路线图改墨)。用户对地府记号另有决定：改成<strong>殿名随殿变</strong>——中文界面竖排汉字殿名(如「秦廣殿」),英文界面竖排英文殿名(如「FIRST COURT」),egy 用 egy 殿名，找不到殿时退「地府 / DIYU」。请按这个调一下地府记号的字号与竖排细节(殿名比两字长)。</p>
+<h3>一、案卷台「就地判」(已写好代码，先用现有令牌)</h3>
+<p>案卷台右栏现在是判栏(320px,sticky,令牌 <code>--verdict-rail-w</code>):未认领时只有「认领 C」;认领后 1–4 选判决、⌘⏎ 落印;落印后这一行划线滑出、自动选下一件，5 秒内可撤回。另有偏好「落印前先确认」(默认关):打开后 ⌘⏎ 先弹回读层(人名、案号、判决，不计时，默认焦点不在落印键)。官员 App 有同一个开关，打开后右滑先弹回读底页。请定这八处:</p>
+<ol>
+<li>判栏和卷宗正文的分界线怎么画。</li>
+<li>页头仍有「认领」「打开卷宗」两个按钮，和判栏重复;现在一屏两个主按钮(「打开卷宗」和「落印」)。留哪个、怎么降级。</li>
+<li>行滑出的动效：现在是划线、往左 24px、280ms。</li>
+<li>撤回条的样式和 5 秒细线。</li>
+<li>四文明的印在判栏里的大小与位置(现在用 <code>DossierSeal</code>,96)。</li>
+<li>判栏宽 320 是否合适(1280 宽下卷宗正文还剩多少)。</li>
+<li>「要选理由的判决送去卷宗整页」(原审「不过」、希腊「通过」)要不要在判栏上提示一句，怎么写。</li>
+<li>回读层(网页)与官员 App 回读底页的版式。</li>
+</ol>
+<h3>二、文明色余下八处(用户请你逐处定：改墨，还是列为例外)</h3>
+<p>规则仍是「文明色只在顶线、印、行程脊、焦点环四处」。代码里还有这八处文字是文明色:空态记号、告别页、diyu 卡、落地页卡片链接、演示首页卡片、案卷台栏名(<code>.colName</code>)、概览「本周已结」数字、待办的「◆」。</p>
+<h3>三、页头记号的位置</h3>
+<p>记号按稿子放在页头右上(right 20 / top 12–22),在有右侧操作按钮和 180px 水印的页面上会和它们叠在一起(记号在底层，不挡点击)。请看是否需要避让规则(比如有操作按钮时下移或缩小)。</p>
+<h3>四、两个 App</h3>
+<p>两个 App 还没做顶线四形和页头记号。要不要跟，怎么在 App 的页头上放。</p>
+<h3>五、97 个 egy 键</h3>
+<p>这几轮新增或改了值、egy 还空着的键(含就地判、回读层、撤回落印、落印措辞「落印后进入审批」、导览角标、殿名随殿的退回值等):</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>social_moderation.errors.self_moderation</code></td><td>不能通过或恢复自己的内容。</td><td>You can&#x27;t approve or restore your own content.</td></tr>
+<tr><td><code>social_moderation.handled.author_deleted</code></td><td>作者之后自己删除了这条内容，不能再恢复可见。</td><td>The author has since deleted it, so it cannot be made visible again.</td></tr>
+<tr><td><code>judgment.queue.key_select</code></td><td>选中裁决（不提交）</td><td>Select a verdict (does not submit)</td></tr>
+<tr><td><code>judgment.queue.key_seal</code></td><td>落印：提交选中的裁决，5 秒内可撤回</td><td>Seal: submit the selected verdict, undoable for 5 s</td></tr>
+<tr><td><code>judgment.queue.key_undo</code></td><td>撤回刚落的印（5 秒内）</td><td>Take back the seal just set (within 5 s)</td></tr>
+<tr><td><code>judgment.queue.key_hold</code></td><td>放进待定（要写理由）</td><td>Put on hold (with a reason)</td></tr>
+<tr><td><code>judgment.queue.seal</code></td><td>落印</td><td>Seal</td></tr>
+<tr><td><code>judgment.queue.undo</code></td><td>撤回</td><td>Undo</td></tr>
+<tr><td><code>judgment.queue.sealed</code></td><td>已落印 · 可撤回 {n} 秒</td><td>Sealed · undo within {n} s</td></tr>
+<tr><td><code>judgment.queue.sealed_note</code></td><td>到时才提交；离开本页或打开别的案子即提交</td><td>Sent when the time runs out; leaving this page or opening another case sends it now</td></tr>
+<tr><td><code>swipe.pass_pending</code></td><td>已通过 · 3 秒后落印。判下一件、离开或切到后台即刻落印</td><td>Passed · seals in 3 s. Judging the next case, leaving or switching away seals it now</td></tr>
+<tr><td><code>about.system_link</code></td><td>系统状况:本次访问的实测、服务目标与线上探测</td><td>System status: this visit measured, service targets and the live probe</td></tr>
+<tr><td><code>demo.build.system</code></td><td>系统状态与服务目标（SLO）</td><td>System status and SLOs</td></tr>
+<tr><td><code>about.system_title</code></td><td>系统状况</td><td>System status</td></tr>
+<tr><td><code>about.system_intro</code></td><td>三块,各自写明数据从哪来。这一页不连后端。</td><td>Three blocks, each labelled with where its data comes from. This page talks to no backend.</td></tr>
+<tr><td><code>about.system_measured</code></td><td>此刻 · 实测</td><td>This visit, measured</td></tr>
+<tr><td><code>about.system_measured_source</code></td><td>来源:你的浏览器(PerformanceObserver)</td><td>Source: your browser (PerformanceObserver)</td></tr>
+<tr><td><code>about.system_measured_note</code></td><td>自这个标签页打开本站起量;INP 要等你在页面上点一下或按一个键。浏览器不支持的项一直显示「还没有读数」。</td><td>Measured since this tab opened the site; INP waits for one click or key press. Anything the browser does not support stays at “No reading yet”.</td></tr>
+<tr><td><code>about.system_pending</code></td><td>还没有读数</td><td>No reading yet</td></tr>
+<tr><td><code>about.system_rating_good</code></td><td>好</td><td>Good</td></tr>
+<tr><td><code>about.system_rating_needs_improvement</code></td><td>待改进</td><td>Needs improvement</td></tr>
+<tr><td><code>about.system_rating_poor</code></td><td>差</td><td>Poor</td></tr>
+<tr><td><code>about.system_slo</code></td><td>服务目标</td><td>Service targets</td></tr>
+<tr><td><code>about.system_slo_source</code></td><td>来源:docs/SLO.md · 目标,不是读数</td><td>Source: docs/SLO.md · targets, not readings</td></tr>
+<tr><td><code>about.system_slo_note</code></td><td>只写成文档,没有执行:没有生产流量,这些都没有在量。28 天滚动窗口;可用性 99.5% 即 201.6 分钟的预算。</td><td>Documented, not enforced: there is no production traffic and nothing measures these. 28-day rolling window; 99.5% availability is a 201.6-minute budget.</td></tr>
+<tr><td><code>about.system_col_id</code></td><td>编号</td><td>#</td></tr>
+<tr><td><code>about.system_col_journey</code></td><td>旅程</td><td>Journey</td></tr>
+<tr><td><code>about.system_col_good</code></td><td>算作好事件</td><td>Counts as good</td></tr>
+<tr><td><code>about.system_col_target</code></td><td>目标</td><td>Target</td></tr>
+<tr><td><code>about.system_journey_open_desk</code></td><td>开卷</td><td>Open the desk</td></tr>
+<tr><td><code>about.system_journey_seal</code></td><td>落印</td><td>Seal a verdict</td></tr>
+<tr><td><code>about.system_journey_timeline</code></td><td>灵魂端时间线</td><td>Soul-app timeline</td></tr>
+<tr><td><code>about.system_journey_realtime</code></td><td>实时通知</td><td>Realtime notices</td></tr>
+<tr><td><code>about.system_journey_tasks</code></td><td>定时任务</td><td>Scheduled tasks</td></tr>
+<tr><td><code>about.system_journey_webhook</code></td><td>事件 webhook</td><td>Event webhooks</td></tr>
+<tr><td><code>about.system_good_availability</code></td><td>不是 5xx</td><td>Not a 5xx</td></tr>
+<tr><td><code>about.system_good_latency</code></td><td>≤ {{ms}} ms</td><td>≤ {{ms}} ms</td></tr>
+<tr><td><code>about.system_good_correctness</code></td><td>有对应的事件行</td><td>Has its event row</td></tr>
+<tr><td><code>about.system_good_freshness</code></td><td>60 秒内推送</td><td>Pushed within 60 s</td></tr>
+<tr><td><code>about.system_good_delivery</code></td><td>5 秒内送达</td><td>Delivered within 5 s</td></tr>
+<tr><td><code>about.system_good_on_time</code></td><td>5 分钟内启动并成功</td><td>Started within 5 min and succeeded</td></tr>
+<tr><td><code>about.system_good_webhook</code></td><td>5 分钟内投递成功</td><td>Delivered within 5 min</td></tr>
+<tr><td><code>about.system_probe</code></td><td>线上探测</td><td>Live probe</td></tr>
+<tr><td><code>about.system_probe_source</code></td><td>来源:GitHub Actions · 本页不读取结果</td><td>Source: GitHub Actions · this page does not fetch the result</td></tr>
+<tr><td><code>about.system_probe_badge</code></td><td>演示探测</td><td>demo probe</td></tr>
+<tr><td><code>about.system_probe_badge_value</code></td><td>每天一次</td><td>daily</td></tr>
+<tr><td><code>about.system_probe_body</code></td><td>一个工作流每天请求一次线上演示的首页、登录页和这一页,任一不是 200 就变红。最近一次的结果在 GitHub 上看。</td><td>Once a day a workflow requests the live demo’s home page, sign-in page and this page; anything but a 200 turns it red. The latest result is on GitHub.</td></tr>
+<tr><td><code>about.system_probe_link</code></td><td>查看探测记录</td><td>See the probe runs</td></tr>
+<tr><td><code>about.system_probe_why</code></td><td>这一页不显示红绿:那要让浏览器向 GitHub 取图或取数据,本站的内容安全策略有意不放行。</td><td>This page shows no red or green itself: that would mean letting the browser fetch images or data from GitHub, which this site’s Content Security Policy deliberately does not allow.</td></tr>
+<tr><td><code>demo.probe.pending</code></td><td>录制里还没有这次请求的回答：下一次重录之后这里才有。</td><td>The recording has no answer to this request yet: it appears after the next re-recording.</td></tr>
+<tr><td><code>demo.probe.lateral.try</code></td><td>以中国判官身份，按编号直接要欧洲殿的一位灵魂</td><td>Ask for an EU hall soul by its id, as the Chinese judge</td></tr>
+<tr><td><code>demo.probe.lateral.target</code></td><td>‹欧洲殿一位灵魂的编号›</td><td>‹an EU hall soul&#x27;s id›</td></tr>
+<tr><td><code>demo.probe.lateral.quiet</code></td><td>正确地什么都不说</td><td>correctly saying nothing</td></tr>
+<tr><td><code>demo.probe.lateral.why</code></td><td>横向越权：编号是真的，灵魂也在，只是在别的殿。后端在查询这一步就按殿过滤，这个编号对本殿来说根本不存在，所以回 404 而不是 403。拒绝会告诉人「有这么一位」，找不到不会。</td><td>Lateral overreach: the id is real and the soul exists, in another hall. The query is filtered by hall before anything else, so for this hall the id does not exist: 404, not 403. A refusal would say there is such a soul; not finding one says nothing.</td></tr>
+<tr><td><code>demo.probe.door.try</code></td><td>拿灵魂 App 的令牌请求官员的接口</td><td>Ask an officer endpoint with the soul app&#x27;s token</td></tr>
+<tr><td><code>demo.probe.door.who</code></td><td>一位灵魂（灵魂令牌）</td><td>a soul (soul token)</td></tr>
+<tr><td><code>demo.probe.door.why</code></td><td>走错门：令牌是真的，但它是灵魂的令牌。官员接口的认证类只认官员令牌，认出这是一张灵魂令牌就回 403 而不是 401。401 会让 App 去刷新、重新登录，而这里不是过期，是越界。</td><td>Wrong door: the token is genuine, but it is a soul&#x27;s. The officer endpoints&#x27; authentication accepts officer tokens only, and answers a soul token with 403, not 401: 401 would send the app to refresh and sign in again, and this is not an expired session, it is out of bounds.</td></tr>
+<tr><td><code>demo.probe.anon.try</code></td><td>不带任何令牌请求同一个接口</td><td>Ask the same endpoint with no token at all</td></tr>
+<tr><td><code>demo.probe.anon.who</code></td><td>未登录的访客</td><td>a visitor who has not signed in</td></tr>
+<tr><td><code>demo.probe.anon.why</code></td><td>匿名：没有令牌，就没有身份可以判断。权限类在视图执行之前就拒绝，回 401，让客户端去登录。</td><td>Anonymous: no token, so no identity to judge. The permission class refuses before the view runs, with 401, which sends the client to sign in.</td></tr>
+<tr><td><code>demo.tour.replay</code></td><td>重看导览</td><td>Watch the tour again</td></tr>
+<tr><td><code>judgment.desk.to_approval</code></td><td>落印后进入审批</td><td>A seal goes to approval</td></tr>
+<tr><td><code>judgment.desk.confirm_body_flow</code></td><td>你选择了「{{verdict}}」。落印后写入审判记录并进入审批：审批走完才执行，驳回则重开一案。</td><td>You chose “{{verdict}}”. Once sealed it goes on the record and to approval: it is carried out when the approval completes, and a rejection reopens the case.</td></tr>
+<tr><td><code>cmdk.verdict.pass_hint_flow</code></td><td>{{case}} · 落印后进入审批</td><td>{{case}} · sealing goes to approval</td></tr>
+<tr><td><code>caseDesk.dossier.judge.hint_flow</code></td><td>选定去处、写好判词后落印。落印后进入审批。</td><td>Choose a destination and write the verdict, then seal it. A seal goes to approval.</td></tr>
+<tr><td><code>caseDesk.dossier.judge.sealed_note_flow</code></td><td>落印后进入了审批：驳回会重开一案；审批走完后，要改判只能走申诉。</td><td>The seal went to approval: a rejection reopens the case; once approved, only an appeal can change the verdict.</td></tr>
+<tr><td><code>officer_app.seal.hold_note_flow</code></td><td>按住「落印」1 秒落下。落印后进入审批；驳回会重开一案。</td><td>Hold Seal for one second. A seal goes to approval; a rejection reopens the case.</td></tr>
+<tr><td><code>souls.events.JUDGMENT_CONCLUSION_WITHDRAWN</code></td><td>判官撤回落印</td><td>Seal withdrawn by the judge</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.button</code></td><td>撤回落印</td><td>Withdraw the seal</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.hint</code></td><td>审批人还没有动手：撤回这一印，审批流程取消，案子另开一件回到你手上重判。</td><td>No approver has acted yet: withdraw this seal, cancel the approval flow, and judge the case again as a new case.</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.confirm</code></td><td>撤回这一印？审批流程会取消，发落作废，案子另开一件由你重判。</td><td>Withdraw this seal? The approval flow is cancelled, the disposition is voided, and the case comes back to you as a new case.</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.done</code></td><td>已撤回落印，新案：{{case_number}}</td><td>Seal withdrawn. New case: {{case_number}}</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.refusal.not_withdrawable</code></td><td>只有已落印的原审可以撤回。</td><td>Only a sealed original case can have its seal withdrawn.</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.refusal.not_your_seal</code></td><td>只有落印的判官本人可以撤回这一印。</td><td>Only the judge who sealed this case can withdraw the seal.</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.refusal.no_pending_flow</code></td><td>这件案子没有还在等待的审批流程，不能撤回。</td><td>This case has no approval flow still waiting, so the seal cannot be withdrawn.</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.refusal.cross_judgment_merged</code></td><td>这件案子的流程挂着跨域联审，请改为撤销联审。</td><td>A cross-realm judgment sits on this case&#x27;s flow; cancel that bench instead.</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.refusal.approval_started</code></td><td>已有审批人处理过这件案子，不能再撤回。</td><td>An approver has already acted on this case; the seal can no longer be withdrawn.</td></tr>
+<tr><td><code>judgment.withdraw_conclusion.refusal.cannot_withdraw</code></td><td>灵魂已经离开这一印安置的地方，不能撤回。</td><td>The soul has already left the place this seal put it in; the seal cannot be withdrawn.</td></tr>
+<tr><td><code>caseDesk.verdict.rail</code></td><td>判栏</td><td>Verdict</td></tr>
+<tr><td><code>caseDesk.verdict.claim_first</code></td><td>这一件还没有人认领。先认领，再判。</td><td>Nobody has claimed this case yet. Claim it, then rule.</td></tr>
+<tr><td><code>caseDesk.verdict.deferred</code></td><td>这一件在待定分组里。打开卷宗取回后再判。</td><td>This case is on hold. Open the dossier to take it back, then rule.</td></tr>
+<tr><td><code>caseDesk.verdict.elsewhere</code></td><td>这一件不能在台上判。打开卷宗看为什么。</td><td>This case can&#x27;t be ruled on from the desk. Open the dossier to see why.</td></tr>
+<tr><td><code>caseDesk.verdict.hint</code></td><td>选定判决、写好判词后落印；落印后 5 秒内可撤回，到时才提交。</td><td>Choose a verdict, write the words, then seal. For 5 seconds after sealing you can take it back; it is sent when they run out.</td></tr>
+<tr><td><code>caseDesk.verdict.hint_readback</code></td><td>落印前会再念一遍人名、案号与判决，确认后当场提交。</td><td>Before it is sealed, the name, case number and verdict are read back to you; it is sent as soon as you confirm.</td></tr>
+<tr><td><code>caseDesk.verdict.sealed</code></td><td>已落印。</td><td>Sealed.</td></tr>
+<tr><td><code>caseDesk.verdict.announce</code></td><td>{{name}} 已落印 · 下一件 {{next}}</td><td>{{name}} sealed · next: {{next}}</td></tr>
+<tr><td><code>caseDesk.verdict.announce_last</code></td><td>{{name}} 已落印 · 台上没有下一件了</td><td>{{name}} sealed · nothing left on the desk</td></tr>
+<tr><td><code>caseDesk.verdict.undone</code></td><td>已撤回 · {{name}} 回到台上</td><td>Taken back · {{name}} is on the desk again</td></tr>
+<tr><td><code>caseDesk.verdict.commit_error</code></td><td>{{name}} 的判决没有提交，已放回案卷台。</td><td>The verdict for {{name}} was not sent; the case is back on the desk.</td></tr>
+<tr><td><code>judgment.seal_readback.pref</code></td><td>落印前先确认</td><td>Confirm before sealing</td></tr>
+<tr><td><code>judgment.seal_readback.pref_hint</code></td><td>打开后，快审与案卷台按 ⌘⏎ 不再直接落印，也没有 5 秒撤回条：先念一遍人名、案号与判决，你按「落印」才提交，没有计时。</td><td>When on, ⌘⏎ on the quick review and the case desk no longer seals at once and there is no 5-second undo strip: the name, case number and verdict are read back first, and nothing is sent until you press Seal. No timer.</td></tr>
+<tr><td><code>judgment.seal_readback.pref_hint_app</code></td><td>打开后，滑卡审判右滑通过不再有 3 秒撤回：先念一遍人名、案号与判决，你按「落印」才提交，没有计时。</td><td>When on, swiping right to pass no longer has the 3-second undo: the name, case number and verdict are read back first, and nothing is sent until you press Seal. No timer.</td></tr>
+<tr><td><code>judgment.seal_readback.title</code></td><td>落印前确认</td><td>Confirm the seal</td></tr>
+<tr><td><code>judgment.seal_readback.soul</code></td><td>灵魂</td><td>Soul</td></tr>
+<tr><td><code>judgment.seal_readback.case</code></td><td>案号</td><td>Case</td></tr>
+<tr><td><code>judgment.seal_readback.verdict</code></td><td>判决</td><td>Verdict</td></tr>
+<tr><td><code>judgment.seal_readback.note</code></td><td>按「落印」当场提交。</td><td>Seal sends it at once.</td></tr>
+</tbody></table></div>
+<p>交付:<code>v4-batch46-desk.html</code>(一、三、四)+ 回复说明(二逐条)+ <code>v4-batch46-egy.json</code>。</p>
+</article>
+
+<article>
+<h2>第四十五批 · 文明色收紧之后，四家靠什么分清<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>收紧已上线(main 0754039ac)。第二轮评审拿线上案卷台对比了地府和埃及:版式相同、配色几乎黑白，能分出是哪一家的基本只剩卷宗脊的形状。用户定：不把文明色放回链接和选中行，另开<strong>不靠颜色</strong>的辨识通道，交你定。验收目标：把四张皮去掉全部色相(灰度)后，仍能在 1 秒内分清是哪一家。</p>
+<p>评审的现状测量(估计值，供参考):</p>
+<ul>
+<li>顶线 2px,在 1280×800 的案卷台上约占屏 0.24%。</li>
+<li>门栏底浅色彩度 0.015–0.019;页头纹样整层 5%;水印 7% / 9%。面积大的都很淡，彩度高的都很小。</li>
+<li>希腊 civT 彩度 0.050(深)/ 0.062(浅),四家最低;浅色下 #31695E 的 2px 线和中性皮 #54575C 很难分。</li>
+<li>规则写「文明色只在四处」,但概览页 88px 的主角数字、路线图当前站的文字仍是文明色。</li>
+</ul>
+<p>请逐项给出决定(可以不全采纳，说明理由即可):</p>
+<div class="scroll"><table><thead><tr><th>#</th><th>通道</th><th>评审建议</th><th>要你给</th></tr></thead><tbody>
+<tr><td>1</td><td>顶线形状</td><td>2px 提到 3px,四家各一种形状：地府 3px 实线、欧洲 1px+1px 双线(间 2px)、埃及 3px 每 48px 一个 6px 缺口、希腊 3px 回纹(8px 周期方齿);中性皮 2px 实线</td><td>四家的形状与尺寸(深浅两套)</td></tr>
+<tr><td>2</td><td>希腊 civT 彩度</td><td>提到 ≥ 0.08,浅色约 #1F6F62(估计)</td><td>希腊深浅两个值;顺带核对四家等明度</td></tr>
+<tr><td>3</td><td>门栏底彩度</td><td>浅色从约 0.017 提到 0.03,仍是最淡一层</td><td>四家门栏底深浅值</td></tr>
+<tr><td>4</td><td>页头题字 / 字形</td><td>每家页头一个文字记号(如殿名的字形、圣书体行、希腊大写)</td><td>每家一个记号及位置、字号</td></tr>
+<tr><td>5</td><td>纸纹</td><td>四家各一种纸纹(面积大、彩度低，靠纹理不靠颜色)</td><td>要不要做;做的话四种纹样与浓度上限</td></tr>
+<tr><td>6</td><td>印位</td><td>四家落印的位置不同(如右下、页眉、天平旁)</td><td>每家印位</td></tr>
+<tr><td>7</td><td>概览主角数字与路线图当前站</td><td>二选一：规则改成「四个记号 + 概览主角数字」,或这两处改墨</td><td>选哪个</td></tr>
+</tbody></table></div>
+<p>另告知：案卷台「就地判」(右栏判栏，不跳审判台)和「落印前先确认」偏好正在写代码，先用现有 v4 令牌和组件;写完后列出需要你定的视觉点，作为下一批发来。</p>
+<p>交付:<code>v4-batch45-civ-identity.html</code>(四家并排，深浅各一组，外加一张去色的对照)+ 回复说明 + 新令牌值。</p>
+</article>
+
+<article>
+<h2>第四十四批 · 两个新键的 egy + 两处界面改动告知<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>用户看过「文明色收紧」的对比图后定了照你第四张卡做：强调色、链接、选中行都改成墨色(选中行墨 7% 底 + 左侧 3px 墨条),文明色只留顶线、印、行程脊、焦点环，加门栏底与卷宗头的晕光水印。另外案卷台的来源筹码挤成三行，改成桌面「更多来源 ▾」下拉 + 窄屏一行横滑；工作流实例列表的两个日期收进「创建日期 ▾」。下面两个新键请给 egy:</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>中文</th><th>English</th><th>在哪</th></tr></thead><tbody>
+<tr><td><code>caseDesk.more_sources</code></td><td>更多来源</td><td>More sources</td><td>案卷台来源筹码右侧的下拉按钮，里面是申诉、城隍初审、跨殿联审、待发勾魂牒、转生申请这几处别的页面</td></tr>
+<tr><td><code>workflow.filter.created</code></td><td>创建日期</td><td>Created</td><td>工作流实例列表筛选行里的日期按钮，选了区间后显示「10-01 – 10-17」</td></tr>
+</tbody></table></div>
+<p>交付:<code>v4-batch44-egy.json</code>(只放这两个键)+ 回复说明。不需要稿子。</p>
+</article>
+
+<article>
+<h2>第四十三批 · 告知:键名是单数 <code>problem.*</code><span class="tag">告知 · 不用回 · 2026-11-14</span></h2>
+<p>第四十一、四十二批已全部落地。你问的键名：代码里是<strong>单数</strong> <code>assist_admin.eval.problem.*</code>(收件箱第四十二批写成了复数，是我们写错了，已改)。你的值已写进 <code>problem.too_many_asks</code>。请把词表里改成复数的那一行改回单数，整组保持 <code>problem.*</code>。不用回复。</p>
+</article>
+
+<article>
+<h2>第四十二批 · 一处告知 + 两条 egy<span class="tag">已收到 · 2026-11-14</span></h2>
+<ol>
+<li><strong>「工程视角」上半屏不换。</strong>用户定:上半屏保持第五殿 ↔ 米诺斯之庭，不换三判官之庭，不重录。你第三十九批的 <code>flow_sub</code> 已写明下半屏对方殿是 <code>{{hall}}</code>,不用改。</li>
+<li><strong>助手评测的上限改成「每个候选」计。</strong>原来 100 条是两个候选合计，官员侧 80 个用例、灵魂侧 55 个，两个模型一比就超，比不起来;现在每个候选各自最多 100 条，花费仍受上限管。中英文已改，egy 请给:
+<div class="scroll"><table><thead><tr><th>键</th><th>中文</th><th>English</th><th>egy 现值</th></tr></thead><tbody>
+<tr><td><code>assist_admin.eval.requests_value</code></td><td>约 {{count}} 条（每个候选最多 {{max}}）</td><td>About {{count}} (at most {{max}} per candidate)</td><td>{{count}} · {{max}}</td></tr>
+<tr><td><code>assist_admin.eval.problem.too_many_asks</code></td><td>用例数超过每个候选的单次上限。</td><td>Too many cases for one candidate in one run.</td><td>Hehy Hau.</td></tr>
+</tbody></table></div>
+现值若仍可用，回一句「不改」即可。</li>
+</ol>
+<p>交付:<code>v4-batch42-egy.json</code>(只放这两个键)+ 回复说明。第四十一批照常回。</p>
+</article>
+
+<article>
+<h2>第四十一批 · 第三十九批落地时核对出的两处措辞<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>第三十九批的 27 个键和第四十批的三处颜色(取 App 值、<code>--color-warn</code> 改名 <code>--color-amber</code>)都已落地。你在第三十九批里请我们核对的两句，核对结果都和代码不一致，现在照你的原文上了，请改:</p>
+<ol>
+<li><strong>第 1 步对方殿「「跨域」里多了一件」:标签不对。</strong>「跨域」(<code>officer_app.desk.sources.cross</code>)数的是<strong>本殿自己</strong>队列里的案子;联审属于发起殿，不会进对方殿的「跨域」。对方殿看到它的地方是「<strong>跨殿联审</strong>」(<code>elsewhere.cross_judgment</code>),对方殿一被列为参与方(联审还在「提议中」)就出现。请把 <code>demo.inside.sees.1.away</code> 里的「跨域」改成「跨殿联审」,并给对应的英文 / egy。</li>
+<li><strong>第 3、4 步的站状态名对不上。</strong>代码里一站的状态是:未开始 / Not started(PENDING)、调拨中(DISPATCHING)、受刑中 / Serving(ACTIVE)。「执行中」是<strong>整份计划</strong>的状态名，不是一站的;「待执行」只在两条调拨通知的句子里出现过。同一张卡片上还会印出这一站的原始状态。请改:
+<ul>
+<li><code>demo.inside.sees.3.away</code>「它那一站的状态变成待执行」→ 用「未开始」</li>
+<li><code>demo.inside.sees.4.away</code>「第 2 站待执行」→ 用「未开始」</li>
+<li><code>demo.inside.sees.4.home</code>「第 1 站执行中」→ 用「受刑中」</li>
+</ul>
+英文现在是 "waiting to be served" / "Stop 1 being served",请与 Not started / Serving 对齐;egy 一并改。</li>
+</ol>
+<p>上半屏换成三判官之庭(你的建议)要重录两次直取，用户还没定，定了另告。</p>
+<p>交付:<code>v4-batch41-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>(只放改动的键)+ 回复说明。</p>
+</article>
+
+<article>
+<h2>第四十批 · 网页与 App 各留一个值的三处颜色(请各定一个)<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>颜色令牌现在只有一份来源:<code>packages/core/tokens/*.tokens.json</code>。网页的 <code>globals.css</code> 和 App 的主题都由它生成。导出时核对了网页与 App 的全部颜色:36 个文明色两边一致，只有下面三处两边各有一个值。这三处都是 v4 定稿里没有印出、两边各自补的值。现在照旧两个值都留着，在令牌里标了「待 Design」。<strong>请每处定一个值</strong>,我们照你的定稿改，两边一起生效。</p>
+<p>对比度是 WCAG 2.x,按 sRGB 现算。底色:深 canvas #111113 / surface-1 #1A1B1E / surface-2 #222327;浅 canvas #F8F8F6 / surface-1 #FFFFFF / surface-2 #F1F1EE。</p>
+<ol>
+<li><strong>警示字色</strong>(警示框里的字、「审判中」、炼狱去向)。
+<table>
+<tr><th></th><th>深</th><th>对 canvas / s1 / s2 / 警示底</th><th>浅</th><th>对 canvas / s1 / s2 / 警示底</th></tr>
+<tr><td>网页 <code>--color-warning</code></td><td>#E07A23</td><td>6.27 / 5.72 / 5.22 / 5.51</td><td>#A65000</td><td>5.24 / 5.57 / 4.92 / 5.02</td></tr>
+<tr><td>App <code>warn</code></td><td>#FF9A3C</td><td>8.93 / 8.15 / 7.43 / 7.85</td><td>#9F4A00</td><td>5.72 / 6.08 / 5.37 / 5.48</td></tr>
+</table>
+警示底两边相同:深 #301904,浅 #FFF1E2。两组都过 4.5。网页浅色在 surface-2 上 4.92,是余量最小的一格。</li>
+<li><strong>成功底色</strong>(成功提示条、「通过」标签的底;上面的字是成功色本身：深 #8AD3A1,浅 #1F6B3F)。
+<table>
+<tr><th></th><th>深</th><th>浅</th><th>成功色字在上面(深 / 浅)</th><th>与 canvas 的区分(深 / 浅)</th></tr>
+<tr><td>网页 <code>--color-success-tint</code>(Design D2)</td><td>#102515</td><td>#E4FBE7</td><td>9.18 / 5.95</td><td>1.17 / 1.03</td></tr>
+<tr><td>App <code>posBg</code>(第三十批 <code>--pos-tint</code>)</td><td>#16261C</td><td>#EAF6EE</td><td>8.97 / 5.85</td><td>1.19 / 1.04</td></tr>
+</table>
+两组的字都过 4.5。底与 canvas 本来就只靠明度差一点点来区分(提示条另有图标和文字,不只靠底色)。</li>
+<li><strong><code>warn</code> 一个名字两种意思，建议网页改名 <code>amber</code></strong>。网页的 <code>--color-warn</code>(第八批 <code>--warn</code>,深 #E8B45A / 浅 #9A6400)只给连接状态的点和顶栏下沿那条 2px 线用，<strong>不当字色</strong>(对 canvas:深 9.98,浅 4.71)。App 的 <code>warn</code> 却是警示<strong>字色</strong>,即上面第 1 条。同一个名字在两端指不同的东西，迟早有人拿错。我们建议把网页这一档改名为 <code>--color-amber</code>,只改名不改值(样式表外现有 2 处引用,都在 <code>connection-status.tsx</code>)。<code>warn</code> / <code>warning</code> 这个名字只留给警示字色。<strong>请确认改名</strong>,或者给别的名字。</li>
+</ol>
+<p>另告知:语域字号(「卷」记录 / 「台」控件)已经进了令牌(<code>--juan-*</code> / <code>--tai-*</code>),值照代码现状，一个没改。三个 <code>.module.css</code> 里写死的 px 字号全部改读这些令牌。具体档位以后要调，再单独给你。</p>
+<p>交付：三处各一个值(深 / 浅 hex),第 3 条一句确认即可。不需要语言包。</p>
+</article>
+
+<article>
+<h2>第三十九批 · 第三十八批落地后的核对结果(告知,三处要你确认)<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>门栏图标与演示站「工程视角」页都已上线到代码。你在第三十八批第三节列的五处,代码那边核对结果如下:</p>
+<ol>
+<li><strong>跨殿按编号直取:回 404</strong>(<code>souls/views.py</code> 查询先按殿收窄;<code>test_tenant_isolation.py</code> 两个方向都断言 404)。<code>demo.inside.probe_result</code> 保留你的写法。两位判官各录了一次真实回应。</li>
+<li><strong>对方殿能看到什么:</strong>它能读这份受刑计划,但只看到每一站的殿名、年数和状态;别殿那一站的理由是空的,灵魂本身它读不到。第 3、4 步「谁看到什么」已照这个改写——<strong>请确认改写后的中文</strong>(<code>demo.inside.step.3.body</code>、<code>demo.inside.sees.N.home / .away</code>;为避免 JSON 嵌套冲突,<code>sees.1.cn / .eu</code> 改名为 <code>sees.N.home / .away</code>,<code>demo.inside.sees</code> 改名 <code>hall_sees</code>)。</li>
+<li><strong>「能设计流程的角色批不了它」不成立</strong>:那条规则按角色定(持有流程设计权限的角色不能同时持有审批权限),不针对某个流程实例,而且跨殿处置不走审批权限。第 2 步说明的后半句已删。</li>
+<li><strong>真实数据:</strong>录制里唯一的跨殿案子是<strong>地府 → 希腊冥界</strong>(项羽,第 1 站泰山殿 60 年,第 2 站塔尔塔罗斯 10 年),没有地府 → 欧洲的案子。上半屏仍是第五殿对米诺斯之庭(计数为真实值);下半屏对方殿用 <code>{{hall}}</code>,现在显示「三判官之庭」。四步按代码改为:发起联审 → 对方殿填站 → 本殿结案 → 按站执行。<strong>请确认下半屏是否接受对方殿换成希腊</strong>,还是要我们在演示种子里补一件地府 → 欧洲的案子。</li>
+<li><strong>egy 三处没用你的写法</strong>:<code>demo.inside.eyebrow</code> 的 Hemsu 只表「系统」,改为 Khery Medjat;<code>demo.inside.narrowed</code> 里的 <code>scope_to_tenant</code> 不在封闭词表里,去掉了;中文 <code>recorded_short</code> 改为「录制的服务端真实回应」以配 egy 里的 Hemsu。英文 <code>as_judge</code> 改为 "Signed in as a judge · {{hall}}"。<strong>请确认或给替换写法。</strong></li>
+</ol>
+<p>另两条告知:错误信封已一次切到 RFC 9457(<code>{type,title,status,code,detail,errors[]}</code>),界面上的报错文案不变;落地页「这是怎么做的」将加一个 <code>/about/system</code>(系统状态与 SLO)入口,文案由代码先写,egy 进待补清单,下一批给你。</p>
+<p>交付:如有改动,<code>v4-batch39-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code> + 回复说明。</p>
+</article>
+
+<article>
+<h2>第三十八批 · 英文门字的辨识度 + 演示站首屏第二入口<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>第三十七批已全部落地(分诊改回、证据编号、两句结案说明、egy 七条)。用户新定了两件要你出稿:</p>
+<ol>
+<li><strong>英文 / egy 界面的门栏不用汉字。</strong>审 / 册 / 律 / 司 / 人间(以及「我」)在英文下现在仍是汉字。用户的判断:要改,但单个英文字母(D / R / L / A / M)认不出来。请给一个辨识度够的写法——例如字母加小图形、两三个字母的缩写、或为每扇门画一个字形 / 图标——网页门栏(1280 与 393)和官员端 App 底栏都要。中文界面保持汉字。请给 en / egy 的标签文字、图形稿和尺寸规则。</li>
+<li><strong>演示站首屏加第二入口「看租户隔离与审批流」。</strong>给技术面试官一条直接看工程亮点的路:现在首屏只有按文明进入。请出这个入口的位置、文案(中 / 英)和它进去后的第一屏(建议:并排两个租户看同一份数据各自可见什么,再一条审批流走一遍)。要和「卷宗」方向一致。</li>
+</ol>
+<p>交付:稿子 + <code>v4-batch38-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code> + 回复说明。</p>
+</article>
+
+<article>
+<h2>第三十七批 · 第三十六批落地后剩下的五处<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>第三十六批已全部落地(四处设计判断、25 条中文、egy 101 条)。落地时冒出下面五处,要你定。</p>
+<ol>
+<li><strong>「来源」里两个「审判队列」。</strong>门内「来源」一节现在有两个同名标签:<code>/judgment</code> 的菜单名本来就是「审判队列 / Judgment Queue」,<code>/judgment/queue</code> 按你上一批也叫「审判队列」。另外案卷台上那个「分诊 ›」链接仍指向 <code>/judgment/queue</code>。请给这两页各一个名字(中 / 英 / egy),并说「分诊 ›」该指向哪里、叫什么。</li>
+<li><strong><code>officer_app.letter.not_yours</code> 的 egy。</strong>你给的 egy 里 <code>{{name}}</code> 出现两次,新中文只出现一次(「这封信由{{name}}经办,回信框只给经办人。要接过来,请经办人放回,或请管理员转过来。」),占位符守卫要求三种语言次数一致,所以这条 egy 还是旧值:<code>Sesh Pen Em Djeret {{name}}: Wesheb Wa. Dbh Redi Er Hat, Er Dbh Sab Hery.</code> 请重给一条只用一次 <code>{{name}}</code> 的。</li>
+<li><strong>英文界面里还剩两处汉字。</strong>审判详情证据列表的编号(一、二、三…,<code>toHanNumeral</code>)和分节标记(甲、乙、丙)。按你上一批「汉字只在中文界面出现」的规则,英文 / egy 下写什么?</li>
+<li><strong>官员端「手机上可以……在『滑卡审判』里结案」已经不全。</strong>现在「判」抽屉(按住落印)在详情页也能结案。请改这两条中文(并给英文 / egy):
+<ul><li><code>officer_app.queue.desk_only</code>:「待宣判 · 可在「滑卡审判」里结案」</li><li><code>officer_app.queue.scope_note</code>:「手机上可以认领、查看、写评议,并在「滑卡审判」里结案。自选去处与引用条文请在官员台。」</li></ul>
+</li>
+<li><strong><code>official_notify.rebirth_status_*</code>。</strong>查过了:是发给灵魂本人的(灵魂账号的站内通知)。<code>official_notify</code> 实际上装着所有站内通知,里面另有几条也是给灵魂的,所以键不搬,这两条 egy 保留 <code>Mesut-Ek</code>。不用你改,只是告知。</li>
+</ol>
+<p>交付:<code>v4-batch37-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code> + 回复说明。</p>
+</article>
+
+<article>
+<h2>第三十六批 · 四处设计判断 + 官员端剩余的「你」 + egy 对账<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>第三十五批(364 键、词根表)已收到,代码这边在落地。这一批四件事。</p>
+
+<section>
+<h3>一、四处要你判断的(浏览器逐页核对时发现,代码没动)</h3>
+<ol>
+<li><strong>英文界面里的汉字字形。</strong>中国文明的站尺在英文下仍是「一 … 十」,功 / 过印字在英文下也是汉字(审判详情、灵魂详情、案卷台)。是有意保留的字形,还是英文下换成数字 / 字母?若换,请给每个文明英文下的写法。</li>
+<li><strong><code>/judgment/queue</code> 的标题与叫法。</strong>标题「审判队列」用了文明色(红),而面包屑写「分诊队列」、门内高亮的标签是「分诊」——三处叫法不一,标题颜色也超出「文明色只在四处」的规则。请定一个名字和标题颜色。</li>
+<li><strong>埃及工作流页的蓝色。</strong><code>/workflow</code> 埃及:模板列表的分组标题和选中底色是埃及蓝。是否算在「文明色只在四处」之内?不算的话改成什么。</li>
+<li><strong><code>/realms</code> 与 <code>/social</code> 归哪一门。</strong>这两页在判官的门里不属于任何一门,进去后门栏一门都不亮,也没有门内标签行。请指定各自归哪一门(或说明就是门外页,以及门外页的门栏该怎么显示)。</li>
+</ol>
+</section>
+
+<section>
+<h3>二、官员端剩下的「你」(25 条)</h3>
+<p>第三十四批第五节那张表只覆盖了 <code>perm_explain.*</code> 与 <code>ai_assist</code> 的说明;<code>officer_app.*</code> 里还有下面这些带「你」。请照同一规则给中文(英文若也要跟着改,一并给;egy 照你第三十五批「不用 -Ek」的写法)。</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>现在的中文</th></tr></thead><tbody>
+<tr><td><code>officer_app.biometric.hint</code></td><td>别人拿到你的手机，也做不了决定</td></tr>
+<tr><td><code>officer_app.biometric.prompt</code></td><td>批准或驳回前，确认是你本人。</td></tr>
+<tr><td><code>officer_app.biometric.prompt_off</code></td><td>关掉这项前，确认是你本人。</td></tr>
+<tr><td><code>officer_app.todo.empty_title</code></td><td>此刻没有轮到你的事</td></tr>
+<tr><td><code>officer_app.todo.empty_body</code></td><td>新的审批、移交和申请会推送给你。</td></tr>
+<tr><td><code>officer_app.todo.empty_body_other</code></td><td>有轮到你的事时会推送给你。</td></tr>
+<tr><td><code>officer_app.detail.your_step</code></td><td>轮到你的节点</td></tr>
+<tr><td><code>officer_app.detail.wait_cosigner</code></td><td>等{{name}}先批，你才能批。{{name}}驳回则这一节点驳回。</td></tr>
+<tr><td><code>officer_app.detail.history_yours</code></td><td>你 · 轮到你</td></tr>
+<tr><td><code>officer_app.confirm.approve_body.cooldown</code></td><td>批准后冷却缩短到你填的天数。</td></tr>
+<tr><td><code>officer_app.state.denied_body</code></td><td>你的角色「{{role}}」看不到{{area}}。需要时请找本殿管理员。</td></tr>
+<tr><td><code>officer_app.cosign.rules</code></td><td>只列本殿在职、有审批权限的官员。加签人先批，你才能批；加签人驳回，整个节点驳回。</td></tr>
+<tr><td><code>officer_app.cosign.added</code></td><td>已加签。对方签完后，你的批准才生效。</td></tr>
+<tr><td><code>officer_app.letter.assign_hint</code></td><td>只列能回这封信的官员。转出后，信从你的待办里移走。</td></tr>
+<tr><td><code>officer_app.letter.not_yours</code></td><td>这封信由{{name}}经办，回信框只给经办人。要接过来，请他放回，或请管理员转给你。</td></tr>
+<tr><td><code>officer_app.outbox.answered</code></td><td>这封书信已经由别的官员回过了。你写的内容还留着。</td></tr>
+<tr><td><code>officer_app.outbox.left_hall</code></td><td>你已不在这一殿。</td></tr>
+<tr><td><code>officer_app.outbox.assigned</code></td><td>这封信已由别的官员经办，没有发出。你写的内容还留着。</td></tr>
+<tr><td><code>officer_app.outbox.moved</code></td><td>灵魂已调往别处，暂不能回信。你写的内容还留着。</td></tr>
+<tr><td><code>officer_app.case.release_body</code></td><td>放回后回到「待认领」，你写的评议保留。</td></tr>
+<tr><td><code>officer_app.case.defer_body</code></td><td>放进待定后案子仍在你手上，不计期限。点「恢复」回到队列。</td></tr>
+<tr><td><code>officer_app.case.reassign_body</code></td><td>批下来之前，案子还在你手上。</td></tr>
+<tr><td><code>officer_app.case.admin_context</code></td><td>在{{name}}手上 · 你是本殿管理员</td></tr>
+<tr><td><code>officer_app.stats.scope</code></td><td>只数你自己的，所有殿合在一起</td></tr>
+<tr><td><code>officer_app.wangsi.reject_body</code></td><td>申诉将记为不属实，连同你的审核意见。</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h3>三、egy 对账:你第三十五批第五节要的 45 个键</h3>
+<p>你第三十五批第五节要的:代码改过、你词表里没有的 45 个键,值是代码里现在的 egy(其中 <code>audit.timeline.cap_reached</code>、<code>audit.timeline.empty</code> 已按第三十五批规则改成 Tera)。请补进词表;有不对的给改正值。</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>代码里的 egy</th></tr></thead><tbody>
+<tr><td><code>nav.soul_events</code></td><td>Medu Ba</td></tr>
+<tr><td><code>souls.detail.load_more</code></td><td>Ini Medu Ky</td></tr>
+<tr><td><code>souls.detail.load_more_failed</code></td><td>Medu Ky Nen Ini. Wehem Semawy.</td></tr>
+<tr><td><code>workflow.start.reason</code></td><td>Khet · Nen Shu; Em Medu Maa</td></tr>
+<tr><td><code>workflow.adjust.reason</code></td><td>Khet (Em Tepy, Sesh Em Medu Maa)</td></tr>
+<tr><td><code>workflow.adjust.saved</code></td><td>Sau-N · Sesh Em Medu Maa</td></tr>
+<tr><td><code>workflow.gate.use_default_confirm</code></td><td>Setep Sekhet Neb En {{realm}}, Shem. Khet Em Tepy, Sesh Em Medu Maa; Sedjem {{realm}}.</td></tr>
+<tr><td><code>dashboard.todo.reports</code></td><td>Nen Wedja Djer · Smi</td></tr>
+<tr><td><code>audit.tabs.permissions</code></td><td>Medu Was</td></tr>
+<tr><td><code>audit.tabs.stats</code></td><td>Hesb Medu</td></tr>
+<tr><td><code>audit.detail.not_found</code></td><td>Nen Gem Medu Pen</td></tr>
+<tr><td><code>audit.detail.trace_filter</code></td><td>Medu Neb En Dbh Pen</td></tr>
+<tr><td><code>audit.detail.no_changes</code></td><td>Nen Semawy Em Medu Pen</td></tr>
+<tr><td><code>audit.resources.role</code></td><td>Iaut</td></tr>
+<tr><td><code>audit.resources.rolepermission</code></td><td>Was Iaut</td></tr>
+<tr><td><code>audit.timeline.show_more</code></td><td>Ini Medu Ky</td></tr>
+<tr><td><code>audit.timeline.cap_reached</code></td><td>Medu 500 Pehwy Wa. Setep Tera Nedjes Er Maa Medu Tepy.</td></tr>
+<tr><td><code>audit.timeline.empty</code></td><td>Nen Medu Was Em Tera Pen</td></tr>
+<tr><td><code>audit.timeline.empty_all</code></td><td>Nen Medu Was Djer</td></tr>
+<tr><td><code>audit.timeline.failed</code></td><td>Nen Ini Medu Was. Wehem Iri.</td></tr>
+<tr><td><code>audit.stats.zero_actions</code></td><td>Aha-N Ky {{n}}: Nen Medu</td></tr>
+<tr><td><code>audit.stats.row_label</code></td><td>Maa Medu Maa «{{name}}»</td></tr>
+<tr><td><code>audit.stats.failed</code></td><td>Nen Ini Hesb Medu. Wehem Iri.</td></tr>
+<tr><td><code>profile.devices.audit_note</code></td><td>Sesh Aq Em Medu Maa.</td></tr>
+<tr><td><code>users.import.row_codes.role_invalid</code></td><td>Iaut Nen Rekh</td></tr>
+<tr><td><code>admin.impersonate.audit_note</code></td><td>Iri Neb: Sesh Em Medu Maa.</td></tr>
+<tr><td><code>death_sync.webhooks.test_event</code></td><td>Medu Sip</td></tr>
+<tr><td><code>death_sync.webhooks.test_sent</code></td><td>Medu Sip Em Smen. Maa Sesh Hab Em Khery.</td></tr>
+<tr><td><code>breadcrumb.menu.judgment_appeals</code></td><td>Sepret</td></tr>
+<tr><td><code>soul_app.assist.history_more</code></td><td>Medu Tepyu</td></tr>
+<tr><td><code>official_notify.impersonation_started.body</code></td><td>{{by}} Maa Em Ba-Ek (Maa Wa · At {{minutes}} Er Aa). Khet: {{reason}}. Iri Neb: Sesh Em Medu Maa.</td></tr>
+<tr><td><code>official_notify.rebirth_status_appealing.body</code></td><td>Dbh Wehem Mesut-Ek: Em Sepret.</td></tr>
+<tr><td><code>official_notify.rebirth_status_appeal_rejected.body</code></td><td>Dbh Wehem Mesut-Ek: Sepret Khesef-N.</td></tr>
+<tr><td><code>officer_app.assist.resumed</code></td><td>Medu {{date}} · Em {{page}}</td></tr>
+<tr><td><code>officer_app.assist.open_failed</code></td><td>Nen Wen Medu Pen. Wehem Iri.</td></tr>
+<tr><td><code>officer_app.soul.tabs.events</code></td><td>Medu</td></tr>
+<tr><td><code>records.archive.blocked_body</code></td><td>«{{name}}»: Wedja Hena-Ef. Fekh: Wedja Nen Khet. Nehem Er Per Sesh: Nen Maa Em Sepu; Medu Smen; Ini Em Per Sesh Er Tera Neb.</td></tr>
+<tr><td><code>records.archive.reason</code></td><td>Khet · Setep; Em Medu Maa</td></tr>
+<tr><td><code>events.col_event</code></td><td>Medu</td></tr>
+<tr><td><code>events.all_types</code></td><td>Medu Neb</td></tr>
+<tr><td><code>events.search_type</code></td><td>Hehy Medu…</td></tr>
+<tr><td><code>events.include_system</code></td><td>Hena Medu Hemsu</td></tr>
+<tr><td><code>events.empty</code></td><td>Nen Medu Em Setep Pen</td></tr>
+<tr><td><code>events.empty_all</code></td><td>Nen Medu Djer</td></tr>
+<tr><td><code>events.failed</code></td><td>Nen Ini Medu. Wehem Iri.</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h3>四、代码这边照你的规则多改的 35 个键(请确认)</h3>
+<p>第三十五批的 json 之外,包里还剩一些废止词根,我们照你同一张替换表改了(Emu→Min、Pet-Sesh→Senn、Pet Sep→Iru Sep、Sepdet→Tera、Shemes→Shat、Sethet→Tehi、Khabes→Teka、Menmen→Hau、Bek-N→Redi-N)。请逐条确认,并补进词表;不对的给改正值。待补 egy 现在是 0 个。</p>
+<div class="scroll"><table><thead><tr><th>键</th><th>改前</th><th>改后</th></tr></thead><tbody>
+<tr><td><code>souls.form.origin_region_hint_greek</code></td><td>Haunebut: Sab Wedja Mi Ta En Mesut. Nen Rekh: Wedja Pehwy Emu.</td><td>Haunebut: Sab Wedja Mi Ta En Mesut. Nen Rekh: Wedja Pehwy Min.</td></tr>
+<tr><td><code>souls.region_backfill.id_hint</code></td><td>soul_id: Medu Ba Em Bek-N; Ba Neb. Mi Ren Hesb Ba (soul_code): Setep Wa Em Sesh.</td><td>soul_id: Medu Ba Em Redi-N; Ba Neb. Mi Ren Hesb Ba (soul_code): Setep Wa Em Sesh.</td></tr>
+<tr><td><code>souls.region_backfill.skipped_file_note</code></td><td>Mi Pet-Sesh, Hena Khet. Semawy, Ini Wehem.</td><td>Mi Senn, Hena Khet. Semawy, Ini Wehem.</td></tr>
+<tr><td><code>common.export_csv</code></td><td>Bek-N CSV</td><td>Redi-N CSV</td></tr>
+<tr><td><code>common.export_scope</code></td><td>Bek-N Mi Setep · {{n}}</td><td>Redi-N Mi Setep · {{n}}</td></tr>
+<tr><td><code>workflow.start.template_default</code></td><td>Tepy Pet Sep · {{name}}</td><td>Tepy Iru Sep · {{name}}</td></tr>
+<tr><td><code>workflow.start.template_only</code></td><td>Pet-Sesh Wa: {{name}}</td><td>Senn Wa: {{name}}</td></tr>
+<tr><td><code>workflow.start.priority_template</code></td><td>Mi Pet-Sesh</td><td>Mi Senn</td></tr>
+<tr><td><code>workflow.start.errors.duplicate</code></td><td>Ba Pen: Wat Hesy «{{type}}» Em Iri ({{id}}). Pet Sep Wa: Wat Wa.</td><td>Ba Pen: Wat Hesy «{{type}}» Em Iri ({{id}}). Iru Sep Wa: Wat Wa.</td></tr>
+<tr><td><code>workflow.start.errors.template_invalid</code></td><td>Pet-Sesh Pen Nen Maat: Wesekhet Ky, Nen Ankh, Ky Nen Taui Ba.</td><td>Senn Pen Nen Maat: Wesekhet Ky, Nen Ankh, Ky Nen Taui Ba.</td></tr>
+<tr><td><code>workflow.start.errors.case_type_civ</code></td><td>Taui «{{civ}}»: Nen Shesep Pet Sep Pen</td><td>Taui «{{civ}}»: Nen Shesep Iru Sep Pen</td></tr>
+<tr><td><code>workflow.pick.stale_body</code></td><td>{{by}} · {{time}}: Semawy Aat Pen. Maa Setep Emu, Er Khet Smen.</td><td>{{by}} · {{time}}: Semawy Aat Pen. Maa Setep Min, Er Khet Smen.</td></tr>
+<tr><td><code>workflow.pick.stale_view</code></td><td>Maa Setep Emu</td><td>Maa Setep Min</td></tr>
+<tr><td><code>audit.timeline.cap_reached</code></td><td>Medu 500 Pehwy Wa. Setep Sepdet Nedjes Er Maa Medu Tepy.</td><td>Medu 500 Pehwy Wa. Setep Tera Nedjes Er Maa Medu Tepy.</td></tr>
+<tr><td><code>audit.timeline.empty</code></td><td>Nen Medu Was Em Sepdet Pen</td><td>Nen Medu Was Em Tera Pen</td></tr>
+<tr><td><code>audit.stats.scope_hall</code></td><td>Sepdet Neb · Wesekhet Pen · Hesb Neb {{count}}</td><td>Tera Neb · Wesekhet Pen · Hesb Neb {{count}}</td></tr>
+<tr><td><code>audit.stats.scope_all</code></td><td>Sepdet Neb · Wesekhet Neb · Hesb Neb {{count}}</td><td>Tera Neb · Wesekhet Neb · Hesb Neb {{count}}</td></tr>
+<tr><td><code>audit.stats.scope_note</code></td><td>Hesb Pen: Nen Setep Sepdet, Nen Setep Wesekhet.</td><td>Hesb Pen: Nen Setep Tera, Nen Setep Wesekhet.</td></tr>
+<tr><td><code>profile.devices.in_use</code></td><td>Em Aq Emu</td><td>Em Aq Min</td></tr>
+<tr><td><code>profile.password_locked</code></td><td>Sep Menmen. Wehem Iri Er Khet.</td><td>Sep Hau. Wehem Iri Er Khet.</td></tr>
+<tr><td><code>crossJudgments.cancel_flow_body_in_realm</code></td><td>Aat {{realm}} Em Iri: Sekhet Tepy Hena Em Khet: Iri Tepy. Wat Hesy Khetem Emu. Shem-N: Nen Semawy.</td><td>Aat {{realm}} Em Iri: Sekhet Tepy Hena Em Khet: Iri Tepy. Wat Hesy Khetem Min. Shem-N: Nen Semawy.</td></tr>
+<tr><td><code>death_sync.error.INTERNAL_ERROR</code></td><td>Sethet</td><td>Tehi</td></tr>
+<tr><td><code>soul_app.common.alert</code></td><td>Sethet</td><td>Tehi</td></tr>
+<tr><td><code>soul_app.social.lamp_many</code></td><td>{{name}} · Ba {{n}}: Wen Khabes Djet · Medu-Ek</td><td>{{name}} · Ba {{n}}: Wen Teka Djet · Medu-Ek</td></tr>
+<tr><td><code>soul_app.social.lamp_one</code></td><td>{{name}}: Wen Khabes Djet · Medu-Ek</td><td>{{name}}: Wen Teka Djet · Medu-Ek</td></tr>
+<tr><td><code>soul_app.social.lamp_two</code></td><td>{{name}} · Ba {{n}}: Wen Khabes Djet · Medu-Ek</td><td>{{name}} · Ba {{n}}: Wen Teka Djet · Medu-Ek</td></tr>
+<tr><td><code>official_notify.workflow_assigned.title</code></td><td>Wat Hesy · Er-Ek Emu</td><td>Wat Hesy · Er-Ek Min</td></tr>
+<tr><td><code>official_notify.workflow_assigned.body</code></td><td>{{soul}} · Wat Hesy «{{workflow}}»: Er-Ek Emu.</td><td>{{soul}} · Wat Hesy «{{workflow}}»: Er-Ek Min.</td></tr>
+<tr><td><code>officer_app.detail.node</code></td><td>Sekhet Emu · {{n}} / {{total}}</td><td>Sekhet Min · {{n}} / {{total}}</td></tr>
+<tr><td><code>officer_app.detail.cooldown_now</code></td><td>Emu: Hru {{n}} Khery</td><td>Min: Hru {{n}} Khery</td></tr>
+<tr><td><code>officer_app.detail.history_yours</code></td><td>Er-Ek Emu</td><td>Er-Ek Min</td></tr>
+<tr><td><code>officer_app.rebirth.cross_civ_body</code></td><td>Taui Ky: Sab Tepy Wedja · Em Medjat Sab. Hesy Emu: «Nen», Nen Semawy.</td><td>Taui Ky: Sab Tepy Wedja · Em Medjat Sab. Hesy Min: «Nen», Nen Semawy.</td></tr>
+<tr><td><code>events.col_time</code></td><td>Sepdet</td><td>Tera</td></tr>
+<tr><td><code>hall_settings.visit.hint</code></td><td>Shemes Nen Wen: Maa Em Medjat Ba. Nen Sesh: Nen Maa.</td><td>Shat Nen Wen: Maa Em Medjat Ba. Nen Sesh: Nen Maa.</td></tr>
+<tr><td><code>hall_settings.visit.letters_on</code></td><td>Shemes Wen-N · Ba Nen Maa Emu.</td><td>Shat Wen-N · Ba Nen Maa Min.</td></tr>
+</tbody></table></div>
+</section>
+
+<p>交付照旧:<code>v4-batch36-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>(扁平键)+ 回复说明。</p>
+</article>
+
+<article>
+<h2>第三十五批 · egy 剩余词根修正(报告第六节里你列的建议)<span class="tag">已收到 · 2026-11-14</span></h2>
+<p>第三十三批两次交付和第三十四批第一次已收到并开始落地。用户对你提的几件事拍板如下(2026-11-14):</p>
+<ul>
+<li><strong>报告里剩下的也一并改</strong>,照你的建议:Sethet(错误)→ Tehi;Shemes(书信)→ Shat;Menmen(太频繁)→ Hau;Emu(现在)→ Min;Khabes → Teka;Hemsu、Menf、Bek、Khedu、Ates、Sherer 等造词:能找到有出处的真词就换,找不到的保留,并在词表加一列「造词」标出;Shut(影)保留 Khaibit 并注明旧转写;Pet / Hetep / Djedu 等义项没有依据的,单开一节一起处理。请给 <code>v4-batch35-egy.json</code> + 回复说明 + 更新后的词表。</li>
+<li><strong>官员端的「你」</strong>:照你第三十四批第五节第 1 条的表改中文(代码这边在改)。</li>
+<li><strong>CN-23</strong>:改用「位列仙班」(你给的三条中文),规则不变。</li>
+<li><strong>欧洲渡口</strong>:照你的建议,后端改成只有地狱路经过渡口,炼狱路和天国路不经渡口(代码这边在改);图不用再动。</li>
+<li><strong>埃及防腐</strong>:先保留作起点;行程里没有防腐这一站时再告诉你。</li>
+<li>第三十四批第二次(63 个积压键)照常交,可以和这一批一起。</li>
+<li><strong>请确认 46 个键</strong>:落地第三十三批第二次时,代码这边按你的规则另改了你快照里没有的 46 个键 —— Medew→Medu 38 个(<code>audit.*</code>、<code>events.*</code>、<code>workflow.*</code> 等)、Nehet→Sepret 3 个、Netjer→Iaut 4 个(<code>audit.resources.role</code>、<code>audit.resources.rolepermission</code>、<code>users.import.row_codes.role_invalid</code>、<code>sentence_plan.cross.seat_role</code>)、Sedjem→Smi 1 个(<code>dashboard.todo.reports</code>)。请对照词表看一眼,有不妥直接在回复里给新值。</li>
+<li><strong>新键 1 个</strong>:<code>map.europe.straight_to_heaven</code>(「直达天国」/ "Straight to heaven",欧洲图上直达线的标签),请给 egy。</li>
+<li>希腊判「普通」的判决句已用你给的写法(键就叫 <code>verdict_doc.gr.verdict.purgatory</code>),文书已恢复。</li>
+</ul>
+</article>
+
+<article>
+<h2>第三十四批 · 卷宗第 3、4 步、AI 功能、四文明修复的新文字 egy + 地图修正<span class="tag new">第一次已回 · 63 个积压待回</span></h2>
+<p>回复写到 <code>v4-batch34-reply.md</code>,egy 写进 <code>v4-batch34-egy.json</code>(扁平),图写到 <code>v4-batch34-map-*.svg</code>。规则照旧(第三十三批起：完成式用「动词-N」、废止词根不再用、以代码里的值为准)。</p>
+<section>
+<h3>一 · 286 个键的 egy</h3>
+<ul>
+<li><strong>新 223 个</strong>:卷宗页(<code>caseDesk.dossier.*</code>)、五门(<code>doors.*</code>、<code>officer_app.doors.*</code>)、官员端落印(<code>officer_app.seal.*</code>)、AI 功能(<code>perm_explain.*</code>、<code>audit_ask.*</code>、<code>ai_assist.*</code>、助手轨迹与安全卡)、四文明修复(希腊「中立之地」一类、欧洲未受洗不得判炼狱的报错)、灵魂端印与记号、egy 说明(<code>nav.language_egy_note</code>)等。</li>
+<li><strong>积压 63 个</strong>:改版之前就缺 egy 的(多为演示站文案)。这一批一起给。</li>
+<li><strong>请复核中文措辞(CN-23,子代理自拟)</strong>:<code>reincarnation.error.eternal_sentence_by_civ.cn.BLISS</code>、<code>soul_app.sentence.eternal_title_by_civ.cn.BLISS</code>、<code>soul_app.sentence.eternal_no_rebirth_by_civ.cn.BLISS</code>——在下表里;如觉得不妥请直接给中文改法。</li>
+</ul>
+<div class="scroll"><table><thead><tr><th>键</th><th>中文</th><th>English</th><th>新 / 积压</th></tr></thead><tbody>
+<tr><td><code>demo.build.quality</code></td><td>怎么测的：质量证据（英文）</td><td>How it is tested: quality evidence</td><td>新</td></tr>
+<tr><td><code>nav.language_egy_note</code></td><td>Kemet 是用中埃及语词根按现代语序拼成的界面语言，只作演示，不是真正的古埃及语句子。逐词根的出处核对见仓库 docs/lore-verification/egy-lexicon-roots.md。</td><td>Kemet is an interface language assembled from Middle Egyptian roots in modern word order, for demonstration. It is not real ancient Egyptian. The root-by-root source check is in the repository at docs/lore-verification/egy-lexicon-roots.md.</td><td>新</td></tr>
+<tr><td><code>soul_app.life.seal_title</code></td><td>你的判词</td><td>Your verdict</td><td>新</td></tr>
+<tr><td><code>soul_app.life.seal_pending</code></td><td>落印后会在这里出现印</td><td>The seal will appear here once it is set.</td><td>新</td></tr>
+<tr><td><code>sentence_plan.errors.unbaptised_no_purgatory</code></td><td>这个灵魂未受洗或生于基督之前：不能判炼狱（炼狱只收死于恩宠的人）。无更重的罪判通过（入林勃），有则判不通过。</td><td>This soul is unbaptised or was born before Christ: not Purgatory, which holds those who died in grace. With no heavier sin give Passed (Limbo); otherwise Failed.</td><td>新</td></tr>
+<tr><td><code>appeals.error.unbaptised_no_purgatory</code></td><td>这个灵魂未受洗或生于基督之前：不能改判炼狱（炼狱只收死于恩宠的人）。</td><td>This soul is unbaptised or was born before Christ: the amended verdict can&#x27;t be Purgatory, which holds those who died in grace.</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.section_title_by_civ.gr.NEUTRAL</code></td><td>我的居所</td><td>My dwelling</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.term_by_civ.gr.NEUTRAL</code></td><td>停留期</td><td>Stay</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.all_done_title_by_civ.gr.NEUTRAL</code></td><td>停留期已满</td><td>Your stay is over</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.blocked_title_by_civ.gr.NEUTRAL</code></td><td>停留期尚未满</td><td>Your stay is not over yet</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.blocked_link_by_civ.gr.NEUTRAL</code></td><td>看我的居所</td><td>See my dwelling</td><td>新</td></tr>
+<tr><td><code>soul_app.life.sentence_by_civ.gr.NEUTRAL</code></td><td>停留期</td><td>Stay</td><td>新</td></tr>
+<tr><td><code>soul_app.life.sentence_years_by_civ.gr.NEUTRAL</code></td><td>停留 {{years}} 年</td><td>{{years}} years</td><td>新</td></tr>
+<tr><td><code>sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.WAITING</code></td><td>停留期满，暂留草原</td><td>Stay over; remaining on the meadow</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.push.completed.title_by_civ.gr.NEUTRAL</code></td><td>停留期已满</td><td>Stay over</td><td>新</td></tr>
+<tr><td><code>soul_push.sentence_completed.title_by_civ.gr.NEUTRAL</code></td><td>停留期已满</td><td>Stay over</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.push.completed.body_by_civ.gr.NEUTRAL</code></td><td>你的停留期已满，打开灵魂簿查看。</td><td>Your stay is over. Open Soul Ledger to see it.</td><td>新</td></tr>
+<tr><td><code>soul_push.sentence_completed.body_by_civ.gr.NEUTRAL</code></td><td>你的停留期已满，打开灵魂簿查看。</td><td>Your stay is over. Open Soul Ledger to see it.</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.push.waiting.title_by_civ.gr.NEUTRAL</code></td><td>一站停留期满，暂留原地</td><td>A stay is over; you remain for now</td><td>新</td></tr>
+<tr><td><code>soul_push.sentence_waiting.title_by_civ.gr.NEUTRAL</code></td><td>一站停留期满，暂留原地</td><td>A stay is over; you remain for now</td><td>新</td></tr>
+<tr><td><code>soul_app.sentence.push.waiting.body_by_civ.gr.NEUTRAL</code></td><td>你有一站停留期已满，打开灵魂簿查看。</td><td>One of your stays is over. Open Soul Ledger to see it.</td><td>新</td></tr>
+<tr><td><code>soul_push.sentence_waiting.body_by_civ.gr.NEUTRAL</code></td><td>你有一站停留期已满，打开灵魂簿查看。</td><td>One of your stays is over. Open Soul Ledger to see it.</td><td>新</td></tr>
+<tr><td><code>perm_explain.why</code></td><td>为什么?</td><td>Why?</td><td>新</td></tr>
+<tr><td><code>perm_explain.loading</code></td><td>正在查原因…</td><td>Finding the reason…</td><td>新</td></tr>
+<tr><td><code>perm_explain.failed</code></td><td>暂时查不到原因,请稍后再试。</td><td>The reason could not be looked up just now. Try again later.</td><td>新</td></tr>
+<tr><td><code>perm_explain.ai_label</code></td><td>AI 措辞 · 原因由系统按权限规则算出</td><td>Worded by AI · the reason itself is computed from the permission rules</td><td>新</td></tr>
+<tr><td><code>perm_explain.needs</code></td><td>所需权限:{name}</td><td>Permission needed: {name}</td><td>新</td></tr>
+<tr><td><code>perm_explain.your_roles</code></td><td>你的角色:{roles}</td><td>Your roles: {roles}</td><td>新</td></tr>
+<tr><td><code>perm_explain.who_can</code></td><td>能做这件事的角色:{roles}</td><td>Roles that can do this: {roles}</td><td>新</td></tr>
+<tr><td><code>perm_explain.scope_kinds</code></td><td>你的数据范围:{kinds}</td><td>Your data scope: {kinds}</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.allowed</code></td><td>你可以做这件事。</td><td>You can do this.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.soul_account</code></td><td>灵魂账号不持有任何官员权限。</td><td>A soul account holds no officer permissions.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.global_admin_only</code></td><td>这项改的是所有殿共用的配置,只给不属于任何殿的全局管理员。</td><td>This changes configuration shared by every hall, so only the administrator with no hall holds it.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.admin_only</code></td><td>这项只给管理员,其他角色在权限表里勾上也不生效。</td><td>Only the administrator role holds this; ticking it for another role has no effect.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.role_forbidden</code></td><td>这项对你的角色是禁止的,权限表里勾上也不生效。</td><td>This is forbidden for your role; ticking it in the permission table has no effect.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.design_approve_conflict</code></td><td>你的角色能设计流程;按规定,设计流程的人不能审批。</td><td>Your role designs workflows, and whoever designs workflows may not approve them.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.missing_permission</code></td><td>你的角色没有这项权限。需要的话请找本殿管理员调整。</td><td>None of your roles has this permission. Ask your hall&#x27;s administrator if you need it.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.viewing_read_only</code></td><td>你正在以他人身份只读查看,这段时间不能做写操作。</td><td>You are viewing as someone else, read-only, so nothing can be changed meanwhile.</td><td>新</td></tr>
+<tr><td><code>perm_explain.reason.out_of_scope</code></td><td>你有这项权限,但这条记录不在你能看到的范围内。</td><td>You hold this permission, but this record is outside what you can see.</td><td>新</td></tr>
+<tr><td><code>audit_ask.label</code></td><td>用一句话找记录</td><td>Find records in a sentence</td><td>新</td></tr>
+<tr><td><code>audit_ask.placeholder</code></td><td>例如:demo_judge 最近 7 天删了什么</td><td>e.g. what did demo_judge delete in the last 7 days</td><td>新</td></tr>
+<tr><td><code>audit_ask.submit</code></td><td>转成筛选</td><td>Turn into filters</td><td>新</td></tr>
+<tr><td><code>audit_ask.proposed</code></td><td>AI 建议的筛选,确认后才查询</td><td>Filters suggested by AI; nothing is queried until you confirm</td><td>新</td></tr>
+<tr><td><code>audit_ask.apply</code></td><td>按这些条件查</td><td>Search with these</td><td>新</td></tr>
+<tr><td><code>audit_ask.discard</code></td><td>不用</td><td>Discard</td><td>新</td></tr>
+<tr><td><code>audit_ask.dropped</code></td><td>已丢掉不认识或越权的条件:{keys}</td><td>Dropped conditions that were unknown or not yours to use: {keys}</td><td>新</td></tr>
+<tr><td><code>audit_ask.not_understood</code></td><td>没听懂这句话,请直接用下面的筛选。</td><td>That sentence was not understood. Use the filters below instead.</td><td>新</td></tr>
+<tr><td><code>audit_ask.unavailable</code></td><td>AI 暂时不可用,请直接用下面的筛选。</td><td>AI is unavailable just now. Use the filters below instead.</td><td>新</td></tr>
+<tr><td><code>audit_ask.not_configured</code></td><td>本殿没有开通 AI,请直接用下面的筛选。</td><td>AI is not switched on for this hall. Use the filters below instead.</td><td>新</td></tr>
+<tr><td><code>audit_ask.busy</code></td><td>AI 正忙,请稍后再试,或直接用下面的筛选。</td><td>AI is busy. Try again shortly, or use the filters below.</td><td>新</td></tr>
+<tr><td><code>audit_ask.model</code></td><td>模型 · {model}</td><td>Model · {model}</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.action</code></td><td>动作</td><td>Action</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.resource</code></td><td>资源</td><td>Resource</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.resource_id</code></td><td>资源编号</td><td>Resource ID</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.username</code></td><td>操作人</td><td>Operator</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.start_date</code></td><td>起始日</td><td>From</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.end_date</code></td><td>截止日</td><td>To</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.trace_id</code></td><td>请求追踪号</td><td>Trace ID</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.tenant</code></td><td>殿</td><td>Hall</td><td>新</td></tr>
+<tr><td><code>audit_ask.fields.search</code></td><td>关键词</td><td>Keyword</td><td>新</td></tr>
+<tr><td><code>audit_ask.clear_field</code></td><td>去掉「{name}」</td><td>Remove “{name}”</td><td>新</td></tr>
+<tr><td><code>audit_ask.demo_not_recorded</code></td><td>这是演示环境,只回放录好的问题。可以试:{examples}</td><td>This is the demo, so only recorded questions are answered. Try: {examples}</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.title</code></td><td>这次怎么答的</td><td>How this was answered</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.tools</code></td><td>调用的工具</td><td>Tools called</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.no_tools</code></td><td>没有调用工具</td><td>No tool called</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.entries</code></td><td>帮助条目</td><td>Help entries</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.retrieval.vector</code></td><td>向量检索，下列条目进了上下文</td><td>Vector search; these entries went into the context</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.retrieval.fallback</code></td><td>检索不可用，送了整份帮助</td><td>Search unavailable; the whole help text was sent</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.retrieval.fallback_low_similarity</code></td><td>没有足够相近的条目，送了整份帮助</td><td>Nothing close enough; the whole help text was sent</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.tokens</code></td><td>token</td><td>Tokens</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.tokens_value</code></td><td>输入 {{input}} · 输出 {{output}} · 缓存读 {{cached}}</td><td>in {{input}} · out {{output}} · cache read {{cached}}</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.latency</code></td><td>耗时</td><td>Time</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.latency_value</code></td><td>{{ms}} ms</td><td>{{ms}} ms</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.latency_first</code></td><td>{{ms}} ms · 首字 {{first}} ms</td><td>{{ms}} ms · first word at {{first}} ms</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.answered_by</code></td><td>作答</td><td>Answered by</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.role.primary</code></td><td>主用</td><td>Primary</td><td>新</td></tr>
+<tr><td><code>officer_assist.trace.role.backup</code></td><td>备用</td><td>Backup</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency</code></td><td>耗时 · 本月</td><td>Latency · this month</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_none</code></td><td>本月还没有记了耗时的已答提问。</td><td>No answered question this month has a recorded time yet.</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_p50</code></td><td>耗时 p50</td><td>Latency p50</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_p95</code></td><td>耗时 p95</td><td>Latency p95</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.first_token_p50</code></td><td>首字 p50</td><td>First word p50</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.first_token_p95</code></td><td>首字 p95</td><td>First word p95</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_source</code></td><td>帮助条目来源</td><td>Help entries from</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_by.vector</code></td><td>向量检索</td><td>Vector search</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_by.fallback</code></td><td>整份帮助（检索不可用）</td><td>Whole help text (search unavailable)</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_by.fallback_low_similarity</code></td><td>整份帮助（不够相近）</td><td>Whole help text (nothing close enough)</td><td>新</td></tr>
+<tr><td><code>assist_admin.usage.latency_note</code></td><td>按本月 {{count}} 次已答提问计，从收到问题到答完；首字只算逐字显示的提问。</td><td>Over {{count}} answered questions this month, from arrival to the last word; first word counts streamed questions only.</td><td>新</td></tr>
+<tr><td><code>assist_admin.eval.pass_rate</code></td><td>通过</td><td>Passed</td><td>新</td></tr>
+<tr><td><code>assist_admin.eval.errors</code></td><td>{{n}} 条出错</td><td>{{n}} errored</td><td>新</td></tr>
+<tr><td><code>assist_admin.eval.max_latency</code></td><td>最慢</td><td>Slowest</td><td>新</td></tr>
+<tr><td><code>assist_admin.eval.forbidden</code></td><td>出现了不该有的「{{phrases}}」</td><td>contains “{{phrases}}”, which it must not</td><td>新</td></tr>
+<tr><td><code>demo.tour.target.assist_guard</code></td><td>助手管理</td><td>Assistant admin</td><td>新</td></tr>
+<tr><td><code>demo.tour.guard.7.name</code></td><td>问一问为什么越不了权</td><td>Why Ask cannot overreach</td><td>新</td></tr>
+<tr><td><code>demo.tour.guard.7.body</code></td><td>助手会调工具查数据，所以它也是一条可能越权的路。防线不在提示词里：工具只收提问者本人，模型选得了调哪个，选不了读谁。下面是守着它的代码与测试，以及几条注入试验的真实回答。</td><td>The assistant calls tools to read data, so it is one more way someone could try to overreach. The defence is not in the prompt: the tools take only the asker, so the model can choose which to call but not whose data to read. Below are the code and tests that hold this, and the real answers to a few injection attempts.</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.how_title</code></td><td>怎么守的</td><td>How it is held</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.guard.no_ids</code></td><td>每个工具只收提问者本人，不收任何编号：模型能选调哪个工具，选不了读谁。</td><td>Every tool takes only the asker and no id: the model can choose which tool to call, not whose data it reads.</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.guard.offered_and_rechecked</code></td><td>只提供提问者有权用的工具；执行时再查一次，编出来的或被诱导调用的工具一律拒绝。</td><td>Only tools the asker may use are offered, and each is checked again when it runs: an invented or coaxed call is refused.</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.guard.counts_only</code></td><td>官员端的工具只出计数，不出姓名、编号、陈述、判词；范围取自各页面自己的查询。</td><td>The officer tools return counts only, never names, numbers, statements or verdicts, scoped by each page&#x27;s own query.</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.guard.whitelist</code></td><td>灵魂端送给模型的字段是白名单，不复用页面的序列化器。</td><td>On the soul side, the fields sent to the model are a whitelist; the page serializers are not reused.</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.guard.data_not_instructions</code></td><td>事实与工具结果都标明是数据，不是指令；助手只读，没有会写入的工具。</td><td>Facts and tool results are marked as data, not instructions; the assistant is read-only and has no tool that writes.</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.cases_title</code></td><td>注入试验</td><td>Injection attempts</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.expect</code></td><td>应当：</td><td>Expected:</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.recorded</code></td><td>录制的回答：在测试环境以评测官员身份真实问过一次（{{at}}）,原样回放。</td><td>A recorded answer: asked for real as the eval officer in the test environment ({{at}}), replayed as it was.</td><td>新</td></tr>
+<tr><td><code>demo.assist_guard.not_recorded</code></td><td>这一条还没有录下真实回答，这里不替它编一个。</td><td>No real answer has been recorded for this one yet, and none is made up here.</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.rebirth_application</code></td><td>转生申请</td><td>Rebirth applications</td><td>新</td></tr>
+<tr><td><code>officer_app.doors.desk.glyph</code></td><td>审</td><td>C</td><td>新</td></tr>
+<tr><td><code>officer_app.doors.desk.label</code></td><td>案卷</td><td>Cases</td><td>新</td></tr>
+<tr><td><code>officer_app.doors.roll.glyph</code></td><td>册</td><td>R</td><td>新</td></tr>
+<tr><td><code>officer_app.doors.roll.label</code></td><td>名册</td><td>Roll</td><td>新</td></tr>
+<tr><td><code>officer_app.doors.me.glyph</code></td><td>我</td><td>M</td><td>新</td></tr>
+<tr><td><code>officer_app.doors.me.label</code></td><td>本人</td><td>Me</td><td>新</td></tr>
+<tr><td><code>officer_app.doors.me_unread</code></td><td>本人 · 有未读通知</td><td>Me · unread notices</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.judge</code></td><td>判</td><td>Judge</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.title</code></td><td>判 · {{name}}</td><td>Judge · {{name}}</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.auto_route</code></td><td>去处按发落规则自动选定；要自选去处或引用条文，在官员台判。</td><td>The destination follows the routing rules; to choose one or cite a statute, judge at the desk.</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.verdict_label</code></td><td>判词</td><td>Verdict</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.hold</code></td><td>按住落印</td><td>Hold to seal</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.hold_note</code></td><td>按住「落印」1 秒落下。落印后不能撤回；要改判只能走申诉。</td><td>Hold Seal for one second. A seal cannot be withdrawn; only an appeal can change the verdict.</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.pending_a11y</code></td><td>印 · 待落印</td><td>Seal · not yet set</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.a11y</code></td><td>已落印</td><td>Sealed</td><td>新</td></tr>
+<tr><td><code>officer_app.seal.done</code></td><td>已落印</td><td>Sealed</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.cn.aria</code></td><td>地府 · 十殿一线</td><td>Diyu · the ten courts in a line</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.cn.pre</code></td><td>前九站</td><td>First nine stops</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.cn.hells</code></td><td>地狱 · 支线</td><td>Hells · branch</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.cn.rebirth</code></td><td>轮回</td><td>Rebirth</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eu.aria</code></td><td>欧洲 · 九圈漏斗</td><td>Europe · the nine-circle funnel</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eu.minos</code></td><td>米诺斯</td><td>Minos</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eg.aria</code></td><td>埃及 · 称心二分</td><td>Egypt · the weighing divides</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eg.death</code></td><td>死亡</td><td>Death</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eg.gate</code></td><td>杜阿特之门</td><td>Gate of the Duat</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eg.heart</code></td><td>心</td><td>Heart</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eg.feather</code></td><td>羽</td><td>Feather</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eg.aaru</code></td><td>芦苇原</td><td>Field of Reeds</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.eg.annihilation</code></td><td>湮灭 · 不是地方</td><td>Annihilation · not a place</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.gr.aria</code></td><td>希腊 · 三岔分路</td><td>Greece · the three-way fork</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.gr.death</code></td><td>死亡</td><td>Death</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.gr.ferry</code></td><td>阿刻戎渡口</td><td>Acheron crossing</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.gr.isles</code></td><td>至福岛</td><td>Isles of the Blessed</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.gr.asphodel</code></td><td>阿斯福得草原</td><td>Asphodel Meadows</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.spine.gr.tartarus</code></td><td>塔尔塔罗斯</td><td>Tartarus</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.seal.aria</code></td><td>{{seal}}</td><td>{{seal}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.seal.aria_pending</code></td><td>{{seal}} · 待落印</td><td>{{seal}} · not yet sealed</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.seal.cn</code></td><td>地府 · 方印</td><td>Diyu · square seal</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.seal.eu</code></td><td>欧洲 · 圆形蜡封</td><td>Europe · wax seal</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.seal.eg</code></td><td>埃及 · 王名圈</td><td>Egypt · cartouche</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.seal.gr</code></td><td>希腊 · 陶片</td><td>Greece · ostracon</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.cn.merit</code></td><td>功</td><td>Merit</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.cn.demerit</code></td><td>过</td><td>Demerit</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.cn.merit_glyph</code></td><td>功</td><td>功</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.cn.demerit_glyph</code></td><td>过</td><td>过</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.eu.merit</code></td><td>德</td><td>Virtue</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.eu.demerit</code></td><td>罪</td><td>Sin</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.eg.merit</code></td><td>羽</td><td>Feather</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.eg.demerit</code></td><td>心</td><td>Heart</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.gr.merit</code></td><td>白票</td><td>White ballot</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.mark.gr.demerit</code></td><td>黑票</td><td>Black ballot</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.tabs.label</code></td><td>卷宗分页</td><td>Dossier sections</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.tabs.dossier</code></td><td>卷宗</td><td>Dossier</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.tabs.merits</code></td><td>功过</td><td>Merits</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.tabs.events</code></td><td>事件</td><td>Events</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.tabs.lives</code></td><td>轮回</td><td>Lives</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.tabs.sentence</code></td><td>受刑</td><td>Sentence</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.merits_all</code></td><td>全部 {{n}} 条</td><td>All {{n}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.head</code></td><td>判 · 按 1–4 选</td><td>Judge · press 1–4</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.sealed_head</code></td><td>判词 · 已落印</td><td>Verdict · sealed</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.words</code></td><td>判词</td><td>Verdict</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.cited</code></td><td>引律条</td><td>Cited statutes</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.seal</code></td><td>落印</td><td>Seal</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.hint</code></td><td>选定去处、写好判词后落印。落印后不能撤回。</td><td>Choose a destination and write the verdict, then seal it. A seal cannot be withdrawn.</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.sealed_note</code></td><td>落印后不能撤回；要改判只能走申诉。</td><td>A seal cannot be withdrawn; only an appeal can change the verdict.</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.seal_appears</code></td><td>落印后会在这里出现印</td><td>The seal will appear here once it is set.</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.full_text</code></td><td>看判词全文</td><td>Read the full verdict</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.judge.sealed_by</code></td><td>{{date}} · {{judge}}</td><td>{{date}} · {{judge}}</td><td>新</td></tr>
+<tr><td><code>doors.section.desk</code></td><td>案卷台</td><td>Case desk</td><td>新</td></tr>
+<tr><td><code>doors.section.sources</code></td><td>来源</td><td>Sources</td><td>新</td></tr>
+<tr><td><code>doors.section.register</code></td><td>名册</td><td>Register</td><td>新</td></tr>
+<tr><td><code>doors.section.statutes</code></td><td>律令</td><td>Statutes</td><td>新</td></tr>
+<tr><td><code>doors.section.ledger</code></td><td>总簿</td><td>Ledger</td><td>新</td></tr>
+<tr><td><code>doors.section.hall</code></td><td>殿司</td><td>Halls</td><td>新</td></tr>
+<tr><td><code>doors.section.users</code></td><td>用户</td><td>Users</td><td>新</td></tr>
+<tr><td><code>doors.section.permissions</code></td><td>权限</td><td>Permissions</td><td>新</td></tr>
+<tr><td><code>doors.section.audit</code></td><td>审计</td><td>Audit</td><td>新</td></tr>
+<tr><td><code>doors.section.system</code></td><td>系统</td><td>System</td><td>新</td></tr>
+<tr><td><code>doors.section.mortal</code></td><td>人间</td><td>Mortal world</td><td>新</td></tr>
+<tr><td><code>doors.office_read_only</code></td><td>殿司 · 窄屏只读</td><td>Hall office · read-only on a phone</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.where.station</code></td><td>第 {{n}} 站</td><td>Stop {{n}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.dossier.where.circle</code></td><td>第 {{n}} 圈</td><td>Circle {{n}}</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.title</code></td><td>AI 建议援引</td><td>AI suggested articles</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.ask</code></td><td>建议援引</td><td>Suggest articles</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.note</code></td><td>只是建议:逐条读原文,勾选的才会引用。</td><td>Suggestions only: read each article; only the ones you tick are cited.</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.why</code></td><td>理由</td><td>Why</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.keyword</code></td><td>关键词匹配</td><td>Keyword match</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.fallback</code></td><td>AI 不可用或本殿未开通,以下是关键词匹配的条文。</td><td>AI is unavailable or not switched on for this hall; these are keyword matches.</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.none</code></td><td>没有找到适用的条文。</td><td>No applicable article found.</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.cite_selected</code></td><td>引用所选({n})</td><td>Cite selected ({n})</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.discard</code></td><td>都不用</td><td>Use none</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.dropped</code></td><td>已丢掉无据的建议:{codes}</td><td>Dropped suggestions with no basis: {codes}</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.model</code></td><td>模型 · {model}</td><td>Model · {model}</td><td>新</td></tr>
+<tr><td><code>ai_assist.statutes.error</code></td><td>没取到建议,请直接检索条文。</td><td>Could not get suggestions; search the articles directly.</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.ask</code></td><td>起草判词</td><td>Draft the verdict text</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.need_verdict</code></td><td>先选定裁决,再起草。</td><td>Choose the verdict first, then draft.</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.note</code></td><td>AI 只按你选定的裁决起草;放进判词框后由你修改、保存。</td><td>AI drafts only the verdict you chose; once in the text box it is yours to edit and save.</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.insert</code></td><td>放入判词框</td><td>Put in the text box</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.replace</code></td><td>替换判词框里的文字</td><td>Replace the text in the box</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.discard</code></td><td>不用</td><td>Discard</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.fallback</code></td><td>AI 不可用或本殿未开通,这是模板句。</td><td>AI is unavailable or not switched on for this hall; this is a template sentence.</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.check_unknown</code></td><td>不在已采纳引用里的条文:{codes}</td><td>Articles not among the adopted citations: {codes}</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.check_contrary</code></td><td>出现了与所选裁决相反的说法:{words}</td><td>Words of a different verdict: {words}</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.check_name</code></td><td>出现了灵魂的姓名或编号</td><td>Names the soul or its code</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.model</code></td><td>模型 · {model}</td><td>Model · {model}</td><td>新</td></tr>
+<tr><td><code>ai_assist.verdict.error</code></td><td>没取到草稿,请直接书写判词。</td><td>Could not get a draft; write the verdict text directly.</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.run</code></td><td>AI 预筛</td><td>AI pre-screen</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.sort</code></td><td>按风险排序</td><td>Sort by risk</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.note</code></td><td>只排序,不隐藏也不删除;决定仍由你做。</td><td>Sorts only; nothing is hidden or deleted. You decide.</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.score</code></td><td>风险 {score}</td><td>Risk {score}</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.fallback</code></td><td>AI 不可用或本殿未开通,只用规则分。</td><td>AI is unavailable or not switched on for this hall; rule scores only.</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.model</code></td><td>模型 · {model}</td><td>Model · {model}</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.error</code></td><td>预筛没成功,队列照常可用。</td><td>Pre-screen failed; the queue works as usual.</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.signals.sensitive_word</code></td><td>命中敏感词</td><td>Sensitive word</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.signals.reported</code></td><td>被举报</td><td>Reported</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.signals.injection_phrase</code></td><td>含操纵评分的句子</td><td>Tries to steer the score</td><td>新</td></tr>
+<tr><td><code>ai_assist.screen.signals.media</code></td><td>带图</td><td>Has images</td><td>新</td></tr>
+<tr><td><code>death_sync.error.SOUL_AMBIGUOUS</code></td><td>同名在世者不止一个</td><td>More than one living soul by this name</td><td>积压</td></tr>
+<tr><td><code>death_sync.next.SOUL_AMBIGUOUS</code></td><td>按姓名找到不止一个在世的灵魂，没有登记；请来源系统补上生辰或灵魂编号后换一个幂等键重新提交。</td><td>More than one living soul has this name, so nothing was registered; the source system should add the birth date or the soul ID and resubmit with a new idempotency key.</td><td>积压</td></tr>
+<tr><td><code>permissions.datascope.default_unset</code></td><td>未配置(兼任时不放宽)</td><td>Not set (does not widen combined roles)</td><td>积压</td></tr>
+<tr><td><code>menu_buttons.display_only_note</code></td><td>这里只控制按钮是否显示，不会让服务端拒绝操作。要禁止某项操作，请收回对应权限。</td><td>This only controls whether the button is shown; the server does not refuse the action. To forbid an action, take the permission away.</td><td>积压</td></tr>
+<tr><td><code>soul_app.assist.history_entry</code></td><td>我的问一问记录</td><td>My Ask history</td><td>积压</td></tr>
+<tr><td><code>soul_app.errors.soul_recycled</code></td><td>灵魂已移入回收站,账号暂停使用</td><td>This soul is in the recycle bin; the account is paused</td><td>积压</td></tr>
+<tr><td><code>dispatch.withdraw_approval</code></td><td>撤回批准</td><td>Withdraw approval</td><td>积压</td></tr>
+<tr><td><code>dispatch.withdraw_approval_warning</code></td><td>本殿已经批准、还没执行。撤回后这次调拨作废,灵魂留在原处,发起殿会收到通知。</td><td>This hall approved it and it has not been executed. Withdrawing voids the dispatch, the soul stays where it is, and the sending hall is notified.</td><td>积压</td></tr>
+<tr><td><code>dispatch.withdraw_approval_success</code></td><td>已撤回批准</td><td>Approval withdrawn</td><td>积压</td></tr>
+<tr><td><code>demo.home.guard_title</code></td><td>系统怎么保护自己</td><td>How the system protects itself</td><td>积压</td></tr>
+<tr><td><code>demo.home.guard_body</code></td><td>以太史令(管理员)身份走 6 步：殿与殿的数据隔离、权限码、越权会被怎样拒绝、数据范围、审计日志、回收站。</td><td>Six steps as the Grand Scribe (the administrator): how each hall&#x27;s data is kept apart, permission codes, how an overreach is refused, data scopes, the audit log, the recycle bin.</td><td>积压</td></tr>
+<tr><td><code>demo.home.guard_cta</code></td><td>走一遍防护导览</td><td>Take the safeguards tour</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.title</code></td><td>系统怎么保护自己</td><td>How the system protects itself</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.done_title</code></td><td>防护导览走完了</td><td>That is the safeguards tour</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.done_body</code></td><td>这些规则都在后端执行，前端只是把它们画出来。换一个冥界，以判官身份走一个灵魂的一生。</td><td>Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul&#x27;s life as its judge.</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.1.name</code></td><td>殿与殿的数据隔离</td><td>Each hall&#x27;s data kept apart</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.1.body</code></td><td>每个冥界是一个租户。你是全局管理员，所以这里列出全部殿；一位判官只看得到本殿的灵魂。隔离不靠前端：每个接口的查询都经 scope_to_tenant 收窄，查不出殿的请求一律给空集。</td><td>Each underworld is a tenant. You are the global administrator, so every hall is listed here; a judge sees only their own hall&#x27;s souls. The screen does not do this: every endpoint&#x27;s query is narrowed by scope_to_tenant, and a request with no resolvable hall gets an empty set.</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.2.name</code></td><td>权限码</td><td>Permission codes</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.2.body</code></td><td>每个动作对应一个权限码(比如「执行审判」),角色持有哪些码在这张矩阵里。菜单和按钮按码显示，接口按同一套码判定。</td><td>Every action has a permission code (&quot;Execute judgment&quot;, for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes.</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.3.name</code></td><td>试一下越权</td><td>Try an overreach</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.3.body</code></td><td>判官看不到这一页，但隐藏按钮不算防护。点下面的按钮，看判官直接请求这一页的接口时，服务端怎么回答。</td><td>A judge never sees this page, but a hidden button is not a safeguard. Press the button below to see what the server answers when a judge asks this page&#x27;s endpoint directly.</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.4.name</code></td><td>数据范围</td><td>Data scopes</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.4.body</code></td><td>权限码决定能做什么，数据范围决定对哪些行做。打开一个角色，可按业务配五种范围：全部、本机构及下级、本机构、仅本人、指定机构。范围在殿级隔离之后再收窄一次。</td><td>Permission codes decide what a role may do; data scopes decide on which rows. Open a role to set one of five scopes per business area: all, own unit and below, own unit, own records only, chosen units. They narrow again after the hall-level isolation.</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.5.name</code></td><td>审计日志</td><td>The audit log</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.5.body</code></td><td>每次写操作都留一行：谁、何时、改了哪些字段、改前改后。密码和令牌不进日志；审计写入失败时一定留下一条错误日志，不会悄无声息地漏记。</td><td>Every write leaves a row: who, when, which fields, before and after. Passwords and tokens never go into it, and an audit write that fails always leaves an error in the log rather than vanishing.</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.6.name</code></td><td>回收站</td><td>The recycle bin</td><td>积压</td></tr>
+<tr><td><code>demo.tour.guard.6.body</code></td><td>删除默认是软删除，记录进回收站，可以还原。还原和彻底删除只有管理员能做：矩阵拒绝把这两个码授给别的角色，接口也会再拒一次。</td><td>A delete is a soft delete: the record goes to the recycle bin and can be restored. Only the administrator may restore or purge: the matrix refuses to grant those two codes to any other role, and the endpoint refuses again.</td><td>积压</td></tr>
+<tr><td><code>demo.tour.target.tenants</code></td><td>殿的列表</td><td>the list of halls</td><td>积压</td></tr>
+<tr><td><code>demo.tour.target.matrix</code></td><td>权限矩阵</td><td>the permission matrix</td><td>积压</td></tr>
+<tr><td><code>demo.tour.target.overreach</code></td><td>越权试验</td><td>the overreach test</td><td>积压</td></tr>
+<tr><td><code>demo.tour.target.data_scope</code></td><td>角色列表</td><td>the roles</td><td>积压</td></tr>
+<tr><td><code>demo.tour.target.audit</code></td><td>审计记录</td><td>the audit records</td><td>积压</td></tr>
+<tr><td><code>demo.tour.target.recycle</code></td><td>回收站</td><td>the recycle bin</td><td>积压</td></tr>
+<tr><td><code>demo.probe.try</code></td><td>以判官身份直接请求这一页的接口</td><td>Ask this page&#x27;s endpoint directly, as a judge</td><td>积压</td></tr>
+<tr><td><code>demo.probe.recorded</code></td><td>这是录制时以 {{user}} 身份真实请求得到的服务端回答，原样回放，不是演示编出来的。</td><td>This is the server&#x27;s real answer, recorded when {{user}} made this request, and replayed as it was. The demo did not make it up.</td><td>积压</td></tr>
+<tr><td><code>demo.probe.why_title</code></td><td>服务端怎么拒的</td><td>How the server refused</td><td>积压</td></tr>
+<tr><td><code>demo.probe.why_front</code></td><td>前端按权限码把这一页从判官的菜单里拿掉了，但那只是显示：绕过界面，请求照样发得出去。</td><td>The screens take this page out of a judge&#x27;s menu by permission code, but that is only display: the request can still be sent around the interface.</td><td>积压</td></tr>
+<tr><td><code>demo.probe.why_back</code></td><td>拦下它的是后端：这个接口带一个专门的权限类，只放行持「系统设置」或「菜单管理」权限的人。判官两样都没有，视图函数还没开始执行就回了 403。</td><td>The backend is what stops it: the endpoint carries its own permission class, which lets through only holders of &quot;System settings&quot; or &quot;Menu management&quot;. A judge holds neither, so the answer is 403 before the view itself runs.</td><td>积压</td></tr>
+<tr><td><code>demo.probe.code</code></td><td>代码</td><td>Code</td><td>积压</td></tr>
+<tr><td><code>demo.probe.test</code></td><td>守着它的测试</td><td>Guarded by</td><td>积压</td></tr>
+<tr><td><code>demo.probe.not_recorded</code></td><td>录制里这次请求的回答是 {{status}},不是拒绝：重录之后这个例子失效了，这里不假装拒绝。</td><td>The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.open</code></td><td>并发与事务</td><td>Concurrency</td><td>积压</td></tr>
+<tr><td><code>demo.txn.title</code></td><td>并发与事务：一件案子只结一次</td><td>Concurrency and transactions: a case is concluded once</td><td>积压</td></tr>
+<tr><td><code>demo.txn.lede</code></td><td>两位判官可能同时对同一件案子按下结案。后端要保证只结一次，也不能只写下半笔。</td><td>Two judges may press 结案 on the same case at the same moment. The backend has to conclude it once, and never leave half of it written.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.step1</code></td><td>甲、乙各自读到这件案子还没结，都提交了结案。</td><td>Judges A and B each read the case as still open, and both submit a conclusion.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.step2</code></td><td>甲先在事务里锁住这一行(select_for_update),写下裁决、处置与事件。</td><td>A takes the row lock first (select_for_update), inside a transaction, and writes the verdict, the disposition and the event.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.step3</code></td><td>乙的结案等在同一把锁上。甲提交后乙拿到锁，在锁内重读这一行，看到已经有了裁决。</td><td>B&#x27;s conclusion waits on the same lock. Once A commits, B gets the lock, reads the row again under it, and finds a verdict already there.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.step4</code></td><td>乙收到 409 already_concluded,什么都没写。</td><td>B gets 409 already_concluded, and nothing of B&#x27;s is written.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.rollback_title</code></td><td>整笔回滚</td><td>All or nothing</td><td>积压</td></tr>
+<tr><td><code>demo.txn.rollback_body</code></td><td>裁决、处置和事件日志在同一个数据库事务里。写事件日志失败，整笔业务回滚，调用方拿到原始错误；通知与推送放在事务提交之后才发，回滚了就不会发出。</td><td>The verdict, the disposition and the event log share one database transaction. If the event row cannot be written, the whole conclusion rolls back and the caller gets the original error; notifications and pushes go out only after the commit, so a rollback sends none.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.try_title</code></td><td>试一下</td><td>Try it</td><td>积压</td></tr>
+<tr><td><code>demo.txn.try_body</code></td><td>以 {{case}} 号案为例，它已经结案。下面的按钮把乙那一笔(拿着结案前的副本)再发一次。</td><td>Take case {{case}}, which is already concluded. The button below sends B&#x27;s request again, with the copy B read before the first conclusion.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.try</code></td><td>发出乙的结案请求</td><td>Send B&#x27;s conclusion</td><td>积压</td></tr>
+<tr><td><code>demo.txn.no_case</code></td><td>这里还没有已结的案子。先在审判台结一件，再回来试。</td><td>No case here is concluded yet. Conclude one on the bench, then come back.</td><td>积压</td></tr>
+<tr><td><code>demo.txn.result_note</code></td><td>演示没有后端：这个回答来自演示层照服务端规则写的一条规则(demo/flows.ts),错误码与提示和 services.py 逐字一致，什么都没写进去。真接口里，先后发出的第二笔会先被视图的已结案检查以 400 拦下；两笔同时越过那道检查时，才走到锁内重读的 409。真正的等锁只能在 PostgreSQL 上测，SQLite 没有行锁，所以上面那条并发测试只在 PostgreSQL 上跑。</td><td>The demo has no backend: this answer comes from a rule the demo layer copies from the server (demo/flows.ts), with the code and message word for word as in services.py, and nothing was written. On the real API, a second request sent after the first is stopped earlier, by the view&#x27;s already-concluded check, with 400; only two requests that both pass that check reach the 409 under the lock. The wait on the lock can only be tested on PostgreSQL, since SQLite has no row locks, so the concurrency test above runs on PostgreSQL only.</td><td>积压</td></tr>
+<tr><td><code>soul_accounts.rebirth.cross_to</code></td><td>跨文明 → {{hall}}</td><td>Cross-civilization → {{hall}}</td><td>积压</td></tr>
+<tr><td><code>soul_accounts.rebirth.cross_no_targets</code></td><td>眼下没有可投生的别的文明。</td><td>No other civilization takes rebirths right now.</td><td>积压</td></tr>
+<tr><td><code>soul_accounts.rebirth.cross_target_refused</code></td><td>这个去处不能选：殿已停用、是终局文明，或与原属同一文明。</td><td>That hall cannot be chosen: it is closed, its civilization is terminal, or it is the soul&#x27;s own civilization.</td><td>积压</td></tr>
+<tr><td><code>soul_app.detail.cross_to</code></td><td>是 · 投生到{{hall}}</td><td>Yes · reborn into {{hall}}</td><td>积压</td></tr>
+<tr><td><code>officer_app.rebirth.cross_civ_to</code></td><td>⇄ 跨文明：投生到{{hall}}</td><td>⇄ Cross-civilisation: to {{hall}}</td><td>积压</td></tr>
+<tr><td><code>officer_app.rebirth.cross_civ_pick</code></td><td>跨文明只能在初审定。选好去处再批准，批准后不能再改。</td><td>Cross-civilisation is set at first review. Choose where the soul goes, then approve; it cannot be changed afterwards.</td><td>积压</td></tr>
+<tr><td><code>officer_app.rebirth.cross_option_none</code></td><td>不跨</td><td>No cross</td><td>积压</td></tr>
+<tr><td><code>officer_app.rebirth.approve_cross</code></td><td>批准 · 跨到{{hall}}</td><td>Approve · to {{hall}}</td><td>积压</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h3>二 · 地图修正(四文明核对 2026-11-13,深浅两版各改)</h3>
+<ol>
+<li><strong>欧洲</strong>:连线改成 死亡 → 前庭 → 渡口 → 九圈(现在是渡口在前庭之前);补「死亡 → 天国」直达线;回退字「炼狱七台」改「炼狱七层」。后端行程里欧洲灵魂的第一站一律是渡口,画法请定。</li>
+<li><strong>希腊</strong>:补「塔尔塔罗斯 → 千年格」(用户定:至福岛与塔尔塔罗斯两条路都过千年);复核「岔路口草地 → 千年格」这条;「审判岔路」改「岔路口草地」;单列的「三判官」节点要不要并入草地,请定。</li>
+<li><strong>埃及</strong>:「真理大厅 · 称心」改「两真之殿 · 称心」;防腐与七道通路画成依次到站,与行程不一致,要不要改画法请定。</li>
+<li><strong>希腊判「普通」的判决文书</strong>缺一句「送往阿斯福得草原」(网页与 PDF 两套):请给这一句的中英文(与 egy),到位后代码恢复出文书。</li>
+</ol>
+<p class="ask">请给:egy json + 地图 svg + 回复说明。量大可以分两次,先交地图和「新」的键。</p>
+</section>
+</article>
+
+<article>
+<h2>第三十三批 · egy 词根修正:按出处核对的结果<span class="tag done">已回 · 落地中</span></h2>
+<p>用户要求把 egy 的每个词根对照词典核一遍。报告在仓库 <code>docs/lore-verification/egy-lexicon-roots.md</code>(GitHub 上 main 分支可读)：454 个词形里，真实 168 组、近似 48、自创 17、组合 11,其余是专名;没有伪造的神名地名。来源是维基词典埃及语词条 + Dickson《Dictionary of Middle Egyptian》(2006);TLA 有人机验证没查成，「自创」只对这两个来源成立。</p>
+<section>
+<h3>请优先处理的问题(详见报告「问题清单」)</h3>
+<ol>
+<li><strong>Seth</strong>(1,050 次,「已…」后置完成标记):查不到，古埃及语没有这种语法词，且与塞特神同形。请给替代方案(例如用已有的完成义词，或不写标记)。</li>
+<li><strong>Unemu</strong> 当「颜色」:wnmw 是「食物」;颜色是 jwn。</li>
+<li><strong>Ahet</strong>(时间):ꜣḫt 是地平线 / 泛滥季。时间可用已登记的 Tera。</li>
+<li><strong>Khemen</strong>(修改)、<strong>Wetep</strong>(处置):查不到;候选 smꜣwj、sḫr。</li>
+<li><strong>Sehen</strong>(取消):sḥn 是「命令」,意思相反;候选 jḫm 或并入 Fekh。</li>
+<li><strong>Sesen</strong>(批准):ssn 是「呼吸」;「应允」是 hnn。</li>
+<li><strong>Gerh</strong>(禁言):grḥ 是「夜」;沉默是 gr。</li>
+<li><strong>Senb</strong>(同步 / 互关):snb 是「健康」;候选 dmḏ 或 ẖnm(避开与 Sma 撞形)。</li>
+<li><strong>Shepet</strong>(受刑)=「恼怒」、<strong>Maakheru</strong>(已读)=审判后称号、<strong>Nehet</strong>(申诉)=「祈祷」。</li>
+<li>放反或没用上的现成词:Hesep / Redu、Sedjem(举报)/ Smi、Netjer(角色)/ Iaut。</li>
+<li><strong>两真之殿两种写法</strong>:Weret Maaty 17 次(查不到)、Wesekhet Maaty 1 次(对的)——统一成 Wesekhet Maaty(四文明核对 EG-15)。</li>
+<li>同一个埃及词拆成两个 egy 词:Medu / Medew、Khet / Ikhet、Hemes / Hems。</li>
+</ol>
+<section>
+<h3>第三十三批补充:报告的「问题清单」原文(你那边读不到仓库,贴在这里)</h3>
+<p>第一次交付已收到并开始落地(1554 键;-N 完成式、Henen、Sekher 的取舍都照你的)。名词后的 -N 先不逐条改。第 9、10、12 条请以下面这一节为准;报告其余部分(真实 / 近似 / 自创的逐词出处)需要时再贴。</p>
+<pre style="white-space:pre-wrap;font:13px/1.6 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto">## 6. 问题清单(给 Design)
+
+每条写:现在的写法 → 问题 → 查得到的替代词与出处。**替代词的拉丁写法是我按现有惯例拟的,
+用不用、怎么写由 Design 定**;有的会和已登记的词撞形,撞的地方都写出来了。
+出现次数在括号里。
+
+### 6.1 生造或用错的词(先改这些)
+
+1. **`Seth`(1,050)** —— 「已…」的完成标记,兼作「项 / 类型」(`Kher Seth`)。古埃及语没有后置的完成标记,
+   这个词也查不到;它的写法还和塞特神的通行英文名一模一样,读起来像「登录 · 塞特」。
+   这是全包用得最多的生造词,也是「egy 不是古埃及语」最直接的证据。
+   没有现成的等价物可换(古埃及语的完成义在动词形态上)。可行的做法是换一个不撞神名的写法,
+   或者在说明里明说它是造出来的语法词。
+2. **`Unemu`(2,颜色)** —— wnmw 是「食物」(W «wnmw»;D [wnmw] food, sustenance)。
+   颜色是 **jwn**(W «jwn»,F 13,Wb 1, 52.7;D [iwn] complexion, colour)。
+   第十节废止的 `Iwen` 正是对的词;现在登记的 `Iwn`(列)是同形的另一个词「柱」。
+3. **`Ahet`(204,时间 / 延迟 / 定时)** —— ꜣḫt 是地平线、泛滥季,ꜣḥt 是田地。
+   「时候、时节」是 **tr**(W «tr»,F 300;已登记为 `Tera` 季),「时间」还有 **nw**(D [nw] time)、
+   **ꜥḥꜥw**(已登记为 `Ahau`)。
+4. **`Khemen`(301,修改 / 编辑)** —— 只查到 ḫmnw「八」。没有核到一个现成的「修改」;
+   最近的是 **smꜣwj**「翻新、更新」(D [smAwy] renovate, renew),与已登记的 `Mawy`(新)同根。
+5. **`Wetep`(221,处置 / 去处)** —— 查不到。可考虑 **sḫr**「谋划、裁定、安排」(D [sxr] plan, counsel, determination)。
+6. **`Sehen`(131,取消)** —— sḥn 是「命令」(D [sHn]),意思相反。
+   可考虑 **ꜥḫm / jḫm**「熄灭、废止」(D [ixm] extinguish, annul),或并入已登记的 `Fekh`(解除)。
+7. **`Sesen`(86,批准 / 许可)** —— ssn 是「呼吸」(W «ssn»,F 245)。
+   「应允」是 **hnn**(D [hnn] assent (to))。
+8. **`Sethet`(24,错误)** —— sṯt 是「亚洲」。「走偏、出错、违犯」是 **thj**(D [thi] go astray, transgress)。
+   D 另有 [wn] fault, blame,但写出来与 `Wen`(开)同形。
+9. **`Gerh`(28,禁言)** —— grḥ 是「夜」和「完结」(W «grḥ»;D [grH]),v4 新登记的 `Gereh`(夜)就是它。
+   「沉默」是 **gr**(W «gr»,F 290,Wb 5, 177)。
+10. **`Senb`(70,同步 / 互关 / 连接)** —— snb 是「健康」(W «snb»,Wb 4, 158.2)。当初从 `Sema` 改过来,
+    是因为与 `Sma`(smꜣ 杀)撞形;但「合、联」正是 **zmꜣ**(W «zmꜣ»,F 226,Wb 3, 445.15;D [smA] unite)。
+    要避开撞形,可用 **dmḏ**「合并、汇总」(W «dmḏ»,F 313;D [dmD])或 **ẖnm**「联结」(W «ẖnm»)。
+    `Per Senb`(医院)那一处是合本义的,不用动。
+11. **`Shepet`(31,受刑)** —— špt 是「恼怒、不满」(D [Spt])。
+    「惩罚」是 **ḫsft**(D [xsft] punishment,与已登记的 `Khesef` 同根)或 **jdryt**(D [idryt] punishment)。
+12. **`Maakheru`(3,已读 / 未读 / 原文)** —— mꜣꜥ-ḫrw 是死者过了审判之后的称号「声音为真」(W «mꜣꜥ-ḫrw»)。
+    在一个以称心审判为主题的系统里,这个词应当留给它本来的意思。「已读」可以就写 `Maa`(看)。
+13. **`Shemes`(37,书信)** —— šms 是「跟随、侍奉」。信是 **šꜥt**(D [Sat] document;已登记为 `Shat` 邮件)、
+    **mḏꜣt**(D [mDAt] letter, dispatch;已登记为 `Medjat`)、**wstj**(D [wsty] letter)。
+14. **`Nehet`(139,申诉)** —— nḥt 是「祈祷」(D [nHt] prayer)。
+    「申诉、请愿」是 **spr / sprt**(D [spr] appeal to, petition;[sprt] petition;[sprw] petitioner)。
+    写出来要与 `Sep`(条 / 案)分开。
+15. **`Netjer`(174,角色 / 人物)** —— nṯr 是「神」。把登录账号的角色叫作「神」,读的人会当成神职。
+    「职位」是 **jꜣwt**(W «jꜣwt»,F 7–8),已登记为 `Iaut`(职能角色)。
+16. **`Hesep`(14,层)与 `Redu`(7,分布)** —— ḥzp 是「园圃」(W «ḥzp»;D [Hsp] garden),
+    而 rdw 恰好是「台阶、阶梯」(D [rdw] stairway, steps)。两个词像是放反了:
+    「层」可以用 `Redu`;「份额、分布」是 **psšt**(D [psSt] sharing out, share, portion)。
+17. **`Sedjem`(113,举报)** —— sḏm 是「听」。「告发、报告」是 **smj**
+    (W «smj»,F 227:to inform on, to lodge a complaint against),已登记为 `Smi`,只用了 1 次。
+18. **`Menmen`(38,太频繁 / 超时)** —— mnmn 是「移动、摇晃」(W «mnmn»,F 109)。
+    「多出、过度」是 **ḥꜣw**(D [HAw] wealth, increase, excess)。
+19. **`Emu`(78,现在)** —— 查不到。「今天、此刻」是 **mjn**(D [min] today)。
+20. 其余查不到的:`Hemsu`(55,系统)、`Menf`(66,令牌)、`Bek`(11,导出)、`Khedu`(8,活动)、
+    `Ates`(2)、`Sherer`(32,中国)。这几个概念古埃及语里本来就没有,造词无可厚非,
+    但应当在词表里标成「造词」,不要和有出处的词根混在同一张表里。
+    `Khabes`(12,灯)没有核到;查得到的是 **tkꜣ**「火炬、灯芯、火焰」(D [tkA])。
+
+### 6.2 同一个东西两种写法
+
+- **两真之殿**:`Weret Maaty` 17 次,`Wesekhet Maaty` 1 次。查得到的是后者(wsḫt nt mꜣꜥtj);
+  前者字面是「两真的大者」,没查到用作厅名。建议统一成 `Wesekhet Maaty`。
+- **影子**:`Shut`(羽)与 `Khaibit`(鬼 / 影)。Khaibit 像是 Budge 一系的旧转写(本轮没有查到它的出处),
+  今天的转写是 šwt / šwyt(W «šwt»,F 262–263;D [Swyt] shadow, shade),与「羽」同形。
+  如果为了避开同形而保留 Khaibit,应在词表里注明它是旧转写。
+
+### 6.3 一个埃及词被拆成了两个 egy 词
+
+写法不同,读的人会以为是两个词,其实词典里是同一个:
+
+| egy 的两个词 | 是同一个 | 现在各自的意思 |
+|---|---|---|
+| Medu / Medew | mdw 话 | 词、帖子 / 事件、日志 |
+| Khet / Ikhet | ḫt(jḫt)东西 | 事、之后 / 设备 |
+| Gerh / Gereh | grḥ 夜 | 禁言 / 夜 |
+| Hemes / Hems(/ Hemsu) | ḥmsj 坐、住 | 暂居 / 坐(/ 系统) |
+
+只差一个字母、容易看混的两对不同的词:`Wedja`(wḏꜥ 裁断)/ `Wedj`(wḏ 命令),`Wat`(wꜣt 路)/ `Wet`(wt 裹缠)。
+
+反过来,一个 egy 写法下并了两个埃及词的:`Per`(pr 房屋 / prj 出去)、`Iwn`(柱 / 颜色)、
+`Shut`(羽 / 影)、`Hai`(喜 / 亥时)。
+
+### 6.4 真词,但有一个义项没有依据
+
+`Pet`(天)另作「类别」(`Pet Sep` 案件类型、`Pet Aq` 账号类别,`Pet-Sesh` 模板);
+`Hetep`(安宁)另作「主题」;`Tepy`(第一)另作「开始」;`Djer`(界限、自从)作万能的时态标记;
+`Er Hry`(向上)同时作「最小」「至少」「升」「右上角」;`Iu`(句首小词)作「是」和「或」;
+`Mesqet`(天上的一处)作「矩阵」;`Sepdet`(天狼星)作「时戳」;`Djedu`(布西里斯)作「条文」。
+
+### 6.5 体例
+
+- 转写惯例前后一致的地方不必改:补 e、ḏ 写 Dj、ḫ 与 ẖ 都写 Kh、š 写 Sh。
+  例外是几个不补元音的:`Dbh`、`Arrwt`、`Iwn`、`Pw`、`Swri`、`Hru`,与其余词的写法不是一套。
+- 后缀代词 `-Ef` / `-Ek` / `-I` 是真的(.f / .k / .j),但这里只用阳性单数,
+  也接在古埃及语里不会接的位置上。
+- 词序是中文 / 英文的:按通行的中埃及语语法(Allen, *Middle Egyptian*,本轮没有翻查),古埃及语的形容词、指示词、属格都在名词后面(这一点 egy 多数时候碰巧是对的),
+  而动词句是「动词 – 主语 – 宾语」,否定词在句首。egy 没有照这个来,也不必照,但说明里要讲清楚。
+
+---
+</pre>
+</section>
+<p class="ask">请给:修订后的词表规则(哪些词根废止、换成什么)+ 受影响键的新 egy(<code>v4-batch33-egy.json</code>,扁平)+ 回复说明。替代词的拉丁写法按现有惯例拟,撞形的地方请自己判断。改动量大的话可以分两次交,先交 1–8 与 11。以代码里现在的 egy 为准(第三十二批说过)。</p>
+</section>
+</article>
+
+<article>
+<h2>第三十二批 · 词表同步:37 条旧条目以代码为准<span class="tag done">已回</span></h2>
+<p>你说第三十一批之后远端词表有人改过值。我把远端 <code>_egy_lexicon.tsv</code> 和代码里的 egy 逐条对了一遍:第二十九、三十一批的 126 个键<strong>完全一致</strong>;另有下表 37 条旧条目不一致。其中 32 条是代码后来改过、词表没跟上(例如 11-02 文案里的权限码换成显示名、10-16 图片上传加 HEIC、11-07 埃及用词修正),5 条是词表里的值从没进过代码(两封邮件只差换行)。<strong>都以代码为准。</strong></p>
+<section>
+<div class="scroll"><table><thead><tr><th>键</th><th>代码(以此为准)</th><th>词表现在</th></tr></thead><tbody>
+<tr><td><code>souls.lost.mark_body</code></td><td>Ba Nen Gem Em Wat. Kheperu: Wetep Seth → Nen Gem. Gem: Wehem Iyi Er Wetep Seth. Nen Gem: Renpet Khetem Smen; Wehem Iyi: Er Khet. Khet: Sesh Em Medjat Sesh Ba Hena Medew Maa.</td><td>Ba Nen Gem Em Wat. Kheperu: Wetep Seth → Nen Gem. Gem: Wehem Iyi Er Wetep Seth. Khet: Sesh Em Medjat Sesh Ba Hena Medew Maa.</td></tr>
+<tr><td><code>souls.timeline.earthly_paradise</code></td><td>Shem Em Pet Em Ta · Swri Mu Lethe Hena Mu Eunoe</td><td>Shem Em Paradiso Terrestre · Swri Mu Lethe Hena Mu Eunoe</td></tr>
+<tr><td><code>menus.gate_visible_nonadmin</code></td><td>Khemen Menu Pen: Sesen Was &quot;Iri Menu&quot; — Sab Hery Wa Shesep Seth.</td><td>Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.</td></tr>
+<tr><td><code>menus.gate_permission_nonadmin</code></td><td>Khemen Menu Pen: Sesen Was &quot;Iri Menu&quot; — Sab Hery Wa Shesep Seth.</td><td>Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.</td></tr>
+<tr><td><code>menus.gate_roles_nonadmin</code></td><td>Khemen Menu Pen: Sesen Was &quot;Iri Menu&quot; — Sab Hery Wa Shesep Seth.</td><td>Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.</td></tr>
+<tr><td><code>menus.gate_menu_type_nonadmin</code></td><td>Khemen Menu Pen: Sesen Was &quot;Iri Menu&quot; — Sab Hery Wa Shesep Seth.</td><td>Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.</td></tr>
+<tr><td><code>menus.gates_footnote</code></td><td>Wen-Khetem 5 Pen: Khemen Sesen Was &quot;Iri Menu&quot; — Em Netjer Pen, Sab Hery Wa.</td><td>Wen-Khetem 5 Pen: Khemen Sesen Was menu.manage — Em Netjer Pen, Sab Hery Wa.</td></tr>
+<tr><td><code>permissions.matrix.confirm_menu_read_warning</code></td><td>&quot;Maa Menu&quot; Em Was Fekh — Remetj Em Netjer Pen Maa Wat Nen Wenen Em Aq Em Khet.</td><td>menu.read Em Was Fekh — Remetj Em Netjer Pen Maa Wat Nen Wenen Em Aq Em Khet.</td></tr>
+<tr><td><code>permissions.config.errors.bad_structure</code></td><td>Djama Nen Maat: Er JSON Em Redi Per Smen, Hena Wa Em permissions, roles, role_permissions, field_permissions, role_data_scopes.</td><td>Djama Nen Maat: Er JSON Em Redi Per Smen, Hena Wa Em permissions, roles, role_permissions, field_permissions, data_scopes.</td></tr>
+<tr><td><code>ledger.civ.EGYPTIAN</code></td><td>Fai Ib</td><td>Dens Ib</td></tr>
+<tr><td><code>judgment.queue.field_origin</code></td><td>Nut</td><td>Ta En Mesut</td></tr>
+<tr><td><code>judgment.detail.conclude_success</code></td><td>Wedja Khetem Seth · Nen Wedja Djer</td><td>Wedja Khetem Seth</td></tr>
+<tr><td><code>judgment.weighing.recorded</code></td><td>Djehuty Sesh: {{result}} (Ib {{weight}})</td><td>Djehuty: {{result}} (Ib {{weight}})</td></tr>
+<tr><td><code>audit.needs_audit_read</code></td><td>Sesen Was</td><td>Sesen Was audit.read</td></tr>
+<tr><td><code>realms.types_by_civ.eu.NEUTRAL</code></td><td>Acheron</td><td>Ta Shem</td></tr>
+<tr><td><code>realms.codes.EG_ANNIHILATION</code></td><td>Mut Sen</td><td>Ammit</td></tr>
+<tr><td><code>realms.names.EG_DUAT_ENTRY</code></td><td>Duat Aq</td><td>Sebkhet Duat</td></tr>
+<tr><td><code>realms.names.EG_ANNIHILATION</code></td><td>Mut Sen</td><td>Ammit - Mut Sen</td></tr>
+<tr><td><code>realms.map.region.PARADISO</code></td><td>Pet</td><td>Pet · Hesep {{n}}</td></tr>
+<tr><td><code>soul_accounts.credentials.manage_hint</code></td><td>Maa Sekhem, Sesh Djeret, Wehem Hab: Was &quot;Iri Aq Ba&quot;</td><td>Maa Sekhem, Sesh Djeret, Wehem Hab: Was soul_account.manage</td></tr>
+<tr><td><code>disposition.term_default</code></td><td>Tepy: Renpet {{n}}</td><td>Tepy: Renpet {{n}} · Khemen Wenen</td></tr>
+<tr><td><code>reincarnation.forms.OTHER</code></td><td>Ky Seth</td><td>Nen Em Wat 6</td></tr>
+<tr><td><code>social.avatar_upload_hint</code></td><td>PNG, JPEG, WebP, HEIC — 5 MB</td><td>PNG, JPEG, WebP — 5 MB</td></tr>
+<tr><td><code>scheduler.manage_hint</code></td><td>Wen, Khemen Ahet, Iri: Was &quot;Iri Baku Ahet&quot;</td><td>Wen, Khemen Ahet, Iri: Was scheduler.manage</td></tr>
+<tr><td><code>scheduler.jobs.judgment_auto_conclude_stale_for_tenant</code></td><td>Sesh Wedja Nen Shem</td><td>Khetem Wedja Tepy Djes-Ef</td></tr>
+<tr><td><code>soul_app.life.ferry.NO_FARE</code></td><td>Nen Redi Er Itru · Charon: Nen Shem Itru. Renpet 100 Hena Itru: Shem Wenen.</td><td>Nen Redi Er Itru · Charon: Nen Shem Itru.</td></tr>
+<tr><td><code>soul_app.life.ferry.no_date</code></td><td>Nen Hru Shem.</td><td>Nen Hru Shem. Er Khet «Redi Er Itru Seth»: Shem Wenen.</td></tr>
+<tr><td><code>soul_app.lexicon.eg.judgments</code></td><td>Fai Ib</td><td>Wedja Ib</td></tr>
+<tr><td><code>soul_app.lexicon.eg.judging</code></td><td>Em Fai Ib</td><td>Em Wedja Ib</td></tr>
+<tr><td><code>soul_app.circle.media.errors.not_an_image</code></td><td>PNG, JPEG, WebP Er HEIC Wa</td><td>PNG, JPEG Er WebP Wa</td></tr>
+<tr><td><code>social_moderation.review.reason_label</code></td><td>Medu Sab (Hab: Sesen)</td><td>Khet (Imen, Hab: Sesen)</td></tr>
+<tr><td><code>social_moderation.review.reason_required</code></td><td>Hab: Khet Sesen</td><td>Imen, Hab: Khet Sesen</td></tr>
+<tr><td><code>sentence_plan.node_states_by_civ.gr.HELL.WAITING</code></td><td>Renpet Khetem · Er Leimon Djer</td><td>Renpet Khetem · Per Djer</td></tr>
+<tr><td><code>soul_mail.reset_code.text</code></td><td>Hesb Maa-Ek: {{code}}
+Wenen At 5. Nen Djes: Nen Iri Khet.</td><td>Hesb Maa-Ek: {{code}} Wenen At 5. Nen Djes: Nen Iri Khet.</td></tr>
+<tr><td><code>soul_mail.credential.text</code></td><td>Ren Hesb Ba-Ek: {{soul_code}}
+Sekhem Tepy: {{password}}
+Wenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy.
+Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.</td><td>Ren Hesb Ba-Ek: {{soul_code}} Sekhem Tepy: {{password}} Wenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy. Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.</td></tr>
+<tr><td><code>officer_app.search.placeholder</code></td><td>Ren, Ren Hesb Ba Er Ren Sep</td><td>Ren Er Ren Ta</td></tr>
+<tr><td><code>map.diyu.naihe_bridge</code></td><td>Shem Naihe</td><td>Shem Itru Naihe</td></tr>
+</tbody></table></div>
+<p class="ask">请把词表这 37 行的 egy 改成「代码」一栏(两封邮件保留换行,写成 \n),然后回一句即可,不用发 json。以后的批次也以代码里的值为准;拿不准时在收件箱问。</p>
+</section>
+</article>
+
+<article>
+<h2>第三十一批 · egy:卷宗改版第 1、2 步的 126 个键<span class="tag done">已回 · 已落地</span></h2>
+<p>回复写到 <code>v4-batch31-reply.md</code>,egy 写进 <code>v4-batch31-egy.json</code>(扁平,键是下表完整路径)。照第十八批的规矩:新词根、专名在回复里列出来;<code>{{…}}</code> 占位原样保留;Maat 规则与 <code>Wehem Ankh</code> 禁用照旧。</p>
+<section>
+<h3>这些键从哪来</h3>
+<ul>
+<li><strong>新 119 个</strong>:第三十批第 1、2 步落地时新加的界面文字 —— 网页案卷台(<code>caseDesk.*</code>)、总簿(<code>zongbu.*</code>)、窄屏筛选(<code>filter.bar.*</code>)、零值句子(<code>overview.zero.*</code> 等)、官员端案卷台(<code>officer_app.desk.*</code>)、灵魂端底栏单字(<code>soul_app.tabs.glyph_*</code>;英文版用字母 L / R / M / C,egy 请给适合单字位的写法)。</li>
+<li><strong>改 7 个</strong>:中文或英文改了,原 egy 已过期:404 与无权限页的标题和说明、默认进站页的三处说明(落地页改成案卷台 / 总簿),以及第二十九批你提醒的官员端推送正文(已去掉「你」,中文为「这个推送设备已被另一个账号登记……」)。</li>
+<li>门名(审 / 册 / 律 / 司 / 人间)和案卷台的来源名在第 4 步定稿后可能再动;这一批先按现在的文案给。</li>
+</ul>
+</section>
+<section>
+<h3>键表</h3>
+<div class="scroll"><table><thead><tr><th>键</th><th>中文</th><th>English</th><th>新 / 改</th></tr></thead><tbody>
+<tr><td><code>soul_app.tabs.glyph_life</code></td><td>世</td><td>L</td><td>新</td></tr>
+<tr><td><code>soul_app.tabs.glyph_rebirth</code></td><td>生</td><td>R</td><td>新</td></tr>
+<tr><td><code>soul_app.tabs.glyph_letters</code></td><td>信</td><td>M</td><td>新</td></tr>
+<tr><td><code>soul_app.tabs.glyph_circle</code></td><td>圈</td><td>C</td><td>新</td></tr>
+<tr><td><code>soul_app.life.balance_none</code></td><td>功过都还没有记上。</td><td>Nothing has been entered for or against you yet.</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.title</code></td><td>案卷台</td><td>Case desk</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.search</code></td><td>搜索案卷</td><td>Search cases</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.position</code></td><td>第 {{n}} / {{total}} 件</td><td>{{n}} of {{total}}</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.all</code></td><td>全部</td><td>All</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.today</code></td><td>今日 {{n}} 件</td><td>{{n}} today</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.overdue</code></td><td>超期 {{n}}</td><td>{{n}} overdue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.no_overdue</code></td><td>无超期</td><td>None overdue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.overview.month_done</code></td><td>本月已结 {{pct}}%</td><td>{{pct}}% closed this month</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.queue</code></td><td>审判队列</td><td>Judgment queue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.city_god</code></td><td>城隍初审</td><td>City god review</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.cross</code></td><td>跨域</td><td>Cross-realm</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.appeal</code></td><td>申诉</td><td>Appeals</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.city_god_review</code></td><td>城隍初审中</td><td>With the city god</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.cross_judgment</code></td><td>跨殿联审</td><td>Joint judgments</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.sources.capture_due</code></td><td>待发勾魂牒</td><td>Warrants due</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.mine</code></td><td>我认领</td><td>Claimed by me</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.deferred</code></td><td>待定</td><td>On hold</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.unclaimed</code></td><td>待认领</td><td>Unclaimed</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.groups.others</code></td><td>他人手上</td><td>With others</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.reviewing</code></td><td>审判中</td><td>In judgment</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.returned</code></td><td>退回重审</td><td>Sent back for retrial</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.overdue</code></td><td>超期 {{n}} 日</td><td>{{n}} days overdue</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.others</code></td><td>他人认领</td><td>Held by another</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.tag.awaiting</code></td><td>待宣判</td><td>Ready for verdict</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.release</code></td><td>放回</td><td>Put back</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.chips.city_god</code></td><td>城隍送来</td><td>Sent on by the city god</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.release_failed</code></td><td>没能放回</td><td>Couldn&#x27;t put back</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.empty_title</code></td><td>案卷台上没有案卷</td><td>No cases on the desk</td><td>新</td></tr>
+<tr><td><code>officer_app.desk.empty_body</code></td><td>新的案子到了会出现在这里。</td><td>New cases will appear here.</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.label</code></td><td>门</td><td>Doors</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.desk</code></td><td>案卷</td><td>Cases</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.desk_glyph</code></td><td>审</td><td>C</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.souls</code></td><td>名册</td><td>Register</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.souls_glyph</code></td><td>册</td><td>R</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.corpus</code></td><td>律令</td><td>Statutes</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.corpus_glyph</code></td><td>律</td><td>S</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.hall</code></td><td>殿司</td><td>Hall office</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.hall_glyph</code></td><td>司</td><td>H</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.moderation</code></td><td>人间</td><td>Mortal world</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.moderation_glyph</code></td><td>人</td><td>W</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.me</code></td><td>本人</td><td>Me</td><td>新</td></tr>
+<tr><td><code>caseDesk.rail.me_glyph</code></td><td>我</td><td>M</td><td>新</td></tr>
+<tr><td><code>caseDesk.chip.city_god_sent</code></td><td>城隍送来</td><td>Sent by city gods</td><td>新</td></tr>
+<tr><td><code>caseDesk.sources_label</code></td><td>按来源看</td><td>By source</td><td>新</td></tr>
+<tr><td><code>caseDesk.search_placeholder</code></td><td>搜姓名、案号</td><td>Search name or case number</td><td>新</td></tr>
+<tr><td><code>caseDesk.search_none</code></td><td>没有对得上的案卷。</td><td>No case matches.</td><td>新</td></tr>
+<tr><td><code>caseDesk.triage</code></td><td>分诊</td><td>Triage</td><td>新</td></tr>
+<tr><td><code>caseDesk.load_failed</code></td><td>没能读到案卷台。</td><td>Could not load the case desk.</td><td>新</td></tr>
+<tr><td><code>caseDesk.open_case</code></td><td>摊开的一份</td><td>Open case</td><td>新</td></tr>
+<tr><td><code>caseDesk.pick</code></td><td>从左边选一件案卷。</td><td>Pick a case on the left.</td><td>新</td></tr>
+<tr><td><code>caseDesk.actions.release</code></td><td>放回待认领</td><td>Put back</td><td>新</td></tr>
+<tr><td><code>caseDesk.actions.next</code></td><td>下一件</td><td>Next</td><td>新</td></tr>
+<tr><td><code>caseDesk.actions.open</code></td><td>打开卷宗</td><td>Open file</td><td>新</td></tr>
+<tr><td><code>caseDesk.meta.entered</code></td><td>{{date}}入册</td><td>Entered {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.life</code></td><td>本世</td><td>This life</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.born</code></td><td>{{date}} 生</td><td>Born {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.born_at</code></td><td>{{date}} 生于{{place}}</td><td>Born {{date}} in {{place}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.died</code></td><td>{{date}} 卒</td><td>Died {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.source</code></td><td>来源</td><td>Source</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.merits</code></td><td>功过</td><td>Merit and demerit</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.merits_value</code></td><td>功 {{merit}} · 过 {{demerit}}</td><td>Merit {{merit}} · Demerit {{demerit}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.net</code></td><td>净</td><td>Net</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.confession</code></td><td>供词</td><td>Confession</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.confession_none</code></td><td>无。</td><td>None.</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.deadline</code></td><td>期限</td><td>Deadline</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.handler</code></td><td>经手</td><td>Handled by</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.claimed</code></td><td>{{name}} · 认领于 {{date}}</td><td>{{name}} · claimed {{date}}</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.unclaimed</code></td><td>还没有人认领</td><td>Nobody has claimed it</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.recent</code></td><td>最近三条记录</td><td>Latest three records</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.recent_none</code></td><td>还没有记录。</td><td>No records yet.</td><td>新</td></tr>
+<tr><td><code>caseDesk.juan.unreadable</code></td><td>没有读名册的权限</td><td>No permission to read the register</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.this</code></td><td>这一件</td><td>This case</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.hall_today</code></td><td>同殿今天</td><td>This hall today</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.court</code></td><td>殿</td><td>Court</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.claimed</code></td><td>认领</td><td>Claimed by</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.overdue</code></td><td>超期</td><td>Overdue</td><td>新</td></tr>
+<tr><td><code>caseDesk.side.done</code></td><td>本月已结</td><td>Done this month</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.move</code></td><td>上下一件</td><td>Next / previous</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.open</code></td><td>打开卷宗</td><td>Open file</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.claim</code></td><td>认领</td><td>Claim</td><td>新</td></tr>
+<tr><td><code>caseDesk.keys.search</code></td><td>搜索</td><td>Search</td><td>新</td></tr>
+<tr><td><code>zongbu.title</code></td><td>总簿</td><td>Ledger of the four realms</td><td>新</td></tr>
+<tr><td><code>zongbu.realms</code></td><td>四个冥界</td><td>Four underworlds</td><td>新</td></tr>
+<tr><td><code>zongbu.as_of</code></td><td>数据截至 {{time}}</td><td>As of {{time}}</td><td>新</td></tr>
+<tr><td><code>zongbu.today</code></td><td>今日待审 {{n}}</td><td>Awaiting judgment {{n}}</td><td>新</td></tr>
+<tr><td><code>zongbu.open_all</code></td><td>打开全部案卷</td><td>Open all cases</td><td>新</td></tr>
+<tr><td><code>zongbu.cross_title</code></td><td>跨界往来</td><td>Across the realms</td><td>新</td></tr>
+<tr><td><code>zongbu.cross_none</code></td><td>还没有跨界往来。</td><td>Nothing has crossed the realms yet.</td><td>新</td></tr>
+<tr><td><code>zongbu.footer</code></td><td>总簿只给管理员;判官看见的是自己那一殿的案卷台。</td><td>The ledger is for administrators; a judge sees the case desk of their own hall.</td><td>新</td></tr>
+<tr><td><code>zongbu.legacy</code></td><td>旧版概览</td><td>Previous overview</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.cn</code></td><td>地府</td><td>Diyu</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.eu</code></td><td>欧洲</td><td>Europe</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.eg</code></td><td>埃及</td><td>Egypt</td><td>新</td></tr>
+<tr><td><code>zongbu.civ.gr</code></td><td>希腊</td><td>Greece</td><td>新</td></tr>
+<tr><td><code>zongbu.kind.dispatch</code></td><td>调拨</td><td>Transfer</td><td>新</td></tr>
+<tr><td><code>zongbu.kind.cross</code></td><td>跨界会审</td><td>Joint judgment</td><td>新</td></tr>
+<tr><td><code>zongbu.col.pending</code></td><td>今日待审</td><td>Awaiting judgment</td><td>新</td></tr>
+<tr><td><code>zongbu.col.none_pending</code></td><td>今日没有待审的案卷</td><td>Nothing awaits judgment today</td><td>新</td></tr>
+<tr><td><code>zongbu.col.failed</code></td><td>没能读到这一栏</td><td>Could not load this column</td><td>新</td></tr>
+<tr><td><code>zongbu.col.month_none</code></td><td>本月已结:这个冥界本月没有案卷</td><td>Done this month: no cases in this realm this month</td><td>新</td></tr>
+<tr><td><code>zongbu.cross_since</code></td><td>{{date}} 起</td><td>since {{date}}</td><td>新</td></tr>
+<tr><td><code>filter.bar.open</code></td><td>筛选</td><td>Filters</td><td>新</td></tr>
+<tr><td><code>filter.bar.open_n</code></td><td>筛选 · {{n}}</td><td>Filters · {{n}}</td><td>新</td></tr>
+<tr><td><code>filter.bar.title</code></td><td>筛选条件</td><td>Filters</td><td>新</td></tr>
+<tr><td><code>filter.bar.quick</code></td><td>快捷筛选</td><td>Quick filters</td><td>新</td></tr>
+<tr><td><code>filter.bar.done</code></td><td>查看结果</td><td>Show results</td><td>新</td></tr>
+<tr><td><code>not_found.to_desk</code></td><td>回案卷台</td><td>Back to the desk</td><td>新</td></tr>
+<tr><td><code>overview.count_unit_none</code></td><td>件 · 无超期</td><td>cases · none overdue</td><td>新</td></tr>
+<tr><td><code>overview.zero.pending</code></td><td>今天没有待审的案卷</td><td>No cases are waiting today</td><td>新</td></tr>
+<tr><td><code>overview.zero.concluded</code></td><td>本月还没有结案</td><td>Nothing concluded this month yet</td><td>新</td></tr>
+<tr><td><code>overview.zero.returned</code></td><td>本月还没有退回重审</td><td>Nothing sent back for retrial this month</td><td>新</td></tr>
+<tr><td><code>annual.zero_received</code></td><td>这一年还没有收到灵魂。</td><td>No souls were received this year.</td><td>新</td></tr>
+<tr><td><code>rebirths.quota.none_of</code></td><td>本月还没有 · 上限 {{limit}}</td><td>None yet · limit {{limit}}</td><td>新</td></tr>
+<tr><td><code>rebirths.quota.none_unlimited</code></td><td>本月还没有 · 不限</td><td>None yet · no limit</td><td>新</td></tr>
+<tr><td><code>profile.default_view_unset</code></td><td>还没选过：按你的角色落地 —— 官员先到案卷台，管理员先到总簿。</td><td>Not chosen yet: you land by role — officers on the case desk, administrators on the ledger.</td><td>改</td></tr>
+<tr><td><code>welcome.view_operator_desc</code></td><td>进来先看案卷台；快捷键优先。</td><td>Opens on the case desk; keyboard first.</td><td>改</td></tr>
+<tr><td><code>welcome.view_admin_desc</code></td><td>进来先看总簿（管理员）；其他角色是统计概览。</td><td>Opens on the ledger (administrators); other roles get the statistics overview.</td><td>改</td></tr>
+<tr><td><code>permission.denied_title</code></td><td>这一页不归这个身份</td><td>This page is not for your role</td><td>改</td></tr>
+<tr><td><code>not_found.title</code></td><td>卷宗里没有这一页</td><td>This page is not in the ledger</td><td>改</td></tr>
+<tr><td><code>not_found.description</code></td><td>链接可能是旧的，或者这一页已经不在这里了。</td><td>The link may be old, or the page has moved.</td><td>改</td></tr>
+<tr><td><code>official_notify.push_device_claimed.body</code></td><td>这个推送设备已被另一个账号登记，这部手机不再收到待办推送。如果不是本人换的手机，请联系管理员。</td><td>This push device was registered by another account and no longer gets to-do pushes. If the phone was not changed by its owner, contact an administrator.</td><td>改</td></tr>
+</tbody></table></div>
+<p class="ask">请给:egy json + 回复说明。第三十批第 3、4 步照常进行,两批互不影响。</p>
+</section>
+</article>
+
+<article>
+<h2>第三十批 · 整体改版「卷宗」:工作页从后台页改成一份打开的卷宗<span class="tag done">四步已回 · 代码进行中</span></h2>
+<section class="ask">
+<h3>对第 3、4 步第十二节四个疑问的拍板(用户 2026-11-13)</h3>
+<ul>
+<li><strong>守卫(GUARDIAN,牛头马面)只给「册」。</strong>它没有任何审判权限,只押解与办转世(权限:灵魂状态读写、转世、派送、读功过 / 发落 / 界域;数据范围只看已发落)。待发勾魂牒放在册的派送页。</li>
+<li><strong>转生申请做案卷台的第七个来源</strong>(像申诉一样作「别处」计数,点了跳过去)。</li>
+<li><strong>殿信箱放「审」里的第二页。</strong></li>
+<li><strong>菜单管理保留</strong>:门固定,菜单管理仍控制每个角色在门里看到哪些页,放在司 · 权限下。</li>
+</ul>
+<p>第 3、4 步代码已开工。新文案的 egy 等代码合完一起发一批。</p>
+</section>
+<section class="ask">
+<h3>对第 1、2 步回复的拍板(用户 2026-11-12)</h3>
+<ul>
+<li><strong>门名：保留「人间」。</strong>审 / 册 / 律 / 司 照你的;朋友圈审核作为第五门「人间」,只给审核员。窄屏第四格「我」照你的。第 4 步请按这个出图标、可见性和旧页映射。</li>
+<li><strong>总簿四栏的文明色顶线：同意这个例外</strong>,只在管理员总簿里。</li>
+<li>你推翻的四处(主按钮墨实底、中性标签 card2+sub、门栏 64 带小字、toast 失败不自动收起且最多三条)照你的做。第 1、2 步代码已开工;第二十九批已落地。</li>
+<li><strong>第 3 步请一并定:</strong>标签去掉边框后,「已驳回」(REJECTED)与「申诉被驳回」(APPEAL_REJECTED)前缀都是「✕」,只靠文字区分。请给两者可区分的形状前缀,连同功过记号一起出。</li>
+<li>灵魂端底栏单字:英文版不用汉字,用英文字母 / 短词(用户 11-13 定)。</li>
+<li><strong>希腊冥界图的旧 id:</strong>第二十九批的 <code>v4-batch29-map-gr-*.svg</code> 里岔路口草地的节点 id 是 <code>EU_PLATO_MEADOW</code>,代码从 realms/0032 起叫 <code>GR_PLATO_MEADOW</code>(代码这边已改)。请把设计系统里的源文件也改成 <code>GR_PLATO_MEADOW</code>,免得下次交付又带回来。</li>
+<li>第三十一批的单字位短词已用上:超过一个字符时字位改用 12px,单个汉字仍 18px,不用改成两个字母。两个「城隍送来」键已合成 <code>officer_app.desk.chips.city_god</code>。</li>
+<li>案卷台的来源:后端会给队列加来源字段与计数,六个来源(审判队列 / 分诊 / 申诉 / 跨域 / 城隍初审 / 待发勾魂牒)都能显示。</li>
+</ul>
+</section>
+<p>回复写到 <code>v4-batch30-reply.md</code>,页面写到 <code>v4-batch30-*.html</code>(每一步一个文件，见下)。这一批是结构改版，不是换色;v4 的全部色值、字体、间距与动效 token 保留。第二十九批仍待回，两批互不影响。</p>
+<section>
+<h3>为什么改(逐页审查的结论，2026-11-12)</h3>
+<ul>
+<li>v4 换了皮但没动结构：身份带单独一块，下面再叠一个同名标题(一屏三次「审判队列」);表格、标签还是 v2/v3 的形。工作页读起来是「旧后台 + 新颜色」。</li>
+<li>导航照后端模块排，判官侧栏十几项;用户真正的任务只有三件：审一个灵魂、查一个灵魂、查一条律。</li>
+<li>「四种冥界」进站后只剩换色;十殿一线、九圈漏斗、称心二分、三岔分路只在冥界图上出现。</li>
+<li>典籍感只在登录、语料、年报;待得最久的审判台和灵魂页是 12–13px 的表单。</li>
+<li>空 / 零 / 错误状态、窄屏、中性皮,v4 里没有规定。</li>
+</ul>
+<p>审查报告的样张(现状与方向 A 并排，三张整页 + 逐项前后对比):<a href="https://claude.ai/artifact/LV3MqdT3i7xYf1TfarHnsy">https://claude.ai/artifact/LV3MqdT3i7xYf1TfarHnsy</a>。请以它为出发点，可以推翻其中任何细节。</p>
+</section>
+<section>
+<h3>方向 A · 卷宗(用户 2026-11-12 选定)</h3>
+<div class="scroll"><table><thead><tr><th>层</th><th>现在</th><th>改成</th></tr></thead><tbody>
+<tr><td>信息架构</td><td>侧栏十几项，按后端模块</td><td>按任务收成四门:审(案卷台：审判队列、分诊、申诉、跨域、城隍初审、待发勾魂牒都是它的来源筛选)/ 册(灵魂册：灵魂、功过、事件、轮回、受刑都是一个灵魂的分页)/ 律(语料、流程模板)/ 司(只给管理员：殿司、权限、用户、审计、回收站);朋友圈审核单列，只给审核员。<strong>门的名字请你定</strong>(初稿「审 / 册 / 律 / 司 / 人间」)。</td></tr>
+<tr><td>判官进站第一页</td><td>灵魂详情或概览</td><td><strong>案卷台</strong>:左一摞案卷(我认领 / 待定 / 待认领分组),右边摊开的一份;概览数字收进顶上一行(「今日 7 件 · 超期 1 · 本月已结 22%」)。</td></tr>
+<tr><td>页头</td><td>身份带 + 第二个标题</td><td>不再有单独的页头带：顶上一条 2px 文明色线;标题在卷宗里，是人名，案号、殿、入册日期是它下面的字段。v4 的 <code>.glowtop</code> 光晕、<code>.pat</code> 纹样、<code>.wm</code> 文明水印保留，挪到卷宗头背后，水印跟文明换。</td></tr>
+<tr><td>版式语法</td><td>卡片、表格、标签混用</td><td>两种语域:「卷」= 记录在案的(功过、供词、判词、属性):宋体 16/28、细横线分行、字段名 / 值两栏，像藏品页;「台」= 能点的(筛选、按钮、标签):sans 14–15、安静。规则：记下来的用卷，点下去的用台。</td></tr>
+<tr><td>色彩</td><td>文明色铺满侧栏、身份带、按钮</td><td>底色一律中性纸墨;文明色只用在顶线、印、卷宗脊、焦点四处。地府朱色只给印，和罪业红拉开。</td></tr>
+<tr><td>功过标记</td><td>红绿描边框</td><td>初稿是 ± 号加「阴 / 阳」字形、颜色只上数字。<strong>请你按文明给方案</strong>:「阴 / 阳」是中国的说法，欧洲、埃及、希腊未必合适。</td></tr>
+<tr><td>字体</td><td>宋体只给标题</td><td>宋体做「卷」的正文;标题只有一个(人名);sans 只给控件。</td></tr>
+<tr><td>四个文明</td><td>同一页换色</td><td>每份卷宗顶部一条<strong>卷宗脊</strong>,四家位置尺寸相同、形状不同：地府十殿一线加支线，欧洲九圈收窄的漏斗，埃及天平两盘，希腊一分为三的岔路。<strong>印</strong>也不同：地府方印、欧洲圆形蜡封、埃及椭圆王名圈、希腊不规则陶片。</td></tr>
+<tr><td>中性皮</td><td>灰色、空卡，像没加载完</td><td>改叫「总簿」:品牌金 + 天平徽记，概览是四个冥界并排的四栏账。</td></tr>
+</tbody></table></div>
+<p class="fyi">保留：落地页、登录页、语料页(已是全站最好的几屏)、全部数据与路由(旧网址重定向到新门)。</p>
+</section>
+<section>
+<h3>分四步，每步单独上线(用户定)</h3>
+<ol>
+<li><strong>五个共享件</strong>(<code>v4-batch30-step1-shared.html</code>):页头(顶线 + 卷宗头)、状态标签(淡染)、toast(中性底 + 左侧语义色条)、窄屏控件(393 宽：搜索 + 「筛选 · N」抽屉 + 一行横滚 chip,触控 ≥ 44px)、403 / 404 / 加载 / 空态 / 零值的写法。</li>
+<li><strong>案卷台</strong>(<code>v4-batch30-step2-desk.html</code>):1440 与 393 两档，四个文明各一张 + 总簿一张。</li>
+<li><strong>卷宗页</strong>(<code>v4-batch30-step3-dossier.html</code>):灵魂详情与审判台合成一页;四种卷宗脊、四种印(SVG,深浅两版);功过标记方案。</li>
+<li><strong>四门导航</strong>(<code>v4-batch30-step4-nav.html</code>):门的名字与图标、每个角色看到哪几门、旧页面落到哪一门的对照表。</li>
+</ol>
+<p><strong>两个 App 也跟着改</strong>(用户定):每一步请顺带给灵魂端与官员端的对应画法(官员端主要是第 2、3 步;灵魂端是第 3 步的「卷」语域与第 1 步的共享件)。</p>
+<p class="ask">请先回第 1、2 步(代码会马上开工),第 3、4 步可以晚一点。回复里写清每一步用了哪些 token、新加了哪些 token,以及你推翻了样张里的哪些细节、为什么。</p>
+</section>
+</article>
+
+<article>
+<h2>第二十九批 · 希腊加了阿斯福得草原:23 个 egy 词 + 希腊冥界图补一个节点<span class="tag done">已回 · 2026-11-12 已落地</span></h2>
+<p>回复写到 <code>v4-batch29-reply.md</code>,egy 写进 <code>v4-batch29-egy.json</code>(扁平，键是下表完整路径;最后一行界域名用键 <code>realms.GR_ASPHODEL_MEADOW.name_egy</code>),图写到 <code>v4-batch29-map-gr-dark.svg</code> / <code>-light.svg</code>。第二十八批 egy 已上线。</p>
+<section>
+<h3>这一轮改了什么(用户 2026-11-11 拍板)</h3>
+<ul>
+<li><strong>希腊审判改三分</strong>(依 <code>docs/04_希腊冥界详解.md</code> §三):善 → 至福岛，恶 → 塔尔塔罗斯，<strong>普通 → 阿斯福得草原</strong>(新界域 <code>GR_ASPHODEL_MEADOW</code>,挂在岔路口草地下，取「中」路;之后照常饮勒忒转世，不进千年循环)。希腊判决里原来的「存疑 / 再审」一档改名「普通」。</li>
+<li><strong>地府第四站名用「恶狗岭」</strong>(此前用 §〇 考证的「恶狗村」)。原 egy「Nut Egou」里 Nut 是「村」,已删，请给「岭」的写法。</li>
+<li><strong>11-12 追加 6 个</strong>(发出后才定下的):字段权限的「已隐藏 — 本角色不可见」;朋友圈敏感词只许从共享词表复制的拒绝提示;灵魂端与官员端「推送设备已被另一个账号登记」的通知标题与正文。</li>
+<li>权限矩阵「禁授」提示按三种原因分开(角色禁项 / 设计流程的人不审批 / 只限管理员);判官演示说明改为「结案定发落」;灵魂暂居别殿时不能删除的新提示。</li>
+</ul>
+</section>
+<section>
+<h3>一 · 23 个 egy 词</h3>
+<p>照第十八批的规矩：新词根、专名在回复里列出来;<code>{{perm}}</code> 占位原样保留;Maat 规则与 <code>Wehem Ankh</code> 禁用照旧。</p>
+<table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>permissions.matrix.legend.deny</code></td><td>禁授 · 按规则</td><td>forbidden · by rule</td></tr>
+<tr><td><code>permissions.matrix.refused.admin_only_permission</code></td><td>与规则冲突：这项权限只有管理员（ADMIN）能持有，已退回。</td><td>Conflicts with the rule that only ADMIN may hold this permission; sent back.</td></tr>
+<tr><td><code>permissions.matrix.refused.role_forbidden_permission</code></td><td>与规则冲突：这个角色不能持有这项权限（角色禁项，或「设计流程的人不审批」），已退回。</td><td>Conflicts with a rule: this role may not hold this permission (a role-forbidden permission, or “who designs a workflow does not approve it”); sent back.</td></tr>
+<tr><td><code>permissions.matrix.deny_hint</code></td><td>角色禁项：这个角色不能持有「{{perm}}」。</td><td>Role rule: this role may never hold 「{{perm}}」.</td></tr>
+<tr><td><code>permissions.matrix.deny_hint_capability</code></td><td>设计流程的人不审批：这个角色持有流程设计权限时不能再授流程审批或推进，持有审批或推进时不能再授设计，「{{perm}}」此刻不能授予。</td><td>Who designs a workflow does not approve it: while this role holds workflow design it cannot be granted approve or advance, and while it holds approve or advance it cannot be granted design — 「{{perm}}」 cannot be granted now.</td></tr>
+<tr><td><code>permissions.matrix.deny_hint_admin_only</code></td><td>「{{perm}}」只有管理员（ADMIN）能持有。</td><td>Only ADMIN may hold 「{{perm}}」.</td></tr>
+<tr><td><code>souls.detail.error_delete_residing</code></td><td>这个灵魂正暂居别殿，不能删除：先结束暂居，再由原属殿删除。</td><td>This soul is residing in another hall and cannot be deleted. End the residence first; its home hall deletes it.</td></tr>
+<tr><td><code>demo.role_judge_desc</code></td><td>官员日常:认领案件、结案定发落、审批。</td><td>An officer&#x27;s day: claim cases, conclude them with a sentence, approve.</td></tr>
+<tr><td><code>souls.diyu_station.EVIL_DOG_VILLAGE</code></td><td>恶狗岭</td><td>Vicious Dog Ridge</td></tr>
+<tr><td><code>realms.codes.GR_ASPHODEL_MEADOW</code></td><td>阿斯福得草原</td><td>Asphodel Meadow</td></tr>
+<tr><td><code>realms.names.GR_ASPHODEL_MEADOW</code></td><td>阿斯福得草原</td><td>The Asphodel Meadow</td></tr>
+<tr><td><code>realms.map.fork.MIDDLE</code></td><td>→ 中 · 平路</td><td>→ Middle · level</td></tr>
+<tr><td><code>realms.topology.fork.MIDDLE</code></td><td>中 · 阿斯福得草原</td><td>Middle · the Asphodel Meadow</td></tr>
+<tr><td><code>sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.ACTIVE</code></td><td>居于阿斯福得草原</td><td>On the Asphodel Meadow</td></tr>
+<tr><td><code>sentence_plan.node_states_by_realm.GR_ASPHODEL_MEADOW.COMPLETED</code></td><td>已离阿斯福得草原</td><td>Left the Asphodel Meadow</td></tr>
+<tr><td><code>judgment.verdicts_by_civ.gr.purgatory</code></td><td>普通</td><td>Ordinary</td></tr>
+<tr><td><code>souls.field_withheld</code></td><td>已隐藏 — 本角色不可见</td><td>Hidden — not visible to this role</td></tr>
+<tr><td><code>social_moderation.errors.shared_source_only</code></td><td>殿管理员只能从全站共享词表复制,不能从别的殿复制</td><td>A hall administrator can copy only the shared site-wide list, not another hall&#x27;s</td></tr>
+<tr><td><code>soul_push.push_device_claimed.title</code></td><td>推送设备已被另一个账号登记</td><td>Your push device was registered by another account</td></tr>
+<tr><td><code>soul_push.push_device_claimed.body</code></td><td>你的推送设备已被另一个账号登记，这部设备不再收到你的通知。如果不是你本人换的手机，请联系殿司。</td><td>Your push device was registered by another account and no longer gets your notifications. If you did not change phones yourself, contact your hall.</td></tr>
+<tr><td><code>official_notify.push_device_claimed.title</code></td><td>推送设备已被另一个账号登记</td><td>Your push device was registered by another account</td></tr>
+<tr><td><code>official_notify.push_device_claimed.body</code></td><td>你的推送设备已被另一个账号登记，这部手机不再收到你的待办推送。如果不是你本人换的手机，请联系管理员。</td><td>Your push device was registered by another account and no longer gets your to-do pushes. If you did not change phones yourself, contact an administrator.</td></tr>
+<tr><td><code>realms.py · GR_ASPHODEL_MEADOW.name_egy</code></td><td>阿斯福得草原(界域表的 egy 名)</td><td>Asphodel Meadow</td></tr>
+</tbody></table>
+</section>
+<section>
+<h3>二 · 希腊冥界图补阿斯福得草原节点</h3>
+<ul>
+<li>现有 <code>frontend/public/v4/maps/soulledger-map-gr-dark.svg</code> / <code>-light.svg</code> 只有草地(岔路口)、渡口、至福岛、塔尔塔罗斯;在草原上的灵魂在图上标不出位置。</li>
+<li>请在岔路口草地与另两条路之间补「中」路与阿斯福得草原节点(灰白、无风、常春花;不是惩罚也不是福地),节点 id 用 <code>GR_ASPHODEL_MEADOW</code>,与其余节点同一套属性写法(代码按 id 找节点)。若该图有主角节点(hero)写法，也请给草原一个。</li>
+<li>深浅两版;字与其余节点同级。</li>
+</ul>
+<p class="ask">请给:egy json + 回复说明 + 两张更新后的 svg(只改草原相关部分，其余节点不动)。</p>
+</section>
+</article>
+
+<details>
+<summary>第二十八批 · egy 57 键<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十八批 · egy:演示首页的 57 个新键<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>请把下表 57 个键的 egy 写进 <code>v4-batch28-egy.json</code>(扁平,键是下表的完整路径,值是 egy 文本),说明写在 <code>v4-batch28-reply.md</code>。照第十八批的规矩:新词根、专名在回复里列出来;双花括号占位原样保留。第二十七批演示首页已按你的稿子上线(<code>soulledger.tardisyuan.ltd</code>)。</p>
+<section>
+<h3>这些键从哪来</h3>
+<p>全部是第二十七批的演示首页:眉题与导语、三步路线、首屏行程预览、四张文明卡的特点与入口、四种身份、「先看 30 秒」弹层、页脚。只在演示站出现,正式版不用。</p>
+</section>
+<section>
+<h3>57 个键</h3>
+<table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>demo.home.eyebrow</code></td><td>演示站 · 不用注册</td><td>Demo · no sign-up</td></tr>
+<tr><td><code>demo.home.lede</code></td><td>灵魂簿是一本跨四种冥界的账：一个人死后的审判、处置、轮回，每一步都记在这里。地府、欧洲、埃及、希腊，各按各的规矩。</td><td>SoulLedger is one ledger across four underworlds: after a death, every step of judgment, placement and rebirth is recorded here. Diyu, Heaven and Hell, the Duat and Hades each keep their own rules.</td></tr>
+<tr><td><code>demo.home.route_title</code></td><td>第一次来，按这三步走</td><td>New here? Three steps</td></tr>
+<tr><td><code>demo.home.step1</code></td><td>以判官身份审一个灵魂</td><td>Judge a soul as an officer</td></tr>
+<tr><td><code>demo.home.step1_sub</code></td><td>在审判台读功过、落印判决</td><td>Read the record at the bench and seal a verdict</td></tr>
+<tr><td><code>demo.home.step2</code></td><td>看它这一世走过的行程</td><td>Follow the road it walked</td></tr>
+<tr><td><code>demo.home.step2_sub</code></td><td>从死亡到现在这一站，走到哪一目了然</td><td>From death to the present stop, at a glance</td></tr>
+<tr><td><code>demo.home.step3</code></td><td>换成灵魂本人，看自己的账</td><td>Switch to the soul and see its own ledger</td></tr>
+<tr><td><code>demo.home.step3_sub</code></td><td>手机上的灵魂端：这一世、去处、再会</td><td>The soul&#x27;s phone app: this life, where it goes, farewell</td></tr>
+<tr><td><code>demo.home.cta</code></td><td>从第一步开始</td><td>Start with step 1</td></tr>
+<tr><td><code>demo.home.cta_sub</code></td><td>以{{hall}}判官身份进入</td><td>Enter as an officer of {{hall}}</td></tr>
+<tr><td><code>demo.home.cta_hall</code></td><td>地府第五殿</td><td>the Fifth Court of Diyu</td></tr>
+<tr><td><code>demo.home.peek</code></td><td>先看 30 秒</td><td>Take a 30-second look</td></tr>
+<tr><td><code>demo.home.preview_title</code></td><td>预览 · 一个灵魂的行程</td><td>Preview · one soul&#x27;s road</td></tr>
+<tr><td><code>demo.home.preview_sub</code></td><td>自动轮换四种冥界 · 悬停暂停</td><td>Cycles through the four underworlds · hover to pause</td></tr>
+<tr><td><code>demo.home.preview_manual</code></td><td>选一种冥界看</td><td>Pick an underworld</td></tr>
+<tr><td><code>demo.home.preview_static</code></td><td>静帧 · 点开看动画</td><td>Still · tap to play</td></tr>
+<tr><td><code>demo.home.preview_soul</code></td><td>{{name}} · 行程</td><td>{{name}} · road</td></tr>
+<tr><td><code>demo.home.preview_tabs</code></td><td>预览哪一种冥界</td><td>Which underworld to preview</td></tr>
+<tr><td><code>demo.home.civ_title</code></td><td>四种冥界，四种走法</td><td>Four underworlds, four roads</td></tr>
+<tr><td><code>demo.home.civ_sub</code></td><td>选一殿，以那一殿的判官身份进入</td><td>Pick a hall and enter as its officer</td></tr>
+<tr><td><code>demo.home.enter_officer</code></td><td>以判官身份进入</td><td>Enter as officer</td></tr>
+<tr><td><code>demo.home.hall.cn</code></td><td>第五殿 · 阎罗</td><td>Fifth Court · Yanluo</td></tr>
+<tr><td><code>demo.home.hall.eu</code></td><td>米诺斯之庭</td><td>Court of Minos</td></tr>
+<tr><td><code>demo.home.hall.eg</code></td><td>两真之殿</td><td>Hall of Two Truths</td></tr>
+<tr><td><code>demo.home.hall.gr</code></td><td>三判官之庭</td><td>Court of the Three Judges</td></tr>
+<tr><td><code>demo.home.feat.cn</code></td><td>十殿一线</td><td>Ten courts, one line</td></tr>
+<tr><td><code>demo.home.feat.cn_body</code></td><td>十三站一条路走到底；十殿逐殿过堂，支线是十八层地狱。</td><td>Thirteen stops on a single road; the ten courts one by one, with the eighteen hells as a branch.</td></tr>
+<tr><td><code>demo.home.feat.eu</code></td><td>九圈漏斗</td><td>The nine-ring funnel</td></tr>
+<tr><td><code>demo.home.feat.eu_body</code></td><td>死时即判：下行九圈往下收，上行炼狱山往上收，直到天国。</td><td>Judged at death: down through nine narrowing circles, or up the narrowing mountain to Heaven.</td></tr>
+<tr><td><code>demo.home.feat.eg</code></td><td>称心二分</td><td>The weighing, two ways</td></tr>
+<tr><td><code>demo.home.feat.eg_body</code></td><td>心与玛阿特之羽同称：过则入芦苇原，不过即湮灭。</td><td>The heart against the feather of Ma&#x27;at: pass to the Field of Reeds, or be annihilated.</td></tr>
+<tr><td><code>demo.home.feat.gr</code></td><td>三岔分路</td><td>Three roads</td></tr>
+<tr><td><code>demo.home.feat.gr_body</code></td><td>三判官分路：至福岛、千年循环、塔尔塔罗斯，最后饮勒忒之水。</td><td>The three judges part the ways: the Isles, the thousand-year cycle, Tartarus — and at last the water of Lethe.</td></tr>
+<tr><td><code>demo.home.roles_title</code></td><td>四种身份</td><td>Four roles</td></tr>
+<tr><td><code>demo.home.role.officer</code></td><td>判官</td><td>Officer</td></tr>
+<tr><td><code>demo.home.role.officer_body</code></td><td>审灵魂、落印、安排去处</td><td>Judges, seals, places souls</td></tr>
+<tr><td><code>demo.home.role.officer_go</code></td><td>选上面任一殿</td><td>Pick any hall above</td></tr>
+<tr><td><code>demo.home.role.soul</code></td><td>灵魂</td><td>Soul</td></tr>
+<tr><td><code>demo.home.role.soul_body</code></td><td>看自己这一世的账和行程</td><td>Sees its own ledger and road</td></tr>
+<tr><td><code>demo.home.role.soul_go</code></td><td>以灵魂身份看看</td><td>Look as a soul</td></tr>
+<tr><td><code>demo.home.role.admin</code></td><td>管理员</td><td>Admin</td></tr>
+<tr><td><code>demo.home.role.admin_body</code></td><td>管殿司、权限、语料</td><td>Halls, permissions, corpus</td></tr>
+<tr><td><code>demo.home.role.admin_go</code></td><td>管理员入口</td><td>Admin entrance</td></tr>
+<tr><td><code>demo.home.role.inspector</code></td><td>巡察</td><td>Inspector</td></tr>
+<tr><td><code>demo.home.role.inspector_body</code></td><td>朋友圈审核：举报、禁言、敏感词</td><td>Moderates the social feed: reports, mutes, banned words</td></tr>
+<tr><td><code>demo.home.role.inspector_go</code></td><td>巡察入口</td><td>Inspector entrance</td></tr>
+<tr><td><code>demo.home.peek_title</code></td><td>先看 30 秒</td><td>A 30-second look</td></tr>
+<tr><td><code>demo.home.peek_sub</code></td><td>四个画面，每张 7 秒，可左右翻</td><td>Four frames, 7 s each, swipe to browse</td></tr>
+<tr><td><code>demo.home.peek_frames.bench</code></td><td>审判台 · 落印</td><td>The bench · sealing</td></tr>
+<tr><td><code>demo.home.peek_frames.road</code></td><td>行程</td><td>The road</td></tr>
+<tr><td><code>demo.home.peek_frames.app</code></td><td>灵魂端 App</td><td>Soul app</td></tr>
+<tr><td><code>demo.home.peek_frames.farewell</code></td><td>再会页</td><td>Farewell</td></tr>
+<tr><td><code>demo.home.peek_prev</code></td><td>上一张</td><td>Previous</td></tr>
+<tr><td><code>demo.home.peek_next</code></td><td>下一张</td><td>Next</td></tr>
+<tr><td><code>demo.home.peek_done</code></td><td>看完了，从第一步开始</td><td>Done — start with step 1</td></tr>
+<tr><td><code>demo.home.footer</code></td><td>灵魂簿 SoulLedger · 演示版</td><td>SoulLedger · demo</td></tr>
+</tbody></table>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十七批 · 演示首页<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十七批 · 演示站首页:更精美、有引导,第一次来的人知道从哪开始<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch27-reply.md</code>,稿子 <code>V4Batch27.dc.html</code>,宽屏(1280)与 393 窄屏各一张合成图,深浅各一。第二十六批 egy 已上线。</p>
+<section>
+<h3>用户的话</h3>
+<p>「演示版有没有更精美一点、有引导性的?比方说主页面根目录这边。」</p>
+</section>
+<section>
+<h3>现在的样子(演示站 <code>soulledger.tardisyuan.ltd</code> 根目录)</h3>
+<ul>
+<li>就是产品落地页(<code>Landing</code>):大标题「同一个问题:这个灵魂过得了关吗?」,四张文明卡(F 嵌彩徽记、描线 + 扫光 + 倾斜),点卡片直接以那一殿的判官身份进去(先盖一枚印做转场)。</li>
+<li>卡片下面两条入口:「以灵魂身份看看」(四个文明的 App 屏幕,网页上的副本)和次要入口(管理员、巡察)。</li>
+<li>进去之后才有导览(<code>DemoTour</code>,六步:死亡 → 审判 → 处置 → …,右下角浮层)。</li>
+<li>顶部一条细横幅:「演示环境 · 数据只在你的浏览器里,重新登录即恢复」。</li>
+</ul>
+<p>问题:第一次来的人不知道该点哪、点了会看到什么、这东西是干嘛的;四张卡只写了名字和「以判官身份进入」。</p>
+</section>
+<section>
+<h3>请重新设计演示首页(只是演示站的首页;正式版落地页另说)</h3>
+<p>几个方向,欢迎你取舍或给更好的:</p>
+<ul>
+<li><strong>一句话 + 一条推荐路线</strong>:讲清这是什么(四种冥界、一本账:灵魂从死亡到审判、处置、轮回的管理系统),再给编号的三步——「① 以判官身份审一个灵魂 → ② 看它这一世走过的行程 → ③ 换成灵魂本人,看自己的账」,第一步是全页唯一的主按钮。</li>
+<li><strong>首屏一段会动的预览</strong>:用第二十五批的行程块(标题 + 阶段条 + 行程图),一个灵魂沿着行程走一遍(已行段描出、当前站金环),不点进去就看到系统在做什么。可以四个文明轮换。</li>
+<li><strong>四张文明卡写出各自的特点</strong>:地府十殿一线、欧洲九圈漏斗、埃及称心二分、希腊三岔,一句话 + 那种形状的小缩略图。</li>
+<li><strong>身份说明</strong>:判官 / 灵魂 / 管理员 / 巡察,各能做什么、各从哪进,一行说清。</li>
+<li><strong>「30 秒先看看」</strong>:不进系统、不登录,按顺序看几张关键画面(审判台落印、行程、灵魂端 App 屏、再会页)。</li>
+<li>页脚:GitHub 链接(用户之前定过作者信息只放 GitHub)。</li>
+</ul>
+<p>约束:</p>
+<ul>
+<li>沿用 v4 的视觉语言与 token(<code>--civT / --glow / --metal</code>、墨阶);F 嵌彩徽记与魂火照旧可用。</li>
+<li>深浅两套;393 窄屏成立(路线三步竖排、预览缩小或换成静帧)。</li>
+<li>动效:一处主动效 + 一处呼吸,避开魂火 0.5–1 Hz;减少动效时静止。</li>
+<li>首屏要快:徽记 SVG 已经很大(八份约 340 KB),预览别再加同量级的图;能用组件画的就别用位图。</li>
+<li>新文案列出来(中 / 英),egy 等代码定了再一起给你。</li>
+</ul>
+<p class="ask">请给:合成图(宽屏 / 393 × 深浅)、各区块的尺寸与变量、动效说明、新文案表;以及你最推荐保留哪几块、砍掉哪几块。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十六批 · egy 39 键<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十六批 · egy:再会页、行程块、界域在押条、十三站卡的 39 个新键<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>请把下表 34 个键的 egy 写进 <code>v4-batch26-egy.json</code>(扁平,键是下表的完整路径,值是 egy 文本),说明写在 <code>v4-batch26-reply.md</code>。照第十八批的规矩:新词根、专名在回复里列出来;<code>{{name}}</code>、<code>{{n}}</code> 占位原样保留。</p>
+<section>
+<h3>这些键从哪来</h3>
+<ul>
+<li><code>auth.goodbye.*</code>:退出登录之后的「再会」页(新页 <code>/goodbye</code>)。四句告别各属一个文明,<code>line.neutral</code> 是没有文明时的那句。</li>
+<li><code>realms.journey.*</code>、<code>souls.detail.journey.stage_*</code>:第二十五批你画的行程块(标题、阶段条、行程图、窄屏胶囊、读屏状态字)。</li>
+<li><code>realms.map.legend_bar</code>、<code>souls.diyu_station.*</code>:界域页在押条的图例、地府十三站卡。</li>
+</ul>
+</section>
+<section>
+<h3>34 个键</h3>
+<table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>auth.goodbye.title</code></td><td>再会</td><td>Farewell</td></tr>
+<tr><td><code>auth.goodbye.title_named</code></td><td>再会，{{name}}</td><td>Farewell, {{name}}</td></tr>
+<tr><td><code>auth.goodbye.signed_out</code></td><td>已安全退出登录</td><td>You have been signed out.</td></tr>
+<tr><td><code>auth.goodbye.returning</code></td><td>{{n}} 秒后回到首页</td><td>Back to the home page in {{n}} s</td></tr>
+<tr><td><code>auth.goodbye.home</code></td><td>回到首页</td><td>Home page</td></tr>
+<tr><td><code>auth.goodbye.login</code></td><td>重新登录</td><td>Sign in again</td></tr>
+<tr><td><code>auth.goodbye.line.neutral</code></td><td>簿已合上。</td><td>The ledger is closed.</td></tr>
+<tr><td><code>auth.goodbye.line.cn</code></td><td>灯已熄，簿已合。</td><td>The lamp is out; the ledger is closed.</td></tr>
+<tr><td><code>auth.goodbye.line.eu</code></td><td>门在身后合上了。</td><td>The gate has closed behind you.</td></tr>
+<tr><td><code>auth.goodbye.line.eg</code></td><td>天平归于平静。</td><td>The scales are at rest.</td></tr>
+<tr><td><code>auth.goodbye.line.gr</code></td><td>渡船已经离岸。</td><td>The ferry has left the shore.</td></tr>
+<tr><td><code>realms.map.legend_bar</code></td><td>条长 = 在押 / 容量；≥ 78% 方块放大、加光圈；≥ 90% 右端一道竖线；没记容量的站只写在押</td><td>bar = held / capacity; ≥ 78% enlarged mark with a halo; ≥ 90% a tick at the end; no capacity recorded, count only</td></tr>
+<tr><td><code>souls.diyu_station.now_card</code></td><td>现在 · 第 {{n}} 站</td><td>Now · station {{n}}</td></tr>
+<tr><td><code>souls.diyu_station.state_passed</code></td><td>已过</td><td>passed</td></tr>
+<tr><td><code>souls.diyu_station.state_ahead</code></td><td>未到</td><td>ahead</td></tr>
+<tr><td><code>realms.journey.now</code></td><td>现在</td><td>Now</td></tr>
+<tr><td><code>realms.journey.now_station</code></td><td>现在 · 第 {{n}} 站</td><td>Now · stop {{n}}</td></tr>
+<tr><td><code>realms.journey.station_n</code></td><td>第 {{n}} 站</td><td>Stop {{n}}</td></tr>
+<tr><td><code>realms.journey.walked_n</code></td><td>已行 {{n}} 站</td><td>{{n}} stops walked</td></tr>
+<tr><td><code>realms.journey.ahead_n</code></td><td>待行 {{n}} 站</td><td>{{n}} stops ahead</td></tr>
+<tr><td><code>realms.journey.left_to</code></td><td>余 {{n}} 站到{{name}}</td><td>{{n}} left to {{name}}</td></tr>
+<tr><td><code>realms.journey.days_here</code></td><td>到此 {{n}} 日</td><td>{{n}} days here</td></tr>
+<tr><td><code>realms.journey.two_roads</code></td><td>之后两条路之一</td><td>one of two roads next</td></tr>
+<tr><td><code>realms.journey.schematic_suffix</code></td><td>（示意）</td><td> (schematic)</td></tr>
+<tr><td><code>realms.journey.off_route</code></td><td>不在此路</td><td>Not on this route</td></tr>
+<tr><td><code>realms.journey.off_note</code></td><td>{{names}} 不在此路，宽屏可见</td><td>{{names}}: not on this route, visible on a wider screen</td></tr>
+<tr><td><code>realms.journey.branch_legend</code></td><td>点线小圈 = 支线，这一世没走</td><td>Dotted ring = a branch not walked in this life</td></tr>
+<tr><td><code>realms.journey.not_a_place</code></td><td>不是地方</td><td>Not a place</td></tr>
+<tr><td><code>realms.journey.no_rebirth</code></td><td>不轮回</td><td>No rebirth</td></tr>
+<tr><td><code>realms.journey.returned</code></td><td>退回重审 · {{n}} 次</td><td>Sent back · {{n}}×</td></tr>
+<tr><td><code>souls.detail.journey.stage_done</code></td><td>已完成</td><td>done</td></tr>
+<tr><td><code>souls.detail.journey.stage_current</code></td><td>现在</td><td>now</td></tr>
+<tr><td><code>souls.detail.journey.stage_future</code></td><td>待办</td><td>to do</td></tr>
+<tr><td><code>souls.detail.journey.stage_na</code></td><td>不适用</td><td>not applicable</td></tr>
+
+</tbody></table>
+<h3>补充:又加了 5 个(2026-11-10,行程块补数据)</h3>
+<p>停留超过一年写年数、隐含经过的站、审判中的说明句、称心未定、希腊千年的「第 N 年」。一起写进同一份 json。</p>
+<table><thead><tr><th>键</th><th>中文</th><th>English</th></tr></thead><tbody>
+<tr><td><code>realms.journey.years_here</code></td><td>到此 {{n}} 年</td><td>{{n}} years here</td></tr>
+<tr><td><code>realms.journey.implied</code></td><td>已过（未登记）</td><td>Passed (not recorded)</td></tr>
+<tr><td><code>realms.journey.judged_at</code></td><td>{{court}}受审中</td><td>Under judgment at {{court}}</td></tr>
+<tr><td><code>realms.journey.weighing</code></td><td>心在天平上，结果未定</td><td>The heart is on the scales; no verdict yet</td></tr>
+<tr><td><code>realms.journey.year_of</code></td><td>第 {{n}} 年 · {{n}} / {{total}}</td><td>Year {{n}} · {{n}} / {{total}}</td></tr>
+</tbody></table>
+<p class="ask">请给:<code>v4-batch26-egy.json</code>(39 个键齐全)和回复里的新词根 / 专名清单。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十五批 · 行程与进度重画<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十五批 · 行程与进度「可视化度太低」:灵魂详情的行程条、四格进度,以及同类的线路图<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch25-reply.md</code>,稿子 <code>V4Batch25.dc.html</code>,深浅各一张合成图。第二十四批已上线(落地页 F 嵌彩、其余 G 天体仪)。</p>
+<section>
+<h3>用户的话</h3>
+<p>看着灵魂详情页的行程条说:「这个行程,可视化度太低了吧,别的也是,调整一下。」</p>
+<p>它现在的样子:四格进度(存活 / 审判 / 处置 / 轮回,当前格底下一道 3px)下面一行「行程 · 一线」,十几个 8px 小方块用 2px 墨线(已行实线、待行虚线)连起来,站名 11px,一屏放不下就横向滚动。整块几乎是灰的,一眼看不出这个灵魂走到哪了。</p>
+<p>我们先做了一轮过渡(已上线,你可以在演示站任一灵魂详情页看到):已行线和站改成文明色加光晕、逐段描出;当前站加一圈慢慢扩散的金环;整条路下铺一道 civT 16% 的淡底轨道;站点 12px、当前 16px;四格上方加一条 6px 进度条(11 s 扫一次光),每格前一颗状态点。<strong>用户要的是你来重画,不是在这一版上加减。</strong></p>
+</section>
+<section>
+<h3>请重画</h3>
+<ul>
+<li><strong>灵魂详情:四格进度 + 行程条</strong>,作为一个整体。四种形状都要:<code>line</code>(地府十殿一线,含「待审所」这类支线)、<code>funnel</code>(欧洲:地狱篇往下收、炼狱山往上收、天堂篇)、<code>fork</code>(希腊三岔路)、<code>fork_two</code>(埃及称心后两条路,「不过」那条的尽头不是地方,用虚线框)。还有「示意」状态(文明没登记形状时画一条线并标「示意」)。</li>
+<li><strong>同类的线路图</strong>(用户说「别的也是」):界域页 <code>/realms</code> 的拓扑图(竖排,每站带在押人数)、灵魂详情下方的三文明冥界地图之外的「十三站卡」(地府)、工作流实例的节点进度。请看一遍,挑出同样「一眼看不出走到哪」的,一并给方案。</li>
+<li>站名一屏放不下时怎么办(现在是横滚 + 自动滚到当前站 + 两端淡出),给你的做法。</li>
+</ul>
+<p>约束:</p>
+<ul>
+<li>语义不变:已行 / 待行 / 现在 / 站 四种状态必须一眼分开,而且<strong>不能只靠颜色</strong>(实线 / 虚线、实心 / 空心照旧,或你给更好的形状区分);读屏另有文字。</li>
+<li>颜色只用 <code>--civT / --glow / --metal</code> 与墨阶;「现在」那一个点仍是全图唯一的 metal。</li>
+<li>动效沿用徽记那套:一处主动效(建议:已行段描出)+ 一处呼吸(当前站),避开魂火 0.5–1 Hz,减少动效时静止。</li>
+<li>宽屏(约 700 宽的卡里)和 393 窄屏都要成立;深浅两套。</li>
+</ul>
+<p class="ask">请给:合成图(四种形状 × 深浅,外加 393 窄屏一张)、每个元素的尺寸与颜色变量、动效说明;另列你挑出的「同类」页面及各自的方案。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十四批 · 徽记定稿(F 嵌彩 / G 天体仪)<span class="tag done">已回 · 已上线</span></summary>
+<article>
+<h2>第二十四批 · 徽记定稿:F 嵌彩做卡片,G 天体仪做其余,出全套<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch24-reply.md</code>,稿子 <code>V4Batch24.dc.html</code>。</p>
+<section>
+<h3>用户的决定</h3>
+<ul>
+<li><strong>落地页四张卡片(约 240,右上,带魂火)用 F · 嵌彩</strong>:地府景泰蓝彼岸花、欧洲彩色玻璃尖窗、埃及有翼日轮胸饰、希腊马赛克油瓶。</li>
+<li><strong>其余所有地方用 G · 天体仪</strong>:空状态(12%)、页头水印(.07 / .09)、24px 单色小标、App 里出现徽记的地方。</li>
+<li>E 圆窗小景不用;B 星图这次也不用。</li>
+</ul>
+</section>
+<section>
+<h3>F · 嵌彩(卡片)要补的</h3>
+<ul>
+<li><strong>四张占位一致</strong>:外形可以各是各的(方牌、尖窗、胸饰、瓶),但放进同一个 240 方框时,视觉重心、上下留白、最大宽高要对齐,四张并排看是一排而不是高低不齐。</li>
+<li><strong>希腊马赛克减到约 300 个元素以内</strong>(现在约 1200)。落地页四张同时内联,元素太多会拖首屏;用大一点的嵌片或把背景区块合并成路径。</li>
+<li>深、浅两套;颜色走 <code>--civT / --metal / --glow</code>,金丝走 <code>--metal</code>。</li>
+<li>动效:一处主动效(建议:金丝描线一次,沿用 <code>.e-l</code> 的画线)+ 一处呼吸(建议:彩色嵌片的微弱光泽,周期 8–12 s,避开魂火 0.5–1 Hz);减少动效时有静止帧。</li>
+<li>光晕在 240 框内淡出(上次被裁成平边的问题别再出现)。</li>
+</ul>
+</section>
+<section>
+<h3>G · 天体仪(其余)要补的</h3>
+<ul>
+<li><strong>四张外形统一</strong>(这正是它负责小尺寸的原因),只靠中心物和底座区分文明。</li>
+<li><strong>24px 单色小标</strong>:另画一版,只留最外的环加中心物剪影,单色 <code>currentColor</code>,线宽按 24px 看得清来定。</li>
+<li>空状态 12%、页头水印 .07 / .09 下要能认出是哪个文明:请在合成图里附这三档的样子。</li>
+<li><strong>App 要用</strong>:react-native-svg 读属性上色,<strong>不能用滤镜、不能用 <code>&lt;style&gt;</code> 里的选择器</strong>;渐变可以。请给一份 App 能直接用的版本(或说明哪些效果在 App 里去掉)。</li>
+<li>深、浅两套;动效一处主动效(建议:环慢转)+ 一处呼吸。</li>
+</ul>
+</section>
+<section>
+<h3>交付</h3>
+<ul>
+<li>文件放 <code>soulledger-v4-pages/emblems-f/</code>(<code>soulledger-emblem-&lt;cn|eu|eg|gr&gt;-&lt;dark|light&gt;.svg</code>)和 <code>emblems-g/</code>(同名,另加四个 <code>-mark.svg</code>)。</li>
+<li>沿用 <code>.e-l / .e-l2 / .e-halo / .e-p / .e-af / .e-hl / .e-glow2</code> 这些 class,代码里的画线、反光、3D 倾斜直接挂上。</li>
+<li>没有新文案键、没有新 egy 词;已定稿的 <code>emblems/</code>、<code>emblems-b/</code>、<code>emblems-c/</code> 别动,上线后我们这边删。</li>
+</ul>
+<p class="ask">请给:两套 SVG 文件、一张总览合成图(F 四卡 + G 四卡 + G 在 12% / .07 / 24px 三档,深浅各一),以及每处动效的说明。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十三批 · 星图留下,再要新方向(E 圆窗 / F 嵌彩 / G 天体仪)<span class="tag done">已回 · F 卡片 + G 其余</span></summary>
+<article>
+<h2>第二十三批 · 徽记:星图留下,再要几个同等水准的新方向<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch23-reply.md</code>,稿子 <code>V4Batch23.dc.html</code>,每个方向一张四卡合成图(深色,和第二十二批一样的版式)。</p>
+<section>
+<h3>用户对第二十二批的反馈</h3>
+<ul>
+<li><strong>B · 星图留下</strong>,而且是你画的<strong>那一版原样</strong>(星盘 + 各自的星)。它是目前唯一被认可的方向。</li>
+<li>A 冥门、C 信物、D 一笔:都不要。</li>
+</ul>
+<p>这期间我们这边也试了几轮,用户<strong>全部否掉</strong>,列出来免得重复:</p>
+<ul>
+<li>换图案、仍是细线描:十殿辐条 / 九圈漏斗 / 羽毛与四十二刻度 / 五河汇流;灯笼、蜡烛、油灯、火把;十殿折线、炼狱山、太阳船夜行、渡河;回纹方印、玫瑰窗、王名圈、阿福花银币。</li>
+<li>同一组图案换画法:App 图标(渐变圆角方块 + 白色剪影)、金属奖章、剪纸叠层、包豪斯色块、立体厚片、印泥。</li>
+<li>星图换画法:星云、全息雷达、星轨长曝光、引力等高线、点阵屏。用户的原话是「都不好看,星图保留最初版本」——所以<strong>星图不要再改</strong>。</li>
+</ul>
+<p>我们的读法:我们自己画的都输在「做工」,不在点子。你画的 B 有气氛、有层次、有细节,这是用户要的水准。</p>
+</section>
+<section>
+<h3>请再给 3–4 个新方向</h3>
+<p>和 B 放在一起给用户挑,所以水准对齐 B,但意象和画法要和上面所有被否掉的拉开。几个还没试过的路子,只是举例:</p>
+<ul>
+<li><strong>圆窗小景</strong>:每个文明一幅微缩场景,比如月下奈何桥、斯堤克斯河上的渡船、杜阿特夜里的太阳船、但丁和维吉尔在地狱入口,像透过一扇圆窗看过去。</li>
+<li><strong>彩色玻璃 / 泥金写本</strong>:宗教手抄本和教堂玫瑰窗的那种华丽,四个文明各用自己的纹样语汇(云纹、哥特窗花、莲花与纸莎草、希腊回纹)。</li>
+<li><strong>水墨晕染</strong>:墨色的浓淡和留白,文明色只点一处。</li>
+<li><strong>天体仪 / 浑天仪</strong>:和 B 同属天象,但是立体的环与球,不是平面星盘。</li>
+</ul>
+<p>约束照旧(深浅两套、颜色走变量、光晕在 240 框内、24px 另给小号、落地页卡片 / 空状态 12% / 页头水印 .07 都要成立、尽量沿用 <code>.e-l / .e-l2 / .e-halo</code>)。这批只是探索稿,只出深色就行。</p>
+<p class="ask">请给:每个方向的四卡合成图(深色)和一句话说明;再把 B 原版也放进同一份稿子里做对照。最推荐哪一个、为什么。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十二批 · 四个新方向(A 冥门 / B 星图 / C 信物 / D 一笔)<span class="tag done">已回 · B 留下</span></summary>
+<article>
+<h2>第二十二批 · 四个文明徽记:完全换个样子,出几套新方向<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch22-reply.md</code>,稿子 <code>V4Batch22.dc.html</code>,每个方向一张四卡合成图。第二十、二十一批已上线(落地页 C、其余 B、埃及 ib 心)。</p>
+<section>
+<h3>用户的话</h3>
+<p>「这四个图案,能不能完全换个样子试试看呢?不一定局限于这四种样子。」——不限于轮盘、九圈 + 炼狱山、天平、三岔路这四个意象,也不限于现在的线描 + 仪器环画法。这是一次探索,不是修改。</p>
+</section>
+<section>
+<h3>请给 3–4 个截然不同的方向</h3>
+<p>每个方向四个文明各一张(先给深色,定了方向再补浅色和全套文件)。方向之间要拉开距离,下面只是举例,欢迎你提更好的:</p>
+<ul>
+<li><strong>换意象</strong>:每个文明挑更有代表性、更少见的符号。例如地府:生死簿、孟婆碗、判官笔与朱砂印、奈何桥;欧洲:但丁的三兽、天国的玫瑰、炼狱的天使之钥;埃及:阿努比斯之首、荷鲁斯之眼、杜阿特的船与太阳;希腊:卡戎的船与钱币、刻耳柏洛斯、石榴。</li>
+<li><strong>换画法</strong>:徽章 / 纹章式(盾形、环形铭边),版画 / 铜版线刻(排线做明暗),极简几何符号(一两笔、像 logo),发光的星座连线,印章 / 封蜡,或者一张「门」的系列(四个文明的冥界之门)。</li>
+<li><strong>统一一个母题</strong>:四个徽记共用一个框架(比如同一个圆章、同一个门框、同一个罗盘),只换里面的符号,四个放在一起一眼是一套。</li>
+</ul>
+<p>约束照旧,方便最后落地:</p>
+<ul>
+<li>深浅两套,颜色走变量;动效每个一处主动效、一处呼吸,避开魂火节奏;减少动效有静止帧;</li>
+<li>光晕在 240 框内淡出;App 能读属性色,无滤镜;24px 另给单色小号;</li>
+<li>放进落地页卡片(约 240,右上,带魂火)、空状态(12%)、页头水印(.07 / .09)都要成立;</li>
+<li>代码那边的画线、反光、倾斜挂在 <code>.e-l / .e-l2 / .e-halo</code> 等 class 上,新方向尽量沿用这些 class。</li>
+</ul>
+<p class="ask">请给:每个方向的四卡合成图(深色)、一句话说明它想传达什么;你最推荐哪一个、为什么。我们给用户挑,挑定后再出全套。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十一批 · 希腊 C 版拉开间距,埃及的心<span class="tag done">已回 · 已落地</span></summary>
+<article>
+<h2>第二十一批 · 希腊 C 版拉开间距,埃及的心换个画法<span class="tag done">已回 · 2026-11-10</span></h2>
+<p>回复写到 <code>v4-batch21-reply.md</code>。用户定了第二十批:<strong>落地页卡片用 C,空状态、页头水印等其余地方用 B</strong>,正在接入。还有两处请你改:</p>
+<section>
+<h3>1. 希腊 C 版</h3>
+<p>照你回复里说的:岔口往下挪,三个尽头(圆窗至福岛 / 拱门千年 / 方井塔尔塔罗斯)的间距拉开,240 里不挤。只改 <code>emblems-c/soulledger-emblem-gr-&lt;dark|light&gt;.svg</code> 两份。</p>
+</section>
+<section>
+<h3>2. 埃及的心(用户点名)</h3>
+<p>用户说「埃及那个心脏也改一下」。现在天平左盘里是一个通用的「爱心」形(♥),和埃及的意象不搭。请换成埃及的心:<strong>ib</strong> —— 象形文字里那个带两只小耳柄、上窄下圆的心形陶罐(𓄣,F34)。线描,和羽毛对称地放在左盘,开口(罐口)透光、上沿高光照第二十批的写法。</p>
+<p>请改所有画到这颗心的地方:</p>
+<ul>
+<li><code>emblems-b/</code>、<code>emblems-c/</code> 的 <code>soulledger-emblem-eg-&lt;dark|light&gt;.svg</code>(各 2 份);</li>
+<li><code>emblems/soulledger-emblem-eg-mark.svg</code> 如果要加心(现在小号里没有心,加不加你定);</li>
+<li>第十六批主角节点 <code>nodes/hero-eg-two-truths.svg</code>(两真之殿那座天平左盘也是 ♥);</li>
+<li>你记得别处还有 ♥ 的埃及图,一起列出来改。</li>
+</ul>
+<p class="ask">class 约定、变量、动效周期照第二十批,文件名不变,代码直接替换。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第二十批 · 徽记 B 版与 C 版<span class="tag done">已回 · 用户选 C 卡片 + B 背景</span></summary>
+<article>
+<h2>第二十批 · 徽记再进一步:调细加层次 + 一版 2.5D<span class="tag done">已回 · 2026-11-09</span></h2>
+<p>回复写到 <code>v4-batch20-reply.md</code>。第十九批已上线。用户看过线上效果:「稍微好一点了」,要再往前走,三件事同时做——代码这边加效果(见第 3 条,不用你画),请你出两版图(第 1、2 条),做完我们并排给用户挑。</p>
+
+<section>
+<h3>1. B 版:在第十九批上调细、加层次(改动小)</h3>
+<ul>
+<li>主线从 6(按 240)降到 3.5–4,细刻度不动;</li>
+<li>分 2–3 层深浅:仪器外环、读数格、远处的线淡一点、虚一点;主体意象最清楚;</li>
+<li>开口(门、窗、心、漏斗底)加内发光,像从里面透出来;</li>
+<li>文件放 <code>emblems-b/</code>,同名 8 份(<code>soulledger-emblem-&lt;civ&gt;-&lt;theme&gt;.svg</code>),变量、class 约定照第十九批(<code>.e-l / .e-l2 / .e-t / .e-a / .e-af / .e-p / .e-glowbg</code>),代码的效果就是挂在这些 class 上的。</li>
+</ul>
+</section>
+
+<section>
+<h3>2. C 版:2.5D 立体(重画)</h3>
+<ul>
+<li>和第十六批主角建筑一样的斜视角:轮盘斜放成立体的盘,天平有前后、两盘有厚度,九圈是真往下陷的漏斗、炼狱山是有体积的台阶,希腊三岔路是从水面延伸出去的立体路面;</li>
+<li>一个统一光源(左上),面分亮暗两层,底下一道柔影;仍是线描为主,不要写实贴图;</li>
+<li>同样的 class 约定与变量,深浅两套;文件放 <code>emblems-c/</code>,同名 8 份;</li>
+<li>第十九批的约束都还在:光晕在框内淡出、App 用属性色、无滤镜以外的高级特性、冥字印、24px 用 mark(mark 可沿用)。</li>
+</ul>
+</section>
+
+<section>
+<h3>3. 代码这边在做的效果(给你参考,不用画)</h3>
+<ul>
+<li>卡片第一次进入视口时,主线(<code>.e-l</code>、<code>.e-l2</code>)约 1 秒逐笔画出,刻度随后淡入;</li>
+<li>一道金属反光约每 11 秒扫过一次;</li>
+<li>鼠标悬停时卡片轻微 3D 倾斜(最多约 6°),徽记与卡底分前后两层;</li>
+<li>减少动效、触屏下全关。</li>
+</ul>
+<p class="ask">请给:B、C 各 8 份 SVG;一张对比图(第十九批 / B / C 三排,深浅各一,带魂火);你更推荐哪一版、为什么。</p>
+</section>
+
+<section>
+<h3>4. 用户补充:整体要更美</h3>
+<p>用户追加一句:「样式也请更加美化一点」。不只是线粗细的问题,B、C 两版都请在美感上多用一点心:</p>
+<ul>
+<li>比例与留白:主体意象占画面的比例、和仪器环之间的呼吸感,别挤也别空;</li>
+<li>细节的精致度:刻度、读数格、开口的形状要有讲究(比如刻度分长短三级、开口边缘有一道细高光);</li>
+<li>颜色的层次:文明色、矿物金属色、glow 色之间要有过渡,深色里亮部要「发光」而不是「涂亮」,浅色里别发灰;</li>
+<li>四个放在一起像一套:同样的仪器语言、同样的光源,但各有个性;</li>
+<li>如果你觉得某个意象的构图本身限制了美感,可以提出更好的构图,在回复里说明。</li>
+</ul>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第十九批 · 重画四个文明徽记<span class="tag done">已回 · 已落地</span></summary>
+<article>
+<h2>第十九批 · 重画四个文明徽记<span class="tag done">已回 · 2026-11-09</span></h2>
+<p>回复写到 <code>v4-batch19-reply.md</code>,新图放 <code>emblems/</code>(沿用现在的文件名 <code>soulledger-emblem-&lt;cn|eu|eg|gr&gt;-&lt;dark|light&gt;.svg</code>,代码直接替换),合成效果图另放。和第十八批互不依赖,哪批先回都行。</p>
+<section>
+<h3>为什么要重画</h3>
+<p>用户看了落地页四张文明卡,要改这四个徽记。现在的徽记是第二批定的(地府:六道轮盘中间一个「冥」字印;欧洲:倒锥九圈加炼狱山;埃及:天平,一边心一边羽;希腊:三岔路),线描加轻动画(刻度转 90 秒、九圈明暗 6 秒、横梁摆 7 秒、光流 3.2 秒)。第十六批之后,卡片里有了魂火、背后有了文明光晕和慢扫描线,地图上有了你画的斜视角主角建筑。放在一起,徽记显得素、平,和地图那套语言不一致,也不够「科技感」(用户对地图提过同样的话)。</p>
+<p>另外我们在修一处:欧洲、埃及、希腊三张卡上,徽记背后那块圆光的顶部被切成了平边。那是我们代码里的裁切问题,你不用管;新稿里光晕请画成在边框以内自然淡出。</p>
+</section>
+<section>
+<h3>要求</h3>
+<ul>
+<li>每个文明仍是一眼认得出的那个核心意象(轮盘、九圈、天平、三岔路),可以换构图,但别换题材;</li>
+<li>和第十六批主角节点一个家族:线描为主、1.6 线宽(按 64 计,放大后等比)、矿物色与本文明 glow 色,门洞 / 开口透光;可以加一点「仪器」元素(刻度、坐标、读数格),但不要放字(地府那个「冥」字印例外,它是印);</li>
+<li>深浅两套,颜色尽量走变量(同 <code>hero-nodes.css</code> 的做法),我们好换色;</li>
+<li>动画:每个徽记一处主动效、一处呼吸即可,周期别和魂火的明灭(0.5–1 Hz)、摆动(5–8 秒)对齐;<code>prefers-reduced-motion</code> 下静止的那一帧也要好看;</li>
+<li>用在这些地方,请都看一眼:落地页卡片(约 240,右上)、空状态背景(12% 不透明)、页头水印(约 260,偏右上,深 .07 / 浅 .09)、灵魂端 App 的登录页标记与水印(react-native-svg 转画,所以别用 <code>filter</code> 以外的高级特性;滤镜我们在 App 里会去掉);</li>
+<li>24px 时还认得出(App 图标位附近会用到小号)。</li>
+</ul>
+<p class="ask">请给:8 份 SVG、一张四卡合成(深浅各一,带魂火和光晕)、一张各用处的缩小样。觉得某个意象该换,在回复里说理由,我们转给用户定。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第十八批 · 补齐 24 个 egy 词<span class="tag done">已回 · 已落地</span></summary>
+<article>
+<h2>第十八批 · 补齐 24 个 egy 词(19 个积压 + 5 个地图新词)<span class="tag done">已回 · 2026-11-09</span></h2>
+<p>回复写到 <code>v4-batch18-reply.md</code>,egy 写到 <code>v4-batch18-egy.json</code>(扁平 <code>键: 值</code>)。zh / en 不用动,除非你觉得哪句要改,那就一起写进 <code>v4-batch18-zh.json</code> / <code>-en.json</code>。</p>
+<p>这 19 个键在 egy 包里一直空着(界面退回中文),有的放了几周。都是已上线的界面文字,没有新功能。照常:能用词表里已有的词就用,需要新词根就在回复里说明。</p>
+<div class="scroll"><table>
+<thead><tr><th>键</th><th>zh</th><th>en</th></tr></thead>
+<tbody>
+<tr><td><code>actors.assessors.title</code></td><td>四十二判官</td><td>The Forty-Two Assessors of Ma&#x27;at</td></tr>
+<tr><td><code>actors.assessors.toggle</code></td><td>展开或收起四十二判官</td><td>Show or hide the bench of forty-two</td></tr>
+<tr><td><code>annual.lead_hall</code></td><td>这一年，本殿一共收了</td><td>This year this hall took in</td></tr>
+<tr><td><code>demo.civ.eu.realm</code></td><td>Inferno · Purgatorio · Paradiso</td><td>Inferno · Purgatorio · Paradiso</td></tr>
+<tr><td><code>demo.tour.eu.2.body</code></td><td>死的那一刻，基督作私审判：天国、炼狱，还是地狱。</td><td>At death Christ judges the soul: Heaven, Purgatory, or Hell.</td></tr>
+<tr><td><code>demo.tour.gr.5.body</code></td><td>按厄尔的故事，灵魂或上天、或入地，走完一千年。</td><td>As in the myth of Er, the soul spends a thousand years, above or below.</td></tr>
+<tr><td><code>doc.pdf_fallback</code></td><td>PDF 服务暂不可用，改用浏览器打印：在打印对话框里选「存为 PDF」。</td><td>The PDF service is unavailable; opening the browser&#x27;s print dialog instead — choose “Save as PDF” there.</td></tr>
+<tr><td><code>judgment.weighing.wavering_hint</code></td><td>判天平摇摆或退回重审：托特记下，心再称一次；没有去处。</td><td>The scale wavers, or Retry: Thoth records it and the heart is weighed again; no destination.</td></tr>
+<tr><td><code>ledger.advisory_disclaimer_eg</code></td><td>天平读采信的功过：心不重于羽即通过，重于羽即交阿米特。官员不另选。</td><td>The scale reads the admitted deeds: a heart no heavier than the feather passes, a heavier one goes to Ammit. No officer chooses otherwise.</td></tr>
+<tr><td><code>map.diyu.mengpo_pavilion</code></td><td>醧忘台</td><td>Terrace of Oblivion</td></tr>
+<tr><td><code>map.diyu.nai_river</code></td><td>奈河</td><td>River Nai</td></tr>
+<tr><td><code>queue.deadline.held</code></td><td>候审中 · 不计期限</td><td>Waiting to be heard · no deadline yet</td></tr>
+<tr><td><code>soul_app.lexicon.eg.no_past_lives</code></td><td>杜阿特不转生：此后不再有下一世。</td><td>The Duat has no rebirth: there is no next life after this one.</td></tr>
+<tr><td><code>soul_app.lexicon.eg.past_read_only</code></td><td>前世记录只读，不能就前世提出申请或申诉。</td><td>Past lives are read-only: no application or appeal can be made about them.</td></tr>
+<tr><td><code>soul_app.lexicon.eu.court</code></td><td>受审于</td><td>Judged at</td></tr>
+<tr><td><code>tenants.settings.rebirth_quota_body_single</code></td><td>每月最多办几次转生。留空 = 不限。满了，灵魂留在原处等候转生，下月或调高后再办。</td><td>The most rebirths this hall may take in a month. Leave blank for no limit. When it is full, souls wait among those awaiting rebirth until next month or until the limit is raised.</td></tr>
+<tr><td><code>tenants.settings.rebirth_quota_single_row</code></td><td>每月转生</td><td>Rebirths a month</td></tr>
+<tr><td><code>verdict_doc.eu.verdict.heresy</code></td><td>否认灵魂不灭，入地狱第六圈。</td><td>Denied that the soul outlives the body: to the sixth circle of Hell.</td></tr>
+<tr><td><code>verdict_doc.eu.verdict.limbo</code></td><td>未受洗，又没有更重的罪，入第一圈林勃。此处不施刑罚。</td><td>Unbaptised, with no graver sin: to the first circle, Limbo. No punishment is given there.</td></tr>
+</tbody></table></div>
+<h3>另外 5 个新键(地图站点小卡与仪表盘小地图,11-09 刚加)</h3>
+<div class="scroll"><table>
+<thead><tr><th>键</th><th>zh</th><th>en</th></tr></thead>
+<tbody>
+<tr><td><code>map.card.today_in</code></td><td>今日进</td><td>In today</td></tr>
+<tr><td><code>map.card.today_out</code></td><td>出</td><td>out</td></tr>
+<tr><td><code>map.card.avg_stay</code></td><td>平均停留</td><td>avg. stay</td></tr>
+<tr><td><code>overview.map.title</code></td><td>冥界图</td><td>Underworld map</td></tr>
+<tr><td><code>overview.map.open</code></td><td>打开界域页</td><td>Open Realms</td></tr>
+</tbody></table></div>
+<p class="fyi">说明:<code>demo.civ.eu.realm</code> 是演示站欧洲卡上的三部曲名;<code>map.diyu.*</code> 是地府地图上的两个站名;<code>verdict_doc.eu.*</code> 是欧洲判决书里的两条判词。</p>
+</article>
+</details>
+
+<details>
+<summary>第十七批 · 三个 egy 词,确认埃及「羽侧 / 心侧」的 egy<span class="tag done">已回 · 已落地</span></summary>
+<article>
+<h2>第十七批 · 三个 egy 词,确认埃及「羽侧 / 心侧」的 egy<span class="tag done">已回 · 2026-11-08</span></h2>
+<p>回复写到 <code>v4-batch17-reply.md</code>,文案三语写到 <code>v4-batch17-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>。第十六批已落地并上线(主角节点、魂火、光效与数据徽标都在演示站上)。</p>
+
+<section>
+<h3>1. 三个新键的 egy</h3>
+<div class="scroll"><table>
+<thead><tr><th>键</th><th>zh</th><th>en</th><th>用在哪</th></tr></thead>
+<tbody>
+<tr><td><code>map.close_up</code></td><td>近处</td><td>Close up</td><td>地图缩放按钮旁,从全景回到当前站附近</td></tr>
+<tr><td><code>map.card.arrived</code></td><td>到达 {{date}}</td><td>Arrived {{date}}</td><td>灵魂路线图上点站点出的小卡,这一站的到达日</td></tr>
+<tr><td><code>souls.detail.timeline.stage_reincarnating_waiting</code></td><td>处置已执行 · 等候转生</td><td>Disposition carried out · awaiting rebirth</td><td>灵魂详情时间线:处置走完、等转生的那一格</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h3>2. 请确认:埃及的「羽侧 / 心侧」</h3>
+<p>用户 11-08 定:埃及那两个数(别的文明叫「功德 / 罪业」)在网页和官员端一律读作「羽侧 / 心侧」,和灵魂端一致。新键都是 <code>_by_civ.eg</code>。egy 是我们用词表里已有的词拼的(没有新词根),请你确认或改:</p>
+<div class="scroll"><table>
+<thead><tr><th>键(都带 <code>_by_civ.eg</code>)</th><th>zh</th><th>en</th><th>我们写的 egy</th></tr></thead>
+<tbody>
+<tr><td><code>souls.detail.merit / demerit</code>、<code>judgment.queue.merit / demerit</code>、<code>ledger.book.col_merit / col_demerit</code></td><td>羽侧 / 心侧</td><td>Feather side / Heart side</td><td>Shut / Ib</td></tr>
+<tr><td><code>ledger.raw_merit</code> 等</td><td>原始 羽侧</td><td>Raw feather side</td><td>Shut Tepy</td></tr>
+<tr><td><code>ledger.decayed_merit</code> 等</td><td>衰减后 羽侧</td><td>Decayed feather side</td><td>Shut Khebi Seth</td></tr>
+<tr><td><code>ledger.journal.pillar_received / pillar_disbursed</code></td><td>新收 · 羽侧 / 开除 · 心侧</td><td>Received · feather side / Disbursed · heart side</td><td>Shesep · Shut / Bek · Ib</td></tr>
+<tr><td><code>events.detail.karma</code></td><td>羽侧 {{merit}} · 心侧 {{demerit}}</td><td>Feather side {{merit}} · Heart side {{demerit}}</td><td>Shut {{merit}} · Ib {{demerit}}</td></tr>
+<tr><td><code>judgment.claim.col_merit_demerit</code></td><td>羽侧 / 心侧</td><td>Feather side / heart side</td><td>Shut / Ib</td></tr>
+<tr><td><code>officer_app.soul.merit_short / demerit_short</code></td><td>羽侧 / 心侧</td><td>Feather / Heart(56px 列放不下更长的)</td><td>Shut / Ib</td></tr>
+</tbody></table></div>
+<p class="ask">「衰减」用 Khebi Seth、「开除」用 Bek 是我们挑的,最没把握;你觉得不对就给正字。zh / en 措辞要改也一起给。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第十六批 · 地图与插画的主角节点、魂火、两个 egy 词<span class="tag done">已回 · 已落地</span></summary>
+<article>
+<h2>第十六批 · 地图与插画的主角节点、魂火、两个 egy 词<span class="tag done">已回 · 2026-11-08</span></h2>
+<p>回复写到 <code>v4-batch16-reply.md</code>;新图放同一目录;文案三语写到 <code>v4-batch16-zh.json</code> / <code>-en.json</code> / <code>-egy.json</code>(扁平 <code>键: 值</code>)。第七至十五批已定的不动。</p>
+
+<section>
+<h3>背景:用户觉得地图和插画「美观度差一点,没有科技感」</h3>
+<p>我们查过,原因有三:全是平涂、没有光和层次;几乎不动(只有当前站一个脉冲圈);图上没有数据。393 宽下整张图缩到约 310px,站名只剩约 4px。</p>
+<p>用户定了:代码这边现在就做两件事(不用你出图),同时请你画「主角」部分。代码这边在做的:</p>
+<ul>
+<li>走过的线两层光(亮芯 + 柔晕),线上有沿路流动的「魂光」,世界图上流速按各站在押数;</li>
+<li>底下加 24px 细网格和刻度;当前站换成扫描环;线宽统一成几档;</li>
+<li>每站旁边加等宽数字小徽标(在押 / 容量),越满的站光越强,点站点出小卡;</li>
+<li>393 宽默认放大到当前站附近;空状态用本文明的徽记线描;落地页徽记卡后面加光晕和慢扫描线。</li>
+</ul>
+<p>这些都叠在你第八批的 SVG 上,<code>id</code>、<code>data-state</code>、<code>.edge</code>、<code>#labels</code> 约定不变。</p>
+</section>
+
+<section>
+<h3>1. 主角节点的新画(四文明 × 深浅)</h3>
+<p>不重画整张图。只画每张图上的几个「主角」站点,做成等距或斜视角的小建筑 / 地标,替换现在的小方块或圆点。建议每个文明 3–4 个:</p>
+<div class="scroll"><table>
+<thead><tr><th>文明</th><th>建议的主角站点</th></tr></thead>
+<tbody>
+<tr><td>地府</td><td>鬼门关、酆都城、十殿、六道轮回</td></tr>
+<tr><td>欧洲</td><td>地狱之门、九圈(可只画最深一圈的冰湖)、炼狱山、天堂</td></tr>
+<tr><td>埃及</td><td>杜阿特入口、两真之殿(称心天平)、芦苇原</td></tr>
+<tr><td>希腊</td><td>冥河渡口、三判官审判处、塔耳塔罗斯 / 极乐</td></tr>
+</tbody></table></div>
+<ul>
+<li>每个节点一份独立 SVG,有「常态 / 当前站 / 已走过 / 未到」四种状态的写法(或告诉我们用哪些 CSS 变量换色);</li>
+<li>线描为主、颜色走矿物色与各文明的 glow 色;深浅各一套;</li>
+<li>尺寸:在 1120×450 的图里约 40–64px 宽,393 宽放大后也要清楚;</li>
+<li>请顺带给一张合成效果图:主角节点放回地图、配上上面那些光效和数据徽标,桌面与 393 宽各一张。站点清单和读屏替代我们保留。</li>
+</ul>
+</section>
+
+<section>
+<h3>2. 落地页的「魂火」</h3>
+<p>落地页四张文明卡后面,想加一层慢慢飘的魂火粒子。我们自己用 canvas 写,不需要你出动画,只需要你定样子:</p>
+<ul>
+<li>颜色(各文明卡后是否用各自的 glow 色,还是统一一种)、粒子大小与疏密、亮度、飘动方向和速度、有没有拖尾;</li>
+<li>一张静态参考图(深浅各一),减少动效和低端机时就显示它;</li>
+<li>它和第二批定的徽记轻动画同时在,请确认不会抢戏。</li>
+</ul>
+</section>
+
+<section>
+<h3>3. 两个新键的 egy</h3>
+<p>安卓 12 及以下,通知被关着时实时进度不显示,现在会在本世页提示一次(用户 11-08 定)。按钮沿用已有的「以后再说」和「前往系统设置 ↗」。</p>
+<div class="scroll"><table>
+<thead><tr><th>键</th><th>zh</th><th>en</th></tr></thead>
+<tbody>
+<tr><td><code>soul_app.push.live_hint_title</code></td><td>锁屏上看不到进度</td><td>No progress on the lock screen</td></tr>
+<tr><td><code>soul_app.push.live_hint_body</code></td><td>灵魂簿的通知关着。要在锁屏上看到这一程走到哪一站,请在系统设置里打开通知。</td><td>Notifications are off for SoulLedger. Turn them on in system settings to see which station you have reached from the lock screen.</td></tr>
+</tbody></table></div>
+<p class="ask">zh / en 是我们先写的,措辞要改也请一起给。地图数据徽标和站点小卡的新键等代码做完再一并交给你。</p>
+</section>
+</article>
+</details>
+
+<details>
+<summary>第十五批 · 两个 egy 词与一处推送用词<span class="tag done">已回 · 已落地</span></summary>
+<section>
+<ul>
+<li><code>workflow.editor.read_only</code> = Maa Wa;<code>workflow.editor.other_exit</code> = <code>{{node}} · Wat Ky · {{label}}</code>,已进代码。</li>
+<li>中国籍灵魂最后一站在埃及:沿用中性的「去处计划已全部走完」,不改不加键。</li>
+<li>侧栏 68 / 252、只点击和 <code>[</code> 展开,第十四批稿里的 64 / 248 与悬停展开作废。</li>
+</ul>
+</section>
+</details>
+</main>
