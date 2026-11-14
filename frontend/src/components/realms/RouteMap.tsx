@@ -21,7 +21,7 @@ import { toRomanNumeral } from "@soulledger/core/config/civilizationSigil";
  * `occupancy` 缺(在押加载失败)时数字写「—」,不写 0。
  *
  * 第二十五批 §五.1:每站右边一根在押 / 容量条(`occupancyBar`,画成 `Meter`:墨 70%,第四十七批起不用文明色)。
- * ≥ 78% 方块放大并加 `--color-glow` 光圈;≥ 90% 填充改 amber、条的右端一道 `--color-danger` 竖线;> 100% 填充改 danger。
+ * ≥ 78% 方块放大并加 `--color-glow` 光圈;≥ 90% 填充改 amber、条的右端一道墨竖线(第四十八批,此前是 danger);> 100% 填充改 danger,红色只说超过容量。
  * 这页没有「现在」,不用 metal。
  * 容量来自界域行自己的 `capacity`(`PATCH /realms/{id}/` 写的那一列)。**容量为 null(未记录)的站只写在押数、不画条** ——
  * 未记录不是无限也不是 0,画不出比例;后端没有别的容量来源,这里不编。在押加载失败时同样只写「—」。

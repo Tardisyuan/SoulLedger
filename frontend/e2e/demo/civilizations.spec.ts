@@ -36,11 +36,13 @@ for (const [skin, role] of SKINS) {
     }
     expect(steps).toBe(skin === "cn" || skin === "gr" ? 6 : 5);
     expect(dark, "steps with nothing highlighted").toEqual([]);
-    // The end card shows once; 留在这里 folds it to a chip (review r2), which opens it again.
+    // The end card shows once; 留在这里 folds it to a chip (review r2), which opens it again. The card is 360 wide here, so
+    // 留在这里 is the corner × (Design 第四十八批), and the text button is not shown.
     const chip = page.locator('[data-testid="demo-tour-badge"][data-finished]');
     await expect(page.locator('[data-testid="demo-tour"][data-finished]')).toBeVisible();
     await expect(chip).toHaveCount(0);
-    await page.getByTestId("demo-tour-stay").click();
+    await expect(page.getByTestId("demo-tour-stay")).toBeHidden();
+    await page.getByTestId("demo-tour-close").click();
     await expect(card).toHaveCount(0);
     await expect(chip).toBeVisible();
     await chip.click();

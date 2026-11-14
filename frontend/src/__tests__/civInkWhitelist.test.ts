@@ -36,7 +36,8 @@ const CSS_ALLOWED: Record<string, Kind> = {
   "app/globals.css :: .page-head-topline[data-loading]::after": "TOPLINE",
   "app/globals.css :: .demo-inside-dossier": "TOPLINE",
   "src/components/desk/desk.module.css :: .stack": "TOPLINE",
-  // 总簿四栏各自的顶线(栏上的 data-civ 是那一家)。总簿页头自己那条是中性皮 metal 2px 实线(.zbHead,不读 civT)。
+  // 总簿四栏各自的顶线(栏上的 data-civ 是那一家)。归 TOPLINE 的依据是 Design 第四十八批:多殿并列时,每殿的栏或卡的
+  // 顶线也算顶线,保留各家的颜色与形状。总簿页头自己那条是中性皮 metal 2px 实线(.zbHead,不读 civT)。
   "src/components/desk/desk.module.css :: .col": "TOPLINE",
   // 印;卷宗头的 G 天体仪水印画的是这一家的徽记,和印同属身份标记(第四十七批确认,浓度深 7% / 浅 9%)。
   "app/globals.css :: .page-head-wm": "SEAL",
@@ -158,11 +159,15 @@ describe("第四十七批:12 处改墨", () => {
     expect(Object.values({ ...CSS_ALLOWED, ...TS_ALLOWED })).not.toContain("PENDING");
   });
 
-  it("条(Meter):底 --line2 = 墨 16%,填充墨 70%,≥ 90% amber,> 100% danger", () => {
+  it("条(Meter):底 --line2 = 墨 16%,填充墨 70%,≥ 90% amber 加墨竖线,> 100% danger", () => {
     expect(body(g, ".meter")).toContain("background: oklch(var(--color-ink) / 0.16);");
     expect(body(g, ".meter-fill")).toContain("background: oklch(var(--color-ink) / 0.7);");
     expect(body(g, '.meter[data-meter="warn"] > .meter-fill')).toContain("background: oklch(var(--color-amber));");
     expect(body(g, '.meter[data-meter="over"] > .meter-fill')).toContain("background: oklch(var(--color-danger));");
+    // 在押条 ≥ 90% 右端的竖线是墨,不是红(第四十八批):红色只说「超过容量」。
+    const tick = body(g, '.realm-occ[data-occupancy-bar="danger"]::after');
+    expect(tick).toContain("background: oklch(var(--color-ink));");
+    expect(tick).not.toContain("--color-danger");
     for (const rel of ["src/components/realms/RouteMap.tsx", "src/components/desk/Zongbu.tsx", "src/components/dashboard/AnnualReport.tsx", "src/components/realms/UnderworldMap.tsx"])
       expect(code(rel)).toMatch(/<Meter\b/);
   });

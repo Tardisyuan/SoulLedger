@@ -540,8 +540,20 @@ export default function DemoTour() {
     } else if (state.finished) {
       const done = guard ? ["demo.tour.guard.done_title", t("demo.tour.guard.done_body")] : ["demo.tour.done_title", t("demo.tour.done_body", { civ })];
       card = (
-        <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={panelBase}>
-          <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t(state.skipped ? "demo.tour.skipped_title" : done[0])}</p>
+        <aside ref={panelRef} data-testid="demo-tour" data-finished="" className={`${panelBase} @container`}>
+          {/* Design 第四十八批:卡不够宽时「留在这里」退成右上角的 ×(同一个文案键作无障碍名),按钮行不为它折成两行。
+              按卡自己的宽度判断(容器查询),不按视口:桌面上卡也只有 360 宽。42rem ≈ 英文整行四个按钮的估算宽度,
+              没有实测;中文在更窄处就放得下,这里取最长的一种语言。 */}
+          <button
+            type="button"
+            data-testid="demo-tour-close"
+            aria-label={t("demo.tour.stay")}
+            onClick={() => update({ collapsed: true })}
+            className="absolute top-1 right-1 hidden size-11 items-center justify-center text-lg text-[oklch(var(--color-ink-muted))] @max-[42rem]:flex"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+          <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))] pr-12">{t(state.skipped ? "demo.tour.skipped_title" : done[0])}</p>
           <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{state.skipped ? t("demo.tour.skipped_body") : done[1]}</p>
           {/* 叙事传输(2026-11-14 用户定):走完一生,访客自己撞一次租户隔离。现成的横向探针 —— 中国殿的判官要欧洲殿的灵魂,
               录下的 404 —— 不另写越权逻辑;它只读录音,与当前登录的是哪一殿无关,所以四殿与「系统怎么保护自己」都能用。
@@ -580,7 +592,7 @@ export default function DemoTour() {
             )}
             <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-replay" onClick={replay}>{t("demo.tour.replay")}</Button>
-              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-stay" onClick={() => update({ collapsed: true })}>{t("demo.tour.stay")}</Button>
+              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-stay" className="@max-[42rem]:hidden" onClick={() => update({ collapsed: true })}>{t("demo.tour.stay")}</Button>
               <Button type="button" variant="primary" size="sm" data-testid="demo-tour-try-another" onClick={() => router.push("/")}>{t("demo.tour.try_another")}</Button>
             </span>
           </div>

@@ -88,3 +88,26 @@ it("重看导览 starts over at the first step, on its page", async () => {
   expect(screen.getByTestId("demo-tour-progress")).toHaveTextContent("1 / 2");
   expect(screen.queryByTestId("demo-tour-badge")).toBeNull();
 });
+
+it("Design 第四十八批:卡不够宽时「留在这里」退成右上角的 ×,无障碍名用同一个文案键,按下同样收成小签", async () => {
+  mockPath = "/judgment";
+  await show({ step: 1, finished: true, skipped: false, collapsed: false });
+  const card = screen.getByTestId("demo-tour");
+  const x = screen.getByTestId("demo-tour-close");
+  const stay = screen.getByTestId("demo-tour-stay");
+  // 按卡的宽度(容器查询)切换:窄时 × 出现、文字按钮藏起;两者同一阈值,宽时反过来。
+  expect(card.className).toContain("@container");
+  expect(x.className).toMatch(/(^| )hidden( |$)/);
+  expect(x.className).toContain("@max-[42rem]:flex");
+  expect(stay.className).toContain("@max-[42rem]:hidden");
+  expect(x).toHaveAccessibleName(tours.stay);
+  expect(x).toHaveTextContent("×");
+  // × 在卡里、不在按钮行里(它不占按钮行的位置)。
+  expect(card.contains(x)).toBe(true);
+  expect(screen.getByTestId("demo-tour-actions").contains(x)).toBe(false);
+
+  await click("demo-tour-close");
+  expect(screen.queryByTestId("demo-tour")).toBeNull();
+  expect(screen.getByTestId("demo-tour-badge")).toHaveTextContent(tours.done_title);
+  expect(saved()).toMatchObject({ finished: true, collapsed: true });
+});

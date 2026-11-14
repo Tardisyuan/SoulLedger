@@ -131,6 +131,38 @@ test("393px: the tour fits above the fold and reaches its second step", async ({
   clean(seen, "393 tour");
 });
 
+// Design 第四十八批:393 宽时「留在这里」是结束卡右上角的 ×,按钮行(试着打开别的殿的案卷 · 重看导览 · 换一个冥界)不折行。
+test("393px: the end card's 留在这里 is the corner ×, and the button row stays on one line", async ({ page, context }) => {
+  test.setTimeout(90000);
+  const seen = watch(context, page);
+  await page.goto("/");
+  await page.getByTestId("landing-card-cn").click();
+  await expect(page.getByTestId("demo-tour")).toBeVisible();
+  for (let step = 0; step < 6; step += 1) {
+    await expect(page.getByTestId("demo-tour-progress")).toContainText(`${step + 1} / 6`);
+    await expect(page.getByTestId("demo-tour-next")).toBeVisible({ timeout: 10000 });
+    await page.getByTestId("demo-tour-next").click();
+  }
+  const end = page.locator('[data-testid="demo-tour"][data-finished]');
+  await expect(end).toBeVisible();
+  await expect(end.getByTestId("demo-tour-stay")).toBeHidden();
+  const x = end.getByTestId("demo-tour-close");
+  await expect(x).toBeVisible();
+  await expect(x).toHaveAccessibleName("留在这里");
+  const tops = await end.getByTestId("demo-tour-actions").locator("button:visible").evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+  expect(tops.length).toBe(3);
+  expect(new Set(tops).size, `button tops ${tops.join(", ")}`).toBe(1);
+  // The × sits in the card's top-right corner, not over the title.
+  const card = (await end.boundingBox())!;
+  const box = (await x.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width + 1);
+  expect(box.y).toBeLessThanOrEqual(card.y + 8);
+  await x.click();
+  await expect(end).toHaveCount(0);
+  await expect(page.locator('[data-testid="demo-tour-badge"][data-finished]')).toBeVisible();
+  clean(seen, "393 end card");
+});
+
 test("393px: the soul entrance fills the screen under a 40px strip, nothing overflows", async ({ page, context }) => {
   const seen = watch(context, page);
   await page.goto("/");

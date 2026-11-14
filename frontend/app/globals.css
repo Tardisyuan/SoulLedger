@@ -521,6 +521,8 @@
                           规则(Design 第四十七批,替换第四十六批第二节那句):
                           文明色只在顶线、印、行程脊、焦点环四处。例外两类:落地页与演示首页上选文明的卡片;
                           图表里一条系列代表一个文明时,用那个文明的颜色。
+                          「顶线」不只是页头那条:多殿并列时(如总簿四栏),每殿的栏或卡的顶线也算顶线,
+                          用那一殿的颜色与形状(Design 第四十八批)。
                           (卡片:颜色本身就是内容,登录后已身在某一殿,不靠颜色说在哪家。当前项、进度、填充一律墨:
                           它们的颜色说的是状态,不是「这是哪一家」。)
                           用到它的选择器与文件逐个列在 src/__tests__/civInkWhitelist.test.ts,不在名单上的一出现就红。
@@ -2747,7 +2749,8 @@ li:last-child > .route-row {
 .meter[data-meter="over"] > .meter-fill {
   background: oklch(var(--color-danger));
 }
-/* 在押条的尺寸;≥ 90% 右端仍有一道 danger 竖线(第二十五批,图例 realms.map.legend_bar 写着它)。 */
+/* 在押条的尺寸;≥ 90% 右端仍有一道竖线(第二十五批,图例 realms.map.legend_bar 写着它,没写颜色)。
+   竖线是墨(第四十八批):≥ 90% 由琥珀填充与这道线说,红色只说「超过容量」(上面的 data-meter="over")。 */
 .realm-occ {
   /* 分岔两栏很窄(埃及称心后):条可以收到 1.5rem,人数不被挤到隔壁「湮灭」框上(2026-11-10 演示站)。 */
   flex: 0 1 5rem;
@@ -2762,7 +2765,7 @@ li:last-child > .route-row {
   top: -3px;
   bottom: -3px;
   width: 2px;
-  background: oklch(var(--color-danger));
+  background: oklch(var(--color-ink));
 }
 /* ≥ 78%:方块放大(TSX 里换 size)并加 glow 光圈。 */
 .realm-occ-hot {
