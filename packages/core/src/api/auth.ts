@@ -30,6 +30,7 @@ import { trackCredentialChange } from "./credentialChange";
  * left `enumsMatchTheSchema.test.ts`.
  */
 export type BuiltinUserRole =
+  | "SYSTEM_ADMIN"
   | "ADMIN"
   | "MODERATOR"
   | "JUDGE"

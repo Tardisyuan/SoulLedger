@@ -2940,6 +2940,7 @@
     },
     "filter_hall": "按殿",
     "all_halls": "全部殿",
+    "civilization_halls": "本文明各殿",
     "resources": {
       "soul": "灵魂",
       "user": "用户",
@@ -2975,6 +2976,7 @@
     "stats": {
       "scope_hall": "本殿全部历史 · 共 {{count}} 条",
       "scope_all": "全部殿全部历史 · 共 {{count}} 条",
+      "scope_civilization": "本文明各殿全部历史 · 共 {{count}} 条",
       "scope_note": "统计不随日期、殿筛选变化。",
       "by_action": "按动作",
       "zero_actions": "另 {{n}} 种动作没有记录",
@@ -3656,6 +3658,7 @@
     "first_name_placeholder": "名",
     "last_name_placeholder": "姓",
     "roles": {
+      "SYSTEM_ADMIN": "系统管理员",
       "ADMIN": "管理员",
       "MODERATOR": "朋友圈审核员",
       "JUDGE": "判官",
@@ -7133,6 +7136,7 @@
     },
     "scope_label": "文明范围",
     "scope_all": "全部文明",
+    "scope_civilization": "本文明各殿",
     "review": {
       "list_label": "待审列表",
       "detail_label": "审阅详情",
@@ -9313,17 +9317,17 @@
       "enter_failed": "没能进入这一殿，请重试",
       "read_only": "只读",
       "until": "{{time}} 前有效",
-      "read_only_hint": "全局管理员只读查看，这里不能改动",
+      "read_only_hint": "管理员只读查看，这里不能改动",
       "expired_title": "只读查看已过期",
       "expired_body": "每次进入有效 30 分钟，不续期。回到各殿概况，再进入一次。"
     },
     "viewing": {
-      "banner": "正在以全局管理员身份查看{{name}}",
+      "banner": "正在以管理员身份查看{{name}}",
       "back": "回到各殿概况"
     },
     "audit": {
-      "view_start": "以全局管理员身份查看 {{hall}}",
-      "view_end": "以全局管理员身份查看 {{hall}} · {{minutes}} 分钟 · 看过 {{pages}} 个页面"
+      "view_start": "以管理员身份查看 {{hall}}",
+      "view_end": "以管理员身份查看 {{hall}} · {{minutes}} 分钟 · 看过 {{pages}} 个页面"
     }
   },
   "earthGods": {

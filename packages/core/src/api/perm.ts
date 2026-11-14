@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { components } from "./generated/schema";
+import { isAdminRole } from "../domain/roles";
 
 export interface Permission {
   id: number;
@@ -115,8 +116,7 @@ export type PermissionImportDocument = Omit<Schemas["PermissionImportRequest"], 
  */
 export type MatrixChange = Schemas["MatrixChange"];
 
-/** The role whose every cell is 「始终」: `check_permission` answers yes before reading a grant, so the matrix cannot untick it. */
-export const ADMIN_ROLE_NAME = "ADMIN";
+export { ADMIN_ROLE_NAME, SYSTEM_ADMIN_ROLE_NAME, isAdminRole, isSystemAdminRole } from "../domain/roles";
 /**
  * Codenames a role may never be granted — a copy of `ROLE_FORBIDDEN_CODENAMES`
  * in backend/apps/perm/checker.py, pinned to it by `roleForbiddenCodenamesMatchBackend.test.ts`.
@@ -147,7 +147,7 @@ export const WORKFLOW_APPROVE_CODENAMES: readonly string[] = ["workflow.approve"
 
 /** Whether `codename` may not be granted to `role` beside `held` (its other grants, unsaved ticks included). */
 export function capabilityForbids(role: string, codename: string, held: ReadonlySet<string>): boolean {
-  if (role === ADMIN_ROLE_NAME) return false;
+  if (isAdminRole(role)) return false;
   const holdsDesign = WORKFLOW_DESIGN_CODENAMES.some((c) => held.has(c));
   if (WORKFLOW_APPROVE_CODENAMES.includes(codename)) return holdsDesign;
   if (WORKFLOW_DESIGN_CODENAMES.includes(codename)) return !holdsDesign && WORKFLOW_APPROVE_CODENAMES.some((c) => held.has(c));

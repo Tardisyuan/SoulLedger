@@ -1,3 +1,5 @@
+import { isAdminRole } from "./roles";
+
 /**
  * 设新密码时逐条列出的要求(第二十三批 Design 回复)。这里只有手机 / 浏览器自己能判断的四条;
  * 「太常见」「和名字或编号太像」只有服务器知道(`backend/config/settings.py` 的 AUTH_PASSWORD_VALIDATORS),
@@ -11,7 +13,7 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const ADMIN_PASSWORD_MIN_LENGTH = 12;
 
 /** 这个角色设密码至少几位。灵魂端没有角色,不传。 */
-export const passwordMinLength = (role?: string): number => (role === "ADMIN" ? ADMIN_PASSWORD_MIN_LENGTH : PASSWORD_MIN_LENGTH);
+export const passwordMinLength = (role?: string): number => (isAdminRole(role) ? ADMIN_PASSWORD_MIN_LENGTH : PASSWORD_MIN_LENGTH);
 
 /** 「至少 N 位」那一条用哪个词条:默认 8 位的一条,管理员 12 位的另一条。 */
 export const minLengthRuleKey = (minLength: number): string =>
