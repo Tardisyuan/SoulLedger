@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { soulsApi, type SoulBatchRecycleRequest, type SoulInput } from "../api/index";
 import { soulBatchRecycleErrorOf } from "../api/souls";
 import { isArchivableConflict, isResidingDeleteRefusal } from "../api/archive";
-import { problemErrors, problemOf } from "../api/problem";
+import { problemErrors } from "../api/problem";
+import { responseStatus } from "../api/client";
 import { notify } from "../platform/index";
 import { recycleBinKeys, soulKeys } from "../query_keys";
 
@@ -67,9 +68,10 @@ export function useCreateSoul() {
   });
 }
 
-/** 400 校验问题(带 `errors`)= 后端按字段(或整份)说了哪里不对;表单把它画在字段下,不再弹通用 toast。 */
+/** 400 校验问题(带 `errors`)= 后端按字段(或整份)说了哪里不对;表单把它画在字段下,不再弹通用 toast。
+ *  状态取 HTTP 的,不取正文的 `status` 成员(`problemOf` 不要求它在)。 */
 function isFieldValidationError(error: unknown): boolean {
-  return problemOf(error)?.status === 400 && problemErrors(error).length > 0;
+  return responseStatus(error) === 400 && problemErrors(error).length > 0;
 }
 
 export function useAddSoulRecord() {

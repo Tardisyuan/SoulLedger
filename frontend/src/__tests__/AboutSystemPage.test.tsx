@@ -4,7 +4,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import AboutSystemPage from "@/app/about/system/page";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 
@@ -91,10 +91,11 @@ describe("AboutSystemPage", () => {
     expect(screen.getAllByTestId("slo-row")[1]).toHaveTextContent("≤ 400 ms");
   });
 
-  it("the probe is a static badge and a link to the workflow that exists; nothing is fetched from GitHub", () => {
+  it("the probe is a static badge and a link to the workflow that exists; nothing is fetched from GitHub", async () => {
     const { container } = renderIn("en");
     const probe = screen.getByTestId("system-probe");
-    expect(within(probe).getByTestId("probe-badge")).toHaveTextContent("demo probe");
+    // The en bundle is a lazy chunk (I18nContext's LAZY_BUNDLES): the first frame is zh-Hans until it lands.
+    await waitFor(() => expect(within(probe).getByTestId("probe-badge")).toHaveTextContent("demo probe"));
     const link = within(probe).getByRole("link", { name: "See the probe runs" });
     expect(link.getAttribute("href")).toMatch(/^https:\/\/github\.com\/[^/]+\/[^/]+\/actions\/workflows\/demo-probe\.yml$/);
     expect(existsSync(path.join(REPO, ".github", "workflows", "demo-probe.yml"))).toBe(true);

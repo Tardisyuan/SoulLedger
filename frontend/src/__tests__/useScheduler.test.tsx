@@ -209,14 +209,14 @@ describe("classifySchedulerError", () => {
     expect(classifySchedulerError(http(403))).toEqual({ kind: "forbidden" });
   });
 
-  it("keeps 400 field errors by field, list or bare string", () => {
+  it("keeps 400 field errors by field; an object-level one under non_field_errors", () => {
     expect(classifySchedulerError(http(400, { code: "invalid", errors: [{ field: "cron", code: "invalid", detail: "invalid crontab: bad" }] }))).toEqual({
       kind: "invalid",
       fields: { cron: ["invalid crontab: bad"] },
     });
-    expect(classifySchedulerError(http(400, { timezone: "Unknown zone" }))).toEqual({
+    expect(classifySchedulerError(http(400, { code: "invalid", errors: [{ field: "timezone", code: "invalid", detail: "Unknown zone" }, { code: "invalid", detail: "Pick a cron or an interval" }] }))).toEqual({
       kind: "invalid",
-      fields: { timezone: ["Unknown zone"] },
+      fields: { timezone: ["Unknown zone"], non_field_errors: ["Pick a cron or an interval"] },
     });
   });
 

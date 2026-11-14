@@ -241,7 +241,13 @@ describe("原审判上开联审", () => {
 
   it("服务端的字段错误原样给出(这份审判已有联审)", async () => {
     as("JUDGE", "CN_DIYU", ...JUDGE);
-    cjApi.create.mockRejectedValue(http(400, { code: "invalid", errors: [{ field: "judgment", code: "invalid", detail: "This judgment already has a cross-tenant judgment." }] }));
+    // The server's validation problem carries its first message as `detail` too (backend apps/core/problems.py).
+    cjApi.create.mockRejectedValue(http(400, {
+      code: "invalid",
+      status: 400,
+      detail: "This judgment already has a cross-tenant judgment.",
+      errors: [{ field: "judgment", code: "invalid", detail: "This judgment already has a cross-tenant judgment." }],
+    }));
     renderWith(<OpenCrossJudgment judgmentId="j1" soulName="张三" />);
     fireEvent.click(screen.getByRole("button", { name: tZh("sentence_plan.cross.open") }));
     const dialog = await screen.findByRole("dialog");

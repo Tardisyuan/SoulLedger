@@ -42,8 +42,8 @@ describe("parseSealGlyphs / sealGlyphsError", () => {
     expect(parseSealGlyphs("一二三")).toHaveLength(3);
   });
 
-  it("flattens DRF's per-index errors, and says nothing for a non-400", () => {
-    expect(sealGlyphsError({ response: { status: 400, data: { seal_glyphs: { 0: ["不是汉字"] } } } })).toBe("不是汉字");
+  it("flattens the per-index errors (`seal_glyphs.0`), and says nothing for a non-400", () => {
+    expect(sealGlyphsError({ response: { status: 400, data: { code: "invalid", errors: [{ field: "seal_glyphs.0", code: "invalid", detail: "不是汉字" }] } } })).toBe("不是汉字");
     expect(sealGlyphsError({ response: { status: 400, data: { code: "invalid", errors: [{ field: "seal_glyphs", code: "invalid", detail: "最多 1 个字。" }] } } })).toBe("最多 1 个字。");
     expect(sealGlyphsError({ response: { status: 500, data: {} } })).toBeNull();
   });
