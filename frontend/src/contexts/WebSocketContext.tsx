@@ -123,6 +123,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   // Connect / disconnect based on user state
   useEffect(() => {
+    // The demo has no server to hold a socket open: every attempt failed and the pill said 「已断开 · 重连」.
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === "1") return;
     if (!user) {
       clientRef.current?.disconnect();
       clientRef.current = null;

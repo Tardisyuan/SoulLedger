@@ -110,10 +110,11 @@ export default function DemoHome() {
                 onClick={(e: MouseEvent<HTMLButtonElement>) => start(e.currentTarget)}
                 onPointerEnter={() => warm(ROLE_OF_SKIN.cn)}
                 onFocus={() => warm(ROLE_OF_SKIN.cn)}
-                className="demo-home-cta inline-flex min-h-12 items-center justify-center gap-2 px-6 text-md disabled:opacity-60"
+                className="demo-home-cta inline-flex min-h-12 items-center justify-center gap-2 px-6 text-md disabled:opacity-60 max-md:flex-wrap max-md:gap-y-0 max-md:py-2"
               >
-                <span>{t("demo.home.cta")}</span>
-                <span className="demo-home-cta-sub text-sm font-normal">· {t("demo.home.cta_sub", { hall: t("demo.home.cta_hall") })}</span>
+                {/* 393:两段各自不断行，放不下时整段换到下一行。此前「从第一步开 / 始」「…身份进 / 入」在字中间断开(2026-11-14 真机)。 */}
+                <span className="whitespace-nowrap">{t("demo.home.cta")}</span>
+                <span className="demo-home-cta-sub text-sm font-normal whitespace-nowrap">· {t("demo.home.cta_sub", { hall: t("demo.home.cta_hall") })}</span>
                 <span aria-hidden="true">→</span>
               </button>
             </div>

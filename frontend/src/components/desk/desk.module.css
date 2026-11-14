@@ -192,6 +192,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
 }
 /* 页头(`.page-head`)是 overflow: hidden,作为 flex 项它的最小高度是 0:摊开的一份比栏高时被压到 68px,
    名字与按钮被下面的站尺盖住。滚动交给 .case,子项一律不压缩。 */
@@ -233,6 +234,13 @@
   padding: 10px 0;
   border-bottom: 1px solid oklch(var(--color-line));
   align-items: baseline;
+}
+/* 摊开的一份窄于 760 时(1024 宽的屏:门栏 + 360 的摞之后只剩约 590),右边 280 的侧栏落到卷下面。
+   此前卷只剩约 210,值列挤到 42px,「1957 年 · 7 月 14 日生于 Ravenna」一字一行(2026-11-14,桌面 769–1180 宽都是)。 */
+@container (max-width: 760px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .juanKey {
   font-size: var(--juan-key-size);

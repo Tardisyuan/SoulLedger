@@ -93,6 +93,8 @@ export function useConnectionBannerShown(): boolean {
   const { status } = useWebSocket();
   const { user } = useTenant();
   const offline = useBrowserOffline();
+  // The demo opens no socket (WebSocketContext), so a socket that is not up says nothing there.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "1") return offline;
   return offline || (!!user && status !== "connected" && status !== "connecting");
 }
 
