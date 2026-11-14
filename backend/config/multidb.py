@@ -40,4 +40,7 @@ class ShadowTenantRouter:
         # through the router rather than `schema_editor.connection.alias` and so read `default`,
         # already fully migrated, and died on a column a later migration had dropped (souls 0020,
         # measured). tests/test_migrations_use_the_migrated_alias.py now keeps them alias-aware.
-        return True
+        # None, not True: this router has no opinion on where a model migrates, so the production
+        # ShardRouter behind it is asked (True here would hide it). With every router silent Django
+        # migrates everything everywhere, which is what both aliases need today.
+        return None

@@ -16,7 +16,10 @@ related lookup from default, and the assignment was refused across databases.
 
 What later stages change, and nothing else may:
   1B  allow_migrate: SHARD models only on civ_* aliases, CONTROL only on default, REFERENCE (Tenant)
-      on both; SHARD -> CONTROL foreign keys become bare ids (the cut list pinned in the placement test).
+      on both, decided by `placement_of(app_label, model_name)` -- by label, because during migrate the
+      model hint is a historical class (tests/test_placement_by_label.py); SHARD <-> CONTROL foreign
+      keys become bare ids (both cut lists pinned in the placement test). Data migrations already skip
+      civ_* aliases (`placed_here`).
   2   writes still go to default; a shadow write to the civilization alias happens outside the router.
   3   db_for_read: a SHARD model of a civilization in settings.SHARD_READ_CIVS goes to
       `alias_for_civilization(civ)`, the civilization taken from the instance hint, else the tenant
