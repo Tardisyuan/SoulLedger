@@ -9,7 +9,8 @@ import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { cn } from "@/lib/utils";
 import { fieldControl } from "@/src/components/ui/Field";
-import { FilterBar } from "@/src/components/ui/FilterChip";
+import { Popover } from "@base-ui/react/popover";
+import { FilterBar, filterChipClass } from "@/src/components/ui/FilterChip";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { Button } from "@/src/components/ui/Button";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -93,8 +94,18 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
     <>
       {/* 待我选站(W-2):审批页最上面一组,有才显示。 */}
       <PickNodesGroup />
-      {/* 共享的 `FilterBar`(用户 2026-11-14):桌面一行(放不下横滑);393 是 搜索 +「筛选 · N」、「只看已超时」的快捷 chip,
-          四个下拉与日期起止进底部抽屉。抽屉里那一份日期带 `-narrow` 的 testid:窄屏上桌面那一份仍在 DOM 里(CSS 藏),同名会撞。 */}
+      {/* 「发起审批」自成一行,不进筛选条:FilterBar 在窄屏把 `trailing` 收进抽屉,主动作不能藏在那里(用户 2026-11-14)。
+          与「模板」页签的「+ 新建模板」同一个位置:页签内容的最上面、靠右。 */}
+      <RequirePermission permissions="workflow.create">
+        <div className="flex justify-end pb-3">
+          <Button type="button" variant="primary" size="sm" onClick={() => setStartOpen(true)}>
+            {t("workflow.start.action")}
+          </Button>
+        </div>
+      </RequirePermission>
+      {/* 共享的 `FilterBar`(用户 2026-11-14):桌面一行,日期起止收在一枚「创建日期 ▾」签的弹层里,1280 放得下;
+          393 是 搜索 +「筛选 · N」、「只看已超时」的快捷 chip,四个下拉与日期起止进底部抽屉。
+          抽屉里那一份日期带 `-narrow` 的 testid:窄屏上桌面那一份仍可能在 DOM 里,同名会撞。 */}
       <FilterBar
         testId="workflow-filters"
         search={(where) => (
@@ -159,7 +170,7 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
               value={from}
               max={to || undefined}
               onChange={(e) => changeFilter(() => setFrom(e.target.value))}
-              className={cn(fieldControl({ size: "md" }), where === "wide" ? "shrink-0" : "ml-auto min-w-0")}
+              className={cn(fieldControl({ size: "md" }), where === "wide" ? undefined : "ml-auto min-w-0")}
             />
           );
           const toInput = (
@@ -171,10 +182,38 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
               value={to}
               min={from || undefined}
               onChange={(e) => changeFilter(() => setTo(e.target.value))}
-              className={cn(fieldControl({ size: "md" }), where === "wide" ? "shrink-0" : "ml-auto min-w-0")}
+              className={cn(fieldControl({ size: "md" }), where === "wide" ? undefined : "ml-auto min-w-0")}
             />
           );
-          if (where === "wide") return <>{fromInput}{toInput}</>;
+          if (where === "wide") {
+            const set = Boolean(from || to);
+            const range = set ? `${from.slice(5)} – ${to.slice(5)}`.trim() : t("workflow.filter.all");
+            const muted = set ? undefined : "text-[oklch(var(--color-ink-subtle))]";
+            return (
+              <Popover.Root>
+                <Popover.Trigger data-testid="workflow-dates" data-filter-chip="" data-active={set || undefined} className={filterChipClass(set)}>
+                  {set ? <span aria-hidden="true">✓</span> : null}
+                  <span className={muted}>{t("workflow.filter.created")} ·</span>
+                  <span className="font-mono tabular-nums">{range}</span>
+                  <span aria-hidden="true" className={muted}>▾</span>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Positioner sideOffset={6} align="start" className="z-drawer">
+                    <Popover.Popup className="grid gap-3 rounded-panel border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-3 shadow-overlay focus:outline-hidden">
+                      <label className="grid gap-1 text-xs text-[oklch(var(--color-ink-muted))]">
+                        <span aria-hidden="true">{t("workflow.filter.from")}</span>
+                        {fromInput}
+                      </label>
+                      <label className="grid gap-1 text-xs text-[oklch(var(--color-ink-muted))]">
+                        <span aria-hidden="true">{t("workflow.filter.to")}</span>
+                        {toInput}
+                      </label>
+                    </Popover.Popup>
+                  </Popover.Positioner>
+                </Popover.Portal>
+              </Popover.Root>
+            );
+          }
           const row = "flex min-h-(--control-h-md) items-center gap-3 border-b border-[oklch(var(--color-line))] text-md";
           return (
             <>
@@ -220,11 +259,6 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
                 hall={hall}
                 count={data?.count}
               />
-            </RequirePermission>
-            <RequirePermission permissions="workflow.create">
-              <Button type="button" variant="primary" size="sm" onClick={() => setStartOpen(true)}>
-                {t("workflow.start.action")}
-              </Button>
             </RequirePermission>
           </>
         }

@@ -82,6 +82,8 @@ describe("WorkflowPage instances tab", () => {
     mockSession.user = { role: "JUDGE", permissions: ["workflow.read", "workflow.create"] };
     await openInstances();
     const start = await screen.findByRole("button", { name: "workflow.start.action" });
+    // 不在 FilterBar 里:FilterBar 在窄屏把 `trailing` 收进抽屉,主动作要一直看得见(用户 2026-11-14)。
+    expect(start.closest("[data-filter-bar]")).toBeNull();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(start);
     expect(await screen.findByRole("dialog")).toHaveTextContent("workflow.start.title");
@@ -205,8 +207,13 @@ describe("WorkflowPage instances tab", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.case_type" }), { target: { value: "APPEAL" } });
     fireEvent.change(screen.getByRole("combobox", { name: "workflow.filter.civilization" }), { target: { value: "GREEK" } });
     fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.priority" }), { target: { value: "2" } });
-    fireEvent.change(screen.getByTestId("workflow-from"), { target: { value: "2026-10-01" } });
+    // 桌面的日期起止在「创建日期 ▾」签的弹层里(用户 2026-11-14:1280 一行放得下)。
+    fireEvent.click(screen.getByTestId("workflow-dates"));
+    fireEvent.change(await screen.findByTestId("workflow-from"), { target: { value: "2026-10-01" } });
     fireEvent.change(screen.getByTestId("workflow-to"), { target: { value: "2026-10-17" } });
+    // 签上写出生效的区间。
+    expect(screen.getByTestId("workflow-dates")).toHaveTextContent("10-01 – 10-17");
+    expect(screen.getByTestId("workflow-dates")).toHaveAttribute("data-active", "true");
 
     const expected = {
       search: "孟",
@@ -236,17 +243,23 @@ describe("WorkflowPage instances tab", () => {
     await screen.findByText("workflow.no_instances");
     expect(wide().className).not.toMatch(/\bflex-wrap\b/);
     expect(wide().className).toMatch(/\bflex-nowrap\b/);
-    for (const id of ["workflow-search", "workflow-from", "workflow-to"]) {
-      expect(within(wide()).getByTestId(id)).toBeInTheDocument();
-    }
+    expect(within(wide()).getByTestId("workflow-search")).toBeInTheDocument();
     expect(within(wide()).getAllByRole("combobox")).toHaveLength(4);
+    // 日期起止不在行里:一枚「创建日期 · 全部 ▾」签,点开才有两个输入框。
+    const dates = within(wide()).getByTestId("workflow-dates");
+    expect(dates).toHaveTextContent("workflow.filter.created");
+    expect(dates).toHaveTextContent("workflow.filter.all");
+    expect(dates).not.toHaveAttribute("data-active");
+    expect(screen.queryByTestId("workflow-from")).toBeNull();
 
     expect(within(narrow()).queryByRole("combobox")).toBeNull();
     expect(within(narrow()).queryByTestId("workflow-from")).toBeNull();
     expect(within(narrow()).getByRole("button", { name: "workflow.filter_overdue", pressed: false })).toBeInTheDocument();
 
     fireEvent.change(within(wide()).getByRole("combobox", { name: "workflow.detail.status" }), { target: { value: "PENDING" } });
-    fireEvent.change(within(wide()).getByTestId("workflow-from"), { target: { value: "2026-10-01" } });
+    fireEvent.click(dates);
+    fireEvent.change(await screen.findByTestId("workflow-from"), { target: { value: "2026-10-01" } });
+    expect(dates).toHaveTextContent("10-01 –");
     fireEvent.click(within(narrow()).getByRole("button", { name: "workflow.filter_overdue" }));
     // 状态 + 起始日 + 已超时 = 3(搜索框就在旁边,不算)。
     const open = within(narrow()).getByRole("button", { name: "filter.bar.open_n(3)" });

@@ -136,7 +136,7 @@ export interface FilterBarQuick {
  * 列表页的筛选条(第三十批「卷宗」第 1 步第 4 条,Design v4 第三十批第一节)。一份声明,两种画法:
  *
  * - **≥ 769(桌面)**:一行,不折行 —— 搜索框、每个维度一个 `FilterChipSelect`、`toggles` 各一个 `FilterChipToggle`、
- *   `fields`(日期之类)、右端 `trailing`(导出、列)。放不下时这一行横滑,不折成两行(用户 2026-11-14)。
+ *   `fields`(日期之类)、右端 `trailing`(导出、列)。不折行(用户 2026-11-14);条件多的页把次要的收进一枚签的弹层(审批实例的日期起止)。
  * - **≤ 768(393 窄屏)**:第一行 搜索框 48 +「筛选 · N」48(N = 已生效的条件数);第二行快捷 chip,高 44、
  *   圆角 22,一行横滑、右缘 40px 渐隐(`.chip-scroll`),chip 不压缩、不截字(`toggles` 排在 `quick` 前面);
  *   其余条件(维度下拉、`fields("sheet")`)都进底部抽屉 —— 选项行 48,
@@ -178,7 +178,7 @@ export function FilterBar({
   return (
     <div data-testid={testId} data-filter-bar="">
       {/* 桌面 */}
-      {/* ponytail: 放不下就横滑;条件再多到常常要滑,改成「更多」弹层。 */}
+      {/* 不折行;769–1279 之间放不下时横滑,不折成两行。 */}
       <div data-filter-bar-wide="" className="max-[768px]:hidden flex flex-nowrap items-center gap-3 overflow-x-auto py-3">
         {search?.("wide")}
         {selects.map((f) => (

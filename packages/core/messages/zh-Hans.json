@@ -1814,6 +1814,7 @@
       "civilization": "文明",
       "from": "创建日期（起）",
       "to": "创建日期（止）",
+      "created": "创建日期",
       "clear": "清除筛选"
     },
     "pick": {
