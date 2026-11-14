@@ -28,29 +28,78 @@ export { BIO_KEY };
 export const APP_LOCK_KEY = "soulledger.login.app_lock";
 export const ASKED_PREFIX = "soulledger.login.bio_asked.";
 
-// ── the remembered account ───────────────────────────────────────────────
+// ── the remembered accounts (Design 第五十批 C4) ──────────────────────────
 
 export interface RememberedAccount {
   code: string;
   name: string;
 }
 
-export function rememberedAccount(): RememberedAccount | null {
+/** At most this many numbers; the sixth to sign in pushes out the one used longest ago, without a word. */
+export const ACCOUNTS_KEPT = 5;
+/**
+ * Whose number the 面容 / 指纹 credential belongs to: there is one credential per phone, issued to whoever turned it on.
+ * Absent on a phone that turned it on before numbers were a list: then it is the one number remembered (see
+ * `bioOwner`), and it is pinned here the moment a second number arrives.
+ */
+export const BIO_OWNER_KEY = "soulledger.login.bio_owner";
+
+const isAccount = (v: unknown): v is RememberedAccount => {
+  const a = v as Partial<RememberedAccount> | null;
+  return !!a && typeof a.code === "string" && !!a.code && typeof a.name === "string";
+};
+
+/**
+ * The numbers this phone remembers, the one used last first. Stored under ACCOUNT_KEY as a list; the single
+ * `{code, name}` an older build kept there reads as a list of one (and is written back as a list on the next change).
+ */
+export function rememberedAccounts(): RememberedAccount[] {
   try {
     const value: unknown = JSON.parse(platform().persistent.get(ACCOUNT_KEY) ?? "null");
-    const v = value as Partial<RememberedAccount> | null;
-    return v && typeof v.code === "string" && v.code && typeof v.name === "string" ? { code: v.code, name: v.name } : null;
+    const list = Array.isArray(value) ? value : [value];
+    return list.filter(isAccount).map(({ code, name }) => ({ code, name }));
   } catch {
-    return null;
+    return [];
   }
 }
 
+/** The number used last (the sign-in card's, when only one is remembered). */
+export const rememberedAccount = (): RememberedAccount | null => rememberedAccounts()[0] ?? null;
+
+const writeAccounts = (list: RememberedAccount[]) =>
+  list.length ? platform().persistent.set(ACCOUNT_KEY, JSON.stringify(list)) : platform().persistent.remove(ACCOUNT_KEY);
+
+/** This number signed in: it goes first. An empty name keeps the one already remembered for it. */
 export function rememberAccount(code: string, name: string): void {
-  platform().persistent.set(ACCOUNT_KEY, JSON.stringify({ code, name }));
+  const list = rememberedAccounts();
+  const before = list.find((a) => a.code === code);
+  // A second number arriving on a phone whose credential predates the list: the credential is the first number's.
+  if (!before && list.length === 1 && bioEnabled() && !platform().persistent.get(BIO_OWNER_KEY)) platform().persistent.set(BIO_OWNER_KEY, list[0].code);
+  writeAccounts([{ code, name: name || before?.name || "" }, ...list.filter((a) => a.code !== code)].slice(0, ACCOUNTS_KEPT));
 }
 
-/** 「换一个账号」: the number and name go; the 面容 / 指纹 credential is `revokeCredential`'s. */
-export const forgetAccount = () => platform().persistent.remove(ACCOUNT_KEY);
+/** 「换一个账号」 / 「忘掉这个编号」: that number (the last used one by default) and its name go. The credential is `forgetNumber`'s. */
+export function forgetAccount(code = rememberedAccount()?.code): void {
+  writeAccounts(rememberedAccounts().filter((a) => a.code !== code));
+}
+
+/** The number the 面容 / 指纹 credential on this phone belongs to, or null when it is off. */
+export function bioOwner(): string | null {
+  if (!bioEnabled()) return null;
+  const pinned = platform().persistent.get(BIO_OWNER_KEY);
+  if (pinned) return pinned;
+  const list = rememberedAccounts();
+  return list.length === 1 ? list[0].code : null;
+}
+
+/**
+ * 「忘掉这个编号」 (C4): the phone stops remembering it; if the credential is that number's, it is revoked on the server
+ * too (「这个编号的面容登录也会关掉」). Another number's credential is left alone.
+ */
+export async function forgetNumber(code: string): Promise<void> {
+  if (bioOwner() === code) await revokeCredential();
+  forgetAccount(code);
+}
 
 // ── 「下次用面容登录？」 ──────────────────────────────────────────────────
 
@@ -81,10 +130,23 @@ export const {
   storeCredential,
   /** The app locks on return from the background: the switch is on AND 面容 / 指纹 login still is. */
   appLockOn,
-  clearCredential,
-  revokeCredential,
-  enableWithPassword,
 } = soul;
+
+/** The credential went: so does the record of whose it was. */
+export const clearCredential = () => {
+  soul.clearCredential();
+  platform().persistent.remove(BIO_OWNER_KEY);
+};
+export const revokeCredential = async () => {
+  await soul.revokeCredential();
+  platform().persistent.remove(BIO_OWNER_KEY);
+};
+/** Turned on while signed in: the credential is the signed-in number's, which `land()` put first in the list. */
+export const enableWithPassword = async (password: string) => {
+  await soul.enableWithPassword(password);
+  const me = rememberedAccount()?.code;
+  if (me) platform().persistent.set(BIO_OWNER_KEY, me);
+};
 
 /** Same kind of string as the sign-in prompt, for 「导出我的资料」: the face / finger check stands in for the password there. */
 export const exportPrompt = () => translate(storedLocale(), "soul_app.biometric.prompt_export");

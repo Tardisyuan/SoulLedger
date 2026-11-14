@@ -11,15 +11,16 @@ import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { expiryOf, formatStamp } from "../rules";
 import { useSession, type MfaChallenge } from "../session";
-import { clearCredential, bioEnabled, forgetAccount, isColdStart, readCredential, rememberedAccount, revokeCredential, spendAutoPrompt } from "../deviceLogin";
+import { bioEnabled, bioOwner, clearCredential, forgetAccount, forgetNumber, isColdStart, readCredential, rememberedAccounts, revokeCredential, spendAutoPrompt, type RememberedAccount } from "../deviceLogin";
 import { LAPSE_KEYS, canSubmitLogin, isFinalLapse, lapseOfReason, shouldAutoPrompt, type Lapse } from "../loginRules";
 import { forgetDevice } from "../mfa";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
-import { SoulCodeField, SoulCodeText } from "../soulCodeView";
+import { RememberedCard } from "../rememberedCard";
+import { SoulCodeField } from "../soulCodeView";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
 import { useNow } from "../useNow";
-import { SwitchAccountSheet } from "./bio";
+import { ForgetNumberSheet, SwitchAccountSheet } from "./bio";
 import { LoginSecondStep } from "./loginMfa";
 
 /** Refusals are the user's to fix (red); a rate limit or a dead network is not (neutral). */
@@ -51,6 +52,15 @@ export function LanguageSwitch() {
       })}
     </View>
   );
+}
+
+/**
+ * 「QU3 ••• W5F」: the card's number (第五十批 C3; Design wrote 「EG-•••-0007」 with its own sample) -- the first and
+ * last groups, enough to tell one's own from another remembered one, grouped as everywhere else in the app.
+ */
+export function maskSoulCode(code: string): string {
+  const groups = formatSoulCode(code).split(/[\s-]+/);
+  return groups.length >= 3 ? `${groups[0]} ••• ${groups[groups.length - 1]}` : formatSoulCode(code);
 }
 
 export type LoginParams = { passwordReset?: boolean; scanned?: string; at?: number } | undefined;
@@ -105,10 +115,19 @@ export function LoginScreen() {
   const reset = params?.passwordReset === true;
   const { state, signIn, deviceSignIn } = useSession();
   const bio = useBiometry();
-  // The account this phone remembers (null: a first visit, or 「换一个账号」), and whether its 面容 / 指纹 is on.
-  const [account, setAccount] = useState(rememberedAccount);
+  const toast = useToast();
+  // The numbers this phone remembers (第五十批 C4: up to five, used-last first). One: its card. Two or more: a list to
+  // pick from (`picking`), unless 「用别的编号」 opened the empty form (`typing`).
+  const [accounts, setAccounts] = useState(rememberedAccounts);
+  // The account on the card (null: a first visit, 「换一个账号」, or none picked from the list yet).
+  const [account, setAccount] = useState<RememberedAccount | null>(() => (accounts.length === 1 ? accounts[0] : null));
+  const [typing, setTyping] = useState(false);
+  const [forgetting, setForgetting] = useState<RememberedAccount | null>(null);
+  // Whether 面容 / 指纹 login is on for the number on the card: one credential per phone, issued to one number.
   const [bioActive, setBioActive] = useState(bioEnabled);
+  const bioHere = bioActive && account !== null && bioOwner() === account.code;
   const known = account !== null;
+  const picking = !account && !typing && accounts.length >= 2;
   const [soulCode, setSoulCode] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -129,7 +148,7 @@ export function LoginScreen() {
   const [error, setError] = useState<SoulErrorMessage | null>(state.status === "signedOut" ? (state.notice ?? null) : null);
   const passwordRef = useRef<TextInput>(null);
   const code = account?.code ?? soulCode;
-  const bioScreen = known && bioActive && !wantPassword && !bioFailed;
+  const bioScreen = known && bioHere && !wantPassword && !bioFailed;
   // `popTo("Login")` returns to THIS screen, not a fresh one: an earlier failed
   // sign-in's error (which hid the notice) and the old password are still here.
   // Each arrival carries a new params object, so a second reset clears them too.
@@ -192,8 +211,10 @@ export function LoginScreen() {
 
   /** 「知道了」 on the final notice: nothing of this account stays on the phone; the page is blank next time. */
   const acknowledgeFinal = () => {
-    forgetAccount();
-    setAccount(null);
+    forgetAccount(account?.code);
+    const left = rememberedAccounts();
+    setAccounts(left);
+    setAccount(left.length === 1 ? left[0] : null);
     setBioActive(false);
     setSoulCode("");
     setPassword("");
@@ -236,14 +257,43 @@ export function LoginScreen() {
     const cold = isColdStart();
     spendAutoPrompt();
     // On the next tick: the sign-in sets state, and an effect body does not.
-    if (account && shouldAutoPrompt({ enabled: bioActive, coldStart: cold, cancelled: false, lapsed: lapse })) void Promise.resolve().then(signInWithBio);
+    if (account && shouldAutoPrompt({ enabled: bioHere, coldStart: cold, cancelled: false, lapsed: lapse })) void Promise.resolve().then(signInWithBio);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the cold start is decided once, when the page first appears
   }, []);
+
+  /** The card back to a clean page: the password, the notices and the 面容 state of the number that was on it go. */
+  const clearPage = () => {
+    setPassword("");
+    setLapse(null);
+    setError(null);
+    setBioFailed(false);
+    setBioMisses(0);
+    setWantPassword(false);
+  };
+
+  /** 「换一个账号」 with two or more numbers remembered: back to the list; nothing is forgotten. */
+  const backToList = () => {
+    setAccount(null);
+    clearPage();
+  };
+
+  /** 「忘掉这个编号」: the phone forgets it (and its 面容 / 指纹 login, if the credential is that number's). */
+  const forget = async (target: RememberedAccount) => {
+    setForgetting(null);
+    await forgetNumber(target.code);
+    const left = rememberedAccounts();
+    setAccounts(left);
+    setBioActive(bioEnabled());
+    // One left: its card, as for a single remembered number.
+    if (left.length === 1) setAccount(left[0]);
+    toast(t("soul_app.accounts.forgotten", { id: maskSoulCode(target.code) }));
+  };
 
   const switchAccount = async () => {
     setSwitching(false);
     if (bioEnabled()) await revokeCredential();
-    forgetAccount();
+    forgetAccount(account?.code);
+    setAccounts(rememberedAccounts());
     setAccount(null);
     setBioActive(false);
     setSoulCode("");
@@ -302,11 +352,9 @@ export function LoginScreen() {
         <Txt variant="title" accessibilityRole="header">
           {t("soul_app.login.title")}
         </Txt>
-        {known ? null : (
-          <Txt tone="muted" style={styles.lead}>
-            {t("soul_app.login.subtitle")}
-          </Txt>
-        )}
+        <Txt testID="login-lead" tone="muted" style={styles.lead}>
+          {t(known ? "auth.remembered.welcome" : picking ? "soul_app.accounts.title" : "soul_app.login.subtitle")}
+        </Txt>
         {reset && !error ? (
           // 第三类 F 组 屏 3:1px 墨框,左侧 3px 功色;粗体一句,小字一句。
           <View
@@ -342,6 +390,47 @@ export function LoginScreen() {
         {/* 第四十九批:no way on from here -- no number, password, 面容, 忘记密码; one quiet 「知道了」. */}
         {final ? (
           <Button testID="login-devoured-ack" kind="secondary" style={styles.submit} title={t("soul_app.login.lapsed.devoured_ack")} onPress={acknowledgeFinal} />
+        ) : picking ? (
+          <View testID="login-accounts" style={styles.fields}>
+            <View style={[styles.list, { borderColor: theme.hair, backgroundColor: theme.s1 }]}>
+              {accounts.map((a) => (
+                <View key={a.code} style={[styles.listRow, { borderBottomColor: theme.hair }]}>
+                  <RememberedCard
+                    testID={`account-${a.code}`}
+                    compact
+                    name={a.name}
+                    masked={maskSoulCode(a.code)}
+                    onPress={() => {
+                      clearPage();
+                      setAccount(a);
+                    }}
+                    trailing={
+                      <Pressable
+                        testID={`account-more-${a.code}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("soul_app.accounts.more", { name: a.name || maskSoulCode(a.code) })}
+                        onPress={() => setForgetting(a)}
+                        style={styles.more}
+                      >
+                        <Txt variant="bodyLg" tone="muted">
+                          ⋯
+                        </Txt>
+                      </Pressable>
+                    }
+                  />
+                </View>
+              ))}
+              <Pressable testID="accounts-other" accessibilityRole="button" onPress={() => setTyping(true)} style={styles.other}>
+                <View style={[styles.plus, { borderColor: theme.hair2 }]}>
+                  <Txt tone="muted">＋</Txt>
+                </View>
+                <Txt variant="bodyLg">{t("soul_app.accounts.other")}</Txt>
+              </Pressable>
+            </View>
+            <Txt variant="caption" tone="muted">
+              {t("soul_app.accounts.hint", { bio: bio.word })}
+            </Txt>
+          </View>
         ) : (
         <>
         {bioFailed ? (
@@ -351,22 +440,15 @@ export function LoginScreen() {
         ) : null}
         <View style={[styles.fields, busy && styles.dimmed]}>
           {account ? (
-            <View testID="login-known" style={[styles.card, { borderColor: theme.hair, backgroundColor: theme.s0 }]}>
-              <View style={styles.fill}>
-                {/* S1: a first sign-in that stopped at 改密 / the second step remembered the number before the name. */}
-                {account.name ? (
-                  <Txt testID="login-known-name" style={styles.knownName}>
-                    {account.name}
-                  </Txt>
-                ) : null}
-                <SoulCodeText testID="login-known-code" code={account.code} />
-              </View>
-              <Pressable testID="login-switch" accessibilityRole="button" disabled={busy} onPress={() => setSwitching(true)} style={styles.switch}>
-                <Txt variant="bodyLg" style={styles.underline}>
-                  {t("soul_app.login.switch")}
-                </Txt>
-              </Pressable>
-            </View>
+            // 第五十批 C3: the card both apps share. S1: a first sign-in that stopped at 改密 / the second step
+            // remembered the number before the name (no name row then).
+            <RememberedCard
+              testID="login-known"
+              name={account.name}
+              masked={maskSoulCode(account.code)}
+              disabled={busy}
+              link={{ testID: "login-switch", label: t("soul_app.login.switch"), onPress: () => (accounts.length >= 2 ? backToList() : setSwitching(true)) }}
+            />
           ) : (
             <SoulCodeField
               value={soulCode}
@@ -442,6 +524,13 @@ export function LoginScreen() {
         )}
         <LanguageSwitch />
       </View>
+      <ForgetNumberSheet
+        open={forgetting !== null}
+        title={forgetting ? [forgetting.name, maskSoulCode(forgetting.code)].filter(Boolean).join(" · ") : ""}
+        bio={bio.word}
+        onCancel={() => setForgetting(null)}
+        onConfirm={() => forgetting && void forget(forgetting)}
+      />
       <SwitchAccountSheet
         open={switching}
         id={account ? formatSoulCode(account.code) : ""}
@@ -642,9 +731,11 @@ const styles = StyleSheet.create({
   noticeTitle: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 22 },
   network: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
   lapsed: { flexDirection: "row", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
-  card: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 8, paddingLeft: 16, paddingRight: 4 },
-  knownName: { fontFamily: family.ui[600], fontSize: 17, lineHeight: 24 },
-  switch: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 12 },
+  list: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
+  listRow: { borderBottomWidth: 1 },
+  more: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
+  other: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingHorizontal: 14 },
+  plus: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   retry: { marginTop: 12 },
   leftLink: { alignItems: "flex-start" },
   trouble: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center", marginBottom: 8 },
