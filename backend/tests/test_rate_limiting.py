@@ -339,7 +339,9 @@ class TestLoginRateLimiting:
             with patch("django.core.cache.cache", _MockCache()):
                 bodies = [self._login(name, "Wrong!", ip=f"10.{start}.0.{i + 1}") for i in range(20)]
                 locked = self._login(name, "Wrong!", ip=f"10.{start}.9.9")
-            return ([(r.status_code, dict(r.data)) for r in bodies],
+            # `instance` is the request's own trace id (`apps/core/problems.py`), new on every
+            # request whichever name is tried; everything else must match field for field.
+            return ([(r.status_code, {k: v for k, v in r.data.items() if k != "instance"}) for r in bodies],
                     (locked.status_code, locked.data["code"], str(locked.data["detail"]), locked.data["retry_after"]))
 
         assert run("ratelimit_user", 70) == run("no_such_officer", 71)
