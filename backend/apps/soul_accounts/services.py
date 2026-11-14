@@ -181,6 +181,9 @@ def provision_account(soul, origin, *, actor=None, request=None):
         except IntegrityError:
             return SoulAccount.objects.get(soul=soul, cycle=cycle), False
         sync_login_email(soul)
+        # sync_login_email 写的是它自己查出来的那份 User;返回的 account.user 跟着读回,
+        # 不然调用方手里的登录邮箱是开号前的空串(邮箱登录的验证就会对着空串什么也不做)。
+        user.refresh_from_db(fields=["email"])
         credential = _issue_credential(account, soul)
         audit("CREATE", soul, f"开通灵魂账号(第 {cycle} 世,{origin})", actor=actor, request=request,
               resource_id=account.pk, changes={"cycle": cycle, "origin": origin, "channel": credential.channel})
