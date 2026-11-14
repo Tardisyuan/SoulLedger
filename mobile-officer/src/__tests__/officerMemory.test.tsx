@@ -4,7 +4,7 @@
  */
 import { platform } from "@soulledger/core/platform";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { Pressable } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 
 import { QUEUE_SOURCE_KEY, REJECT_REASONS_KEY, readQueueSource, recentReasons, rememberReason, writeQueueSource } from "../memory";
 import { Detail } from "../screens/detail";
@@ -55,14 +55,40 @@ beforeEach(() => {
 });
 afterEach(() => platform().persistent.remove(USER_KEY));
 
-describe("O1: 我 shows the sign-in username", () => {
-  it("read-only, beside the display name", async () => {
+describe("O1 / 第五十二批 F2: 我 › 账号安全 shows the sign-in username first", () => {
+  it("read-only, whole, in mono, the first row of 账号安全 (not under 个人信息), selectable for a long-press copy", async () => {
     renderOfficer(<MeTab onOpen={() => {}} />);
     const row = await screen.findByTestId("me-username");
-    expect(row).toHaveTextContent(/登录用户名\s*yama/);
+    expect(row).toHaveTextContent(/^用户名\s*yama$/);
     // Not a button: nothing to press there.
     expect(screen.root.findAll((n) => n.props.testID === "me-username" && typeof n.props.onPress === "function")).toEqual([]);
+    const value = screen.getByTestId("me-username-value");
+    expect(value.props.selectable).toBe(true);
+    expect(StyleSheet.flatten(value.props.style)).toMatchObject({ fontSize: 14 });
+    expect(String(StyleSheet.flatten(value.props.style).fontFamily)).toMatch(/Mono/i);
     expect(screen.getByTestId("me-name-value")).toHaveTextContent("阎罗");
+    // Order on the page: 账号安全's heading, then the username, then 用指纹登录's block.
+    const ids = screen.root.findAll((n) => typeof n.props.testID === "string" && typeof n.type === "string").map((n) => n.props.testID as string);
+    expect(ids.indexOf("me-username")).toBeGreaterThan(ids.indexOf("me-name"));
+    expect(ids.indexOf("me-username")).toBeLessThan(ids.indexOf("me-password"));
+    expect(ids.indexOf("me-username")).toBeGreaterThan(ids.indexOf("me-mfa"));
+    // No verified email: no hint.
+    expect(screen.queryByTestId("me-username-hint")).toBeNull();
+  });
+
+  it("the hint that a verified email also signs in shows only with a verified email", async () => {
+    const { authApi } = jest.requireMock("@soulledger/core/api/auth") as { authApi: { profile: jest.Mock } };
+    authApi.profile.mockResolvedValueOnce({ data: { email: "yama@example.com", email_verified: true } });
+    renderOfficer(<MeTab onOpen={() => {}} />);
+    expect(await screen.findByTestId("me-username-hint")).toHaveTextContent("登录时也可以用已验证的邮箱。");
+  });
+
+  it("an unverified email gives no hint", async () => {
+    const { authApi } = jest.requireMock("@soulledger/core/api/auth") as { authApi: { profile: jest.Mock } };
+    authApi.profile.mockResolvedValueOnce({ data: { email: "yama@example.com", email_verified: false } });
+    renderOfficer(<MeTab onOpen={() => {}} />);
+    expect(await screen.findByTestId("me-email")).toBeTruthy();
+    expect(screen.queryByTestId("me-username-hint")).toBeNull();
   });
 });
 
@@ -133,12 +159,23 @@ describe("D8b: the last three reject reasons", () => {
     rememberReason("材料不全");
     mockApproveNode.mockResolvedValue({});
     await openReject();
-    expect(screen.getByTestId("decision-recent")).toHaveTextContent(/最近用过的理由/);
+    expect(screen.getByTestId("decision-recent")).toHaveTextContent(/^最近用过/);
+    expect(screen.getByTestId("decision-recent")).not.toHaveTextContent(/点一条填入/);
     expect(screen.getByTestId("decision-recent-0")).toHaveTextContent("材料不全");
     expect(screen.getByTestId("decision-recent-1")).toHaveTextContent("先退回");
     expect(screen.queryByTestId("decision-recent-2")).toBeNull();
+    // 第五十二批 F1: an outlined full-width row, 40 high, ↺ in --faint, one line; read as 「填入：…」.
+    const row = screen.getByTestId("decision-recent-1");
+    expect(row.props.accessibilityLabel).toBe("填入：先退回");
+    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ height: 40, borderWidth: 1, borderRadius: 8 });
+    expect(screen.getByTestId("decision-recent-1-icon")).toHaveTextContent("↺");
     fireEvent.press(screen.getByTestId("decision-recent-1"));
     expect(screen.getByTestId("decision-reason").props.value).toBe("先退回");
+    // A second tap adds on a new line, never over what is there; the row is still there.
+    fireEvent.press(screen.getByTestId("decision-recent-0"));
+    expect(screen.getByTestId("decision-reason").props.value).toBe("先退回\n材料不全");
+    expect(screen.getByTestId("decision-recent-0")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("decision-reason"), "先退回");
     fireEvent.press(screen.getByTestId("decision-confirm"));
     await waitFor(() => expect(mockApproveNode).toHaveBeenCalledWith("wf-1", "node-1", { verdict: "REJECTED", notes: "先退回", require_reason: true }));
     await waitFor(() => expect(recentReasons()).toEqual(["先退回", "材料不全"]));

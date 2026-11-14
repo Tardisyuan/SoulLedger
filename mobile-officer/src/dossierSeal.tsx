@@ -25,6 +25,7 @@ export const civOf = (civilization: string | null | undefined) => {
 export function DossierSeal({
   civilization,
   court,
+  civLevel,
   size = 96,
   pending,
   stamp,
@@ -34,6 +35,8 @@ export function DossierSeal({
 }: {
   civilization: string | null | undefined;
   court?: string | null;
+  /** The civilization's own seal, no hall on it (地府: 「地府之印」; the others carry no hall anyway). 第五十二批 E2. */
+  civLevel?: boolean;
   size?: number;
   pending?: boolean;
   /** Plays the drop once when it mounts. */
@@ -55,7 +58,7 @@ export function DossierSeal({
   const scale = drop.interpolate({ inputRange: [0, 1], outputRange: [1.18, 1] });
   return (
     <Animated.View style={[{ width: size, height: size, opacity: drop, transform: [{ scale }] }, style]}>
-      <SealArt testID={testID} civ={civ} scheme={scheme} size={size} pending={pending} court={courtNumber(court)} label={label} />
+      <SealArt testID={testID} civ={civ} scheme={scheme} size={size} pending={pending} court={civLevel ? 0 : courtNumber(court)} label={label} />
     </Animated.View>
   );
 }

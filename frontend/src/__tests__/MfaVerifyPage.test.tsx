@@ -219,7 +219,7 @@ describe("LoginVerifyPage · password managers and the kept account name (W3, W5
     storeMfaPending({ ...PENDING, remember: true });
     render(<LoginVerifyPage />);
     fireEvent.change(codeInput(), { target: { value: "123456" } });
-    await waitFor(() => expect(localStorage.getItem("soulledger_last_username")).toBe("yama"));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem("soulledger_last_username") ?? "null")).toEqual({ username: "yama", display_name: "" }));
   });
 
   it("forgets a kept name when 保持登录 was not ticked", async () => {

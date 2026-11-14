@@ -11,7 +11,7 @@ import * as Camera from "expo-camera";
 import * as Haptics from "expo-haptics";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
-import { Linking, TextInput } from "react-native";
+import { Linking, StyleSheet, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ACCOUNTS_KEPT, ACCOUNT_KEY, ASKED_PREFIX, BIO_KEY, BIO_OWNER_KEY, rememberAccount, rememberedAccount, rememberedAccounts, spendAutoPrompt } from "../deviceLogin";
@@ -292,6 +292,22 @@ describe("A · the scanner", () => {
     expect(cameraMod.__state.last).toMatchObject({ enableTorch: true });
   });
 
+  it("第五十二批 F3: 从相册选 and 手电筒 are the same outlined capsule (44), side by side; the manual way is a link under them; one privacy line", async () => {
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-scan"));
+    await screen.findByTestId("scan");
+    const album = StyleSheet.flatten(screen.getByTestId("scan-album").props.style);
+    const torch = StyleSheet.flatten(screen.getByTestId("scan-torch").props.style);
+    for (const s of [album, torch]) expect(s).toMatchObject({ height: 44, borderWidth: 1, borderRadius: 22 });
+    // Side by side: one row holds both.
+    const row = screen.getByTestId("scan-capsules");
+    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ flexDirection: "row" });
+    expect(within(row).getByTestId("scan-torch")).toBeTruthy();
+    expect(screen.getByTestId("scan-manual").props.accessibilityRole).toBe("link");
+    expect(screen.getByTestId("scan-privacy")).toHaveTextContent("相机和相册都只读码，不拍照、不上传。");
+    expect(screen.queryByText("相机只用来读二维码，不拍照、不存图。")).toBeNull();
+  });
+
   it("a refused camera permission is a page with two ways on, and no camera", async () => {
     cameraMod.__state.permission = { status: "denied", granted: false, canAskAgain: false };
     const open = jest.spyOn(Linking, "openSettings").mockResolvedValue();
@@ -299,7 +315,7 @@ describe("A · the scanner", () => {
     fireEvent.press(screen.getByTestId("login-scan"));
     await screen.findByTestId("scan-denied");
     expect(screen.getByText("没有相机权限")).toBeTruthy();
-    expect(screen.getByText("相机只用来读二维码，不拍照、不存图。")).toBeTruthy();
+    expect(screen.getByText("相机和相册都只读码，不拍照、不上传。")).toBeTruthy();
     expect(screen.queryByTestId("scan-camera")).toBeNull();
     fireEvent.press(screen.getByTestId("scan-open-settings"));
     expect(open).toHaveBeenCalledTimes(1);
@@ -335,9 +351,14 @@ describe("S4 · 「从相册选」 on the scanner", () => {
     await openScanner();
     await screen.findByTestId("scan");
     fireEvent.press(screen.getByTestId("scan-album"));
-    expect(await screen.findByText("! 这张图里没有找到二维码")).toBeTruthy();
-    expect(screen.getByText("换一张拍得清楚些的交付单照片，或手动输入编号。")).toBeTruthy();
+    // 第五十二批 F3: a light two-line notice at the bottom in place of the link and the privacy line, not the red bar.
+    const notice = await screen.findByTestId("scan-photo-none");
+    expect(notice).toHaveTextContent("这张图里没有找到编号码");
+    expect(notice).toHaveTextContent("换一张，拍清楚编号单右侧的码，或改为输入编号。");
+    expect(screen.queryByTestId("scan-invalid")).toBeNull();
     expect(screen.queryByText("! 这不是灵魂簿交付单上的码")).toBeNull();
+    expect(screen.queryByTestId("scan-privacy")).toBeNull();
+    expect(screen.getByTestId("scan-camera")).toBeTruthy();
     expect(navigationRef.getCurrentRoute()?.name).toBe("ScanCode");
   });
 
@@ -546,6 +567,29 @@ describe("B1 · the phone remembers the account", () => {
     expect(await screen.findByTestId("login-bio")).toBeTruthy(); // 张三's card, 面容 still on
     expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")).toBeUndefined();
     expect(persistentStore.get(BIO_KEY)).toBe("face");
+  });
+
+  it("第五十二批 C4: the row that owns the credential carries the fingerprint after its number, read out; the other row has none", async () => {
+    rememberAccount(CODE, "张三");
+    persistentStore.set(BIO_KEY, "face");
+    secureMod.__guarded.set("soulledger_device_login", CRED);
+    rememberAccount(CODE2, "李四");
+    spendAutoPrompt();
+    await renderApp();
+    expect(await screen.findByTestId("login-accounts")).toBeTruthy();
+    const mark = screen.getByTestId(`account-bio-${CODE}`);
+    expect(mark.props.accessibilityLabel).toBe("这个编号开了面容登录");
+    expect(mark.props.width).toBe(16);
+    expect(screen.queryByTestId(`account-bio-${CODE2}`)).toBeNull();
+  });
+
+  it("第五十二批 C4: no credential on the phone, no fingerprint on any row", async () => {
+    rememberAccount(CODE, "张三");
+    rememberAccount(CODE2, "李四");
+    spendAutoPrompt();
+    await renderApp();
+    expect(await screen.findByTestId("login-accounts")).toBeTruthy();
+    expect(screen.queryByTestId(/^account-bio-/)).toBeNull();
   });
 
   it("第五十批 C4: an older phone's single remembered account reads as a list of one; five are kept, the oldest goes", () => {

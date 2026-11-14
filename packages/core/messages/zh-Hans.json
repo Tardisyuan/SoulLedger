@@ -64,7 +64,6 @@
     "account": "账号",
     "account_or_email": "用户名或邮箱",
     "account_or_email_hint": "邮箱要先在「个人中心」验证过才能用来登录",
-    "switch_account": "换个账号",
     "console": "SoulLedger · 官员台",
     "statute_eyebrow": "今日律条",
     "statute_rotates": "每次进入换一条",
@@ -117,7 +116,8 @@
       }
     },
     "remembered": {
-      "welcome": "欢迎回来"
+      "welcome": "欢迎回来",
+      "switch": "换一个账号"
     }
   },
   "mfa": {
@@ -6272,15 +6272,15 @@
       "torch": "手电筒",
       "torch_on": "手电筒 · 开",
       "manual": "手动输入编号",
-      "album": "从相册选",
-      "album_none": "! 这张图里没有找到二维码",
-      "album_none_body": "换一张拍得清楚些的交付单照片，或手动输入编号。",
       "invalid": "! 这不是灵魂簿交付单上的码",
       "invalid_body": "请扫交付单右侧那个。也可以关掉这里，手动输入编号。",
       "denied_title": "没有相机权限",
       "denied_body": "扫码要用相机。可以去系统设置里给灵魂簿打开相机，也可以直接手动输入编号。",
       "open_settings": "去系统设置打开 ↗",
-      "privacy": "相机只用来读二维码，不拍照、不存图。"
+      "from_photos": "从相册选",
+      "photo_none": "这张图里没有找到编号码",
+      "photo_none_body": "换一张，拍清楚编号单右侧的码，或改为输入编号。",
+      "privacy_both": "相机和相册都只读码，不拍照、不上传。"
     },
     "bio": {
       "face": "面容",
@@ -6478,7 +6478,8 @@
       "more": "{{name}} 的更多操作",
       "forget": "忘掉这个编号",
       "forget_body": "只是这台手机不再记住这个编号，账号本身不受影响。这个编号的{{bio}}登录也会关掉。",
-      "forgotten": "已忘掉 {{id}}"
+      "forgotten": "已忘掉 {{id}}",
+      "bio_here": "这个编号开了{{bio}}登录"
     }
   },
   "soul_push": {
@@ -8291,11 +8292,11 @@
       "clear_recent": "清除",
       "recent_empty": "还没有打开过案件。",
       "group_cases": "案件 · {{n}}",
-      "group_people": "人物 · {{n}}",
       "see_all": "看全部 {{n}} 件 ›",
       "kind_soul": "灵魂",
       "kind_officer": "官员",
-      "no_results_hint": "可以按姓名搜，或输入案号的开头，如 {{example}}。"
+      "no_results_hint": "可以按姓名搜，或输入案号的开头，如 {{example}}。",
+      "first_only": "只显示前 {{n}} 件"
     },
     "assist": {
       "entry": "问一问",
@@ -8345,7 +8346,7 @@
       "reject_body": "驳回后流程退回{{name}}，不能撤回。",
       "reject_ok": "确认驳回",
       "reason_label": "驳回理由 · 必填，发起人会读到",
-      "recent_reasons": "最近用过的理由 · 点一条填入",
+      "recent_reasons": "最近用过",
       "reason_required": "驳回必须写理由",
       "failed": "没能提交 · {{reason}}",
       "reasons": {
@@ -8379,7 +8380,8 @@
         "dispatch": "驳回后，这 {{n}} 个灵魂留在{{from}}，发起方会读到理由。",
         "reincarnation": "驳回后，{{name}}留在本殿，会读到理由。",
         "cooldown": "驳回后冷却不变，还剩 {{n}} 天。"
-      }
+      },
+      "recent_aria": "填入：{{text}}"
     },
     "landing": {
       "handled": "已由{{name}}处理",
@@ -8407,7 +8409,7 @@
       "name_empty": "姓名不能为空",
       "role": "角色",
       "hall": "所属殿",
-      "username": "登录用户名",
+      "username": "用户名",
       "mfa": "两步验证",
       "mfa_on": "已开启",
       "mfa_off": "未开启",
@@ -8437,7 +8439,8 @@
       "logout_pending_drafts": "还有 {{drafts}} 份回信草稿。退出后会从这台设备上清除。",
       "logout_retry": "先重试发送",
       "logout_anyway": "仍然退出",
-      "security": "账号安全"
+      "security": "账号安全",
+      "username_hint": "登录时也可以用已验证的邮箱。"
     },
     "back": "返回",
     "areas": {

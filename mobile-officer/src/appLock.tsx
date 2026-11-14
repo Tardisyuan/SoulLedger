@@ -86,15 +86,19 @@ export function AppLock() {
 
   if (phase === "off") return null;
   const user = state.status === "signedIn" ? state.user : null;
-  // 第五十批 C5: the soul app's lock page (lockView.tsx) with the hall's seal at 64 -- a seal, one of the four places
-  // a civilization's colour goes. A hall whose civilization is not known has no seal: the brand mark then.
-  const seal = <DossierSeal testID="app-lock-seal" civilization={user?.tenant?.civilization} size={64} label={t("officer_app.seal.a11y")} />;
+  // 第五十批 C5: the soul app's lock page (lockView.tsx) with a seal at 64 -- one of the four places a civilization's
+  // colour goes. 第五十二批 E2: the civilization's seal, not a hall's (地府's reads 「地府之印」): drawing 「第一殿」 for a
+  // hall the page does not know would name the wrong hall. A civilization that is not known: the brand mark.
+  const seal = <DossierSeal testID="app-lock-seal" civilization={user?.tenant?.civilization} civLevel size={64} label={t("officer_app.seal.a11y")} />;
+  const name = user ? user.display_name || user.username : "";
+  const hall = user ? hallLabel(t, user.tenant) : undefined;
   return (
     <LockView
       locked={phase === "locked"}
       mark={civOf(user?.tenant?.civilization) ? seal : <BrandMark size={66} color={OFFICER_BRAND.mark} />}
       title={t("officer_app.bio_login.lock_title")}
-      who={user ? t("officer_app.bio_login.lock_who", { name: user.display_name || user.username, hall: hallLabel(t, user.tenant) ?? "" }) : undefined}
+      // The name alone when the hall is not known: no dangling 「 · 」.
+      who={!user ? undefined : hall ? t("officer_app.bio_login.lock_who", { name, hall }) : name}
       failed={failed ? t("officer_app.bio_login.failed", { bio: bio.word }) : null}
       unlockLabel={t("officer_app.bio_login.unlock", { bio: bio.word })}
       onUnlock={() => void unlock()}

@@ -64,7 +64,6 @@
     "account": "Account",
     "account_or_email": "Username or email",
     "account_or_email_hint": "An email works once it is verified on your profile",
-    "switch_account": "Use another account",
     "console": "SoulLedger · Officer console",
     "statute_eyebrow": "Today's statute",
     "statute_rotates": "A new one each visit",
@@ -117,7 +116,8 @@
       }
     },
     "remembered": {
-      "welcome": "Welcome back"
+      "welcome": "Welcome back",
+      "switch": "Use another account"
     }
   },
   "mfa": {
@@ -6272,15 +6272,15 @@
       "torch": "Flashlight",
       "torch_on": "Flashlight · on",
       "manual": "Type the number instead",
-      "album": "Choose from photos",
-      "album_none": "! No QR code found in this picture",
-      "album_none_body": "Try a clearer photo of your slip, or type the number.",
       "invalid": "! This isn't a Soul Ledger slip code",
       "invalid_body": "Scan the one on the right of your slip, or close this and type the number.",
       "denied_title": "No camera access",
       "denied_body": "Scanning needs the camera. Turn it on in system settings, or type the number.",
       "open_settings": "Open system settings ↗",
-      "privacy": "The camera only reads the code. Nothing is photographed or saved."
+      "from_photos": "Choose from photos",
+      "photo_none": "No soul code in this picture",
+      "photo_none_body": "Try another picture showing the code on the right of your slip, or type the number.",
+      "privacy_both": "The camera and photos are only used to read the code. Nothing is taken or uploaded."
     },
     "bio": {
       "face": "Face",
@@ -6478,7 +6478,8 @@
       "more": "More for {{name}}",
       "forget": "Forget this number",
       "forget_body": "Only this phone stops remembering the number; the account itself is not affected. {{bio}} sign-in for it is turned off too.",
-      "forgotten": "Forgot {{id}}"
+      "forgotten": "Forgot {{id}}",
+      "bio_here": "{{bio}} sign-in is on for this number"
     }
   },
   "soul_push": {
@@ -8291,11 +8292,11 @@
       "clear_recent": "Clear",
       "recent_empty": "No cases opened yet.",
       "group_cases": "Cases · {{n}}",
-      "group_people": "People · {{n}}",
       "see_all": "See all {{n}} ›",
       "kind_soul": "Soul",
       "kind_officer": "Officer",
-      "no_results_hint": "Search by name, or type the start of a case number, e.g. {{example}}."
+      "no_results_hint": "Search by name, or type the start of a case number, e.g. {{example}}.",
+      "first_only": "Showing the first {{n}} only"
     },
     "assist": {
       "entry": "Ask",
@@ -8345,7 +8346,7 @@
       "reject_body": "The flow goes back to {{name}}; this can't be undone.",
       "reject_ok": "Reject",
       "reason_label": "Reason · required, the requester will read it",
-      "recent_reasons": "Reasons used lately · tap one to fill it in",
+      "recent_reasons": "Recently used",
       "reason_required": "A reason is required to reject",
       "failed": "Couldn't submit · {{reason}}",
       "reasons": {
@@ -8379,7 +8380,8 @@
         "dispatch": "Once rejected, the {{n}} souls stay in {{from}}; the proposing hall reads your reason.",
         "reincarnation": "Once rejected, {{name}} stays in this hall and reads your reason.",
         "cooldown": "Once rejected, the cooldown stays: {{n}} days left."
-      }
+      },
+      "recent_aria": "Use: {{text}}"
     },
     "landing": {
       "handled": "Already handled by {{name}}",
@@ -8407,7 +8409,7 @@
       "name_empty": "Name can't be empty",
       "role": "Role",
       "hall": "Hall",
-      "username": "Sign-in username",
+      "username": "Username",
       "mfa": "Two-step verification",
       "mfa_on": "On",
       "mfa_off": "Off",
@@ -8437,7 +8439,8 @@
       "logout_pending_drafts": "Reply drafts on this device: {{drafts}}. Signing out removes them.",
       "logout_retry": "Try sending first",
       "logout_anyway": "Sign out anyway",
-      "security": "Account security"
+      "security": "Account security",
+      "username_hint": "A verified email also works for signing in."
     },
     "back": "Back",
     "areas": {

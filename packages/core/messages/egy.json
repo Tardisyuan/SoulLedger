@@ -111,7 +111,8 @@
       }
     },
     "remembered": {
-      "welcome": "Iyi Wehem"
+      "welcome": "Iyi Wehem",
+      "switch": "Aq Em Ky Ren Aq"
     },
     "account_or_email": "Ren Aq Er Djeret"
   },
@@ -6257,7 +6258,10 @@
       "denied_title": "Nen Was Maa Tut",
       "denied_body": "Maa Tut Medu: Was Er Medjat. Wen Em Djeret Medjat, Mi Sesh Ren Hesb Ba.",
       "open_settings": "Wen Djeret Medjat ↗",
-      "privacy": "Maa Tut Medu Wa. Nen Smen Tut."
+      "from_photos": "Setep Tut",
+      "photo_none": "Nen Gem Tut Medu Em Tut Pen",
+      "photo_none_body": "Setep Tut Ky: Tut Medu Em Djama Redi. Mi Sesh Ren Hesb Ba.",
+      "privacy_both": "Maa Tut Medu Wa. Nen Smen Tut, Nen Hab Tut."
     },
     "bio": {
       "face": "Djes-Ek",
@@ -6455,7 +6459,8 @@
       "more": "Smen {{name}}",
       "forget": "Nen Rekh Ren Hesb Ba Pen",
       "forget_body": "Medjat Pen Nen Rekh Ren Hesb Ba Pen Djer; Aq Wenen. Aq Em {{bio}}: Khetem.",
-      "forgotten": "Nen Rekh {{id}}-N"
+      "forgotten": "Nen Rekh {{id}}-N",
+      "bio_here": "Aq Em {{bio}}: Wen"
     }
   },
   "soul_push": {
@@ -8201,7 +8206,6 @@
       "clear_recent": "Fekh",
       "recent_empty": "Nen Wen Sep Djer.",
       "group_cases": "Sepu · {{n}}",
-      "group_people": "Remetj · {{n}}",
       "see_all": "Maa Neb · {{n}} ›",
       "kind_soul": "Ba",
       "kind_officer": "Sab",
@@ -8309,7 +8313,9 @@
         "dispatch": "Khesef: Ba {{n}} Wenen Em {{from}}; Per Ky Maa Khet.",
         "reincarnation": "Khesef: {{name}} Wenen Em Wesekhet Pen; Maa Khet.",
         "cooldown": "Khesef: Tera Qebeh Nen Semawy · Hru {{n}} Khery."
-      }
+      },
+      "recent_reasons": "Sesh Pehwy",
+      "recent_aria": "Sesh: {{text}}"
     },
     "landing": {
       "handled": "Iri-N Em {{name}}",
@@ -8365,7 +8371,9 @@
       "logout_anyway": "Per Aq Min",
       "logout_pending_unsent": "Wesheb Nen Hab {{unsent}}: Em Medjat Pen. Per Aq: Fekh.",
       "logout_pending_drafts": "Sesh Tepy {{drafts}}: Em Medjat Pen. Per Aq: Fekh.",
-      "security": "Senb Ren Aq"
+      "security": "Senb Ren Aq",
+      "username": "Ren Aq",
+      "username_hint": "Djeret Smen-N: Aq Hena."
     },
     "login": {
       "password": "Sekhem",

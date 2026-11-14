@@ -65,7 +65,7 @@ describe("the Live Activity's two halves", () => {
     expect(lock).toContain(".activityBackgroundTint(card.ground)");
     expect(lock).toContain("let card = Card.of(scheme)");
     expect(lock).toContain("Mark(tint: tints.mark(scheme))");
-    expect(lock).toContain("Bar(progress: state.progress, fill: state.ended ? Color.ended : tints.bar(scheme), track: card.track)");
+    expect(lock).toContain("Bar(progress: state.ended ? 1 : state.progress, fill: tints.bar(scheme), track: card.track)");
     expect(lock).toContain(".background(card.tag)");
     expect(lock).toContain(".font(.system(size: 15, weight: .semibold))");
     expect(lock).toContain(".font(.system(size: 13, weight: .medium).monospacedDigit())");
@@ -84,6 +84,23 @@ describe("the Live Activity's two halves", () => {
     expect(swift).toContain("let card = Card.dark");
     // The tag does not take the civilization's colour.
     expect(swift).not.toMatch(/tint\.opacity|tints\.\w+\.opacity/);
+  });
+
+  it("Design 第五十二批 E1: an ended road is full in civT; only the tag's words take --neg; the end's name is bold", () => {
+    const swift: string = live.widgetSwift();
+    const lock = swift.slice(swift.indexOf("private struct LockScreenLive"), swift.indexOf("struct SoulLedgerLiveWidget"));
+    // The pale red is gone from the bar and from the widget altogether: no `Color.ended`, no fixed #F2849B outside CARD.
+    expect(swift).not.toContain("Color.ended");
+    expect(swift).not.toMatch(/0xF2 \/ 255/);
+    expect(lock).not.toMatch(/fill: state\.ended/);
+    expect(lock).toContain(".foregroundStyle(state.ended ? card.neg : card.main)");
+    expect(lock).toContain("Text(state.last).fontWeight(state.ended ? .semibold : .regular).foregroundStyle(state.ended ? card.main : card.secondary)");
+    expect([live.CARD.light.neg, live.CARD.dark.neg]).toEqual(["#A81E3C", "#F2849B"]);
+    // The tag's words in --neg clear 4.5:1 on the tag's ground and on the card's (Design: 5.97 / 5.44, 6.77 / 6.86).
+    for (const scheme of ["light", "dark"] as const) {
+      expect(contrastRatio(live.CARD[scheme].neg, live.CARD[scheme].tag)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(live.CARD[scheme].neg, live.CARD[scheme].ground)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it("the widget still reads the older tints: 第四十九批's mark;barLight;barDark and a single colour", () => {

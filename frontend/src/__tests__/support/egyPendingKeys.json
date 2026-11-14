@@ -3,7 +3,6 @@
   "auth.error_attempts_body",
   "auth.error_locked_body",
   "auth.error_locked_title",
-  "auth.switch_account",
   "officer_app.bio_login.button",
   "officer_app.bio_login.enable_body",
   "officer_app.bio_login.expired",
@@ -14,14 +13,10 @@
   "officer_app.bio_login.row_unavailable",
   "officer_app.bio_login.toggle_failed",
   "officer_app.bio_login.wrong_password",
-  "officer_app.confirm.recent_reasons",
-  "officer_app.me.username",
+  "officer_app.search.first_only",
   "soul_app.login.email",
   "soul_app.login.email_hint",
   "soul_app.login.reset_filled",
   "soul_app.login.use_code",
-  "soul_app.login.use_email",
-  "soul_app.scan.album",
-  "soul_app.scan.album_none",
-  "soul_app.scan.album_none_body"
+  "soul_app.login.use_email"
 ]

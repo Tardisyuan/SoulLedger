@@ -1,7 +1,7 @@
 /**
  * The foreground lock's page, one for both apps (Design 第五十批 C5): a mark in the middle (the soul app's brand mark;
- * the officer app's hall seal at 64, which counts as a seal), the title, an optional line under it (the officer's
- * 「{name} · {hall}」), the main button and the text link 「用密码登录」. The apps pass their own words; when to lock
+ * the officer app's civilization seal at 64, 第五十二批 E2), the title, an optional line under it (the officer's
+ * 「{name} · {hall}」, or the name alone when the hall is not known), the main button and the text link 「用密码登录」. The apps pass their own words; when to lock
  * and what unlocking does stay in each app's `appLock.tsx`. A leaf: ui only, so the officer app can import it.
  */
 import type { ReactNode } from "react";

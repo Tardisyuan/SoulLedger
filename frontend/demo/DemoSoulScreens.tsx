@@ -220,7 +220,15 @@ function Lock({ view }: { view: SoulView }) {
       <p className="m-0 text-sm opacity-70">{now.toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric" })}</p>
       <p className="m-0 font-title text-display-lg">{now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</p>
       <div className="mt-8 w-full rounded-panel bg-[oklch(var(--color-canvas)/0.12)] p-4">
-        <p className="m-0 text-2xs uppercase opacity-70">{live?.title ?? t("live.title")}</p>
+        <p className="m-0 flex items-baseline justify-between gap-2 text-2xs">
+          <span className="uppercase opacity-70">{live?.title ?? t("live.title")}</span>
+          {/* Design 第五十二批 E1: an ended road says so in the tag (its words in --neg: both ends today are bad ones). */}
+          {live?.tag ? (
+            <span data-testid="demo-soul-lock-tag" className={live.ended ? "text-[oklch(var(--color-danger))]" : "opacity-70"}>
+              {live.tag}
+            </span>
+          ) : null}
+        </p>
         {live ? (
           <>
             <p className="m-0 mt-2 flex items-baseline justify-between gap-2">
@@ -228,7 +236,8 @@ function Lock({ view }: { view: SoulView }) {
               <span className="font-mono text-xs opacity-70">{live.count}</span>
             </p>
             <div aria-hidden="true" className="mt-3 h-1 rounded-full bg-[oklch(var(--color-canvas)/0.2)]">
-              <div className={`h-1 rounded-full ${live.ended ? "bg-[oklch(var(--color-danger))]" : "bg-[oklch(var(--color-canvas))]"}`} style={{ width: `${live.progress * 100}%` }} />
+              {/* The walked bar, full when the road has ended: never the failure colour (第五十二批 E1). */}
+              <div className="h-1 rounded-full bg-[oklch(var(--color-canvas))]" style={{ width: `${live.progress * 100}%` }} />
             </div>
             <p className="m-0 mt-2 flex justify-between text-2xs opacity-70">
               <span>{live.first}</span>

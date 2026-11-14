@@ -4,6 +4,7 @@ import { SOUL_CODE_LENGTH, formatSoulCode } from "@soulledger/core/domain/soulCo
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import Svg, { G, Path } from "react-native-svg";
 
 import { BrandMark } from "../brandMarkView";
 import { useToast } from "../feedback";
@@ -85,6 +86,25 @@ function NetworkNotice({ onRetry }: { onRetry: () => void }) {
 }
 
 /** ◇ + a title and a sentence: the credential on this phone no longer works. Neutral, not an error. */
+/**
+ * 第五十二批 C4: the fingerprint, 16 in --sub, after the number of the one row whose credential this phone holds, so
+ * the list says which number 「用指纹登录」 will answer for. Read as 「这个编号开了{bio}登录」.
+ */
+function BioHere({ label, testID }: { label: string; testID: string }) {
+  const theme = useTheme();
+  return (
+    <Svg testID={testID} width={16} height={16} viewBox="0 0 24 24" accessible accessibilityRole="image" accessibilityLabel={label}>
+      <G fill="none" stroke={theme.inkMuted} strokeWidth={1.6} strokeLinecap="round">
+        <Path d="M6.5 5.5A9 9 0 0 1 20 10.5" />
+        <Path d="M4 9.5a9 9 0 0 1 1.2-2.7M4.2 14.5A8 8 0 0 1 4 12" />
+        <Path d="M8 19.5c-1.2-1.7-2-3.9-2-7.5a6 6 0 0 1 12 0v1" />
+        <Path d="M12 21c-1.6-2.3-3-4.8-3-9a3 3 0 0 1 6 0c0 2.6 1 4.4 2.2 6" />
+        <Path d="M12 12c0 3.6 1.2 6.3 3 8.6" />
+      </G>
+    </Svg>
+  );
+}
+
 function LapsedNotice({ lapse, bio }: { lapse: Lapse; bio: string }) {
   const theme = useTheme();
   const { t } = useI18n();
@@ -400,6 +420,7 @@ export function LoginScreen() {
                     compact
                     name={a.name}
                     masked={maskSoulCode(a.code)}
+                    afterCode={bioActive && bioOwner() === a.code ? <BioHere testID={`account-bio-${a.code}`} label={t("soul_app.accounts.bio_here", { bio: bio.word })} /> : undefined}
                     onPress={() => {
                       clearPage();
                       setAccount(a);
