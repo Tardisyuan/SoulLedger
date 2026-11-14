@@ -16,7 +16,7 @@ const mockPush = jest.fn();
 const mockShowToast = jest.fn();
 
 // next/dynamic never resolves its loader under jest; hand back the real rail synchronously.
-jest.mock("next/dynamic", () => () => jest.requireActual("@/src/components/desk/VerdictRail").default);
+jest.mock("next/dynamic", () => () => require("@/src/components/desk/VerdictRail").default);
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
   usePathname: () => "/desk",

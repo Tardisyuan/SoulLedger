@@ -17,7 +17,7 @@ import { useSealReadback } from "@/src/components/judgment/SealReadback";
 import { DossierSeal } from "@/src/components/dossier/DossierSeal";
 import { hallOf, spineCivOf } from "@/src/components/dossier/spineModel";
 import { heldBeforeClaim } from "./deskRules";
-import dossier from "@/src/components/dossier/dossier.module.css";
+import dossier from "../dossier/dossier.module.css";
 import s from "./desk.module.css";
 
 export type DeskVerdictDraft = { verdict: VerdictCode; notes: string };

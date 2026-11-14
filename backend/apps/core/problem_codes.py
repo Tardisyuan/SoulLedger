@@ -443,6 +443,13 @@ class ProblemCode(StrEnum):
     WORKFLOW_STARTED = "workflow_started"
     WRONG = "wrong"
     WRONG_STATUS = "wrong_status"
+    # Withdrawing a seal before any approver acts (2026-11-14, `weighing.withdrawal_refusal`).
+    APPROVAL_STARTED = "approval_started"
+    CANNOT_WITHDRAW = "cannot_withdraw"
+    CROSS_JUDGMENT_MERGED = "cross_judgment_merged"
+    NO_PENDING_FLOW = "no_pending_flow"
+    NOT_WITHDRAWABLE = "not_withdrawable"
+    NOT_YOUR_SEAL = "not_your_seal"
     # Codes the auth views emit that the first sweep missed (2026-11-14, found by the frontend's types).
     WRONG_PASSWORD = "wrong_password"
     MFA_REQUIRED = "mfa_required"
