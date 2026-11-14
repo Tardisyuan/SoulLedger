@@ -37,13 +37,15 @@ Write to [tardisyuan@gmail.com](mailto:tardisyuan@gmail.com?subject=SoulLedger).
 </p>
 
 **About AI.** Most of the code in this repository was written by Claude Code, not typed by me line by
-line: 3,826 of its 4,630 commits carry a `Co-Authored-By: Claude` line, and 62 more are authored by Claude.
-What I did is the part this project is meant to show:
+line: about four in five commits carry a `Co-Authored-By: Claude` line (`git log` gives the exact count).
+So the code alone proves little about me. What follows is what I decided, and each item links to a record
+that was written at the time, so you can check it without taking my word for it:
 
-1. **I set the model.** The four civilizations are not flattened into one karma number
-   ([`ledger/readings.py`](backend/apps/ledger/readings.py)). I don't remember the first draft's details; what I know is
-   that one shared score could not carry four doctrines that measure different things, so the model keeps
-   them apart and the code refuses to merge them.
+1. **I dropped my own first idea when the cost was worked out.** I wanted one database per tenant: four
+   civilizations as four separate worlds. Costed on the code, it meant sagas for every cross-tenant
+   judgment, no cross-tenant foreign keys and routing on every query, for a workload that did not exist.
+   The decision is to split by business domain and defer sharding until a measured trigger
+   ([ADR 0004](docs/adr/0004-split-by-domain-not-by-tenant.md)).
 2. **I did not trust "done".** On 2026-05-30 a report in this repository declared the code "Production
    Ready". On 2026-08-07 an audit of the same code found four critical tenant-isolation gaps. The report
    is still here, marked superseded ([`PRODUCTION_READINESS_REPORT.md`](docs/PRODUCTION_READINESS_REPORT.md)).
@@ -54,7 +56,11 @@ What I did is the part this project is meant to show:
    PostgreSQL as well as SQLite (ADR 0003). The rule "no claim of *fixed* without the command, its exit
    code and the passed count" is written into the agents' instructions.
 
-If you want to test me, ask about the details of any of these three.
+Three questions I'd like to be asked:
+
+- Why does a merit recalculation that changes nothing write no event, and what would it cost if it did?
+- A judge seals a case and regrets it. When can the seal still be withdrawn, and why is there no timer?
+- What did SQLite let through that PostgreSQL caught on the first run?
 
 ## Three things worth a look
 
