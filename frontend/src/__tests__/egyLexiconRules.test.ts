@@ -99,7 +99,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "III", "SENTENTIA"]); // SENTENTIA: 欧洲判决文书的装饰标题与印文,拉丁文「判决」原样大写(v4 第五 / 六批,用户 2026-11-06 定); // III: 出处「Inf. III」(但丁《地狱篇》第三歌,第五十七批 c); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "III", "SENTENTIA", "SLO", "INP"]); // SLO / INP: 「系统状况」页的服务目标与 Web Vitals 指标名(第四十六批); // SENTENTIA: 欧洲判决文书的装饰标题与印文,拉丁文「判决」原样大写(v4 第五 / 六批,用户 2026-11-06 定); // III: 出处「Inf. III」(但丁《地狱篇》第三歌,第五十七批 c); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -205,7 +205,8 @@ const hasHemsu = (v: string) => /\bHemsu\b/.test(prose(v));
  * Design 给的「后台」没有收:2026-09-26 实测没有任何含 Hemsu 的键中文写「后台」,放进去是一条没人用过的放行。
  */
 // 第三十五批(第三十四批积压的演示导览):「服务端」「接口」也是服务器义,写 Per Hemsu。
-const isSystemZh = (zh: string) => /系统|服务器|服务端|后端|接口|队列|连接/.test(zh);
+// 第四十六批:「服务目标」(SLO)的服务也是系统义,写 Hep Hemsu。
+const isSystemZh = (zh: string) => /系统|服务器|服务端|服务目标|后端|接口|队列|连接/.test(zh);
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
@@ -287,6 +288,15 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 修订表 742 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
+  // 第四十六批:「系统状况」页与演示导览里原样保留的代码字面(Design 逐键核过)。
+  "about.system_measured_note": ["INP"],
+  "about.system_measured_source": ["PerformanceObserver"],
+  "about.system_slo_source": ["docs/SLO.md"],
+  "about.system_probe_source": ["Actions"],
+  "about.system_good_availability": ["5xx"],
+  "about.system_good_latency": ["ms"],
+  "demo.build.system": ["SLO"],
+  "judgment.queue.sealed": ["{n}"],
   "judgment.queue.read_only": ["judgment.execute"],
   "menus.permission_codename_placeholder": ["soul.read"],
   "menu_buttons.permission_placeholder": ["soul.create", "judgment.delete"],

@@ -10322,7 +10322,9 @@
       "announce": "{{name}} sealed · next: {{next}}",
       "announce_last": "{{name}} sealed · nothing left on the desk",
       "undone": "Taken back · {{name}} is on the desk again",
-      "commit_error": "The verdict for {{name}} was not sent; the case is back on the desk."
+      "commit_error": "The verdict for {{name}} was not sent; the case is back on the desk.",
+      "needs_reason": "“{{verdict}}” needs a reason: seal it on the full dossier page.",
+      "to_dossier": "Write the reason on the dossier page →"
     }
   },
   "zongbu": {
