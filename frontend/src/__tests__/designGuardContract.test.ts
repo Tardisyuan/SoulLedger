@@ -552,8 +552,16 @@ describe("DESIGN.md cannot prescribe against the code", () => {
   const tok = (re: RegExp): Map<string, number> =>
     new Map([...css.matchAll(re)].map((m) => [m[1], Number(m[2])] as [string, number]));
   // 档名里只允许单个连字符(`display-lg`):`[a-z0-9-]+` 会把 `2xs--line-height` 也当成一个档。
-  const SIZE = tok(/^\s*--text-([a-z0-9]+(?:-[a-z0-9]+)*):\s*(\d+)px;/gm);
-  const LINE = tok(/^\s*--text-([a-z0-9-]+)--line-height:\s*(\d+)px;/gm);
+  // 两档展示字号是 clamp(最小, 斜率, 最大)(2026-11-15,设计参照 §3):文档写它在宽屏上的那一档,即最大值。
+  // 它们的行高是无单位的比值,折成那一档的 px(四舍五入)再比。
+  const SIZE = new Map([
+    ...tok(/^\s*--text-([a-z0-9]+(?:-[a-z0-9]+)*):\s*(\d+)px;/gm),
+    ...[...tok(/^\s*--text-([a-z0-9]+(?:-[a-z0-9]+)*):\s*clamp\([^;]*,\s*([\d.]+)rem\);/gm)].map(([k, rem]) => [k, rem * 16] as [string, number]),
+  ]);
+  const LINE = new Map([
+    ...tok(/^\s*--text-([a-z0-9-]+)--line-height:\s*(\d+)px;/gm),
+    ...[...tok(/^\s*--text-([a-z0-9-]+)--line-height:\s*([\d.]+);/gm)].map(([k, r]) => [k, Math.round(r * (SIZE.get(k) ?? NaN))] as [string, number]),
+  ]);
   const WEIGHT = tok(/^\s*--text-([a-z0-9-]+)--font-weight:\s*(\d+);/gm);
 
   it("the Type scale row lists exactly the steps globals.css declares, at their sizes", () => {
