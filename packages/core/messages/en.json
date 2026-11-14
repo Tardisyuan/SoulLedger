@@ -8346,7 +8346,7 @@
       "reject_body": "The flow goes back to {{name}}; this can't be undone.",
       "reject_ok": "Reject",
       "reason_label": "Reason · required, the requester will read it",
-      "recent_reasons": "Reasons used lately · tap one to fill it in",
+      "recent_reasons": "Recently used",
       "reason_required": "A reason is required to reject",
       "failed": "Couldn't submit · {{reason}}",
       "reasons": {
@@ -8380,7 +8380,8 @@
         "dispatch": "Once rejected, the {{n}} souls stay in {{from}}; the proposing hall reads your reason.",
         "reincarnation": "Once rejected, {{name}} stays in this hall and reads your reason.",
         "cooldown": "Once rejected, the cooldown stays: {{n}} days left."
-      }
+      },
+      "recent_aria": "Use: {{text}}"
     },
     "landing": {
       "handled": "Already handled by {{name}}",

@@ -7,10 +7,10 @@
  */
 import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoFacts, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { useCallback, useEffect, useState } from "react";
-import { Share, View } from "react-native";
+import { Pressable, Share, View } from "react-native";
 
 import { NotConfirmed, confirmedDecision, useBioWord } from "../deviceCheck";
-import { ActionButton, Chip, Row, Segmented } from "../kit";
+import { ActionButton, Row, Segmented } from "../kit";
 import { recentReasons, rememberReason } from "../memory";
 import {
   decisionFailure,
@@ -199,16 +199,38 @@ export function DecisionSheet({
           />
         ) : null}
         {verdict === "reject" && recent.length > 0 ? (
-          // D8: the last three reasons this officer sent; a tap puts one in the box (cut to this box's length).
+          // D8: the last three reasons this officer sent. 第五十二批 F1: full-width outlined rows, not chips -- a reason is
+          // a sentence, and three often differ only in their second half. A tap fills an empty box, or adds the reason
+          // on a new line under what is there (never over it); the row stays, to be used again. None: no block at all.
           <View testID="decision-recent" style={{ gap: space[2] }}>
             <Txt variant="caption" tone="muted">{t("officer_app.confirm.recent_reasons")}</Txt>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space[2] }}>
-              {recent.map((r, i) => (
-                <View key={r} style={{ maxWidth: "100%" }}>
-                  <Chip testID={`decision-recent-${i}`} label={r} on={reason === r.slice(0, maxReason)} onPress={() => setReason(r.slice(0, maxReason))} />
-                </View>
-              ))}
-            </View>
+            {recent.map((r, i) => (
+              <Pressable
+                key={r}
+                testID={`decision-recent-${i}`}
+                accessibilityRole="button"
+                accessibilityLabel={t("officer_app.confirm.recent_aria", { text: r })}
+                onPress={() => setReason((reason.trim() ? `${reason}\n${r}` : r).slice(0, maxReason))}
+                style={({ pressed }) => ({
+                  height: 40,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: space[2],
+                  paddingHorizontal: space[3],
+                  borderWidth: 1,
+                  borderColor: theme.hair2,
+                  borderRadius: 8,
+                  backgroundColor: pressed ? theme.hair : undefined,
+                })}
+              >
+                <Txt testID={`decision-recent-${i}-icon`} style={{ color: theme.faint, fontSize: 14 }} accessibilityElementsHidden importantForAccessibility="no">
+                  ↺
+                </Txt>
+                <Txt numberOfLines={1} style={{ flex: 1, color: theme.ink, fontSize: 14, lineHeight: 20 }}>
+                  {r}
+                </Txt>
+              </Pressable>
+            ))}
           </View>
         ) : null}
         {verdict === "reject" ? (

@@ -8309,7 +8309,9 @@
         "dispatch": "Khesef: Ba {{n}} Wenen Em {{from}}; Per Ky Maa Khet.",
         "reincarnation": "Khesef: {{name}} Wenen Em Wesekhet Pen; Maa Khet.",
         "cooldown": "Khesef: Tera Qebeh Nen Semawy · Hru {{n}} Khery."
-      }
+      },
+      "recent_reasons": "Sesh Pehwy",
+      "recent_aria": "Sesh: {{text}}"
     },
     "landing": {
       "handled": "Iri-N Em {{name}}",

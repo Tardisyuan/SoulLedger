@@ -8346,7 +8346,7 @@
       "reject_body": "驳回后流程退回{{name}}，不能撤回。",
       "reject_ok": "确认驳回",
       "reason_label": "驳回理由 · 必填，发起人会读到",
-      "recent_reasons": "最近用过的理由 · 点一条填入",
+      "recent_reasons": "最近用过",
       "reason_required": "驳回必须写理由",
       "failed": "没能提交 · {{reason}}",
       "reasons": {
@@ -8380,7 +8380,8 @@
         "dispatch": "驳回后，这 {{n}} 个灵魂留在{{from}}，发起方会读到理由。",
         "reincarnation": "驳回后，{{name}}留在本殿，会读到理由。",
         "cooldown": "驳回后冷却不变，还剩 {{n}} 天。"
-      }
+      },
+      "recent_aria": "填入：{{text}}"
     },
     "landing": {
       "handled": "已由{{name}}处理",

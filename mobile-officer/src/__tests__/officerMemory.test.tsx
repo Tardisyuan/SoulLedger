@@ -4,7 +4,7 @@
  */
 import { platform } from "@soulledger/core/platform";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { Pressable } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 
 import { QUEUE_SOURCE_KEY, REJECT_REASONS_KEY, readQueueSource, recentReasons, rememberReason, writeQueueSource } from "../memory";
 import { Detail } from "../screens/detail";
@@ -133,12 +133,23 @@ describe("D8b: the last three reject reasons", () => {
     rememberReason("材料不全");
     mockApproveNode.mockResolvedValue({});
     await openReject();
-    expect(screen.getByTestId("decision-recent")).toHaveTextContent(/最近用过的理由/);
+    expect(screen.getByTestId("decision-recent")).toHaveTextContent(/^最近用过/);
+    expect(screen.getByTestId("decision-recent")).not.toHaveTextContent(/点一条填入/);
     expect(screen.getByTestId("decision-recent-0")).toHaveTextContent("材料不全");
     expect(screen.getByTestId("decision-recent-1")).toHaveTextContent("先退回");
     expect(screen.queryByTestId("decision-recent-2")).toBeNull();
+    // 第五十二批 F1: an outlined full-width row, 40 high, ↺ in --faint, one line; read as 「填入：…」.
+    const row = screen.getByTestId("decision-recent-1");
+    expect(row.props.accessibilityLabel).toBe("填入：先退回");
+    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ height: 40, borderWidth: 1, borderRadius: 8 });
+    expect(screen.getByTestId("decision-recent-1-icon")).toHaveTextContent("↺");
     fireEvent.press(screen.getByTestId("decision-recent-1"));
     expect(screen.getByTestId("decision-reason").props.value).toBe("先退回");
+    // A second tap adds on a new line, never over what is there; the row is still there.
+    fireEvent.press(screen.getByTestId("decision-recent-0"));
+    expect(screen.getByTestId("decision-reason").props.value).toBe("先退回\n材料不全");
+    expect(screen.getByTestId("decision-recent-0")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("decision-reason"), "先退回");
     fireEvent.press(screen.getByTestId("decision-confirm"));
     await waitFor(() => expect(mockApproveNode).toHaveBeenCalledWith("wf-1", "node-1", { verdict: "REJECTED", notes: "先退回", require_reason: true }));
     await waitFor(() => expect(recentReasons()).toEqual(["先退回", "材料不全"]));
