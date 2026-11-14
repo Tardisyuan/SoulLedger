@@ -7,7 +7,7 @@ test("the home page shows how it was built: architecture, test counts, the two a
   await page.goto("/");
   // The section was found and then replaced before the scroll (detached, twice in one run, 2026-11-14): the server's
   // page was thrown away when a provider's context changed before its lazy chunk had hydrated. app/page.tsx now draws
-  // it in the browser only (`ssr: false`; demoHomeMountsOnce.test.tsx). If it is replaced anyway, the failure says what
+  // it in the browser only (`ssr: false`; the cause is read from React's source, not reproduced). If it is replaced anyway, the failure says what
   // the console said.
   await page.waitForLoadState("networkidle");
   const section = page.locator("#how-built");

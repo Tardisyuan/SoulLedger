@@ -7,7 +7,8 @@ import { Landing } from "@/src/components/landing/Landing";
 // still dehydrated while its lazy chunk loaded, and the first context change from the root layout's providers
 // (ThemeProvider reading the OS theme after mount) made React give up hydrating it: the server's DOM was thrown away
 // and the page drawn again, so anything holding a node from the first paint (`#how-built`) held a detached one.
-// demoHomeMountsOnce.test.tsx reproduces it.
+// That cause is read from React's source, not reproduced: a jsdom harness hydrating the server HTML under the real
+// ThemeProvider did not replace the section either way (2026-11-14), so there is no unit test for it.
 const DemoHome = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => import("@/demo/DemoHome"), { ssr: false }) : null;
 
 export default function HomePage() {
