@@ -747,9 +747,12 @@ describe("查询 finds a case by its number too (O-d)", () => {
     expect(await screen.findByTestId("case-row-j-42")).toBeTruthy();
     // The server matches a case number's beginning (D4), so both are its answer; the app no longer filters to an exact one.
     expect(screen.getByTestId("case-row-j-43")).toBeTruthy();
-    expect(screen.getByText("案件")).toBeTruthy();
-    expect(await screen.findByTestId("search-no-soul")).toBeTruthy();
-    expect(screen.getByText("没有编号或姓名对得上的灵魂")).toBeTruthy();
+    expect(screen.getByText("案件 · 2")).toBeTruthy();
+    // 第五十批 C2: no soul matched -- no 人物 group, and no 「没有找到」 while cases did.
+    await waitFor(() => expect(mockSouls).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByTestId("search-people")).toBeNull();
+    expect(screen.queryByTestId("search-no-results")).toBeNull();
     expect(onOpenJudgment).not.toHaveBeenCalled();
     expect(mockList).toHaveBeenCalledWith({ search: "cn-2026-0042" });
     fireEvent.press(screen.getByTestId("case-row-j-42"));
@@ -760,7 +763,7 @@ describe("查询 finds a case by its number too (O-d)", () => {
     mockSouls.mockResolvedValue({ data: { results: [], count: 0, next: null } });
     renderOfficer(<SearchTab onOpenSoul={() => {}} />);
     search("王守仁");
-    expect(await screen.findByText("没有找到")).toBeTruthy();
+    expect(await screen.findByText("没有找到「王守仁」")).toBeTruthy();
     expect(mockList).toHaveBeenCalledWith({ search: "王守仁" });
     expect(screen.queryByTestId("search-cases")).toBeNull();
   });

@@ -18,6 +18,8 @@ export interface RecentOpened {
   title: string;
   /** A case's soul name. */
   line?: string;
+  /** When it was opened (ISO), shown at the row's right (第五十批 C2). */
+  at?: string;
 }
 
 export function readRecent(): RecentOpened[] {
@@ -25,7 +27,8 @@ export function readRecent(): RecentOpened[] {
   return Array.isArray(items) ? (items as RecentOpened[]) : [];
 }
 
-export function noteOpened(entry: RecentOpened): void {
+export function noteOpened(opened: RecentOpened): void {
+  const entry = { ...opened, at: opened.at ?? new Date().toISOString() };
   const items = [entry, ...readRecent().filter((e) => !(e.type === entry.type && e.id === entry.id))].slice(0, RECENT_KEEP);
   try {
     writeOwned(RECENT_KEY, { items });

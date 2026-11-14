@@ -84,7 +84,7 @@ async function approve() {
 }
 
 describe("「下一件」 after a decision (D1)", () => {
-  it("offers the next row of the group with its place, opens it only when pressed; the last offers only 回到待办", async () => {
+  it("offers the next row of the group by name and what is left, opens it only when pressed; the last offers only 回到待办 (第五十批 C1)", async () => {
     renderOfficer(<Shell />);
     fireEvent.press(await screen.findByTestId("tab-todo"));
     fireEvent.press(await screen.findByTestId("todo-row-approval-wf-2"));
@@ -92,8 +92,13 @@ describe("「下一件」 after a decision (D1)", () => {
     expect(screen.queryByTestId("next-bar")).toBeNull(); // nothing offered before deciding
 
     await approve();
-    expect(await screen.findByTestId("detail-next")).toHaveTextContent("下一件(3/3)");
+    expect(await screen.findByTestId("detail-next")).toHaveTextContent("下一件");
+    expect(screen.getByTestId("detail-next-caption")).toHaveTextContent("审批 wf-3 · 还剩 1 件");
+    expect(screen.getByTestId("detail-next")).not.toHaveTextContent("3/3"); // no 「3/7」 any more
+    expect(screen.getByTestId("detail-next").props.accessibilityLabel).toBe("下一件：审批 wf-3，还剩 1 件");
     expect(screen.getByTestId("detail-leave")).toHaveTextContent("回到待办");
+    expect(screen.queryByTestId("detail-leave-caption")).toBeNull();
+    expect(screen.getByTestId("detail-dimmed")).toHaveStyle({ opacity: 0.55 });
     expect(screen.queryByTestId("action-bar")).toBeNull();
     expect(mockItem).not.toHaveBeenCalledWith("approval", "wf-3"); // not jumped to
 
@@ -105,6 +110,7 @@ describe("「下一件」 after a decision (D1)", () => {
     mockApproveNode.mockClear();
     await approve();
     expect(await screen.findByTestId("detail-leave")).toHaveTextContent("回到待办");
+    expect(screen.getByTestId("detail-leave-caption")).toHaveTextContent("今天的都办完了");
     expect(screen.queryByTestId("detail-next")).toBeNull();
     fireEvent.press(screen.getByTestId("detail-leave"));
     expect(await screen.findByTestId("todo-row-approval-wf-1")).toBeTruthy();
@@ -173,7 +179,8 @@ describe("「最近打开」 (D2)", () => {
     signInAs(8);
     expect(readRecent()).toEqual([]);
     renderOfficer(<SearchTab onOpenSoul={() => {}} />);
-    expect(screen.queryByTestId("search-recent")).toBeNull();
+    expect(screen.queryAllByTestId(/^recent-row-/)).toEqual([]);
+    expect(screen.getByTestId("search-recent-empty")).toHaveTextContent("还没有打开过案件。");
     signInAs(7);
     expect(readRecent()).toHaveLength(1);
     clearReadCache();
@@ -197,6 +204,6 @@ describe("「最近打开」 (D2)", () => {
     mockGet.mockResolvedValue({ data: { id: "j-1", case_number: "CN-2026-1", soul: "s-1", soul_name: "张三", court: "Tenth Court", claimed_by_name: "阎罗", is_final: false } });
     renderOfficer(<Detail target={{ type: "judgment", id: "j-1" }} onBack={() => {}} onSettled={() => {}} />);
     await screen.findByTestId("judgment-detail");
-    expect(readRecent()[0]).toEqual({ type: "judgment", id: "j-1", title: "CN-2026-1", line: "张三" });
+    expect(readRecent()[0]).toEqual(expect.objectContaining({ type: "judgment", id: "j-1", title: "CN-2026-1", line: "张三" }));
   });
 });
