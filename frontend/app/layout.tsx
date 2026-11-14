@@ -1,17 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import dynamic from "next/dynamic";
-// CJK 两支:包自带的 index.css 各含 101 条 @font-face,每条带自己的 unicode-range,
-// 浏览器只取页面真正用到的分片。必须在 globals.css 之前 import,让 Tailwind 的
-// base 层能覆盖它们带来的任何默认值。见 app/fonts.ts 顶部关于为何不走 next/font/local。
-import "@fontsource-variable/noto-sans-sc";
-import "@fontsource-variable/noto-serif-sc";
+// CJK:外壳字(导航、落地页、案卷台、门名)一个子集文件,在关键 CSS 里并 preload;
+// 其余汉字的 202 条 fontsource 分片由 FontShards 在首帧之后挂上(不再阻塞首帧,fe-perf P3)。
+// 见 app/fonts.ts 顶部与 scripts/gen-font-subsets.mjs。fontShellSubset.test.ts 守着这里不再同步 import 分片。
+import "./fonts-shell.css";
 import "./globals.css";
 import "./print.css";
 import "./print-slip-ink.css";
 import "./verdict-doc.css";
 import { fontVariables } from "./fonts";
 import { plaqueFontVariables } from "@/src/components/plaque/fonts";
+import { FontShards } from "./FontShards";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { BCP47_FOR_LOCALE, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
@@ -115,8 +115,13 @@ export default async function RootLayout({
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        {/* 只在中文界面预取:英文界面一个汉字都不画,unicode-range 本来就不会下载它,预取会白下约 300 KB。 */}
+        {(locale ?? "zh-Hans") === "zh-Hans" && (
+          <link rel="preload" href="/fonts/shell-sans.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        )}
       </head>
       <body className="antialiased min-h-screen">
+        <FontShards />
         <PlatformProvider />
         <QueryProvider>
           <I18nProvider initialLocale={locale}>

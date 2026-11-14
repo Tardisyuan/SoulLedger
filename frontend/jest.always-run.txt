@@ -49,6 +49,7 @@ src/__tests__/errorIsNotAnEmptyState.test.ts frontend
 src/__tests__/eventInvalidationReachesCache.test.ts packages
 src/__tests__/eventRegistry.contract.test.ts backend
 src/__tests__/focusRingContract.test.ts packages
+src/__tests__/fontShellSubset.test.ts frontend
 src/__tests__/inkOnSurfaceContract.test.ts packages
 src/__tests__/jestAlwaysRunList.test.ts *
 src/__tests__/jestRunsNextVendoredReact.test.ts package.json
