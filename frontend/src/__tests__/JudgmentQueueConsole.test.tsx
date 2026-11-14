@@ -17,6 +17,7 @@ import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueCon
 import { UNDO_MS } from "@soulledger/core/hooks/useJudgmentQueue";
 import { judgmentApi } from "@soulledger/core/api";
 import { setSingleKeyShortcuts } from "@/src/lib/hotkeys";
+import { SealReadbackToggle, sealReadbackEnabled, setSealReadback } from "@/src/components/judgment/SealReadback";
 import { isMinePending } from "@/src/components/judgment/RowMark";
 import { PlaqueProvider } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
@@ -1038,5 +1039,71 @@ describe("a case with an open cross-realm judgment (batch 43)", () => {
     const box = screen.getByRole("checkbox", { name: /judgment\.queue\.create_workflow/ });
     expect(box).not.toBeChecked();
     expect(box).not.toBeDisabled();
+  });
+});
+
+// 偏好「落印前先确认」(用户 2026-11-14,WCAG 2.2.1 的「可关」):打开后 ⌘⏎ 走回读层,没有计时,当场发。
+describe("落印前先确认", () => {
+  afterEach(() => setSealReadback(false));
+
+  it("is off by default and the toggle on 我的 page switches it", () => {
+    expect(sealReadbackEnabled()).toBe(false);
+    renderWithProviders(<SealReadbackToggle />, { i18n: false });
+    const box = screen.getByTestId("seal-readback-toggle");
+    expect(box).not.toBeChecked();
+    fireEvent.click(box);
+    expect(sealReadbackEnabled()).toBe(true);
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    expect(sealReadbackEnabled()).toBe(false);
+  });
+
+  it("off: ⌘⏎ stages as before (no read-back layer)", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await seal("1");
+    expect(screen.getByTestId("undo-strip")).toBeInTheDocument();
+    expect(screen.queryByTestId("seal-readback")).not.toBeInTheDocument();
+  });
+
+  it("on: ⌘⏎ reads back name, case and verdict; no timer; 落印 sends at once with no undo strip", async () => {
+    setSealReadback(true);
+    mockNext.mockImplementation(async (params?: { skip?: string[] }) => {
+      const skipped = params?.skip ?? [];
+      const queue = [{ ...JUDGMENT, case_number: "CN-2026-0042" }, NEXT_JUDGMENT].filter((j) => !skipped.includes(j.id) && !concluded.has(j.id));
+      return cursor((queue[0] as typeof JUDGMENT) ?? null, queue.length);
+    });
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await seal("1");
+    expect(await screen.findByTestId("seal-readback")).toBeInTheDocument();
+    expect(screen.getByTestId("seal-readback-name")).toHaveTextContent("第一位待判者");
+    expect(screen.getByTestId("seal-readback-case")).toHaveTextContent("CN-2026-0042");
+    // The raw member rides on the label's title (DomainEnum), whatever this test's echo `t` makes of the words.
+    expect(within(screen.getByTestId("seal-readback-verdict")).getByTitle("PASSED")).toBeInTheDocument();
+    // No timer, and a second ⌘⏎ is not a confirmation.
+    await press({ key: "Enter", ctrlKey: true });
+    await runOut(UNDO_MS * 3);
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
+    expect(document.activeElement).not.toBe(screen.getByTestId("seal-readback-confirm"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("seal-readback-confirm"));
+    });
+    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, { verdict: "PASSED", notes: "" });
+    expect(screen.queryByTestId("undo-strip")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
+  });
+
+  it("on: 取消 sends nothing and the case stays", async () => {
+    setSealReadback(true);
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await seal("1");
+    fireEvent.click(await screen.findByTestId("seal-readback-cancel"));
+    await runOut(UNDO_MS * 2);
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(screen.getByText("第一位待判者")).toBeInTheDocument();
   });
 });

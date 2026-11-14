@@ -22,6 +22,7 @@ import { NotificationPreferences, NOTIFICATION_PREFS_ANCHOR } from "@/src/compon
 import { EmailVerificationRow } from "@/src/components/profile/EmailVerificationRow";
 import { cn } from "@/lib/utils";
 import { SingleKeyShortcutsToggle } from "@/src/components/layout/ShortcutHelp";
+import { SealReadbackToggle } from "@/src/components/judgment/SealReadback";
 import { DefaultViewSection } from "@/src/components/profile/DefaultViewSection";
 import { sectionMark } from "@/src/lib/sectionMark";
 
@@ -362,8 +363,10 @@ export default function ProfilePage() {
           <span aria-hidden="true">{sectionMark("己", locale)} · </span>
           {t("shortcuts.title")}
         </h2>
-        <div className="py-3">
+        <div className="py-3 space-y-3">
           <SingleKeyShortcutsToggle />
+          {/* 落印前先确认(WCAG 2.2.1 的「可关」):快审与案卷台的 ⌘⏎ 改走回读层,没有计时。 */}
+          <SealReadbackToggle />
         </div>
       </section>
 

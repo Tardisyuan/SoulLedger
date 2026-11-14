@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dossiersApi } from "@soulledger/core/api/dossiers";
-import { judgmentApi, type JudgmentQueueSource } from "@soulledger/core/api/judgment";
+import { concludeRefusalOf, judgmentApi, type JudgmentQueueSource } from "@soulledger/core/api/judgment";
+import { UNDO_MS, useStagedCommit } from "@soulledger/core/hooks/useJudgmentQueue";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay } from "@soulledger/core/domain/dates";
@@ -14,14 +16,17 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
-import { CaseNumber } from "@/src/components/ui/DomainValue";
+import { CaseNumber, DomainEnum } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { isTypingTarget, useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { useOverflowEnd } from "@/src/hooks/useOverflowEnd";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { DESK_GROUPS, deskTag, heldBeforeClaim, matchesSearch, onDeskCount, overviewParts, rowNotes, sourceChips, sourceLabel, step } from "./deskRules";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { SealReadbackDialog, sealReadbackEnabled } from "@/src/components/judgment/SealReadback";
+import { verdictNamespace } from "@/src/lib/domainNames";
 import { OpenCase } from "./OpenCase";
+import type { DeskVerdictDraft } from "./VerdictRail";
 import s from "./desk.module.css";
 
 /**
@@ -34,13 +39,45 @@ import s from "./desk.module.css";
  *
  * 摞读一个请求:`GET /dossiers/desk/`(四组头几件 + 计数 + 本月已结;此前是四个分组列表、两次 queue-counts 与 hall-stats)。
  * 四组由服务端出自同一个快照、互斥,不再在前端去重。
+ *
+ * 就地判(用户 2026-11-14,fe-ia §3.5):右栏是判栏(`VerdictRail`,懒加载)。1–4 选、⌘⏎ 落印 —— 与快审同一个承诺:
+ * 落印即这一行划线滑出(600ms,减少动态时立即)、选中到下一件,裁决在 5 秒撤回窗口(`useStagedCommit`)到点、落下一印、
+ * 或离开本页时才发 `conclude/`;U 或撤回条收回。偏好「落印前先确认」打开时改走回读层(`SealReadback.tsx`),当场发、不计时。
+ * 选中一件约 150ms 后预取下一件的卷宗,J 落下时不等。
  */
 const SHORTCUTS = [
   { key: "J · K", label: "caseDesk.keys.move" },
   { key: "↵", label: "caseDesk.keys.open" },
   { key: "C", label: "caseDesk.keys.claim" },
+  { key: "1–4", label: "judgment.queue.key_select" },
+  { key: "⌘⏎", label: "judgment.queue.key_seal" },
+  { key: "U", label: "judgment.queue.key_undo" },
+  { key: "N", label: "judgment.queue.key_notes" },
   { key: "/", label: "caseDesk.keys.search" },
 ] as const;
+
+/** 判栏只在这一页、只在桌面用到:不进案卷台的首屏包(fe-perf:懒加载)。 */
+const VerdictRail = dynamic(() => import("./VerdictRail"), { ssr: false, loading: () => null });
+
+/** 落印后这一行划线滑出的时长:印落下(320ms)之后再走(fe-ia §3.5 的 600ms)。 */
+export const SEAL_LEAVE_MS = 600;
+/** 选中后多久预取下一件的卷宗(fe-ia §6 / fe-perf):按住 J 一路扫过时不为每一件都发。 */
+export const PREFETCH_DELAY_MS = 150;
+
+type DeskSeal = DeskVerdictDraft & { id: string; name: string; caseNumber: string; civilization: string };
+
+type T = (key: string, vars?: Record<string, string>) => string;
+
+/** 结案被拒的那一句:与审判台同一组分类(`concludeRefusalOf`),认领一族的码走同一张译文表。 */
+function concludeFailure(t: T, e: unknown): string {
+  const r = concludeRefusalOf(e);
+  if (r?.kind === "weighing") return t(`judgment.weighing.errors.${r.code}`);
+  if (r?.kind === "fail_reason") return t(`judgment.fail_reason_errors.${r.code}`);
+  if (r?.kind === "plan") return t(`sentence_plan.errors.${r.code}`);
+  return claimRefusalMessage(e, t);
+}
+
+const reducedMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
 export function CaseDesk() {
   const { t, locale } = useI18n();
@@ -72,9 +109,12 @@ export function CaseDesk() {
   const counts = desk.data?.counts ?? null;
   const monthPct = desk.data?.month_done_pct ?? null;
 
+  // 落了印的(撤回窗口里、请求在路上、已结而摞还没重取):不在摞上;正在滑出的那一行还画着(`leaving`)。
+  const [gone, setGone] = useState<readonly string[]>([]);
+  const [leaving, setLeaving] = useState<string | null>(null);
   const groups = DESK_GROUPS.map((group) => {
     const g = desk.data?.groups.find((x) => x.group === group);
-    return { group, total: g?.total ?? 0, rows: (g?.rows ?? []).filter((r) => matchesSearch(r, query)) };
+    return { group, total: g?.total ?? 0, rows: (g?.rows ?? []).filter((r) => matchesSearch(r, query) && (!gone.includes(r.id) || r.id === leaving)) };
   });
   const flat = groups.flatMap((g) => g.rows.map((row) => ({ row, group: g.group })));
   const ids = flat.map((f) => f.row.id);
@@ -130,6 +170,95 @@ export function CaseDesk() {
   const claimable = !!current && canClaim && current.group === "unclaimed" && !heldBeforeClaim(current.row);
   const releasable = !!current && canClaim && current.group === "mine";
 
+  // ── 就地判 ─────────────────────────────────────────────────────────────
+  const [stamp, setStamp] = useState(0);
+  /** 撤回回来的那一件:判栏带着当时的裁决与判词重新打开。 */
+  const [restored, setRestored] = useState<DeskSeal | null>(null);
+  /** 偏好「落印前先确认」打开时,等回读层答复的那一印。 */
+  const [asking, setAsking] = useState<DeskSeal | null>(null);
+  const [sealNote, setSealNote] = useState("");
+  const currentRef = useRef(currentId);
+  useEffect(() => {
+    currentRef.current = currentId;
+  });
+
+  const sendSeal = (v: DeskSeal) =>
+    judgmentApi.conclude(v.id, { verdict: v.verdict, notes: v.notes }).then(
+      () => void queryClient.invalidateQueries({ queryKey: judgmentKeys.all }),
+      (e: unknown) => {
+        // 没落下(或说不清):这一件回到摞上,说清是哪一件、为什么。
+        setGone((prev) => prev.filter((x) => x !== v.id));
+        showToast(`${t("caseDesk.verdict.commit_error", { name: v.name })} ${concludeFailure(t, e)}`, "error");
+      },
+    );
+  // W 不勾 = 不说(`create_workflow` 不带):原审由服务端按全部站生成审批流,与快审同一条(useJudgmentQueue 的 send)。
+  const sealWindow = useStagedCommit<DeskSeal>((v) => void sendSeal(v));
+
+  /** 这一行划线滑出,选中落到它后面那一件(没有就前一件)。 */
+  const leave = (v: DeskSeal) => {
+    const rest = ids.filter((x) => x !== v.id);
+    const next = rest[Math.min(Math.max(ids.indexOf(v.id), 0), rest.length - 1)] ?? null;
+    const nextName = flat.find((f) => f.row.id === next)?.row.soul_name ?? "";
+    setStamp((n) => n + 1);
+    setGone((prev) => (prev.includes(v.id) ? prev : [...prev, v.id]));
+    setLeaving(v.id);
+    setSealNote(next ? t("caseDesk.verdict.announce", { name: v.name, next: nextName }) : t("caseDesk.verdict.announce_last", { name: v.name }));
+    window.setTimeout(
+      () => {
+        setLeaving((x) => (x === v.id ? null : x));
+        if (currentRef.current === v.id && next) select(next);
+      },
+      reducedMotion() ? 0 : SEAL_LEAVE_MS,
+    );
+  };
+
+  const seal = (d: DeskVerdictDraft) => {
+    if (!current || gone.includes(current.row.id)) return;
+    const v: DeskSeal = { ...d, id: current.row.id, name: current.row.soul_name ?? "", caseNumber: current.row.case_number ?? "", civilization: current.row.civilization ?? "" };
+    setRestored(null);
+    if (sealReadbackEnabled()) {
+      setAsking(v);
+      return;
+    }
+    sealWindow.stage(v);
+    leave(v);
+  };
+  /** 回读层里按了「落印」:当场发,没有撤回窗口。 */
+  const confirmAsked = () => {
+    const v = asking;
+    setAsking(null);
+    if (!v) return;
+    void sendSeal(v);
+    leave(v);
+  };
+  const undo = () => {
+    const v = sealWindow.undo();
+    if (!v) return;
+    setGone((prev) => prev.filter((x) => x !== v.id));
+    setLeaving(null);
+    setRestored(v);
+    setSealNote(t("caseDesk.verdict.undone", { name: v.name }));
+    select(v.id);
+  };
+
+  // 窗口里关标签页,这一印就没发出去:先问(站内离开会把它发出去,见 `useStagedCommit`)。与快审同一条。
+  useEffect(() => {
+    if (!sealWindow.staged) return;
+    const ask = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", ask);
+    return () => window.removeEventListener("beforeunload", ask);
+  }, [sealWindow.staged]);
+
+  // 选中一件 150ms 后预取下一件的卷宗(判栏与 OpenCase 读同一把键);已在缓存里且新鲜的不再发。
+  const nextId = step(ids, currentId, 1);
+  useEffect(() => {
+    if (!nextId || nextId === currentId) return;
+    const handle = window.setTimeout(() => {
+      void queryClient.prefetchQuery({ queryKey: judgmentKeys.dossier(nextId), queryFn: async () => (await dossiersApi.get(nextId)).data, staleTime: 30_000 });
+    }, PREFETCH_DELAY_MS);
+    return () => window.clearTimeout(handle);
+  }, [nextId, currentId, queryClient]);
+
   useShortcutHelp(SHORTCUTS);
   useHotkeys({
     j: () => select(step(ids, currentId, 1)),
@@ -137,8 +266,9 @@ export function CaseDesk() {
     c: () => {
       if (current && claimable && !move.isPending) move.mutate({ id: current.row.id, kind: "claim" });
     },
+    ...(sealWindow.staged ? { u: undo } : {}),
     "/": () => searchRef.current?.focus(),
-  });
+  }, asking === null);
   // ↵ 不走 useHotkeys:它对所有按钮都会 preventDefault,而焦点在 chip、链接上时 ↵ 应当照常按下那个控件。
   // 只在焦点在页面本身或摞上的一行时打开卷宗。
   useEffect(() => {
@@ -287,6 +417,7 @@ export function CaseDesk() {
                           className={s.row}
                           aria-current={row.id === currentId ? "true" : undefined}
                           data-desk-row=""
+                          data-leaving={row.id === leaving ? "" : undefined}
                           data-testid={`desk-row-${row.id}`}
                           onClick={() => {
                             select(row.id);
@@ -325,8 +456,20 @@ export function CaseDesk() {
             row={current.row}
             group={current.group}
             position={position}
-            counts={counts}
-            monthPct={monthPct}
+            rail={
+              <VerdictRail
+                key={current.row.id}
+                row={current.row}
+                group={current.group}
+                claim={claimable ? { busy: move.isPending, run: () => move.mutate({ id: current.row.id, kind: "claim" }) } : null}
+                sealed={gone.includes(current.row.id)}
+                stampKey={stamp}
+                draft={restored?.id === current.row.id ? restored : null}
+                paused={asking !== null}
+                onSeal={seal}
+                onOpen={() => open(current.row.id)}
+              />
+            }
             onBack={() => {
               if (pushedCase.current) {
                 pushedCase.current = false;
@@ -341,7 +484,29 @@ export function CaseDesk() {
         ) : (
           <p className={s.empty}>{t("caseDesk.pick")}</p>
         )}
+        {/* 撤回条:贴在右栏底边。人名 · 判决 · 「已落印 · 可撤回 5 秒」· 撤回 U,下沿一条 5 秒走完的细线。 */}
+        {sealWindow.staged ? (
+          <div className={s.undo} data-testid="desk-undo">
+            <span className={s.undoWhat}>
+              {`${sealWindow.staged.name} · `}
+              <DomainEnum namespace={verdictNamespace(t, sealWindow.staged.civilization, sealWindow.staged.verdict)} value={sealWindow.staged.verdict} />
+            </span>
+            <span className={s.undoNote}>{t("judgment.queue.sealed", { n: String(UNDO_MS / 1000) })}</span>
+            <Button size="sm" variant="secondary" onClick={undo} aria-keyshortcuts="U" data-testid="desk-undo-button">
+              {t("judgment.queue.undo")}
+              <span className={s.kbd} aria-hidden="true">
+                U
+              </span>
+            </Button>
+            <span key={sealWindow.staged.id} className={s.undoClock} style={{ animationDuration: `${UNDO_MS}ms` }} aria-hidden="true" />
+          </div>
+        ) : null}
       </section>
+
+      <SealReadbackDialog item={asking} onCancel={() => setAsking(null)} onConfirm={confirmAsked} />
+      <p className="sr-only" aria-live="polite" data-testid="desk-seal-announce">
+        {sealNote}
+      </p>
 
       <p className="sr-only" aria-live="polite" data-testid="desk-announce">
         {announce}

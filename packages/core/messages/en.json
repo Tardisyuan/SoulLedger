@@ -2794,6 +2794,16 @@
       "step_choose": "Step 1 · choose the account",
       "step_seal": "Step 2 · seal",
       "confirm_pass": "Pass · seal"
+    },
+    "seal_readback": {
+      "pref": "Confirm before sealing",
+      "pref_hint": "When on, ⌘⏎ on the quick review and the case desk no longer seals at once and there is no 5-second undo strip: the name, case number and verdict are read back first, and nothing is sent until you press Seal. No timer.",
+      "pref_hint_app": "When on, swiping right to pass no longer has the 3-second undo: the name, case number and verdict are read back first, and nothing is sent until you press Seal. No timer.",
+      "title": "Confirm the seal",
+      "soul": "Soul",
+      "case": "Case",
+      "verdict": "Verdict",
+      "note": "Seal sends it at once."
     }
   },
   "audit": {
@@ -10186,14 +10196,6 @@
       "recent_none": "No records yet.",
       "unreadable": "No permission to read the register"
     },
-    "side": {
-      "this": "This case",
-      "hall_today": "This hall today",
-      "court": "Court",
-      "claimed": "Claimed by",
-      "overdue": "Overdue",
-      "done": "Done this month"
-    },
     "keys": {
       "move": "Next / previous",
       "open": "Open file",
@@ -10283,6 +10285,19 @@
         "station": "Stop {{n}}",
         "circle": "Circle {{n}}"
       }
+    },
+    "verdict": {
+      "rail": "Verdict",
+      "claim_first": "Nobody has claimed this case yet. Claim it, then rule.",
+      "deferred": "This case is on hold. Open the dossier to take it back, then rule.",
+      "elsewhere": "This case can't be ruled on from the desk. Open the dossier to see why.",
+      "hint": "Choose a verdict, write the words, then seal. For 5 seconds after sealing you can take it back; it is sent when they run out.",
+      "hint_readback": "Before it is sealed, the name, case number and verdict are read back to you; it is sent as soon as you confirm.",
+      "sealed": "Sealed.",
+      "announce": "{{name}} sealed · next: {{next}}",
+      "announce_last": "{{name}} sealed · nothing left on the desk",
+      "undone": "Taken back · {{name}} is on the desk again",
+      "commit_error": "The verdict for {{name}} was not sent; the case is back on the desk."
     }
   },
   "zongbu": {

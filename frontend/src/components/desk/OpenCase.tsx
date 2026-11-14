@@ -1,8 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { dossiersApi, type DeskRow } from "@soulledger/core/api/dossiers";
-import type { JudgmentQueueCounts, JudgmentQueueGroup } from "@soulledger/core/api/judgment";
+import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatHistoricalDate, formatListDate, type HistoricalDate } from "@soulledger/core/domain/dates";
@@ -23,7 +24,8 @@ type Action = { busy: boolean; run: () => void } | null;
 /**
  * 摊开的一份(Design 第三十批 第 2 步 · 右):顶线 + 卷宗头(人名 h1 宋体 32/40,上面一行 mono 12 的案号 · 殿 · 入册日期),
  * 三个按钮,脊(第 3 步之前是占位,只定位置与高度 `--spine-h`),卷(本世 · 来源 · 功过 · 供词 · 期限 · 经手 + 最近三条记录,
- * 只读),右栏两张小卡,底下键位提示。读一个请求:`GET /dossiers/{id}/` —— 案子、灵魂(连最近三条记录,服务端排好)、
+ * 只读),右栏是判栏(`rail`,CaseDesk 懒加载的 `VerdictRail`;此前是「这一件」「同殿今天」两张小卡,信息已在摞的顶行与页头,
+ * fe-ia §3.5 撤掉),底下键位提示。读一个请求:`GET /dossiers/{id}/` —— 案子、灵魂(连最近三条记录,服务端排好)、
  * 灵魂此刻在脊上的哪一点(`whereabouts.spine`,服务端算;此前前端从 `court` 的自由文本里抠殿号,再另取 `/souls/{id}/path/`)。
  * 看不到灵魂由服务端说(`soul_redacted`),不再由前端按权限猜。
  */
@@ -31,8 +33,7 @@ export function OpenCase({
   row,
   group,
   position,
-  counts,
-  monthPct,
+  rail,
   onBack,
   onNext,
   onOpen,
@@ -42,8 +43,8 @@ export function OpenCase({
   row: DeskRow;
   group: JudgmentQueueGroup;
   position: { n: number; total: number };
-  counts: JudgmentQueueCounts | null;
-  monthPct: number | null;
+  /** 判栏(桌面);393 宽 `.side` 不画,窄屏照旧「打开卷宗」。 */
+  rail: ReactNode;
   onBack: () => void;
   onNext: () => void;
   onOpen: () => void;
@@ -191,25 +192,8 @@ export function OpenCase({
           )}
         </div>
 
-        <aside className={s.side}>
-          <h2 data-h2-role="column" className={s.juanTitle}>{t("caseDesk.side.this")}</h2>
-          <dl className={s.card}>
-            <dt>{t("caseDesk.juan.source")}</dt>
-            <dd>{sourceLabel(t, j)}</dd>
-            <dt>{t("caseDesk.side.court")}</dt>
-            <dd>{court || <MissingValue kind="unrecorded" />}</dd>
-            <dt>{t("caseDesk.side.claimed")}</dt>
-            <dd>{j.claimed_by_name || t("caseDesk.juan.unclaimed")}</dd>
-          </dl>
-          <h2 data-h2-role="column" className={s.juanTitle}>{t("caseDesk.side.hall_today")}</h2>
-          <dl className={s.card}>
-            <dt>{t("officer_app.desk.groups.unclaimed")}</dt>
-            <dd className={s.juanNum}>{counts ? counts.unclaimed : <MissingValue kind="unrecorded" />}</dd>
-            <dt>{t("caseDesk.side.overdue")}</dt>
-            <dd className={s.juanNum}>{counts?.overdue ?? <MissingValue kind="unrecorded" />}</dd>
-            <dt>{t("caseDesk.side.done")}</dt>
-            <dd className={s.juanNum}>{monthPct != null ? `${monthPct}%` : <MissingValue kind="unrecorded" />}</dd>
-          </dl>
+        <aside className={s.side} aria-label={t("caseDesk.verdict.rail")}>
+          {rail}
         </aside>
       </div>
 
@@ -222,6 +206,9 @@ export function OpenCase({
         </span>
         <span>
           <span className={s.kbd}>C</span> {t("caseDesk.keys.claim")}
+        </span>
+        <span>
+          <span className={s.kbd}>1–4</span> · <span className={s.kbd}>⌘⏎</span> {t("caseDesk.dossier.judge.seal")}
         </span>
         <span>
           <span className={s.kbd}>/</span> {t("caseDesk.keys.search")}
