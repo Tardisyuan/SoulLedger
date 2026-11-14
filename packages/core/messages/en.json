@@ -53,9 +53,9 @@
     "civilization_note": "Your account decides the civilization; you enter it on sign-in. The marked one is where this device last signed in.",
     "remember_me": "Keep me signed in on this device for {{days}} days",
     "forgot_password": "Forgot password",
-    "forgot_desc": "Accounts are opened by your hall's administrator. Enter your username and they will be notified to reset your password.",
+    "forgot_desc": "Accounts are opened by your hall’s administrator. Enter your username and they will be notified to reset your password.",
     "forgot_submit": "Notify administrator",
-    "forgot_sent": "Your hall's administrator has been notified",
+    "forgot_sent": "Your hall’s administrator has been notified",
     "forgot_failed": "Could not send. Try again later",
     "rate_limited": "Too many requests. Try again later",
     "back_to_login": "Back to sign in",
@@ -65,7 +65,7 @@
     "account_or_email": "Username or email",
     "account_or_email_hint": "An email works once it is verified on your profile",
     "console": "SoulLedger · Officer console",
-    "statute_eyebrow": "Today's statute",
+    "statute_eyebrow": "Today’s statute",
     "statute_rotates": "A new one each visit",
     "statute_expand": "Show full text",
     "statute_chars": "Full text · {{n}} characters",
@@ -74,7 +74,7 @@
     "error_attempts_body": "{{n}} more tries, then a wait of up to {{m}} minutes before the next.",
     "error_locked_title": "Sign-in paused",
     "error_locked_body": "Too many wrong attempts. Try again after {{time}}; nothing else needs doing.",
-    "error_network": "Can't reach the server",
+    "error_network": "Can’t reach the server",
     "error_network_body": "What you typed is kept. Check your connection and retry.",
     "submitting": "Signing in",
     "forgot_email_desc": "Enter your username or email. If the account exists and its email is verified, we will send you a link to reset the password.",
@@ -130,7 +130,7 @@
       "subtitle": "Account {{id}} · enter the 6-digit code from your authenticator app",
       "code_label": "Code",
       "code_hint": "The 6 digits shown in the authenticator app; pasting works",
-      "remember_device": "Don't ask again on this device for {{days}} days",
+      "remember_device": "Don’t ask again on this device for {{days}} days",
       "submit": "Verify",
       "submitting": "Verifying",
       "use_recovery": "Phone not at hand? Use a recovery code",
@@ -167,7 +167,7 @@
       "setup_failed": "Could not start setup, try again later",
       "step3_title": "Confirm with a code",
       "step3_body": "Enter the 6 digits the authenticator app shows right now.",
-      "step3_error": "That code is not right — check that the phone's clock is accurate",
+      "step3_error": "That code is not right — check that the phone’s clock is accurate",
       "step4_title": "Save your recovery codes",
       "step4_warning": "If the phone is lost or replaced, each recovery code signs you in once in place of the app. They are not shown again after this step — save them now.",
       "copy_all": "Copy all",
@@ -223,7 +223,7 @@
       "reset": "Reset two-step verification",
       "reset_title": "Reset two-step verification for “{{name}}”?",
       "reset_consequence_1": "The authenticator and all 10 recovery codes stop working; the next sign-in needs only the password",
-      "reset_consequence_2": "Every “don't ask again for 30 days” device record is cleared",
+      "reset_consequence_2": "Every “don’t ask again for 30 days” device record is cleared",
       "reset_consequence_3": "The account is signed out on every device",
       "reset_reason": "Reason (written to the audit log)",
       "reset_done": "Two-step verification reset",
@@ -308,7 +308,7 @@
   "souls": {
     "title": "Souls",
     "create": "Create Soul",
-    "search_placeholder": "Search by name...",
+    "search_placeholder": "Search by name…",
     "search": "Search",
     "filter_state": "State",
     "filter_civilization": "Civilization",
@@ -322,7 +322,7 @@
     "balance": "Balance",
     "death": "Death",
     "fated_death_date": "Fated date of death",
-    "fated_death_help": "The date of death fixed in the ledger of life and death. If the recorded death comes earlier, the death is untimely: the judgment is marked Untimely and the soul waits in the City of Wrongful Death; the judgment can't be claimed before that date. Leave blank if unknown.",
+    "fated_death_help": "The date of death fixed in the ledger of life and death. If the recorded death comes earlier, the death is untimely: the judgment is marked Untimely and the soul waits in the City of Wrongful Death; the judgment can’t be claimed before that date. Leave blank if unknown.",
     "fated_death_preview": "Death before the fated date · this judgment will be marked Untimely, held until {{date}}",
     "action": "Action",
     "states": {
@@ -382,7 +382,7 @@
       "CITY_GOD_RECEIVED": "Received by the City God",
       "CITY_GOD_SENT_ON": "Sent on by the City God to the Ten Courts",
       "CITY_GOD_RETURNED": "Returned by the City God for correction",
-      "MENGPO_SOUP_TAKEN": "Drank Meng Po's soup",
+      "MENGPO_SOUP_TAKEN": "Drank Meng Po’s soup",
       "PURGATORY_ASCENDED": "Rose from purgatory to heaven",
       "OFFICER_HANDOVER": "Case handed to another officer",
       "DUAT_PASSAGE_CHANGED": "Duat passage changed",
@@ -454,13 +454,13 @@
       "OTHER": "Other"
     },
     "dedication": {
-      "body": "A rite the soul's living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or still on their placement plan.",
+      "body": "A rite the soul’s living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or still on their placement plan.",
       "source_label": "Source (who, which rite)",
       "date_label": "Date of the rite",
       "not_eligible": "Only for souls being judged or still on their placement plan. {{name}} is {{state}} now.",
       "tag": "From the living",
       "body_by_civ": {
-        "cn": "A rite the soul's living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or serving a sentence."
+        "cn": "A rite the soul’s living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or serving a sentence."
       },
       "not_eligible_by_civ": {
         "cn": "Only for souls being judged or serving a sentence. {{name}} is {{state}} now."
@@ -486,15 +486,15 @@
       "location_label": "Location",
       "location_placeholder": "e.g. Chengdu",
       "submit": "Create Soul",
-      "submitting": "Creating...",
+      "submitting": "Creating…",
       "create_success": "Soul created successfully",
       "create_error": "Failed to create soul",
       "update_success": "Soul updated successfully",
-      "updating": "Saving...",
+      "updating": "Saving…",
       "location_edit_label": "Origin Location",
       "state_label": "Current State",
       "edit_title": "Edit Soul",
-      "origin_region_hint_greek": "The Greek Underworld uses this to choose the presiding judge; \"Unknown\" goes straight to the final review."
+      "origin_region_hint_greek": "The Greek Underworld uses this to choose the presiding judge; “Unknown” goes straight to the final review."
     },
     "detail": {
       "back_to_list": "← Back to souls",
@@ -517,10 +517,10 @@
       "mark_dead": "Mark Dead → Begin Judgment",
       "mark_dead_success": "Marked dead; judgment opened",
       "recalculate": "Recalculate",
-      "recalculate_confirm": "Recalculate {{name}}'s merit and demerit from all records?",
+      "recalculate_confirm": "Recalculate {{name}}’s merit and demerit from all records?",
       "recalculate_success": "Merit and demerit recalculated",
       "recalculate_failed": "Recalculation failed. Try again later.",
-      "processing": "Processing...",
+      "processing": "Processing…",
       "render_judgment": "Render Judgment",
       "start_judgment": "Start Judgment",
       "verdict_passed": "Passed",
@@ -531,7 +531,7 @@
       "reincarnate_success": "Reincarnation complete",
       "rebirth_suggestion": "Suggested by the tenth court from the merit and demerit at conclusion: {{form}}",
       "rebirth_pick_form": "Negative merit, but not low enough for the hell path: the tenth court gives no suggestion. Choose a path.",
-      "being_reborn": "Soul is being reborn...",
+      "being_reborn": "Soul is being reborn…",
       "previous_reincarnations": "previous reincarnation(s)",
       "destination": "Destination",
       "memory_reset": "Memory reset",
@@ -543,7 +543,7 @@
       "confirm_delete": "Move to recycle bin?",
       "cancel_delete": "Cancel",
       "confirm_delete_action": "Move to recycle bin",
-      "deleting": "Deleting...",
+      "deleting": "Deleting…",
       "delete_confirm_message": "It moves to the recycle bin and is not erased. It can be restored from Settings › Recycle bin, with its judgments and dispositions.",
       "error_update": "Update failed",
       "error_delete": "Delete failed",
@@ -579,9 +579,9 @@
         "elapsed_missing_term_start": "When the term began",
         "elapsed_missing_time_served": "How much of it has been served",
         "unrenderable_kind": "The ledger returned a reading this build cannot render ({{kind}}).",
-        "unavailable_tenant_not_mapped_explanation": "This soul's tenant is not mapped to a cosmology, so there is no verdict to render — only the raw ledger below.",
+        "unavailable_tenant_not_mapped_explanation": "This soul’s tenant is not mapped to a cosmology, so there is no verdict to render — only the raw ledger below.",
         "unavailable_raw_data": "Raw ledger (not a reading)",
-        "unavailable_tenant_not_mapped_cta": "Configure this tenant's civilization mapping to enable a reading."
+        "unavailable_tenant_not_mapped_cta": "Configure this tenant’s civilization mapping to enable a reading."
       },
       "date_problems": {
         "title": "Date Problems",
@@ -677,7 +677,7 @@
       "load_more": "Load more records",
       "load_more_failed": "Some records did not load; try again",
       "memory_mechanisms": {
-        "MENGPO": "Meng Po's soup",
+        "MENGPO": "Meng Po’s soup",
         "LETHE": "The water of Lethe",
         "SPELL": "Spell recitation",
         "NONE": "No reset"
@@ -762,7 +762,7 @@
       "file_codes": {
         "file_too_large": "File is too large",
         "bad_encoding": "File is not UTF-8",
-        "bad_encoding_gbk": "File is not UTF-8 (looks like GBK): in Excel, save as \"CSV UTF-8\"",
+        "bad_encoding_gbk": "File is not UTF-8 (looks like GBK): in Excel, save as “CSV UTF-8”",
         "empty_file": "File is empty",
         "no_rows": "File has no data rows",
         "duplicate_columns": "Duplicate column names",
@@ -777,7 +777,7 @@
     "region_backfill": {
       "button": "Fill in regions of origin",
       "title": "Fill in regions of origin · {{step}}/3",
-      "intro": "Updates the region of origin of existing souls from a list. Only this hall's souls; nothing is created.",
+      "intro": "Updates the region of origin of existing souls from a list. Only this hall’s souls; nothing is created.",
       "id_hint": "soul_id is the soul ID in the first column of an export; every soul has one. You can use soul codes (soul_code) instead, but only one kind per file.",
       "values_hint": "Region of origin: {{europe}} or {{asia}}; leave blank for {{unknown}}.",
       "col_name": "Soul",
@@ -790,8 +790,8 @@
         "duplicate": "Duplicate of row {{row}}"
       },
       "summary": "{{total}} rows · {{update}} to update · {{same}} unchanged · {{skip}} skipped",
-      "skip_note": "Rows that aren't found, have an invalid value or repeat are skipped; the rest still go through.",
-      "to_unknown": "{{n}} rows go back to \"{{unknown}}\"",
+      "skip_note": "Rows that aren’t found, have an invalid value or repeat are skipped; the rest still go through.",
+      "to_unknown": "{{n}} rows go back to “{{unknown}}”",
       "back": "Back",
       "commit": "Update {{n}} souls",
       "committing": "Updating…",
@@ -799,7 +799,7 @@
       "nothing_body": "Every row is unchanged or skipped. Fix the file and choose it again.",
       "done": "Updated {{updated}} · {{same}} unchanged · {{skipped}} rows skipped",
       "download_skipped": "Download skipped rows",
-      "skipped_file_note": "Same two columns as the template, plus a \"reason\" column; fix it and upload it again.",
+      "skipped_file_note": "Same two columns as the template, plus a “reason” column; fix it and upload it again.",
       "file_codes": {
         "mixed_id_columns": "Use either soul_code or soul_id, not both"
       },
@@ -838,7 +838,7 @@
       "EARLY_DEATH": "Infant or early death",
       "NAMELESS": "Nameless",
       "IMPROPER_BURIAL": "Improper burial",
-      "help": "Proper burial: after 70 days of embalming the soul sets out for the Hall of Two Truths; the judgment can't be claimed before then. An infant or early death is not judged and goes straight to the Field of Reeds. The nameless do not enter the underworld, and an improper burial (body not intact, no spells) cannot complete the journey: both judgments stay held."
+      "help": "Proper burial: after 70 days of embalming the soul sets out for the Hall of Two Truths; the judgment can’t be claimed before then. An infant or early death is not judged and goes straight to the Field of Reeds. The nameless do not enter the underworld, and an improper burial (body not intact, no spells) cannot complete the journey: both judgments stay held."
     },
     "baptism": {
       "label": "Baptism",
@@ -849,7 +849,7 @@
       "help": "Unbaptised or born before Christ, with no heavier sin: the first circle, Limbo (not a punishment). A heavier sin decides instead. Such a soul cannot be given Purgatory. A baptised soul never lands in Limbo."
     },
     "denied_immortality": {
-      "label": "Denied the soul's immortality",
+      "label": "Denied the soul’s immortality",
       "UNRECORDED": "Not recorded",
       "YES": "Yes",
       "NO": "No",
@@ -867,7 +867,7 @@
       "NONE": "Buried, fare paid",
       "UNBURIED": "Unburied",
       "NO_FARE": "No fare",
-      "help": "Charon ferries only the buried who can pay. The unburied and those without a fare wait on the bank of Acheron and their judgment can't be claimed; record “Buried, fare paid” and the case can be heard. Both cross once a hundred years have passed since death (Virgil, Aeneid 6.325-330).",
+      "help": "Charon ferries only the buried who can pay. The unburied and those without a fare wait on the bank of Acheron and their judgment can’t be claimed; record “Buried, fare paid” and the case can be heard. Both cross once a hundred years have passed since death (Virgil, Aeneid 6.325-330).",
       "century_passed": "A hundred years on the bank: may cross"
     },
     "sin_gravity": {
@@ -876,12 +876,12 @@
       "MORTAL": "Mortal · unrepented",
       "MORTAL_ABSOLVED": "Mortal · absolved",
       "VENIAL": "Venial",
-      "help": "An unrepented mortal sin can only be condemned (hell). Venial sins and absolved mortal sins can't be sent to hell; they are purged in purgatory. Unclassified deeds are not checked."
+      "help": "An unrepented mortal sin can only be condemned (hell). Venial sins and absolved mortal sins can’t be sent to hell; they are purged in purgatory. Unclassified deeds are not checked."
     },
     "diyu_station": {
       "label": "Thirteen stations",
       "NONE": "Not on the road",
-      "TUDI_TEMPLE": "Earth God's Temple",
+      "TUDI_TEMPLE": "Earth God’s Temple",
       "YELLOW_SPRINGS_ROAD": "Road of the Yellow Springs",
       "WANGXIANG_TERRACE": "Terrace for Viewing Home",
       "EVIL_DOG_VILLAGE": "Vicious Dog Ridge",
@@ -920,11 +920,11 @@
       "NANZHAN": "Jambudvīpa (South)",
       "XINIU": "Aparagodānīya (West)",
       "BEIJULU": "Uttarakuru (North)",
-      "help": "Which of the four continents this life was born in. A rebirth into the human path sets the next life's continent."
+      "help": "Which of the four continents this life was born in. A rebirth into the human path sets the next life’s continent."
     },
     "capture": {
       "title": "Capture",
-      "unavailable": "Capture status can't be read right now",
+      "unavailable": "Capture status can’t be read right now",
       "escort_label": "Escort",
       "escort": {
         "SUGGESTED": "Suggested by karma",
@@ -951,7 +951,7 @@
         "not_alive": "This soul is no longer alive.",
         "lifespan_not_ended": "The fated date has not come, or is not recorded.",
         "warrant_open": "This soul already has an open capture warrant.",
-        "wrong_status": "The warrant can't do that now; refresh and try again.",
+        "wrong_status": "The warrant can’t do that now; refresh and try again.",
         "reason_required": "Write a reason to cancel."
       },
       "escort_hint": "More merit than demerit: {{merit_escort}}. More demerit than merit: {{demerit_escort}}.",
@@ -968,7 +968,7 @@
       "earthly_paradise": "By way of the Earthly Paradise · drank of Lethe and Eunoë"
     },
     "diyu_station_desc": {
-      "TUDI_TEMPLE": "The soul reports first at the Earth God's temple; the Earth God tells the City God and sends it on its way.",
+      "TUDI_TEMPLE": "The soul reports first at the Earth God’s temple; the Earth God tells the City God and sends it on its way.",
       "YELLOW_SPRINGS_ROAD": "The road every soul must take to the underworld.",
       "WANGXIANG_TERRACE": "Where the soul looks back on the world of the living and sees home one last time.",
       "EVIL_DOG_VILLAGE": "Here dogs bar the way and bite those who did evil in life.",
@@ -977,10 +977,10 @@
       "MIHUN_HALL": "The soul drinks the water of bewilderment, and its mind is cleared.",
       "OFFERING_PAVILION": "Where the soul receives the paper money its family burns for it above.",
       "GHOST_FORT": "A shelter for lonely souls with nowhere else to go.",
-      "FENGDU_CITY": "The soul enters the City of Fengdu, comes under the underworld's rule, and awaits the Ten Courts.",
+      "FENGDU_CITY": "The soul enters the City of Fengdu, comes under the underworld’s rule, and awaits the Ten Courts.",
       "EIGHTEEN_HELLS": "Where punishment happens in the popular telling (a rival account to the ten courts).",
       "LOTUS_TERRACE": "Where the soul is delivered and lifted out of the sea of suffering.",
-      "HUANHUN_CLIFF": "The last pass before rebirth, after drinking Meng Po's soup."
+      "HUANHUN_CLIFF": "The last pass before rebirth, after drinking Meng Po’s soup."
     },
     "life_label": {
       "this_life": "This life",
@@ -993,15 +993,15 @@
     "close": "Close",
     "cancel": "Cancel",
     "save": "Save",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "edit": "Edit",
     "delete": "Delete",
     "prev": "Previous",
     "next": "Next",
     "confirm_delete": "Confirm Delete",
-    "deleting": "Deleting...",
+    "deleting": "Deleting…",
     "back": "← Back",
-    "submitting": "Submitting...",
+    "submitting": "Submitting…",
     "create": "Create",
     "retry": "Retry",
     "confirm": "Confirm",
@@ -1062,22 +1062,22 @@
       "MENU": "Menu",
       "BUTTON": "Button"
     },
-    "menu_type_directory_hint": "A directory is a pure navigation grouping with no page of its own — path, component, and permission don't apply.",
+    "menu_type_directory_hint": "A directory is a pure navigation grouping with no page of its own — path, component, and permission don’t apply.",
     "parent_label": "Parent",
     "parent_none": "None — top level",
     "permission_field": "Permission Codename",
     "permission_codename_placeholder": "e.g. soul.read (blank derives from path)",
     "permission_derived_as": "Blank derives as: {{codename}}",
-    "permission_derived_none": "Blank — can't derive a codename without a path",
-    "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this won't resolve if something starts checking it",
-    "roles_empty_hint": "Empty = public, visible to every role — not \"nobody\"",
+    "permission_derived_none": "Blank — can’t derive a codename without a path",
+    "permission_mismatch_warning": "“{{codename}}” doesn’t match a real permission — this won’t resolve if something starts checking it",
+    "roles_empty_hint": "Empty = public, visible to every role — not “nobody”",
     "visible_label": "Show in sidebar",
-    "visible_hint": "Separate from Active. An active-but-hidden entry still opens via direct navigation — it's just absent from the sidebar list.",
-    "active_hint": "Query-level gate: a non-ADMIN user never sees an inactive menu at all — it's filtered out of their tree entirely, not greyed out.",
+    "visible_hint": "Separate from Active. An active-but-hidden entry still opens via direct navigation — it’s just absent from the sidebar list.",
+    "active_hint": "Query-level gate: a non-ADMIN user never sees an inactive menu at all — it’s filtered out of their tree entirely, not greyed out.",
     "active_readonly_note": "Only ADMIN can change this.",
     "icon_required_hint": "Required. In locales where the name renders in Chinese (untranslated database content), the icon is the only way to tell entries apart.",
     "icon_missing_error": "Pick an icon before saving",
-    "icon_collision_warning": "Already used by \"{{name}}\" under the same parent",
+    "icon_collision_warning": "Already used by “{{name}}” under the same parent",
     "shown_label": "Shown",
     "hidden_label": "Hidden",
     "gates_title": "Five visibility gates",
@@ -1085,28 +1085,28 @@
     "gate_col_name": "Gate",
     "gate_col_effect": "What it does",
     "gate_col_nonadmin": "Non-ADMIN editor state",
-    "gate_is_active_effect": "Query-level gate. A non-ADMIN's request filters is_active=True before it reaches them — an inactive entry is absent from their tree, not dimmed.",
-    "gate_is_active_nonadmin": "Read-only, no toggle shown — and even a role granted write access couldn't find an inactive row here, since their own reads filter it out too.",
+    "gate_is_active_effect": "Query-level gate. A non-ADMIN’s request filters is_active=True before it reaches them — an inactive entry is absent from their tree, not dimmed.",
+    "gate_is_active_nonadmin": "Read-only, no toggle shown — and even a role granted write access couldn’t find an inactive row here, since their own reads filter it out too.",
     "gate_visible_effect": "Sidebar-only. An invisible-but-active entry still resolves via direct navigation — only the sidebar listing skips it.",
-    "gate_visible_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
+    "gate_visible_nonadmin": "Editing this menu at all requires “Manage menus” — ADMIN-only today.",
     "gate_permission_effect": "The codename Menu.get_codename() would use if anything called it — nothing does yet, so this is dormant, not a live gate. Blank derives a guess from path.",
-    "gate_permission_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
-    "gate_roles_effect": "Coarser than permission — controls which roles see this entry at all. Empty list = public, not \"nobody\".",
-    "gate_roles_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
+    "gate_permission_nonadmin": "Editing this menu at all requires “Manage menus” — ADMIN-only today.",
+    "gate_roles_effect": "Coarser than permission — controls which roles see this entry at all. Empty list = public, not “nobody”.",
+    "gate_roles_nonadmin": "Editing this menu at all requires “Manage menus” — ADMIN-only today.",
     "gate_menu_type_effect": "DIRECTORY / MENU / BUTTON. Decides which of the other fields are meaningful — a DIRECTORY has no page.",
-    "gate_menu_type_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
-    "gates_footnote": "All five require \"Manage menus\" to edit at all — ADMIN-only in the current role setup.",
+    "gate_menu_type_nonadmin": "Editing this menu at all requires “Manage menus” — ADMIN-only today.",
+    "gates_footnote": "All five require “Manage menus” to edit at all — ADMIN-only in the current role setup.",
     "show_deleted": "Show deleted",
     "deleted_badge": "Deleted",
     "delete_confirm_title": "Move to recycle bin?",
-    "delete_confirm_message": "\"{{name}}\" will move to the recycle bin. It can be restored for {{days}} days; after that, an administrator can permanently delete it.",
+    "delete_confirm_message": "“{{name}}” will move to the recycle bin. It can be restored for {{days}} days; after that, an administrator can permanently delete it.",
     "delete_confirm_action": "Move to recycle bin",
     "update_error": "Failed to update menu"
   },
   "recycle_bin": {
     "title": "Recycle Bin",
     "intro": "Everything soft-deleted, across every entity type, on one screen — each parent as one row with its dependent count, not its dependents listed separately.",
-    "no_access": "You don't have permission to view the recycle bin.",
+    "no_access": "You don’t have permission to view the recycle bin.",
     "col_type": "Type",
     "col_item": "Item",
     "col_dependents": "Dependents",
@@ -1120,7 +1120,7 @@
     "hard_delete_error": "Permanent delete failed",
     "hard_delete_not_yet_eligible": "Still inside its {{days}}-day retention window",
     "hard_delete_confirm_title": "Delete permanently?",
-    "hard_delete_confirm_message": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "hard_delete_confirm_message": "“{{name}}” will be permanently deleted. This cannot be undone.",
     "dependent_count": "{{type}} {{name}} · {{count}} linked items",
     "empty": "The recycle bin is empty",
     "manage_from_bin": "Manage from the recycle bin",
@@ -1158,13 +1158,13 @@
     "category_placeholder": "e.g. soul (or type a new one)",
     "category_hint": "Pick an existing category, or type a new one",
     "submit": "Save",
-    "submitting": "Saving...",
+    "submitting": "Saving…",
     "delete_error": "Delete failed",
     "create_error": "Create failed",
     "edit_error": "Update failed",
     "confirm_delete": "Delete this permission?",
     "confirm_delete_message": "After deletion, all roles using this permission will lose it. This cannot be undone.",
-    "deleting": "Deleting...",
+    "deleting": "Deleting…",
     "confirm_delete_action": "Confirm Delete",
     "roles_title": "Role Management",
     "create_role": "Create Role",
@@ -1179,7 +1179,7 @@
     "matrix": {
       "title": "Permission Matrix",
       "codename_col": "Codename",
-      "filter_placeholder": "Filter by codename or name...",
+      "filter_placeholder": "Filter by codename or name…",
       "only_differences": "Show only differing rows",
       "no_roles": "No roles yet",
       "save_button": "Save changes",
@@ -1188,16 +1188,16 @@
       "legend_title": "Five peers, not a ladder",
       "legend_intro": "Holding more codenames does not mean outranking another role. Real comparisons pulled from the current data:",
       "legend_nonsubset": "{{roleA}} holds codenames {{roleB}} does not (e.g. {{codenamesA}}); {{roleB}} likewise holds codenames {{roleA}} does not (e.g. {{codenamesB}}) — neither is a subset of the other.",
-      "legend_countparadox": "{{higher}} holds {{higherCount}} codenames in total, more than {{lower}}'s {{lowerCount}} — yet {{lower}} alone holds {{codenames}}, which {{higher}} does not. Holding more does not mean holding a superset.",
+      "legend_countparadox": "{{higher}} holds {{higherCount}} codenames in total, more than {{lower}}’s {{lowerCount}} — yet {{lower}} alone holds {{codenames}}, which {{higher}} does not. Holding more does not mean holding a superset.",
       "confirm_title": "Confirm permission changes",
       "confirm_user_count": "{{count}} user(s) currently hold this role — this takes effect immediately on save.",
       "confirm_removed_label": "Will be removed:",
       "confirm_clear_warning": "This clears every codename {{role}} currently holds.",
-      "confirm_menu_read_warning": "\"View menus\" is among what's being removed — holders of this role will see an empty navigation tree on their next login.",
+      "confirm_menu_read_warning": "“View menus” is among what’s being removed — holders of this role will see an empty navigation tree on their next login.",
       "confirm_type_role_label": "Type the role name {{role}} to confirm:",
       "confirm_cancel": "Cancel",
       "confirm_submit": "Confirm save",
-      "confirm_submitting": "Saving...",
+      "confirm_submitting": "Saving…",
       "showing": "Permissions · showing {{shown}} / {{total}}",
       "no_differences": "No differences: every role has the same values under this filter.",
       "role_picker": "Role",
@@ -1261,7 +1261,7 @@
       "members": "Members",
       "permissions": "Permissions",
       "updated": "Updated",
-      "foot": "Built-in roles cannot be deleted · click a row to edit · delete is in the drawer's ⋯",
+      "foot": "Built-in roles cannot be deleted · click a row to edit · delete is in the drawer’s ⋯",
       "drawer_title": "Edit role · {{name}}",
       "code_immutable": "Fixed after creation: workflows refer to the code",
       "edit_in_matrix": "Edit in the matrix",
@@ -1292,12 +1292,12 @@
       "import": "Import configuration…",
       "import_title": "Import configuration · {step}/3",
       "choose_file": "Choose file",
-      "file_hint": "Choose a JSON file produced by \"Export configuration\". Up to {max}.",
+      "file_hint": "Choose a JSON file produced by “Export configuration”. Up to {max}.",
       "merge_note": "Merge by default: entries in the file that the system lacks are added; existing entries are neither changed nor deleted. To overwrite, choose it in the next step.",
       "errors": {
         "not_json": "This is not a valid JSON file.",
         "too_large": "The file is too large. The limit is {max}.",
-        "bad_structure": "Wrong structure: expected a JSON object from \"Export configuration\" containing at least one of permissions, roles, role_permissions, field_permissions, role_data_scopes.",
+        "bad_structure": "Wrong structure: expected a JSON object from “Export configuration” containing at least one of permissions, roles, role_permissions, field_permissions, role_data_scopes.",
         "empty": "The file contains nothing to import.",
         "overwrite_disabled": "The server has turned overwrite import off; use merge."
       },
@@ -1333,7 +1333,7 @@
         "all_halls": "Permission configuration is not per hall: overwrite affects every hall, not only {hall}.",
         "blocked_own": "The entries missing from the file include your own, so overwrite is blocked. Add them to the file, or merge instead.",
         "action": "Overwrite and import",
-        "confirm_hint": "Type \"Overwrite\" to confirm"
+        "confirm_hint": "Type “Overwrite” to confirm"
       },
       "download_skipped": "Download skipped details"
     },
@@ -1372,14 +1372,14 @@
       "extra": "Additional",
       "primary_locked": "A main role cannot be removed here: give this person another main role first.",
       "remove": "Remove",
-      "remove_label": "Remove {{name}}'s additional role",
+      "remove_label": "Remove {{name}}’s additional role",
       "grant": "Grant to people",
       "grant_n": "Grant to {{n}}",
       "pick_search": "Find people by username or email",
       "pick_empty": "Nobody matches",
       "already": "Already holds it",
       "kind": "Grant as",
-      "primary_hint": "Granting it as the main role replaces the person's current main role.",
+      "primary_hint": "Granting it as the main role replaces the person’s current main role.",
       "granted": "Granted to {{n}} · takes effect for them when they reload",
       "removed": "Removed from {{n}} · takes effect for them when they reload",
       "change_error": "The change did not go through; try again",
@@ -1403,7 +1403,7 @@
       "auto_layout": "Auto layout",
       "relayouting": "Re-arranging…",
       "delete_selected": "Delete Selected",
-      "saving": "Saving...",
+      "saving": "Saving…",
       "save_template": "Save draft",
       "hint": "Double-click node to edit · Drag to connect nodes",
       "edit_node": "Edit Node",
@@ -1433,7 +1433,7 @@
       "issues_none": "All checks pass",
       "issue": {
         "name_empty": "{{node}} has no name",
-        "self_route": "{{node}}'s “{{branch}}” route points back to itself; the flow never takes it",
+        "self_route": "{{node}}’s “{{branch}}” route points back to itself; the flow never takes it",
         "duplicate_route": "{{node}} has {{count}} “{{branch}}” routes; only the last one is saved",
         "reject_not_earlier": "{{node}}: “return to” must name an earlier node",
         "reject_and_fail_route": "{{node}} has both a return and a refuse route; the refuse route never runs",
@@ -1448,7 +1448,7 @@
         "unreachable": "{{node}} cannot be reached from the start",
         "no_exit": "{{node}} has no way out to an end node",
         "no_end": "{{node}}: a flow with conditions or end nodes needs at least one end node",
-        "auto_route_exit_missing": "{{node}}: the \"{{region}}\" exit has no target"
+        "auto_route_exit_missing": "{{node}}: the “{{region}}” exit has no target"
       },
       "issue_short": {
         "name_empty": "No name",
@@ -1631,7 +1631,7 @@
       "palette_hint": {
         "AUTO_ROUTE": "No approver; takes one of three exits by region of origin"
       },
-      "kind_locked": "Can't be changed",
+      "kind_locked": "Can’t be changed",
       "legend": {
         "unconnected_exit": "□ Open end = exit not connected · drag from it to a node to connect · or pick a target on the right"
       }
@@ -1641,7 +1641,7 @@
     "new_template": "New Template",
     "custom_templates": "Custom Templates",
     "predefined_templates": "Predefined Templates",
-    "delete_confirm_msg": "Delete template \"{{name}}\"?",
+    "delete_confirm_msg": "Delete template “{{name}}”?",
     "delete_irreversible": "This action cannot be undone.",
     "select_from_left": "Select a template from the left",
     "instances": "Instances",
@@ -1649,7 +1649,7 @@
     "filter_overdue": "Overdue only",
     "overdue_badge": "Overdue",
     "detail": {
-      "loading": "Loading workflow...",
+      "loading": "Loading workflow…",
       "not_found": "Workflow not found",
       "back_to_list": "Back to workflow list",
       "appeal": "Appeal",
@@ -1667,10 +1667,10 @@
       "order": "Order",
       "select_verdict": "Select Verdict",
       "notes": "Notes",
-      "notes_placeholder": "Enter notes...",
-      "processing": "Processing...",
+      "notes_placeholder": "Enter notes…",
+      "processing": "Processing…",
       "submit_decision": "Submit Decision",
-      "advancing": "Advancing...",
+      "advancing": "Advancing…",
       "advance": "Advance",
       "completed": "Workflow Completed",
       "completed_message": "This workflow has been completed.",
@@ -1696,7 +1696,7 @@
       "advance_reason_label": "Reason to advance (required, recorded in the audit log)",
       "advance_reason_placeholder": "Why the current step is passed without a decision",
       "advance_needs_reason": "Advancing needs a reason",
-      "approver_name_absent": "the node carries the approver's primary key; the backend sends no name",
+      "approver_name_absent": "the node carries the approver’s primary key; the backend sends no name",
       "reason_for_soul": "Rejection reason for the soul",
       "reason_for_soul_hint": "The soul will see this reason; internal notes stay hidden. Up to 2000 characters.",
       "reason_for_soul_required": "Rejecting a rebirth application requires a reason for the soul",
@@ -1802,17 +1802,17 @@
       "submit": "Start",
       "done": "Approval started",
       "errors": {
-        "duplicate": "This soul already has a \"{{type}}\" approval in progress ({{id}}). Only one per case type at a time.",
+        "duplicate": "This soul already has a “{{type}}” approval in progress ({{id}}). Only one per case type at a time.",
         "duplicate_view": "View it",
         "soul_not_found": "Soul not found, or not in this hall",
-        "template_invalid": "This template can't be used: it's from another hall, disabled, or doesn't match the soul's civilization",
-        "case_type_civ": "The {{civ}} civilization doesn't take this case type",
-        "judgment_mismatch": "This judgment isn't for this soul",
+        "template_invalid": "This template can’t be used: it’s from another hall, disabled, or doesn’t match the soul’s civilization",
+        "case_type_civ": "The {{civ}} civilization doesn’t take this case type",
+        "judgment_mismatch": "This judgment isn’t for this soul",
         "judgment_taken": "This judgment already has an approval",
         "reason_required": "Add a reason",
-        "forbidden": "You don't have permission to start approvals",
-        "failed": "Couldn't start, please try again",
-        "origin_flow_open": "This soul's original approval workflow has not finished; an appeal waits for it"
+        "forbidden": "You don’t have permission to start approvals",
+        "failed": "Couldn’t start, please try again",
+        "origin_flow_open": "This soul’s original approval workflow has not finished; an appeal waits for it"
       }
     },
     "filter": {
@@ -1831,18 +1831,18 @@
       "col_hall": "Hall",
       "col_approver": "Approver",
       "final_badge": "Required",
-      "final_reason": "The final review decides the outcome, so it can't be skipped.",
-      "jump_target_reason": "{{source}} hands rejected cases here, so this station can't be skipped",
+      "final_reason": "The final review decides the outcome, so it can’t be skipped.",
+      "jump_target_reason": "{{source}} hands rejected cases here, so this station can’t be skipped",
       "summary": "This realm: {{go}} to go · {{skip}} skipped",
       "restore_all": "Restore all",
       "only_final_title": "Only the final review this time",
-      "only_final_body": "The other {{n}} stations are skipped; {{approver}} ({{hall}}) decides directly. Generate as usual if that's intended.",
+      "only_final_body": "The other {{n}} stations are skipped; {{approver}} ({{hall}}) decides directly. Generate as usual if that’s intended.",
       "foreign_title": "Other realms · follow in cross-realm judgment order",
-      "foreign_by_realm": "That realm's judge picks its stations",
+      "foreign_by_realm": "That realm’s judge picks its stations",
       "foreign_default": "Default flow · {{n}} stations",
-      "foreign_note": "Once the flow starts, each realm's judge gets a \"pick stations\" task at the same time. Realms go one after another; if the next realm hasn't picked yet, the flow waits and reminds it.",
+      "foreign_note": "Once the flow starts, each realm’s judge gets a “pick stations” task at the same time. Realms go one after another; if the next realm hasn’t picked yet, the flow waits and reminds it.",
       "position": "This realm is no. {{order}} · before it: {{prev}}, {{n}} stations",
-      "confirmed": "Stations picked · you'll be told when it's this realm's turn",
+      "confirmed": "Stations picked · you’ll be told when it’s this realm’s turn",
       "repick": "Change picks",
       "stale_title": "This segment was just changed",
       "stale_body": "{{by}} changed this segment at {{time}}. Below is the current selection — check it before confirming.",
@@ -1850,13 +1850,13 @@
       "next": "Next",
       "back": "Back",
       "cross_forced": "A cross-realm judgment is open on this case: concluding generates an approval flow, with the other realms following in order.",
-      "load_error": "Couldn't load the stations — try again",
-      "route_target_reason": "Automatic routing may send the case here, so it can't be skipped.",
+      "load_error": "Couldn’t load the stations — try again",
+      "route_target_reason": "Automatic routing may send the case here, so it can’t be skipped.",
       "foreign_all_required": "All required · nothing to pick"
     },
     "pick_group": {
       "title": "Stations to pick",
-      "hint": "Approval flows from other realms — pick before this realm's turn",
+      "hint": "Approval flows from other realms — pick before this realm’s turn",
       "row_title": "{{soul}} · {{n}} stations here",
       "row_meta": "{{realm}} · from {{hall}} · this realm no. {{order}}",
       "hall": "{{realm}} {{court}}",
@@ -1906,7 +1906,7 @@
       "count": "{{go}} of {{total}} stations",
       "not_picked": "Not picked yet",
       "done": "Done",
-      "error": "Couldn't save — try again"
+      "error": "Couldn’t save — try again"
     },
     "node_state": {
       "skipped_at_pick": "Skipped at setup",
@@ -1931,7 +1931,7 @@
       "hint": "Ticked = go, unticked = skip. Only stations after the current one can change.",
       "locked_past": "{{range}} · done or skipped",
       "locked_current": "{{node}} · current",
-      "locked": "Can't change",
+      "locked": "Can’t change",
       "mark_add": "Restore",
       "mark_skip": "Skip",
       "reason": "Reason · required, written to the audit log",
@@ -1941,25 +1941,25 @@
     },
     "gate": {
       "waiting_title": "Waiting for {{realm}} to pick · day {{n}}",
-      "waiting_body": "This realm is done. {{realm}}'s judge has been reminded; the flow continues once they pick.",
-      "overdue_body": "Reminded daily; {{realm}} hasn't picked yet.",
+      "waiting_body": "This realm is done. {{realm}}’s judge has been reminded; the flow continues once they pick.",
+      "overdue_body": "Reminded daily; {{realm}} hasn’t picked yet.",
       "remind_again": "Remind again",
       "reminded": "Reminder sent",
       "use_default": "Go with the default flow",
-      "use_default_confirm": "Picks every station for {{realm}} and continues. A reason is required; it's written to the audit log and {{realm}} is told.",
+      "use_default_confirm": "Picks every station for {{realm}} and continues. A reason is required; it’s written to the audit log and {{realm}} is told.",
       "no_picker_title": "{{realm}} has no judge who can pick",
-      "no_picker_body": "The task went to that realm's hall admins. If there are none, you can go with the default flow now.",
+      "no_picker_body": "The task went to that realm’s hall admins. If there are none, you can go with the default flow now.",
       "foreign_title": "A flow is waiting for this realm to pick",
-      "foreign_body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks.",
+      "foreign_body": "{{soul}} · {{realm}}’s stations are done; it continues once this realm picks.",
       "stopped_here": "Stopped here",
       "remind_too_soon": "Already reminded within the hour — try again later"
     },
     "refusal": {
-      "jump_target_required": "{{station}} receives rejected cases from {{source}}, so it can't be skipped unless {{source}} is skipped too",
-      "final_required": "The final review can't be skipped",
+      "jump_target_required": "{{station}} receives rejected cases from {{source}}, so it can’t be skipped unless {{source}} is skipped too",
+      "final_required": "The final review can’t be skipped",
       "segment_changed": "Someone just changed this segment; reopen it and pick again",
       "workflow_required": "A cross-realm judgment is open on this case, so the ruling must generate an approval flow",
-      "not_allowed": "You can't do this step",
+      "not_allowed": "You can’t do this step",
       "too_early": "Allowed after {{days}} days at the gate, or when the realm has no judge to pick",
       "unknown_node": "That station is no longer in this flow; refresh and try again",
       "reason_required": "Please give a reason",
@@ -2028,12 +2028,12 @@
       "range_12m": "12 months",
       "by_state": "By state",
       "by_civilization": "By civilization",
-      "error": "Trends couldn't be loaded",
+      "error": "Trends couldn’t be loaded",
       "subtitle": "Snapshot every day at 00:00 · vs the start of the range",
       "dimension_label": "Dimension",
       "empty_title": "No snapshots yet",
-      "empty_body": "One is taken every day at 00:00. While the range isn't full, only the days that exist are drawn.",
-      "partial": "Only {{n}} days of snapshots. The empty part on the left isn't zero: those days have no record yet.",
+      "empty_body": "One is taken every day at 00:00. While the range isn’t full, only the days that exist are drawn.",
+      "partial": "Only {{n}} days of snapshots. The empty part on the left isn’t zero: those days have no record yet.",
       "change_up": "up {{pct}}%",
       "change_down": "down {{pct}}%",
       "change_flat": "flat",
@@ -2134,7 +2134,7 @@
       "eg": "Decayed heart side"
     },
     "raw_balance_sr": "Raw balance {{n}}",
-    "advisory_disclaimer": "For the bench's reference only · karma is not part of the verdict calculation; the judge decides",
+    "advisory_disclaimer": "For the bench’s reference only · karma is not part of the verdict calculation; the judge decides",
     "journal": {
       "title": "Merit & Demerit Journal",
       "subtitle": "Opening + received − disbursed = closing · recorded weight, before decay",
@@ -2166,7 +2166,7 @@
       "empty_reason": "Nothing was recorded in {{month}}; opening = closing = {{opening}}.",
       "load_failed": "The journal failed to load",
       "month_too_large": "Too many entries this month. Narrow the filters.",
-      "row_hint": "Click a row for that soul's merit & demerit",
+      "row_hint": "Click a row for that soul’s merit & demerit",
       "search": "Soul name or ID",
       "export": "Export",
       "export_failed": "Export failed"
@@ -2181,7 +2181,7 @@
     "soul_filter": "Soul",
     "soul_filter_clear": "Clear the soul filter",
     "soul_name": "Soul Name",
-    "soul_name_not_returned": "the soul's name did not come back with this judgment",
+    "soul_name_not_returned": "the soul’s name did not come back with this judgment",
     "civilization": "Civilization",
     "court": "Court",
     "verdict": "Verdict",
@@ -2218,7 +2218,7 @@
       "stat_deferred": "{{n}} deferred",
       "stat_remaining": "{{n}} left",
       "exhausted_title": "Queue is clear",
-      "read_only": "You may review this queue but not rule on it. Ruling needs the \"Rule on cases\" permission.",
+      "read_only": "You may review this queue but not rule on it. Ruling needs the “Rule on cases” permission.",
       "exhausted_with_deferred_title": "Only deferred cases remain",
       "exhausted_body": "{{n}} ruled on in this sitting.",
       "incomplete_title": "This case came back incomplete",
@@ -2240,7 +2240,7 @@
       "ledger_description": "Deed",
       "ledger_weight": "Weight",
       "ledger_recorded": "Recorded",
-      "ledger_empty": "Nothing has been entered in this soul's ledger.",
+      "ledger_empty": "Nothing has been entered in this soul’s ledger.",
       "cycle": "Cycle",
       "from_realm": "From",
       "to_realm": "To",
@@ -2274,7 +2274,7 @@
       "sealed_note": "Sent when the time runs out; leaving this page or opening another case sends it now"
     },
     "detail": {
-      "loading": "Loading judgment...",
+      "loading": "Loading judgment…",
       "not_found": "Judgment not found",
       "back_to_list": "Back to judgments",
       "final": "Final",
@@ -2287,8 +2287,8 @@
       "conclude_success": "Judgment recorded; awaiting approval",
       "conclude_error": "Failed to conclude judgment",
       "select_verdict": "Please select a verdict",
-      "concluding": "Concluding...",
-      "notes_placeholder": "Enter notes...",
+      "concluding": "Concluding…",
+      "notes_placeholder": "Enter notes…",
       "create_workflow": "Start approval workflow",
       "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type.",
       "conclude_with_workflow": "Rule and open workflow",
@@ -2340,7 +2340,7 @@
       "original": "Original",
       "translation": "Translation",
       "original_absent": "Only a translation was transcribed; the source-language text is not stored",
-      "notes": "Editor's notes",
+      "notes": "Editor’s notes",
       "source": "Source",
       "cite": "Citation",
       "copy_cite": "Copy citation",
@@ -2462,11 +2462,11 @@
         "not_found": "Some judgments no longer exist",
         "permission_denied": "Permission denied",
         "generic": "The action did not go through",
-        "assignee_out_of_scope": "That officer's data scope cannot see this record",
+        "assignee_out_of_scope": "That officer’s data scope cannot see this record",
         "defer_reason_required": "Write a reason to move it to Deferred"
       },
       "held_short": "Can be claimed after that date",
-      "held": "This judgment is held until {{date}}: the soul is in the City of Wrongful Death and can't be claimed before then.",
+      "held": "This judgment is held until {{date}}: the soul is in the City of Wrongful Death and can’t be claimed before then.",
       "civilization_all": "Civilization · all",
       "sort": "Sort",
       "sort_oldest": "Sort · longest waiting",
@@ -2510,10 +2510,10 @@
       "undefer": "Restore",
       "done_undefer": "Restored; the case is back in the queue",
       "load_more": "More ({{n}} left)",
-      "embalming": "This judgment is held until {{date}}: the embalming isn't finished and the soul hasn't set out for the Hall of Two Truths; it can't be claimed before then.",
-      "duat_unfinished": "This judgment can't be claimed: the soul cannot reach the Hall of Two Truths.",
-      "duat_barred_short": "Can't reach the hall",
-      "unferried": "This judgment can't be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron.",
+      "embalming": "This judgment is held until {{date}}: the embalming isn’t finished and the soul hasn’t set out for the Hall of Two Truths; it can’t be claimed before then.",
+      "duat_unfinished": "This judgment can’t be claimed: the soul cannot reach the Hall of Two Truths.",
+      "duat_barred_short": "Can’t reach the hall",
+      "unferried": "This judgment can’t be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron.",
       "not_yours_readonly": "{{name}} has claimed this case; only they can change it. You can read it.",
       "override_recorded": "You are not the claimant ({{name}} has claimed this case); what you change here is recorded."
     },
@@ -2588,8 +2588,8 @@
       "DIABOLICAL_TRIAL": "Diabolical trial"
     },
     "case_number": "Case no.",
-    "close_blocked_title": "A cross-realm judgment is still open, so this can't be closed yet",
-    "close_blocked_body": "{{name}} · convened {{date}} · {{joined}} of {{total}} seated. Once it's ended or cancelled, you can close here.",
+    "close_blocked_title": "A cross-realm judgment is still open, so this can’t be closed yet",
+    "close_blocked_body": "{{name}} · convened {{date}} · {{joined}} of {{total}} seated. Once it’s ended or cancelled, you can close here.",
     "close_blocked_link": "Go to cross-realm judgment ›",
     "error": {
       "at_city_god": "With the City God for first review; it can be claimed and concluded once sent on",
@@ -2629,8 +2629,8 @@
     "offences": {
       "ABDUCTION": "Abducting young men and women",
       "SEIZING_PROPERTY": "Seizing others' property",
-      "MAIMING": "Maiming another's eyes, ears, hands or feet",
-      "DEFYING_ELDERS": "Defying one's elders",
+      "MAIMING": "Maiming another’s eyes, ears, hands or feet",
+      "DEFYING_ELDERS": "Defying one’s elders",
       "INCITING_LITIGATION": "Inciting litigation",
       "BETRAYING_TRUST": "Betraying a kindness or trust",
       "WITHHOLDING_DUES": "Withholding grain dues and rent",
@@ -2705,7 +2705,7 @@
       "unset": "Not recorded",
       "grievance": "Grievance",
       "plea": "The grievance",
-      "plea_hint": "Recorded on the soul's behalf; the City God's officers or a hall administrator review it.",
+      "plea_hint": "Recorded on the soul’s behalf; the City God’s officers or a hall administrator review it.",
       "file": "File grievance",
       "decision_note": "Review note",
       "uphold": "Upheld · release early",
@@ -2717,13 +2717,13 @@
         "grievance_open": "This case already has a grievance.",
         "no_grievance_filed": "No grievance is awaiting review.",
         "grievance_not_major": "Only a major or severe grievance releases the soul early.",
-        "not_city_god_officer": "Only this City God's officers or a hall administrator can review it.",
+        "not_city_god_officer": "Only this City God’s officers or a hall administrator can review it.",
         "not_pending": "This case is concluded.",
         "deliver_needs_upheld": "Only an upheld grievance can deliver the soul."
       },
       "release_title": "Release {{name}} early?",
       "release_body": "Upheld: {{name}} leaves the City of Wrongful Death, and the judgment can be claimed now instead of on {{date}}.",
-      "release_irreversible": "This can't be undone.",
+      "release_irreversible": "This can’t be undone.",
       "release_gate": "Only a grievance of {{level}} or above can be upheld",
       "released_line": "Untimely · released early on {{date}}",
       "deliver": "Upheld · deliver",
@@ -2736,7 +2736,7 @@
     },
     "confessions": {
       "title": "The forty-two denials",
-      "hint": "The deceased denies one wrong before each of the forty-two assessors. Record whether each denial is true; it can't be changed once the case is concluded.",
+      "hint": "The deceased denies one wrong before each of the forty-two assessors. Record whether each denial is true; it can’t be changed once the case is concluded.",
       "tally": "True {{truthful}} · False {{untruthful}} · Not recorded {{unheard}}",
       "truthful": "True",
       "untruthful": "False",
@@ -2745,24 +2745,24 @@
       "note_placeholder": "Grounds (optional)",
       "row_label": "Assessor {{n}}, {{assessor}}",
       "errors": {
-        "concluded": "The case is concluded; the confession record can't be changed.",
+        "concluded": "The case is concluded; the confession record can’t be changed.",
         "not_weighed": "This case is not weighed and hears no denials.",
         "unknown_clause": "This hall has no such assessor.",
         "generic": "Not recorded; please try again."
       },
       "only_unrecorded": "Unrecorded only",
-      "not_seeded": "The confession list hasn't been imported yet"
+      "not_seeded": "The confession list hasn’t been imported yet"
     },
     "ferry": {
-      "barred_unburied": "Unburied: can't cross the river",
-      "barred_no_fare": "No fare: can't cross the river"
+      "barred_unburied": "Unburied: can’t cross the river",
+      "barred_no_fare": "No fare: can’t cross the river"
     },
     "reopen_cancelled": {
       "button": "Reopen as a new case",
-      "hint": "This case's approval flow was cancelled and its disposition is stuck. Withdraw the conclusion and open a new case.",
+      "hint": "This case’s approval flow was cancelled and its disposition is stuck. Withdraw the conclusion and open a new case.",
       "done": "Reopened: {{case_number}}",
       "refusal": {
-        "not_cancelled": "This case's approval flow was not cancelled, so it cannot be reopened this way.",
+        "not_cancelled": "This case’s approval flow was not cancelled, so it cannot be reopened this way.",
         "cannot_reopen": "The soul has already been placed; ask for a reopening or an appeal instead."
       }
     },
@@ -2775,7 +2775,7 @@
         "not_withdrawable": "Only a sealed original case can have its seal withdrawn.",
         "not_your_seal": "Only the judge who sealed this case can withdraw the seal.",
         "no_pending_flow": "This case has no approval flow still waiting, so the seal cannot be withdrawn.",
-        "cross_judgment_merged": "A cross-realm judgment sits on this case's flow; cancel that bench instead.",
+        "cross_judgment_merged": "A cross-realm judgment sits on this case’s flow; cancel that bench instead.",
         "approval_started": "An approver has already acted on this case; the seal can no longer be withdrawn.",
         "cannot_withdraw": "The soul has already left the place this seal put it in; the seal cannot be withdrawn."
       }
@@ -2786,12 +2786,12 @@
     "greek_account_label": "The account this verdict is written in",
     "fail_reason_errors": {
       "fail_reason_required": "Choose a reason to finish the judgment.",
-      "fail_reason_invalid": "That reason is not one this hall's verdict can give. Choose again.",
+      "fail_reason_invalid": "That reason is not one this hall’s verdict can give. Choose again.",
       "fail_reason_not_selectable": "The scale lists the reasons; none can be chosen.",
       "fail_reason_not_failed": "Reasons and the curability mark go with a Fail verdict only.",
       "fail_reason_note_required": "“Other” needs one line.",
       "fail_reason_note_too_long": "The line can be at most 500 characters.",
-      "fail_reason_contradicts_record": "The soul's record does not say this, so the verdict cannot say it.",
+      "fail_reason_contradicts_record": "The soul’s record does not say this, so the verdict cannot say it.",
       "greek_account_required": "Choose the account the verdict is written in: Gorgias or Republic.",
       "curability_required": "Add the mark: curable or incurable.",
       "greek_mark_not_applicable": "Only a Greek case takes an account or a curability mark.",
@@ -2882,7 +2882,7 @@
       "IMPERSONATE_START": "Started viewing as",
       "IMPERSONATE_END": "Stopped viewing as"
     },
-    "needs_audit_read": "Requires the \"View the audit log\" permission",
+    "needs_audit_read": "Requires the “View the audit log” permission",
     "repeat_expand": "expand",
     "repeat_collapse": "collapse",
     "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row",
@@ -2927,7 +2927,7 @@
       },
       "failure_reason": "Reason",
       "user_agent": "Client",
-      "search_placeholder": "Search username...",
+      "search_placeholder": "Search username…",
       "no_logs": "No login logs"
     },
     "resource_tenant": "Hall settings",
@@ -2970,19 +2970,19 @@
       "cap_reached": "Showing the latest 500. Narrow the dates to see earlier ones.",
       "empty": "No permission changes in this period",
       "empty_all": "No permission changes yet",
-      "failed": "Couldn't load permission changes, please try again"
+      "failed": "Couldn’t load permission changes, please try again"
     },
     "stats": {
       "scope_hall": "All history for this hall · {{count}} entries",
       "scope_all": "All halls, all history · {{count}} entries",
-      "scope_note": "These numbers don't follow date or hall filters.",
+      "scope_note": "These numbers don’t follow date or hall filters.",
       "by_action": "By action",
       "zero_actions": "{{n}} other actions have no entries",
       "top_resources": "Most-changed resources · top 20",
       "col_resource": "Resource",
       "col_count": "Entries",
-      "row_label": "View audit log for \"{{name}}\"",
-      "failed": "Couldn't load statistics, please try again"
+      "row_label": "View audit log for “{{name}}”",
+      "failed": "Couldn’t load statistics, please try again"
     },
     "filter_operator": "Operator (username)"
   },
@@ -3021,7 +3021,7 @@
       "mail": "Email",
       "locked": "Always on",
       "settings": "Notification settings",
-      "footnote": "“Always on” can't be turned off: Account security and Password help are always delivered, and so is the in-app side of Approval timeouts.",
+      "footnote": "“Always on” can’t be turned off: Account security and Password help are always delivered, and so is the in-app side of Approval timeouts.",
       "categories": {
         "account_security": "Account security",
         "approval": "Pending approvals",
@@ -3035,7 +3035,7 @@
       "notes": {
         "account_security": "Sign-in elsewhere, password changed, two-step changes, someone viewing as you",
         "approval": "A new approval is waiting on you",
-        "approval_timeout": "In-app can't be turned off: a timeout affects the deadline",
+        "approval_timeout": "In-app can’t be turned off: a timeout affects the deadline",
         "password_help": "Only administrators receive these",
         "dispatch": "Proposed, approved, rejected, cancelled",
         "city_god": "A case for first review, or one returned for correction"
@@ -3057,17 +3057,17 @@
       "sign_out_others": "Sign out all others",
       "confirm_title": "Sign out {{n}} other devices?",
       "mfa_until": "No second step until {{date}}",
-      "stranger": "Don't recognise a device? Sign it out, then change your password.",
+      "stranger": "Don’t recognise a device? Sign it out, then change your password.",
       "intro": "A device you sign out has to sign in again next time. Changing your password signs out every device except this one.",
       "count": "{{n}} devices",
       "in_use": "In use now",
       "sign_out_here": "Sign out at the top right",
       "signed_out": "Signed out",
-      "confirm_body": "This device is not affected. \"Don't ask for 30 days\" is cancelled on the other devices too.",
+      "confirm_body": "This device is not affected. “Don’t ask for 30 days” is cancelled on the other devices too.",
       "confirm_action": "Sign out {{n}}",
       "audit_note": "Sign-in history is in the audit log.",
-      "load_failed": "Couldn't load your devices",
-      "sign_out_failed": "Couldn't sign out. Please try again."
+      "load_failed": "Couldn’t load your devices",
+      "sign_out_failed": "Couldn’t sign out. Please try again."
     },
     "mfa_must_setup": "Your role requires two-step verification. Turn it on to carry on.",
     "default_view_admin": "Administrator",
@@ -3081,7 +3081,7 @@
     "mark_all_success": "Marked {{count}} as read",
     "mark_read": "Mark as Read",
     "empty": "No notifications",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "view_all": "View All",
     "mark_read_error": "Failed to mark as read",
     "mark_all_error": "Failed to mark all as read",
@@ -3099,7 +3099,7 @@
     "batch_deleted": "Deleted {{count}}",
     "batch_delete_error": "Failed to delete",
     "batch_delete_title": "Delete {{n}} notifications?",
-    "batch_delete_message": "They disappear from your inbox. This does not affect anyone else's notifications.",
+    "batch_delete_message": "They disappear from your inbox. This does not affect anyone else’s notifications.",
     "open_workflow": "Open the approval",
     "open_cross_judgment": "Open the cross-realm judgment",
     "open_soul": "Open the soul",
@@ -3287,7 +3287,7 @@
       "eternal_no": "No",
       "full": "full",
       "capacity_unrecorded": "Capacity not recorded",
-      "read_only": "Read-only · only holders of \"Manage realms\" can change capacity; every other column comes from the mythology corpus",
+      "read_only": "Read-only · only holders of “Manage realms” can change capacity; every other column comes from the mythology corpus",
       "empty_civ": "No realms are configured for this civilization",
       "occupancy_failed": "Occupancy failed to load",
       "not_a_place": "— · not a place",
@@ -3315,7 +3315,7 @@
       "GREEK": "Greece"
     },
     "switch_hint": "Switching changes only the civilization you view; the plaque and seal stay yours",
-    "manage_hint": "\"Manage realms\" · capacity can be edited in place",
+    "manage_hint": "“Manage realms” · capacity can be edited in place",
     "map": {
       "title": "Route map",
       "shape_line": "A single line",
@@ -3416,7 +3416,7 @@
       "OVERSEER": "Overseer"
     },
     "assessors": {
-      "title": "The Forty-Two Assessors of Ma'at",
+      "title": "The Forty-Two Assessors of Ma’at",
       "count": "{{count}} seats",
       "seat": "Seat {{index}}",
       "toggle": "Show or hide the bench of forty-two"
@@ -3432,17 +3432,17 @@
     "no_pending": "No pending proposals",
     "no_history": "No dispatch history",
     "target_soul": "Target Soul",
-    "soul_search_placeholder": "Search souls by name...",
+    "soul_search_placeholder": "Search souls by name…",
     "soul_search_empty": "No souls match",
     "soul_search_error": "Could not search souls. Try again — this is a failed request, not an empty result.",
     "tenants_error": "Could not load the tenant list. Try again.",
     "soul_search_more": "Showing {{shown}} of {{count}} — keep typing to narrow",
     "target_tenant": "Target Tenant",
-    "select_tenant": "Select tenant...",
+    "select_tenant": "Select tenant…",
     "reason": "Reason",
-    "reason_placeholder": "Reason for dispatch...",
+    "reason_placeholder": "Reason for dispatch…",
     "reason_too_short": "At least {{min}} characters, {{count}} so far",
-    "submitting": "Submitting...",
+    "submitting": "Submitting…",
     "submit_proposal": "Submit Proposal",
     "soul_prefix": "Soul #",
     "detail_title": "Dispatch detail",
@@ -3482,7 +3482,7 @@
     "reject_placeholder": "Explain why this is being rejected",
     "confirm_execute": "Execute this dispatch?",
     "confirm_reject": "Reject this dispatch?",
-    "execute_warning": "Executing places the soul in the target tenant's custody to be judged and sentenced there; once that disposition is executed, the soul returns to its home tenant.",
+    "execute_warning": "Executing places the soul in the target tenant’s custody to be judged and sentenced there; once that disposition is executed, the soul returns to its home tenant.",
     "approved_success": "Approved",
     "rejected_success": "Rejected",
     "executed_success": "Executed",
@@ -3533,7 +3533,7 @@
       "not_yet": "Not yet"
     },
     "filter": {
-      "search": "Search soul name or reason...",
+      "search": "Search soul name or reason…",
       "all_status": "All statuses",
       "all_tenants": "All tenants",
       "from": "Proposed from",
@@ -3596,8 +3596,8 @@
     "cancel_reason": "Reason · required",
     "ended": "Ended · {{conclusion}} · {{date}} · {{name}}",
     "cancelled": "Cancelled · Reason: {{reason}}",
-    "end_error": "Couldn't end it. Try again.",
-    "cancel_error": "Couldn't cancel it. Try again.",
+    "end_error": "Couldn’t end it. Try again.",
+    "cancel_error": "Couldn’t cancel it. Try again.",
     "order": {
       "title": "Realm order",
       "hint": "The approval flow goes realm by realm in this order",
@@ -3615,15 +3615,15 @@
     },
     "cancel_flow_body": "Unstarted realm segments in the approval flow ({{realms}}) are all marked skipped; the flow ends after this realm. Stations already passed stay as they are.",
     "cancel_flow_body_in_realm": "In the {{realm}} segment now running, the current and later stations are marked skipped and the flow ends now. Stations already passed stay as they are.",
-    "cancel_flow_note": "Open \"pick stations\" tasks for other realms are withdrawn and each realm is told.",
+    "cancel_flow_note": "Open “pick stations” tasks for other realms are withdrawn and each realm is told.",
     "workflow_running": "The approval flow is still running: this judgment ends when the flow finishes or is rejected. To stop early, cancel the cross-realm judgment.",
-    "join_locked": "The approval flow isn't running, so no new seat; while it runs, a new realm can only go last"
+    "join_locked": "The approval flow isn’t running, so no new seat; while it runs, a new realm can only go last"
   },
   "users": {
     "title": "User Management",
     "create_user": "Create User",
     "edit_user": "Edit User",
-    "search_placeholder": "Search username or email...",
+    "search_placeholder": "Search username or email…",
     "all_roles": "All Roles",
     "no_users": "No users found",
     "active": "Active",
@@ -3672,7 +3672,7 @@
       "primary": "Primary role",
       "primary_hint": "The primary role decides whether the account is an administrator and how it ranks.",
       "extra": "Additional roles",
-      "extra_hint": "Permissions are the union of the primary role and every additional role. Each role's own refusals apply to that role only, so a Circle Moderator who is also a Judge can approve as Judge. Administrator-only actions still follow the primary role.",
+      "extra_hint": "Permissions are the union of the primary role and every additional role. Each role’s own refusals apply to that role only, so a Circle Moderator who is also a Judge can approve as Judge. Administrator-only actions still follow the primary role.",
       "extra_none": "No roles available to add",
       "admin_locked": "An administrator already holds everything and cannot take additional roles.",
       "saved": "Roles updated",
@@ -3681,7 +3681,7 @@
     "batch": {
       "region": "Batch actions",
       "selected": "{{n}} selected",
-      "select_row": "Select \"{{name}}\"",
+      "select_row": "Select “{{name}}”",
       "select_all": "Select all on this page",
       "clear": "Clear selection",
       "activate": "Activate selected",
@@ -3719,7 +3719,7 @@
       "col_username": "Username",
       "col_name": "Name",
       "col_issue": "Issue",
-      "template_notes": "username is required. A row with an email and no password gets an invite email, and the person sets their own password within 7 days. A row with a password uses it as the initial password, to be changed at first sign-in. Rows with neither are not imported. Invite rows can't have the ADMIN role.",
+      "template_notes": "username is required. A row with an email and no password gets an invite email, and the person sets their own password within 7 days. A row with a password uses it as the initial password, to be changed at first sign-in. Rows with neither are not imported. Invite rows can’t have the ADMIN role.",
       "back": "Back",
       "commit": "Import {{n}} people",
       "blocked": "{{n}} rows have problems; import is disabled. Fix the file and choose it again.",
@@ -3787,7 +3787,7 @@
       "impersonate": "View as this user"
     },
     "impersonate": {
-      "body": "View only. You can't do anything. Up to 30 minutes.",
+      "body": "View only. You can’t do anything. Up to 30 minutes.",
       "notice": "{{name}} will be told, with your name and this reason.",
       "banner": "Viewing as {{name}}",
       "exit": "Stop viewing",
@@ -3799,7 +3799,7 @@
       "readonly": "Read only",
       "reason_line": "Reason: {{reason}}",
       "remaining": "{{time}} left",
-      "locked": "Viewing: you can't act"
+      "locked": "Viewing: you can’t act"
     }
   },
   "welcome": {
@@ -3842,8 +3842,8 @@
     "next_redo_onboarding": "Redo first-time setup",
     "activity_source": "Audit log · my last {{n}}",
     "activity_empty_reason": "Rulings, registrations and transfers you make appear here in order.",
-    "error_stats": "Stats didn't load. The shortcuts below still work.",
-    "error_activity": "The audit log can't be read right now.",
+    "error_stats": "Stats didn’t load. The shortcuts below still work.",
+    "error_activity": "The audit log can’t be read right now.",
     "onboarding_can_change": "You can change all four later.",
     "onboarding_wrong_identity": "Wrong identity? Contact your hall admin.",
     "onboarding_view_title": "What should you see after signing in?",
@@ -3855,8 +3855,8 @@
   },
   "permission": {
     "denied_title": "This page is not for your role",
-    "denied_message": "You don't have permission to access this page or perform this action.",
-    "ask_admin": "Ask your hall's administrator.",
+    "denied_message": "You don’t have permission to access this page or perform this action.",
+    "ask_admin": "Ask your hall’s administrator.",
     "go_back": "Go back",
     "needs": "This page needs the “{{names}}” permission.",
     "needs_admin": "This page is open to administrators only.",
@@ -3935,7 +3935,7 @@
   },
   "icon_picker": {
     "select": "Select Icon",
-    "search": "Search icons...",
+    "search": "Search icons…",
     "clear": "Clear",
     "no_results": "No icons found",
     "categories": {
@@ -3972,8 +3972,8 @@
     "create_error": "Failed to create button",
     "update_error": "Failed to update button",
     "delete_error": "Failed to delete button",
-    "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role",
-    "rule": "A button shows only if it's on here and the user has the permission. Off here means hidden even for users with permission.",
+    "permission_mismatch_warning": "“{{codename}}” doesn’t match a real permission — this button will be silently hidden from every non-ADMIN role",
+    "rule": "A button shows only if it’s on here and the user has the permission. Off here means hidden even for users with permission.",
     "display_only_note": "This only controls whether the button is shown; the server does not refuse the action. To forbid an action, take the permission away.",
     "count": "{{menu}} · {{n}} buttons",
     "col_show": "Show",
@@ -4069,7 +4069,7 @@
       "download": "Download",
       "remove": "Remove",
       "delete_title": "Delete attachment",
-      "delete_body": "“{{name}}” can't be recovered once deleted; after the case is concluded attachments can no longer be deleted.",
+      "delete_body": "“{{name}}” can’t be recovered once deleted; after the case is concluded attachments can no longer be deleted.",
       "delete_failed": "Could not delete",
       "delete_concluded": "The case is concluded; attachments can no longer be deleted.",
       "preview_failed": "Could not open this attachment",
@@ -4232,13 +4232,13 @@
       "SOUL_NOT_FOUND": "Check the name and birth date in the soul roster. If the registration is wrong, the source system must correct it and resubmit under a new idempotency key (resending it as is counts as the same request).",
       "SOUL_NOT_ALIVE": "This soul is no longer among the living and has most likely been registered already; check its current state — usually nothing more is needed.",
       "SOUL_AMBIGUOUS": "More than one living soul has this name, so nothing was registered; the source system should add the birth date or the soul ID and resubmit with a new idempotency key.",
-      "INVALID_TRANSITION": "The soul's current state cannot move into judgment; check its state and timeline before deciding whether to handle it by hand.",
+      "INVALID_TRANSITION": "The soul’s current state cannot move into judgment; check its state and timeline before deciding whether to handle it by hand.",
       "INTERNAL_ERROR": "An internal error; you can press “Retry”.",
       "VALIDATION_ERROR": "The registration is malformed (see the text above); the source system must correct it and resubmit under a new idempotency key.",
       "NO_CITY_GOD": "First give this hall a City God that can take the case on the City Gods page, then press “Retry”.",
       "HALL_INACTIVE": "This hall is deactivated; an administrator must reactivate it before this registration can be taken.",
-      "retry_exhausted": "No retries left; pass this row's source reference to whoever maintains the system.",
-      "unknown": "Pass this row's source reference to whoever maintains the system to look into.",
+      "retry_exhausted": "No retries left; pass this row’s source reference to whoever maintains the system.",
+      "unknown": "Pass this row’s source reference to whoever maintains the system to look into.",
       "link_roster": "Open the soul roster",
       "link_soul": "View this soul",
       "link_city_gods": "Open City Gods"
@@ -4278,7 +4278,7 @@
     "credentials": {
       "title": "Initial passwords awaiting delivery",
       "subtitle": "Soul passwords that could not be sent: view once, deliver in person, or retry sending",
-      "manage_hint": "\"Manage soul accounts\" is required to view, mark delivered or retry",
+      "manage_hint": "“Manage soul accounts” is required to view, mark delivered or retry",
       "filters": {
         "label": "Filter by status",
         "PENDING": "Awaiting delivery",
@@ -4297,7 +4297,7 @@
       "revealed_by": "Viewed by {{by}} at {{time}}",
       "delivered_by": "Delivered by {{by}} at {{time}}",
       "expired": "Expired",
-      "expired_go_reset": "This initial password has expired; reset it on the soul's page",
+      "expired_go_reset": "This initial password has expired; reset it on the soul’s page",
       "actions": {
         "reveal": "View password",
         "retry": "Retry sending",
@@ -4328,13 +4328,13 @@
         "qr_hint": "In the Soul Ledger app, tap Scan on the sign-in page",
         "officer": "Issued by {{name}}",
         "printed_at": "Printed {{time}}",
-        "personal": "For you only. Don't photograph or forward it.",
+        "personal": "For you only. Don’t photograph or forward it.",
         "cut": "✂ Cut here · top to the soul, bottom kept by the hall",
         "stub": "Stub · kept by the hall",
         "stub_until": "Initial password valid until",
         "stub_printed": "Printed",
-        "sign_soul": "Soul's signature · date",
-        "sign_officer": "Officer's signature",
+        "sign_soul": "Soul’s signature · date",
+        "sign_officer": "Officer’s signature",
         "after_sign": "After signing, tap Mark delivered on the desk.",
         "reprint": "Reprint",
         "system": "Soul Ledger",
@@ -4364,7 +4364,7 @@
     "reveal": {
       "confirm_title": "View the initial password?",
       "confirm_body": "The plaintext can be viewed once. The server erases it as soon as you confirm, and nobody can see it again after this window closes. Only continue if you can hand it to {{name}} (code {{code}}, life {{n}}) in person now.",
-      "confirm": "I'm ready, show it",
+      "confirm": "I’m ready, show it",
       "shown_title": "Initial password (shown once)",
       "shown_warning": "This cannot be viewed again after closing. Deliver it in person now; the soul must change it at first sign-in.",
       "password_label": "Initial password",
@@ -4377,7 +4377,7 @@
       "close_confirm_body": "The password is shown only once. Close anyway? It cannot be viewed again; you would have to reset it to get a new initial password.",
       "close_confirm": "Close anyway",
       "close_back": "Go back",
-      "already_revealed": "This password was already viewed (perhaps by another officer) and cannot be shown again; reset it on the soul's page to deliver",
+      "already_revealed": "This password was already viewed (perhaps by another officer) and cannot be shown again; reset it on the soul’s page to deliver",
       "failed": "Could not view the password; try again"
     },
     "account": {
@@ -4405,11 +4405,11 @@
       "retired_at": "retired {{time}}",
       "pending_link": "See passwords awaiting delivery",
       "actions": {
-        "provision": "Open this life's account",
+        "provision": "Open this life’s account",
         "reset": "Reset initial password",
         "mfa_reset": "Turn off two-step verification"
       },
-      "provision_title": "Open this life's account for {{name}}?",
+      "provision_title": "Open this life’s account for {{name}}?",
       "provision_body": "A random initial password is generated (valid 72 hours, must be changed at first sign-in). It is sent to a contact if there is one; otherwise it waits in the delivery list.",
       "reset_title": "Reset the initial password for {{name}}?",
       "reset_body": "Any undelivered password is voided now; the new one is valid 72 hours and must be changed at sign-in. It is sent to a contact if there is one; otherwise it waits in the delivery list.",
@@ -4422,17 +4422,17 @@
       "failed": "Something went wrong; try again",
       "mfa_reset": {
         "title": "Turn off two-step verification for {{name}}?",
-        "consequence_1": "The authenticator key, the recovery codes and every “don't ask again on this phone” are voided; signed-in devices must sign in again.",
+        "consequence_1": "The authenticator key, the recovery codes and every “don’t ask again on this phone” are voided; signed-in devices must sign in again.",
         "consequence_2": "From then on the soul signs in with its password alone, and sees in its notifications which officer turned it off.",
         "consequence_3": "It can only be turned off, never on, for a soul; the soul can turn it on again itself.",
         "reason": "Reason (required, goes into the audit log)",
         "reason_required": "A reason is needed",
         "done": "Two-step verification turned off",
         "not_enabled": "This soul has not turned two-step verification on",
-        "not_home_hall": "Only an officer of the soul's own hall can turn off its two-step verification"
+        "not_home_hall": "Only an officer of the soul’s own hall can turn off its two-step verification"
       },
-      "provisioned_sent": "This life's account is open. The initial password is being sent to {{to}}; if sending fails it moves to the pending list.",
-      "provisioned_pending": "This life's account is open. There is no contact on file, so the initial password is waiting in the pending list — view it or print the slip and hand it to the soul in person."
+      "provisioned_sent": "This life’s account is open. The initial password is being sent to {{to}}; if sending fails it moves to the pending list.",
+      "provisioned_pending": "This life’s account is open. There is no contact on file, so the initial password is waiting in the pending list — view it or print the slip and hand it to the soul in person."
     },
     "rebirth": {
       "title": "Rebirth applications",
@@ -4451,7 +4451,7 @@
         "appeal": "Appeal",
         "decided_at": "Decided at",
         "created_at": "Filed",
-        "statement": "Soul's statement",
+        "statement": "Soul’s statement",
         "appeal_statement": "Appeal statement",
         "rejection_reason": "Rejection reason",
         "cooldown": "Cooldown"
@@ -4481,7 +4481,7 @@
       "step_appeal": "(appeal)",
       "cross_to": "Cross-civilization → {{hall}}",
       "cross_no_targets": "No other civilization takes rebirths right now.",
-      "cross_target_refused": "That hall cannot be chosen: it is closed, its civilization is terminal, or it is the soul's own civilization."
+      "cross_target_refused": "That hall cannot be chosen: it is closed, its civilization is terminal, or it is the soul’s own civilization."
     },
     "cooldown": {
       "tabs": {
@@ -4519,7 +4519,7 @@
       "note_required": "A rejection needs a note; the soul will read it",
       "remaining_progress": "{{past}} of {{total}} days passed",
       "approve_with_days": "Approve · {{days}} days left",
-      "scope_note": "Approval only shortens this cooling-off period; the hall's setting is unchanged",
+      "scope_note": "Approval only shortens this cooling-off period; the hall’s setting is unchanged",
       "sort_note": "Pending sorted by days left; ended cooling-off last",
       "source": "Cooling-off from the final rejection of {{id}}",
       "decide_failed": "Could not decide: {{reason}}",
@@ -4562,7 +4562,7 @@
     "term_default": "Default {{n}} years",
     "release": "Release at term end",
     "release_confirm": "Release at term end?",
-    "release_warning": "Records the term as over and the soul leaves this stop: to the next stop of its placement plan, or, if none is left, to await rebirth (or its final rest). This can't be undone.",
+    "release_warning": "Records the term as over and the soul leaves this stop: to the next stop of its placement plan, or, if none is left, to await rebirth (or its final rest). This can’t be undone.",
     "release_success": "Released at term end",
     "release_error": {
       "term_not_ended": "The term has not ended yet; it cannot be released.",
@@ -4577,7 +4577,7 @@
     "term_overdue": "Term ended, not released",
     "overdue_since": "Ended {{date}}",
     "release_warning_by_civ": {
-      "cn": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can't be undone."
+      "cn": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can’t be undone."
     }
   },
   "reincarnation": {
@@ -4596,18 +4596,18 @@
       "THREE_EVIL_PATHS": "Three evil paths"
     },
     "error": {
-      "soup_not_taken": "{{name}} hasn't taken Meng Po's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
-      "plan_in_progress": "{{name}}'s placement plan is not finished; no rebirth yet.",
+      "soup_not_taken": "{{name}} hasn’t taken Meng Po’s soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
+      "plan_in_progress": "{{name}}’s placement plan is not finished; no rebirth yet.",
       "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
-      "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth.",
-      "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
+      "rebirth_not_approved": "{{name}}’s rebirth application was rejected or is still under review; no rebirth.",
+      "term_not_served": "{{name}}’s term is not served out (until {{date}}); release it at term end before the rebirth.",
       "disposition_not_executed": "{{name}} still has a disposition that has not been executed; execute it and let the term run out before the rebirth.",
       "open_judgment": "{{name}} still has an open judgment; conclude or withdraw it before the rebirth.",
-      "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path.",
+      "rebirth_form_reason_required": "{{name}}’s approved application asks for {{form}}; give a reason to choose another path.",
       "rebirth_continent_not_applicable": "Only a soul of Diyu reborn into the human path is born in one of the four continents.",
-      "origin_flow_open": "{{name}}'s original approval workflow has not finished; the rebirth waits for it.",
+      "origin_flow_open": "{{name}}’s original approval workflow has not finished; the rebirth waits for it.",
       "plan_in_progress_by_civ": {
-        "cn": "{{name}}'s sentence plan is not finished; no rebirth yet."
+        "cn": "{{name}}’s sentence plan is not finished; no rebirth yet."
       },
       "eternal_sentence_by_civ": {
         "cn": {
@@ -4620,7 +4620,7 @@
     },
     "next_continent": "Continent of the next life · optional",
     "next_continent_same": "Same as this life",
-    "next_continent_hint": "Leave it to keep this life's continent.",
+    "next_continent_hint": "Leave it to keep this life’s continent.",
     "next_continent_unset": "Not specified",
     "desired_form": "The soul asks for: {{form}}",
     "form_reason": "Reason for another path",
@@ -4757,7 +4757,7 @@
       "rebirth_quota_used_col": "Done this month",
       "rebirth_quota_zero": "0 = none this month",
       "rebirth_quota_invalid": "Enter a whole number, 0 or more",
-      "rebirth_quota_below_used": "Lower than this month's count: this path takes no more this month",
+      "rebirth_quota_below_used": "Lower than this month’s count: this path takes no more this month",
       "dispatch_enabled": "Can receive transfers (residence)",
       "saved": "Settings saved",
       "save_failed": "Could not save the settings",
@@ -4861,7 +4861,7 @@
     "rebuild_confirm_message": "Fills in missing schedule rows for every active tenant from the registry and removes rows no longer in it. Operator changes to enabled, cron and time zone are kept.",
     "rebuild_done": "Rebuilt: {{created}} created, {{updated}} updated, {{removed}} removed, {{legacy_removed}} legacy rows cleared",
     "rebuild_failed": "Rebuild failed",
-    "manage_hint": "Enabling, editing or running a job needs \"Manage scheduled tasks\"",
+    "manage_hint": "Enabling, editing or running a job needs “Manage scheduled tasks”",
     "groups": {
       "global": "Global jobs",
       "tenant": "Tenant {{code}}",
@@ -5080,7 +5080,7 @@
       "scan": "Scan",
       "scanned": "✓ Filled in from the code",
       "reset_filled": "✓ Your soul number, from the reset",
-      "bad_char": "! A soul number doesn't use \"{{c}}\"",
+      "bad_char": "! A soul number doesn’t use “{{c}}”",
       "bad_char_body": "Numbers never use 0, O, 1, I or L. Check your slip again.",
       "bad_symbol": "! Only letters and digits",
       "bad_paste": "! The pasted text has characters a number never uses",
@@ -5097,8 +5097,8 @@
         "pw_changed_body": "Enter the new password. You can turn {{bio}} sign-in back on in Settings.",
         "reset": "An officer of your hall reset your password",
         "reset_body": "Sign in with the initial password the officer gave you, then set a new one.",
-        "reborn": "You have been reborn — this is a new life's account",
-        "reborn_body": "Your number stays the same. Sign in with this life's initial password.",
+        "reborn": "You have been reborn — this is a new life’s account",
+        "reborn_body": "Your number stays the same. Sign in with this life’s initial password.",
         "bio_changed": "{{bio}} sign-in is off",
         "bio_changed_body": "The {{bio}} on this phone changed, so we turned it off. Enter your password to turn it back on.",
         "devoured": "Your heart has gone to Ammit",
@@ -5126,12 +5126,12 @@
     },
     "forgot_password": {
       "link": "Forgot password",
-      "email_intro": "Enter your soul account's contact email and we will send a 6-digit code to it.",
+      "email_intro": "Enter your soul account’s contact email and we will send a 6-digit code to it.",
       "email": "Email",
       "email_invalid": "Enter a valid email address",
       "send": "Send code",
       "sending": "Sending…",
-      "sent_neutral": "If this is a soul account's contact email, a code has been sent",
+      "sent_neutral": "If this is a soul account’s contact email, a code has been sent",
       "code": "Code",
       "code_format": "The code is 6 digits",
       "resend": "Resend",
@@ -5148,7 +5148,7 @@
       "no_email_kicker": "Reset password",
       "no_email_title": "Ask your hall to reset it",
       "no_email_body": "A soul with no bound email cannot reset its own password in the app.",
-      "no_email_step_1": "Come to the hall's counter with your delivery slip, and give your name and soul code.",
+      "no_email_step_1": "Come to the hall’s counter with your delivery slip, and give your name and soul code.",
       "no_email_step_2": "Once the hall has confirmed who you are, it resets the password and gives you a temporary one.",
       "no_email_note": "If you cannot come, ask a soul of your hall to write to the hall for you. Once you are back in, add an address under Settings › Contact email, so next time you can reset it yourself.",
       "back_to_login": "Back to sign-in",
@@ -5215,12 +5215,12 @@
       "code_copied": "Soul code copied",
       "code_copy_failed": "Copy failed",
       "residing": "Residing in {{current}} · belongs to {{home}}",
-      "residing_note": "You return home when the residence ends. Until then your ledger keeps your home civilization's words.",
+      "residing_note": "You return home when the residence ends. Until then your ledger keeps your home civilization’s words.",
       "here": "Where you are now",
       "stage": "Stage {{at}} / {{total}}",
       "balance": "Balance, this life",
       "balance_none": "Nothing has been entered for or against you yet.",
-      "ledger": "This life's ledger",
+      "ledger": "This life’s ledger",
       "ledger_hint": "Open an item to read it",
       "station": "Where you are",
       "station_at": "Station {{n}} / 13",
@@ -5306,7 +5306,7 @@
       "reborn_as": "Reborn as {{form}}",
       "reborn_on": "Reborn {{date}}",
       "sealed": "SEALED",
-      "no_actions": "This life's record is read-only; there is nothing to act on.",
+      "no_actions": "This life’s record is read-only; there is nothing to act on.",
       "end": "The record ends here. Earlier lives are not in the ledger."
     },
     "applications": {
@@ -5324,7 +5324,7 @@
       "expectation": "What you state here is a {{hope}}. The judges decide where you go, and the first review decides whether you cross civilizations.",
       "expectation_word": "wish",
       "statement_hint": "Your own words, passed to the judges as written.",
-      "residing_note": "You are residing in {{current}}; rebirth is still decided by {{home}}. This page follows {{home}}'s rules.",
+      "residing_note": "You are residing in {{current}}; rebirth is still decided by {{home}}. This page follows {{home}}’s rules.",
       "state_reason": {
         "ALIVE": "You are still alive. You can apply for rebirth once this life has ended and its judgment and disposition are complete.",
         "JUDGING": "Your judgment is not over yet. You can apply for rebirth once it is concluded and its disposition carried out.",
@@ -5465,7 +5465,7 @@
     },
     "homecoming": {
       "title": "You are back in {{home}}",
-      "body": "Your residence in {{from}} has ended. The ledger and its colours are {{home}}'s again.",
+      "body": "Your residence in {{from}} has ended. The ledger and its colours are {{home}}’s again.",
       "ok": "Got it"
     },
     "welcome": {
@@ -5528,9 +5528,9 @@
       "push_comments": "Comments and replies",
       "push_review": "Review results",
       "push_warning": "Hall warnings",
-      "locked": "Can't be turned off",
+      "locked": "Can’t be turned off",
       "email_nudge_title": "Add a contact email",
-      "email_nudge_body": "If you forget your password, the code goes to your contact email. Without one, only the hall's counter can reset it."
+      "email_nudge_body": "If you forget your password, the code goes to your contact email. Without one, only the hall’s counter can reset it."
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -5569,7 +5569,7 @@
       "hall": {
         "hint": "Write to the hall; an officer replies in its name.",
         "title": "{{hall}} · Hall",
-        "subtitle": "An officer replies in the hall's name · not immediate",
+        "subtitle": "An officer replies in the hall’s name · not immediate",
         "officer_byline": "{{hall}} · {{role}} {{name}}",
         "not_current": "You are no longer at {{hall}}. The old letters remain; nothing can be added.",
         "go_current": "Write to {{hall}}"
@@ -5592,7 +5592,7 @@
         "from_circle": "From the circle",
         "circle_hint": "Only souls of your civilization who follow you or whom you follow.",
         "write": "Write",
-        "circle_error": "Couldn't load your circle."
+        "circle_error": "Couldn’t load your circle."
       },
       "compose": {
         "placeholder": "Say something…",
@@ -5615,7 +5615,7 @@
         "incoming_hint": "A first letter. Reply and you can speak freely; you may also leave it.",
         "locked": "Waiting for a reply",
         "next_at": "One letter sent. You may send another from {{time}}.",
-        "throttled": "One letter a day, and today's is sent. You may send again from {{time}}. Your draft is kept.",
+        "throttled": "One letter a day, and today’s is sent. You may send again from {{time}}. Your draft is kept.",
         "decline": "Decline",
         "block": "Block",
         "declined": "Request declined"
@@ -5740,7 +5740,7 @@
       "muted": {
         "body": "You are muted: no posts or comments until then. Letters to the hall are not affected.",
         "until": "Until {{time}}",
-        "reason": "The hall's reason: {{reason}}"
+        "reason": "The hall’s reason: {{reason}}"
       },
       "react": {
         "like": "Like",
@@ -6123,7 +6123,7 @@
       "not_configured_title": "Ask is not open at this hall yet",
       "not_configured_body": "If you have a question, write to your hall; an officer will reply.",
       "to_letters": "Go to Letters · the hall",
-      "letters_card": "Write to {{hall}} · an officer replies in the hall's name",
+      "letters_card": "Write to {{hall}} · an officer replies in the hall’s name",
       "letters_note": "This conversation is not carried over; you write the letter yourself.",
       "new": "New conversation",
       "history_end": "Conversations are kept 30 days, then deleted automatically.",
@@ -6183,7 +6183,7 @@
         "title": "First, put an authenticator on your phone",
         "body": "Once it is on, signing in takes a 6-digit number as well as your password. An authenticator app makes the number, a new one every 30 seconds, and it exists only on your phone.",
         "no_app_title": "No authenticator yet?",
-        "no_app_body": "Search your phone's app store for “authenticator”; any free one will do. If you already have one, go straight on.",
+        "no_app_body": "Search your phone’s app store for “authenticator”; any free one will do. If you already have one, go straight on.",
         "why": "With it on, someone who learns your password still cannot sign in without your phone.",
         "next": "I have one · Next",
         "password_hint": "Enter your current password first, to show it is you."
@@ -6261,7 +6261,7 @@
         "no_email": "A contact email cannot be used to turn off two-step verification."
       },
       "copied": "Copied",
-      "copied_clears": "Copied. Paste it within {{seconds}} seconds; after that it's cleared from the clipboard.",
+      "copied_clears": "Copied. Paste it within {{seconds}} seconds; after that it’s cleared from the clipboard.",
       "wrong_password": "! That password is wrong"
     },
     "scan": {
@@ -6272,7 +6272,7 @@
       "torch": "Flashlight",
       "torch_on": "Flashlight · on",
       "manual": "Type the number instead",
-      "invalid": "! This isn't a Soul Ledger slip code",
+      "invalid": "! This isn’t a Soul Ledger slip code",
       "invalid_body": "Scan the one on the right of your slip, or close this and type the number.",
       "denied_title": "No camera access",
       "denied_body": "Scanning needs the camera. Turn it on in system settings, or type the number.",
@@ -6311,13 +6311,13 @@
       "this_phone": "This phone",
       "last_seen": "Last seen {{time}}",
       "sign_out": "Sign out",
-      "sign_out_failed": "Couldn't sign out. Please try again.",
-      "load_failed": "Couldn't load devices and sign-ins",
+      "sign_out_failed": "Couldn’t sign out. Please try again.",
+      "load_failed": "Couldn’t load devices and sign-ins",
       "no_records": "No sign-ins yet",
       "method_recovery": "Recovery code",
       "failed_mfa": "Failed {{n}} times · wrong code",
       "failed_face": "Failed {{n}} times · {{bio}} not recognised",
-      "stranger_title": "A device or record you don't recognise?",
+      "stranger_title": "A device or record you don’t recognise?",
       "stranger_body": "Sign that device out first, then change your password. Changing it signs out everything except this phone.",
       "lost_phone_hint": "Lost your phone? Sign in on another one, sign the lost phone out under “Devices and sign-ins”, then change your password."
     },
@@ -6372,15 +6372,15 @@
       "q_login": "I cannot sign in",
       "a_login": "First check that the number is right. After 5 wrong passwords in a row the account is locked for 15 minutes; wait and try again. If it still fails, tap “Forgot password”.",
       "q_forgot": "I forgot my password",
-      "a_forgot": "On the sign-in page tap “Forgot password”; a code is sent to your contact email. No contact email yet? Add one under Settings › Contact email once signed in. Already unable to sign in? Come to the hall's counter with your delivery slip.",
+      "a_forgot": "On the sign-in page tap “Forgot password”; a code is sent to your contact email. No contact email yet? Add one under Settings › Contact email once signed in. Already unable to sign in? Come to the hall’s counter with your delivery slip.",
       "q_phone": "I lost my phone",
-      "a_phone": "Sign in on another phone, go to “Account security › Devices and sign-ins”, sign the lost phone out, then change your password. If two-step verification is on, sign in with a recovery code. If you have lost the recovery codes too, come to the hall's counter.",
+      "a_phone": "Sign in on another phone, go to “Account security › Devices and sign-ins”, sign the lost phone out, then change your password. If two-step verification is on, sign in with a recovery code. If you have lost the recovery codes too, come to the hall’s counter.",
       "q_slip": "What is the delivery slip",
       "a_slip": "The paper you were given when you arrived. It carries your number and the password for your first sign-in; after that first sign-in the password no longer works. Keep the slip: you need it at the counter.",
       "q_contact": "How do I contact the hall",
-      "a_contact": "Tap “Write to the hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall's counter.",
+      "a_contact": "Tap “Write to the hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall’s counter.",
       "in_person_title": "Come to {{hall}} with your delivery slip",
-      "in_person_body": "Letters aren't open here yet, so please ask in person.",
+      "in_person_body": "Letters aren’t open here yet, so please ask in person.",
       "address": "Address",
       "hours": "Opening hours",
       "phone": "Phone",
@@ -6389,7 +6389,7 @@
       "q_appeals": "The three kinds of appeal",
       "a_appeals": "Judgment appeal: you dispute a concluded judgment; file it before its deadline, at most twice per judgment, and a withdrawal counts. Rebirth appeal: a rejected rebirth application can be appealed once. Grievance: held in the City of Wrongful Death and believing your death unjust, you petition the City God; if it is found untrue you may file again later.",
       "q_merit": "Merit and demerit",
-      "a_merit": "Your records are this life's account: good deeds are merit, wrongs are demerit. Merit minus demerit is the number above “This life's ledger”.",
+      "a_merit": "Your records are this life’s account: good deeds are merit, wrongs are demerit. Merit minus demerit is the number above “This life’s ledger”.",
       "q_disposition": "Disposition",
       "a_disposition": "What is decided for you once a judgment is concluded: where you go, how long you stay there, and whether another stop follows.",
       "q_sentence": "Placement plan",
@@ -6458,7 +6458,7 @@
         "UPHELD_LATE": "Grievance upheld · you had already left on the fated day",
         "DELIVERED": "Grievance upheld · delivered to the Lotus Terrace"
       },
-      "note_label": "The City God's note",
+      "note_label": "The City God’s note",
       "plea_label": "Your grievance",
       "plea_required": "Write down your grievance",
       "file_body": "The City God will look into it. A grave grievance that proves true releases you early to be judged; if it is not upheld you stay until your fated day, and may file again.",
@@ -6509,7 +6509,7 @@
     },
     "appeal_upheld": {
       "title": "Appeal reviewed: the verdict stands",
-      "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the reviewer's note."
+      "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the reviewer’s note."
     },
     "appeal_amended": {
       "title": "Appeal reviewed: the verdict was changed",
@@ -6521,7 +6521,7 @@
     },
     "wangsi_upheld_late": {
       "title": "Grievance upheld",
-      "body": "Your grievance was found true. Open Soul Ledger to read the reviewer's note."
+      "body": "Your grievance was found true. Open Soul Ledger to read the reviewer’s note."
     },
     "wangsi_delivered": {
       "title": "Grievance upheld: delivered",
@@ -6529,7 +6529,7 @@
     },
     "wangsi_rejected": {
       "title": "Grievance not upheld",
-      "body": "Your grievance was not found true. Open Soul Ledger to read the reviewer's note."
+      "body": "Your grievance was not found true. Open Soul Ledger to read the reviewer’s note."
     },
     "disposition_executed": {
       "title": "Disposition carried out",
@@ -6753,15 +6753,15 @@
     },
     "dispatch_approved": {
       "title": "Dispatch proposal approved",
-      "body": "{{target}} approved your hall's proposal to send soul {{soul}}."
+      "body": "{{target}} approved your hall’s proposal to send soul {{soul}}."
     },
     "dispatch_rejected": {
       "title": "Dispatch proposal rejected",
-      "body": "{{target}} rejected your hall's proposal to send soul {{soul}}. Reason: {{reason}}"
+      "body": "{{target}} rejected your hall’s proposal to send soul {{soul}}. Reason: {{reason}}"
     },
     "dispatch_rejected_bare": {
       "title": "Dispatch proposal rejected",
-      "body": "{{target}} rejected your hall's proposal to send soul {{soul}}."
+      "body": "{{target}} rejected your hall’s proposal to send soul {{soul}}."
     },
     "dispatch_cancelled": {
       "title": "Dispatch proposal cancelled by its sender",
@@ -6874,12 +6874,12 @@
     },
     "sentence_request_decided": {
       "title": "Placement plan request decided",
-      "body": "The original judge has decided this hall's request on the placement plan of soul {{soul}}. Open it to see.",
+      "body": "The original judge has decided this hall’s request on the placement plan of soul {{soul}}. Open it to see.",
       "title_by_civ": {
         "cn": "Sentence plan request decided"
       },
       "body_by_civ": {
-        "cn": "The original judge has decided this hall's request on the sentence plan of soul {{soul}}. Open it to see."
+        "cn": "The original judge has decided this hall’s request on the sentence plan of soul {{soul}}. Open it to see."
       }
     },
     "sentence_plan_cancelled": {
@@ -6981,7 +6981,7 @@
       "body": "Your request to shorten the cooldown was rejected."
     },
     "assistant_cap_warning": {
-      "title": "Assistant spend at 80% of this month's cap",
+      "title": "Assistant spend at 80% of this month’s cap",
       "body": "Estimated spend this month is {{spent}} against a cap of {{cap}}. The assistant switches off at the cap; the month rolls over on the 1st at 8:00 Beijing time."
     },
     "assistant_cap_closed": {
@@ -7009,15 +7009,15 @@
       "body": "{{soul}} has filed a grievance, waiting for review."
     },
     "workflow_pick_nodes": {
-      "title": "Pick this realm's stations",
+      "title": "Pick this realm’s stations",
       "body": "{{soul}} · approval flow from {{realm}}; this realm is no. {{order}}. Pick before your turn."
     },
     "workflow_pick_waiting": {
       "title": "A flow is waiting for this realm to pick",
-      "body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks."
+      "body": "{{soul}} · {{realm}}’s stations are done; it continues once this realm picks."
     },
     "workflow_pick_overdue": {
-      "title": "{{realm}} hasn't picked in 3 days",
+      "title": "{{realm}} hasn’t picked in 3 days",
       "body": "{{soul}} · the flow has waited at {{realm}} for {{n}} days. Remind again, or go with the default flow."
     },
     "workflow_nodes_adjusted": {
@@ -7026,11 +7026,11 @@
     },
     "workflow_pick_withdrawn": {
       "title": "Pick-stations task withdrawn",
-      "body": "The cross-realm judgment \"{{title}}\" was cancelled; no need to pick stations for {{soul}}."
+      "body": "The cross-realm judgment “{{title}}” was cancelled; no need to pick stations for {{soul}}."
     },
     "officer_handover_received": {
       "title": "Work handed over to you",
-      "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} City Gods, {{letters}} letters."
+      "body": "{{by}} handed {{from}}’s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} City Gods, {{letters}} letters."
     }
   },
   "social_moderation": {
@@ -7092,7 +7092,7 @@
     "failed": "Action failed",
     "errors": {
       "already_resolved": "This report was already handled (perhaps by another officer)",
-      "invalid_transition": "The content's status changed; refresh and try again",
+      "invalid_transition": "The content’s status changed; refresh and try again",
       "already_deleted": "The content was already deleted",
       "duplicate_word": "That word is already on the list",
       "invalid_word": "The word cannot be empty",
@@ -7101,11 +7101,11 @@
       "not_found": "Not found, or not in this civilization",
       "reason_required": "Write a reason first",
       "admin_only": "Only an administrator can copy a word list across civilizations",
-      "shared_source_only": "A hall administrator can copy only the shared site-wide list, not another hall's",
+      "shared_source_only": "A hall administrator can copy only the shared site-wide list, not another hall’s",
       "same_tenant": "The source is this civilization",
       "no_tenant": "No current civilization",
       "invalid_days": "A mute lasts 1–365 days",
-      "self_moderation": "You can't approve or restore your own content."
+      "self_moderation": "You can’t approve or restore your own content."
     },
     "empty": {
       "words": "No words yet",
@@ -7253,7 +7253,7 @@
       "not_inbox": "This is not a hall inbox",
       "chat_not_configured": "Chat is not enabled",
       "chat_unavailable": "Chat is temporarily unavailable",
-      "invalid_assignee": "That officer cannot take this hall's letters",
+      "invalid_assignee": "That officer cannot take this hall’s letters",
       "not_current_hall": "This soul has been transferred elsewhere; you cannot reply for now",
       "assigned_to_other": "Another officer is handling this letter. Take it over before replying. What you wrote is kept."
     },
@@ -7298,7 +7298,7 @@
       "new": "New template",
       "title": "Title",
       "body": "Text",
-      "placeholders": "Filled in with the soul's and the hall's name before sending:",
+      "placeholders": "Filled in with the soul’s and the hall’s name before sending:",
       "saved": "Template saved",
       "deleted": "Template deleted",
       "delete_confirm": "Deleting the template “{{title}}” cannot be undone.",
@@ -7412,18 +7412,18 @@
       "not_original_judge": "A reopening request is decided by the original judge; when they are no longer on duty, by an officer of the home hall who can reassign cases",
       "node_not_pending": "A stop to be removed has already begun",
       "eternal_not_last": "An eternal term must be the last stop",
-      "soul_state": "The soul's current state does not allow the plan to close",
+      "soul_state": "The soul’s current state does not allow the plan to close",
       "reason_required": "A reason is required",
       "not_found": "No such request",
       "failed": "Something went wrong",
       "invalid_changes": "The changes are malformed",
       "empty_changes": "Add or remove at least one stop",
       "foreign_node": "Stops can be added only in your own civilization; elsewhere the home judge opens a cross-realm judgment",
-      "foreign_realm": "That realm is not one of your civilization's",
+      "foreign_realm": "That realm is not one of your civilization’s",
       "unknown_node": "No such stop on this plan",
       "soul_is_here": "The soul is here; open an amendment judgment",
       "node_not_retryable": "This is not a stop waiting after a refused dispatch",
-      "not_refused": "This stop's dispatch was never refused or cancelled",
+      "not_refused": "This stop’s dispatch was never refused or cancelled",
       "not_next": "An earlier stop has not started yet; deal with that one first",
       "soul_away": "The soul is not at home, so the dispatch cannot be sent again",
       "dispatch_not_started": "The dispatch could not be sent (for example another manual dispatch is in flight); try again later",
@@ -7432,7 +7432,7 @@
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Purgatory.",
       "unbaptised_no_purgatory": "This soul is unbaptised or was born before Christ: not Purgatory, which holds those who died in grace. With no heavier sin give Passed (Limbo); otherwise Failed.",
-      "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again.",
+      "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can’t be Passed. Let the scale waver to weigh again.",
       "five_heinous_must_fail": "The offence is one of the five heinous crimes: the verdict cannot be passed."
     },
     "cross": {
@@ -7769,7 +7769,7 @@
     },
     "switch": {
       "master": "Master switch",
-      "master_hint": "When off, Ask disappears for souls and officers alike. It turns itself off when this month's spend reaches the cap.",
+      "master_hint": "When off, Ask disappears for souls and officers alike. It turns itself off when this month’s spend reaches the cap.",
       "env_off": "The deployment has the assistant turned off, so the switches here have no effect. Turning it back on is a deployment change, not something this page can do.",
       "env_off_short": "Turned off by the deployment; no effect here"
     },
@@ -7782,7 +7782,7 @@
       "saving": "Saving…",
       "saved": "Saved",
       "failed": "Failed",
-      "note": "Each hall's switch takes effect when pressed; it is not part of the draft below."
+      "note": "Each hall’s switch takes effect when pressed; it is not part of the draft below."
     },
     "provider": {
       "type": "Type",
@@ -7845,7 +7845,7 @@
       "primary": "Primary provider",
       "backup": "Backup provider (optional)",
       "backup_none": "No backup provider",
-      "backup_explain": "When the primary can't be reached, times out, is rate-limited, out of credit or has a server error, the backup answers instead, once.",
+      "backup_explain": "When the primary can’t be reached, times out, is rate-limited, out of credit or has a server error, the backup answers instead, once.",
       "backup_add": "Add a backup",
       "backup_remove": "Remove backup",
       "backup_same_platform": "Same platform as the primary. If this platform fails, both stop working together. Saving is not affected.",
@@ -7871,7 +7871,7 @@
       "soul_per_hour": "Soul side · per account per hour",
       "officer_per_hour": "Officer side · per account per hour",
       "monthly_cap": "Monthly spend cap",
-      "monthly_cap_hint": "Empty = no cap. Reaching it turns the master switch off; you're notified at 80%.",
+      "monthly_cap_hint": "Empty = no cap. Reaching it turns the master switch off; you’re notified at 80%.",
       "eval_spend_cap": "Spend cap per eval run",
       "rollover": "The month rolls over at 08:00 Beijing time on the 1st; the cap and the 80% alert start again."
     },
@@ -7881,7 +7881,7 @@
       "max_concurrent_why": "Bound by database connections — a wrong value takes the whole site down; changing it is a deployment matter.",
       "timeout_seconds": "Total timeout",
       "timeout_seconds_value": "{{value}} s",
-      "timeout_seconds_why": "Must stay under the app's 25 s; not safe to change here.",
+      "timeout_seconds_why": "Must stay under the app’s 25 s; not safe to change here.",
       "history_turns": "History turns",
       "history_turns_value": "{{value}}",
       "history_turns_why": "Affects cost but rarely changes.",
@@ -7931,9 +7931,9 @@
       "requests": "Requests",
       "requests_value": "About {{count}} (at most {{max}} per candidate)",
       "estimate": "Estimated spend / cap",
-      "not_counted": "Not counted in this month's usage or cap, nor in any account's hourly limit.",
+      "not_counted": "Not counted in this month’s usage or cap, nor in any account’s hourly limit.",
       "problem": {
-        "unpriced_model": "A model has no price, so spend can't be estimated.",
+        "unpriced_model": "A model has no price, so spend can’t be estimated.",
         "no_cases": "No active eval cases for this side.",
         "too_many_asks": "Too many cases for one candidate in one run.",
         "over_spend_cap": "The estimate is over the per-run spend cap.",
@@ -8017,7 +8017,7 @@
       "api_key_required": "A new provider or address needs a new API key too: the stored key is never sent to a new address.",
       "unpriced_model": "With a monthly cap set, the current model needs a price.",
       "read_only_field": "Eval identities can only be set by 「Create eval identities」.",
-      "invalid": "A number is invalid: counts start at 1, amounts can't be negative.",
+      "invalid": "A number is invalid: counts start at 1, amounts can’t be negative.",
       "invalid_confirm_token": "The confirmation expired or was used; run again.",
       "invalid_month": "Invalid month.",
       "not_found": "Not found.",
@@ -8034,14 +8034,14 @@
       "untested_embedding": "The address, model or dimensions changed: test them before saving.",
       "backup_untested": "The backup has not passed its test. Save once both the primary and the backup pass.",
       "backup_failed": "The backup failed its test. Fix or remove the backup before saving.",
-      "unpriced_backup_model": "With a monthly cap set, the backup's model needs a price too."
+      "unpriced_backup_model": "With a monthly cap set, the backup’s model needs a price too."
     },
     "usage": {
       "month": "Month",
       "spent": "Spent this month / cap",
       "no_cap": "no cap",
       "alert_mark": "80% alert",
-      "cap_note": "You're notified at 80%; at the cap the master switch turns off and you're notified. The month rolls over at 08:00 Beijing time on the 1st: the cap and the 80% alert start again, and the switch reopens — only if the cap closed it, never if you did.",
+      "cap_note": "You’re notified at 80%; at the cap the master switch turns off and you’re notified. The month rolls over at 08:00 Beijing time on the 1st: the cap and the 80% alert start again, and the switch reopens — only if the cap closed it, never if you did.",
       "unpriced": "These models have no price and are missing from spend: {{models}}",
       "quality": "Quality · this month",
       "rate_unavailable": "Unavailable (503)",
@@ -8172,9 +8172,9 @@
       "enable_body": "Enter your current password, then confirm your {{bio}}.",
       "enable_ok": "Turn on",
       "wrong_password": "Wrong current password",
-      "toggle_failed": "Couldn't turn it on. Try again later.",
+      "toggle_failed": "Couldn’t turn it on. Try again later.",
       "button": "Sign in with {{bio}}",
-      "failed": "Your {{bio}} wasn't recognised. Enter your password.",
+      "failed": "Your {{bio}} wasn’t recognised. Enter your password.",
       "locked": "Too many {{bio}} tries; the phone has locked it for now. Enter your password, or try again later.",
       "expired": "Sign-in with {{bio}} on this phone has ended. Enter your password.",
       "ask_title": "Use {{bio}} next time?",
@@ -8191,7 +8191,7 @@
     "biometric": {
       "setting": "Check {{bio}} before approving or rejecting",
       "hint": "Someone else holding this phone still cannot decide anything.",
-      "unavailable": "This phone has no screen lock yet, so this can't be turned on. Set one in system settings first.",
+      "unavailable": "This phone has no screen lock yet, so this can’t be turned on. Set one in system settings first.",
       "failed": "{{bio}} not recognised. Not approved yet. Tap Confirm to try again.",
       "failed_reject": "{{bio}} not recognised. Not rejected yet. Tap Confirm to try again.",
       "prompt": "Confirm it is you before approving or rejecting.",
@@ -8227,7 +8227,7 @@
       "empty_title": "Nothing waiting on you",
       "empty_body": "New approvals, handovers and requests will be pushed to this phone.",
       "filter_summary": "{{kinds}} · {{n}} items",
-      "filter_empty_title": "No \"{{kinds}}\" items",
+      "filter_empty_title": "No “{{kinds}}” items",
       "filter_empty_body": "Try another type, or clear the filters.",
       "filter_clear": "Clear filters",
       "see_all": "All {{n}}",
@@ -8238,7 +8238,7 @@
       "desk_only": "Ready for verdict · conclude it with Judge or in Swipe to judge",
       "scope_note": "On the phone you can claim, read, comment, and conclude with Judge or in Swipe to judge. Choosing a destination and citing articles are done at the desk.",
       "claim": "Claim",
-      "claim_failed": "Couldn't claim",
+      "claim_failed": "Couldn’t claim",
       "claim_taken": "Someone else claimed it first",
       "open_swipe": "Swipe to judge"
     },
@@ -8280,7 +8280,7 @@
       "chips": {
         "city_god": "Sent on by the city god"
       },
-      "release_failed": "Couldn't put back",
+      "release_failed": "Couldn’t put back",
       "empty_title": "No cases on the desk",
       "empty_body": "New cases will appear here."
     },
@@ -8305,7 +8305,7 @@
       "time_today": "Today {{time}}",
       "resumed": "Conversation from {{date}} · asked on {{page}}",
       "continue_placeholder": "Ask a follow-up…",
-      "open_failed": "Couldn't open this conversation, please try again"
+      "open_failed": "Couldn’t open this conversation, please try again"
     },
     "detail": {
       "your_step": "Your step",
@@ -8331,7 +8331,7 @@
       "attachments": "Attachments · {{n}}",
       "open_system": "Opens in system viewer",
       "attachment_offline": "Connect to open",
-      "attachment_failed": "Couldn't open this attachment",
+      "attachment_failed": "Couldn’t open this attachment",
       "sealed": "Sealed · sent for approval",
       "sealed_meta": "{{time}} · if rejected, the case reopens as a new one",
       "next_meta": "{{name}} · {{n}} left",
@@ -8343,18 +8343,18 @@
       "approve_title": "Approve this step?",
       "approve_ok": "Approve",
       "reject_title": "Reject this step?",
-      "reject_body": "The flow goes back to {{name}}; this can't be undone.",
+      "reject_body": "The flow goes back to {{name}}; this can’t be undone.",
       "reject_ok": "Reject",
       "reason_label": "Reason · required, the requester will read it",
       "recent_reasons": "Recently used",
       "reason_required": "A reason is required to reject",
-      "failed": "Couldn't submit · {{reason}}",
+      "failed": "Couldn’t submit · {{reason}}",
       "reasons": {
         "already_handled": "Someone else already signed",
         "deadline_passed": "The deadline has passed",
         "permission_changed": "Your permissions changed",
         "network": "Network error",
-        "other": "The server didn't accept it"
+        "other": "The server didn’t accept it"
       },
       "requester": "the requester",
       "approve_body": {
@@ -8370,11 +8370,11 @@
       "verdict_label": "Verdict to approve with",
       "desired": "Requested: {{n}} days left",
       "approve_effect": {
-        "approval": "Once approved, it goes to \"{{next}}\".",
+        "approval": "Once approved, it goes to “{{next}}”.",
         "approval_last": "This is the last step. Approving ends the flow and the request takes effect.",
-        "dispatch": "Once approved, {{n}} souls move from {{from}} to {{to}}. This can't be undone once carried out.",
+        "dispatch": "Once approved, {{n}} souls move from {{from}} to {{to}}. This can’t be undone once carried out.",
         "reincarnation": "Once approved, {{name}} is scheduled for rebirth.",
-        "cooldown": "Once approved, {{name}}'s cooldown goes from {{from}} to {{to}} days left."
+        "cooldown": "Once approved, {{name}}’s cooldown goes from {{from}} to {{to}} days left."
       },
       "reject_effect": {
         "dispatch": "Once rejected, the {{n}} souls stay in {{from}}; the proposing hall reads your reason.",
@@ -8394,19 +8394,19 @@
       "reason": "Reason: {{reason}}"
     },
     "state": {
-      "error_title": "Couldn't load",
-      "error_body": "Check your connection and retry. Open items aren't affected.",
+      "error_title": "Couldn’t load",
+      "error_body": "Check your connection and retry. Open items aren’t affected.",
       "denied_title": "No access",
-      "denied_body": "Your role {{role}} can't see {{area}}. Ask your hall admin if you need it.",
-      "refresh_failed": "Couldn't refresh. What's shown may be out of date."
+      "denied_body": "Your role {{role}} can’t see {{area}}. Ask your hall admin if you need it.",
+      "refresh_failed": "Couldn’t refresh. What’s shown may be out of date."
     },
     "me": {
       "email": "Email",
-      "email_none": "No email on file: password-reset mail can't reach you. Ask an administrator to add one.",
+      "email_none": "No email on file: password-reset mail can’t reach you. Ask an administrator to add one.",
       "push": "Push notifications",
       "profile": "Profile",
       "name": "Name",
-      "name_empty": "Name can't be empty",
+      "name_empty": "Name can’t be empty",
       "role": "Role",
       "hall": "Hall",
       "username": "Username",
@@ -8424,8 +8424,8 @@
       "push_note": "The lock screen shows only a count.",
       "push_denied": "Notifications are off in system settings.",
       "push_unanswered": "Notifications are not on yet. Choose Allow when the system asks, then tap again.",
-      "push_unavailable": "Push isn't available in this build.",
-      "push_failed": "Couldn't turn push on. Try again later.",
+      "push_unavailable": "Push isn’t available in this build.",
+      "push_failed": "Couldn’t turn push on. Try again later.",
       "about": "About",
       "version": "Version {{version}}",
       "logout": "Sign out",
@@ -8470,7 +8470,7 @@
         "bad_credentials": "Wrong username or password",
         "locked": "Too many attempts. Try again later",
         "network": "Network error",
-        "other": "Couldn't sign in. Try again later"
+        "other": "Couldn’t sign in. Try again later"
       },
       "forgot_password": "Forgot password",
       "switch": "Use another account",
@@ -8479,10 +8479,10 @@
     "mfa": {
       "title": "Two-step verification",
       "body": "Enter the 6-digit code from your authenticator app.",
-      "recovery_body": "Enter a recovery code you haven't used.",
+      "recovery_body": "Enter a recovery code you haven’t used.",
       "code_label": "Code",
       "recovery_label": "Recovery code",
-      "remember": "Don't ask again on this device for 30 days",
+      "remember": "Don’t ask again on this device for 30 days",
       "submit": "Verify",
       "use_recovery": "Use a recovery code",
       "use_code": "Use an authenticator code",
@@ -8495,7 +8495,7 @@
         "expired": "This sign-in timed out. Sign in again",
         "locked": "Too many attempts. Try again later",
         "network": "Network error",
-        "other": "Couldn't verify. Try again later"
+        "other": "Couldn’t verify. Try again later"
       },
       "setup": {
         "done": "Done",
@@ -8507,9 +8507,9 @@
       "search": "Search name or username",
       "empty": "Nobody to choose",
       "confirm": "Add signer",
-      "unavailable": "Adding a signer isn't possible right now; you can only look at the candidates.",
+      "unavailable": "Adding a signer isn’t possible right now; you can only look at the candidates.",
       "added": "Signer added. Your approval counts once they have signed.",
-      "not_eligible": "This person can't be added (an active officer of this hall who may approve).",
+      "not_eligible": "This person can’t be added (an active officer of this hall who may approve).",
       "duplicate": "Already a co-signer, or already able to decide this step alone.",
       "more": "More ({{n}} more)"
     },
@@ -8518,10 +8518,10 @@
       "empty": "No comments yet",
       "write": "Write a comment",
       "send": "Post",
-      "failed": "Couldn't post the comment. Try again later.",
+      "failed": "Couldn’t post the comment. Try again later.",
       "show_rest": "Show {{n}} more",
       "after_close": "After closing",
-      "load_failed": "Couldn't load comments"
+      "load_failed": "Couldn’t load comments"
     },
     "letter": {
       "irreversible": "Cannot be undone once sent",
@@ -8544,19 +8544,19 @@
       "done_unarchived": "Unarchived",
       "archived_banner": "Archived · {{date}}",
       "unassigned_tag": "Unassigned",
-      "take": "I'll take it",
+      "take": "I’ll take it",
       "earlier": "Earlier letters",
-      "earlier_failed": "Couldn't load earlier letters",
+      "earlier_failed": "Couldn’t load earlier letters",
       "handler": "Handled by {{name}}",
       "handler_none": "Handled by · unassigned",
       "not_yours": "{{name}} is handling this letter, and only the handler can reply. To take it over, ask them to put it back, or ask an administrator to reassign it.",
       "assign_to_me": "Hand to me",
-      "moved": "This soul has been moved elsewhere, so you can't reply for now."
+      "moved": "This soul has been moved elsewhere, so you can’t reply for now."
     },
     "offline": {
       "banner": "Offline · showing content from {{time}}",
       "banner_bare": "Offline",
-      "no_decide": "You can't approve or reject offline: the case may have changed.",
+      "no_decide": "You can’t approve or reject offline: the case may have changed.",
       "restored": "Back online",
       "restored_sent": "Back online · {{n}} replies sent",
       "image_later": "Shown when online"
@@ -8573,13 +8573,13 @@
       "retry": "Not sent. Try again later.",
       "view_existing": "See the existing reply",
       "discard": "Delete my draft",
-      "discard_confirm": "Delete this draft? What you wrote can't be recovered.",
+      "discard_confirm": "Delete this draft? What you wrote can’t be recovered.",
       "discard_ok": "Delete",
       "moved": "This soul has been moved elsewhere, so no reply can go out for now. What you wrote is kept."
     },
     "list": {
       "more": "Load more",
-      "more_failed": "Couldn't load more"
+      "more_failed": "Couldn’t load more"
     },
     "case": {
       "release": "Release",
@@ -8605,8 +8605,8 @@
       "summary_more": "Show all",
       "evidence": "Evidence · {{n}}",
       "evidence_attachment": "Attachment {{n}}",
-      "load_failed": "The case details didn't load",
-      "admin_context": "With {{name}} · you are this hall's administrator",
+      "load_failed": "The case details didn’t load",
+      "admin_context": "With {{name}} · you are this hall’s administrator",
       "reassign_to": "Reassign to…",
       "release_for": "Release for {{name}}",
       "reassign_request": "{{name}} asked to reassign · {{time}}",
@@ -8621,7 +8621,7 @@
       "attach_concluded": "Concluded; attachments are read-only"
     },
     "notify": {
-      "intro": "Types you turn off aren't pushed to this phone or shown in the app. This is the same setting as your web profile; email is set on the web.",
+      "intro": "Types you turn off aren’t pushed to this phone or shown in the app. This is the same setting as your web profile; email is set on the web.",
       "save_failed": "Not saved; switch restored"
     },
     "soul": {
@@ -8649,7 +8649,7 @@
       "judgment_meta_life": "{{life}} · {{verdict}} · {{status}}",
       "current_stop": "◐ Current stop",
       "no_disposition": "No disposition yet",
-      "open_label": "Open {{name}}'s soul record",
+      "open_label": "Open {{name}}’s soul record",
       "term_due": "Term served · {{date}}",
       "term_default": "Default {{n}} years"
     },
@@ -8664,7 +8664,7 @@
     },
     "rebirth": {
       "cross_civ_none": "⇄ Cross-civilisation: no",
-      "cross_civ_body": "Cross-civilisation can only be set at first review, on a computer. Approving now sets it to \"no\" for good.",
+      "cross_civ_body": "Cross-civilisation can only be set at first review, on a computer. Approving now sets it to “no” for good.",
       "approve_no_cross": "Approve · no cross",
       "decide_on_desk": "Decide on computer",
       "cross_wanted": "This asks for another civilisation; review it on a computer.",
@@ -8690,17 +8690,17 @@
       "appeals_in_review": "In review",
       "empty_title": "Nothing to count yet",
       "empty_body": "These fill in once you claim and conclude your first case.",
-      "load_failed": "Couldn't load your numbers"
+      "load_failed": "Couldn’t load your numbers"
     },
     "wangsi": {
       "row_meta": "{{city_god}} · grievance {{level}}",
       "review_title": "Grievance · {{name}}",
       "note_required": "Write the review note first",
       "level_saves": "Tap a level to save it",
-      "reject_title": "Find {{name}}'s grievance not upheld?",
+      "reject_title": "Find {{name}}’s grievance not upheld?",
       "reject_body": "The grievance is recorded as not upheld, with the review note.",
-      "late_title": "Find {{name}}'s grievance upheld?",
-      "final": "A finding can't be changed once recorded."
+      "late_title": "Find {{name}}’s grievance upheld?",
+      "final": "A finding can’t be changed once recorded."
     },
     "judgment": {
       "flow_progress": "Approval workflow · station {{n}} of {{total}}",
@@ -8746,25 +8746,25 @@
     "not_digits": "Not only numbers",
     "not_current": "Different from your current password",
     "match": "Both entries match",
-    "match_bad": "Entries don't match",
+    "match_bad": "Entries don’t match",
     "note": "Avoid common passwords, your name or your soul number",
     "common_title": "This password is too easy to guess",
-    "common_body": "It's on a list of common passwords, or too close to your name or number. Choose another.",
+    "common_body": "It’s on a list of common passwords, or too close to your name or number. Choose another.",
     "state_ok": "met",
     "state_bad": "not met",
     "summary": "{{n}} requirements not met: {{list}}"
   },
   "records": {
     "archive": {
-      "blocked_title": "Can't delete — archive instead",
-      "blocked_body": "\"{{name}}\" is linked to a judgment; deleting it would leave that judgment without a basis. Archiving hides it from lists, keeps the record, and can be undone any time.",
+      "blocked_title": "Can’t delete — archive instead",
+      "blocked_body": "“{{name}}” is linked to a judgment; deleting it would leave that judgment without a basis. Archiving hides it from lists, keeps the record, and can be undone any time.",
       "action": "Archive instead…",
-      "title": "Archive \"{{name}}\"",
+      "title": "Archive “{{name}}”",
       "read_only": "Archived records are read-only. Unarchive to edit.",
       "reason": "Reason · optional, kept in the audit log",
       "confirm": "Archive",
       "done": "Archived",
-      "failed": "Couldn't archive, please try again",
+      "failed": "Couldn’t archive, please try again",
       "badge": "Archived",
       "banner": "Archived by {{name}} on {{date}}",
       "unarchive": "Unarchive",
@@ -8787,7 +8787,7 @@
       "parent_hint": "Changing the parent moves the unit. Sub-units and people move with it.",
       "save": "Save"
     },
-    "delete_blocked_title": "\"{{name}}\" can't be deleted yet",
+    "delete_blocked_title": "“{{name}}” can’t be deleted yet",
     "delete_blocked_body": {
       "both": "It still has {{units}} sub-units and {{people}} people. Move them to another unit first, then delete.",
       "units": "It still has {{units}} sub-units. Move them to another unit first, then delete.",
@@ -8795,11 +8795,11 @@
       "records": "It still owns {{souls}} souls and {{judgments}} judgments. Move them to another unit first, then delete."
     },
     "delete_blocked_people": "View people",
-    "delete_title": "Delete \"{{name}}\"?",
-    "delete_body": "This can't be undone.",
+    "delete_title": "Delete “{{name}}”?",
+    "delete_body": "This can’t be undone.",
     "saved": "Saved",
     "deleted": "Deleted",
-    "failed": "Couldn't save, please try again",
+    "failed": "Couldn’t save, please try again",
     "move_to": "Move its souls and judgments to",
     "move_and_delete": "Move and delete",
     "owner_label": "Owning unit",
@@ -8840,7 +8840,7 @@
     },
     "empty": "No events match",
     "empty_all": "No events yet",
-    "failed": "Couldn't load events, please try again",
+    "failed": "Couldn’t load events, please try again",
     "realtime": {
       "NOTIFICATION_CREATED": "New notification",
       "POST_CREATED": "New post",
@@ -8861,7 +8861,7 @@
   },
   "state": {
     "gone_title": "No access, or it no longer exists",
-    "gone_body": "It may have been deleted, or it's no longer something you can see.",
+    "gone_body": "It may have been deleted, or it’s no longer something you can see.",
     "gone_back": "Back to {{from}}"
   },
   "rebirths": {
@@ -8877,7 +8877,7 @@
     "empty": "No rebirths yet",
     "all_forms": "All forms",
     "quota": {
-      "title": "This month's quota · {{month}}",
+      "title": "This month’s quota · {{month}}",
       "used_of": "{{used}} of {{limit}}",
       "used_unlimited": "{{used}} · no limit",
       "full_badge": "Full",
@@ -8894,12 +8894,12 @@
   "hall_settings": {
     "visit": {
       "title": "In-person visits",
-      "hint": "Shown on the soul app's help page when letters are off here. Empty fields are hidden.",
+      "hint": "Shown on the soul app’s help page when letters are off here. Empty fields are hidden.",
       "address": "Address",
       "hours": "Opening hours",
       "phone": "Phone",
       "optional": "Optional",
-      "letters_on": "Letters are on · souls don't see these now."
+      "letters_on": "Letters are on · souls don’t see these now."
     },
     "soul_accounts": "Soul accounts",
     "soul_email_self": "Let souls change their own contact email",
@@ -8921,20 +8921,20 @@
       "appeal_open": "An appeal is already being reviewed",
       "appeal_rounds_used": "Both appeals have been used",
       "appeal_window_closed": "The appeal period ended on {{date}}",
-      "not_concluded": "This judgment isn't concluded yet; you can appeal once it is",
-      "not_appealable": "This judgment can't be appealed",
+      "not_concluded": "This judgment isn’t concluded yet; you can appeal once it is",
+      "not_appealable": "This judgment can’t be appealed",
       "past_life_read_only": "Judgments from past lives are read-only",
-      "no_appeal_above_minos": "Minos's judgment is final; there is no one above him to appeal to",
+      "no_appeal_above_minos": "Minos’s judgment is final; there is no one above him to appeal to",
       "soul_devoured": "This soul was devoured by Ammit and no longer exists; there is no appeal",
       "not_escalatable": "You can escalate only after a review has upheld the verdict",
       "appeal_closed": "This appeal has already been decided or withdrawn.",
       "ladder_running": "This appeal is in the appeal flow; it cannot be withdrawn until the flow is done.",
-      "origin_flow_open": "This judgment's approval workflow has not finished; you can appeal once it has"
+      "origin_flow_open": "This judgment’s approval workflow has not finished; you can appeal once it has"
     },
     "file": "Judgment appeal",
     "file_title": "Appeal this judgment",
     "file_body": "Another judge reviews it. Each judgment can be appealed at most twice; a withdrawn appeal counts as one.",
-    "reason_label": "Why you're appealing",
+    "reason_label": "Why you’re appealing",
     "reason_required": "Please give a reason",
     "evidence_label": "New evidence · optional",
     "submit": "Submit judgment appeal",
@@ -8942,12 +8942,12 @@
     "withdraw": "Withdraw",
     "withdraw_title": "Withdraw this appeal?",
     "withdraw_body": "A withdrawn appeal still counts. After this you can appeal this judgment {{left}} more time.",
-    "withdraw_body_last": "A withdrawn appeal still counts. This is the second one; after this the judgment can't be appealed again.",
+    "withdraw_body_last": "A withdrawn appeal still counts. This is the second one; after this the judgment can’t be appealed again.",
     "withdrawn_toast": "Appeal withdrawn",
     "original_verdict": "Original verdict",
     "new_verdict": "New verdict",
     "verdict_change": "{{from}} → {{to}}",
-    "decision_note": "Reviewer's note",
+    "decision_note": "Reviewer’s note",
     "compensation": "Compensation",
     "compensation_row": "Station {{order}} · merit {{weight}}",
     "compensation_hint": "Each station already served earns one merit entry, already added to your merits and demerits.",
@@ -8961,7 +8961,7 @@
       "reviewer": "Reviewer"
     },
     "claim": "Claim review",
-    "claimed_toast": "Claimed — you're reviewing this appeal",
+    "claimed_toast": "Claimed — you’re reviewing this appeal",
     "claim_disabled_original": "You made the original ruling; another officer must review this appeal",
     "decide_action": "Decide",
     "decide_title": "Appeal decision · {{case}}",
@@ -8972,23 +8972,23 @@
     "amend_impact": "After the change, stops not yet reached follow the new verdict; each stop already passed earns the soul one compensation merit.",
     "decided_toast": "Decision sent; the soul will be notified",
     "error": {
-      "plan_in_transit": "The soul is on the way to, or away at, a station that hasn't been served yet. Decide once it has.",
-      "plan_busy": "The placement plan is being retried, held indefinitely, or has a request awaiting the original judge; it can't be changed now.",
+      "plan_in_transit": "The soul is on the way to, or away at, a station that hasn’t been served yet. Decide once it has.",
+      "plan_busy": "The placement plan is being retried, held indefinitely, or has a request awaiting the original judge; it can’t be changed now.",
       "already_claimed": "Another officer has already claimed this appeal",
-      "original_judge": "You made the original ruling and can't review it",
+      "original_judge": "You made the original ruling and can’t review it",
       "not_reviewer": "Only the officer who claimed it can decide",
       "appeal_closed": "This appeal has already been decided or withdrawn",
       "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict.",
-      "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done",
+      "ladder_running": "This appeal is before the appeal court; it can’t be claimed or decided until the court is done",
       "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: amend to a final verdict, or open a new judgment.",
       "not_final_judge": "Only the final judge can decide",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
-      "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",
-      "unbaptised_no_purgatory": "This soul is unbaptised or was born before Christ: the amended verdict can't be Purgatory, which holds those who died in grace.",
-      "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed.",
+      "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can’t be hell.",
+      "unbaptised_no_purgatory": "This soul is unbaptised or was born before Christ: the amended verdict can’t be Purgatory, which holds those who died in grace.",
+      "untruthful_confession": "A denial in the original case’s negative confession was recorded as untrue: the amended verdict can’t be Passed.",
       "five_heinous_must_fail": "The original offence is one of the five heinous crimes: the appeal cannot amend it to passed.",
       "plan_busy_by_civ": {
-        "cn": "The sentence plan is being retried, held indefinitely, or has a request awaiting the original judge; it can't be changed now."
+        "cn": "The sentence plan is being retried, held indefinitely, or has a request awaiting the original judge; it can’t be changed now."
       }
     },
     "decide": {
@@ -9000,7 +9000,7 @@
     },
     "escalate": "Escalate",
     "escalate_title": "Escalate to the appeal court",
-    "escalate_body": "The last review upheld the verdict. Escalated, the appeal goes station by station through this realm's appeal court: any station that rejects it upholds the verdict, and if it passes every station the final judge decides. It can't be withdrawn while the court hears it, and it counts as one appeal.",
+    "escalate_body": "The last review upheld the verdict. Escalated, the appeal goes station by station through this realm’s appeal court: any station that rejects it upholds the verdict, and if it passes every station the final judge decides. It can’t be withdrawn while the court hears it, and it counts as one appeal.",
     "ladder": "Appeal court · {{name}}",
     "escalated_tag": "Escalated",
     "ladder_progress": "Station {{n}} of {{total}}",
@@ -9029,8 +9029,8 @@
     "explain": "If the place of origin names several places, the last one named decides. If none matches, the default City God takes it; with no default, no case can be opened.",
     "name": "Name",
     "regions": "Places",
-    "regions_hint": "One place per entry; press Enter to add. The bare name is enough, e.g. Lin'an.",
-    "is_default": "Make this the hall's default City God",
+    "regions_hint": "One place per entry; press Enter to add. The bare name is enough, e.g. Lin’an.",
+    "is_default": "Make this the hall’s default City God",
     "default_badge": "Default",
     "default_hint": "Takes cases whose place of origin matches no one. Without a default, those cases go straight to the Ten Courts.",
     "officers": "Officers",
@@ -9044,15 +9044,15 @@
     "deleted_toast": "City God deleted",
     "error": {
       "region_taken": "{{region}} already belongs to {{city_god}}; a place can belong to one City God only",
-      "default_taken": "{{city_god}} is already this hall's default; turn that off first",
+      "default_taken": "{{city_god}} is already this hall’s default; turn that off first",
       "name_taken": "This hall already has a City God named {{name}}",
-      "invalid_officer": "This officer can't take cases in this hall",
+      "invalid_officer": "This officer can’t take cases in this hall",
       "city_god_has_open_cases": "{{name}} still has {{count}} cases not sent on; send them on or move them first",
       "city_gods_diyu_only": "Only halls of the Chinese Diyu can have City Gods",
       "city_god_has_tudi_gods": "{{city_god}} has Earth Gods under it, and an Earth God reports only to a county City God; move them to another City God first",
       "tudi_city_god_not_county": "An Earth God reports only to a county City God"
     },
-    "no_officers": "No officers: only hall administrators can act on this City God's cases",
+    "no_officers": "No officers: only hall administrators can act on this City God’s cases",
     "default_regions": "Cases whose place matches no one",
     "default_current": "Current default: {{name}}",
     "default_none": "This hall has no default City God now",
@@ -9143,18 +9143,18 @@
     "return": "Return for correction",
     "return_note": "What needs correcting",
     "return_note_required": "Say what needs correcting",
-    "return_hint": "The hall administrators will be notified. Once it's fixed, the same City God sends it on.",
+    "return_hint": "The hall administrators will be notified. Once it’s fixed, the same City God sends it on.",
     "returned_toast": "Returned; the hall administrators have been notified",
     "transfer": "Move to another City God",
     "transfer_pick": "Which City God takes it",
     "transferred_toast": "Moved to {{city_god}}; back to awaiting review",
-    "cannot_act": "You aren't one of this City God's officers",
+    "cannot_act": "You aren’t one of this City God’s officers",
     "sent_on_line": "First review by {{city_god}} · sent on {{date}}",
     "returned_line": "Returned by {{city_god}} for correction · {{date}}",
     "transferred_from": "moved from {{city_god}}",
     "error": {
       "not_at_city_god": "This case is no longer with a City God",
-      "not_city_god_officer": "You aren't one of this City God's officers",
+      "not_city_god_officer": "You aren’t one of this City God’s officers",
       "invalid_city_god": "Pick another City God of this hall",
       "not_pending": "Someone just acted on this case; it has been refreshed"
     },
@@ -9179,14 +9179,14 @@
     "row_city_gods": "City God assignments",
     "row_city_gods_names": "Moves from {{names}}",
     "row_letters": "Open letters",
-    "returned_to_pool": "{{n}} of the appeals go back to the review pool: the new officer gave the original verdict and can't review their own judgment. Anyone who can review may claim them.",
+    "returned_to_pool": "{{n}} of the appeals go back to the review pool: the new officer gave the original verdict and can’t review their own judgment. Anyone who can review may claim them.",
     "empty": "{{name}} has nothing open; there is nothing to hand over.",
     "may_shrink": "Anything concluded or reassigned after this preview is left alone, so the final count may be lower.",
-    "blocked_title": "Can't hand over yet",
+    "blocked_title": "Can’t hand over yet",
     "problem": {
-      "target_cannot_judge": "{{name}} can't take cases, and there are judgments or appeals to hand over. Pick someone else, or give them case permissions first.",
-      "target_cannot_reply": "{{name}} can't answer letters, and there are letters to hand over. Pick someone else, or give them that permission first.",
-      "target_out_of_scope": "{{name}}'s data scope can't see some of the judgments or appeals to hand over. Pick someone else, or widen their data scope first."
+      "target_cannot_judge": "{{name}} can’t take cases, and there are judgments or appeals to hand over. Pick someone else, or give them case permissions first.",
+      "target_cannot_reply": "{{name}} can’t answer letters, and there are letters to hand over. Pick someone else, or give them that permission first.",
+      "target_out_of_scope": "{{name}}’s data scope can’t see some of the judgments or appeals to hand over. Pick someone else, or widen their data scope first."
     },
     "result_title": "Handed over to {{name}}",
     "result_counts": "Moved: judgments {{judgments}} · appeals {{appeals}} · City Gods {{city_gods}} · letters {{letters}}",
@@ -9195,7 +9195,7 @@
     "result_notified": "{{name}} has been notified",
     "error": {
       "same_officer": "Pick two different officers",
-      "invalid_target": "The new officer isn't an active officer of this hall",
+      "invalid_target": "The new officer isn’t an active officer of this hall",
       "not_found": "Officer not found"
     },
     "deactivate_prompt": "{{name}} still has open work. Hand it over before deactivating?",
@@ -9209,7 +9209,7 @@
     "title": "Invite an officer",
     "body": "They get an email with a link to set their own password. The link lasts 7 days and works once.",
     "username_optional": "Username · optional",
-    "username_hint": "Leave blank to use the part before the @; a number is added if it's taken",
+    "username_hint": "Leave blank to use the part before the @; a number is added if it’s taken",
     "display_name_optional": "Display name · optional",
     "hall": "Hall",
     "send": "Send invite",
@@ -9217,9 +9217,9 @@
     "resent_toast": "{{email}} was already invited; the invite was sent again",
     "pending_badge": "Invite pending",
     "resend": "Resend invite",
-    "resend_hint": "If the email didn't arrive, send it again",
+    "resend_hint": "If the email didn’t arrive, send it again",
     "error": {
-      "email_invalid": "That isn't a valid email",
+      "email_invalid": "That isn’t a valid email",
       "role_invalid": "Invite officer roles only, not Soul or Administrator",
       "email_taken": "This email belongs to another account",
       "username_taken": "That username is taken"
@@ -9227,35 +9227,35 @@
   },
   "acceptInvite": {
     "title": "Set your password",
-    "subtitle": "You've been invited as an officer. Once the password is set, sign in with your username and this password.",
+    "subtitle": "You’ve been invited as an officer. Once the password is set, sign in with your username and this password.",
     "new_password": "New password",
     "confirm_password": "Repeat the password",
     "submit": "Set password",
-    "weak": "That password isn't strong enough:",
+    "weak": "That password isn’t strong enough:",
     "done_title": "Password set",
     "done_body": "Sign in with your username and the new password.",
     "go_login": "Go to sign in",
-    "invalid_title": "This invite link can't be used",
-    "invalid_body": "Ask your hall's administrator to invite you again.",
+    "invalid_title": "This invite link can’t be used",
+    "invalid_body": "Ask your hall’s administrator to invite you again.",
     "rate_limited": "Too many tries. Try again in {{seconds}} s",
     "link_note": "An invite link lasts 7 days and works once.",
     "reset_subtitle": "An administrator reset your password. Set a new one here, then sign in with your username and it.",
     "reset_link_note": "This link lasts 24 hours and works once.",
-    "reset_invalid_title": "This link can't be used",
+    "reset_invalid_title": "This link can’t be used",
     "reset_invalid_body": "It has expired or was already used. Ask your administrator to reset your password again."
   },
   "mengpoSoup": {
-    "title": "Meng Po's soup",
-    "hint": "Souls of Diyu take Meng Po's soup before rebirth.",
+    "title": "Meng Po’s soup",
+    "hint": "Souls of Diyu take Meng Po’s soup before rebirth.",
     "not_taken": "Not taken",
     "taken": "Taken · {{time}}",
     "register": "Record as taken",
-    "register_title": "Record that {{name}} has taken Meng Po's soup?",
-    "register_body": "Once per life. It can't be undone; it clears when the rebirth completes.",
-    "registered_toast": "Recorded: {{name}} has taken Meng Po's soup",
-    "batch_refused": "{{n}} haven't taken Meng Po's soup and were not reborn; they stay awaiting rebirth:",
+    "register_title": "Record that {{name}} has taken Meng Po’s soup?",
+    "register_body": "Once per life. It can’t be undone; it clears when the rebirth completes.",
+    "registered_toast": "Recorded: {{name}} has taken Meng Po’s soup",
+    "batch_refused": "{{n}} haven’t taken Meng Po’s soup and were not reborn; they stay awaiting rebirth:",
     "error": {
-      "not_diyu": "Only souls of Diyu take Meng Po's soup",
+      "not_diyu": "Only souls of Diyu take Meng Po’s soup",
       "not_reincarnating": "Only souls awaiting rebirth can take it",
       "soup_already_taken": "Already taken in this life"
     }
@@ -9264,9 +9264,9 @@
     "create": "New hall",
     "create_title": "New hall",
     "code": "Code",
-    "code_hint": "Starts with a capital letter; capitals, digits and underscores only, 2–50 characters. It can't be changed later.",
+    "code_hint": "Starts with a capital letter; capitals, digits and underscores only, 2–50 characters. It can’t be changed later.",
     "code_taken": "A hall already uses this code",
-    "code_invalid": "That code isn't in the right form",
+    "code_invalid": "That code isn’t in the right form",
     "civilization": "Civilization",
     "civilization_pick": "Choose a civilization",
     "civ_mismatch": "{{code}} is a hall of {{civ}}",
@@ -9276,17 +9276,17 @@
     "description_optional": "Description · optional",
     "submit": "Create",
     "created_toast": "Created {{name}}",
-    "create_failed": "Couldn't create it. Try again.",
+    "create_failed": "Couldn’t create it. Try again.",
     "deactivate": "Deactivate",
     "activate": "Reactivate",
     "deactivate_title": "Deactivate {{name}}?",
     "deactivate_body": "Everything is kept, and existing souls and cases carry on. Once it is deactivated:",
     "deactivate_no_souls": "no new souls can be registered;",
-    "deactivate_no_deaths": "death registrations sent by outside systems are refused, and retrying won't change that.",
-    "deactivate_reversible": "You can reactivate it at any time. Halls can't be deleted.",
+    "deactivate_no_deaths": "death registrations sent by outside systems are refused, and retrying won’t change that.",
+    "deactivate_reversible": "You can reactivate it at any time. Halls can’t be deleted.",
     "deactivated_toast": "Deactivated {{name}}",
     "activated_toast": "Reactivated {{name}}",
-    "action_failed": "That didn't go through. Try again.",
+    "action_failed": "That didn’t go through. Try again.",
     "overview": {
       "title": "Halls at a glance",
       "subtitle": "Counts only, no soul names. Deactivated halls are included.",
@@ -9304,18 +9304,18 @@
       "todo_cooldowns": "Cool-downs {{n}}",
       "todo_letters": "Letters {{n}}",
       "judgments_label": "Open judgments: at the City God {{at_city_god}} · in the City of Wrongful Death {{held}} · claimed {{claimed}} · unclaimed {{unclaimed}}",
-      "note": "Hall to-do is the hall's count, not any one officer's \"waiting on me\".",
+      "note": "Hall to-do is the hall’s count, not any one officer’s “waiting on me”.",
       "legend": "Bar, light to dark: at the City God · in the City of Wrongful Death · claimed. The lightest gap is unclaimed.",
       "enter": "Enter →",
       "enter_label": "Enter {{name}} to view",
       "empty": "No halls yet",
-      "load_failed": "Couldn't load the halls",
-      "enter_failed": "Couldn't enter this hall. Try again.",
+      "load_failed": "Couldn’t load the halls",
+      "enter_failed": "Couldn’t enter this hall. Try again.",
       "read_only": "Read-only",
       "until": "Valid until {{time}}",
       "read_only_hint": "Administrator view is read-only; nothing can be changed here",
       "expired_title": "This read-only view has expired",
-      "expired_body": "Each visit lasts 30 minutes and isn't extended. Go back to all halls and open it again."
+      "expired_body": "Each visit lasts 30 minutes and isn’t extended. Go back to all halls and open it again."
     },
     "viewing": {
       "banner": "Viewing {{name}} as global admin",
@@ -9333,11 +9333,11 @@
     "parent_city_god": "City God above",
     "no_parent": "—",
     "register_death": "Record a death as reported by an Earth God",
-    "report_label": "Earth God's report · optional",
+    "report_label": "Earth God’s report · optional",
     "register_hint": "Once recorded, it goes to {{city_god}} for first review.",
     "officers": "Officers",
     "no_officers": "No officers",
-    "officers_hint": "This Earth God's officers, and hall administrators, can record a death in its name.",
+    "officers_hint": "This Earth God’s officers, and hall administrators, can record a death in its name.",
     "edit": "Edit",
     "delete": "Delete",
     "delete_confirm": "Delete {{name}}? The deaths it recorded stay.",
@@ -9352,9 +9352,9 @@
     "register_failed": "Not recorded: {{reason}}",
     "error": {
       "name_taken": "This hall already has an Earth God by that name",
-      "invalid_city_god": "The City God above must be one of this hall's",
-      "invalid_officer": "Some officers can't take these cases",
-      "not_tudi_officer": "Only this Earth God's officers, or a hall administrator, can record it",
+      "invalid_city_god": "The City God above must be one of this hall’s",
+      "invalid_officer": "Some officers can’t take these cases",
+      "not_tudi_officer": "Only this Earth God’s officers, or a hall administrator, can record it",
       "tudi_gods_diyu_only": "Only halls of the Chinese Diyu can have Earth Gods"
     },
     "register_submit": "Record the death"
@@ -9380,7 +9380,7 @@
     "login_desc": "This is a portfolio demo: no backend, no password. Whatever you change stays in this tab and resets when you sign out or back in.",
     "enter_as": "Enter as {{role}}",
     "role_judge": "Judge",
-    "role_judge_desc": "An officer's day: claim cases, conclude them with a sentence, approve.",
+    "role_judge_desc": "An officer’s day: claim cases, conclude them with a sentence, approve.",
     "role_admin": "Administrator",
     "role_admin_desc": "Sees all four civilizations: users, roles and permissions, configuration, audit.",
     "role_moderator": "Circle moderator",
@@ -9400,26 +9400,26 @@
       "cn": {
         "name": "Diyu",
         "realm": "Diyu",
-        "line": "Ten courts in turn, six paths of rebirth — and a bowl of Meng Po's soup beyond the six bridges."
+        "line": "Ten courts in turn, six paths of rebirth — and a bowl of Meng Po’s soup beyond the six bridges."
       },
       "eu": {
         "name": "Heaven and Hell",
         "realm": "Inferno · Purgatorio · Paradiso",
-        "line": "St Peter at the gate, Purgatory cleansing terrace by terrace, Dante's nine circles sinking by sin."
+        "line": "St Peter at the gate, Purgatory cleansing terrace by terrace, Dante’s nine circles sinking by sin."
       },
       "eg": {
         "name": "The Duat",
         "realm": "Duat",
-        "line": "The heart on the scale against Ma'at's feather, and forty-two denials heard one by one."
+        "line": "The heart on the scale against Ma’at’s feather, and forty-two denials heard one by one."
       },
       "gr": {
         "name": "Hades",
         "realm": "Hades",
-        "line": "Three judges part the ways; after Er's thousand-year cycle, a drink from Lethe and a new life."
+        "line": "Three judges part the ways; after Er’s thousand-year cycle, a drink from Lethe and a new life."
       }
     },
     "build": {
-      "title": "How it's built",
+      "title": "How it’s built",
       "lede": "One Django backend, three front ends (web, soul app, officer app). The rules of the four underworlds live in the backend; packages/core holds the API client, hooks, domain configuration and language packs the three share.",
       "node": {
         "web": "Web console",
@@ -9449,8 +9449,8 @@
       "system": "System status and SLOs"
     },
     "tour": {
-      "title": "A soul's life",
-      "title_civ": "A soul's life · {{civ}}",
+      "title": "A soul’s life",
+      "title_civ": "A soul’s life · {{civ}}",
       "progress": "Step {{n}} of {{total}}",
       "next": "Next",
       "prev": "Back",
@@ -9461,7 +9461,7 @@
       "done_title": "That was one life",
       "done_body": "That is how {{civ}} does it. Change underworld and the rules change with it.",
       "try_another": "Try another underworld",
-      "try_overreach": "Try opening another hall's case",
+      "try_overreach": "Try opening another hall’s case",
       "stay": "Stay here",
       "replay": "Watch the tour again",
       "cn": {
@@ -9475,7 +9475,7 @@
         },
         "3": {
           "name": "First review",
-          "body": "The City God reviews merit and demerit first; the wrongfully dead wait in their own city. This step shows the whole hall's cases."
+          "body": "The City God reviews merit and demerit first; the wrongfully dead wait in their own city. This step shows the whole hall’s cases."
         },
         "4": {
           "name": "The ten courts",
@@ -9487,7 +9487,7 @@
         },
         "6": {
           "name": "Rebirth",
-          "body": "Term served: a bowl of Meng Po's soup, and rebirth into one of the six paths."
+          "body": "Term served: a bowl of Meng Po’s soup, and rebirth into one of the six paths."
         }
       },
       "eu": {
@@ -9501,7 +9501,7 @@
         },
         "3": {
           "name": "Judgment",
-          "body": "The judge records the sin; by Dante's ordering, the graver the sin, the deeper the circle."
+          "body": "The judge records the sin; by Dante’s ordering, the graver the sin, the deeper the circle."
         },
         "4": {
           "name": "Purgatory or Hell",
@@ -9523,7 +9523,7 @@
         },
         "3": {
           "name": "The weighing",
-          "body": "The heart is weighed against Ma'at's feather; only a heart no heavier passes."
+          "body": "The heart is weighed against Ma’at’s feather; only a heart no heavier passes."
         },
         "4": {
           "name": "Disposition",
@@ -9566,7 +9566,7 @@
         "city_god": "First review",
         "desk_offence": "Judgment desk · verdict",
         "soul_plan": "Soul · sentence plan",
-        "rebirth_soup": "Rebirth · Meng Po's soup",
+        "rebirth_soup": "Rebirth · Meng Po’s soup",
         "desk_place": "Judgment desk · verdict and destination",
         "realm_map": "Realms · map",
         "timeline": "Soul · timeline",
@@ -9589,16 +9589,16 @@
       "skipped_body": "Look around on your own, or try another underworld.",
       "guard": {
         "1": {
-          "name": "Each hall's data kept apart",
-          "body": "Each underworld is a tenant. You are the global administrator, so every hall is listed here; a judge sees only their own hall's souls. The screen does not do this: every endpoint's query is narrowed by scope_to_tenant, and a request with no resolvable hall gets an empty set."
+          "name": "Each hall’s data kept apart",
+          "body": "Each underworld is a tenant. You are the global administrator, so every hall is listed here; a judge sees only their own hall’s souls. The screen does not do this: every endpoint’s query is narrowed by scope_to_tenant, and a request with no resolvable hall gets an empty set."
         },
         "2": {
           "name": "Permission codes",
-          "body": "Every action has a permission code (\"Execute judgment\", for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes."
+          "body": "Every action has a permission code (“Execute judgment”, for one), and this matrix says which roles hold which. Menus and buttons show by code, and the endpoints decide by the same codes."
         },
         "3": {
           "name": "Try an overreach",
-          "body": "A judge never sees this page, but a hidden button is not a safeguard. Each button below sends one request the screens never would: another hall's soul, a hidden page, an officer endpoint with a soul's token, and no token at all. Open each to see what the server answered, which line stopped it, and which test guards it."
+          "body": "A judge never sees this page, but a hidden button is not a safeguard. Each button below sends one request the screens never would: another hall’s soul, a hidden page, an officer endpoint with a soul’s token, and no token at all. Open each to see what the server answered, which line stopped it, and which test guards it."
         },
         "4": {
           "name": "Data scopes",
@@ -9614,7 +9614,7 @@
         },
         "title": "How the system protects itself",
         "done_title": "That is the safeguards tour",
-        "done_body": "Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul's life as its judge.",
+        "done_body": "Every one of these rules is enforced by the backend; the screens only draw them. Pick an underworld to follow one soul’s life as its judge.",
         "7": {
           "name": "Why Ask cannot overreach",
           "body": "The assistant calls tools to read data, so it is one more way someone could try to overreach. The defence is not in the prompt: the tools take only the asker, so the model can choose which to call but not whose data to read. Below are the code and tests that hold this, and the real answers to a few injection attempts."
@@ -9635,7 +9635,7 @@
       "lock": "Lock screen",
       "lock_hint": "Demo only",
       "switch_civ": "Try another underworld",
-      "back": "Back to the judge's view",
+      "back": "Back to the judge’s view",
       "strip": "Demo · how the app looks",
       "back_short": "Back to judge"
     },
@@ -9648,12 +9648,12 @@
       "step2": "Follow the road it walked",
       "step2_sub": "From death to the present stop, at a glance",
       "step3": "Switch to the soul and see its own ledger",
-      "step3_sub": "The soul's phone app: this life, where it goes, farewell",
+      "step3_sub": "The soul’s phone app: this life, where it goes, farewell",
       "cta": "Start with step 1",
       "cta_sub": "Enter as an officer of {{hall}}",
       "cta_hall": "the Fifth Court of Diyu",
       "peek": "Take a 30-second look",
-      "preview_title": "Preview · one soul's road",
+      "preview_title": "Preview · one soul’s road",
       "preview_sub": "Cycles through the four underworlds · hover to pause",
       "preview_manual": "Pick an underworld",
       "preview_static": "Still · tap to play",
@@ -9675,7 +9675,7 @@
         "eu": "The nine-ring funnel",
         "eu_body": "Judged at death: down through nine narrowing circles, or up the narrowing mountain to Heaven.",
         "eg": "The weighing, two ways",
-        "eg_body": "The heart against the feather of Ma'at: pass to the Field of Reeds, or be annihilated.",
+        "eg_body": "The heart against the feather of Ma’at: pass to the Field of Reeds, or be annihilated.",
         "gr": "Three roads",
         "gr_body": "The three judges part the ways: the Isles, the Asphodel Meadow, Tartarus — a thousand years on the first and the last, and at last the water of Lethe."
       },
@@ -9707,31 +9707,31 @@
       "peek_done": "Done — start with step 1",
       "footer": "SoulLedger · demo",
       "guard_title": "How the system protects itself",
-      "guard_body": "Six steps as the Grand Scribe (the administrator): how each hall's data is kept apart, permission codes, how an overreach is refused, data scopes, the audit log, the recycle bin.",
+      "guard_body": "Six steps as the Grand Scribe (the administrator): how each hall’s data is kept apart, permission codes, how an overreach is refused, data scopes, the audit log, the recycle bin.",
       "guard_cta": "Take the safeguards tour",
       "inside_cta": "See tenant isolation and the approval flow",
       "inside_sub": "Two halls side by side on the same data, then one cross-hall case end to end · about 2 min"
     },
     "probe": {
-      "try": "Ask this page's endpoint directly, as a judge",
-      "recorded": "This is the server's real answer, recorded when {{user}} made this request, and replayed as it was. The demo did not make it up.",
+      "try": "Ask this page’s endpoint directly, as a judge",
+      "recorded": "This is the server’s real answer, recorded when {{user}} made this request, and replayed as it was. The demo did not make it up.",
       "why_title": "How the server refused",
-      "why_front": "The screens take this page out of a judge's menu by permission code, but that is only display: the request can still be sent around the interface.",
-      "why_back": "The backend is what stops it: the endpoint carries its own permission class, which lets through only holders of \"System settings\" or \"Menu management\". A judge holds neither, so the answer is 403 before the view itself runs.",
+      "why_front": "The screens take this page out of a judge’s menu by permission code, but that is only display: the request can still be sent around the interface.",
+      "why_back": "The backend is what stops it: the endpoint carries its own permission class, which lets through only holders of “System settings” or “Menu management”. A judge holds neither, so the answer is 403 before the view itself runs.",
       "code": "Code",
       "test": "Guarded by",
       "not_recorded": "The recording answers this request with {{status}}, not a refusal: the example went stale with a re-recording, and this does not pretend otherwise.",
       "pending": "The recording has no answer to this request yet: it appears after the next re-recording.",
       "lateral": {
         "try": "Ask for an EU hall soul by its id, as the Chinese judge",
-        "target": "‹an EU hall soul's id›",
+        "target": "‹an EU hall soul’s id›",
         "quiet": "correctly saying nothing",
         "why": "Lateral overreach: the id is real and the soul exists, in another hall. The query is filtered by hall before anything else, so for this hall the id does not exist: 404, not 403. A refusal would say there is such a soul; not finding one says nothing."
       },
       "door": {
-        "try": "Ask an officer endpoint with the soul app's token",
+        "try": "Ask an officer endpoint with the soul app’s token",
         "who": "a soul (soul token)",
-        "why": "Wrong door: the token is genuine, but it is a soul's. The officer endpoints' authentication accepts officer tokens only, and answers a soul token with 403, not 401: 401 would send the app to refresh and sign in again, and this is not an expired session, it is out of bounds."
+        "why": "Wrong door: the token is genuine, but it is a soul’s. The officer endpoints' authentication accepts officer tokens only, and answers a soul token with 403, not 401: 401 would send the app to refresh and sign in again, and this is not an expired session, it is out of bounds."
       },
       "anon": {
         "try": "Ask the same endpoint with no token at all",
@@ -9745,22 +9745,22 @@
       "lede": "Two judges may press 结案 on the same case at the same moment. The backend has to conclude it once, and never leave half of it written.",
       "step1": "Judges A and B each read the case as still open, and both submit a conclusion.",
       "step2": "A takes the row lock first (select_for_update), inside a transaction, and writes the verdict, the disposition and the event.",
-      "step3": "B's conclusion waits on the same lock. Once A commits, B gets the lock, reads the row again under it, and finds a verdict already there.",
-      "step4": "B gets 409 already_concluded, and nothing of B's is written.",
+      "step3": "B’s conclusion waits on the same lock. Once A commits, B gets the lock, reads the row again under it, and finds a verdict already there.",
+      "step4": "B gets 409 already_concluded, and nothing of B’s is written.",
       "rollback_title": "All or nothing",
       "rollback_body": "The verdict, the disposition and the event log share one database transaction. If the event row cannot be written, the whole conclusion rolls back and the caller gets the original error; notifications and pushes go out only after the commit, so a rollback sends none.",
       "try_title": "Try it",
-      "try_body": "Take case {{case}}, which is already concluded. The button below sends B's request again, with the copy B read before the first conclusion.",
-      "try": "Send B's conclusion",
+      "try_body": "Take case {{case}}, which is already concluded. The button below sends B’s request again, with the copy B read before the first conclusion.",
+      "try": "Send B’s conclusion",
       "no_case": "No case here is concluded yet. Conclude one on the bench, then come back.",
-      "result_note": "The demo has no backend: this answer comes from a rule the demo layer copies from the server (demo/flows.ts), with the code and message word for word as in services.py, and nothing was written. On the real API, a second request sent after the first is stopped earlier, by the view's already-concluded check, with 400; only two requests that both pass that check reach the 409 under the lock. The wait on the lock can only be tested on PostgreSQL, since SQLite has no row locks, so the concurrency test above runs on PostgreSQL only."
+      "result_note": "The demo has no backend: this answer comes from a rule the demo layer copies from the server (demo/flows.ts), with the code and message word for word as in services.py, and nothing was written. On the real API, a second request sent after the first is stopped earlier, by the view’s already-concluded check, with 400; only two requests that both pass that check reach the 409 under the lock. The wait on the lock can only be tested on PostgreSQL, since SQLite has no row locks, so the concurrency test above runs on PostgreSQL only."
     },
     "assist_guard": {
       "how_title": "How it is held",
       "guard": {
         "no_ids": "Every tool takes only the asker and no id: the model can choose which tool to call, not whose data it reads.",
         "offered_and_rechecked": "Only tools the asker may use are offered, and each is checked again when it runs: an invented or coaxed call is refused.",
-        "counts_only": "The officer tools return counts only, never names, numbers, statements or verdicts, scoped by each page's own query.",
+        "counts_only": "The officer tools return counts only, never names, numbers, statements or verdicts, scoped by each page’s own query.",
         "whitelist": "On the soul side, the fields sent to the model are a whitelist; the page serializers are not reused.",
         "data_not_instructions": "Facts and tool results are marked as data, not instructions; the assistant is read-only and has no tool that writes."
       },
@@ -9888,7 +9888,7 @@
   },
   "doc": {
     "download_pdf": "Download PDF",
-    "pdf_fallback": "The PDF service is unavailable; opening the browser's print dialog instead — choose “Save as PDF” there."
+    "pdf_fallback": "The PDF service is unavailable; opening the browser’s print dialog instead — choose “Save as PDF” there."
   },
   "empty": {
     "body": "The queue is clear. New cases appear here.",
@@ -9936,12 +9936,12 @@
   "landing": {
     "civ": {
       "cn": "Ten courts; the offence picks the court",
-      "eg": "The heart weighed against Ma'at's feather",
+      "eg": "The heart weighed against Ma’at’s feather",
       "eu": "Sink by sin, or climb through Purgatory",
       "gr": "Three judges, a thousand years, Lethe"
     },
     "lede": "Four ledgers, four answers.",
-    "preview_label": "What you'll see inside",
+    "preview_label": "What you’ll see inside",
     "title": "One question: will this soul pass?"
   },
   "live": {
@@ -10142,7 +10142,7 @@
   "soul": {
     "here": {
       "cn_court": "You are before {{court}}. A judge is reading the merits and faults of your life.",
-      "eg_weighing": "Your heart is weighed against Ma'at's feather.",
+      "eg_weighing": "Your heart is weighed against Ma’at’s feather.",
       "eu_realm": "You are in {{realm}}.",
       "gr_thousand": "{{n}} years into the thousand-year road."
     }
@@ -10381,7 +10381,7 @@
       "rail": "Verdict",
       "claim_first": "Nobody has claimed this case yet. Claim it, then rule.",
       "deferred": "This case is on hold. Open the dossier to take it back, then rule.",
-      "elsewhere": "This case can't be ruled on from the desk. Open the dossier to see why.",
+      "elsewhere": "This case can’t be ruled on from the desk. Open the dossier to see why.",
       "hint": "Choose a verdict, write the words, then seal. For 5 seconds after sealing you can take it back; it is sent when they run out.",
       "hint_readback": "Before it is sealed, the name, case number and verdict are read back to you; it is sent as soon as you confirm.",
       "sealed": "Sealed.",
@@ -10438,7 +10438,7 @@
       "admin_only": "Only the administrator role holds this; ticking it for another role has no effect.",
       "role_forbidden": "This is forbidden for your role; ticking it in the permission table has no effect.",
       "design_approve_conflict": "Your role designs workflows, and whoever designs workflows may not approve them.",
-      "missing_permission": "None of your roles has this permission. Ask your hall's administrator if you need it.",
+      "missing_permission": "None of your roles has this permission. Ask your hall’s administrator if you need it.",
       "viewing_read_only": "You are viewing as someone else, read-only, so nothing can be changed meanwhile.",
       "out_of_scope": "You hold this permission, but this record is outside what you can see."
     }
