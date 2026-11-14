@@ -47,5 +47,16 @@
   "about.system_probe_badge_value",
   "about.system_probe_body",
   "about.system_probe_link",
-  "about.system_probe_why"
+  "about.system_probe_why",
+  "demo.probe.pending",
+  "demo.probe.lateral.try",
+  "demo.probe.lateral.target",
+  "demo.probe.lateral.quiet",
+  "demo.probe.lateral.why",
+  "demo.probe.door.try",
+  "demo.probe.door.who",
+  "demo.probe.door.why",
+  "demo.probe.anon.try",
+  "demo.probe.anon.who",
+  "demo.probe.anon.why"
 ]

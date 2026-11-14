@@ -474,6 +474,19 @@ const soulReady: Record<string, Recording | null> = {};
 /** What `soulRecording` has already resolved to, in the same render: `undefined` while it is still loading. */
 export const soulRecordingNow = (civ: string, lang: DemoLang): Recording | null | undefined => soulReady[`soul_${civ}.${lang}`];
 
+/** The overreach probe's two requests no officer makes (`data/overreach.<lang>.json`, scripts/demo-record.mjs): a soul's token, and none. */
+export interface OverreachRecording {
+  recordedAt: string;
+  answers: Partial<Record<"door" | "anon", { path: string; s: number; b: unknown }>>;
+}
+export function overreachRecording(lang: DemoLang): Promise<OverreachRecording | null> {
+  const name = "overreach";
+  return import(`./data/${name}.${lang}.json`).then(
+    (m) => m.default as OverreachRecording,
+    () => null,
+  );
+}
+
 export const nextSeq = () => ++overlay.seq;
 
 /** A UUID's own shape, so a stand-in id reads like the real ones. */

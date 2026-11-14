@@ -567,6 +567,19 @@ await browser.close();
 // (frontend/demo/data/soul-letters.json is written by hand).
 const SOUL_PATHS = ["/me/", "/me/life/", "/me/past-lives/", "/me/sentence-plan/", "/me/rebirth-applications/", "/me/social/status/", "/me/social/feed/"];
 const SOUL_LOGINS = process.env.DEMO_SOUL_LOGINS ? JSON.parse(readFileSync(process.env.DEMO_SOUL_LOGINS, "utf8")) : {};
+// The safeguards tour's overreach probe (frontend/demo/OverreachProbe.tsx): two of its four requests are no officer's, so
+// no role's recording holds them. The first soul's token at an officer endpoint, and no token at all; written whatever
+// the status (`overreachRecording` in frontend/demo/store.ts reads the file).
+const OVERREACH = {};
+async function askOverreach(kind, access) {
+  for (const [lang, language] of LANGS) {
+    const headers = { "Accept-Language": language, ...(access ? { Authorization: `Bearer ${access}` } : {}) };
+    const res = await fetch(`${API}/souls/`, { headers });
+    const body = await res.json().catch(() => null);
+    (OVERREACH[lang] ??= {})[kind] = { path: "/souls/", s: res.status, b: translator(lang)(scrub(body)) };
+    console.log(`overreach: ${kind} GET /souls/ (${lang}) → ${res.status}`);
+  }
+}
 for (const [civ, { soul_code, name }] of Object.entries(SOUL_LOGINS)) {
   const res = await fetch(`${API}/soul-auth/login/`, {
     method: "POST",
@@ -575,6 +588,7 @@ for (const [civ, { soul_code, name }] of Object.entries(SOUL_LOGINS)) {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.access) throw new Error(`soul login refused for ${civ} (${name}): ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
+  if (!OVERREACH.zh?.door) await askOverreach("door", body.access);
   const recordedAt = new Date().toISOString();
   for (const [lang, language] of [["zh", "zh-Hans"], ["en", "en"]]) {
     const rec = { lists: {}, docs: {}, errors: new Set(), swept: {} };
@@ -587,6 +601,10 @@ for (const [civ, { soul_code, name }] of Object.entries(SOUL_LOGINS)) {
     console.log(`soul_${civ} (${name}) ${lang}: ${Object.keys(out.docs).length} docs, ${Object.keys(out.lists).length} lists; refused: ${[...rec.errors].join(" | ") || "none"}`);
   }
 }
+
+await askOverreach("anon", null);
+const overreachAt = new Date().toISOString();
+for (const [lang] of LANGS) writeFileSync(`${OUT}/overreach.${lang}.json`, JSON.stringify({ recordedAt: overreachAt, answers: OVERREACH[lang] }));
 
 // The home page's journey preview reads a few KB of the judges' recordings, not the recordings (scripts/demo-home-preview.mjs).
 writeHomePreview();
