@@ -123,10 +123,14 @@ def test_date_range_is_inclusive_on_both_ends(api_client, viewer_user, cn_tenant
 
     _auth(api_client, viewer_user)
     soul = Soul.objects.create(name="RangeSoul", tenant=cn_tenant)
-    before = _event_at(soul, datetime(2026, 10, 9, 23, 59, tzinfo=UTC))
-    first = _event_at(soul, datetime(2026, 10, 10, 0, 0, tzinfo=UTC))
-    last = _event_at(soul, datetime(2026, 10, 12, 23, 59, tzinfo=UTC))
-    after = _event_at(soul, datetime(2026, 10, 13, 0, 1, tzinfo=UTC))
+    # 日界按殿的时区(`caller_hall_tz`):中国殿默认东八区,不是 UTC。
+    from zoneinfo import ZoneInfo
+
+    hall = ZoneInfo(cn_tenant.hall_timezone)
+    before = _event_at(soul, datetime(2026, 10, 9, 23, 59, tzinfo=hall))
+    first = _event_at(soul, datetime(2026, 10, 10, 0, 0, tzinfo=hall))
+    last = _event_at(soul, datetime(2026, 10, 12, 23, 59, tzinfo=hall))
+    after = _event_at(soul, datetime(2026, 10, 13, 0, 1, tzinfo=hall))
 
     got = _ids(api_client.get(f"{LIST}&start_date=2026-10-10&end_date=2026-10-12"))
     assert got == {str(first.pk), str(last.pk)}
@@ -150,7 +154,9 @@ def test_range_search_and_actors_do_not_cross_tenants(api_client, viewer_user, c
     now = timezone.now()
     mine = _event_at(Soul.objects.create(name="Shared Name", tenant=cn_tenant), now, actor="judge")
     theirs = _event_at(Soul.objects.create(name="Shared Name", tenant=eu_tenant), now, actor="eu-judge")
-    today = now.date().isoformat()
+    from zoneinfo import ZoneInfo
+
+    today = now.astimezone(ZoneInfo(cn_tenant.hall_timezone)).date().isoformat()  # 殿的「今天」,不是 UTC 的
 
     got = _ids(api_client.get(f"{LIST}&start_date={today}&end_date={today}&search=Shared"))
     assert str(mine.pk) in got

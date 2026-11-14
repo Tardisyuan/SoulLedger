@@ -1,14 +1,17 @@
 """`date_range_q`(事件与审计的 `?start_date=` / `?end_date=`)与它替换掉的 `__date__gte/lte` 选出同样的行。
 
 半开区间 `[start 0 点, end 次日 0 点)` 是为了让 `create_time` / `timestamp` 上的索引用得上(be-scale 4.4);
-它只换写法不换意思。这里在日界两侧各放一行,逐组参数比两种写法的结果,当前时区为 UTC 与非 UTC 各比一次。
+同一时区下它只换写法不换意思:这里在日界两侧各放一行,逐组参数比两种写法的结果,UTC 与非 UTC 各比一次。
+切日的时区是调用者所在殿的(`caller_hall_tz`,用户 2026-11-14 决定),无殿为 UTC。
 """
 from datetime import UTC, date, datetime, timedelta
+from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.utils import timezone
 
-from apps.audit.views import date_range_q
+from apps.audit.views import caller_hall_tz, date_range_q
 from apps.events.models import EventType, SoulEvent
 from apps.souls.models import Soul
 
@@ -49,8 +52,8 @@ def boundary_events(cn_tenant):
 @pytest.mark.parametrize("tz", ["UTC", "Asia/Shanghai"])
 @pytest.mark.parametrize("params", PARAMS)
 def test_the_range_selects_the_rows_date_lookup_selected(boundary_events, tz, params):
-    with timezone.override(tz):
-        new = set(boundary_events.filter(date_range_q(params, "create_time")).values_list("pk", flat=True))
+    new = set(boundary_events.filter(date_range_q(params, "create_time", ZoneInfo(tz))).values_list("pk", flat=True))
+    with timezone.override(tz):  # `__date` 按当前时区取日期
         old = set(_old(boundary_events, params).values_list("pk", flat=True))
     assert new == old
     if params == {"start_date": "2026-10-10", "end_date": "2026-10-10"}:
@@ -61,7 +64,9 @@ def test_the_range_selects_the_rows_date_lookup_selected(boundary_events, tz, pa
 def test_a_one_day_range_excludes_the_next_midnight_and_keeps_its_own(boundary_events):
     """不比旧写法、直接断言日界:当天 0 点在内,次日 0 点不在内。"""
     got = set(
-        boundary_events.filter(date_range_q({"start_date": "2026-10-10", "end_date": "2026-10-10"}, "create_time"))
+        boundary_events.filter(
+            date_range_q({"start_date": "2026-10-10", "end_date": "2026-10-10"}, "create_time", ZoneInfo("UTC"))
+        )
         .values_list("create_time", flat=True)
     )
     assert datetime(2026, 10, 10, tzinfo=UTC) in got
@@ -74,6 +79,23 @@ def test_a_one_day_range_excludes_the_next_midnight_and_keeps_its_own(boundary_e
 def test_the_ends_of_the_calendar_do_not_overflow(boundary_events):
     """`9999-12-31` 的次日与东区的 `0001-01-01` 0 点 datetime 都表示不了:那一端不设界,不抛 OverflowError。"""
     everything = set(boundary_events.values_list("pk", flat=True))
-    with timezone.override("Asia/Shanghai"):
-        q = date_range_q({"start_date": "0001-01-01", "end_date": "9999-12-31"}, "create_time")
-        assert set(boundary_events.filter(q).values_list("pk", flat=True)) == everything
+    q = date_range_q({"start_date": "0001-01-01", "end_date": "9999-12-31"}, "create_time", ZoneInfo("Asia/Shanghai"))
+    assert set(boundary_events.filter(q).values_list("pk", flat=True)) == everything
+
+
+@pytest.mark.django_db
+def test_the_day_is_cut_in_the_callers_hall_and_utc_without_one(cn_tenant):
+    """东八区的殿:10-10 这一天是 UTC 10-09 16:00 到 10-10 16:00。无殿的请求按 UTC。"""
+    cn_tenant.settings = {**(cn_tenant.settings or {}), "timezone": "Asia/Shanghai"}
+    cn_tenant.save(update_fields=["settings"])
+    hall = SimpleNamespace(tenant=cn_tenant, user=None)
+    assert caller_hall_tz(hall) == ZoneInfo("Asia/Shanghai")
+    assert caller_hall_tz(SimpleNamespace(tenant=None, user=None)) == ZoneInfo("UTC")
+    assert caller_hall_tz(None) == ZoneInfo("UTC")
+
+    day = {"start_date": "2026-10-10", "end_date": "2026-10-10"}
+    q = date_range_q(day, "create_time", caller_hall_tz(hall))
+    assert dict(q.children) == {
+        "create_time__gte": datetime(2026, 10, 9, 16, tzinfo=UTC),
+        "create_time__lt": datetime(2026, 10, 10, 16, tzinfo=UTC),
+    }
