@@ -29,8 +29,12 @@ class SoulLedgerLiveModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("SoulLedgerLive")
 
-    /** Posts the notification, or replaces it in place. false: notifications are off for the app. */
-    AsyncFunction("notify") { channelName: String, title: String, body: String, progress: Double ->
+    /**
+     * Posts the notification, or replaces it in place. false: notifications are off for the app. `accent` (#RRGGBB,
+     * optional): the walked bar's civT for the system's current scheme (liveProgress.ts `liveAccent`, Design 第五十一批);
+     * without it, or unparsable, the manifest's notification colour.
+     */
+    AsyncFunction("notify") { channelName: String, title: String, body: String, progress: Double, accent: String? ->
       val ctx = context
       val manager = NotificationManagerCompat.from(ctx)
       if (!manager.areNotificationsEnabled()) return@AsyncFunction false
@@ -49,7 +53,7 @@ class SoulLedgerLiveModule : Module() {
         .setShowWhen(false)
         .setCategory(NotificationCompat.CATEGORY_PROGRESS)
         .setContentIntent(openLife(ctx))
-        .apply { color(ctx)?.let { setColor(it) } }
+        .apply { (parse(accent) ?: color(ctx))?.let { setColor(it) } }
         .build()
       post(manager, notification)
     }
@@ -101,6 +105,13 @@ class SoulLedgerLiveModule : Module() {
   /** The icon expo-notifications uses (app.json's expo-notifications `icon`, as manifest meta-data), else the app's. */
   private fun smallIcon(ctx: Context): Int =
     meta(ctx)?.getInt(ICON_KEY, 0)?.takeIf { it != 0 } ?: ctx.applicationInfo.icon
+
+  private fun parse(hex: String?): Int? =
+    try {
+      hex?.let { android.graphics.Color.parseColor(it) }
+    } catch (e: IllegalArgumentException) {
+      null
+    }
 
   private fun color(ctx: Context): Int? =
     meta(ctx)?.getInt(COLOR_KEY, 0)?.takeIf { it != 0 }?.let {

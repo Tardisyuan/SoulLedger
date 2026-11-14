@@ -24,26 +24,29 @@ import { platform } from "@soulledger/core/platform";
 import { requireOptionalNativeModule } from "expo";
 import * as Notifications from "expo-notifications";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { Platform } from "react-native";
+import { Appearance, Platform } from "react-native";
 
 import { useI18n } from "./i18n";
 import { PRIMER_SEEN_KEY, permission, registerDevice, requestPermission, type Permission } from "./push";
 import { liveContent, type LiveContent, type SoulRoute } from "@soulledger/core/domain/soulRoute";
-import { contrastRatio, themeOf, type CivKey, type ColorScheme } from "./theme";
+import { contrastRatio, seal, themeOf, type CivKey, type ColorScheme } from "./theme";
 import { useTheme } from "./ui";
 
 interface LiveNative {
   /**
    * Starts the activity, or updates the running one (restarting it if the title or tint changed). false: not allowed.
-   * `tint` is `liveTint`'s `mark;barLight;barDark`.
+   * `tint` is `liveTint`'s `markLight;markDark;barLight;barDark`.
    */
   show(title: string, tint: string, state: string): Promise<boolean>;
   end(): Promise<void>;
 }
 
 interface LiveNativeAndroid {
-  /** Posts or replaces the ongoing notification on LIVE_CHANNEL, VISIBILITY_PUBLIC. false: notifications are off. */
-  notify(channelName: string, title: string, body: string, progress: number): Promise<boolean>;
+  /**
+   * Posts or replaces the ongoing notification on LIVE_CHANNEL, VISIBILITY_PUBLIC. false: notifications are off.
+   * `color` (#RRGGBB): the notification's accent — the walked bar's civT for the system's current scheme (`liveAccent`).
+   */
+  notify(channelName: string, title: string, body: string, progress: number, color: string): Promise<boolean>;
   end(): Promise<void>;
 }
 
@@ -160,24 +163,39 @@ async function mayNotify(): Promise<boolean> {
 }
 
 /**
- * The lock screen's own grounds, which follow the system's light / dark, not the app's: iOS `secondarySystemBackground`
- * (#F2F2F7 / #1C1C1E), a shade nearer the bar than plain white / black, so the check errs strict.
+ * The live card's own grounds (Design 第五十一批 D1), one neutral card for all four civilizations, following the system's
+ * light / dark, not the app's. The widget paints them (plugins/liveActivity.js `CARD.ground`, which must equal this).
  */
-export const LOCK_GROUND: Record<ColorScheme, string> = { light: "#F2F2F7", dark: "#1C1C1E" };
+export const LOCK_GROUND: Record<ColorScheme, string> = { light: "#F8F8F6", dark: "#1C1D20" };
 
 /**
- * The tint the Live Activity gets (Design 第四十九批 B1), three colours `mark;barLight;barDark`, read by the widget
- * (plugins/liveActivity.js): the mark is a seal and keeps the civilization's glow; the progress bar is the road's spine,
- * civT (`plaque`) of that scheme where it holds 3:1 on that scheme's lock-screen ground, else the ink. The tag's ground
- * is the system's own fill, so it takes no colour from here.
+ * The tint the Live Activity gets (Design 第五十一批), four colours `markLight;markDark;barLight;barDark`, read by the
+ * widget (plugins/liveActivity.js `Tints`, which still reads the older three-part and single-colour tints): the mark is
+ * a seal, the civilization's `seal` of that scheme (neutral has none: its bar colour); the walked bar is the road's
+ * spine, civT (`plaque`) of that scheme. Everything else on the card is neutral and lives in the widget. Design states
+ * every civT clears 3:1 on both grounds; the check stays, and a civT that falls under it draws the bar in the ink.
  */
 export function liveTint(civ: CivKey): string {
-  const bar = (scheme: ColorScheme) => {
+  const column = (scheme: ColorScheme) => {
     const t = themeOf(civ, scheme);
     const civT = t.plaque;
-    return contrastRatio(civT, LOCK_GROUND[scheme]) >= 3 ? civT : t.ink;
+    const bar = contrastRatio(civT, LOCK_GROUND[scheme]) >= 3 ? civT : t.ink;
+    return { mark: civ === "neutral" ? bar : seal[civ][scheme], bar };
   };
-  return [themeOf(civ, "dark").glow, bar("light"), bar("dark")].join(";");
+  const light = column("light");
+  const dark = column("dark");
+  return [light.mark, dark.mark, light.bar, dark.bar].join(";");
+}
+
+/**
+ * Android's accent for the ongoing notification: the walked bar of the column matching the system's scheme (the
+ * notification's ground and text are the system's; Design 第五十一批 落地提示). An older tint reads as the widget does.
+ */
+export function liveAccent(tint: string, scheme: ColorScheme): string {
+  const parts = tint.split(";");
+  if (parts.length >= 4) return scheme === "dark" ? parts[3] : parts[2];
+  if (parts.length === 3) return scheme === "dark" ? parts[2] : parts[1];
+  return parts[0];
 }
 
 /** Starts or updates the lock screen's live progress (iOS: the Live Activity, which needs no permission). */
@@ -191,7 +209,8 @@ export async function showLiveProgress(c: LiveContent, tint: string): Promise<vo
   const native = android();
   if (native) {
     const { title, body } = androidContent(c);
-    await native.notify(c.title, title ?? c.title, body ?? "", c.progress);
+    const accent = liveAccent(tint, Appearance.getColorScheme() === "dark" ? "dark" : "light");
+    await native.notify(c.title, title ?? c.title, body ?? "", c.progress, accent);
     return;
   }
   await Notifications.setNotificationChannelAsync(EXPO_CHANNEL, liveChannel(c.title));

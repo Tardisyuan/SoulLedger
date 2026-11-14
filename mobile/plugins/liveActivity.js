@@ -22,12 +22,27 @@ const widgetBundleId = (appBundleId) => {
 };
 
 /**
+ * The card's neutral colours (Design 第五十一批 D1–D6): one card for all four civilizations, following the system's
+ * light / dark. Only the mark (the civilization's `seal`) and the walked part of the bar (its civT) take colour; they
+ * arrive in the activity's tint (liveProgress.ts `liveTint`). `ground` must equal liveProgress.ts `LOCK_GROUND`, the
+ * ground liveTint checks 3:1 against (liveActivity.test holds both).
+ */
+const CARD = {
+  light: { ground: "#F8F8F6", main: "#16171A", secondary: "#54575C", track: "#DCDCD8", tag: "#EAEAE6" },
+  dark: { ground: "#1C1D20", main: "#F3F3F1", secondary: "#B4B6BA", track: "#3A3B40", tag: "#2E2F34" },
+};
+
+const cardSwift = (c) =>
+  `Card(ground: Color(hex: "${c.ground}"), main: Color(hex: "${c.main}"), secondary: Color(hex: "${c.secondary}"), track: Color(hex: "${c.track}"), tag: Color(hex: "${c.tag}"))`;
+
+/**
  * The lock screen and the Dynamic Island (V4Batch07 05 App「锁屏 · 实时活动」「灵动岛三种状态」): the title and the
  * road's name, the headline and the count, the progress, and start · here · end under it. Compact: the mark and
  * 「10/11」; minimal: the mark; expanded: the place over the soul and the step. A road that ends (湮灭, 永罚) draws
- * its progress in v4's pale red (dark --neg #F2849B), never in the civilization's colour. Design 第四十九批 B1: the
- * mark is a seal (the civilization's glow), the bar is the spine (civT, or ink where civT is under 3:1 on that
- * scheme's lock screen), the tag's ground is the system's fill, untinted.
+ * its progress in v4's pale red (dark --neg #F2849B), never in the civilization's colour.
+ * Design 第五十一批: the card's ground, text, track and tag are fixed neutrals per scheme (`CARD`), never the system's
+ * `.primary` / `.secondary` (those take the wallpaper's vibrancy over our ground); the mark is the seal per scheme and
+ * the walked bar civT per scheme. The Dynamic Island's ground is the system's black: it takes the dark column.
  */
 const widgetSwift = () => `import ActivityKit
 import SwiftUI
@@ -48,23 +63,58 @@ private extension Color {
   static let ended = Color(red: 0xF2 / 255, green: 0x84 / 255, blue: 0x9B / 255)
 }
 
-/// The app's tint, "mark;barLight;barDark" (liveProgress.ts liveTint): the mark keeps the civilization's colour; the
-/// bar is civT where it holds 3:1 on that scheme's lock screen, else the ink. An older single colour serves all three.
+/// The card's neutrals (Design 第五十一批 D1–D6), one pair for every civilization.
+private struct Card {
+  let ground: Color
+  let main: Color
+  let secondary: Color
+  let track: Color
+  let tag: Color
+  static let light = ${cardSwift(CARD.light)}
+  static let dark = ${cardSwift(CARD.dark)}
+  static func of(_ scheme: ColorScheme) -> Card { scheme == .dark ? dark : light }
+}
+
+/// The app's tint (liveProgress.ts liveTint), "markLight;markDark;barLight;barDark": the mark is the civilization's
+/// seal, the bar its civT, each per scheme. Older tints still render: "mark;barLight;barDark" (第四十九批, one mark)
+/// and a single colour (all four).
 private struct Tints {
-  let mark: Color
+  let markLight: Color
+  let markDark: Color
   let barLight: Color
   let barDark: Color
   init(_ tint: String) {
     let parts = tint.split(separator: ";").map { Color(hex: String($0)) }
-    mark = parts.first ?? Color(hex: tint)
-    barLight = parts.count > 1 ? parts[1] : mark
-    barDark = parts.count > 2 ? parts[2] : mark
+    let first = parts.first ?? Color(hex: tint)
+    let four = parts.count >= 4
+    markLight = first
+    markDark = four ? parts[1] : first
+    barLight = four ? parts[2] : parts.count == 3 ? parts[1] : first
+    barDark = four ? parts[3] : parts.count == 3 ? parts[2] : first
   }
+  func mark(_ scheme: ColorScheme) -> Color { scheme == .dark ? markDark : markLight }
+  func bar(_ scheme: ColorScheme) -> Color { scheme == .dark ? barDark : barLight }
 }
 
 private struct Mark: View {
   let tint: Color
-  var body: some View { Image(systemName: "mappin.and.ellipse").foregroundStyle(tint) }
+  var body: some View { Image(systemName: "mappin.and.ellipse").font(.system(size: 18)).foregroundStyle(tint) }
+}
+
+/// The progress: the walked part over a neutral track. A ProgressView cannot colour its track, hence two capsules.
+private struct Bar: View {
+  let progress: Double
+  let fill: Color
+  let track: Color
+  var body: some View {
+    GeometryReader { g in
+      ZStack(alignment: .leading) {
+        Capsule().fill(track)
+        Capsule().fill(fill).frame(width: g.size.width * min(max(progress, 0), 1))
+      }
+    }
+    .frame(height: 5)
+  }
 }
 
 private struct LockScreenLive: View {
@@ -74,32 +124,35 @@ private struct LockScreenLive: View {
   @Environment(\\.colorScheme) private var scheme
 
   var body: some View {
+    let card = Card.of(scheme)
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 6) {
-        Mark(tint: tints.mark)
-        Text(title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+        Mark(tint: tints.mark(scheme))
+        Text(title).font(.caption).foregroundStyle(card.secondary).lineLimit(1)
         Spacer(minLength: 4)
         if !state.tag.isEmpty {
-          Text(state.tag).font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
-            .background(Color(uiColor: .tertiarySystemFill)).clipShape(Capsule())
+          Text(state.tag).font(.system(size: 11.5, weight: .medium)).foregroundStyle(card.main)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(card.tag).clipShape(Capsule())
         }
       }
       HStack(alignment: .firstTextBaseline) {
-        Text(state.headline).font(.headline).lineLimit(1)
+        Text(state.headline).font(.system(size: 15, weight: .semibold)).foregroundStyle(card.main).lineLimit(1)
         Spacer(minLength: 8)
-        Text(state.count).font(.subheadline.monospacedDigit())
+        Text(state.count).font(.system(size: 13, weight: .medium).monospacedDigit()).foregroundStyle(card.main)
       }
-      ProgressView(value: min(max(state.progress, 0), 1)).tint(state.ended ? Color.ended : (scheme == .dark ? tints.barDark : tints.barLight))
+      Bar(progress: state.progress, fill: state.ended ? Color.ended : tints.bar(scheme), track: card.track)
       HStack {
-        Text(state.first)
+        Text(state.first).foregroundStyle(card.secondary)
         Spacer(minLength: 4)
-        Text(state.current).fontWeight(.semibold)
+        Text(state.current).fontWeight(.semibold).foregroundStyle(card.main)
         Spacer(minLength: 4)
-        Text(state.last)
+        Text(state.last).foregroundStyle(card.secondary)
       }
-      .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+      .font(.caption2).lineLimit(1)
     }
     .padding(16)
+    .activityBackgroundTint(card.ground)
   }
 }
 
@@ -108,21 +161,23 @@ struct SoulLedgerLiveWidget: Widget {
     ActivityConfiguration(for: SoulLedgerLiveAttributes.self) { context in
       LockScreenLive(title: context.attributes.title, tints: Tints(context.attributes.tint), state: context.state)
     } dynamicIsland: { context in
-      let tint = Tints(context.attributes.tint).mark
+      // The island's ground is the system's black: the dark column.
+      let tint = Tints(context.attributes.tint).mark(.dark)
+      let card = Card.dark
       return DynamicIsland {
         DynamicIslandExpandedRegion(.leading) { Mark(tint: tint) }
-        DynamicIslandExpandedRegion(.trailing) { Text(context.state.compact).font(.body.monospacedDigit()) }
+        DynamicIslandExpandedRegion(.trailing) { Text(context.state.compact).font(.body.monospacedDigit()).foregroundStyle(card.main) }
         DynamicIslandExpandedRegion(.bottom) {
           VStack(alignment: .leading, spacing: 2) {
-            Text(context.state.place).font(.headline).lineLimit(1)
-            Text(context.state.island).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text(context.state.place).font(.headline).foregroundStyle(card.main).lineLimit(1)
+            Text(context.state.island).font(.caption).foregroundStyle(card.secondary).lineLimit(1)
           }
           .frame(maxWidth: .infinity, alignment: .leading)
         }
       } compactLeading: {
         Mark(tint: tint)
       } compactTrailing: {
-        Text(context.state.compact).font(.caption2.monospacedDigit())
+        Text(context.state.compact).font(.caption2.monospacedDigit()).foregroundStyle(card.main)
       } minimal: {
         Mark(tint: tint)
       }
@@ -196,6 +251,7 @@ function widgetBuildSettings({ bundleId, version, build, team, tablet }) {
 
 module.exports = {
   TARGET,
+  CARD,
   ATTRIBUTES_FILE,
   WIDGET_FILE,
   PLIST_FILE,
